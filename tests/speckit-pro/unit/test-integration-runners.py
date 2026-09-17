@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Layer-4 contracts for the Python Layer-7 replay/live runners."""
+"""Layer-4 contracts for the Python Layer-6 replay/live runners."""
 
 from __future__ import annotations
 
@@ -20,9 +20,9 @@ from unittest.mock import patch
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 TESTS_ROOT = REPO_ROOT / "tests" / "speckit-pro"
-LAYER7 = TESTS_ROOT / "layer7-integration"
+LAYER6 = TESTS_ROOT / "layer6-integration"
 LIB_DIR = TESTS_ROOT / "lib"
-for value in (LAYER7, LIB_DIR):
+for value in (LAYER6, LIB_DIR):
     if str(value) not in sys.path:
         sys.path.insert(0, str(value))
 
@@ -30,7 +30,7 @@ from lib import fixture_runner  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
 
-AGGREGATE_RUNNER = LAYER7 / "run-all-fixtures.py"
+AGGREGATE_RUNNER = LAYER6 / "run-all-fixtures.py"
 
 
 def run_runner(path: Path, *args: str) -> subprocess.CompletedProcess[str]:
@@ -54,17 +54,17 @@ def load_script_module(path: Path, module_name: str) -> object:
     return module
 
 
-class Layer7RunnerTests(unittest.TestCase):
-    def test_layer7_runner_contract(self) -> None:
+class Layer6RunnerTests(unittest.TestCase):
+    def test_layer6_runner_contract(self) -> None:
         aggregate_module = load_script_module(AGGREGATE_RUNNER, "run_all_fixtures_test")
-        dispatcher_module = load_script_module(TESTS_ROOT / "run-layer-scripts.py", "run_layer_scripts_layer7_test")
+        dispatcher_module = load_script_module(TESTS_ROOT / "run-layer-scripts.py", "run_layer_scripts_layer6_test")
         runners = list(aggregate_module.RUNNERS.values())
         self.assertTrue(runners)
         checks: list[tuple[str, Callable[[], None]]] = []
         for runner in (*runners, AGGREGATE_RUNNER):
             checks.append((f"{runner.name} exists", lambda runner=runner: self.assertTrue(runner.is_file())))
-        checks.append(("shared fixture runner exists", lambda: self.assertTrue((LAYER7 / "lib" / "fixture_runner.py").is_file())))
-        checks.append(("all Layer-7 Python runners are executable", lambda: self.assertTrue(all(os.access(path, os.X_OK) for path in (*runners, AGGREGATE_RUNNER)))))
+        checks.append(("shared fixture runner exists", lambda: self.assertTrue((LAYER6 / "lib" / "fixture_runner.py").is_file())))
+        checks.append(("all Layer-6 Python runners are executable", lambda: self.assertTrue(all(os.access(path, os.X_OK) for path in (*runners, AGGREGATE_RUNNER)))))
 
         for runner in runners:
             result = run_runner(runner, "--replay")
@@ -78,13 +78,13 @@ class Layer7RunnerTests(unittest.TestCase):
         aggregate = run_runner(AGGREGATE_RUNNER, "--replay")
         checks.append(("run-all-fixtures.py replay exits 0", lambda: self.assertEqual(aggregate.returncode, 0, aggregate.stderr)))
         for class_id in aggregate_module.RUNNERS:
-            heading = f"Layer 7 - Class {class_id}"
+            heading = f"Layer 6 - Class {class_id}"
             checks.append((f"run-all-fixtures.py executes class {class_id}", lambda heading=heading: self.assertEqual(aggregate.stdout.count(heading), 1)))
-        checks.append(("run-all-fixtures.py preserves PASSED headline", lambda: self.assertIn("Layer 7 PASSED", aggregate.stdout)))
+        checks.append(("run-all-fixtures.py preserves PASSED headline", lambda: self.assertIn("Layer 6 PASSED", aggregate.stdout)))
 
         empty_reporter = fixture_runner.Reporter()
         with contextlib.redirect_stdout(io.StringIO()):
-            empty_reporter_exit = empty_reporter.finish("empty-layer7-fixture")
+            empty_reporter_exit = empty_reporter.finish("empty-layer6-fixture")
         checks.append(("fixture reporter rejects zero discovered checks", lambda: self.assertEqual(empty_reporter_exit, 1)))
 
         invalid_nested_results = (
@@ -128,7 +128,7 @@ class Layer7RunnerTests(unittest.TestCase):
                 dispatch_stderr = io.StringIO()
                 with contextlib.redirect_stdout(dispatch_stdout), contextlib.redirect_stderr(dispatch_stderr):
                     dispatch_exit = dispatcher_module.run_script_suite(
-                        "layer-7 integration fixtures",
+                        "layer-6 integration fixtures",
                         [AGGREGATE_RUNNER],
                         REPO_ROOT,
                     )
@@ -139,9 +139,9 @@ class Layer7RunnerTests(unittest.TestCase):
                 )
             )
 
-        source_paths = [*runners, AGGREGATE_RUNNER, LAYER7 / "lib" / "fixture_runner.py"]
-        checks.append(("Layer-7 runner sources contain no shell=True", lambda: self.assertTrue(all("shell=True" not in path.read_text(encoding="utf-8") for path in source_paths))))
-        checks.append(("Layer-7 runner sources contain no os.system", lambda: self.assertTrue(all("os.system" not in path.read_text(encoding="utf-8") for path in source_paths))))
+        source_paths = [*runners, AGGREGATE_RUNNER, LAYER6 / "lib" / "fixture_runner.py"]
+        checks.append(("Layer-6 runner sources contain no shell=True", lambda: self.assertTrue(all("shell=True" not in path.read_text(encoding="utf-8") for path in source_paths))))
+        checks.append(("Layer-6 runner sources contain no os.system", lambda: self.assertTrue(all("os.system" not in path.read_text(encoding="utf-8") for path in source_paths))))
 
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
@@ -149,7 +149,7 @@ class Layer7RunnerTests(unittest.TestCase):
             fixture.mkdir()
             (fixture / "prompt.txt").write_text("test prompt\n", encoding="utf-8")
             (fixture / "expected.json").write_text("{}\n", encoding="utf-8")
-            transcript_source = LAYER7 / "test-fixtures" / "single-dispatch.jsonl"
+            transcript_source = LAYER6 / "test-fixtures" / "single-dispatch.jsonl"
             discovered_claude = str(root / "claude.cmd")
             claude_argv: list[str] = []
             real_run = subprocess.run
@@ -165,7 +165,7 @@ class Layer7RunnerTests(unittest.TestCase):
             with (
                 patch.object(fixture_runner.shutil, "which", return_value=discovered_claude),
                 patch.object(fixture_runner.subprocess, "run", side_effect=run_with_fake_claude),
-                patch.dict(os.environ, {"L7_UPDATE_PARSER_FIXTURE": "true"}),
+                patch.dict(os.environ, {"L6_UPDATE_PARSER_FIXTURE": "true"}),
             ):
                 captured = fixture_runner.capture_live(fixture, "1.25")
             transcript_written = (fixture / "transcript.jsonl").is_file()
@@ -181,7 +181,7 @@ class Layer7RunnerTests(unittest.TestCase):
             fixture = root / "fixture"
             fixture.mkdir()
             (fixture / "prompt.txt").write_text("test prompt\n", encoding="utf-8")
-            transcript_source = LAYER7 / "test-fixtures" / "single-dispatch.jsonl"
+            transcript_source = LAYER6 / "test-fixtures" / "single-dispatch.jsonl"
             discovered_claude = str(root / "claude.cmd")
             real_run = subprocess.run
 
@@ -213,10 +213,10 @@ class Layer7RunnerTests(unittest.TestCase):
             fixture.mkdir()
             (fixture / "expected.json").write_text('{"response_assertions":false}\n', encoding="utf-8")
             (fixture / "parser-fixture.jsonl").write_text(
-                (LAYER7 / "test-fixtures" / "single-dispatch.jsonl").read_text(encoding="utf-8"),
+                (LAYER6 / "test-fixtures" / "single-dispatch.jsonl").read_text(encoding="utf-8"),
                 encoding="utf-8",
             )
-            module = load_script_module(LAYER7 / "run-return-format-fixtures.py", "run_return_format_fixtures_test")
+            module = load_script_module(LAYER6 / "run-return-format-fixtures.py", "run_return_format_fixtures_test")
             module.FIXTURES = root
             stderr = io.StringIO()
             with contextlib.redirect_stderr(stderr):
@@ -224,7 +224,7 @@ class Layer7RunnerTests(unittest.TestCase):
             checks.append(("return-format runner rejects top-level false response_assertions", lambda: self.assertEqual(malformed_exit, 2)))
             checks.append(("return-format runner reports response_assertions array requirement", lambda: self.assertIn("response_assertions must be an array", stderr.getvalue())))
 
-        tree = ast.parse((LAYER7 / "lib" / "fixture_runner.py").read_text(encoding="utf-8"))
+        tree = ast.parse((LAYER6 / "lib" / "fixture_runner.py").read_text(encoding="utf-8"))
         subprocess_calls = [node for node in ast.walk(tree) if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and node.func.attr == "run"]
         checks.append(("live capture subprocess calls use argv lists", lambda: self.assertTrue(all(isinstance(call.args[0], (ast.List, ast.Name)) for call in subprocess_calls))))
 
@@ -234,5 +234,5 @@ class Layer7RunnerTests(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    suite = unittest.defaultTestLoader.loadTestsFromTestCase(Layer7RunnerTests)
+    suite = unittest.defaultTestLoader.loadTestsFromTestCase(Layer6RunnerTests)
     raise SystemExit(run_counted(suite, label="test-integration-runners"))

@@ -1,0 +1,6 @@
+# Technical Roadmap
+
+## SPEC-014 — Existing branch safety
+
+Scope: reuse an existing dedicated worktree only after confirming its branch.
+

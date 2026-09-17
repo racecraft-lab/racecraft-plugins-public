@@ -1,0 +1,6 @@
+# Technical Roadmap
+
+## SPEC-015 — Push failure recovery
+
+Scope: report locally completed scaffold work and an unsuccessful push separately.
+

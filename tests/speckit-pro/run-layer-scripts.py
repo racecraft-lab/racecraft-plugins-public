@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Repo-side dispatcher for manifest-backed test layers 1, 4, 5, 7, and 8.
+"""Repo-side dispatcher for manifest-backed deterministic test layers.
 
 This script is intentionally NOT shipped in any plugin payload. Every manifest
 entry it dispatches is Python-authoritative; non-Python entries fail closed.
 
 The suite gate (``speckit_pro_runner.gates.suite``) invokes this as an external
-argv command (``python tests/speckit-pro/run-layer-scripts.py --layer 1|4|5|7|8``) and
+argv command (``python tests/speckit-pro/run-layer-scripts.py --layer <id|key>``) and
 maps the process exit code to a runner status: 0 -> ok, 1 -> expected_failure,
 2 -> input_error, 3 -> missing_prerequisite, 4 -> subprocess_failure.
 """
@@ -26,13 +26,6 @@ if str(TEST_LIB) not in sys.path:
 from test_result import child_check_status  # noqa: E402
 
 SUITE_MANIFEST = "tests/speckit-pro/suite-manifest.json"
-LAYER_LABELS = {
-    "1": "layer-1 structural validation",
-    "4": "layer-4 python helper tests",
-    "5": "layer-5 agent tool scoping",
-    "7": "layer-7 integration fixtures",
-    "8": "layer-8 parity fixtures",
-}
 
 
 def resolve_repo_root() -> Path | None:
@@ -42,20 +35,33 @@ def resolve_repo_root() -> Path | None:
     return None
 
 
+def load_manifest(repo_root: Path) -> dict:
+    return json.loads((repo_root / SUITE_MANIFEST).read_text(encoding="utf-8"))
+
+
+def canonical_layer_entry(repo_root: Path, selector: str) -> dict | None:
+    """Resolve one exact numeric ID or semantic key through the manifest."""
+    matches = [
+        entry
+        for entry in load_manifest(repo_root).get("layers", [])
+        if not entry.get("live_only")
+        and entry.get("id") != "toolchain"
+        and entry.get("dispatch") == "python-module"
+        and selector in {entry.get("id"), entry.get("key")}
+    ]
+    return matches[0] if len(matches) == 1 else None
+
+
 def canonical_test_scripts(repo_root: Path, layer: str) -> list[Path]:
     """Return the layer's dispatch roster from suite-manifest.json (not run-all.sh).
 
     The manifest's per-layer ``scripts[]`` is the single source of truth for the
     dispatch set.
     """
-    manifest_path = repo_root / SUITE_MANIFEST
-    if not manifest_path.is_file():
+    entry = canonical_layer_entry(repo_root, layer)
+    if entry is None:
         return []
-    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-    for entry in manifest.get("layers", []):
-        if entry.get("id") == layer:
-            return [repo_root / script["path"] for script in entry.get("scripts", [])]
-    return []
+    return [repo_root / script["path"] for script in entry.get("scripts", [])]
 
 
 def python_child_env(repo_root: Path) -> dict[str, str]:
@@ -115,10 +121,10 @@ def run_script_suite(label: str, tests: list[Path], repo_root: Path) -> int:
 
 
 def main(argv: list[str]) -> int:
-    if len(argv) != 2 or argv[0] != "--layer" or argv[1] not in LAYER_LABELS:
-        print("usage: run-layer-scripts.py --layer {1|4|5|7|8}", file=sys.stderr)
+    if len(argv) != 2 or argv[0] != "--layer":
+        print("usage: run-layer-scripts.py --layer <id|key>", file=sys.stderr)
         return 2
-    layer = argv[1]
+    selector = argv[1]
 
     repo_root = resolve_repo_root()
     if repo_root is None:
@@ -130,12 +136,17 @@ def main(argv: list[str]) -> int:
         print(f"missing prerequisite: {SUITE_MANIFEST} not found", file=sys.stderr)
         return 3
 
-    tests = canonical_test_scripts(repo_root, layer)
+    layer = canonical_layer_entry(repo_root, selector)
+    if layer is None:
+        print(f"unsupported layer selector: {selector}", file=sys.stderr)
+        return 2
+
+    tests = [repo_root / script["path"] for script in layer.get("scripts", [])]
     if not tests:
-        print(f"missing prerequisite: no layer {layer} test entries in {SUITE_MANIFEST}", file=sys.stderr)
+        print(f"missing prerequisite: no layer {layer['id']} test entries in {SUITE_MANIFEST}", file=sys.stderr)
         return 3
 
-    return run_script_suite(LAYER_LABELS[layer], tests, repo_root)
+    return run_script_suite(f"layer-{layer['id']} {layer['label'].lower()}", tests, repo_root)
 
 
 if __name__ == "__main__":

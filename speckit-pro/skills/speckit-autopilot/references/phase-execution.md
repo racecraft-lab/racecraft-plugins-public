@@ -29,7 +29,7 @@ commands and scripts:
 ## Subagent Delegation
 
 Each phase is executed by spawning a foreground subagent via
-the Agent tool. The subagent:
+the Agent tool with `run_in_background: false`. The subagent:
 
 1. Loads the `/speckit-*` command via `Skill()`
 2. Runs the command in its own context
@@ -50,6 +50,7 @@ return only a structured summary.
 Agent(
   subagent_type: "speckit-pro:phase-executor",
   description: "SPEC-XXX <phase>",
+  run_in_background: false,
   prompt: """
     Run the /speckit-<phase> command.
     Use: Skill("speckit-<phase>", args: "<workflow prompt>")
@@ -235,6 +236,7 @@ TaskUpdate: "Phase 0: Doctor Health Check" → in_progress
 Agent(
   subagent_type: "general-purpose",
   description: "SPEC-XXX doctor health check",
+  run_in_background: false,
   prompt: "Run /speckit.speckit-utils.doctor for this project.
     Return the diagnostic report summary."
 )
@@ -272,7 +274,7 @@ Read the workflow file's `### Specify Prompt` section.
 Spawn a subagent:
 
 ```text
-Agent(description: "SPEC-XXX specify", prompt: "...")
+Agent(run_in_background: false, description: "SPEC-XXX specify", prompt: "...")
 ```
 
 **Branch-aware:** If `ON_FEATURE_BRANCH` is true, add
@@ -299,6 +301,7 @@ questions and applies accepted edits in the main session.
 For each clarify session in the workflow file:
   1. TaskUpdate: session task → in_progress
   2. Agent(subagent_type: "speckit-pro:clarify-executor",
+          run_in_background: false,
           prompt: """
             Prepare a Clarify Question Set for: <session prompt>
           """)
@@ -407,7 +410,7 @@ orchestrator follows
 §Plan ambiguity provenance repair. It classifies the disputed wording from
 direct source evidence, appends the Plan Ambiguity Repair Log, and re-dispatches
 the same Plan executor with the original prompt plus the complete
-`Plan Repair Context`. Re-run G3 after each of at most 2 repairs. Missing
+`Plan Repair Context`. Re-run G3 after the shared corrective reservation. Missing
 artifacts and constitutional failures retain the ordinary G3 auto-fix path.
 
 Pass WORKFLOW_FILE as `workflow_file` to validate-gate. Stage the formal helper's
@@ -426,6 +429,7 @@ with two-layer resolution **after each domain**:
 For each checklist domain in the workflow file:
   1. TaskUpdate: domain task → in_progress
   2. Agent(subagent_type: "speckit-pro:checklist-executor",
+          run_in_background: false,
           prompt: "Run /speckit-checklist with: <domain prompt>")
      The checklist-executor runs the checklist, researches
      gaps, applies fixes, and re-runs to verify (Layer 1)
@@ -451,7 +455,7 @@ codebase exploration, and library docs (MCP tools preferred
 when available).
 
 **Layer 2 (consensus):** For gaps the executor couldn't
-resolve (remained after 2 loops, low confidence, security
+resolve (shared reservation exhausted, low confidence, security
 keywords), the main session spawns 3 consensus agents.
 
 **Why after each domain:** Domain 2 may depend on Domain
@@ -486,6 +490,7 @@ TaskUpdate: "Phase 5: Verify Tasks" → in_progress
 Agent(
   subagent_type: "general-purpose",
   description: "SPEC-XXX verify tasks",
+  run_in_background: false,
   prompt: "Run /speckit-verify-tasks-run for SPEC-XXX.
     Check for phantom completions — tasks marked [X]
     that have no real implementation. Return findings."
@@ -525,6 +530,7 @@ TaskUpdate: "Phase 5: Tasks to Issues" → in_progress
 Agent(
   subagent_type: "general-purpose",
   description: "SPEC-XXX tasks to issues",
+  run_in_background: false,
   prompt: "Run /speckit-taskstoissues for SPEC-XXX."
 )
 TaskUpdate: → completed
@@ -589,14 +595,17 @@ state.
 Read the workflow file's `### Analyze Prompt` section.
 Spawn the analyze-executor subagent.
 
-The analyze-executor runs the analysis, researches ALL
-findings at every severity, applies fixes, and re-runs to
-verify (Layer 1). Items it can't resolve are flagged in its
+The analyze-executor runs the analysis, resolves concrete evidence gaps for
+required defects at every severity, and repairs within the parent's shared
+reservation (Layer 1). Optional style suggestions remain separate. Current
+evidence is reused; no mandatory research pass for mechanical changes.
+Items it can't resolve are flagged in its
 "Unresolved for consensus" summary section.
 
 ```text
 1. TaskUpdate: "Analyze" → in_progress
 2. Agent(subagent_type: "speckit-pro:analyze-executor",
+        run_in_background: false,
         prompt: "Run /speckit-analyze with: <prompt>")
    The executor handles research + remediation (Layer 1)
 3. Parse executor's "Unresolved for consensus" section
@@ -827,6 +836,7 @@ it returns one outcome per page it wrote or could not write:
 Agent(
   subagent_type: "speckit-pro:artifact-author",
   description: "SPEC-XXX draft artifact generation",
+  run_in_background: false,
   prompt: """
     Author this feature's draft-stage gallery pages and write them into
     specs/<feature>/artifacts/.
@@ -2388,21 +2398,17 @@ This protocol is injected into every implementation agent's
 prompt, ensuring identical RED→GREEN→REFACTOR discipline
 regardless of which agent executes the task.
 
-#### Step 3: Task-Level Execution Loop (with `[P]` parallel partitioning)
+#### Step 3: Task-Level Execution Loop
 
 This is **Use site 3** in the [Agent Teams use-site map](./agent-teams-integration.md).
-Tasks are partitioned into RUNS (parallel for consecutive `[P]`-tagged tasks
-that route to the same agent; singleton for everything else). Dispatch each
-parallel run in ONE assistant message via background subagents (or as an Agent
-Team when `AGENT_TEAMS_AVAILABLE=true`). Sequential runs dispatch one
-foreground agent at a time. Safety net: after every parallel run, run
-TYPECHECK + UNIT_TEST; on regression, fall back to serial re-run.
+Read [Bounded Execution and Verification](./execution-efficiency.md) before
+partitioning; it owns metadata validation, budgets, and result reconciliation.
 
 ##### Step 3a: Partition The Tasks (runner helper)
 
-The partition is a deterministic function of `tasks.md`, so the runner owns it.
-Invoke runner helper `partition-phase7-tasks` once on entry to Step 3, before
-the first dispatch, and read the runs out of its stdout JSON:
+Use `validate-task-execution` after Tasks and whenever task definitions change,
+including Converge or review appends. Reconcile the sidecar through the Tasks
+producer before dispatch; do not change upstream Converge. Then invoke:
 
 ```text
 resolved_python -m speckit_pro_runner < request.json
@@ -2418,203 +2424,98 @@ request.json:
     "tasks_file": "specs/<feature>/tasks.md",
     "wave_size": <SUBAGENT_WAVE_SIZE>,
     "project_agent_name": "<PROJECT_IMPLEMENTATION_AGENT>",
-    "project_agent_keywords": ["<keyword>", "..."]
+    "project_agent_keywords": ["<keyword>", "..."],
+    "task_execution_required": <true for metadata-producing workflows>,
+    "completed_tasks": ["<parent-reconciled completed ID>", "..."]
   }
 }
 ```
 
-`resolved_python` is the Python 3.11+ interpreter resolved by the installed
-runtime contract, not a hardcoded interpreter name. Pass `SUBAGENT_WAVE_SIZE`
-from the Step 0.6 runtime record explicitly; the helper falls back to the
-conservative default of 4 when the field is absent. Pass
-`project_agent_name` and `project_agent_keywords` from Step 0.10; omit both when
-the project has no implementation agent of its own.
+Use the resolved Python 3.11+ interpreter and Step 0 routing/concurrency inputs.
+Omit project-agent fields when no project agent exists. Invalid/stale metadata,
+duplicate IDs, cycles, unsafe ownership, or a missing required sidecar stop
+dispatch; never dispatch a partial partition. Metadata-aware output provides
+`batches` and `waves` of batch IDs; legacy `runs` are consumed as singletons.
+The helper retains existing agent routing and phase grouping. Do not hand
+reconstruct either routing or scheduling from prose.
 
-Stdout JSON carries `runs`, an ordered list. Each run has `kind`
-(`parallel` or `singleton`), `agent`, `group` (the phase-group heading), and
-`tasks` (task IDs in `tasks.md` order); a parallel run also has `waves`, its
-task IDs split into dispatch-sized groups. Runner status `ok` means the
-partition is usable. Exit 1 with a non-empty `errors` array means `tasks.md` has
-a duplicate or malformed task ID: fix the task list, do not dispatch a partial
-partition. `input_error` is the usage path for a missing or unreadable
-`tasks.md` or an out-of-range setting.
-
-**The ten rules the helper applies.** They are the contract for its output, and
-they are what a reader should check the helper against:
-
-1. Tasks are visited in `tasks.md` order, and that order is preserved
-   everywhere downstream: inside a run, inside a wave, and across runs.
-2. A task joins the open parallel run only when it carries `[P]` **and** routes
-   to the same agent as that run.
-3. A task that lacks `[P]`, or that routes to a different agent, closes the
-   open parallel run. A task without `[P]` becomes a singleton run; a `[P]`
-   task opens a new parallel run.
-4. A phase-group heading closes the open parallel run. No run straddles two
-   groups, because the orchestrator opens and closes one task entry per group.
-5. A parallel run holding fewer than two tasks degrades to a singleton; there is
-   nothing to run in parallel.
-6. Each parallel run is split into order-preserving waves no larger than
-   `wave_size`.
-7. Routing takes the first match, in this order: (a) the project
-   implementation agent when a project keyword matches, (b)
-   `speckit-pro:implement-executor` for `test`, `contract test`, `unit test`, or
-   `integration`, (c) `speckit-pro:domain-researcher` for `research`,
-   `investigate`, or `explore API`, (d) `orchestrator-direct` when the
-   description's leading verb is `verify`, `run`, `check`, `build`, or `lint`,
-   (e) `speckit-pro:implement-executor` as the fallback. Branch (d) is
-   verification-only work, which is why it reads the leading verb rather than
-   the whole description; rule 8 says what that buys.
-8. Inline code spans are removed from the description before matching, then
-   matching is case-insensitive and whole-word over what remains. Whole-word
-   keeps `test` off `latest` and still lets it match inside a bare
-   `src/parser.test.ts`. Dropping code spans keeps a backticked helper or file
-   name from routing the task: a task list writes those as identifiers, not as
-   words about the work, so "Port and register the `check-prerequisites`
-   helper" is implementation work and not a `check` for the orchestrator.
-   Branches (a) through (c) match anywhere in the description. Branch (d)
-   matches the leading verb alone, and markdown emphasis around that verb does
-   not hide it. The reason is that `run`, `check` and `build` are ordinary
-   words everywhere else in a task list, so matching them anywhere sent
-   implementation work to `orchestrator-direct`, the one route that dispatches
-   no agent and injects no TDD protocol: "Add the required
-   validate-release-note check (workflow)" and "Register the helper in the
-   dispatch table and check the manifest" both landed there. At the head,
-   `build` reads both ways
-   and verification wins it. An author who means implementation opens with
-   `Implement`, `Add`, or `Create`.
-9. Branch (a) applies only when the request carries both a project agent name
-   and at least one keyword that matches. Missing either one falls through to
-   (b).
-10. A duplicate or malformed task ID fails the partition rather than
-    partitioning around it, so a task list that two runs would disagree about is
-    never dispatched.
-
-##### Step 3b: Execute Each Run
+##### Step 3b: Execute Each Batch
 
 ```text
-Initialize COMPLETED_TASKS = {}
+Recover COMPLETED_TASKS from consumed results and verified effects.
+Call task-results action=start before dispatch to freeze the original partition
+in the feature's named result journal; follow the shared exact input contract.
+Retain partition_sha256 from the original parent start result independently of
+the worker-owned journal. Pass it as expected_partition_sha256 on every later
+start, inspect, or record; never reconstruct it from the journal's current plan.
+On resume call task-results action=inspect and reconcile retained complete and
+unfinished results before selecting work; never reset batch IDs from checkboxes.
+For each dependency-ready wave from the helper:
+  Check execution-control status and reserve each batch before dispatch.
+  For implementation/project-agent batches, dispatch one native Agent with TDD.
+  For domain-researcher batches, dispatch the routed Agent without TDD.
+  For orchestrator-direct batches, execute the assigned verification in the
+  parent without an Agent; use validated proof reuse when eligible.
+  Count native agents against SUBAGENT_WAVE_SIZE.
+  Named teammates are allowed only when AGENT_TEAMS_AVAILABLE; otherwise use
+  background Agent calls without names for parallel work, foreground calls
+  with `run_in_background: false` for one.
+  Each worker executes its at-most-four task IDs sequentially.
+  Consume actual per-task results, not idle/liveness signals.
+  Teammates MUST send each complete Task Result block to the lead.
+  Call task-results action=record with every frozen task's full result block
+  and independently captured parent native_observations before marking tasks
+  complete. A journal checkpoint or invalid record does not authorize replay.
+  Append each task's implementation-notes entry on result arrival.
+  For a team, request graceful shutdown after every report is received and
+  confirm owned cleanup before starting another team. Idle is not a result.
+  Reconcile partial results; schedule only proven unfinished work.
+  Missing/unknown effects permit one read-only reconciliation, not relaunch.
+  Record execution-control completion for each dispatch.
 
-For each phase group in the helper's runs (grouped by run.group):
-  TaskUpdate: "<Phase 7: group name>" → in_progress
-
-  For each run in that group's runs:
-    if run.kind == "parallel":
-      For each wave in run.waves:
-      if AGENT_TEAMS_AVAILABLE:
-        # Path A: named Agent calls become teammates in an eligible
-        # interactive team-enabled session.
-        Spawn one Agent teammate per task in the wave, using one stable
-        team_name for the wave and one unique name per teammate. Do not invoke
-        removed legacy team-management tools.
-        Each teammate claims one [P] task and runs it with the
-        Agent prompt template below, plus one Teams-only line:
-        each teammate MUST send its complete
-        `## Task Result: <TASK_ID>` block to the lead when its
-        task completes. The team's shared mailbox
-        lets teammates coordinate ("I'm changing the auth
-        interface, heads up").
-        Append each teammate's entry as that report message
-        arrives, without waiting for the rest of the run, and
-        never on a bare idle or liveness notification.
-        Only then wait for all teammates to complete.
-        Request graceful teammate shutdown after every report is received;
-        Claude Code owns team cleanup. Start no second team until shutdown is
-        confirmed.
-      else:
-        # Path B: spawn all [P] tasks in ONE message, background
-        For each task in the wave:
-          Agent(
-            subagent_type: run.agent,
-            run_in_background: true,
-            description: "SPEC-XXX <task-id> [P] <brief>",
-            prompt: <task prompt — see Step 3c>
-          )
-        # All N tasks dispatched in ONE assistant message
-        # Omit name so a normal subagent cannot be promoted to a teammate.
-        # All agents share the current checkout and must touch only their
-        # disjoint declared ownership.
-        Wait for ALL to complete.
-        Each background subagent's completion arrives on its own
-        turn; append that task's entry then, without waiting for
-        the rest of the run.
-
-      # Safety net for either path: verify no regression
-      # (every arrived attempt's entry is already appended by now)
-      Run Command("<TYPECHECK> && <UNIT_TEST>") in the orchestrator.
-      If FAIL:
-        Log regression to workflow file.
-        Re-run the tasks SERIALLY (one foreground agent each):
-        for task in run.tasks:
-          Agent(subagent_type: run.agent, ..., prompt: ...)
-          On that result, append a further entry under the same
-          task ID; the earlier entry stays exactly as written.
-        After serial re-run, run TYPECHECK + UNIT_TEST again.
-        If still failing, surface to user.
-
-    else:
-      # Singleton run: run.tasks holds exactly one task ID and
-      # run.agent is the agent rule 7 routed it to.
-
-      All five routing branches append an entry; the researcher
-      and orchestrator-direct branches emit no task-result block,
-      so their entries record None.
-
-      Foreground dispatch: Agent(..., prompt: ...)
-      Wait for result.
-      Append this task's entry on the turn that result arrives,
-      before the next dispatch.
-
-  # Step 3c: Agent prompt template (used for parallel + singleton)
-  Agent(
-    subagent_type: "<run.agent>",
-    run_in_background: true if part of a [P] parallel run else omitted,
-    description: "SPEC-XXX <task-id> <brief>",
-    prompt: """
-      <tdd_protocol>
-      <TDD_PROTOCOL contents>
-      </tdd_protocol>
-
-      PROJECT_COMMANDS:
-        BUILD: <cmd>  TYPECHECK: <cmd>  LINT: <cmd>
-        UNIT_TEST: <cmd>  INTEGRATION_TEST: <cmd>
-        SINGLE_FILE_TEST: <cmd>
-        SINGLE_FILE_INTEGRATION: <cmd>
-        COMPLEXITY: <cmd or N/A>  DEPENDENCY_RULES: <cmd or N/A>
-
-      <if PRESET_CONVENTIONS>
-      PRESET_CONVENTIONS: ...
-      </if>
-
-      COMPLETED_TASKS:
-        <structured list of prior task results>
-
-      Your task:
-      ---
-      <exact task description from tasks.md>
-      ---
-    """
-  )
-
-  # Step 3d: ACCUMULATE context
-  COMPLETED_TASKS[T00X] = {
-    files: [paths created/modified],
-    tests: N,
-    status: "GREEN" | "RED" | "error"
-  }
-
-  Phase-group verification (orchestrator-direct):
-    Command(BUILD) && Command(TYPECHECK) && Command(LINT) &&
-    Command(UNIT_TEST) &&
-    Command(COMPLEXITY) && Command(DEPENDENCY_RULES)
-      with {paths} = source files this group changed (populated slots only);
-      when that list is empty, skip COMPLEXITY and record
-      `n/a: no source files changed` for it; DEPENDENCY_RULES
-      takes no {paths} and still runs
-    If any fail → dispatch fix agent, re-run. A populated
-    quality-gate slot failing blocks like a red test.
-
-  TaskUpdate: "<Phase 7: group name>" → completed
+At each completed capability group:
+  Call task-results action=inspect and reconcile every required task result.
+  Run its focused behavioral tests and one independent requirements review.
+  Reserve any localized corrective work by stable failure invariant.
+  Do not replay an entire wave or rerun every full-suite command.
+  Mark a group complete only after every task result and required proof exists.
 ```
+
+A group review must identify requirement-linked defects at every severity,
+security/authorization problems, and regression risk. Treat naming/style
+suggestions separately; they do not require another repair/review cycle.
+Research a vendor claim using relevant official documentation only when needed;
+reuse still-current evidence and do not repeat generic web/code/history passes.
+
+##### Step 3c: Agent Prompt Template
+
+```text
+Agent(
+  subagent_type: "<batch.agent>",
+  description: "SPEC-XXX <batch.id> <task IDs>",
+  run_in_background: <false for a sequential dispatch; true only for an intentional parallel wave>,
+  prompt: """
+    <if implementation/project-agent route>
+    <tdd_protocol><TDD_PROTOCOL contents></tdd_protocol>
+    </if>
+    PROJECT_COMMANDS: <discovered commands, including focused tests>
+    PRESET_CONVENTIONS: <when configured>
+    COMPLETED_TASKS: <relevant verified prior task results>
+    EXECUTION_RESERVATION: <parent-issued reservation and remaining limits>
+    BATCH: <id, ordered task IDs, capability_group, owns, tdd_units>
+    Your tasks:
+    <exact assigned descriptions and per-task execution metadata>
+    Execute sequentially within declared ownership. Return a separate
+    ## Task Result: <TASK_ID> for every ID, including unfinished work.
+  """
+)
+```
+
+Load shared context once per batch. Preserve the existing research and
+orchestrator-direct routes; only implementation routes receive TDD. Related
+test/implementation checkboxes share one closed `tdd_unit`; a test-only
+checkbox never independently claims GREEN. On a failed focused check, diagnose
+and repair only its affected dependency closure within the shared budget.
 
 #### Never Yield With Nothing In Flight
 
@@ -2670,8 +2571,7 @@ reported text across those entries, or repeat the shared text under each.
 that attempt's own result reaches the orchestrator, before dispatching further
 work. A member of a parallel run does not wait for the rest of its run: the
 platform delivers each worker's completion individually, so the entry is written
-when that worker reports, not when the run reaches the TYPECHECK and UNIT_TEST
-safety net. Never batched to phase end, and never deferred to a run boundary.
+when that worker reports, not at a wave verification boundary. Never batched to phase end, and never deferred to a run boundary.
 Where several results do reach the orchestrator on the same turn, each still
 gets its own entry on that turn, in the order they are presented.
 
@@ -2682,7 +2582,7 @@ and double-counts the attempt once the worker is woken and finishes.
 
 **Additive only.** No entry already written is rewritten, reordered, or removed,
 and the record is never read back to update a counter or to find a previous
-entry. The serial re-run after a parallel regression appends a further entry
+entry. A budget-authorized localized repair appends a further entry
 under the same task ID and leaves the earlier one exactly as written; two
 entries sharing a task ID are correct history, not a defect. Document order is
 append order, so position is the record's only ordering signal, and where two
@@ -2706,10 +2606,16 @@ After the producing implementation tests, run the selected `final` formal
 checkpoint with the state mirror per [Selected formal checkpoints](formal-methods.md#later-planning-implementation-and-closeout).
 G7 requires current evidence; model-and-trace selections also require trace checks.
 
-After all phase groups complete:
+After all phase groups and producing artifact changes complete, use the shared
+`execute-verification` / `validate-execution-record` contract. G7 and Post reuse
+only independently validated native producer evidence from this final snapshot.
+For Docker v2, follow the shared qualification contract in
+[Bounded Execution and Verification](execution-efficiency.md#required-proof-once-per-unchanged-snapshot).
+The execution result itself never authorizes reuse; retain its genuine native
+observation for separate current-input validation at both G7 and Post.
 
 ```text
-Run FULL_VERIFY:
+Execute required PROJECT_COMMANDS slots once:
   Command(BUILD) && Command(TYPECHECK) && Command(LINT) &&
   Command(UNIT_TEST) && Command(INTEGRATION_TEST)
 Then every populated quality-gate slot on the whole diff:
@@ -2725,7 +2631,7 @@ When MUTATION is populated, run the hardener once per spec between the
 MUTATION run and its block decision, per
 [Hardener Delegation](./hardener-delegation.md): delegate a tests-only
 loop to local Qwen when `qwen_health` is good, else run it on the primary
-model; stop at the floor or the iteration cap; record the outcome on the
+model; stop at the floor or the shared corrective/time ceiling; record the outcome on the
 Quality Gates table's `Hardener` line. Only after the hardener records its
 ending does a still-failing MUTATION block.
 
@@ -2769,7 +2675,7 @@ one research task.
 **Commit:**
 `git add -A && git commit -m "feat(SPEC-XXX): implement phase"`
 
-**After G7 passes:** Run Integration/E2E Test Verification,
+**After G7 passes:** Validate/reuse Integration/E2E proof,
 then execute PR Creation Protocol (see below).
 
 ### Phase-Gate: Spec-MOC Navigation Regeneration
@@ -2844,9 +2750,9 @@ regressions from other specs.
    `Glob("tests/integration/*<spec-name>*")`
 2. If missing → spawn implement-executor to create them
    (the Implement phase failed to meet this requirement)
-3. Run the FULL integration suite (all specs, not just new):
+3. Validate/reuse final integration evidence; if ineligible run the FULL suite:
    `Command("<INTEGRATION_TEST command>")`
-4. Fix any failures (max 2 attempts)
+4. Reserve localized repairs against the shared execution-control ledger
 5. Record results in workflow file
 
 ## Extension Hook Events

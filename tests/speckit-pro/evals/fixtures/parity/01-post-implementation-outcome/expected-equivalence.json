@@ -1,0 +1,65 @@
+{
+  "schema": "speckit.layer7.expected-equivalence.v1",
+  "fixture_id": "01-post-implementation-outcome",
+  "description": "Compares independently correct post-implementation reports after each native workflow run.",
+  "compare": [
+    {
+      "field": "outcome.status",
+      "source": "artifacts/post-implementation-report.md",
+      "section_selector": "## Outcome",
+      "extractor": "table_column:Status",
+      "tolerance_key": "outcome.status"
+    },
+    {
+      "field": "outcome.decision",
+      "source": "artifacts/post-implementation-report.md",
+      "section_selector": "## Outcome",
+      "extractor": "table_column:Decision",
+      "tolerance_key": "outcome.decision"
+    },
+    {
+      "field": "outcome.evidence",
+      "source": "artifacts/post-implementation-report.md",
+      "section_selector": "## Outcome",
+      "extractor": "table_column:Evidence",
+      "tolerance_key": "outcome.evidence"
+    },
+    {
+      "field": "routing.atomicity_route",
+      "source": "artifacts/post-implementation-report.md",
+      "section_selector": "## Routing",
+      "extractor": "table_column:Atomicity Route",
+      "tolerance_key": "routing.atomicity_route"
+    },
+    {
+      "field": "routing.layer_status",
+      "source": "artifacts/post-implementation-report.md",
+      "section_selector": "## Routing",
+      "extractor": "table_column:Layer Status",
+      "tolerance_key": "routing.layer_status"
+    },
+    {
+      "field": "routing.increment_count",
+      "source": "artifacts/post-implementation-report.md",
+      "section_selector": "## Routing",
+      "extractor": "table_column:Increment Count",
+      "tolerance_key": "routing.increment_count"
+    },
+    {
+      "field": "verification.command",
+      "source": "artifacts/post-implementation-report.md",
+      "section_selector": "## Verification Evidence",
+      "extractor": "table_column:Command",
+      "tolerance_key": "verification.command"
+    },
+    {
+      "field": "verification.status",
+      "source": "artifacts/post-implementation-report.md",
+      "section_selector": "## Verification Evidence",
+      "extractor": "table_column:Status",
+      "tolerance_key": "verification.status"
+    }
+  ],
+  "fail_fast": false,
+  "report_format": "field-level-diff"
+}

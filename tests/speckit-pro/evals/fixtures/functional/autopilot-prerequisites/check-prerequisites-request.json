@@ -1,0 +1,10 @@
+{
+  "schema_version": "1.0",
+  "request_id": "check-prerequisites",
+  "helper_id": "check-prerequisites",
+  "operation": "check-prerequisites",
+  "mode": "read_only",
+  "inputs": {
+    "workflow_file": "docs/ai/specs/.process/SPEC-805-workflow.md"
+  }
+}

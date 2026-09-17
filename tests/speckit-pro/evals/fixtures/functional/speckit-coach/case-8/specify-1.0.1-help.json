@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "specify_version": "1.0.1",
+  "observed_at": "2026-09-06T13:27:37.668123+00:00",
+  "executable": "specify",
+  "executable_sha256": "2692accd323344f8619c8c1787cd12eecde88fa40b70e10f3ccfdcd333628c40",
+  "observation_scope": "Immutable help captured from the installed Specify CLI 1.0.1. Project settings and extension manifests in this fixture are synthetic; this capture does not establish their live installation or compatibility with other CLI versions.",
+  "commands": [
+    {
+      "arguments": [
+        "--version"
+      ],
+      "exit_code": 0,
+      "stdout": "specify 1.0.1\n",
+      "stderr": "",
+      "stdout_sha256": "2b061e889959a1321aed476a6f08a703fb9cf781bcab3c6c5ee9863bae52a782",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "arguments": [
+        "--help"
+      ],
+      "exit_code": 0,
+      "stdout": "              ███████╗██████╗ ███████╗ ██████╗██╗███████╗██╗   ██╗              \n              ██╔════╝██╔══██╗██╔════╝██╔════╝██║██╔════╝╚██╗ ██╔╝              \n              ███████╗██████╔╝█████╗  ██║     ██║█████╗   ╚████╔╝               \n              ╚════██║██╔═══╝ ██╔══╝  ██║     ██║██╔══╝    ╚██╔╝                \n              ███████║██║     ███████╗╚██████╗██║██║        ██║                 \n              ╚══════╝╚═╝     ╚══════╝ ╚═════╝╚═╝╚═╝        ╚═╝                 \n                                                                                \n               GitHub Spec Kit - Spec-Driven Development Toolkit                \n\n                                                                                \n Usage: specify [OPTIONS] COMMAND [ARGS]...                                     \n                                                                                \n Setup tool for Specify spec-driven development projects                        \n                                                                                \n╭─ Options ────────────────────────────────────────────────────────────────────╮\n│ --version  -V        Show version and exit.                                  │\n│ --help               Show this message and exit.                             │\n╰──────────────────────────────────────────────────────────────────────────────╯\n╭─ Commands ───────────────────────────────────────────────────────────────────╮\n│ init         Initialize a new Specify project.                               │\n│ check        Check that all required tools are installed.                    │\n│ version      Display version and system information.                         │\n│ self         Manage the specify CLI itself: check for newer releases,        │\n│              preview upgrades with --dry-run, and upgrade in place.          │\n│ extension    Manage spec-kit extensions                                      │\n│ integration  Manage coding agent integrations                                │\n│ event        Manage and execute event-driven commands                        │\n│ preset       Manage spec-kit presets                                         │\n│ bundle       Discover, install, and author Spec Kit bundles                  │\n│ workflow     Manage and run automation workflows                             │\n╰──────────────────────────────────────────────────────────────────────────────╯\n\n",
+      "stderr": "",
+      "stdout_sha256": "a03f0ae00f4b92636c82ad464b1a36fca87eb587b117f8f47aa390ee47c8dc6d",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "arguments": [
+        "extension",
+        "--help"
+      ],
+      "exit_code": 0,
+      "stdout": "                                                                                \n Usage: specify extension [OPTIONS] COMMAND [ARGS]...                           \n                                                                                \n Manage spec-kit extensions                                                     \n                                                                                \n╭─ Options ────────────────────────────────────────────────────────────────────╮\n│ --help          Show this message and exit.                                  │\n╰──────────────────────────────────────────────────────────────────────────────╯\n╭─ Commands ───────────────────────────────────────────────────────────────────╮\n│ list          List installed extensions.                                     │\n│ add           Install an extension.                                          │\n│ remove        Uninstall an extension.                                        │\n│ search        Search for available extensions in catalog.                    │\n│ info          Show detailed information about an extension.                  │\n│ update        Update extension(s) to latest version.                         │\n│ enable        Enable a disabled extension.                                   │\n│ disable       Disable an extension without removing it.                      │\n│ set-priority  Set the resolution priority of an installed extension.         │\n│ catalog       Manage extension catalogs.                                     │\n╰──────────────────────────────────────────────────────────────────────────────╯\n\n",
+      "stderr": "",
+      "stdout_sha256": "bf9aebfba9dfc63a6ae67768fad9872fd17956fa41e3e7c0d4b9a5e7d5c09dfb",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "arguments": [
+        "extension",
+        "add",
+        "--help"
+      ],
+      "exit_code": 0,
+      "stdout": "                                                                                \n Usage: specify extension add [OPTIONS] {extension}                             \n                                                                                \n Install an extension.                                                          \n                                                                                \n╭─ Arguments ──────────────────────────────────────────────────────────────────╮\n│ *    extension      <str>  Extension name or path [required]                 │\n╰──────────────────────────────────────────────────────────────────────────────╯\n╭─ Options ────────────────────────────────────────────────────────────────────╮\n│ --dev                    Install from local directory                        │\n│ --from            <str>  Install from custom URL                             │\n│ --force                  Overwrite if already installed                      │\n│ --priority        <int>  Resolution priority (lower = higher precedence,     │\n│                          default 10)                                         │\n│                          [default: 10]                                       │\n│ --help                   Show this message and exit.                         │\n╰──────────────────────────────────────────────────────────────────────────────╯\n\n",
+      "stderr": "",
+      "stdout_sha256": "ef366c1cadc78a2dc7486b75a9c6917df035474a2df759205f84e89ced4cbf9c",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ]
+}

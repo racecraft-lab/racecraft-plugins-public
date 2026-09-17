@@ -1921,7 +1921,7 @@ class WorkflowAndEvalContractTests(unittest.TestCase):
     def test_operator_live_smoke_covers_both_exact_clis_with_one_fixture(self) -> None:
         script = (
             REPO_ROOT
-            / "tests/speckit-pro/layer7-integration/run-feedback-sweep-isolation-smoke.py"
+            / "tests/speckit-pro/layer6-integration/run-feedback-sweep-isolation-smoke.py"
         )
         self.assertTrue(script.is_file())
         spec = importlib.util.spec_from_file_location("feedback_sweep_live_smoke", script)

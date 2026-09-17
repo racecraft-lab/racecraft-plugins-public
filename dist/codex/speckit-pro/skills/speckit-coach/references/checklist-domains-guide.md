@@ -24,7 +24,21 @@ Checklists test whether your **specifications are complete, clear, and consisten
 
 ### Step 1: Extract Signals from Spec and Plan
 
-Read `spec.md` and `plan.md` and identify which of these signal categories are present:
+Find and read the feature's `spec.md` and, when present, `plan.md` before
+recommending project-specific domains. Keep this discovery independent of
+optional preset or extension probes: a missing `.specify/` directory or failed
+configuration command does not prove the feature artifacts are absent. If a
+probe fails, still check the project root and feature directories for those
+artifacts. Base the recommendation on details actually read, not just the
+request's topic. If no feature artifacts are available, label any suggestions
+as provisional and based only on the user's description.
+
+Read each discovered feature artifact completely in a separate operation, and
+check that read's result before recommending domains. Do not append optional
+configuration probes to the read or use a fixed line preview as the full read:
+their errors or truncation can conceal whether the artifact was obtained.
+
+Identify which of these signal categories are present:
 
 | Signal in Spec/Plan | Indicates Domain | Priority |
 |---|---|---|

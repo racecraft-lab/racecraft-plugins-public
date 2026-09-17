@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Focused Layer-4 contracts for the Python Layer-8 parity runner."""
+"""Focused Layer-4 contracts for the Python Layer-7 parity runner."""
 
 from __future__ import annotations
 
@@ -21,8 +21,8 @@ from unittest.mock import patch
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 TESTS_ROOT = REPO_ROOT / "tests" / "speckit-pro"
-LAYER8 = TESTS_ROOT / "layer8-parity"
-RUNNER = LAYER8 / "run-parity-fixtures.py"
+LAYER7 = TESTS_ROOT / "layer7-parity"
+RUNNER = LAYER7 / "run-parity-fixtures.py"
 SHARED_LIB = TESTS_ROOT / "lib"
 if str(SHARED_LIB) not in sys.path:
     sys.path.insert(0, str(SHARED_LIB))
@@ -31,10 +31,10 @@ from test_result import run_counted  # noqa: E402
 
 
 CURRENT_INVENTORY = [
-    "Layer-8 runner module imports",
-    "Layer-8 runner source has no shell=True",
-    "Layer-8 runner source has no os.system",
-    "tracked Layer-8 tree contains no shell scripts",
+    "Layer-7 runner module imports",
+    "Layer-7 runner source has no shell=True",
+    "Layer-7 runner source has no os.system",
+    "tracked Layer-7 tree contains no shell scripts",
     "run_path subprocess call uses argv variable",
     "run_path subprocess call disables shell",
     "help exits zero and prints usage",
@@ -110,7 +110,7 @@ LIVE_TOLERANCES = {
 
 
 def import_runner() -> ModuleType:
-    spec = importlib.util.spec_from_file_location("layer8_runner", RUNNER)
+    spec = importlib.util.spec_from_file_location("layer7_runner", RUNNER)
     module = importlib.util.module_from_spec(spec)
     assert spec.loader is not None
     sys.modules[spec.name] = module
@@ -150,18 +150,18 @@ def make_fixture(
         write_json(
             fixture / f"env-{mode}.json",
             {
-                "schema": "speckit.layer8.env.v1",
+                "schema": "speckit.layer7.env.v1",
                 "mode": mode,
                 "environment": {
-                    "set": {"L8_MODE": mode},
-                    "unset": ["L8_SHOULD_BE_UNSET"],
+                    "set": {"L7_MODE": mode},
+                    "unset": ["L7_SHOULD_BE_UNSET"],
                 },
             },
         )
     write_json(
         fixture / "tolerance.json",
         {
-            "schema": "speckit.layer8.tolerance.v1",
+            "schema": "speckit.layer7.tolerance.v1",
             "fixture_id": name,
             "fields": {
                 key: value | {"rationale": value.get("rationale", "focused unit-test contract")}
@@ -172,7 +172,7 @@ def make_fixture(
     write_json(
         fixture / "expected-equivalence.json",
         {
-            "schema": "speckit.layer8.expected-equivalence.v1",
+            "schema": "speckit.layer7.expected-equivalence.v1",
             "fixture_id": name,
             "compare": compare,
             "fail_fast": fail_fast,
@@ -187,8 +187,8 @@ def fake_claude_run(argv: list[str], **kwargs: object) -> subprocess.CompletedPr
     if not isinstance(child_env, dict):
         raise AssertionError("child environment must be a dictionary")
     cwd = Path(str(kwargs["cwd"]))
-    mode = str(child_env.get("L8_MODE", ""))
-    log_path = Path(str(child_env["L8_STUB_LOG"]))
+    mode = str(child_env.get("L7_MODE", ""))
+    log_path = Path(str(child_env["L7_STUB_LOG"]))
     with log_path.open("a", encoding="utf-8") as log:
         log.write(
             json.dumps(
@@ -199,7 +199,7 @@ def fake_claude_run(argv: list[str], **kwargs: object) -> subprocess.CompletedPr
                     "budget": argv[argv.index("--max-budget-usd") + 1],
                     "cwd": cwd.name,
                     "mode": mode,
-                    "unset_present": "L8_SHOULD_BE_UNSET" in child_env,
+                    "unset_present": "L7_SHOULD_BE_UNSET" in child_env,
                 },
                 sort_keys=True,
             )
@@ -275,7 +275,7 @@ def call_shell_keyword_is_false(call: ast.Call) -> bool:
     return False
 
 
-class Layer8RunnerTests(unittest.TestCase):
+class Layer7RunnerTests(unittest.TestCase):
     def test_required_invariant_negative_canaries(self) -> None:
         runner = import_runner()
         with tempfile.TemporaryDirectory() as temporary:
@@ -330,13 +330,13 @@ class Layer8RunnerTests(unittest.TestCase):
                 self.assertFalse(valid)
                 self.assertEqual(counts.failed, 1)
 
-    def test_layer8_runner_contract(self) -> None:
+    def test_layer7_runner_contract(self) -> None:
         runner = import_runner()
         source = RUNNER.read_text(encoding="utf-8")
         tree = ast.parse(source)
         run_calls = subprocess_run_calls(tree)
         tracked_shells = subprocess.run(
-            ["git", "ls-files", "--", ":(glob)tests/speckit-pro/layer8-parity/**/*.sh"],
+            ["git", "ls-files", "--", ":(glob)tests/speckit-pro/layer7-parity/**/*.sh"],
             cwd=REPO_ROOT,
             text=True,
             capture_output=True,
@@ -358,9 +358,9 @@ class Layer8RunnerTests(unittest.TestCase):
             out_root = root / "out"
             log_path = root / "stub-calls.jsonl"
             env = {
-                "L8_OUT": str(out_root),
-                "L8_STUB_LOG": str(log_path),
-                "L8_SHOULD_BE_UNSET": "inherited-value",
+                "L7_OUT": str(out_root),
+                "L7_STUB_LOG": str(log_path),
+                "L7_SHOULD_BE_UNSET": "inherited-value",
             }
             counts = runner.Counts()
             stdout = io.StringIO()
@@ -419,9 +419,9 @@ class Layer8RunnerTests(unittest.TestCase):
                 patch.dict(
                     os.environ,
                     {
-                        "L8_OUT": str(root / "fail-fast-out"),
-                        "L8_STUB_LOG": str(fail_fast_log),
-                        "L8_SHOULD_BE_UNSET": "inherited-value",
+                        "L7_OUT": str(root / "fail-fast-out"),
+                        "L7_STUB_LOG": str(fail_fast_log),
+                        "L7_SHOULD_BE_UNSET": "inherited-value",
                     },
                     clear=False,
                 ),
@@ -442,8 +442,8 @@ class Layer8RunnerTests(unittest.TestCase):
                     "schema": "broken.schema",
                     "mode": "fallback",
                     "environment": {
-                        "set": {"L8_MODE": "fallback"},
-                        "unset": ["L8_SHOULD_BE_UNSET"],
+                        "set": {"L7_MODE": "fallback"},
+                        "unset": ["L7_SHOULD_BE_UNSET"],
                     },
                 },
             )
@@ -570,7 +570,7 @@ class Layer8RunnerTests(unittest.TestCase):
                 (
                     next(names),
                     lambda: self.assertTrue(
-                        help_result.returncode == 0 and "Layer 8 - Parity Fixtures Runner" in help_result.stdout
+                        help_result.returncode == 0 and "Layer 7 - Parity Fixtures Runner" in help_result.stdout
                     ),
                 ),
                 (
@@ -723,5 +723,5 @@ class Layer8RunnerTests(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    suite = unittest.defaultTestLoader.loadTestsFromTestCase(Layer8RunnerTests)
+    suite = unittest.defaultTestLoader.loadTestsFromTestCase(Layer7RunnerTests)
     raise SystemExit(run_counted(suite, label="test-parity-runner"))

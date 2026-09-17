@@ -51,7 +51,7 @@ Python runtime migration and are archival evidence, not current guidance.
 
 ## Eval fixture integrity
 
-Layer 2, 3, and 7 fixture files contain query strings consumed by Python eval and
+Layer 2, 3, and 6 fixture files contain query strings consumed by Python eval and
 integration runners. A contributor with write access could add prompt-injection
 content that changes outcomes or exposes context.
 
@@ -61,7 +61,7 @@ content that changes outcomes or exposes context.
   instructions require explicit security review.
 - Keep transcript fixtures free of credentials, raw personal paths, and other
   secrets even when a scrubber is expected to run later.
-- `tests/speckit-pro/layer7-integration/scrub-transcript.py` compiles
+- `tests/speckit-pro/layer6-integration/scrub-transcript.py` compiles
   `TRANSCRIPT_SCRUB_EXTRA_REGEX` with Python `re`. Invalid or adversarial
   expressions can abort processing or remove assertion data, so the value stays
   untrusted outside controlled test runs.

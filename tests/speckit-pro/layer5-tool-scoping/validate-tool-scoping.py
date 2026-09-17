@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import re
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -57,17 +58,25 @@ UNTRUSTED_INPUT_ALLOWLISTS = {
         "mcp__plugin_speckit-pro_sweep-broker__submit_result",
     },
 }
-TERMINAL_WORKERS = ("implement-executor", "uat-runbook-author", "formal-model-author")
+TERMINAL_WORKERS = ("artifact-author", "implement-executor", "uat-runbook-author", "formal-model-author")
+AUTHOR_WORKERS = ("artifact-author", "uat-runbook-author")
 SKILL_DRIVEN_EXECUTORS = ("phase-executor", "analyze-executor", "checklist-executor")
-CODEX_READ_ONLY_ROLES = ("codebase-analyst", "spec-context-analyst", "domain-researcher", "clarify-executor")
-CODEX_WRITE_ROLES = (
-    "checklist-executor",
-    "analyze-executor",
-    "implement-executor",
-    "phase-executor",
-    "uat-runbook-author",
-    "formal-model-author",
-)
+CODEX_SANDBOX_POLICY = {
+    "analyze-executor": "workspace-write",
+    "artifact-author": "workspace-write",
+    "autopilot-fast-helper": "read-only",
+    "checklist-executor": "workspace-write",
+    "clarify-executor": "read-only",
+    "codebase-analyst": "read-only",
+    "domain-researcher": "read-only",
+    "formal-model-author": "workspace-write",
+    "implement-executor": "workspace-write",
+    "phase-executor": "workspace-write",
+    "spec-context-analyst": "read-only",
+    "uat-runbook-author": "workspace-write",
+}
+CODEX_READ_ONLY_ROLES = tuple(role for role, sandbox in CODEX_SANDBOX_POLICY.items() if sandbox == "read-only")
+CODEX_WRITE_ROLES = tuple(role for role, sandbox in CODEX_SANDBOX_POLICY.items() if sandbox == "workspace-write")
 TEST_METHOD_ORDER = (
     "test_operator_tool_surface_no_tools_allowlist_pinning",
     "test_open_executors_orchestration_capabilities_never_denied",
@@ -76,6 +85,7 @@ TEST_METHOD_ORDER = (
     "test_skill_driven_executors_keep_skill_and_mutation_surface",
     "test_session_shape_metadata",
     "test_codex_agent_sandbox_mode_scoping",
+    "test_codex_agent_sandbox_mode_scoping_rejects_missing_directory",
     "test_named_tool_regression_guard",
     "test_untrusted_input_consumers_pin_read_only_allowlists",
 )
@@ -218,13 +228,14 @@ class ValidateToolScoping(unittest.TestCase):
                 with self.subTest(msg=f"{agent} does NOT deny {tool} (mutating role requires it)"):
                     self.assert_not_denied(denials, tool, agent)
 
-        denials = _disallowed_tools(AGENTS_DIR / "uat-runbook-author.md")
-        for tool in ORCHESTRATION_TOOLS:
-            with self.subTest(msg=f"uat-runbook-author denies {tool} (hyper-focused worker does not fan out)"):
-                self.assert_denied(denials, tool, "uat-runbook-author")
+        for agent in AUTHOR_WORKERS:
+            denials = _disallowed_tools(AGENTS_DIR / f"{agent}.md")
+            for tool in ORCHESTRATION_TOOLS:
+                with self.subTest(msg=f"{agent} denies {tool} (hyper-focused worker does not fan out)"):
+                    self.assert_denied(denials, tool, agent)
 
-        with self.subTest(msg="uat-runbook-author model is sonnet (read-and-synthesize task)"):
-            self.assertEqual("sonnet", _yaml_field(AGENTS_DIR / "uat-runbook-author.md", "model"))
+            with self.subTest(msg=f"{agent} model is sonnet (read-and-synthesize task)"):
+                self.assertEqual("sonnet", _yaml_field(AGENTS_DIR / f"{agent}.md", "model"))
 
     def test_skill_driven_executors_keep_skill_and_mutation_surface(self) -> None:
         for agent in SKILL_DRIVEN_EXECUTORS:
@@ -256,39 +267,38 @@ class ValidateToolScoping(unittest.TestCase):
             self.assertEqual("high", _yaml_field(AGENTS_DIR / "consensus-synthesizer.md", "effort"))
 
     def test_codex_agent_sandbox_mode_scoping(self) -> None:
+        with self.subTest(msg="codex agent directory exists (fail closed)"):
+            self.assertTrue(CODEX_AGENTS_DIR.is_dir(), f"directory not found: {CODEX_AGENTS_DIR}")
         if not CODEX_AGENTS_DIR.is_dir():
             return
 
-        for agent in CODEX_READ_ONLY_ROLES:
+        discovered = tuple(sorted(path.stem for path in CODEX_AGENTS_DIR.glob("*.toml") if path.is_file()))
+        with self.subTest(msg="codex agent roster exactly matches sandbox policy"):
+            self.assertEqual(tuple(sorted(CODEX_SANDBOX_POLICY)), discovered, "missing or unknown Codex sandbox role")
+
+        for agent, expected_sandbox in CODEX_SANDBOX_POLICY.items():
             agent_file = CODEX_AGENTS_DIR / f"{agent}.toml"
+            with self.subTest(msg=f"codex {agent}: TOML file exists"):
+                self.assertTrue(agent_file.is_file(), f"file not found: {agent_file}")
             if not agent_file.is_file():
                 continue
 
-            with self.subTest(msg=f"codex {agent}: sandbox_mode is read-only"):
-                self.assertEqual("read-only", _toml_field(agent_file, "sandbox_mode"), f"{agent} must be read-only")
+            with self.subTest(msg=f"codex {agent}: sandbox_mode is {expected_sandbox}"):
+                self.assertEqual(expected_sandbox, _toml_field(agent_file, "sandbox_mode"), f"{agent} must be {expected_sandbox}")
 
-        agent = "clarify-executor"
-        agent_file = CODEX_AGENTS_DIR / f"{agent}.toml"
-        if agent_file.is_file():
-            with self.subTest(msg=f"codex {agent}: sandbox_mode is read-only"):
-                self.assertEqual("read-only", _toml_field(agent_file, "sandbox_mode"), f"{agent} must be read-only")
+    def test_codex_agent_sandbox_mode_scoping_rejects_missing_directory(self) -> None:
+        module = sys.modules[__name__]
+        original = module.CODEX_AGENTS_DIR
+        with tempfile.TemporaryDirectory() as temporary:
+            module.CODEX_AGENTS_DIR = Path(temporary) / "missing-codex-agents"
+            try:
+                result = unittest.TestResult()
+                ValidateToolScoping("test_codex_agent_sandbox_mode_scoping").run(result)
+            finally:
+                module.CODEX_AGENTS_DIR = original
 
-        agent_file = CODEX_AGENTS_DIR / "autopilot-fast-helper.toml"
-        if agent_file.is_file():
-            with self.subTest(msg="codex autopilot-fast-helper: sandbox_mode is read-only (advisory text-only leaf)"):
-                self.assertEqual(
-                    "read-only",
-                    _toml_field(agent_file, "sandbox_mode"),
-                    "autopilot-fast-helper must be read-only",
-                )
-
-        for agent in CODEX_WRITE_ROLES:
-            agent_file = CODEX_AGENTS_DIR / f"{agent}.toml"
-            if not agent_file.is_file():
-                continue
-
-            with self.subTest(msg=f"codex {agent}: sandbox_mode is workspace-write"):
-                self.assertEqual("workspace-write", _toml_field(agent_file, "sandbox_mode"), f"{agent} must be workspace-write")
+        self.assertFalse(result.wasSuccessful(), "missing Codex agent directory passed sandbox validation")
+        self.assertEqual([], result.errors, "missing directory must fail closed without an unhandled error")
 
     def test_named_tool_regression_guard(self) -> None:
         named_guard_files = [*_claude_agent_files(), *_codex_agent_files()]

@@ -96,7 +96,7 @@ class ValidateSkills(unittest.TestCase):
                 ):
                     self.assertIn(f'`{provenance_class}`', gate)
                 self.assertIn('None can upgrade a constraint', gate)
-                self.assertIn('at most 2 repairs', phase)
+                self.assertIn('shared corrective reservation', phase)
                 self.assertIn('Plan Repair Context', phase)
                 self.assertIn('run `validate-gate` for G3 again', gate)
                 self.assertIn('acknowledgement time is not interchangeable with actual UI-delivery timing', gate)
@@ -242,11 +242,9 @@ class ValidateSkills(unittest.TestCase):
                     self.assertTrue(re.search('^# SpecKit Scaffold Spec$', content, re.MULTILINE) is not None and re.search('^# SpecKit Setup$', content, re.MULTILINE) is None, "expected '# SpecKit Scaffold Spec' heading in skills/speckit-scaffold-spec/SKILL.md")
                 with self.subTest(msg='speckit-scaffold-spec: completion report uses scaffold naming'):
                     self.assertTrue(re.search('^## Scaffold Complete$', content, re.MULTILINE) is not None and re.search('^## Setup Complete$', content, re.MULTILINE) is None, "expected '## Scaffold Complete' report heading in skills/speckit-scaffold-spec/SKILL.md")
-            with self.subTest(msg=f'{skill}: references directory exists if required'):
-                if skill in SKILLS_REQUIRING_REFERENCES:
+            if skill in SKILLS_REQUIRING_REFERENCES:
+                with self.subTest(msg=f'{skill}: references directory exists if required'):
                     self.assertTrue((skill_dir / 'references').is_dir(), f"references directory not found at {skill_dir / 'references'}")
-                else:
-                    self.assertTrue(True)
 validate_codex_skills_CODEX_SKILLS_DIR = PLUGIN_ROOT / 'codex-skills'
 validate_codex_skills_SKILLS = ('speckit-archive-cleanup', 'speckit-autopilot', 'speckit-coach', 'speckit-scaffold-spec', 'speckit-status', 'speckit-resolve-pr', 'install', 'speckit-install', 'speckit-upgrade', 'grill-me', 'speckit-prd', 'ubiquitous-language')
 COLLISION_GUARD_SKILLS = ('speckit-archive-cleanup', 'speckit-autopilot', 'speckit-coach', 'grill-me', 'speckit-prd', 'ubiquitous-language')
@@ -363,6 +361,29 @@ class ValidateCodexSkills(unittest.TestCase):
             self.assertIn('parse-consensus-categories', body)
             self.assertNotIn('per the routing table', body)
             self.assertNotIn('codebase-analyst only', body)
+        with self.subTest(msg='speckit-autopilot: maps shared consensus synthesis to the Codex parent session'):
+            self.assertTrue(
+                re.search(r'Shared consensus rounds, analyst routing, decision rules, output formats,\s+artifact edits, and logging remain authoritative\.', phase_execution)
+                and re.search(r'every shared\s+consensus-synthesizer step maps to synthesis in the parent session', phase_execution)
+                and re.search(r'it never\s+dispatches a Codex child role\.', phase_execution)
+                and re.search(r'parent session re-evaluates the fresh analyst result under\s+the shared consensus rules', phase_execution)
+                and re.search(r're-emits the canonical `Pre-Implement Confidence` block', phase_execution),
+                'expected shared consensus behavior to remain authoritative while Codex synthesis stays in the parent session',
+            )
+        with self.subTest(msg='speckit-autopilot: never dispatches a Codex consensus-synthesizer role'):
+            self.assertNotRegex(
+                phase_execution,
+                r'spawn_agent[^\n]*consensus-synthesizer',
+                'Codex has no consensus-synthesizer role; the parent session must synthesize analyst results',
+            )
+        with self.subTest(msg='speckit-autopilot: names built-in default for both general Post tracks'):
+            self.assertTrue(
+                re.search(r'\*\*Track B:\*\* Code Review \(item 13\) — spawn the built-in `default` subagent', post_implementation)
+                and re.search(r'\*\*Track C:\*\* Verify-chain \(items 11 → 12 → 14\) — spawn one built-in `default`\s+subagent without a model or reasoning-effort override', post_implementation),
+                'expected Code Review and Verify-chain to use the documented Codex built-in default role',
+            )
+        with self.subTest(msg='speckit-autopilot: excludes undocumented general-purpose Codex roles'):
+            self.assertNotIn('general-purpose', post_implementation, 'Codex role guidance must use the built-in default role')
         with self.subTest(msg='speckit-autopilot: maps hosted and local Codex follow-up tools'):
             self.assertTrue('followup_task' in runtime_doc and 'send_message' in runtime_doc and ('resume_agent' in runtime_doc) and ('send_input' in runtime_doc), 'expected hosted followup_task/send_message plus local send_input and resume-then-send_input handling')
         with self.subTest(msg='speckit-autopilot: adapts agent cleanup to the exposed Codex surface'):
@@ -398,10 +419,13 @@ class ValidateCodexSkills(unittest.TestCase):
                 and 'resume at the first incomplete Post\n   item. Do not summarize completion from a `Phase 7: Implement Complete`\n   state.' in error_recovery,
                 'expected the Post entrypoint and recovery reference to continue from the first incomplete Post item without a premature completion summary',
             )
-        with self.subTest(msg='speckit-autopilot: blocks final answers while Post items remain incomplete'):
+        with self.subTest(msg='speckit-autopilot: blocks completion but allows honest budget checkpoints'):
             self.assertTrue(
                 '### 3.4 Pre-final completion audit' in body
-                and 'You MUST NOT send a\nfinal response if any `Post:` item is `pending`, `in_progress`, or missing.' in body
+                and 'A completion response is\nforbidden if any `Post:` item is `pending`, `in_progress`, or missing.' in body
+                and 'execution_control.disposition=checkpoint_required' in body
+                and 'run is **not complete**' in body
+                and 'never mark them completed to stop' in body
                 and 'set the first\nincomplete item to `in_progress` in both state stores and continue the\nautopilot loop instead of summarizing.' in body
                 and '`Post: Retrospective` is the final\nPost item; it must be completed or explicitly skipped before the\nautopilot can report completion.' in body,
                 'expected the direct final audit to forbid completion, continue the first incomplete Post item, and require Retrospective',

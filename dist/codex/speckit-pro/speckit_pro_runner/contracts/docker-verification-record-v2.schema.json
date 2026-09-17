@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "docker-verification-record/v2",
+  "title": "Qualified Docker execution closure requiring independent native provenance",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "execution_id", "dispatch_id", "workflow_file", "command_id", "argv", "snapshot_sha256", "inputs_unchanged", "input_snapshot_verified", "post_input_snapshot_verified", "environment_sha256", "configuration", "git_snapshot", "toolchain", "completed", "exit_code", "elapsed_seconds", "stdout_sha256", "stderr_sha256", "evidence_sha256", "event_log_sha256", "execution_closure_sha256", "revalidation_input_sha256", "output_directory", "output_contract", "isolation_mode", "producer"],
+  "properties": {
+    "schema_version": {"const": "docker-verification-record/v2"},
+    "execution_id": {"type": "string", "pattern": "^[0-9a-f]{32}$"},
+    "dispatch_id": {"type": "string", "minLength": 1},
+    "workflow_file": {"type": "string", "minLength": 1},
+    "command_id": {"enum": ["BUILD", "TYPECHECK", "LINT", "UNIT_TEST", "INTEGRATION_TEST", "FULL_VERIFY", "COMPLEXITY", "MUTATION", "DEPENDENCY_RULES"]},
+    "argv": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+    "snapshot_sha256": {"$ref": "#/$defs/sha256"},
+    "inputs_unchanged": {"type": "boolean"},
+    "input_snapshot_verified": {"type": "boolean"},
+    "post_input_snapshot_verified": {"type": "boolean"},
+    "environment_sha256": {"$ref": "#/$defs/sha256"},
+    "configuration": {
+      "type": "object", "additionalProperties": false,
+      "required": ["executable", "endpoint", "base_image", "output_contract", "qualification_profile"],
+      "properties": {
+        "executable": {"type": "string", "pattern": "^/"},
+        "endpoint": {"type": "string", "pattern": "^unix:///"},
+        "base_image": {"type": "string", "pattern": "@sha256:[0-9a-f]{64}$"},
+        "output_contract": {"const": "streams_only"},
+        "qualification_profile": {"const": "docker-qualified/v2"}
+      }
+    },
+    "git_snapshot": {
+      "type": "object", "additionalProperties": false,
+      "required": ["profile", "qualified", "layout", "directories", "directory_modes", "control_files", "snapshot_sha256", "source_binding_sha256", "entry_count", "limitations"],
+      "properties": {
+        "profile": {"const": "git-hermetic-relocated/v2"}, "qualified": {"const": true},
+        "layout": {"enum": ["plain", "linked"]}, "directories": {"type": "object"},
+        "directory_modes": {"type": "object"}, "control_files": {"type": "object"},
+        "snapshot_sha256": {"$ref": "#/$defs/sha256"}, "source_binding_sha256": {"$ref": "#/$defs/sha256"},
+        "entry_count": {"type": "integer", "minimum": 1}, "limitations": {"const": []}
+      }
+    },
+    "toolchain": {
+      "type": "object", "additionalProperties": false,
+      "required": ["kind", "base_reference", "base_image_id", "image_id", "runner_sha256", "cli", "engine", "base_image"],
+      "properties": {
+        "kind": {"const": "docker-image"},
+        "base_reference": {"type": "string", "pattern": "@sha256:[0-9a-f]{64}$"},
+        "base_image_id": {"type": ["string", "null"], "pattern": "^sha256:[0-9a-f]{64}$"},
+        "image_id": {"type": ["string", "null"], "pattern": "^sha256:[0-9a-f]{64}$"},
+        "runner_sha256": {"$ref": "#/$defs/sha256"},
+        "cli": {"type": ["object", "null"]}, "engine": {"type": ["object", "null"]},
+        "base_image": {"type": ["object", "null"]}
+      }
+    },
+    "completed": {"type": "boolean"},
+    "exit_code": {"type": ["integer", "null"]},
+    "elapsed_seconds": {"type": "number", "minimum": 0},
+    "stdout_sha256": {"$ref": "#/$defs/sha256"},
+    "stderr_sha256": {"$ref": "#/$defs/sha256"},
+    "evidence_sha256": {"$ref": "#/$defs/sha256"},
+    "event_log_sha256": {"$ref": "#/$defs/sha256"},
+    "execution_closure_sha256": {"$ref": "#/$defs/sha256"},
+    "revalidation_input_sha256": {"$ref": "#/$defs/sha256"},
+    "output_directory": {"type": "string", "pattern": "^[^/]"},
+    "output_contract": {"const": "streams_only"},
+    "isolation_mode": {"const": "docker_readonly_qualified"},
+    "producer": {"const": "runner-docker-project-command/v2"}
+  },
+  "$defs": {"sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}}
+}

@@ -83,9 +83,12 @@ in Step 0 and
 
 ## Prerequisites — Model
 
-The orchestrator makes gate decisions, synthesizes consensus, and
-manages a 7-phase workflow. Weak-model orchestration cascades into
-expensive rework.
+The orchestrator makes gate decisions, coordinates consensus synthesis, and
+manages a 7-phase workflow. On Claude, it dispatches
+`speckit-pro:consensus-synthesizer` after every analyst round and consumes the
+returned result; on Codex, the parent synthesizes consensus directly. In both
+hosts, the parent owns artifact application and gates. Weak-model orchestration
+cascades into expensive rework.
 
 **Before executing any step**, verify:
 
@@ -103,6 +106,11 @@ the session and never refuses to run.
 The operator owns the session setting; the plugin does not veto it.
 
 ## Execution Rules
+
+At kickoff/resume, read [Bounded Execution and Verification](./references/execution-efficiency.md).
+Initialize/recover its durable execution-control ledger before phase dispatch.
+It owns task metadata, native batching, proof reuse, and the shared repair/time
+ceilings across every phase, nested worker, and Post step.
 
 ### 0. Forbidden skill invocations
 
@@ -126,9 +134,13 @@ pre-workflow human alignment via `/speckit-pro:speckit-scaffold-spec` or
 ### 1. Subagent per phase
 
 For each phase, spawn a **foreground subagent** via the Agent
-tool. The subagent runs the `/speckit-*` command and returns a
-summary. You (the parent) receive the result as a tool call
-response, which keeps your agent loop alive.
+tool with `run_in_background: false`. The subagent runs the
+`/speckit-*` command and returns a summary. You (the parent) receive
+the result as a tool call response, which keeps your agent loop alive.
+Treat async-launch metadata as launch acknowledgement only; collect the
+actual terminal summary through the native result handling before validating
+the gate or advancing the phase. The foreground request is not a host-level
+guarantee.
 
 **Third-party skills:** the same hazard applies when capability discovery
 selects an *installed* skill you invoke via `Skill()` — its completion text
@@ -146,8 +158,8 @@ stays in the subagent's context; the parent receives only a summary.
 | Specify, Plan, Tasks | `speckit-pro:phase-executor` | Heavy reasoning (Specify, Plan); mechanical for Tasks. Single skill invocation, single summary. |
 | Clarify | `speckit-pro:clarify-executor` | Read-only question set; parent answers and edits |
 | Checklist | `speckit-pro:checklist-executor` | Must run checklist AND remediate gaps with research |
-| Analyze | `speckit-pro:analyze-executor` | Must run analysis AND remediate ALL findings with research |
-| Implement | per-task routing | Task-level dispatch: routes each task to best-fit agent with TDD protocol |
+| Analyze | `speckit-pro:analyze-executor` | Resolve required defects at every severity using relevant evidence and the shared repair reservation |
+| Implement | per-task routing | Route tasks with TDD; dispatch validated capability batches or legacy singletons |
 
 Full `Agent(...)` prompt template + per-phase prefixes live in
 [`references/phase-execution.md`](./references/phase-execution.md)
@@ -205,9 +217,13 @@ After EACH Clarify, Checklist, or Analyze executor returns, complete consensus
 before the next prompt. The parent applies accepted Clarify edits; all three
 executors surface remaining items with category tags. For every such item,
 call `parse-consensus-categories`, dispatch exactly the routed analysts in
-host-bounded batches, consume their actual results, synthesize, apply artifact
-edits serially, and append the Consensus Resolution Log. Follow the mandatory
-Round 2, stop, re-evaluation, and Phase 6 confidence-emit contracts in
+host-bounded batches, and consume their actual results. On Claude, after every
+analyst round — including a round with one or two analysts — dispatch
+`speckit-pro:consensus-synthesizer`, await and consume its actual returned
+result, then apply accepted artifact edits serially and run gates in the parent.
+On Codex, synthesize in the parent, which likewise owns artifact application and
+gates. Append the Consensus Resolution Log. Follow the mandatory Round 2, stop,
+re-evaluation, and Phase 6 confidence-emit contracts in
 [`references/consensus-protocol.md`](./references/consensus-protocol.md)
 §Category-Routed Dispatch, §Batched Dispatch, §Phase-Specific Consensus Flows,
 and §Logging.
@@ -399,12 +415,10 @@ Run the pre-flight sequence before any phase work. STOP on failure.
      every run that followed an interrupted one. Report it and proceed.
 6e. **Preserve the prerequisite test-count baseline; do not recompute it** — if
    the workflow file already records a G0 test-count baseline, **keep it.** The
-   post-implementation gate verifies the count *increased* against that baseline
-   (see [Gate Validation §G7](./references/gate-validation.md#g7--after-implement)),
-   and a baseline recaptured after planning already contains whatever the run
-   added, which makes the comparison vacuous — it would compare the tree against
-   itself and pass unconditionally. A `--stage implement` run in a fresh session
-   is exactly when this is tempting and exactly when it is wrong.
+   count is a diagnostic, not a test-growth acceptance requirement (see
+   [Gate Validation §G7](./references/gate-validation.md#g7--after-implement)).
+   Recapturing it after planning loses the original health evidence. Require
+   meaningful behavioral coverage instead of adding tests to increase a count.
    - If a newly observed count differs from the recorded baseline, record it as a
      **non-blocking drift diagnostic** naming both numbers. Do **not** replace the
      baseline with it. Drift means the tree moved underneath the spec, which the
@@ -514,14 +528,15 @@ for phase in PHASES starting from first_pending:
     1. TaskUpdate: phase task → in_progress
     2. Run before_<phase> hooks from .specify/extensions.yml
     3. For each workflow prompt in this phase:
-         Agent(subagent_type: <phase executor>, prompt: ...)
+         Agent(subagent_type: <phase executor>, run_in_background: false, prompt: ...)
     4. Run consensus (Clarify/Checklist/Analyze only) — see Rule 6
     5. Run after_<phase> hooks
     6. Validate the gate (G1-G7): run runner helper
        `helper_id=validate-gate operation=validate-gate mode=read_only`
        with `gate=G<N>` and `feature_dir=<feature-dir>`, then branch on
        the JSON `pass` field
-       On FAIL: auto-fix max 2 attempts; then honor gate-failure setting
+       On FAIL: reserve a corrective cycle through execution-control;
+       honor its shared family/spec budget and checkpoint disposition
     7. Update workflow file; auto-commit if configured
          phases 1-6: git add specs/ <workflow-file-path> <workflow-dir>/autopilot-state.json && git commit
          phase 7:    git add -A && git commit
@@ -610,7 +625,7 @@ Before each corresponding dispatch, read the mandatory
 §Subagent Delegation, §Phase-by-Phase Execution, and §Phase 7 Step 3. They own
 the exact workflow-prompt envelope, preset/project-command feed-down,
 branch-aware prefixes, Clarify and Checklist sequencing, namespaced agent
-routing, `[P]` waves, TDD injection, and regression fallback. Rule 6 and the
+routing, validated capability batches, TDD injection, and localized repair. Rule 6 and the
 consensus reference own resolution between prompts. Do not reconstruct those
 contracts from this entrypoint.
 
@@ -640,8 +655,8 @@ directions; do not infer a broader precedence rule.
 
 - **Resume:** `/speckit-pro:speckit-autopilot workflow.md --from-phase
   <next-pending-phase>` — the workflow file persists all state.
-- **Gate fails after 2 auto-fix attempts:** honor `gate-failure`
-  setting (default `stop`); on STOP, show gate script output.
+- **Repair or time budget exhausted:** checkpoint with the exact gate output
+  and remaining work; no phase or nested worker has an independent retry budget.
 - **Consensus all-disagree** (Round 2): flag `[HUMAN REVIEW NEEDED]`,
   STOP, and present all 3 perspectives to the user.
 - **Research/context capability unavailable:** use the next acceptable

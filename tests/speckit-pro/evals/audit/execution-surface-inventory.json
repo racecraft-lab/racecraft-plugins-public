@@ -1,0 +1,205 @@
+{
+  "schema_version": 1,
+  "purpose": "Static completeness inventory for executable validation, test, generator, dispatch, and fixture-input surfaces. This is not an execution result.",
+  "snapshot": {
+    "captured_at_utc": "2026-09-15T17:54:21Z",
+    "scope": [
+      "tests/speckit-pro",
+      "scripts",
+      ".github/workflows/{container-preflight,pr-checks,release,deploy-docs,formal-qualification}.yml",
+      "docs-site/package.json"
+    ],
+    "excluded": [
+      "vendored content",
+      "generated artifacts",
+      "node_modules",
+      "historical specs"
+    ],
+    "suite_manifest_sha256": "eae2b20f0bd7b4671173a3f8274d9dec259c1ca2fa3a431c00e5b72af2ae3c79",
+    "tests_speckit_pro_executable_source_files": 151,
+    "test_name_candidates": 89,
+    "run_name_candidates": 18,
+    "validate_name_candidates": 8
+  },
+  "seven_layer_accounting": {
+    "source": "tests/speckit-pro/suite-manifest.json",
+    "registered_entries": 102,
+    "existing_inventory_links": {
+      "layers_1_4_5": "tests/speckit-pro/evals/audit/deterministic-inventory.json",
+      "layers_2_3_6_7": "existing behavioral reports (outside this read-only inventory)"
+    },
+    "registered_runners_not_test_name_candidates": [
+      "tests/speckit-pro/layer2-trigger/run-trigger-evals.py",
+      "tests/speckit-pro/layer2-trigger/run-trigger-evals-codex.py",
+      "tests/speckit-pro/layer3-functional/run-functional-evals.py",
+      "tests/speckit-pro/layer3-functional/run-functional-evals-codex.py",
+      "tests/speckit-pro/layer6-integration/run-all-fixtures.py",
+      "tests/speckit-pro/layer7-parity/run-parity-fixtures.py"
+    ]
+  },
+  "test_tree_entrypoints": {
+    "registered_semantic_layer_entries": {
+      "layer_1": [
+        "tests/speckit-pro/layer1-structural/test-structural-regressions.py",
+        "tests/speckit-pro/layer1-structural/validate-*.py"
+      ],
+      "layer_2": [
+        "tests/speckit-pro/layer2-trigger/run-trigger-evals.py",
+        "tests/speckit-pro/layer2-trigger/run-trigger-evals-codex.py"
+      ],
+      "layer_3": [
+        "tests/speckit-pro/layer3-functional/run-functional-evals.py",
+        "tests/speckit-pro/layer3-functional/run-functional-evals-codex.py"
+      ],
+      "layer_4": [
+        "tests/speckit-pro/unit/test-*.py except the two frozen gaps below"
+      ],
+      "layer_5": [
+        "tests/speckit-pro/layer5-tool-scoping/validate-tool-scoping.py"
+      ],
+      "layer_6": [
+        "tests/speckit-pro/layer6-integration/run-all-fixtures.py"
+      ],
+      "layer_7": [
+        "tests/speckit-pro/layer7-parity/run-parity-fixtures.py"
+      ]
+    },
+    "wrappers_or_subrunners_not_independent_checks": [
+      "tests/speckit-pro/run-all.py (manifest orchestrator)",
+      "tests/speckit-pro/run-layer-scripts.py (selected-script helper)",
+      "tests/speckit-pro/layer6-integration/run-dispatch-fixtures.py (invoked by run-all-fixtures)",
+      "tests/speckit-pro/layer6-integration/run-return-format-fixtures.py (invoked by run-all-fixtures)",
+      "tests/speckit-pro/layer6-integration/run-e2e-fixtures.py (invoked by run-all-fixtures)",
+      "tests/speckit-pro/layer6-integration/run-grounding-fixtures.py (invoked by run-all-fixtures)",
+      "tests/speckit-pro/layer3-functional/run-headless-evals.py (functional runner support)",
+      "tests/speckit-pro/layer2-trigger/compare-trigger-evals.py (comparison support)",
+      "tests/speckit-pro/layer2-trigger/plan-trigger-evals.py (planning support)",
+      "tests/speckit-pro/layer2-trigger/run-trigger-campaign.py (campaign support)",
+      "tests/speckit-pro/layer3-functional/executor-modes/score-executor-modes.py (scoring support)",
+      "tests/speckit-pro/layer6-integration/reduce-transcript-fixture.py (fixture generator)",
+      "tests/speckit-pro/layer6-integration/scrub-transcript.py (fixture sanitization support)",
+      "tests/speckit-pro/layer6-integration/run-feedback-sweep-isolation-smoke.py (one-off smoke support)",
+      "tests/speckit-pro/layer2-trigger/generate-carry-forward-replay.py (replay generator)"
+    ],
+    "outside_seven_layer_support_or_platform_checks": [
+      "tests/speckit-pro/run-container-preflight.py (container/CI preflight)",
+      "tests/speckit-pro/run-hosted-windows-preflight.py (hosted Windows preflight)",
+      "tests/speckit-pro/test-run-all.py (orchestrator contract test)",
+      "tests/speckit-pro/run-native-evals.py (public native-evaluation CLI; execution integration boundary, not a manifest layer entry)"
+    ]
+  },
+  "repository_owned_external_entrypoints": {
+    "ci_validation_or_dispatch": [
+      "scripts/emit-plugin-matrix.py",
+      "scripts/run-runner-requests.py",
+      "scripts/compose-release-notes.py",
+      "scripts/install-actionlint.py",
+      "scripts/classify-docs-validation.py",
+      "scripts/check-pr-workflow-results.py",
+      "scripts/refresh-release-artifacts.py",
+      "scripts/docs-artifact.py",
+      "scripts/audit-release-notes.py",
+      "scripts/dispatch-release-pr-checks.py"
+    ],
+    "release_or_build_operations": [
+      "scripts/build-plugin-payloads.py",
+      "scripts/release-pr-lifecycle.py",
+      "scripts/resolve_release_prs.py",
+      "scripts/sync_release_pr.py",
+      "scripts/sync-marketplace-versions.py",
+      "scripts/refresh-local-plugin.py",
+      "scripts/release_note_policy.py",
+      "scripts/run-plugin-evals.py"
+    ],
+    "workflow_dispatched_validation": {
+      "container-preflight": [
+        "tests/speckit-pro/run-container-preflight.py"
+      ],
+      "pr-checks": [
+        "scripts/emit-plugin-matrix.py",
+        "scripts/compose-release-notes.py --validate-pr",
+        "scripts/install-actionlint.py run",
+        "scripts/classify-docs-validation.py",
+        "scripts/refresh-release-artifacts.py --check",
+        "scripts/check-pr-workflow-results.py",
+        "speckit_pro_runner request fixtures under tests/speckit-pro/unit/fixtures/runner-gates/requests"
+      ],
+      "release": [
+        "scripts/release-pr-lifecycle.py",
+        "scripts/resolve_release_prs.py",
+        "scripts/sync_release_pr.py",
+        "scripts/run-runner-requests.py",
+        "scripts/dispatch-release-pr-checks.py",
+        "scripts/refresh-release-artifacts.py --check",
+        "scripts/audit-release-notes.py"
+      ],
+      "formal-qualification": [
+        "tests/speckit-pro/unit/test-formal-checkers.py",
+        "tests/speckit-pro/unit/test-formal-setup.py --native-setup",
+        "tests/speckit-pro/unit/test-formal-traces.py"
+      ],
+      "deploy-docs": [
+        "scripts/docs-artifact.py prepare/verify",
+        "pnpm --dir docs-site validate"
+      ]
+    },
+    "docs_site_package_scripts": {
+      "validation": [
+        "check",
+        "reference:check",
+        "validate",
+        "validate:links",
+        "validate:safe-aids",
+        "validate:quality",
+        "validate:smoke:preview",
+        "validate:gallery"
+      ],
+      "generator_or_build": [
+        "build",
+        "reference:generate"
+      ],
+      "development_only": [
+        "dev",
+        "preview"
+      ]
+    }
+  },
+  "fixture_inputs": {
+    "count": 540,
+    "roots": {
+      "tests/speckit-pro/evals/fixtures": 16,
+      "tests/speckit-pro/layer1-structural/fixtures": 75,
+      "tests/speckit-pro/layer2-trigger/fixtures": 15,
+      "tests/speckit-pro/layer3-functional/fixtures": 47,
+      "tests/speckit-pro/unit/fixtures": 209,
+      "tests/speckit-pro/layer6-integration (replay corpus and scenario inputs)": 182
+    },
+    "treatment": "Inputs are counted separately from executable checks. No corpus-content suitability or removal decision is made by this inventory."
+  },
+  "precise_gaps": [
+    {
+      "path": "tests/speckit-pro/unit/test-native-functional-catalog.py",
+      "classification": "substantive Layer-3 native functional catalog validation",
+      "registration_state": "not in suite-manifest snapshot; absent from current deterministic inventory",
+      "mtime_epoch": 1789494288,
+      "sha256": "b8b2b2338cae879a58a666207e6966224d27a1cc149880ebfcb248bde1e54243"
+    },
+    {
+      "path": "tests/speckit-pro/unit/test-native-trigger-catalog.py",
+      "classification": "substantive Layer-2 native trigger catalog validation",
+      "registration_state": "not in suite-manifest snapshot; absent from current deterministic inventory",
+      "mtime_epoch": 1789493503,
+      "sha256": "f8e7c68ed02b8770f10486f3f693b5fcea2d17948371705f6a87743b1146a491"
+    },
+    {
+      "path": "tests/speckit-pro/run-native-evals.py",
+      "classification": "new public native CLI execution surface",
+      "registration_state": "outside current seven-layer manifest snapshot and not yet represented by the deterministic inventory; execution integration ownership is elsewhere"
+    }
+  ],
+  "limitations": [
+    "Static inventory only: it does not execute providers, runners, formal tools, package scripts, or workflows.",
+    "The two native catalog-test findings are frozen by the stated timestamp and SHA-256 because concurrent work may change their registration after this snapshot.",
+    "No assertion is made that all repository validation is complete; only the listed paths and classifications are accounted for."
+  ]
+}

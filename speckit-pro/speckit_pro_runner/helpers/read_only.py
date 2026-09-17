@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ast
 import hashlib
 import json
 import math
@@ -55,12 +56,32 @@ PATH_KEYS = {
     "feature_dir",
     "packet_path",
     "plan_file",
+    "spec_file",
+    "record_path",
+    "ledger_path",
     "tasks_file",
     "repo_root",
     "target",
     "workflow_file",
     "worktree_root_override",
 }
+
+CLAUDE_REQUIRED_AGENT_NAMES = (
+    "phase-executor",
+    "clarify-executor",
+    "checklist-executor",
+    "analyze-executor",
+    "implement-executor",
+    "formal-model-author",
+    "codebase-analyst",
+    "spec-context-analyst",
+    "domain-researcher",
+    "consensus-synthesizer",
+    "artifact-author",
+    "uat-runbook-author",
+    "sweep-classifier",
+    "sweep-analyst",
+)
 
 PHASE7_DEFAULT_WAVE_SIZE = 4
 PHASE7_IMPLEMENT_AGENT = "speckit-pro:implement-executor"
@@ -303,6 +324,11 @@ def canonicalize_inputs(helper_id: str, inputs: dict[str, Any], repo_root: Path)
         "atomicity-route": {"feature_dir"},
         "plan-layers-feature-dir": {"feature_dir"},
         "partition-phase7-tasks": {"tasks_file"},
+        "validate-task-execution": {"tasks_file"},
+        "validate-execution-record": {"workflow_file", "record_path"},
+        "execution-control": {"workflow_file", "spec_file", "ledger_path"},
+        "execute-verification": {"workflow_file", "ledger_path"},
+        "task-results": {"tasks_file", "journal_file", "prior_journal_file"},
         "validate-pr-workflow-contract": {"repo_root", "changed_files"},
         "validate-pr-packet-read-only": {"packet_path"},
     }
@@ -410,6 +436,8 @@ def explicit_or_derived_args(helper_id: str, inputs: dict[str, Any], repo_root: 
         # Runtime observations arrive as bounded structured input. No observed
         # value is interpolated into a subprocess or shell command.
         return []
+    if helper_id == "validate-agent-install":
+        return []
     if helper_id == "sweep-pr-feedback":
         # The observation arrives as request data on stdin, so there are no
         # derived CLI args and no field is interpolated into a command.
@@ -454,7 +482,7 @@ def explicit_or_derived_args(helper_id: str, inputs: dict[str, Any], repo_root: 
         return required_args(inputs, [path_key], helper_id, repo_root, path_keys={path_key})
     if helper_id == "plan-layers-feature-dir":
         return required_args(inputs, ["feature_dir"], helper_id, repo_root, path_keys={"feature_dir"})
-    if helper_id == "partition-phase7-tasks":
+    if helper_id in {"partition-phase7-tasks", "validate-task-execution"}:
         wave_size = inputs.get("wave_size")
         if wave_size is not None and (isinstance(wave_size, bool) or not isinstance(wave_size, int) or wave_size < 1):
             return invalid_args(helper_id, "wave_size must be a positive integer")
@@ -467,6 +495,9 @@ def explicit_or_derived_args(helper_id: str, inputs: dict[str, Any], repo_root: 
         if agent_name is not None and (not isinstance(agent_name, str) or not agent_name.strip()):
             return invalid_args(helper_id, "project_agent_name must be a non-empty string")
         return required_args(inputs, ["tasks_file"], helper_id, repo_root, path_keys={"tasks_file"})
+    if helper_id == "validate-execution-record":
+        return required_args(inputs, ["workflow_file", "record_path", "command_id"], helper_id, repo_root,
+                             path_keys={"workflow_file", "record_path"})
     if helper_id == "validate-pr-workflow-contract":
         title = inputs.get("title")
         if not isinstance(title, str) or not title:
@@ -1278,7 +1309,7 @@ def check_prerequisites(inputs: dict[str, Any], repo_root: Path) -> dict[str, An
 
     specify_path = find_specify()
     if specify_path:
-        checks.append(check("speckit_cli", True, "SpecKit CLI installed", "specify 0.11.8"))
+        checks.append(check("speckit_cli", True, "SpecKit CLI installed", f"{specify_path} (version not checked)"))
     else:
         checks.append(check("speckit_cli", False, "SpecKit CLI not found. Install: uv tool install specify-cli --from git+https://github.com/github/spec-kit.git", ""))
         all_pass = False
@@ -5197,6 +5228,295 @@ def o5_topology(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
     return make_result(json_text(obj))
 
 
+def _atomicity_change_records(repo_root: Path) -> dict[str, str] | None:
+    """Return the current versionable change shape relative to origin/main.
+
+    Tracked working-tree changes are included. Untracked, non-ignored files are
+    additions. Renames and any path/status shape that cannot be represented
+    without inference make the result unavailable so the classifier abstains.
+    """
+    try:
+        verify = subprocess.run(
+            ["git", "-C", str(repo_root), "rev-parse", "--verify", "origin/main"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            shell=False,
+            check=False,
+            timeout=SUBPROCESS_TIMEOUT_SECONDS,
+        )
+        if verify.returncode != 0:
+            return None
+        diff = subprocess.run(
+            ["git", "-C", str(repo_root), "diff", "--name-status", "--no-renames", "-z", "origin/main", "--"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            shell=False,
+            check=False,
+            timeout=SUBPROCESS_TIMEOUT_SECONDS,
+        )
+        untracked = subprocess.run(
+            ["git", "-C", str(repo_root), "ls-files", "--others", "--exclude-standard", "-z", "--"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            shell=False,
+            check=False,
+            timeout=SUBPROCESS_TIMEOUT_SECONDS,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    if diff.returncode != 0 or untracked.returncode != 0:
+        return None
+    try:
+        fields = diff.stdout.decode("utf-8", "strict").split("\0")
+        untracked_paths = untracked.stdout.decode("utf-8", "strict").split("\0")
+    except UnicodeDecodeError:
+        return None
+    if fields[-1:] == [""]:
+        fields.pop()
+    if untracked_paths[-1:] == [""]:
+        untracked_paths.pop()
+    if len(fields) % 2:
+        return None
+
+    records: dict[str, str] = {}
+
+    def add(status: str, raw_path: str) -> bool:
+        path = PurePosixPath(raw_path)
+        if (
+            status not in {"A", "M", "D", "T"}
+            or not raw_path
+            or "\\" in raw_path
+            or path.is_absolute()
+            or any(part in {"", ".", ".."} for part in path.parts)
+            or path.as_posix() != raw_path
+            or raw_path in records
+        ):
+            return False
+        records[raw_path] = status
+        return True
+
+    for index in range(0, len(fields), 2):
+        if not add(fields[index], fields[index + 1]):
+            return None
+    for raw_path in untracked_paths:
+        if not add("A", raw_path):
+            return None
+    return records
+
+
+def _atomicity_additive_multi_seam(
+    feature_rel: str,
+    tasks_file: Path,
+    tasks_text: str,
+    repo_root: Path,
+    changes: dict[str, str] | None,
+) -> tuple[bool, bool]:
+    """Prove a split only from complete topology and additive Git evidence.
+
+    The second result reports a real non-additive implementation change even
+    when the complete split proof does not hold.
+    """
+    if changes is None:
+        return False, False
+    metadata_paths = {
+        f"{feature_rel}/spec.md",
+        f"{feature_rel}/plan.md",
+        f"{feature_rel}/tasks.md",
+    }
+    implementation_changes = {
+        path: status for path, status in changes.items() if path not in metadata_paths
+    }
+    modify_heavy = any(status != "A" for status in implementation_changes.values())
+    stdout, warning_count, error_count = plan_layers_json(feature_rel, tasks_file, repo_root)
+    try:
+        plan = json.loads(stdout)
+    except (TypeError, ValueError):
+        return False, modify_heavy
+    increments = plan.get("increments")
+    if (
+        plan.get("status") != "ok"
+        or warning_count
+        or error_count
+        or not isinstance(increments, list)
+    ):
+        return False, modify_heavy
+    stories = [row for row in increments if isinstance(row, dict) and row.get("kind") == "story"]
+    if len(stories) < 2 or len(stories) != len(increments):
+        return False, modify_heavy
+
+    dependency_declarations: dict[str, list[str]] = {}
+    dependency_pattern = re.compile(r"^\s*-\s+\*\*([^*]+)\*\*:\s+Depends\s+on\s+(.+)$")
+    for line in tasks_text.splitlines():
+        match = dependency_pattern.match(line)
+        if match is None:
+            continue
+        increment_id = plan_layers_label_to_id(match.group(1))
+        if increment_id is not None:
+            dependency_declarations.setdefault(increment_id, []).append(match.group(2).strip())
+
+    scopes: list[set[str]] = []
+    planned_paths: set[str] = set()
+    for story in stories:
+        story_id = story.get("id")
+        files = story.get("files")
+        tests = story.get("tests")
+        depends_on = story.get("depends_on")
+        declarations = dependency_declarations.get(story_id, []) if isinstance(story_id, str) else []
+        if (
+            not isinstance(story_id, str)
+            or len(declarations) != 1
+            or re.fullmatch(r"No\s+prerequisites\.?", declarations[0], re.IGNORECASE) is None
+            or not isinstance(depends_on, list)
+            or depends_on
+            or not isinstance(files, list)
+            or not files
+            or not isinstance(tests, list)
+            or not tests
+            or not all(isinstance(path, str) for path in [*files, *tests])
+        ):
+            return False, modify_heavy
+        scope = set([*files, *tests])
+        if len(scope) != len(files) + len(tests):
+            return False, modify_heavy
+        if any(scope & other for other in scopes):
+            return False, modify_heavy
+        scopes.append(scope)
+        planned_paths.update(scope)
+
+    if set(implementation_changes) != planned_paths:
+        return False, modify_heavy
+    if any(implementation_changes[path] != "A" for path in planned_paths):
+        return False, modify_heavy
+    if not _atomicity_python_seams_have_no_cross_imports(scopes, repo_root):
+        return False, modify_heavy
+    return True, modify_heavy
+
+
+def _atomicity_python_seams_have_no_cross_imports(
+    scopes: list[set[str]],
+    repo_root: Path,
+) -> bool:
+    """Bound the independence proof to statically parseable Python imports.
+
+    This is deliberately not a claim of general semantic independence. The
+    classifier abstains for other languages, invalid modules, dynamic imports,
+    or a direct import from one proposed seam into another.
+    """
+    modules: list[dict[str, set[str]]] = []
+    trees: list[list[tuple[str, ast.AST]]] = []
+    for scope in scopes:
+        seam_modules: dict[str, set[str]] = {}
+        seam_trees: list[tuple[str, ast.AST]] = []
+        for path in sorted(scope):
+            pure = PurePosixPath(path)
+            if pure.suffix != ".py":
+                return False
+            parts = list(pure.with_suffix("").parts)
+            is_package = parts[-1] == "__init__"
+            if is_package:
+                parts.pop()
+            if not parts or not all(part.isidentifier() for part in parts):
+                return False
+            text = trusted_text(repo_root / path, repo_root)
+            if text is None:
+                return False
+            try:
+                tree = ast.parse(text, filename=path)
+            except (SyntaxError, ValueError):
+                return False
+            module = ".".join(parts)
+            aliases = {module, parts[-1]}
+            seam_modules[module] = aliases
+            package = module if is_package else ".".join(parts[:-1])
+            seam_trees.append((package, tree))
+        modules.append(seam_modules)
+        trees.append(seam_trees)
+
+    for seam_index, seam_trees in enumerate(trees):
+        other_aliases = {
+            alias
+            for index, seam_modules in enumerate(modules)
+            if index != seam_index
+            for aliases in seam_modules.values()
+            for alias in aliases
+        }
+        for package, tree in seam_trees:
+            if _atomicity_has_unsupported_dynamic_import(tree):
+                return False
+            imports: set[str] = set()
+            for node in ast.walk(tree):
+                if isinstance(node, ast.Import):
+                    imports.update(alias.name for alias in node.names)
+                elif isinstance(node, ast.ImportFrom):
+                    package_parts = package.split(".") if package else []
+                    if node.level:
+                        if node.level > len(package_parts):
+                            return False
+                        base_parts = package_parts[: len(package_parts) - node.level + 1]
+                    else:
+                        base_parts = []
+                    if node.module:
+                        base_parts.extend(node.module.split("."))
+                    base = ".".join(base_parts)
+                    if base:
+                        imports.add(base)
+                    imports.update(
+                        f"{base}.{alias.name}" if base else alias.name
+                        for alias in node.names
+                        if alias.name != "*"
+                    )
+            if any(
+                imported == alias or imported.startswith(f"{alias}.")
+                for imported in imports
+                for alias in other_aliases
+            ):
+                return False
+    return True
+
+
+def _atomicity_has_unsupported_dynamic_import(tree: ast.AST) -> bool:
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Attribute) and node.attr in {"import_module", "__import__"}:
+            return True
+        if isinstance(node, ast.Name) and node.id == "__import__":
+            return True
+        if isinstance(node, ast.ImportFrom) and (
+            node.module == "importlib"
+            and any(alias.name == "import_module" for alias in node.names)
+            or node.module == "builtins"
+            and any(alias.name == "__import__" for alias in node.names)
+        ):
+            return True
+        if (
+            isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Name)
+            and node.func.id == "getattr"
+            and any(
+                isinstance(argument, ast.Constant)
+                and argument.value in {"import_module", "__import__"}
+                for argument in node.args[1:]
+            )
+        ):
+            return True
+    return False
+
+
+def _atomicity_cutover_route(context: str) -> str | None:
+    release_held = re.search(
+        r"release[ -]?held.{0,120}cutover|cutover.{0,120}release[ -]?held",
+        context,
+        re.IGNORECASE | re.DOTALL,
+    )
+    if release_held is not None:
+        return "single-atomic-PR"
+    guarded = re.search(
+        r"guarded.{0,120}cutover|cutover.{0,120}guarded",
+        context,
+        re.IGNORECASE | re.DOTALL,
+    )
+    return "one-navigable-PR" if guarded is not None else None
+
+
 def atomicity_route(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
     raw = request_path_display(inputs.get("feature_dir") or "", repo_root)
     feature = resolve_input_path(raw, repo_root)
@@ -5217,16 +5537,34 @@ def atomicity_route(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
     warnings: list[str] = []
     route = "one-navigable-PR"
     releasable = True
+    cutover_route = _atomicity_cutover_route(context_corpus)
     if re.search(r"release[ -]?(cadence|train|window|held|hold)|ship[ -]?cadence|deploy[ -]?cadence|cutover", context_corpus, re.I):
         hints.append("hint:release-cadence:weak")
-    if re.search(r"(^|[^A-Za-z0-9_])(UPDATE|DELETE|DROP|CHECK)([^A-Za-z0-9_]|$)", corpus, re.I):
-        signals.append("change-shape:modify-heavy")
     if re.search(r"(DROP|DELETE|TRUNCATE).+`[^`]*(migration|schema|\.sql)[^`]*`", corpus, re.I):
         signals.insert(0, "hard-atomic:destructive-migration")
         signals.append("releasability:destructive-migration")
         warnings.append(WARN_DESTRUCTIVE_MIGRATION)
         route = "single-atomic-PR"
         releasable = False
+    elif cutover_route is not None:
+        route = cutover_route
+    else:
+        split, modify_heavy = _atomicity_additive_multi_seam(
+            raw,
+            tasks,
+            tasks_text,
+            repo_root,
+            _atomicity_change_records(repo_root),
+        )
+        if modify_heavy:
+            signals.append("change-shape:modify-heavy")
+        if split:
+            route = "split-PR"
+            signals.extend([
+                "change-shape:additive-only",
+                "topology:independent-multi-seam",
+                "source-proof:direct-python-imports-only",
+            ])
     return make_result(json_text({"route": route, "releasable": releasable, "signals": signals, "hints": hints, "warnings": warnings}))
 
 
@@ -5391,6 +5729,8 @@ def partition_phase7_tasks(inputs: dict[str, Any], repo_root: Path) -> dict[str,
     project_keywords = [word for word in keywords_raw if word.strip()]
 
     lines = trusted_lines(tasks_file, repo_root)
+    records: list[dict[str, Any]] = []
+    phase_instance = 0
     task_sources: dict[str, dict[str, Any]] = {}
     warnings: list[dict[str, Any]] = []
     errors: list[dict[str, Any]] = []
@@ -5405,6 +5745,7 @@ def partition_phase7_tasks(inputs: dict[str, Any], repo_root: Path) -> dict[str,
             # closes one task entry per group, so no run may straddle two.
             phase7_flush(pending, wave_size, runs)
             group = line[3:].strip()
+            phase_instance += 1
             continue
         task = parse_task_line(
             line,
@@ -5421,6 +5762,7 @@ def partition_phase7_tasks(inputs: dict[str, Any], repo_root: Path) -> dict[str,
             continue
         task_count += 1
         agent = phase7_route(task["title"], project_agent, project_keywords)
+        records.append({**task, "agent": agent, "group": group, "phase_instance": phase_instance})
         record = {"id": task["id"], "agent": agent, "group": group}
         if task["parallel"] and pending and pending[0]["agent"] == agent:
             pending.append(record)
@@ -5447,7 +5789,68 @@ def partition_phase7_tasks(inputs: dict[str, Any], repo_root: Path) -> dict[str,
             f"partition-phase7-tasks: invalid_tasks: {len(errors)} error(s)\n",
             1,
         )
+    required = inputs.get("task_execution_required", False)
+    if not isinstance(required, bool):
+        return phase7_error("task_execution_required must be a Boolean")
+    metadata_path = tasks_file.parent / ".process" / "task-execution.json"
+    action = inputs.get("_task_execution_action")
+    if required or action or metadata_path.exists() or metadata_path.is_symlink():
+        return phase7_metadata_partition(inputs, repo_root, tasks_file, records, payload)
     return make_result(json_text(payload))
+
+
+def phase7_metadata_partition(inputs: dict[str, Any], repo_root: Path, tasks_file: Path,
+                              records: list[dict[str, Any]], payload: dict[str, Any]) -> dict[str, Any]:
+    """Validate the sidecar before handing native orchestration a batch plan."""
+    from ..task_execution import TaskExecutionError, batch_waves, fingerprints, make_batches, validate_metadata
+
+    texts = [trusted_text(path, repo_root) for path in (
+        tasks_file.parent / "spec.md", tasks_file.parent / "plan.md", tasks_file
+    )]
+    if any(text is None for text in texts):
+        return phase7_error("metadata requires readable, contained spec.md, plan.md, and tasks.md")
+    expected = fingerprints(*texts)
+    if inputs.get("_task_execution_action") == "fingerprints":
+        return make_result(json_text({"tool": "validate-task-execution", "contract_version": 1,
+                                      "fingerprints": expected, "task_ids": [r["id"] for r in records]}))
+    metadata_text = trusted_text(tasks_file.parent / ".process" / "task-execution.json", repo_root)
+    if metadata_text is None:
+        return phase7_error("task-execution metadata missing or unreadable; parent reconciliation required")
+    try:
+        entries = validate_metadata(metadata_text, records, repo_root, expected, inputs.get("completed_tasks", []))
+        batches = make_batches(records, entries)
+    except TaskExecutionError as exc:
+        return phase7_error(str(exc))
+    result = {key: value for key, value in payload.items() if key != "runs"}
+    result.update({"contract_version": 2, "fingerprints": expected, "batches": batches,
+                   "waves": batch_waves(batches, payload["wave_size"]), "dispatch_count": len(batches),
+                   "completed_tasks": [r["id"] for r in records if r["status"] == "done"]})
+    for batch in batches:
+        batch.pop("_filesystem_ids")
+    return make_result(json_text(result))
+
+
+def validate_task_execution(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
+    """Inspect authoritative fingerprints or validate executable Tasks metadata."""
+    action = inputs.get("action", "validate")
+    if not isinstance(action, str) or action not in {"validate", "fingerprints"}:
+        return make_result("", "validate-task-execution: action must be validate or fingerprints\n", 2)
+    result = partition_phase7_tasks({**inputs, "_task_execution_action": action,
+                                    "task_execution_required": True}, repo_root)
+    payload = json.loads(result["stdout"])
+    payload["tool"] = "validate-task-execution"
+    if result["exit_code"] == 0 and action == "validate":
+        payload["valid"] = True
+    result["stdout"] = json_text(payload)
+    return result
+
+
+def validate_execution_record(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
+    from ..verification_records import validate_execution_record as validate_record
+
+    payload = validate_record(repo_root, inputs)
+    return make_result(json_text(payload), "" if payload["reusable"] else "execution evidence requires rerun\n",
+                       0 if payload["reusable"] else 1)
 
 def validate_pr_workflow_contract(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
     title = str(inputs.get("title") or "")
@@ -7022,6 +7425,99 @@ def trusted_dir_exists(path: Path, repo_root: Path) -> bool:
     return path.is_dir() and path_stays_in_trust_boundary(path, repo_root)
 
 
+def validate_agent_install(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
+    surface = inputs.get("surface")
+    if surface != "claude":
+        return make_result(
+            json_text({"error": "surface must be claude"}),
+            exit_code=2,
+        )
+
+    loaded_root = detect_plugin_root()
+    if loaded_root is None:
+        return make_result(
+            json_text({"error": "loaded plugin root is unavailable"}),
+            exit_code=3,
+        )
+    loaded_root = loaded_root.resolve(strict=False)
+    requested_root = inputs.get("plugin_root")
+    if requested_root is not None:
+        if not isinstance(requested_root, str) or not requested_root.strip():
+            return make_result(
+                json_text({"error": "plugin_root must be a non-empty path"}),
+                exit_code=2,
+            )
+        requested_path = resolve_input_path(requested_root, repo_root).resolve(strict=False)
+        if requested_path != loaded_root:
+            return make_result(
+                json_text({"error": "plugin_root must match the loaded plugin root"}),
+                exit_code=2,
+            )
+
+    agents_dir = loaded_root / "agents"
+    try:
+        agents_stat = agents_dir.stat(follow_symlinks=False)
+    except OSError:
+        agents_stat = None
+    if (
+        agents_stat is None
+        or agents_dir.is_symlink()
+        or not stat.S_ISDIR(agents_stat.st_mode)
+    ):
+        return make_result(
+            json_text({"error": "loaded Claude agent directory is unavailable"}),
+            exit_code=3,
+        )
+
+    expected = sorted(f"{name}.md" for name in CLAUDE_REQUIRED_AGENT_NAMES)
+    observed: list[str] = []
+    nonregular: list[str] = []
+    symlinks: list[str] = []
+    try:
+        entries = sorted(agents_dir.iterdir(), key=lambda path: path.name)
+        for entry in entries:
+            if entry.is_symlink():
+                symlinks.append(entry.name)
+                continue
+            try:
+                entry_stat = entry.stat(follow_symlinks=False)
+            except OSError:
+                nonregular.append(entry.name)
+                continue
+            if stat.S_ISREG(entry_stat.st_mode):
+                observed.append(entry.name)
+            else:
+                nonregular.append(entry.name)
+    except OSError:
+        return make_result(
+            json_text({"error": "loaded Claude agent directory cannot be read"}),
+            exit_code=3,
+        )
+
+    observed_set = set(observed)
+    expected_set = set(expected)
+    missing = sorted(expected_set - observed_set)
+    unexpected = sorted(observed_set - expected_set)
+    valid = not (missing or unexpected or nonregular or symlinks)
+    return make_result(
+        json_text(
+            {
+                "surface": "claude",
+                "plugin_root": str(loaded_root),
+                "agents_dir": str(agents_dir),
+                "expected_agents": expected,
+                "observed_agents": sorted(observed),
+                "missing": missing,
+                "unexpected": unexpected,
+                "nonregular": sorted(nonregular),
+                "symlinks": sorted(symlinks),
+                "valid": valid,
+            }
+        ),
+        exit_code=0 if valid else 1,
+    )
+
+
 def path_stays_in_trust_boundary(path: Path, repo_root: Path) -> bool:
     resolved = path.resolve(strict=False)
     return is_relative_to(resolved, repo_root.resolve(strict=False))
@@ -7534,6 +8030,9 @@ PY_HELPERS: dict[str, Callable[[dict[str, Any], Path], dict[str, Any]]] = {
     "atomicity-route": atomicity_route,
     "plan-layers-feature-dir": plan_layers_feature_dir,
     "partition-phase7-tasks": partition_phase7_tasks,
+    "validate-task-execution": validate_task_execution,
+    "validate-execution-record": validate_execution_record,
     "validate-pr-workflow-contract": validate_pr_workflow_contract,
     "validate-pr-packet-read-only": validate_pr_packet_read_only,
+    "validate-agent-install": validate_agent_install,
 }

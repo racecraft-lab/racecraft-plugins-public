@@ -1,0 +1,7 @@
+{
+  "id": "review",
+  "kind": "extension",
+  "description": "Reviews implementation changes and reports evidence-backed, actionable findings.",
+  "commands": [],
+  "hooks": []
+}

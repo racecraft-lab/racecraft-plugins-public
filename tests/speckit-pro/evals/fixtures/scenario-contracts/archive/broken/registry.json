@@ -1,0 +1,8 @@
+{
+  "archive": {
+    "enabled": true,
+    "registered_commands": {
+      "claude": ["speckit-archive-run"]
+    }
+  }
+}

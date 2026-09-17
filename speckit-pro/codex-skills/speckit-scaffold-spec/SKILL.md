@@ -193,7 +193,9 @@ seed the workflow:
 - scope description and any constraints
 - any tool count or tool names already recorded in the roadmap
 
-If the spec is missing, stop and report the available pending specs. If the
+If the spec is missing, stop and report the available pending specs. Offer to
+help the user add or correct the roadmap entry with `$speckit-coach`; do not
+invent the entry or continue scaffolding. If the
 spec is already complete, warn the user and stop. If the roadmap says the spec
 is already in progress, prefer reusing the existing worktree branch rather than
 creating a second setup.

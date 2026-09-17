@@ -1,0 +1,5 @@
+# Technical Roadmap
+
+## SPEC-030 — Adjacent entry only
+
+Improve the existing search results page with saved filter presets.

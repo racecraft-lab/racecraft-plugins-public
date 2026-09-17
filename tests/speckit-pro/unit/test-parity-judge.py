@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Layer-4 contracts for the Python Layer-8 parity judge."""
+"""Layer-4 contracts for the Python Layer-7 parity judge."""
 
 from __future__ import annotations
 
@@ -15,7 +15,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 TESTS_ROOT = REPO_ROOT / "tests" / "speckit-pro"
-JUDGE = TESTS_ROOT / "layer8-parity" / "lib" / "judge.py"
+JUDGE = TESTS_ROOT / "layer7-parity" / "lib" / "judge.py"
 LIB_DIR = TESTS_ROOT / "lib"
 if str(LIB_DIR) not in sys.path:
     sys.path.insert(0, str(LIB_DIR))
@@ -42,7 +42,7 @@ CURRENT_INVENTORY = [
 
 
 def import_judge():
-    spec = importlib.util.spec_from_file_location("l8_judge", JUDGE)
+    spec = importlib.util.spec_from_file_location("l7_judge", JUDGE)
     module = importlib.util.module_from_spec(spec)
     assert spec.loader is not None
     spec.loader.exec_module(module)
@@ -63,7 +63,7 @@ def run_cli(*args: str) -> subprocess.CompletedProcess[str]:
     )
 
 
-class Layer8JudgeTests(unittest.TestCase):
+class Layer7JudgeTests(unittest.TestCase):
     def test_judge_contract(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
@@ -171,7 +171,7 @@ class Layer8JudgeTests(unittest.TestCase):
 
 
 def main() -> int:
-    suite = unittest.defaultTestLoader.loadTestsFromTestCase(Layer8JudgeTests)
+    suite = unittest.defaultTestLoader.loadTestsFromTestCase(Layer7JudgeTests)
     return run_counted(suite, label="test-parity-judge")
 
 

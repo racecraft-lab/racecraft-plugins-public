@@ -9,11 +9,13 @@ import io
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -29,7 +31,8 @@ LAYER3_CONTRACT_ROOTS = (
     TESTS_ROOT / "layer3-functional" / "evals",
     TESTS_ROOT / "layer3-functional" / "codex-evals",
 )
-LAYER8_ROOT = TESTS_ROOT / "layer8-parity"
+LAYER7_ROOT = TESTS_ROOT / "layer7-parity"
+FAKE_CLAUDE = Path(__file__).resolve().parent / "fixtures" / "skill-selection" / "claude"
 
 if str(PLUGIN_ROOT) not in sys.path:
     sys.path.insert(0, str(PLUGIN_ROOT))
@@ -122,26 +125,26 @@ LAYER3_NEGATIVE_CONTEXTS = {
     ("tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json", 29): {"relocate-process-artifacts.sh"},
 }
 
-# Layer 8 Markdown is scanned only in contract files. Each retained retired
+# Layer 7 Markdown is scanned only in contract files. Each retained retired
 # path must live in one explicitly classified section.
-LAYER8_MARKDOWN_CONTEXTS = {
+LAYER7_MARKDOWN_CONTEXTS = {
     (
-        "tests/speckit-pro/layer8-parity/02-repository-migration-guidance/README.md",
+        "tests/speckit-pro/layer7-parity/02-repository-migration-guidance/README.md",
         "Test scenario",
         "relocate-process-artifacts.sh",
     ): "negative",
     (
-        "tests/speckit-pro/layer8-parity/02-repository-migration-guidance/workflow.md",
+        "tests/speckit-pro/layer7-parity/02-repository-migration-guidance/workflow.md",
         "Legacy Input Scenario",
         "migrate-structure.sh",
     ): "legacy_input",
     (
-        "tests/speckit-pro/layer8-parity/02-repository-migration-guidance/workflow.md",
+        "tests/speckit-pro/layer7-parity/02-repository-migration-guidance/workflow.md",
         "Legacy Input Scenario",
         "relocate-process-artifacts.sh",
     ): "legacy_input",
     (
-        "tests/speckit-pro/layer8-parity/02-repository-migration-guidance/workflow.md",
+        "tests/speckit-pro/layer7-parity/02-repository-migration-guidance/workflow.md",
         "No Auto-Run Guard",
         "relocate-process-artifacts.sh",
     ): "negative",
@@ -215,17 +218,17 @@ def layer3_reference_allowed(relative: str, eval_id: object, field_path: tuple[o
     return "retired" in lowered and any(marker in lowered for marker in NEGATIVE_MARKERS)
 
 
-def layer8_contract_files() -> tuple[list[Path], list[Path]]:
-    markdown = [LAYER8_ROOT / "README.md"]
+def layer7_contract_files() -> tuple[list[Path], list[Path]]:
+    markdown = [LAYER7_ROOT / "README.md"]
     structured: list[Path] = []
-    for fixture_dir in sorted(path for path in LAYER8_ROOT.iterdir() if path.is_dir() and path.name[:1].isdigit()):
+    for fixture_dir in sorted(path for path in LAYER7_ROOT.iterdir() if path.is_dir() and path.name[:1].isdigit()):
         markdown.extend(fixture_dir / name for name in ("README.md", "workflow.md"))
         structured.extend(fixture_dir / name for name in ("expected-equivalence.json", "tolerance.json"))
     return [path for path in markdown if path.is_file()], [path for path in structured if path.is_file()]
 
 
 def runtime_contract_files() -> list[Path]:
-    markdown, structured = layer8_contract_files()
+    markdown, structured = layer7_contract_files()
     layer3 = [path for root in LAYER3_CONTRACT_ROOTS for path in sorted(root.glob("*.json"))]
     return sorted({*SHIPPED_RUNTIME_CONTRACTS, *layer3, *markdown, *structured})
 
@@ -315,6 +318,7 @@ def runtime_contract_violations() -> list[str]:
         "do not claim",
         "must not",
     )
+    read_only_packet = r"\bvalidate-pr-packet(?:-read-only)?(?![\w-])"
 
     for path in runtime_contract_files():
         relative = path.relative_to(REPO_ROOT).as_posix()
@@ -340,8 +344,8 @@ def runtime_contract_violations() -> list[str]:
 
             persistence_claim = any(
                 term in lowered for term in ("validation.json", "validation_result_path", "validation file")
-            ) or re.search(r"validate-pr-packet.{0,100}\b(?:writes|persists|persisted|written)\b", lowered)
-            if "validate-pr-packet" in lowered and persistence_claim:
+            ) or re.search(rf"{read_only_packet}.{{0,100}}\b(?:writes|persists|persisted|written)\b", lowered)
+            if re.search(read_only_packet, lowered) and persistence_claim:
                 if not any(marker in lowered for marker in persistence_safe):
                     violations.append(f"{relative}: claims read-only packet validation persists state")
     return sorted(set(violations))
@@ -525,8 +529,8 @@ def markdown_section_map(text: str) -> tuple[list[str], dict[str, str]]:
     return line_sections, {section: "\n".join(lines).casefold() for section, lines in section_lines.items()}
 
 
-def layer8_markdown_reference_allowed(relative: str, section: str, line: str, section_text: str, helper: str) -> bool:
-    classification = LAYER8_MARKDOWN_CONTEXTS.get((relative, section, helper))
+def layer7_markdown_reference_allowed(relative: str, section: str, line: str, section_text: str, helper: str) -> bool:
+    classification = LAYER7_MARKDOWN_CONTEXTS.get((relative, section, helper))
     lowered = line.casefold()
     if classification == "negative":
         return "retired" in lowered and any(marker in lowered for marker in NEGATIVE_MARKERS)
@@ -553,7 +557,7 @@ def retired_contract_violations() -> list[str]:
                             continue
                         violations.append(f"{relative}:eval[{eval_id}].{json_path_display(field_path)} prescribes {helper}")
 
-    markdown_paths, structured_paths = layer8_contract_files()
+    markdown_paths, structured_paths = layer7_contract_files()
     for path in structured_paths:
         relative = path.relative_to(REPO_ROOT).as_posix()
         data = json.loads(path.read_text(encoding="utf-8"))
@@ -573,7 +577,7 @@ def retired_contract_violations() -> list[str]:
                 helper = match.group(1)
                 if is_vendored_speckit_reference(line, match):
                     continue
-                if layer8_markdown_reference_allowed(relative, section, line, section_texts[section], helper):
+                if layer7_markdown_reference_allowed(relative, section, line, section_texts[section], helper):
                     continue
                 violations.append(f"{relative}:{line_number} [{section}] prescribes {helper}")
 
@@ -599,28 +603,16 @@ def run_script(script: Path, *args: str, env_overrides: dict[str, str] | None = 
 def write_fake_claude(root: Path) -> Path:
     binary_dir = root / "bin"
     binary_dir.mkdir()
-    script = binary_dir / "claude-stub.py"
-    script.write_text(
-        "import sys\n"
-        "if '--version' in sys.argv:\n"
-        "    print('2.1.269 (Claude Code)')\n"
-        "elif '--help' in sys.argv:\n"
-        "    print('--restricted --setting-sources --plugin-dir --strict-mcp-config --mcp-config --tools --allowedTools --settings --permission-mode --permission-prompts --output-format --verbose --no-session-persistence')\n"
-        "elif 'doctor' in sys.argv:\n"
-        "    print('Running: native (2.1.269)')\n"
-        "    print('Managed settings (remote): not fetched — requires an Enterprise or Team subscription')\n"
-        "    print('Organization policy: not applicable to Pro and Max accounts')\n"
-        "else:\n"
-        "    raise SystemExit(97)\n",
-        encoding="utf-8",
-    )
     if os.name == "nt":
+        script = binary_dir / "claude-stub.py"
+        shutil.copyfile(FAKE_CLAUDE, script)
         launcher = binary_dir / "claude.cmd"
         launcher.write_text(f'@"{sys.executable}" "{script}" %*\r\n', encoding="utf-8")
     else:
         launcher = binary_dir / "claude"
-        launcher.write_text(f"#!{sys.executable}\nimport runpy\nrunpy.run_path({str(script)!r}, run_name='__main__')\n", encoding="utf-8")
-        launcher.chmod(0o755)
+        launcher.symlink_to(FAKE_CLAUDE)
+        if not os.access(launcher, os.X_OK):
+            raise RuntimeError("immutable fake Claude fixture is not executable")
     return binary_dir
 
 
@@ -760,6 +752,40 @@ class EvalRunnerSkillSelectionTests(unittest.TestCase):
         for name, mutated in canaries.items():
             with self.subTest(msg=name):
                 self.assertTrue(post_implementation_outcome_violations({"Claude": mutated, "Codex": codex}))
+
+    def test_packet_persistence_claims_distinguish_read_only_and_write_helpers(self) -> None:
+        cases = (
+            ("validate-pr-packet-write persists validation_result_path.", False),
+            ("validate-pr-packet persists validation_result_path.", True),
+            ("validate-pr-packet-read-only writes validation.json.", True),
+            ("validate-pr-packet-read-only persists its result.", True),
+            ("validate-pr-packet-read-only does not persist a validation file.", False),
+        )
+        for prose, rejected in cases:
+            with self.subTest(prose=prose), patch(
+                f"{__name__}.runtime_contract_files", return_value=[REPO_ROOT / "fixture.md"]
+            ), patch(f"{__name__}.contract_units", return_value=[prose]):
+                self.assertEqual(bool(runtime_contract_violations()), rejected)
+
+    @unittest.skipIf(os.name == "nt", "POSIX executable fixture placement")
+    def test_fake_claude_executes_from_immutable_fixture(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            binary_dir = write_fake_claude(root)
+            launcher = binary_dir / "claude"
+            fixture = Path(__file__).resolve().parent / "fixtures" / "skill-selection" / "claude"
+            self.assertTrue(launcher.is_symlink())
+            self.assertEqual(launcher.resolve(), fixture)
+            self.assertFalse(launcher.resolve().is_relative_to(root.resolve()))
+            self.assertTrue(os.access(launcher, os.X_OK))
+
+    @unittest.skipIf(os.name == "nt", "POSIX executable fixture admission")
+    def test_unexecutable_fake_claude_refuses_provider_fallback(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary, patch(
+            f"{__name__}.os.access", return_value=False
+        ):
+            with self.assertRaisesRegex(RuntimeError, "fixture is not executable"):
+                write_fake_claude(Path(temporary))
 
     def test_eval_runner_skill_selection_contract(self) -> None:
         self.assertEqual(retired_contract_violations(), [])

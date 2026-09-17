@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate Layer-8 comparison extractors."""
+"""Validate Layer-7 comparison extractors."""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 TESTS_ROOT = REPO_ROOT / "tests" / "speckit-pro"
-EXTRACTORS_LIB = TESTS_ROOT / "layer8-parity" / "lib"
+EXTRACTORS_LIB = TESTS_ROOT / "layer7-parity" / "lib"
 EXTRACTORS = EXTRACTORS_LIB / "extractors.py"
 SHARED_LIB = TESTS_ROOT / "lib"
 for value in (EXTRACTORS_LIB, SHARED_LIB):
@@ -35,7 +35,7 @@ def run_extractor(*args: str) -> subprocess.CompletedProcess[str]:
     )
 
 
-class Layer8ExtractorTests(unittest.TestCase):
+class Layer7ExtractorTests(unittest.TestCase):
     def setUp(self) -> None:
         self._tmp = tempfile.TemporaryDirectory()
         self.fixture_dir = Path(self._tmp.name)
@@ -163,5 +163,5 @@ class Layer8ExtractorTests(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    suite = unittest.defaultTestLoader.loadTestsFromTestCase(Layer8ExtractorTests)
+    suite = unittest.defaultTestLoader.loadTestsFromTestCase(Layer7ExtractorTests)
     raise SystemExit(run_counted(suite, label="test-parity-extractors"))

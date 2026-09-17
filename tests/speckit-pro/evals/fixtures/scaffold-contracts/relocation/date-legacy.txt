@@ -1,0 +1,4 @@
+# Date named legacy namespace
+
+Out of the Speckit namespace.
+

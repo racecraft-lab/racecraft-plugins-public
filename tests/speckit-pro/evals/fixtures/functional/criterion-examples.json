@@ -1,0 +1,125 @@
+{
+  "schema_version": "functional-criterion-examples/v1",
+  "literal_checks": [
+    {
+      "case_id": "functional.speckit-autopilot.case-11",
+      "check_id": "legacy-01-text",
+      "passing": "The optional helper is named autopilot-fast-helper."
+    },
+    {
+      "case_id": "functional.speckit-autopilot.case-15",
+      "check_id": "legacy-09-text",
+      "passing": "Return a Clarify Question Set to the parent."
+    },
+    {
+      "case_id": "functional.speckit-autopilot.case-24",
+      "check_id": "legacy-01-text",
+      "passing": "Call confidence-gate with workflow_file, mode_name, and threshold."
+    },
+    {
+      "case_id": "functional.speckit-autopilot.case-24",
+      "check_id": "legacy-10-text",
+      "passing": "resolve-confidence-mode checks .claude/speckit-pro.local.md and .codex/speckit-pro.local.md as default configuration paths."
+    },
+    {
+      "case_id": "functional.speckit-autopilot.case-26",
+      "check_id": "legacy-01-text",
+      "passing": "Run the pre-final completion audit."
+    },
+    {
+      "case_id": "functional.speckit-autopilot.case-103",
+      "check_id": "legacy-01-text",
+      "passing": "Capability path: codebase context -> local repository; Evidence: inspected tracked files; Confidence: 0.8 (direct local evidence)"
+    },
+    {
+      "case_id": "functional.speckit-coach.case-1",
+      "check_id": "legacy-04-text",
+      "passing": "The phases are specify, clarify, plan, checklist, tasks, analyze, and implement."
+    },
+    {
+      "case_id": "functional.speckit-coach.case-9",
+      "check_id": "legacy-02-text",
+      "passing": "Record the SPEC-ID and feature branch fields."
+    },
+    {
+      "case_id": "functional.speckit-coach.case-9",
+      "check_id": "legacy-04-text",
+      "passing": "The workflow path is docs/ai/specs/.process/SPEC-NNN-workflow.md."
+    },
+    {
+      "case_id": "functional.speckit-coach.case-103",
+      "check_id": "legacy-01-text",
+      "passing": "Capability path: library guidance -> installed documentation source; Evidence: current reference; Confidence: 0.8 (authoritative source)"
+    }
+  ],
+  "case_examples": [
+    {
+      "case_id": "functional.speckit-autopilot.case-3",
+      "correct_paraphrase": "Assign a separate implement-executor to each task. Tasks marked [P] may run concurrently, while other tasks follow their dependencies. Every executor uses TDD's red-green-refactor loop, and an executor failure is handled and reported.",
+      "keyword_stuffed_wrong": "Never use implement-executor. Ignore whether tasks are separate, run all [P] and dependent tasks together, skip TDD red-green-refactor, and conceal every executor failure."
+    },
+    {
+      "case_id": "functional.speckit-autopilot.case-11",
+      "correct_paraphrase": "The parent may optionally use autopilot-fast-helper with gpt-5.6-luna for text-only compression, triage, or query drafting. It is not a dependency and may not edit artifacts, decide gates, vote in consensus, or make the final decision.",
+      "keyword_stuffed_wrong": "Never use autopilot-fast-helper as an optional text-only helper. It must edit artifacts, decide gate outcomes, cast the consensus vote, and become the final decision-maker using gpt-5.6-luna."
+    }
+  ],
+  "literal_plus_semantic_examples": [
+    {
+      "case_id": "functional.speckit-autopilot.case-15",
+      "requirement_id": "legacy-09",
+      "correct_paraphrase": "The clarify-executor returns its Clarify Question Set to the parent as the handoff for answering.",
+      "keyword_stuffed_wrong": "The Clarify Question Set is not a clarify-executor handoff and must never be returned to the parent."
+    },
+    {
+      "case_id": "functional.speckit-autopilot.case-24",
+      "requirement_id": "legacy-01",
+      "correct_paraphrase": "confidence-gate is the read-only runner helper; workflow_file, mode_name, and threshold are its inputs.",
+      "keyword_stuffed_wrong": "confidence-gate is not a read-only runner helper, and workflow_file, mode_name, and threshold are not its inputs."
+    },
+    {
+      "case_id": "functional.speckit-autopilot.case-24",
+      "requirement_id": "legacy-10",
+      "correct_paraphrase": "resolve-confidence-mode checks .claude/speckit-pro.local.md and .codex/speckit-pro.local.md as its two default configuration paths.",
+      "keyword_stuffed_wrong": "resolve-confidence-mode does not check .claude/speckit-pro.local.md or .codex/speckit-pro.local.md as default configuration paths."
+    },
+    {
+      "case_id": "functional.speckit-coach.case-1",
+      "requirement_id": "legacy-04",
+      "correct_paraphrase": "The seven SDD phases proceed in this order: specify, clarify, plan, checklist, tasks, analyze, then implement.",
+      "keyword_stuffed_wrong": "Do not use specify, clarify, plan, checklist, tasks, analyze, implement as the SDD sequence."
+    }
+  ],
+  "same_keyword_format_negatives": [
+    {
+      "case_id": "functional.speckit-autopilot.case-103",
+      "check_id": "legacy-01-text",
+      "wrong": "Evidence: none; Confidence: high; Capability path: missing -> invented"
+    },
+    {
+      "case_id": "functional.speckit-autopilot.case-103",
+      "check_id": "legacy-01-text",
+      "wrong": "Capability path: codebase context -> local repository; Evidence: inspected tracked files; Confidence: ;"
+    },
+    {
+      "case_id": "functional.speckit-coach.case-1",
+      "check_id": "legacy-04-text",
+      "wrong": "implement, analyze, tasks, checklist, plan, clarify, specify"
+    },
+    {
+      "case_id": "functional.speckit-coach.case-103",
+      "check_id": "legacy-01-text",
+      "wrong": "Capability path: library guidance -> installed documentation source; Evidence: current reference; Confidence: ;"
+    }
+  ],
+  "grounded_semantic_examples": [
+    {
+      "case_id": "functional.speckit-coach.case-2",
+      "check_id": "fixture-grounding",
+      "accepted_concise": "API: cover POST /deliveries returning 202. Resilience: test the five-attempt retry limit. Security: verify HMAC-SHA256 signature validation.",
+      "generic_wrong": "Use API, resilience, and security checklists because webhook delivery needs those domains.",
+      "contradictory_wrong": "POST /deliveries always returns 200, every 4xx is retried forever, and the unsigned body and signing secret may be written to logs.",
+      "evidence_note": "These are judge-control examples. Mocked semantic verdicts prove grader plumbing only; they are not native subject or live-judge proof."
+    }
+  ]
+}

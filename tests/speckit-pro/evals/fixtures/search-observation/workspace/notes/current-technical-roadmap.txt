@@ -1,0 +1,1 @@
+This plain-text planning note is not a Markdown technical roadmap.

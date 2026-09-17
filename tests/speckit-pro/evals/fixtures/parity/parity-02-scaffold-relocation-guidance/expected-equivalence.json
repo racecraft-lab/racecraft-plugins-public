@@ -1,0 +1,79 @@
+{
+  "schema": "speckit.layer7.expected-equivalence.v1",
+  "fixture_id": "parity-02-scaffold-relocation-guidance",
+  "description": "Compares independently correct Claude and Codex scaffold relocation-guidance reports.",
+  "compare": [
+    {
+      "field": "capability.operation",
+      "source": "artifacts/parity-02-scaffold-guidance.md",
+      "section_selector": "## Capability",
+      "extractor": "table_column:Operation",
+      "tolerance_key": "capability.operation"
+    },
+    {
+      "field": "capability.promotion_status",
+      "source": "artifacts/parity-02-scaffold-guidance.md",
+      "section_selector": "## Capability",
+      "extractor": "table_column:Promotion Status",
+      "tolerance_key": "capability.promotion_status"
+    },
+    {
+      "field": "capability.authoritative_request",
+      "source": "artifacts/parity-02-scaffold-guidance.md",
+      "section_selector": "## Capability",
+      "extractor": "table_column:Authoritative Request",
+      "tolerance_key": "capability.authoritative_request"
+    },
+    {
+      "field": "capability.runner_modes",
+      "source": "artifacts/parity-02-scaffold-guidance.md",
+      "section_selector": "## Capability",
+      "extractor": "table_column:Runner Modes",
+      "tolerance_key": "capability.runner_modes"
+    },
+    {
+      "field": "capability.action",
+      "source": "artifacts/parity-02-scaffold-guidance.md",
+      "section_selector": "## Capability",
+      "extractor": "table_column:Action",
+      "tolerance_key": "capability.action"
+    },
+    {
+      "field": "classification.spec",
+      "source": "artifacts/parity-02-scaffold-guidance.md",
+      "section_selector": "## Classification",
+      "extractor": "table_column:Spec",
+      "tolerance_key": "classification.spec"
+    },
+    {
+      "field": "classification.decision",
+      "source": "artifacts/parity-02-scaffold-guidance.md",
+      "section_selector": "## Classification",
+      "extractor": "table_column:Decision",
+      "tolerance_key": "classification.decision"
+    },
+    {
+      "field": "classification.reason",
+      "source": "artifacts/parity-02-scaffold-guidance.md",
+      "section_selector": "## Classification",
+      "extractor": "table_column:Reason",
+      "tolerance_key": "classification.reason"
+    },
+    {
+      "field": "guard.surface",
+      "source": "artifacts/parity-02-scaffold-guidance.md",
+      "section_selector": "## No Auto-Run",
+      "extractor": "table_column:Surface",
+      "tolerance_key": "guard.surface"
+    },
+    {
+      "field": "guard.status",
+      "source": "artifacts/parity-02-scaffold-guidance.md",
+      "section_selector": "## No Auto-Run",
+      "extractor": "table_column:Status",
+      "tolerance_key": "guard.status"
+    }
+  ],
+  "fail_fast": false,
+  "report_format": "field-level-diff"
+}

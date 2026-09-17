@@ -1,0 +1,11 @@
+{
+  "schema_version": "1.0",
+  "request_id": "functional-validate-g7",
+  "helper_id": "validate-gate",
+  "operation": "validate-gate",
+  "mode": "read_only",
+  "inputs": {
+    "gate": "G7",
+    "feature_dir": "scenario-inputs/read-only-helper-feature"
+  }
+}

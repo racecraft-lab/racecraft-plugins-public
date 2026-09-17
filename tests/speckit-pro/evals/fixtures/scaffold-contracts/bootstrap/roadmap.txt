@@ -1,0 +1,7 @@
+# Technical Roadmap
+
+## SPEC-009 — Native scaffold contract
+
+Scope: prepare a dedicated worktree, collect the Design Concept, and create the
+workflow record. Non-goal: execute any autopilot phase during scaffold.
+

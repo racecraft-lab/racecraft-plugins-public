@@ -1,0 +1,11 @@
+{
+  "schema_version": "1.0",
+  "request_id": "functional-plan-repair-explicit-g3",
+  "helper_id": "validate-gate",
+  "operation": "validate-gate",
+  "mode": "read_only",
+  "inputs": {
+    "gate": "G3",
+    "feature_dir": "scenario-inputs/feature"
+  }
+}

@@ -82,13 +82,14 @@ def cleanup_child(
     kill_sent = False
     last_probe_error: PermissionError | None = None
 
-    def running() -> bool:
+    def running(*, natural_grace: bool = False) -> bool:
         nonlocal last_probe_error
         child.poll()
         if os.name == "nt":
             return child.returncode is None
         if child.pid <= 0 or child.pid == os.getpgrp():
             raise OSError("refusing to inspect an unowned process group")
+        last_probe_error = None
         try:
             os.killpg(child.pid, 0)
         except ProcessLookupError:
@@ -98,15 +99,15 @@ def cleanup_child(
         except PermissionError as exc:
             if observations is not None:
                 observations.append({"pgid": child.pid, "errno": exc.errno, "elapsed_seconds": time.monotonic() - started})
-            if not kill_sent or exc.errno != errno.EPERM:
+            if exc.errno != errno.EPERM or (not natural_grace and not kill_sent):
                 raise
-            # A post-KILL permission error is unresolved, never proof of absence.
+            # Permission denial is unresolved, never proof of absence.
             last_probe_error = exc
         return True
 
     if child.poll() is not None:
         deadline = time.monotonic() + grace
-        while running() and time.monotonic() < deadline:
+        while time.monotonic() < deadline and running(natural_grace=True):
             time.sleep(0.01)
     signaled = False
     for signum in (signal.SIGTERM, signal.SIGKILL):

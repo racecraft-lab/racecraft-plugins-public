@@ -1,0 +1,6 @@
+# Technical Roadmap
+
+## SPEC-710 — Dual runtime writing boundary
+
+Scope: resolve placement beneath the current task root before any mutation.
+

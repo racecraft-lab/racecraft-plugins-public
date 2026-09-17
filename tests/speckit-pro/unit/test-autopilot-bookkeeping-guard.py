@@ -904,157 +904,142 @@ class AuthorityMatchedPairClassificationTests(unittest.TestCase):
             encoding="utf-8",
         )
 
-    def test_exact_tracked_adjacent_authority_match_is_eligible(self) -> None:
-        with tempfile.TemporaryDirectory() as raw:
-            root = Path(raw)
-            self._write_state(
-                root,
-                "specs/alpha/autopilot-state.json",
-                "specs/alpha/FEATURE-001-workflow.md",
-            )
-            result = classify_authority_matched_pairs(
-                root,
+    def test_authority_pair_classification_matrix(self) -> None:
+        cases = (
+            (
+                "eligible exact adjacent tracked pair",
+                (
+                    "specs/alpha/autopilot-state.json",
+                    "specs/alpha/FEATURE-001-workflow.md",
+                ),
                 (
                     "specs/alpha/FEATURE-001-workflow.md",
                     "specs/alpha/autopilot-state.json",
                 ),
-            )
-
-        self.assertEqual(
-            result,
-            {
-                "eligible": ((
+                ((
                     "specs/alpha/FEATURE-001-workflow.md",
                     "specs/alpha/autopilot-state.json",
                 ),),
-                "excluded": (),
-            },
-        )
-
-    def test_missing_adjacent_state_is_excluded_without_synthesis(self) -> None:
-        with tempfile.TemporaryDirectory() as raw:
-            result = classify_authority_matched_pairs(
-                Path(raw),
+                (),
+                True,
+            ),
+            (
+                "missing adjacent state",
+                None,
                 ("specs/missing/FEATURE-002-workflow.md",),
-            )
-
-        self.assertEqual(result["eligible"], ())
-        self.assertEqual(
-            result["excluded"],
-            ({
-                "workflow": "specs/missing/FEATURE-002-workflow.md",
-                "state": "specs/missing/autopilot-state.json",
-                "reason": "missing-adjacent-state",
-            },),
-        )
-
-    def test_mismatched_authority_is_excluded(self) -> None:
-        with tempfile.TemporaryDirectory() as raw:
-            root = Path(raw)
-            self._write_state(
-                root,
-                "specs/mismatch/autopilot-state.json",
-                "specs/other/FEATURE-003-workflow.md",
-            )
-            result = classify_authority_matched_pairs(
-                root,
+                (),
+                ({
+                    "workflow": "specs/missing/FEATURE-002-workflow.md",
+                    "state": "specs/missing/autopilot-state.json",
+                    "reason": "missing-adjacent-state",
+                },),
+                False,
+            ),
+            (
+                "mismatched workflow authority",
+                (
+                    "specs/mismatch/autopilot-state.json",
+                    "specs/other/FEATURE-003-workflow.md",
+                ),
                 (
                     "specs/mismatch/FEATURE-003-workflow.md",
                     "specs/mismatch/autopilot-state.json",
                 ),
-            )
-
-        self.assertEqual(result["eligible"], ())
-        self.assertEqual(
-            result["excluded"],
-            ({
-                "workflow": "specs/mismatch/FEATURE-003-workflow.md",
-                "state": "specs/mismatch/autopilot-state.json",
-                "reason": "workflow-file-mismatch",
-                "workflow_file": "specs/other/FEATURE-003-workflow.md",
-            },),
-        )
-
-    def test_untracked_adjacent_state_is_excluded(self) -> None:
-        with tempfile.TemporaryDirectory() as raw:
-            root = Path(raw)
-            self._write_state(
-                root,
-                "specs/untracked/autopilot-state.json",
-                "specs/untracked/FEATURE-004-workflow.md",
-            )
-            result = classify_authority_matched_pairs(
-                root,
+                (),
+                ({
+                    "workflow": "specs/mismatch/FEATURE-003-workflow.md",
+                    "state": "specs/mismatch/autopilot-state.json",
+                    "reason": "workflow-file-mismatch",
+                    "workflow_file": "specs/other/FEATURE-003-workflow.md",
+                },),
+                False,
+            ),
+            (
+                "untracked adjacent state",
+                (
+                    "specs/untracked/autopilot-state.json",
+                    "specs/untracked/FEATURE-004-workflow.md",
+                ),
                 ("specs/untracked/FEATURE-004-workflow.md",),
-            )
-
-        self.assertEqual(result["eligible"], ())
-        self.assertEqual(
-            result["excluded"],
-            ({
-                "workflow": "specs/untracked/FEATURE-004-workflow.md",
-                "state": "specs/untracked/autopilot-state.json",
-                "reason": "untracked-adjacent-state",
-            },),
-        )
-
-    def test_matching_non_adjacent_state_is_not_synthesized(self) -> None:
-        with tempfile.TemporaryDirectory() as raw:
-            root = Path(raw)
-            self._write_state(
-                root,
-                "specs/elsewhere/autopilot-state.json",
-                "specs/synthetic/FEATURE-005-workflow.md",
-            )
-            result = classify_authority_matched_pairs(
-                root,
+                (),
+                ({
+                    "workflow": "specs/untracked/FEATURE-004-workflow.md",
+                    "state": "specs/untracked/autopilot-state.json",
+                    "reason": "untracked-adjacent-state",
+                },),
+                False,
+            ),
+            (
+                "matching but non-adjacent state",
                 (
                     "specs/elsewhere/autopilot-state.json",
                     "specs/synthetic/FEATURE-005-workflow.md",
                 ),
-            )
-
-        self.assertEqual(result["eligible"], ())
-        self.assertEqual(
-            result["excluded"],
-            ({
-                "workflow": "specs/synthetic/FEATURE-005-workflow.md",
-                "state": "specs/synthetic/autopilot-state.json",
-                "reason": "missing-adjacent-state",
-            },),
+                (
+                    "specs/elsewhere/autopilot-state.json",
+                    "specs/synthetic/FEATURE-005-workflow.md",
+                ),
+                (),
+                ({
+                    "workflow": "specs/synthetic/FEATURE-005-workflow.md",
+                    "state": "specs/synthetic/autopilot-state.json",
+                    "reason": "missing-adjacent-state",
+                },),
+                False,
+            ),
         )
 
-    def test_tracked_state_read_failure_is_not_silently_skipped(self) -> None:
-        with tempfile.TemporaryDirectory() as raw:
-            root = Path(raw)
-            state = root / "specs/read/autopilot-state.json"
-            state.parent.mkdir(parents=True, exist_ok=True)
-            state.mkdir()
+        for label, state_record, tracked, eligible, excluded, assert_whole in cases:
+            with self.subTest(case=label):
+                with tempfile.TemporaryDirectory() as raw:
+                    root = Path(raw)
+                    if state_record is not None:
+                        state_path, workflow_file = state_record
+                        self._write_state(root, state_path, workflow_file)
+                    result = classify_authority_matched_pairs(root, tracked)
 
-            with self.assertRaisesRegex(OSError, "specs/read/autopilot-state.json"):
-                classify_authority_matched_pairs(
-                    root,
-                    (
-                        "specs/read/FEATURE-006-workflow.md",
-                        "specs/read/autopilot-state.json",
-                    ),
-                )
+                if assert_whole:
+                    self.assertEqual(
+                        result,
+                        {"eligible": eligible, "excluded": excluded},
+                    )
+                else:
+                    self.assertEqual(result["eligible"], eligible)
+                    self.assertEqual(result["excluded"], excluded)
 
-    def test_tracked_state_json_parse_failure_is_not_silently_skipped(self) -> None:
-        with tempfile.TemporaryDirectory() as raw:
-            root = Path(raw)
-            state = root / "specs/bad-json/autopilot-state.json"
-            state.parent.mkdir(parents=True, exist_ok=True)
-            state.write_text("{not-json", encoding="utf-8")
+    def test_tracked_state_failure_matrix(self) -> None:
+        cases = (
+            (
+                "tracked-state read OSError including path",
+                "specs/read/FEATURE-006-workflow.md",
+                "specs/read/autopilot-state.json",
+                OSError,
+                "directory",
+            ),
+            (
+                "tracked-state JSON ValueError including path",
+                "specs/bad-json/FEATURE-007-workflow.md",
+                "specs/bad-json/autopilot-state.json",
+                ValueError,
+                "invalid-json",
+            ),
+        )
 
-            with self.assertRaisesRegex(ValueError, "specs/bad-json/autopilot-state.json"):
-                classify_authority_matched_pairs(
-                    root,
-                    (
-                        "specs/bad-json/FEATURE-007-workflow.md",
-                        "specs/bad-json/autopilot-state.json",
-                    ),
-                )
+        for label, workflow, state_path, error_type, fixture_kind in cases:
+            with self.subTest(case=label), tempfile.TemporaryDirectory() as raw:
+                root = Path(raw)
+                state = root / state_path
+                state.parent.mkdir(parents=True, exist_ok=True)
+                if fixture_kind == "directory":
+                    state.mkdir()
+                else:
+                    state.write_text("{not-json", encoding="utf-8")
+
+                with self.assertRaisesRegex(error_type, state_path):
+                    classify_authority_matched_pairs(
+                        root,
+                        (workflow, state_path),
+                    )
 
 
 class TrackedPairCorpusTests(StatusEvidenceReportAssertions, unittest.TestCase):
@@ -1098,45 +1083,48 @@ class TrackedPairCorpusTests(StatusEvidenceReportAssertions, unittest.TestCase):
 class StatusEvidenceNegativeTests(StatusEvidenceReportAssertions, unittest.TestCase):
     """FEATURE-017 isolated state-invariant controls for the status-evidence gate."""
 
-    def test_in_progress_errors_isolated_mutation_blocks_status_evidence(self) -> None:
-        with tempfile.TemporaryDirectory() as raw:
-            supplied, state = clean_workflow_state_fixture(Path(raw))
-            planted = json.loads(state.read_text(encoding="utf-8"))
-            planted["plan"][0]["status"] = "in_progress"
-            planted["plan"][1]["status"] = "in_progress"
-            state.write_text(json.dumps(planted), encoding="utf-8")
+    def test_isolated_state_invariant_failure_matrix(self) -> None:
+        def plant_in_progress_errors(plan: list[dict]) -> None:
+            plan[0]["status"] = "in_progress"
+            plan[1]["status"] = "in_progress"
 
-            code, report = run_status_evidence_report(supplied, state)
+        def plant_duplicate_state_steps(plan: list[dict]) -> None:
+            plan.append(dict(plan[0]))
 
-        self.assertCompleteReport(report)
-        self.assertOnlySelectedProblemKeyPopulated(report, "in_progress_errors")
-        self.assertEqual(code, 1, report)
+        def plant_state_order_errors(plan: list[dict]) -> None:
+            plan[0], plan[1] = plan[1], plan[0]
 
-    def test_duplicate_state_steps_isolated_mutation_blocks_status_evidence(self) -> None:
-        with tempfile.TemporaryDirectory() as raw:
-            supplied, state = clean_workflow_state_fixture(Path(raw))
-            planted = json.loads(state.read_text(encoding="utf-8"))
-            planted["plan"].append(dict(planted["plan"][0]))
-            state.write_text(json.dumps(planted), encoding="utf-8")
+        cases = (
+            (
+                "in-progress invariant only",
+                "in_progress_errors",
+                plant_in_progress_errors,
+            ),
+            (
+                "duplicate-step invariant only",
+                "duplicate_state_steps",
+                plant_duplicate_state_steps,
+            ),
+            (
+                "state-order invariant only",
+                "state_order_errors",
+                plant_state_order_errors,
+            ),
+        )
 
-            code, report = run_status_evidence_report(supplied, state)
+        for label, problem_key, plant_fault in cases:
+            with self.subTest(case=label):
+                with tempfile.TemporaryDirectory() as raw:
+                    supplied, state = clean_workflow_state_fixture(Path(raw))
+                    planted = json.loads(state.read_text(encoding="utf-8"))
+                    plant_fault(planted["plan"])
+                    state.write_text(json.dumps(planted), encoding="utf-8")
 
-        self.assertCompleteReport(report)
-        self.assertOnlySelectedProblemKeyPopulated(report, "duplicate_state_steps")
-        self.assertEqual(code, 1, report)
+                    code, report = run_status_evidence_report(supplied, state)
 
-    def test_state_order_errors_isolated_mutation_blocks_status_evidence(self) -> None:
-        with tempfile.TemporaryDirectory() as raw:
-            supplied, state = clean_workflow_state_fixture(Path(raw))
-            planted = json.loads(state.read_text(encoding="utf-8"))
-            planted["plan"][0], planted["plan"][1] = planted["plan"][1], planted["plan"][0]
-            state.write_text(json.dumps(planted), encoding="utf-8")
-
-            code, report = run_status_evidence_report(supplied, state)
-
-        self.assertCompleteReport(report)
-        self.assertOnlySelectedProblemKeyPopulated(report, "state_order_errors")
-        self.assertEqual(code, 1, report)
+                self.assertCompleteReport(report)
+                self.assertOnlySelectedProblemKeyPopulated(report, problem_key)
+                self.assertEqual(code, 1, report)
 
 
 class WorkflowAuthorityTests(unittest.TestCase):

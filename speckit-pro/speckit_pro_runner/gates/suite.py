@@ -19,6 +19,9 @@ from ..path_utils import find_repo_root, is_relative_to, resolves_to_current_pyt
 from .gate_response import gate_base_data
 
 CAPTURE_LIMIT_BYTES = 16 * 1024
+CANONICAL_LAYER_KEYS = frozenset(
+    {"structural", "trigger", "functional", "unit", "tool-scoping", "integration", "parity"}
+)
 DEFAULT_TIMEOUT_SECONDS = 300
 LAYER_SCRIPT_DISPATCHER = "tests/speckit-pro/run-layer-scripts.py"
 LAYER_SCRIPT_TIMEOUT_SECONDS = 1800
@@ -37,6 +40,29 @@ class SuiteManifestError(Exception):
     """
 
 
+def _validate_manifest_layers(layers: Any) -> tuple[set[str], set[str]]:
+    if not isinstance(layers, list) or not layers:
+        raise SuiteManifestError("suite manifest must carry a non-empty layers array")
+    layer_ids: set[str] = set()
+    layer_keys: set[str] = set()
+    for layer in layers:
+        if not isinstance(layer, dict) or not all(
+            field in layer for field in ("id", "default", "live_only", "dispatch", "scripts")
+        ):
+            raise SuiteManifestError("suite manifest layer is missing a required field")
+        layer_id = layer["id"]
+        if not isinstance(layer_id, str) or not layer_id or layer_id in layer_ids:
+            raise SuiteManifestError("suite manifest layer ids must be non-empty and unique")
+        layer_ids.add(layer_id)
+        if layer_id == "toolchain":
+            continue
+        layer_key = layer.get("key")
+        if not isinstance(layer_key, str) or not layer_key or layer_key in layer_keys:
+            raise SuiteManifestError("suite manifest numeric layer keys must be non-empty and unique")
+        layer_keys.add(layer_key)
+    return layer_ids, layer_keys
+
+
 def load_suite_manifest(repo_root: Path) -> dict[str, Any]:
     """Load and shape-check the suite manifest; raise SuiteManifestError on failure."""
     path = repo_root / SUITE_MANIFEST_PATH
@@ -50,14 +76,11 @@ def load_suite_manifest(repo_root: Path) -> dict[str, Any]:
         raise SuiteManifestError(f"suite manifest is not valid JSON: {SUITE_MANIFEST_PATH}") from exc
     if not isinstance(data, dict) or data.get("schema_version") != "1.0":
         raise SuiteManifestError("suite manifest schema_version must be '1.0'")
-    layers = data.get("layers")
-    if not isinstance(layers, list) or not layers:
-        raise SuiteManifestError("suite manifest must carry a non-empty layers array")
-    for layer in layers:
-        if not isinstance(layer, dict) or not all(
-            field in layer for field in ("id", "default", "live_only", "dispatch", "scripts")
-        ):
-            raise SuiteManifestError("suite manifest layer is missing a required field")
+    layer_ids, layer_keys = _validate_manifest_layers(data.get("layers"))
+    if layer_keys & layer_ids:
+        raise SuiteManifestError("suite manifest layer keys must not collide with layer ids")
+    if layer_keys != CANONICAL_LAYER_KEYS:
+        raise SuiteManifestError("suite manifest layer keys must match the canonical seven-layer catalog")
     return data
 
 
@@ -75,20 +98,29 @@ def manifest_allowed_layers(manifest: dict[str, Any]) -> frozenset[str]:
     )
 
 
+def manifest_layer_ids_by_key(manifest: dict[str, Any]) -> dict[str, str]:
+    return {
+        layer["key"]: layer["id"]
+        for layer in manifest["layers"]
+        if layer["id"] != "toolchain"
+    }
+
+
 def _runner_repo_root() -> Path:
     # gates/suite.py -> gates -> speckit_pro_runner -> speckit-pro -> repo root.
     return Path(__file__).resolve().parents[3]
 
 
-def _derive_module_roster() -> tuple[tuple[str, ...], tuple[str, ...], frozenset[str], str | None]:
+def _derive_module_roster() -> tuple[tuple[str, ...], tuple[str, ...], frozenset[str], dict[str, str], str | None]:
     try:
         manifest = load_suite_manifest(_runner_repo_root())
     except SuiteManifestError as exc:
-        return (), (), frozenset(), str(exc)
+        return (), (), frozenset(), {}, str(exc)
     return (
         manifest_default_suite(manifest),
         manifest_extended_suite(manifest),
         manifest_allowed_layers(manifest),
+        manifest_layer_ids_by_key(manifest),
         None,
     )
 
@@ -96,7 +128,7 @@ def _derive_module_roster() -> tuple[tuple[str, ...], tuple[str, ...], frozenset
 # Derived solely from the manifest at import; the gate fails closed when the
 # manifest is unavailable (SUITE_MANIFEST_ERROR set) rather than using a
 # hardcoded default suite.
-DEFAULT_SUITE, EXTENDED_SUITE, ALLOWED_LAYERS, SUITE_MANIFEST_ERROR = _derive_module_roster()
+DEFAULT_SUITE, EXTENDED_SUITE, ALLOWED_LAYERS, LAYER_IDS_BY_KEY, SUITE_MANIFEST_ERROR = _derive_module_roster()
 STATUS_BY_EXIT_CODE = {
     0: "ok",
     1: "expected_failure",
@@ -180,9 +212,9 @@ def run_suite_gate(entry: Any, request: Any) -> dict[str, Any]:
     if operation == "run-toolchain-preflight":
         return run_toolchain_preflight(entry, request, repo_root)
     if operation == "run-integration-suite":
-        return run_command_set(entry, request, repo_root, ["layer-7"])
+        return run_semantic_layer(entry, request, repo_root, "integration")
     if operation == "run-parity-suite":
-        return run_command_set(entry, request, repo_root, ["layer-8"])
+        return run_semantic_layer(entry, request, repo_root, "parity")
     return response(
         "input_error",
         request_id=request.request_id,
@@ -206,17 +238,37 @@ def run_default_suite(entry: Any, request: Any, repo_root: Path) -> dict[str, An
 
 
 def run_layer(entry: Any, request: Any, repo_root: Path) -> dict[str, Any]:
-    layer = request.inputs.get("layer")
-    if not isinstance(layer, str) or layer not in ALLOWED_LAYERS:
+    selector = request.inputs.get("layer")
+    layer = resolve_layer_selector(selector) if isinstance(selector, str) else None
+    if layer is None:
+        supported_selectors = sorted(ALLOWED_LAYERS | {
+            key for key, layer_id in LAYER_IDS_BY_KEY.items() if layer_id in ALLOWED_LAYERS
+        })
         diag = diagnostic(
             "invalid_layer",
             "run-layer requires one supported deterministic layer",
-            details={"layer": layer, "supported_layers": sorted(ALLOWED_LAYERS)},
+            details={"layer": selector, "supported_layers": supported_selectors},
             remediation_summary="Send a supported run-layer request.",
-            remediation_actions=["Set inputs.layer to 1, 4, 5, 7, or 8.", "Retry the suite-gate request."],
+            remediation_actions=["Set inputs.layer to a supported numeric ID or semantic key.", "Retry the suite-gate request."],
         )
         return response("input_error", request_id=request.request_id, data=base_data(entry, request.operation, "input_error"), diagnostics=[diag])
     return run_command_set(entry, request, repo_root, [suite_item_to_command_id(layer)])
+
+
+def resolve_layer_selector(selector: str) -> str | None:
+    if selector in ALLOWED_LAYERS:
+        return selector
+    layer_id = LAYER_IDS_BY_KEY.get(selector)
+    return layer_id if layer_id in ALLOWED_LAYERS else None
+
+
+def run_semantic_layer(entry: Any, request: Any, repo_root: Path, layer_key: str) -> dict[str, Any]:
+    return run_command_set(
+        entry,
+        request,
+        repo_root,
+        [suite_item_to_command_id(LAYER_IDS_BY_KEY[layer_key])],
+    )
 
 
 def run_toolchain_preflight(entry: Any, request: Any, repo_root: Path) -> dict[str, Any]:
@@ -268,20 +320,33 @@ def requested_suite(inputs: dict[str, Any]) -> tuple[str, ...] | dict[str, Any]:
         return diagnostic(
             "invalid_suite",
             "run-default-suite inputs.suite must be a list of suite item ids",
-            details={"supported_suite_items": list(EXTENDED_SUITE)},
+            details={"supported_suite_items": supported_suite_selectors()},
             remediation_summary="Send a structured suite list.",
-            remediation_actions=["Use suite entries toolchain, 1, 4, 5, 7, and 8.", "Retry the request."],
+            remediation_actions=["Use supported numeric IDs or semantic keys.", "Retry the request."],
         )
-    invalid = [item for item in raw if item not in EXTENDED_SUITE]
+    normalized = [resolve_suite_item(item) for item in raw]
+    invalid = [item for item, resolved in zip(raw, normalized, strict=True) if resolved is None]
     if invalid:
         return diagnostic(
             "invalid_suite",
             "run-default-suite received unsupported suite item ids",
-            details={"invalid": invalid, "supported_suite_items": list(EXTENDED_SUITE)},
+            details={"invalid": invalid, "supported_suite_items": supported_suite_selectors()},
             remediation_summary="Send only supported suite item ids.",
             remediation_actions=["Remove unsupported suite entries.", "Retry the request."],
         )
-    return tuple(raw)
+    return tuple(item for item in normalized if item is not None)
+
+
+def resolve_suite_item(selector: str) -> str | None:
+    if selector in EXTENDED_SUITE:
+        return selector
+    layer_id = LAYER_IDS_BY_KEY.get(selector)
+    return layer_id if layer_id in EXTENDED_SUITE else None
+
+
+def supported_suite_selectors() -> list[str]:
+    semantic = [key for key, layer_id in LAYER_IDS_BY_KEY.items() if layer_id in EXTENDED_SUITE]
+    return sorted(set(EXTENDED_SUITE) | set(semantic))
 
 
 def suite_item_to_command_id(item: str) -> str:
@@ -321,7 +386,7 @@ def command_spec_from_override(command_id: str, raw: Any) -> CommandSpec | dict[
 def default_command_spec(command_id: str, inputs: dict[str, Any], repo_root: Path) -> CommandSpec | dict[str, Any]:
     if command_id == "toolchain":
         return toolchain_command_spec(command_id, inputs, repo_root)
-    if command_id in {"layer-1", "layer-4", "layer-5", "layer-7", "layer-8"}:
+    if command_id in {suite_item_to_command_id(item) for item in ALLOWED_LAYERS}:
         return external_layer_script_spec(command_id)
     return unsafe_command_diagnostic(command_id, "unknown suite command id")
 
@@ -515,7 +580,8 @@ def base_data(entry: Any, operation: str, status: str) -> dict[str, Any]:
 
 def comparison_ids(operation: str) -> list[str]:
     if operation == "run-default-suite":
-        return ["default-suite-toolchain-l1-l4-l5-l7-l8"]
+        roster = "-".join("toolchain" if item == "toolchain" else f"l{item}" for item in EXTENDED_SUITE)
+        return [f"default-suite-{roster}"]
     return [operation]
 
 

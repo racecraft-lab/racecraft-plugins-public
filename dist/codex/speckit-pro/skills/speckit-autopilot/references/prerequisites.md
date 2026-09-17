@@ -131,18 +131,24 @@ different from the autopilot scripts.
 invocations — it only exists inside agent subprocesses. Always use
 the literal path extracted from the skill header.
 
+Runner helper transport: use the resolved Python 3.11+ interpreter as
+`<resolved_python>`, send one JSON request on stdin, and parse the one JSON
+response envelope from stdout. Every request includes `schema_version`,
+`request_id`, `helper_id`, `operation`, `mode`, and `inputs`.
+
 ## Step 0.0b: Claude Agent Package Completeness
 
 Before any phase work, verify the installed Claude Code plugin package includes
 every bundled SpecKit Pro agent:
 
 ```text
-Command("'runner helper validate-agent-install' --surface claude --plugin-root '<plugin-root>'")
+printf '%s\n' '{"schema_version":"1.0","request_id":"autopilot-validate-agent-install","helper_id":"validate-agent-install","operation":"validate-agent-install","mode":"read_only","inputs":{"surface":"claude"}}' | <resolved_python> -m speckit_pro_runner
 ```
 
-Use the plugin root that owns `skills/speckit-autopilot/`; this is the directory
-above `skills/`, not the host repository root. The validator checks all bundled
-`agents/*.md` files, including `uat-runbook-author.md`.
+The helper resolves the loaded plugin root that owns
+`skills/speckit-autopilot/` and checks all bundled `agents/*.md` files,
+including `uat-runbook-author.md`. If `plugin_root` is supplied in `inputs`,
+it must equal that loaded root.
 
 If the check fails, STOP. Claude Code loads plugin agents directly from the
 plugin cache, so autopilot cannot safely self-heal a missing Claude agent file.
@@ -152,7 +158,7 @@ retry.
 ## Step 0.1–0.7: Environment Checks
 
 ```text
-Command("'runner helper check-prerequisites' <workflow_file_path>")
+printf '%s\n' '{"schema_version":"1.0","request_id":"autopilot-check-prerequisites","helper_id":"check-prerequisites","operation":"check-prerequisites","mode":"read_only","inputs":{"workflow_file":"<workflow-file-path>"}}' | <resolved_python> -m speckit_pro_runner
 ```
 
 Parse the JSON result:
@@ -306,7 +312,7 @@ New-model authoring may be pending; missing existing files or tool setup blocks
 with a resumable diagnostic. Do not install a checker implicitly.
 
 ```text
-Command("'runner helper detect-commands'")
+printf '%s\n' '{"schema_version":"1.0","request_id":"autopilot-detect-commands","helper_id":"detect-commands","operation":"detect-commands","mode":"read_only","inputs":{}}' | <resolved_python> -m speckit_pro_runner
 ```
 
 Parse the JSON result for `commands` object containing:
@@ -441,7 +447,7 @@ Two plugin hooks enforce rules the orchestrator must also honor by hand:
 ## Step 0.12: Preset and Extension Detection
 
 ```text
-Command("'runner helper detect-presets'")
+printf '%s\n' '{"schema_version":"1.0","request_id":"autopilot-detect-presets","helper_id":"detect-presets","operation":"detect-presets","mode":"read_only","inputs":{}}' | <resolved_python> -m speckit_pro_runner
 ```
 
 Parse the JSON result for: `has_presets`, `presets` (names +

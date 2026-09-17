@@ -58,9 +58,9 @@ class ArgParsingTests(unittest.TestCase):
         self.assertTrue(config.run_all)
         self.assertTrue(config.live)
 
-    def test_integration_flag_selects_layer_seven(self) -> None:
+    def test_integration_flag_selects_semantic_key(self) -> None:
         config = run_all.parse_args(["--integration"])
-        self.assertEqual(config.run_layer, "7")
+        self.assertEqual(config.run_layer, "integration")
 
     def test_layer_and_live_and_verbose_flags(self) -> None:
         config = run_all.parse_args(["--layer", "4", "--live", "--verbose"])
@@ -88,29 +88,38 @@ class ScopeSelectionTests(unittest.TestCase):
     def _ordered_runs(self, config):
         return [layer["id"] for layer in run_all.execution_layers(self.manifest) if run_all.layer_should_run(layer, config)]
 
+    def test_manifest_has_unique_stable_layer_keys(self) -> None:
+        keyed_layers = [layer for layer in self.manifest["layers"] if layer["id"] != "toolchain"]
+        self.assertEqual(
+            [(layer["key"], layer["id"]) for layer in keyed_layers],
+            [("structural", "1"), ("unit", "4"), ("tool-scoping", "5"), ("integration", "6"),
+             ("parity", "7"), ("trigger", "2"), ("functional", "3")],
+        )
+
     def test_default_runs_only_1_4_5(self) -> None:
         self.assertEqual(self._runs(run_all.parse_args([])), {"1", "4", "5"})
 
     def test_live_preserves_default_1_4_5_scope(self) -> None:
         self.assertEqual(self._ordered_runs(run_all.parse_args(["--live"])), ["1", "4", "5"])
 
-    def test_all_runs_every_configured_runner_block_but_not_layer_8(self) -> None:
+    def test_all_runs_every_configured_runner_block_but_not_parity(self) -> None:
         runs = self._ordered_runs(run_all.parse_args(["--all"]))
         expected = [
             layer["id"]
             for layer in run_all.execution_layers(self.manifest)
-            if layer["id"] != "8"
+            if layer.get("key") != "parity"
         ]
         self.assertEqual(runs, expected)
-        self.assertNotIn("8", runs)
+        self.assertNotIn("7", runs)
 
     def test_layer_selection_is_exact(self) -> None:
         self.assertEqual(self._runs(run_all.parse_args(["--layer", "4"])), {"4"})
 
-    def test_integration_selects_only_layer_7(self) -> None:
-        self.assertEqual(self._runs(run_all.parse_args(["--integration"])), {"7"})
+    def test_integration_selects_only_layer_6(self) -> None:
+        self.assertEqual(self._runs(run_all.parse_args(["--integration"])), {"6"})
+        self.assertEqual(self._runs(run_all.parse_args(["--layer", "integration"])), {"6"})
 
-    def test_toolchain_runs_when_any_of_1_4_5_7_run(self) -> None:
+    def test_toolchain_runs_when_any_of_1_4_5_6_run(self) -> None:
         self.assertTrue(run_all.toolchain_should_run(self.manifest, run_all.parse_args([])))
         self.assertTrue(run_all.toolchain_should_run(self.manifest, run_all.parse_args(["--integration"])))
         self.assertFalse(run_all.toolchain_should_run(self.manifest, run_all.parse_args(["--layer", "2"])))

@@ -10,7 +10,7 @@ import re
 import shlex
 import string
 import subprocess
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
 
@@ -290,6 +290,7 @@ CLASSIFICATIONS = (
     "source_checkout_helper",
     "docs_non_runtime",
     "test_fixture",
+    "eval_harness_native_execution",
     "docs_out_of_scope",
 )
 
@@ -680,6 +681,7 @@ def run_repo_bash_confinement(entry: Any, request: Any, repo_root: Path) -> dict
             )
         )
 
+    findings = [repo_bash_classify_native_execution(finding) for finding in findings]
     blocking = [finding for finding in findings if finding.classification == "blocking_repo_bash"]
     status = "expected_failure" if blocking else "ok"
     data = repo_bash_base_data(entry, request.operation, status, request.inputs)
@@ -987,6 +989,39 @@ def repo_bash_shebang(content: str) -> bool:
             for delegated in env_delegated_argvs(["env", *argv[1:]])
         )
     return executable_basename(argv[0]) in REPO_BASH_SHEBANG_NAMES
+
+
+# Native-execution surfaces of the eval harness. These findings are fail-closed
+# on an executable the AST resolver cannot follow -- a harness-generated
+# launcher or a tool binary pinned by a validated runtime receipt -- not on
+# evidence of a Bash dependency. A real bash/sh/jq token or Bash-family script
+# suffix is detected independently and stays blocking in every path, so this
+# cannot hide a genuine dependency. Deliberately separate from the canonical
+# Spec Kit allowlist, which stays reserved for vendored helpers.
+REPO_BASH_NATIVE_EXECUTION_PREFIXES = (
+    "tests/speckit-pro/lib/native_eval_",
+    "tests/speckit-pro/unit/test-native-",
+)
+REPO_BASH_NATIVE_EXECUTION_CLASSIFICATION = "eval_harness_native_execution"
+
+
+def repo_bash_classify_native_execution(finding: RawFinding) -> RawFinding:
+    """Downgrade unresolved-executable findings inside the native eval harness."""
+    if finding.classification != "blocking_repo_bash":
+        return finding
+    if finding.category != "command_argv_subprocess" or "<dynamic" not in finding.pattern:
+        return finding
+    if not finding.path.startswith(REPO_BASH_NATIVE_EXECUTION_PREFIXES):
+        return finding
+    return replace(
+        finding,
+        active_role="eval_harness_native_execution",
+        classification=REPO_BASH_NATIVE_EXECUTION_CLASSIFICATION,
+        remediation=(
+            "Keep the executable receipt-validated or harness-generated. "
+            "Never introduce a shell token or Bash-family script suffix."
+        ),
+    )
 
 
 def repo_bash_raw_finding(
@@ -4397,7 +4432,7 @@ def classify_path(path: str, category: str, pattern: str, content: str, source_k
         return "generated_payload_mirror"
     if path.startswith("docs-site/") or path.startswith("docs/") or path in {"CLAUDE.md", "README.md"} or path.startswith("specs/"):
         return "docs_out_of_scope"
-    if "/fixtures/" in path or path.endswith("bash-reference-manifest.json") or "layer8-parity/" in path:
+    if "/fixtures/" in path or path.endswith("bash-reference-manifest.json") or "layer7-parity/" in path:
         return "temporary_parity_evidence"
     if path.startswith("speckit-pro/codex-skills/") or path.startswith("speckit-pro/skills/") or path.startswith("speckit-pro/scripts/"):
         return "installed_runtime_cutover_surface"
@@ -4421,7 +4456,7 @@ def classify_installed_runtime_path(path: str, category: str, pattern: str, cont
         return "archive_provenance"
     if path.startswith(".specify/scripts/bash/"):
         return "upstream_spec_kit_helper"
-    if path.startswith("tests/") or "/fixtures/" in path or "layer8-parity/" in path:
+    if path.startswith("tests/") or "/fixtures/" in path or "layer7-parity/" in path:
         return "test_fixture"
     if installed_runtime_payload_script_detector_reference(path, content):
         return "source_checkout_helper"
