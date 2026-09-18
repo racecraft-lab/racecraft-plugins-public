@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"net/http/httptest"
 	"os"
@@ -283,6 +284,75 @@ func TestKeyErrorsNeverQuoteTheValue(t *testing.T) {
 		}
 		if strings.Contains(err.Error(), sentinel) {
 			t.Fatalf("error quoted the key: %v", err)
+		}
+	}
+}
+
+// The same property on the environment path, which the key-file cases above
+// never reach. This is the flow CodeQL's go/clear-text-logging rule reports:
+// os.LookupEnv(APIKeyEnv) feeds parseKey, whose error is wrapped and printed
+// by `evaluate setup pi`. The value must not survive that trip, and every
+// rejection reason is exercised rather than one representative case.
+func TestEnvironmentKeyErrorsNeverQuoteTheValue(t *testing.T) {
+	const sentinel = "sk-sentinel-must-not-appear"
+	for name, value := range map[string]string{
+		"trailing whitespace": sentinel + " ",
+		"leading whitespace":  " " + sentinel,
+		"embedded newline":    sentinel + "\nsecond",
+		"control character":   sentinel + "\x01",
+		"delete character":    sentinel + "\x7f",
+		"placeholder":         "${" + sentinel + "}",
+	} {
+		t.Run(name, func(t *testing.T) {
+			// envLookup, not os.LookupEnv: resolveConfig's contract is that a
+			// test never reads the developer's shell. The value still has to
+			// reach os.LookupEnv inside loadCredential, so it is also set in
+			// the process environment, scoped to this subtest.
+			cfg, err := resolveConfig(envLookup(map[string]string{
+				"JEV_PROVIDER": "openrouter",
+			}))
+			if err != nil {
+				t.Fatal(err)
+			}
+			t.Setenv(cfg.Provider.APIKeyEnv, value)
+
+			_, err = loadCredential(cfg)
+			if err == nil {
+				t.Fatalf("%q: want an error", value)
+			}
+			if strings.Contains(err.Error(), sentinel) {
+				t.Fatalf("error quoted the key: %v", err)
+			}
+			// The variable's name is the useful part and is not a secret.
+			if !strings.Contains(err.Error(), "OPENROUTER_API_KEY") {
+				t.Errorf("error should name the variable: %v", err)
+			}
+		})
+	}
+}
+
+// Each rejection reason is a package-level value, so no error parseKey returns
+// can carry the key it was handed. Building one inside the function from the
+// candidate would defeat the test above without failing it, because a future
+// edit could interpolate the value into a message that still matches no
+// sentinel this test happens to use.
+func TestKeyRejectionReasonsAreConstant(t *testing.T) {
+	const sentinel = "sk-another-sentinel"
+	for _, s := range []string{
+		"", sentinel + " ", " " + sentinel, sentinel + "\n",
+		sentinel + "\x00", "${" + sentinel + "}",
+	} {
+		_, err := parseKey(s)
+		if err == nil {
+			t.Fatalf("parseKey(%q) should fail", s)
+		}
+		switch {
+		case errors.Is(err, errKeyEmpty),
+			errors.Is(err, errKeyWhitespace),
+			errors.Is(err, errKeyControlChar),
+			errors.Is(err, errKeyPlaceholder):
+		default:
+			t.Errorf("parseKey(%q) returned an ad-hoc error %v, not one of the fixed reasons", s, err)
 		}
 	}
 }

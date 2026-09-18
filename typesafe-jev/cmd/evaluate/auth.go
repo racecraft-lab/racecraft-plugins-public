@@ -106,6 +106,18 @@ func readKeyFile(path string) (credential, error) {
 	return key, nil
 }
 
+// The reasons a candidate key is rejected. They are package-level values built
+// from constants, so no error parseKey returns can be derived from the key it
+// was given. That is the property TestKeyErrorsNeverQuoteTheValue asserts, and
+// stating it in the type rather than in each return makes it checkable by
+// reading one block instead of auditing every path.
+var (
+	errKeyEmpty       = errors.New("is empty")
+	errKeyWhitespace  = errors.New("has leading or trailing whitespace")
+	errKeyControlChar = errors.New("contains a control character")
+	errKeyPlaceholder = errors.New("is an unexpanded ${...} placeholder")
+)
+
 // parseKey validates a candidate key. It never includes the value in an error:
 // an error message travels further than the operator expects.
 //
@@ -113,23 +125,23 @@ func readKeyFile(path string) (credential, error) {
 // guesses at one rejects a valid new key for no benefit.
 func parseKey(s string) (credential, error) {
 	if s == "" {
-		return "", errors.New("is empty")
+		return "", errKeyEmpty
 	}
 	if s != strings.TrimSpace(s) {
 		// Not trimmed silently: leading or trailing space usually means a
 		// copy-paste error, and sending the trimmed value would hide it.
-		return "", errors.New("has leading or trailing whitespace")
+		return "", errKeyWhitespace
 	}
 	// A header value cannot hold these, and a newline in particular would let
 	// a malformed key inject a second header.
 	for _, r := range s {
 		if r < 0x20 || r == 0x7f {
-			return "", errors.New("contains a control character")
+			return "", errKeyControlChar
 		}
 	}
 	// The usual sign that a config template was copied without substitution.
 	if strings.HasPrefix(s, "${") && strings.HasSuffix(s, "}") {
-		return "", errors.New("is an unexpanded ${...} placeholder")
+		return "", errKeyPlaceholder
 	}
 	return credential(s), nil
 }
