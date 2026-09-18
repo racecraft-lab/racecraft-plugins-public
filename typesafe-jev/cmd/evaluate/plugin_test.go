@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 )
@@ -381,6 +382,153 @@ func TestVersionsAgreeAndAreBumped(t *testing.T) {
 	for _, decl := range versionDeclarations {
 		if !wired[decl.path+" "+decl.jsonpath] {
 			t.Errorf("release-please does not bump %s %s", decl.path, decl.jsonpath)
+		}
+	}
+}
+
+// skillFrontmatter returns a skill's YAML frontmatter as raw lines.
+func skillFrontmatter(t *testing.T, path string) map[string]string {
+	t.Helper()
+	b, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("%s: %v", path, err)
+	}
+	body := string(b)
+	if !strings.HasPrefix(body, "---\n") {
+		t.Fatalf("%s does not open with YAML frontmatter", path)
+	}
+	end := strings.Index(body[4:], "\n---\n")
+	if end < 0 {
+		t.Fatalf("%s has no closing frontmatter delimiter", path)
+	}
+	// A minimal reader rather than a YAML dependency: these files hold scalars
+	// and one folded block, and the fields under test are known.
+	fields := map[string]string{}
+	key := ""
+	for i, line := range strings.Split(body[4:4+end], "\n") {
+		if strings.HasPrefix(line, " ") || strings.HasPrefix(line, "\t") {
+			// A continuation before any key means the frontmatter is
+			// malformed. Folding it into fields[""] would accept the file and
+			// then fail somewhere less obvious, such as a description that
+			// measures zero characters.
+			if key == "" {
+				t.Fatalf("%s: line %d is indented but continues no key: %q", path, i+2, line)
+			}
+			if fields[key] != "" {
+				fields[key] += " "
+			}
+			fields[key] += strings.TrimSpace(line)
+			continue
+		}
+		name, value, ok := strings.Cut(line, ":")
+		if !ok {
+			continue
+		}
+		key = strings.TrimSpace(name)
+		fields[key] = strings.TrimSpace(strings.TrimSuffix(strings.TrimSpace(value), ">"))
+	}
+	return fields
+}
+
+// Every shipped skill meets the published requirements for a skill folder:
+// a kebab-case name matching the directory, a description that says what it
+// does and when to use it within the length limit, and no angle brackets,
+// which are refused because frontmatter reaches the system prompt.
+//
+// A skill that violates these does not fail loudly. It silently never loads,
+// which is indistinguishable from the model choosing not to use the tool.
+func TestSkillsMeetTheAuthoringRules(t *testing.T) {
+	root := filepath.Join(repoRoot(t), "shared-skills")
+	entries, err := os.ReadDir(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(entries) == 0 {
+		t.Fatal("no skills are shipped")
+	}
+
+	kebab := regexp.MustCompile(`^[a-z0-9]+(-[a-z0-9]+)*$`)
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+		t.Run(entry.Name(), func(t *testing.T) {
+			dir := filepath.Join(root, entry.Name())
+			// Exactly SKILL.md: the loader is case-sensitive and a variant
+			// spelling is simply not found.
+			path := filepath.Join(dir, "SKILL.md")
+			if _, err := os.Stat(path); err != nil {
+				t.Fatalf("no SKILL.md: %v", err)
+			}
+			if _, err := os.Stat(filepath.Join(dir, "README.md")); err == nil {
+				t.Error("a skill folder must not contain README.md")
+			}
+
+			fields := skillFrontmatter(t, path)
+			name := fields["name"]
+			if !kebab.MatchString(name) {
+				t.Errorf("name %q is not kebab-case", name)
+			}
+			if name != entry.Name() {
+				t.Errorf("name %q does not match the directory %q", name, entry.Name())
+			}
+			if strings.HasPrefix(name, "claude") || strings.HasPrefix(name, "anthropic") {
+				t.Errorf("name %q uses a reserved prefix", name)
+			}
+
+			desc := fields["description"]
+			if desc == "" {
+				t.Fatal("no description")
+			}
+			if len(desc) > 1024 {
+				t.Errorf("description is %d characters, over the 1024 limit", len(desc))
+			}
+			if strings.ContainsAny(desc, "<>") {
+				t.Error("description contains an angle bracket, which is refused in frontmatter")
+			}
+			// "When to use it" is what decides whether the skill ever loads.
+			if !strings.Contains(strings.ToLower(desc), "use ") {
+				t.Error("description does not say when to use the skill")
+			}
+		})
+	}
+}
+
+// The judgment skill is the one that has to fire without being asked, so it
+// carries the two things a description needs beyond the shared rules: the
+// moments that should trigger it, and the negative triggers that keep it from
+// firing on everything else.
+func TestJudgmentSkillNamesItsTriggers(t *testing.T) {
+	path := filepath.Join(repoRoot(t), "shared-skills", "typed-judgments", "SKILL.md")
+	fields := skillFrontmatter(t, path)
+	desc := strings.ToLower(fields["description"])
+
+	for _, trigger := range []string{"merge", "sever", "flaky", "constraint", "classif"} {
+		if !strings.Contains(desc, trigger) {
+			t.Errorf("description names no %q moment; it will under-trigger", trigger)
+		}
+	}
+	if !strings.Contains(desc, "do not use") {
+		t.Error("description has no negative trigger; it will over-trigger")
+	}
+	if !strings.Contains(desc, "evaluate") {
+		t.Error("description does not name the tool it routes to")
+	}
+
+	body, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// The three rules that decide whether an answer is worth having. Each was
+	// established against the live backend, not inferred.
+	for _, rule := range []string{
+		"no-match",       // a choice without one hides a bad fit
+		"0.5",            // uncertain, not medium intensity
+		"parallel",       // batched questions cannot see each other
+		"probability-we", // score is weighted, not an index
+	} {
+		if !strings.Contains(string(body), rule) {
+			t.Errorf("SKILL.md omits the %q rule", rule)
 		}
 	}
 }

@@ -1,0 +1,4 @@
+schema_version: "1.1"
+name: forced-classify-tickets
+context:
+  scaffold_script: scaffold.sh

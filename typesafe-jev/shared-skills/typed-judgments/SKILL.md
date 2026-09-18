@@ -1,0 +1,127 @@
+---
+name: typed-judgments
+description: >
+  Get a typed judgment with a probability from the `evaluate` MCP tool instead
+  of deciding by intuition and asserting the result. Use when a step in the
+  current task turns on a judgment call: whether a change is ready to merge,
+  which of several options or owners fits, how severe or risky something is,
+  whether a test failure is real or flaky, whether a result satisfies a
+  constraint that was stated earlier, or classifying many items the same way.
+  Covers the noul, choice and score primitives, how to batch questions, and how
+  to read the numbers. Do NOT use for writing code or prose, for a lookup or
+  search, or for any question whose possible answers cannot be listed up front.
+license: MIT
+---
+
+# Typed judgments with Jev
+
+The `evaluate` tool answers a question you define, from state you supply, with
+a probability attached. Nothing to parse and no prompt to maintain.
+
+## When to reach for it
+
+The trigger is a judgment you are about to make by intuition and then state as
+fact. In a working session that is usually one of:
+
+| Moment | Question type |
+|---|---|
+| Is this change ready to merge? | `score` over readiness levels |
+| Which of these options fits? Who owns this? | `choice` |
+| How severe or risky is this? | `score` |
+| Is this failure real or unrelated to the change? | `noul` |
+| Does this satisfy the constraint stated earlier? | `noul` |
+| Classify or rank many items the same way | one call per item |
+
+Use it **before** asserting the judgment, not to confirm one already given.
+
+## When not to
+
+- Writing code, prose, commit messages, or anything generative.
+- A search, a lookup, or reading a file: those are cheaper done directly.
+- Any question whose answers cannot be listed up front. The answer space must
+  be enumerable, at most 255 options.
+- A judgment the user already made. Their decision stands.
+
+## The three primitives
+
+- **`noul`** — the probability a yes/no condition holds. Optional `criteria`
+  is `{"true": "...", "false": "..."}`.
+- **`choice`** — one option from a required `criteria` map of option to
+  description.
+- **`score`** — a position on an ordered array of at least two level
+  descriptions. The answer is probability-weighted, so `2.13` means mostly
+  level 2 with some weight on 3. That fraction is the signal; do not round it
+  away.
+
+## Rules that decide whether the answer is useful
+
+**Batch.** Independent questions over the same state go in one call. They run
+in parallel and cannot see each other's answers. Eight questions cost barely
+more than one, so ask everything you want to know at once.
+
+**The id carries no meaning.** Question ids are never sent to the model.
+`"is_regression"` tells it nothing; the full sentence in `instructions` does.
+
+**Put the evidence in `state`.** Prefer a JSON object with named fields, and
+point at them with backticked paths: ``judge only from `ticket.messages` ``.
+
+**Give `choice` a no-match option.** Without one the model must pick from your
+list even when nothing fits, and you will never know that happened.
+
+**Score levels describe situations, not adjectives.** "Severe: a large account
+is blocked from an imminent renewal" produces a usable answer. "High" does not.
+
+**Read the numbers correctly.** A `noul` near 0.5 means *uncertain*, not
+"medium intensity". `confidence` measures how concentrated the distribution is,
+not whether the answer is right: a confidently wrong answer is what badly drawn
+criteria produce.
+
+**Strings only on the OpenRouter backend.** `instructions` and every criteria
+description must be a string. The tool rejects a structured value locally, with
+the field path, rather than flattening it. The `typesafe` backend accepts the
+structured form.
+
+## Example
+
+State, then several judgments about it in one call:
+
+```json
+{
+  "state": {"pr": {"files_changed": 23, "tests_added": 9, "ci": {"tests": "pass"},
+             "review_comments": [{"body": "the test does not clean up on failure"}]}},
+  "questions": {
+    "has_unresolved_feedback": {
+      "type": "noul",
+      "instructions": "At least one comment in `pr.review_comments` names a concrete problem that still needs a code change before merge.",
+      "criteria": {"true": "A comment names a specific defect that is unresolved.",
+                   "false": "All comments are questions, opinions, or resolved points."}},
+    "merge_readiness": {
+      "type": "score",
+      "instructions": "Rate how ready this pull request is to merge as it stands.",
+      "criteria": ["Not ready: checks failing or the change is wrong.",
+                   "Needs work: checks pass but reviewers raised unaddressed problems.",
+                   "Nearly ready: only minor points remain.",
+                   "Ready: no open concerns and all checks pass."]}
+  }
+}
+```
+
+Report the number, not a paraphrase of it. "Merge readiness 1 of 3, and
+`has_unresolved_feedback` 0.95" is the finding; "it looks about ready" throws
+away what you paid for.
+
+## Cost and privacy
+
+Each call sends the state and questions to the configured provider and is
+billed there. The read-only annotation means it changes nothing on this
+machine, not that it is free or private. Do not put a secret in `state`.
+
+Which backend is used is fixed by the operator's `JEV_PROVIDER` setting, not by
+anything you pass.
+
+## If the tool is not there
+
+The plugin ships a launcher, not the binary. If `evaluate` is missing, the
+server reports where it looked; see the plugin's README for the one-time
+install. Do not write an SDK integration as a substitute for an in-session
+judgment.
