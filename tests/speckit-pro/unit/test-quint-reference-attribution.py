@@ -245,7 +245,11 @@ class QuintReferenceAttributionTests(unittest.TestCase):
                     self.assertRegex(item.get("upstream_sha256", ""), r"^[0-9a-f]{64}$")
                     self.assertTrue(item.get("transforms"), "an adapted file must name its transform")
                     kinds = {transform["kind"] for transform in item["transforms"]}
-                    self.assertTrue(kinds <= set(ADAPTATION_TRANSFORM_KINDS))
+                    self.assertLessEqual(
+                        kinds,
+                        set(ADAPTATION_TRANSFORM_KINDS),
+                        "an adapted file uses an undeclared transform kind",
+                    )
                     if "entry-document-renamed" not in kinds:
                         self.assertNotEqual(
                             item["upstream_sha256"],
