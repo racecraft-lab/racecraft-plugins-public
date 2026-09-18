@@ -13,20 +13,36 @@ and state projection, described in [implementation-traces.md](implementation-tra
 Generating test inputs from a model or replaying a counterexample is useful but
 does not establish implementation conformance.
 
-## Use the upstream guidance on demand
+## Use the attributed guidance on demand
 
-Reuse the official Quint team's language and modeling skills as references:
+Use the locally extracted, attributed references when a Quint model is selected.
+Read the smallest relevant document and do not load the whole library:
 
-- [Quint language guidance](https://github.com/quint-co/quint/blob/6fb2924e00707cef6dbc5e30db606d555c447123/skills/quint-lang/SKILL.md)
-- [Quint modeling guidance](https://github.com/quint-co/quint/blob/6fb2924e00707cef6dbc5e30db606d555c447123/skills/quint-modeling/SKILL.md)
-- [Quint LLM Kit's lightweight plugin](https://github.com/quint-co/quint-llm-kit/tree/cc75369f741af7d490936f82002c2d28e3b3d78d/quint-llm-kit-plugin)
+- Consult [quint-lang/OVERVIEW.md](quint/quint-lang/OVERVIEW.md) for:
+  Quint syntax, types, operators, the toolchain commands, `basicSpells`, and how
+  to read simulation output or a counterexample. Its `guidelines/` files cover
+  choreography, constraints, operators, patterns, simulations, and tests.
+- Consult [quint-modeling/OVERVIEW.md](quint/quint-modeling/OVERVIEW.md) for:
+  the end-to-end workflow for building a new model from requirements, code, an
+  idea, or a TLA+ spec, and for reviewing a finished model. Its `guidelines/`
+  files cover each starting point and review; `examples/` holds worked models.
+- Consult [witness-and-trace.md](quint/witness-and-trace.md) for:
+  proposing witnesses for reachability, interpreting results, explaining a
+  counterexample, and debugging a witness that never triggers.
+- [UPSTREAM-NOTICE.md](quint/UPSTREAM-NOTICE.md) and
+  [provenance.json](quint/provenance.json) record attribution and copy fidelity.
 
-The first two references are the preferred reusable authoring guidance. The
-parent supplies only the relevant sections and examples to `formal-model-author`.
-Read referenced guidelines from that same pinned revision. Both repositories use
-Apache-2.0; these links preserve upstream ownership and avoid a second maintained
-copy of the language manual. The reviewed revisions' skill trees passed the
-repository's skill security scan without findings.
+These trees are authoring references only; they are not active skills inside
+SpecKit Pro. `OVERVIEW.md` is the upstream entry document, renamed inside
+`references/` so neither platform treats it as a skill entrypoint. The copied
+prose is unedited and still names the upstream layout, so read `SKILL.md` in
+that prose as the sibling `OVERVIEW.md`, and treat upstream mentions of
+`quint-execute-spec`, `mcp-servers/`, the Docker image, or the LSP bridge as
+unadopted layers rather than anything to install. The witness
+and trace guide is a SpecKit adaptation. The pinned upstream project is
+**Quint LLM Kit** by **Informal Systems Inc.**, licensed under Apache-2.0 at
+commit `cc75369f741af7d490936f82002c2d28e3b3d78d`. The parent supplies only the
+relevant sections and examples to `formal-model-author`.
 
 SpecKit owns selection, approved requirements, phase order, allowed output paths,
 and gate decisions. Upstream advice that ordinary modeling needs only simulation

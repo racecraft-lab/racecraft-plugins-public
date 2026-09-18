@@ -132,6 +132,7 @@
         { "path": "tests/speckit-pro/unit/test-formal-checkers.py", "label": "test-formal-checkers" },
         { "path": "tests/speckit-pro/unit/test-formal-setup.py", "label": "test-formal-setup" },
         { "path": "tests/speckit-pro/unit/test-formal-traces.py", "label": "test-formal-traces" },
+        { "path": "tests/speckit-pro/unit/test-quint-reference-attribution.py", "label": "test-quint-reference-attribution" },
         { "path": "tests/speckit-pro/unit/test-stack-manager-plan.py", "label": "test-stack-manager-plan" },
         { "path": "tests/speckit-pro/unit/test-workflow-guard-hook.py", "label": "test-workflow-guard-hook" },
         { "path": "tests/speckit-pro/unit/test-ubiquitous-language-lint.py", "label": "test-ubiquitous-language-lint" },
