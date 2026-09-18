@@ -517,12 +517,10 @@ class QuintIdentityTests(unittest.TestCase):
             quint.validate_tool(tool)
         self.assertEqual("version_mismatch", raised.exception.verdict)
 
-    def test_absolute_quint_root_outside_formal_tools_fails_closed(self) -> None:
-        tool = {"version": quint.VERSION, "root": str(self.root / "attacker"),
+    def test_pinned_digest_accepts_the_publisher_tree_without_trusting_root_location(self) -> None:
+        tool = {"version": quint.VERSION, "root": str(self.root / "quint-0.32.0"),
                 "tree_sha256": quint.TREE_SHA256, "node": "node"}
-        with self.assertRaises(catalog.FormalError) as raised:
-            quint.installation(self.root, tool)
-        self.assertEqual("unsupported", raised.exception.verdict)
+        self.assertEqual(self.root / "quint-0.32.0", quint.installation(self.root, tool))
 
 
 class NativeQuintTests(FormalCheckerTests):
