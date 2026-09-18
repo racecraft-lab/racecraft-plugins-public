@@ -22,6 +22,16 @@ This is Racecraft Lab's fork of [itsmostafa/typesafe-mcp](https://github.com/its
 
 **Solution:** `evaluate` exposes one tool, `evaluate`, that sends state plus typed questions to Jev and returns structured answers with probabilities. Nothing to parse and no prompt formatting to maintain.
 
+## Install as a plugin, or by hand
+
+This repository is both an MCP server and a plugin for Claude Code and Codex.
+The plugin bundles the `evaluate` tool together with TypeSafe's agent skill,
+adapted to use it: see [docs/plugin.md](docs/plugin.md). Install it **instead
+of** the official `typesafe` plugin, not alongside it.
+
+The by-hand path below registers the same server with no plugin involved. Use
+one or the other.
+
 ## Quickstart
 
 **1. Install** (macOS and Linux, amd64 and arm64).

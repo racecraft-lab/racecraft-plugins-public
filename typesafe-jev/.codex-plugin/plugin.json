@@ -1,0 +1,37 @@
+{
+  "name": "typesafe-jev",
+  "version": "0.5.0",
+  "description": "Ask Jev for typed judgments with calibrated probabilities instead of parsing prose, through TypeSafe directly or OpenRouter's Decisions API, with the backend chosen explicitly.",
+  "author": {
+    "name": "Racecraft Lab",
+    "url": "https://github.com/racecraft-lab"
+  },
+  "homepage": "https://github.com/racecraft-lab/typesafe-mcp",
+  "repository": "https://github.com/racecraft-lab/typesafe-mcp",
+  "license": "MIT",
+  "keywords": [
+    "typesafe",
+    "jev",
+    "openrouter",
+    "classification",
+    "structured-decisions"
+  ],
+  "skills": [
+    "./shared-skills/"
+  ],
+  "interface": {
+    "displayName": "TypeSafe Jev",
+    "shortDescription": "Typed judgments with probabilities, not parsed prose",
+    "longDescription": "Adds one MCP tool, evaluate, that sends state and typed questions to TypeSafe's Jev model and returns noul, choice, and score answers with calibrated probabilities. The backend is TypeSafe directly or OpenRouter's Decisions API, selected explicitly rather than by whichever API key happens to be set. Ships TypeSafe's agent skill, adapted so the tool is used for in-session judgments and the SDK guidance stays for building an application.",
+    "developerName": "Racecraft Lab",
+    "category": "Developer Tools",
+    "capabilities": [
+      "MCP"
+    ],
+    "defaultPrompt": [
+      "Use evaluate to classify this ticket and pick the owning team.",
+      "Score these candidates against the brief with evaluate."
+    ]
+  },
+  "mcpServers": "./.mcp.json"
+}

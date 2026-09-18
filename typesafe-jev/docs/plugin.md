@@ -1,0 +1,128 @@
+# Installing as a plugin
+
+This repository is also a plugin for Claude Code and Codex. Installing it gives
+a client both halves at once: the `evaluate` MCP tool, and TypeSafe's agent
+skill adapted to use it.
+
+The alternative is [openrouter.md](openrouter.md), which registers the MCP
+server by hand with no plugin involved. Both paths run the same binary. Use one.
+
+## What is in the plugin
+
+| Path | Purpose |
+|---|---|
+| `.claude-plugin/plugin.json` | Claude Code manifest |
+| `.claude-plugin/marketplace.json` | marketplace entry, source `./` |
+| `.codex-plugin/plugin.json` | Codex manifest |
+| `mcp/claude.json` | MCP entry for Claude Code |
+| `.mcp.json` | MCP entry for Codex |
+| `shared-skills/typesafe-ai/` | TypeSafe's skill, adapted, with its MIT licence |
+| `bin/evaluate-launch` | resolves the binary and applies plugin defaults |
+
+Both manifests declare the same name and version, which a test enforces.
+
+## One thing the plugin cannot carry
+
+**The server binary is not in the plugin.** It is compiled Go, and committing
+four platform builds to git would bloat every clone and still miss a fifth
+platform. So the binary is installed once, separately, and `bin/evaluate-launch`
+finds it.
+
+If it is missing, the launcher writes one line to stderr naming the install
+command and exits. Stdout stays clean, because a human-readable line there is a
+frame the MCP client cannot parse.
+
+## Install
+
+**1. The binary**, once:
+
+```sh
+task install
+# or, from a release:
+#   curl -fsSL -o install.sh \
+#     https://raw.githubusercontent.com/racecraft-lab/typesafe-mcp/main/install.sh
+#   sh install.sh
+```
+
+Both put it at `~/.local/libexec/racecraft-jev/evaluate`. Set `EVALUATE_BIN` if
+you keep it elsewhere.
+
+**2. The credential**, once. The plugin points at
+`~/.config/racecraft-jev/openrouter.key` by default:
+
+```sh
+mkdir -p -m 700 ~/.config/racecraft-jev
+cat > ~/.config/racecraft-jev/openrouter.key    # paste, then ctrl-d
+chmod 600 ~/.config/racecraft-jev/openrouter.key
+```
+
+The launcher sets `JEV_API_KEY_FILE` to that path only when it is not already
+set, so an explicit value in the client's environment still wins. No credential
+is stored in any manifest, and a test checks for that.
+
+**3. The plugin.** Add this repository as a marketplace, then install from it,
+using your client's own plugin commands. Claude Code and Codex differ here, and
+both have changed recently, so check `claude plugin --help` and
+`codex --help` for the current spelling rather than copying a command that may
+have moved.
+
+## Replaces the official TypeSafe plugin
+
+Install this **instead of** TypeSafe's `typesafe` plugin, not alongside it.
+
+Both ship a skill named `typesafe-ai`, so installing both is a collision. More
+importantly, upstream's skill teaches an agent to write SDK or HTTP code against
+the TypeSafe API. That is right when building an application and wrong when a
+judgment is needed in the current session and the tool is already connected. The
+vendored copy adds a section that makes the distinction, and leaves the rest of
+upstream's text alone.
+
+Provenance is recorded in the file's own header: `typesafe-ai/skills`, plugin
+version 0.5.7, MIT, with the licence kept beside it. A test asserts the licence,
+the provenance, and that upstream's guidance survived the edit.
+
+When TypeSafe publishes a new skill version, re-vendor it and re-apply the two
+additions rather than editing around the old copy.
+
+## Defaults the plugin sets
+
+```json
+"env": {
+  "JEV_PROVIDER": "openrouter",
+  "JEV_MODEL": "~typesafe/jev-latest",
+  "JEV_REQUEST_TIMEOUT": "45s"
+}
+```
+
+The plugin opts in to OpenRouter explicitly. The binary's own default is still
+`typesafe`, so nothing infers a backend from which keys happen to be set. To run
+the plugin against TypeSafe directly, override `JEV_PROVIDER` in the client's
+own configuration for this server.
+
+The Codex entry also sets `tool_timeout_sec: 75`, above the 45s request budget,
+so the client does not give up while the server is still inside the time it was
+given.
+
+## Codex: take the tool out of code mode
+
+Codex routes MCP tools through code mode by default, and this one does not work
+well there. Add to `~/.codex/config.toml`, adding only the line if the table
+already exists:
+
+```toml
+[features.code_mode]
+direct_only_tool_namespaces = ["mcp__jev"]
+```
+
+The namespace follows the server name in `.mcp.json`, which is `jev` here. A
+plugin cannot set this setting; it is the operator's own configuration.
+
+## Rollback
+
+Remove the plugin with your client's plugin command. That removes the tool and
+the skill together, and touches neither client's own model nor its
+authentication.
+
+The binary and the key file are outside the plugin and survive it. Delete
+`~/.local/libexec/racecraft-jev/evaluate` and the key file separately if you
+want them gone, and revoke the key only when you mean to.

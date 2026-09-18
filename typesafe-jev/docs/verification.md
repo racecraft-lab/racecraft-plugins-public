@@ -148,28 +148,187 @@ is this fork's local policy and is labelled as such.
 
 ## Live tests
 
+Run 2026-09-18 against OpenRouter, with a key the owner placed in
+`~/.config/racecraft-jev/openrouter.key` themselves. The key was never typed
+into a conversation, passed as an argument, or printed.
+
 | Check | Status |
 |---|---|
-| LIVE-01: one authorized raw Decisions call | **NOT RUN** |
-| LIVE-02: one authorized Claude Code batch | **NOT RUN** |
-| LIVE-03: one authorized Codex batch | **NOT RUN** |
-| Native Claude/Codex auth and model preserved | **NOT VERIFIED** by execution |
+| LIVE-01: one authorized raw Decisions call | **PASS** |
+| LIVE-01b: the same batch through this server | **PASS** |
+| LIVE-01c: the same batch through the launcher over real stdio | **PASS** |
+| LIVE-02: one authorized Claude Code batch | **PASS** |
+| LIVE-03: one authorized Codex batch | **PASS** |
+| Native Claude/Codex auth and model preserved | **PASS** |
 
-Blocker for all four: no OpenRouter credential was supplied, and none was
-requested. The owner enters a key locally using the key-file workflow in
-[openrouter.md](openrouter.md), and separately authorizes installation and any
-billed call. No key was asked for in conversation and no policy was bypassed to
-obtain one.
+### LIVE-01: raw HTTPS call
 
-The native-authentication claim is a design property, not an executed check.
-Nothing in this server reads or writes `ANTHROPIC_BASE_URL`,
+`POST https://openrouter.ai/api/alpha/decisions` with the three-primitive
+fixture, using `curl` and no project code, to establish that the contract and
+the credential work independently of this implementation.
+
+```text
+HTTP 200
+model:       typesafe/jev-1.13-20260917
+usage:       input_tokens=512 output_tokens=79 cost=2.1504e-05
+id:          gen-dec-1789741031-rPefX4WoAe6xW2Dv53wY
+provider:    TypeSafe
+answers:     customer_impact noul=0.99
+             owner choice=engineering confidence=1
+             disruption score=2 confidence=1 (+legend, +probabilities)
+```
+
+### LIVE-01b: through this server
+
+`runEvaluate` with the real resolved config, so the credential, request
+validation, transport, and response validation all took part.
+
+```text
+backend=openrouter endpoint=https://openrouter.ai/api/alpha/decisions
+model=~typesafe/jev-latest credential=file ~/.config/racecraft-jev/openrouter.key
+latency: 831ms   resolved model: typesafe/jev-1.13-20260917   cost: 2.1252e-05
+```
+
+A companion check confirmed the OpenRouter backend rejects structured
+instructions locally, naming `questions.impact.instructions`, with no request
+sent and nothing billed.
+
+### LIVE-01c: through the launcher, over real stdio
+
+The installed binary at `~/.local/libexec/racecraft-jev/evaluate`, launched by
+`bin/evaluate-launch` exactly as a plugin-installed client would, driven by a
+real MCP `CommandTransport`. `initialize`, `tools/list`, and `tools/call` all
+succeeded over the protocol.
+
+```text
+latency over stdio: 611ms
+resolved model:     typesafe/jev-1.13-20260917
+usage:              input_tokens=480 output_tokens=78 cost=2.016e-05
+```
+
+The server's instructions arrived carrying the backend note, confirming an
+agent sees which backend is configured and that only strings are accepted.
+
+### Three design decisions the live runs confirmed
+
+1. **The alias does not come back.** `~typesafe/jev-latest` resolved to
+   `typesafe/jev-1.13-20260917` every time. Code that compared the returned
+   model to the requested one would have failed.
+2. **A score is not a probability.** Every run returned `score: 2` on a
+   three-level scale. Clamping a score to 0-1, which the plan's response rules
+   warned against, would have rejected a valid answer on the first live call.
+3. **Zero is a real value.** `probabilities` came back with genuine zeros for
+   the ruled-out options. Treating them as absent would have discarded them.
+
+A `noul` answer carried no `confidence` field, as both schemas say it should
+not. No value was invented to fill it.
+
+### LIVE-02: Claude Code
+
+Registered at user scope as `jev-openrouter` (the name was free; `claude mcp
+list` was checked first), then driven with `claude -p` and the tool allowed.
+`claude mcp get` reported **Connected**.
+
+The client invoked the tool and returned the provider's JSON verbatim:
+
+```text
+resolved model: typesafe/jev-1.13-20260917
+usage:          input_tokens=681 output_tokens=77 cost=2.8602e-05
+answers:        customer_impact noul=0.98
+                responsible_team choice=engineering confidence=1
+                severity_level score=2 confidence=1
+```
+
+It reported unprompted that the `noul` answer carried no `confidence` and no
+`probabilities`, rather than inventing either. That is the behaviour the tool
+guidance is there to produce.
+
+### LIVE-03: Codex
+
+Registered as `jev-openrouter` and driven with `codex exec`.
+
+```text
+resolved model: typesafe/jev-1.13-20260917
+usage:          input_tokens=404 output_tokens=71 cost=1.6968e-05
+answers:        customer_impact noul=0.98
+                owner choice=engineering confidence=1
+                disruption score=2 confidence=1 (+legend)
+```
+
+Two client-side findings, neither a server defect:
+
+**Codex needs the tool taken out of code mode.** On the first attempt Codex
+emitted a well-formed call and the turn ended before the result came back, and
+it called the tool three times rather than once. Adding this server's namespace
+to `direct_only_tool_namespaces` fixed it:
+
+```toml
+[features.code_mode]
+direct_only_tool_namespaces = ["mcp__jev_openrouter"]
+```
+
+Note the underscore: Codex maps the hyphen in `jev-openrouter` to `_` in the
+tool namespace. A plugin cannot set this; it is the operator's config.
+
+**Validation was confirmed through a real client.** Before that fix, Codex sent
+a `noul` question whose criteria used `yes`/`no` keys. The server rejected it
+with `questions.customer_impacting_incident.criteria.true is required when
+criteria is given` and sent nothing to the provider. The field path was enough
+for the client to diagnose it without help.
+
+### Native authentication and model preserved
+
+Both client configurations were backed up first and compared afterwards.
+
+**Claude Code** (`~/.claude.json`): the only change under my control is one
+added key, `mcpServers["jev-openrouter"]`. No existing server was modified or
+removed. `oauthAccount`, `userID`, `primaryApiKey`, and
+`customApiKeyResponses` are byte-identical. Claude Code continued answering
+from its own Anthropic session throughout, with no new credential.
+
+**Codex** (`~/.codex/config.toml`): a semantic comparison of all keys shows
+279 after versus 272 before, with the seven additions all under
+`mcp_servers.jev-openrouter`, and **no changed values** anywhere else. Codex
+kept using its own OpenAI authentication.
+
+One incidental change to report: `codex mcp add` rewrites the whole file
+through its own TOML serializer. That reordered keys, rendered
+`startup_timeout_sec = 120` as `120.0`, and dropped one empty array,
+`mcp_servers.node_repl.args = []`. The values are equivalent and nothing else
+was lost, but it is a side effect of the client's own command, not of this
+server, and it is a reason to keep a backup before running it.
+
+### Rollback, verified available
+
+```sh
+claude mcp remove jev-openrouter --scope user
+codex mcp remove jev-openrouter
+```
+
+Total spend across all five live runs: roughly **$0.00011**.
+
+The native-authentication claim now rests on a design property *and* an
+executed check. Nothing in this server reads or writes `ANTHROPIC_BASE_URL`,
 `ANTHROPIC_AUTH_TOKEN`, Codex's `model_provider`, or either client's login
-state; `setup mcp` writes no file at all. That is verifiable by reading the
-diff, and `TestSetupMutatesNothing` proves the no-write part against a temporary
-home. It has not been confirmed by running both clients.
+state, and `setup mcp` writes no file at all; that is visible in the diff, and
+`TestSetupMutatesNothing` proves the no-write part against a temporary home.
+The configuration comparisons above confirm it in practice: after registering
+and using the server in both clients, Claude Code's auth fields were
+byte-identical and Codex's configuration had no changed values outside the new
+entry.
 
-**This integration is not production-verified.** It is review-ready with the
-live checks explicitly outstanding.
+What that still does not establish is durability. Each client made one
+successful call. That is evidence the path works, not that it keeps working
+across upgrades of either client.
+
+**The integration is verified end to end on this machine**, from the resolved
+configuration through the credential, transport, and both validation passes, to
+a real answer returned inside both native clients, with their own
+authentication and models untouched.
+
+What that does **not** cover: Linux and `darwin/amd64` at runtime, the release
+pipeline, and sustained use. One successful call in each client is evidence the
+path works, not evidence it is reliable.
 
 ## Client installation
 
@@ -177,16 +336,17 @@ live checks explicitly outstanding.
 |---|---|
 | `claude mcp add --help` inspected (2.1.276) | done |
 | `codex mcp add --help` inspected (0.154.0) | done |
-| Server registered in the owner's Claude Code | **NOT RUN** |
-| Server registered in the owner's Codex | **NOT RUN** |
+| Server registered in the owner's Claude Code | done, with the owner's approval |
+| Server registered in the owner's Codex | done, with the owner's approval |
 
 Both clients' help output was read to confirm the generated commands match the
 installed versions: Claude Code's `-e/--env` is variadic and its `--scope` and
 `--transport` options exist as used; Codex takes `--env KEY=VALUE` before `--`
 and the server name as a positional argument.
 
-No real client configuration was changed. The owner runs the generated commands
-when they choose to.
+The generated commands were run with the owner's explicit approval after the
+exact commands and their rollback were shown. Both configurations were backed
+up first.
 
 ## Continuous integration
 
@@ -223,7 +383,7 @@ workflow is skipped.
 
 ### Outstanding release blockers
 
-1. LIVE-01, LIVE-02, and LIVE-03 have not run.
+1. ~~LIVE-01, LIVE-02, and LIVE-03 have not run.~~ All pass; see above.
 2. `RELEASE_ENABLED` and the protected `release` environment are not configured.
 3. The new pre-publication asset gate has never executed, because no release has
    been attempted. It is code that has not run.

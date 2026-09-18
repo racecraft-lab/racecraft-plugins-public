@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "jev": {
+      "command": "${CLAUDE_PLUGIN_ROOT}/bin/evaluate-launch",
+      "env": {
+        "JEV_PROVIDER": "openrouter",
+        "JEV_MODEL": "~typesafe/jev-latest",
+        "JEV_REQUEST_TIMEOUT": "45s"
+      },
+      "timeout": 75000
+    }
+  }
+}

@@ -180,6 +180,26 @@ JEV_REQUEST_TIMEOUT = "45s"
 `tool_timeout_sec` should exceed `JEV_REQUEST_TIMEOUT`, or the client gives up
 while the server is still within the budget it was given.
 
+### Take the tool out of Codex's code mode
+
+Codex routes MCP tools through code mode by default, and this one does not work
+well there: the turn can end before the result comes back, and the tool may be
+called several times when once was asked for. Add its namespace to
+`~/.codex/config.toml`:
+
+```toml
+[features.code_mode]
+direct_only_tool_namespaces = ["mcp__jev_openrouter"]
+```
+
+Note the underscore. Codex maps the hyphen in the server name `jev-openrouter`
+to `_` in the tool namespace, so a name with a hyphen does not appear here
+verbatim. If the file already has a `[features.code_mode]` table, add only the
+one line to it rather than repeating the header, and keep any namespaces
+already listed.
+
+A plugin cannot set this. It is the operator's configuration.
+
 Start a new Codex session and run `/mcp`.
 
 ### Neither client's own model changes
