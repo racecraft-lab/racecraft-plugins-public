@@ -10,7 +10,7 @@
     {
       "name": "typesafe-jev",
       "description": "Typed judgments from Jev through TypeSafe or OpenRouter, with the backend selected explicitly",
-      "source": "./",
+      "source": "./plugin",
       "version": "0.6.0"
     }
   ]

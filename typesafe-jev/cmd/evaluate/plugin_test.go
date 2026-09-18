@@ -31,6 +31,15 @@ func shellPath(t *testing.T) string {
 	return sh
 }
 
+// pluginRoot is the payload directory. Paths inside a plugin manifest resolve
+// against it, not against the repository, which is why it is separate from
+// repoRoot: the two were the same until the payload moved out of the root so a
+// client would stop caching the Go source and the eval suite.
+func pluginRoot(t *testing.T) string {
+	t.Helper()
+	return filepath.Join(repoRoot(t), "plugin")
+}
+
 func readJSON(t *testing.T, path string) map[string]any {
 	t.Helper()
 	b, err := os.ReadFile(path)
@@ -51,11 +60,11 @@ func TestPluginManifestsResolve(t *testing.T) {
 	root := repoRoot(t)
 
 	for _, manifest := range []string{
-		".claude-plugin/plugin.json",
+		"plugin/.claude-plugin/plugin.json",
 		".claude-plugin/marketplace.json",
-		".codex-plugin/plugin.json",
-		"mcp/claude.json",
-		".mcp.json",
+		"plugin/.codex-plugin/plugin.json",
+		"plugin/mcp/claude.json",
+		"plugin/.mcp.json",
 	} {
 		doc := readJSON(t, filepath.Join(root, manifest))
 		if len(doc) == 0 {
@@ -63,7 +72,7 @@ func TestPluginManifestsResolve(t *testing.T) {
 		}
 	}
 
-	for _, client := range []string{".claude-plugin/plugin.json", ".codex-plugin/plugin.json"} {
+	for _, client := range []string{"plugin/.claude-plugin/plugin.json", "plugin/.codex-plugin/plugin.json"} {
 		doc := readJSON(t, filepath.Join(root, client))
 
 		skills, _ := doc["skills"].([]any)
@@ -79,7 +88,7 @@ func TestPluginManifestsResolve(t *testing.T) {
 				t.Errorf("%s: skills[%d] is %T, want a string", client, i, entry)
 				continue
 			}
-			dir := filepath.Join(root, filepath.Clean(path))
+			dir := filepath.Join(pluginRoot(t), filepath.Clean(path))
 			if info, err := os.Stat(dir); err != nil || !info.IsDir() {
 				t.Errorf("%s: skills path %q does not resolve to a directory", client, path)
 			}
@@ -90,15 +99,15 @@ func TestPluginManifestsResolve(t *testing.T) {
 			t.Errorf("%s declares no mcpServers file", client)
 			continue
 		}
-		if _, err := os.Stat(filepath.Join(root, filepath.Clean(servers))); err != nil {
+		if _, err := os.Stat(filepath.Join(pluginRoot(t), filepath.Clean(servers))); err != nil {
 			t.Errorf("%s: mcpServers path %q does not exist", client, servers)
 		}
 	}
 
 	// Both clients must agree on the plugin name and version, or an operator
 	// ends up with two differently-versioned installs of the same thing.
-	claude := readJSON(t, filepath.Join(root, ".claude-plugin/plugin.json"))
-	codex := readJSON(t, filepath.Join(root, ".codex-plugin/plugin.json"))
+	claude := readJSON(t, filepath.Join(root, "plugin/.claude-plugin/plugin.json"))
+	codex := readJSON(t, filepath.Join(root, "plugin/.codex-plugin/plugin.json"))
 	for _, key := range []string{"name", "version", "repository"} {
 		if claude[key] != codex[key] {
 			t.Errorf("%s differs: claude=%v codex=%v", key, claude[key], codex[key])
@@ -113,8 +122,8 @@ func TestPluginMCPEntries(t *testing.T) {
 	root := repoRoot(t)
 
 	for _, tc := range []struct{ file, wantCommand string }{
-		{"mcp/claude.json", "${CLAUDE_PLUGIN_ROOT}/bin/evaluate-launch"},
-		{".mcp.json", "bin/evaluate-launch"},
+		{"plugin/mcp/claude.json", "${CLAUDE_PLUGIN_ROOT}/bin/evaluate-launch"},
+		{"plugin/.mcp.json", "bin/evaluate-launch"},
 	} {
 		doc := readJSON(t, filepath.Join(root, tc.file))
 		servers, _ := doc["mcpServers"].(map[string]any)
@@ -160,7 +169,7 @@ func TestPluginMCPEntries(t *testing.T) {
 // The vendored skill must keep its upstream licence and provenance, and must
 // carry the two Racecraft additions that make it agree with this server.
 func TestVendoredSkillKeepsProvenance(t *testing.T) {
-	root := filepath.Join(repoRoot(t), "shared-skills", "typesafe-ai")
+	root := filepath.Join(repoRoot(t), "plugin", "shared-skills", "typesafe-ai")
 
 	license, err := os.ReadFile(filepath.Join(root, "LICENSE"))
 	if err != nil {
@@ -204,7 +213,7 @@ func TestVendoredSkillKeepsProvenance(t *testing.T) {
 // The launcher is the plugin's only moving part, so its two paths are checked
 // against a fake binary rather than a real install.
 func TestLauncherResolvesTheBinary(t *testing.T) {
-	launcher := filepath.Join(repoRoot(t), "bin", "evaluate-launch")
+	launcher := filepath.Join(repoRoot(t), "plugin", "bin", "evaluate-launch")
 	if info, err := os.Stat(launcher); err != nil || info.Mode().Perm()&0o111 == 0 {
 		t.Fatalf("launcher missing or not executable: %v", err)
 	}
@@ -275,8 +284,8 @@ func TestLauncherResolvesTheBinary(t *testing.T) {
 // the release-please jsonpath that has to bump it. Adding a manifest without
 // adding it here is the mistake this table exists to make visible.
 var versionDeclarations = []struct{ path, jsonpath string }{
-	{".claude-plugin/plugin.json", "$.version"},
-	{".codex-plugin/plugin.json", "$.version"},
+	{"plugin/.claude-plugin/plugin.json", "$.version"},
+	{"plugin/.codex-plugin/plugin.json", "$.version"},
 	{".claude-plugin/marketplace.json", "$.version"},
 	{".claude-plugin/marketplace.json", `$.plugins[?(@.name=="typesafe-jev")].version`},
 	{".agents/plugins/marketplace.json", `$.plugins[?(@.name=="typesafe-jev")].version`},
@@ -296,7 +305,7 @@ func TestCodexMarketplaceResolves(t *testing.T) {
 
 	// Found by name rather than by position: the entry this test is about is
 	// the one named in the Codex manifest, whatever order the file lists them.
-	manifest := readJSON(t, filepath.Join(root, ".codex-plugin/plugin.json"))
+	manifest := readJSON(t, filepath.Join(root, "plugin/.codex-plugin/plugin.json"))
 	name, _ := manifest["name"].(string)
 	if name == "" {
 		t.Fatal("the Codex manifest declares no name")
@@ -438,7 +447,7 @@ func skillFrontmatter(t *testing.T, path string) map[string]string {
 // A skill that violates these does not fail loudly. It silently never loads,
 // which is indistinguishable from the model choosing not to use the tool.
 func TestSkillsMeetTheAuthoringRules(t *testing.T) {
-	root := filepath.Join(repoRoot(t), "shared-skills")
+	root := filepath.Join(pluginRoot(t), "shared-skills")
 	entries, err := os.ReadDir(root)
 	if err != nil {
 		t.Fatal(err)
@@ -499,7 +508,7 @@ func TestSkillsMeetTheAuthoringRules(t *testing.T) {
 // moments that should trigger it, and the negative triggers that keep it from
 // firing on everything else.
 func TestJudgmentSkillNamesItsTriggers(t *testing.T) {
-	path := filepath.Join(repoRoot(t), "shared-skills", "typed-judgments", "SKILL.md")
+	path := filepath.Join(repoRoot(t), "plugin", "shared-skills", "typed-judgments", "SKILL.md")
 	fields := skillFrontmatter(t, path)
 	desc := strings.ToLower(fields["description"])
 
@@ -530,5 +539,151 @@ func TestJudgmentSkillNamesItsTriggers(t *testing.T) {
 		if !strings.Contains(string(body), rule) {
 			t.Errorf("SKILL.md omits the %q rule", rule)
 		}
+	}
+}
+
+// The skills install without the plugin, through skills.sh, which carries
+// skill files and no MCP server. That path is real (upstream distributes the
+// same way and it resolves this repository's plugin/shared-skills/ directory), so the
+// README has to name it, and the judgment skill has to say what to do when the
+// tool it routes to does not exist. A skill that keeps recommending a tool
+// nobody has is worse than one that admits it.
+func TestSkillsSurviveInstallWithoutTheServer(t *testing.T) {
+	root := repoRoot(t)
+
+	readme, err := os.ReadFile(filepath.Join(root, "README.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		"skills add racecraft-lab/typesafe-mcp", // the command
+		"no MCP server",                         // and its one real limitation
+	} {
+		if !strings.Contains(string(readme), want) {
+			t.Errorf("README does not document %q", want)
+		}
+	}
+
+	skill, err := os.ReadFile(filepath.Join(root, "plugin", "shared-skills", "typed-judgments", "SKILL.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		"No `evaluate` tool exists at all", // the case is named
+		"skills add",                       // and attributed to the right cause
+		"make the judgment yourself",       // with an instruction that works
+	} {
+		if !strings.Contains(string(skill), want) {
+			t.Errorf("typed-judgments does not handle the no-server install: missing %q", want)
+		}
+	}
+
+	// Both skills name the tool, so both have to survive its absence. The
+	// vendored one said "this plugin ships an MCP server" and "call evaluate"
+	// with no condition, which under skills add routes an agent to a tool that
+	// is not there. Only the Racecraft-added section may change, which is
+	// where the condition belongs.
+	vendored, err := os.ReadFile(filepath.Join(root, "plugin", "shared-skills", "typesafe-ai", "SKILL.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		"skills add",          // the install that has no server
+		"when it is there",    // the call is conditional
+		"no such tool exists", // and the absent case is handled
+		"in the ordinary way", // with an instruction that works
+	} {
+		if !strings.Contains(string(vendored), want) {
+			t.Errorf("typesafe-ai routes to evaluate unconditionally: missing %q", want)
+		}
+	}
+	// The unconditional instruction must be gone, not merely qualified later.
+	if strings.Contains(string(vendored), "**Call `evaluate`.**") {
+		t.Error("typesafe-ai still says to call evaluate unconditionally")
+	}
+}
+
+// The skill's own metadata states a version, so it has to be bumped with
+// everything else. A generic extra-file entry is how release-please reaches a
+// Markdown file, keyed off the x-release-please-version annotation beside the
+// value.
+func TestSkillVersionIsBumpedByRelease(t *testing.T) {
+	root := repoRoot(t)
+	const skillPath = "plugin/shared-skills/typed-judgments/SKILL.md"
+
+	b, err := os.ReadFile(filepath.Join(root, skillPath))
+	if err != nil {
+		t.Fatal(err)
+	}
+	released, _ := readJSON(t, filepath.Join(root, ".release-please-manifest.json"))["."].(string)
+	if released == "" {
+		t.Fatal("the release manifest states no version")
+	}
+	want := "version: " + released + " # x-release-please-version"
+	if !strings.Contains(string(b), want) {
+		t.Errorf("SKILL.md metadata does not carry %q", want)
+	}
+
+	cfg := readJSON(t, filepath.Join(root, "release-please-config.json"))
+	packages, _ := cfg["packages"].(map[string]any)
+	pkg, _ := packages["."].(map[string]any)
+	extra, _ := pkg["extra-files"].([]any)
+	for _, e := range extra {
+		entry, _ := e.(map[string]any)
+		if entry != nil && entry["path"] == skillPath {
+			return
+		}
+	}
+	t.Errorf("release-please does not bump %s", skillPath)
+}
+
+// Upstream's skill carries no bundled scripts or references; it routes the
+// agent to live documentation, which is what keeps it current as the model
+// changes. The judgment skill has to do the same for the pages that bear on
+// designing a question, or an agent using the tool has only what fits in one
+// file. Every link is checked for the .md suffix Mintlify needs, because a
+// link to the extensionless page returns HTML an agent cannot read well.
+func TestJudgmentSkillRoutesToLiveDocs(t *testing.T) {
+	b, err := os.ReadFile(filepath.Join(pluginRoot(t), "shared-skills", "typed-judgments", "SKILL.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	skill := string(b)
+
+	// The pages that matter for asking a question, as opposed to writing an
+	// integration, which is the other skill's job.
+	for _, page := range []string{
+		"https://docs.typesafe.ai/llms.txt",
+		"https://docs.typesafe.ai/primitives.md",
+		"https://docs.typesafe.ai/primitives/choice.md",
+		"https://docs.typesafe.ai/primitives/score.md",
+		"https://docs.typesafe.ai/primitives/noul.md",
+		"https://docs.typesafe.ai/concepts/state.md",
+		"https://docs.typesafe.ai/confidence.md",
+	} {
+		if !strings.Contains(skill, page) {
+			t.Errorf("SKILL.md does not route to %s", page)
+		}
+	}
+
+	// Every docs link except the index must end in .md, or Mintlify serves the
+	// HTML page instead of the Markdown one.
+	links := regexp.MustCompile(`https://docs\.typesafe\.ai/[^\s)\]]+`).FindAllString(skill, -1)
+	if len(links) < 7 {
+		t.Fatalf("found only %d docs links", len(links))
+	}
+	for _, l := range links {
+		if l == "https://docs.typesafe.ai/llms.txt" {
+			continue
+		}
+		if !strings.HasSuffix(l, ".md") {
+			t.Errorf("docs link %q does not end in .md, so it serves HTML", l)
+		}
+	}
+
+	// And the failure mode is named, so an agent without network access says
+	// so rather than inventing a version-dependent detail.
+	if !strings.Contains(skill, "If the docs cannot be fetched") {
+		t.Error("SKILL.md does not say what to do when the docs are unreachable")
 	}
 }

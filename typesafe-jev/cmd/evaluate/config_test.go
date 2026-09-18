@@ -6,7 +6,9 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
+	"syscall"
 	"testing"
 	"time"
 )
@@ -409,5 +411,48 @@ func TestConfigHoldsNoSecret(t *testing.T) {
 	}
 	if !strings.Contains(printed, path) {
 		t.Errorf("credentialSource should name the path: %s", printed)
+	}
+}
+
+// A named pipe as a key file must be refused, not waited on. os.Open blocks on
+// a FIFO until a writer appears, and it blocks before any check has run, so the
+// server hangs at startup with no message. Found by smoke-testing the released
+// plugin: the probe that fed it a FIFO never returned.
+//
+// The test has no writer on purpose. If the open is ever made blocking again,
+// this hangs rather than failing, which the deadline turns into a failure.
+func TestKeyFileRejectsANamedPipe(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("no mkfifo on windows")
+	}
+	path := filepath.Join(t.TempDir(), "fifo.key")
+	if err := syscall.Mkfifo(path, 0o600); err != nil {
+		t.Skipf("mkfifo unavailable: %v", err)
+	}
+
+	cfg, err := resolveConfig(envLookup(map[string]string{
+		"JEV_PROVIDER":     "openrouter",
+		"JEV_API_KEY_FILE": path,
+	}))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	done := make(chan error, 1)
+	go func() {
+		_, err := loadCredential(cfg)
+		done <- err
+	}()
+
+	select {
+	case err := <-done:
+		if err == nil {
+			t.Fatal("a named pipe should not be accepted as a key file")
+		}
+		if !strings.Contains(err.Error(), "not a regular file") {
+			t.Errorf("error should say the file is not regular: %v", err)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("loadCredential blocked on the named pipe instead of refusing it")
 	}
 }

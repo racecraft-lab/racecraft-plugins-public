@@ -159,3 +159,29 @@ treated as a minimum wait, never as a cap to negotiate down.
 document. This server sends fixed values for the OpenRouter backend only:
 the public fork URL and `Racecraft Jev MCP`. Neither is derived from a local
 filesystem path or from repository content.
+
+## Jev context budgets
+
+Source: <https://docs.typesafe.ai/models.md>, read 2026-09-18.
+
+| Budget | Limit |
+| --- | --- |
+| Whole request: state plus every question | 64,000 tokens |
+| State plus the single longest question | 32,000 tokens |
+
+Both are enforced locally by `validateBudget`, from an estimate of four bytes
+per token. No tokenizer ships here, and adding one for a guardrail would be a
+poor trade. The ratio under-counts dense input such as CJK or code, so the
+estimate errs toward letting a borderline request through and leaving the
+provider to judge it.
+
+That direction is deliberate. The check exists to turn an opaque response into
+a useful message, not to second-guess the backend. Probed on 2026-09-18: a
+45,000-token state returned `HTTP 400; the provider rejected the request shape;
+check question types and criteria`, which is both billed and misleading, since
+the questions were fine and the state was the problem.
+
+Jev also ingests the state once and evaluates every question against it in
+parallel, which is why batching costs so little and why the second budget
+exists: many small questions can pass the total and still blow the state-plus-
+longest one.

@@ -66,4 +66,4 @@ dollar figure, is the real budget.
 ## Scope
 
 `claude plugin eval` exercises Claude Code only. The skill ships to Codex
-through `shared-skills/` as well, but nothing here measures Codex.
+through `plugin/shared-skills/` as well, but nothing here measures Codex.

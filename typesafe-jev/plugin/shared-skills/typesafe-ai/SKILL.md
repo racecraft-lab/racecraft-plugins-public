@@ -47,14 +47,21 @@ supplies programmable common sense where ordinary code needs semantic understand
 
 ## Make the judgment now, or build an integration
 
-This plugin ships an MCP server exposing one tool, **`evaluate`**, that sends
-state and typed questions to Jev and returns the provider's answers. Decide
-which of the two jobs you are doing:
+Installed as a plugin, this ships an MCP server exposing one tool,
+**`evaluate`**, that sends state and typed questions to Jev and returns the
+provider's answers. Installed on its own through `skills add`, it does not:
+that path carries skill files and no MCP server. **Check that an `evaluate`
+tool is actually available before relying on one.**
+
+Decide which of the two jobs you are doing:
 
 - **A judgment is needed in this session** — classify this ticket, rank these
   candidates, check whether this claim holds, decide which branch to take.
-  **Call `evaluate`.** Do not write a script, add an SDK, or make the judgment
-  yourself from the prose. One call can carry many independent questions.
+  **Call `evaluate` when it is there.** Do not write a script, add an SDK, or
+  make the judgment yourself from the prose. One call can carry many
+  independent questions. When no such tool exists, say so once and make the
+  judgment in the ordinary way; do not build an integration to stand in for a
+  missing one. The plugin at `racecraft-lab/typesafe-mcp` is what provides it.
 - **An application needs to call TypeSafe in production** — then the rest of
   this skill applies. Read the API or SDK page and write the integration. The
   `evaluate` tool is for this session, not a runtime dependency of the user's

@@ -196,7 +196,7 @@ sent and nothing billed.
 ### LIVE-01c: through the launcher, over real stdio
 
 The installed binary at `~/.local/libexec/racecraft-jev/evaluate`, launched by
-`bin/evaluate-launch` exactly as a plugin-installed client would, driven by a
+`plugin/bin/evaluate-launch` exactly as a plugin-installed client would, driven by a
 real MCP `CommandTransport`. `initialize`, `tools/list`, and `tools/call` all
 succeeded over the protocol.
 

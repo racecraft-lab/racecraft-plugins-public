@@ -7,6 +7,7 @@ import (
 	"os"
 	"runtime"
 	"strings"
+	"syscall"
 )
 
 // maxKeyFileBytes bounds the key file. Real keys are well under a hundred
@@ -53,7 +54,12 @@ func loadCredential(cfg Config) (credential, error) {
 // opened file rather than the path, so a file swapped between the check and the
 // read cannot slip past.
 func readKeyFile(path string) (credential, error) {
-	f, err := os.Open(path)
+	// O_NONBLOCK, because os.Open on a named pipe blocks until a writer
+	// appears, and it does so before any check below has run: the server would
+	// hang at startup with no message rather than refusing a file that is not
+	// a regular file. The flag changes nothing for a regular file, which is
+	// the only kind this accepts anyway.
+	f, err := os.OpenFile(path, os.O_RDONLY|syscall.O_NONBLOCK, 0)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			return "", fmt.Errorf("JEV_API_KEY_FILE %s does not exist", path)

@@ -9,16 +9,21 @@ server by hand with no plugin involved. Both paths run the same binary. Use one.
 
 ## What is in the plugin
 
+The payload lives in `plugin/`, and the two marketplace files at the repository
+root point at it. That separation is what a client caches: everything outside
+`plugin/` (the Go source, the eval suite, the docs) stays out of it.
+
 | Path | Purpose |
 |---|---|
-| `.claude-plugin/plugin.json` | Claude Code manifest |
-| `.claude-plugin/marketplace.json` | marketplace entry, source `./` |
-| `.codex-plugin/plugin.json` | Codex manifest |
-| `.agents/plugins/marketplace.json` | marketplace entry Codex prefers, source `./` |
-| `mcp/claude.json` | MCP entry for Claude Code |
-| `.mcp.json` | MCP entry for Codex |
-| `shared-skills/typesafe-ai/` | TypeSafe's skill, adapted, with its MIT licence |
-| `bin/evaluate-launch` | resolves the binary and applies plugin defaults |
+| `.claude-plugin/marketplace.json` | marketplace entry, source `./plugin` |
+| `.agents/plugins/marketplace.json` | marketplace entry Codex prefers, source `./plugin` |
+| `plugin/.claude-plugin/plugin.json` | Claude Code manifest |
+| `plugin/.codex-plugin/plugin.json` | Codex manifest |
+| `plugin/mcp/claude.json` | MCP entry for Claude Code |
+| `plugin/.mcp.json` | MCP entry for Codex |
+| `plugin/shared-skills/typesafe-ai/` | TypeSafe's skill, adapted, with its MIT licence |
+| `plugin/shared-skills/typed-judgments/` | routes an in-session judgment to the tool |
+| `plugin/bin/evaluate-launch` | resolves the binary and applies plugin defaults |
 
 Both manifests declare the same name and version, which a test enforces.
 
@@ -26,7 +31,7 @@ Both manifests declare the same name and version, which a test enforces.
 
 **The server binary is not in the plugin.** It is compiled Go, and committing
 four platform builds to git would bloat every clone and still miss a fifth
-platform. So the binary is installed once, separately, and `bin/evaluate-launch`
+platform. So the binary is installed once, separately, and `plugin/bin/evaluate-launch`
 finds it.
 
 If it is missing, the launcher writes one line to stderr naming the install

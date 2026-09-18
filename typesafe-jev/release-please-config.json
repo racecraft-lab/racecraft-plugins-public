@@ -12,12 +12,12 @@
       "extra-files": [
         {
           "type": "json",
-          "path": ".claude-plugin/plugin.json",
+          "path": "plugin/.claude-plugin/plugin.json",
           "jsonpath": "$.version"
         },
         {
           "type": "json",
-          "path": ".codex-plugin/plugin.json",
+          "path": "plugin/.codex-plugin/plugin.json",
           "jsonpath": "$.version"
         },
         {
@@ -34,6 +34,10 @@
           "type": "json",
           "path": ".agents/plugins/marketplace.json",
           "jsonpath": "$.plugins[?(@.name==\"typesafe-jev\")].version"
+        },
+        {
+          "type": "generic",
+          "path": "plugin/shared-skills/typed-judgments/SKILL.md"
         }
       ]
     }
