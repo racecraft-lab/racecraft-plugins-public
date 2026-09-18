@@ -1,5 +1,32 @@
 # Changelog
 
+## [0.7.0](https://github.com/racecraft-lab/typesafe-mcp/compare/v0.6.0...v0.7.0) (2026-09-18)
+
+Seven fixes, every one of them found by smoke-testing the released 0.6.0 plugin against the live backend rather than by reading the code.
+
+### ⚠ Reinstall required
+
+The plugin payload moved to `plugin/`, so the marketplace source changed from `./` to `./plugin`. Update the marketplace and reinstall the plugin in each client; an in-place plugin update will not pick it up.
+
+### Features
+
+* **Install through skills.sh.** Both skills install into roughly twenty agents beyond Claude Code and Codex, the way upstream distributes its own. The capability already worked and was simply undocumented. That path carries no MCP server, so both skills now check the `evaluate` tool exists before relying on it and make the judgment normally when it does not ([#10](https://github.com/racecraft-lab/typesafe-mcp/pull/10))
+* **The judgment skill can learn.** Upstream ships no bundled scripts or references; it routes the agent to live documentation, which keeps guidance current as the model changes. `typed-judgments` had none of that, so an agent had only what fitted in one file. It now carries a table from the difficulty at hand to the page that addresses it, the Mintlify `.md` convention, and what to do when the docs cannot be reached ([#10](https://github.com/racecraft-lab/typesafe-mcp/pull/10))
+
+### Bug Fixes
+
+* **A choice over 255 options was billed, then rejected.** The cap is documented but nothing enforced it, so an oversized question was serialised, sent, charged for, and returned as a bare HTTP 400 naming no field. Probed at the boundary: 255 options answer correctly, 256 do not ([#10](https://github.com/racecraft-lab/typesafe-mcp/pull/10))
+* **A request too big for the context window was billed and misreported.** Jev takes about 64,000 tokens per request and 32,000 for the state plus the longest question. Neither was checked, so a 45,000-token state came back as "check question types and criteria" when the questions were fine and the state was the problem. Both budgets are now estimated locally, and the error names which one was exceeded ([#10](https://github.com/racecraft-lab/typesafe-mcp/pull/10))
+* **A named pipe as a key file hung the server.** `os.Open` blocks on a FIFO until a writer appears, and it blocks before any check runs, so the server waited forever at startup with no message rather than refusing a file that is not regular ([#10](https://github.com/racecraft-lab/typesafe-mcp/pull/10))
+* **The plugin shipped the whole repository.** A client cached 624K, of which the Go source was 208K and the eval suite 188K. Moving the payload leaves 52K, and nothing outside `plugin/` reaches a client ([#10](https://github.com/racecraft-lab/typesafe-mcp/pull/10))
+* **auth:** make the key-rejection reasons provably value-free ([#7](https://github.com/racecraft-lab/typesafe-mcp/pull/7)) ([0a999e8](https://github.com/racecraft-lab/typesafe-mcp/commit/0a999e870bf94b0bee4ca795e2c6c2421a52493e))
+
+### Verified
+
+The `evaluate` tool exposes TypeSafe's entire evaluation surface: `POST /v1/systemone` is the only evaluation endpoint, and all three primitives, optional criteria on each, batching, structured instructions on the TypeSafe backend, and confidence with per-option probabilities are all covered. `GET /v1/models` is deliberately not exposed: it is account-scoped discovery, it has no equivalent on the OpenRouter route, and every response already reports the versioned model that answered.
+
+The vendored `typesafe-ai` skill remains a strict superset of upstream v0.5.7, with zero upstream lines deleted or changed.
+
 ## [0.6.0](https://github.com/racecraft-lab/typesafe-mcp/compare/v0.5.0...v0.6.0) (2026-09-18)
 
 
