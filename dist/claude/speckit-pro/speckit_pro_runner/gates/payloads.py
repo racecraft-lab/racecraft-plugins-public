@@ -334,6 +334,7 @@ def build_installed_plugin_payloads(repo_root: Path, dist_root: Path) -> None:
     copy_optional_installed_plugin(repo_root / "LICENSE", codex / "LICENSE")
     copy_required_installed_plugin(source / "skills", codex / "skills")
     copy_required_installed_plugin(source / "codex-skills", codex / "skills")
+    remove_nested_codex_skill_entrypoints(codex / "skills")
     rewrite_codex_manifest_installed_plugin(codex)
     for text_file in codex.rglob("*"):
         if text_file.is_file():
@@ -368,6 +369,15 @@ def copy_optional_installed_plugin(src: Path, dst: Path) -> None:
     elif src.is_file():
         dst.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(src, dst)
+
+
+def remove_nested_codex_skill_entrypoints(root: Path) -> None:
+    """Keep Codex skills flat; nested upstream references are docs, not skills."""
+    if not root.is_dir():
+        return
+    for path in sorted(root.rglob("SKILL.md"), key=lambda item: item.as_posix()):
+        if len(path.relative_to(root).parts) > 2:
+            path.unlink()
 
 
 def remove_payload_shell_scripts_installed_plugin(root: Path) -> None:

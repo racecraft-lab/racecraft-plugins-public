@@ -1,0 +1,200 @@
+{
+  "entries": [
+    {
+      "files": [
+        {
+          "path": "quint-lang/SKILL.md",
+          "sha256": "ba2312c2da15be623f8fcce0d256ae4427905ff3592e6d74bac0caa3aff68532",
+          "kind": "verbatim"
+        },
+        {
+          "path": "quint-lang/guidelines/choreo.md",
+          "sha256": "455b5f9d892c53d8e7c050d223e20eb48cb27f92dc4c1091e4e240a5c251ccfb",
+          "kind": "adapted",
+          "upstream_sha256": "df50e68d501c23b9efd1785f63cecf463a228d5b34166a20c4edf92bef431ec7",
+          "transforms": [
+            {
+              "kind": "fence-info-string-normalized",
+              "occurrences": 2
+            }
+          ]
+        },
+        {
+          "path": "quint-lang/guidelines/cli.md",
+          "sha256": "f2acc39a9c22a75a03c6b1475fa61b592b9de4b3c3bb7462f51c1fb2ba715e16",
+          "kind": "adapted",
+          "upstream_sha256": "1cfebe0cf4ffe330629e89a437627cc6b0602775bb368bc1a045e9c62e61982e",
+          "transforms": [
+            {
+              "kind": "fence-info-string-normalized",
+              "occurrences": 12
+            }
+          ]
+        },
+        {
+          "path": "quint-lang/guidelines/constraints.md",
+          "sha256": "a17142da9d039235eafb68562508fcf1f8aea4cf4e63c8e15b68526b4ce116ae",
+          "kind": "verbatim"
+        },
+        {
+          "path": "quint-lang/guidelines/operators.md",
+          "sha256": "ebae12f6163b445ec17f5f41174bf24c86539636652b99b60ae94ca048020152",
+          "kind": "verbatim"
+        },
+        {
+          "path": "quint-lang/guidelines/patterns.md",
+          "sha256": "d6a4a45b064e6ece1b3a503f7815db0fb1469294b046eab328e194a92ff67417",
+          "kind": "adapted",
+          "upstream_sha256": "70f6fada9dae472c0a73ee96eed350a27b00f89ce3021d5d3dd63f22fd4d0522",
+          "transforms": [
+            {
+              "kind": "fence-info-string-normalized",
+              "occurrences": 2
+            }
+          ]
+        },
+        {
+          "path": "quint-lang/guidelines/simulations.md",
+          "sha256": "21c0f0de109230444384e6e3eb71986929f0eebd429231d20a6fe43f6cad0d33",
+          "kind": "adapted",
+          "upstream_sha256": "f7f0344703ec1f2d5c78340e533c64818e01d9d16f86285d3d1dd0830f0fa1d9",
+          "transforms": [
+            {
+              "kind": "fence-info-string-normalized",
+              "occurrences": 8
+            }
+          ]
+        },
+        {
+          "path": "quint-lang/guidelines/tests.md",
+          "sha256": "c3eb15df353a4b3936d6eb8fc415b3e95979407373f48000fd32799cd5a18b3a",
+          "kind": "adapted",
+          "upstream_sha256": "8386d24169fa38385a7776be0bc3fd230b004532a5392d8a0f4374340e2c4da8",
+          "transforms": [
+            {
+              "kind": "fence-info-string-normalized",
+              "occurrences": 6
+            }
+          ]
+        }
+      ],
+      "kind": "adapted",
+      "local_path": "speckit-pro/skills/speckit-coach/references/quint/quint-lang",
+      "name": "quint-lang",
+      "upstream_path": "quint-llm-kit-plugin/skills/quint-lang",
+      "adapted_file_count": 5
+    },
+    {
+      "files": [
+        {
+          "path": "quint-modeling/SKILL.md",
+          "sha256": "fe595baac9353a4c8ca572ee91b0d516000a17a83697db6244597597ae69c591",
+          "kind": "verbatim"
+        },
+        {
+          "path": "quint-modeling/examples/README.md",
+          "sha256": "92bbaff181c23308f146ff3b048bbb4fdf48c9565a6f3eff046347feaeeebf1c",
+          "kind": "adapted",
+          "upstream_sha256": "61131aa8e1c52f496d61ce443d511cb4ec5dc5d2dd93825fd9871a83364716c0",
+          "transforms": [
+            {
+              "kind": "script-filename-extension-dropped",
+              "occurrences": 1
+            }
+          ]
+        },
+        {
+          "path": "quint-modeling/examples/ewd426.qnt",
+          "sha256": "9d443e24d231c606588e2712b5d46cdafac6e37a308dd32b23718d6c9c09f703",
+          "kind": "verbatim"
+        },
+        {
+          "path": "quint-modeling/examples/tendermint/choreo.qnt",
+          "sha256": "d2f93ccd70dfa7f7365acbc442dfc0fb83cb3711091202e0079b4b2dc1a5dafd",
+          "kind": "verbatim"
+        },
+        {
+          "path": "quint-modeling/examples/tendermint/spells/basicSpells.qnt",
+          "sha256": "60e566ee21ed308c7f33069199b277fcbc9856bc16b0ac877cacc81d61926102",
+          "kind": "verbatim"
+        },
+        {
+          "path": "quint-modeling/examples/tendermint/tendermint.qnt",
+          "sha256": "ffe94743741fc2c1af988eb99c02a230d564063db76b3077578d60f4f2db0e09",
+          "kind": "verbatim"
+        },
+        {
+          "path": "quint-modeling/examples/tendermint/tendermintTest.qnt",
+          "sha256": "0779f63de819204ce5f4ee48efdf1998d1359a33a25f666544ca317df0a2ea9f",
+          "kind": "verbatim"
+        },
+        {
+          "path": "quint-modeling/guidelines/from-code.md",
+          "sha256": "15358f1f8cf7782d8369548fe860a6ba8e4f253945ce4dea12498aea92171c39",
+          "kind": "verbatim"
+        },
+        {
+          "path": "quint-modeling/guidelines/from-nothing.md",
+          "sha256": "81b443f481f03d8f3cfaffca19c0b6d58193dad96d851f09f2f576bb23042e94",
+          "kind": "verbatim"
+        },
+        {
+          "path": "quint-modeling/guidelines/from-requirements.md",
+          "sha256": "8b2717b35d533b00667e6ac9fdfe85ff5b5bcb3a59c57cbc7c2d944fe204efcb",
+          "kind": "verbatim"
+        },
+        {
+          "path": "quint-modeling/guidelines/from-tlaplus.md",
+          "sha256": "0722ff375dc29dc96482802cb070ea0d40b8abdcead2eebb8aee7babc80eca9c",
+          "kind": "verbatim"
+        },
+        {
+          "path": "quint-modeling/guidelines/review.md",
+          "sha256": "8b81f4a4bdc0bab7cd7c17ec036fd3d2108f5ad251dd4608145caf08e3ec9424",
+          "kind": "verbatim"
+        }
+      ],
+      "kind": "adapted",
+      "local_path": "speckit-pro/skills/speckit-coach/references/quint/quint-modeling",
+      "name": "quint-modeling",
+      "upstream_path": "quint-llm-kit-plugin/skills/quint-modeling",
+      "adapted_file_count": 1
+    },
+    {
+      "files": [
+        {
+          "path": "witness-and-trace.md",
+          "sha256": "fc12c270696989f2535de68dfee8dad419db2f78d831c3500a9e48f1a365ae9c",
+          "kind": "derived"
+        }
+      ],
+      "kind": "derived",
+      "local_path": "speckit-pro/skills/speckit-coach/references/quint/witness-and-trace.md",
+      "name": "witness-and-trace",
+      "upstream_path": "agentic"
+    }
+  ],
+  "upstream": {
+    "author": "Informal Systems Inc.",
+    "commit": "cc75369f741af7d490936f82002c2d28e3b3d78d",
+    "license": "Apache-2.0",
+    "notice": "speckit-pro/skills/speckit-coach/references/quint/UPSTREAM-NOTICE.md",
+    "project": "Quint LLM Kit",
+    "repository": "quint-co/quint-llm-kit"
+  },
+  "adaptation": {
+    "reason": "The plugin-bash-confinement guard blocks shell-dialect tokens and script filenames anywhere under speckit-pro/ and the generated payloads. Six upstream files therefore carry a recorded mechanical normalization, itemized per file. No other content changed.",
+    "contract": "plugin-bash-confinement (tests/speckit-pro/unit/fixtures/plugin-bash-confinement/zero-bash-guard-cases.json)",
+    "transform_kinds": [
+      {
+        "kind": "fence-info-string-normalized",
+        "effect": "a code-fence info string; sample content unchanged"
+      },
+      {
+        "kind": "script-filename-extension-dropped",
+        "effect": "one helper filename named in prose"
+      }
+    ],
+    "exact_token_mapping_recorded_in": "tests/speckit-pro/unit/test-quint-reference-attribution.py"
+  }
+}

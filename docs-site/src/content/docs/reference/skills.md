@@ -11,12 +11,14 @@ Claude Code and Codex skill surfaces, invocations, prerequisites, expected artif
 
 - **Public path:** `/racecraft-plugins-public/reference/skills/`
 - **Generated output:** `docs-site/src/content/docs/reference/skills.md`
-- **Records:** 12
+- **Records:** 14
 
 ## Navigation Summary
 
 - Grill Me
 - Install
+- Quint Lang
+- Quint Modeling
 - Speckit Archive Cleanup
 - Speckit Autopilot
 - Speckit Coach
@@ -103,6 +105,74 @@ Claude Code and Codex skill surfaces, invocations, prerequisites, expected artif
 
 - This skill is present only in the Codex source tree; do not assume a parallel runtime surface exists unless a matching source file is added.
   - Based on: `speckit-pro/codex-skills/install/SKILL.md`
+
+### Quint Lang
+
+- **Purpose:** Quint language and CLI reference — the expert on Quint syntax, operators, types, `basicSpells`, the toolchain (typecheck/run/test/verify), and how to read simulation and counterexample output.
+- **Classification:** `source`
+- **Platform concept:** SpecKit Pro quint-lang skill
+- **Claude Code:** /speckit-pro:quint-lang
+- **Codex:** No Codex source skill in this repository.
+- **Runtime difference:** This skill is present in only one runtime source tree.
+
+#### Command Or Skill Reference
+
+- **Claude Code invocation:** `/speckit-pro:quint-lang`
+- **Codex invocation:** `Not available in the Codex source tree.`
+- **Purpose:** Quint language and CLI reference — the expert on Quint syntax, operators, types, `basicSpells`, the toolchain (typecheck/run/test/verify), and how to read simulation and counterexample output.
+- **Expected output artifact:** A source-backed skill response or workflow artifact.
+
+**Prerequisites**
+
+- SpecKit Pro is installed for the selected runtime.
+- The linked SKILL.md file defines the active scope and guardrails.
+
+#### Source Facts
+
+- quint-lang has a Claude Code skill source and no Codex skill source in the checked-in plugin tree. Source refs: `speckit-pro/skills/speckit-coach/references/quint/quint-lang/SKILL.md`.
+
+#### Sources
+
+- [speckit-pro/skills/speckit-coach/references/quint/quint-lang/SKILL.md](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/speckit-pro/skills/speckit-coach/references/quint/quint-lang/SKILL.md)
+
+#### Inferred Notes
+
+- This skill is present only in the Claude Code source tree; do not assume a parallel runtime surface exists unless a matching source file is added.
+  - Based on: `speckit-pro/skills/speckit-coach/references/quint/quint-lang/SKILL.md`
+
+### Quint Modeling
+
+- **Purpose:** Build a Quint model of a system, protocol, or algorithm.
+- **Classification:** `source`
+- **Platform concept:** SpecKit Pro quint-modeling skill
+- **Claude Code:** /speckit-pro:quint-modeling
+- **Codex:** No Codex source skill in this repository.
+- **Runtime difference:** This skill is present in only one runtime source tree.
+
+#### Command Or Skill Reference
+
+- **Claude Code invocation:** `/speckit-pro:quint-modeling`
+- **Codex invocation:** `Not available in the Codex source tree.`
+- **Purpose:** Build a Quint model of a system, protocol, or algorithm.
+- **Expected output artifact:** A source-backed skill response or workflow artifact.
+
+**Prerequisites**
+
+- SpecKit Pro is installed for the selected runtime.
+- The linked SKILL.md file defines the active scope and guardrails.
+
+#### Source Facts
+
+- quint-modeling has a Claude Code skill source and no Codex skill source in the checked-in plugin tree. Source refs: `speckit-pro/skills/speckit-coach/references/quint/quint-modeling/SKILL.md`.
+
+#### Sources
+
+- [speckit-pro/skills/speckit-coach/references/quint/quint-modeling/SKILL.md](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/speckit-pro/skills/speckit-coach/references/quint/quint-modeling/SKILL.md)
+
+#### Inferred Notes
+
+- This skill is present only in the Claude Code source tree; do not assume a parallel runtime surface exists unless a matching source file is added.
+  - Based on: `speckit-pro/skills/speckit-coach/references/quint/quint-modeling/SKILL.md`
 
 ### Speckit Archive Cleanup
 
