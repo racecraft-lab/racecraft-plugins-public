@@ -14,9 +14,17 @@ native launches, a 50.46% reduction from 2,628. The minimum reduction target is
 met; the 200-case stretch target is not. This is launch arithmetic, not a measured
 token, billing, latency, or behavior result.
 
-Semantic review approved the inventory with SHA-256
-`0dfbf5670912e7806c7b588394c7ffd25d1ab8dc01acca1a9263f9df2151bdf1`.
-Any edit invalidates that approval. Do not prune cases after observing outcomes.
+Semantic review approved the inventory; the shipped revision is frozen at
+SHA-256 `fc54fdeee50a49a3accb8c1353367bbd0f18cb91830a846a675f51530d57bdcf`.
+Relative to the earlier reviewed revision
+`0dfbf5670912e7806c7b588394c7ffd25d1ab8dc01acca1a9263f9df2151bdf1`, the only
+change is the 23 explicit-invocation smoke queries, rewritten from the Claude `/`
+and Codex `$` control syntax into ordinary-language requests that name the exact
+target skill, which the qualified observation scope requires. No case was added,
+removed, relabelled or consolidated; source corpora, dispositions, protected and
+pilot identities, category, intent and boundary tags are unchanged, and no
+provider result existed when the revision changed. Any edit invalidates that
+approval. Do not prune cases after observing outcomes.
 
 ## Controlled comparison
 

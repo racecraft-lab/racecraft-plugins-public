@@ -14,7 +14,9 @@ import unittest
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "lib"))
 import trigger_campaign as campaign
+import trigger_comparison as comparison
 from test_result import run_counted
+from trigger_inventory import load_inventory, plan_inventory
 
 
 def approval(digest="a" * 64, budget=6):
@@ -534,10 +536,40 @@ class CampaignTests(unittest.TestCase):
             campaign.worker_limit(2, {"qualified": True}, "a" * 64)
 
 
+
+class CampaignDraftBindingTests(unittest.TestCase):
+    """Committed freeze drafts must keep binding the shipped corpus.
+
+    ``compare-trigger-evals.py validate`` is the launch-time gate, but nothing
+    ran it over the drafts kept in the repository, so a corpus revision that
+    landed after they were generated left both of them unable to validate
+    against the inventory they name. Rebind them from the provider-free planner
+    whenever the inventory changes; the freeze-time model, CLI, observer,
+    catalog, fixture and description pins stay with the draft.
+    """
+
+    def test_committed_campaign_drafts_match_the_provider_free_planner(self):
+        layer = ROOT / "layer2-trigger"
+        inventory_path = layer / "case-inventory.json"
+        inventory = load_inventory(inventory_path)
+        drafts = {"issue-573-pilot.draft.json": "pilot", "issue-573-full.draft.json": "full"}
+        for name, scope in sorted(drafts.items()):
+            with self.subTest(draft=name):
+                draft = json.loads((layer / "campaign-drafts" / name).read_bytes())
+                plan = plan_inventory(inventory, layer, scope, inventory_path=inventory_path)
+                cases = comparison.validate_inventory_binding(draft, inventory)
+                self.assertEqual(len(cases), len(plan["roster"]))
+                for field in ("roster", "corpus_sha256", "inventory_sha256", "arms",
+                              "trials", "threshold", "qualification_scope"):
+                    self.assertEqual(draft[field], plan[field], field)
+                self.assertEqual(draft["launch_budget_requested"], plan["launch_count"])
+
+
 if __name__ == "__main__":
     suite = unittest.TestSuite([
         unittest.defaultTestLoader.loadTestsFromTestCase(CampaignTests),
         unittest.defaultTestLoader.loadTestsFromTestCase(MultiGenerationApprovalTests),
         unittest.defaultTestLoader.loadTestsFromTestCase(CarryForwardTests),
+        unittest.defaultTestLoader.loadTestsFromTestCase(CampaignDraftBindingTests),
     ])
     raise SystemExit(run_counted(suite, label="test-trigger-campaign"))
