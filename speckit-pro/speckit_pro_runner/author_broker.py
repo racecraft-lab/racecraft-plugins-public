@@ -75,6 +75,7 @@ def _write_state(path: Path, state: dict[str, Any]) -> None:
         try:
             temporary.unlink()
         except FileNotFoundError:
+            # Atomic replacement may have already removed the temporary path.
             pass
 
 
