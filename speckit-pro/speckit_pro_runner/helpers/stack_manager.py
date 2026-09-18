@@ -14,6 +14,9 @@ from ..envelope import diagnostic, response
 BRANCH = re.compile(r"(?!-)(?!.*\.\.)(?!.*//)[A-Za-z0-9._/-]{1,255}\Z")
 REPOSITORY = re.compile(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+\Z")
 QUALIFIED_VERSION = "0.1.1"
+SKILL_SHA256 = "f90eec41187457b44640f3d85d2b6069dc702c898b923c79759e7858597d62f7"
+TRUSTED_SKILL_PARENTS = (Path.home() / ".claude/skills", Path.home() / ".codex/skills")
+TRUSTED_SKILL_PATHS = tuple(parent / "gh-stack/SKILL.md" for parent in TRUSTED_SKILL_PARENTS)
 
 
 def probe(root: Path, argv: list[str]) -> dict[str, Any]:
@@ -112,6 +115,12 @@ def qualify_tools(root: Path, skill: Any, decision: dict[str, Any]) -> bool:
     path = Path(skill).expanduser() if isinstance(skill, str) and skill else None
     if path is None or path.name != "SKILL.md" or not path.is_file():
         fallback(decision, "The gh-stack skill is unavailable", "missing")
+        return False
+    if path.resolve() not in TRUSTED_SKILL_PATHS:
+        fallback(decision, "The gh-stack skill is outside its trusted installation roots", "missing")
+        return False
+    if hashlib.sha256(path.read_bytes()).hexdigest() != SKILL_SHA256:
+        fallback(decision, "The installed gh-stack skill differs from its pinned identity", "missing")
         return False
     text = path.read_text(encoding="utf-8")
     if not text.startswith("---\n") or not re.search(r"(?m)^name:\s*gh-stack\s*$", text.split("---", 2)[1]):

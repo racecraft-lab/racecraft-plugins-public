@@ -11,12 +11,13 @@ Claude Code plugin agents and Codex custom-agent templates with runtime-specific
 
 - **Public path:** `/racecraft-plugins-public/reference/agents/`
 - **Generated output:** `docs-site/src/content/docs/reference/agents.md`
-- **Records:** 15
+- **Records:** 16
 
 ## Navigation Summary
 
 - Analyze Executor
 - Artifact Author
+- Artifact Preview Observer
 - Autopilot Fast Helper
 - Checklist Executor
 - Clarify Executor
@@ -83,6 +84,28 @@ Claude Code plugin agents and Codex custom-agent templates with runtime-specific
 
 - Runtime-specific agent source formats are parallel surfaces, not generated copies of one another.
   - Based on: `speckit-pro/agents/artifact-author.md`, `speckit-pro/codex-agents/artifact-author.toml`
+
+### Artifact Preview Observer
+
+- **Purpose:** Publishes and observes one generated artifact page in an isolated preview surface.
+- **Classification:** `source`
+- **Platform concept:** SpecKit Pro artifact-preview-observer agent
+- **Claude Code:** artifact-preview-observer.md plugin agent source
+- **Codex:** No Codex custom-agent template in this repository.
+- **Runtime difference:** Claude Code agent sources are Markdown plugin agent definitions; Codex custom-agent templates are TOML files installed into a Codex agent directory.
+
+#### Source Facts
+
+- artifact-preview-observer has Claude Code agent source and no Codex custom-agent source. Source refs: `speckit-pro/agents/artifact-preview-observer.md`.
+
+#### Sources
+
+- [speckit-pro/agents/artifact-preview-observer.md](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/speckit-pro/agents/artifact-preview-observer.md)
+
+#### Inferred Notes
+
+- Runtime-specific agent source formats are parallel surfaces, not generated copies of one another.
+  - Based on: `speckit-pro/agents/artifact-preview-observer.md`
 
 ### Autopilot Fast Helper
 

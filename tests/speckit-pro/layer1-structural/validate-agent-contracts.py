@@ -111,7 +111,7 @@ class ValidateAgentInstructions(unittest.TestCase):
         with self.subTest(msg='agent instruction files have canonical wrapper shape'):
             self.assertFalse(errors, '\n'.join(errors))
 AGENTS_DIR = PLUGIN_ROOT / 'agents'
-validate_agents_AGENTS = ('phase-executor', 'clarify-executor', 'checklist-executor', 'analyze-executor', 'implement-executor', 'formal-model-author', 'codebase-analyst', 'spec-context-analyst', 'domain-researcher', 'consensus-synthesizer', 'artifact-author', 'uat-runbook-author', 'sweep-classifier', 'sweep-analyst')
+validate_agents_AGENTS = ('phase-executor', 'clarify-executor', 'checklist-executor', 'analyze-executor', 'implement-executor', 'formal-model-author', 'codebase-analyst', 'spec-context-analyst', 'domain-researcher', 'consensus-synthesizer', 'artifact-author', 'artifact-preview-observer', 'uat-runbook-author', 'sweep-classifier', 'sweep-analyst')
 PLUGIN_AGENT_FIELDS = {'name', 'description', 'model', 'effort', 'maxTurns', 'tools', 'disallowedTools', 'skills', 'memory', 'background', 'isolation', 'color'}
 UNSUPPORTED_PLUGIN_AGENT_FIELDS = {'hooks', 'mcpServers', 'permissionMode', 'initialPrompt', 'experimental.cacheTtl'}
 MEMORY_POLICY = {'codebase-analyst': 'local', 'implement-executor': 'local', 'spec-context-analyst': 'local'}

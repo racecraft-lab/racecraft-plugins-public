@@ -137,7 +137,7 @@ does not end at the boundary commit above. It runs this sequence, in this order:
 4. Create or refresh the draft pull request.
 5. Write the `Draft PR` record to the workflow file.
 6. Take a separate bookkeeping commit carrying that record, and push it.
-7. The parent opens and observes each generated artifact preview.
+7. The parent dispatches `artifact-preview-observer` for each generated artifact preview; the isolated observer never inherits general repository tools.
 8. Validate and commit/push the workflow-only preview evidence.
 ```
 

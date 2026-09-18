@@ -6,6 +6,7 @@ from __future__ import annotations
 import copy
 import hashlib
 import json
+import re
 import runpy
 import sys
 import tempfile
@@ -41,6 +42,11 @@ class ArtifactReviewTests(unittest.TestCase):
             (self.root / path).write_text("Review Demo preserves the existing draft PR.\n")
             inputs[path] = hashlib.sha256((self.root / path).read_bytes()).hexdigest()
         self.gallery = ROOT / "speckit-pro/artifact-gallery"
+        def render_template(identifier, title, body):
+            template = (self.gallery / f"templates/{identifier}.html").read_text(encoding="utf-8")
+            pattern = re.compile(r"(<!--\s*FILL:document-title:START\s*-->)(.*?)(<!--\s*FILL:document-title:END\s*-->)", re.DOTALL)
+            replacement = rf"\1<title>{title}</title><h1>{body}</h1>\3"
+            return pattern.sub(replacement, template, count=1)
         self.record = {
             "schema_version": "1.0",
             "feature_dir": self.feature,
@@ -54,7 +60,7 @@ class ArtifactReviewTests(unittest.TestCase):
             path = f"{self.feature}/artifacts/{identifier}.html"
             title = f"Review Demo: {identifier}"
             body = f"Review Demo {identifier} preserves the existing draft PR."
-            (self.root / path).write_text(f"<html><head><title>{title}</title></head><body><p>{body}</p></body></html>")
+            (self.root / path).write_text(render_template(identifier, title, body))
             self.record["template_hashes"][identifier] = hashlib.sha256(
                 (self.gallery / f"templates/{identifier}.html").read_bytes()
             ).hexdigest()
@@ -103,8 +109,16 @@ class ArtifactReviewTests(unittest.TestCase):
         result = self.review()
         self.assertEqual(result["status"], "pending")
         self.assertEqual(result["resume_action"], "preview")
+        self.assertEqual(result["observer"], artifact_review.OBSERVER)
         self.assertTrue(result["reuse_artifacts"])
         self.assertEqual(result["verified"], 0)
+
+    def test_untrusted_html_outside_template_regions_is_rejected(self) -> None:
+        path = self.root / self.record["pages"][0]["path"]
+        path.write_text(path.read_text().replace("<!DOCTYPE html>", "<!DOCTYPE html><!-- injected -->", 1))
+        self.record["pages"][0]["sha256"] = hashlib.sha256(path.read_bytes()).hexdigest()
+        with self.assertRaisesRegex(ValueError, "trusted fill"):
+            self.review()
 
     def test_all_rendered_pages_are_verified(self) -> None:
         self.verify(0)
@@ -278,7 +292,7 @@ class ArtifactReviewTests(unittest.TestCase):
             path = ROOT / f"speckit-pro/{directory}/speckit-autopilot/references/phase-execution{suffix}.md"
             text = path.read_text()
             self.assertIn("artifact-review.md", text)
-            self.assertLess(text.index("6. Take a separate bookkeeping commit"), text.index("7. The parent opens and observes"))
+            self.assertLess(text.index("6. Take a separate bookkeeping commit"), text.index("7. The parent dispatches `artifact-preview-observer`"))
             self.assertIn("preview-only resume", text)
             self.assertIn("direct local file links", text)
 

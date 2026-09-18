@@ -78,6 +78,7 @@ CLAUDE_REQUIRED_AGENT_NAMES = (
     "domain-researcher",
     "consensus-synthesizer",
     "artifact-author",
+    "artifact-preview-observer",
     "uat-runbook-author",
     "sweep-classifier",
     "sweep-analyst",

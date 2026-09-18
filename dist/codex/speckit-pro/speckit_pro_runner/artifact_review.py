@@ -15,6 +15,8 @@ from .formal.selection import next_fence, require_fields, require_text, unique_o
 HEADING = "## Artifact Review Handoff"
 GALLERY = Path(__file__).resolve().parents[1] / "artifact-gallery"
 PREVIEW_STATUSES = ("pending", "verified", "unavailable", "denied")
+OBSERVER = "artifact-preview-observer"
+FILL_MARKER = re.compile(rb"<!--\s*FILL:([a-z0-9-]+):(START|END)\s*-->")
 FileReader = Callable[[Path, Path], bytes | None]
 
 
@@ -87,6 +89,35 @@ def _relative(value: Any) -> str:
     if any(part.casefold() == ".git" for part in path.parts):
         raise ValueError("artifact review paths cannot name git metadata")
     return value
+
+
+def _fill_skeleton(value: bytes) -> tuple[tuple[str, ...], tuple[bytes, ...]]:
+    matches = list(FILL_MARKER.finditer(value))
+    if len(matches) % 2:
+        raise ValueError("artifact template has an unmatched fill marker")
+    slots: list[str] = []
+    static: list[bytes] = []
+    cursor = 0
+    for index in range(0, len(matches), 2):
+        start, end = matches[index], matches[index + 1]
+        if start.group(2) != b"START" or end.group(2) != b"END" or start.group(1) != end.group(1):
+            raise ValueError("artifact template has an invalid fill marker")
+        slots.append(start.group(1).decode("ascii"))
+        static.append(value[cursor:start.end()])
+        cursor = end.start()
+    static.append(value[cursor:])
+    return tuple(slots), tuple(static)
+
+
+def _generation_provenance(page: dict[str, Any], root: Path, read_file: FileReader) -> None:
+    template = read_file(GALLERY / f"templates/{page['id']}.html", GALLERY)
+    artifact = read_file(root / page["path"], root)
+    if template is None or artifact is None:
+        raise ValueError(f"artifact preview provenance is unreadable: {page['id']}")
+    template_slots, template_static = _fill_skeleton(template)
+    artifact_slots, artifact_static = _fill_skeleton(artifact)
+    if template_slots != artifact_slots or template_static != artifact_static:
+        raise ValueError(f"artifact preview is not a trusted fill of its template: {page['id']}")
 
 
 def _current_hash(root: Path, relative: str, read_file: FileReader) -> str | None:
@@ -236,6 +267,8 @@ def _page_results(record: dict[str, Any], root: Path, read_file: FileReader) -> 
             fresh = fresh and digest is None
             continue
         current = digest == page["sha256"]
+        if current:
+            _generation_provenance(page, root, read_file)
         fresh = fresh and current
         preview = page["preview"]
         result = {"id": page["id"], "path": path, "status": preview["status"], "blocker": preview["blocker"]}
@@ -260,4 +293,5 @@ def review_handoff(text: str, root: Path, read_file: FileReader) -> dict[str, An
         "status": status, "resume_action": "generate" if not fresh else "preview" if status == "pending" else "none",
         "reuse_artifacts": fresh, "feature_dir": record["feature_dir"], "generated": len(pages),
         "verified": verified, "pages": pages, "generation_gaps": gaps, "generation_error": record["generation_error"],
+        "observer": OBSERVER,
     }

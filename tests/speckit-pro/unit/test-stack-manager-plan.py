@@ -2,6 +2,7 @@
 """Optional manager selection must never create PRs or mix recovery paths."""
 
 import copy
+import hashlib
 import json
 from pathlib import Path
 import sys
@@ -22,9 +23,16 @@ class StackManagerTests(unittest.TestCase):
         temporary = tempfile.TemporaryDirectory()
         self.addCleanup(temporary.cleanup)
         self.root = Path(temporary.name).resolve()
-        self.skill = self.root / "gh-stack/SKILL.md"
-        self.skill.parent.mkdir()
+        self.skill = self.root / ".claude/skills/gh-stack/SKILL.md"
+        self.skill.parent.mkdir(parents=True)
         self.skill.write_text("---\nname: gh-stack\n---\nUse gh stack link with existing PR URLs.\n")
+        self.skill_digest = hashlib.sha256(self.skill.read_bytes()).hexdigest()
+        self.original_skill_paths = stack_manager.TRUSTED_SKILL_PATHS
+        self.original_skill_digest = stack_manager.SKILL_SHA256
+        stack_manager.TRUSTED_SKILL_PATHS = (self.skill.resolve(),)
+        stack_manager.SKILL_SHA256 = self.skill_digest
+        self.addCleanup(setattr, stack_manager, "TRUSTED_SKILL_PATHS", self.original_skill_paths)
+        self.addCleanup(setattr, stack_manager, "SKILL_SHA256", self.original_skill_digest)
         self.inputs = {"repo_root": str(self.root), "repository": "example/project", "remote": "origin",
                        "skill_path": str(self.skill), "topology": [
                            {"review_order": 1, "slice_id": "first", "branch": "codex/first", "base_branch": "main", "pr_url": "https://github.com/example/project/pull/11"},
@@ -69,6 +77,22 @@ class StackManagerTests(unittest.TestCase):
         self.assertEqual(["gh", "stack", "link", "--remote", "origin", "--base", "main", *[x["pr_url"] for x in self.inputs["topology"]]], decision["command_plan"][0]["argv"])
         self.assertFalse(result["data"]["writes_state"])
         self.assertFalse(any("create" in c or "edit" in c or "link" in c and "--help" not in c for c in self.calls))
+
+    def test_repository_local_skill_is_not_trusted(self):
+        local = self.root / "gh-stack/SKILL.md"
+        local.parent.mkdir()
+        local.write_text(self.skill.read_text())
+        with patch.object(stack_manager, "probe", side_effect=self.probe):
+            result = self.request(skill_path=str(local))
+        self.assertEqual("explicit-gh", result["data"]["decision"]["selected_manager"])
+        self.assertFalse(result["data"]["decision"]["gh_stack"]["skill_available"])
+
+    def test_tampered_skill_digest_falls_back(self):
+        self.skill.write_text(self.skill.read_text() + "tampered\n")
+        with patch.object(stack_manager, "probe", side_effect=self.probe):
+            result = self.request()
+        self.assertEqual("explicit-gh", result["data"]["decision"]["selected_manager"])
+        self.assertFalse(result["data"]["decision"]["gh_stack"]["skill_available"])
 
     def test_missing_either_capability_and_unsupported_version_fall_back(self):
         for unavailable in ("cli", "skill", "version", "repository"):
