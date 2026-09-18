@@ -23,10 +23,7 @@ ENTRY = PACKAGE + "/dist/src/cli.js"
 
 def installation(root: Path, tool: dict[str, Any]) -> Path:
     path = Path(tool["root"])
-    result = path.resolve() if path.is_absolute() else confined(root, tool["root"])
-    if not result.is_relative_to((root / FORMAL_TOOLS_ROOT).resolve()):
-        raise FormalError("unsupported", "Quint installation must stay inside .specify/tools/formal")
-    return result
+    return path.resolve() if path.is_absolute() else confined(root, tool["root"])
 
 
 def tree_digest(directory: Path) -> str:
