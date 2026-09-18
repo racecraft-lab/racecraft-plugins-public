@@ -1,0 +1,34 @@
+name: PR title
+
+# Release Please derives the next version from the merged commit subjects. This
+# repository squash-merges, so the PR title becomes that subject: a title with
+# no conventional-commit type produces a commit Release Please ignores, and the
+# release it should have cut never appears. The first three PRs merged that way.
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, edited]
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  validate-pr-title:
+    name: validate-pr-title
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Validate the pull request title
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          TITLE: ${{ github.event.pull_request.title }}
+        with:
+          script: |
+            const title = process.env.TITLE ?? ""
+            const conventional = /^(feat|fix|chore|docs|refactor|test|build|ci|perf|revert)(\([^)]+\))?!?: .+$/
+            if (!conventional.test(title)) {
+              throw new Error(`PR title must use Conventional Commits syntax; received: ${title}`)
+            }
+            core.info(`Validated PR title: ${title}`)

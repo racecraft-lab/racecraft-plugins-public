@@ -95,7 +95,7 @@ jobs:
         run: |
           if git grep -n -F "$UPSTREAM" -- \
                'cmd/' 'install.sh' 'go.mod' 'Taskfile.yml' \
-               'mcp/' '.mcp.json' '.claude-plugin/' '.codex-plugin/'; then
+               'mcp/' '.mcp.json' '.claude-plugin/' '.codex-plugin/' '.agents/'; then
             echo "::error::found an upstream reference in code or packaging" >&2
             exit 1
           fi

@@ -29,6 +29,19 @@ The plugin bundles the `evaluate` tool together with TypeSafe's agent skill,
 adapted to use it: see [docs/plugin.md](docs/plugin.md). Install it **instead
 of** the official `typesafe` plugin, not alongside it.
 
+```sh
+# Claude Code
+claude plugin marketplace add racecraft-lab/typesafe-mcp --scope user
+claude plugin install typesafe-jev@racecraft-typesafe --scope user
+
+# Codex
+codex plugin marketplace add racecraft-lab/typesafe-mcp
+codex plugin add typesafe-jev@racecraft-typesafe
+```
+
+The binary is installed separately either way, by step 1 of the quickstart
+below. The plugin carries a launcher, not four platform builds.
+
 The by-hand path below registers the same server with no plugin involved. Use
 one or the other.
 

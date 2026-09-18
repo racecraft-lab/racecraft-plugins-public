@@ -1,4 +1,5 @@
 {
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
   "packages": {
     ".": {
       "release-type": "go",
@@ -7,8 +8,34 @@
       "bump-minor-pre-major": true,
       "bump-patch-for-minor-pre-major": false,
       "draft": true,
-      "force-tag-creation": true
+      "force-tag-creation": true,
+      "extra-files": [
+        {
+          "type": "json",
+          "path": ".claude-plugin/plugin.json",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "json",
+          "path": ".codex-plugin/plugin.json",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "json",
+          "path": ".claude-plugin/marketplace.json",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "json",
+          "path": ".claude-plugin/marketplace.json",
+          "jsonpath": "$.plugins[?(@.name==\"typesafe-jev\")].version"
+        },
+        {
+          "type": "json",
+          "path": ".agents/plugins/marketplace.json",
+          "jsonpath": "$.plugins[?(@.name==\"typesafe-jev\")].version"
+        }
+      ]
     }
-  },
-  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json"
+  }
 }

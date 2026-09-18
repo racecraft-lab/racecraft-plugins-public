@@ -269,3 +269,118 @@ func TestLauncherResolvesTheBinary(t *testing.T) {
 		}
 	})
 }
+
+// versionDeclarations lists every file that states the plugin's version, with
+// the release-please jsonpath that has to bump it. Adding a manifest without
+// adding it here is the mistake this table exists to make visible.
+var versionDeclarations = []struct{ path, jsonpath string }{
+	{".claude-plugin/plugin.json", "$.version"},
+	{".codex-plugin/plugin.json", "$.version"},
+	{".claude-plugin/marketplace.json", "$.version"},
+	{".claude-plugin/marketplace.json", `$.plugins[?(@.name=="typesafe-jev")].version`},
+	{".agents/plugins/marketplace.json", `$.plugins[?(@.name=="typesafe-jev")].version`},
+}
+
+// Codex reads its marketplace from .agents/plugins/marketplace.json, not from
+// .codex-plugin/plugin.json, which is the payload manifest. Without this file
+// `codex plugin marketplace add` finds no plugins at all.
+func TestCodexMarketplaceResolves(t *testing.T) {
+	root := repoRoot(t)
+	doc := readJSON(t, filepath.Join(root, ".agents/plugins/marketplace.json"))
+
+	claudeMarket := readJSON(t, filepath.Join(root, ".claude-plugin/marketplace.json"))
+	if doc["name"] != claudeMarket["name"] {
+		t.Errorf("marketplace name differs: codex=%v claude=%v", doc["name"], claudeMarket["name"])
+	}
+
+	// Found by name rather than by position: the entry this test is about is
+	// the one named in the Codex manifest, whatever order the file lists them.
+	manifest := readJSON(t, filepath.Join(root, ".codex-plugin/plugin.json"))
+	name, _ := manifest["name"].(string)
+	if name == "" {
+		t.Fatal("the Codex manifest declares no name")
+	}
+
+	plugins, _ := doc["plugins"].([]any)
+	var entry map[string]any
+	for _, p := range plugins {
+		candidate, _ := p.(map[string]any)
+		if candidate != nil && candidate["name"] == name {
+			entry = candidate
+		}
+	}
+	if entry == nil {
+		t.Fatalf("the Codex marketplace has no entry named %q", name)
+	}
+
+	// The source is an object for Codex, unlike Claude Code's bare string.
+	source, _ := entry["source"].(map[string]any)
+	if source == nil {
+		t.Fatal("source is not an object")
+	}
+	if source["source"] != "local" {
+		t.Errorf("source.source = %v, want local", source["source"])
+	}
+	path, _ := source["path"].(string)
+	if path == "" {
+		t.Fatal("source.path is empty")
+	}
+	// It must resolve to the directory holding the Codex payload manifest.
+	if _, err := os.Stat(filepath.Join(root, filepath.Clean(path), ".codex-plugin", "plugin.json")); err != nil {
+		t.Errorf("source.path %q does not hold .codex-plugin/plugin.json: %v", path, err)
+	}
+}
+
+// Every manifest states the version the release manifest holds, and Release
+// Please is configured to bump every one of them. A version a release cannot
+// reach is a version an operator sees and cannot install.
+func TestVersionsAgreeAndAreBumped(t *testing.T) {
+	root := repoRoot(t)
+
+	released, _ := readJSON(t, filepath.Join(root, ".release-please-manifest.json"))["."].(string)
+	if released == "" {
+		t.Fatal("the release manifest states no version for the root package")
+	}
+
+	for _, decl := range versionDeclarations {
+		doc := readJSON(t, filepath.Join(root, decl.path))
+		var got any
+		if strings.HasPrefix(decl.jsonpath, "$.plugins") {
+			plugins, _ := doc["plugins"].([]any)
+			for _, p := range plugins {
+				entry, _ := p.(map[string]any)
+				if entry != nil && entry["name"] == "typesafe-jev" {
+					got = entry["version"]
+				}
+			}
+		} else {
+			got = doc["version"]
+		}
+		if got != released {
+			t.Errorf("%s %s = %v, want %s (the released version)", decl.path, decl.jsonpath, got, released)
+		}
+	}
+
+	// And each one is wired into the release, or the next release leaves it
+	// behind at whatever it says today.
+	cfg := readJSON(t, filepath.Join(root, "release-please-config.json"))
+	packages, _ := cfg["packages"].(map[string]any)
+	root0, _ := packages["."].(map[string]any)
+	extra, _ := root0["extra-files"].([]any)
+
+	wired := map[string]bool{}
+	for _, e := range extra {
+		entry, _ := e.(map[string]any)
+		if entry == nil {
+			continue
+		}
+		path, _ := entry["path"].(string)
+		jsonpath, _ := entry["jsonpath"].(string)
+		wired[path+" "+jsonpath] = true
+	}
+	for _, decl := range versionDeclarations {
+		if !wired[decl.path+" "+decl.jsonpath] {
+			t.Errorf("release-please does not bump %s %s", decl.path, decl.jsonpath)
+		}
+	}
+}

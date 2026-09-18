@@ -14,6 +14,7 @@ server by hand with no plugin involved. Both paths run the same binary. Use one.
 | `.claude-plugin/plugin.json` | Claude Code manifest |
 | `.claude-plugin/marketplace.json` | marketplace entry, source `./` |
 | `.codex-plugin/plugin.json` | Codex manifest |
+| `.agents/plugins/marketplace.json` | marketplace entry Codex prefers, source `./` |
 | `mcp/claude.json` | MCP entry for Claude Code |
 | `.mcp.json` | MCP entry for Codex |
 | `shared-skills/typesafe-ai/` | TypeSafe's skill, adapted, with its MIT licence |
@@ -60,11 +61,36 @@ The launcher sets `JEV_API_KEY_FILE` to that path only when it is not already
 set, so an explicit value in the client's environment still wins. No credential
 is stored in any manifest, and a test checks for that.
 
-**3. The plugin.** Add this repository as a marketplace, then install from it,
-using your client's own plugin commands. Claude Code and Codex differ here, and
-both have changed recently, so check `claude plugin --help` and
-`codex --help` for the current spelling rather than copying a command that may
-have moved.
+**3. The plugin.** Each client reads its own marketplace file from this
+repository, so the same source works for both.
+
+Claude Code:
+
+```sh
+claude plugin marketplace add racecraft-lab/typesafe-mcp --scope user
+claude plugin install typesafe-jev@racecraft-typesafe --scope user
+```
+
+Codex, which has no scope flag because marketplaces are global under `~/.codex`:
+
+```sh
+codex plugin marketplace add racecraft-lab/typesafe-mcp
+codex plugin add typesafe-jev@racecraft-typesafe
+```
+
+Restart the client afterwards. Both commands track `main`. To pin, append
+`@<tag>` to the Claude source or pass `--ref <tag>` to Codex; no release tag
+exists for this fork yet.
+
+Codex reads `.agents/plugins/marketplace.json` when it is present and falls back
+to `.claude-plugin/marketplace.json` when it is not, so it could install this
+plugin before the Codex marketplace file existed. `codex plugin list` prints the
+file it chose. The Codex file is still worth keeping: it is where the display
+name, category and installation policy Codex shows belong, and the fallback is
+behaviour rather than a documented contract.
+
+Claude Code and Codex both change these commands from time to time. Check
+`claude plugin --help` and `codex plugin --help` if either is rejected.
 
 ## Replaces the official TypeSafe plugin
 
