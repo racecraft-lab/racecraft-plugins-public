@@ -15,6 +15,7 @@ from .formal.selection import next_fence, require_fields, require_text, unique_o
 HEADING = "## Artifact Review Handoff"
 GALLERY = Path(__file__).resolve().parents[1] / "artifact-gallery"
 PREVIEW_STATUSES = ("pending", "verified", "unavailable", "denied")
+BROKERED_PREVIEW_VERDICTS = ("verified", "unavailable", "denied")
 OBSERVER = "artifact-preview-observer"
 FILL_MARKER = re.compile(rb"<!--\s*FILL:([a-z0-9-]+):(START|END)\s*-->")
 FileReader = Callable[[Path, Path], bytes | None]
@@ -133,16 +134,15 @@ def _current_hash(root: Path, relative: str, read_file: FileReader) -> str | Non
 
 
 def _observation(value: Any) -> None:
-    require_fields(value, {"kind", "title", "body_text", "route", "reference", "observed_at"}, "rendered observation")
-    if value["kind"] != "rendered":
-        raise ValueError("only a rendered observation can verify a preview")
-    for key in ("title", "body_text"):
-        if not isinstance(value[key], str):
-            raise ValueError(f"observation.{key} must be text")
-    for key in ("route", "reference", "observed_at"):
-        require_text(value[key], f"observation.{key}")
+    require_fields(value, {"kind", "verdict", "artifact_sha256", "observed_at"}, "brokered preview observation")
+    if value["kind"] != "brokered":
+        raise ValueError("only a brokered preview observation can verify a preview")
+    if value["verdict"] not in BROKERED_PREVIEW_VERDICTS:
+        raise ValueError("brokered preview verdict is outside the closed vocabulary")
+    _hash(value["artifact_sha256"], "observation.artifact_sha256")
+    require_text(value["observed_at"], "observation.observed_at")
     if datetime.fromisoformat(value["observed_at"]).tzinfo is None:
-        raise ValueError("rendered observation must include a timezone")
+        raise ValueError("brokered preview observation must include a timezone")
 
 
 def _preview(page: dict[str, Any]) -> None:
@@ -152,19 +152,21 @@ def _preview(page: dict[str, Any]) -> None:
     observation = preview["observation"]
     if observation is not None:
         _observation(observation)
+        if observation["verdict"] != preview["status"]:
+            raise ValueError("brokered preview verdict does not match preview status")
+    if preview["status"] == "pending" and observation is not None:
+        raise ValueError("pending preview cannot carry brokered evidence")
     if preview["status"] != "verified":
         require_text(preview["blocker"], "unverified preview blocker")
         return
     if observation is None or preview["blocker"] is not None:
-        raise ValueError("verified preview requires rendered evidence and no blocker")
+        raise ValueError("verified preview requires brokered evidence and no blocker")
     title = " ".join(page["expected_title"].split())
     content = " ".join(page["expected_content"].split())
     if content in title:
         raise ValueError("feature body content must be distinct from the title")
-    if " ".join(observation["title"].split()) != title:
-        raise ValueError("rendered title does not match the expected page")
-    if content not in " ".join(observation["body_text"].split()):
-        raise ValueError("rendered body does not contain the expected feature content")
+    if observation["artifact_sha256"] != page["sha256"]:
+        raise ValueError("brokered preview artifact digest does not match the generated page")
 
 
 def _page(page: Any, feature: str) -> None:

@@ -95,9 +95,9 @@ class ArtifactReviewTests(unittest.TestCase):
         page["preview"] = {
             "status": "verified", "blocker": None,
             "observation": {
-                "kind": "rendered", "title": page["expected_title"],
-                "body_text": page["expected_content"], "route": "native-html",
-                "reference": f"observation-{index}", "observed_at": "2026-09-10T18:00:00Z",
+                "kind": "brokered", "verdict": "verified",
+                "artifact_sha256": page["sha256"],
+                "observed_at": "2026-09-10T18:00:00Z",
             },
         }
 
@@ -134,25 +134,25 @@ class ArtifactReviewTests(unittest.TestCase):
         self.assertEqual(result["verified"], 1)
         self.assertEqual([page["status"] for page in result["pages"]], ["verified", "pending"])
 
-    def test_open_receipts_never_verify_a_page(self) -> None:
-        for kind in ("queued", "open", "http", "file", "tab"):
+    def test_non_brokered_receipts_never_verify_a_page(self) -> None:
+        for kind in ("rendered", "queued", "open", "http", "file", "tab"):
             with self.subTest(kind=kind):
                 self.verify()
                 self.record["pages"][0]["preview"]["observation"]["kind"] = kind
                 with self.assertRaises(ValueError):
                     self.review()
 
-    def test_wrong_blank_error_and_title_only_observations_cannot_verify(self) -> None:
-        for body in ("", "404 Not Found", "Unrelated feature", "Review Demo: implementation-plan"):
-            with self.subTest(body=body):
+    def test_wrong_digest_verdict_and_timestamp_cannot_verify(self) -> None:
+        for key, value in (
+            ("artifact_sha256", "0" * 64),
+            ("verdict", "denied"),
+            ("observed_at", "2026-09-10T18:00:00"),
+        ):
+            with self.subTest(key=key):
                 self.verify()
-                self.record["pages"][0]["preview"]["observation"]["body_text"] = body
+                self.record["pages"][0]["preview"]["observation"][key] = value
                 with self.assertRaises(ValueError):
                     self.review()
-        self.verify()
-        self.record["pages"][0]["preview"]["observation"]["title"] = "Wrong title"
-        with self.assertRaises(ValueError):
-            self.review()
 
     def test_denied_and_headless_dispositions_are_valid_but_unverified(self) -> None:
         for status, blocker in (("denied", "Browser access denied"), ("unavailable", "No rendered observer in CLI")):

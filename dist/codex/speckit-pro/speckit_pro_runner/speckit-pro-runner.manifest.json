@@ -47,7 +47,15 @@
         "value": "speckit_pro_runner/artifact_review.py",
         "display": "speckit_pro_runner/artifact_review.py"
       },
-      "sha256": "489778e53bce850ac1da59594b65a2695a12a63b8c3757ddbd119b97ee7933ed"
+      "sha256": "0da10ad39fd07e7d1084dd7c3308123be8280e527d438977260595fae899b1ca"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
+        "value": "speckit_pro_runner/author_broker.py",
+        "display": "speckit_pro_runner/author_broker.py"
+      },
+      "sha256": "3cf721672dad69ce3cf071304867b9a34e6b62a139347746dd19805930d055ce"
     },
     {
       "path": {

@@ -42,9 +42,19 @@ READ_ONLY_ROLES = (
 UNTRUSTED_INPUT_CONSUMERS = ("sweep-classifier", "sweep-analyst")
 PATH_SCOPED_UNTRUSTED_INPUT_AUTHORS = ("formal-model-author",)
 NO_TOOL_OBSERVERS = ("artifact-preview-observer",)
-NO_TOOL_OBSERVER_ALLOWLISTS = {"artifact-preview-observer": {"Artifact"}}
+NO_TOOL_OBSERVER_ALLOWLISTS = {
+    "artifact-preview-observer": {
+        "Artifact",
+        "mcp__plugin_speckit-pro_author-broker__submit_preview_verdict",
+    }
+}
 PATH_SCOPED_UNTRUSTED_INPUT_AUTHOR_ALLOWLISTS = {
-    "formal-model-author": {"Read", "Grep", "Glob", "Write", "Edit"},
+    "formal-model-author": {
+        "Read",
+        "Grep",
+        "Glob",
+        "mcp__plugin_speckit-pro_author-broker__write_formal_file",
+    },
 }
 UNTRUSTED_INPUT_ALLOWLISTS = {
     "sweep-classifier": {
@@ -201,7 +211,12 @@ class ValidateToolScoping(unittest.TestCase):
 
             with self.subTest(msg=f"{agent_name} frontmatter uses only its permitted vendor-qualified mcp__ tokens"):
                 tokens = set(NAMED_TOOL_PATTERN.findall(frontmatter))
-                expected = UNTRUSTED_INPUT_ALLOWLISTS.get(agent_name, set())
+                combined = (
+                    UNTRUSTED_INPUT_ALLOWLISTS.get(agent_name, set())
+                    | PATH_SCOPED_UNTRUSTED_INPUT_AUTHOR_ALLOWLISTS.get(agent_name, set())
+                    | NO_TOOL_OBSERVER_ALLOWLISTS.get(agent_name, set())
+                )
+                expected = {tool for tool in combined if tool.startswith("mcp__")}
                 self.assertEqual(expected, tokens)
 
     def test_open_executors_orchestration_capabilities_never_denied(self) -> None:
@@ -409,7 +424,7 @@ class ValidateToolScoping(unittest.TestCase):
             with self.subTest(msg=f"carve-out: {agent} pins exactly '{', '.join(sorted(expected))}' in tools"):
                 self.assertEqual(expected, declared, f"{agent} must declare exactly its stated allowlist")
 
-            for tool in ("Bash", "WebFetch", "WebSearch"):
+            for tool in ("Bash", "WebFetch", "WebSearch", "Write", "Edit"):
                 with self.subTest(msg=f"carve-out: {agent} excludes {tool} from its allowlist"):
                     self.assertNotIn(tool, declared)
 
@@ -434,7 +449,7 @@ class ValidateToolScoping(unittest.TestCase):
             with self.subTest(msg=f"no-tool observer: {agent} pins exactly '{', '.join(sorted(expected))}' in tools"):
                 self.assertEqual(expected, declared)
 
-            for tool in ("Read", "Grep", "Glob", "Write", "Edit", "Bash", "WebFetch", "WebSearch"):
+            for tool in ("Read", "Grep", "Glob", "Write", "Edit", "Bash", "WebFetch", "WebSearch", "Skill"):
                 with self.subTest(msg=f"no-tool observer: {agent} excludes {tool}"):
                     self.assertNotIn(tool, declared)
 
