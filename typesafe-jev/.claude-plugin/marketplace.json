@@ -5,13 +5,13 @@
     "name": "Racecraft Lab",
     "url": "https://github.com/racecraft-lab"
   },
-  "version": "0.5.0",
+  "version": "0.6.0",
   "plugins": [
     {
       "name": "typesafe-jev",
       "description": "Typed judgments from Jev through TypeSafe or OpenRouter, with the backend selected explicitly",
       "source": "./",
-      "version": "0.5.0"
+      "version": "0.6.0"
     }
   ]
 }

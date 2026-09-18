@@ -1,5 +1,42 @@
 # Changelog
 
+## [0.6.0](https://github.com/racecraft-lab/typesafe-mcp/compare/v0.5.0...v0.6.0) (2026-09-18)
+
+
+### Features
+
+* **plugin:** add the typed-judgments skill and a proactive eval suite ([#8](https://github.com/racecraft-lab/typesafe-mcp/pull/8)) ([4bab4dc](https://github.com/racecraft-lab/typesafe-mcp/commit/4bab4dc9185d498b9f6ba28d13a254a53d66fdc5))
+
+  A plugin cannot ship a rules file, so instructions reach the model through a
+  skill or not at all. `shared-skills/typed-judgments` names the moments that
+  should route a judgment to the `evaluate` tool, merge readiness, picking one
+  option, severity, flaky-versus-real, a constraint check, classifying many
+  items, and the negative triggers that should not: code, prose, lookups, and
+  any answer space that cannot be listed. It carries the rules that decide
+  whether an answer is worth having, including that a `noul` near 0.5 is
+  uncertainty rather than intensity and that a `score` is a probability-weighted
+  position.
+
+  The `evals/` suite measures it rather than asserting it, in three classes:
+  `forced-*` name the tool, `ladder-*` are judgment-shaped tasks that never
+  mention Jev, and `no-trigger-*` are ordinary work where firing is a false
+  positive. First baseline: the tool fired unprompted on 4 of 4 ladder cases,
+  with 0 false positives on 3 no-trigger cases.
+
+  Also enforces the published skill-authoring rules in tests. A skill that
+  breaks them does not fail loudly; it silently never loads.
+
+
+### Bug Fixes
+
+* **auth:** make the key-rejection reasons provably value-free ([#7](https://github.com/racecraft-lab/typesafe-mcp/pull/7)) ([0a999e8](https://github.com/racecraft-lab/typesafe-mcp/commit/0a999e870bf94b0bee4ca795e2c6c2421a52493e))
+
+  The four reasons `parseKey` can reject a candidate are now package-level
+  values built from constants, so no error it returns can be derived from the
+  key it was handed. Nothing behavioural changes; the guarantee moves from
+  "audit every return" to "read one block". The environment credential path,
+  which had no leak test at all, is now covered for every rejection reason.
+
 ## [0.5.0](https://github.com/racecraft-lab/typesafe-mcp/compare/v0.4.0...v0.5.0) (2026-09-18)
 
 First release of Racecraft Lab's fork of [itsmostafa/typesafe-mcp](https://github.com/itsmostafa/typesafe-mcp). The fork's substance landed in [#1](https://github.com/racecraft-lab/typesafe-mcp/pull/1), [#2](https://github.com/racecraft-lab/typesafe-mcp/pull/2) and [#3](https://github.com/racecraft-lab/typesafe-mcp/pull/3), which squash-merged with non-conventional subjects, so this section is written by hand rather than generated from them.
