@@ -42,12 +42,14 @@
         {
           "path": "quint-lang/guidelines/constraints.md",
           "sha256": "a17142da9d039235eafb68562508fcf1f8aea4cf4e63c8e15b68526b4ce116ae",
-          "kind": "verbatim"
+          "kind": "verbatim",
+          "upstream_sha256": "a17142da9d039235eafb68562508fcf1f8aea4cf4e63c8e15b68526b4ce116ae"
         },
         {
           "path": "quint-lang/guidelines/operators.md",
           "sha256": "ebae12f6163b445ec17f5f41174bf24c86539636652b99b60ae94ca048020152",
-          "kind": "verbatim"
+          "kind": "verbatim",
+          "upstream_sha256": "ebae12f6163b445ec17f5f41174bf24c86539636652b99b60ae94ca048020152"
         },
         {
           "path": "quint-lang/guidelines/patterns.md",
@@ -122,52 +124,62 @@
         {
           "path": "quint-modeling/examples/ewd426.qnt",
           "sha256": "9d443e24d231c606588e2712b5d46cdafac6e37a308dd32b23718d6c9c09f703",
-          "kind": "verbatim"
+          "kind": "verbatim",
+          "upstream_sha256": "9d443e24d231c606588e2712b5d46cdafac6e37a308dd32b23718d6c9c09f703"
         },
         {
           "path": "quint-modeling/examples/tendermint/choreo.qnt",
           "sha256": "d2f93ccd70dfa7f7365acbc442dfc0fb83cb3711091202e0079b4b2dc1a5dafd",
-          "kind": "verbatim"
+          "kind": "verbatim",
+          "upstream_sha256": "d2f93ccd70dfa7f7365acbc442dfc0fb83cb3711091202e0079b4b2dc1a5dafd"
         },
         {
           "path": "quint-modeling/examples/tendermint/spells/basicSpells.qnt",
           "sha256": "60e566ee21ed308c7f33069199b277fcbc9856bc16b0ac877cacc81d61926102",
-          "kind": "verbatim"
+          "kind": "verbatim",
+          "upstream_sha256": "60e566ee21ed308c7f33069199b277fcbc9856bc16b0ac877cacc81d61926102"
         },
         {
           "path": "quint-modeling/examples/tendermint/tendermint.qnt",
           "sha256": "ffe94743741fc2c1af988eb99c02a230d564063db76b3077578d60f4f2db0e09",
-          "kind": "verbatim"
+          "kind": "verbatim",
+          "upstream_sha256": "ffe94743741fc2c1af988eb99c02a230d564063db76b3077578d60f4f2db0e09"
         },
         {
           "path": "quint-modeling/examples/tendermint/tendermintTest.qnt",
           "sha256": "0779f63de819204ce5f4ee48efdf1998d1359a33a25f666544ca317df0a2ea9f",
-          "kind": "verbatim"
+          "kind": "verbatim",
+          "upstream_sha256": "0779f63de819204ce5f4ee48efdf1998d1359a33a25f666544ca317df0a2ea9f"
         },
         {
           "path": "quint-modeling/guidelines/from-code.md",
           "sha256": "15358f1f8cf7782d8369548fe860a6ba8e4f253945ce4dea12498aea92171c39",
-          "kind": "verbatim"
+          "kind": "verbatim",
+          "upstream_sha256": "15358f1f8cf7782d8369548fe860a6ba8e4f253945ce4dea12498aea92171c39"
         },
         {
           "path": "quint-modeling/guidelines/from-nothing.md",
           "sha256": "81b443f481f03d8f3cfaffca19c0b6d58193dad96d851f09f2f576bb23042e94",
-          "kind": "verbatim"
+          "kind": "verbatim",
+          "upstream_sha256": "81b443f481f03d8f3cfaffca19c0b6d58193dad96d851f09f2f576bb23042e94"
         },
         {
           "path": "quint-modeling/guidelines/from-requirements.md",
           "sha256": "8b2717b35d533b00667e6ac9fdfe85ff5b5bcb3a59c57cbc7c2d944fe204efcb",
-          "kind": "verbatim"
+          "kind": "verbatim",
+          "upstream_sha256": "8b2717b35d533b00667e6ac9fdfe85ff5b5bcb3a59c57cbc7c2d944fe204efcb"
         },
         {
           "path": "quint-modeling/guidelines/from-tlaplus.md",
           "sha256": "0722ff375dc29dc96482802cb070ea0d40b8abdcead2eebb8aee7babc80eca9c",
-          "kind": "verbatim"
+          "kind": "verbatim",
+          "upstream_sha256": "0722ff375dc29dc96482802cb070ea0d40b8abdcead2eebb8aee7babc80eca9c"
         },
         {
           "path": "quint-modeling/guidelines/review.md",
           "sha256": "8b81f4a4bdc0bab7cd7c17ec036fd3d2108f5ad251dd4608145caf08e3ec9424",
-          "kind": "verbatim"
+          "kind": "verbatim",
+          "upstream_sha256": "8b81f4a4bdc0bab7cd7c17ec036fd3d2108f5ad251dd4608145caf08e3ec9424"
         }
       ],
       "kind": "adapted",

@@ -34,7 +34,11 @@ Read the smallest relevant document and do not load the whole library:
 
 These trees are authoring references only; they are not active skills inside
 SpecKit Pro. `OVERVIEW.md` is the upstream entry document, renamed inside
-`references/` so neither platform treats it as a skill entrypoint. The witness
+`references/` so neither platform treats it as a skill entrypoint. The copied
+prose is unedited and still names the upstream layout, so read `SKILL.md` in
+that prose as the sibling `OVERVIEW.md`, and treat upstream mentions of
+`quint-execute-spec`, `mcp-servers/`, the Docker image, or the LSP bridge as
+unadopted layers rather than anything to install. The witness
 and trace guide is a SpecKit adaptation. The pinned upstream project is
 **Quint LLM Kit** by **Informal Systems Inc.**, licensed under Apache-2.0 at
 commit `cc75369f741af7d490936f82002c2d28e3b3d78d`. The parent supplies only the

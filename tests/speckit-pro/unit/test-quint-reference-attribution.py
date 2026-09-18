@@ -225,9 +225,14 @@ class QuintReferenceAttributionTests(unittest.TestCase):
                     continue
                 seen += 1
                 with self.subTest(path=item["path"]):
+                    self.assertRegex(
+                        item.get("upstream_sha256", ""),
+                        r"^[0-9a-f]{64}$",
+                        "a verbatim file must record the upstream hash it was copied from",
+                    )
                     self.assertEqual(
                         item["sha256"],
-                        item.get("upstream_sha256", item["sha256"]),
+                        item["upstream_sha256"],
                         "a verbatim file must hash identically to its upstream source",
                     )
                     self.assertNotIn("transforms", item)
@@ -346,6 +351,22 @@ class QuintReferenceAttributionTests(unittest.TestCase):
                 self.assertNotIn(f"quint/{forbidden}", guide)
         self.assertIn("authoring", guide.lower())
         self.assertIn("smallest relevant", guide)
+        # The copied prose still names the upstream layout. Both disclosure
+        # surfaces must translate it, or a reader follows `../SKILL.md` and the
+        # unadopted upstream layers into files this repository does not ship.
+        for surface, text in (
+            ("quint-guide.md", guide),
+            ("quint/README.md", (REF_ROOT / "README.md").read_text(encoding="utf-8")),
+        ):
+            with self.subTest(surface=surface):
+                self.assertIn("SKILL.md", text, "the rename is not disclosed")
+                self.assertIn("OVERVIEW.md", text, "the rename is not disclosed")
+                for unadopted in ("quint-execute-spec", "mcp-servers/", "Docker", "LSP"):
+                    self.assertIn(
+                        unadopted,
+                        text,
+                        f"{surface} does not mark {unadopted} as unadopted",
+                    )
 
     def test_model_author_uses_local_references_and_keeps_gates_in_speckit(self) -> None:
         surfaces = (
@@ -372,8 +393,12 @@ class QuintProgressiveDisclosureTests(unittest.TestCase):
 
     def _links(self, path: Path) -> list[str]:
         found = []
+        fenced = False
         for line in path.read_text(encoding="utf-8").splitlines():
             if line.lstrip().startswith("```"):
+                fenced = not fenced
+                continue
+            if fenced:
                 continue
             found.extend(match.group("target") for match in self.LINK_RE.finditer(line))
         return found
@@ -442,7 +467,20 @@ class QuintProgressiveDisclosureTests(unittest.TestCase):
             REPO_ROOT / "speckit-pro" / "codex-agents" / "formal-model-author.toml",
         ):
             text = surface.read_text(encoding="utf-8")
-            for target in sorted(set(re.findall(r"references/quint[a-z0-9/._-]*?\.(?:md|json)", text))):
+            # The character class must admit upper case: the entry documents ship
+            # as OVERVIEW.md, and a lower-case-only class silently collects none
+            # of them, leaving this loop to pass on a subset.
+            targets = sorted(set(re.findall(r"references/quint[A-Za-z0-9/._-]*?\.(?:md|json)", text)))
+            self.assertLessEqual(
+                {
+                    "references/quint/quint-lang/OVERVIEW.md",
+                    "references/quint/quint-modeling/OVERVIEW.md",
+                    "references/quint/witness-and-trace.md",
+                },
+                set(targets),
+                f"{surface.name} stopped naming a bundled reference",
+            )
+            for target in targets:
                 with self.subTest(surface=surface.name, target=target):
                     self.assertTrue(
                         (self.SKILL_ROOT / target).is_file(),

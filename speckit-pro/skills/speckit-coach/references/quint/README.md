@@ -17,7 +17,8 @@ License: **Apache-2.0**
 
 Twelve of the twenty copied upstream files are byte-for-byte copies and are
 labelled `verbatim` in [`provenance.json`](provenance.json). For each one the
-recorded SHA-256 is both the upstream hash and the hash of the local copy.
+recorded `sha256` and `upstream_sha256` are both present and equal, so the
+local copy and its upstream source hash identically.
 
 Eight files are labelled `adapted`. Each adaptation is mechanical and is
 recorded per file in `provenance.json` together with the original upstream
@@ -37,6 +38,19 @@ guard blocks shell-dialect tokens and script filenames anywhere under
 `speckit-pro/` and the generated payloads; `provenance.json` names the exact
 contract. Adapted files are still upstream text carrying upstream attribution;
 they are not SpecKit-authored guidance.
+
+## Reading the upstream prose
+
+The upstream text is unedited, so it still refers to its own layout. Two
+rules cover every such pointer:
+
+- `SKILL.md` in upstream prose means the sibling `OVERVIEW.md` in the same
+  tree. `../SKILL.md` from `quint-modeling/guidelines/` means
+  `quint-modeling/OVERVIEW.md`, and `quint-modeling/SKILL.md` means the same
+  file.
+- `quint-execute-spec`, `mcp-servers/`, the Docker image, and the LSP bridge
+  are not adopted here. Upstream prose that points at them describes the full
+  upstream kit, not anything SpecKit Pro ships or expects you to install.
 
 ## Not active skills
 
