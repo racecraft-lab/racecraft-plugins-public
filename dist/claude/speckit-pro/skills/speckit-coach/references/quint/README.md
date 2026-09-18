@@ -15,18 +15,22 @@ License: **Apache-2.0**
 
 ## Copy fidelity
 
-Fifteen of the twenty upstream files are byte-for-byte copies and are labelled
-`verbatim` in [`provenance.json`](provenance.json). For each one the recorded
-SHA-256 is both the upstream hash and the hash of the local copy.
+Twelve of the twenty copied upstream files are byte-for-byte copies and are
+labelled `verbatim` in [`provenance.json`](provenance.json). For each one the
+recorded SHA-256 is both the upstream hash and the hash of the local copy.
 
-Five files are labelled `adapted`, plus one file in `quint-modeling/examples/`.
-Each adaption is mechanical and is recorded per file in `provenance.json`
-together with the original upstream SHA-256:
+Eight files are labelled `adapted`. Each adaptation is mechanical and is
+recorded per file in `provenance.json` together with the original upstream
+SHA-256 and the transform that produced it:
 
-- A code-fence info string was normalized to the portable shell tag the plugin
-  allows. Only the info string moved; every sample command inside the fence is
-  unchanged.
-- One helper filename named in prose lost its script extension.
+- Five files under `quint-lang/guidelines/` had a code-fence info string
+  normalized to the portable shell tag the plugin allows. Only the info string
+  moved; every sample command inside the fence is unchanged.
+- One helper filename named in prose in `quint-modeling/examples/README.md` lost
+  its script extension.
+- `quint-lang/SKILL.md` and `quint-modeling/SKILL.md` ship as `OVERVIEW.md`.
+  Their bytes are unchanged; only the path moved, so neither platform treats the
+  upstream entry document as a skill entrypoint.
 
 The normalization exists because the repository's plugin shell-confinement
 guard blocks shell-dialect tokens and script filenames anywhere under

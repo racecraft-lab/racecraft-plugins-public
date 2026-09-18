@@ -3,9 +3,10 @@
 This directory contains upstream guidance from the project identified below.
 
 - `quint-lang/` and `quint-modeling/` are copies of the upstream skill trees.
-  Fifteen files are byte-for-byte **verbatim**; six carry a single recorded
-  mechanical transform. `provenance.json` records the SHA-256, the original
-  upstream SHA-256, and the transform for every copied file.
+  Twelve files are byte-for-byte **verbatim**; eight carry a recorded mechanical
+  normalization or the entry-document rename. `provenance.json` records the
+  SHA-256, the original upstream SHA-256, and the transform for every copied
+  file, and `README.md` itemizes the adaptations.
 - `witness-and-trace.md` is a **SpecKit-derived** adaptation. It carries its own
   provenance header and is not a verbatim upstream copy.
 

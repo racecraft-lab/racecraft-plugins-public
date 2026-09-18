@@ -273,6 +273,32 @@ class QuintReferenceAttributionTests(unittest.TestCase):
                     offenders.append(f"{path.relative_to(REF_ROOT).as_posix()}: {pattern.pattern}")
         self.assertEqual(offenders, [], "extracted content would block the plugin zero-Bash guard")
 
+    def test_fidelity_prose_matches_the_manifest(self) -> None:
+        manifest = _manifest()
+        counts = {}
+        for entry in manifest["entries"]:
+            for item in entry["files"]:
+                counts[item["kind"]] = counts.get(item["kind"], 0) + 1
+        self.assertEqual(counts.get("verbatim"), 12)
+        self.assertEqual(counts.get("adapted"), EXPECTED_ADAPTED_FILE_COUNT)
+        readme = (REF_ROOT / "README.md").read_text(encoding="utf-8")
+        self.assertIn(
+            "Twelve of the twenty",
+            readme,
+            "README copy-fidelity totals drifted from provenance.json; update both together",
+        )
+        self.assertIn(
+            "Eight files are labelled `adapted`",
+            readme,
+            "README adapted-file total drifted from provenance.json; update both together",
+        )
+        notice = (REF_ROOT / "UPSTREAM-NOTICE.md").read_text(encoding="utf-8")
+        self.assertIn(
+            "Twelve files are byte-for-byte **verbatim**; eight carry",
+            notice,
+            "UPSTREAM-NOTICE totals drifted from provenance.json; update both together",
+        )
+
     def test_derived_guide_names_its_upstream_sources(self) -> None:
         manifest = _manifest()
         entry = _entry_by_name(manifest, "witness-and-trace")
