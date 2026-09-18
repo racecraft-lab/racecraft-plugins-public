@@ -751,7 +751,7 @@ validate_codex_parity_AGENTS_DIR = PLUGIN_ROOT / 'agents'
 validate_codex_parity_CODEX_AGENTS_DIR = PLUGIN_ROOT / 'codex-agents'
 validate_codex_parity_SKILLS_DIR = PLUGIN_ROOT / 'skills'
 validate_codex_parity_CODEX_SKILLS_DIR = PLUGIN_ROOT / 'codex-skills'
-CC_ONLY_AGENTS = frozenset({'sweep-classifier', 'sweep-analyst'})
+CC_ONLY_AGENTS = frozenset({'artifact-preview-observer', 'sweep-classifier', 'sweep-analyst'})
 CODEX_ONLY_AGENTS = frozenset({'autopilot-fast-helper'})
 REF_RE = re.compile('\\.\\./\\.\\./skills/[^)]+\\.md')
 

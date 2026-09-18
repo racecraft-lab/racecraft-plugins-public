@@ -40,6 +40,12 @@ READ_ONLY_ROLES = (
     "consensus-synthesizer",
 )
 UNTRUSTED_INPUT_CONSUMERS = ("sweep-classifier", "sweep-analyst")
+PATH_SCOPED_UNTRUSTED_INPUT_AUTHORS = ("formal-model-author",)
+NO_TOOL_OBSERVERS = ("artifact-preview-observer",)
+NO_TOOL_OBSERVER_ALLOWLISTS = {"artifact-preview-observer": {"Artifact"}}
+PATH_SCOPED_UNTRUSTED_INPUT_AUTHOR_ALLOWLISTS = {
+    "formal-model-author": {"Read", "Grep", "Glob", "Write", "Edit"},
+}
 UNTRUSTED_INPUT_ALLOWLISTS = {
     "sweep-classifier": {
         "mcp__plugin_speckit-pro_sweep-broker__snapshot_list",
@@ -89,6 +95,9 @@ TEST_METHOD_ORDER = (
     "test_codex_agent_sandbox_mode_scoping_rejects_missing_directory",
     "test_named_tool_regression_guard",
     "test_untrusted_input_consumers_pin_read_only_allowlists",
+    "test_path_scoped_untrusted_input_authors_pin_exact_tool_allowlists",
+    "test_no_tool_observers_pin_exact_tool_allowlists",
+    "test_claude_only_observer_has_no_codex_twin",
 )
 
 NAMED_TOOL_PATTERN = re.compile(r"mcp__[A-Za-z0-9_-]+__[A-Za-z0-9_-]+")
@@ -184,7 +193,7 @@ class ValidateToolScoping(unittest.TestCase):
 
             # UNTRUSTED_INPUT_CONSUMERS is exempt from this rule and from nothing
             # else in this file; the mcp__ assertion below still binds them.
-            if agent_name not in UNTRUSTED_INPUT_CONSUMERS:
+            if agent_name not in {*UNTRUSTED_INPUT_CONSUMERS, *PATH_SCOPED_UNTRUSTED_INPUT_AUTHORS, *NO_TOOL_OBSERVERS}:
                 with self.subTest(msg=f"{agent_name} has NO tools: allowlist (inherits the operator's full surface)"):
                     self.assertIsNone(
                         re.search(r"^tools:", frontmatter, re.MULTILINE),
@@ -384,6 +393,60 @@ class ValidateToolScoping(unittest.TestCase):
                         f"{agent} must be read-only - sandbox_mode is the only Codex lever, and it bounds the filesystem rather than the tool set",
                     )
 
+
+    def test_path_scoped_untrusted_input_authors_pin_exact_tool_allowlists(self) -> None:
+        with self.subTest(msg="carve-out: PATH_SCOPED_UNTRUSTED_INPUT_AUTHORS is exactly the formal model author"):
+            self.assertEqual(("formal-model-author",), PATH_SCOPED_UNTRUSTED_INPUT_AUTHORS)
+
+        for agent in PATH_SCOPED_UNTRUSTED_INPUT_AUTHORS:
+            agent_file = AGENTS_DIR / f"{agent}.md"
+            with self.subTest(msg=f"carve-out: {agent} definition exists"):
+                self.assertTrue(agent_file.is_file(), f"speckit-pro/agents/{agent}.md is missing")
+
+            if not agent_file.is_file():
+                continue
+            declared = {item.strip() for item in _yaml_field(agent_file, "tools").split(",") if item.strip()}
+            expected = PATH_SCOPED_UNTRUSTED_INPUT_AUTHOR_ALLOWLISTS.get(agent, {"<no pinned allowlist>"})
+            with self.subTest(msg=f"carve-out: {agent} pins exactly '{', '.join(sorted(expected))}' in tools"):
+                self.assertEqual(expected, declared, f"{agent} must declare exactly its stated allowlist")
+
+            for tool in ("Bash", "WebFetch", "WebSearch"):
+                with self.subTest(msg=f"carve-out: {agent} excludes {tool} from its allowlist"):
+                    self.assertNotIn(tool, declared)
+
+            codex_file = CODEX_AGENTS_DIR / f"{agent}.toml"
+            if codex_file.is_file():
+                with self.subTest(msg=f"carve-out: codex {agent} sandbox_mode is workspace-write"):
+                    self.assertEqual("workspace-write", _toml_field(codex_file, "sandbox_mode"))
+
+    def test_no_tool_observers_pin_exact_tool_allowlists(self) -> None:
+        with self.subTest(msg="no-tool observer roster is exactly the artifact preview observer"):
+            self.assertEqual(("artifact-preview-observer",), NO_TOOL_OBSERVERS)
+
+        for agent in NO_TOOL_OBSERVERS:
+            agent_file = AGENTS_DIR / f"{agent}.md"
+            with self.subTest(msg=f"no-tool observer: {agent} definition exists"):
+                self.assertTrue(agent_file.is_file(), f"speckit-pro/agents/{agent}.md is missing")
+
+            if not agent_file.is_file():
+                continue
+            declared = {item.strip() for item in _yaml_field(agent_file, "tools").split(",") if item.strip()}
+            expected = NO_TOOL_OBSERVER_ALLOWLISTS.get(agent, {"<no pinned allowlist>"})
+            with self.subTest(msg=f"no-tool observer: {agent} pins exactly '{', '.join(sorted(expected))}' in tools"):
+                self.assertEqual(expected, declared)
+
+            for tool in ("Read", "Grep", "Glob", "Write", "Edit", "Bash", "WebFetch", "WebSearch"):
+                with self.subTest(msg=f"no-tool observer: {agent} excludes {tool}"):
+                    self.assertNotIn(tool, declared)
+
+            denials = _disallowed_tools(agent_file)
+            with self.subTest(msg=f"no-tool observer: {agent} denies orchestration"):
+                for tool in ORCHESTRATION_TOOLS:
+                    self.assert_denied(denials, tool, agent)
+
+    def test_claude_only_observer_has_no_codex_twin(self) -> None:
+        with self.subTest(msg="artifact preview observer is Claude-only because Artifact is a Claude tool"):
+            self.assertFalse((CODEX_AGENTS_DIR / "artifact-preview-observer.toml").exists())
 
 def build_suite() -> unittest.TestSuite:
     suite = unittest.TestSuite()
