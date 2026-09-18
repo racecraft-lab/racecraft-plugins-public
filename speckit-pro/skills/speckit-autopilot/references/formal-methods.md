@@ -33,13 +33,18 @@ is enabled. The phase executor retains its single-command contract. The parent:
 
 1. Revalidates workflow binding and loads spec.md, plan.md, the approved selection,
    existing selected models, and catalog settings.
-2. Dispatches `formal-model-author` for each selected behavior, with explicit
-   permitted outputs: new `formal/<id>/` model/configuration/contract files or
-   declared existing inputs, plus that model's catalog entry. Supply the approved
-   requirements, assumptions, property mapping, and requested evidence level.
-   Claude uses its installed `speckit-pro:formal-model-author` agent; Codex uses
-   the installed custom `formal-model-author` role with `spawn_agent`. Wait for
-   its completed result. If unavailable, stop and repair the agent installation.
+2. Calls `mcp__plugin_speckit-pro_author-broker__create_formal_session` with the
+   canonical `repo_root`, `workflow_file`, `model_id`, and exact permitted
+   outputs: new `formal/<id>/` model/configuration/contract files or declared
+   existing inputs, plus that model's catalog entry. The broker canonicalizes
+   those paths and returns an opaque capability. Dispatch `formal-model-author`
+   for each selected behavior with that capability and the approved requirements,
+   assumptions, property mapping, and requested evidence level. Claude uses its
+   installed `speckit-pro:formal-model-author` agent; Codex uses the installed
+   custom `formal-model-author` role with `spawn_agent`. Wait for its completed
+   result, then call `mcp__plugin_speckit-pro_author-broker__close_session`
+   with the capability. If either broker tool or agent is unavailable, stop and
+   repair the installation.
 3. Reviews the returned paths and requirement mapping, refreshes `formal-doctor`,
    then previews and executes `formal-check`. Both distributions use this request:
 

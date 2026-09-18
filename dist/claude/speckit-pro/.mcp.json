@@ -2,7 +2,20 @@
   "mcpServers": {
     "sweep-broker": {
       "command": "python3",
-      "args": ["-m", "speckit_pro_runner.sweep_broker"],
+      "args": [
+        "-m",
+        "speckit_pro_runner.sweep_broker"
+      ],
+      "env": {
+        "PYTHONPATH": "${CLAUDE_PLUGIN_ROOT}"
+      }
+    },
+    "author-broker": {
+      "command": "python3",
+      "args": [
+        "-m",
+        "speckit_pro_runner.author_broker"
+      ],
       "env": {
         "PYTHONPATH": "${CLAUDE_PLUGIN_ROOT}"
       }
