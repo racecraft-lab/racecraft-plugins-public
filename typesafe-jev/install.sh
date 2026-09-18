@@ -1,11 +1,21 @@
 #!/bin/sh
-# Install the latest evaluate release from GitHub.
-#   curl -fsSL https://raw.githubusercontent.com/itsmostafa/typesafe-mcp/main/install.sh | sh
+# Install the latest Racecraft evaluate release from GitHub.
+#
+# Fetch this script, read it, then run it:
+#   curl -fsSL -o install.sh \
+#     https://raw.githubusercontent.com/racecraft-lab/typesafe-mcp/main/install.sh
+#   sh install.sh
+#
 # Override the target directory with EVALUATE_INSTALL_DIR.
+#
+# This is Racecraft Lab's fork. It installs into its own directory rather than
+# ~/.local/bin, so it cannot overwrite an upstream `evaluate` already on PATH,
+# and it never replaces an existing file unless EVALUATE_FORCE=1.
 set -eu
 
-REPO="itsmostafa/typesafe-mcp"
-INSTALL_DIR="${EVALUATE_INSTALL_DIR:-$HOME/.local/bin}"
+REPO="racecraft-lab/typesafe-mcp"
+INSTALL_DIR="${EVALUATE_INSTALL_DIR:-$HOME/.local/libexec/racecraft-jev}"
+FORCE="${EVALUATE_FORCE:-0}"
 
 main() {
 	os=$(uname -s | tr '[:upper:]' '[:lower:]')
@@ -45,17 +55,27 @@ main() {
 		exit 1
 	fi
 
+	target="$INSTALL_DIR/evaluate"
+	if [ -e "$target" ] && [ "$FORCE" != 1 ]; then
+		echo "$target already exists." >&2
+		echo "Keep a copy of it first, then re-run with EVALUATE_FORCE=1 to replace it." >&2
+		exit 1
+	fi
+
 	tar -xzf "$tmp/$archive" -C "$tmp" evaluate
 	chmod +x "$tmp/evaluate"
 	mkdir -p "$INSTALL_DIR"
-	mv "$tmp/evaluate" "$INSTALL_DIR/evaluate"
+	# Staged inside the target directory so the rename is atomic and never
+	# crosses a filesystem: an interrupted install leaves the old binary intact.
+	staged="$INSTALL_DIR/.evaluate.$$"
+	mv "$tmp/evaluate" "$staged"
+	mv "$staged" "$target"
 
-	echo "Installed to $INSTALL_DIR/evaluate"
-	case ":$PATH:" in
-	*":$INSTALL_DIR:"*) ;;
-	*) echo "Add $INSTALL_DIR to your PATH to run evaluate from anywhere." >&2 ;;
-	esac
-	"$INSTALL_DIR/evaluate" --version
+	echo "Installed to $target"
+	# Deliberately not added to PATH: an isolated absolute path cannot shadow,
+	# or be shadowed by, another evaluate install. Point clients at it directly.
+	echo "Register it with: $target setup mcp --client claude-code --client codex" >&2
+	"$target" version --verbose
 }
 
 main "$@"

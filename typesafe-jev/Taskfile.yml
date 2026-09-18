@@ -41,9 +41,16 @@ tasks:
       - task: test
 
   install:
-    desc: Install evaluate into GOBIN
+    desc: Build and install evaluate into the isolated Racecraft directory
+    # Not `go install`: GOBIN is usually on PATH, where this binary would
+    # collide with an upstream `evaluate`. Clients are pointed at this absolute
+    # path instead, which is also where install.sh puts a release build.
+    vars:
+      INSTALL_DIR: '{{.EVALUATE_INSTALL_DIR | default (printf "%s/.local/libexec/racecraft-jev" .HOME)}}'
     cmds:
-      - go install ./cmd/evaluate
+      - mkdir -p {{.INSTALL_DIR}}
+      - go build -trimpath -o {{.INSTALL_DIR}}/evaluate ./cmd/evaluate
+      - '{{.INSTALL_DIR}}/evaluate version --verbose'
 
   inspect:
     desc: Open the MCP Inspector against the server

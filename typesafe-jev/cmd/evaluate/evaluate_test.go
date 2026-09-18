@@ -12,7 +12,6 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
-	"slices"
 	"strings"
 	"testing"
 )
@@ -42,7 +41,7 @@ func TestEvaluate(t *testing.T) {
 		w.Write([]byte(`{"model":"` + in.Model + `","answers":{"q":{"type":"noul","noul":0.9}}}`))
 	}))
 	defer srv.Close()
-	c := &Client{URL: srv.URL + "/v1/systemone", APIKey: "k", HTTP: srv.Client()}
+	c := testClient(providerAt("typesafe", srv.URL+"/v1/systemone"), srv)
 	req := evaluateIn{Model: "jev-latest", Questions: map[string]question{"q": {Type: "noul", Instructions: "urgent?"}}}
 
 	req.State = "busy"
@@ -51,9 +50,19 @@ func TestEvaluate(t *testing.T) {
 		t.Fatalf("retry: calls=%d b=%s err=%v", calls, b, err)
 	}
 
+	// A rejected request reports the status and a remedy, but not the
+	// provider's own error text. Upstream echoed the body; that text can quote
+	// the submitted state back, and an error travels further than the input did.
 	req.State = "bad"
-	if _, err := c.Evaluate(context.Background(), req); err == nil || !strings.Contains(err.Error(), "criteria required") {
-		t.Fatalf("422: err=%v", err)
+	_, err = c.Evaluate(context.Background(), req)
+	if err == nil {
+		t.Fatal("422: want an error")
+	}
+	if !strings.Contains(err.Error(), "HTTP 422") {
+		t.Errorf("422: error should name the status: %v", err)
+	}
+	if strings.Contains(err.Error(), "criteria required") {
+		t.Errorf("422: error echoed the provider's body: %v", err)
 	}
 }
 
@@ -65,7 +74,7 @@ func TestEvaluatePostsToURL(t *testing.T) {
 		w.Write([]byte(`{}`))
 	}))
 	defer srv.Close()
-	c := &Client{URL: srv.URL + "/api/alpha/decisions", APIKey: "k", HTTP: srv.Client()}
+	c := testClient(providerAt("openrouter", srv.URL+"/api/alpha/decisions"), srv)
 	if _, err := c.Evaluate(context.Background(), evaluateIn{State: "x"}); err != nil {
 		t.Fatal(err)
 	}
@@ -74,101 +83,10 @@ func TestEvaluatePostsToURL(t *testing.T) {
 	}
 }
 
-func TestRoute(t *testing.T) {
-	for _, tc := range []struct{ typesafe, openrouter, url, model, key string }{
-		{"t", "", "https://api.typesafe.ai/v1/systemone", "jev-latest", "t"},
-		{"", "o", "https://openrouter.ai/api/alpha/decisions", "~typesafe/jev-latest", "o"},
-		// TypeSafe wins so a stray OpenRouter key cannot reroute an existing setup.
-		{"t", "o", "https://api.typesafe.ai/v1/systemone", "jev-latest", "t"},
-	} {
-		t.Setenv("TYPESAFE_API_KEY", tc.typesafe)
-		t.Setenv("OPENROUTER_API_KEY", tc.openrouter)
-		c, err := route()
-		if err != nil {
-			t.Fatalf("%+v: %v", tc, err)
-		}
-		// APIKey too: each route must send the key that selected it.
-		if c.URL != tc.url || c.Model != tc.model || c.APIKey != tc.key {
-			t.Errorf("%+v: got %s %s %s", tc, c.URL, c.Model, c.APIKey)
-		}
-	}
-
-	t.Setenv("TYPESAFE_API_KEY", "")
-	t.Setenv("OPENROUTER_API_KEY", "")
-	if _, err := route(); err == nil {
-		t.Fatal("no keys: want error")
-	}
-}
-
-func TestSetupEnv(t *testing.T) {
-	got := setupEnv([]string{
-		"PATH=/bin", "TYPESAFE_API_KEY=k", "OPENROUTER_API_KEY_OTHER=no",
-		"TYPESAFE_OTHER=s", "OPENROUTER_BASE_URL=no", "OPENROUTER_API_KEY=o=o",
-	})
-	want := []string{"TYPESAFE_API_KEY=k", "TYPESAFE_OTHER=s", "OPENROUTER_API_KEY=o=o"}
-	if !slices.Equal(got, want) {
-		t.Fatalf("got %q\nwant %q", got, want)
-	}
-}
-
-func TestSetupCommands(t *testing.T) {
-	cmds := setupCommands("/bin/evaluate", []string{"TYPESAFE_API_KEY=k", "OPENROUTER_API_KEY=o"})
-	want := [][]string{
-		{"mcp", "remove", "evaluate", "-s", "user"},
-		{"mcp", "add", "evaluate", "-s", "user", "-e", "TYPESAFE_API_KEY=k", "-e", "OPENROUTER_API_KEY=o", "--", "/bin/evaluate", "mcp"},
-		{"mcp", "remove", "jev", "-s", "user"},
-		nil,
-		{"mcp", "add", "evaluate", "--env", "TYPESAFE_API_KEY=k", "--env", "OPENROUTER_API_KEY=o", "--", "/bin/evaluate", "mcp"},
-		{"mcp", "remove", "jev"},
-	}
-	got := [][]string{cmds[0].reset, cmds[0].add, cmds[0].legacy, cmds[1].reset, cmds[1].add, cmds[1].legacy}
-	if !slices.EqualFunc(got, want, slices.Equal) {
-		t.Fatalf("got %q\nwant %q", got, want)
-	}
-}
-
-func TestSetupClaudeDesktop(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "claude_desktop_config.json")
-	seed := `{"mcpServers":{"lumi":{"command":"/bin/lumi"},"evaluate":{"command":"/old"},"jev":{"command":"/gone"}},"preferences":{"sidebarMode":"chat"}}`
-	if err := os.WriteFile(path, []byte(seed), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	if err := setupClaudeDesktop(path, "/bin/evaluate", []string{"TYPESAFE_API_KEY=k"}); err != nil {
-		t.Fatal(err)
-	}
-	b, _ := os.ReadFile(path)
-	var got struct {
-		MCPServers map[string]struct {
-			Command string            `json:"command"`
-			Args    []string          `json:"args"`
-			Env     map[string]string `json:"env"`
-		} `json:"mcpServers"`
-		Preferences map[string]string `json:"preferences"`
-	}
-	if err := json.Unmarshal(b, &got); err != nil {
-		t.Fatal(err)
-	}
-	s := got.MCPServers["evaluate"]
-	if s.Command != "/bin/evaluate" || !slices.Equal(s.Args, []string{"mcp"}) || s.Env["TYPESAFE_API_KEY"] != "k" {
-		t.Fatalf("evaluate entry = %+v", s)
-	}
-	if got.MCPServers["lumi"].Command != "/bin/lumi" || got.Preferences["sidebarMode"] != "chat" {
-		t.Fatalf("other keys lost: %s", b)
-	}
-	// The pre-rename entry has to go, or the client keeps launching /gone.
-	if _, ok := got.MCPServers["jev"]; ok {
-		t.Fatalf("legacy jev entry kept: %s", b)
-	}
-
-	for _, seed := range []string{`null`, `{"mcpServers":null}`} {
-		if err := os.WriteFile(path, []byte(seed), 0o600); err != nil {
-			t.Fatal(err)
-		}
-		if err := setupClaudeDesktop(path, "/bin/evaluate", nil); err != nil {
-			t.Fatalf("seed %s: %v", seed, err)
-		}
-	}
-}
+// TestRoute, TestSetupEnv, TestSetupCommands, and TestSetupClaudeDesktop covered
+// behaviour this fork removed: key-presence routing, bulk environment capture,
+// and setup that edits client config. Their replacements are in config_test.go
+// and setup_test.go.
 
 // A tar member named "evaluate" that is a symlink (or any other non-regular entry)
 // must not be extracted and installed over the running binary.

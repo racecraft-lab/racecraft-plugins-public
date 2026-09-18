@@ -1,0 +1,99 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+# Read-only. Nothing here needs to write to the repository, and no job has
+# access to a provider credential: every test runs against a local mock.
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: test (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        # macOS is not redundant with Linux here: the key-file permission
+        # checks and path handling are filesystem behaviour, and
+        # cross-compiling proves nothing about how they run.
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - uses: actions/setup-go@7a3fe6cf4cb3a834922a1244abfce67bcef6a0c5 # v6.2.0
+        with:
+          go-version-file: go.mod
+
+      - name: Verify module checksums
+        run: go mod verify
+
+      - name: Check formatting
+        run: test -z "$(gofmt -l .)" || (gofmt -l . && exit 1)
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Test
+        run: go test -count=1 ./...
+
+      # Separate from the static builds below, which set CGO_ENABLED=0. The
+      # race detector needs cgo.
+      - name: Test with the race detector
+        run: go test -race -count=1 ./...
+
+      - name: Check for whitespace errors
+        run: git diff --check
+
+  build:
+    name: cross-compile
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - uses: actions/setup-go@7a3fe6cf4cb3a834922a1244abfce67bcef6a0c5 # v6.2.0
+        with:
+          go-version-file: go.mod
+
+      - name: Build every release target
+        env:
+          CGO_ENABLED: 0
+        run: |
+          mkdir -p .artifacts/build
+          for goos in darwin linux; do
+            for goarch in amd64 arm64; do
+              GOOS=$goos GOARCH=$goarch go build -trimpath \
+                -o ".artifacts/build/evaluate-$goos-$goarch" ./cmd/evaluate
+            done
+          done
+          ls -l .artifacts/build
+
+  provenance:
+    name: fork provenance
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+
+      # A stray upstream reference in the installer or updater would send an
+      # operator's `evaluate update` to a binary without any of this fork's
+      # changes. The changelog, docs, and README keep their historical links,
+      # and this workflow is excluded because it names the pattern it searches
+      # for.
+      - name: No upstream release or module references outside history
+        env:
+          UPSTREAM: itsmostafa/typesafe-mcp
+        run: |
+          if git grep -n -F "$UPSTREAM" -- \
+               ':!CHANGELOG.md' ':!docs/' ':!README.md' ':!.github/workflows/ci.yml'; then
+            echo "::error::found an upstream reference in code or packaging" >&2
+            exit 1
+          fi
+
+      - name: Installer parses
+        run: sh -n install.sh

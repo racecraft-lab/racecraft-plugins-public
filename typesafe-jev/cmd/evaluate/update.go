@@ -14,12 +14,18 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
 )
 
-const githubRepo = "itsmostafa/typesafe-mcp"
+// githubRepo is the only release source. There is no upstream fallback: a fork
+// that quietly installed the original project's binary when its own release
+// was missing would undo every change in this repository, including the
+// explicit backend selection and the credential rules.
+const githubRepo = "racecraft-lab/typesafe-mcp"
 
 const (
 	// One deadline covers connect, headers and body: a stalled mirror must not
@@ -90,17 +96,30 @@ func runUpdate(ctx context.Context) error {
 	defer os.Remove(staged.Name()) // no-op after a successful rename
 	defer staged.Close()
 
+	// A source or development build has no release to compare against, and
+	// replacing it would silently discard whatever it was built from.
+	current, err := parseVersion(version)
+	if err != nil {
+		return fmt.Errorf("this is a %s build, not a release; rebuild from %s instead of updating in place", version, githubRepo)
+	}
+
 	release, err := fetchLatestRelease(ctx)
 	if err != nil {
-		return fmt.Errorf("fetching latest release: %w", err)
+		// Not a reason to look anywhere else. The operator fixes the fork's
+		// releases, or rebuilds from source.
+		return fmt.Errorf("fetching the latest %s release: %w", githubRepo, err)
 	}
-	// ponytail: equality, not semver; a local build newer than the latest
-	// release gets replaced by it. Compare versions if that starts to bite.
-	if version == release.TagName {
-		fmt.Printf("Already up to date (%s).\n", version)
+	latest, err := parseVersion(release.TagName)
+	if err != nil {
+		return fmt.Errorf("latest %s release %q is not a semantic version", githubRepo, release.TagName)
+	}
+	// Compared, not merely differenced: upstream replaced a newer local build
+	// with an older release whenever the two strings happened to differ.
+	if !latest.newerThan(current) {
+		fmt.Printf("Already up to date (%s; latest release is %s).\n", version, release.TagName)
 		return nil
 	}
-	fmt.Printf("Updating %s → %s\n", version, release.TagName)
+	fmt.Printf("Updating %s → %s from %s\n", version, release.TagName, githubRepo)
 
 	archiveName := fmt.Sprintf("evaluate-%s-%s.tar.gz", runtime.GOOS, runtime.GOARCH)
 	archiveURL, err := findAssetURL(release.Assets, archiveName)
@@ -215,4 +234,114 @@ func extractBinaryFromTar(archive []byte, binaryName string, dst io.Writer) erro
 		return err
 	}
 	return fmt.Errorf("binary %q not found in archive", binaryName)
+}
+
+// semver is the subset of semantic versioning a release tag uses here:
+// major.minor.patch, optionally prefixed with "v" and suffixed with a
+// pre-release identifier.
+//
+// A hand-rolled comparison rather than a new dependency: three integers and a
+// pre-release flag is the whole contract, and the rule that matters is simply
+// that an older release must never replace a newer build.
+type semver struct {
+	major, minor, patch int
+	pre                 string
+}
+
+// Build metadata is deliberately not accepted. A release tag never carries a
+// "+" suffix, but Go stamps one onto a build made from a modified working tree
+// ("v0.4.0+dirty"). Treating that as the release it was built near would
+// replace someone's local changes with the published binary.
+var semverPattern = regexp.MustCompile(`^v?(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?$`)
+
+func parseVersion(s string) (semver, error) {
+	m := semverPattern.FindStringSubmatch(strings.TrimSpace(s))
+	if m == nil {
+		return semver{}, fmt.Errorf("%q is not a semantic version", s)
+	}
+	var v semver
+	var err error
+	if v.major, err = strconv.Atoi(m[1]); err != nil {
+		return semver{}, err
+	}
+	if v.minor, err = strconv.Atoi(m[2]); err != nil {
+		return semver{}, err
+	}
+	if v.patch, err = strconv.Atoi(m[3]); err != nil {
+		return semver{}, err
+	}
+	v.pre = m[4]
+	return v, nil
+}
+
+// newerThan reports whether v is a later version than other. A pre-release
+// sorts before the release it leads to, so 1.2.0-rc.1 is older than 1.2.0.
+func (v semver) newerThan(other semver) bool {
+	for _, pair := range [][2]int{
+		{v.major, other.major},
+		{v.minor, other.minor},
+		{v.patch, other.patch},
+	} {
+		if pair[0] != pair[1] {
+			return pair[0] > pair[1]
+		}
+	}
+	switch {
+	case v.pre == other.pre:
+		return false
+	case v.pre == "":
+		return true
+	case other.pre == "":
+		return false
+	default:
+		return comparePre(v.pre, other.pre) > 0
+	}
+}
+
+// comparePre orders two pre-release strings by the SemVer rules, returning a
+// negative number, zero, or a positive number.
+//
+// A plain string comparison is wrong here: it puts "rc.10" before "rc.2",
+// because "1" sorts before "2". SemVer compares dot-separated identifiers, and
+// a numeric identifier is compared as a number. It also sorts a numeric
+// identifier below an alphanumeric one, and treats a longer set of identifiers
+// as greater when every earlier one is equal.
+func comparePre(a, b string) int {
+	ai := strings.Split(a, ".")
+	bi := strings.Split(b, ".")
+	for i := 0; i < len(ai) && i < len(bi); i++ {
+		if c := comparePreIdentifier(ai[i], bi[i]); c != 0 {
+			return c
+		}
+	}
+	return len(ai) - len(bi)
+}
+
+func comparePreIdentifier(a, b string) int {
+	an, aNum := preNumber(a)
+	bn, bNum := preNumber(b)
+	switch {
+	case aNum && bNum:
+		return an - bn
+	case aNum:
+		// Numeric identifiers always have lower precedence.
+		return -1
+	case bNum:
+		return 1
+	default:
+		return strings.Compare(a, b)
+	}
+}
+
+// preNumber reports whether s is a numeric identifier, and its value. Leading
+// zeros are not valid in a numeric identifier, so "01" is compared as text.
+func preNumber(s string) (int, bool) {
+	if s == "" || (len(s) > 1 && s[0] == '0') {
+		return 0, false
+	}
+	n, err := strconv.Atoi(s)
+	if err != nil || n < 0 {
+		return 0, false
+	}
+	return n, true
 }

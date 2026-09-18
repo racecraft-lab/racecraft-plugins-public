@@ -3,9 +3,7 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"net/http"
 	"os"
 	"os/signal"
 	"runtime/debug"
@@ -66,14 +64,7 @@ func newRootCmd() *cobra.Command {
 		RunE:  func(cmd *cobra.Command, _ []string) error { return cmd.Help() },
 	}
 	setupCmd.AddCommand(
-		&cobra.Command{
-			Use:   "mcp",
-			Short: "Register with Claude Code, Claude Desktop, and Codex",
-			Args:  cobra.NoArgs,
-			RunE: func(cmd *cobra.Command, _ []string) error {
-				return runMCPSetup(cmd.Context())
-			},
-		},
+		newMCPSetupCmd(),
 		&cobra.Command{
 			Use:   "pi",
 			Short: "Install the evaluate extension for pi",
@@ -89,44 +80,113 @@ func newRootCmd() *cobra.Command {
 		&cobra.Command{Use: "update", Short: "Update evaluate to the latest release", Args: cobra.NoArgs, RunE: func(cmd *cobra.Command, _ []string) error {
 			return runUpdate(cmd.Context())
 		}},
-		&cobra.Command{Use: "version", Short: "Print the version", Args: cobra.NoArgs, Run: func(*cobra.Command, []string) {
-			fmt.Println(version)
-		}},
+		newVersionCmd(),
 	)
 	return root
 }
 
-// route picks the evaluation endpoint from the environment: the TypeSafe API
-// when TYPESAFE_API_KEY is set, otherwise OpenRouter's Decisions router.
-// TypeSafe wins when both are set, so an OPENROUTER_API_KEY left in the shell
-// by another tool cannot silently reroute and re-bill an existing setup.
-func route() (*Client, error) {
-	switch {
-	case os.Getenv("TYPESAFE_API_KEY") != "":
-		return &Client{
-			URL:    "https://api.typesafe.ai/v1/systemone",
-			APIKey: os.Getenv("TYPESAFE_API_KEY"),
-			Model:  "jev-latest",
-		}, nil
-	case os.Getenv("OPENROUTER_API_KEY") != "":
-		return &Client{
-			// ponytail: /api/alpha/ is OpenRouter's alpha path and may move.
-			URL:    "https://openrouter.ai/api/alpha/decisions",
-			APIKey: os.Getenv("OPENROUTER_API_KEY"),
-			Model:  "~typesafe/jev-latest",
-		}, nil
+func newVersionCmd() *cobra.Command {
+	var verbose bool
+	cmd := &cobra.Command{
+		Use:   "version",
+		Short: "Print the version",
+		Args:  cobra.NoArgs,
+		Run: func(cmd *cobra.Command, _ []string) {
+			out := cmd.OutOrStdout()
+			if !verbose {
+				fmt.Fprintln(out, version)
+				return
+			}
+			// Which build this is and where it came from, so an operator can
+			// tell a Racecraft install from an upstream one without a network
+			// call or a credential.
+			fmt.Fprintln(out, "version:   ", version)
+			fmt.Fprintln(out, "repository:", githubRepo)
+			fmt.Fprintln(out, "commit:    ", buildCommit())
+		},
 	}
-	return nil, errors.New("set TYPESAFE_API_KEY (https://console.typesafe.ai/) or OPENROUTER_API_KEY (https://openrouter.ai/keys)")
+	cmd.Flags().BoolVar(&verbose, "verbose", false, "also print the source repository and build commit")
+	return cmd
+}
+
+// buildCommit reports the VCS revision stamped into the binary, or "unknown"
+// for a build made outside a repository.
+func buildCommit() string {
+	info, ok := debug.ReadBuildInfo()
+	if !ok {
+		return "unknown"
+	}
+	for _, s := range info.Settings {
+		if s.Key == "vcs.revision" {
+			return s.Value
+		}
+	}
+	return "unknown"
+}
+
+// newClient builds the HTTP client for cfg. The credential is loaded here and
+// nowhere else, so there is exactly one place a key enters the process.
+//
+// Unlike the version this fork was taken from, the backend comes from
+// JEV_PROVIDER rather than from whichever API key happens to be set. Which
+// credentials are lying around in a shell should not decide where state is
+// sent, or which account pays for it. See docs/upstream-baseline.md.
+func newClient(cfg Config) (*Client, error) {
+	key, err := loadCredential(cfg)
+	if err != nil {
+		return nil, err
+	}
+	return &Client{
+		Provider:   cfg.Provider,
+		Model:      cfg.Model,
+		APIKey:     key,
+		Timeout:    cfg.Timeout,
+		MaxRetries: cfg.MaxRetries,
+		HTTP:       newHTTPClient(),
+		Backoff:    time.Second,
+	}, nil
+}
+
+// newServer registers the tools for cfg's backend against c. Split out from
+// serve so a test can drive the real registration without a transport or a
+// provider.
+func newServer(cfg Config, c *Client) *mcp.Server {
+	s := mcp.NewServer(
+		&mcp.Implementation{Name: "evaluate", Version: version},
+		&mcp.ServerOptions{Instructions: instructions + backendNote(cfg)},
+	)
+	registerTools(s, cfg, c)
+	return s
+}
+
+// backendNote appends what differs about the configured backend.
+//
+// TypeSafe's own documentation, and the TypeSafe agent skill built from it,
+// teach structured instructions and criteria. That is correct for the direct
+// API and wrong for OpenRouter, whose Decisions schema types those fields as
+// strings. Saying so up front turns a rejected call into one that is never
+// written that way.
+func backendNote(cfg Config) string {
+	note := "\nBackend: " + cfg.Provider.Name + ". Calling this tool sends the state and questions" +
+		" you pass to that provider, which bills for the call."
+	if cfg.Provider.Name == "openrouter" {
+		note += "\nThis backend accepts only strings for instructions and for every criteria" +
+			" description. Structured objects or arrays, and null option descriptions, are" +
+			" supported by the TypeSafe backend and rejected here."
+	}
+	return note
 }
 
 func serve(ctx context.Context) error {
-	c, err := route()
+	cfg, err := resolveConfig(os.LookupEnv)
 	if err != nil {
 		return err
 	}
-	c.HTTP = &http.Client{Timeout: 60 * time.Second}
-	c.Backoff = time.Second
-	s := mcp.NewServer(&mcp.Implementation{Name: "evaluate", Version: version}, &mcp.ServerOptions{Instructions: instructions})
-	registerTools(s, c)
-	return s.Run(ctx, &mcp.StdioTransport{})
+	c, err := newClient(cfg)
+	if err != nil {
+		return err
+	}
+	// Nothing is printed here: stdout carries the MCP protocol, and a startup
+	// banner on it is a protocol error.
+	return newServer(cfg, c).Run(ctx, &mcp.StdioTransport{})
 }

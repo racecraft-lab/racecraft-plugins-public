@@ -1,4 +1,4 @@
-module github.com/itsmostafa/typesafe-mcp
+module github.com/racecraft-lab/typesafe-mcp
 
 go 1.27.1
 
