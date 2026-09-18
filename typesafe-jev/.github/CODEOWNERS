@@ -1,0 +1,21 @@
+# Default owner for everything. Keeps a review on every pull request, including
+# Dependabot's, since a dependency bump here can change what the binary links.
+#
+# A GitHub team would be better than a personal account once one exists in the
+# org; @racecraft-lab has no teams today, and an unresolvable owner silently
+# assigns nobody.
+*                             @fgabelmannjr
+
+# The contract docs and the credential and validation code are where a wrong
+# claim about a provider turns into a wrong request or a leaked key.
+/docs/provider-contracts.md   @fgabelmannjr
+/cmd/evaluate/validation.go   @fgabelmannjr
+/cmd/evaluate/auth.go         @fgabelmannjr
+
+# Workflows run with repository permissions and publish releases.
+/.github/workflows/           @fgabelmannjr
+/install.sh                   @fgabelmannjr
+
+# Vendored from TypeSafe under MIT. Changes here must preserve the licence and
+# provenance header, and should be a re-vendor rather than an edit in place.
+/shared-skills/               @fgabelmannjr

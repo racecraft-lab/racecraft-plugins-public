@@ -1,0 +1,30 @@
+name: Dependency review
+
+# Blocks a pull request that introduces a dependency with a known advisory, or
+# one under a licence this project cannot ship. Catching it here is cheaper
+# than a Dependabot alert after it has merged.
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        with:
+          # Moderate rather than high: this binary handles a credential and
+          # talks to an external endpoint, so a middling advisory in the
+          # transport or JSON path still deserves a look before it lands.
+          fail-on-severity: moderate
+          comment-summary-in-pr: on-failure
+          # This project ships under MIT. A copyleft dependency would change
+          # what downstream users may do with the binary, which is a decision
+          # rather than a merge.
+          deny-licenses: GPL-2.0, GPL-3.0, AGPL-3.0, LGPL-2.1, LGPL-3.0
