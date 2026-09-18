@@ -71,8 +71,9 @@ ADAPTATION_TOKEN_MAP = (
 ADAPTATION_TRANSFORM_KINDS = {
     "fence-info-string-normalized": ("```bash", "```sh"),
     "script-filename-extension-dropped": ("test_witness.sh", "test_witness"),
+    "entry-document-renamed": ("SKILL.md", "OVERVIEW.md"),
 }
-EXPECTED_ADAPTED_FILE_COUNT = 6
+EXPECTED_ADAPTED_FILE_COUNT = 8
 
 
 def _manifest() -> dict:
@@ -155,6 +156,13 @@ class QuintReferenceAttributionTests(unittest.TestCase):
                 for transform in item["transforms"]:
                     source, target = ADAPTATION_TRANSFORM_KINDS[transform["kind"]]
                     with self.subTest(path=item["path"], kind=transform["kind"]):
+                        if transform["kind"] == "entry-document-renamed":
+                            self.assertTrue(
+                                item["path"].endswith(target),
+                                "a renamed entry document must ship under its new name",
+                            )
+                            self.assertEqual(item.get("upstream_path", "").endswith(source), True)
+                            continue
                         self.assertNotIn(source, content, "the normalized token is still present")
                         self.assertIn(target, content, "the normalized token is missing")
                         if transform["kind"] == "fence-info-string-normalized":
@@ -235,10 +243,15 @@ class QuintReferenceAttributionTests(unittest.TestCase):
                 seen += 1
                 with self.subTest(path=item["path"]):
                     self.assertRegex(item.get("upstream_sha256", ""), r"^[0-9a-f]{64}$")
-                    self.assertNotEqual(item["upstream_sha256"], item["sha256"])
                     self.assertTrue(item.get("transforms"), "an adapted file must name its transform")
-                    for transform in item["transforms"]:
-                        self.assertIn(transform["kind"], ADAPTATION_TRANSFORM_KINDS)
+                    kinds = {transform["kind"] for transform in item["transforms"]}
+                    self.assertTrue(kinds <= set(ADAPTATION_TRANSFORM_KINDS))
+                    if "entry-document-renamed" not in kinds:
+                        self.assertNotEqual(
+                            item["upstream_sha256"],
+                            item["sha256"],
+                            "content adaptation must change the file hash",
+                        )
         self.assertEqual(seen, EXPECTED_ADAPTED_FILE_COUNT, "the recorded adaptation set changed")
 
     def test_extracted_upstream_content_is_free_of_zero_bash_tokens(self) -> None:
@@ -289,15 +302,20 @@ class QuintReferenceAttributionTests(unittest.TestCase):
 
     def test_guide_links_local_references_only(self) -> None:
         guide = (GUIDE_ROOT / "quint-guide.md").read_text(encoding="utf-8")
-        self.assertIn("quint/quint-lang/SKILL.md", guide)
-        self.assertIn("quint/quint-modeling/SKILL.md", guide)
-        self.assertIn("quint/witness-and-trace.md", guide)
-        self.assertIn("quint/UPSTREAM-NOTICE.md", guide)
-        self.assertIn("quint/provenance.json", guide)
+        for expected in (
+            "quint/quint-lang/OVERVIEW.md",
+            "quint/quint-modeling/OVERVIEW.md",
+            "quint/witness-and-trace.md",
+            "quint/UPSTREAM-NOTICE.md",
+            "quint/provenance.json",
+        ):
+            with self.subTest(link=expected):
+                self.assertIn(expected, guide)
         for forbidden in ("quint-execute-spec", "Docker", "MCP", "LSP"):
             with self.subTest(forbidden=forbidden):
                 self.assertNotIn(f"quint/{forbidden}", guide)
         self.assertIn("authoring", guide.lower())
+        self.assertIn("smallest relevant", guide)
 
     def test_model_author_uses_local_references_and_keeps_gates_in_speckit(self) -> None:
         surfaces = (
@@ -307,7 +325,8 @@ class QuintReferenceAttributionTests(unittest.TestCase):
         for surface in surfaces:
             with self.subTest(surface=surface.name):
                 text = surface.read_text(encoding="utf-8")
-                self.assertIn("references/quint/quint-lang/SKILL.md", text)
+                self.assertIn("references/quint/quint-lang/OVERVIEW.md", text)
+                self.assertIn("references/quint/quint-modeling/OVERVIEW.md", text)
                 self.assertIn("references/quint/witness-and-trace.md", text)
                 self.assertIn("formal-check", text)
                 self.assertIn("gate decisions", text)
@@ -315,6 +334,98 @@ class QuintReferenceAttributionTests(unittest.TestCase):
                     self.assertNotIn(forbidden, text)
 
 
+class QuintProgressiveDisclosureTests(unittest.TestCase):
+    """The extracted references must be reachable at level 3 on both platforms."""
+
+    SKILL_ROOT = REPO_ROOT / "speckit-pro" / "skills" / "speckit-coach"
+    LINK_RE = re.compile(r"\[[^\]]*\]\((?P<target>[^)\s]+)\)")
+
+    def _links(self, path: Path) -> list[str]:
+        found = []
+        for line in path.read_text(encoding="utf-8").splitlines():
+            if line.lstrip().startswith("```"):
+                continue
+            found.extend(match.group("target") for match in self.LINK_RE.finditer(line))
+        return found
+
+    def _resolve(self, source: Path, target: str) -> Path:
+        target = target.split("#", 1)[0]
+        return (source.parent / target).resolve()
+
+    def test_no_nested_skill_entrypoint_is_extracted(self) -> None:
+        nested = sorted(
+            path.relative_to(REF_ROOT).as_posix()
+            for path in REF_ROOT.rglob("SKILL.md")
+        )
+        self.assertEqual(
+            nested,
+            [],
+            "a nested SKILL.md is stripped from the Codex payload and would dangle links",
+        )
+        for tree in VERBATIM_TREES:
+            with self.subTest(tree=tree):
+                self.assertTrue(
+                    (REF_ROOT / tree / "OVERVIEW.md").is_file(),
+                    f"{tree} must ship its renamed entry document",
+                )
+
+    def test_quint_guide_disclosure_links_resolve(self) -> None:
+        guide = GUIDE_ROOT / "quint-guide.md"
+        targets = [t for t in self._links(guide) if not t.startswith(("http://", "https://"))]
+        self.assertTrue(targets, "the guide must link its bundled references")
+        for target in targets:
+            with self.subTest(target=target):
+                self.assertTrue(self._resolve(guide, target).is_file(), f"dangling link {target}")
+
+    def test_reference_readme_links_resolve(self) -> None:
+        readme = REF_ROOT / "README.md"
+        for target in self._links(readme):
+            if target.startswith(("http://", "https://")):
+                continue
+            with self.subTest(target=target):
+                self.assertTrue(self._resolve(readme, target).is_file(), f"dangling link {target}")
+
+    def test_both_coach_surfaces_route_to_the_quint_guide(self) -> None:
+        surfaces = {
+            REPO_ROOT / "speckit-pro" / "skills" / "speckit-coach" / "SKILL.md":
+                "./references/quint-guide.md",
+            REPO_ROOT / "speckit-pro" / "codex-skills" / "speckit-coach" / "SKILL.md":
+                "../../skills/speckit-coach/references/quint-guide.md",
+        }
+        for surface, expected in surfaces.items():
+            with self.subTest(surface=surface.name):
+                text = surface.read_text(encoding="utf-8")
+                self.assertIn(expected, text, "the coach must route to the Quint guidance")
+                self.assertTrue(
+                    self._resolve(surface, expected).is_file(),
+                    f"{surface.name} routes to a missing file",
+                )
+                self.assertLess(
+                    len(text.split()),
+                    5000,
+                    "the guide caps a skill entrypoint at 5,000 words",
+                )
+
+    def test_model_author_reference_paths_exist(self) -> None:
+        for surface in (
+            REPO_ROOT / "speckit-pro" / "agents" / "formal-model-author.md",
+            REPO_ROOT / "speckit-pro" / "codex-agents" / "formal-model-author.toml",
+        ):
+            text = surface.read_text(encoding="utf-8")
+            for target in sorted(set(re.findall(r"references/quint[a-z0-9/._-]*?\.(?:md|json)", text))):
+                with self.subTest(surface=surface.name, target=target):
+                    self.assertTrue(
+                        (self.SKILL_ROOT / target).is_file(),
+                        f"{surface.name} names a missing reference {target}",
+                    )
+
+
 if __name__ == "__main__":
-    suite = unittest.defaultTestLoader.loadTestsFromTestCase(QuintReferenceAttributionTests)
+    loader = unittest.defaultTestLoader
+    suite = unittest.TestSuite(
+        (
+            loader.loadTestsFromTestCase(QuintReferenceAttributionTests),
+            loader.loadTestsFromTestCase(QuintProgressiveDisclosureTests),
+        )
+    )
     raise SystemExit(run_counted(suite, label="test-quint-reference-attribution"))

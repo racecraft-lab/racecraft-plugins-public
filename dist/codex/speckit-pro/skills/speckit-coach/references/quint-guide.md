@@ -15,20 +15,30 @@ does not establish implementation conformance.
 
 ## Use the attributed guidance on demand
 
-Use the locally extracted, attributed references when a Quint model is selected:
+Use the locally extracted, attributed references when a Quint model is selected.
+Read the smallest relevant document and do not load the whole library:
 
-- [Quint language guidance](quint/quint-lang/SKILL.md)
-- [Quint modeling guidance](quint/quint-modeling/SKILL.md)
-- [Witness and trace guidance](quint/witness-and-trace.md)
-- [Upstream notice](quint/UPSTREAM-NOTICE.md)
-- [Provenance manifest](quint/provenance.json)
+- Consult [quint-lang/OVERVIEW.md](quint/quint-lang/OVERVIEW.md) for:
+  Quint syntax, types, operators, the toolchain commands, `basicSpells`, and how
+  to read simulation output or a counterexample. Its `guidelines/` files cover
+  choreography, constraints, operators, patterns, simulations, and tests.
+- Consult [quint-modeling/OVERVIEW.md](quint/quint-modeling/OVERVIEW.md) for:
+  the end-to-end workflow for building a new model from requirements, code, an
+  idea, or a TLA+ spec, and for reviewing a finished model. Its `guidelines/`
+  files cover each starting point and review; `examples/` holds worked models.
+- Consult [witness-and-trace.md](quint/witness-and-trace.md) for:
+  proposing witnesses for reachability, interpreting results, explaining a
+  counterexample, and debugging a witness that never triggers.
+- [UPSTREAM-NOTICE.md](quint/UPSTREAM-NOTICE.md) and
+  [provenance.json](quint/provenance.json) record attribution and copy fidelity.
 
-The two verbatim skill trees are authoring references only; they are not active
-skills inside SpecKit Pro. The witness and trace guide is a SpecKit adaptation.
-The pinned upstream project is **Quint LLM Kit** by **Informal Systems Inc.**,
-licensed under Apache-2.0 at commit
-`cc75369f741af7d490936f82002c2d28e3b3d78d`. The parent supplies only the relevant
-sections and examples to `formal-model-author`.
+These trees are authoring references only; they are not active skills inside
+SpecKit Pro. `OVERVIEW.md` is the upstream entry document, renamed inside
+`references/` so neither platform treats it as a skill entrypoint. The witness
+and trace guide is a SpecKit adaptation. The pinned upstream project is
+**Quint LLM Kit** by **Informal Systems Inc.**, licensed under Apache-2.0 at
+commit `cc75369f741af7d490936f82002c2d28e3b3d78d`. The parent supplies only the
+relevant sections and examples to `formal-model-author`.
 
 SpecKit owns selection, approved requirements, phase order, allowed output paths,
 and gate decisions. Upstream advice that ordinary modeling needs only simulation

@@ -3,9 +3,17 @@
     {
       "files": [
         {
-          "path": "quint-lang/SKILL.md",
+          "path": "quint-lang/OVERVIEW.md",
+          "kind": "adapted",
           "sha256": "ba2312c2da15be623f8fcce0d256ae4427905ff3592e6d74bac0caa3aff68532",
-          "kind": "verbatim"
+          "upstream_path": "quint-lang/SKILL.md",
+          "transforms": [
+            {
+              "kind": "entry-document-renamed",
+              "occurrences": 1
+            }
+          ],
+          "upstream_sha256": "ba2312c2da15be623f8fcce0d256ae4427905ff3592e6d74bac0caa3aff68532"
         },
         {
           "path": "quint-lang/guidelines/choreo.md",
@@ -82,14 +90,22 @@
       "local_path": "speckit-pro/skills/speckit-coach/references/quint/quint-lang",
       "name": "quint-lang",
       "upstream_path": "quint-llm-kit-plugin/skills/quint-lang",
-      "adapted_file_count": 5
+      "adapted_file_count": 6
     },
     {
       "files": [
         {
-          "path": "quint-modeling/SKILL.md",
+          "path": "quint-modeling/OVERVIEW.md",
+          "kind": "adapted",
           "sha256": "fe595baac9353a4c8ca572ee91b0d516000a17a83697db6244597597ae69c591",
-          "kind": "verbatim"
+          "upstream_path": "quint-modeling/SKILL.md",
+          "transforms": [
+            {
+              "kind": "entry-document-renamed",
+              "occurrences": 1
+            }
+          ],
+          "upstream_sha256": "fe595baac9353a4c8ca572ee91b0d516000a17a83697db6244597597ae69c591"
         },
         {
           "path": "quint-modeling/examples/README.md",
@@ -158,7 +174,7 @@
       "local_path": "speckit-pro/skills/speckit-coach/references/quint/quint-modeling",
       "name": "quint-modeling",
       "upstream_path": "quint-llm-kit-plugin/skills/quint-modeling",
-      "adapted_file_count": 1
+      "adapted_file_count": 2
     },
     {
       "files": [
@@ -193,6 +209,10 @@
       {
         "kind": "script-filename-extension-dropped",
         "effect": "one helper filename named in prose"
+      },
+      {
+        "kind": "entry-document-renamed",
+        "effect": "the upstream entry document ships inside references/ as OVERVIEW.md, so neither platform sees a nested skill entrypoint"
       }
     ],
     "exact_token_mapping_recorded_in": "tests/speckit-pro/unit/test-quint-reference-attribution.py"
