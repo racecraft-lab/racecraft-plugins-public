@@ -1,5 +1,6 @@
 **/.process/** linguist-generated=true
 speckit-pro/speckit_pro_runner/**/*.py text eol=lf
+speckit-pro/speckit_pro_runner/agent_inventory.json text eol=lf
 
 # ---------------------------------------------------------------------------
 # Generated artifacts: never text-merge them.

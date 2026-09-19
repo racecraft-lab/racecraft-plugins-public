@@ -276,6 +276,8 @@ async function buildSkillsPage() {
   ]);
 }
 async function buildAgentsPage() {
+  const inventoryPath = 'speckit-pro/speckit_pro_runner/agent_inventory.json';
+  const inventory = await readJson(inventoryPath);
   const claudeAgents = new Map();
   for (const file of await listFiles('speckit-pro/agents', (rel) => rel.endsWith('.md'))) {
     const agent = await parseClaudeAgent(file);
@@ -286,39 +288,82 @@ async function buildAgentsPage() {
     const agent = await parseCodexAgent(file);
     codexAgents.set(agent.name, agent);
   }
-  const names = Array.from(new Set([...claudeAgents.keys(), ...codexAgents.keys()])).sort((a, b) => a.localeCompare(b));
+  const roles = Array.isArray(inventory.roles) ? inventory.roles : [];
+  if (!roles.length) throw new GeneratorError('source', 'Agent inventory has no roles.', inventoryPath);
+  const expectedClaude = new Set(
+    roles.filter((role) => role.claude_code?.implementation === 'plugin_agent').map((role) => role.name),
+  );
+  const expectedCodex = new Set(
+    roles.filter((role) => role.codex?.implementation === 'custom_agent').map((role) => role.name),
+  );
+  const actualClaude = new Set(claudeAgents.keys());
+  const actualCodex = new Set(codexAgents.keys());
+  const rosterMismatch = (expected, actual) => ({
+    missing: [...expected].filter((name) => !actual.has(name)).sort(),
+    unexpected: [...actual].filter((name) => !expected.has(name)).sort(),
+  });
+  const claudeMismatch = rosterMismatch(expectedClaude, actualClaude);
+  const codexMismatch = rosterMismatch(expectedCodex, actualCodex);
+  if (claudeMismatch.missing.length || claudeMismatch.unexpected.length || codexMismatch.missing.length || codexMismatch.unexpected.length) {
+    throw new GeneratorError(
+      'source',
+      `Agent definitions drift from inventory: Claude missing=${claudeMismatch.missing.join(',') || '<none>'} unexpected=${claudeMismatch.unexpected.join(',') || '<none>'}; Codex missing=${codexMismatch.missing.join(',') || '<none>'} unexpected=${codexMismatch.unexpected.join(',') || '<none>'}.`,
+      inventoryPath,
+    );
+  }
   const records = [];
-  for (const name of names) {
+  const comparisonRows = [];
+  const describePlatform = (platform) => {
+    if (platform.implementation === 'none') return 'Not implemented';
+    return `${platform.implementation.replaceAll('_', ' ')} (${platform.install_status.replaceAll('_', ' ')})`;
+  };
+  for (const role of roles) {
+    const name = role.name;
     const claude = claudeAgents.get(name);
     const codex = codexAgents.get(name);
-    const sourceRefs = [claude?.path, codex?.path].filter(Boolean);
+    const sourceRefs = [
+      inventoryPath,
+      role.claude_code.source ? `speckit-pro/${role.claude_code.source}` : null,
+      role.codex.source ? `speckit-pro/${role.codex.source}` : null,
+    ].filter(Boolean);
     const sources = [];
     for (const source of sourceRefs) sources.push(await citation(source));
-    const codexModel = codex?.model ? ` Codex model metadata declares \`${codex.model}\`${codex.effort ? ` with \`${codex.effort}\` effort` : ''}.` : '';
+    const codexModel = role.codex.model ? ` Codex uses \`${role.codex.model}\` with \`${role.codex.effort}\` effort.` : '';
+    const exception = role.exception_reason || 'Responsibilities align; runtime prompts remain separately authored and retain platform-specific model, effort, sandbox, and memory settings.';
     records.push({
       id: name,
       heading: titleFromSlug(name),
       purpose: firstSentence(codex?.description || claude?.description, `SpecKit Pro agent ${name}`),
       platformMapping: {
         concept: `SpecKit Pro ${name} agent`,
-        claudeCode: claude ? `${name}.md plugin agent source` : 'No Claude Code agent source in this repository.',
-        codex: codex ? `${name}.toml custom-agent template` : 'No Codex custom-agent template in this repository.',
-        runtimeDifference: 'Claude Code agent sources are Markdown plugin agent definitions; Codex custom-agent templates are TOML files installed into a Codex agent directory.',
+        claudeCode: describePlatform(role.claude_code),
+        codex: describePlatform(role.codex),
+        runtimeDifference: exception,
       },
       sourceFacts: [
-        sourceFact(`${name} has ${claude ? 'Claude Code agent source' : 'no Claude Code agent source'} and ${codex ? 'Codex custom-agent source' : 'no Codex custom-agent source'}.${codexModel}`, sourceRefs),
+        sourceFact(`${name} is classified as \`${role.category}\`. Claude Code: ${describePlatform(role.claude_code)}. Codex: ${describePlatform(role.codex)}.${codexModel}`, sourceRefs),
       ],
       sources,
       inferredNotes: [
-        inferredNote('Runtime-specific agent source formats are parallel surfaces, not generated copies of one another.', sourceRefs),
+        inferredNote('Runtime-specific Markdown, TOML, and isolated prompt sources remain authored separately; the inventory aligns responsibilities and records intentional exceptions.', sourceRefs),
       ],
       classification: 'source',
     });
+    comparisonRows.push({
+      role: name,
+      category: role.category,
+      claudeCode: describePlatform(role.claude_code),
+      codex: describePlatform(role.codex),
+      exception,
+    });
   }
-  return page('agents', 'Agents Reference', 'Claude Code plugin agents and Codex custom-agent templates with runtime-specific source paths.', records, [
+  const generatedPage = page('agents', 'Agents Reference', 'Claude Code and Codex agent responsibilities derived from the authoritative shipped inventory.', records, [
+    await citation(inventoryPath),
     await citation('speckit-pro/agents/phase-executor.md'),
     await citation('speckit-pro/codex-agents/phase-executor.toml'),
   ]);
+  generatedPage.comparisonRows = comparisonRows;
+  return generatedPage;
 }
 async function buildHooksPage() {
   const claudeHooks = await readJson('speckit-pro/hooks/hooks.json');
@@ -695,6 +740,15 @@ function renderPage(generatedPage) {
     '## Records',
     '',
   ];
+  if (generatedPage.comparisonRows?.length) {
+    lines.push('## Agent Inventory Comparison', '');
+    lines.push('| Role | Category | Claude Code | Codex | Exception or alignment note |');
+    lines.push('| --- | --- | --- | --- | --- |');
+    for (const row of generatedPage.comparisonRows) {
+      lines.push(`| ${escapeMarkdown(row.role)} | ${escapeMarkdown(row.category)} | ${escapeMarkdown(row.claudeCode)} | ${escapeMarkdown(row.codex)} | ${escapeMarkdown(row.exception)} |`);
+    }
+    lines.push('');
+  }
   for (const record of generatedPage.records) {
     lines.push(`### ${record.heading}`, '');
     lines.push(`- **Purpose:** ${record.purpose}`);

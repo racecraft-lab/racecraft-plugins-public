@@ -17,6 +17,7 @@ from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 from typing import Any, Callable
 
+from ..agent_inventory import CLAUDE_REQUIRED_AGENT_NAMES
 from ..envelope import diagnostic, response
 from ..gate_discovery import SLOTS as GATE_SLOTS, resolve_slots as resolve_gate_slots
 from .. import quality_gates
@@ -65,23 +66,6 @@ PATH_KEYS = {
     "workflow_file",
     "worktree_root_override",
 }
-
-CLAUDE_REQUIRED_AGENT_NAMES = (
-    "phase-executor",
-    "clarify-executor",
-    "checklist-executor",
-    "analyze-executor",
-    "implement-executor",
-    "formal-model-author",
-    "codebase-analyst",
-    "spec-context-analyst",
-    "domain-researcher",
-    "consensus-synthesizer",
-    "artifact-author",
-    "uat-runbook-author",
-    "sweep-classifier",
-    "sweep-analyst",
-)
 
 PHASE7_DEFAULT_WAVE_SIZE = 4
 PHASE7_IMPLEMENT_AGENT = "speckit-pro:implement-executor"
