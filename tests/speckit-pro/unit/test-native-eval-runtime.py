@@ -24,7 +24,10 @@ from unittest import mock
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 TEST_ROOT = REPO_ROOT / "tests" / "speckit-pro"
-sys.path.insert(0, str(TEST_ROOT / "lib"))
+PLUGIN_ROOT = REPO_ROOT / "speckit-pro"
+for import_root in (TEST_ROOT / "lib", PLUGIN_ROOT):
+    if str(import_root) not in sys.path:
+        sys.path.insert(0, str(import_root))
 
 import native_eval_runtime as runtime  # noqa: E402
 from native_eval_runtime import (  # noqa: E402
@@ -33,22 +36,14 @@ from native_eval_runtime import (  # noqa: E402
     stage_codex_runtime,
 )
 from test_result import run_counted  # noqa: E402
-
-
-REQUIRED_AGENTS = (
-    "analyze-executor",
-    "artifact-author",
-    "checklist-executor",
-    "clarify-executor",
-    "codebase-analyst",
-    "domain-researcher",
-    "formal-model-author",
-    "implement-executor",
-    "phase-executor",
-    "spec-context-analyst",
-    "uat-runbook-author",
+from speckit_pro_runner.agent_inventory import (  # noqa: E402
+    CODEX_OPTIONAL_AGENT_NAMES,
+    CODEX_REQUIRED_AGENT_NAMES,
 )
-OPTIONAL_HELPER = "autopilot-fast-helper"
+
+
+REQUIRED_AGENTS = CODEX_REQUIRED_AGENT_NAMES
+OPTIONAL_HELPER = CODEX_OPTIONAL_AGENT_NAMES[0]
 DEFAULT_AGENTS = tuple(sorted((*REQUIRED_AGENTS, OPTIONAL_HELPER)))
 
 
@@ -140,7 +135,7 @@ class NativeEvalRuntimeTests(unittest.TestCase):
         result = self.stage()
         installed = sorted(path.name for path in result.agent_root.glob("*.toml"))
         self.assertEqual(installed, [f"{name}.toml" for name in DEFAULT_AGENTS])
-        self.assertEqual(len(result.proof["materializations"]), 12)
+        self.assertEqual(len(result.proof["materializations"]), len(DEFAULT_AGENTS))
         self.assertEqual(
             [item["name"] for item in result.proof["materializations"]],
             list(DEFAULT_AGENTS),
@@ -193,7 +188,7 @@ class NativeEvalRuntimeTests(unittest.TestCase):
         mutation = response["data"]["mutation"]
         self.assertEqual(mutation["mutation_status"], "no_op")
         self.assertEqual(mutation["planned_operations"], [])
-        self.assertEqual(len(mutation["no_op_operations"]), 12)
+        self.assertEqual(len(mutation["no_op_operations"]), len(DEFAULT_AGENTS))
         self.assertEqual(
             sorted(Path(item["target"]).name for item in mutation["no_op_operations"]),
             [f"{name}.toml" for name in DEFAULT_AGENTS],
@@ -202,7 +197,7 @@ class NativeEvalRuntimeTests(unittest.TestCase):
     def test_proof_binds_payload_roster_and_each_materialization(self) -> None:
         result = self.stage()
         roster = result.proof["roster"]
-        self.assertEqual(len(roster["files"]), 12)
+        self.assertEqual(len(roster["files"]), len(DEFAULT_AGENTS))
         self.assertEqual(
             [record["name"] for record in roster["files"]],
             sorted([f"{name}.toml" for name in REQUIRED_AGENTS] + [f"{OPTIONAL_HELPER}.toml"]),

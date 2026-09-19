@@ -209,6 +209,21 @@ class NativeEvalJudgeTests(unittest.TestCase):
                 self.assertEqual(projected[0]["name"], "command_execution")
                 self.assertEqual(projected[0]["input"], {"command": "cat input.txt"})
 
+    def test_codex_native_wait_is_supported_as_collaboration_evidence(self) -> None:
+        native = observation(tool_calls=[{
+            "name": "wait",
+            "input": {"receiver_thread_ids": [], "agents_states": {}},
+            "success": True,
+        }])
+
+        projected = build_judge_request(case(), native, host="codex")["evidence"]["tool_calls"]
+
+        self.assertEqual(projected, [{
+            "id": "call-0", "name": "wait",
+            "input": {"receiver_thread_ids": [], "agents_states": {}},
+            "success": True, "position": 0, "parent_id": None,
+        }])
+
     def test_tool_search_is_discovery_evidence_not_execution_of_its_results(self) -> None:
         reference = [{"type": "tool_reference", "tool_name": "TaskOutput"}]
         native = observation(tool_calls=[

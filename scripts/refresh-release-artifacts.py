@@ -34,6 +34,7 @@ sys.dont_write_bytecode = True
 
 RUNNER_MANIFEST_FILE = "speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json"
 RUNNER_CHECKSUM_FILE = "speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256"
+RUNNER_DATA_FILES = ("agent_inventory.json",)
 
 # marketplace registry -> within-plugin manifest read from each entry's source dir
 MARKETPLACES = (
@@ -283,7 +284,8 @@ def refresh_runner_trust_metadata(repo_root: Path) -> list[str]:
     plugin_root = repo_root / "speckit-pro"
     package_dir = plugin_root / "speckit_pro_runner"
     source_files = sorted(
-        path for path in package_dir.rglob("*.py") if "__pycache__" not in path.parts
+        [path for path in package_dir.rglob("*.py") if "__pycache__" not in path.parts]
+        + [package_dir / name for name in RUNNER_DATA_FILES]
     )
     digests = {path.relative_to(plugin_root).as_posix(): sha256_file(path) for path in source_files}
 

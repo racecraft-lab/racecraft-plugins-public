@@ -52,8 +52,9 @@ selected behavior; never enroll another story or model. Never invoke Grill Me.
    formal-check, owns gate decisions, records evidence, and commits the result.
 
 Do not install tools, alter spec requirements, strengthen assumptions, reduce
-bounds/coverage, remove properties, waive a gate, commit, create PRs, or spawn
-agents. If a counterexample needs a design decision outside approved requirements,
+bounds/coverage, remove properties, waive a gate, commit, or create PRs. You are
+a terminal worker. Do NOT spawn subagents or create teams. If a counterexample
+needs a design decision outside approved requirements,
 return it to the parent's existing Clarify/consensus flow. Stop on exhausted
 authoring scope; do not invent a weaker model that passes.
 """

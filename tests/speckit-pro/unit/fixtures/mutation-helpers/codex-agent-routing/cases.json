@@ -11,7 +11,8 @@
     "implement-executor",
     "phase-executor",
     "spec-context-analyst",
-    "uat-runbook-author"
+    "uat-runbook-author",
+    "consensus-synthesizer"
   ],
   "optional_helper": "autopilot-fast-helper",
   "base_case": {
@@ -78,7 +79,7 @@
       "expected": {
         "status": "ok",
         "required_outcome": "resolved",
-        "required_count": 11,
+        "required_count": 12,
         "helper_outcome": "installed",
         "writes_state": false,
         "restart_required": false

@@ -36,7 +36,7 @@ _HOST_CANONICAL_TOOLS = {
     "codex": frozenset({
         "apply_patch", "command_execution", "file_change", "list_files",
         "mcp_tool_call", "read_file", "search_files", "send_input", "subagent",
-        "web_search",
+        "wait", "web_search",
     }),
 }
 _COMPATIBLE_TOOLS = frozenset({

@@ -24,6 +24,7 @@ TEST_ROOT = REPO_ROOT / "tests" / "speckit-pro"
 sys.path.insert(0, str(TEST_ROOT / "lib"))
 
 from native_eval_catalog import (  # noqa: E402
+    NATIVE_SYNTHESIS_MECHANISMS,
     input_fingerprint,
     load_catalog,
     plan_trials,
@@ -766,7 +767,7 @@ class NativeEvalCatalogTests(unittest.TestCase):
                     "mode": "dedicated_subagent",
                     "role": "speckit-pro:consensus-synthesizer",
                 },
-                "codex": {"mode": "parent_session", "role": None},
+                "codex": {"mode": "dedicated_subagent", "role": "consensus-synthesizer"},
             },
         }
         checks = [
@@ -782,7 +783,7 @@ class NativeEvalCatalogTests(unittest.TestCase):
         ]
         valid = case(checks)
         loaded = validate_catalog(catalog(valid), self.root)["cases"][0]["checks"][0]
-        self.assertEqual(loaded["per_host"]["codex"]["mode"], "parent_session")
+        self.assertEqual(loaded["per_host"]["codex"]["mode"], "dedicated_subagent")
 
         mutations = (
             (lambda check: check.update(artifact_path="../result.json"), "canonical relative path"),
@@ -793,10 +794,10 @@ class NativeEvalCatalogTests(unittest.TestCase):
              "claude mode must be dedicated_subagent"),
             (lambda check: check["per_host"]["claude"].update(role="consensus-synthesizer"),
              "claude role must be speckit-pro:consensus-synthesizer"),
-            (lambda check: check["per_host"]["codex"].update(mode="dedicated_subagent"),
-             "codex mode must be parent_session"),
-            (lambda check: check["per_host"]["codex"].update(role="consensus-synthesizer"),
-             "codex role must be null"),
+            (lambda check: check["per_host"]["codex"].update(mode="parent_session"),
+             "codex mode must be dedicated_subagent"),
+            (lambda check: check["per_host"]["codex"].update(role=None),
+             "codex role must be consensus-synthesizer"),
             (lambda check: check["per_host"]["codex"].update(extra=True), "malformed codex settings"),
         )
         for mutate, message in mutations:
@@ -989,13 +990,7 @@ class NativeEvalGradingTests(unittest.TestCase):
             {
                 "id": "mechanism", "requirement": "r1", "type": "native_synthesis_mechanism",
                 "artifact_path": "scenario-output/consensus-result.json",
-                "per_host": {
-                    "claude": {
-                        "mode": "dedicated_subagent",
-                        "role": "speckit-pro:consensus-synthesizer",
-                    },
-                    "codex": {"mode": "parent_session", "role": None},
-                },
+                "per_host": copy.deepcopy(NATIVE_SYNTHESIS_MECHANISMS),
             },
             {
                 "id": "source-a", "requirement": "r1", "type": "file_access",
@@ -1013,86 +1008,81 @@ class NativeEvalGradingTests(unittest.TestCase):
         ])
 
     @staticmethod
-    def _claude_synthesis_observation() -> dict[str, object]:
-        returned = {"type": "text", "text": "low confidence; escape to round 2"}
-        encoded = json.dumps(
-            returned, ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False,
-        ).encode("utf-8")
+    def _synthesis_observation(host: str) -> dict[str, object]:
+        is_claude = host == "claude"
+        returned = ({"type": "text", "text": "low confidence; escape to round 2"}
+                    if is_claude else "result")
+        encoded = (json.dumps(returned, ensure_ascii=False, sort_keys=True,
+                              separators=(",", ":"), allow_nan=False).encode("utf-8")
+                   if is_claude else b"result")
         digest = hashlib.sha256(encoded).hexdigest()
-        calls = [
+        read_name = "Read" if is_claude else "command_execution"
+        read_key = "file_path" if is_claude else "command"
+        reads = [
             {
-                "id": "read-a", "name": "Read",
-                "input": {"file_path": "scenario-inputs/analyst-a.md"},
-                "output": "option a", "success": True, "parent_id": None, "position": 0,
-            },
-            {
-                "id": "read-b", "name": "Read",
-                "input": {"file_path": "scenario-inputs/analyst-b.md"},
-                "output": "option b", "success": True, "parent_id": None, "position": 1,
-            },
-            {
-                "id": "synth", "name": "subagent",
-                "input": {"subagent_type": "speckit-pro:consensus-synthesizer"},
-                "output": returned, "success": True, "parent_id": None, "position": 2,
-            },
-            {
-                "id": "write", "name": "Write",
-                "input": {"file_path": "scenario-output/consensus-result.json"},
-                "output": {"changed": True}, "success": True, "parent_id": None, "position": 4,
-            },
+                "id": f"read-{suffix}", "name": read_name,
+                "input": {read_key: path if is_claude else f"cat {path}"},
+                "output": f"option {suffix}", "success": True,
+                "parent_id": None, "position": position,
+            }
+            for position, (suffix, path) in enumerate((
+                ("a", "scenario-inputs/analyst-a.md"),
+                ("b", "scenario-inputs/analyst-b.md"),
+            ))
         ]
-        return observation(
-            tool_calls=calls,
-            artifacts={
-                "scenario-output/consensus-result.json": '{"decision":"escape_to_round_2"}',
-            },
-            native_metadata={
-                "claude_tool_results": [{
-                    "tool_call_index": 2, "id": "synth", "tool_result_position": 3,
-                    "output_sha256": digest, "output_bytes": len(encoded),
+        role_input = ({"subagent_type": "speckit-pro:consensus-synthesizer"}
+                      if is_claude else {"role": "consensus-synthesizer"})
+        change = ({
+            "id": "write", "name": "Write",
+            "input": {"file_path": "scenario-output/consensus-result.json"},
+            "output": {"changed": True}, "success": True, "parent_id": None, "position": 4,
+        } if is_claude else {
+            "id": "change", "name": "file_change",
+            "input": {"changes": [{"path": "scenario-output/consensus-result.json"}]},
+            "output": {"changed": True}, "success": True, "parent_id": None, "position": 4,
+        })
+        stream, turn = (("claude-main", None) if is_claude else ("root-thread", "root-turn"))
+        native_metadata = {
+            "subagent_return_order": {
+                "schema": "native-subagent-return-order/v1", "scope": "direct-root-only",
+                "returns": [{
+                    "tool_call_index": 2, "call_id": "synth",
+                    "authority": "claude-tool-result" if is_claude else "codex-parent-delivery",
+                    "native_stream": stream, "native_turn": turn, "completion_index": 3,
+                    "content_sha256": digest, "content_bytes": len(encoded),
+                    "content_nonempty": True,
                 }],
-                "subagent_return_order": {
-                    "schema": "native-subagent-return-order/v1",
-                    "scope": "direct-root-only",
-                    "returns": [{
-                        "tool_call_index": 2, "call_id": "synth",
-                        "authority": "claude-tool-result", "native_stream": "claude-main",
-                        "native_turn": None, "completion_index": 3,
-                        "content_sha256": digest, "content_bytes": len(encoded),
-                        "content_nonempty": True,
-                    }],
-                    "parent_file_changes": [{
-                        "tool_call_index": 3, "call_id": "write", "native_stream": "claude-main",
-                        "native_turn": None, "native_event_index": 4,
-                        "paths": ["scenario-output/consensus-result.json"],
-                    }],
-                },
+                "parent_file_changes": [{
+                    "tool_call_index": 3, "call_id": change["id"],
+                    "native_stream": stream, "native_turn": turn, "native_event_index": 4,
+                    "paths": ["scenario-output/consensus-result.json"],
+                }],
             },
-        )
-
-    @staticmethod
-    def _codex_synthesis_observation() -> dict[str, object]:
+        }
+        if is_claude:
+            native_metadata["claude_tool_results"] = [{
+                "tool_call_index": 2, "id": "synth", "tool_result_position": 3,
+                "output_sha256": digest, "output_bytes": len(encoded),
+            }]
+        else:
+            native_metadata.update({
+                "nested_rollout": {"dispatches": [{"id": "synth", "delivery": {
+                    "native_event_index": 3, "turn_id": turn,
+                    "sha256": digest, "bytes": len(encoded),
+                }}]},
+                "nested_merge": {"events": [{
+                    "id": change["id"], "thread_id": stream, "turn_id": turn,
+                    "native_event_index": 4,
+                }]},
+            })
         return observation(
-            tool_calls=[
-                {
-                    "id": "read-a", "name": "command_execution",
-                    "input": {"command": "cat scenario-inputs/analyst-a.md"},
-                    "output": "option a", "success": True, "parent_id": None, "position": 0,
-                },
-                {
-                    "id": "read-b", "name": "command_execution",
-                    "input": {"command": "cat scenario-inputs/analyst-b.md"},
-                    "output": "option b", "success": True, "parent_id": None, "position": 1,
-                },
-                {
-                    "id": "change", "name": "file_change",
-                    "input": {"changes": [{"path": "scenario-output/consensus-result.json"}]},
-                    "output": {"changed": True}, "success": True, "parent_id": None, "position": 2,
-                },
-            ],
-            artifacts={
-                "scenario-output/consensus-result.json": '{"decision":"escape_to_round_2"}',
-            },
+            tool_calls=[*reads, {
+                "id": "synth", "name": "subagent", "input": role_input,
+                "output": returned, "success": True, "parent_id": None, "position": 2,
+            }, change],
+            artifacts={"scenario-output/consensus-result.json":
+                       '{"decision":"escape_to_round_2"}'},
+            native_metadata=native_metadata,
         )
 
     def test_rejects_missing_malformed_incomplete_and_error_evidence(self) -> None:
@@ -1305,8 +1295,8 @@ class NativeEvalGradingTests(unittest.TestCase):
 
     def test_native_synthesis_mechanism_uses_only_the_trusted_host_policy(self) -> None:
         value = self._synthesis_case()
-        claude = self._claude_synthesis_observation()
-        codex = self._codex_synthesis_observation()
+        claude = self._synthesis_observation("claude")
+        codex = self._synthesis_observation("codex")
         self.assertEqual(grade_observation(value, claude, host="claude")["status"], "pass")
         self.assertEqual(grade_observation(value, codex, host="codex")["status"], "pass")
         self.assertEqual(grade_observation(value, claude)["status"], "invalid")
@@ -1319,9 +1309,9 @@ class NativeEvalGradingTests(unittest.TestCase):
         legacy = case()
         self.assertEqual(grade_observation(legacy, observation(), host="other")["status"], "pass")
 
-    def test_claude_synthesis_requires_completed_exact_role_then_parent_write(self) -> None:
+    def test_each_host_synthesis_requires_completed_exact_role_then_parent_write(self) -> None:
         value = self._synthesis_case()
-        valid = self._claude_synthesis_observation()
+        valid = self._synthesis_observation("claude")
         variants = []
 
         wrong_role = copy.deepcopy(valid)
@@ -1362,52 +1352,51 @@ class NativeEvalGradingTests(unittest.TestCase):
             with self.subTest(expected=expected, evidence=evidence):
                 self.assertEqual(grade_observation(value, evidence, host="claude")["status"], expected)
 
-    def test_codex_synthesis_requires_parent_reads_and_structured_parent_change(self) -> None:
         value = self._synthesis_case()
-        valid = self._codex_synthesis_observation()
+        valid = self._synthesis_observation("codex")
         variants = []
 
-        child = {
-            "id": "synth", "name": "subagent",
-            "input": {"role": "consensus-synthesizer"},
-            "output": "result", "success": True, "parent_id": None, "position": 2,
-        }
-        delegated = copy.deepcopy(valid)
-        delegated["tool_calls"].insert(2, child)
-        variants.append((delegated, "fail"))
+        missing = copy.deepcopy(valid)
+        missing["tool_calls"].pop(2)
+        variants.append((missing, "fail"))
+        wrong_role = copy.deepcopy(valid)
+        wrong_role["tool_calls"][2]["input"]["role"] = "codebase-analyst"
+        variants.append((wrong_role, "fail"))
         nested = copy.deepcopy(valid)
-        nested_child = copy.deepcopy(child)
-        nested_child["parent_id"] = "other-agent"
-        nested["tool_calls"].insert(2, nested_child)
-        variants.append((nested, "fail"))
+        nested["tool_calls"][2]["parent_id"] = "other-agent"
+        variants.append((nested, "invalid"))
+        failed = copy.deepcopy(valid)
+        failed["tool_calls"][2]["success"] = False
+        variants.append((failed, "fail"))
+        no_receipt = copy.deepcopy(valid)
+        del no_receipt["native_metadata"]["subagent_return_order"]
+        variants.append((no_receipt, "invalid"))
         shell_write = copy.deepcopy(valid)
-        shell_write["tool_calls"][2] = {
+        shell_write["tool_calls"][3] = {
             "id": "shell", "name": "command_execution",
             "input": {"command": "printf result > scenario-output/consensus-result.json"},
-            "output": "", "success": True, "parent_id": None, "position": 2,
+            "output": "", "success": True, "parent_id": None, "position": 4,
         }
-        variants.append((shell_write, "fail"))
+        variants.append((shell_write, "invalid"))
         response_only = copy.deepcopy(valid)
-        response_only["tool_calls"].pop(2)
+        response_only["tool_calls"].pop(3)
         response_only["final_text"] = "I wrote the result."
-        variants.append((response_only, "fail"))
+        variants.append((response_only, "invalid"))
         child_writer = copy.deepcopy(valid)
-        child_writer["tool_calls"][2]["parent_id"] = "analyst"
-        variants.append((child_writer, "fail"))
+        child_writer["tool_calls"][3]["parent_id"] = "synth"
+        variants.append((child_writer, "invalid"))
         late_read = copy.deepcopy(valid)
-        late_read["tool_calls"] = [late_read["tool_calls"][2], *late_read["tool_calls"][:2]]
+        late_read["tool_calls"] = [late_read["tool_calls"][2], *late_read["tool_calls"][:2],
+                                   late_read["tool_calls"][3]]
         variants.append((late_read, "fail"))
         missing_read = copy.deepcopy(valid)
         missing_read["tool_calls"].pop(1)
         variants.append((missing_read, "fail"))
-        malformed_change = copy.deepcopy(valid)
-        malformed_change["tool_calls"][2]["input"] = {"changes": "result"}
-        variants.append((malformed_change, "invalid"))
-        duplicated_change = copy.deepcopy(valid)
-        duplicate_change = copy.deepcopy(duplicated_change["tool_calls"][2])
-        duplicate_change["id"] = "change-again"
-        duplicated_change["tool_calls"].append(duplicate_change)
-        variants.append((duplicated_change, "invalid"))
+        wrong_authority = copy.deepcopy(valid)
+        wrong_authority["native_metadata"]["subagent_return_order"]["returns"][0][
+            "authority"
+        ] = "claude-tool-result"
+        variants.append((wrong_authority, "invalid"))
 
         for evidence, expected in variants:
             with self.subTest(expected=expected, evidence=evidence):
@@ -1415,7 +1404,7 @@ class NativeEvalGradingTests(unittest.TestCase):
 
     def test_synthesis_mechanism_does_not_override_wrong_artifact_content(self) -> None:
         value = self._synthesis_case()
-        evidence = self._codex_synthesis_observation()
+        evidence = self._synthesis_observation("codex")
         evidence["artifacts"]["scenario-output/consensus-result.json"] = '{"decision":"human_review"}'
         result = grade_observation(value, evidence, host="codex")
         self.assertEqual(result["status"], "fail")

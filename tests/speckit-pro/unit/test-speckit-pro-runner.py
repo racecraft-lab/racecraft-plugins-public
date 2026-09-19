@@ -317,7 +317,10 @@ class RunnerFoundationTests(unittest.TestCase):
         self.assertEqual(manifest["checksum_algorithm"], "sha256")
 
         expected = {}
-        runner_sources = sorted(path for path in RUNNER_DIR.rglob("*.py") if "__pycache__" not in path.parts)
+        runner_sources = sorted(
+            [path for path in RUNNER_DIR.rglob("*.py") if "__pycache__" not in path.parts]
+            + [RUNNER_DIR / "agent_inventory.json"]
+        )
         for path in runner_sources:
             digest = hashlib.sha256(path.read_bytes()).hexdigest()
             expected[path.relative_to(PLUGIN_ROOT).as_posix()] = digest

@@ -32,6 +32,9 @@ class NativeReturnCatalogTests(unittest.TestCase):
         self.cases = {case["id"]: case for case in catalog["cases"]}
         self.disagreement = self.cases["integration.return-01-synthesizer-disagreement"]
         self.majority = self.cases["integration.return-02-synthesizer-majority"]
+        self.analyze = self.cases[
+            "integration.return-03-analyze-zero-findings-confidence"
+        ]
 
     def test_return_cases_preserve_two_and_three_input_boundaries(self) -> None:
         for case, names in (
@@ -41,6 +44,7 @@ class NativeReturnCatalogTests(unittest.TestCase):
             with self.subTest(case=case["id"]):
                 paths = [f"scenario-inputs/analysts/{name}.md" for name in names]
                 self.assertEqual([fixture["destination"] for fixture in case["fixtures"]], paths)
+
                 self.assertEqual([check["path"] for check in case["checks"]
                                   if check["type"] == "file_access"], paths)
                 for fixture in case["fixtures"]:
@@ -50,18 +54,37 @@ class NativeReturnCatalogTests(unittest.TestCase):
                     self.assertIsNotNone(re.search(unchanged["pattern"], original))
                     self.assertIsNone(re.search(unchanged["pattern"], original + "changed"))
 
-    def test_native_mechanisms_are_not_interchangeable(self) -> None:
-        for case in (self.disagreement, self.majority):
+    def test_analyze_case_requires_a_standalone_complete_input_read(self) -> None:
+        self.assertIn(
+            "using its own standalone read operation; do not combine that read",
+            self.analyze["prompt"],
+        )
+
+    def test_native_mechanisms_align_responsibilities_with_platform_role_names(self) -> None:
+        for case in (self.disagreement, self.majority, self.analyze):
             mechanism = [check for check in case["checks"]
                          if check["type"] == "native_synthesis_mechanism"]
             self.assertEqual(len(mechanism), 1)
             self.assertEqual(mechanism[0]["per_host"], {
                 "claude": {"mode": "dedicated_subagent", "role": "speckit-pro:consensus-synthesizer"},
-                "codex": {"mode": "parent_session", "role": None},
+                "codex": {"mode": "dedicated_subagent", "role": "consensus-synthesizer"},
             })
             self.assertEqual(case["resource_class"], "nested")
             self.assertEqual(case["layer"], "integration")
-        self.assertEqual(len(plan_trials([self.disagreement, self.majority])), 4)
+        self.assertEqual(
+            len(plan_trials([self.disagreement, self.majority, self.analyze])),
+            6,
+        )
+
+    def test_representative_phase_cases_cover_clarify_checklist_and_clean_analyze(self) -> None:
+        self.assertIn("Clarify", self.disagreement["capability"])
+        self.assertIn("Checklist", self.majority["capability"])
+        self.assertIn("zero-findings", self.analyze["capability"])
+        self.assertIn("exactly once", self.analyze["prompt"])
+        confidence = next(check for check in self.analyze["checks"]
+                          if check["id"] == "confidence-block")
+        self.assertIn("Task\\ understanding", confidence["pattern"])
+        self.assertIn("Completeness", confidence["pattern"])
 
     def test_decision_checks_reject_old_terminal_and_wrong_majority_results(self) -> None:
         for case, expected in (

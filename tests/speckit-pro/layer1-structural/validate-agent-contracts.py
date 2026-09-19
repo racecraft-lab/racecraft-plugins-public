@@ -19,6 +19,13 @@ for _import_root in (LIB_DIR, PLUGIN_ROOT):
 from structural_helpers import body as _body
 from structural_helpers import frontmatter as _frontmatter
 from test_result import run_counted
+from speckit_pro_runner.agent_inventory import (
+    AGENT_INVENTORY,
+    CLAUDE_REQUIRED_AGENT_NAMES,
+    CODEX_OPTIONAL_AGENT_NAMES,
+    CODEX_REQUIRED_AGENT_NAMES,
+    inventory_source_errors,
+)
 
 EXPECTED_AGENT_DIRS = (Path('.'), Path('speckit-pro'), Path('tests/speckit-pro'), Path('docs-site'))
 CLAUDE_WRAPPER = '@./AGENTS.md\n'
@@ -111,10 +118,14 @@ class ValidateAgentInstructions(unittest.TestCase):
         with self.subTest(msg='agent instruction files have canonical wrapper shape'):
             self.assertFalse(errors, '\n'.join(errors))
 AGENTS_DIR = PLUGIN_ROOT / 'agents'
-validate_agents_AGENTS = ('phase-executor', 'clarify-executor', 'checklist-executor', 'analyze-executor', 'implement-executor', 'formal-model-author', 'codebase-analyst', 'spec-context-analyst', 'domain-researcher', 'consensus-synthesizer', 'artifact-author', 'uat-runbook-author', 'sweep-classifier', 'sweep-analyst')
+validate_agents_AGENTS = CLAUDE_REQUIRED_AGENT_NAMES
 PLUGIN_AGENT_FIELDS = {'name', 'description', 'model', 'effort', 'maxTurns', 'tools', 'disallowedTools', 'skills', 'memory', 'background', 'isolation', 'color'}
 UNSUPPORTED_PLUGIN_AGENT_FIELDS = {'hooks', 'mcpServers', 'permissionMode', 'initialPrompt', 'experimental.cacheTtl'}
-MEMORY_POLICY = {'codebase-analyst': 'local', 'implement-executor': 'local', 'spec-context-analyst': 'local'}
+MEMORY_POLICY = {
+    role['name']: role['claude_code']['memory']
+    for role in AGENT_INVENTORY['roles']
+    if role['claude_code']['memory'] != 'none'
+}
 NAME_RE = re.compile('^[a-zA-Z0-9][a-zA-Z0-9-]{2,49}$')
 validate_agents_MODEL_RE = re.compile('^(opus|sonnet|haiku|inherit)$')
 
@@ -132,6 +143,8 @@ def validate_agents__nonblank(text: str) -> str:
 class ValidateAgents(unittest.TestCase):
 
     def test_agents(self) -> None:
+        with self.subTest(msg='authored agent sources exactly match the authoritative inventory'):
+            self.assertEqual(inventory_source_errors(PLUGIN_ROOT, AGENT_INVENTORY), [])
         with self.subTest(msg='Claude agent roster exactly matches all shipped source definitions'):
             discovered = {path.stem for path in AGENTS_DIR.glob('*.md')}
             self.assertEqual(set(validate_agents_AGENTS), discovered)
@@ -193,20 +206,15 @@ class ValidateAgents(unittest.TestCase):
 CODEX_AGENTS_DIR = PLUGIN_ROOT / 'codex-agents'
 CC_AGENTS_DIR = PLUGIN_ROOT / 'agents'
 CODEX_AGENT_PROFILES = {
-    'analyze-executor': ('gpt-5.6-sol', 'xhigh', 'workspace-write'),
-    'artifact-author': ('gpt-5.6-sol', 'xhigh', 'workspace-write'),
-    'autopilot-fast-helper': ('gpt-5.6-luna', 'low', 'read-only'),
-    'checklist-executor': ('gpt-5.6-sol', 'xhigh', 'workspace-write'),
-    'clarify-executor': ('gpt-5.6-sol', 'xhigh', 'read-only'),
-    'codebase-analyst': ('gpt-5.6-sol', 'low', 'read-only'),
-    'domain-researcher': ('gpt-5.6-sol', 'xhigh', 'read-only'),
-    'formal-model-author': ('gpt-5.6-sol', 'xhigh', 'workspace-write'),
-    'implement-executor': ('gpt-5.6-sol', 'xhigh', 'workspace-write'),
-    'phase-executor': ('gpt-5.6-sol', 'xhigh', 'workspace-write'),
-    'spec-context-analyst': ('gpt-5.6-sol', 'low', 'read-only'),
-    'uat-runbook-author': ('gpt-5.6-sol', 'xhigh', 'workspace-write'),
+    role['name']: (
+        role['codex']['model'],
+        role['codex']['effort'],
+        role['codex']['sandbox'],
+    )
+    for role in AGENT_INVENTORY['roles']
+    if role['codex']['implementation'] == 'custom_agent'
 }
-validate_codex_agents_AGENTS = tuple(CODEX_AGENT_PROFILES)
+validate_codex_agents_AGENTS = (*CODEX_REQUIRED_AGENT_NAMES, *CODEX_OPTIONAL_AGENT_NAMES)
 LOW_EFFORT_ANALYST_ROLES = frozenset({'codebase-analyst', 'spec-context-analyst'})
 CC_ONLY_FIELDS = ('tools', 'disallowedTools', 'permissionMode', 'color', 'maxTurns', 'background', 'effort')
 validate_codex_agents_MODEL_RE = re.compile('^(gpt-5\\.6-sol|gpt-5\\.6-terra|gpt-5\\.6-luna|gpt-5\\.5|gpt-5\\.4|gpt-5\\.4-mini|gpt-5\\.3-codex|gpt-5\\.3-codex-spark)$')

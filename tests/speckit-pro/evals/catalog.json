@@ -13888,7 +13888,7 @@
     {
       "id": "integration.return-01-synthesizer-disagreement",
       "layer": "integration",
-      "capability": "Read two retained analyst returns, preserve both supported options, and emit the current low-confidence Round-2 escape without fabricating evidence.",
+      "capability": "Resolve a representative Clarify question by reading two retained analyst returns, preserving both supported options, and emitting the current low-confidence Round-2 escape without fabricating evidence.",
       "timeout_seconds": 300,
       "resource_class": "nested",
       "requirements": [
@@ -13925,7 +13925,7 @@
           "description": "Attribute each recommendation to its exact retained analyst source without fabricated evidence."
         }
       ],
-      "prompt": "First invoke {{skill}} through the client's native skill-loading mechanism. Execute only one bounded consensus-synthesis observation. Read `scenario-inputs/analysts/codebase-analyst.md` and `scenario-inputs/analysts/domain-researcher.md` completely, using a separate native tool call for each analyst file; parallel calls are allowed. They are retained analyst returns for one Round-1 item routed to `[codebase, domain]`; do not dispatch replacement analysts and do not research beyond these inputs. Apply the installed skill's current agreement rules through its native synthesis mechanism. Do not invent a role that the installed client does not define. If the native mechanism delegates synthesis, wait for and use the actual returned result; if the product assigns synthesis to the parent session, perform it in the parent. Then write only `scenario-output/consensus-result.json` as strict JSON with exactly these keys: `decision` (string or null), `retained_options` (distinct recommendation tokens in input order), `agreement` (one of `single-analyst`, `both-agree`, `two-analyst-disagreement`, `3/3-unanimous`, `2/3-majority`, `0/3-all-disagree`), `confidence` (`high` or `low`), `next_action` (`apply`, `escape_to_round_2`, or `human_review`), and `evidence` (input-order objects with exactly `analyst`, `source`, and `recommendation`). Use the same concise option token in `retained_options`, in `decision` when non-null, and in each `evidence.recommendation`; do not put explanatory sentences in these token fields. Each evidence object must name the canonical analyst, its exact staged source path, and only the recommendation supported by that source. Do not copy an expected answer from elsewhere, do not edit the inputs, and stop after the artifact is written.",
+      "prompt": "First invoke {{skill}} through the client's native skill-loading mechanism. Execute only one bounded Clarify consensus-synthesis observation. Read `scenario-inputs/analysts/codebase-analyst.md` and `scenario-inputs/analysts/domain-researcher.md` completely, using a separate native tool call for each analyst file; parallel calls are allowed. They are retained analyst returns for one Clarify Round-1 item routed to `[codebase, domain]`; do not dispatch replacement analysts and do not research beyond these inputs. Dispatch the installed client's named consensus-synthesizer, wait for its actual returned result, and use that result before writing the artifact. The parent must not perform or silently replace synthesis. Then write only `scenario-output/consensus-result.json` as strict JSON with exactly these keys: `decision` (string or null), `retained_options` (distinct recommendation tokens in input order), `agreement` (one of `single-analyst`, `both-agree`, `two-analyst-disagreement`, `3/3-unanimous`, `2/3-majority`, `0/3-all-disagree`), `confidence` (`high` or `low`), `next_action` (`apply`, `escape_to_round_2`, or `human_review`), and `evidence` (input-order objects with exactly `analyst`, `source`, and `recommendation`). When the result escapes, the exact `next_action` token is `escape_to_round_2`; never substitute `escalate_to_round_2` or prose. Use the same concise option token in `retained_options`, in `decision` when non-null, and in each `evidence.recommendation`; do not put explanatory sentences in these token fields. Each evidence object must name the canonical analyst, its exact staged source path, and only the recommendation supported by that source. Do not copy an expected answer from elsewhere, do not edit the inputs, and stop after the artifact is written.",
       "fixtures": [
         {
           "source": "tests/speckit-pro/evals/fixtures/integration-return-contracts/return-01-synthesizer-disagreement/codebase-analyst.md",
@@ -13953,7 +13953,8 @@
           "skill": "speckit-autopilot",
           "allowed_tools": [
             "command_execution",
-            "file_change"
+            "file_change",
+            "spawn_agent"
           ],
           "modes": [
             "project"
@@ -13981,8 +13982,8 @@
               "role": "speckit-pro:consensus-synthesizer"
             },
             "codex": {
-              "mode": "parent_session",
-              "role": null
+              "mode": "dedicated_subagent",
+              "role": "consensus-synthesizer"
             }
           }
         },
@@ -14117,8 +14118,8 @@
         }
       ],
       "native_differences": [
-        "Claude exposes the product's consensus-synthesizer agent; its actual nonempty child return must support the materialized result.",
-        "Canonical Codex autopilot assigns shared consensus synthesis to the parent session and must not invent a consensus-synthesizer child role."
+        "Claude dispatches the namespaced speckit-pro:consensus-synthesizer role through its native Agent transport.",
+        "Codex dispatches the consensus-synthesizer custom agent through its native collaboration transport; both clients require an actual nonempty returned result before the parent writes the artifact."
       ],
       "provenance": [
         "tests/speckit-pro/layer6-integration/return-format-fixtures/01-synthesizer-reads-analysts"
@@ -14127,7 +14128,7 @@
     {
       "id": "integration.return-02-synthesizer-majority",
       "layer": "integration",
-      "capability": "Read three retained agreeing analyst returns and emit the supported unanimous JSON decision with high confidence and exact evidence attribution.",
+      "capability": "Resolve a representative Checklist gap by reading three retained agreeing analyst returns and emitting the supported unanimous JSON decision with high confidence and exact evidence attribution.",
       "timeout_seconds": 300,
       "resource_class": "nested",
       "requirements": [
@@ -14164,7 +14165,7 @@
           "description": "Attribute every agreeing recommendation to its exact retained analyst source without fabricated evidence."
         }
       ],
-      "prompt": "First invoke {{skill}} through the client's native skill-loading mechanism. Execute only one bounded consensus-synthesis observation. Read `scenario-inputs/analysts/codebase-analyst.md`, `scenario-inputs/analysts/domain-researcher.md`, and `scenario-inputs/analysts/spec-context-analyst.md` completely, using a separate native tool call for each analyst file; parallel calls are allowed. They are retained analyst returns for one Round-1 item routed to `[codebase, domain, spec]`; do not dispatch replacement analysts and do not research beyond these inputs. Apply the installed skill's current agreement rules through its native synthesis mechanism. Do not invent a role that the installed client does not define. If the native mechanism delegates synthesis, wait for and use the actual returned result; if the product assigns synthesis to the parent session, perform it in the parent. Then write only `scenario-output/consensus-result.json` as strict JSON with exactly these keys: `decision` (string or null), `retained_options` (distinct recommendation tokens in input order), `agreement` (one of `single-analyst`, `both-agree`, `two-analyst-disagreement`, `3/3-unanimous`, `2/3-majority`, `0/3-all-disagree`), `confidence` (`high` or `low`), `next_action` (`apply`, `escape_to_round_2`, or `human_review`), and `evidence` (input-order objects with exactly `analyst`, `source`, and `recommendation`). Use the same concise option token in `retained_options`, in `decision` when non-null, and in each `evidence.recommendation`; do not put explanatory sentences in these token fields. Each evidence object must name the canonical analyst, its exact staged source path, and only the recommendation supported by that source. Do not copy an expected answer from elsewhere, do not edit the inputs, and stop after the artifact is written.",
+      "prompt": "First invoke {{skill}} through the client's native skill-loading mechanism. Execute only one bounded Checklist gap consensus-synthesis observation. Read `scenario-inputs/analysts/codebase-analyst.md`, `scenario-inputs/analysts/domain-researcher.md`, and `scenario-inputs/analysts/spec-context-analyst.md` completely, using a separate native tool call for each analyst file; parallel calls are allowed. They are retained analyst returns for one Checklist Round-1 gap routed to `[codebase, domain, spec]`; do not dispatch replacement analysts and do not research beyond these inputs. Dispatch the installed client's named consensus-synthesizer, wait for its actual returned result, and use that result before writing the artifact. The parent must not perform or silently replace synthesis. Then write only `scenario-output/consensus-result.json` as strict JSON with exactly these keys: `decision` (string or null), `retained_options` (distinct recommendation tokens in input order), `agreement` (one of `single-analyst`, `both-agree`, `two-analyst-disagreement`, `3/3-unanimous`, `2/3-majority`, `0/3-all-disagree`), `confidence` (`high` or `low`), `next_action` (`apply`, `escape_to_round_2`, or `human_review`), and `evidence` (input-order objects with exactly `analyst`, `source`, and `recommendation`). Use the same concise option token in `retained_options`, in `decision` when non-null, and in each `evidence.recommendation`; do not put explanatory sentences in these token fields. Each evidence object must name the canonical analyst, its exact staged source path, and only the recommendation supported by that source. Do not copy an expected answer from elsewhere, do not edit the inputs, and stop after the artifact is written.",
       "fixtures": [
         {
           "source": "tests/speckit-pro/evals/fixtures/integration-return-contracts/return-02-synthesizer-majority/codebase-analyst.md",
@@ -14196,7 +14197,8 @@
           "skill": "speckit-autopilot",
           "allowed_tools": [
             "command_execution",
-            "file_change"
+            "file_change",
+            "spawn_agent"
           ],
           "modes": [
             "project"
@@ -14224,8 +14226,8 @@
               "role": "speckit-pro:consensus-synthesizer"
             },
             "codex": {
-              "mode": "parent_session",
-              "role": null
+              "mode": "dedicated_subagent",
+              "role": "consensus-synthesizer"
             }
           }
         },
@@ -14425,11 +14427,123 @@
         }
       ],
       "native_differences": [
-        "Claude exposes the product's consensus-synthesizer agent; its actual nonempty child return must support the materialized result.",
-        "Canonical Codex autopilot assigns shared consensus synthesis to the parent session and must not invent a consensus-synthesizer child role."
+        "Claude dispatches the namespaced speckit-pro:consensus-synthesizer role through its native Agent transport.",
+        "Codex dispatches the consensus-synthesizer custom agent through its native collaboration transport; both clients require an actual nonempty returned result before the parent writes the artifact."
       ],
       "provenance": [
         "tests/speckit-pro/layer6-integration/return-format-fixtures/02-synthesizer-majority"
+      ]
+    },
+    {
+      "id": "integration.return-03-analyze-zero-findings-confidence",
+      "layer": "integration",
+      "capability": "Complete representative Analyze final synthesis after a zero-findings pass and persist one exact five-criterion confidence block from the named synthesizer's returned result.",
+      "timeout_seconds": 300,
+      "resource_class": "nested",
+      "requirements": [
+        {
+          "id": "selection",
+          "description": "Activate speckit-autopilot through the native client mechanism."
+        },
+        {
+          "id": "inputs",
+          "description": "Read the retained zero-findings Analyze result in full."
+        },
+        {
+          "id": "mechanism",
+          "description": "Dispatch the installed named consensus-synthesizer and retain its actual result before materializing the confidence artifact."
+        },
+        {
+          "id": "result",
+          "description": "Persist exactly one canonical confidence block with all five retained criterion scores and the correct arithmetic mean."
+        }
+      ],
+      "prompt": "First invoke {{skill}} through the client's native skill-loading mechanism. Execute only the final Analyze confidence synthesis for a clean pass with zero findings. Read `scenario-inputs/analyze-result.md` completely using its own standalone read operation; do not combine that read with any other file or command. Do not run Analyze again, dispatch analysts, edit the input, or gather new evidence. Dispatch the installed client's named consensus-synthesizer with the retained Analyze result, wait for its actual returned result, validate that it contains all five canonical criterion lines exactly once, and use that returned result before writing the artifact. The parent must not perform or silently replace synthesis. Extract and persist only the canonical six-line confidence block from the returned result: discard headings, dispositions, zero-findings commentary, and every other returned line. Write only `scenario-output/analyze-confidence.md`, containing exactly that one confidence block and no other text, then stop.",
+      "fixtures": [
+        {
+          "source": "tests/speckit-pro/evals/fixtures/integration-return-contracts/return-03-analyze-confidence/analyze-result.md",
+          "destination": "scenario-inputs/analyze-result.md"
+        }
+      ],
+      "hosts": {
+        "claude": {
+          "skill": "speckit-pro:speckit-autopilot",
+          "allowed_tools": [
+            "Skill",
+            "Read",
+            "Write",
+            "Agent"
+          ],
+          "modes": [
+            "plugin"
+          ]
+        },
+        "codex": {
+          "skill": "speckit-autopilot",
+          "allowed_tools": [
+            "command_execution",
+            "file_change",
+            "spawn_agent"
+          ],
+          "modes": [
+            "project"
+          ]
+        }
+      },
+      "checks": [
+        {
+          "id": "selection",
+          "requirement": "selection",
+          "type": "selection",
+          "expected": [
+            "speckit-autopilot"
+          ],
+          "allowed_extra": []
+        },
+        {
+          "id": "native-mechanism",
+          "requirement": "mechanism",
+          "type": "native_synthesis_mechanism",
+          "artifact_path": "scenario-output/analyze-confidence.md",
+          "per_host": {
+            "claude": {
+              "mode": "dedicated_subagent",
+              "role": "speckit-pro:consensus-synthesizer"
+            },
+            "codex": {
+              "mode": "dedicated_subagent",
+              "role": "consensus-synthesizer"
+            }
+          }
+        },
+        {
+          "id": "read-analyze-result",
+          "requirement": "inputs",
+          "type": "file_access",
+          "operation": "read_file",
+          "path": "scenario-inputs/analyze-result.md"
+        },
+        {
+          "id": "confidence-exists",
+          "requirement": "result",
+          "type": "file_exists",
+          "path": "scenario-output/analyze-confidence.md",
+          "exists": true
+        },
+        {
+          "id": "confidence-block",
+          "requirement": "result",
+          "type": "text",
+          "source": "scenario-output/analyze-confidence.md",
+          "pattern": "\\A📊\\ Confidence:\\ 0\\.88\\\n\\\n\\-\\ Task\\ understanding:\\ 0\\.90\\\n\\-\\ Approach\\ clarity:\\ 0\\.80\\\n\\-\\ Requirements\\ alignment:\\ 0\\.90\\\n\\-\\ Risk\\ assessment:\\ 0\\.80\\\n\\-\\ Completeness:\\ 1\\.00\\\n\\Z"
+        }
+      ],
+      "native_differences": [
+        "Claude dispatches the namespaced speckit-pro:consensus-synthesizer role through its native Agent transport.",
+        "Codex dispatches the consensus-synthesizer custom agent through its native collaboration transport; both clients require the returned confidence result before the parent persists the block."
+      ],
+      "provenance": [
+        "speckit-pro/skills/speckit-autopilot/references/consensus-protocol.md"
       ]
     },
     {

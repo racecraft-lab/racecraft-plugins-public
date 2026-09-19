@@ -543,10 +543,14 @@ def payload_trust_metadata_mismatches(payload_root: Path) -> list[str]:
     checksum_path = runner_root / "speckit-pro-runner.sha256"
     manifest_rel = "speckit_pro_runner/speckit-pro-runner.manifest.json"
     checksum_rel = "speckit_pro_runner/speckit-pro-runner.sha256"
+    inventory_path = runner_root / "agent_inventory.json"
     runner_files = sorted(
-        path
-        for path in runner_root.rglob("*.py")
-        if path.is_file() and "__pycache__" not in path.parts and not path.name.endswith(".pyc")
+        [
+            path
+            for path in runner_root.rglob("*.py")
+            if path.is_file() and "__pycache__" not in path.parts and not path.name.endswith(".pyc")
+        ]
+        + ([inventory_path] if inventory_path.is_file() else [])
     )
     if not runner_files:
         return []

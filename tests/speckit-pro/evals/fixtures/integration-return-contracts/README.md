@@ -1,10 +1,10 @@
 # Native integration return contracts
 
-These files retain the analyst responses used by the two legacy Layer 6
-synthesizer return-format fixtures. Native evaluation cases stage only the
-listed analyst responses. Expected decisions and grader answers remain in the
-controller-owned catalog/proposal and are never copied into the subject
-workspace.
+These files retain the inputs used by three native synthesis cases: the two
+legacy Layer 6 analyst return-format fixtures and the zero-findings Analyze
+confidence fixture. Native evaluation cases stage only the listed inputs.
+Expected decisions and grader answers remain in the controller-owned catalog
+and are never copied into the subject workspace.
 
 The disagreement fixture intentionally contains two analyst responses because
 that is the legacy input set. Under the current consensus contract, disagreement
