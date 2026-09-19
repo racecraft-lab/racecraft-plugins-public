@@ -93,6 +93,10 @@ Bind the workflow to actual Codex primitives:
   it never replaces the required result. If an agent is terminal without a
   delivered result, use its one read-only reconciliation to drain the mailbox
   and inspect effects; checkpoint if unknown, never automatically re-spawn.
+- Every custom-agent dispatch MUST pass
+  `agent_type="<installed-agent-name>"` to `spawn_agent`. Never omit
+  `agent_type` or accept a `default` or general-purpose worker as equivalent to
+  the installed role.
 - When `close_agent` is exposed, call it promptly after consuming the result.
   Cleanup policy is best-effort: if the surface reports the agent already gone,
   log it and continue without retry-looping. When `close_agent` is absent,
@@ -263,8 +267,8 @@ Concrete Codex mapping:
 - If the installed agent is missing, STOP and tell the user to run `$install`,
   then restart Codex
 - Build the phase prompt in the parent session
-- Call `spawn_agent` using the installed custom agent by its `name`
-  plus the workflow prompt
+- Call `spawn_agent` with `agent_type="<installed-agent-name>"` plus the
+  workflow prompt
 - Call `wait_agent` for completion
 - Persist the returned summary into the workflow file and `autopilot-state.json`
 
@@ -313,6 +317,10 @@ its actual result, then apply accepted artifact edits serially and append the
 Consensus Resolution Log. The parent MUST NOT synthesize directly or silently
 replace a missing, failed, or malformed synthesizer result. Such a result
 authorizes no edit and cannot mark consensus complete. Follow the mandatory
+Codex dispatch form `spawn_agent` with
+`agent_type="consensus-synthesizer"`.
+A default or general-purpose worker is not the named synthesizer; its result is
+invalid. Follow the mandatory
 Round 2, stop, re-evaluation, and Phase 6 confidence-emit contracts in
 [`consensus-protocol.md`](references/consensus-protocol.md)
 §Category-Routed Dispatch, §Batched Dispatch, §Phase-Specific Consensus Flows,

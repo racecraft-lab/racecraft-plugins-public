@@ -15,6 +15,7 @@ import uuid
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "lib"))
 import native_eval_execution as execution
+from native_eval_catalog import NATIVE_SYNTHESIS_MECHANISMS
 from native_eval_capture import file_accesses
 from native_eval_execution import run_evaluations
 from test_result import run_counted
@@ -156,29 +157,21 @@ def runner_result_case():
 
 def synthesis_return_case():
     value = case(resource_class="nested")
-    value["checks"].append({
+    value["checks"].extend([{
         "id": "mechanism", "requirement": "r1", "type": "native_synthesis_mechanism",
         "artifact_path": "result.txt",
-        "per_host": {
-            "claude": {
-                "mode": "dedicated_subagent",
-                "role": "speckit-pro:consensus-synthesizer",
-            },
-            "codex": {"mode": "parent_session", "role": None},
-        },
-    })
-    return value
-
-
-def parent_synthesis_case():
-    value = synthesis_return_case()
-    value["checks"].extend([
+        "per_host": copy.deepcopy(NATIVE_SYNTHESIS_MECHANISMS),
+    },
         {"id": "source-a", "requirement": "r1", "type": "file_access",
          "operation": "read_file", "path": "scenario-inputs/analyst-a.md"},
         {"id": "source-b", "requirement": "r1", "type": "file_access",
          "operation": "read_file", "path": "scenario-inputs/analyst-b.md"},
     ])
     return value
+
+
+def dedicated_synthesis_case():
+    return synthesis_return_case()
 
 
 def git_observation():
@@ -404,6 +397,49 @@ def claude_causal_trace(cwd, variation="valid"):
                "plugins": [], "tools": ["Agent", tool_name]}, *work,
               {"type": "result", "subtype": "success", "is_error": False, "result": "done",
                "usage": {"input_tokens": 2, "output_tokens": 1}}]
+    return "\n".join(json.dumps(event) for event in events)
+
+
+def claude_synthesis_trace(cwd):
+    reads = []
+    for index, path in enumerate(("scenario-inputs/analyst-a.md",
+                                  "scenario-inputs/analyst-b.md")):
+        call_id = f"read-{index}"
+        reads.extend([
+            {"type": "assistant", "message": {"content": [{
+                "type": "tool_use", "id": call_id, "name": "Read",
+                "input": {"file_path": path},
+            }]}, "parent_tool_use_id": None},
+            {"type": "user", "message": {"content": [{
+                "type": "tool_result", "tool_use_id": call_id,
+                "content": f"option {index}", "is_error": False,
+            }]}, "parent_tool_use_id": None},
+        ])
+    agent_use = {"type": "assistant", "message": {"content": [{
+        "type": "tool_use", "id": "agent-call", "name": "Agent",
+        "input": {"description": "Synthesize retained analyst results",
+                  "prompt": "Synthesize only the supplied analyst returns",
+                  "subagent_type": "speckit-pro:consensus-synthesizer"},
+    }]}, "parent_tool_use_id": None}
+    agent_result = {"type": "user", "message": {"content": [{
+        "type": "tool_result", "tool_use_id": "agent-call",
+        "content": "consensus result", "is_error": False,
+    }]}, "parent_tool_use_id": None}
+    write_use = {"type": "assistant", "message": {"content": [{
+        "type": "tool_use", "id": "write-call", "name": "Write",
+        "input": {"file_path": str(Path(cwd) / "result.txt"), "content": "done"},
+    }]}, "parent_tool_use_id": None}
+    write_result = {"type": "user", "message": {"content": [{
+        "type": "tool_result", "tool_use_id": "write-call",
+        "content": "written", "is_error": False,
+    }]}, "parent_tool_use_id": None}
+    events = [
+        {"type": "system", "subtype": "init", "model": "claude-test", "cwd": str(cwd),
+         "plugins": [], "tools": ["Read", "Agent", "Write"]},
+        *reads, agent_use, agent_result, write_use, write_result,
+        {"type": "result", "subtype": "success", "is_error": False, "result": "done",
+         "usage": {"input_tokens": 2, "output_tokens": 1}},
+    ]
     return "\n".join(json.dumps(event) for event in events)
 
 
@@ -707,10 +743,11 @@ def root_rollout(cwd, *, prompt="perform the test", witnesses=None, include_chil
     return records
 
 
-def parent_session_rollout(cwd, *, prompt, witnesses, include_child=False, malformed=False):
+def synthesis_rollout(cwd, *, prompt, witnesses, include_child=True,
+                      include_delivery=True, role="consensus-synthesizer", malformed=False):
     records = root_rollout(
         cwd, prompt=prompt, witnesses=witnesses, include_child=include_child,
-        role="consensus-synthesizer",
+        role=role, include_delivery=include_delivery,
     )
     reads = [
         rollout_event({"type": "item_completed", "thread_id": ROOT_THREAD,
@@ -723,6 +760,20 @@ def parent_session_rollout(cwd, *, prompt, witnesses, include_child=False, malfo
         )
     ]
     records[4:4] = reads
+    if include_child and include_delivery:
+        delivery_index = next(index for index, record in enumerate(records)
+                              if record.get("type") == "response_item"
+                              and record.get("payload", {}).get("id") == "delivery-one")
+        delivery = records.pop(delivery_index)
+        delivery["timestamp"] = "2026-09-15T16:36:46.5Z"
+        finished_index = next(index for index, record in enumerate(records)
+                              if record.get("payload", {}).get("item", {}).get("id")
+                              == "finished")
+        finished = records.pop(finished_index)
+        finished["timestamp"] = "2026-09-15T16:36:46.2Z"
+        write_index = next(index for index, record in enumerate(records)
+                           if record.get("payload", {}).get("item", {}).get("id") == "root-write")
+        records[write_index:write_index] = [finished, delivery]
     if not include_child:
         records.insert(-1, rollout_event({"type": "item_completed", "thread_id": ROOT_THREAD,
             "turn_id": ROOT_TURN, "item": {"type": "FileChange", "id": "root-write",
@@ -1429,10 +1480,13 @@ class NestedCallbacks(FakeCallbacks):
         return super().execute(prepared, timeout)
 
 
-class ParentSessionCallbacks(NestedCallbacks):
+class SynthesisCallbacks(NestedCallbacks):
     def __init__(self, output, *, variation="valid"):
         super().__init__(output)
         self.variation = variation
+        self.dispatch_role = "codebase-analyst" if variation == "wrong-role" \
+            else "consensus-synthesizer"
+        self.include_delivery = variation != "missing-delivery"
         reads = (
             {"id": "read-a", "type": "command_execution", "status": "completed",
              "command": "cat scenario-inputs/analyst-a.md", "aggregated_output": "option a",
@@ -1443,9 +1497,9 @@ class ParentSessionCallbacks(NestedCallbacks):
         )
         write = {"id": "root-write", "type": "file_change", "status": "completed",
                  "changes": [{"path": "result.txt", "kind": "add"}]}
-        if variation == "forbidden-child":
+        if variation != "no-child":
             spawn = {"id": SPAWN_CALL, "type": "collab_tool_call", "tool": "spawn_agent",
-                     "status": "completed", "agent_type": "consensus-synthesizer",
+                     "status": "completed", "agent_type": self.dispatch_role,
                      "result": {"thread_id": CHILD_THREAD}}
             self.codex_items = (*reads, spawn, write)
         else:
@@ -1453,6 +1507,18 @@ class ParentSessionCallbacks(NestedCallbacks):
 
     def execute(self, prepared, timeout):
         (prepared.artifact_root / "result.txt").write_text("done", encoding="utf-8")
+        if prepared.host == "claude":
+            self.executed.append(prepared.host)
+            raw_trace = claude_synthesis_trace(prepared.cwd)
+            prepared.stdout_path.write_bytes(raw_trace.encode())
+            prepared.stderr_path.write_text("")
+            prepared.process_receipt_path.write_text('{"exit_code":0}\n')
+            prepared.trace_path.write_text(raw_trace)
+            return SimpleNamespace(
+                exit_code=0, timed_out=False, process_evidence={"cleanup_verified": True},
+                stdout=raw_trace, stderr="", raw_trace=raw_trace, framework_result=None,
+                artifact_root=prepared.artifact_root,
+            )
         sessions = self.codex_home / "sessions" / "2026" / "09" / "15"
         sessions.mkdir(parents=True, exist_ok=True)
         cwd = str(Path(prepared.cwd).resolve())
@@ -1460,16 +1526,24 @@ class ParentSessionCallbacks(NestedCallbacks):
             self.codex_items[-1]["changes"][0]["path"] = str(Path(cwd) / "result.txt")
         witnesses = prepared.runtime_identity["settings"]["skill_read_witnesses"]
         if self.variation != "missing-root":
-            root = parent_session_rollout(
+            root = synthesis_rollout(
                 cwd, prompt=prepared.command[-1], witnesses=witnesses,
-                include_child=self.variation == "forbidden-child",
+                include_child=self.variation != "no-child",
+                include_delivery=self.include_delivery,
+                role=self.dispatch_role,
                 malformed=self.variation == "malformed-root",
             )
+            if self.variation == "projected-write-id":
+                native_write = next(
+                    record["payload"]["item"] for record in root
+                    if record.get("payload", {}).get("item", {}).get("id") == "root-write"
+                )
+                native_write["id"] = "native-root-write"
             (sessions / f"rollout-2026-09-15T16-36-42-{ROOT_THREAD}.jsonl").write_bytes(
                 rollout_raw(root)
             )
-        if self.variation == "forbidden-child":
-            child = child_rollout(cwd, role="consensus-synthesizer")
+        if self.variation != "no-child":
+            child = child_rollout(cwd, role=self.dispatch_role)
             (sessions / f"rollout-2026-09-15T16-36-43-{CHILD_THREAD}.jsonl").write_bytes(
                 rollout_raw(child)
             )
@@ -1549,7 +1623,8 @@ class CausalCallbacks(NestedCallbacks):
         elif self.variation == "bash-write":
             self.codex_items = tuple(item for item in self.codex_items if item["id"] != "root-write") + (
                 {"id": "root-write", "type": "command_execution", "status": "completed",
-                 "command": "printf done > result.txt", "aggregated_output": "", "exit_code": 0},)
+                 "command": ["sh", "-c", "printf done > result.txt"],
+                 "aggregated_output": "", "exit_code": 0},)
         elif self.variation == "unrelated-write":
             self.codex_items = tuple(
                 {**item, "changes": [{"path": "other.txt", "kind": "add"}]}
@@ -2900,13 +2975,12 @@ class NativeExecutionTests(unittest.TestCase):
     def test_native_synthesis_binds_real_return_metadata_fresh_and_regrade_both_hosts(self):
         value = synthesis_return_case()
         rows = [row("claude"), row("codex")]
-        callbacks = CausalCallbacks(self.output)
+        callbacks = SynthesisCallbacks(self.output)
         initial = run_evaluations(
             config(self.output), {}, [value], rows, repo_root=self.repo,
             prepare=callbacks.prepare, execute=callbacks.execute,
         )
-        self.assertEqual(initial["counts"]["behavior_fails"], 1, initial)
-        self.assertEqual(initial["counts"]["infrastructure_invalid"], 1, initial)
+        self.assertEqual(initial["counts"]["passes"], 2, initial)
         attempts = list((self.output / "attempts").iterdir())
         captured = {
             json.loads((attempt / "launch-prepared.json").read_text())["host"]:
@@ -2918,12 +2992,16 @@ class NativeExecutionTests(unittest.TestCase):
             ["authority"],
             "claude-tool-result",
         )
-        self.assertNotIn("subagent_return_order", captured["codex"]["native_metadata"])
+        self.assertEqual(
+            captured["codex"]["native_metadata"]["subagent_return_order"]["returns"][0]
+            ["authority"],
+            "codex-parent-delivery",
+        )
         self.assertEqual(len(captured["codex"]["native_metadata"]["nested_rollout"]["children"]), 1)
 
         changed = copy.deepcopy(value)
-        changed["checks"][0]["pattern"] = "do.e"
-        replay_callbacks = CausalCallbacks(self.output)
+        changed["checks"][1]["id"] = "source-a-regraded"
+        replay_callbacks = SynthesisCallbacks(self.output)
         replay = run_evaluations(
             config(self.output), {}, [changed], rows, repo_root=self.repo,
             prepare=replay_callbacks.prepare, execute=replay_callbacks.execute,
@@ -2944,11 +3022,15 @@ class NativeExecutionTests(unittest.TestCase):
             ["authority"],
             "claude-tool-result",
         )
-        self.assertNotIn("subagent_return_order", interpreted["codex"]["native_metadata"])
+        self.assertEqual(
+            interpreted["codex"]["native_metadata"]["subagent_return_order"]["returns"][0]
+            ["authority"],
+            "codex-parent-delivery",
+        )
 
-    def test_codex_parent_session_synthesis_accepts_root_only_fresh_and_regrade(self):
-        value = parent_synthesis_case()
-        callbacks = ParentSessionCallbacks(self.output, variation="absolute-write")
+    def test_codex_dedicated_synthesis_accepts_return_before_parent_write_and_regrade(self):
+        value = dedicated_synthesis_case()
+        callbacks = SynthesisCallbacks(self.output, variation="absolute-write")
         initial = run_evaluations(
             config(self.output), {}, [value], [row("codex")], repo_root=self.repo,
             prepare=callbacks.prepare, execute=callbacks.execute,
@@ -2967,20 +3049,35 @@ class NativeExecutionTests(unittest.TestCase):
                 ROOT_THREAD,
             )
         nested = observation["native_metadata"]["nested_rollout"]
-        self.assertEqual(nested["dispatches"], [])
-        self.assertEqual(nested["children"], [])
-        self.assertEqual(set(nested["raw_sha256"]), {ROOT_THREAD})
-        self.assertNotIn("subagent_return_order", observation["native_metadata"])
+        self.assertEqual([item["role"] for item in nested["dispatches"]],
+                         ["consensus-synthesizer"])
+        self.assertEqual([item["thread_id"] for item in nested["children"]], [CHILD_THREAD])
+        self.assertEqual(set(nested["raw_sha256"]), {ROOT_THREAD, CHILD_THREAD})
+        synthesis = next(call for call in observation["tool_calls"]
+                         if call["name"] == "subagent")
+        self.assertEqual(
+            synthesis["output"]["result"],
+            "Message Type: FINAL_ANSWER\nPayload:\nfixture read complete",
+        )
+        tampered = copy.deepcopy(nested)
+        tampered["dispatches"][0]["delivery"]["text"] = "forged result"
+        with self.assertRaisesRegex(ValueError, "conflicts with its delivery receipt"):
+            execution._nested_events(tampered)
+        self.assertEqual(
+            observation["native_metadata"]["subagent_return_order"]["returns"][0]["authority"],
+            "codex-parent-delivery",
+        )
         names = [call["name"] for call in observation["tool_calls"]]
-        self.assertEqual(names, ["command_execution", "command_execution", "file_change"])
+        self.assertEqual(names, ["command_execution", "command_execution", "subagent",
+                                 "command_execution", "file_change"])
         self.assertEqual(
             [call["position"] for call in observation["tool_calls"]],
             sorted(call["position"] for call in observation["tool_calls"]),
         )
 
         changed = copy.deepcopy(value)
-        changed["checks"][0]["pattern"] = "do.e"
-        replay_callbacks = ParentSessionCallbacks(self.output, variation="absolute-write")
+        changed["checks"][1]["id"] = "source-a-regraded"
+        replay_callbacks = SynthesisCallbacks(self.output, variation="absolute-write")
         replay = run_evaluations(
             config(self.output), {}, [changed], [row("codex")], repo_root=self.repo,
             prepare=replay_callbacks.prepare, execute=replay_callbacks.execute,
@@ -2990,43 +3087,64 @@ class NativeExecutionTests(unittest.TestCase):
         self.assertEqual(replay["counts"]["subject_launches"], 0)
         self.assertEqual(replay_callbacks.executed, [])
 
-    def test_codex_parent_session_captures_forbidden_synthesizer_child_then_fails_grade(self):
-        value = parent_synthesis_case()
-        callbacks = ParentSessionCallbacks(self.output, variation="forbidden-child")
+        self._assert_projected_file_change_binding()
+
+    def _assert_projected_file_change_binding(self):
+        projected_output = self.root / "projected-write-id"
+        projected_callbacks = SynthesisCallbacks(
+            projected_output, variation="projected-write-id",
+        )
+        projected = run_evaluations(
+            config(projected_output), {}, [dedicated_synthesis_case()], [row("codex")],
+            repo_root=self.repo, prepare=projected_callbacks.prepare,
+            execute=projected_callbacks.execute,
+        )
+        self.assertEqual(projected["counts"]["passes"], 1, projected)
+        projected_attempt = next((projected_output / "attempts").iterdir())
+        projected_observation = json.loads(
+            (projected_attempt / "capture.json").read_text()
+        )["payload"]["observation"]
+        projected_writes = [
+            call for call in projected_observation["tool_calls"]
+            if call["name"] == "file_change"
+        ]
+        self.assertEqual([call["id"] for call in projected_writes], ["native-root-write"])
+
+    def test_codex_parent_only_synthesis_is_rejected_before_grading(self):
+        value = dedicated_synthesis_case()
+        callbacks = SynthesisCallbacks(self.output, variation="no-child")
         report = run_evaluations(
             config(self.output), {}, [value], [row("codex")], repo_root=self.repo,
             prepare=callbacks.prepare, execute=callbacks.execute,
         )
-        self.assertEqual(report["counts"]["behavior_fails"], 1, report)
-        self.assertEqual(report["counts"]["infrastructure_invalid"], 0, report)
+        self.assertEqual(report["counts"]["behavior_fails"], 0, report)
+        self.assertEqual(report["counts"]["infrastructure_invalid"], 1, report)
         attempt = next((self.output / "attempts").iterdir())
         capture = json.loads((attempt / "capture.json").read_text())["payload"]
-        nested = capture["observation"]["native_metadata"]["nested_rollout"]
-        self.assertEqual([item["role"] for item in nested["dispatches"]],
-                         ["consensus-synthesizer"])
-        self.assertEqual([item["thread_id"] for item in nested["children"]], [CHILD_THREAD])
-        self.assertIn("codex_rollout_" + CHILD_THREAD.replace("-", "_"), capture["evidence"])
+        self.assertIsNone(capture["observation"])
 
-    def test_codex_parent_session_requires_valid_root_and_dedicated_cases_still_require_child(self):
-        for variation in ("missing-root", "malformed-root"):
+    def test_codex_dedicated_synthesis_requires_valid_root_return_and_exact_role(self):
+        expected_by_variation = {
+            "missing-root": (1, 0),
+            "malformed-root": (1, 0),
+            "missing-delivery": (1, 0),
+            "wrong-role": (0, 1),
+        }
+        for variation, expected in expected_by_variation.items():
             with self.subTest(variation=variation):
                 output = self.root / variation
-                callbacks = ParentSessionCallbacks(output, variation=variation)
+                callbacks = SynthesisCallbacks(output, variation=variation)
                 report = run_evaluations(
-                    config(output), {}, [parent_synthesis_case()], [row("codex")],
+                    config(output), {}, [dedicated_synthesis_case()], [row("codex")],
                     repo_root=self.repo, prepare=callbacks.prepare, execute=callbacks.execute,
                 )
-                self.assertEqual(report["counts"]["infrastructure_invalid"], 1, report)
-                self.assertEqual(report["counts"]["passes"], 0, report)
-
-        dedicated_output = self.root / "dedicated-no-child"
-        dedicated = ParentSessionCallbacks(dedicated_output)
-        report = run_evaluations(
-            config(dedicated_output), {}, [causal_case()], [row("codex")],
-            repo_root=self.repo, prepare=dedicated.prepare, execute=dedicated.execute,
-        )
-        self.assertEqual(report["counts"]["infrastructure_invalid"], 1, report)
-        self.assertIn("no trusted nested dispatch", report["results"][0]["reason"])
+                counts = report["counts"]
+                self.assertEqual(
+                    (counts["infrastructure_invalid"], counts["behavior_fails"]),
+                    expected,
+                    report,
+                )
+                self.assertEqual(counts["passes"], 0, report)
 
     def test_v2_git_observation_is_retained_and_replayed_for_both_hosts(self):
         rows = [row("claude"), row("codex")]

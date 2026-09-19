@@ -332,7 +332,7 @@ class NativeCodexRolloutTests(unittest.TestCase):
         self.assertEqual(proof["observed_marker_count"], 65)
         self.assertTrue(proof["markers_truncated"])
 
-    def test_parent_delivery_is_native_bound_opaque_evidence(self):
+    def test_parent_delivery_retains_native_bound_result_evidence(self):
         records = root_records()
         records.insert(-1, delivery_record(message_id=_MISSING))
         tree = {ROOT: raw(records), CHILD: raw(child_records())}
@@ -347,6 +347,7 @@ class NativeCodexRolloutTests(unittest.TestCase):
                         delivery["native_event_index"])
         self.assertEqual(delivery, {
             "message_id": None,
+            "text": rendered.decode(),
             "sha256": hashlib.sha256(rendered).hexdigest(),
             "bytes": len(rendered),
             "author": "/root/read_fixture",
@@ -354,7 +355,7 @@ class NativeCodexRolloutTests(unittest.TestCase):
             "turn_id": ROOT_TURN,
             "native_event_index": len(records) - 2,
         })
-        self.assertNotIn("CANARY_OK", json.dumps(dispatch))
+        self.assertEqual(delivery["text"], "Message Type: FINAL_ANSWER\nPayload:\nCANARY_OK")
 
     def test_required_parent_delivery_missing_is_incomplete(self):
         with self.assertRaises(NativeRolloutPending):

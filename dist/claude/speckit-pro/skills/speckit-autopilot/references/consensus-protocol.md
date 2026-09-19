@@ -236,7 +236,10 @@ Stage 2 — All synthesizers, ONE assistant message:
 
   Runtime name mapping: Claude Code dispatches
   `speckit-pro:consensus-synthesizer`; Codex dispatches the installed
-  `consensus-synthesizer`. The parent never performs this synthesis itself.
+  `consensus-synthesizer` with
+  `spawn_agent(agent_type="consensus-synthesizer", ...)`.
+  Omitting `agent_type` and accepting the default role is a failed dispatch.
+  The parent never performs this synthesis itself.
 
 Stage 3 — Apply Artifact Edits SERIALLY (orchestrator's own Edit calls):
   ROUND_2_QUEUE = []

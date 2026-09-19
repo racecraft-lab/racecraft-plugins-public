@@ -774,16 +774,7 @@ def _allows_root_only_codex_rollout(case: Mapping[str, object], host: str) -> bo
         return True
     if runner_checks(case):
         return True
-    mechanisms = [
-        check for check in case.get("checks", [])
-        if isinstance(check, Mapping) and check.get("type") == "native_synthesis_mechanism"
-    ]
-    if len(mechanisms) != 1:
-        return False
-    per_host = mechanisms[0].get("per_host")
-    return isinstance(per_host, Mapping) and per_host.get("codex") == {
-        "mode": "parent_session", "role": None,
-    }
+    return False
 
 
 def _requires_subagent_returns(case: Mapping[str, object], host: str) -> bool:
@@ -829,13 +820,29 @@ def _rollout_evidence(collection: Mapping[str, object], directory: Path) -> dict
 
 
 def _nested_dispatch(item: Mapping[str, object], parent_id: str | None) -> dict[str, object]:
+    delivery = item.get("delivery")
+    output = {key: item.get(key) for key in (
+        "child_thread_id", "agent_path", "status", "order")}
+    if delivery is not None:
+        required = {"message_id", "text", "sha256", "bytes", "author", "recipient",
+                    "turn_id", "native_event_index"}
+        if not isinstance(delivery, dict) or set(delivery) != required:
+            raise ValueError("native rollout dispatch delivery is malformed")
+        result = delivery.get("text")
+        try:
+            encoded = result.encode("utf-8", errors="strict") if isinstance(result, str) else b""
+        except UnicodeError as error:
+            raise ValueError("native rollout dispatch result is not strict UTF-8") from error
+        if not result or delivery.get("bytes") != len(encoded) \
+                or delivery.get("sha256") != hashlib.sha256(encoded).hexdigest():
+            raise ValueError("native rollout dispatch result conflicts with its delivery receipt")
+        output["result"] = result
     return {
         "id": item["id"], "name": "spawn_agent",
         "input": {key: item.get(key) for key in (
             "namespace", "parent_thread_id", "depth", "role", "role_source",
             "task_name", "fork_turns", "task_input")},
-        "output": {key: item.get(key) for key in (
-            "child_thread_id", "agent_path", "status", "order")},
+        "output": output,
         "success": item.get("status") == "completed", "parent_id": parent_id,
     }
 
@@ -952,6 +959,93 @@ def _ordered_nested_calls(root_calls: list[dict[str, object]], nested_calls: lis
     return ordered, merge
 
 
+def _codex_command_signature(value: object) -> tuple[str, ...]:
+    if isinstance(value, str):
+        try:
+            parts = shlex.split(value)
+        except ValueError as exc:
+            raise ValueError("Codex projected command is malformed") from exc
+    elif isinstance(value, list) and all(isinstance(part, str) and part for part in value):
+        parts = value
+    else:
+        raise ValueError("Codex projected command is malformed")
+    if not parts:
+        raise ValueError("Codex projected command is empty")
+    return tuple(parts)
+
+
+def _rebind_codex_root_tool_ids(
+    calls: list[dict[str, object]], raw_root: bytes, root_thread_id: str, cwd: str,
+) -> None:
+    supported = {"command_execution", "file_change"}
+    projected = [call for call in calls
+                 if call.get("name") in supported and call.get("parent_id") is None]
+    native: list[tuple[str, str, object]] = []
+    for line in raw_root.splitlines():
+        record = json.loads(line)
+        payload = record.get("payload") if isinstance(record, dict) else None
+        item = payload.get("item") if isinstance(payload, dict) \
+            and payload.get("type") == "item_completed" \
+            and payload.get("thread_id") == root_thread_id else None
+        if not isinstance(item, dict) or item.get("type") not in {"CommandExecution", "FileChange"}:
+            continue
+        identity = item.get("id")
+        if not isinstance(identity, str) or not identity:
+            raise ValueError("Codex native root tool omitted its identity")
+        if item["type"] == "CommandExecution":
+            native.append(("command_execution", identity,
+                           _codex_command_signature(item.get("command"))))
+        else:
+            changes = item.get("changes")
+            if isinstance(changes, dict):
+                entries = []
+                for path, detail in changes.items():
+                    if not isinstance(path, str) or not isinstance(detail, dict):
+                        raise ValueError("Codex native file change is malformed")
+                    entries.append({"path": path, "kind": detail.get("type")})
+            elif isinstance(changes, list):
+                entries = changes
+            else:
+                raise ValueError("Codex native file change is malformed")
+            native_call = {"name": "file_change", "input": {"changes": entries}}
+            paths = _change_paths("codex", native_call, cwd)
+            kinds = [entry.get("kind") if isinstance(entry, Mapping) else None
+                     for entry in entries]
+            if any(not isinstance(kind, str) or not kind for kind in kinds):
+                raise ValueError("Codex native file change kind is malformed")
+            native.append(("file_change", identity, tuple(zip(paths, kinds))))
+
+    existing_ids = {call.get("id") for call in calls if call not in projected}
+    if None in existing_ids or len(existing_ids) != len(calls) - len(projected):
+        raise ValueError("captured Codex tool identities are ambiguous")
+    for name in sorted(supported):
+        projected_kind = [call for call in projected if call.get("name") == name]
+        native_kind = [(identity, signature) for native_name, identity, signature in native
+                       if native_name == name]
+        if len(projected_kind) != len(native_kind):
+            raise ValueError(f"Codex projected and native {name} counts disagree")
+        for call, (identity, native_signature) in zip(projected_kind, native_kind):
+            inputs = call.get("input")
+            if not isinstance(inputs, Mapping):
+                raise ValueError(f"Codex projected {name} input is malformed")
+            if name == "command_execution":
+                projected_signature = _codex_command_signature(inputs.get("command"))
+            else:
+                paths = _change_paths("codex", call, cwd)
+                changes = inputs.get("changes")
+                if not isinstance(changes, list):
+                    raise ValueError("Codex projected file change is malformed")
+                kinds = [entry.get("kind") if isinstance(entry, Mapping) else None
+                         for entry in changes]
+                projected_signature = tuple(zip(paths, kinds))
+            if projected_signature != native_signature:
+                raise ValueError(f"Codex projected {name} disagrees with native event")
+            if identity in existing_ids:
+                raise ValueError("Codex native root-tool identity collides with a tool call")
+            existing_ids.add(identity)
+            call["id"] = identity
+
+
 def _merge_codex_supplement(observation: dict[str, Any], supplement: Mapping[str, object],
                             expected_cwd: Path, raw_by_thread: Mapping[str, bytes],
                             require_exact_order: bool) -> None:
@@ -970,8 +1064,13 @@ def _merge_codex_supplement(observation: dict[str, Any], supplement: Mapping[str
     calls = observation.get("tool_calls")
     if not isinstance(calls, list) or not all(isinstance(call, dict) for call in calls):
         raise ValueError("captured Codex tool calls are malformed")
+    root_thread_id = str(supplement["root_thread_id"])
+    raw_root = raw_by_thread.get(root_thread_id)
+    if not isinstance(raw_root, bytes):
+        raise ValueError("native rollout merge omitted the root rollout")
+    _rebind_codex_root_tool_ids(calls, raw_root, root_thread_id, expected)
     ordered, merge = _ordered_nested_calls(calls, _nested_events(supplement), raw_by_thread,
-                                            str(supplement["root_thread_id"]), require_exact_order)
+                                            root_thread_id, require_exact_order)
     observation["tool_calls"] = ordered
     metadata["nested_rollout"] = dict(supplement)
     metadata["nested_merge"] = merge

@@ -53,6 +53,7 @@ _FIXTURE_RECEIPT_LIMIT = 64 * 1024
 _GIT_RUNTIME_SCHEMA_VERSION = "native-eval-git-runtime/v1"
 _PYTHON_RUNTIME_SCHEMA_VERSION = "native-eval-python-runtime/v1"
 _CODEX_GIT_CONTROLLER_EXCLUDE = b"/.agents/\n/.codex/\n"
+_CODEX_PROJECT_CONFIG = "[agents]\nenabled = true\n"
 _CLAUDE_GIT_SCAFFOLD_SOURCE = r'''from __future__ import annotations
 
 import json
@@ -2019,6 +2020,8 @@ def _prepare_codex(
             plan["fixtures"], "codex", prepared_upstream.runtime_identity,
         )
     runtime_stage: native_eval_runtime.CodexRuntimeStage | None = None
+    agent_registration_args: list[str] = []
+    agent_registrations: list[dict[str, str]] = []
     if case.get("layer") == "trigger":
         prompt, trigger_stage = _stage_trigger(
             case, host_settings, repo, workspace, "codex", prompt, trial_identity,
@@ -2036,6 +2039,29 @@ def _prepare_codex(
                  and runtime_stage.proof.get("pythonpath_relative") == ".agents"
                  and runtime_stage.runtime_identity.startswith("sha256:"),
                  "canonical Codex runtime returned malformed identity evidence")
+        _write_text(workspace / ".codex" / "config.toml", _CODEX_PROJECT_CONFIG)
+        materializations = runtime_stage.proof.get("materializations")
+        _require(isinstance(materializations, list),
+                 "canonical Codex runtime omitted agent materializations")
+        for materialization in materializations:
+            _require(isinstance(materialization, dict),
+                     "canonical Codex agent materialization is malformed")
+            name = materialization.get("name")
+            destination_value = materialization.get("destination_path")
+            _require(isinstance(name, str) and _CODEX_SKILL_NAME.fullmatch(name) is not None
+                     and isinstance(destination_value, str),
+                     "canonical Codex agent registration is malformed")
+            destination = PurePosixPath(destination_value)
+            _require(destination == PurePosixPath(".codex", "agents", f"{name}.toml"),
+                     "canonical Codex agent registration path is malformed")
+            role_file = workspace.joinpath(*destination.parts).resolve()
+            _require(role_file.is_file(),
+                     f"canonical Codex agent registration is missing: {name}")
+            agent_registrations.append({"name": name, "path": destination.as_posix()})
+            agent_registration_args.extend([
+                "--config",
+                f"agents.{name}.config_file={json.dumps(str(role_file))}",
+            ])
         if prepared_upstream is not None:
             native_eval_upstream.stage_upstream_integration(prepared_upstream, workspace)
             staged_tree_exclusions = _merge_staged_file_exclusions(
@@ -2095,6 +2121,7 @@ def _prepare_codex(
             "proof": json.loads(_canonical_json(runtime_stage.proof)),
             "pythonpath_relative": ".agents",
             "python": python_identity,
+            "agent_registrations": agent_registrations,
         }
     git_settings: dict[str, object] | None = None
     git_subject_settings: dict[str, object] | None = None
@@ -2161,11 +2188,14 @@ def _prepare_codex(
         ["--config", "developer_instructions=" + json.dumps(trigger_instruction)]
         if trigger_instruction is not None else []
     )
+    project_root_markers = [".codex"] if runtime_stage is not None else []
     command = [
         executable, "exec", "--json", *session_args, "--strict-config",
         "--ignore-user-config", "--ignore-rules", "--model", model,
         "--skip-git-repo-check",
-        *permission_args, "--config", "project_root_markers=[]", *trigger_instruction_args,
+        *permission_args, "--config",
+        "project_root_markers=" + json.dumps(project_root_markers, separators=(",", ":")),
+        *agent_registration_args, *trigger_instruction_args,
         "--cd", str(workspace.resolve()), *isolation_args, prompt,
     ]
     isolation_qualification = _qualify_codex_isolation(
@@ -2192,7 +2222,7 @@ def _prepare_codex(
         "project_instructions_isolated": False,
         "instruction_inputs_fingerprinted": True,
         "project_instruction_parent_traversal": False,
-        "project_root_markers": [],
+        "project_root_markers": project_root_markers,
         "global_instructions_disabled": False,
         "filesystem": f"workspace-{filesystem_access}-plus-runtime-minimal", "network": False,
         "filesystem_capability_enforced": True, "literal_tool_allowlist_enforced": False,
@@ -3221,10 +3251,17 @@ def _verify_prepared_identity(prepared: PreparedTrial) -> None:
         else:
             fixture_root = prepared.attempt_dir / "staged-inputs" / "fixture-sources"
         settings = identity.get("settings")
+        expected_project_root_markers = (
+            [".codex"]
+            if prepared.mode == "project"
+            and isinstance(settings, dict)
+            and settings.get("trigger_stage") is None
+            else []
+        )
         _require(prepared.mode in {"project", "judge"}
                  and isinstance(settings, dict)
                  and settings.get("project_instruction_parent_traversal") is False
-                 and settings.get("project_root_markers") == []
+                 and settings.get("project_root_markers") == expected_project_root_markers
                  and settings.get("global_instructions_disabled") is False,
                  "prepared Codex instruction discovery settings are malformed")
         _require(_codex_instruction_inputs(
@@ -3236,16 +3273,26 @@ def _verify_prepared_identity(prepared: PreparedTrial) -> None:
             runtime = settings.get("codex_runtime")
             _require(isinstance(runtime, dict) and set(runtime) == {
                 "schema_version", "runtime_identity", "proof", "pythonpath_relative", "python",
+                "agent_registrations",
             }, "prepared canonical Codex runtime identity is malformed")
             proof = runtime.get("proof")
             python_identity = runtime.get("python")
+            registrations = runtime.get("agent_registrations")
             _require(runtime.get("schema_version") == native_eval_runtime.SCHEMA_VERSION
                      and isinstance(runtime.get("runtime_identity"), str)
                      and runtime["runtime_identity"].startswith("sha256:")
                      and runtime.get("pythonpath_relative") == ".agents"
                      and isinstance(proof, dict)
                      and proof.get("schema_version") == native_eval_runtime.SCHEMA_VERSION
-                     and proof.get("pythonpath_relative") == ".agents",
+                     and proof.get("pythonpath_relative") == ".agents"
+                     and isinstance(registrations, list)
+                     and all(
+                         isinstance(entry, dict)
+                         and set(entry) == {"name", "path"}
+                         and isinstance(entry.get("name"), str)
+                         and isinstance(entry.get("path"), str)
+                         for entry in registrations
+                     ),
                      "prepared canonical Codex runtime evidence is malformed")
             _require(prepared.environment.get("PYTHONPATH") == str(prepared.cwd / ".agents"),
                      "prepared canonical Codex runtime PYTHONPATH changed")
