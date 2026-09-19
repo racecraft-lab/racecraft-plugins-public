@@ -64,11 +64,11 @@
     }
   ],
   "corpus_sha256": "70a809f4c92e7d00e7b0b9810d5535cfcdfaa8eb45deff5ff25f4bfcfad21f5b",
-  "inventory_sha256": "0dfbf5670912e7806c7b588394c7ffd25d1ab8dc01acca1a9263f9df2151bdf1",
+  "inventory_sha256": "fc54fdeee50a49a3accb8c1353367bbd0f18cb91830a846a675f51530d57bdcf",
   "pins": {
     "claude": {
       "model": "claude-sonnet-5",
-      "cli_version": "2.1.269 (Claude Code)"
+      "cli_version": "2.1.270 (Claude Code)"
     },
     "codex": {
       "model": "gpt-5.6-sol",
@@ -76,8 +76,8 @@
     }
   },
   "identities": {
-    "observer": "bbd2c580f316452ee3fb5b67d464aa397c8c0b20e4fe6f6e3622c69599539674",
-    "catalog": "1122d2fd60a0991c70559bae36a1af49993533afc14d598b9603f03994a85e01",
+    "observer": "9968b9160d5164f6433051f5fb2cc4a80f19288a0ac8cbb05645e7442407a8e4",
+    "catalog": "173f40ef89e1614502a575dec090c04fd6804d9798efbe86aacc3c5d4b9206aa",
     "fixture": "1253f805565b41bd894bbed3ee202d2c476ef8537584aa043f794ccea4ce07ba"
   },
   "controlled_difference": {

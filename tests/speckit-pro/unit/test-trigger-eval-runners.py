@@ -3715,6 +3715,27 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
             self.assertIsNone(duplicate_readiness, "a duplicated sibling entry fails")
 
 
+    def test_committed_campaign_drafts_pin_the_runner_builds(self):
+        """A draft pin must equal the build its own runner preflights.
+
+        ``trigger_comparison`` rejects any trial whose recorded
+        ``preflight.version`` differs from ``pins[host]["cli_version"]``, and each
+        runner refuses to launch unless ``--version`` matches its own pinned
+        constant, so a draft pinned to another build can never compare.
+        """
+        claude = import_script(CLAUDE_RUNNER, "layer2_draft_pin_claude")
+        codex = import_script(CODEX_ENGINE, "layer2_draft_pin_codex")
+        expected = {
+            "claude": {"model": claude.DEFAULT_MODEL, "cli_version": claude.PINNED_CLAUDE_VERSION},
+            "codex": {"model": codex.DEFAULT_MODEL, "cli_version": codex.PINNED_CODEX_VERSION},
+        }
+        drafts = sorted((LAYER2 / "campaign-drafts").glob("*.draft.json"))
+        self.assertTrue(drafts, "no committed campaign drafts found")
+        for path in drafts:
+            manifest = json.loads(path.read_bytes())
+            with self.subTest(draft=path.name):
+                self.assertEqual(manifest["pins"], expected)
+
 class CodexRelativeSkillBodyReadTests(unittest.TestCase):
     def test_relative_skill_body_read_requires_the_matched_skill_path(self) -> None:
         engine = import_script(CODEX_ENGINE, "layer2_codex_relative_skill_body_read")

@@ -7,10 +7,10 @@
   "qualification_scope": "full",
   "roster": [
     {
-      "case_id": "l2-8859711d19e33d53b8019bd4",
+      "case_id": "l2-087eabc01a9e54929b82bcde",
       "host": "claude",
       "skill": "grill-me",
-      "query": "/speckit-pro:grill-me — use this skill for its documented purpose in this repository.",
+      "query": "Please use the speckit-pro:grill-me skill for its documented purpose in this repository.",
       "should_trigger": true
     },
     {
@@ -63,10 +63,10 @@
       "should_trigger": false
     },
     {
-      "case_id": "l2-4c3456ed58130b980002c768",
+      "case_id": "l2-bf25191a9d3ad7d235c1a1e2",
       "host": "claude",
       "skill": "speckit-archive-cleanup",
-      "query": "/speckit-pro:speckit-archive-cleanup — use this skill for its documented purpose in this repository.",
+      "query": "Please use the speckit-pro:speckit-archive-cleanup skill for its documented purpose in this repository.",
       "should_trigger": true
     },
     {
@@ -126,10 +126,10 @@
       "should_trigger": false
     },
     {
-      "case_id": "l2-5a7aecfae471b42d10040af7",
+      "case_id": "l2-6bcdf22db4fdf2eaed5bda3d",
       "host": "claude",
       "skill": "speckit-autopilot",
-      "query": "/speckit-pro:speckit-autopilot — use this skill for its documented purpose in this repository.",
+      "query": "Please use the speckit-pro:speckit-autopilot skill for its documented purpose in this repository.",
       "should_trigger": true
     },
     {
@@ -196,10 +196,10 @@
       "should_trigger": false
     },
     {
-      "case_id": "l2-935a5b8792ea3b0eca671f1c",
+      "case_id": "l2-1c2675c60a7f7551d0a4d5d9",
       "host": "claude",
       "skill": "speckit-coach",
-      "query": "/speckit-pro:speckit-coach — use this skill for its documented purpose in this repository.",
+      "query": "Please use the speckit-pro:speckit-coach skill for its documented purpose in this repository.",
       "should_trigger": true
     },
     {
@@ -273,10 +273,10 @@
       "should_trigger": false
     },
     {
-      "case_id": "l2-00a8bbb6f3f79441fa70ac4c",
+      "case_id": "l2-6cc906ad83b89e9f38b58396",
       "host": "claude",
       "skill": "speckit-install",
-      "query": "/speckit-pro:speckit-install — use this skill for its documented purpose in this repository.",
+      "query": "Please use the speckit-pro:speckit-install skill for its documented purpose in this repository.",
       "should_trigger": true
     },
     {
@@ -343,10 +343,10 @@
       "should_trigger": false
     },
     {
-      "case_id": "l2-570730fce95ef16c144e84d9",
+      "case_id": "l2-e010ebb45018ac5d5b6ae2e0",
       "host": "claude",
       "skill": "speckit-prd",
-      "query": "/speckit-pro:speckit-prd — use this skill for its documented purpose in this repository.",
+      "query": "Please use the speckit-pro:speckit-prd skill for its documented purpose in this repository.",
       "should_trigger": true
     },
     {
@@ -413,10 +413,10 @@
       "should_trigger": false
     },
     {
-      "case_id": "l2-b9d6d87334d3a0a3a8d9eefe",
+      "case_id": "l2-fffdae930abdcf3ae7da6aaa",
       "host": "claude",
       "skill": "speckit-resolve-pr",
-      "query": "/speckit-pro:speckit-resolve-pr — use this skill for its documented purpose in this repository.",
+      "query": "Please use the speckit-pro:speckit-resolve-pr skill for its documented purpose in this repository.",
       "should_trigger": true
     },
     {
@@ -469,10 +469,10 @@
       "should_trigger": false
     },
     {
-      "case_id": "l2-4740bfa4ac61e841dc957af9",
+      "case_id": "l2-f69dde515225196b33f36f4f",
       "host": "claude",
       "skill": "speckit-scaffold-spec",
-      "query": "/speckit-pro:speckit-scaffold-spec — use this skill for its documented purpose in this repository.",
+      "query": "Please use the speckit-pro:speckit-scaffold-spec skill for its documented purpose in this repository.",
       "should_trigger": true
     },
     {
@@ -546,10 +546,10 @@
       "should_trigger": false
     },
     {
-      "case_id": "l2-09a699966be8b41d819c8c5d",
+      "case_id": "l2-cf921b173c4c1bf519a67274",
       "host": "claude",
       "skill": "speckit-status",
-      "query": "/speckit-pro:speckit-status — use this skill for its documented purpose in this repository.",
+      "query": "Please use the speckit-pro:speckit-status skill for its documented purpose in this repository.",
       "should_trigger": true
     },
     {
@@ -602,10 +602,10 @@
       "should_trigger": false
     },
     {
-      "case_id": "l2-d5a62e8d525c6057082fa220",
+      "case_id": "l2-9b26f845870da81d3facde25",
       "host": "claude",
       "skill": "speckit-upgrade",
-      "query": "/speckit-pro:speckit-upgrade — use this skill for its documented purpose in this repository.",
+      "query": "Please use the speckit-pro:speckit-upgrade skill for its documented purpose in this repository.",
       "should_trigger": true
     },
     {
@@ -672,10 +672,10 @@
       "should_trigger": false
     },
     {
-      "case_id": "l2-eaaeee07556a1b42a64a3e32",
+      "case_id": "l2-3a20171e2a95ffbc911dfa92",
       "host": "claude",
       "skill": "ubiquitous-language",
-      "query": "/speckit-pro:ubiquitous-language — use this skill for its documented purpose in this repository.",
+      "query": "Please use the speckit-pro:ubiquitous-language skill for its documented purpose in this repository.",
       "should_trigger": true
     },
     {
@@ -742,10 +742,10 @@
       "should_trigger": false
     },
     {
-      "case_id": "l2-a99a20f3ddc9de6aca2d8339",
+      "case_id": "l2-25e14f3512a3184792beea92",
       "host": "codex",
       "skill": "grill-me",
-      "query": "$grill-me — use this skill for its documented purpose in this repository.",
+      "query": "Please use the grill-me skill for its documented purpose in this repository.",
       "should_trigger": true
     },
     {
@@ -798,10 +798,10 @@
       "should_trigger": false
     },
     {
-      "case_id": "l2-b66a469a22c85b01c92198e6",
+      "case_id": "l2-b17609d6e21200d9d5f902e9",
       "host": "codex",
       "skill": "install",
-      "query": "$install — use this skill for its documented purpose in this repository.",
+      "query": "Please use the install skill for its documented purpose in this repository.",
       "should_trigger": true
     },
     {
@@ -847,10 +847,10 @@
       "should_trigger": false
     },
     {
-      "case_id": "l2-3c266c520021686cdf5a0387",
+      "case_id": "l2-6e16ad01b274229c4c44ba87",
       "host": "codex",
       "skill": "speckit-archive-cleanup",
-      "query": "$speckit-archive-cleanup — use this skill for its documented purpose in this repository.",
+      "query": "Please use the speckit-archive-cleanup skill for its documented purpose in this repository.",
       "should_trigger": true
     },
     {
@@ -910,10 +910,10 @@
       "should_trigger": false
     },
     {
-      "case_id": "l2-9805362f4b65da729e36873d",
+      "case_id": "l2-c264bc1707fef5785aa75625",
       "host": "codex",
       "skill": "speckit-autopilot",
-      "query": "$speckit-autopilot — use this skill for its documented purpose in this repository.",
+      "query": "Please use the speckit-autopilot skill for its documented purpose in this repository.",
       "should_trigger": true
     },
     {
@@ -980,10 +980,10 @@
       "should_trigger": false
     },
     {
-      "case_id": "l2-f726b00e7bb74f2fdcf00dfd",
+      "case_id": "l2-8925772b768380a3272947f0",
       "host": "codex",
       "skill": "speckit-coach",
-      "query": "$speckit-coach — use this skill for its documented purpose in this repository.",
+      "query": "Please use the speckit-coach skill for its documented purpose in this repository.",
       "should_trigger": true
     },
     {
@@ -1057,10 +1057,10 @@
       "should_trigger": false
     },
     {
-      "case_id": "l2-81aeb7578dda769ffbe338a2",
+      "case_id": "l2-da508e7d2efc38262d0d0b6d",
       "host": "codex",
       "skill": "speckit-install",
-      "query": "$speckit-install — use this skill for its documented purpose in this repository.",
+      "query": "Please use the speckit-install skill for its documented purpose in this repository.",
       "should_trigger": true
     },
     {
@@ -1127,10 +1127,10 @@
       "should_trigger": false
     },
     {
-      "case_id": "l2-9169748857cdde9f8a8736ce",
+      "case_id": "l2-2f8712b4cfaa1214a0da0954",
       "host": "codex",
       "skill": "speckit-prd",
-      "query": "$speckit-prd — use this skill for its documented purpose in this repository.",
+      "query": "Please use the speckit-prd skill for its documented purpose in this repository.",
       "should_trigger": true
     },
     {
@@ -1197,10 +1197,10 @@
       "should_trigger": false
     },
     {
-      "case_id": "l2-6e4681297ca5f345f08f7675",
+      "case_id": "l2-79b8ee44ec3d41441474d908",
       "host": "codex",
       "skill": "speckit-resolve-pr",
-      "query": "$speckit-resolve-pr — use this skill for its documented purpose in this repository.",
+      "query": "Please use the speckit-resolve-pr skill for its documented purpose in this repository.",
       "should_trigger": true
     },
     {
@@ -1253,10 +1253,10 @@
       "should_trigger": false
     },
     {
-      "case_id": "l2-2e963b14632c7bfd9a74d521",
+      "case_id": "l2-1ad3837397aad6254b9cc650",
       "host": "codex",
       "skill": "speckit-scaffold-spec",
-      "query": "$speckit-scaffold-spec — use this skill for its documented purpose in this repository.",
+      "query": "Please use the speckit-scaffold-spec skill for its documented purpose in this repository.",
       "should_trigger": true
     },
     {
@@ -1330,10 +1330,10 @@
       "should_trigger": false
     },
     {
-      "case_id": "l2-2c65e376b7a21d0a7e586d0a",
+      "case_id": "l2-110b872a4d27082146664b76",
       "host": "codex",
       "skill": "speckit-status",
-      "query": "$speckit-status — use this skill for its documented purpose in this repository.",
+      "query": "Please use the speckit-status skill for its documented purpose in this repository.",
       "should_trigger": true
     },
     {
@@ -1386,10 +1386,10 @@
       "should_trigger": false
     },
     {
-      "case_id": "l2-ae7f5640f7f40f5d88e59483",
+      "case_id": "l2-41b00a0f8451babf666cc8b3",
       "host": "codex",
       "skill": "speckit-upgrade",
-      "query": "$speckit-upgrade — use this skill for its documented purpose in this repository.",
+      "query": "Please use the speckit-upgrade skill for its documented purpose in this repository.",
       "should_trigger": true
     },
     {
@@ -1456,10 +1456,10 @@
       "should_trigger": false
     },
     {
-      "case_id": "l2-395a113fccccba23a8db46a6",
+      "case_id": "l2-4fe1b3be091cec92e64b201c",
       "host": "codex",
       "skill": "ubiquitous-language",
-      "query": "$ubiquitous-language — use this skill for its documented purpose in this repository.",
+      "query": "Please use the ubiquitous-language skill for its documented purpose in this repository.",
       "should_trigger": true
     },
     {
@@ -1526,12 +1526,12 @@
       "should_trigger": false
     }
   ],
-  "corpus_sha256": "cf8012f5ace4c78ba52a106d57e0063868e714d023ebb840b1e9661ca9ab925e",
-  "inventory_sha256": "0dfbf5670912e7806c7b588394c7ffd25d1ab8dc01acca1a9263f9df2151bdf1",
+  "corpus_sha256": "c9f5d5feecdfadbe0bc5a1f82e44c7a1e45e00809f5d325063550e677aba35a6",
+  "inventory_sha256": "fc54fdeee50a49a3accb8c1353367bbd0f18cb91830a846a675f51530d57bdcf",
   "pins": {
     "claude": {
       "model": "claude-sonnet-5",
-      "cli_version": "2.1.269 (Claude Code)"
+      "cli_version": "2.1.270 (Claude Code)"
     },
     "codex": {
       "model": "gpt-5.6-sol",
@@ -1539,8 +1539,8 @@
     }
   },
   "identities": {
-    "observer": "bbd2c580f316452ee3fb5b67d464aa397c8c0b20e4fe6f6e3622c69599539674",
-    "catalog": "1122d2fd60a0991c70559bae36a1af49993533afc14d598b9603f03994a85e01",
+    "observer": "9968b9160d5164f6433051f5fb2cc4a80f19288a0ac8cbb05645e7442407a8e4",
+    "catalog": "173f40ef89e1614502a575dec090c04fd6804d9798efbe86aacc3c5d4b9206aa",
     "fixture": "1253f805565b41bd894bbed3ee202d2c476ef8537584aa043f794ccea4ce07ba"
   },
   "controlled_difference": {
