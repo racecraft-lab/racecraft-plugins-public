@@ -24,6 +24,7 @@ from .path_utils import sha256_file
 
 MANIFEST_NAME = "speckit-pro-runner.manifest.json"
 CHECKSUM_NAME = "speckit-pro-runner.sha256"
+RUNNER_DATA_FILES = ("agent_inventory.json",)
 
 
 class MetadataFormatError(ValueError):
@@ -302,9 +303,12 @@ def metadata_report(
 
 def runner_source_files(package_dir: Path) -> list[Path]:
     return sorted(
-        path
-        for path in package_dir.rglob("*.py")
-        if "__pycache__" not in path.parts
+        [
+            path
+            for path in package_dir.rglob("*.py")
+            if "__pycache__" not in path.parts
+        ]
+        + [package_dir / name for name in RUNNER_DATA_FILES]
     )
 
 

@@ -1,4 +1,4 @@
-"""Prove complete bounded Codex fixture reads from controller-owned witnesses.
+"""Prove complete Codex fixture reads from controller-owned witnesses.
 
 The native command and output remain subject evidence.  The witness mapping is
 trusted preparation evidence retained by the controller.  This module performs
@@ -44,7 +44,7 @@ class _Witness:
 @dataclass(frozen=True)
 class _Read:
     path: str
-    end_line: int
+    end_line: int | None
     kind: str
 
 
@@ -131,8 +131,7 @@ def bound_fixture_read_witnesses(observation: object) -> dict[str, dict[str, obj
 
 def _tokens(command: str) -> list[str] | None:
     if (not command.strip()
-            or any(ord(character) < 32 or character in ";|<>`" for character in command)
-            or "$" in command):
+            or any(ord(character) < 32 or character in ";|<>`" for character in command)):
         return None
     try:
         return shlex.split(command, comments=False, posix=True)
@@ -140,7 +139,7 @@ def _tokens(command: str) -> list[str] | None:
         return None
 
 
-def _sed(tokens: list[str]) -> tuple[str, int] | None:
+def _sed(tokens: list[str]) -> tuple[str, int | None] | None:
     if not tokens or tokens[0] not in _SED or len(tokens) not in {4, 5} or tokens[1] != "-n":
         return None
     if len(tokens) == 5:
@@ -151,9 +150,10 @@ def _sed(tokens: list[str]) -> tuple[str, int] | None:
         expression, operand = tokens[2], tokens[3]
     match = _SED_RANGE.fullmatch(expression)
     path = _path(operand, "bounded sed path")
-    if match is None or path is None or (len(tokens) == 4 and operand.startswith("-")):
+    if (match is None and expression != "1,$p") or path is None \
+            or (len(tokens) == 4 and operand.startswith("-")):
         return None
-    return path, int(match.group(1))
+    return path, int(match.group(1)) if match is not None else None
 
 
 def _wc(tokens: list[str]) -> str | None:
@@ -180,8 +180,7 @@ def _read(command: object) -> _Read | None:
         return None
     if len(outer) == 3 and outer[0] in _SHELLS and outer[1] == "-c":
         nested = outer[2]
-        if (any(ord(character) < 32 or character in ";|<>`" for character in nested)
-                or "$" in nested):
+        if any(ord(character) < 32 or character in ";|<>`" for character in nested):
             return None
         try:
             tokens = shlex.split(nested, comments=False, posix=True)
@@ -193,15 +192,20 @@ def _read(command: object) -> _Read | None:
             read = _sed(tokens[split + 1:])
             if counted is None or read is None or counted != read[0]:
                 return None
-            return _Read(read[0], read[1], "count_then_bounded_sed")
+            kind = "count_then_bounded_sed" if read[1] is not None \
+                else "count_then_unbounded_sed"
+            return _Read(read[0], read[1], kind)
         direct = _sed(tokens)
     else:
         direct = _sed(outer)
-    return _Read(direct[0], direct[1], "bounded_sed") if direct is not None else None
+    if direct is None:
+        return None
+    return _Read(direct[0], direct[1],
+                 "bounded_sed" if direct[1] is not None else "unbounded_sed")
 
 
 def _body(output: str, read: _Read) -> tuple[str, int] | None:
-    if read.kind == "bounded_sed":
+    if read.kind in {"bounded_sed", "unbounded_sed"}:
         return output, output.count("\n")
     header, separator, body = output.partition("\n")
     if not separator:
@@ -255,7 +259,8 @@ def fixture_read_accesses(
         except UnicodeError:
             continue
         logical_lines = wc_newlines + (1 if encoded and not encoded.endswith(b"\n") else 0)
-        if (read.end_line < logical_lines or len(encoded) != witness.byte_count
+        if ((read.end_line is not None and read.end_line < logical_lines)
+                or len(encoded) != witness.byte_count
                 or hashlib.sha256(encoded).hexdigest() != witness.sha256):
             continue
         accesses.append({
@@ -268,10 +273,10 @@ def fixture_read_accesses(
                 "bytes": witness.byte_count,
                 "sha256": witness.sha256,
                 "start_line": 1,
-                "end_line": read.end_line,
+                "end_line": read.end_line if read.end_line is not None else logical_lines,
                 "logical_lines": logical_lines,
                 "newline_count": wc_newlines,
-                "count_header_verified": read.kind == "count_then_bounded_sed",
+                "count_header_verified": read.kind.startswith("count_then_"),
             },
         })
     return accesses

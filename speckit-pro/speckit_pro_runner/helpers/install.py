@@ -20,6 +20,7 @@ from pathlib import Path, PurePosixPath
 from typing import Any
 
 from ..agent_materialization import materialize_agent_policy
+from ..agent_inventory import CODEX_OPTIONAL_AGENT_NAMES, CODEX_REQUIRED_AGENT_NAMES
 from ..envelope import diagnostic, is_diagnostic, response
 from ..path_utils import resolves_to_current_python, sha256_text
 from .mutation import empty_mutation, operation_record, run_mutation_helper, validate_target_path
@@ -30,21 +31,10 @@ FAKE_HOME_FIXTURE_ROOT = Path("tests") / "speckit-pro" / "unit" / "fixtures"
 INSTALLED_PLUGIN_RELEASE_FIXTURE_ROOT = FAKE_HOME_FIXTURE_ROOT / "installed-plugin-release"
 DEFAULT_RUNNER_INVOCATION_CASES = INSTALLED_PLUGIN_RELEASE_FIXTURE_ROOT / "runner-invocation-cases.json"
 MINIMUM_PYTHON = (3, 11, 0)
-CODEX_OPTIONAL_HELPER_NAME = "autopilot-fast-helper"
+if len(CODEX_OPTIONAL_AGENT_NAMES) != 1:
+    raise RuntimeError("agent inventory must declare exactly one optional Codex helper")
+CODEX_OPTIONAL_HELPER_NAME = CODEX_OPTIONAL_AGENT_NAMES[0]
 CODEX_LOW_EFFORT_AGENT_NAMES = frozenset({"codebase-analyst", "spec-context-analyst"})
-CODEX_REQUIRED_AGENT_NAMES = (
-    "analyze-executor",
-    "artifact-author",
-    "checklist-executor",
-    "clarify-executor",
-    "codebase-analyst",
-    "domain-researcher",
-    "formal-model-author",
-    "implement-executor",
-    "phase-executor",
-    "spec-context-analyst",
-    "uat-runbook-author",
-)
 CODEX_SOURCE_AGENT_TOML_NAMES = tuple(
     sorted((*[f"{name}.toml" for name in CODEX_REQUIRED_AGENT_NAMES], f"{CODEX_OPTIONAL_HELPER_NAME}.toml"))
 )

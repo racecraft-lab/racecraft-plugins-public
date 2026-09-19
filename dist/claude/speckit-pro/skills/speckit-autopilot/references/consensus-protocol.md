@@ -234,6 +234,13 @@ Stage 2 — All synthesizers, ONE assistant message:
   ↓
   Await ALL synthesizers.
 
+  Runtime name mapping: Claude Code dispatches
+  `speckit-pro:consensus-synthesizer`; Codex dispatches the installed
+  `consensus-synthesizer` with
+  `spawn_agent(agent_type="consensus-synthesizer", ...)`.
+  Omitting `agent_type` and accepting the default role is a failed dispatch.
+  The parent never performs this synthesis itself.
+
 Stage 3 — Apply Artifact Edits SERIALLY (orchestrator's own Edit calls):
   ROUND_2_QUEUE = []
   For each synthesizer result, in item order:
@@ -274,6 +281,13 @@ items where all required analysts succeeded; failed items get
 re-queued for a single retry. If retry also fails, surface to user
 via `[HUMAN REVIEW NEEDED]` for that item — do NOT block the rest of
 the batch.
+
+If a synthesizer dispatch fails or returns a missing or malformed result, the
+parent applies no edit, writes no completed Consensus Resolution Log row, and
+does not mark the item complete. The parent may retry the same named
+synthesizer once with the same analyst responses. A second invalid result is
+`[HUMAN REVIEW NEEDED]` and stops that item; the parent must never replace it
+with parent-authored synthesis.
 
 ## Three-Analyst Consensus Rules (Round 2 / N=3)
 
@@ -538,6 +552,13 @@ the data source for the optional Confidence Gate (G6.5) that runs
 between Phase 6 and Phase 7. The same emit fires whether the
 gate is configured advisory or strict — the gate is opt-in;
 the emit is not.
+
+The parent performs one dedicated final Analyze dispatch to the named
+consensus-synthesizer after remediation, even when there were zero findings.
+It validates that the returned block has all five criterion lines, then
+persists that block exactly once for the current Analyze pass. A missing,
+failed, malformed, or duplicate confidence block does not complete Analyze and
+cannot be reconstructed by the parent.
 
 **Format (canonical, regex-parseable):**
 

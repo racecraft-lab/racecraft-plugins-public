@@ -317,7 +317,10 @@ class RunnerFoundationTests(unittest.TestCase):
         self.assertEqual(manifest["checksum_algorithm"], "sha256")
 
         expected = {}
-        runner_sources = sorted(path for path in RUNNER_DIR.rglob("*.py") if "__pycache__" not in path.parts)
+        runner_sources = sorted(
+            [path for path in RUNNER_DIR.rglob("*.py") if "__pycache__" not in path.parts]
+            + [RUNNER_DIR / "agent_inventory.json"]
+        )
         for path in runner_sources:
             digest = hashlib.sha256(path.read_bytes()).hexdigest()
             expected[path.relative_to(PLUGIN_ROOT).as_posix()] = digest
@@ -355,6 +358,15 @@ class RunnerFoundationTests(unittest.TestCase):
             digest, rel_path = line.split(maxsplit=1)
             checksum_records[rel_path] = digest
         self.assertEqual(checksum_records, expected)
+
+    def test_metadata_report_verifies_checked_in_runner_data_files(self) -> None:
+        from speckit_pro_runner import runtime
+
+        report = runtime.metadata_report(PLUGIN_ROOT, RUNNER_DIR, check_metadata=True)
+
+        self.assertEqual(report["verification_status"], "verified")
+        runner_paths = {record["path"]["value"] for record in report["runner_files"]}
+        self.assertIn("speckit_pro_runner/agent_inventory.json", runner_paths)
 
     def test_metadata_readiness_failures(self) -> None:
         expected = {

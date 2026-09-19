@@ -90,6 +90,33 @@ class NativeFixtureReadTests(unittest.TestCase):
             "bounded_sed",
         )
 
+    def test_direct_unbounded_sed_proves_exact_fixture_body(self):
+        content = "alpha\nbeta\ngamma\n"
+        commands = (
+            "sed -n '1,$p' docs/spec.md",
+            "/bin/zsh -c \"sed -n '1,\"'$p'\"' docs/spec.md\"",
+        )
+        for command in commands:
+            with self.subTest(command=command):
+                accesses = fixture_read_accesses(
+                    observation(command, content), witness(content, "docs/spec.md"),
+                )
+                self.assertEqual(accesses[0]["provenance"]["kind"], "unbounded_sed")
+                self.assertEqual(accesses[0]["provenance"]["end_line"], 3)
+
+    def test_unbounded_sed_rejects_variable_and_substitution_operands(self):
+        content = "alpha\n"
+        commands = (
+            "sed -n '1,$p' '$TARGET'",
+            "sed -n '1,$p' ${TARGET}",
+            "sed -n '1,$p' $(printf spec.md)",
+        )
+        accesses = [
+            fixture_read_accesses(observation(command, content), witness(content))
+            for command in commands
+        ]
+        self.assertEqual(accesses, [[], [], []])
+
     def test_bounded_read_requires_controller_witness_for_that_exact_path(self):
         content = "alpha\nbeta\n"
         candidate = observation("sed -n '1,9999p' spec.md", content)

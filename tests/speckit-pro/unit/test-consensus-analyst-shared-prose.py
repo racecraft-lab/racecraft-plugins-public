@@ -23,12 +23,10 @@ copy names the other two lanes, so the three can never be byte-equal.
 **Comparison is byte-exact.** Nothing is whitespace-normalized. A rewrap of a
 shared block in one body is a real divergence and this file reports it.
 
-**Two accepted cross-platform asymmetries**, both recorded rather than fixed:
+**One accepted cross-platform asymmetry**, recorded rather than fixed:
 
 1. The Codex TOMLs write ``$speckit-analyze`` where the Claude bodies write
    ``/speckit-analyze``. The Codex checks map the one to the other.
-2. The Codex parity checks cover the Input bullets only; the ``### Terminal
-   Deliverable`` paragraph is outside those checks.
 
 The fourth ``Research Task`` input is domain-researcher's alone. Phase 7 routes
 implementation tasks whose descriptions match ``research``, ``investigate``, or
@@ -221,6 +219,16 @@ class ConsensusAnalystSharedProseTests(unittest.TestCase):
                         "Claude Input bullets, with `$speckit-analyze` for "
                         "`/speckit-analyze`",
                     )
+
+    def test_codex_mirrors_carry_the_terminal_deliverable_contract(self) -> None:
+        for name in ANALYSTS:
+            with self.subTest(agent=name):
+                self.assertEqual(
+                    _terminal_deliverable(_codex_body(name)),
+                    _terminal_deliverable(_claude_body(name)),
+                    f"[{CODEX_GROUP}] {name}: the Codex Terminal Deliverable must "
+                    "match its Claude counterpart byte for byte",
+                )
 
     def test_consensus_only_analysts_declare_three_input_types(self) -> None:
         for name in CONSENSUS_ONLY:

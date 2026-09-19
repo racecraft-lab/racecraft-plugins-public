@@ -68,6 +68,7 @@ CODEX_SANDBOX_POLICY = {
     "checklist-executor": "workspace-write",
     "clarify-executor": "read-only",
     "codebase-analyst": "read-only",
+    "consensus-synthesizer": "read-only",
     "domain-researcher": "read-only",
     "formal-model-author": "workspace-write",
     "implement-executor": "workspace-write",

@@ -22,6 +22,10 @@ from native_eval_verification import validate_check as validate_native_verificat
 SCHEMA_VERSION = "native-eval-catalog/v1"
 LAYERS = frozenset({"trigger", "functional", "integration", "parity"})
 HOSTS = ("claude", "codex")
+NATIVE_SYNTHESIS_MECHANISMS = {
+    "claude": {"mode": "dedicated_subagent", "role": "speckit-pro:consensus-synthesizer"},
+    "codex": {"mode": "dedicated_subagent", "role": "consensus-synthesizer"},
+}
 RESOURCE_CLASSES = frozenset({"ordinary", "nested"})
 REQUIRED_TOOLS = frozenset({"specify"})
 MAX_TIMEOUT_SECONDS = 3600
@@ -290,20 +294,17 @@ def _validate_native_synthesis_mechanism(
     per_host = check["per_host"]
     _require(isinstance(per_host, dict) and set(per_host) == set(HOSTS),
              _check_label(case_id, check_id, "per_host must define exactly claude and codex"))
-    claude = per_host["claude"]
-    _require(isinstance(claude, dict) and set(claude) == {"mode", "role"},
-             _check_label(case_id, check_id, "has malformed claude settings"))
-    _require(claude["mode"] == "dedicated_subagent",
-             _check_label(case_id, check_id, "claude mode must be dedicated_subagent"))
-    _require(claude["role"] == "speckit-pro:consensus-synthesizer",
-             _check_label(case_id, check_id, "claude role must be speckit-pro:consensus-synthesizer"))
-    codex = per_host["codex"]
-    _require(isinstance(codex, dict) and set(codex) == {"mode", "role"},
-             _check_label(case_id, check_id, "has malformed codex settings"))
-    _require(codex["mode"] == "parent_session",
-             _check_label(case_id, check_id, "codex mode must be parent_session"))
-    _require(codex["role"] is None,
-             _check_label(case_id, check_id, "codex role must be null"))
+    for host in HOSTS:
+        settings = per_host[host]
+        _require(isinstance(settings, dict) and set(settings) == {"mode", "role"},
+                 _check_label(case_id, check_id, f"has malformed {host} settings"))
+        expected = NATIVE_SYNTHESIS_MECHANISMS[host]
+        _require(settings["mode"] == expected["mode"],
+                 _check_label(case_id, check_id,
+                              f"{host} mode must be {expected['mode']}"))
+        _require(settings["role"] == expected["role"],
+                 _check_label(case_id, check_id,
+                              f"{host} role must be {expected['role']}"))
 
 
 def _validate_native_subagent_dispatch(

@@ -609,6 +609,7 @@ def _delivery_evidence(payload: Mapping[str, Any], index: int,
              "parent delivery message id is invalid")
     return {
         "message_id": message_id,
+        "text": text,
         "sha256": hashlib.sha256(encoded).hexdigest(),
         "bytes": len(encoded),
         "author": author,

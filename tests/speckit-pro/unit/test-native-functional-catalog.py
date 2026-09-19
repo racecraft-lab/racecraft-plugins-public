@@ -280,7 +280,7 @@ class NativeFunctionalCatalogTests(unittest.TestCase):
             - REDIRECT_IDS - WORKTREE_MIGRATION_IDS
         )
         self.assertEqual(len(response_only_ids), 65)
-        self.assertEqual(len(self.all_cases), 206)
+        self.assertEqual(len(self.all_cases), 207)
         self.assertEqual(len(self.catalog["cases"]), 93)
         self.assertEqual(set(self.cases), selected_ids | GROUNDED_IDS | NATIVE_RESPONSE_IDS | DASHBOARD_IDS)
         selected = {row["case_id"]: row for row in self.selection["selected"]}

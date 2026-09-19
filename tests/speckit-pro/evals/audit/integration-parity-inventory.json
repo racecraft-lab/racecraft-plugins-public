@@ -20,10 +20,10 @@
   },
   "integration_return_catalog_slice": {
     "catalog": "tests/speckit-pro/evals/catalog.json",
-    "authored_case_count": 2,
-    "planned_subject_trials_at_one_run_each": 4,
+    "authored_case_count": 3,
+    "planned_subject_trials_at_one_run_each": 6,
     "native_qualified_count": 0,
-    "status": "Authored and covered by provider-free corpus controls; live qualification pending. Dedicated Claude synthesis and Codex parent synthesis have distinct deterministic mechanism checks."
+    "status": "Authored and covered by provider-free corpus controls; live qualification pending. Both clients require dedicated named synthesis with distinct native role identifiers and transport receipts."
   },
   "parity_catalog_slice": {
     "catalog": "tests/speckit-pro/evals/catalog.json",

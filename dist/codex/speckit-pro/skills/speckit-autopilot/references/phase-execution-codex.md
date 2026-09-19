@@ -5,8 +5,12 @@ installed custom subagents through `spawn_agent` and `wait_agent`.
 
 Shared consensus rounds, analyst routing, decision rules, output formats,
 artifact edits, and logging remain authoritative. On Codex, every shared
-consensus-synthesizer step maps to synthesis in the parent session; it never
-dispatches a Codex child role.
+consensus-synthesizer step dispatches the installed
+`consensus-synthesizer`, awaits its actual result, and validates that result
+before the parent applies any edit. The parent never performs synthesis as a
+fallback. Dispatch means calling `spawn_agent` with the installed
+`consensus-synthesizer` role, then `wait_agent` and consuming that returned
+result.
 
 ## Contents
 
@@ -1101,10 +1105,11 @@ update the preflight, and resolve it there.
               (e.g., "task_understanding" lowest → clarify-executor
               re-pass on spec.md; "completeness" → verify artifact
               presence).
-            - The parent session re-evaluates the fresh analyst result under
-              the shared consensus rules, applies any serial artifact edit,
-              and re-emits the canonical `Pre-Implement Confidence` block in
-              the workflow file.
+            - The parent session dispatches the installed
+              `consensus-synthesizer` with the fresh analyst result, consumes
+              its actual result, applies any accepted serial artifact edit,
+              and persists the returned canonical `Pre-Implement Confidence`
+              block exactly once in the workflow file.
             - Re-run confidence-gate.
             - Increment iteration_count.
        c. After max iterations OR exit 0:

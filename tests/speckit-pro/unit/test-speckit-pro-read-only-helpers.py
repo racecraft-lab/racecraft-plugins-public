@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import argparse
-import ast
 import json
 import os
 import re
@@ -329,17 +328,11 @@ class ReadOnlyHelperTests(unittest.TestCase):
             self.skipTest("validate-agent-install cases use validate-agent-install")
         from speckit_pro_runner.helpers.read_only import CLAUDE_REQUIRED_AGENT_NAMES, validate_agent_install
 
-        structural_source = (
-            REPO_ROOT / "tests" / "speckit-pro" / "layer1-structural" / "validate-agent-contracts.py"
-        ).read_text(encoding="utf-8")
-        module = ast.parse(structural_source)
-        assignment = next(
-            node
-            for node in module.body
-            if isinstance(node, ast.Assign)
-            and any(isinstance(target, ast.Name) and target.id == "validate_agents_AGENTS" for target in node.targets)
+        from speckit_pro_runner.agent_inventory import (
+            CLAUDE_REQUIRED_AGENT_NAMES as INVENTORY_CLAUDE_REQUIRED_AGENT_NAMES,
         )
-        self.assertEqual(tuple(ast.literal_eval(assignment.value)), CLAUDE_REQUIRED_AGENT_NAMES)
+
+        self.assertEqual(INVENTORY_CLAUDE_REQUIRED_AGENT_NAMES, CLAUDE_REQUIRED_AGENT_NAMES)
 
         with tempfile.TemporaryDirectory(prefix="validate-agent-install-") as directory:
             plugin_root = Path(directory)

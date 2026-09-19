@@ -8,7 +8,7 @@ from pathlib import PurePosixPath
 import re
 from typing import Any
 
-from native_eval_catalog import _is_json_value, _unique_object
+from native_eval_catalog import NATIVE_SYNTHESIS_MECHANISMS, _is_json_value, _unique_object
 from native_eval_capture import file_accesses, file_search_results
 from native_eval_catalog import _validate_file_search_check
 from native_eval_git_grading import grade_final_state as _native_git_final_state
@@ -884,20 +884,27 @@ def _synthesis_dispatches(observation: dict[str, Any]) -> tuple[list[int], str |
     return synthesizers, None
 
 
-def _claude_synthesis_mechanism(
-    path: str, observation: dict[str, Any], case: dict[str, Any], synthesizers: list[int],
+def _dedicated_synthesis_mechanism(
+    path: str,
+    observation: dict[str, Any],
+    case: dict[str, Any],
+    synthesizers: list[int],
+    *,
+    host_label: str,
+    native_read: str,
+    return_authority: str,
 ) -> tuple[str, str]:
     if len(synthesizers) > 1:
-        return "invalid", "Claude synthesis dispatch evidence is duplicated or ambiguous"
+        return "invalid", f"{host_label} synthesis dispatch evidence is duplicated or ambiguous"
     if not synthesizers:
-        return "fail", "Claude must complete exactly one consensus-synthesizer subagent"
+        return "fail", f"{host_label} must complete exactly one consensus-synthesizer subagent"
     synthesis_index = synthesizers[0]
     synthesis_call = observation["tool_calls"][synthesis_index]
     if synthesis_call.get("parent_id") is not None:
-        return "invalid", "Claude consensus-synthesizer is not a supported direct-root dispatch"
+        return "invalid", f"{host_label} consensus-synthesizer is not a supported direct-root dispatch"
     if synthesis_call["success"] is not True:
-        return "fail", "Claude consensus-synthesizer did not complete successfully"
-    reads = _source_reads_precede(case, observation, synthesis_index, "Read")
+        return "fail", f"{host_label} consensus-synthesizer did not complete successfully"
+    reads = _source_reads_precede(case, observation, synthesis_index, native_read)
     if reads is not None:
         return reads
     causal = _subagent_returns_before_parent_file_change({"path": path}, observation)
@@ -908,43 +915,16 @@ def _claude_synthesis_mechanism(
     returns = receipt.get("returns") if isinstance(receipt, dict) else None
     matching = [item for item in returns if isinstance(item, dict)
                 and item.get("tool_call_index") == synthesis_index] if isinstance(returns, list) else []
-    if len(matching) != 1 or matching[0].get("authority") != "claude-tool-result":
-        return "invalid", "Claude synthesizer completion is not bound to a native tool result"
-    return "pass", "Claude synthesizer returned before the parent wrote the declared artifact"
-
-
-def _codex_synthesis_mechanism(
-    path: str, observation: dict[str, Any], case: dict[str, Any], synthesizers: list[int],
-) -> tuple[str, str]:
-    if synthesizers:
-        return "fail", "Codex parent-session synthesis must not dispatch a consensus-synthesizer child"
-    matching_changes: list[int] = []
-    for index, call in enumerate(observation["tool_calls"]):
-        if call["name"] != "file_change":
-            continue
-        paths = _native_change_paths(call, observation.get("native_metadata", {}))
-        if paths is None:
-            return "invalid", "Codex structured file-change evidence is malformed"
-        if path in paths and call.get("parent_id") is None and call["success"] is True:
-            matching_changes.append(index)
-    if len(matching_changes) > 1:
-        return "invalid", "Codex parent-session artifact changes are duplicated or ambiguous"
-    if not matching_changes:
-        return "fail", "Codex parent session must complete exactly one structured change to the declared artifact"
-    reads = _source_reads_precede(case, observation, matching_changes[0], "command_execution")
-    if reads is not None:
-        return reads
-    return "pass", "Codex parent session read the declared sources before writing the declared artifact"
+    if len(matching) != 1 or matching[0].get("authority") != return_authority:
+        return "invalid", f"{host_label} synthesizer completion is not bound to {return_authority}"
+    return "pass", f"{host_label} synthesizer returned before the parent wrote the declared artifact"
 
 
 def _native_synthesis_mechanism(
     check: dict[str, Any], observation: dict[str, Any], case: dict[str, Any], host: str | None,
 ) -> tuple[str, str]:
     path = check.get("artifact_path")
-    expected = {
-        "claude": {"mode": "dedicated_subagent", "role": "speckit-pro:consensus-synthesizer"},
-        "codex": {"mode": "parent_session", "role": None},
-    }
+    expected = NATIVE_SYNTHESIS_MECHANISMS
     if not _canonical_path(path) or check.get("per_host") != expected:
         return "invalid", "catalog native synthesis mechanism is malformed"
     if host not in expected:
@@ -952,9 +932,17 @@ def _native_synthesis_mechanism(
     synthesizers, error = _synthesis_dispatches(observation)
     if error is not None:
         return "invalid", error
-    if host == "claude":
-        return _claude_synthesis_mechanism(path, observation, case, synthesizers)
-    return _codex_synthesis_mechanism(path, observation, case, synthesizers)
+    policies = {
+        "claude": ("Claude", "Read", "claude-tool-result"),
+        "codex": ("Codex", "command_execution", "codex-parent-delivery"),
+    }
+    host_label, native_read, return_authority = policies[host]
+    return _dedicated_synthesis_mechanism(
+        path, observation, case, synthesizers,
+        host_label=host_label,
+        native_read=native_read,
+        return_authority=return_authority,
+    )
 
 
 def _file_access(check: dict[str, Any], observation: dict[str, Any]) -> tuple[str, str]:
