@@ -359,6 +359,15 @@ class RunnerFoundationTests(unittest.TestCase):
             checksum_records[rel_path] = digest
         self.assertEqual(checksum_records, expected)
 
+    def test_metadata_report_verifies_checked_in_runner_data_files(self) -> None:
+        from speckit_pro_runner import runtime
+
+        report = runtime.metadata_report(PLUGIN_ROOT, RUNNER_DIR, check_metadata=True)
+
+        self.assertEqual(report["verification_status"], "verified")
+        runner_paths = {record["path"]["value"] for record in report["runner_files"]}
+        self.assertIn("speckit_pro_runner/agent_inventory.json", runner_paths)
+
     def test_metadata_readiness_failures(self) -> None:
         expected = {
             "missing_metadata": "runner_metadata_missing",
