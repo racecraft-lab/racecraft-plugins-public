@@ -99,11 +99,12 @@ in Step 0 and
 ## Prerequisites — Model
 
 The orchestrator makes gate decisions, coordinates consensus synthesis, and
-manages a 7-phase workflow. On Claude, it dispatches
-`speckit-pro:consensus-synthesizer` after every analyst round and consumes the
-returned result; on Codex, the parent synthesizes consensus directly. In both
-hosts, the parent owns artifact application and gates. Weak-model orchestration
-cascades into expensive rework.
+manages a 7-phase workflow. After every analyst round it dispatches the named
+synthesizer (`speckit-pro:consensus-synthesizer` on Claude Code,
+`consensus-synthesizer` on Codex), awaits it, and consumes its actual returned
+result. The parent never substitutes its own synthesis. In both hosts, the
+parent owns artifact application and gates. Weak-model orchestration cascades
+into expensive rework.
 
 **Before executing any step**, verify:
 
@@ -232,12 +233,14 @@ After EACH Clarify, Checklist, or Analyze executor returns, complete consensus
 before the next prompt. The parent applies accepted Clarify edits; all three
 executors surface remaining items with category tags. For every such item,
 call `parse-consensus-categories`, dispatch exactly the routed analysts in
-host-bounded batches, and consume their actual results. On Claude, after every
-analyst round — including a round with one or two analysts — dispatch
-`speckit-pro:consensus-synthesizer`, await and consume its actual returned
+host-bounded batches, and consume their actual results. After every analyst
+round — including a round with one or two analysts — dispatch the runtime's
+named `consensus-synthesizer`, await it, validate and consume its actual returned
 result, then apply accepted artifact edits serially and run gates in the parent.
-On Codex, synthesize in the parent, which likewise owns artifact application and
-gates. Append the Consensus Resolution Log. Follow the mandatory Round 2, stop,
+The parent MUST NOT synthesize directly or silently replace a missing, failed,
+or malformed synthesizer result. Such a result authorizes no edit and cannot
+mark consensus complete. Append the Consensus Resolution Log only from a valid
+consumed result. Follow the mandatory Round 2, stop,
 re-evaluation, and Phase 6 confidence-emit contracts in
 [`references/consensus-protocol.md`](./references/consensus-protocol.md)
 §Category-Routed Dispatch, §Batched Dispatch, §Phase-Specific Consensus Flows,
@@ -490,7 +493,9 @@ After parsing the workflow state, create a **granular** task list. For
 multi-prompt phases (Clarify, Checklist), create one task per
 prompt/session. **Every Clarify session, every Checklist domain, and
 the Analyze phase MUST have a paired Consensus task** immediately
-after (skipped only if the executor reports zero unresolved items).
+after. A zero-unresolved Clarify or Checklist task may be skipped; the Analyze
+task still dispatches the synthesizer once for the final five-criterion
+confidence block.
 
 The full **12-entry Post-Implementation task list** and the task
 naming pattern live in

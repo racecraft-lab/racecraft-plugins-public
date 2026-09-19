@@ -361,20 +361,16 @@ class ValidateCodexSkills(unittest.TestCase):
             self.assertIn('parse-consensus-categories', body)
             self.assertNotIn('per the routing table', body)
             self.assertNotIn('codebase-analyst only', body)
-        with self.subTest(msg='speckit-autopilot: maps shared consensus synthesis to the Codex parent session'):
+        with self.subTest(msg='speckit-autopilot: dispatches the installed Codex consensus synthesizer'):
             self.assertTrue(
                 re.search(r'Shared consensus rounds, analyst routing, decision rules, output formats,\s+artifact edits, and logging remain authoritative\.', phase_execution)
-                and re.search(r'every shared\s+consensus-synthesizer step maps to synthesis in the parent session', phase_execution)
-                and re.search(r'it never\s+dispatches a Codex child role\.', phase_execution)
-                and re.search(r'parent session re-evaluates the fresh analyst result under\s+the shared consensus rules', phase_execution)
-                and re.search(r're-emits the canonical `Pre-Implement Confidence` block', phase_execution),
-                'expected shared consensus behavior to remain authoritative while Codex synthesis stays in the parent session',
-            )
-        with self.subTest(msg='speckit-autopilot: never dispatches a Codex consensus-synthesizer role'):
-            self.assertNotRegex(
-                phase_execution,
-                r'spawn_agent[^\n]*consensus-synthesizer',
-                'Codex has no consensus-synthesizer role; the parent session must synthesize analyst results',
+                and re.search(r'every shared\s+consensus-synthesizer step dispatches the installed\s+`consensus-synthesizer`', phase_execution)
+                and re.search(r'awaits its actual result', phase_execution)
+                and re.search(r'parent never performs synthesis as a\s+fallback', phase_execution)
+                and re.search(r'calling `spawn_agent` with the installed\s+`consensus-synthesizer` role, then `wait_agent`', phase_execution)
+                and re.search(r'parent session dispatches the installed\s+`consensus-synthesizer` with the fresh analyst result', phase_execution)
+                and re.search(r'persists the returned canonical `Pre-Implement Confidence`\s+block exactly once', phase_execution),
+                'expected shared consensus behavior to dispatch and consume the installed Codex synthesizer',
             )
         with self.subTest(msg='speckit-autopilot: names built-in default for both general Post tracks'):
             self.assertTrue(
@@ -491,7 +487,7 @@ validate_capability_pointer_DIRECTIVE_MARKER = 'capability-discovery.md'
 validate_capability_pointer_GROUNDING_MARKER = 'grounding.md'
 CAPABILITY_NOTE = 'Capability path:'
 validate_capability_pointer_CC_EXCLUSIONS = frozenset({'consensus-synthesizer', 'phase-executor', 'sweep-analyst', 'sweep-classifier'})
-validate_capability_pointer_CODEX_EXCLUSIONS = frozenset({'autopilot-fast-helper', 'phase-executor'})
+validate_capability_pointer_CODEX_EXCLUSIONS = frozenset({'autopilot-fast-helper', 'consensus-synthesizer', 'phase-executor'})
 APPROVED_EQUIVALENTS: frozenset[str] = frozenset()
 
 def validate_capability_pointer__rel(path: Path) -> str:
@@ -540,7 +536,7 @@ validate_capability_resolution_GROUNDING_MARKER = 'grounding.md'
 validate_capability_resolution_PATH_TOKEN_RE = re.compile('speckit-pro/[A-Za-z0-9._/-]*capability-discovery\\.md')
 validate_capability_resolution_GROUNDING_TOKEN_RE = re.compile('speckit-pro/[A-Za-z0-9._/-]*grounding\\.md')
 validate_capability_resolution_CC_EXCLUSIONS = frozenset({'consensus-synthesizer', 'phase-executor'})
-validate_capability_resolution_CODEX_EXCLUSIONS = frozenset({'autopilot-fast-helper', 'phase-executor'})
+validate_capability_resolution_CODEX_EXCLUSIONS = frozenset({'autopilot-fast-helper', 'consensus-synthesizer', 'phase-executor'})
 
 def validate_capability_resolution__rel(path: Path) -> str:
     return path.relative_to(REPO_ROOT).as_posix()
@@ -755,7 +751,7 @@ validate_codex_parity_AGENTS_DIR = PLUGIN_ROOT / 'agents'
 validate_codex_parity_CODEX_AGENTS_DIR = PLUGIN_ROOT / 'codex-agents'
 validate_codex_parity_SKILLS_DIR = PLUGIN_ROOT / 'skills'
 validate_codex_parity_CODEX_SKILLS_DIR = PLUGIN_ROOT / 'codex-skills'
-CC_ONLY_AGENTS = frozenset({'consensus-synthesizer', 'sweep-classifier', 'sweep-analyst'})
+CC_ONLY_AGENTS = frozenset({'sweep-classifier', 'sweep-analyst'})
 CODEX_ONLY_AGENTS = frozenset({'autopilot-fast-helper'})
 REF_RE = re.compile('\\.\\./\\.\\./skills/[^)]+\\.md')
 

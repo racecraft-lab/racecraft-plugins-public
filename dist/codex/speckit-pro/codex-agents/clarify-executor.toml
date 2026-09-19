@@ -94,6 +94,9 @@ agent.
    question via research + consensus, flag it under "Unresolved for
    consensus" and let the orchestrator decide.
 
+8. **Remain terminal.** Do NOT spawn subagents or create teams.
+   Return the Clarify Question Set directly to the parent.
+
 </hard_constraints>
 
 ## Process

@@ -156,9 +156,11 @@ required SpecKit Pro subagent is missing, STOP and instruct the user to run
 
 ## Prerequisites — Model
 
-The autopilot orchestrator makes gate decisions, synthesizes consensus, and
-manages a 7-phase workflow. Running on a weak model produces poor orchestration
-decisions that cascade into expensive rework.
+The autopilot orchestrator makes gate decisions, coordinates the named
+`consensus-synthesizer`, and manages a 7-phase workflow. It consumes the
+synthesizer's actual result and never substitutes parent-authored synthesis.
+Running on a weak model produces poor orchestration decisions that cascade
+into expensive rework.
 
 **Before executing any step**, verify:
 
@@ -305,8 +307,12 @@ After EACH Clarify, Checklist, or Analyze executor returns, complete consensus
 before the next prompt. The parent applies accepted Clarify edits; all three
 executors surface remaining items with category tags. For every such item,
 call `parse-consensus-categories`, dispatch exactly the returned analysts in
-host-bounded waves, consume their actual results, synthesize, apply artifact
-edits serially, and append the Consensus Resolution Log. Follow the mandatory
+host-bounded waves, and consume their actual results. After every analyst round,
+dispatch the installed `consensus-synthesizer`, await it, validate and consume
+its actual result, then apply accepted artifact edits serially and append the
+Consensus Resolution Log. The parent MUST NOT synthesize directly or silently
+replace a missing, failed, or malformed synthesizer result. Such a result
+authorizes no edit and cannot mark consensus complete. Follow the mandatory
 Round 2, stop, re-evaluation, and Phase 6 confidence-emit contracts in
 [`consensus-protocol.md`](../../skills/speckit-autopilot/references/consensus-protocol.md)
 §Category-Routed Dispatch, §Batched Dispatch, §Phase-Specific Consensus Flows,
@@ -534,9 +540,10 @@ Missing, stale, or mismatched external PR authority is blocking.
 
 Every Clarify session, every Checklist domain, and the Analyze
 phase MUST have a corresponding Consensus item immediately after
-it. The consensus item runs the two-layer resolution process
-(Rule 6) — skipped only if the executor reports zero unresolved
-items. **Never omit consensus items.**
+it. A zero-unresolved Clarify or Checklist item may be skipped. The Analyze
+item always runs the named synthesizer after remediation, including a clean
+pass with zero findings, so the five-criterion confidence block is emitted and
+persisted exactly once for that Analyze pass. **Never omit consensus items.**
 
 ### 1.2 Validate Plan State Before Phase 1
 

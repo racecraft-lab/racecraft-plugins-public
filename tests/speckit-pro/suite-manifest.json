@@ -140,6 +140,7 @@
         { "path": "tests/speckit-pro/unit/test-generate-spec-index.py", "label": "test-generate-spec-index" },
         { "path": "tests/speckit-pro/unit/test-agent-inventory.py", "label": "test-agent-inventory" },
         { "path": "tests/speckit-pro/unit/test-agent-materialization.py", "label": "test-agent-materialization" },
+        { "path": "tests/speckit-pro/unit/test-agent-terminal-contracts.py", "label": "test-agent-terminal-contracts" },
         { "path": "tests/speckit-pro/unit/test-parity-extractors.py", "label": "test-parity-extractors" },
         { "path": "tests/speckit-pro/unit/test-parity-judge.py", "label": "test-parity-judge" },
         { "path": "tests/speckit-pro/unit/test-moc-lint-exit-codes.py", "label": "test-moc-lint-exit-codes" },
