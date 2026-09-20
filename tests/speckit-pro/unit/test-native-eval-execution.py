@@ -136,6 +136,7 @@ def claude_verification_case():
 
 
 RUNNER_REQUEST_PATH = "scenario-inputs/binding-request.json"
+SECOND_RUNNER_REQUEST_PATH = "scenario-inputs/second-binding-request.json"
 
 
 def runner_request():
@@ -161,6 +162,20 @@ def runner_result_case():
         "expected_stdout_value": "ambiguous",
         "response_field_path": ["binding_result"],
     })
+    return value
+
+
+def multi_runner_result_case():
+    value = runner_result_case()
+    value["fixtures"].append({
+        "source": "second-request.json", "destination": SECOND_RUNNER_REQUEST_PATH,
+    })
+    second = copy.deepcopy(value["checks"][-1])
+    second.update({
+        "id": "second-runner-result", "request_path": SECOND_RUNNER_REQUEST_PATH,
+        "response_field_path": ["second_binding_result"],
+    })
+    value["checks"].append(second)
     return value
 
 
@@ -4638,6 +4653,123 @@ class NativeExecutionTests(unittest.TestCase):
         self.assertEqual(replay["counts"]["regraded"], 2, replay)
         self.assertEqual(replay["counts"]["subject_launches"], 0, replay)
         self.assertEqual(replay_callbacks.executed, [])
+
+    def test_multiple_native_runner_results_seal_distinct_requests_and_bind_all_checks(self):
+        payload = (json.dumps(runner_request(), sort_keys=True, indent=2) + "\n").encode()
+        (self.repo / "request.json").write_bytes(payload)
+        (self.repo / "second-request.json").write_bytes(payload)
+        value = multi_runner_result_case()
+        shared = copy.deepcopy(value["checks"][-2])
+        shared.update({
+            "id": "shared-request-result",
+            "response_field_path": ["shared_binding_result"],
+        })
+        value["checks"].append(shared)
+        witness = {"bytes": len(payload), "sha256": hashlib.sha256(payload).hexdigest()}
+        prepared = SimpleNamespace(runtime_identity={"settings": {
+            "fixture_read_witnesses": {
+                RUNNER_REQUEST_PATH: witness,
+                SECOND_RUNNER_REQUEST_PATH: witness,
+            },
+        }})
+
+        sealed = execution._sealed_runner_result_inputs(value, prepared, self.repo)
+
+        self.assertEqual(
+            set(sealed["requests"]), {RUNNER_REQUEST_PATH, SECOND_RUNNER_REQUEST_PATH},
+        )
+        invocations = []
+        for index, request_path in enumerate(
+            (RUNNER_REQUEST_PATH, SECOND_RUNNER_REQUEST_PATH), start=1,
+        ):
+            invocations.append({
+                "authority": "protected-native-runner", "call_id": f"runner-{index}",
+                "tool_call_index": index, "request_path": request_path,
+                "output": json.dumps(runner_result_response(), separators=(",", ":")),
+                "success": False, "native_exit_code": 1,
+            })
+        evidence = {"native_metadata": {}}
+        with mock.patch.object(
+            execution, "_native_runner_invocations", return_value=invocations,
+        ):
+            execution._bind_runner_result_context(
+                value, "codex", evidence,
+                {"native_runner_result_inputs": sealed}, None,
+            )
+        receipts = evidence["native_metadata"]["controller_runner_results"]["checks"]
+        self.assertEqual(
+            [receipt["check_id"] for receipt in receipts],
+            ["runner-result", "second-runner-result", "shared-request-result"],
+        )
+        self.assertEqual(
+            [receipt["actual"]["request_path"] for receipt in receipts],
+            [RUNNER_REQUEST_PATH, SECOND_RUNNER_REQUEST_PATH, RUNNER_REQUEST_PATH],
+        )
+
+    def test_multiple_native_runner_results_fail_closed_on_changed_witnesses(self):
+        payload = (json.dumps(runner_request(), sort_keys=True, indent=2) + "\n").encode()
+        (self.repo / "request.json").write_bytes(payload)
+        (self.repo / "second-request.json").write_bytes(payload)
+        value = multi_runner_result_case()
+        witness = {"bytes": len(payload), "sha256": hashlib.sha256(payload).hexdigest()}
+        prepared = SimpleNamespace(runtime_identity={"settings": {
+            "fixture_read_witnesses": {
+                RUNNER_REQUEST_PATH: witness,
+                SECOND_RUNNER_REQUEST_PATH: {**witness, "sha256": "0" * 64},
+            },
+        }})
+        with self.assertRaisesRegex(ValueError, "request witness changed"):
+            execution._sealed_runner_result_inputs(value, prepared, self.repo)
+
+    def test_multiple_native_runner_results_fail_closed_on_missing_duplicate_or_changed_evidence(self):
+        payload = (json.dumps(runner_request(), sort_keys=True, indent=2) + "\n").encode()
+        value = multi_runner_result_case()
+        digest = hashlib.sha256(payload).hexdigest()
+        sealed = {
+            "schema": "native-runner-result-sealed-inputs/v1",
+            "authority": "controller-before-subject-launch",
+            "requests": {
+                request_path: {
+                    "text": payload.decode(), "bytes": len(payload), "sha256": digest,
+                }
+                for request_path in (RUNNER_REQUEST_PATH, SECOND_RUNNER_REQUEST_PATH)
+            },
+        }
+
+        first = {
+            "authority": "protected-native-runner", "call_id": "runner-1",
+            "tool_call_index": 1, "request_path": RUNNER_REQUEST_PATH,
+            "output": json.dumps(runner_result_response(), separators=(",", ":")),
+            "success": False, "native_exit_code": 1,
+        }
+        second = {
+            **first, "call_id": "runner-2", "tool_call_index": 2,
+            "request_path": SECOND_RUNNER_REQUEST_PATH,
+        }
+        variants = {
+            "missing": [first],
+            "ambiguous": [
+                first, second, {**second, "call_id": "runner-3", "tool_call_index": 3},
+            ],
+        }
+        for label, invocations in variants.items():
+            with self.subTest(label=label), mock.patch.object(
+                execution, "_native_runner_invocations", return_value=invocations,
+            ), self.assertRaisesRegex(ValueError, "invocation is missing or ambiguous"):
+                execution._bind_runner_result_context(
+                    value, "codex", {"native_metadata": {}},
+                    {"native_runner_result_inputs": sealed}, None,
+                )
+
+        changed = copy.deepcopy(sealed)
+        changed["requests"][SECOND_RUNNER_REQUEST_PATH]["sha256"] = "0" * 64
+        with mock.patch.object(
+            execution, "_native_runner_invocations", return_value=[first, second],
+        ), self.assertRaisesRegex(ValueError, "sealed native runner request changed"):
+            execution._bind_runner_result_context(
+                value, "codex", {"native_metadata": {}},
+                {"native_runner_result_inputs": changed}, None,
+            )
 
     def test_codex_verify_child_runner_result_is_hash_bound_and_graded(self):
         payload = (json.dumps(runner_request(), sort_keys=True, indent=2) + "\n").encode()

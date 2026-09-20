@@ -549,6 +549,57 @@ class NativeEvalGitObservationTests(unittest.TestCase):
                 self.assertEqual(row["head"], result["git_repository"][row["revision"] + "_commit"])
         self.assertEqual(receipts[0], receipts[1])
 
+    def test_registered_worktree_observation_accepts_official_runner_relocation(self) -> None:
+        runner = self.root / "runner"
+        fixture_root = runner / "fixture"
+        plan = self.plan(fixture_root)
+        plan["git_repository"]["worktrees"] = [
+            {"path": ".worktrees/work", "branch": "scenario/work", "revision": "feature"},
+        ]
+        workspace = runner / "home/cwd"
+        workspace.mkdir(parents=True)
+        result = fixture_setup.materialize_workspace(plan, workspace)
+        controls = fixture_setup.snapshot_git_repository_controls(workspace)
+
+        sealed = runner / "sealed"
+        sealed.mkdir()
+        (runner / "home").rename(sealed / "home")
+        relocated = sealed / "home/cwd"
+
+        observed = observation.observe_registered_worktrees(
+            relocated, controls, result["git_repository"], result["worktrees"],
+        )
+        self.assertEqual(observed["schema_version"], "native-eval-git-worktrees/v1")
+        self.assertEqual(observed["worktrees"][0]["initial"], result["worktrees"][0])
+        self.assertEqual(observed["worktrees"][0]["head"], result["worktrees"][0]["head"])
+        self.assertTrue(observed["worktrees"][0]["status"]["clean"])
+
+    def test_registered_worktree_observation_rejects_lookalike_relocated_marker(self) -> None:
+        runner = self.root / "runner-lookalike"
+        fixture_root = runner / "fixture"
+        plan = self.plan(fixture_root)
+        plan["git_repository"]["worktrees"] = [
+            {"path": ".worktrees/work", "branch": "scenario/work", "revision": "feature"},
+        ]
+        workspace = runner / "home/cwd"
+        workspace.mkdir(parents=True)
+        result = fixture_setup.materialize_workspace(plan, workspace)
+        controls = fixture_setup.snapshot_git_repository_controls(workspace)
+
+        sealed = runner / "sealed"
+        sealed.mkdir()
+        (runner / "home").rename(sealed / "home")
+        relocated = sealed / "home/cwd"
+        marker = relocated / ".worktrees/work/.git"
+        marker.write_text(
+            f"gitdir: {self.root / 'outside/.git/worktrees/work'}\n", encoding="utf-8",
+        )
+
+        with self.assertRaisesRegex(GitObservationError, "marker escaped"):
+            observation.observe_registered_worktrees(
+                relocated, controls, result["git_repository"], result["worktrees"],
+            )
+
     def test_registered_worktree_observation_binds_initial_and_current_state(self) -> None:
         root = self.root / "observed-topology"
         plan = self.plan(root)

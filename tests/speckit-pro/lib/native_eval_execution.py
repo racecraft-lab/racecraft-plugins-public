@@ -396,14 +396,36 @@ def _sealed_plan_repair_inputs(
     }
 
 
+def _sealed_runner_request(
+    source: Path, root: Path, witness: object,
+) -> dict[str, object]:
+    try:
+        status = source.lstat()
+        resolved = source.resolve(strict=True)
+    except OSError as exc:
+        raise ValueError("trusted native runner request is unavailable") from exc
+    if not stat.S_ISREG(status.st_mode) or stat.S_ISLNK(status.st_mode) \
+            or not resolved.is_relative_to(root):
+        raise ValueError("trusted native runner request is unsafe")
+    try:
+        payload = source.read_bytes()
+        text = payload.decode("utf-8", errors="strict")
+    except (OSError, UnicodeError) as exc:
+        raise ValueError("trusted native runner request is unreadable") from exc
+    digest_value = hashlib.sha256(payload).hexdigest()
+    if not isinstance(witness, Mapping) or set(witness) != {"bytes", "sha256"} \
+            or witness.get("bytes") != len(payload) \
+            or witness.get("sha256") != digest_value:
+        raise ValueError("trusted native runner request witness changed")
+    return {"text": text, "bytes": len(payload), "sha256": digest_value}
+
+
 def _sealed_runner_result_inputs(
     case: Mapping[str, object], prepared: object, repo: Path,
 ) -> dict[str, object] | None:
     checks = runner_checks(case)
     if not checks:
         return None
-    if len(checks) != 1:
-        raise ValueError("native runner result checks are ambiguous")
     fixtures = case.get("fixtures")
     if not isinstance(fixtures, list):
         raise ValueError("native runner result case fixtures are malformed")
@@ -425,36 +447,23 @@ def _sealed_runner_result_inputs(
     witnesses = settings.get("fixture_read_witnesses") if isinstance(settings, Mapping) else None
     if not isinstance(witnesses, Mapping):
         raise ValueError("prepared native runner request has no controller witness")
-    request_path = str(checks[0]["request_path"])
-    if request_path not in by_destination:
-        raise ValueError("native runner request is not a staged fixture")
     root = repo.resolve(strict=True)
-    source = root.joinpath(*PurePosixPath(by_destination[request_path]).parts)
-    try:
-        status = source.lstat()
-        resolved = source.resolve(strict=True)
-    except OSError as exc:
-        raise ValueError("trusted native runner request is unavailable") from exc
-    if not stat.S_ISREG(status.st_mode) or stat.S_ISLNK(status.st_mode) \
-            or not resolved.is_relative_to(root):
-        raise ValueError("trusted native runner request is unsafe")
-    try:
-        payload = source.read_bytes()
-        text = payload.decode("utf-8", errors="strict")
-    except (OSError, UnicodeError) as exc:
-        raise ValueError("trusted native runner request is unreadable") from exc
-    witness = witnesses.get(request_path)
-    digest_value = hashlib.sha256(payload).hexdigest()
-    if not isinstance(witness, Mapping) or set(witness) != {"bytes", "sha256"} \
-            or witness.get("bytes") != len(payload) \
-            or witness.get("sha256") != digest_value:
-        raise ValueError("trusted native runner request witness changed")
+    requests: dict[str, dict[str, object]] = {}
+    for check in checks:
+        request_path = str(check["request_path"])
+        if request_path in requests:
+            continue
+        source_path = by_destination.get(request_path)
+        if source_path is None:
+            raise ValueError("native runner request is not a staged fixture")
+        source = root.joinpath(*PurePosixPath(source_path).parts)
+        requests[request_path] = _sealed_runner_request(
+            source, root, witnesses.get(request_path),
+        )
     return {
         "schema": "native-runner-result-sealed-inputs/v1",
         "authority": "controller-before-subject-launch",
-        "requests": {request_path: {
-            "text": text, "bytes": len(payload), "sha256": digest_value,
-        }},
+        "requests": requests,
     }
 
 
@@ -3110,26 +3119,12 @@ def _stored_verification(
     attach_verification_receipt(observation, [receipt])
 
 
-def _bind_runner_result_context(
-    case: Mapping[str, object], host: str, observation: dict[str, Any],
-    launch: Mapping[str, object], codex_trace: Mapping[str, object] | None,
-) -> None:
-    checks = runner_checks(case)
-    if not checks:
-        return
-    if len(checks) != 1:
-        raise ValueError("native runner result checks are ambiguous")
-    sealed = launch.get("native_runner_result_inputs")
-    requests = sealed.get("requests") if isinstance(sealed, Mapping) else None
-    if not isinstance(sealed, Mapping) \
-            or set(sealed) != {"schema", "authority", "requests"} \
-            or sealed.get("schema") != "native-runner-result-sealed-inputs/v1" \
-            or sealed.get("authority") != "controller-before-subject-launch" \
-            or not isinstance(requests, Mapping):
-        raise ValueError("sealed native runner request is unavailable")
-    request_path = checks[0]["request_path"]
+def _sealed_runner_request_bytes(
+    request_path: str, requests: Mapping[object, object],
+) -> bytes:
     request = requests.get(request_path)
-    if not isinstance(request, Mapping) or set(request) != {"text", "bytes", "sha256"} \
+    if not isinstance(request, Mapping) \
+            or set(request) != {"text", "bytes", "sha256"} \
             or not isinstance(request.get("text"), str) \
             or type(request.get("bytes")) is not int \
             or not isinstance(request.get("sha256"), str):
@@ -3138,16 +3133,39 @@ def _bind_runner_result_context(
     if request["bytes"] != len(request_bytes) \
             or request["sha256"] != hashlib.sha256(request_bytes).hexdigest():
         raise ValueError("sealed native runner request changed")
-    candidates = [
-        invocation for invocation in _native_runner_invocations(
-            host, observation, launch, codex_trace,
-        )
-        if invocation.get("request_path") == request_path
-    ]
-    if len(candidates) != 1:
-        raise ValueError("native runner result invocation is missing or ambiguous")
-    receipt = bind_runner_result(checks[0], candidates[0], request_bytes)
-    attach_runner_result_receipt(observation, [receipt])
+    return request_bytes
+
+
+def _bind_runner_result_context(
+    case: Mapping[str, object], host: str, observation: dict[str, Any],
+    launch: Mapping[str, object], codex_trace: Mapping[str, object] | None,
+) -> None:
+    checks = runner_checks(case)
+    if not checks:
+        return
+    sealed = launch.get("native_runner_result_inputs")
+    requests = sealed.get("requests") if isinstance(sealed, Mapping) else None
+    request_paths = {str(check["request_path"]) for check in checks}
+    if not isinstance(sealed, Mapping) \
+            or set(sealed) != {"schema", "authority", "requests"} \
+            or sealed.get("schema") != "native-runner-result-sealed-inputs/v1" \
+            or sealed.get("authority") != "controller-before-subject-launch" \
+            or not isinstance(requests, Mapping) \
+            or set(requests) != request_paths:
+        raise ValueError("sealed native runner request is unavailable")
+    invocations = _native_runner_invocations(host, observation, launch, codex_trace)
+    receipts = []
+    for check in checks:
+        request_path = str(check["request_path"])
+        request_bytes = _sealed_runner_request_bytes(request_path, requests)
+        candidates = [
+            invocation for invocation in invocations
+            if invocation.get("request_path") == request_path
+        ]
+        if len(candidates) != 1:
+            raise ValueError("native runner result invocation is missing or ambiguous")
+        receipts.append(bind_runner_result(check, candidates[0], request_bytes))
+    attach_runner_result_receipt(observation, receipts)
 
 
 def _sealed_plan_repair_check(

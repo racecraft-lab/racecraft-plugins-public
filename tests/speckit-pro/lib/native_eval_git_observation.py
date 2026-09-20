@@ -205,15 +205,24 @@ def _worktree_listing(
     )
     _need(raw.endswith(b"\0\0"), "registered Git worktree list is malformed")
     records: dict[Path, dict[str, str | None]] = {}
+    relocation = _official_runner_relocation(workspace)
     for block in raw[:-2].split(b"\0\0"):
         fields = block.split(b"\0")
-        _need(len(fields) == 3 and fields[0].startswith(b"worktree ")
+        _need(len(fields) in {3, 4} and fields[0].startswith(b"worktree ")
               and fields[1].startswith(b"HEAD ")
               and (fields[2].startswith(b"branch refs/heads/") or fields[2] == b"detached"),
               "registered Git worktree list is malformed")
+        _need(
+            len(fields) == 3
+            or relocation is not None
+            and fields[3].startswith(b"prunable ")
+            and len(fields[3]) > len(b"prunable "),
+            "registered Git worktree list is malformed",
+        )
         raw_path = _decode_text(fields[0][len(b"worktree "):], "registered worktree path")
         path = Path(raw_path)
         _need(path.is_absolute(), "registered Git worktree path is malformed")
+        path = _relocated_worktree_registration(workspace, path)
         head = _need_oid(
             _decode_text(fields[1][len(b"HEAD "):], "registered worktree HEAD"),
             "registered worktree HEAD",
@@ -539,9 +548,11 @@ def _validate_linked_git_marker(
           "Git worktree marker is malformed")
     declared_admin = Path(text[len("gitdir: "):-1])
     _need(declared_admin.is_absolute(), "Git worktree marker is malformed")
-    _need(declared_admin.parent == admin_root and ".." not in declared_admin.parts,
+    _need(".." not in declared_admin.parts,
           "Git worktree marker escaped the disposable repository")
-    admin = declared_admin
+    admin, relocated_from = _linked_admin_directory(
+        workspace, declared_admin, admin_root,
+    )
     _real_directory(admin, "Git worktree admin directory")
     # Which optional entries Git materializes here depends on its version and on
     # the operations that have run, so the contract is "every required entry is
@@ -571,7 +582,10 @@ def _validate_linked_git_marker(
     gitdir = _regular_text(admin / "gitdir", "Git worktree reverse marker")
     _need(gitdir.endswith("\n") and gitdir.count("\n") == 1,
           "Git worktree reverse marker is malformed")
-    _need(Path(gitdir[:-1]) == marker.absolute(),
+    expected_marker = marker.absolute()
+    if relocated_from is not None:
+        expected_marker = relocated_from / child.relative_to(workspace) / ".git"
+    _need(Path(gitdir[:-1]) == expected_marker,
           "Git worktree reverse marker does not match the declared worktree")
     _safe_head(admin / "HEAD", "Git worktree HEAD")
     if admin / "ORIG_HEAD" in present_admin_entries:
@@ -588,6 +602,98 @@ def _validate_linked_git_marker(
         _need(not _directory_entries(refs, "Git worktree private refs"),
               "Git worktree private refs contain undeclared entries")
     return admin
+
+
+def _official_runner_relocation(workspace: Path) -> tuple[Path, Path] | None:
+    """Return the official runner's current and pre-seal repository roots."""
+
+    current_root = workspace
+    if workspace.parent.name == ".worktrees":
+        current_root = workspace.parent.parent
+    if (
+        current_root.name != "cwd"
+        or current_root.parent.name != "home"
+        or current_root.parent.parent.name != "sealed"
+    ):
+        return None
+    retained_root = current_root.parent.parent.parent
+    original_root = retained_root / "home" / "cwd"
+    _need(
+        _lstat_optional(original_root, "pre-relocation Git workspace") is None,
+        "official runner Git relocation is ambiguous",
+    )
+    return current_root, original_root
+
+
+def _relocated_worktree_registration(workspace: Path, path: Path) -> Path:
+    relocation = _official_runner_relocation(workspace)
+    if relocation is None:
+        return path
+    current_root, original_root = relocation
+    if not path.is_relative_to(original_root):
+        return path
+    relative = path.relative_to(original_root)
+    _need(
+        relative == Path(".")
+        or re.fullmatch(
+            r"\.worktrees/[a-z0-9][a-z0-9-]{0,63}", relative.as_posix(),
+        ) is not None,
+        "registered Git worktree path escaped the disposable repository",
+    )
+    return current_root / relative
+
+
+def _linked_admin_directory(
+    workspace: Path, declared_admin: Path, admin_root: Path,
+) -> tuple[Path, Path | None]:
+    if declared_admin.parent == admin_root:
+        return declared_admin, None
+    relocation = _official_runner_relocation(workspace)
+    _need(relocation is not None,
+          "Git worktree marker escaped the disposable repository")
+    current_root, original_root = relocation
+    _need(
+        workspace == current_root
+        and declared_admin == original_root / ".git" / "worktrees" / declared_admin.name
+        and _lstat_optional(
+            declared_admin, "pre-relocation Git worktree admin directory",
+        ) is None,
+        "Git worktree marker escaped the disposable repository",
+    )
+    return admin_root / declared_admin.name, original_root
+
+
+def _relocated_worktree_environment(
+    workspace: Path, environment: dict[str, str], label: str,
+) -> dict[str, str]:
+    relocation = _official_runner_relocation(workspace)
+    if relocation is None or workspace == relocation[0]:
+        return environment
+    current_root, original_root = relocation
+    _need(
+        workspace.parent == current_root / ".worktrees",
+        f"Git {label} workspace escaped the disposable repository",
+    )
+    marker_text = _regular_text(workspace / ".git", "Git worktree marker")
+    _need(
+        marker_text.startswith("gitdir: ")
+        and marker_text.endswith("\n")
+        and marker_text.count("\n") == 1,
+        "Git worktree marker is malformed",
+    )
+    declared_admin = Path(marker_text[len("gitdir: "):-1])
+    _need(
+        declared_admin.parent == original_root / ".git" / "worktrees"
+        and ".." not in declared_admin.parts,
+        "Git worktree marker escaped the disposable repository",
+    )
+    relocated_admin = current_root / ".git" / "worktrees" / declared_admin.name
+    _real_directory(relocated_admin, "Git worktree admin directory")
+    return {
+        **environment,
+        "GIT_DIR": str(relocated_admin),
+        "GIT_WORK_TREE": str(workspace),
+    }
 
 
 def _validate_receipt(value: object) -> dict[str, Any]:
@@ -973,12 +1079,13 @@ def _git_result(
         f"Git {label} executable does not match the pinned git runtime",
     )
     command = [executable, "--no-pager", *arguments]
+    command_environment = _relocated_worktree_environment(workspace, environment, label)
     try:
         with tempfile.TemporaryFile() as stdout, tempfile.TemporaryFile() as stderr:
             completed = subprocess.run(
                 command,
                 cwd=workspace,
-                env=environment,
+                env=command_environment,
                 stdin=subprocess.DEVNULL,
                 stdout=stdout,
                 stderr=stderr,
