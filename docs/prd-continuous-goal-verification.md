@@ -15,7 +15,7 @@
 
 Autopilot today decides completion from signals that a fluent agent can satisfy without doing the work: a self-rated five-criterion confidence composite, tasks marked `[X]`, an FR identifier appearing in a task title, a review thread reply that sounds like a fix, and a terminal summary that says "all tests pass." Deterministic gates catch structural defects (missing markers, malformed frontmatter, path drift), but nothing checks the semantic relationship between a requirement and the evidence offered for it. The failure shows up late: reviewers reopen threads, UAT finds requirements nobody planned for, and archive summaries describe work that never shipped.
 
-The `typesafe-jev` plugin (0.7.0, built from the same `typesafe-mcp` revision the bundle inspected) already exposes one `evaluate` MCP tool that answers bounded semantic questions with calibrated probabilities. Shipped SpecKit Pro source contains no reference to it. The handoff bundle catalogs 71 ways to use it. This PRD selects the twelve that attack run-level false completion and defers the rest with reasons.
+The `typesafe-jev` plugin (0.7.0, built from the same `typesafe-mcp` revision the bundle inspected) already exposes one `evaluate` MCP tool that answers bounded semantic questions with calibrated probabilities. Shipped SpecKit Pro source contains no reference to it. The handoff bundle catalogs 71 ways to use it. This PRD selects the 13 backlog items that attack run-level false completion, delivers them as twelve features (two items split across specs, two specs share an item), and defers the other 58 with reasons.
 
 ## 2. Goals & Non-goals
 
@@ -30,7 +30,7 @@ The `typesafe-jev` plugin (0.7.0, built from the same `typesafe-mcp` revision th
 
 ### 2.2 Non-goals (out of scope)
 
-The bundle's 71 opportunities were filtered to the twelve features below. Every excluded identifier is listed here with the reason, so the cut is auditable. The full per-item record for all 71 (surfaces, evidence, behavior, boundary, metric, dependencies, disposition) lives in the [backlog catalog](ai/specs/continuous-goal-verification-backlog.md), which replaces the external handoff bundle as the source of record for future specs.
+The bundle's 71 opportunities were filtered to 13 in-scope items, delivered by the twelve features below. Every one of the 58 excluded identifiers is listed here with the reason, so the cut is auditable. The full per-item record for all 71 (surfaces, evidence, behavior, boundary, metric, dependencies, disposition) lives in the [backlog catalog](ai/specs/continuous-goal-verification-backlog.md), which replaces the external handoff bundle as the source of record for future specs.
 
 | Group | Backlog IDs | Reason for deferral |
 |---|---|---|
@@ -64,7 +64,7 @@ Also out of scope, permanently for this PRD:
 - **AC-2.3**: The wire projection sends only provider-supported `state`, `questions`, and selected model fields; local run, workflow, correlation, and consent identities are excluded, and a test proves it.
 - **AC-2.4**: Normalization handles Noul, Choice, and Score separately; malformed JSON, duplicate keys, non-finite numbers, unknown options, omitted answers, refusals, and unknown model identity each produce an explicit non-success state and never a positive judgment.
 - **AC-2.5**: Receipts keep `execution_status`, `coverage`, `semantic_outcomes`, `freshness`, `provenance`, and `policy_interpretation` as separate fields; `execution_status=complete` means the request was answered, not that a goal is complete.
-- **AC-2.6**: Canonicalization is versioned, rejects duplicate keys and non-finite values, preserves evidence bytes, and computes actual serialized UTF-8 size against the 64k total and 32k state-plus-longest-question budgets.
+- **AC-2.6**: Canonicalization is versioned, rejects duplicate keys and non-finite values, preserves evidence bytes, and measures actual serialized UTF-8 size. The 64k total and 32k state-plus-longest-question token budgets are checked with an explicitly labeled estimate (or a qualified tokenizer when available), never equated with the byte count; the receipt records which was used, and the provider's own enforcement remains the backstop.
 - **AC-2.7**: The initial rubric catalog uses string instructions and criteria only, so it runs on both the direct TypeSafe and OpenRouter backends.
 
 ### 3.3 Additive Decision Journal and Offline Replay *(-> VRFY-003)*

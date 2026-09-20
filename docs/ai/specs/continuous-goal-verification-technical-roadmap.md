@@ -142,20 +142,23 @@ Each accepted spec delivers its own observable outcome.
 
 | Spec | Name | Status | Workflow File | Next Phase |
 |------|------|--------|---------------|------------|
-| VRFY-001 | Host Boundary and Implementation-Map Spike | ⏳ Pending | [VRFY-001-workflow.md](VRFY-001-workflow.md) | Specify |
-| VRFY-002 | Versioned Decision Contract and Offline Prepare/Assess | ⏳ Pending | [VRFY-002-workflow.md](VRFY-002-workflow.md) | VRFY-001 |
-| VRFY-003 | Additive Decision Journal and Offline Replay | ⏳ Pending | [VRFY-003-workflow.md](VRFY-003-workflow.md) | VRFY-002 |
-| VRFY-004 | Dual-Host Trusted-Parent Adapter | ⏳ Pending | [VRFY-004-workflow.md](VRFY-004-workflow.md) | VRFY-003 |
-| VRFY-005 | Pilot: Requirement-to-Task Semantic Coverage | ⏳ Pending | [VRFY-005-workflow.md](VRFY-005-workflow.md) | VRFY-004 |
-| VRFY-006 | Pilot: Review-Fix Closure Verification | ⏳ Pending | [VRFY-006-workflow.md](VRFY-006-workflow.md) | VRFY-004 |
-| VRFY-007 | Pilot: Claim-to-Source Support Annotation | ⏳ Pending | [VRFY-007-workflow.md](VRFY-007-workflow.md) | VRFY-004 |
-| VRFY-008 | Frozen Goal and Obligation Registry | ⏳ Pending | [VRFY-008-workflow.md](VRFY-008-workflow.md) | VRFY-002 |
-| VRFY-009 | Phase-Boundary Goal-Completion Verifier | ⏳ Pending | [VRFY-009-workflow.md](VRFY-009-workflow.md) | VRFY-008 |
-| VRFY-010 | Change-Triggered Scheduler and Invalidation | ⏳ Pending | [VRFY-010-workflow.md](VRFY-010-workflow.md) | VRFY-009 |
-| VRFY-011 | Premature-Stop and Redundant-Continuation Advice | ⏳ Pending | [VRFY-011-workflow.md](VRFY-011-workflow.md) | VRFY-010 |
-| VRFY-012 | Trajectory Corpus, Calibration Report, and Gated Live Evaluation | ⏳ Pending | [VRFY-012-workflow.md](VRFY-012-workflow.md) | VRFY-010 |
+| VRFY-001 | Host Boundary and Implementation-Map Spike | ⏳ Pending | - | Specify |
+| VRFY-002 | Versioned Decision Contract and Offline Prepare/Assess | ⏳ Pending | - | VRFY-001 |
+| VRFY-003 | Additive Decision Journal and Offline Replay | ⏳ Pending | - | VRFY-002 |
+| VRFY-004 | Dual-Host Trusted-Parent Adapter | ⏳ Pending | - | VRFY-003 |
+| VRFY-005 | Pilot: Requirement-to-Task Semantic Coverage | ⏳ Pending | - | VRFY-004 |
+| VRFY-006 | Pilot: Review-Fix Closure Verification | ⏳ Pending | - | VRFY-004 |
+| VRFY-007 | Pilot: Claim-to-Source Support Annotation | ⏳ Pending | - | VRFY-004 |
+| VRFY-008 | Frozen Goal and Obligation Registry | ⏳ Pending | - | VRFY-002 |
+| VRFY-009 | Phase-Boundary Goal-Completion Verifier | ⏳ Pending | - | VRFY-008 |
+| VRFY-010 | Change-Triggered Scheduler and Invalidation | ⏳ Pending | - | VRFY-009 |
+| VRFY-011 | Premature-Stop and Redundant-Continuation Advice | ⏳ Pending | - | VRFY-010 |
+| VRFY-012 | Trajectory Corpus, Calibration Report, and Gated Live Evaluation | ⏳ Pending | - | VRFY-010 |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⚠️ Blocked
+
+Workflow files are created by `speckit-scaffold-spec` under `.process/`; the
+column reads `-` until a spec is scaffolded.
 
 ---
 
@@ -258,9 +261,11 @@ Budget result: within budget
   `assess-semantic-check` in the helper registry with promotion status and
   request fixtures, following the existing envelope.
 - Versioned canonicalization: reject duplicate keys and non-finite numbers,
-  preserve evidence bytes, order keys, compute serialized UTF-8 size, and check
-  the 64k total and 32k state-plus-longest-question budgets locally before the
-  provider's own enforcement.
+  preserve evidence bytes, order keys, and measure serialized UTF-8 bytes. Check
+  the 64k total and 32k state-plus-longest-question token budgets locally with
+  an explicitly labeled estimate (or a qualified tokenizer when one is
+  available) before the provider's own enforcement; bytes are measured, tokens
+  are estimated, and the receipt records which.
 - Separate evaluation key (evidence, projection, rubric, normalizer, provider
   contract, model identity, inference settings) from interpretation key (plus
   policy version and applicable goal state); neither includes timestamps,
