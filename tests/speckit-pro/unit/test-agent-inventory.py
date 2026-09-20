@@ -42,7 +42,7 @@ class AgentInventoryTests(unittest.TestCase):
         categories = [role["category"] for role in AGENT_INVENTORY["roles"]]
         self.assertEqual(categories.count("shared"), 12)
         self.assertEqual(categories.count("sweep_security"), 2)
-        self.assertEqual(categories.count("claude_only"), 1)
+        self.assertEqual(categories.count("brokered_observer"), 1)
         self.assertEqual(categories.count("optional_helper"), 1)
         self.assertEqual(len(CLAUDE_REQUIRED_AGENT_NAMES), 15)
         self.assertEqual(len(CODEX_REQUIRED_AGENT_NAMES), 12)

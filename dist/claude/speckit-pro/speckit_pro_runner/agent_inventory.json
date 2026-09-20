@@ -108,10 +108,10 @@
     },
     {
       "name": "artifact-preview-observer",
-      "category": "claude_only",
-      "exception_reason": "Claude Code publishes and observes the preview through the Artifact surface and returns only a brokered verdict; no Codex agent definition ships for this role, and the author-broker MCP server is registered only in the Claude payload, so none is installed on Codex.",
+      "category": "brokered_observer",
+      "exception_reason": "Claude Code publishes and observes the preview through the Artifact surface; Codex uses an isolated launcher prompt against the same author-broker so page bytes and rendered text stay outside the privileged parent. Both return only a closed brokered verdict, and neither is a callable installed Codex agent.",
       "claude_code": {"implementation": "plugin_agent", "source": "agents/artifact-preview-observer.md", "install_status": "required", "order": 14, "model": "haiku", "effort": "low", "sandbox": "broker-only", "memory": "none"},
-      "codex": {"implementation": "none", "source": null, "install_status": "not_installed", "order": null, "model": "not-implemented", "effort": "not-implemented", "sandbox": "not-implemented", "memory": "none"}
+      "codex": {"implementation": "isolated_prompt_role", "source": "codex-skills/speckit-autopilot/references/preview-prompts/observer.md", "install_status": "not_installed", "order": null, "model": "launcher-configured", "effort": "launcher-configured", "sandbox": "isolated-launcher", "memory": "none"}
     }
   ]
 }

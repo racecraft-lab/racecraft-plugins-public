@@ -59,7 +59,7 @@ Claude Code and Codex agent responsibilities derived from the authoritative ship
 | sweep-classifier | sweep_security | plugin agent (required) | isolated prompt role (not installed) | Claude Code uses a broker-only plugin agent; Codex uses an isolated launcher prompt so credentials, filesystem access, and raw reviewer text remain outside the model process. |
 | sweep-analyst | sweep_security | plugin agent (required) | isolated prompt role (not installed) | Claude Code uses a broker-only plugin agent; Codex uses an isolated launcher prompt so credentials, filesystem access, and raw reviewer text remain outside the model process. |
 | autopilot-fast-helper | optional_helper | Not implemented | custom agent (optional) | Codex may activate this latency-first advisory leaf helper after route probing; Claude Code has no equivalent helper and does not require one for workflow correctness. |
-| artifact-preview-observer | claude_only | plugin agent (required) | Not implemented | Claude Code publishes and observes the preview through the Artifact surface and returns only a brokered verdict; no Codex agent definition ships for this role, and the author-broker MCP server is registered only in the Claude payload, so none is installed on Codex. |
+| artifact-preview-observer | brokered_observer | plugin agent (required) | isolated prompt role (not installed) | Claude Code publishes and observes the preview through the Artifact surface; Codex uses an isolated launcher prompt against the same author-broker so page bytes and rendered text stay outside the privileged parent. Both return only a closed brokered verdict, and neither is a callable installed Codex agent. |
 
 ### Analyze Executor
 
@@ -115,22 +115,23 @@ Claude Code and Codex agent responsibilities derived from the authoritative ship
 - **Classification:** `source`
 - **Platform concept:** SpecKit Pro artifact-preview-observer agent
 - **Claude Code:** plugin agent (required)
-- **Codex:** Not implemented
-- **Runtime difference:** Claude Code publishes and observes the preview through the Artifact surface and returns only a brokered verdict; no Codex agent definition ships for this role, and the author-broker MCP server is registered only in the Claude payload, so none is installed on Codex.
+- **Codex:** isolated prompt role (not installed)
+- **Runtime difference:** Claude Code publishes and observes the preview through the Artifact surface; Codex uses an isolated launcher prompt against the same author-broker so page bytes and rendered text stay outside the privileged parent. Both return only a closed brokered verdict, and neither is a callable installed Codex agent.
 
 #### Source Facts
 
-- artifact-preview-observer is classified as `claude_only`. Claude Code: plugin agent (required). Codex: Not implemented. Codex uses `not-implemented` with `not-implemented` effort. Source refs: `speckit-pro/speckit_pro_runner/agent_inventory.json`, `speckit-pro/agents/artifact-preview-observer.md`.
+- artifact-preview-observer is classified as `brokered_observer`. Claude Code: plugin agent (required). Codex: isolated prompt role (not installed). Codex uses `launcher-configured` with `launcher-configured` effort. Source refs: `speckit-pro/speckit_pro_runner/agent_inventory.json`, `speckit-pro/agents/artifact-preview-observer.md`, `speckit-pro/codex-skills/speckit-autopilot/references/preview-prompts/observer.md`.
 
 #### Sources
 
 - [speckit-pro/speckit_pro_runner/agent_inventory.json](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/speckit-pro/speckit_pro_runner/agent_inventory.json)
 - [speckit-pro/agents/artifact-preview-observer.md](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/speckit-pro/agents/artifact-preview-observer.md)
+- [speckit-pro/codex-skills/speckit-autopilot/references/preview-prompts/observer.md](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/speckit-pro/codex-skills/speckit-autopilot/references/preview-prompts/observer.md)
 
 #### Inferred Notes
 
 - Runtime-specific Markdown, TOML, and isolated prompt sources remain authored separately; the inventory aligns responsibilities and records intentional exceptions.
-  - Based on: `speckit-pro/speckit_pro_runner/agent_inventory.json`, `speckit-pro/agents/artifact-preview-observer.md`
+  - Based on: `speckit-pro/speckit_pro_runner/agent_inventory.json`, `speckit-pro/agents/artifact-preview-observer.md`, `speckit-pro/codex-skills/speckit-autopilot/references/preview-prompts/observer.md`
 
 ### Autopilot Fast Helper
 

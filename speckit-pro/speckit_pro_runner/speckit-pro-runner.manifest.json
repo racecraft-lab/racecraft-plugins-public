@@ -31,7 +31,7 @@
         "value": "speckit_pro_runner/agent_inventory.json",
         "display": "speckit_pro_runner/agent_inventory.json"
       },
-      "sha256": "f6119f7c96317419471cc169f971cb2665018c85ca9cd50e7d453a5484afb708"
+      "sha256": "3962b1a26b2273a3a39734d4564b317f5b3081825636d64758bed554059522ba"
     },
     {
       "path": {
@@ -39,7 +39,7 @@
         "value": "speckit_pro_runner/agent_inventory.py",
         "display": "speckit_pro_runner/agent_inventory.py"
       },
-      "sha256": "6f3df4feb49d4715e620ade71917fd3a777a9047e2138ace877d83b1c033662e"
+      "sha256": "570328bae55333488ffe7b1dddc0bca3f4143e4ceaaec58f1d5f76ebc8c1f5c9"
     },
     {
       "path": {

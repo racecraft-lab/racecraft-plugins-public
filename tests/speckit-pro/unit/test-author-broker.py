@@ -171,6 +171,41 @@ class AuthorBrokerTests(unittest.TestCase):
         with self.assertRaisesRegex(author_broker.BrokerViolation, "unknown author broker tool"):
             author_broker.call_tool("not-a-tool", {})
 
+    def test_codex_reaches_the_author_broker_through_an_isolated_prompt_role(self) -> None:
+        import json
+
+        plugin_root = ROOT / "speckit-pro"
+        codex_mcp = json.loads((plugin_root / ".codex-plugin/sweep-mcp.json").read_text(encoding="utf-8"))
+        server = codex_mcp["mcpServers"]["author-broker"]
+        self.assertEqual(["-m", "speckit_pro_runner.author_broker"], server["args"])
+        self.assertEqual(".", server["cwd"])
+        self.assertNotIn("env", server)
+        self.assertEqual(
+            codex_mcp,
+            json.loads((ROOT / "dist/codex/speckit-pro/.codex-plugin/sweep-mcp.json").read_text(encoding="utf-8")),
+        )
+
+        self.assertFalse((plugin_root / "codex-agents/artifact-preview-observer.toml").exists())
+        prompt = plugin_root / "codex-skills/speckit-autopilot/references/preview-prompts/observer.md"
+        self.assertTrue(prompt.is_file())
+        text = prompt.read_text(encoding="utf-8")
+        self.assertIn("mcp__author-broker__submit_preview_verdict", text)
+        self.assertNotIn("mcp__plugin_speckit-pro_author-broker__", text)
+        for verdict in author_broker.PREVIEW_VERDICTS:
+            self.assertIn(f"`{verdict}`", text)
+
+    def test_inventory_records_the_observer_as_a_brokered_observer_role(self) -> None:
+        from speckit_pro_runner.agent_inventory import AGENT_INVENTORY
+
+        role = next(r for r in AGENT_INVENTORY["roles"] if r["name"] == "artifact-preview-observer")
+        self.assertEqual("brokered_observer", role["category"])
+        self.assertEqual(("plugin_agent", "required"), (role["claude_code"]["implementation"], role["claude_code"]["install_status"]))
+        self.assertEqual(("isolated_prompt_role", "not_installed"), (role["codex"]["implementation"], role["codex"]["install_status"]))
+        self.assertEqual(
+            "codex-skills/speckit-autopilot/references/preview-prompts/observer.md",
+            role["codex"]["source"],
+        )
+
 
 if __name__ == "__main__":
     raise SystemExit(run_counted(unittest.defaultTestLoader.loadTestsFromTestCase(AuthorBrokerTests), label="test-author-broker"))
