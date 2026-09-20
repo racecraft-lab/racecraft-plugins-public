@@ -25,7 +25,7 @@ _RESERVED_METADATA = frozenset({"fixture_read_proofs", "fixture_read_witnesses"}
 _SHELLS = frozenset({"sh", "bash", "zsh", "/bin/sh", "/bin/bash", "/bin/zsh"})
 _SED = frozenset({"sed", "/bin/sed", "/usr/bin/sed"})
 _WC = frozenset({"wc", "/usr/bin/wc"})
-_SED_RANGE = re.compile(r"1,([1-9][0-9]{0,8})p")
+_SED_RANGE = re.compile(r"1,(\$|[1-9][0-9]{0,8})p")
 _SHA256 = re.compile(r"[0-9a-f]{64}")
 _WC_HEADER = re.compile(r"[ \t]*([0-9]{1,9})[ \t]+(.+)")
 
@@ -150,10 +150,9 @@ def _sed(tokens: list[str]) -> tuple[str, int | None] | None:
         expression, operand = tokens[2], tokens[3]
     match = _SED_RANGE.fullmatch(expression)
     path = _path(operand, "bounded sed path")
-    if (match is None and expression != "1,$p") or path is None \
-            or (len(tokens) == 4 and operand.startswith("-")):
+    if match is None or path is None or (len(tokens) == 4 and operand.startswith("-")):
         return None
-    return path, int(match.group(1)) if match is not None else None
+    return path, None if match.group(1) == "$" else int(match.group(1))
 
 
 def _wc(tokens: list[str]) -> str | None:
@@ -192,16 +191,18 @@ def _read(command: object) -> _Read | None:
             read = _sed(tokens[split + 1:])
             if counted is None or read is None or counted != read[0]:
                 return None
-            kind = "count_then_bounded_sed" if read[1] is not None \
-                else "count_then_unbounded_sed"
-            return _Read(read[0], read[1], kind)
+            return _Read(
+                read[0], read[1],
+                "count_then_unbounded_sed" if read[1] is None else "count_then_bounded_sed",
+            )
         direct = _sed(tokens)
     else:
         direct = _sed(outer)
     if direct is None:
         return None
-    return _Read(direct[0], direct[1],
-                 "bounded_sed" if direct[1] is not None else "unbounded_sed")
+    return _Read(
+        direct[0], direct[1], "unbounded_sed" if direct[1] is None else "bounded_sed",
+    )
 
 
 def _body(output: str, read: _Read) -> tuple[str, int] | None:

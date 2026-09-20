@@ -90,6 +90,31 @@ class NativeFixtureReadTests(unittest.TestCase):
             "bounded_sed",
         )
 
+    def test_shell_wrapped_unbounded_sed_proves_the_exact_complete_fixture(self):
+        content = "alpha\nbeta\ngamma\n"
+        command = "/bin/zsh -c \"sed -n '1,$p' scenario-inputs/analysts/codebase-analyst.md\""
+        access = fixture_read_accesses(
+            observation(command, content),
+            witness(content, "scenario-inputs/analysts/codebase-analyst.md"),
+        )
+        self.assertEqual(len(access), 1)
+        self.assertEqual(access[0]["path"],
+                         "scenario-inputs/analysts/codebase-analyst.md")
+        self.assertEqual(access[0]["provenance"]["kind"], "unbounded_sed")
+        self.assertEqual(access[0]["provenance"]["end_line"], 3)
+
+    def test_unbounded_sed_still_rejects_expansion_and_incomplete_output(self):
+        content = "alpha\nbeta\n"
+        for command, output in (
+            ("sed -n '1,$p' $FIXTURE", content),
+            ("/bin/zsh -c \"sed -n '1,$p' $(printf spec.md)\"", content),
+            ("sed -n '1,$p' spec.md", "alpha\n"),
+        ):
+            with self.subTest(command=command):
+                self.assertEqual(
+                    fixture_read_accesses(observation(command, output), witness(content)), [],
+                )
+
     def test_direct_unbounded_sed_proves_exact_fixture_body(self):
         content = "alpha\nbeta\ngamma\n"
         commands = (

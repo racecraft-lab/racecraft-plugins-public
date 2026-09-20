@@ -63,7 +63,9 @@ This Codex variant is a concrete tool contract, not advisory prose.
 Bind the workflow to actual Codex primitives:
 
 - `update_plan` is REQUIRED before Phase 1 and after every phase transition.
-  If the call fails or is skipped, STOP.
+  Invoke it directly; do not infer that it is unavailable from tool summaries,
+  prompt prose, or runtime metadata. STOP only if the actual call is rejected,
+  fails, or is skipped.
 - Discover the callable collaboration actions before dispatch and select the
   semantic equivalents that the current Codex surface actually exposes.
   `spawn_agent` plus `wait_agent` and delivery of the agent's result are the
@@ -658,6 +660,14 @@ incomplete item to `in_progress` in both state stores and continue the
 autopilot loop instead of summarizing. `Post: Retrospective` is the final
 Post item; it must be completed or explicitly skipped before the
 autopilot can report completion.
+
+The same audit must reconcile every started native command, tool, and agent
+with its terminal result. Give each final local gate one owner, run each gate
+once as a separately attributable foreground command, and wait on that exact
+native handle before starting the next gate. Never launch an overlapping copy
+of pending work. If time or budget prevents terminal reconciliation, preserve
+the unresolved identities and report an incomplete checkpoint instead of a
+completion response.
 
 Only after every Post item is completed or explicitly skipped, and the
 PR URL is known, the autopilot is DONE. Report the final summary with

@@ -450,6 +450,8 @@ def _validate_case(case: object, repo_root: Path) -> None:
     fields = base_fields | ({"pairing"} if layer == "parity" else set())
     if "git_fixture" in case:
         fields |= {"git_fixture"}
+    if "git_metadata_access" in case:
+        fields |= {"git_metadata_access"}
     if "required_tools" in case:
         fields |= {"required_tools"}
     _require(isinstance(case, dict) and set(case) == fields, "catalog contains a malformed case")
@@ -471,8 +473,14 @@ def _validate_case(case: object, repo_root: Path) -> None:
     _nonempty_text(case["capability"], f"case {case_id} capability")
     prompt = _nonempty_text(case["prompt"], f"case {case_id} prompt")
     placeholders = re.findall(r"{{[^{}]*}}", prompt)
-    _require(all(item == "{{skill}}" for item in placeholders)
-             and not re.search(r"{{|}}", prompt.replace("{{skill}}", "")),
+    allowed_placeholders = {"{{skill}}"}
+    if "required_tools" in case:
+        allowed_placeholders.add("{{resolved_python}}")
+    prompt_without_placeholders = prompt
+    for placeholder in allowed_placeholders:
+        prompt_without_placeholders = prompt_without_placeholders.replace(placeholder, "")
+    _require(all(item in allowed_placeholders for item in placeholders)
+             and not re.search(r"{{|}}", prompt_without_placeholders),
              f"case {case_id} prompt contains an unsupported placeholder")
     requirements = case["requirements"]
     _require(isinstance(requirements, list) and bool(requirements), f"case {case_id} has no requirements")
@@ -500,6 +508,11 @@ def _validate_case(case: object, repo_root: Path) -> None:
         if "worktrees" in case["git_fixture"]:
             _require(all(destination.parts[0].casefold() != ".worktrees" for destination in destinations),
                      f"case {case_id} git worktrees reserve the .worktrees directory")
+    if "git_metadata_access" in case:
+        _require(case["git_metadata_access"] == "write",
+                 f"case {case_id} git_metadata_access must be write")
+        _require("git_fixture" in case,
+                 f"case {case_id} git_metadata_access requires git_fixture")
     hosts = case["hosts"]
     _require(isinstance(hosts, dict) and set(hosts) == set(HOSTS),
              f"case {case_id} must define exactly claude and codex")
@@ -695,6 +708,8 @@ def input_fingerprint(
     case_input_keys = ["id", "prompt", "fixtures", "timeout_seconds", "resource_class"]
     if "required_tools" in case:
         case_input_keys.append("required_tools")
+    if "git_metadata_access" in case:
+        case_input_keys.append("git_metadata_access")
     payload = {
         "schema_version": "native-eval-input/v1",
         "case_inputs": {key: case[key] for key in case_input_keys},

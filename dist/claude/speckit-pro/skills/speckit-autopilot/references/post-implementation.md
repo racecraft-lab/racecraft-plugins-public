@@ -67,6 +67,39 @@ same wall-clock parallelism via background dispatch.
 
 Wall-clock = `max(track A, track B, track C)` for either code path.
 
+**Resolve the native launcher before dispatch:** use `Agent` when the current
+Claude tool inventory exposes `Agent`; when the runtime instead exposes the
+renamed `Task` tool, use `Task` with the same subagent fields. `TaskCreate`,
+`TaskUpdate`, `TaskGet`, and `TaskList` only manage the shared task list. They
+never count as worker dispatch and never authorize parent execution of a
+track. When `Task` is listed but deferred, first call `ToolSearch` with the
+exact query `select:Task`, then issue the three `Task` launches together in
+one assistant message. Loading `TaskCreate` or `TaskUpdate` alone does not load
+the subagent launcher. If neither `Agent` nor `Task` is available, checkpoint the unavailable
+capability instead of running the three tracks in the parent.
+
+<hard_constraints>
+
+**Three-worker ownership before any track work:** The first Post action is to
+resolve the host-native subagent launcher and dispatch exactly three workers:
+Doctor, Code Review, and Verify. The lead MUST NOT execute any track-owned
+Task 10-14 action itself, either before dispatch or while the workers run. If a
+worker cannot be launched, checkpoint the unavailable capability and stop; do
+not absorb that track into the lead.
+
+**Join barrier before the serial tail:** After dispatching these tracks, the
+lead's only permitted actions are waiting for, collecting, and reconciling
+their terminal results. Launch acknowledgement is not a result. While any
+track result is outstanding, the lead MUST NOT invoke another parent-owned
+tool, derive routing, update durable workflow state, create a checkpoint, or
+start Task 15 or any later Post item. Consume and attribute every successful,
+nonempty final report before the first parent-owned serial action. If the host
+cannot wait for or return a terminal result, record a checkpoint with unknown
+effects; never continue past the join barrier on a claim, task count, or
+launch receipt.
+
+</hard_constraints>
+
 ### Path A: Agent Teams (when `AGENT_TEAMS_AVAILABLE=true`)
 
 The lead issues three named `Agent` calls for tasks 10-14, waits for every
@@ -170,7 +203,8 @@ all three, then synthesizes.
 Ordinary calls MUST omit `name`, which prevents accidental teammate promotion
 in a team-enabled interactive session.
 
-**Background dispatch (single tool turn):**
+**Background dispatch (single tool turn, using the resolved `Agent` or `Task`
+launcher):**
 
 ```text
 Agent(subagent_type: "general-purpose",
@@ -301,6 +335,28 @@ before proceeding.
 test count, pass/fail, regressions found.
 
 ## 3.2 PR Creation
+
+Before deriving the PR route, invoke the authoritative `atomicity-route`
+read-only helper with both exact path inputs:
+
+```json
+{
+  "helper_id": "atomicity-route",
+  "operation": "atomicity-route",
+  "mode": "read_only",
+  "inputs": {
+    "feature_dir": "<feature-dir>",
+    "workflow_file": "<current workflow file>"
+  }
+}
+```
+
+In addition to the established `.process` and `.autopilot-requests`
+control trees, the helper excludes only that resolved repository-relative
+workflow file and its exact sibling `autopilot-state.json` from change-shape
+classification. Never pass a substitute path to hide another change. A
+lookalike filename outside those control trees or any other non-control change
+remains part of the route decision.
 
 For specs whose atomicity route is `split-PR`, PR creation is multi-PR
 emission. The `plan-layers` output is the authoritative source of

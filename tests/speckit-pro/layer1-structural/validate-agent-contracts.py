@@ -220,6 +220,17 @@ CC_ONLY_FIELDS = ('tools', 'disallowedTools', 'permissionMode', 'color', 'maxTur
 validate_codex_agents_MODEL_RE = re.compile('^(gpt-5\\.6-sol|gpt-5\\.6-terra|gpt-5\\.6-luna|gpt-5\\.5|gpt-5\\.4|gpt-5\\.4-mini|gpt-5\\.3-codex|gpt-5\\.3-codex-spark)$')
 EFFORT_RE = re.compile('^(minimal|low|medium|high|xhigh)$')
 SANDBOX_RE = re.compile('^(read-only|workspace-write)$')
+NATIVE_COMMAND_LIFECYCLE_CONTRACT = (
+    'inspect the whole returned object, not only its',
+    '`session_id` without an integer `exit_code`',
+    'Poll `write_stdin` with empty `chars` and that exact `session_id`',
+    'every intermediate response remains pending',
+    'Do not relaunch an equivalent gate',
+    'return while any owned command remains pending',
+    'succeeds only when its own `exit_code` is `0`',
+    'partial stdout',
+    'every exact handle is tracked and drained',
+)
 
 def _extract_toml_string(text: str, field: str) -> str:
     """First ``field = "value"`` line's value (mirrors the sed -n extractor)."""
@@ -305,6 +316,13 @@ class ValidateCodexAgents(unittest.TestCase):
             instructions = _extract_developer_instructions(content)
             with self.subTest(msg=f'{agent}: developer_instructions body is non-empty'):
                 self.assertTrue(validate_codex_agents__nonblank(instructions), 'developer_instructions block is empty')
+            with self.subTest(msg=f'{agent}: drains native command handles before dependent work or return'):
+                normalized_instructions = ' '.join(instructions.split())
+                missing = [
+                    phrase for phrase in NATIVE_COMMAND_LIFECYCLE_CONTRACT
+                    if phrase not in normalized_instructions
+                ]
+                self.assertFalse(missing, f'native command lifecycle clauses missing: {missing}')
             with self.subTest(msg=f'{agent}: no Claude Code-only fields'):
                 bad = [field for field in CC_ONLY_FIELDS if _has_field_line(content, field)]
                 self.assertFalse(bad, f"Claude Code-only fields found: {' '.join(bad)}")

@@ -372,6 +372,27 @@ class NativeEvalCatalogTests(unittest.TestCase):
                 malformed["required_tools"] = value
                 self.assert_invalid(malformed, message)
 
+    def test_git_metadata_write_is_explicit_and_requires_a_git_fixture(self) -> None:
+        valid = case()
+        valid["git_fixture"] = {
+            "recipe": fixture_setup.GIT_FIXTURE_RECIPE,
+            "baseline": [{
+                "source": "tests/speckit-pro/fixtures/baseline.txt",
+                "destination": "baseline.txt",
+            }],
+        }
+        valid["git_metadata_access"] = "write"
+        loaded = validate_catalog(catalog(valid), self.root)["cases"][0]
+        self.assertEqual(loaded["git_metadata_access"], "write")
+
+        missing_fixture = case()
+        missing_fixture["git_metadata_access"] = "write"
+        self.assert_invalid(missing_fixture, "git_metadata_access requires git_fixture")
+        for value in ("read", "deny", True, None):
+            malformed = copy.deepcopy(valid)
+            malformed["git_metadata_access"] = value
+            self.assert_invalid(malformed, "git_metadata_access must be write")
+
     def test_requires_pairing_only_for_parity_and_keeps_host_checks_independent(self) -> None:
         missing = case()
         missing["layer"] = "parity"
@@ -613,6 +634,13 @@ class NativeEvalCatalogTests(unittest.TestCase):
         bad_prompt = case()
         bad_prompt["prompt"] = "Use {{provider}}."
         self.assert_invalid(bad_prompt, "unsupported placeholder")
+        unresolved_python = case()
+        unresolved_python["prompt"] = "Run {{resolved_python}} -m speckit_pro_runner."
+        self.assert_invalid(unresolved_python, "unsupported placeholder")
+        resolved_python = case()
+        resolved_python["required_tools"] = ["specify"]
+        resolved_python["prompt"] = "Run {{resolved_python}} -m speckit_pro_runner."
+        validate_catalog(catalog(resolved_python), self.root)
         null_skill = case()
         null_skill["hosts"]["codex"]["skill"] = None
         self.assert_invalid(null_skill, "cannot interpolate a null host skill")
@@ -862,6 +890,14 @@ class NativeEvalCatalogTests(unittest.TestCase):
         self.assertNotEqual(
             original,
             input_fingerprint(tool_required, "claude", "plugin", {"model": "sonnet", "cli": "1"}),
+        )
+        git_metadata_write = copy.deepcopy(value)
+        git_metadata_write["git_metadata_access"] = "write"
+        self.assertNotEqual(
+            original,
+            input_fingerprint(
+                git_metadata_write, "claude", "plugin", {"model": "sonnet", "cli": "1"},
+            ),
         )
         with self.assertRaisesRegex(ValueError, "runtime_identity"):
             input_fingerprint(value, "claude", "plugin", {})

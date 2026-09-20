@@ -125,7 +125,7 @@ HELPER_CASES: dict[str, dict[str, object]] = {
     "confidence-gate": {"workflow_file": WORKFLOW_FILE, "mode_name": "advisory"},
     "generate-spec-index-check": {},
     "o5-topology": {"target": FEATURE_DIR},
-    "atomicity-route": {"feature_dir": FEATURE_DIR},
+    "atomicity-route": {"feature_dir": FEATURE_DIR, "workflow_file": WORKFLOW_FILE},
     "plan-layers-feature-dir": {"feature_dir": FEATURE_DIR},
     "partition-phase7-tasks": {"tasks_file": f"{FEATURE_DIR}/tasks.md", "wave_size": 4},
     "validate-task-execution": {"tasks_file": f"{FEATURE_DIR}/tasks.md", "action": "fingerprints"},

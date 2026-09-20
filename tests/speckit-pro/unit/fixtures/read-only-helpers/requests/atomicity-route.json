@@ -5,6 +5,7 @@
   "operation": "atomicity-route",
   "mode": "read_only",
   "inputs": {
-    "feature_dir": "tests/speckit-pro/unit/fixtures/read-only-helpers/read-only-helper-feature"
+    "feature_dir": "tests/speckit-pro/unit/fixtures/read-only-helpers/read-only-helper-feature",
+    "workflow_file": "tests/speckit-pro/unit/fixtures/autopilot-stage/workflow.md"
   }
 }

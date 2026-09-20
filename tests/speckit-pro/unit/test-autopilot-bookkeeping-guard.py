@@ -1323,16 +1323,19 @@ class RepositoryRootResolutionTests(unittest.TestCase):
         a property of the caller, not of this function, and four call sites rely
         on it. The guard makes the function safe on its own terms.
         """
-        import os
-
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
-            a, b = root / "loop_a", root / "loop_b"
-            os.symlink(b, a)
-            os.symlink(a, b)
-            # Whether resolve() raises on a loop is platform and version
-            # dependent; either way the contract is the same, never raise.
-            self.assertIsNone(validator._repository_root(a / "state.json"))
+            target = root / "unresolvable" / "state.json"
+            original_resolve = Path.resolve
+            for error in (OSError("unresolvable"), RuntimeError("unresolvable")):
+                with self.subTest(error=type(error).__name__):
+                    def resolve(path, *args, **kwargs):
+                        if path == target:
+                            raise error
+                        return original_resolve(path, *args, **kwargs)
+
+                    with mock.patch.object(Path, "resolve", resolve):
+                        self.assertIsNone(validator._repository_root(target))
 
     def test_an_unresolvable_supplied_workflow_skips_instead_of_raising(self) -> None:
         """The authority helper resolves a second path, and it must not raise either.
@@ -1345,8 +1348,6 @@ class RepositoryRootResolutionTests(unittest.TestCase):
         and then ``main()``, which catches only ``ValidationError`` -- printing a
         traceback where the autopilot expects the JSON report.
         """
-        import os
-
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
             (root / ".git").write_text(
@@ -1357,17 +1358,24 @@ class RepositoryRootResolutionTests(unittest.TestCase):
                 json.dumps({"workflow_file": SUPPLIED_WORKFLOW_REF, "plan": []}),
                 encoding="utf-8",
             )
-            a, b = root / "loop_a", root / "loop_b"
-            os.symlink(b, a)
-            os.symlink(a, b)
-            self.assertEqual(
-                validator._workflow_authority_errors(
-                    a / "supplied-workflow.md",
-                    state,
-                    {"workflow_file": SUPPLIED_WORKFLOW_REF},
-                ),
-                [],
-            )
+            supplied = root / "unresolvable" / "supplied-workflow.md"
+            original_resolve = Path.resolve
+            for error in (OSError("unresolvable"), RuntimeError("unresolvable")):
+                with self.subTest(error=type(error).__name__):
+                    def resolve(path, *args, **kwargs):
+                        if path == supplied:
+                            raise error
+                        return original_resolve(path, *args, **kwargs)
+
+                    with mock.patch.object(Path, "resolve", resolve):
+                        self.assertEqual(
+                            validator._workflow_authority_errors(
+                                supplied,
+                                state,
+                                {"workflow_file": SUPPLIED_WORKFLOW_REF},
+                            ),
+                            [],
+                        )
 
 
 class ProblemKeyClassificationTests(unittest.TestCase):

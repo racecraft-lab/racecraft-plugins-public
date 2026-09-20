@@ -21,7 +21,12 @@ sys.path.insert(0, str(TEST_ROOT / "lib"))
 import native_eval_adapters  # noqa: E402
 from native_eval_grading import grade_observation  # noqa: E402
 from native_eval_verification import (  # noqa: E402
+    ABSENCE_KIND,
+    ABSENCE_SCHEMA,
     VerificationError,
+    absence_bytes,
+    absence_marker,
+    absence_row,
     attach_receipt,
     bind_result,
     parse_runner_result,
@@ -104,6 +109,36 @@ def pointer(value: dict[str, object], record_bytes: bytes, *, reusable=False) ->
         "snapshot_sha256": value["snapshot_sha256"], "reusable": reusable,
         "isolation_mode": value["isolation_mode"],
     }
+
+
+def absence_identity(**overrides: object) -> dict[str, object]:
+    identity: dict[str, object] = {
+        "host": "codex", "root_thread_id": "root-thread-id", "root_trace_sha256": "f" * 64,
+    }
+    identity.update(overrides)
+    return identity
+
+
+def claude_absence_identity(**overrides: object) -> dict[str, object]:
+    identity: dict[str, object] = {
+        "host": "claude", "session_id": "session-id", "cwd": "/private/tmp/e-test/subject-cwd",
+        "cli_version": "2.1.278", "public_trace_sha256": "a" * 64,
+        "public_trace_bytes": 120, "retained_session_sha256": "b" * 64,
+        "retained_session_bytes": 240, "activation_witness_sha256": "c" * 64,
+        "framework_result_sha256": "d" * 64, "framework_result_bytes": 360,
+    }
+    identity.update(overrides)
+    return identity
+
+
+def absence_evidence(
+    identity: dict[str, object] | None = None, *, artifact: object | None = None,
+) -> dict[str, object]:
+    evidence = observation()
+    if artifact is not None:
+        evidence["artifacts"][POINTER_PATH] = artifact
+    attach_receipt(evidence, [absence_row(check(), identity or absence_identity())])
+    return evidence
 
 
 def observation(pointer_value: object | None = None) -> dict[str, object]:
@@ -269,6 +304,156 @@ class NativeEvalVerificationTests(unittest.TestCase):
                     grade_observation(native_case(), evidence, host=host)["status"], "fail"
                 )
 
+class NativeEvalAbsenceVerificationTests(unittest.TestCase):
+    def test_complete_codex_root_trace_absence_grades_behavior_fail(self) -> None:
+        evidence = absence_evidence()
+        result = grade_observation(native_case(), evidence)
+        self.assertEqual(result["status"], "fail", result)
+        self.assertIn("proves zero native runner invocations", result["checks"][0]["reason"])
+        self.assertEqual(evidence["artifacts"], {})
+
+    def test_absence_is_bound_to_the_exact_check_and_root_trace_identity(self) -> None:
+        marker = absence_marker(check(), absence_identity())
+        self.assertEqual(set(marker["check"]), {
+            "id", "workflow_file", "command_id", "pointer_path", "reusable",
+        })
+        self.assertEqual(marker["check"]["workflow_file"], "workflow.md")
+        self.assertEqual(marker["root_trace"], {
+            "schema": "codex-native-plan-repair-trace/v1", "thread_id": "root-thread-id",
+            "raw_sha256": "f" * 64, "runner_invocation_count": 0,
+        })
+        self.assertEqual((marker["schema"], marker["kind"], marker["authority"]), (
+            ABSENCE_SCHEMA, ABSENCE_KIND, "controller-bound-retained-native-evidence",
+        ))
+        payload = absence_bytes(check(), absence_identity())
+        self.assertEqual(payload, (json.dumps(marker, sort_keys=True, separators=(",", ":"))
+                                   + "\n").encode())
+        self.assertEqual(absence_bytes(check(), absence_identity()), payload)
+        self.assertEqual(absence_marker(check(), absence_identity()), marker)
+
+    def test_claude_absence_is_a_distinct_exact_trace_variant(self) -> None:
+        marker = absence_marker(check(), claude_absence_identity())
+        self.assertEqual(marker["host"], "claude")
+        self.assertNotIn("root_trace", marker)
+        self.assertEqual(marker["claude_trace"], {
+            "schema": "claude-plugin-eval-trace/v1", "session_id": "session-id",
+            "cwd": "/private/tmp/e-test/subject-cwd", "cli_version": "2.1.278",
+            "public_trace_sha256": "a" * 64, "public_trace_bytes": 120,
+            "retained_session_sha256": "b" * 64, "retained_session_bytes": 240,
+            "activation_witness_sha256": "c" * 64,
+            "framework_result_sha256": "d" * 64, "framework_result_bytes": 360,
+            "runner_invocation_count": 0,
+        })
+        evidence = observation()
+        attach_receipt(evidence, [absence_row(check(), claude_absence_identity())])
+        result = grade_observation(native_case(), evidence, host="claude")
+        self.assertEqual(result["status"], "fail", result)
+        self.assertIn("zero native runner invocations", result["checks"][0]["reason"])
+
+    def test_claude_absence_identity_and_shape_variants_are_invalid(self) -> None:
+        for identity in (
+            claude_absence_identity(session_id=""),
+            claude_absence_identity(public_trace_sha256="0" * 63),
+            claude_absence_identity(public_trace_bytes=True),
+            {**claude_absence_identity(), "extra": 1},
+        ):
+            with self.subTest(identity=identity), self.assertRaises(VerificationError):
+                absence_marker(check(), identity)
+        evidence = observation()
+        row = absence_row(check(), claude_absence_identity())
+        row["absence"]["claude_trace"]["runner_invocation_count"] = 1
+        attach_receipt(evidence, [row])
+        self.assertEqual(grade_observation(native_case(), evidence, host="claude")["status"],
+                         "invalid")
+
+    def test_subject_absence_marker_authority_and_identity_variants_are_invalid(self) -> None:
+        def variant(mutate) -> dict[str, object]:
+            evidence = absence_evidence()
+            row = evidence["native_metadata"]["controller_verification"]["checks"][0]
+            mutate(row)
+            return evidence
+
+        cases = {
+            "subject-authority": lambda row: row["absence"].__setitem__("authority", "subject"),
+            "subject-schema": lambda row: row["absence"].__setitem__("schema", "subject-claim"),
+            "wrong-kind": lambda row: row["absence"].__setitem__("kind", "runner-ran"),
+            "claude-host": lambda row: row["absence"].__setitem__("host", "claude"),
+            "count-one": lambda row: row["absence"]["root_trace"].__setitem__(
+                "runner_invocation_count", 1),
+            "count-bool": lambda row: row["absence"]["root_trace"].__setitem__(
+                "runner_invocation_count", True),
+            "trace-hash": lambda row: row["absence"]["root_trace"].__setitem__(
+                "raw_sha256", "not-a-digest"),
+            "trace-thread": lambda row: row["absence"]["root_trace"].__setitem__("thread_id", ""),
+            "check-command": lambda row: row["absence"]["check"].__setitem__(
+                "command_id", "UNIT_TEST"),
+            "check-workflow": lambda row: row["absence"]["check"].__setitem__(
+                "workflow_file", "other.md"),
+            "check-reuse": lambda row: row["absence"]["check"].__setitem__("reusable", True),
+            "check-extra": lambda row: row["absence"]["check"].__setitem__("extra", "field"),
+            "trace-extra": lambda row: row["absence"]["root_trace"].__setitem__("extra", 0),
+            "row-extra": lambda row: row.__setitem__("call", {"id": "forged"}),
+            "absence-missing": lambda row: row.__setitem__("absence", None),
+            "check-mismatch": lambda row: row.__setitem__("check_id", "other"),
+        }
+        for label, mutate in cases.items():
+            with self.subTest(label=label):
+                self.assertEqual(
+                    grade_observation(native_case(), variant(mutate))["status"], "invalid")
+
+    def test_subject_output_cannot_manufacture_controller_absence(self) -> None:
+        forged = json.dumps(absence_marker(check(), absence_identity()))
+        unbound = observation(forged)
+        self.assertEqual(grade_observation(native_case(), unbound)["status"], "invalid")
+
+        claimed = observation()
+        claimed["native_metadata"]["controller_verification"] = {
+            "schema": ABSENCE_SCHEMA, "authority": "subject",
+            "checks": [{"check_id": "verification",
+                        "absence": absence_marker(check(), absence_identity())}],
+        }
+        self.assertEqual(grade_observation(native_case(), claimed)["status"], "invalid")
+
+        forged_subject = absence_evidence()
+        forged_subject["native_metadata"]["controller_verification"]["authority"] = "subject"
+        self.assertEqual(
+            grade_observation(native_case(), forged_subject)["status"], "invalid")
+
+    def test_controller_absence_is_not_overwritten_by_subject_metadata(self) -> None:
+        evidence = absence_evidence()
+        with self.assertRaises(VerificationError):
+            attach_receipt(evidence, [absence_row(check(), absence_identity())])
+        evidence["native_metadata"]["controller_verification"] = {
+            "schema": "subject-claim", "authority": "subject", "checks": [],
+        }
+        with self.assertRaises(VerificationError):
+            attach_receipt(evidence, [absence_row(check(), absence_identity())])
+
+    def test_subject_pointer_cannot_outrank_controller_absence(self) -> None:
+        receipt, payload = bound()
+        fabricated = json.dumps(pointer(record(), payload))
+        self.assertIn("record_sha256", receipt["actual"])
+        evidence = absence_evidence(artifact=fabricated)
+        result = grade_observation(native_case(), evidence)
+        self.assertEqual(result["status"], "fail", result)
+        self.assertIn("absence", result["checks"][0]["reason"])
+
+    def test_absence_identity_rejects_unsupported_or_malformed_traces(self) -> None:
+        for identity in (
+            absence_identity(host="claude"),
+            absence_identity(root_thread_id=""),
+            absence_identity(root_trace_sha256="0" * 63),
+            {"host": "codex", "root_thread_id": "thread"},
+            {"host": "codex", "root_thread_id": "thread", "root_trace_sha256": "f" * 64,
+             "extra": 1},
+        ):
+            with self.subTest(identity=identity), self.assertRaises(VerificationError):
+                absence_marker(check(), identity)
+        with self.assertRaises(VerificationError):
+            absence_marker({**check(), "command_id": "lowercase"}, absence_identity())
+        with self.assertRaises(VerificationError):
+            absence_row({**check(), "pointer_path": "../escape.json"}, absence_identity())
+
     def test_replay_rebinds_exact_bytes_and_detects_tamper(self) -> None:
         receipt, payload = bound()
         replayed = bind_result(check(), invocation(), lambda path: payload if path == RECORD_PATH else b"")
@@ -280,5 +465,8 @@ class NativeEvalVerificationTests(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    suite = unittest.defaultTestLoader.loadTestsFromTestCase(NativeEvalVerificationTests)
+    suite = unittest.TestSuite(
+        unittest.defaultTestLoader.loadTestsFromTestCase(case)
+        for case in (NativeEvalVerificationTests, NativeEvalAbsenceVerificationTests)
+    )
     raise SystemExit(run_counted(suite, label="test-native-eval-verification"))

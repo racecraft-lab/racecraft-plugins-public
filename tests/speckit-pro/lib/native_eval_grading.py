@@ -109,6 +109,13 @@ def _validate_observation(observation: object) -> str | None:
         malformed = _validate_tool_call(call)
         if malformed is not None:
             return malformed
+        inputs = call["input"]
+        native = inputs.get("_native") if isinstance(inputs, dict) else None
+        if isinstance(native, dict) and (
+            native.get("post_terminal_completion") is True
+            or native.get("model_observed") is False
+        ):
+            return "native observation contains a tool completion the model did not observe"
     return None
 
 

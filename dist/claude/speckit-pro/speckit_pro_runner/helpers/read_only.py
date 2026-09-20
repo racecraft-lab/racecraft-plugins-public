@@ -306,7 +306,7 @@ def canonicalize_inputs(helper_id: str, inputs: dict[str, Any], repo_root: Path)
         "aggregate-crl": {"workflow_file"},
         "generate-spec-index-check": {"repo_root"},
         "o5-topology": {"target"},
-        "atomicity-route": {"feature_dir"},
+        "atomicity-route": {"feature_dir", "workflow_file"},
         "plan-layers-feature-dir": {"feature_dir"},
         "partition-phase7-tasks": {"tasks_file"},
         "validate-task-execution": {"tasks_file"},
@@ -466,9 +466,16 @@ def explicit_or_derived_args(helper_id: str, inputs: dict[str, Any], repo_root: 
         return argv
     if helper_id == "generate-spec-index-check":
         return ["--check", request_path_display(inputs.get("repo_root") or ".", repo_root)]
-    if helper_id in {"o5-topology", "atomicity-route"}:
-        path_key = "target" if helper_id == "o5-topology" else "feature_dir"
-        return required_args(inputs, [path_key], helper_id, repo_root, path_keys={path_key})
+    if helper_id == "o5-topology":
+        return required_args(inputs, ["target"], helper_id, repo_root, path_keys={"target"})
+    if helper_id == "atomicity-route":
+        return required_args(
+            inputs,
+            ["feature_dir", "workflow_file"],
+            helper_id,
+            repo_root,
+            path_keys={"feature_dir", "workflow_file"},
+        )
     if helper_id == "plan-layers-feature-dir":
         return required_args(inputs, ["feature_dir"], helper_id, repo_root, path_keys={"feature_dir"})
     if helper_id in {"partition-phase7-tasks", "validate-task-execution"}:
@@ -5254,7 +5261,10 @@ def o5_topology(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
     return make_result(json_text(obj))
 
 
-def _atomicity_change_records(repo_root: Path) -> dict[str, str] | None:
+def _atomicity_change_records(
+    repo_root: Path,
+    excluded_control_paths: set[str],
+) -> dict[str, str] | None:
     """Return the current versionable change shape relative to origin/main.
 
     Tracked working-tree changes are included. Untracked, non-ignored files are
@@ -5318,6 +5328,8 @@ def _atomicity_change_records(repo_root: Path) -> dict[str, str] | None:
             or raw_path in records
         ):
             return False
+        if raw_path in excluded_control_paths:
+            return True
         records[raw_path] = status
         return True
 
@@ -5350,7 +5362,11 @@ def _atomicity_additive_multi_seam(
         f"{feature_rel}/tasks.md",
     }
     implementation_changes = {
-        path: status for path, status in changes.items() if path not in metadata_paths
+        path: status
+        for path, status in changes.items()
+        if path not in metadata_paths
+        and ".process" not in PurePosixPath(path).parts
+        and ".autopilot-requests" not in PurePosixPath(path).parts
     }
     modify_heavy = any(status != "A" for status in implementation_changes.values())
     stdout, warning_count, error_count = plan_layers_json(feature_rel, tasks_file, repo_root)
@@ -5546,11 +5562,15 @@ def _atomicity_cutover_route(context: str) -> str | None:
 def atomicity_route(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
     raw = request_path_display(inputs.get("feature_dir") or "", repo_root)
     feature = resolve_input_path(raw, repo_root)
+    workflow_raw = request_path_display(inputs.get("workflow_file") or "", repo_root)
+    workflow = resolve_input_path(workflow_raw, repo_root)
     tasks = feature / "tasks.md"
     plan = feature / "plan.md"
     spec = feature / "spec.md"
     if not raw or not trusted_dir_exists(feature, repo_root):
         return make_result(json_text({"error": f"feature directory not found or unreadable: {raw}"}), exit_code=2)
+    if not workflow_raw or not trusted_file_exists(workflow, repo_root):
+        return make_result(json_text({"error": f"workflow file not found or unreadable: {workflow_raw}"}), exit_code=2)
     tasks_text = trusted_text(tasks, repo_root)
     if not tasks_text:
         return make_result(json_text({"route": "out-of-scope", "releasable": True, "signals": [], "hints": [], "warnings": []}))
@@ -5580,7 +5600,13 @@ def atomicity_route(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
             tasks,
             tasks_text,
             repo_root,
-            _atomicity_change_records(repo_root),
+            _atomicity_change_records(
+                repo_root,
+                {
+                    repo_relative(workflow, repo_root),
+                    repo_relative(workflow.parent / "autopilot-state.json", repo_root),
+                },
+            ),
         )
         if modify_heavy:
             signals.append("change-shape:modify-heavy")

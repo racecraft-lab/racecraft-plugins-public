@@ -20,6 +20,7 @@ CLAUDE_PLUGIN_SCHEMA_VERSION = "native-eval-toolchain/claude-plugin-v1"
 _LAUNCHER_DIRECTORY = Path(".codex/native-eval-tool-bin")
 _CLAUDE_RUNTIME_DIRECTORY = Path(".native-toolchain")
 _CLAUDE_BIN_DIRECTORY = Path("bin")
+_CLAUDE_PYTHON_RUNTIME = ".speckit-python3-runtime"
 _ALLOWED_TOOLS = frozenset({"specify", "uv"})
 _SAFE_OWNER_IDS = frozenset({0, os.geteuid()}) if hasattr(os, "geteuid") else frozenset({0})
 _MAX_LINKS = 32
@@ -130,6 +131,7 @@ def prepare_claude_plugin_toolchain(
     created_runtime = False
     launcher = bin_root / "specify"
     python_link = bin_root / "python3"
+    python_runtime_link = bin_root / _CLAUDE_PYTHON_RUNTIME
     created_outputs: list[Path] = []
     try:
         if runtime_root.exists() or runtime_root.is_symlink():
@@ -141,30 +143,26 @@ def prepare_claude_plugin_toolchain(
         else:
             bin_root.mkdir(mode=0o700)
             created_bin = True
-        for output in (launcher, python_link):
+        for output in (launcher, python_link, python_runtime_link):
             if output.exists() or output.is_symlink():
                 raise NativeToolchainError(f"Claude plugin output must not pre-exist: {output.name}")
 
         runtime_root.mkdir(mode=0o700)
         created_runtime = True
-        source_python = Path(receipt["python_root"])
-        source_specify = Path(receipt["tool_root"])
-        staged_python = runtime_root / "python"
-        staged_specify = runtime_root / "specify"
-        mappings = (
-            (source_python, staged_python),
-            (source_specify, staged_specify),
-        )
-        _copy_protected_tree(source_python, staged_python, mappings)
-        _copy_protected_tree(source_specify, staged_specify, mappings)
-        os.chmod(runtime_root, 0o555)
+        staged_python = _stage_claude_runtime(runtime_root, receipt)
 
         python_name = Path(receipt["interpreter"]["resolved_path"]).name
         staged_python_executable = staged_python / "bin" / python_name
         if not staged_python_executable.is_file():
             raise NativeToolchainError("staged Specify Python executable is missing")
-        python_link.symlink_to(os.path.relpath(staged_python_executable, bin_root))
+        python_runtime_link.symlink_to(os.path.relpath(staged_python_executable, bin_root))
+        created_outputs.append(python_runtime_link)
+
+        handle = python_link.open("xb")
         created_outputs.append(python_link)
+        with handle:
+            handle.write(_claude_python_launcher_bytes())
+        os.chmod(python_link, 0o555)
 
         handle = launcher.open("xb")
         created_outputs.append(launcher)
@@ -182,7 +180,7 @@ def prepare_claude_plugin_toolchain(
             launchers=launchers,
             path_entries=(bin_root,),
             environment=_fixed_environment(),
-            readonly_roots=(runtime_root, bin_root),
+            readonly_roots=(runtime_root, bin_root, target / "speckit_pro_runner"),
             runtime_identity=identity,
         )
         verify_native_toolchain(prepared)
@@ -198,6 +196,26 @@ def prepare_claude_plugin_toolchain(
         if created_bin and bin_root.exists() and not any(bin_root.iterdir()):
             bin_root.rmdir()
         raise
+
+
+def _stage_claude_runtime(
+    runtime_root: Path,
+    receipt: dict[str, Any],
+) -> Path:
+    source_python = Path(receipt["python_root"])
+    source_specify = Path(receipt["tool_root"])
+    staged_python = runtime_root / "python"
+    staged_specify = runtime_root / "specify"
+    mappings = ((source_python, staged_python), (source_specify, staged_specify))
+    _copy_protected_tree(
+        source_python,
+        staged_python,
+        mappings,
+        ignore_python_bytecode_caches=True,
+    )
+    _copy_protected_tree(source_specify, staged_specify, mappings)
+    os.chmod(runtime_root, 0o555)
+    return staged_python
 
 
 def verify_native_toolchain(prepared: PreparedNativeToolchain) -> None:
@@ -315,7 +333,11 @@ def _inspect_specify(
         raise NativeToolchainError("Specify Python must resolve inside a versioned runtime bin")
     python_root = python_path.parent.parent
 
-    python_tree = _tree_receipt(python_root, "Specify Python runtime")
+    python_tree = _tree_receipt(
+        python_root,
+        "Specify Python runtime",
+        ignore_python_bytecode_caches=True,
+    )
     tool_tree = _tree_receipt(tool_root, "Specify tool installation")
     python_version = (
         _probe_version(
@@ -530,21 +552,59 @@ def _first_link(path: Path, label: str) -> tuple[Path, tuple[str, ...]] | None:
     return None
 
 
-def _tree_receipt(root: Path, label: str) -> dict[str, Any]:
+def _is_python_bytecode_cache(name: str, metadata: os.stat_result) -> bool:
+    """Return whether one installed-runtime entry is generated Python bytecode."""
+
+    return (
+        stat.S_ISDIR(metadata.st_mode) and name == "__pycache__"
+    ) or (
+        stat.S_ISREG(metadata.st_mode) and name.endswith(".pyc")
+    )
+
+
+def _is_python_bytecode_cache_path(path: Path) -> bool:
+    """Return whether a relative path resolves inside generated bytecode state."""
+
+    return "__pycache__" in path.parts or path.name.endswith(".pyc")
+
+
+def _tree_receipt_entries(
+    directory: Path, label: str, ignore_python_bytecode_caches: bool,
+) -> list[tuple[os.DirEntry[str], os.stat_result]]:
+    try:
+        entries = sorted(os.scandir(directory), key=lambda entry: entry.name)
+    except OSError as error:
+        raise NativeToolchainError(f"cannot inspect {label}") from error
+    admitted = []
+    for entry in entries:
+        metadata = entry.stat(follow_symlinks=False)
+        if ignore_python_bytecode_caches and _is_python_bytecode_cache(
+            entry.name, metadata
+        ):
+            continue
+        admitted.append((entry, metadata))
+    return admitted
+
+
+def _tree_receipt(
+    root: Path,
+    label: str,
+    *,
+    ignore_python_bytecode_caches: bool = False,
+) -> dict[str, Any]:
+    """Hash a protected tree, optionally excluding generated Python bytecode."""
+
     _safe_directory(root, label)
     records: list[dict[str, Any]] = []
     total_bytes = 0
 
     def visit(directory: Path) -> None:
         nonlocal total_bytes
-        try:
-            entries = sorted(os.scandir(directory), key=lambda entry: entry.name)
-        except OSError as error:
-            raise NativeToolchainError(f"cannot inspect {label}") from error
-        for entry in entries:
+        for entry, metadata in _tree_receipt_entries(
+            directory, label, ignore_python_bytecode_caches
+        ):
             path = Path(entry.path)
             relative = path.relative_to(root).as_posix()
-            metadata = entry.stat(follow_symlinks=False)
             mode = stat.S_IMODE(metadata.st_mode)
             base: dict[str, Any] = {"path": relative, "mode": mode, "uid": metadata.st_uid}
             if stat.S_ISDIR(metadata.st_mode):
@@ -582,12 +642,34 @@ def _tree_receipt(root: Path, label: str) -> dict[str, Any]:
     }
 
 
+def _staged_symlink_target(
+    resolved: Path,
+    source_roots: tuple[tuple[Path, Path], ...],
+    ignore_python_bytecode_caches: bool,
+) -> Path | None:
+    """Map one admitted symlink target into its staged tree."""
+
+    for source_root, staged_root in source_roots:
+        try:
+            relative = resolved.relative_to(source_root)
+        except ValueError:
+            continue
+        if ignore_python_bytecode_caches and _is_python_bytecode_cache_path(relative):
+            raise NativeToolchainError(
+                "installed runtime symlink resolves into excluded Python bytecode caches"
+            )
+        return staged_root / relative
+    return None
+
+
 def _copy_protected_tree(
     source: Path,
     destination: Path,
     mappings: tuple[tuple[Path, Path], ...],
+    *,
+    ignore_python_bytecode_caches: bool = False,
 ) -> None:
-    """Copy one admitted tree while internalizing every accepted symlink."""
+    """Copy an admitted tree, excluding only generated bytecode when requested."""
 
     _safe_directory(source, "installed runtime source")
     source_roots = tuple((root.resolve(), staged) for root, staged in mappings)
@@ -599,6 +681,10 @@ def _copy_protected_tree(
             source_path = Path(entry.path)
             destination_path = destination_dir / entry.name
             metadata = entry.stat(follow_symlinks=False)
+            if ignore_python_bytecode_caches and _is_python_bytecode_cache(
+                entry.name, metadata
+            ):
+                continue
             if stat.S_ISDIR(metadata.st_mode):
                 _require_protected(metadata, f"installed runtime directory {source_path}")
                 destination_path.mkdir(mode=0o700)
@@ -618,14 +704,9 @@ def _copy_protected_tree(
                     resolved = source_path.resolve(strict=True)
                 except (OSError, RuntimeError) as error:
                     raise NativeToolchainError("installed runtime contains an invalid symlink") from error
-                staged_target: Path | None = None
-                for source_root, staged_root in source_roots:
-                    try:
-                        relative = resolved.relative_to(source_root)
-                    except ValueError:
-                        continue
-                    staged_target = staged_root / relative
-                    break
+                staged_target = _staged_symlink_target(
+                    resolved, source_roots, ignore_python_bytecode_caches
+                )
                 if staged_target is None:
                     raise NativeToolchainError("installed runtime symlink resolves outside admitted roots")
                 destination_path.symlink_to(
@@ -773,6 +854,30 @@ os.execve(python, [python, entrypoint, *sys.argv[1:]], environment)
     return script.encode("utf-8")
 
 
+def _claude_python_launcher_bytes() -> bytes:
+    script = f'''#!/usr/bin/env -S {_CLAUDE_PYTHON_RUNTIME} -I
+import os
+from pathlib import Path
+import sys
+
+plugin = Path(__file__).resolve(strict=True).parents[1]
+python = plugin / "bin" / {_CLAUDE_PYTHON_RUNTIME!r}
+workspace = Path.cwd().resolve(strict=True)
+allowed = ("LANG", "LC_ALL", "LC_CTYPE", "LOGNAME", "PATH", "TERM", "TMPDIR", "USER")
+environment = {{key: os.environ[key] for key in allowed if key in os.environ}}
+environment.update({{
+    "GIT_CONFIG_NOSYSTEM": "1",
+    "HOME": str(workspace),
+    "PYTHONDONTWRITEBYTECODE": "1",
+    "PYTHONNOUSERSITE": "1",
+    "PYTHONPATH": str(plugin),
+    "PYTHONSAFEPATH": "1",
+}})
+os.execve(str(python), [str(python), "-B", "-P", "-s", *sys.argv[1:]], environment)
+'''
+    return script.encode("utf-8")
+
+
 def _claude_specify_launcher_bytes(receipt: dict[str, Any]) -> bytes:
     version = re.fullmatch(
         r"Python ([0-9]+)\.([0-9]+)\.[0-9]+", receipt["python_version"]
@@ -834,32 +939,32 @@ def _verify_claude_plugin_toolchain(
 
     runtime_root = target / _CLAUDE_RUNTIME_DIRECTORY
     bin_root = target / _CLAUDE_BIN_DIRECTORY
+    source_runner = target / "speckit_pro_runner"
     _safe_directory(runtime_root, "Claude plugin toolchain directory", expected_mode=0o555)
     _safe_directory(bin_root, "Claude plugin bin directory")
     python_root = runtime_root / "python"
     specify_root = runtime_root / "specify"
     staged = identity.get("staged")
-    observed_staged = {
-        "directories": {
-            "runtime": _directory_record(target, runtime_root),
-            "bin": _directory_record(target, bin_root),
-        },
-        "python": _staged_tree_record(target, python_root, "staged Python runtime"),
-        "specify": _staged_tree_record(target, specify_root, "staged Specify runtime"),
-    }
+    observed_staged = _claude_staged_identity(
+        target,
+        runtime_root,
+        bin_root,
+    )
     if observed_staged != staged:
         raise NativeToolchainError("staged Claude plugin toolchain changed after preparation")
     _verify_internal_tree_links(runtime_root)
 
     python_name = Path(receipt["interpreter"]["resolved_path"]).name
     python_link = bin_root / "python3"
-    if not python_link.is_symlink():
-        raise NativeToolchainError("Claude plugin Python link is missing")
+    _require_exact_file(python_link, _claude_python_launcher_bytes(), 0o555)
+    python_runtime_link = bin_root / _CLAUDE_PYTHON_RUNTIME
+    if not python_runtime_link.is_symlink():
+        raise NativeToolchainError("Claude plugin Python runtime link is missing")
     expected_target = os.path.relpath(python_root / "bin" / python_name, bin_root)
-    if os.readlink(python_link) != expected_target:
-        raise NativeToolchainError("Claude plugin Python link changed after preparation")
+    if os.readlink(python_runtime_link) != expected_target:
+        raise NativeToolchainError("Claude plugin Python runtime link changed after preparation")
     try:
-        python_link.resolve(strict=True).relative_to(runtime_root)
+        python_runtime_link.resolve(strict=True).relative_to(runtime_root)
     except (OSError, RuntimeError, ValueError) as error:
         raise NativeToolchainError("Claude plugin Python link escapes the staged runtime") from error
 
@@ -872,7 +977,7 @@ def _verify_claude_plugin_toolchain(
         raise NativeToolchainError("Claude plugin launcher directory changed after preparation")
     if prepared.path_entries != (bin_root,):
         raise NativeToolchainError("Claude plugin PATH entries changed after preparation")
-    if prepared.readonly_roots != (runtime_root, bin_root):
+    if prepared.readonly_roots != (runtime_root, bin_root, source_runner):
         raise NativeToolchainError("Claude plugin read-only roots changed after preparation")
     if prepared.environment != _fixed_environment():
         raise NativeToolchainError("native toolchain environment changed after preparation")
@@ -900,12 +1005,87 @@ def _verify_internal_tree_links(root: Path) -> None:
             raise NativeToolchainError("staged native toolchain contains an external symlink") from error
 
 
-def _staged_tree_record(plugin_root: Path, root: Path, label: str) -> dict[str, Any]:
+def _staged_tree_record(
+    plugin_root: Path,
+    root: Path,
+    label: str,
+    *,
+    ignore_python_bytecode_caches: bool = False,
+) -> dict[str, Any]:
     _safe_directory(root, label, expected_mode=0o555)
+    return _tree_record(
+        plugin_root,
+        root,
+        label,
+        ignore_python_bytecode_caches=ignore_python_bytecode_caches,
+    )
+
+
+def _tree_record(
+    plugin_root: Path,
+    root: Path,
+    label: str,
+    *,
+    ignore_python_bytecode_caches: bool = False,
+) -> dict[str, Any]:
     return {
         "path": root.relative_to(plugin_root).as_posix(),
         "mode": stat.S_IMODE(root.lstat().st_mode),
-        "tree": _tree_receipt(root, label),
+        "tree": _tree_receipt(
+            root,
+            label,
+            ignore_python_bytecode_caches=ignore_python_bytecode_caches,
+        ),
+    }
+
+
+def _claude_runner_record(
+    plugin_root: Path,
+    python_link: Path,
+) -> dict[str, Any]:
+    runner_root = plugin_root / "speckit_pro_runner"
+    _safe_directory(runner_root, "Claude plugin SpecKit Pro runner")
+    record = _tree_record(
+        plugin_root,
+        runner_root,
+        "Claude plugin SpecKit Pro runner",
+        ignore_python_bytecode_caches=True,
+    )
+    record["version"] = _probe_version(
+        [str(python_link), "-m", "speckit_pro_runner", "--version"],
+        plugin_root,
+        expected=r"speckit-pro-runner [0-9]+\.[0-9]+\.[0-9]+(?:[-+._a-zA-Z0-9]*)?",
+        additions={"PATH": f"{python_link.parent}:/usr/bin:/bin"},
+    )
+    return record
+
+
+def _claude_staged_identity(
+    plugin_root: Path,
+    runtime_root: Path,
+    bin_root: Path,
+) -> dict[str, Any]:
+    python_root = runtime_root / "python"
+    return {
+        "directories": {
+            "runtime": _directory_record(plugin_root, runtime_root),
+            "bin": _directory_record(plugin_root, bin_root),
+        },
+        "python": _staged_tree_record(
+            plugin_root,
+            python_root,
+            "staged Python runtime",
+            ignore_python_bytecode_caches=True,
+        ),
+        "runner": _claude_runner_record(
+            plugin_root,
+            bin_root / "python3",
+        ),
+        "specify": _staged_tree_record(
+            plugin_root,
+            runtime_root / "specify",
+            "staged Specify runtime",
+        ),
     }
 
 
@@ -919,23 +1099,17 @@ def _claude_runtime_identity(
     launcher = launchers["specify"]
     launcher_body = _read_regular_file(launcher, "Claude plugin Specify launcher")
     python_link = bin_root / "python3"
+    python_body = _read_regular_file(python_link, "Claude plugin Python launcher")
     identity: dict[str, Any] = {
         "schema_version": CLAUDE_PLUGIN_SCHEMA_VERSION,
         "transport": "claude-plugin-bin",
         "required_tools": ["specify"],
         "tools": receipts,
-        "staged": {
-            "directories": {
-                "runtime": _directory_record(plugin_root, runtime_root),
-                "bin": _directory_record(plugin_root, bin_root),
-            },
-            "python": _staged_tree_record(
-                plugin_root, runtime_root / "python", "staged Python runtime"
-            ),
-            "specify": _staged_tree_record(
-                plugin_root, runtime_root / "specify", "staged Specify runtime"
-            ),
-        },
+        "staged": _claude_staged_identity(
+            plugin_root,
+            runtime_root,
+            bin_root,
+        ),
         "launchers": {
             "specify": {
                 "path": launcher.relative_to(plugin_root).as_posix(),
@@ -945,12 +1119,18 @@ def _claude_runtime_identity(
             },
             "python3": {
                 "path": python_link.relative_to(plugin_root).as_posix(),
+                "bytes": len(python_body),
+                "sha256": hashlib.sha256(python_body).hexdigest(),
+                "mode": stat.S_IMODE(python_link.lstat().st_mode),
+            },
+            "python-runtime": {
+                "path": (bin_root / _CLAUDE_PYTHON_RUNTIME).relative_to(plugin_root).as_posix(),
                 "kind": "internal-symlink",
-                "target": os.readlink(python_link),
+                "target": os.readlink(bin_root / _CLAUDE_PYTHON_RUNTIME),
             },
         },
         "path_entries": ["bin"],
-        "readonly_roots": [".native-toolchain", "bin"],
+        "readonly_roots": [".native-toolchain", "bin", "speckit_pro_runner"],
         "environment": {
             "home": "$SUBJECT_CWD",
             "preserved": ["LANG", "LC_ALL", "LC_CTYPE", "LOGNAME", "PATH", "TERM", "TMPDIR", "USER"],
@@ -1009,6 +1189,7 @@ def _runtime_identity(
 
 def _fixed_environment() -> dict[str, str]:
     return {
+        "GIT_CONFIG_NOSYSTEM": "1",
         "PYTHONDONTWRITEBYTECODE": "1",
         "PYTHONNOUSERSITE": "1",
         "PYTHONSAFEPATH": "1",

@@ -67,6 +67,10 @@ CONTRACT_CHECKS = (
     ("Codex reference consumes read-only packet validation in memory", "codex", ("data.stdout_json", "writes_state=false"), ()),
     ("Claude reference keeps restack deferred with explicit fallback", "claude", ("runner `restack` operation is\ndeferred, has no authoritative request", "gh pr edit <number> --base <branch>"), ()),
     ("Codex reference keeps restack deferred with explicit fallback", "codex", ("runner `restack` operation is\ndeferred, has no authoritative request", "gh pr edit <number> --base <branch>"), ()),
+    ("Claude reference blocks parent serial work until every parallel result is consumed", "claude", ("Join barrier before the serial tail", "Launch acknowledgement is not a result", "MUST NOT invoke another parent-owned\ntool", "Consume and attribute every successful,\nnonempty final report before the first parent-owned serial action"), ()),
+    ("Claude reference resolves the renamed Task launcher without mistaking bookkeeping for dispatch", "claude", ("use `Agent` when the current\nClaude tool inventory exposes `Agent`", "renamed `Task` tool", "only manage the shared task list", "never count as worker dispatch"), ()),
+    ("Claude reference loads the deferred Task launcher before the parallel group", "claude", ("exact query `select:Task`", "three `Task` launches together", "does not load\nthe subagent launcher"), ()),
+    ("Claude reference forbids the parent from absorbing parallel track work", "claude", ("Three-worker ownership before any track work", "dispatch exactly three workers", "MUST NOT execute any track-owned\nTask 10-14 action itself", "do\nnot absorb that track into the lead"), ()),
 )
 
 

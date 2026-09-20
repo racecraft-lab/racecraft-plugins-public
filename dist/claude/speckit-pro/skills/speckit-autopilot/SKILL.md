@@ -15,6 +15,13 @@ license: MIT
 
 # SpecKit Autopilot — Autonomous Execution Engine
 
+## Explicit Invocation Boundary
+
+When `/speckit-pro:speckit-autopilot` loads this file, the skill is already
+active. Do not invoke the `Skill` tool for `speckit-pro:speckit-autopilot`
+again; start with these instructions. A rejected redundant `Skill` call is not
+a prerequisite failure and does not authorize stopping the workflow.
+
 ## Installed Runtime Contract
 
 Installed Claude and Codex surfaces resolve Python 3.11 or newer, invoke
@@ -134,8 +141,12 @@ pre-workflow human alignment via `/speckit-pro:speckit-scaffold-spec` or
 
 ### 1. Subagent per phase
 
-For each phase, spawn a **foreground subagent** via the Agent
-tool with `run_in_background: false`. The subagent runs the
+For each phase, spawn a **foreground subagent** via the native subagent tool
+(`Agent` when exposed, otherwise its renamed `Task` equivalent) with
+`run_in_background: false`. `TaskCreate`, `TaskUpdate`, and `TaskList` are
+bookkeeping tools, not subagent launchers. If `Task` is listed but deferred,
+load it with `ToolSearch` query `select:Task`; never load only `TaskCreate` or
+`TaskUpdate` and treat that as worker availability. The subagent runs the
 `/speckit-*` command and returns a summary. You (the parent) receive
 the result as a tool call response, which keeps your agent loop alive.
 Treat async-launch metadata as launch acknowledgement only; collect the
@@ -644,6 +655,11 @@ packet dry-run/apply and validation, single- versus split-PR emission, review
 remediation, retrospective, and final summary. Do not start PR side effects
 without the reference's current evidence and packet contracts, and never report
 completion while its continuation or canonical Post work remains incomplete.
+
+The first Post action is to resolve the host-native subagent launcher and
+dispatch exactly three workers for the Doctor, Code Review, and Verify tracks.
+The parent MUST NOT perform any track-owned Task 10-14 action itself. It may
+continue only after it has consumed all three terminal worker reports.
 
 ## Workflow File Update Protocol
 

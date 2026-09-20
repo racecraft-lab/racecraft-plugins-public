@@ -125,9 +125,19 @@ class NativeParityCatalogTests(unittest.TestCase):
         self.assertEqual(self.case["layer"], "parity")
         self.assertEqual(self.case["resource_class"], "nested")
         self.assertEqual(self.case["required_tools"], ["specify"])
+        self.assertEqual(self.case["git_metadata_access"], "write")
         self.assertEqual(self.case["hosts"]["claude"]["skill"], "speckit-pro:speckit-autopilot")
         self.assertEqual(self.case["hosts"]["codex"]["skill"], "speckit-autopilot")
         self.assertNotIn("speckit-pro:autopilot", json.dumps(self.case))
+        prompt = self.case["prompt"]
+        self.assertIn("dispatch exactly three host-native workers", prompt)
+        self.assertIn("await and consume all three terminal reports", prompt)
+        self.assertIn("must not execute any Task 10-14 track action itself", prompt)
+        self.assertIn("required workflow.md and sibling autopilot-state.json control updates", prompt)
+        self.assertIn("inputs.feature_dir=specs/parity-01", prompt)
+        self.assertIn("inputs.workflow_file=workflow.md", prompt)
+        self.assertIn("Run every final local gate and checkpoint step serially", prompt)
+        self.assertIn("never emit final text while any tool item remains in progress", prompt)
         plan = compile_pair_plan(self.case, REPO_ROOT)
         self.assertEqual(plan["arms"], {"claude": "plugin", "codex": "project"})
         self.assertEqual(plan["declared_artifact_paths"], [REPORT_PATH])
@@ -135,6 +145,12 @@ class NativeParityCatalogTests(unittest.TestCase):
             plan["checks"][0]["contracts"]["expected_path"],
             f"tests/speckit-pro/evals/fixtures/parity/{FIXTURE_ID}/expected-equivalence.json",
         )
+        routing = next(
+            check for check in self.case["checks"]
+            if check["id"] == "authoritative-routing-evidence"
+        )
+        self.assertIn("workflow_file=workflow.md", routing["rubric"])
+        self.assertIn("after the required workflow and sibling state updates", routing["rubric"])
         scaffold_plan = compile_pair_plan(self.scaffold, REPO_ROOT)
         self.assertEqual(scaffold_plan["arms"], {"claude": "plugin", "codex": "project"})
         self.assertEqual(scaffold_plan["declared_artifact_paths"], [SCAFFOLD_REPORT_PATH])
@@ -642,7 +658,19 @@ class NativeParityCatalogTests(unittest.TestCase):
             self.assertEqual(stage["source"], "argv")
             self.assertEqual(stage["basis"], "explicit --stage implement")
 
-            route = run("atomicity-route", {"feature_dir": "specs/parity-01"})
+            workflow = workspace / "workflow.md"
+            workflow.write_text(
+                workflow.read_text(encoding="utf-8") + "\nRoute pending.\n",
+                encoding="utf-8",
+            )
+            (workspace / "autopilot-state.json").write_text("{}\n", encoding="utf-8")
+            route = run(
+                "atomicity-route",
+                {
+                    "feature_dir": "specs/parity-01",
+                    "workflow_file": "workflow.md",
+                },
+            )
             self.assertEqual(route["route"], "split-PR")
             self.assertTrue(route["releasable"])
             self.assertEqual(route["signals"], [
@@ -686,6 +714,12 @@ class NativeParityCatalogTests(unittest.TestCase):
         self.assertIn("one or more local commits", safety)
         self.assertIn("controller Git observation", safety)
         self.assertIn("there is no push", safety)
+        request_path = ".process/execution-control/native-eval-execute-verification-request.json"
+        self.assertIn(request_path, self.case["prompt"])
+        self.assertIn(request_path, safety)
+        self.assertIn("Delete that transient request immediately", self.case["prompt"])
+        self.assertIn("do not create or pass a changed-files evidence file", self.case["prompt"])
+        self.assertIn("without a changed-files evidence file", safety)
         self.assertNotIn("no commit", safety)
         forbidden = [
             check for check in self.case["checks"]
@@ -699,6 +733,11 @@ class NativeParityCatalogTests(unittest.TestCase):
             for name in ("workflow.md", "spec.md", "plan.md", "tasks.md")
         )
         self.assertIn("Local commits are required checkpoints", combined)
+        self.assertIn(request_path, combined)
+        self.assertIn(
+            "Do not create or pass a changed-files evidence file",
+            " ".join(combined.split()),
+        )
         self.assertIn("pushes and all PR mutations remain forbidden", " ".join(combined.split()))
 
     def test_route_and_verification_answers_are_not_staged_as_fixture_evidence(self) -> None:

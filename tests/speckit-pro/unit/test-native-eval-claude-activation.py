@@ -77,6 +77,49 @@ def trace(*, session=SESSION, cwd=CWD, version=VERSION, skills=None, duplicate_i
     return native_session_bytes(records)
 
 
+def continuation_trace():
+    first = json.loads(trace().splitlines()[1])
+    first.update(model="claude-test", plugins=[], tools=["Skill"])
+    tool_use_id = "toolu_background"
+    task_id = "task-background"
+    second = copy.deepcopy(first)
+    second["uuid"] = str(uuid.UUID(int=15))
+    return native_session_bytes([
+        first,
+        {"type": "assistant", "message": {"content": [{
+            "type": "tool_use", "id": tool_use_id, "name": "Agent",
+            "input": {"description": "Finish UAT", "run_in_background": True},
+        }]}, "parent_tool_use_id": None, "session_id": SESSION,
+         "uuid": str(uuid.UUID(int=8))},
+        {"type": "system", "subtype": "task_started", "task_id": task_id,
+         "tool_use_id": tool_use_id, "description": "Finish UAT",
+         "is_backgrounded": True, "session_id": SESSION,
+         "uuid": str(uuid.UUID(int=9))},
+        {"type": "user", "message": {"content": [{
+            "type": "tool_result", "tool_use_id": tool_use_id,
+            "content": "Agent launched", "is_error": False,
+        }]}, "parent_tool_use_id": None, "session_id": SESSION,
+         "uuid": str(uuid.UUID(int=10))},
+        {"type": "system", "subtype": "background_tasks_changed", "tasks": [],
+         "session_id": SESSION, "uuid": str(uuid.UUID(int=11))},
+        {"type": "system", "subtype": "task_updated", "task_id": task_id,
+         "patch": {"status": "completed", "end_time": 1234},
+         "session_id": SESSION, "uuid": str(uuid.UUID(int=12))},
+        {"type": "system", "subtype": "task_notification", "task_id": task_id,
+         "tool_use_id": tool_use_id, "status": "completed",
+         "output_file": "/tmp/task.out", "summary": "UAT complete",
+         "session_id": SESSION, "uuid": str(uuid.UUID(int=13))},
+        second,
+        {"type": "result", "subtype": "success", "is_error": False,
+         "result": "waiting", "usage": {"input_tokens": 1, "output_tokens": 1},
+         "session_id": SESSION, "uuid": str(uuid.UUID(int=16)), "result_index": 0},
+        {"type": "result", "subtype": "success", "is_error": False,
+         "result": "finished", "usage": {"input_tokens": 1, "output_tokens": 1},
+         "session_id": SESSION, "uuid": str(uuid.UUID(int=17)), "result_index": 1,
+         "origin": {"kind": "task-notification"}},
+    ])
+
+
 def command_content(arguments=ARGUMENTS):
     return (
         f"<command-message>{SKILL}</command-message>\n"
@@ -176,6 +219,29 @@ class NativeClaudeActivationTests(unittest.TestCase):
         self.assertEqual(result["arguments"]["sha256"], hashlib.sha256(ARGUMENTS.encode()).hexdigest())
         self.assertNotIn(PROMPT, json.dumps(result))
         self.assertNotIn(DIRECTORY, json.dumps(result))
+
+    def test_witness_accepts_one_evidence_bound_continuation(self):
+        result = witness(raw_trace=continuation_trace())
+
+        self.assertEqual(result["trace"]["session_id"], SESSION)
+        self.assertEqual(result["trace"]["cli_version"], VERSION)
+
+    def test_witness_rejects_unbound_or_changed_continuation(self):
+        for variation in ("missing-bridge", "foreign-bridge", "changed-init", "bad-origin"):
+            with self.subTest(variation=variation):
+                values = [json.loads(line) for line in continuation_trace().splitlines()]
+                second = next(index for index, record in enumerate(values)
+                              if record.get("uuid") == str(uuid.UUID(int=15)))
+                if variation == "missing-bridge":
+                    values.pop(second - 3)
+                elif variation == "foreign-bridge":
+                    values[second - 1]["session_id"] = str(uuid.UUID(int=70))
+                elif variation == "changed-init":
+                    values[second]["cwd"] = "/private/tmp/elsewhere"
+                else:
+                    values[-1]["origin"] = {"kind": "user-prompt"}
+                with self.assertRaises(ClaudeActivationInvalid):
+                    witness(raw_trace=native_session_bytes(values))
 
     def test_correct_outcome_and_slash_text_without_loader_pair_do_not_activate(self):
         expected = witness()

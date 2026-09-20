@@ -317,6 +317,35 @@ class NativeEvalPairingTests(unittest.TestCase):
         self.assertEqual(len(result["semantic_request"]["semantic_criteria"]), 2)
         self.assertEqual(set(result["semantic_request"]["evidence"]), {"arm_a", "arm_b"})
 
+    def test_semantic_section_text_accepts_native_table_layouts(self) -> None:
+        compare = [{
+            "field": "results.summary", "source": "workflow.md",
+            "section_selector": "## Results", "extractor": "section_text",
+            "tolerance_key": "results.summary",
+        }]
+        fields = {"results.summary": {
+            "tolerance": "semantic-equivalent",
+            "rationale": "Require the same closed outcome while allowing native table layouts.",
+        }}
+        self.write_contracts(compare=compare, fields=fields, invariants=False)
+        self.case = self.make_case(invariant_keys=[])
+        plan = compile_pair_plan(self.case, self.root)
+        left = "## Results\n\n| Status | Notes |\n|---|---|\n| PASS | complete |\n"
+        right = "## Results\n\n| Item | Result |\n|---|---|\n| Run | passed and complete |\n"
+        result = grade_pair(self.case, plan, self.arms(left, right))
+        self.assertEqual(result["status"], "needs_judge", result)
+        request = result["semantic_request"]
+        criterion = request["semantic_criteria"][0]
+        self.assertEqual(set(request["evidence"]), {"arm_a", "arm_b"})
+        self.assertIn("| Status | Notes |", request["evidence"]["arm_a"][criterion["id"]])
+        self.assertIn("| Item | Result |", request["evidence"]["arm_b"][criterion["id"]])
+        verdict = {criterion["id"]: {
+            "passed": True,
+            "evidence": [f"arm_a/{criterion['id']}", f"arm_b/{criterion['id']}"],
+        }}
+        self.assertEqual(grade_pair(self.case, plan, self.arms(left, right), verdict)["status"],
+                         "pass")
+
     def test_input_and_grader_fingerprints_have_separate_mutation_boundaries(self) -> None:
         arms = self.arms()
         pair_input = pair_input_fingerprint(self.case["id"], self.plan, arms)

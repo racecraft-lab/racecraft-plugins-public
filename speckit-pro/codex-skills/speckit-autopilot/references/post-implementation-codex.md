@@ -162,6 +162,14 @@ background subagents as the fallback path. The 3-track structure
   confirmed stuck turn, then reconcile read-only and checkpoint unknown effects.
   No interruption authorizes a replacement launch. Hosted completed threads remain inspectable and are
   managed by the host; their absence of explicit closure is not a failure.
+- **Drain final tool work:** give each final local gate one owner and run each
+  gate exactly once as a separately attributable foreground command. Consume
+  one gate's completed result before starting the next; do not launch an
+  overlapping copy while an equivalent gate is pending. Reuse completed gate
+  evidence only when its command, configuration, baseline, working directory,
+  and relevant source and fixture state are unchanged. A final or checkpoint
+  response is forbidden while any started tool item remains in progress; wait
+  on that exact native handle for its terminal result and reconcile it first.
 
 ## PR Packet Validation Workflow
 

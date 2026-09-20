@@ -17,6 +17,8 @@ import re
 import stat
 from typing import Any, Mapping
 
+from native_eval_capture import CaptureError, claude_continuation_layout
+
 
 WITNESS_SCHEMA = "native-claude-explicit-skill-witness/v1"
 RECEIPT_SCHEMA = "native-claude-explicit-skill-activation/v1"
@@ -187,7 +189,23 @@ def _trace_identity(raw_trace: bytes, expected_skill: str) -> dict[str, Any]:
     )
     init = [record for record in records
             if record.get("type") == "system" and record.get("subtype") == "init"]
-    _require(len(init) == 1, "Claude public trace must contain one init record")
+    _require(bool(init), "Claude public trace must contain an init record")
+    if len(init) > 1:
+        first_init = next(index for index, record in enumerate(records) if record is init[0])
+        final_result = max(
+            (index for index, record in enumerate(records)
+             if record.get("type") == "result"
+             and record.get("parent_tool_use_id") is None),
+            default=-1,
+        )
+        _require(final_result >= first_init,
+                 "Claude continuation trace has no final root result")
+        try:
+            claude_continuation_layout(records[first_init:final_result + 1])
+        except CaptureError as exc:
+            raise ClaudeActivationInvalid(
+                "Claude public trace has an invalid continuation: " + str(exc)
+            ) from exc
     record = init[0]
     session_id = _canonical_uuid(record.get("session_id"), "Claude init session id")
     cwd = _absolute_posix_path(record.get("cwd"), "Claude init cwd")

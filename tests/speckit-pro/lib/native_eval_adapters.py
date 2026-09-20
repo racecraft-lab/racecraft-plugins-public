@@ -46,12 +46,21 @@ _CLAUDE_SKILL_NAME = re.compile(
 _SUPPORTED_MODES = {"claude": "plugin", "codex": "project"}
 _SUPPORTED_REQUIRED_TOOLS = frozenset({"specify"})
 _GATED_CLAUDE_TOOLS = frozenset({"Bash", "Write", "Edit", "WebFetch", "WebSearch"})
+_CLAUDE_MAX_TURNS = {"ordinary": 50, "nested": 100}
 _ARTIFACT_FILE_LIMIT = 1024 * 1024
 _ARTIFACT_TOTAL_LIMIT = 8 * 1024 * 1024
 _ARTIFACT_COUNT_LIMIT = 64
 _FIXTURE_RECEIPT_LIMIT = 64 * 1024
 _GIT_RUNTIME_SCHEMA_VERSION = "native-eval-git-runtime/v1"
 _PYTHON_RUNTIME_SCHEMA_VERSION = "native-eval-python-runtime/v1"
+_CLAUDE_DOCKER_CONFIG_SCHEMA_VERSION = "native-eval-claude-docker-config/v1"
+_CLAUDE_DOCKER_CONFIG_DIRECTORY = "docker-config"
+_CLAUDE_CONTROLLER_HOME_SCHEMA_VERSION = "native-eval-claude-controller-home/v1"
+_CLAUDE_CONTROLLER_HOME_DIRECTORY = "controller-home"
+_CLAUDE_CONFIG_ROOT_SCHEMA_VERSION = "native-eval-claude-config-root/v1"
+_CLAUDE_AUTOMATION_AUTH_VARIABLES = (
+    "CLAUDE_CODE_OAUTH_TOKEN", "ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN",
+)
 _CODEX_GIT_CONTROLLER_EXCLUDE = b"/.agents/\n/.codex/\n"
 _CODEX_PROJECT_CONFIG = "[agents]\nenabled = true\n"
 _CLAUDE_GIT_SCAFFOLD_SOURCE = r'''from __future__ import annotations
@@ -192,6 +201,7 @@ class PreparedTrial:
     artifact_root: Path | None
     runtime_identity: dict[str, Any]
     trigger_stage: native_eval_trigger.TriggerStage | None = None
+    stdin_path: Path | None = None
 
     @property
     def stdout_path(self) -> Path:
@@ -213,7 +223,11 @@ class PreparedTrial:
         return {
             "command": list(self.command),
             "cwd": str(self.cwd),
-            "environment": dict(self.environment),
+            "environment": {
+                key: "<redacted-controller-credential>"
+                if key in _CLAUDE_AUTOMATION_AUTH_VARIABLES else value
+                for key, value in self.environment.items()
+            },
             "host": self.host,
             "mode": self.mode,
             "attempt_dir": str(self.attempt_dir),
@@ -222,6 +236,7 @@ class PreparedTrial:
             "artifact_root": str(self.artifact_root) if self.artifact_root is not None else None,
             "runtime_identity": dict(self.runtime_identity),
             "trigger_stage": self.trigger_stage.as_dict() if self.trigger_stage is not None else None,
+            "stdin_path": str(self.stdin_path) if self.stdin_path is not None else None,
         }
 
 
@@ -272,7 +287,10 @@ def _resolve_executable(name: str) -> str:
 def _base_environment() -> dict[str, str]:
     return {
         key: os.environ[key]
-        for key in ("PATH", "HOME", "TMPDIR", "LANG", "LC_ALL", "LC_CTYPE", "USER")
+        for key in (
+            "PATH", "HOME", "TMPDIR", "LANG", "LC_ALL", "LC_CTYPE", "USER",
+            "DOCKER_CONFIG",
+        )
         if key in os.environ
     }
 
@@ -333,7 +351,10 @@ def _relocated(value: object, attempt: Path) -> object:
     return value
 
 
-def _tree_digest(root: Path, *, exclusions: Mapping[str, object] | None = None) -> str:
+def _tree_digest(
+    root: Path, *, exclusions: Mapping[str, object] | None = None,
+    relocation_root: Path | None = None,
+) -> str:
     excluded_roots: frozenset[str] = frozenset()
     excluded_files: frozenset[str] = frozenset()
     if exclusions is not None:
@@ -358,6 +379,10 @@ def _tree_digest(root: Path, *, exclusions: Mapping[str, object] | None = None) 
                  "staged tree file exclusion is not canonical")
         excluded_roots = frozenset(roots)
         excluded_files = frozenset(files)
+    relocation_source: bytes | None = None
+    if relocation_root is not None:
+        _require(relocation_root.is_absolute(), "staged tree relocation root must be absolute")
+        relocation_source = str(relocation_root).encode("utf-8")
     digest = hashlib.sha256()
     if not root.exists():
         return digest.hexdigest()
@@ -373,7 +398,10 @@ def _tree_digest(root: Path, *, exclusions: Mapping[str, object] | None = None) 
         if stat.S_ISDIR(status.st_mode):
             digest.update(b"D\0" + relative + b"\0")
         elif stat.S_ISREG(status.st_mode):
-            digest.update(b"F\0" + relative + b"\0" + path.read_bytes() + b"\0")
+            payload = path.read_bytes()
+            if relocation_source is not None:
+                payload = payload.replace(relocation_source, b"<attempt_dir>")
+            digest.update(b"F\0" + relative + b"\0" + payload + b"\0")
         else:
             raise ValueError(f"staged runtime contains a non-file entry: {path.relative_to(root)}")
     return digest.hexdigest()
@@ -788,6 +816,11 @@ def _case_inputs(case: Mapping[str, object], host: str, mode: str, model: str) -
     _require(type(timeout) is int and 1 <= timeout <= 3600, "native case timeout is outside 1..3600")
     _require(case.get("resource_class") in {"ordinary", "nested"},
              "native case resource_class must be ordinary or nested")
+    git_metadata_access = case.get("git_metadata_access")
+    _require(git_metadata_access in {None, "write"},
+             "native case git_metadata_access must be write when declared")
+    _require(git_metadata_access is None or isinstance(case.get("git_fixture"), Mapping),
+             "native case git_metadata_access requires git_fixture")
     _required_native_tools(case)
     prompt = case.get("prompt")
     _require(isinstance(prompt, str) and bool(prompt.strip()), "native case prompt is empty")
@@ -799,10 +832,35 @@ def _case_inputs(case: Mapping[str, object], host: str, mode: str, model: str) -
         _require(isinstance(skill, str), "native prompt cannot interpolate a null skill")
         if host != "codex":
             prompt = prompt.replace("{{skill}}", skill)
+    required_tools = _required_native_tools(case)
+    if "{{resolved_python}}" in prompt:
+        _require(bool(required_tools),
+                 "resolved Python placeholder requires a staged native toolchain")
     remaining = prompt.replace("{{skill}}", "") if layer == "trigger" or host == "codex" else prompt
+    remaining = remaining.replace("{{resolved_python}}", "")
     _require("{{" not in remaining and "}}" not in remaining,
              "native prompt contains an unsupported placeholder")
     return prompt, host_settings
+
+
+def _render_resolved_python(
+    prompt: str, host: str, staged_root: Path, required_tools: tuple[str, ...],
+) -> str:
+    placeholder = "{{resolved_python}}"
+    if placeholder not in prompt:
+        return prompt
+    _require(bool(required_tools),
+             "resolved Python placeholder requires a staged native toolchain")
+    if host == "claude":
+        replacement = str(staged_root / "bin" / "python3")
+    elif host == "codex":
+        replacement = "python3"
+    else:
+        raise ValueError("resolved Python placeholder host is unsupported")
+    rendered = prompt.replace(placeholder, replacement)
+    _require(placeholder not in rendered,
+             "resolved Python placeholder was not rendered")
+    return rendered
 
 
 def _required_native_tools(case: Mapping[str, object]) -> tuple[str, ...]:
@@ -881,6 +939,94 @@ def _prepare_attempt_directory(attempt_dir: str | Path) -> Path:
     return attempt.resolve(strict=True)
 
 
+def _claude_controller_directory_identity(
+    attempt: Path, *, kind: str, create: bool,
+) -> tuple[Path, dict[str, object]]:
+    _require(kind in {"home", "docker"}, "Claude controller directory kind is unsupported")
+    directory, schema_version, label = {
+        "home": (
+            _CLAUDE_CONTROLLER_HOME_DIRECTORY,
+            _CLAUDE_CONTROLLER_HOME_SCHEMA_VERSION,
+            "Claude controller home",
+        ),
+        "docker": (
+            _CLAUDE_DOCKER_CONFIG_DIRECTORY,
+            _CLAUDE_DOCKER_CONFIG_SCHEMA_VERSION,
+            "Claude Docker config directory",
+        ),
+    }[kind]
+    path = attempt / directory
+    if create:
+        try:
+            path.mkdir(mode=0o700)
+        except OSError as exc:
+            raise NativeAdapterError(f"{label} could not be created") from exc
+    try:
+        metadata = path.lstat()
+    except OSError as exc:
+        raise NativeAdapterError(f"{label} is unavailable") from exc
+    _require(stat.S_ISDIR(metadata.st_mode) and not stat.S_ISLNK(metadata.st_mode),
+             f"{label} must be a real directory")
+    _require(stat.S_IMODE(metadata.st_mode) == 0o700,
+             f"{label} must have mode 0700")
+    try:
+        entries = list(path.iterdir())
+    except OSError as exc:
+        raise NativeAdapterError(f"{label} is unavailable") from exc
+    _require(not entries, f"{label} must remain empty")
+    return path, {
+        "schema_version": schema_version,
+        "path": directory,
+        "kind": "controller-owned-empty-directory",
+        "mode": 0o700,
+    }
+
+
+def _claude_config_root_identity(
+    attempt: Path, configured_path: Path | None = None,
+) -> tuple[Path, dict[str, object]]:
+    if configured_path is None:
+        explicit = os.environ.get("CLAUDE_CONFIG_DIR")
+        if explicit is not None:
+            candidate = Path(explicit)
+        else:
+            home = os.environ.get("HOME")
+            _require(isinstance(home, str) and bool(home),
+                     "Claude controller HOME is unavailable")
+            candidate = Path(home) / ".claude"
+    else:
+        candidate = configured_path
+    _require(candidate.is_absolute(), "Claude controller config root must be absolute")
+    try:
+        candidate_metadata = candidate.lstat()
+        canonical = candidate.resolve(strict=True)
+        metadata = canonical.lstat()
+    except OSError as exc:
+        raise NativeAdapterError("Claude controller config root is unavailable") from exc
+    _require(stat.S_ISDIR(candidate_metadata.st_mode)
+             and not stat.S_ISLNK(candidate_metadata.st_mode)
+             and stat.S_ISDIR(metadata.st_mode)
+             and not stat.S_ISLNK(metadata.st_mode),
+             "Claude controller config root must be a real directory")
+    _require(metadata.st_uid == os.getuid(),
+             "Claude controller config root must be owned by the current user")
+    mode = stat.S_IMODE(metadata.st_mode)
+    _require(mode & 0o022 == 0,
+             "Claude controller config root must not be group/world writable")
+    attempt_root = attempt.resolve(strict=True)
+    _require(not canonical.is_relative_to(attempt_root),
+             "Claude controller config root must be outside attempt staging")
+    return canonical, {
+        "schema_version": _CLAUDE_CONFIG_ROOT_SCHEMA_VERSION,
+        "path": str(canonical),
+        "kind": "controller-config-directory",
+        "mode": mode,
+        "uid": metadata.st_uid,
+        "device": metadata.st_dev,
+        "inode": metadata.st_ino,
+    }
+
+
 def _runtime_identity(
     *, case: Mapping[str, object], host: str, mode: str, model: str,
     executable: str, cli_version: str, staged_root: Path, skill_root: Path,
@@ -890,6 +1036,21 @@ def _runtime_identity(
     trusted_input_root: Path | None = None,
     staged_tree_exclusions: Mapping[str, object] | None = None,
 ) -> dict[str, Any]:
+    runtime_settings = _relocated(dict(settings), attempt)
+    _require(isinstance(runtime_settings, dict), "runtime settings could not be relocated")
+    explicit_activation = runtime_settings.get("claude_explicit_activation")
+    if explicit_activation is not None:
+        _require(isinstance(explicit_activation, dict),
+                 "Claude explicit activation settings are malformed")
+        prompt = explicit_activation.get("prompt")
+        _require(isinstance(prompt, str), "Claude explicit activation prompt is malformed")
+        attempt_prefix = str(attempt)
+        relocated_prompt = prompt.replace(
+            attempt_prefix + os.sep, "<attempt_dir>" + os.sep,
+        )
+        _require(attempt_prefix not in relocated_prompt,
+                 "Claude explicit activation prompt cannot be relocated")
+        explicit_activation["prompt"] = relocated_prompt
     identity: dict[str, Any] = {
         "schema_version": "native-eval-runtime/v1",
         "case_id": case["id"],
@@ -898,11 +1059,13 @@ def _runtime_identity(
         "model": model,
         "cli_path": executable,
         "cli_version": cli_version,
-        "settings": dict(settings),
+        "settings": runtime_settings,
         "relocations": {"attempt_dir": "<attempt_dir>", "scope": "exact staged launch path"},
         "command_sha256": hashlib.sha256(_canonical_json(_relocated(command, attempt))).hexdigest(),
         "environment_sha256": hashlib.sha256(_canonical_json(_relocated(dict(environment), attempt))).hexdigest(),
-        "staged_tree_sha256": _tree_digest(staged_root, exclusions=staged_tree_exclusions),
+        "staged_tree_sha256": _tree_digest(
+            staged_root, exclusions=staged_tree_exclusions, relocation_root=attempt,
+        ),
         "skill_catalog_sha256": _tree_digest(skill_root),
         "fixture_tree_sha256": _tree_digest(fixture_root),
         "fixture_setup_sha256": hashlib.sha256(Path(fixture_setup.__file__).read_bytes()).hexdigest(),
@@ -949,6 +1112,7 @@ def _prepared_native_toolchain(
     fixed = value.get("environment")
     fixed = fixed.get("fixed") if isinstance(fixed, dict) else None
     _require(fixed == {
+        "GIT_CONFIG_NOSYSTEM": "1",
         "PYTHONDONTWRITEBYTECODE": "1",
         "PYTHONNOUSERSITE": "1",
         "PYTHONSAFEPATH": "1",
@@ -957,11 +1121,13 @@ def _prepared_native_toolchain(
     launcher = staged_root.joinpath(*PurePosixPath(expected_launcher).parts)
     if host == "claude":
         _require(value.get("path_entries") == ["bin"]
-                 and value.get("readonly_roots") == [".native-toolchain", "bin"],
+                 and value.get("readonly_roots")
+                 == [".native-toolchain", "bin", "speckit_pro_runner"],
                  "prepared Claude toolchain paths are malformed")
         readonly_roots = (
             staged_root / ".native-toolchain",
             staged_root / "bin",
+            staged_root / "speckit_pro_runner",
         )
     else:
         roots = value.get("readonly_roots")
@@ -989,8 +1155,8 @@ def _merge_claude_toolchain_exclusions(
         "root_directories": list(exclusions["root_directories"]) if exclusions else [],
         "files": list(exclusions["files"]) if exclusions else [],
     }
-    merged["root_directories"].append(".native-toolchain")
-    merged["files"].append("bin/python3")
+    merged["root_directories"].extend((".native-toolchain", "speckit_pro_runner"))
+    merged["files"].extend(("bin/python3", "bin/.speckit-python3-runtime"))
     return merged
 
 
@@ -1132,12 +1298,18 @@ def _codex_instruction_inputs(
 def _codex_permission_args(
     workspace: Path, environment: Mapping[str, str], filesystem_access: str, permission_name: str,
     *, forwarded_environment: tuple[str, ...] = (), runtime_read_roots: tuple[Path, ...] = (),
+    git_metadata_access: str | None = None,
 ) -> list[str]:
     _require(filesystem_access in {"read", "write"}, "Codex filesystem access is unsupported")
+    _require(git_metadata_access in {None, "write"},
+             "Codex Git metadata access is unsupported")
+    _require(git_metadata_access is None or filesystem_access == "write",
+             "Codex Git metadata write requires workspace write access")
     workspace_value = str(workspace.resolve())
     entries = {
         ":root": "deny", ":minimal": "read", workspace_value: filesystem_access,
         f"{workspace_value}/.agents": "read", f"{workspace_value}/.codex": "read",
+        f"{workspace_value}/.git": git_metadata_access or "read",
     }
     for runtime_root in runtime_read_roots:
         runtime_value = str(runtime_root)
@@ -1299,6 +1471,12 @@ def _require_probe_result(
              and isinstance(completed.stdout, bytes)
              and isinstance(completed.stderr, bytes),
              f"Codex native sandbox {label} probe returned malformed evidence")
+    if (completed.returncode == 71 and
+            b"sandbox-exec: sandbox_apply: Operation not permitted" in completed.stderr):
+        raise NativeAdapterError(
+            "Codex native sandbox cannot initialize inside an outer macOS sandbox; "
+            "relaunch the native-eval controller outside the outer sandbox"
+        )
     if denied:
         _require(completed.returncode != 0 and not completed.stdout
                  and _ISOLATION_DENIAL.search(completed.stderr) is not None,
@@ -1394,6 +1572,54 @@ def _remove_exact_probe_entry(path: Path) -> None:
             path.unlink()
     except OSError as exc:
         raise NativeAdapterError("Codex native isolation write-probe cleanup failed") from exc
+
+
+def _qualify_codex_git_metadata(
+    *, executable: str, workspace: Path, environment: Mapping[str, str],
+    permission_args: list[str], permission_name: str, filesystem_access: str,
+    directory_maker: str, git_metadata_access: str | None,
+) -> dict[str, str] | None:
+    _require(git_metadata_access in {None, "write"},
+             "Codex Git metadata access is unsupported")
+    _require(git_metadata_access is None or filesystem_access == "write",
+             "Codex Git metadata write requires workspace write access")
+    git_metadata = workspace / ".git"
+    if git_metadata_access == "write":
+        try:
+            git_metadata_status = git_metadata.lstat()
+        except OSError as exc:
+            raise NativeAdapterError("Codex Git metadata control is unavailable") from exc
+        _require(stat.S_ISDIR(git_metadata_status.st_mode)
+                 and not stat.S_ISLNK(git_metadata_status.st_mode),
+                 "Codex Git metadata control must be a directory")
+    if not git_metadata.is_dir() or git_metadata.is_symlink():
+        return None
+
+    git_write = git_metadata / f".native-isolation-write-{uuid.uuid4().hex}"
+    denied = git_metadata_access != "write"
+    try:
+        completed = _run_codex_sandbox_probe(
+            _sandbox_probe_command(
+                executable, permission_name, permission_args, workspace,
+                directory_maker, git_write,
+            ), cwd=workspace, environment=environment,
+        )
+        try:
+            target_status = git_write.lstat()
+        except FileNotFoundError:
+            target_status = None
+        if denied:
+            _require_probe_result(completed, label="git-metadata-write", denied=True)
+            _require(target_status is None,
+                     "Codex native sandbox created the denied git-metadata-write control")
+        else:
+            _require(completed.returncode == 0 and target_status is not None
+                     and stat.S_ISDIR(target_status.st_mode)
+                     and not stat.S_ISLNK(target_status.st_mode),
+                     "Codex native sandbox failed the git-metadata-write control")
+    finally:
+        _remove_exact_probe_entry(git_write)
+    return {"name": "git-metadata-write", "outcome": "denied" if denied else "allowed"}
 
 
 def _isolation_checker_identity() -> dict[str, object]:
@@ -1498,6 +1724,7 @@ def _qualify_codex_isolation(
     evidence_root: str | Path | None, repo_root: Path, attempt: Path,
     runtime_executable: Path | None = None, runtime_version: tuple[int, int] | None = None,
     toolchain_probe: tuple[Path, str] | None = None,
+    git_metadata_access: str | None = None,
 ) -> dict[str, object]:
     """Qualify the exact local profile without contacting a model provider."""
     _require(evidence_root is not None,
@@ -1513,7 +1740,6 @@ def _qualify_codex_isolation(
     _require(workspace.parent == attempt, "Codex workspace escaped its reserved staging attempt")
     workspace = _real_canonical_directory(workspace, "Codex workspace")
     repo_root = _real_canonical_directory(repo_root, "repo_root")
-
     control = workspace / ".codex" / "native-eval-isolation-control.txt"
     control_status = control.lstat()
     _require(stat.S_ISREG(control_status.st_mode) and not stat.S_ISLNK(control_status.st_mode),
@@ -1594,6 +1820,15 @@ def _qualify_codex_isolation(
                 finally:
                     _remove_exact_probe_entry(target)
                 checks.append({"name": label, "outcome": "denied" if denied else "allowed"})
+
+        git_metadata_probe = _qualify_codex_git_metadata(
+            executable=executable, workspace=workspace, environment=environment,
+            permission_args=permission_args, permission_name=permission_name,
+            filesystem_access=filesystem_access, directory_maker=directory_maker,
+            git_metadata_access=git_metadata_access,
+        )
+        if git_metadata_probe is not None:
+            checks.append(git_metadata_probe)
 
         _require((runtime_executable is None) == (runtime_version is None),
                  "Codex protected runtime probe inputs are incomplete")
@@ -1786,6 +2021,13 @@ def _prepare_claude(
 ) -> PreparedTrial:
     executable = _resolve_executable("claude")
     cli_version = _probe_cli_version(executable)
+    config_root, config_root_identity = _claude_config_root_identity(attempt)
+    controller_home, controller_home_identity = _claude_controller_directory_identity(
+        attempt, kind="home", create=True,
+    )
+    docker_config, docker_config_identity = _claude_controller_directory_identity(
+        attempt, kind="docker", create=True,
+    )
     plugin = attempt / "plugin"
     explicit_activation: dict[str, object] | None = None
     if case.get("layer") == "trigger":
@@ -1795,9 +2037,6 @@ def _prepare_claude(
     else:
         _copy_tree(repo / "speckit-pro", plugin)
         trigger_stage = None
-        prompt, explicit_activation = _claude_explicit_activation_input(
-            prompt, host_settings.get("skill"), plugin,
-        )
     case_dir = plugin / "evals" / str(case["id"])
     _require(not case_dir.exists(), "staged plugin already contains the native case")
     case_dir.mkdir(parents=True)
@@ -1830,6 +2069,14 @@ def _prepare_claude(
         prepared_toolchain = native_eval_toolchain.prepare_claude_plugin_toolchain(
             plugin, required_tools=required_tools,
         )
+        launchers = prepared_toolchain.runtime_identity.get("launchers")
+        python_launcher = launchers.get("python3") if isinstance(launchers, Mapping) else None
+        _require(
+            isinstance(python_launcher, Mapping)
+            and python_launcher.get("path") == "bin/python3"
+            and (plugin / "bin" / "python3").is_file(),
+            "Claude protected Python launcher is not bound to the staged plugin",
+        )
         upstream_controller = case_dir / "upstream-controller"
         upstream_controller.mkdir(mode=0o700)
         prepared_upstream = native_eval_upstream.prepare_upstream_integration(
@@ -1844,6 +2091,11 @@ def _prepare_claude(
             staged_tree_exclusions,
             tuple(f"{source_prefix}/{path}" for path in
                   native_eval_upstream.volatile_manifest_paths(prepared_upstream.runtime_identity)),
+        )
+    prompt = _render_resolved_python(prompt, "claude", plugin, required_tools)
+    if trigger_stage is None:
+        prompt, explicit_activation = _claude_explicit_activation_input(
+            prompt, host_settings.get("skill"), plugin,
         )
     declared_tools = host_settings.get("allowed_tools")
     _require(isinstance(declared_tools, list)
@@ -1864,7 +2116,7 @@ def _prepare_claude(
         f"schema_version: \"1.1\"\nname: {json.dumps(case['id'])}\n"
         "runs: 1\n"
         "execution:\n"
-        "  max_turns: 50\n"
+        f"  max_turns: {_CLAUDE_MAX_TURNS[case['resource_class']]}\n"
         f"  timeout_seconds: {case['timeout_seconds']}\n"
         f"  allowed_tools: {json.dumps(tools)}\n"
     )
@@ -1916,6 +2168,13 @@ def _prepare_claude(
     if granted:
         command.extend(["--allow-tools", *granted])
     command.extend(["--json", str(result_path)])
+    controller_auth = {
+        name: os.environ[name]
+        for name in _CLAUDE_AUTOMATION_AUTH_VARIABLES
+        if isinstance(os.environ.get(name), str) and bool(os.environ[name].strip())
+    }
+    _require(len(controller_auth) == 1,
+             "Claude native eval isolation requires exactly one documented automation credential")
     settings = {
         "runs": 1, "ablation": "none", "concurrency": 1, "publish": False,
         "trust_plugin": True, "scaffold": True, "keep_temp": True,
@@ -1944,6 +2203,10 @@ def _prepare_claude(
         } if prepared_toolchain is not None else {}),
         **({"fixture_read_witnesses": fixture_read_witnesses} if fixture_read_witnesses else {}),
         **({"git_fixture": git_settings} if git_settings is not None else {}),
+        "controller_auth": {
+            "source": next(iter(controller_auth)),
+            "subprocess_scrub": True,
+        },
         **({"trigger_measurement_instruction": {
             "text": trigger_instruction,
             "bytes": len(trigger_instruction.encode("utf-8")),
@@ -1951,7 +2214,24 @@ def _prepare_claude(
         }, "trigger_tool_exposure_runtime_qualification_required": True}
            if trigger_instruction is not None else {}),
     }
+    settings["controller_home"] = controller_home_identity
+    settings["docker_config"] = docker_config_identity
+    settings["claude_config_root"] = config_root_identity
     environment = _base_environment()
+    environment["HOME"] = str(controller_home)
+    environment["DOCKER_CONFIG"] = str(docker_config)
+    environment["CLAUDE_CONFIG_DIR"] = str(config_root)
+    environment["CLAUDE_CODE_SUBPROCESS_ENV_SCRUB"] = "1"
+    environment.update(controller_auth)
+    if prepared_toolchain is not None:
+        original_path = environment.get("PATH", "")
+        protected_entries = [str(path) for path in prepared_toolchain.path_entries]
+        environment["PATH"] = os.pathsep.join([
+            *protected_entries,
+            *([original_path] if original_path else []),
+        ])
+        environment["PYTHONPATH"] = str(plugin)
+        environment["PYTHONSAFEPATH"] = "1"
     identity = _runtime_identity(
         case=case, host="claude", mode="plugin", model=model, executable=executable,
         cli_version=cli_version, staged_root=plugin, skill_root=plugin / "skills",
@@ -1981,6 +2261,7 @@ def _prepare_codex(
     required_tools = _required_native_tools(case)
     _require(not required_tools or case.get("layer") != "trigger",
              "trigger measurements cannot stage an upstream tool integration")
+    prompt = _render_resolved_python(prompt, "codex", workspace, required_tools)
     for fixture in plan["fixtures"]:
         destination = PurePosixPath(fixture["destination"])
         reserved = {".agents", ".codex", ".codex-trigger-runtime"}
@@ -2177,6 +2458,7 @@ def _prepare_codex(
         workspace, environment, filesystem_access, permission_name,
         forwarded_environment=tuple(forwarded_environment),
         runtime_read_roots=runtime_read_roots,
+        git_metadata_access=case.get("git_metadata_access"),
     )
     nested = case["resource_class"] == "nested"
     recorded_session = nested or case.get("layer") != "trigger"
@@ -2193,8 +2475,10 @@ def _prepare_codex(
         executable, "exec", "--json", *session_args, "--strict-config",
         "--ignore-user-config", "--ignore-rules", "--model", model,
         "--skip-git-repo-check",
-        *permission_args, "--config",
+        *permission_args,
+        "--config",
         "project_root_markers=" + json.dumps(project_root_markers, separators=(",", ":")),
+        "--config", "tools.update_plan.enabled=true",
         *agent_registration_args, *trigger_instruction_args,
         "--cd", str(workspace.resolve()), *isolation_args, prompt,
     ]
@@ -2208,6 +2492,7 @@ def _prepare_codex(
             prepared_toolchain.launchers["specify"],
             prepared_toolchain.runtime_identity["tools"]["specify"]["version"],
         ) if prepared_toolchain is not None else None,
+        git_metadata_access=case.get("git_metadata_access"),
     )
     protected_control_trees = {
         ".agents": _tree_digest(workspace / ".agents"),
@@ -2224,6 +2509,7 @@ def _prepare_codex(
         "project_instruction_parent_traversal": False,
         "project_root_markers": project_root_markers,
         "global_instructions_disabled": False,
+        "update_plan_enabled": True,
         "filesystem": f"workspace-{filesystem_access}-plus-runtime-minimal", "network": False,
         "filesystem_capability_enforced": True, "literal_tool_allowlist_enforced": False,
         "isolation_qualification": isolation_qualification,
@@ -2231,6 +2517,8 @@ def _prepare_codex(
         "approval_policy": "never",
         "login_shell": False, "shell_environment_inherit": "none",
         "allowed_tools": requested_tools,
+        **({"git_metadata_access": case["git_metadata_access"]}
+           if "git_metadata_access" in case else {}),
         "timeout_seconds": case["timeout_seconds"], "resource_class": case.get("resource_class"),
         "declared_artifacts": list(_declared_artifacts(case, repo)),
         "verification_record_directories": list(
@@ -2342,6 +2630,9 @@ def prepare_judge(
     control.mkdir(mode=0o700)
     schema_path = control / "output-schema.json"
     _write_json(schema_path, validated["output_schema"])
+    prompt_path = control / "prompt.txt"
+    prompt_payload = _judge_prompt(validated).encode("utf-8")
+    _write_text(prompt_path, prompt_payload.decode("utf-8"))
     result_path = attempt / "judge-result.json"
 
     environment = dict(helpers.codex_environment())
@@ -2376,11 +2667,14 @@ def prepare_judge(
         "--skip-git-repo-check", *permission_args,
         "--config", "project_root_markers=[]",
         "--output-schema", str(schema_path), "--output-last-message", str(result_path),
-        "--cd", str(workspace), *isolation_args, _judge_prompt(validated),
+        "--cd", str(workspace), *isolation_args, "-",
     ]
     settings = {
         "judge_request_sha256": validated["request_sha256"],
         "semantic_criteria_count": len(validated["semantic_criteria"]),
+        "judge_prompt_sha256": hashlib.sha256(prompt_payload).hexdigest(),
+        "judge_prompt_bytes": len(prompt_payload),
+        "prompt_transport": "stdin",
         "user_config_ignored": True, "rules_ignored": True,
         "ephemeral": True, "recorded_session": False, "multi_agent_enabled": False,
         "multi_agent_v2_enabled": False,
@@ -2422,7 +2716,7 @@ def prepare_judge(
     )
     return PreparedTrial(
         command, workspace, environment, "codex", "judge", attempt,
-        attempt / "trace.jsonl", result_path, None, identity,
+        attempt / "trace.jsonl", result_path, None, identity, stdin_path=prompt_path,
     )
 
 
@@ -2437,11 +2731,11 @@ def judge_runtime_compatibility_identity(prepared: PreparedTrial) -> dict[str, A
     input_catalog = settings.pop("disabled_native_input_catalog")
     settings.pop("judge_request_sha256", None)
     settings.pop("semantic_criteria_count", None)
+    settings.pop("judge_prompt_sha256", None)
+    settings.pop("judge_prompt_bytes", None)
     command_template = list(prepared.command)
-    _require(bool(command_template) and command_template[-1].startswith(
-        "Evaluate every trusted semantic_criteria rubric"),
-        "prepared judge command prompt is malformed")
-    command_template[-1] = "<judge-request>"
+    _require(bool(command_template) and command_template[-1] == "-",
+             "prepared judge stdin command is malformed")
     compatibility: dict[str, Any] = {
         "schema_version": "native-eval-judge-runtime-compatibility/v1",
         "host": "codex",
@@ -3056,8 +3350,8 @@ def _validated_git_fixture_settings(prepared: PreparedTrial) -> Mapping[str, obj
                  == native_eval_toolchain.CLAUDE_PLUGIN_SCHEMA_VERSION,
                  "prepared Claude toolchain identity is malformed")
         toolchain_exclusions = {
-            "root_directories": [".native-toolchain"],
-            "files": ["bin/python3"],
+            "root_directories": [".native-toolchain", "speckit_pro_runner"],
+            "files": ["bin/python3", "bin/.speckit-python3-runtime"],
         }
     upstream = _prepared_upstream_integration(
         prepared.attempt_dir, settings.get("upstream_integration"),
@@ -3170,6 +3464,30 @@ def _read_claude_fixture_receipt(
     return receipt
 
 
+def _prepared_stdin_bytes(prepared: PreparedTrial) -> bytes | None:
+    if prepared.stdin_path is None:
+        return None
+    _require(prepared.host == "codex" and prepared.mode == "judge",
+             "native stdin is supported only for the Codex semantic judge")
+    expected_path = prepared.attempt_dir / "judge-control" / "prompt.txt"
+    _require(prepared.stdin_path == expected_path,
+             "prepared judge stdin path is malformed")
+    try:
+        status = prepared.stdin_path.lstat()
+        payload = prepared.stdin_path.read_bytes()
+    except OSError as exc:
+        raise NativeAdapterError("prepared judge stdin is unavailable") from exc
+    _require(stat.S_ISREG(status.st_mode) and not stat.S_ISLNK(status.st_mode),
+             "prepared judge stdin is not a regular file")
+    settings = prepared.runtime_identity.get("settings")
+    _require(isinstance(settings, dict)
+             and settings.get("prompt_transport") == "stdin"
+             and settings.get("judge_prompt_bytes") == len(payload)
+             and settings.get("judge_prompt_sha256") == hashlib.sha256(payload).hexdigest(),
+             "prepared judge stdin changed after admission")
+    return payload
+
+
 def _verify_prepared_identity(prepared: PreparedTrial) -> None:
     identity = prepared.runtime_identity
     _require(isinstance(identity, dict), "prepared runtime identity is malformed")
@@ -3225,6 +3543,66 @@ def _verify_prepared_identity(prepared: PreparedTrial) -> None:
         else:
             raise ValueError("Claude fixture receipt path contains stale evidence")
     if prepared.host == "claude":
+        controller_home_value = settings_value.get("controller_home")
+        expected_controller_home = {
+            "schema_version": _CLAUDE_CONTROLLER_HOME_SCHEMA_VERSION,
+            "path": _CLAUDE_CONTROLLER_HOME_DIRECTORY,
+            "kind": "controller-owned-empty-directory",
+            "mode": 0o700,
+        }
+        _require(controller_home_value == expected_controller_home,
+                 "prepared Claude controller home identity is malformed")
+        controller_home, observed_controller_home = _claude_controller_directory_identity(
+            prepared.attempt_dir, kind="home", create=False,
+        )
+        docker_config_value = settings_value.get("docker_config")
+        expected_docker_config = {
+            "schema_version": _CLAUDE_DOCKER_CONFIG_SCHEMA_VERSION,
+            "path": _CLAUDE_DOCKER_CONFIG_DIRECTORY,
+            "kind": "controller-owned-empty-directory",
+            "mode": 0o700,
+        }
+        _require(docker_config_value == expected_docker_config,
+                 "prepared Claude Docker config identity is malformed")
+        docker_config, observed_docker_config = _claude_controller_directory_identity(
+            prepared.attempt_dir, kind="docker", create=False,
+        )
+        config_root_value = settings_value.get("claude_config_root")
+        _require(isinstance(config_root_value, dict)
+                 and set(config_root_value) == {
+                     "schema_version", "path", "kind", "mode", "uid", "device", "inode",
+                 }
+                 and config_root_value.get("schema_version")
+                 == _CLAUDE_CONFIG_ROOT_SCHEMA_VERSION
+                 and config_root_value.get("kind") == "controller-config-directory"
+                 and isinstance(config_root_value.get("path"), str),
+                 "prepared Claude controller config root identity is malformed")
+        config_root, observed_config_root = _claude_config_root_identity(
+            prepared.attempt_dir, Path(config_root_value["path"]),
+        )
+        controller_auth = settings_value.get("controller_auth")
+        auth_source = controller_auth.get("source") \
+            if isinstance(controller_auth, dict) else None
+        _require(observed_controller_home == controller_home_value
+                 and observed_docker_config == docker_config_value
+                 and observed_config_root == config_root_value
+                 and prepared.environment.get("HOME") == str(controller_home)
+                 and prepared.environment.get("DOCKER_CONFIG") == str(docker_config)
+                 and prepared.environment.get("CLAUDE_CONFIG_DIR") == str(config_root)
+                 and prepared.environment.get("CLAUDE_CODE_SUBPROCESS_ENV_SCRUB") == "1"
+                 and isinstance(auth_source, str)
+                 and auth_source in _CLAUDE_AUTOMATION_AUTH_VARIABLES
+                 and controller_auth == {
+                     "source": auth_source, "subprocess_scrub": True,
+                 }
+                 and isinstance(prepared.environment.get(auth_source), str)
+                 and bool(prepared.environment[auth_source].strip())
+                 and not any(
+                     name in prepared.environment
+                     for name in _CLAUDE_AUTOMATION_AUTH_VARIABLES
+                     if name != auth_source
+                 ),
+                 "prepared Claude controller environment changed after admission")
         staged_root = prepared.cwd
         skill_root = prepared.cwd / "skills"
         fixture_root = prepared.cwd / "evals" / str(identity.get("case_id")) / "fixture-sources"
@@ -3248,6 +3626,7 @@ def _verify_prepared_identity(prepared: PreparedTrial) -> None:
             _require(len(catalog_paths) == len(catalog["files"])
                      and _file_catalog_identity(catalog_paths) == catalog,
                      "prepared judge input catalog changed after admission")
+            _prepared_stdin_bytes(prepared)
         else:
             fixture_root = prepared.attempt_dir / "staged-inputs" / "fixture-sources"
         settings = identity.get("settings")
@@ -3262,7 +3641,9 @@ def _verify_prepared_identity(prepared: PreparedTrial) -> None:
                  and isinstance(settings, dict)
                  and settings.get("project_instruction_parent_traversal") is False
                  and settings.get("project_root_markers") == expected_project_root_markers
-                 and settings.get("global_instructions_disabled") is False,
+                 and settings.get("global_instructions_disabled") is False
+                 and (prepared.mode != "project"
+                      or settings.get("update_plan_enabled") is True),
                  "prepared Codex instruction discovery settings are malformed")
         _require(_codex_instruction_inputs(
                     prepared.environment, prepared.cwd,
@@ -3310,7 +3691,9 @@ def _verify_prepared_identity(prepared: PreparedTrial) -> None:
     else:
         raise ValueError(f"unsupported prepared host: {prepared.host}")
     exclusions = identity.get("staged_tree_exclusions")
-    _require(_tree_digest(staged_root, exclusions=exclusions) == identity.get("staged_tree_sha256"),
+    _require(_tree_digest(
+        staged_root, exclusions=exclusions, relocation_root=prepared.attempt_dir,
+    ) == identity.get("staged_tree_sha256"),
              "prepared staged runtime changed after admission")
     _require(_tree_digest(skill_root) == identity.get("skill_catalog_sha256"),
              "prepared skill catalog changed after admission")
@@ -3395,7 +3778,9 @@ def _verify_post_execution_controls(prepared: PreparedTrial) -> None:
                 and git_settings is None and explicit_activation is None):
             return
         exclusions = prepared.runtime_identity.get("staged_tree_exclusions")
-        _require(_tree_digest(prepared.cwd, exclusions=exclusions)
+        _require(_tree_digest(
+            prepared.cwd, exclusions=exclusions, relocation_root=prepared.attempt_dir,
+        )
                  == prepared.runtime_identity.get("staged_tree_sha256"),
                  "prepared staged runtime changed during execution")
         if prepared_toolchain is not None:
@@ -3532,10 +3917,17 @@ def execute_prepared(
         raw_paths.append(prepared.git_observation_path)
     for raw_path in raw_paths:
         _require(not raw_path.exists(), "native process path contains stale evidence")
+    stdin_bytes = _prepared_stdin_bytes(prepared)
     evidence: dict[str, object] = {}
+    if stdin_bytes is not None:
+        evidence.update({
+            "stdin_bytes": len(stdin_bytes),
+            "stdin_sha256": hashlib.sha256(stdin_bytes).hexdigest(),
+        })
     try:
         child = subprocess.Popen(
-            list(prepared.command), cwd=prepared.cwd, stdin=subprocess.DEVNULL,
+            list(prepared.command), cwd=prepared.cwd,
+            stdin=subprocess.PIPE if stdin_bytes is not None else subprocess.DEVNULL,
             stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=prepared.environment,
             shell=False, start_new_session=os.name != "nt",
         )
@@ -3544,6 +3936,7 @@ def execute_prepared(
     try:
         exit_code, stdout_bytes, stderr_bytes, timed_out = trigger_process.supervise_child(
             child, timeout, cleanup=trigger_process.cleanup_child, evidence=evidence,
+            input_bytes=stdin_bytes,
         )
     except (trigger_process.QueryError, trigger_process.TerminationRequested) as exc:
         exit_code = exc.exit_code
@@ -3560,7 +3953,7 @@ def execute_prepared(
         raw_trace, framework_result, artifact_root, retained_root = _collect_execution_outputs(
             prepared, git_settings, evidence, stdout,
         )
-        if prepared.host == "claude":
+        if prepared.host == "claude" and exit_code == 0 and not timed_out:
             _verify_retained_claude_upstream(prepared, retained_root)
         result = RawExecutionEvidence(
             exit_code=exit_code, timed_out=timed_out, process_evidence=evidence,

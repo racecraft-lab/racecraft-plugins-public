@@ -24,6 +24,7 @@ from test_result import run_counted  # noqa: E402
 
 
 FEATURE = "specs/atomicity-additive"
+WORKFLOW = "docs/ai/specs/.process/ATOMICITY-workflow.md"
 
 
 def git(root: Path, *args: str) -> str:
@@ -92,6 +93,7 @@ class AtomicityAdditiveRoutingTests(unittest.TestCase):
         git(root, "config", "user.email", "native-eval@example.invalid")
         git(root, "config", "commit.gpgsign", "false")
         write(root, "README.md", "# Atomicity fixture\n")
+        write(root, WORKFLOW, "# Atomicity workflow\n")
         for relative, text in (baseline_files or {}).items():
             write(root, relative, text)
         git(root, "add", "--all")
@@ -108,7 +110,10 @@ class AtomicityAdditiveRoutingTests(unittest.TestCase):
         return temporary, root
 
     def route(self, root: Path, feature: str = FEATURE) -> dict:
-        result = atomicity_route({"feature_dir": feature}, root)
+        result = atomicity_route(
+            {"feature_dir": feature, "workflow_file": WORKFLOW},
+            root,
+        )
         self.assertEqual(result["exit_code"], 0, result)
         return json.loads(result["stdout"])
 
@@ -128,6 +133,13 @@ class AtomicityAdditiveRoutingTests(unittest.TestCase):
         )
         with temporary:
             result = self.route(root)
+            write(root, WORKFLOW, "# Atomicity workflow\n\nRoute pending.\n")
+            write(root, "docs/ai/specs/.process/autopilot-state.json", "{}\n")
+            control_state_result = self.route(root)
+            write(root, ".autopilot-requests/request.json", "{}\n")
+            write(root, f"{FEATURE}/.autopilot-requests/request.json", "{}\n")
+            write(root, "specs/other/.process/runner-record.json", "{}\n")
+            control_transport_result = self.route(root)
         self.assertEqual(result["route"], "split-PR")
         self.assertTrue(result["releasable"])
         self.assertEqual(result["signals"], [
@@ -135,6 +147,47 @@ class AtomicityAdditiveRoutingTests(unittest.TestCase):
             "topology:independent-multi-seam",
             "source-proof:direct-python-imports-only",
         ])
+        self.assertEqual(control_state_result, result)
+        self.assertEqual(control_transport_result, result)
+
+        temporary, root = self.repository(
+            task_plan(), feature_files=self.independent_files(),
+        )
+        with temporary:
+            write(root, "scratch/request.json", "{}\n")
+            arbitrary_result = self.route(root)
+        self.assertEqual(arbitrary_result["route"], "one-navigable-PR")
+        self.assertNotIn("topology:independent-multi-seam", arbitrary_result["signals"])
+
+        for lookalike in (
+            "docs/ai/specs/ATOMICITY-workflow-copy.md",
+            "docs/ai/specs/autopilot-state-copy.json",
+        ):
+            with self.subTest(lookalike=lookalike):
+                temporary, root = self.repository(
+                    task_plan(), feature_files=self.independent_files(),
+                )
+                with temporary:
+                    write(root, lookalike, "{}\n")
+                    lookalike_result = self.route(root)
+                self.assertEqual(lookalike_result["route"], "one-navigable-PR")
+                self.assertNotIn(
+                    "topology:independent-multi-seam",
+                    lookalike_result["signals"],
+                )
+
+    def test_workflow_file_is_required_and_must_resolve_to_a_real_file(self) -> None:
+        temporary, root = self.repository(
+            task_plan(), feature_files=self.independent_files(),
+        )
+        with temporary:
+            missing_input = atomicity_route({"feature_dir": FEATURE}, root)
+            missing_file = atomicity_route(
+                {"feature_dir": FEATURE, "workflow_file": "workflow-missing.md"},
+                root,
+            )
+        self.assertEqual(missing_input["exit_code"], 2)
+        self.assertEqual(missing_file["exit_code"], 2)
 
     def test_one_seam_abstains(self) -> None:
         temporary, root = self.repository(
@@ -301,13 +354,35 @@ class AtomicityAdditiveRoutingTests(unittest.TestCase):
         with tempfile.TemporaryDirectory(prefix="atomicity-parity01-") as raw_tmp:
             workspace = Path(raw_tmp).resolve()
             materialize_workspace(plan, workspace)
-            result = self.route(workspace, "specs/parity-01")
+            write(workspace, "workflow.md", "# PARITY-01 Workflow\n\nRoute pending.\n")
+            write(workspace, "autopilot-state.json", "{}\n")
+            write(workspace, "specs/parity-01/__pycache__/verify.cpython-313.pyc", "cache\n")
+            result = atomicity_route(
+                {
+                    "feature_dir": "specs/parity-01",
+                    "workflow_file": "workflow.md",
+                },
+                workspace,
+            )
+            self.assertEqual(result["exit_code"], 0, result)
+            result = json.loads(result["stdout"])
+            write(workspace, "scratch.tmp", "real untracked file\n")
+            noisy_result = atomicity_route(
+                {
+                    "feature_dir": "specs/parity-01",
+                    "workflow_file": "workflow.md",
+                },
+                workspace,
+            )
+            self.assertEqual(noisy_result["exit_code"], 0, noisy_result)
+            noisy_result = json.loads(noisy_result["stdout"])
         self.assertEqual(result["route"], "split-PR")
         self.assertEqual(result["signals"], [
             "change-shape:additive-only",
             "topology:independent-multi-seam",
             "source-proof:direct-python-imports-only",
         ])
+        self.assertEqual(noisy_result["route"], "one-navigable-PR")
 
 
 if __name__ == "__main__":

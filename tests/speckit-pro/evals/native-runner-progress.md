@@ -987,3 +987,42 @@ as proof of machine-wide workspace-only confinement.
 
 Raw captures and local receipts remain in ignored private evidence storage;
 they are not committed with this report.
+
+## 2026-09-20 lean native qualification closeout
+
+The agreed one-trial representative qualification is complete for
+`parity.01-post-implementation-outcome` on both native clients. The retained
+Claude `plugin` arm and Codex `project` arm each have a valid independent pass,
+and their blinded behavioral-parity judgment also passes.
+
+The final resume reused both terminal subject grades, launched **zero** new
+subjects, and made exactly **one** pair-judge call. This proves the resumability
+contract on the accepted evidence while avoiding another expensive native run.
+The private report is retained under
+`.native-eval-output/qualification-2026-09-19-final12/`; raw captures remain
+ignored and are not committed.
+
+The closeout also repaired the issues exposed by the lean run:
+
+- pair assembly now uses the exact runtime-bound subject grader identity rather
+  than recomputing an identity without host runtime settings;
+- parity compares the three required report sections through one blinded
+  semantic request, instead of requiring undeclared provider-specific table
+  column names;
+- Claude continuation and protected-runner evidence remain fail-closed while
+  accepting the authenticated native lifecycle actually emitted by the client;
+- Codex retained-rollout recovery no longer depends on cleaned live session
+  storage; and
+- fixture hygiene prevents generated Python cache files from changing the
+  authoritative atomicity route while arbitrary unplanned files still fail
+  closed.
+
+Provider-free closeout is green on the final tree: the complete deterministic
+suite passes **8,283/8,283**, toolchain preflight passes, generated references
+are current, and Ripwire reports **zero gating quality regressions**.
+
+This is the agreed lean single-trial gate, not statistical reliability and not
+an exhaustive live run of every retained case. Full-catalog live qualification
+for the remaining Layer 2, 3, 6, and 7 cases, the held parity/performance
+workloads, interactive Claude team verification, and human UAT remain separate
+follow-up evidence if they are still required for a later release decision.

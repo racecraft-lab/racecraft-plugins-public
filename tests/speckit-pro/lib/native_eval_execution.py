@@ -9,6 +9,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path, PurePosixPath
 import re
@@ -21,6 +22,8 @@ from typing import Any, Callable, Mapping
 import uuid
 
 from native_eval_adapters import (
+    _capture_claude_artifacts,
+    _read_claude_trace,
     _tree_digest,
     prepare_trial,
     execute_prepared,
@@ -68,8 +71,11 @@ from native_eval_store import RunStore, digest
 from native_eval_trigger import qualify_trigger_observation
 from native_eval_verification import (
     VerificationError,
+    absence_bytes as verification_absence_bytes,
+    absence_row as verification_absence_row,
     attach_receipt as attach_verification_receipt,
     bind_result as bind_verification_result,
+    durable_record_bytes as durable_verification_record_bytes,
     parse_runner_result as parse_verification_runner_result,
     verification_checks,
 )
@@ -696,9 +702,15 @@ def _native_error_text(raw: object) -> tuple[str, str] | None:
 
 def _classify_text(text: str, source: str) -> dict[str, object] | None:
     lowered = text.lower()
-    if any(token in lowered for token in ("quota", "rate limit", "rate_limit", "429", "usage limit")):
+    if (any(token in lowered for token in ("quota", "rate limit", "rate_limit", "usage limit"))
+            or re.search(r"(?<!\d)429(?!\d)", lowered) is not None):
         return {"kind": "quota", "source": source, "inferred": True}
-    if any(token in lowered for token in ("authentication", "unauthorized", "credential", "api key", "login", "401")):
+    if (any(token in lowered for token in ("authentication", "unauthorized", "api key", "login"))
+            or re.search(r"(?<!\d)401(?!\d)", lowered) is not None):
+        return {"kind": "auth", "source": source, "inferred": True}
+    if "docker" in lowered and "credential store" in lowered and "symbolic link" in lowered:
+        return None
+    if "credential" in lowered:
         return {"kind": "auth", "source": source, "inferred": True}
     return None
 
@@ -797,6 +809,24 @@ def _rollout_label(thread_id: str) -> str:
     return f"codex_rollout_{thread_id.replace('-', '_')}"
 
 
+def _retained_rollout_thread_ids(refs: Mapping[str, object]) -> tuple[str, ...]:
+    prefix = "codex_rollout_"
+    thread_ids: list[str] = []
+    for label, ref in refs.items():
+        if label == "codex_rollout_supplement":
+            continue
+        if not isinstance(label, str) or not label.startswith(prefix):
+            continue
+        try:
+            thread_id = str(uuid.UUID(label.removeprefix(prefix).replace("_", "-")))
+        except (AttributeError, ValueError) as exc:
+            raise ValueError("stored native rollout label is malformed") from exc
+        if label != _rollout_label(thread_id) or not isinstance(ref, Mapping):
+            raise ValueError("stored native rollout reference is malformed")
+        thread_ids.append(thread_id)
+    return tuple(thread_ids)
+
+
 def _rollout_evidence(collection: Mapping[str, object], directory: Path) -> dict[str, Path]:
     refs = collection.get("evidence")
     if not isinstance(refs, Mapping) or not refs:
@@ -819,24 +849,29 @@ def _rollout_evidence(collection: Mapping[str, object], directory: Path) -> dict
     return result
 
 
+def _nested_delivery_result(delivery: object, label: str) -> str:
+    required = {"message_id", "text", "sha256", "bytes", "author", "recipient",
+                "turn_id", "native_event_index"}
+    if not isinstance(delivery, dict) or set(delivery) != required:
+        raise ValueError(f"{label} delivery is malformed")
+    result = delivery.get("text")
+    try:
+        encoded = result.encode("utf-8", errors="strict") if isinstance(result, str) else b""
+    except UnicodeError as error:
+        raise ValueError(f"{label} result is not strict UTF-8") from error
+    if not result or delivery.get("bytes") != len(encoded) \
+            or delivery.get("sha256") != hashlib.sha256(encoded).hexdigest():
+        raise ValueError(f"{label} result conflicts with its delivery receipt")
+    return result
+
+
 def _nested_dispatch(item: Mapping[str, object], parent_id: str | None) -> dict[str, object]:
     delivery = item.get("delivery")
     output = {key: item.get(key) for key in (
-        "child_thread_id", "agent_path", "status", "order")}
+        "child_thread_id", "agent_path", "status", "order", "completion_source",
+        "terminal_failure")}
     if delivery is not None:
-        required = {"message_id", "text", "sha256", "bytes", "author", "recipient",
-                    "turn_id", "native_event_index"}
-        if not isinstance(delivery, dict) or set(delivery) != required:
-            raise ValueError("native rollout dispatch delivery is malformed")
-        result = delivery.get("text")
-        try:
-            encoded = result.encode("utf-8", errors="strict") if isinstance(result, str) else b""
-        except UnicodeError as error:
-            raise ValueError("native rollout dispatch result is not strict UTF-8") from error
-        if not result or delivery.get("bytes") != len(encoded) \
-                or delivery.get("sha256") != hashlib.sha256(encoded).hexdigest():
-            raise ValueError("native rollout dispatch result conflicts with its delivery receipt")
-        output["result"] = result
+        output["result"] = _nested_delivery_result(delivery, "native rollout dispatch")
     return {
         "id": item["id"], "name": "spawn_agent",
         "input": {key: item.get(key) for key in (
@@ -847,19 +882,66 @@ def _nested_dispatch(item: Mapping[str, object], parent_id: str | None) -> dict[
     }
 
 
+def _nested_followup(item: Mapping[str, object], dispatch: Mapping[str, object],
+                     parent_id: str | None) -> dict[str, object]:
+    required_strings = (
+        "call_id", "native_name", "target", "prior_completed_native_event_id",
+        "completed_native_event_id",
+    )
+    if not all(isinstance(item.get(key), str) and item[key] for key in required_strings) \
+            or item.get("native_name") != "followup_task":
+        raise ValueError("native rollout follow-up identity is malformed")
+    indexes = [item.get(key) for key in (
+        "prior_completed_native_event_index", "call_record_index",
+        "interaction_record_index", "result_record_index",
+        "completed_native_event_index",
+    )]
+    if any(type(index) is not int or index < 0 for index in indexes) \
+            or indexes != sorted(indexes) or len(set(indexes)) != len(indexes):
+        raise ValueError("native rollout follow-up ordering is malformed")
+    task_input = item.get("task_input")
+    if not isinstance(task_input, Mapping):
+        raise ValueError("native rollout follow-up input is malformed")
+    delivery = item.get("delivery")
+    result = _nested_delivery_result(delivery, "native rollout follow-up")
+    if delivery.get("author") != dispatch.get("agent_path") \
+            or delivery.get("recipient") != "/root" \
+            or delivery.get("turn_id") != dispatch.get("parent_turn_id") \
+            or delivery.get("native_event_index") <= indexes[-1]:
+        raise ValueError("native rollout follow-up delivery does not bind its dispatch")
+    return {
+        "id": item["call_id"], "name": "send_input",
+        "input": {
+            "namespace": "collaboration", "native_name": item["native_name"],
+            "target": item["target"], "task_input": dict(task_input),
+            "child_thread_id": dispatch.get("child_thread_id"),
+        },
+        "output": {
+            "child_thread_id": dispatch.get("child_thread_id"),
+            "agent_path": dispatch.get("agent_path"), "status": "completed",
+            "result": result,
+        },
+        "success": True, "parent_id": parent_id,
+    }
+
+
 def _nested_tool(item: Mapping[str, object], parent_id: str) -> dict[str, object]:
     inputs = item.get("input")
     if not isinstance(inputs, dict):
         raise ValueError("native rollout tool input is malformed")
     inputs = dict(inputs)
     inputs["_native"] = {key: item.get(key) for key in (
-        "namespace", "native_type", "thread_id", "status", "native_event_index")}
+        "namespace", "native_type", "thread_id", "status", "native_event_index",
+        "post_terminal_completion", "model_observed")}
     return {"id": item["id"], "name": item.get("name"), "input": inputs,
             "output": item.get("output"), "success": item.get("success"),
             "parent_id": parent_id}
 
 
-def _nested_events(supplement: Mapping[str, object]) -> list[dict[str, object]]:
+def _nested_event_indexes(
+    supplement: Mapping[str, object],
+) -> tuple[list[dict[str, object]], dict[object, dict[str, object]],
+           dict[object, object], list[object]]:
     dispatches, children = supplement.get("dispatches"), supplement.get("children")
     if not isinstance(dispatches, list) or not isinstance(children, list) \
             or not all(isinstance(item, dict) for item in dispatches + children):
@@ -872,6 +954,48 @@ def _nested_events(supplement: Mapping[str, object]) -> list[dict[str, object]]:
     if None in owners or len(owners) != len(dispatches) or None in identities \
             or len(set(identities)) != len(identities) or set(owners) != set(child_by_id):
         raise ValueError("native rollout dispatch identity is ambiguous")
+    return dispatches, child_by_id, owners, identities
+
+
+def _nested_followup_events(
+    dispatch: Mapping[str, object], parent_id: str | None, identities: list[object],
+) -> list[dict[str, object]]:
+    followups = dispatch.get("followup_turns", [])
+    if not isinstance(followups, list) or not all(
+        isinstance(followup, dict) for followup in followups
+    ):
+        raise ValueError("native rollout follow-up evidence is malformed")
+    result = []
+    for followup in followups:
+        identity = followup.get("call_id")
+        if not isinstance(identity, str) or not identity or identity in identities:
+            raise ValueError("native rollout follow-up identity is ambiguous")
+        identities.append(identity)
+        result.append(_nested_followup(followup, dispatch, parent_id))
+    return result
+
+
+def _nested_child_events(
+    child: Mapping[str, object], dispatch_id: str, identities: list[object],
+) -> list[dict[str, object]]:
+    tools = child.get("tool_calls")
+    if not isinstance(tools, list) or not all(isinstance(tool, dict) for tool in tools):
+        raise ValueError("native rollout child tools are malformed")
+    indexes = [tool.get("native_event_index") for tool in tools]
+    if any(type(index) is not int or index < 0 for index in indexes):
+        raise ValueError("native rollout tool ordering is malformed")
+    result = []
+    for tool in sorted(tools, key=lambda value: value["native_event_index"]):
+        identity = tool.get("id")
+        if not isinstance(identity, str) or not identity or identity in identities:
+            raise ValueError("native rollout tool identity is ambiguous")
+        identities.append(identity)
+        result.append(_nested_tool(tool, dispatch_id))
+    return result
+
+
+def _nested_events(supplement: Mapping[str, object]) -> list[dict[str, object]]:
+    dispatches, child_by_id, owners, identities = _nested_event_indexes(supplement)
     result = []
     for order, dispatch in enumerate(dispatches, 1):
         if dispatch.get("order") != order or not all(
@@ -879,18 +1003,12 @@ def _nested_events(supplement: Mapping[str, object]) -> list[dict[str, object]]:
             for key in ("id", "parent_thread_id", "child_thread_id")
         ):
             raise ValueError("native rollout dispatch ordering is malformed")
-        result.append(_nested_dispatch(dispatch, owners.get(dispatch["parent_thread_id"])))
-        tools = child_by_id[dispatch["child_thread_id"]].get("tool_calls")
-        if not isinstance(tools, list) or not all(isinstance(tool, dict) for tool in tools):
-            raise ValueError("native rollout child tools are malformed")
-        indexes = [tool.get("native_event_index") for tool in tools]
-        if any(type(index) is not int or index < 0 for index in indexes):
-            raise ValueError("native rollout tool ordering is malformed")
-        for tool in sorted(tools, key=lambda value: value["native_event_index"]):
-            if not isinstance(tool.get("id"), str) or not tool["id"] or tool["id"] in identities:
-                raise ValueError("native rollout tool identity is ambiguous")
-            identities.append(tool["id"])
-            result.append(_nested_tool(tool, dispatch["id"]))
+        parent_id = owners.get(dispatch["parent_thread_id"])
+        result.append(_nested_dispatch(dispatch, parent_id))
+        result.extend(_nested_followup_events(dispatch, parent_id, identities))
+        result.extend(_nested_child_events(
+            child_by_id[dispatch["child_thread_id"]], dispatch["id"], identities,
+        ))
     return result
 
 
@@ -1013,7 +1131,7 @@ def _rebind_codex_root_tool_ids(
                      for entry in entries]
             if any(not isinstance(kind, str) or not kind for kind in kinds):
                 raise ValueError("Codex native file change kind is malformed")
-            native.append(("file_change", identity, tuple(zip(paths, kinds))))
+            native.append(("file_change", identity, tuple(sorted(zip(paths, kinds)))))
 
     existing_ids = {call.get("id") for call in calls if call not in projected}
     if None in existing_ids or len(existing_ids) != len(calls) - len(projected):
@@ -1037,13 +1155,91 @@ def _rebind_codex_root_tool_ids(
                     raise ValueError("Codex projected file change is malformed")
                 kinds = [entry.get("kind") if isinstance(entry, Mapping) else None
                          for entry in changes]
-                projected_signature = tuple(zip(paths, kinds))
+                projected_signature = tuple(sorted(zip(paths, kinds)))
             if projected_signature != native_signature:
                 raise ValueError(f"Codex projected {name} disagrees with native event")
             if identity in existing_ids:
                 raise ValueError("Codex native root-tool identity collides with a tool call")
             existing_ids.add(identity)
             call["id"] = identity
+
+
+def _codex_root_completion_identity(
+    completion: Mapping[str, object], root_thread_id: str, cwd: str,
+) -> str:
+    expected = {
+        "schema": "codex-post-terminal-command-completion/v2",
+        "model_observed": False,
+        "thread_id": root_thread_id,
+        "cwd": cwd,
+        "source": "unified_exec_startup",
+        "status": "completed",
+        "exit_code": 0,
+    }
+    identity = completion.get("item_id")
+    malformed = any(completion.get(key) != value for key, value in expected.items())
+    if not isinstance(identity, str) or not identity or malformed \
+            or completion.get("model_observed") is not False \
+            or type(completion.get("exit_code")) is not int:
+        raise ValueError("Codex root post-terminal completion is malformed")
+    return identity
+
+
+def _codex_root_tools_by_id(
+    calls: list[dict[str, object]],
+) -> dict[object, dict[str, object]]:
+    root_calls = [call for call in calls if call.get("parent_id") is None]
+    by_id = {call.get("id"): call for call in root_calls}
+    if None in by_id or len(by_id) != len(root_calls):
+        raise ValueError("captured Codex root tool identities are ambiguous")
+    return by_id
+
+
+def _mark_codex_root_completion(call: object) -> None:
+    if not isinstance(call, dict) or call.get("name") != "command_execution":
+        raise ValueError("Codex root post-terminal completion is unmatched")
+    inputs = call.get("input")
+    if not isinstance(inputs, dict):
+        raise ValueError("Codex root post-terminal tool input is malformed")
+    native = inputs.get("_native")
+    if native is None:
+        native = {}
+        inputs["_native"] = native
+    expected = {"post_terminal_completion": True, "model_observed": False}
+    if not isinstance(native, dict) or any(
+        key in native and native[key] is not value for key, value in expected.items()
+    ):
+        raise ValueError("Codex root post-terminal tool metadata conflicts")
+    native.update(expected)
+    call["success"] = False
+
+
+def _mark_codex_root_post_terminal_completions(
+    calls: list[dict[str, object]], supplement: Mapping[str, object], raw_root: bytes,
+    root_thread_id: str, cwd: str,
+) -> None:
+    metadata = supplement.get("native_metadata")
+    if metadata is None:
+        return
+    expected_metadata = {"post_terminal_completions", "rollout_raw_sha256"}
+    if not isinstance(metadata, Mapping) or set(metadata) != expected_metadata \
+            or metadata.get("rollout_raw_sha256") != hashlib.sha256(raw_root).hexdigest():
+        raise ValueError("Codex root post-terminal metadata is malformed")
+    completions = metadata.get("post_terminal_completions")
+    if not isinstance(completions, list) or not completions \
+            or not all(isinstance(item, Mapping) for item in completions):
+        raise ValueError("Codex root post-terminal completions are malformed")
+
+    by_id = _codex_root_tools_by_id(calls)
+    consumed: set[str] = set()
+    for completion in completions:
+        identity = _codex_root_completion_identity(completion, root_thread_id, cwd)
+        if identity in consumed:
+            raise ValueError("Codex root post-terminal completion is malformed")
+        _mark_codex_root_completion(by_id.get(identity))
+        consumed.add(identity)
+    if len(consumed) != len(completions):
+        raise ValueError("Codex root post-terminal completions were not consumed exactly once")
 
 
 def _merge_codex_supplement(observation: dict[str, Any], supplement: Mapping[str, object],
@@ -1069,6 +1265,9 @@ def _merge_codex_supplement(observation: dict[str, Any], supplement: Mapping[str
     if not isinstance(raw_root, bytes):
         raise ValueError("native rollout merge omitted the root rollout")
     _rebind_codex_root_tool_ids(calls, raw_root, root_thread_id, expected)
+    _mark_codex_root_post_terminal_completions(
+        calls, supplement, raw_root, root_thread_id, expected,
+    )
     ordered, merge = _ordered_nested_calls(calls, _nested_events(supplement), raw_by_thread,
                                             root_thread_id, require_exact_order)
     observation["tool_calls"] = ordered
@@ -1081,8 +1280,13 @@ def _stored_evidence(attempt: Path, reference: Mapping[str, object]) -> Path:
     if not isinstance(relative, str):
         raise ValueError("stored raw evidence path is malformed")
     path = attempt / relative
-    if not path.is_file() or path.is_symlink() or path.absolute() != path.resolve(strict=True) \
-            or not path.resolve(strict=True).is_relative_to(attempt):
+    attempt_absolute = Path(os.path.abspath(attempt))
+    attempt_root = attempt.resolve(strict=True)
+    path_absolute = Path(os.path.abspath(path))
+    path_root = path.resolve(strict=True)
+    if attempt_absolute != attempt_root or not path.is_file() or path.is_symlink() \
+            or path_absolute != path_root \
+            or not path_root.is_relative_to(attempt_root):
         raise ValueError("stored raw evidence is not confined")
     return path
 
@@ -1239,6 +1443,40 @@ def _bind_launch_fixture_read_witnesses(
     )
 
 
+def _rehydrate_claude_activation_prompt(
+    prompt: object, launch: Mapping[str, object],
+) -> object:
+    attempt_value = launch.get("staging_dir")
+    cwd_value = launch.get("cwd")
+    if not isinstance(prompt, str) or "<attempt_dir>" not in prompt:
+        return prompt
+    if not isinstance(attempt_value, str) or not isinstance(cwd_value, str):
+        raise ValueError("Claude explicit activation relocation is malformed")
+    attempt_path, cwd_path = Path(attempt_value), Path(cwd_value)
+    try:
+        cwd_relative = cwd_path.relative_to(attempt_path)
+    except ValueError as exc:
+        raise ValueError("Claude explicit activation relocation is malformed") from exc
+    token_path = (
+        PurePosixPath("<attempt_dir>") / PurePosixPath(cwd_relative.as_posix())
+        / "bin" / "python3"
+    ).as_posix()
+    if prompt.count("<attempt_dir>") != 1 or token_path not in prompt:
+        raise ValueError("Claude explicit activation relocation is malformed")
+    return prompt.replace(token_path, str(cwd_path / "bin" / "python3"))
+
+
+def _validated_claude_activation_source(source: object, canonical: object) -> dict[str, object]:
+    expected_path = f"skills/{canonical}/SKILL.md"
+    if not isinstance(source, Mapping) or set(source) != {"path", "bytes", "sha256"} \
+            or source.get("path") != expected_path \
+            or type(source.get("bytes")) is not int or source["bytes"] <= 0 \
+            or not isinstance(source.get("sha256"), str) \
+            or re.fullmatch(r"[0-9a-f]{64}", source["sha256"]) is None:
+        raise ValueError("Claude explicit activation skill source is malformed")
+    return dict(source)
+
+
 def _claude_activation_binding(
     case: Mapping[str, object], host: str, launch: object,
 ) -> dict[str, object] | None:
@@ -1259,9 +1497,8 @@ def _claude_activation_binding(
         "schema_version", "skill", "canonical_activation", "prompt", "skill_source",
     } or value.get("schema_version") != "native-claude-explicit-activation-input/v1":
         raise ValueError("Claude explicit activation input is malformed")
-    skill = value.get("skill")
-    canonical = value.get("canonical_activation")
-    prompt = value.get("prompt")
+    skill, canonical = value.get("skill"), value.get("canonical_activation")
+    prompt = _rehydrate_claude_activation_prompt(value.get("prompt"), launch)
     hosts = case.get("hosts")
     host_settings = hosts.get("claude") if isinstance(hosts, Mapping) else None
     declared_skill = host_settings.get("skill") if isinstance(host_settings, Mapping) else None
@@ -1269,20 +1506,14 @@ def _claude_activation_binding(
             or canonical != skill.rsplit(":", 1)[1] \
             or not isinstance(prompt, str) or not prompt.startswith(f"/{skill} "):
         raise ValueError("Claude explicit activation command is malformed")
-    source = value.get("skill_source")
-    expected_path = f"skills/{canonical}/SKILL.md"
-    if not isinstance(source, Mapping) or set(source) != {"path", "bytes", "sha256"} \
-            or source.get("path") != expected_path \
-            or type(source.get("bytes")) is not int or source["bytes"] <= 0 \
-            or not isinstance(source.get("sha256"), str) \
-            or re.fullmatch(r"[0-9a-f]{64}", source["sha256"]) is None:
-        raise ValueError("Claude explicit activation skill source is malformed")
     return {
         "schema_version": value["schema_version"],
         "skill": skill,
         "canonical_activation": canonical,
         "prompt": prompt,
-        "skill_source": dict(source),
+        "skill_source": _validated_claude_activation_source(
+            value.get("skill_source"), canonical,
+        ),
     }
 
 
@@ -1300,12 +1531,55 @@ def _strict_json_evidence(payload: bytes, label: str) -> dict[str, Any]:
     return value
 
 
+def _capture_can_be_renormalized(found: Mapping[str, object]) -> bool:
+    """Return whether an invalid capture retained one completed subject result."""
+    capture = found.get("capture")
+    attempt = found.get("attempt")
+    if not isinstance(capture, Mapping) or capture.get("observation") is not None \
+            or not isinstance(capture.get("error"), str) \
+            or not isinstance(attempt, Path):
+        return False
+    refs = capture.get("evidence")
+    if not isinstance(refs, Mapping) or not all(
+        isinstance(refs.get(key), Mapping)
+        for key in ("launch_prepared", "raw_trace", "process_receipt")
+    ):
+        return False
+    try:
+        receipt = _strict_json_evidence(
+            _stored_evidence(attempt, refs["process_receipt"]).read_bytes(),
+            "stored native process receipt",
+        )
+    except (OSError, TypeError, UnicodeError, ValueError):
+        return False
+    process = receipt.get("process_evidence")
+    if process is not None and (
+        not isinstance(process, Mapping)
+        or process.get("provider_exit_code", 0) != 0
+        or process.get("timed_out", False) is not False
+        or process.get("process_error") is not None
+        or process.get("interrupted_by_signal") is not None
+        or process.get("cleanup_verified", True) is not True
+        or process.get("unexpected_descendants", False) is not False
+    ):
+        return False
+    return receipt.get("exit_code") == 0 and receipt.get("timed_out", False) is False
+
+
 def _prepared_claude_skill(
     prepared: object, launch: Mapping[str, object], binding: Mapping[str, object],
 ) -> tuple[bytes, Path]:
     cwd = Path(getattr(prepared, "cwd", ""))
     if not cwd.is_absolute() or launch.get("cwd") != str(cwd):
         raise ValueError("Claude prepared launch cwd is malformed")
+    return _claude_skill_source(cwd, binding)
+
+
+def _claude_skill_source(
+    cwd: Path, binding: Mapping[str, object],
+) -> tuple[bytes, Path]:
+    if not cwd.is_absolute():
+        raise ValueError("Claude launch cwd is malformed")
     source = binding["skill_source"]
     relative = PurePosixPath(source["path"])
     if relative.is_absolute() or any(part in {"", ".", ".."} for part in relative.parts):
@@ -1351,19 +1625,9 @@ def _fresh_claude_activation(
     trace_path = evidence.get("raw_trace")
     if trace_path is None:
         raise ValueError("Claude activation evidence omitted its public trace")
-    staged_skill, staged_directory = _prepared_claude_skill(prepared, launch, binding)
-    witness = build_activation_witness(
-        skill_name=binding["skill"], prompt=binding["prompt"], staged_skill=staged_skill,
-        staged_skill_directory=str(staged_directory), raw_trace=trace_path.read_bytes(),
+    witness = _claude_activation_witness(
+        prepared, launch, binding, trace_path.read_bytes(),
     )
-    source = witness.get("skill_source")
-    if not isinstance(source, Mapping) \
-            or source.get("path") != binding["skill_source"]["path"] \
-            or source.get("file_bytes") != binding["skill_source"]["bytes"] \
-            or source.get("file_sha256") != binding["skill_source"]["sha256"]:
-        raise ClaudeActivationInvalid(
-            "Claude activation witness does not match the prepared skill source"
-        )
     witness_path = attempt / "claude-activation-witness.json"
     _write_json_once(witness_path, witness)
     evidence["claude_activation_witness"] = witness_path
@@ -1375,6 +1639,111 @@ def _fresh_claude_activation(
     _write_bytes_once(session_path, session)
     evidence["claude_activation_session"] = session_path
     return binding, parse_explicit_activation(session, witness)
+
+
+def _claude_activation_witness(
+    prepared: object | None, launch: Mapping[str, object],
+    binding: Mapping[str, object], raw_trace: bytes,
+) -> dict[str, object]:
+    if prepared is None:
+        cwd_value = launch.get("cwd")
+        if not isinstance(cwd_value, str):
+            raise ValueError("Claude retained launch cwd is malformed")
+        staged_skill, staged_directory = _claude_skill_source(Path(cwd_value), binding)
+    else:
+        staged_skill, staged_directory = _prepared_claude_skill(prepared, launch, binding)
+    witness = build_activation_witness(
+        skill_name=binding["skill"], prompt=binding["prompt"], staged_skill=staged_skill,
+        staged_skill_directory=str(staged_directory), raw_trace=raw_trace,
+    )
+    source = witness.get("skill_source")
+    if not isinstance(source, Mapping) \
+            or source.get("path") != binding["skill_source"]["path"] \
+            or source.get("file_bytes") != binding["skill_source"]["bytes"] \
+            or source.get("file_sha256") != binding["skill_source"]["sha256"]:
+        raise ClaudeActivationInvalid(
+            "Claude activation witness does not match the prepared skill source"
+        )
+    return witness
+
+
+def _renormalized_claude_activation(
+    case: Mapping[str, object], host: str, launch: Mapping[str, object],
+    refs: Mapping[str, object], attempt: Path, prepared: object, recovery_root: Path,
+) -> tuple[
+    tuple[dict[str, object], dict[str, object]] | None,
+    dict[str, Path],
+]:
+    binding = _claude_activation_binding(case, host, launch)
+    if binding is None:
+        return None, {}
+    witness_ref = refs.get("claude_activation_witness")
+    session_ref = refs.get("claude_activation_session")
+    if isinstance(witness_ref, Mapping) and isinstance(session_ref, Mapping):
+        return _stored_claude_activation(case, host, launch, refs, attempt), {}
+    if witness_ref is not None or session_ref is not None:
+        raise ValueError("stored capture has incomplete Claude activation evidence")
+    retained_root, stored_trace = _retained_claude_root(
+        refs, attempt, prepared, "activation evidence",
+    )
+    witness = _claude_activation_witness(
+        None, launch, binding, stored_trace,
+    )
+    session = collect_retained_session(retained_root, witness)
+    recovery_root.mkdir(parents=True, exist_ok=False)
+    witness_path = recovery_root / "claude-activation-witness.json"
+    session_path = recovery_root / "raw-claude-activation-session.jsonl"
+    _write_json_once(witness_path, witness)
+    _write_bytes_once(session_path, session)
+    return (
+        (binding, parse_explicit_activation(session, witness)),
+        {
+            "claude_activation_witness": witness_path,
+            "claude_activation_session": session_path,
+        },
+    )
+
+
+def _retained_claude_root(
+    refs: Mapping[str, object], attempt: Path, prepared: object, purpose: str,
+) -> tuple[Path, bytes]:
+    framework_ref = refs.get("framework_result")
+    raw_ref = refs.get("raw_trace")
+    if not isinstance(framework_ref, Mapping) or not isinstance(raw_ref, Mapping):
+        raise ValueError(f"stored capture cannot recover Claude {purpose}")
+    framework = _strict_json_evidence(
+        _stored_evidence(attempt, framework_ref).read_bytes(),
+        "stored Claude framework result",
+    )
+    retained_trace, retained_root = _read_claude_trace(prepared, framework)
+    stored_trace = _stored_evidence(attempt, raw_ref).read_bytes()
+    if retained_trace != stored_trace:
+        raise ValueError("retained Claude framework trace changed after capture")
+    return retained_root, stored_trace
+
+
+def _renormalized_artifacts(
+    case: Mapping[str, object], host: str, observation: dict[str, Any],
+    refs: Mapping[str, object], attempt: Path, prepared: object, recovery_root: Path,
+    staging: Path, repo_root: Path,
+) -> dict[str, Path]:
+    if not _declared_artifacts(case, repo_root):
+        return {}
+    if isinstance(refs.get("artifact_manifest"), Mapping):
+        _restore_artifacts(case, observation, refs, attempt, repo_root)
+        return {}
+    if host != "claude":
+        raise ValueError("stored capture omitted its artifact manifest")
+    retained_root, _ = _retained_claude_root(
+        refs, attempt, prepared, "declared artifacts",
+    )
+    artifact_root = _capture_claude_artifacts(prepared, retained_root)
+    if artifact_root is None:
+        raise ValueError("retained Claude declared artifacts are unavailable")
+    recovery_root.mkdir(parents=True, exist_ok=False)
+    return _attach_artifacts(
+        dict(case), observation, artifact_root, recovery_root, staging, repo_root,
+    )
 
 
 def _stored_claude_activation(
@@ -1632,6 +2001,51 @@ def _change_paths(host: str, call: Mapping[str, object], cwd: object) -> list[st
     return result
 
 
+def _bind_codex_followups(
+    calls: list[dict[str, Any]], dispatches: list[object],
+    event_by_id: Mapping[object, object], root_thread_id: str,
+) -> None:
+    if not all(isinstance(dispatch, Mapping) for dispatch in dispatches):
+        raise ValueError("Codex native subagent dispatch evidence is malformed")
+    owners = {
+        dispatch.get("child_thread_id"): dispatch.get("id")
+        for dispatch in dispatches
+    }
+    if None in owners or len(owners) != len(dispatches):
+        raise ValueError("Codex native subagent ownership is ambiguous")
+    expected: dict[str, tuple[Mapping[str, object], Mapping[str, object]]] = {}
+    for dispatch in dispatches:
+        followups = dispatch.get("followup_turns", [])
+        if not isinstance(followups, list) or not all(
+            isinstance(followup, Mapping) for followup in followups
+        ):
+            raise ValueError("Codex native follow-up evidence is malformed")
+        for followup in followups:
+            identity = followup.get("call_id")
+            if not isinstance(identity, str) or not identity or identity in expected:
+                raise ValueError("Codex native follow-up identity is ambiguous")
+            expected[identity] = (dispatch, followup)
+    actual = [call for call in calls if call.get("name") == "send_input"]
+    actual_by_id = {call.get("id"): call for call in actual}
+    if None in actual_by_id or len(actual_by_id) != len(actual) \
+            or set(actual_by_id) != set(expected):
+        raise ValueError("Codex follow-up calls disagree with native dispatches")
+    for identity, (dispatch, followup) in expected.items():
+        parent_id = owners.get(dispatch.get("parent_thread_id"))
+        projected = _nested_followup(followup, dispatch, parent_id)
+        call = actual_by_id[identity]
+        if {key: value for key, value in call.items() if key != "position"} != projected:
+            raise ValueError("Codex follow-up call conflicts with native lifecycle evidence")
+        event = event_by_id.get(identity)
+        if not isinstance(event, Mapping) \
+                or event.get("thread_id") != dispatch.get("parent_thread_id") \
+                or event.get("turn_id") != dispatch.get("parent_turn_id") \
+                or event.get("native_event_index") != followup.get("interaction_record_index"):
+            raise ValueError("Codex follow-up call lacks its native interaction event")
+        if dispatch.get("parent_thread_id") == root_thread_id and parent_id is not None:
+            raise ValueError("Codex root follow-up has a nested owner")
+
+
 def _bind_subagent_return_order(
     host: str, observation: dict[str, Any], *, allow_failed_dispatches: bool = False,
 ) -> None:
@@ -1643,9 +2057,12 @@ def _bind_subagent_return_order(
         raise ValueError("native subagent return-order metadata conflicts with capture")
     if type(allow_failed_dispatches) is not bool:
         raise ValueError("allow_failed_dispatches must be boolean")
-    direct = [(index, call) for index, call in enumerate(calls)
-              if call.get("name") == "subagent" and call.get("parent_id") is None
-              and (not allow_failed_dispatches or call.get("success") is True)]
+    all_direct = [(index, call) for index, call in enumerate(calls)
+                  if call.get("name") == "subagent" and call.get("parent_id") is None]
+    if not allow_failed_dispatches and any(call.get("success") is not True
+                                           for _index, call in all_direct):
+        raise ValueError("native subagent dispatch did not complete successfully")
+    direct = [(index, call) for index, call in all_direct if call.get("success") is True]
     if not direct:
         metadata["subagent_return_order"] = {
             "schema": "native-subagent-return-order/v1", "scope": "direct-root-only",
@@ -1701,8 +2118,6 @@ def _bind_subagent_return_order(
                                 "native_turn": None,
                                 "native_event_index": position, "paths": paths})
     elif host == "codex":
-        if any(call.get("name") == "send_input" for call in calls):
-            raise ValueError("Codex follow-up subagents are unsupported by causal grading")
         supplement, merge = metadata.get("nested_rollout"), metadata.get("nested_merge")
         if not isinstance(supplement, Mapping) or not isinstance(merge, Mapping):
             raise ValueError("Codex capture omitted its native rollout evidence")
@@ -1714,9 +2129,11 @@ def _bind_subagent_return_order(
         event_by_id = {event.get("id"): event for event in events if isinstance(event, Mapping)}
         if len(event_by_id) != len(events) or None in event_by_id:
             raise ValueError("Codex native event indexes are ambiguous")
+        _bind_codex_followups(calls, dispatches, event_by_id, root)
         direct_dispatches = [dispatch for dispatch in dispatches
                              if isinstance(dispatch, Mapping)
-                             and dispatch.get("parent_thread_id") == root]
+                             and dispatch.get("parent_thread_id") == root
+                             and dispatch.get("status") == "completed"]
         dispatch_by_id = {dispatch.get("id"): dispatch for dispatch in direct_dispatches}
         if len(dispatch_by_id) != len(direct_dispatches) or None in dispatch_by_id:
             raise ValueError("Codex direct subagent dispatches are ambiguous")
@@ -1725,13 +2142,17 @@ def _bind_subagent_return_order(
         for index, call in direct:
             dispatch = dispatch_by_id[call.get("id")]
             delivery = dispatch.get("delivery")
+            completions = dispatch.get("turn_completions")
+            completion = completions[0] if isinstance(completions, list) and completions else None
             if not isinstance(delivery, Mapping) or delivery.get("turn_id") != dispatch.get("parent_turn_id") \
                     or delivery.get("author") != dispatch.get("agent_path") \
-                    or delivery.get("recipient") != "/root":
+                    or delivery.get("recipient") != "/root" \
+                    or not isinstance(completion, Mapping) \
+                    or completion.get("kind") != "completed":
                 raise ValueError("Codex subagent delivery does not bind its native dispatch")
             finish, size, content_hash = (delivery.get("native_event_index"),
                                           delivery.get("bytes"), delivery.get("sha256"))
-            if type(finish) is not int or finish <= dispatch.get("completed_native_event_index", -1) \
+            if type(finish) is not int or finish <= completion.get("native_event_index", -1) \
                     or type(size) is not int or size <= 0 \
                     or not isinstance(content_hash, str) or len(content_hash) != 64:
                 raise ValueError("Codex subagent delivery evidence is malformed")
@@ -1882,6 +2303,281 @@ def _runner_command_matches(command: object, python_names: set[str], request_pat
     return _runner_request_path(command, python_names) == request_path
 
 
+def _runner_command_path(value: Mapping[str, object], python_names: set[str]) -> str | None:
+    """Return the native runner request path one command-shaped value names, if any."""
+
+    supplied = value.get("input")
+    command = supplied.get("command") if isinstance(supplied, Mapping) else None
+    return _runner_request_path(command, python_names)
+
+
+def _claude_runner_request_path(
+    command: object, python_names: set[str], expected_cwd: object,
+) -> str | None:
+    """Accept an exact runner command, optionally after a trusted cwd prelude."""
+
+    direct = _runner_request_path(command, python_names)
+    if direct is not None:
+        return direct
+    if not isinstance(command, str) or not isinstance(expected_cwd, str):
+        return None
+    lines = command.splitlines()
+    if len(lines) != 2:
+        return None
+    try:
+        cwd_tokens = shlex.split(lines[0], comments=False, posix=True)
+    except ValueError:
+        return None
+    if cwd_tokens != ["cd", expected_cwd]:
+        return None
+    direct = _runner_request_path(lines[1], python_names)
+    if direct is not None:
+        return direct
+    try:
+        tokens = shlex.split(lines[1], comments=False, posix=True)
+    except ValueError:
+        return None
+    if len(tokens) != 12 or tokens[5:7] != ["|", "tee"] \
+            or tokens[8:] != ["|", "python3", "-m", "json.tool"] \
+            or tokens[9] not in python_names \
+            or re.fullmatch(r"\$TMPDIR/[A-Za-z0-9][A-Za-z0-9._-]*", tokens[7]) is None:
+        return None
+    return _runner_request_path(" ".join(tokens[:5]), python_names)
+
+
+def _claude_runner_capture_request_path(
+    command: object, python_names: set[str],
+) -> str | None:
+    """Recognize the exact bounded wrapper used to retain runner stdout and stderr."""
+
+    if not isinstance(command, str):
+        return None
+    lines = command.splitlines()
+    if len(lines) != 7:
+        return None
+    try:
+        tokens = shlex.split(lines[0], comments=False, posix=True)
+    except ValueError:
+        return None
+    if len(tokens) != 8 or tokens[0] not in python_names \
+            or tokens[1:4] != ["-m", "speckit_pro_runner", "<"] or tokens[5] != ">" \
+            or not tokens[7].startswith("2>$TMPDIR/"):
+        return None
+    request = PurePosixPath(tokens[4])
+    stdout = tokens[6]
+    stderr = tokens[7][2:]
+    if request.is_absolute() or tokens[4] != request.as_posix() \
+            or any(part in {"", ".", ".."} for part in request.parts):
+        return None
+    prefix = "$TMPDIR/"
+    if not stdout.startswith(prefix) or not stderr.startswith(prefix):
+        return None
+    stdout_name, stderr_name = stdout[len(prefix):], stderr[len(prefix):]
+    safe_name = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]*").fullmatch
+    expected_first = (f'{tokens[0]} -m speckit_pro_runner < {tokens[4]} > '
+                      f'"$TMPDIR/{stdout_name}" 2>"$TMPDIR/{stderr_name}"')
+    if safe_name(stdout_name) is None or safe_name(stderr_name) is None \
+            or stdout_name == stderr_name or lines[0] != expected_first:
+        return None
+    expected = [
+        'echo "exit=$?"', 'echo "---stdout---"',
+        f'cat "$TMPDIR/{stdout_name}"', "echo", 'echo "---stderr---"',
+        f'cat "$TMPDIR/{stderr_name}"',
+    ]
+    return tokens[4] if lines[1:] == expected else None
+
+
+def _claude_runner_capture_output(output: object) -> str:
+    prefix = "exit=0\n---stdout---\n"
+    suffix = "\n\n---stderr---"
+    if not isinstance(output, str) or not output.startswith(prefix) \
+            or not output.endswith(suffix):
+        raise ValueError("Claude runner capture wrapper output is malformed")
+    payload = output[len(prefix):-len(suffix)]
+    if not payload:
+        raise ValueError("Claude runner capture wrapper output is empty")
+    return payload
+
+
+def _validated_codex_runner_commands(
+    codex_trace: Mapping[str, object], raw_hashes: Mapping[object, object],
+) -> list[Mapping[str, object]]:
+    raw_commands = codex_trace.get("authenticated_commands")
+    if not isinstance(raw_commands, list) or not all(
+        isinstance(item, Mapping) for item in raw_commands
+    ):
+        raise ValueError("Codex runner command trace is malformed")
+    authenticated: set[tuple[str, str]] = set()
+    for command in raw_commands:
+        command_thread = command.get("thread_id")
+        identity = command.get("id")
+        supplied = command.get("input")
+        if not isinstance(command_thread, str) or not command_thread \
+                or not isinstance(identity, str) or not identity \
+                or not isinstance(supplied, Mapping) \
+                or command.get("cwd") != supplied.get("cwd") \
+                or not isinstance(command.get("output"), Mapping) \
+                or not isinstance(command.get("status"), str) \
+                or type(command.get("success")) is not bool \
+                or raw_hashes.get(command_thread) != command.get("raw_sha256"):
+            raise ValueError("Codex runner command trace is not hash-bound")
+        key = (command_thread, identity)
+        if key in authenticated:
+            raise ValueError("Codex runner command identities are ambiguous")
+        authenticated.add(key)
+    return raw_commands
+
+
+def _observed_codex_commands(
+    calls: list[Mapping[str, object]], root_thread_id: str,
+) -> dict[tuple[str, str], tuple[int, Mapping[str, object]]]:
+    normalized_calls = []
+    for index, call in enumerate(calls):
+        if call.get("name") != "command_execution":
+            continue
+        command_thread = root_thread_id
+        if call.get("parent_id") is not None:
+            supplied = call.get("input")
+            native = supplied.get("_native") if isinstance(supplied, Mapping) else None
+            command_thread = native.get("thread_id") if isinstance(native, Mapping) else None
+        if not isinstance(command_thread, str) or not command_thread \
+                or not isinstance(call.get("id"), str) or not call.get("id"):
+            raise ValueError("Codex runner command identity is invalid")
+        normalized_calls.append(((command_thread, call["id"]), index, call))
+    normalized = {key: (index, call) for key, index, call in normalized_calls}
+    if len(normalized) != len(normalized_calls):
+        raise ValueError("Codex runner command identities are ambiguous")
+    return normalized
+
+
+def _codex_runner_trace(
+    observation: Mapping[str, object], launch: Mapping[str, object],
+    codex_trace: Mapping[str, object] | None,
+) -> tuple[set[str], str, list[Mapping[str, object]],
+           dict[tuple[str, str], tuple[int, Mapping[str, object]]]]:
+    """Validate retained root/child rollouts down to runner-command facts."""
+
+    if not isinstance(codex_trace, Mapping) \
+            or codex_trace.get("schema") != "codex-native-plan-repair-trace/v1":
+        raise ValueError("Codex runner root trace is unavailable")
+    metadata = observation.get("native_metadata")
+    nested = metadata.get("nested_rollout") if isinstance(metadata, Mapping) else None
+    raw = nested.get("raw_sha256") if isinstance(nested, Mapping) else None
+    thread_id = codex_trace.get("root_thread_id")
+    if not isinstance(raw, Mapping) or raw.get(thread_id) != codex_trace.get("raw_sha256"):
+        raise ValueError("Codex runner root trace is not hash-bound")
+    launch_cwd = launch.get("cwd")
+    if not isinstance(launch_cwd, str) or not launch_cwd:
+        raise ValueError("prepared Codex runner cwd is unavailable")
+    calls = observation.get("tool_calls")
+    if not isinstance(calls, list) or not all(isinstance(call, Mapping) for call in calls):
+        raise ValueError("native runner tool evidence is malformed")
+    expected_cwd = str(Path(launch_cwd).resolve(strict=True))
+    raw_commands = _validated_codex_runner_commands(codex_trace, raw)
+    normalized = _observed_codex_commands(calls, thread_id)
+    return _resolved_python_names(launch, "codex"), expected_cwd, raw_commands, normalized
+
+
+def _claude_runner_invocations(
+    calls: list[Mapping[str, object]], metadata: Mapping[str, object],
+    python_names: set[str],
+) -> list[dict[str, object]]:
+    result: list[dict[str, object]] = []
+    completions = metadata.get("claude_tool_results")
+    if not isinstance(completions, list) or not all(
+        isinstance(item, Mapping) for item in completions
+    ):
+        raise ValueError("Claude runner result joins are unavailable")
+    by_index = {item.get("tool_call_index"): item for item in completions}
+    if len(by_index) != len(completions):
+        raise ValueError("Claude runner result joins are ambiguous")
+    for index, call in enumerate(calls):
+        if call.get("name") != "Bash" or call.get("parent_id") is not None:
+            continue
+        supplied = call.get("input")
+        command = supplied.get("command") if isinstance(supplied, Mapping) else None
+        request_path = _claude_runner_request_path(command, python_names, metadata.get("cwd"))
+        captured = False
+        if request_path is None:
+            request_path = _claude_runner_capture_request_path(command, python_names)
+            captured = request_path is not None
+        if request_path is None:
+            continue
+        completion = by_index.get(index)
+        if not isinstance(completion, Mapping) \
+                or type(call.get("position")) is not int \
+                or type(completion.get("tool_result_position")) is not int \
+                or call["position"] > completion["tool_result_position"] \
+                or type(call.get("success")) is not bool:
+            raise ValueError("Claude runner command completion is unavailable")
+        output = call.get("output")
+        if captured:
+            output = _claude_runner_capture_output(output)
+        result.append({
+            "authority": "protected-native-runner",
+            "call_id": call.get("id"), "tool_call_index": index,
+            "request_path": request_path, "output": output,
+            "success": call["success"],
+            "native_exit_code": 0 if call["success"] else None,
+        })
+    return result
+
+
+def _bind_codex_child_runner_command(
+    raw_command: Mapping[str, object], observed: Mapping[str, object],
+) -> None:
+    observed_input = observed.get("input")
+    native = observed_input.get("_native") if isinstance(observed_input, Mapping) else None
+    projected_input = dict(observed_input) if isinstance(observed_input, Mapping) else None
+    if isinstance(projected_input, dict):
+        projected_input.pop("_native", None)
+    if not isinstance(native, Mapping) \
+            or native.get("thread_id") != raw_command.get("thread_id") \
+            or native.get("status") != raw_command.get("status") \
+            or native.get("native_event_index") != raw_command.get("native_event_index") \
+            or projected_input != raw_command.get("input") \
+            or observed.get("output") != raw_command.get("output"):
+        raise ValueError("Codex child runner command is not capture-bound")
+
+
+def _codex_runner_invocations(
+    observation: Mapping[str, object], launch: Mapping[str, object],
+    codex_trace: Mapping[str, object] | None,
+) -> list[dict[str, object]]:
+    python_names, expected_cwd, raw_commands, normalized = _codex_runner_trace(
+        observation, launch, codex_trace,
+    )
+    result = []
+    for raw_command in raw_commands:
+        request_path = _runner_command_path(raw_command, python_names)
+        if request_path is None:
+            continue
+        supplied = raw_command.get("input")
+        cwd = supplied.get("cwd") if isinstance(supplied, Mapping) else None
+        if cwd not in {expected_cwd, f"file://{expected_cwd}"} \
+                or type(raw_command.get("success")) is not bool:
+            raise ValueError("Codex runner command identity is invalid")
+        output = raw_command.get("output")
+        stdout = output.get("stdout") if isinstance(output, Mapping) else None
+        native_exit = output.get("exit_code") if isinstance(output, Mapping) else None
+        if not isinstance(stdout, str) or type(native_exit) is not int:
+            raise ValueError("Codex runner command result is incomplete")
+        thread_id = raw_command.get("thread_id")
+        match = normalized.get((thread_id, raw_command.get("id")))
+        if match is None or match[1].get("success") is not raw_command["success"]:
+            raise ValueError("Codex runner command is not capture-bound")
+        if thread_id != codex_trace.get("root_thread_id"):
+            _bind_codex_child_runner_command(raw_command, match[1])
+        result.append({
+            "authority": "protected-native-runner",
+            "call_id": raw_command.get("id"), "tool_call_index": match[0],
+            "thread_id": thread_id, "cwd": cwd,
+            "request_path": request_path, "output": stdout,
+            "success": raw_command["success"], "native_exit_code": native_exit,
+        })
+    return result
+
+
 def _native_runner_invocations(
     host: str, observation: Mapping[str, object], launch: Mapping[str, object],
     codex_trace: Mapping[str, object] | None,
@@ -1891,90 +2587,13 @@ def _native_runner_invocations(
     if not isinstance(calls, list) or not all(isinstance(call, Mapping) for call in calls) \
             or not isinstance(metadata, Mapping):
         raise ValueError("native runner tool evidence is malformed")
-    python_names = _resolved_python_names(launch, host)
-    result: list[dict[str, object]] = []
     if host == "claude":
-        completions = metadata.get("claude_tool_results")
-        if not isinstance(completions, list) or not all(
-            isinstance(item, Mapping) for item in completions
-        ):
-            raise ValueError("Claude runner result joins are unavailable")
-        by_index = {item.get("tool_call_index"): item for item in completions}
-        if len(by_index) != len(completions):
-            raise ValueError("Claude runner result joins are ambiguous")
-        for index, call in enumerate(calls):
-            if call.get("name") != "Bash" or call.get("parent_id") is not None:
-                continue
-            supplied = call.get("input")
-            command = supplied.get("command") if isinstance(supplied, Mapping) else None
-            request_path = _runner_request_path(command, python_names)
-            if request_path is None:
-                continue
-            completion = by_index.get(index)
-            if not isinstance(completion, Mapping) \
-                    or type(call.get("position")) is not int \
-                    or type(completion.get("tool_result_position")) is not int \
-                    or call["position"] > completion["tool_result_position"] \
-                    or type(call.get("success")) is not bool:
-                raise ValueError("Claude runner command completion is unavailable")
-            result.append({
-                "authority": "protected-native-runner",
-                "call_id": call.get("id"), "tool_call_index": index,
-                "request_path": request_path, "output": call.get("output"),
-                "success": call["success"],
-                "native_exit_code": 0 if call["success"] else None,
-            })
-        return result
-    if host != "codex":
-        raise ValueError("native runner host is unsupported")
-    if not isinstance(codex_trace, Mapping) \
-            or codex_trace.get("schema") != "codex-native-plan-repair-trace/v1":
-        raise ValueError("Codex runner root trace is unavailable")
-    nested = metadata.get("nested_rollout")
-    raw = nested.get("raw_sha256") if isinstance(nested, Mapping) else None
-    thread_id = codex_trace.get("root_thread_id")
-    if not isinstance(raw, Mapping) or raw.get(thread_id) != codex_trace.get("raw_sha256"):
-        raise ValueError("Codex runner root trace is not hash-bound")
-    launch_cwd = launch.get("cwd")
-    if not isinstance(launch_cwd, str) or not launch_cwd:
-        raise ValueError("prepared Codex runner cwd is unavailable")
-    expected_cwd = str(Path(launch_cwd).resolve(strict=True))
-    raw_commands = codex_trace.get("commands")
-    if not isinstance(raw_commands, list) or not all(
-        isinstance(item, Mapping) for item in raw_commands
-    ):
-        raise ValueError("Codex runner command trace is malformed")
-    normalized_calls = [
-        (index, call) for index, call in enumerate(calls)
-        if call.get("name") == "command_execution" and call.get("parent_id") is None
-    ]
-    normalized = {call.get("id"): (index, call) for index, call in normalized_calls}
-    if len(normalized) != len(normalized_calls):
-        raise ValueError("Codex runner command identities are ambiguous")
-    for raw_command in raw_commands:
-        supplied = raw_command.get("input")
-        command = supplied.get("command") if isinstance(supplied, Mapping) else None
-        request_path = _runner_request_path(command, python_names)
-        if request_path is None:
-            continue
-        cwd = supplied.get("cwd") if isinstance(supplied, Mapping) else None
-        if cwd != expected_cwd or type(raw_command.get("success")) is not bool:
-            raise ValueError("Codex runner command identity is invalid")
-        output = raw_command.get("output")
-        stdout = output.get("stdout") if isinstance(output, Mapping) else None
-        native_exit = output.get("exit_code") if isinstance(output, Mapping) else None
-        if not isinstance(stdout, str) or type(native_exit) is not int:
-            raise ValueError("Codex runner command result is incomplete")
-        match = normalized.get(raw_command.get("id"))
-        if match is None or match[1].get("success") is not raw_command["success"]:
-            raise ValueError("Codex runner command is not capture-bound")
-        result.append({
-            "authority": "protected-native-runner",
-            "call_id": raw_command.get("id"), "tool_call_index": match[0],
-            "request_path": request_path, "output": stdout,
-            "success": raw_command["success"], "native_exit_code": native_exit,
-        })
-    return result
+        return _claude_runner_invocations(
+            calls, metadata, _resolved_python_names(launch, host),
+        )
+    if host == "codex":
+        return _codex_runner_invocations(observation, launch, codex_trace)
+    raise ValueError("native runner host is unsupported")
 
 
 def _verification_invocation(
@@ -1997,9 +2616,357 @@ def _verification_invocation(
         except VerificationError:
             continue
         candidates.append(invocation)
-    if len(candidates) != 1:
-        raise ValueError("native verification invocation is missing or ambiguous")
-    return candidates[0]
+    if len(candidates) > 1:
+        raise ValueError("native verification invocation is ambiguous")
+    return candidates[0] if candidates else None
+
+
+def _verification_absence(
+    case: Mapping[str, object], host: str, observation: Mapping[str, object],
+    launch: Mapping[str, object], codex_trace: Mapping[str, object] | None,
+    evidence: Mapping[str, object], attempt: Path,
+) -> dict[str, object] | None:
+    """Return a host trace identity when it proves the runner was never invoked.
+
+    Codex uses its complete hash-bound root rollout. Claude uses the official
+    framework result, complete public trace, exact retained root session, and
+    the already authenticated explicit-loader receipt. Any weaker evidence
+    remains infrastructure-invalid.
+    """
+
+    if host == "codex":
+        python_names, _expected_cwd, raw_commands, _normalized = _codex_runner_trace(
+            observation, launch, codex_trace,
+        )
+        if any(_runner_command_path(item, python_names) is not None for item in raw_commands):
+            return None
+        if _names_runner_command(observation, python_names):
+            raise ValueError(
+                "Codex native runner command is not bound to the retained root trace"
+            )
+        return {
+            "host": "codex", "root_thread_id": codex_trace.get("root_thread_id"),
+            "root_trace_sha256": codex_trace.get("raw_sha256"),
+        }
+    if host == "claude":
+        return _claude_verification_absence(case, observation, launch, evidence, attempt)
+    return None
+
+
+def _retained_evidence_bytes(
+    evidence: Mapping[str, object], label: str, attempt: Path,
+) -> bytes:
+    """Read one fresh Path or stored evidence ref and verify its immutable binding."""
+
+    value = evidence.get(label)
+    if isinstance(value, Path):
+        path = value
+    elif isinstance(value, Mapping) and set(value) == {"path", "sha256", "bytes"}:
+        path = _stored_evidence(attempt, value)
+    else:
+        raise ValueError(f"Claude verification absence omitted {label} evidence")
+    try:
+        metadata = path.lstat()
+        resolved = path.resolve(strict=True)
+        root = attempt.resolve(strict=True)
+    except OSError as exc:
+        raise ValueError(f"Claude verification absence {label} evidence is unavailable") from exc
+    if not stat.S_ISREG(metadata.st_mode) or stat.S_ISLNK(metadata.st_mode) \
+            or not resolved.is_relative_to(root):
+        raise ValueError(f"Claude verification absence {label} evidence is not confined")
+    payload = path.read_bytes()
+    if not payload:
+        raise ValueError(f"Claude verification absence {label} evidence is empty")
+    if isinstance(value, Mapping) and (
+        value.get("sha256") != hashlib.sha256(payload).hexdigest()
+        or value.get("bytes") != len(payload)
+    ):
+        raise ValueError(f"Claude verification absence {label} evidence changed")
+    return payload
+
+
+def _strict_json_lines(payload: bytes, label: str) -> list[dict[str, Any]]:
+    try:
+        text = payload.decode("utf-8", errors="strict")
+    except UnicodeError as exc:
+        raise ValueError(f"{label} is malformed") from exc
+    lines = text.splitlines()
+    if not lines or any(not line.strip() for line in lines):
+        raise ValueError(f"{label} is malformed")
+    records: list[dict[str, Any]] = []
+    for line in lines:
+        records.append(_strict_json_evidence(line.encode("utf-8"), label))
+    return records
+
+
+def _record_claude_session_bash_item(
+    item: object, calls: dict[str, str], results: dict[str, int],
+) -> None:
+    if not isinstance(item, Mapping):
+        raise ValueError("Claude retained session tool content is malformed")
+    if item.get("type") == "tool_use" and item.get("name") == "Bash":
+        call_id = item.get("id")
+        supplied = item.get("input")
+        command = supplied.get("command") if isinstance(supplied, Mapping) else None
+        if not isinstance(call_id, str) or not call_id or not isinstance(command, str) \
+                or not command or call_id in calls:
+            raise ValueError("Claude retained session Bash call is malformed")
+        calls[call_id] = command
+    elif item.get("type") == "tool_result":
+        call_id = item.get("tool_use_id")
+        if isinstance(call_id, str):
+            results[call_id] = results.get(call_id, 0) + 1
+
+
+def _claude_session_bash_calls(records: list[dict[str, Any]]) -> dict[str, str]:
+    """Return exact root-session Bash call ids and command text."""
+
+    calls: dict[str, str] = {}
+    results: dict[str, int] = {}
+    for record in records:
+        message = record.get("message")
+        content = message.get("content") if isinstance(message, Mapping) else None
+        for item in content if isinstance(content, list) else []:
+            _record_claude_session_bash_item(item, calls, results)
+    if any(results.get(call_id) != 1 for call_id in calls):
+        raise ValueError("Claude retained session Bash completion is unavailable")
+    return calls
+
+
+def _claude_observation_join_is_valid(
+    call: Mapping[str, object], call_id: object, command: object,
+    completion: object, result: Mapping[str, str],
+) -> bool:
+    if not isinstance(call_id, str) or not call_id or call_id in result \
+            or not isinstance(command, str) or not command \
+            or not isinstance(completion, Mapping):
+        return False
+    call_position = call.get("position")
+    result_position = completion.get("tool_result_position")
+    return completion.get("id") == call_id \
+        and completion.get("native_name") == "Bash" \
+        and completion.get("tool_use_position") == call_position \
+        and type(result_position) is int and type(call_position) is int \
+        and call_position < result_position \
+        and type(call.get("success")) is bool
+
+
+def _claude_observation_bash_calls(
+    observation: Mapping[str, object], python_names: set[str],
+) -> dict[str, str] | None:
+    calls = observation.get("tool_calls")
+    metadata = observation.get("native_metadata")
+    completions = metadata.get("claude_tool_results") if isinstance(metadata, Mapping) else None
+    if not isinstance(calls, list) or not all(isinstance(call, Mapping) for call in calls) \
+            or not isinstance(completions, list) \
+            or not all(isinstance(item, Mapping) for item in completions):
+        raise ValueError("Claude runner result joins are unavailable")
+    by_index: dict[object, Mapping[str, object]] = {}
+    for completion in completions:
+        index = completion.get("tool_call_index")
+        if index in by_index:
+            raise ValueError("Claude runner result joins are ambiguous")
+        by_index[index] = completion
+    result: dict[str, str] = {}
+    for index, call in enumerate(calls):
+        if call.get("name") != "Bash":
+            continue
+        call_id = call.get("id")
+        supplied = call.get("input")
+        command = supplied.get("command") if isinstance(supplied, Mapping) else None
+        completion = by_index.get(index)
+        if not _claude_observation_join_is_valid(
+            call, call_id, command, completion, result
+        ):
+            raise ValueError("Claude runner command completion is unavailable")
+        result[call_id] = command
+        exact = _runner_command_path(call, python_names)
+        if exact is not None:
+            return None
+        if "speckit_pro_runner" in command:
+            raise ValueError("Claude native runner command is malformed or unbound")
+    return result
+
+
+def _claude_complete_trace_identity(
+    records: list[dict[str, Any]], trace: Mapping[str, object],
+    public_trace: bytes, session: bytes, session_artifact: Mapping[str, object],
+) -> tuple[str, str, str]:
+    terminal = records[-1]
+    if terminal.get("type") != "result" or terminal.get("subtype") != "success" \
+            or terminal.get("is_error") is not False \
+            or terminal.get("terminal_reason") != "completed" \
+            or terminal.get("stop_reason") != "end_turn" \
+            or terminal.get("api_error_status") is not None:
+        raise ValueError("Claude public trace is not terminally complete")
+    session_id, cwd, cli_version = (
+        trace.get("session_id"), trace.get("cwd"), trace.get("cli_version")
+    )
+    if not all(isinstance(value, str) and value for value in (session_id, cwd, cli_version)) \
+            or trace.get("bytes") != len(public_trace) \
+            or trace.get("sha256") != hashlib.sha256(public_trace).hexdigest() \
+            or session_artifact.get("bytes") != len(session) \
+            or session_artifact.get("sha256") != hashlib.sha256(session).hexdigest():
+        raise ValueError("Claude explicit activation evidence is not hash-bound")
+    init = [record for record in records
+            if record.get("type") == "system" and record.get("subtype") == "init"]
+    if not init or any(record.get("session_id") != session_id
+                       or record.get("cwd") != cwd
+                       or record.get("claude_code_version") != cli_version
+                       for record in init) \
+            or terminal.get("session_id") != session_id \
+            or any(record.get("session_id") not in (None, session_id) for record in records):
+        raise ValueError("Claude public trace identity is inconsistent")
+    return session_id, cwd, cli_version
+
+
+def _claude_bound_framework_result(
+    case: Mapping[str, object], launch: Mapping[str, object],
+    framework_raw: bytes, cli_version: str,
+) -> None:
+    framework = _strict_json_evidence(framework_raw, "Claude framework result")
+    cases = framework.get("cases")
+    activation_binding = _claude_activation_binding(case, "claude", launch)
+    expected_prompt = activation_binding.get("prompt") \
+        if isinstance(activation_binding, Mapping) else None
+    if framework.get("schemaVersion") != 1 or framework.get("partial") is not False \
+            or framework.get("claudeVersion") != cli_version \
+            or not isinstance(cases, list) or len(cases) != 1 \
+            or not isinstance(cases[0], Mapping) or cases[0].get("name") != case.get("id") \
+            or cases[0].get("promptMarkdown") != expected_prompt:
+        raise ValueError("Claude framework result is not bound to the prepared case")
+    suite = framework.get("suite")
+    arms = cases[0].get("arms")
+    with_arm = arms.get("with") if isinstance(arms, Mapping) else None
+    arm = with_arm[0] if isinstance(with_arm, list) and len(with_arm) == 1 \
+        and isinstance(with_arm[0], Mapping) else None
+    trace_path = arm.get("tracePath") if isinstance(arm, Mapping) else None
+    if not isinstance(suite, Mapping) or suite.get("caseFilter") != case.get("id") \
+            or suite.get("ablation") != "none" or not isinstance(arm, Mapping) \
+            or arm.get("error") is not None or not isinstance(trace_path, str) \
+            or not Path(trace_path).is_absolute() or ".." in Path(trace_path).parts:
+        raise ValueError("Claude framework result is incomplete")
+
+
+def _claude_verification_absence(
+    case: Mapping[str, object], observation: Mapping[str, object],
+    launch: Mapping[str, object], evidence: Mapping[str, object], attempt: Path,
+) -> dict[str, object] | None:
+    """Prove zero Claude runner calls from four mutually bound retained surfaces."""
+
+    public_trace = _retained_evidence_bytes(evidence, "raw_trace", attempt)
+    session = _retained_evidence_bytes(evidence, "claude_activation_session", attempt)
+    witness_raw = _retained_evidence_bytes(evidence, "claude_activation_witness", attempt)
+    framework_raw = _retained_evidence_bytes(evidence, "framework_result", attempt)
+    records = _strict_json_lines(public_trace, "Claude public trace")
+    metadata = observation.get("native_metadata")
+    activation = metadata.get("claude_explicit_activation") \
+        if isinstance(metadata, Mapping) else None
+    trace = activation.get("trace_binding") if isinstance(activation, Mapping) else None
+    session_artifact = activation.get("session_artifact") \
+        if isinstance(activation, Mapping) else None
+    if not isinstance(activation, Mapping) \
+            or activation.get("schema_version") != "native-claude-explicit-skill-activation/v1" \
+            or activation.get("authority") != "claude-session-loader" \
+            or not isinstance(trace, Mapping) or not isinstance(session_artifact, Mapping):
+        raise ValueError("Claude explicit activation receipt is unavailable")
+    session_id, cwd, cli_version = _claude_complete_trace_identity(
+        records, trace, public_trace, session, session_artifact
+    )
+    witness = _strict_json_evidence(witness_raw, "Claude activation witness")
+    canonical_witness = json.dumps(
+        witness, sort_keys=True, separators=(",", ":"), ensure_ascii=False,
+    ).encode("utf-8")
+    if activation.get("witness_sha256") != hashlib.sha256(canonical_witness).hexdigest():
+        raise ValueError("Claude activation witness is not receipt-bound")
+    _claude_bound_framework_result(case, launch, framework_raw, cli_version)
+    python_names = _resolved_python_names(launch, "claude")
+    public_bash = _claude_observation_bash_calls(observation, python_names)
+    if public_bash is None:
+        return None
+    session_bash = _claude_session_bash_calls(
+        _strict_json_lines(session, "Claude retained root session")
+    )
+    if public_bash != session_bash:
+        raise ValueError("Claude public and retained Bash traces disagree")
+    return {
+        "host": "claude", "session_id": session_id, "cwd": cwd,
+        "cli_version": cli_version,
+        "public_trace_sha256": hashlib.sha256(public_trace).hexdigest(),
+        "public_trace_bytes": len(public_trace),
+        "retained_session_sha256": hashlib.sha256(session).hexdigest(),
+        "retained_session_bytes": len(session),
+        "activation_witness_sha256": hashlib.sha256(witness_raw).hexdigest(),
+        "framework_result_sha256": hashlib.sha256(framework_raw).hexdigest(),
+        "framework_result_bytes": len(framework_raw),
+    }
+
+
+def _names_runner_command(
+    observation: Mapping[str, object], python_names: set[str],
+) -> bool:
+    """Return whether captured tool calls name a native runner command at all."""
+
+    calls = observation.get("tool_calls")
+    for call in calls if isinstance(calls, list) else []:
+        if isinstance(call, Mapping) and call.get("name") == "command_execution" \
+                and _runner_command_path(call, python_names) is not None:
+            return True
+    return False
+
+
+def _proven_absence_identity(
+    case: Mapping[str, object], host: str, observation: Mapping[str, object],
+    launch: Mapping[str, object], codex_trace: Mapping[str, object] | None,
+    evidence: Mapping[str, object], attempt: Path,
+) -> dict[str, object]:
+    """Return the controller absence identity or reject an unprovable absence."""
+
+    identity = _verification_absence(
+        case, host, observation, launch, codex_trace, evidence, attempt,
+    )
+    if identity is None:
+        raise ValueError("native verification invocation is missing")
+    return identity
+
+
+def _fresh_verification_absence(
+    case: Mapping[str, object], check: Mapping[str, object], host: str,
+    observation: dict[str, Any],
+    launch: Mapping[str, object], codex_trace: Mapping[str, object] | None,
+    evidence: Mapping[str, object], evidence_attempt: Path, destination_root: Path,
+) -> dict[str, Path]:
+    """Retain the controller-authored absence marker for a proven zero invocation."""
+
+    identity = _proven_absence_identity(
+        case, host, observation, launch, codex_trace, evidence, evidence_attempt,
+    )
+    destination = destination_root / "raw-verification-absence.json"
+    _write_bytes_once(destination, verification_absence_bytes(check, identity))
+    attach_verification_receipt(observation, [verification_absence_row(check, identity)])
+    return {"verification_absence": destination}
+
+
+def _stored_verification_absence(
+    case: Mapping[str, object], check: Mapping[str, object], host: str,
+    observation: dict[str, Any],
+    launch: Mapping[str, object], codex_trace: Mapping[str, object] | None,
+    refs: Mapping[str, object], attempt: Path,
+) -> None:
+    """Rebuild the retained absence marker and verify it byte for byte."""
+
+    identity = _proven_absence_identity(
+        case, host, observation, launch, codex_trace, refs, attempt,
+    )
+    reference = refs.get("verification_absence")
+    if not isinstance(reference, Mapping) or set(reference) != {"path", "sha256", "bytes"}:
+        raise ValueError("stored capture omitted native verification absence evidence")
+    payload = _stored_evidence(attempt, reference).read_bytes()
+    if payload != verification_absence_bytes(check, identity) \
+            or reference.get("sha256") != hashlib.sha256(payload).hexdigest() \
+            or reference.get("bytes") != len(payload):
+        raise ValueError("stored native verification absence evidence changed")
+    attach_verification_receipt(observation, [verification_absence_row(check, identity)])
 
 
 def _verification_record(root: Path, relative: str, staging: Path) -> tuple[Path, bytes]:
@@ -2023,38 +2990,71 @@ def _verification_record(root: Path, relative: str, staging: Path) -> tuple[Path
     return source, source.read_bytes()
 
 
-def _fresh_verification(
-    case: Mapping[str, object], host: str, observation: dict[str, Any],
-    launch: Mapping[str, object], codex_trace: Mapping[str, object] | None,
-    root_value: object, attempt: Path, staging: Path,
-) -> dict[str, Path]:
-    checks = verification_checks(case)
+@dataclass(frozen=True)
+class _VerificationContext:
+    case: Mapping[str, object]
+    host: str
+    observation: dict[str, Any]
+    launch: Mapping[str, object]
+    codex_trace: Mapping[str, object] | None
+    root_value: object
+    evidence: Mapping[str, object]
+    attempt: Path
+    staging: Path
+    evidence_attempt: Path | None = None
+
+
+def _fresh_verification(context: _VerificationContext) -> dict[str, Path]:
+    checks = verification_checks(context.case)
     if not checks:
         return {}
-    if root_value is None:
+    if context.root_value is None:
         raise ValueError("native verification artifact root is unavailable")
-    root = Path(root_value)
-    invocation = _verification_invocation(case, host, observation, launch, codex_trace)
+    root = Path(context.root_value)
+    invocation = _verification_invocation(
+        context.case, context.host, context.observation, context.launch,
+        context.codex_trace,
+    )
+    if invocation is None:
+        return _fresh_verification_absence(
+            context.case, checks[0], context.host, context.observation, context.launch,
+            context.codex_trace, context.evidence,
+            context.attempt if context.evidence_attempt is None else context.evidence_attempt,
+            context.attempt,
+        )
     retained: dict[str, tuple[Path, bytes]] = {}
 
     def read_record(relative: str) -> bytes:
-        source, payload = _verification_record(root, relative, staging)
+        try:
+            source, payload = _verification_record(root, relative, context.staging)
+        except ValueError as exc:
+            if context.evidence_attempt is None \
+                    or str(exc) != "native verification record is missing":
+                raise
+            result = parse_verification_runner_result(invocation.get("output"))
+            if result.get("record_path") != relative:
+                raise ValueError("recovered verification record path is inconsistent") from exc
+            record = result.get("record")
+            if not isinstance(record, Mapping):
+                raise ValueError("recovered verification record is malformed") from exc
+            source = root.joinpath(*PurePosixPath(relative).parts)
+            payload = durable_verification_record_bytes(record)
         retained[relative] = (source, payload)
         return payload
 
-    receipt = bind_verification_result(checks[0], invocation or {}, read_record)
+    receipt = bind_verification_result(checks[0], invocation, read_record)
     actual_path = receipt["actual"]["record_path"]
     if actual_path not in retained:
         raise ValueError("native verification record was not retained")
     payload = retained[actual_path][1]
-    destination = attempt / "raw-verification-record.json"
+    destination = context.attempt / "raw-verification-record.json"
     _write_bytes_once(destination, payload)
-    manifest = attempt / "verification-record-manifest.json"
+    manifest = context.attempt / "verification-record-manifest.json"
     _write_json_once(manifest, {
         "schema": "native-verification-record-manifest/v1",
         "record_path": actual_path, "evidence": "verification_record",
     })
-    attach_verification_receipt(observation, [receipt])
+    attach_verification_receipt(context.observation, [receipt])
     return {"verification_record": destination, "verification_record_manifest": manifest}
 
 
@@ -2065,6 +3065,12 @@ def _stored_verification(
 ) -> None:
     checks = verification_checks(case)
     if not checks:
+        return
+    invocation = _verification_invocation(case, host, observation, launch, codex_trace)
+    if invocation is None:
+        _stored_verification_absence(
+            case, checks[0], host, observation, launch, codex_trace, refs, attempt,
+        )
         return
     manifest_ref = refs.get("verification_record_manifest")
     record_ref = refs.get("verification_record")
@@ -2080,14 +3086,13 @@ def _stored_verification(
             or not isinstance(manifest.get("record_path"), str):
         raise ValueError("stored native verification record manifest is malformed")
     payload = _stored_evidence(attempt, record_ref).read_bytes()
-    invocation = _verification_invocation(case, host, observation, launch, codex_trace)
 
     def read_record(relative: str) -> bytes:
         if relative != manifest["record_path"]:
             raise ValueError("stored native verification record path changed")
         return payload
 
-    receipt = bind_verification_result(checks[0], invocation or {}, read_record)
+    receipt = bind_verification_result(checks[0], invocation, read_record)
     attach_verification_receipt(observation, [receipt])
 
 
@@ -2454,6 +3459,8 @@ class _Execution:
     def _reuse(self, job: Job, context: dict[str, object]) -> Outcome | None:
         found, row, case = context["found"], context["row"], context["case"]
         status, retry = found["status"], context["retry"]
+        if status == "invalid" and not retry and _capture_can_be_renormalized(found):
+            return self._regrade(job, context)
         if status in _TERMINAL and not retry:
             value = {"row": row, "status": status, "reason": "reused_terminal_grade",
                      "attempt": str(found["attempt"]), "reused": True, "subject_launched": False}
@@ -2475,9 +3482,14 @@ class _Execution:
     def _regrade(self, job: Job, context: dict[str, object]) -> Outcome:
         found, case, row, grader = (context[key] for key in ("found", "case", "row", "grader"))
         try:
-            observation, grade_evidence = self._renormalize(context)
+            observation, grade_evidence, recovery_evidence = self._renormalize(context)
         except (CaptureError, NativeRolloutError, OSError, TypeError, UnicodeError, ValueError) as exc:
             reason = f"needs_renormalization: {exc}"
+            if found["capture"].get("error") is not None:
+                value = {"row": row, "status": "invalid", "reason": reason,
+                         "attempt": str(found["attempt"]), "regraded": True,
+                         "subject_launched": False}
+                return self._outcome(job, value)
             grade_dir = found["attempt"] / "grades" / grader
             grade_dir.mkdir(parents=True, exist_ok=True)
             receipt = grade_dir / "interpretation-error.json"
@@ -2494,97 +3506,160 @@ class _Execution:
             value = {"row": row, "status": "invalid", "reason": reason,
                      "attempt": str(found["attempt"]), "regraded": True, "subject_launched": False}
             return self._outcome(job, value)
+        attempt = found["attempt"]
+        if found["capture"].get("error") is not None or recovery_evidence:
+            attempt, grade_evidence = self._publish_recovered_capture(
+                context, observation, grade_evidence, recovery_evidence,
+            )
         verdict = self._measure("grading_seconds", grade_observation, case, observation,
                                 host=row["host"])
         if verdict["status"] != "needs_judge":
-            self._measure("checkpoint_seconds", self.store.grade, found["attempt"], grader, verdict,
+            self._measure("checkpoint_seconds", self.store.grade, attempt, grader, verdict,
                           evidence=grade_evidence)
             value = {"row": row, "status": verdict["status"], "reason": "raw_capture_renormalized",
-                     "attempt": str(found["attempt"]), "regraded": True, "subject_launched": False}
+                     "attempt": str(attempt), "regraded": True, "subject_launched": False}
             return self._outcome(job, value)
         if self.judge_execute is None:
             value = {"row": row, "status": "incomplete", "reason": "semantic_judge_unavailable",
-                     "attempt": str(found["attempt"]), "regraded": True, "subject_launched": False}
+                     "attempt": str(attempt), "regraded": True, "subject_launched": False}
             return self._outcome(job, value, status="invalid")
-        return self._judge_followup(job, context, observation, found["attempt"],
+        return self._judge_followup(job, context, observation, attempt,
                                     grade_evidence=grade_evidence, regraded=True)
 
-    def _renormalize(self, context: dict[str, object]) -> tuple[dict[str, Any], dict[str, Path]]:
-        found, case, prepared = context["found"], context["case"], context["prepared"]
+    def _publish_recovered_capture(
+        self, context: dict[str, object], observation: dict[str, Any],
+        grade_evidence: Mapping[str, Path], recovery_evidence: Mapping[str, Path],
+    ) -> tuple[Path, dict[str, Path]]:
+        found = context["found"]
+        source_attempt = found["attempt"]
         refs = found["capture"].get("evidence")
-        if not isinstance(refs, Mapping) or not isinstance(refs.get("raw_trace"), Mapping):
-            raise ValueError("stored capture omitted its raw trace")
-        attempt = found["attempt"]
-        launch = _stored_launch(refs, attempt)
-        if case.get("layer") == "trigger" and isinstance(launch, Mapping):
-            runtime_identity, staging_dir = launch.get("runtime_identity"), launch.get("staging_dir")
-            if not isinstance(runtime_identity, Mapping) or not isinstance(staging_dir, str):
-                raise ValueError("stored trigger launch identity is malformed")
-            stage = self._measure("capture_seconds", trigger_stage_from_runtime_identity,
-                                  runtime_identity, attempt_dir=Path(staging_dir))
-        else:
-            stage = None
-        raw_path = _stored_evidence(attempt, refs["raw_trace"])
-        raw_trace = raw_path.read_text(encoding="utf-8", errors="strict")
-        observation = self._measure("capture_seconds", normalize_trace,
-                                    context["row"]["host"], raw_trace,
-                                    **_capture_options(prepared, stage))
-        claude_activation = self._measure(
-            "capture_seconds", _stored_claude_activation, case, context["row"]["host"],
-            launch, refs, attempt,
+        if not isinstance(source_attempt, Path) or not isinstance(refs, Mapping) \
+                or (not recovery_evidence and found["capture"].get("error") is None):
+            raise ValueError("invalid capture lacks recoverable retained evidence")
+        source_capture: dict[str, tuple[bytes, PurePosixPath]] = {}
+        for key, ref in refs.items():
+            if not isinstance(key, str) or not isinstance(ref, Mapping):
+                raise ValueError("invalid capture evidence is malformed")
+            path_value = ref.get("path")
+            if not isinstance(path_value, str):
+                raise ValueError("invalid capture evidence path is malformed")
+            relative = PurePosixPath(path_value)
+            if relative.is_absolute() or any(part in {"", ".", ".."} for part in relative.parts):
+                raise ValueError("invalid capture evidence path is not canonical")
+            source_capture[key] = (
+                _stored_evidence(source_attempt, ref).read_bytes(), relative,
+            )
+        recovered = {
+            key: (path.read_bytes(), path.name)
+            for key, path in recovery_evidence.items()
+        }
+        if set(source_capture).intersection(recovered):
+            raise ValueError("recovered capture evidence identity is duplicated")
+        grades = {
+            key: (path.read_bytes(), path.name)
+            for key, path in grade_evidence.items()
+        }
+        attempt = self._measure(
+            "checkpoint_seconds", self.store.reserve, context["row"],
+            context["fingerprint"], retry=True,
         )
-        if claude_activation is not None:
-            binding, activation_receipt = claude_activation
-            self._measure("capture_seconds", _attach_claude_activation,
-                          observation, binding, activation_receipt)
-        observation = self._measure(
-            "capture_seconds", _bind_launch_fixture_read_witnesses, observation, launch,
+        capture_paths: dict[str, Path] = {}
+        for key, (payload, relative) in source_capture.items():
+            destination = attempt.joinpath(*relative.parts)
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            _write_bytes_once(destination, payload)
+            capture_paths[key] = destination
+        for key, (payload, name) in recovered.items():
+            destination = attempt / "native-rollouts" / name
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            _write_bytes_once(destination, payload)
+            capture_paths[key] = destination
+        self._measure(
+            "checkpoint_seconds", self.store.capture, attempt,
+            observation=observation, error=None, evidence=capture_paths,
         )
-        git_observation = self._measure(
-            "capture_seconds", _stored_git_observation, prepared, refs, attempt,
-        )
-        self._measure("capture_seconds", _attach_git_observation,
-                      observation, git_observation)
-        self._measure("capture_seconds", _restore_artifacts, case, observation, refs, attempt,
-                      self.repo)
-        skill_binding = _codex_skill_injection_binding(case, context["row"]["host"], launch)
+        retained_grades: dict[str, Path] = {}
+        for key, (payload, name) in grades.items():
+            destination = attempt / "grades" / context["grader"] / name
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            _write_bytes_once(destination, payload)
+            retained_grades[key] = destination
+        return attempt, retained_grades
+
+    def _reconstruct_codex_evidence(
+        self, context: Mapping[str, object], observation: dict[str, Any],
+        launch: Mapping[str, object], refs: Mapping[str, object], attempt: Path,
+        recovery_evidence: dict[str, Path],
+    ) -> Mapping[str, object] | None:
+        found, case, prepared = context["found"], context["case"], context["prepared"]
+        host = context["row"]["host"]
+        skill_binding = _codex_skill_injection_binding(case, host, launch)
         plugin_name = _codex_rollout_plugin_name(prepared) if skill_binding is not None else None
         root_skill_raw = None
         plan_repair_trace = None
-        if context["row"]["host"] == "codex" and (
+        if host == "codex" and (
             case.get("resource_class") == "nested" or verification_checks(case)
             or runner_checks(case)
         ):
             thread_id = _codex_root_thread(observation)
-            old_metadata = found["capture"]["observation"].get("native_metadata", {})
-            old_supplement = old_metadata.get("nested_rollout") if isinstance(old_metadata, Mapping) else None
-            thread_ids = old_supplement.get("raw_sha256") if isinstance(old_supplement, Mapping) else None
-            if not isinstance(thread_ids, Mapping) or not thread_ids:
-                raise ValueError("stored capture omitted its native rollout identities")
-            raw_by_thread = {}
-            for retained_id in thread_ids:
-                ref = refs.get(_rollout_label(retained_id))
-                if not isinstance(retained_id, str) or not isinstance(ref, Mapping):
-                    raise ValueError("stored capture omitted a native rollout")
-                raw_by_thread[retained_id] = _stored_evidence(attempt, ref).read_bytes()
-            supplement = self._measure(
-                "capture_seconds", parse_native_tree, thread_id, raw_by_thread,
-                require_delivery=_requires_subagent_returns(case, context["row"]["host"]),
-                allow_root_only=_allows_root_only_codex_rollout(
-                    case, context["row"]["host"],
-                ),
-                capture_dispatch_item_markers=_has_native_subagent_dispatch(case),
-            )
-            launch_cwd = launch.get("cwd") if isinstance(launch, Mapping) else None
+            old_observation = found["capture"].get("observation")
+            old_metadata = old_observation.get("native_metadata", {}) \
+                if isinstance(old_observation, Mapping) else {}
+            old_supplement = old_metadata.get("nested_rollout") \
+                if isinstance(old_metadata, Mapping) else None
+            old_thread_ids = old_supplement.get("raw_sha256") \
+                if isinstance(old_supplement, Mapping) else None
+            thread_ids = tuple(old_thread_ids) \
+                if isinstance(old_thread_ids, Mapping) and old_thread_ids \
+                else _retained_rollout_thread_ids(refs)
+            if thread_ids:
+                raw_by_thread = {}
+                for retained_id in thread_ids:
+                    ref = refs.get(_rollout_label(retained_id))
+                    if not isinstance(retained_id, str) or not isinstance(ref, Mapping):
+                        raise ValueError("stored capture omitted a native rollout")
+                    raw_by_thread[retained_id] = _stored_evidence(attempt, ref).read_bytes()
+                supplement = self._measure(
+                    "capture_seconds", parse_native_tree, thread_id, raw_by_thread,
+                    require_delivery=_requires_subagent_returns(case, host),
+                    allow_root_only=_allows_root_only_codex_rollout(case, host),
+                    capture_dispatch_item_markers=_has_native_subagent_dispatch(case),
+                )
+            else:
+                environment = getattr(prepared, "environment", None)
+                codex_home = environment.get("CODEX_HOME") \
+                    if isinstance(environment, Mapping) else None
+                if not isinstance(codex_home, str) or not codex_home:
+                    raise ValueError("prepared Codex runtime omitted CODEX_HOME")
+                rollout_dir = context["staging"] / "recovered-native-rollouts"
+                collection = self._measure(
+                    "capture_seconds", collect_native_tree, thread_id,
+                    Path(codex_home) / "sessions", rollout_dir,
+                    require_delivery=_requires_subagent_returns(case, host),
+                    allow_root_only=_allows_root_only_codex_rollout(case, host),
+                    capture_dispatch_item_markers=_has_native_subagent_dispatch(case),
+                )
+                recovery_evidence.update(_rollout_evidence(collection, rollout_dir))
+                raw_by_thread = {
+                    retained_id: (rollout_dir / ref["path"]).read_bytes()
+                    for retained_id, ref in collection["evidence"].items()
+                }
+                supplement = collection["supplement"]
+            launch_cwd = launch.get("cwd")
             if not isinstance(launch_cwd, str) or not launch_cwd:
                 raise ValueError("stored prepared launch receipt omitted its cwd")
-            self._measure("capture_seconds", _merge_codex_supplement, observation, supplement,
-                          Path(launch_cwd), raw_by_thread, _has_tool_order(case))
+            self._measure(
+                "capture_seconds", _merge_codex_supplement, observation, supplement,
+                Path(launch_cwd), raw_by_thread, _has_tool_order(case),
+            )
             root_skill_raw = raw_by_thread.get(thread_id)
             if _plan_repair_checks(case) or verification_checks(case) or runner_checks(case):
                 plan_repair_trace = self._measure(
                     "capture_seconds", extract_native_plan_repair_trace,
-                    thread_id, raw_by_thread[thread_id],
+                    thread_id, raw_by_thread[thread_id], validated_dispatches={
+                        "dispatches": supplement.get("dispatches"),
+                        "authenticated_tree": (raw_by_thread, supplement),
+                    },
                 )
         if skill_binding is not None:
             thread_id = _codex_root_thread(observation)
@@ -2599,31 +3674,70 @@ class _Execution:
                 expected_cwd=cwd, expected_prompt=prompt, skill_witnesses=witnesses,
                 plugin_name=plugin_name,
             )
-            self._measure("capture_seconds", _merge_codex_skill_injections,
-                          observation, skill_supplement, thread_id)
+            self._measure(
+                "capture_seconds", _merge_codex_skill_injections,
+                observation, skill_supplement, thread_id,
+            )
+        return plan_repair_trace
+
+    def _bind_renormalized_observation(
+        self, context: Mapping[str, object], observation: dict[str, Any],
+        launch: Mapping[str, object], plan_repair_trace: Mapping[str, object] | None,
+        refs: Mapping[str, object], attempt: Path, recovery_evidence: dict[str, Path],
+        stage: object,
+    ) -> dict[str, Any]:
+        found, case, host = context["found"], context["case"], context["row"]["host"]
         observation = self._measure("capture_seconds", _qualify_trigger, case, stage, observation)
-        observation = self._measure("capture_seconds", _canonicalize_subagent_calls,
-                                    context["row"]["host"], observation)
+        observation = self._measure(
+            "capture_seconds", _canonicalize_subagent_calls, host, observation,
+        )
         if _has_native_subagent_dispatch(case):
-            self._measure("capture_seconds", _bind_native_subagent_dispatch_attribution,
-                          context["row"]["host"], observation)
-        if _requires_subagent_returns(case, context["row"]["host"]):
-            self._measure("capture_seconds", _bind_subagent_return_order,
-                          context["row"]["host"], observation,
-                          allow_failed_dispatches=_has_native_subagent_dispatch(case))
+            self._measure(
+                "capture_seconds", _bind_native_subagent_dispatch_attribution,
+                host, observation,
+            )
+        if _requires_subagent_returns(case, host):
+            self._measure(
+                "capture_seconds", _bind_subagent_return_order, host, observation,
+                allow_failed_dispatches=_has_native_subagent_dispatch(case),
+            )
         self._measure(
-            "capture_seconds", _bind_plan_repair_context, case,
-            context["row"]["host"], observation, launch, plan_repair_trace,
+            "capture_seconds", _bind_plan_repair_context,
+            case, host, observation, launch, plan_repair_trace,
         )
+        if found["capture"].get("error") is not None and verification_checks(case):
+            launch_cwd, launch_staging = launch.get("cwd"), launch.get("staging_dir")
+            if not isinstance(launch_cwd, str) or not isinstance(launch_staging, str):
+                raise ValueError("stored prepared launch omitted verification roots")
+            verification_dir = context["staging"] / "recovered-verification"
+            verification_dir.mkdir(parents=True, exist_ok=True)
+            recovery_evidence.update(self._measure(
+                "capture_seconds", _fresh_verification, _VerificationContext(
+                    case=case, host=host, observation=observation, launch=launch,
+                    codex_trace=plan_repair_trace, root_value=Path(launch_cwd),
+                    evidence=refs, attempt=verification_dir,
+                    staging=Path(launch_staging), evidence_attempt=attempt,
+                ),
+            ))
+        else:
+            self._measure(
+                "capture_seconds", _stored_verification, case, host,
+                observation, launch, plan_repair_trace, refs, attempt,
+            )
         self._measure(
-            "capture_seconds", _stored_verification, case, context["row"]["host"],
-            observation, launch, plan_repair_trace, refs, attempt,
+            "capture_seconds", _bind_runner_result_context,
+            case, host, observation, launch, plan_repair_trace,
         )
-        self._measure(
-            "capture_seconds", _bind_runner_result_context, case,
-            context["row"]["host"], observation, launch, plan_repair_trace,
-        )
-        grade_dir = attempt / "grades" / context["grader"]
+        return observation
+
+    def _renormalized_receipt(
+        self, context: Mapping[str, object], observation: Mapping[str, object],
+        refs: Mapping[str, object], attempt: Path, claude_activation: object,
+    ) -> Path:
+        found, case, host = context["found"], context["case"], context["row"]["host"]
+        grade_dir = (context["staging"] / "recovered-grade"
+                     if found["capture"].get("error") is not None
+                     else attempt / "grades" / context["grader"])
         grade_dir.mkdir(parents=True, exist_ok=True)
         receipt = grade_dir / "interpretation.json"
         self._measure("checkpoint_seconds", _write_json_once, receipt, {
@@ -2643,11 +3757,71 @@ class _Execution:
             "runner_result_source": _source_sha(
                 Path(__file__).resolve().parent / "native_eval_runner_result.py"
             ) if runner_checks(case) else None,
-            "rollout_source": _source_sha(Path(__file__).resolve().parent / "native_eval_codex_rollouts.py")
-            if case.get("resource_class") == "nested"
-            or (context["row"]["host"] == "codex" and case.get("layer") != "trigger") else None,
+            "rollout_source": _source_sha(
+                Path(__file__).resolve().parent / "native_eval_codex_rollouts.py"
+            ) if case.get("resource_class") == "nested"
+            or (host == "codex" and case.get("layer") != "trigger") else None,
         })
-        return observation, {"interpretation": receipt}
+        return receipt
+
+    def _renormalize(self, context: dict[str, object]) \
+            -> tuple[dict[str, Any], dict[str, Path], dict[str, Path]]:
+        found, case, prepared = context["found"], context["case"], context["prepared"]
+        refs = found["capture"].get("evidence")
+        if not isinstance(refs, Mapping) or not isinstance(refs.get("raw_trace"), Mapping):
+            raise ValueError("stored capture omitted its raw trace")
+        attempt = found["attempt"]
+        recovery_evidence: dict[str, Path] = {}
+        launch = _stored_launch(refs, attempt)
+        if case.get("layer") == "trigger" and isinstance(launch, Mapping):
+            runtime_identity, staging_dir = launch.get("runtime_identity"), launch.get("staging_dir")
+            if not isinstance(runtime_identity, Mapping) or not isinstance(staging_dir, str):
+                raise ValueError("stored trigger launch identity is malformed")
+            stage = self._measure("capture_seconds", trigger_stage_from_runtime_identity,
+                                  runtime_identity, attempt_dir=Path(staging_dir))
+        else:
+            stage = None
+        raw_path = _stored_evidence(attempt, refs["raw_trace"])
+        raw_trace = raw_path.read_text(encoding="utf-8", errors="strict")
+        observation = self._measure("capture_seconds", normalize_trace,
+                                    context["row"]["host"], raw_trace,
+                                    **_capture_options(prepared, stage))
+        claude_activation, activation_evidence = self._measure(
+            "capture_seconds", _renormalized_claude_activation,
+            case, context["row"]["host"], launch, refs, attempt, prepared,
+            context["staging"] / "recovered-claude-activation",
+        )
+        recovery_evidence.update(activation_evidence)
+        if claude_activation is not None:
+            binding, activation_receipt = claude_activation
+            self._measure("capture_seconds", _attach_claude_activation,
+                          observation, binding, activation_receipt)
+        observation = self._measure(
+            "capture_seconds", _bind_launch_fixture_read_witnesses, observation, launch,
+        )
+        git_observation = self._measure(
+            "capture_seconds", _stored_git_observation, prepared, refs, attempt,
+        )
+        self._measure("capture_seconds", _attach_git_observation,
+                      observation, git_observation)
+        artifact_evidence = self._measure(
+            "capture_seconds", _renormalized_artifacts,
+            case, context["row"]["host"], observation, refs, attempt, prepared,
+            context["staging"] / "recovered-claude-artifacts",
+            context["staging"], self.repo,
+        )
+        recovery_evidence.update(artifact_evidence)
+        plan_repair_trace = self._reconstruct_codex_evidence(
+            context, observation, launch, refs, attempt, recovery_evidence,
+        )
+        observation = self._bind_renormalized_observation(
+            context, observation, launch, plan_repair_trace,
+            refs, attempt, recovery_evidence, stage,
+        )
+        receipt = self._renormalized_receipt(
+            context, observation, refs, attempt, claude_activation,
+        )
+        return observation, {"interpretation": receipt}, recovery_evidence
 
     def _captured_invalid(self, job: Job, context: dict[str, object], reason: str,
                           evidence: dict[str, Path], classification: dict[str, object] | None) -> Outcome:
@@ -2738,6 +3912,10 @@ class _Execution:
                     plan_repair_trace = self._measure(
                         "capture_seconds", extract_native_plan_repair_trace,
                         thread_id, raw_by_thread[thread_id],
+                        validated_dispatches={
+                            "dispatches": collection["supplement"].get("dispatches"),
+                            "authenticated_tree": (raw_by_thread, collection["supplement"]),
+                        },
                     )
                 if skill_binding is not None:
                     cwd, prompt, witnesses = skill_binding
@@ -2783,9 +3961,12 @@ class _Execution:
                 observation, launch, plan_repair_trace,
             )
             verification_evidence = self._measure(
-                "capture_seconds", _fresh_verification, context["case"], job.host,
-                observation, launch, plan_repair_trace, raw.artifact_root,
-                context["attempt"], context["staging"],
+                "capture_seconds", _fresh_verification, _VerificationContext(
+                    case=context["case"], host=job.host, observation=observation,
+                    launch=launch, codex_trace=plan_repair_trace,
+                    root_value=raw.artifact_root, evidence=evidence,
+                    attempt=context["attempt"], staging=context["staging"],
+                ),
             )
             evidence.update(verification_evidence)
             self._measure(
@@ -2838,6 +4019,7 @@ class _Execution:
         context: dict[str, object] = {"attempt": None, "subject_launched": False}
         try:
             context = self._context(job)
+            job.payload["grader"] = context["grader"]
             existing = self._reuse(job, context)
             return existing if existing is not None else self._launch(job, context)
         except Exception as exc:
@@ -2946,8 +4128,9 @@ class _Execution:
                         subject = self.results.get(job.id)
                         if not isinstance(subject, dict) or not isinstance(subject.get("attempt"), str):
                             raise ValueError("pair arm has no retained terminal attempt")
-                        grader = self._measure("grading_seconds", _grader_identity, case, job.host,
-                                               self.judge_model, self.judge_runtime)
+                        grader = job.payload.get("grader")
+                        if not isinstance(grader, str) or _OBJECT_ID.fullmatch(grader) is None:
+                            raise ValueError("pair arm has no bound grader identity")
                         arms.append(self._measure("checkpoint_seconds", self.store.pair_arm,
                                                   Path(subject["attempt"]), grader))
                     fingerprint = self._measure("grading_seconds", pair_input_fingerprint,
