@@ -1,0 +1,10 @@
+{
+  "schema_version": "1.0",
+  "request_id": "fixture-preview-isolation-session",
+  "helper_id": "preview-isolation-session",
+  "operation": "preview-isolation-session",
+  "mode": "read_only",
+  "inputs": {
+    "named_surface": "attest_codex"
+  }
+}

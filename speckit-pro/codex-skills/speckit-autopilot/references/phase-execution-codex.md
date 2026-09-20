@@ -141,9 +141,19 @@ does not end at the boundary commit above. It runs this sequence, in this order:
 4. Create or refresh the draft pull request.
 5. Write the `Draft PR` record to the workflow file.
 6. Take a separate bookkeeping commit carrying that record, and push it.
-7. The parent opens and observes each generated artifact preview.
+7. The parent dispatches `artifact-preview-observer` for each generated artifact preview; the isolated observer never inherits general repository tools.
 8. Validate and commit/push the workflow-only preview evidence.
 ```
+
+Dispatch step 7 through the runner, never by running the observer yourself:
+`helper_id=preview-isolation-session operation=preview-isolation-session mode=read_only`
+with `named_surface=attest_codex` once, then `named_surface=observe_codex` plus
+`artifact_path` and `expected_sha256` per page. The runner mints the broker
+capability, runs the observer under its own Codex permission profile with one
+broker tool and no network, and returns only the closed brokered observation.
+Under that profile the isolated process has no preview capability, so
+`unavailable` is the expected verdict; record it rather than substituting a
+parent-side judgement.
 
 **Read the [Artifact Review Handoff contract](../../../skills/speckit-autopilot/references/artifact-review.md) before this sequence.**
 It defines the durable record, preview evidence, current-task binding, and

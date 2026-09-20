@@ -6,6 +6,7 @@ from __future__ import annotations
 import copy
 import hashlib
 import json
+import re
 import runpy
 import sys
 import tempfile
@@ -41,6 +42,11 @@ class ArtifactReviewTests(unittest.TestCase):
             (self.root / path).write_text("Review Demo preserves the existing draft PR.\n")
             inputs[path] = hashlib.sha256((self.root / path).read_bytes()).hexdigest()
         self.gallery = ROOT / "speckit-pro/artifact-gallery"
+        def render_template(identifier, title, body):
+            template = (self.gallery / f"templates/{identifier}.html").read_text(encoding="utf-8")
+            pattern = re.compile(r"(<!--\s*FILL:document-title:START\s*-->)(.*?)(<!--\s*FILL:document-title:END\s*-->)", re.DOTALL)
+            replacement = rf"\1<title>{title}</title><h1>{body}</h1>\3"
+            return pattern.sub(replacement, template, count=1)
         self.record = {
             "schema_version": "1.0",
             "feature_dir": self.feature,
@@ -54,7 +60,7 @@ class ArtifactReviewTests(unittest.TestCase):
             path = f"{self.feature}/artifacts/{identifier}.html"
             title = f"Review Demo: {identifier}"
             body = f"Review Demo {identifier} preserves the existing draft PR."
-            (self.root / path).write_text(f"<html><head><title>{title}</title></head><body><p>{body}</p></body></html>")
+            (self.root / path).write_text(render_template(identifier, title, body))
             self.record["template_hashes"][identifier] = hashlib.sha256(
                 (self.gallery / f"templates/{identifier}.html").read_bytes()
             ).hexdigest()
@@ -89,9 +95,9 @@ class ArtifactReviewTests(unittest.TestCase):
         page["preview"] = {
             "status": "verified", "blocker": None,
             "observation": {
-                "kind": "rendered", "title": page["expected_title"],
-                "body_text": page["expected_content"], "route": "native-html",
-                "reference": f"observation-{index}", "observed_at": "2026-09-10T18:00:00Z",
+                "kind": "brokered", "verdict": "verified",
+                "artifact_sha256": page["sha256"],
+                "observed_at": "2026-09-10T18:00:00Z",
             },
         }
 
@@ -103,8 +109,16 @@ class ArtifactReviewTests(unittest.TestCase):
         result = self.review()
         self.assertEqual(result["status"], "pending")
         self.assertEqual(result["resume_action"], "preview")
+        self.assertEqual(result["observer"], artifact_review.OBSERVER)
         self.assertTrue(result["reuse_artifacts"])
         self.assertEqual(result["verified"], 0)
+
+    def test_untrusted_html_outside_template_regions_is_rejected(self) -> None:
+        path = self.root / self.record["pages"][0]["path"]
+        path.write_text(path.read_text().replace("<!DOCTYPE html>", "<!DOCTYPE html><!-- injected -->", 1))
+        self.record["pages"][0]["sha256"] = hashlib.sha256(path.read_bytes()).hexdigest()
+        with self.assertRaisesRegex(ValueError, "trusted fill"):
+            self.review()
 
     def test_all_rendered_pages_are_verified(self) -> None:
         self.verify(0)
@@ -120,25 +134,25 @@ class ArtifactReviewTests(unittest.TestCase):
         self.assertEqual(result["verified"], 1)
         self.assertEqual([page["status"] for page in result["pages"]], ["verified", "pending"])
 
-    def test_open_receipts_never_verify_a_page(self) -> None:
-        for kind in ("queued", "open", "http", "file", "tab"):
+    def test_non_brokered_receipts_never_verify_a_page(self) -> None:
+        for kind in ("rendered", "queued", "open", "http", "file", "tab"):
             with self.subTest(kind=kind):
                 self.verify()
                 self.record["pages"][0]["preview"]["observation"]["kind"] = kind
                 with self.assertRaises(ValueError):
                     self.review()
 
-    def test_wrong_blank_error_and_title_only_observations_cannot_verify(self) -> None:
-        for body in ("", "404 Not Found", "Unrelated feature", "Review Demo: implementation-plan"):
-            with self.subTest(body=body):
+    def test_wrong_digest_verdict_and_timestamp_cannot_verify(self) -> None:
+        for key, value in (
+            ("artifact_sha256", "0" * 64),
+            ("verdict", "denied"),
+            ("observed_at", "2026-09-10T18:00:00"),
+        ):
+            with self.subTest(key=key):
                 self.verify()
-                self.record["pages"][0]["preview"]["observation"]["body_text"] = body
+                self.record["pages"][0]["preview"]["observation"][key] = value
                 with self.assertRaises(ValueError):
                     self.review()
-        self.verify()
-        self.record["pages"][0]["preview"]["observation"]["title"] = "Wrong title"
-        with self.assertRaises(ValueError):
-            self.review()
 
     def test_denied_and_headless_dispositions_are_valid_but_unverified(self) -> None:
         for status, blocker in (("denied", "Browser access denied"), ("unavailable", "No rendered observer in CLI")):
@@ -278,7 +292,7 @@ class ArtifactReviewTests(unittest.TestCase):
             path = ROOT / f"speckit-pro/{directory}/speckit-autopilot/references/phase-execution{suffix}.md"
             text = path.read_text()
             self.assertIn("artifact-review.md", text)
-            self.assertLess(text.index("6. Take a separate bookkeeping commit"), text.index("7. The parent opens and observes"))
+            self.assertLess(text.index("6. Take a separate bookkeeping commit"), text.index("7. The parent dispatches `artifact-preview-observer`"))
             self.assertIn("preview-only resume", text)
             self.assertIn("direct local file links", text)
 

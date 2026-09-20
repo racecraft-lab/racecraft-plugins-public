@@ -15,6 +15,9 @@ from .formal.selection import next_fence, require_fields, require_text, unique_o
 HEADING = "## Artifact Review Handoff"
 GALLERY = Path(__file__).resolve().parents[1] / "artifact-gallery"
 PREVIEW_STATUSES = ("pending", "verified", "unavailable", "denied")
+BROKERED_PREVIEW_VERDICTS = ("verified", "unavailable", "denied")
+OBSERVER = "artifact-preview-observer"
+FILL_MARKER = re.compile(rb"<!--\s*FILL:([a-z0-9-]+):(START|END)\s*-->")
 FileReader = Callable[[Path, Path], bytes | None]
 
 
@@ -89,6 +92,35 @@ def _relative(value: Any) -> str:
     return value
 
 
+def _fill_skeleton(value: bytes) -> tuple[tuple[str, ...], tuple[bytes, ...]]:
+    matches = list(FILL_MARKER.finditer(value))
+    if len(matches) % 2:
+        raise ValueError("artifact template has an unmatched fill marker")
+    slots: list[str] = []
+    static: list[bytes] = []
+    cursor = 0
+    for index in range(0, len(matches), 2):
+        start, end = matches[index], matches[index + 1]
+        if start.group(2) != b"START" or end.group(2) != b"END" or start.group(1) != end.group(1):
+            raise ValueError("artifact template has an invalid fill marker")
+        slots.append(start.group(1).decode("ascii"))
+        static.append(value[cursor:start.end()])
+        cursor = end.start()
+    static.append(value[cursor:])
+    return tuple(slots), tuple(static)
+
+
+def _generation_provenance(page: dict[str, Any], root: Path, read_file: FileReader) -> None:
+    template = read_file(GALLERY / f"templates/{page['id']}.html", GALLERY)
+    artifact = read_file(root / page["path"], root)
+    if template is None or artifact is None:
+        raise ValueError(f"artifact preview provenance is unreadable: {page['id']}")
+    template_slots, template_static = _fill_skeleton(template)
+    artifact_slots, artifact_static = _fill_skeleton(artifact)
+    if template_slots != artifact_slots or template_static != artifact_static:
+        raise ValueError(f"artifact preview is not a trusted fill of its template: {page['id']}")
+
+
 def _current_hash(root: Path, relative: str, read_file: FileReader) -> str | None:
     path = root / relative
     if path.resolve() != root.resolve() / relative:
@@ -102,16 +134,15 @@ def _current_hash(root: Path, relative: str, read_file: FileReader) -> str | Non
 
 
 def _observation(value: Any) -> None:
-    require_fields(value, {"kind", "title", "body_text", "route", "reference", "observed_at"}, "rendered observation")
-    if value["kind"] != "rendered":
-        raise ValueError("only a rendered observation can verify a preview")
-    for key in ("title", "body_text"):
-        if not isinstance(value[key], str):
-            raise ValueError(f"observation.{key} must be text")
-    for key in ("route", "reference", "observed_at"):
-        require_text(value[key], f"observation.{key}")
+    require_fields(value, {"kind", "verdict", "artifact_sha256", "observed_at"}, "brokered preview observation")
+    if value["kind"] != "brokered":
+        raise ValueError("only a brokered preview observation can verify a preview")
+    if value["verdict"] not in BROKERED_PREVIEW_VERDICTS:
+        raise ValueError("brokered preview verdict is outside the closed vocabulary")
+    _hash(value["artifact_sha256"], "observation.artifact_sha256")
+    require_text(value["observed_at"], "observation.observed_at")
     if datetime.fromisoformat(value["observed_at"]).tzinfo is None:
-        raise ValueError("rendered observation must include a timezone")
+        raise ValueError("brokered preview observation must include a timezone")
 
 
 def _preview(page: dict[str, Any]) -> None:
@@ -121,19 +152,21 @@ def _preview(page: dict[str, Any]) -> None:
     observation = preview["observation"]
     if observation is not None:
         _observation(observation)
+        if observation["verdict"] != preview["status"]:
+            raise ValueError("brokered preview verdict does not match preview status")
+    if preview["status"] == "pending" and observation is not None:
+        raise ValueError("pending preview cannot carry brokered evidence")
     if preview["status"] != "verified":
         require_text(preview["blocker"], "unverified preview blocker")
         return
     if observation is None or preview["blocker"] is not None:
-        raise ValueError("verified preview requires rendered evidence and no blocker")
+        raise ValueError("verified preview requires brokered evidence and no blocker")
     title = " ".join(page["expected_title"].split())
     content = " ".join(page["expected_content"].split())
     if content in title:
         raise ValueError("feature body content must be distinct from the title")
-    if " ".join(observation["title"].split()) != title:
-        raise ValueError("rendered title does not match the expected page")
-    if content not in " ".join(observation["body_text"].split()):
-        raise ValueError("rendered body does not contain the expected feature content")
+    if observation["artifact_sha256"] != page["sha256"]:
+        raise ValueError("brokered preview artifact digest does not match the generated page")
 
 
 def _page(page: Any, feature: str) -> None:
@@ -236,6 +269,8 @@ def _page_results(record: dict[str, Any], root: Path, read_file: FileReader) -> 
             fresh = fresh and digest is None
             continue
         current = digest == page["sha256"]
+        if current:
+            _generation_provenance(page, root, read_file)
         fresh = fresh and current
         preview = page["preview"]
         result = {"id": page["id"], "path": path, "status": preview["status"], "blocker": preview["blocker"]}
@@ -260,4 +295,5 @@ def review_handoff(text: str, root: Path, read_file: FileReader) -> dict[str, An
         "status": status, "resume_action": "generate" if not fresh else "preview" if status == "pending" else "none",
         "reuse_artifacts": fresh, "feature_dir": record["feature_dir"], "generated": len(pages),
         "verified": verified, "pages": pages, "generation_gaps": gaps, "generation_error": record["generation_error"],
+        "observer": OBSERVER,
     }

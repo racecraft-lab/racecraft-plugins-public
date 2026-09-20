@@ -10,7 +10,7 @@ from typing import Any
 AGENT_INVENTORY_PATH = Path(__file__).with_name("agent_inventory.json")
 SCHEMA_VERSION = "1.0.0"
 PLATFORMS = ("claude_code", "codex")
-CATEGORIES = frozenset({"shared", "sweep_security", "optional_helper"})
+CATEGORIES = frozenset({"shared", "sweep_security", "brokered_observer", "optional_helper"})
 IMPLEMENTATIONS = frozenset({"plugin_agent", "custom_agent", "isolated_prompt_role", "none"})
 INSTALL_STATUSES = frozenset({"required", "optional", "not_installed"})
 ROLE_KEYS = frozenset({"name", "category", "exception_reason", *PLATFORMS})
@@ -119,6 +119,14 @@ def _validate_role_shape(role: dict[str, Any]) -> None:
             "not_installed",
         ):
             raise AgentInventoryError(f"sweep role {name} must remain a non-installed Codex prompt role")
+    elif category == "brokered_observer":
+        if (claude["implementation"], claude["install_status"]) != ("plugin_agent", "required"):
+            raise AgentInventoryError(f"observer role {name} must be a required Claude plugin agent")
+        if (codex["implementation"], codex["install_status"]) != (
+            "isolated_prompt_role",
+            "not_installed",
+        ):
+            raise AgentInventoryError(f"observer role {name} must remain a non-installed Codex prompt role")
     elif (claude["implementation"], claude["install_status"]) != ("none", "not_installed") or (
         codex["implementation"], codex["install_status"]
     ) != ("custom_agent", "optional"):

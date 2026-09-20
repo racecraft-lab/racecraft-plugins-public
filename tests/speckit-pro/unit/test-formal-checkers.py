@@ -504,6 +504,25 @@ class NativeTlcTests(FormalCheckerTests):
         self.assertEqual("timeout", self.request("apply")["data"]["verdict"])
 
 
+class QuintIdentityTests(unittest.TestCase):
+    def setUp(self) -> None:
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        self.root = Path(temporary.name).resolve()
+
+    def test_self_supplied_quint_digest_fails_closed(self) -> None:
+        tool = {"version": quint.VERSION, "root": ".specify/tools/formal/quint-0.32.0",
+                "tree_sha256": "0" * 64, "node": "node"}
+        with self.assertRaises(catalog.FormalError) as raised:
+            quint.validate_tool(tool)
+        self.assertEqual("version_mismatch", raised.exception.verdict)
+
+    def test_pinned_digest_accepts_the_publisher_tree_without_trusting_root_location(self) -> None:
+        tool = {"version": quint.VERSION, "root": str(self.root / "quint-0.32.0"),
+                "tree_sha256": quint.TREE_SHA256, "node": "node"}
+        self.assertEqual(self.root / "quint-0.32.0", quint.installation(self.root, tool))
+
+
 class NativeQuintTests(FormalCheckerTests):
     def setUp(self) -> None:
         super().setUp()
@@ -562,6 +581,7 @@ if __name__ == "__main__":
     if QUINT_ROOT and not JAR:
         parser.error("--quint-root requires --apalache-jar")
     suite = unittest.defaultTestLoader.loadTestsFromTestCase(FormalCheckerTests)
+    suite.addTests(unittest.defaultTestLoader.loadTestsFromTestCase(QuintIdentityTests))
     if JAR:
         for name in unittest.defaultTestLoader.getTestCaseNames(NativeApalacheTests):
             if name.startswith("test_native_"):

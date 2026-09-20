@@ -15,6 +15,8 @@ from .process import run_process, runtime_environment
 from .selection import require_fields, require_text, unique_object
 
 VERSION = "0.32.0"
+TREE_SHA256 = "ad2b0a994292da8dcf69ef33d26a95bdfec609a1250615251789543b6cef342f"
+FORMAL_TOOLS_ROOT = ".specify/tools/formal"
 PACKAGE = "node_modules/@informalsystems/quint"
 ENTRY = PACKAGE + "/dist/src/cli.js"
 
@@ -48,8 +50,8 @@ def validate_tool(value: Any) -> dict[str, Any]:
         raise FormalError("version_mismatch", f"Quint requires qualified version {VERSION}")
     for key in ("root", "node"):
         require_text(value[key], f"quint.{key}")
-    if not isinstance(value["tree_sha256"], str) or not re.fullmatch(r"[0-9a-f]{64}", value["tree_sha256"]):
-        raise ValueError("quint.tree_sha256 must pin the full installed compiler/dependency tree")
+    if value["tree_sha256"] != TREE_SHA256:
+        raise FormalError("version_mismatch", "Quint installation digest differs from the publisher-pinned compiler/dependency tree")
     return value
 
 
@@ -58,7 +60,7 @@ def inspect(root: Path, tool: dict[str, Any]) -> dict[str, Any]:
     if not (directory / ENTRY).is_file() or not (directory / "package-lock.json").is_file():
         raise FormalError("missing_tool", "Install the pinned Quint package and lockfile explicitly before checking")
     metadata = read_json(directory / PACKAGE / "package.json")
-    if metadata.get("version") != VERSION or tree_digest(directory) != tool["tree_sha256"]:
+    if metadata.get("version") != VERSION or tree_digest(directory) != TREE_SHA256:
         raise FormalError("version_mismatch", "Quint package version or full installation checksum differs from the catalog")
     node = shutil.which("node")
     requested = shutil.which(tool["node"])

@@ -105,6 +105,13 @@
       "exception_reason": "Codex may activate this latency-first advisory leaf helper after route probing; Claude Code has no equivalent helper and does not require one for workflow correctness.",
       "claude_code": {"implementation": "none", "source": null, "install_status": "not_installed", "order": null, "model": null, "effort": null, "sandbox": null, "memory": "none"},
       "codex": {"implementation": "custom_agent", "source": "codex-agents/autopilot-fast-helper.toml", "install_status": "optional", "order": 0, "model": "gpt-5.6-luna", "effort": "low", "sandbox": "read-only", "memory": "none"}
+    },
+    {
+      "name": "artifact-preview-observer",
+      "category": "brokered_observer",
+      "exception_reason": "Claude Code publishes and observes the preview through the Artifact surface; Codex uses an isolated launcher prompt against the same author-broker so page bytes and rendered text stay outside the privileged parent. Both return only a closed brokered verdict, and neither is a callable installed Codex agent.",
+      "claude_code": {"implementation": "plugin_agent", "source": "agents/artifact-preview-observer.md", "install_status": "required", "order": 14, "model": "haiku", "effort": "low", "sandbox": "broker-only", "memory": "none"},
+      "codex": {"implementation": "isolated_prompt_role", "source": "codex-skills/speckit-autopilot/references/preview-prompts/observer.md", "install_status": "not_installed", "order": null, "model": "launcher-configured", "effort": "launcher-configured", "sandbox": "isolated-launcher", "memory": "none"}
     }
   ]
 }
