@@ -222,9 +222,16 @@ class PreviewLauncherTests(unittest.TestCase):
         self.runtime_root.mkdir()
 
     def command(self) -> list[str]:
-        return self.launcher.codex_preview_command(
-            plugin_root=self.plugin_root, runtime_root=self.runtime_root, capability="cap-token"
-        )
+        # The runtimes are stubbed the way the sweep launcher's own tests stub
+        # them: this asserts the invocation this launcher builds, and CI runners
+        # carry no Codex install.
+        codex_runtime = Path(self.temp.name) / "runtimes" / "bin" / "codex"
+        python_runtime = Path(self.temp.name) / "runtimes" / "bin" / "python3"
+        with unittest.mock.patch.object(self.launcher, "codex_executable", return_value=codex_runtime), \
+                unittest.mock.patch.object(self.launcher, "python_executable", return_value=python_runtime):
+            return self.launcher.codex_preview_command(
+                plugin_root=self.plugin_root, runtime_root=self.runtime_root, capability="cap-token"
+            )
 
     def test_invocation_reaches_exactly_one_broker_tool(self) -> None:
         command = self.command()
@@ -258,10 +265,12 @@ class PreviewLauncherTests(unittest.TestCase):
         self.assertFalse(schema["additionalProperties"])
 
     def test_missing_capability_is_refused(self) -> None:
-        with self.assertRaises(self.launcher.LauncherViolation):
-            self.launcher.codex_preview_command(
-                plugin_root=self.plugin_root, runtime_root=self.runtime_root, capability=""
-            )
+        codex_runtime = Path(self.temp.name) / "runtimes" / "bin" / "codex"
+        with unittest.mock.patch.object(self.launcher, "codex_executable", return_value=codex_runtime):
+            with self.assertRaises(self.launcher.LauncherViolation):
+                self.launcher.codex_preview_command(
+                    plugin_root=self.plugin_root, runtime_root=self.runtime_root, capability=""
+                )
 
     def test_prompt_attestation_refuses_an_unavailable_layout(self) -> None:
         with self.assertRaises(self.launcher.LauncherViolation):
