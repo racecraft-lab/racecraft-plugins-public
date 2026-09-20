@@ -33,8 +33,13 @@ PowerShell-specific command-language requirement for installed workflows.
 ## Scope
 
 This skill handles autonomous workflow EXECUTION. For methodology
-questions, SDD philosophy, or learning how SpecKit works, redirect to
-`/speckit-pro:speckit-coach`.
+questions, SDD philosophy, comparisons, design rationale, deep dives, or
+learning how SpecKit works, redirect to `/speckit-pro:speckit-coach` when the
+user is asking for explanation rather than execution. Do not redirect a real
+implementation request merely because it asks for detailed progress or uses
+the word "implement": when the user supplies or identifies a populated
+workflow and asks to run, resume, or implement it, this remains an autopilot
+execution request.
 
 You are an **orchestrator** for SpecKit workflows: read prompts from
 the workflow file and delegate each phase to a **subagent** that runs

@@ -118,6 +118,8 @@ else should be derived from the repository.
 ## Hard Constraints
 
 - Never commit or push `main`.
+- Re-read the active branch immediately before every commit and push; if it is
+  `main`, stop before the mutation.
 - Detect the actual git remote name before pushing.
 - Create or reuse a dedicated worktree branch for the spec.
 - After the worktree exists, perform all file edits inside the worktree, not in
@@ -133,6 +135,21 @@ else should be derived from the repository.
 - Always run the `$grill-me` interview before writing the workflow file. The
   Design Concept doc is a required setup output, not optional. Setup must not
   attempt to fabricate design-concept content if grill-me aborts.
+
+## Canonical Scaffold Identity
+
+Derive one deterministic `<branch-name>` from the roadmap's spec number and
+short slug, then use that exact verified value everywhere. The authored paths,
+relative to the resolved worktree root, are:
+
+- `docs/ai/specs/.process/SPEC-<ID>-design-concept.md`
+- `docs/ai/specs/.process/SPEC-<ID>-workflow.md`
+- `specs/<branch-name>/SPEC-MOC.md`
+
+The generated workflow's `Branch` field is the actual dedicated branch
+returned by `resolve-scaffold-worktree-placement` and verified inside the
+worktree. Never write `main`, a guessed branch, or a display label into that
+field.
 
 ## Procedure
 
@@ -676,6 +693,10 @@ filling it with fiction.
 
 ### 7. Commit and push from the worktree
 
+Immediately before the commit and again immediately before the push, run
+`git rev-parse --abbrev-ref HEAD` in the resolved worktree. The result must
+equal the resolver's `branch_name` and must not be `main`; otherwise stop.
+
 Stage the generated/updated preset files when present, plus the design concept
 doc, the workflow file, AND the SPEC-MOC marker in the worktree branch (the
 marker is a review-visible CONTRACT artifact — if it is written but left
@@ -712,6 +733,9 @@ Then verify:
 
 Update the technical roadmap copy inside the worktree to mark the spec as in
 progress. Commit and push that roadmap status change on the same spec branch.
+Immediately before that commit and again before its push, re-read the active
+branch and stop if it differs from the resolver's `branch_name` or equals
+`main`.
 Do not touch the main checkout. The roadmap change reaches the default branch
 only when the spec branch is merged.
 
@@ -815,7 +839,7 @@ grill-me questions are pre-existing, are not counted, and are not removed.
 
 | Platform | Hand-off command |
 | -------- | ---------------- |
-| Claude Code | `/cd <absolute-worktree-root>`, then `/speckit-pro:speckit-autopilot <relative-workflow-file> --stage plan` |
+| Claude Code | `/cd <absolute-worktree-root>`, then `/speckit-pro:speckit-autopilot <absolute-workflow-file> --stage plan` |
 | Codex CLI | `$speckit-autopilot <absolute-workflow-file> --stage plan` |
 
 The Codex form is the ordinary same-task outcome. OpenAI documents worktrees as

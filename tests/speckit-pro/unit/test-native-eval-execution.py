@@ -2105,7 +2105,11 @@ class NativeExecutionTests(unittest.TestCase):
             ]
             self.assertEqual(
                 observation["native_metadata"]["controller_fixture_read_witnesses"],
-                {"authority": "controller-staged-fixtures", "witnesses": expected},
+                {
+                    "authority": "controller-staged-fixtures",
+                    "witnesses": expected,
+                    "project_artifacts": [FIXTURE_READ_PATH],
+                },
             )
             access = next(item for item in file_accesses(observation)
                           if item["path"] == FIXTURE_READ_PATH)
@@ -3057,6 +3061,45 @@ class NativeExecutionTests(unittest.TestCase):
                                 prepare=retried.prepare, execute=retried.execute)
         self.assertEqual(third["counts"]["retries"], 1)
         self.assertEqual(third["counts"]["passes"], 1)
+
+    def test_unfinished_codex_item_is_retryable_invalid_without_output_salvage_or_auto_retry(self):
+        callbacks = FakeCallbacks(self.output, texts=["apparently complete final answer"])
+        with mock.patch.object(
+            execution, "normalize_trace",
+            side_effect=execution.CaptureError("Codex capture has unfinished items"),
+        ):
+            first = run_evaluations(
+                config(self.output), {}, [case()], [row("codex")], repo_root=self.repo,
+                prepare=callbacks.prepare, execute=callbacks.execute,
+            )
+        self.assertEqual(first["counts"]["infrastructure_invalid"], 1, first)
+        verdict = first["results"][0]
+        self.assertEqual(verdict["status"], "invalid")
+        self.assertEqual(verdict["reason"], "Codex capture has unfinished items")
+        self.assertEqual(verdict["infrastructure_error"], {
+            "kind": "unfinished_native_item",
+            "source": "native_capture",
+            "retryable": True,
+            "inferred": False,
+        })
+        self.assertNotIn("provider_error", verdict)
+        attempt = next((self.output / "attempts").iterdir())
+        capture = json.loads((attempt / "capture.json").read_text())["payload"]
+        self.assertIsNone(capture["observation"])
+        self.assertEqual(capture["error"], "Codex capture has unfinished items")
+
+        resumed_callbacks = FakeCallbacks(self.output)
+        resumed = run_evaluations(
+            config(self.output), {}, [case()], [row("codex")], repo_root=self.repo,
+            prepare=resumed_callbacks.prepare, execute=resumed_callbacks.execute,
+        )
+        self.assertEqual(resumed["counts"]["subject_launches"], 0, resumed)
+        self.assertEqual(resumed["counts"]["reused"], 1, resumed)
+        self.assertEqual(resumed_callbacks.executed, [])
+        self.assertEqual(
+            resumed["results"][0]["infrastructure_error"]["kind"],
+            "unfinished_native_item",
+        )
 
     def test_semantic_case_is_held_without_judge_and_judged_after_deterministic_pass(self):
         value = case(semantic=True)

@@ -228,6 +228,9 @@ class NativeParityCatalogTests(unittest.TestCase):
         ):
             self.assertNotIn(answer, prompt)
             self.assertNotIn(answer, fixture_text)
+        self.assertIn("Run every final local gate and checkpoint step serially", prompt)
+        self.assertIn("consume each command's terminal result before the next action", prompt)
+        self.assertIn("never emit final text while any tool item remains in progress", prompt)
         self.assertIn("the requested table shape is not an answer key", prompt)
 
     def test_scaffold_git_observation_distinguishes_exact_final_boundaries(self) -> None:
@@ -351,9 +354,11 @@ class NativeParityCatalogTests(unittest.TestCase):
                     activation="speckit-scaffold-spec",
                     calls=[{
                         "name": tool_name,
-                        "input": {"command": "./relocate-process-artifacts.sh apply"},
-                        "output": "not found",
-                        "success": False,
+                        "input": {
+                            "command": "./relocate-process-artifacts.sh apply && true",
+                        },
+                        "output": "relocation attempted",
+                        "success": True,
                     }],
                 )
                 self.assertEqual(

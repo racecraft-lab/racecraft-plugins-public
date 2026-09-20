@@ -845,16 +845,30 @@ class SurfaceConfinementTests(unittest.TestCase):
     def test_codex_launcher_is_ephemeral_user_config_free_and_disables_privileged_surfaces(self) -> None:
         runtime_root = REPO_ROOT.parent / "isolated-sweep-runtime"
         codex_runtime = REPO_ROOT.parent / "test-runtimes" / "codex"
-        with patch.object(sweep_launcher, "codex_executable", return_value=codex_runtime):
-            command = sweep_launcher.codex_command(
-                plugin_root=PLUGIN_ROOT,
-                repo_root=REPO_ROOT,
-                runtime_root=runtime_root,
-                capability=f"sweep-cap:v1:{'a' * 32}:{'b' * 64}",
-                stage="classifier",
-            )
+        with tempfile.TemporaryDirectory() as temp:
+            python_runtime_root = Path(temp).resolve() / "python-runtime"
+            python_runtime_root.mkdir()
+            python_runtime = python_runtime_root / "bin" / "python3"
+            with patch.object(
+                sweep_launcher, "codex_executable", return_value=codex_runtime
+            ), patch.object(
+                sweep_launcher, "python_executable", return_value=python_runtime
+            ), patch.object(
+                sweep_launcher.sys, "base_prefix", str(python_runtime_root)
+            ):
+                command = sweep_launcher.codex_command(
+                    plugin_root=PLUGIN_ROOT,
+                    repo_root=REPO_ROOT,
+                    runtime_root=runtime_root,
+                    capability=f"sweep-cap:v1:{'a' * 32}:{'b' * 64}",
+                    stage="classifier",
+                )
         joined = " ".join(command)
         self.assertEqual(codex_runtime, Path(command[0]))
+        self.assertIn(
+            f"mcp_servers.sweep-broker.command={json.dumps(str(python_runtime))}",
+            command,
+        )
         filesystem = next(
             item
             for item in command
@@ -862,7 +876,7 @@ class SurfaceConfinementTests(unittest.TestCase):
         )
         for runtime in (
             Path(command[0]).parent.parent,
-            Path(sys.base_prefix).resolve(),
+            python_runtime_root,
             runtime_root,
         ):
             self.assertIn(json.dumps(str(runtime)), filesystem)

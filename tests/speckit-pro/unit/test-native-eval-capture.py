@@ -17,6 +17,7 @@ from native_eval_capture import (
     CaptureError,
     _claude_continuation_bridge,
     file_accesses,
+    file_search_results,
     normalize_trace,
 )
 from native_eval_fixture_reads import bind_controller_fixture_read_witnesses
@@ -369,6 +370,122 @@ class NativeCaptureTests(unittest.TestCase):
         ))
         self.assertEqual(result, original)
 
+class NativeCaptureEvidenceRepairTests(unittest.TestCase):
+    def test_codex_safe_compound_reads_preserve_full_read_evidence(self):
+        command = (
+            "/bin/zsh -c \"printf '%s\\n' 'INPUTS' && sed -n '1,999p' plan.md "
+            "&& find docs -maxdepth 3 -type f -print | sort\""
+        )
+        content = "plan line one\nplan line two\n"
+        events = codex_command_events(command)
+        events[3]["item"]["aggregated_output"] = (
+            "INPUTS\n" + content + "docs/plan.md\n"
+        )
+        result = bind_controller_fixture_read_witnesses(
+            normalize_trace("codex", stream(events)),
+            {"plan.md": {
+                "bytes": len(content.encode("utf-8")),
+                "sha256": hashlib.sha256(content.encode("utf-8")).hexdigest(),
+            }},
+        )
+        accesses = file_accesses(result)
+        self.assertTrue(any(
+            row["path"] == "plan.md"
+            and row.get("provenance", {}).get("kind") == "compound_bounded_sed"
+            for row in accesses
+        ))
+
+    def test_codex_compound_reads_reject_forged_partial_and_arbitrary_shell(self):
+        content = "one\ntwo\n"
+        encoded = content.encode("utf-8")
+        witness = {"plan.md": {
+            "bytes": len(encoded), "sha256": hashlib.sha256(encoded).hexdigest(),
+        }}
+        variants = (
+            ("sed -n '1,1p' plan.md", "one\n"),
+            ("sed -n '1,999p' plan.md", "one\nforged\n"),
+            ("sed -n '1,999p' plan.md && python3 helper.py", content),
+            ("sed -n '1,999p' plan.md > copy.md", content),
+            ("sed -n '1,999p' plan.md | head -1", "one\n"),
+            ("sed -n '1,999p' $(printf plan.md)", content),
+        )
+        for command, output in variants:
+            with self.subTest(command=command):
+                events = codex_command_events(command)
+                events[3]["item"]["aggregated_output"] = output
+                result = bind_controller_fixture_read_witnesses(
+                    normalize_trace("codex", stream(events)), witness,
+                )
+                self.assertEqual(file_accesses(result), [])
+
+class NativeCaptureProjectionTests(unittest.TestCase):
+    def test_codex_jq_identity_and_nl_are_full_reads_but_jq_projection_is_not(self):
+        for command, expected in (
+            ("jq . input.json", "input.json"),
+            ("jq -- . nested/input.json", "nested/input.json"),
+            ("nl -ba docs/plan.md", "docs/plan.md"),
+        ):
+            with self.subTest(command=command):
+                result = normalize_trace("codex", stream(codex_command_events(command)))
+                self.assertEqual(file_accesses(result), [{
+                    "operation": "read_file", "path": expected, "tool_call_index": 0,
+                }])
+        projected = normalize_trace(
+            "codex", stream(codex_command_events("jq '{id: .id}' input.json")),
+        )
+        self.assertEqual(file_accesses(projected), [])
+
+class NativeCaptureScopedSearchTests(unittest.TestCase):
+    def test_codex_rg_files_uses_only_controller_project_scope(self):
+        command = "/bin/zsh -c \"rg --files -g '*roadmap*' -g '*workflow*' .\""
+        events = codex_command_events(command)
+        events[3]["item"]["aggregated_output"] = (
+            "./docs/current-technical-roadmap.md\n"
+            ".agents/skills/runtime-roadmap.md\n"
+        )
+        result = bind_controller_fixture_read_witnesses(
+            normalize_trace("codex", stream(events)),
+            {
+                "README.md": {
+                    "bytes": len(b"readme\n"),
+                    "sha256": hashlib.sha256(b"readme\n").hexdigest(),
+                },
+                "docs/current-technical-roadmap.md": {
+                    "bytes": len(b"roadmap\n"),
+                    "sha256": hashlib.sha256(b"roadmap\n").hexdigest(),
+                },
+            },
+        )
+        rows = file_search_results(result, host="codex")
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["paths"], ["docs/current-technical-roadmap.md"])
+        self.assertEqual(rows[0]["scope"], "controller-project-artifacts")
+
+    def test_codex_rg_files_rejects_partial_wrong_scope_and_failed_results(self):
+        command = "rg --files -g '*roadmap*' ."
+        witnesses = {
+            "docs/current-roadmap.md": {
+                "bytes": len(b"one\n"), "sha256": hashlib.sha256(b"one\n").hexdigest(),
+            },
+            "docs/next-roadmap.md": {
+                "bytes": len(b"two\n"), "sha256": hashlib.sha256(b"two\n").hexdigest(),
+            },
+        }
+        for output, status, exit_code in (
+            ("docs/current-roadmap.md\n", "completed", 0),
+            ("docs/current-roadmap.md\nprivate/forged-roadmap.md\n", "completed", 0),
+            ("docs/current-roadmap.md\ndocs/next-roadmap.md\n", "failed", 1),
+        ):
+            with self.subTest(output=output, status=status):
+                events = codex_command_events(command, status=status, exit_code=exit_code)
+                events[3]["item"]["aggregated_output"] = output
+                result = bind_controller_fixture_read_witnesses(
+                    normalize_trace("codex", stream(events)), witnesses,
+                )
+                self.assertEqual(file_search_results(result, host="codex"), [])
+
+
+class NativeCaptureContinuationTests(unittest.TestCase):
     def test_codex_unsupported_or_ambiguous_commands_are_not_read_evidence(self):
         commands = (
             "echo plan.md",
@@ -417,6 +534,7 @@ class NativeCaptureTests(unittest.TestCase):
         self.assertFalse(result["tool_calls"][0]["success"])
         self.assertEqual(result["tool_calls"][0]["input"], {"command": command})
 
+class NativeCaptureClaudePreludeTests(unittest.TestCase):
     def test_claude_successful_session_start_hook_prelude_is_preserved(self):
         events = claude_hook_prelude() + claude_events()
         events[2].update(session_id="hook-session", uuid="init")
@@ -466,6 +584,7 @@ class NativeCaptureTests(unittest.TestCase):
             with self.subTest(raw=raw.splitlines()[0]), self.assertRaises(CaptureError):
                 normalize_trace("codex", raw)
 
+class NativeCaptureActivationTests(unittest.TestCase):
     def test_claude_activation_requires_completed_skill_tool(self):
         result = normalize_trace("claude", stream(claude_events()))
         self.assertTrue(result["completed"])
@@ -1045,6 +1164,12 @@ class ClaudeCleanupEpilogueTests(unittest.TestCase):
 if __name__ == "__main__":
     suite = unittest.TestSuite((
         unittest.defaultTestLoader.loadTestsFromTestCase(NativeCaptureTests),
+        unittest.defaultTestLoader.loadTestsFromTestCase(NativeCaptureEvidenceRepairTests),
+        unittest.defaultTestLoader.loadTestsFromTestCase(NativeCaptureProjectionTests),
+        unittest.defaultTestLoader.loadTestsFromTestCase(NativeCaptureScopedSearchTests),
+        unittest.defaultTestLoader.loadTestsFromTestCase(NativeCaptureContinuationTests),
+        unittest.defaultTestLoader.loadTestsFromTestCase(NativeCaptureClaudePreludeTests),
+        unittest.defaultTestLoader.loadTestsFromTestCase(NativeCaptureActivationTests),
         unittest.defaultTestLoader.loadTestsFromTestCase(ClaudeContinuationTests),
         unittest.defaultTestLoader.loadTestsFromTestCase(NativeCaptureOwnershipTests),
         unittest.defaultTestLoader.loadTestsFromTestCase(ClaudeCleanupEpilogueTests),

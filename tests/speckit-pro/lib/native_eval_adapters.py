@@ -52,6 +52,7 @@ _ARTIFACT_TOTAL_LIMIT = 8 * 1024 * 1024
 _ARTIFACT_COUNT_LIMIT = 64
 _FIXTURE_RECEIPT_LIMIT = 64 * 1024
 _GIT_RUNTIME_SCHEMA_VERSION = "native-eval-git-runtime/v1"
+_PROTECTED_GIT_SCHEMA_VERSION = "native-eval-protected-git/v1"
 _PYTHON_RUNTIME_SCHEMA_VERSION = "native-eval-python-runtime/v1"
 _CLAUDE_DOCKER_CONFIG_SCHEMA_VERSION = "native-eval-claude-docker-config/v1"
 _CLAUDE_DOCKER_CONFIG_DIRECTORY = "docker-config"
@@ -295,18 +296,24 @@ def _base_environment() -> dict[str, str]:
     }
 
 
-def _probe_cli_version(executable: str) -> str:
+def _probe_executable_output(executable: str, argument: str, error: str) -> str:
     try:
         completed = subprocess.run(
-            [executable, "--version"], stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
+            [executable, argument], stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
             stderr=subprocess.PIPE, env=_base_environment(), shell=False, check=False, timeout=10,
         )
-        version = completed.stdout.decode("utf-8", errors="strict").strip()
+        output = completed.stdout.decode("utf-8", errors="strict").strip()
     except (OSError, subprocess.TimeoutExpired, UnicodeDecodeError) as exc:
-        raise NativeAdapterError("native CLI version could not be established") from exc
-    if completed.returncode != 0 or not version:
-        raise NativeAdapterError("native CLI version could not be established")
-    return version
+        raise NativeAdapterError(error) from exc
+    if completed.returncode != 0 or not output or "\n" in output:
+        raise NativeAdapterError(error)
+    return output
+
+
+def _probe_cli_version(executable: str) -> str:
+    return _probe_executable_output(
+        executable, "--version", "native CLI version could not be established",
+    )
 
 
 def _codex_helpers() -> object:
@@ -529,84 +536,116 @@ def _write_json(path: Path, value: object) -> None:
     _write_text(path, json.dumps(value, sort_keys=True, indent=2, ensure_ascii=False) + "\n")
 
 
+def _stage_fixture_records(
+    value: object, namespace: str, repo_root: Path, tests_root: Path, source_root: Path,
+) -> list[dict[str, str]]:
+    _require(isinstance(value, list), "case fixtures are malformed")
+    records: list[dict[str, str]] = []
+    for index, fixture in enumerate(value):
+        _require(isinstance(fixture, dict) and set(fixture) == {"source", "destination"},
+                 "case fixture is malformed")
+        source_value, destination_value = fixture["source"], fixture["destination"]
+        _require(isinstance(source_value, str) and isinstance(destination_value, str),
+                 "case fixture paths are malformed")
+        source_relative = PurePosixPath(source_value)
+        destination = PurePosixPath(destination_value)
+        _require(source_relative.parts[:2] == ("tests", "speckit-pro"),
+                 "case fixture source must be under tests/speckit-pro")
+        _require(not source_relative.is_absolute() and source_relative.as_posix() == source_value
+                 and all(part not in {"", ".", ".."} for part in source_relative.parts),
+                 "case fixture source must be canonical relative")
+        _require(not destination.is_absolute() and destination.as_posix() == destination_value
+                 and all(part not in {"", ".", ".."} for part in destination.parts),
+                 "case fixture destination must be canonical relative")
+        try:
+            source = repo_root.joinpath(*source_relative.parts).resolve(strict=True)
+        except OSError as exc:
+            raise ValueError(f"case fixture source is unavailable: {source_value}") from exc
+        _require(source.is_relative_to(tests_root) and source.is_file(),
+                 "case fixture source escaped tests/speckit-pro")
+        payload = source.read_bytes()
+        staged_name = f"{index:04d}.fixture"
+        staged_relative = f"{namespace}/{staged_name}" if namespace else staged_name
+        staged = source_root.joinpath(*PurePosixPath(staged_relative).parts)
+        staged.parent.mkdir(parents=True, exist_ok=True)
+        with staged.open("xb") as stream:
+            stream.write(payload)
+        staged.chmod(0o600)
+        records.append({
+            "source": staged_relative, "destination": destination.as_posix(),
+            "sha256": hashlib.sha256(payload).hexdigest(),
+        })
+    return records
+
+
+def _git_fixture_plan(
+    git_fixture: object, fixtures: object,
+    repo_root: Path, tests_root: Path, source_root: Path,
+) -> dict[str, object]:
+    _require(isinstance(git_fixture, dict) and set(git_fixture) in (
+        {"recipe", "baseline"},
+        {"recipe", "baseline", "worktrees"},
+        {"recipe", "baseline", "feature_deletions"},
+        {"recipe", "baseline", "feature_deletions", "worktrees"},
+    ), "case git_fixture is malformed")
+    _require(git_fixture["recipe"] == fixture_setup.GIT_FIXTURE_RECIPE,
+             "case git_fixture has an unsupported recipe")
+    baseline = _stage_fixture_records(
+        git_fixture["baseline"], "baseline", repo_root, tests_root, source_root,
+    )
+    _require(bool(baseline), "case git_fixture baseline must be nonempty")
+    feature = _stage_fixture_records(fixtures, "feature", repo_root, tests_root, source_root)
+    feature_deletions = _git_feature_deletions(git_fixture)
+    _require(bool(feature) or bool(feature_deletions),
+             "case git feature overlay must be nonempty")
+    git_repository = {"recipe": fixture_setup.GIT_FIXTURE_RECIPE, "baseline": baseline}
+    if feature_deletions:
+        git_repository["feature_deletions"] = list(feature_deletions)
+    if "worktrees" in git_fixture:
+        git_repository["worktrees"] = fixture_setup._worktree_records(git_fixture["worktrees"])
+    return {
+        "schema_version": fixture_setup.GIT_SCHEMA_VERSION,
+        "source_root": "fixture-sources", "fixtures": feature,
+        "git_repository": git_repository,
+    }
+
+
 def _stage_fixture_plan(case: Mapping[str, object], repo_root: Path, plan_dir: Path) -> tuple[dict[str, object], Path]:
     tests_root = (repo_root / "tests" / "speckit-pro").resolve(strict=True)
     source_root = plan_dir / "fixture-sources"
     source_root.mkdir(mode=0o700)
-    def stage_records(value: object, namespace: str) -> list[dict[str, str]]:
-        _require(isinstance(value, list), "case fixtures are malformed")
-        records: list[dict[str, str]] = []
-        for index, fixture in enumerate(value):
-            _require(isinstance(fixture, dict) and set(fixture) == {"source", "destination"},
-                     "case fixture is malformed")
-            source_value, destination_value = fixture["source"], fixture["destination"]
-            _require(isinstance(source_value, str) and isinstance(destination_value, str),
-                     "case fixture paths are malformed")
-            source_relative = PurePosixPath(source_value)
-            destination = PurePosixPath(destination_value)
-            _require(source_relative.parts[:2] == ("tests", "speckit-pro"),
-                     "case fixture source must be under tests/speckit-pro")
-            _require(not source_relative.is_absolute() and source_relative.as_posix() == source_value
-                     and all(part not in {"", ".", ".."} for part in source_relative.parts),
-                     "case fixture source must be canonical relative")
-            _require(not destination.is_absolute() and destination.as_posix() == destination_value
-                     and all(part not in {"", ".", ".."} for part in destination.parts),
-                     "case fixture destination must be canonical relative")
-            try:
-                source = repo_root.joinpath(*source_relative.parts).resolve(strict=True)
-            except OSError as exc:
-                raise ValueError(f"case fixture source is unavailable: {source_value}") from exc
-            _require(source.is_relative_to(tests_root) and source.is_file(),
-                     "case fixture source escaped tests/speckit-pro")
-            payload = source.read_bytes()
-            staged_name = f"{index:04d}.fixture"
-            staged_relative = f"{namespace}/{staged_name}" if namespace else staged_name
-            staged = source_root.joinpath(*PurePosixPath(staged_relative).parts)
-            staged.parent.mkdir(parents=True, exist_ok=True)
-            with staged.open("xb") as stream:
-                stream.write(payload)
-            staged.chmod(0o600)
-            records.append({
-                "source": staged_relative,
-                "destination": destination.as_posix(),
-                "sha256": hashlib.sha256(payload).hexdigest(),
-            })
-        return records
-
     fixtures = case.get("fixtures")
     git_fixture = case.get("git_fixture")
     if git_fixture is None:
         plan = {
             "schema_version": fixture_setup.SCHEMA_VERSION,
             "source_root": "fixture-sources",
-            "fixtures": stage_records(fixtures, ""),
+            "fixtures": _stage_fixture_records(
+                fixtures, "", repo_root, tests_root, source_root,
+            ),
         }
     else:
-        _require(isinstance(git_fixture, dict) and set(git_fixture) in (
-            {"recipe", "baseline"}, {"recipe", "baseline", "worktrees"},
-        ),
-                 "case git_fixture is malformed")
-        _require(git_fixture["recipe"] == fixture_setup.GIT_FIXTURE_RECIPE,
-                 "case git_fixture has an unsupported recipe")
-        baseline = stage_records(git_fixture["baseline"], "baseline")
-        _require(bool(baseline), "case git_fixture baseline must be nonempty")
-        feature = stage_records(fixtures, "feature")
-        _require(bool(feature), "case git fixtures must be nonempty")
-        git_repository = {
-            "recipe": fixture_setup.GIT_FIXTURE_RECIPE,
-            "baseline": baseline,
-        }
-        if "worktrees" in git_fixture:
-            git_repository["worktrees"] = fixture_setup._worktree_records(git_fixture["worktrees"])
-        plan = {
-            "schema_version": fixture_setup.GIT_SCHEMA_VERSION,
-            "source_root": "fixture-sources",
-            "fixtures": feature,
-            "git_repository": git_repository,
-        }
+        plan = _git_fixture_plan(
+            git_fixture, fixtures, repo_root, tests_root, source_root,
+        )
     plan_path = plan_dir / "fixture-plan.json"
     _write_json(plan_path, plan)
     return plan, plan_path
+
+
+def _git_feature_deletions(git_fixture: Mapping[str, object]) -> list[str]:
+    values = git_fixture.get("feature_deletions", [])
+    _require(isinstance(values, list)
+             and ("feature_deletions" not in git_fixture or bool(values))
+             and all(isinstance(item, str) for item in values)
+             and len(values) == len(set(values)),
+             "case git_fixture feature_deletions are malformed")
+    for value in values:
+        deletion = PurePosixPath(value)
+        _require(not deletion.is_absolute() and deletion.as_posix() == value
+                 and all(part not in {"", ".", ".."} for part in deletion.parts),
+                 "case git_fixture feature_deletion must be canonical relative")
+    return values
 
 
 def _fixture_read_witnesses(case: Mapping[str, object], plan_path: Path) -> dict[str, dict[str, object]]:
@@ -1409,6 +1448,115 @@ def _protected_python_runtime() -> tuple[Path, dict[str, object]]:
     return executable, identity
 
 
+def _protected_git_source() -> tuple[Path, Path, dict[str, object]]:
+    """Resolve a real Git binary and its exact helper directory without a shim."""
+    discovered = shutil.which("git")
+    _require(isinstance(discovered, str) and bool(discovered),
+             "protected Git runtime is unavailable")
+    try:
+        candidate = Path(discovered).resolve(strict=True)
+    except OSError as exc:
+        raise NativeAdapterError("protected Git runtime is unavailable") from exc
+
+    error = "protected Git runtime could not be established"
+    exec_path = Path(_probe_executable_output(str(candidate), "--exec-path", error))
+    _require(exec_path.is_absolute(), "protected Git exec path is not absolute")
+    try:
+        exec_path = exec_path.resolve(strict=True)
+    except OSError as exc:
+        raise NativeAdapterError("protected Git exec path is unavailable") from exc
+    direct_candidate = exec_path.parent.parent / "bin" / "git"
+    source = direct_candidate if direct_candidate.is_file() else candidate
+    try:
+        source = source.resolve(strict=True)
+        source_status = source.lstat()
+        exec_path_status = exec_path.lstat()
+    except OSError as exc:
+        raise NativeAdapterError("protected Git runtime is unavailable") from exc
+    owner = getattr(os, "getuid", lambda: source_status.st_uid)()
+    writable_mask = stat.S_IWGRP | stat.S_IWOTH
+    _require(stat.S_ISREG(source_status.st_mode) and os.access(source, os.X_OK)
+             and source_status.st_uid in {0, owner}
+             and not source_status.st_mode & writable_mask,
+             "protected Git executable ownership or mode is unsafe")
+    _require(stat.S_ISDIR(exec_path_status.st_mode) and not stat.S_ISLNK(exec_path_status.st_mode)
+             and exec_path_status.st_uid in {0, owner}
+             and not exec_path_status.st_mode & writable_mask,
+             "protected Git exec path ownership or mode is unsafe")
+    _require(Path(_probe_executable_output(str(source), "--exec-path", error)
+                  ).resolve(strict=True) == exec_path,
+             "protected Git executable does not use the pinned exec path")
+    version = _probe_executable_output(str(source), "--version", error)
+    try:
+        payload = source.read_bytes()
+    except OSError as exc:
+        raise NativeAdapterError("protected Git executable bytes cannot be read") from exc
+    identity: dict[str, object] = {
+        "schema_version": _PROTECTED_GIT_SCHEMA_VERSION,
+        "source_executable": str(source),
+        "source_sha256": hashlib.sha256(payload).hexdigest(),
+        "source_owner": source_status.st_uid,
+        "source_mode": stat.S_IMODE(source_status.st_mode),
+        "exec_path": str(exec_path),
+        "exec_path_owner": exec_path_status.st_uid,
+        "exec_path_mode": stat.S_IMODE(exec_path_status.st_mode),
+        "version": version,
+    }
+    return source, exec_path, identity
+
+
+def _stage_protected_git(workspace: Path) -> tuple[Path, Path, dict[str, object]]:
+    source, exec_path, identity = _protected_git_source()
+    relative = PurePosixPath(".codex", "native-eval-git-bin", "git")
+    launcher = workspace.joinpath(*relative.parts)
+    _require(not launcher.exists() and not launcher.is_symlink(),
+             "protected Git launcher already exists")
+    launcher.parent.mkdir(mode=0o700)
+    try:
+        shutil.copyfile(source, launcher)
+        launcher.chmod(0o500)
+        staged_status = launcher.lstat()
+        staged_payload = launcher.read_bytes()
+    except OSError as exc:
+        raise NativeAdapterError("protected Git launcher could not be staged") from exc
+    _require(stat.S_ISREG(staged_status.st_mode) and not stat.S_ISLNK(staged_status.st_mode)
+             and staged_status.st_nlink == 1 and stat.S_IMODE(staged_status.st_mode) == 0o500
+             and os.access(launcher, os.X_OK)
+             and hashlib.sha256(staged_payload).hexdigest() == identity["source_sha256"],
+             "protected Git launcher is unsafe")
+    return launcher, exec_path, {
+        **identity,
+        "launcher_relative": relative.as_posix(),
+        "launcher_mode": 0o500,
+    }
+
+
+def _verify_protected_git(workspace: Path, identity: object) -> None:
+    _require(isinstance(identity, dict) and set(identity) == {
+        "schema_version", "source_executable", "source_sha256", "source_owner",
+        "source_mode", "exec_path", "exec_path_owner", "exec_path_mode", "version",
+        "launcher_relative", "launcher_mode",
+    }, "prepared protected Git identity is malformed")
+    source, exec_path, current = _protected_git_source()
+    _require(identity == {
+        **current,
+        "launcher_relative": ".codex/native-eval-git-bin/git",
+        "launcher_mode": 0o500,
+    }, "prepared protected Git source changed after admission")
+    launcher = workspace.joinpath(*PurePosixPath(identity["launcher_relative"]).parts)
+    try:
+        status = launcher.lstat()
+        payload = launcher.read_bytes()
+    except OSError as exc:
+        raise NativeAdapterError("prepared protected Git launcher is unavailable") from exc
+    _require(source.is_file() and exec_path.is_dir()
+             and stat.S_ISREG(status.st_mode) and not stat.S_ISLNK(status.st_mode)
+             and status.st_nlink == 1 and stat.S_IMODE(status.st_mode) == identity["launcher_mode"]
+             and os.access(launcher, os.X_OK)
+             and hashlib.sha256(payload).hexdigest() == identity["source_sha256"],
+             "prepared protected Git launcher changed after admission")
+
+
 def _is_broad_temporary_root(path: Path) -> bool:
     candidates = {Path(tempfile.gettempdir())}
     if os.name == "posix":
@@ -1464,8 +1612,11 @@ def _sandbox_probe_command(
 
 def _require_probe_result(
     completed: subprocess.CompletedProcess[bytes], *, label: str,
-    expected_payload: bytes | None = None, denied: bool = False,
+    expected_payload: bytes | None = None, expected_prefix: bytes | None = None,
+    denied: bool = False,
 ) -> None:
+    _require(expected_payload is None or expected_prefix is None,
+             f"Codex native sandbox {label} probe expectation is ambiguous")
     _require(isinstance(completed, subprocess.CompletedProcess)
              and isinstance(completed.returncode, int)
              and isinstance(completed.stdout, bytes)
@@ -1482,7 +1633,9 @@ def _require_probe_result(
                  and _ISOLATION_DENIAL.search(completed.stderr) is not None,
                  f"Codex native sandbox did not enforce {label} denial")
         return
-    _require(completed.returncode == 0 and completed.stdout == expected_payload,
+    output_matches = (completed.stdout.startswith(expected_prefix)
+                      if expected_prefix is not None else completed.stdout == expected_payload)
+    _require(completed.returncode == 0 and output_matches,
              f"Codex native sandbox failed the {label} control")
 
 
@@ -1724,6 +1877,7 @@ def _qualify_codex_isolation(
     evidence_root: str | Path | None, repo_root: Path, attempt: Path,
     runtime_executable: Path | None = None, runtime_version: tuple[int, int] | None = None,
     toolchain_probe: tuple[Path, str] | None = None,
+    git_probe: Path | None = None,
     git_metadata_access: str | None = None,
 ) -> dict[str, object]:
     """Qualify the exact local profile without contacting a model provider."""
@@ -1868,6 +2022,21 @@ def _qualify_codex_isolation(
                 expected_payload=f"{expected_version}\n".encode("utf-8"),
             )
             checks.append({"name": "native-tool-specify", "outcome": "allowed"})
+
+        if git_probe is not None:
+            _require(git_probe.is_absolute() and git_probe.is_relative_to(workspace),
+                     "Codex protected Git probe is malformed")
+            completed = _run_codex_sandbox_probe(
+                _sandbox_probe_command(
+                    executable, permission_name, permission_args, workspace,
+                    str(git_probe), arguments=("worktree", "list", "--porcelain"),
+                ), cwd=workspace, environment=environment,
+            )
+            _require_probe_result(
+                completed, label="protected-git-worktree-list",
+                expected_prefix=f"worktree {workspace}\n".encode("utf-8"),
+            )
+            checks.append({"name": "protected-git-worktree-list", "outcome": "allowed"})
 
     for path, expected in directory_identities.items():
         try:
@@ -2406,6 +2575,8 @@ def _prepare_codex(
         }
     git_settings: dict[str, object] | None = None
     git_subject_settings: dict[str, object] | None = None
+    protected_git: Path | None = None
+    protected_git_settings: dict[str, object] | None = None
     if git_result is not None:
         environment = {
             name: value for name, value in environment.items()
@@ -2430,6 +2601,16 @@ def _prepare_codex(
         git_environment, git_subject_settings = _codex_git_subject_environment(workspace)
         environment.update(git_environment)
         forwarded_environment.extend(git_environment)
+        protected_git, git_exec_path, protected_git_settings = _stage_protected_git(workspace)
+        environment["GIT_EXEC_PATH"] = str(git_exec_path)
+        forwarded_environment.append("GIT_EXEC_PATH")
+        protected_git_directory = str(protected_git.parent)
+        environment["PATH"] = os.pathsep.join([
+            protected_git_directory,
+            *(entry for entry in environment.get("PATH", "").split(os.pathsep)
+              if entry and entry != protected_git_directory),
+        ])
+        runtime_read_roots = tuple(dict.fromkeys([*runtime_read_roots, git_exec_path]))
     if prepared_toolchain is not None:
         environment.update(prepared_toolchain.environment)
         existing_path = [entry for entry in environment.get("PATH", "").split(os.pathsep) if entry]
@@ -2492,6 +2673,7 @@ def _prepare_codex(
             prepared_toolchain.launchers["specify"],
             prepared_toolchain.runtime_identity["tools"]["specify"]["version"],
         ) if prepared_toolchain is not None else None,
+        git_probe=protected_git,
         git_metadata_access=case.get("git_metadata_access"),
     )
     protected_control_trees = {
@@ -2542,6 +2724,8 @@ def _prepare_codex(
         **({"git_fixture": git_settings} if git_settings is not None else {}),
         **({"git_subject_environment": git_subject_settings}
            if git_subject_settings is not None else {}),
+        **({"protected_git": protected_git_settings}
+           if protected_git_settings is not None else {}),
         **({"skill_read_witnesses": skill_read_witnesses}
            if skill_read_witnesses is not None else {}),
         **({"trigger_measurement_instruction": {
@@ -3532,6 +3716,21 @@ def _verify_prepared_identity(prepared: PreparedTrial) -> None:
                 prepared_upstream.runtime_identity, prepared.cwd,
             )
     git_settings = _validated_git_fixture_settings(prepared)
+    protected_git_value = settings_value.get("protected_git")
+    _require((protected_git_value is not None)
+             == (git_settings is not None and prepared.host == "codex"),
+             "prepared protected Git declaration does not match the Codex Git fixture")
+    if protected_git_value is not None:
+        _verify_protected_git(prepared.cwd, protected_git_value)
+        _require(isinstance(protected_git_value, dict)
+                 and prepared.environment.get("GIT_EXEC_PATH")
+                 == protected_git_value.get("exec_path"),
+                 "prepared protected Git exec path changed after admission")
+        launcher = prepared.cwd.joinpath(*PurePosixPath(
+            protected_git_value["launcher_relative"]
+        ).parts)
+        _require(shutil.which("git", path=prepared.environment.get("PATH")) == str(launcher),
+                 "prepared protected Git launcher is not first on PATH")
     if git_settings is not None and prepared.host == "claude":
         receipt_path = _claude_fixture_receipt_path(prepared, git_settings)
         try:

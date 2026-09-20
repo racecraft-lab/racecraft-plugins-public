@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import hashlib
+import fnmatch
 import json
 from pathlib import PurePosixPath
 import re
+import shlex
 from typing import Any
 
 from native_eval_catalog import NATIVE_SYNTHESIS_MECHANISMS, _is_json_value, _unique_object
@@ -196,6 +198,53 @@ def _strict_json(text: str) -> object:
     )
 
 
+def _stage_relative_path(actual: object, expected: object, observation: dict[str, Any]) -> bool:
+    if not isinstance(actual, str) or not _canonical_path(expected):
+        return False
+    metadata = observation.get("native_metadata")
+    cwd = metadata.get("cwd") if isinstance(metadata, dict) else None
+    if not isinstance(cwd, str):
+        return False
+    actual_path, cwd_path = PurePosixPath(actual), PurePosixPath(cwd)
+    if (not actual_path.is_absolute() or not cwd_path.is_absolute()
+            or actual != actual_path.as_posix() or cwd != cwd_path.as_posix()
+            or any(part in {"", ".", ".."} for part in actual_path.parts[1:])
+            or any(part in {"", ".", ".."} for part in cwd_path.parts[1:])):
+        return False
+    try:
+        relative = actual_path.relative_to(cwd_path).as_posix()
+    except ValueError:
+        return False
+    return relative == expected
+
+
+def _structured_ids(actual: object) -> list[str] | None:
+    rows = actual.get("targets") if isinstance(actual, dict) and set(actual) == {"targets"} else actual
+    if (not isinstance(rows, list) or not rows
+            or not all(isinstance(row, dict) and isinstance(row.get("id"), str) for row in rows)):
+        return None
+    identifiers = [row["id"] for row in rows]
+    if any(not _STABLE_ID.fullmatch(identifier) for identifier in identifiers):
+        return None
+    return identifiers if len(set(identifiers)) == len(identifiers) else None
+
+
+def _response_equivalent(
+    actual: object, expected: object, observation: dict[str, Any],
+) -> bool:
+    if _strict_equal(actual, expected):
+        return True
+    if _stage_relative_path(actual, expected, observation):
+        return True
+    if (isinstance(expected, list) and expected
+            and all(isinstance(identifier, str) and _STABLE_ID.fullmatch(identifier)
+                    for identifier in expected)
+            and len(set(expected)) == len(expected)):
+        identifiers = _structured_ids(actual)
+        return identifiers is not None and sorted(identifiers) == sorted(expected)
+    return False
+
+
 def _json_field(check: dict[str, Any], observation: dict[str, Any]) -> tuple[str, str]:
     path = check["path"]
     if path not in observation["artifacts"]:
@@ -256,8 +305,8 @@ def _response_json_field(
                 value = value[part]
     except (KeyError, IndexError, TypeError):
         return "fail", "declared response JSON field is absent"
-    if _strict_equal(value, expected_by_host[host]):
-        return "pass", "response JSON field matched the trusted host expectation with strict type equality"
+    if _response_equivalent(value, expected_by_host[host], observation):
+        return "pass", "response JSON field matched the trusted host expectation"
     return "fail", "response JSON field value or type did not match the trusted host expectation"
 
 
@@ -265,6 +314,39 @@ def _input_text(value: object) -> str:
     if isinstance(value, str):
         return value
     return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False)
+
+
+_NON_INVOKING_COMMANDS = frozenset({
+    "cat", "find", "grep", "jq", "nl", "rg", "ripwire", "sed",
+})
+_COMMAND_SHELLS = frozenset({"sh", "bash", "zsh"})
+
+
+def _command_invocation_text(value: object) -> str:
+    """Return only an actual invocation, not a read/search command's query text."""
+    if not isinstance(value, dict) or set(value) != {"command"} \
+            or not isinstance(value.get("command"), str):
+        return _input_text(value)
+    command = value["command"]
+    try:
+        tokens = shlex.split(command, comments=False, posix=True)
+    except ValueError:
+        return _input_text(value)
+    if tokens and PurePosixPath(tokens[0]).name in _COMMAND_SHELLS:
+        if len(tokens) != 3 or tokens[1] != "-c":
+            return _input_text(value)
+        command = tokens[2]
+        try:
+            tokens = shlex.split(command, comments=False, posix=True)
+        except ValueError:
+            return _input_text(value)
+    if (not tokens or any(character in command for character in ";|&`")
+            or "$(" in command or "${" in command):
+        return _input_text(value)
+    executable = PurePosixPath(tokens[0]).name
+    if executable in _NON_INVOKING_COMMANDS:
+        return executable
+    return command
 
 
 def _tool_used(check: dict[str, Any], observation: dict[str, Any]) -> tuple[str, str]:
@@ -277,7 +359,14 @@ def _tool_used(check: dict[str, Any], observation: dict[str, Any]) -> tuple[str,
     ]
     if "input_regex" in check:
         try:
-            matches = [call for call in matches if re.search(check["input_regex"], _input_text(call["input"])) is not None]
+            matches = [
+                call for call in matches
+                if re.search(
+                    check["input_regex"],
+                    _command_invocation_text(call["input"])
+                    if call["name"] == "command_execution" else _input_text(call["input"]),
+                ) is not None
+            ]
         except re.error as exc:
             return "invalid", f"catalog tool input pattern is invalid: {exc}"
     count = len(matches)
@@ -964,13 +1053,41 @@ def _file_access(check: dict[str, Any], observation: dict[str, Any]) -> tuple[st
     return "fail", f"no supported successful exact-path unbounded read operation for {check['path']} was observed"
 
 
+def _glob_terms(pattern: str) -> set[str]:
+    return {
+        term.lower() for term in re.findall(r"[A-Za-z0-9]+", PurePosixPath(pattern).name)
+        if len(term) >= 3 and term.lower() not in {"md", "json", "yaml", "yml"}
+    }
+
+
+def _scoped_search_matches(check: dict[str, Any], row: dict[str, object]) -> bool:
+    if (row.get("scope") != "controller-project-artifacts"
+            or not isinstance(row.get("patterns"), list)
+            or not all(isinstance(pattern, str) for pattern in row["patterns"])
+            or not isinstance(row.get("paths"), list)
+            or not isinstance(row.get("project_artifacts"), list)):
+        return False
+    expected_terms = _glob_terms(check["pattern"])
+    query_terms = set().union(*(_glob_terms(pattern) for pattern in row["patterns"]))
+    if not expected_terms or not expected_terms & query_terms:
+        return False
+    authoritative = sorted(
+        path for path in row["project_artifacts"]
+        if fnmatch.fnmatchcase(PurePosixPath(path).name, check["pattern"][3:])
+    )
+    return authoritative == sorted(check["matches"]) \
+        and set(check["matches"]) <= set(row["paths"])
+
+
 def _file_search(check: dict[str, Any], observation: dict[str, Any], host: str) -> tuple[str, str]:
     try:
         _validate_file_search_check(check, "direct-grade", str(check.get("id")))
     except (ValueError, TypeError):
         return "invalid", "catalog file search check is malformed"
     matched = any(
-        row["pattern"] == check["pattern"] and row["paths"] == sorted(check["matches"])
+        (row.get("pattern") == check["pattern"]
+         and row.get("paths") == sorted(check["matches"]))
+        or _scoped_search_matches(check, row)
         for row in file_search_results(observation, host=host)
     )
     if matched:

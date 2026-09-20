@@ -563,6 +563,10 @@ class AdapterPreparationTests(unittest.TestCase):
         target = Path(command[-1])
         if program.endswith("python3.11"):
             return subprocess.CompletedProcess(command, 0, b"3.11\n", b"")
+        if program.endswith("/.codex/native-eval-git-bin/git"):
+            return subprocess.CompletedProcess(
+                command, 0, f"worktree {cwd}\nHEAD {'1' * 40}\n\n".encode(), b"",
+            )
         if program.endswith("cat") and target == cwd / ".codex/native-eval-isolation-control.txt":
             return subprocess.CompletedProcess(command, 0, adapters._ISOLATION_CONTROL, b"")
         if program.endswith("mkdir") and target.parent == cwd:
@@ -797,6 +801,64 @@ class AdapterPreparationTests(unittest.TestCase):
                 evidence_root=other_store,
             )
         self.assertNotEqual(prepared.runtime_identity, output_root_changed.runtime_identity)
+
+    @unittest.skipUnless(NATIVE_CODEX_SANDBOX_PROBES, "requires native POSIX sandbox probes")
+    def test_codex_git_fixture_stages_and_qualifies_protected_real_git(self) -> None:
+        store, attempt = self.isolation_store("qualified-git-store")
+        codex_home = self.temp / "qualified-git-home"
+        codex_home.mkdir()
+        helpers = mock.Mock()
+        helpers.codex_executable.return_value = str(Path(sys.executable).resolve())
+        helpers.enumerate_non_target_skills.return_value = ()
+        helpers.skill_isolation_args.return_value = []
+        helpers.codex_environment.side_effect = lambda workspace: {
+            "PATH": os.environ["PATH"], "HOME": str(workspace),
+            "CODEX_HOME": str(codex_home),
+        }
+        with mock.patch.object(adapters, "_codex_helpers", return_value=helpers), \
+                mock.patch.object(adapters, "_qualify_codex_isolation", self.real_isolation_qualifier), \
+                mock.patch.object(adapters, "_is_broad_temporary_root", return_value=False), \
+                mock.patch.object(adapters, "_run_codex_sandbox_probe", side_effect=self.successful_sandbox_probe):
+            prepared = adapters.prepare_trial(
+                git_native_case(self.repo), "codex", "project", self.repo,
+                attempt, "gpt-5.6-sol", evidence_root=store,
+            )
+        settings = prepared.runtime_identity["settings"]
+        protected = settings["protected_git"]
+        launcher = prepared.cwd / protected["launcher_relative"]
+        self.assertTrue(launcher.is_file())
+        self.assertFalse(launcher.is_symlink())
+        self.assertEqual(stat.S_IMODE(launcher.stat().st_mode), 0o500)
+        self.assertEqual(hashlib.sha256(launcher.read_bytes()).hexdigest(),
+                         protected["source_sha256"])
+        self.assertEqual(prepared.environment["GIT_EXEC_PATH"], protected["exec_path"])
+        self.assertEqual(shutil.which("git", path=prepared.environment["PATH"]), str(launcher))
+        self.assertIn("GIT_EXEC_PATH=", next(
+            prepared.command[index + 1]
+            for index, argument in enumerate(prepared.command[:-1])
+            if argument == "--config"
+            and prepared.command[index + 1].startswith("shell_environment_policy.set=")
+        ))
+        qualification = settings["isolation_qualification"]
+        self.assertIn(
+            {"name": "protected-git-worktree-list", "outcome": "allowed"},
+            qualification["probes"],
+        )
+        filesystem = next(
+            prepared.command[index + 1]
+            for index, argument in enumerate(prepared.command[:-1])
+            if argument == "--config"
+            and prepared.command[index + 1].startswith(
+                "permissions.native-eval-write.filesystem="
+            )
+        )
+        self.assertIn(f'{json.dumps(protected["exec_path"])}="read"', filesystem)
+        self.assertNotIn(f'{json.dumps(str(Path(protected["exec_path"]).parent))}=', filesystem)
+
+        launcher.chmod(0o700)
+        launcher.write_bytes(b"tampered")
+        with self.assertRaisesRegex(ValueError, "protected Git launcher"):
+            adapters._verify_prepared_identity(prepared)
 
     @unittest.skipUnless(NATIVE_CODEX_SANDBOX_PROBES, "requires native POSIX sandbox probes")
     def test_read_only_isolation_requires_denied_workspace_write_without_creation(self) -> None:
@@ -3000,6 +3062,34 @@ class AdapterPreparationTests(unittest.TestCase):
         )
         self.assertNotIn("git_fixture", prepared.runtime_identity["settings"])
         self.assertNotIn("staged_tree_exclusions", prepared.runtime_identity)
+
+    def test_git_feature_deletions_are_canonical_identity_not_staged_bytes(self) -> None:
+        value = git_native_case(self.repo)
+        value["fixtures"] = []
+        value["git_fixture"]["feature_deletions"] = ["workflow.md"]
+        plan_dir = self.temp / "feature-deletion-plan"
+        plan_dir.mkdir()
+        plan, plan_path = adapters._stage_fixture_plan(value, self.repo, plan_dir)
+        self.assertEqual(plan["fixtures"], [])
+        self.assertEqual(plan["git_repository"]["feature_deletions"], ["workflow.md"])
+        self.assertEqual(json.loads(plan_path.read_text()), plan)
+        self.assertFalse((plan_dir / "fixture-sources" / "feature").exists())
+
+        for label, deletions in (
+            ("empty", []),
+            ("duplicate", ["workflow.md", "workflow.md"]),
+            ("absolute", ["/workflow.md"]),
+            ("parent", ["../workflow.md"]),
+            ("noncanonical", ["nested/../workflow.md"]),
+        ):
+            with self.subTest(label=label):
+                malformed = git_native_case(self.repo)
+                malformed["fixtures"] = []
+                malformed["git_fixture"]["feature_deletions"] = deletions
+                malformed_dir = self.temp / f"feature-deletion-{label}"
+                malformed_dir.mkdir()
+                with self.assertRaisesRegex(ValueError, "feature_deletion"):
+                    adapters._stage_fixture_plan(malformed, self.repo, malformed_dir)
 
     def test_v2_git_fixture_codex_identity_is_semantic_and_relocatable(self) -> None:
         case = git_native_case(self.repo)

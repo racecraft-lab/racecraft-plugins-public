@@ -14,7 +14,12 @@ import shlex
 from typing import Any, Mapping
 
 from native_eval_catalog import _relative_path, _search_glob, _unique_object
-from native_eval_fixture_reads import bound_fixture_read_witnesses, fixture_read_accesses
+from native_eval_fixture_reads import (
+    bound_fixture_read_witnesses,
+    bound_project_artifact_paths,
+    codex_unbounded_read_paths,
+    fixture_read_accesses,
+)
 
 
 class CaptureError(ValueError):
@@ -91,7 +96,7 @@ def _codex_cat_path(tokens: list[str], command: str) -> str | None:
         return None
     if len(tokens) == 2:
         return _safe_codex_operand(tokens[1], option_terminated=False)
-    if len(tokens) == 3 and tokens[1] == "--":
+    if len(tokens) == 3 and tokens[1] == "--" and tokens[2] != "-":
         return _safe_codex_operand(tokens[2], option_terminated=True)
     return None
 
@@ -139,6 +144,9 @@ def _codex_read_paths(command: object) -> list[str]:
     counted_read = _codex_count_then_sed_path(command)
     if counted_read is not None:
         return [counted_read]
+    projected = codex_unbounded_read_paths(command)
+    if projected:
+        return list(projected)
     tokens = _codex_tokens(command)
     if tokens is None or not isinstance(command, str):
         return []
@@ -150,6 +158,100 @@ def _codex_read_paths(command: object) -> list[str]:
     else:
         path = _codex_cat_path(tokens, command) or _codex_sed_path(tokens, command)
     return [path] if path is not None else []
+
+
+_CODEX_RG = frozenset({"rg", "/usr/bin/rg", "/opt/homebrew/bin/rg"})
+_INJECTED_RUNTIME_ROOTS = frozenset({".agents", ".codex/agents", ".codex-trigger-runtime"})
+
+
+def _unwrapped_codex_tokens(command: object) -> list[str] | None:
+    tokens = _codex_tokens(command)
+    if not tokens or tokens[0] not in _CODEX_SHELLS:
+        return tokens
+    return _codex_tokens(tokens[2]) if len(tokens) == 3 and tokens[1] == "-c" else None
+
+
+def _consume_rg_glob(arguments: list[str]) -> tuple[str | None, list[str]] | None:
+    token, remaining = arguments[0], arguments[1:]
+    if token == "--hidden":
+        return None, remaining
+    if token in {"-g", "--glob"} and remaining:
+        return remaining[0], remaining[1:]
+    if token.startswith("--glob="):
+        return token.removeprefix("--glob="), remaining
+    return None
+
+
+def _canonical_rg_glob(glob: str) -> tuple[bool, str] | None:
+    if (not glob or glob == "!" or "\\" in glob or glob.startswith("/")
+            or ".." in PurePosixPath(glob).parts or glob.startswith("!!")):
+        return None
+    return (True, glob[1:]) if glob.startswith("!") and len(glob) > 1 else (False, glob)
+
+
+def _rg_globs(tokens: list[str]) -> tuple[tuple[str, ...], tuple[str, ...]] | None:
+    arguments = tokens[2:]
+    if arguments[-1:] == ["."]:
+        arguments = arguments[:-1]
+    includes: list[str] = []
+    excludes: list[str] = []
+    while arguments:
+        consumed = _consume_rg_glob(arguments)
+        if consumed is None:
+            return None
+        glob, arguments = consumed
+        if glob is None:
+            continue
+        canonical = _canonical_rg_glob(glob)
+        if canonical is None:
+            return None
+        excluded, pattern = canonical
+        (excludes if excluded else includes).append(pattern)
+    return (tuple(includes), tuple(excludes)) if includes else None
+
+
+def _rg_files_query(command: object) -> tuple[tuple[str, ...], tuple[str, ...]] | None:
+    """Parse one side-effect-free, root-recursive ``rg --files`` projection."""
+    tokens = _unwrapped_codex_tokens(command)
+    if not tokens or tokens[0] not in _CODEX_RG or tokens[1:2] != ["--files"]:
+        return None
+    return _rg_globs(tokens)
+
+
+def _rg_matches(path: str, pattern: str) -> bool:
+    if "/" in pattern:
+        return fnmatch.fnmatchcase(path, pattern)
+    return fnmatch.fnmatchcase(PurePosixPath(path).name, pattern)
+
+
+def _scoped_rg_result(
+    output: object,
+    includes: tuple[str, ...],
+    excludes: tuple[str, ...],
+    project_artifacts: tuple[str, ...],
+) -> list[str] | None:
+    if not isinstance(output, str):
+        return None
+    selected = sorted(
+        path for path in project_artifacts
+        if any(_rg_matches(path, pattern) for pattern in includes)
+        and not any(_rg_matches(path, pattern) for pattern in excludes)
+    )
+    observed: list[str] = []
+    for value in output.splitlines():
+        if value.startswith("./"):
+            value = value[2:]
+        path = _canonical_relative_file(value)
+        if path is None:
+            return None
+        if any(path == root or path.startswith(root + "/") for root in _INJECTED_RUNTIME_ROOTS):
+            continue
+        if path not in project_artifacts:
+            return None
+        observed.append(path)
+    if len(set(observed)) != len(observed) or sorted(observed) != selected:
+        return None
+    return selected
 
 
 def file_accesses(
@@ -317,15 +419,56 @@ def _complete_glob_result(metadata: object, index: int, call: dict, pattern: str
     return _search_paths(output, pattern, "claude", metadata.get("cwd")) == paths
 
 
+def _scoped_rg_row(
+    call: dict[str, object], index: int, project_artifacts: tuple[str, ...] | None,
+) -> dict[str, object] | None:
+    supplied = call.get("input")
+    if (project_artifacts is None or call.get("name") != "command_execution"
+            or call.get("success") is not True or call.get("parent_id") is not None
+            or not isinstance(supplied, dict) or set(supplied) != {"command"}):
+        return None
+    query = _rg_files_query(supplied["command"])
+    if query is None:
+        return None
+    includes, excludes = query
+    paths = _scoped_rg_result(call.get("output"), includes, excludes, project_artifacts)
+    if paths is None:
+        return None
+    return {
+        "patterns": list(includes),
+        "excluded_patterns": list(excludes),
+        "paths": paths,
+        "project_artifacts": list(project_artifacts),
+        "scope": "controller-project-artifacts",
+        "tool_call_index": index,
+    }
+
+
+def _legacy_search_row(
+    call: dict[str, object], index: int, host: str, cwd: object, metadata: object,
+) -> dict[str, object] | None:
+    pattern = _search_query(call, host, cwd)
+    if pattern is None:
+        return None
+    paths = _search_paths(call.get("output"), pattern, host, cwd)
+    if paths is None or (
+        host == "claude" and not _complete_glob_result(metadata, index, call, pattern, paths)
+    ):
+        return None
+    return {"pattern": pattern, "paths": paths, "tool_call_index": index}
+
+
 def file_search_results(observation: object, *, host: str) -> list[dict[str, object]]:
     """Derive complete root-recursive search results, never absence from prose.
 
     Only native Glob and a single unbounded find invocation qualify. Pipelines,
     redirection, login shells, depth limits, failed calls, malformed output and
     outside-root paths and child calls with unbound working directories do not.
-    Glob additionally requires its native structured
-    result to affirm complete, untruncated matching counts. Results include runtime files: filtering a native
-    catalog out of a project search requires a separate controller-owned scope.
+    Glob additionally requires its native structured result to affirm complete,
+    untruncated matching counts. Legacy results include runtime files. A Codex
+    ``rg --files`` projection is accepted only when a controller-bound authored
+    project scope proves its complete result; exact injected runtime roots are
+    ignored in that scope.
     This function deliberately does not hide any path or claim that discovery
     implies file contents were read.
     """
@@ -333,16 +476,15 @@ def file_search_results(observation: object, *, host: str) -> list[dict[str, obj
         return []
     metadata = observation.get("native_metadata")
     cwd = metadata.get("cwd") if isinstance(metadata, dict) else None
-    results = []
+    project_artifacts = bound_project_artifact_paths(observation)
+    results: list[dict[str, object]] = []
     for index, call in enumerate(observation["tool_calls"]):
         if not isinstance(call, dict):
             continue
-        pattern = _search_query(call, host, cwd)
-        if pattern is None:
-            continue
-        paths = _search_paths(call.get("output"), pattern, host, cwd)
-        if paths is not None and (host != "claude" or _complete_glob_result(metadata, index, call, pattern, paths)):
-            results.append({"pattern": pattern, "paths": paths, "tool_call_index": index})
+        row = _scoped_rg_row(call, index, project_artifacts) if host == "codex" else None
+        row = row or _legacy_search_row(call, index, host, cwd, metadata)
+        if row is not None:
+            results.append(row)
     return results
 
 

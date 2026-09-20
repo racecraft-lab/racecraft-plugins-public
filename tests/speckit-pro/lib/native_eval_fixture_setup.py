@@ -182,6 +182,54 @@ def _write_records(
     return copied
 
 
+def _feature_deletion_paths(
+    value: object,
+    baseline: list[tuple[PurePosixPath, bytes]],
+    feature: list[tuple[PurePosixPath, bytes]],
+) -> list[PurePosixPath]:
+    """Validate explicit file deletions applied only to the feature overlay."""
+    _require(isinstance(value, list) and bool(value),
+             "git fixture feature_deletions must be a nonempty list")
+    paths = [_relative_path(item, "git fixture feature deletion") for item in value]
+    _require(len(paths) == len(set(paths)),
+             "git fixture feature_deletions contain duplicates")
+    baseline_paths = {path for path, _payload in baseline}
+    feature_paths = {path for path, _payload in feature}
+    for path in paths:
+        _require(path.parts[0].casefold() not in _GIT_RESERVED_ROOTS,
+                 "git fixture feature deletion targets a reserved runtime path")
+        _require(path in baseline_paths,
+                 "git fixture feature deletion must name an exact baseline file")
+        _require(path not in feature_paths,
+                 "git fixture feature deletion conflicts with a feature fixture")
+    for index, left in enumerate(paths):
+        for right in paths[index + 1:]:
+            overlap = (left.parts == right.parts[:len(left.parts)]
+                       or right.parts == left.parts[:len(right.parts)])
+            _require(not overlap, "git fixture feature_deletions overlap")
+    return paths
+
+
+def _apply_feature_deletions(target: Path, paths: list[PurePosixPath]) -> list[str]:
+    """Delete validated baseline files without following symlinks or escaping the workspace."""
+    deleted: list[str] = []
+    for path in paths:
+        parent = _safe_parent(target, path)
+        candidate = parent / path.name
+        try:
+            status = candidate.lstat()
+        except OSError as exc:
+            raise ValueError(f"git fixture feature deletion is unavailable: {path}") from exc
+        _require(stat.S_ISREG(status.st_mode) and not stat.S_ISLNK(status.st_mode),
+                 f"git fixture feature deletion is not a regular file: {path}")
+        try:
+            candidate.unlink()
+        except OSError as exc:
+            raise ValueError(f"git fixture feature deletion failed: {path}") from exc
+        deleted.append(path.as_posix())
+    return deleted
+
+
 def _git_environment(config_path: Path) -> dict[str, str]:
     """Create a small environment which deliberately excludes every inherited GIT_* value."""
     path = os.environ.get("PATH")
@@ -455,14 +503,23 @@ def materialize_workspace(plan: Mapping[str, object], workspace: str | Path) -> 
     _require(not any(target.iterdir()), "git fixture workspace must be empty")
     git_plan = plan["git_repository"]
     _require(isinstance(git_plan, Mapping) and set(git_plan) in (
-        {"recipe", "baseline"}, {"recipe", "baseline", "worktrees"}),
+        {"recipe", "baseline"},
+        {"recipe", "baseline", "worktrees"},
+        {"recipe", "baseline", "feature_deletions"},
+        {"recipe", "baseline", "worktrees", "feature_deletions"},
+    ),
              "git fixture has malformed fields")
     _require(git_plan["recipe"] == GIT_FIXTURE_RECIPE, "git fixture has an unsupported recipe")
     worktrees = _worktree_records(git_plan["worktrees"]) if "worktrees" in git_plan else []
     baseline = _fixture_records(git_plan["baseline"], source_root, label_prefix="git baseline")
     _require(bool(baseline), "git fixture baseline must be nonempty")
     feature = _fixture_records(plan["fixtures"], source_root)
-    _require(bool(feature), "git fixture feature must be nonempty")
+    feature_deletions = (
+        _feature_deletion_paths(git_plan["feature_deletions"], baseline, feature)
+        if "feature_deletions" in git_plan else []
+    )
+    _require(bool(feature) or bool(feature_deletions),
+             "git fixture feature overlay must add, replace, or delete a file")
     all_destinations = [destination for destination, _payload in baseline + feature]
     _require(not worktrees or all(path.parts[0].casefold() != ".worktrees" for path in all_destinations),
              "git worktree fixtures reserve the .worktrees directory")
@@ -474,6 +531,7 @@ def materialize_workspace(plan: Mapping[str, object], workspace: str | Path) -> 
     state = _git_repository(target)
     try:
         copied.extend(_write_records(target, feature, replace=frozenset(destination for destination, _payload in baseline)))
+        _apply_feature_deletions(target, feature_deletions)
         receipt = _finish_git_repository(target, state)
         linked = _materialize_worktrees(target, state, receipt, worktrees) if worktrees else []
     finally:

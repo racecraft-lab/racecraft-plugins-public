@@ -4684,7 +4684,7 @@ def formal_checkpoint_errors(workflow: Path, workflow_text: str, state: dict[str
         selection = selection_from_workflow(workflow_text)
         if selection["status"] != "enabled":
             return {"formal_checkpoint_errors": []}
-        root = _repository_root(workflow.parent)
+        root = _repository_root(workflow)
         if root is None:
             return {"formal_checkpoint_errors": ["Cannot resolve WORKFLOW_ROOT for selected formal evidence"]}
         relative = workflow.resolve().relative_to(root).as_posix()
@@ -4710,7 +4710,7 @@ def artifact_review_errors(workflow: Path, workflow_text: str) -> dict[str, list
         from speckit_pro_runner.helpers.read_only import trusted_bytes
 
         if record_from_workflow(workflow_text) is not None:
-            root = _repository_root(workflow.parent)
+            root = _repository_root(workflow)
             if root is None:
                 raise ValueError("Cannot resolve WORKFLOW_ROOT for artifact review evidence")
             review_handoff(workflow_text, root, trusted_bytes)
@@ -4739,7 +4739,7 @@ def build_report(
     state_result = validate_state(plan_steps)
     status_result = validate_state_status(state_data)
     autonomy_result = validate_autonomy_boundary(
-        state_data, _repository_root(workflow.parent),
+        state_data, _repository_root(workflow),
         current_execution_boundary=authority.current_execution_boundary,
         require_boundary=authority.require_autonomy_boundary,
     )

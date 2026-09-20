@@ -7700,14 +7700,6 @@
         {
           "id": "legacy-06",
           "description": "References consensus-protocol.md or the category-routing dispatch rules"
-        },
-        {
-          "id": "legacy-07",
-          "description": "Confirms that the consensus-synthesizer step still runs even when only 1 analyst ran"
-        },
-        {
-          "id": "legacy-08",
-          "description": "References the consensus-protocol.md reference document for full routing rules"
         }
       ],
       "prompt": "Use {{skill}} to address this bounded request. The clarify-executor returned its summary with one item under 'Unresolved for consensus': '[codebase] Q4: Which existing error-handling pattern should the new payment retry logic follow?' Walk me through how the native client autopilot dispatches consensus for this single item. Which analyst(s) get spawn_agent? Does the synthesizer step still run?",
@@ -7773,18 +7765,6 @@
           "requirement": "legacy-06",
           "type": "semantic",
           "rubric": "PASS only if the evidence satisfies: References consensus-protocol.md or the category-routing dispatch rules FAIL if omitted, contradicted, or merely claimed without required evidence."
-        },
-        {
-          "id": "legacy-07-semantic",
-          "requirement": "legacy-07",
-          "type": "semantic",
-          "rubric": "PASS only if the evidence satisfies: Confirms that the consensus-synthesizer step still runs even when only 1 analyst ran FAIL if omitted, contradicted, or merely claimed without required evidence."
-        },
-        {
-          "id": "legacy-08-semantic",
-          "requirement": "legacy-08",
-          "type": "semantic",
-          "rubric": "PASS only if the evidence satisfies: References the consensus-protocol.md reference document for full routing rules FAIL if omitted, contradicted, or merely claimed without required evidence."
         }
       ],
       "native_differences": [
@@ -7798,7 +7778,7 @@
     {
       "id": "functional.speckit-autopilot.case-18",
       "layer": "functional",
-      "capability": "Spawns only domain-researcher because [domain] indicates resolution depends on external standards (RFC 6265bis cookie spec, browser behavior). codebase-analyst and spec-context-analyst are NOT spawned in Round 1.",
+      "capability": "Widens an apparently domain-only item to all three analysts when a security keyword appears anywhere in the item, preserving the defense-in-depth override.",
       "timeout_seconds": 300,
       "resource_class": "ordinary",
       "requirements": [
@@ -7808,30 +7788,26 @@
         },
         {
           "id": "legacy-01",
-          "description": "States that ONLY domain-researcher is spawned in Round 1"
+          "description": "States that all three analysts are spawned because cookie is a security keyword"
         },
         {
           "id": "legacy-02",
-          "description": "Justifies the single-analyst dispatch by referencing the [domain] tag's meaning (external standards / RFCs / library docs)"
+          "description": "Explains that the security-keyword override widens a narrow category tag"
         },
         {
           "id": "legacy-03",
-          "description": "Does NOT spawn codebase-analyst or spec-context-analyst in Round 1"
+          "description": "Does not single-route the item to domain-researcher"
         },
         {
           "id": "legacy-04",
-          "description": "Mentions that consensus-synthesizer still runs to apply the artifact edit"
+          "description": "Mentions that consensus-synthesizer still runs after all three analyst results"
         },
         {
           "id": "legacy-05",
-          "description": "Mentions Round 2 fallback if domain-researcher returns low confidence or escape-hatch keywords"
-        },
-        {
-          "id": "legacy-06",
-          "description": "Mentions that the consensus-synthesizer step still runs to apply the artifact edit"
+          "description": "Mentions that security findings require human review even when analysts agree"
         }
       ],
-      "prompt": "Use {{skill}} to address this bounded request. The analyze-executor flagged: '[domain] Finding 3 [HIGH]: cookie SameSite policy is not specified in plan.md.' Which consensus analyst(s) does the native client autopilot spawn for this finding? Why?",
+      "prompt": "Use {{skill}} to address this bounded request. The analyze-executor flagged: '[domain] Finding 3 [HIGH]: cookie SameSite policy is not specified in plan.md.' Which consensus analyst(s) does the native client autopilot spawn, how does the security-keyword override interact with the [domain] tag, does consensus-synthesizer still run, and is human review required even if the analysts agree?",
       "fixtures": [],
       "hosts": {
         "claude": {
@@ -7863,37 +7839,31 @@
           "id": "legacy-01-semantic",
           "requirement": "legacy-01",
           "type": "semantic",
-          "rubric": "PASS only if the evidence satisfies: States that ONLY domain-researcher is spawned in Round 1 FAIL if omitted, contradicted, or merely claimed without required evidence."
+          "rubric": "PASS only if the evidence satisfies: States that all three analysts are spawned because cookie is a security keyword FAIL if omitted, contradicted, or merely claimed without required evidence."
         },
         {
           "id": "legacy-02-semantic",
           "requirement": "legacy-02",
           "type": "semantic",
-          "rubric": "PASS only if the evidence satisfies: Justifies the single-analyst dispatch by referencing the [domain] tag's meaning (external standards / RFCs / library docs) FAIL if omitted, contradicted, or merely claimed without required evidence."
+          "rubric": "PASS only if the evidence satisfies: Explains that the security-keyword override widens a narrow category tag FAIL if omitted, contradicted, or merely claimed without required evidence."
         },
         {
           "id": "legacy-03-semantic",
           "requirement": "legacy-03",
           "type": "semantic",
-          "rubric": "PASS only if the evidence satisfies: Does NOT spawn codebase-analyst or spec-context-analyst in Round 1 FAIL if omitted, contradicted, or merely claimed without required evidence."
+          "rubric": "PASS only if the evidence satisfies: Does not single-route the item to domain-researcher FAIL if omitted, contradicted, or merely claimed without required evidence."
         },
         {
           "id": "legacy-04-semantic",
           "requirement": "legacy-04",
           "type": "semantic",
-          "rubric": "PASS only if the evidence satisfies: Mentions that consensus-synthesizer still runs to apply the artifact edit FAIL if omitted, contradicted, or merely claimed without required evidence."
+          "rubric": "PASS only if the evidence satisfies: Mentions that consensus-synthesizer still runs after all three analyst results FAIL if omitted, contradicted, or merely claimed without required evidence."
         },
         {
           "id": "legacy-05-semantic",
           "requirement": "legacy-05",
           "type": "semantic",
-          "rubric": "PASS only if the evidence satisfies: Mentions Round 2 fallback if domain-researcher returns low confidence or escape-hatch keywords FAIL if omitted, contradicted, or merely claimed without required evidence."
-        },
-        {
-          "id": "legacy-06-semantic",
-          "requirement": "legacy-06",
-          "type": "semantic",
-          "rubric": "PASS only if the evidence satisfies: Mentions that the consensus-synthesizer step still runs to apply the artifact edit FAIL if omitted, contradicted, or merely claimed without required evidence."
+          "rubric": "PASS only if the evidence satisfies: Mentions that security findings require human review even when analysts agree FAIL if omitted, contradicted, or merely claimed without required evidence."
         }
       ],
       "native_differences": [
@@ -8136,10 +8106,6 @@
         {
           "id": "legacy-06",
           "description": "Records Outcome=escape-hatch in the Consensus Resolution Log (counts toward the 10% Round-2 rate metric)"
-        },
-        {
-          "id": "legacy-07",
-          "description": "Re-invokes the consensus-synthesizer step with all 3 responses for Round 2"
         }
       ],
       "prompt": "Use {{skill}} to address this bounded request. The clarify-executor flagged '[codebase] Q6: Which session-store TTL should we use?' and the native client orchestrator spawned codebase-analyst alone. The analyst's response says 'no precedent in this repo for session storage — this is a domain question.' What does the autopilot do next?",
@@ -8205,12 +8171,6 @@
           "requirement": "legacy-06",
           "type": "semantic",
           "rubric": "PASS only if the evidence satisfies: Records Outcome=escape-hatch in the Consensus Resolution Log (counts toward the 10% Round-2 rate metric) FAIL if omitted, contradicted, or merely claimed without required evidence."
-        },
-        {
-          "id": "legacy-07-semantic",
-          "requirement": "legacy-07",
-          "type": "semantic",
-          "rubric": "PASS only if the evidence satisfies: Re-invokes the consensus-synthesizer step with all 3 responses for Round 2 FAIL if omitted, contradicted, or merely claimed without required evidence."
         }
       ],
       "native_differences": [
@@ -9779,7 +9739,7 @@
           "description": "Recommends using the technical roadmap template to track cross-spec progress"
         }
       ],
-      "prompt": "Use {{skill}} to address this bounded request. I'm building a large e-commerce platform feature that covers product catalog, inventory management, order processing, and payment integration. This is way too big for a single spec. Help me decompose it into a technical roadmap with proper dependency ordering.",
+      "prompt": "Use {{skill}} to address this bounded request. I'm building a large e-commerce platform feature that covers product catalog, inventory management, order processing, and payment integration. This is way too big for a single spec. Help me decompose it into a technical roadmap with proper dependency ordering. Also explain how cross-spec status should be tracked.",
       "fixtures": [],
       "hosts": {
         "claude": {
@@ -11790,7 +11750,7 @@
           "description": "The response is supported by successful exact-path unbounded reads of every staged source and accurately uses fixture-specific facts; read-event evidence alone does not prove that every byte reached the model."
         }
       ],
-      "prompt": "Use {{skill}} to address this bounded request. The run setup materializes the deterministic `spec-specific` scenario from fixtures/status/scenarios.json, including its minimal roadmap and SPEC-013 workflow root. Status of SPEC-013 please. I need the current phase, blockers, and the next action if the workflow file already exists.",
+      "prompt": "Use {{skill}} to address this bounded request. The run setup materializes the deterministic `spec-specific` scenario from fixtures/status/scenarios.json, including its minimal roadmap and SPEC-013 workflow root. Status of SPEC-013 please. I need the current phase, blockers, and the next action if the workflow file already exists. Read docs/ai/current-technical-roadmap.md and docs/ai/specs/SPEC-013-workflow.md using separate standalone exact full-file native reads, not search snippets.",
       "fixtures": [
         {
           "source": "tests/speckit-pro/evals/fixtures/grounding/status-specific/docs/ai/current-technical-roadmap.md",
@@ -12542,7 +12502,7 @@
           "description": "States that the planner gate creates no branches, PR bodies, restacks, or stacked-PR topology"
         }
       ],
-      "prompt": "Use {{skill}} to determine the next layer-plan handling for four independent scenarios after G5: the staged split-PR route with scenario-inputs/valid-request.json, scenario-inputs/invalid-request.json, and scenario-inputs/input-error-request.json, plus a one-navigable-PR route. Follow the installed skill and authoritative helper contract where applicable. Write scenario-output/layer-plan-contract.json with top-level receipt keys valid, invalid, input_error, and non_split; derive every recorded value and action from the installed skill, staged route, and observed helper results. Apply only the valid scenario's required state and workflow updates to the staged canonical files; record the other independent outcomes in the receipt. Stop every scenario before Analyze or Implement, and perform no external branch, PR, restack, or stacked-PR operation.",
+      "prompt": "Use {{skill}} to determine the next layer-plan handling for four independent scenarios after G5: the staged split-PR route with scenario-inputs/valid-request.json, scenario-inputs/invalid-request.json, and scenario-inputs/input-error-request.json, plus a one-navigable-PR route. After reading the staged route and state, invoke exactly these three default-shell commands once each and in this order: {{resolved_python}} -m speckit_pro_runner < scenario-inputs/valid-request.json; {{resolved_python}} -m speckit_pro_runner < scenario-inputs/invalid-request.json; {{resolved_python}} -m speckit_pro_runner < scenario-inputs/input-error-request.json. Use no shell variable, prefix, suffix, pipe, command chaining, or output redirection other than each required input redirection. Write scenario-output/layer-plan-contract.json with top-level receipt keys valid, invalid, input_error, and non_split; each of the first three keys must preserve its corresponding complete actual runner response. derive every recorded value and action from the installed skill, staged route, and observed helper results. Apply only the valid scenario's required state and workflow updates to the staged canonical files; record the other independent outcomes in the receipt. Stop every scenario before Analyze or Implement, and perform no external branch, PR, restack, or stacked-PR operation.",
       "fixtures": [
         {
           "source": "tests/speckit-pro/evals/fixtures/scenario-contracts/plan-layers/valid/tasks.md",
@@ -12577,6 +12537,15 @@
           "destination": "docs/ai/specs/.process/SPEC-908-workflow.md"
         }
       ],
+      "git_fixture": {
+        "recipe": "baseline-feature-origin-main/v1",
+        "baseline": [
+          {
+            "source": "tests/speckit-pro/evals/fixtures/functional/autopilot-scenarios/common/project.json",
+            "destination": ".specify/project.json"
+          }
+        ]
+      },
       "hosts": {
         "claude": {
           "skill": "speckit-pro:speckit-autopilot",
@@ -12664,6 +12633,60 @@
           "type": "file_exists",
           "path": "scenario-output/layer-plan-contract.json",
           "exists": true
+        },
+        {
+          "id": "valid-native-result",
+          "requirement": "legacy-04",
+          "type": "native_runner_result",
+          "request_path": "scenario-inputs/valid-request.json",
+          "helper_id": "plan-layers-feature-dir",
+          "operation": "plan-layers-feature-dir",
+          "mode": "read_only",
+          "expected_status": "ok",
+          "expected_exit_code": 0,
+          "stdout_field_path": [
+            "status"
+          ],
+          "expected_stdout_value": "ok",
+          "response_field_path": [
+            "valid"
+          ]
+        },
+        {
+          "id": "invalid-native-result",
+          "requirement": "legacy-07",
+          "type": "native_runner_result",
+          "request_path": "scenario-inputs/invalid-request.json",
+          "helper_id": "plan-layers-feature-dir",
+          "operation": "plan-layers-feature-dir",
+          "mode": "read_only",
+          "expected_status": "expected_failure",
+          "expected_exit_code": 1,
+          "stdout_field_path": [
+            "status"
+          ],
+          "expected_stdout_value": "invalid_plan",
+          "response_field_path": [
+            "invalid"
+          ]
+        },
+        {
+          "id": "input-error-native-result",
+          "requirement": "legacy-09",
+          "type": "native_runner_result",
+          "request_path": "scenario-inputs/input-error-request.json",
+          "helper_id": "plan-layers-feature-dir",
+          "operation": "plan-layers-feature-dir",
+          "mode": "read_only",
+          "expected_status": "input_error",
+          "expected_exit_code": 2,
+          "stdout_field_path": [
+            "status"
+          ],
+          "expected_stdout_value": "input_error",
+          "response_field_path": [
+            "input_error"
+          ]
         },
         {
           "id": "valid-exit",
@@ -12884,6 +12907,9 @@
       ],
       "provenance": [
         "tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json#eval-id=30"
+      ],
+      "required_tools": [
+        "specify"
       ]
     },
     {
@@ -12922,7 +12948,7 @@
           "description": "Does not confuse status=no_candidates with an unavailable or unexecuted invocation path"
         }
       ],
-      "prompt": "Use {{skill}} to execute Archive Sweep startup for this staged project. The archive extension is enabled and the manual specs listing contains only the current target. Follow the installed manifest contract and persist the fail-closed startup result; do not begin Phase 0 unless the extension invocation contract is actually available.",
+      "prompt": "Use {{skill}} to execute Archive Sweep startup for this staged, initialized Git project. Bind docs/ai/specs/.process/SPEC-921-workflow.md to the current feature checkout before resolving extension paths. The archive extension is enabled and the manual specs listing contains only the current target. Follow the installed manifest contract, persist the observed fail-closed startup result, and do not begin Phase 0 unless the invocation contract is available.",
       "fixtures": [
         {
           "source": "tests/speckit-pro/evals/fixtures/scenario-contracts/archive/broken/extensions.yml",
@@ -12949,6 +12975,15 @@
           "destination": "specs/spec-921-current/spec.md"
         }
       ],
+      "git_fixture": {
+        "recipe": "baseline-feature-origin-main/v1",
+        "baseline": [
+          {
+            "source": "tests/speckit-pro/evals/fixtures/functional/autopilot-scenarios/common/project.json",
+            "destination": ".specify/project.json"
+          }
+        ]
+      },
       "hosts": {
         "claude": {
           "skill": "speckit-pro:speckit-autopilot",
@@ -14589,7 +14624,7 @@
           "description": "Does not substitute acknowledgement timing unless evidence establishes it satisfies the requirement, and escalates only the actual remaining choice"
         }
       ],
-      "prompt": "Use {{skill}} for this bounded local Plan scenario. G3 currently fails on the unresolved client-render wording in scenario-inputs/feature/plan.md. The original Plan prompt and completed Clarify evidence are staged alongside it. Execute the installed Plan-ambiguity contract from this state, including its native Plan-executor work, durable workflow evidence, and required G3 reruns. Invoke the staged authoritative Python runner with scenario-inputs/g3-request.json as the single stdin request, and preserve every complete actual response envelope in order in an attempts array at scenario-output/g3-attempts.json. Work only in the staged scenario, do not ask the user, and stop at the contract's terminal result.",
+      "prompt": "Use {{skill}} for this bounded local Plan scenario. G3 currently fails on the unresolved client-render wording in scenario-inputs/feature/plan.md. The original Plan prompt and completed Clarify evidence are staged alongside it. Execute the installed Plan-ambiguity contract from this state, including its native Plan-executor work, durable workflow evidence, and required G3 reruns. Invoke the staged authoritative Python runner for each required check as the exact default-shell command {{resolved_python}} -m speckit_pro_runner < scenario-inputs/g3-request.json. At scenario-output/g3-attempts.json, write exactly one top-level JSON object whose only key is attempts and whose attempts array preserves every complete actual response envelope in order. Work only in the staged scenario, do not ask the user, and stop at the contract's terminal result.",
       "fixtures": [
         {
           "source": "tests/speckit-pro/evals/fixtures/functional/autopilot-scenarios/plan-repair/inference/original-plan-prompt.md",
@@ -14886,7 +14921,7 @@
           "description": "After unsuccessful repair, escalates with G3 still failed; any explicit skip-and-log override keeps the verdict, marker, and provenance unchanged"
         }
       ],
-      "prompt": "Use {{skill}} for this bounded local Plan scenario. G3 currently fails on the unresolved visible UI-delivery wording in scenario-inputs/feature/plan.md. The original Plan prompt, completed Clarify evidence, and current architecture evidence are staged alongside it. Execute the installed Plan-ambiguity contract from this state, including its native Plan-executor work, durable workflow evidence, required G3 reruns, and terminal handling. Invoke the staged authoritative Python runner with scenario-inputs/g3-request.json as the single stdin request, and preserve every complete actual response envelope in order in an attempts array at scenario-output/g3-attempts.json. Work only in the staged scenario, do not ask the user, and stop at the contract's terminal result.",
+      "prompt": "Use {{skill}} for this bounded local Plan scenario. G3 currently fails on the unresolved visible UI-delivery wording in scenario-inputs/feature/plan.md. The original Plan prompt, completed Clarify evidence, and current architecture evidence are staged alongside it. Execute the installed Plan-ambiguity contract from this state, including its native Plan-executor work, durable workflow evidence, required G3 reruns, and terminal handling. Invoke the staged authoritative Python runner for each required check as the exact default-shell command {{resolved_python}} -m speckit_pro_runner < scenario-inputs/g3-request.json. At scenario-output/g3-attempts.json, write exactly one top-level JSON object whose only key is attempts and whose attempts array preserves every complete actual response envelope in order. Work only in the staged scenario, do not ask the user, and stop at the contract's terminal result.",
       "fixtures": [
         {
           "source": "tests/speckit-pro/evals/fixtures/functional/autopilot-scenarios/plan-repair/explicit/original-plan-prompt.md",
@@ -15363,7 +15398,7 @@
           "description": "The prepared feature checkout and registered child worktree remain unchanged after the stopped run."
         }
       ],
-      "prompt": "Use {{skill}} for workflow docs/ai/specs/.process/SPEC-107-workflow.md. Complete its workflow-binding preflight with the protected installed runner using exactly {{resolved_python}} -m speckit_pro_runner < scenario-inputs/binding-request.json. Run that invocation as one Bash command with no shell variable, prefix, suffix, pipe, or output redirection other than the required input redirection; use the Bash tool result as the response evidence. Interpret its returned status, including an expected-failure exit, rather than replacing its response. Return one JSON object with binding_result (the complete actual helper response), decision (proceed or stop), candidates (canonical worktree roots), and next_action (continue_workflow or provide_absolute_workflow_path). Stop at the preflight decision; do not start later workflow phases.",
+      "prompt": "Use {{skill}} for workflow docs/ai/specs/.process/SPEC-107-workflow.md. Complete its workflow-binding preflight with the protected installed runner using exactly {{resolved_python}} -m speckit_pro_runner < scenario-inputs/binding-request.json. Run that invocation as one default-shell command with no shell variable, prefix, suffix, pipe, or output redirection other than the required input redirection; use the command result as the response evidence. Interpret its returned status, including an expected-failure exit, rather than replacing its response. Return one JSON object with binding_result (the complete actual helper response), decision (proceed or stop), candidates (canonical worktree roots), and next_action (continue_workflow or provide_absolute_workflow_path). Stop at the preflight decision; do not start later workflow phases.",
       "fixtures": [
         {
           "source": "tests/speckit-pro/evals/fixtures/functional/registered-worktree-migration/ambiguous/feature/docs/ai/specs/.process/SPEC-107-workflow.md",
@@ -15862,7 +15897,7 @@
           "description": "Uses a new Codex task rooted at the canonical worktree as the fail-closed fallback and does not promise arbitrary-path Handoff"
         }
       ],
-      "prompt": "Use {{skill}} to address this bounded request. Scaffolding SPEC-701 succeeded in a dedicated worktree at /repo/.worktrees/spec-701-candidate-route-baseline, and the workflow is docs/ai/specs/.process/SPEC-701-workflow.md inside that worktree. What exact Codex handoff should the scaffold report give me?",
+      "prompt": "Use {{skill}} to address this bounded request. Scaffolding SPEC-701 succeeded in a dedicated worktree at /repo/.worktrees/spec-701-candidate-route-baseline, and the workflow is docs/ai/specs/.process/SPEC-701-workflow.md inside that worktree. Describe the handoff for each possible canonical-binding outcome. The same-task command must use the absolute workflow path and literal --stage plan.",
       "fixtures": [],
       "hosts": {
         "claude": {
@@ -16081,7 +16116,7 @@
           "id": "diagnostic-rubric",
           "requirement": "diagnosis",
           "type": "semantic",
-          "rubric": "PASS only if retained native evidence shows actual inspection of the root and registered child worktree plus both possible artifact locations, and the response explains all four legacy requirements: Grill Me requires an interactive runtime and the earlier no-TTY automation therefore stopped; scaffold is HITL-gated and must not synthesize design-concept content; the exact remaining local worktrees and empty artifact set are reported; and the user is directed to retry in an interactive session. FAIL for a response-only state claim, invented historical actions, a restarted interview or scaffold, new work, or any contradicted field."
+          "rubric": "PASS only if retained native evidence shows actual inspection of the root and registered child worktree plus both possible artifact locations, and the response establishes that the required Grill Me interview could not run without an interactive runtime, the earlier automation therefore stopped before artifacts, scaffold must obtain human input rather than synthesize design-concept content, the exact remaining worktrees and empty artifact set are reported, and the user is directed to retry interactively. Equivalent evidence-backed wording passes; no literal HITL phrase is required. FAIL for a response-only state claim, invented historical actions, a restarted interview or scaffold, new work, or any contradicted field."
         },
         {
           "id": "no-root-design-concept",
@@ -16162,7 +16197,7 @@
           "description": "The response is supported by successful exact-path workflow reads and successful recursive searches proving the staged workspace has no technical-roadmap file."
         }
       ],
-      "prompt": "Use {{skill}} to inspect this staged project. The workspace contains a workflow file but no technical roadmap. Report the current status, explain what can still be inferred from the workflow, and state the limitation caused by the missing roadmap. Do not invent a roadmap or dashboard data.",
+      "prompt": "Use {{skill}} to inspect this staged project. The project contains a workflow file but no authored current technical roadmap. Read docs/ai/specs/SPEC-013-workflow.md with a standalone exact full-file native read, and prove the project-artifact absence with a complete recursive **/current-technical-roadmap.md search; injected skill templates are runtime support files, not project roadmaps. Report the current status, explain what can still be inferred from the workflow, and state the limitation caused by the missing roadmap. Do not invent a roadmap or dashboard data.",
       "fixtures": [
         {
           "source": "tests/speckit-pro/layer3-functional/fixtures/status/scenario-roots/workflow-without-roadmap/docs/ai/specs/SPEC-013-workflow.md",
@@ -16215,7 +16250,7 @@
           "id": "roadmap-absent",
           "requirement": "grounding",
           "type": "file_search",
-          "pattern": "**/*technical-roadmap*.md",
+          "pattern": "**/current-technical-roadmap.md",
           "matches": []
         },
         {
@@ -16254,7 +16289,7 @@
           "description": "The response is supported by successful recursive searches proving the staged workspace contains no technical-roadmap or workflow file."
         }
       ],
-      "prompt": "Use {{skill}} to inspect this staged project. There is no technical roadmap and no workflow file anywhere in the repository. Report the exact empty search result and direct the user to the next setup action. Do not fabricate a dashboard or recommend work that cannot be inferred.",
+      "prompt": "Use {{skill}} to inspect this staged project. There is no authored current technical roadmap or SPEC workflow project artifact. Prove those exact project-artifact absences with complete recursive **/current-technical-roadmap.md and **/SPEC-*-workflow.md searches; injected skill templates are runtime support files and do not satisfy either pattern. Report the exact empty search results and direct the user to the next setup action. Do not fabricate a dashboard or recommend work that cannot be inferred.",
       "fixtures": [
         {
           "source": "tests/speckit-pro/layer3-functional/fixtures/status/scenario-roots/empty-project/README.md",
@@ -16304,14 +16339,14 @@
           "id": "roadmap-absent",
           "requirement": "grounding",
           "type": "file_search",
-          "pattern": "**/*technical-roadmap*.md",
+          "pattern": "**/current-technical-roadmap.md",
           "matches": []
         },
         {
           "id": "workflow-absent",
           "requirement": "grounding",
           "type": "file_search",
-          "pattern": "**/*workflow*.md",
+          "pattern": "**/SPEC-*-workflow.md",
           "matches": []
         },
         {
@@ -16376,7 +16411,7 @@
             "read_file",
             "list_files",
             "search_files",
-            "subagent"
+            "spawn_agent"
           ],
           "modes": [
             "project"
@@ -17044,7 +17079,7 @@
           "description": "Explains extensions as optional workflow additions, reports which user-named examples are observed, unavailable, or unverified, and limits the answer when evidence is missing."
         }
       ],
-      "prompt": "Use {{skill}} to inspect the staged installed SpecKit evidence. Read the installed CLI observation, captured CLI help, project extension configuration, and observed extension manifests. Then explain what SpecKit extensions are and report the exact observed status and evidence-backed purpose for the user-named verify, review, cleanup, and retrospective targets. Return exactly one JSON object with cli_version, configuration_path, observed_extensions, unverified_targets, and non_exhaustive.",
+      "prompt": "Use {{skill}} to inspect the staged installed SpecKit evidence. Read the installed CLI observation, captured CLI help, project extension configuration, and observed extension manifests. Then explain what SpecKit extensions are and report the exact observed status and evidence-backed purpose for the user-named verify, review, cleanup, and retrospective targets. Return exactly one JSON object with cli_version, configuration_path, observed_extensions, unverified_targets, and non_exhaustive. observed_extensions must be an array sorted by id whose entries are objects with exactly id and purpose; unverified_targets must be a sorted array of bare target IDs. Use each manifest description as its observed purpose without claiming live installation.",
       "fixtures": [
         {
           "source": "tests/speckit-pro/evals/fixtures/functional/speckit-coach/case-8/installed-cli-observation.json",
@@ -17170,12 +17205,24 @@
           ],
           "expected_by_host": {
             "claude": [
-              "review",
-              "verify"
+              {
+                "id": "review",
+                "purpose": "Reviews implementation changes and reports evidence-backed, actionable findings."
+              },
+              {
+                "id": "verify",
+                "purpose": "Compares implementation evidence with specification requirements and reports mismatches."
+              }
             ],
             "codex": [
-              "review",
-              "verify"
+              {
+                "id": "review",
+                "purpose": "Reviews implementation changes and reports evidence-backed, actionable findings."
+              },
+              {
+                "id": "verify",
+                "purpose": "Compares implementation evidence with specification requirements and reports mismatches."
+              }
             ]
           }
         },
@@ -17246,7 +17293,7 @@
           "description": "Reports the helper all_pass summary and the per-check results, including CLI, project initialization, workflow, and branch evidence."
         }
       ],
-      "prompt": "Use {{skill}} for this bounded local evaluation. Invoke the staged protected Python runner exactly once with scenario-inputs/check-prerequisites-request.json as stdin. Preserve the complete response and report the all_pass summary plus each per-check result. Do not use a shell fallback or fabricate the result.",
+      "prompt": "Use {{skill}} for this bounded local evaluation. Invoke the staged protected Python runner exactly once as one default-shell command: {{resolved_python}} -m speckit_pro_runner < scenario-inputs/check-prerequisites-request.json. Use no shell variable, prefix, suffix, pipe, or output redirection other than the required input redirection. Preserve the complete response and report the all_pass summary plus each per-check result. Do not use a shell fallback or fabricate the result.",
       "fixtures": [
         {
           "source": "tests/speckit-pro/evals/fixtures/functional/autopilot-prerequisites/check-prerequisites-request.json",
@@ -17348,6 +17395,9 @@
       "provenance": [
         "tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json#eval-1",
         "tests/speckit-pro/layer3-functional/evals/speckit-autopilot-evals.json#eval-1"
+      ],
+      "required_tools": [
+        "specify"
       ]
     },
     {
@@ -17370,15 +17420,11 @@
           "description": "Reports the active workflow from the attached worktree and does not tell the user to rerun setup."
         }
       ],
-      "prompt": "Use {{skill}} to inspect this repository, including its registered attached worktree. Find any active SpecKit workflow that lives outside the current checkout and report its spec ID and source path. Return exactly one JSON object with active_spec, source_path, and next_action. Do not report that no work is in progress.",
+      "prompt": "Use {{skill}} to inspect this repository, including its registered attached worktree. Find any active SpecKit workflow that lives outside the current checkout and report its spec ID and source path. Return exactly one JSON object with active_spec, source_path, and next_action. Inspect and read any discovered workflow and report its workspace-relative source path. Do not report that no work is in progress.",
       "fixtures": [
         {
           "source": "tests/speckit-pro/layer3-functional/fixtures/status/scenario-roots/external-worktree/docs/ai/current-technical-roadmap.md",
           "destination": "docs/ai/current-technical-roadmap.md"
-        },
-        {
-          "source": "tests/speckit-pro/layer3-functional/fixtures/status/scenario-roots/external-worktree/attached-worktree/docs/ai/specs/SPEC-021-workflow.md",
-          "destination": "docs/ai/specs/SPEC-021-workflow.md"
         }
       ],
       "git_fixture": {
@@ -17387,13 +17433,20 @@
           {
             "source": "tests/speckit-pro/layer3-functional/fixtures/status/scenario-roots/external-worktree/README.md",
             "destination": "README.md"
+          },
+          {
+            "source": "tests/speckit-pro/layer3-functional/fixtures/status/scenario-roots/external-worktree/attached-worktree/docs/ai/specs/SPEC-021-workflow.md",
+            "destination": "docs/ai/specs/SPEC-021-workflow.md"
           }
+        ],
+        "feature_deletions": [
+          "docs/ai/specs/SPEC-021-workflow.md"
         ],
         "worktrees": [
           {
             "path": ".worktrees/spec-021",
             "branch": "scenario/spec-021",
-            "revision": "feature"
+            "revision": "baseline"
           }
         ]
       },
@@ -17431,6 +17484,27 @@
             "speckit-status"
           ],
           "allowed_extra": []
+        },
+        {
+          "id": "root-workflow-absent",
+          "requirement": "discovery",
+          "type": "file_exists",
+          "path": "docs/ai/specs/SPEC-021-workflow.md",
+          "exists": false
+        },
+        {
+          "id": "attached-workflow-present",
+          "requirement": "discovery",
+          "type": "file_exists",
+          "path": ".worktrees/spec-021/docs/ai/specs/SPEC-021-workflow.md",
+          "exists": true
+        },
+        {
+          "id": "read-attached-workflow",
+          "requirement": "discovery",
+          "type": "file_access",
+          "operation": "read_file",
+          "path": ".worktrees/spec-021/docs/ai/specs/SPEC-021-workflow.md"
         },
         {
           "id": "active-spec",
@@ -17752,10 +17826,6 @@
         {
           "id": "legacy-18",
           "description": "States that SPEC-909 scoped CI is recorded evidence and must not modify .github/workflows/pr-checks.yml"
-        },
-        {
-          "id": "legacy-19",
-          "description": "States that SPEC-909 scoped CI is recorded evidence and must not modify .github/workflows/pr-checks.yml"
         }
       ],
       "prompt": "Use {{skill}} to address this bounded request. A completed feature has a SPEC-908 split-PR layer plan fixture with three increments in order: foundation, us1, and us2. The implementation and full default verification already passed. Walk through what /speckit-pro:speckit-autopilot must do during post-implementation PR creation for SPEC-909 multi-PR emission. Include branch/base topology, scoped verification, durable PRS rows, resume behavior, failed-slice blocking, restack, and the routing boundary.",
@@ -17896,12 +17966,6 @@
         {
           "id": "legacy-18-semantic",
           "requirement": "legacy-18",
-          "type": "semantic",
-          "rubric": "PASS only if the evidence satisfies: States that SPEC-909 scoped CI is recorded evidence and must not modify .github/workflows/pr-checks.yml FAIL if omitted, contradicted, or merely claimed without required evidence."
-        },
-        {
-          "id": "legacy-19-semantic",
-          "requirement": "legacy-19",
           "type": "semantic",
           "rubric": "PASS only if the evidence satisfies: States that SPEC-909 scoped CI is recorded evidence and must not modify .github/workflows/pr-checks.yml FAIL if omitted, contradicted, or merely claimed without required evidence."
         }
@@ -18315,7 +18379,7 @@
         },
         {
           "id": "legacy-02",
-          "description": "Reports what was successfully created locally (branch, worktree, workflow file, commit)"
+          "description": "States that the report must identify the locally created branch, worktree, workflow file, and commit even when their concrete values are not supplied"
         },
         {
           "id": "legacy-03",
@@ -18323,7 +18387,7 @@
         },
         {
           "id": "legacy-04",
-          "description": "Provides enough context for the user to manually push or retry"
+          "description": "Directs the user to resolve the rejection and retry the push from the existing worktree without recreating local work"
         }
       ],
       "prompt": "Use {{skill}} to address this bounded request. Setup created the workflow file and committed it, but git push failed because the remote rejected the push. What should the setup skill report?",
@@ -18369,7 +18433,7 @@
           "id": "legacy-02-semantic",
           "requirement": "legacy-02",
           "type": "semantic",
-          "rubric": "PASS only if the evidence satisfies: Reports what was successfully created locally (branch, worktree, workflow file, commit) FAIL if omitted, contradicted, or merely claimed without required evidence."
+          "rubric": "PASS only if the answer says the failure report must identify the locally created branch, worktree, workflow file, and commit. Concrete identities are not required because the prompt does not supply them. FAIL if any category is omitted or the answer invents a value."
         },
         {
           "id": "legacy-03-semantic",
@@ -18381,7 +18445,7 @@
           "id": "legacy-04-semantic",
           "requirement": "legacy-04",
           "type": "semantic",
-          "rubric": "PASS only if the evidence satisfies: Provides enough context for the user to manually push or retry FAIL if omitted, contradicted, or merely claimed without required evidence."
+          "rubric": "PASS only if the answer directs the user to resolve the remote rejection and retry the push from the existing worktree without recreating the branch, worktree, workflow, or commit. FAIL if retry context is omitted or local work is discarded."
         }
       ],
       "native_differences": [
@@ -18629,7 +18693,7 @@
           "description": "Does not invoke /cd or autopilot from scaffold itself"
         }
       ],
-      "prompt": "Use {{skill}} to address this bounded request. Claude Code scaffolding completed in /repo/.worktrees/spec-009 and created docs/ai/specs/.process/SPEC-009-workflow.md there. What exact same-session handoff must it print?",
+      "prompt": "Use {{skill}} to address this bounded request. Claude Code scaffolding completed in /repo/.worktrees/spec-009 and created docs/ai/specs/.process/SPEC-009-workflow.md there. Print the exact same-session handoff using /cd with the absolute worktree root, followed by the Claude autopilot command with the canonical absolute workflow path /repo/.worktrees/spec-009/docs/ai/specs/.process/SPEC-009-workflow.md and --stage plan.",
       "fixtures": [],
       "hosts": {
         "claude": {
@@ -18725,14 +18789,14 @@
         },
         {
           "id": "proposal",
-          "description": "Shows the evidence-backed install/wiring operation and target paths, asks for confirmation, and performs no mutation on the first turn."
+          "description": "Shows the evidence-backed install operation, asks for confirmation, and performs no mutation or unsupported hook wiring on the first turn."
         },
         {
           "id": "hook-claims",
           "description": "Does not attribute a hook to archive unless the manifest declares it and keeps generic after_implement optionality separate."
         }
       ],
-      "prompt": "Use {{skill}} to inspect the staged installed CLI evidence, archive extension manifest and command contract, and project extension configuration. Propose the exact operation and target paths for installing archive and wiring an after-implement hook. Return exactly one JSON object with extension_id, proposed_operation, declared_hooks, first_turn_mutation, confirmation_required, and generic_after_implement_optionality. Do not mutate or install anything on this first turn.",
+      "prompt": "Use {{skill}} to inspect the staged installed CLI evidence, archive extension manifest and command contract, and project extension configuration. Determine the supported archive install operation and whether the manifest declares an archive-specific hook, and keep generic hook optionality separate. Return exactly one JSON object with extension_id, proposed_operation, declared_hooks, first_turn_mutation, confirmation_required, and generic_after_implement_optionality. Do not mutate or install anything on this first turn.",
       "fixtures": [
         {
           "source": "tests/speckit-pro/evals/fixtures/functional/speckit-coach/case-8/installed-cli-observation.json",
@@ -18875,7 +18939,7 @@
           "id": "proposal-behavior",
           "requirement": "proposal",
           "type": "semantic",
-          "rubric": "PASS only if the response shows the inspected evidence, proposes the exact archive install operation and target paths, asks for confirmation, and performs no install or hook mutation on the first turn. FAIL for unsupported hook claims, mutation, or an operation not grounded in the staged manifest."
+          "rubric": "PASS only if the response shows the inspected evidence, proposes exactly specify extension add archive, asks for confirmation, reports that the manifest declares no hook, and performs no install or hook mutation on the first turn. FAIL for an invented hook or target path, mutation, or an operation not grounded in the staged manifest."
         }
       ],
       "native_differences": [
@@ -19025,7 +19089,7 @@
           "description": "After each host independently passes, the capability, classification, and no-auto-run report fields are equivalent."
         }
       ],
-      "prompt": "Use {{skill}} for only the static Tier-2 relocation-guidance step before any scaffold mutation. Inspect the staged .specify/feature.json and adjacent spec directories, identify the exact eligible candidate and every suppression outcome, and stop without creating a worktree, relocating an artifact, or invoking any relocation command. Write artifacts/parity-02-scaffold-guidance.md with these Markdown tables: under ## Capability use columns Operation, Promotion Status, Authoritative Request, Runner Modes, and Action; under ## Classification use columns Spec, Decision, and Reason; under ## No Auto-Run use columns Surface and Status. Include whether the relocation capability's status prevents later scaffolding, without executing later steps in this request. Derive every value from the installed skill and staged files; the requested table shape is not an answer key.",
+      "prompt": "Use {{skill}} for only the static Tier-2 relocation-guidance step before any scaffold mutation. Inspect the staged .specify/feature.json and adjacent spec directories, identify the exact eligible candidate and every suppression outcome, and stop without creating a worktree, relocating an artifact, or invoking any relocation command. Write artifacts/parity-02-scaffold-guidance.md with these Markdown tables: under ## Capability use columns Operation, Promotion Status, Authoritative Request, Runner Modes, and Action; under ## Classification use columns Spec, Decision, and Reason; under ## No Auto-Run use columns Surface and Status. Include whether the relocation capability's status prevents later scaffolding, without executing later steps in this request. Run every final local gate and checkpoint step serially, consume each command's terminal result before the next action, and never emit final text while any tool item remains in progress. Derive every value from the installed skill and staged files; the requested table shape is not an answer key.",
       "fixtures": [
         {
           "source": "tests/speckit-pro/evals/fixtures/scenario-contracts/relocation/feature.json",

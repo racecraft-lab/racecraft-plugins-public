@@ -747,6 +747,33 @@ class RuleScopingTests(unittest.TestCase):
 
 
 class AutonomyBoundaryCliTests(unittest.TestCase):
+    def test_root_level_workflow_uses_its_nested_repository_for_planning_evidence(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            outer = Path(raw)
+            (outer / ".git").mkdir()
+            root = outer / "nested"
+            root.mkdir()
+            (root / ".git").mkdir()
+            workflow_path = root / "workflow.md"
+            workflow_path.write_text(
+                workflow(("Specify", "✅ Complete"), body="G1 gate: PASS"),
+                encoding="utf-8",
+            )
+            state_path = root / "autopilot-state.json"
+            state = _autonomy_boundary_state(root)
+            state["workflow_file"] = "workflow.md"
+            state_path.write_text(json.dumps(state), encoding="utf-8")
+            report = validator.build_report(
+                workflow_path,
+                state_path,
+                authority=validator.ReportAuthority(
+                    current_execution_boundary=_current_execution_boundary(root),
+                    require_autonomy_boundary=True,
+                ),
+            )
+
+        self.assertEqual(report["autonomy_boundary_errors"], [], report)
+
     def test_cli_rejects_a_valid_record_under_a_different_current_boundary(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)

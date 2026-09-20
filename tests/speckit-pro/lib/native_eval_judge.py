@@ -58,8 +58,6 @@ _SUBAGENT_OUTPUT_PROVENANCE = frozenset({
     "agent_path", "child_thread_id", "namespace", "thread_id",
 })
 _PROJECTION_SCHEMA = "native-judge-evidence/v1"
-_BOUNDED_TEXT_SCHEMA = "native-judge-bounded-text/v1"
-_TEXT_PROJECTION_LIMIT = 4_096
 _REQUEST_CHAR_LIMIT = 900_000
 
 
@@ -139,20 +137,15 @@ def _skill_target(call: Mapping[str, object]) -> str:
     return native[len(prefix):] if native.startswith(prefix) else native
 
 
-def _project_text(value: str) -> str | dict[str, object]:
-    if len(value) <= _TEXT_PROJECTION_LIMIT:
-        return value
-    encoded = value.encode("utf-8")
-    head_chars = _TEXT_PROJECTION_LIMIT // 2
-    tail_chars = _TEXT_PROJECTION_LIMIT - head_chars
-    return {
-        "schema": _BOUNDED_TEXT_SCHEMA,
-        "chars": len(value),
-        "bytes": len(encoded),
-        "sha256": hashlib.sha256(encoded).hexdigest(),
-        "head": value[:head_chars],
-        "tail": value[-tail_chars:],
-    }
+def _project_text(value: str) -> str:
+    """Retain complete evidence so omitted text can never prove a criterion absent.
+
+    ``build_judge_request`` enforces the shared request-size ceiling after the
+    complete projection is assembled.  Evidence that cannot fit is therefore
+    rejected as an invalid judge request instead of being silently reduced to
+    a head/tail sample that could support a false omission verdict.
+    """
+    return value
 
 
 def _project_value(value: object, blocked: frozenset[str] = frozenset()) -> object:

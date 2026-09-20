@@ -35,7 +35,7 @@ Use the smallest relevant reference; do not load the whole library.
 | Model a difficult rule in Quint, or look up Quint language, modeling, or witness guidance | [Optional Quint modeling](./references/quint-guide.md). Read only the sections the model needs; SpecKit still owns selection, bounds, and gate decisions. |
 | Design a constitution | [Constitution guide](./references/constitution-guide.md). |
 | Create or repair `.specify/quality-gates.json`, pick gate thresholds, or record a permanent gate skip | [Quality gates guide](./references/quality-gates-guide.md). Measure the existing code before proposing a ceiling; write the file only after the operator confirms. |
-| Design a multi-spec roadmap or split a feature | [Technical-roadmap template](./templates/technical-roadmap-template.md) and [slicing heuristics](./references/slicing-heuristics.md). Derive independently executable vertical slices with observable outcomes and explicit real dependencies; review the graph before writing. |
+| Design a multi-spec roadmap or split a feature | Read the complete [technical-roadmap template](./templates/technical-roadmap-template.md) and [slicing heuristics](./references/slicing-heuristics.md), then instantiate the template without dropping required sections. `## Progress Tracking` is mandatory: scaffold and status use it as the shared lifecycle record. Derive independently executable vertical slices with observable outcomes and explicit real dependencies; review the graph before writing. |
 | Create a PRD and roadmap from an unformed idea | Route to `/speckit-pro:speckit-prd`; use its PRD and roadmap templates. |
 | Track one spec through phases or understand scaffold-created workflow files | [Workflow template](./templates/workflow-template.md). For scaffold creation, population, inputs, or output locations, also read the [live scaffold skill](../speckit-scaffold-spec/SKILL.md) as a reference only; do not execute or invoke it. Keep artifacts, gates, and decisions current. |
 | Explain the roadmap home note | [Roadmap-MOC guide](./references/roadmap-moc-guide.md). The curated zone is author-owned; the generated index is regenerated, not hand-edited. |
@@ -44,6 +44,26 @@ Use the smallest relevant reference; do not load the whole library.
 | Scope a raw brief interactively | Route to `/speckit-pro:grill-me`; do not conduct its interview here. |
 | Scaffold a roadmap item, inspect status, or resolve a review | Route respectively to `/speckit-pro:speckit-scaffold-spec`, `/speckit-pro:speckit-status`, or `/speckit-pro:speckit-resolve-pr`. |
 | Archive merged-spec records or clean up archived specs | Route to `/speckit-pro:speckit-archive-cleanup`; do not copy or execute its cleanup workflow here. |
+
+## Keep adjacent contracts distinct
+
+- Scaffold owns roadmap lookup, branch/worktree placement, the canonical
+  Design Concept and workflow artifacts, and the explicit hand-off to
+  autopilot. Grill Me owns the interactive interview that supplies the Design
+  Concept. Grill Me never creates a branch, worktree, workflow, or roadmap
+  status update, and scaffold must not synthesize interview answers when a
+  human interaction surface is unavailable.
+- Canonical scaffold artifacts are
+  `docs/ai/specs/.process/SPEC-<ID>-design-concept.md`,
+  `docs/ai/specs/.process/SPEC-<ID>-workflow.md`, and
+  `specs/<branch-name>/SPEC-MOC.md`. The workflow's `Branch` field records the
+  actual dedicated spec branch returned and verified by scaffold; it is never
+  `main` and is never guessed from the spec title alone.
+- A declared extension command is not evidence that a hook runs
+  automatically. Inspect installed presence, host command registration, and
+  enabled hook wiring separately. Report an empty declaration as empty and an
+  unavailable registration or wiring check as unverified; never describe a
+  command declaration as a hook.
 
 ## Essential SDD guidance
 

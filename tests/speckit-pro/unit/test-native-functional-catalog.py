@@ -25,7 +25,7 @@ EXAMPLES_PATH = TEST_ROOT / "evals" / "fixtures" / "functional" / "criterion-exa
 AUDIT_PATH = TEST_ROOT / "evals" / "audit" / "functional-inventory.json"
 sys.path.insert(0, str(TEST_ROOT / "lib"))
 
-from native_eval_catalog import load_catalog  # noqa: E402
+from native_eval_catalog import load_catalog, validate_catalog  # noqa: E402
 from native_eval_adapters import _stage_fixture_plan  # noqa: E402
 from native_eval_fixture_setup import materialize_workspace  # noqa: E402
 from native_eval_grading import grade_observation  # noqa: E402
@@ -199,6 +199,12 @@ EXPECTED_SEMANTIC_OVERLAYS = {
     ("functional.speckit-coach.case-1", "legacy-04-semantic"):
         "PASS only if the evidence identifies specify, clarify, plan, checklist, tasks, analyze, and implement as the seven SDD phases in that order. "
         "FAIL if the sequence relationship is negated, contradicted, or the phase names are merely listed.",
+    ("functional.speckit-scaffold-spec.case-5", "legacy-02-semantic"):
+        "PASS only if the answer says the failure report must identify the locally created branch, worktree, workflow file, and commit. "
+        "Concrete identities are not required because the prompt does not supply them. FAIL if any category is omitted or the answer invents a value.",
+    ("functional.speckit-scaffold-spec.case-5", "legacy-04-semantic"):
+        "PASS only if the answer directs the user to resolve the remote rejection and retry the push from the existing worktree without recreating the branch, worktree, workflow, or commit. "
+        "FAIL if retry context is omitted or local work is discarded.",
 }
 
 
@@ -260,10 +266,91 @@ def grounded_observation(case: dict, host: str, *, final_text: str = "grounded r
     )
 
 
+def _assert_scenario_legacy_boundaries(
+    test: unittest.TestCase,
+    cases: dict[str, dict],
+    selection: dict,
+) -> None:
+    for case_id, sources in SCENARIO_LEGACY_SOURCES.items():
+        case = cases[case_id]
+        test.assertEqual(
+            case["provenance"],
+            [f"tests/speckit-pro/{source}#eval-id={eval_id}" for source, eval_id in sources],
+            case_id,
+        )
+        test.assertTrue(any(check["type"] == "semantic" for check in case["checks"]), case_id)
+        test.assertTrue(any(check["type"] == "file_access" for check in case["checks"]), case_id)
+        for source, eval_id in sources:
+            legacy = json.loads((TEST_ROOT / source).read_text(encoding="utf-8"))
+            entry = next(row for row in legacy["evals"] if row["id"] == eval_id)
+            mapped = next(row for row in selection["selected"] if row["case_id"] == case_id)
+            boundary = next(row for row in mapped["sources"] if row["eval_id"] == eval_id)
+            test.assertEqual(len(boundary["expectations"]), len(entry["expectations"]))
+
+
+def _assert_relocation_checks(test: unittest.TestCase, cases: dict[str, dict]) -> None:
+    relocation = cases["functional.speckit-autopilot.case-29"]
+    test.assertEqual(
+        {check["id"] for check in relocation["checks"] if check["type"] == "file_exists"},
+        {"no-relocated-analysis", "no-relocated-uat"},
+    )
+    test.assertEqual(
+        {check["id"] for check in relocation["checks"] if check["type"] == "text"},
+        {"candidate-analysis-unchanged", "candidate-uat-unchanged"},
+    )
+
+
+def _assert_layer_plan_checks(test: unittest.TestCase, cases: dict[str, dict]) -> None:
+    layer_plan = cases["functional.speckit-autopilot.case-30"]
+    prompt = layer_plan["prompt"]
+    test.assertIn("four independent scenarios after G5", prompt)
+    test.assertIn("top-level receipt keys valid, invalid, input_error, and non_split", prompt)
+    test.assertIn("derive every recorded value and action", prompt)
+    test.assertEqual(layer_plan["required_tools"], ["specify"])
+    test.assertIn("git_fixture", layer_plan)
+    for request in ("valid-request.json", "invalid-request.json", "input-error-request.json"):
+        test.assertEqual(
+            prompt.count(
+                f"{{{{resolved_python}}}} -m speckit_pro_runner < scenario-inputs/{request}"
+            ),
+            1,
+        )
+    for leaked_answer in (
+        "status skipped",
+        "helper_invoked false",
+        "persist the valid response's complete data.stdout_json",
+        "exact exit-1 stop line",
+    ):
+        test.assertNotIn(leaked_answer, prompt)
+    layer_checks = {check["id"] for check in layer_plan["checks"]}
+    test.assertTrue(
+        {
+            "valid-exit", "invalid-exit", "input-error-exit", "non-split-skipped",
+            "exact-three-invocations", "gate-order", "request-contract",
+            "no-pr-side-effects", "valid-native-result", "invalid-native-result",
+            "input-error-native-result",
+        } <= layer_checks
+    )
+
+
+def _assert_broken_archive_checks(test: unittest.TestCase, cases: dict[str, dict]) -> None:
+    broken_archive = cases["functional.speckit-autopilot.case-36"]
+    archive_checks = {check["id"] for check in broken_archive["checks"]}
+    test.assertTrue(
+        {
+            "missing-command", "blocked-status", "cleanup-disabled",
+            "invocation-unavailable", "exact-missing-path", "archive-item-pending",
+            "phase-zero-pending", "manual-inventory-rejected",
+            "no-no-candidates-substitution",
+        } <= archive_checks
+    )
+
+
 class NativeFunctionalCatalogTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         loaded = load_catalog(CATALOG_PATH, REPO_ROOT)
+        cls.loaded = loaded
         cls.all_cases = {case["id"]: case for case in loaded["cases"]}
         cls.catalog = {**loaded, "cases": [case for case in loaded["cases"] if case["layer"] == "functional"]}
         cls.selection = json.loads(SELECTION_PATH.read_text(encoding="utf-8"))
@@ -377,7 +464,12 @@ class NativeFunctionalCatalogTests(unittest.TestCase):
                     expected = normalize_legacy_requirement(entry["expectations"][mapping["expectation_index"]])
                     if selected["case_id"] in REDIRECT_IDS:
                         expected = expected.replace("as the correct command", "as the correct entrypoint")
-                    self.assertEqual(requirements[mapping["requirement_id"]], expected)
+                    if selected["case_id"] not in {
+                        "functional.speckit-autopilot.case-17",
+                        "functional.speckit-autopilot.case-18",
+                        "functional.speckit-autopilot.case-21",
+                    }:
+                        self.assertEqual(requirements[mapping["requirement_id"]], expected)
                     mapped_ids.add(mapping["requirement_id"])
             catalog_ids = {key for key in requirements if key.startswith("legacy-")}
             if selected["case_id"] in WORKTREE_MIGRATION_IDS:
@@ -737,9 +829,9 @@ class NativeFunctionalCatalogTests(unittest.TestCase):
             self.assertTrue(all(row == legacy_rows[0] for row in legacy_rows), case_id)
             legacy = legacy_rows[0]
             self.assertEqual(case["provenance"], expected_provenance, case_id)
-            self.assertEqual(
-                case["prompt"],
+            self.assertIn(
                 "Use {{skill}} to address this bounded request. " + legacy["prompt"],
+                case["prompt"],
                 case_id,
             )
             behavior = next(row for row in case["requirements"] if row["id"] == "behavior")
@@ -757,65 +849,102 @@ class NativeFunctionalCatalogTests(unittest.TestCase):
             )
 
     def test_scenario_additions_preserve_legacy_boundaries_and_observable_checks(self) -> None:
-        for case_id, sources in SCENARIO_LEGACY_SOURCES.items():
+        _assert_scenario_legacy_boundaries(self, self.cases, self.selection)
+        _assert_relocation_checks(self, self.cases)
+        _assert_layer_plan_checks(self, self.cases)
+        _assert_broken_archive_checks(self, self.cases)
+
+    def test_repaired_contracts_are_explicit_and_obsolete_duplicates_are_merged(self) -> None:
+        merged = {
+            "functional.speckit-autopilot.case-17": {"legacy-07", "legacy-08"},
+            "functional.speckit-autopilot.case-18": {"legacy-06"},
+            "functional.speckit-autopilot.case-21": {"legacy-07"},
+            "functional.speckit-autopilot.case-31": {"legacy-19"},
+        }
+        for case_id, retired in merged.items():
             case = self.cases[case_id]
-            self.assertEqual(
-                case["provenance"],
-                [f"tests/speckit-pro/{source}#eval-id={eval_id}" for source, eval_id in sources],
-                case_id,
-            )
-            self.assertTrue(any(check["type"] == "semantic" for check in case["checks"]), case_id)
-            self.assertTrue(any(check["type"] == "file_access" for check in case["checks"]), case_id)
-            for source, eval_id in sources:
-                legacy = json.loads((TEST_ROOT / source).read_text(encoding="utf-8"))
-                entry = next(row for row in legacy["evals"] if row["id"] == eval_id)
-                mapped = next(
-                    row for row in self.selection["selected"] if row["case_id"] == case_id
-                )
-                boundary = next(row for row in mapped["sources"] if row["eval_id"] == eval_id)
-                self.assertEqual(len(boundary["expectations"]), len(entry["expectations"]))
+            requirement_ids = {row["id"] for row in case["requirements"]}
+            check_requirements = {row["requirement"] for row in case["checks"]}
+            self.assertTrue(retired.isdisjoint(requirement_ids), case_id)
+            self.assertTrue(retired.isdisjoint(check_requirements), case_id)
 
-        relocation = self.cases["functional.speckit-autopilot.case-29"]
+        security = self.cases["functional.speckit-autopilot.case-18"]
+        security_text = " ".join(
+            [security["capability"], security["prompt"]]
+            + [row["description"] for row in security["requirements"]]
+        ).casefold()
+        self.assertIn("all three analysts", security_text)
+        self.assertIn("security-keyword override", security_text)
+        self.assertIn("human review", security_text)
+        self.assertIn("does not single-route", security_text)
+
+        for case_id in ("functional.speckit-autopilot.case-1", "functional.speckit-autopilot.case-107"):
+            case = self.cases[case_id]
+            self.assertEqual(case["required_tools"], ["specify"])
+            self.assertIn("default-shell command", case["prompt"])
+            self.assertIn("{{resolved_python}} -m speckit_pro_runner <", case["prompt"])
+
+        for case_id in PLAN_REPAIR_IDS:
+            prompt = self.cases[case_id]["prompt"]
+            self.assertIn("exactly one top-level JSON object whose only key is attempts", prompt)
+
+        grill = self.cases["functional.grill-me.case-7"]
+        self.assertIn("spawn_agent", grill["hosts"]["codex"]["allowed_tools"])
+        self.assertNotIn("subagent", grill["hosts"]["codex"]["allowed_tools"])
+
+    def test_status_cases_scope_absence_and_stage_external_workflow_only(self) -> None:
+        status3 = self.cases["functional.speckit-status.case-3"]
+        status7 = self.cases["functional.speckit-status.case-7"]
         self.assertEqual(
-            {check["id"] for check in relocation["checks"] if check["type"] == "file_exists"},
-            {"no-relocated-analysis", "no-relocated-uat"},
+            next(check for check in status3["checks"] if check["type"] == "file_search")["pattern"],
+            "**/current-technical-roadmap.md",
         )
         self.assertEqual(
-            {check["id"] for check in relocation["checks"] if check["type"] == "text"},
-            {"candidate-analysis-unchanged", "candidate-uat-unchanged"},
+            {check["pattern"] for check in status7["checks"] if check["type"] == "file_search"},
+            {"**/current-technical-roadmap.md", "**/SPEC-*-workflow.md"},
         )
 
-        layer_plan = self.cases["functional.speckit-autopilot.case-30"]
-        prompt = layer_plan["prompt"]
-        self.assertIn("four independent scenarios after G5", prompt)
-        self.assertIn("top-level receipt keys valid, invalid, input_error, and non_split", prompt)
-        self.assertIn("derive every recorded value and action", prompt)
-        for leaked_answer in (
-            "status skipped",
-            "helper_invoked false",
-            "persist the valid response's complete data.stdout_json",
-            "exact exit-1 stop line",
-        ):
-            self.assertNotIn(leaked_answer, prompt)
-        layer_checks = {check["id"] for check in layer_plan["checks"]}
-        self.assertTrue(
-            {
-                "valid-exit", "invalid-exit", "input-error-exit", "non-split-skipped",
-                "exact-three-invocations", "gate-order", "request-contract",
-                "no-pr-side-effects",
-            } <= layer_checks
+        external = self.cases["functional.speckit-status.case-4"]
+        self.assertEqual(
+            external["git_fixture"]["feature_deletions"],
+            ["docs/ai/specs/SPEC-021-workflow.md"],
         )
+        self.assertEqual(external["git_fixture"]["worktrees"][0]["revision"], "baseline")
+        checks = {check["id"]: check for check in external["checks"]}
+        self.assertFalse(checks["root-workflow-absent"]["exists"])
+        self.assertTrue(checks["attached-workflow-present"]["exists"])
+        for field in ("active_spec", "source_path", "next_action"):
+            self.assertIn(field, external["prompt"])
+        for leaked_answer in ("SPEC-021", ".worktrees/spec-021", "continue_workflow"):
+            self.assertNotIn(leaked_answer, external["prompt"])
 
-        broken_archive = self.cases["functional.speckit-autopilot.case-36"]
-        archive_checks = {check["id"] for check in broken_archive["checks"]}
-        self.assertTrue(
-            {
-                "missing-command", "blocked-status", "cleanup-disabled",
-                "invocation-unavailable", "exact-missing-path", "archive-item-pending",
-                "phase-zero-pending", "manual-inventory-rejected",
-                "no-no-candidates-substitution",
-            } <= archive_checks
+    def test_catalog_rejects_unknown_host_tools_and_hidden_machine_contracts(self) -> None:
+        unknown_tool = copy.deepcopy(self.loaded)
+        target = next(
+            case for case in unknown_tool["cases"]
+            if case["id"] == "functional.grill-me.case-7"
         )
+        target["hosts"]["codex"]["allowed_tools"][-1] = "subagent"
+        with self.assertRaisesRegex(ValueError, "unknown names"):
+            validate_catalog(unknown_tool, REPO_ROOT)
+
+        hidden_field = copy.deepcopy(self.loaded)
+        target = next(
+            case for case in hidden_field["cases"]
+            if case["id"] == "functional.speckit-status.case-4"
+        )
+        target["prompt"] = target["prompt"].replace("next_action", "next result")
+        with self.assertRaisesRegex(ValueError, "omits response fields"):
+            validate_catalog(hidden_field, REPO_ROOT)
+
+        hidden_search = copy.deepcopy(self.loaded)
+        target = next(
+            case for case in hidden_search["cases"]
+            if case["id"] == "functional.speckit-status.case-7"
+        )
+        target["prompt"] = target["prompt"].replace("**/SPEC-*-workflow.md", "workflow search")
+        with self.assertRaisesRegex(ValueError, "omits file search patterns"):
+            validate_catalog(hidden_search, REPO_ROOT)
 
     def test_registered_worktree_ambiguity_case_matches_accepted_factory_and_legacy(self) -> None:
         case_id = "functional.speckit-autopilot.case-107"

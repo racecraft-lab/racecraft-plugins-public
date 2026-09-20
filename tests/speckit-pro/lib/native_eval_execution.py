@@ -91,6 +91,7 @@ _CONTROLLER_GIT_OBSERVATION_V1 = "native-eval-controller-git-observation/v1"
 _OBJECT_ID = re.compile(r"[a-f0-9]{40}|[a-f0-9]{64}")
 _DISPATCH_ITEM_MARKER = re.compile(r"\[\[native-eval-item:([a-z0-9][a-z0-9._-]*)\]\]")
 _MAX_DISPATCH_ITEM_MARKERS = 64
+_CODEX_UNFINISHED_ITEMS = "Codex capture has unfinished items"
 
 
 def _write_bytes_once(path: Path, payload: bytes) -> None:
@@ -1539,6 +1540,8 @@ def _capture_can_be_renormalized(found: Mapping[str, object]) -> bool:
             or not isinstance(capture.get("error"), str) \
             or not isinstance(attempt, Path):
         return False
+    if capture.get("error") == _CODEX_UNFINISHED_ITEMS:
+        return False
     refs = capture.get("evidence")
     if not isinstance(refs, Mapping) or not all(
         isinstance(refs.get(key), Mapping)
@@ -1564,6 +1567,17 @@ def _capture_can_be_renormalized(found: Mapping[str, object]) -> bool:
     ):
         return False
     return receipt.get("exit_code") == 0 and receipt.get("timed_out", False) is False
+
+
+def _retryable_infrastructure_error(reason: object) -> dict[str, object] | None:
+    if reason != _CODEX_UNFINISHED_ITEMS:
+        return None
+    return {
+        "kind": "unfinished_native_item",
+        "source": "native_capture",
+        "retryable": True,
+        "inferred": False,
+    }
 
 
 def _prepared_claude_skill(
@@ -3464,6 +3478,12 @@ class _Execution:
         if status in _TERMINAL and not retry:
             value = {"row": row, "status": status, "reason": "reused_terminal_grade",
                      "attempt": str(found["attempt"]), "reused": True, "subject_launched": False}
+            infrastructure_error = _retryable_infrastructure_error(
+                found.get("capture", {}).get("error")
+                if isinstance(found.get("capture"), Mapping) else None
+            )
+            if infrastructure_error is not None:
+                value["infrastructure_error"] = infrastructure_error
             return self._outcome(job, value)
         if status == "incomplete" and not retry:
             value = {"row": row, "status": "incomplete", "reason": "explicit_retry_required",
@@ -3823,8 +3843,11 @@ class _Execution:
         )
         return observation, {"interpretation": receipt}, recovery_evidence
 
-    def _captured_invalid(self, job: Job, context: dict[str, object], reason: str,
-                          evidence: dict[str, Path], classification: dict[str, object] | None) -> Outcome:
+    def _captured_invalid(
+        self, job: Job, context: dict[str, object], reason: str,
+        evidence: dict[str, Path], classification: dict[str, object] | None,
+        infrastructure_error: dict[str, object] | None = None,
+    ) -> Outcome:
         attempt = context["attempt"]
         self._measure("checkpoint_seconds", self.store.capture, attempt,
                       observation=None, error=reason, evidence=evidence)
@@ -3832,6 +3855,8 @@ class _Execution:
                  "attempt": str(attempt), "subject_launched": True, "retry": context["retry"]}
         if classification is not None:
             value["provider_error"] = classification
+        if infrastructure_error is not None:
+            value["infrastructure_error"] = infrastructure_error
         return self._outcome(job, value, stop_provider=job.host if classification else None)
 
     def _capture(self, job: Job, context: dict[str, object], raw: object,
@@ -3979,8 +4004,13 @@ class _Execution:
         except ClaudeActivationUnavailable:
             raise
         except (CaptureError, OSError, TypeError, ValueError) as exc:
-            return self._captured_invalid(job, context, str(exc),
-                                          evidence or {"launch_prepared": launch_receipt}, classification)
+            infrastructure_error = _retryable_infrastructure_error(str(exc)) \
+                if isinstance(exc, CaptureError) else None
+            return self._captured_invalid(
+                job, context, str(exc),
+                evidence or {"launch_prepared": launch_receipt}, classification,
+                infrastructure_error,
+            )
 
     def _launch(self, job: Job, context: dict[str, object]) -> Outcome:
         attempt = self._measure("checkpoint_seconds", self.store.reserve, context["row"],

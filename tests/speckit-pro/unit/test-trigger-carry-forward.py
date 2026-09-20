@@ -833,8 +833,10 @@ class CarryForwardThreatTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "checks disagree"):
             generator["record_projection"]({**projection_record, "checks": {"typed": False}},
                                             {"valid": True}, checker=checker)
-        with tempfile.TemporaryDirectory() as temp:
+        with (tempfile.TemporaryDirectory() as temp,
+              tempfile.TemporaryDirectory() as runtime):
             closure = Path(temp).resolve()
+            safe_stdlib = Path(runtime).resolve()
             loaded = closure / "tests/speckit-pro/lib/parser.py"
             loaded.parent.mkdir(parents=True)
             source = b"VALUE = 'reviewed'\n"
@@ -842,7 +844,9 @@ class CarryForwardThreatTests(unittest.TestCase):
             expected = {"lib/parser.py": hashlib.sha256(source).hexdigest()}
             sources = generator["_reviewed_closure_sources"](closure, expected)
             loaded.write_bytes(b"VALUE = 'substituted'\n")
-            finder = generator["_ClosedBytesFinder"](closure, sources, expected)
+            with mock.patch.object(generator["sysconfig"], "get_path",
+                                   return_value=str(safe_stdlib)):
+                finder = generator["_ClosedBytesFinder"](closure, sources, expected)
             sys.meta_path.insert(0, finder)
             try:
                 with mock.patch.object(importlib.machinery.SourceFileLoader, "get_data",
@@ -855,8 +859,12 @@ class CarryForwardThreatTests(unittest.TestCase):
             self.assertEqual(finder.consumed, expected)
 
     def test_threat_6_fresh_worker_rejects_unapproved_stdlib_shadow(self):
-        with tempfile.TemporaryDirectory() as temp:
+        with (tempfile.TemporaryDirectory() as temp,
+              tempfile.TemporaryDirectory() as runtime):
             closure = Path(temp).resolve()
+            safe_stdlib = Path(runtime).resolve()
+            (safe_stdlib / "shlex.py").write_text(
+                "def split(value):\n    return value.split()\n")
             lib = closure / "tests/speckit-pro/lib"
             lib.mkdir(parents=True)
             marker = closure / "shadow-executed"
@@ -870,6 +878,7 @@ class CarryForwardThreatTests(unittest.TestCase):
 import json, runpy, sys
 from pathlib import Path
 g = runpy.run_path({str(ROOT / 'layer2-trigger/generate-carry-forward-replay.py')!r})
+g['sysconfig'].get_path = lambda _name: {str(safe_stdlib)!r}
 closure = Path({str(closure)!r})
 sources = g['_reviewed_closure_sources'](closure, {expected!r})
 finder = g['_ClosedBytesFinder'](closure, sources, {expected!r})

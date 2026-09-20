@@ -252,7 +252,9 @@ class NativeEvalCatalogTests(unittest.TestCase):
             "field_path": ["steps", 0],
             "expected_by_host": {"claude": ["one"], "codex": ["one", "two"]},
         }
-        validate_catalog(catalog(case([check])), self.root)
+        valid = case([check])
+        valid["prompt"] = "Use {{skill}} for this request and return the steps response field."
+        validate_catalog(catalog(valid), self.root)
         for field_path in ([], [True], [-1], [1.0], [""]):
             with self.subTest(field_path=field_path):
                 invalid = copy.deepcopy(check)
@@ -617,7 +619,7 @@ class NativeEvalCatalogTests(unittest.TestCase):
         duplicate = case([runner_result_check(), {
             **runner_result_check(), "id": "runner-result-two",
         }])
-        self.assert_invalid(duplicate, "ambiguous native runner result checks")
+        self.assert_invalid(duplicate, "duplicate native runner result bindings")
 
 
     def test_rejects_unknown_checks_empty_rubrics_and_bad_templates(self) -> None:
@@ -701,11 +703,15 @@ class NativeEvalCatalogTests(unittest.TestCase):
             "id": "search", "requirement": "r1", "type": "file_search",
             "pattern": "**/*roadmap*.md", "matches": ["docs/current-technical-roadmap.md"],
         }
+        valid = case([check])
+        valid["prompt"] = "Use {{skill}} for this request and search for **/*roadmap*.md."
         self.assertEqual(
-            validate_catalog(catalog(case([check])), self.root)["cases"][0]["checks"][0],
+            validate_catalog(catalog(valid), self.root)["cases"][0]["checks"][0],
             check,
         )
-        validate_catalog(catalog(case([{**check, "matches": []}])), self.root)
+        valid_empty = copy.deepcopy(valid)
+        valid_empty["checks"][0]["matches"] = []
+        validate_catalog(catalog(valid_empty), self.root)
         for updates, message in (
             ({"pattern": "*roadmap*.md"}, "recursive basename glob"),
             ({"pattern": "**/docs/*.md"}, "recursive basename glob"),

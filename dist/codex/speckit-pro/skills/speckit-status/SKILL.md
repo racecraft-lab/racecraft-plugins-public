@@ -63,6 +63,12 @@ attached worktrees are included even when setup used a nonstandard worktree
 root. Narrow to the files that actually describe the SpecKit project. If a file
 looks unrelated, ignore it rather than polluting the dashboard.
 
+Search and worktree discovery only identify candidates. This standalone status
+skill must read every selected current roadmap and workflow file from beginning
+to end before answering; snippets, cached summaries, and another skill's report
+are not substitutes for a full-file read. Do not infer status, dependencies,
+branch, or phase state from an unread section.
+
 ## Overall Dashboard Procedure
 
 ### 1. Parse the roadmap first

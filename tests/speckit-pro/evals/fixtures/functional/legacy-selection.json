@@ -454,9 +454,9 @@
           ]
         },
         {
-          "host": "codex",
-          "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json",
-          "eval_id": 5,
+      "host": "codex",
+      "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json",
+      "eval_id": 5,
           "expectations": [
             {
               "expectation_index": 0,
@@ -464,11 +464,11 @@
             },
             {
               "expectation_index": 1,
-              "requirement_id": "legacy-07"
+          "requirement_id": "legacy-07"
             },
             {
               "expectation_index": 2,
-              "requirement_id": "legacy-08"
+          "requirement_id": "legacy-08"
             },
             {
               "expectation_index": 3,
@@ -1040,9 +1040,9 @@
           ]
         },
         {
-          "host": "codex",
-          "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json",
-          "eval_id": 17,
+      "host": "codex",
+      "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json",
+      "eval_id": 17,
           "expectations": [
             {
               "expectation_index": 0,
@@ -1054,7 +1054,7 @@
             },
             {
               "expectation_index": 2,
-              "requirement_id": "legacy-07"
+          "requirement_id": "legacy-03"
             },
             {
               "expectation_index": 3,
@@ -1066,13 +1066,13 @@
             },
             {
               "expectation_index": 5,
-              "requirement_id": "legacy-08"
+          "requirement_id": "legacy-06"
             }
           ]
         }
       ],
       "deterministic_text_checks": 0,
-      "semantic_checks": 8
+    "semantic_checks": 6
     },
     {
       "case_id": "functional.speckit-autopilot.case-18",
@@ -1127,7 +1127,7 @@
             },
             {
               "expectation_index": 3,
-              "requirement_id": "legacy-06"
+          "requirement_id": "legacy-04"
             },
             {
               "expectation_index": 4,
@@ -1137,7 +1137,7 @@
         }
       ],
       "deterministic_text_checks": 0,
-      "semantic_checks": 6
+    "semantic_checks": 5
     },
     {
       "case_id": "functional.speckit-autopilot.case-19",
@@ -1326,7 +1326,7 @@
             },
             {
               "expectation_index": 3,
-              "requirement_id": "legacy-07"
+          "requirement_id": "legacy-04"
             },
             {
               "expectation_index": 4,
@@ -1340,7 +1340,7 @@
         }
       ],
       "deterministic_text_checks": 0,
-      "semantic_checks": 7
+    "semantic_checks": 6
     },
     {
       "case_id": "functional.speckit-autopilot.case-22",
@@ -5091,14 +5091,14 @@
             {
               "expectation_index": 18,
               "requirement_ids": [
-                "legacy-19"
+            "legacy-18"
               ]
             }
           ]
         }
       ],
       "deterministic_text_checks": 0,
-      "semantic_checks": 19
+    "semantic_checks": 18
     },
     {
       "case_id": "functional.speckit-autopilot.case-32",

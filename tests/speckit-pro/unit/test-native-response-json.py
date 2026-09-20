@@ -48,24 +48,51 @@ def case(value: dict[str, object] | None = None) -> dict[str, object]:
     }
 
 
-def observation(value: object, *, encoded: bool = False) -> dict[str, object]:
-    return {
+def observation(
+    value: object, *, encoded: bool = False, cwd: str | None = None,
+    tool_calls: list[dict[str, object]] | None = None,
+) -> dict[str, object]:
+    result: dict[str, object] = {
         "completed": True,
         "error": None,
         "final_text": value if encoded else json.dumps(value, allow_nan=False),
         "activations": [],
-        "tool_calls": [],
+        "tool_calls": tool_calls or [],
         "artifacts": {},
         "usage": {},
     }
+    if cwd is not None:
+        result["native_metadata"] = {"cwd": cwd}
+    return result
+
+
+def _grade_response(response: object, *, host: str | None = "claude",
+                    value: dict[str, object] | None = None, encoded: bool = False) -> str:
+    return str(grade_observation(
+        case(value), observation(response, encoded=encoded), host=host,
+    )["status"])
+
+
+def _grade_command(command: str) -> str:
+    forbidden = {
+        "id": "forbidden", "requirement": "forbidden", "type": "tool_used",
+        "name": "command_execution", "input_regex": "relocate-process-artifacts",
+        "min": 0, "max": 0,
+    }
+    test_case = {"requirements": [{"id": "forbidden"}], "checks": [forbidden]}
+    call = {
+        "name": "command_execution", "input": {"command": command},
+        "success": True,
+    }
+    return str(grade_observation(
+        test_case, observation({}, tool_calls=[call]), host="codex",
+    )["status"])
 
 
 class NativeResponseJsonTests(unittest.TestCase):
     def grade(self, response: object, *, host: str | None = "claude",
               value: dict[str, object] | None = None, encoded: bool = False) -> str:
-        return str(grade_observation(
-            case(value), observation(response, encoded=encoded), host=host,
-        )["status"])
+        return _grade_response(response, host=host, value=value, encoded=encoded)
 
     def test_each_host_matches_only_its_declared_post_steps(self) -> None:
         for host in ("claude", "codex"):
@@ -141,8 +168,86 @@ class NativeResponseJsonTests(unittest.TestCase):
                 self.assertEqual(self.grade(response, host=host), "invalid")
 
 
+class NativeResponseJsonPathAndToolTests(unittest.TestCase):
+    def test_stage_absolute_path_matches_only_its_trusted_cwd_relative_path(self) -> None:
+        value = check()
+        value["field_path"] = ["source_path"]
+        value["expected_by_host"] = {
+            "claude": ".worktrees/spec-021/docs/plan.md",
+            "codex": ".worktrees/spec-021/docs/plan.md",
+        }
+        cwd = "/private/tmp/native-eval/workspace"
+        response = {"source_path": cwd + "/.worktrees/spec-021/docs/plan.md"}
+        result = grade_observation(case(value), observation(response, cwd=cwd), host="codex")
+        self.assertEqual(result["status"], "pass")
+        for actual, trusted_cwd in (
+            ("/private/tmp/native-eval/outside/docs/plan.md", cwd),
+            (cwd + "/.worktrees/spec-021/docs/plan.md", "/private/tmp/other"),
+            (cwd + "/.worktrees/spec-021/../spec-021/docs/plan.md", cwd),
+        ):
+            with self.subTest(actual=actual, trusted_cwd=trusted_cwd):
+                result = grade_observation(
+                    case(value), observation({"source_path": actual}, cwd=trusted_cwd),
+                    host="codex",
+                )
+                self.assertEqual(result["status"], "fail")
+
+    def test_search_text_does_not_count_as_a_forbidden_command_invocation(self) -> None:
+        self.assertEqual(
+            _grade_command("rg -n 'relocate-process-artifacts' .agents docs"), "pass",
+        )
+        self.assertEqual(
+            _grade_command("/bin/zsh -c \"grep -R 'relocate-process-artifacts' docs\""),
+            "pass",
+        )
+        self.assertEqual(_grade_command("relocate-process-artifacts --dry-run"), "fail")
+        # Ambiguous compound shell remains fail-closed rather than hiding a
+        # possible invocation behind a search command.
+        self.assertEqual(
+            _grade_command("rg -n relocate-process-artifacts docs || relocate-process-artifacts"),
+            "fail",
+        )
+
+
+class NativeResponseJsonProjectionTests(unittest.TestCase):
+    def test_structured_id_projection_accepts_only_unique_exact_ids(self) -> None:
+        value = check()
+        value["field_path"] = ["observed_extensions"]
+        value["expected_by_host"] = {
+            "claude": ["verify", "review"], "codex": ["verify", "review"],
+        }
+        accepted = (
+            [{"id": "review", "status": "configured"}, {"id": "verify"}],
+            {"targets": [{"id": "verify", "purpose": "checks"}, {"id": "review"}]},
+        )
+        for actual in accepted:
+            with self.subTest(actual=actual):
+                self.assertEqual(
+                    _grade_response({"observed_extensions": actual}, host="codex", value=value),
+                    "pass",
+                )
+        rejected = (
+            [{"id": "verify"}],
+            [{"id": "verify"}, {"id": "verify"}],
+            [{"id": "verify"}, {"id": 2}],
+            {"targets": [{"id": "verify"}, {"id": "review"}], "extra": True},
+            {"items": [{"id": "verify"}, {"id": "review"}]},
+        )
+        for actual in rejected:
+            with self.subTest(actual=actual):
+                self.assertEqual(
+                    _grade_response({"observed_extensions": actual}, host="codex", value=value),
+                    "fail",
+                )
+
+
 if __name__ == "__main__":
-    raise SystemExit(run_counted(
-        unittest.defaultTestLoader.loadTestsFromTestCase(NativeResponseJsonTests),
-        label="test-native-response-json",
-    ))
+    suite = unittest.TestSuite(
+        unittest.defaultTestLoader.loadTestsFromTestCase(test_case)
+        for test_case in (
+            NativeResponseJsonTests,
+            NativeResponseJsonPathAndToolTests,
+            NativeResponseJsonProjectionTests,
+        )
+    )
+    raise SystemExit(run_counted(suite, label="test-native-response-json"))

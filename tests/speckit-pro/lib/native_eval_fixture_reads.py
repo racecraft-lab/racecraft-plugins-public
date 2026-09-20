@@ -21,8 +21,14 @@ from native_eval_catalog import _relative_path
 _SCHEMA = "native-eval-fixture-read-proof/v1"
 _CONTROLLER_KEY = "controller_fixture_read_witnesses"
 _CONTROLLER_AUTHORITY = "controller-staged-fixtures"
-_RESERVED_METADATA = frozenset({"fixture_read_proofs", "fixture_read_witnesses"})
+_PROJECT_ARTIFACTS = "project_artifacts"
+_RESERVED_METADATA = frozenset({
+    "fixture_read_proofs", "fixture_read_witnesses", "project_artifact_search_scope",
+})
 _SHELLS = frozenset({"sh", "bash", "zsh", "/bin/sh", "/bin/bash", "/bin/zsh"})
+_CAT = frozenset({"cat", "/bin/cat"})
+_JQ = frozenset({"jq", "/usr/bin/jq", "/opt/homebrew/bin/jq"})
+_NL = frozenset({"nl", "/usr/bin/nl"})
 _SED = frozenset({"sed", "/bin/sed", "/usr/bin/sed"})
 _WC = frozenset({"wc", "/usr/bin/wc"})
 _SED_RANGE = re.compile(r"1,(\$|[1-9][0-9]{0,8})p")
@@ -46,6 +52,15 @@ class _Read:
     path: str
     end_line: int | None
     kind: str
+
+
+def _project_artifacts(value: object) -> tuple[str, ...]:
+    _require(isinstance(value, list) and all(isinstance(item, str) for item in value),
+             "controller project-artifact scope is malformed")
+    paths = tuple(_path(item, "controller project-artifact path") for item in value)
+    _require(all(path is not None for path in paths) and list(paths) == sorted(set(paths)),
+             "controller project-artifact scope is not canonical")
+    return tuple(path for path in paths if path is not None)
 
 
 def _require(condition: bool, message: str) -> None:
@@ -108,13 +123,15 @@ def bind_controller_fixture_read_witnesses(
     result_metadata[_CONTROLLER_KEY] = {
         "authority": _CONTROLLER_AUTHORITY,
         "witnesses": validated,
+        _PROJECT_ARTIFACTS: sorted(validated),
     }
     result["native_metadata"] = result_metadata
     return result
 
 
-def bound_fixture_read_witnesses(observation: object) -> dict[str, dict[str, object]] | None:
-    """Read the exact controller envelope, rejecting malformed lookalikes."""
+def _bound_controller_envelope(
+    observation: object,
+) -> tuple[dict[str, dict[str, object]], Mapping[str, object]] | None:
     _require(isinstance(observation, Mapping), "native observation must be a mapping")
     metadata = observation.get("native_metadata")
     _require(metadata is None or isinstance(metadata, Mapping),
@@ -123,10 +140,36 @@ def bound_fixture_read_witnesses(observation: object) -> dict[str, dict[str, obj
         return None
     envelope = metadata[_CONTROLLER_KEY]
     _require(isinstance(envelope, Mapping)
-             and set(envelope) == {"authority", "witnesses"}
+             and set(envelope) in (
+                 {"authority", "witnesses"},
+                 {"authority", "witnesses", _PROJECT_ARTIFACTS},
+             )
              and envelope.get("authority") == _CONTROLLER_AUTHORITY,
              "controller fixture-read witness envelope is malformed")
-    return validate_fixture_read_witnesses(envelope.get("witnesses"))
+    return validate_fixture_read_witnesses(envelope.get("witnesses")), envelope
+
+
+def bound_fixture_read_witnesses(observation: object) -> dict[str, dict[str, object]] | None:
+    """Read the exact controller envelope, rejecting malformed lookalikes."""
+    bound = _bound_controller_envelope(observation)
+    return None if bound is None else bound[0]
+
+
+def bound_project_artifact_paths(observation: object) -> tuple[str, ...] | None:
+    """Return the controller-owned project fixture scope, excluding injected runtime files."""
+    bound = _bound_controller_envelope(observation)
+    if bound is None:
+        return None
+    witnesses, envelope = bound
+    if _PROJECT_ARTIFACTS not in envelope:
+        # Compatibility for retained captures written before the explicit scope
+        # field: the controller's fixture witness map was already exhaustive for
+        # authored scenario inputs and excluded injected runtime payloads.
+        return tuple(sorted(witnesses))
+    paths = _project_artifacts(envelope[_PROJECT_ARTIFACTS])
+    _require(set(witnesses) <= set(paths),
+             "controller project-artifact scope omits a witnessed fixture")
+    return paths
 
 
 def _tokens(command: str) -> list[str] | None:
@@ -155,20 +198,166 @@ def _sed(tokens: list[str]) -> tuple[str, int | None] | None:
     return path, None if match.group(1) == "$" else int(match.group(1))
 
 
-def _wc(tokens: list[str]) -> str | None:
-    if not tokens or tokens[0] not in _WC:
+def _single_operand(
+    tokens: list[str], executables: frozenset[str], prefixes: tuple[tuple[str, ...], ...],
+    label: str,
+) -> str | None:
+    if len(tokens) < 2 or tokens[0] not in executables:
         return None
-    if len(tokens) == 3 and tokens[1] == "-l":
-        operand = tokens[2]
-        option_terminated = False
-    elif len(tokens) == 4 and tokens[1:3] == ["-l", "--"]:
-        operand = tokens[3]
-        option_terminated = True
+    prefix = tuple(tokens[1:-1])
+    if prefix not in prefixes:
+        return None
+    operand = tokens[-1]
+    if operand == "-" or (prefix[-1:] != ("--",) and operand.startswith("-")):
+        return None
+    return _path(operand, label)
+
+
+def _wc(tokens: list[str]) -> str | None:
+    return _single_operand(tokens, _WC, (("-l",), ("-l", "--")), "wc path")
+
+
+def _cat(tokens: list[str]) -> str | None:
+    return _single_operand(tokens, _CAT, ((), ("--",)), "cat path")
+
+
+def _jq_identity(tokens: list[str]) -> str | None:
+    if not tokens or tokens[0] not in _JQ:
+        return None
+    if len(tokens) == 3:
+        expression, operand = tokens[1], tokens[2]
+    elif len(tokens) == 4 and tokens[1] == "--":
+        expression, operand = tokens[2], tokens[3]
     else:
         return None
-    if not option_terminated and operand.startswith("-"):
+    return _path(operand, "jq identity path") if expression == "." else None
+
+
+def _nl_full(tokens: list[str]) -> str | None:
+    if not tokens or tokens[0] not in _NL:
         return None
-    return _path(operand, "wc path")
+    if len(tokens) == 2:
+        operand = tokens[1]
+    elif len(tokens) == 3 and tokens[1] == "-ba":
+        operand = tokens[2]
+    elif len(tokens) == 3 and tokens[1] == "--":
+        operand = tokens[2]
+    elif len(tokens) == 4 and tokens[1:3] == ["-ba", "--"]:
+        operand = tokens[3]
+    else:
+        return None
+    return _path(operand, "nl path")
+
+
+def _shell_body(command: object) -> str | None:
+    if (not isinstance(command, str) or not command.strip()
+            or any(ord(character) < 32 and character not in "\n\t" for character in command)
+            or "`" in command or "$(" in command or "${" in command):
+        return None
+    try:
+        outer = shlex.split(command, comments=False, posix=True)
+    except ValueError:
+        return None
+    if outer and outer[0] in _SHELLS:
+        return outer[2] if len(outer) == 3 and outer[1] == "-c" else None
+    return command
+
+
+def _sequence_tokens(command: object) -> list[list[str]] | None:
+    """Lex only safe sequential shell forms; retain a single allowed pipeline."""
+    body = _shell_body(command)
+    if body is None:
+        return None
+    lexer = shlex.shlex(body, posix=True, punctuation_chars=";&|<>")
+    lexer.whitespace_split = True
+    lexer.commenters = ""
+    try:
+        tokens = list(lexer)
+    except ValueError:
+        return None
+    segments: list[list[str]] = [[]]
+    for token in tokens:
+        if token in {"&&", ";"}:
+            if not segments[-1]:
+                return None
+            segments.append([])
+        elif token in {"&", "||", "<", ">", "<<", ">>"}:
+            return None
+        else:
+            segments[-1].append(token)
+    return segments if segments and segments[-1] else None
+
+
+def _safe_find_projection(tokens: list[str]) -> bool:
+    if "|" in tokens:
+        separator = tokens.index("|")
+        if tokens[separator + 1:] != ["sort"] or "|" in tokens[separator + 1:]:
+            return False
+        tokens = tokens[:separator]
+    if len(tokens) < 5 or tokens[0] not in {"find", "/usr/bin/find"}:
+        return False
+    try:
+        root = _path(tokens[1], "find root")
+    except FixtureReadProofError:
+        return False
+    if root is None:
+        return False
+    options = tokens[2:]
+    if options[-3:] != ["-type", "f", "-print"]:
+        return False
+    options = options[:-3]
+    return not options or (
+        len(options) == 2 and options[0] == "-maxdepth"
+        and options[1].isdigit() and int(options[1]) >= 0
+    )
+
+
+def _literal_heading(tokens: list[str]) -> bool:
+    if not tokens or tokens[0] not in {"printf", "/usr/bin/printf"}:
+        return False
+    if len(tokens) == 2:
+        return "%" not in tokens[1]
+    return len(tokens) == 3 and tokens[1] == "%s\\n" and "%" not in tokens[2]
+
+
+def _sequence_projection(tokens: list[str]) -> _Read | bool | None:
+    sed = _sed(tokens)
+    if sed is not None:
+        return _Read(sed[0], sed[1], "unbounded_sed" if sed[1] is None else "bounded_sed")
+    path = _cat(tokens)
+    if path is not None:
+        return _Read(path, None, "cat")
+    path = _jq_identity(tokens)
+    if path is not None:
+        return _Read(path, None, "jq_identity")
+    path = _nl_full(tokens)
+    if path is not None:
+        return _Read(path, None, "nl_full")
+    if _literal_heading(tokens) or _safe_find_projection(tokens):
+        return False
+    return None
+
+
+def _read_sequence(command: object) -> list[_Read] | None:
+    segments = _sequence_tokens(command)
+    if segments is None:
+        return None
+    reads: list[_Read] = []
+    for tokens in segments:
+        projected = _sequence_projection(tokens)
+        if projected is None:
+            return None
+        if isinstance(projected, _Read):
+            reads.append(projected)
+    return reads or None
+
+
+def codex_unbounded_read_paths(command: object) -> tuple[str, ...]:
+    """Return exact paths only when the whole command is a safe full-read projection."""
+    reads = _read_sequence(command)
+    if reads is None:
+        return ()
+    return tuple(read.path for read in reads if read.end_line is None)
 
 
 def _read(command: object) -> _Read | None:
@@ -217,6 +406,83 @@ def _body(output: str, read: _Read) -> tuple[str, int] | None:
             or int(matched.group(1)) != newlines):
         return None
     return body, newlines
+
+
+def _witness_body(output: str, witness: _Witness) -> bytes | None:
+    """Locate exact controller-authenticated fixture bytes in a compound projection."""
+    try:
+        encoded = output.encode("utf-8", errors="strict")
+    except UnicodeError:
+        return None
+    if witness.byte_count > len(encoded):
+        return None
+    for start in range(len(encoded) - witness.byte_count + 1):
+        candidate = encoded[start:start + witness.byte_count]
+        if hashlib.sha256(candidate).hexdigest() == witness.sha256:
+            return candidate
+    return None
+
+
+def _verified_projection(
+    output: str, projected: _Read, read_count: int, witness: _Witness,
+) -> tuple[bytes, int, int] | None:
+    if read_count != 1:
+        return None
+    encoded = _witness_body(output, witness)
+    if encoded is None:
+        return None
+    newlines = encoded.count(b"\n")
+    logical_lines = newlines + (1 if encoded and not encoded.endswith(b"\n") else 0)
+    if ((projected.end_line is not None and projected.end_line < logical_lines)
+            or len(encoded) != witness.byte_count
+            or hashlib.sha256(encoded).hexdigest() != witness.sha256):
+        return None
+    return encoded, newlines, logical_lines
+
+
+def _projection_access(
+    projected: _Read, witness: _Witness, index: int, verified: tuple[bytes, int, int],
+) -> dict[str, object]:
+    _, newlines, logical_lines = verified
+    return {
+        "operation": "read_file",
+        "path": projected.path,
+        "tool_call_index": index,
+        "provenance": {
+            "schema_version": _SCHEMA,
+            "kind": f"compound_{projected.kind}",
+            "bytes": witness.byte_count,
+            "sha256": witness.sha256,
+            "start_line": 1,
+            "end_line": projected.end_line if projected.end_line is not None else logical_lines,
+            "logical_lines": logical_lines,
+            "newline_count": newlines,
+            "count_header_verified": projected.kind.startswith("count_then_"),
+        },
+    }
+
+
+def _fixture_call_accesses(
+    index: int, call: Mapping[str, object], trusted: Mapping[str, _Witness],
+) -> list[dict[str, object]]:
+    supplied, output = call.get("input"), call.get("output")
+    if (call.get("name") != "command_execution" or call.get("success") is not True
+            or not isinstance(supplied, Mapping) or set(supplied) != {"command"}
+            or not isinstance(output, str)):
+        return []
+    command = supplied.get("command")
+    if _read(command) is not None:
+        return []
+    reads = _read_sequence(command) or []
+    accesses: list[dict[str, object]] = []
+    for projected in reads:
+        witness = trusted.get(projected.path)
+        if witness is None:
+            continue
+        verified = _verified_projection(output, projected, len(reads), witness)
+        if verified is not None:
+            accesses.append(_projection_access(projected, witness, index, verified))
+    return accesses
 
 
 def fixture_read_accesses(
@@ -283,10 +549,35 @@ def fixture_read_accesses(
     return accesses
 
 
+_legacy_fixture_read_accesses = fixture_read_accesses
+
+
+def _fixture_read_accesses_with_compound(
+    observation: object,
+    fixture_read_witnesses: Mapping[str, object],
+) -> list[dict[str, object]]:
+    legacy = _legacy_fixture_read_accesses(observation, fixture_read_witnesses)
+    calls = observation.get("tool_calls") if isinstance(observation, Mapping) else None
+    if not isinstance(calls, list):
+        return legacy
+    trusted = _witnesses(fixture_read_witnesses)
+    return legacy + [
+        access
+        for index, call in enumerate(calls)
+        if isinstance(call, Mapping)
+        for access in _fixture_call_accesses(index, call, trusted)
+    ]
+
+
+fixture_read_accesses = _fixture_read_accesses_with_compound
+
+
 __all__ = [
     "FixtureReadProofError",
     "bind_controller_fixture_read_witnesses",
     "bound_fixture_read_witnesses",
+    "bound_project_artifact_paths",
+    "codex_unbounded_read_paths",
     "fixture_read_accesses",
     "validate_fixture_read_witnesses",
 ]
