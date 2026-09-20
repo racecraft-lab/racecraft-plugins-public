@@ -15,7 +15,7 @@ from .process import run_process, runtime_environment
 from .selection import require_fields, require_text, unique_object
 
 VERSION = "0.32.0"
-TREE_SHA256 = "f6629ced74a17d1c2df89409c3ed1920043b35b80d659e78b53d572e4dd33863"
+TREE_SHA256 = "ad2b0a994292da8dcf69ef33d26a95bdfec609a1250615251789543b6cef342f"
 FORMAL_TOOLS_ROOT = ".specify/tools/formal"
 PACKAGE = "node_modules/@informalsystems/quint"
 ENTRY = PACKAGE + "/dist/src/cli.js"
