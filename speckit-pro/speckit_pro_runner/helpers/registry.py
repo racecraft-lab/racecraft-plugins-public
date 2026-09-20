@@ -240,6 +240,14 @@ HELPERS: dict[str, HelperEntry] = {
         "python_only",
         authoritative_request("sweep-isolation-session"),
     ),
+    "preview-isolation-session": HelperEntry(
+        "preview-isolation-session",
+        "preview-isolation-session",
+        None,
+        "python_authoritative",
+        "python_only",
+        authoritative_request("preview-isolation-session"),
+    ),
     "check-artifact-freshness": HelperEntry(
         "check-artifact-freshness",
         "check-artifact-freshness",

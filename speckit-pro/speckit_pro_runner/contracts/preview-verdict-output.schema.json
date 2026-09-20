@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Isolated artifact preview verdict",
+  "description": "The only value an isolated Codex preview observer may return. Page text never appears here.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["verdict", "artifact_sha256"],
+  "properties": {
+    "verdict": {"type": "string", "enum": ["verified", "denied", "unavailable"]},
+    "artifact_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  }
+}

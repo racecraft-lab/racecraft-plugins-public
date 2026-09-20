@@ -71,7 +71,7 @@
         "value": "speckit_pro_runner/author_broker.py",
         "display": "speckit_pro_runner/author_broker.py"
       },
-      "sha256": "c16ec04eefcadce034aa72d74aac9c172e418c83859400dda54390b7f283d10a"
+      "sha256": "16bbe6a8ed15ee2dff57ebc4c2c59374916a527082c4c34b949ecaacfc2835ae"
     },
     {
       "path": {
@@ -311,7 +311,7 @@
         "value": "speckit_pro_runner/helpers/read_only.py",
         "display": "speckit_pro_runner/helpers/read_only.py"
       },
-      "sha256": "debf790e49a336abb5d66e937346e372270586bb78b990afda196e8b7862ff57"
+      "sha256": "a3c4fa01d36276e9a52e7e5ad47d6de3bef7db73fb0d608ee9be662f9768ab91"
     },
     {
       "path": {
@@ -319,7 +319,7 @@
         "value": "speckit_pro_runner/helpers/registry.py",
         "display": "speckit_pro_runner/helpers/registry.py"
       },
-      "sha256": "b17d5a138d7f44aab235e59cdedc80119864390015c8254b8866e3ebeabd479f"
+      "sha256": "da1bb402234547ae22237153e28143589b856a8c70ab72ec3ecde69e779d3fa9"
     },
     {
       "path": {
@@ -336,6 +336,14 @@
         "display": "speckit_pro_runner/path_utils.py"
       },
       "sha256": "02840b01a30d3d891b219df26cf2efcd66325d196e6959317acee7353afddb29"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
+        "value": "speckit_pro_runner/preview_launcher.py",
+        "display": "speckit_pro_runner/preview_launcher.py"
+      },
+      "sha256": "e617de91256b609e31a76400b594ecd7a13c1d6b2aba22d3d3b53c0a35fb8d8d"
     },
     {
       "path": {

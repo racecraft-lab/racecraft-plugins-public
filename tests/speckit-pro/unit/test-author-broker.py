@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import tempfile
 import unittest
 import unittest.mock
@@ -207,5 +208,117 @@ class AuthorBrokerTests(unittest.TestCase):
         )
 
 
+class PreviewLauncherTests(unittest.TestCase):
+    """The isolated Codex preview observer's invocation boundary."""
+
+    def setUp(self) -> None:
+        from speckit_pro_runner import preview_launcher
+
+        self.launcher = preview_launcher
+        self.plugin_root = ROOT / "speckit-pro"
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.runtime_root = Path(self.temp.name) / "runtime"
+        self.runtime_root.mkdir()
+
+    def command(self) -> list[str]:
+        return self.launcher.codex_preview_command(
+            plugin_root=self.plugin_root, runtime_root=self.runtime_root, capability="cap-token"
+        )
+
+    def test_invocation_reaches_exactly_one_broker_tool(self) -> None:
+        command = self.command()
+        self.assertEqual(("submit_preview_verdict",), self.launcher.OBSERVER_TOOL_NAMES)
+        self.assertIn('mcp_servers.author-broker.enabled_tools=["submit_preview_verdict"]', command)
+        for forbidden in ("create_preview_session", "close_session", "write_formal_file", "create_formal_session"):
+            self.assertNotIn(forbidden, " ".join(c for c in command if c.startswith("mcp_servers")))
+
+    def test_invocation_disables_network_and_ambient_configuration(self) -> None:
+        command = self.command()
+        for flag in ("--ignore-user-config", "--ignore-rules", "--ephemeral", "--strict-config", "--skip-git-repo-check"):
+            self.assertIn(flag, command)
+        self.assertIn("permissions.author-broker-only.network.enabled=false", command)
+        self.assertIn('web_search="disabled"', command)
+        self.assertIn('default_permissions="author-broker-only"', command)
+
+    def test_isolated_filesystem_excludes_the_repository(self) -> None:
+        command = self.command()
+        filesystem = next(c for c in command if c.startswith("permissions.author-broker-only.filesystem="))
+        self.assertIn(str(self.runtime_root.resolve()), filesystem)
+        self.assertNotIn(str(ROOT), filesystem)
+
+    def test_capability_and_trusted_prompt_reach_the_observer(self) -> None:
+        command = self.command()
+        prompt = command[-1]
+        self.assertIn("cap-token", prompt)
+        self.assertIn("mcp__author-broker__submit_preview_verdict", prompt)
+        self.assertIn("--output-schema", command)
+        schema = json.loads(self.launcher.output_schema_path(self.plugin_root).read_text(encoding="utf-8"))
+        self.assertEqual(["verified", "denied", "unavailable"], schema["properties"]["verdict"]["enum"])
+        self.assertFalse(schema["additionalProperties"])
+
+    def test_missing_capability_is_refused(self) -> None:
+        with self.assertRaises(self.launcher.LauncherViolation):
+            self.launcher.codex_preview_command(
+                plugin_root=self.plugin_root, runtime_root=self.runtime_root, capability=""
+            )
+
+    def test_prompt_attestation_refuses_an_unavailable_layout(self) -> None:
+        with self.assertRaises(self.launcher.LauncherViolation):
+            self.launcher.codex_preview_prompt_resource(Path(self.temp.name))
+
+    def test_observation_rejects_output_the_observer_must_not_produce(self) -> None:
+        digest = "b" * 64
+        self.assertEqual("unavailable", self.launcher.preview_observation({"verdict": "unavailable", "artifact_sha256": digest}, digest)["verdict"])
+        for bad in (
+            {"verdict": "unavailable", "artifact_sha256": digest, "page_title": "leaked"},
+            {"verdict": "looks-fine", "artifact_sha256": digest},
+            {"verdict": "verified", "artifact_sha256": "c" * 64},
+            {"verdict": "verified"},
+            "verified",
+        ):
+            with self.assertRaises(self.launcher.LauncherViolation):
+                self.launcher.preview_observation(bad, digest)
+
+    def test_broker_rejection_closes_as_blocked_rather_than_raising(self) -> None:
+        from speckit_pro_runner.helpers.read_only import preview_isolation_session
+
+        repo = Path(self.temp.name) / "repo"
+        (repo / "artifacts").mkdir(parents=True)
+        page = repo / "artifacts" / "page.html"
+        page.write_text("<!doctype html><title>x</title>", encoding="utf-8")
+        for inputs in (
+            {"named_surface": "observe_codex", "artifact_path": "artifacts/page.html", "expected_sha256": "0" * 64},
+            {"named_surface": "observe_codex", "artifact_path": "../escape.html", "expected_sha256": "0" * 64},
+            {"named_surface": "observe_codex", "artifact_path": "artifacts/missing.html", "expected_sha256": "0" * 64},
+        ):
+            with self.subTest(artifact_path=inputs["artifact_path"]):
+                result = preview_isolation_session(inputs, repo)
+                self.assertEqual(3, result["exit_code"])
+                self.assertEqual(
+                    {"status": "blocked", "reason": "preview_boundary_unavailable"},
+                    json.loads(result["stdout"]),
+                )
+
+    def test_redeeming_broker_is_told_the_session_root(self) -> None:
+        from speckit_pro_runner import author_broker
+
+        command = self.command()
+        broker_env = next(c for c in command if c.startswith("mcp_servers.author-broker.env="))
+        self.assertIn(author_broker.STATE_ROOT_VARIABLE, broker_env)
+        self.assertIn(str(author_broker._state_root()), broker_env)
+
+    def test_operation_is_registered_for_the_parent_to_invoke(self) -> None:
+        from speckit_pro_runner.helpers.registry import HELPERS
+
+        entry = HELPERS["preview-isolation-session"]
+        self.assertEqual("preview-isolation-session", entry.operation)
+        self.assertEqual("python_authoritative", entry.promotion_status)
+
+
 if __name__ == "__main__":
-    raise SystemExit(run_counted(unittest.defaultTestLoader.loadTestsFromTestCase(AuthorBrokerTests), label="test-author-broker"))
+    suite = unittest.TestSuite([
+        unittest.defaultTestLoader.loadTestsFromTestCase(AuthorBrokerTests),
+        unittest.defaultTestLoader.loadTestsFromTestCase(PreviewLauncherTests),
+    ])
+    raise SystemExit(run_counted(suite, label="test-author-broker"))

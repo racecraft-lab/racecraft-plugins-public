@@ -298,6 +298,7 @@ def canonicalize_inputs(helper_id: str, inputs: dict[str, Any], repo_root: Path)
         # body listed here would be corrupted before the deny-set ever runs.
         "sweep-pr-feedback": {"workflow_file", "feature_dir"},
         "sweep-isolation-session": {"workflow_file"},
+        "preview-isolation-session": {"workflow_file", "artifact_path"},
         # The freshness helper reads one path and only one: every git fact it
         # needs arrives as request data.
         "check-artifact-freshness": {"workflow_file"},
@@ -429,6 +430,10 @@ def explicit_or_derived_args(helper_id: str, inputs: dict[str, Any], repo_root: 
     if helper_id == "sweep-isolation-session":
         # All values cross the runner on stdin. No untrusted value is ever
         # interpolated into a shell command or model prompt.
+        return []
+    if helper_id == "preview-isolation-session":
+        # Same: the capability and verdict cross the runner on stdin, and the
+        # artifact path is resolved by the broker, never interpolated.
         return []
     if helper_id == "check-artifact-freshness":
         # Same reason: the whole request arrives on stdin and no field is
@@ -2865,6 +2870,43 @@ def sweep_pr_feedback(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]
     if named_surface == "check_target":
         return sweep_check_target(inputs, repo_root)
     return sweep_parse(inputs, repo_root)
+
+
+def preview_isolation_session(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
+    """Observe one artifact preview in isolation and return only its verdict."""
+    from ..author_broker import BrokerViolation
+    from ..preview_launcher import LauncherViolation, run_codex_preview, verify_preview_boundary
+
+    named_surface = inputs.get("named_surface")
+    if named_surface not in {"attest_codex", "observe_codex"}:
+        return make_result(json_text({"status": "invalid_request"}), "preview request rejected\n", 2)
+
+    plugin_root = Path(__file__).resolve().parents[2]
+    try:
+        if named_surface == "attest_codex":
+            if set(inputs) != {"named_surface"}:
+                raise LauncherViolation("attestation fields do not match")
+            verify_preview_boundary(plugin_root)
+            payload = {"surface": "codex", "status": "attested"}
+        else:
+            if set(inputs) != {"named_surface", "artifact_path", "expected_sha256"}:
+                raise LauncherViolation("preview observation fields do not match")
+            payload = run_codex_preview(
+                plugin_root=plugin_root,
+                repo_root=repo_root,
+                artifact_path=inputs["artifact_path"],
+                expected_sha256=inputs["expected_sha256"],
+            )
+    except (BrokerViolation, LauncherViolation):
+        # A rejected artifact path, an escaping path, or bytes that no longer
+        # match the expected digest are ordinary bad requests. They close the
+        # same way as an unavailable boundary: no traceback, no page evidence.
+        return make_result(
+            json_text({"status": "blocked", "reason": "preview_boundary_unavailable"}),
+            "artifact preview isolation boundary unavailable\n",
+            3,
+        )
+    return make_result(json_text(payload), "", 0)
 
 
 def sweep_isolation_session(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
@@ -8005,6 +8047,7 @@ PY_HELPERS: dict[str, Callable[[dict[str, Any], Path], dict[str, Any]]] = {
     "resolve-claude-subagent-runtime": resolve_claude_subagent_runtime,
     "sweep-pr-feedback": sweep_pr_feedback,
     "sweep-isolation-session": sweep_isolation_session,
+    "preview-isolation-session": preview_isolation_session,
     "check-artifact-freshness": check_artifact_freshness,
     "confidence-gate": confidence_gate,
     "parse-consensus-categories": parse_consensus_categories,

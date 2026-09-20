@@ -41,7 +41,21 @@ class BrokerViolation(ValueError):
     """A broker request violated its closed trust boundary."""
 
 
+STATE_ROOT_VARIABLE = "SPECKIT_AUTHOR_BROKER_STATE_ROOT"
+
+
 def _state_root() -> Path:
+    """Resolve the private session root, honouring an explicit launcher override.
+
+    A capability is minted in one process and redeemed in another. When an
+    isolated launcher starts the redeeming broker it cannot rely on the child
+    inheriting the same TMPDIR, so it names the root outright. The value is
+    still validated by _ensure_private_root, which refuses a symlink, a
+    non-directory, or a root this user does not own.
+    """
+    override = os.environ.get(STATE_ROOT_VARIABLE)
+    if override:
+        return Path(override)
     uid = getattr(os, "getuid", lambda: 0)()
     return Path(tempfile.gettempdir()) / f"speckit-pro-author-broker-{uid}"
 

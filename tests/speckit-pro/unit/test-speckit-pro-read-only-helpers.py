@@ -87,6 +87,7 @@ EXPECTED_HELPERS = [
     "estimate-spec-size",
     "sweep-pr-feedback",
     "sweep-isolation-session",
+    "preview-isolation-session",
     "check-artifact-freshness",
     "partition-phase7-tasks",
     "validate-task-execution",
@@ -168,6 +169,7 @@ HELPER_CASES: dict[str, dict[str, object]] = {
         },
     },
     "sweep-isolation-session": {"named_surface": "attest_claude"},
+    "preview-isolation-session": {"named_surface": "attest_codex"},
     "check-artifact-freshness": {
         "workflow_file": "docs/ai/specs/.process/FEATURE-002-workflow.md",
         "artifacts_observation": {

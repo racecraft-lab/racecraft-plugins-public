@@ -145,6 +145,16 @@ does not end at the boundary commit above. It runs this sequence, in this order:
 8. Validate and commit/push the workflow-only preview evidence.
 ```
 
+Dispatch step 7 through the runner, never by running the observer yourself:
+`helper_id=preview-isolation-session operation=preview-isolation-session mode=read_only`
+with `named_surface=attest_codex` once, then `named_surface=observe_codex` plus
+`artifact_path` and `expected_sha256` per page. The runner mints the broker
+capability, runs the observer under its own Codex permission profile with one
+broker tool and no network, and returns only the closed brokered observation.
+Under that profile the isolated process has no preview capability, so
+`unavailable` is the expected verdict; record it rather than substituting a
+parent-side judgement.
+
 **Read the [Artifact Review Handoff contract](../../../skills/speckit-autopilot/references/artifact-review.md) before this sequence.**
 It defines the durable record, preview evidence, current-task binding, and
 preview-only resume. Publication through step 6 remains fail-open for generation
