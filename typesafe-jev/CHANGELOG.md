@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.1](https://github.com/racecraft-lab/typesafe-mcp/compare/v0.7.0...v0.7.1) (2026-09-20)
+
+
+### Bug Fixes
+
+* **providers:** restore full parity after OpenRouter widened its schema ([#12](https://github.com/racecraft-lab/typesafe-mcp/issues/12)) ([959e459](https://github.com/racecraft-lab/typesafe-mcp/commit/959e459683426cd44c1ee457cb6c4bbc6890b6c2))
+
 ## [0.7.0](https://github.com/racecraft-lab/typesafe-mcp/compare/v0.6.0...v0.7.0) (2026-09-18)
 
 Seven fixes, every one of them found by smoke-testing the released 0.6.0 plugin against the live backend rather than by reading the code.
