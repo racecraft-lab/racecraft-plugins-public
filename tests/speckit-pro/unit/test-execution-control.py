@@ -361,8 +361,13 @@ class VerificationTests(unittest.TestCase):
                 self.assertIn("input_snapshot_changed", invalid["reasons"])
                 path.write_bytes(old)
         result, observed = self.produce()
-        with patch.dict(os.environ, {"VERIFICATION_CHANGED": "yes"}):
+        # The binding covers the variables the child actually receives. Changing
+        # one of those still invalidates reuse; an unrelated host variable no
+        # longer reaches the child, so it must not.
+        with patch.dict(os.environ, {"TZ": "UTC-14"}):
             self.assertIn("toolchain_or_environment_changed", self.validate(result, observed)["reasons"])
+        with patch.dict(os.environ, {"VERIFICATION_CHANGED": "yes"}):
+            self.assertNotIn("toolchain_or_environment_changed", self.validate(result, observed)["reasons"])
 
     def test_missing_receipt_and_native_result_mismatch_fail_closed(self):
         result, observed = self.produce()
@@ -405,6 +410,31 @@ class VerificationTests(unittest.TestCase):
         (self.root / "check.py").write_text("from pathlib import Path\nPath('feature').chmod(0o700)\n")
         result, _ = self.produce()
         self.assertFalse(result["record"]["snapshot_unchanged"])
+
+    def test_child_environment_excludes_host_credentials(self):
+        canaries = {
+            "SPECKIT_TEST_CANARY": "top-secret-value",
+            "AWS_SECRET_ACCESS_KEY": "aws-canary",
+            "GITHUB_TOKEN": "gh-canary",
+            "NPM_TOKEN": "npm-canary",
+        }
+        with patch.dict(os.environ, canaries):
+            with patch("speckit_pro_runner.verification_records.run_snapshot_command", wraps=run_snapshot_command) as launched:
+                self.produce()
+        environment = launched.call_args.args[2]
+        for name, value in canaries.items():
+            self.assertNotIn(name, environment, f"{name} leaked into the verification child environment")
+            self.assertNotIn(value, environment.values())
+
+    def test_child_home_is_relocated_away_from_the_operator_account(self):
+        with patch("speckit_pro_runner.verification_records.run_snapshot_command", wraps=run_snapshot_command) as launched:
+            result, _ = self.produce()
+        environment = launched.call_args.args[2]
+        outputs = result["record"]["output_directory"]
+        self.assertEqual(outputs, environment["HOME"])
+        self.assertNotEqual(str(Path.home()), environment["HOME"])
+        for name in ("XDG_CONFIG_HOME", "XDG_DATA_HOME", "XDG_CACHE_HOME"):
+            self.assertEqual(outputs, environment[name])
 
     def test_record_binds_effective_child_environment_after_output_relocation(self):
         with patch("speckit_pro_runner.verification_records.run_snapshot_command", wraps=run_snapshot_command) as launched:

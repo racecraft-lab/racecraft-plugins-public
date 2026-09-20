@@ -35,6 +35,12 @@ from .execution_control import confined_path, durable_json, elapsed, execution_c
 SCHEMA = "verification-record/v1"
 COMMAND_IDS = {"BUILD", "TYPECHECK", "LINT", "UNIT_TEST", "INTEGRATION_TEST", "FULL_VERIFY",
                "COMPLEXITY", "MUTATION", "DEPENDENCY_RULES"}
+# Carried into the verification child by name. Locating a toolchain and
+# formatting its output is all these do; nothing here names a credential, a
+# socket, or a host path outside the toolchain. Windows needs its loader and
+# executable-suffix variables or the interpreter will not start at all.
+ENVIRONMENT_PASSTHROUGH = ("PATH", "LANG", "LC_ALL", "LC_CTYPE", "TZ",
+                           "SYSTEMROOT", "SYSTEMDRIVE", "COMSPEC", "PATHEXT", "NUMBER_OF_PROCESSORS")
 MAX_FILES = 50000
 MAX_BYTES = 512 * 1024 * 1024
 MAX_RECORD_BYTES = 1024 * 1024
@@ -160,10 +166,29 @@ def tree_digest(files: dict[str, tuple[int, bytes | None]]) -> str:
 
 
 def environment_binding(outputs: Path) -> tuple[dict[str, str], str]:
-    environment = dict(os.environ)
-    environment.update(PYTHONDONTWRITEBYTECODE="1", PYTHONNOUSERSITE="1", TMPDIR=str(outputs), TMP=str(outputs),
-                       TEMP=str(outputs), XDG_CACHE_HOME=str(outputs), SPECKIT_VERIFICATION_OUTPUT_DIR=str(outputs))
-    # Do not persist values: credentials may be inherited by an authorized check.
+    """Build a credential-free child environment instead of inheriting the host's.
+
+    The command comes from the repository's own PROJECT_COMMANDS slots, so a
+    contributor chooses what runs. Copying ``os.environ`` handed that command
+    every ambient secret the operator holds (API tokens, ``SSH_AUTH_SOCK``,
+    ``DOCKER_HOST``) and a ``HOME`` full of credential files. Only the variables
+    a toolchain needs to locate itself and format output are carried over, by
+    name; everything else is dropped. ``HOME`` and the XDG roots are relocated
+    into the run's own output directory so ``~/.npmrc``, ``~/.netrc``,
+    ``~/.cargo/credentials.toml`` and friends are simply not there to read.
+
+    This closes the credential half of the isolation requirement. It does not
+    confine the filesystem or the network, which is why the record still
+    declares ``copy_only`` and refuses to qualify itself.
+    """
+    inherited = {name: os.environ[name] for name in ENVIRONMENT_PASSTHROUGH if name in os.environ}
+    environment = {**inherited, "PYTHONDONTWRITEBYTECODE": "1", "PYTHONNOUSERSITE": "1",
+                   "HOME": str(outputs), "TMPDIR": str(outputs), "TMP": str(outputs), "TEMP": str(outputs),
+                   "XDG_CACHE_HOME": str(outputs), "XDG_CONFIG_HOME": str(outputs),
+                   "XDG_DATA_HOME": str(outputs), "XDG_STATE_HOME": str(outputs),
+                   "SPECKIT_VERIFICATION_OUTPUT_DIR": str(outputs)}
+    if os.name == "nt":
+        environment["USERPROFILE"] = str(outputs)
     return environment, digest(environment)
 
 
