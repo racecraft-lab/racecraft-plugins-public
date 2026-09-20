@@ -108,15 +108,18 @@ func TestLiveThreePrimitives(t *testing.T) {
 	t.Logf("raw response: %s", body)
 }
 
-// The stricter OpenRouter schema is enforced before a request is sent, so a
-// structured instruction costs nothing to get wrong.
-func TestLiveRejectsStructuredInstructionsOnOpenRouter(t *testing.T) {
+// OpenRouter republished its Decisions schemas to accept structured
+// instructions, so this asserts the opposite of what it once did: the
+// structured form must now reach the backend and come back answered. It is the
+// check that would catch a re-narrowing on the provider's side, which local
+// tests cannot see.
+func TestLiveAcceptsStructuredInstructionsOnOpenRouter(t *testing.T) {
 	cfg, c := liveConfig(t)
 	if cfg.Provider.Name != "openrouter" {
 		t.Skipf("backend is %s; this check is about openrouter", cfg.Provider.Name)
 	}
 
-	_, err := runEvaluate(context.Background(), c, evaluateIn{
+	body, err := runEvaluate(context.Background(), c, evaluateIn{
 		State: "checkout is down",
 		Questions: map[string]question{
 			"impact": {
@@ -125,13 +128,13 @@ func TestLiveRejectsStructuredInstructionsOnOpenRouter(t *testing.T) {
 			},
 		},
 	})
-	if err == nil {
-		t.Fatal("structured instructions were accepted by the openrouter backend")
+	if err != nil {
+		t.Fatalf("openrouter rejected structured instructions: %v", err)
 	}
-	if !strings.Contains(err.Error(), "questions.impact.instructions") {
-		t.Errorf("error should name the field path: %v", err)
+	if !strings.Contains(string(body), `"impact"`) {
+		t.Errorf("response has no answer for the question: %s", body)
 	}
-	t.Logf("rejected locally, no request made: %v", err)
+	t.Logf("raw response: %s", body)
 }
 
 // The closest thing to a client smoke test without touching a real client

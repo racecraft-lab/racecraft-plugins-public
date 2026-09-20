@@ -146,7 +146,7 @@ It gets back the raw response JSON, with each answer under the same id you gave 
 - **Setup that changes nothing.** `evaluate setup mcp` prints the commands and config for the clients you name. It never runs a client CLI, edits a config file, or reads your key: only the key-file *path* appears in its output, never a value.
 - **Explicit backends.** `JEV_PROVIDER` selects TypeSafe or OpenRouter, and each backend reads only its own credential. An `OPENROUTER_API_KEY` left in a shell by another tool cannot silently reroute and re-bill your setup.
 - **Answers your code can branch on.** Three question types: `noul` (probability a condition holds), `choice` (one option from a map), `score` (position on ordered levels).
-- **Per-backend validation.** TypeSafe's structured instructions and null option descriptions keep working. The stricter OpenRouter schema applies only to OpenRouter, and a request it would reject fails locally before it costs anything.
+- **Both backends at full capability.** Structured instructions and criteria, and null option descriptions, work on TypeSafe and OpenRouter alike. Validation is per backend rather than a shared lowest common denominator, so neither is narrowed to suit the other, and a request a backend would reject fails locally before it costs anything.
 - **Rate limits handled honestly.** Each backend retries only the statuses it documents as transient, `Retry-After` is honoured as a minimum wait, and retry waits come out of the same timeout as the attempts. Authentication, credit, and validation failures are never replayed.
 - **Several questions, one call.** Batch independent questions over the same state; they run in parallel.
 - **Agents that use it well out of the box.** The server ships usage guidance (narrow questions, JSON state, no-match options) to the client, so the agent writes better questions without extra prompting.
@@ -170,7 +170,7 @@ It gets back the raw response JSON, with each answer under the same id you gave 
 
 Criteria by type: `noul` takes optional `{"true": ..., "false": ...}` descriptions; `choice` requires a map of option to description; `score` requires an ordered array of at least 2 levels.
 
-**The backends do not accept the same values.** TypeSafe accepts a string, object, array, or null for instructions and for every criteria description. OpenRouter's Decisions schema types all of them as plain strings. [docs/provider-contracts.md](docs/provider-contracts.md) has the field-by-field comparison with a source for each row.
+**Both backends accept the same values.** TypeSafe accepts a string, object, array, or null for instructions and for every criteria description. OpenRouter's Decisions schema accepts a string, object, or array for all of them, and null for choice option descriptions — the one shape it does not take is a null where this server requires a value anyway. OpenRouter typed these fields as plain strings until it republished the schema; nothing here narrows them any more. [docs/provider-contracts.md](docs/provider-contracts.md) has the field-by-field comparison with a source for each row.
 
 ### Settings
 
@@ -190,7 +190,9 @@ TypeSafe publishes an agent skill (`typesafe-ai`) that teaches an agent the Syst
 
 They divide cleanly. The skill is for **designing** judgments, and for writing an application that calls TypeSafe from your own code. This server is for **making** a judgment during a session, without the agent writing an integration first.
 
-One interaction is worth knowing. The skill teaches structured instructions and criteria, which TypeSafe documents and accepts. On the **OpenRouter** backend that shape is rejected, because OpenRouter's Decisions schema types those fields as strings. The tool error names the field path and says so. Either send string instructions on that backend, or select `JEV_PROVIDER=typesafe` when you want the structured form.
+The structured instructions and criteria the skill teaches now work on **both** backends. OpenRouter's Decisions schema typed those fields as plain strings until it republished them as string, object, or array, so nothing needs reconciling and no backend has to be selected to use the form the skill describes.
+
+One asymmetry is still worth knowing, and it is in the reply rather than the request: OpenRouter marks `confidence` and `probabilities` optional on choice and score answers, where TypeSafe always sends them. The server says so in its instructions at connect time. An absent field is reported absent and never filled in with a plausible number, so branch on it only after checking it is there.
 
 ### Manual client config
 

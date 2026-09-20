@@ -7,23 +7,28 @@ import (
 	"strings"
 )
 
-// The two backends take the same request shape but do not accept the same
-// values inside it. TypeSafe documents that instructions, choice option
-// descriptions, score level descriptions, and noul true/false descriptions all
-// accept a string, an object, an array, or null. OpenRouter's Decisions
-// schemas type every one of those as a plain string.
+// The two backends take the same request shape, and now accept the same values
+// inside it. TypeSafe documents that instructions, choice option descriptions,
+// score level descriptions, and noul true/false descriptions all accept a
+// string, an object, an array, or null. OpenRouter's Decisions schemas typed
+// every one of those as a plain string until it republished them; they are now
+// anyOf string, object, or array, with null additionally allowed for choice
+// option descriptions.
 //
-// So the strictness is per backend, never global: narrowing TypeSafe to match
-// OpenRouter would drop input shapes TypeSafe publishes and existing callers
-// use. See docs/provider-contracts.md for the field-by-field source.
+// So structure is no longer narrowed for OpenRouter. What remains of the
+// divergence is null in the three positions this server requires a value
+// anyway (instructions, noul true/false, score levels), which is why no
+// per-backend null rule survives here either. The capability still lives on
+// ProviderSpec rather than being assumed, so a backend that re-narrows is one
+// field to flip. See docs/provider-contracts.md for the field-by-field source.
 
 const (
 	// Question types, shared by both backends.
 	typeNoul   = "noul"
 	typeChoice = "choice"
 	typeScore  = "score"
-	// minScoreLevels is this fork's policy, not a published constraint.
-	// OpenRouter's schema sets no minItems, but a one-level scale gives the
+	// minScoreLevels is this fork's policy, stricter than either publisher.
+	// OpenRouter's schema sets minItems: 1, but a one-level scale gives the
 	// model nothing to place a value between.
 	minScoreLevels = 2
 	// maxChoiceOptions is a published limit, not this fork's policy: the tool
@@ -169,11 +174,9 @@ func validateEntry(spec ProviderSpec, path string, v any, mode entryMode) error 
 		if mode == entryRequired {
 			return fmt.Errorf("%s is required", path)
 		}
-		// TypeSafe documents null as a valid description, meaning "the option
-		// name says it". OpenRouter types the field as a string.
-		if spec.Name == "openrouter" {
-			return fmt.Errorf("%s must be a string for the openrouter backend; it may be null only on typesafe", path)
-		}
+		// A null description means "the option name says it". Both backends
+		// accept it in the one optional position this server has, a choice
+		// option description.
 		return nil
 	}
 
@@ -184,11 +187,11 @@ func validateEntry(spec ProviderSpec, path string, v any, mode entryMode) error 
 		}
 		return nil
 	case map[string]any, []any:
-		if spec.Name == "openrouter" {
+		if !spec.StructuredEntries {
 			// Not stringified silently: JSON-encoding an object into the
 			// instructions would send the model something nobody wrote.
-			return fmt.Errorf("%s must be a string for the openrouter backend; structured %s are supported on typesafe only",
-				path, describeKind(v))
+			return fmt.Errorf("%s must be a string for the %s backend; structured %s are not accepted there",
+				path, spec.Name, describeKind(v))
 		}
 		return nil
 	default:

@@ -162,8 +162,8 @@ for the OpenRouter integration to work.
 - The single tool named `evaluate`, its argument names, and its annotations.
 - Go, Cobra, the MCP Go SDK v1.7.0, and stdio transport.
 - TypeSafe's accepted input shapes. Structured instructions and null criteria
-  descriptions still work on the TypeSafe backend; the stricter schema applies
-  only to OpenRouter.
+  descriptions still work, and now work on the OpenRouter backend too, which
+  republished its Decisions schemas to accept them.
 - Upstream's tool guidance about question ids, batching, and what confidence
   means.
 - `setup pi` and `cmd/evaluate/pi.ts`.

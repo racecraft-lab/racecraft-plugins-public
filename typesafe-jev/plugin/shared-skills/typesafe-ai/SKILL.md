@@ -22,8 +22,9 @@ Adapted from TypeSafe AI's official agent skill.
   License: MIT, see the LICENSE file beside this one.
 
 Racecraft Lab's changes are limited to the "Make the judgment now" section
-below, the matching line in the front-matter description, and the OpenRouter
-note under "Design the judgments". Everything else is upstream's text.
+below, the matching line in the front-matter description, and the backend note
+under "Design the judgments". Everything else is upstream's text, kept verbatim
+and re-diffed against the source on each upstream release.
 
 Why adapt rather than ship alongside: upstream's skill teaches an agent to
 write SDK or HTTP code against the TypeSafe API. That is right when you are
@@ -180,15 +181,20 @@ selection, check candidate coverage: the model cannot choose an omitted value.
 **Structured instructions and criteria through the `evaluate` tool.** The
 paragraph above describes the direct TypeSafe API, which accepts a string,
 object, array, or null for instructions and for every criteria description.
-OpenRouter's Decisions schema types all of those as plain strings.
+The tool accepts that same structured form on **both** backends.
 
-So when the tool is configured with `JEV_PROVIDER=openrouter`, send strings.
-The tool's exported schema says so, its server instructions say so at connect
-time, and a structured value is rejected locally with the field path rather
-than being flattened into something nobody wrote. On the `typesafe` backend the
-structured form works exactly as described above. This constrains the tool's
-transport only; it says nothing about what TypeSafe's own API accepts in an
-application you write.
+OpenRouter's Decisions schema typed those fields as plain strings until it
+republished them as string, object, or array, so there is no longer a backend
+on which to avoid the structured form, and nothing to reconcile between this
+skill and the tool. Write the questions the way this skill teaches.
+
+One asymmetry remains, and it is in the answer rather than the question. On the
+`openrouter` backend, `confidence` and `probabilities` are optional on choice
+and score answers, where the TypeSafe backend always sends them. The tool
+reports an absent field as absent and never substitutes a number, so check the
+field is there before you branch on it. Both of these constrain the tool's
+transport only; neither says anything about what TypeSafe's own API accepts or
+returns in an application you write.
 
 ## Compose and verify
 

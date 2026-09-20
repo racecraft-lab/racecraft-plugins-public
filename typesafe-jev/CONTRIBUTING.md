@@ -52,10 +52,12 @@ OpenRouter accept belong in `docs/provider-contracts.md` with a link and a
 fetch date. Do not infer a contract from one observed response, and do not
 guess at a versioned API.
 
-**Keep the two backends honest.** TypeSafe accepts structured instructions and
-null option descriptions; OpenRouter does not. Never narrow both to satisfy
-one. If you add a rule, say whether it is the provider's requirement or this
-fork's policy.
+**Keep the two backends honest.** Both accept structured instructions, and both
+accept a null choice option description; OpenRouter reached that point later,
+when it republished its Decisions schemas. Never narrow both to satisfy one,
+and never leave a narrowing in place once the reason for it is gone — a rule
+that outlives its source hides a capability the backend has. If you add a rule,
+say whether it is the provider's requirement or this fork's policy.
 
 ## Things this project deliberately will not do
 

@@ -63,7 +63,10 @@ func TestRetryPolicyIsPerBackend(t *testing.T) {
 		{"typesafe", 503, 1},
 		{"openrouter", 429, 2},
 		{"openrouter", 503, 2},
-		{"openrouter", 529, 1},
+		// 524 and 529 joined OpenRouter's documented Decisions statuses when
+		// it republished the path; both are transient, so both are retried.
+		{"openrouter", 524, 2},
+		{"openrouter", 529, 2},
 		{"openrouter", 500, 1},
 		{"openrouter", 502, 1},
 	} {

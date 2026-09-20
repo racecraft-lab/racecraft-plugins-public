@@ -249,8 +249,8 @@ answers too, and may be absent where TypeSafe always sends them.
 | `HTTP 402` | Out of credits, or the key's spending limit is reached | Add credits or raise the cap |
 | `HTTP 403` | The key is valid but not permitted for this call; a management key cannot run inference | Use an inference key |
 | `HTTP 404` | Could be the model id, could be the alpha endpoint moving | Check the model first; do not switch to chat completions |
-| `HTTP 429` or `503` | Rate limited or temporarily unavailable | Retried automatically within the budget; retry later if it persists |
-| `must be a string for the openrouter backend` | Structured instructions or a null description on OpenRouter | Send strings, or select the `typesafe` backend |
+| `HTTP 429`, `503`, `524`, or `529` | Rate limited, unavailable, upstream timeout, or overloaded | Retried automatically within the budget; retry later if it persists |
+| A choice or score answer has no `confidence` or `probabilities` | Optional on OpenRouter; always sent by TypeSafe | Check the field is present before branching on it; do not substitute a default |
 | `the next retry would not fit in the ... budget` | Retry-After exceeds the remaining timeout | Raise `JEV_REQUEST_TIMEOUT`, or retry later |
 | The tool times out in Codex but the server looks fine | `tool_timeout_sec` is below `JEV_REQUEST_TIMEOUT` | Raise `tool_timeout_sec` |
 | Two `evaluate` tools appear | An upstream install is also registered | They are separate servers; remove the one you do not want, or rename this one with `--name` |

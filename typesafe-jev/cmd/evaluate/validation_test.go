@@ -76,10 +76,11 @@ func TestValidateRequestAcceptsThreePrimitives(t *testing.T) {
 	}
 }
 
-// REQ-02, REQ-03: TypeSafe documents structured instructions; OpenRouter types
-// them as strings. The strictness applies to OpenRouter only, and never
-// stringifies the structure to force it through.
-func TestStructuredInstructionsAreBackendSpecific(t *testing.T) {
+// REQ-02, REQ-03: both backends document structured instructions. TypeSafe
+// always has; OpenRouter's Decisions schemas typed them as plain strings until
+// it republished them as anyOf string, object, or array. Neither backend may
+// reject the structured form, and neither may stringify it to force it through.
+func TestStructuredInstructionsAcceptedOnBothBackends(t *testing.T) {
 	for _, literal := range []string{
 		`{"field":{"name":"amount_due","type":"number"},"question":"How large is it?"}`,
 		`["compare sender name","compare sender domain"]`,
@@ -88,23 +89,37 @@ func TestStructuredInstructionsAreBackendSpecific(t *testing.T) {
 			State:     "x",
 			Questions: map[string]question{"q": {Type: "noul", Instructions: jsonValue(t, literal)}},
 		}
-		if err := validateRequest(typesafeSpec, in); err != nil {
-			t.Errorf("typesafe rejected documented structure %s: %v", literal, err)
-		}
-		err := validateRequest(openrouterSpec, in)
-		if err == nil {
-			t.Errorf("openrouter accepted structure it cannot parse: %s", literal)
-			continue
-		}
-		if !strings.Contains(err.Error(), "questions.q.instructions") {
-			t.Errorf("error should name the field path: %v", err)
+		for _, spec := range []ProviderSpec{typesafeSpec, openrouterSpec} {
+			if err := validateRequest(spec, in); err != nil {
+				t.Errorf("%s rejected documented structure %s: %v", spec.Name, literal, err)
+			}
 		}
 	}
 }
 
-// REQ-04, REQ-05: a null choice description means "the option name says it" on
-// TypeSafe. OpenRouter types the description as a string.
-func TestNullChoiceDescriptionIsBackendSpecific(t *testing.T) {
+// A backend that types these fields as plain strings must still be narrowed.
+// The capability drives the rule, so this is what re-narrowing would cost.
+func TestStructuredInstructionsRejectedWhenBackendLacksSupport(t *testing.T) {
+	narrow := openrouterSpec
+	narrow.StructuredEntries = false
+
+	in := evaluateIn{
+		State:     "x",
+		Questions: map[string]question{"q": {Type: "noul", Instructions: jsonValue(t, `{"question":"structured"}`)}},
+	}
+	err := validateRequest(narrow, in)
+	if err == nil {
+		t.Fatal("a string-only backend accepted structured instructions")
+	}
+	if !strings.Contains(err.Error(), "questions.q.instructions") {
+		t.Errorf("error should name the field path: %v", err)
+	}
+}
+
+// REQ-04, REQ-05: a null choice description means "the option name says it".
+// Both backends document it: TypeSafe for every entry field, OpenRouter for
+// choice option descriptions, which is the only optional entry this server has.
+func TestNullChoiceDescriptionAcceptedOnBothBackends(t *testing.T) {
 	in := evaluateIn{
 		State: "x",
 		Questions: map[string]question{
@@ -115,11 +130,10 @@ func TestNullChoiceDescriptionIsBackendSpecific(t *testing.T) {
 			},
 		},
 	}
-	if err := validateRequest(typesafeSpec, in); err != nil {
-		t.Errorf("typesafe rejected a documented null description: %v", err)
-	}
-	if err := validateRequest(openrouterSpec, in); err == nil {
-		t.Error("openrouter accepted a null description")
+	for _, spec := range []ProviderSpec{typesafeSpec, openrouterSpec} {
+		if err := validateRequest(spec, in); err != nil {
+			t.Errorf("%s rejected a documented null description: %v", spec.Name, err)
+		}
 	}
 }
 
@@ -134,9 +148,11 @@ func TestLocalRejectionMakesNoRequest(t *testing.T) {
 	defer srv.Close()
 
 	c := testClient(providerAt("openrouter", srv.URL), srv)
+	// Structure is accepted on both backends now, so the trigger is a rule
+	// that is still local: a blank instruction string.
 	_, err := runEvaluate(context.Background(), c, evaluateIn{
 		State:     "x",
-		Questions: map[string]question{"q": {Type: "noul", Instructions: jsonValue(t, `{"question":"structured"}`)}},
+		Questions: map[string]question{"q": {Type: "noul", Instructions: "   "}},
 	})
 	if err == nil {
 		t.Fatal("want a validation error")

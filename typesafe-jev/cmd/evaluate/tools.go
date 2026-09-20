@@ -30,47 +30,14 @@ type evaluateIn struct {
 	Model     string              `json:"model,omitempty" jsonschema:"model to use; defaults to the latest Jev on whichever endpoint is configured"`
 }
 
-// strictQuestion is the OpenRouter shape. Its Decisions schemas type
-// instructions as a plain string, so the exported tool schema says so rather
-// than advertising structure the backend will reject.
+// registerTools adds the one `evaluate` tool.
 //
-// A description alone would not do it: an agent reads the type, so the
-// restriction has to be in the type.
-type strictQuestion struct {
-	Type         string `json:"type" jsonschema:"noul (probability a yes/no condition holds), choice (one option from the criteria map), or score (probability-weighted position on ordered criteria levels)"`
-	Instructions string `json:"instructions" jsonschema:"the judgment to make, with its full meaning, as a string; this backend does not accept structured instructions"`
-	Criteria     any    `json:"criteria,omitempty" jsonschema:"noul: optional {\"true\": \"...\", \"false\": \"...\"} string descriptions; choice (required): map of option to string description; score (required): ordered array of at least 2 string level descriptions"`
-}
-
-type strictEvaluateIn struct {
-	State     any                       `json:"state" jsonschema:"content to judge: plain text, or a JSON object/array with named fields"`
-	Questions map[string]strictQuestion `json:"questions" jsonschema:"map of question id to question; answers come back under the same ids, which are not sent to the model"`
-	Model     string                    `json:"model,omitempty" jsonschema:"model to use; defaults to the configured Jev alias"`
-}
-
-// request widens the strict shape into the one both backends are sent over the
-// wire. The JSON is identical; only the schema the agent sees differs.
-func (in strictEvaluateIn) request() evaluateIn {
-	out := evaluateIn{State: in.State, Model: in.Model}
-	if in.Questions != nil {
-		out.Questions = make(map[string]question, len(in.Questions))
-		for id, q := range in.Questions {
-			out.Questions[id] = question{Type: q.Type, Instructions: q.Instructions, Criteria: q.Criteria}
-		}
-	}
-	return out
-}
-
-// registerTools adds the one `evaluate` tool, with the input schema its
-// backend actually accepts. The tool name, its argument names, and its
-// annotations are the same either way; only the instructions type narrows.
-func registerTools(s *mcp.Server, cfg Config, c *Client) {
-	if cfg.Provider.Name == "openrouter" {
-		add(s, evaluateTool(), func(ctx context.Context, in strictEvaluateIn) ([]byte, error) {
-			return runEvaluate(ctx, c, in.request())
-		})
-		return
-	}
+// There was a second, narrower schema here that typed instructions as a plain
+// string for OpenRouter, because its Decisions schemas did. They no longer do:
+// both backends accept a string, an object, or an array. Exporting the narrow
+// shape now would hide a capability the backend has, which is the same failure
+// as advertising one it lacks, so one schema serves both.
+func registerTools(s *mcp.Server, _ Config, c *Client) {
 	add(s, evaluateTool(), func(ctx context.Context, in evaluateIn) ([]byte, error) {
 		return runEvaluate(ctx, c, in)
 	})

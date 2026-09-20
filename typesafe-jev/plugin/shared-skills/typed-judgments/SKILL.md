@@ -77,12 +77,12 @@ the whole site.
 | A large state, and whether accuracy holds | [Models](https://docs.typesafe.ai/models.md), [Jev 1.13 jaggedness](https://docs.typesafe.ai/model-jaggedness/jev-1.13.md) |
 | Anything else | the [documentation index](https://docs.typesafe.ai/llms.txt) |
 
-Two cautions specific to using the tool rather than writing code. The
+One caution specific to using the tool rather than writing code: the SDK pages
+describe an integration you would write, which is a different job from the one
+this skill is for. The
 [advanced structure](https://docs.typesafe.ai/primitives/advanced.md) page
-describes JSON structure in instructions and criteria, which the `typesafe`
-backend accepts and the OpenRouter one does not; see the strings rule below.
-And the SDK pages describe an integration you would write, which is a different
-job from the one this skill is for.
+needs no such caution — the JSON structure it describes for instructions and
+criteria works on both backends.
 
 If the docs cannot be fetched, say so and work from what is here rather than
 inventing a detail that depends on a version you cannot see.
@@ -118,10 +118,11 @@ is blocked from an imminent renewal" produces a usable answer. "High" does not.
 not whether the answer is right: a confidently wrong answer is what badly drawn
 criteria produce.
 
-**Strings only on the OpenRouter backend.** `instructions` and every criteria
-description must be a string. The tool rejects a structured value locally, with
-the field path, rather than flattening it. The `typesafe` backend accepts the
-structured form.
+**A missing number is not a zero.** On the `openrouter` backend, `confidence`
+and `probabilities` are optional on a choice or score answer; the `typesafe`
+backend always sends them. The tool reports an absent field as absent and never
+substitutes a value, so check it is there before you branch on it. Structured
+instructions and criteria, by contrast, work on both backends.
 
 ## Example
 

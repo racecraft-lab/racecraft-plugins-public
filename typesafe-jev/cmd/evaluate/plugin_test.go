@@ -186,12 +186,16 @@ func TestVendoredSkillKeepsProvenance(t *testing.T) {
 	skill := string(b)
 
 	for _, want := range []string{
-		"typesafe-ai/skills",      // where it came from
-		"version 0.5.7",           // which version
-		"Make the judgment now",   // the addition that routes to the tool
-		"`evaluate`",              // names the tool
-		"JEV_PROVIDER=openrouter", // the OpenRouter string constraint
-		"Install this plugin",     // the collision warning
+		"typesafe-ai/skills",    // where it came from
+		"version 0.5.7",         // which version
+		"Make the judgment now", // the addition that routes to the tool
+		"`evaluate`",            // names the tool
+		// The backend note. It used to warn that OpenRouter took only
+		// strings; that backend now accepts the structured form, so what
+		// is left to say is which fields its answers may omit.
+		"`openrouter` backend",
+		"confidence",
+		"Install this plugin", // the collision warning
 	} {
 		if !strings.Contains(skill, want) {
 			t.Errorf("vendored SKILL.md is missing %q", want)

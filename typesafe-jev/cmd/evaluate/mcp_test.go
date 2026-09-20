@@ -64,13 +64,16 @@ func mockBackend(t *testing.T, reply string) *httptest.Server {
 // description claiming "string" while the schema says "any" is not a
 // restriction, so this asserts on the schema the agent receives.
 func TestToolsListExportsBackendSchema(t *testing.T) {
+	// Both backends accept a string, an object, or an array for instructions,
+	// so neither schema may pin the field to "string". The narrow OpenRouter
+	// shape this once asserted would now hide a capability the backend has.
 	for _, tc := range []struct {
 		provider      string
 		wantType      string
 		wantStructure bool
 	}{
 		{"typesafe", "", true},
-		{"openrouter", "string", false},
+		{"openrouter", "", true},
 	} {
 		t.Run(tc.provider, func(t *testing.T) {
 			srv := mockBackend(t, noulReply)
@@ -95,10 +98,10 @@ func TestToolsListExportsBackendSchema(t *testing.T) {
 			if gotType != tc.wantType {
 				t.Errorf("instructions type = %q, want %q\nschema: %s", gotType, tc.wantType, schema)
 			}
-			// The TypeSafe schema must keep advertising structure, or agents
-			// stop sending input TypeSafe documents and callers already use.
+			// The schema must keep advertising structure, or agents stop
+			// sending input both backends document and callers already use.
 			if tc.wantStructure && gotType == "string" {
-				t.Errorf("typesafe schema narrowed to a string: %s", schema)
+				t.Errorf("%s schema narrowed to a string: %s", tc.provider, schema)
 			}
 			for _, arg := range []string{"state", "questions", "model"} {
 				if !strings.Contains(string(schema), `"`+arg+`"`) {
@@ -312,11 +315,11 @@ func TestStdioTransportRoundTrip(t *testing.T) {
 
 // The server's instructions are what both clients read before the agent writes
 // a question. They must say which backend is configured, that a call costs
-// money, and, for OpenRouter, that structured instructions are rejected there.
+// money, and, for OpenRouter, that a choice or score answer may arrive without
+// confidence or probabilities.
 //
-// This last point is what keeps the official TypeSafe agent skill usable
-// alongside this server: the skill teaches the structured form, which is
-// correct for the direct API and rejected by OpenRouter.
+// The structured form the official TypeSafe agent skill teaches now works on
+// both backends, so no instruction may talk an agent out of using it.
 func TestServerInstructionsNameTheBackend(t *testing.T) {
 	for _, tc := range []struct {
 		provider string
@@ -328,16 +331,19 @@ func TestServerInstructionsNameTheBackend(t *testing.T) {
 			wantAll: []string{
 				"Backend: openrouter",
 				"bills for the call",
-				"accepts only strings",
-				"rejected here",
+				"may omit confidence and probabilities",
+				"Treat an absent field as absent",
 			},
+			// Structure is accepted here now. A leftover string-only warning
+			// would talk agents out of a form the backend supports.
+			wantNone: []string{"accepts only strings", "rejected here"},
 		},
 		{
 			provider: "typesafe",
 			wantAll:  []string{"Backend: typesafe", "bills for the call"},
-			// The direct API does accept structure, so the warning must not
-			// leak onto this backend and talk agents out of using it.
-			wantNone: []string{"accepts only strings", "rejected here"},
+			// This backend always sends both fields, so the omission note must
+			// not leak onto it.
+			wantNone: []string{"accepts only strings", "may omit confidence"},
 		},
 	} {
 		t.Run(tc.provider, func(t *testing.T) {

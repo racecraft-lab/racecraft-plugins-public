@@ -24,6 +24,17 @@ type ProviderSpec struct {
 	// Attribution is sent as fixed HTTP-Referer / X-OpenRouter-Title headers
 	// when set. It is a constant, never derived from local paths or content.
 	Attribution bool
+	// StructuredEntries reports whether the backend accepts a JSON object or
+	// array where an instruction or a description is expected, rather than a
+	// plain string.
+	//
+	// Both backends do. OpenRouter's Decisions schemas typed these fields as
+	// plain strings until it republished them; as of the 2026-09-20 fetch
+	// recorded in docs/provider-contracts.md they are anyOf string, object, or
+	// array, matching what TypeSafe documents. It stays a capability rather
+	// than an assumption so a re-narrowing is one field to flip, not a hunt
+	// through the validator.
+	StructuredEntries bool
 	// RetryStatuses are the HTTP statuses worth a second attempt on this
 	// backend. See docs/provider-contracts.md: this is fork policy, not a
 	// provider guarantee.
@@ -39,6 +50,9 @@ var providers = map[string]ProviderSpec{
 		EndpointURL:  "https://api.typesafe.ai/v1/systemone",
 		APIKeyEnv:    "TYPESAFE_API_KEY",
 		DefaultModel: "jev-latest",
+		// TypeSafe documents string, object, array, or null for every
+		// instruction and description field.
+		StructuredEntries: true,
 		// 529 is TypeSafe's overload status, which upstream already retried.
 		RetryStatuses: []int{429, 529},
 	},
@@ -48,8 +62,15 @@ var providers = map[string]ProviderSpec{
 		APIKeyEnv:    "OPENROUTER_API_KEY",
 		DefaultModel: "~typesafe/jev-latest",
 		Attribution:  true,
-		// 503 is documented on the Decisions path; 529 is not.
-		RetryStatuses: []int{429, 503},
+		// Matches TypeSafe since OpenRouter republished the Decisions schemas.
+		StructuredEntries: true,
+		// All four are documented on the Decisions path and transient in
+		// kind: 429 rate limited, 503 unavailable, 524 an upstream timeout,
+		// and 529 overloaded. 524 and 529 were absent from the documented
+		// list at the 2026-09-18 fetch and present at the 2026-09-20 one.
+		// 500 and 502 are documented too but are not retried: neither is
+		// transient by nature, and a replayed inference call bills again.
+		RetryStatuses: []int{429, 503, 524, 529},
 	},
 }
 

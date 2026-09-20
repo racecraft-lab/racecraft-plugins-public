@@ -134,6 +134,13 @@ field, with sources, in [provider-contracts.md](provider-contracts.md).
 This is documentation-level evidence of a contract. It is **not** proof that any
 particular key can call the endpoint.
 
+**Superseded on 2026-09-20.** OpenRouter republished the document (sha256
+`a913f294…`, 2 153 530 bytes). The Decisions schemas that typed every
+instruction and description as a plain string now accept a string, an object,
+or an array, and the documented status list gained `524` and `529`. The record
+above is kept as it was taken; the current matrix is in
+[provider-contracts.md](provider-contracts.md).
+
 ### Two corrections to the implementation plan, from the fetched schema
 
 The plan said the OpenAPI document's declared `Retry-After` headers backed the
@@ -207,7 +214,11 @@ usage:              input_tokens=480 output_tokens=78 cost=2.016e-05
 ```
 
 The server's instructions arrived carrying the backend note, confirming an
-agent sees which backend is configured and that only strings are accepted.
+agent sees which backend is configured. (That note said only strings were
+accepted when this run was made. OpenRouter has since republished its Decisions
+schemas to accept structured instructions and criteria, and the note now covers
+the omission of `confidence` and `probabilities` instead; see
+[provider-contracts.md](provider-contracts.md).)
 
 ### Three design decisions the live runs confirmed
 

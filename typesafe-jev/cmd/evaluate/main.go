@@ -161,18 +161,21 @@ func newServer(cfg Config, c *Client) *mcp.Server {
 
 // backendNote appends what differs about the configured backend.
 //
-// TypeSafe's own documentation, and the TypeSafe agent skill built from it,
-// teach structured instructions and criteria. That is correct for the direct
-// API and wrong for OpenRouter, whose Decisions schema types those fields as
-// strings. Saying so up front turns a rejected call into one that is never
-// written that way.
+// The structured instructions and criteria that TypeSafe's documentation, and
+// the agent skill built from it, teach now work on both backends, so there is
+// no longer a warning to give about writing them.
+//
+// What does still differ is the reply. OpenRouter's Decisions schemas mark
+// confidence and probabilities optional on choice and score answers, where
+// TypeSafe always sends them. An agent that branches on a number which is
+// simply absent misreads the answer, so the note says so up front.
 func backendNote(cfg Config) string {
 	note := "\nBackend: " + cfg.Provider.Name + ". Calling this tool sends the state and questions" +
 		" you pass to that provider, which bills for the call."
 	if cfg.Provider.Name == "openrouter" {
-		note += "\nThis backend accepts only strings for instructions and for every criteria" +
-			" description. Structured objects or arrays, and null option descriptions, are" +
-			" supported by the TypeSafe backend and rejected here."
+		note += "\nThis backend may omit confidence and probabilities from a choice or score" +
+			" answer, which the TypeSafe backend always sends. Treat an absent field as" +
+			" absent: do not substitute a default before branching on it."
 	}
 	return note
 }
