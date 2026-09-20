@@ -11,12 +11,13 @@ Claude Code and Codex agent responsibilities derived from the authoritative ship
 
 - **Public path:** `/racecraft-plugins-public/reference/agents/`
 - **Generated output:** `docs-site/src/content/docs/reference/agents.md`
-- **Records:** 15
+- **Records:** 16
 
 ## Navigation Summary
 
 - Analyze Executor
 - Artifact Author
+- Artifact Preview Observer
 - Autopilot Fast Helper
 - Checklist Executor
 - Clarify Executor
@@ -58,6 +59,7 @@ Claude Code and Codex agent responsibilities derived from the authoritative ship
 | sweep-classifier | sweep_security | plugin agent (required) | isolated prompt role (not installed) | Claude Code uses a broker-only plugin agent; Codex uses an isolated launcher prompt so credentials, filesystem access, and raw reviewer text remain outside the model process. |
 | sweep-analyst | sweep_security | plugin agent (required) | isolated prompt role (not installed) | Claude Code uses a broker-only plugin agent; Codex uses an isolated launcher prompt so credentials, filesystem access, and raw reviewer text remain outside the model process. |
 | autopilot-fast-helper | optional_helper | Not implemented | custom agent (optional) | Codex may activate this latency-first advisory leaf helper after route probing; Claude Code has no equivalent helper and does not require one for workflow correctness. |
+| artifact-preview-observer | claude_only | plugin agent (required) | Not implemented | Claude Code publishes and observes the preview through the Artifact surface and returns only a brokered verdict; no Codex agent definition ships for this role, and the author-broker MCP server is registered only in the Claude payload, so none is installed on Codex. |
 
 ### Analyze Executor
 
@@ -106,6 +108,29 @@ Claude Code and Codex agent responsibilities derived from the authoritative ship
 
 - Runtime-specific Markdown, TOML, and isolated prompt sources remain authored separately; the inventory aligns responsibilities and records intentional exceptions.
   - Based on: `speckit-pro/speckit_pro_runner/agent_inventory.json`, `speckit-pro/agents/artifact-author.md`, `speckit-pro/codex-agents/artifact-author.toml`
+
+### Artifact Preview Observer
+
+- **Purpose:** Publishes and observes one generated artifact page in an isolated preview surface.
+- **Classification:** `source`
+- **Platform concept:** SpecKit Pro artifact-preview-observer agent
+- **Claude Code:** plugin agent (required)
+- **Codex:** Not implemented
+- **Runtime difference:** Claude Code publishes and observes the preview through the Artifact surface and returns only a brokered verdict; no Codex agent definition ships for this role, and the author-broker MCP server is registered only in the Claude payload, so none is installed on Codex.
+
+#### Source Facts
+
+- artifact-preview-observer is classified as `claude_only`. Claude Code: plugin agent (required). Codex: Not implemented. Codex uses `not-implemented` with `not-implemented` effort. Source refs: `speckit-pro/speckit_pro_runner/agent_inventory.json`, `speckit-pro/agents/artifact-preview-observer.md`.
+
+#### Sources
+
+- [speckit-pro/speckit_pro_runner/agent_inventory.json](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/speckit-pro/speckit_pro_runner/agent_inventory.json)
+- [speckit-pro/agents/artifact-preview-observer.md](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/speckit-pro/agents/artifact-preview-observer.md)
+
+#### Inferred Notes
+
+- Runtime-specific Markdown, TOML, and isolated prompt sources remain authored separately; the inventory aligns responsibilities and records intentional exceptions.
+  - Based on: `speckit-pro/speckit_pro_runner/agent_inventory.json`, `speckit-pro/agents/artifact-preview-observer.md`
 
 ### Autopilot Fast Helper
 

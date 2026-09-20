@@ -31,7 +31,7 @@
         "value": "speckit_pro_runner/agent_inventory.json",
         "display": "speckit_pro_runner/agent_inventory.json"
       },
-      "sha256": "5f4f655a4d3f40eac8dcc6bd813f32a3ad666caa5ce7f0a367b5b0e9634d1f63"
+      "sha256": "f6119f7c96317419471cc169f971cb2665018c85ca9cd50e7d453a5484afb708"
     },
     {
       "path": {
@@ -39,7 +39,7 @@
         "value": "speckit_pro_runner/agent_inventory.py",
         "display": "speckit_pro_runner/agent_inventory.py"
       },
-      "sha256": "e2da7364a2dff2c79415e45877e2fae38c7c9763c3216881477fb49061919b77"
+      "sha256": "6f3df4feb49d4715e620ade71917fd3a777a9047e2138ace877d83b1c033662e"
     },
     {
       "path": {
@@ -63,7 +63,15 @@
         "value": "speckit_pro_runner/artifact_review.py",
         "display": "speckit_pro_runner/artifact_review.py"
       },
-      "sha256": "22f81e489ae5687625ab74289e1bfbd8ad1d83d7e643adda27f7c4789adcdbed"
+      "sha256": "0da10ad39fd07e7d1084dd7c3308123be8280e527d438977260595fae899b1ca"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
+        "value": "speckit_pro_runner/author_broker.py",
+        "display": "speckit_pro_runner/author_broker.py"
+      },
+      "sha256": "c16ec04eefcadce034aa72d74aac9c172e418c83859400dda54390b7f283d10a"
     },
     {
       "path": {
@@ -167,7 +175,7 @@
         "value": "speckit_pro_runner/formal/quint.py",
         "display": "speckit_pro_runner/formal/quint.py"
       },
-      "sha256": "2159a52c163041add9707e7bc5dfcc8fcca81fde73b33c095df7d2f5dd655e07"
+      "sha256": "c66b94b8ade31a37c16bda4786ced1fd46e3aa34cbf00f22e3ce448483177916"
     },
     {
       "path": {
@@ -319,7 +327,7 @@
         "value": "speckit_pro_runner/helpers/stack_manager.py",
         "display": "speckit_pro_runner/helpers/stack_manager.py"
       },
-      "sha256": "11df4533e645e3fffca7bf2bbbcecfc4d61529e809e13823cd3e096b10776d1c"
+      "sha256": "e7758f0f7a8cd18125988cdd25f7e6d31d51de3df8bae11226eaa21e9cd1d87d"
     },
     {
       "path": {
