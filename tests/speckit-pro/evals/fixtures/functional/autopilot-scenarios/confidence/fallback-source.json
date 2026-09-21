@@ -1,0 +1,7 @@
+{
+  "finding_id": "B",
+  "selection": "repo-local-fallback",
+  "fit": "fallback",
+  "source_kind": "local_indirect",
+  "evidence": "A local note suggests the likely behavior but is not authoritative."
+}

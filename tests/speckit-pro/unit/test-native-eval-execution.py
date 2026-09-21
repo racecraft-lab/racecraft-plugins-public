@@ -621,10 +621,22 @@ def runner_result_response(*, binding_status="ambiguous"):
         }
 
     request = runner_request()
+    diagnostic = {
+        "source": "runner", "severity": "error", "code": "validation_failure",
+        "message": "read-only helper reported an expected validation failure",
+        "remediation": {
+            "actions": ["Inspect the helper stdout JSON."],
+            "summary": "Inspect the helper output.",
+        },
+        "details": {
+            "exit_code": 1, "helper_id": request["helper_id"],
+            "stdout_bytes": len(stdout_text.encode()), "stderr_bytes": 0,
+        },
+    }
     return {
         "schema_version": "1.0", "status": "expected_failure", "exit_code": 1,
         "legacy_exit_code": None,
-        "diagnostics": [{"source": "runner", "code": "validation_failure"}],
+        "diagnostics": [diagnostic],
         "request_id": request["request_id"],
         "data": {
             "helper_id": request["helper_id"], "operation": request["operation"],
@@ -638,6 +650,39 @@ def runner_result_response(*, binding_status="ambiguous"):
             "stdout_json": stdout_json,
         },
     }
+
+
+def plan_repair_response(request, passed):
+    stdout_json = {"gate": "G3", "pass": passed, "markers": 0 if passed else 1}
+    value = {
+        "schema_version": "1.0", "request_id": request["request_id"],
+        "status": "success" if passed else "expected_failure", "exit_code": 0 if passed else 1,
+        "data": {"stdin_request": {key: item for key, item in request.items()
+                                     if key != "request_id"},
+                 "stdout_json": stdout_json},
+    }
+    if passed:
+        return value
+    stdout_text = json.dumps(stdout_json, separators=(",", ":")) + "\n"
+    diagnostic = {
+        "source": "runner", "severity": "error", "code": "validation_failure",
+        "message": "read-only helper reported an expected validation failure",
+        "remediation": {"actions": ["Inspect the helper stdout JSON."],
+                        "summary": "Inspect the helper output."},
+        "details": {"exit_code": 1, "helper_id": request["helper_id"],
+                    "stdout_bytes": len(stdout_text.encode()), "stderr_bytes": 0},
+    }
+    capture = lambda text: {  # noqa: E731 - compact test fixture constructor
+        "text": text, "byte_count": len(text.encode()),
+        "limit_bytes": 16 * 1024, "truncated": False,
+    }
+    value["diagnostics"] = [diagnostic]
+    value["data"].update({
+        "helper_id": request["helper_id"], "operation": request["operation"],
+        "mode": request["mode"], "exit_code": 1,
+        "stdout": capture(stdout_text), "stderr": capture(""),
+    })
+    return value
 
 
 def runner_final_text(value):
@@ -1683,6 +1728,33 @@ class AbsentVerificationCallbacks(VerificationCallbacks):
         )
 
 
+def claude_diagnostic_runner_output(value, variation, command_exit):
+    diagnostic = value["diagnostics"][0]
+    if variation == "claude-exit-diagnostic-mismatch":
+        diagnostic = {
+            **diagnostic,
+            "details": {**diagnostic["details"], "helper_id": "other"},
+        }
+    values = [diagnostic, value]
+    if variation == "claude-exit-diagnostic-extra":
+        values.append(value)
+    stream = "\n".join(json.dumps(item, separators=(",", ":")) for item in values)
+    return f"Exit code {command_exit}\n{stream}"
+
+
+def run_runner_result_evaluation(test, output, callbacks, host):
+    payload = (json.dumps(runner_request(), sort_keys=True, indent=2) + "\n").encode()
+    (test.repo / "request.json").write_bytes(payload)
+    report = run_evaluations(
+        config(output), {}, [runner_result_case()], [row(host)], repo_root=test.repo,
+        prepare=callbacks.prepare, execute=callbacks.execute,
+    )
+    attempt = next((output / "attempts").iterdir())
+    capture = json.loads((attempt / "capture.json").read_text())["payload"]
+    receipt = capture["observation"]["native_metadata"]["controller_runner_results"]
+    return report, capture, receipt
+
+
 class RunnerResultCallbacks(VerificationCallbacks):
     def __init__(self, output, *, variation="valid"):
         super().__init__(output)
@@ -1724,6 +1796,12 @@ class RunnerResultCallbacks(VerificationCallbacks):
             raw_trace = (claude_trace(final_text) if prepared.host == "claude"
                          else codex_trace(final_text, ROOT_THREAD, ()))
         elif prepared.host == "claude":
+            if self.variation == "claude-exit-wrapper":
+                output = f"Exit code {command_exit}\n{output}"
+            elif self.variation.startswith("claude-exit-diagnostic-"):
+                output = claude_diagnostic_runner_output(
+                    value, self.variation, command_exit,
+                )
             raw_trace = claude_runner_result_trace(
                 output, final_text, command=command, is_error=command_exit != 0,
             )
@@ -2406,12 +2484,34 @@ class NativeExecutionTests(unittest.TestCase):
             "-m speckit_pro_runner < request.json",
         )
 
-        malformed = copy.deepcopy(launch)
-        malformed["runtime_identity"]["settings"]["claude_explicit_activation"][
+        repeated = copy.deepcopy(launch)
+        repeated_prompt = " then ".join([prompt, prompt, prompt])
+        repeated["runtime_identity"]["settings"]["claude_explicit_activation"][
             "prompt"
-        ] = prompt.replace("plugin/bin/python3", "other/bin/python3")
-        with self.assertRaisesRegex(ValueError, "relocation is malformed"):
-            execution._claude_activation_binding(value, "claude", malformed)
+        ] = repeated_prompt
+        repeated_binding = execution._claude_activation_binding(
+            value, "claude", repeated,
+        )
+        self.assertEqual(
+            repeated_binding["prompt"].count(str(cwd / "bin" / "python3")), 3,
+        )
+        self.assertNotIn("<attempt_dir>", repeated_binding["prompt"])
+
+        for malformed_prompt in (
+            prompt.replace("plugin/bin/python3", "other/bin/python3"),
+            prompt + " and <attempt_dir>/plugin/bin/python30",
+            prompt + " and x<attempt_dir>/plugin/bin/python3",
+            prompt + " and <attempt_dir>/plugin/bin/python3/child",
+            prompt + " and <attempt_dir>/unresolved",
+        ):
+            malformed = copy.deepcopy(launch)
+            malformed["runtime_identity"]["settings"]["claude_explicit_activation"][
+                "prompt"
+            ] = malformed_prompt
+            with self.subTest(prompt=malformed_prompt), self.assertRaisesRegex(
+                ValueError, "relocation is malformed",
+            ):
+                execution._claude_activation_binding(value, "claude", malformed)
 
     def test_claude_missing_session_is_incomplete_but_malformed_session_is_invalid(self):
         value = claude_activation_case()
@@ -4654,6 +4754,67 @@ class NativeExecutionTests(unittest.TestCase):
         self.assertEqual(replay["counts"]["subject_launches"], 0, replay)
         self.assertEqual(replay_callbacks.executed, [])
 
+    def test_claude_runner_binds_only_exact_nonzero_exit_wrapper(self):
+        payload = (json.dumps(runner_request(), sort_keys=True, indent=2) + "\n").encode()
+        (self.repo / "request.json").write_bytes(payload)
+        callbacks = RunnerResultCallbacks(self.output, variation="claude-exit-wrapper")
+        report = run_evaluations(
+            config(self.output), {}, [runner_result_case()], [row("claude")],
+            repo_root=self.repo, prepare=callbacks.prepare, execute=callbacks.execute,
+        )
+        self.assertEqual(report["counts"]["passes"], 1, report)
+        attempt = next((self.output / "attempts").iterdir())
+        capture = json.loads((attempt / "capture.json").read_text())["payload"]
+        receipt = capture["observation"]["native_metadata"]["controller_runner_results"]
+        self.assertEqual(receipt["checks"][0]["call"]["native_exit_code"], 1)
+
+        response = json.dumps(runner_result_response(), separators=(",", ":"))
+        normalized, native_exit = execution._normalized_claude_runner_output(
+            f"Exit code 1\n{response}", False,
+        )
+        self.assertEqual((normalized, native_exit), (response, 1))
+        malformed = (
+            f"Exit code 0\n{response}",
+            f"Exit code nope\n{response}",
+            f"Exit code 1\nExit code 1\n{response}",
+            f"Exit code 2\n{response}",
+            f"Exit code 1\n{response}\ntrailing-junk",
+        )
+        for output in malformed:
+            with self.subTest(output=output[:40]), self.assertRaisesRegex(
+                ValueError, "nonzero exit wrapper is malformed",
+            ):
+                execution._normalized_claude_runner_output(output, False)
+        with self.assertRaisesRegex(ValueError, "nonzero exit wrapper is malformed"):
+            execution._normalized_claude_runner_output(
+                f"Exit code 1\n{response}", True,
+            )
+
+    def test_claude_runner_correlates_official_wrapper_with_diagnostic_prefix(self):
+        callbacks = RunnerResultCallbacks(
+            self.output, variation="claude-exit-diagnostic-wrapper",
+        )
+        report, _capture, receipt = run_runner_result_evaluation(
+            self, self.output, callbacks, "claude",
+        )
+        self.assertEqual(report["counts"]["passes"], 1, report)
+        self.assertEqual(report["counts"]["infrastructure_invalid"], 0, report)
+        self.assertEqual(receipt["checks"][0]["actual"]["status"], "expected_failure")
+        self.assertEqual(receipt["checks"][0]["call"]["native_exit_code"], 1)
+
+        for variation in (
+            "claude-exit-diagnostic-extra", "claude-exit-diagnostic-mismatch",
+        ):
+            with self.subTest(variation=variation):
+                output = self.root / variation
+                invalid = RunnerResultCallbacks(output, variation=variation)
+                report = run_evaluations(
+                    config(output), {}, [runner_result_case()], [row("claude")],
+                    repo_root=self.repo, prepare=invalid.prepare, execute=invalid.execute,
+                )
+                self.assertEqual(report["counts"]["infrastructure_invalid"], 1, report)
+                self.assertEqual(report["counts"]["passes"], 0, report)
+
     def test_multiple_native_runner_results_seal_distinct_requests_and_bind_all_checks(self):
         payload = (json.dumps(runner_request(), sort_keys=True, indent=2) + "\n").encode()
         (self.repo / "request.json").write_bytes(payload)
@@ -4705,6 +4866,61 @@ class NativeExecutionTests(unittest.TestCase):
             [receipt["actual"]["request_path"] for receipt in receipts],
             [RUNNER_REQUEST_PATH, SECOND_RUNNER_REQUEST_PATH, RUNNER_REQUEST_PATH],
         )
+
+    def test_repository_runner_diagnostic_prefix_is_exactly_correlated(self):
+        payload = (json.dumps(runner_request(), sort_keys=True, indent=2) + "\n").encode()
+        response = runner_result_response()
+        diagnostic = response["diagnostics"][0]
+        stream = "\n".join(
+            json.dumps(value, separators=(",", ":"))
+            for value in (diagnostic, response)
+        )
+        invocation = {
+            "authority": "protected-native-runner", "call_id": "runner-1",
+            "tool_call_index": 1, "request_path": RUNNER_REQUEST_PATH,
+            "output": stream, "success": False, "native_exit_code": 1,
+        }
+        sealed = {
+            "schema": "native-runner-result-sealed-inputs/v1",
+            "authority": "controller-before-subject-launch",
+            "requests": {RUNNER_REQUEST_PATH: {
+                "text": payload.decode(), "bytes": len(payload),
+                "sha256": hashlib.sha256(payload).hexdigest(),
+            }},
+        }
+        evidence = {"native_metadata": {}}
+        with mock.patch.object(
+            execution, "_native_runner_invocations", return_value=[invocation],
+        ):
+            execution._bind_runner_result_context(
+                runner_result_case(), "codex", evidence,
+                {"native_runner_result_inputs": sealed}, None,
+            )
+        receipt = evidence["native_metadata"]["controller_runner_results"]["checks"][0]
+        self.assertEqual(receipt["actual"]["response"], response)
+
+        arbitrary = {"source": "runner", "code": "validation_failure"}
+        variants = {
+            "arbitrary": [arbitrary, response],
+            "extra": [diagnostic, response, response],
+            "mismatched-exit": [
+                {**diagnostic, "details": {**diagnostic["details"], "exit_code": 2}},
+                response,
+            ],
+            "mismatched-helper": [
+                {**diagnostic, "details": {**diagnostic["details"], "helper_id": "other"}},
+                response,
+            ],
+            "mismatched-copy": [diagnostic, {**response, "diagnostics": []}],
+        }
+        for label, values in variants.items():
+            output = "\n".join(
+                json.dumps(value, separators=(",", ":")) for value in values
+            )
+            with self.subTest(label=label), self.assertRaisesRegex(
+                ValueError, "diagnostic stream is not correlated",
+            ):
+                execution._normalized_repository_runner_output(output, 1, payload)
 
     def test_multiple_native_runner_results_fail_closed_on_changed_witnesses(self):
         payload = (json.dumps(runner_request(), sort_keys=True, indent=2) + "\n").encode()
@@ -4772,18 +4988,12 @@ class NativeExecutionTests(unittest.TestCase):
             )
 
     def test_codex_verify_child_runner_result_is_hash_bound_and_graded(self):
-        payload = (json.dumps(runner_request(), sort_keys=True, indent=2) + "\n").encode()
-        (self.repo / "request.json").write_bytes(payload)
         callbacks = ChildVerifyRunnerResultCallbacks(self.output)
-        report = run_evaluations(
-            config(self.output), {}, [runner_result_case()], [row("codex")],
-            repo_root=self.repo, prepare=callbacks.prepare, execute=callbacks.execute,
+        report, capture, receipt = run_runner_result_evaluation(
+            self, self.output, callbacks, "codex",
         )
         self.assertEqual(report["counts"]["passes"], 1, report)
         self.assertEqual(report["counts"]["infrastructure_invalid"], 0, report)
-        attempt = next((self.output / "attempts").iterdir())
-        capture = json.loads((attempt / "capture.json").read_text())["payload"]
-        receipt = capture["observation"]["native_metadata"]["controller_runner_results"]
         self.assertEqual(receipt["checks"][0]["actual"]["status"], "expected_failure")
         child_call = next(
             call for call in capture["observation"]["tool_calls"]
@@ -5153,21 +5363,17 @@ class NativeExecutionTests(unittest.TestCase):
             "architecture": "No delivery callback is currently available.\n",
         }
 
-        def response(passed):
-            return {
-                "schema_version": "1.0", "request_id": request["request_id"],
-                "status": "success" if passed else "expected_failure", "exit_code": 0 if passed else 1,
-                "data": {"stdin_request": {key: value for key, value in request.items()
-                                             if key != "request_id"},
-                         "stdout_json": {"gate": "G3", "pass": passed, "markers": 0 if passed else 1}},
-            }
-
-        initial, repaired = response(False), response(True)
+        initial = plan_repair_response(request, False)
+        repaired = plan_repair_response(request, True)
         message = "\n".join([*contexts.values(), json.dumps(initial, indent=2)])
+        diagnostic = initial["diagnostics"][0]
+        initial_stream = "\n".join(
+            json.dumps(item, separators=(",", ":")) for item in (diagnostic, initial)
+        )
         command = "python3 -m speckit_pro_runner < scenario-inputs/g3-request.json"
         calls = [
             {"id": "g3-initial", "name": "Bash", "input": {"command": command},
-             "output": json.dumps({"code": "validation_failure"}) + "\n" + json.dumps(initial),
+             "output": "Exit code 1\n" + initial_stream,
              "success": False, "position": 1, "parent_id": None},
             {"id": "repair", "name": "subagent",
              "input": {"prompt": message, "subagent_type": "phase-executor"},
@@ -5260,6 +5466,29 @@ class NativeExecutionTests(unittest.TestCase):
         late_receipt["dispatches"][0]["returned"] = 6
         self.assertEqual(execution.grade_observation(value, late, host="claude")["status"],
                          "fail")
+
+        unwrapped = copy.deepcopy(observation)
+        del unwrapped["native_metadata"]["native_plan_repair_context"]
+        unwrapped["tool_calls"][0]["output"] = json.dumps(initial)
+        execution._bind_plan_repair_context(value, "claude", unwrapped, launch)
+        self.assertEqual(
+            execution.grade_observation(value, unwrapped, host="claude")["status"],
+            "fail",
+        )
+
+        arbitrary = copy.deepcopy(observation)
+        del arbitrary["native_metadata"]["native_plan_repair_context"]
+        arbitrary_response = {**initial, "status": "input_error"}
+        arbitrary["tool_calls"][0]["output"] = (
+            "Exit code 1\n" + json.dumps(arbitrary_response)
+        )
+        with self.assertRaisesRegex(
+            ValueError, "expected-nonzero response is malformed",
+        ):
+            execution._bind_plan_repair_context(
+                value, "claude", arbitrary, launch,
+            )
+
 
     def test_codex_plan_repair_context_binds_raw_message_to_opaque_native_input(self):
         request = {"schema_version": "1.0", "request_id": "g3", "helper_id": "validate-gate",

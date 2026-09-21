@@ -1,0 +1,8 @@
+{
+  "items": [
+    {"name": "Phase 1: Specify", "status": "pending"},
+    {"name": "Phase 4: Plan", "status": "pending"},
+    {"name": "Phase 6: Tasks", "status": "pending"}
+  ],
+  "from_phase": "specify"
+}

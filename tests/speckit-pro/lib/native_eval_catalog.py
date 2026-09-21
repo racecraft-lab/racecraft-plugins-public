@@ -338,14 +338,10 @@ def _validate_native_synthesis_mechanism(
                               f"{host} role must be {expected['role']}"))
 
 
-def _validate_native_subagent_dispatch(
-    check: dict[str, Any], case_id: str, check_id: str,
-) -> None:
-    label = _check_label(case_id, check_id, "expected")
-    expected = check["expected"]
-    _require(isinstance(expected, list) and bool(expected), f"{label} must be nonempty")
+def _validated_dispatch_pairs(value: object, label: str) -> list[tuple[str, str]]:
+    _require(isinstance(value, list) and bool(value), f"{label} must be nonempty")
     pairs: list[tuple[str, str]] = []
-    for item in expected:
+    for item in value:
         _require(isinstance(item, dict) and set(item) == {"item_id", "role"},
                  f"{label} item is malformed")
         pairs.append((
@@ -353,13 +349,50 @@ def _validate_native_subagent_dispatch(
             _stable_id(item["role"], f"{label} role"),
         ))
     _require(len(pairs) == len(set(pairs)), f"{label} contains duplicates")
+    return pairs
+
+
+def _validate_native_subagent_dispatch(
+    check: dict[str, Any], case_id: str, check_id: str,
+) -> None:
+    has_shared = "expected" in check
+    has_host_specific = "expected_by_host" in check
+    _require(has_shared is not has_host_specific,
+             _check_label(case_id, check_id,
+                          "must define exactly one of expected and expected_by_host"))
+    if has_shared:
+        pairs_by_contract = {"shared": _validated_dispatch_pairs(
+            check["expected"], _check_label(case_id, check_id, "expected"),
+        )}
+    else:
+        expected_by_host = check["expected_by_host"]
+        _require(isinstance(expected_by_host, dict) and set(expected_by_host) == set(HOSTS),
+                 _check_label(case_id, check_id,
+                              "expected_by_host must define exactly claude and codex"))
+        pairs_by_contract = {
+            host: _validated_dispatch_pairs(
+                expected_by_host[host],
+                _check_label(case_id, check_id, f"expected_by_host.{host}"),
+            )
+            for host in HOSTS
+        }
+    if has_host_specific:
+        _require(
+            sorted(item_id for item_id, _role in pairs_by_contract["claude"])
+            == sorted(item_id for item_id, _role in pairs_by_contract["codex"]),
+            _check_label(case_id, check_id,
+                         "expected_by_host must define equivalent item_ids"),
+        )
     forbidden = [
         _stable_id(role, _check_label(case_id, check_id, "forbidden_roles item"))
         for role in _unique_text_list(
             check["forbidden_roles"], _check_label(case_id, check_id, "forbidden_roles"),
         )
     ]
-    _require(set(forbidden).isdisjoint(role for _item_id, role in pairs),
+    expected_roles = {
+        role for pairs in pairs_by_contract.values() for _item_id, role in pairs
+    }
+    _require(set(forbidden).isdisjoint(expected_roles),
              _check_label(case_id, check_id, "forbidden_roles overlap expected roles"))
 
 
@@ -420,7 +453,7 @@ _CHECK_FIELDS = {
     "semantic": {"rubric"},
     "subagent_returns_before_parent_file_change": {"path"},
     "native_synthesis_mechanism": {"artifact_path", "per_host"},
-    "native_subagent_dispatch": {"expected", "forbidden_roles"},
+    "native_subagent_dispatch": {"forbidden_roles"},
     "native_plan_repair_context": {
         "contexts", "g3_request_path", "executor_role", "max_repairs", "terminal_outcome",
     },
@@ -460,6 +493,7 @@ def _validate_check(check: object, requirement_ids: set[str], case_id: str) -> N
     required = {"id", "requirement", "type"} | _CHECK_FIELDS[check_type]
     optional = ({"input_regex", "include_failed"} if check_type == "tool_used" else
                 {"alternatives"} if check_type == "json_field" else
+                {"expected", "expected_by_host"} if check_type == "native_subagent_dispatch" else
                 {"registered_worktrees_unchanged"} if check_type == "native_git_final_state" else set())
     allowed = required | optional
     _require(required <= set(check) <= allowed, _check_label(case_id, check_id, "has malformed parameters"))

@@ -998,3 +998,11 @@ Stop instead of improvising when any of the following are true:
 
 If scaffolding partially succeeds before a failure, report exactly what was created
 and what remains unfinished so the user can resume without duplicating work.
+For a push failure, preserve and report the existing absolute worktree root,
+spec branch, workflow path, local commit SHA, detected remote, and failed push
+diagnostic. Do not recreate the branch or worktree, repeat completed scaffold
+mutations, or claim the remote branch exists. After the remote problem is
+fixed, retry the same failed push from that same worktree with
+`git -C <absolute-worktree-root> push -u <remote> <spec-branch>`, then resume at
+the first unfinished scaffold step. The hand-off remains blocked until the
+same-worktree retry succeeds and the branch is verified on the detected remote.

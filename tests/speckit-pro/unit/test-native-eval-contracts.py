@@ -744,6 +744,49 @@ class NativeEvalCatalogTests(unittest.TestCase):
                 check["include_failed"] = include_failed
                 self.assert_invalid(case([check]), "include_failed must be boolean")
 
+    def test_native_subagent_dispatch_requires_complete_host_specific_contract(self) -> None:
+        host_specific_check = copy.deepcopy(dispatch_check())
+        host_specific_check["expected_by_host"] = {
+            "claude": [{"item_id": "dispatch-i1", "role": "general-purpose"}],
+            "codex": [{"item_id": "dispatch-i1", "role": "default"}],
+        }
+        del host_specific_check["expected"]
+        host_specific = case([host_specific_check])
+        host_specific["resource_class"] = "nested"
+        loaded = validate_catalog(catalog(host_specific), self.root)["cases"][0]["checks"][0]
+        self.assertEqual(loaded, host_specific_check)
+
+        host_mutations = []
+        for expected_by_host, message in (
+            ({"claude": host_specific_check["expected_by_host"]["claude"]},
+             "must define exactly claude and codex"),
+            ({**host_specific_check["expected_by_host"], "other": []},
+             "must define exactly claude and codex"),
+            ({"claude": [], "codex": host_specific_check["expected_by_host"]["codex"]},
+             "expected_by_host.claude must be nonempty"),
+            ({"claude": [{"item_id": "dispatch-i1", "role": "general-purpose"}],
+              "codex": [{"item_id": "different-item", "role": "default"}]},
+             "must define equivalent item_ids"),
+            ({"claude": [{"item_id": "dispatch-i1", "role": "general-purpose", "extra": True}],
+              "codex": host_specific_check["expected_by_host"]["codex"]},
+             "expected_by_host.claude item is malformed"),
+        ):
+            malformed = copy.deepcopy(host_specific)
+            malformed["checks"][0]["expected_by_host"] = expected_by_host
+            host_mutations.append((malformed, message))
+        conflicting = copy.deepcopy(host_specific)
+        conflicting["checks"][0]["expected"] = dispatch_check()["expected"]
+        host_mutations.append((conflicting, "exactly one of expected and expected_by_host"))
+        absent = copy.deepcopy(host_specific)
+        del absent["checks"][0]["expected_by_host"]
+        host_mutations.append((absent, "exactly one of expected and expected_by_host"))
+        forbidden = copy.deepcopy(host_specific)
+        forbidden["checks"][0]["forbidden_roles"] = ["default"]
+        host_mutations.append((forbidden, "overlap expected roles"))
+        for malformed, message in host_mutations:
+            with self.subTest(message=message):
+                self.assert_invalid(malformed, message)
+
     def test_native_subagent_dispatch_requires_exact_pairs_and_nested_runtime(self) -> None:
         valid = case([dispatch_check()])
         valid["resource_class"] = "nested"
@@ -1025,6 +1068,66 @@ class NativeEvalGradingTests(unittest.TestCase):
                 self.assertEqual(
                     grade_observation(value, evidence, host="claude")["status"], expected,
                 )
+
+    def test_native_subagent_dispatch_preserves_exact_host_roles(self) -> None:
+        check = dispatch_check()
+        check["expected_by_host"] = {
+            "claude": [{"item_id": "dispatch-i1", "role": "codebase-analyst"}],
+            "codex": [{"item_id": "dispatch-i1", "role": "default"}],
+        }
+        del check["expected"]
+        value = case([check])
+        value["resource_class"] = "nested"
+
+        claude_evidence = dispatch_observation()
+        claude_evidence["tool_calls"].pop()
+        claude_metadata = claude_evidence["native_metadata"]
+        claude_metadata["native_subagent_dispatch_attribution"]["calls"].pop()
+        claude_metadata["subagent_return_order"]["returns"].pop()
+        claude_metadata["claude_tool_results"].pop()
+        self.assertEqual(
+            grade_observation(value, claude_evidence, host="claude")["status"], "pass",
+        )
+
+        codex_evidence = self._synthesis_observation("codex")
+        codex_call = codex_evidence["tool_calls"][2]
+        prompt = "Inspect the item. [[native-eval-item:dispatch-i1]]"
+        codex_call["input"] = {"message": prompt, "role": "default"}
+        encoded = prompt.encode("utf-8")
+        opaque = {
+            "kind": "opaque", "sha256": hashlib.sha256(encoded).hexdigest(),
+            "bytes": len(encoded),
+        }
+        dispatch = codex_evidence["native_metadata"]["nested_rollout"]["dispatches"][0]
+        dispatch.update({
+            "task_input": opaque,
+            "item_attribution": {
+                "task_input": opaque, "observed_item_ids": ["dispatch-i1"],
+                "observed_marker_count": 1, "markers_truncated": False,
+            },
+        })
+        codex_evidence["native_metadata"]["nested_rollout"]["root_thread_id"] = "root-thread"
+        codex_evidence["native_metadata"]["native_subagent_dispatch_attribution"] = {
+            "schema": "native-subagent-dispatch-attribution/v1",
+            "authority": "controller-bound-native-trace",
+            "calls": [{
+                "tool_call_index": 2, "call_id": "synth",
+                "observed_item_ids": ["dispatch-i1"], "observed_marker_count": 1,
+                "markers_truncated": False, "message_sha256": opaque["sha256"],
+                "message_bytes": opaque["bytes"],
+            }],
+        }
+        codex_result = grade_observation(value, codex_evidence, host="codex")
+        self.assertEqual(codex_result["status"], "pass", codex_result)
+
+        wrong_role = copy.deepcopy(codex_evidence)
+        wrong_role["tool_calls"][2]["input"]["role"] = "general-purpose"
+        self.assertEqual(
+            grade_observation(value, wrong_role, host="codex")["status"], "fail",
+        )
+        self.assertEqual(
+            grade_observation(value, codex_evidence, host="other")["status"], "invalid",
+        )
 
     @staticmethod
     def _synthesis_case() -> dict[str, object]:

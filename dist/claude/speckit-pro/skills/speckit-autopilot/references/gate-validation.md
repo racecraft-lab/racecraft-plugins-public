@@ -138,6 +138,16 @@ establishes that the proxy satisfies the requirement. In particular,
 acknowledgement time is not interchangeable with actual UI-delivery timing.
 Never delete or disguise an unresolved marker merely to make G3 pass.
 
+`explicit-human` establishes the requested outcome, not the existence or
+suitability of a proposed mechanism. A proposed callback, hook, event, or other
+architecture path remains **unverified architecture** until current code or
+authoritative documentation proves that the path exists and satisfies the
+requirement. If that support is absent, preserve the clarification marker and
+failed G3 verdict, record the evidence gap, and follow the normal bounded repair
+then escalation sequence. Do not turn the proposal into established
+architecture evidence, clear the marker, or report G3 passed merely because the
+desired behavior came from a human.
+
 After every completed Plan repair, run `validate-gate` for G3 again and append
 the returned result to the log. Stop when G3 passes, its shared corrective
 reservation ends, or when `unresolved-provenance` makes a safe repair

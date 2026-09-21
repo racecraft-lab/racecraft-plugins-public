@@ -76,9 +76,11 @@ SCAFFOLD_FIXTURE_IDS = {"functional.speckit-scaffold-spec.case-3"}
 SCAFFOLD_DIAGNOSTIC_IDS = {"functional.speckit-scaffold-spec.case-7"}
 STATUS_SEARCH_IDS = {"functional.speckit-status.case-3", "functional.speckit-status.case-7"}
 CHILD_ABORT_IDS = {"functional.grill-me.case-7"}
+AMBIGUOUS_DISPATCH_IDS = {"functional.speckit-autopilot.case-20"}
 WORKTREE_BINDING_IDS = {
     "functional.speckit-autopilot.case-34",
     "functional.speckit-autopilot.case-106",
+    "functional.speckit-autopilot.case-106-claude",
     "functional.speckit-autopilot.case-108",
 }
 ARCHIVE_EXTENSION_IDS = {"functional.speckit-autopilot.case-35"}
@@ -87,6 +89,41 @@ AUTOPILOT_PREREQ_IDS = {"functional.speckit-autopilot.case-1"}
 STATUS_WORKTREE_IDS = {"functional.speckit-status.case-4"}
 SCAFFOLD_HANDOFF_IDS = {"functional.speckit-scaffold-spec.case-2-handoff"}
 COACH_ARCHIVE_IDS = {"functional.speckit-coach.case-14"}
+TASK_LIST_CONTRACT_IDS = {
+    "functional.speckit-autopilot.case-12",
+    "functional.speckit-autopilot.case-13",
+    "functional.speckit-autopilot.case-104",
+    "functional.speckit-autopilot.case-105",
+}
+RETIRED_LEGACY_REQUIREMENTS = {
+    "functional.speckit-autopilot.case-5": {"legacy-05"},
+    "functional.speckit-autopilot.case-6": {"legacy-05"},
+    "functional.speckit-autopilot.case-20": {"legacy-05"},
+    "functional.speckit-autopilot.case-104": {"legacy-03"},
+    "functional.speckit-autopilot.case-105": {"legacy-04"},
+    "functional.speckit-autopilot.case-32": {"legacy-13"},
+}
+AMENDED_LEGACY_DESCRIPTION_IDS = {
+    "functional.speckit-autopilot.case-3",
+    "functional.speckit-autopilot.case-4",
+    "functional.speckit-autopilot.case-8",
+    "functional.speckit-autopilot.case-15",
+    "functional.speckit-autopilot.case-17",
+    "functional.speckit-autopilot.case-18",
+    "functional.speckit-autopilot.case-21",
+    "functional.speckit-autopilot.case-23",
+    "functional.speckit-autopilot.case-26",
+    "functional.speckit-autopilot.case-28",
+    "functional.speckit-autopilot.case-32",
+    "functional.speckit-coach.case-9",
+    "functional.speckit-coach.case-12",
+}
+AUTOPILOT_REDIRECT_IDS = {"functional.speckit-autopilot.case-10"}
+RETIRED_LITERAL_CHECK_IDS = {
+    "functional.speckit-autopilot.case-15",
+    "functional.speckit-autopilot.case-26",
+}
+PROMOTED_LITERAL_TO_SEMANTIC_IDS = {"functional.speckit-autopilot.case-26"}
 SCENARIO_IDS = {
     "functional.speckit-autopilot.case-29",
     "functional.speckit-autopilot.case-30",
@@ -188,8 +225,8 @@ FROZEN_GROUNDING_COPIES = {
 
 EXPECTED_SEMANTIC_OVERLAYS = {
     ("functional.speckit-autopilot.case-15", "legacy-09-semantic"):
-        "PASS only if the evidence identifies the Clarify Question Set as the clarify-executor handoff returned to the parent. "
-        "FAIL if the named set has another role, the handoff direction is contradicted, or the phrase is merely named.",
+        "PASS only if the evidence identifies the clarify-executor question-set handoff returned to the parent for answering. "
+        "Equivalent wording passes; no exact label is required. FAIL if the set has another role or the handoff direction is contradicted.",
     ("functional.speckit-autopilot.case-24", "legacy-01-semantic"):
         "PASS only if the evidence identifies confidence-gate as a read-only runner helper and workflow_file, mode_name, and threshold as its inputs. "
         "FAIL if the helper role or input relationship is omitted, contradicted, or merely implied by adjacent names.",
@@ -212,6 +249,21 @@ def normalize_legacy_requirement(text: str) -> str:
     for old, new in ALIASES.items():
         text = text.replace(old, new)
     return " ".join(text.replace("the the ", "the ").split())
+
+
+def active_legacy_requirement_ids(case_id: str, mapping: dict[str, object]) -> set[str]:
+    ids = mapping.get("requirement_ids", [mapping.get("requirement_id")])
+    return set(ids) - RETIRED_LEGACY_REQUIREMENTS.get(case_id, set())
+
+
+def assert_unamended_legacy_description(
+    test: unittest.TestCase,
+    case_id: str,
+    actual: str,
+    expected: str,
+) -> None:
+    if case_id not in AMENDED_LEGACY_DESCRIPTION_IDS:
+        test.assertEqual(actual, expected)
 
 
 def observation(
@@ -305,7 +357,7 @@ def _assert_layer_plan_checks(test: unittest.TestCase, cases: dict[str, dict]) -
     prompt = layer_plan["prompt"]
     test.assertIn("four independent scenarios after G5", prompt)
     test.assertIn("top-level receipt keys valid, invalid, input_error, and non_split", prompt)
-    test.assertIn("derive every recorded value and action", prompt)
+    test.assertIn("Derive every recorded value and action", prompt)
     test.assertEqual(layer_plan["required_tools"], ["specify"])
     test.assertIn("git_fixture", layer_plan)
     for request in ("valid-request.json", "invalid-request.json", "input-error-request.json"):
@@ -362,11 +414,11 @@ class NativeFunctionalCatalogTests(unittest.TestCase):
         selected_ids = {row["case_id"] for row in self.selection["selected"]}
         response_only_ids = (
             (selected_ids | NATIVE_RESPONSE_IDS)
-            - SCAFFOLD_FIXTURE_IDS - SCAFFOLD_DIAGNOSTIC_IDS - STATUS_SEARCH_IDS - CHILD_ABORT_IDS
+            - SCAFFOLD_FIXTURE_IDS - SCAFFOLD_DIAGNOSTIC_IDS - STATUS_SEARCH_IDS - CHILD_ABORT_IDS - AMBIGUOUS_DISPATCH_IDS
             - WORKTREE_BINDING_IDS - ARCHIVE_EXTENSION_IDS - COACH_INSTALLED_IDS - COACH_ARCHIVE_IDS - AUTOPILOT_PREREQ_IDS - STATUS_WORKTREE_IDS - SCAFFOLD_HANDOFF_IDS - SCENARIO_IDS - LOCAL_COMMAND_IDS
-            - REDIRECT_IDS - WORKTREE_MIGRATION_IDS
+            - REDIRECT_IDS - WORKTREE_MIGRATION_IDS - TASK_LIST_CONTRACT_IDS
         )
-        self.assertEqual(len(response_only_ids), 65)
+        self.assertEqual(len(response_only_ids), 59)
         self.assertEqual(len(self.all_cases), 207)
         self.assertEqual(len(self.catalog["cases"]), 93)
         self.assertEqual(set(self.cases), selected_ids | GROUNDED_IDS | NATIVE_RESPONSE_IDS | DASHBOARD_IDS)
@@ -374,7 +426,7 @@ class NativeFunctionalCatalogTests(unittest.TestCase):
         for case in self.catalog["cases"]:
             self.assertEqual(case["layer"], "functional")
             self.assertEqual(set(case["hosts"]), {"claude", "codex"})
-            if case["id"] in CHILD_ABORT_IDS:
+            if case["id"] in CHILD_ABORT_IDS | AMBIGUOUS_DISPATCH_IDS:
                 self.assertEqual(case["timeout_seconds"], 300)
                 self.assertEqual(case["resource_class"], "nested")
             elif case["id"] in PLAN_REPAIR_IDS:
@@ -386,23 +438,26 @@ class NativeFunctionalCatalogTests(unittest.TestCase):
                 self.assertEqual(case["resource_class"], "ordinary")
             self.assertNotIn("Schema-valid", case["capability"])
             self.assertFalse(any("observable response satisfies" in row["description"] for row in case["requirements"]))
-            if case["id"] in GROUNDED_IDS | SCAFFOLD_FIXTURE_IDS | SCAFFOLD_DIAGNOSTIC_IDS | STATUS_SEARCH_IDS | CHILD_ABORT_IDS | WORKTREE_BINDING_IDS | ARCHIVE_EXTENSION_IDS | COACH_INSTALLED_IDS | COACH_ARCHIVE_IDS | AUTOPILOT_PREREQ_IDS | STATUS_WORKTREE_IDS | SCAFFOLD_HANDOFF_IDS | SCENARIO_IDS | LOCAL_COMMAND_IDS | REDIRECT_IDS | NATIVE_RESPONSE_IDS | DASHBOARD_IDS | WORKTREE_MIGRATION_IDS:
+            if case["id"] in GROUNDED_IDS | SCAFFOLD_FIXTURE_IDS | SCAFFOLD_DIAGNOSTIC_IDS | STATUS_SEARCH_IDS | CHILD_ABORT_IDS | AMBIGUOUS_DISPATCH_IDS | WORKTREE_BINDING_IDS | ARCHIVE_EXTENSION_IDS | COACH_INSTALLED_IDS | COACH_ARCHIVE_IDS | AUTOPILOT_PREREQ_IDS | STATUS_WORKTREE_IDS | SCAFFOLD_HANDOFF_IDS | SCENARIO_IDS | LOCAL_COMMAND_IDS | REDIRECT_IDS | NATIVE_RESPONSE_IDS | DASHBOARD_IDS | WORKTREE_MIGRATION_IDS | TASK_LIST_CONTRACT_IDS | AUTOPILOT_REDIRECT_IDS:
                 continue
             self.assertEqual(case["fixtures"], [], case["id"])
             self.assertFalse(any(check["type"] == "tool_used" for check in case["checks"]), case["id"])
             self.assertEqual(
-                selected[case["id"]]["deterministic_text_checks"],
+                selected[case["id"]]["deterministic_text_checks"]
+                - (case["id"] in RETIRED_LITERAL_CHECK_IDS),
                 sum(check["type"] == "text" for check in case["checks"]),
                 case["id"],
             )
             self.assertEqual(
-                selected[case["id"]]["semantic_checks"],
+                selected[case["id"]]["semantic_checks"]
+                - len(RETIRED_LEGACY_REQUIREMENTS.get(case["id"], set()))
+                + (case["id"] in PROMOTED_LITERAL_TO_SEMANTIC_IDS),
                 sum(check["type"] == "semantic" for check in case["checks"]),
                 case["id"],
             )
         self.assertEqual(
             sum(check["type"] == "text" for case in self.catalog["cases"] for check in case["checks"]),
-            22,
+            20,
         )
         self.assertEqual(
             sum(
@@ -456,21 +511,19 @@ class NativeFunctionalCatalogTests(unittest.TestCase):
                 if "legacy_expectations" in source:
                     self.assertEqual(source["legacy_expectations"], entry["expectations"])
                 for mapping in source["expectations"]:
+                    active = active_legacy_requirement_ids(selected["case_id"], mapping)
+                    if not active:
+                        continue
+                    self.assertLessEqual(active, set(requirements))
+                    mapped_ids.update(active)
                     if "requirement_ids" in mapping:
-                        self.assertTrue(mapping["requirement_ids"])
-                        self.assertLessEqual(set(mapping["requirement_ids"]), set(requirements))
-                        mapped_ids.update(mapping["requirement_ids"])
                         continue
                     expected = normalize_legacy_requirement(entry["expectations"][mapping["expectation_index"]])
                     if selected["case_id"] in REDIRECT_IDS:
                         expected = expected.replace("as the correct command", "as the correct entrypoint")
-                    if selected["case_id"] not in {
-                        "functional.speckit-autopilot.case-17",
-                        "functional.speckit-autopilot.case-18",
-                        "functional.speckit-autopilot.case-21",
-                    }:
-                        self.assertEqual(requirements[mapping["requirement_id"]], expected)
-                    mapped_ids.add(mapping["requirement_id"])
+                    assert_unamended_legacy_description(
+                        self, selected["case_id"], requirements[mapping["requirement_id"]], expected,
+                    )
             catalog_ids = {key for key in requirements if key.startswith("legacy-")}
             if selected["case_id"] in WORKTREE_MIGRATION_IDS:
                 self.assertEqual(mapped_ids, {"binding", "preservation"})
@@ -484,6 +537,9 @@ class NativeFunctionalCatalogTests(unittest.TestCase):
                 expected = {
                     "functional.speckit-autopilot.case-34": {"binding", "planning"},
                     "functional.speckit-autopilot.case-106": {"binding", "safety"},
+                    "functional.speckit-autopilot.case-106-claude": {
+                        "legacy-01", "legacy-02", "legacy-03", "legacy-04", "legacy-05",
+                    },
                     "functional.speckit-autopilot.case-108": {"revalidation", "safety"},
                 }[selected["case_id"]]
                 self.assertEqual(mapped_ids, expected)
@@ -677,7 +733,7 @@ class NativeFunctionalCatalogTests(unittest.TestCase):
 
     def test_fixtures_are_dedicated_existing_and_never_runtime_specs_paths(self) -> None:
         for case in self.catalog["cases"]:
-            if case["id"] not in GROUNDED_IDS | SCAFFOLD_FIXTURE_IDS | SCAFFOLD_DIAGNOSTIC_IDS | STATUS_SEARCH_IDS | CHILD_ABORT_IDS | WORKTREE_BINDING_IDS | ARCHIVE_EXTENSION_IDS | COACH_INSTALLED_IDS | COACH_ARCHIVE_IDS | AUTOPILOT_PREREQ_IDS | STATUS_WORKTREE_IDS | SCAFFOLD_HANDOFF_IDS | SCENARIO_IDS | LOCAL_COMMAND_IDS | REDIRECT_IDS | DASHBOARD_IDS | WORKTREE_MIGRATION_IDS:
+            if case["id"] not in GROUNDED_IDS | SCAFFOLD_FIXTURE_IDS | SCAFFOLD_DIAGNOSTIC_IDS | STATUS_SEARCH_IDS | CHILD_ABORT_IDS | WORKTREE_BINDING_IDS | ARCHIVE_EXTENSION_IDS | COACH_INSTALLED_IDS | COACH_ARCHIVE_IDS | AUTOPILOT_PREREQ_IDS | STATUS_WORKTREE_IDS | SCAFFOLD_HANDOFF_IDS | SCENARIO_IDS | LOCAL_COMMAND_IDS | REDIRECT_IDS | DASHBOARD_IDS | WORKTREE_MIGRATION_IDS | TASK_LIST_CONTRACT_IDS:
                 self.assertEqual(case["fixtures"], [], case["id"])
                 continue
             if case["id"] in SCAFFOLD_FIXTURE_IDS:
@@ -713,6 +769,21 @@ class NativeFunctionalCatalogTests(unittest.TestCase):
                         fixture,
                     )
                     self.assertTrue((REPO_ROOT / fixture["source"]).is_file(), fixture)
+                continue
+            if case["id"] in TASK_LIST_CONTRACT_IDS:
+                for fixture in case["fixtures"]:
+                    self.assertTrue(
+                        fixture["source"].startswith(
+                            "tests/speckit-pro/evals/fixtures/functional/autopilot-scenarios/"
+                        ),
+                        fixture,
+                    )
+                    self.assertTrue((REPO_ROOT / fixture["source"]).is_file(), fixture)
+                reads = {
+                    check["path"] for check in case["checks"]
+                    if check["type"] == "file_access" and check["operation"] == "read_file"
+                }
+                self.assertEqual(reads, {fixture["destination"] for fixture in case["fixtures"]})
                 continue
             if case["id"] in CHILD_ABORT_IDS | SCAFFOLD_HANDOFF_IDS:
                 self.assertEqual(case["fixtures"], [], case["id"])
@@ -915,8 +986,56 @@ class NativeFunctionalCatalogTests(unittest.TestCase):
         self.assertTrue(checks["attached-workflow-present"]["exists"])
         for field in ("active_spec", "source_path", "next_action"):
             self.assertIn(field, external["prompt"])
-        for leaked_answer in ("SPEC-021", ".worktrees/spec-021", "continue_workflow"):
-            self.assertNotIn(leaked_answer, external["prompt"])
+        self.assertIn("git worktree list --porcelain", external["prompt"])
+        self.assertNotIn("SPEC-021", external["prompt"])
+        self.assertNotIn(".worktrees/spec-021", external["prompt"])
+        self.assertIn("continue_workflow or rerun_setup", external["prompt"])
+
+    def test_parity_remediations_are_executable_and_fail_closed(self) -> None:
+        case106 = self.cases["functional.speckit-autopilot.case-106"]
+        check = next(row for row in case106["checks"] if row["id"] == "no-live-post-handoff-claim")
+        isolated = one_check_case(case106, check)
+        activation = "speckit-autopilot"
+        accepted = grade_observation(
+            isolated,
+            observation(activation=activation, final_text='{"live_post_handoff_verified":false}'),
+            host="codex",
+        )
+        fabricated = grade_observation(
+            isolated,
+            observation(activation=activation, final_text='{"live_post_handoff_verified":true}'),
+            host="codex",
+        )
+        self.assertEqual(accepted["status"], "pass")
+        self.assertEqual(fabricated["status"], "fail")
+
+        for case_id in (
+            "functional.speckit-autopilot.case-12",
+            "functional.speckit-autopilot.case-13",
+        ):
+            case = self.cases[case_id]
+            self.assertNotIn("task-list-contract.md", json.dumps(case))
+            self.assertTrue(any(row["type"] == "response_json_field" for row in case["checks"]))
+
+        dispatch = self.cases["functional.speckit-autopilot.case-20"]
+        dispatch_check = next(row for row in dispatch["checks"] if row["id"] == "ambiguous-dispatch")
+        self.assertEqual(
+            {row["role"] for row in dispatch_check["expected"]},
+            {"codebase-analyst", "spec-context-analyst", "domain-researcher"},
+        )
+        for case_id in (
+            "functional.speckit-autopilot.case-104",
+            "functional.speckit-autopilot.case-105",
+        ):
+            case = self.cases[case_id]
+            self.assertTrue(case["fixtures"])
+            self.assertTrue(any(row["type"] == "file_access" for row in case["checks"]))
+            self.assertTrue(any(row["type"] == "response_json_field" for row in case["checks"]))
+
+        scaffold = self.cases["functional.speckit-scaffold-spec.case-2-handoff"]
+        self.assertNotIn(".worktrees/spec-009", scaffold["prompt"])
+        mode = next(row for row in scaffold["checks"] if row["id"] == "handoff-mode")
+        self.assertNotEqual(mode["expected_by_host"]["claude"], mode["expected_by_host"]["codex"])
 
     def test_catalog_rejects_unknown_host_tools_and_hidden_machine_contracts(self) -> None:
         unknown_tool = copy.deepcopy(self.loaded)

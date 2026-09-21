@@ -1,0 +1,7 @@
+{
+  "items": [
+    {"name": "Phase 6: Tasks", "status": "completed"},
+    {"name": "Phase 7: Implement - Pending task decomposition", "status": "pending"},
+    {"name": "Post: Verification and Status Sync", "status": "pending"}
+  ]
+}

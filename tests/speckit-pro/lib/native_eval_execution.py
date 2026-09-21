@@ -1471,9 +1471,17 @@ def _rehydrate_claude_activation_prompt(
         PurePosixPath("<attempt_dir>") / PurePosixPath(cwd_relative.as_posix())
         / "bin" / "python3"
     ).as_posix()
-    if prompt.count("<attempt_dir>") != 1 or token_path not in prompt:
+    token_pattern = re.compile(
+        rf"(?<![A-Za-z0-9_./-]){re.escape(token_path)}(?![A-Za-z0-9_./-])"
+    )
+    matches = list(token_pattern.finditer(prompt))
+    if not matches or prompt.count("<attempt_dir>") != len(matches):
         raise ValueError("Claude explicit activation relocation is malformed")
-    return prompt.replace(token_path, str(cwd_path / "bin" / "python3"))
+    replacement = str(cwd_path / "bin" / "python3")
+    rehydrated = token_pattern.sub(lambda _match: replacement, prompt)
+    if "<attempt_dir>" in rehydrated:
+        raise ValueError("Claude explicit activation relocation is malformed")
+    return rehydrated
 
 
 def _validated_claude_activation_source(source: object, canonical: object) -> dict[str, object]:
@@ -2247,6 +2255,66 @@ def _strict_json_stream(text: object) -> list[object] | None:
     return values
 
 
+def _normalized_repository_runner_values(
+    output: object, native_exit: object, request: Mapping[str, object],
+) -> object:
+    """Strip only an exact diagnostic copy correlated to a sealed request."""
+
+    values = _strict_json_stream(output)
+    if values is None or len(values) == 1:
+        return output
+    if len(values) != 2 or not all(isinstance(value, dict) for value in values):
+        raise ValueError("native runner diagnostic stream is not correlated")
+    diagnostic, response = values
+    data = response.get("data")
+    details = diagnostic.get("details")
+    stdout = data.get("stdout") if isinstance(data, Mapping) else None
+    stderr = data.get("stderr") if isinstance(data, Mapping) else None
+    status_codes = {
+        "expected_failure": (1, "validation_failure"),
+        "input_error": (2, "invalid_input"),
+    }
+    status = response.get("status")
+    expected = status_codes.get(status) if isinstance(status, str) else None
+    if type(native_exit) is not int or native_exit == 0 or expected is None \
+            or native_exit != expected[0] \
+            or response.get("exit_code") != native_exit \
+            or response.get("request_id") != request.get("request_id") \
+            or not isinstance(data, Mapping) \
+            or data.get("helper_id") != request.get("helper_id") \
+            or data.get("operation") != request.get("operation") \
+            or data.get("mode") != request.get("mode") \
+            or data.get("exit_code") != native_exit \
+            or diagnostic.get("source") != "runner" \
+            or diagnostic.get("severity") != "error" \
+            or diagnostic.get("code") != expected[1] \
+            or not isinstance(details, Mapping) \
+            or set(details) != {"exit_code", "helper_id", "stderr_bytes", "stdout_bytes"} \
+            or details.get("exit_code") != native_exit \
+            or details.get("helper_id") != request.get("helper_id") \
+            or not isinstance(stdout, Mapping) or not isinstance(stderr, Mapping) \
+            or details.get("stdout_bytes") != stdout.get("byte_count") \
+            or details.get("stderr_bytes") != stderr.get("byte_count") \
+            or not _strict_equal(response.get("diagnostics"), [diagnostic]):
+        raise ValueError("native runner diagnostic stream is not correlated")
+    return json.dumps(
+        response, sort_keys=True, separators=(",", ":"),
+        ensure_ascii=False, allow_nan=False,
+    )
+
+
+def _normalized_repository_runner_output(
+    output: object, native_exit: object, request_bytes: bytes,
+) -> object:
+    """Normalize repository-runner output against its sealed request bytes."""
+
+    values = _strict_json_stream(output)
+    if values is None or len(values) == 1:
+        return output
+    request = _strict_json_evidence(request_bytes, "sealed native runner request")
+    return _normalized_repository_runner_values(output, native_exit, request)
+
+
 def _runner_response(output: object, request: Mapping[str, object]) \
         -> tuple[dict[str, object], str, int, bool] | None:
     if isinstance(output, list):
@@ -2422,6 +2490,50 @@ def _claude_runner_capture_output(output: object) -> str:
     return payload
 
 
+def _normalized_claude_runner_output(
+    output: object, success: bool,
+) -> tuple[object, int | None]:
+    """Remove only Claude's exact authenticated nonzero-exit display wrapper."""
+
+    if not isinstance(output, str) or not output.startswith("Exit code "):
+        return output, None
+    prefix, separator, payload = output.partition("\n")
+    match = re.fullmatch(r"Exit code ([0-9]+)", prefix)
+    if separator != "\n" or match is None:
+        raise ValueError("Claude runner nonzero exit wrapper is malformed")
+    native_exit = int(match.group(1))
+    values = _strict_json_stream(payload)
+    if native_exit == 0 or success or len(values or []) not in {1, 2} \
+            or not all(isinstance(value, dict) for value in values) \
+            or type(values[-1].get("exit_code")) is not int \
+            or values[-1]["exit_code"] != native_exit:
+        raise ValueError("Claude runner nonzero exit wrapper is malformed")
+    return payload, native_exit
+
+
+def _normalized_claude_plan_repair_output(
+    output: object, success: object, request: Mapping[str, object],
+) -> object | None:
+    """Retain only an authenticated success or expected G3 nonzero response."""
+
+    if type(success) is not bool:
+        raise ValueError("Claude Plan-repair command status is unavailable")
+    if success:
+        return output
+    normalized, native_exit = _normalized_claude_runner_output(output, success)
+    if native_exit is None:
+        return None
+    normalized = _normalized_repository_runner_values(
+        normalized, native_exit, request,
+    )
+    values = _strict_json_stream(normalized)
+    if native_exit != 1 or len(values or []) != 1 \
+            or not isinstance(values[0], dict) \
+            or values[0].get("status") != "expected_failure":
+        raise ValueError("Claude Plan-repair expected-nonzero response is malformed")
+    return normalized
+
+
 def _validated_codex_runner_commands(
     codex_trace: Mapping[str, object], raw_hashes: Mapping[object, object],
 ) -> list[Mapping[str, object]]:
@@ -2534,14 +2646,19 @@ def _claude_runner_invocations(
                 or type(call.get("success")) is not bool:
             raise ValueError("Claude runner command completion is unavailable")
         output = call.get("output")
+        native_exit = None
         if captured:
             output = _claude_runner_capture_output(output)
+        else:
+            output, native_exit = _normalized_claude_runner_output(
+                output, call["success"],
+            )
         result.append({
             "authority": "protected-native-runner",
             "call_id": call.get("id"), "tool_call_index": index,
             "request_path": request_path, "output": output,
             "success": call["success"],
-            "native_exit_code": 0 if call["success"] else None,
+            "native_exit_code": 0 if call["success"] else native_exit,
         })
     return result
 
@@ -3164,7 +3281,11 @@ def _bind_runner_result_context(
         ]
         if len(candidates) != 1:
             raise ValueError("native runner result invocation is missing or ambiguous")
-        receipts.append(bind_runner_result(check, candidates[0], request_bytes))
+        invocation = dict(candidates[0])
+        invocation["output"] = _normalized_repository_runner_output(
+            invocation.get("output"), invocation.get("native_exit_code"), request_bytes,
+        )
+        receipts.append(bind_runner_result(check, invocation, request_bytes))
     attach_runner_result_receipt(observation, receipts)
 
 
@@ -3301,6 +3422,12 @@ def _bind_plan_repair_context(
                 continue
             if not _runner_command_matches(command, python_names, request_path):
                 continue
+            if host == "claude":
+                output = _normalized_claude_plan_repair_output(
+                    output, call.get("success"), request,
+                )
+                if output is None:
+                    continue
             response = _runner_response(output, request)
             if response is None:
                 continue

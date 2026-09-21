@@ -762,27 +762,73 @@ def _dispatch_returns(
     return None
 
 
+def _dispatch_pairs(value: object) -> list[tuple[str, str]] | None:
+    if not isinstance(value, list) or not value:
+        return None
+    pairs: list[tuple[str, str]] = []
+    for item in value:
+        if not isinstance(item, dict) or set(item) != {"item_id", "role"} \
+                or any(not isinstance(item[key], str)
+                       or _STABLE_ID.fullmatch(item[key]) is None
+                       for key in ("item_id", "role")):
+            return None
+        pairs.append((item["item_id"], item["role"]))
+    return pairs if len(pairs) == len(set(pairs)) else None
+
+
+def _dispatch_expectations(
+    check: dict[str, Any],
+) -> tuple[dict[str, list[tuple[str, str]]], bool] | None:
+    has_shared = "expected" in check
+    has_host_specific = "expected_by_host" in check
+    if has_shared is has_host_specific:
+        return None
+    if has_shared:
+        pairs = _dispatch_pairs(check.get("expected"))
+        return ({"shared": pairs}, False) if pairs is not None else None
+    expected_by_host = check.get("expected_by_host")
+    if not isinstance(expected_by_host, dict) \
+            or set(expected_by_host) != {"claude", "codex"}:
+        return None
+    pairs_by_contract = {
+        name: _dispatch_pairs(expected_by_host[name]) for name in ("claude", "codex")
+    }
+    if any(pairs is None for pairs in pairs_by_contract.values()):
+        return None
+    if sorted(item_id for item_id, _role in pairs_by_contract["claude"]) \
+            != sorted(item_id for item_id, _role in pairs_by_contract["codex"]):
+        return None
+    return pairs_by_contract, True
+
+
+def _dispatch_contract(
+    check: dict[str, Any], host: str,
+) -> tuple[list[tuple[str, str]], set[str]] | None:
+    expectations = _dispatch_expectations(check)
+    forbidden = check.get("forbidden_roles")
+    if expectations is None or not isinstance(forbidden, list):
+        return None
+    pairs_by_contract, host_specific = expectations
+    expected_pairs = pairs_by_contract[host] if host_specific else pairs_by_contract["shared"]
+    expected_roles = {
+        role for pairs in pairs_by_contract.values() for _item_id, role in pairs
+    }
+    if any(not isinstance(role, str) or _STABLE_ID.fullmatch(role) is None for role in forbidden) \
+            or len(forbidden) != len(set(forbidden)) \
+            or not set(forbidden).isdisjoint(expected_roles):
+        return None
+    return expected_pairs, set(forbidden)
+
+
 def _native_subagent_dispatch(
     check: dict[str, Any], observation: dict[str, Any], host: str | None,
 ) -> tuple[str, str]:
     if host not in {"claude", "codex"}:
         return "invalid", "native subagent dispatch requires a trusted subject host"
-    expected = check.get("expected")
-    forbidden = check.get("forbidden_roles")
-    if not isinstance(expected, list) or not expected or not isinstance(forbidden, list):
+    contract = _dispatch_contract(check, host)
+    if contract is None:
         return "invalid", "catalog native subagent dispatch is malformed"
-    expected_pairs = []
-    for item in expected:
-        if not isinstance(item, dict) or set(item) != {"item_id", "role"} \
-                or any(not isinstance(item[key], str) or _STABLE_ID.fullmatch(item[key]) is None
-                       for key in ("item_id", "role")):
-            return "invalid", "catalog native subagent dispatch is malformed"
-        expected_pairs.append((item["item_id"], item["role"]))
-    if len(expected_pairs) != len(set(expected_pairs)) \
-            or any(not isinstance(role, str) or _STABLE_ID.fullmatch(role) is None for role in forbidden) \
-            or len(forbidden) != len(set(forbidden)) \
-            or not set(forbidden).isdisjoint(role for _item, role in expected_pairs):
-        return "invalid", "catalog native subagent dispatch is malformed"
+    expected_pairs, forbidden_set = contract
     attributions, error = _dispatch_attributions(observation, host)
     if error is not None:
         return "invalid", error
@@ -791,7 +837,6 @@ def _native_subagent_dispatch(
         return "invalid", return_error
     actual_pairs = []
     problems = []
-    forbidden_set = set(forbidden)
     for index, call in enumerate(observation["tool_calls"]):
         if call["name"] != "subagent":
             continue

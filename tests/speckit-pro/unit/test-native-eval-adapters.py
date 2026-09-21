@@ -559,13 +559,17 @@ class AdapterPreparationTests(unittest.TestCase):
         self, command: list[str], *, cwd: Path, environment: dict[str, str],
     ) -> subprocess.CompletedProcess[bytes]:
         del environment
-        program = command[command.index("-C") + 2]
+        program_index = command.index("-C") + 2
+        program = command[program_index]
+        arguments = command[program_index + 1:]
         target = Path(command[-1])
         if program.endswith("python3.11"):
             return subprocess.CompletedProcess(command, 0, b"3.11\n", b"")
         if program.endswith("/.codex/native-eval-git-bin/git"):
+            if arguments == ["rev-parse", "--is-inside-work-tree"]:
+                return subprocess.CompletedProcess(command, 0, b"true\n", b"")
             return subprocess.CompletedProcess(
-                command, 0, f"worktree {cwd}\nHEAD {'1' * 40}\n\n".encode(), b"",
+                command, 0, b"git version 2.54.0\n", b"",
             )
         if program.endswith("cat") and target == cwd / ".codex/native-eval-isolation-control.txt":
             return subprocess.CompletedProcess(command, 0, adapters._ISOLATION_CONTROL, b"")
@@ -818,7 +822,10 @@ class AdapterPreparationTests(unittest.TestCase):
         with mock.patch.object(adapters, "_codex_helpers", return_value=helpers), \
                 mock.patch.object(adapters, "_qualify_codex_isolation", self.real_isolation_qualifier), \
                 mock.patch.object(adapters, "_is_broad_temporary_root", return_value=False), \
-                mock.patch.object(adapters, "_run_codex_sandbox_probe", side_effect=self.successful_sandbox_probe):
+                mock.patch.object(
+                    adapters, "_run_codex_sandbox_probe",
+                    side_effect=self.successful_sandbox_probe,
+                ) as sandbox_probe:
             prepared = adapters.prepare_trial(
                 git_native_case(self.repo), "codex", "project", self.repo,
                 attempt, "gpt-5.6-sol", evidence_root=store,
@@ -840,10 +847,12 @@ class AdapterPreparationTests(unittest.TestCase):
             and prepared.command[index + 1].startswith("shell_environment_policy.set=")
         ))
         qualification = settings["isolation_qualification"]
-        self.assertIn(
-            {"name": "protected-git-worktree-list", "outcome": "allowed"},
-            qualification["probes"],
-        )
+        self.assertIn({"name": "protected-git-runtime", "outcome": "allowed"},
+                      qualification["probes"])
+        self.assertTrue(any(
+            call.args[0][-2:] == ["rev-parse", "--is-inside-work-tree"]
+            for call in sandbox_probe.call_args_list
+        ))
         filesystem = next(
             prepared.command[index + 1]
             for index, argument in enumerate(prepared.command[:-1])
@@ -859,6 +868,44 @@ class AdapterPreparationTests(unittest.TestCase):
         launcher.write_bytes(b"tampered")
         with self.assertRaisesRegex(ValueError, "protected Git launcher"):
             adapters._verify_prepared_identity(prepared)
+
+    @unittest.skipUnless(NATIVE_CODEX_SANDBOX_PROBES, "requires native POSIX sandbox probes")
+    def test_codex_git_fixture_qualification_rejects_denied_repository_metadata(self) -> None:
+        store, attempt = self.isolation_store("denied-git-metadata-store")
+        codex_home = self.temp / "denied-git-metadata-home"
+        codex_home.mkdir()
+        helpers = mock.Mock()
+        helpers.codex_executable.return_value = str(Path(sys.executable).resolve())
+        helpers.enumerate_non_target_skills.return_value = ()
+        helpers.skill_isolation_args.return_value = []
+        helpers.codex_environment.side_effect = lambda workspace: {
+            "PATH": os.environ["PATH"], "HOME": str(workspace),
+            "CODEX_HOME": str(codex_home),
+        }
+
+        def denied_metadata(
+            command: list[str], *, cwd: Path, environment: dict[str, str],
+        ) -> subprocess.CompletedProcess[bytes]:
+            program_index = command.index("-C") + 2
+            if (command[program_index].endswith("/.codex/native-eval-git-bin/git")
+                    and command[program_index + 1:]
+                    == ["rev-parse", "--is-inside-work-tree"]):
+                return subprocess.CompletedProcess(
+                    command, 1, b"", b"fatal: .git: Operation not permitted\n",
+                )
+            return self.successful_sandbox_probe(
+                command, cwd=cwd, environment=environment,
+            )
+
+        with mock.patch.object(adapters, "_codex_helpers", return_value=helpers), \
+                mock.patch.object(adapters, "_qualify_codex_isolation", self.real_isolation_qualifier), \
+                mock.patch.object(adapters, "_is_broad_temporary_root", return_value=False), \
+                mock.patch.object(adapters, "_run_codex_sandbox_probe", side_effect=denied_metadata), \
+                self.assertRaisesRegex(ValueError, "failed the protected-git-runtime control"):
+            adapters.prepare_trial(
+                git_native_case(self.repo), "codex", "project", self.repo,
+                attempt, "gpt-5.6-sol", evidence_root=store,
+            )
 
     @unittest.skipUnless(NATIVE_CODEX_SANDBOX_PROBES, "requires native POSIX sandbox probes")
     def test_read_only_isolation_requires_denied_workspace_write_without_creation(self) -> None:
@@ -1164,6 +1211,85 @@ class AdapterPreparationTests(unittest.TestCase):
         self.assertEqual(prepared.runtime_identity["cli_version"], "test-cli 1.0")
         self.assertEqual(prepared.runtime_identity["settings"]["declared_artifacts"], ["receipt.txt"])
         self.assertRegex(prepared.runtime_identity["digest"], r"^[0-9a-f]{64}$")
+
+    def test_claude_reference_access_is_limited_to_selected_skill_references(self) -> None:
+        selected = self.repo / "speckit-pro" / "skills" / "native-skill" / "references" / "guide.md"
+        selected.parent.mkdir()
+        selected.write_text("selected reference\n", encoding="utf-8")
+        adjacent = self.repo / "speckit-pro" / "skills" / "sibling-skill" / "references" / "secret.md"
+        adjacent.parent.mkdir()
+        adjacent.write_text("adjacent reference\n", encoding="utf-8")
+        attempt = self.temp / "claude-reference-access"
+        with mock.patch.object(adapters, "_resolve_executable", return_value="/opt/bin/claude"):
+            prepared = adapters.prepare_trial(
+                self.case, "claude", "plugin", self.repo, attempt, "claude-sonnet-5",
+            )
+
+        case_dir = prepared.cwd / "evals" / str(self.case["id"])
+        link = case_dir / ".native-eval-skill-references"
+        staged_selected = prepared.cwd / "skills" / "native-skill" / "references"
+        staged_adjacent = prepared.cwd / "skills" / "sibling-skill" / "references" / "secret.md"
+        output_secret = attempt / "framework-output" / "secret.txt"
+        output_secret.parent.mkdir()
+        output_secret.write_text("qualification output\n", encoding="utf-8")
+
+        self.assertTrue(link.is_symlink())
+        self.assertEqual(link.resolve(), staged_selected.resolve())
+        config = (case_dir / "case.yaml").read_text(encoding="utf-8")
+        self.assertIn(
+            'context:\n  add_dirs: [".native-eval-skill-references"]\n'
+            "  scaffold_script: fixture.sh\n",
+            config,
+        )
+        self.assertNotIn(str(attempt), config)
+        access = prepared.runtime_identity["settings"]["claude_reference_access"]
+        self.assertEqual(access, {
+            "schema_version": "native-claude-reference-access/v2",
+            "skill": "mini-plugin:native-skill",
+            "add_dir": ".native-eval-skill-references",
+            "target": "skills/native-skill/references",
+            "tree_sha256": adapters._tree_digest(staged_selected),
+        })
+        self.assertEqual(prepared.runtime_identity["staged_tree_exclusions"], {
+            "root_directories": [],
+            "files": ["evals/native.writable/.native-eval-skill-references"],
+        })
+        grant = (case_dir / access["add_dir"]).resolve()
+        self.assertEqual((grant / "guide.md").read_text(encoding="utf-8"), "selected reference\n")
+        self.assertTrue((grant / "guide.md").is_relative_to(grant))
+        self.assertFalse(staged_adjacent.resolve().is_relative_to(grant))
+        self.assertFalse(output_secret.resolve().is_relative_to(grant))
+        self.assertFalse(prepared.cwd.resolve().is_relative_to(grant))
+        adapters._verify_prepared_identity(prepared)
+        adapters._verify_post_execution_controls(prepared)
+
+        link.unlink()
+        link.symlink_to(os.path.relpath(staged_adjacent.parent, start=case_dir))
+        with self.assertRaisesRegex(ValueError, "reference access symlink changed"):
+            adapters._verify_post_execution_controls(prepared)
+
+        link.unlink()
+        link.symlink_to(os.path.relpath(staged_selected, start=case_dir))
+        (staged_selected / "guide.md").write_text("mutated reference\n", encoding="utf-8")
+        with self.assertRaisesRegex(ValueError, "reference tree changed"):
+            adapters._verify_post_execution_controls(prepared)
+
+    def test_claude_reference_access_requires_read_permission(self) -> None:
+        references = self.repo / "speckit-pro" / "skills" / "native-skill" / "references"
+        references.mkdir()
+        (references / "guide.md").write_text("selected reference\n", encoding="utf-8")
+        case = copy.deepcopy(self.case)
+        case["hosts"]["claude"]["allowed_tools"] = ["Skill", "Write"]
+        attempt = self.temp / "claude-no-reference-read"
+        with mock.patch.object(adapters, "_resolve_executable", return_value="/opt/bin/claude"):
+            prepared = adapters.prepare_trial(
+                case, "claude", "plugin", self.repo, attempt, "claude-sonnet-5",
+            )
+
+        case_dir = prepared.cwd / "evals" / str(case["id"])
+        self.assertFalse((case_dir / ".native-eval-skill-references").exists())
+        self.assertNotIn("add_dirs", (case_dir / "case.yaml").read_text(encoding="utf-8"))
+        self.assertNotIn("claude_reference_access", prepared.runtime_identity["settings"])
 
     def test_nested_claude_eval_uses_extended_official_turn_budget(self) -> None:
         case = copy.deepcopy(self.case)
@@ -2092,6 +2218,92 @@ class AdapterPreparationTests(unittest.TestCase):
         fake_helpers.enumerate_non_target_skills.assert_called_once()
         fake_helpers.skill_isolation_args.assert_called_once()
 
+    def test_codex_protected_git_is_declarative_hermetic_and_fail_closed(self) -> None:
+        plain = copy.deepcopy(self.case)
+        runner = copy.deepcopy(self.case)
+        runner["hosts"]["codex"]["allowed_tools"] = ["read_file"]
+        runner["checks"] = [{
+            "id": "runner", "requirement": "r1", "type": "native_runner_result",
+            "request_path": "input.txt", "helper_id": "check-prerequisites",
+            "operation": "check-prerequisites", "mode": "read_only",
+            "expected_status": "ok", "expected_exit_code": 0,
+            "stdout_field_path": ["status"], "expected_stdout_value": "ready",
+            "response_field_path": ["binding_result"],
+        }]
+        git_check = copy.deepcopy(self.case)
+        git_check["checks"] = [{
+            "id": "git", "requirement": "r1", "type": "native_git_final_state",
+        }]
+        self.assertFalse(adapters._codex_protected_git_required(plain))
+        self.assertTrue(adapters._codex_protected_git_required(runner))
+        self.assertTrue(adapters._codex_protected_git_required(git_check))
+        self.assertTrue(adapters._codex_protected_git_required(git_native_case(self.repo)))
+
+        attempt = self.temp / "runner-git"
+        codex_home = self.temp / "runner-git-home"
+        codex_home.mkdir()
+        helpers = mock.Mock()
+        helpers.codex_executable.return_value = str(Path(sys.executable).resolve())
+        helpers.enumerate_non_target_skills.return_value = ()
+        helpers.skill_isolation_args.return_value = []
+        ambient_global = self.ambient_home / ".gitconfig"
+        ambient_temp = self.temp / "ambient-temp"
+        ambient_temp.mkdir()
+        helpers.codex_environment.return_value = {
+            "PATH": os.environ["PATH"], "HOME": str(self.ambient_home),
+            "CODEX_HOME": str(codex_home),
+            "GIT_CONFIG_GLOBAL": str(ambient_global),
+            "GIT_ASKPASS": "/ambient/credential-helper",
+            "TMPDIR": str(ambient_temp),
+        }
+        with mock.patch.object(adapters, "_codex_helpers", return_value=helpers):
+            prepared = adapters.prepare_trial(
+                runner, "codex", "project", self.repo, attempt, "gpt-5.6-sol",
+            )
+
+        settings = prepared.runtime_identity["settings"]
+        subject = settings["git_subject_environment"]
+        protected = settings["protected_git"]
+        temporary = prepared.cwd / ".native-eval-tmp"
+        self.assertEqual(
+            subject["schema_version"], "native-eval-git-subject-environment/v2",
+        )
+        self.assertEqual(
+            {prepared.environment[name] for name in ("TMPDIR", "TMP", "TEMP")},
+            {str(temporary)},
+        )
+        self.assertEqual(
+            prepared.environment["GIT_CONFIG_GLOBAL"],
+            str(prepared.cwd / ".codex/native-eval-git-global.config"),
+        )
+        self.assertNotIn("GIT_ASKPASS", prepared.environment)
+        self.assertNotEqual(prepared.environment["GIT_CONFIG_GLOBAL"], str(ambient_global))
+        self.assertTrue(temporary.is_dir())
+        self.assertFalse(temporary.is_symlink())
+        filesystem = next(
+            prepared.command[index + 1]
+            for index, value in enumerate(prepared.command[:-1])
+            if value == "--config" and "permissions.native-eval-read.filesystem="
+            in prepared.command[index + 1]
+        )
+        self.assertIn(f'{json.dumps(str(prepared.cwd))}="read"', filesystem)
+        self.assertIn(f'{json.dumps(str(temporary))}="write"', filesystem)
+        self.assertIn(f'{json.dumps(protected["source_executable"])}="read"', filesystem)
+        self.assertIn(f'{json.dumps(protected["exec_path"])}="read"', filesystem)
+        self.assertNotIn(f'{json.dumps(str(attempt.parent))}="read"', filesystem)
+        self.assertNotIn(f'{json.dumps(str(self.ambient_home))}="read"', filesystem)
+
+        adjacent = attempt / "adjacent-output"
+        adjacent.mkdir()
+        temporary.rmdir()
+        temporary.symlink_to(adjacent, target_is_directory=True)
+        with mock.patch.object(adapters.subprocess, "Popen") as provider, \
+                self.assertRaisesRegex(
+                    ValueError, "staged runtime contains a symlink|Git temporary directory|Git subject controls",
+                ):
+            adapters.execute_prepared(prepared, 10)
+        provider.assert_not_called()
+
     def test_codex_git_metadata_write_requires_explicit_case_contract(self) -> None:
         codex_home = self.temp / "git-metadata-home"
         codex_home.mkdir()
@@ -2858,6 +3070,7 @@ class AdapterPreparationTests(unittest.TestCase):
                             "global Codex home plus exact current directory; "
                             "parent traversal disabled",
                         )
+
                     self.assertEqual(prepared.as_dict()["trigger_stage"], stage.as_dict())
                     self.assertNotIn('"checks"', json.dumps(prepared.runtime_identity))
                     self.assertNotIn('"expected"', json.dumps(prepared.runtime_identity))
@@ -2905,6 +3118,58 @@ class AdapterPreparationTests(unittest.TestCase):
                             prepared.command,
                         )
                         self.assertEqual(set(stage.skill_markers.values()), set(stage.witnesses))
+        self.runtime_stage_mock.assert_not_called()
+
+    def test_codex_trigger_git_fixture_keeps_hermetic_git_without_runtime_stage(self) -> None:
+        trigger = git_native_case(self.repo)
+        trigger["layer"] = "trigger"
+        trigger["prompt"] = "Choose {{skill}} only when its staged description matches this request."
+        trigger["checks"] = [{
+            "id": "selection", "requirement": "r1", "type": "selection",
+            "expected": ["native-skill"], "allowed_extra": [],
+        }]
+        trigger["hosts"]["codex"]["allowed_tools"] = ["command_execution"]
+        codex_home = self.temp / "trigger-git-home"
+        codex_home.mkdir()
+        helpers = mock.Mock()
+        helpers.codex_executable.return_value = str(Path(sys.executable).resolve())
+        helpers.enumerate_non_target_skills.return_value = ()
+        helpers.skill_isolation_args.return_value = []
+        helpers.codex_environment.side_effect = lambda workspace: {
+            "PATH": os.environ["PATH"], "HOME": str(workspace),
+            "CODEX_HOME": str(codex_home),
+            "GIT_CONFIG_GLOBAL": "/ambient/.gitconfig",
+            "GIT_ASKPASS": "/ambient/credential-helper",
+        }
+        with mock.patch.object(adapters, "_codex_helpers", return_value=helpers):
+            prepared = adapters.prepare_trial(
+                trigger, "codex", "project", self.repo, self.temp / "trigger-git",
+                "gpt-5.6-sol", trial_identity="campaign/case/codex/run-1",
+            )
+
+        settings = prepared.runtime_identity["settings"]
+        self.assertNotIn("codex_runtime", settings)
+        self.assertIn("git_fixture", settings)
+        self.assertIn("git_subject_environment", settings)
+        self.assertIn("protected_git", settings)
+        self.assertNotIn("GIT_ASKPASS", prepared.environment)
+        self.assertEqual(
+            prepared.environment["GIT_CONFIG_GLOBAL"],
+            str(prepared.cwd / ".codex/native-eval-git-global.config"),
+        )
+        filesystem = next(
+            prepared.command[index + 1]
+            for index, value in enumerate(prepared.command[:-1])
+            if value == "--config" and "permissions.native-eval-write.filesystem="
+            in prepared.command[index + 1]
+        )
+        source_git = Path(settings["protected_git"]["source_executable"])
+        self.assertTrue(source_git.is_file())
+        self.assertIn(f'{json.dumps(str(source_git))}="read"', filesystem)
+        self.assertIn(
+            f'{json.dumps(str(prepared.cwd / ".native-eval-tmp"))}="write"',
+            filesystem,
+        )
         self.runtime_stage_mock.assert_not_called()
 
     def test_trigger_identity_is_stable_for_resume_and_distinct_per_logical_trial(self) -> None:
@@ -3122,11 +3387,11 @@ class AdapterPreparationTests(unittest.TestCase):
         )
         self.assertEqual(
             git_identity["git_controls"]["info_exclude_base64"],
-            base64.b64encode(b"/.agents/\n/.codex/\n").decode("ascii"),
+            base64.b64encode(b"/.agents/\n/.codex/\n/.native-eval-tmp/\n").decode("ascii"),
         )
         self.assertEqual(
             (first.cwd / ".git/info/exclude").read_bytes(),
-            b"/.agents/\n/.codex/\n",
+            b"/.agents/\n/.codex/\n/.native-eval-tmp/\n",
         )
         self.assertEqual(first.runtime_identity["staged_tree_exclusions"], {
             "root_directories": [".git"], "files": [],
@@ -3136,7 +3401,7 @@ class AdapterPreparationTests(unittest.TestCase):
         subject_environment = first.runtime_identity["settings"]["git_subject_environment"]
         self.assertEqual(
             subject_environment["schema_version"],
-            "native-eval-git-subject-environment/v1",
+            "native-eval-git-subject-environment/v2",
         )
         self.assertNotIn("GIT_ASKPASS", first.environment)
         self.assertNotEqual(first.environment["GIT_CONFIG_GLOBAL"], "/ambient/global-config")
@@ -3207,7 +3472,7 @@ class AdapterPreparationTests(unittest.TestCase):
         )
         self.assertEqual(
             codex.runtime_identity["settings"]["git_fixture"]["controller_info_exclude"],
-            "/.agents/\n/.codex/\n/.worktrees/\n",
+            "/.agents/\n/.codex/\n/.native-eval-tmp/\n/.worktrees/\n",
         )
 
         case_dir = claude.cwd / "evals" / str(case["id"])
@@ -3317,6 +3582,9 @@ class AdapterPreparationTests(unittest.TestCase):
         self.assertNotEqual(first, adapters._tree_digest(root, exclusions=policy))
 
     def test_v2_git_fixture_claude_uses_exclusive_hidden_receipt(self) -> None:
+        references = self.repo / "speckit-pro" / "skills" / "native-skill" / "references"
+        references.mkdir()
+        (references / "guide.md").write_text("selected reference\n", encoding="utf-8")
         case = git_native_case(self.repo)
         with mock.patch.object(adapters, "_resolve_executable", return_value="/opt/bin/claude"):
             first = adapters.prepare_trial(
@@ -3337,8 +3605,12 @@ class AdapterPreparationTests(unittest.TestCase):
         self.assertEqual(git_identity["receipt_relative_path"], "evals/native.writable/fixture-receipt.json")
         self.assertEqual(first.runtime_identity["staged_tree_exclusions"], {
             "root_directories": [],
-            "files": ["evals/native.writable/fixture-receipt.json"],
+            "files": [
+                "evals/native.writable/fixture-receipt.json",
+                "evals/native.writable/.native-eval-skill-references",
+            ],
         })
+        adapters._verify_prepared_identity(first)
         workspace = self.temp / "claude-git-smoke"
         workspace.mkdir()
         completed = subprocess.run(

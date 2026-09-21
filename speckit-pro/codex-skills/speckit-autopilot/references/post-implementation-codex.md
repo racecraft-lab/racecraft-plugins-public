@@ -253,10 +253,20 @@ Validate the PR workflow contract before any single-PR create attempt. The
 read-only `validate-pr-workflow-contract` helper checks the actual PR title against the
 changed spec scope and rejects aggregate single-PR creation when changed files
 contain multi-PR candidate commands or multi-marker final split evidence. A
-`DOC-*` spec title must be `docs(DOC-XXX): ...`; `feat(speckit-pro): ...` is
-only valid for non-spec plugin changes. Any split-contract failure means the
+documentation spec such as `SPEC-704` must use the derived lowercase spec scope,
+for example `docs(spec-704): ...`; `docs(SPEC-704): ...`,
+`docs(DOC-704): ...`, and `feat(speckit-pro): ...` are invalid for that
+spec-backed implementation. Any split-contract failure means the
 single-PR path is forbidden. Continue only through the split workflow below,
 or stop blocked with the validator output.
+
+The packet-owned title and body must describe the actual change in strict,
+unpatronizing, ELI5-style plain English. Do not dump commands, file paths, packet
+mechanics, or raw evidence into PR prose. For marker-derived PRs,
+normalize raw `Foundation`, `User Story`, and `slice` labels into a specific
+change description, derive the lowercase title scope from the spec ID, and
+carry verification evidence by repo-relative reference rather than copying it
+into the body.
 
 Create the single PR from packet fields, never from branch-derived title text
 or hand-written body content:
@@ -330,16 +340,37 @@ marker-aware live head: <recorded marker checkpoint commit>
 gh pr create --base <base> --head <head> --body-file <body-file> --title <packet-title>
 ```
 
-Each slice must pass or record scoped verification before PR creation. A failing
-required scoped command must stop before `gh pr create`, record the failed
-command, exit status, evidence path, stderr/stdout tail, and keep
-`next_slice_id` on the blocked slice. Each existing slice packet must also pass
-a fresh `validate-pr-packet-read-only` request before `gh pr create`; consume
-`data.stdout_json` in memory/state and do not claim a validation file was
-written. If any required packet is absent or invalid, stop before PR creation
-with the validator diagnostics. A validation failure blocks on the same slice without opening or
-repairing a PR. A later failed slice must not rewind,
-invalidate, or mark earlier opened slice PRs as blocked.
+Apply this exact fail-closed sequence independently to every planned slice; do
+not open any slice PR until all preceding steps for that slice pass:
+
+1. Run or record the slice's required scoped verification. Carry the
+   pre-emission full regression evidence by repo-relative path instead of
+   rerunning the full suite for every slice. On a failed required scoped command,
+   stop before `gh pr create`; record the command, exit status, evidence path,
+   stderr/stdout tail, and keep `next_slice_id` on the blocked slice.
+2. Emit or refresh that slice's feature-local packet with `pr-packet-output`.
+   Reject generic foundation/story/slice titles, hardcoded plugin scopes for
+   spec PRs, packet-mechanics prose, and raw evidence dumps before any slice PR
+   is opened.
+3. Run a fresh `validate-pr-packet-read-only` request, consume
+   `data.stdout_json` in memory/state, and require `data.writes_state=false`.
+   Missing, stale, malformed, or invalid packet evidence blocks on this slice
+   with the validator diagnostics.
+4. Checkpoint the packet/body artifacts so the worktree is clean, then run
+   `validate-pr-packet-write`; its apply mode must rerun current read-only
+   validation before persisting `validation_result_path`.
+5. Run `validate-pr-workflow-contract` against the packet title and current
+   changed-file evidence. Any title, scope, or split-contract failure blocks
+   before PR creation.
+6. Only then run `gh pr create` with the packet-owned `--base`, `--head`,
+   `--title`, and `--body-file` values.
+7. Persist the successful PRS row, regenerated SPEC-MOC table,
+   `multi_pr_emission` state, and workflow evidence before advancing
+   `next_slice_id`.
+
+A validation failure blocks on the same slice without opening or repairing a
+PR. There is no post-create auto-repair fallback. A later failed slice must not
+rewind, invalidate, or mark earlier opened slice PRs as blocked.
 
 After each successful slice PR, persist reviewer and resume surfaces before the
 next slice starts:

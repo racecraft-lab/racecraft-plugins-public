@@ -53,6 +53,7 @@ _ARTIFACT_COUNT_LIMIT = 64
 _FIXTURE_RECEIPT_LIMIT = 64 * 1024
 _GIT_RUNTIME_SCHEMA_VERSION = "native-eval-git-runtime/v1"
 _PROTECTED_GIT_SCHEMA_VERSION = "native-eval-protected-git/v1"
+_CODEX_GIT_SUBJECT_ENVIRONMENT_SCHEMA_VERSION = "native-eval-git-subject-environment/v2"
 _PYTHON_RUNTIME_SCHEMA_VERSION = "native-eval-python-runtime/v1"
 _CLAUDE_DOCKER_CONFIG_SCHEMA_VERSION = "native-eval-claude-docker-config/v1"
 _CLAUDE_DOCKER_CONFIG_DIRECTORY = "docker-config"
@@ -62,7 +63,7 @@ _CLAUDE_CONFIG_ROOT_SCHEMA_VERSION = "native-eval-claude-config-root/v1"
 _CLAUDE_AUTOMATION_AUTH_VARIABLES = (
     "CLAUDE_CODE_OAUTH_TOKEN", "ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN",
 )
-_CODEX_GIT_CONTROLLER_EXCLUDE = b"/.agents/\n/.codex/\n"
+_CODEX_GIT_CONTROLLER_EXCLUDE = b"/.agents/\n/.codex/\n/.native-eval-tmp/\n"
 _CODEX_PROJECT_CONFIG = "[agents]\nenabled = true\n"
 _CLAUDE_GIT_SCAFFOLD_SOURCE = r'''from __future__ import annotations
 
@@ -798,10 +799,18 @@ def _codex_git_subject_environment(
     """Create deterministic subject Git identity without consulting ambient config."""
     config_relative = ".codex/native-eval-git-global.config"
     hooks_relative = ".codex/native-eval-git-hooks"
+    temporary_relative = ".native-eval-tmp"
     config = workspace / config_relative
     hooks = workspace / hooks_relative
+    temporary = workspace / temporary_relative
     _write_text(config, "")
     hooks.mkdir(mode=0o700)
+    temporary.mkdir(mode=0o700)
+    temporary_status = temporary.lstat()
+    _require(stat.S_ISDIR(temporary_status.st_mode)
+             and not stat.S_ISLNK(temporary_status.st_mode)
+             and stat.S_IMODE(temporary_status.st_mode) == 0o700,
+             "Codex Git temporary directory is unsafe")
     values = {
         "GIT_CONFIG_NOSYSTEM": "1",
         "GIT_CONFIG_GLOBAL": str(config),
@@ -819,17 +828,39 @@ def _codex_git_subject_environment(
         "GIT_AUTHOR_DATE": "2000-01-02T00:00:00 +0000",
         "GIT_COMMITTER_DATE": "2000-01-02T00:00:00 +0000",
         "GIT_TERMINAL_PROMPT": "0",
+        "TMPDIR": str(temporary),
+        "TMP": str(temporary),
+        "TEMP": str(temporary),
     }
     identity_values = dict(values)
     identity_values["GIT_CONFIG_GLOBAL"] = config_relative
     identity_values["GIT_CONFIG_VALUE_0"] = hooks_relative
+    for name in ("TMPDIR", "TMP", "TEMP"):
+        identity_values[name] = temporary_relative
     identity: dict[str, object] = {
-        "schema_version": "native-eval-git-subject-environment/v1",
+        "schema_version": _CODEX_GIT_SUBJECT_ENVIRONMENT_SCHEMA_VERSION,
         "environment": identity_values,
         "global_config_sha256": hashlib.sha256(config.read_bytes()).hexdigest(),
         "hooks_directory": hooks_relative,
+        "temporary_directory": {
+            "path": temporary_relative,
+            "mode": 0o700,
+            "uid": temporary_status.st_uid,
+        },
     }
     return values, identity
+
+
+def _codex_protected_git_required(case: Mapping[str, object]) -> bool:
+    """Select protected Git only for repository-aware native contracts."""
+    if isinstance(case.get("git_fixture"), Mapping):
+        return True
+    checks = case.get("checks")
+    return isinstance(checks, list) and any(
+        isinstance(check, Mapping)
+        and check.get("type") in {"native_runner_result", "native_git_final_state"}
+        for check in checks
+    )
 
 
 def _case_inputs(case: Mapping[str, object], host: str, mode: str, model: str) -> tuple[str, dict[str, object]]:
@@ -1337,6 +1368,7 @@ def _codex_instruction_inputs(
 def _codex_permission_args(
     workspace: Path, environment: Mapping[str, str], filesystem_access: str, permission_name: str,
     *, forwarded_environment: tuple[str, ...] = (), runtime_read_roots: tuple[Path, ...] = (),
+    runtime_write_roots: tuple[Path, ...] = (),
     git_metadata_access: str | None = None,
 ) -> list[str]:
     _require(filesystem_access in {"read", "write"}, "Codex filesystem access is unsupported")
@@ -1356,6 +1388,12 @@ def _codex_permission_args(
                  and runtime_value not in entries,
                  "Codex runtime read root is malformed")
         entries[runtime_value] = "read"
+    for runtime_root in runtime_write_roots:
+        runtime_value = str(runtime_root)
+        _require(runtime_root.is_absolute() and runtime_root.is_relative_to(workspace)
+                 and runtime_root != workspace and runtime_value not in entries,
+                 "Codex runtime write root is malformed")
+        entries[runtime_value] = "write"
     filesystem = "{" + ",".join(
         f"{json.dumps(path)}={json.dumps(access)}" for path, access in entries.items()
     ) + "}"
@@ -1537,12 +1575,25 @@ def _verify_protected_git(workspace: Path, identity: object) -> None:
         "source_mode", "exec_path", "exec_path_owner", "exec_path_mode", "version",
         "launcher_relative", "launcher_mode",
     }, "prepared protected Git identity is malformed")
-    source, exec_path, current = _protected_git_source()
-    _require(identity == {
-        **current,
-        "launcher_relative": ".codex/native-eval-git-bin/git",
-        "launcher_mode": 0o500,
-    }, "prepared protected Git source changed after admission")
+    source = Path(identity["source_executable"])
+    exec_path = Path(identity["exec_path"])
+    try:
+        source_status = source.lstat()
+        exec_path_status = exec_path.lstat()
+        source_payload = source.read_bytes()
+    except OSError as exc:
+        raise NativeAdapterError("prepared protected Git source is unavailable") from exc
+    _require(stat.S_ISREG(source_status.st_mode) and os.access(source, os.X_OK)
+             and source_status.st_uid == identity["source_owner"]
+             and stat.S_IMODE(source_status.st_mode) == identity["source_mode"]
+             and hashlib.sha256(source_payload).hexdigest() == identity["source_sha256"]
+             and stat.S_ISDIR(exec_path_status.st_mode)
+             and not stat.S_ISLNK(exec_path_status.st_mode)
+             and exec_path_status.st_uid == identity["exec_path_owner"]
+             and stat.S_IMODE(exec_path_status.st_mode) == identity["exec_path_mode"]
+             and identity["launcher_relative"] == ".codex/native-eval-git-bin/git"
+             and identity["launcher_mode"] == 0o500,
+             "prepared protected Git source changed after admission")
     launcher = workspace.joinpath(*PurePosixPath(identity["launcher_relative"]).parts)
     try:
         status = launcher.lstat()
@@ -1555,6 +1606,65 @@ def _verify_protected_git(workspace: Path, identity: object) -> None:
              and os.access(launcher, os.X_OK)
              and hashlib.sha256(payload).hexdigest() == identity["source_sha256"],
              "prepared protected Git launcher changed after admission")
+
+
+def _verify_codex_git_subject_environment(
+    prepared: PreparedTrial, settings: Mapping[str, object],
+) -> None:
+    git_subject = settings.get("git_subject_environment")
+    _require(isinstance(git_subject, dict) and set(git_subject) == {
+        "schema_version", "environment", "global_config_sha256",
+        "hooks_directory", "temporary_directory",
+    } and git_subject.get("schema_version")
+             == _CODEX_GIT_SUBJECT_ENVIRONMENT_SCHEMA_VERSION
+             and isinstance(git_subject.get("environment"), dict)
+             and git_subject.get("hooks_directory") == ".codex/native-eval-git-hooks",
+             "prepared Git subject environment is malformed")
+    expected_environment = dict(git_subject["environment"])
+    expected_environment["GIT_CONFIG_GLOBAL"] = str(
+        prepared.cwd / ".codex/native-eval-git-global.config"
+    )
+    expected_environment["GIT_CONFIG_VALUE_0"] = str(
+        prepared.cwd / ".codex/native-eval-git-hooks"
+    )
+    for name in ("TMPDIR", "TMP", "TEMP"):
+        expected_environment[name] = str(prepared.cwd / ".native-eval-tmp")
+    expected_git_names = {
+        name for name in expected_environment if name.startswith("GIT_")
+    }
+    expected_git_names.add("GIT_EXEC_PATH")
+    mismatched = sorted(
+        name for name, value in expected_environment.items()
+        if prepared.environment.get(name) != value
+    )
+    unexpected_git = sorted(
+        {name for name in prepared.environment if name.startswith("GIT_")}
+        - expected_git_names
+    )
+    _require(not mismatched and not unexpected_git,
+             "prepared Git subject environment changed after admission: "
+             + ", ".join([*mismatched, *unexpected_git]))
+    config = prepared.cwd / ".codex/native-eval-git-global.config"
+    hooks = prepared.cwd / ".codex/native-eval-git-hooks"
+    temporary = prepared.cwd / ".native-eval-tmp"
+    temporary_identity = git_subject.get("temporary_directory")
+    try:
+        temporary_status = temporary.lstat()
+    except OSError as exc:
+        raise NativeAdapterError("prepared Git temporary directory is unavailable") from exc
+    _require(config.is_file() and not config.is_symlink()
+             and hashlib.sha256(config.read_bytes()).hexdigest()
+             == git_subject.get("global_config_sha256")
+             and hooks.is_dir() and not hooks.is_symlink()
+             and not any(hooks.iterdir())
+             and temporary_identity == {
+                 "path": ".native-eval-tmp", "mode": 0o700,
+                 "uid": temporary_status.st_uid,
+             }
+             and stat.S_ISDIR(temporary_status.st_mode)
+             and not stat.S_ISLNK(temporary_status.st_mode)
+             and stat.S_IMODE(temporary_status.st_mode) == 0o700,
+             "prepared Git subject controls changed after admission")
 
 
 def _is_broad_temporary_root(path: Path) -> bool:
@@ -2026,17 +2136,24 @@ def _qualify_codex_isolation(
         if git_probe is not None:
             _require(git_probe.is_absolute() and git_probe.is_relative_to(workspace),
                      "Codex protected Git probe is malformed")
+            git_metadata = workspace / ".git"
+            repository_probe = git_metadata.is_dir() and not git_metadata.is_symlink()
+            arguments = (
+                ("rev-parse", "--is-inside-work-tree")
+                if repository_probe else ("--version",)
+            )
             completed = _run_codex_sandbox_probe(
                 _sandbox_probe_command(
                     executable, permission_name, permission_args, workspace,
-                    str(git_probe), arguments=("worktree", "list", "--porcelain"),
+                    str(git_probe), arguments=arguments,
                 ), cwd=workspace, environment=environment,
             )
             _require_probe_result(
-                completed, label="protected-git-worktree-list",
-                expected_prefix=f"worktree {workspace}\n".encode("utf-8"),
+                completed, label="protected-git-runtime",
+                expected_payload=b"true\n" if repository_probe else None,
+                expected_prefix=None if repository_probe else b"git version ",
             )
-            checks.append({"name": "protected-git-worktree-list", "outcome": "allowed"})
+            checks.append({"name": "protected-git-runtime", "outcome": "allowed"})
 
     for path, expected in directory_identities.items():
         try:
@@ -2184,6 +2301,38 @@ def _claude_explicit_activation_input(
     }
 
 
+def _claude_reference_access(
+    case_dir: Path, plugin: Path, skill: object, allowed_tools: list[str],
+) -> dict[str, object] | None:
+    """Grant the official runner read access to one staged skill's references."""
+    if not any(tool.partition("(")[0] == "Read" for tool in allowed_tools):
+        return None
+    if skill is None:
+        return None
+    _require(isinstance(skill, str)
+             and _CLAUDE_SKILL_NAME.fullmatch(skill) is not None,
+             "Claude skill is not a canonical namespaced skill")
+    leaf = skill.rsplit(":", 1)[1]
+    target_relative = PurePosixPath("skills") / leaf / "references"
+    target = plugin / Path(target_relative)
+    if not target.exists():
+        return None
+    _require(target.is_dir() and not target.is_symlink(),
+             "Claude staged skill references are not a plain directory")
+    link_name = ".native-eval-skill-references"
+    link = case_dir / link_name
+    _require(not link.exists() and not link.is_symlink(),
+             "Claude staged skill reference grant already exists")
+    link.symlink_to(os.path.relpath(target, start=case_dir), target_is_directory=True)
+    return {
+        "schema_version": "native-claude-reference-access/v2",
+        "skill": skill,
+        "add_dir": link_name,
+        "target": target_relative.as_posix(),
+        "tree_sha256": _tree_digest(target),
+    }
+
+
 def _prepare_claude(
     case: Mapping[str, object], prompt: str, host_settings: Mapping[str, object],
     repo: Path, attempt: Path, model: str, trial_identity: str,
@@ -2276,6 +2425,16 @@ def _prepare_claude(
     )
     if toolchain_bash_grant:
         tools.append("Bash")
+    reference_access = _claude_reference_access(
+        case_dir, plugin, host_settings.get("skill"), tools,
+    )
+    if reference_access is not None:
+        link_relative = (
+            case_dir / str(reference_access["add_dir"])
+        ).relative_to(plugin).as_posix()
+        staged_tree_exclusions = _merge_staged_file_exclusions(
+            staged_tree_exclusions, (link_relative,),
+        )
     _write_text(case_dir / "prompt.md", f"{prompt.rstrip()}\n")
     _write_text(
         case_dir / "graders" / "transport.md",
@@ -2292,11 +2451,17 @@ def _prepare_claude(
     trigger_instruction = _TRIGGER_MEASUREMENT_INSTRUCTIONS["claude"] if trigger_stage is not None else None
     if trigger_instruction is not None:
         case_config += f"  append_system_prompt: {json.dumps(trigger_instruction)}\n"
+    context: list[str] = []
+    if reference_access is not None:
+        context.append(f"  add_dirs: {json.dumps([reference_access['add_dir']])}\n")
+    if plan["fixtures"] or prepared_upstream is not None:
+        context.append("  scaffold_script: fixture.sh\n")
+    if context:
+        case_config += "context:\n" + "".join(context)
     if plan["fixtures"] or prepared_upstream is not None:
         staged_setup = case_dir / "native_eval_fixture_setup.py"
         shutil.copyfile(Path(fixture_setup.__file__).resolve(), staged_setup)
         staged_setup.chmod(0o500)
-        case_config += "context:\n  scaffold_script: fixture.sh\n"
         launcher = "#!/bin/sh\nexec " + shlex.quote(str(Path(sys.executable).resolve()))
         if prepared_upstream is not None:
             staged_upstream = case_dir / "native_eval_upstream.py"
@@ -2354,6 +2519,8 @@ def _prepare_claude(
             native_eval_verification.record_directories(case)
         ),
         "trigger_stage": _trigger_identity(trigger_stage, attempt),
+        **({"claude_reference_access": reference_access}
+           if reference_access is not None else {}),
         **({"claude_explicit_activation": explicit_activation}
            if explicit_activation is not None else {}),
         **({
@@ -2578,10 +2745,6 @@ def _prepare_codex(
     protected_git: Path | None = None
     protected_git_settings: dict[str, object] | None = None
     if git_result is not None:
-        environment = {
-            name: value for name, value in environment.items()
-            if not name.startswith("GIT_")
-        }
         git_controls = fixture_setup.snapshot_git_repository_controls(workspace)
         _require(fixture_setup.inspect_git_repository(workspace, git_controls)
                  == git_result["git_repository"],
@@ -2598,6 +2761,12 @@ def _prepare_codex(
             host="codex",
             include_upstream=bool(required_tools),
         )
+    runtime_write_roots: tuple[Path, ...] = ()
+    if _codex_protected_git_required(case):
+        environment = {
+            name: value for name, value in environment.items()
+            if not name.startswith("GIT_") and name not in {"TMPDIR", "TMP", "TEMP"}
+        }
         git_environment, git_subject_settings = _codex_git_subject_environment(workspace)
         environment.update(git_environment)
         forwarded_environment.extend(git_environment)
@@ -2610,7 +2779,11 @@ def _prepare_codex(
             *(entry for entry in environment.get("PATH", "").split(os.pathsep)
               if entry and entry != protected_git_directory),
         ])
-        runtime_read_roots = tuple(dict.fromkeys([*runtime_read_roots, git_exec_path]))
+        source_git = Path(protected_git_settings["source_executable"])
+        runtime_read_roots = tuple(dict.fromkeys([
+            *runtime_read_roots, git_exec_path, source_git,
+        ]))
+        runtime_write_roots = (workspace / ".native-eval-tmp",)
     if prepared_toolchain is not None:
         environment.update(prepared_toolchain.environment)
         existing_path = [entry for entry in environment.get("PATH", "").split(os.pathsep) if entry]
@@ -2639,6 +2812,7 @@ def _prepare_codex(
         workspace, environment, filesystem_access, permission_name,
         forwarded_environment=tuple(forwarded_environment),
         runtime_read_roots=runtime_read_roots,
+        runtime_write_roots=runtime_write_roots,
         git_metadata_access=case.get("git_metadata_access"),
     )
     nested = case["resource_class"] == "nested"
@@ -3521,11 +3695,67 @@ def _retain_git_observation(
         })
 
 
+def _verify_claude_reference_access(
+    prepared: PreparedTrial, settings: Mapping[str, object],
+) -> str | None:
+    """Verify the exact excluded symlink and immutable reference tree."""
+    value = settings.get("claude_reference_access")
+    if value is None:
+        return None
+    _require(prepared.host == "claude" and prepared.mode == "plugin"
+             and isinstance(value, dict)
+             and set(value) == {"schema_version", "skill", "add_dir", "target", "tree_sha256"},
+             "prepared Claude reference access identity is malformed")
+    skill = value["skill"]
+    _require(value["schema_version"] == "native-claude-reference-access/v2"
+             and isinstance(skill, str)
+             and _CLAUDE_SKILL_NAME.fullmatch(skill) is not None
+             and value["add_dir"] == ".native-eval-skill-references"
+             and isinstance(value["tree_sha256"], str)
+             and re.fullmatch(r"[0-9a-f]{64}", value["tree_sha256"]) is not None,
+             "prepared Claude reference access identity is malformed")
+    allowed_tools = settings.get("allowed_tools")
+    _require(isinstance(allowed_tools, list)
+             and any(isinstance(tool, str) and tool.partition("(")[0] == "Read"
+                     for tool in allowed_tools),
+             "prepared Claude reference access lacks Read permission")
+    leaf = skill.rsplit(":", 1)[1]
+    target_relative = PurePosixPath("skills") / leaf / "references"
+    _require(value["target"] == target_relative.as_posix(),
+             "prepared Claude reference access target is malformed")
+    case_id = prepared.runtime_identity.get("case_id")
+    _require(isinstance(case_id, str) and _CASE_ID.fullmatch(case_id) is not None,
+             "prepared Claude reference access case identity is malformed")
+    case_dir = prepared.cwd / "evals" / case_id
+    target = prepared.cwd.joinpath(*target_relative.parts)
+    link = case_dir / str(value["add_dir"])
+    try:
+        case_status = case_dir.lstat()
+        target_status = target.lstat()
+        link_status = link.lstat()
+        link_value = os.readlink(link)
+        resolved_link = link.resolve(strict=True)
+        resolved_target = target.resolve(strict=True)
+    except OSError as exc:
+        raise NativeAdapterError("prepared Claude reference access is unavailable") from exc
+    _require(stat.S_ISDIR(case_status.st_mode) and not stat.S_ISLNK(case_status.st_mode)
+             and stat.S_ISDIR(target_status.st_mode) and not stat.S_ISLNK(target_status.st_mode)
+             and stat.S_ISLNK(link_status.st_mode),
+             "prepared Claude reference access path is unsafe")
+    expected_link = os.path.relpath(target, start=case_dir)
+    _require(link_value == expected_link and resolved_link == resolved_target,
+             "prepared Claude reference access symlink changed")
+    _require(_tree_digest(target) == value["tree_sha256"],
+             "prepared Claude reference tree changed")
+    return link.relative_to(prepared.cwd).as_posix()
+
+
 def _validated_git_fixture_settings(prepared: PreparedTrial) -> Mapping[str, object] | None:
     settings = prepared.runtime_identity.get("settings")
     _require(isinstance(settings, dict), "prepared runtime settings are malformed")
     value = settings.get("git_fixture")
     exclusions = prepared.runtime_identity.get("staged_tree_exclusions")
+    reference_exclusion = _verify_claude_reference_access(prepared, settings)
     toolchain_value = settings.get("native_toolchain")
     toolchain_exclusions: dict[str, object] | None = None
     if toolchain_value is not None and prepared.host == "claude":
@@ -3547,6 +3777,10 @@ def _validated_git_fixture_settings(prepared: PreparedTrial) -> Mapping[str, obj
             prefix = upstream.project_root.relative_to(prepared.cwd).as_posix()
             volatile = tuple(f"{prefix}/{path}" for path in volatile)
         expected_exclusions = _merge_staged_file_exclusions(expected_exclusions, volatile)
+    if reference_exclusion is not None:
+        expected_exclusions = _merge_staged_file_exclusions(
+            expected_exclusions, (reference_exclusion,),
+        )
     if value is None:
         _require(exclusions == expected_exclusions,
                  "non-Git prepared runtime declares invalid staged tree exclusions")
@@ -3615,6 +3849,10 @@ def _validated_git_fixture_settings(prepared: PreparedTrial) -> Mapping[str, obj
             prefix = upstream.project_root.relative_to(prepared.cwd).as_posix()
             volatile = tuple(f"{prefix}/{path}" for path in volatile)
         expected_exclusions = _merge_staged_file_exclusions(expected_exclusions, volatile)
+    if reference_exclusion is not None:
+        expected_exclusions = _merge_staged_file_exclusions(
+            expected_exclusions, (reference_exclusion,),
+        )
     _require(exclusions == expected_exclusions,
              "prepared git staged tree exclusions are malformed")
     return value
@@ -3717,9 +3955,9 @@ def _verify_prepared_identity(prepared: PreparedTrial) -> None:
             )
     git_settings = _validated_git_fixture_settings(prepared)
     protected_git_value = settings_value.get("protected_git")
-    _require((protected_git_value is not None)
-             == (git_settings is not None and prepared.host == "codex"),
-             "prepared protected Git declaration does not match the Codex Git fixture")
+    protected_git_declared = settings_value.get("git_subject_environment") is not None
+    _require((protected_git_value is not None) == protected_git_declared,
+             "prepared protected Git declaration does not match its environment")
     if protected_git_value is not None:
         _verify_protected_git(prepared.cwd, protected_git_value)
         _require(isinstance(protected_git_value, dict)
@@ -3931,32 +4169,8 @@ def _verify_prepared_identity(prepared: PreparedTrial) -> None:
                 )
                 _require(_worktrees_match_initial(observed),
                          "prepared Git worktrees changed after admission")
-            git_subject = settings.get("git_subject_environment")
-            _require(isinstance(git_subject, dict)
-                     and git_subject.get("schema_version")
-                     == "native-eval-git-subject-environment/v1"
-                     and isinstance(git_subject.get("environment"), dict)
-                     and git_subject.get("hooks_directory")
-                     == ".codex/native-eval-git-hooks",
-                     "prepared Git subject environment is malformed")
-            expected_environment = dict(git_subject["environment"])
-            expected_environment["GIT_CONFIG_GLOBAL"] = str(
-                prepared.cwd / ".codex/native-eval-git-global.config"
-            )
-            expected_environment["GIT_CONFIG_VALUE_0"] = str(
-                prepared.cwd / ".codex/native-eval-git-hooks"
-            )
-            _require(all(prepared.environment.get(name) == value
-                         for name, value in expected_environment.items()),
-                     "prepared Git subject environment changed after admission")
-            config = prepared.cwd / ".codex/native-eval-git-global.config"
-            hooks = prepared.cwd / ".codex/native-eval-git-hooks"
-            _require(config.is_file() and not config.is_symlink()
-                     and hashlib.sha256(config.read_bytes()).hexdigest()
-                     == git_subject.get("global_config_sha256")
-                     and hooks.is_dir() and not hooks.is_symlink()
-                     and not any(hooks.iterdir()),
-                     "prepared Git subject controls changed after admission")
+        if protected_git_declared:
+            _verify_codex_git_subject_environment(prepared, settings)
 
 
 def _verify_post_execution_controls(prepared: PreparedTrial) -> None:
@@ -3973,8 +4187,10 @@ def _verify_post_execution_controls(prepared: PreparedTrial) -> None:
     git_settings = _validated_git_fixture_settings(prepared)
     if prepared.host == "claude":
         explicit_activation = settings.get("claude_explicit_activation")
+        reference_access = settings.get("claude_reference_access")
         if (prepared_toolchain is None and prepared_upstream is None
-                and git_settings is None and explicit_activation is None):
+                and git_settings is None and explicit_activation is None
+                and reference_access is None):
             return
         exclusions = prepared.runtime_identity.get("staged_tree_exclusions")
         _require(_tree_digest(
@@ -4009,6 +4225,8 @@ def _verify_post_execution_controls(prepared: PreparedTrial) -> None:
     for relative, expected in protected.items():
         _require(_tree_digest(prepared.cwd / relative) == expected,
                  f"prepared Codex {relative} controls changed during execution")
+    if settings.get("protected_git") is not None:
+        _verify_codex_git_subject_environment(prepared, settings)
     if git_settings is not None:
         _require(fixture_setup.snapshot_git_repository_controls(prepared.cwd)
                  == git_settings["git_controls"],

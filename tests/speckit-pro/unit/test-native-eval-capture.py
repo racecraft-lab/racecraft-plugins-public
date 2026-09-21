@@ -59,7 +59,8 @@ def claude_continuation_trace(session: str = "continuation-session"):
         }]}, "parent_tool_use_id": None, "session_id": session, "uuid": "agent-use"},
         {"type": "system", "subtype": "task_started", "task_id": task_id,
          "tool_use_id": tool_use_id, "description": "Finish UAT",
-         "is_backgrounded": True, "uuid": "task-start", "session_id": session},
+         "is_backgrounded": True, "task_type": "local_agent",
+         "uuid": "task-start", "session_id": session},
         {"type": "user", "message": {"content": [{
             "type": "tool_result", "tool_use_id": tool_use_id,
             "content": "Agent launched", "is_error": False,
@@ -702,6 +703,64 @@ class ClaudeContinuationTests(unittest.TestCase):
         with self.assertRaisesRegex(CaptureError, "background Agent"):
             normalize_trace("claude", stream(events))
 
+    def test_claude_explicit_background_flag_preserves_missing_task_type(self):
+        events = claude_continuation_trace()
+        started = next(event for event in events if event.get("uuid") == "task-start")
+        del started["task_type"]
+
+        result = normalize_trace("claude", stream(events))
+
+        self.assertEqual(result["native_metadata"]["native_turns"], 2)
+
+    def test_claude_agent_omitted_background_flag_uses_authoritative_lifecycle(self):
+        events = claude_continuation_trace()
+        agent = next(event for event in events if event.get("uuid") == "agent-use")
+        del agent["message"]["content"][0]["input"]["run_in_background"]
+
+        result = normalize_trace("claude", stream(events))
+
+        bridge = result["native_metadata"]["continuation_bridges"][0]
+        self.assertEqual(bridge["task_id"], "background-task")
+        self.assertEqual(bridge["records"][1]["patch"]["status"], "completed")
+        self.assertEqual(bridge["records"][2]["status"], "completed")
+
+    def test_claude_agent_omitted_background_flag_rejects_incomplete_lifecycle(self):
+        for variation in (
+            "explicit-false", "explicit-null", "explicit-one",
+            "foreground-start", "wrong-task-type",
+            "missing-completion", "reordered-completion", "missing-notification",
+        ):
+            with self.subTest(variation=variation):
+                events = claude_continuation_trace()
+                agent = next(event for event in events if event.get("uuid") == "agent-use")
+                tool_input = agent["message"]["content"][0]["input"]
+                del tool_input["run_in_background"]
+                started = next(event for event in events if event.get("uuid") == "task-start")
+                completion_index = next(index for index, event in enumerate(events)
+                                        if event.get("uuid") == "bridge-complete")
+                notification_index = next(index for index, event in enumerate(events)
+                                          if event.get("uuid") == "bridge-notification")
+                if variation.startswith("explicit-"):
+                    tool_input["run_in_background"] = {
+                        "explicit-false": False,
+                        "explicit-null": None,
+                        "explicit-one": 1,
+                    }[variation]
+                elif variation == "foreground-start":
+                    started["is_backgrounded"] = False
+                elif variation == "wrong-task-type":
+                    started["task_type"] = "local_bash"
+                elif variation == "missing-completion":
+                    events.pop(completion_index)
+                elif variation == "reordered-completion":
+                    events[completion_index], events[notification_index] = (
+                        events[notification_index], events[completion_index]
+                    )
+                else:
+                    events.pop(notification_index)
+                with self.assertRaises(CaptureError):
+                    normalize_trace("claude", stream(events))
+
     def test_claude_continuation_allows_same_session_parallel_progress_before_resume(self):
         events = claude_continuation_trace()
         init_index = next(index for index, event in enumerate(events)
@@ -748,7 +807,8 @@ class ClaudeContinuationTests(unittest.TestCase):
              "uuid": "parallel-agent"},
             {"type": "system", "subtype": "task_started", "task_id": task_id,
              "tool_use_id": tool_use_id, "description": "Parallel worker",
-             "is_backgrounded": True, "session_id": session, "uuid": "parallel-start"},
+             "is_backgrounded": True, "task_type": "local_agent",
+             "session_id": session, "uuid": "parallel-start"},
             {"type": "system", "subtype": "init", "session_id": session,
              "uuid": "prior-resume"},
             {"type": "system", "subtype": "background_tasks_changed", "tasks": [],

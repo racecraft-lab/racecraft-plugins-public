@@ -781,7 +781,9 @@ def _claude_continuation_task_type(
     if tool_use.get("name") == "Agent":
         if (started.get("is_backgrounded") is not True
                 or not isinstance(tool_input, dict)
-                or tool_input.get("run_in_background") is not True
+                or tool_input.get(
+                    "run_in_background", started.get("task_type") == "local_agent",
+                ) is not True
                 or terminal_status != "completed"
                 or notification.get("status") != "completed"):
             raise CaptureError("Claude continuation task was not launched as a background Agent")

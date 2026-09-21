@@ -40,6 +40,15 @@ Use the smallest relevant reference; do not load the whole library.
 | Scaffold a roadmap item, inspect status, or resolve a review | Route respectively to `/speckit-pro:speckit-scaffold-spec`, `/speckit-pro:speckit-status`, or `/speckit-pro:speckit-resolve-pr`. |
 | Archive merged-spec records or clean up archived specs | Route to `/speckit-pro:speckit-archive-cleanup`; do not copy or execute its cleanup workflow here. |
 
+When an execution request belongs to autopilot, the redirect is a bounded
+operator handoff, not merely a command name. Briefly explain that autopilot owns
+the durable phase task list, native subagent lifecycle, gate checks, workflow
+and state updates, and operator-visible progress. Give the exact autopilot
+invocation and required workflow/stage input. Set the expectation that it
+continues through the selected stage until completion or a real gate/capability
+stop; at a stop it preserves evidence and reports the exact action required to
+resume. Do not imply that Coach will run, monitor, or resume that lifecycle.
+
 ## Keep adjacent contracts distinct
 
 - Scaffold owns roadmap lookup, branch/worktree placement, the canonical

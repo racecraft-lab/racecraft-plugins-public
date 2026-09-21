@@ -32,7 +32,7 @@ Use the smallest relevant reference; do not load the whole library.
 | Track one spec through phases or understand scaffold-created workflow files | [Workflow template](../../skills/speckit-coach/templates/workflow-template.md). For scaffold creation, population, inputs, or output locations, also read the [live scaffold skill](../speckit-scaffold-spec/SKILL.md) as a reference only; do not execute or invoke it. Keep artifacts, gates, and decisions current. |
 | Explain the roadmap home note | [Roadmap-MOC guide](../../skills/speckit-coach/references/roadmap-moc-guide.md). The curated zone is author-owned; the generated index is regenerated, not hand-edited. |
 | Explain or configure presets, extensions, hooks, catalogs, or upgrade recovery | [Presets and extensions guide](../../skills/speckit-coach/references/presets-extensions-guide.md). Discover and inspect first; confirm before any mutation. |
-| Explain autonomous execution, consensus, remediation, review loops, or configuration | Read [the live autopilot skill](../speckit-autopilot/SKILL.md) as a reference only; explain its current contract without executing or invoking it. |
+| Explain autonomous execution, consensus, remediation, review loops, or configuration | Read [the live autopilot skill](../speckit-autopilot/SKILL.md) as a reference only; explain its current contract without executing or invoking it. When the user asks to run an existing workflow, use the bounded autopilot hand-off below. |
 | Scope a raw brief interactively | Route to `$grill-me`; do not conduct its interview here. |
 | Scaffold a roadmap item, inspect status, resolve a review, or repair Codex agents | Route respectively to `$speckit-scaffold-spec`, `$speckit-status`, `$speckit-resolve-pr`, or the SpecKit Pro `install` skill. |
 | Archive merged-spec records or clean up archived specs | Route to `$speckit-archive-cleanup`; do not copy or execute its cleanup workflow here. |
@@ -62,6 +62,24 @@ Use the smallest relevant reference; do not load the whole library.
 The normal flow is `constitution → specify → clarify (as needed) → plan → checklist (as needed) → tasks → analyze (as needed) → implement`. Preserve the traceability markers in the artifacts: user stories, functional requirements, clarifications, parallel-safe tasks, and checklist gaps. Do not advance past a failed gate; explain the artifact or evidence that must change first.
 
 For roadmap decomposition, prefer delivery slices over technical layers when a slice can be independently verified. Keep cross-spec dependencies explicit, minimize them, and use mocks only when the handoff contract is defined.
+
+## Bounded autopilot hand-off
+
+Coach never executes or invokes autopilot. When the user asks to run a workflow
+and supplies its path, return one explicit Codex command bounded to the
+requested stage:
+
+```text
+$speckit-autopilot <workflow-file> --stage plan|implement|full
+```
+
+Use `--stage full` only when the user asks for the full workflow; use
+`--stage plan` or `--stage implement` only for that requested boundary. Preserve
+the supplied workflow path exactly, do not invent a path or broaden the stage,
+and state briefly that the autopilot owns its own preflight, phase gates,
+durable state, and fail-closed stops. If no workflow path exists, route to
+`$speckit-scaffold-spec`; if the path or requested stage is ambiguous, ask for
+that missing input instead of executing anything.
 
 ## Project fixup
 

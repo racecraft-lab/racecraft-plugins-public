@@ -206,6 +206,13 @@ one, `worktree_root_override`. Require `placement_status=resolved` and
 `relation=external`, report the returned `problems[]` and canonical path, then
 STOP before mutation.
 
+This ordering is invariant: the first resolver result comes before
+`git worktree add`, artifact writes, or roadmap mutation. Only after that
+result passes may scaffold create or reuse the worktree. A second resolver
+check then runs after creation or reuse and immediately before bootstrap or
+Grill Me. Neither bootstrap nor Grill Me may begin unless that second check
+confirms the registered worktree described below.
+
 Without an override, require the helper's exact
 `TASK_ROOT/.worktrees/<branch-name>` result. Never derive placement from the
 primary checkout, `git rev-parse --git-common-dir`, or the first
@@ -216,11 +223,14 @@ Inspect `git remote -v` before git mutation and never assume `origin`. Honor
 the helper's disposition:
 
 1. On `disposition=reuse`, reuse the returned registered worktree without
-   moving, recreating, duplicating, or pruning it.
+   moving, recreating, duplicating, or pruning it. An existing local or remote
+   branch never authorizes work in the primary checkout: all commits and pushes
+   still originate from the resolved worktree branch, never `main`.
 2. On `disposition=create`, inspect the intended branch locally and on every
    actual remote. STOP if more than one remote carries it. Add the returned
    worktree using the local branch, the single remote tracking branch, or a new
-   branch as the observed state requires.
+   branch as the observed state requires. Never commit or push `main` while
+   recovering or reusing a remote branch.
 3. Verify the active branch inside the returned worktree before any push. It
    must equal the helper's `branch_name` and must not be `main`.
 
@@ -744,6 +754,14 @@ equal the resolver's `branch_name` and must not be `main`; otherwise STOP.
 
 2. Push the WORKTREE BRANCH:
    From `.worktrees/<number>-<short-name>/`, run `git push`.
+
+   If the push fails or the remote rejects it, STOP and report the failure
+   instead of continuing as though the scaffold succeeded. The failure report
+   identifies the existing local branch, canonical worktree, workflow file,
+   and local commit. Tell the operator to resolve the remote rejection and
+   retry the push from that same existing worktree. Do not recreate the branch
+   or worktree, regenerate the workflow, or replace the existing commit merely
+   to retry the push.
 
 3. Verify:
    - Read the design concept doc — must contain Goals, Non-goals,

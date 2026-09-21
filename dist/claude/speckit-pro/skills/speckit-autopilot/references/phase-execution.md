@@ -306,8 +306,10 @@ For each clarify session in the workflow file:
             Prepare a Clarify Question Set for: <session prompt>
           """)
   3. Parent answers returned questions and edits spec/workflow/state
-  4. Parse executor's "Unresolved for consensus" section
-  5. If unresolved items exist:
+  4. Re-scan spec.md for `[NEEDS CLARIFICATION]` markers and record the
+     remaining count in the session result
+  5. Parse executor's "Unresolved for consensus" section
+  6. If unresolved items exist:
      a. TaskUpdate: "<session> Consensus" → in_progress
      b. BATCHED dispatch (see consensus-protocol.md §Batched Dispatch):
         Stage 1: spawn ALL routed analysts for ALL items in ONE
@@ -318,8 +320,10 @@ For each clarify session in the workflow file:
                  to spec.md (preserves write contention safety).
         Round 2 escape-hatch: also batched across all queued items.
      c. TaskUpdate: "<session> Consensus" → completed
-  6. TaskUpdate: session task → completed
-  7. Proceed to next session
+  7. After accepted consensus edits, re-scan spec.md and update the recorded
+     remaining-marker count
+  8. TaskUpdate: session task → completed
+  9. Proceed to next session
 ```
 
 **Layer 1 (executor):** The clarify-executor researches possible
@@ -337,6 +341,12 @@ Session 1's resolved questions. Both layers complete
 before the next session runs.
 
 **Gate:** G2 — verify 0 markers remain
+
+G2 is a separate post-Clarify check, not an inference from completed tasks or
+consensus. After the final session, scan the current `spec.md` again and advance
+only when the actual `[NEEDS CLARIFICATION]` count is zero. A missing scan,
+unreadable spec, or remaining marker leaves Clarify and G2 incomplete and
+follows the configured gate-failure/escalation path.
 
 **Commit:**
 `git add specs/ <workflow-file-path> <workflow-dir>/autopilot-state.json && git commit -m "feat(SPEC-XXX): complete clarify phase"`

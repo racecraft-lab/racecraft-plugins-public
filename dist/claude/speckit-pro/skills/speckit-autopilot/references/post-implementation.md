@@ -420,7 +420,11 @@ opens one slice PR.
    changed-file scope, verification evidence, UAT text, non-goals, and known
    gaps. The helper writes the packet JSON and packet-owned body file, and
    declares the validation-result path. `generate-pr-body` is a body-only
-   `golden_only` operation and cannot replace the packet.
+   `golden_only` operation and cannot replace the packet. Its complete input
+   contract is only `output_path`, `title`, and `sections`; it writes one
+   Markdown body and no packet metadata. Do not pass it packet JSON, raw gate
+   output, full test logs, internal evidence records, or any other undeclared
+   field.
 6b. Require the emitted packet's repo-relative `body_file` to be present and
    readable. If body prose needs refinement, edit only the declared editable
    regions described below, then rerun validation before PR creation.
@@ -434,6 +438,10 @@ opens one slice PR.
    - **No internal jargon.** Drop requirement IDs (`FR-009`), internal layer
      numbers (`Layer 4`), workstream/codenames, and process jargon
      (`consensus`, `tolerance arm`, `gate`). Say what happened in English.
+   - **No evidence dump.** Summarize the verified outcome and reviewer-relevant
+     risk in plain English. Do not paste raw commands, transcripts, hashes,
+     grader output, internal state JSON, or exhaustive test logs into editable
+     prose; packet-owned evidence fields remain the structured audit record.
    - **Keep governance terse and collapsed.** Do NOT promote the
      `<details>Reviewer checklist &amp; scope details</details>` block to
      top-level headings, and do NOT pad it — the auto-filled numbers plus a
@@ -463,7 +471,9 @@ opens one slice PR.
    Continue only when this just-run validator exits 0. It checks the actual PR
    title against changed spec scope and rejects aggregate single-PR creation
    when changed files contain multi-PR candidate commands or multi-marker final
-   split evidence. A `DOC-*` spec title must be `docs(DOC-XXX): ...`;
+   split evidence. A documentation SPEC title uses the lowercase scope required
+   by release readiness, for example `docs(spec-704): document the marketplace
+   installation path`; `docs(SPEC-704): ...` is invalid. Likewise,
    `feat(speckit-pro): ...` is only valid for non-spec plugin changes. Any
    split-contract failure means the single-PR path is forbidden: run
    `multi-pr-emission` with the current layer or marker plan, or stop
@@ -497,6 +507,22 @@ opens one slice PR.
    `implementation_checkpoint.head_sha` or
    `implementation_checkpoint.commit_sha`; without those commit SHAs, stop
    before branch or PR mutation and repair the marker checkpoints.
+   The per-slice order is exact and fail-closed:
+   1. validate the current `pr_marker_plan`, source fingerprint, marker order,
+      checkpoint commit, and final `marker_split`/emission-ready status;
+   2. derive that slice's packet ID, title, body path, base/head, and file scope
+      from its marker/layer-plan record—never from a branch name, changed-file
+      guess, aggregate candidate command, or another slice's packet;
+   3. emit or refresh that slice's packet with `pr-packet-output`;
+   4. run fresh `validate-pr-packet-read-only`, consume its current
+      `data.stdout_json`, and persist the passing validation evidence; and
+   5. only then create or refresh the PR using the validated packet's title and
+      body file.
+   Each slice title and body must describe that marker's own outcome and scope
+   in plain English. Never reuse an aggregate or neighboring slice title/body,
+   and never create first and repair title, body, membership, or splitting
+   afterward. A `multi-pr-emission` candidate command plan is planning evidence,
+   not packet validation or authorization for a PR side effect.
 7b. Run `detect-stack-manager-plan` in `dry_run` mode per
    [Optional stack manager](stack-manager.md). It qualifies CLI **and** skill,
    repository and owned topology, respects operator fallback, and blocks manager

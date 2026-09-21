@@ -7,11 +7,6 @@
       "passing": "The optional helper is named autopilot-fast-helper."
     },
     {
-      "case_id": "functional.speckit-autopilot.case-15",
-      "check_id": "legacy-09-text",
-      "passing": "Return a Clarify Question Set to the parent."
-    },
-    {
       "case_id": "functional.speckit-autopilot.case-24",
       "check_id": "legacy-01-text",
       "passing": "Call confidence-gate with workflow_file, mode_name, and threshold."
@@ -20,11 +15,6 @@
       "case_id": "functional.speckit-autopilot.case-24",
       "check_id": "legacy-10-text",
       "passing": "resolve-confidence-mode checks .claude/speckit-pro.local.md and .codex/speckit-pro.local.md as default configuration paths."
-    },
-    {
-      "case_id": "functional.speckit-autopilot.case-26",
-      "check_id": "legacy-01-text",
-      "passing": "Run the pre-final completion audit."
     },
     {
       "case_id": "functional.speckit-autopilot.case-103",
@@ -65,12 +55,6 @@
     }
   ],
   "literal_plus_semantic_examples": [
-    {
-      "case_id": "functional.speckit-autopilot.case-15",
-      "requirement_id": "legacy-09",
-      "correct_paraphrase": "The clarify-executor returns its Clarify Question Set to the parent as the handoff for answering.",
-      "keyword_stuffed_wrong": "The Clarify Question Set is not a clarify-executor handoff and must never be returned to the parent."
-    },
     {
       "case_id": "functional.speckit-autopilot.case-24",
       "requirement_id": "legacy-01",

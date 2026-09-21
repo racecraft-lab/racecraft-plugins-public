@@ -287,7 +287,11 @@ Run the pre-flight sequence before any phase work. STOP on failure.
 2. **Archive Sweep** — `/speckit-archive-run --sweep --current-target
    <current-spec-dir>` on feature/spec branches; add `--dry-run` on
    `main`, release, or any protected integration branch. Skip if the
-   archive extension is absent. Excludes the current target spec.
+   archive extension is absent. Excludes the current target spec. Distinguish
+   an absent extension from a broken installation: if the extension is present
+   but `/speckit-archive-run` is missing or unregistered, STOP pre-flight with
+   that discovery evidence and repair/install guidance. Never silently treat a
+   missing archive command as an absent extension.
 3. **Run prereq helper operations** and parse the JSON output of each:
    ```text
    helper_id=check-prerequisites operation=check-prerequisites mode=read_only
