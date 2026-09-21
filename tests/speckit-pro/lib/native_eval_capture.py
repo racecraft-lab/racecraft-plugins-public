@@ -348,22 +348,9 @@ def _search_query(call: Mapping[str, Any], host: str, cwd: object) -> str | None
             return None
         pattern = inputs["pattern"]
     elif host == "codex" and call.get("name") == "command_execution" and set(inputs) == {"command"}:
-        command = inputs["command"]
-        tokens = _codex_tokens(command)
-        if tokens and tokens[0] in _CODEX_SHELLS:
-            if len(tokens) != 3 or tokens[1] != "-c":
-                return None
-            command = tokens[2]
-            tokens = _codex_tokens(command)
-        if tokens is None or not isinstance(command, str):
+        pattern = _codex_find_pattern(inputs["command"])
+        if pattern is None:
             return None
-        matched = re.fullmatch(
-            r"""(?:find|/usr/bin/find) \. -type f -name (['"])([A-Za-z0-9*?_.-]+)\1 -print""",
-            command,
-        )
-        if matched is None:
-            return None
-        pattern = "**/" + matched[2]
     else:
         return None
     try:
@@ -371,6 +358,66 @@ def _search_query(call: Mapping[str, Any], host: str, cwd: object) -> str | None
     except ValueError:
         return None
     return pattern
+
+
+def _codex_find_pattern(command: object, *, allow_shell: bool = True) -> str | None:
+    """Parse one exact, unbounded Codex ``find`` command into its glob."""
+    tokens = _codex_tokens(command)
+    if allow_shell and tokens and tokens[0] in _CODEX_SHELLS:
+        if len(tokens) != 3 or tokens[1] != "-c":
+            return None
+        command = tokens[2]
+        tokens = _codex_tokens(command)
+    if tokens is None or not isinstance(command, str):
+        return None
+    matched = re.fullmatch(
+        r"""(?:find|/usr/bin/find) \. -type f -name (['"])([A-Za-z0-9*?_.-]+)\1 -print""",
+        command,
+    )
+    if matched is None:
+        return None
+    pattern = "**/" + matched[2]
+    try:
+        _search_glob(pattern)
+    except ValueError:
+        return None
+    return pattern
+
+
+def _codex_compound_empty_lines(call: Mapping[str, Any]) -> list[str]:
+    """Return exact newline-separated find commands from one empty Codex call."""
+    inputs = call.get("input")
+    signature = (
+        call.get("name"), call.get("success"), call.get("parent_id"), call.get("output")
+    )
+    if signature != ("command_execution", True, None, ""):
+        return []
+    if not isinstance(inputs, dict) or set(inputs) != {"command"}:
+        return []
+    command = inputs["command"]
+    if not isinstance(command, str) or "\r" in command:
+        return []
+    try:
+        outer = shlex.split(command, comments=False, posix=True)
+    except ValueError:
+        return []
+    if len(outer) != 3 or outer[0] not in _CODEX_SHELLS or outer[1] != "-c":
+        return []
+    lines = outer[2].split("\n")
+    return lines if len(lines) >= 2 and all(line and line == line.strip() for line in lines) else []
+
+
+def _codex_compound_empty_searches(
+    call: Mapping[str, Any], index: int,
+) -> list[dict[str, object]]:
+    """Project newline-separated exact finds only when all returned no matches."""
+    patterns = [_codex_find_pattern(line, allow_shell=False) for line in _codex_compound_empty_lines(call)]
+    if not patterns or None in patterns or len(patterns) != len(set(patterns)):
+        return []
+    return [
+        {"pattern": pattern, "paths": [], "tool_call_index": index}
+        for pattern in patterns
+    ]
 
 
 def _search_paths(output: object, pattern: str, host: str, cwd: object) -> list[str] | None:
@@ -458,6 +505,21 @@ def _legacy_search_row(
     return {"pattern": pattern, "paths": paths, "tool_call_index": index}
 
 
+def _file_search_rows(
+    call: dict[str, object], index: int, host: str, cwd: object,
+    metadata: object, project_artifacts: tuple[str, ...] | None,
+) -> list[dict[str, object]]:
+    if host == "codex":
+        compound = _codex_compound_empty_searches(call, index)
+        if compound:
+            return compound
+        row = _scoped_rg_row(call, index, project_artifacts)
+    else:
+        row = None
+    row = row or _legacy_search_row(call, index, host, cwd, metadata)
+    return [row] if row is not None else []
+
+
 def file_search_results(observation: object, *, host: str) -> list[dict[str, object]]:
     """Derive complete root-recursive search results, never absence from prose.
 
@@ -479,12 +541,8 @@ def file_search_results(observation: object, *, host: str) -> list[dict[str, obj
     project_artifacts = bound_project_artifact_paths(observation)
     results: list[dict[str, object]] = []
     for index, call in enumerate(observation["tool_calls"]):
-        if not isinstance(call, dict):
-            continue
-        row = _scoped_rg_row(call, index, project_artifacts) if host == "codex" else None
-        row = row or _legacy_search_row(call, index, host, cwd, metadata)
-        if row is not None:
-            results.append(row)
+        if isinstance(call, dict):
+            results.extend(_file_search_rows(call, index, host, cwd, metadata, project_artifacts))
     return results
 
 

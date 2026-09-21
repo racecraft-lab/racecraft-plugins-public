@@ -1026,3 +1026,61 @@ an exhaustive live run of every retained case. Full-catalog live qualification
 for the remaining Layer 2, 3, 6, and 7 cases, the held parity/performance
 workloads, interactive Claude team verification, and human UAT remain separate
 follow-up evidence if they are still required for a later release decision.
+
+## 2026-09-20 full functional run and batched remediation
+
+The first complete one-trial Layer 3 functional run finished against source
+commit `bc529116a`. It scheduled all **93** retained functional cases on both
+native clients: **186 subject launches**, **133 shared semantic-judge calls**,
+and no automatic retries. The terminal result was **95 passes**, **90 valid
+behavior failures**, **1 infrastructure-invalid attempt**, and **0 incomplete
+attempts**. Claude completed 93/93 subject launches at peak concurrency 2;
+Codex completed 93/93 subjects plus all 133 judge calls at peak concurrency 4.
+The private report and raw captures remain under
+`.native-eval-output/qualification-2026-09-20-bc529116/` and are not committed.
+
+No failing row was retried merely to turn it green. The failures were clustered
+from retained evidence and remediated in batches. The current tree includes:
+
+- authenticated Claude reference access to the exact staged target skill, with
+  pre- and post-execution symlink and tree-digest verification;
+- fail-closed reprocessing of the official Claude diagnostic-plus-response
+  stream and exact Codex runner/Git identity binding;
+- corrected host-specific dispatch and handoff requirements, removed answer
+  leakage, executable graders for previously descriptive requirements, and
+  matching Claude/Codex authored behavior contracts;
+- a protected resolved-Python binding for the G7 local-runner case instead of
+  forcing the subject to discover and substitute an import path;
+- explicit Claude tool grants for the two scaffold cases that must invoke the
+  model-selectable scaffold skill, while the two explicit-autopilot consensus
+  cases grant only target-reference reads and cannot activate Coach as an
+  undeclared sibling;
+- removal of a nonexistent status-scenario path from the all-blocked prompt;
+- fail-closed normalization of one successful Codex command containing two
+  newline-separated exact recursive `find` operations when, and only when,
+  both results are provably empty; and
+- explicit raw-JSON-only output contracts for the Post inventory and
+  workflow-binding responses.
+
+The retained Codex capture for `functional.speckit-status.case-7` now passes
+both deterministic absence checks under the repaired parser and reaches
+`needs_judge`. It therefore needs one semantic judge call, not another subject
+launch. The other affected failures need one targeted current-source subject
+trial because their catalog input, target skill bytes, staged references, or
+native execution binding changed. Existing valid passes remain reusable only
+when the runner's full resume identity still matches; none will be relabeled as
+current-source evidence by prose or by an old grader receipt.
+
+### Qualification remainder after this batch
+
+1. Run one targeted current-source confirmation for the affected Layer 3
+   host-cases, allowing resume to reuse the `status.case-7` subject capture and
+   any other byte-compatible terminal evidence.
+2. Batch any observed current-source failures once, then run one lean targeted
+   confirmation of those repairs.
+3. Complete the still-required one-trial Layer 2, Layer 6, and Layer 7 native
+   matrices, including required execution-mode arms, without an automatic
+   repetition multiplier.
+4. Record interactive Claude team verification separately, then complete human
+   UAT and the final measured performance report. Neither is represented as an
+   automated native-eval pass.

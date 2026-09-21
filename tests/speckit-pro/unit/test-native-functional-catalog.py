@@ -607,6 +607,8 @@ class NativeFunctionalCatalogTests(unittest.TestCase):
 
     def test_native_response_contracts_keep_exact_source_steps_and_legacy_coverage(self) -> None:
         case = self.cases["functional.speckit-autopilot.case-7"]
+        self.assertIn("Output only raw JSON", case["prompt"])
+        self.assertIn("no diagnostic prefix", case["prompt"])
         sequence = next(check for check in case["checks"] if check["id"] == "native-sequence")
         sources = {
             "claude": "speckit-pro/skills/speckit-autopilot/references/task-list-canonical.md",
@@ -900,11 +902,15 @@ class NativeFunctionalCatalogTests(unittest.TestCase):
             self.assertTrue(all(row == legacy_rows[0] for row in legacy_rows), case_id)
             legacy = legacy_rows[0]
             self.assertEqual(case["provenance"], expected_provenance, case_id)
-            self.assertIn(
-                "Use {{skill}} to address this bounded request. " + legacy["prompt"],
-                case["prompt"],
-                case_id,
-            )
+            if case_id == "functional.speckit-status.case-6":
+                self.assertNotIn("fixtures/status/scenarios.json", case["prompt"])
+                self.assertIn("Read that roadmap completely", case["prompt"])
+            else:
+                self.assertIn(
+                    "Use {{skill}} to address this bounded request. " + legacy["prompt"],
+                    case["prompt"],
+                    case_id,
+                )
             behavior = next(row for row in case["requirements"] if row["id"] == "behavior")
             self.assertEqual(behavior["description"], legacy["expected_output"], case_id)
             rubric = next(check for check in case["checks"] if check["id"] == "legacy-behavior")["rubric"]
@@ -949,7 +955,11 @@ class NativeFunctionalCatalogTests(unittest.TestCase):
         self.assertIn("human review", security_text)
         self.assertIn("does not single-route", security_text)
 
-        for case_id in ("functional.speckit-autopilot.case-1", "functional.speckit-autopilot.case-107"):
+        for case_id in (
+            "functional.speckit-autopilot.case-1",
+            "functional.speckit-autopilot.case-2",
+            "functional.speckit-autopilot.case-107",
+        ):
             case = self.cases[case_id]
             self.assertEqual(case["required_tools"], ["specify"])
             self.assertIn("default-shell command", case["prompt"])
@@ -990,6 +1000,20 @@ class NativeFunctionalCatalogTests(unittest.TestCase):
         self.assertNotIn("SPEC-021", external["prompt"])
         self.assertNotIn(".worktrees/spec-021", external["prompt"])
         self.assertIn("continue_workflow or rerun_setup", external["prompt"])
+
+    def test_claude_skill_grants_match_the_functional_activation_contract(self) -> None:
+        for case_id in (
+            "functional.speckit-scaffold-spec.case-4",
+            "functional.speckit-scaffold-spec.case-9",
+        ):
+            self.assertIn("Skill", self.cases[case_id]["hosts"]["claude"]["allowed_tools"])
+        for case_id in (
+            "functional.speckit-autopilot.case-18",
+            "functional.speckit-autopilot.case-19",
+        ):
+            tools = self.cases[case_id]["hosts"]["claude"]["allowed_tools"]
+            self.assertEqual(tools, ["Read", "Glob", "Grep"])
+            self.assertNotIn("Skill", tools)
 
     def test_parity_remediations_are_executable_and_fail_closed(self) -> None:
         case106 = self.cases["functional.speckit-autopilot.case-106"]

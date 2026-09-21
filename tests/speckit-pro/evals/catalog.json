@@ -6017,6 +6017,9 @@
       "capability": "Executes the authoritative read-only validate-gate helper for G7 against an unchanged staged feature, preserves the exact response envelope, and reports the observed incomplete-task result.",
       "timeout_seconds": 300,
       "resource_class": "ordinary",
+      "required_tools": [
+        "specify"
+      ],
       "requirements": [
         {
           "id": "selection",
@@ -6039,7 +6042,7 @@
           "description": "Treats G7 as the completed-task check implemented by the current runner helper"
         }
       ],
-      "prompt": "Use {{skill}} for this bounded local evaluation. Inspect scenario-inputs/validate-g7-request.json, invoke the staged authoritative Python runner exactly once with that JSON as stdin, and preserve its complete stdout response envelope without rewriting it at scenario-output/validate-g7-envelope.json. Then report the observed G7 result and task-completion details. Do not invoke a legacy shell helper or change the staged feature.",
+      "prompt": "Use {{skill}} for this bounded local evaluation. Inspect scenario-inputs/validate-g7-request.json, then invoke exactly one default-shell command: {{resolved_python}} -m speckit_pro_runner < scenario-inputs/validate-g7-request.json. Use no shell variable, prefix, suffix, pipe, command chaining, or output redirection other than the required input redirection. Preserve the complete actual stdout response envelope without rewriting it at scenario-output/validate-g7-envelope.json. Then report the observed G7 result and task-completion details. Do not invoke a legacy shell helper or change the staged feature.",
       "fixtures": [
         {
           "source": "tests/speckit-pro/evals/fixtures/functional/local-command/validate-g7-request.json",
@@ -7985,7 +7988,11 @@
       "hosts": {
         "claude": {
           "skill": "speckit-pro:speckit-autopilot",
-          "allowed_tools": [],
+          "allowed_tools": [
+            "Read",
+            "Glob",
+            "Grep"
+          ],
           "modes": [
             "plugin"
           ]
@@ -8084,7 +8091,11 @@
       "hosts": {
         "claude": {
           "skill": "speckit-pro:speckit-autopilot",
-          "allowed_tools": [],
+          "allowed_tools": [
+            "Read",
+            "Glob",
+            "Grep"
+          ],
           "modes": [
             "plugin"
           ]
@@ -12309,7 +12320,7 @@
           "description": "The response is supported by successful exact-path unbounded reads of every staged source and accurately uses fixture-specific facts; read-event evidence alone does not prove that every byte reached the model."
         }
       ],
-      "prompt": "Use {{skill}} to address this bounded request. The run setup materializes the deterministic `all-blocked` scenario from fixtures/status/scenarios.json, whose remaining roadmap specs all have incomplete dependencies. Every remaining spec in the roadmap is blocked by an incomplete dependency. What should the status dashboard show for the next recommendation?",
+      "prompt": "Use {{skill}} to address this bounded request. The staged roadmap is the deterministic `all-blocked` scenario: every remaining roadmap spec is blocked by an incomplete dependency. Read that roadmap completely, then report what the status dashboard should show for the next recommendation.",
       "fixtures": [
         {
           "source": "tests/speckit-pro/evals/fixtures/grounding/status-blocked/docs/ai/current-technical-roadmap.md",
@@ -13877,7 +13888,7 @@
           "description": "Identifies the documented parallel verification group and the ordered serial tail."
         }
       ],
-      "prompt": "Use {{skill}} to answer this explanation-only request; do not execute the workflow or write files. What happens after all seven SDD phases complete? List the specific Post steps in order, distinguish extensions from built-ins, and explain parallelism, UAT, packet/body preparation, validation, PR creation, and remediation. Return one JSON object with post_steps (exact canonical item names in order), review_loop (native mechanism name), inactive_helpers (native deferred/out-of-scope helper IDs), and explanation (your detailed prose). Do not include Markdown fences.",
+      "prompt": "Use {{skill}} to answer this explanation-only request; do not execute the workflow or write files. What happens after all seven SDD phases complete? List the specific Post steps in order, distinguish extensions from built-ins, and explain parallelism, UAT, packet/body preparation, validation, PR creation, and remediation. Output only raw JSON: exactly one top-level object with post_steps (exact canonical item names in order), review_loop (native mechanism name), inactive_helpers (native deferred/out-of-scope helper IDs), and explanation (your detailed prose), with no diagnostic prefix, prose outside the object, Markdown, or code fences.",
       "fixtures": [],
       "hosts": {
         "claude": {
@@ -15754,7 +15765,7 @@
           "description": "The prepared feature checkout and registered child worktree remain unchanged after the stopped run."
         }
       ],
-      "prompt": "Use {{skill}} for workflow docs/ai/specs/.process/SPEC-107-workflow.md. Complete its workflow-binding preflight with the protected installed runner using exactly {{resolved_python}} -m speckit_pro_runner < scenario-inputs/binding-request.json. Run that invocation as one default-shell command with no shell variable, prefix, suffix, pipe, or output redirection other than the required input redirection; use the command result as the response evidence. Interpret its returned status, including an expected-failure exit, rather than replacing its response. Return one JSON object with binding_result (the complete actual helper response), decision (proceed or stop), candidates (canonical worktree roots), and next_action (continue_workflow or provide_absolute_workflow_path). Stop at the preflight decision; do not start later workflow phases.",
+      "prompt": "Use {{skill}} for workflow docs/ai/specs/.process/SPEC-107-workflow.md. Complete its workflow-binding preflight with the protected installed runner using exactly {{resolved_python}} -m speckit_pro_runner < scenario-inputs/binding-request.json. Run that invocation as one default-shell command with no shell variable, prefix, suffix, pipe, or output redirection other than the required input redirection; use the command result as the response evidence. Interpret its returned status, including an expected-failure exit, rather than replacing its response. Output only raw JSON: exactly one top-level object with binding_result (the complete actual helper response), decision (proceed or stop), candidates (canonical worktree roots), and next_action (continue_workflow or provide_absolute_workflow_path), with no diagnostic prefix, prose, Markdown, or code fences. Stop at the preflight decision; do not start later workflow phases.",
       "fixtures": [
         {
           "source": "tests/speckit-pro/evals/fixtures/functional/registered-worktree-migration/ambiguous/feature/docs/ai/specs/.process/SPEC-107-workflow.md",
@@ -16214,7 +16225,8 @@
           "allowed_tools": [
             "Read",
             "Glob",
-            "Grep"
+            "Grep",
+            "Skill"
           ],
           "modes": [
             "plugin"
@@ -16319,7 +16331,8 @@
           "allowed_tools": [
             "Read",
             "Glob",
-            "Grep"
+            "Grep",
+            "Skill"
           ],
           "modes": [
             "plugin"
