@@ -2166,53 +2166,73 @@ class GateFoundationTests(unittest.TestCase):
         )
         version_check = next(check for check in readiness["checks"] if check["check_id"] == "version-sync")
         expected_version = json.loads(
-            (REPO_ROOT / "speckit-pro/.claude-plugin/plugin.json").read_text(encoding="utf-8")
+            (REPO_ROOT / "speckit-pro/.codex-plugin/plugin.json").read_text(encoding="utf-8")
         )["version"]
-        expected_sources = {
-            "speckit-pro/.claude-plugin/plugin.json",
+        versioned_sources = {
             "speckit-pro/.codex-plugin/plugin.json",
-            ".claude-plugin/marketplace.json",
             ".agents/plugins/marketplace.json",
             ".release-please-manifest.json",
             "speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json",
         }
+        unversioned_sources = {
+            "speckit-pro/.claude-plugin/plugin.json",
+            ".claude-plugin/marketplace.json",
+        }
         self.assertEqual(
             set(version_check["evidence"]),
-            {f"{path}={expected_version}" for path in expected_sources},
+            {f"{path}={expected_version}" for path in versioned_sources}
+            | {f"{path}=omitted" for path in unversioned_sources},
         )
         self.assertTrue(all("script_file_count" in item for item in readiness["payload_results"]))
         self.assert_release_readiness_contract_subset(readiness)
 
-    def test_installed_release_readiness_blocks_live_version_manifest_drift(self) -> None:
+    def assert_manifest_mutation_blocked(
+        self,
+        relative_path: str,
+        key: str,
+        value: str,
+        check_id: str,
+    ) -> dict[str, Any]:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             copy_installed_release_tree(root)
-            manifest_path = root / ".release-please-manifest.json"
+            manifest_path = root / relative_path
             manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-            manifest["speckit-pro"] = "9.9.9"
+            manifest[key] = value
             manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
             response = run_installed_release_readiness(repo_root=root)
 
         self.assert_response(response, "expected_failure")
         readiness = response["data"]["release_readiness"]
+        check = next(check for check in readiness["checks"] if check["check_id"] == check_id)
+        self.assertTrue(check["blocking"])
+        return readiness
+
+    def test_installed_release_readiness_blocks_live_version_manifest_drift(self) -> None:
+        readiness = self.assert_manifest_mutation_blocked(
+            ".release-please-manifest.json",
+            "speckit-pro",
+            "9.9.9",
+            "version-sync",
+        )
         version_check = next(check for check in readiness["checks"] if check["check_id"] == "version-sync")
-        self.assertTrue(version_check["blocking"])
         self.assertIn(".release-please-manifest.json=9.9.9", version_check["evidence"])
 
-    def test_installed_release_readiness_blocks_live_platform_payload_drift(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            copy_installed_release_tree(root)
-            manifest_path = root / "dist/codex/speckit-pro/.codex-plugin/plugin.json"
-            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-            manifest["version"] = "9.9.9"
-            manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
-            response = run_installed_release_readiness(repo_root=root)
+    def test_installed_release_readiness_blocks_pinned_claude_cache_identity(self) -> None:
+        self.assert_manifest_mutation_blocked(
+            "speckit-pro/.claude-plugin/plugin.json",
+            "version",
+            "2.32.0",
+            "version-sync",
+        )
 
-        self.assert_response(response, "expected_failure")
-        readiness = response["data"]["release_readiness"]
-        payload_check = next(check for check in readiness["checks"] if check["check_id"] == "payload-completeness")
-        self.assertTrue(payload_check["blocking"])
+    def test_installed_release_readiness_blocks_live_platform_payload_drift(self) -> None:
+        readiness = self.assert_manifest_mutation_blocked(
+            "dist/codex/speckit-pro/.codex-plugin/plugin.json",
+            "version",
+            "9.9.9",
+            "payload-completeness",
+        )
         self.assertFalse(
             any("fixture" in evidence.lower() for check in readiness["checks"] for evidence in check["evidence"])
         )

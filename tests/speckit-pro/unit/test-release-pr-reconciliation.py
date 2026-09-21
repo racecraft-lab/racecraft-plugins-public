@@ -43,6 +43,10 @@ dispatch = load_module(
     "dispatch_release_pr_checks",
     REPO_ROOT / "scripts" / "dispatch-release-pr-checks.py",
 )
+integrity = load_module(
+    "validate_release_pr_integrity",
+    REPO_ROOT / "scripts" / "validate-release-pr-integrity.py",
+)
 audit = load_module("audit_release_notes", REPO_ROOT / "scripts" / "audit-release-notes.py")
 runner_requests = load_module(
     "run_runner_requests",
@@ -289,6 +293,125 @@ class ReleasePrDispatchTests(unittest.TestCase):
         self.assertIn("child exit 17", stderr.getvalue())
 
 
+class ReleasePrIntegrityTests(unittest.TestCase):
+    HEAD_SHA = "a" * 40
+    CITED_SHA = "deadbee"
+    FULL_CITED_SHA = "deadbeef" * 5
+
+    @classmethod
+    def graphql_payload(
+        cls,
+        *,
+        branch: str = "release-please--branches--main--components--speckit-pro",
+        body: str = "Fixed in `deadbee`.",
+        association: str = "MEMBER",
+        resolved: bool = True,
+    ) -> dict:
+        return {
+            "data": {
+                "repository": {
+                    "pullRequest": {
+                        "headRefName": branch,
+                        "headRefOid": cls.HEAD_SHA,
+                        "reviewThreads": {
+                            "nodes": [
+                                {
+                                    "id": "thread-1",
+                                    "isResolved": resolved,
+                                    "comments": {
+                                        "nodes": [
+                                            {
+                                                "body": body,
+                                                "authorAssociation": association,
+                                                "url": "https://example.test/thread-1",
+                                            }
+                                        ],
+                                        "pageInfo": {"hasNextPage": False},
+                                    },
+                                }
+                            ],
+                            "pageInfo": {"hasNextPage": False, "endCursor": None},
+                        },
+                    }
+                }
+            }
+        }
+
+    def api(self, comparison_status: str = "ahead"):
+        calls: list[list[str]] = []
+
+        def fake(argv):
+            command = list(argv)
+            calls.append(command)
+            if command[:2] == ["api", "graphql"]:
+                return self.graphql_payload()
+            if command == ["api", f"repos/racecraft-lab/racecraft-plugins-public/commits/{self.CITED_SHA}"]:
+                return {"sha": self.FULL_CITED_SHA}
+            if command == [
+                "api",
+                f"repos/racecraft-lab/racecraft-plugins-public/compare/{self.FULL_CITED_SHA}...{self.HEAD_SHA}",
+            ]:
+                return {"status": comparison_status}
+            raise AssertionError(command)
+
+        return fake, calls
+
+    def test_reachable_cited_fix_passes(self) -> None:
+        api, calls = self.api("ahead")
+        result = integrity.validate_release_pr(
+            "racecraft-lab/racecraft-plugins-public", 570, api=api
+        )
+        self.assertEqual(0, result)
+        self.assertTrue(any("compare/" in part for call in calls for part in call))
+
+    def test_dropped_cited_fix_fails_closed(self) -> None:
+        api, _calls = self.api("diverged")
+        with self.assertRaises(integrity.IntegrityError) as caught:
+            integrity.validate_release_pr(
+                "racecraft-lab/racecraft-plugins-public", 570, api=api
+            )
+        self.assertIn(self.CITED_SHA, str(caught.exception))
+        self.assertIn("not reachable", str(caught.exception))
+
+    def test_untrusted_or_unresolved_claims_are_not_commit_attestations(self) -> None:
+        for association, resolved in (("NONE", True), ("MEMBER", False)):
+            with self.subTest(association=association, resolved=resolved):
+                calls: list[list[str]] = []
+
+                def fake(argv):
+                    command = list(argv)
+                    calls.append(command)
+                    if command[:2] == ["api", "graphql"]:
+                        return self.graphql_payload(
+                            association=association,
+                            resolved=resolved,
+                        )
+                    raise AssertionError(command)
+
+                self.assertEqual(
+                    0,
+                    integrity.validate_release_pr(
+                        "racecraft-lab/racecraft-plugins-public", 570, api=fake
+                    ),
+                )
+                self.assertEqual(1, len(calls))
+
+    def test_non_release_pr_is_a_clean_noop(self) -> None:
+        calls: list[list[str]] = []
+
+        def fake(argv):
+            calls.append(list(argv))
+            return self.graphql_payload(branch="codex/ordinary-change")
+
+        self.assertEqual(
+            0,
+            integrity.validate_release_pr(
+                "racecraft-lab/racecraft-plugins-public", 588, api=fake
+            ),
+        )
+        self.assertEqual(1, len(calls))
+
+
 class ReleasePrLifecycleTests(unittest.TestCase):
     class FakeRunner:
         def __init__(self, draft_states: dict[int, bool]) -> None:
@@ -360,6 +483,7 @@ class ReleasePrLifecycleTests(unittest.TestCase):
     def test_release_workflow_holds_review_until_artifact_sync(self) -> None:
         config = json.loads((REPO_ROOT / "release-please-config.json").read_text(encoding="utf-8"))
         workflow = (REPO_ROOT / ".github/workflows/release.yml").read_text(encoding="utf-8")
+        pr_checks = (REPO_ROOT / ".github/workflows/pr-checks.yml").read_text(encoding="utf-8")
         container = (REPO_ROOT / ".github/workflows/container-preflight.yml").read_text(encoding="utf-8")
 
         self.assertIs(config["draft-pull-request"], True)
@@ -376,6 +500,9 @@ class ReleasePrLifecycleTests(unittest.TestCase):
         self.assertEqual(sorted(positions), positions)
         self.assertIn("python3 scripts/release-pr-lifecycle.py hold", workflow)
         self.assertIn("python3 scripts/release-pr-lifecycle.py ready", workflow)
+        self.assertIn("Validate generated release PR commit ancestry", pr_checks)
+        self.assertIn("python3 scripts/validate-release-pr-integrity.py", pr_checks)
+        self.assertIn("pull-requests: read", pr_checks)
         self.assertIn(
             "PR_DRAFT: ${{ github.event_name == 'pull_request' && "
             "github.event.pull_request.draft || false }}",

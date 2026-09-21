@@ -11,8 +11,16 @@ from typing import Any
 
 
 MARKETPLACES = (
-    (Path(".claude-plugin/marketplace.json"), Path(".claude-plugin/plugin.json")),
-    (Path(".agents/plugins/marketplace.json"), Path(".codex-plugin/plugin.json")),
+    (
+        Path(".claude-plugin/marketplace.json"),
+        Path(".claude-plugin/plugin.json"),
+        True,
+    ),
+    (
+        Path(".agents/plugins/marketplace.json"),
+        Path(".codex-plugin/plugin.json"),
+        False,
+    ),
 )
 SEMVER_RE = re.compile(r"^[0-9]+\.[0-9]+\.[0-9]+$")
 
@@ -47,13 +55,15 @@ def plugin_name(entry: dict[str, Any], index: int) -> str:
     return str(name) if isinstance(name, str) and name else f"index {index}"
 
 
-def read_manifest_version(path: Path) -> str:
+def read_manifest_version(path: Path, *, allow_missing: bool = False) -> str | None:
     if not path.is_file():
         raise FatalError(f"Error: Plugin file not found: {path.as_posix()} (referenced by marketplace entry).")
     manifest = load_json(path)
     if not isinstance(manifest, dict):
         raise FatalError(f"Error: {path.as_posix()} contains invalid JSON.")
     version = manifest.get("version")
+    if allow_missing and version is None:
+        return None
     if not isinstance(version, str) or not version:
         raise FatalError(f"Error: No 'version' field in {path.as_posix()}.")
     if SEMVER_RE.fullmatch(version) is None:
@@ -61,7 +71,26 @@ def read_manifest_version(path: Path) -> str:
     return version
 
 
-def sync_marketplace(marketplace: Path, manifest_rel: Path) -> int:
+def sync_entry_version(entry: dict[str, Any], plugin_dir: str, version: str | None) -> str | None:
+    current = entry.get("version")
+    current_version = current if isinstance(current, str) else ""
+    if version is None:
+        if "version" not in entry:
+            return None
+        entry.pop("version")
+        return f"removed {plugin_dir} version {current_version or '<invalid>'} to use the resolved git commit"
+    entry["version"] = version
+    if current_version == version:
+        return None
+    return f"synced {plugin_dir}: {current_version or '<none>'} -> {version}"
+
+
+def sync_marketplace(
+    marketplace: Path,
+    manifest_rel: Path,
+    *,
+    allow_unversioned: bool = False,
+) -> int:
     if not marketplace.is_file():
         return 0
 
@@ -102,7 +131,7 @@ def sync_marketplace(marketplace: Path, manifest_rel: Path) -> int:
 
         plugin_json = Path(plugin_dir) / manifest_rel
         try:
-            version = read_manifest_version(plugin_json)
+            version = read_manifest_version(plugin_json, allow_missing=allow_unversioned)
         except FatalError as exc:
             message = str(exc)
             if "referenced by marketplace entry" in message:
@@ -111,11 +140,9 @@ def sync_marketplace(marketplace: Path, manifest_rel: Path) -> int:
                 ) from exc
             raise
 
-        current = entry.get("version")
-        current_version = current if isinstance(current, str) else ""
-        entry["version"] = version
-        if current_version != version:
-            changes.append(f"synced {plugin_dir}: {current_version or '<none>'} -> {version}")
+        change = sync_entry_version(entry, plugin_dir, version)
+        if change:
+            changes.append(change)
 
     if changes:
         try:
@@ -129,13 +156,17 @@ def sync_marketplace(marketplace: Path, manifest_rel: Path) -> int:
 
 
 def main() -> int:
-    if not any(marketplace.is_file() for marketplace, _manifest in MARKETPLACES):
+    if not any(marketplace.is_file() for marketplace, _manifest, _allow in MARKETPLACES):
         print("Error: no supported marketplace.json found. Run this script from the repository root.", file=sys.stderr)
         return 1
 
     try:
-        for marketplace, manifest_rel in MARKETPLACES:
-            sync_marketplace(marketplace, manifest_rel)
+        for marketplace, manifest_rel, allow_unversioned in MARKETPLACES:
+            sync_marketplace(
+                marketplace,
+                manifest_rel,
+                allow_unversioned=allow_unversioned,
+            )
     except FatalError as exc:
         print(exc, file=sys.stderr)
         return 1

@@ -319,30 +319,46 @@ def live_installed_release_gate_evidence(repo_root: Path) -> dict[str, Any]:
 
 
 def live_version_sync_check(repo_root: Path) -> dict[str, Any]:
-    sources = (
+    unversioned_sources = (
         ("speckit-pro/.claude-plugin/plugin.json", ("version",)),
-        ("speckit-pro/.codex-plugin/plugin.json", ("version",)),
         (".claude-plugin/marketplace.json", ("plugins", "speckit-pro", "version")),
+    )
+    versioned_sources = (
+        ("speckit-pro/.codex-plugin/plugin.json", ("version",)),
         (".agents/plugins/marketplace.json", ("plugins", "speckit-pro", "version")),
         (".release-please-manifest.json", ("speckit-pro",)),
         ("speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json", ("plugin_version",)),
     )
-    versions = [(path, live_version_value(repo_root / path, selector)) for path, selector in sources]
+    versions = [
+        (path, live_version_value(repo_root / path, selector))
+        for path, selector in versioned_sources
+    ]
     values = [value for _path, value in versions]
     synchronized = (
-        all(re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", value or "") is not None for value in values)
+        all(
+            live_version_field_omitted(repo_root / path, selector)
+            for path, selector in unversioned_sources
+        )
+        and all(re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", value or "") is not None for value in values)
         and len(set(values)) == 1
     )
+    evidence = [f"{path}=omitted" for path, _selector in unversioned_sources]
+    evidence.extend(f"{path}={value or 'missing'}" for path, value in versions)
     return installed_release_check(
         "version-sync",
         "stale_metadata",
         synchronized,
-        "Current source, marketplace, release, and runner versions are synchronized.",
-        [f"{path}={value or 'missing'}" for path, value in versions],
+        "Claude uses commit-addressed cache identity; Codex, release, and runner versions are synchronized.",
+        evidence,
     )
 
 
-def live_version_value(path: Path, selector: tuple[str, ...]) -> str | None:
+def live_version_field_omitted(path: Path, selector: tuple[str, ...]) -> bool:
+    current = live_json_value(path, selector[:-1])
+    return isinstance(current, dict) and selector[-1] not in current
+
+
+def live_json_value(path: Path, selector: tuple[str, ...]) -> Any:
     try:
         current: Any = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError, UnicodeError):
@@ -357,6 +373,11 @@ def live_version_value(path: Path, selector: tuple[str, ...]) -> str | None:
             current = current.get(key)
         else:
             return None
+    return current
+
+
+def live_version_value(path: Path, selector: tuple[str, ...]) -> str | None:
+    current = live_json_value(path, selector)
     return current if isinstance(current, str) and current else None
 
 

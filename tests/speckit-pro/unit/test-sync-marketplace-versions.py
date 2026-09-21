@@ -182,13 +182,13 @@ class SyncMarketplaceVersionsTests(unittest.TestCase):
         with self.subTest(msg="Non-relative source — stderr mentions skipping"):
             self.assertIn("Skipping", result.stderr)
 
-        root = self._marketplace("missing-version", '{"name":"test","plugins":[{"name":"noversion","source":"./noversion"}]}')
+        root = self._marketplace("missing-version", '{"name":"test","plugins":[{"name":"noversion","source":"./noversion","version":"9.9.9"}]}')
         create_plugin(root, "noversion", None)
         result = run_sync(root)
-        with self.subTest(msg="No version in plugin.json — exit 1"):
-            self.assertEqual(result.returncode, 1)
-        with self.subTest(msg="No version in plugin.json — stderr mentions version"):
-            self.assertIn("version", result.stderr)
+        with self.subTest(msg="Unversioned Claude plugin — stale marketplace version is removed"):
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(marketplace_version(root), "")
+            self.assertIn("resolved git commit", result.stdout)
 
         root = self._marketplace("bad-semver", '{"name":"test","plugins":[{"name":"twopart","source":"./twopart"}]}')
         create_plugin(root, "twopart", "1.0")

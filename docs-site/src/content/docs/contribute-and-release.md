@@ -30,7 +30,7 @@ Primary sources: [suite manifest](https://github.com/racecraft-lab/racecraft-plu
 | Docs-site content | `docs-site/src/content/docs/` | Astro/Starlight build output | `pnpm --dir docs-site validate`; use `reference:check` when generated references are involved. |
 | Plugin source | `speckit-pro/` | `dist/claude/speckit-pro/` and `dist/codex/speckit-pro/` | Generated-artifact consistency and `python3 tests/speckit-pro/run-all.py`. |
 | Generated payload/dist | `scripts/refresh-release-artifacts.py` or the Release workflow's release-PR sync | `dist/**` | Explain the source change or workflow run that generated the outputs. |
-| Marketplace registry | `.claude-plugin/marketplace.json`, `.agents/plugins/marketplace.json` | Release-please version bumps, then synchronization from platform plugin manifests during artifact refresh | Manifest version consistency and generated-artifact evidence. |
+| Marketplace registry | `.claude-plugin/marketplace.json`, `.agents/plugins/marketplace.json` | Claude resolves the git commit because its manifest and marketplace entry intentionally omit `version`; release-please bumps the Codex version and artifact refresh synchronizes it | Cache-identity, manifest-version, and generated-artifact evidence. |
 | Release automation | `.github/workflows/release.yml`, `scripts/sync_release_pr.py`, `scripts/compose-release-notes.py`, `release-please-config.json` | Release PRs, synchronized release artifacts, immutable release-input snapshots, GitHub Releases, and release-note audits | Workflow rationale, PR Checks evidence, snapshot/composer contract evidence, and rollback notes. |
 
 For any mixed PR, combine the lanes. For example, a PR that changes plugin
@@ -112,19 +112,25 @@ Primary sources: [suite manifest](https://github.com/racecraft-lab/racecraft-plu
 
 ## Version Fields
 
-Treat version fields as owned by their source hierarchy:
+Treat cache identity and version fields as owned by their source hierarchy:
 
-- Release-please owns release version bumps for the Claude and Codex source
-  plugin manifests, the runner manifest's `plugin_version`, and both marketplace
-  registry version fields configured in `release-please-config.json`.
+- The Claude source manifest and Claude marketplace entry intentionally omit
+  `version`. For a relative path in a git-hosted marketplace, Claude Code then
+  uses the resolved commit SHA for update detection and the cache key. Do not
+  add either field back: a static manifest version masks newer commits and can
+  leave installed skill bytes stale. See Anthropic's
+  [version-management reference](https://code.claude.com/docs/en/plugins-reference#version-management).
+- Release-please owns release version bumps for the Codex source plugin
+  manifest, the runner manifest's `plugin_version`, and the Codex marketplace
+  registry version configured in `release-please-config.json`.
 - `scripts/refresh-release-artifacts.py` recomputes runner trust metadata,
   rebuilds generated payloads under `dist/`, synchronizes marketplace versions
   from source manifests.
 - `scripts/sync_release_pr.py` runs that refresh and the docs reference generator
   on the release PR branch, then commits and pushes the generated outputs when
   they changed.
-- Manual version edits should be rare and explicitly explained, such as a
-  maintainer-approved release recovery.
+- Manual Codex or runner version edits should be rare and explicitly explained,
+  such as a maintainer-approved release recovery.
 
 Primary sources: [release-please-config.json](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/release-please-config.json), [.release-please-manifest.json](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/.release-please-manifest.json), [Claude plugin manifest](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/speckit-pro/.claude-plugin/plugin.json), [Codex plugin manifest](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/speckit-pro/.codex-plugin/plugin.json), [Claude marketplace registry](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/.claude-plugin/marketplace.json), and [Codex marketplace registry](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/.agents/plugins/marketplace.json).
 
@@ -142,24 +148,35 @@ The maintainer-facing release flow is:
    payloads, marketplace versions, and
    generated references, then commits and pushes any changes onto the release
    PR branch. The workflow also dispatches `PR Checks` as a fallback.
-4. When the release PR is merged, release-please publishes the GitHub Release.
+4. `PR Checks` validates every commit cited by a maintainer in a resolved review
+   thread on a generated release PR. If regeneration drops a cited commit, the
+   existing required `validate-workflows` check fails before merge.
+5. When the release PR is merged, release-please publishes the GitHub Release.
    Post-release gates regenerate the docs reference and fail if `main` is not
    already artifact-consistent; the workflow does not open a second sync PR.
-5. `capture-release-note-inputs` captures the release action's raw body, tag,
+6. `capture-release-note-inputs` captures the release action's raw body, tag,
    Compare API response, and referenced PR bodies and labels as canonical JSON.
    It uploads that complete input set as a uniquely named, immutable artifact
    with a recorded SHA-256 and 90-day retention.
-6. `compose-release-notes` downloads that exact artifact by ID and rejects any
+7. `compose-release-notes` downloads that exact artifact by ID and rejects any
    artifact digest, snapshot SHA-256, schema, repository, tag, or provenance
    mismatch. `scripts/compose-release-notes.py` builds consumer Highlights from
    validated `release-note` blocks and bounded fallbacks, preserves the raw
    release-please body under `## Commit appendix`, and patches the GitHub
    Release. A persisted digest marker makes reruns idempotent.
-7. The workflow reads the published release back, verifies its structure,
+8. The workflow reads the published release back, verifies its structure,
    count metadata, byte length, and digests against the captured snapshot and
    composer result, then uploads a separate immutable release-note audit
-   artifact with 90-day retention. Composition or verification failures leave
-   an audit record and fail the workflow loudly.
+artifact with 90-day retention. Composition or verification failures leave
+an audit record and fail the workflow loudly.
+
+Release-please branches are generated state. Never push a product, security,
+documentation, or review fix directly to a branch whose name starts with
+`release-please--branches--`. Land the fix on `main` through its own pull
+request, then let release-please regenerate and the Release workflow reconcile
+the release PR. A direct release-branch commit can be discarded by the next
+regeneration; the ancestry check is the fail-closed backstop for any resolved
+review reply that cites such a commit.
 
 The manual `PR Checks` dispatch is observable repository behavior. If you
 explain the GitHub-token reason, scope it to this repository's workflow comments

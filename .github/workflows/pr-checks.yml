@@ -153,6 +153,7 @@ jobs:
     if: github.event_name == 'workflow_dispatch' || github.event.pull_request.draft == false
     permissions:
       contents: read
+      pull-requests: read
 
     steps:
       - name: Checkout repository
@@ -166,6 +167,12 @@ jobs:
 
       - name: Run actionlint
         run: python3 scripts/install-actionlint.py run
+
+      - name: Validate generated release PR commit ancestry
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event_name == 'pull_request' && github.event.pull_request.number || inputs.pr_number }}
+        run: python3 scripts/validate-release-pr-integrity.py
 
   # ───────────────────────────────────────────────────────────────────
   # Job 5: Validate docs-site and generated reference surfaces
