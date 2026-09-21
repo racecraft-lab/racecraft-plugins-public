@@ -129,9 +129,11 @@ def command_content(arguments=ARGUMENTS):
 
 
 def rendered(body=BODY, directory=DIRECTORY, arguments=ARGUMENTS):
+    plugin_root = str(Path(directory).parents[1]).encode()
     return (
         f"Base directory for this skill: {directory}\n".encode()
-        + body + b"\n\nARGUMENTS: " + arguments.encode()
+        + body.replace(b"${CLAUDE_PLUGIN_ROOT}", plugin_root)
+        + b"\n\nARGUMENTS: " + arguments.encode()
     ).decode()
 
 
@@ -219,6 +221,19 @@ class NativeClaudeActivationTests(unittest.TestCase):
         self.assertEqual(result["arguments"]["sha256"], hashlib.sha256(ARGUMENTS.encode()).hexdigest())
         self.assertNotIn(PROMPT, json.dumps(result))
         self.assertNotIn(DIRECTORY, json.dumps(result))
+
+    def test_witness_matches_native_plugin_root_expansion(self):
+        body = BODY + b"Read ${CLAUDE_PLUGIN_ROOT}/fixture.md.\n"
+        skill_bytes = SKILL_BYTES.replace(BODY, body)
+        expected = witness(staged_skill=skill_bytes)
+
+        receipt = parse_explicit_activation(
+            native_session_bytes(records(body=body)), expected,
+        )
+
+        self.assertEqual(receipt["authority"], AUTHORITY)
+        self.assertEqual(receipt["skill_source"]["body_sha256"],
+                         hashlib.sha256(body).hexdigest())
 
     def test_witness_accepts_one_evidence_bound_continuation(self):
         result = witness(raw_trace=continuation_trace())
@@ -345,8 +360,6 @@ class NativeClaudeActivationTests(unittest.TestCase):
             "not-explicit": {"prompt": "Please use static-skill"},
             "wrong-name": {"staged_skill": SKILL_BYTES.replace(
                 b"name: static-skill", b"name: other")},
-            "model-invocable": {"staged_skill": SKILL_BYTES.replace(
-                b"disable-model-invocation: true", b"disable-model-invocation: false")},
             "not-user-invocable": {"staged_skill": SKILL_BYTES.replace(
                 b"user-invocable: true", b"user-invocable: false")},
             "arguments-substitution": {"staged_skill": SKILL_BYTES + b"\n$ARGUMENTS\n"},
@@ -357,6 +370,16 @@ class NativeClaudeActivationTests(unittest.TestCase):
             with self.subTest(label=label):
                 with self.assertRaises(ClaudeActivationInvalid):
                     witness(**values)
+
+    def test_explicit_loader_evidence_accepts_model_invocable_user_skills(self):
+        for staged in (
+            SKILL_BYTES.replace(
+                b"disable-model-invocation: true", b"disable-model-invocation: false",
+            ),
+            SKILL_BYTES.replace(b"disable-model-invocation: true\n", b""),
+        ):
+            with self.subTest(staged=staged):
+                self.assertEqual(witness(staged_skill=staged)["skill"], SKILL)
 
     def test_regrade_uses_saved_raw_session_and_witness_only(self):
         expected = json.loads(json.dumps(witness()))

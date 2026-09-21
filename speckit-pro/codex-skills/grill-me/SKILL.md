@@ -26,8 +26,11 @@ direct reply.
 
 Abort in background or non-interactive execution, `codex exec`, CI, autopilot,
 any phase or consensus agent, and every subagent context. Say that Grill Me
-requires an active user conversation and that autopilot uses its Clarify
-consensus flow. Do not ask a question and do not write any file.
+requires an active user conversation and that autopilot uses the Clarify
+Question Set and consensus protocol. Do not ask a question and do not write any
+file. That refusal is the entire result: end immediately after naming that
+mechanism, and do not offer to start or continue the interview after a later
+reply.
 
 ## Codex interaction adapter
 

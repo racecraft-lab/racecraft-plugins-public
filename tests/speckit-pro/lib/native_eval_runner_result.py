@@ -77,6 +77,9 @@ def validate_check(check: Mapping[str, object], label: str) -> None:
           f"{label} expected_exit_code contradicts expected_status")
     _field_path(check.get("stdout_field_path"), f"{label} stdout_field_path")
     _field_path(check.get("response_field_path"), f"{label} response_field_path")
+    if "response_value_path" in check:
+        _field_path(check.get("response_value_path"),
+                    f"{label} response_value_path")
     _json_value(check.get("expected_stdout_value"), f"{label} expected_stdout_value")
 
 
@@ -454,7 +457,13 @@ def grade_result(
         reported = _lookup(
             final_values[0], check["response_field_path"], "reported runner response",
         )
-        if not _strict_equal(reported, actual["response"]):
+        expected_report = actual["response"]
+        if "response_value_path" in check:
+            expected_report = _lookup(
+                expected_report, check["response_value_path"],
+                "controller runner response",
+            )
+        if not _strict_equal(reported, expected_report):
             mismatches.append("reported response binding")
     except RunnerResultError:
         mismatches.append("reported response binding")

@@ -42,7 +42,7 @@ _TOOL_TYPES = frozenset({"CommandExecution", "FileChange", "McpToolCall",
 _FAILURE_EVENTS = frozenset({"error", "task_failed", "turn_aborted", "turn_failed"})
 _SKILL_CONTENT_KIND = "skills.selected_skill_instructions"
 _PROMPT_CONTENT_KIND = "user.text"
-_DISPATCH_ITEM_MARKER = re.compile(r"\[\[native-eval-item:([a-z0-9][a-z0-9._-]*)\]\]")
+_DISPATCH_ITEM_MARKER = re.compile(r"\[\[work-item:([a-z0-9][a-z0-9._-]*)\]\]")
 _FILE_CHANGE_KINDS = frozenset({"add", "update", "delete"})
 _EXEC_ITEM_ID_PATTERN = re.compile(
     r"exec-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
@@ -2063,6 +2063,7 @@ def _plan_repair_dispatch_trace(
         "id": call_id,
         "role": dispatch.get("role"),
         "message": message,
+        "delivery_text": delivery["text"],
         "task_input": _opaque(message),
         "invoked_at_ns": _timestamp_ns(
             call_record.get("timestamp"), "Plan-repair dispatch invocation",

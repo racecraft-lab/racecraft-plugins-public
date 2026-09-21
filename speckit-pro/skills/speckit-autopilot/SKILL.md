@@ -140,6 +140,45 @@ Initialize/recover its durable execution-control ledger before phase dispatch.
 It owns task metadata, native batching, proof reuse, and the shared repair/time
 ceilings across every phase, nested worker, and Post step.
 
+When a bounded request supplies an exact native command together with an
+invocation count or order, that command is the authority. Execute each listed
+command exactly once and in order, with no interpreter preflight, shell
+variable, wrapper, replay, capture redirection, or substituted command unless
+the request explicitly permits it. Consume the direct native result; do not
+rerun a helper merely to make its output easier to parse. The native tool result
+is the captured result: preserve that direct response for later artifacts. Do
+not issue a second invocation to obtain a file, exit code, stdout, or stderr.
+
+### Claude native worker lifecycle
+
+- Discover the current native worker, follow-up, wait/result, inspection,
+  interruption, and cleanup actions before dispatch. Do not infer a capability
+  from a tool name mentioned in prose.
+- Derive the usable worker count from the active surface. When no count is
+  exposed, use one worker as the safe fallback unless a narrower workflow
+  contract explicitly owns a bounded parallel group **and** the active native
+  surface can execute that group within its exposed limit. Work wider than the
+  usable count proceeds in waves; a named parallel group never overrides the
+  host's actual cap.
+- Task-list actions such as `TaskCreate`, `TaskUpdate`, and `TaskList` are
+  bookkeeping, not worker follow-up, wait, or result-consumption actions. Use
+  a separately discovered native worker action for those lifecycle steps. If
+  only a foreground worker call is available, its direct return is the final
+  report and each later call is a new attempt, not reuse.
+- Every asynchronous dispatch follows launch, bounded wait or polling, and
+  consumption of that worker's actual final report. A launch receipt, ordinary
+  message, timeout, or terminal status is not the required result.
+- A single timeout is only a poll boundary. Interrupt or cancel only a
+  confirmed stuck running turn after the separate execution deadline. An
+  interruption is neither closure nor a result.
+- After interruption or a missing result, reconcile the tracked dispatch and
+  owned effects once, then checkpoint unknown state. Never automatically
+  respawn work until the original attempt is proven unable to return.
+- Cleanup is best-effort when the host exposes it; do not retry-loop an
+  already-gone worker. When cleanup is absent, leave the completed inspectable
+  worker to the host. Before completion, audit every tracked worker and consume
+  every required final report.
+
 ### 0. Forbidden skill invocations
 
 <hard_constraints>
@@ -609,6 +648,10 @@ for phase in PHASES starting from first_pending:
         file's "## Atomicity Route" section. READ-ONLY + ADVISORY —
         the script writes nothing and never blocks; the SKILL is
         what records it.
+        The Phase 7 placeholder is invalid after G5. Parse `tasks.md` and
+        replace that placeholder in both the native visible progress plan and
+        `autopilot-state.json` with concrete task-group items and task IDs;
+        Analyze and Implement remain blocked until both stores are repaired.
     8d. After recording the atomicity route, run the layer planner only
         when route is exactly `split-PR`, and always before Analyze or
         Implement can continue:
@@ -684,6 +727,19 @@ The first Post action is to resolve the host-native subagent launcher and
 dispatch exactly three workers for the Doctor, Code Review, and Verify tracks.
 The parent MUST NOT perform any track-owned Task 10-14 action itself. It may
 continue only after it has consumed all three terminal worker reports.
+
+### 3.4 Pre-final completion audit
+
+Before any final user-facing response, re-read `autopilot-state.json` and the
+workflow file, reconcile both with the native visible progress plan, and audit
+the complete canonical Post list. A completion response is forbidden while
+any `Post:` item is pending, in progress, or missing. For the first Post
+parallel group, mark Doctor, Code Review, Verify Implementation, Verify Tasks
+Phantom Check, and Integration Suite in progress before dispatching the three
+workers. Later serial items advance one at a time. Completion requires every
+Post item to be completed or explicitly skipped **and** the created PR URL to
+be known; otherwise continue the loop or report an honest incomplete
+checkpoint, never a completion summary.
 
 ## Workflow File Update Protocol
 

@@ -142,7 +142,7 @@ def runner_result_check() -> dict[str, object]:
 def _opaque_message(value: object) -> dict[str, object]:
     encoded = json.dumps(value, sort_keys=True, separators=(",", ":"),
                          ensure_ascii=False, allow_nan=False).encode("utf-8")
-    markers = re.findall(r"\[\[native-eval-item:([a-z0-9][a-z0-9._-]*)\]\]", value) \
+    markers = re.findall(r"\[\[work-item:([a-z0-9][a-z0-9._-]*)\]\]", value) \
         if isinstance(value, str) else []
     return {
         "observed_item_ids": markers[:64], "observed_marker_count": len(markers),
@@ -159,7 +159,7 @@ def dispatch_observation() -> dict[str, object]:
     claude_results = []
     for index, role in enumerate(roles):
         identity = f"agent-{index}"
-        prompt = "Inspect the item. [[native-eval-item:dispatch-i1]]"
+        prompt = "Inspect the item. [[work-item:dispatch-i1]]"
         output = f"return-{index}"
         calls.append({
             "id": identity, "name": "subagent",
@@ -273,6 +273,7 @@ class NativeEvalCatalogTests(unittest.TestCase):
             "type": "native_plan_repair_context",
             "contexts": {"original-prompt": "input.txt"},
             "g3_request_path": "g3-request.json",
+            "context_request_path": "context-request.json",
             "executor_role": "phase-executor", "max_repairs": 2,
             "terminal_outcome": "pass",
         }
@@ -282,6 +283,10 @@ class NativeEvalCatalogTests(unittest.TestCase):
         value["fixtures"].append({
             "source": "tests/speckit-pro/fixtures/g3-request.json",
             "destination": "g3-request.json",
+        })
+        value["fixtures"].append({
+            "source": "tests/speckit-pro/fixtures/g3-request.json",
+            "destination": "context-request.json",
         })
         validated = validate_catalog(catalog(value), self.root)["cases"][0]
         self.assertEqual(validated["checks"][0], check)
@@ -296,6 +301,8 @@ class NativeEvalCatalogTests(unittest.TestCase):
             ("contexts", {"original": "missing.txt"}, "must reference declared fixtures"),
             ("g3_request_path", "../g3-request.json", "g3_request_path"),
             ("g3_request_path", "missing.json", "must reference declared fixtures"),
+            ("context_request_path", "../context-request.json", "context_request_path"),
+            ("context_request_path", "missing.json", "must reference declared fixtures"),
             ("executor_role", "speckit-pro:phase-executor", "executor_role is not a stable identifier"),
             ("max_repairs", 1, "max_repairs must be exactly 2"),
             ("max_repairs", True, "max_repairs must be exactly 2"),
@@ -601,6 +608,10 @@ class NativeEvalCatalogTests(unittest.TestCase):
         valid = case([runner_result_check()])
         accepted = validate_catalog(catalog(valid), self.root)["cases"][0]["checks"][0]
         self.assertEqual(accepted["expected_status"], "expected_failure")
+        nested = copy.deepcopy(valid)
+        nested["checks"][0]["response_value_path"] = ["data", "stdout_json"]
+        accepted_nested = validate_catalog(catalog(nested), self.root)["cases"][0]["checks"][0]
+        self.assertEqual(accepted_nested["response_value_path"], ["data", "stdout_json"])
         for field, value, message in (
             ("request_path", "../request.json", "request_path is malformed"),
             ("helper_id", "Resolve Binding", "helper_id is malformed"),
@@ -608,6 +619,7 @@ class NativeEvalCatalogTests(unittest.TestCase):
             ("expected_exit_code", True, "contradicts expected_status"),
             ("stdout_field_path", [], "stdout_field_path is malformed"),
             ("response_field_path", [""], "response_field_path is malformed"),
+            ("response_value_path", [], "response_value_path is malformed"),
         ):
             malformed = copy.deepcopy(valid)
             malformed["checks"][0][field] = value
@@ -1030,8 +1042,8 @@ class NativeEvalGradingTests(unittest.TestCase):
         variants.append(("failed", failed, "fail"))
         for name, prompt in (
             ("missing-marker", "Inspect the item."),
-            ("wrong-marker", "[[native-eval-item:other-item]]"),
-            ("duplicate-marker", "[[native-eval-item:dispatch-i1]] [[native-eval-item:dispatch-i1]]"),
+            ("wrong-marker", "[[work-item:other-item]]"),
+            ("duplicate-marker", "[[work-item:dispatch-i1]] [[work-item:dispatch-i1]]"),
         ):
             changed = copy.deepcopy(valid)
             changed["tool_calls"][0]["input"]["prompt"] = prompt
@@ -1091,7 +1103,7 @@ class NativeEvalGradingTests(unittest.TestCase):
 
         codex_evidence = self._synthesis_observation("codex")
         codex_call = codex_evidence["tool_calls"][2]
-        prompt = "Inspect the item. [[native-eval-item:dispatch-i1]]"
+        prompt = "Inspect the item. [[work-item:dispatch-i1]]"
         codex_call["input"] = {"message": prompt, "role": "default"}
         encoded = prompt.encode("utf-8")
         opaque = {
@@ -1127,6 +1139,22 @@ class NativeEvalGradingTests(unittest.TestCase):
         )
         self.assertEqual(
             grade_observation(value, codex_evidence, host="other")["status"], "invalid",
+        )
+
+    def test_native_subagent_dispatch_single_item_context_accepts_opaque_messages(self) -> None:
+        check = dispatch_check()
+        check["single_item_context"] = True
+        value = case([check])
+        value["resource_class"] = "nested"
+        evidence = dispatch_observation()
+        for index, call in enumerate(evidence["tool_calls"]):
+            prompt = f"Inspect the controller-bound single item for role {index}."
+            call["input"]["prompt"] = prompt
+            evidence["native_metadata"]["native_subagent_dispatch_attribution"][
+                "calls"
+            ][index].update(_opaque_message(prompt))
+        self.assertEqual(
+            grade_observation(value, evidence, host="claude")["status"], "pass",
         )
 
     @staticmethod

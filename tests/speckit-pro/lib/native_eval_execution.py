@@ -47,7 +47,11 @@ from native_eval_codex_rollouts import (
     parse_native_skill_injections,
     parse_native_tree,
 )
-from native_eval_dispatch_context import qualify_native_dispatch_context
+from native_eval_dispatch_context import (
+    contains_complete_json_value,
+    decode_sealed_plan_repair_payload,
+    qualify_native_dispatch_context,
+)
 from native_eval_grading import grade_observation
 from native_eval_fixture_reads import (
     bind_controller_fixture_read_witnesses,
@@ -89,7 +93,7 @@ _GIT_FIXTURE_V2 = "native-eval-fixtures/v2"
 _GIT_OBSERVATION_V1 = "native-eval-git-observation/v1"
 _CONTROLLER_GIT_OBSERVATION_V1 = "native-eval-controller-git-observation/v1"
 _OBJECT_ID = re.compile(r"[a-f0-9]{40}|[a-f0-9]{64}")
-_DISPATCH_ITEM_MARKER = re.compile(r"\[\[native-eval-item:([a-z0-9][a-z0-9._-]*)\]\]")
+_DISPATCH_ITEM_MARKER = re.compile(r"\[\[work-item:([a-z0-9][a-z0-9._-]*)\]\]")
 _MAX_DISPATCH_ITEM_MARKERS = 64
 _CODEX_UNFINISHED_ITEMS = "Codex capture has unfinished items"
 
@@ -353,13 +357,16 @@ def _sealed_plan_repair_inputs(
     for check in checks:
         contexts = check.get("contexts")
         request_path = check.get("g3_request_path")
+        context_request_path = check.get("context_request_path")
         if not isinstance(contexts, Mapping) or not contexts \
                 or not all(isinstance(key, str) and isinstance(value, str)
                            for key, value in contexts.items()) \
-                or not isinstance(request_path, str):
+                or not isinstance(request_path, str) \
+                or not isinstance(context_request_path, str):
             raise ValueError("Plan-repair check fixture declarations are malformed")
         required.update(contexts.values())
         required.add(request_path)
+        required.add(context_request_path)
 
     sealed: dict[str, object] = {}
     root = repo.resolve(strict=True)
@@ -3289,9 +3296,59 @@ def _bind_runner_result_context(
     attach_runner_result_receipt(observation, receipts)
 
 
+def _sealed_plan_repair_fixture_text(
+    fixtures: Mapping[str, object], path: str, *, malformed_error: str,
+    changed_error: str, not_text_error: str | None = None,
+) -> str:
+    record = fixtures.get(path)
+    if not isinstance(record, Mapping) or set(record) != {"text", "bytes", "sha256"}:
+        raise ValueError(malformed_error)
+    text = record.get("text")
+    if not isinstance(text, str):
+        raise ValueError(not_text_error or malformed_error)
+    encoded = text.encode("utf-8", errors="strict")
+    if record.get("bytes") != len(encoded) \
+            or record.get("sha256") != hashlib.sha256(encoded).hexdigest():
+        raise ValueError(changed_error)
+    return text
+
+
+def _strict_plan_repair_fixture_json(text: str, error: str) -> object:
+    values = _strict_json_stream(text)
+    if values is None or len(values) != 1:
+        raise ValueError(error)
+    return values[0]
+
+
+def _validated_plan_repair_g3_request(value: object) -> dict[str, object]:
+    if not isinstance(value, dict) or not isinstance(value.get("request_id"), str) \
+            or value.get("helper_id") != "validate-gate" \
+            or value.get("operation") != "validate-gate" \
+            or value.get("mode") != "read_only" \
+            or not isinstance(value.get("inputs"), dict) \
+            or value["inputs"].get("gate") != "G3":
+        raise ValueError("sealed Plan-repair G3 request contract is malformed")
+    return value
+
+
+def _validated_plan_repair_context_request(
+    value: object, declared: Mapping[str, object],
+) -> dict[str, object]:
+    inputs = value.get("inputs") if isinstance(value, dict) else None
+    if not isinstance(value, dict) \
+            or not isinstance(value.get("request_id"), str) \
+            or value.get("helper_id") != "render-plan-repair-context" \
+            or value.get("operation") != "render-plan-repair-context" \
+            or value.get("mode") != "read_only" \
+            or not isinstance(inputs, dict) \
+            or inputs.get("context_paths") != declared:
+        raise ValueError("sealed Plan-repair context request contract is malformed")
+    return value
+
+
 def _sealed_plan_repair_check(
     check: Mapping[str, object], launch: Mapping[str, object],
-) -> tuple[dict[str, str], dict[str, object]]:
+) -> tuple[dict[str, str], dict[str, object], dict[str, object]]:
     envelope = launch.get("native_plan_repair_inputs")
     fixtures = envelope.get("fixtures") if isinstance(envelope, Mapping) else None
     if not isinstance(envelope, Mapping) \
@@ -3302,46 +3359,218 @@ def _sealed_plan_repair_check(
         raise ValueError("sealed Plan-repair inputs are unavailable")
     declared = check.get("contexts")
     request_path = check.get("g3_request_path")
-    if not isinstance(declared, Mapping) or not declared or not isinstance(request_path, str):
+    context_request_path = check.get("context_request_path")
+    if not isinstance(declared, Mapping) or not declared \
+            or not isinstance(request_path, str) \
+            or not isinstance(context_request_path, str):
         raise ValueError("Plan-repair check fixture declarations are malformed")
     contexts: dict[str, str] = {}
     for context_id, path in declared.items():
-        record = fixtures.get(path)
-        if not isinstance(context_id, str) or not isinstance(path, str) \
-                or not isinstance(record, Mapping) or set(record) != {"text", "bytes", "sha256"}:
+        if not isinstance(context_id, str) or not isinstance(path, str):
             raise ValueError("sealed Plan-repair context is malformed")
-        text = record.get("text")
-        if not isinstance(text, str):
-            raise ValueError("sealed Plan-repair context is not text")
-        encoded = text.encode("utf-8", errors="strict")
-        if record.get("bytes") != len(encoded) \
-                or record.get("sha256") != hashlib.sha256(encoded).hexdigest():
-            raise ValueError("sealed Plan-repair context changed")
-        contexts[context_id] = text
-    request_record = fixtures.get(request_path)
-    if not isinstance(request_record, Mapping) or set(request_record) != {"text", "bytes", "sha256"} \
-            or not isinstance(request_record.get("text"), str):
-        raise ValueError("sealed Plan-repair G3 request is malformed")
-    request_bytes = request_record["text"].encode("utf-8", errors="strict")
-    if request_record.get("bytes") != len(request_bytes) \
-            or request_record.get("sha256") != hashlib.sha256(request_bytes).hexdigest():
-        raise ValueError("sealed Plan-repair G3 request changed")
-    try:
-        request = json.loads(
-            request_record["text"], object_pairs_hook=_unique_object,
-            parse_constant=lambda token: (_ for _ in ()).throw(
-                ValueError(f"invalid JSON constant: {token}")),
+        contexts[context_id] = _sealed_plan_repair_fixture_text(
+            fixtures, path,
+            malformed_error="sealed Plan-repair context is malformed",
+            not_text_error="sealed Plan-repair context is not text",
+            changed_error="sealed Plan-repair context changed",
         )
-    except (json.JSONDecodeError, ValueError) as exc:
-        raise ValueError("sealed Plan-repair G3 request is not strict JSON") from exc
-    if not isinstance(request, dict) or not isinstance(request.get("request_id"), str) \
-            or request.get("helper_id") != "validate-gate" \
-            or request.get("operation") != "validate-gate" \
-            or request.get("mode") != "read_only" \
-            or not isinstance(request.get("inputs"), dict) \
-            or request["inputs"].get("gate") != "G3":
-        raise ValueError("sealed Plan-repair G3 request contract is malformed")
-    return contexts, request
+    request_text = _sealed_plan_repair_fixture_text(
+        fixtures, request_path,
+        malformed_error="sealed Plan-repair G3 request is malformed",
+        changed_error="sealed Plan-repair G3 request changed",
+    )
+    request = _validated_plan_repair_g3_request(
+        _strict_plan_repair_fixture_json(
+            request_text, "sealed Plan-repair G3 request is not strict JSON",
+        )
+    )
+    context_request_text = _sealed_plan_repair_fixture_text(
+        fixtures, context_request_path,
+        malformed_error="sealed Plan-repair context request is malformed",
+        changed_error="sealed Plan-repair context request changed",
+    )
+    context_request = _validated_plan_repair_context_request(
+        _strict_plan_repair_fixture_json(
+            context_request_text,
+            "sealed Plan-repair context request is not strict JSON",
+        ),
+        declared,
+    )
+    return contexts, request, context_request
+
+
+def _plan_repair_renderer_response(
+    output: object, request: Mapping[str, object],
+) -> tuple[dict[str, object], dict[str, object], str, int] | None:
+    values = _strict_json_stream(output)
+    request_id = request.get("request_id")
+    candidates = [value for value in values or []
+                  if isinstance(value, dict) and value.get("request_id") == request_id]
+    if len(candidates) != 1:
+        return None
+    response = candidates[0]
+    data = response.get("data")
+    expected_stdin = {key: value for key, value in request.items() if key != "request_id"}
+    if not isinstance(data, Mapping) \
+            or not _strict_equal(data.get("stdin_request"), expected_stdin):
+        return None
+    encoded_response = json.dumps(
+        response, ensure_ascii=False, sort_keys=True, separators=(",", ":"),
+        allow_nan=False,
+    ).encode("utf-8", errors="strict")
+    payload = decode_sealed_plan_repair_payload(encoded_response.decode("utf-8"))
+    if payload is None:
+        return None
+    return (
+        payload, response, hashlib.sha256(encoded_response).hexdigest(),
+        len(encoded_response),
+    )
+
+
+def _normalized_plan_repair_command(
+    index: int, call: Mapping[str, object], host: str,
+    claude_completions: Mapping[object, Mapping[str, object]],
+    codex_commands: Mapping[str, Mapping[str, object]],
+) -> tuple[object, object, object, object] | None:
+    if host == "claude" and call.get("name") == "Bash":
+        supplied = call.get("input")
+        command = supplied.get("command") if isinstance(supplied, Mapping) else None
+        completion = claude_completions.get(index)
+        if not isinstance(completion, Mapping):
+            raise ValueError("Claude Plan-repair Bash completion is unavailable")
+        return (
+            command, call.get("position"), completion.get("tool_result_position"),
+            call.get("output"),
+        )
+    if host == "codex" and call.get("name") == "command_execution" \
+            and call.get("parent_id") is None:
+        raw_command = codex_commands.get(call.get("id"))
+        if not isinstance(raw_command, Mapping):
+            return None
+        supplied = raw_command.get("input")
+        command = supplied.get("command") if isinstance(supplied, Mapping) else None
+        output_record = raw_command.get("output")
+        output = output_record.get("stdout") if isinstance(output_record, Mapping) else None
+        return (
+            command, raw_command.get("started_at_ns"), raw_command.get("completed_at_ns"),
+            output,
+        )
+    return None
+
+
+def _plan_repair_command_receipts(
+    calls: list[dict[str, object]], host: str, python_names: set[str],
+    request_path: str, context_request_path: str,
+    request: Mapping[str, object], context_request: Mapping[str, object],
+    claude_completions: Mapping[object, Mapping[str, object]],
+    codex_commands: Mapping[str, Mapping[str, object]],
+) -> tuple[list[dict[str, object]], list[dict[str, object]]]:
+    commands: list[dict[str, object]] = []
+    renderers: list[dict[str, object]] = []
+    for index, call in enumerate(calls):
+        normalized = _normalized_plan_repair_command(
+            index, call, host, claude_completions, codex_commands,
+        )
+        if normalized is None:
+            continue
+        command, start, finish, output = normalized
+        g3_match = _runner_command_matches(command, python_names, request_path)
+        renderer_match = _runner_command_matches(
+            command, python_names, context_request_path,
+        )
+        if not g3_match and not renderer_match:
+            continue
+        if renderer_match:
+            if host == "claude" and call.get("success") is not True:
+                continue
+            rendered = _plan_repair_renderer_response(output, context_request)
+            if rendered is None:
+                continue
+            payload, response, response_sha, response_bytes = rendered
+            if type(start) is not int or type(finish) is not int or start > finish:
+                raise ValueError("Plan-repair renderer timing is unavailable")
+            renderers.append({
+                "tool_call_index": index, "call_id": call.get("id"),
+                "started": start, "completed": finish,
+                "response_sha256": response_sha,
+                "response_bytes": response_bytes,
+                "message_sha256": payload["message_sha256"],
+                "context_bundle_sha256": payload["context_bundle_sha256"],
+                "context_ids": payload["context_ids"],
+                "executor_message": payload["executor_message"],
+                "response": response,
+            })
+            continue
+        if host == "claude":
+            output = _normalized_claude_plan_repair_output(
+                output, call.get("success"), request,
+            )
+            if output is None:
+                continue
+        response = _runner_response(output, request)
+        if response is None:
+            continue
+        parsed, response_sha, response_bytes, passed = response
+        if type(start) is not int or type(finish) is not int or start > finish:
+            raise ValueError("Plan-repair command timing is unavailable")
+        commands.append({
+            "tool_call_index": index, "call_id": call.get("id"),
+            "started": start, "completed": finish,
+            "response_sha256": response_sha, "response_bytes": response_bytes,
+            "passed": passed, "response": parsed,
+        })
+    commands.sort(key=lambda item: (item["started"], item["completed"]))
+    renderers.sort(key=lambda item: (item["started"], item["completed"]))
+    return commands, renderers
+
+
+def _plan_repair_context_proof(
+    message: str, host: str, contexts: Mapping[str, str],
+    prior: Mapping[str, object] | None, renderer: Mapping[str, object] | None,
+    delivery_text: object,
+) -> dict[str, object]:
+    qualified_message = renderer["executor_message"] \
+        if isinstance(renderer, Mapping) else message
+    context_transport = "literal"
+    renderer_bound = isinstance(renderer, Mapping) and message == qualified_message
+    decoded_payload = decode_sealed_plan_repair_payload(message)
+    if decoded_payload is not None:
+        context_transport = "sealed_runner_envelope"
+        renderer_bound = isinstance(renderer, Mapping) \
+            and decoded_payload.get("message_sha256") \
+            == renderer.get("message_sha256") \
+            and decoded_payload.get("context_bundle_sha256") \
+            == renderer.get("context_bundle_sha256")
+    elif host == "codex" and isinstance(renderer, Mapping) \
+            and message != qualified_message:
+        context_transport = "encrypted_native_with_child_receipt"
+    context_digest = renderer.get("context_bundle_sha256") \
+        if isinstance(renderer, Mapping) else None
+    if host == "claude" and isinstance(renderer, Mapping) \
+            and message != qualified_message \
+            and decoded_payload is None:
+        context_transport = "claude_framed_renderer_envelope"
+        renderer_bound = contains_complete_json_value(
+            message, renderer.get("response"),
+        )
+    marker = f"PLAN_REPAIR_CONTEXT_SHA256={context_digest}"
+    child_return_bound = isinstance(delivery_text, str) \
+        and len(re.findall(rf"(?m)^{re.escape(marker)}$", delivery_text)) == 1
+    if context_transport == "encrypted_native_with_child_receipt":
+        renderer_bound = child_return_bound
+    proof = qualify_native_dispatch_context(
+        qualified_message, contexts, prior["response"] if prior is not None else {},
+    )
+    proof["context_transport"] = context_transport
+    encoded_transport = message.encode("utf-8", errors="strict")
+    proof["message_sha256"] = hashlib.sha256(encoded_transport).hexdigest()
+    proof["message_bytes"] = len(encoded_transport)
+    proof["rendered_message_sha256"] = renderer.get("message_sha256") \
+        if isinstance(renderer, Mapping) else None
+    proof["context_bundle_sha256"] = context_digest
+    proof["child_return_digest_bound"] = child_return_bound
+    proof["renderer_bound"] = renderer_bound
+    return proof
 
 
 def _bind_plan_repair_context(
@@ -3395,52 +3624,14 @@ def _bind_plan_repair_context(
         if isinstance(item, Mapping)
     } if host == "claude" and isinstance(completions, list) else {}
     for check in checks:
-        contexts, request = _sealed_plan_repair_check(check, launch)
+        contexts, request, context_request = _sealed_plan_repair_check(check, launch)
         request_path = check["g3_request_path"]
-        commands = []
+        context_request_path = check["context_request_path"]
+        commands, renderers = _plan_repair_command_receipts(
+            calls, host, python_names, request_path, context_request_path,
+            request, context_request, claude_completions, codex_commands,
+        )
         dispatches = []
-        for index, call in enumerate(calls):
-            if host == "claude" and call.get("name") == "Bash":
-                supplied = call.get("input")
-                command = supplied.get("command") if isinstance(supplied, Mapping) else None
-                completion = claude_completions.get(index)
-                if not isinstance(completion, Mapping):
-                    raise ValueError("Claude Plan-repair Bash completion is unavailable")
-                start, finish = call.get("position"), completion.get("tool_result_position")
-                output = call.get("output")
-            elif host == "codex" and call.get("name") == "command_execution" \
-                    and call.get("parent_id") is None:
-                raw_command = codex_commands.get(call.get("id"))
-                if not isinstance(raw_command, Mapping):
-                    continue
-                supplied = raw_command.get("input")
-                command = supplied.get("command") if isinstance(supplied, Mapping) else None
-                start, finish = raw_command.get("started_at_ns"), raw_command.get("completed_at_ns")
-                output_record = raw_command.get("output")
-                output = output_record.get("stdout") if isinstance(output_record, Mapping) else None
-            else:
-                continue
-            if not _runner_command_matches(command, python_names, request_path):
-                continue
-            if host == "claude":
-                output = _normalized_claude_plan_repair_output(
-                    output, call.get("success"), request,
-                )
-                if output is None:
-                    continue
-            response = _runner_response(output, request)
-            if response is None:
-                continue
-            parsed, response_sha, response_bytes, passed = response
-            if type(start) is not int or type(finish) is not int or start > finish:
-                raise ValueError("Plan-repair command timing is unavailable")
-            commands.append({
-                "tool_call_index": index, "call_id": call.get("id"),
-                "started": start, "completed": finish,
-                "response_sha256": response_sha, "response_bytes": response_bytes,
-                "passed": passed, "response": parsed,
-            })
-        commands.sort(key=lambda item: (item["started"], item["completed"]))
 
         for index, call in enumerate(calls):
             if call.get("name") != "subagent" or call.get("parent_id") is not None:
@@ -3453,6 +3644,7 @@ def _bind_plan_repair_context(
                 returned = returns_by_index.get(index)
                 finish = returned.get("completion_index") if isinstance(returned, Mapping) else None
                 opaque = None
+                delivery_text = call.get("output")
             else:
                 raw_dispatch = codex_dispatches.get(call.get("id"))
                 if not isinstance(raw_dispatch, Mapping):
@@ -3460,22 +3652,30 @@ def _bind_plan_repair_context(
                 message, role = raw_dispatch.get("message"), raw_dispatch.get("role")
                 start, finish = raw_dispatch.get("invoked_at_ns"), raw_dispatch.get("returned_at_ns")
                 opaque = raw_dispatch.get("task_input")
+                delivery_text = raw_dispatch.get("delivery_text")
                 task_input = supplied.get("task_input") if isinstance(supplied, Mapping) else None
                 if opaque != task_input:
                     raise ValueError("Codex Plan-repair opaque task input is inconsistent")
             if not isinstance(message, str) or type(start) is not int or type(finish) is not int:
                 raise ValueError("Plan-repair dispatch lifecycle evidence is unavailable")
-            proof = qualify_native_dispatch_context(message, contexts, {})
             preceding = [command for command in commands if command["completed"] < start]
             prior = preceding[-1] if preceding else None
-            if prior is not None:
-                proof = qualify_native_dispatch_context(message, contexts, prior["response"])
+            preceding_renderers = [
+                renderer for renderer in renderers
+                if renderer["completed"] < start
+                and (prior is None or prior["completed"] < renderer["started"])
+            ]
+            renderer = preceding_renderers[-1] if preceding_renderers else None
+            proof = _plan_repair_context_proof(
+                message, host, contexts, prior, renderer, delivery_text,
+            )
             reruns = [command for command in commands if command["started"] > finish]
             rerun = reruns[0] if reruns else None
             dispatches.append({
                 "tool_call_index": index, "call_id": call.get("id"), "role": role,
                 "started": start, "returned": finish,
                 "preceding_g3_call_id": prior.get("call_id") if prior else None,
+                "preceding_renderer_call_id": renderer.get("call_id") if renderer else None,
                 "rerun_g3_call_id": rerun.get("call_id") if rerun else None,
                 "context_proof": proof,
                 "opaque_task_input": opaque,
@@ -3484,9 +3684,12 @@ def _bind_plan_repair_context(
         dispatches.sort(key=lambda item: (item["started"], item["returned"]))
         for command in commands:
             command.pop("response")
+        for renderer in renderers:
+            renderer.pop("executor_message")
+            renderer.pop("response")
         receipts.append({
             "check_id": check.get("id"), "commands": commands,
-            "dispatches": dispatches,
+            "renderers": renderers, "dispatches": dispatches,
         })
     metadata["native_plan_repair_context"] = {
         "schema": "native-plan-repair-context/v1",

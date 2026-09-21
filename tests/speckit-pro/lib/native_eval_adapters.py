@@ -175,6 +175,12 @@ _TRIGGER_MEASUREMENT_INSTRUCTIONS = {
         "paths, edit files, or execute the requested workflow. Stop after the selection response."
     ),
 }
+_CLAUDE_REFERENCE_ACCESS_INSTRUCTION = (
+    "The selected skill's references directory is mirrored for this evaluation at the exact "
+    "absolute directory `{read_root}`. Whenever the skill directs you to read "
+    "`references/<path>`, read `{read_root}/<path>` instead. The mirror is byte-identical "
+    "installed reference content; do not read the plugin installation path."
+)
 _CODEX_HELPERS: object | None = None
 _ISOLATION_CONTROL = b"native-eval-isolation-control/v1\n"
 _ISOLATION_DENIAL = re.compile(
@@ -2357,7 +2363,7 @@ def _trigger_identity(
 def _claude_explicit_activation_input(
     prompt: str, skill: object, plugin: Path,
 ) -> tuple[str, dict[str, object] | None]:
-    """Render a manual-only staged skill as one explicit native user command."""
+    """Render a functional staged skill as one explicit native user command."""
     if skill is None:
         return prompt, None
     _require(isinstance(skill, str)
@@ -2384,12 +2390,10 @@ def _claude_explicit_activation_input(
         key, value = match.groups()
         _require(key not in fields, f"Claude staged skill has duplicate {key} frontmatter")
         fields[key] = value.strip()
-    if fields.get("disable-model-invocation") != "true":
-        return prompt, None
     _require(fields.get("name") == leaf,
-             "Claude manual-only skill name does not match its command")
+             "Claude skill name does not match its command")
     _require(fields.get("user-invocable") == "true",
-             "Claude manual-only skill is not explicitly user-invocable")
+             "Claude skill is not explicitly user-invocable")
     rendered = f"/{skill} {prompt}"
     return rendered, {
         "schema_version": "native-claude-explicit-activation-input/v1",
@@ -2407,7 +2411,7 @@ def _claude_explicit_activation_input(
 def _claude_reference_access(
     case_dir: Path, plugin: Path, skill: object,
 ) -> dict[str, object] | None:
-    """Grant the official runner read access to one staged skill's references."""
+    """Copy one selected skill's references inside the official runner's case boundary."""
     if skill is None:
         return None
     _require(isinstance(skill, str)
@@ -2420,17 +2424,18 @@ def _claude_reference_access(
         return None
     _require(target.is_dir() and not target.is_symlink(),
              "Claude staged skill references are not a plain directory")
-    link_name = ".native-eval-skill-references"
-    link = case_dir / link_name
-    _require(not link.exists() and not link.is_symlink(),
-             "Claude staged skill reference grant already exists")
-    link.symlink_to(os.path.relpath(target, start=case_dir), target_is_directory=True)
+    add_dir = ".native-eval-skill-references"
+    granted = case_dir / add_dir
+    _copy_tree(target, granted)
+    tree_sha256 = _tree_digest(target)
+    _require(_tree_digest(granted) == tree_sha256,
+             "Claude staged skill reference copy differs from its selected source")
     return {
-        "schema_version": "native-claude-reference-access/v2",
+        "schema_version": "native-claude-reference-access/v4",
         "skill": skill,
-        "add_dir": link_name,
+        "add_dir": add_dir,
         "target": target_relative.as_posix(),
-        "tree_sha256": _tree_digest(target),
+        "tree_sha256": tree_sha256,
     }
 
 
@@ -2529,13 +2534,6 @@ def _prepare_claude(
     reference_access = _claude_reference_access(
         case_dir, plugin, host_settings.get("skill"),
     )
-    if reference_access is not None:
-        link_relative = (
-            case_dir / str(reference_access["add_dir"])
-        ).relative_to(plugin).as_posix()
-        staged_tree_exclusions = _merge_staged_file_exclusions(
-            staged_tree_exclusions, (link_relative,),
-        )
     _write_text(case_dir / "prompt.md", f"{prompt.rstrip()}\n")
     _write_text(
         case_dir / "graders" / "transport.md",
@@ -2549,9 +2547,20 @@ def _prepare_claude(
         f"  timeout_seconds: {case['timeout_seconds']}\n"
         f"  allowed_tools: {json.dumps(tools)}\n"
     )
-    trigger_instruction = _TRIGGER_MEASUREMENT_INSTRUCTIONS["claude"] if trigger_stage is not None else None
+    system_instructions: list[str] = []
+    trigger_instruction = (
+        _TRIGGER_MEASUREMENT_INSTRUCTIONS["claude"] if trigger_stage is not None else None
+    )
     if trigger_instruction is not None:
-        case_config += f"  append_system_prompt: {json.dumps(trigger_instruction)}\n"
+        system_instructions.append(trigger_instruction)
+    if reference_access is not None:
+        system_instructions.append(_CLAUDE_REFERENCE_ACCESS_INSTRUCTION.format(
+            read_root=str(case_dir / str(reference_access["add_dir"])),
+        ))
+    if system_instructions:
+        case_config += (
+            f"  append_system_prompt: {json.dumps(chr(10).join(system_instructions))}\n"
+        )
     external_git_receipt = git_settings is not None and not plan["fixtures"] \
         and prepared_upstream is None
     needs_scaffold = bool(plan["fixtures"]) or prepared_upstream is not None \
@@ -3807,7 +3816,7 @@ def _retain_git_observation(
 def _verify_claude_reference_access(
     prepared: PreparedTrial, settings: Mapping[str, object],
 ) -> str | None:
-    """Verify the exact excluded symlink and immutable reference tree."""
+    """Verify the immutable selected source and its in-case reference copy."""
     value = settings.get("claude_reference_access")
     if value is None:
         return None
@@ -3816,18 +3825,13 @@ def _verify_claude_reference_access(
              and set(value) == {"schema_version", "skill", "add_dir", "target", "tree_sha256"},
              "prepared Claude reference access identity is malformed")
     skill = value["skill"]
-    _require(value["schema_version"] == "native-claude-reference-access/v2"
+    _require(value["schema_version"] == "native-claude-reference-access/v4"
              and isinstance(skill, str)
              and _CLAUDE_SKILL_NAME.fullmatch(skill) is not None
-             and value["add_dir"] == ".native-eval-skill-references"
+             and isinstance(value["add_dir"], str)
              and isinstance(value["tree_sha256"], str)
              and re.fullmatch(r"[0-9a-f]{64}", value["tree_sha256"]) is not None,
              "prepared Claude reference access identity is malformed")
-    allowed_tools = settings.get("allowed_tools")
-    _require(isinstance(allowed_tools, list)
-             and any(isinstance(tool, str) and tool.partition("(")[0] == "Read"
-                     for tool in allowed_tools),
-             "prepared Claude reference access lacks Read permission")
     leaf = skill.rsplit(":", 1)[1]
     target_relative = PurePosixPath("skills") / leaf / "references"
     _require(value["target"] == target_relative.as_posix(),
@@ -3837,26 +3841,23 @@ def _verify_claude_reference_access(
              "prepared Claude reference access case identity is malformed")
     case_dir = prepared.cwd / "evals" / case_id
     target = prepared.cwd.joinpath(*target_relative.parts)
-    link = case_dir / str(value["add_dir"])
+    granted = case_dir / str(value["add_dir"])
     try:
         case_status = case_dir.lstat()
         target_status = target.lstat()
-        link_status = link.lstat()
-        link_value = os.readlink(link)
-        resolved_link = link.resolve(strict=True)
-        resolved_target = target.resolve(strict=True)
+        granted_status = granted.lstat()
     except OSError as exc:
         raise NativeAdapterError("prepared Claude reference access is unavailable") from exc
     _require(stat.S_ISDIR(case_status.st_mode) and not stat.S_ISLNK(case_status.st_mode)
              and stat.S_ISDIR(target_status.st_mode) and not stat.S_ISLNK(target_status.st_mode)
-             and stat.S_ISLNK(link_status.st_mode),
+             and stat.S_ISDIR(granted_status.st_mode) and not stat.S_ISLNK(granted_status.st_mode),
              "prepared Claude reference access path is unsafe")
-    expected_link = os.path.relpath(target, start=case_dir)
-    _require(link_value == expected_link and resolved_link == resolved_target,
-             "prepared Claude reference access symlink changed")
-    _require(_tree_digest(target) == value["tree_sha256"],
+    _require(value["add_dir"] == ".native-eval-skill-references",
+             "prepared Claude reference access target changed")
+    _require(_tree_digest(target) == value["tree_sha256"]
+             and _tree_digest(granted) == value["tree_sha256"],
              "prepared Claude reference tree changed")
-    return link.relative_to(prepared.cwd).as_posix()
+    return None
 
 
 def _validated_git_fixture_settings(prepared: PreparedTrial) -> Mapping[str, object] | None:

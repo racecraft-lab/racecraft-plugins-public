@@ -383,6 +383,14 @@ def _validate_native_subagent_dispatch(
             _check_label(case_id, check_id,
                          "expected_by_host must define equivalent item_ids"),
         )
+    single_item_context = check.get("single_item_context", False)
+    _require(type(single_item_context) is bool,
+             _check_label(case_id, check_id, "single_item_context must be boolean"))
+    if single_item_context:
+        _require(all(len({item_id for item_id, _role in pairs}) == 1
+                     for pairs in pairs_by_contract.values()),
+                 _check_label(case_id, check_id,
+                              "single_item_context requires exactly one item_id"))
     forbidden = [
         _stable_id(role, _check_label(case_id, check_id, "forbidden_roles item"))
         for role in _unique_text_list(
@@ -407,6 +415,10 @@ def _validate_native_plan_repair_context(
         _relative_path(path, _check_label(case_id, check_id, "context path"))
     _relative_path(
         check["g3_request_path"], _check_label(case_id, check_id, "g3_request_path"),
+    )
+    _relative_path(
+        check["context_request_path"],
+        _check_label(case_id, check_id, "context_request_path"),
     )
     _stable_id(
         check["executor_role"], _check_label(case_id, check_id, "executor_role"),
@@ -455,7 +467,8 @@ _CHECK_FIELDS = {
     "native_synthesis_mechanism": {"artifact_path", "per_host"},
     "native_subagent_dispatch": {"forbidden_roles"},
     "native_plan_repair_context": {
-        "contexts", "g3_request_path", "executor_role", "max_repairs", "terminal_outcome",
+        "contexts", "g3_request_path", "context_request_path", "executor_role",
+        "max_repairs", "terminal_outcome",
     },
     "native_git_final_state": set(NATIVE_GIT_FINAL_STATE_FIELDS),
     "native_verification_pointer": set(NATIVE_VERIFICATION_POINTER_FIELDS),
@@ -493,8 +506,11 @@ def _validate_check(check: object, requirement_ids: set[str], case_id: str) -> N
     required = {"id", "requirement", "type"} | _CHECK_FIELDS[check_type]
     optional = ({"input_regex", "include_failed"} if check_type == "tool_used" else
                 {"alternatives"} if check_type == "json_field" else
-                {"expected", "expected_by_host"} if check_type == "native_subagent_dispatch" else
+                {"expected", "expected_by_host", "single_item_context"}
+                if check_type == "native_subagent_dispatch" else
                 {"registered_worktrees_unchanged"} if check_type == "native_git_final_state" else set())
+    if check_type == "native_runner_result":
+        optional = {"response_value_path"}
     allowed = required | optional
     _require(required <= set(check) <= allowed, _check_label(case_id, check_id, "has malformed parameters"))
     _CHECK_VALIDATORS[check_type](check, case_id, check_id)
@@ -690,7 +706,10 @@ def _validate_case(case: object, repo_root: Path) -> None:
         _require(check["request_path"] in declared_fixture_paths,
                  f"case {case_id} native runner request_path must reference a declared fixture")
     for check in plan_repair_checks:
-        required_fixture_paths = {*check["contexts"].values(), check["g3_request_path"]}
+        required_fixture_paths = {
+            *check["contexts"].values(), check["g3_request_path"],
+            check["context_request_path"],
+        }
         _require(required_fixture_paths <= declared_fixture_paths,
                  f"case {case_id} native Plan-repair context must reference declared fixtures")
     check_ids = [check["id"] for check in checks]

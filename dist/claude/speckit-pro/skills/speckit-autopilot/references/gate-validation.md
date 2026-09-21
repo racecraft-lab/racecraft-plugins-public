@@ -120,10 +120,24 @@ Before the first repair attempt:
 | --- | --- | --- | --- | --- | --- | --- |
 ```
 
-For each attempt, dispatch the same Plan phase executor with the original Plan
-prompt plus a `Plan Repair Context` containing the exact G3 JSON, disputed
-wording, source evidence, provenance class, prior repair result, and attempt
-number. The repair rules are:
+For each attempt, dispatch the same Plan phase executor with literal trusted
+context blocks containing the complete original Plan prompt and the direct
+source evidence used for provenance. Add a `Plan Repair Context` containing the
+complete immediately preceding actual G3 runner response envelope without
+summary or field omission (including its exact G3 JSON), disputed wording,
+provenance class, prior repair result, and attempt number. The repair rules are:
+
+Render that context through `render-plan-repair-context` and dispatch its
+unchanged successful response envelope. The executor must copy the rendered
+`PLAN_REPAIR_CONTEXT_SHA256=<digest>` receipt into its final return exactly.
+This receipt preserves an authenticated context binding when a native client
+retains the child prompt only in encrypted form.
+
+The parent orchestrator, not the Plan executor, invokes the authoritative G3
+runner once before the first repair and again after every completed executor
+return. The executor receives the parent's complete immediately preceding G3
+envelope and must not run G3 itself. Each repair therefore has the strict order
+`parent G3 -> executor dispatch and return -> parent G3 rerun`.
 
 - `assistant-inference`: remove or narrow only the unsupported strengthening;
   retain the source-supported requirement and any marker whose actual choice
@@ -147,6 +161,12 @@ failed G3 verdict, record the evidence gap, and follow the normal bounded repair
 then escalation sequence. Do not turn the proposal into established
 architecture evidence, clear the marker, or report G3 passed merely because the
 desired behavior came from a human.
+
+The executor message itself must contain the exact trusted-context bytes and
+the complete parsed G3 response object. A path, instruction to read, excerpt,
+summary, or reconstructed subset is not equivalent. Verify those complete
+values are literal substrings of the message before dispatch; repair the
+message first if any value is absent.
 
 After every completed Plan repair, run `validate-gate` for G3 again and append
 the returned result to the log. Stop when G3 passes, its shared corrective

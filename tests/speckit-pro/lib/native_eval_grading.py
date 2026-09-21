@@ -22,7 +22,7 @@ _OBSERVATION_FIELDS = {"completed", "error", "final_text", "activations", "tool_
 _OBSERVATION_OPTIONAL_FIELDS = {"native_metadata"}
 _TOOL_FIELDS = {"name", "input", "success"}
 _TOOL_OPTIONAL_FIELDS = {"id", "parent_id", "position", "output"}
-_DISPATCH_ITEM_MARKER = re.compile(r"\[\[native-eval-item:([a-z0-9][a-z0-9._-]*)\]\]")
+_DISPATCH_ITEM_MARKER = re.compile(r"\[\[work-item:([a-z0-9][a-z0-9._-]*)\]\]")
 _STABLE_ID = re.compile(r"[a-z0-9][a-z0-9._-]*")
 _MAX_DISPATCH_ITEM_MARKERS = 64
 
@@ -317,7 +317,7 @@ def _input_text(value: object) -> str:
 
 
 _NON_INVOKING_COMMANDS = frozenset({
-    "cat", "find", "grep", "jq", "nl", "rg", "ripwire", "sed",
+    "cat", "echo", "find", "grep", "jq", "nl", "printf", "rg", "ripwire", "sed",
 })
 _COMMAND_SHELLS = frozenset({"sh", "bash", "zsh"})
 
@@ -340,11 +340,14 @@ def _command_invocation_text(value: object) -> str:
             tokens = shlex.split(command, comments=False, posix=True)
         except ValueError:
             return _input_text(value)
-    if (not tokens or any(character in command for character in ";|&`")
-            or "$(" in command or "${" in command):
+    if not tokens:
         return _input_text(value)
     executable = PurePosixPath(tokens[0]).name
-    if executable in _NON_INVOKING_COMMANDS:
+    compound = (
+        any(token in {";", "|", "||", "&&", "&"} for token in tokens)
+        or any("`" in token or "$(" in token or "${" in token for token in tokens)
+    )
+    if executable in _NON_INVOKING_COMMANDS and not compound:
         return executable
     return command
 
@@ -364,7 +367,8 @@ def _tool_used(check: dict[str, Any], observation: dict[str, Any]) -> tuple[str,
                 if re.search(
                     check["input_regex"],
                     _command_invocation_text(call["input"])
-                    if call["name"] == "command_execution" else _input_text(call["input"]),
+                    if call["name"] in {"Bash", "command_execution"}
+                    else _input_text(call["input"]),
                 ) is not None
             ]
         except re.error as exc:
@@ -829,6 +833,8 @@ def _native_subagent_dispatch(
     if contract is None:
         return "invalid", "catalog native subagent dispatch is malformed"
     expected_pairs, forbidden_set = contract
+    expected_item_ids = {item_id for item_id, _role in expected_pairs}
+    single_item_context = check.get("single_item_context") is True
     attributions, error = _dispatch_attributions(observation, host)
     if error is not None:
         return "invalid", error
@@ -846,7 +852,10 @@ def _native_subagent_dispatch(
         role = _role_name(role)
         proof = attributions[index]
         markers = proof["observed_item_ids"]
-        if proof["markers_truncated"] or proof["observed_marker_count"] != 1:
+        if proof["observed_marker_count"] == 0 and single_item_context \
+                and len(expected_item_ids) == 1:
+            actual_pairs.append((next(iter(expected_item_ids)), role))
+        elif proof["markers_truncated"] or proof["observed_marker_count"] != 1:
             problems.append(f"dispatch {index} did not contain exactly one item marker")
         else:
             actual_pairs.append((markers[0], role))
@@ -865,52 +874,16 @@ def _native_subagent_dispatch(
     return "pass", "exact parent-owned native dispatches completed and returned for every item-role pair"
 
 
-def _native_plan_repair_context(
-    check: dict[str, Any], observation: dict[str, Any], host: str | None,
-) -> tuple[str, str]:
-    if host not in {"claude", "codex"}:
-        return "invalid", "native Plan-repair context requires a trusted subject host"
-    contexts = check.get("contexts")
-    request_path = check.get("g3_request_path")
-    role = check.get("executor_role")
-    maximum = check.get("max_repairs")
-    terminal = check.get("terminal_outcome")
-    if not isinstance(contexts, dict) or not contexts \
-            or any(_STABLE_ID.fullmatch(key) is None or not _canonical_path(path)
-                   for key, path in contexts.items()
-                   if isinstance(key, str) and isinstance(path, str)) \
-            or not all(isinstance(key, str) and isinstance(path, str)
-                       for key, path in contexts.items()) \
-            or not _canonical_path(request_path) \
-            or not isinstance(role, str) or _STABLE_ID.fullmatch(role) is None \
-            or type(maximum) is not int or maximum != 2 \
-            or terminal not in {"pass", "unresolved"}:
-        return "invalid", "catalog native Plan-repair context check is malformed"
-    metadata = observation.get("native_metadata")
-    receipt = metadata.get("native_plan_repair_context") if isinstance(metadata, dict) else None
-    if not isinstance(receipt, dict) or set(receipt) != {"schema", "authority", "checks"} \
-            or receipt.get("schema") != "native-plan-repair-context/v1" \
-            or receipt.get("authority") != "controller-bound-retained-native-evidence" \
-            or not isinstance(receipt.get("checks"), list):
-        return "invalid", "native Plan-repair context receipt is missing or malformed"
-    matches = [item for item in receipt["checks"] if isinstance(item, dict)
-               and item.get("check_id") == check.get("id")]
-    if len(matches) != 1 or set(matches[0]) != {"check_id", "commands", "dispatches"}:
-        return "invalid", "native Plan-repair context receipt does not bind its check"
-    commands, dispatches = matches[0]["commands"], matches[0]["dispatches"]
-    if not isinstance(commands, list) or not isinstance(dispatches, list):
-        return "invalid", "native Plan-repair context receipt entries are malformed"
-    calls = observation["tool_calls"]
+def _validate_plan_repair_command_receipts(
+    commands: list[Any],
+    calls: list[dict[str, Any]],
+    host: str,
+    seen_calls: set[str],
+) -> tuple[str, str] | None:
     command_fields = {
         "tool_call_index", "call_id", "started", "completed",
         "response_sha256", "response_bytes", "passed",
     }
-    dispatch_fields = {
-        "tool_call_index", "call_id", "role", "started", "returned",
-        "preceding_g3_call_id", "rerun_g3_call_id", "context_proof",
-        "opaque_task_input", "return_bound",
-    }
-    seen_calls: set[str] = set()
     for item in commands:
         if not isinstance(item, dict) or set(item) != command_fields:
             return "invalid", "native Plan-repair command receipt is malformed"
@@ -928,11 +901,54 @@ def _native_plan_repair_context(
                 or type(item["passed"]) is not bool:
             return "invalid", "native Plan-repair command receipt conflicts with native calls"
         seen_calls.add(call_id)
-    direct = [index for index, call in enumerate(calls)
-              if call.get("name") == "subagent" and call.get("parent_id") is None]
-    if len(dispatches) != len(direct):
-        return "fail", "Plan-repair dispatch count does not match root native dispatches"
-    expected_context_ids = sorted(contexts)
+    return None
+
+
+def _validate_plan_repair_renderer_receipts(
+    renderers: list[Any],
+    calls: list[dict[str, Any]],
+    host: str,
+    contexts: dict[str, str],
+    seen_calls: set[str],
+) -> tuple[str, str] | None:
+    renderer_fields = {
+        "tool_call_index", "call_id", "started", "completed",
+        "response_sha256", "response_bytes", "message_sha256",
+        "context_bundle_sha256", "context_ids",
+    }
+    for item in renderers:
+        if not isinstance(item, dict) or set(item) != renderer_fields:
+            return "invalid", "native Plan-repair renderer receipt is malformed"
+        index, call_id = item["tool_call_index"], item["call_id"]
+        expected_name = "Bash" if host == "claude" else "command_execution"
+        if type(index) is not int or not (0 <= index < len(calls)) \
+                or call_id != calls[index].get("id") \
+                or calls[index].get("name") != expected_name \
+                or calls[index].get("parent_id") is not None \
+                or not isinstance(call_id, str) or call_id in seen_calls \
+                or type(item["started"]) is not int or type(item["completed"]) is not int \
+                or item["started"] > item["completed"] \
+                or any(not isinstance(item[field], str)
+                       or re.fullmatch(r"[a-f0-9]{64}", item[field]) is None
+                       for field in ("response_sha256", "message_sha256",
+                                     "context_bundle_sha256")) \
+                or type(item["response_bytes"]) is not int or item["response_bytes"] <= 0 \
+                or item["context_ids"] != sorted(contexts):
+            return "invalid", "native Plan-repair renderer receipt conflicts with native calls"
+        seen_calls.add(call_id)
+    return None
+
+
+def _validate_plan_repair_dispatch_receipts(
+    dispatches: list[Any],
+    calls: list[dict[str, Any]],
+    direct: list[int],
+) -> tuple[str, str] | None:
+    dispatch_fields = {
+        "tool_call_index", "call_id", "role", "started", "returned",
+        "preceding_g3_call_id", "preceding_renderer_call_id", "rerun_g3_call_id",
+        "context_proof", "opaque_task_input", "return_bound",
+    }
     for item in dispatches:
         if not isinstance(item, dict) or set(item) != dispatch_fields:
             return "invalid", "native Plan-repair dispatch receipt is malformed"
@@ -942,17 +958,47 @@ def _native_plan_repair_context(
                 or item["started"] > item["returned"] \
                 or not isinstance(proof, dict) or set(proof) != {
                     "message_sha256", "message_bytes", "observed_context_ids",
-                    "complete_preceding_json_found",
+                    "complete_preceding_json_found", "context_transport",
+                    "rendered_message_sha256", "context_bundle_sha256",
+                    "child_return_digest_bound", "renderer_bound",
                 } or not isinstance(proof.get("message_sha256"), str) \
                 or re.fullmatch(r"[a-f0-9]{64}", proof["message_sha256"]) is None \
                 or type(proof.get("message_bytes")) is not int or proof["message_bytes"] < 0 \
                 or not isinstance(proof.get("observed_context_ids"), list) \
-                or type(proof.get("complete_preceding_json_found")) is not bool:
+                or type(proof.get("complete_preceding_json_found")) is not bool \
+                or not isinstance(proof.get("rendered_message_sha256"), str) \
+                or re.fullmatch(r"[a-f0-9]{64}", proof["rendered_message_sha256"]) is None \
+                or not isinstance(proof.get("context_bundle_sha256"), str) \
+                or re.fullmatch(r"[a-f0-9]{64}", proof["context_bundle_sha256"]) is None \
+                or type(proof.get("child_return_digest_bound")) is not bool \
+                or type(proof.get("renderer_bound")) is not bool \
+                or proof.get("context_transport") not in {
+                    "literal", "sealed_runner_envelope",
+                    "claude_framed_renderer_envelope",
+                    "encrypted_native_with_child_receipt",
+                }:
             return "invalid", "native Plan-repair dispatch receipt conflicts with native calls"
+    return None
+
+
+def _validate_plan_repair_sequence(
+    commands: list[dict[str, Any]],
+    renderers: list[dict[str, Any]],
+    dispatches: list[dict[str, Any]],
+    calls: list[dict[str, Any]],
+    observation: dict[str, Any],
+    host: str,
+    contexts: dict[str, str],
+    role: str,
+    maximum: int,
+    terminal: str,
+) -> tuple[str, str]:
     return_error = _dispatch_returns(observation, host)
     if return_error is not None:
         return "invalid", return_error
-    if not 1 <= len(dispatches) <= maximum or len(commands) != len(dispatches) + 1:
+    if not 1 <= len(dispatches) <= maximum \
+            or len(commands) != len(dispatches) + 1 \
+            or len(renderers) != len(dispatches):
         return "fail", "Plan-repair did not perform one initial G3 run and one rerun per completed repair"
     if commands[0]["passed"] is not False:
         return "fail", "Plan-repair did not begin from an actual failed G3 result"
@@ -961,8 +1007,10 @@ def _native_plan_repair_context(
     expected_terminal = terminal == "pass"
     if commands[-1]["passed"] is not expected_terminal:
         return "fail", f"Plan-repair terminal G3 outcome did not remain {terminal}"
+    expected_context_ids = sorted(contexts)
     for index, dispatch in enumerate(dispatches):
         previous, rerun = commands[index], commands[index + 1]
+        renderer = renderers[index]
         proof = dispatch["context_proof"]
         actual_role = dispatch["role"]
         if host == "claude" and isinstance(actual_role, str):
@@ -971,14 +1019,89 @@ def _native_plan_repair_context(
                 or calls[dispatch["tool_call_index"]].get("success") is not True:
             return "fail", "Plan-repair used the wrong executor or lacked a completed native return"
         if proof["observed_context_ids"] != expected_context_ids \
-                or proof["complete_preceding_json_found"] is not True:
+                or proof["complete_preceding_json_found"] is not True \
+                or proof["rendered_message_sha256"] != renderer["message_sha256"] \
+                or proof["context_bundle_sha256"] != renderer["context_bundle_sha256"] \
+                or proof["renderer_bound"] is not True:
             return "fail", "Plan-repair executor dispatch omitted trusted context or the complete preceding G3 result"
+        if proof["context_transport"] == "encrypted_native_with_child_receipt" \
+                and proof["child_return_digest_bound"] is not True:
+            return "fail", "encrypted Plan-repair dispatch lacked its authenticated child digest receipt"
         if dispatch["preceding_g3_call_id"] != previous["call_id"] \
+                or dispatch["preceding_renderer_call_id"] != renderer["call_id"] \
                 or dispatch["rerun_g3_call_id"] != rerun["call_id"] \
                 or not (previous["completed"] < dispatch["started"]
+                        and previous["completed"] < renderer["started"]
+                        <= renderer["completed"] < dispatch["started"]
                         <= dispatch["returned"] < rerun["started"]):
             return "fail", "Plan-repair G3, dispatch, return, and rerun order is not causal"
     return "pass", "every completed Plan repair received exact trusted context and its immediately preceding G3 result before one authoritative rerun"
+
+
+def _native_plan_repair_context(
+    check: dict[str, Any], observation: dict[str, Any], host: str | None,
+) -> tuple[str, str]:
+    if host not in {"claude", "codex"}:
+        return "invalid", "native Plan-repair context requires a trusted subject host"
+    contexts = check.get("contexts")
+    request_path = check.get("g3_request_path")
+    context_request_path = check.get("context_request_path")
+    role = check.get("executor_role")
+    maximum = check.get("max_repairs")
+    terminal = check.get("terminal_outcome")
+    if not isinstance(contexts, dict) or not contexts \
+            or any(_STABLE_ID.fullmatch(key) is None or not _canonical_path(path)
+                   for key, path in contexts.items()
+                   if isinstance(key, str) and isinstance(path, str)) \
+            or not all(isinstance(key, str) and isinstance(path, str)
+                       for key, path in contexts.items()) \
+            or not _canonical_path(request_path) \
+            or not _canonical_path(context_request_path) \
+            or not isinstance(role, str) or _STABLE_ID.fullmatch(role) is None \
+            or type(maximum) is not int or maximum != 2 \
+            or terminal not in {"pass", "unresolved"}:
+        return "invalid", "catalog native Plan-repair context check is malformed"
+    metadata = observation.get("native_metadata")
+    receipt = metadata.get("native_plan_repair_context") if isinstance(metadata, dict) else None
+    if not isinstance(receipt, dict) or set(receipt) != {"schema", "authority", "checks"} \
+            or receipt.get("schema") != "native-plan-repair-context/v1" \
+            or receipt.get("authority") != "controller-bound-retained-native-evidence" \
+            or not isinstance(receipt.get("checks"), list):
+        return "invalid", "native Plan-repair context receipt is missing or malformed"
+    matches = [item for item in receipt["checks"] if isinstance(item, dict)
+               and item.get("check_id") == check.get("id")]
+    if len(matches) != 1 or set(matches[0]) != {
+            "check_id", "commands", "renderers", "dispatches"}:
+        return "invalid", "native Plan-repair context receipt does not bind its check"
+    commands = matches[0]["commands"]
+    renderers = matches[0]["renderers"]
+    dispatches = matches[0]["dispatches"]
+    if not isinstance(commands, list) or not isinstance(renderers, list) \
+            or not isinstance(dispatches, list):
+        return "invalid", "native Plan-repair context receipt entries are malformed"
+    calls = observation["tool_calls"]
+    seen_calls: set[str] = set()
+    receipt_error = _validate_plan_repair_command_receipts(
+        commands, calls, host, seen_calls,
+    )
+    if receipt_error is not None:
+        return receipt_error
+    receipt_error = _validate_plan_repair_renderer_receipts(
+        renderers, calls, host, contexts, seen_calls,
+    )
+    if receipt_error is not None:
+        return receipt_error
+    direct = [index for index, call in enumerate(calls)
+              if call.get("name") == "subagent" and call.get("parent_id") is None]
+    if len(dispatches) != len(direct):
+        return "fail", "Plan-repair dispatch count does not match root native dispatches"
+    receipt_error = _validate_plan_repair_dispatch_receipts(dispatches, calls, direct)
+    if receipt_error is not None:
+        return receipt_error
+    return _validate_plan_repair_sequence(
+        commands, renderers, dispatches, calls, observation, host,
+        contexts, role, maximum, terminal,
+    )
 
 
 def _synthesis_source_paths(case: dict[str, Any]) -> list[str] | None:

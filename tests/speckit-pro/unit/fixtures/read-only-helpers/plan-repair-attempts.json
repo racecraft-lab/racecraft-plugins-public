@@ -1,0 +1,17 @@
+{
+  "attempts": [
+    {
+      "schema_version": "1.0",
+      "request_id": "fixture-g3",
+      "status": "expected_failure",
+      "data": {
+        "stdout_json": {
+          "gate": "G3",
+          "markers": 1,
+          "pass": false
+        }
+      },
+      "diagnostics": []
+    }
+  ]
+}

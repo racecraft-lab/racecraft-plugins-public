@@ -420,7 +420,9 @@ orchestrator follows
 §Plan ambiguity provenance repair. It classifies the disputed wording from
 direct source evidence, appends the Plan Ambiguity Repair Log, and re-dispatches
 the same Plan executor with the original prompt plus the complete
-`Plan Repair Context`. Re-run G3 after the shared corrective reservation. Missing
+`Plan Repair Context`. The executor returns the renderer-provided
+`PLAN_REPAIR_CONTEXT_SHA256=<digest>` receipt unchanged. Re-run G3 after the
+shared corrective reservation. Missing
 artifacts and constitutional failures retain the ordinary G3 auto-fix path.
 
 Pass WORKFLOW_FILE as `workflow_file` to validate-gate. Stage the formal helper's
@@ -1754,6 +1756,11 @@ lead there: all three analysts disagreeing after Round 2, a Round-1 escape
 whose Round 2 still cannot resolve, and an analyst that fails its single
 retry. All three land on one behavior, and only the report names which
 occurred.
+
+The closed synthesis basis must remain exact: no agreeing pair is
+`all_disagree`, an unresolved escape is `escape_unresolved`, and an exhausted
+analyst retry is `analyst_failed`. Do not replace these sweep-specific values
+with the general Consensus Resolution Log outcome labels.
 
 **No edit, no class, no sweep row.** No artifact is edited and the comment is
 given no class, because `amended` would assert an edit nobody resolved and the

@@ -685,6 +685,233 @@ def plan_repair_response(request, passed):
     return value
 
 
+def plan_repair_renderer_response(request, message, context_ids, context_digest):
+    encoded = message.encode("utf-8")
+    rendered = {
+        "schema": "plan-repair-executor-message/v1",
+        "executor_message": message,
+        "message_sha256": hashlib.sha256(encoded).hexdigest(),
+        "message_bytes": len(encoded),
+        "context_ids": sorted(context_ids),
+        "g3_attempt_index": 0,
+        "context_bundle_sha256": context_digest,
+    }
+    stdout_text = json.dumps(rendered, separators=(",", ":")) + "\n"
+    return {
+        "schema_version": "1.0", "request_id": request["request_id"],
+        "status": "ok", "exit_code": 0, "diagnostics": [],
+        "data": {
+            "helper_id": "render-plan-repair-context",
+            "operation": "render-plan-repair-context", "mode": "read_only",
+            "exit_code": 0, "writes_state": False,
+            "stdin_request": {key: value for key, value in request.items()
+                              if key != "request_id"},
+            "stdout": {"text": stdout_text, "byte_count": len(stdout_text.encode()),
+                       "truncated": False},
+            "stdout_json": rendered,
+        },
+    }
+
+
+def _sealed_plan_repair_inputs(fixtures):
+    sealed = {path: {"text": text, "bytes": len(text.encode()),
+                     "sha256": hashlib.sha256(text.encode()).hexdigest()}
+              for path, text in fixtures.items()}
+    return {
+        "schema": "native-plan-repair-sealed-inputs/v1",
+        "authority": "controller-before-subject-launch", "fixtures": sealed,
+    }
+
+
+def _claude_plan_repair_observation(calls):
+    completions = []
+    for index, call in enumerate(calls):
+        encoded = json.dumps(call["output"], sort_keys=True, separators=(",", ":")).encode()
+        completions.append({
+            "tool_call_index": index, "id": call["id"],
+            "native_name": "Agent" if index == 2 else "Bash",
+            "tool_use_position": call["position"],
+            "tool_result_position": call["position"] + 1,
+            "output_sha256": hashlib.sha256(encoded).hexdigest(),
+            "output_bytes": len(encoded),
+        })
+    return {
+        "completed": True, "error": None, "final_text": "done", "activations": [],
+        "tool_calls": calls, "artifacts": {}, "usage": {},
+        "native_metadata": {"claude_tool_results": completions},
+    }
+
+
+def _claude_plan_repair_fixture():
+    request = {
+        "schema_version": "1.0", "request_id": "plan-repair-g3",
+        "helper_id": "validate-gate", "operation": "validate-gate",
+        "mode": "read_only", "inputs": {"gate": "G3", "feature_dir": "feature"},
+    }
+    contexts = {"original-prompt": "Design the original human requirement.\n",
+                "architecture": "No delivery callback is currently available.\n"}
+    context_request = {
+        "schema_version": "1.0", "request_id": "plan-repair-context",
+        "helper_id": "render-plan-repair-context", "operation": "render-plan-repair-context",
+        "mode": "read_only", "inputs": {"context_paths": {
+            "original-prompt": "scenario-inputs/original.md",
+            "architecture": "scenario-inputs/architecture.md"}},
+    }
+    initial, repaired = plan_repair_response(request, False), plan_repair_response(request, True)
+    context_digest = "c" * 64
+    message = "\n".join([*contexts.values(), json.dumps(initial, indent=2),
+                           f"PLAN_REPAIR_CONTEXT_SHA256={context_digest}"])
+    rendered = plan_repair_renderer_response(context_request, message, contexts, context_digest)
+    initial_stream = "\n".join(json.dumps(item, separators=(",", ":"))
+                               for item in (initial["diagnostics"][0], initial))
+    command = "python3 -m speckit_pro_runner < scenario-inputs/g3-request.json"
+    render_command = "python3 -m speckit_pro_runner < scenario-inputs/context-request.json"
+    calls = [
+        {"id": "g3-initial", "name": "Bash", "input": {"command": command},
+         "output": "Exit code 1\n" + initial_stream, "success": False,
+         "position": 1, "parent_id": None},
+        {"id": "renderer", "name": "Bash", "input": {"command": render_command},
+         "output": json.dumps(rendered), "success": True, "position": 3, "parent_id": None},
+        {"id": "repair", "name": "subagent",
+         "input": {"prompt": message, "subagent_type": "phase-executor"},
+         "output": "repair complete", "success": True, "position": 5, "parent_id": None},
+        {"id": "g3-rerun", "name": "Bash", "input": {"command": command},
+         "output": json.dumps(repaired), "success": True, "position": 7, "parent_id": None},
+    ]
+    check = {"id": "repair-context", "requirement": "r1", "type": "native_plan_repair_context",
+             "contexts": {"original-prompt": "scenario-inputs/original.md",
+                          "architecture": "scenario-inputs/architecture.md"},
+             "g3_request_path": "scenario-inputs/g3-request.json",
+             "context_request_path": "scenario-inputs/context-request.json",
+             "executor_role": "phase-executor", "max_repairs": 2, "terminal_outcome": "pass"}
+    fixtures = {"scenario-inputs/original.md": contexts["original-prompt"],
+                "scenario-inputs/architecture.md": contexts["architecture"],
+                "scenario-inputs/g3-request.json": json.dumps(request),
+                "scenario-inputs/context-request.json": json.dumps(context_request)}
+    launch = {"cwd": "/private/tmp/plugin", "runtime_identity": {"settings": {
+        "native_toolchain": {"launchers": {"python3": {"path": "bin/python3"}}}}},
+        "native_plan_repair_inputs": _sealed_plan_repair_inputs(fixtures)}
+    return SimpleNamespace(contexts=contexts, initial=initial, message=message, rendered=rendered,
+                           observation=_claude_plan_repair_observation(calls),
+                           value={"requirements": [{"id": "r1"}], "checks": [check]}, launch=launch)
+
+
+def _codex_plan_repair_response(request, passed):
+    return {"schema_version": "1.0", "request_id": "g3",
+            "data": {"stdin_request": {key: value for key, value in request.items()
+                                        if key != "request_id"},
+                     "stdout_json": {"pass": passed}}}
+
+
+def _opaque_plan_repair_input(message):
+    encoded = json.dumps(message, sort_keys=True, separators=(",", ":")).encode()
+    digest = hashlib.sha256()
+    digest.update(encoded)
+    return {"kind": "opaque", "sha256": digest.hexdigest(), "bytes": len(encoded)}
+
+
+def _codex_plan_repair_observation(calls, opaque, delivery):
+    return {
+        "completed": True, "error": None, "final_text": "done", "activations": [],
+        "tool_calls": calls, "artifacts": {}, "usage": {}, "native_metadata": {
+            "nested_rollout": {"root_thread_id": ROOT_THREAD,
+                "raw_sha256": {ROOT_THREAD: "a" * 64},
+                "dispatches": [{"id": "repair", "parent_thread_id": ROOT_THREAD,
+                                "task_input": opaque, "delivery": delivery}]},
+            "subagent_return_order": {"schema": "native-subagent-return-order/v1",
+                "scope": "direct-root-only", "parent_file_changes": [], "returns": [{
+                    "tool_call_index": 2, "call_id": "repair",
+                    "authority": "codex-parent-delivery", "native_stream": ROOT_THREAD,
+                    "native_turn": ROOT_TURN, "completion_index": 9,
+                    "content_sha256": delivery["sha256"],
+                    "content_bytes": delivery["bytes"], "content_nonempty": True,
+                }]},
+        },
+    }
+
+
+def _codex_plan_repair_fixture():
+    request = {"schema_version": "1.0", "request_id": "g3", "helper_id": "validate-gate",
+               "operation": "validate-gate", "mode": "read_only",
+               "inputs": {"gate": "G3", "feature_dir": "feature"}}
+    context, context_digest = "Original Plan prompt", "d" * 64
+    initial, rerun = (_codex_plan_repair_response(request, passed) for passed in (False, True))
+    message = (context + "\n" + json.dumps(initial)
+               + f"\nPLAN_REPAIR_CONTEXT_SHA256={context_digest}")
+    context_request = {"schema_version": "1.0", "request_id": "context",
+                       "helper_id": "render-plan-repair-context",
+                       "operation": "render-plan-repair-context", "mode": "read_only",
+                       "inputs": {"context_paths": {"original": "scenario-inputs/original.md"}}}
+    rendered = plan_repair_renderer_response(context_request, message, ["original"], context_digest)
+    opaque = _opaque_plan_repair_input(message)
+    delivery_text = b"repair complete"
+    delivery = {"turn_id": ROOT_TURN, "author": "/root/repair", "recipient": "/root",
+                "native_event_index": 9, "bytes": len(delivery_text),
+                "sha256": hashlib.sha256(delivery_text).hexdigest()}
+    command = ["/bin/zsh", "-c", "python3 -m speckit_pro_runner < scenario-inputs/g3-request.json"]
+    render_command = ["/bin/zsh", "-c", "python3 -m speckit_pro_runner < scenario-inputs/context-request.json"]
+    calls = [
+        {"id": "g3-0", "name": "command_execution", "input": {"command": command},
+         "output": json.dumps(initial), "success": False, "position": 0, "parent_id": None},
+        {"id": "renderer", "name": "command_execution", "input": {"command": render_command},
+         "output": json.dumps(rendered), "success": True, "position": 1, "parent_id": None},
+        {"id": "repair", "name": "subagent", "input": {"role": "phase-executor",
+         "task_input": opaque}, "output": {"status": "completed"}, "success": True,
+         "position": 2, "parent_id": None},
+        {"id": "g3-1", "name": "command_execution", "input": {"command": command},
+         "output": json.dumps(rerun), "success": True, "position": 3, "parent_id": None},
+    ]
+    check = {"id": "context", "requirement": "r1", "type": "native_plan_repair_context",
+             "contexts": {"original": "scenario-inputs/original.md"},
+             "g3_request_path": "scenario-inputs/g3-request.json",
+             "context_request_path": "scenario-inputs/context-request.json",
+             "executor_role": "phase-executor", "max_repairs": 2, "terminal_outcome": "pass"}
+    fixtures = {"scenario-inputs/original.md": context, "scenario-inputs/g3-request.json": json.dumps(request),
+                "scenario-inputs/context-request.json": json.dumps(context_request)}
+    launch = {"runtime_identity": {"settings": {"codex_runtime": {"python": {
+        "python3_command": "python3", "python3_path": "/protected/bin/python3",
+        "executable": "/protected/bin/python3.11"}}}},
+        "native_plan_repair_inputs": _sealed_plan_repair_inputs(fixtures)}
+    trace = {"schema": "codex-native-plan-repair-trace/v1", "root_thread_id": ROOT_THREAD,
+             "raw_sha256": "a" * 64, "commands": [
+                 {"id": "g3-0", "started_at_ns": 1, "completed_at_ns": 2,
+                  "input": {"command": command}, "output": {"stdout": json.dumps(initial)}},
+                 {"id": "renderer", "started_at_ns": 3, "completed_at_ns": 4,
+                  "input": {"command": render_command}, "output": {"stdout": json.dumps(rendered)}},
+                 {"id": "g3-1", "started_at_ns": 7, "completed_at_ns": 8,
+                  "input": {"command": command}, "output": {"stdout": json.dumps(rerun)}}],
+             "dispatches": [{"id": "repair", "role": "phase-executor", "message": message,
+                              "task_input": opaque, "delivery_text": delivery_text.decode(),
+                              "invoked_at_ns": 5, "returned_at_ns": 6}]}
+    return SimpleNamespace(message=message, rendered=rendered, context_digest=context_digest,
+                           opaque=opaque, observation=_codex_plan_repair_observation(calls, opaque, delivery),
+                           value={"requirements": [{"id": "r1"}], "checks": [check]},
+                           launch=launch, trace=trace)
+
+
+def _codex_plan_repair_variant(fixture, message, delivery_text=None):
+    opaque = _opaque_plan_repair_input(message)
+    observation = copy.deepcopy(fixture.observation)
+    observation["native_metadata"].pop("native_plan_repair_context", None)
+    observation["tool_calls"][2]["input"]["task_input"] = opaque
+    dispatch = observation["native_metadata"]["nested_rollout"]["dispatches"][0]
+    dispatch["task_input"] = opaque
+    trace = copy.deepcopy(fixture.trace)
+    trace["dispatches"][0].update({"message": message, "task_input": opaque})
+    if delivery_text is not None:
+        encoded = delivery_text.encode()
+        dispatch["delivery"]["sha256"] = hashlib.sha256(encoded).hexdigest()
+        dispatch["delivery"]["bytes"] = len(encoded)
+        returned = observation["native_metadata"]["subagent_return_order"]["returns"][0]
+        returned["content_sha256"] = dispatch["delivery"]["sha256"]
+        returned["content_bytes"] = len(encoded)
+        trace["dispatches"][0]["delivery_text"] = delivery_text
+    execution._bind_plan_repair_context(
+        fixture.value, "codex", observation, fixture.launch, trace,
+    )
+    return observation
+
+
 def runner_final_text(value):
     return json.dumps({
         "binding_result": value, "decision": "stop",
@@ -2062,7 +2289,7 @@ class NativeSubagentCallbacks(NestedCallbacks):
 class DispatchCallbacks(NativeSubagentCallbacks):
     def __init__(self, output):
         super().__init__(output)
-        self.dispatch_message = "Inspect [[native-eval-item:dispatch-i1]]"
+        self.dispatch_message = "Inspect [[work-item:dispatch-i1]]"
         self.dispatch_role = "codebase-analyst"
         self.claude_dispatch_message = self.dispatch_message
         self.claude_dispatch_role = self.dispatch_role
@@ -5353,132 +5580,101 @@ class NativeExecutionTests(unittest.TestCase):
                 self.assertEqual(report["counts"]["passes"], 0)
 
     def test_plan_repair_context_binds_exact_dispatch_and_causal_rerun(self):
-        request = {
-            "schema_version": "1.0", "request_id": "plan-repair-g3",
-            "helper_id": "validate-gate", "operation": "validate-gate",
-            "mode": "read_only", "inputs": {"gate": "G3", "feature_dir": "feature"},
-        }
-        contexts = {
-            "original-prompt": "Design the original human requirement.\n",
-            "architecture": "No delivery callback is currently available.\n",
-        }
-
-        initial = plan_repair_response(request, False)
-        repaired = plan_repair_response(request, True)
-        message = "\n".join([*contexts.values(), json.dumps(initial, indent=2)])
-        diagnostic = initial["diagnostics"][0]
-        initial_stream = "\n".join(
-            json.dumps(item, separators=(",", ":")) for item in (diagnostic, initial)
+        fixture = _claude_plan_repair_fixture()
+        execution._bind_subagent_return_order("claude", fixture.observation)
+        execution._bind_plan_repair_context(
+            fixture.value, "claude", fixture.observation, fixture.launch,
         )
-        command = "python3 -m speckit_pro_runner < scenario-inputs/g3-request.json"
-        calls = [
-            {"id": "g3-initial", "name": "Bash", "input": {"command": command},
-             "output": "Exit code 1\n" + initial_stream,
-             "success": False, "position": 1, "parent_id": None},
-            {"id": "repair", "name": "subagent",
-             "input": {"prompt": message, "subagent_type": "phase-executor"},
-             "output": "repair complete", "success": True, "position": 3, "parent_id": None},
-            {"id": "g3-rerun", "name": "Bash", "input": {"command": command},
-             "output": json.dumps(repaired), "success": True, "position": 5, "parent_id": None},
-        ]
-        completions = []
-        for index, call in enumerate(calls):
-            encoded = json.dumps(call["output"], sort_keys=True, separators=(",", ":")).encode()
-            completions.append({
-                "tool_call_index": index, "id": call["id"],
-                "native_name": "Agent" if index == 1 else "Bash",
-                "tool_use_position": call["position"],
-                "tool_result_position": call["position"] + 1,
-                "output_sha256": hashlib.sha256(encoded).hexdigest(),
-                "output_bytes": len(encoded),
-            })
-        observation = {
-            "completed": True, "error": None, "final_text": "done", "activations": [],
-            "tool_calls": calls, "artifacts": {}, "usage": {},
-            "native_metadata": {"claude_tool_results": completions},
-        }
-        check = {
-            "id": "repair-context", "requirement": "r1",
-            "type": "native_plan_repair_context",
-            "contexts": {"original-prompt": "scenario-inputs/original.md",
-                         "architecture": "scenario-inputs/architecture.md"},
-            "g3_request_path": "scenario-inputs/g3-request.json",
-            "executor_role": "phase-executor", "max_repairs": 2,
-            "terminal_outcome": "pass",
-        }
-        value = {"requirements": [{"id": "r1"}], "checks": [check]}
-        fixture_values = {
-            "scenario-inputs/original.md": contexts["original-prompt"],
-            "scenario-inputs/architecture.md": contexts["architecture"],
-            "scenario-inputs/g3-request.json": json.dumps(request),
-        }
-        sealed = {path: {"text": text, "bytes": len(text.encode()),
-                         "sha256": hashlib.sha256(text.encode()).hexdigest()}
-                  for path, text in fixture_values.items()}
-        launch = {
-            "cwd": "/private/tmp/plugin", "runtime_identity": {"settings": {
-                "native_toolchain": {"launchers": {"python3": {"path": "bin/python3"}}},
-            }},
-            "native_plan_repair_inputs": {
-                "schema": "native-plan-repair-sealed-inputs/v1",
-                "authority": "controller-before-subject-launch", "fixtures": sealed,
-            },
-        }
-        execution._bind_subagent_return_order("claude", observation)
-        execution._bind_plan_repair_context(value, "claude", observation, launch)
-        self.assertEqual(execution.grade_observation(value, observation, host="claude")["status"],
+        self.assertEqual(execution.grade_observation(
+            fixture.value, fixture.observation, host="claude",
+        )["status"],
                          "pass")
-        receipt = observation["native_metadata"]["native_plan_repair_context"]
-        self.assertNotIn(message, json.dumps(receipt))
+        receipt = fixture.observation["native_metadata"]["native_plan_repair_context"]
+        self.assertNotIn(fixture.message, json.dumps(receipt))
 
+    def test_plan_repair_context_accepts_claude_transport_envelopes(self):
+        fixture = _claude_plan_repair_fixture()
+        execution._bind_subagent_return_order("claude", fixture.observation)
+        sealed_claude = copy.deepcopy(fixture.observation)
+        sealed_claude["tool_calls"][2]["input"]["prompt"] = json.dumps(
+            fixture.rendered, separators=(",", ":"),
+        )
+        execution._bind_plan_repair_context(
+            fixture.value, "claude", sealed_claude, fixture.launch,
+        )
+        sealed_grade = execution.grade_observation(
+            fixture.value, sealed_claude, host="claude",
+        )
+        self.assertEqual(sealed_grade["status"], "pass", sealed_grade)
+        self.assertEqual(
+            sealed_claude["native_metadata"]["native_plan_repair_context"]["checks"][0][
+                "dispatches"
+            ][0]["context_proof"]["context_transport"],
+            "sealed_runner_envelope",
+        )
+
+        framed_claude = copy.deepcopy(fixture.observation)
+        framed_claude["tool_calls"][2]["input"]["prompt"] = (
+            "Claude native dispatch framing\n"
+            + json.dumps(fixture.rendered, separators=(",", ":"))
+            + "\nUse the embedded renderer response."
+        )
+        execution._bind_plan_repair_context(
+            fixture.value, "claude", framed_claude, fixture.launch,
+        )
+        framed_grade = execution.grade_observation(
+            fixture.value, framed_claude, host="claude",
+        )
+        self.assertEqual(framed_grade["status"], "pass", framed_grade)
+        self.assertEqual(
+            framed_claude["native_metadata"]["native_plan_repair_context"]["checks"][0][
+                "dispatches"
+            ][0]["context_proof"]["context_transport"],
+            "claude_framed_renderer_envelope",
+        )
+
+    def test_plan_repair_context_enforces_claude_executor_role(self):
+        fixture = _claude_plan_repair_fixture()
+        execution._bind_subagent_return_order("claude", fixture.observation)
+        execution._bind_plan_repair_context(
+            fixture.value, "claude", fixture.observation, fixture.launch,
+        )
         for native_role, expected in (
             ("speckit-pro:phase-executor", "pass"),
             ("foreign:phase-executor", "fail"),
             ("speckit-pro:other-executor", "fail"),
         ):
             with self.subTest(native_role=native_role):
-                variant = copy.deepcopy(observation)
+                variant = copy.deepcopy(fixture.observation)
                 del variant["native_metadata"]["native_plan_repair_context"]
-                variant["tool_calls"][1]["input"]["subagent_type"] = native_role
-                execution._bind_plan_repair_context(value, "claude", variant, launch)
+                variant["tool_calls"][2]["input"]["subagent_type"] = native_role
+                execution._bind_plan_repair_context(
+                    fixture.value, "claude", variant, fixture.launch,
+                )
                 self.assertEqual(
-                    execution.grade_observation(value, variant, host="claude")["status"], expected,
+                    execution.grade_observation(
+                        fixture.value, variant, host="claude",
+                    )["status"], expected,
                 )
 
-        float_limit = copy.deepcopy(value)
+    def test_plan_repair_context_rejects_invalid_claude_contract_values(self):
+        fixture = _claude_plan_repair_fixture()
+        execution._bind_subagent_return_order("claude", fixture.observation)
+        execution._bind_plan_repair_context(
+            fixture.value, "claude", fixture.observation, fixture.launch,
+        )
+        float_limit = copy.deepcopy(fixture.value)
         float_limit["checks"][0]["max_repairs"] = 2.0
         self.assertEqual(
-            execution.grade_observation(float_limit, observation, host="claude")["status"],
+            execution.grade_observation(
+                float_limit, fixture.observation, host="claude",
+            )["status"],
             "invalid",
         )
 
-        missing = copy.deepcopy(observation)
-        del missing["native_metadata"]["native_plan_repair_context"]
-        missing["tool_calls"][1]["input"]["prompt"] = (
-            contexts["original-prompt"] + json.dumps(initial)
-        )
-        execution._bind_plan_repair_context(value, "claude", missing, launch)
-        self.assertEqual(execution.grade_observation(value, missing, host="claude")["status"],
-                         "fail")
-
-        late = copy.deepcopy(observation)
-        late_receipt = late["native_metadata"]["native_plan_repair_context"]["checks"][0]
-        late_receipt["dispatches"][0]["returned"] = 6
-        self.assertEqual(execution.grade_observation(value, late, host="claude")["status"],
-                         "fail")
-
-        unwrapped = copy.deepcopy(observation)
-        del unwrapped["native_metadata"]["native_plan_repair_context"]
-        unwrapped["tool_calls"][0]["output"] = json.dumps(initial)
-        execution._bind_plan_repair_context(value, "claude", unwrapped, launch)
-        self.assertEqual(
-            execution.grade_observation(value, unwrapped, host="claude")["status"],
-            "fail",
-        )
-
-        arbitrary = copy.deepcopy(observation)
+        arbitrary = copy.deepcopy(fixture.observation)
         del arbitrary["native_metadata"]["native_plan_repair_context"]
-        arbitrary_response = {**initial, "status": "input_error"}
+        arbitrary_response = {**fixture.initial, "status": "input_error"}
         arbitrary["tool_calls"][0]["output"] = (
             "Exit code 1\n" + json.dumps(arbitrary_response)
         )
@@ -5486,95 +5682,123 @@ class NativeExecutionTests(unittest.TestCase):
             ValueError, "expected-nonzero response is malformed",
         ):
             execution._bind_plan_repair_context(
-                value, "claude", arbitrary, launch,
+                fixture.value, "claude", arbitrary, fixture.launch,
             )
 
+    def test_plan_repair_context_rejects_missing_or_out_of_order_claude_evidence(self):
+        fixture = _claude_plan_repair_fixture()
+        execution._bind_subagent_return_order("claude", fixture.observation)
+        execution._bind_plan_repair_context(
+            fixture.value, "claude", fixture.observation, fixture.launch,
+        )
+        missing = copy.deepcopy(fixture.observation)
+        del missing["native_metadata"]["native_plan_repair_context"]
+        missing["tool_calls"][2]["input"]["prompt"] = (
+            fixture.contexts["original-prompt"] + json.dumps(fixture.initial)
+        )
+        execution._bind_plan_repair_context(
+            fixture.value, "claude", missing, fixture.launch,
+        )
+        self.assertEqual(execution.grade_observation(
+            fixture.value, missing, host="claude",
+        )["status"], "fail")
+
+        late = copy.deepcopy(fixture.observation)
+        late_receipt = late["native_metadata"]["native_plan_repair_context"]["checks"][0]
+        late_receipt["dispatches"][0]["returned"] = 7
+        self.assertEqual(execution.grade_observation(
+            fixture.value, late, host="claude",
+        )["status"], "fail")
+
+        unwrapped = copy.deepcopy(fixture.observation)
+        del unwrapped["native_metadata"]["native_plan_repair_context"]
+        unwrapped["tool_calls"][0]["output"] = json.dumps(fixture.initial)
+        execution._bind_plan_repair_context(
+            fixture.value, "claude", unwrapped, fixture.launch,
+        )
+        self.assertEqual(
+            execution.grade_observation(
+                fixture.value, unwrapped, host="claude",
+            )["status"],
+            "fail",
+        )
 
     def test_codex_plan_repair_context_binds_raw_message_to_opaque_native_input(self):
-        request = {"schema_version": "1.0", "request_id": "g3", "helper_id": "validate-gate",
-                   "operation": "validate-gate", "mode": "read_only",
-                   "inputs": {"gate": "G3", "feature_dir": "feature"}}
+        fixture = _codex_plan_repair_fixture()
+        execution._bind_plan_repair_context(
+            fixture.value, "codex", fixture.observation, fixture.launch, fixture.trace,
+        )
+        codex_grade = execution.grade_observation(
+            fixture.value, fixture.observation, host="codex",
+        )
+        self.assertEqual(codex_grade["status"], "pass", codex_grade)
+        receipt = fixture.observation["native_metadata"]["native_plan_repair_context"]
+        self.assertNotIn(fixture.message, json.dumps(receipt))
+        self.assertEqual(
+            receipt["checks"][0]["dispatches"][0]["opaque_task_input"], fixture.opaque,
+        )
 
-        def response(passed):
-            return {"schema_version": "1.0", "request_id": "g3",
-                    "data": {"stdin_request": {key: value for key, value in request.items()
-                                                if key != "request_id"},
-                             "stdout_json": {"pass": passed}}}
+    def test_codex_plan_repair_context_accepts_supported_transports(self):
+        fixture = _codex_plan_repair_fixture()
+        sealed_message = json.dumps(fixture.rendered, separators=(",", ":"))
+        sealed_observation = _codex_plan_repair_variant(fixture, sealed_message)
+        self.assertEqual(
+            execution.grade_observation(
+                fixture.value, sealed_observation, host="codex",
+            )["status"],
+            "pass",
+        )
+        sealed_proof = sealed_observation["native_metadata"][
+            "native_plan_repair_context"
+        ]["checks"][0]["dispatches"][0]["context_proof"]
+        self.assertEqual(sealed_proof["context_transport"], "sealed_runner_envelope")
+        self.assertEqual(
+            sealed_proof["message_sha256"],
+            hashlib.sha256(sealed_message.encode("utf-8")).hexdigest(),
+        )
 
-        context = "Original Plan prompt"
-        initial, rerun = response(False), response(True)
-        message = context + "\n" + json.dumps(initial)
-        encoded_message = json.dumps(message, sort_keys=True, separators=(",", ":")).encode()
-        opaque = {"kind": "opaque", "sha256": hashlib.sha256(encoded_message).hexdigest(),
-                  "bytes": len(encoded_message)}
-        delivery_text = b"repair complete"
-        delivery = {"turn_id": ROOT_TURN, "author": "/root/repair", "recipient": "/root",
-                    "native_event_index": 9, "bytes": len(delivery_text),
-                    "sha256": hashlib.sha256(delivery_text).hexdigest()}
-        command = ["/bin/zsh", "-c",
-                   "python3 -m speckit_pro_runner < scenario-inputs/g3-request.json"]
-        calls = [
-            {"id": "g3-0", "name": "command_execution", "input": {"command": command},
-             "output": json.dumps(initial), "success": False, "position": 0, "parent_id": None},
-            {"id": "repair", "name": "subagent", "input": {"role": "phase-executor",
-             "task_input": opaque}, "output": {"status": "completed"}, "success": True,
-             "position": 1, "parent_id": None},
-            {"id": "g3-1", "name": "command_execution", "input": {"command": command},
-             "output": json.dumps(rerun), "success": True, "position": 2, "parent_id": None},
-        ]
-        observation = {
-            "completed": True, "error": None, "final_text": "done", "activations": [],
-            "tool_calls": calls, "artifacts": {}, "usage": {}, "native_metadata": {
-                "nested_rollout": {"root_thread_id": ROOT_THREAD,
-                    "raw_sha256": {ROOT_THREAD: "a" * 64},
-                    "dispatches": [{"id": "repair", "parent_thread_id": ROOT_THREAD,
-                                    "task_input": opaque, "delivery": delivery}]},
-                "subagent_return_order": {"schema": "native-subagent-return-order/v1",
-                    "scope": "direct-root-only", "parent_file_changes": [], "returns": [{
-                        "tool_call_index": 1, "call_id": "repair",
-                        "authority": "codex-parent-delivery", "native_stream": ROOT_THREAD,
-                        "native_turn": ROOT_TURN, "completion_index": 9,
-                        "content_sha256": delivery["sha256"], "content_bytes": delivery["bytes"],
-                        "content_nonempty": True,
-                    }]},
-            },
-        }
-        check = {"id": "context", "requirement": "r1",
-                 "type": "native_plan_repair_context",
-                 "contexts": {"original": "scenario-inputs/original.md"},
-                 "g3_request_path": "scenario-inputs/g3-request.json",
-                 "executor_role": "phase-executor", "max_repairs": 2,
-                 "terminal_outcome": "pass"}
-        value = {"requirements": [{"id": "r1"}], "checks": [check]}
-        fixtures = {"scenario-inputs/original.md": context,
-                    "scenario-inputs/g3-request.json": json.dumps(request)}
-        sealed = {path: {"text": text, "bytes": len(text.encode()),
-                         "sha256": hashlib.sha256(text.encode()).hexdigest()}
-                  for path, text in fixtures.items()}
-        launch = {"runtime_identity": {"settings": {"codex_runtime": {"python": {
-            "python3_command": "python3", "python3_path": "/protected/bin/python3",
-            "executable": "/protected/bin/python3.11",
-        }}}}, "native_plan_repair_inputs": {
-            "schema": "native-plan-repair-sealed-inputs/v1",
-            "authority": "controller-before-subject-launch", "fixtures": sealed,
-        }}
-        trace = {"schema": "codex-native-plan-repair-trace/v1",
-                 "root_thread_id": ROOT_THREAD, "raw_sha256": "a" * 64,
-                 "commands": [
-                     {"id": "g3-0", "started_at_ns": 1, "completed_at_ns": 2,
-                      "input": {"command": command}, "output": {"stdout": json.dumps(initial)}},
-                     {"id": "g3-1", "started_at_ns": 7, "completed_at_ns": 8,
-                      "input": {"command": command}, "output": {"stdout": json.dumps(rerun)}},
-                 ],
-                 "dispatches": [{"id": "repair", "role": "phase-executor",
-                                  "message": message, "task_input": opaque,
-                                  "invoked_at_ns": 3, "returned_at_ns": 6}]}
-        execution._bind_plan_repair_context(value, "codex", observation, launch, trace)
-        self.assertEqual(execution.grade_observation(value, observation, host="codex")["status"],
-                         "pass")
-        receipt = observation["native_metadata"]["native_plan_repair_context"]
-        self.assertNotIn(message, json.dumps(receipt))
-        self.assertEqual(receipt["checks"][0]["dispatches"][0]["opaque_task_input"], opaque)
+        encrypted_message = "gAAAAABencrypted-native-child-prompt"
+        receipt_text = (
+            f"repair complete\nPLAN_REPAIR_CONTEXT_SHA256={fixture.context_digest}"
+        )
+        encrypted_observation = _codex_plan_repair_variant(
+            fixture, encrypted_message, receipt_text,
+        )
+        encrypted_grade = execution.grade_observation(
+            fixture.value, encrypted_observation, host="codex",
+        )
+        self.assertEqual(encrypted_grade["status"], "pass", encrypted_grade)
+        encrypted_proof = encrypted_observation["native_metadata"][
+            "native_plan_repair_context"
+        ]["checks"][0]["dispatches"][0]["context_proof"]
+        self.assertEqual(
+            encrypted_proof["context_transport"],
+            "encrypted_native_with_child_receipt",
+        )
+        self.assertTrue(encrypted_proof["child_return_digest_bound"])
+
+    def test_codex_plan_repair_context_rejects_unbound_child_receipt(self):
+        fixture = _codex_plan_repair_fixture()
+        encrypted_message = "gAAAAABencrypted-native-child-prompt"
+        receipt_text = (
+            f"repair complete\nPLAN_REPAIR_CONTEXT_SHA256={fixture.context_digest}"
+        )
+        encrypted_observation = _codex_plan_repair_variant(
+            fixture, encrypted_message, receipt_text,
+        )
+        missing_receipt = copy.deepcopy(encrypted_observation)
+        missing_receipt["native_metadata"]["native_plan_repair_context"]["checks"][0][
+            "dispatches"
+        ][0]["context_proof"]["child_return_digest_bound"] = False
+        missing_receipt["native_metadata"]["native_plan_repair_context"]["checks"][0][
+            "dispatches"
+        ][0]["context_proof"]["renderer_bound"] = False
+        self.assertEqual(
+            execution.grade_observation(
+                fixture.value, missing_receipt, host="codex",
+            )["status"],
+            "fail",
+        )
 
     def test_plan_repair_sealing_rejects_unavailable_or_changed_trusted_fixture(self):
         fixture = self.repo / "plan-context.md"
@@ -5584,7 +5808,8 @@ class NativeExecutionTests(unittest.TestCase):
                                 "destination": "scenario-inputs/context.md"}],
                  "checks": [{"id": "context", "type": "native_plan_repair_context",
                               "contexts": {"plan": "scenario-inputs/context.md"},
-                              "g3_request_path": "scenario-inputs/context.md"}]}
+                              "g3_request_path": "scenario-inputs/context.md",
+                              "context_request_path": "scenario-inputs/context.md"}]}
         prepared = SimpleNamespace(runtime_identity={"settings": {"fixture_read_witnesses": {
             "scenario-inputs/context.md": {"bytes": len(body),
                                              "sha256": hashlib.sha256(body).hexdigest()},

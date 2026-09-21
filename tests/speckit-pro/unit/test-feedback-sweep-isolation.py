@@ -901,6 +901,7 @@ class SurfaceConfinementTests(unittest.TestCase):
             self.assertIn(required, joined)
         self.assertNotIn("--sandbox", command)
         self.assertNotIn("code_mode_host", sweep_launcher.CODEX_DISABLED_FEATURES)
+        self.assertIn("view_image", sweep_launcher.CODEX_DISABLED_FEATURES)
         self.assertIn(
             'mcp_servers.sweep-broker.default_tools_approval_mode="approve"',
             command,

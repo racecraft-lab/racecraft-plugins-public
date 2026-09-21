@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import re
@@ -67,6 +68,7 @@ EXPECTED_HELPERS = [
     "check-prerequisites",
     "resolve-workflow-binding",
     "resolve-scaffold-worktree-placement",
+    "render-plan-repair-context",
     "detect-commands",
     "detect-presets",
     "count-markers",
@@ -103,6 +105,19 @@ HELPER_CASES: dict[str, dict[str, object]] = {
     "check-prerequisites": {"workflow_file": WORKFLOW_FILE},
     "resolve-workflow-binding": {"workflow_file": AUTOPILOT_STAGE_WORKFLOW_FILE},
     "resolve-scaffold-worktree-placement": {"branch_name": "test-scaffold-placement"},
+    "render-plan-repair-context": {
+        "context_paths": {
+            "original-plan-prompt": "tests/speckit-pro/unit/fixtures/read-only-helpers/plan-repair-original.md",
+            "source-evidence": "tests/speckit-pro/unit/fixtures/read-only-helpers/plan-repair-source.md",
+        },
+        "g3_attempts_path": "tests/speckit-pro/unit/fixtures/read-only-helpers/plan-repair-attempts.json",
+        "g3_attempt_index": 0,
+        "executor_task": "Remove only the unsupported exact-render strengthening.",
+        "attempt_number": 1,
+        "disputed_wording": "exact client render timing",
+        "provenance_class": "assistant-inference",
+        "prior_repair_result": "initial G3 failure",
+    },
     "detect-commands": {},
     "detect-presets": {},
     "count-markers": {"type": "all", "feature_dir": FEATURE_DIR},
@@ -626,6 +641,77 @@ class ReadOnlyHelperTests(unittest.TestCase):
             request = json.loads(fixture_path.read_text(encoding="utf-8"))
             self.assertEqual(request["helper_id"], record["helper_id"])
             self.assertEqual(request["operation"], record["operation"])
+
+    def test_render_plan_repair_context_binds_exact_sources_and_g3_envelope(self) -> None:
+        if self.helper_filter and self.helper_filter != "render-plan-repair-context":
+            self.skipTest("Plan-repair rendering cases use render-plan-repair-context")
+        completed, response, stderr_records = run_runner(
+            helper_request("render-plan-repair-context", HELPER_CASES["render-plan-repair-context"])
+        )
+        self.assertEqual(completed.returncode, 0)
+        self.assertEqual(stderr_records, [])
+        self.assert_response(response, "ok", 0)
+        rendered = response["data"]["stdout_json"]
+        self.assertEqual(rendered["schema"], "plan-repair-executor-message/v1")
+        message = rendered["executor_message"]
+        for name in ("plan-repair-original.md", "plan-repair-source.md"):
+            exact = (FIXTURE_DIR / name).read_text(encoding="utf-8")
+            self.assertIn(exact, message)
+        attempts = json.loads((FIXTURE_DIR / "plan-repair-attempts.json").read_text(encoding="utf-8"))
+        decoder = json.JSONDecoder()
+        embedded = []
+        for index, character in enumerate(message):
+            if character not in "{[":
+                continue
+            try:
+                candidate, _end = decoder.raw_decode(message, index)
+            except json.JSONDecodeError:
+                continue
+            embedded.append(candidate)
+        self.assertIn(attempts["attempts"][0], embedded)
+        encoded = message.encode("utf-8")
+        self.assertEqual(rendered["message_bytes"], len(encoded))
+        self.assertEqual(rendered["message_sha256"], hashlib.sha256(encoded).hexdigest())
+        self.assertRegex(rendered["context_bundle_sha256"], r"\A[a-f0-9]{64}\Z")
+        self.assertEqual(
+            message.count(
+                "PLAN_REPAIR_CONTEXT_SHA256=" + rendered["context_bundle_sha256"]
+            ),
+            1,
+        )
+        self.assertEqual(
+            rendered["context_ids"], ["original-plan-prompt", "source-evidence"],
+        )
+
+    def test_render_plan_repair_context_fails_closed_on_untrusted_or_malformed_evidence(self) -> None:
+        if self.helper_filter and self.helper_filter != "render-plan-repair-context":
+            self.skipTest("Plan-repair rendering cases use render-plan-repair-context")
+        traversal = dict(HELPER_CASES["render-plan-repair-context"])
+        traversal["context_paths"] = {"source-evidence": "../outside.md"}
+        completed, response, stderr_records = run_runner(
+            helper_request("render-plan-repair-context", traversal)
+        )
+        self.assertEqual(completed.returncode, 2)
+        self.assert_response(response, "input_error", 2)
+        self.assertEqual([row["code"] for row in stderr_records], ["unsupported_path"])
+
+        with helper_project() as root:
+            (root / "context.md").write_text("trusted source\n", encoding="utf-8")
+            (root / "attempts.json").write_text(
+                '{"attempts":[],"attempts":[]}\n', encoding="utf-8",
+            )
+            malformed = {
+                **HELPER_CASES["render-plan-repair-context"],
+                "context_paths": {"source-evidence": "context.md"},
+                "g3_attempts_path": "attempts.json",
+            }
+            completed, response, stderr_records = run_runner(
+                helper_request("render-plan-repair-context", malformed), cwd=root,
+            )
+            self.assertEqual(completed.returncode, 2)
+            self.assert_response(response, "input_error", 2)
+            self.assertEqual(response["data"]["stdout_json"]["error"], "G3 attempts evidence is malformed")
+            self.assertEqual([row["code"] for row in stderr_records], ["invalid_input"])
 
     def test_envelope_rejects_unknown_and_mutation_modes(self) -> None:
         if self.helper_filter:
@@ -3468,7 +3554,7 @@ class ReadOnlyHelperTests(unittest.TestCase):
                 self.assertEqual(data["authoritative_command"].split(" < ", 1)[0], "python -m speckit_pro_runner")
                 expected_stdout_limit = (
                     PLAN_LAYERS_CAPTURE_LIMIT_BYTES
-                    if helper_id == "plan-layers-feature-dir"
+                    if helper_id in {"plan-layers-feature-dir", "render-plan-repair-context"}
                     else GENERIC_CAPTURE_LIMIT_BYTES
                 )
                 self.assertEqual(data["stdout"]["limit_bytes"], expected_stdout_limit)

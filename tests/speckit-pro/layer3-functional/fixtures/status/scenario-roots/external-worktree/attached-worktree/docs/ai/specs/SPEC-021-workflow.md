@@ -1,5 +1,3 @@
-<!-- fixture-kind: deterministic-synthetic-testdata; status scenario input only. -->
-
 # SPEC-021 Notifications Workflow
 
 ## Specification Context

@@ -880,8 +880,8 @@ class NativeCodexDeliveryTests(unittest.TestCase):
     def test_dispatch_item_markers_are_opt_in_bounded_opaque_evidence(self):
         messages = (
             "no marker",
-            "[[native-eval-item:dispatch-i1]]",
-            "[[native-eval-item:dispatch-i1]] then [[native-eval-item:other-item]]",
+            "[[work-item:dispatch-i1]]",
+            "[[work-item:dispatch-i1]] then [[work-item:other-item]]",
         )
         for message, expected in zip(messages, ([], ["dispatch-i1"], ["dispatch-i1", "other-item"])):
             with self.subTest(message=message):
@@ -899,7 +899,7 @@ class NativeCodexDeliveryTests(unittest.TestCase):
                 self.assertEqual(proof["task_input"], dispatch["task_input"])
                 self.assertNotIn(message, json.dumps(dispatch))
 
-        repeated = " ".join("[[native-eval-item:dispatch-i1]]" for _ in range(65))
+        repeated = " ".join("[[work-item:dispatch-i1]]" for _ in range(65))
         tree = fixture_tree()
         tree[ROOT] = raw(root_records(message=repeated))
         proof = parse_native_tree(

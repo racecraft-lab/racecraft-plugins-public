@@ -64,6 +64,18 @@
       "rollback": "Remove the helper registry entry and retain the scaffold pre-mutation stop."
     },
     {
+      "helper_id": "render-plan-repair-context",
+      "operation": "render-plan-repair-context",
+      "promotion_status": "python_authoritative",
+      "failure_classes": ["invalid_input", "missing_input", "malformed_json", "unsupported_path"],
+      "rejected_stdout_schema": {"error": "string"},
+      "deterministic_remediation": {"summary": "Provide sealed source-context files and retained G3 evidence.", "actions": ["Preserve the actual G3 envelope in the attempts file.", "Retry with repo-bound trusted context paths."]},
+      "subprocess_policy": {"shell": false, "bounded_input": true, "timeout_seconds": 30},
+      "path_boundary_policy": {"boundary": "repo_or_plugin", "rejects": ["traversal", "symlink_escape", "external_absolute_path", "duplicate_json_keys"]},
+      "authoritative_command": "python -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/read-only-helpers/requests/render-plan-repair-context.json",
+      "rollback": "Remove the helper registry entry and retain the literal-context pre-dispatch stop."
+    },
+    {
       "helper_id": "detect-commands",
       "operation": "detect-commands",
       "promotion_status": "python_authoritative",

@@ -26,6 +26,7 @@ from native_eval_fixture_reads import bind_controller_fixture_read_witnesses
 CANARY_TRACE = Path("/private/tmp/speckit-native-entry-canary.91QKOu/run/attempts/bed7e376197242aca25343222c73f137/raw-raw_trace.jsonl")
 CODEX_COUNT_THEN_SED = '''/bin/zsh -c "wc -l spec.md && sed -n '1,"'$p'"' spec.md"'''
 CODEX_BOUNDED_COUNT_THEN_SED = "/bin/zsh -c \"wc -l spec.md && sed -n '1,9999p' spec.md\""
+_OMITTED_BACKGROUND_FLAG = object()
 
 
 def stream(events):
@@ -88,6 +89,19 @@ def claude_continuation_trace(session: str = "continuation-session"):
          "session_id": session, "uuid": "result-two", "result_index": 1,
          "origin": {"kind": "task-notification"}},
     ])
+    return events
+
+
+def _claude_agent_continuation_events(
+    background_flag=_OMITTED_BACKGROUND_FLAG,
+):
+    events = claude_continuation_trace()
+    agent = next(event for event in events if event.get("uuid") == "agent-use")
+    tool_input = agent["message"]["content"][0]["input"]
+    if background_flag is _OMITTED_BACKGROUND_FLAG:
+        del tool_input["run_in_background"]
+    else:
+        tool_input["run_in_background"] = background_flag
     return events
 
 
@@ -713,9 +727,7 @@ class ClaudeContinuationTests(unittest.TestCase):
         self.assertEqual(result["native_metadata"]["native_turns"], 2)
 
     def test_claude_agent_omitted_background_flag_uses_authoritative_lifecycle(self):
-        events = claude_continuation_trace()
-        agent = next(event for event in events if event.get("uuid") == "agent-use")
-        del agent["message"]["content"][0]["input"]["run_in_background"]
+        events = _claude_agent_continuation_events()
 
         result = normalize_trace("claude", stream(events))
 
@@ -724,9 +736,19 @@ class ClaudeContinuationTests(unittest.TestCase):
         self.assertEqual(bridge["records"][1]["patch"]["status"], "completed")
         self.assertEqual(bridge["records"][2]["status"], "completed")
 
+    def test_claude_runtime_backgrounding_overrides_explicit_foreground_request(self):
+        events = _claude_agent_continuation_events(False)
+
+        result = normalize_trace("claude", stream(events))
+
+        self.assertEqual(
+            result["native_metadata"]["continuation_bridges"][0]["task_id"],
+            "background-task",
+        )
+
     def test_claude_agent_omitted_background_flag_rejects_incomplete_lifecycle(self):
         for variation in (
-            "explicit-false", "explicit-null", "explicit-one",
+            "explicit-null", "explicit-one",
             "foreground-start", "wrong-task-type",
             "missing-completion", "reordered-completion", "missing-notification",
         ):
@@ -742,7 +764,6 @@ class ClaudeContinuationTests(unittest.TestCase):
                                           if event.get("uuid") == "bridge-notification")
                 if variation.startswith("explicit-"):
                     tool_input["run_in_background"] = {
-                        "explicit-false": False,
                         "explicit-null": None,
                         "explicit-one": 1,
                     }[variation]
@@ -858,12 +879,9 @@ class ClaudeContinuationTests(unittest.TestCase):
                 elif variation == "failure-then-success":
                     changed[-2].update(is_error=True, subtype="error")
                 elif variation == "foreground-agent":
-                    agent = next(
-                        block for event in changed
-                        for block in event.get("message", {}).get("content", [])
-                        if isinstance(block, dict) and block.get("name") == "Agent"
-                    )
-                    agent["input"]["run_in_background"] = False
+                    started = next(event for event in changed
+                                   if event.get("uuid") == "task-start")
+                    started["is_backgrounded"] = False
                 else:
                     changed.pop()
                 with self.assertRaises(CaptureError):

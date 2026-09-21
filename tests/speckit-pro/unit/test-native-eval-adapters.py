@@ -127,7 +127,8 @@ def repository(root: Path) -> None:
             skill = root / "speckit-pro" / catalog / name / "SKILL.md"
             skill.parent.mkdir(parents=True)
             skill.write_text(
-                f"---\nname: {name}\ndescription: {name} description\n---\n\n{name} body\n",
+                f"---\nname: {name}\ndescription: {name} description\n"
+                f"user-invocable: true\n---\n\n{name} body\n",
                 encoding="utf-8",
             )
     for name in ("phase-executor", "implement-executor"):
@@ -1178,7 +1179,8 @@ class AdapterPreparationTests(unittest.TestCase):
         prompt = attempt / "plugin" / "evals" / "native.writable" / "prompt.md"
         self.assertEqual(
             prompt.read_text(),
-            self.case["prompt"].replace("{{skill}}", "mini-plugin:native-skill") + "\n",
+            "/mini-plugin:native-skill "
+            + self.case["prompt"].replace("{{skill}}", "mini-plugin:native-skill") + "\n",
         )
         case_config = prompt.with_name("case.yaml").read_text()
         self.assertIn('schema_version: "1.1"\n', case_config)
@@ -1226,34 +1228,35 @@ class AdapterPreparationTests(unittest.TestCase):
             )
 
         case_dir = prepared.cwd / "evals" / str(self.case["id"])
-        link = case_dir / ".native-eval-skill-references"
         staged_selected = prepared.cwd / "skills" / "native-skill" / "references"
         staged_adjacent = prepared.cwd / "skills" / "sibling-skill" / "references" / "secret.md"
         output_secret = attempt / "framework-output" / "secret.txt"
         output_secret.parent.mkdir()
         output_secret.write_text("qualification output\n", encoding="utf-8")
 
-        self.assertTrue(link.is_symlink())
-        self.assertEqual(link.resolve(), staged_selected.resolve())
         config = (case_dir / "case.yaml").read_text(encoding="utf-8")
         self.assertIn(
             'context:\n  add_dirs: [".native-eval-skill-references"]\n'
             "  scaffold_script: fixture.sh\n",
             config,
         )
-        self.assertNotIn(str(attempt), config)
+        self.assertIn(
+            "Whenever the skill directs you to read `references/<path>`, read "
+            f"`{case_dir / '.native-eval-skill-references'}/<path>` instead.",
+            config,
+        )
+        self.assertEqual(
+            config.count(str(case_dir / ".native-eval-skill-references")), 2,
+        )
         access = prepared.runtime_identity["settings"]["claude_reference_access"]
         self.assertEqual(access, {
-            "schema_version": "native-claude-reference-access/v2",
+            "schema_version": "native-claude-reference-access/v4",
             "skill": "mini-plugin:native-skill",
             "add_dir": ".native-eval-skill-references",
             "target": "skills/native-skill/references",
             "tree_sha256": adapters._tree_digest(staged_selected),
         })
-        self.assertEqual(prepared.runtime_identity["staged_tree_exclusions"], {
-            "root_directories": [],
-            "files": ["evals/native.writable/.native-eval-skill-references"],
-        })
+        self.assertNotIn("staged_tree_exclusions", prepared.runtime_identity)
         grant = (case_dir / access["add_dir"]).resolve()
         self.assertEqual((grant / "guide.md").read_text(encoding="utf-8"), "selected reference\n")
         self.assertTrue((grant / "guide.md").is_relative_to(grant))
@@ -1263,13 +1266,11 @@ class AdapterPreparationTests(unittest.TestCase):
         adapters._verify_prepared_identity(prepared)
         adapters._verify_post_execution_controls(prepared)
 
-        link.unlink()
-        link.symlink_to(os.path.relpath(staged_adjacent.parent, start=case_dir))
-        with self.assertRaisesRegex(ValueError, "reference access symlink changed"):
+        access["add_dir"] = os.path.relpath(staged_adjacent.parent, start=case_dir)
+        with self.assertRaisesRegex(ValueError, "reference access target changed"):
             adapters._verify_post_execution_controls(prepared)
 
-        link.unlink()
-        link.symlink_to(os.path.relpath(staged_selected, start=case_dir))
+        access["add_dir"] = ".native-eval-skill-references"
         (staged_selected / "guide.md").write_text("mutated reference\n", encoding="utf-8")
         with self.assertRaisesRegex(ValueError, "reference tree changed"):
             adapters._verify_post_execution_controls(prepared)
@@ -1287,8 +1288,6 @@ class AdapterPreparationTests(unittest.TestCase):
             )
 
         case_dir = prepared.cwd / "evals" / str(case["id"])
-        reference_link = case_dir / ".native-eval-skill-references"
-        self.assertTrue(reference_link.is_symlink())
         config = (case_dir / "case.yaml").read_text(encoding="utf-8")
         self.assertIn('  allowed_tools: ["Skill", "Write"]\n', config)
         self.assertIn('  add_dirs: [".native-eval-skill-references"]\n', config)
@@ -1296,6 +1295,8 @@ class AdapterPreparationTests(unittest.TestCase):
             prepared.runtime_identity["settings"]["claude_reference_access"]["target"],
             "skills/native-skill/references",
         )
+        adapters._verify_prepared_identity(prepared)
+        adapters._verify_post_execution_controls(prepared)
 
     def test_nested_claude_eval_uses_extended_official_turn_budget(self) -> None:
         case = copy.deepcopy(self.case)
@@ -2872,6 +2873,7 @@ class AdapterPreparationTests(unittest.TestCase):
             if value == "--disable"
         }
         self.assertTrue({"code_mode", "code_mode_only"} <= disabled)
+        self.assertIn("view_image", disabled)
         enabled = {
             prepared.command[index + 1]
             for index, value in enumerate(prepared.command[:-1])
@@ -3687,10 +3689,7 @@ class AdapterPreparationTests(unittest.TestCase):
         self.assertEqual(git_identity["receipt_relative_path"], "evals/native.writable/fixture-receipt.json")
         self.assertEqual(first.runtime_identity["staged_tree_exclusions"], {
             "root_directories": [],
-            "files": [
-                "evals/native.writable/fixture-receipt.json",
-                "evals/native.writable/.native-eval-skill-references",
-            ],
+            "files": ["evals/native.writable/fixture-receipt.json"],
         })
         adapters._verify_prepared_identity(first)
         copied_scaffold = self.temp / "copied-claude-scaffold"
@@ -4232,7 +4231,9 @@ class AdapterExecutionTests(unittest.TestCase):
             attempt_dir=timeout_dir, trace_path=timeout_dir / "timed-out.jsonl", result_path=None,
             artifact_root=timeout_dir, runtime_identity={"digest": "d" * 64},
         )
-        timed_out = adapters.execute_prepared(codex, 0.05)
+        # Leave enough startup time for the interpreter to establish its process group under
+        # concurrent CI load while still exercising the timeout-and-cleanup path.
+        timed_out = adapters.execute_prepared(codex, 1.0)
         self.assertTrue(timed_out.timed_out)
         self.assertEqual(timed_out.exit_code, -1)
         self.assertTrue(timed_out.process_evidence["cleanup_verified"])

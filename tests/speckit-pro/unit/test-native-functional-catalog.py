@@ -27,6 +27,7 @@ sys.path.insert(0, str(TEST_ROOT / "lib"))
 
 from native_eval_catalog import load_catalog, validate_catalog  # noqa: E402
 from native_eval_adapters import _stage_fixture_plan  # noqa: E402
+from native_eval_dispatch_context import qualify_native_dispatch_context  # noqa: E402
 from native_eval_fixture_setup import materialize_workspace  # noqa: E402
 from native_eval_grading import grade_observation  # noqa: E402
 from test_result import run_counted  # noqa: E402
@@ -96,17 +97,26 @@ TASK_LIST_CONTRACT_IDS = {
     "functional.speckit-autopilot.case-105",
 }
 RETIRED_LEGACY_REQUIREMENTS = {
+    "functional.speckit-autopilot.case-10": {"legacy-03"},
+    "functional.speckit-autopilot.case-12": {"legacy-02", "legacy-05", "legacy-06"},
     "functional.speckit-autopilot.case-5": {"legacy-05"},
     "functional.speckit-autopilot.case-6": {"legacy-05"},
     "functional.speckit-autopilot.case-20": {"legacy-05"},
+    "functional.speckit-autopilot.case-30": {"legacy-08"},
     "functional.speckit-autopilot.case-104": {"legacy-03"},
     "functional.speckit-autopilot.case-105": {"legacy-04"},
     "functional.speckit-autopilot.case-32": {"legacy-13"},
+    "functional.speckit-coach.case-12": {"legacy-06", "legacy-07", "legacy-08", "legacy-09"},
 }
 AMENDED_LEGACY_DESCRIPTION_IDS = {
     "functional.speckit-autopilot.case-3",
     "functional.speckit-autopilot.case-4",
+    "functional.speckit-autopilot.case-5",
     "functional.speckit-autopilot.case-8",
+    "functional.speckit-autopilot.case-10",
+    "functional.speckit-autopilot.case-12",
+    "functional.speckit-autopilot.case-13",
+    "functional.speckit-autopilot.case-14",
     "functional.speckit-autopilot.case-15",
     "functional.speckit-autopilot.case-17",
     "functional.speckit-autopilot.case-18",
@@ -114,16 +124,26 @@ AMENDED_LEGACY_DESCRIPTION_IDS = {
     "functional.speckit-autopilot.case-23",
     "functional.speckit-autopilot.case-26",
     "functional.speckit-autopilot.case-28",
+    "functional.speckit-autopilot.case-29",
+    "functional.speckit-autopilot.case-30",
     "functional.speckit-autopilot.case-32",
     "functional.speckit-coach.case-9",
+    "functional.speckit-coach.case-6",
     "functional.speckit-coach.case-12",
+    "functional.speckit-scaffold-spec.case-9",
 }
 AUTOPILOT_REDIRECT_IDS = {"functional.speckit-autopilot.case-10"}
-RETIRED_LITERAL_CHECK_IDS = {
+FULLY_RETIRED_LITERAL_CHECK_IDS = {
     "functional.speckit-autopilot.case-15",
     "functional.speckit-autopilot.case-26",
 }
-PROMOTED_LITERAL_TO_SEMANTIC_IDS = {"functional.speckit-autopilot.case-26"}
+PARTIALLY_RETIRED_LITERAL_CHECKS = {
+    ("functional.speckit-coach.case-9", "legacy-02-text"),
+}
+PROMOTED_LITERAL_TO_SEMANTIC_IDS = {
+    "functional.speckit-autopilot.case-26",
+    "functional.speckit-coach.case-9",
+}
 SCENARIO_IDS = {
     "functional.speckit-autopilot.case-29",
     "functional.speckit-autopilot.case-30",
@@ -224,9 +244,27 @@ FROZEN_GROUNDING_COPIES = {
 }
 
 EXPECTED_SEMANTIC_OVERLAYS = {
+    ("functional.speckit-autopilot.case-5", "legacy-06-semantic"):
+        "PASS only if the evidence says the active runtime's native visible-progress mechanism is required before Phase 1. "
+        "FAIL if it names a mechanism unavailable in the active runtime, omits the pre-Phase-1 plan, or treats visible progress as optional.",
+    ("functional.speckit-autopilot.case-5", "legacy-07-semantic"):
+        "PASS only if the evidence says current progress is mirrored to autopilot-state.json while the workflow file remains durable authority for workflow status and stage. "
+        "FAIL if it makes the state mirror the sole durable authority or omits the mirror.",
+    ("functional.speckit-autopilot.case-5", "legacy-09-semantic"):
+        "PASS only if the evidence includes Archive Sweep, Phase 0 through Phase 7 including Phase 6.5, and Post in the pre-Phase-1 plan. "
+        "FAIL if any canonical family is omitted.",
+    ("functional.speckit-autopilot.case-5", "legacy-12-semantic"):
+        "PASS only if the evidence explains that resume reconstructs the host-native visible plan by reconciling workflow-file authority with the current-run state mirror, repairing missing or stale state. "
+        "FAIL if it claims autopilot-state.json alone is authoritative or omits reconstruction.",
     ("functional.speckit-autopilot.case-15", "legacy-09-semantic"):
         "PASS only if the evidence identifies the clarify-executor question-set handoff returned to the parent for answering. "
         "Equivalent wording passes; no exact label is required. FAIL if the set has another role or the handoff direction is contradicted.",
+    ("functional.speckit-autopilot.case-15", "legacy-03-semantic"):
+        "PASS only if the evidence explains that consensus handles ambiguity and unresolved consensus is surfaced through the parent for human resolution. "
+        "FAIL if it bypasses consensus, hides the unresolved question, or invokes grill-me inside autopilot.",
+    ("functional.speckit-autopilot.case-26", "legacy-05-semantic"):
+        "PASS only if the response starts the first Post parallel group by marking the Doctor, Code Review, and Verify track items in_progress before dispatch. "
+        "FAIL if it marks the run complete, skips the group, or starts a later serial item first.",
     ("functional.speckit-autopilot.case-24", "legacy-01-semantic"):
         "PASS only if the evidence identifies confidence-gate as a read-only runner helper and workflow_file, mode_name, and threshold as its inputs. "
         "FAIL if the helper role or input relationship is omitted, contradicted, or merely implied by adjacent names.",
@@ -236,6 +274,9 @@ EXPECTED_SEMANTIC_OVERLAYS = {
     ("functional.speckit-coach.case-1", "legacy-04-semantic"):
         "PASS only if the evidence identifies specify, clarify, plan, checklist, tasks, analyze, and implement as the seven SDD phases in that order. "
         "FAIL if the sequence relationship is negated, contradicted, or the phase names are merely listed.",
+    ("functional.speckit-coach.case-9", "legacy-02-semantic"):
+        "PASS only if the response identifies the workflow's Spec ID field and its verified dedicated feature-branch field, allowing canonical label equivalents such as Branch when the surrounding explanation establishes that it is the verified feature branch. "
+        "FAIL if either field is omitted or the branch is not tied to the dedicated feature worktree.",
     ("functional.speckit-scaffold-spec.case-5", "legacy-02-semantic"):
         "PASS only if the answer says the failure report must identify the locally created branch, worktree, workflow file, and commit. "
         "Concrete identities are not required because the prompt does not supply them. FAIL if any category is omitted or the answer invents a value.",
@@ -377,7 +418,7 @@ def _assert_layer_plan_checks(test: unittest.TestCase, cases: dict[str, dict]) -
     layer_checks = {check["id"] for check in layer_plan["checks"]}
     test.assertTrue(
         {
-            "valid-exit", "invalid-exit", "input-error-exit", "non-split-skipped",
+            "valid-exit", "invalid-exit", "input-error-exit", "non-split-behavior",
             "exact-three-invocations", "gate-order", "request-contract",
             "no-pr-side-effects", "valid-native-result", "invalid-native-result",
             "input-error-native-result",
@@ -396,6 +437,128 @@ def _assert_broken_archive_checks(test: unittest.TestCase, cases: dict[str, dict
             "no-no-candidates-substitution",
         } <= archive_checks
     )
+
+
+def _assert_case_runtime_profile(test: unittest.TestCase, case: dict) -> None:
+    case_id = case["id"]
+    if case_id in AMBIGUOUS_DISPATCH_IDS:
+        test.assertEqual(case["timeout_seconds"], 300)
+        test.assertEqual(case["resource_class"], "nested")
+    elif case_id in CHILD_ABORT_IDS:
+        test.assertEqual(case["timeout_seconds"], 300)
+        test.assertEqual(case["resource_class"], "ordinary")
+    elif case_id in PLAN_REPAIR_IDS:
+        test.assertEqual(case["timeout_seconds"], 600)
+        test.assertEqual(case["resource_class"], "nested")
+        test.assertEqual(case["required_tools"], ["specify"])
+    elif case_id == "functional.speckit-autopilot.case-30":
+        test.assertEqual(case["timeout_seconds"], 600)
+        test.assertEqual(case["resource_class"], "ordinary")
+    else:
+        test.assertEqual(case["timeout_seconds"], 300)
+        test.assertEqual(case["resource_class"], "ordinary")
+
+
+def _assert_case_check_accounting(
+    test: unittest.TestCase,
+    case: dict,
+    selected: dict[str, dict],
+) -> None:
+    exempt_ids = (
+        GROUNDED_IDS | SCAFFOLD_FIXTURE_IDS | SCAFFOLD_DIAGNOSTIC_IDS
+        | STATUS_SEARCH_IDS | CHILD_ABORT_IDS | AMBIGUOUS_DISPATCH_IDS
+        | WORKTREE_BINDING_IDS | ARCHIVE_EXTENSION_IDS | COACH_INSTALLED_IDS
+        | COACH_ARCHIVE_IDS | AUTOPILOT_PREREQ_IDS | STATUS_WORKTREE_IDS
+        | SCAFFOLD_HANDOFF_IDS | SCENARIO_IDS | LOCAL_COMMAND_IDS | REDIRECT_IDS
+        | NATIVE_RESPONSE_IDS | DASHBOARD_IDS | WORKTREE_MIGRATION_IDS
+        | TASK_LIST_CONTRACT_IDS | AUTOPILOT_REDIRECT_IDS
+    )
+    case_id = case["id"]
+    if case_id in exempt_ids:
+        return
+    test.assertEqual(case["fixtures"], [], case_id)
+    test.assertFalse(any(check["type"] == "tool_used" for check in case["checks"]), case_id)
+    expected_text_checks = (
+        selected[case_id]["deterministic_text_checks"]
+        - (case_id in FULLY_RETIRED_LITERAL_CHECK_IDS)
+        - sum(candidate == case_id for candidate, _ in PARTIALLY_RETIRED_LITERAL_CHECKS)
+    )
+    test.assertEqual(
+        expected_text_checks,
+        sum(check["type"] == "text" for check in case["checks"]),
+        case_id,
+    )
+    expected_semantic_checks = (
+        selected[case_id]["semantic_checks"]
+        - len(RETIRED_LEGACY_REQUIREMENTS.get(case_id, set()))
+        + (case_id in PROMOTED_LITERAL_TO_SEMANTIC_IDS)
+    )
+    if case_id in {
+        "functional.speckit-autopilot.case-28",
+        "functional.speckit-scaffold-spec.case-10",
+    }:
+        expected_semantic_checks = 0
+    test.assertEqual(
+        expected_semantic_checks,
+        sum(check["type"] == "semantic" for check in case["checks"]),
+        case_id,
+    )
+
+
+def _assert_g3_failure(test: unittest.TestCase, case_id: str, result: subprocess.CompletedProcess) -> dict:
+    test.assertEqual(result.returncode, 1, (case_id, result.stderr))
+    envelope = json.loads(result.stdout)
+    test.assertEqual(envelope["status"], "expected_failure", case_id)
+    test.assertFalse(envelope["data"]["writes_state"], case_id)
+    test.assertEqual(
+        envelope["data"]["stdout_json"],
+        {
+            "gate": "G3", "pass": False,
+            "reason": "1 unresolved markers (NC:1, TODO:0)",
+            "markers": 1, "details": [],
+        },
+        case_id,
+    )
+    return envelope
+
+
+def _assert_renderer_context_proof(
+    test: unittest.TestCase,
+    contexts: dict[str, str],
+    fixtures: dict[str, Path],
+    root: Path,
+    envelope: dict,
+) -> None:
+    request_path = fixtures["scenario-inputs/context-request.json"]
+    context_request = json.loads(request_path.read_text(encoding="utf-8"))
+    test.assertEqual(context_request["helper_id"], "render-plan-repair-context")
+    test.assertEqual(context_request["operation"], "render-plan-repair-context")
+    test.assertEqual(context_request["inputs"]["context_paths"], contexts)
+    for destination in contexts.values():
+        target = root / destination
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(fixtures[destination], target)
+    attempts_path = root / context_request["inputs"]["g3_attempts_path"]
+    attempts_path.parent.mkdir(parents=True, exist_ok=True)
+    attempts_path.write_text(json.dumps({"attempts": [envelope]}), encoding="utf-8")
+    rendered_result = subprocess.run(
+        [sys.executable, "-m", "speckit_pro_runner"],
+        input=json.dumps(context_request),
+        text=True,
+        capture_output=True,
+        cwd=root,
+        env={**os.environ, "PYTHONPATH": str(REPO_ROOT / "speckit-pro")},
+        check=False,
+    )
+    test.assertEqual(rendered_result.returncode, 0, rendered_result.stderr)
+    rendered = json.loads(rendered_result.stdout)["data"]["stdout_json"]
+    trusted = {
+        context_id: (root / destination).read_text(encoding="utf-8")
+        for context_id, destination in contexts.items()
+    }
+    proof = qualify_native_dispatch_context(rendered["executor_message"], trusted, envelope)
+    test.assertEqual(proof["observed_context_ids"], sorted(contexts))
+    test.assertTrue(proof["complete_preceding_json_found"])
 
 
 class NativeFunctionalCatalogTests(unittest.TestCase):
@@ -426,47 +589,18 @@ class NativeFunctionalCatalogTests(unittest.TestCase):
         for case in self.catalog["cases"]:
             self.assertEqual(case["layer"], "functional")
             self.assertEqual(set(case["hosts"]), {"claude", "codex"})
-            if case["id"] in CHILD_ABORT_IDS | AMBIGUOUS_DISPATCH_IDS:
-                self.assertEqual(case["timeout_seconds"], 300)
-                self.assertEqual(case["resource_class"], "nested")
-            elif case["id"] in PLAN_REPAIR_IDS:
-                self.assertEqual(case["timeout_seconds"], 600)
-                self.assertEqual(case["resource_class"], "nested")
-                self.assertEqual(case["required_tools"], ["specify"])
-            else:
-                self.assertEqual(case["timeout_seconds"], 300)
-                self.assertEqual(case["resource_class"], "ordinary")
+            _assert_case_runtime_profile(self, case)
             self.assertNotIn("Schema-valid", case["capability"])
             self.assertFalse(any("observable response satisfies" in row["description"] for row in case["requirements"]))
-            if case["id"] in GROUNDED_IDS | SCAFFOLD_FIXTURE_IDS | SCAFFOLD_DIAGNOSTIC_IDS | STATUS_SEARCH_IDS | CHILD_ABORT_IDS | AMBIGUOUS_DISPATCH_IDS | WORKTREE_BINDING_IDS | ARCHIVE_EXTENSION_IDS | COACH_INSTALLED_IDS | COACH_ARCHIVE_IDS | AUTOPILOT_PREREQ_IDS | STATUS_WORKTREE_IDS | SCAFFOLD_HANDOFF_IDS | SCENARIO_IDS | LOCAL_COMMAND_IDS | REDIRECT_IDS | NATIVE_RESPONSE_IDS | DASHBOARD_IDS | WORKTREE_MIGRATION_IDS | TASK_LIST_CONTRACT_IDS | AUTOPILOT_REDIRECT_IDS:
-                continue
-            self.assertEqual(case["fixtures"], [], case["id"])
-            self.assertFalse(any(check["type"] == "tool_used" for check in case["checks"]), case["id"])
-            self.assertEqual(
-                selected[case["id"]]["deterministic_text_checks"]
-                - (case["id"] in RETIRED_LITERAL_CHECK_IDS),
-                sum(check["type"] == "text" for check in case["checks"]),
-                case["id"],
-            )
-            self.assertEqual(
-                selected[case["id"]]["semantic_checks"]
-                - len(RETIRED_LEGACY_REQUIREMENTS.get(case["id"], set()))
-                + (case["id"] in PROMOTED_LITERAL_TO_SEMANTIC_IDS),
-                sum(check["type"] == "semantic" for check in case["checks"]),
-                case["id"],
-            )
-        self.assertEqual(
-            sum(check["type"] == "text" for case in self.catalog["cases"] for check in case["checks"]),
-            20,
+            _assert_case_check_accounting(self, case, selected)
+        text_checks = sum(
+            check["type"] == "text" for case in self.catalog["cases"] for check in case["checks"]
         )
-        self.assertEqual(
-            sum(
-                check["type"] == "text"
-                for case_id in SCENARIO_IDS
-                for check in self.cases[case_id]["checks"]
-            ),
-            10,
+        scenario_text_checks = sum(
+            check["type"] == "text" for case_id in SCENARIO_IDS for check in self.cases[case_id]["checks"]
         )
+        self.assertEqual(text_checks, 18)
+        self.assertEqual(scenario_text_checks, 9)
 
     def test_cross_layer_reuse_preserves_every_legacy_expectation_without_duplicate_launches(self) -> None:
         reused = self.selection["cross_layer_reuse"]
@@ -970,7 +1104,7 @@ class NativeFunctionalCatalogTests(unittest.TestCase):
             self.assertIn("exactly one top-level JSON object whose only key is attempts", prompt)
 
         grill = self.cases["functional.grill-me.case-7"]
-        self.assertIn("spawn_agent", grill["hosts"]["codex"]["allowed_tools"])
+        self.assertNotIn("spawn_agent", grill["hosts"]["codex"]["allowed_tools"])
         self.assertNotIn("subagent", grill["hosts"]["codex"]["allowed_tools"])
 
     def test_status_cases_scope_absence_and_stage_external_workflow_only(self) -> None:
@@ -1045,7 +1179,10 @@ class NativeFunctionalCatalogTests(unittest.TestCase):
         dispatch_check = next(row for row in dispatch["checks"] if row["id"] == "ambiguous-dispatch")
         self.assertEqual(
             {row["role"] for row in dispatch_check["expected"]},
-            {"codebase-analyst", "spec-context-analyst", "domain-researcher"},
+            {
+                "codebase-analyst", "spec-context-analyst", "domain-researcher",
+                "consensus-synthesizer",
+            },
         )
         for case_id in (
             "functional.speckit-autopilot.case-104",
@@ -1059,8 +1196,49 @@ class NativeFunctionalCatalogTests(unittest.TestCase):
 
         scaffold = self.cases["functional.speckit-scaffold-spec.case-2-handoff"]
         self.assertNotIn(".worktrees/spec-009", scaffold["prompt"])
-        mode = next(row for row in scaffold["checks"] if row["id"] == "handoff-mode")
-        self.assertNotEqual(mode["expected_by_host"]["claude"], mode["expected_by_host"]["codex"])
+        self.assertNotIn("handoff-mode", {row["id"] for row in scaffold["checks"]})
+        handoff = next(row for row in scaffold["checks"] if row["id"] == "legacy-01-semantic")
+        self.assertIn("current host's directory action", handoff["rubric"])
+
+    def test_scaffold_case_10_enforces_dual_runtime_placement_contract(self) -> None:
+        scaffold10 = self.cases["functional.speckit-scaffold-spec.case-10"]
+        self.assertFalse(any(row["type"] == "semantic" for row in scaffold10["checks"]))
+        self.assertEqual(
+            sum(row["type"] == "response_json_field" for row in scaffold10["checks"]),
+            13,
+        )
+        valid_scaffold10 = {
+            "pre_create_helper": "resolve-scaffold-worktree-placement",
+            "pre_create_before_worktree_add": True,
+            "pre_create_before_artifact_or_roadmap_mutation": True,
+            "worktree_root": "/workspace/.codex/worktrees/15bd/repo/.worktrees/spec-710-dual-runtime-writing-boundary",
+            "required_placement_status": "resolved",
+            "allowed_relations": ["same", "descendant"],
+            "post_create_helper_rerun": True,
+            "post_create_disposition": "reuse",
+            "identical_binding_fields": ["task_root", "worktree_root", "branch_name"],
+            "post_create_before_bootstrap_and_grill_me": True,
+            "stop_on_external_override": True,
+            "stop_on_external_existing_worktree": True,
+            "non_authoritative_sources": [
+                "git rev-parse --git-common-dir",
+                "primary checkout",
+                "first git worktree list record",
+            ],
+        }
+        accepted = grade_observation(
+            scaffold10,
+            observation(activation="speckit-scaffold-spec", final_text=json.dumps(valid_scaffold10)),
+            host="codex",
+        )
+        self.assertEqual(accepted["status"], "pass")
+        valid_scaffold10["post_create_helper_rerun"] = False
+        rejected = grade_observation(
+            scaffold10,
+            observation(activation="speckit-scaffold-spec", final_text=json.dumps(valid_scaffold10)),
+            host="codex",
+        )
+        self.assertEqual(rejected["status"], "fail")
 
     def test_catalog_rejects_unknown_host_tools_and_hidden_machine_contracts(self) -> None:
         unknown_tool = copy.deepcopy(self.loaded)
@@ -1155,6 +1333,11 @@ class NativeFunctionalCatalogTests(unittest.TestCase):
                 if check["type"] == "native_plan_repair_context"
             ]
             self.assertEqual(len(native_checks), 1, case_id)
+            self.assertNotIn(
+                "actual-g3-sequence",
+                {check["id"] for check in case["checks"]},
+                case_id,
+            )
             check = native_checks[0]
             self.assertEqual(check["contexts"], contexts, case_id)
             self.assertEqual(check["executor_role"], "phase-executor", case_id)
@@ -1182,19 +1365,8 @@ class NativeFunctionalCatalogTests(unittest.TestCase):
                     env=env,
                     check=False,
                 )
-                self.assertEqual(result.returncode, 1, (case_id, result.stderr))
-                envelope = json.loads(result.stdout)
-                self.assertEqual(envelope["status"], "expected_failure", case_id)
-                self.assertFalse(envelope["data"]["writes_state"], case_id)
-                self.assertEqual(
-                    envelope["data"]["stdout_json"],
-                    {
-                        "gate": "G3", "pass": False,
-                        "reason": "1 unresolved markers (NC:1, TODO:0)",
-                        "markers": 1, "details": [],
-                    },
-                    case_id,
-                )
+                envelope = _assert_g3_failure(self, case_id, result)
+                _assert_renderer_context_proof(self, contexts, fixtures, root, envelope)
 
     def test_local_command_cases_preserve_provenance_and_exact_observations(self) -> None:
         for case_id, sources in LOCAL_COMMAND_LEGACY_SOURCES.items():
@@ -1539,7 +1711,8 @@ class NativeFunctionalCatalogTests(unittest.TestCase):
                             "schema": "native-plan-repair-context/v1",
                             "authority": "controller-bound-retained-native-evidence",
                             "checks": [{
-                                "check_id": check["id"], "commands": [], "dispatches": [],
+                                "check_id": check["id"], "commands": [],
+                                "renderers": [], "dispatches": [],
                             }],
                         },
                         "subagent_return_order": {
@@ -1623,7 +1796,12 @@ class NativeFunctionalCatalogTests(unittest.TestCase):
                 self.assertNotIn("all applicable requirements", check["rubric"])
 
     def test_only_audited_literal_or_format_requirements_use_text_checks(self) -> None:
-        declared = {(row["case_id"], row["check_id"]): row for row in self.examples["literal_checks"]}
+        declared = {
+            (row["case_id"], row["check_id"]): row
+            for row in self.examples["literal_checks"]
+            if row["case_id"] not in FULLY_RETIRED_LITERAL_CHECK_IDS
+            and (row["case_id"], row["check_id"]) not in PARTIALLY_RETIRED_LITERAL_CHECKS
+        }
         actual = {
             (case["id"], check["id"]): (case, check)
             for case in self.catalog["cases"]

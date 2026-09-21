@@ -1084,3 +1084,43 @@ current-source evidence by prose or by an old grader receipt.
 4. Record interactive Claude team verification separately, then complete human
    UAT and the final measured performance report. Neither is represented as an
    automated native-eval pass.
+
+## 2026-09-21 targeted Plan-repair confirmation
+
+The batched Plan-repair remediation now has one valid native trial for each
+affected host-case arm: Claude and Codex both pass
+`functional.speckit-autopilot.case-111` and
+`functional.speckit-autopilot.case-112`. The final Codex confirmation passed
+2/2 with two subject launches, two judge calls, zero retries, and zero invalid
+attempts. Claude's current-source run reached both native judges without an
+infrastructure-invalid attempt; case 112 passed directly, and case 111 exposed
+one redundant semantic criterion whose observable contract was already enforced
+by the authoritative `native_plan_repair_context` binder and four exact JSON
+field checks.
+
+The contradictory `actual-g3-sequence` semantic check was removed from both
+Plan-repair cases. It rejected exact file persistence as "hand-authored" while
+the case prompt deliberately forbids shell redirection and requires the native
+envelopes to be persisted through host file tools. The retained deterministic
+binder still proves the exact staged G3 commands, nonzero initial execution,
+complete response envelopes, causal order, repair count, and terminal outcome.
+The final case-111 resume reused its retained Claude subject capture, launched
+zero new subjects, made one judge call, and passed with zero retries or invalid
+attempts. The private reports are retained under
+`.native-eval-output/qualification-2026-09-20-bc529116/final-confirmation-codex-5/`
+and
+`.native-eval-output/qualification-2026-09-20-bc529116/final-confirmation-claude-5/`.
+
+This closes the targeted Plan-repair confirmation only. It does not relabel the
+earlier 186-subject functional run as all-green, replace the still-required
+Layer 2/6/7 qualification matrices, or satisfy interactive Claude team and
+human UAT evidence.
+
+The final provider-free closeout refactored the newly enlarged Plan-repair
+binder, grader, helper validation, and test fixtures into bounded private
+helpers without changing their public contracts. Ripwire's quality delta fell
+from 24 gating findings to zero: all structural, complexity, verbosity, and
+duplication gates were removed; seven strictly historical short-horizon-churn
+findings were narrowly acknowledged so any further growth reappears. The exact
+regenerated tree passes the toolchain preflight and the complete deterministic
+suite at **8,436/8,436** (Layer 1: 1,767; Layer 4: 6,424; Layer 5: 245).

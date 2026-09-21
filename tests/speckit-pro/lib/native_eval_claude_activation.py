@@ -1,7 +1,7 @@
 """Fail-closed evidence for explicit Claude skill-loader activation.
 
 The public plugin-eval stream omits the initial slash command.  This module
-binds a controller-prepared static skill to Claude's retained root-session
+binds a controller-prepared user-invocable skill to Claude's retained root-session
 JSONL, where the native loader records both the command envelope and its
 directly parented rendered-skill injection.  Availability, final prose, and
 correct output are deliberately not activation evidence.
@@ -173,8 +173,6 @@ def _frontmatter_body(staged_skill: bytes, expected_skill: str) -> bytes:
              "staged skill name does not match the expected command")
     _require(fields.get("user-invocable") == "true",
              "staged skill is not explicitly user-invocable")
-    _require(fields.get("disable-model-invocation") == "true",
-             "staged skill does not preserve manual-only invocation")
     body = staged_skill[end + len(b"\n---\n"):]
     _require(bool(body), "staged skill body is empty")
     _require(not any(marker.search(body) for marker in _DYNAMIC_SKILL_MARKERS),
@@ -244,6 +242,8 @@ def build_activation_witness(
     _require(PurePosixPath(directory).name == skill.rsplit(":", 1)[1],
              "staged skill directory does not match the expected skill")
     body = _frontmatter_body(staged_skill, skill)
+    plugin_root = str(PurePosixPath(directory).parents[1]).encode("utf-8")
+    rendered_body = body.replace(b"${CLAUDE_PLUGIN_ROOT}", plugin_root)
     command_content = (
         f"<command-message>{skill}</command-message>\n"
         f"<command-name>/{skill}</command-name>\n"
@@ -251,7 +251,7 @@ def build_activation_witness(
     ).encode("utf-8")
     rendered = (
         f"Base directory for this skill: {directory}\n".encode("utf-8")
-        + body + b"\n\nARGUMENTS: " + arguments_bytes
+        + rendered_body + b"\n\nARGUMENTS: " + arguments_bytes
     )
     trace = _trace_identity(raw_trace, skill)
     return {
