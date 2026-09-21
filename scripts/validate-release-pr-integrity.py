@@ -22,6 +22,19 @@ COMMIT_CITATION_RE = re.compile(
 )
 REPOSITORY_RE = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
 
+THREAD_COMMENTS_QUERY = """
+query($thread:ID!,$after:String){
+  node(id:$thread){
+    ... on PullRequestReviewThread{
+      comments(first:100,after:$after){
+        nodes{body authorAssociation url}
+        pageInfo{hasNextPage endCursor}
+      }
+    }
+  }
+}
+""".strip()
+
 
 class IntegrityError(RuntimeError):
     """Raised when release-PR integrity cannot be established."""
@@ -47,6 +60,87 @@ def run_gh(argv: Sequence[str]) -> dict[str, Any]:
     return payload
 
 
+def _connection_page(
+    connection: Any,
+    *,
+    label: str,
+) -> tuple[list[dict[str, Any]], bool, str | None]:
+    if not isinstance(connection, dict):
+        raise IntegrityError(f"{label} is missing")
+    nodes = connection.get("nodes")
+    if not isinstance(nodes, list) or not all(isinstance(item, dict) for item in nodes):
+        raise IntegrityError(f"{label} is malformed")
+    page_info = connection.get("pageInfo")
+    if not isinstance(page_info, dict):
+        raise IntegrityError(f"{label} pagination metadata is missing")
+    has_next_page = page_info.get("hasNextPage")
+    if not isinstance(has_next_page, bool):
+        raise IntegrityError(f"{label} pagination metadata is malformed")
+    if "endCursor" not in page_info:
+        raise IntegrityError(f"{label} pagination cursor metadata is missing")
+    end_cursor = page_info.get("endCursor")
+    if has_next_page and (not isinstance(end_cursor, str) or not end_cursor):
+        raise IntegrityError(f"{label} pagination cursor is missing")
+    if end_cursor is not None and not isinstance(end_cursor, str):
+        raise IntegrityError(f"{label} pagination cursor is malformed")
+    return nodes, has_next_page, end_cursor
+
+
+def _load_thread_comments(
+    thread: dict[str, Any],
+    *,
+    api: Callable[[Sequence[str]], dict[str, Any]],
+) -> dict[str, Any]:
+    comments = thread.get("comments")
+    nodes, has_next_page, end_cursor = _connection_page(
+        comments,
+        label="review thread comments",
+    )
+    all_nodes = list(nodes)
+    seen_cursors: set[str] = set()
+    while has_next_page:
+        thread_id = thread.get("id")
+        if not isinstance(thread_id, str) or not thread_id:
+            raise IntegrityError("review thread ID is missing for comment pagination")
+        assert isinstance(end_cursor, str)
+        if end_cursor in seen_cursors:
+            raise IntegrityError("review thread comment pagination cursor did not advance")
+        seen_cursors.add(end_cursor)
+        payload = api(
+            [
+                "api",
+                "graphql",
+                "-f",
+                f"query={THREAD_COMMENTS_QUERY}",
+                "-F",
+                f"thread={thread_id}",
+                "-f",
+                f"after={end_cursor}",
+            ]
+        )
+        if payload.get("errors"):
+            raise IntegrityError("GitHub GraphQL returned errors while paginating comments")
+        data = payload.get("data")
+        node = data.get("node") if isinstance(data, dict) else None
+        if not isinstance(node, dict):
+            raise IntegrityError("review thread comment pagination response is malformed")
+        page_nodes, has_next_page, end_cursor = _connection_page(
+            node.get("comments"),
+            label="review thread comments",
+        )
+        all_nodes.extend(page_nodes)
+
+    assert isinstance(comments, dict)
+    return {
+        **thread,
+        "comments": {
+            **comments,
+            "nodes": all_nodes,
+            "pageInfo": {"hasNextPage": False, "endCursor": end_cursor},
+        },
+    }
+
+
 def load_release_pr(
     repository: str,
     pr_number: int,
@@ -66,7 +160,7 @@ query($owner:String!,$name:String!,$number:Int!,$after:String){
           isResolved
           comments(first:100){
             nodes{body authorAssociation url}
-            pageInfo{hasNextPage}
+            pageInfo{hasNextPage endCursor}
           }
         }
         pageInfo{hasNextPage endCursor}
@@ -105,23 +199,14 @@ query($owner:String!,$name:String!,$number:Int!,$after:String){
         connection = current.get("reviewThreads")
         if not isinstance(connection, dict):
             raise IntegrityError("review thread inventory is missing")
-        nodes = connection.get("nodes")
-        if not isinstance(nodes, list) or not all(isinstance(item, dict) for item in nodes):
-            raise IntegrityError("review thread inventory is malformed")
-        for thread in nodes:
-            comments = thread.get("comments")
-            page_info = comments.get("pageInfo") if isinstance(comments, dict) else None
-            if not isinstance(page_info, dict) or page_info.get("hasNextPage"):
-                raise IntegrityError("a review thread has more than 100 comments")
-        threads.extend(nodes)
-        page_info = connection.get("pageInfo")
-        if not isinstance(page_info, dict):
-            raise IntegrityError("review thread pagination metadata is missing")
-        if not page_info.get("hasNextPage"):
+        nodes, has_next_page, end_cursor = _connection_page(
+            connection,
+            label="review thread inventory",
+        )
+        threads.extend(_load_thread_comments(thread, api=api) for thread in nodes)
+        if not has_next_page:
             break
-        after = page_info.get("endCursor")
-        if not isinstance(after, str) or not after:
-            raise IntegrityError("review thread pagination cursor is missing")
+        after = end_cursor
     assert pr is not None
     return pr, threads
 

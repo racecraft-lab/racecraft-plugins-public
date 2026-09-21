@@ -326,7 +326,7 @@ class ReleasePrIntegrityTests(unittest.TestCase):
                                                 "url": "https://example.test/thread-1",
                                             }
                                         ],
-                                        "pageInfo": {"hasNextPage": False},
+                                        "pageInfo": {"hasNextPage": False, "endCursor": None},
                                     },
                                 }
                             ],
@@ -410,6 +410,95 @@ class ReleasePrIntegrityTests(unittest.TestCase):
             ),
         )
         self.assertEqual(1, len(calls))
+
+
+def _integrity_comments(payload: dict) -> dict:
+    return payload["data"]["repository"]["pullRequest"]["reviewThreads"]["nodes"][0][
+        "comments"
+    ]
+
+
+def _integrity_initial_page() -> dict:
+    payload = ReleasePrIntegrityTests.graphql_payload()
+    _integrity_comments(payload)["pageInfo"] = {
+        "hasNextPage": True,
+        "endCursor": "comments-1",
+    }
+    return payload
+
+
+def _integrity_nested_page(nodes: list[dict], has_next: bool, cursor: str | None) -> dict:
+    return {
+        "data": {
+            "node": {
+                "comments": {
+                    "nodes": nodes,
+                    "pageInfo": {"hasNextPage": has_next, "endCursor": cursor},
+                }
+            }
+        }
+    }
+
+
+class ReleasePrIntegrityPaginationTests(unittest.TestCase):
+    REPOSITORY = "racecraft-lab/racecraft-plugins-public"
+
+    def test_multipage_review_thread_comments_are_all_checked(self) -> None:
+        first = _integrity_initial_page()
+        _integrity_comments(first)["nodes"] = [
+            {"body": f"Observation {index}.", "authorAssociation": "MEMBER", "url": "u"}
+            for index in range(100)
+        ]
+        middle = _integrity_nested_page(
+            [{"body": "Follow-up.", "authorAssociation": "MEMBER", "url": "u"}] * 100,
+            True,
+            "comments-2",
+        )
+        final = _integrity_nested_page(
+            [{"body": "Fixed in `deadbee`.", "authorAssociation": "MEMBER", "url": "u"}],
+            False,
+            None,
+        )
+        pages = iter([first, middle, final])
+        calls: list[list[str]] = []
+
+        def fake(argv):
+            command = list(argv)
+            calls.append(command)
+            if command[:2] == ["api", "graphql"]:
+                return next(pages)
+            if "/commits/deadbee" in command[-1]:
+                return {"sha": ReleasePrIntegrityTests.FULL_CITED_SHA}
+            if "/compare/" in command[-1]:
+                return {"status": "ahead"}
+            raise AssertionError(command)
+
+        self.assertEqual(0, integrity.validate_release_pr(self.REPOSITORY, 570, api=fake))
+        nested = [call for call in calls if any("query($thread:ID!" in part for part in call)]
+        self.assertEqual(2, len(nested))
+        self.assertTrue(any("after=comments-1" in part for part in nested[0]))
+        self.assertTrue(any("after=comments-2" in part for part in nested[1]))
+
+    def test_invalid_comment_pagination_fails_closed(self) -> None:
+        missing = ReleasePrIntegrityTests.graphql_payload()
+        del _integrity_comments(missing)["pageInfo"]
+        malformed_nested = _integrity_nested_page([], False, None)
+        del malformed_nested["data"]["node"]["comments"]["pageInfo"]["hasNextPage"]
+        repeated = _integrity_nested_page([], True, "comments-1")
+        scenarios = (
+            ("missing metadata", [missing], "pagination metadata is missing"),
+            (
+                "malformed nested metadata",
+                [_integrity_initial_page(), malformed_nested],
+                "metadata is malformed",
+            ),
+            ("repeated cursor", [_integrity_initial_page(), repeated], "cursor did not advance"),
+        )
+        for label, responses, expected in scenarios:
+            with self.subTest(label=label), self.assertRaises(integrity.IntegrityError) as caught:
+                pages = iter(responses)
+                integrity.load_release_pr(self.REPOSITORY, 570, api=lambda _argv: next(pages))
+            self.assertIn(expected, str(caught.exception))
 
 
 class ReleasePrLifecycleTests(unittest.TestCase):
