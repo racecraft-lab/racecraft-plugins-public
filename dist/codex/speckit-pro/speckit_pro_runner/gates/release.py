@@ -342,7 +342,10 @@ def live_version_sync_check(repo_root: Path) -> dict[str, Any]:
         and all(re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", value or "") is not None for value in values)
         and len(set(values)) == 1
     )
-    evidence = [f"{path}=omitted" for path, _selector in unversioned_sources]
+    evidence = [
+        f"{path}={live_unversioned_version_evidence(repo_root / path, selector)}"
+        for path, selector in unversioned_sources
+    ]
     evidence.extend(f"{path}={value or 'missing'}" for path, value in versions)
     return installed_release_check(
         "version-sync",
@@ -356,6 +359,18 @@ def live_version_sync_check(repo_root: Path) -> dict[str, Any]:
 def live_version_field_omitted(path: Path, selector: tuple[str, ...]) -> bool:
     current = live_json_value(path, selector[:-1])
     return isinstance(current, dict) and selector[-1] not in current
+
+
+def live_unversioned_version_evidence(path: Path, selector: tuple[str, ...]) -> str:
+    current = live_json_value(path, selector[:-1])
+    if not isinstance(current, dict):
+        return "missing-or-invalid"
+    if selector[-1] not in current:
+        return "omitted"
+    value = current[selector[-1]]
+    if isinstance(value, str) and value:
+        return value
+    return f"invalid:{json.dumps(value, sort_keys=True, separators=(',', ':'))}"
 
 
 def live_json_value(path: Path, selector: tuple[str, ...]) -> Any:
