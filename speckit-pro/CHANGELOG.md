@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.32.1](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.32.0...speckit-pro-v2.32.1) (2026-09-21)
+
+
+### Bug Fixes
+
+* **evals:** complete native parity qualification ([#588](https://github.com/racecraft-lab/racecraft-plugins-public/issues/588)) ([fc0d981](https://github.com/racecraft-lab/racecraft-plugins-public/commit/fc0d9818f629bedc22cc4323495e7be2e33bea49))
+* **release:** prevent stale caches and dropped release fixes ([#590](https://github.com/racecraft-lab/racecraft-plugins-public/issues/590)) ([7c3b0db](https://github.com/racecraft-lab/racecraft-plugins-public/commit/7c3b0dbd5c45705230865931d8bafc77d7924118))
+
 ## [2.32.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.31.0...speckit-pro-v2.32.0) (2026-09-20)
 
 
