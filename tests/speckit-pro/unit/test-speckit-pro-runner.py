@@ -296,11 +296,11 @@ class RunnerFoundationTests(unittest.TestCase):
         self.assertEqual(manifest["selected_runtime_name"], "python-stdlib-runner")
         self.assertEqual(manifest["contract_version"], "1.0")
         # Version-agnostic: the runner manifest's plugin_version must be a valid
-        # semantic version AND equal the released plugin version. release-please
-        # bumps it via release-please-config.json extra-files ($.plugin_version),
-        # so a hardcoded literal here would silently drift.
+        # semantic version AND equal the released Codex plugin version.
+        # Claude intentionally omits version so its git commit becomes the
+        # update and cache identity.
         plugin_version = json.loads(
-            (PLUGIN_ROOT / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8")
+            (PLUGIN_ROOT / ".codex-plugin" / "plugin.json").read_text(encoding="utf-8")
         )["version"]
         self.assertRegex(
             manifest["plugin_version"],
@@ -310,7 +310,7 @@ class RunnerFoundationTests(unittest.TestCase):
         self.assertEqual(
             manifest["plugin_version"],
             plugin_version,
-            "runner manifest plugin_version must track speckit-pro/.claude-plugin/plugin.json $.version",
+            "runner manifest plugin_version must track speckit-pro/.codex-plugin/plugin.json $.version",
         )
         self.assertEqual(manifest["python_minimum_version"], "3.11")
         self.assertTrue(manifest["specify_required"])
@@ -434,11 +434,16 @@ class RunnerFoundationTests(unittest.TestCase):
             self.assertEqual(completed.returncode, 0, completed.stderr)
             baseline = json.loads(completed.stdout)
             current = json.loads((REPO_ROOT / path).read_text(encoding="utf-8"))
-            baseline_version = baseline.pop("version")
-            current_version = current.pop("version")
+            baseline_version = baseline.pop("version", None)
+            current_version = current.pop("version", None)
             expected = {**baseline, **allowed_manifest_fields[path]}
             self.assertEqual(current, expected, path)
-            if release_please_review:
+            if path == "speckit-pro/.claude-plugin/plugin.json":
+                self.assertIsNone(
+                    current_version,
+                    "Claude manifest version must stay omitted so updates use the resolved commit",
+                )
+            elif release_please_review:
                 self.assertNotEqual(current_version, baseline_version, path)
 
     def test_release_please_review_detection_from_environment(self) -> None:

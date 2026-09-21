@@ -23,7 +23,6 @@ from test_result import run_counted
 
 PLUGIN_JSON = PLUGIN_ROOT / '.claude-plugin' / 'plugin.json'
 KEBAB_RE = re.compile('^[a-z][a-z0-9]*(-[a-z0-9]+)*$')
-validate_plugin_SEMVER_RE = re.compile('^[0-9]+\\.[0-9]+\\.[0-9]+$')
 
 def _field_str(data: object, key: str) -> str:
     """Mirror the bash `python3 -c ... 2>/dev/null` field read: value as a string,
@@ -54,9 +53,8 @@ class ValidatePlugin(unittest.TestCase):
         with self.subTest(msg='name is kebab-case'):
             name_val = _field_str(data, 'name')
             self.assertRegex(name_val, KEBAB_RE, 'name must be kebab-case')
-        with self.subTest(msg='version field exists and is semver'):
-            version_val = _field_str(data, 'version')
-            self.assertRegex(version_val, validate_plugin_SEMVER_RE, 'version must be X.Y.Z')
+        with self.subTest(msg='version field is omitted for commit-addressed cache identity'):
+            self.assertNotIn('version', data)
         with self.subTest(msg='description field exists and is non-empty'):
             desc_val = _field_str(data, 'description')
             self.assertTrue(bool(desc_val), 'description is empty')
@@ -118,16 +116,6 @@ class ValidateCodexPlugin(unittest.TestCase):
                 self.assertTrue((PLUGIN_ROOT / 'codex-skills' / skill).is_dir(), f'codex-skills/{skill}/ directory not found')
             with self.subTest(msg=f'codex-skills/{skill}/SKILL.md exists'):
                 self.assertTrue((PLUGIN_ROOT / 'codex-skills' / skill / 'SKILL.md').is_file(), f'file not found: codex-skills/{skill}/SKILL.md')
-        with self.subTest(msg='version matches .claude-plugin/plugin.json'):
-            if CLAUDE_JSON.is_file():
-                try:
-                    claude_version = json.loads(CLAUDE_JSON.read_text(encoding='utf-8')).get('version')
-                except (json.JSONDecodeError, OSError):
-                    claude_version = None
-                codex_version = _nested(data, 'version')
-                self.assertEqual(claude_version, codex_version, f"version mismatch: .claude-plugin/plugin.json='{claude_version}', .codex-plugin/plugin.json='{codex_version}'")
-            else:
-                self.fail('.claude-plugin/plugin.json not found — cannot compare versions')
 MARKETPLACE_JSON = REPO_ROOT / '.agents' / 'plugins' / 'marketplace.json'
 
 class ValidateCodexMarketplace(unittest.TestCase):

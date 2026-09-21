@@ -664,6 +664,11 @@ class ValidateReleaseWorkflow(unittest.TestCase):
         audit_record_step = _named_step_block(composer_job, 'Record immutable audit artifact')
         with self.subTest(msg='release workflow can dispatch PR checks'):
             self.assertTrue(_contains_all(content + dispatch_helper_content, ('actions: write', 'scripts/dispatch-release-pr-checks.py', '"gh",', '"workflow",', '"run",', '"pr-checks.yml",', '"--ref",', 'f"pr_number={release_pr[\'number\']}"', 'f"pr_title={release_pr[\'title\']}"', '"base_ref=main",', 'check=True', 'shell=False')), 'expected release workflow to dispatch PR Checks for release-please PR branches')
+        with self.subTest(msg='required workflow gate rejects dropped commits cited by resolved release reviews'):
+            integrity_helper = REPO_ROOT / 'scripts' / 'validate-release-pr-integrity.py'
+            integrity_content = integrity_helper.read_text(encoding='utf-8') if integrity_helper.is_file() else ''
+            self.assertTrue(_contains_all(pr_checks_content, ('validate-workflows:', 'pull-requests: read', 'Validate generated release PR commit ancestry', 'python3 scripts/validate-release-pr-integrity.py')), 'expected the existing required workflow gate to validate release PR ancestry')
+            self.assertTrue(_contains_all(integrity_content, ('reviewThreads(first:100', 'isResolved', 'authorAssociation', 'compare/', 'not reachable from the release PR head')), 'expected release PR integrity helper to fail when a resolved maintainer citation is unreachable')
         with self.subTest(msg='release workflow resolves new or unchanged release PRs for payload sync'):
             self.assertTrue(_contains_all(content, ('RELEASE_PRS: ${{ steps.release.outputs.prs }}', 'scripts/resolve_release_prs.py', 'RELEASE_PRS: ${{ steps.release_prs.outputs.prs }}', "steps.release_prs.outputs.found == 'true'", 'scripts/dispatch-release-pr-checks.py')), 'expected release workflow to normalize release-please output and reconcile unchanged open release PRs')
             self.assertTrue(_contains_all(dispatch_helper_content, ('item.get("headBranchName") or item.get("headRefName")', 'release PR resolver returned no metadata', 'parse_release_prs')))

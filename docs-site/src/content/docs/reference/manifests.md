@@ -145,8 +145,7 @@ Marketplace, plugin, integration, and generated distribution manifests with runt
 #### Source Facts
 
 - dist/claude/speckit-pro/.claude-plugin/plugin.json is categorized as generated distribution plugin manifest. Source refs: `dist/claude/speckit-pro/.claude-plugin/plugin.json`.
-- Top-level fields: `author`, `description`, `homepage`, `keywords`, `license`, `name`, `repository`, `version`. Source refs: `dist/claude/speckit-pro/.claude-plugin/plugin.json`.
-- The manifest declares version `2.32.0`. Source refs: `dist/claude/speckit-pro/.claude-plugin/plugin.json`.
+- Top-level fields: `author`, `description`, `homepage`, `keywords`, `license`, `name`, `repository`. Source refs: `dist/claude/speckit-pro/.claude-plugin/plugin.json`.
 
 #### Sources
 
@@ -205,8 +204,7 @@ Marketplace, plugin, integration, and generated distribution manifests with runt
 #### Source Facts
 
 - speckit-pro/.claude-plugin/plugin.json is categorized as source plugin manifest. Source refs: `speckit-pro/.claude-plugin/plugin.json`.
-- Top-level fields: `author`, `description`, `homepage`, `keywords`, `license`, `name`, `repository`, `version`. Source refs: `speckit-pro/.claude-plugin/plugin.json`.
-- The manifest declares version `2.32.0`. Source refs: `speckit-pro/.claude-plugin/plugin.json`.
+- Top-level fields: `author`, `description`, `homepage`, `keywords`, `license`, `name`, `repository`. Source refs: `speckit-pro/.claude-plugin/plugin.json`.
 
 #### Sources
 

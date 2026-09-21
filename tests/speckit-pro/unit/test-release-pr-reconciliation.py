@@ -43,6 +43,10 @@ dispatch = load_module(
     "dispatch_release_pr_checks",
     REPO_ROOT / "scripts" / "dispatch-release-pr-checks.py",
 )
+integrity = load_module(
+    "validate_release_pr_integrity",
+    REPO_ROOT / "scripts" / "validate-release-pr-integrity.py",
+)
 audit = load_module("audit_release_notes", REPO_ROOT / "scripts" / "audit-release-notes.py")
 runner_requests = load_module(
     "run_runner_requests",
@@ -289,6 +293,214 @@ class ReleasePrDispatchTests(unittest.TestCase):
         self.assertIn("child exit 17", stderr.getvalue())
 
 
+class ReleasePrIntegrityTests(unittest.TestCase):
+    HEAD_SHA = "a" * 40
+    CITED_SHA = "deadbee"
+    FULL_CITED_SHA = "deadbeef" * 5
+
+    @classmethod
+    def graphql_payload(
+        cls,
+        *,
+        branch: str = "release-please--branches--main--components--speckit-pro",
+        body: str = "Fixed in `deadbee`.",
+        association: str = "MEMBER",
+        resolved: bool = True,
+    ) -> dict:
+        return {
+            "data": {
+                "repository": {
+                    "pullRequest": {
+                        "headRefName": branch,
+                        "headRefOid": cls.HEAD_SHA,
+                        "reviewThreads": {
+                            "nodes": [
+                                {
+                                    "id": "thread-1",
+                                    "isResolved": resolved,
+                                    "comments": {
+                                        "nodes": [
+                                            {
+                                                "body": body,
+                                                "authorAssociation": association,
+                                                "url": "https://example.test/thread-1",
+                                            }
+                                        ],
+                                        "pageInfo": {"hasNextPage": False, "endCursor": None},
+                                    },
+                                }
+                            ],
+                            "pageInfo": {"hasNextPage": False, "endCursor": None},
+                        },
+                    }
+                }
+            }
+        }
+
+    def api(self, comparison_status: str = "ahead"):
+        calls: list[list[str]] = []
+
+        def fake(argv):
+            command = list(argv)
+            calls.append(command)
+            if command[:2] == ["api", "graphql"]:
+                return self.graphql_payload()
+            if command == ["api", f"repos/racecraft-lab/racecraft-plugins-public/commits/{self.CITED_SHA}"]:
+                return {"sha": self.FULL_CITED_SHA}
+            if command == [
+                "api",
+                f"repos/racecraft-lab/racecraft-plugins-public/compare/{self.FULL_CITED_SHA}...{self.HEAD_SHA}",
+            ]:
+                return {"status": comparison_status}
+            raise AssertionError(command)
+
+        return fake, calls
+
+    def test_reachable_cited_fix_passes(self) -> None:
+        api, calls = self.api("ahead")
+        result = integrity.validate_release_pr(
+            "racecraft-lab/racecraft-plugins-public", 570, api=api
+        )
+        self.assertEqual(0, result)
+        self.assertTrue(any("compare/" in part for call in calls for part in call))
+
+    def test_dropped_cited_fix_fails_closed(self) -> None:
+        api, _calls = self.api("diverged")
+        with self.assertRaises(integrity.IntegrityError) as caught:
+            integrity.validate_release_pr(
+                "racecraft-lab/racecraft-plugins-public", 570, api=api
+            )
+        self.assertIn(self.CITED_SHA, str(caught.exception))
+        self.assertIn("not reachable", str(caught.exception))
+
+    def test_untrusted_or_unresolved_claims_are_not_commit_attestations(self) -> None:
+        for association, resolved in (("NONE", True), ("MEMBER", False)):
+            with self.subTest(association=association, resolved=resolved):
+                calls: list[list[str]] = []
+
+                def fake(argv):
+                    command = list(argv)
+                    calls.append(command)
+                    if command[:2] == ["api", "graphql"]:
+                        return self.graphql_payload(
+                            association=association,
+                            resolved=resolved,
+                        )
+                    raise AssertionError(command)
+
+                self.assertEqual(
+                    0,
+                    integrity.validate_release_pr(
+                        "racecraft-lab/racecraft-plugins-public", 570, api=fake
+                    ),
+                )
+                self.assertEqual(1, len(calls))
+
+    def test_non_release_pr_is_a_clean_noop(self) -> None:
+        calls: list[list[str]] = []
+
+        def fake(argv):
+            calls.append(list(argv))
+            return self.graphql_payload(branch="codex/ordinary-change")
+
+        self.assertEqual(
+            0,
+            integrity.validate_release_pr(
+                "racecraft-lab/racecraft-plugins-public", 588, api=fake
+            ),
+        )
+        self.assertEqual(1, len(calls))
+
+
+def _integrity_comments(payload: dict) -> dict:
+    return payload["data"]["repository"]["pullRequest"]["reviewThreads"]["nodes"][0][
+        "comments"
+    ]
+
+
+def _integrity_initial_page() -> dict:
+    payload = ReleasePrIntegrityTests.graphql_payload()
+    _integrity_comments(payload)["pageInfo"] = {
+        "hasNextPage": True,
+        "endCursor": "comments-1",
+    }
+    return payload
+
+
+def _integrity_nested_page(nodes: list[dict], has_next: bool, cursor: str | None) -> dict:
+    return {
+        "data": {
+            "node": {
+                "comments": {
+                    "nodes": nodes,
+                    "pageInfo": {"hasNextPage": has_next, "endCursor": cursor},
+                }
+            }
+        }
+    }
+
+
+class ReleasePrIntegrityPaginationTests(unittest.TestCase):
+    REPOSITORY = "racecraft-lab/racecraft-plugins-public"
+
+    def test_multipage_review_thread_comments_are_all_checked(self) -> None:
+        first = _integrity_initial_page()
+        _integrity_comments(first)["nodes"] = [
+            {"body": f"Observation {index}.", "authorAssociation": "MEMBER", "url": "u"}
+            for index in range(100)
+        ]
+        middle = _integrity_nested_page(
+            [{"body": "Follow-up.", "authorAssociation": "MEMBER", "url": "u"}] * 100,
+            True,
+            "comments-2",
+        )
+        final = _integrity_nested_page(
+            [{"body": "Fixed in `deadbee`.", "authorAssociation": "MEMBER", "url": "u"}],
+            False,
+            None,
+        )
+        pages = iter([first, middle, final])
+        calls: list[list[str]] = []
+
+        def fake(argv):
+            command = list(argv)
+            calls.append(command)
+            if command[:2] == ["api", "graphql"]:
+                return next(pages)
+            if "/commits/deadbee" in command[-1]:
+                return {"sha": ReleasePrIntegrityTests.FULL_CITED_SHA}
+            if "/compare/" in command[-1]:
+                return {"status": "ahead"}
+            raise AssertionError(command)
+
+        self.assertEqual(0, integrity.validate_release_pr(self.REPOSITORY, 570, api=fake))
+        nested = [call for call in calls if any("query($thread:ID!" in part for part in call)]
+        self.assertEqual(2, len(nested))
+        self.assertTrue(any("after=comments-1" in part for part in nested[0]))
+        self.assertTrue(any("after=comments-2" in part for part in nested[1]))
+
+    def test_invalid_comment_pagination_fails_closed(self) -> None:
+        missing = ReleasePrIntegrityTests.graphql_payload()
+        del _integrity_comments(missing)["pageInfo"]
+        malformed_nested = _integrity_nested_page([], False, None)
+        del malformed_nested["data"]["node"]["comments"]["pageInfo"]["hasNextPage"]
+        repeated = _integrity_nested_page([], True, "comments-1")
+        scenarios = (
+            ("missing metadata", [missing], "pagination metadata is missing"),
+            (
+                "malformed nested metadata",
+                [_integrity_initial_page(), malformed_nested],
+                "metadata is malformed",
+            ),
+            ("repeated cursor", [_integrity_initial_page(), repeated], "cursor did not advance"),
+        )
+        for label, responses, expected in scenarios:
+            with self.subTest(label=label), self.assertRaises(integrity.IntegrityError) as caught:
+                pages = iter(responses)
+                integrity.load_release_pr(self.REPOSITORY, 570, api=lambda _argv: next(pages))
+            self.assertIn(expected, str(caught.exception))
+
+
 class ReleasePrLifecycleTests(unittest.TestCase):
     class FakeRunner:
         def __init__(self, draft_states: dict[int, bool]) -> None:
@@ -360,6 +572,7 @@ class ReleasePrLifecycleTests(unittest.TestCase):
     def test_release_workflow_holds_review_until_artifact_sync(self) -> None:
         config = json.loads((REPO_ROOT / "release-please-config.json").read_text(encoding="utf-8"))
         workflow = (REPO_ROOT / ".github/workflows/release.yml").read_text(encoding="utf-8")
+        pr_checks = (REPO_ROOT / ".github/workflows/pr-checks.yml").read_text(encoding="utf-8")
         container = (REPO_ROOT / ".github/workflows/container-preflight.yml").read_text(encoding="utf-8")
 
         self.assertIs(config["draft-pull-request"], True)
@@ -376,6 +589,9 @@ class ReleasePrLifecycleTests(unittest.TestCase):
         self.assertEqual(sorted(positions), positions)
         self.assertIn("python3 scripts/release-pr-lifecycle.py hold", workflow)
         self.assertIn("python3 scripts/release-pr-lifecycle.py ready", workflow)
+        self.assertIn("Validate generated release PR commit ancestry", pr_checks)
+        self.assertIn("python3 scripts/validate-release-pr-integrity.py", pr_checks)
+        self.assertIn("pull-requests: read", pr_checks)
         self.assertIn(
             "PR_DRAFT: ${{ github.event_name == 'pull_request' && "
             "github.event.pull_request.draft || false }}",

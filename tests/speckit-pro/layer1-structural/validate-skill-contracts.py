@@ -790,8 +790,10 @@ class ValidateCodexParity(unittest.TestCase):
         if CC_PLUGIN.is_file() and CODEX_PLUGIN.is_file():
             cc_version = _json_field(CC_PLUGIN, 'version')
             codex_version = _json_field(CODEX_PLUGIN, 'version')
-            with self.subTest(msg=f'CC and Codex plugin.json versions match ({cc_version})'):
-                self.assertEqual(cc_version, codex_version, f'versions must match: CC={cc_version}, Codex={codex_version}')
+            with self.subTest(msg='Claude plugin.json omits a cache-pinning version'):
+                self.assertEqual(cc_version, 'null', f'Claude version must be omitted, got {cc_version}')
+            with self.subTest(msg=f'Codex plugin.json remains release-versioned ({codex_version})'):
+                self.assertRegex(codex_version, r'^\d+\.\d+\.\d+$', f'Codex version must be X.Y.Z, got {codex_version}')
         with self.subTest(msg='both marketplace.json files exist'):
             self.assertTrue(CC_MARKETPLACE.is_file() and CODEX_MARKETPLACE.is_file(), f'missing one or both marketplace.json files (CC: {CC_MARKETPLACE}, Codex: {CODEX_MARKETPLACE})')
         if CC_MARKETPLACE.is_file() and CODEX_MARKETPLACE.is_file():
