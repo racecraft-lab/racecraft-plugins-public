@@ -92,6 +92,8 @@ class AtomicityAdditiveRoutingTests(unittest.TestCase):
         git(root, "config", "user.name", "Atomicity Test")
         git(root, "config", "user.email", "native-eval@example.invalid")
         git(root, "config", "commit.gpgsign", "false")
+        git(root, "config", "maintenance.auto", "false")
+        git(root, "config", "gc.auto", "0")
         write(root, "README.md", "# Atomicity fixture\n")
         write(root, WORKFLOW, "# Atomicity workflow\n")
         for relative, text in (baseline_files or {}).items():
