@@ -1054,7 +1054,8 @@ class NativeFunctionalCatalogTests(unittest.TestCase):
             case = self.cases[case_id]
             self.assertTrue(case["fixtures"])
             self.assertTrue(any(row["type"] == "file_access" for row in case["checks"]))
-            self.assertTrue(any(row["type"] == "response_json_field" for row in case["checks"]))
+            self.assertTrue(any(row["type"] == "semantic" for row in case["checks"]))
+            self.assertFalse(any(row["type"] == "response_json_field" for row in case["checks"]))
 
         scaffold = self.cases["functional.speckit-scaffold-spec.case-2-handoff"]
         self.assertNotIn(".worktrees/spec-009", scaffold["prompt"])

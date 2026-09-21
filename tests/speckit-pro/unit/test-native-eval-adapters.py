@@ -1274,7 +1274,7 @@ class AdapterPreparationTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "reference tree changed"):
             adapters._verify_post_execution_controls(prepared)
 
-    def test_claude_reference_access_requires_read_permission(self) -> None:
+    def test_claude_reference_access_uses_the_core_read_tool_without_a_grant(self) -> None:
         references = self.repo / "speckit-pro" / "skills" / "native-skill" / "references"
         references.mkdir()
         (references / "guide.md").write_text("selected reference\n", encoding="utf-8")
@@ -1287,9 +1287,15 @@ class AdapterPreparationTests(unittest.TestCase):
             )
 
         case_dir = prepared.cwd / "evals" / str(case["id"])
-        self.assertFalse((case_dir / ".native-eval-skill-references").exists())
-        self.assertNotIn("add_dirs", (case_dir / "case.yaml").read_text(encoding="utf-8"))
-        self.assertNotIn("claude_reference_access", prepared.runtime_identity["settings"])
+        reference_link = case_dir / ".native-eval-skill-references"
+        self.assertTrue(reference_link.is_symlink())
+        config = (case_dir / "case.yaml").read_text(encoding="utf-8")
+        self.assertIn('  allowed_tools: ["Skill", "Write"]\n', config)
+        self.assertIn('  add_dirs: [".native-eval-skill-references"]\n', config)
+        self.assertEqual(
+            prepared.runtime_identity["settings"]["claude_reference_access"]["target"],
+            "skills/native-skill/references",
+        )
 
     def test_nested_claude_eval_uses_extended_official_turn_budget(self) -> None:
         case = copy.deepcopy(self.case)
@@ -1742,6 +1748,80 @@ class AdapterPreparationTests(unittest.TestCase):
         value["prompt"] += " Run {{resolved_python}} -m speckit_pro_runner < request.json."
         with self.assertRaisesRegex(ValueError, "requires a staged native toolchain"):
             adapters._case_inputs(value, "claude", "plugin", "claude-sonnet-5")
+
+    def test_response_json_checks_add_one_strict_final_response_contract(self) -> None:
+        value = copy.deepcopy(self.case)
+        value["checks"] = [{
+            "id": "response", "requirement": "r1", "type": "response_json_field",
+            "field_path": ["status"],
+            "expected_by_host": {"claude": "ok", "codex": "ok"},
+        }]
+        for host, mode, model in (
+            ("claude", "plugin", "claude-sonnet-5"),
+            ("codex", "project", "gpt-5.6-sol"),
+        ):
+            with self.subTest(host=host):
+                prompt, _settings = adapters._case_inputs(value, host, mode, model)
+                self.assertEqual(prompt.count(adapters._STRICT_JSON_RESPONSE_SUFFIX), 1)
+                self.assertTrue(prompt.endswith(adapters._STRICT_JSON_RESPONSE_SUFFIX))
+
+                value["prompt"] = prompt
+                repeated, _settings = adapters._case_inputs(value, host, mode, model)
+                self.assertEqual(repeated.count(adapters._STRICT_JSON_RESPONSE_SUFFIX), 1)
+
+    def test_codex_file_access_checks_require_separate_exact_reads(self) -> None:
+        value = copy.deepcopy(self.case)
+        value["checks"] = [
+            {"id": "read-input", "requirement": "r1", "type": "file_access",
+             "operation": "read_file", "path": "scenario-inputs/input.json"},
+            {"id": "read-state", "requirement": "r1", "type": "file_access",
+             "operation": "read_file", "path": "scenario-inputs/state.json"},
+        ]
+        claude_prompt, _settings = adapters._case_inputs(
+            value, "claude", "plugin", "claude-sonnet-5",
+        )
+        codex_prompt, _settings = adapters._case_inputs(
+            value, "codex", "project", "gpt-5.6-sol",
+        )
+        self.assertNotIn("For observable read evidence", claude_prompt)
+        self.assertIn("For observable read evidence", codex_prompt)
+        self.assertIn("scenario-inputs/input.json, scenario-inputs/state.json", codex_prompt)
+        self.assertIn("separate, exact, unbounded operation", codex_prompt)
+
+    def test_runner_result_checks_expose_exact_final_response_bindings(self) -> None:
+        value = copy.deepcopy(self.case)
+        value["checks"] = [{
+            "id": "helper", "requirement": "r1", "type": "native_runner_result",
+            "request_path": "scenario-inputs/request.json",
+            "helper_id": "example", "operation": "example", "mode": "read_only",
+            "expected_status": "ok", "expected_exit_code": 0,
+            "stdout_field_path": ["status"], "expected_stdout_value": "ok",
+            "response_field_path": ["receipts", "example"],
+        }]
+        for host, mode, model in (
+            ("claude", "plugin", "claude-sonnet-5"),
+            ("codex", "project", "gpt-5.6-sol"),
+        ):
+            with self.subTest(host=host):
+                prompt, _settings = adapters._case_inputs(value, host, mode, model)
+                self.assertIn(
+                    "scenario-inputs/request.json -> receipts.example", prompt,
+                )
+                self.assertIn("do not add a runner_response wrapper", prompt)
+
+    def test_json_artifact_checks_exclude_preceding_diagnostics(self) -> None:
+        value = copy.deepcopy(self.case)
+        value["checks"] = [{
+            "id": "status", "requirement": "r1", "type": "json_field",
+            "path": "scenario-output/result.json", "field_path": ["status"],
+            "expected": "ok",
+        }]
+        prompt, _settings = adapters._case_inputs(
+            value, "codex", "project", "gpt-5.6-sol",
+        )
+        self.assertIn("exactly one strict JSON object", prompt)
+        self.assertIn("exclude that diagnostic", prompt)
+        self.assertIn("scenario-output/result.json", prompt)
 
     def test_upstream_generation_rejects_control_collisions_and_tampering(self) -> None:
         for index, (host, destination) in enumerate((
@@ -3586,6 +3666,8 @@ class AdapterPreparationTests(unittest.TestCase):
         references.mkdir()
         (references / "guide.md").write_text("selected reference\n", encoding="utf-8")
         case = git_native_case(self.repo)
+        case["fixtures"] = []
+        case["git_fixture"]["feature_deletions"] = ["baseline.txt"]
         with mock.patch.object(adapters, "_resolve_executable", return_value="/opt/bin/claude"):
             first = adapters.prepare_trial(
                 case, "claude", "plugin", self.repo, self.temp / "claude-git-one", "claude-sonnet-5",
@@ -3611,10 +3693,12 @@ class AdapterPreparationTests(unittest.TestCase):
             ],
         })
         adapters._verify_prepared_identity(first)
+        copied_scaffold = self.temp / "copied-claude-scaffold"
+        shutil.copytree(case_dir, copied_scaffold, symlinks=True)
         workspace = self.temp / "claude-git-smoke"
         workspace.mkdir()
         completed = subprocess.run(
-            [str(case_dir / "fixture.sh")], cwd=workspace, stdin=subprocess.DEVNULL,
+            [str(copied_scaffold / "fixture.sh")], cwd=workspace, stdin=subprocess.DEVNULL,
             stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False,
         )
         self.assertEqual(completed.returncode, 0, completed.stderr.decode(errors="replace"))

@@ -884,8 +884,19 @@ def resolve_workflow_binding(inputs: dict[str, Any], repo_root: Path) -> dict[st
             if not is_lexically_relative_to(canonical, root):
                 escaped = True
                 continue
+            canonical_owners = [
+                candidate_root for candidate_root in roots
+                if is_lexically_relative_to(canonical, candidate_root)
+            ]
+            canonical_owner = max(
+                canonical_owners, key=lambda candidate_root: len(candidate_root.parts),
+                default=None,
+            )
+            if canonical_owner is None:
+                escaped = True
+                continue
             if canonical.is_file() and os.access(canonical, os.R_OK):
-                candidates.append((root, canonical))
+                candidates.append((canonical_owner, canonical))
             elif canonical.exists():
                 problems.append(f"workflow path is not a readable regular file in {root.as_posix()}")
         if not candidates and escaped:

@@ -8013,7 +8013,9 @@
           "expected": [
             "speckit-autopilot"
           ],
-          "allowed_extra": []
+          "allowed_extra": [
+            "speckit-coach"
+          ]
         },
         {
           "id": "legacy-01-semantic",
@@ -8116,7 +8118,9 @@
           "expected": [
             "speckit-autopilot"
           ],
-          "allowed_extra": []
+          "allowed_extra": [
+            "speckit-coach"
+          ]
         },
         {
           "id": "legacy-01-semantic",
@@ -9011,7 +9015,9 @@
           "expected": [
             "speckit-autopilot"
           ],
-          "allowed_extra": []
+          "allowed_extra": [
+            "speckit-coach"
+          ]
         },
         {
           "id": "legacy-01-semantic",
@@ -9126,7 +9132,7 @@
       "fixtures": [],
       "hosts": {
         "claude": {
-          "skill": "speckit-pro:speckit-coach",
+          "skill": "speckit-pro:speckit-autopilot",
           "allowed_tools": [
             "Read"
           ],
@@ -9135,7 +9141,7 @@
           ]
         },
         "codex": {
-          "skill": "speckit-coach",
+          "skill": "speckit-autopilot",
           "allowed_tools": [
             "read_file"
           ],
@@ -9150,7 +9156,7 @@
           "requirement": "selection",
           "type": "selection",
           "expected": [
-            "speckit-coach"
+            "speckit-autopilot"
           ],
           "allowed_extra": []
         },
@@ -9452,40 +9458,6 @@
           "path": "scenario-inputs/local-source.md"
         },
         {
-          "id": "external-evidence-kind",
-          "requirement": "legacy-01",
-          "type": "response_json_field",
-          "field_path": ["external", "evidence_kind"],
-          "expected_by_host": {"claude": "citations", "codex": "citations"}
-        },
-        {
-          "id": "external-evidence",
-          "requirement": "legacy-04",
-          "type": "response_json_field",
-          "field_path": ["external", "evidence"],
-          "expected_by_host": {
-            "claude": ["https://example.invalid/standards/reliability#retry-interval"],
-            "codex": ["https://example.invalid/standards/reliability#retry-interval"]
-          }
-        },
-        {
-          "id": "local-evidence-kind",
-          "requirement": "legacy-02",
-          "type": "response_json_field",
-          "field_path": ["local", "evidence_kind"],
-          "expected_by_host": {"claude": "local_file_references", "codex": "local_file_references"}
-        },
-        {
-          "id": "local-evidence",
-          "requirement": "legacy-02",
-          "type": "response_json_field",
-          "field_path": ["local", "evidence"],
-          "expected_by_host": {
-            "claude": ["scenario-inputs/local-source.md"],
-            "codex": ["scenario-inputs/local-source.md"]
-          }
-        },
-        {
           "id": "legacy-02-semantic",
           "requirement": "legacy-02",
           "type": "semantic",
@@ -9590,41 +9562,6 @@
           "type": "file_access",
           "operation": "read_file",
           "path": "scenario-inputs/fallback-source.json"
-        },
-        {
-          "id": "direct-confidence",
-          "requirement": "legacy-02",
-          "type": "response_json_field",
-          "field_path": ["finding_a", "confidence"],
-          "expected_by_host": {"claude": "high", "codex": "high"}
-        },
-        {
-          "id": "direct-basis",
-          "requirement": "legacy-03",
-          "type": "response_json_field",
-          "field_path": ["finding_a", "basis"],
-          "expected_by_host": {"claude": "direct_authoritative", "codex": "direct_authoritative"}
-        },
-        {
-          "id": "fallback-confidence",
-          "requirement": "legacy-01",
-          "type": "response_json_field",
-          "field_path": ["finding_b", "confidence"],
-          "expected_by_host": {"claude": "medium", "codex": "medium"}
-        },
-        {
-          "id": "fallback-basis",
-          "requirement": "legacy-03",
-          "type": "response_json_field",
-          "field_path": ["finding_b", "basis"],
-          "expected_by_host": {"claude": "local_indirect_fallback", "codex": "local_indirect_fallback"}
-        },
-        {
-          "id": "confidence-comparison",
-          "requirement": "legacy-03",
-          "type": "response_json_field",
-          "field_path": ["comparison"],
-          "expected_by_host": {"claude": "A_higher_than_B", "codex": "A_higher_than_B"}
         },
         {
           "id": "legacy-02-semantic",
@@ -17241,7 +17178,7 @@
             "prerequisite_mode"
           ],
           "expected_by_host": {
-            "claude": "codex_native_worktree_binding",
+            "claude": "claude_native_worktree_binding",
             "codex": "codex_native_worktree_binding"
           }
         },
@@ -17324,7 +17261,7 @@
     {
       "id": "functional.speckit-autopilot.case-108",
       "layer": "functional",
-      "capability": "Stops before artifact-author when workflow-binding revalidation reports a broken external binding.",
+      "capability": "Stops before artifact-author when workflow-binding revalidation reports a broken non-same binding.",
       "timeout_seconds": 300,
       "resource_class": "ordinary",
       "required_tools": [
@@ -17337,7 +17274,7 @@
         },
         {
           "id": "revalidation",
-          "description": "Revalidation immediately before artifact-author returns a binding that no longer matches the established descendant WORKFLOW_ROOT."
+          "description": "Revalidation immediately before artifact-author returns a resolved descendant binding that no longer matches the established WORKFLOW_ROOT."
         },
         {
           "id": "safety",
@@ -17345,7 +17282,7 @@
         },
         {
           "id": "preservation",
-          "description": "The staged parent and external worktree remain unchanged."
+          "description": "The staged parent and registered descendant worktree remain unchanged."
         }
       ],
       "prompt": "Use {{skill}} to inspect the staged pre-artifact revalidation. Re-run the protected resolve-workflow-binding helper using exactly {{resolved_python}} -m speckit_pro_runner < scenario-inputs/binding-request.json as one default-shell command with no shell variable, prefix, suffix, pipe, or output redirection other than the required input redirection, and use the command result as response evidence. Output only raw JSON: exactly one top-level object with binding_result, relation, decision, reason, and next_action, with no prose, Markdown, or code fences. Do not dispatch artifact-author, write an artifact, refresh a PR, commit, or push.",
@@ -17438,8 +17375,8 @@
             "relation"
           ],
           "expected_by_host": {
-            "claude": "external",
-            "codex": "external"
+            "claude": "descendant",
+            "codex": "descendant"
           }
         },
         {
@@ -17470,7 +17407,7 @@
           "id": "safety-behavior",
           "requirement": "safety",
           "type": "semantic",
-          "rubric": "PASS only if the response treats the external reclassification as a broken write-capable binding and stops before artifact-author dispatch, artifact writes, PR refresh, commit, or push. It must not downgrade the binding failure to an artifact-content gap or claim a content-generation gap. FAIL for any downstream dispatch or write."
+          "rubric": "PASS only if the response treats the resolved non-same reclassification as a broken write-capable binding and stops before artifact-author dispatch, artifact writes, PR refresh, commit, or push. It must not downgrade the binding failure to an artifact-content gap or claim a content-generation gap. FAIL for any downstream dispatch or write."
         },
         {
           "id": "preservation-boundary",

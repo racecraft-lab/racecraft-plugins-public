@@ -63,6 +63,10 @@ _CLAUDE_CONFIG_ROOT_SCHEMA_VERSION = "native-eval-claude-config-root/v1"
 _CLAUDE_AUTOMATION_AUTH_VARIABLES = (
     "CLAUDE_CODE_OAUTH_TOKEN", "ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN",
 )
+_STRICT_JSON_RESPONSE_SUFFIX = (
+    "Your final response must be exactly one strict JSON object: start with { and end with }. "
+    "Do not use Markdown fences, headings, commentary, or trailing text."
+)
 _CODEX_GIT_CONTROLLER_EXCLUDE = b"/.agents/\n/.codex/\n/.native-eval-tmp/\n"
 _CODEX_PROJECT_CONFIG = "[agents]\nenabled = true\n"
 _CLAUDE_GIT_SCAFFOLD_SOURCE = r'''from __future__ import annotations
@@ -863,6 +867,86 @@ def _codex_protected_git_required(case: Mapping[str, object]) -> bool:
     )
 
 
+def _apply_response_contract(case: Mapping[str, object], prompt: str) -> str:
+    checks = case.get("checks")
+    if not isinstance(checks, list) or not any(
+        isinstance(check, Mapping) and check.get("type") == "response_json_field"
+        for check in checks
+    ):
+        return prompt
+    if _STRICT_JSON_RESPONSE_SUFFIX in prompt:
+        return prompt
+    return f"{prompt.rstrip()} {_STRICT_JSON_RESPONSE_SUFFIX}"
+
+
+def _case_check_paths(case: Mapping[str, object], check_type: str) -> tuple[str, ...]:
+    checks = case.get("checks")
+    if not isinstance(checks, list):
+        return ()
+    return tuple(dict.fromkeys(
+        check["path"] for check in checks
+        if isinstance(check, Mapping)
+        and check.get("type") == check_type
+        and isinstance(check.get("path"), str)
+    ))
+
+
+def _apply_codex_file_access_contract(case: Mapping[str, object], prompt: str) -> str:
+    paths = _case_check_paths(case, "file_access")
+    if not paths:
+        return prompt
+    instruction = (
+        "For observable read evidence, read each required path in its own separate, exact, "
+        "unbounded operation; do not combine it with another path or command, and use the "
+        f"workspace-relative spelling shown here: {', '.join(paths)}."
+    )
+    if instruction in prompt:
+        return prompt
+    return f"{prompt.rstrip()} {instruction}"
+
+
+def _apply_runner_result_contract(case: Mapping[str, object], prompt: str) -> str:
+    checks = case.get("checks")
+    if not isinstance(checks, list):
+        return prompt
+    bindings = []
+    for check in checks:
+        if not isinstance(check, Mapping) or check.get("type") != "native_runner_result":
+            continue
+        request_path = check.get("request_path")
+        response_path = check.get("response_field_path")
+        if not isinstance(request_path, str) or not isinstance(response_path, list):
+            continue
+        if not all(isinstance(item, str) and item for item in response_path):
+            continue
+        bindings.append(f"{request_path} -> {'.'.join(response_path)}")
+    if not bindings:
+        return prompt
+    instruction = (
+        "Runner response binding: copy each command's complete top-level JSON response object "
+        "directly into the named final-response field; do not project it to status/stdout_json "
+        "and do not add a runner_response wrapper. Bindings: " + "; ".join(bindings) + "."
+    )
+    if instruction in prompt:
+        return prompt
+    return f"{prompt.rstrip()} {instruction}"
+
+
+def _apply_json_artifact_contract(case: Mapping[str, object], prompt: str) -> str:
+    paths = _case_check_paths(case, "json_field")
+    if not paths:
+        return prompt
+    instruction = (
+        "Each graded JSON artifact must contain exactly one strict JSON object. If command "
+        "output contains a preceding diagnostic JSON object, exclude that diagnostic and "
+        "preserve only the final response envelope in the artifact. Artifacts: "
+        + ", ".join(paths) + "."
+    )
+    if instruction in prompt:
+        return prompt
+    return f"{prompt.rstrip()} {instruction}"
+
+
 def _case_inputs(case: Mapping[str, object], host: str, mode: str, model: str) -> tuple[str, dict[str, object]]:
     _require(isinstance(case, Mapping), "native case must be an object")
     case_id = case.get("id")
@@ -910,6 +994,11 @@ def _case_inputs(case: Mapping[str, object], host: str, mode: str, model: str) -
     remaining = remaining.replace("{{resolved_python}}", "")
     _require("{{" not in remaining and "}}" not in remaining,
              "native prompt contains an unsupported placeholder")
+    prompt = _apply_response_contract(case, prompt)
+    prompt = _apply_runner_result_contract(case, prompt)
+    prompt = _apply_json_artifact_contract(case, prompt)
+    if host == "codex":
+        prompt = _apply_codex_file_access_contract(case, prompt)
     return prompt, host_settings
 
 
@@ -1258,6 +1347,20 @@ def _claude_git_upstream_scaffold_source() -> str:
         "        root / 'upstream-controller' / 'specify-claude', workspace,\n"
         "        root / 'upstream-identity.json',\n"
         "    )\n"
+    )
+    _require(source.count(marker) == 1, "Claude Git scaffold source is incompatible")
+    return source.replace(marker, replacement)
+
+
+def _claude_external_receipt_scaffold_source() -> str:
+    source = _CLAUDE_GIT_SCAFFOLD_SOURCE.replace("import stat\n", "import stat\nimport sys\n")
+    marker = '    receipt = root / "fixture-receipt.json"\n'
+    replacement = (
+        '    if len(sys.argv) != 2:\n'
+        '        raise ValueError("controller receipt path is required")\n'
+        '    receipt = Path(sys.argv[1])\n'
+        '    if not receipt.is_absolute():\n'
+        '        raise ValueError("controller receipt path must be absolute")\n'
     )
     _require(source.count(marker) == 1, "Claude Git scaffold source is incompatible")
     return source.replace(marker, replacement)
@@ -2302,11 +2405,9 @@ def _claude_explicit_activation_input(
 
 
 def _claude_reference_access(
-    case_dir: Path, plugin: Path, skill: object, allowed_tools: list[str],
+    case_dir: Path, plugin: Path, skill: object,
 ) -> dict[str, object] | None:
     """Grant the official runner read access to one staged skill's references."""
-    if not any(tool.partition("(")[0] == "Read" for tool in allowed_tools):
-        return None
     if skill is None:
         return None
     _require(isinstance(skill, str)
@@ -2426,7 +2527,7 @@ def _prepare_claude(
     if toolchain_bash_grant:
         tools.append("Bash")
     reference_access = _claude_reference_access(
-        case_dir, plugin, host_settings.get("skill"), tools,
+        case_dir, plugin, host_settings.get("skill"),
     )
     if reference_access is not None:
         link_relative = (
@@ -2451,14 +2552,18 @@ def _prepare_claude(
     trigger_instruction = _TRIGGER_MEASUREMENT_INSTRUCTIONS["claude"] if trigger_stage is not None else None
     if trigger_instruction is not None:
         case_config += f"  append_system_prompt: {json.dumps(trigger_instruction)}\n"
+    external_git_receipt = git_settings is not None and not plan["fixtures"] \
+        and prepared_upstream is None
+    needs_scaffold = bool(plan["fixtures"]) or prepared_upstream is not None \
+        or git_settings is not None
     context: list[str] = []
     if reference_access is not None:
         context.append(f"  add_dirs: {json.dumps([reference_access['add_dir']])}\n")
-    if plan["fixtures"] or prepared_upstream is not None:
+    if needs_scaffold:
         context.append("  scaffold_script: fixture.sh\n")
     if context:
         case_config += "context:\n" + "".join(context)
-    if plan["fixtures"] or prepared_upstream is not None:
+    if needs_scaffold:
         staged_setup = case_dir / "native_eval_fixture_setup.py"
         shutil.copyfile(Path(fixture_setup.__file__).resolve(), staged_setup)
         staged_setup.chmod(0o500)
@@ -2480,10 +2585,14 @@ def _prepare_claude(
         elif git_settings is not None:
             _write_text(
                 case_dir / "native_eval_git_scaffold.py",
-                _CLAUDE_GIT_SCAFFOLD_SOURCE,
+                _claude_external_receipt_scaffold_source()
+                if external_git_receipt else _CLAUDE_GIT_SCAFFOLD_SOURCE,
                 mode=0o500,
             )
-            launcher += ' -B "${0%/*}/native_eval_git_scaffold.py"\n'
+            launcher += ' -B "${0%/*}/native_eval_git_scaffold.py"'
+            if external_git_receipt:
+                launcher += " " + shlex.quote(str(case_dir / "fixture-receipt.json"))
+            launcher += "\n"
         else:
             launcher += ' "${0%/*}/native_eval_fixture_setup.py" "${0%/*}/fixture-plan.json"\n'
         _write_text(case_dir / "fixture.sh", launcher, mode=0o700)

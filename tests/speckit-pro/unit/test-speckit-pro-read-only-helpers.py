@@ -807,6 +807,14 @@ class ReadOnlyHelperTests(unittest.TestCase):
             )
             self.assertEqual(payload["workflow_root"], descendant_root.resolve().as_posix())
 
+            nested_relative = descendant_root.relative_to(task_root) / nested_file.name
+            payload, exit_code = self.binding_result(task_root, nested_relative.as_posix())
+            self.assertEqual(
+                (payload["binding_status"], payload["relation"], exit_code),
+                ("resolved", "descendant", 0),
+            )
+            self.assertEqual(payload["workflow_root"], descendant_root.resolve().as_posix())
+
             rebound, exit_code = self.binding_result(descendant_root, str(nested_file))
             self.assertEqual(
                 (rebound["binding_status"], rebound["relation"], exit_code),
