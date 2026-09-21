@@ -416,26 +416,28 @@ def _assert_layer_plan_checks(test: unittest.TestCase, cases: dict[str, dict]) -
     ):
         test.assertNotIn(leaked_answer, prompt)
     layer_checks = {check["id"] for check in layer_plan["checks"]}
-    test.assertTrue(
+    test.assertLessEqual(
         {
             "valid-exit", "invalid-exit", "input-error-exit", "non-split-behavior",
             "exact-three-invocations", "gate-order", "request-contract",
             "no-pr-side-effects", "valid-native-result", "invalid-native-result",
             "input-error-native-result",
-        } <= layer_checks
+        },
+        layer_checks,
     )
 
 
 def _assert_broken_archive_checks(test: unittest.TestCase, cases: dict[str, dict]) -> None:
     broken_archive = cases["functional.speckit-autopilot.case-36"]
     archive_checks = {check["id"] for check in broken_archive["checks"]}
-    test.assertTrue(
+    test.assertLessEqual(
         {
             "missing-command", "blocked-status", "cleanup-disabled",
             "invocation-unavailable", "exact-missing-path", "archive-item-pending",
             "phase-zero-pending", "manual-inventory-rejected",
             "no-no-candidates-substitution",
-        } <= archive_checks
+        },
+        archive_checks,
     )
 
 
