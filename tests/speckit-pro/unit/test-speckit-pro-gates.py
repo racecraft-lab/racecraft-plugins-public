@@ -2208,23 +2208,54 @@ class GateFoundationTests(unittest.TestCase):
         self.assertTrue(check["blocking"])
         return readiness
 
-    def test_installed_release_readiness_blocks_live_version_manifest_drift(self) -> None:
-        readiness = self.assert_manifest_mutation_blocked(
-            ".release-please-manifest.json",
-            "speckit-pro",
-            "9.9.9",
-            "version-sync",
+    def test_installed_release_readiness_reports_version_sync_failures_truthfully(self) -> None:
+        cases = (
+            (
+                ".release-please-manifest.json",
+                "speckit-pro",
+                "9.9.9",
+                ".release-please-manifest.json=9.9.9",
+                None,
+            ),
+            (
+                "speckit-pro/.claude-plugin/plugin.json",
+                "version",
+                "2.32.0",
+                "speckit-pro/.claude-plugin/plugin.json=2.32.0",
+                "speckit-pro/.claude-plugin/plugin.json=omitted",
+            ),
+            (
+                "speckit-pro/.claude-plugin/plugin.json",
+                "version",
+                "",
+                'speckit-pro/.claude-plugin/plugin.json=invalid:""',
+                None,
+            ),
         )
-        version_check = next(check for check in readiness["checks"] if check["check_id"] == "version-sync")
-        self.assertIn(".release-please-manifest.json=9.9.9", version_check["evidence"])
+        for relative_path, key, value, expected, unexpected in cases:
+            with self.subTest(relative_path=relative_path, value=value):
+                readiness = self.assert_manifest_mutation_blocked(
+                    relative_path,
+                    key,
+                    value,
+                    "version-sync",
+                )
+                version_check = next(
+                    check for check in readiness["checks"] if check["check_id"] == "version-sync"
+                )
+                self.assertIn(expected, version_check["evidence"])
+                if unexpected is not None:
+                    self.assertNotIn(unexpected, version_check["evidence"])
 
-    def test_installed_release_readiness_blocks_pinned_claude_cache_identity(self) -> None:
-        self.assert_manifest_mutation_blocked(
-            "speckit-pro/.claude-plugin/plugin.json",
-            "version",
-            "2.32.0",
-            "version-sync",
-        )
+    def test_live_unversioned_version_evidence_reports_omitted_field(self) -> None:
+        from speckit_pro_runner.gates import release as release_gate
+
+        with tempfile.TemporaryDirectory() as tmp:
+            manifest_path = Path(tmp) / "plugin.json"
+            manifest_path.write_text("{}\n", encoding="utf-8")
+            evidence = release_gate.live_unversioned_version_evidence(manifest_path, ("version",))
+
+        self.assertEqual(evidence, "omitted")
 
     def test_installed_release_readiness_blocks_live_platform_payload_drift(self) -> None:
         readiness = self.assert_manifest_mutation_blocked(
