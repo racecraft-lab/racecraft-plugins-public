@@ -59,6 +59,10 @@ the final local checkpoint immediately before the external PR-creation command.
 Record manual UAT as not performed; the generated runbook is preparation, not
 UAT execution.
 
+For `validate-pr-workflow-contract`, pass `inputs.repo_root=.` and let the
+helper inspect `origin/main...HEAD` directly. Do not create or pass a
+changed-files evidence file.
+
 Derive the atomicity route and any layer plan from the authoritative runner and
 the staged files. Run the declared integration command through
 `execute-verification`; the emission pointer must identify that actual current
@@ -75,6 +79,8 @@ runner result rather than repeat fixture prose.
 - Control state: `workflow.md` and `autopilot-state.json`.
 - Product evidence: `specs/parity-01/.process/uat-runbook.md`,
   `specs/parity-01/.process/emission/verification-pointer.json`,
+  the transient
+  `.process/execution-control/native-eval-execute-verification-request.json`,
   dynamic runner records under `.process/verification/` and
   `.process/execution-control/`,
   `specs/parity-01/.process/pr-packets/parity-01.json`,
@@ -82,6 +88,8 @@ runner result rather than repeat fixture prose.
   `specs/parity-01/.process/pr-packets/parity-01/validation.json`, and
   `artifacts/post-implementation-report.md`.
 - Local commits are required checkpoints and may contain only the paths above.
+- The transient execute-verification request is deleted immediately after its
+  invocation and before any checkpoint.
 - Forbidden: every other product path, pushes, PR creation, PR edits, review
   mutations, and every external side effect.
 

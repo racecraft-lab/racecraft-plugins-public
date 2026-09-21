@@ -1,5 +1,3 @@
-<!-- fixture-kind: deterministic-synthetic-testdata; status scenario input only. -->
-
 # Current Technical Roadmap
 
 ## Progress Tracking

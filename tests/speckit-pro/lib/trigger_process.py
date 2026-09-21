@@ -160,7 +160,7 @@ def restore_termination_handlers(previous: dict[int, object]) -> None:
 def supervise_child(
     child: subprocess.Popen[bytes], timeout: float, *,
     cleanup: Callable[..., bool] = cleanup_child, cleanup_timeout: float = CLEANUP_TIMEOUT,
-    evidence: dict[str, object] | None = None,
+    evidence: dict[str, object] | None = None, input_bytes: bytes | None = None,
 ) -> tuple[int, bytes, bytes, bool]:
     """Collect exact streams and verify the owned scope before returning or raising."""
     stdout = stderr = b""
@@ -171,7 +171,10 @@ def supervise_child(
     observations: list[dict[str, object]] = []
     try:
         try:
-            stdout, stderr = child.communicate(timeout=timeout)
+            if input_bytes is None:
+                stdout, stderr = child.communicate(timeout=timeout)
+            else:
+                stdout, stderr = child.communicate(input=input_bytes, timeout=timeout)
             completed = True
         except subprocess.TimeoutExpired as exc:
             timed_out = True

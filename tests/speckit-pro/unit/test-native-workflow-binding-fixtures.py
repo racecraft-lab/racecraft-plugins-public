@@ -21,20 +21,27 @@ from test_result import run_counted  # noqa: E402
 WORKFLOW = "docs/ai/specs/.process/SPEC-025-workflow.md"
 
 
+def fixture_record(source_root: Path, source: str, destination: str) -> dict[str, str]:
+    payload = (source_root / source).read_bytes()
+    return {
+        "source": source,
+        "destination": destination,
+        "sha256": hashlib.sha256(payload).hexdigest(),
+    }
+
+
 class WorkflowBindingFixtureTests(unittest.TestCase):
     def test_real_runner_distinguishes_all_declared_binding_relations(self) -> None:
         fixtures = TEST_ROOT / "evals" / "fixtures" / "functional"
-        def record(source: str, destination: str) -> dict[str, str]:
-            payload = (fixtures / source).read_bytes()
-            return {"source": source, "destination": destination,
-                    "sha256": hashlib.sha256(payload).hexdigest()}
 
         plan = {
             "schema_version": "native-eval-fixtures/v2", "source_root": str(fixtures),
-            "fixtures": [record("coach-redirect/workflow.md", WORKFLOW)],
+            "fixtures": [fixture_record(fixtures, "coach-redirect/workflow.md", WORKFLOW)],
             "git_repository": {
                 "recipe": "baseline-feature-origin-main/v1",
-                "baseline": [record("autopilot-scenarios/common/project.json", ".specify/project.json")],
+                "baseline": [fixture_record(
+                    fixtures, "autopilot-scenarios/common/project.json", ".specify/project.json",
+                )],
                 "worktrees": [
                     {"path": ".worktrees/task", "branch": "scenario/task", "revision": "baseline"},
                     {"path": ".worktrees/feature", "branch": "scenario/feature", "revision": "feature"},
@@ -79,6 +86,74 @@ class WorkflowBindingFixtureTests(unittest.TestCase):
                         self.assertEqual(set(result["candidates"]), {str(workspace), str(feature)})
                     self.assertEqual((workspace / WORKFLOW).read_bytes(), original)
                     self.assertEqual((feature / WORKFLOW).read_bytes(), original)
+
+    def test_catalog_rebinding_cases_resolve_the_declared_descendant(self) -> None:
+        catalog = json.loads((TEST_ROOT / "evals" / "catalog.json").read_text(encoding="utf-8"))
+        cases = {case["id"]: case for case in catalog["cases"]}
+        expectations = {
+            "functional.speckit-autopilot.case-34": "spec-701",
+            "functional.speckit-autopilot.case-108": "external",
+        }
+        environment = {
+            **os.environ,
+            "PYTHONPATH": str(REPO_ROOT / "speckit-pro"),
+            "PYTHONDONTWRITEBYTECODE": "1",
+            "GIT_CONFIG_GLOBAL": os.devnull,
+            "GIT_CONFIG_NOSYSTEM": "1",
+        }
+
+        for case_id, worktree_name in expectations.items():
+            with self.subTest(case_id=case_id), tempfile.TemporaryDirectory(
+                prefix="native-binding-catalog-",
+            ) as temporary:
+                case = cases[case_id]
+                git_fixture = case["git_fixture"]
+                project = {
+                    "source": (
+                        "tests/speckit-pro/evals/fixtures/functional/"
+                        "autopilot-scenarios/common/project.json"
+                    ),
+                    "destination": ".specify/project.json",
+                }
+                plan = {
+                    "schema_version": "native-eval-fixtures/v2",
+                    "source_root": str(REPO_ROOT),
+                    "fixtures": [
+                        fixture_record(REPO_ROOT, item["source"], item["destination"])
+                        for item in case["fixtures"]
+                    ],
+                    "git_repository": {
+                        "recipe": git_fixture["recipe"],
+                        "baseline": [
+                            *[
+                                fixture_record(REPO_ROOT, item["source"], item["destination"])
+                                for item in git_fixture["baseline"]
+                            ],
+                            fixture_record(REPO_ROOT, project["source"], project["destination"]),
+                        ],
+                        "worktrees": git_fixture["worktrees"],
+                    },
+                }
+                workspace = Path(temporary).resolve()
+                materialize_workspace(plan, workspace)
+                request_path = workspace / "scenario-inputs" / "binding-request.json"
+                completed = subprocess.run(
+                    [sys.executable, "-B", "-m", "speckit_pro_runner"],
+                    cwd=workspace,
+                    env=environment,
+                    input=request_path.read_text(encoding="utf-8"),
+                    text=True,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    timeout=30,
+                    check=False,
+                )
+                self.assertEqual(completed.returncode, 0, completed.stderr)
+                result = json.loads(completed.stdout)["data"]["stdout_json"]
+                self.assertEqual(result["binding_status"], "resolved")
+                self.assertEqual(result["relation"], "descendant")
+                expected_root = workspace / ".worktrees" / worktree_name
+                self.assertEqual(result["workflow_root"], str(expected_root))
 
 
 if __name__ == "__main__":

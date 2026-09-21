@@ -205,14 +205,18 @@ def dynamic_local_pattern() -> re.Pattern[str] | None:
         email_local,
         str(REPO_ROOT),
     )
-    terms = sorted(
-        {
-            term
-            for value in values
-            for term in emit_sensitive_terms_from_value(value)
-            if is_sensitive_local_term(term)
-        }
-    )
+    declared_public_terms = {
+        term
+        for value in public_identity_literals()
+        for term in emit_sensitive_terms_from_value(value)
+        if is_sensitive_local_term(term)
+    }
+    terms = sorted({
+        term
+        for value in values
+        for term in emit_sensitive_terms_from_value(value)
+        if is_sensitive_local_term(term) and term not in declared_public_terms
+    })
     if not terms:
         return None
     return re.compile("|".join(re.escape(term) for term in terms), re.IGNORECASE)
@@ -266,6 +270,24 @@ def committed_transcript_fixtures() -> list[str]:
 def assert_no_hits(test: unittest.TestCase, hits: list[str], label: str) -> None:
     preview = "; ".join(hits[:3])
     test.assertFalse(hits, f"{label} leaked into current tree: {preview}")
+
+
+class PublicIdentityTests(unittest.TestCase):
+    def test_declared_public_identity_is_not_treated_as_dynamic_private_identity(self) -> None:
+        def configured(key: str) -> str:
+            return {
+                "user.name": "Private Operator",
+                "user.email": "privateoperator" + "@example.invalid",
+            }.get(key, "")
+
+        with patch.dict(os.environ, {"USER": "fgabelmannjr"}, clear=True), \
+                patch(f"{__name__}.git_config", side_effect=configured):
+            pattern = dynamic_local_pattern()
+        self.assertIsNotNone(pattern)
+        self.assertIsNone(pattern.search("Merged by fgabelmannjr"))
+        self.assertIsNotNone(pattern.search("privateoperator"))
+        public_home = "/" + "Users/" + "fgabelmannjr/project"
+        self.assertIsNotNone(HOME_PATH_PATTERN.search(public_home))
 
 
 class PrivacyScanTests(unittest.TestCase):
@@ -336,7 +358,10 @@ class PrivacyScanTests(unittest.TestCase):
 
 
 def main() -> int:
-    suite = unittest.defaultTestLoader.loadTestsFromTestCase(PrivacyScanTests)
+    suite = unittest.TestSuite([
+        unittest.defaultTestLoader.loadTestsFromTestCase(PublicIdentityTests),
+        unittest.defaultTestLoader.loadTestsFromTestCase(PrivacyScanTests),
+    ])
     # Sweeps whatever specs exist rather than depending on a named one, so
     # it is archive-safe by construction: an absent feature folder
     # contributes nothing. See install_specs_read_guard.

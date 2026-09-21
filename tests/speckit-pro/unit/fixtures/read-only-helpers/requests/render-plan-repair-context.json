@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "request_id": "fixture-render-plan-repair-context",
+  "helper_id": "render-plan-repair-context",
+  "operation": "render-plan-repair-context",
+  "mode": "read_only",
+  "inputs": {
+    "context_paths": {
+      "original-plan-prompt": "tests/speckit-pro/unit/fixtures/read-only-helpers/plan-repair-original.md",
+      "source-evidence": "tests/speckit-pro/unit/fixtures/read-only-helpers/plan-repair-source.md"
+    },
+    "g3_attempts_path": "tests/speckit-pro/unit/fixtures/read-only-helpers/plan-repair-attempts.json",
+    "g3_attempt_index": 0,
+    "executor_task": "Remove only the unsupported exact-render strengthening.",
+    "attempt_number": 1,
+    "disputed_wording": "exact client render timing",
+    "provenance_class": "assistant-inference",
+    "prior_repair_result": "initial G3 failure"
+  }
+}

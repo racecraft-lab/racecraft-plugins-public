@@ -24,6 +24,11 @@ _HOST_ALIASES = {
         "Glob": "list_files",
         "Grep": "search_files",
         "Read": "read_file",
+        "TaskCreate": "task_create",
+        "TaskGet": "task_get",
+        "TaskList": "task_list",
+        "TaskStop": "task_stop",
+        "TaskUpdate": "task_update",
         "ToolSearch": "search_tools",
         "WebFetch": "web_fetch",
         "WebSearch": "web_search",
@@ -53,6 +58,7 @@ _SUBAGENT_OUTPUT_PROVENANCE = frozenset({
     "agent_path", "child_thread_id", "namespace", "thread_id",
 })
 _PROJECTION_SCHEMA = "native-judge-evidence/v1"
+_REQUEST_CHAR_LIMIT = 900_000
 
 
 def _canonical_json(value: object) -> bytes:
@@ -131,10 +137,29 @@ def _skill_target(call: Mapping[str, object]) -> str:
     return native[len(prefix):] if native.startswith(prefix) else native
 
 
+def _project_text(value: str) -> str:
+    """Retain complete evidence so omitted text can never prove a criterion absent.
+
+    ``build_judge_request`` enforces the shared request-size ceiling after the
+    complete projection is assembled.  Evidence that cannot fit is therefore
+    rejected as an invalid judge request instead of being silently reduced to
+    a head/tail sample that could support a false omission verdict.
+    """
+    return value
+
+
 def _project_value(value: object, blocked: frozenset[str] = frozenset()) -> object:
-    if not isinstance(value, dict):
-        return copy.deepcopy(value)
-    return {key: copy.deepcopy(item) for key, item in value.items() if key not in blocked}
+    if isinstance(value, str):
+        return _project_text(value)
+    if isinstance(value, dict):
+        return {
+            key: _project_value(item)
+            for key, item in value.items()
+            if key not in blocked
+        }
+    if isinstance(value, list):
+        return [_project_value(item) for item in value]
+    return copy.deepcopy(value)
 
 
 def _retained_tool_calls(
@@ -213,14 +238,17 @@ def _evidence(
         raise ValueError("observation is incomplete or malformed")
     tool_calls = _project_tool_calls(case, observation, grade, host, _tool_aliases(host, aliases))
     activations = [aliases.get(name, name) for name in observation["activations"]]
-    artifacts = {path: observation["artifacts"][path] for path in sorted(observation["artifacts"])}
+    artifacts = {
+        path: _project_value(observation["artifacts"][path])
+        for path in sorted(observation["artifacts"])
+    }
     references = ["final_text"]
     references.extend(f"artifacts/{path}" for path in artifacts)
     references.extend(f"tool_calls/{index}" for index in range(len(tool_calls)))
     references.append("activations")
     return {
         "schema": _PROJECTION_SCHEMA,
-        "final_text": observation["final_text"],
+        "final_text": _project_value(observation["final_text"]),
         "artifacts": artifacts,
         "tool_calls": tool_calls,
         "activations": activations,
@@ -262,6 +290,11 @@ def build_judge_request(
         "evidence_references": references,
         "output_schema": _output_schema(checks, references),
     }
+    request_chars = len(_canonical_json(request).decode("utf-8"))
+    if request_chars > _REQUEST_CHAR_LIMIT:
+        raise ValueError(
+            f"semantic judge request exceeds {_REQUEST_CHAR_LIMIT} projected characters"
+        )
     request["request_sha256"] = hashlib.sha256(_canonical_json(request)).hexdigest()
     return request
 

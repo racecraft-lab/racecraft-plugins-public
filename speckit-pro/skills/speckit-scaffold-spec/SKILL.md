@@ -114,6 +114,21 @@ does not block the remaining scaffold workflow, but it must be recorded.
 /speckit-pro:speckit-scaffold-spec SPEC-008
 ```
 
+## Canonical Scaffold Identity
+
+Derive one deterministic `<branch-name>` from the roadmap's spec number and
+short slug, then use that exact verified value everywhere. The authored paths,
+relative to the resolved worktree root, are:
+
+- `docs/ai/specs/.process/SPEC-<ID>-design-concept.md`
+- `docs/ai/specs/.process/SPEC-<ID>-workflow.md`
+- `specs/<branch-name>/SPEC-MOC.md`
+
+The generated workflow's `Branch` field is the actual dedicated branch
+returned by `resolve-scaffold-worktree-placement` and verified inside the
+worktree. Never write `main`, a guessed branch, or a display label into that
+field.
+
 ## What to Do
 
 ### -0.5 Verify Claude Agent Package Completeness
@@ -189,37 +204,56 @@ may proceed only when the workflow records the scope budget and split decision.
 
 <hard_constraints>
 
-**NEVER commit or push to main.** All work happens in the
-worktree. The worktree branch is what gets pushed to remote.
+**NEVER commit or push to main.** All work happens in the worktree. The
+worktree branch is what gets pushed to remote. Re-read the active branch
+immediately before every commit and push; if it is `main`, STOP before the
+mutation.
 
 </hard_constraints>
 
-```text
-1. Detect remote name:
-   Run `git remote -v`.
+Before `git worktree add` or any artifact or roadmap write, invoke the
+read-only runner helper `resolve-scaffold-worktree-placement` with the
+deterministic single-segment `branch_name` and, only when the user supplied
+one, `worktree_root_override`. Require `placement_status=resolved` and
+`relation=same` or `relation=descendant`. On `conflict`, `invalid`, or
+`relation=external`, report the returned `problems[]` and canonical path, then
+STOP before mutation.
 
-2. Create the branch and worktree:
-   Run `git worktree add .worktrees/<number>-<short-name> -b <number>-<short-name>`.
+This ordering is invariant: the first resolver result comes before
+`git worktree add`, artifact writes, or roadmap mutation. Only after that
+result passes may scaffold create or reuse the worktree. A second resolver
+check then runs after creation or reuse and immediately before bootstrap or
+Grill Me. Neither bootstrap nor Grill Me may begin unless that second check
+confirms the registered worktree described below.
 
-3. Switch your working directory to the worktree:
-   ALL subsequent commands run FROM the worktree path:
-   .worktrees/<number>-<short-name>/
+Without an override, require the helper's exact
+`TASK_ROOT/.worktrees/<branch-name>` result. Never derive placement from the
+primary checkout, `git rev-parse --git-common-dir`, or the first
+`git worktree list` record. Use the returned absolute `worktree_root`
+unchanged.
 
-4. Push the WORKTREE BRANCH (not main) to remote:
-   From `.worktrees/<number>-<short-name>/`, run
-   `git push -u <remote> <number>-<short-name>`.
+Inspect `git remote -v` before git mutation and never assume `origin`. Honor
+the helper's disposition:
 
-5. Verify you're on the correct branch:
-   From `.worktrees/<number>-<short-name>/`, run
-   `git rev-parse --abbrev-ref HEAD`.
-   Must show: <number>-<short-name> (NOT main)
-```
+1. On `disposition=reuse`, reuse the returned registered worktree without
+   moving, recreating, duplicating, or pruning it. An existing local or remote
+   branch never authorizes work in the primary checkout: all commits and pushes
+   still originate from the resolved worktree branch, never `main`.
+2. On `disposition=create`, inspect the intended branch locally and on every
+   actual remote. STOP if more than one remote carries it. Add the returned
+   worktree using the local branch, the single remote tracking branch, or a new
+   branch as the observed state requires. Never commit or push `main` while
+   recovering or reusing a remote branch.
+3. Verify the active branch inside the returned worktree before any push. It
+   must equal the helper's `branch_name` and must not be `main`.
 
-If the worktree already exists, ask the user whether to use
-the existing one or recreate it.
-
-If the branch already exists (locally or remotely), check it
-out in the worktree instead of creating a new one.
+Re-run `resolve-scaffold-worktree-placement` after worktree creation and again
+immediately before bootstrap or Grill Me on both create and reuse paths.
+Require `placement_status=resolved`, `disposition=reuse`, the identical
+canonical `task_root`, `worktree_root`, and `branch_name`, plus
+`relation=same` or `relation=descendant`. STOP before bootstrap or Grill Me if
+any field drifts. Only then may the verified worktree branch be pushed to the
+detected remote.
 
 ### 3.5. Bootstrap the Worktree (IN the Worktree)
 
@@ -718,6 +752,9 @@ with read-only formal-doctor against WORKFLOW_ROOT after population.
 ### 7. Commit and Verify (IN the Worktree)
 
 All commits happen on the worktree branch (see hard constraints).
+Immediately before the commit and again immediately before the push, run
+`git rev-parse --abbrev-ref HEAD` in the resolved worktree. The result must
+equal the resolver's `branch_name` and must not be `main`; otherwise STOP.
 
 ```text
 1. Stage and commit the design concept doc, the workflow file, AND the
@@ -730,6 +767,14 @@ All commits happen on the worktree branch (see hard constraints).
 
 2. Push the WORKTREE BRANCH:
    From `.worktrees/<number>-<short-name>/`, run `git push`.
+
+   If the push fails or the remote rejects it, STOP and report the failure
+   instead of continuing as though the scaffold succeeded. The failure report
+   identifies the existing local branch, canonical worktree, workflow file,
+   and local commit. Tell the operator to resolve the remote rejection and
+   retry the push from that same existing worktree. Do not recreate the branch
+   or worktree, regenerate the workflow, or replace the existing commit merely
+   to retry the push.
 
 3. Verify:
    - Read the design concept doc — must contain Goals, Non-goals,
@@ -776,6 +821,8 @@ WORKTREE (not on main) to mark the spec as `🔄 In Progress`:
    Edit(".worktrees/<number>-<short-name>/<roadmap-path-from-step-1>")
 
 2. Commit IN THE WORKTREE:
+   Re-read the active branch first and STOP if it differs from the resolver's
+   `branch_name` or equals `main`.
    From `.worktrees/<number>-<short-name>/`, stage `docs/ai/`, commit with
    `chore(SPEC-XXX): mark as In Progress`, and push the branch.
 ```
@@ -923,7 +970,7 @@ endings is a failure and none is the operator's fault.
 fixed, except that the draft-PR line is conditional on a URL existing. The
 outcome line, the artifact index, and the next step are **derived** — each has
 its own rule below. `<two-command hand-off block>` is the Step 9 `/cd` command
-followed by the relative autopilot command. It remains one report element even
+followed by the absolute-workflow autopilot command. It remains one report element even
 though it is rendered on two lines.
 
 **The set-aside findings count MUST NOT appear here.** The list is closed at

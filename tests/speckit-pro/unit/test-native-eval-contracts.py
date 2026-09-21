@@ -142,7 +142,7 @@ def runner_result_check() -> dict[str, object]:
 def _opaque_message(value: object) -> dict[str, object]:
     encoded = json.dumps(value, sort_keys=True, separators=(",", ":"),
                          ensure_ascii=False, allow_nan=False).encode("utf-8")
-    markers = re.findall(r"\[\[native-eval-item:([a-z0-9][a-z0-9._-]*)\]\]", value) \
+    markers = re.findall(r"\[\[work-item:([a-z0-9][a-z0-9._-]*)\]\]", value) \
         if isinstance(value, str) else []
     return {
         "observed_item_ids": markers[:64], "observed_marker_count": len(markers),
@@ -159,7 +159,7 @@ def dispatch_observation() -> dict[str, object]:
     claude_results = []
     for index, role in enumerate(roles):
         identity = f"agent-{index}"
-        prompt = "Inspect the item. [[native-eval-item:dispatch-i1]]"
+        prompt = "Inspect the item. [[work-item:dispatch-i1]]"
         output = f"return-{index}"
         calls.append({
             "id": identity, "name": "subagent",
@@ -252,7 +252,9 @@ class NativeEvalCatalogTests(unittest.TestCase):
             "field_path": ["steps", 0],
             "expected_by_host": {"claude": ["one"], "codex": ["one", "two"]},
         }
-        validate_catalog(catalog(case([check])), self.root)
+        valid = case([check])
+        valid["prompt"] = "Use {{skill}} for this request and return the steps response field."
+        validate_catalog(catalog(valid), self.root)
         for field_path in ([], [True], [-1], [1.0], [""]):
             with self.subTest(field_path=field_path):
                 invalid = copy.deepcopy(check)
@@ -271,6 +273,7 @@ class NativeEvalCatalogTests(unittest.TestCase):
             "type": "native_plan_repair_context",
             "contexts": {"original-prompt": "input.txt"},
             "g3_request_path": "g3-request.json",
+            "context_request_path": "context-request.json",
             "executor_role": "phase-executor", "max_repairs": 2,
             "terminal_outcome": "pass",
         }
@@ -280,6 +283,10 @@ class NativeEvalCatalogTests(unittest.TestCase):
         value["fixtures"].append({
             "source": "tests/speckit-pro/fixtures/g3-request.json",
             "destination": "g3-request.json",
+        })
+        value["fixtures"].append({
+            "source": "tests/speckit-pro/fixtures/g3-request.json",
+            "destination": "context-request.json",
         })
         validated = validate_catalog(catalog(value), self.root)["cases"][0]
         self.assertEqual(validated["checks"][0], check)
@@ -294,6 +301,8 @@ class NativeEvalCatalogTests(unittest.TestCase):
             ("contexts", {"original": "missing.txt"}, "must reference declared fixtures"),
             ("g3_request_path", "../g3-request.json", "g3_request_path"),
             ("g3_request_path", "missing.json", "must reference declared fixtures"),
+            ("context_request_path", "../context-request.json", "context_request_path"),
+            ("context_request_path", "missing.json", "must reference declared fixtures"),
             ("executor_role", "speckit-pro:phase-executor", "executor_role is not a stable identifier"),
             ("max_repairs", 1, "max_repairs must be exactly 2"),
             ("max_repairs", True, "max_repairs must be exactly 2"),
@@ -371,6 +380,27 @@ class NativeEvalCatalogTests(unittest.TestCase):
                 malformed = case()
                 malformed["required_tools"] = value
                 self.assert_invalid(malformed, message)
+
+    def test_git_metadata_write_is_explicit_and_requires_a_git_fixture(self) -> None:
+        valid = case()
+        valid["git_fixture"] = {
+            "recipe": fixture_setup.GIT_FIXTURE_RECIPE,
+            "baseline": [{
+                "source": "tests/speckit-pro/fixtures/baseline.txt",
+                "destination": "baseline.txt",
+            }],
+        }
+        valid["git_metadata_access"] = "write"
+        loaded = validate_catalog(catalog(valid), self.root)["cases"][0]
+        self.assertEqual(loaded["git_metadata_access"], "write")
+
+        missing_fixture = case()
+        missing_fixture["git_metadata_access"] = "write"
+        self.assert_invalid(missing_fixture, "git_metadata_access requires git_fixture")
+        for value in ("read", "deny", True, None):
+            malformed = copy.deepcopy(valid)
+            malformed["git_metadata_access"] = value
+            self.assert_invalid(malformed, "git_metadata_access must be write")
 
     def test_requires_pairing_only_for_parity_and_keeps_host_checks_independent(self) -> None:
         missing = case()
@@ -578,6 +608,10 @@ class NativeEvalCatalogTests(unittest.TestCase):
         valid = case([runner_result_check()])
         accepted = validate_catalog(catalog(valid), self.root)["cases"][0]["checks"][0]
         self.assertEqual(accepted["expected_status"], "expected_failure")
+        nested = copy.deepcopy(valid)
+        nested["checks"][0]["response_value_path"] = ["data", "stdout_json"]
+        accepted_nested = validate_catalog(catalog(nested), self.root)["cases"][0]["checks"][0]
+        self.assertEqual(accepted_nested["response_value_path"], ["data", "stdout_json"])
         for field, value, message in (
             ("request_path", "../request.json", "request_path is malformed"),
             ("helper_id", "Resolve Binding", "helper_id is malformed"),
@@ -585,6 +619,7 @@ class NativeEvalCatalogTests(unittest.TestCase):
             ("expected_exit_code", True, "contradicts expected_status"),
             ("stdout_field_path", [], "stdout_field_path is malformed"),
             ("response_field_path", [""], "response_field_path is malformed"),
+            ("response_value_path", [], "response_value_path is malformed"),
         ):
             malformed = copy.deepcopy(valid)
             malformed["checks"][0][field] = value
@@ -596,7 +631,7 @@ class NativeEvalCatalogTests(unittest.TestCase):
         duplicate = case([runner_result_check(), {
             **runner_result_check(), "id": "runner-result-two",
         }])
-        self.assert_invalid(duplicate, "ambiguous native runner result checks")
+        self.assert_invalid(duplicate, "duplicate native runner result bindings")
 
 
     def test_rejects_unknown_checks_empty_rubrics_and_bad_templates(self) -> None:
@@ -613,6 +648,13 @@ class NativeEvalCatalogTests(unittest.TestCase):
         bad_prompt = case()
         bad_prompt["prompt"] = "Use {{provider}}."
         self.assert_invalid(bad_prompt, "unsupported placeholder")
+        unresolved_python = case()
+        unresolved_python["prompt"] = "Run {{resolved_python}} -m speckit_pro_runner."
+        self.assert_invalid(unresolved_python, "unsupported placeholder")
+        resolved_python = case()
+        resolved_python["required_tools"] = ["specify"]
+        resolved_python["prompt"] = "Run {{resolved_python}} -m speckit_pro_runner."
+        validate_catalog(catalog(resolved_python), self.root)
         null_skill = case()
         null_skill["hosts"]["codex"]["skill"] = None
         self.assert_invalid(null_skill, "cannot interpolate a null host skill")
@@ -673,11 +715,15 @@ class NativeEvalCatalogTests(unittest.TestCase):
             "id": "search", "requirement": "r1", "type": "file_search",
             "pattern": "**/*roadmap*.md", "matches": ["docs/current-technical-roadmap.md"],
         }
+        valid = case([check])
+        valid["prompt"] = "Use {{skill}} for this request and search for **/*roadmap*.md."
         self.assertEqual(
-            validate_catalog(catalog(case([check])), self.root)["cases"][0]["checks"][0],
+            validate_catalog(catalog(valid), self.root)["cases"][0]["checks"][0],
             check,
         )
-        validate_catalog(catalog(case([{**check, "matches": []}])), self.root)
+        valid_empty = copy.deepcopy(valid)
+        valid_empty["checks"][0]["matches"] = []
+        validate_catalog(catalog(valid_empty), self.root)
         for updates, message in (
             ({"pattern": "*roadmap*.md"}, "recursive basename glob"),
             ({"pattern": "**/docs/*.md"}, "recursive basename glob"),
@@ -709,6 +755,49 @@ class NativeEvalCatalogTests(unittest.TestCase):
                 check = copy.deepcopy(base)
                 check["include_failed"] = include_failed
                 self.assert_invalid(case([check]), "include_failed must be boolean")
+
+    def test_native_subagent_dispatch_requires_complete_host_specific_contract(self) -> None:
+        host_specific_check = copy.deepcopy(dispatch_check())
+        host_specific_check["expected_by_host"] = {
+            "claude": [{"item_id": "dispatch-i1", "role": "general-purpose"}],
+            "codex": [{"item_id": "dispatch-i1", "role": "default"}],
+        }
+        del host_specific_check["expected"]
+        host_specific = case([host_specific_check])
+        host_specific["resource_class"] = "nested"
+        loaded = validate_catalog(catalog(host_specific), self.root)["cases"][0]["checks"][0]
+        self.assertEqual(loaded, host_specific_check)
+
+        host_mutations = []
+        for expected_by_host, message in (
+            ({"claude": host_specific_check["expected_by_host"]["claude"]},
+             "must define exactly claude and codex"),
+            ({**host_specific_check["expected_by_host"], "other": []},
+             "must define exactly claude and codex"),
+            ({"claude": [], "codex": host_specific_check["expected_by_host"]["codex"]},
+             "expected_by_host.claude must be nonempty"),
+            ({"claude": [{"item_id": "dispatch-i1", "role": "general-purpose"}],
+              "codex": [{"item_id": "different-item", "role": "default"}]},
+             "must define equivalent item_ids"),
+            ({"claude": [{"item_id": "dispatch-i1", "role": "general-purpose", "extra": True}],
+              "codex": host_specific_check["expected_by_host"]["codex"]},
+             "expected_by_host.claude item is malformed"),
+        ):
+            malformed = copy.deepcopy(host_specific)
+            malformed["checks"][0]["expected_by_host"] = expected_by_host
+            host_mutations.append((malformed, message))
+        conflicting = copy.deepcopy(host_specific)
+        conflicting["checks"][0]["expected"] = dispatch_check()["expected"]
+        host_mutations.append((conflicting, "exactly one of expected and expected_by_host"))
+        absent = copy.deepcopy(host_specific)
+        del absent["checks"][0]["expected_by_host"]
+        host_mutations.append((absent, "exactly one of expected and expected_by_host"))
+        forbidden = copy.deepcopy(host_specific)
+        forbidden["checks"][0]["forbidden_roles"] = ["default"]
+        host_mutations.append((forbidden, "overlap expected roles"))
+        for malformed, message in host_mutations:
+            with self.subTest(message=message):
+                self.assert_invalid(malformed, message)
 
     def test_native_subagent_dispatch_requires_exact_pairs_and_nested_runtime(self) -> None:
         valid = case([dispatch_check()])
@@ -863,6 +952,14 @@ class NativeEvalCatalogTests(unittest.TestCase):
             original,
             input_fingerprint(tool_required, "claude", "plugin", {"model": "sonnet", "cli": "1"}),
         )
+        git_metadata_write = copy.deepcopy(value)
+        git_metadata_write["git_metadata_access"] = "write"
+        self.assertNotEqual(
+            original,
+            input_fingerprint(
+                git_metadata_write, "claude", "plugin", {"model": "sonnet", "cli": "1"},
+            ),
+        )
         with self.assertRaisesRegex(ValueError, "runtime_identity"):
             input_fingerprint(value, "claude", "plugin", {})
         with self.assertRaisesRegex(ValueError, "mode"):
@@ -945,8 +1042,8 @@ class NativeEvalGradingTests(unittest.TestCase):
         variants.append(("failed", failed, "fail"))
         for name, prompt in (
             ("missing-marker", "Inspect the item."),
-            ("wrong-marker", "[[native-eval-item:other-item]]"),
-            ("duplicate-marker", "[[native-eval-item:dispatch-i1]] [[native-eval-item:dispatch-i1]]"),
+            ("wrong-marker", "[[work-item:other-item]]"),
+            ("duplicate-marker", "[[work-item:dispatch-i1]] [[work-item:dispatch-i1]]"),
         ):
             changed = copy.deepcopy(valid)
             changed["tool_calls"][0]["input"]["prompt"] = prompt
@@ -983,6 +1080,82 @@ class NativeEvalGradingTests(unittest.TestCase):
                 self.assertEqual(
                     grade_observation(value, evidence, host="claude")["status"], expected,
                 )
+
+    def test_native_subagent_dispatch_preserves_exact_host_roles(self) -> None:
+        check = dispatch_check()
+        check["expected_by_host"] = {
+            "claude": [{"item_id": "dispatch-i1", "role": "codebase-analyst"}],
+            "codex": [{"item_id": "dispatch-i1", "role": "default"}],
+        }
+        del check["expected"]
+        value = case([check])
+        value["resource_class"] = "nested"
+
+        claude_evidence = dispatch_observation()
+        claude_evidence["tool_calls"].pop()
+        claude_metadata = claude_evidence["native_metadata"]
+        claude_metadata["native_subagent_dispatch_attribution"]["calls"].pop()
+        claude_metadata["subagent_return_order"]["returns"].pop()
+        claude_metadata["claude_tool_results"].pop()
+        self.assertEqual(
+            grade_observation(value, claude_evidence, host="claude")["status"], "pass",
+        )
+
+        codex_evidence = self._synthesis_observation("codex")
+        codex_call = codex_evidence["tool_calls"][2]
+        prompt = "Inspect the item. [[work-item:dispatch-i1]]"
+        codex_call["input"] = {"message": prompt, "role": "default"}
+        encoded = prompt.encode("utf-8")
+        opaque = {
+            "kind": "opaque", "sha256": hashlib.sha256(encoded).hexdigest(),
+            "bytes": len(encoded),
+        }
+        dispatch = codex_evidence["native_metadata"]["nested_rollout"]["dispatches"][0]
+        dispatch.update({
+            "task_input": opaque,
+            "item_attribution": {
+                "task_input": opaque, "observed_item_ids": ["dispatch-i1"],
+                "observed_marker_count": 1, "markers_truncated": False,
+            },
+        })
+        codex_evidence["native_metadata"]["nested_rollout"]["root_thread_id"] = "root-thread"
+        codex_evidence["native_metadata"]["native_subagent_dispatch_attribution"] = {
+            "schema": "native-subagent-dispatch-attribution/v1",
+            "authority": "controller-bound-native-trace",
+            "calls": [{
+                "tool_call_index": 2, "call_id": "synth",
+                "observed_item_ids": ["dispatch-i1"], "observed_marker_count": 1,
+                "markers_truncated": False, "message_sha256": opaque["sha256"],
+                "message_bytes": opaque["bytes"],
+            }],
+        }
+        codex_result = grade_observation(value, codex_evidence, host="codex")
+        self.assertEqual(codex_result["status"], "pass", codex_result)
+
+        wrong_role = copy.deepcopy(codex_evidence)
+        wrong_role["tool_calls"][2]["input"]["role"] = "general-purpose"
+        self.assertEqual(
+            grade_observation(value, wrong_role, host="codex")["status"], "fail",
+        )
+        self.assertEqual(
+            grade_observation(value, codex_evidence, host="other")["status"], "invalid",
+        )
+
+    def test_native_subagent_dispatch_single_item_context_accepts_opaque_messages(self) -> None:
+        check = dispatch_check()
+        check["single_item_context"] = True
+        value = case([check])
+        value["resource_class"] = "nested"
+        evidence = dispatch_observation()
+        for index, call in enumerate(evidence["tool_calls"]):
+            prompt = f"Inspect the controller-bound single item for role {index}."
+            call["input"]["prompt"] = prompt
+            evidence["native_metadata"]["native_subagent_dispatch_attribution"][
+                "calls"
+            ][index].update(_opaque_message(prompt))
+        self.assertEqual(
+            grade_observation(value, evidence, host="claude")["status"], "pass",
+        )
 
     @staticmethod
     def _synthesis_case() -> dict[str, object]:

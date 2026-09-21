@@ -1,0 +1,9 @@
+{
+  "binding_status": "resolved",
+  "relation": "descendant",
+  "workflow_root": "/workspace/.worktrees/spec-009",
+  "workflow_file": "/workspace/.worktrees/spec-009/docs/ai/specs/.process/SPEC-009-workflow.md",
+  "branch": "codex/spec-009",
+  "branch_protected": false,
+  "stage": "plan"
+}

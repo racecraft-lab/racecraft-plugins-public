@@ -197,6 +197,62 @@ def observation(response: dict[str, object], artifacts: dict[str, str] | None = 
     }
 
 
+def _skill_variants(skill_name: str) -> list[str]:
+    roots = (
+        REPO_ROOT / "speckit-pro" / "skills",
+        REPO_ROOT / "speckit-pro" / "codex-skills",
+    )
+    return [(root / skill_name / "SKILL.md").read_text(encoding="utf-8") for root in roots]
+
+
+class ShippedSkillContractTests(unittest.TestCase):
+    def test_shipped_skill_contracts(self) -> None:
+        expected = {
+            "speckit-autopilot": (
+                "deep dives", "populated workflow", "remains an autopilot execution request",
+            ),
+            "speckit-coach": (
+                "`## Progress Tracking` is mandatory",
+                "Grill Me never creates a branch, worktree, workflow",
+                "A declared extension command is not evidence that a hook runs",
+                "`specs/<branch-name>/SPEC-MOC.md`",
+                "actual dedicated spec branch",
+            ),
+            "speckit-status": (
+                "This standalone status skill",
+                "from beginning to end before answering",
+                "another skill's report",
+            ),
+        }
+        for skill_name, needles in expected.items():
+            for text in _skill_variants(skill_name):
+                compact = " ".join(text.split())
+                with self.subTest(skill=skill_name):
+                    for needle in needles:
+                        self.assertIn(needle, compact)
+
+        for text in _skill_variants("speckit-scaffold-spec"):
+            compact, lowered = " ".join(text.split()), text.lower()
+            for needle in (
+                "Before `git worktree add` or any artifact or roadmap write, invoke the read-only",
+                "after worktree creation and again",
+                "before bootstrap or Grill Me",
+                "immediately before every commit and push",
+                "`docs/ai/specs/.process/SPEC-<ID>-workflow.md`",
+                "actual dedicated branch",
+                "<absolute-workflow-file> --stage plan",
+            ):
+                self.assertIn(needle, compact)
+            self.assertIn("never commit or push", lowered)
+            self.assertTrue(
+                "human-in-the-loop" in lowered or "strictly interactive" in lowered
+            )
+            self.assertTrue(
+                "do not synthesize design-concept content" in lowered
+                or "do not attempt to skip grilling" in lowered
+            )
+
+
 class NativeScaffoldNoninteractiveTests(unittest.TestCase):
     def test_candidate_is_schema_valid_and_remains_an_ordinary_diagnostic(self) -> None:
         catalog = {"schema_version": "native-eval-catalog/v1", "cases": [scaffold_case()]}
@@ -295,5 +351,8 @@ class NativeScaffoldNoninteractiveTests(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    suite = unittest.defaultTestLoader.loadTestsFromTestCase(NativeScaffoldNoninteractiveTests)
+    suite = unittest.TestSuite([
+        unittest.defaultTestLoader.loadTestsFromTestCase(ShippedSkillContractTests),
+        unittest.defaultTestLoader.loadTestsFromTestCase(NativeScaffoldNoninteractiveTests),
+    ])
     raise SystemExit(run_counted(suite, label="test-native-scaffold-noninteractive"))

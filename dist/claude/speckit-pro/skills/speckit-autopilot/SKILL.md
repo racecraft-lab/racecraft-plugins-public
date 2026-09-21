@@ -15,6 +15,13 @@ license: MIT
 
 # SpecKit Autopilot — Autonomous Execution Engine
 
+## Explicit Invocation Boundary
+
+When `/speckit-pro:speckit-autopilot` loads this file, the skill is already
+active. Do not invoke the `Skill` tool for `speckit-pro:speckit-autopilot`
+again; start with these instructions. A rejected redundant `Skill` call is not
+a prerequisite failure and does not authorize stopping the workflow.
+
 ## Installed Runtime Contract
 
 Installed Claude and Codex surfaces resolve Python 3.11 or newer, invoke
@@ -26,8 +33,13 @@ PowerShell-specific command-language requirement for installed workflows.
 ## Scope
 
 This skill handles autonomous workflow EXECUTION. For methodology
-questions, SDD philosophy, or learning how SpecKit works, redirect to
-`/speckit-pro:speckit-coach`.
+questions, SDD philosophy, comparisons, design rationale, deep dives, or
+learning how SpecKit works, redirect to `/speckit-pro:speckit-coach` when the
+user is asking for explanation rather than execution. Do not redirect a real
+implementation request merely because it asks for detailed progress or uses
+the word "implement": when the user supplies or identifies a populated
+workflow and asks to run, resume, or implement it, this remains an autopilot
+execution request.
 
 You are an **orchestrator** for SpecKit workflows: read prompts from
 the workflow file and delegate each phase to a **subagent** that runs
@@ -113,6 +125,45 @@ Initialize/recover its durable execution-control ledger before phase dispatch.
 It owns task metadata, native batching, proof reuse, and the shared repair/time
 ceilings across every phase, nested worker, and Post step.
 
+When a bounded request supplies an exact native command together with an
+invocation count or order, that command is the authority. Execute each listed
+command exactly once and in order, with no interpreter preflight, shell
+variable, wrapper, replay, capture redirection, or substituted command unless
+the request explicitly permits it. Consume the direct native result; do not
+rerun a helper merely to make its output easier to parse. The native tool result
+is the captured result: preserve that direct response for later artifacts. Do
+not issue a second invocation to obtain a file, exit code, stdout, or stderr.
+
+### Claude native worker lifecycle
+
+- Discover the current native worker, follow-up, wait/result, inspection,
+  interruption, and cleanup actions before dispatch. Do not infer a capability
+  from a tool name mentioned in prose.
+- Derive the usable worker count from the active surface. When no count is
+  exposed, use one worker as the safe fallback unless a narrower workflow
+  contract explicitly owns a bounded parallel group **and** the active native
+  surface can execute that group within its exposed limit. Work wider than the
+  usable count proceeds in waves; a named parallel group never overrides the
+  host's actual cap.
+- Task-list actions such as `TaskCreate`, `TaskUpdate`, and `TaskList` are
+  bookkeeping, not worker follow-up, wait, or result-consumption actions. Use
+  a separately discovered native worker action for those lifecycle steps. If
+  only a foreground worker call is available, its direct return is the final
+  report and each later call is a new attempt, not reuse.
+- Every asynchronous dispatch follows launch, bounded wait or polling, and
+  consumption of that worker's actual final report. A launch receipt, ordinary
+  message, timeout, or terminal status is not the required result.
+- A single timeout is only a poll boundary. Interrupt or cancel only a
+  confirmed stuck running turn after the separate execution deadline. An
+  interruption is neither closure nor a result.
+- After interruption or a missing result, reconcile the tracked dispatch and
+  owned effects once, then checkpoint unknown state. Never automatically
+  respawn work until the original attempt is proven unable to return.
+- Cleanup is best-effort when the host exposes it; do not retry-loop an
+  already-gone worker. When cleanup is absent, leave the completed inspectable
+  worker to the host. Before completion, audit every tracked worker and consume
+  every required final report.
+
 ### 0. Forbidden skill invocations
 
 <hard_constraints>
@@ -134,8 +185,12 @@ pre-workflow human alignment via `/speckit-pro:speckit-scaffold-spec` or
 
 ### 1. Subagent per phase
 
-For each phase, spawn a **foreground subagent** via the Agent
-tool with `run_in_background: false`. The subagent runs the
+For each phase, spawn a **foreground subagent** via the native subagent tool
+(`Agent` when exposed, otherwise its renamed `Task` equivalent) with
+`run_in_background: false`. `TaskCreate`, `TaskUpdate`, and `TaskList` are
+bookkeeping tools, not subagent launchers. If `Task` is listed but deferred,
+load it with `ToolSearch` query `select:Task`; never load only `TaskCreate` or
+`TaskUpdate` and treat that as worker availability. The subagent runs the
 `/speckit-*` command and returns a summary. You (the parent) receive
 the result as a tool call response, which keeps your agent loop alive.
 Treat async-launch metadata as launch acknowledgement only; collect the
@@ -271,7 +326,11 @@ Run the pre-flight sequence before any phase work. STOP on failure.
 2. **Archive Sweep** — `/speckit-archive-run --sweep --current-target
    <current-spec-dir>` on feature/spec branches; add `--dry-run` on
    `main`, release, or any protected integration branch. Skip if the
-   archive extension is absent. Excludes the current target spec.
+   archive extension is absent. Excludes the current target spec. Distinguish
+   an absent extension from a broken installation: if the extension is present
+   but `/speckit-archive-run` is missing or unregistered, STOP pre-flight with
+   that discovery evidence and repair/install guidance. Never silently treat a
+   missing archive command as an absent extension.
 3. **Run prereq helper operations** and parse the JSON output of each:
    ```text
    helper_id=check-prerequisites operation=check-prerequisites mode=read_only
@@ -574,6 +633,10 @@ for phase in PHASES starting from first_pending:
         file's "## Atomicity Route" section. READ-ONLY + ADVISORY —
         the script writes nothing and never blocks; the SKILL is
         what records it.
+        The Phase 7 placeholder is invalid after G5. Parse `tasks.md` and
+        replace that placeholder in both the native visible progress plan and
+        `autopilot-state.json` with concrete task-group items and task IDs;
+        Analyze and Implement remain blocked until both stores are repaired.
     8d. After recording the atomicity route, run the layer planner only
         when route is exactly `split-PR`, and always before Analyze or
         Implement can continue:
@@ -644,6 +707,24 @@ packet dry-run/apply and validation, single- versus split-PR emission, review
 remediation, retrospective, and final summary. Do not start PR side effects
 without the reference's current evidence and packet contracts, and never report
 completion while its continuation or canonical Post work remains incomplete.
+
+The first Post action is to resolve the host-native subagent launcher and
+dispatch exactly three workers for the Doctor, Code Review, and Verify tracks.
+The parent MUST NOT perform any track-owned Task 10-14 action itself. It may
+continue only after it has consumed all three terminal worker reports.
+
+### 3.4 Pre-final completion audit
+
+Before any final user-facing response, re-read `autopilot-state.json` and the
+workflow file, reconcile both with the native visible progress plan, and audit
+the complete canonical Post list. A completion response is forbidden while
+any `Post:` item is pending, in progress, or missing. For the first Post
+parallel group, mark Doctor, Code Review, Verify Implementation, Verify Tasks
+Phantom Check, and Integration Suite in progress before dispatching the three
+workers. Later serial items advance one at a time. Completion requires every
+Post item to be completed or explicitly skipped **and** the created PR URL to
+be known; otherwise continue the loop or report an honest incomplete
+checkpoint, never a completion summary.
 
 ## Workflow File Update Protocol
 

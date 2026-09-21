@@ -153,7 +153,7 @@ def _compile_comparison(
     if extractor is not None:
         _require(isinstance(section, str) and section.startswith("## ") and bool(section[3:].strip()),
                  f"{label} section_selector must name an H2 section")
-        valid_extractor = extractor == "table_row_count" or (
+        valid_extractor = extractor in {"section_text", "table_row_count"} or (
             isinstance(extractor, str) and extractor.startswith("table_column:") and bool(extractor[13:].strip())
         )
         _require(valid_extractor, f"{label} extractor is unsupported")
@@ -374,7 +374,7 @@ def pair_grader_fingerprint(plan: Mapping[str, Any], grader_identity: object) ->
     return hashlib.sha256(_canonical(payload, "pair grader fingerprint payload")).hexdigest()
 
 
-def _table(text: str, section_selector: str) -> list[str]:
+def _section(text: str, section_selector: str) -> list[str]:
     lines = text.splitlines()
     matches = [index for index, line in enumerate(lines) if line == section_selector]
     _require(bool(matches), f"section not found: {section_selector}")
@@ -385,6 +385,12 @@ def _table(text: str, section_selector: str) -> list[str]:
         if line.startswith("## "):
             break
         section.append(line)
+    _require(any(line.strip() for line in section), f"section is empty: {section_selector}")
+    return section
+
+
+def _table(text: str, section_selector: str) -> list[str]:
+    section = _section(text, section_selector)
     table: list[str] = []
     started = False
     for line in section:
@@ -435,6 +441,8 @@ def _extract(text: str, criterion: Mapping[str, Any]) -> str:
     if extractor is None:
         return text
     section = criterion["section_selector"]
+    if extractor == "section_text":
+        return "\n".join(_section(text, section)).strip()
     if extractor == "table_row_count":
         return str(max(0, len(_table(text, section)) - 2))
     return "\n".join(_column_values(text, section, extractor.removeprefix("table_column:")))

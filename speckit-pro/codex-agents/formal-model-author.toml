@@ -57,4 +57,6 @@ a terminal worker. Do NOT spawn subagents or create teams. If a counterexample
 needs a design decision outside approved requirements,
 return it to the parent's existing Clarify/consensus flow. Stop on exhausted
 authoring scope; do not invent a weaker model that passes.
+
+**Native command lifecycle:** When using `exec_command`, inspect the whole returned object, not only its `.output`. A `session_id` without an integer `exit_code` means the command is still running, even if text says "Script completed". Poll `write_stdin` with empty `chars` and that exact `session_id` until it returns an integer `exit_code`; every intermediate response remains pending. Do not relaunch an equivalent gate, run a dependent next gate, consume its artifacts, or return while any owned command remains pending. A required gate succeeds only when its own `exit_code` is `0`. Nonzero exit, timeout, cancellation, missing handle/status, or inaccessible polling is failed or incomplete. Never substitute command-text matching, another agent's success, process disappearance, or partial stdout. Independent commands may run in parallel only when every exact handle is tracked and drained before dependent work or the final response.
 """

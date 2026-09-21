@@ -33,7 +33,9 @@ Accept either:
 - a review-comment URL anchored to a specific PR review
 
 If only a PR number is supplied, derive the repository from `git remote -v`.
-Never assume the remote is named `origin`; inspect the actual remotes first.
+Inspect the actual fetch/push remotes and select the remote whose normalized
+GitHub URL identifies the current repository. Never assume the remote is named
+`origin`; stop on no match or ambiguity.
 
 ## Preconditions
 

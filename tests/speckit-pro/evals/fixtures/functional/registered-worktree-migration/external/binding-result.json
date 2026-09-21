@@ -1,0 +1,7 @@
+{
+  "binding_status": "resolved",
+  "relation": "external",
+  "workflow_root": "/workspace-external/spec-106",
+  "workflow_file": "/workspace-external/spec-106/docs/ai/specs/.process/SPEC-106-workflow.md",
+  "requested_stage": "plan"
+}

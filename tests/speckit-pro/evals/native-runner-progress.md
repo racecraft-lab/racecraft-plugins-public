@@ -987,3 +987,140 @@ as proof of machine-wide workspace-only confinement.
 
 Raw captures and local receipts remain in ignored private evidence storage;
 they are not committed with this report.
+
+## 2026-09-20 lean native qualification closeout
+
+The agreed one-trial representative qualification is complete for
+`parity.01-post-implementation-outcome` on both native clients. The retained
+Claude `plugin` arm and Codex `project` arm each have a valid independent pass,
+and their blinded behavioral-parity judgment also passes.
+
+The final resume reused both terminal subject grades, launched **zero** new
+subjects, and made exactly **one** pair-judge call. This proves the resumability
+contract on the accepted evidence while avoiding another expensive native run.
+The private report is retained under
+`.native-eval-output/qualification-2026-09-19-final12/`; raw captures remain
+ignored and are not committed.
+
+The closeout also repaired the issues exposed by the lean run:
+
+- pair assembly now uses the exact runtime-bound subject grader identity rather
+  than recomputing an identity without host runtime settings;
+- parity compares the three required report sections through one blinded
+  semantic request, instead of requiring undeclared provider-specific table
+  column names;
+- Claude continuation and protected-runner evidence remain fail-closed while
+  accepting the authenticated native lifecycle actually emitted by the client;
+- Codex retained-rollout recovery no longer depends on cleaned live session
+  storage; and
+- fixture hygiene prevents generated Python cache files from changing the
+  authoritative atomicity route while arbitrary unplanned files still fail
+  closed.
+
+Provider-free closeout is green on the final tree: the complete deterministic
+suite passes **8,283/8,283**, toolchain preflight passes, generated references
+are current, and Ripwire reports **zero gating quality regressions**.
+
+This is the agreed lean single-trial gate, not statistical reliability and not
+an exhaustive live run of every retained case. Full-catalog live qualification
+for the remaining Layer 2, 3, 6, and 7 cases, the held parity/performance
+workloads, interactive Claude team verification, and human UAT remain separate
+follow-up evidence if they are still required for a later release decision.
+
+## 2026-09-20 full functional run and batched remediation
+
+The first complete one-trial Layer 3 functional run finished against source
+commit `bc529116a`. It scheduled all **93** retained functional cases on both
+native clients: **186 subject launches**, **133 shared semantic-judge calls**,
+and no automatic retries. The terminal result was **95 passes**, **90 valid
+behavior failures**, **1 infrastructure-invalid attempt**, and **0 incomplete
+attempts**. Claude completed 93/93 subject launches at peak concurrency 2;
+Codex completed 93/93 subjects plus all 133 judge calls at peak concurrency 4.
+The private report and raw captures remain under
+`.native-eval-output/qualification-2026-09-20-bc529116/` and are not committed.
+
+No failing row was retried merely to turn it green. The failures were clustered
+from retained evidence and remediated in batches. The current tree includes:
+
+- authenticated Claude reference access to the exact staged target skill, with
+  pre- and post-execution symlink and tree-digest verification;
+- fail-closed reprocessing of the official Claude diagnostic-plus-response
+  stream and exact Codex runner/Git identity binding;
+- corrected host-specific dispatch and handoff requirements, removed answer
+  leakage, executable graders for previously descriptive requirements, and
+  matching Claude/Codex authored behavior contracts;
+- a protected resolved-Python binding for the G7 local-runner case instead of
+  forcing the subject to discover and substitute an import path;
+- explicit Claude tool grants for the two scaffold cases that must invoke the
+  model-selectable scaffold skill, while the two explicit-autopilot consensus
+  cases grant only target-reference reads and cannot activate Coach as an
+  undeclared sibling;
+- removal of a nonexistent status-scenario path from the all-blocked prompt;
+- fail-closed normalization of one successful Codex command containing two
+  newline-separated exact recursive `find` operations when, and only when,
+  both results are provably empty; and
+- explicit raw-JSON-only output contracts for the Post inventory and
+  workflow-binding responses.
+
+The retained Codex capture for `functional.speckit-status.case-7` now passes
+both deterministic absence checks under the repaired parser and reaches
+`needs_judge`. It therefore needs one semantic judge call, not another subject
+launch. The other affected failures need one targeted current-source subject
+trial because their catalog input, target skill bytes, staged references, or
+native execution binding changed. Existing valid passes remain reusable only
+when the runner's full resume identity still matches; none will be relabeled as
+current-source evidence by prose or by an old grader receipt.
+
+### Qualification remainder after this batch
+
+1. Run one targeted current-source confirmation for the affected Layer 3
+   host-cases, allowing resume to reuse the `status.case-7` subject capture and
+   any other byte-compatible terminal evidence.
+2. Batch any observed current-source failures once, then run one lean targeted
+   confirmation of those repairs.
+3. Complete the still-required one-trial Layer 2, Layer 6, and Layer 7 native
+   matrices, including required execution-mode arms, without an automatic
+   repetition multiplier.
+4. Record interactive Claude team verification separately, then complete human
+   UAT and the final measured performance report. Neither is represented as an
+   automated native-eval pass.
+
+## 2026-09-21 targeted Plan-repair confirmation
+
+The batched Plan-repair remediation now has one valid native trial for each
+affected host-case arm: Claude and Codex both pass
+`functional.speckit-autopilot.case-111` and
+`functional.speckit-autopilot.case-112`. The final Codex confirmation passed
+2/2 with two subject launches, two judge calls, zero retries, and zero invalid
+attempts. Claude's current-source run reached both native judges without an
+infrastructure-invalid attempt; case 112 passed directly, and case 111 exposed
+one redundant semantic criterion whose observable contract was already enforced
+by the authoritative `native_plan_repair_context` binder and four exact JSON
+field checks.
+
+The contradictory `actual-g3-sequence` semantic check was removed from both
+Plan-repair cases. It rejected exact file persistence as "hand-authored" while
+the case prompt deliberately forbids shell redirection and requires the native
+envelopes to be persisted through host file tools. The retained deterministic
+binder still proves the exact staged G3 commands, nonzero initial execution,
+complete response envelopes, causal order, repair count, and terminal outcome.
+The final case-111 resume reused its retained Claude subject capture, launched
+zero new subjects, made one judge call, and passed with zero retries or invalid
+attempts. The private reports are retained under
+`.native-eval-output/qualification-2026-09-20-bc529116/final-confirmation-codex-5/`
+and
+`.native-eval-output/qualification-2026-09-20-bc529116/final-confirmation-claude-5/`.
+
+This closes the targeted Plan-repair confirmation only. It does not relabel the
+earlier 186-subject functional run as all-green, replace the still-required
+Layer 2/6/7 qualification matrices, or satisfy interactive Claude team and
+human UAT evidence.
+
+The final provider-free closeout refactored the newly enlarged Plan-repair
+binder, grader, helper validation, and test fixtures into bounded private
+helpers without changing their public contracts. Ripwire's quality delta fell
+from 24 gating findings to zero: all structural, complexity, verbosity, and
+duplication gates were removed; seven strictly historical short-horizon-churn
+findings were narrowly acknowledged so any further growth reappears. The exact
+regenerated tree passes the toolchain preflight and the complete deterministic
+suite at **8,436/8,436** (Layer 1: 1,767; Layer 4: 6,424; Layer 5: 245).

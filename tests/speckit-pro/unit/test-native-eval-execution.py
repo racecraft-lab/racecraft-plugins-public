@@ -5,6 +5,7 @@ from __future__ import annotations
 import copy
 import hashlib
 import json
+import os
 from pathlib import Path
 from types import SimpleNamespace
 import sys
@@ -17,6 +18,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "lib"))
 import native_eval_execution as execution
 from native_eval_catalog import NATIVE_SYNTHESIS_MECHANISMS
 from native_eval_capture import file_accesses
+from native_eval_codex_rollouts import NativeRolloutInvalid
 from native_eval_execution import run_evaluations
 from test_result import run_counted
 
@@ -126,7 +128,15 @@ def verification_case():
     return value
 
 
+def claude_verification_case():
+    value = verification_case()
+    value["prompt"] = "Use {{skill}} to perform the test"
+    value["hosts"]["claude"]["skill"] = CLAUDE_MANUAL_SKILL
+    return value
+
+
 RUNNER_REQUEST_PATH = "scenario-inputs/binding-request.json"
+SECOND_RUNNER_REQUEST_PATH = "scenario-inputs/second-binding-request.json"
 
 
 def runner_request():
@@ -152,6 +162,20 @@ def runner_result_case():
         "expected_stdout_value": "ambiguous",
         "response_field_path": ["binding_result"],
     })
+    return value
+
+
+def multi_runner_result_case():
+    value = runner_result_case()
+    value["fixtures"].append({
+        "source": "second-request.json", "destination": SECOND_RUNNER_REQUEST_PATH,
+    })
+    second = copy.deepcopy(value["checks"][-1])
+    second.update({
+        "id": "second-runner-result", "request_path": SECOND_RUNNER_REQUEST_PATH,
+        "response_field_path": ["second_binding_result"],
+    })
+    value["checks"].append(second)
     return value
 
 
@@ -262,10 +286,110 @@ def config(output, *, retry_cases=(), retry_status=None, claude_concurrency=1,
     )
 
 
-def claude_trace(text="done", skill=None):
-    events = [
-        {"type": "system", "subtype": "init", "model": "claude-test", "plugins": [], "tools": []},
+def run_claude_activation_without_retained_refs(output, repo, value, callbacks):
+    real_fresh = execution._fresh_claude_activation
+
+    def omit_refs(*args, **kwargs):
+        result = real_fresh(*args, **kwargs)
+        evidence = args[5]
+        evidence.pop("claude_activation_witness", None)
+        evidence.pop("claude_activation_session", None)
+        return result
+
+    with mock.patch("native_eval_execution._fresh_claude_activation",
+                    side_effect=omit_refs):
+        return run_evaluations(
+            config(output), {}, [value], [row()], repo_root=repo,
+            prepare=callbacks.prepare, execute=callbacks.execute,
+        )
+
+
+def run_report_with_capture(output, repo, value, host, callbacks):
+    report = run_evaluations(
+        config(output), {}, [value], [row(host)], repo_root=repo,
+        prepare=callbacks.prepare, execute=callbacks.execute,
+    )
+    attempt = next((Path(output) / "attempts").iterdir())
+    capture = json.loads((attempt / "capture.json").read_text())["payload"]
+    return report, capture
+
+
+def assert_verified_capture(test, report, capture):
+    test.assertEqual(report["counts"]["passes"], 1, report)
+    test.assertEqual(report["counts"]["infrastructure_invalid"], 0, report)
+    test.assertIn("verification_record", capture["evidence"])
+
+
+def assert_rejected_parent_synthesis(test, report, capture):
+    test.assertEqual(report["counts"]["behavior_fails"], 0, report)
+    test.assertEqual(report["counts"]["infrastructure_invalid"], 1, report)
+    test.assertIsNone(capture["observation"])
+
+
+def assert_claude_verification_capture(test, callbacks):
+    report, capture = run_report_with_capture(
+        test.output, test.repo, verification_case(), "claude", callbacks,
+    )
+    assert_verified_capture(test, report, capture)
+
+
+def assert_codex_parent_synthesis_rejected(test, callbacks):
+    report, capture = run_report_with_capture(
+        test.output, test.repo, dedicated_synthesis_case(), "codex", callbacks,
+    )
+    assert_rejected_parent_synthesis(test, report, capture)
+
+
+def retained_invalid_codex_capture(test):
+    value = case(resource_class="nested")
+    callbacks = NestedCallbacks(test.output)
+    with mock.patch(
+        "native_eval_execution._merge_codex_supplement",
+        side_effect=ValueError("post-retention normalization failed"),
+    ):
+        initial = run_evaluations(
+            config(test.output), {}, [value], [row("codex")],
+            repo_root=test.repo, prepare=callbacks.prepare, execute=callbacks.execute,
+        )
+    test.assertEqual(initial["counts"]["infrastructure_invalid"], 1, initial)
+    attempt = next((test.output / "attempts").iterdir())
+    capture = json.loads((attempt / "capture.json").read_text())["payload"]
+    labels = {
+        execution._rollout_label(ROOT_THREAD),
+        execution._rollout_label(CHILD_THREAD),
+    }
+    test.assertTrue(labels.issubset(capture["evidence"]))
+    return value, callbacks, attempt, labels
+
+
+def replay_retained_codex_capture(test, value, callbacks):
+    for session in callbacks.codex_home.rglob("*.jsonl"):
+        session.unlink()
+    resumed = NestedCallbacks(test.output)
+    with mock.patch(
+        "native_eval_execution.collect_native_tree",
+        side_effect=AssertionError("retained replay used live Codex sessions"),
+    ):
+        replay = run_evaluations(
+            config(test.output), {}, [value], [row("codex")],
+            repo_root=test.repo, prepare=resumed.prepare, execute=resumed.execute,
+        )
+    return replay, resumed
+
+
+def claude_event_trace(events, *, text="done", tools=()):
+    records = [
+        {"type": "system", "subtype": "init", "model": "claude-test",
+         "plugins": [], "tools": list(tools)},
+        *events,
+        {"type": "result", "subtype": "success", "is_error": False,
+         "result": text, "usage": {"input_tokens": 2, "output_tokens": 1}},
     ]
+    return "\n".join(json.dumps(record) for record in records)
+
+
+def claude_trace(text="done", skill=None):
+    events = []
     if skill is not None:
         events.extend([
             {"type": "assistant", "message": {"content": [{"type": "tool_use", "id": "skill-call",
@@ -273,11 +397,7 @@ def claude_trace(text="done", skill=None):
             {"type": "user", "message": {"content": [{"type": "tool_result",
               "tool_use_id": "skill-call", "content": "Loaded skill", "is_error": False}]}},
         ])
-    events.append(
-        {"type": "result", "subtype": "success", "is_error": False, "result": text,
-         "usage": {"input_tokens": 2, "output_tokens": 1}}
-    )
-    return "\n".join(json.dumps(event) for event in events)
+    return claude_event_trace(events, text=text)
 
 
 def claude_explicit_trace(cwd, *, session=CLAUDE_SESSION):
@@ -286,7 +406,8 @@ def claude_explicit_trace(cwd, *, session=CLAUDE_SESSION):
          "cwd": cwd, "session_id": session, "claude_code_version": "2.1.273",
          "skills": [CLAUDE_MANUAL_SKILL], "plugins": [], "tools": []},
         {"type": "result", "subtype": "success", "is_error": False, "result": "done",
-         "usage": {"input_tokens": 2, "output_tokens": 1}},
+         "session_id": session, "terminal_reason": "completed", "stop_reason": "end_turn",
+         "api_error_status": None, "usage": {"input_tokens": 2, "output_tokens": 1}},
     ])
 
 
@@ -500,10 +621,22 @@ def runner_result_response(*, binding_status="ambiguous"):
         }
 
     request = runner_request()
+    diagnostic = {
+        "source": "runner", "severity": "error", "code": "validation_failure",
+        "message": "read-only helper reported an expected validation failure",
+        "remediation": {
+            "actions": ["Inspect the helper stdout JSON."],
+            "summary": "Inspect the helper output.",
+        },
+        "details": {
+            "exit_code": 1, "helper_id": request["helper_id"],
+            "stdout_bytes": len(stdout_text.encode()), "stderr_bytes": 0,
+        },
+    }
     return {
         "schema_version": "1.0", "status": "expected_failure", "exit_code": 1,
         "legacy_exit_code": None,
-        "diagnostics": [{"source": "runner", "code": "validation_failure"}],
+        "diagnostics": [diagnostic],
         "request_id": request["request_id"],
         "data": {
             "helper_id": request["helper_id"], "operation": request["operation"],
@@ -519,6 +652,266 @@ def runner_result_response(*, binding_status="ambiguous"):
     }
 
 
+def plan_repair_response(request, passed):
+    stdout_json = {"gate": "G3", "pass": passed, "markers": 0 if passed else 1}
+    value = {
+        "schema_version": "1.0", "request_id": request["request_id"],
+        "status": "success" if passed else "expected_failure", "exit_code": 0 if passed else 1,
+        "data": {"stdin_request": {key: item for key, item in request.items()
+                                     if key != "request_id"},
+                 "stdout_json": stdout_json},
+    }
+    if passed:
+        return value
+    stdout_text = json.dumps(stdout_json, separators=(",", ":")) + "\n"
+    diagnostic = {
+        "source": "runner", "severity": "error", "code": "validation_failure",
+        "message": "read-only helper reported an expected validation failure",
+        "remediation": {"actions": ["Inspect the helper stdout JSON."],
+                        "summary": "Inspect the helper output."},
+        "details": {"exit_code": 1, "helper_id": request["helper_id"],
+                    "stdout_bytes": len(stdout_text.encode()), "stderr_bytes": 0},
+    }
+    capture = lambda text: {  # noqa: E731 - compact test fixture constructor
+        "text": text, "byte_count": len(text.encode()),
+        "limit_bytes": 16 * 1024, "truncated": False,
+    }
+    value["diagnostics"] = [diagnostic]
+    value["data"].update({
+        "helper_id": request["helper_id"], "operation": request["operation"],
+        "mode": request["mode"], "exit_code": 1,
+        "stdout": capture(stdout_text), "stderr": capture(""),
+    })
+    return value
+
+
+def plan_repair_renderer_response(request, message, context_ids, context_digest):
+    encoded = message.encode("utf-8")
+    rendered = {
+        "schema": "plan-repair-executor-message/v1",
+        "executor_message": message,
+        "message_sha256": hashlib.sha256(encoded).hexdigest(),
+        "message_bytes": len(encoded),
+        "context_ids": sorted(context_ids),
+        "g3_attempt_index": 0,
+        "context_bundle_sha256": context_digest,
+    }
+    stdout_text = json.dumps(rendered, separators=(",", ":")) + "\n"
+    return {
+        "schema_version": "1.0", "request_id": request["request_id"],
+        "status": "ok", "exit_code": 0, "diagnostics": [],
+        "data": {
+            "helper_id": "render-plan-repair-context",
+            "operation": "render-plan-repair-context", "mode": "read_only",
+            "exit_code": 0, "writes_state": False,
+            "stdin_request": {key: value for key, value in request.items()
+                              if key != "request_id"},
+            "stdout": {"text": stdout_text, "byte_count": len(stdout_text.encode()),
+                       "truncated": False},
+            "stdout_json": rendered,
+        },
+    }
+
+
+def _sealed_plan_repair_inputs(fixtures):
+    sealed = {path: {"text": text, "bytes": len(text.encode()),
+                     "sha256": hashlib.sha256(text.encode()).hexdigest()}
+              for path, text in fixtures.items()}
+    return {
+        "schema": "native-plan-repair-sealed-inputs/v1",
+        "authority": "controller-before-subject-launch", "fixtures": sealed,
+    }
+
+
+def _claude_plan_repair_observation(calls):
+    completions = []
+    for index, call in enumerate(calls):
+        encoded = json.dumps(call["output"], sort_keys=True, separators=(",", ":")).encode()
+        completions.append({
+            "tool_call_index": index, "id": call["id"],
+            "native_name": "Agent" if index == 2 else "Bash",
+            "tool_use_position": call["position"],
+            "tool_result_position": call["position"] + 1,
+            "output_sha256": hashlib.sha256(encoded).hexdigest(),
+            "output_bytes": len(encoded),
+        })
+    return {
+        "completed": True, "error": None, "final_text": "done", "activations": [],
+        "tool_calls": calls, "artifacts": {}, "usage": {},
+        "native_metadata": {"claude_tool_results": completions},
+    }
+
+
+def _claude_plan_repair_fixture():
+    request = {
+        "schema_version": "1.0", "request_id": "plan-repair-g3",
+        "helper_id": "validate-gate", "operation": "validate-gate",
+        "mode": "read_only", "inputs": {"gate": "G3", "feature_dir": "feature"},
+    }
+    contexts = {"original-prompt": "Design the original human requirement.\n",
+                "architecture": "No delivery callback is currently available.\n"}
+    context_request = {
+        "schema_version": "1.0", "request_id": "plan-repair-context",
+        "helper_id": "render-plan-repair-context", "operation": "render-plan-repair-context",
+        "mode": "read_only", "inputs": {"context_paths": {
+            "original-prompt": "scenario-inputs/original.md",
+            "architecture": "scenario-inputs/architecture.md"}},
+    }
+    initial, repaired = plan_repair_response(request, False), plan_repair_response(request, True)
+    context_digest = "c" * 64
+    message = "\n".join([*contexts.values(), json.dumps(initial, indent=2),
+                           f"PLAN_REPAIR_CONTEXT_SHA256={context_digest}"])
+    rendered = plan_repair_renderer_response(context_request, message, contexts, context_digest)
+    initial_stream = "\n".join(json.dumps(item, separators=(",", ":"))
+                               for item in (initial["diagnostics"][0], initial))
+    command = "python3 -m speckit_pro_runner < scenario-inputs/g3-request.json"
+    render_command = "python3 -m speckit_pro_runner < scenario-inputs/context-request.json"
+    calls = [
+        {"id": "g3-initial", "name": "Bash", "input": {"command": command},
+         "output": "Exit code 1\n" + initial_stream, "success": False,
+         "position": 1, "parent_id": None},
+        {"id": "renderer", "name": "Bash", "input": {"command": render_command},
+         "output": json.dumps(rendered), "success": True, "position": 3, "parent_id": None},
+        {"id": "repair", "name": "subagent",
+         "input": {"prompt": message, "subagent_type": "phase-executor"},
+         "output": "repair complete", "success": True, "position": 5, "parent_id": None},
+        {"id": "g3-rerun", "name": "Bash", "input": {"command": command},
+         "output": json.dumps(repaired), "success": True, "position": 7, "parent_id": None},
+    ]
+    check = {"id": "repair-context", "requirement": "r1", "type": "native_plan_repair_context",
+             "contexts": {"original-prompt": "scenario-inputs/original.md",
+                          "architecture": "scenario-inputs/architecture.md"},
+             "g3_request_path": "scenario-inputs/g3-request.json",
+             "context_request_path": "scenario-inputs/context-request.json",
+             "executor_role": "phase-executor", "max_repairs": 2, "terminal_outcome": "pass"}
+    fixtures = {"scenario-inputs/original.md": contexts["original-prompt"],
+                "scenario-inputs/architecture.md": contexts["architecture"],
+                "scenario-inputs/g3-request.json": json.dumps(request),
+                "scenario-inputs/context-request.json": json.dumps(context_request)}
+    launch = {"cwd": "/private/tmp/plugin", "runtime_identity": {"settings": {
+        "native_toolchain": {"launchers": {"python3": {"path": "bin/python3"}}}}},
+        "native_plan_repair_inputs": _sealed_plan_repair_inputs(fixtures)}
+    return SimpleNamespace(contexts=contexts, initial=initial, message=message, rendered=rendered,
+                           observation=_claude_plan_repair_observation(calls),
+                           value={"requirements": [{"id": "r1"}], "checks": [check]}, launch=launch)
+
+
+def _codex_plan_repair_response(request, passed):
+    return {"schema_version": "1.0", "request_id": "g3",
+            "data": {"stdin_request": {key: value for key, value in request.items()
+                                        if key != "request_id"},
+                     "stdout_json": {"pass": passed}}}
+
+
+def _opaque_plan_repair_input(message):
+    encoded = json.dumps(message, sort_keys=True, separators=(",", ":")).encode()
+    digest = hashlib.sha256()
+    digest.update(encoded)
+    return {"kind": "opaque", "sha256": digest.hexdigest(), "bytes": len(encoded)}
+
+
+def _codex_plan_repair_observation(calls, opaque, delivery):
+    return {
+        "completed": True, "error": None, "final_text": "done", "activations": [],
+        "tool_calls": calls, "artifacts": {}, "usage": {}, "native_metadata": {
+            "nested_rollout": {"root_thread_id": ROOT_THREAD,
+                "raw_sha256": {ROOT_THREAD: "a" * 64},
+                "dispatches": [{"id": "repair", "parent_thread_id": ROOT_THREAD,
+                                "task_input": opaque, "delivery": delivery}]},
+            "subagent_return_order": {"schema": "native-subagent-return-order/v1",
+                "scope": "direct-root-only", "parent_file_changes": [], "returns": [{
+                    "tool_call_index": 2, "call_id": "repair",
+                    "authority": "codex-parent-delivery", "native_stream": ROOT_THREAD,
+                    "native_turn": ROOT_TURN, "completion_index": 9,
+                    "content_sha256": delivery["sha256"],
+                    "content_bytes": delivery["bytes"], "content_nonempty": True,
+                }]},
+        },
+    }
+
+
+def _codex_plan_repair_fixture():
+    request = {"schema_version": "1.0", "request_id": "g3", "helper_id": "validate-gate",
+               "operation": "validate-gate", "mode": "read_only",
+               "inputs": {"gate": "G3", "feature_dir": "feature"}}
+    context, context_digest = "Original Plan prompt", "d" * 64
+    initial, rerun = (_codex_plan_repair_response(request, passed) for passed in (False, True))
+    message = (context + "\n" + json.dumps(initial)
+               + f"\nPLAN_REPAIR_CONTEXT_SHA256={context_digest}")
+    context_request = {"schema_version": "1.0", "request_id": "context",
+                       "helper_id": "render-plan-repair-context",
+                       "operation": "render-plan-repair-context", "mode": "read_only",
+                       "inputs": {"context_paths": {"original": "scenario-inputs/original.md"}}}
+    rendered = plan_repair_renderer_response(context_request, message, ["original"], context_digest)
+    opaque = _opaque_plan_repair_input(message)
+    delivery_text = b"repair complete"
+    delivery = {"turn_id": ROOT_TURN, "author": "/root/repair", "recipient": "/root",
+                "native_event_index": 9, "bytes": len(delivery_text),
+                "sha256": hashlib.sha256(delivery_text).hexdigest()}
+    command = ["/bin/zsh", "-c", "python3 -m speckit_pro_runner < scenario-inputs/g3-request.json"]
+    render_command = ["/bin/zsh", "-c", "python3 -m speckit_pro_runner < scenario-inputs/context-request.json"]
+    calls = [
+        {"id": "g3-0", "name": "command_execution", "input": {"command": command},
+         "output": json.dumps(initial), "success": False, "position": 0, "parent_id": None},
+        {"id": "renderer", "name": "command_execution", "input": {"command": render_command},
+         "output": json.dumps(rendered), "success": True, "position": 1, "parent_id": None},
+        {"id": "repair", "name": "subagent", "input": {"role": "phase-executor",
+         "task_input": opaque}, "output": {"status": "completed"}, "success": True,
+         "position": 2, "parent_id": None},
+        {"id": "g3-1", "name": "command_execution", "input": {"command": command},
+         "output": json.dumps(rerun), "success": True, "position": 3, "parent_id": None},
+    ]
+    check = {"id": "context", "requirement": "r1", "type": "native_plan_repair_context",
+             "contexts": {"original": "scenario-inputs/original.md"},
+             "g3_request_path": "scenario-inputs/g3-request.json",
+             "context_request_path": "scenario-inputs/context-request.json",
+             "executor_role": "phase-executor", "max_repairs": 2, "terminal_outcome": "pass"}
+    fixtures = {"scenario-inputs/original.md": context, "scenario-inputs/g3-request.json": json.dumps(request),
+                "scenario-inputs/context-request.json": json.dumps(context_request)}
+    launch = {"runtime_identity": {"settings": {"codex_runtime": {"python": {
+        "python3_command": "python3", "python3_path": "/protected/bin/python3",
+        "executable": "/protected/bin/python3.11"}}}},
+        "native_plan_repair_inputs": _sealed_plan_repair_inputs(fixtures)}
+    trace = {"schema": "codex-native-plan-repair-trace/v1", "root_thread_id": ROOT_THREAD,
+             "raw_sha256": "a" * 64, "commands": [
+                 {"id": "g3-0", "started_at_ns": 1, "completed_at_ns": 2,
+                  "input": {"command": command}, "output": {"stdout": json.dumps(initial)}},
+                 {"id": "renderer", "started_at_ns": 3, "completed_at_ns": 4,
+                  "input": {"command": render_command}, "output": {"stdout": json.dumps(rendered)}},
+                 {"id": "g3-1", "started_at_ns": 7, "completed_at_ns": 8,
+                  "input": {"command": command}, "output": {"stdout": json.dumps(rerun)}}],
+             "dispatches": [{"id": "repair", "role": "phase-executor", "message": message,
+                              "task_input": opaque, "delivery_text": delivery_text.decode(),
+                              "invoked_at_ns": 5, "returned_at_ns": 6}]}
+    return SimpleNamespace(message=message, rendered=rendered, context_digest=context_digest,
+                           opaque=opaque, observation=_codex_plan_repair_observation(calls, opaque, delivery),
+                           value={"requirements": [{"id": "r1"}], "checks": [check]},
+                           launch=launch, trace=trace)
+
+
+def _codex_plan_repair_variant(fixture, message, delivery_text=None):
+    opaque = _opaque_plan_repair_input(message)
+    observation = copy.deepcopy(fixture.observation)
+    observation["native_metadata"].pop("native_plan_repair_context", None)
+    observation["tool_calls"][2]["input"]["task_input"] = opaque
+    dispatch = observation["native_metadata"]["nested_rollout"]["dispatches"][0]
+    dispatch["task_input"] = opaque
+    trace = copy.deepcopy(fixture.trace)
+    trace["dispatches"][0].update({"message": message, "task_input": opaque})
+    if delivery_text is not None:
+        encoded = delivery_text.encode()
+        dispatch["delivery"]["sha256"] = hashlib.sha256(encoded).hexdigest()
+        dispatch["delivery"]["bytes"] = len(encoded)
+        returned = observation["native_metadata"]["subagent_return_order"]["returns"][0]
+        returned["content_sha256"] = dispatch["delivery"]["sha256"]
+        returned["content_bytes"] = len(encoded)
+        trace["dispatches"][0]["delivery_text"] = delivery_text
+    execution._bind_plan_repair_context(
+        fixture.value, "codex", observation, fixture.launch, trace,
+    )
+    return observation
+
+
 def runner_final_text(value):
     return json.dumps({
         "binding_result": value, "decision": "stop",
@@ -526,21 +919,17 @@ def runner_final_text(value):
     }, separators=(",", ":"))
 
 
-def claude_verification_trace(output):
-    return "\n".join(json.dumps(event) for event in [
-        {"type": "system", "subtype": "init", "model": "claude-test",
-         "plugins": [], "tools": ["Bash"]},
+def claude_verification_trace(output, *, command="python3 -m speckit_pro_runner < request.json"):
+    return claude_event_trace([
         {"type": "assistant", "message": {"content": [{
             "type": "tool_use", "id": "verify-command", "name": "Bash",
-            "input": {"command": "python3 -m speckit_pro_runner < request.json"},
+            "input": {"command": command},
         }]}, "parent_tool_use_id": None},
         {"type": "user", "message": {"content": [{
             "type": "tool_result", "tool_use_id": "verify-command",
             "content": output, "is_error": False,
         }]}, "parent_tool_use_id": None},
-        {"type": "result", "subtype": "success", "is_error": False, "result": "done",
-         "usage": {"input_tokens": 2, "output_tokens": 1}},
-    ])
+    ], tools=("Bash",))
 
 
 def claude_runner_result_trace(output, final_text, *, command=None, is_error=True):
@@ -577,7 +966,8 @@ def codex_verification_rollout(cwd, output, *, prompt="perform the test"):
             "started_at_ms": 2, "completed_at_ms": 3,
             "item": {
                 "type": "CommandExecution", "id": "verify-command", "status": "completed",
-                "command": "python3 -m speckit_pro_runner < request.json", "cwd": cwd,
+                "command": "python3 -m speckit_pro_runner < request.json",
+                "cwd": f"file://{cwd}",
                 "stdout": output, "stderr": "", "aggregated_output": output,
                 "formatted_output": output, "exit_code": 0, "duration": 0.1,
             },
@@ -691,7 +1081,7 @@ def native_skill_records(cwd, prompt, witnesses, selected=("native-eval-canary",
 
 def root_rollout(cwd, *, prompt="perform the test", witnesses=None, include_child=True,
                  role="native_canary_worker", dispatch_message="Read only fixture.txt",
-                 include_delivery=False):
+                 include_delivery=False, plugin_name=None):
     witnesses = witnesses or {
         "native-eval-canary": skill_witness("native-eval-canary", SKILL_CANARY),
     }
@@ -699,7 +1089,8 @@ def root_rollout(cwd, *, prompt="perform the test", witnesses=None, include_chil
                rollout_event({"type": "task_started", "turn_id": ROOT_TURN, "started_at": 1}),
                rollout_message(prompt, message_id="prompt-message"),
                rollout_message(selected_skill_text("native-eval-canary",
-                                                   witnesses["native-eval-canary"], cwd),
+                                                   witnesses["native-eval-canary"], cwd,
+                                                   plugin_name),
                                kind="skills.selected_skill_instructions",
                                message_id="selected-native-eval-canary")]
     if include_child:
@@ -1070,6 +1461,111 @@ class ClaudeActivationCallbacks(FakeCallbacks):
         )
 
 
+class ClaudeAbsentVerificationCallbacks(ClaudeActivationCallbacks):
+    """A complete official Claude run whose subject never invokes the runner."""
+
+    def __init__(self, output, *, variation="valid"):
+        super().__init__(output)
+        self.variation = variation
+
+    def prepare(self, value, host, mode, repo_root, staging_dir, model, *, trial_identity=None,
+                evidence_root=None):
+        prepared = super().prepare(
+            value, host, mode, repo_root, staging_dir, model,
+            trial_identity=trial_identity, evidence_root=evidence_root,
+        )
+        prepared.runtime_identity["case_id"] = value["id"]
+        prepared.runtime_identity["settings"]["native_toolchain"] = {
+            "launchers": {"python3": {"path": "bin/python3"}},
+        }
+        prepared.result_path = prepared.attempt_dir / "framework-result.json"
+        return prepared
+
+    def execute(self, prepared, timeout):
+        raw = super().execute(prepared, timeout)
+        trace_path = str(prepared.trace_path.resolve())
+        prompt = prepared.runtime_identity["settings"]["claude_explicit_activation"]["prompt"]
+        framework = {
+            "schemaVersion": 1, "claudeVersion": "2.1.273", "partial": False,
+            "suite": {"caseFilter": prepared.runtime_identity["case_id"], "ablation": "none"},
+            "cases": [{
+                "name": prepared.runtime_identity["case_id"], "promptMarkdown": prompt,
+                "arms": {"with": [{"error": None, "tracePath": trace_path}]},
+            }],
+        }
+        if self.variation == "partial":
+            framework["partial"] = True
+        elif self.variation == "wrong-session":
+            changed = claude_explicit_trace(str(prepared.cwd / "subject-cwd"), session="wrong-session")
+            prepared.stdout_path.write_bytes(changed.encode())
+            prepared.trace_path.write_text(changed)
+            raw.stdout = raw.raw_trace = changed
+        elif self.variation == "truncated-trace":
+            changed = "\n".join(raw.raw_trace.splitlines()[:-1])
+            prepared.stdout_path.write_bytes(changed.encode())
+            prepared.trace_path.write_text(changed)
+            raw.stdout = raw.raw_trace = changed
+        elif self.variation == "malformed-runner":
+            records = [json.loads(line) for line in raw.raw_trace.splitlines()]
+            records[1:1] = [
+                {"type": "assistant", "session_id": CLAUDE_SESSION,
+                 "message": {"content": [{
+                     "type": "tool_use", "id": "malformed-runner", "name": "Bash",
+                     "input": {"command": "python3 -m speckit_pro_runner"},
+                 }]}},
+                {"type": "user", "session_id": CLAUDE_SESSION,
+                 "message": {"content": [{
+                     "type": "tool_result", "tool_use_id": "malformed-runner",
+                     "content": "missing request", "is_error": True,
+                 }]}},
+            ]
+            changed = "\n".join(json.dumps(record) for record in records)
+            prepared.stdout_path.write_bytes(changed.encode())
+            prepared.trace_path.write_text(changed)
+            raw.stdout = raw.raw_trace = changed
+        prepared.result_path.write_text(json.dumps(framework, sort_keys=True) + "\n")
+        raw.framework_result = framework
+        return raw
+
+
+class RecoverableClaudeActivationCallbacks(ClaudeActivationCallbacks):
+    """A Claude run whose official retained tree outlives capture normalization."""
+
+    def __init__(self, output, retained_root):
+        super().__init__(output)
+        self.retained_root = retained_root
+
+    def prepare(self, value, host, mode, repo_root, staging_dir, model, *, trial_identity=None,
+                evidence_root=None):
+        prepared = super().prepare(
+            value, host, mode, repo_root, staging_dir, model,
+            trial_identity=trial_identity, evidence_root=evidence_root,
+        )
+        prepared.runtime_identity["case_id"] = value["id"]
+        prepared.result_path = prepared.attempt_dir / "framework-result.json"
+        return prepared
+
+    def execute(self, prepared, timeout):
+        raw = super().execute(prepared, timeout)
+        trace = self.retained_root / "out" / "trace.jsonl"
+        trace.parent.mkdir(parents=True)
+        trace.write_text(raw.raw_trace)
+        project = self.retained_root / "config" / "projects" / "synthetic-project"
+        project.mkdir(parents=True)
+        source = next((raw.retained_root / "config" / "projects").glob("*/*.jsonl"))
+        (project / source.name).write_bytes(source.read_bytes())
+        framework = {
+            "schemaVersion": 1,
+            "cases": [{
+                "name": prepared.runtime_identity["case_id"],
+                "arms": {"with": [{"error": None, "tracePath": str(trace)}]},
+            }],
+        }
+        prepared.result_path.write_text(json.dumps(framework, sort_keys=True) + "\n")
+        raw.framework_result = framework
+        return raw
+
+
 class FixtureReadCallbacks(FakeCallbacks):
     def __init__(self, output, *, witness_body=FIXTURE_READ_BODY,
                  observed_body=None, status="completed", include_witness=True):
@@ -1255,6 +1751,10 @@ class GitObservationCallbacks(FakeCallbacks):
 
 
 class VerificationCallbacks(FakeCallbacks):
+    def __init__(self, output, *, claude_capture_wrapper=False):
+        super().__init__(output)
+        self.claude_capture_wrapper = claude_capture_wrapper
+
     def prepare(self, value, host, mode, repo_root, staging_dir, model, *, trial_identity=None,
                 evidence_root=None):
         prepared = super().prepare(
@@ -1301,7 +1801,17 @@ class VerificationCallbacks(FakeCallbacks):
         }))
         output = json.dumps(verification_response(value), separators=(",", ":"))
         if prepared.host == "claude":
-            raw_trace = claude_verification_trace(output)
+            command = "python3 -m speckit_pro_runner < request.json"
+            if self.claude_capture_wrapper:
+                command = "\n".join([
+                    'python3 -m speckit_pro_runner < request.json > '
+                    + '"$TMPDIR/runner-output.json" 2>"$TMPDIR/runner-stderr.log"',
+                    'echo "exit=$?"', 'echo "---stdout---"',
+                    'cat "$TMPDIR/runner-output.json"', "echo",
+                    'echo "---stderr---"', 'cat "$TMPDIR/runner-stderr.log"',
+                ])
+                output = f"exit=0\n---stdout---\n{output}\n\n---stderr---"
+            raw_trace = claude_verification_trace(output, command=command)
         else:
             command = {
                 "id": "verify-command", "type": "command_execution", "status": "completed",
@@ -1311,8 +1821,9 @@ class VerificationCallbacks(FakeCallbacks):
             raw_trace = codex_trace("done", ROOT_THREAD, (command,))
             sessions = self.codex_home / "sessions" / "2026" / "09" / "15"
             sessions.mkdir(parents=True, exist_ok=True)
+            cwd = str(Path(prepared.cwd).resolve())
             (sessions / f"rollout-2026-09-15T16-36-42-{ROOT_THREAD}.jsonl").write_bytes(
-                rollout_raw(codex_verification_rollout(str(Path(prepared.cwd).resolve()), output))
+                rollout_raw(codex_verification_rollout(cwd, output))
             )
         prepared.stdout_path.write_bytes(raw_trace.encode())
         prepared.stderr_path.write_text("")
@@ -1323,6 +1834,152 @@ class VerificationCallbacks(FakeCallbacks):
             stdout=raw_trace, stderr="", raw_trace=raw_trace, framework_result=None,
             artifact_root=prepared.artifact_root,
         )
+
+
+def runner_command_item(*, cwd, exit_code=0, output="", item_id="verify-command") -> dict:
+    return {"type": "CommandExecution", "id": item_id, "status": "completed",
+            "command": CODEX_RUNNER_COMMAND, "cwd": cwd,
+            "stdout": output, "stderr": "", "aggregated_output": output,
+            "formatted_output": output, "exit_code": exit_code, "duration": 0.1}
+
+
+def runner_command_call(*, exit_code=0, item_id="verify-command") -> dict:
+    return {"id": item_id, "type": "command_execution", "status": "completed",
+            "command": CODEX_RUNNER_COMMAND, "aggregated_output": "", "exit_code": exit_code}
+
+
+def codex_rollout_without_runner(cwd, *, items=(), complete=True) -> list:
+    witness = skill_witness("native-eval-canary", SKILL_CANARY)
+    records = [
+        rollout_meta(ROOT_THREAD, cwd),
+        rollout_event({"type": "task_started", "turn_id": ROOT_TURN, "started_at": 1}),
+        rollout_message("perform the test", message_id="prompt-message"),
+        rollout_message(selected_skill_text("native-eval-canary", witness, cwd, "speckit-pro"),
+                        kind="skills.selected_skill_instructions",
+                        message_id="selected-native-eval-canary"),
+    ]
+    for index, item in enumerate(items):
+        records.append(rollout_event({
+            "type": "item_completed", "thread_id": ROOT_THREAD, "turn_id": ROOT_TURN,
+            "started_at_ms": 2 + index, "completed_at_ms": 3 + index, "item": item,
+        }))
+    records.append(rollout_event({
+        "type": "item_completed", "thread_id": ROOT_THREAD, "turn_id": ROOT_TURN,
+        "item": {"type": "AgentMessage", "id": "final-message",
+                 "content": [{"type": "text", "text": "done"}]},
+    }))
+    if complete:
+        records.append(rollout_event({"type": "task_complete", "turn_id": ROOT_TURN,
+                                      "completed_at": 4}))
+    return records
+
+
+CODEX_RUNNER_COMMAND = "python3 -m speckit_pro_runner < request.json"
+VERIFICATION_POINTER_PATH = "specs/parity-01/.process/emission/verification-pointer.json"
+
+
+class AbsentVerificationCallbacks(VerificationCallbacks):
+    """Subjects whose retained native rollout proves the runner never ran."""
+
+    def __init__(self, output, *, variation="absent"):
+        super().__init__(output)
+        self.variation = variation
+
+    def execute(self, prepared, timeout):
+        self.executed.append(prepared.host)
+        cwd = str(Path(prepared.cwd).resolve())
+        if prepared.host == "claude":
+            raw_trace = claude_trace("done")
+            prepared.stdout_path.write_bytes(raw_trace.encode())
+            prepared.stderr_path.write_text("")
+            prepared.process_receipt_path.write_text('{"exit_code":0}\n')
+            prepared.trace_path.write_text(raw_trace)
+            return SimpleNamespace(
+                exit_code=0, timed_out=False, process_evidence={"cleanup_verified": True},
+                stdout=raw_trace, stderr="", raw_trace=raw_trace, framework_result=None,
+                artifact_root=prepared.artifact_root,
+            )
+        if self.variation == "forged-absence":
+            raw = super().execute(prepared, timeout)
+            (prepared.artifact_root / VERIFICATION_POINTER_PATH).write_text(json.dumps({
+                "schema": "native-eval-verification-absence/v1",
+                "kind": "no-native-runner-invocation",
+                "authority": "controller-bound-retained-native-evidence",
+                "host": "codex",
+                "root_trace": {"schema": "codex-native-plan-repair-trace/v1",
+                               "thread_id": ROOT_THREAD, "raw_sha256": "f" * 64,
+                               "runner_invocation_count": 0},
+                "check": {"id": "verification", "workflow_file": "workflow.md",
+                          "command_id": "INTEGRATION_TEST",
+                          "pointer_path": VERIFICATION_POINTER_PATH, "reusable": False},
+            }))
+            return raw
+        rollout_items: tuple = ()
+        stdout_items: tuple = ()
+        if self.variation == "wrong-cwd":
+            rollout_items = (runner_command_item(cwd=cwd + "/elsewhere"),)
+        elif self.variation == "failed":
+            rollout_items = (runner_command_item(cwd=cwd, exit_code=1),)
+        elif self.variation == "truncated-command":
+            rollout_items = (runner_command_item(cwd=cwd, output='{"data":'),)
+        elif self.variation == "duplicate":
+            output = json.dumps(verification_response(verification_record()),
+                                separators=(",", ":"))
+            rollout_items = (
+                runner_command_item(cwd=cwd, output=output),
+                runner_command_item(cwd=cwd, output=output, item_id="verify-command-2"),
+            )
+            stdout_items = (
+                runner_command_call(),
+                runner_command_call(item_id="verify-command-2"),
+            )
+        if self.variation in {"unbound", "wrong-cwd", "failed", "truncated-command"}:
+            stdout_items = (runner_command_call(
+                exit_code=1 if self.variation == "failed" else 0),)
+        raw_trace = codex_trace("done", ROOT_THREAD, stdout_items)
+        sessions = self.codex_home / "sessions" / "2026" / "09" / "15"
+        sessions.mkdir(parents=True, exist_ok=True)
+        (sessions / f"rollout-2026-09-15T16-36-42-{ROOT_THREAD}.jsonl").write_bytes(
+            rollout_raw(codex_rollout_without_runner(
+                cwd, items=rollout_items, complete=self.variation != "truncated",
+            ))
+        )
+        prepared.stdout_path.write_bytes(raw_trace.encode())
+        prepared.stderr_path.write_text("")
+        prepared.process_receipt_path.write_text('{"exit_code":0}\n')
+        prepared.trace_path.write_text(raw_trace)
+        return SimpleNamespace(
+            exit_code=0, timed_out=False, process_evidence={"cleanup_verified": True},
+            stdout=raw_trace, stderr="", raw_trace=raw_trace, framework_result=None,
+            artifact_root=prepared.artifact_root,
+        )
+
+
+def claude_diagnostic_runner_output(value, variation, command_exit):
+    diagnostic = value["diagnostics"][0]
+    if variation == "claude-exit-diagnostic-mismatch":
+        diagnostic = {
+            **diagnostic,
+            "details": {**diagnostic["details"], "helper_id": "other"},
+        }
+    values = [diagnostic, value]
+    if variation == "claude-exit-diagnostic-extra":
+        values.append(value)
+    stream = "\n".join(json.dumps(item, separators=(",", ":")) for item in values)
+    return f"Exit code {command_exit}\n{stream}"
+
+
+def run_runner_result_evaluation(test, output, callbacks, host):
+    payload = (json.dumps(runner_request(), sort_keys=True, indent=2) + "\n").encode()
+    (test.repo / "request.json").write_bytes(payload)
+    report = run_evaluations(
+        config(output), {}, [runner_result_case()], [row(host)], repo_root=test.repo,
+        prepare=callbacks.prepare, execute=callbacks.execute,
+    )
+    attempt = next((output / "attempts").iterdir())
+    capture = json.loads((attempt / "capture.json").read_text())["payload"]
+    receipt = capture["observation"]["native_metadata"]["controller_runner_results"]
+    return report, capture, receipt
 
 
 class RunnerResultCallbacks(VerificationCallbacks):
@@ -1366,6 +2023,12 @@ class RunnerResultCallbacks(VerificationCallbacks):
             raw_trace = (claude_trace(final_text) if prepared.host == "claude"
                          else codex_trace(final_text, ROOT_THREAD, ()))
         elif prepared.host == "claude":
+            if self.variation == "claude-exit-wrapper":
+                output = f"Exit code {command_exit}\n{output}"
+            elif self.variation.startswith("claude-exit-diagnostic-"):
+                output = claude_diagnostic_runner_output(
+                    value, self.variation, command_exit,
+                )
             raw_trace = claude_runner_result_trace(
                 output, final_text, command=command, is_error=command_exit != 0,
             )
@@ -1400,6 +2063,59 @@ class RunnerResultCallbacks(VerificationCallbacks):
             (sessions / f"rollout-2026-09-15T16-36-42-{ROOT_THREAD}.jsonl").write_bytes(
                 rollout_raw(records)
             )
+        prepared.stdout_path.write_bytes(raw_trace.encode())
+        prepared.stderr_path.write_text("")
+        prepared.process_receipt_path.write_text('{"exit_code":0}\n')
+        prepared.trace_path.write_text(raw_trace)
+        return SimpleNamespace(
+            exit_code=0, timed_out=False, process_evidence={"cleanup_verified": True},
+            stdout=raw_trace, stderr="", raw_trace=raw_trace, framework_result=None,
+            artifact_root=prepared.artifact_root,
+        )
+
+
+class ChildVerifyRunnerResultCallbacks(RunnerResultCallbacks):
+    """A Verify child, rather than the root, owns the native runner call."""
+
+    def execute(self, prepared, timeout):
+        self.executed.append(prepared.host)
+        value = runner_result_response()
+        output = json.dumps(value, separators=(",", ":"))
+        cwd = str(Path(prepared.cwd).resolve())
+        command = f"python3 -m speckit_pro_runner < {RUNNER_REQUEST_PATH}"
+        root_items = (
+            {"id": SPAWN_CALL, "type": "collab_tool_call", "tool": "spawn_agent",
+             "status": "completed", "result": {"thread_id": CHILD_THREAD}},
+            {"id": "wait-call", "type": "collab_tool_call", "tool": "wait",
+             "status": "completed", "result": {"completed": [CHILD_THREAD]}},
+            {"id": "root-write", "type": "file_change", "status": "completed",
+             "changes": [{"path": "result.txt", "kind": "add"}]},
+        )
+        raw_trace = codex_trace(runner_final_text(value), ROOT_THREAD, root_items)
+
+        witnesses = prepared.runtime_identity["settings"]["skill_read_witnesses"]
+        root = root_rollout(
+            cwd, prompt=prepared.command[-1], witnesses=witnesses, include_delivery=True,
+            plugin_name="speckit-pro",
+        )
+        child = child_rollout(cwd)
+        native_command = next(
+            record["payload"]["item"] for record in child
+            if record.get("payload", {}).get("item", {}).get("type") == "CommandExecution"
+        )
+        native_command.update({
+            "id": "verify-runner-command", "command": command, "cwd": cwd,
+            "stdout": output, "stderr": "", "aggregated_output": output,
+            "formatted_output": output, "exit_code": 1, "duration": 0.1,
+        })
+        sessions = self.codex_home / "sessions" / "2026" / "09" / "15"
+        sessions.mkdir(parents=True, exist_ok=True)
+        (sessions / f"rollout-2026-09-15T16-36-42-{ROOT_THREAD}.jsonl").write_bytes(
+            rollout_raw(root)
+        )
+        (sessions / f"rollout-2026-09-15T16-36-43-{CHILD_THREAD}.jsonl").write_bytes(
+            rollout_raw(child)
+        )
         prepared.stdout_path.write_bytes(raw_trace.encode())
         prepared.stderr_path.write_text("")
         prepared.process_receipt_path.write_text('{"exit_code":0}\n')
@@ -1573,7 +2289,7 @@ class NativeSubagentCallbacks(NestedCallbacks):
 class DispatchCallbacks(NativeSubagentCallbacks):
     def __init__(self, output):
         super().__init__(output)
-        self.dispatch_message = "Inspect [[native-eval-item:dispatch-i1]]"
+        self.dispatch_message = "Inspect [[work-item:dispatch-i1]]"
         self.dispatch_role = "codebase-analyst"
         self.claude_dispatch_message = self.dispatch_message
         self.claude_dispatch_role = self.dispatch_role
@@ -1709,7 +2425,11 @@ class NativeExecutionTests(unittest.TestCase):
             ]
             self.assertEqual(
                 observation["native_metadata"]["controller_fixture_read_witnesses"],
-                {"authority": "controller-staged-fixtures", "witnesses": expected},
+                {
+                    "authority": "controller-staged-fixtures",
+                    "witnesses": expected,
+                    "project_artifacts": [FIXTURE_READ_PATH],
+                },
             )
             access = next(item for item in file_accesses(observation)
                           if item["path"] == FIXTURE_READ_PATH)
@@ -1961,6 +2681,65 @@ class NativeExecutionTests(unittest.TestCase):
         replayed = json.loads(interpretation.read_text())["observation"]
         self.assertEqual(replayed["activations"], ["static-skill"])
 
+    def test_claude_activation_binding_rehydrates_only_bound_python_launcher(self):
+        value = claude_activation_case()
+        attempt = self.root / "activation-relocation"
+        cwd = attempt / "plugin"
+        prompt = (
+            f"/{CLAUDE_MANUAL_SKILL} invoke "
+            "<attempt_dir>/plugin/bin/python3 -m speckit_pro_runner < request.json"
+        )
+        source = {
+            "path": "skills/static-skill/SKILL.md",
+            "bytes": len(CLAUDE_MANUAL_SOURCE),
+            "sha256": hashlib.sha256(CLAUDE_MANUAL_SOURCE).hexdigest(),
+        }
+        launch = {
+            "host": "claude", "staging_dir": str(attempt), "cwd": str(cwd),
+            "runtime_identity": {"settings": {"claude_explicit_activation": {
+                "schema_version": "native-claude-explicit-activation-input/v1",
+                "skill": CLAUDE_MANUAL_SKILL,
+                "canonical_activation": "static-skill",
+                "prompt": prompt,
+                "skill_source": source,
+            }}},
+        }
+        binding = execution._claude_activation_binding(value, "claude", launch)
+        self.assertEqual(
+            binding["prompt"],
+            f"/{CLAUDE_MANUAL_SKILL} invoke {cwd / 'bin' / 'python3'} "
+            "-m speckit_pro_runner < request.json",
+        )
+
+        repeated = copy.deepcopy(launch)
+        repeated_prompt = " then ".join([prompt, prompt, prompt])
+        repeated["runtime_identity"]["settings"]["claude_explicit_activation"][
+            "prompt"
+        ] = repeated_prompt
+        repeated_binding = execution._claude_activation_binding(
+            value, "claude", repeated,
+        )
+        self.assertEqual(
+            repeated_binding["prompt"].count(str(cwd / "bin" / "python3")), 3,
+        )
+        self.assertNotIn("<attempt_dir>", repeated_binding["prompt"])
+
+        for malformed_prompt in (
+            prompt.replace("plugin/bin/python3", "other/bin/python3"),
+            prompt + " and <attempt_dir>/plugin/bin/python30",
+            prompt + " and x<attempt_dir>/plugin/bin/python3",
+            prompt + " and <attempt_dir>/plugin/bin/python3/child",
+            prompt + " and <attempt_dir>/unresolved",
+        ):
+            malformed = copy.deepcopy(launch)
+            malformed["runtime_identity"]["settings"]["claude_explicit_activation"][
+                "prompt"
+            ] = malformed_prompt
+            with self.subTest(prompt=malformed_prompt), self.assertRaisesRegex(
+                ValueError, "relocation is malformed",
+            ):
+                execution._claude_activation_binding(value, "claude", malformed)
+
     def test_claude_missing_session_is_incomplete_but_malformed_session_is_invalid(self):
         value = claude_activation_case()
         missing_output = self.root / "missing-claude-session"
@@ -1990,20 +2769,9 @@ class NativeExecutionTests(unittest.TestCase):
     def test_claude_historical_capture_without_activation_raw_needs_renormalization(self):
         value = claude_activation_case()
         callbacks = ClaudeActivationCallbacks(self.output)
-        real_fresh = execution._fresh_claude_activation
-
-        def omit_refs(*args, **kwargs):
-            result = real_fresh(*args, **kwargs)
-            evidence = args[5]
-            evidence.pop("claude_activation_witness", None)
-            evidence.pop("claude_activation_session", None)
-            return result
-
-        with mock.patch("native_eval_execution._fresh_claude_activation", side_effect=omit_refs):
-            initial = run_evaluations(
-                config(self.output), {}, [value], [row()], repo_root=self.repo,
-                prepare=callbacks.prepare, execute=callbacks.execute,
-            )
+        initial = run_claude_activation_without_retained_refs(
+            self.output, self.repo, value, callbacks,
+        )
         self.assertEqual(initial["counts"]["passes"], 1, initial)
 
         changed = copy.deepcopy(value)
@@ -2015,8 +2783,37 @@ class NativeExecutionTests(unittest.TestCase):
         )
         self.assertEqual(replay["counts"]["infrastructure_invalid"], 1, replay)
         self.assertEqual(replay["counts"]["subject_launches"], 0)
-        self.assertIn("omitted Claude activation evidence", replay["results"][0]["reason"])
+        self.assertIn("cannot recover Claude activation evidence", replay["results"][0]["reason"])
         self.assertEqual(resumed.executed, [])
+
+    def test_claude_activation_is_recovered_from_bound_retained_framework_tree(self):
+        value = claude_activation_case()
+        retained_root = self.root / "e-recoverable"
+        callbacks = RecoverableClaudeActivationCallbacks(self.output, retained_root)
+        initial = run_claude_activation_without_retained_refs(
+            self.output, self.repo, value, callbacks,
+        )
+        self.assertEqual(initial["counts"]["passes"], 1, initial)
+
+        changed = copy.deepcopy(value)
+        changed["checks"][0]["pattern"] = "do.e"
+        resumed = RecoverableClaudeActivationCallbacks(self.output, retained_root)
+        replay = run_evaluations(
+            config(self.output), {}, [changed], [row()], repo_root=self.repo,
+            prepare=resumed.prepare, execute=resumed.execute,
+        )
+        self.assertEqual(replay["counts"]["regraded"], 1, replay)
+        self.assertEqual(replay["counts"]["passes"], 1, replay)
+        self.assertEqual(replay["counts"]["subject_launches"], 0, replay)
+        self.assertEqual(resumed.executed, [])
+        captures = [
+            json.loads(path.read_text())["payload"]
+            for path in (self.output / "attempts").glob("*/capture.json")
+        ]
+        recovered = [capture for capture in captures
+                     if "claude_activation_witness" in capture.get("evidence", {})]
+        self.assertEqual(len(recovered), 1, captures)
+        self.assertIn("claude_activation_session", recovered[0]["evidence"])
 
     def test_trigger_stage_drives_claude_namespace_and_codex_marker_capture(self):
         value = case()
@@ -2526,6 +3323,50 @@ class NativeExecutionTests(unittest.TestCase):
         self.assertEqual(sorted(len(request["semantic_criteria"]) for request in judge.requests),
                          [1, 1, 2])
 
+    def test_pair_uses_runtime_bound_subject_grader_identity_and_resumes(self):
+        value = pair_case(self.repo)
+        value["checks"].append({
+            "id": "independent-semantic", "requirement": "r1", "type": "semantic",
+            "rubric": "The artifact independently satisfies the requested workflow.",
+        })
+        artifacts = {"claude": pair_workflow("alpha"), "codex": pair_workflow("beta")}
+        callbacks = PairCallbacks(self.output, artifacts=artifacts)
+        judge = PairJudge([True, True, True])
+        original_grader_identity = execution._grader_identity
+
+        def runtime_bound_grader(*args):
+            identity = original_grader_identity(*args)
+            if len(args) == 5 and args[1] == "claude" and args[4] is not None:
+                return hashlib.sha256(f"{identity}:runtime-bound".encode()).hexdigest()
+            return identity
+
+        with mock.patch.object(execution, "_grader_identity",
+                               side_effect=runtime_bound_grader):
+            report = run_evaluations(
+                config(self.output), {}, [value], [row("claude"), row("codex")],
+                repo_root=self.repo, prepare=callbacks.prepare, execute=callbacks.execute,
+                judge_execute=judge,
+            )
+        self.assertEqual(report["counts"]["passes"], 2, report)
+        self.assertEqual(report["pair_counts"]["passes"], 1, report)
+        self.assertEqual(report["pair_counts"]["judge_calls"], 1, report)
+
+        resumed_callbacks = PairCallbacks(self.output, artifacts=artifacts)
+        resumed_judge = PairJudge([])
+        with mock.patch.object(execution, "_grader_identity",
+                               side_effect=runtime_bound_grader):
+            resumed = run_evaluations(
+                config(self.output), {}, [value], [row("claude"), row("codex")],
+                repo_root=self.repo, prepare=resumed_callbacks.prepare,
+                execute=lambda *_args: self.fail("cached subject relaunched"),
+                judge_execute=resumed_judge,
+            )
+        self.assertEqual(resumed["counts"]["subject_launches"], 0, resumed)
+        self.assertEqual(resumed["counts"]["reused"], 2, resumed)
+        self.assertEqual(resumed["pair_counts"]["passes"], 1, resumed)
+        self.assertEqual(resumed["pair_counts"]["reused"], 1, resumed)
+        self.assertEqual(resumed_judge.requests, [])
+
     def test_pair_missing_or_reordered_arms_is_invalid_without_derived_work(self):
         value = pair_case(self.repo)
         artifacts = {"claude": pair_workflow("same"), "codex": pair_workflow("same")}
@@ -2562,6 +3403,45 @@ class NativeExecutionTests(unittest.TestCase):
                                 prepare=retried.prepare, execute=retried.execute)
         self.assertEqual(third["counts"]["retries"], 1)
         self.assertEqual(third["counts"]["passes"], 1)
+
+    def test_unfinished_codex_item_is_retryable_invalid_without_output_salvage_or_auto_retry(self):
+        callbacks = FakeCallbacks(self.output, texts=["apparently complete final answer"])
+        with mock.patch.object(
+            execution, "normalize_trace",
+            side_effect=execution.CaptureError("Codex capture has unfinished items"),
+        ):
+            first = run_evaluations(
+                config(self.output), {}, [case()], [row("codex")], repo_root=self.repo,
+                prepare=callbacks.prepare, execute=callbacks.execute,
+            )
+        self.assertEqual(first["counts"]["infrastructure_invalid"], 1, first)
+        verdict = first["results"][0]
+        self.assertEqual(verdict["status"], "invalid")
+        self.assertEqual(verdict["reason"], "Codex capture has unfinished items")
+        self.assertEqual(verdict["infrastructure_error"], {
+            "kind": "unfinished_native_item",
+            "source": "native_capture",
+            "retryable": True,
+            "inferred": False,
+        })
+        self.assertNotIn("provider_error", verdict)
+        attempt = next((self.output / "attempts").iterdir())
+        capture = json.loads((attempt / "capture.json").read_text())["payload"]
+        self.assertIsNone(capture["observation"])
+        self.assertEqual(capture["error"], "Codex capture has unfinished items")
+
+        resumed_callbacks = FakeCallbacks(self.output)
+        resumed = run_evaluations(
+            config(self.output), {}, [case()], [row("codex")], repo_root=self.repo,
+            prepare=resumed_callbacks.prepare, execute=resumed_callbacks.execute,
+        )
+        self.assertEqual(resumed["counts"]["subject_launches"], 0, resumed)
+        self.assertEqual(resumed["counts"]["reused"], 1, resumed)
+        self.assertEqual(resumed_callbacks.executed, [])
+        self.assertEqual(
+            resumed["results"][0]["infrastructure_error"]["kind"],
+            "unfinished_native_item",
+        )
 
     def test_semantic_case_is_held_without_judge_and_judged_after_deterministic_pass(self):
         value = case(semantic=True)
@@ -2760,10 +3640,178 @@ class NativeExecutionTests(unittest.TestCase):
         })
         report = run_evaluations(config(self.output), {}, [case()], rows, repo_root=self.repo,
                                  prepare=callbacks.prepare, execute=callbacks.execute)
-        self.assertEqual(report["counts"]["subject_launches"], 2)
+        self.assertEqual(report["counts"]["subject_launches"], 2, report)
         self.assertEqual(report["counts"]["incomplete"], 1)
         self.assertIn("codex", callbacks.executed)
         self.assertEqual(report["providers"]["claude"]["held"], 1)
+
+    def test_docker_credential_store_refusal_does_not_stop_provider_queue(self):
+        message = "the Docker credential store holds a symbolic link inside it"
+        self.assertIsNone(execution._classify_text(message, "stderr"))
+        self.assertEqual(
+            execution._classify_text(message + "; 401 authentication required", "stderr")["kind"],
+            "auth",
+        )
+        rows = [row("claude", 1)]
+        callbacks = FakeCallbacks(self.output, by_host={
+            "claude": ("done", 1, message),
+        })
+        report = run_evaluations(
+            config(self.output), {}, [case()], rows, repo_root=self.repo,
+            prepare=callbacks.prepare, execute=callbacks.execute,
+        )
+        self.assertEqual(report["counts"]["subject_launches"], 1, report)
+        self.assertEqual(report["counts"]["infrastructure_invalid"], 1)
+        self.assertEqual(report["providers"]["claude"]["held"], 0)
+        self.assertNotIn("provider_error", report["results"][0])
+
+    def test_http_status_classifier_does_not_match_digits_inside_timestamp(self):
+        for timestamp in ("2026-09-19T18:41:37.674015Z", "2026-09-19T18:42:37.429015Z"):
+            with self.subTest(timestamp=timestamp):
+                message = f"{timestamp} ERROR codex_core::tools::router: command rejected"
+                self.assertIsNone(execution._classify_text(message, "stderr"))
+        self.assertEqual(execution._classify_text("HTTP 401", "stderr")["kind"], "auth")
+        self.assertEqual(execution._classify_text("HTTP 429", "stderr")["kind"], "quota")
+
+    def test_codex_supplement_preserves_unobserved_completion_and_grading_rejects_it(self):
+        observation = {
+            "completed": True, "error": None, "final_text": "done", "activations": [],
+            "tool_calls": [], "artifacts": {}, "usage": {},
+            "native_metadata": {"thread_id": ROOT_THREAD},
+        }
+        supplement = {
+            "root_thread_id": ROOT_THREAD,
+            "dispatches": [{
+                "id": SPAWN_CALL, "parent_thread_id": ROOT_THREAD,
+                "child_thread_id": CHILD_THREAD, "order": 1, "status": "completed",
+            }],
+            "children": [{
+                "thread_id": CHILD_THREAD,
+                "native_metadata": {"cwd": str(self.repo.resolve())},
+                "tool_calls": [{
+                    "id": "post-terminal-command", "name": "command_execution",
+                    "input": {"command": ["true"]}, "output": {"exit_code": 0},
+                    "success": True, "namespace": None,
+                    "native_type": "CommandExecution", "thread_id": CHILD_THREAD,
+                    "status": "completed", "native_event_index": 9,
+                    "post_terminal_completion": True, "model_observed": False,
+                }],
+            }],
+        }
+
+        execution._merge_codex_supplement(
+            observation, supplement, self.repo,
+            {ROOT_THREAD: b"", CHILD_THREAD: b""}, False,
+        )
+
+        tool = next(
+            call for call in observation["tool_calls"]
+            if call["id"] == "post-terminal-command"
+        )
+        self.assertIs(tool["input"]["_native"]["post_terminal_completion"], True)
+        self.assertIs(tool["input"]["_native"]["model_observed"], False)
+        grade = execution.grade_observation(case(semantic=True), observation)
+        self.assertEqual(grade["status"], "invalid", grade)
+        self.assertTrue(all(row["verdict"] == "invalid" for row in grade["checks"]))
+        self.assertTrue(all("model did not observe" in row["reason"] for row in grade["checks"]))
+
+    def test_codex_root_post_terminal_completion_is_unobserved_and_invalid(self):
+        command_id = "exec-root-drained"
+        command = ["/bin/zsh", "-c", "ripwire . --quality-delta"]
+        raw_root = (json.dumps({
+            "timestamp": "2026-09-19T16:36:42Z",
+            "type": "event_msg",
+            "payload": {
+                "type": "item_completed", "thread_id": ROOT_THREAD,
+                "turn_id": ROOT_TURN,
+                "item": {"type": "CommandExecution", "id": command_id,
+                         "command": command},
+            },
+        }, separators=(",", ":")) + "\n").encode()
+        observation = {
+            "completed": True, "error": None, "final_text": "done", "activations": [],
+            "tool_calls": [{
+                "id": "projected-root-command", "name": "command_execution",
+                "input": {"command": command}, "output": {"exit_code": 0},
+                "success": True, "parent_id": None,
+            }],
+            "artifacts": {}, "usage": {},
+            "native_metadata": {"thread_id": ROOT_THREAD},
+        }
+        completion = {
+            "schema": "codex-post-terminal-command-completion/v2",
+            "model_observed": False, "thread_id": ROOT_THREAD,
+            "item_id": command_id, "cwd": str(self.repo.resolve()),
+            "source": "unified_exec_startup", "status": "completed", "exit_code": 0,
+        }
+        supplement = {
+            "root_thread_id": ROOT_THREAD, "dispatches": [], "children": [],
+            "native_metadata": {
+                "post_terminal_completions": [completion],
+                "rollout_raw_sha256": hashlib.sha256(raw_root).hexdigest(),
+            },
+        }
+
+        execution._merge_codex_supplement(
+            observation, supplement, self.repo, {ROOT_THREAD: raw_root}, False,
+        )
+
+        tool = observation["tool_calls"][0]
+        self.assertEqual(tool["id"], command_id)
+        self.assertFalse(tool["success"])
+        self.assertIs(tool["input"]["_native"]["post_terminal_completion"], True)
+        self.assertIs(tool["input"]["_native"]["model_observed"], False)
+        grade = execution.grade_observation(case(semantic=True), observation)
+        self.assertEqual(grade["status"], "invalid", grade)
+        self.assertTrue(all(row["verdict"] == "invalid" for row in grade["checks"]))
+        self.assertTrue(all("model did not observe" in row["reason"] for row in grade["checks"]))
+
+    def test_codex_root_post_terminal_completion_rejects_bad_identity_sets(self):
+        command_id = "exec-root-drained"
+        command = ["/bin/zsh", "-c", "ripwire . --quality-delta"]
+        raw_root = (json.dumps({
+            "timestamp": "2026-09-19T16:36:42Z",
+            "type": "event_msg",
+            "payload": {
+                "type": "item_completed", "thread_id": ROOT_THREAD,
+                "turn_id": ROOT_TURN,
+                "item": {"type": "CommandExecution", "id": command_id,
+                         "command": command},
+            },
+        }, separators=(",", ":")) + "\n").encode()
+        base_observation = {
+            "completed": True, "error": None, "final_text": "done", "activations": [],
+            "tool_calls": [{
+                "id": "projected-root-command", "name": "command_execution",
+                "input": {"command": command}, "output": {"exit_code": 0},
+                "success": True, "parent_id": None,
+            }],
+            "artifacts": {}, "usage": {},
+            "native_metadata": {"thread_id": ROOT_THREAD},
+        }
+        completion = {
+            "schema": "codex-post-terminal-command-completion/v2",
+            "model_observed": False, "thread_id": ROOT_THREAD,
+            "item_id": command_id, "cwd": str(self.repo.resolve()),
+            "source": "unified_exec_startup", "status": "completed", "exit_code": 0,
+        }
+        for name, completions in (
+            ("duplicate", [completion, copy.deepcopy(completion)]),
+            ("unmatched", [{**completion, "item_id": "exec-root-other"}]),
+            ("malformed", [{**completion, "model_observed": True}]),
+        ):
+            with self.subTest(name=name), self.assertRaises(ValueError):
+                supplement = {
+                    "root_thread_id": ROOT_THREAD, "dispatches": [], "children": [],
+                    "native_metadata": {
+                        "post_terminal_completions": completions,
+                        "rollout_raw_sha256": hashlib.sha256(raw_root).hexdigest(),
+                    },
+                }
+                execution._merge_codex_supplement(
+                    copy.deepcopy(base_observation), supplement, self.repo,
+                    {ROOT_THREAD: raw_root}, False,
+                )
 
     def test_nested_codex_merges_exact_owned_rollouts_without_root_duplication(self):
         value = case(resource_class="nested")
@@ -2820,6 +3868,93 @@ class NativeExecutionTests(unittest.TestCase):
         self.assertEqual(regraded["results"][0]["reason"], "raw_capture_renormalized")
         self.assertEqual(resumed.executed, [])
 
+    def test_codex_followup_is_projected_separately_from_initial_return(self):
+        def delivered(text, index):
+            encoded = text.encode("utf-8")
+            return {
+                "message_id": f"delivery-{index}", "text": text,
+                "sha256": hashlib.sha256(encoded).hexdigest(), "bytes": len(encoded),
+                "author": "/root/read_fixture", "recipient": "/root",
+                "turn_id": ROOT_TURN, "native_event_index": index,
+            }
+
+        first = delivered("Message Type: FINAL_ANSWER\nPayload:\nFIRST", 11)
+        second = delivered("Message Type: FINAL_ANSWER\nPayload:\nSECOND", 21)
+        followup = {
+            "call_id": "call-followup", "native_name": "followup_task",
+            "target": "/root/read_fixture", "task_input": {"sha256": "a" * 64, "bytes": 11},
+            "prior_completed_native_event_id": "completed-first",
+            "prior_completed_native_event_index": 10,
+            "call_record_index": 12, "interaction_record_index": 13,
+            "result_record_index": 14,
+            "completed_native_event_id": "completed-second",
+            "completed_native_event_index": 20, "delivery": second,
+        }
+        dispatch = {
+            "id": SPAWN_CALL, "name": "spawn_agent", "namespace": "collaboration",
+            "parent_thread_id": ROOT_THREAD, "child_thread_id": CHILD_THREAD,
+            "agent_path": "/root/read_fixture", "depth": 1,
+            "role": "native_canary_worker", "role_source": "function_call",
+            "task_name": "read_fixture", "fork_turns": "all",
+            "task_input": {"sha256": "b" * 64, "bytes": 12},
+            "followup_turns": [followup],
+            "turn_completions": [
+                {"kind": "completed", "id": "completed-first", "native_event_index": 10},
+                {"kind": "completed", "id": "completed-second", "native_event_index": 20},
+            ],
+            "status": "completed", "parent_turn_id": ROOT_TURN,
+            "native_event_index": 4,
+            "completed_native_event_id": "completed-second",
+            "completed_native_event_index": 20,
+            "completion_source": "parent-subagent-activity",
+            "terminal_failure": None, "delivery": first, "order": 1,
+        }
+        supplement = {
+            "root_thread_id": ROOT_THREAD, "dispatches": [dispatch],
+            "children": [{"thread_id": CHILD_THREAD, "tool_calls": []}],
+        }
+        calls = execution._nested_events(supplement)
+        observation = {
+            "tool_calls": calls,
+            "native_metadata": {
+                "nested_rollout": supplement,
+                "nested_merge": {"events": [
+                    {"id": SPAWN_CALL, "thread_id": ROOT_THREAD,
+                     "turn_id": ROOT_TURN, "native_event_index": 4},
+                    {"id": "call-followup", "thread_id": ROOT_THREAD,
+                     "turn_id": ROOT_TURN, "native_event_index": 13},
+                ]},
+            },
+        }
+        for position, call in enumerate(calls):
+            call["position"] = position
+        execution._canonicalize_subagent_calls("codex", observation)
+        execution._bind_subagent_return_order("codex", observation)
+
+        spawn, projected_followup = observation["tool_calls"]
+        self.assertEqual(spawn["output"]["result"], first["text"])
+        self.assertEqual(projected_followup["name"], "send_input")
+        self.assertEqual(projected_followup["output"]["result"], second["text"])
+        self.assertEqual(
+            observation["native_metadata"]["subagent_return_order"]["returns"][0]
+            ["completion_index"],
+            first["native_event_index"],
+        )
+
+        for variation in ("missing-call", "forged-result", "wrong-event"):
+            with self.subTest(variation=variation), self.assertRaises(ValueError):
+                changed = copy.deepcopy(observation)
+                del changed["native_metadata"]["subagent_return_order"]
+                if variation == "missing-call":
+                    changed["tool_calls"].pop()
+                elif variation == "forged-result":
+                    changed["tool_calls"][-1]["output"]["result"] = "forged"
+                else:
+                    changed["native_metadata"]["nested_merge"]["events"][-1][
+                        "native_event_index"
+                    ] = 99
+                execution._bind_subagent_return_order("codex", changed)
+
     def test_native_subagent_aliases_both_hosts_and_replays_without_subject_launches(self):
         value = case(resource_class="nested")
         value["checks"].append({"id": "subagent", "requirement": "r1", "type": "tool_used",
@@ -2873,6 +4008,53 @@ class NativeExecutionTests(unittest.TestCase):
                          if (path / "interpretation.json").exists())
             observation = json.loads((grade / "interpretation.json").read_text())["observation"]
             self.assertEqual([call["name"] for call in observation["tool_calls"]].count("subagent"), 1)
+
+    def test_terminal_failed_codex_dispatch_is_preserved_and_never_counted_as_a_return(self):
+        failure = {
+            "schema": "codex-native-terminal-failure/v1",
+            "turn_id": str(uuid.UUID(int=901)),
+            "native_event_index": 84,
+            "timestamp": "2026-09-19T20:20:00Z",
+            "codex_error_info": "server_overloaded",
+            "message_sha256": hashlib.sha256(
+                b"Selected model is at capacity."
+            ).hexdigest(),
+            "message_bytes": len(b"Selected model is at capacity."),
+        }
+        call = execution._nested_dispatch({
+            "id": "failed-spawn",
+            "namespace": "collaboration",
+            "parent_thread_id": str(uuid.UUID(int=900)),
+            "child_thread_id": str(uuid.UUID(int=902)),
+            "depth": 1,
+            "agent_path": "/root/post_uat_author",
+            "role": "uat-runbook-author",
+            "role_source": "native",
+            "task_name": "post_uat_author",
+            "fork_turns": "all",
+            "task_input": {"sha256": "a" * 64, "bytes": 20},
+            "status": "failed",
+            "order": 1,
+            "completion_source": "child-task-complete-error",
+            "terminal_failure": failure,
+        }, None)
+        self.assertFalse(call["success"])
+        self.assertEqual(call["output"]["terminal_failure"], failure)
+
+        observation = {"tool_calls": [call], "native_metadata": {}}
+        execution._canonicalize_subagent_calls("codex", observation)
+        with self.assertRaisesRegex(ValueError, "did not complete successfully"):
+            execution._bind_subagent_return_order("codex", copy.deepcopy(observation))
+
+        execution._bind_subagent_return_order(
+            "codex", observation, allow_failed_dispatches=True,
+        )
+        self.assertEqual(observation["native_metadata"]["subagent_return_order"], {
+            "schema": "native-subagent-return-order/v1",
+            "scope": "direct-root-only",
+            "returns": [],
+            "parent_file_changes": [],
+        })
 
     def test_native_dispatch_attribution_passes_both_hosts_and_replays_without_subjects(self):
         rows = [row("claude"), row("codex")]
@@ -3110,18 +4292,59 @@ class NativeExecutionTests(unittest.TestCase):
         ]
         self.assertEqual([call["id"] for call in projected_writes], ["native-root-write"])
 
-    def test_codex_parent_only_synthesis_is_rejected_before_grading(self):
-        value = dedicated_synthesis_case()
-        callbacks = SynthesisCallbacks(self.output, variation="no-child")
-        report = run_evaluations(
-            config(self.output), {}, [value], [row("codex")], repo_root=self.repo,
-            prepare=callbacks.prepare, execute=callbacks.execute,
+    def test_codex_root_file_change_binding_canonicalizes_only_entry_order(self):
+        native_changes = {
+            str(self.repo / "workflow.md"): {"type": "update"},
+            str(self.repo / "obsolete.md"): {"type": "delete"},
+            str(self.repo / "artifact.md"): {"type": "add"},
+        }
+        raw_root = rollout_raw([rollout_event({
+            "type": "item_completed", "thread_id": ROOT_THREAD, "turn_id": ROOT_TURN,
+            "item": {"type": "FileChange", "id": "native-root-write",
+                     "status": "completed", "changes": native_changes},
+        })])
+
+        def projected(changes):
+            return [{
+                "id": "projected-write", "name": "file_change", "parent_id": None,
+                "input": {"changes": changes},
+            }]
+
+        reordered = projected([
+            {"path": "artifact.md", "kind": "add"},
+            {"path": "obsolete.md", "kind": "delete"},
+            {"path": "workflow.md", "kind": "update"},
+        ])
+        execution._rebind_codex_root_tool_ids(
+            reordered, raw_root, ROOT_THREAD, str(self.repo),
         )
-        self.assertEqual(report["counts"]["behavior_fails"], 0, report)
-        self.assertEqual(report["counts"]["infrastructure_invalid"], 1, report)
-        attempt = next((self.output / "attempts").iterdir())
-        capture = json.loads((attempt / "capture.json").read_text())["payload"]
-        self.assertIsNone(capture["observation"])
+        self.assertEqual(reordered[0]["id"], "native-root-write")
+
+        for label, changes, reason in (
+            ("changed-kind", [
+                {"path": "artifact.md", "kind": "update"},
+                {"path": "obsolete.md", "kind": "delete"},
+                {"path": "workflow.md", "kind": "update"},
+            ], "disagrees with native event"),
+            ("changed-path", [
+                {"path": "other.md", "kind": "add"},
+                {"path": "obsolete.md", "kind": "delete"},
+                {"path": "workflow.md", "kind": "update"},
+            ], "disagrees with native event"),
+            ("duplicate-path", [
+                {"path": "artifact.md", "kind": "add"},
+                {"path": "artifact.md", "kind": "add"},
+                {"path": "workflow.md", "kind": "update"},
+            ], "duplicate paths"),
+        ):
+            with self.subTest(label=label), self.assertRaisesRegex(ValueError, reason):
+                execution._rebind_codex_root_tool_ids(
+                    projected(changes), raw_root, ROOT_THREAD, str(self.repo),
+                )
+
+    def test_codex_parent_only_synthesis_is_rejected_before_grading(self):
+        callbacks = SynthesisCallbacks(self.output, variation="no-child")
+        assert_codex_parent_synthesis_rejected(self, callbacks)
 
     def test_codex_dedicated_synthesis_requires_valid_root_return_and_exact_role(self):
         expected_by_variation = {
@@ -3264,6 +4487,91 @@ class NativeExecutionTests(unittest.TestCase):
         self.assertEqual(replay["counts"]["subject_launches"], 0)
         self.assertEqual(replay_callbacks.executed, [])
 
+    def test_claude_verification_accepts_the_exact_bounded_capture_wrapper(self):
+        assert_claude_verification_capture(
+            self,
+            VerificationCallbacks(self.output, claude_capture_wrapper=True),
+        )
+
+    def test_claude_runner_capture_wrapper_rejects_any_extra_shell_action(self):
+        command = "\n".join([
+            'python3 -m speckit_pro_runner < request.json > '
+            + '"$TMPDIR/runner-output.json" 2>"$TMPDIR/runner-stderr.log"',
+            'echo "exit=$?"', 'echo "---stdout---"',
+            'cat "$TMPDIR/runner-output.json"', "echo",
+            'echo "---stderr---"', 'cat "$TMPDIR/runner-stderr.log"',
+        ])
+        self.assertEqual(
+            execution._claude_runner_capture_request_path(command, {"python3"}),
+            "request.json",
+        )
+        for changed in (
+            command + "\necho injected",
+            command.replace("request.json", "../request.json"),
+            command.replace("runner-output.json", "nested/runner-output.json"),
+            command.replace("runner-stderr.log", "runner-output.json"),
+            command.replace('"$TMPDIR/runner-output.json"',
+                            "'$TMPDIR/runner-output.json'", 1),
+            command.replace('echo "exit=$?"', 'echo "exit=0"'),
+        ):
+            with self.subTest(changed=changed):
+                self.assertIsNone(
+                    execution._claude_runner_capture_request_path(changed, {"python3"})
+                )
+        with self.assertRaisesRegex(ValueError, "wrapper output is malformed"):
+            execution._claude_runner_capture_output(
+                "exit=0\n---stdout---\n{}\n\n---stderr---\nuntrusted"
+            )
+
+    def test_claude_runner_accepts_only_the_exact_native_cwd_prelude(self):
+        cwd = "/private/tmp/native fixture/cwd"
+        command = (
+            f"cd '{cwd}'\n"
+            f"python3 -m speckit_pro_runner < {RUNNER_REQUEST_PATH}"
+        )
+        self.assertEqual(
+            execution._claude_runner_request_path(command, {"python3"}, cwd),
+            RUNNER_REQUEST_PATH,
+        )
+        for changed in (
+            command.replace(cwd, "/private/tmp/other", 1),
+            command + "\necho injected",
+            command.replace("cd ", "cd -- ", 1),
+            command.replace(RUNNER_REQUEST_PATH, "../request.json"),
+        ):
+            with self.subTest(changed=changed):
+                self.assertIsNone(
+                    execution._claude_runner_request_path(
+                        changed, {"python3"}, cwd,
+                    )
+                )
+
+    def test_claude_runner_accepts_only_the_bounded_tmp_capture_pipeline(self):
+        cwd = "/private/tmp/native-fixture/cwd"
+        command = (
+            f"cd {cwd}\n"
+            f"python3 -m speckit_pro_runner < {RUNNER_REQUEST_PATH} | "
+            'tee "$TMPDIR/execute-verification-response.json" | '
+            "python3 -m json.tool"
+        )
+        self.assertEqual(
+            execution._claude_runner_request_path(command, {"python3"}, cwd),
+            RUNNER_REQUEST_PATH,
+        )
+        for changed in (
+            command.replace("$TMPDIR/", "/tmp/", 1),
+            command.replace("json.tool", "other.tool", 1),
+            command.replace(" | python3", " | cat | python3", 1),
+            command + "\necho injected",
+            command.replace("response.json", "nested/response.json", 1),
+        ):
+            with self.subTest(changed=changed):
+                self.assertIsNone(
+                    execution._claude_runner_request_path(
+                        changed, {"python3"}, cwd,
+                    )
+                )
+
     def test_verification_persists_authenticated_bytes_if_source_changes_after_binding(self):
         real_bind = execution.bind_verification_result
         expected = (json.dumps(verification_record(), sort_keys=True, indent=2) + "\n").encode()
@@ -3317,6 +4625,328 @@ class NativeExecutionTests(unittest.TestCase):
                     self.assertEqual(replay["counts"]["subject_launches"], 0, replay)
                     self.assertEqual(replay_callbacks.executed, [])
 
+    def test_codex_complete_trace_without_runner_invocation_retains_controller_absence(self):
+        callbacks = AbsentVerificationCallbacks(self.output)
+        report = run_evaluations(
+            config(self.output), {}, [verification_case()], [row("codex")],
+            repo_root=self.repo, prepare=callbacks.prepare, execute=callbacks.execute,
+        )
+        self.assertEqual(report["counts"]["behavior_fails"], 1, report)
+        self.assertEqual(report["counts"]["infrastructure_invalid"], 0, report)
+        self.assertEqual(report["counts"]["passes"], 0, report)
+        self.assertEqual(report["counts"]["subject_launches"], 1, report)
+        attempt = next((self.output / "attempts").iterdir())
+        capture = json.loads((attempt / "capture.json").read_text())["payload"]
+        self.assertNotIn("verification_record", capture["evidence"])
+        reference = capture["evidence"]["verification_absence"]
+        self.assertEqual(capture["observation"]["artifacts"], {})
+        receipt = capture["observation"]["native_metadata"]["controller_verification"]
+        self.assertEqual(receipt["checks"][0]["check_id"], "verification")
+        absence = receipt["checks"][0]["absence"]
+        self.assertEqual(absence["kind"], "no-native-runner-invocation")
+        self.assertEqual(absence["authority"], "controller-bound-retained-native-evidence")
+        self.assertEqual(absence["check"]["command_id"], "INTEGRATION_TEST")
+        rollout = capture["evidence"][execution._rollout_label(ROOT_THREAD)]
+        self.assertEqual(absence["root_trace"]["thread_id"], ROOT_THREAD)
+        self.assertEqual(absence["root_trace"]["raw_sha256"], rollout["sha256"])
+        self.assertEqual(absence["root_trace"]["runner_invocation_count"], 0)
+        payload = (json.dumps(absence, sort_keys=True, separators=(",", ":")) + "\n").encode()
+        retained = attempt / reference["path"]
+        self.assertEqual(retained.read_bytes(), payload)
+        self.assertEqual(reference["sha256"], hashlib.sha256(payload).hexdigest())
+        self.assertEqual(reference["bytes"], len(payload))
+        verdicts = [json.loads(path.read_text())["payload"]["verdict"]
+                    for path in attempt.glob("grade-*.json")]
+        self.assertTrue(verdicts)
+        self.assertTrue(all(verdict["status"] == "fail" for verdict in verdicts), verdicts)
+        verification = [check for check in verdicts[0]["checks"]
+                        if check["id"] == "verification"]
+        self.assertEqual(verification[0]["verdict"], "fail")
+        self.assertIn("absence", verification[0]["reason"])
+
+    def test_claude_complete_bound_run_without_runner_is_behavior_fail_and_regrades(self):
+        callbacks = ClaudeAbsentVerificationCallbacks(self.output)
+        value = claude_verification_case()
+        report = run_evaluations(
+            config(self.output), {}, [value], [row("claude")], repo_root=self.repo,
+            prepare=callbacks.prepare, execute=callbacks.execute,
+        )
+        self.assertEqual(report["counts"]["behavior_fails"], 1, report)
+        self.assertEqual(report["counts"]["infrastructure_invalid"], 0, report)
+        attempt = next((self.output / "attempts").iterdir())
+        capture = json.loads((attempt / "capture.json").read_text())["payload"]
+        reference = capture["evidence"]["verification_absence"]
+        absence = capture["observation"]["native_metadata"][
+            "controller_verification"]["checks"][0]["absence"]
+        self.assertEqual(absence["host"], "claude")
+        self.assertNotIn("root_trace", absence)
+        self.assertEqual(absence["claude_trace"]["runner_invocation_count"], 0)
+        retained = attempt / reference["path"]
+        before = (retained.stat().st_ino, retained.stat().st_mtime_ns, retained.read_bytes())
+
+        changed = claude_verification_case()
+        changed["checks"][0]["pattern"] = "do.e"
+        replay_callbacks = ClaudeAbsentVerificationCallbacks(self.output, variation="partial")
+        replay = run_evaluations(
+            config(self.output), {}, [changed], [row("claude")], repo_root=self.repo,
+            prepare=replay_callbacks.prepare, execute=replay_callbacks.execute,
+        )
+        self.assertEqual(replay["counts"]["regraded"], 1, replay)
+        self.assertEqual(replay["counts"]["behavior_fails"], 1, replay)
+        self.assertEqual(replay["counts"]["infrastructure_invalid"], 0, replay)
+        self.assertEqual(replay["counts"]["subject_launches"], 0, replay)
+        self.assertEqual(replay_callbacks.executed, [])
+        after = (retained.stat().st_ino, retained.stat().st_mtime_ns, retained.read_bytes())
+        self.assertEqual(after, before)
+
+    def test_claude_trace_identity_accepts_repeated_bound_init_and_rejects_mismatch(self):
+        cwd = "/tmp/claude-subject"
+        records = [json.loads(line) for line in claude_explicit_trace(cwd).splitlines()]
+        records.insert(1, copy.deepcopy(records[0]))
+        public_trace = "\n".join(json.dumps(record) for record in records).encode()
+        session = b"retained-session\n"
+        trace = {
+            "session_id": CLAUDE_SESSION,
+            "cwd": cwd,
+            "cli_version": "2.1.273",
+            "bytes": len(public_trace),
+            "sha256": hashlib.sha256(public_trace).hexdigest(),
+        }
+        session_artifact = {
+            "bytes": len(session),
+            "sha256": hashlib.sha256(session).hexdigest(),
+        }
+        self.assertEqual(
+            execution._claude_complete_trace_identity(
+                records, trace, public_trace, session, session_artifact,
+            ),
+            (CLAUDE_SESSION, cwd, "2.1.273"),
+        )
+
+        records[1]["session_id"] = "wrong-session"
+        with self.assertRaisesRegex(ValueError, "trace identity is inconsistent"):
+            execution._claude_complete_trace_identity(
+                records, trace, public_trace, session, session_artifact,
+            )
+
+    def test_stored_evidence_accepts_a_confined_relative_attempt_root(self):
+        attempt = self.root / "relative-attempt"
+        attempt.mkdir()
+        retained = attempt / "raw-trace.jsonl"
+        retained.write_text("{}\n")
+        relative_attempt = Path(os.path.relpath(attempt.resolve(strict=True), Path.cwd()))
+        resolved = execution._stored_evidence(
+            relative_attempt, {"path": "raw-trace.jsonl"},
+        )
+        self.assertEqual(resolved.resolve(strict=True), retained.resolve(strict=True))
+
+    def test_claude_absence_rejects_partial_truncated_wrong_session_and_malformed_runner(self):
+        for variation in ("partial", "truncated-trace", "wrong-session", "malformed-runner"):
+            with self.subTest(variation=variation):
+                output = self.root / f"claude-{variation}"
+                callbacks = ClaudeAbsentVerificationCallbacks(output, variation=variation)
+                report = run_evaluations(
+                    config(output), {}, [claude_verification_case()], [row("claude")],
+                    repo_root=self.repo, prepare=callbacks.prepare, execute=callbacks.execute,
+                )
+                self.assertEqual(report["counts"]["infrastructure_invalid"], 1, report)
+                self.assertEqual(report["counts"]["behavior_fails"], 0, report)
+
+    def test_invalid_claude_absence_capture_is_renormalized_without_relaunch(self):
+        value = claude_verification_case()
+        callbacks = ClaudeAbsentVerificationCallbacks(self.output)
+        with mock.patch(
+            "native_eval_execution._claude_complete_trace_identity",
+            side_effect=ValueError("legacy parser rejected continuation"),
+        ):
+            initial = run_evaluations(
+                config(self.output), {}, [value], [row("claude")], repo_root=self.repo,
+                prepare=callbacks.prepare, execute=callbacks.execute,
+            )
+        self.assertEqual(initial["counts"]["infrastructure_invalid"], 1, initial)
+        self.assertEqual(initial["counts"]["subject_launches"], 1)
+        original_attempt = next((self.output / "attempts").iterdir())
+
+        resumed = ClaudeAbsentVerificationCallbacks(self.output)
+        replay = run_evaluations(
+            config(self.output), {}, [value], [row("claude")], repo_root=self.repo,
+            prepare=resumed.prepare, execute=resumed.execute,
+        )
+        self.assertEqual(replay["counts"]["behavior_fails"], 1, replay)
+        self.assertEqual(replay["counts"]["regraded"], 1, replay)
+        self.assertEqual(replay["counts"]["subject_launches"], 0, replay)
+        self.assertEqual(replay["results"][0]["reason"], "raw_capture_renormalized")
+        self.assertEqual(resumed.executed, [])
+        attempts = list((self.output / "attempts").iterdir())
+        self.assertEqual(len(attempts), 2)
+        recovered = next(path for path in attempts if path != original_attempt)
+        capture = json.loads((recovered / "capture.json").read_text())["payload"]
+        self.assertIsNone(capture["error"])
+        self.assertIn("verification_absence", capture["evidence"])
+
+    def test_invalid_claude_verification_recovers_deleted_record_from_bound_response(self):
+        value = verification_case()
+        callbacks = VerificationCallbacks(self.output, claude_capture_wrapper=True)
+        with mock.patch(
+            "native_eval_execution._fresh_verification",
+            side_effect=ValueError("legacy parser rejected capture"),
+        ):
+            initial = run_evaluations(
+                config(self.output), {}, [value], [row("claude")], repo_root=self.repo,
+                prepare=callbacks.prepare, execute=callbacks.execute,
+            )
+        self.assertEqual(initial["counts"]["infrastructure_invalid"], 1, initial)
+        original_attempt = next((self.output / "attempts").iterdir())
+        original_capture = json.loads((original_attempt / "capture.json").read_text())["payload"]
+        self.assertIn("artifact_manifest", original_capture["evidence"])
+        record = callbacks.prepared[0][1] / "workspace/.process/verification" / f"{'a' * 32}.json"
+        record.unlink()
+
+        resumed = VerificationCallbacks(self.output, claude_capture_wrapper=True)
+        replay = run_evaluations(
+            config(self.output), {}, [value], [row("claude")], repo_root=self.repo,
+            prepare=resumed.prepare, execute=resumed.execute,
+        )
+        self.assertEqual(replay["counts"]["passes"], 1, replay)
+        self.assertEqual(replay["counts"]["regraded"], 1, replay)
+        self.assertEqual(replay["counts"]["subject_launches"], 0, replay)
+        self.assertEqual(replay["results"][0]["reason"], "raw_capture_renormalized")
+        attempts = list((self.output / "attempts").iterdir())
+        recovered = next(path for path in attempts if path != original_attempt)
+        capture = json.loads((recovered / "capture.json").read_text())["payload"]
+        retained = recovered / capture["evidence"]["verification_record"]["path"]
+        expected = (json.dumps(
+            verification_record(), sort_keys=True, indent=2, allow_nan=False,
+        ) + "\n").encode()
+        self.assertEqual(retained.read_bytes(), expected)
+
+    def absent_verification_attempt(self, output=None):
+        """Run one fresh zero-invocation attempt and return its stored capture."""
+
+        output = self.output if output is None else output
+        callbacks = AbsentVerificationCallbacks(output)
+        report = run_evaluations(
+            config(output), {}, [verification_case()], [row("codex")],
+            repo_root=self.repo, prepare=callbacks.prepare, execute=callbacks.execute,
+        )
+        self.assertEqual(report["counts"]["behavior_fails"], 1, report)
+        attempt = next((output / "attempts").iterdir())
+        return attempt, json.loads((attempt / "capture.json").read_text())["payload"]
+
+    def test_absent_verification_regrades_and_reconstructs_retained_absence(self):
+        attempt, capture = self.absent_verification_attempt()
+        retained = attempt / capture["evidence"]["verification_absence"]["path"]
+        payload = retained.read_bytes()
+        before = retained.stat()
+
+        changed = verification_case()
+        changed["checks"][0]["pattern"] = "do.e"
+        replay_callbacks = AbsentVerificationCallbacks(self.output, variation="unbound")
+        replay = run_evaluations(
+            config(self.output), {}, [changed], [row("codex")], repo_root=self.repo,
+            prepare=replay_callbacks.prepare, execute=replay_callbacks.execute,
+        )
+        self.assertEqual(replay["counts"]["regraded"], 1, replay)
+        self.assertEqual(replay["counts"]["behavior_fails"], 1, replay)
+        self.assertEqual(replay["counts"]["infrastructure_invalid"], 0, replay)
+        self.assertEqual(replay["counts"]["subject_launches"], 0, replay)
+        self.assertEqual(replay_callbacks.executed, [])
+        after = retained.stat()
+        self.assertEqual((after.st_ino, after.st_mtime_ns, retained.read_bytes()),
+                         (before.st_ino, before.st_mtime_ns, payload))
+        interpretations = list((attempt / "grades").glob("*/interpretation.json"))
+        self.assertTrue(interpretations)
+        for path in interpretations:
+            marker = json.loads(path.read_text())["observation"]["native_metadata"][
+                "controller_verification"]["checks"][0]["absence"]
+            rebuilt = (json.dumps(marker, sort_keys=True, separators=(",", ":"))
+                       + "\n").encode()
+            self.assertEqual(rebuilt, payload)
+
+    def test_absent_verification_regrade_with_changed_check_identity_is_invalid(self):
+        self.absent_verification_attempt()
+        changed = verification_case()
+        changed["checks"][1]["command_id"] = "UNIT_TEST"
+        replay_callbacks = AbsentVerificationCallbacks(self.output)
+        replay = run_evaluations(
+            config(self.output), {}, [changed], [row("codex")], repo_root=self.repo,
+            prepare=replay_callbacks.prepare, execute=replay_callbacks.execute,
+        )
+        self.assertEqual(replay["counts"]["infrastructure_invalid"], 1, replay)
+        self.assertEqual(replay["counts"]["behavior_fails"], 0, replay)
+        self.assertEqual(replay["counts"]["subject_launches"], 0, replay)
+        self.assertEqual(replay_callbacks.executed, [])
+        self.assertIn("native verification absence evidence changed",
+                      replay["results"][0]["reason"])
+
+    def test_absent_verification_without_retained_evidence_is_invalid(self):
+        real = execution._fresh_verification_absence
+
+        def omit_evidence(*args, **kwargs):
+            real(*args, **kwargs)
+            return {}
+
+        callbacks = AbsentVerificationCallbacks(self.output)
+        with mock.patch.object(execution, "_fresh_verification_absence",
+                               side_effect=omit_evidence):
+            initial = run_evaluations(
+                config(self.output), {}, [verification_case()], [row("codex")],
+                repo_root=self.repo, prepare=callbacks.prepare, execute=callbacks.execute,
+            )
+        self.assertEqual(initial["counts"]["behavior_fails"], 1, initial)
+        attempt = next((self.output / "attempts").iterdir())
+        capture = json.loads((attempt / "capture.json").read_text())["payload"]
+        self.assertNotIn("verification_absence", capture["evidence"])
+
+        changed = verification_case()
+        changed["checks"][0]["pattern"] = "do.e"
+        replay = run_evaluations(
+            config(self.output), {}, [changed], [row("codex")], repo_root=self.repo,
+            prepare=AbsentVerificationCallbacks(self.output).prepare,
+            execute=AbsentVerificationCallbacks(self.output).execute,
+        )
+        self.assertEqual(replay["counts"]["infrastructure_invalid"], 1, replay)
+        self.assertEqual(replay["counts"]["behavior_fails"], 0, replay)
+        self.assertIn("omitted native verification absence evidence",
+                      replay["results"][0]["reason"])
+
+    def test_subject_output_cannot_spoof_controller_absence(self):
+        callbacks = AbsentVerificationCallbacks(self.output, variation="forged-absence")
+        report = run_evaluations(
+            config(self.output), {}, [verification_case()], [row("codex")],
+            repo_root=self.repo, prepare=callbacks.prepare, execute=callbacks.execute,
+        )
+        self.assertEqual(report["counts"]["behavior_fails"], 1, report)
+        self.assertEqual(report["counts"]["passes"], 0, report)
+        self.assertEqual(report["counts"]["infrastructure_invalid"], 0, report)
+        attempt = next((self.output / "attempts").iterdir())
+        capture = json.loads((attempt / "capture.json").read_text())["payload"]
+        self.assertNotIn("verification_absence", capture["evidence"])
+        receipt_row = capture["observation"]["native_metadata"][
+            "controller_verification"]["checks"][0]
+        self.assertNotIn("absence", receipt_row)
+        self.assertIn("call", receipt_row)
+        verdicts = [json.loads(path.read_text())["payload"]["verdict"]
+                    for path in attempt.glob("grade-*.json")]
+        verification = [check for check in verdicts[0]["checks"] if check["id"] == "verification"]
+        self.assertEqual(verification[0]["verdict"], "fail")
+
+    def test_absent_verification_evidence_variants_stay_infrastructure_invalid(self):
+        for variation, host in (("claude-absent", "claude"), ("unbound", "codex"),
+                                ("wrong-cwd", "codex"), ("failed", "codex"),
+                                ("truncated-command", "codex"), ("truncated", "codex"),
+                                ("duplicate", "codex")):
+            with self.subTest(variation=variation):
+                output = self.root / variation
+                callbacks = AbsentVerificationCallbacks(output, variation=variation)
+                report = run_evaluations(
+                    config(output), {}, [verification_case()], [row(host)],
+                    repo_root=self.repo, prepare=callbacks.prepare, execute=callbacks.execute,
+                )
+                self.assertEqual(report["counts"]["infrastructure_invalid"], 1, report)
+                self.assertEqual(report["counts"]["behavior_fails"], 0, report)
+                self.assertEqual(report["counts"]["passes"], 0, report)
+
     def test_native_runner_expected_failure_is_bound_fresh_and_replayed_both_hosts(self):
         payload = (json.dumps(runner_request(), sort_keys=True, indent=2) + "\n").encode()
         (self.repo / "request.json").write_bytes(payload)
@@ -3350,6 +4980,254 @@ class NativeExecutionTests(unittest.TestCase):
         self.assertEqual(replay["counts"]["regraded"], 2, replay)
         self.assertEqual(replay["counts"]["subject_launches"], 0, replay)
         self.assertEqual(replay_callbacks.executed, [])
+
+    def test_claude_runner_binds_only_exact_nonzero_exit_wrapper(self):
+        payload = (json.dumps(runner_request(), sort_keys=True, indent=2) + "\n").encode()
+        (self.repo / "request.json").write_bytes(payload)
+        callbacks = RunnerResultCallbacks(self.output, variation="claude-exit-wrapper")
+        report = run_evaluations(
+            config(self.output), {}, [runner_result_case()], [row("claude")],
+            repo_root=self.repo, prepare=callbacks.prepare, execute=callbacks.execute,
+        )
+        self.assertEqual(report["counts"]["passes"], 1, report)
+        attempt = next((self.output / "attempts").iterdir())
+        capture = json.loads((attempt / "capture.json").read_text())["payload"]
+        receipt = capture["observation"]["native_metadata"]["controller_runner_results"]
+        self.assertEqual(receipt["checks"][0]["call"]["native_exit_code"], 1)
+
+        response = json.dumps(runner_result_response(), separators=(",", ":"))
+        normalized, native_exit = execution._normalized_claude_runner_output(
+            f"Exit code 1\n{response}", False,
+        )
+        self.assertEqual((normalized, native_exit), (response, 1))
+        malformed = (
+            f"Exit code 0\n{response}",
+            f"Exit code nope\n{response}",
+            f"Exit code 1\nExit code 1\n{response}",
+            f"Exit code 2\n{response}",
+            f"Exit code 1\n{response}\ntrailing-junk",
+        )
+        for output in malformed:
+            with self.subTest(output=output[:40]), self.assertRaisesRegex(
+                ValueError, "nonzero exit wrapper is malformed",
+            ):
+                execution._normalized_claude_runner_output(output, False)
+        with self.assertRaisesRegex(ValueError, "nonzero exit wrapper is malformed"):
+            execution._normalized_claude_runner_output(
+                f"Exit code 1\n{response}", True,
+            )
+
+    def test_claude_runner_correlates_official_wrapper_with_diagnostic_prefix(self):
+        callbacks = RunnerResultCallbacks(
+            self.output, variation="claude-exit-diagnostic-wrapper",
+        )
+        report, _capture, receipt = run_runner_result_evaluation(
+            self, self.output, callbacks, "claude",
+        )
+        self.assertEqual(report["counts"]["passes"], 1, report)
+        self.assertEqual(report["counts"]["infrastructure_invalid"], 0, report)
+        self.assertEqual(receipt["checks"][0]["actual"]["status"], "expected_failure")
+        self.assertEqual(receipt["checks"][0]["call"]["native_exit_code"], 1)
+
+        for variation in (
+            "claude-exit-diagnostic-extra", "claude-exit-diagnostic-mismatch",
+        ):
+            with self.subTest(variation=variation):
+                output = self.root / variation
+                invalid = RunnerResultCallbacks(output, variation=variation)
+                report = run_evaluations(
+                    config(output), {}, [runner_result_case()], [row("claude")],
+                    repo_root=self.repo, prepare=invalid.prepare, execute=invalid.execute,
+                )
+                self.assertEqual(report["counts"]["infrastructure_invalid"], 1, report)
+                self.assertEqual(report["counts"]["passes"], 0, report)
+
+    def test_multiple_native_runner_results_seal_distinct_requests_and_bind_all_checks(self):
+        payload = (json.dumps(runner_request(), sort_keys=True, indent=2) + "\n").encode()
+        (self.repo / "request.json").write_bytes(payload)
+        (self.repo / "second-request.json").write_bytes(payload)
+        value = multi_runner_result_case()
+        shared = copy.deepcopy(value["checks"][-2])
+        shared.update({
+            "id": "shared-request-result",
+            "response_field_path": ["shared_binding_result"],
+        })
+        value["checks"].append(shared)
+        witness = {"bytes": len(payload), "sha256": hashlib.sha256(payload).hexdigest()}
+        prepared = SimpleNamespace(runtime_identity={"settings": {
+            "fixture_read_witnesses": {
+                RUNNER_REQUEST_PATH: witness,
+                SECOND_RUNNER_REQUEST_PATH: witness,
+            },
+        }})
+
+        sealed = execution._sealed_runner_result_inputs(value, prepared, self.repo)
+
+        self.assertEqual(
+            set(sealed["requests"]), {RUNNER_REQUEST_PATH, SECOND_RUNNER_REQUEST_PATH},
+        )
+        invocations = []
+        for index, request_path in enumerate(
+            (RUNNER_REQUEST_PATH, SECOND_RUNNER_REQUEST_PATH), start=1,
+        ):
+            invocations.append({
+                "authority": "protected-native-runner", "call_id": f"runner-{index}",
+                "tool_call_index": index, "request_path": request_path,
+                "output": json.dumps(runner_result_response(), separators=(",", ":")),
+                "success": False, "native_exit_code": 1,
+            })
+        evidence = {"native_metadata": {}}
+        with mock.patch.object(
+            execution, "_native_runner_invocations", return_value=invocations,
+        ):
+            execution._bind_runner_result_context(
+                value, "codex", evidence,
+                {"native_runner_result_inputs": sealed}, None,
+            )
+        receipts = evidence["native_metadata"]["controller_runner_results"]["checks"]
+        self.assertEqual(
+            [receipt["check_id"] for receipt in receipts],
+            ["runner-result", "second-runner-result", "shared-request-result"],
+        )
+        self.assertEqual(
+            [receipt["actual"]["request_path"] for receipt in receipts],
+            [RUNNER_REQUEST_PATH, SECOND_RUNNER_REQUEST_PATH, RUNNER_REQUEST_PATH],
+        )
+
+    def test_repository_runner_diagnostic_prefix_is_exactly_correlated(self):
+        payload = (json.dumps(runner_request(), sort_keys=True, indent=2) + "\n").encode()
+        response = runner_result_response()
+        diagnostic = response["diagnostics"][0]
+        stream = "\n".join(
+            json.dumps(value, separators=(",", ":"))
+            for value in (diagnostic, response)
+        )
+        invocation = {
+            "authority": "protected-native-runner", "call_id": "runner-1",
+            "tool_call_index": 1, "request_path": RUNNER_REQUEST_PATH,
+            "output": stream, "success": False, "native_exit_code": 1,
+        }
+        sealed = {
+            "schema": "native-runner-result-sealed-inputs/v1",
+            "authority": "controller-before-subject-launch",
+            "requests": {RUNNER_REQUEST_PATH: {
+                "text": payload.decode(), "bytes": len(payload),
+                "sha256": hashlib.sha256(payload).hexdigest(),
+            }},
+        }
+        evidence = {"native_metadata": {}}
+        with mock.patch.object(
+            execution, "_native_runner_invocations", return_value=[invocation],
+        ):
+            execution._bind_runner_result_context(
+                runner_result_case(), "codex", evidence,
+                {"native_runner_result_inputs": sealed}, None,
+            )
+        receipt = evidence["native_metadata"]["controller_runner_results"]["checks"][0]
+        self.assertEqual(receipt["actual"]["response"], response)
+
+        arbitrary = {"source": "runner", "code": "validation_failure"}
+        variants = {
+            "arbitrary": [arbitrary, response],
+            "extra": [diagnostic, response, response],
+            "mismatched-exit": [
+                {**diagnostic, "details": {**diagnostic["details"], "exit_code": 2}},
+                response,
+            ],
+            "mismatched-helper": [
+                {**diagnostic, "details": {**diagnostic["details"], "helper_id": "other"}},
+                response,
+            ],
+            "mismatched-copy": [diagnostic, {**response, "diagnostics": []}],
+        }
+        for label, values in variants.items():
+            output = "\n".join(
+                json.dumps(value, separators=(",", ":")) for value in values
+            )
+            with self.subTest(label=label), self.assertRaisesRegex(
+                ValueError, "diagnostic stream is not correlated",
+            ):
+                execution._normalized_repository_runner_output(output, 1, payload)
+
+    def test_multiple_native_runner_results_fail_closed_on_changed_witnesses(self):
+        payload = (json.dumps(runner_request(), sort_keys=True, indent=2) + "\n").encode()
+        (self.repo / "request.json").write_bytes(payload)
+        (self.repo / "second-request.json").write_bytes(payload)
+        value = multi_runner_result_case()
+        witness = {"bytes": len(payload), "sha256": hashlib.sha256(payload).hexdigest()}
+        prepared = SimpleNamespace(runtime_identity={"settings": {
+            "fixture_read_witnesses": {
+                RUNNER_REQUEST_PATH: witness,
+                SECOND_RUNNER_REQUEST_PATH: {**witness, "sha256": "0" * 64},
+            },
+        }})
+        with self.assertRaisesRegex(ValueError, "request witness changed"):
+            execution._sealed_runner_result_inputs(value, prepared, self.repo)
+
+    def test_multiple_native_runner_results_fail_closed_on_missing_duplicate_or_changed_evidence(self):
+        payload = (json.dumps(runner_request(), sort_keys=True, indent=2) + "\n").encode()
+        value = multi_runner_result_case()
+        digest = hashlib.sha256(payload).hexdigest()
+        sealed = {
+            "schema": "native-runner-result-sealed-inputs/v1",
+            "authority": "controller-before-subject-launch",
+            "requests": {
+                request_path: {
+                    "text": payload.decode(), "bytes": len(payload), "sha256": digest,
+                }
+                for request_path in (RUNNER_REQUEST_PATH, SECOND_RUNNER_REQUEST_PATH)
+            },
+        }
+
+        first = {
+            "authority": "protected-native-runner", "call_id": "runner-1",
+            "tool_call_index": 1, "request_path": RUNNER_REQUEST_PATH,
+            "output": json.dumps(runner_result_response(), separators=(",", ":")),
+            "success": False, "native_exit_code": 1,
+        }
+        second = {
+            **first, "call_id": "runner-2", "tool_call_index": 2,
+            "request_path": SECOND_RUNNER_REQUEST_PATH,
+        }
+        variants = {
+            "missing": [first],
+            "ambiguous": [
+                first, second, {**second, "call_id": "runner-3", "tool_call_index": 3},
+            ],
+        }
+        for label, invocations in variants.items():
+            with self.subTest(label=label), mock.patch.object(
+                execution, "_native_runner_invocations", return_value=invocations,
+            ), self.assertRaisesRegex(ValueError, "invocation is missing or ambiguous"):
+                execution._bind_runner_result_context(
+                    value, "codex", {"native_metadata": {}},
+                    {"native_runner_result_inputs": sealed}, None,
+                )
+
+        changed = copy.deepcopy(sealed)
+        changed["requests"][SECOND_RUNNER_REQUEST_PATH]["sha256"] = "0" * 64
+        with mock.patch.object(
+            execution, "_native_runner_invocations", return_value=[first, second],
+        ), self.assertRaisesRegex(ValueError, "sealed native runner request changed"):
+            execution._bind_runner_result_context(
+                value, "codex", {"native_metadata": {}},
+                {"native_runner_result_inputs": changed}, None,
+            )
+
+    def test_codex_verify_child_runner_result_is_hash_bound_and_graded(self):
+        callbacks = ChildVerifyRunnerResultCallbacks(self.output)
+        report, capture, receipt = run_runner_result_evaluation(
+            self, self.output, callbacks, "codex",
+        )
+        self.assertEqual(report["counts"]["passes"], 1, report)
+        self.assertEqual(report["counts"]["infrastructure_invalid"], 0, report)
+        self.assertEqual(receipt["checks"][0]["actual"]["status"], "expected_failure")
+        child_call = next(
+            call for call in capture["observation"]["tool_calls"]
+            if call.get("id") == "verify-runner-command"
+        )
+        self.assertIsNotNone(child_call["parent_id"])
+        self.assertEqual(child_call["input"]["_native"]["thread_id"], CHILD_THREAD)
 
     def test_native_runner_claim_only_is_invalid_and_wrong_outcome_fails_both_hosts(self):
         payload = (json.dumps(runner_request(), sort_keys=True, indent=2) + "\n").encode()
@@ -3486,6 +5364,83 @@ class NativeExecutionTests(unittest.TestCase):
                 capture = json.loads((attempt / "capture.json").read_text())["payload"]
                 self.assertIsNone(capture["observation"])
                 self.assertIsInstance(capture["error"], str)
+
+    def test_invalid_codex_capture_is_renormalized_without_subject_relaunch(self):
+        value = case(resource_class="nested")
+        callbacks = NestedCallbacks(self.output)
+        with mock.patch(
+            "native_eval_execution.collect_native_tree",
+            side_effect=NativeRolloutInvalid("legacy parser rejected capture"),
+        ):
+            initial = run_evaluations(
+                config(self.output), {}, [value], [row("codex")],
+                repo_root=self.repo, prepare=callbacks.prepare, execute=callbacks.execute,
+            )
+        self.assertEqual(initial["counts"]["infrastructure_invalid"], 1, initial)
+        self.assertEqual(initial["counts"]["subject_launches"], 1)
+        original_attempt = next((self.output / "attempts").iterdir())
+        original_capture = json.loads(
+            (original_attempt / "capture.json").read_text()
+        )["payload"]
+        self.assertIsNone(original_capture["observation"])
+        self.assertIn("legacy parser rejected capture", original_capture["error"])
+        self.assertTrue({"launch_prepared", "raw_trace", "process_receipt"}.issubset(
+            original_capture["evidence"]
+        ))
+
+        resumed = NestedCallbacks(self.output)
+        replay = run_evaluations(
+            config(self.output), {}, [value], [row("codex")],
+            repo_root=self.repo, prepare=resumed.prepare, execute=resumed.execute,
+        )
+
+        self.assertEqual(replay["counts"]["passes"], 1, replay)
+        self.assertEqual(replay["counts"]["regraded"], 1)
+        self.assertEqual(replay["counts"]["subject_launches"], 0)
+        self.assertEqual(replay["results"][0]["reason"], "raw_capture_renormalized")
+        self.assertEqual(resumed.executed, [])
+        attempts = list((self.output / "attempts").iterdir())
+        self.assertEqual(len(attempts), 2)
+        recovered = next(path for path in attempts if path != original_attempt)
+        recovered_capture = json.loads(
+            (recovered / "capture.json").read_text()
+        )["payload"]
+        self.assertIsNone(recovered_capture["error"])
+        self.assertIsNotNone(recovered_capture["observation"])
+        self.assertTrue((recovered / "native-rollouts" / "supplement.json").is_file())
+
+    def test_invalid_codex_capture_replays_retained_rollouts_after_session_cleanup(self):
+        value, callbacks, original_attempt, rollout_labels = \
+            retained_invalid_codex_capture(self)
+        replay, resumed = replay_retained_codex_capture(self, value, callbacks)
+
+        self.assertEqual(replay["counts"]["passes"], 1, replay)
+        self.assertEqual(replay["counts"]["regraded"], 1)
+        self.assertEqual(replay["counts"]["subject_launches"], 0)
+        self.assertEqual(resumed.executed, [])
+        recovered = next(
+            path for path in (self.output / "attempts").iterdir()
+            if path != original_attempt
+        )
+        recovered_capture = json.loads(
+            (recovered / "capture.json").read_text()
+        )["payload"]
+        self.assertTrue(rollout_labels.issubset(recovered_capture["evidence"]))
+
+    def test_retained_rollout_reference_index_fails_closed(self):
+        label = execution._rollout_label(ROOT_THREAD)
+        reference = {"path": "native-rollouts/root.jsonl", "sha256": "0" * 64}
+        self.assertEqual(
+            execution._retained_rollout_thread_ids({label: reference}),
+            (ROOT_THREAD,),
+        )
+        for refs in (
+            {"codex_rollout_not_a_uuid": reference},
+            {"codex_rollout_AAAAAAAA_AAAA_AAAA_AAAA_AAAAAAAAAAAA": reference},
+            {label: None},
+        ):
+            with self.subTest(refs=refs), self.assertRaises(ValueError):
+                execution._retained_rollout_thread_ids(refs)
 
     def test_nested_order_check_is_invalid_when_cross_thread_timeline_is_ambiguous(self):
         value = case(resource_class="nested")
@@ -3625,209 +5580,225 @@ class NativeExecutionTests(unittest.TestCase):
                 self.assertEqual(report["counts"]["passes"], 0)
 
     def test_plan_repair_context_binds_exact_dispatch_and_causal_rerun(self):
-        request = {
-            "schema_version": "1.0", "request_id": "plan-repair-g3",
-            "helper_id": "validate-gate", "operation": "validate-gate",
-            "mode": "read_only", "inputs": {"gate": "G3", "feature_dir": "feature"},
-        }
-        contexts = {
-            "original-prompt": "Design the original human requirement.\n",
-            "architecture": "No delivery callback is currently available.\n",
-        }
-
-        def response(passed):
-            return {
-                "schema_version": "1.0", "request_id": request["request_id"],
-                "status": "success" if passed else "expected_failure", "exit_code": 0 if passed else 1,
-                "data": {"stdin_request": {key: value for key, value in request.items()
-                                             if key != "request_id"},
-                         "stdout_json": {"gate": "G3", "pass": passed, "markers": 0 if passed else 1}},
-            }
-
-        initial, repaired = response(False), response(True)
-        message = "\n".join([*contexts.values(), json.dumps(initial, indent=2)])
-        command = "python3 -m speckit_pro_runner < scenario-inputs/g3-request.json"
-        calls = [
-            {"id": "g3-initial", "name": "Bash", "input": {"command": command},
-             "output": json.dumps({"code": "validation_failure"}) + "\n" + json.dumps(initial),
-             "success": False, "position": 1, "parent_id": None},
-            {"id": "repair", "name": "subagent",
-             "input": {"prompt": message, "subagent_type": "phase-executor"},
-             "output": "repair complete", "success": True, "position": 3, "parent_id": None},
-            {"id": "g3-rerun", "name": "Bash", "input": {"command": command},
-             "output": json.dumps(repaired), "success": True, "position": 5, "parent_id": None},
-        ]
-        completions = []
-        for index, call in enumerate(calls):
-            encoded = json.dumps(call["output"], sort_keys=True, separators=(",", ":")).encode()
-            completions.append({
-                "tool_call_index": index, "id": call["id"],
-                "native_name": "Agent" if index == 1 else "Bash",
-                "tool_use_position": call["position"],
-                "tool_result_position": call["position"] + 1,
-                "output_sha256": hashlib.sha256(encoded).hexdigest(),
-                "output_bytes": len(encoded),
-            })
-        observation = {
-            "completed": True, "error": None, "final_text": "done", "activations": [],
-            "tool_calls": calls, "artifacts": {}, "usage": {},
-            "native_metadata": {"claude_tool_results": completions},
-        }
-        check = {
-            "id": "repair-context", "requirement": "r1",
-            "type": "native_plan_repair_context",
-            "contexts": {"original-prompt": "scenario-inputs/original.md",
-                         "architecture": "scenario-inputs/architecture.md"},
-            "g3_request_path": "scenario-inputs/g3-request.json",
-            "executor_role": "phase-executor", "max_repairs": 2,
-            "terminal_outcome": "pass",
-        }
-        value = {"requirements": [{"id": "r1"}], "checks": [check]}
-        fixture_values = {
-            "scenario-inputs/original.md": contexts["original-prompt"],
-            "scenario-inputs/architecture.md": contexts["architecture"],
-            "scenario-inputs/g3-request.json": json.dumps(request),
-        }
-        sealed = {path: {"text": text, "bytes": len(text.encode()),
-                         "sha256": hashlib.sha256(text.encode()).hexdigest()}
-                  for path, text in fixture_values.items()}
-        launch = {
-            "cwd": "/private/tmp/plugin", "runtime_identity": {"settings": {
-                "native_toolchain": {"launchers": {"python3": {"path": "bin/python3"}}},
-            }},
-            "native_plan_repair_inputs": {
-                "schema": "native-plan-repair-sealed-inputs/v1",
-                "authority": "controller-before-subject-launch", "fixtures": sealed,
-            },
-        }
-        execution._bind_subagent_return_order("claude", observation)
-        execution._bind_plan_repair_context(value, "claude", observation, launch)
-        self.assertEqual(execution.grade_observation(value, observation, host="claude")["status"],
+        fixture = _claude_plan_repair_fixture()
+        execution._bind_subagent_return_order("claude", fixture.observation)
+        execution._bind_plan_repair_context(
+            fixture.value, "claude", fixture.observation, fixture.launch,
+        )
+        self.assertEqual(execution.grade_observation(
+            fixture.value, fixture.observation, host="claude",
+        )["status"],
                          "pass")
-        receipt = observation["native_metadata"]["native_plan_repair_context"]
-        self.assertNotIn(message, json.dumps(receipt))
+        receipt = fixture.observation["native_metadata"]["native_plan_repair_context"]
+        self.assertNotIn(fixture.message, json.dumps(receipt))
 
+    def test_plan_repair_context_accepts_claude_transport_envelopes(self):
+        fixture = _claude_plan_repair_fixture()
+        execution._bind_subagent_return_order("claude", fixture.observation)
+        sealed_claude = copy.deepcopy(fixture.observation)
+        sealed_claude["tool_calls"][2]["input"]["prompt"] = json.dumps(
+            fixture.rendered, separators=(",", ":"),
+        )
+        execution._bind_plan_repair_context(
+            fixture.value, "claude", sealed_claude, fixture.launch,
+        )
+        sealed_grade = execution.grade_observation(
+            fixture.value, sealed_claude, host="claude",
+        )
+        self.assertEqual(sealed_grade["status"], "pass", sealed_grade)
+        self.assertEqual(
+            sealed_claude["native_metadata"]["native_plan_repair_context"]["checks"][0][
+                "dispatches"
+            ][0]["context_proof"]["context_transport"],
+            "sealed_runner_envelope",
+        )
+
+        framed_claude = copy.deepcopy(fixture.observation)
+        framed_claude["tool_calls"][2]["input"]["prompt"] = (
+            "Claude native dispatch framing\n"
+            + json.dumps(fixture.rendered, separators=(",", ":"))
+            + "\nUse the embedded renderer response."
+        )
+        execution._bind_plan_repair_context(
+            fixture.value, "claude", framed_claude, fixture.launch,
+        )
+        framed_grade = execution.grade_observation(
+            fixture.value, framed_claude, host="claude",
+        )
+        self.assertEqual(framed_grade["status"], "pass", framed_grade)
+        self.assertEqual(
+            framed_claude["native_metadata"]["native_plan_repair_context"]["checks"][0][
+                "dispatches"
+            ][0]["context_proof"]["context_transport"],
+            "claude_framed_renderer_envelope",
+        )
+
+    def test_plan_repair_context_enforces_claude_executor_role(self):
+        fixture = _claude_plan_repair_fixture()
+        execution._bind_subagent_return_order("claude", fixture.observation)
+        execution._bind_plan_repair_context(
+            fixture.value, "claude", fixture.observation, fixture.launch,
+        )
         for native_role, expected in (
             ("speckit-pro:phase-executor", "pass"),
             ("foreign:phase-executor", "fail"),
             ("speckit-pro:other-executor", "fail"),
         ):
             with self.subTest(native_role=native_role):
-                variant = copy.deepcopy(observation)
+                variant = copy.deepcopy(fixture.observation)
                 del variant["native_metadata"]["native_plan_repair_context"]
-                variant["tool_calls"][1]["input"]["subagent_type"] = native_role
-                execution._bind_plan_repair_context(value, "claude", variant, launch)
+                variant["tool_calls"][2]["input"]["subagent_type"] = native_role
+                execution._bind_plan_repair_context(
+                    fixture.value, "claude", variant, fixture.launch,
+                )
                 self.assertEqual(
-                    execution.grade_observation(value, variant, host="claude")["status"], expected,
+                    execution.grade_observation(
+                        fixture.value, variant, host="claude",
+                    )["status"], expected,
                 )
 
-        float_limit = copy.deepcopy(value)
+    def test_plan_repair_context_rejects_invalid_claude_contract_values(self):
+        fixture = _claude_plan_repair_fixture()
+        execution._bind_subagent_return_order("claude", fixture.observation)
+        execution._bind_plan_repair_context(
+            fixture.value, "claude", fixture.observation, fixture.launch,
+        )
+        float_limit = copy.deepcopy(fixture.value)
         float_limit["checks"][0]["max_repairs"] = 2.0
         self.assertEqual(
-            execution.grade_observation(float_limit, observation, host="claude")["status"],
+            execution.grade_observation(
+                float_limit, fixture.observation, host="claude",
+            )["status"],
             "invalid",
         )
 
-        missing = copy.deepcopy(observation)
-        del missing["native_metadata"]["native_plan_repair_context"]
-        missing["tool_calls"][1]["input"]["prompt"] = (
-            contexts["original-prompt"] + json.dumps(initial)
+        arbitrary = copy.deepcopy(fixture.observation)
+        del arbitrary["native_metadata"]["native_plan_repair_context"]
+        arbitrary_response = {**fixture.initial, "status": "input_error"}
+        arbitrary["tool_calls"][0]["output"] = (
+            "Exit code 1\n" + json.dumps(arbitrary_response)
         )
-        execution._bind_plan_repair_context(value, "claude", missing, launch)
-        self.assertEqual(execution.grade_observation(value, missing, host="claude")["status"],
-                         "fail")
+        with self.assertRaisesRegex(
+            ValueError, "expected-nonzero response is malformed",
+        ):
+            execution._bind_plan_repair_context(
+                fixture.value, "claude", arbitrary, fixture.launch,
+            )
 
-        late = copy.deepcopy(observation)
+    def test_plan_repair_context_rejects_missing_or_out_of_order_claude_evidence(self):
+        fixture = _claude_plan_repair_fixture()
+        execution._bind_subagent_return_order("claude", fixture.observation)
+        execution._bind_plan_repair_context(
+            fixture.value, "claude", fixture.observation, fixture.launch,
+        )
+        missing = copy.deepcopy(fixture.observation)
+        del missing["native_metadata"]["native_plan_repair_context"]
+        missing["tool_calls"][2]["input"]["prompt"] = (
+            fixture.contexts["original-prompt"] + json.dumps(fixture.initial)
+        )
+        execution._bind_plan_repair_context(
+            fixture.value, "claude", missing, fixture.launch,
+        )
+        self.assertEqual(execution.grade_observation(
+            fixture.value, missing, host="claude",
+        )["status"], "fail")
+
+        late = copy.deepcopy(fixture.observation)
         late_receipt = late["native_metadata"]["native_plan_repair_context"]["checks"][0]
-        late_receipt["dispatches"][0]["returned"] = 6
-        self.assertEqual(execution.grade_observation(value, late, host="claude")["status"],
-                         "fail")
+        late_receipt["dispatches"][0]["returned"] = 7
+        self.assertEqual(execution.grade_observation(
+            fixture.value, late, host="claude",
+        )["status"], "fail")
+
+        unwrapped = copy.deepcopy(fixture.observation)
+        del unwrapped["native_metadata"]["native_plan_repair_context"]
+        unwrapped["tool_calls"][0]["output"] = json.dumps(fixture.initial)
+        execution._bind_plan_repair_context(
+            fixture.value, "claude", unwrapped, fixture.launch,
+        )
+        self.assertEqual(
+            execution.grade_observation(
+                fixture.value, unwrapped, host="claude",
+            )["status"],
+            "fail",
+        )
 
     def test_codex_plan_repair_context_binds_raw_message_to_opaque_native_input(self):
-        request = {"schema_version": "1.0", "request_id": "g3", "helper_id": "validate-gate",
-                   "operation": "validate-gate", "mode": "read_only",
-                   "inputs": {"gate": "G3", "feature_dir": "feature"}}
+        fixture = _codex_plan_repair_fixture()
+        execution._bind_plan_repair_context(
+            fixture.value, "codex", fixture.observation, fixture.launch, fixture.trace,
+        )
+        codex_grade = execution.grade_observation(
+            fixture.value, fixture.observation, host="codex",
+        )
+        self.assertEqual(codex_grade["status"], "pass", codex_grade)
+        receipt = fixture.observation["native_metadata"]["native_plan_repair_context"]
+        self.assertNotIn(fixture.message, json.dumps(receipt))
+        self.assertEqual(
+            receipt["checks"][0]["dispatches"][0]["opaque_task_input"], fixture.opaque,
+        )
 
-        def response(passed):
-            return {"schema_version": "1.0", "request_id": "g3",
-                    "data": {"stdin_request": {key: value for key, value in request.items()
-                                                if key != "request_id"},
-                             "stdout_json": {"pass": passed}}}
+    def test_codex_plan_repair_context_accepts_supported_transports(self):
+        fixture = _codex_plan_repair_fixture()
+        sealed_message = json.dumps(fixture.rendered, separators=(",", ":"))
+        sealed_observation = _codex_plan_repair_variant(fixture, sealed_message)
+        self.assertEqual(
+            execution.grade_observation(
+                fixture.value, sealed_observation, host="codex",
+            )["status"],
+            "pass",
+        )
+        sealed_proof = sealed_observation["native_metadata"][
+            "native_plan_repair_context"
+        ]["checks"][0]["dispatches"][0]["context_proof"]
+        self.assertEqual(sealed_proof["context_transport"], "sealed_runner_envelope")
+        self.assertEqual(
+            sealed_proof["message_sha256"],
+            hashlib.sha256(sealed_message.encode("utf-8")).hexdigest(),
+        )
 
-        context = "Original Plan prompt"
-        initial, rerun = response(False), response(True)
-        message = context + "\n" + json.dumps(initial)
-        encoded_message = json.dumps(message, sort_keys=True, separators=(",", ":")).encode()
-        opaque = {"kind": "opaque", "sha256": hashlib.sha256(encoded_message).hexdigest(),
-                  "bytes": len(encoded_message)}
-        delivery_text = b"repair complete"
-        delivery = {"turn_id": ROOT_TURN, "author": "/root/repair", "recipient": "/root",
-                    "native_event_index": 9, "bytes": len(delivery_text),
-                    "sha256": hashlib.sha256(delivery_text).hexdigest()}
-        command = ["/bin/zsh", "-c",
-                   "python3 -m speckit_pro_runner < scenario-inputs/g3-request.json"]
-        calls = [
-            {"id": "g3-0", "name": "command_execution", "input": {"command": command},
-             "output": json.dumps(initial), "success": False, "position": 0, "parent_id": None},
-            {"id": "repair", "name": "subagent", "input": {"role": "phase-executor",
-             "task_input": opaque}, "output": {"status": "completed"}, "success": True,
-             "position": 1, "parent_id": None},
-            {"id": "g3-1", "name": "command_execution", "input": {"command": command},
-             "output": json.dumps(rerun), "success": True, "position": 2, "parent_id": None},
-        ]
-        observation = {
-            "completed": True, "error": None, "final_text": "done", "activations": [],
-            "tool_calls": calls, "artifacts": {}, "usage": {}, "native_metadata": {
-                "nested_rollout": {"root_thread_id": ROOT_THREAD,
-                    "raw_sha256": {ROOT_THREAD: "a" * 64},
-                    "dispatches": [{"id": "repair", "parent_thread_id": ROOT_THREAD,
-                                    "task_input": opaque, "delivery": delivery}]},
-                "subagent_return_order": {"schema": "native-subagent-return-order/v1",
-                    "scope": "direct-root-only", "parent_file_changes": [], "returns": [{
-                        "tool_call_index": 1, "call_id": "repair",
-                        "authority": "codex-parent-delivery", "native_stream": ROOT_THREAD,
-                        "native_turn": ROOT_TURN, "completion_index": 9,
-                        "content_sha256": delivery["sha256"], "content_bytes": delivery["bytes"],
-                        "content_nonempty": True,
-                    }]},
-            },
-        }
-        check = {"id": "context", "requirement": "r1",
-                 "type": "native_plan_repair_context",
-                 "contexts": {"original": "scenario-inputs/original.md"},
-                 "g3_request_path": "scenario-inputs/g3-request.json",
-                 "executor_role": "phase-executor", "max_repairs": 2,
-                 "terminal_outcome": "pass"}
-        value = {"requirements": [{"id": "r1"}], "checks": [check]}
-        fixtures = {"scenario-inputs/original.md": context,
-                    "scenario-inputs/g3-request.json": json.dumps(request)}
-        sealed = {path: {"text": text, "bytes": len(text.encode()),
-                         "sha256": hashlib.sha256(text.encode()).hexdigest()}
-                  for path, text in fixtures.items()}
-        launch = {"runtime_identity": {"settings": {"codex_runtime": {"python": {
-            "python3_command": "python3", "python3_path": "/protected/bin/python3",
-            "executable": "/protected/bin/python3.11",
-        }}}}, "native_plan_repair_inputs": {
-            "schema": "native-plan-repair-sealed-inputs/v1",
-            "authority": "controller-before-subject-launch", "fixtures": sealed,
-        }}
-        trace = {"schema": "codex-native-plan-repair-trace/v1",
-                 "root_thread_id": ROOT_THREAD, "raw_sha256": "a" * 64,
-                 "commands": [
-                     {"id": "g3-0", "started_at_ns": 1, "completed_at_ns": 2,
-                      "input": {"command": command}, "output": {"stdout": json.dumps(initial)}},
-                     {"id": "g3-1", "started_at_ns": 7, "completed_at_ns": 8,
-                      "input": {"command": command}, "output": {"stdout": json.dumps(rerun)}},
-                 ],
-                 "dispatches": [{"id": "repair", "role": "phase-executor",
-                                  "message": message, "task_input": opaque,
-                                  "invoked_at_ns": 3, "returned_at_ns": 6}]}
-        execution._bind_plan_repair_context(value, "codex", observation, launch, trace)
-        self.assertEqual(execution.grade_observation(value, observation, host="codex")["status"],
-                         "pass")
-        receipt = observation["native_metadata"]["native_plan_repair_context"]
-        self.assertNotIn(message, json.dumps(receipt))
-        self.assertEqual(receipt["checks"][0]["dispatches"][0]["opaque_task_input"], opaque)
+        encrypted_message = "gAAAAABencrypted-native-child-prompt"
+        receipt_text = (
+            f"repair complete\nPLAN_REPAIR_CONTEXT_SHA256={fixture.context_digest}"
+        )
+        encrypted_observation = _codex_plan_repair_variant(
+            fixture, encrypted_message, receipt_text,
+        )
+        encrypted_grade = execution.grade_observation(
+            fixture.value, encrypted_observation, host="codex",
+        )
+        self.assertEqual(encrypted_grade["status"], "pass", encrypted_grade)
+        encrypted_proof = encrypted_observation["native_metadata"][
+            "native_plan_repair_context"
+        ]["checks"][0]["dispatches"][0]["context_proof"]
+        self.assertEqual(
+            encrypted_proof["context_transport"],
+            "encrypted_native_with_child_receipt",
+        )
+        self.assertTrue(encrypted_proof["child_return_digest_bound"])
+
+    def test_codex_plan_repair_context_rejects_unbound_child_receipt(self):
+        fixture = _codex_plan_repair_fixture()
+        encrypted_message = "gAAAAABencrypted-native-child-prompt"
+        receipt_text = (
+            f"repair complete\nPLAN_REPAIR_CONTEXT_SHA256={fixture.context_digest}"
+        )
+        encrypted_observation = _codex_plan_repair_variant(
+            fixture, encrypted_message, receipt_text,
+        )
+        missing_receipt = copy.deepcopy(encrypted_observation)
+        missing_receipt["native_metadata"]["native_plan_repair_context"]["checks"][0][
+            "dispatches"
+        ][0]["context_proof"]["child_return_digest_bound"] = False
+        missing_receipt["native_metadata"]["native_plan_repair_context"]["checks"][0][
+            "dispatches"
+        ][0]["context_proof"]["renderer_bound"] = False
+        self.assertEqual(
+            execution.grade_observation(
+                fixture.value, missing_receipt, host="codex",
+            )["status"],
+            "fail",
+        )
 
     def test_plan_repair_sealing_rejects_unavailable_or_changed_trusted_fixture(self):
         fixture = self.repo / "plan-context.md"
@@ -3837,7 +5808,8 @@ class NativeExecutionTests(unittest.TestCase):
                                 "destination": "scenario-inputs/context.md"}],
                  "checks": [{"id": "context", "type": "native_plan_repair_context",
                               "contexts": {"plan": "scenario-inputs/context.md"},
-                              "g3_request_path": "scenario-inputs/context.md"}]}
+                              "g3_request_path": "scenario-inputs/context.md",
+                              "context_request_path": "scenario-inputs/context.md"}]}
         prepared = SimpleNamespace(runtime_identity={"settings": {"fixture_read_witnesses": {
             "scenario-inputs/context.md": {"bytes": len(body),
                                              "sha256": hashlib.sha256(body).hexdigest()},

@@ -1,0 +1,7 @@
+{
+  "finding_id": "A",
+  "selection": "installed-capability",
+  "fit": "high",
+  "source_kind": "authoritative_direct",
+  "evidence": "The authoritative source states the required limit directly."
+}

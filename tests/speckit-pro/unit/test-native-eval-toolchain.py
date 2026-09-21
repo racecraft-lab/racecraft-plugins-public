@@ -7,6 +7,7 @@ from dataclasses import replace
 import json
 import os
 from pathlib import Path
+import shutil
 import stat
 import subprocess
 import sys
@@ -53,13 +54,20 @@ class NativeEvalToolchainTests(unittest.TestCase):
                 import runpy
                 import sys
 
-                if sys.argv[1:] == ["--version"]:
+                args = sys.argv[1:]
+                while args and args[0] in {{"-B", "-I", "-P", "-s"}}:
+                    args = args[1:]
+
+                if args == ["--version"]:
                     print("Python 3.13.13")
-                elif len(sys.argv) >= 3 and sys.argv[1] == "-I":
-                    sys.argv = sys.argv[2:]
-                    runpy.run_path(sys.argv[0], run_name="__main__")
-                elif len(sys.argv) == 3 and Path(sys.argv[1]).name == "specify" and sys.argv[2] == "--version":
+                elif len(args) == 2 and Path(args[0]).name == "specify" and args[1] == "--version":
                     print("specify 1.0.1")
+                elif len(args) >= 2 and args[:2] == ["-m", "speckit_pro_runner"]:
+                    sys.argv = args[1:]
+                    runpy.run_module("speckit_pro_runner", run_name="__main__", alter_sys=True)
+                elif args and Path(args[0]) != Path({str(self.root / 'installed-tools' / 'specify-cli' / 'bin' / 'specify')!r}) and Path(args[0]).name in {{"python3", "specify"}} and ".native-toolchain" not in Path(args[0]).parts:
+                    sys.argv = args
+                    runpy.run_path(sys.argv[0], run_name="__main__")
                 else:
                     Path({str(self.capture)!r}).write_text(json.dumps({{
                         "argv": sys.argv,
@@ -142,8 +150,20 @@ class NativeEvalToolchainTests(unittest.TestCase):
     def _plugin(self, name: str) -> Path:
         plugin = self.root / name
         plugin.mkdir()
+        self._install_claude_plugin(plugin)
         os.chmod(plugin, 0o700)
         return plugin
+
+    def _install_claude_plugin(self, plugin: Path) -> None:
+        shutil.copytree(
+            REPO_ROOT / "speckit-pro" / "speckit_pro_runner",
+            plugin / "speckit_pro_runner",
+            ignore=shutil.ignore_patterns("__pycache__", "*.pyc"),
+        )
+        shutil.copytree(
+            REPO_ROOT / "speckit-pro" / ".claude-plugin",
+            plugin / ".claude-plugin",
+        )
 
     def prepare(
         self,
@@ -176,6 +196,7 @@ class NativeEvalToolchainTests(unittest.TestCase):
         self.assertEqual(
             prepared.environment,
             {
+                "GIT_CONFIG_NOSYSTEM": "1",
                 "PYTHONDONTWRITEBYTECODE": "1",
                 "PYTHONNOUSERSITE": "1",
                 "PYTHONSAFEPATH": "1",
@@ -409,6 +430,7 @@ class NativeEvalToolchainTests(unittest.TestCase):
         for environment in (
             {**prepared.environment, "PYTHONPATH": "/untrusted"},
             {**prepared.environment, "PYTHONDONTWRITEBYTECODE": "0"},
+            {**prepared.environment, "GIT_CONFIG_NOSYSTEM": "0"},
             {},
         ):
             with self.subTest(environment=environment):
@@ -462,13 +484,25 @@ class NativeEvalToolchainTests(unittest.TestCase):
         self.assertEqual(prepared.path_entries, (plugin / "bin",))
         self.assertEqual(
             prepared.readonly_roots,
-            (plugin / ".native-toolchain", plugin / "bin"),
+            (
+                plugin / ".native-toolchain",
+                plugin / "bin",
+                plugin / "speckit_pro_runner",
+            ),
         )
         self.assertEqual(prepared.launchers["specify"], plugin / "bin" / "specify")
         identity = prepared.runtime_identity
         self.assertEqual(identity["schema_version"], "native-eval-toolchain/claude-plugin-v1")
         self.assertEqual(identity["transport"], "claude-plugin-bin")
         self.assertEqual(identity["staged"]["python"]["path"], ".native-toolchain/python")
+        self.assertEqual(
+            identity["staged"]["runner"]["path"],
+            "speckit_pro_runner",
+        )
+        self.assertEqual(
+            identity["staged"]["runner"]["version"],
+            "speckit-pro-runner 0.1.0",
+        )
         self.assertEqual(identity["staged"]["specify"]["path"], ".native-toolchain/specify")
         self.assertNotIn(str(plugin), json.dumps(identity["staged"], sort_keys=True))
         self.assertNotIn(str(self.python_root), prepared.launchers["specify"].read_text())
@@ -491,6 +525,249 @@ class NativeEvalToolchainTests(unittest.TestCase):
             prepared.launchers["specify"].read_bytes(),
             moved_prepared.launchers["specify"].read_bytes(),
         )
+
+    def test_claude_plugin_python_executes_staged_runner_without_pythonpath(self) -> None:
+        plugin = self._plugin("direct-runner-plugin")
+        prepared = prepare_claude_plugin_toolchain(
+            plugin,
+            required_tools=("specify",),
+            specify_executable=self.specify_candidate,
+        )
+        fixture = self._workspace("direct-runner-cwd")
+        shadow = fixture / "speckit_pro_runner"
+        shadow.mkdir()
+        (shadow / "__init__.py").write_text("", encoding="utf-8")
+        (shadow / "__main__.py").write_text(
+            "print('shadowed-runner')\n",
+            encoding="utf-8",
+        )
+        environment = {
+            "PATH": f"{plugin / 'bin'}:/usr/bin:/bin",
+            "GIT_CONFIG_COUNT": "1",
+            "GIT_CONFIG_GLOBAL": str(self.root / "hostile.gitconfig"),
+            "GIT_CONFIG_KEY_0": "core.hooksPath",
+            "GIT_CONFIG_NOSYSTEM": "0",
+            "GIT_CONFIG_VALUE_0": str(self.root / "hostile-hooks"),
+            "GIT_DIR": str(self.root / "hostile-git-dir"),
+            "PYTHONPATH": str(fixture),
+            "PYTHONUSERBASE": str(fixture / "poisoned-user-base"),
+        }
+
+        result = subprocess.run(
+            ["python3", "-m", "speckit_pro_runner", "--version"],
+            cwd=fixture,
+            env=environment,
+            capture_output=True,
+            text=True,
+            timeout=10,
+            check=False,
+        )
+
+        self.assertEqual(
+            (result.returncode, result.stdout.strip(), result.stderr),
+            (0, "speckit-pro-runner 0.1.0", ""),
+        )
+
+        environment_probe = subprocess.run(
+            ["python3", "-c", "ignored-by-fixture-runtime"],
+            cwd=fixture,
+            env=environment,
+            capture_output=True,
+            text=True,
+            timeout=10,
+            check=False,
+        )
+        self.assertEqual(
+            (environment_probe.returncode, environment_probe.stdout, environment_probe.stderr),
+            (0, "", ""),
+        )
+        captured_environment = json.loads(
+            self.capture.read_text(encoding="utf-8")
+        )["environment"]
+        self.assertEqual(
+            {
+                key: value
+                for key, value in captured_environment.items()
+                if key.startswith("GIT_")
+            },
+            {"GIT_CONFIG_NOSYSTEM": "1"},
+        )
+
+        requests = {
+            "preflight.json": {
+                "schema_version": "1.0",
+                "request_id": "direct-preflight",
+                "helper_id": "runner",
+                "operation": "preflight",
+                "mode": "read_only",
+                "inputs": {},
+            },
+            "helper.json": {
+                "schema_version": "1.0",
+                "request_id": "direct-helper",
+                "helper_id": "helper-registry-dispatch",
+                "operation": "helper-registry-dispatch",
+                "mode": "read_only",
+                "inputs": {},
+            },
+        }
+        responses = {}
+        for name, request in requests.items():
+            request_path = fixture / name
+            request_path.write_text(json.dumps(request), encoding="utf-8")
+            with request_path.open("rb") as request_input:
+                completed = subprocess.run(
+                    ["python3", "-m", "speckit_pro_runner"],
+                    cwd=fixture,
+                    env=environment,
+                    stdin=request_input,
+                    capture_output=True,
+                    text=False,
+                    timeout=10,
+                    check=False,
+                )
+            self.assertEqual(
+                (completed.returncode, completed.stderr),
+                (0, b""),
+                completed.stdout.decode("utf-8", errors="replace"),
+            )
+            responses[name] = json.loads(completed.stdout)
+
+        preflight = responses["preflight.json"]
+        self.assertEqual(preflight["status"], "ok")
+        report = preflight["data"]["report"]
+        self.assertEqual(report["metadata"]["verification_status"], "verified")
+        self.assertEqual(report["paths"]["plugin_root"]["value"], ".")
+        helpers = responses["helper.json"]["data"]["helpers"]
+        self.assertTrue(helpers)
+        self.assertEqual(
+            [record["helper_id"] for record in helpers],
+            sorted(record["helper_id"] for record in helpers),
+        )
+        verify_native_toolchain(prepared)
+
+    def test_claude_plugin_python_supports_clean_git_mutation_check(self) -> None:
+        plugin = self._plugin("git-smoke-plugin")
+        prepare_claude_plugin_toolchain(
+            plugin,
+            required_tools=("specify",),
+            specify_executable=self.specify_candidate,
+        )
+        fixture = self.root / "git-smoke-cwd"
+        fixture.mkdir()
+        probe = fixture / "python3"
+        probe.write_text(
+            textwrap.dedent(
+                """\
+                import json
+                import os
+                from pathlib import Path
+
+                from speckit_pro_runner.helpers.mutation import git_worktree_status
+
+                print(json.dumps({
+                    "git_environment": {
+                        key: value
+                        for key, value in os.environ.items()
+                        if key.startswith("GIT_")
+                    },
+                    "worktree_dirty": git_worktree_status(Path.cwd()),
+                }, sort_keys=True))
+                """
+            ),
+            encoding="utf-8",
+        )
+        git_environment = {
+            "PATH": os.environ.get("PATH", "/usr/bin:/bin"),
+            "HOME": str(fixture),
+            "GIT_CONFIG_NOSYSTEM": "1",
+            "GIT_CONFIG_GLOBAL": os.devnull,
+            "GIT_TERMINAL_PROMPT": "0",
+        }
+        git_commands = (
+            ["git", "init", "--quiet"],
+            ["git", "add", probe.name],
+            [
+                "git",
+                "-c",
+                "user.name=runner",
+                "-c",
+                "user.email=support@openai.com",
+                "-c",
+                "commit.gpgsign=false",
+                "commit",
+                "--quiet",
+                "--message=fixture",
+            ],
+        )
+        for command in git_commands:
+            initialized = subprocess.run(
+                command,
+                cwd=fixture,
+                env=git_environment,
+                capture_output=True,
+                text=True,
+                timeout=10,
+                check=False,
+            )
+            self.assertEqual(
+                initialized.returncode,
+                0,
+                f"{command!r}: {initialized.stderr}",
+            )
+
+        environment = {
+            "PATH": f"{plugin / 'bin'}:/usr/bin:/bin",
+            "GIT_CONFIG_COUNT": "1",
+            "GIT_CONFIG_GLOBAL": str(self.root / "hostile.gitconfig"),
+            "GIT_CONFIG_KEY_0": "core.hooksPath",
+            "GIT_CONFIG_NOSYSTEM": "0",
+            "GIT_CONFIG_VALUE_0": str(self.root / "hostile-hooks"),
+            "GIT_DIR": str(self.root / "hostile-git-dir"),
+        }
+        completed = subprocess.run(
+            ["python3", str(probe)],
+            cwd=fixture,
+            env=environment,
+            capture_output=True,
+            text=True,
+            timeout=10,
+            check=False,
+        )
+        self.assertEqual(
+            (completed.returncode, completed.stderr),
+            (0, ""),
+            completed.stdout,
+        )
+        self.assertEqual(
+            json.loads(completed.stdout),
+            {
+                "git_environment": {"GIT_CONFIG_NOSYSTEM": "1"},
+                "worktree_dirty": False,
+            },
+        )
+
+    def test_claude_plugin_runtime_rejects_staged_runner_tamper(self) -> None:
+        plugin = self._plugin("runner-tamper-plugin")
+        prepared = prepare_claude_plugin_toolchain(
+            plugin,
+            required_tools=("specify",),
+            specify_executable=self.specify_candidate,
+        )
+        runner_file = (
+            plugin
+            / "speckit_pro_runner"
+            / "__init__.py"
+        )
+        cursor = runner_file.parent
+        while cursor != plugin:
+            os.chmod(cursor, 0o700)
+            cursor = cursor.parent
+        os.chmod(runner_file, 0o600)
+        runner_file.write_text("RUNNER_VERSION = 'tampered'\n", encoding="utf-8")
+
+        with self.assertRaisesRegex(NativeToolchainError, "probe|staged|changed"):
+            verify_native_toolchain(prepared)
 
     def test_claude_plugin_launcher_forwards_arguments_and_closes_environment(self) -> None:
         plugin = self._plugin("plugin-launch")
@@ -628,6 +905,66 @@ class NativeEvalToolchainTests(unittest.TestCase):
             hidden_specify.rename(self.specify_root)
             hidden_python.rename(self.python_root)
         self.assertEqual((result.returncode, result.stdout.strip()), (0, "specify 1.0.1"))
+
+    def test_python_runtime_receipts_ignore_only_generated_bytecode_caches(self) -> None:
+        library = self.python_root / "lib" / "python3.13"
+        cache = library / "multiprocessing" / "__pycache__"
+        cache.mkdir(parents=True)
+        (cache / "stale.cpython-313.pyc").write_bytes(b"stale-bytecode")
+        (library / "legacy.pyc").write_bytes(b"legacy-bytecode")
+
+        plugin = self._plugin("bytecode-cache-plugin")
+        prepared = prepare_claude_plugin_toolchain(
+            plugin,
+            required_tools=("specify",),
+            specify_executable=self.specify_candidate,
+        )
+        staged_python = plugin / ".native-toolchain" / "python"
+        self.assertFalse(any(staged_python.rglob("__pycache__")))
+        self.assertFalse(any(staged_python.rglob("*.pyc")))
+
+        (cache / "synchronize.cpython-313.pyc").write_bytes(b"new-bytecode")
+        (cache / "forkserver.cpython-313.pyc").write_bytes(b"more-bytecode")
+        verify_native_toolchain(prepared)
+
+        specify_cache = self.specify_root / "lib" / "python3.13" / "__pycache__"
+        specify_cache.mkdir()
+        (specify_cache / "unexpected.cpython-313.pyc").write_bytes(b"tool-bytecode")
+        with self.assertRaisesRegex(
+            NativeToolchainError, "installed native toolchain changed after preparation"
+        ):
+            verify_native_toolchain(prepared)
+
+    def test_python_runtime_receipts_still_reject_non_cache_drift(self) -> None:
+        source = self.python_root / "lib" / "python3.13" / "runtime_source.py"
+        source.parent.mkdir(parents=True)
+        source.write_text("value = 1\n", encoding="utf-8")
+        plugin = self._plugin("python-drift-plugin")
+        prepared = prepare_claude_plugin_toolchain(
+            plugin,
+            required_tools=("specify",),
+            specify_executable=self.specify_candidate,
+        )
+
+        cache = source.parent / "__pycache__"
+        cache.mkdir()
+        (cache / "runtime_source.cpython-313.pyc").write_bytes(b"generated")
+        verify_native_toolchain(prepared)
+
+        source.write_text("value = 2\n", encoding="utf-8")
+        with self.assertRaisesRegex(
+            NativeToolchainError, "installed native toolchain changed after preparation"
+        ):
+            verify_native_toolchain(prepared)
+        source.write_text("value = 1\n", encoding="utf-8")
+        verify_native_toolchain(prepared)
+
+        ordinary = source.parent / "ordinary.cache"
+        ordinary.write_bytes(b"not-python-bytecode")
+        with self.assertRaisesRegex(
+            NativeToolchainError, "installed native toolchain changed after preparation"
+        ):
+            verify_native_toolchain(prepared)
 
 
 if __name__ == "__main__":

@@ -22,6 +22,50 @@ from speckit_pro_runner.execution_control import execution_control  # noqa: E402
 from speckit_pro_runner.helpers.read_only import json_schema_failures  # noqa: E402
 
 
+class LiveCanaryRegressionTests(unittest.TestCase):
+    def test_claude_explicit_loader_does_not_reinvoke_the_active_skill(self):
+        shared = (SHARED / "SKILL.md").read_text()
+        boundary = " ".join(shared.split("## Explicit Invocation Boundary", 1)[1].split(
+            "## Installed Runtime Contract", 1
+        )[0].split())
+        self.assertIn("skill is already active", boundary)
+        self.assertIn("Do not invoke the `Skill` tool", boundary)
+        self.assertIn("does not authorize stopping", boundary)
+
+    def test_codex_requires_direct_update_plan_invocation(self):
+        codex = (CODEX / "SKILL.md").read_text()
+        runtime = codex.split("## Codex Runtime Contract", 1)[1].split(
+            "## Scope", 1
+        )[0]
+        self.assertIn("Invoke it directly", runtime)
+        self.assertIn("do not infer that it is unavailable", runtime)
+        self.assertIn("actual call is rejected", runtime)
+
+    def test_codex_pre_final_audit_drains_separately_attributable_gate_runs(self):
+        post = (CODEX / "references/post-implementation-codex.md").read_text()
+        audit = " ".join(post.split("- **Pre-final completion audit:**", 1)[1].split(
+            "## PR Packet Validation Workflow", 1
+        )[0].split())
+        for boundary in (
+            "run each gate exactly once as a separately attributable foreground command",
+            "do not launch an overlapping copy while an equivalent gate is pending",
+            "forbidden while any started tool item remains in progress",
+            "wait on that exact native handle for its terminal result",
+        ):
+            self.assertIn(boundary, audit)
+
+        skill_audit = " ".join((CODEX / "SKILL.md").read_text().split(
+            "### 3.4 Pre-final completion audit", 1
+        )[1].split("## Workflow File Update Protocol", 1)[0].split())
+        for boundary in (
+            "reconcile every started native command, tool, and agent",
+            "separately attributable foreground command",
+            "wait on that exact native handle",
+            "report an incomplete checkpoint instead of a completion response",
+        ):
+            self.assertIn(boundary, skill_audit)
+
+
 class ExecutionContractTests(unittest.TestCase):
     def test_both_hosts_load_one_durable_contract(self):
         for root in (SHARED, CODEX):
@@ -227,7 +271,8 @@ class NativeRequestContractTests(unittest.TestCase):
 if __name__ == "__main__":
     raise SystemExit(run_counted(
         unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case)
-                           for case in (ExecutionContractTests, ExecutionMirrorTests,
+                           for case in (LiveCanaryRegressionTests, ExecutionContractTests,
+                                        ExecutionMirrorTests,
                                         NativeRequestContractTests)),
         label="test-autopilot-execution-contract",
     ))

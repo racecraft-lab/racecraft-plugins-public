@@ -118,6 +118,39 @@ class NativeSearchTests(unittest.TestCase):
         value["tool_calls"][0]["input"]["command"] = value["tool_calls"][0]["input"]["command"].replace(" -c ", " -lc ")
         self.assertEqual(capture.file_search_results(value, host="codex"), [])
 
+    def test_successful_newline_separated_empty_finds_prove_each_absence(self):
+        value = observation("codex")
+        first = "find . -type f -name 'current-technical-roadmap.md' -print"
+        second = "find . -type f -name 'SPEC-*-workflow.md' -print"
+        value["tool_calls"][0]["input"]["command"] = f"/bin/zsh -c \"{first}\n{second}\""
+        self.assertEqual(capture.file_search_results(value, host="codex"), [
+            {"pattern": "**/current-technical-roadmap.md", "paths": [], "tool_call_index": 0},
+            {"pattern": "**/SPEC-*-workflow.md", "paths": [], "tool_call_index": 0},
+        ])
+        case = {
+            "requirements": [{"id": "search", "description": "Prove both absences."}],
+            "checks": [
+                {"id": "roadmap", "requirement": "search", "type": "file_search",
+                 "pattern": "**/current-technical-roadmap.md", "matches": []},
+                {"id": "workflow", "requirement": "search", "type": "file_search",
+                 "pattern": "**/SPEC-*-workflow.md", "matches": []},
+            ],
+        }
+        self.assertEqual(grade_observation(case, value, host="codex")["status"], "pass")
+
+        for command, output, success in (
+            (f"/bin/zsh -c \"{first}; {second}\"", "", True),
+            (f"/bin/zsh -c \"{first}\n{second}\"", "unexpected.md\n", True),
+            (f"/bin/zsh -c \"{first}\n{second}\"", "", False),
+            (f"/bin/zsh -c \"{first}\n{first}\"", "", True),
+        ):
+            with self.subTest(command=command, output=output, success=success):
+                changed = copy.deepcopy(value)
+                changed["tool_calls"][0]["input"]["command"] = command
+                changed["tool_calls"][0]["output"] = output
+                changed["tool_calls"][0]["success"] = success
+                self.assertEqual(capture.file_search_results(changed, host="codex"), [])
+
     def test_glob_requires_native_complete_counts_not_just_text(self):
         value = observation("claude", "No files found")
         for updates in (

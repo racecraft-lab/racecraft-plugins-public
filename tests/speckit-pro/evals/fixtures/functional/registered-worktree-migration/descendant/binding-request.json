@@ -5,6 +5,6 @@
   "operation": "resolve-workflow-binding",
   "mode": "read_only",
   "inputs": {
-    "workflow_file": "docs/ai/specs/.process/SPEC-701-workflow.md"
+    "workflow_file": ".worktrees/spec-701/docs/ai/specs/.process/SPEC-701-workflow.md"
   }
 }

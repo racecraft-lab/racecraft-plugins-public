@@ -62,6 +62,8 @@ Adjust the metrics section based on the phase — Specify
 reports FR/story counts, Plan reports artifact status,
 Tasks reports task counts.
 
+**Native command lifecycle:** When using `exec_command`, inspect the whole returned object, not only its `.output`. A `session_id` without an integer `exit_code` means the command is still running, even if text says "Script completed". Poll `write_stdin` with empty `chars` and that exact `session_id` until it returns an integer `exit_code`; every intermediate response remains pending. Do not relaunch an equivalent gate, run a dependent next gate, consume its artifacts, or return while any owned command remains pending. A required gate succeeds only when its own `exit_code` is `0`. Nonzero exit, timeout, cancellation, missing handle/status, or inaccessible polling is failed or incomplete. Never substitute command-text matching, another agent's success, process disappearance, or partial stdout. Independent commands may run in parallel only when every exact handle is tracked and drained before dependent work or the final response.
+
 ### Terminal Deliverable
 
 Your final message MUST be the complete Phase Result summary above (Files created/modified / Metrics / Markers found / Errors). Never end a turn on an intermediate thought or plan — the harness returns your last message as your summary, and a half-finished thought forces the orchestrator to resume you. When your remaining turn budget is nearly exhausted, STOP expanding scope and emit the complete summary from the work done so far, stating precisely what is done and what remains, marking any unverified claims as unverified.

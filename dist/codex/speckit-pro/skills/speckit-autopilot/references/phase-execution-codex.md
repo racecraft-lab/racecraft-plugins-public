@@ -841,12 +841,38 @@ The parent orchestrator, not the Plan executor or consensus agents, classifies
 the disputed wording before retrying. Follow
 [`gate-validation.md`](gate-validation.md)
 §Plan ambiguity provenance repair exactly. Give the same `phase-executor` the
-original Plan prompt within that same corrective reservation, plus a `Plan Repair Context`
-containing the exact G3 JSON, disputed wording, direct source evidence,
-provenance class, prior repair result, and attempt number. Append every attempt
+complete original Plan prompt within that same corrective reservation, plus
+literal trusted context blocks containing the direct source evidence and a
+`Plan Repair Context` containing the complete immediately preceding actual G3
+runner response envelope without summary or field omission (including its exact
+G3 JSON), disputed wording, provenance class, prior repair result, and attempt number. Append every attempt
 and revalidation result to the workflow's Plan Ambiguity Repair Log. If
 provenance is unresolved, record why repair cannot safely proceed; never turn
 downstream agent agreement into human ratification.
+
+The executor message itself must contain those exact bytes. A file path, an
+instruction for the executor to read the file, an excerpt, or a paraphrase is
+not a trusted-context block. Before dispatch, verify locally that the complete
+original prompt, every required source-evidence block, and the complete parsed
+G3 response object are literal substrings of the message. If any block is
+missing, repair the message before dispatch rather than asking the executor to
+recover the context independently.
+
+For Codex, construct that message with the registered read-only
+`render-plan-repair-context` runner helper. First persist the complete actual
+G3 response envelope in the request's declared attempts file. Then invoke the
+helper request and pass its complete successful response envelope unchanged as
+the `phase-executor` child message. The executor treats only the envelope's
+hash-bound `data.stdout_json.executor_message` as its instruction. This sealed
+transport avoids a second model-authored copy while preserving every source
+byte and the complete G3 object. Do not manually summarize, reconstruct,
+extract, or splice the helper output. If the helper rejects its bounded inputs
+or retained evidence, stop before dispatch and repair the request or evidence.
+
+The parent, never the executor, runs the authoritative G3 command before the
+first repair and after every completed executor return. Preserve the strict
+order `parent G3 -> executor dispatch and return -> parent G3 rerun`; the
+executor must not produce or substitute the G3 evidence it receives.
 
 ## Static Tier-2 Relocation Suggestion
 
@@ -1672,6 +1698,11 @@ row is the load-bearing part, because the skip key is that log's comment-id
 column and nothing else, so the absent row is what makes the comment a
 candidate again once a human has resolved it; a row here would record the
 sweep's own failure as the comment's disposition and make it permanent.
+
+The closed synthesis basis must remain exact: no agreeing pair is
+`all_disagree`, an unresolved escape is `escape_unresolved`, and an exhausted
+analyst retry is `analyst_failed`. Do not replace these sweep-specific values
+with the general Consensus Resolution Log outcome labels.
 
 **It surfaces as one Consensus Resolution Log row instead**, `Type` `Sweep`,
 its item cell naming the comment id, and that row **counts** toward the Round-2

@@ -21,6 +21,7 @@ from native_eval_dispatch_context import (  # noqa: E402
     MAX_JSON_DEPTH,
     MAX_MESSAGE_BYTES,
     MAX_PRECEDING_JSON_BYTES,
+    decode_sealed_plan_repair_message,
     qualify_native_dispatch_context,
 )
 from test_result import run_counted  # noqa: E402
@@ -170,8 +171,87 @@ class NativeEvalDispatchContextTests(unittest.TestCase):
         self.assertNotIn("stdout_json", encoded)
 
 
+class SealedPlanRepairMessageTests(unittest.TestCase):
+    @staticmethod
+    def _build_envelope() -> tuple[dict[str, object], str]:
+        context_digest = "b" * 64
+        executor_message = (
+            f"{PROMPT}\n{ARCHITECTURE}\n{json.dumps(G3)}\n"
+            f"PLAN_REPAIR_CONTEXT_SHA256={context_digest}"
+        )
+        body = executor_message.encode("utf-8")
+        rendered = {
+            "schema": "plan-repair-executor-message/v1",
+            "executor_message": executor_message,
+            "message_sha256": hashlib.sha256(body).hexdigest(),
+            "message_bytes": len(body),
+            "context_ids": ["architecture", "original-plan"],
+            "g3_attempt_index": 0,
+            "context_bundle_sha256": context_digest,
+        }
+        stdout_text = json.dumps(rendered, separators=(",", ":")) + "\n"
+        envelope = {
+            "schema_version": "1.0",
+            "status": "ok",
+            "exit_code": 0,
+            "diagnostics": [],
+            "data": {
+                "helper_id": "render-plan-repair-context",
+                "operation": "render-plan-repair-context",
+                "mode": "read_only",
+                "exit_code": 0,
+                "writes_state": False,
+                "stdin_request": {
+                    "helper_id": "render-plan-repair-context",
+                    "operation": "render-plan-repair-context",
+                    "mode": "read_only",
+                },
+                "stdout": {
+                    "text": stdout_text,
+                    "byte_count": len(stdout_text.encode("utf-8")),
+                    "truncated": False,
+                },
+                "stdout_json": rendered,
+            },
+        }
+        return envelope, executor_message
+
+    def test_decodes_hash_bound_executor_message(self) -> None:
+        envelope, executor_message = self._build_envelope()
+        transport = json.dumps(envelope, separators=(",", ":"))
+        self.assertEqual(decode_sealed_plan_repair_message(transport), executor_message)
+        proof = qualify_native_dispatch_context(
+            decode_sealed_plan_repair_message(transport) or "",
+            {"original-plan": PROMPT, "architecture": ARCHITECTURE},
+            G3,
+        )
+        self.assertEqual(proof["observed_context_ids"], ["architecture", "original-plan"])
+        self.assertTrue(proof["complete_preceding_json_found"])
+
+    def test_rejects_mutated_envelope(self) -> None:
+        envelope, _executor_message = self._build_envelope()
+        for label, mutate in (
+            ("hash", lambda value: value["data"]["stdout_json"].__setitem__("message_sha256", "0" * 64)),
+            ("bytes", lambda value: value["data"]["stdout_json"].__setitem__("message_bytes", 1)),
+            ("stdout", lambda value: value["data"]["stdout"].__setitem__("text", "{}\n")),
+            ("status", lambda value: value.__setitem__("status", "expected_failure")),
+        ):
+            with self.subTest(label=label):
+                candidate = json.loads(json.dumps(envelope))
+                mutate(candidate)
+                self.assertIsNone(
+                    decode_sealed_plan_repair_message(
+                        json.dumps(candidate, separators=(",", ":")),
+                    )
+                )
+
+
 if __name__ == "__main__":
-    raise SystemExit(run_counted(
+    suite = unittest.TestSuite((
         unittest.defaultTestLoader.loadTestsFromTestCase(NativeEvalDispatchContextTests),
+        unittest.defaultTestLoader.loadTestsFromTestCase(SealedPlanRepairMessageTests),
+    ))
+    raise SystemExit(run_counted(
+        suite,
         label="test-native-eval-dispatch-context",
     ))

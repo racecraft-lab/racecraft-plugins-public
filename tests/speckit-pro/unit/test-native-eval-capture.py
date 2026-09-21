@@ -13,13 +13,20 @@ import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "lib"))
 from test_result import run_counted
-from native_eval_capture import CaptureError, file_accesses, normalize_trace
+from native_eval_capture import (
+    CaptureError,
+    _claude_continuation_bridge,
+    file_accesses,
+    file_search_results,
+    normalize_trace,
+)
 from native_eval_fixture_reads import bind_controller_fixture_read_witnesses
 
 
 CANARY_TRACE = Path("/private/tmp/speckit-native-entry-canary.91QKOu/run/attempts/bed7e376197242aca25343222c73f137/raw-raw_trace.jsonl")
 CODEX_COUNT_THEN_SED = '''/bin/zsh -c "wc -l spec.md && sed -n '1,"'$p'"' spec.md"'''
 CODEX_BOUNDED_COUNT_THEN_SED = "/bin/zsh -c \"wc -l spec.md && sed -n '1,9999p' spec.md\""
+_OMITTED_BACKGROUND_FLAG = object()
 
 
 def stream(events):
@@ -35,6 +42,120 @@ def claude_events():
     ]
 
 
+def claude_continuation_trace(session: str = "continuation-session"):
+    events = claude_events()
+    events[0].update(
+        session_id=session, uuid="init-one", cwd="/tmp/work",
+        claude_code_version="2.1.278",
+    )
+    events[1].update(session_id=session, uuid="skill-use")
+    events[2].update(session_id=session, uuid="skill-result")
+    events.pop()
+    tool_use_id = "background-tool"
+    task_id = "background-task"
+    events.extend([
+        {"type": "assistant", "message": {"content": [{
+            "type": "tool_use", "id": tool_use_id, "name": "Agent",
+            "input": {"description": "Finish UAT", "run_in_background": True},
+        }]}, "parent_tool_use_id": None, "session_id": session, "uuid": "agent-use"},
+        {"type": "system", "subtype": "task_started", "task_id": task_id,
+         "tool_use_id": tool_use_id, "description": "Finish UAT",
+         "is_backgrounded": True, "task_type": "local_agent",
+         "uuid": "task-start", "session_id": session},
+        {"type": "user", "message": {"content": [{
+            "type": "tool_result", "tool_use_id": tool_use_id,
+            "content": "Agent launched", "is_error": False,
+        }]}, "parent_tool_use_id": None, "session_id": session, "uuid": "agent-result"},
+        {"type": "system", "subtype": "background_tasks_changed", "tasks": [],
+         "uuid": "bridge-empty", "session_id": session},
+        {"type": "system", "subtype": "task_updated", "task_id": task_id,
+         "patch": {"status": "completed", "end_time": 1234},
+         "uuid": "bridge-complete", "session_id": session},
+        {"type": "system", "subtype": "task_notification", "task_id": task_id,
+         "tool_use_id": tool_use_id, "status": "completed",
+         "output_file": "/tmp/task.out", "summary": "UAT complete",
+         "uuid": "bridge-notification", "session_id": session},
+    ])
+    resumed = copy.deepcopy(events[0])
+    resumed["uuid"] = "init-two"
+    events.append(resumed)
+    events.extend([
+        {"type": "result", "subtype": "success", "is_error": False,
+         "result": "waiting for worker", "usage": {"input_tokens": 10, "output_tokens": 2},
+         "session_id": session, "uuid": "result-one", "result_index": 0},
+        {"type": "result", "subtype": "success", "is_error": False,
+         "result": "finished after worker returned",
+         "usage": {"input_tokens": 5, "output_tokens": 3},
+         "session_id": session, "uuid": "result-two", "result_index": 1,
+         "origin": {"kind": "task-notification"}},
+    ])
+    return events
+
+
+def _claude_agent_continuation_events(
+    background_flag=_OMITTED_BACKGROUND_FLAG,
+):
+    events = claude_continuation_trace()
+    agent = next(event for event in events if event.get("uuid") == "agent-use")
+    tool_input = agent["message"]["content"][0]["input"]
+    if background_flag is _OMITTED_BACKGROUND_FLAG:
+        del tool_input["run_in_background"]
+    else:
+        tool_input["run_in_background"] = background_flag
+    return events
+
+
+def claude_backgrounded_bash_continuation_trace(
+    status: str = "failed", session: str = "continuation-session",
+):
+    events = claude_continuation_trace(session)
+    task_id = "background-task"
+    description = "Search for existing execution-control ledger files"
+    output_file = f"/tmp/{session}/tasks/{task_id}.output"
+    tool_event = next(event for event in events if event.get("uuid") == "agent-use")
+    tool_event["message"]["content"][0].update(
+        name="Bash", input={"command": "find / -iname '*execution-control*'"},
+    )
+    started = next(event for event in events if event.get("uuid") == "task-start")
+    started.update(
+        description=description, is_backgrounded=False, task_type="local_bash",
+    )
+    result_index = next(index for index, event in enumerate(events)
+                        if event.get("uuid") == "agent-result")
+    events[result_index:result_index] = [
+        {"type": "system", "subtype": "background_tasks_changed", "tasks": [{
+            "task_id": task_id, "task_type": "local_bash", "description": description,
+        }], "uuid": "bash-active", "session_id": session},
+        {"type": "system", "subtype": "task_updated", "task_id": task_id,
+         "patch": {"is_backgrounded": True}, "uuid": "bash-backgrounded",
+         "session_id": session},
+    ]
+    result_event = next(event for event in events if event.get("uuid") == "agent-result")
+    result_event["message"]["content"][0].update(
+        content=(
+            "Command did not complete within its 120s timeout and was moved to the "
+            f"background (ID: {task_id}). Output is being written to: {output_file}. "
+            "You will be notified when it completes."
+        ),
+        is_error=False,
+    )
+    result_event["tool_use_result"] = {
+        "stdout": "", "stderr": "", "interrupted": False, "isImage": False,
+        "noOutputExpected": False, "backgroundTaskId": task_id,
+        "timedOutAfterMs": 120000,
+    }
+    updated = next(event for event in events if event.get("uuid") == "bridge-complete")
+    updated["patch"]["status"] = status
+    notification = next(
+        event for event in events if event.get("uuid") == "bridge-notification"
+    )
+    notification.update(
+        status=status, output_file=output_file,
+        summary=f'Background command "{description}" {status}',
+    )
+    return events
+
+
 def claude_hook_prelude(session: str = "hook-session"):
     return [
         {"type": "system", "subtype": "hook_started", "hook_id": "hook-1", "hook_name": "SessionStart:startup",
@@ -43,6 +164,46 @@ def claude_hook_prelude(session: str = "hook-session"):
          "hook_event": "SessionStart", "output": "", "stdout": "", "stderr": "", "exit_code": 0,
          "outcome": "success", "uuid": "hook-response", "session_id": session},
     ]
+
+
+def claude_cleanup_trace(session: str = "cleanup-session"):
+    events = claude_events()
+    events[0].update(session_id=session, uuid="init")
+    events[-1].update(session_id=session, uuid="result")
+    tool_use_id = "cleanup-tool"
+    task_id = "cleanup-task"
+    description = "Finish the background command"
+    events[-1:-1] = [
+        {"type": "assistant", "message": {"content": [{
+            "type": "tool_use", "id": tool_use_id, "name": "Bash",
+            "input": {"command": "sleep 60"},
+        }]}, "parent_tool_use_id": None, "session_id": session, "uuid": "tool-use"},
+        {"type": "system", "subtype": "task_started", "task_id": task_id,
+         "tool_use_id": tool_use_id, "description": description, "is_backgrounded": False,
+         "task_type": "local_bash", "uuid": "task-start", "session_id": session},
+        {"type": "system", "subtype": "background_tasks_changed",
+         "tasks": [{"task_id": task_id, "task_type": "local_bash",
+                    "description": description}],
+         "uuid": "task-set", "session_id": session},
+        {"type": "system", "subtype": "task_updated", "task_id": task_id,
+         "patch": {"is_backgrounded": True}, "uuid": "task-backgrounded",
+         "session_id": session},
+        {"type": "user", "message": {"content": [{
+            "type": "tool_result", "tool_use_id": tool_use_id,
+            "content": "Command moved to the background", "is_error": False,
+        }]}, "parent_tool_use_id": None, "session_id": session, "uuid": "tool-result"},
+    ]
+    cleanup = [
+        {"type": "system", "subtype": "background_tasks_changed", "tasks": [],
+         "uuid": "cleanup-empty", "session_id": session},
+        {"type": "system", "subtype": "task_updated", "task_id": task_id,
+         "patch": {"status": "killed", "end_time": 1234},
+         "uuid": "cleanup-killed", "session_id": session},
+        {"type": "system", "subtype": "task_notification", "task_id": task_id,
+         "tool_use_id": tool_use_id, "status": "stopped", "output_file": "/tmp/task.out",
+         "summary": description, "uuid": "cleanup-stopped", "session_id": session},
+    ]
+    return events, cleanup
 
 
 def codex_events():
@@ -224,6 +385,122 @@ class NativeCaptureTests(unittest.TestCase):
         ))
         self.assertEqual(result, original)
 
+class NativeCaptureEvidenceRepairTests(unittest.TestCase):
+    def test_codex_safe_compound_reads_preserve_full_read_evidence(self):
+        command = (
+            "/bin/zsh -c \"printf '%s\\n' 'INPUTS' && sed -n '1,999p' plan.md "
+            "&& find docs -maxdepth 3 -type f -print | sort\""
+        )
+        content = "plan line one\nplan line two\n"
+        events = codex_command_events(command)
+        events[3]["item"]["aggregated_output"] = (
+            "INPUTS\n" + content + "docs/plan.md\n"
+        )
+        result = bind_controller_fixture_read_witnesses(
+            normalize_trace("codex", stream(events)),
+            {"plan.md": {
+                "bytes": len(content.encode("utf-8")),
+                "sha256": hashlib.sha256(content.encode("utf-8")).hexdigest(),
+            }},
+        )
+        accesses = file_accesses(result)
+        self.assertTrue(any(
+            row["path"] == "plan.md"
+            and row.get("provenance", {}).get("kind") == "compound_bounded_sed"
+            for row in accesses
+        ))
+
+    def test_codex_compound_reads_reject_forged_partial_and_arbitrary_shell(self):
+        content = "one\ntwo\n"
+        encoded = content.encode("utf-8")
+        witness = {"plan.md": {
+            "bytes": len(encoded), "sha256": hashlib.sha256(encoded).hexdigest(),
+        }}
+        variants = (
+            ("sed -n '1,1p' plan.md", "one\n"),
+            ("sed -n '1,999p' plan.md", "one\nforged\n"),
+            ("sed -n '1,999p' plan.md && python3 helper.py", content),
+            ("sed -n '1,999p' plan.md > copy.md", content),
+            ("sed -n '1,999p' plan.md | head -1", "one\n"),
+            ("sed -n '1,999p' $(printf plan.md)", content),
+        )
+        for command, output in variants:
+            with self.subTest(command=command):
+                events = codex_command_events(command)
+                events[3]["item"]["aggregated_output"] = output
+                result = bind_controller_fixture_read_witnesses(
+                    normalize_trace("codex", stream(events)), witness,
+                )
+                self.assertEqual(file_accesses(result), [])
+
+class NativeCaptureProjectionTests(unittest.TestCase):
+    def test_codex_jq_identity_and_nl_are_full_reads_but_jq_projection_is_not(self):
+        for command, expected in (
+            ("jq . input.json", "input.json"),
+            ("jq -- . nested/input.json", "nested/input.json"),
+            ("nl -ba docs/plan.md", "docs/plan.md"),
+        ):
+            with self.subTest(command=command):
+                result = normalize_trace("codex", stream(codex_command_events(command)))
+                self.assertEqual(file_accesses(result), [{
+                    "operation": "read_file", "path": expected, "tool_call_index": 0,
+                }])
+        projected = normalize_trace(
+            "codex", stream(codex_command_events("jq '{id: .id}' input.json")),
+        )
+        self.assertEqual(file_accesses(projected), [])
+
+class NativeCaptureScopedSearchTests(unittest.TestCase):
+    def test_codex_rg_files_uses_only_controller_project_scope(self):
+        command = "/bin/zsh -c \"rg --files -g '*roadmap*' -g '*workflow*' .\""
+        events = codex_command_events(command)
+        events[3]["item"]["aggregated_output"] = (
+            "./docs/current-technical-roadmap.md\n"
+            ".agents/skills/runtime-roadmap.md\n"
+        )
+        result = bind_controller_fixture_read_witnesses(
+            normalize_trace("codex", stream(events)),
+            {
+                "README.md": {
+                    "bytes": len(b"readme\n"),
+                    "sha256": hashlib.sha256(b"readme\n").hexdigest(),
+                },
+                "docs/current-technical-roadmap.md": {
+                    "bytes": len(b"roadmap\n"),
+                    "sha256": hashlib.sha256(b"roadmap\n").hexdigest(),
+                },
+            },
+        )
+        rows = file_search_results(result, host="codex")
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["paths"], ["docs/current-technical-roadmap.md"])
+        self.assertEqual(rows[0]["scope"], "controller-project-artifacts")
+
+    def test_codex_rg_files_rejects_partial_wrong_scope_and_failed_results(self):
+        command = "rg --files -g '*roadmap*' ."
+        witnesses = {
+            "docs/current-roadmap.md": {
+                "bytes": len(b"one\n"), "sha256": hashlib.sha256(b"one\n").hexdigest(),
+            },
+            "docs/next-roadmap.md": {
+                "bytes": len(b"two\n"), "sha256": hashlib.sha256(b"two\n").hexdigest(),
+            },
+        }
+        for output, status, exit_code in (
+            ("docs/current-roadmap.md\n", "completed", 0),
+            ("docs/current-roadmap.md\nprivate/forged-roadmap.md\n", "completed", 0),
+            ("docs/current-roadmap.md\ndocs/next-roadmap.md\n", "failed", 1),
+        ):
+            with self.subTest(output=output, status=status):
+                events = codex_command_events(command, status=status, exit_code=exit_code)
+                events[3]["item"]["aggregated_output"] = output
+                result = bind_controller_fixture_read_witnesses(
+                    normalize_trace("codex", stream(events)), witnesses,
+                )
+                self.assertEqual(file_search_results(result, host="codex"), [])
+
+
+class NativeCaptureContinuationTests(unittest.TestCase):
     def test_codex_unsupported_or_ambiguous_commands_are_not_read_evidence(self):
         commands = (
             "echo plan.md",
@@ -272,6 +549,7 @@ class NativeCaptureTests(unittest.TestCase):
         self.assertFalse(result["tool_calls"][0]["success"])
         self.assertEqual(result["tool_calls"][0]["input"], {"command": command})
 
+class NativeCaptureClaudePreludeTests(unittest.TestCase):
     def test_claude_successful_session_start_hook_prelude_is_preserved(self):
         events = claude_hook_prelude() + claude_events()
         events[2].update(session_id="hook-session", uuid="init")
@@ -321,6 +599,7 @@ class NativeCaptureTests(unittest.TestCase):
             with self.subTest(raw=raw.splitlines()[0]), self.assertRaises(CaptureError):
                 normalize_trace("codex", raw)
 
+class NativeCaptureActivationTests(unittest.TestCase):
     def test_claude_activation_requires_completed_skill_tool(self):
         result = normalize_trace("claude", stream(claude_events()))
         self.assertTrue(result["completed"])
@@ -340,28 +619,271 @@ class NativeCaptureTests(unittest.TestCase):
         events[1]["message"]["content"][0]["input"]["skill"] = "other:test"
         self.assertEqual(normalize_trace("claude", stream(events))["activations"], ["other:test"])
 
+class ClaudeContinuationTests(unittest.TestCase):
     def test_claude_streaming_continuation_is_one_capture_not_duplicate_trial(self):
-        events = claude_events()
-        events[0].update(session_id="session", uuid="init-one")
-        events[-1].update(session_id="session", uuid="result-one")
-        resumed = copy.deepcopy(events[0])
-        resumed["uuid"] = "init-two"
-        final = copy.deepcopy(events[-1])
-        final.update(uuid="result-two", result="finished after worker returned")
-        events.insert(-1, resumed)
-        events.append(final)
+        events = claude_continuation_trace()
         result = normalize_trace("claude", stream(events))
         self.assertEqual(result["final_text"], "finished after worker returned")
         self.assertEqual(result["native_metadata"]["native_turns"], 2)
-        for variation in ("foreign-session", "duplicate-uuid", "early-error"):
+        self.assertEqual(
+            [turn["result_index"] for turn in result["native_metadata"]["claude_turns"]],
+            [0, 1],
+        )
+        bridge = result["native_metadata"]["continuation_bridges"]
+        self.assertEqual(len(bridge), 1)
+        self.assertEqual(bridge[0]["task_id"], "background-task")
+        self.assertEqual(
+            [record["subtype"] for record in bridge[0]["records"]],
+            ["background_tasks_changed", "task_updated", "task_notification"],
+        )
+
+    def test_claude_auto_backgrounded_bash_binds_terminal_outcome(self):
+        for status, expected_success in (("completed", True), ("failed", False)):
+            with self.subTest(status=status):
+                result = normalize_trace(
+                    "claude", stream(claude_backgrounded_bash_continuation_trace(status)),
+                )
+                bash = next(call for call in result["tool_calls"]
+                            if call["id"] == "background-tool")
+                self.assertIs(bash["success"], expected_success)
+                bridge = result["native_metadata"]["continuation_bridges"][0]
+                self.assertEqual(bridge["task_type"], "local_bash")
+                self.assertEqual(bridge["terminal_status"], status)
+
+    def test_claude_auto_backgrounded_bash_rejects_unbound_or_forged_lifecycle(self):
+        for variation in (
+            "mismatched-terminal", "unsupported-terminal", "foreground-start",
+            "wrong-task-type", "missing-active-set", "missing-background-update",
+            "wrong-background-update", "result-before-background-update",
+            "wrong-native-task", "missing-native-field", "foreign-result-session",
+            "errored-handoff", "mismatched-output-file",
+        ):
             with self.subTest(variation=variation):
-                changed = copy.deepcopy(events)
-                if variation == "foreign-session":
-                    changed[-1]["session_id"] = "other"
+                events = claude_backgrounded_bash_continuation_trace()
+                started_index = next(index for index, event in enumerate(events)
+                                     if event.get("uuid") == "task-start")
+                active_index = next(index for index, event in enumerate(events)
+                                    if event.get("uuid") == "bash-active")
+                update_index = next(index for index, event in enumerate(events)
+                                    if event.get("uuid") == "bash-backgrounded")
+                result_index = next(index for index, event in enumerate(events)
+                                    if event.get("uuid") == "agent-result")
+                bridge_update = next(
+                    event for event in events if event.get("uuid") == "bridge-complete"
+                )
+                notification = next(
+                    event for event in events if event.get("uuid") == "bridge-notification"
+                )
+                result_event = events[result_index]
+                if variation == "mismatched-terminal":
+                    notification["status"] = "completed"
+                elif variation == "unsupported-terminal":
+                    bridge_update["patch"]["status"] = "killed"
+                    notification["status"] = "killed"
+                elif variation == "foreground-start":
+                    events[started_index]["is_backgrounded"] = True
+                elif variation == "wrong-task-type":
+                    events[started_index]["task_type"] = "local_agent"
+                elif variation == "missing-active-set":
+                    events.pop(active_index)
+                elif variation == "missing-background-update":
+                    events.pop(update_index)
+                elif variation == "wrong-background-update":
+                    events[update_index]["patch"] = {"is_backgrounded": False}
+                elif variation == "result-before-background-update":
+                    result = events.pop(result_index)
+                    events.insert(update_index, result)
+                elif variation == "wrong-native-task":
+                    result_event["tool_use_result"]["backgroundTaskId"] = "other-task"
+                elif variation == "missing-native-field":
+                    del result_event["tool_use_result"]["timedOutAfterMs"]
+                elif variation == "foreign-result-session":
+                    result_event["session_id"] = "other-session"
+                elif variation == "errored-handoff":
+                    result_event["message"]["content"][0]["is_error"] = True
+                else:
+                    notification["output_file"] = "/tmp/forged.output"
+                with self.assertRaises(CaptureError):
+                    normalize_trace("claude", stream(events))
+
+    def test_claude_explicit_agent_still_requires_completed_terminal_pair(self):
+        events = claude_continuation_trace()
+        next(event for event in events if event.get("uuid") == "bridge-complete")[
+            "patch"
+        ]["status"] = "failed"
+        next(event for event in events if event.get("uuid") == "bridge-notification")[
+            "status"
+        ] = "failed"
+        with self.assertRaisesRegex(CaptureError, "background Agent"):
+            normalize_trace("claude", stream(events))
+
+    def test_claude_explicit_background_flag_preserves_missing_task_type(self):
+        events = claude_continuation_trace()
+        started = next(event for event in events if event.get("uuid") == "task-start")
+        del started["task_type"]
+
+        result = normalize_trace("claude", stream(events))
+
+        self.assertEqual(result["native_metadata"]["native_turns"], 2)
+
+    def test_claude_agent_omitted_background_flag_uses_authoritative_lifecycle(self):
+        events = _claude_agent_continuation_events()
+
+        result = normalize_trace("claude", stream(events))
+
+        bridge = result["native_metadata"]["continuation_bridges"][0]
+        self.assertEqual(bridge["task_id"], "background-task")
+        self.assertEqual(bridge["records"][1]["patch"]["status"], "completed")
+        self.assertEqual(bridge["records"][2]["status"], "completed")
+
+    def test_claude_runtime_backgrounding_overrides_explicit_foreground_request(self):
+        events = _claude_agent_continuation_events(False)
+
+        result = normalize_trace("claude", stream(events))
+
+        self.assertEqual(
+            result["native_metadata"]["continuation_bridges"][0]["task_id"],
+            "background-task",
+        )
+
+    def test_claude_agent_omitted_background_flag_rejects_incomplete_lifecycle(self):
+        for variation in (
+            "explicit-null", "explicit-one",
+            "foreground-start", "wrong-task-type",
+            "missing-completion", "reordered-completion", "missing-notification",
+        ):
+            with self.subTest(variation=variation):
+                events = claude_continuation_trace()
+                agent = next(event for event in events if event.get("uuid") == "agent-use")
+                tool_input = agent["message"]["content"][0]["input"]
+                del tool_input["run_in_background"]
+                started = next(event for event in events if event.get("uuid") == "task-start")
+                completion_index = next(index for index, event in enumerate(events)
+                                        if event.get("uuid") == "bridge-complete")
+                notification_index = next(index for index, event in enumerate(events)
+                                          if event.get("uuid") == "bridge-notification")
+                if variation.startswith("explicit-"):
+                    tool_input["run_in_background"] = {
+                        "explicit-null": None,
+                        "explicit-one": 1,
+                    }[variation]
+                elif variation == "foreground-start":
+                    started["is_backgrounded"] = False
+                elif variation == "wrong-task-type":
+                    started["task_type"] = "local_bash"
+                elif variation == "missing-completion":
+                    events.pop(completion_index)
+                elif variation == "reordered-completion":
+                    events[completion_index], events[notification_index] = (
+                        events[notification_index], events[completion_index]
+                    )
+                else:
+                    events.pop(notification_index)
+                with self.assertRaises(CaptureError):
+                    normalize_trace("claude", stream(events))
+
+    def test_claude_continuation_allows_same_session_parallel_progress_before_resume(self):
+        events = claude_continuation_trace()
+        init_index = next(index for index, event in enumerate(events)
+                          if event.get("uuid") == "init-two")
+        events[init_index - 3]["tasks"] = [{
+            "task_id": "remaining-task", "task_type": "local_agent",
+            "description": "Still running",
+        }]
+        interleaved = [
+            {"type": "system", "subtype": "task_progress", "task_id": "remaining-task",
+             "tool_use_id": "remaining-tool", "session_id": "continuation-session",
+             "uuid": "remaining-progress"},
+            {"type": "assistant", "message": {"content": [{"type": "text", "text": "waiting"}]},
+             "parent_tool_use_id": None, "session_id": "continuation-session",
+             "uuid": "root-waiting"},
+        ]
+        events[init_index:init_index] = interleaved
+        result = normalize_trace("claude", stream(events))
+        self.assertEqual(result["native_metadata"]["native_turns"], 2)
+        self.assertEqual(
+            result["native_metadata"]["continuation_bridges"][0]["task_id"],
+            "background-task",
+        )
+
+        unsafe = copy.deepcopy(events)
+        unsafe[init_index + 1]["message"]["content"] = [{
+            "type": "tool_use", "id": "root-work", "name": "Bash",
+            "input": {"command": "echo unsafe"},
+        }]
+        with self.assertRaisesRegex(CaptureError, "suffix contains root work"):
+            normalize_trace("claude", stream(unsafe))
+
+    def test_parallel_task_completion_binds_to_launch_before_prior_resume(self):
+        session = "parallel-continuation"
+        tool_use_id = "parallel-tool"
+        task_id = "parallel-task"
+        events = [
+            {"type": "system", "subtype": "init", "session_id": session,
+             "uuid": "initial-init"},
+            {"type": "assistant", "message": {"content": [{
+                "type": "tool_use", "id": tool_use_id, "name": "Agent",
+                "input": {"description": "Parallel worker", "run_in_background": True},
+            }]}, "parent_tool_use_id": None, "session_id": session,
+             "uuid": "parallel-agent"},
+            {"type": "system", "subtype": "task_started", "task_id": task_id,
+             "tool_use_id": tool_use_id, "description": "Parallel worker",
+             "is_backgrounded": True, "task_type": "local_agent",
+             "session_id": session, "uuid": "parallel-start"},
+            {"type": "system", "subtype": "init", "session_id": session,
+             "uuid": "prior-resume"},
+            {"type": "system", "subtype": "background_tasks_changed", "tasks": [],
+             "session_id": session, "uuid": "parallel-empty"},
+            {"type": "system", "subtype": "task_updated", "task_id": task_id,
+             "patch": {"status": "completed", "end_time": 1234},
+             "session_id": session, "uuid": "parallel-complete"},
+            {"type": "system", "subtype": "task_notification", "task_id": task_id,
+             "tool_use_id": tool_use_id, "status": "completed",
+             "output_file": "/tmp/parallel.out", "summary": "Worker complete",
+             "session_id": session, "uuid": "parallel-notification"},
+            {"type": "system", "subtype": "init", "session_id": session,
+             "uuid": "current-resume"},
+        ]
+        bridge = _claude_continuation_bridge(
+            events, turn=2, init_index=7, prior_init_index=3,
+        )
+        self.assertEqual(bridge["task_id"], task_id)
+        self.assertEqual(bridge["tool_use_id"], tool_use_id)
+
+    def test_claude_continuation_rejects_unbound_or_ambiguous_turns(self):
+        for variation in (
+            "foreign-bridge", "missing-bridge", "reordered-bridge", "changed-init",
+            "bad-result-index", "bad-result-origin", "duplicate-uuid",
+            "failure-then-success", "incomplete-suffix", "foreground-agent",
+        ):
+            with self.subTest(variation=variation):
+                changed = claude_continuation_trace()
+                init_index = next(index for index, event in enumerate(changed)
+                                  if event.get("uuid") == "init-two")
+                if variation == "foreign-bridge":
+                    changed[init_index - 2]["session_id"] = "other"
+                elif variation == "missing-bridge":
+                    changed.pop(init_index - 3)
+                elif variation == "reordered-bridge":
+                    changed[init_index - 3], changed[init_index - 2] = (
+                        changed[init_index - 2], changed[init_index - 3]
+                    )
+                elif variation == "changed-init":
+                    changed[init_index]["model"] = "different-model"
+                elif variation == "bad-result-index":
+                    changed[-1]["result_index"] = 2
+                elif variation == "bad-result-origin":
+                    changed[-1]["origin"] = {"kind": "user-prompt"}
                 elif variation == "duplicate-uuid":
                     changed[-1]["uuid"] = "result-one"
+                elif variation == "failure-then-success":
+                    changed[-2].update(is_error=True, subtype="error")
+                elif variation == "foreground-agent":
+                    started = next(event for event in changed
+                                   if event.get("uuid") == "task-start")
+                    started["is_backgrounded"] = False
                 else:
-                    changed[-2]["is_error"] = True
+                    changed.pop()
                 with self.assertRaises(CaptureError):
                     normalize_trace("claude", stream(changed))
 
@@ -376,24 +898,20 @@ class NativeCaptureTests(unittest.TestCase):
         self.assertEqual(result["native_metadata"]["usage_scope"], "cumulative-agent-tree")
 
     def test_claude_continuation_uses_latest_cumulative_tree_usage(self):
-        events = claude_events()
-        events[0].update(session_id="session", uuid="init-one")
-        events[-1].update(session_id="session", uuid="result-one", modelUsage={"model": {
+        events = claude_continuation_trace()
+        events[-2]["modelUsage"] = {"model": {
             "inputTokens": 1, "cacheReadInputTokens": 2, "cacheCreationInputTokens": 3,
             "outputTokens": 4,
-        }})
-        resumed = copy.deepcopy(events[0])
-        resumed["uuid"] = "init-two"
-        final = copy.deepcopy(events[-1])
-        final.update(uuid="result-two", modelUsage={"model": {
+        }}
+        events[-1]["modelUsage"] = {"model": {
             "inputTokens": 10, "cacheReadInputTokens": 20, "cacheCreationInputTokens": 30,
             "outputTokens": 40,
-        }})
-        events.extend([resumed, final])
+        }}
         result = normalize_trace("claude", stream(events))
         self.assertEqual(result["usage"]["input_tokens"], 60)
         self.assertEqual(result["usage"]["output_tokens"], 40)
 
+class NativeCaptureOwnershipTests(unittest.TestCase):
     def test_claude_preserves_nested_tool_ownership(self):
         events = claude_events()
         events[1]["message"]["content"][0].update(name="Agent", input={"subagent_type": "worker"})
@@ -405,6 +923,43 @@ class NativeCaptureTests(unittest.TestCase):
         calls = normalize_trace("claude", stream(events))["tool_calls"]
         self.assertEqual(calls[1]["parent_id"], calls[0]["id"])
         self.assertEqual(calls[1]["output"], "value")
+
+    def test_claude_accepts_bounded_heartbeat_progress_for_owning_tool(self):
+        events = claude_events()
+        events[1]["message"]["content"][0].update(
+            name="Bash", input={"command": "python3 -m bounded_helper"},
+        )
+        events[2:2] = [{
+            "type": "tool_progress", "tool_use_id": "a-heartbeat-0",
+            "tool_name": "Bash", "parent_tool_use_id": "a",
+            "elapsed_time_seconds": 30, "heartbeat": True,
+        }]
+        calls = normalize_trace("claude", stream(events))["tool_calls"]
+        self.assertEqual(calls[0]["name"], "Bash")
+
+    def test_claude_rejects_unbound_or_malformed_tool_progress(self):
+        base = claude_events()
+        base[1]["message"]["content"][0].update(
+            name="Bash", input={"command": "python3 -m bounded_helper"},
+        )
+        progress = {
+            "type": "tool_progress", "tool_use_id": "a-heartbeat-0",
+            "tool_name": "Bash", "parent_tool_use_id": "a",
+            "elapsed_time_seconds": 30, "heartbeat": True,
+        }
+        variations = {
+            "wrong-parent": {**progress, "parent_tool_use_id": "missing"},
+            "wrong-name": {**progress, "tool_name": "Agent"},
+            "not-heartbeat": {**progress, "heartbeat": False},
+            "bad-id": {**progress, "tool_use_id": "a-progress-0"},
+            "bad-elapsed": {**progress, "elapsed_time_seconds": 0},
+        }
+        for label, malformed in variations.items():
+            with self.subTest(label=label):
+                events = copy.deepcopy(base)
+                events[2:2] = [malformed]
+                with self.assertRaises(CaptureError):
+                    normalize_trace("claude", stream(events))
 
     def test_claude_rejects_orphaned_or_mismatched_nested_ownership(self):
         for variation in ("orphan-event", "mismatched-result", "non-agent-parent"):
@@ -556,5 +1111,145 @@ class NativeCaptureTests(unittest.TestCase):
                     normalize_trace("codex", stream(events))
 
 
+class ClaudeCleanupEpilogueTests(unittest.TestCase):
+    def test_claude_post_result_cleanup_epilogue_is_preserved(self):
+        events, cleanup = claude_cleanup_trace()
+        result = normalize_trace("claude", stream(events + cleanup))
+        self.assertEqual(result["final_text"], "done")
+        self.assertEqual(result["native_metadata"]["native_turns"], 1)
+        self.assertEqual(result["native_metadata"]["cleanup_epilogue"], cleanup)
+
+    def test_claude_cleanup_rejects_incomplete_reordered_duplicate_and_non_system_events(self):
+        for variation in (
+            "missing-first", "missing-middle", "missing-last", "reordered", "duplicate",
+            "assistant", "user", "error", "unknown-system", "extra-after",
+        ):
+            with self.subTest(variation=variation):
+                events, cleanup = claude_cleanup_trace()
+                if variation.startswith("missing-"):
+                    cleanup.pop({"missing-first": 0, "missing-middle": 1, "missing-last": 2}[variation])
+                elif variation == "reordered":
+                    cleanup[0], cleanup[1] = cleanup[1], cleanup[0]
+                elif variation == "duplicate":
+                    cleanup.insert(1, copy.deepcopy(cleanup[0]))
+                elif variation == "assistant":
+                    cleanup[0] = {"type": "assistant", "message": {"content": []}}
+                elif variation == "user":
+                    cleanup[0] = {"type": "user", "message": {"content": []}}
+                elif variation == "error":
+                    cleanup[0] = {"type": "error", "subtype": "background_tasks_changed"}
+                elif variation == "unknown-system":
+                    cleanup[0]["subtype"] = "cleanup_started"
+                else:
+                    cleanup.append({"type": "system", "subtype": "cleanup_finished"})
+                with self.assertRaises(CaptureError):
+                    normalize_trace("claude", stream(events + cleanup))
+
+    def test_claude_cleanup_rejects_mismatched_or_malformed_cleanup_identity(self):
+        for variation in (
+            "nonempty-tasks", "updated-task", "notification-task", "notification-tool",
+            "foreign-session", "nested-first", "nested-middle", "nested-last", "missing-uuid",
+            "duplicate-uuid", "runtime-uuid", "prelude-uuid", "wrong-update-status", "missing-end-time",
+            "boolean-end-time", "extra-update-field", "wrong-notification-status",
+            "relative-output", "empty-summary", "different-summary",
+        ):
+            with self.subTest(variation=variation):
+                events, cleanup = claude_cleanup_trace()
+                if variation == "nonempty-tasks":
+                    cleanup[0]["tasks"] = [{"task_id": "cleanup-task"}]
+                elif variation == "updated-task":
+                    cleanup[1]["task_id"] = "other-task"
+                elif variation == "notification-task":
+                    cleanup[2]["task_id"] = "other-task"
+                elif variation == "notification-tool":
+                    cleanup[2]["tool_use_id"] = "other-tool"
+                elif variation == "foreign-session":
+                    cleanup[1]["session_id"] = "other-session"
+                elif variation.startswith("nested-"):
+                    index = {"nested-first": 0, "nested-middle": 1, "nested-last": 2}[variation]
+                    cleanup[index]["parent_tool_use_id"] = "parent"
+                elif variation == "missing-uuid":
+                    cleanup[0]["uuid"] = ""
+                elif variation == "duplicate-uuid":
+                    cleanup[2]["uuid"] = cleanup[1]["uuid"]
+                elif variation == "runtime-uuid":
+                    cleanup[0]["uuid"] = "result"
+                elif variation == "prelude-uuid":
+                    events = claude_hook_prelude("cleanup-session") + events
+                    cleanup[0]["uuid"] = "hook-start"
+                elif variation == "wrong-update-status":
+                    cleanup[1]["patch"]["status"] = "completed"
+                elif variation == "missing-end-time":
+                    del cleanup[1]["patch"]["end_time"]
+                elif variation == "boolean-end-time":
+                    cleanup[1]["patch"]["end_time"] = True
+                elif variation == "extra-update-field":
+                    cleanup[1]["patch"]["reason"] = "shutdown"
+                elif variation == "wrong-notification-status":
+                    cleanup[2]["status"] = "completed"
+                elif variation == "relative-output":
+                    cleanup[2]["output_file"] = "task.out"
+                elif variation == "empty-summary":
+                    cleanup[2]["summary"] = ""
+                else:
+                    cleanup[2]["summary"] = "different task"
+                with self.assertRaises(CaptureError):
+                    normalize_trace("claude", stream(events + cleanup))
+
+    def test_claude_cleanup_requires_one_still_active_prior_task_and_tool_use(self):
+        for variation in (
+            "missing-start", "duplicate-start", "mismatched-start-tool", "nested-start",
+            "foreign-start-session", "missing-tool-use", "duplicate-tool-use",
+            "completed-before-result", "stopped-before-result", "removed-before-result",
+        ):
+            with self.subTest(variation=variation):
+                events, cleanup = claude_cleanup_trace()
+                start_index = next(index for index, event in enumerate(events)
+                                   if event.get("subtype") == "task_started")
+                if variation == "missing-start":
+                    events.pop(start_index)
+                elif variation == "duplicate-start":
+                    events.insert(start_index + 1, copy.deepcopy(events[start_index]))
+                elif variation == "mismatched-start-tool":
+                    events[start_index]["tool_use_id"] = "other-tool"
+                elif variation == "nested-start":
+                    events[start_index]["parent_tool_use_id"] = "parent"
+                elif variation == "foreign-start-session":
+                    events[start_index]["session_id"] = "other-session"
+                elif variation == "missing-tool-use":
+                    tool_event = next(event for event in events if event.get("uuid") == "tool-use")
+                    tool_event["message"]["content"][0]["id"] = "other-tool"
+                elif variation == "duplicate-tool-use":
+                    tool_event = next(event for event in events if event.get("uuid") == "tool-use")
+                    duplicate = copy.deepcopy(tool_event)
+                    duplicate["uuid"] = "second-tool-use"
+                    events.insert(start_index, duplicate)
+                elif variation == "completed-before-result":
+                    events.insert(-1, {"type": "system", "subtype": "task_updated",
+                        "task_id": "cleanup-task", "patch": {"status": "completed"},
+                        "uuid": "early-complete", "session_id": "cleanup-session"})
+                elif variation == "stopped-before-result":
+                    events.insert(-1, {"type": "system", "subtype": "task_notification",
+                        "task_id": "cleanup-task", "status": "stopped",
+                        "uuid": "early-stop", "session_id": "cleanup-session"})
+                else:
+                    events.insert(-1, {"type": "system", "subtype": "background_tasks_changed",
+                        "tasks": [], "uuid": "early-empty", "session_id": "cleanup-session"})
+                with self.assertRaises(CaptureError):
+                    normalize_trace("claude", stream(events + cleanup))
+
+
 if __name__ == "__main__":
-    raise SystemExit(run_counted(unittest.defaultTestLoader.loadTestsFromTestCase(NativeCaptureTests), label="test-native-eval-capture"))
+    suite = unittest.TestSuite((
+        unittest.defaultTestLoader.loadTestsFromTestCase(NativeCaptureTests),
+        unittest.defaultTestLoader.loadTestsFromTestCase(NativeCaptureEvidenceRepairTests),
+        unittest.defaultTestLoader.loadTestsFromTestCase(NativeCaptureProjectionTests),
+        unittest.defaultTestLoader.loadTestsFromTestCase(NativeCaptureScopedSearchTests),
+        unittest.defaultTestLoader.loadTestsFromTestCase(NativeCaptureContinuationTests),
+        unittest.defaultTestLoader.loadTestsFromTestCase(NativeCaptureClaudePreludeTests),
+        unittest.defaultTestLoader.loadTestsFromTestCase(NativeCaptureActivationTests),
+        unittest.defaultTestLoader.loadTestsFromTestCase(ClaudeContinuationTests),
+        unittest.defaultTestLoader.loadTestsFromTestCase(NativeCaptureOwnershipTests),
+        unittest.defaultTestLoader.loadTestsFromTestCase(ClaudeCleanupEpilogueTests),
+    ))
+    raise SystemExit(run_counted(suite, label="test-native-eval-capture"))

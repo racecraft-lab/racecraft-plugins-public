@@ -242,6 +242,18 @@ class ValidateSkills(unittest.TestCase):
                     self.assertTrue(re.search('^# SpecKit Scaffold Spec$', content, re.MULTILINE) is not None and re.search('^# SpecKit Setup$', content, re.MULTILINE) is None, "expected '# SpecKit Scaffold Spec' heading in skills/speckit-scaffold-spec/SKILL.md")
                 with self.subTest(msg='speckit-scaffold-spec: completion report uses scaffold naming'):
                     self.assertTrue(re.search('^## Scaffold Complete$', content, re.MULTILINE) is not None and re.search('^## Setup Complete$', content, re.MULTILINE) is None, "expected '## Scaffold Complete' report heading in skills/speckit-scaffold-spec/SKILL.md")
+                normalized = ' '.join(content.split())
+                with self.subTest(msg='speckit-scaffold-spec: branch reuse never writes main'):
+                    self.assertIn('all commits and pushes still originate from the resolved worktree branch, never `main`', normalized)
+                    self.assertIn('Never commit or push `main` while recovering or reusing a remote branch', normalized)
+                with self.subTest(msg='speckit-scaffold-spec: rejected push preserves and reports local work'):
+                    self.assertIn('The failure report identifies the existing local branch, canonical worktree, workflow file, and local commit', normalized)
+                    self.assertIn('retry the push from that same existing worktree', normalized)
+                    self.assertIn('Do not recreate the branch or worktree, regenerate the workflow, or replace the existing commit', normalized)
+                with self.subTest(msg='speckit-scaffold-spec: resolver ordering gates mutation and interview'):
+                    self.assertIn('the first resolver result comes before `git worktree add`, artifact writes, or roadmap mutation', normalized)
+                    self.assertIn('A second resolver check then runs after creation or reuse and immediately before bootstrap or Grill Me', normalized)
+                    self.assertIn('Neither bootstrap nor Grill Me may begin unless that second check confirms the registered worktree', normalized)
             if skill in SKILLS_REQUIRING_REFERENCES:
                 with self.subTest(msg=f'{skill}: references directory exists if required'):
                     self.assertTrue((skill_dir / 'references').is_dir(), f"references directory not found at {skill_dir / 'references'}")

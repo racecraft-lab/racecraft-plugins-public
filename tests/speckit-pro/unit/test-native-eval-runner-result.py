@@ -229,6 +229,18 @@ class NativeEvalRunnerResultTests(unittest.TestCase):
         result = grade_observation(native_case(), evidence)
         self.assertEqual(result["status"], "pass", result)
 
+    def test_nested_controller_response_binding_passes(self) -> None:
+        value = response()
+        selected = value["data"]["stdout_json"]
+        changed = native_case()
+        changed["checks"][0]["response_value_path"] = ["data", "stdout_json"]
+        evidence = observation(selected)
+        attach_receipt(evidence, [bound(value)])
+
+        result = grade_observation(changed, evidence)
+
+        self.assertEqual(result["status"], "pass", result)
+
     def test_raw_formatting_and_canonical_request_identities_are_distinct(self) -> None:
         value = response()
         pretty = request_bytes()

@@ -118,6 +118,31 @@ class StructuralRegressionTests(unittest.TestCase):
 
 
 class CodexAgentRegressionTests(unittest.TestCase):
+    def test_codex_agent_validator_rejects_missing_native_command_lifecycle_clause(self) -> None:
+        for role in agents.CODEX_AGENT_PROFILES:
+            with self.subTest(role=role), tempfile.TemporaryDirectory() as temporary:
+                target = Path(temporary) / "codex-agents"
+                shutil.copytree(agents.CODEX_AGENTS_DIR, target)
+                path = target / f"{role}.toml"
+                text = path.read_text(encoding="utf-8")
+                path.write_text(
+                    text.replace(
+                        '`write_stdin`',
+                        '`discarded_stdin`',
+                        1,
+                    ),
+                    encoding="utf-8",
+                )
+
+                result = run_codex_agent_validator(target)
+                self.assertFalse(result.wasSuccessful(), f"{role} lifecycle corruption passed validation")
+                self.assertEqual([], result.errors, f"{role} corruption raised instead of asserting")
+                failures = "\n".join(
+                    f"{test}\n{traceback}" for test, traceback in result.failures
+                )
+                self.assertIn(role, failures)
+                self.assertIn("native command lifecycle clauses missing", failures)
+
     def test_codex_agent_validator_rejects_newly_covered_role_corruption(self) -> None:
         mutations = (
             ("artifact-author", 'sandbox_mode = "workspace-write"', 'sandbox_mode = "read-only"'),

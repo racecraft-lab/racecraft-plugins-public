@@ -134,6 +134,14 @@ HELPERS: dict[str, HelperEntry] = {
         "python_contract",
         authoritative_request("resolve-scaffold-worktree-placement"),
     ),
+    "render-plan-repair-context": HelperEntry(
+        "render-plan-repair-context",
+        "render-plan-repair-context",
+        None,
+        "python_authoritative",
+        "python_contract",
+        authoritative_request("render-plan-repair-context"),
+    ),
     "detect-commands": HelperEntry(
         "detect-commands",
         "detect-commands",

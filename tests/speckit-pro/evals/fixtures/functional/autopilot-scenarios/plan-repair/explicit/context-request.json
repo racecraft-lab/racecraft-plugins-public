@@ -1,0 +1,21 @@
+{
+  "schema_version": "1.0",
+  "request_id": "case-112-plan-repair-context",
+  "helper_id": "render-plan-repair-context",
+  "operation": "render-plan-repair-context",
+  "mode": "read_only",
+  "inputs": {
+    "context_paths": {
+      "architecture": "scenario-inputs/architecture.md",
+      "clarify-results": "scenario-inputs/clarify-results.md",
+      "original-plan-prompt": "scenario-inputs/original-plan-prompt.md"
+    },
+    "g3_attempts_path": "scenario-output/g3-attempts.json",
+    "g3_attempt_index": 0,
+    "executor_task": "Preserve the exact visible UI-delivery requirement and its unresolved marker in scenario-inputs/feature/plan.md, record the explicit-human provenance and unavailable architecture in docs/ai/specs/.process/SPEC-112-workflow.md under the Plan Ambiguity Repair Log, and return after this single evidence-bearing repair.",
+    "attempt_number": 1,
+    "disputed_wording": "actual visible UI delivery",
+    "provenance_class": "explicit-human",
+    "prior_repair_result": "initial G3 failure with one unresolved marker and no supported observation mechanism"
+  }
+}

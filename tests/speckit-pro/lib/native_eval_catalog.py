@@ -22,6 +22,13 @@ from native_eval_verification import validate_check as validate_native_verificat
 SCHEMA_VERSION = "native-eval-catalog/v1"
 LAYERS = frozenset({"trigger", "functional", "integration", "parity"})
 HOSTS = ("claude", "codex")
+HOST_TOOL_NAMES = {
+    "claude": frozenset({"Agent", "Bash", "Edit", "Glob", "Grep", "Read", "Skill", "Write"}),
+    "codex": frozenset({
+        "apply_patch", "command_execution", "edit_file", "file_change", "list_files",
+        "read_file", "search_files", "send_input", "spawn_agent", "write_file",
+    }),
+}
 NATIVE_SYNTHESIS_MECHANISMS = {
     "claude": {"mode": "dedicated_subagent", "role": "speckit-pro:consensus-synthesizer"},
     "codex": {"mode": "dedicated_subagent", "role": "consensus-synthesizer"},
@@ -135,9 +142,14 @@ def _validate_fixture_destinations(destinations: list[PurePosixPath], case_id: s
             _require(not shared_prefix, f"case {case_id} has overlapping fixture destinations")
 
 
-def _validate_git_fixture(value: object, repo_root: Path, case_id: str) -> list[PurePosixPath]:
+def _validate_git_fixture(
+    value: object, repo_root: Path, case_id: str,
+) -> tuple[list[PurePosixPath], list[PurePosixPath]]:
     _require(isinstance(value, dict) and set(value) in (
-        {"recipe", "baseline"}, {"recipe", "baseline", "worktrees"},
+        {"recipe", "baseline"},
+        {"recipe", "baseline", "worktrees"},
+        {"recipe", "baseline", "feature_deletions"},
+        {"recipe", "baseline", "worktrees", "feature_deletions"},
     ),
              f"case {case_id} has malformed git_fixture")
     _require(value["recipe"] == GIT_FIXTURE_RECIPE,
@@ -149,6 +161,21 @@ def _validate_git_fixture(value: object, repo_root: Path, case_id: str) -> list[
     _validate_fixture_destinations(destinations, case_id)
     _require(all(destination.parts[0].casefold() not in _GIT_RESERVED_ROOTS for destination in destinations),
              f"case {case_id} git fixture cannot target a reserved runtime path")
+    deletions: list[PurePosixPath] = []
+    if "feature_deletions" in value:
+        raw_deletions = value["feature_deletions"]
+        _require(isinstance(raw_deletions, list) and bool(raw_deletions),
+                 f"case {case_id} git feature_deletions must be nonempty")
+        deletions = [
+            _relative_path(item, f"case {case_id} git feature deletion")
+            for item in raw_deletions
+        ]
+        _require(len(deletions) == len(set(deletions)),
+                 f"case {case_id} git feature_deletions contain duplicates")
+        _require(all(path in destinations for path in deletions),
+                 f"case {case_id} git feature_deletions must name exact baseline files")
+        _require(all(path.parts[0].casefold() not in _GIT_RESERVED_ROOTS for path in deletions),
+                 f"case {case_id} git feature deletion targets a reserved runtime path")
     if "worktrees" in value:
         rows = value["worktrees"]
         _require(isinstance(rows, list) and 1 <= len(rows) <= 4,
@@ -173,7 +200,7 @@ def _validate_git_fixture(value: object, repo_root: Path, case_id: str) -> list[
             branches.add(branch)
         _require(all(destination.parts[0].casefold() != ".worktrees" for destination in destinations),
                  f"case {case_id} git worktrees reserve the .worktrees directory")
-    return destinations
+    return destinations, deletions
 
 
 def _validate_host(host: object, case_id: str, host_name: str) -> None:
@@ -182,7 +209,11 @@ def _validate_host(host: object, case_id: str, host_name: str) -> None:
     skill = host["skill"]
     _require(skill is None or isinstance(skill, str) and bool(skill.strip()),
              f"case {case_id} {host_name} skill must be nonempty text or null")
-    _unique_text_list(host["allowed_tools"], f"case {case_id} {host_name} allowed_tools")
+    allowed_tools = _unique_text_list(
+        host["allowed_tools"], f"case {case_id} {host_name} allowed_tools",
+    )
+    unknown = sorted(set(allowed_tools) - HOST_TOOL_NAMES[host_name])
+    _require(not unknown, f"case {case_id} {host_name} allowed_tools contain unknown names: {unknown!r}")
     _unique_text_list(host["modes"], f"case {case_id} {host_name} modes", nonempty=True)
 
 
@@ -307,14 +338,10 @@ def _validate_native_synthesis_mechanism(
                               f"{host} role must be {expected['role']}"))
 
 
-def _validate_native_subagent_dispatch(
-    check: dict[str, Any], case_id: str, check_id: str,
-) -> None:
-    label = _check_label(case_id, check_id, "expected")
-    expected = check["expected"]
-    _require(isinstance(expected, list) and bool(expected), f"{label} must be nonempty")
+def _validated_dispatch_pairs(value: object, label: str) -> list[tuple[str, str]]:
+    _require(isinstance(value, list) and bool(value), f"{label} must be nonempty")
     pairs: list[tuple[str, str]] = []
-    for item in expected:
+    for item in value:
         _require(isinstance(item, dict) and set(item) == {"item_id", "role"},
                  f"{label} item is malformed")
         pairs.append((
@@ -322,13 +349,58 @@ def _validate_native_subagent_dispatch(
             _stable_id(item["role"], f"{label} role"),
         ))
     _require(len(pairs) == len(set(pairs)), f"{label} contains duplicates")
+    return pairs
+
+
+def _validate_native_subagent_dispatch(
+    check: dict[str, Any], case_id: str, check_id: str,
+) -> None:
+    has_shared = "expected" in check
+    has_host_specific = "expected_by_host" in check
+    _require(has_shared is not has_host_specific,
+             _check_label(case_id, check_id,
+                          "must define exactly one of expected and expected_by_host"))
+    if has_shared:
+        pairs_by_contract = {"shared": _validated_dispatch_pairs(
+            check["expected"], _check_label(case_id, check_id, "expected"),
+        )}
+    else:
+        expected_by_host = check["expected_by_host"]
+        _require(isinstance(expected_by_host, dict) and set(expected_by_host) == set(HOSTS),
+                 _check_label(case_id, check_id,
+                              "expected_by_host must define exactly claude and codex"))
+        pairs_by_contract = {
+            host: _validated_dispatch_pairs(
+                expected_by_host[host],
+                _check_label(case_id, check_id, f"expected_by_host.{host}"),
+            )
+            for host in HOSTS
+        }
+    if has_host_specific:
+        _require(
+            sorted(item_id for item_id, _role in pairs_by_contract["claude"])
+            == sorted(item_id for item_id, _role in pairs_by_contract["codex"]),
+            _check_label(case_id, check_id,
+                         "expected_by_host must define equivalent item_ids"),
+        )
+    single_item_context = check.get("single_item_context", False)
+    _require(type(single_item_context) is bool,
+             _check_label(case_id, check_id, "single_item_context must be boolean"))
+    if single_item_context:
+        _require(all(len({item_id for item_id, _role in pairs}) == 1
+                     for pairs in pairs_by_contract.values()),
+                 _check_label(case_id, check_id,
+                              "single_item_context requires exactly one item_id"))
     forbidden = [
         _stable_id(role, _check_label(case_id, check_id, "forbidden_roles item"))
         for role in _unique_text_list(
             check["forbidden_roles"], _check_label(case_id, check_id, "forbidden_roles"),
         )
     ]
-    _require(set(forbidden).isdisjoint(role for _item_id, role in pairs),
+    expected_roles = {
+        role for pairs in pairs_by_contract.values() for _item_id, role in pairs
+    }
+    _require(set(forbidden).isdisjoint(expected_roles),
              _check_label(case_id, check_id, "forbidden_roles overlap expected roles"))
 
 
@@ -343,6 +415,10 @@ def _validate_native_plan_repair_context(
         _relative_path(path, _check_label(case_id, check_id, "context path"))
     _relative_path(
         check["g3_request_path"], _check_label(case_id, check_id, "g3_request_path"),
+    )
+    _relative_path(
+        check["context_request_path"],
+        _check_label(case_id, check_id, "context_request_path"),
     )
     _stable_id(
         check["executor_role"], _check_label(case_id, check_id, "executor_role"),
@@ -389,9 +465,10 @@ _CHECK_FIELDS = {
     "semantic": {"rubric"},
     "subagent_returns_before_parent_file_change": {"path"},
     "native_synthesis_mechanism": {"artifact_path", "per_host"},
-    "native_subagent_dispatch": {"expected", "forbidden_roles"},
+    "native_subagent_dispatch": {"forbidden_roles"},
     "native_plan_repair_context": {
-        "contexts", "g3_request_path", "executor_role", "max_repairs", "terminal_outcome",
+        "contexts", "g3_request_path", "context_request_path", "executor_role",
+        "max_repairs", "terminal_outcome",
     },
     "native_git_final_state": set(NATIVE_GIT_FINAL_STATE_FIELDS),
     "native_verification_pointer": set(NATIVE_VERIFICATION_POINTER_FIELDS),
@@ -429,10 +506,43 @@ def _validate_check(check: object, requirement_ids: set[str], case_id: str) -> N
     required = {"id", "requirement", "type"} | _CHECK_FIELDS[check_type]
     optional = ({"input_regex", "include_failed"} if check_type == "tool_used" else
                 {"alternatives"} if check_type == "json_field" else
+                {"expected", "expected_by_host", "single_item_context"}
+                if check_type == "native_subagent_dispatch" else
                 {"registered_worktrees_unchanged"} if check_type == "native_git_final_state" else set())
+    if check_type == "native_runner_result":
+        optional = {"response_value_path"}
     allowed = required | optional
     _require(required <= set(check) <= allowed, _check_label(case_id, check_id, "has malformed parameters"))
     _CHECK_VALIDATORS[check_type](check, case_id, check_id)
+
+
+def _require_prompt_check_consistency(prompt: str, checks: list[dict[str, Any]], case_id: str) -> None:
+    response_fields = {
+        check["field_path"][0]
+        for check in checks
+        if check.get("type") == "response_json_field"
+        and isinstance(check.get("field_path"), list)
+        and isinstance(check["field_path"][0], str)
+    }
+    hidden_fields = sorted(field for field in response_fields if field not in prompt)
+    _require(not hidden_fields,
+             f"case {case_id} prompt omits response fields: {hidden_fields!r}")
+
+    search_patterns = {
+        check["pattern"] for check in checks if check.get("type") == "file_search"
+    }
+    hidden_patterns = sorted(pattern for pattern in search_patterns if pattern not in prompt)
+    _require(not hidden_patterns,
+             f"case {case_id} prompt omits file search patterns: {hidden_patterns!r}")
+
+    runner_checks = [check for check in checks if check.get("type") == "native_runner_result"]
+    if "{{resolved_python}}" in prompt and runner_checks:
+        _require("default-shell" in prompt,
+                 f"case {case_id} resolved Python invocation must name the default-shell boundary")
+        for check in runner_checks:
+            command = f"{{{{resolved_python}}}} -m speckit_pro_runner < {check['request_path']}"
+            _require(command in prompt,
+                     f"case {case_id} prompt omits exact native runner command: {command}")
 
 
 def _validate_case(case: object, repo_root: Path) -> None:
@@ -450,6 +560,8 @@ def _validate_case(case: object, repo_root: Path) -> None:
     fields = base_fields | ({"pairing"} if layer == "parity" else set())
     if "git_fixture" in case:
         fields |= {"git_fixture"}
+    if "git_metadata_access" in case:
+        fields |= {"git_metadata_access"}
     if "required_tools" in case:
         fields |= {"required_tools"}
     _require(isinstance(case, dict) and set(case) == fields, "catalog contains a malformed case")
@@ -471,24 +583,41 @@ def _validate_case(case: object, repo_root: Path) -> None:
     _nonempty_text(case["capability"], f"case {case_id} capability")
     prompt = _nonempty_text(case["prompt"], f"case {case_id} prompt")
     placeholders = re.findall(r"{{[^{}]*}}", prompt)
-    _require(all(item == "{{skill}}" for item in placeholders)
-             and not re.search(r"{{|}}", prompt.replace("{{skill}}", "")),
+    allowed_placeholders = {"{{skill}}"}
+    if "required_tools" in case:
+        allowed_placeholders.add("{{resolved_python}}")
+    prompt_without_placeholders = prompt
+    for placeholder in allowed_placeholders:
+        prompt_without_placeholders = prompt_without_placeholders.replace(placeholder, "")
+    _require(all(item in allowed_placeholders for item in placeholders)
+             and not re.search(r"{{|}}", prompt_without_placeholders),
              f"case {case_id} prompt contains an unsupported placeholder")
     requirements = case["requirements"]
     _require(isinstance(requirements, list) and bool(requirements), f"case {case_id} has no requirements")
     requirement_ids: list[str] = []
+    requirement_descriptions: list[str] = []
     for requirement in requirements:
         _require(isinstance(requirement, dict) and set(requirement) == {"id", "description"},
                  f"case {case_id} has a malformed requirement")
         requirement_ids.append(_stable_id(requirement["id"], f"case {case_id} requirement id"))
-        _nonempty_text(requirement["description"], f"case {case_id} requirement description")
+        description = _nonempty_text(
+            requirement["description"], f"case {case_id} requirement description",
+        )
+        requirement_descriptions.append(
+            re.sub(r"\b(?:the|step)\b", "", description.casefold()).replace("-", " ")
+        )
     _require(len(requirement_ids) == len(set(requirement_ids)), f"case {case_id} has duplicate requirement ids")
+    normalized_descriptions = [re.sub(r"\s+", " ", item).strip() for item in requirement_descriptions]
+    _require(len(normalized_descriptions) == len(set(normalized_descriptions)),
+             f"case {case_id} has duplicate requirement descriptions")
     fixtures = case["fixtures"]
     _require(isinstance(fixtures, list), f"case {case_id} fixtures must be a list")
     destinations = [_validate_fixture(fixture, repo_root, case_id) for fixture in fixtures]
     _validate_fixture_destinations(destinations, case_id)
     if "git_fixture" in case:
-        baseline_destinations = _validate_git_fixture(case["git_fixture"], repo_root, case_id)
+        baseline_destinations, feature_deletions = _validate_git_fixture(
+            case["git_fixture"], repo_root, case_id,
+        )
         _require(all(destination.parts[0].casefold() not in _GIT_RESERVED_ROOTS for destination in destinations),
                  f"case {case_id} git fixture cannot target a reserved runtime path")
         for destination in destinations:
@@ -497,9 +626,16 @@ def _validate_case(case: object, repo_root: Path) -> None:
                 shared_prefix = shared_prefix or baseline_destination.parts == destination.parts[:len(baseline_destination.parts)]
                 _require(destination == baseline_destination or not shared_prefix,
                          f"case {case_id} has overlapping fixture destinations")
+        _require(not set(destinations).intersection(feature_deletions),
+                 f"case {case_id} git feature deletion conflicts with a feature fixture")
         if "worktrees" in case["git_fixture"]:
             _require(all(destination.parts[0].casefold() != ".worktrees" for destination in destinations),
                      f"case {case_id} git worktrees reserve the .worktrees directory")
+    if "git_metadata_access" in case:
+        _require(case["git_metadata_access"] == "write",
+                 f"case {case_id} git_metadata_access must be write")
+        _require("git_fixture" in case,
+                 f"case {case_id} git_metadata_access requires git_fixture")
     hosts = case["hosts"]
     _require(isinstance(hosts, dict) and set(hosts) == set(HOSTS),
              f"case {case_id} must define exactly claude and codex")
@@ -515,6 +651,7 @@ def _validate_case(case: object, repo_root: Path) -> None:
         if check.get("type") == "semantic":
             _require(_CROSS_HOST_RUBRIC.search(check["rubric"]) is None,
                      f"case {case_id} per-host semantic check requires cross-host evidence; use pairing")
+    _require_prompt_check_consistency(prompt, checks, case_id)
     declared_artifacts = {
         check["path"] for check in checks
         if check.get("type") in {"json_field", "file_exists"}
@@ -556,14 +693,23 @@ def _validate_case(case: object, repo_root: Path) -> None:
     runner_result_checks = [
         check for check in checks if check.get("type") == "native_runner_result"
     ]
-    _require(len(runner_result_checks) <= 1,
-             f"case {case_id} has ambiguous native runner result checks")
+    _require(len(runner_result_checks) <= 8,
+             f"case {case_id} has too many native runner result checks")
+    runner_bindings = [
+        (check["request_path"], tuple(check["response_field_path"]))
+        for check in runner_result_checks
+    ]
+    _require(len(runner_bindings) == len(set(runner_bindings)),
+             f"case {case_id} has duplicate native runner result bindings")
     declared_fixture_paths = {destination.as_posix() for destination in destinations}
     for check in runner_result_checks:
         _require(check["request_path"] in declared_fixture_paths,
                  f"case {case_id} native runner request_path must reference a declared fixture")
     for check in plan_repair_checks:
-        required_fixture_paths = {*check["contexts"].values(), check["g3_request_path"]}
+        required_fixture_paths = {
+            *check["contexts"].values(), check["g3_request_path"],
+            check["context_request_path"],
+        }
         _require(required_fixture_paths <= declared_fixture_paths,
                  f"case {case_id} native Plan-repair context must reference declared fixtures")
     check_ids = [check["id"] for check in checks]
@@ -695,6 +841,8 @@ def input_fingerprint(
     case_input_keys = ["id", "prompt", "fixtures", "timeout_seconds", "resource_class"]
     if "required_tools" in case:
         case_input_keys.append("required_tools")
+    if "git_metadata_access" in case:
+        case_input_keys.append("git_metadata_access")
     payload = {
         "schema_version": "native-eval-input/v1",
         "case_inputs": {key: case[key] for key in case_input_keys},

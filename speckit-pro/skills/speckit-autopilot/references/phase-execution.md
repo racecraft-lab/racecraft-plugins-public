@@ -306,8 +306,10 @@ For each clarify session in the workflow file:
             Prepare a Clarify Question Set for: <session prompt>
           """)
   3. Parent answers returned questions and edits spec/workflow/state
-  4. Parse executor's "Unresolved for consensus" section
-  5. If unresolved items exist:
+  4. Re-scan spec.md for `[NEEDS CLARIFICATION]` markers and record the
+     remaining count in the session result
+  5. Parse executor's "Unresolved for consensus" section
+  6. If unresolved items exist:
      a. TaskUpdate: "<session> Consensus" → in_progress
      b. BATCHED dispatch (see consensus-protocol.md §Batched Dispatch):
         Stage 1: spawn ALL routed analysts for ALL items in ONE
@@ -318,8 +320,10 @@ For each clarify session in the workflow file:
                  to spec.md (preserves write contention safety).
         Round 2 escape-hatch: also batched across all queued items.
      c. TaskUpdate: "<session> Consensus" → completed
-  6. TaskUpdate: session task → completed
-  7. Proceed to next session
+  7. After accepted consensus edits, re-scan spec.md and update the recorded
+     remaining-marker count
+  8. TaskUpdate: session task → completed
+  9. Proceed to next session
 ```
 
 **Layer 1 (executor):** The clarify-executor researches possible
@@ -337,6 +341,12 @@ Session 1's resolved questions. Both layers complete
 before the next session runs.
 
 **Gate:** G2 — verify 0 markers remain
+
+G2 is a separate post-Clarify check, not an inference from completed tasks or
+consensus. After the final session, scan the current `spec.md` again and advance
+only when the actual `[NEEDS CLARIFICATION]` count is zero. A missing scan,
+unreadable spec, or remaining marker leaves Clarify and G2 incomplete and
+follows the configured gate-failure/escalation path.
 
 **Commit:**
 `git add specs/ <workflow-file-path> <workflow-dir>/autopilot-state.json && git commit -m "feat(SPEC-XXX): complete clarify phase"`
@@ -410,7 +420,9 @@ orchestrator follows
 §Plan ambiguity provenance repair. It classifies the disputed wording from
 direct source evidence, appends the Plan Ambiguity Repair Log, and re-dispatches
 the same Plan executor with the original prompt plus the complete
-`Plan Repair Context`. Re-run G3 after the shared corrective reservation. Missing
+`Plan Repair Context`. The executor returns the renderer-provided
+`PLAN_REPAIR_CONTEXT_SHA256=<digest>` receipt unchanged. Re-run G3 after the
+shared corrective reservation. Missing
 artifacts and constitutional failures retain the ordinary G3 auto-fix path.
 
 Pass WORKFLOW_FILE as `workflow_file` to validate-gate. Stage the formal helper's
@@ -1744,6 +1756,11 @@ lead there: all three analysts disagreeing after Round 2, a Round-1 escape
 whose Round 2 still cannot resolve, and an analyst that fails its single
 retry. All three land on one behavior, and only the report names which
 occurred.
+
+The closed synthesis basis must remain exact: no agreeing pair is
+`all_disagree`, an unresolved escape is `escape_unresolved`, and an exhausted
+analyst retry is `analyst_failed`. Do not replace these sweep-specific values
+with the general Consensus Resolution Log outcome labels.
 
 **No edit, no class, no sweep row.** No artifact is edited and the comment is
 given no class, because `amended` would assert an edit nobody resolved and the

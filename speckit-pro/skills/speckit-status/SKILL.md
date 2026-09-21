@@ -63,6 +63,12 @@ For each design concept doc found, record the SPEC-ID it corresponds to
 frontmatter). This drives the **DC** (Design Concept) column in the
 phase-detail dashboard and the per-spec detail view.
 
+Search and glob results only discover candidates. This standalone status skill
+must read every selected current roadmap and workflow file from beginning to
+end before answering; snippets, cached summaries, and another skill's report
+are not substitutes for a full-file read. Do not infer status, dependencies,
+branch, or phase state from an unread section.
+
 ### 2. Parse the Technical Roadmap (Full Roadmap)
 
 If a technical roadmap file exists, extract the **Progress Tracking**

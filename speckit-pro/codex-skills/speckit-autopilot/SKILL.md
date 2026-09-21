@@ -25,6 +25,15 @@ Initialize/recover its execution-control ledger before dispatch. Its metadata,
 native batching, proof-reuse, shared repair/time ceilings, and honest checkpoint
 rules govern every phase and Post step; agent replacement never resets budgets.
 
+When a bounded request supplies an exact native command together with an
+invocation count or order, that command is the authority. Execute each listed
+command exactly once and in order, with no interpreter preflight, shell
+variable, wrapper, replay, capture redirection, or substituted command unless
+the request explicitly permits it. Consume the direct native result; do not
+rerun a helper merely to make its output easier to parse. The native tool result
+is the captured result: preserve that direct response for later artifacts. Do
+not issue a second invocation to obtain a file, exit code, stdout, or stderr.
+
 ## Installed Runtime Contract
 
 Installed Claude and Codex surfaces resolve Python 3.11 or newer, invoke
@@ -36,9 +45,13 @@ PowerShell-specific command-language requirement for installed workflows.
 ## Scope
 
 This skill handles autonomous workflow EXECUTION. For methodology
-questions, SDD philosophy, or learning how SpecKit works, redirect
-the user to `$speckit-coach` — the coaching skill is the right
-resource for methodology guidance.
+questions, SDD philosophy, comparisons, design rationale, deep dives, or
+learning how SpecKit works, redirect the user to `$speckit-coach` when the
+user is asking for explanation rather than execution. Do not redirect a real
+implementation request merely because it asks for detailed progress or uses
+the word "implement": when the user supplies or identifies a populated
+workflow and asks to run, resume, or implement it, this remains an autopilot
+execution request.
 
 You are an **orchestrator** for SpecKit workflows. You read
 prompts from the workflow file and delegate each phase to a
@@ -63,7 +76,9 @@ This Codex variant is a concrete tool contract, not advisory prose.
 Bind the workflow to actual Codex primitives:
 
 - `update_plan` is REQUIRED before Phase 1 and after every phase transition.
-  If the call fails or is skipped, STOP.
+  Invoke it directly; do not infer that it is unavailable from tool summaries,
+  prompt prose, or runtime metadata. STOP only if the actual call is rejected,
+  fails, or is skipped.
 - Discover the callable collaboration actions before dispatch and select the
   semantic equivalents that the current Codex surface actually exposes.
   `spawn_agent` plus `wait_agent` and delivery of the agent's result are the
@@ -658,6 +673,14 @@ incomplete item to `in_progress` in both state stores and continue the
 autopilot loop instead of summarizing. `Post: Retrospective` is the final
 Post item; it must be completed or explicitly skipped before the
 autopilot can report completion.
+
+The same audit must reconcile every started native command, tool, and agent
+with its terminal result. Give each final local gate one owner, run each gate
+once as a separately attributable foreground command, and wait on that exact
+native handle before starting the next gate. Never launch an overlapping copy
+of pending work. If time or budget prevents terminal reconciliation, preserve
+the unresolved identities and report an incomplete checkpoint instead of a
+completion response.
 
 Only after every Post item is completed or explicitly skipped, and the
 PR URL is known, the autopilot is DONE. Report the final summary with

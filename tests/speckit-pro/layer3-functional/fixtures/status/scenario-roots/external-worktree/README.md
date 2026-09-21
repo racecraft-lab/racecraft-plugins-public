@@ -1,5 +1,3 @@
-<!-- fixture-kind: deterministic-synthetic-testdata; setup input only, not a live project snapshot. -->
-
 # External Worktree Scenario
 
 The materializer must create and attach a real disposable worktree outside the

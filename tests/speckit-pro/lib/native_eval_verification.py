@@ -13,6 +13,26 @@ CHECK_FIELDS = frozenset({"workflow_file", "command_id", "pointer_path", "reusab
 POINTER_SCHEMA = "native-eval-verification-pointer/v1"
 RECEIPT_SCHEMA = "native-eval-controller-verification/v1"
 RECEIPT_AUTHORITY = "controller-bound-retained-native-evidence"
+ABSENCE_SCHEMA = "native-eval-verification-absence/v1"
+ABSENCE_KIND = "no-native-runner-invocation"
+ROOT_TRACE_SCHEMA = "codex-native-plan-repair-trace/v1"
+CLAUDE_TRACE_SCHEMA = "claude-plugin-eval-trace/v1"
+_CODEX_ABSENCE_FIELDS = frozenset({
+    "schema", "kind", "authority", "host", "root_trace", "check",
+})
+_CODEX_ABSENCE_TRACE_FIELDS = frozenset({
+    "schema", "thread_id", "raw_sha256", "runner_invocation_count",
+})
+_CLAUDE_ABSENCE_FIELDS = frozenset({
+    "schema", "kind", "authority", "host", "claude_trace", "check",
+})
+_CLAUDE_ABSENCE_TRACE_FIELDS = frozenset({
+    "schema", "session_id", "cwd", "cli_version",
+    "public_trace_sha256", "public_trace_bytes",
+    "retained_session_sha256", "retained_session_bytes",
+    "activation_witness_sha256", "framework_result_sha256",
+    "framework_result_bytes", "runner_invocation_count",
+})
 _HEX_32 = re.compile(r"[a-f0-9]{32}")
 _SHA256 = re.compile(r"[a-f0-9]{64}")
 _COMMAND_ID = re.compile(r"[A-Z][A-Z0-9_]*")
@@ -208,6 +228,17 @@ def parse_runner_result(output: object) -> dict[str, Any]:
     }
 
 
+def durable_record_bytes(record: Mapping[str, object]) -> bytes:
+    """Reproduce the runner's durable_json encoding for recovery verification."""
+
+    try:
+        return (json.dumps(
+            dict(record), sort_keys=True, indent=2, allow_nan=False,
+        ) + "\n").encode("utf-8")
+    except (TypeError, ValueError) as exc:
+        raise VerificationError("native verification record is not durably encodable") from exc
+
+
 def bind_result(
     check: Mapping[str, object], invocation: Mapping[str, object],
     read_record: Callable[[str], bytes],
@@ -261,6 +292,151 @@ def attach_receipt(observation: dict[str, Any], rows: list[Mapping[str, object]]
     }
 
 
+def _check_identity(check: Mapping[str, object]) -> dict[str, object]:
+    """Return the exact catalog identity one absence marker must bind."""
+
+    return {
+        "id": check.get("id"), "workflow_file": check.get("workflow_file"),
+        "command_id": check.get("command_id"), "pointer_path": check.get("pointer_path"),
+        "reusable": check.get("reusable"),
+    }
+
+
+def absence_marker(
+    check: Mapping[str, object], identity: Mapping[str, object],
+) -> dict[str, object]:
+    """Build the controller-authored absence marker for one pointer check.
+
+    The marker is authored here, inside the trusted controller verification
+    module, and reaches grading only through the receipt envelope. It is bound to
+    both the pointer check's catalog identity and one host-specific retained
+    trace whose completeness proves the native runner was never invoked.
+    """
+
+    validate_check(check, "native_verification_pointer check")
+    _need(isinstance(identity, Mapping),
+          "native verification absence identity is malformed")
+    host = identity.get("host")
+    if host == "codex":
+        _need(set(identity) == {"host", "root_thread_id", "root_trace_sha256"},
+              "native verification absence identity is malformed")
+        thread_id = identity.get("root_thread_id")
+        _need(isinstance(thread_id, str) and bool(thread_id),
+              "native verification absence thread identity is malformed")
+        digest = identity.get("root_trace_sha256")
+        _need(isinstance(digest, str) and _SHA256.fullmatch(digest) is not None,
+              "native verification absence trace hash is malformed")
+        return {
+            "schema": ABSENCE_SCHEMA, "kind": ABSENCE_KIND,
+            "authority": RECEIPT_AUTHORITY, "host": "codex",
+            "root_trace": {
+                "schema": ROOT_TRACE_SCHEMA, "thread_id": thread_id,
+                "raw_sha256": digest, "runner_invocation_count": 0,
+            },
+            "check": _check_identity(check),
+        }
+    _need(host == "claude" and set(identity) == {
+        "host", "session_id", "cwd", "cli_version",
+        "public_trace_sha256", "public_trace_bytes",
+        "retained_session_sha256", "retained_session_bytes",
+        "activation_witness_sha256", "framework_result_sha256",
+        "framework_result_bytes",
+    }, "native verification absence identity is malformed")
+    for field in ("session_id", "cwd", "cli_version"):
+        _need(isinstance(identity.get(field), str) and bool(identity[field]),
+              f"native verification absence {field} is malformed")
+    for field in (
+        "public_trace_sha256", "retained_session_sha256",
+        "activation_witness_sha256", "framework_result_sha256",
+    ):
+        _need(isinstance(identity.get(field), str)
+              and _SHA256.fullmatch(identity[field]) is not None,
+              f"native verification absence {field} is malformed")
+    for field in ("public_trace_bytes", "retained_session_bytes", "framework_result_bytes"):
+        _need(type(identity.get(field)) is int and identity[field] > 0,
+              f"native verification absence {field} is malformed")
+    return {
+        "schema": ABSENCE_SCHEMA, "kind": ABSENCE_KIND,
+        "authority": RECEIPT_AUTHORITY, "host": "claude",
+        "claude_trace": {
+            "schema": CLAUDE_TRACE_SCHEMA,
+            **{field: identity[field] for field in (
+                "session_id", "cwd", "cli_version",
+                "public_trace_sha256", "public_trace_bytes",
+                "retained_session_sha256", "retained_session_bytes",
+                "activation_witness_sha256", "framework_result_sha256",
+                "framework_result_bytes",
+            )},
+            "runner_invocation_count": 0,
+        },
+        "check": _check_identity(check),
+    }
+
+
+def absence_row(
+    check: Mapping[str, object], identity: Mapping[str, object],
+) -> dict[str, object]:
+    """Return the tagged absence variant row for the controller receipt envelope."""
+
+    return {"check_id": check.get("id"), "absence": absence_marker(check, identity)}
+
+
+def absence_bytes(
+    check: Mapping[str, object], identity: Mapping[str, object],
+) -> bytes:
+    """Return the canonical append-only bytes retained for one absence marker."""
+
+    return json.dumps(
+        absence_marker(check, identity), sort_keys=True, separators=(",", ":"),
+        ensure_ascii=False, allow_nan=False,
+    ).encode("utf-8") + b"\n"
+
+
+def _absence(value: object, check: Mapping[str, object]) -> Mapping[str, object]:
+    """Validate one controller-authored absence marker against its pointer check."""
+
+    _need(isinstance(value, Mapping)
+          and value.get("schema") == ABSENCE_SCHEMA and value.get("kind") == ABSENCE_KIND
+          and value.get("authority") == RECEIPT_AUTHORITY,
+          "controller verification absence marker is malformed")
+    host = value.get("host")
+    if host == "codex":
+        _need(set(value) == _CODEX_ABSENCE_FIELDS,
+              "controller verification absence marker is malformed")
+        trace = value.get("root_trace")
+        _need(isinstance(trace, Mapping) and set(trace) == _CODEX_ABSENCE_TRACE_FIELDS
+              and trace.get("schema") == ROOT_TRACE_SCHEMA
+              and isinstance(trace.get("thread_id"), str) and bool(trace["thread_id"])
+              and isinstance(trace.get("raw_sha256"), str)
+              and _SHA256.fullmatch(trace["raw_sha256"]) is not None
+              and type(trace.get("runner_invocation_count")) is int
+              and trace["runner_invocation_count"] == 0,
+              "controller verification absence trace identity is malformed")
+    else:
+        _need(host == "claude" and set(value) == _CLAUDE_ABSENCE_FIELDS,
+              "controller verification absence marker is malformed")
+        trace = value.get("claude_trace")
+        _need(isinstance(trace, Mapping) and set(trace) == _CLAUDE_ABSENCE_TRACE_FIELDS
+              and trace.get("schema") == CLAUDE_TRACE_SCHEMA
+              and all(isinstance(trace.get(field), str) and bool(trace[field])
+                      for field in ("session_id", "cwd", "cli_version"))
+              and all(isinstance(trace.get(field), str)
+                      and _SHA256.fullmatch(trace[field]) is not None for field in (
+                          "public_trace_sha256", "retained_session_sha256",
+                          "activation_witness_sha256", "framework_result_sha256",
+                      ))
+              and all(type(trace.get(field)) is int and trace[field] > 0 for field in (
+                          "public_trace_bytes", "retained_session_bytes",
+                          "framework_result_bytes",
+                      ))
+              and type(trace.get("runner_invocation_count")) is int
+              and trace["runner_invocation_count"] == 0,
+              "controller verification absence trace identity is malformed")
+    _need(_strict_equal(value.get("check"), _check_identity(check)),
+          "controller verification absence does not match its pointer check")
+    return value
+
+
 def _receipt_row(check: Mapping[str, object], observation: Mapping[str, object]) -> Mapping[str, object]:
     metadata = observation.get("native_metadata")
     receipt = metadata.get("controller_verification") if isinstance(metadata, Mapping) else None
@@ -274,8 +450,11 @@ def _receipt_row(check: Mapping[str, object], observation: Mapping[str, object])
     _need(isinstance(rows, list) and len(matches) == 1,
           "controller verification evidence is missing or ambiguous")
     row = matches[0]
-    _need(set(row) == {"check_id", "call", "actual"},
+    _need(set(row) in ({"check_id", "call", "actual"}, {"check_id", "absence"}),
           "controller verification check evidence is malformed")
+    if "absence" in row:
+        _absence(row["absence"], check)
+        return row
     call, actual = row.get("call"), row.get("actual")
     _need(isinstance(call, Mapping)
           and set(call) == {"id", "tool_call_index", "response_sha256", "response_bytes"}
@@ -343,6 +522,11 @@ def grade_pointer(
         row = _receipt_row(check, observation)
     except VerificationError as exc:
         return "invalid", str(exc)
+    if "absence" in row:
+        return "fail", (
+            "controller-bound verification absence: the retained native trace "
+            "proves zero native runner invocations for this check"
+        )
     actual = row["actual"]
     mismatches = []
     for key in ("workflow_file", "command_id", "reusable"):
@@ -371,7 +555,8 @@ def grade_pointer(
 
 
 __all__ = (
-    "CHECK_FIELDS", "VerificationError", "attach_receipt", "bind_result",
-    "grade_pointer", "pointer_artifacts", "record_directories", "validate_check",
-    "verification_checks",
+    "ABSENCE_KIND", "ABSENCE_SCHEMA", "CHECK_FIELDS", "ROOT_TRACE_SCHEMA",
+    "VerificationError", "absence_bytes", "absence_marker", "absence_row",
+    "attach_receipt", "bind_result", "grade_pointer", "pointer_artifacts",
+    "record_directories", "validate_check", "verification_checks",
 )

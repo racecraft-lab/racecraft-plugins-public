@@ -4,6 +4,18 @@ Presets customize how installed Spec Kit workflows generate artifacts;
 extensions add capabilities. The active installation owns their exact commands,
 resolution behavior, manifests, hooks, and configuration schema.
 
+## Hook optionality
+
+- `enabled: false` disables the hook in every mode.
+- `optional: false` runs automatically.
+- `optional: true` prompts or may be skipped in an interactive session.
+- In noninteractive autopilot, `optional: true` does not mean automatic skip:
+  autopilot evaluates the documented eligibility rules and auto-accepts an
+  eligible hook by invoking its command directly.
+
+Keep generic hook policy separate from an extension manifest's declared hooks.
+An extension command is not evidence that the extension declares a hook.
+
 ## Inspect before advising
 
 1. Confirm the target project and active host. Preserve unrelated work.

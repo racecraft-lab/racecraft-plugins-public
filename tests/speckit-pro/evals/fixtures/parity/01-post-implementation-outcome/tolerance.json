@@ -3,37 +3,17 @@
   "fixture_id": "01-post-implementation-outcome",
   "description": "Post-implementation output tolerances.",
   "fields": {
-    "outcome.status": {
-      "tolerance": "exact",
-      "rationale": "The closed completion or block status must match."
-    },
-    "outcome.decision": {
+    "outcome.summary": {
       "tolerance": "semantic-equivalent",
-      "rationale": "Allow paraphrase while requiring the same packet, gate, and serial-tail decision."
+      "rationale": "Require equivalent safe stop state, bounded Post execution, truthful manual UAT status, and absence of external PR mutation while allowing native report structure and additional evidence detail."
     },
-    "outcome.evidence": {
+    "routing.summary": {
       "tolerance": "semantic-equivalent",
-      "rationale": "Allow prose variance only when the cited workflow evidence supports the same result."
+      "rationale": "Require the same authoritative split-PR atomicity route and the same two ordered independent increments while allowing native labels and evidence detail."
     },
-    "routing.atomicity_route": {
-      "tolerance": "exact",
-      "rationale": "Both clients must consume the same authoritative route from the same staged topology."
-    },
-    "routing.layer_status": {
-      "tolerance": "exact",
-      "rationale": "Both clients must consume an independently correct current planner envelope before comparison."
-    },
-    "routing.increment_count": {
-      "tolerance": "exact",
-      "rationale": "The two independent additive increments are a closed fixture fact."
-    },
-    "verification.command": {
-      "tolerance": "exact",
-      "rationale": "Both clients execute the declared INTEGRATION_TEST command through the runner."
-    },
-    "verification.status": {
-      "tolerance": "exact",
-      "rationale": "Both clients must report the same truthful current execution outcome."
+    "verification.summary": {
+      "tolerance": "semantic-equivalent",
+      "rationale": "Require successful execution of the declared INTEGRATION_TEST through the protected runner, an authentic saved verification pointer, copy-only isolation with reusable false, and successful local packet and workflow validation while allowing run-specific identifiers and native report structure."
     }
   }
 }

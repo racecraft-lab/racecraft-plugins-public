@@ -20,6 +20,7 @@ from test_result import run_counted  # noqa: E402
 
 
 SOURCE_PATHS = {
+    "claude_coach": REPO_ROOT / "speckit-pro/skills/speckit-coach/SKILL.md",
     "claude_skill": REPO_ROOT / "speckit-pro/skills/speckit-autopilot/SKILL.md",
     "claude_gate": REPO_ROOT / "speckit-pro/skills/speckit-autopilot/references/gate-validation.md",
     "claude_phase": REPO_ROOT / "speckit-pro/skills/speckit-autopilot/references/phase-execution.md",
@@ -31,6 +32,9 @@ SOURCE_PATHS = {
     / "speckit-pro/codex-skills/speckit-autopilot/references/phase-execution-codex.md",
     "codex_post": REPO_ROOT
     / "speckit-pro/codex-skills/speckit-autopilot/references/post-implementation-codex.md",
+    "claude_scaffold": REPO_ROOT / "speckit-pro/skills/speckit-scaffold-spec/SKILL.md",
+    "codex_scaffold": REPO_ROOT / "speckit-pro/codex-skills/speckit-scaffold-spec/SKILL.md",
+    "codex_coach": REPO_ROOT / "speckit-pro/codex-skills/speckit-coach/SKILL.md",
     "claude_evals": REPO_ROOT
     / "tests/speckit-pro/layer3-functional/evals/speckit-autopilot-evals.json",
     "codex_evals": REPO_ROOT
@@ -206,6 +210,128 @@ CHECKS = (
 )
 
 
+AUDITED_PHASE_CONTRACT_CHECKS = (
+    (
+        "Coach redirects explain durable autopilot lifecycle ownership",
+        "audited_contracts_combined",
+        "autopilot owns the durable phase task list, native subagent lifecycle",
+    ),
+    (
+        "Coach redirects explain operator-visible progress",
+        "audited_contracts_combined",
+        "operator-visible progress",
+    ),
+    (
+        "Clarify guidance requires a separate post-Clarify marker check",
+        "audited_contracts_combined",
+        "G2 is a separate post-Clarify check",
+    ),
+    (
+        "Plan repair distinguishes a human outcome from proposed architecture",
+        "audited_contracts_combined",
+        "explicit-human` establishes the requested outcome, not the existence or suitability of a proposed mechanism",
+    ),
+    (
+        "Plan repair preserves marker and G3 failure without support",
+        "audited_contracts_combined",
+        "preserve the clarification marker and failed G3 verdict",
+    ),
+    (
+        "Archive discovery distinguishes absent and broken installations",
+        "audited_contracts_combined",
+        "Never silently treat a missing archive command as an absent extension",
+    ),
+)
+
+
+AUDITED_PR_CONTRACT_CHECKS = (
+    (
+        "PR body generation names its complete input contract",
+        "audited_contracts_combined",
+        "complete input contract is only `output_path`, `title`, and `sections`",
+    ),
+    (
+        "PR prose forbids evidence dumps",
+        "audited_contracts_combined",
+        "No evidence dump",
+    ),
+    (
+        "SPEC-704 title example uses the release gate lowercase scope",
+        "audited_contracts_combined",
+        "docs(spec-704): document the marketplace installation path",
+    ),
+    (
+        "Split PR emission is explicitly ordered and fail closed",
+        "audited_contracts_combined",
+        "The per-slice order is exact and fail-closed",
+    ),
+    (
+        "Split PR emission derives each packet from its own marker",
+        "audited_contracts_combined",
+        "derive that slice's packet ID, title, body path, base/head, and file scope",
+    ),
+    (
+        "Split PR command plans do not authorize side effects",
+        "audited_contracts_combined",
+        "not packet validation or authorization for a PR side effect",
+    ),
+)
+
+
+CODEX_AUTHORED_CHECKS = (
+    (
+        "Codex post guidance uses the live lowercase documentation-spec scope",
+        "codex_post",
+        "`docs(spec-704): ...`",
+    ),
+    (
+        "Codex post guidance rejects stale uppercase documentation-spec scope",
+        "codex_post",
+        "`docs(SPEC-704): ...`",
+    ),
+    (
+        "Codex post guidance forbids raw evidence dumps in PR prose",
+        "codex_post",
+        "mechanics, or raw evidence into PR prose",
+    ),
+    (
+        "Codex post guidance binds every slice to an exact fail-closed sequence",
+        "codex_post",
+        "Apply this exact fail-closed sequence independently to every planned slice",
+    ),
+    (
+        "Codex post guidance validates each packet before packet validation persistence",
+        "codex_post",
+        "Run a fresh `validate-pr-packet-read-only` request",
+    ),
+    (
+        "Codex post guidance validates the workflow contract before PR creation",
+        "codex_post",
+        "Run `validate-pr-workflow-contract` against the packet title",
+    ),
+    (
+        "Codex scaffold retries a rejected push from the existing worktree",
+        "codex_scaffold",
+        "retry the same failed push from that same worktree",
+    ),
+    (
+        "Codex scaffold gives the exact same-worktree retry shape",
+        "codex_scaffold",
+        "`git -C <absolute-worktree-root> push -u <remote> <spec-branch>`",
+    ),
+    (
+        "Codex coach provides a stage-bounded autopilot hand-off",
+        "codex_coach",
+        "## Bounded autopilot hand-off",
+    ),
+    (
+        "Codex coach hands off with an explicit stage selector",
+        "codex_coach",
+        "$speckit-autopilot <workflow-file> --stage plan|implement|full",
+    ),
+)
+
+
 class ReviewabilityMarkerGuidanceTests(unittest.TestCase):
     """Keep Claude, Codex, workflow, and eval marker guidance aligned."""
 
@@ -219,11 +345,26 @@ class ReviewabilityMarkerGuidanceTests(unittest.TestCase):
             bodies[name] for name in ("codex_skill", "codex_phase", "codex_post")
         )
         bodies["evals_combined"] = "\n".join(bodies[name] for name in ("claude_evals", "codex_evals"))
+        bodies["audited_contracts_combined"] = " ".join(
+            "\n".join(
+                bodies[name]
+                for name in (
+                    "claude_coach", "claude_skill", "claude_gate", "claude_phase", "claude_post",
+                    "claude_scaffold", "codex_coach", "codex_skill", "codex_phase", "codex_post",
+                    "codex_scaffold",
+                )
+            ).split()
+        )
         cls.bodies = bodies
 
     def test_reviewability_marker_guidance_contract(self) -> None:
-        for name, body_key, expected in CHECKS:
-            with self.subTest(msg=name):
+        for name, body_key, expected in (
+            *CHECKS,
+            *AUDITED_PHASE_CONTRACT_CHECKS,
+            *AUDITED_PR_CONTRACT_CHECKS,
+            *CODEX_AUTHORED_CHECKS,
+        ):
+            with self.subTest(msg=name, source=body_key):
                 self.assertIn(expected, self.bodies[body_key])
 
     def test_pr_marker_plan_schema_accepts_polish_without_weakening_existing_markers(self) -> None:

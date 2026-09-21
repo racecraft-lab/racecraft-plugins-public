@@ -41,7 +41,9 @@ If full URL provided:
   Extract OWNER, REPO, PR_NUMBER from URL
 
 If just a number:
-  Run `git remote -v` and extract OWNER/REPO from origin URL
+  Run `git remote -v`, inspect the actual fetch/push remotes, and select the
+  remote whose normalized GitHub URL identifies the current repository.
+  Never assume that remote is named `origin`; stop on no match or ambiguity.
   PR_NUMBER = the provided number
 ```
 

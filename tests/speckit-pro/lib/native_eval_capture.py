@@ -14,7 +14,12 @@ import shlex
 from typing import Any, Mapping
 
 from native_eval_catalog import _relative_path, _search_glob, _unique_object
-from native_eval_fixture_reads import bound_fixture_read_witnesses, fixture_read_accesses
+from native_eval_fixture_reads import (
+    bound_fixture_read_witnesses,
+    bound_project_artifact_paths,
+    codex_unbounded_read_paths,
+    fixture_read_accesses,
+)
 
 
 class CaptureError(ValueError):
@@ -91,7 +96,7 @@ def _codex_cat_path(tokens: list[str], command: str) -> str | None:
         return None
     if len(tokens) == 2:
         return _safe_codex_operand(tokens[1], option_terminated=False)
-    if len(tokens) == 3 and tokens[1] == "--":
+    if len(tokens) == 3 and tokens[1] == "--" and tokens[2] != "-":
         return _safe_codex_operand(tokens[2], option_terminated=True)
     return None
 
@@ -139,6 +144,9 @@ def _codex_read_paths(command: object) -> list[str]:
     counted_read = _codex_count_then_sed_path(command)
     if counted_read is not None:
         return [counted_read]
+    projected = codex_unbounded_read_paths(command)
+    if projected:
+        return list(projected)
     tokens = _codex_tokens(command)
     if tokens is None or not isinstance(command, str):
         return []
@@ -150,6 +158,100 @@ def _codex_read_paths(command: object) -> list[str]:
     else:
         path = _codex_cat_path(tokens, command) or _codex_sed_path(tokens, command)
     return [path] if path is not None else []
+
+
+_CODEX_RG = frozenset({"rg", "/usr/bin/rg", "/opt/homebrew/bin/rg"})
+_INJECTED_RUNTIME_ROOTS = frozenset({".agents", ".codex/agents", ".codex-trigger-runtime"})
+
+
+def _unwrapped_codex_tokens(command: object) -> list[str] | None:
+    tokens = _codex_tokens(command)
+    if not tokens or tokens[0] not in _CODEX_SHELLS:
+        return tokens
+    return _codex_tokens(tokens[2]) if len(tokens) == 3 and tokens[1] == "-c" else None
+
+
+def _consume_rg_glob(arguments: list[str]) -> tuple[str | None, list[str]] | None:
+    token, remaining = arguments[0], arguments[1:]
+    if token == "--hidden":
+        return None, remaining
+    if token in {"-g", "--glob"} and remaining:
+        return remaining[0], remaining[1:]
+    if token.startswith("--glob="):
+        return token.removeprefix("--glob="), remaining
+    return None
+
+
+def _canonical_rg_glob(glob: str) -> tuple[bool, str] | None:
+    if (not glob or glob == "!" or "\\" in glob or glob.startswith("/")
+            or ".." in PurePosixPath(glob).parts or glob.startswith("!!")):
+        return None
+    return (True, glob[1:]) if glob.startswith("!") and len(glob) > 1 else (False, glob)
+
+
+def _rg_globs(tokens: list[str]) -> tuple[tuple[str, ...], tuple[str, ...]] | None:
+    arguments = tokens[2:]
+    if arguments[-1:] == ["."]:
+        arguments = arguments[:-1]
+    includes: list[str] = []
+    excludes: list[str] = []
+    while arguments:
+        consumed = _consume_rg_glob(arguments)
+        if consumed is None:
+            return None
+        glob, arguments = consumed
+        if glob is None:
+            continue
+        canonical = _canonical_rg_glob(glob)
+        if canonical is None:
+            return None
+        excluded, pattern = canonical
+        (excludes if excluded else includes).append(pattern)
+    return (tuple(includes), tuple(excludes)) if includes else None
+
+
+def _rg_files_query(command: object) -> tuple[tuple[str, ...], tuple[str, ...]] | None:
+    """Parse one side-effect-free, root-recursive ``rg --files`` projection."""
+    tokens = _unwrapped_codex_tokens(command)
+    if not tokens or tokens[0] not in _CODEX_RG or tokens[1:2] != ["--files"]:
+        return None
+    return _rg_globs(tokens)
+
+
+def _rg_matches(path: str, pattern: str) -> bool:
+    if "/" in pattern:
+        return fnmatch.fnmatchcase(path, pattern)
+    return fnmatch.fnmatchcase(PurePosixPath(path).name, pattern)
+
+
+def _scoped_rg_result(
+    output: object,
+    includes: tuple[str, ...],
+    excludes: tuple[str, ...],
+    project_artifacts: tuple[str, ...],
+) -> list[str] | None:
+    if not isinstance(output, str):
+        return None
+    selected = sorted(
+        path for path in project_artifacts
+        if any(_rg_matches(path, pattern) for pattern in includes)
+        and not any(_rg_matches(path, pattern) for pattern in excludes)
+    )
+    observed: list[str] = []
+    for value in output.splitlines():
+        if value.startswith("./"):
+            value = value[2:]
+        path = _canonical_relative_file(value)
+        if path is None:
+            return None
+        if any(path == root or path.startswith(root + "/") for root in _INJECTED_RUNTIME_ROOTS):
+            continue
+        if path not in project_artifacts:
+            return None
+        observed.append(path)
+    if len(set(observed)) != len(observed) or sorted(observed) != selected:
+        return None
+    return selected
 
 
 def file_accesses(
@@ -246,22 +348,9 @@ def _search_query(call: Mapping[str, Any], host: str, cwd: object) -> str | None
             return None
         pattern = inputs["pattern"]
     elif host == "codex" and call.get("name") == "command_execution" and set(inputs) == {"command"}:
-        command = inputs["command"]
-        tokens = _codex_tokens(command)
-        if tokens and tokens[0] in _CODEX_SHELLS:
-            if len(tokens) != 3 or tokens[1] != "-c":
-                return None
-            command = tokens[2]
-            tokens = _codex_tokens(command)
-        if tokens is None or not isinstance(command, str):
+        pattern = _codex_find_pattern(inputs["command"])
+        if pattern is None:
             return None
-        matched = re.fullmatch(
-            r"""(?:find|/usr/bin/find) \. -type f -name (['"])([A-Za-z0-9*?_.-]+)\1 -print""",
-            command,
-        )
-        if matched is None:
-            return None
-        pattern = "**/" + matched[2]
     else:
         return None
     try:
@@ -269,6 +358,66 @@ def _search_query(call: Mapping[str, Any], host: str, cwd: object) -> str | None
     except ValueError:
         return None
     return pattern
+
+
+def _codex_find_pattern(command: object, *, allow_shell: bool = True) -> str | None:
+    """Parse one exact, unbounded Codex ``find`` command into its glob."""
+    tokens = _codex_tokens(command)
+    if allow_shell and tokens and tokens[0] in _CODEX_SHELLS:
+        if len(tokens) != 3 or tokens[1] != "-c":
+            return None
+        command = tokens[2]
+        tokens = _codex_tokens(command)
+    if tokens is None or not isinstance(command, str):
+        return None
+    matched = re.fullmatch(
+        r"""(?:find|/usr/bin/find) \. -type f -name (['"])([A-Za-z0-9*?_.-]+)\1 -print""",
+        command,
+    )
+    if matched is None:
+        return None
+    pattern = "**/" + matched[2]
+    try:
+        _search_glob(pattern)
+    except ValueError:
+        return None
+    return pattern
+
+
+def _codex_compound_empty_lines(call: Mapping[str, Any]) -> list[str]:
+    """Return exact newline-separated find commands from one empty Codex call."""
+    inputs = call.get("input")
+    signature = (
+        call.get("name"), call.get("success"), call.get("parent_id"), call.get("output")
+    )
+    if signature != ("command_execution", True, None, ""):
+        return []
+    if not isinstance(inputs, dict) or set(inputs) != {"command"}:
+        return []
+    command = inputs["command"]
+    if not isinstance(command, str) or "\r" in command:
+        return []
+    try:
+        outer = shlex.split(command, comments=False, posix=True)
+    except ValueError:
+        return []
+    if len(outer) != 3 or outer[0] not in _CODEX_SHELLS or outer[1] != "-c":
+        return []
+    lines = outer[2].split("\n")
+    return lines if len(lines) >= 2 and all(line and line == line.strip() for line in lines) else []
+
+
+def _codex_compound_empty_searches(
+    call: Mapping[str, Any], index: int,
+) -> list[dict[str, object]]:
+    """Project newline-separated exact finds only when all returned no matches."""
+    patterns = [_codex_find_pattern(line, allow_shell=False) for line in _codex_compound_empty_lines(call)]
+    if not patterns or None in patterns or len(patterns) != len(set(patterns)):
+        return []
+    return [
+        {"pattern": pattern, "paths": [], "tool_call_index": index}
+        for pattern in patterns
+    ]
 
 
 def _search_paths(output: object, pattern: str, host: str, cwd: object) -> list[str] | None:
@@ -317,15 +466,71 @@ def _complete_glob_result(metadata: object, index: int, call: dict, pattern: str
     return _search_paths(output, pattern, "claude", metadata.get("cwd")) == paths
 
 
+def _scoped_rg_row(
+    call: dict[str, object], index: int, project_artifacts: tuple[str, ...] | None,
+) -> dict[str, object] | None:
+    supplied = call.get("input")
+    if (project_artifacts is None or call.get("name") != "command_execution"
+            or call.get("success") is not True or call.get("parent_id") is not None
+            or not isinstance(supplied, dict) or set(supplied) != {"command"}):
+        return None
+    query = _rg_files_query(supplied["command"])
+    if query is None:
+        return None
+    includes, excludes = query
+    paths = _scoped_rg_result(call.get("output"), includes, excludes, project_artifacts)
+    if paths is None:
+        return None
+    return {
+        "patterns": list(includes),
+        "excluded_patterns": list(excludes),
+        "paths": paths,
+        "project_artifacts": list(project_artifacts),
+        "scope": "controller-project-artifacts",
+        "tool_call_index": index,
+    }
+
+
+def _legacy_search_row(
+    call: dict[str, object], index: int, host: str, cwd: object, metadata: object,
+) -> dict[str, object] | None:
+    pattern = _search_query(call, host, cwd)
+    if pattern is None:
+        return None
+    paths = _search_paths(call.get("output"), pattern, host, cwd)
+    if paths is None or (
+        host == "claude" and not _complete_glob_result(metadata, index, call, pattern, paths)
+    ):
+        return None
+    return {"pattern": pattern, "paths": paths, "tool_call_index": index}
+
+
+def _file_search_rows(
+    call: dict[str, object], index: int, host: str, cwd: object,
+    metadata: object, project_artifacts: tuple[str, ...] | None,
+) -> list[dict[str, object]]:
+    if host == "codex":
+        compound = _codex_compound_empty_searches(call, index)
+        if compound:
+            return compound
+        row = _scoped_rg_row(call, index, project_artifacts)
+    else:
+        row = None
+    row = row or _legacy_search_row(call, index, host, cwd, metadata)
+    return [row] if row is not None else []
+
+
 def file_search_results(observation: object, *, host: str) -> list[dict[str, object]]:
     """Derive complete root-recursive search results, never absence from prose.
 
     Only native Glob and a single unbounded find invocation qualify. Pipelines,
     redirection, login shells, depth limits, failed calls, malformed output and
     outside-root paths and child calls with unbound working directories do not.
-    Glob additionally requires its native structured
-    result to affirm complete, untruncated matching counts. Results include runtime files: filtering a native
-    catalog out of a project search requires a separate controller-owned scope.
+    Glob additionally requires its native structured result to affirm complete,
+    untruncated matching counts. Legacy results include runtime files. A Codex
+    ``rg --files`` projection is accepted only when a controller-bound authored
+    project scope proves its complete result; exact injected runtime roots are
+    ignored in that scope.
     This function deliberately does not hide any path or claim that discovery
     implies file contents were read.
     """
@@ -333,16 +538,11 @@ def file_search_results(observation: object, *, host: str) -> list[dict[str, obj
         return []
     metadata = observation.get("native_metadata")
     cwd = metadata.get("cwd") if isinstance(metadata, dict) else None
-    results = []
+    project_artifacts = bound_project_artifact_paths(observation)
+    results: list[dict[str, object]] = []
     for index, call in enumerate(observation["tool_calls"]):
-        if not isinstance(call, dict):
-            continue
-        pattern = _search_query(call, host, cwd)
-        if pattern is None:
-            continue
-        paths = _search_paths(call.get("output"), pattern, host, cwd)
-        if paths is not None and (host != "claude" or _complete_glob_result(metadata, index, call, pattern, paths)):
-            results.append({"pattern": pattern, "paths": paths, "tool_call_index": index})
+        if isinstance(call, dict):
+            results.extend(_file_search_rows(call, index, host, cwd, metadata, project_artifacts))
     return results
 
 
@@ -360,6 +560,32 @@ def _claude_blocks(events: list[dict[str, Any]]):
             raise CaptureError("Claude message content is malformed")
         for block in content:
             yield position, event, block
+
+
+def _claude_tool_progress(
+    events: list[dict[str, Any]], calls: Mapping[str, Mapping[str, Any]],
+    results: Mapping[str, Mapping[str, Any]],
+) -> None:
+    progress_ids: set[str] = set()
+    for position, event in enumerate(events):
+        if event.get("type") != "tool_progress":
+            continue
+        parent = event.get("parent_tool_use_id")
+        progress_id = event.get("tool_use_id")
+        elapsed = event.get("elapsed_time_seconds")
+        owner = calls.get(parent) if isinstance(parent, str) else None
+        owner_result = results.get(parent) if isinstance(parent, str) else None
+        if (not isinstance(parent, str) or not parent or owner is None
+                or owner_result is None or owner["position"] >= position
+                or owner_result["position"] <= position
+                or event.get("tool_name") != owner["name"]
+                or event.get("heartbeat") is not True
+                or type(elapsed) is not int or elapsed <= 0
+                or not isinstance(progress_id, str)
+                or re.fullmatch(re.escape(parent) + r"-heartbeat-[0-9]+", progress_id) is None
+                or progress_id in progress_ids):
+            raise CaptureError("Claude tool progress identity is invalid")
+        progress_ids.add(progress_id)
 
 
 def _claude_calls(events: list[dict[str, Any]]) \
@@ -385,9 +611,10 @@ def _claude_calls(events: list[dict[str, Any]]) \
                                  "parent_id": event.get("parent_tool_use_id")}
     if calls.keys() != results.keys():
         raise CaptureError("Claude capture has unfinished tool invocations")
+    _claude_tool_progress(events, calls, results)
     for position, event in enumerate(events):
         parent = event.get("parent_tool_use_id")
-        if parent is None:
+        if parent is None or event.get("type") == "tool_progress":
             continue
         owner = calls.get(parent)
         if (not isinstance(parent, str) or not parent or owner is None
@@ -465,7 +692,371 @@ def _claude_hook_prelude(events: list[dict[str, Any]]) -> tuple[list[dict[str, A
     return prelude, runtime
 
 
-def _claude_lifecycle(events: list[dict[str, Any]]) -> int:
+def _claude_cleanup_epilogue(
+    events: list[dict[str, Any]], prelude: list[dict[str, Any]],
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """Separate the exact root-task cleanup emitted after a successful result."""
+    results = [index for index, event in enumerate(events)
+               if event["type"] == "result" and event.get("parent_tool_use_id") is None]
+    if not results or results[-1] == len(events) - 1:
+        return events, []
+
+    result_index = results[-1]
+    runtime, cleanup = events[:result_index + 1], events[result_index + 1:]
+    expected = ("background_tasks_changed", "task_updated", "task_notification")
+    if (len(cleanup) != len(expected)
+            or tuple(event.get("subtype") for event in cleanup) != expected
+            or any(event.get("type") != "system"
+                   or event.get("parent_tool_use_id") is not None for event in cleanup)):
+        raise CaptureError("Claude post-result events are not the root cleanup epilogue")
+
+    init, terminal = runtime[0], runtime[-1]
+    session = init.get("session_id")
+    if (not isinstance(session, str) or not session
+            or terminal.get("session_id") != session
+            or any(event.get("session_id") != session for event in cleanup)):
+        raise CaptureError("Claude cleanup epilogue has mismatched session identity")
+
+    identities = [event.get("uuid") for event in cleanup]
+    prior_identities = {
+        event.get("uuid") for event in [*prelude, *runtime]
+        if isinstance(event.get("uuid"), str)
+    }
+    if (any(not isinstance(identity, str) or not identity for identity in identities)
+            or len(set(identities)) != len(identities)
+            or not set(identities).isdisjoint(prior_identities)):
+        raise CaptureError("Claude cleanup epilogue has missing or duplicate event identity")
+
+    changed, updated, notification = cleanup
+    if changed.get("tasks") != []:
+        raise CaptureError("Claude cleanup epilogue did not empty the background task set")
+    task_id = notification.get("task_id")
+    tool_use_id = notification.get("tool_use_id")
+    if (not isinstance(task_id, str) or not task_id
+            or not isinstance(tool_use_id, str) or not tool_use_id
+            or updated.get("task_id") != task_id):
+        raise CaptureError("Claude cleanup epilogue has mismatched task or tool identity")
+    patch = updated.get("patch")
+    if (not isinstance(patch, dict) or set(patch) != {"status", "end_time"}
+            or patch.get("status") != "killed"
+            or type(patch.get("end_time")) is not int or patch["end_time"] < 0
+            or notification.get("status") != "stopped"
+            or not isinstance(notification.get("output_file"), str)
+            or not notification["output_file"].startswith("/")
+            or not isinstance(notification.get("summary"), str)
+            or not notification["summary"]):
+        raise CaptureError("Claude cleanup epilogue is malformed")
+
+    starts = [
+        (index, event) for index, event in enumerate(runtime[:-1])
+        if event.get("subtype") == "task_started"
+        and (event.get("task_id") == task_id or event.get("tool_use_id") == tool_use_id)
+    ]
+    if len(starts) != 1:
+        raise CaptureError("Claude cleanup epilogue is not bound to one prior task")
+    start_index, started = starts[0]
+    if (started.get("type") != "system" or started.get("parent_tool_use_id") is not None
+            or started.get("session_id") != session or started.get("task_id") != task_id
+            or started.get("tool_use_id") != tool_use_id
+            or not isinstance(started.get("description"), str) or not started["description"]
+            or notification["summary"] != started["description"]):
+        raise CaptureError("Claude cleanup epilogue does not match its prior task start")
+
+    tool_uses = [
+        (position, block) for position, _event, block in _claude_blocks(runtime[:start_index])
+        if block.get("type") == "tool_use" and block.get("id") == tool_use_id
+    ]
+    if len(tool_uses) != 1:
+        raise CaptureError("Claude cleanup task is not bound to one prior tool use")
+
+    terminal_statuses = {"completed", "failed", "killed", "stopped"}
+    for event in runtime[start_index + 1:-1]:
+        if event.get("type") != "system" or event.get("session_id") != session:
+            continue
+        subtype = event.get("subtype")
+        if subtype == "task_updated" and event.get("task_id") == task_id:
+            task_patch = event.get("patch")
+            if not isinstance(task_patch, dict):
+                raise CaptureError("Claude cleanup task update is malformed")
+            if task_patch.get("status") in terminal_statuses:
+                raise CaptureError("Claude cleanup task was already terminal before the result")
+        elif subtype == "task_notification" and event.get("task_id") == task_id:
+            if event.get("status") in terminal_statuses:
+                raise CaptureError("Claude cleanup task was already terminal before the result")
+        elif subtype == "background_tasks_changed":
+            tasks = event.get("tasks")
+            if (not isinstance(tasks, list)
+                    or not any(isinstance(task, dict) and task.get("task_id") == task_id
+                               for task in tasks)):
+                raise CaptureError("Claude cleanup task was not active before the result")
+    return runtime, cleanup
+
+
+def _claude_backgrounded_bash_result_position(
+    events: list[dict[str, Any]], *, start_index: int, bridge_start: int,
+    session: str, task_id: str, tool_use_id: str, output_file: str,
+) -> int:
+    results = [
+        (position, event, block)
+        for position, event, block in _claude_blocks(events[start_index + 1:bridge_start])
+        if block.get("type") == "tool_result" and block.get("tool_use_id") == tool_use_id
+    ]
+    if len(results) != 1:
+        raise CaptureError("Claude backgrounded Bash continuation has no unique tool result")
+    relative_position, result_event, result_block = results[0]
+    native_result = result_event.get("tool_use_result")
+    expected_native_fields = {
+        "stdout", "stderr", "interrupted", "isImage", "noOutputExpected",
+        "backgroundTaskId", "timedOutAfterMs",
+    }
+    content = result_block.get("content")
+    if (result_event.get("session_id") != session
+            or result_event.get("parent_tool_use_id") is not None
+            or result_block.get("is_error") is not False
+            or not isinstance(content, str)
+            or f"(ID: {task_id})" not in content
+            or output_file not in content
+            or not isinstance(native_result, dict)
+            or set(native_result) != expected_native_fields
+            or native_result.get("backgroundTaskId") != task_id
+            or type(native_result.get("timedOutAfterMs")) is not int
+            or native_result["timedOutAfterMs"] <= 0
+            or native_result.get("interrupted") is not False
+            or native_result.get("isImage") is not False
+            or native_result.get("noOutputExpected") is not False
+            or not isinstance(native_result.get("stdout"), str)
+            or not isinstance(native_result.get("stderr"), str)):
+        raise CaptureError("Claude backgrounded Bash tool result is malformed")
+    return start_index + 1 + relative_position
+
+
+def _claude_continuation_task_type(
+    events: list[dict[str, Any]], *, start_index: int, bridge_start: int,
+    session: str, started: dict[str, Any], tool_use: dict[str, Any],
+    notification: dict[str, Any], terminal_status: Any,
+) -> str | None:
+    tool_input = tool_use.get("input")
+    if tool_use.get("name") == "Agent":
+        if (started.get("is_backgrounded") is not True
+                or not isinstance(tool_input, dict)
+                or not isinstance(tool_input.get("run_in_background", False), bool)
+                or started.get("task_type", "local_agent") != "local_agent"
+                or terminal_status != "completed"
+                or notification.get("status") != "completed"):
+            raise CaptureError("Claude continuation task was not launched as a background Agent")
+        return None
+    if tool_use.get("name") != "Bash":
+        raise CaptureError("Claude continuation task used an unsupported native tool")
+
+    task_id = started["task_id"]
+    tool_use_id = started["tool_use_id"]
+    if (started.get("is_backgrounded") is not False
+            or started.get("task_type") != "local_bash"
+            or terminal_status not in {"completed", "failed"}
+            or notification.get("status") != terminal_status):
+        raise CaptureError("Claude backgrounded Bash continuation is malformed")
+    result_position = _claude_backgrounded_bash_result_position(
+        events, start_index=start_index, bridge_start=bridge_start,
+        session=session, task_id=task_id, tool_use_id=tool_use_id,
+        output_file=notification["output_file"],
+    )
+    active_positions = []
+    backgrounded_positions = []
+    for position in range(start_index + 1, bridge_start):
+        event = events[position]
+        if event.get("type") != "system" or event.get("session_id") != session:
+            continue
+        subtype = event.get("subtype")
+        if subtype == "background_tasks_changed":
+            tasks = event.get("tasks")
+            if (not isinstance(tasks, list)
+                    or any(not isinstance(task, dict) for task in tasks)):
+                raise CaptureError("Claude backgrounded Bash task set is malformed")
+            matching = [task for task in tasks if task.get("task_id") == task_id]
+            if matching:
+                if (len(matching) != 1
+                        or matching[0].get("task_type") != "local_bash"
+                        or matching[0].get("description") != started["description"]):
+                    raise CaptureError("Claude backgrounded Bash task set is mismatched")
+                active_positions.append(position)
+        elif subtype == "task_updated" and event.get("task_id") == task_id:
+            if event.get("patch") != {"is_backgrounded": True}:
+                raise CaptureError("Claude backgrounded Bash update is malformed")
+            backgrounded_positions.append(position)
+        elif subtype == "task_notification" and event.get("task_id") == task_id:
+            raise CaptureError("Claude backgrounded Bash completed before its bridge")
+    if (len(backgrounded_positions) != 1 or not active_positions
+            or not (start_index < active_positions[0] < backgrounded_positions[0]
+                    < result_position < bridge_start)):
+        raise CaptureError("Claude backgrounded Bash lifecycle is incomplete or reordered")
+    return "local_bash"
+
+
+def _claude_continuation_records(
+    events: list[dict[str, Any]], *, prior_init_index: int, init_index: int,
+) -> tuple[list[int], list[dict[str, Any]]]:
+    if init_index < 3:
+        raise CaptureError("Claude continuation omitted its completion bridge")
+    expected = ("background_tasks_changed", "task_updated", "task_notification")
+    candidates = [
+        list(range(position, position + 3))
+        for position in range(prior_init_index + 1, init_index - 2)
+        if tuple(events[index].get("subtype") for index in range(position, position + 3))
+        == expected
+        and all(events[index].get("type") == "system"
+                and events[index].get("parent_tool_use_id") is None
+                for index in range(position, position + 3))
+    ]
+    if len(candidates) != 1:
+        raise CaptureError("Claude continuation bridge is missing, reordered, or not root-owned")
+    positions = candidates[0]
+    return positions, [events[position] for position in positions]
+
+
+def _claude_continuation_task_shape(
+    events: list[dict[str, Any]], *, prior_init_index: int,
+    bridge: list[dict[str, Any]],
+) -> tuple[str, str, str, Any]:
+    changed, updated, notification = bridge
+    session = events[prior_init_index].get("session_id")
+    if any(event.get("session_id") != session for event in bridge):
+        raise CaptureError("Claude continuation bridge has a foreign session")
+    task_id = notification.get("task_id")
+    tool_use_id = notification.get("tool_use_id")
+    remaining = changed.get("tasks")
+    if (not isinstance(remaining, list)
+            or not all(isinstance(item, dict)
+                       and isinstance(item.get("task_id"), str) and item["task_id"]
+                       and isinstance(item.get("task_type"), str) and item["task_type"]
+                       and isinstance(item.get("description"), str) and item["description"]
+                       for item in remaining)
+            or len({item["task_id"] for item in remaining}) != len(remaining)
+            or task_id in {item["task_id"] for item in remaining}):
+        raise CaptureError("Claude continuation bridge has a malformed remaining task set")
+    patch = updated.get("patch")
+    if (not isinstance(task_id, str) or not task_id
+            or not isinstance(tool_use_id, str) or not tool_use_id
+            or updated.get("task_id") != task_id
+            or not isinstance(patch, dict) or set(patch) != {"status", "end_time"}
+            or type(patch.get("end_time")) is not int or patch["end_time"] < 0
+            or not isinstance(notification.get("output_file"), str)
+            or not notification["output_file"].startswith("/")
+            or not isinstance(notification.get("summary"), str)
+            or not notification["summary"]):
+        raise CaptureError("Claude continuation bridge is malformed")
+    return session, task_id, tool_use_id, patch.get("status")
+
+
+def _claude_continuation_suffix(
+    events: list[dict[str, Any]], *, bridge_end: int, init_index: int, session: str,
+) -> None:
+    trailing = events[bridge_end + 1:init_index]
+    for event in trailing:
+        if event.get("session_id") != session:
+            raise CaptureError("Claude continuation suffix has a foreign session")
+        if event.get("parent_tool_use_id") is not None:
+            continue
+        if event.get("type") == "system" and event.get("subtype") in {
+            "task_progress", "thinking_tokens",
+        }:
+            continue
+        content = event.get("message", {}).get("content") \
+            if isinstance(event.get("message"), dict) else None
+        if (event.get("type") == "assistant" and isinstance(content, list)
+                and content and all(isinstance(block, dict)
+                                    and block.get("type") in {"text", "thinking"}
+                                    for block in content)):
+            continue
+        raise CaptureError("Claude continuation suffix contains root work")
+
+
+def _claude_continuation_prior_launch(
+    events: list[dict[str, Any]], *, bridge_start: int, session: str,
+    task_id: str, tool_use_id: str, notification: dict[str, Any],
+    terminal_status: Any,
+) -> str | None:
+    segment = events[:bridge_start]
+    starts = [
+        (offset, event) for offset, event in enumerate(segment)
+        if event.get("type") == "system" and event.get("subtype") == "task_started"
+        and (event.get("task_id") == task_id or event.get("tool_use_id") == tool_use_id)
+    ]
+    if len(starts) != 1:
+        raise CaptureError("Claude continuation bridge is not bound to one prior task")
+    start_index, started = starts[0]
+    if (started.get("parent_tool_use_id") is not None
+            or started.get("session_id") != session
+            or started.get("task_id") != task_id
+            or started.get("tool_use_id") != tool_use_id
+            or not isinstance(started.get("description"), str)
+            or not started["description"]):
+        raise CaptureError("Claude continuation bridge does not match its prior task start")
+    tool_uses = [
+        (position, block) for position, _event, block in _claude_blocks(
+            events[:start_index]
+        ) if block.get("type") == "tool_use" and block.get("id") == tool_use_id
+    ]
+    if len(tool_uses) != 1:
+        raise CaptureError("Claude continuation task is not bound to one prior tool use")
+    _tool_position, tool_use = tool_uses[0]
+    task_type = _claude_continuation_task_type(
+        events, start_index=start_index, bridge_start=bridge_start, session=session,
+        started=started, tool_use=tool_use, notification=notification,
+        terminal_status=terminal_status,
+    )
+
+    terminal_statuses = {"completed", "failed", "killed", "stopped"}
+    for event in events[start_index + 1:bridge_start]:
+        if event.get("type") != "system" or event.get("session_id") != session:
+            continue
+        if event.get("subtype") == "task_updated" and event.get("task_id") == task_id:
+            update = event.get("patch")
+            if not isinstance(update, dict):
+                raise CaptureError("Claude continuation task update is malformed")
+            if update.get("status") in terminal_statuses:
+                raise CaptureError("Claude continuation task was already terminal")
+        elif (event.get("subtype") == "task_notification"
+              and event.get("task_id") == task_id
+              and event.get("status") in terminal_statuses):
+            raise CaptureError("Claude continuation task was already terminal")
+    return task_type
+
+
+def _claude_continuation_bridge(
+    events: list[dict[str, Any]], *, turn: int, init_index: int,
+    prior_init_index: int,
+) -> dict[str, Any]:
+    """Validate the observed background-task bridge into one resumed root turn."""
+    positions, bridge = _claude_continuation_records(
+        events, prior_init_index=prior_init_index, init_index=init_index,
+    )
+    session, task_id, tool_use_id, terminal_status = _claude_continuation_task_shape(
+        events, prior_init_index=prior_init_index, bridge=bridge,
+    )
+    _claude_continuation_suffix(
+        events, bridge_end=positions[-1], init_index=init_index, session=session,
+    )
+    task_type = _claude_continuation_prior_launch(
+        events, bridge_start=positions[0], session=session, task_id=task_id,
+        tool_use_id=tool_use_id, notification=bridge[-1],
+        terminal_status=terminal_status,
+    )
+
+    record = {
+        "from_turn": turn - 1,
+        "to_turn": turn,
+        "positions": positions,
+        "task_id": task_id,
+        "tool_use_id": tool_use_id,
+        "records": bridge,
+    }
+    if task_type == "local_bash":
+        record.update(task_type=task_type, terminal_status=terminal_status)
+    return record
+
+
+def claude_continuation_layout(events: list[dict[str, Any]]) -> dict[str, Any]:
+    """Validate Claude root turns and return their ordered, evidence-bound layout."""
     starts = [i for i, event in enumerate(events) if event["type"] == "system"
               and event.get("subtype") == "init" and event.get("parent_tool_use_id") is None]
     ends = [i for i, event in enumerate(events) if event["type"] == "result"
@@ -474,18 +1065,34 @@ def _claude_lifecycle(events: list[dict[str, Any]]) -> int:
         raise CaptureError("Claude lifecycle is missing, duplicated, or out of order")
     if any(start >= end for start, end in zip(starts, ends)):
         raise CaptureError("Claude result precedes its initialization")
+    bridges: list[dict[str, Any]] = []
     if len(starts) > 1:
-        lifecycle = [events[i] for i in sorted(starts + ends)]
-        session = events[0].get("session_id")
-        identities = [event.get("uuid") for event in lifecycle]
-        if (not isinstance(session, str) or not session
-                or any(event.get("session_id") != session for event in lifecycle)
-                or any(not isinstance(identity, str) or not identity for identity in identities)
+        if ends != list(range(ends[0], len(events))):
+            raise CaptureError("Claude continuation results are not one contiguous suffix")
+        indexes = [events[index].get("result_index") for index in ends]
+        if any(type(value) is not int for value in indexes) or indexes != list(range(len(ends))):
+            raise CaptureError("Claude continuation result indexes are invalid")
+        if any(events[index].get("origin") != {"kind": "task-notification"}
+               for index in ends[1:]):
+            raise CaptureError("Claude continuation result origin is not a task notification")
+        identities = [event.get("uuid") for event in events]
+        if (any(not isinstance(identity, str) or not identity for identity in identities)
                 or len(set(identities)) != len(identities)):
-            raise CaptureError("Claude continuation has mismatched session or duplicate event identity")
-        for index in starts[1:]:
-            if any(events[index].get(key) != events[0].get(key) for key in ("model", "cwd", "plugins")):
-                raise CaptureError("Claude continuation changed its runtime identity")
+            raise CaptureError("Claude continuation has missing or duplicate event identity")
+
+        session = events[0].get("session_id")
+        if (not isinstance(session, str) or not session
+                or any(event.get("session_id") != session
+                       for event in [events[index] for index in starts + ends])):
+            raise CaptureError("Claude continuation has a mismatched session")
+        canonical_init = {key: value for key, value in events[starts[0]].items() if key != "uuid"}
+        for turn, index in enumerate(starts[1:], 1):
+            resumed = {key: value for key, value in events[index].items() if key != "uuid"}
+            if resumed != canonical_init:
+                raise CaptureError("Claude continuation changed its initialization record")
+            bridges.append(_claude_continuation_bridge(
+                events, turn=turn, init_index=index, prior_init_index=starts[turn - 1],
+            ))
     for index in ends:
         terminal = events[index]
         if terminal.get("is_error") is not False or terminal.get("subtype") != "success":
@@ -494,7 +1101,19 @@ def _claude_lifecycle(events: list[dict[str, Any]]) -> int:
         _claude_tree_usage(terminal)
     if any(event["type"] == "error" for event in events):
         raise CaptureError("Claude capture includes a native error event")
-    return len(ends)
+    turns = []
+    for turn, (start, end) in enumerate(zip(starts, ends)):
+        terminal = events[end]
+        turns.append({
+            "turn_index": turn,
+            "init_position": start,
+            "init_uuid": events[start].get("uuid"),
+            "result_position": end,
+            "result_uuid": terminal.get("uuid"),
+            "result_index": terminal.get("result_index"),
+            "origin": terminal.get("origin"),
+        })
+    return {"turns": turns, "bridges": bridges}
 
 
 def _claude_tree_usage(terminal: Mapping[str, Any]) -> dict[str, int] | None:
@@ -523,12 +1142,29 @@ def _claude_tree_usage(terminal: Mapping[str, Any]) -> dict[str, int] | None:
     return totals
 
 
+def _bind_claude_backgrounded_bash_outcomes(
+    calls: list[dict[str, Any]], bridges: list[dict[str, Any]],
+) -> None:
+    outcomes = {
+        bridge["tool_use_id"]: bridge["terminal_status"]
+        for bridge in bridges if bridge.get("task_type") == "local_bash"
+    }
+    for call in calls:
+        if call["id"] not in outcomes:
+            continue
+        if call["name"] != "Bash":
+            raise CaptureError("Claude background task outcome changed native tool identity")
+        call["success"] = outcomes[call["id"]] == "completed"
+
+
 def _claude(events: list[dict[str, Any]], namespace: str) -> dict[str, Any]:
     prelude, runtime = _claude_hook_prelude(events)
-    native_turns = _claude_lifecycle(runtime)
+    runtime, cleanup = _claude_cleanup_epilogue(runtime, prelude)
+    lifecycle = claude_continuation_layout(runtime)
     terminal = runtime[-1]
     result = _observation(terminal, terminal.get("result"))
     result["tool_calls"], completions = _claude_calls(runtime)
+    _bind_claude_backgrounded_bash_outcomes(result["tool_calls"], lifecycle["bridges"])
     prefix = namespace + ":"
     for call in result["tool_calls"]:
         if call["name"] == "Skill" and call["success"]:
@@ -541,9 +1177,14 @@ def _claude(events: list[dict[str, Any]], namespace: str) -> dict[str, Any]:
     }
     if prelude:
         result["native_metadata"]["hook_prelude"] = prelude
+    if cleanup:
+        result["native_metadata"]["cleanup_epilogue"] = cleanup
     result["native_metadata"]["claude_tool_results"] = completions
-    result["native_metadata"].update(native_turns=native_turns, last_turn_usage=result["usage"],
-                                     usage_scope="main-loop-last-turn")
+    result["native_metadata"].update(
+        native_turns=len(lifecycle["turns"]), claude_turns=lifecycle["turns"],
+        continuation_bridges=lifecycle["bridges"], last_turn_usage=result["usage"],
+        usage_scope="main-loop-last-turn",
+    )
     tree_usage = _claude_tree_usage(terminal)
     if tree_usage is not None:
         result["usage"] = tree_usage

@@ -147,6 +147,13 @@ def _contains_complete_json(message: str, expected: object) -> bool:
     return False
 
 
+def contains_complete_json_value(message: str, expected: object) -> bool:
+    """Return whether text contains one type-strict complete JSON value."""
+    _require(isinstance(message, str), "dispatch message must be text")
+    _preceding(expected)
+    return _contains_complete_json(message, expected)
+
+
 def qualify_native_dispatch_context(
     message: str,
     contexts: Mapping[str, str],
@@ -172,6 +179,101 @@ def qualify_native_dispatch_context(
     }
 
 
+def decode_sealed_plan_repair_payload(message: str) -> dict[str, object] | None:
+    """Decode one unchanged successful Plan-repair renderer response."""
+    if not isinstance(message, str):
+        return None
+    try:
+        encoded_transport = message.encode("utf-8", errors="strict")
+    except UnicodeError:
+        return None
+    if len(encoded_transport) > MAX_MESSAGE_BYTES:
+        return None
+    try:
+        envelope = json.loads(
+            message,
+            object_pairs_hook=_unique_object,
+            parse_constant=_reject_constant,
+        )
+    except (json.JSONDecodeError, ValueError, RecursionError):
+        return None
+    if not isinstance(envelope, dict) \
+            or envelope.get("schema_version") != "1.0" \
+            or envelope.get("status") != "ok" \
+            or envelope.get("exit_code") != 0 \
+            or envelope.get("diagnostics") != []:
+        return None
+    data = envelope.get("data")
+    if not isinstance(data, dict) \
+            or data.get("helper_id") != "render-plan-repair-context" \
+            or data.get("operation") != "render-plan-repair-context" \
+            or data.get("mode") != "read_only" \
+            or data.get("exit_code") != 0 \
+            or data.get("writes_state") is not False:
+        return None
+    stdin_request = data.get("stdin_request")
+    if not isinstance(stdin_request, dict) \
+            or stdin_request.get("helper_id") != "render-plan-repair-context" \
+            or stdin_request.get("operation") != "render-plan-repair-context" \
+            or stdin_request.get("mode") != "read_only":
+        return None
+    rendered = data.get("stdout_json")
+    expected_fields = {
+        "schema", "executor_message", "message_sha256", "message_bytes",
+        "context_ids", "g3_attempt_index", "context_bundle_sha256",
+    }
+    if not isinstance(rendered, dict) or set(rendered) != expected_fields \
+            or rendered.get("schema") != "plan-repair-executor-message/v1" \
+            or not isinstance(rendered.get("executor_message"), str) \
+            or not isinstance(rendered.get("message_sha256"), str) \
+            or re.fullmatch(r"[a-f0-9]{64}", rendered["message_sha256"]) is None \
+            or type(rendered.get("message_bytes")) is not int \
+            or not isinstance(rendered.get("context_ids"), list) \
+            or rendered["context_ids"] != sorted(rendered["context_ids"]) \
+            or not all(isinstance(item, str) and _CONTEXT_ID.fullmatch(item) is not None
+                       for item in rendered["context_ids"]) \
+            or type(rendered.get("g3_attempt_index")) is not int \
+            or rendered["g3_attempt_index"] < 0 \
+            or not isinstance(rendered.get("context_bundle_sha256"), str) \
+            or re.fullmatch(r"[a-f0-9]{64}", rendered["context_bundle_sha256"]) is None:
+        return None
+    executor_message = rendered["executor_message"]
+    try:
+        encoded = executor_message.encode("utf-8", errors="strict")
+    except UnicodeError:
+        return None
+    if len(encoded) != rendered["message_bytes"] \
+            or len(encoded) > MAX_MESSAGE_BYTES \
+            or hashlib.sha256(encoded).hexdigest() != rendered["message_sha256"]:
+        return None
+    stdout = data.get("stdout")
+    if not isinstance(stdout, dict) or stdout.get("truncated") is not False \
+            or type(stdout.get("byte_count")) is not int \
+            or not isinstance(stdout.get("text"), str):
+        return None
+    try:
+        stdout_bytes = stdout["text"].encode("utf-8", errors="strict")
+        stdout_json = json.loads(
+            stdout["text"],
+            object_pairs_hook=_unique_object,
+            parse_constant=_reject_constant,
+        )
+    except (UnicodeError, json.JSONDecodeError, ValueError, RecursionError):
+        return None
+    if len(stdout_bytes) != stdout["byte_count"] or stdout_json != rendered:
+        return None
+    marker = "PLAN_REPAIR_CONTEXT_SHA256=" + rendered["context_bundle_sha256"]
+    if executor_message.count(marker) != 1:
+        return None
+    return rendered
+
+
+def decode_sealed_plan_repair_message(message: str) -> str | None:
+    """Decode the executor message from a validated renderer response."""
+    payload = decode_sealed_plan_repair_payload(message)
+    return payload["executor_message"] if payload is not None else None
+
+
 __all__ = [
     "DispatchContextProofError",
     "MAX_CONTEXTS",
@@ -181,5 +283,8 @@ __all__ = [
     "MAX_JSON_DEPTH",
     "MAX_MESSAGE_BYTES",
     "MAX_PRECEDING_JSON_BYTES",
+    "contains_complete_json_value",
+    "decode_sealed_plan_repair_payload",
+    "decode_sealed_plan_repair_message",
     "qualify_native_dispatch_context",
 ]

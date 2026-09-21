@@ -833,22 +833,42 @@ class SurfaceConfinementTests(unittest.TestCase):
         self.assertTrue(all(variant["additionalProperties"] is False for variant in variants))
 
     def test_broker_refuses_unsupported_python_before_reading_stdio(self) -> None:
-        with patch.object(sweep_broker.sys, "version_info", (3, 10)):
+        stderr = io.StringIO()
+        with patch.object(sweep_broker.sys, "version_info", (3, 10)), \
+                contextlib.redirect_stderr(stderr):
             self.assertEqual(2, sweep_broker.main())
+        self.assertEqual(
+            "feedback sweep broker requires Python 3.11 or newer\n",
+            stderr.getvalue(),
+        )
 
     def test_codex_launcher_is_ephemeral_user_config_free_and_disables_privileged_surfaces(self) -> None:
         runtime_root = REPO_ROOT.parent / "isolated-sweep-runtime"
         codex_runtime = REPO_ROOT.parent / "test-runtimes" / "codex"
-        with patch.object(sweep_launcher, "codex_executable", return_value=codex_runtime):
-            command = sweep_launcher.codex_command(
-                plugin_root=PLUGIN_ROOT,
-                repo_root=REPO_ROOT,
-                runtime_root=runtime_root,
-                capability=f"sweep-cap:v1:{'a' * 32}:{'b' * 64}",
-                stage="classifier",
-            )
+        with tempfile.TemporaryDirectory() as temp:
+            python_runtime_root = Path(temp).resolve() / "python-runtime"
+            python_runtime_root.mkdir()
+            python_runtime = python_runtime_root / "bin" / "python3"
+            with patch.object(
+                sweep_launcher, "codex_executable", return_value=codex_runtime
+            ), patch.object(
+                sweep_launcher, "python_executable", return_value=python_runtime
+            ), patch.object(
+                sweep_launcher.sys, "base_prefix", str(python_runtime_root)
+            ):
+                command = sweep_launcher.codex_command(
+                    plugin_root=PLUGIN_ROOT,
+                    repo_root=REPO_ROOT,
+                    runtime_root=runtime_root,
+                    capability=f"sweep-cap:v1:{'a' * 32}:{'b' * 64}",
+                    stage="classifier",
+                )
         joined = " ".join(command)
         self.assertEqual(codex_runtime, Path(command[0]))
+        self.assertIn(
+            f"mcp_servers.sweep-broker.command={json.dumps(str(python_runtime))}",
+            command,
+        )
         filesystem = next(
             item
             for item in command
@@ -856,7 +876,7 @@ class SurfaceConfinementTests(unittest.TestCase):
         )
         for runtime in (
             Path(command[0]).parent.parent,
-            Path(sys.base_prefix).resolve(),
+            python_runtime_root,
             runtime_root,
         ):
             self.assertIn(json.dumps(str(runtime)), filesystem)
@@ -881,6 +901,7 @@ class SurfaceConfinementTests(unittest.TestCase):
             self.assertIn(required, joined)
         self.assertNotIn("--sandbox", command)
         self.assertNotIn("code_mode_host", sweep_launcher.CODEX_DISABLED_FEATURES)
+        self.assertIn("view_image", sweep_launcher.CODEX_DISABLED_FEATURES)
         self.assertIn(
             'mcp_servers.sweep-broker.default_tools_approval_mode="approve"',
             command,
@@ -1166,7 +1187,7 @@ class SurfaceConfinementTests(unittest.TestCase):
         )
         self.assertEqual("python3", server["command"])
         completed = subprocess.run(
-            ["python3", *server["args"]],
+            [sys.executable, *server["args"]],
             cwd=PLUGIN_ROOT / server["cwd"],
             input="".join(json.dumps(request) + "\n" for request in requests),
             text=True,
@@ -1602,43 +1623,27 @@ class CaptureAndHookTests(unittest.TestCase):
                     self.assertNotIn(canary, refused.stderr + refused.stdout)
 
     def test_claude_hook_maps_an_unexpected_exception_to_unclassified(self) -> None:
-        # A deeply nested payload overflows the JSON scanner with a RecursionError,
-        # which no refusal path names. The hook must still fail closed with exit 2
-        # and one reason class instead of a traceback that carries exception text
-        # and interpreter paths.
+        # Inject an exception outside the hook's checked refusal vocabulary. The
+        # exact JSON recursion limit varies across supported Python versions, so
+        # a synthetic exception is the deterministic way to exercise this branch.
         script = PLUGIN_ROOT / "scripts" / "sweep-isolation-hook.py"
-        depth = 32_000
-        nested = "[" * depth + "]" * depth
-        payload = (
-            '{"cwd":"'
-            + str(REPO_ROOT)
-            + '","agent_type":"sweep-classifier","agent_id":"sweep-1",'
-            + '"tool_input":'
-            + nested
-            + "}"
-        )
-        self.assertLessEqual(len(payload.encode("utf-8")), 64 * 1024)
-        try:
-            json.loads(nested)
-        except RecursionError:
-            pass
-        else:
-            self.skipTest("this interpreter parses the deepest payload the hook accepts")
-        with tempfile.TemporaryDirectory(prefix="sweep-hook-depth-") as temporary:
-            refused = subprocess.run(
-                [sys.executable, str(script), "authorize-broker", sweep_isolation.HOOK_VERSION],
-                input=payload,
-                text=True,
-                capture_output=True,
-                env={**os.environ, "TMPDIR": temporary, "SPECKIT_SWEEP_CAPABILITY": ""},
-                check=False,
-            )
-        self.assertEqual(2, refused.returncode, refused.stderr)
+        spec = importlib.util.spec_from_file_location("sweep_isolation_hook_unclassified", script)
+        self.assertIsNotNone(spec)
+        self.assertIsNotNone(spec.loader)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        stdout, stderr = io.StringIO(), io.StringIO()
+        canary = "unexpected-private-exception-text"
+        with patch.object(module, "_payload", side_effect=RuntimeError(canary)), \
+                contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+            returncode = module.main(["authorize-broker", sweep_isolation.HOOK_VERSION])
+        self.assertEqual(2, returncode, stderr.getvalue())
         self.assertEqual(
             "feedback sweep security hook failed closed: unclassified\n",
-            refused.stderr,
+            stderr.getvalue(),
         )
-        self.assertEqual("", refused.stdout)
+        self.assertEqual("", stdout.getvalue())
+        self.assertNotIn(canary, stderr.getvalue() + stdout.getvalue())
 
     def test_claude_hook_reason_vocabulary_is_closed_and_code_owned(self) -> None:
         script = PLUGIN_ROOT / "scripts" / "sweep-isolation-hook.py"
