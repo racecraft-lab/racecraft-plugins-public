@@ -64,9 +64,9 @@ With `ripwire` on PATH, one argument per flag: `ripwire . --for="<task>"` first,
 
 ## Commands
 
-Run from the repository root with Python 3.11+ (Node >= 22.12 for docs). CI's
-`python3` is 3.12, which warns on an invalid escape such as `"\|"` that 3.11
-ignores.
+Run from the repository root with Python 3.11+ (Node >= 22.12 for docs). The PR
+Checks `test` job's `python3` is 3.12, which warns on an invalid escape such as
+`"\|"` that 3.11 ignores.
 
 | Check | Command | CI job (required?) |
 | --- | --- | --- |
@@ -77,7 +77,7 @@ ignores.
 | Release-note fence | `PR_TITLE='<title>' PR_BODY='<body>' PR_LABELS_JSON='[]' python3 scripts/compose-release-notes.py --validate-pr` | `validate-release-note` (yes) |
 | Docs, reference mode: reference inputs changed | `pnpm --dir docs-site reference:check`, then `pnpm --dir docs-site validate:quality` | `validate-docs` (no) |
 | Docs, full mode: `docs-site/`, the artifact gallery, or a docs contract file changed (`scripts/classify-docs-validation.py`) | `pnpm --dir docs-site exec playwright install chromium` once, then `pnpm --dir docs-site validate` | `validate-docs` (no) |
-| Container preflight: reruns the suite in Linux Python 3.11.15 containers when runner, test, or workflow paths change | CI only | `container-preflight-linux-amd64`, `-arm64` (yes) |
+| Container preflight: Linux containers rerun the suite when runner, test, or workflow paths change | CI only; its extra requests (`LINUX_REQUESTS` in `tests/speckit-pro/run-container-preflight.py`) also run locally | `container-preflight-linux-amd64`, `-arm64` (yes) |
 | Workflow lint | `actionlint` at the version pinned in `pr-checks.yml`, from the repository root. The CI installer (`scripts/install-actionlint.py`) fetches a Linux amd64 binary only | `validate-workflows` (no; it also checks release-PR ancestry, CI only) |
 
 ## Worktree Preflight
@@ -92,19 +92,18 @@ ignores.
   ```
 
   `.gitattributes` routes generated paths here; the driver keeps "ours" (your
-  branch in a merge, upstream in a rebase). A one-word driver such as `true`
-  runs as a program on PATH. Git never runs driver code from a clone, so this
-  stays local and fails safe.
+  branch in a merge, upstream in a rebase). Use `exit 0`, not `true`: git runs a
+  one-word driver as a program on PATH. Git never runs driver code from a clone,
+  so this stays local and fails safe.
 
 ## Merging Main
 
 Generated artifacts are a pure function of the source tree, so a merge never
-produces a correct one. **Regenerate; do not hand-resolve.** If `main` brought
-in a release and your branch also changed the runner manifest, copy
-`plugin_version` from `speckit-pro/.codex-plugin/plugin.json` before the
-refresh: release-please owns it, the refresh never writes it, and
-`test-speckit-pro-runner.py` checks it. This is the one sanctioned hand edit.
-After the commands below, run the CI suite; the table lists each output.
+produces a correct one. **Regenerate; do not hand-resolve.** One sanctioned hand
+edit: if `main` brought in a release and your branch also changed the runner
+manifest, set its `plugin_version` to the `version` in
+`speckit-pro/.codex-plugin/plugin.json` before the refresh, which never writes
+it (`test-speckit-pro-runner.py` checks). Run these commands, then the CI suite:
 
 ```bash
 git merge origin/main            # generated paths resolve without conflict
@@ -123,9 +122,8 @@ pnpm --dir docs-site reference:generate
 - On a draft PR every other PR Checks job skips and `validate-plugins` passes.
 - `test-privacy-scan.py` rejects non-allowlisted emails, home paths, Claude and
   macOS temp paths, raw UUIDs, and local identity terms in non-ignored files;
-  use repo-relative placeholders. The instruction and docs files listed in
-  `active_path_guard.py`, this one included, must not tell anyone to run `bash`,
-  `sh`, or `jq`; use `python3`.
+  use repo-relative placeholders. Files listed in `active_path_guard.py`, this
+  one included, must not instruct `bash`, `sh`, or `jq`; use `python3`.
 - Live sessions run the installed plugin; test a refreshed `dist/` with
   `claude --plugin-dir dist/claude/speckit-pro`. Ask before
   `scripts/refresh-local-plugin.py` (`--dry-run` previews): it rebuilds `dist/`,
@@ -154,18 +152,20 @@ pnpm --dir docs-site reference:generate
 ## Pull Requests
 
 Open every pull request, a single one included, as a stack with the official
-`gh-stack` skill, which drives `gh stack`. Install the skill at user scope,
-since the default project scope writes into this repository:
+`gh-stack` skill. Install it at user scope; the default project scope writes
+into this repository:
 `gh skill install github/gh-stack gh-stack --scope user --agent claude-code`
-(or `codex`). `gh stack submit --auto` creates drafts unless you pass `--open`.
+(or `codex`). `gh stack submit --auto` opens drafts titled from the branch,
+which fail the title gate: fix each title and body (keep the template's fence)
+with `gh pr edit`, then mark it ready.
 
 ## Definition Of Done
 
 - Generated outputs, a new spec's index included, are committed with their
   source; `--check` and both suites pass; the PR is ready, required checks green.
-- Docs checks and actionlint pass when their inputs changed. A `feat` or `fix`
-  PR has one non-empty `release-note` fence unless labeled `release-note/skip`;
-  others leave it empty, since any unlabeled fence reaches the release notes.
+- Docs checks and actionlint pass when their inputs changed. Only a `feat` or
+  `fix` PR fills its `release-note` fence, required unless labeled
+  `release-note/skip`; any unlabeled fence is published.
 
 ## Code Review Rules
 
