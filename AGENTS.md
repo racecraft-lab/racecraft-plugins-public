@@ -54,7 +54,7 @@ are context on demand. Scoped `AGENTS.md` files in `speckit-pro/`,
 | Area | Where to look |
 | --- | --- |
 | Claude skills, agents, hooks | `speckit-pro/skills/`, `speckit-pro/agents/`, `speckit-pro/hooks/` |
-| Codex skills, agents, hooks | `speckit-pro/codex-skills/`, `speckit-pro/codex-agents/` (TOML), `speckit-pro/codex-hooks.json` |
+| Codex skills, agents, hooks | `speckit-pro/skills/` overlaid by `speckit-pro/codex-skills/`, `speckit-pro/codex-agents/` (TOML), `speckit-pro/codex-hooks.json` |
 | Python runner | `speckit-pro/speckit_pro_runner/`: gates in `gates/`, helper ids in `helpers/registry.py` |
 | Release and CI tooling (not shipped) | `scripts/`, `.github/workflows/` |
 | Tests | `tests/speckit-pro/`; layers and default selection in `suite-manifest.json` |
@@ -63,7 +63,7 @@ are context on demand. Scoped `AGENTS.md` files in `speckit-pro/`,
 With `ripwire` on PATH, map first: `ripwire . --for="<task>"`, then
 `--callers=SYM` and `--impact=SYM` before a change, and
 `--quality-delta=$(git merge-base origin/main HEAD)..HEAD` before calling work
-done, one argument per flag. In 0.6.2, `--exemplar` ignored its query here.
+done, one argument per flag.
 
 ## Commands
 
@@ -73,11 +73,11 @@ today), which warns on an invalid escape such as `"\|"` that 3.11 ignores.
 | Check | Command | CI job (required?) |
 | --- | --- | --- |
 | Quick suite: toolchain, layers 1, 4, 5 (`--layer 1`, `4`, `5`, or `6` for one) | `python3 tests/speckit-pro/run-all.py` | none |
-| CI suite: adds layers 6 and 7; the only way to run parity (7) | `SPECKIT_SKIP_TOOLCHAIN_CHECK=1 GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null GIT_CONFIG_NOSYSTEM=1 PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/runner-gates/requests/run-default-suite.json` | `test` (yes, via `validate-plugins`) |
+| CI suite: adds layers 6 and 7 (`run-all.py` cannot select 7; `python3 tests/speckit-pro/run-layer-scripts.py --layer 7` runs it alone) | `SPECKIT_SKIP_TOOLCHAIN_CHECK=1 GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null GIT_CONFIG_NOSYSTEM=1 PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/runner-gates/requests/run-default-suite.json` | `test` (yes, via `validate-plugins`) |
 | Generated-artifact drift; commit first, since any uncommitted change under its paths fails it | `python3 scripts/refresh-release-artifacts.py --check` | `artifact-consistency` (yes, via `validate-plugins`) |
 | PR title | `TITLE='<title>' PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/runner-gates/requests/validate-pr-title-live.json` | `validate-pr-title` (yes) |
-| Release-note fence | `PR_TITLE='<title>' PR_BODY='<body>' python3 scripts/compose-release-notes.py --validate-pr` | `validate-release-note` (yes) |
-| Docs reference pages (`validate` for the full site) | `pnpm --dir docs-site reference:check` | `validate-docs` (no) |
+| Release-note fence | `PR_TITLE='<title>' PR_BODY='<body>' PR_LABELS_JSON='[]' python3 scripts/compose-release-notes.py --validate-pr` | `validate-release-note` (yes) |
+| Docs: reference inputs changed; `validate` instead when `docs-site/` changed | `pnpm --dir docs-site reference:check`, then `pnpm --dir docs-site validate:quality` | `validate-docs` (no) |
 | Container preflight | CI only | `container-preflight-linux-amd64`, `-arm64` (yes) |
 | Workflow lint | `actionlint` 1.7.12 from the repository root. The CI installer (`scripts/install-actionlint.py`) fetches a Linux amd64 binary only | `validate-workflows` (no; it also checks release-PR ancestry, CI only) |
 
@@ -111,10 +111,10 @@ pnpm --dir docs-site reference:generate
 ```
 
 If `main` brought in a release and your branch also changed the runner
-manifest, copy `plugin_version` from `.release-please-manifest.json`, then run
-the suite. After adding or retitling a spec, regenerate the spec index with
-untracked files moved aside: the generator scans the filesystem, and the
-suite's link check rejects a backlink to an untracked path.
+manifest, copy `plugin_version` from `speckit-pro/.codex-plugin/plugin.json`,
+then run the suite. After adding or retitling a spec, regenerate the spec index
+with untracked files moved aside: the generator scans the filesystem, so a
+backlink to an untracked path passes locally and fails on a clean checkout.
 
 ## Generated Files
 
@@ -123,23 +123,23 @@ suite's link check rejects a backlink to an untracked path.
 | `dist/` payloads, marketplace versions, runner hashes (any runner `.py` edit) | `python3 scripts/refresh-release-artifacts.py` | `artifact-consistency` |
 | Runner manifest `plugin_version` | release-please; the refresh never writes it | `test` (`test-speckit-pro-runner.py`) |
 | `docs-site/src/content/docs/reference/**`, from plugin sources, READMEs, manifests, `scripts/`, `tests/speckit-pro/` | `pnpm --dir docs-site reference:generate` | `validate-docs` only, not required |
-| Spec index blocks in `SPEC-MOC.md` and roadmap MOC files | runner helper `generate-spec-index-write`: `dry_run`, then `apply` (`main` may already be stale) | freshness: no PR check |
+| Spec index blocks in `SPEC-MOC.md` and roadmap MOC files | runner helper `generate-spec-index-write`: `dry_run`, then `apply`; commit only your spec's index files, since `main` may already be stale | freshness: no PR check |
 
 ## Gotchas
 
 - On a draft PR every other PR Checks job is skipped and `validate-plugins`
-  still passes. Mark the PR ready to run CI.
-- A non-empty `release-note` fence reaches the release notes whatever the PR
-  type, unless the PR has the `release-note/skip` label. Only `feat` and `fix`
-  need one; leave it empty otherwise.
-- `test-privacy-scan.py` rejects email addresses, home paths, Claude and macOS
-  temp paths, raw UUIDs, and local identity terms in any non-ignored file. A
+  still passes; mark it ready to run CI.
+- A non-empty `release-note` fence reaches the release notes from any PR type
+  without the `release-note/skip` label. Fill it only on `feat` and `fix`.
+- `test-privacy-scan.py` rejects non-allowlisted emails, home paths, Claude and
+  macOS temp paths, raw UUIDs, and local identity terms (git identity only in
+  the quick suite) in any non-ignored file; use repo-relative placeholders. A
   guard rejects `bash`, `sh`, or `jq` commands in this file, `CLAUDE.md`, the
   root and plugin READMEs, and docs-site content; write `python3` calls.
 - A running Claude Code or Codex session uses the installed plugin, not this
   checkout; try `claude --plugin-dir dist/claude/speckit-pro` after a refresh.
-  `scripts/refresh-local-plugin.py` rebuilds `dist/`, reinstalls user-scope
-  plugins, and stops if either marketplace points elsewhere: `--dry-run` first.
+  Ask before `scripts/refresh-local-plugin.py`: it rebuilds `dist/`, reinstalls
+  user-scope plugins, and stops if either CLI's marketplace points elsewhere.
 
 ## Editing Boundaries
 
@@ -163,9 +163,9 @@ suite's link check rejects a backlink to an untracked path.
 ## Definition Of Done
 
 - Generated outputs, including a new spec's index, are committed with their
-  source; the CI suite and `refresh-release-artifacts.py --check` pass.
-- `reference:check` and actionlint pass when their inputs changed, any
-  `release-note` fence passes its gate, and the PR is ready with checks green.
+  source; the quick suite, the CI suite, and `--check` pass.
+- Docs checks and actionlint pass when their inputs changed; only a `feat` or
+  `fix` PR fills its `release-note` fence. The PR is ready, checks green.
 
 ## Code Review Rules
 
