@@ -56,17 +56,19 @@ scoped `AGENTS.md`; Codex loads one only when started inside that directory.
 | Codex skills, agents, hooks | `speckit-pro/skills/` overlaid by `speckit-pro/codex-skills/`, `speckit-pro/codex-agents/` (TOML), `speckit-pro/codex-hooks.json` |
 | Python runner | `speckit-pro/speckit_pro_runner/`: gates in `gates/`, helper ids in `helpers/registry.py` |
 | Tests | `tests/speckit-pro/`; layers and default selection in `suite-manifest.json` |
-| Tooling and process (not shipped) | `scripts/`, `.github/workflows/`, the PR template, `REVIEW.md`, `SECURITY.md`, `docs-site/src/content/docs/contribute-and-release.md` |
 
-With `ripwire` on PATH, one argument per flag: `ripwire . --for="<task>"` first,
-`--callers=SYM` and `--impact=SYM` before a change, and before a PR
-`--quality-delta=$(git merge-base origin/main HEAD)..HEAD`.
+Two optional tools save reading and tokens; work on without them, and no check
+may depend on either. With `ripwire` on PATH (one argument per flag), run
+`ripwire . --for="<task>"` first, `--callers=SYM` and `--impact=SYM` before a
+change, and `--quality-delta=$(git merge-base origin/main HEAD)..HEAD` before a
+PR; confirm its graph with a read. Jev (the `typesafe-jev` plugin's `evaluate`
+tool) gives advisory judgments only: its verdict never approves a destructive
+step, and each call bills a third party, so send no secrets or local paths.
 
 ## Commands
 
-Run from the repository root with Python 3.11+ (Node >= 22.12 for docs). The PR
-Checks `test` job's `python3` is 3.12 today, which warns on an invalid escape
-such as `"\|"` that 3.11 ignores.
+Run from the repository root (Python 3.11+, Node >= 22.12 for docs). The `test`
+job's `python3` is 3.12 today, which warns on a `"\|"` escape; 3.11 does not.
 
 | Check | Command | CI job (required?) |
 | --- | --- | --- |
@@ -82,8 +84,8 @@ such as `"\|"` that 3.11 ignores.
 
 ## Worktree Preflight
 
-- A fresh worktree holds only tracked files; only `docs-site/` needs installs:
-  run `pnpm --dir docs-site install --frozen-lockfile` before docs commands.
+- A fresh worktree holds only tracked files; before any docs command, run
+  `pnpm --dir docs-site install --frozen-lockfile`.
 - Define the generated-artifact merge driver once per clone:
 
   ```bash
@@ -92,18 +94,17 @@ such as `"\|"` that 3.11 ignores.
   ```
 
   `.gitattributes` routes generated paths here; the driver keeps "ours" (your
-  branch in a merge, upstream in a rebase). Use `exit 0`, not `true`: git runs a
-  one-word driver as a program on PATH. Git never runs driver code from a clone,
-  so this stays local and fails safe.
+  branch in a merge, upstream in a rebase). Use `exit 0`, not `true`, which git
+  runs from PATH. Git never runs driver code from a clone, so this stays local
+  and fails safe.
 
 ## Merging Main
 
 Generated artifacts are a pure function of the source tree, so a merge never
 produces a correct one. **Regenerate; do not hand-resolve.** One sanctioned hand
 edit: if `main` brought in a release and your branch also changed the runner
-manifest, set its `plugin_version` to the `version` in
-`speckit-pro/.codex-plugin/plugin.json` before the refresh, which never writes
-it (`test-speckit-pro-runner.py` checks). Run these commands, then the CI suite:
+manifest, set its `plugin_version` to `speckit-pro/.codex-plugin/plugin.json`'s
+`version` before the refresh. Run these, then the CI suite:
 
 ```bash
 git merge origin/main            # generated paths resolve without conflict
@@ -119,16 +120,15 @@ pnpm --dir docs-site reference:generate
 
 ## Gotchas
 
-- On a draft PR every other PR Checks job skips and `validate-plugins` passes.
 - `test-privacy-scan.py` rejects non-allowlisted emails, home paths, Claude and
   macOS temp paths, raw UUIDs, and local identity terms in non-ignored files;
   use repo-relative placeholders. Files listed in `active_path_guard.py`, this
   one included, must not instruct `bash`, `sh`, or `jq`; use `python3`.
-- Live sessions run the installed plugin; test a refreshed `dist/` with
-  `claude --plugin-dir dist/claude/speckit-pro`. Ask before
+- Live sessions run the installed plugin; `claude --plugin-dir
+  dist/claude/speckit-pro` tests a refreshed `dist/`. Ask before
   `scripts/refresh-local-plugin.py` (`--dry-run` previews): it rebuilds `dist/`,
-  reinstalls user-scope plugins (Codex first), adds a missing marketplace, and
-  stops on one pointing elsewhere, even the main checkout from a worktree.
+  reinstalls user-scope plugins, and stops if a marketplace points elsewhere,
+  even at the main checkout.
 
 ## Editing Boundaries
 
@@ -157,15 +157,15 @@ writes into this repository:
 `gh skill install github/gh-stack gh-stack --scope user --agent claude-code`
 (or `codex`). Validate the final title first. `gh stack submit --auto` opens
 drafts titled from a lone commit's subject or else the branch name, with the PR
-template as body: set the title and fence with `gh pr edit`, then mark ready.
+template as body: set the title and fence with `gh pr edit`, then mark ready. A
+draft skips every other PR Checks job, and `validate-plugins` passes anyway.
 
 ## Definition Of Done
 
-- Generated outputs, a new spec's index included, are committed with their
-  source; `--check` and both suites pass; the PR is ready, required checks green.
-- Docs checks and actionlint pass when their inputs changed. Only a `feat` or
-  `fix` PR fills its `release-note` fence, required unless labeled
-  `release-note/skip`; any unlabeled fence is published.
+- Generated outputs are committed with their source; `--check`, both suites, and
+  required checks pass, as do docs checks and actionlint when their inputs
+  changed. Only `feat` and `fix` PRs fill the `release-note` fence, required
+  unless labeled `release-note/skip`; any unlabeled fence is published.
 
 ## Code Review Rules
 
