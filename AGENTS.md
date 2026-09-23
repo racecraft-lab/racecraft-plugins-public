@@ -43,34 +43,47 @@ own failure patterns.
   `<type>(<lowercase-scope>): <plain English description>`.
 - If verification cannot run, report the exact command and reason.
 
-## Repository Orientation
+## Start Here
 
-- This is a public Claude Code and Codex plugin marketplace.
-- Current plugin source lives under `speckit-pro/`.
-- Repository-only validation lives under `tests/speckit-pro/`.
-- The docs site lives under `docs-site/`.
-- Historical specs and generated planning artifacts are context on demand, not
-  always-on agent instructions.
+This is a public Claude Code and Codex plugin marketplace with one plugin,
+`speckit-pro`. Installers receive `dist/claude/speckit-pro/` and
+`dist/codex/speckit-pro/`, because both marketplace files point at `dist/`.
+Historical specs and generated planning artifacts are context on demand. The
+scoped `AGENTS.md` files in `speckit-pro/`, `tests/speckit-pro/`, and
+`docs-site/` add rules for their trees.
 
-## Codebase Mapping
+| Area | Where to look |
+| --- | --- |
+| Claude skills, agents, hooks | `speckit-pro/skills/`, `speckit-pro/agents/`, `speckit-pro/hooks/` |
+| Codex skills, agents, hooks | `speckit-pro/codex-skills/`, `speckit-pro/codex-agents/` (TOML), `speckit-pro/codex-hooks.json` |
+| Python runner | `speckit-pro/speckit_pro_runner/`: gates in `gates/`, helper ids in `helpers/registry.py` |
+| Release and CI tooling (not shipped) | `scripts/`, `.github/workflows/` |
+| Tests | `tests/speckit-pro/`; layers and default selection in `suite-manifest.json` |
+| Contributor, review, security docs | `docs-site/src/content/docs/contribute-and-release.md`, the PR template, `REVIEW.md`, `SECURITY.md` |
 
-- When `ripwire` is on PATH, reach for it before blind grep or whole-file
-  reads: `ripwire . --for="<task>"` for a ranked, quality-annotated map;
-  `--callers=SYM` / `--impact=SYM` before changing a symbol; `--quality-delta`
-  before calling work done.
-- See the `ripwire-router` skill, when installed, to pick the right one.
+## Commands
+
+Run from the repository root. CI runs Python 3.12, where an invalid string
+escape such as `"\|"` warns; 3.11 stays silent, and tooling must run on both.
+
+| Check | Command | CI job (required?) |
+| --- | --- | --- |
+| Quick suite: toolchain, layers 1, 4, 5 (`--layer N` for one) | `python3 tests/speckit-pro/run-all.py` | none |
+| CI suite: adds layers 6 and 7 | `SPECKIT_SKIP_TOOLCHAIN_CHECK=1 GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null GIT_CONFIG_NOSYSTEM=1 PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/runner-gates/requests/run-default-suite.json` | `test` (yes, via `validate-plugins`) |
+| Generated-artifact drift; commit first, since any uncommitted change under its paths fails it | `python3 scripts/refresh-release-artifacts.py --check` | `artifact-consistency` (yes, via `validate-plugins`) |
+| PR title | `TITLE='<title>' PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/runner-gates/requests/validate-pr-title-live.json` | `validate-pr-title` (yes) |
+| Release-note fence | `PR_TITLE='<title>' PR_BODY='<body>' python3 scripts/compose-release-notes.py --validate-pr` | `validate-release-note` (yes) |
+| Docs reference pages (`validate` for the full site) | `pnpm --dir docs-site reference:check` | `validate-docs` (no) |
+| Container preflight | CI only | `container-preflight-linux-amd64` and `-arm64` (yes) |
+| Workflow lint | `python3 scripts/install-actionlint.py install`, then `run`; set `RUNNER_TEMP` to a scratch directory for both, and `ACTIONLINT_VERSION` and `ACTIONLINT_SHA256` from `pr-checks.yml` for `install` | `validate-workflows` (no) |
 
 ## Worktree Preflight
 
-A fresh worktree holds only tracked files. Three facts cover every surface:
+A fresh worktree holds only tracked files. The test suite needs no bootstrap.
 
-- The repository test suite needs no bootstrap. Run
-  `python3 tests/speckit-pro/run-all.py` directly.
 - `docs-site/` is the only surface with dependencies. Run
-  `pnpm --dir docs-site install --frozen-lockfile` once per worktree before any docs command,
-  including the `pnpm --dir docs-site reference:generate` that the scoped
-  `tests/speckit-pro/` and `docs-site/` rules require after a tracked
-  `.md`, `.py`, or `.sh` change under the test tree.
+  `pnpm --dir docs-site install --frozen-lockfile` once per worktree before any
+  docs command, including `reference:generate`.
 - Define the generated-artifact merge driver once per clone:
 
   ```bash
@@ -78,20 +91,10 @@ A fresh worktree holds only tracked files. Three facts cover every surface:
   git config merge.generated.driver "exit 0"
   ```
 
-  `.gitattributes` marks every generated path `merge=generated` so git stops
-  text-merging content hashes and payload copies, which is the cause of nearly
-  every merge conflict in this repository. The driver keeps git's "ours" side
-  verbatim and never mixes the two: the current branch during
-  `git merge origin/main`, the upstream during a rebase. Which one survives does
-  not matter, because regenerating is the correctness step.
-
-  Use `"exit 0"`, with the quotes, rather than `true`. Git runs a one-word
-  driver directly, so `true` needs that executable on PATH; a two-word command
-  runs through git's own shell and needs only builtins.
-
-  Git will not run driver code from a cloned repository, so this cannot be
-  committed. Skipping it leaves the rules inert and merges behave as they did
-  before, so it fails safe.
+  `.gitattributes` routes every generated path to this driver, which keeps
+  git's "ours" side. Keep the quotes: git runs a one-word driver such as `true`
+  as a program on PATH. Git never runs driver code from a clone, so this stays
+  local; skipping it fails safe.
 
 ## Merging Main
 
@@ -104,27 +107,39 @@ python3 scripts/refresh-release-artifacts.py
 pnpm --dir docs-site reference:generate
 ```
 
-Then run the suite. CI's `artifact-consistency` job fails the pull request if
-the regeneration was skipped, so a stale artifact cannot land.
+If `main` brought in a release and your branch also changed the runner
+manifest, copy `plugin_version` from `.release-please-manifest.json`. Then run the suite; `artifact-consistency` fails a pull request that skipped
+the refresh. After adding or retitling a spec, also regenerate the spec index
+with untracked files moved aside: the generator scans the filesystem, so an
+untracked path becomes a committed backlink that fails on a clean checkout.
 
-One generated surface is **not** covered by `refresh-release-artifacts.py`
-and needs its own step when its inputs changed:
+## Generated Files
 
-- The spec index (`generate-spec-index`) after adding or retitling a spec.
-  Regenerate with untracked files moved aside: the generator scans the
-  filesystem rather than the git index, so an untracked path becomes a
-  committed backlink that passes locally and fails on a clean checkout.
-## Source Of Truth
+| Output | Regenerate with | Caught by |
+| --- | --- | --- |
+| `dist/` payloads, marketplace versions, runner hashes (any runner `.py` edit) | `python3 scripts/refresh-release-artifacts.py` | `artifact-consistency` |
+| Runner manifest `plugin_version` | release-please; the refresh never writes it | Release workflow only, not PRs |
+| `docs-site/src/content/docs/reference/**` | `pnpm --dir docs-site reference:generate` | `validate-docs` only |
+| Spec index blocks in `SPEC-MOC.md` and roadmap MOC files | runner helper `generate-spec-index-write`, mode `apply` | no PR check |
 
-- For plugin behavior, read the nearest `README.md`, manifests, skill files, and
-  surrounding source.
-- For test selection, use `tests/speckit-pro/suite-manifest.json`.
-- For contributor and release workflow details, use
-  `docs-site/src/content/docs/contribute-and-release.md`, the PR template, and
-  the GitHub workflow files.
-- For docs-site commands and constraints, use `docs-site/AGENTS.md`.
-- For code-review calibration, use `REVIEW.md`.
-- For vulnerability reporting and the security model, use `SECURITY.md`.
+## Gotchas
+
+- Reference pages go stale when plugin sources, READMEs, manifests, `scripts/`,
+  or `tests/speckit-pro/` change. No required check catches it.
+- On a draft PR every PR Checks job is skipped and `validate-plugins` still
+  passes. Mark the PR ready to run CI.
+- A non-empty `release-note` fence reaches the release notes whatever the PR
+  type. Only `feat` and `fix` need one; leave it empty otherwise.
+- The suite rejects committed email addresses, home or temp paths, raw UUIDs,
+  and local identity terms (`test-privacy-scan.py`), and `bash`, `sh`, or `jq`
+  commands in this file, READMEs, or docs pages; write `python3` calls.
+- A running Claude Code or Codex session uses the installed plugin, not this
+  checkout. `python3 scripts/refresh-local-plugin.py` refreshes both caches.
+- When `ripwire` is on PATH, run `ripwire . --for="<task>"` before opening
+  files, `--callers=SYM` and `--impact=SYM` before changing a symbol, and
+  `--quality-delta=$(git merge-base origin/main HEAD)..HEAD` before calling
+  work done. Pass each flag as its own argument. Skip `--exemplar`, which
+  ignored its query here; the `ripwire-router` skill picks the right verb.
 
 ## Editing Boundaries
 
@@ -144,6 +159,13 @@ and needs its own step when its inputs changed:
   workflow dispatch glue and fixed vendored boundaries.
 - If plugin source or payload-affecting files change, account for the generated
   artifact contract before calling the work done.
+
+## Definition Of Done
+
+- Generated outputs are committed with their source, the CI suite passes, and
+  `refresh-release-artifacts.py --check` passes on the committed tree.
+- `reference:check` passes if a reference input changed, and actionlint if a
+  workflow changed. The PR is ready for review with required checks green.
 
 ## Code Review Rules
 
