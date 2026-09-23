@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.0](https://github.com/racecraft-lab/typesafe-mcp/compare/v0.7.1...v0.8.0) (2026-09-23)
+
+
+### Features
+
+* **fallback:** opt-in second backend, and the plugin uses TypeSafe first ([#14](https://github.com/racecraft-lab/typesafe-mcp/issues/14)) ([58cde3e](https://github.com/racecraft-lab/typesafe-mcp/commit/58cde3e6ba11c9b4faf245346e62cbe8a18007ad))
+
 ## [0.7.1](https://github.com/racecraft-lab/typesafe-mcp/compare/v0.7.0...v0.7.1) (2026-09-20)
 
 

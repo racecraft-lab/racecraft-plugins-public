@@ -13,7 +13,7 @@ description: >
 license: MIT
 metadata:
   author: Racecraft Lab
-  version: 0.7.1 # x-release-please-version
+  version: 0.8.0 # x-release-please-version
   mcp-server: jev
 ---
 
