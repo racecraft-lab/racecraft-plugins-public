@@ -78,7 +78,7 @@ job's unpinned, newer `python3` warns on a `"\|"` escape; 3.11 does not.
 | PR title | `TITLE='<title>' PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/runner-gates/requests/validate-pr-title-live.json` | `validate-pr-title` (yes) |
 | Release-note fence | `PR_TITLE='<title>' PR_BODY='<body>' PR_LABELS_JSON='[]' python3 scripts/compose-release-notes.py --validate-pr` | `validate-release-note` (yes) |
 | Docs, reference mode: reference inputs changed | `pnpm --dir docs-site reference:check`, then `pnpm --dir docs-site validate:quality` | `validate-docs` (no) |
-| Docs, full mode: `docs-site/`, the artifact gallery, or a docs contract file changed (`scripts/classify-docs-validation.py`) | `pnpm --dir docs-site exec playwright install chromium` once, then `pnpm --dir docs-site validate` | `validate-docs` (no) |
+| Docs, full mode: `docs-site/`, the artifact gallery, or a docs contract file changed (`scripts/classify-docs-validation.py`) | `pnpm --dir docs-site exec playwright install --with-deps chromium` once, then `pnpm --dir docs-site validate` | `validate-docs` (no) |
 | Container preflight: Linux containers rerun the suite when runner, test, or workflow paths change | CI only; its extra requests (`LINUX_REQUESTS` in `tests/speckit-pro/run-container-preflight.py`) also run locally | `container-preflight-linux-amd64`, `-arm64` (yes) |
 | Workflow lint | `actionlint` at the version pinned in `pr-checks.yml`, from the repository root. The CI installer (`scripts/install-actionlint.py`) fetches a Linux amd64 binary only | `validate-workflows` (no; it also checks release-PR ancestry, CI only) |
 
