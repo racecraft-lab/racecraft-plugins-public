@@ -43,34 +43,49 @@ own failure patterns.
   `<type>(<lowercase-scope>): <plain English description>`.
 - If verification cannot run, report the exact command and reason.
 
-## Repository Orientation
+## Start Here
 
-- This is a public Claude Code and Codex plugin marketplace.
-- Current plugin source lives under `speckit-pro/`.
-- Repository-only validation lives under `tests/speckit-pro/`.
-- The docs site lives under `docs-site/`.
-- Historical specs and generated planning artifacts are context on demand, not
-  always-on agent instructions.
+A public Claude Code and Codex marketplace; its one plugin, `speckit-pro`,
+installs from `dist/`. Specs and planning artifacts are context on demand.
+Before editing `speckit-pro/`, `tests/speckit-pro/`, or `docs-site/`, read its
+scoped `AGENTS.md`; Codex loads one only when started inside that directory.
 
-## Codebase Mapping
+| Area | Where to look |
+| --- | --- |
+| Claude skills, agents, hooks | `speckit-pro/skills/`, `speckit-pro/agents/`, `speckit-pro/hooks/` |
+| Codex skills, agents, hooks | `speckit-pro/skills/` overlaid by `speckit-pro/codex-skills/`, `speckit-pro/codex-agents/` (TOML), `speckit-pro/codex-hooks.json` |
+| Python runner | `speckit-pro/speckit_pro_runner/`: gates in `gates/`, helper ids in `helpers/registry.py` |
+| Tests | `tests/speckit-pro/`; layers and default selection in `suite-manifest.json` |
 
-- When `ripwire` is on PATH, reach for it before blind grep or whole-file
-  reads: `ripwire . --for="<task>"` for a ranked, quality-annotated map;
-  `--callers=SYM` / `--impact=SYM` before changing a symbol; `--quality-delta`
-  before calling work done.
-- See the `ripwire-router` skill, when installed, to pick the right one.
+Two optional tools save reading and tokens; work on without them, and no check
+may depend on either. With `ripwire` on PATH (one argument per flag), run
+`ripwire . --for="<task>"` first, `--callers=SYM` and `--impact=SYM` before a
+change, and `--quality-delta=$(git merge-base origin/main HEAD)..HEAD` before a
+PR; confirm its graph with a read. Jev (the `typesafe-jev` plugin's `evaluate`
+tool) gives advisory judgments only: its verdict never approves a destructive
+step, and each call bills a third party, so send no secrets or local paths.
+
+## Commands
+
+Run from the repository root (Python 3.11+, Node >= 22.12 for docs). The `test`
+job's unpinned, newer `python3` warns on a `"\|"` escape; 3.11 does not.
+
+| Check | Command | CI job (required?) |
+| --- | --- | --- |
+| Quick suite: toolchain, layers 1, 4, 5 (`--layer 1`, `4`, `5`, or `6` for one) | `python3 tests/speckit-pro/run-all.py` | none |
+| CI suite: adds layers 6 and 7 (`run-all.py` cannot select 7; `python3 tests/speckit-pro/run-layer-scripts.py --layer 7` runs it alone) | `SPECKIT_SKIP_TOOLCHAIN_CHECK=1 GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null GIT_CONFIG_NOSYSTEM=1 PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/runner-gates/requests/run-default-suite.json` | `test` (yes, via `validate-plugins`) |
+| Generated-artifact drift; commit first, since any uncommitted change under its paths fails it | `python3 scripts/refresh-release-artifacts.py --check` | `artifact-consistency` (yes, via `validate-plugins`) |
+| PR title | `TITLE='<title>' PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/runner-gates/requests/validate-pr-title-live.json` | `validate-pr-title` (yes) |
+| Release-note fence | `PR_TITLE='<title>' PR_BODY='<body>' PR_LABELS_JSON='[]' python3 scripts/compose-release-notes.py --validate-pr` | `validate-release-note` (yes) |
+| Docs, reference mode: reference inputs changed | `pnpm --dir docs-site reference:check`, then `pnpm --dir docs-site validate:quality` | `validate-docs` (no) |
+| Docs, full mode: `docs-site/`, the artifact gallery, or a docs contract file changed (`scripts/classify-docs-validation.py`) | `pnpm --dir docs-site exec playwright install --with-deps chromium` once, then `pnpm --dir docs-site validate` | `validate-docs` (no) |
+| Container preflight: Linux containers rerun the suite when runner, test, or workflow paths change | CI only; its extra requests (`LINUX_REQUESTS` in `tests/speckit-pro/run-container-preflight.py`) also run locally | `container-preflight-linux-amd64`, `-arm64` (yes) |
+| Workflow lint | `actionlint` at the version pinned in `pr-checks.yml`, from the repository root. The CI installer (`scripts/install-actionlint.py`) fetches a Linux amd64 binary only | `validate-workflows` (no; it also checks release-PR ancestry, CI only) |
 
 ## Worktree Preflight
 
-A fresh worktree holds only tracked files. Three facts cover every surface:
-
-- The repository test suite needs no bootstrap. Run
-  `python3 tests/speckit-pro/run-all.py` directly.
-- `docs-site/` is the only surface with dependencies. Run
-  `pnpm --dir docs-site install --frozen-lockfile` once per worktree before any docs command,
-  including the `pnpm --dir docs-site reference:generate` that the scoped
-  `tests/speckit-pro/` and `docs-site/` rules require after a tracked
-  `.md`, `.py`, or `.sh` change under the test tree.
+- A fresh worktree holds only tracked files; before any docs command, run
+  `pnpm --dir docs-site install --frozen-lockfile`.
 - Define the generated-artifact merge driver once per clone:
 
   ```bash
@@ -78,25 +93,18 @@ A fresh worktree holds only tracked files. Three facts cover every surface:
   git config merge.generated.driver "exit 0"
   ```
 
-  `.gitattributes` marks every generated path `merge=generated` so git stops
-  text-merging content hashes and payload copies, which is the cause of nearly
-  every merge conflict in this repository. The driver keeps git's "ours" side
-  verbatim and never mixes the two: the current branch during
-  `git merge origin/main`, the upstream during a rebase. Which one survives does
-  not matter, because regenerating is the correctness step.
-
-  Use `"exit 0"`, with the quotes, rather than `true`. Git runs a one-word
-  driver directly, so `true` needs that executable on PATH; a two-word command
-  runs through git's own shell and needs only builtins.
-
-  Git will not run driver code from a cloned repository, so this cannot be
-  committed. Skipping it leaves the rules inert and merges behave as they did
-  before, so it fails safe.
+  `.gitattributes` routes generated paths here; the driver keeps "ours" (your
+  branch in a merge, upstream in a rebase). Use `exit 0`, not `true`, which git
+  runs from PATH. Git never runs driver code from a clone, so this stays local
+  and fails safe.
 
 ## Merging Main
 
 Generated artifacts are a pure function of the source tree, so a merge never
-produces a correct one. **Regenerate; do not hand-resolve.**
+produces a correct one. **Regenerate; do not hand-resolve.** One sanctioned hand
+edit: if `main` brought in a release and your branch also changed the runner
+manifest, set its `plugin_version` to `speckit-pro/.codex-plugin/plugin.json`'s
+`version` before the refresh. Run these, then the CI suite:
 
 ```bash
 git merge origin/main            # generated paths resolve without conflict
@@ -104,27 +112,23 @@ python3 scripts/refresh-release-artifacts.py
 pnpm --dir docs-site reference:generate
 ```
 
-Then run the suite. CI's `artifact-consistency` job fails the pull request if
-the regeneration was skipped, so a stale artifact cannot land.
+| Output | Regenerate with | Caught by |
+| --- | --- | --- |
+| `dist/` payloads, marketplace versions, runner hashes (any runner `.py` edit) | `python3 scripts/refresh-release-artifacts.py` | `artifact-consistency` |
+| `docs-site/src/content/docs/reference/**`, from plugin sources, READMEs, manifests, `scripts/`, `tests/speckit-pro/` | `pnpm --dir docs-site reference:generate` | `validate-docs` only, not required |
+| Spec index blocks in `SPEC-MOC.md` and roadmap MOC files | runner request shaped like `tests/speckit-pro/unit/fixtures/mutation-helpers/requests/generate-spec-index-write.json` with `repo_root` `.`: `dry_run`, then `apply`, with untracked files moved aside (the generator scans the filesystem, so a backlink to an untracked path passes locally and fails on a clean checkout); commit only your spec's index files, since `main` may already be stale | freshness: no PR check |
 
-One generated surface is **not** covered by `refresh-release-artifacts.py`
-and needs its own step when its inputs changed:
+## Gotchas
 
-- The spec index (`generate-spec-index`) after adding or retitling a spec.
-  Regenerate with untracked files moved aside: the generator scans the
-  filesystem rather than the git index, so an untracked path becomes a
-  committed backlink that passes locally and fails on a clean checkout.
-## Source Of Truth
-
-- For plugin behavior, read the nearest `README.md`, manifests, skill files, and
-  surrounding source.
-- For test selection, use `tests/speckit-pro/suite-manifest.json`.
-- For contributor and release workflow details, use
-  `docs-site/src/content/docs/contribute-and-release.md`, the PR template, and
-  the GitHub workflow files.
-- For docs-site commands and constraints, use `docs-site/AGENTS.md`.
-- For code-review calibration, use `REVIEW.md`.
-- For vulnerability reporting and the security model, use `SECURITY.md`.
+- `test-privacy-scan.py` rejects non-allowlisted emails, home paths, Claude and
+  macOS temp paths, raw UUIDs, and local identity terms in non-ignored files;
+  use repo-relative placeholders. Files listed in `active_path_guard.py`, this
+  one included, must not instruct `bash`, `sh`, or `jq`; use `python3`.
+- Live sessions run the installed plugin; `claude --plugin-dir
+  dist/claude/speckit-pro` tests a refreshed `dist/`. Ask before
+  `scripts/refresh-local-plugin.py` (`--dry-run` previews): it rebuilds `dist/`,
+  reinstalls user-scope plugins, and stops if a marketplace points elsewhere,
+  even at the main checkout.
 
 ## Editing Boundaries
 
@@ -144,6 +148,24 @@ and needs its own step when its inputs changed:
   workflow dispatch glue and fixed vendored boundaries.
 - If plugin source or payload-affecting files change, account for the generated
   artifact contract before calling the work done.
+
+## Pull Requests
+
+Open every pull request with the official `gh-stack` skill, even one PR (GitHub
+links a stack only at two). Install it at user scope; the default project scope
+writes into this repository:
+`gh skill install github/gh-stack gh-stack --scope user --agent claude-code`
+(or `codex`). Validate the final title first. `gh stack submit --auto` opens
+drafts titled from a lone commit's subject or else the branch name, with the PR
+template as body: set the title and fence with `gh pr edit`, then mark ready. A
+draft skips every other PR Checks job, and `validate-plugins` passes anyway.
+
+## Definition Of Done
+
+- Generated outputs are committed with their source; `--check`, both suites, and
+  required checks pass, as do docs checks and actionlint when their inputs
+  changed. Only `feat` and `fix` PRs fill the `release-note` fence, required
+  unless labeled `release-note/skip`; any unlabeled fence is published.
 
 ## Code Review Rules
 
