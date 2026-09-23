@@ -65,8 +65,8 @@ With `ripwire` on PATH, one argument per flag: `ripwire . --for="<task>"` first,
 ## Commands
 
 Run from the repository root with Python 3.11+ (Node >= 22.12 for docs). The PR
-Checks `test` job's `python3` is 3.12, which warns on an invalid escape such as
-`"\|"` that 3.11 ignores.
+Checks `test` job's `python3` is 3.12 today, which warns on an invalid escape
+such as `"\|"` that 3.11 ignores.
 
 | Check | Command | CI job (required?) |
 | --- | --- | --- |
@@ -151,13 +151,13 @@ pnpm --dir docs-site reference:generate
 
 ## Pull Requests
 
-Open every pull request, a single one included, as a stack with the official
-`gh-stack` skill. Install it at user scope; the default project scope writes
-into this repository:
+Open every pull request with the official `gh-stack` skill, even one PR (GitHub
+links a stack only at two). Install it at user scope; the default project scope
+writes into this repository:
 `gh skill install github/gh-stack gh-stack --scope user --agent claude-code`
-(or `codex`). `gh stack submit --auto` opens drafts titled from the branch,
-which fail the title gate: fix each title and body (keep the template's fence)
-with `gh pr edit`, then mark it ready.
+(or `codex`). Validate the final title first. `gh stack submit --auto` opens
+drafts titled from a lone commit's subject or else the branch name, with the PR
+template as body: set the title and fence with `gh pr edit`, then mark ready.
 
 ## Definition Of Done
 
