@@ -181,6 +181,8 @@ Criteria by type: `noul` takes optional `{"true": ..., "false": ...}` descriptio
 | `JEV_API_KEY_FILE` | unset | Absolute path to a private key file; wins over the environment key |
 | `JEV_REQUEST_TIMEOUT` | `45s` | Bounds the whole evaluation, retry waits included |
 | `JEV_MAX_RETRIES` | `3` | Additional attempts, 0 to 5 |
+| `JEV_FALLBACK_PROVIDER` | unset | Opt-in second backend, used when the primary refuses its credential (401, 402, 403), is not found (404), throttles (429), fails (5xx) or cannot be reached. The session then stays on it. Never used for a request the primary rejected by shape |
+| `JEV_FALLBACK_API_KEY_FILE` | unset | The fallback's key file, by the same rules as `JEV_API_KEY_FILE` |
 
 An invalid value for any of these is a startup error, not a silent fallback.
 

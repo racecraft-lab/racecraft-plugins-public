@@ -53,17 +53,22 @@ task install
 Both put it at `~/.local/libexec/racecraft-jev/evaluate`. Set `EVALUATE_BIN` if
 you keep it elsewhere.
 
-**2. The credential**, once. The plugin points at
-`~/.config/racecraft-jev/openrouter.key` by default:
+**2. The credential**, once. The plugin uses TypeSafe first and OpenRouter as
+its fallback, each with its own key file. Either one is enough:
 
 ```sh
 mkdir -p -m 700 ~/.config/racecraft-jev
-cat > ~/.config/racecraft-jev/openrouter.key    # paste, then ctrl-d
+cat > ~/.config/racecraft-jev/typesafe.key      # paste, then ctrl-d
+chmod 600 ~/.config/racecraft-jev/typesafe.key
+cat > ~/.config/racecraft-jev/openrouter.key    # the fallback
 chmod 600 ~/.config/racecraft-jev/openrouter.key
 ```
 
-The launcher sets `JEV_API_KEY_FILE` to that path only when it is not already
-set, so an explicit value in the client's environment still wins. No credential
+The launcher sets `JEV_API_KEY_FILE` to the primary's file and
+`JEV_FALLBACK_API_KEY_FILE` to the fallback's, each only when it is not already
+set, so an explicit value in the client's environment still wins. A missing
+TypeSafe key starts the server on OpenRouter; a missing OpenRouter key leaves
+TypeSafe serving alone. No credential
 is stored in any manifest, and a test checks for that.
 
 **3. The plugin.** Each client reads its own marketplace file from this
@@ -119,16 +124,22 @@ additions rather than editing around the old copy.
 
 ```json
 "env": {
-  "JEV_PROVIDER": "openrouter",
-  "JEV_MODEL": "~typesafe/jev-latest",
+  "JEV_PROVIDER": "typesafe",
+  "JEV_MODEL": "jev-latest",
+  "JEV_FALLBACK_PROVIDER": "openrouter",
   "JEV_REQUEST_TIMEOUT": "45s"
 }
 ```
 
-The plugin opts in to OpenRouter explicitly. The binary's own default is still
-`typesafe`, so nothing infers a backend from which keys happen to be set. To run
-the plugin against TypeSafe directly, override `JEV_PROVIDER` in the client's
-own configuration for this server.
+The plugin names both backends explicitly: TypeSafe first, and OpenRouter as the
+fallback it opts in to with `JEV_FALLBACK_PROVIDER`. Nothing infers a backend
+from which keys happen to be set. A call moves to OpenRouter only when TypeSafe
+refuses its credential (401, 402, 403), is not found (404), throttles (429),
+fails (5xx) or cannot be reached. The session then stays on OpenRouter, and the
+switch is one line on stderr. A request TypeSafe rejected by shape never moves.
+Both backends share the one 45s budget, so the client's 75s abort still fits.
+To pin one backend, set `JEV_PROVIDER` and remove `JEV_FALLBACK_PROVIDER` in the
+client's own configuration for this server.
 
 The Codex entry also sets `tool_timeout_sec: 75`, above the 45s request budget,
 so the client does not give up while the server is still inside the time it was

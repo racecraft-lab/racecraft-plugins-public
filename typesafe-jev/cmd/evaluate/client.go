@@ -11,6 +11,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 )
 
@@ -46,6 +47,16 @@ type Client struct {
 	MaxRetries int
 	// Backoff is the first retry delay; it doubles each attempt.
 	Backoff time.Duration
+
+	// Fallback is the operator's opt-in second backend (JEV_FALLBACK_PROVIDER),
+	// or nil. See fallback.go.
+	Fallback *Client
+	// Log receives the one line written when calls switch to Fallback. It is
+	// stderr in production: stdout carries the MCP protocol.
+	Log io.Writer
+	// switched is set once and never cleared, so one session never alternates
+	// between backends.
+	switched atomic.Bool
 }
 
 // newHTTPClient returns the transport used for provider calls.
@@ -99,8 +110,8 @@ func (c *Client) Evaluate(ctx context.Context, req any) ([]byte, error) {
 		// Stop rather than sleep past the deadline and then make one more
 		// doomed attempt on the way out.
 		if remaining := time.Until(deadline); wait >= remaining {
-			return nil, fmt.Errorf("%s: HTTP %d; the next retry would not fit in the %s budget; retry later",
-				c.Provider.Name, status, c.Timeout)
+			return nil, &statusErr{Status: status, text: fmt.Sprintf("%s: HTTP %d; the next retry would not fit in the %s budget; retry later",
+				c.Provider.Name, status, c.Timeout)}
 		}
 		if err := sleep(ctx, wait); err != nil {
 			return nil, err
@@ -213,10 +224,20 @@ func (c *Client) attempt(ctx context.Context, body []byte) ([]byte, int, string,
 func (c *Client) statusError(status int, body []byte) error {
 	remedy := remedyFor(status)
 	if id := requestID(body); id != "" {
-		return fmt.Errorf("%s: HTTP %d; %s (request %s)", c.Provider.Name, status, remedy, id)
+		return &statusErr{Status: status, text: fmt.Sprintf("%s: HTTP %d; %s (request %s)", c.Provider.Name, status, remedy, id)}
 	}
-	return fmt.Errorf("%s: HTTP %d; %s", c.Provider.Name, status, remedy)
+	return &statusErr{Status: status, text: fmt.Sprintf("%s: HTTP %d; %s", c.Provider.Name, status, remedy)}
 }
+
+// statusErr is a provider's non-2xx answer. The text is what the agent reads;
+// the status is what a configured fallback decides on, so neither has to be
+// parsed back out of the other.
+type statusErr struct {
+	Status int
+	text   string
+}
+
+func (e *statusErr) Error() string { return e.text }
 
 func remedyFor(status int) string {
 	switch status {

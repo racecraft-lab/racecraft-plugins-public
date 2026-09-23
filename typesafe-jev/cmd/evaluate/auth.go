@@ -27,7 +27,9 @@ func (c credential) reveal() string { return string(c) }
 // when one is configured and otherwise from that backend's own environment
 // variable.
 //
-// There is no fallback between the two, and none between backends. If the
+// There is no fallback between the two, and no implicit one between backends:
+// a fallback backend exists only when the operator names it, and it loads its
+// own credential through this same function (see fallback.go). If the
 // operator named a file, an unreadable file is fatal even when a usable
 // environment key is sitting right there: quietly using a different credential
 // would bill a different account than the one they configured.

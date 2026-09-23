@@ -91,6 +91,31 @@ type Config struct {
 	// KeyFile is an absolute path, or "" to use the provider's environment
 	// variable. The path is not a secret; the file's contents are.
 	KeyFile string
+	// Fallback is the backend a call moves to when Provider refuses its
+	// credential or is unavailable, or nil. It is set only by the operator
+	// (JEV_FALLBACK_PROVIDER): which keys happen to exist never creates one.
+	Fallback *FallbackConfig
+}
+
+// FallbackConfig names the second backend and where its key comes from, by
+// the same rules as the primary's.
+type FallbackConfig struct {
+	Provider ProviderSpec
+	// KeyFile is an absolute path, or "" to use the fallback provider's own
+	// environment variable.
+	KeyFile string
+}
+
+// fallbackConfig is the Config a client for the fallback backend is built
+// from: its own provider, model default and key, and the primary's limits.
+func (c Config) fallbackConfig() Config {
+	return Config{
+		Provider:   c.Fallback.Provider,
+		Model:      c.Fallback.Provider.DefaultModel,
+		Timeout:    c.Timeout,
+		MaxRetries: c.MaxRetries,
+		KeyFile:    c.Fallback.KeyFile,
+	}
 }
 
 // lookupFunc reports a variable's value and whether it was set at all. The
@@ -120,6 +145,9 @@ func resolveConfig(look lookupFunc) (Config, error) {
 		return cfg, err
 	}
 	if cfg.KeyFile, err = resolveKeyFile(look); err != nil {
+		return cfg, err
+	}
+	if cfg.Fallback, err = resolveFallback(look, spec); err != nil {
 		return cfg, err
 	}
 	return cfg, nil
@@ -204,21 +232,51 @@ func resolveMaxRetries(look lookupFunc) (int, error) {
 }
 
 func resolveKeyFile(look lookupFunc) (string, error) {
-	raw, set := look("JEV_API_KEY_FILE")
+	return resolveKeyFileVar(look, "JEV_API_KEY_FILE")
+}
+
+func resolveKeyFileVar(look lookupFunc, name string) (string, error) {
+	raw, set := look(name)
 	if !set || raw == "" {
 		return "", nil
 	}
 	path := strings.TrimSpace(raw)
 	if path == "" {
-		return "", fmt.Errorf("JEV_API_KEY_FILE is whitespace only; unset it to use the provider's environment variable")
+		return "", fmt.Errorf("%s is whitespace only; unset it to use the provider's environment variable", name)
 	}
 	// Absolute only. A client launches this server with an unpredictable
 	// working directory, so a relative path would resolve somewhere nobody
 	// intended, or nowhere at all.
 	if !filepath.IsAbs(path) {
-		return "", fmt.Errorf("JEV_API_KEY_FILE=%q must be an absolute path", path)
+		return "", fmt.Errorf("%s=%q must be an absolute path", name, path)
 	}
 	return path, nil
+}
+
+// resolveFallback reads the opt-in second backend. Unset means none, which is
+// exactly the behaviour before fallback existed. A fallback key file with no
+// fallback provider is a mistake worth reporting, not a hint to guess one.
+func resolveFallback(look lookupFunc, primary ProviderSpec) (*FallbackConfig, error) {
+	raw, set := look("JEV_FALLBACK_PROVIDER")
+	if !set || raw == "" {
+		if file, _ := look("JEV_FALLBACK_API_KEY_FILE"); file != "" {
+			return nil, fmt.Errorf("JEV_FALLBACK_API_KEY_FILE is set without JEV_FALLBACK_PROVIDER; name the fallback backend, one of %s", providerNames())
+		}
+		return nil, nil
+	}
+	name := strings.TrimSpace(raw)
+	spec, ok := providers[name]
+	if !ok {
+		return nil, fmt.Errorf("JEV_FALLBACK_PROVIDER=%q is not a known backend; use one of %s", name, providerNames())
+	}
+	if spec.Name == primary.Name {
+		return nil, fmt.Errorf("JEV_FALLBACK_PROVIDER=%q is the primary backend; a fallback must be the other one", name)
+	}
+	keyFile, err := resolveKeyFileVar(look, "JEV_FALLBACK_API_KEY_FILE")
+	if err != nil {
+		return nil, err
+	}
+	return &FallbackConfig{Provider: spec, KeyFile: keyFile}, nil
 }
 
 // credentialSource names where the key will be read from, for a diagnostic

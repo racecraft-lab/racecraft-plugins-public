@@ -4,6 +4,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"os/signal"
 	"runtime/debug"
@@ -147,6 +148,38 @@ func newClient(cfg Config) (*Client, error) {
 	}, nil
 }
 
+// newClients builds the primary client and, when the operator configured one,
+// its fallback. It returns the Config that describes what will actually serve,
+// so the server's instructions name the destination in force.
+//
+// A primary whose credential cannot be loaded, such as a missing key file,
+// starts on the fallback outright. A fallback whose credential cannot be
+// loaded is dropped with a line on log, and the primary serves alone. Only
+// when neither loads does the server refuse to start, naming both.
+func newClients(cfg Config, log io.Writer) (*Client, Config, error) {
+	primary, primaryErr := newClient(cfg)
+	if cfg.Fallback == nil {
+		return primary, cfg, primaryErr
+	}
+	fallbackCfg := cfg.fallbackConfig()
+	fallback, fallbackErr := newClient(fallbackCfg)
+	switch {
+	case primaryErr == nil && fallbackErr == nil:
+		primary.Fallback = fallback
+		primary.Log = log
+		return primary, cfg, nil
+	case primaryErr == nil:
+		fmt.Fprintf(log, "evaluate: the %s fallback is off: %v\n", fallbackCfg.Provider.Name, fallbackErr)
+		cfg.Fallback = nil
+		return primary, cfg, nil
+	case fallbackErr == nil:
+		fmt.Fprintf(log, "evaluate: %v; using the %s fallback\n", primaryErr, fallbackCfg.Provider.Name)
+		return fallback, fallbackCfg, nil
+	default:
+		return nil, cfg, fmt.Errorf("%w; the %s fallback cannot start either: %v", primaryErr, fallbackCfg.Provider.Name, fallbackErr)
+	}
+}
+
 // newServer registers the tools for cfg's backend against c. Split out from
 // serve so a test can drive the real registration without a transport or a
 // provider.
@@ -172,7 +205,13 @@ func newServer(cfg Config, c *Client) *mcp.Server {
 func backendNote(cfg Config) string {
 	note := "\nBackend: " + cfg.Provider.Name + ". Calling this tool sends the state and questions" +
 		" you pass to that provider, which bills for the call."
-	if cfg.Provider.Name == "openrouter" {
+	if cfg.Fallback != nil {
+		note = "\nBackend: " + cfg.Provider.Name + ", with " + cfg.Fallback.Provider.Name + " as fallback." +
+			" Calling this tool sends the state and questions you pass to " + cfg.Provider.Name +
+			", or to " + cfg.Fallback.Provider.Name + " when " + cfg.Provider.Name + " refuses its credential" +
+			" or is unavailable; the provider that answers bills for the call."
+	}
+	if cfg.Provider.Name == "openrouter" || (cfg.Fallback != nil && cfg.Fallback.Provider.Name == "openrouter") {
 		note += "\nThis backend may omit confidence and probabilities from a choice or score" +
 			" answer, which the TypeSafe backend always sends. Treat an absent field as" +
 			" absent: do not substitute a default before branching on it."
@@ -185,7 +224,7 @@ func serve(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	c, err := newClient(cfg)
+	c, cfg, err := newClients(cfg, os.Stderr)
 	if err != nil {
 		return err
 	}

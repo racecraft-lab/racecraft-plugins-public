@@ -141,8 +141,16 @@ func TestPluginMCPEntries(t *testing.T) {
 		}
 
 		env, _ := entry["env"].(map[string]any)
-		if got, _ := env["JEV_PROVIDER"].(string); got != "openrouter" {
-			t.Errorf("%s: JEV_PROVIDER = %q, want openrouter", tc.file, got)
+		// TypeSafe first, with OpenRouter as the operator's explicit fallback,
+		// each with its own model id: the ids differ per backend.
+		for key, want := range map[string]string{
+			"JEV_PROVIDER":          "typesafe",
+			"JEV_MODEL":             "jev-latest",
+			"JEV_FALLBACK_PROVIDER": "openrouter",
+		} {
+			if got, _ := env[key].(string); got != want {
+				t.Errorf("%s: %s = %q, want %q", tc.file, key, got, want)
+			}
 		}
 		// The binary's own default stays typesafe; the plugin opts in rather
 		// than the server guessing from which keys are set.
@@ -260,8 +268,37 @@ func TestLauncherResolvesTheBinary(t *testing.T) {
 		if !strings.Contains(got, "args=mcp") {
 			t.Errorf("launcher did not pass `mcp`: %q", got)
 		}
-		if !strings.Contains(got, filepath.Join(dir, ".config", "racecraft-jev", "openrouter.key")) {
+		if !strings.Contains(got, filepath.Join(dir, ".config", "racecraft-jev", "typesafe.key")) {
 			t.Errorf("key-file default not applied: %q", got)
+		}
+	})
+
+	t.Run("each backend gets its own key-file default, and a fallback gets one only when configured", func(t *testing.T) {
+		dir := t.TempDir()
+		fake := filepath.Join(dir, "evaluate")
+		script := "#!/bin/sh\necho \"keyfile=$JEV_API_KEY_FILE\"\necho \"fallbackfile=${JEV_FALLBACK_API_KEY_FILE:-none}\"\n"
+		if err := os.WriteFile(fake, []byte(script), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		keys := filepath.Join(dir, ".config", "racecraft-jev")
+		for _, tc := range []struct {
+			env           []string
+			key, fallback string
+		}{
+			{nil, filepath.Join(keys, "typesafe.key"), "none"},
+			{[]string{"JEV_PROVIDER=openrouter"}, filepath.Join(keys, "openrouter.key"), "none"},
+			{[]string{"JEV_PROVIDER=typesafe", "JEV_FALLBACK_PROVIDER=openrouter"}, filepath.Join(keys, "typesafe.key"), filepath.Join(keys, "openrouter.key")},
+			{[]string{"JEV_FALLBACK_PROVIDER=openrouter", "JEV_FALLBACK_API_KEY_FILE=/else/or.key"}, filepath.Join(keys, "typesafe.key"), "/else/or.key"},
+		} {
+			cmd := exec.Command(shellPath(t), launcher)
+			cmd.Env = append(append(os.Environ(), "EVALUATE_BIN="+fake, "HOME="+dir), tc.env...)
+			out, err := cmd.Output()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !strings.Contains(string(out), "keyfile="+tc.key+"\n") || !strings.Contains(string(out), "fallbackfile="+tc.fallback+"\n") {
+				t.Errorf("%v: got %q, want key %s and fallback %s", tc.env, out, tc.key, tc.fallback)
+			}
 		}
 	})
 

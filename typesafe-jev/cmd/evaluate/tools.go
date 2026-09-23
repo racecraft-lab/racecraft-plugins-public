@@ -47,6 +47,14 @@ func registerTools(s *mcp.Server, _ Config, c *Client) {
 // enforced is a convenience, not a boundary, so everything is checked again
 // here.
 func runEvaluate(ctx context.Context, c *Client, in evaluateIn) ([]byte, error) {
+	if c.Fallback != nil {
+		return runWithFallback(ctx, c, in)
+	}
+	return runOn(ctx, c, in)
+}
+
+// runOn is one evaluation on one backend.
+func runOn(ctx context.Context, c *Client, in evaluateIn) ([]byte, error) {
 	// Precedence: the tool call's model, then JEV_MODEL, then the backend
 	// default. c.Model already holds the resolved second and third of those.
 	//

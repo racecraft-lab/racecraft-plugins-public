@@ -54,8 +54,10 @@ Do not put a secret in `state` to have a judgment made about it.
 ## Credential handling
 
 - Read once at startup, from `JEV_API_KEY_FILE` or the selected backend's own
-  environment variable. There is no fallback between the two, and none between
-  backends.
+  environment variable. There is no fallback between the two, and no implicit
+  one between backends: a second backend is used only when the operator names it
+  with `JEV_FALLBACK_PROVIDER`, and it reads its own credential by the same rules
+  (`JEV_FALLBACK_API_KEY_FILE` or its own environment variable).
 - A key file must be a regular file, at most 8 KiB, not readable by group or
   others. Empty values, control characters, surrounding whitespace, and
   unexpanded `${...}` placeholders are rejected rather than repaired.

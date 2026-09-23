@@ -66,8 +66,9 @@ one:
 
 - Infer the backend from which API keys happen to be set. That is what this
   fork exists to remove.
-- Fall back to the other backend when one fails. The error goes to the agent;
-  the operator decides.
+- Fall back to the other backend on its own. A fallback exists only when the
+  operator names one with `JEV_FALLBACK_PROVIDER`; without it the error goes to
+  the agent and the operator decides.
 - Add an environment variable that points the server at an arbitrary URL.
   Tests inject endpoints through constructors instead.
 - Make `setup mcp` edit client configuration again.

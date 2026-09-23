@@ -4,8 +4,9 @@
       "command": "bin/evaluate-launch",
       "cwd": ".",
       "env": {
-        "JEV_PROVIDER": "openrouter",
-        "JEV_MODEL": "~typesafe/jev-latest",
+        "JEV_PROVIDER": "typesafe",
+        "JEV_MODEL": "jev-latest",
+        "JEV_FALLBACK_PROVIDER": "openrouter",
         "JEV_REQUEST_TIMEOUT": "45s"
       },
       "startup_timeout_sec": 10,
