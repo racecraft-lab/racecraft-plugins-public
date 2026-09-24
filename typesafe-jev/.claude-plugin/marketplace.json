@@ -1,0 +1,17 @@
+{
+  "name": "racecraft-typesafe",
+  "description": "Racecraft Lab's TypeSafe Jev plugin: the evaluate MCP tool plus the adapted TypeSafe agent skill.",
+  "owner": {
+    "name": "Racecraft Lab",
+    "url": "https://github.com/racecraft-lab"
+  },
+  "version": "0.8.0",
+  "plugins": [
+    {
+      "name": "typesafe-jev",
+      "description": "Typed judgments from Jev through TypeSafe or OpenRouter, with the backend selected explicitly",
+      "source": "./plugin",
+      "version": "0.8.0"
+    }
+  ]
+}

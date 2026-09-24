@@ -1,0 +1,45 @@
+{
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "packages": {
+    ".": {
+      "release-type": "go",
+      "initial-version": "0.1.0",
+      "changelog-path": "CHANGELOG.md",
+      "bump-minor-pre-major": true,
+      "bump-patch-for-minor-pre-major": false,
+      "draft": true,
+      "force-tag-creation": true,
+      "extra-files": [
+        {
+          "type": "json",
+          "path": "plugin/.claude-plugin/plugin.json",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "json",
+          "path": "plugin/.codex-plugin/plugin.json",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "json",
+          "path": ".claude-plugin/marketplace.json",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "json",
+          "path": ".claude-plugin/marketplace.json",
+          "jsonpath": "$.plugins[?(@.name==\"typesafe-jev\")].version"
+        },
+        {
+          "type": "json",
+          "path": ".agents/plugins/marketplace.json",
+          "jsonpath": "$.plugins[?(@.name==\"typesafe-jev\")].version"
+        },
+        {
+          "type": "generic",
+          "path": "plugin/shared-skills/typed-judgments/SKILL.md"
+        }
+      ]
+    }
+  }
+}

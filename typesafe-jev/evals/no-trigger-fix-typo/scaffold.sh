@@ -1,0 +1,8 @@
+#!/bin/sh
+set -eu
+. "$(dirname "$0")/../lib/link-server.sh"
+link_evaluate_server
+
+cat > notes.md <<'FIXTURE'
+Keep the two concerns seperate so each can be tested alone.
+FIXTURE

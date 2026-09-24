@@ -1,0 +1,183 @@
+name: Release Please
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  # Publication is opt-in. Until the repository variable RELEASE_ENABLED is set
+  # to 'true', nothing below runs, so a merge to main cannot cut a release of
+  # the fork by accident while the integration is still under review.
+  #
+  # Turning it on is a deliberate step: set the variable, and protect the
+  # `release` environment used by the publish job with required reviewers.
+  gate:
+    runs-on: ubuntu-latest
+    outputs:
+      enabled: ${{ vars.RELEASE_ENABLED == 'true' }}
+    steps:
+      - name: Report the gate
+        env:
+          RELEASE_ENABLED: ${{ vars.RELEASE_ENABLED }}
+        run: |
+          if [ "$RELEASE_ENABLED" = "true" ]; then
+            echo "RELEASE_ENABLED is set; the release pipeline will run."
+          else
+            echo "RELEASE_ENABLED is not 'true'; skipping every release step."
+          fi
+
+  release-please:
+    needs: gate
+    if: ${{ needs.gate.outputs.enabled == 'true' }}
+    runs-on: ubuntu-latest
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
+    steps:
+      - name: Run Release Please
+        # Requires release-please >=17.2.0 to honor force-tag-creation for drafts.
+        # Without the tag, PR generation replays already-released commits.
+        uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
+        id: release
+
+  # The tagged source is tested before anything is built from it. A release
+  # whose own tests never ran against the exact tagged tree is not a verified
+  # artifact, however green the branch looked when it merged.
+  test-tag:
+    needs: release-please
+    if: ${{ needs.release-please.outputs.release_created == 'true' }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          ref: ${{ needs.release-please.outputs.tag_name }}
+      - uses: actions/setup-go@7a3fe6cf4cb3a834922a1244abfce67bcef6a0c5 # v6.2.0
+        with:
+          go-version-file: go.mod
+      - run: go mod verify
+      - run: test -z "$(gofmt -l .)" || (gofmt -l . && exit 1)
+      - run: go vet ./...
+      - run: go test -count=1 ./...
+      - run: go test -race -count=1 ./...
+
+  build-release:
+    needs: [release-please, test-tag]
+    if: ${{ needs.release-please.outputs.release_created == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          # Build the tagged commit, not whatever push triggered this run.
+          ref: ${{ needs.release-please.outputs.tag_name }}
+      - uses: actions/setup-go@7a3fe6cf4cb3a834922a1244abfce67bcef6a0c5 # v6.2.0
+        with:
+          go-version-file: go.mod
+      - name: Build, checksum and upload assets to the draft
+        env:
+          CGO_ENABLED: 0
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.release-please.outputs.tag_name }}
+          REPO: ${{ github.repository }}
+        run: |
+          for goos in darwin linux; do
+            for goarch in amd64 arm64; do
+              GOOS=$goos GOARCH=$goarch go build -trimpath \
+                -ldflags="-s -w -X main.version=${TAG}" -o evaluate ./cmd/evaluate
+              tar -czf "evaluate-${goos}-${goarch}.tar.gz" evaluate LICENSE
+            done
+          done
+          sha256sum evaluate-*.tar.gz > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+          gh release upload "$TAG" evaluate-*.tar.gz SHA256SUMS.txt --clobber --repo "$REPO"
+
+  # The gate: the exact assets attached to the draft are downloaded,
+  # checksummed and executed before anyone can install them.
+  #
+  # Deliberately not `sh install.sh`: that reads /releases/latest/download,
+  # which cannot see a draft, so running it here would verify the *previous*
+  # release. The authenticated download below is what makes this a real gate.
+  verify-assets:
+    needs: [release-please, build-release]
+    if: ${{ needs.release-please.outputs.release_created == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          ref: ${{ needs.release-please.outputs.tag_name }}
+      - name: Download and verify the draft's own assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.release-please.outputs.tag_name }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -eu
+          dir="$RUNNER_TEMP/release"
+          mkdir -p "$dir"
+          gh release download "$TAG" --dir "$dir" --repo "$REPO"
+
+          cd "$dir"
+          sha256sum --check SHA256SUMS.txt
+
+          # Every advertised target must be present, or an operator on that
+          # platform gets a release they cannot install.
+          for goos in darwin linux; do
+            for goarch in amd64 arm64; do
+              test -f "evaluate-${goos}-${goarch}.tar.gz" \
+                || { echo "::error::missing evaluate-${goos}-${goarch}.tar.gz" >&2; exit 1; }
+            done
+          done
+
+          # The runner's own target has to run and report the tag it was built
+          # as, which catches a mislabelled, truncated, or stale archive.
+          tar -xzf evaluate-linux-amd64.tar.gz evaluate
+          chmod +x evaluate
+          got=$(./evaluate version)
+          echo "built version: $got"
+          test "$got" = "$TAG" || { echo "::error::binary reports $got, expected $TAG" >&2; exit 1; }
+          ./evaluate version --verbose
+
+          # It must also refuse to serve without a credential, rather than
+          # reaching for one it was not given.
+          if JEV_PROVIDER=openrouter OPENROUTER_API_KEY= ./evaluate mcp </dev/null; then
+            echo "::error::the server started with no credential" >&2
+            exit 1
+          fi
+
+  publish:
+    needs: [release-please, verify-assets]
+    if: ${{ needs.release-please.outputs.release_created == 'true' }}
+    runs-on: ubuntu-latest
+    # Protect this environment in repository settings to require a human
+    # approval before the verified draft becomes public.
+    environment: release
+    steps:
+      - name: Publish the verified draft
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.release-please.outputs.tag_name }}
+          REPO: ${{ github.repository }}
+        run: gh release edit "$TAG" --draft=false --repo "$REPO"
+
+  # After publication, as a convenience check that the public installer path
+  # now resolves. This is not the gate; verify-assets is.
+  smoke-installer:
+    needs: [release-please, publish]
+    if: ${{ needs.release-please.outputs.release_created == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          # The tagged installer, not whatever main happens to hold now.
+          ref: ${{ needs.release-please.outputs.tag_name }}
+      - name: Install from the published release
+        run: EVALUATE_INSTALL_DIR="$RUNNER_TEMP/bin" sh install.sh

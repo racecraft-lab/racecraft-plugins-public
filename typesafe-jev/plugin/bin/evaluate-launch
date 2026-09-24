@@ -1,0 +1,64 @@
+#!/bin/sh
+# Launch the evaluate MCP server for a plugin-installed client.
+#
+# The plugin cannot be fully self-contained: this server is a compiled Go
+# binary, and committing four platform builds to git would bloat the repository
+# and still need a fifth for anyone else. So the plugin ships this launcher and
+# the binary is installed once, separately.
+#
+# Everything this writes for a human goes to stderr. Stdout belongs to the MCP
+# protocol, and a single stray line on it is a frame the client cannot parse.
+set -eu
+
+BIN="${EVALUATE_BIN:-$HOME/.local/libexec/racecraft-jev/evaluate}"
+
+if [ ! -x "$BIN" ]; then
+	cat >&2 <<EOF
+evaluate: no server binary at $BIN
+
+Install it once, then reconnect this MCP server:
+
+  # from a release
+  curl -fsSL -o install.sh \\
+    https://raw.githubusercontent.com/racecraft-lab/typesafe-mcp/main/install.sh
+  sh install.sh
+
+  # or from a checkout of this repository
+  task install
+
+Set EVALUATE_BIN to override the path.
+EOF
+	exit 1
+fi
+
+# Defaults the plugin can supply without the client having to expand anything
+# in its own config. An explicit value in the client's environment still wins,
+# because ":=" only assigns when the variable is unset or empty. Each backend
+# has its own key file, named after it, so neither is handed the other's key.
+case "${JEV_PROVIDER:-typesafe}" in
+openrouter) : "${JEV_API_KEY_FILE:=$HOME/.config/racecraft-jev/openrouter.key}" ;;
+*) : "${JEV_API_KEY_FILE:=$HOME/.config/racecraft-jev/typesafe.key}" ;;
+esac
+export JEV_API_KEY_FILE
+
+# The fallback is opt-in: only a configured JEV_FALLBACK_PROVIDER gets a key
+# file default, and the server validates the name.
+if [ -n "${JEV_FALLBACK_PROVIDER:-}" ]; then
+	: "${JEV_FALLBACK_API_KEY_FILE:=$HOME/.config/racecraft-jev/$JEV_FALLBACK_PROVIDER.key}"
+	export JEV_FALLBACK_API_KEY_FILE
+fi
+
+# A key file is the documented path, but an operator may use the provider's
+# environment variable instead. Only warn when nothing is available, and never
+# print a value.
+if [ ! -f "$JEV_API_KEY_FILE" ] && [ ! -f "${JEV_FALLBACK_API_KEY_FILE:-/nonexistent}" ] &&
+	[ -z "${OPENROUTER_API_KEY:-}" ] && [ -z "${TYPESAFE_API_KEY:-}" ]; then
+	echo "evaluate: no credential yet; expected a key file at $JEV_API_KEY_FILE" >&2
+	echo "evaluate: see docs/openrouter.md for how to create it" >&2
+	# Not fatal: the server reports the same thing with a better message, and
+	# failing here would hide it.
+fi
+
+# exec, not a subshell: the client signals this process directly, and an extra
+# shell in between would swallow the termination it sends.
+exec "$BIN" mcp
