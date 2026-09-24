@@ -23,7 +23,7 @@ root point at it. That separation is what a client caches: everything outside
 | `plugin/.mcp.json` | MCP entry for Codex |
 | `plugin/shared-skills/typesafe-ai/` | TypeSafe's skill, adapted, with its MIT licence |
 | `plugin/shared-skills/typed-judgments/` | routes an in-session judgment to the tool |
-| `plugin/bin/evaluate-launch` | resolves the binary and applies plugin defaults |
+| `plugin/scripts/evaluate_launch.py` | resolves the binary and applies plugin defaults |
 
 Both manifests declare the same name and version, which a test enforces.
 
@@ -31,7 +31,7 @@ Both manifests declare the same name and version, which a test enforces.
 
 **The server binary is not in the plugin.** It is compiled Go, and committing
 four platform builds to git would bloat every clone and still miss a fifth
-platform. So the binary is installed once, separately, and `plugin/bin/evaluate-launch`
+platform. So the binary is installed once, separately, and `plugin/scripts/evaluate_launch.py`
 finds it.
 
 If it is missing, the launcher writes one line to stderr naming the install

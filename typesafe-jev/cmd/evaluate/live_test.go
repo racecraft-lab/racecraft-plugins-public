@@ -146,14 +146,14 @@ func TestLiveThroughLauncherOverStdio(t *testing.T) {
 	if os.Getenv("EVALUATE_LIVE") != "1" {
 		t.Skip("set EVALUATE_LIVE=1 to make a real, billed provider call")
 	}
-	launcher := filepath.Join(repoRoot(t), "bin", "evaluate-launch")
+	launcher := filepath.Join(repoRoot(t), filepath.FromSlash(launcherPath))
 	installed := filepath.Join(os.Getenv("HOME"), ".local", "libexec", "racecraft-jev", "evaluate")
 	if _, err := os.Stat(installed); err != nil {
 		t.Skipf("no installed binary at %s", installed)
 	}
 
 	ctx := context.Background()
-	cmd := exec.Command(shellPath(t), launcher)
+	cmd := exec.Command(pythonPath(t), launcher)
 	cmd.Env = append(os.Environ(),
 		"EVALUATE_BIN="+installed,
 		"JEV_PROVIDER=openrouter",

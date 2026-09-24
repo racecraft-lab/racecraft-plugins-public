@@ -5,9 +5,7 @@
 
 # Racecraft fork: local evidence, builds, and credentials.
 .artifacts/
-# bin/* not bin/: git cannot re-include a file whose parent dir is excluded.
 bin/*
-!plugin/bin/evaluate-launch
 *.key
 *.bak
 .env.*

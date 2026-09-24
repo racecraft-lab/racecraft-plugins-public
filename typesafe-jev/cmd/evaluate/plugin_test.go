@@ -20,16 +20,20 @@ func repoRoot(t *testing.T) string {
 	return root
 }
 
-// shellPath resolves sh from PATH rather than assuming /bin/sh, and skips the
-// test where no shell exists, so these run on more than one layout.
-func shellPath(t *testing.T) string {
+// pythonPath resolves python3 from PATH, the same way the plugin's MCP entries
+// do, and skips the test where none exists, so these run on more than one
+// layout.
+func pythonPath(t *testing.T) string {
 	t.Helper()
-	sh, err := exec.LookPath("sh")
+	python, err := exec.LookPath("python3")
 	if err != nil {
-		t.Skipf("no sh on PATH: %v", err)
+		t.Skipf("no python3 on PATH: %v", err)
 	}
-	return sh
+	return python
 }
+
+// launcherPath is the shipped launcher, relative to the repository root.
+const launcherPath = "plugin/scripts/evaluate_launch.py"
 
 // pluginRoot is the payload directory. Paths inside a plugin manifest resolve
 // against it, not against the repository, which is why it is separate from
@@ -120,9 +124,9 @@ func TestPluginManifestsResolve(t *testing.T) {
 func TestPluginMCPEntries(t *testing.T) {
 	root := repoRoot(t)
 
-	for _, tc := range []struct{ file, wantCommand string }{
-		{"plugin/mcp/claude.json", "${CLAUDE_PLUGIN_ROOT}/bin/evaluate-launch"},
-		{"plugin/.mcp.json", "bin/evaluate-launch"},
+	for _, tc := range []struct{ file, wantScript string }{
+		{"plugin/mcp/claude.json", "${CLAUDE_PLUGIN_ROOT}/scripts/evaluate_launch.py"},
+		{"plugin/.mcp.json", "scripts/evaluate_launch.py"},
 	} {
 		doc := readJSON(t, filepath.Join(root, tc.file))
 		servers, _ := doc["mcpServers"].(map[string]any)
@@ -135,8 +139,11 @@ func TestPluginMCPEntries(t *testing.T) {
 			t.Errorf("%s: no server named jev", tc.file)
 			continue
 		}
-		if got, _ := entry["command"].(string); got != tc.wantCommand {
-			t.Errorf("%s: command = %q, want %q", tc.file, got, tc.wantCommand)
+		if got, _ := entry["command"].(string); got != "python3" {
+			t.Errorf("%s: command = %q, want %q", tc.file, got, "python3")
+		}
+		if args, _ := entry["args"].([]any); len(args) != 1 || args[0] != tc.wantScript {
+			t.Errorf("%s: args = %v, want [%q]", tc.file, entry["args"], tc.wantScript)
 		}
 
 		env, _ := entry["env"].(map[string]any)
@@ -224,13 +231,13 @@ func TestVendoredSkillKeepsProvenance(t *testing.T) {
 // The launcher is the plugin's only moving part, so its two paths are checked
 // against a fake binary rather than a real install.
 func TestLauncherResolvesTheBinary(t *testing.T) {
-	launcher := filepath.Join(repoRoot(t), "plugin", "bin", "evaluate-launch")
-	if info, err := os.Stat(launcher); err != nil || info.Mode().Perm()&0o111 == 0 {
-		t.Fatalf("launcher missing or not executable: %v", err)
+	launcher := filepath.Join(repoRoot(t), filepath.FromSlash(launcherPath))
+	if info, err := os.Stat(launcher); err != nil || !info.Mode().IsRegular() {
+		t.Fatalf("launcher missing: %v", err)
 	}
 
 	t.Run("missing binary reports on stderr and fails", func(t *testing.T) {
-		cmd := exec.Command(shellPath(t), launcher)
+		cmd := exec.Command(pythonPath(t), launcher)
 		cmd.Env = append(os.Environ(), "EVALUATE_BIN="+filepath.Join(t.TempDir(), "absent"))
 		var stdout, stderr strings.Builder
 		cmd.Stdout, cmd.Stderr = &stdout, &stderr
@@ -244,7 +251,7 @@ func TestLauncherResolvesTheBinary(t *testing.T) {
 		if stdout.String() != "" {
 			t.Errorf("launcher wrote to stdout: %q", stdout.String())
 		}
-		if !strings.Contains(stderr.String(), "install.sh") {
+		if !strings.Contains(stderr.String(), "go build") {
 			t.Errorf("stderr should say how to install: %q", stderr.String())
 		}
 	})
@@ -257,7 +264,7 @@ func TestLauncherResolvesTheBinary(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		cmd := exec.Command(shellPath(t), launcher)
+		cmd := exec.Command(pythonPath(t), launcher)
 		cmd.Env = append(os.Environ(), "EVALUATE_BIN="+fake, "HOME="+dir)
 		out, err := cmd.Output()
 		if err != nil {
@@ -289,7 +296,7 @@ func TestLauncherResolvesTheBinary(t *testing.T) {
 			{[]string{"JEV_PROVIDER=typesafe", "JEV_FALLBACK_PROVIDER=openrouter"}, filepath.Join(keys, "typesafe.key"), filepath.Join(keys, "openrouter.key")},
 			{[]string{"JEV_FALLBACK_PROVIDER=openrouter", "JEV_FALLBACK_API_KEY_FILE=/else/or.key"}, filepath.Join(keys, "typesafe.key"), "/else/or.key"},
 		} {
-			cmd := exec.Command(shellPath(t), launcher)
+			cmd := exec.Command(pythonPath(t), launcher)
 			cmd.Env = append(append(os.Environ(), "EVALUATE_BIN="+fake, "HOME="+dir), tc.env...)
 			out, err := cmd.Output()
 			if err != nil {
@@ -307,7 +314,7 @@ func TestLauncherResolvesTheBinary(t *testing.T) {
 		if err := os.WriteFile(fake, []byte("#!/bin/sh\necho \"keyfile=$JEV_API_KEY_FILE\"\n"), 0o755); err != nil {
 			t.Fatal(err)
 		}
-		cmd := exec.Command(shellPath(t), launcher)
+		cmd := exec.Command(pythonPath(t), launcher)
 		cmd.Env = append(os.Environ(), "EVALUATE_BIN="+fake, "HOME="+dir,
 			"JEV_API_KEY_FILE=/somewhere/else.key")
 		out, err := cmd.Output()

@@ -1,7 +1,10 @@
 {
   "mcpServers": {
     "jev": {
-      "command": "bin/evaluate-launch",
+      "command": "python3",
+      "args": [
+        "scripts/evaluate_launch.py"
+      ],
       "cwd": ".",
       "env": {
         "JEV_PROVIDER": "typesafe",

@@ -1,7 +1,10 @@
 {
   "mcpServers": {
     "jev": {
-      "command": "${CLAUDE_PLUGIN_ROOT}/bin/evaluate-launch",
+      "command": "python3",
+      "args": [
+        "${CLAUDE_PLUGIN_ROOT}/scripts/evaluate_launch.py"
+      ],
       "env": {
         "JEV_PROVIDER": "typesafe",
         "JEV_MODEL": "jev-latest",
