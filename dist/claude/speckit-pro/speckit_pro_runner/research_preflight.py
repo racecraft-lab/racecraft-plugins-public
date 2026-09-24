@@ -55,9 +55,10 @@ JEV_PLUGIN_SETTINGS = {
     "JEV_FALLBACK_PROVIDER": "openrouter",
     "JEV_REQUEST_TIMEOUT": "45s",
 }
-# The Jev model the screening thresholds were calibrated on. It applies to the
-# primary backend only; a fallback answer from another model is marked unpinned.
-JEV_PINNED_MODEL = "jev-1.12"
+# The Jev model family the screening thresholds were calibrated on. The broker
+# does not force a model id, because a retired id would fail every call; it
+# records the answering model and marks any other family as unpinned.
+JEV_CALIBRATED_MODEL = "jev-1.13"
 
 # Variables a Jev child process may receive. Everything else is dropped.
 CHILD_ENVIRONMENT_NAMES = frozenset(
@@ -66,7 +67,6 @@ CHILD_ENVIRONMENT_NAMES = frozenset(
         "PATH",
         "TMPDIR",
         "SYSTEMROOT",
-        "JEV_MODEL",
         *JEV_PLUGIN_SETTINGS,
         *(name for _, name, _ in JEV_CREDENTIALS),
         *(name for _, _, name in JEV_CREDENTIALS),
@@ -172,7 +172,6 @@ def jev_child_environment(env: Mapping[str, str], home: Path) -> dict[str, str]:
         if _value(env, name):
             child[name] = env[name]
     child.update(JEV_PLUGIN_SETTINGS)
-    child["JEV_MODEL"] = JEV_PINNED_MODEL
     return child
 
 
