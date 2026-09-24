@@ -30,7 +30,7 @@ Token discipline does **not** touch:
   — these are public-readable, governed by
   [contribute-and-release.md](../../../../docs-site/src/content/docs/contribute-and-release.md)
 - Workflow log entries that a human reviews
-  (Self-Review block, Consensus Resolution Log, gate decisions)
+  (Consensus Resolution Log, gate decisions)
 - Operator-facing status output, error messages, or progress
   reports
 - Any text that lands in `spec.md`, `plan.md`, `tasks.md`,

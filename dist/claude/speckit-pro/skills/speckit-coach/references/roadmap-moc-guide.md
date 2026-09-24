@@ -73,14 +73,11 @@ finds the zone by matching those exact bytes.
 
 ## The ~10-epic cap is advisory
 
-The "cap epics below ~10" guideline is **advisory**. Nothing here blocks, gates,
-or rejects a home note. When the auto-derived scaffold yields more than about ten
-epics, `speckit-prd` prints a single one-line advisory (for example, "11 epics —
-consider consolidating; more than ~10 strains navigability") and **still writes
-the file**. It is a navigability nudge, never a hard stop, never a CI lint, never
-an exit code.
+The "cap epics below ~10" guideline is **advisory**: no gate, CI lint, or exit
+code enforces it. When the auto-derived scaffold yields more than about ten epics,
+`speckit-prd` prints one advisory line (for example, "11 epics — consider
+consolidating; more than ~10 strains navigability") and still writes the file.
 
-Coach the guideline as a prompt to consolidate, not a rule to satisfy: a map with
-a dozen-plus top-level epics is harder to scan, so collapsing closely related
-epics usually helps — but the author always decides, and the file is written
-regardless.
+Coach the guideline as a prompt to consolidate. A map with a dozen-plus top-level
+epics is harder to scan, so collapsing closely related epics usually helps. The
+author decides.

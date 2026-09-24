@@ -485,7 +485,6 @@ CANONICAL_POST_ENTRIES = (
     "Post: Code Review",
     "Post: Integration Suite",
     "Post: Reviewability Diff Gate",
-    "Post: Self-Review",
     "Post: UAT Runbook Generation",
     "Post: PR Body Generation",
     "Post: PR Creation",
