@@ -32,11 +32,11 @@ import os
 import sys
 
 KEY_DIRECTORY = os.path.join("~", ".config", "racecraft-jev")
+INSTALLER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "install_evaluate.py")
 SETUP_TEXT = (
     "Jev is not set up on this machine, so this server offers no tools.\n"
     "To enable the evaluate tool:\n"
-    "1. Install the evaluate binary. See the typesafe-jev README in the "
-    "racecraft-plugins-public repository.\n"
+    f"1. Install the evaluate binary that matches this plugin: python3 {INSTALLER}\n"
     f"2. Put a TypeSafe key in {KEY_DIRECTORY}/typesafe.key, or an OpenRouter key in "
     f"{KEY_DIRECTORY}/openrouter.key, readable only by you (chmod 600).\n"
     "3. Reconnect this MCP server.\n"

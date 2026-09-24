@@ -54,18 +54,17 @@ stand-in.
 
 ## Install
 
-**1. The binary**, once:
+**1. The binary**, once, from the plugin's own installer:
 
 ```sh
-task install
-# or, from a release:
-#   curl -fsSL -o install.sh \
-#     https://raw.githubusercontent.com/racecraft-lab/typesafe-mcp/main/install.sh
-#   sh install.sh
+python3 plugin/scripts/install_evaluate.py
 ```
 
-Both put it at `~/.local/libexec/racecraft-jev/evaluate`. Set `EVALUATE_BIN` if
-you keep it elsewhere.
+It installs the release that matches the plugin's version, tagged
+`typesafe-jev-v<version>`, after checking it against the release's
+`SHA256SUMS.txt`, and puts it at `~/.local/libexec/racecraft-jev/evaluate`.
+Set `EVALUATE_BIN` if you keep it elsewhere. When the binary is missing, the
+stand-in server's instructions give the installer's full path.
 
 **2. The credential**, once. The plugin uses TypeSafe first and OpenRouter as
 its fallback, each with its own key file. Either one is enough:

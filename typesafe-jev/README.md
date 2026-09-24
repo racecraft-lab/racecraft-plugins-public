@@ -67,21 +67,21 @@ one or the other.
 
 ## Quickstart
 
-**1. Install** (macOS and Linux, amd64 and arm64).
+**1. Install** (macOS and Linux, amd64 and arm64; Windows has no release build yet).
 
-Fetch the installer, read it, then run it:
-
-```sh
-curl -fsSL -o install.sh \
-  https://raw.githubusercontent.com/racecraft-lab/typesafe-mcp/main/install.sh
-sh install.sh
-```
-
-It installs to `~/.local/libexec/racecraft-jev/evaluate`, deliberately **not** on your `PATH`, so it cannot collide with an upstream `evaluate` you may already have. Point clients at that absolute path. Building from source works too, into the same directory:
+The installer is a Python script in the plugin, at `plugin/scripts/install_evaluate.py`. Read it, then run it from a checkout of this repository, or from the installed plugin's directory:
 
 ```sh
-task install
+python3 plugin/scripts/install_evaluate.py
 ```
+
+It downloads the release tagged `typesafe-jev-v<version>` for this machine, checks it against that release's `SHA256SUMS.txt`, and installs it to `~/.local/libexec/racecraft-jev/evaluate`. By default it installs the plugin's own version, so the binary matches the launcher; `--version 0.9.0` picks another, and `--force` replaces an existing binary. It never asks GitHub for the "latest" release, because this repository releases more than one component. The path is deliberately **not** on your `PATH`, so it cannot collide with an upstream `evaluate` you may already have. Point clients at that absolute path. Building from source works too, into the same directory:
+
+```sh
+go build -trimpath -o ~/.local/libexec/racecraft-jev/evaluate ./cmd/evaluate
+```
+
+`evaluate update` later moves an installed release to the newest `typesafe-jev-v*` release, and ignores every other component's releases.
 
 **2. Choose a backend.** Selection is explicit. Which API keys happen to be set never decides where your state is sent or which account is billed.
 

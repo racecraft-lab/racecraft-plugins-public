@@ -1,4 +1,4 @@
-module github.com/racecraft-lab/typesafe-mcp
+module github.com/racecraft-lab/racecraft-plugins-public/typesafe-jev
 
 go 1.27.1
 

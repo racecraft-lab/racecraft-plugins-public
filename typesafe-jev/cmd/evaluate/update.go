@@ -25,7 +25,22 @@ import (
 // that quietly installed the original project's binary when its own release
 // was missing would undo every change in this repository, including the
 // explicit backend selection and the credential rules.
-const githubRepo = "racecraft-lab/typesafe-mcp"
+const githubRepo = "racecraft-lab/racecraft-plugins-public"
+
+// releaseTagPrefix marks this component's releases. The repository releases
+// more than one component, so its "latest" release may belong to another one:
+// the updater lists releases and picks the highest typesafe-jev-v* tag, and
+// never asks GitHub for "latest".
+const releaseTagPrefix = "typesafe-jev-"
+
+// githubAPI is the API root. Tests point it at a local server.
+var githubAPI = "https://api.github.com"
+
+// releasesPerPage and maxReleasePages bound the release listing: 1,000
+// releases across every component, far more than this repository will carry.
+var releasesPerPage = 100
+
+const maxReleasePages = 10
 
 const (
 	// One deadline covers connect, headers and body: a stalled mirror must not
@@ -35,6 +50,8 @@ const (
 	// compressed binary. Both caps are generous by orders of magnitude.
 	maxMetadataBytes = 1 << 20
 	maxArchiveBytes  = 100 << 20
+	// A page of 100 releases carries each one's notes and asset list.
+	maxReleaseListBytes = 16 << 20
 )
 
 var updateClient = &http.Client{Timeout: updateTimeout}
@@ -71,7 +88,7 @@ func download(ctx context.Context, url string, limit int64) ([]byte, error) {
 	return b, err
 }
 
-// runUpdate replaces the running binary with the latest GitHub release.
+// runUpdate replaces the running binary with the newest typesafe-jev release.
 func runUpdate(ctx context.Context) error {
 	exe, err := os.Executable()
 	if err == nil {
@@ -103,15 +120,11 @@ func runUpdate(ctx context.Context) error {
 		return fmt.Errorf("this is a %s build, not a release; rebuild from %s instead of updating in place", version, githubRepo)
 	}
 
-	release, err := fetchLatestRelease(ctx)
+	release, latest, err := fetchLatestRelease(ctx)
 	if err != nil {
-		// Not a reason to look anywhere else. The operator fixes the fork's
-		// releases, or rebuilds from source.
-		return fmt.Errorf("fetching the latest %s release: %w", githubRepo, err)
-	}
-	latest, err := parseVersion(release.TagName)
-	if err != nil {
-		return fmt.Errorf("latest %s release %q is not a semantic version", githubRepo, release.TagName)
+		// Not a reason to look anywhere else. The operator fixes the
+		// repository's releases, or rebuilds from source.
+		return fmt.Errorf("finding the latest typesafe-jev release of %s: %w", githubRepo, err)
 	}
 	// Compared, not merely differenced: upstream replaced a newer local build
 	// with an older release whenever the two strings happened to differ.
@@ -162,8 +175,10 @@ func runUpdate(ctx context.Context) error {
 }
 
 type githubRelease struct {
-	TagName string        `json:"tag_name"`
-	Assets  []githubAsset `json:"assets"`
+	TagName    string        `json:"tag_name"`
+	Draft      bool          `json:"draft"`
+	Prerelease bool          `json:"prerelease"`
+	Assets     []githubAsset `json:"assets"`
 }
 
 type githubAsset struct {
@@ -171,13 +186,55 @@ type githubAsset struct {
 	BrowserDownloadURL string `json:"browser_download_url"`
 }
 
-func fetchLatestRelease(ctx context.Context) (*githubRelease, error) {
-	body, err := download(ctx, fmt.Sprintf("https://api.github.com/repos/%s/releases/latest", githubRepo), maxMetadataBytes)
-	if err != nil {
-		return nil, err
+// fetchLatestRelease lists the repository's releases and returns the highest
+// published typesafe-jev-v* release, with its version. Drafts and pre-releases
+// are skipped, and so is every other component's release, wherever it falls in
+// the listing.
+func fetchLatestRelease(ctx context.Context) (*githubRelease, semver, error) {
+	var best *githubRelease
+	var bestVersion semver
+	for page := 1; page <= maxReleasePages; page++ {
+		url := fmt.Sprintf("%s/repos/%s/releases?per_page=%d&page=%d", githubAPI, githubRepo, releasesPerPage, page)
+		body, err := download(ctx, url, maxReleaseListBytes)
+		if err != nil {
+			return nil, semver{}, err
+		}
+		var releases []githubRelease
+		if err := json.Unmarshal(body, &releases); err != nil {
+			return nil, semver{}, fmt.Errorf("%s is not a release list: %w", url, err)
+		}
+		for i := range releases {
+			r := &releases[i]
+			if r.Draft || r.Prerelease {
+				continue
+			}
+			v, ok := componentVersion(r.TagName)
+			if !ok {
+				continue
+			}
+			if best == nil || v.newerThan(bestVersion) {
+				best, bestVersion = r, v
+			}
+		}
+		if len(releases) < releasesPerPage {
+			break
+		}
 	}
-	var rel githubRelease
-	return &rel, json.Unmarshal(body, &rel)
+	if best == nil {
+		return nil, semver{}, errors.New("no published release has a typesafe-jev-v tag")
+	}
+	return best, bestVersion, nil
+}
+
+// componentVersion returns the version in a typesafe-jev-vX.Y.Z tag, and false
+// for any other tag.
+func componentVersion(tag string) (semver, bool) {
+	rest, ok := strings.CutPrefix(tag, releaseTagPrefix)
+	if !ok || !strings.HasPrefix(rest, "v") {
+		return semver{}, false
+	}
+	v, err := parseVersion(rest)
+	return v, err == nil
 }
 
 func findAssetURL(assets []githubAsset, name string) (string, error) {

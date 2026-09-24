@@ -102,7 +102,7 @@ func newRootCmd() *cobra.Command {
 		mcpCmd,
 		newCallCmd(),
 		setupCmd,
-		&cobra.Command{Use: "update", Short: "Update evaluate to the latest release", Args: cobra.NoArgs, RunE: func(cmd *cobra.Command, _ []string) error {
+		&cobra.Command{Use: "update", Short: "Update evaluate to the newest typesafe-jev release", Args: cobra.NoArgs, RunE: func(cmd *cobra.Command, _ []string) error {
 			return runUpdate(cmd.Context())
 		}},
 		newVersionCmd(),

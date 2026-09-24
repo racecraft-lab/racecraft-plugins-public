@@ -168,6 +168,31 @@ class ValidateCodexMarketplace(unittest.TestCase):
         with self.subTest(msg='category field exists'):
             val = _nested(data, 'plugins', 0, 'category')
             self.assertTrue(val, 'category field is missing or empty')
+TYPESAFE_JEV_ROOT = REPO_ROOT / 'typesafe-jev'
+TYPESAFE_JEV_MODULE = 'module github.com/racecraft-lab/racecraft-plugins-public/typesafe-jev'
+UPSTREAM_REFERENCE = 'itsmostafa/typesafe-mcp'
+
+class ValidateTypesafeJevProvenance(unittest.TestCase):
+    """typesafe-jev forks itsmostafa/typesafe-mcp. Its code and its shipped
+    plugin must never point back at upstream, or an update or an install could
+    fetch a binary without this fork's credential and backend rules. Prose that
+    credits upstream (README, CHANGELOG, docs) is outside this check."""
+
+    def test_no_upstream_reference_in_code_or_packaging(self) -> None:
+        scanned = [TYPESAFE_JEV_ROOT / 'go.mod']
+        for root in (TYPESAFE_JEV_ROOT / 'cmd', TYPESAFE_JEV_ROOT / 'plugin'):
+            scanned.extend(path for path in sorted(root.rglob('*')) if path.is_file())
+        with self.subTest(msg='typesafe-jev code and packaging exist'):
+            self.assertGreater(len(scanned), 1, 'no typesafe-jev files were found to scan')
+        for path in scanned:
+            text = path.read_text(encoding='utf-8', errors='replace')
+            with self.subTest(msg=f'{path.relative_to(REPO_ROOT)} has no upstream reference'):
+                self.assertNotIn(UPSTREAM_REFERENCE, text)
+
+    def test_module_path_is_this_repository(self) -> None:
+        go_mod = (TYPESAFE_JEV_ROOT / 'go.mod').read_text(encoding='utf-8')
+        self.assertEqual(TYPESAFE_JEV_MODULE, go_mod.splitlines()[0])
+
 MANIFEST = PLUGIN_ROOT / 'scripts' / 'curated-set.json'
 EXPECTED_ENTRIES = {'review': 'extension', 'verify': 'extension', 'verify-tasks': 'extension', 'cleanup': 'extension', 'retrospective': 'extension', 'claude-ask-questions': 'preset'}
 

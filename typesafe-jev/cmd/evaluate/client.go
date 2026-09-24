@@ -23,7 +23,7 @@ const maxBody = 16 << 20
 const maxRequestBody = 16 << 20
 
 const (
-	attributionURL   = "https://github.com/racecraft-lab/typesafe-mcp"
+	attributionURL   = "https://github.com/racecraft-lab/racecraft-plugins-public"
 	attributionTitle = "Racecraft Jev MCP"
 )
 

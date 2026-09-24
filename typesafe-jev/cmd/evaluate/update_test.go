@@ -1,6 +1,12 @@
 package main
 
 import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -9,7 +15,7 @@ import (
 // upstream would replace this binary with one that has none of its changes:
 // no explicit backend selection, no credential rules, no validation.
 func TestReleaseSourceIsTheFork(t *testing.T) {
-	if githubRepo != "racecraft-lab/typesafe-mcp" {
+	if githubRepo != "racecraft-lab/racecraft-plugins-public" {
 		t.Fatalf("githubRepo = %q", githubRepo)
 	}
 	if strings.Contains(githubRepo, "itsmostafa") {
@@ -104,6 +110,104 @@ func TestPreReleaseOrdering(t *testing.T) {
 		}
 		if earlier.newerThan(later) {
 			t.Errorf("%s should not be newer than %s", tc.earlier, tc.later)
+		}
+	}
+}
+
+// fakeReleasesAPI serves releases, newest first, releasesPerPage at a time, the
+// way GitHub's list endpoint does. A request for /releases/latest fails the
+// test: in a repository that releases several components, "latest" can be
+// another component's release.
+func fakeReleasesAPI(t *testing.T, releases []githubRelease) *httptest.Server {
+	t.Helper()
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "/releases/latest") {
+			t.Errorf("the updater asked for %s", r.URL.Path)
+			http.NotFound(w, r)
+			return
+		}
+		if r.URL.Path != "/repos/"+githubRepo+"/releases" {
+			http.NotFound(w, r)
+			return
+		}
+		page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+		perPage, _ := strconv.Atoi(r.URL.Query().Get("per_page"))
+		start := (page - 1) * perPage
+		end := min(start+perPage, len(releases))
+		if start < 0 || start > len(releases) {
+			start, end = 0, 0
+		}
+		json.NewEncoder(w).Encode(releases[start:end])
+	}))
+	t.Cleanup(srv.Close)
+	return srv
+}
+
+func withReleasesAPI(t *testing.T, srv *httptest.Server, perPage int) {
+	t.Helper()
+	oldAPI, oldPerPage := githubAPI, releasesPerPage
+	githubAPI, releasesPerPage = srv.URL, perPage
+	t.Cleanup(func() { githubAPI, releasesPerPage = oldAPI, oldPerPage })
+}
+
+// REL-03: the updater picks the highest published typesafe-jev-v* release,
+// however the listing interleaves it with speckit-pro-v* releases, and
+// wherever the page boundary falls.
+func TestLatestReleaseIsThisComponents(t *testing.T) {
+	releases := []githubRelease{
+		{TagName: "speckit-pro-v2.40.0"},
+		{TagName: "speckit-pro-v2.39.1"},
+		{TagName: "typesafe-jev-v0.11.0", Draft: true},
+		{TagName: "speckit-pro-v2.39.0"},
+		{TagName: "typesafe-jev-v0.10.0-rc.1", Prerelease: true},
+		{TagName: "typesafe-jev-v0.9.0"},
+		{TagName: "speckit-pro-v2.38.0"},
+		{TagName: "typesafe-jev-v0.10.0"},
+		{TagName: "typesafe-jev-vnext"},
+		{TagName: "v9.9.9"},
+		{TagName: "typesafe-jev-v0.8.0"},
+	}
+	for _, perPage := range []int{2, 3, 100} {
+		t.Run(fmt.Sprintf("%d per page", perPage), func(t *testing.T) {
+			withReleasesAPI(t, fakeReleasesAPI(t, releases), perPage)
+			got, v, err := fetchLatestRelease(context.Background())
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got.TagName != "typesafe-jev-v0.10.0" {
+				t.Errorf("picked %s, want typesafe-jev-v0.10.0", got.TagName)
+			}
+			if want, _ := parseVersion("v0.10.0"); v != want {
+				t.Errorf("version = %+v", v)
+			}
+		})
+	}
+}
+
+// REL-04: a repository with no published typesafe-jev release is an error, not
+// a reason to take another component's release.
+func TestNoComponentReleaseIsAnError(t *testing.T) {
+	withReleasesAPI(t, fakeReleasesAPI(t, []githubRelease{
+		{TagName: "speckit-pro-v2.40.0"},
+		{TagName: "typesafe-jev-v0.9.0", Draft: true},
+	}), 100)
+	if got, _, err := fetchLatestRelease(context.Background()); err == nil {
+		t.Fatalf("picked %s from a list with no published typesafe-jev release", got.TagName)
+	}
+}
+
+func TestComponentVersion(t *testing.T) {
+	for tag, want := range map[string]bool{
+		"typesafe-jev-v0.9.0":       true,
+		"typesafe-jev-v1.0.0-rc.1":  true,
+		"typesafe-jev-0.9.0":        false,
+		"speckit-pro-v0.9.0":        false,
+		"v0.9.0":                    false,
+		"typesafe-jev-v0.9.0+dirty": false,
+		"typesafe-jev-v0.9":         false,
+	} {
+		if _, ok := componentVersion(tag); ok != want {
+			t.Errorf("componentVersion(%q) ok = %v, want %v", tag, ok, want)
 		}
 	}
 }

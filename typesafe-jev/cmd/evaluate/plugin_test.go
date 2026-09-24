@@ -306,7 +306,11 @@ func TestLauncherServesSetupInstructionsWhenUnconfigured(t *testing.T) {
 			ctx := context.Background()
 
 			instructions := session.InitializeResult().Instructions
-			for _, want := range []string{tc.wantReason, "typesafe.key", "chmod 600", "Reconnect"} {
+			wants := []string{tc.wantReason, "typesafe.key", "chmod 600", "Reconnect"}
+			if tc.byLauncher {
+				wants = append(wants, "install_evaluate.py")
+			}
+			for _, want := range wants {
 				if !strings.Contains(instructions, want) {
 					t.Errorf("instructions do not say %q:\n%s", want, instructions)
 				}

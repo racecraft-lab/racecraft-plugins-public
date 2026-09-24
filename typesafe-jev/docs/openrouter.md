@@ -84,7 +84,7 @@ upstream `evaluate` on your `PATH`:
 
 ```sh
 BIN="$HOME/.local/libexec/racecraft-jev/evaluate"
-task install          # or: sh install.sh
+python3 plugin/scripts/install_evaluate.py    # the release that matches the plugin
 "$BIN" version --verbose
 ```
 
