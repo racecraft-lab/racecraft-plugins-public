@@ -147,15 +147,15 @@ Why the commands look like this:
 **Residual risk.** Running a dependency audit still resolves the project's
 own dependency sources. What each tool can still reach:
 
-- npm can still fetch package metadata for a vulnerable scoped package
-  from a registry the checkout's `.npmrc` names for that scope. The
-  request carries no secret, but it reveals the dependency names and your
-  address to that host. A proxy setting in the checkout's `.npmrc`
-  applies too.
+- A scope registry still applies. npm fetches metadata for a vulnerable
+  scoped package from the registry the checkout's `.npmrc` names for that
+  scope, and the bun docs say bun sends scoped packages to their scope
+  registry (bun 1.3.14 did not in testing). The request carries no
+  secret, but it reveals the dependency names and your address to that
+  host. A proxy setting in the checkout's `.npmrc` applies too.
 - npm still reads the global config file (`$PREFIX/etc/npmrc`). bun still
   reads `~/.npmrc` and `~/.bunfig.toml`, so any token stored there stays
-  loaded, though the pinned registry is the only host the audit contacts
-  in testing.
+  loaded for the hosts it names.
 - govulncheck loads packages through the `go` command, which downloads
   modules from your own `GOPROXY`.
 - A checkout's `.cargo/audit.toml` can still turn off the database fetch
