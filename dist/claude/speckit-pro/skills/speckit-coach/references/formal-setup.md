@@ -42,14 +42,14 @@ pass and explain an intentional counterexample before adapting the model.
 | TLC | 1.7.4 (`tla2tools.jar`; reports internal TLC 2.19) | Official release JAR, checksum verified |
 | Quint | 0.32.0 | Shipped package lock, `npm ci --ignore-scripts`, full installed-tree checksum, Node.js 24 |
 
-The native profile was executed locally on macOS arm64 with Java 26.0.1,
-Node.js 24.11.1, and Python 3.11.0. [Hosted qualification](https://github.com/racecraft-lab/racecraft-plugins-public/actions/runs/34441556263)
-also passed native checker and installed-consumer cases on Ubuntu x64 with
-Temurin 25.0.4+1/Python 3.11.16 and macOS arm64 with Temurin
-25.0.4+101.0.LTS/Python 3.11.9, both using Node.js 24.11.1. The macOS job passed
-Python, TypeScript and Swift implementation traces with Apalache and TLC, plus
-the optional Quint path. These are executed profiles; Windows, native Linux
-arm64 and other runtime versions still require their own qualification.
+Qualified profiles. Each row is an executed profile. Windows, native Linux
+arm64, and other runtime versions need their own qualification.
+
+| Profile | Java | Node.js | Python | Coverage |
+|---|---|---|---|---|
+| Local, macOS arm64 | Java 26.0.1 | 24.11.1 | 3.11.0 | Native profile |
+| [Hosted](https://github.com/racecraft-lab/racecraft-plugins-public/actions/runs/34441556263), Ubuntu x64 | Temurin 25.0.4+1 | 24.11.1 | 3.11.16 | Native checker and installed-consumer cases |
+| [Hosted](https://github.com/racecraft-lab/racecraft-plugins-public/actions/runs/34441556263), macOS arm64 | Temurin 25.0.4+101.0.LTS | 24.11.1 | 3.11.9 | Native checker and installed-consumer cases; Python, TypeScript, and Swift implementation traces with Apalache and TLC; the optional Quint path |
 
 Apalache's [official instructions](https://apalache-mc.org/docs/apalache/installation/index.html)
 recommend Java 25 and at least 4 GB of RAM; its JAR targets Java 21 bytecode.

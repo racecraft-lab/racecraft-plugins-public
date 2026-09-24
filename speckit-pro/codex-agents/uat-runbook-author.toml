@@ -66,9 +66,9 @@ the story steps but leaves the other two untouched still fails:
 
 Also tighten the **Negative-Path Tests**: turn dense spec prose and edge
 cases into plain "try this bad/empty/unexpected input → expect this safe
-behavior" steps. Leave the **Self-Review Findings**, **Sign-off**, and
-**Rollback** sections as the skeleton produced them (only fix obvious
-placeholders, e.g. a `<set on PR open>` PR field).
+behavior" steps. Leave the **Sign-off** and **Rollback** sections as the
+skeleton produced them (only fix obvious placeholders, e.g. a
+`<set on PR open>` PR field).
 
 Remove raw HTML anchors such as `<a id="us-1"></a>`. Keep ordinary Markdown
 headings only; the runbook is for humans, not for anchor plumbing.

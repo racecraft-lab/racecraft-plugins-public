@@ -760,8 +760,8 @@
     },
     {
       "id": "claude:speckit-autopilot:7",
-      "requirement": "Lists the canonical 12 Post items in order, identifies the parallel group and serial tail, and distinguishes extension-backed items from built-in work. It states that generate-uat-skeleton is active while final-reviewabi",
-      "detail_count": 12,
+      "requirement": "Lists the canonical 11 Post items in order, identifies the parallel group and serial tail, and distinguishes extension-backed items from built-in work. It states that generate-uat-skeleton is active while final-reviewabi",
+      "detail_count": 11,
       "disposition": "merge",
       "coverage": "automated-native-semantic",
       "evidence": {
@@ -779,8 +779,8 @@
     },
     {
       "id": "codex:speckit-autopilot:7",
-      "requirement": "Lists all 14 Codex Post plan items in order, identifies the parallel group and serial tail, and distinguishes extension-backed items from built-in work. It states that generate-uat-skeleton is active, final-reviewability",
-      "detail_count": 13,
+      "requirement": "Lists all 13 Codex Post plan items in order, identifies the parallel group and serial tail, and distinguishes extension-backed items from built-in work. It states that generate-uat-skeleton is active, final-reviewability",
+      "detail_count": 12,
       "disposition": "merge",
       "coverage": "automated-native-semantic",
       "evidence": {
@@ -1362,8 +1362,8 @@
     },
     {
       "id": "claude:speckit-autopilot:21",
-      "requirement": "Lists the 4 self-review questions in order (Tests executed? Edge cases? Requirements matched? Follow-up?), describes the block format with Self-Review heading and individual answer paragraphs, records answers in the work",
-      "detail_count": 8,
+      "requirement": "States that the canonical Post list has no separate Self-Review step: Post: Code Review is the single final integration review, and no later step reviews unchanged code a second time. The step after Post: Reviewability D",
+      "detail_count": 3,
       "disposition": "merge",
       "coverage": "automated-native-semantic",
       "evidence": {
@@ -1381,8 +1381,8 @@
     },
     {
       "id": "codex:speckit-autopilot:25",
-      "requirement": "Lists the 4 self-review questions in order (Tests executed? Edge cases? Requirements matched? Follow-up?), describes the block format with Self-Review heading and individual answer paragraphs, records answers in the work",
-      "detail_count": 9,
+      "requirement": "States that the canonical Post list has no separate Self-Review step: Post: Code Review is the single final integration review, and no later step reviews unchanged code a second time. The step after Post: Reviewability D",
+      "detail_count": 4,
       "disposition": "merge",
       "coverage": "automated-native-semantic",
       "evidence": {
@@ -1420,7 +1420,7 @@
     },
     {
       "id": "claude:speckit-autopilot:22",
-      "requirement": "States that Post: UAT Runbook Generation is mandatory, checkpoints only the current workflow and autopilot state after Self-Review, and runs generate-uat-skeleton in dry_run then apply mode from the required clean worktr",
+      "requirement": "States that Post: UAT Runbook Generation is mandatory, checkpoints only the current workflow and autopilot state after the terms lint, and runs generate-uat-skeleton in dry_run then apply mode from the required clean worktr",
       "detail_count": 13,
       "disposition": "replace",
       "coverage": "authored-native-semantic",
@@ -1440,7 +1440,7 @@
     },
     {
       "id": "codex:speckit-autopilot:27",
-      "requirement": "States that Post: UAT Runbook Generation is mandatory, checkpoints only the current workflow and autopilot state after Self-Review, and runs generate-uat-skeleton in dry_run then apply mode from the required clean worktr",
+      "requirement": "States that Post: UAT Runbook Generation is mandatory, checkpoints only the current workflow and autopilot state after the terms lint, and runs generate-uat-skeleton in dry_run then apply mode from the required clean worktr",
       "detail_count": 13,
       "disposition": "replace",
       "coverage": "authored-native-semantic",

@@ -3,7 +3,7 @@
   "signals": [
     "competing_approaches",
     "brownfield_change",
-    "self_review_findings",
+    "code_review_findings",
     "large_diff",
     "operational_flow_change"
   ],
@@ -90,9 +90,9 @@
       "id": "annotated-diff",
       "category": "code-review",
       "title": "Annotated Diff",
-      "when_to_use": "Walk a reviewer through the diff hunk by hunk, annotating the ones that need it. Reach for it when the change is large, or when the self-review recorded a gap worth pointing at.",
+      "when_to_use": "Walk a reviewer through the diff hunk by hunk, annotating the ones that need it. Reach for it when the change is large, or when Code Review recorded a finding worth pointing at.",
       "stage": "final-pr",
-      "trigger": { "any_of": ["self_review_findings", "large_diff"] },
+      "trigger": { "any_of": ["code_review_findings", "large_diff"] },
       "source": { "origin": "upstream", "file": "03-code-review-pr.html" },
       "status": "shipped",
       "exports": ["prompt", "markdown"]

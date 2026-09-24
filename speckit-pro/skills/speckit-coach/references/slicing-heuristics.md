@@ -83,21 +83,15 @@ When a slice is marked as a spike, the estimator skips the LOC comparison
 entirely and returns `{"estimated_loc":0,"suggested_slices":1,"status":"ok"}`.
 Here `status: ok` means **"LOC sizing is not applicable to a research slice"**
 (the INVEST "Estimable" escape hatch) — it does **not** mean the slice is
-trivially small. A spike never trips a misleading `warn`, and no third status
-value is ever introduced.
+trivially small.
 
 ## The at-ceiling boundary rule
 
-Both skills must treat the boundary identically:
-
-- When the estimate is **exactly at** the ceiling (`estimated_loc == ~400`), the
-  status is **`ok`**.
-- The status is **`warn`** only when the estimate is **strictly over** the
-  ceiling (`estimated_loc > ~400`).
-
-`status` is always exactly one of **`ok`** or **`warn`** — never a third value.
-A `warn` is informational: surface it as advisory text and continue the
-interview. It is never an exit code, a gate, or a hard stop.
+The status is `ok` when the estimate is at or under the ceiling
+(`estimated_loc <= ~400`) and `warn` only when it is strictly over
+(`estimated_loc > ~400`). Those are the only two values. A `warn` is
+advisory: surface it as text and continue the interview. The estimator exits 0
+and never blocks.
 
 ## How the estimator turns signals into a guess
 

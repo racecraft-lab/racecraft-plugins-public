@@ -41,10 +41,10 @@ Start from live repository truth:
    identify the exact folder that belongs to the merged spec.
 
 Do not remove any active spec folder until merge provenance and recovery
-commands are recorded. Do not remove process files under
-`docs/ai/specs/.process/` unless repository history shows that process evidence
-is intentionally deleted for completed specs. In this repository, process files
-are preserved as historical evidence.
+commands are recorded. SpecKit Pro keeps process files under
+`docs/ai/specs/.process/` as historical evidence; remove them only when
+repository history shows that process evidence is intentionally deleted for
+completed specs.
 
 ## Archive Procedure
 

@@ -25,8 +25,8 @@
 ## Host-Native Post Contract
 
 The activated skill must materialize its complete canonical plan in both
-`workflow.md` and `autopilot-state.json`: the 12-item Claude Post list or the
-14-item Codex combined Post list. It may not substitute this abbreviated task
+`workflow.md` and `autopilot-state.json`: the 11-item Claude Post list or the
+13-item Codex combined Post list. It may not substitute this abbreviated task
 file for the product's canonical list, truncate later entries, or mark the run
 complete while `Post: Retrospective` or another canonical item remains pending.
 

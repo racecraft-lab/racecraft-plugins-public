@@ -446,7 +446,7 @@ disagreement is named in `reason`.
        what clears the deduction, so a fix left unrecorded
        fails the gate again on the next iteration. The
        criterion breakdown will not point at those rows: the
-       synthesizer no longer deducts for findings, so they
+       synthesizer does not deduct for findings, so they
        show up in deductions, not in a low criterion.
      - Otherwise identify the lowest-scoring criterion from
        the JSON output and dispatch a focused consensus round
@@ -565,8 +565,9 @@ validation alongside the standard G7 checks. This validates the
 implementation against spec artifacts.
 
 If the `verify-tasks` extension is enabled in `.registry`,
-run the `speckit-verify-tasks-run` skill to complement G5 by detecting
-phantom completions — tasks marked `[X]` that have no real
+run the `speckit-verify-tasks-run` skill once, as the
+`Post: Verify Tasks Phantom Check` item, to detect phantom
+completions — tasks marked `[X]` that have no real
 implementation behind them.
 
 These are extension-installed skills under `.claude/skills/`,

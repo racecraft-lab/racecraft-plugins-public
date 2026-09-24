@@ -6738,7 +6738,7 @@ Revert the reply adapter commit.
 
 ## Implementation
 
-- Implementation complete; Self-Review is pending.
+- Implementation complete; the UAT runbook is pending.
 """,
                 encoding="utf-8",
             )
@@ -6748,9 +6748,9 @@ Revert the reply adapter commit.
             workflow.write_text(
                 """# Workflow
 
-## Self-Review
+## Terms Lint
 
-- Confirmed stale review context fails closed.
+- Terms lint: no terms document.
 
 ## Next Section
 
@@ -6777,7 +6777,7 @@ This line must not be copied.
             self.assertFalse((feature_dir / ".process" / "uat-runbook.md").exists())
 
             self.run_git(git_root, "add", "specs/sample-feature/.process/workflow.md")
-            self.run_git(git_root, "commit", "--quiet", "-m", "checkpoint Self-Review")
+            self.run_git(git_root, "commit", "--quiet", "-m", "checkpoint terms lint")
 
             completed, response, stderr_records = run_runner(
                 helper_request("generate-uat-skeleton", mode="dry_run", inputs=inputs),
@@ -6807,7 +6807,8 @@ This line must not be copied.
             self.assertIn("# UAT Runbook: sample-feature", runbook)
             self.assertIn("### User Story 1 - Reject stale review context", runbook)
             self.assertIn("A reply arrives after the review thread is resolved.", runbook)
-            self.assertIn("Confirmed stale review context fails closed.", runbook)
+            self.assertNotIn("## Self-Review Findings", runbook)
+            self.assertNotIn("Terms lint: no terms document.", runbook)
             self.assertNotIn("This line must not be copied.", runbook)
             self.assertIn("`python -m build`", runbook)
             self.assertIn("Revert the reply adapter commit.", runbook)
