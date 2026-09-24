@@ -43,9 +43,7 @@ mutation operations and writes through the runner's bounded mutation layer.
 - `gh --jq` is a GitHub CLI query option and does not require the external `jq`
   executable. Repository JSON processing uses Python standard-library parsing.
 
-Historical context: earlier releases used `generate-pr-body.sh`, shell heredocs,
-and external `jq` encoding. Those implementations were retired during the
-Python runtime migration and are archival evidence, not current guidance.
+Archived specs and process records may describe retired shell-based PR-body tooling. The helper named above is the only current path.
 
 ---
 
@@ -66,8 +64,6 @@ content that changes outcomes or exposes context.
   expressions can abort processing or remove assertion data, so the value stays
   untrusted outside controlled test runs.
 
-Historical context: the transcript scrubber and replay runners previously had
-shell and external-`jq` predecessors. The active implementations are Python.
 
 ---
 
@@ -81,9 +77,10 @@ workflow are trust anchors for consumers.
 - Parse JSON with Python's `json` module and verify expected object/list/string
   types before comparing or writing values. Regex and line-oriented matching are
   not substitutes for structured parsing.
-- `scripts/sync-marketplace-versions.py` is the authoritative marketplace version
-  synchronizer. Changes to it or `.github/workflows/release.yml` receive the same
-  scrutiny as other write-capable release automation.
+- `scripts/refresh-release-artifacts.py` syncs marketplace versions for releases
+  (the release workflow runs it through `scripts/sync_release_pr.py`). Changes to
+  it, `scripts/sync-marketplace-versions.py`, or `.github/workflows/release.yml`
+  receive the same scrutiny as other write-capable release automation.
 - Do not hand-edit generated payloads or installed caches. Change authoritative
   source and regenerate through the owning Python command.
 - Plugin manifests must not smuggle executable content. Where a host hook schema

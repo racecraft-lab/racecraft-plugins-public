@@ -13,7 +13,7 @@ Scaffolds a new skill in a marketplace plugin. Both user-invocable and Claude-in
 1. **Plugin** — which plugin (default: `speckit-pro`)
 2. **Skill name** — kebab-case, e.g. `my-skill`
 3. **Description** — one sentence with concrete trigger phrases (the description is what Claude matches on; vague descriptions = skill never fires)
-4. **Codex mirror** — yes/no. If yes, also create under `codex-skills/<name>/SKILL.md`
+4. **Codex mirror** — required for a `speckit-pro` skill: Layer 1 fails when `skills/<name>/` has no `codex-skills/<name>/SKILL.md`. Create it with the Codex frontmatter and sidecar described below.
 5. **References / scripts** — does the skill need supporting files? Default: no (start minimal per CLAUDE.md "Simplest change" rule)
 
 ## What this creates
@@ -32,11 +32,14 @@ license: MIT
 ---
 ```
 
-Optional Codex mirror:
+Codex mirror (required for `speckit-pro`):
 ```
 <plugin>/codex-skills/<name>/
-└── SKILL.md
+├── SKILL.md
+└── agents/openai.yaml
 ```
+
+The Codex `SKILL.md` frontmatter carries `name` and `description` only: Layer 1 rejects the Claude Code-only keys `license`, `user-invocable`, `disable-model-invocation`, and `argument-hint` there. Copy the `agents/openai.yaml` shape from a sibling Codex skill.
 
 Optional `references/` and `scripts/` subdirs (only if user said yes).
 
@@ -47,12 +50,9 @@ Always run from the repository root:
 python3 tests/speckit-pro/run-all.py --layer 1
 ```
 
-If Codex mirror created, also run:
-```console
-python3 tests/speckit-pro/layer1-structural/validate-codex-skills.py
-```
+Add the new Codex skill's name to `validate_codex_skills_SKILLS` in `tests/speckit-pro/layer1-structural/validate-skill-contracts.py`. Layer 1 runs the Codex frontmatter checks only for skills listed there.
 
-If either fails, fix the SKILL.md before reporting success.
+If Layer 1 fails, fix the SKILL.md before reporting success. A new skill under `speckit-pro/` changes shipped source, so also run `python3 scripts/refresh-release-artifacts.py`; the `artifact-consistency` CI job fails without it.
 
 ## What this does NOT do
 

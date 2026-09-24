@@ -17,7 +17,6 @@ from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
-GUARD = REPO_ROOT / ".claude" / "hooks" / "guard-version-triplet.py"
 STRUCTURAL = REPO_ROOT / ".claude" / "hooks" / "validate-structural.py"
 LIB_DIR = REPO_ROOT / "tests" / "speckit-pro" / "lib"
 if str(LIB_DIR) not in sys.path:
@@ -56,36 +55,11 @@ def make_executable(path: Path, content: str) -> None:
 
 class ClaudeHookTests(unittest.TestCase):
     def test_hook_ports_contract(self) -> None:
-        with self.subTest(msg="guard-version-triplet.py exists"):
-            self.assertTrue(GUARD.is_file(), f"file not found: {GUARD}")
-
         with self.subTest(msg="validate-structural.py exists"):
             self.assertTrue(STRUCTURAL.is_file(), f"file not found: {STRUCTURAL}")
 
-        with self.subTest(msg="guard-version-triplet.py is executable"):
-            self.assertTrue(os.access(GUARD, os.X_OK), f"file not executable: {GUARD}")
-
         with self.subTest(msg="validate-structural.py is executable"):
             self.assertTrue(os.access(STRUCTURAL, os.X_OK), f"file not executable: {STRUCTURAL}")
-
-        target = f"{REPO_ROOT}/.claude-plugin/marketplace.json"
-        result = run_hook(GUARD, make_payload(target))
-        with self.subTest(msg="guard blocks marketplace edit with exit 2"):
-            self.assertEqual(result.returncode, 2, result.stderr)
-
-        with self.subTest(msg="guard warning names version-load-bearing file"):
-            self.assertIn("version-load-bearing", result.stderr)
-
-        result = run_hook(GUARD, make_payload(f"{REPO_ROOT}/README.md"))
-        with self.subTest(msg="guard allows unrelated file"):
-            self.assertEqual(result.returncode, 0, result.stderr)
-
-        with self.subTest(msg="guard unrelated file is quiet"):
-            self.assertEqual(result.stderr, "")
-
-        result = run_hook(GUARD, "{not-json")
-        with self.subTest(msg="guard malformed JSON fails open"):
-            self.assertEqual(result.returncode, 0, result.stderr)
 
         result = run_hook(STRUCTURAL, "{not-json")
         with self.subTest(msg="structural malformed JSON fails open"):
@@ -137,7 +111,7 @@ class ClaudeHookTests(unittest.TestCase):
         with self.subTest(msg="structural ignores non-trigger markdown"):
             self.assertFalse(structural.should_validate(f"{REPO_ROOT}/docs/readme.md"))
 
-        for script in (GUARD, STRUCTURAL):
+        for script in (STRUCTURAL,):
             source = script.read_text(encoding="utf-8")
             tree = ast.parse(source)
             with self.subTest(msg=f"{script.name} does not call os.system"):

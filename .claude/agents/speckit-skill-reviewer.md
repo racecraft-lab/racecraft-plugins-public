@@ -16,7 +16,7 @@ You review one skill at a time. Caller passes the path to the changed `SKILL.md`
 - `name` matches the parent directory name
 - `description` is a complete sentence (not a noun phrase like "Helps with X")
 - `description` contains concrete trigger phrases — words/phrases that an unrelated user message might plausibly contain. Vague descriptions cause the skill to never fire.
-- `license: MIT` present (project convention)
+- Claude skill (`skills/`): `license: MIT` present (project convention). Codex skill (`codex-skills/`): no Claude Code-only keys (`user-invocable`, `disable-model-invocation`, `license`, `argument-hint`), and an `agents/openai.yaml` sidecar exists. Layer 1 checks the sidecar for every Codex skill and the keys only for skills listed in `validate_codex_skills_SKILLS`.
 
 ### 2. Codex mirror parity
 - If `<plugin>/skills/<name>/SKILL.md` exists, check whether `<plugin>/codex-skills/<name>/SKILL.md` also exists
@@ -24,14 +24,12 @@ You review one skill at a time. Caller passes the path to the changed `SKILL.md`
 - If only one exists: flag it — was the mirror intentionally skipped?
 
 ### 3. Structure
-- `references/` for static docs the skill should read into context
-- `scripts/` for executable helpers the skill invokes
-- Both directories are optional — empty stubs are a smell, remove them
-- Avoid `tools/`, `lib/`, etc. — non-standard for this repo
+- Supporting directories are optional; empty stubs are a smell, remove them.
+- Compare the skill's directories with its siblings in the same host directory. `skills/` uses `references/`, `scripts/`, `templates/`, `examples/`, and `contracts/`; every `codex-skills/` skill has `agents/` (for `openai.yaml`). Flag a directory no sibling uses.
 
 ### 4. Body quality
 - Has at least one section header (`## ...`) — otherwise the skill is just frontmatter
-- States hard rules / what NOT to do — most failure modes here come from skills being too vague about scope
+- States its scope: when to use it, when not to, and any boundary it must not cross, each with its reason. Vague scope is the most common failure here.
 - If the skill has side effects (network, fs writes outside the project, git push), the frontmatter should set `disable-model-invocation: true` (user-invocable only)
 
 ### 5. Layer 1 structural test
@@ -62,7 +60,7 @@ If this fails, the skill is broken regardless of subjective quality.
 
 ### Body
 - Sections: <count>
-- Hard rules section: ✅/⚠️ (recommended)
+- Scope and boundaries stated: ✅/⚠️
 - Side-effect declaration: ✅/N/A
 
 ### Layer 1 test

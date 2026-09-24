@@ -11,13 +11,13 @@ User-invocable. Stops Claude from auto-running this — it has side effects (pus
 
 ## What this does
 
-Walks through the publish flow documented in `CLAUDE.md`, but enforces the parts that are easy to forget:
+Walks through the publish flow in the root `AGENTS.md` (Commands, Pull Requests, Definition Of Done) and enforces the parts that are easy to forget:
 
 1. **Pre-flight check** — `python3 tests/speckit-pro/run-all.py --layer 1` must pass (catches missing frontmatter and invalid JSON).
-2. **Detect remote** — `git remote -v` (per global CLAUDE.md "Git Operations" rule — don't assume `origin`).
+2. **Detect remote** — run `git remote -v`; do not assume the remote is named `origin`.
 3. **Stage selectively** — list candidate files, ask user which to include. NEVER `git add -A` or `git add .`.
 4. **Commit with conventional-commits prefix** — required types: `feat`, `fix`, `chore`, `docs`, `refactor`, `test`. Validate before writing.
-5. **Push and open PR** — `gh pr create` with the same prefix in the title (the `validate-pr-title` CI check enforces this).
+5. **Push and open the PR** — follow the Pull Requests section of the root `AGENTS.md`, which opens every PR with the `gh-stack` skill. Validate the final title with the release-readiness gate first. For `feat` and `fix` PRs, fill the `release-note` fence or apply the `release-note/skip` label.
 6. **Remind user** — after PR is merged (squash-only), tell them to run:
    ```
    /plugin marketplace update racecraft-plugins-public
@@ -26,15 +26,15 @@ Walks through the publish flow documented in `CLAUDE.md`, but enforces the parts
 ## When NOT to use
 
 - For a release (release-please handles version bumps automatically — do not manually edit `plugin.json` versions)
-- For docs-only PRs touching `CLAUDE.md` or `README.md` (the `detect` CI job skips test matrix anyway; just commit + push, no skill needed)
-- For the marketplace.json/release-please-config.json triplet — those have their own PreToolUse guard hook
+- For docs-only PRs; commit and open the PR directly.
+- For version fields in `release-please-config.json`, `.release-please-manifest.json`, or the marketplace registries: release automation owns them (see the Release Automation section of `docs-site/src/content/docs/contribute-and-release.md`).
 
 ## Hard rules
 
-- Never merge the PR (only humans merge — see global memory)
+- Never merge the PR; a human reviews and merges it.
 - Never use `--no-verify` to skip hooks
 - Never push to `main` directly (branch protection blocks it; use a feature branch + PR)
-- Conventional-commit title format: `<type>(<scope>): <description>` (scope optional)
+- PR title format: `<type>(<lowercase-scope>): <description>`. The scope is required: the `validate-pr-title` CI job rejects a title without one.
 
 ## Output
 
