@@ -5,9 +5,7 @@ from __future__ import annotations
 import copy
 import hashlib
 from pathlib import Path
-import subprocess
 import sys
-import tempfile
 import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "lib"))

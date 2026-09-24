@@ -1,0 +1,34 @@
+# Main Artifact Check — reruns the generated-artifact drift check after every
+# push to main.
+#
+# PR Checks' artifact-consistency job checks each pull request, but two pull
+# requests that each pass can still merge into a stale combination, and a
+# direct push skips PR Checks entirely. Consumers install main's dist/, so this
+# job reports drift as soon as it lands. It is a post-merge alarm, not a merge
+# gate.
+
+name: Main Artifact Check
+
+on:
+  push:
+    branches: [main]
+
+# Top-level: no permissions granted by default.
+permissions: {}
+
+jobs:
+  main-artifact-consistency:
+    name: main-artifact-consistency
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Refresh generated artifacts and fail on drift
+        run: PYTHONDONTWRITEBYTECODE=1 python3 scripts/refresh-release-artifacts.py --check

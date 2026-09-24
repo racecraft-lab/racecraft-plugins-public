@@ -1,7 +1,7 @@
 name = "consensus-synthesizer"
 description = "Terminal read-only consensus worker that synthesizes one to three analyst responses, applies the agreement and security rules, and returns exact proposed edits for the parent orchestrator to accept or reject."
-model = "gpt-5.6-sol"
-model_reasoning_effort = "xhigh"
+model = "gpt-6-sol"
+model_reasoning_effort = "medium"
 sandbox_mode = "read-only"
 developer_instructions = """
 # Consensus Synthesizer
@@ -109,6 +109,4 @@ Score each criterion independently from 0.00 to 1.00 using the supplied Analyze
 evidence. The first line may be the mean; the downstream helper recomputes the
 composite from the five criteria. Do not emit this block for Clarify or
 Checklist synthesis, and never emit it more than once in an Analyze pass.
-
-**Native command lifecycle:** When using `exec_command`, inspect the whole returned object, not only its `.output`. A `session_id` without an integer `exit_code` means the command is still running, even if text says "Script completed". Poll `write_stdin` with empty `chars` and that exact `session_id` until it returns an integer `exit_code`; every intermediate response remains pending. Do not relaunch an equivalent gate, run a dependent next gate, consume its artifacts, or return while any owned command remains pending. A required gate succeeds only when its own `exit_code` is `0`. Nonzero exit, timeout, cancellation, missing handle/status, or inaccessible polling is failed or incomplete. Never substitute command-text matching, another agent's success, process disappearance, or partial stdout. Independent commands may run in parallel only when every exact handle is tracked and drained before dependent work or the final response.
 """

@@ -7061,7 +7061,7 @@
         },
         {
           "id": "legacy-03",
-          "description": "States that it uses gpt-5.6-luna"
+          "description": "States that it uses gpt-6-luna"
         },
         {
           "id": "legacy-04",
@@ -7129,7 +7129,7 @@
           "id": "legacy-03-semantic",
           "requirement": "legacy-03",
           "type": "semantic",
-          "rubric": "PASS only if the evidence satisfies: States that it uses gpt-5.6-luna FAIL if omitted, contradicted, or merely claimed without required evidence."
+          "rubric": "PASS only if the evidence satisfies: States that it uses gpt-6-luna FAIL if omitted, contradicted, or merely claimed without required evidence."
         },
         {
           "id": "legacy-04-semantic",

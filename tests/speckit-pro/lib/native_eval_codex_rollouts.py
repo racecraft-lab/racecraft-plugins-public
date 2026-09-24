@@ -1092,7 +1092,7 @@ def _subagent_activities(
         if item.get("type") != "SubAgentActivity":
             continue
         child_id = _validated_thread_id(item.get("agent_thread_id"), "subagent thread id")
-        path = _nonempty(item.get("agent_path"), "subagent path")
+        _nonempty(item.get("agent_path"), "subagent path")
         turn_id = _validated_thread_id(payload.get("turn_id"), "subagent parent turn id")
         kind = item.get("kind")
         if kind == "interacted":

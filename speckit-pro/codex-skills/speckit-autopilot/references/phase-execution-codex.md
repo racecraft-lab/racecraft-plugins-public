@@ -945,7 +945,8 @@ runner status `ok` with the verdict in the helper stdout JSON `status` field;
 - **`over_budget`, interactive use** → surface the over-budget result to the
   human as a decision.
 - **`not_estimated`** (`projected: null` — `plan.md` has no parseable declared
-  production-file structure) → record "not estimated (no declared production
+  production-file structure, or no declared entry counted as production code,
+  with the cause in `reason`) → record "not estimated (no declared production
   files)" and continue. Never treat this as a within-budget pass.
 - **diagnostic response** → record "estimator could not run" with the diagnostic code and
   continue the autonomous run.
