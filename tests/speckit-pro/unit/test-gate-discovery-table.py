@@ -230,6 +230,15 @@ class GateSlotResolutionTests(unittest.TestCase):
             with self.subTest(msg="nodejs maps to typescript rows"):
                 (root / "package.json").write_text("{}", encoding="utf-8")
                 self.assertIn("--language typescript", self._resolve(root, "nodejs")["COMPLEXITY"]["command"])
+            with self.subTest(msg="a bun.lock selects the Bun rows ahead of the pnpm package.json rows"):
+                (root / "bun.lock").write_text("{}", encoding="utf-8")
+                slots = self._resolve(root, "nodejs")
+                self.assertEqual("bun.lock", slots["COMPLEXITY"]["signal"])
+                self.assertIn("bun test --isolate --coverage --coverage-reporter=lcov", slots["COMPLEXITY"]["command"])
+                self.assertIn("--complexity-tool oxlint --coverage-lcov coverage/lcov.info", slots["COMPLEXITY"]["command"])
+                self.assertNotIn("pnpm", slots["COMPLEXITY"]["command"])
+                self.assertEqual("populated", slots["MUTATION"]["status"])
+                self.assertTrue(slots["MUTATION"]["command"].startswith("bunx stryker run --testRunner bun"))
 
 
 def build_suite() -> unittest.TestSuite:

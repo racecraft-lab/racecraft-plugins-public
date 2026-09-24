@@ -6,10 +6,14 @@ function's measured lines (Python) or statements (TypeScript) that ran.
 
 Python joins ``radon cc --json`` with a ``coverage json`` report. TypeScript
 joins ESLint's ``complexity`` rule (``--format json``, max 0 so every function
-reports) with an Istanbul ``coverage-final.json``. Each source can be supplied
-pre-generated (``--radon-json``, ``--coverage-json``, ``--eslint-json``) so the
-join runs without the tools installed; otherwise radon, ESLint, and
-``coverage json`` run here with fixed argument lists. The test run that
+reports) with an Istanbul ``coverage-final.json``, or, for Bun projects,
+oxlint's port of the same rule with the ``lcov.info`` that ``bun test`` writes
+(``--complexity-tool oxlint --coverage-lcov``). oxlint needs no TypeScript
+compiler API, so it also runs on TypeScript 7. Each source can be supplied
+pre-generated (``--radon-json``, ``--coverage-json``, ``--eslint-json``,
+``--oxlint-json``) so the join runs without the tools installed; otherwise
+radon, ESLint, oxlint, and ``coverage json`` run here with fixed argument
+lists. The test run that
 produces coverage data is never launched from this script: the discovery
 table's slot command runs it first, so no operator-supplied executable is
 ever spawned from plugin Python.
@@ -34,6 +38,10 @@ from typing import Any
 
 ESLINT_COMPLEXITY_RE = re.compile(r"^(?P<name>.+?) has a complexity of (?P<cc>\d+)\.")
 DEFAULT_TS_COVERAGE_JSON = "coverage/coverage-final.json"
+DEFAULT_TS_COVERAGE_LCOV = "coverage/lcov.info"
+# Rule options cannot be set on the oxlint command line, so the max-0 rule
+# travels in a throwaway config; every default category is switched off.
+OXLINT_CONFIG = {"categories": {"correctness": "off"}, "rules": {"eslint/complexity": ["warn", {"max": 0}]}}
 
 
 class ToolError(Exception):
@@ -57,6 +65,11 @@ def local_eslint(cwd: Path) -> bool:
     static for the plugin confinement guard.
     """
     return (cwd / "node_modules" / ".bin" / "eslint").is_file()
+
+
+def local_oxlint(cwd: Path) -> bool:
+    """True when the project installed oxlint under ``node_modules/.bin``."""
+    return (cwd / "node_modules" / ".bin" / "oxlint").is_file()
 
 
 def load_json(source: Path | str) -> Any:
@@ -151,6 +164,12 @@ def python_functions(args: argparse.Namespace, paths: list[Path], cwd: Path) -> 
 
 
 def typescript_functions(args: argparse.Namespace, paths: list[Path], cwd: Path) -> list[dict[str, Any]]:
+    if args.complexity_tool == "oxlint":
+        return oxlint_functions(args, paths, cwd)
+    if args.coverage_lcov:
+        # ESLint's complexity location ends at the function head, not its body,
+        # so it cannot bound the lcov lines a function owns.
+        raise ToolError("--coverage-lcov needs --complexity-tool oxlint")
     if args.eslint_json:
         eslint = load_json(Path(args.eslint_json))
     else:
@@ -212,6 +231,89 @@ def typescript_functions(args: argparse.Namespace, paths: list[Path], cwd: Path)
     return functions
 
 
+def lcov_lines(source: Path) -> dict[str, dict[int, int]]:
+    """Map each ``SF:`` file in an lcov report to its ``DA:`` line hit counts."""
+    try:
+        text = source.read_text(encoding="utf-8")
+    except OSError as exc:
+        raise ToolError(f"cannot read lcov report: {exc}") from exc
+    files: dict[str, dict[int, int]] = {}
+    current: dict[int, int] | None = None
+    for raw in text.splitlines():
+        line = raw.strip()
+        if line.startswith("SF:"):
+            current = files.setdefault(line[3:], {})
+        elif line.startswith("DA:") and current is not None:
+            fields = line[3:].split(",")
+            try:
+                current[int(fields[0])] = int(fields[1])
+            except (IndexError, ValueError) as exc:
+                raise ToolError(f"malformed lcov line: {line!r}") from exc
+        elif line == "end_of_record":
+            current = None
+    if not files:
+        raise ToolError(f"lcov report has no SF records: {source}")
+    return files
+
+
+def oxlint_functions(args: argparse.Namespace, paths: list[Path], cwd: Path) -> list[dict[str, Any]]:
+    if args.oxlint_json:
+        oxlint = load_json(Path(args.oxlint_json))
+    else:
+        local = local_oxlint(cwd)
+        if not local:
+            require_tool("oxlint")
+        with tempfile.TemporaryDirectory() as tmp:
+            config = Path(tmp) / "oxlintrc.json"
+            config.write_text(json.dumps(OXLINT_CONFIG), encoding="utf-8")
+            result = subprocess.run(
+                [
+                    "node_modules/.bin/oxlint" if local else "oxlint",
+                    "-c", str(config), "--disable-nested-config", "-f", "json", "--", *map(str, paths),
+                ],
+                cwd=cwd, capture_output=True, text=True, shell=False, check=False,
+            )
+        if result.returncode > 1:
+            raise ToolError(f"oxlint failed: {result.stderr.strip()[-2000:]}")
+        oxlint = load_json(result.stdout)
+    diagnostics = oxlint.get("diagnostics") if isinstance(oxlint, dict) else None
+    if not isinstance(diagnostics, list):
+        raise ToolError("oxlint output has no diagnostics list")
+    # Reads the lcov report the slot command's `bun test --coverage` produced.
+    lcov = lcov_lines(Path(args.coverage_lcov) if args.coverage_lcov else cwd / DEFAULT_TS_COVERAGE_LCOV)
+    functions: list[dict[str, Any]] = []
+    for path in paths:
+        hits = file_entry(lcov, path, cwd) or {}
+        try:
+            source = path.read_bytes() if path.is_absolute() else (cwd / path).read_bytes()
+        except OSError as exc:
+            raise ToolError(f"cannot read source file: {exc}") from exc
+        for diagnostic in diagnostics:
+            if diagnostic.get("code") != "eslint(complexity)" or not same_file(diagnostic.get("filename", ""), path, cwd):
+                continue
+            match = ESLINT_COMPLEXITY_RE.match(diagnostic.get("message", ""))
+            labels = diagnostic.get("labels")
+            span = labels[0].get("span") if isinstance(labels, list) and labels and isinstance(labels[0], dict) else None
+            if not match or not isinstance(span, dict) or not all(isinstance(span.get(key), int) for key in ("line", "offset", "length")):
+                raise ToolError(f"unrecognised oxlint complexity diagnostic: {diagnostic.get('message')!r}")
+            start = span["line"]
+            # The span covers the whole function in UTF-8 bytes; its last line is
+            # the start line plus the newlines inside it.
+            end = start + source[span["offset"]:span["offset"] + span["length"]].count(b"\n")
+            measured = [line for line in hits if start <= line <= end]
+            covered = sum(1 for line in measured if hits[line] > 0)
+            functions.append(
+                {
+                    "file": str(path),
+                    "name": match.group("name"),
+                    "line": start,
+                    "complexity": int(match.group("cc")),
+                    "coverage": (covered / len(measured)) if measured else 0.0,
+                }
+            )
+    return functions
+
+
 # --- CLI ----------------------------------------------------------------------
 
 
@@ -221,8 +323,11 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--ceiling", type=float, required=True, help="maximum CRAP score per function")
     parser.add_argument("--complexity-ceiling", type=int, required=True, help="maximum cyclomatic complexity per function")
     parser.add_argument("--radon-json", help="pre-generated `radon cc --json` output")
+    parser.add_argument("--complexity-tool", choices=("eslint", "oxlint"), default="eslint", help="TypeScript complexity source (default eslint)")
     parser.add_argument("--eslint-json", help="pre-generated `eslint --format json` output")
+    parser.add_argument("--oxlint-json", help="pre-generated `oxlint -f json` output")
     parser.add_argument("--coverage-json", help="coverage report to read (coverage.py JSON; Istanbul coverage-final.json, default coverage/coverage-final.json)")
+    parser.add_argument("--coverage-lcov", help="lcov report to read with --complexity-tool oxlint (default coverage/lcov.info, where `bun test --coverage --coverage-reporter=lcov` writes it)")
     parser.add_argument("--report", help="write the full JSON report to this file")
     parser.add_argument("paths", nargs="+", help="source files to check; at least one is required")
     return parser.parse_args(argv)

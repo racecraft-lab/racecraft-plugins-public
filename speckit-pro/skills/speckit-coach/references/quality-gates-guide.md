@@ -39,8 +39,12 @@ phase into a refactoring project the spec never asked for; a ceiling above it
 gates nothing. Measure, do not guess:
 
 1. Confirm the complexity tool is installed (`radon` for Python, `eslint` for
-   TypeScript). If it is not, offer the install command from the discovery
-   table and, if the operator declines, use the no-code fallback below.
+   TypeScript, `oxlint` for a Bun project with a `bun.lock`). If it is not,
+   offer the install command from the discovery table and, if the operator
+   declines, use the no-code fallback below. A Bun project passes
+   `--complexity-tool oxlint --coverage-lcov coverage/lcov.info` so the report
+   joins the lcov that `bun test --coverage` writes; oxlint needs no TypeScript
+   compiler API, so it also measures TypeScript 7 code.
 2. Run the shipped CRAP script with lenient ceilings over the whole source
    tree, tests excluded, writing a report. Run the repository's coverage step
    first so the report can join coverage (the slot command in the discovery

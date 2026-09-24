@@ -1618,6 +1618,10 @@ def check(name: str, passed: bool, message: str, detail: str) -> dict[str, Any]:
 
 
 def node_script_command(package_manager: str, script: str) -> str:
+    # `bun test` and `bun build` are Bun's own test runner and bundler, not the
+    # package.json scripts of those names, so Bun always goes through `bun run`.
+    if package_manager == "bun":
+        return f"bun run {script}"
     return f"{package_manager} {script}"
 
 
@@ -1687,6 +1691,24 @@ def discover_test_runner(root: Path, repo_root: Path) -> str:
         return ""
 
 
+def local_node_bin_present(root: Path, name: str, repo_root: Path) -> bool:
+    """True when ``node_modules/.bin/<name>`` resolves to a file inside ``node_modules``.
+
+    Every Node package manager installs these entries as symlinks, which the
+    no-follow trusted opener refuses. This is a presence probe only, never a
+    read, so it follows the link but requires the target to stay under the
+    project's own ``node_modules``.
+    """
+    modules = root / "node_modules"
+    if not trusted_dir_exists(modules / ".bin", repo_root):
+        return False
+    try:
+        target = (modules / ".bin" / name).resolve(strict=True)
+        return target.is_file() and target.is_relative_to(modules.resolve(strict=True))
+    except (OSError, RuntimeError):
+        return False
+
+
 def detect_commands(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
     root = resolve_input_path(inputs.get("repo_root") or ".", repo_root)
     commands = {
@@ -1707,7 +1729,7 @@ def detect_commands(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
         package_manager = "pnpm"
     elif trusted_file_exists(root / "yarn.lock", repo_root):
         package_manager = "yarn"
-    elif trusted_file_exists(root / "bun.lockb", repo_root):
+    elif trusted_file_exists(root / "bun.lock", repo_root) or trusted_file_exists(root / "bun.lockb", repo_root):
         package_manager = "bun"
     elif trusted_file_exists(root / "package-lock.json", repo_root):
         package_manager = "npm"
@@ -1801,7 +1823,7 @@ def detect_commands(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
         root,
         stack,
         file_exists=lambda path: trusted_file_exists(path, repo_root),
-        which=lambda name: bool(shutil.which(name)) or trusted_file_exists(root / "node_modules" / ".bin" / name, repo_root),
+        which=lambda name: bool(shutil.which(name)) or local_node_bin_present(root, name, repo_root),
         thresholds=quality_gates.substitutions(quality["thresholds"]) if quality["thresholds"] else None,
         skips=quality["skips"],
     )

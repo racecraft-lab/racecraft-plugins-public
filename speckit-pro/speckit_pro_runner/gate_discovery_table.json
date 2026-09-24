@@ -40,6 +40,24 @@
     {
       "language": "typescript",
       "slot": "COMPLEXITY",
+      "signal": { "kind": "file", "path": "bun.lock" },
+      "tool": "oxlint complexity + Bun lcov coverage (CRAP join)",
+      "install": "bun add -d oxlint",
+      "probe": ["oxlint"],
+      "command": "bun test --isolate --coverage --coverage-reporter=lcov && python3 {plugin_root}/scripts/crap-score.py --language typescript --complexity-tool oxlint --coverage-lcov coverage/lcov.info --ceiling {ceiling} --complexity-ceiling {complexity_ceiling} -- {paths}"
+    },
+    {
+      "language": "typescript",
+      "slot": "MUTATION",
+      "signal": { "kind": "file", "path": "bun.lock" },
+      "tool": "StrykerJS + Bun test runner",
+      "install": "bun add -d @stryker-mutator/core @hughescr/stryker-bun-runner",
+      "probe": ["stryker"],
+      "command": "bunx stryker run --testRunner bun --appendPlugins @hughescr/stryker-bun-runner --reporters json,progress --incremental --mutate {paths}"
+    },
+    {
+      "language": "typescript",
+      "slot": "COMPLEXITY",
       "signal": { "kind": "file", "path": "vitest.config.ts" },
       "tool": "ESLint complexity + Vitest coverage (CRAP join)",
       "install": "pnpm add -D eslint typescript-eslint @vitest/coverage-v8",
