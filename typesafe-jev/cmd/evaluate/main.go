@@ -3,6 +3,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -35,11 +36,30 @@ Docs: https://docs.typesafe.ai/llms.txt`
 
 func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	err := newRootCmd().ExecuteContext(ctx)
+	code := execute(ctx, os.Args[1:])
 	stop()
-	if err != nil {
+	os.Exit(code)
+}
+
+// execute runs the command line args and returns the process exit code. Most
+// failures exit 1; `call` chooses its own codes, and has usually said what went
+// wrong already.
+func execute(ctx context.Context, args []string) int {
+	root := newRootCmd()
+	root.SetArgs(args)
+	err := root.ExecuteContext(ctx)
+	var exit *exitCodeError
+	switch {
+	case err == nil:
+		return 0
+	case errors.As(err, &exit):
+		if exit.text != "" {
+			fmt.Fprintln(os.Stderr, "evaluate:", exit.text)
+		}
+		return exit.code
+	default:
 		fmt.Fprintln(os.Stderr, "evaluate:", err)
-		os.Exit(1)
+		return 1
 	}
 }
 
@@ -53,9 +73,12 @@ func newRootCmd() *cobra.Command {
 		SilenceErrors: true,
 	}
 	root.SetVersionTemplate("{{.Version}}\n")
+	var pluginDefaults bool
 	mcpCmd := &cobra.Command{Use: "mcp", Short: "Run the MCP server over stdio", Args: cobra.NoArgs, RunE: func(cmd *cobra.Command, _ []string) error {
-		return serve(cmd.Context())
+		return serve(cmd.Context(), pluginDefaults)
 	}}
+	mcpCmd.Flags().BoolVar(&pluginDefaults, "plugin-defaults", false,
+		"default each unset key-file path to "+pluginKeyDirectory+"/<provider>.key, only when that file exists")
 	// Args+RunE, not a bare parent: cobra checks Runnable before validating args,
 	// so without both `evaluate setup typo` prints help and exits 0.
 	setupCmd := &cobra.Command{
@@ -77,6 +100,7 @@ func newRootCmd() *cobra.Command {
 	)
 	root.AddCommand(
 		mcpCmd,
+		newCallCmd(),
 		setupCmd,
 		&cobra.Command{Use: "update", Short: "Update evaluate to the latest release", Args: cobra.NoArgs, RunE: func(cmd *cobra.Command, _ []string) error {
 			return runUpdate(cmd.Context())
@@ -219,10 +243,45 @@ func backendNote(cfg Config) string {
 	return note
 }
 
-func serve(ctx context.Context) error {
-	cfg, err := resolveConfig(os.LookupEnv)
+// setupInstructions is what the plugin's server says, with no tools, when no
+// credential source is configured at all.
+const setupInstructions = `Jev has no TypeSafe or OpenRouter credential on this machine, so this server offers no tools.
+To enable the evaluate tool:
+1. Put a TypeSafe key in ~/.config/racecraft-jev/typesafe.key, or an OpenRouter key in ~/.config/racecraft-jev/openrouter.key, readable only by you (chmod 600).
+2. Reconnect this MCP server.
+Until then, make any judgment yourself in the ordinary way.`
+
+// newSetupServer is the server `mcp --plugin-defaults` runs when nothing is
+// configured: connected, with no tools, and instructions that say how to set
+// Jev up. A user without a key then sees a server that explains itself
+// rather than one that failed to start.
+func newSetupServer() *mcp.Server {
+	return mcp.NewServer(
+		&mcp.Implementation{Name: "evaluate", Version: version},
+		&mcp.ServerOptions{
+			Instructions: setupInstructions,
+			// Advertised, with an empty list, so a client that asks for tools
+			// gets none rather than an error.
+			Capabilities: &mcp.ServerCapabilities{Tools: &mcp.ToolCapabilities{}},
+		},
+	)
+}
+
+// serve runs the MCP server over stdio. With pluginDefaults it also applies
+// the plugin's key-file defaults and, when no credential source exists at
+// all, serves the setup instructions instead of refusing to start. A source
+// that exists but is broken still refuses, naming the fix.
+func serve(ctx context.Context, pluginDefaults bool) error {
+	cfg, err := resolveCallConfig(os.LookupEnv, pluginDefaults)
 	if err != nil {
 		return err
+	}
+	if pluginDefaults {
+		primary, fallback := classifySources(cfg, os.LookupEnv)
+		if credentialExit(primary, fallback) == exitUnconfigured {
+			fmt.Fprintln(os.Stderr, "evaluate: no TypeSafe or OpenRouter credential is configured; serving setup instructions with no tools")
+			return newSetupServer().Run(ctx, &mcp.StdioTransport{})
+		}
 	}
 	c, cfg, err := newClients(cfg, os.Stderr)
 	if err != nil {

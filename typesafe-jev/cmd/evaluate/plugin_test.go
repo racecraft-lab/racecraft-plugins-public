@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"os"
 	"os/exec"
@@ -8,6 +9,8 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 // repoRoot returns the repository root from the package directory.
@@ -228,103 +231,196 @@ func TestVendoredSkillKeepsProvenance(t *testing.T) {
 	}
 }
 
-// The launcher is the plugin's only moving part, so its two paths are checked
-// against a fake binary rather than a real install.
-func TestLauncherResolvesTheBinary(t *testing.T) {
+// launcherCmd runs the shipped launcher with an environment built from
+// scratch: PATH, a fresh HOME, and only what the case adds. Inheriting the
+// developer's environment would let a real key decide a "no key" case.
+func launcherCmd(t *testing.T, home string, env ...string) *exec.Cmd {
+	t.Helper()
+	cmd := exec.Command(pythonPath(t), filepath.Join(repoRoot(t), filepath.FromSlash(launcherPath)))
+	cmd.Env = append([]string{
+		"PATH=" + os.Getenv("PATH"),
+		"HOME=" + home,
+		// What both plugin manifests set.
+		"JEV_PROVIDER=typesafe",
+		"JEV_FALLBACK_PROVIDER=openrouter",
+	}, env...)
+	return cmd
+}
+
+// asEvaluate makes the test binary the launcher's evaluate binary. See
+// TestMain.
+func asEvaluate() []string {
+	return []string{"EVALUATE_BIN=" + os.Args[0], asBinaryEnv + "=1"}
+}
+
+// connectLauncher starts the launcher as an MCP server and returns the session
+// and what it wrote to stderr.
+func connectLauncher(t *testing.T, cmd *exec.Cmd) (*mcp.ClientSession, *strings.Builder) {
+	t.Helper()
+	var stderr strings.Builder
+	cmd.Stderr = &stderr
+	session, err := mcp.NewClient(testImpl, nil).Connect(context.Background(), &mcp.CommandTransport{Command: cmd}, nil)
+	if err != nil {
+		t.Fatalf("connecting through the launcher: %v\nstderr: %s", err, stderr.String())
+	}
+	t.Cleanup(func() { session.Close() })
+	return session, &stderr
+}
+
+// LAUNCH-01: without a binary, or without any credential source, the plugin
+// serves a stand-in with no tools whose instructions say how to set Jev up,
+// rather than a server that fails to start. The launcher serves it when the
+// binary is missing; `mcp --plugin-defaults` serves it when no key is
+// configured. Stdout carries only protocol frames: the client would fail to
+// connect on anything else.
+func TestLauncherServesSetupInstructionsWhenUnconfigured(t *testing.T) {
 	launcher := filepath.Join(repoRoot(t), filepath.FromSlash(launcherPath))
 	if info, err := os.Stat(launcher); err != nil || !info.Mode().IsRegular() {
 		t.Fatalf("launcher missing: %v", err)
 	}
 
-	t.Run("missing binary reports on stderr and fails", func(t *testing.T) {
-		cmd := exec.Command(pythonPath(t), launcher)
-		cmd.Env = append(os.Environ(), "EVALUATE_BIN="+filepath.Join(t.TempDir(), "absent"))
-		var stdout, stderr strings.Builder
-		cmd.Stdout, cmd.Stderr = &stdout, &stderr
+	for _, tc := range []struct {
+		name, wantReason string
+		env              func(home string) []string
+		// byLauncher is true when the Python launcher serves the stand-in,
+		// which answers a stray tools/call with the setup text.
+		byLauncher bool
+	}{
+		{
+			name:       "no binary",
+			wantReason: "not installed",
+			env: func(home string) []string {
+				return []string{"EVALUATE_BIN=" + filepath.Join(home, "absent")}
+			},
+			byLauncher: true,
+		},
+		{
+			name:       "no credential source",
+			wantReason: "no TypeSafe or OpenRouter credential",
+			env:        func(string) []string { return asEvaluate() },
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			home := t.TempDir()
+			session, stderr := connectLauncher(t, launcherCmd(t, home, tc.env(home)...))
+			ctx := context.Background()
 
-		err := cmd.Run()
-		if err == nil {
-			t.Fatal("want a non-zero exit when the binary is missing")
-		}
-		// Stdout carries the MCP protocol. A human-readable line there is a
-		// frame the client cannot parse.
-		if stdout.String() != "" {
-			t.Errorf("launcher wrote to stdout: %q", stdout.String())
-		}
-		if !strings.Contains(stderr.String(), "go build") {
-			t.Errorf("stderr should say how to install: %q", stderr.String())
-		}
-	})
-
-	t.Run("present binary is exec'd with the key-file default", func(t *testing.T) {
-		dir := t.TempDir()
-		fake := filepath.Join(dir, "evaluate")
-		script := "#!/bin/sh\necho \"args=$*\"\necho \"keyfile=$JEV_API_KEY_FILE\"\n"
-		if err := os.WriteFile(fake, []byte(script), 0o755); err != nil {
-			t.Fatal(err)
-		}
-
-		cmd := exec.Command(pythonPath(t), launcher)
-		cmd.Env = append(os.Environ(), "EVALUATE_BIN="+fake, "HOME="+dir)
-		out, err := cmd.Output()
-		if err != nil {
-			t.Fatalf("%v", err)
-		}
-		got := string(out)
-		if !strings.Contains(got, "args=mcp") {
-			t.Errorf("launcher did not pass `mcp`: %q", got)
-		}
-		if !strings.Contains(got, filepath.Join(dir, ".config", "racecraft-jev", "typesafe.key")) {
-			t.Errorf("key-file default not applied: %q", got)
-		}
-	})
-
-	t.Run("each backend gets its own key-file default, and a fallback gets one only when configured", func(t *testing.T) {
-		dir := t.TempDir()
-		fake := filepath.Join(dir, "evaluate")
-		script := "#!/bin/sh\necho \"keyfile=$JEV_API_KEY_FILE\"\necho \"fallbackfile=${JEV_FALLBACK_API_KEY_FILE:-none}\"\n"
-		if err := os.WriteFile(fake, []byte(script), 0o755); err != nil {
-			t.Fatal(err)
-		}
-		keys := filepath.Join(dir, ".config", "racecraft-jev")
-		for _, tc := range []struct {
-			env           []string
-			key, fallback string
-		}{
-			{nil, filepath.Join(keys, "typesafe.key"), "none"},
-			{[]string{"JEV_PROVIDER=openrouter"}, filepath.Join(keys, "openrouter.key"), "none"},
-			{[]string{"JEV_PROVIDER=typesafe", "JEV_FALLBACK_PROVIDER=openrouter"}, filepath.Join(keys, "typesafe.key"), filepath.Join(keys, "openrouter.key")},
-			{[]string{"JEV_FALLBACK_PROVIDER=openrouter", "JEV_FALLBACK_API_KEY_FILE=/else/or.key"}, filepath.Join(keys, "typesafe.key"), "/else/or.key"},
-		} {
-			cmd := exec.Command(pythonPath(t), launcher)
-			cmd.Env = append(append(os.Environ(), "EVALUATE_BIN="+fake, "HOME="+dir), tc.env...)
-			out, err := cmd.Output()
+			instructions := session.InitializeResult().Instructions
+			for _, want := range []string{tc.wantReason, "typesafe.key", "chmod 600", "Reconnect"} {
+				if !strings.Contains(instructions, want) {
+					t.Errorf("instructions do not say %q:\n%s", want, instructions)
+				}
+			}
+			tools, err := session.ListTools(ctx, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
-			if !strings.Contains(string(out), "keyfile="+tc.key+"\n") || !strings.Contains(string(out), "fallbackfile="+tc.fallback+"\n") {
-				t.Errorf("%v: got %q, want key %s and fallback %s", tc.env, out, tc.key, tc.fallback)
+			if len(tools.Tools) != 0 {
+				t.Errorf("the stand-in lists tools: %+v", tools.Tools)
 			}
-		}
-	})
+			if tc.byLauncher {
+				// An agent that calls the tool anyway gets the setup text as
+				// an error result, not a protocol failure.
+				res, err := session.CallTool(ctx, &mcp.CallToolParams{Name: "evaluate", Arguments: map[string]any{}})
+				if err != nil {
+					t.Fatal(err)
+				}
+				if !res.IsError || !strings.Contains(contentText(t, res), "chmod 600") {
+					t.Errorf("tools/call on the stand-in = %+v", res)
+				}
+			}
+			if err := session.Close(); err != nil {
+				t.Errorf("closing: %v", err)
+			}
+			if !strings.Contains(stderr.String(), "serving setup instructions") {
+				t.Errorf("stderr does not explain the stand-in: %q", stderr.String())
+			}
+		})
+	}
+}
 
-	t.Run("an explicit key file is not overridden", func(t *testing.T) {
-		dir := t.TempDir()
-		fake := filepath.Join(dir, "evaluate")
-		if err := os.WriteFile(fake, []byte("#!/bin/sh\necho \"keyfile=$JEV_API_KEY_FILE\"\n"), 0o755); err != nil {
-			t.Fatal(err)
-		}
-		cmd := exec.Command(pythonPath(t), launcher)
-		cmd.Env = append(os.Environ(), "EVALUATE_BIN="+fake, "HOME="+dir,
-			"JEV_API_KEY_FILE=/somewhere/else.key")
-		out, err := cmd.Output()
-		if err != nil {
-			t.Fatal(err)
-		}
-		if !strings.Contains(string(out), "keyfile=/somewhere/else.key") {
-			t.Errorf("launcher overrode an explicit key file: %q", out)
-		}
-	})
+// LAUNCH-02: a key file readable by others is a credential the operator set up
+// and broke. The server refuses to start and names the fix, instead of hiding
+// it behind the stand-in.
+func TestLauncherPassesABrokenKeyToTheRealServer(t *testing.T) {
+	home := t.TempDir()
+	writeDefaultKey(t, home, "typesafe", fixtureKey, 0o644)
+
+	cmd := launcherCmd(t, home, asEvaluate()...)
+	var stdout, stderr strings.Builder
+	cmd.Stdout, cmd.Stderr = &stdout, &stderr
+	if err := cmd.Run(); err == nil {
+		t.Fatal("want the real server to refuse to start")
+	}
+	if stdout.String() != "" {
+		t.Errorf("launcher wrote to stdout: %q", stdout.String())
+	}
+	if !strings.Contains(stderr.String(), "chmod 600") {
+		t.Errorf("stderr does not give the fix: %q", stderr.String())
+	}
+	if strings.Contains(stderr.String(), fixtureKey) {
+		t.Error("stderr carries the key")
+	}
+}
+
+// LAUNCH-05: the setup stand-in is the plugin's behaviour only. Run by hand
+// without --plugin-defaults, a server with no key still refuses to start.
+func TestServerWithoutPluginDefaultsRefusesWithoutAKey(t *testing.T) {
+	cmd := exec.Command(os.Args[0], "mcp")
+	cmd.Env = []string{"PATH=" + os.Getenv("PATH"), "HOME=" + t.TempDir(), asBinaryEnv + "=1"}
+	var stdout, stderr strings.Builder
+	cmd.Stdout, cmd.Stderr = &stdout, &stderr
+	if err := cmd.Run(); err == nil {
+		t.Fatal("want the server to refuse to start without a key")
+	}
+	if stdout.String() != "" {
+		t.Errorf("stdout = %q", stdout.String())
+	}
+	if !strings.Contains(stderr.String(), "no credential") {
+		t.Errorf("stderr = %q", stderr.String())
+	}
+}
+
+// LAUNCH-03: a configured key, in the default file or only in the
+// environment, starts the real server with its one tool. The environment case
+// is the 0.8.0 bug: the launcher always set a default key-file path, so an
+// environment-only key was never read.
+func TestLauncherStartsTheRealServerWithACredential(t *testing.T) {
+	for _, tc := range []struct {
+		name  string
+		setup func(t *testing.T, home string) []string
+	}{
+		{"default key file", func(t *testing.T, home string) []string {
+			writeDefaultKey(t, home, "typesafe", fixtureKey, 0o600)
+			return nil
+		}},
+		{"environment only", func(t *testing.T, home string) []string {
+			return []string{"TYPESAFE_API_KEY=" + fixtureKey}
+		}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			home := t.TempDir()
+			env := append(asEvaluate(), tc.setup(t, home)...)
+			session, stderr := connectLauncher(t, launcherCmd(t, home, env...))
+
+			tools, err := session.ListTools(context.Background(), nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(tools.Tools) != 1 || tools.Tools[0].Name != "evaluate" {
+				t.Fatalf("tools = %+v; stderr: %s", tools.Tools, stderr.String())
+			}
+			if !strings.Contains(session.InitializeResult().Instructions, "Backend: typesafe") {
+				t.Errorf("the real server did not start on the primary: %s", session.InitializeResult().Instructions)
+			}
+			if err := session.Close(); err != nil {
+				t.Errorf("closing: %v", err)
+			}
+			if strings.Contains(stderr.String(), fixtureKey) {
+				t.Error("stderr carries the key")
+			}
+		})
+	}
 }
 
 // skillFrontmatter returns a skill's YAML frontmatter as raw lines.

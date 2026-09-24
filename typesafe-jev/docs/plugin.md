@@ -23,7 +23,7 @@ root point at it. That separation is what a client caches: everything outside
 | `plugin/.mcp.json` | MCP entry for Codex |
 | `plugin/shared-skills/typesafe-ai/` | TypeSafe's skill, adapted, with its MIT licence |
 | `plugin/shared-skills/typed-judgments/` | routes an in-session judgment to the tool |
-| `plugin/scripts/evaluate_launch.py` | resolves the binary and applies plugin defaults |
+| `plugin/scripts/evaluate_launch.py` | resolves the binary, checks for a credential, and starts the right server |
 
 Both manifests declare the same name and version, which a test enforces.
 
@@ -34,9 +34,23 @@ four platform builds to git would bloat every clone and still miss a fifth
 platform. So the binary is installed once, separately, and `plugin/scripts/evaluate_launch.py`
 finds it.
 
-If it is missing, the launcher writes one line to stderr naming the install
-command and exits. Stdout stays clean, because a human-readable line there is a
-frame the MCP client cannot parse.
+If the binary is missing, the launcher serves a stand-in MCP server with no
+tools. Its instructions say how to install the binary and where the key file
+goes. If the binary is there, the launcher replaces itself with
+`evaluate mcp --plugin-defaults`, which does the same when no credential source
+is configured at all. A user without a TypeSafe or OpenRouter key therefore sees
+a connected server that explains itself rather than a failed one. Either way,
+one line on stderr says so. Stdout carries only protocol frames, because a
+human-readable line there is a frame the MCP client cannot parse.
+
+The launcher never reads a key and starts no other process. A credential that
+is configured but broken, such as a key file other users can read, is not
+hidden behind the stand-in: the server refuses it and names the fix.
+`evaluate call --check --plugin-defaults` gives the same verdict without
+starting a server, as an exit code: 0 ready, 3 nothing configured, 4 broken.
+
+Windows has no release build yet, so on Windows the launcher always serves the
+stand-in.
 
 ## Install
 
@@ -64,11 +78,14 @@ cat > ~/.config/racecraft-jev/openrouter.key    # the fallback
 chmod 600 ~/.config/racecraft-jev/openrouter.key
 ```
 
-The launcher sets `JEV_API_KEY_FILE` to the primary's file and
-`JEV_FALLBACK_API_KEY_FILE` to the fallback's, each only when it is not already
-set, so an explicit value in the client's environment still wins. A missing
-TypeSafe key starts the server on OpenRouter; a missing OpenRouter key leaves
-TypeSafe serving alone. No credential
+The server runs with `--plugin-defaults`, which sets `JEV_API_KEY_FILE` to the
+primary's file and `JEV_FALLBACK_API_KEY_FILE` to the fallback's, each only when
+it is not already set **and the file exists**. An explicit value in the client's
+environment still wins, and a key held only in `TYPESAFE_API_KEY` or
+`OPENROUTER_API_KEY` is read when no key file is there. Through 0.8.0 the
+launcher set both paths unconditionally, which stopped the server from reading
+those variables at all. A missing TypeSafe key starts the server on OpenRouter;
+a missing OpenRouter key leaves TypeSafe serving alone. No credential
 is stored in any manifest, and a test checks for that.
 
 **3. The plugin.** Each client reads its own marketplace file from this

@@ -172,6 +172,36 @@ Criteria by type: `noul` takes optional `{"true": ..., "false": ...}` descriptio
 
 **Both backends accept the same values.** TypeSafe accepts a string, object, array, or null for instructions and for every criteria description. OpenRouter's Decisions schema accepts a string, object, or array for all of them, and null for choice option descriptions — the one shape it does not take is a null where this server requires a value anyway. OpenRouter typed these fields as plain strings until it republished the schema; nothing here narrows them any more. [docs/provider-contracts.md](docs/provider-contracts.md) has the field-by-field comparison with a source for each row.
 
+### `evaluate call`
+
+A one-shot form of the same tool, for a program rather than an agent. It reads
+one request, `{"state": ..., "questions": {...}, "model": "..."}`, from stdin
+(at most 16 MiB), runs it through the same path as the MCP tool, fallback and
+both validations included, and writes the provider's JSON to stdout. Stderr
+carries a diagnostic that never includes a key or the request.
+
+`evaluate call --check` loads the configuration and credentials, makes no
+network call, and prints the value-free state of each credential source as
+JSON: where it comes from (`explicit-file`, `default-file`, `environment`, or
+`none`) and whether it is `ok`, `absent`, or `unusable`.
+
+`--plugin-defaults` (on `call` and `mcp`) points each unset key-file variable at
+`~/.config/racecraft-jev/<provider>.key`, only when that file exists.
+
+| Exit | Meaning |
+|---|---|
+| 0 | Answered, and the response passed validation |
+| 2 | Request rejected locally: its shape, the 255-option cap, or the context budget |
+| 3 | No credential source configured for the primary or the fallback |
+| 4 | A credential source is configured but unusable, including an explicit key-file path whose file is absent, or the configuration itself is invalid |
+| 5 | Provider or transport error, or timeout, after the client's own retries |
+| 6 | The response failed validation |
+
+A broken source is exit 4 even when the other backend's key works: a key file
+you set up is never passed over silently. The MCP server is more forgiving in
+that one case. It drops the broken fallback with a line on stderr and serves
+the primary.
+
 ### Settings
 
 | Variable | Default | Meaning |

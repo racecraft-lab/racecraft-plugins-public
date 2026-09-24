@@ -91,6 +91,9 @@ type Config struct {
 	// KeyFile is an absolute path, or "" to use the provider's environment
 	// variable. The path is not a secret; the file's contents are.
 	KeyFile string
+	// KeyFileDefaulted reports that KeyFile came from --plugin-defaults rather
+	// than from the operator, so a diagnostic can say which.
+	KeyFileDefaulted bool
 	// Fallback is the backend a call moves to when Provider refuses its
 	// credential or is unavailable, or nil. It is set only by the operator
 	// (JEV_FALLBACK_PROVIDER): which keys happen to exist never creates one.
@@ -104,6 +107,8 @@ type FallbackConfig struct {
 	// KeyFile is an absolute path, or "" to use the fallback provider's own
 	// environment variable.
 	KeyFile string
+	// KeyFileDefaulted is KeyFileDefaulted for the fallback's key file.
+	KeyFileDefaulted bool
 }
 
 // fallbackConfig is the Config a client for the fallback backend is built
@@ -115,6 +120,8 @@ func (c Config) fallbackConfig() Config {
 		Timeout:    c.Timeout,
 		MaxRetries: c.MaxRetries,
 		KeyFile:    c.Fallback.KeyFile,
+
+		KeyFileDefaulted: c.Fallback.KeyFileDefaulted,
 	}
 }
 

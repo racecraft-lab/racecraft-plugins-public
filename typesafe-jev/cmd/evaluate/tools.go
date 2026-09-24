@@ -65,14 +65,14 @@ func runOn(ctx context.Context, c *Client, in evaluateIn) ([]byte, error) {
 		in.Model = c.Model
 	}
 	if err := validateRequest(c.Provider, in); err != nil {
-		return nil, err
+		return nil, &requestInvalidError{err}
 	}
 	body, err := c.Evaluate(ctx, in)
 	if err != nil {
 		return nil, err
 	}
 	if err := validateResponse(c.Provider, in, body); err != nil {
-		return nil, err
+		return nil, &responseInvalidError{err}
 	}
 	// The provider's own bytes, unknown fields and all. Rebuilding a narrower
 	// struct here would quietly drop cost, usage, provider, ids, legends, and
