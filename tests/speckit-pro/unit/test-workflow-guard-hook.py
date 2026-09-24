@@ -98,6 +98,8 @@ class WorkflowGuardHookTests(unittest.TestCase):
                 "substitution in an unquoted heredoc body runs": "cat > notes.md <<EOF\nbin: $(npm bin)\nEOF",
                 "a backtick in an unquoted heredoc body runs": "cat > notes.md <<EOF\n`npm bin`\nEOF",
                 "a command after the delimiter runs": "cat > notes.md <<'EOF'\ntext\nEOF\nnpm install",
+                "an arithmetic expansion shift is not a heredoc": "echo $((1<<2))\nnpm install",
+                "an arithmetic command shift is not a heredoc": "(( y = (x + 1) << 2 ))\nnpm install",
             }
             for label, command in heredoc_runs.items():
                 with self.subTest(msg=label):

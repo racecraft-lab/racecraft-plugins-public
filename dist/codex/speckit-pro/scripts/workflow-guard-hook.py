@@ -101,6 +101,7 @@ def split_segments(command: str) -> list[str]:
     current: list[str] = []
     quote: str | None = None
     heredocs: list[tuple[str, bool, bool]] = []
+    arithmetic = arithmetic_spans(command)
     index = 0
     while index < len(command):
         char = command[index]
@@ -110,7 +111,8 @@ def split_segments(command: str) -> list[str]:
             index = heredoc_bodies(command, index + 1, heredocs, segments)
             heredocs = []
             continue
-        if quote is None and command.startswith("<<", index) and not command.startswith("<<<", index):
+        if (quote is None and command.startswith("<<", index) and not command.startswith("<<<", index)
+                and not any(start < index < end for start, end in arithmetic)):
             match = HEREDOC_RE.match(command, index)
             if match:
                 strip, single, double, backslash, bare = match.groups()
@@ -147,6 +149,23 @@ def split_segments(command: str) -> list[str]:
         index += 1
     segments.append("".join(current))
     return segments
+
+
+def arithmetic_spans(command: str) -> list[tuple[int, int]]:
+    """Spans of ``((`` ... ``))`` arithmetic, where ``<<`` is a shift, not a heredoc."""
+    spans: list[tuple[int, int]] = []
+    start = command.find("((")
+    while start >= 0:
+        depth = 0
+        end = start
+        while end < len(command):
+            depth += {"(": 1, ")": -1}.get(command[end], 0)
+            if depth == 0:
+                break
+            end += 1
+        spans.append((start, end))
+        start = command.find("((", end + 1)
+    return spans
 
 
 def heredoc_bodies(command: str, index: int, heredocs: list[tuple[str, bool, bool]], segments: list[str]) -> int:
