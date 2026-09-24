@@ -42,6 +42,7 @@ jobs:
   changes:
     name: Detect container preflight changes
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     permissions:
       contents: read
     outputs:
@@ -90,6 +91,7 @@ jobs:
     needs: [changes]
     if: needs.changes.result == 'success' && needs.changes.outputs.run_preflight == 'true'
     runs-on: ubuntu-24.04
+    timeout-minutes: 30
     container:
       image: python:3.11.15-bookworm@sha256:b7ae8a4dcc0ab327e333c5e46a3eaa6c1b0ff585bed77e01cd6de4be1325837e
       # `--init` gives the job container a zombie-reaping PID 1. Without it the
@@ -134,6 +136,7 @@ jobs:
     needs: [changes]
     if: needs.changes.result == 'success' && needs.changes.outputs.run_preflight == 'true'
     runs-on: ubuntu-24.04-arm
+    timeout-minutes: 30
     container:
       image: python:3.11.15-bookworm@sha256:b7ae8a4dcc0ab327e333c5e46a3eaa6c1b0ff585bed77e01cd6de4be1325837e
       # `--init` gives the job container a zombie-reaping PID 1. Without it the
@@ -176,6 +179,7 @@ jobs:
   windows-availability:
     name: Record Windows hosted-label enablement
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     permissions:
       contents: read
     outputs:
@@ -236,6 +240,7 @@ jobs:
     if: needs.changes.result == 'success' && needs.changes.outputs.run_preflight == 'true' && needs.windows-availability.outputs.x64_enabled == 'true'
     continue-on-error: true
     runs-on: windows-2025
+    timeout-minutes: 15
     permissions:
       contents: read
 
@@ -279,6 +284,7 @@ jobs:
     if: needs.changes.result == 'success' && needs.changes.outputs.run_preflight == 'true' && needs.windows-availability.outputs.arm64_enabled == 'true'
     continue-on-error: true
     runs-on: windows-11-arm
+    timeout-minutes: 15
     permissions:
       contents: read
 
@@ -321,6 +327,7 @@ jobs:
     needs: [changes, linux-amd64-preflight]
     if: always()
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     permissions:
       contents: read
 
@@ -365,6 +372,7 @@ jobs:
     needs: [changes, linux-arm64-preflight]
     if: always()
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     permissions:
       contents: read
 
