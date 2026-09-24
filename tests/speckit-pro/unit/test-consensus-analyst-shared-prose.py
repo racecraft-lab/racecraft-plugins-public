@@ -65,7 +65,7 @@ DISPATCH_GROUP = "RESEARCH DISPATCH"
 SHARED_INPUT_BULLETS = (
     "1. **Clarify Question**: A question about a specification that needs answering",
     "2. **Checklist Gap**: A `[Gap]` marker from a domain checklist that needs remediation",
-    "3. **Analyze Finding**: A CRITICAL or HIGH finding from `/speckit-analyze` "
+    "3. **Analyze Finding**: An unresolved finding of any severity from `/speckit-analyze` "
     "that needs fixing",
 )
 SHARED_INPUT_CLOSER = (

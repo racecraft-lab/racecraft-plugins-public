@@ -250,26 +250,37 @@ class ReleasePrDispatchTests(unittest.TestCase):
         )
         dispatch.dispatch_release_pr_checks(release_prs, run=fake_run)
 
-        self.assertEqual(1, len(calls))
-        argv, kwargs = calls[0]
         self.assertEqual(
             [
-                "gh",
-                "workflow",
-                "run",
-                "pr-checks.yml",
-                "--ref",
-                "release-please--branches--main--components--speckit-pro",
-                "-f",
-                "pr_number=302",
-                "-f",
-                "pr_title=chore(main): release speckit-pro 2.19.0",
-                "-f",
-                "base_ref=main",
+                [
+                    "gh",
+                    "workflow",
+                    "run",
+                    "pr-checks.yml",
+                    "--ref",
+                    "release-please--branches--main--components--speckit-pro",
+                    "-f",
+                    "pr_number=302",
+                    "-f",
+                    "base_ref=main",
+                ],
+                [
+                    "gh",
+                    "workflow",
+                    "run",
+                    "pr-metadata.yml",
+                    "--ref",
+                    "release-please--branches--main--components--speckit-pro",
+                    "-f",
+                    "pr_number=302",
+                    "-f",
+                    "pr_title=chore(main): release speckit-pro 2.19.0",
+                ],
             ],
-            argv,
+            [argv for argv, _kwargs in calls],
         )
-        self.assertEqual({"check": True, "shell": False}, kwargs)
+        for _argv, kwargs in calls:
+            self.assertEqual({"check": True, "shell": False}, kwargs)
 
     def test_dispatch_rejects_malformed_empty_and_incomplete_metadata(self) -> None:
         invalid_values = (
@@ -306,8 +317,31 @@ class ReleasePrDispatchTests(unittest.TestCase):
 
         self.assertEqual(1, returncode)
         self.assertEqual(1, len(calls))
-        self.assertIn("PR #1", stderr.getvalue())
+        self.assertIn("PR Checks dispatch failed for PR #1", stderr.getvalue())
         self.assertIn("child exit 17", stderr.getvalue())
+
+    def test_dispatch_reports_which_workflow_failed(self) -> None:
+        calls: list[list[str]] = []
+
+        def metadata_failing_run(argv, **_kwargs):
+            calls.append(list(argv))
+            if "pr-metadata.yml" in argv:
+                raise subprocess.CalledProcessError(9, argv)
+            return subprocess.CompletedProcess(argv, 0)
+
+        environment = {
+            "RELEASE_PRS": json.dumps(
+                [{"headRefName": "release/one", "number": 1, "title": "release one"}]
+            )
+        }
+        stderr = io.StringIO()
+        with redirect_stderr(stderr):
+            returncode = dispatch.main(environment, run=metadata_failing_run)
+
+        self.assertEqual(1, returncode)
+        self.assertEqual(["pr-checks.yml", "pr-metadata.yml"], [argv[3] for argv in calls])
+        self.assertIn("PR Metadata dispatch failed for PR #1", stderr.getvalue())
+        self.assertIn("child exit 9", stderr.getvalue())
 
 
 class ReleasePrIntegrityTests(unittest.TestCase):

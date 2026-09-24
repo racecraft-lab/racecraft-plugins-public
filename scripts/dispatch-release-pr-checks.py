@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Dispatch PR Checks for normalized release-please pull requests."""
+"""Dispatch PR Checks and PR Metadata for normalized release-please pull requests."""
 
 from __future__ import annotations
 
@@ -88,31 +88,52 @@ def dispatch_release_pr_checks(
     run: Callable[..., subprocess.CompletedProcess[Any]] = subprocess.run,
 ) -> None:
     for release_pr in release_prs:
-        argv = [
-            "gh",
-            "workflow",
-            "run",
-            "pr-checks.yml",
-            "--ref",
-            release_pr["branch"],
-            "-f",
-            f"pr_number={release_pr['number']}",
-            "-f",
-            f"pr_title={release_pr['title']}",
-            "-f",
-            "base_ref=main",
-        ]
-        try:
-            run(argv, check=True, shell=False)
-        except subprocess.CalledProcessError as exc:
-            raise DispatchError(
-                f"PR Checks dispatch failed for PR #{release_pr['number']} "
-                f"(child exit {exc.returncode})",
-            ) from exc
-        except OSError as exc:
-            raise DispatchError(
-                f"PR Checks dispatch failed for PR #{release_pr['number']}: {exc}"
-            ) from exc
+        # PR Checks runs the suite; PR Metadata runs the required title and
+        # release-note checks. Each workflow accepts only its own inputs.
+        dispatches = (
+            (
+                "PR Checks",
+                [
+                    "gh",
+                    "workflow",
+                    "run",
+                    "pr-checks.yml",
+                    "--ref",
+                    release_pr["branch"],
+                    "-f",
+                    f"pr_number={release_pr['number']}",
+                    "-f",
+                    "base_ref=main",
+                ],
+            ),
+            (
+                "PR Metadata",
+                [
+                    "gh",
+                    "workflow",
+                    "run",
+                    "pr-metadata.yml",
+                    "--ref",
+                    release_pr["branch"],
+                    "-f",
+                    f"pr_number={release_pr['number']}",
+                    "-f",
+                    f"pr_title={release_pr['title']}",
+                ],
+            ),
+        )
+        for workflow_name, argv in dispatches:
+            try:
+                run(argv, check=True, shell=False)
+            except subprocess.CalledProcessError as exc:
+                raise DispatchError(
+                    f"{workflow_name} dispatch failed for PR #{release_pr['number']} "
+                    f"(child exit {exc.returncode})",
+                ) from exc
+            except OSError as exc:
+                raise DispatchError(
+                    f"{workflow_name} dispatch failed for PR #{release_pr['number']}: {exc}"
+                ) from exc
 
 
 def main(

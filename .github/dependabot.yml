@@ -1,7 +1,7 @@
 # Dependabot configuration for racecraft-plugins-public.
-# This repo is a Claude Code plugin marketplace. Two things are tracked:
-# GitHub Actions pinned in `.github/workflows/`, and the Go module in
-# `typesafe-jev/`, the only package manifest that ships in a plugin.
+# This repo is a Claude Code plugin marketplace. It tracks the GitHub Actions
+# pinned in `.github/workflows/`, the docs site's pnpm dependencies, and the Go
+# module in `typesafe-jev/`, the only package manifest that ships in a plugin.
 #
 # Docs: https://docs.github.com/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
 
@@ -12,6 +12,29 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+
+  # The docs site. Astro, its integrations, and the Starlight plugins move
+  # together: bumping astro alone breaks them.
+  - package-ecosystem: "npm"
+    directory: "/docs-site"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    cooldown:
+      default-days: 7
+    groups:
+      astro-starlight:
+        patterns:
+          - "astro"
+          - "astro-*"
+          - "@astrojs/*"
+          - "starlight-*"
+      docs-site-tooling:
+        patterns:
+          - "*"
     commit-message:
       prefix: "chore"
       include: "scope"

@@ -9,7 +9,8 @@ from ..envelope import diagnostic, response
 from ..execution_control import run_execution_helper
 from ..formal.helper import run_formal_helper
 from ..research_preflight import run_research_broker_preflight_helper
-from .install import CODEX_OPTIONAL_HELPER_NAME, CODEX_REQUIRED_AGENT_NAMES, run_install_helper
+# The two CODEX_ names are re-exported: tests read them through the registry.
+from .install import CODEX_OPTIONAL_HELPER_NAME, CODEX_REQUIRED_AGENT_NAMES, run_install_helper  # noqa: F401
 from .mutation import empty_mutation, run_mutation_helper, run_spec_index_write, run_sweep_apply_result
 from .pr_emission import run_pr_emission_helper
 from .promotion import promotion_record

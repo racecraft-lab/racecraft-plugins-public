@@ -317,8 +317,12 @@ class ValidateToolScoping(unittest.TestCase):
             with self.subTest(msg=f"{agent_name} maxTurns exists and is positive"):
                 self.assertTrue(_positive_integer(_yaml_field(agent_file, "maxTurns")), "maxTurns must be positive")
 
-            with self.subTest(msg=f"{agent_name} effort field exists"):
-                self.assertNotEqual("", _yaml_field(agent_file, "effort"), "effort must not be empty")
+            if _yaml_field(agent_file, "model") == "haiku":
+                with self.subTest(msg=f"{agent_name} omits effort (Haiku does not support the effort parameter)"):
+                    self.assertEqual("", _yaml_field(agent_file, "effort"), "haiku agents must not set effort")
+            else:
+                with self.subTest(msg=f"{agent_name} effort field exists"):
+                    self.assertNotEqual("", _yaml_field(agent_file, "effort"), "effort must not be empty")
 
             with self.subTest(msg=f"{agent_name} does not reference retired TeamCreate tooling"):
                 self.assertNotIn("TeamCreate", _read(agent_file))

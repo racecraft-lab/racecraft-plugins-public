@@ -943,7 +943,6 @@ def _verify_claude_plugin_toolchain(
     _safe_directory(runtime_root, "Claude plugin toolchain directory", expected_mode=0o555)
     _safe_directory(bin_root, "Claude plugin bin directory")
     python_root = runtime_root / "python"
-    specify_root = runtime_root / "specify"
     staged = identity.get("staged")
     observed_staged = _claude_staged_identity(
         target,

@@ -79,7 +79,6 @@ POST_STEPS = [
     "Post: Code Review",
     "Post: Integration Suite",
     "Post: Reviewability Diff Gate",
-    "Post: Self-Review",
     "Post: UAT Runbook Generation",
     "Post: PR Body Generation",
     "Post: PR Creation",
@@ -445,7 +444,7 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
                 self.assertEqual(exit_code, 1)
                 self.assertEqual(len(report["missing_workflow_sections"]), 9)
                 self.assertEqual(len(report["missing_workflow_tokens"]), 3)
-                self.assertEqual(len(report["missing_workflow_post_items"]), 12)
+                self.assertEqual(len(report["missing_workflow_post_items"]), len(POST_STEPS))
 
     def test_workflow_checkpoint_claims_bind_marker_plan_commits(self) -> None:
         expected_commit = "a" * 40

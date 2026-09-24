@@ -45,9 +45,9 @@ extension is missing, still create the item but mark it
 `skipped: <extension> not installed`.
 
 This is the combined Codex plan: the numbered 10-19 gates from
-`post-implementation-codex.md` plus the four mandatory supporting tasks that
+`post-implementation-codex.md` plus the three mandatory supporting tasks that
 remain independently visible for resume safety. `Final Reviewability Backstop`
-owns the diff-gate/self-review/UAT boundary, and `PR Packet/Body Generation`
+owns the diff-gate/UAT boundary, and `PR Packet/Body Generation`
 owns the body-generation boundary; the supporting rows are evidence-producing
 steps, not substitutes for those numbered gates.
 
@@ -58,7 +58,6 @@ steps, not substitutes for those numbered gates.
   "Post: Code Review"                   ← built-in independent review (no ext)
   "Post: Integration Suite"             ← always required (no ext)
   "Post: Reviewability Diff Gate"       ← always required (no ext)
-  "Post: Self-Review"                   ← always required (no ext, 4-question audit)
   "Post: UAT Runbook Generation"        ← always required (no ext, skeleton script + author agent)
   "Post: Final Reviewability Backstop"  ← numbered Post 15 gate
   "Post: PR Packet/Body Generation"     ← numbered Post 16 gate
@@ -75,7 +74,7 @@ in the plan with status `skipped: <ext-name> not installed`. Never
 silently drop it.
 
 **Verify item-list completeness before starting Phase 1**: count
-the 14 entries above and confirm every single one is present in
+the 13 entries above and confirm every single one is present in
 both `update_plan` and `autopilot-state.json` (in addition to all
 Phase / Consensus items). If any are missing, ADD them before
 advancing. Then run
@@ -172,7 +171,6 @@ rule — which is why this clause is recorded here and not mirrored back.
     {"step": "Post: Code Review", "status": "pending"},
     {"step": "Post: Integration Suite", "status": "pending"},
     {"step": "Post: Reviewability Diff Gate", "status": "pending"},
-    {"step": "Post: Self-Review", "status": "pending"},
     {"step": "Post: UAT Runbook Generation", "status": "pending"},
     {"step": "Post: Final Reviewability Backstop", "status": "pending"},
     {"step": "Post: PR Packet/Body Generation", "status": "pending"},

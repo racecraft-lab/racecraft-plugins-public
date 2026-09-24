@@ -945,7 +945,8 @@ runner status `ok` with the verdict in the helper stdout JSON `status` field;
 - **`over_budget`, interactive use** → surface the over-budget result to the
   human as a decision.
 - **`not_estimated`** (`projected: null` — `plan.md` has no parseable declared
-  production-file structure) → record "not estimated (no declared production
+  production-file structure, or no declared entry counted as production code,
+  with the cause in `reason`) → record "not estimated (no declared production
   files)" and continue. Never treat this as a within-budget pass.
 - **diagnostic response** → record "estimator could not run" with the diagnostic code and
   continue the autonomous run.
@@ -1133,7 +1134,7 @@ update the preflight, and resolve it there.
           file's most recent Analysis Results table: fix each one and
           record the fix in that row's Resolution cell, which is what
           clears the deduction. The criterion breakdown will not point
-          at those rows, because the synthesizer no longer deducts for
+          at those rows, because the synthesizer does not deduct for
           findings. When false, read the JSON `criteria` object and
           target the lowest-scoring criterion.
        b. If iteration_count < 3:

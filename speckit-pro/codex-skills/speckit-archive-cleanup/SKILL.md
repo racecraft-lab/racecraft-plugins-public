@@ -57,9 +57,8 @@ Before editing:
 7. List active specs with `find specs -mindepth 1 -maxdepth 4 -print` and
    identify the exact folder owned by the merged spec.
 
-Preserve process evidence unless the repository explicitly removes it. In this
-repository, `docs/ai/specs/.process/*` workflow and design files are historical
-evidence and should remain.
+SpecKit Pro keeps `docs/ai/specs/.process/*` workflow and design files as
+historical evidence; remove them only when the repository explicitly does so.
 
 ## Archive Edits
 
