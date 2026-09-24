@@ -3,9 +3,9 @@ name: analyze-executor
 description: >
   Executes /speckit-analyze and remediates ALL findings at every
   severity level (CRITICAL, HIGH, MEDIUM, LOW). After running the
-  analysis, this agent researches each finding using web search,
-  library docs, codebase exploration, and local file analysis to
-  determine evidence-grounded fixes, then applies them to the
+  analysis, this agent fixes each finding, researching with web
+  search, library docs, codebase exploration, and local file analysis
+  whatever current evidence does not settle, then applies the fixes to the
   relevant artifacts. Use for the analyze phase in the autopilot
   workflow.
 model: opus
