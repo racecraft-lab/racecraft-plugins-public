@@ -1320,7 +1320,6 @@ def _clean_boundary_index(source_root: Path, source_manifest: dict,
                           carried_ids: tuple[str, ...]) -> tuple[dict, dict[str, bytes], dict]:
     """Construct an evidence index from one secure read of every source artifact."""
     cache: dict[str, bytes] = {}
-    cases = {row["case_id"]: row for row in source_manifest["roster"]}
     partial = {**source_manifest, "qualification_scope": "pr-core",
                "roster": [row for row in source_manifest["roster"]
                           if row["case_id"] in set(carried_ids)]}
@@ -1543,7 +1542,6 @@ def validate_clean_boundary_carry_forward(
     processes = _current_process_snapshot()
     runners, groups, workspaces = [], [], []
     for case_id in carried_ids:
-        case_root = source_root / "serial" / "candidate" / case_id
         launch = _json(cache[f"serial/candidate/{case_id}/launch.json"],
                        "clean-boundary runner launch")
         execution = _json(cache[f"serial/candidate/{case_id}/execution.json"],

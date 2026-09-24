@@ -212,7 +212,8 @@ it does NOT invoke a `/speckit-*` command.
    slot per the Step 0.11 rule: `COMPLEXITY` on the whole
    tracked source tree (a measurement; only exit 2 blocks),
    `MUTATION` as `deferred`, `DEPENDENCY_RULES` as a real
-   blocking run
+   blocking run, `DEPENDENCY_AUDIT` as a real blocking run only
+   when opted in
 3. Verify structural patterns documented in CLAUDE.md
    (e.g., source code organization, module boundaries)
 4. Record baselines in the workflow file's Prerequisites
@@ -221,7 +222,7 @@ it does NOT invoke a `/speckit-*` command.
 
 **Gate:** G0 — `quality_gates.status` from Step 0.11 must be
 `present`, all automated checks must pass, `DEPENDENCY_RULES`
-must pass, and no slot may exit 2. A `COMPLEXITY` baseline over
+must pass, and no blocking slot may exit 2. A `COMPLEXITY` baseline over
 the ceiling is recorded, not a block. If any fail, STOP; a missing or
 invalid `.specify/quality-gates.json` stops with the Step 0.11
 message naming the file and the coach flow.
@@ -403,7 +404,8 @@ runner status `ok` with the verdict in the helper stdout JSON `status` field;
 - **`over_budget`, interactive use** → surface the over-budget result to the
   human as a decision.
 - **`not_estimated`** (`projected: null` — `plan.md` has no parseable declared
-  production-file structure) → record "not estimated (no declared production
+  production-file structure, or no declared entry counted as production code,
+  with the cause in `reason`) → record "not estimated (no declared production
   files)" and continue. Never treat this as a within-budget pass.
 - **diagnostic response** → record "estimator could not run" with the diagnostic code and
   continue the autonomous run.
@@ -2643,6 +2645,9 @@ Then every populated quality-gate slot on the whole diff:
     record `n/a: no source files changed`
   Any failure blocks. Record each result in the Quality Gates table
   next to its G0 baseline.
+Then Command(DEPENDENCY_AUDIT) only when populated, which requires
+  `.specify/quality-gates.json` to list it in `enforce`; a failure
+  blocks. Otherwise it is `off` and never runs.
 ```
 
 When MUTATION is populated, run the hardener once per spec between the
@@ -2651,7 +2656,9 @@ MUTATION run and its block decision, per
 loop to local Qwen when `qwen_health` is good, else run it on the primary
 model; stop at the floor or the shared corrective/time ceiling; record the outcome on the
 Quality Gates table's `Hardener` line. Only after the hardener records its
-ending does a still-failing MUTATION block.
+ending does a still-failing MUTATION block. MUTATION fails on its exit
+status: `cr-rate --fail-over` for cosmic-ray, and the chained
+`mutation-score.py` floor check for StrykerJS.
 
 #### Agent Routing Table
 

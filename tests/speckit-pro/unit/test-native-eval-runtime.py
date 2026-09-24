@@ -167,7 +167,7 @@ class NativeEvalRuntimeTests(unittest.TestCase):
             "mode": "dry_run",
             "inputs": {
                 "destination": ".codex/agents",
-                "model": "gpt-5.6-sol",
+                "model": "gpt-6-sol",
             },
         }
         environment = dict(os.environ)
