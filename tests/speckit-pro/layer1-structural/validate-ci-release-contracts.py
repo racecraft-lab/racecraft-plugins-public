@@ -184,6 +184,7 @@ def yaml_syntax_sane(text: str) -> bool:
             nested_value = _NestedValue(indent, 'mapping')
     return True
 validate_pr_checks_sentinel_WORKFLOW_FILE = REPO_ROOT / '.github' / 'workflows' / 'pr-checks.yml'
+PR_METADATA_WORKFLOW_FILE = REPO_ROOT / '.github' / 'workflows' / 'pr-metadata.yml'
 ACTIONLINT_HELPER_FILE = REPO_ROOT / 'scripts' / 'install-actionlint.py'
 DOCS_CLASSIFIER_FILE = REPO_ROOT / 'scripts' / 'classify-docs-validation.py'
 RESULTS_HELPER_FILE = REPO_ROOT / 'scripts' / 'check-pr-workflow-results.py'
@@ -201,9 +202,11 @@ CONTAINER_IMAGE_PIN = 'python:3.11.15-bookworm@sha256:b7ae8a4dcc0ab327e333c5e46a
 CONTAINER_DISPATCH = 'run: import runpy; runpy.run_path("tests/speckit-pro/run-container-preflight.py", run_name="__main__")'
 SPEC_KIT_VERSION_PIN = 'SPEC_KIT_VERSION: v0.8.13'
 SPEC_KIT_REF_PIN = 'SPEC_KIT_GIT_REF: git+https://github.com/github/spec-kit.git@b2314680fce898e0a9151b37ad2535d810c93eef'
+PR_CHECKS_EVENTS_LITERAL = '[opened, reopened, synchronize, ready_for_review]'
+PR_CONCURRENCY_LINES = ('  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}', "  cancel-in-progress: ${{ github.event_name == 'pull_request' }}")
 UNIQUE_ARTIFACT_SUFFIX = '-${{ github.run_id }}-${{ github.run_attempt }}'
 TITLE_LITERAL = "TITLE: ${{ github.event_name == 'pull_request' && github.event.pull_request.title || inputs.pr_title }}"
-CONTENT_CHECKS: list[tuple[str, str, str, list[str]]] = [('workflow', 'all', 'title validation uses the live Python title gate', ['validate-pr-title-live.json', 'python3 -m speckit_pro_runner']), ('workflow', 'all', 'title validation supplies the live title', [TITLE_LITERAL]), ('workflow', 'all', 'workflow validation job is defined', ['validate-workflows:']), ('combined', 'all', 'workflow validation installs pinned actionlint', ['ACTIONLINT_VERSION: "1.7.12"', 'ACTIONLINT_SHA256: "8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8"', 'run: python3 scripts/install-actionlint.py install', 'https://github.com/rhysd/actionlint/releases/download/', 'verify_sha256(archive_path, pinned_sha256)']), ('combined', 'all', 'workflow validation runs actionlint over all workflows', ['run: python3 scripts/install-actionlint.py run', 'workflows_directory.glob("*.yml")', 'shell=False']), ('combined', 'all', 'Python-gated plugin matrix is emitted', ['Emit Python-gated plugin matrix', 'run: python3 scripts/emit-plugin-matrix.py', 'PLUGINS = ("speckit-pro",)']), ('workflow', 'all', 'workflow_dispatch trigger is defined', ['workflow_dispatch:']), ('workflow', 'all', 'dispatched PR checks identify the PR number', ['run-name: "PR Checks #', 'inputs.pr_number']), ('workflow', 'all', 'workflow_dispatch accepts PR check inputs', ['pr_number:', 'pr_title:', 'base_ref:']), ('workflow', 'all', 'detect supports dispatched release PR checks', ["github.event_name == 'workflow_dispatch' || github.event.pull_request.draft == false", "github.event_name == 'pull_request' && github.base_ref || inputs.base_ref"]), ('workflow', 'all', 'title validation supports dispatched release PR checks', ["github.event_name == 'pull_request' && github.event.pull_request.title || inputs.pr_title"]), ('workflow', 'all', 'sentinel depends on detect, test, and artifact-consistency jobs', ['needs: [detect, test, artifact-consistency]']), ('workflow', 'all', 'sentinel checks the artifact-consistency result', ['ARTIFACT_RESULT: ${{ needs.artifact-consistency.result }}', 'run: python3 scripts/check-pr-workflow-results.py']), ('workflow', 'all', 'sentinel runs if: always()', ['if: always()']), ('workflow', 'all', 'sentinel has only checkout read permission', ['validate-plugins:', 'contents: read']), ('workflow', 'absent', 'latest jq job is deferred', ['test-latest-jq:', 'latest_jq_result']), ('workflow', 'all', 'test job dispatches runner toolchain gate', ['run-toolchain-preflight.json', 'PYTHONPATH="${PLUGIN}" python3 -m speckit_pro_runner']), ('workflow', 'all', 'test job dispatches runner default suite gate', ['run-default-suite.json', 'PYTHONPATH="${PLUGIN}" python3 -m speckit_pro_runner']), ('workflow', 'all', 'docs validation dispatches runner toolchain preflight', ['Report docs toolchain', 'run-toolchain-preflight-docs.json']), ('workflow', 'absent', 'docs validation does not dispatch bash toolchain check', ['bash tests/speckit-pro/check-toolchain.sh --mode docs']), ('combined', 'all', 'sentinel checks detect_result for failure', ['DETECT_RESULT: ${{ needs.detect.result }}', 'detect_result in {"failure", "cancelled"}']), ('combined', 'all', 'sentinel checks test_result for success or skipped', ['TEST_RESULT: ${{ needs.test.result }}', 'test_result not in {"success", "skipped"}']), ('combined', 'all', 'sentinel exits 0 on success or skipped', ['Plugin tests passed or were skipped', 'artifact_result not in {"success", "skipped"}']), ('combined', 'all', 'sentinel exits 1 on detect failure', ['"failure"']), ('combined', 'all', 'sentinel exits 1 on detect cancellation', ['"cancelled"'])]
+CONTENT_CHECKS: list[tuple[str, str, str, list[str]]] = [('metadata', 'all', 'title validation uses the live Python title gate', ['validate-pr-title-live.json', 'python3 -m speckit_pro_runner']), ('metadata', 'all', 'title validation supplies the live title', [TITLE_LITERAL]), ('metadata', 'all', 'metadata jobs keep the required context names', ['validate-pr-title:', 'validate-release-note:', 'name: validate-release-note']), ('metadata', 'all', 'metadata supports dispatched release PR checks', ['workflow_dispatch:', 'run-name: "PR Metadata #', 'inputs.pr_number', 'pr_number:', 'pr_title:', "github.event_name == 'workflow_dispatch' || github.event.pull_request.draft == false"]), ('metadata', 'all', 'release-note validation receives PR text through env values', ['PR_TITLE: ', 'PR_BODY: ', 'PR_LABELS_JSON: ', 'run: python3 scripts/compose-release-notes.py --validate-pr']), ('workflow', 'absent', 'PR Checks no longer reports the metadata contexts', ['validate-pr-title:', 'validate-release-note:', 'pr_title:', 'inputs.pr_title']), ('workflow', 'all', 'workflow validation job is defined', ['validate-workflows:']), ('combined', 'all', 'workflow validation installs pinned actionlint', ['ACTIONLINT_VERSION: "1.7.12"', 'ACTIONLINT_SHA256: "8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8"', 'run: python3 scripts/install-actionlint.py install', 'https://github.com/rhysd/actionlint/releases/download/', 'verify_sha256(archive_path, pinned_sha256)']), ('combined', 'all', 'workflow validation runs actionlint over all workflows', ['run: python3 scripts/install-actionlint.py run', 'workflows_directory.glob("*.yml")', 'shell=False']), ('combined', 'all', 'Python-gated plugin matrix is emitted', ['Emit Python-gated plugin matrix', 'run: python3 scripts/emit-plugin-matrix.py', 'PLUGINS = ("speckit-pro",)']), ('workflow', 'all', 'workflow_dispatch trigger is defined', ['workflow_dispatch:']), ('workflow', 'all', 'dispatched PR checks identify the PR number', ['run-name: "PR Checks #', 'inputs.pr_number']), ('workflow', 'all', 'workflow_dispatch accepts PR check inputs', ['pr_number:', 'base_ref:']), ('workflow', 'all', 'detect supports dispatched release PR checks', ["github.event_name == 'workflow_dispatch' || github.event.pull_request.draft == false", "github.event_name == 'pull_request' && github.base_ref || inputs.base_ref"]), ('metadata', 'all', 'title validation supports dispatched release PR checks', ["github.event_name == 'pull_request' && github.event.pull_request.title || inputs.pr_title"]), ('workflow', 'all', 'sentinel depends on detect, test, and artifact-consistency jobs', ['needs: [detect, test, artifact-consistency]']), ('workflow', 'all', 'sentinel checks the artifact-consistency result', ['ARTIFACT_RESULT: ${{ needs.artifact-consistency.result }}', 'run: python3 scripts/check-pr-workflow-results.py']), ('workflow', 'all', 'sentinel runs if: always()', ['if: always()']), ('workflow', 'all', 'sentinel has only checkout read permission', ['validate-plugins:', 'contents: read']), ('workflow', 'absent', 'latest jq job is deferred', ['test-latest-jq:', 'latest_jq_result']), ('workflow', 'all', 'test job dispatches runner toolchain gate', ['run-toolchain-preflight.json', 'PYTHONPATH="${PLUGIN}" python3 -m speckit_pro_runner']), ('workflow', 'all', 'test job dispatches runner default suite gate', ['run-default-suite.json', 'PYTHONPATH="${PLUGIN}" python3 -m speckit_pro_runner']), ('workflow', 'all', 'docs validation dispatches runner toolchain preflight', ['Report docs toolchain', 'run-toolchain-preflight-docs.json']), ('workflow', 'absent', 'docs validation does not dispatch bash toolchain check', ['bash tests/speckit-pro/check-toolchain.sh --mode docs']), ('combined', 'all', 'sentinel checks detect_result for failure', ['DETECT_RESULT: ${{ needs.detect.result }}', 'detect_result in {"failure", "cancelled"}']), ('combined', 'all', 'sentinel checks test_result for success or skipped', ['TEST_RESULT: ${{ needs.test.result }}', 'test_result not in {"success", "skipped"}']), ('combined', 'all', 'sentinel exits 0 on success or skipped', ['Plugin tests passed or were skipped', 'artifact_result not in {"success", "skipped"}']), ('combined', 'all', 'sentinel exits 1 on detect failure', ['"failure"']), ('combined', 'all', 'sentinel exits 1 on detect cancellation', ['"cancelled"'])]
 CONTAINER_JOBS = ('changes', 'linux-amd64-preflight', 'linux-arm64-preflight', 'windows-availability', 'windows-x64-smoke', 'windows-arm64-smoke', 'linux-amd64', 'linux-arm64')
 LINUX_REQUESTS = ('run-toolchain-preflight.json', 'run-default-suite.json', 'repository-bash-confinement/requests/repo-bash-confinement.json', 'installed-plugin-release/requests/runner-invocation.json', 'installed-plugin-release/requests/active-runtime-guard.json', 'installed-plugin-release/requests/payload-completeness.json', 'installed-plugin-release/requests/release-readiness.json')
 EXPECTED_PERMISSIONS = {'changes': 'contents: read', 'linux-amd64-preflight': 'contents: read', 'linux-arm64-preflight': 'contents: read', 'windows-availability': 'contents: read', 'windows-x64-smoke': 'contents: read', 'windows-arm64-smoke': 'contents: read', 'linux-amd64': 'contents: read', 'linux-arm64': 'contents: read'}
@@ -231,7 +234,10 @@ class ValidatePrChecksSentinel(unittest.TestCase):
         content = validate_pr_checks_sentinel_WORKFLOW_FILE.read_text(encoding='utf-8') if validate_pr_checks_sentinel_WORKFLOW_FILE.is_file() else ''
         helper_files = (ACTIONLINT_HELPER_FILE, DOCS_CLASSIFIER_FILE, RESULTS_HELPER_FILE, MATRIX_HELPER_FILE)
         helper_contents = {path: path.read_text(encoding='utf-8') if path.is_file() else '' for path in helper_files}
-        sources = {'workflow': content, 'combined': '\n'.join((content, *helper_contents.values()))}
+        metadata_content = PR_METADATA_WORKFLOW_FILE.read_text(encoding='utf-8') if PR_METADATA_WORKFLOW_FILE.is_file() else ''
+        sources = {'workflow': content, 'metadata': metadata_content, 'combined': '\n'.join((content, *helper_contents.values()))}
+        with self.subTest(msg='pr-metadata.yml exists'):
+            self.assertTrue(PR_METADATA_WORKFLOW_FILE.is_file(), f'file not found: {PR_METADATA_WORKFLOW_FILE}')
         with self.subTest(msg='validate-plugins job is defined'):
             self.assertIn('validate-plugins:', content)
         with self.subTest(msg='validate-plugins has name: validate-plugins'):
@@ -270,7 +276,7 @@ class ValidatePrChecksSentinel(unittest.TestCase):
             self.assertNotRegex(content, direct_jq)
             self.assertIsNone(direct_jq.search('gh pr view 123 --jq .title'))
             self.assertIsNotNone(direct_jq.search('jq -r .title result.json'))
-            run_commands = re.findall('(?m)^\\s+run:\\s*([^\\n]+)$', content)
+            run_commands = re.findall('(?m)^\\s+run:\\s*([^\\n]+)$', content + '\n' + metadata_content)
             self.assertTrue(run_commands)
             for command in run_commands:
                 for shell_token in ('|', '&', ';', '<<', '>', '$(', '<(', '`', '*'):
@@ -296,6 +302,17 @@ class ValidatePrChecksSentinel(unittest.TestCase):
             self.assertNotIn('sha256sum', content)
             self.assertNotIn('curl ', content)
             self.assertNotIn('tar ', content)
+        with self.subTest(msg='PR Checks ignores title, body, and label edits'):
+            pull_request_trigger = _mapping_block(content, 'pull_request', 2)
+            self.assertEqual([PR_CHECKS_EVENTS_LITERAL], _scalar_values(pull_request_trigger, 'types', 4))
+        with self.subTest(msg='PR Checks supersedes stale runs for the same PR only'):
+            for concurrency_line in PR_CONCURRENCY_LINES:
+                self.assertIn(concurrency_line, content)
+        with self.subTest(msg='PR Metadata never cancels a same-SHA run'):
+            self.assertNotIn('concurrency:', metadata_content)
+            metadata_permissions = _job_block(metadata_content, 'validate-pr-title') + _job_block(metadata_content, 'validate-release-note')
+            self.assertNotIn('write', metadata_permissions)
+            self.assertRegex(metadata_content, '(?m)^permissions:\\s*\\{\\}\\s*$')
 
     def test_container_preflight(self) -> None:
         with self.subTest(msg='container-preflight.yml exists'):
@@ -542,6 +559,7 @@ class ValidatePrChecksSentinel(unittest.TestCase):
             self.assertNotIn('shell=True', dispatch_content)
 validate_release_workflow_WORKFLOW_FILE = REPO_ROOT / '.github' / 'workflows' / 'release.yml'
 PR_CHECKS_WORKFLOW_FILE = REPO_ROOT / '.github' / 'workflows' / 'pr-checks.yml'
+RELEASE_NOTE_WORKFLOW_FILE = REPO_ROOT / '.github' / 'workflows' / 'pr-metadata.yml'
 COMPOSER_FILE = REPO_ROOT / 'scripts' / 'compose-release-notes.py'
 AUDIT_HELPER_FILE = REPO_ROOT / 'scripts' / 'audit-release-notes.py'
 DISPATCH_HELPER_FILE = REPO_ROOT / 'scripts' / 'dispatch-release-pr-checks.py'
@@ -641,6 +659,7 @@ class ValidateReleaseWorkflow(unittest.TestCase):
             self.assertTrue(validate_release_workflow_WORKFLOW_FILE.is_file(), f'file not found: {validate_release_workflow_WORKFLOW_FILE}')
         content = validate_release_workflow_WORKFLOW_FILE.read_text(encoding='utf-8') if validate_release_workflow_WORKFLOW_FILE.is_file() else ''
         pr_checks_content = PR_CHECKS_WORKFLOW_FILE.read_text(encoding='utf-8') if PR_CHECKS_WORKFLOW_FILE.is_file() else ''
+        release_note_workflow_content = RELEASE_NOTE_WORKFLOW_FILE.read_text(encoding='utf-8') if RELEASE_NOTE_WORKFLOW_FILE.is_file() else ''
         composer_content = COMPOSER_FILE.read_text(encoding='utf-8') if COMPOSER_FILE.is_file() else ''
         audit_helper_content = AUDIT_HELPER_FILE.read_text(encoding='utf-8') if AUDIT_HELPER_FILE.is_file() else ''
         dispatch_helper_content = DISPATCH_HELPER_FILE.read_text(encoding='utf-8') if DISPATCH_HELPER_FILE.is_file() else ''
@@ -663,7 +682,7 @@ class ValidateReleaseWorkflow(unittest.TestCase):
         audit_upload_step = _named_step_block(composer_job, 'Upload immutable release note audit')
         audit_record_step = _named_step_block(composer_job, 'Record immutable audit artifact')
         with self.subTest(msg='release workflow can dispatch PR checks'):
-            self.assertTrue(_contains_all(content + dispatch_helper_content, ('actions: write', 'scripts/dispatch-release-pr-checks.py', '"gh",', '"workflow",', '"run",', '"pr-checks.yml",', '"--ref",', 'f"pr_number={release_pr[\'number\']}"', 'f"pr_title={release_pr[\'title\']}"', '"base_ref=main",', 'check=True', 'shell=False')), 'expected release workflow to dispatch PR Checks for release-please PR branches')
+            self.assertTrue(_contains_all(content + dispatch_helper_content, ('actions: write', 'scripts/dispatch-release-pr-checks.py', '"gh",', '"workflow",', '"run",', '"pr-checks.yml",', '"pr-metadata.yml",', '"--ref",', 'f"pr_number={release_pr[\'number\']}"', 'f"pr_title={release_pr[\'title\']}"', '"base_ref=main",', 'check=True', 'shell=False')), 'expected release workflow to dispatch PR Checks and PR Metadata for release-please PR branches')
         with self.subTest(msg='required workflow gate rejects dropped commits cited by resolved release reviews'):
             integrity_helper = REPO_ROOT / 'scripts' / 'validate-release-pr-integrity.py'
             integrity_content = integrity_helper.read_text(encoding='utf-8') if integrity_helper.is_file() else ''
@@ -727,7 +746,7 @@ class ValidateReleaseWorkflow(unittest.TestCase):
             missed = [sample for sample in samples if MAIN_PUSH_RE.search(sample) is None]
             self.assertEqual([], missed, f'main-push regex missed: {missed}')
         with self.subTest(msg='release note validation covers all seven pull request events'):
-            pull_request_trigger = _mapping_block(pr_checks_content, 'pull_request', 2)
+            pull_request_trigger = _mapping_block(release_note_workflow_content, 'pull_request', 2)
             event_values = _scalar_values(pull_request_trigger, 'types', 4)
             self.assertEqual(1, len(event_values), 'expected one pull_request event list')
             self.assertEqual(RELEASE_NOTE_EVENTS, _inline_list(event_values[0]))
