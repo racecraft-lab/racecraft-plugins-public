@@ -121,6 +121,24 @@ class CrapScoreTests(unittest.TestCase):
                 self.assertEqual(2, code)
                 self.assertIn("unrecognised", stderr)
 
+        with self.subTest(msg="typescript on bun: a malformed oxlint span is a parse failure, not a crash"):
+            import tempfile
+            malformed = {
+                "missing offset": {"line": 1, "length": 54},
+                "string length": {"line": 1, "offset": 7, "length": "54"},
+                "span not an object": "1:7",
+            }
+            for label, span in malformed.items():
+                with tempfile.TemporaryDirectory() as tmp:
+                    bad = Path(tmp) / "oxlint.json"
+                    data = json.loads((REPO_ROOT / FIXTURES / "oxlint.json").read_text(encoding="utf-8"))
+                    data["diagnostics"][0]["labels"] = [{"span": span}]
+                    bad.write_text(json.dumps(data), encoding="utf-8")
+                    code, _, stderr = run("--language", "typescript", "--complexity-tool", "oxlint", "--oxlint-json", str(bad),
+                                          "--coverage-lcov", f"{FIXTURES}/coverage.lcov", *tight, "--", f"{FIXTURES}/sample.ts")
+                    self.assertEqual(2, code, label)
+                    self.assertIn("unrecognised", stderr, label)
+
         with self.subTest(msg="lcov coverage without oxlint spans is refused, never a pass"):
             code, _, stderr = run("--language", "typescript", "--eslint-json", f"{FIXTURES}/eslint.json",
                                   "--coverage-lcov", f"{FIXTURES}/coverage.lcov", *tight, "--", f"{FIXTURES}/sample.ts")

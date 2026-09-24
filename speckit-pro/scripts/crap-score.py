@@ -292,8 +292,9 @@ def oxlint_functions(args: argparse.Namespace, paths: list[Path], cwd: Path) -> 
             if diagnostic.get("code") != "eslint(complexity)" or not same_file(diagnostic.get("filename", ""), path, cwd):
                 continue
             match = ESLINT_COMPLEXITY_RE.match(diagnostic.get("message", ""))
-            span = (diagnostic.get("labels") or [{}])[0].get("span", {})
-            if not match or not isinstance(span.get("line"), int):
+            labels = diagnostic.get("labels")
+            span = labels[0].get("span") if isinstance(labels, list) and labels and isinstance(labels[0], dict) else None
+            if not match or not isinstance(span, dict) or not all(isinstance(span.get(key), int) for key in ("line", "offset", "length")):
                 raise ToolError(f"unrecognised oxlint complexity diagnostic: {diagnostic.get('message')!r}")
             start = span["line"]
             # The span covers the whole function in UTF-8 bytes; its last line is
