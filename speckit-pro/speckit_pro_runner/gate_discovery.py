@@ -1,7 +1,8 @@
 """Validate the gate discovery table that fills the quality-gate slots.
 
 The table maps a repository signal to the tool and command for one
-PROJECT_COMMANDS slot (COMPLEXITY, MUTATION, DEPENDENCY_RULES). The JSON
+PROJECT_COMMANDS slot (COMPLEXITY, MUTATION, DEPENDENCY_RULES, and the
+opt-in DEPENDENCY_AUDIT). The JSON
 schema in ``contracts/gate-discovery-table.schema.json`` documents the shape;
 this module enforces the same rules with the standard library only, because
 nothing in the plugin validates JSON schema locally.
@@ -23,23 +24,32 @@ from pathlib import Path
 from typing import Any
 
 SCHEMA_VERSION = "1.0"
-LANGUAGES = ("python", "typescript")
-SLOTS = ("COMPLEXITY", "MUTATION", "DEPENDENCY_RULES")
+LANGUAGES = ("python", "typescript", "go", "rust")
+SLOTS = ("COMPLEXITY", "MUTATION", "DEPENDENCY_RULES", "DEPENDENCY_AUDIT")
+# An opt-in slot never runs unless .specify/quality-gates.json lists it in
+# `enforce`; listed, it runs and blocks like any other slot. A dependency
+# audit resolves the checkout's own registry configuration, so running one
+# must be the operator's choice, never a default.
+OPT_IN_SLOTS = ("DEPENDENCY_AUDIT",)
+OPT_IN_REASON = "runs only when .specify/quality-gates.json lists it in enforce"
 SIGNAL_KINDS = ("file",)
 _DRIVE_PREFIX_RE = re.compile(r"^[A-Za-z]:")
 ROW_FIELDS = ("language", "slot", "signal", "tool", "install", "command")
 OPTIONAL_ROW_FIELDS = ("probe",)
 PLACEHOLDERS = frozenset(
-    {"ceiling", "complexity_ceiling", "floor", "survival_ceiling", "rules_path", "paths", "paths_csv", "plugin_root"}
+    {"ceiling", "complexity_ceiling", "floor", "survival_ceiling", "rules_path", "base_branch", "paths", "paths_csv", "plugin_root"}
 )
 DEFAULT_TABLE = Path(__file__).resolve().parent / "gate_discovery_table.json"
 REPO_OVERRIDE = ".specify/gate-discovery.json"
-STACK_LANGUAGE = {"python": "python", "nodejs": "typescript"}
+STACK_LANGUAGE = {"python": "python", "nodejs": "typescript", "go": "go", "rust": "rust"}
+# The branch the mutation filter diffs against when origin/HEAD is not set;
+# the orchestrator's own change base is origin/main...HEAD.
+DEFAULT_BASE_BRANCH = "origin/main"
 # Used only when .specify/quality-gates.json is missing or invalid, so the
 # operator can still see what would run; G0 fails until the file exists.
 DEFAULT_THRESHOLDS = {
     "ceiling": "30",
-    "complexity_ceiling": "8",
+    "complexity_ceiling": "10",
     "floor": "60",
     "survival_ceiling": "40",
 }
@@ -180,6 +190,8 @@ def resolve_slots(
     which: Any,
     thresholds: dict[str, str] | None = None,
     skips: dict[str, Any] | None = None,
+    enforce: Any = (),
+    base_branch: str = DEFAULT_BASE_BRANCH,
 ) -> dict[str, dict[str, Any]]:
     """Fill the quality-gate slots for ``stack`` from the discovery table.
 
@@ -189,8 +201,10 @@ def resolve_slots(
     Within one slot the first row whose signal file exists wins. A slot
     named in ``skips`` (from quality-gates.json) is reported as skipped and
     never populated. Thresholds (``thresholds`` placeholder values from
-    quality-gates.json, else the shipped defaults) and ``{rules_path}`` are
-    substituted here;
+    quality-gates.json, else the shipped defaults), ``{rules_path}``, and
+    ``{base_branch}`` (the caller's resolved change base) are substituted here;
+    an opt-in slot not named in ``enforce`` is ``off`` with command ``N/A``,
+    whatever signal files or overrides exist;
     ``{paths}`` and ``{plugin_root}`` stay literal because the orchestrator
     fills them at run time, which also keeps machine-specific paths out of
     the recorded workflow file. ``file_exists(path)`` and ``which(name)`` are
@@ -202,6 +216,9 @@ def resolve_slots(
     for slot, entry in (skips or {}).items():
         if slot in slots:
             slots[slot] = {"status": "skipped", "command": "N/A", "reason": entry.get("reason", "")}
+    for slot in OPT_IN_SLOTS:
+        if slot not in (enforce or ()) and slots[slot]["status"] != "skipped":
+            slots[slot] = {"status": "off", "command": "N/A", "reason": OPT_IN_REASON}
     language = STACK_LANGUAGE.get(stack)
     if language is None:
         return slots
@@ -225,13 +242,14 @@ def resolve_slots(
         if row["language"] != language:
             continue
         entry = slots[row["slot"]]
-        if entry["status"] in ("populated", "skipped"):
+        if entry["status"] in ("populated", "skipped", "off"):
             continue
         signal_path = row["signal"]["path"]
         if not file_exists(repo_root / signal_path):
             continue
         command = row["command"]
-        for name, value in {**(thresholds or DEFAULT_THRESHOLDS), "rules_path": signal_path}.items():
+        values = {**(thresholds or DEFAULT_THRESHOLDS), "rules_path": signal_path, "base_branch": base_branch}
+        for name, value in values.items():
             command = command.replace("{" + name + "}", value)
         probe = row.get("probe", [])
         entry.update(

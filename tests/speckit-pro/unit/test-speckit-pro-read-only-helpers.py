@@ -3138,6 +3138,95 @@ class ReadOnlyHelperTests(unittest.TestCase):
 
         return json.loads(detect_commands({}, project_path)["stdout"])
 
+    @staticmethod
+    def _helper_json(helper: str, inputs: dict[str, object], project_path: Path) -> tuple[int, dict[str, object]]:
+        from speckit_pro_runner.helpers import read_only
+
+        result = getattr(read_only, helper)(inputs, project_path)
+        return result["exit_code"], json.loads(result["stdout"])
+
+    def test_clarification_counters_match_bare_and_colon_markers(self) -> None:
+        """The spec template writes `[NEEDS CLARIFICATION: ...]`; every counter must see it."""
+        if self.helper_filter and self.helper_filter not in {"validate-gate", "count-markers"}:
+            self.skipTest("marker-form cases use validate-gate and count-markers")
+        with helper_project() as project_path:
+            feature = project_path / "specs" / "001-demo"
+            feature.mkdir(parents=True)
+            (feature / "spec.md").write_text(
+                "- FR-001: Log in via [NEEDS CLARIFICATION: auth method not specified]\n"
+                "- FR-002: Keep data for [NEEDS CLARIFICATION]\n"
+                "The phrase NEEDS CLARIFICATION in plain prose is not a marker.\n"
+                "Neither is [NEEDS CLARIFICATIONS] or (NEEDS CLARIFICATION: x).\n",
+                encoding="utf-8",
+            )
+            (feature / "plan.md").write_text("Plan text [NEEDS CLARIFICATION: storage engine]\n", encoding="utf-8")
+            inputs = {"feature_dir": "specs/001-demo"}
+            for gate in ("G1", "G2"):
+                with self.subTest(gate=gate):
+                    code, payload = self._helper_json("validate_gate", {**inputs, "gate": gate}, project_path)
+                    self.assertEqual(1, code)
+                    self.assertFalse(payload["pass"])
+                    self.assertEqual(2, payload["markers"])
+                    self.assertEqual(2, len(payload["details"]))
+            code, payload = self._helper_json("validate_gate", {**inputs, "gate": "G3"}, project_path)
+            self.assertEqual(1, code)
+            self.assertIn("NC:1", payload["reason"])
+            code, payload = self._helper_json("count_markers", {**inputs, "type": "clarifications"}, project_path)
+            self.assertEqual((0, 3, 2, 1), (code, payload["total"], payload["spec"], payload["plan"]))
+            self.assertEqual(2, len(payload["details"]))
+            code, payload = self._helper_json("count_markers", {**inputs, "type": "all"}, project_path)
+            self.assertEqual(3, payload["clarifications"])
+            (feature / "spec.md").write_text("The phrase NEEDS CLARIFICATION in prose only.\n", encoding="utf-8")
+            code, payload = self._helper_json("validate_gate", {**inputs, "gate": "G2"}, project_path)
+            self.assertEqual((0, True, 0), (code, payload["pass"], payload["markers"]))
+
+    def test_validate_gate_g4_counts_checklist_gaps(self) -> None:
+        if self.helper_filter and self.helper_filter != "validate-gate":
+            self.skipTest("G4 checklist case uses validate-gate")
+        with helper_project() as project_path:
+            feature = project_path / "specs" / "001-demo"
+            (feature / "checklists").mkdir(parents=True)
+            (feature / "spec.md").write_text("spec\n", encoding="utf-8")
+            (feature / "plan.md").write_text("plan\n", encoding="utf-8")
+            (feature / "checklists" / "security.md").write_text(
+                "- [ ] CHK001 Is token expiry defined? [Gap]\n- [ ] CHK002 Are roles listed? [Gap]\n", encoding="utf-8"
+            )
+            code, payload = self._helper_json("validate_gate", {"gate": "G4", "feature_dir": "specs/001-demo"}, project_path)
+            self.assertEqual(1, code)
+            self.assertEqual(2, payload["markers"])
+            self.assertIn("checklists:2", payload["reason"])
+            (feature / "checklists" / "security.md").write_text("- [x] CHK001 Is token expiry defined?\n", encoding="utf-8")
+            code, payload = self._helper_json("validate_gate", {"gate": "G4", "feature_dir": "specs/001-demo"}, project_path)
+            self.assertEqual((0, True), (code, payload["pass"]))
+
+    def test_estimate_reviewable_loc_does_not_pass_when_no_production_file_counts(self) -> None:
+        if self.helper_filter and self.helper_filter != "estimate-reviewable-loc":
+            self.skipTest("estimator stack cases use estimate-reviewable-loc")
+
+        def estimate(project_path: Path, *entries: str) -> dict[str, object]:
+            body = "\n".join(f"- NEW {entry}" for entry in entries)
+            (project_path / "plan.md").write_text(f"# Plan\n\n## Declared File Operations\n\n{body}\n", encoding="utf-8")
+            code, payload = self._helper_json("estimate_reviewable_loc", {"plan_file": "plan.md"}, project_path)
+            self.assertEqual(0, code)
+            return payload
+
+        with helper_project() as project_path:
+            payload = estimate(project_path, "docs/guide.md", "README.md")
+            self.assertEqual("not_estimated", payload["status"])
+            self.assertIsNone(payload["projected"])
+            self.assertIn("no declared entry counted as production", payload["reason"])
+            self.assertEqual(2, payload["declared_files"]["total_entries"])
+            for label, entries, expected in (
+                ("python package", ("mypkg/service.py", "tests/test_service.py"), 1),
+                ("go layout", ("cmd/api/main.go", "internal/store/store.go", "internal/store/store_test.go"), 2),
+                ("rust layout", ("crates/core/src/lib.rs", "crates/core/tests/it.rs"), 1),
+                ("java layout", ("src/main/java/App.java", "service/src/main/kotlin/Api.kt"), 2),
+            ):
+                with self.subTest(layout=label):
+                    payload = estimate(project_path, *entries)
+                    self.assertEqual("pass", payload["status"])
+                    self.assertEqual(expected, payload["declared_files"]["production"])
+
     def test_detect_commands_finds_repository_test_runner(self) -> None:
         """A runner script under tests/ is real, verifiable evidence of a test command.
 
@@ -3218,10 +3307,82 @@ class ReadOnlyHelperTests(unittest.TestCase):
             payload = self._detected(project_path)
             self.assertEqual("invalid", payload["quality_gates"]["status"])
             self.assertTrue(payload["quality_gates"]["problems"])
-            self.assertIn("--ceiling 30 --complexity-ceiling 8", payload["commands"]["COMPLEXITY"])
+            self.assertIn("--ceiling 30 --complexity-ceiling 10", payload["commands"]["COMPLEXITY"])
         with tempfile.TemporaryDirectory(prefix="read-only-helper-project-") as project:
             payload = self._detected(Path(project).resolve())
             self.assertEqual({"N/A"}, {payload["commands"][slot] for slot in ("COMPLEXITY", "MUTATION", "DEPENDENCY_RULES")})
+
+    def test_detect_commands_fills_lint_and_typecheck_only_on_a_tool_signal(self) -> None:
+        if self.helper_filter and self.helper_filter != "detect-commands":
+            self.skipTest("lint default case uses detect-commands")
+        cases = (
+            ("no python signal", {"pyproject.toml": "[project]\nname = 'x'\n"}, "N/A", "N/A"),
+            ("ruff.toml", {"pyproject.toml": "", "ruff.toml": ""}, "ruff check", "N/A"),
+            ("tool.ruff and tool.mypy", {"pyproject.toml": "[tool.ruff]\nline-length = 100\n[tool.mypy]\nstrict = true\n"}, "ruff check", "mypy ."),
+            ("ruff dev dependency", {"pyproject.toml": "[dependency-groups]\ndev = [\"ruff>=0.6\"]\n"}, "ruff check", "N/A"),
+            ("requirements pin", {"requirements-dev.txt": "ruff==0.6.0\n", "requirements.txt": ""}, "ruff check", "N/A"),
+            ("mypy.ini", {"setup.py": "", "mypy.ini": "[mypy]\n"}, "N/A", "mypy ."),
+            ("setup.cfg mypy section", {"setup.cfg": "[mypy]\nstrict = True\n"}, "N/A", "mypy ."),
+            ("go", {"go.mod": "module x\n"}, "go vet ./...", "N/A"),
+            ("rust", {"Cargo.toml": "[package]\n"}, "cargo clippy -- -D warnings", "N/A"),
+        )
+        for label, files, lint, typecheck in cases:
+            with self.subTest(case=label):
+                with tempfile.TemporaryDirectory(prefix="read-only-helper-project-") as project:
+                    project_path = Path(project).resolve()
+                    for name, text in files.items():
+                        (project_path / name).write_text(text, encoding="utf-8")
+                    payload = self._detected(project_path)
+                    self.assertEqual((lint, typecheck), (payload["commands"]["LINT"], payload["commands"]["TYPECHECK"]))
+                    if lint != "N/A":
+                        self.assertIn(lint, payload["commands"]["FULL_VERIFY"])
+
+    def test_detect_commands_reports_the_base_branch_for_the_mutation_filter(self) -> None:
+        if self.helper_filter and self.helper_filter != "detect-commands":
+            self.skipTest("base branch case uses detect-commands")
+        git_env = {**os.environ, "GIT_CONFIG_GLOBAL": os.devnull, "GIT_CONFIG_NOSYSTEM": "1"}
+
+        def git(project_path: Path, *args: str) -> None:
+            subprocess.run(["git", "-C", str(project_path), *args], check=True, capture_output=True, env=git_env)
+
+        with tempfile.TemporaryDirectory(prefix="read-only-helper-project-") as project:
+            project_path = Path(project).resolve()
+            (project_path / "pyproject.toml").write_text("", encoding="utf-8")
+            (project_path / "cosmic-ray.toml").write_text("", encoding="utf-8")
+            payload = self._detected(project_path)
+            self.assertEqual({"value": "origin/main", "source": "default"}, payload["base_branch"])
+            git(project_path, "init", "-q", "-b", "trunk")
+            git(project_path, "-c", "user.email=native-eval@example.invalid", "-c", "user.name=t", "commit", "-q", "--allow-empty", "-m", "i")
+            git(project_path, "update-ref", "refs/remotes/origin/trunk", "HEAD")
+            git(project_path, "symbolic-ref", "refs/remotes/origin/HEAD", "refs/remotes/origin/trunk")
+            payload = self._detected(project_path)
+            self.assertEqual({"value": "origin/trunk", "source": "origin_head"}, payload["base_branch"])
+            self.assertIn("'origin/trunk' | cr-filter-git --config -", payload["commands"]["MUTATION"])
+
+    def test_detect_commands_runs_the_dependency_audit_only_on_opt_in(self) -> None:
+        if self.helper_filter and self.helper_filter != "detect-commands":
+            self.skipTest("dependency audit case uses detect-commands")
+        with tempfile.TemporaryDirectory(prefix="read-only-helper-project-") as project:
+            project_path = Path(project).resolve()
+            (project_path / "package.json").write_text("{}", encoding="utf-8")
+            (project_path / "package-lock.json").write_text("{}", encoding="utf-8")
+            payload = self._detected(project_path)
+            self.assertEqual("off", payload["gates"]["DEPENDENCY_AUDIT"]["status"])
+            self.assertEqual("N/A", payload["commands"]["DEPENDENCY_AUDIT"])
+            (project_path / ".specify").mkdir()
+            (project_path / ".specify" / "quality-gates.json").write_text(
+                '{"schema_version":"1.0","thresholds":{"complexity":5,"crap":12,"mutation_score_floor":70},'
+                '"enforce":["DEPENDENCY_AUDIT"]}',
+                encoding="utf-8",
+            )
+            payload = self._detected(project_path)
+            self.assertEqual(["DEPENDENCY_AUDIT"], payload["quality_gates"]["enforce"])
+            self.assertEqual("populated", payload["gates"]["DEPENDENCY_AUDIT"]["status"])
+            self.assertEqual(
+                'env -i PATH="$PATH" HOME="$HOME" npm_config_userconfig=/dev/null '
+                "npm audit --audit-level=high --registry=https://registry.npmjs.org/",
+                payload["commands"]["DEPENDENCY_AUDIT"],
+            )
 
     def test_detect_commands_runner_discovery_is_deterministic(self) -> None:
         if self.helper_filter and self.helper_filter != "detect-commands":
