@@ -112,8 +112,11 @@ For each thread:
 
 #### 4c. Dispatch parallel subagents per partition
 
-If `PARTITIONS` has ≥2 entries, dispatch ALL partitions in ONE
-assistant message via background subagents:
+Dispatch subagents only when `PARTITIONS` has 2 or more entries and the
+fixes are large enough to repay each worker's setup cost (it re-reads the
+file, rebuilds context, and re-runs the checks). A few small fixes are
+faster to make directly, one partition at a time. When you dispatch, send
+ALL partitions in ONE assistant message via background subagents:
 
 ```text
 For each (file_path, threads) in PARTITIONS:
