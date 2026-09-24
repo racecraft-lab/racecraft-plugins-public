@@ -131,6 +131,64 @@ class TypesafeJevReleaseBuildTests(unittest.TestCase):
             with self.assertRaisesRegex(BUILD.ReleaseBuildError, "has no"):
                 BUILD.check_assets(directory)
 
+    def test_resolve_passes_release_please_outputs_through(self) -> None:
+        with unittest.mock.patch.object(BUILD.subprocess, "run") as run:
+            self.assertEqual(
+                ("typesafe-jev-v0.9.0", "## raw body\n"),
+                BUILD.resolve("", "typesafe-jev-v0.9.0", "## raw body\n"),
+            )
+            with self.assertRaises(BUILD.ReleaseBuildError):
+                BUILD.resolve("", "speckit-pro-v2.35.0", "body")
+        run.assert_not_called()
+
+    def test_recovery_rejects_a_malformed_tag_before_calling_gh(self) -> None:
+        for tag in ("typesafe-jev-v0.9.0-rc.1", "speckit-pro-v2.35.0", "typesafe-jev-v0.9", "v0.9.0", "typesafe-jev-v0.9.0\n"):
+            with self.subTest(tag=tag), unittest.mock.patch.object(BUILD.subprocess, "run") as run:
+                with self.assertRaisesRegex(BUILD.ReleaseBuildError, "not typesafe-jev-vX.Y.Z"):
+                    BUILD.resolve(tag, "", "")
+                run.assert_not_called()
+
+    def test_recovery_reads_the_draft_body_from_the_api(self) -> None:
+        view = '{"isDraft": true, "tagName": "typesafe-jev-v0.9.0", "body": "## [0.9.0](compare)\\n"}'
+        with unittest.mock.patch.object(BUILD.subprocess, "run", return_value=completed(["gh"], stdout=view)) as run:
+            self.assertEqual(
+                ("typesafe-jev-v0.9.0", "## [0.9.0](compare)\n"),
+                BUILD.resolve("typesafe-jev-v0.9.0", "", ""),
+            )
+        self.assertEqual(
+            ["gh", "release", "view", "typesafe-jev-v0.9.0", "--json", "isDraft,tagName,body"],
+            run.call_args.args[0],
+        )
+
+    def test_recovery_refuses_a_published_missing_or_mismatched_release(self) -> None:
+        cases = (
+            ('{"isDraft": false, "tagName": "typesafe-jev-v0.9.0", "body": "b"}', 0, "not a draft"),
+            ('{"isDraft": true, "tagName": "typesafe-jev-v0.8.0", "body": "b"}', 0, "did not return"),
+            ('{"isDraft": true, "tagName": "typesafe-jev-v0.9.0", "body": ""}', 0, "has no body"),
+            ("not json", 0, "invalid JSON"),
+            ("", 1, "gh release view failed"),
+        )
+        for stdout, returncode, message in cases:
+            result = completed(["gh"], returncode=returncode, stdout=stdout)
+            with self.subTest(message=message), unittest.mock.patch.object(BUILD.subprocess, "run", return_value=result):
+                with self.assertRaisesRegex(BUILD.ReleaseBuildError, message):
+                    BUILD.resolve("typesafe-jev-v0.9.0", "", "")
+
+    def test_github_output_keeps_a_multiline_body_intact(self) -> None:
+        body = "## [0.9.0](compare)\n\n### Features\n\n* one\nname=value\n"
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "output"
+            BUILD.write_github_output(path, {"tag_name": "typesafe-jev-v0.9.0", "body": body})
+            lines = path.read_text(encoding="utf-8").split("\n")
+        parsed: dict[str, str] = {}
+        index = 0
+        while index < len(lines) and lines[index]:
+            name, delimiter = lines[index].split("<<", 1)
+            end = lines.index(delimiter, index + 1)
+            parsed[name] = "\n".join(lines[index + 1:end])
+            index = end + 1
+        self.assertEqual({"tag_name": "typesafe-jev-v0.9.0", "body": body}, parsed)
+
     def test_publish_never_marks_the_release_latest(self) -> None:
         with unittest.mock.patch.object(BUILD.subprocess, "run", return_value=completed(["gh"])) as run:
             with contextlib.redirect_stdout(io.StringIO()):
