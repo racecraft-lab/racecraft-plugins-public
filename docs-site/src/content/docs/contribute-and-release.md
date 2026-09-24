@@ -184,8 +184,7 @@ It then checks the draft's own assets against the checksums and the bundle.
 `typesafe-jev-publish` runs in the `release`
 environment. It publishes the draft without marking it latest, then installs it
 with the plugin's installer. Its release notes are then captured and composed
-like `speckit-pro`'s. The component's history starts at the import merge, which
-`last-release-sha` in `release-please-config.json` names.
+like `speckit-pro`'s.
 
 The `typesafe-jev` jobs start from `typesafe-jev-draft`, which names the draft
 to release. They still run when a later step of the `release` job fails, such
