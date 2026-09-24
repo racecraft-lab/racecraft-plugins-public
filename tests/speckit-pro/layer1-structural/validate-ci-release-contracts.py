@@ -606,6 +606,16 @@ def _python_function_block(text: str, name: str) -> str:
     end = len(text) if next_symbol is None else match.end() + next_symbol.start()
     return text[match.start():end]
 
+def _renamed(text: str, renames: tuple[tuple[str, str], ...]) -> str:
+    for old, new in renames:
+        text = text.replace(old, new)
+    return text
+
+def _job_without_comments(job_block: str) -> str:
+    """A job block with comment lines and trailing blank lines removed."""
+    lines = [line for line in job_block.splitlines() if not line.lstrip().startswith('#')]
+    return '\n'.join(lines).rstrip()
+
 def _inline_list(value: str) -> tuple[str, ...]:
     """Parse the workflow's intentionally simple inline event list."""
     if not value.startswith('[') or not value.endswith(']'):
@@ -652,7 +662,7 @@ class ValidateReleaseWorkflow(unittest.TestCase):
         with self.subTest(msg='release workflow uses release-please'):
             self.assertIn('googleapis/release-please-action@v5', content)
         with self.subTest(msg='release workflow pins checkout actions'):
-            self.assertEqual(4, len(validate_release_workflow_CHECKOUT_PIN_RE.findall(content)), 'release workflow pinned checkout count')
+            self.assertEqual(8, len(validate_release_workflow_CHECKOUT_PIN_RE.findall(content)), 'release workflow pinned checkout count')
         release_job = _mapping_block(content, 'release', 2)
         capture_job = _mapping_block(content, 'capture-release-note-inputs', 2)
         composer_job = _mapping_block(content, 'compose-release-notes', 2)
@@ -749,7 +759,7 @@ class ValidateReleaseWorkflow(unittest.TestCase):
             self.assertNotIn('actions: write', capture_job)
             self.assertNotIn('pull-requests: write', capture_job)
         with self.subTest(msg='capture uploads complete canonical Compare and PR inputs'):
-            self.assertEqual(2, len(UPLOAD_ARTIFACT_PIN_RE.findall(content)))
+            self.assertEqual(4, len(UPLOAD_ARTIFACT_PIN_RE.findall(content)))
             self.assertLess(capture_job.find('actions/checkout@'), capture_job.find('--capture-snapshot'))
             self.assertTrue(_contains_all(capture_step + snapshot_upload_step, ('GITHUB_TOKEN: ${{ github.token }}', 'GITHUB_REPOSITORY: ${{ github.repository }}', 'RELEASE_BODY: ${{ needs.release.outputs.body }}', 'RELEASE_TAG: ${{ needs.release.outputs.tag_name }}', 'python3 scripts/compose-release-notes.py --capture-snapshot ', '--snapshot-output release-note-snapshot.json', 'actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a', 'name: release-note-input-${{ github.run_id }}-${{ github.run_attempt }}', 'path: release-note-snapshot.json', 'if-no-files-found: error', 'retention-days: 90')))
             self.assertNotIn('overwrite: true', snapshot_upload_step)
@@ -765,7 +775,7 @@ class ValidateReleaseWorkflow(unittest.TestCase):
         with self.subTest(msg='composer has exact minimum endpoint permissions'):
             self.assertEqual({'contents': 'write'}, _permission_map(composer_job))
         with self.subTest(msg='composer downloads the exact immutable snapshot by artifact id'):
-            self.assertEqual(1, len(DOWNLOAD_ARTIFACT_PIN_RE.findall(content)))
+            self.assertEqual(2, len(DOWNLOAD_ARTIFACT_PIN_RE.findall(content)))
             self.assertTrue(_contains_all(snapshot_download_step, ('id: download_release_snapshot', 'if: ${{ always() && !cancelled() }}', 'actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c', 'artifact-ids: ${{ needs.capture-release-note-inputs.outputs.snapshot_artifact_id }}', 'path: release-note-input', 'digest-mismatch: error')))
         with self.subTest(msg='composer audits capture download and digest failures'):
             self.assertTrue(_contains_all(compose_step + audit_helper_content, ('if: ${{ always() && !cancelled() }}', 'CAPTURE_RESULT: ${{ needs.capture-release-note-inputs.result }}', 'EXPECTED_SNAPSHOT_SHA256: ${{ needs.capture-release-note-inputs.outputs.snapshot_sha256 }}', 'SNAPSHOT_ARTIFACT_DIGEST: ${{ needs.capture-release-note-inputs.outputs.snapshot_artifact_digest }}', 'SNAPSHOT_DOWNLOAD_OUTCOME: ${{ steps.download_release_snapshot.outcome }}', 'run: python3 scripts/audit-release-notes.py', 'FAILURE_OUTCOME = "release_note_composition_failed"', '"capture_result": capture_result', '"snapshot_download_outcome": download_outcome', 'if capture_result != "success":', 'if download_outcome != "success":', 'snapshot_sha256 != expected_sha256', 'snapshot["repository"] != environment["GITHUB_REPOSITORY"]', '"compare_headers"', '"release_body"', '"pulls"', 'not re.fullmatch(r"[0-9a-f]{64}", artifact_digest)', 'except AuditFailure as error:')))
@@ -821,6 +831,64 @@ class ValidateReleaseWorkflow(unittest.TestCase):
             self.assertNotIn('pull-requests: write', composer_job)
             self.assertNotIn('pull-requests: read', composer_job)
             self.assertNotIn('RELEASE_PLEASE_TOKEN', composer_job)
+        with self.subTest(msg='typesafe-jev release notes mirror the speckit-pro capture and compose jobs'):
+            # The second component's jobs must differ from the audited
+            # speckit-pro pair only in names, inputs, and gating, so every
+            # assertion above about the pair holds for both.
+            typesafe_capture = _mapping_block(content, 'capture-typesafe-jev-release-note-inputs', 2)
+            typesafe_composer = _mapping_block(content, 'compose-typesafe-jev-release-notes', 2)
+            capture_renames = (
+                ('capture-typesafe-jev-release-note-inputs:', 'capture-release-note-inputs:'),
+                ('needs: [release, typesafe-jev-publish]', 'needs: release'),
+                ("if: ${{ always() && needs.typesafe-jev-publish.result == 'success' }}", "if: ${{ always() && needs.release.outputs.release_created == 'true' }}"),
+                ('needs.release.outputs.typesafe_jev_body', 'needs.release.outputs.body'),
+                ('needs.release.outputs.typesafe_jev_tag_name', 'needs.release.outputs.tag_name'),
+                ('release-note-input-typesafe-jev-', 'release-note-input-'),
+            )
+            composer_renames = (
+                ('compose-typesafe-jev-release-notes:', 'compose-release-notes:'),
+                ('capture-typesafe-jev-release-note-inputs', 'capture-release-note-inputs'),
+                ('needs.release.outputs.typesafe_jev_release_created', 'needs.release.outputs.release_created'),
+                ('release-note-audit-typesafe-jev-', 'release-note-audit-'),
+            )
+            self.assertTrue(typesafe_capture and typesafe_composer, 'missing typesafe-jev capture or compose job')
+            self.assertEqual(_job_without_comments(capture_job), _job_without_comments(_renamed(typesafe_capture, capture_renames)))
+            self.assertEqual(_job_without_comments(composer_job), _job_without_comments(_renamed(typesafe_composer, composer_renames)))
+        with self.subTest(msg='typesafe-jev assets are built, attached, and verified on the draft before publishing'):
+            release_outputs = _mapping_block(release_job, 'outputs', 4)
+            self.assertTrue(_contains_all(release_outputs, ("typesafe_jev_release_created: ${{ steps.release.outputs['typesafe-jev--release_created'] }}", "typesafe_jev_tag_name: ${{ steps.release.outputs['typesafe-jev--tag_name'] }}", "typesafe_jev_body: ${{ steps.release.outputs['typesafe-jev--body'] }}")))
+            assets_job = _mapping_block(content, 'typesafe-jev-assets', 2)
+            publish_job = _mapping_block(content, 'typesafe-jev-publish', 2)
+            self.assertEqual(["${{ needs.release.outputs.typesafe_jev_release_created == 'true' }}"], _scalar_values(assets_job, 'if', 4))
+            self.assertEqual({'contents': 'write'}, _permission_map(assets_job))
+            self.assertEqual(
+                ['python3 scripts/check-go-module.py check', 'python3 scripts/build-typesafe-jev-release.py build', 'python3 scripts/build-typesafe-jev-release.py upload', 'python3 scripts/build-typesafe-jev-release.py verify'],
+                _run_commands(assets_job),
+            )
+            self.assertTrue(_contains_all(assets_job, ('ref: ${{ needs.release.outputs.typesafe_jev_tag_name }}', 'go-version-file: typesafe-jev/go.mod', 'persist-credentials: false')))
+            self.assertEqual(['[release, typesafe-jev-assets]'], _scalar_values(publish_job, 'needs', 4))
+            self.assertEqual(['release'], _scalar_values(publish_job, 'environment', 4))
+            self.assertEqual({'contents': 'write'}, _permission_map(publish_job))
+            self.assertEqual(
+                ['python3 scripts/build-typesafe-jev-release.py publish', 'python3 scripts/build-typesafe-jev-release.py smoke-install'],
+                _run_commands(publish_job),
+            )
+            self.assertNotIn('RELEASE_PLEASE_TOKEN', assets_job + publish_job)
+        with self.subTest(msg='release-please releases typesafe-jev as its own drafted component'):
+            config = json.loads(RELEASE_CONFIG_FILE.read_text(encoding='utf-8')) if RELEASE_CONFIG_FILE.is_file() else {}
+            manifest_file = REPO_ROOT / '.release-please-manifest.json'
+            manifest = json.loads(manifest_file.read_text(encoding='utf-8')) if manifest_file.is_file() else {}
+            packages = config.get('packages') or {}
+            self.assertEqual({'speckit-pro', 'typesafe-jev'}, set(packages))
+            self.assertEqual(set(packages), set(manifest))
+            self.assertIs(True, config.get('separate-pull-requests'))
+            self.assertRegex(str(config.get('last-release-sha', '')), '^[0-9a-f]{40}$')
+            typesafe = packages.get('typesafe-jev') or {}
+            self.assertEqual('typesafe-jev', typesafe.get('component'))
+            self.assertIs(True, typesafe.get('draft'))
+            self.assertIs(True, typesafe.get('force-tag-creation'))
+            extra_paths = {entry.get('path') for entry in typesafe.get('extra-files') or [] if isinstance(entry, dict)}
+            self.assertEqual({'plugin/.claude-plugin/plugin.json', 'plugin/.codex-plugin/plugin.json', 'plugin/shared-skills/typed-judgments/SKILL.md'}, extra_paths)
         with self.subTest(msg='release.yml is valid YAML'):
             tab_indented_step = 'name: Invalid\njobs:\n\tbuild:\n\t  runs-on: ubuntu-latest\n'
             valid_nested_step = 'name: Valid\njobs:\n  release:\n    runs-on: ubuntu-latest\n    steps:\n      - name: Publish\n        run: echo valid\n'

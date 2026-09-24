@@ -20,7 +20,7 @@ import urllib.parse
 import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Mapping, Sequence
+from typing import Collection, Mapping, Sequence
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import release_note_policy as _release_note_policy  # noqa: E402
@@ -44,6 +44,8 @@ FAILURE_OUTCOME = "release_note_composition_failed"
 VALIDATION_FAILURE_OUTCOME = "release_note_validation_failed"
 VALIDATION_PASS_OUTCOME = "release_note_validation_passed"
 SNAPSHOT_MARKER_PREFIX = "<!-- release-note-composer-snapshot:v1 "
+RELEASE_CONFIG_FILE = Path(__file__).resolve().parents[1] / "release-please-config.json"
+SCOPE_RE = re.compile(r"^[A-Za-z][A-Za-z0-9-]*\((?P<scope>[^\r\n)]+)\)!?:")
 
 COMPARE_HEADING_RE = re.compile(
     r"(?m)^#{1,6}[ \t]+.*?\]\([^\n)]*/compare/"
@@ -261,6 +263,55 @@ def load_persisted_snapshot(
     )
 
 
+def load_release_components(path: Path = RELEASE_CONFIG_FILE) -> frozenset[str]:
+    """Return the component names release-please releases from this repository."""
+    try:
+        config = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as error:
+        raise CompositionError(f"unable to read release components from {path.name}: {error}") from error
+    packages = config.get("packages") if isinstance(config, dict) else None
+    if not isinstance(packages, dict) or not packages:
+        raise CompositionError(f"{path.name} lists no packages")
+    components: set[str] = set()
+    for key, package in packages.items():
+        component = package.get("component") if isinstance(package, dict) else None
+        components.add(component if isinstance(component, str) and component else str(key))
+    return frozenset(components)
+
+
+def release_component(tag: str, components: Collection[str]) -> str | None:
+    """Return the component a `<component>-vX.Y.Z` tag releases, if any."""
+    for component in sorted(components, key=len, reverse=True):
+        if re.fullmatch(rf"{re.escape(component)}-v[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?", tag):
+            return component
+    return None
+
+
+def commits_for_component(
+    commits: Sequence[DiscoveredCommit],
+    tag: str,
+    components: Collection[str],
+) -> list[DiscoveredCommit]:
+    """Drop pull requests scoped to a different component of this repository.
+
+    A Compare range covers the whole repository, so one component's range also
+    lists every other component's pull requests. A pull request whose
+    conventional-commit scope names another component belongs to that
+    component's release notes only; every other scope stays.
+    """
+    own = release_component(tag, components)
+    if own is None:
+        return list(commits)
+    kept: list[DiscoveredCommit] = []
+    for commit in commits:
+        match = SCOPE_RE.match(commit.subject)
+        scope = match.group("scope").strip().lower() if match else ""
+        if scope in components and scope != own:
+            continue
+        kept.append(commit)
+    return kept
+
+
 def _format_highlight(note: str) -> str:
     lines = note.splitlines() or [note]
     return "- " + lines[0] + "".join(f"\n  {line}" for line in lines[1:])
@@ -273,8 +324,14 @@ def compose_release_body(
     *,
     compare_commit_count: int,
     source_sha256: str | None = None,
+    tag: str | None = None,
+    components: Collection[str] = (),
 ) -> str:
-    """Compose Highlights while embedding only the raw action body as appendix."""
+    """Compose Highlights while embedding only the raw action body as appendix.
+
+    With a release tag and the repository's components, pull requests scoped to
+    another component are left out before anything is counted.
+    """
     if isinstance(compare_commit_count, bool) or not isinstance(compare_commit_count, int):
         raise CompositionError("release input snapshot Compare commit count is invalid")
     if compare_commit_count < len(commits):
@@ -287,6 +344,8 @@ def compose_release_body(
         source_sha256 = _sha256_text(raw_release_body)
     if not re.fullmatch(r"[0-9a-f]{64}", source_sha256):
         raise CompositionError("release input snapshot source digest is invalid")
+    if tag is not None and components:
+        commits = commits_for_component(commits, tag, components)
 
     entries: list[tuple[DiscoveredCommit, str | None, bool]] = []
     block_count = 0
@@ -648,6 +707,8 @@ def run(argv: Sequence[str] | None = None) -> int:
                 snapshot_input.pulls,
                 compare_commit_count=snapshot_input.commit_count,
                 source_sha256=snapshot_input.sha256,
+                tag=args.tag,
+                components=load_release_components(),
             )
             snapshot = load_persisted_snapshot(
                 composed,
@@ -693,6 +754,8 @@ def run(argv: Sequence[str] | None = None) -> int:
             snapshot_input.pulls,
             compare_commit_count=snapshot_input.commit_count,
             source_sha256=snapshot_input.sha256,
+            tag=args.tag,
+            components=load_release_components(),
         )
         snapshot = load_persisted_snapshot(
             persisted_body,

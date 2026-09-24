@@ -21,6 +21,9 @@ jobs:
       release_created: ${{ steps.release.outputs['speckit-pro--release_created'] }}
       tag_name: ${{ steps.release.outputs['speckit-pro--tag_name'] }}
       body: ${{ steps.release.outputs['speckit-pro--body'] }}
+      typesafe_jev_release_created: ${{ steps.release.outputs['typesafe-jev--release_created'] }}
+      typesafe_jev_tag_name: ${{ steps.release.outputs['typesafe-jev--tag_name'] }}
+      typesafe_jev_body: ${{ steps.release.outputs['typesafe-jev--body'] }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -222,6 +225,173 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: release-note-audit-${{ github.run_id }}-${{ github.run_attempt }}
+          path: release-note-audit.json
+          if-no-files-found: error
+          retention-days: 90
+          compression-level: 0
+
+      - name: Record immutable audit artifact
+        if: ${{ always() && steps.upload_release_audit.outcome == 'success' }}
+        env:
+          AUDIT_ARTIFACT_DIGEST: ${{ steps.upload_release_audit.outputs['artifact-digest'] }}
+          AUDIT_ARTIFACT_ID: ${{ steps.upload_release_audit.outputs['artifact-id'] }}
+          AUDIT_ARTIFACT_URL: ${{ steps.upload_release_audit.outputs['artifact-url'] }}
+        run: python3 scripts/audit-release-notes.py --record-artifact
+
+  # typesafe-jev releases as a draft with its tag already pushed. Its archives
+  # are built from the tag, attached, and checked on the draft before anyone
+  # can download them; only then is the release published.
+  typesafe-jev-assets:
+    needs: release
+    if: ${{ needs.release.outputs.typesafe_jev_release_created == 'true' }}
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.release.outputs.typesafe_jev_tag_name }}
+          persist-credentials: false
+
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: typesafe-jev/go.mod
+          cache-dependency-path: typesafe-jev/go.sum
+
+      - name: Test the tagged typesafe-jev tree
+        run: python3 scripts/check-go-module.py check
+
+      - name: Build the typesafe-jev release archives
+        env:
+          RELEASE_TAG: ${{ needs.release.outputs.typesafe_jev_tag_name }}
+        run: python3 scripts/build-typesafe-jev-release.py build
+
+      - name: Attach the archives to the draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ needs.release.outputs.typesafe_jev_tag_name }}
+        run: python3 scripts/build-typesafe-jev-release.py upload
+
+      - name: Verify the draft release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ needs.release.outputs.typesafe_jev_tag_name }}
+        run: python3 scripts/build-typesafe-jev-release.py verify
+
+  typesafe-jev-publish:
+    needs: [release, typesafe-jev-assets]
+    if: ${{ needs.typesafe-jev-assets.result == 'success' }}
+    environment: release
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.release.outputs.typesafe_jev_tag_name }}
+          persist-credentials: false
+
+      - name: Publish the verified typesafe-jev release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ needs.release.outputs.typesafe_jev_tag_name }}
+        run: python3 scripts/build-typesafe-jev-release.py publish
+
+      - name: Install the published release as a user would
+        env:
+          RELEASE_TAG: ${{ needs.release.outputs.typesafe_jev_tag_name }}
+        run: python3 scripts/build-typesafe-jev-release.py smoke-install
+
+  capture-typesafe-jev-release-note-inputs:
+    needs: [release, typesafe-jev-publish]
+    if: ${{ always() && needs.typesafe-jev-publish.result == 'success' }}
+    permissions:
+      contents: read
+    outputs:
+      snapshot_artifact_id: ${{ steps.upload_release_snapshot.outputs['artifact-id'] }}
+      snapshot_artifact_digest: ${{ steps.upload_release_snapshot.outputs['artifact-digest'] }}
+      snapshot_artifact_url: ${{ steps.upload_release_snapshot.outputs['artifact-url'] }}
+      snapshot_sha256: ${{ steps.capture_snapshot.outputs.snapshot_sha256 }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Capture complete immutable release inputs
+        id: capture_snapshot
+        env:
+          GITHUB_API_URL: ${{ github.api_url }}
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          RELEASE_BODY: ${{ needs.release.outputs.typesafe_jev_body }}
+          RELEASE_TAG: ${{ needs.release.outputs.typesafe_jev_tag_name }}
+        run: python3 scripts/compose-release-notes.py --capture-snapshot --snapshot-output release-note-snapshot.json
+
+      - name: Upload immutable release input snapshot
+        id: upload_release_snapshot
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: release-note-input-typesafe-jev-${{ github.run_id }}-${{ github.run_attempt }}
+          path: release-note-snapshot.json
+          if-no-files-found: error
+          retention-days: 90
+          compression-level: 0
+
+  compose-typesafe-jev-release-notes:
+    needs: [release, capture-typesafe-jev-release-note-inputs]
+    if: ${{ always() && !cancelled() && needs.release.outputs.typesafe_jev_release_created == 'true' }}
+    permissions:
+      contents: write
+    outputs:
+      audit_artifact_id: ${{ steps.upload_release_audit.outputs['artifact-id'] }}
+      audit_artifact_digest: ${{ steps.upload_release_audit.outputs['artifact-digest'] }}
+      audit_artifact_url: ${{ steps.upload_release_audit.outputs['artifact-url'] }}
+      audit_sha256: ${{ steps.compose.outputs.audit_sha256 }}
+      release_body_sha256: ${{ steps.compose.outputs.release_body_sha256 }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Download immutable release input snapshot
+        id: download_release_snapshot
+        if: ${{ always() && !cancelled() }}
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          artifact-ids: ${{ needs.capture-typesafe-jev-release-note-inputs.outputs.snapshot_artifact_id }}
+          path: release-note-input
+          digest-mismatch: error
+
+      - name: Compose and verify public release notes
+        id: compose
+        if: ${{ always() && !cancelled() }}
+        env:
+          CAPTURE_RESULT: ${{ needs.capture-typesafe-jev-release-note-inputs.result }}
+          EXPECTED_SNAPSHOT_SHA256: ${{ needs.capture-typesafe-jev-release-note-inputs.outputs.snapshot_sha256 }}
+          GITHUB_API_URL: ${{ github.api_url }}
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          SNAPSHOT_ARTIFACT_DIGEST: ${{ needs.capture-typesafe-jev-release-note-inputs.outputs.snapshot_artifact_digest }}
+          SNAPSHOT_ARTIFACT_ID: ${{ needs.capture-typesafe-jev-release-note-inputs.outputs.snapshot_artifact_id }}
+          SNAPSHOT_ARTIFACT_URL: ${{ needs.capture-typesafe-jev-release-note-inputs.outputs.snapshot_artifact_url }}
+          SNAPSHOT_DOWNLOAD_OUTCOME: ${{ steps.download_release_snapshot.outcome }}
+          WORKFLOW_RUN_ATTEMPT: ${{ github.run_attempt }}
+          WORKFLOW_RUN_ID: ${{ github.run_id }}
+        run: python3 scripts/audit-release-notes.py
+
+      - name: Upload immutable release note audit
+        id: upload_release_audit
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: release-note-audit-typesafe-jev-${{ github.run_id }}-${{ github.run_attempt }}
           path: release-note-audit.json
           if-no-files-found: error
           retention-days: 90

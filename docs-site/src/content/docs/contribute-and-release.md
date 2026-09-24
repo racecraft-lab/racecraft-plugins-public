@@ -170,6 +170,19 @@ The maintainer-facing release flow is:
 artifact with 90-day retention. Composition or verification failures leave
 an audit record and fail the workflow loudly.
 
+The repository releases two components, `speckit-pro` and `typesafe-jev`, each
+with its own release PR (`separate-pull-requests`) and its own tags
+(`speckit-pro-vX.Y.Z`, `typesafe-jev-vX.Y.Z`). Release notes for one component
+leave out pull requests whose Conventional Commits scope names the other.
+`typesafe-jev` releases as a draft with its tag already pushed.
+`typesafe-jev-assets` builds `evaluate-<os>-<arch>.tar.gz` and `SHA256SUMS.txt`
+from the tag with `scripts/build-typesafe-jev-release.py`, attaches them, and
+checks the draft's own assets. `typesafe-jev-publish` runs in the `release`
+environment. It publishes the draft without marking it latest, then installs it
+with the plugin's installer. Its release notes are then captured and composed
+like `speckit-pro`'s. The component's history starts at the import merge, which
+`last-release-sha` in `release-please-config.json` names.
+
 Release-please branches are generated state. Never push a product, security,
 documentation, or review fix directly to a branch whose name starts with
 `release-please--branches--`. Land the fix on `main` through its own pull

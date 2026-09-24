@@ -107,6 +107,23 @@ class ReleasePrReconciliationTests(unittest.TestCase):
             [{"number": 302, "title": "release", "headBranchName": "release-please--branches--main--components--speckit-pro"}],
         )
 
+    def test_each_component_release_pr_is_resolved(self) -> None:
+        # With separate-pull-requests, speckit-pro and typesafe-jev each get a
+        # release branch of their own, and both are synchronized.
+        created = [
+            {"number": 302, "title": "chore(main): release speckit-pro 2.34.0", "headBranchName": "release-please--branches--main--components--speckit-pro"},
+            {"number": 304, "title": "chore(main): release typesafe-jev 0.9.0", "headBranchName": "release-please--branches--main--components--typesafe-jev"},
+        ]
+        self.assertEqual([302, 304], [pr["number"] for pr in resolver.resolve_release_prs(created, [], "main")])
+        open_prs = [
+            {"number": 304, "title": "chore(main): release typesafe-jev 0.9.0", "headRefName": "release-please--branches--main--components--typesafe-jev", "baseRefName": "main"},
+            {"number": 302, "title": "chore(main): release speckit-pro 2.34.0", "headRefName": "release-please--branches--main--components--speckit-pro", "baseRefName": "main"},
+        ]
+        self.assertEqual(
+            {"release-please--branches--main--components--speckit-pro", "release-please--branches--main--components--typesafe-jev"},
+            {pr["headBranchName"] for pr in resolver.resolve_release_prs([], open_prs, "main")},
+        )
+
     def test_no_open_release_pr_is_a_clean_noop(self) -> None:
         self.assertEqual(resolver.resolve_release_prs([], [], "main"), [])
 
