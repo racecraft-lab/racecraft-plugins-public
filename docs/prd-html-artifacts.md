@@ -199,7 +199,7 @@ currently uses neither.
 
 - **AC-10.1**: Post-implementation generates the PR writeup (always), its
   implementation-notes section populated from the ART-012 record.
-- **AC-10.2**: The annotated diff is emitted when self-review recorded
+- **AC-10.2**: The annotated diff is emitted when Code Review recorded
   findings or the diff is large; the flowchart is emitted when the spec
   changed an operational flow.
 - **AC-10.3**: The existing draft PR is updated in place (body artifact index
@@ -389,7 +389,7 @@ operator reviews artifacts (file:// in browser)
   ├─ implement (TDD, per-task dispatch)
   │    └─ implementation-notes capture                      [ART-012]
   └─ post-implementation
-       ├─ integration suite + self-review (unchanged)
+       ├─ integration suite + Code Review (unchanged)
        ├─ pr-writeup.html (always, with impl notes)         [ART-003/010]
        ├─ uat-walkthrough.html (always, replaces runbook)   [ART-009]
        ├─ annotated-diff.html / flowchart.html (conditional)
