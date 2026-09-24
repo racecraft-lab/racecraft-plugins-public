@@ -29,6 +29,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import shlex
 import subprocess
 import sys
 from pathlib import Path
@@ -45,8 +46,17 @@ LOCKFILES = {
 MANAGER_ALIASES = {"npm": "npm", "npx": "npm", "pnpm": "pnpm", "pnpx": "pnpm", "yarn": "yarn", "bun": "bun", "bunx": "bun"}
 # A segment starts at the command start or after a control operator or a
 # subshell opener; only its first word can be the package manager, after any
-# VAR=value prefix and common wrappers.
-SEGMENT_SPLIT_RE = re.compile(r"(?:&&|\|\||[;|\n]|\$\(|\(|`)")
+# VAR=value prefix and common wrappers. Operators inside quotes do not split:
+# `grep "a\|yarn build"` is one grep, not a yarn invocation. Command
+# substitution still runs inside double quotes, so `$(` and a backtick split
+# there too.
+# "\x24(" is the command-substitution opener, spelled by code point so the
+# installed-runtime guard does not read this data as shell interpolation.
+SEGMENT_OPERATORS = ("&&", "||", ";", "|", "\n", "\x24(", "(", "`")
+DOUBLE_QUOTED_OPERATORS = ("\x24(", "`")
+# The directory flag each manager documents for running against another
+# project. Only these, or a leading `cd <dir>`, move the lockfile lookup.
+DIRECTORY_FLAGS = {"pnpm": ("--dir", "-C"), "npm": ("--prefix",), "yarn": ("--cwd",), "bun": ("--cwd",)}
 WRAPPERS = {"sudo", "env", "time", "command", "exec", "nice", "nohup"}
 ASSIGNMENT_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")
 STATE_PATH = Path("docs/ai/specs/.process/autopilot-state.json")
@@ -80,22 +90,91 @@ def lockfile_manager(root: Path) -> str | None:
     return None
 
 
-def invoked_managers(command: str) -> set[str]:
-    """Manager names in the executable position of each shell segment.
+def split_segments(command: str) -> list[str]:
+    """Split at control operators and subshell openers that are not quoted."""
+    segments: list[str] = []
+    current: list[str] = []
+    quote: str | None = None
+    index = 0
+    while index < len(command):
+        char = command[index]
+        if quote == "'":
+            quote = None if char == "'" else quote
+            current.append(char)
+            index += 1
+            continue
+        if char == "\\" and index + 1 < len(command):
+            current.append(command[index:index + 2])
+            index += 2
+            continue
+        if quote == '"':
+            if char == '"':
+                quote = None
+            operators: tuple[str, ...] = DOUBLE_QUOTED_OPERATORS
+        elif char in "'\"":
+            quote = char
+            operators = ()
+        else:
+            operators = SEGMENT_OPERATORS
+        operator = next((op for op in operators if command.startswith(op, index)), None)
+        if operator:
+            segments.append("".join(current))
+            current = []
+            index += len(operator)
+            continue
+        current.append(char)
+        index += 1
+    segments.append("".join(current))
+    return segments
+
+
+def segment_words(segment: str) -> list[str]:
+    try:
+        words = shlex.split(segment)
+    except ValueError:
+        words = segment.split()
+    while words and (ASSIGNMENT_RE.match(words[0]) or words[0] in WRAPPERS or words[0].startswith("-")):
+        words.pop(0)
+    return words
+
+
+def resolve_dir(base: Path, value: str) -> Path:
+    path = Path(os.path.expanduser(value))
+    return (path if path.is_absolute() else base / path).resolve(strict=False)
+
+
+def directory_flag(manager: str, args: list[str]) -> str | None:
+    for position, word in enumerate(args):
+        for flag in DIRECTORY_FLAGS[manager]:
+            if word == flag and position + 1 < len(args):
+                return args[position + 1]
+            if word.startswith(flag + "="):
+                return word[len(flag) + 1:]
+    return None
+
+
+def invocations(command: str, root: Path) -> list[tuple[str, Path]]:
+    """Each manager in executable position, with the directory its lockfile is read from.
 
     A manager name that appears only as an argument (``grep npm README.md``)
-    is not an invocation.
+    is not an invocation. The directory is the session directory, moved by a
+    preceding ``cd <dir>`` or by the manager's own directory flag; anything
+    else leaves the session directory in place.
     """
-    found: set[str] = set()
-    for segment in SEGMENT_SPLIT_RE.split(command):
-        words = segment.split()
-        while words and (ASSIGNMENT_RE.match(words[0]) or words[0] in WRAPPERS or words[0].startswith("-")):
-            words.pop(0)
+    found: list[tuple[str, Path]] = []
+    here = root
+    for segment in split_segments(command):
+        words = segment_words(segment)
         if not words:
+            continue
+        if words[0] == "cd":
+            here = resolve_dir(here, words[1]) if len(words) == 2 else root
             continue
         executable = words[0].rsplit("/", 1)[-1]
         if executable in MANAGER_ALIASES:
-            found.add(executable)
+            manager = MANAGER_ALIASES[executable]
+            target = directory_flag(manager, words[1:])
+            found.append((manager, resolve_dir(here, target) if target else here))
     return found
 
 
@@ -104,17 +183,14 @@ def lockfile_decision(data: dict[str, Any]) -> str | None:
     command = tool_input.get("command") if isinstance(tool_input, dict) else None
     if not isinstance(command, str):
         return None
-    used = {MANAGER_ALIASES[m] for m in invoked_managers(command)}
-    if not used:
-        return None
-    expected = lockfile_manager(work_root(data))
-    if expected is None or used == {expected}:
-        return None
-    wrong = ", ".join(sorted(used - {expected}))
-    return (
-        f"The lockfile selects {expected}; this command uses {wrong}. "
-        f"Re-run it with {expected} so the lockfile stays authoritative."
-    )
+    for manager, directory in invocations(command, work_root(data)):
+        expected = lockfile_manager(directory)
+        if expected is not None and manager != expected:
+            return (
+                f"The lockfile selects {expected}; this command uses {manager}. "
+                f"Re-run it with {expected} so the lockfile stays authoritative."
+            )
+    return None
 
 
 def active_state(root: Path) -> bool:
