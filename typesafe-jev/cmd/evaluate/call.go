@@ -308,22 +308,24 @@ func defaultKeyFile(look lookupFunc, filled map[string]string, name, dir, provid
 // when a fallback is configured, the fallback's. It reads each key exactly as
 // the server would and keeps only the verdict.
 func classifySources(cfg Config, look lookupFunc) (sourceStatus, *sourceStatus) {
-	primary := classifySource(cfg.Provider, cfg.KeyFile, cfg.KeyFileDefaulted, look)
+	primary := classifySource(cfg.Provider, pluginKeyFileEnv, cfg.KeyFile, cfg.KeyFileDefaulted, look)
 	if cfg.Fallback == nil {
 		return primary, nil
 	}
-	fallback := classifySource(cfg.Fallback.Provider, cfg.Fallback.KeyFile, cfg.Fallback.KeyFileDefaulted, look)
+	fallback := classifySource(cfg.Fallback.Provider, pluginFallbackFileEnv, cfg.Fallback.KeyFile, cfg.Fallback.KeyFileDefaulted, look)
 	return primary, &fallback
 }
 
-func classifySource(spec ProviderSpec, keyFile string, defaulted bool, look lookupFunc) sourceStatus {
+// classifySource reports one source's state. keyFileVar names the variable
+// keyFile came from, so an unusable file's reason names the setting to fix.
+func classifySource(spec ProviderSpec, keyFileVar, keyFile string, defaulted bool, look lookupFunc) sourceStatus {
 	s := sourceStatus{Provider: spec.Name}
 	if keyFile != "" {
 		s.Source = "explicit-file"
 		if defaulted {
 			s.Source = "default-file"
 		}
-		if _, err := readKeyFile(keyFile); err != nil {
+		if _, err := readKeyFile(keyFileVar, keyFile); err != nil {
 			s.State, s.reason = "unusable", err.Error()
 			return s
 		}

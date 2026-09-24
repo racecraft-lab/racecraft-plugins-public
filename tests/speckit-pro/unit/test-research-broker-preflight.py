@@ -17,8 +17,8 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import unittest.mock
 from pathlib import Path
-from unittest import mock
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 PLUGIN_ROOT = REPO_ROOT / "speckit-pro"
@@ -29,9 +29,10 @@ for entry in (PLUGIN_ROOT, REPO_ROOT / "tests" / "speckit-pro" / "lib"):
 from speckit_pro_runner import research_preflight as preflight  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
-# A value that must never be echoed. Built at run time so no key-shaped literal
-# sits in the tree.
-SECRET_VALUE = "fixture" + "-secret-" + "value-0000"
+# A marker that must never be echoed. It is not a credential: it only stands in
+# for a file's or a variable's content so a test can prove the preflight never
+# repeats what it was given.
+FIXTURE_VALUE = "fixture-marker-" + "0" * 4
 
 
 class FakeRunner:
@@ -68,7 +69,7 @@ class PreflightStateTests(unittest.TestCase):
         self.binary.write_text("placeholder\n", encoding="utf-8")
         self.binary.chmod(0o755)
 
-    def write_key(self, directory: str, name: str, mode: int = 0o600, content: str = SECRET_VALUE) -> Path:
+    def write_key(self, directory: str, name: str, mode: int = 0o600, content: str = FIXTURE_VALUE) -> Path:
         path = self.home / ".config" / directory / name
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(content, encoding="utf-8")
@@ -178,7 +179,7 @@ class PreflightStateTests(unittest.TestCase):
     def test_environment_only_credential_is_ready_but_warns(self) -> None:
         self.install_binary()
         self.write_key("speckit-pro", "tavily.key")
-        record = self.run_preflight(self.env(TYPESAFE_API_KEY=SECRET_VALUE))
+        record = self.run_preflight(self.env(TYPESAFE_API_KEY=FIXTURE_VALUE))
         self.assertEqual(record["jev"]["state"], "ready")
         self.assertEqual(record["jev"]["credential_source"], "environment")
         self.assertEqual(record["screening_mode"], "jev")
@@ -228,7 +229,7 @@ class PreflightStateTests(unittest.TestCase):
                 self.assertEqual(record["search"]["reason"], reason)
 
     def test_tavily_environment_key_is_configured_with_warning(self) -> None:
-        record = self.run_preflight(self.env(TAVILY_API_KEY=SECRET_VALUE))
+        record = self.run_preflight(self.env(TAVILY_API_KEY=FIXTURE_VALUE))
         self.assertEqual(record["search"]["state"], "configured")
         self.assertEqual(record["search"]["source"], "environment")
         self.assertIn("search_environment_only_credential", [item["code"] for item in record["warnings"]])
@@ -247,6 +248,33 @@ class PreflightStateTests(unittest.TestCase):
         self.assertEqual(record["docs"]["state"], "configured")
         self.assertEqual(record["docs"]["source"], "key_file")
 
+    def test_context7_environment_key_is_configured_with_warning(self) -> None:
+        self.install_binary()
+        self.write_key("racecraft-jev", "typesafe.key")
+        self.write_key("speckit-pro", "tavily.key")
+        record = self.run_preflight(self.env(CONTEXT7_API_KEY=FIXTURE_VALUE))
+        self.assertEqual(record["docs"]["state"], "configured")
+        self.assertEqual(record["docs"]["source"], "environment")
+        self.assertIn("docs_environment_only_credential", [item["code"] for item in record["warnings"]])
+        self.assertEqual(record["severity"], "warning")
+
+    def test_symlinked_key_file_is_not_regular(self) -> None:
+        target = self.write_key("speckit-pro", "real-tavily.key")
+        link = target.with_name("tavily.key")
+        link.symlink_to(target)
+        record = self.run_preflight(self.env())
+        self.assertEqual(record["search"]["state"], "unusable")
+        self.assertEqual(record["search"]["reason"], "key_file_not_regular")
+        self.assertEqual(record["severity"], "error")
+
+    @unittest.skipIf(os.name != "posix" or os.geteuid() == 0, "root reads any file, and Windows has no mode bits")
+    def test_key_file_the_owner_cannot_read_is_unreadable(self) -> None:
+        path = self.write_key("speckit-pro", "tavily.key", mode=0o200)
+        self.addCleanup(path.chmod, 0o600)
+        record = self.run_preflight(self.env())
+        self.assertEqual(record["search"]["state"], "unusable")
+        self.assertEqual(record["search"]["reason"], "key_file_unreadable")
+
     # --- Value-free and bounded ----------------------------------------------
 
     def test_never_opens_a_key_file_or_prints_a_value(self) -> None:
@@ -260,25 +288,25 @@ class PreflightStateTests(unittest.TestCase):
                 raise AssertionError(f"preflight opened a key file: {file}")
             return real_open(file, *args, **kwargs)
 
-        with mock.patch("builtins.open", guarded_open), mock.patch.object(Path, "read_text", side_effect=AssertionError("read_text")), mock.patch.object(Path, "read_bytes", side_effect=AssertionError("read_bytes")):
-            record = self.run_preflight(self.env(OPENROUTER_API_KEY=SECRET_VALUE, TAVILY_API_KEY=SECRET_VALUE))
-        self.assertNotIn(SECRET_VALUE, json.dumps(record))
+        with unittest.mock.patch("builtins.open", guarded_open), unittest.mock.patch.object(Path, "read_text", side_effect=AssertionError("read_text")), unittest.mock.patch.object(Path, "read_bytes", side_effect=AssertionError("read_bytes")):
+            record = self.run_preflight(self.env(OPENROUTER_API_KEY=FIXTURE_VALUE, TAVILY_API_KEY=FIXTURE_VALUE))
+        self.assertNotIn(FIXTURE_VALUE, json.dumps(record))
 
     def test_child_environment_is_an_allowlist(self) -> None:
         self.install_binary()
         runner = FakeRunner()
         self.run_preflight(
             self.env(
-                TYPESAFE_API_KEY=SECRET_VALUE,
-                TAVILY_API_KEY=SECRET_VALUE,
+                TYPESAFE_API_KEY=FIXTURE_VALUE,
+                TAVILY_API_KEY=FIXTURE_VALUE,
                 JEV_PROVIDER="attacker",
-                UNRELATED_SECRET=SECRET_VALUE,
+                UNRELATED_VARIABLE=FIXTURE_VALUE,
             ),
             runner,
         )
         _, child_env = runner.calls[-1]
         self.assertNotIn("TAVILY_API_KEY", child_env)
-        self.assertNotIn("UNRELATED_SECRET", child_env)
+        self.assertNotIn("UNRELATED_VARIABLE", child_env)
         self.assertEqual(child_env["JEV_PROVIDER"], "typesafe")
         self.assertEqual(child_env["JEV_FALLBACK_PROVIDER"], "openrouter")
         self.assertIn("TYPESAFE_API_KEY", child_env)
@@ -350,25 +378,25 @@ class PreflightProcessTests(unittest.TestCase):
         binary = self.fake_binary(version="0.9.0", check_exit=0)
         key = self.home / ".config" / "racecraft-jev" / "typesafe.key"
         key.parent.mkdir(parents=True)
-        key.write_text(SECRET_VALUE, encoding="utf-8")
+        key.write_text(FIXTURE_VALUE, encoding="utf-8")
         key.chmod(0o600)
         completed, response = self.run_helper({"HOME": str(self.home), "EVALUATE_BIN": str(binary)})
         self.assertEqual(response["status"], "ok", completed.stderr)
         self.assertEqual(response["data"]["jev"]["state"], "ready")
         self.assertFalse(response["data"]["writes_state"])
         self.assertNotIn("raw child stderr", completed.stdout + completed.stderr)
-        self.assertNotIn(SECRET_VALUE, completed.stdout + completed.stderr)
+        self.assertNotIn(FIXTURE_VALUE, completed.stdout + completed.stderr)
 
     def test_runner_reports_expected_failure_for_an_unusable_credential(self) -> None:
         binary = self.fake_binary(version="0.9.1", check_exit=4)
         completed, response = self.run_helper(
-            {"HOME": str(self.home), "EVALUATE_BIN": str(binary), "TYPESAFE_API_KEY": SECRET_VALUE}
+            {"HOME": str(self.home), "EVALUATE_BIN": str(binary), "TYPESAFE_API_KEY": FIXTURE_VALUE}
         )
         self.assertEqual(response["status"], "expected_failure")
         self.assertEqual(completed.returncode, 1)
         self.assertEqual(response["data"]["jev"]["state"], "credential_unusable")
         self.assertIn("jev_credential_unusable", [diag["code"] for diag in response["diagnostics"]])
-        self.assertNotIn(SECRET_VALUE, completed.stdout + completed.stderr)
+        self.assertNotIn(FIXTURE_VALUE, completed.stdout + completed.stderr)
 
     def test_runner_rejects_unknown_inputs(self) -> None:
         request = {
