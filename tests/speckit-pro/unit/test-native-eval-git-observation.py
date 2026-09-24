@@ -114,6 +114,8 @@ class NativeEvalGitObservationTests(unittest.TestCase):
                 git,
                 "-c",
                 f"core.hooksPath={hooks}",
+                "-c",
+                "maintenance.auto=false",
                 *arguments,
             ],
             cwd=workspace,
@@ -203,6 +205,24 @@ class NativeEvalGitObservationTests(unittest.TestCase):
         with mock.patch.object(observation, "MAX_PATHS", 0):
             with self.assertRaisesRegex(GitObservationError, "path count exceeds limit"):
                 observe_git_state(workspace, controls, receipt)
+
+    def test_fixture_commits_never_start_detached_auto_maintenance(self) -> None:
+        # A detached `git maintenance run --auto` holds objects/maintenance.lock
+        # while the control-path walk runs, so a vanished lock fails it at random.
+        trace = self.root / "git-trace"
+        real_environment = fixture_setup._git_environment
+
+        def traced_environment(config: Path) -> dict[str, str]:
+            return {**real_environment(config), "GIT_TRACE": str(trace)}
+
+        with mock.patch.object(fixture_setup, "_git_environment", traced_environment):
+            workspace, _receipt, _controls = self.fixture("traced")
+            (workspace / "artifact.md").write_text("traced artifact\n", encoding="utf-8")
+            self.git_write(workspace, "add", "--", "artifact.md")
+            self.git_write(workspace, "commit", "--quiet", "--no-gpg-sign", "-m", "traced")
+        log = trace.read_text(encoding="utf-8")
+        self.assertIn("built-in: git commit", log)
+        self.assertNotIn("maintenance run", log)
 
     def test_commit_records_message_paths_and_feature_relative_count(self) -> None:
         workspace, receipt, controls = self.fixture("committed")
