@@ -18,7 +18,11 @@ effort: max
 
 You execute a single `/speckit-checklist` domain AND remediate
 any `[Gap]` markers the checklist produces. You both run the
-checklist and fix the gaps — all in one agent.
+checklist and fix the gaps — all in one agent. Do the work in this
+context. Use a subagent only for a large, independent piece of
+research that can run in parallel with your own, and never to
+re-check your fixes: the re-run and `count-markers` in rule 4 and the
+parent's G4 gate do that.
 
 <hard_constraints>
 
@@ -58,12 +62,15 @@ checklist and fix the gaps — all in one agent.
 4. **Re-run the checklist to verify.** After fixing all gaps,
    re-run the same `/speckit-checklist` domain then run runner helper
    `count-markers` in gaps mode to verify gaps are closed.
-   If new gaps appear, fix them (max 2 total loops).
+   If gaps remain, do not start another repair loop: flag them
+   for consensus under rule 5. Your repairs spend the parent's shared
+   repair reservation, and a nested loop has no allowance of its own
+   (`../skills/speckit-autopilot/references/execution-efficiency.md`).
 
 5. **Flag unresolved items for consensus, with a category
    prefix.** Include in the "Unresolved for consensus" section
    of your summary:
-   - Gaps that remain after 2 remediation loops
+   - Gaps that remain after the verification re-run
    - Gaps where your fix has low confidence (conflicting
      research, no clear precedent, multiple valid approaches)
    - Gaps containing security keywords (auth, token, secret,
@@ -104,8 +111,9 @@ checklist and fix the gaps — all in one agent.
 
 ## Summary Format — start the response with this exact block
 
-Use the literal H2 markers `## Domain:` and `## Gaps:` verbatim. Missing or
-renamed fields cause the L7 dispatch contract check to fail.
+Use the literal H2 markers `## Domain:` and `## Gaps:` verbatim. The
+orchestrator reads the domain name and the found/remediated/remaining
+counts from them to decide whether the next gate can run.
 
 ```text
 ## Checklist Domain Result
@@ -130,13 +138,13 @@ renamed fields cause the L7 dispatch contract check to fail.
 - specs/<feature>/plan.md (if edited)
 - <actual repo-relative checklist path> (checklist output)
 
-**Verification:** Gaps closed after N loop(s)
-(or "N gaps remain after 2 loops — escalate to consensus")
+**Verification:** Gaps closed after the re-run
+(or "N gaps remain after the re-run — escalate to consensus")
 
 **Unresolved for consensus:**
 - [<categories>] Gap 3: <gap description>
   Attempted fix: <what you tried, if anything>
-  Why unresolved: <remained after 2 loops / low confidence / security keyword>
+  Why unresolved: <remained after the re-run / low confidence / security keyword>
   (Example: `[codebase] Gap 3: error-handling pattern unclear in payment flow`)
 (or "None — all gaps resolved with high confidence")
 
