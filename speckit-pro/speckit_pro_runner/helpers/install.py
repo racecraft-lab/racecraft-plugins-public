@@ -2602,9 +2602,9 @@ def codex_route_aware_bounded_child_probe_results(
             continue
         seen.add((probe_id, route_id))
         result = {"probe_id": probe_id, "route_id": route_id}
-        for field in ("status", "available", "evidence_id", "error"):
-            if field in raw:
-                result[field] = copy.deepcopy(raw[field])
+        for field_name in ("status", "available", "evidence_id", "error"):
+            if field_name in raw:
+                result[field_name] = copy.deepcopy(raw[field_name])
         results.append(result)
     return results
 
@@ -4036,9 +4036,9 @@ def validate_route_policy_route(raw: Any, *, context: str) -> dict[str, Any]:
                 "unknown": sorted(keys - ROUTE_POLICY_ROUTE_KEYS),
             },
         )
-    for field in ("route_id", "model", "model_reasoning_effort"):
-        if not isinstance(raw.get(field), str) or not raw[field]:
-            return invalid_route_policy_manifest("route_field_invalid", details={"route": context, "field": field})
+    for field_name in ("route_id", "model", "model_reasoning_effort"):
+        if not isinstance(raw.get(field_name), str) or not raw[field_name]:
+            return invalid_route_policy_manifest("route_field_invalid", details={"route": context, "field": field_name})
     if raw["model"] not in SUPPORTED_CODEX_AGENT_MODELS:
         return invalid_route_policy_manifest("route_model_unsupported", details={"route": context, "model": raw["model"]})
     if not isinstance(raw.get("capabilities"), list) or any(not isinstance(item, str) or not item for item in raw["capabilities"]):

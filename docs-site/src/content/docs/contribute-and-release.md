@@ -51,7 +51,7 @@ Primary sources: [PR Checks workflow](https://github.com/racecraft-lab/racecraft
    permits omitting it.
 5. For a `feat` or `fix`, include exactly one non-empty fenced `release-note`
    block unless the `release-note/skip` label applies. Write consumer-facing
-   prose; PR Checks sanitize and validate the block before merge.
+   prose; PR Metadata sanitizes and validates the block before merge.
 6. Write the PR body for a public reader. Include what changed, why it changed,
    non-goals, review order, validation evidence, known gaps, and rollback notes.
 7. Include the validation commands that match the changed surfaces.
@@ -59,7 +59,7 @@ Primary sources: [PR Checks workflow](https://github.com/racecraft-lab/racecraft
 Good titles keep both pieces: the Conventional Commit prefix and plain English
 after the colon. Avoid internal-only codes in the title or body.
 
-Primary sources: [pull request template](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/.github/pull_request_template.md) and [PR Checks workflow](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/.github/workflows/pr-checks.yml).
+Primary sources: [pull request template](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/.github/pull_request_template.md) and [PR Metadata workflow](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/.github/workflows/pr-metadata.yml).
 
 ## Maintainer Release Readiness
 
@@ -147,7 +147,8 @@ The maintainer-facing release flow is:
    release branch, and runs `scripts/sync_release_pr.py`. That helper refreshes
    payloads, marketplace versions, and
    generated references, then commits and pushes any changes onto the release
-   PR branch. The workflow also dispatches `PR Checks` as a fallback.
+   PR branch. The workflow also dispatches `PR Checks` and `PR Metadata` as a
+   fallback.
 4. `PR Checks` validates every commit cited by a maintainer in a resolved review
    thread on a generated release PR. If regeneration drops a cited commit, the
    existing required `validate-workflows` check fails before merge.
@@ -178,7 +179,8 @@ the release PR. A direct release-branch commit can be discarded by the next
 regeneration; the ancestry check is the fail-closed backstop for any resolved
 review reply that cites such a commit.
 
-The manual `PR Checks` dispatch is observable repository behavior. If you
+The manual `PR Checks` and `PR Metadata` dispatch is observable repository
+behavior. If you
 explain the GitHub-token reason, scope it to this repository's workflow comments
 and GitHub's recursion guard behavior rather than treating it as a general
 platform rule for every event.
@@ -187,8 +189,14 @@ Primary sources: [Release workflow](https://github.com/racecraft-lab/racecraft-p
 
 ## Current PR Checks Behavior
 
-`PR Checks` runs on non-draft pull requests and can also be dispatched manually
-by the Release workflow for release-please PR branches.
+`PR Checks` runs on non-draft pull requests when they open, reopen, receive a
+push, or leave draft. The Release workflow can also dispatch it for
+release-please PR branches. A newer push cancels the superseded run for the same
+pull request; dispatched runs are never cancelled.
+
+`PR Metadata` holds the title and release-note checks. It also reruns when the
+title, body, or labels change, so those edits take seconds and never rerun the
+test suite. The Release workflow dispatches it alongside `PR Checks`.
 
 Current behavior to account for in review:
 
@@ -199,16 +207,16 @@ Current behavior to account for in review:
   from source.
 - `validate-plugins` is the stable branch-protection sentinel for the plugin
   matrix and artifact-consistency result.
-- `validate-pr-title` checks the Conventional Commit title contract.
-  `validate-release-note` separately enforces the `feat`/`fix`
-  release-note block contract.
+- `validate-pr-title` (in `PR Metadata`) checks the Conventional Commit title
+  contract. `validate-release-note` (in `PR Metadata`) separately enforces the
+  `feat`/`fix` release-note block contract.
 - `validate-workflows` checks GitHub Actions syntax and semantics.
 - `validate-docs` always reports but chooses a no-op, generated-reference, or
   full docs-site validation mode from the changed paths. Full mode runs the
   Astro/Starlight build and Playwright smoke checks; generated-reference mode
   checks reference drift and docs quality.
 
-Primary source: [PR Checks workflow](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/.github/workflows/pr-checks.yml).
+Primary sources: [PR Checks workflow](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/.github/workflows/pr-checks.yml) and [PR Metadata workflow](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/.github/workflows/pr-metadata.yml).
 
 ## Final Checklist
 

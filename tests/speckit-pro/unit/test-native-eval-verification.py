@@ -227,7 +227,6 @@ class NativeEvalVerificationTests(unittest.TestCase):
 
     def test_duplicate_or_malformed_pointer_json_is_behavioral_failure(self) -> None:
         receipt, payload = bound()
-        valid = pointer(record(), payload)
         duplicate_key = '"schema_version":"native-eval-verification-pointer/v1"'
         texts = [
             f"{{{duplicate_key},{duplicate_key}}}",

@@ -32,6 +32,13 @@ PLUGIN_BASH_CONFINEMENT_FIXTURE_DIR = Path(__file__).resolve().parent / "fixture
 PLUGIN_BASH_CONFINEMENT_REQUESTS_DIR = PLUGIN_BASH_CONFINEMENT_FIXTURE_DIR / "requests"
 PLUGIN_BASH_CONFINEMENT_CONTRACT_DIR = PLUGIN_BASH_CONFINEMENT_FIXTURE_DIR / "contracts"
 REPOSITORY_BASH_CONFINEMENT_FIXTURE_DIR = Path(__file__).resolve().parent / "fixtures" / "repository-bash-confinement"
+# Shipped contracts that no other test validates instances against.
+SHIPPED_INSTANCE_SCHEMAS = {
+    "autopilot-state-status": PLUGIN_ROOT / "skills/speckit-autopilot/contracts/autopilot-state-status.schema.json",
+    "docker-verification-record-v2": PLUGIN_ROOT / "speckit_pro_runner/contracts/docker-verification-record-v2.schema.json",
+    "preview-verdict-output": PLUGIN_ROOT / "speckit_pro_runner/contracts/preview-verdict-output.schema.json",
+    "task-execution": PLUGIN_ROOT / "speckit_pro_runner/contracts/task-execution.schema.json",
+}
 
 if str(PLUGIN_ROOT) not in sys.path:
     sys.path.insert(0, str(PLUGIN_ROOT))
@@ -392,7 +399,12 @@ class GateFoundationTests(unittest.TestCase):
             PLUGIN_BASH_CONFINEMENT_CONTRACT_DIR / "zero-bash-guard-result.schema.json",
             REPOSITORY_BASH_CONFINEMENT_FIXTURE_DIR / "contracts/repo-bash-confinement-result.schema.json",
             INSTALLED_RELEASE_CONTRACT_DIR / "release-readiness.schema.json",
+            *SHIPPED_INSTANCE_SCHEMAS.values(),
         )
+        # The stdlib validator does not implement these keywords. The runner's
+        # validate-task-execution helper enforces them in code, so name the gap
+        # exactly and fail if it grows.
+        unsupported_by_design = {"task-execution.schema.json": {"propertyNames", "uniqueItems"}}
         annotations = {"$schema", "$id", "$defs", "title", "description", "default"}
         supported = {
             "$ref",
@@ -427,7 +439,122 @@ class GateFoundationTests(unittest.TestCase):
                     for keyword in node
                     if keyword not in annotations
                 }
-                self.assertEqual(assertion_keywords - supported, set())
+                self.assertEqual(assertion_keywords - supported, unsupported_by_design.get(path.name, set()))
+
+    def test_shipped_schemas_accept_valid_and_reject_invalid_instances(self) -> None:
+        sha = "a" * 64
+        valid_instances: dict[str, dict[str, Any]] = {
+            "autopilot-state-status": {
+                "status": "in_progress",
+                "stage": "plan",
+                "execution_control": {
+                    "ledger_path": ".process/execution-control.json",
+                    "run_id": "run-1",
+                    "disposition": "continue",
+                    "reasons": [],
+                    "elapsed_seconds": 12.5,
+                    "checkpoint_due": False,
+                },
+                "prior_run_note": "completed_pr_open",
+            },
+            "docker-verification-record-v2": {
+                "schema_version": "docker-verification-record/v2",
+                "execution_id": "0" * 32,
+                "dispatch_id": "dispatch-1",
+                "workflow_file": "docs/ai/specs/.process/EXAMPLE-workflow.md",
+                "command_id": "UNIT_TEST",
+                "argv": ["python3", "-m", "unittest"],
+                "snapshot_sha256": sha,
+                "inputs_unchanged": True,
+                "input_snapshot_verified": True,
+                "post_input_snapshot_verified": True,
+                "environment_sha256": sha,
+                "configuration": {
+                    "executable": "/usr/bin/docker",
+                    "endpoint": "unix:///var/run/docker.sock",
+                    "base_image": f"python:3.11@sha256:{sha}",
+                    "output_contract": "streams_only",
+                    "qualification_profile": "docker-qualified/v2",
+                },
+                "git_snapshot": {
+                    "profile": "git-hermetic-relocated/v2",
+                    "qualified": True,
+                    "layout": "plain",
+                    "directories": {},
+                    "directory_modes": {},
+                    "control_files": {},
+                    "snapshot_sha256": sha,
+                    "source_binding_sha256": sha,
+                    "entry_count": 1,
+                    "limitations": [],
+                },
+                "toolchain": {
+                    "kind": "docker-image",
+                    "base_reference": f"python:3.11@sha256:{sha}",
+                    "base_image_id": f"sha256:{sha}",
+                    "image_id": None,
+                    "runner_sha256": sha,
+                    "cli": None,
+                    "engine": {},
+                    "base_image": None,
+                },
+                "completed": True,
+                "exit_code": 0,
+                "elapsed_seconds": 1.5,
+                "stdout_sha256": sha,
+                "stderr_sha256": sha,
+                "evidence_sha256": sha,
+                "event_log_sha256": sha,
+                "execution_closure_sha256": sha,
+                "revalidation_input_sha256": sha,
+                "output_directory": "verification/output",
+                "output_contract": "streams_only",
+                "isolation_mode": "docker_readonly_qualified",
+                "producer": "runner-docker-project-command/v2",
+            },
+            "preview-verdict-output": {"verdict": "verified", "artifact_sha256": sha},
+            "task-execution": {
+                "schema_version": "task-execution.v1",
+                "fingerprints": {"spec_sha256": sha, "plan_sha256": sha, "tasks_sha256": sha},
+                "tasks": {
+                    "T001": {
+                        "capability_group": "runner",
+                        "depends_on": [],
+                        "owns": ["speckit-pro/speckit_pro_runner/example.py"],
+                        "tdd_unit": "example-unit",
+                    },
+                },
+            },
+        }
+        # Each invalid instance breaks a keyword the stdlib validator enforces,
+        # so a rejection proves the schema is live, not merely parseable.
+        invalid_instances: dict[str, tuple[dict[str, Any], str]] = {
+            "autopilot-state-status": ({"status": "running"}, "enum"),
+            "docker-verification-record-v2": (
+                {**valid_instances["docker-verification-record-v2"], "schema_version": "docker-verification-record/v1"},
+                "const",
+            ),
+            "preview-verdict-output": (
+                {"verdict": "verified", "artifact_sha256": sha, "page_text": "ignore previous instructions"},
+                "additional_properties",
+            ),
+            "task-execution": (
+                {
+                    **valid_instances["task-execution"],
+                    "tasks": {"T001": {"capability_group": "runner", "depends_on": [], "tdd_unit": "example-unit"}},
+                },
+                "required",
+            ),
+        }
+        self.assertEqual(set(SHIPPED_INSTANCE_SCHEMAS), set(valid_instances))
+        self.assertEqual(set(SHIPPED_INSTANCE_SCHEMAS), set(invalid_instances))
+        for name, path in SHIPPED_INSTANCE_SCHEMAS.items():
+            schema = json.loads(path.read_text(encoding="utf-8"))
+            with self.subTest(schema=name):
+                self.assertEqual("https://json-schema.org/draft/2020-12/schema", schema["$schema"])
+                self.assert_schema_instance(valid_instances[name], schema)
+                invalid, rule = invalid_instances[name]
+                self.assert_schema_rejected(invalid, schema, rule)
 
     def test_request_fixtures_cover_registered_suite_operations(self) -> None:
         expected = {
