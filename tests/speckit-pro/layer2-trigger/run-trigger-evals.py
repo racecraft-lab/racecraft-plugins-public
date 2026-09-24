@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import argparse
-import errno
 import hashlib
 import json
 import os
@@ -16,7 +15,8 @@ import signal
 import subprocess
 import sys
 import tempfile
-import time
+# Unused here, but tests patch time.monotonic and time.sleep through this module.
+import time  # noqa: F401
 import uuid
 
 

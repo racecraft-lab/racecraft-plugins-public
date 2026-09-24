@@ -82,9 +82,13 @@ def python_child_env(repo_root: Path) -> dict[str, str]:
     plugin_root = repo_root / "speckit-pro"
     existing = env.get("PYTHONPATH")
     env["PYTHONPATH"] = plugin_root.as_posix() if not existing else f"{plugin_root.as_posix()}{os.pathsep}{existing}"
-    env["GIT_CONFIG_COUNT"] = "1"
-    env["GIT_CONFIG_KEY_0"] = "commit.gpgsign"
-    env["GIT_CONFIG_VALUE_0"] = "false"
+    # Scripts run in parallel, and git's detached auto-maintenance can create and
+    # delete .git/objects/maintenance.lock while a fixture walks .git.
+    git_config = (("commit.gpgsign", "false"), ("maintenance.auto", "false"), ("gc.auto", "0"))
+    env["GIT_CONFIG_COUNT"] = str(len(git_config))
+    for index, (key, value) in enumerate(git_config):
+        env[f"GIT_CONFIG_KEY_{index}"] = key
+        env[f"GIT_CONFIG_VALUE_{index}"] = value
     return env
 
 

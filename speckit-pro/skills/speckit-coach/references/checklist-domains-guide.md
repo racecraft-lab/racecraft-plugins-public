@@ -55,6 +55,8 @@ Identify which of these signal categories are present:
 | Third-party APIs, external services, webhooks, data imports | **integration** | Medium for specs with external dependencies |
 | Touch targets, gestures, orientation, offline, responsive breakpoints | **mobile-ux** | High for mobile-first specs |
 | Logging, monitoring, alerting, health checks, observability | **reliability** | Medium for production-critical specs |
+| Personal data (PII), consent, retention periods, deletion, data export | **privacy** | Optional; High when the spec stores or processes PII |
+| New third-party packages, dependency upgrades, vendored code, build or install scripts | **supply-chain** | Optional; Medium when the plan adds a dependency |
 
 ### Step 2: Rank by Risk and Coverage Gap Potential
 
@@ -62,7 +64,7 @@ After extracting signals, rank the candidate domains:
 
 1. **Core domains** (directly tied to the spec's primary deliverable) — always include
 2. **Cross-cutting domains** (security, performance, error-handling) — include when the spec touches sensitive areas
-3. **Edge domains** (reliability, mobile-ux) — include only when explicitly relevant
+3. **Edge domains** (reliability, mobile-ux, privacy, supply-chain) — include only when explicitly relevant
 
 **Target: 2-4 domains per spec.** More than 4 is diminishing returns.
 

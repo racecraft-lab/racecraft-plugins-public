@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import copy
 from contextlib import AbstractContextManager
-import fcntl
 import hashlib
 import json
 import math
