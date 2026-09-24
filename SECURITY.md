@@ -7,8 +7,10 @@ documentation.
 
 ## Reporting a vulnerability
 
-Use GitHub's private reporting: open the **Security** tab of this repository and
-choose **Report a vulnerability**. That opens a private advisory visible only to
+Report privately through GitHub's private vulnerability reporting:
+<https://github.com/racecraft-lab/racecraft-plugins-public/security/advisories/new>.
+You can also open the **Security** tab of this repository and choose **Report a
+vulnerability**. Either way, the report is a private advisory visible only to
 the maintainers.
 
 If private advisories are unavailable to you, contact a maintainer through their
@@ -21,8 +23,7 @@ branch name, or commit message before a fix ships.
 Include the affected path, what an attacker or a misbehaving agent could reach,
 and steps to reproduce. A proof-of-concept diff helps but is not required.
 
-Expect an acknowledgement within seven days. There is no bug bounty for this
-repository.
+There is no bug bounty for this repository.
 
 ## Supported versions
 
@@ -62,8 +63,18 @@ Out of scope: third-party MCP servers and services the plugins call, the
 upstream SpecKit CLI, vendored upstream content, and archived spec artifacts
 under `specs/`. Report those to their respective maintainers.
 
-## Disclosure
+## Disclosure process
 
-Report privately, and give the maintainers a chance to ship a fix before
-publishing. Once a fix is released, credit is offered to the reporter unless
-anonymity is requested.
+We follow coordinated disclosure. After you report:
+
+1. We acknowledge the report within 3 business days.
+2. Within 10 business days, we tell you whether we confirm the issue and how
+   severe we judge it.
+3. We aim to ship a fix within 90 days of the report, sooner for severe
+   issues. We update you at least every 14 days until it ships.
+4. When the fix is released, we publish a GitHub security advisory and credit
+   you, unless you ask to stay anonymous.
+
+Please keep the details private until the advisory is published or 90 days have
+passed, whichever comes first. If a fix needs longer, we will explain why and
+agree a new date with you.

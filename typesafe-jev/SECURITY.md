@@ -10,8 +10,9 @@ Include what you did, what happened, and what you expected. A minimal
 reproduction is worth more than a long description. **Never include a real API
 key in a report**, even a revoked one; describe where it came from instead.
 
-We aim to acknowledge a report within three working days. This is a small
-project, so a fix may take longer than the acknowledgement.
+We acknowledge a report within 3 business days and aim to ship a fix within 90
+days, sooner for severe issues. Timelines, updates, and credit follow the
+repository's [disclosure process](../SECURITY.md#disclosure-process).
 
 ## Scope
 
