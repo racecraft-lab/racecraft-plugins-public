@@ -1,7 +1,7 @@
 # Dependabot configuration for racecraft-plugins-public.
-# This repo is a Claude Code plugin marketplace — no application package
-# manifests live here. The only thing worth tracking is GitHub Actions
-# pinned in `.github/workflows/`.
+# This repo is a Claude Code plugin marketplace. Two things are tracked:
+# GitHub Actions pinned in `.github/workflows/`, and the Go module in
+# `typesafe-jev/`, the only package manifest that ships in a plugin.
 #
 # Docs: https://docs.github.com/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
 
@@ -15,3 +15,32 @@ updates:
     commit-message:
       prefix: "chore"
       include: "scope"
+
+  # typesafe-jev's Go dependencies. The MCP SDK and Cobra sit on the path that
+  # handles a credential, so an advisory against either matters most here.
+  - package-ecosystem: "gomod"
+    directory: "/typesafe-jev"
+    schedule:
+      interval: "weekly"
+    # Wait a week before proposing a new release, so a compromised or
+    # withdrawn version has time to be caught upstream first.
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+    groups:
+      # One PR for the routine bumps. Major versions stay separate: they need
+      # reading, not merging.
+      go-minor-and-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+    ignore:
+      # The go directive in go.mod is deliberate. Raising the required Go
+      # version is a decision about who can build this, not a dependency bump.
+      - dependency-name: "go"
+      - dependency-name: "toolchain"

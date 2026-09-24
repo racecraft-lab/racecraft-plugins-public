@@ -1,0 +1,42 @@
+# Dependency Review — blocks a pull request that adds a dependency with a
+# known advisory, or one under a licence this repository cannot ship.
+#
+# The only package manifest here is typesafe-jev's Go module. Catching a bad
+# dependency before merge is cheaper than a Dependabot alert after it.
+#
+# Security notes:
+# - pull_request, not pull_request_target: a fork PR gets a read-only token
+#   and no secrets.
+
+name: Dependency Review
+
+on:
+  pull_request:
+
+permissions: {}
+
+jobs:
+  dependency-review:
+    name: dependency-review
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Review dependency changes
+        uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        with:
+          # Moderate rather than high: typesafe-jev handles a credential and
+          # talks to an external endpoint, so a middling advisory in the
+          # transport or JSON path still deserves a look before it lands.
+          fail-on-severity: moderate
+          # typesafe-jev ships under MIT. A copyleft dependency would change
+          # what downstream users may do with the binary, which is a decision
+          # rather than a merge.
+          deny-licenses: GPL-2.0, GPL-3.0, AGPL-3.0, LGPL-2.1, LGPL-3.0
