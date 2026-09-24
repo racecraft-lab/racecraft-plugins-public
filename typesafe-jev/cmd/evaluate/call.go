@@ -358,10 +358,17 @@ func readCallRequest(r io.Reader) (evaluateIn, error) {
 	if len(b) > maxRequestBody {
 		return in, fmt.Errorf("the request on stdin is over the %d byte limit", maxRequestBody)
 	}
+	notAnObject := errors.New(`stdin is not one JSON object of the form {"state": ..., "questions": {...}, "model": "..."}`)
+	// Decode accepts a bare null into a struct and leaves it zero, so the
+	// object is required here, before decoding. JSON allows only these four
+	// whitespace bytes ahead of a value.
+	if !bytes.HasPrefix(bytes.TrimLeft(b, " \t\r\n"), []byte("{")) {
+		return in, notAnObject
+	}
 	dec := json.NewDecoder(bytes.NewReader(b))
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(&in); err != nil {
-		return in, errors.New(`stdin is not one JSON object of the form {"state": ..., "questions": {...}, "model": "..."}`)
+		return in, notAnObject
 	}
 	if _, err := dec.Token(); err != io.EOF {
 		return in, errors.New("stdin holds more than one JSON value; send exactly one request")

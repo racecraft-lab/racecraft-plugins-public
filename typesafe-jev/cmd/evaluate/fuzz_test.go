@@ -120,7 +120,7 @@ func FuzzCallRequestDecode(f *testing.F) {
 			t.Fatalf("accepted input is not a single JSON object: %v", err)
 		}
 		if fields == nil {
-			return // a bare null, which decodes to the zero request
+			t.Fatal("accepted a bare null as a request")
 		}
 		// The same request with one field it does not define must be refused.
 		fields["zzUnknownField"] = json.RawMessage("1")
