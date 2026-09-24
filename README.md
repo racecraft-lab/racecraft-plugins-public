@@ -3,6 +3,8 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)
 ![Platforms: Claude Code and Codex](https://img.shields.io/badge/platforms-Claude%20Code%20%2B%20Codex-blue)
 ![Marketplace: public](https://img.shields.io/badge/marketplace-public-lightgrey)
+[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/14821/badge)](https://www.bestpractices.dev/projects/14821)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/racecraft-lab/racecraft-plugins-public/badge)](https://scorecard.dev/viewer/?uri=github.com/racecraft-lab/racecraft-plugins-public)
 
 Racecraft Plugins Public is the open-source plugin marketplace from
 [Racecraft Lab](https://github.com/racecraft-lab). It publishes

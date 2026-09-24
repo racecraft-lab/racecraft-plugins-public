@@ -1,0 +1,3 @@
+# Every path is owned by the maintainers team. The main-branch ruleset
+# requires a code-owner review; repository admins may bypass it.
+* @racecraft-lab/maintainers
