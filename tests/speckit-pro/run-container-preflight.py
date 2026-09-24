@@ -9,6 +9,7 @@ import platform
 import shutil
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 from typing import Any, Callable
 
@@ -24,6 +25,11 @@ LINUX_CONTAINER_SOURCE = (
     "https://github.com/docker-library/python/tree/"
     "4d216ad3beb5b697c4049071c82fc375acb8abad/3.11/bookworm"
 )
+# Runner children cache bytecode in a mirror tree here, outside the checkout and
+# outside the uploaded EVIDENCE_DIR. The checkout stays free of __pycache__, as
+# PYTHONDONTWRITEBYTECODE kept it, but each module compiles once per job rather
+# than once per child process.
+PYCACHE_PREFIX = Path(tempfile.gettempdir()) / "container-preflight-pycache"
 WINDOWS_HELPER = REPO_ROOT / "tests" / "speckit-pro" / "run-hosted-windows-preflight.py"
 RUNNER_TIMEOUT_SECONDS = 1800
 WINDOWS_TIMEOUT_SECONDS = 3600
@@ -271,11 +277,13 @@ def _run_runner_request(
     child_env.update(
         {
             "GIT_CONFIG_GLOBAL": str(git_config_path),
-            "PYTHONDONTWRITEBYTECODE": "1",
+            "PYTHONPYCACHEPREFIX": str(PYCACHE_PREFIX),
             "PYTHONUTF8": "1",
             "PYTHONPATH": str(REPO_ROOT / "speckit-pro"),
         }
     )
+    # An inherited PYTHONDONTWRITEBYTECODE would switch the cache off again.
+    child_env.pop("PYTHONDONTWRITEBYTECODE", None)
     if skip_toolchain:
         child_env["SPECKIT_SKIP_TOOLCHAIN_CHECK"] = "1"
     else:
