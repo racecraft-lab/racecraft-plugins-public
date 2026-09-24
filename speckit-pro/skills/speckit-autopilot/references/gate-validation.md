@@ -239,7 +239,7 @@ Step 5: If gaps remain when the shared reservation ends → STOP, present
 
 **Why research + consensus:** Gaps often require understanding
 both what the codebase already does (codebase exploration) AND what
-the API/standard requires (via web search). Using multiple research
+the API/standard requires (via the research broker's web search). Using multiple research
 sources produces higher-quality fixes than guessing.
 
 **Critical:** Run gap remediation sequentially (one gap at a

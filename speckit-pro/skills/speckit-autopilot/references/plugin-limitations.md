@@ -30,7 +30,9 @@ documented in the official Anthropic docs.
 2. **Research/context capability coverage:** Agents can only use evidence
    capabilities that are available in the parent session. This includes
    codebase context, library documentation, web/domain research, and source
-   extraction.
+   extraction. Web research and library documentation come only from the
+   bundled research broker (`research_search`, `docs_query`); see the
+   research broker rule in `capability-discovery.md`.
 
    When a stronger capability is unavailable, agents use their built-in
    fallback paths and record any confidence impact in the relevant workflow
@@ -98,8 +100,8 @@ acceptable fallback path exists:
 | Capability | Used By | Fallback behavior |
 |------------|---------|-------------------|
 | Codebase context | analyze-executor, checklist-executor, clarify-executor, codebase-analyst | Use local repository reads and searches |
-| Library documentation | analyze-executor, checklist-executor, clarify-executor, domain-researcher | Use available docs evidence or cite the fallback confidence limit |
-| Web/domain research | analyze-executor, checklist-executor, clarify-executor, domain-researcher | Use available public-source evidence or mark reduced confidence |
+| Library documentation (research broker `docs_query`) | analyze-executor, checklist-executor, clarify-executor, domain-researcher | Keyless Context7 when no key is set; otherwise cite the fallback confidence limit |
+| Web/domain research (research broker `research_search`) | analyze-executor, checklist-executor, clarify-executor, domain-researcher | Without a Tavily key the tool returns `search_unavailable`; mark reduced confidence |
 | Source extraction | analyze-executor, checklist-executor, clarify-executor, domain-researcher | Use accessible source text or request escalation when no acceptable evidence path remains |
 
 The prerequisite check reports this as a single `capability_coverage`
