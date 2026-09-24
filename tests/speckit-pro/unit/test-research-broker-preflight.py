@@ -267,11 +267,19 @@ class PreflightStateTests(unittest.TestCase):
         self.assertEqual(record["search"]["reason"], "key_file_not_regular")
         self.assertEqual(record["severity"], "error")
 
-    @unittest.skipIf(os.name != "posix" or os.geteuid() == 0, "root reads any file, and Windows has no mode bits")
     def test_key_file_the_owner_cannot_read_is_unreadable(self) -> None:
-        path = self.write_key("speckit-pro", "tavily.key", mode=0o200)
-        self.addCleanup(path.chmod, 0o600)
-        record = self.run_preflight(self.env())
+        # os.access is stubbed rather than driven by a mode-0200 file: root, as
+        # in the CI container, reads any file, and a skip fails the counted run.
+        path = self.write_key("speckit-pro", "tavily.key")
+        real_access = os.access
+
+        def access(target, mode, *args, **kwargs):  # type: ignore[no-untyped-def]
+            if Path(target) == path and mode == os.R_OK:
+                return False
+            return real_access(target, mode, *args, **kwargs)
+
+        with unittest.mock.patch.object(preflight.os, "access", access):
+            record = self.run_preflight(self.env())
         self.assertEqual(record["search"]["state"], "unusable")
         self.assertEqual(record["search"]["reason"], "key_file_unreadable")
 
