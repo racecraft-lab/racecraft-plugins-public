@@ -154,7 +154,9 @@ def copy_installed_release_tree(destination: Path) -> None:
         "speckit-pro",
         "tests/speckit-pro/unit/fixtures",
     ):
-        shutil.copytree(REPO_ROOT / relative, destination / relative)
+        # Parallel Layer 4 siblings may be writing bytecode into the tree; a
+        # half-written .pyc can vanish mid-copy, and no gate reads the caches.
+        shutil.copytree(REPO_ROOT / relative, destination / relative, ignore=shutil.ignore_patterns("__pycache__"))
     shutil.copy2(REPO_ROOT / ".release-please-manifest.json", destination)
 
 
