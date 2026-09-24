@@ -23,7 +23,7 @@ root point at it. That separation is what a client caches: everything outside
 | `plugin/.mcp.json` | MCP entry for Codex |
 | `plugin/shared-skills/typesafe-ai/` | TypeSafe's skill, adapted, with its MIT licence |
 | `plugin/shared-skills/typed-judgments/` | routes an in-session judgment to the tool |
-| `plugin/scripts/evaluate_launch.py` | resolves the binary, checks for a credential, and starts the right server |
+| `plugin/scripts/evaluate_launch.py` | serves a no-tool stand-in when the binary is missing or on Windows; otherwise execs `evaluate mcp --plugin-defaults`, which handles a missing credential |
 
 Both manifests declare the same name and version, which a test enforces.
 
