@@ -1585,6 +1585,31 @@ class ReadOnlyHelperTests(unittest.TestCase):
         self.assertEqual(stdout_json["gates"]["COMPLEXITY"]["signal"], "bun.lock")
         self.assertEqual(stderr_records, [])
 
+    def test_detect_commands_probes_symlinked_node_bins_inside_node_modules(self) -> None:
+        if self.helper_filter and self.helper_filter != "detect-commands":
+            self.skipTest("detect-commands node_modules/.bin probe case")
+        with helper_project() as project_path, tempfile.TemporaryDirectory() as outside:
+            (project_path / "bun.lock").write_text("{}\n", encoding="utf-8")
+            (project_path / "package.json").write_text('{"scripts":{"test":"bun test"}}\n', encoding="utf-8")
+            bin_dir = project_path / "node_modules" / ".bin"
+            bin_dir.mkdir(parents=True)
+            # Package managers install .bin entries as symlinks into node_modules.
+            package_bin = project_path / "node_modules" / "oxlint" / "bin" / "oxlint"
+            package_bin.parent.mkdir(parents=True)
+            package_bin.write_text("#!/bin/sh\n", encoding="utf-8")
+            (bin_dir / "oxlint").symlink_to(Path("..") / "oxlint" / "bin" / "oxlint")
+            # A link that escapes the project's node_modules never counts as installed.
+            escaped = Path(outside) / "stryker"
+            escaped.write_text("#!/bin/sh\n", encoding="utf-8")
+            (bin_dir / "stryker").symlink_to(escaped)
+            completed, response, _ = run_runner(
+                helper_request("detect-commands", {"repo_root": "."}), cwd=project_path
+            )
+        self.assertEqual(completed.returncode, 0)
+        gates = response["data"]["stdout_json"]["gates"]
+        self.assertIs(gates["COMPLEXITY"]["tool_present"], True)
+        self.assertIs(gates["MUTATION"]["tool_present"], False)
+
     def test_detect_commands_subdir_matches_bash_reference_from_effective_cwd(self) -> None:
         if self.helper_filter and self.helper_filter != "detect-commands":
             self.skipTest("detect-commands effective-cwd parity case")
