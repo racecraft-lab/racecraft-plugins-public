@@ -34,10 +34,6 @@ Run these from the repository root before walking the acceptance tests.
 
 {{NEGATIVE_PATH}}
 
-## Self-Review Findings
-
-{{SELF_REVIEW}}
-
 ## Sign-off
 
 Advisory only — these checkboxes block nothing.

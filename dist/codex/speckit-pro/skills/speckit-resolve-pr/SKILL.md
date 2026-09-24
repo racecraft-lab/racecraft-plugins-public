@@ -90,11 +90,12 @@ If there are no unresolved threads, report that clearly and stop.
 
 ## Process Threads — Partition by File, Parallel Across Files
 
-**Partition the unresolved threads by file path first**, then dispatch
-parallel-per-partition. Within a partition (same file), process
-serially — concurrent `apply_patch` calls to the same file race. Across
-partitions (different files), spawn one `spawn_agent` per partition in
-ONE tool turn, then `wait_agent` on all handles.
+**Partition the unresolved threads by file path first.** Within a partition
+(same file), process serially — concurrent `apply_patch` calls to the same
+file race. Across partitions (different files), when the fixes are large
+enough to repay a worker's setup cost, spawn one `spawn_agent` per partition
+in ONE tool turn, then `wait_agent` on all handles; otherwise handle the
+partitions yourself, one at a time.
 
 Before partitioning, scan each thread's comment body for cross-file
 hints (e.g., "rename and update all callers", references to other
@@ -114,7 +115,7 @@ For each partition:
    - Do NOT push, post replies, or resolve threads — the lead handles
      those serially after all partitions return
 2. Use `general-purpose` (or `phase-executor` as fallback) as the
-   worker agent type. Use Sonnet for the worker — focused execution.
+   worker agent type.
 
 After all `wait_agent` calls return, process `CROSS_FILE` threads
 serially in the lead session.

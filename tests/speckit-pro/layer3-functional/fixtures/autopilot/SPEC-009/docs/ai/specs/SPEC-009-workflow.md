@@ -217,7 +217,6 @@ report completion. The fixture records all items as pending.
 | Post: Code Review | ⏳ Pending | unobserved |
 | Post: Integration Suite | ⏳ Pending | unobserved |
 | Post: Reviewability Diff Gate | ⏳ Pending | unobserved |
-| Post: Self-Review | ⏳ Pending | unobserved |
 | Post: UAT Runbook Generation | ⏳ Pending | unobserved |
 | Post: PR Body Generation | ⏳ Pending | unobserved |
 | Post: PR Creation | ⏳ Pending | unobserved |

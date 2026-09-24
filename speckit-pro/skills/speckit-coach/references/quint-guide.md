@@ -86,9 +86,10 @@ and TLC execution of Quint models require separate qualification and are rejecte
 
 ## Pinned compiler and checking boundary
 
-The executed profile is Quint **0.32.0**, Node.js **24.11.1**, Apalache **0.62.2**,
-and Java **26.0.1**, on macOS arm64. These exact local executions establish the
-reported compatibility; additional OS/runtime combinations need their own tests.
+The pinned tools are Quint **0.32.0** and Apalache **0.62.2**. The executed
+OS, Java, and Node.js profiles are listed in
+[formal-setup.md](formal-setup.md#qualified-versions-and-requirements); other
+OS/runtime combinations need their own tests.
 Installation is an explicit operator action. The catalog's `tools.quint` records
 `version`, installation `root`, `tree_sha256`, and `node`. The full tree digest
 includes the installed compiler, dependencies, and package lockfile; doctor

@@ -11,7 +11,7 @@ Consensus dispatch runs as batched ordinary subagents; see
 
 - [Two-Layer Resolution Architecture](#two-layer-resolution-architecture) — executor first-pass then consensus second-pass
 - [Category-Routed Dispatch (Tier A)](#category-routed-dispatch-tier-a) — `[codebase|spec|domain|security|ambiguous]` routing rules + escape-hatch
-- [Batched Dispatch](#batched-dispatch) — multi-item fan-out in ONE tool turn (the canonical WS-D1 pattern)
+- [Batched Dispatch](#batched-dispatch) — multi-item fan-out in ONE tool turn
 - [Three-Analyst Consensus Rules (Round 2 / N=3)](#three-analyst-consensus-rules-round-2--n3) — full fan-out behavior
 - [The 3 Perspective Agents](#the-3-perspective-agents) — codebase-analyst / spec-context-analyst / domain-researcher
 - [Consensus Rules](#consensus-rules) — N=1, N=2, N=3 agreement rules + escape-hatch + STOP conditions
@@ -189,8 +189,8 @@ from the log rather than eyeballed.
 
 When a consensus phase (Clarify, Checklist, Analyze) produces N
 unresolved items, the orchestrator dispatches them in a **batched
-fan-out across items**, not per-item serially. This is the canonical
-WS-D1 pattern and applies to every per-phase consensus invocation.
+fan-out across items**, not per-item serially. This applies to every
+per-phase consensus invocation.
 
 ### Why batched
 
