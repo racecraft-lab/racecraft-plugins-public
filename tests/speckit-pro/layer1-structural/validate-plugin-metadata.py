@@ -171,6 +171,14 @@ class ValidateCodexMarketplace(unittest.TestCase):
 TYPESAFE_JEV_ROOT = REPO_ROOT / 'typesafe-jev'
 TYPESAFE_JEV_MODULE = 'module github.com/racecraft-lab/racecraft-plugins-public/typesafe-jev'
 UPSTREAM_REFERENCE = 'itsmostafa/typesafe-mcp'
+# The fork's former standalone home. The plugin manifests must point at this
+# repository instead; the `skills add racecraft-lab/typesafe-mcp` lines in the
+# skills and docs are intentional and stay outside this check.
+FORMER_FORK_REFERENCE = 'racecraft-lab/typesafe-mcp'
+TYPESAFE_JEV_MANIFESTS = (
+    TYPESAFE_JEV_ROOT / 'plugin' / '.claude-plugin' / 'plugin.json',
+    TYPESAFE_JEV_ROOT / 'plugin' / '.codex-plugin' / 'plugin.json',
+)
 
 class ValidateTypesafeJevProvenance(unittest.TestCase):
     """typesafe-jev forks itsmostafa/typesafe-mcp. Its code and its shipped
@@ -188,6 +196,11 @@ class ValidateTypesafeJevProvenance(unittest.TestCase):
             text = path.read_text(encoding='utf-8', errors='replace')
             with self.subTest(msg=f'{path.relative_to(REPO_ROOT)} has no upstream reference'):
                 self.assertNotIn(UPSTREAM_REFERENCE, text)
+
+    def test_manifests_do_not_point_at_the_former_fork(self) -> None:
+        for path in TYPESAFE_JEV_MANIFESTS:
+            with self.subTest(msg=f'{path.relative_to(REPO_ROOT)} has no {FORMER_FORK_REFERENCE} reference'):
+                self.assertNotIn(FORMER_FORK_REFERENCE, path.read_text(encoding='utf-8'))
 
     def test_module_path_is_this_repository(self) -> None:
         go_mod = (TYPESAFE_JEV_ROOT / 'go.mod').read_text(encoding='utf-8')

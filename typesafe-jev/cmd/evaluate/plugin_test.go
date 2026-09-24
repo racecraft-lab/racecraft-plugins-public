@@ -343,6 +343,49 @@ func TestLauncherServesSetupInstructionsWhenUnconfigured(t *testing.T) {
 	}
 }
 
+// A leading ~ in EVALUATE_BIN is the home directory, as it is for the
+// installer: the launcher finds and execs the binary there instead of serving
+// the "not installed" stand-in.
+func TestLauncherExpandsTildeInEvaluateBin(t *testing.T) {
+	home := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(home, "bin"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(os.Args[0], filepath.Join(home, "bin", "evaluate")); err != nil {
+		t.Fatal(err)
+	}
+	session, stderr := connectLauncher(t, launcherCmd(t, home, "EVALUATE_BIN=~/bin/evaluate", asBinaryEnv+"=1"))
+	instructions := session.InitializeResult().Instructions
+	if strings.Contains(instructions, "not installed") || !strings.Contains(instructions, "no TypeSafe or OpenRouter credential") {
+		t.Errorf("the launcher did not run the binary at ~/bin/evaluate:\n%s\nstderr: %s", instructions, stderr.String())
+	}
+}
+
+// The setup text quotes the installer path, so a plugin installed under a
+// directory with a space in its name yields a command that copies and runs.
+func TestLauncherQuotesTheInstallerPath(t *testing.T) {
+	src, err := os.ReadFile(filepath.Join(repoRoot(t), filepath.FromSlash(launcherPath)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	dir := filepath.Join(t.TempDir(), "plugin cache", "scripts")
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	launcher := filepath.Join(dir, "evaluate_launch.py")
+	if err := os.WriteFile(launcher, src, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	home := t.TempDir()
+	cmd := launcherCmd(t, home, "EVALUATE_BIN="+filepath.Join(home, "absent"))
+	cmd.Args[1] = launcher
+	session, _ := connectLauncher(t, cmd)
+	want := "python3 '" + filepath.Join(dir, "install_evaluate.py") + "'"
+	if instructions := session.InitializeResult().Instructions; !strings.Contains(instructions, want) {
+		t.Errorf("instructions do not carry %s:\n%s", want, instructions)
+	}
+}
+
 // LAUNCH-02: a key file readable by others is a credential the operator set up
 // and broke. The server refuses to start and names the fix, instead of hiding
 // it behind the stand-in.

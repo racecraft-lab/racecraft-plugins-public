@@ -83,10 +83,14 @@ def target() -> tuple[str, str]:
 
 
 def default_destination() -> Path:
-    """Where the plugin's launcher looks: EVALUATE_BIN, else the default path."""
+    """Where the plugin's launcher looks: EVALUATE_BIN, else the default path.
+
+    A leading ~ in EVALUATE_BIN is expanded, as the launcher does, so both
+    resolve the same file.
+    """
     explicit = os.environ.get("EVALUATE_BIN")
     if explicit:
-        return Path(explicit)
+        return Path(os.path.expanduser(explicit))
     return Path.home() / ".local" / "libexec" / "racecraft-jev" / "evaluate"
 
 

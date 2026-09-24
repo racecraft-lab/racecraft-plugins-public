@@ -90,11 +90,18 @@ func sumsFor(name string, archive []byte) []byte {
 
 func runInstaller(t *testing.T, args ...string) (string, string, error) {
 	t.Helper()
+	return runInstallerIn(t, t.TempDir(), nil, args...)
+}
+
+// runInstallerIn runs the installer with HOME set to home and env added to an
+// environment built from scratch.
+func runInstallerIn(t *testing.T, home string, env []string, args ...string) (string, string, error) {
+	t.Helper()
 	if runtime.GOOS != "darwin" && runtime.GOOS != "linux" {
 		t.Skipf("no release build for %s", runtime.GOOS)
 	}
 	cmd := exec.Command(pythonPath(t), append([]string{filepath.Join(repoRoot(t), filepath.FromSlash(installerPath))}, args...)...)
-	cmd.Env = []string{"PATH=" + os.Getenv("PATH"), "HOME=" + t.TempDir()}
+	cmd.Env = append([]string{"PATH=" + os.Getenv("PATH"), "HOME=" + home}, env...)
 	var stdout, stderr strings.Builder
 	cmd.Stdout, cmd.Stderr = &stdout, &stderr
 	err := cmd.Run()
@@ -191,6 +198,25 @@ func TestInstallerReplacesOnlyWithForce(t *testing.T) {
 		t.Errorf("--force installed %q", got)
 	}
 	assertNoStagedFiles(t, dir)
+}
+
+// A leading ~ in EVALUATE_BIN is the home directory, as it is for the
+// launcher, so the installer writes the file the launcher will look for.
+func TestInstallerExpandsTildeInEvaluateBin(t *testing.T) {
+	archive := releaseArchive(t, "release binary")
+	srv := newFakeReleaseDownloads(t, "typesafe-jev-v0.9.0", map[string][]byte{
+		assetName():      archive,
+		"SHA256SUMS.txt": sumsFor(assetName(), archive),
+	})
+	home := t.TempDir()
+
+	_, stderr, err := runInstallerIn(t, home, []string{"EVALUATE_BIN=~/bin/evaluate"}, "--version", "0.9.0", "--base-url", srv.URL)
+	if err != nil {
+		t.Fatalf("%v; stderr: %s", err, stderr)
+	}
+	if got, err := os.ReadFile(filepath.Join(home, "bin", "evaluate")); err != nil || string(got) != "release binary" {
+		t.Errorf("installed at ~/bin/evaluate: %q, %v", got, err)
+	}
 }
 
 // INS-04: by default the installer takes the plugin's own version, so the
