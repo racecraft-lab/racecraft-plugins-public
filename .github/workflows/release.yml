@@ -38,7 +38,7 @@ jobs:
         run: python3 scripts/release-pr-lifecycle.py hold
 
       - id: release
-        uses: googleapis/release-please-action@v5
+        uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
         with:
           # Open the release PR with a maintainer PAT / GitHub App token when
           # one is configured, so the PR is created and its branch pushed by a
@@ -64,6 +64,8 @@ jobs:
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v6
         with:
           node-version: 22
+          # This job holds write permissions; never restore a dependency cache.
+          package-manager-cache: false
 
       - name: Sync generated artifacts onto the release PR
         if: steps.release_prs.outputs.found == 'true'
@@ -111,6 +113,8 @@ jobs:
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v6
         with:
           node-version: 22
+          # This job holds write permissions; never restore a dependency cache.
+          package-manager-cache: false
 
       - name: Enable Corepack
         if: steps.release.outputs['speckit-pro--release_created'] == 'true'

@@ -50,8 +50,8 @@
     },
     {
       "case_id": "functional.speckit-autopilot.case-11",
-      "correct_paraphrase": "The parent may optionally use autopilot-fast-helper with gpt-5.6-luna for text-only compression, triage, or query drafting. It is not a dependency and may not edit artifacts, decide gates, vote in consensus, or make the final decision.",
-      "keyword_stuffed_wrong": "Never use autopilot-fast-helper as an optional text-only helper. It must edit artifacts, decide gate outcomes, cast the consensus vote, and become the final decision-maker using gpt-5.6-luna."
+      "correct_paraphrase": "The parent may optionally use autopilot-fast-helper with gpt-6-luna for text-only compression, triage, or query drafting. It is not a dependency and may not edit artifacts, decide gates, vote in consensus, or make the final decision.",
+      "keyword_stuffed_wrong": "Never use autopilot-fast-helper as an optional text-only helper. It must edit artifacts, decide gate outcomes, cast the consensus vote, and become the final decision-maker using gpt-6-luna."
     }
   ],
   "literal_plus_semantic_examples": [

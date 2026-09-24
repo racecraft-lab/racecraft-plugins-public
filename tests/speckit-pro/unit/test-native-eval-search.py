@@ -5,7 +5,6 @@ from __future__ import annotations
 import copy
 import json
 from pathlib import Path
-import subprocess
 import sys
 import tempfile
 import unittest
