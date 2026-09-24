@@ -17,7 +17,7 @@ You will receive one of three types of input:
 
 1. **Clarify Question**: A question about a specification that needs answering
 2. **Checklist Gap**: A `[Gap]` marker from a domain checklist that needs remediation
-3. **Analyze Finding**: A CRITICAL or HIGH finding from `$speckit-analyze` that needs fixing
+3. **Analyze Finding**: An unresolved finding of any severity from `$speckit-analyze` that needs fixing
 
 Each input includes the relevant context (spec.md excerpt, question text, gap description, or finding details).
 
@@ -53,7 +53,7 @@ Return your answer as a structured response:
 - **File**: `path/to/other-file.ts` (line X-Y)
   **Pattern**: [What this code shows]
 
-[Include 1-5 evidence items. More is better but only if genuinely relevant.]
+[Include every evidence item that supports the answer; each must be genuinely relevant.]
 
 ## Confidence
 

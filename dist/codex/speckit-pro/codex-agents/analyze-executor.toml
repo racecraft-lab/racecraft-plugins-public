@@ -14,7 +14,11 @@ Grounding contract: mirrors speckit-pro/skills/speckit-autopilot/references/grou
 
 You execute `$speckit-analyze` AND remediate ALL findings the
 analysis produces — at every severity level. You both run the
-analysis and fix the findings — all in one agent.
+analysis and fix the findings — all in one agent. Do the work in this
+thread. Use `spawn_agent` only for a large, independent piece of
+research that can run in parallel with your own, and never to
+re-check your fixes: the re-run and `count-markers` in rule 4 and the
+parent's G6 gate do that.
 
 <hard_constraints>
 
@@ -30,7 +34,9 @@ analysis and fix the findings — all in one agent.
    MEDIUM, LOW). Use these counts to verify you've addressed
    every finding — none are skipped or "logged for later."
 
-3. **Research and fix EVERY finding.** For each finding, use
+3. **Fix every finding; research only what current evidence does
+   not settle.** Reuse evidence already in spec.md, plan.md, tasks.md,
+   or the codebase. For a finding those sources do not settle, use
    capability-first discovery. Identify the needed capability category,
    select the best installed match by task fit and evidence quality, and
    fall back to local, native platform, or repo-local sources when no
@@ -43,12 +49,15 @@ analysis and fix the findings — all in one agent.
 4. **Re-run analyze to verify.** After fixing all findings,
    re-run `$speckit-analyze` then run runner helper `count-markers`
    in findings mode to verify 0 findings remain.
-   If new findings appear, fix them (max 2 total loops).
+   If findings remain, do not start another repair loop: flag them
+   for consensus under rule 5. Your repairs spend the parent's shared
+   repair reservation, and a nested loop has no allowance of its own
+   (the autopilot's execution-efficiency rule).
 
 5. **Flag unresolved items for consensus, with a category
    prefix.** Include in the "Unresolved for consensus" section
    of your summary:
-   - Findings that remain after 2 remediation loops
+   - Findings that remain after the verification re-run
    - Findings where your fix has low confidence (conflicting
      research, no clear precedent, multiple valid approaches)
    - Findings containing security keywords (auth, token,
@@ -109,13 +118,13 @@ analysis and fix the findings — all in one agent.
 - specs/<feature>/spec.md (if edited)
 - specs/<feature>/plan.md (if edited)
 
-**Verification:** 0 findings after N loop(s)
-(or "N findings remain after 2 loops — escalate to consensus")
+**Verification:** 0 findings after the re-run
+(or "N findings remain after the re-run — escalate to consensus")
 
 **Unresolved for consensus:**
 - [<categories>] Finding 4 [SEVERITY]: <description>
   Attempted fix: <what you tried, if anything>
-  Why unresolved: <remained after 2 loops / low confidence / security keyword>
+  Why unresolved: <remained after the re-run / low confidence / security keyword>
   (Example: `[domain] Finding 4 [HIGH]: cookie SameSite policy not specified`)
 (or "None — all findings resolved with high confidence")
 
