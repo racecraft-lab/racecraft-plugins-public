@@ -357,9 +357,34 @@ func runPiSetup() error {
 	if cfg, err := resolveConfig(os.LookupEnv); err != nil {
 		fmt.Printf("\nNote: %v\n", err)
 	} else if _, err := loadCredential(cfg); err != nil {
-		fmt.Printf("\nNote: %v\n", err)
+		fmt.Printf("\nNote: %s\n", piCredentialHint(cfg.KeyFile != "", err))
 	}
 	return nil
+}
+
+// piCredentialHint explains a loadCredential failure for `setup pi`. It is
+// fixed text chosen with errors.Is, and it never formats err. The error holds
+// no key value (see parseKey), but it names the backend's key variable, and
+// CodeQL's go/clear-text-logging rule treats anything read through a field
+// called APIKeyEnv as sensitive. `evaluate call --check` prints the full
+// reason, on stderr. fromFile says whether a key file was configured, so a bad
+// file is not reported as a bad environment key.
+func piCredentialHint(fromFile bool, err error) string {
+	const check = "; run `evaluate call --check` for the reason and the fix"
+	if errors.Is(err, errNoCredential) {
+		return "no API key is set for pi to use. Set your backend's key variable in the shell pi runs in, " +
+			"or point JEV_API_KEY_FILE at a private key file" + check
+	}
+	source := "the API key in the environment"
+	if fromFile {
+		source = "the key file in JEV_API_KEY_FILE"
+	}
+	for _, reason := range []error{errKeyEmpty, errKeyWhitespace, errKeyControlChar, errKeyPlaceholder} {
+		if errors.Is(err, reason) {
+			return source + " " + reason.Error() + check
+		}
+	}
+	return source + " cannot be used" + check
 }
 
 // writePiExtension renders the embedded extension into dir and returns its path.

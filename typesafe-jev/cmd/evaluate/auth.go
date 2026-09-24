@@ -42,8 +42,8 @@ func loadCredential(cfg Config) (credential, error) {
 	}
 	raw, ok := os.LookupEnv(cfg.Provider.APIKeyEnv)
 	if !ok || raw == "" {
-		return "", fmt.Errorf("%s: no credential; set %s, or point %s at a private key file",
-			cfg.Provider.Name, cfg.Provider.APIKeyEnv, cfg.keyFileEnv())
+		return "", fmt.Errorf("%s: %w; set %s, or point %s at a private key file",
+			cfg.Provider.Name, errNoCredential, cfg.Provider.APIKeyEnv, cfg.keyFileEnv())
 	}
 	key, err := parseKey(raw)
 	if err != nil {
@@ -126,6 +126,11 @@ var (
 	errKeyControlChar = errors.New("contains a control character")
 	errKeyPlaceholder = errors.New("is an unexpanded ${...} placeholder")
 )
+
+// errNoCredential marks the one loadCredential failure that is not about a
+// bad value: nothing was set at all. It lets a caller choose its own wording
+// without reading the error text.
+var errNoCredential = errors.New("no credential")
 
 // parseKey validates a candidate key. It never includes the value in an error:
 // an error message travels further than the operator expects.

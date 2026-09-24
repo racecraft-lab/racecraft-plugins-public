@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -291,5 +292,75 @@ func TestSetupRefusesDryRunFalse(t *testing.T) {
 
 	if err := cmd.Execute(); err == nil {
 		t.Fatalf("--dry-run=false was accepted; output:\n%s", out.String())
+	}
+}
+
+// `setup pi` prints a hint when the shell holds no usable key. The hint is
+// fixed text chosen by errors.Is: it never carries the key value, and it never
+// carries the variable name either, because that name is read through
+// ProviderSpec.APIKeyEnv, the field CodeQL's go/clear-text-logging rule treats
+// as a sensitive source. Each case drives the real loadCredential, so the hint
+// is checked against the errors it actually receives.
+func TestPiCredentialHint(t *testing.T) {
+	const sentinel = "sk-sentinel-must-not-appear"
+	cases := []struct {
+		name    string
+		env     string // the OPENROUTER_API_KEY value; ignored with keyFile
+		keyFile string // the key file contents; "" means no key file
+		missing bool   // point JEV_API_KEY_FILE at a file that does not exist
+		want    string
+	}{
+		{name: "nothing set", env: "", want: "no API key is set for pi to use"},
+		{name: "environment whitespace", env: sentinel + " ", want: "the API key in the environment has leading or trailing whitespace"},
+		{name: "environment control character", env: sentinel + "\x01", want: "the API key in the environment contains a control character"},
+		{name: "environment placeholder", env: "${" + sentinel + "}", want: "the API key in the environment is an unexpanded ${...} placeholder"},
+		{name: "key file whitespace", keyFile: " " + sentinel + "\n", want: "the key file in JEV_API_KEY_FILE has leading or trailing whitespace"},
+		{name: "key file empty", keyFile: "\n", want: "the key file in JEV_API_KEY_FILE is empty"},
+		{name: "key file missing", missing: true, want: "the key file in JEV_API_KEY_FILE cannot be used"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			path := ""
+			switch {
+			case tc.missing:
+				path = filepath.Join(t.TempDir(), "absent.key")
+			case tc.keyFile != "":
+				path = writeKeyFile(t, tc.keyFile, 0o600)
+			}
+			cfg := setupConfig(t, "openrouter", path)
+			t.Setenv("OPENROUTER_API_KEY", tc.env)
+
+			_, err := loadCredential(cfg)
+			if err == nil {
+				t.Fatal("want a credential error")
+			}
+			hint := piCredentialHint(cfg.KeyFile != "", err)
+			if !strings.HasPrefix(hint, tc.want) {
+				t.Errorf("hint = %q, want it to start with %q", hint, tc.want)
+			}
+			if !strings.Contains(hint, "evaluate call --check") {
+				t.Errorf("hint should point at `evaluate call --check`: %q", hint)
+			}
+			for _, leak := range []string{sentinel, "OPENROUTER_API_KEY", "TYPESAFE_API_KEY"} {
+				if strings.Contains(hint, leak) {
+					t.Errorf("hint carries %q: %q", leak, hint)
+				}
+			}
+		})
+	}
+}
+
+// errNoCredential changed how the "nothing set" error is built, not what it
+// says. The operator-facing text is pinned here so the sentinel cannot drift it.
+func TestNoCredentialErrorText(t *testing.T) {
+	cfg := setupConfig(t, "openrouter", "")
+	t.Setenv("OPENROUTER_API_KEY", "")
+	_, err := loadCredential(cfg)
+	const want = "openrouter: no credential; set OPENROUTER_API_KEY, or point JEV_API_KEY_FILE at a private key file"
+	if err == nil || err.Error() != want {
+		t.Fatalf("loadCredential() error = %v, want %q", err, want)
+	}
+	if !errors.Is(err, errNoCredential) {
+		t.Errorf("error does not wrap errNoCredential: %v", err)
 	}
 }
