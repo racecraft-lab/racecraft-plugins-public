@@ -36,7 +36,7 @@ nonblank line after the target selection. A nonce without its native target sele
 unknown, malformed, or conflicting selections, is invalid. A sibling selection
 is a valid target nonselection.
 
-The runner pins Claude Code 2.1.269 and `claude-sonnet-5`. It launches with an
+The runner pins Claude Code 2.1.270 and `claude-sonnet-5`. It launches with an
 empty `--setting-sources` list, strict empty MCP configuration, a curated
 environment, and `CLAUDE_CODE_MAX_RETRIES=0`. Qualification is limited to macOS
 or Linux after the runner verifies the documented managed-settings locations
@@ -190,7 +190,9 @@ cannot be reconstructed; qualification relies on the explicit no-retry controls
 and rejects every reported retry or error event.
 
 The record counts nine provider invocations. One Claude canary on 2026-09-11
-validated the Claude selection path; the Codex model change did not recheck it.
+validated the Claude selection path under Claude Code 2.1.269, the build the
+record still names. The runner has since moved to 2.1.270 (#582), and no live
+run has requalified that build; the Codex model change did not recheck Claude.
 On 2026-09-24, one Codex 0.153.3 transport probe served `gpt-6-sol` but emitted
 an `error` item for missing model metadata, which this contract rejects, so the
 pin moved to 0.156.1, the first build that ships that metadata. One 0.156.1
