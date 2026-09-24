@@ -203,9 +203,11 @@ class TypesafeJevReleaseBuildTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as scratch:
             out_dir = Path(scratch) / "out"
             out_dir.mkdir()
-            for goos, goarch in BUILD.RELEASE_TARGETS:
-                (out_dir / BUILD.asset_name(goos, goarch)).write_bytes(b"archive")
-            (out_dir / BUILD.SUMS_NAME).write_text("", encoding="utf-8")
+            archives = {BUILD.asset_name(goos, goarch): goarch.encode() for goos, goarch in BUILD.RELEASE_TARGETS}
+            for name, data in archives.items():
+                (out_dir / name).write_bytes(data)
+            sums = BUILD.sums_text(archives)
+            (out_dir / BUILD.SUMS_NAME).write_text(sums, encoding="utf-8")
             bundle = Path(scratch) / "attestation.json"
             bundle.write_text('{"bundle": 1}', encoding="utf-8")
 
@@ -227,7 +229,8 @@ class TypesafeJevReleaseBuildTests(unittest.TestCase):
             )
             self.assertEqual('{"bundle": 1}', (out_dir / BUILD.PROVENANCE_NAME).read_text(encoding="utf-8"))
             # The checksums cover only the archives, never the bundle.
-            self.assertNotIn(BUILD.PROVENANCE_NAME, (out_dir / BUILD.SUMS_NAME).read_text(encoding="utf-8"))
+            self.assertEqual(sums, (out_dir / BUILD.SUMS_NAME).read_text(encoding="utf-8"))
+            self.assertEqual(sorted(archives), sorted(BUILD.parse_sums(sums)))
 
     def test_provenance_verifies_every_archive_against_the_repository(self) -> None:
         names = [BUILD.asset_name(goos, goarch) for goos, goarch in BUILD.RELEASE_TARGETS]
