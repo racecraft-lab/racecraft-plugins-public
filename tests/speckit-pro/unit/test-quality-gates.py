@@ -3,7 +3,7 @@
 
 The schema file must agree with the validator's enums, every rule must reject
 a minimal negative case, and the recommended complexity ceiling must let
-about 90 percent of measured functions pass, or fall back to Bob's six.
+about 90 percent of measured functions pass, or fall back to NIST SP 500-235's ten.
 """
 
 from __future__ import annotations
@@ -58,6 +58,23 @@ class QualityGatesTests(unittest.TestCase):
             self.assertEqual(list(quality_gates.THRESHOLD_FIELDS), schema["properties"]["thresholds"]["required"])
             self.assertEqual(list(quality_gates.SLOTS), schema["properties"]["skips"]["propertyNames"]["enum"])
             self.assertEqual(list(quality_gates.BASIS_METHODS), schema["properties"]["basis"]["properties"]["method"]["enum"])
+            self.assertEqual(list(quality_gates.OPT_IN_SLOTS), schema["properties"]["enforce"]["items"]["enum"])
+            self.assertEqual(
+                "^(" + "|".join(quality_gates.SLOTS) + ")$", next(iter(schema["properties"]["skips"]["patternProperties"]))
+            )
+        with self.subTest(msg="thresholds and slots agree with the discovery table"):
+            from speckit_pro_runner import gate_discovery
+
+            self.assertEqual(gate_discovery.SLOTS, quality_gates.SLOTS)
+            self.assertEqual(gate_discovery.OPT_IN_SLOTS, quality_gates.OPT_IN_SLOTS)
+            self.assertEqual(
+                str(quality_gates.SHIPPED_DEFAULTS["complexity"]), gate_discovery.DEFAULT_THRESHOLDS["complexity_ceiling"]
+            )
+            self.assertEqual(10, quality_gates.SHIPPED_DEFAULTS["complexity"])
+        with self.subTest(msg="an opt-in slot may be enforced"):
+            self.assertEqual([], quality_gates.validate({**valid(), "enforce": ["DEPENDENCY_AUDIT"]}))
+        with self.subTest(msg="a committed bobs-six basis still validates"):
+            self.assertEqual([], quality_gates.validate(mutated("basis.method", "bobs-six")))
             self.assertIn(quality_gates.FILE_PATH, schema["description"])
         with self.subTest(msg="valid file passes"):
             self.assertEqual([], quality_gates.validate(valid()))
@@ -82,6 +99,9 @@ class QualityGatesTests(unittest.TestCase):
             "skip without reason": mutated("skips", {"MUTATION": {}}),
             "skip unknown field": mutated("skips", {"MUTATION": {"reason": "x", "until": "2027"}}),
             "basis unknown method": mutated("basis.method", "guess"),
+            "enforce not a list": {**valid(), "enforce": "DEPENDENCY_AUDIT"},
+            "enforce a blocking slot": {**valid(), "enforce": ["COMPLEXITY"]},
+            "enforce duplicate": {**valid(), "enforce": ["DEPENDENCY_AUDIT", "DEPENDENCY_AUDIT"]},
             "basis negative count": mutated("basis.measured_functions", -1),
             "basis recorded not a string": mutated("basis.recorded", 20260906),
             "basis recorded blank": mutated("basis.recorded", " "),
@@ -103,10 +123,10 @@ class QualityGatesTests(unittest.TestCase):
             self.assertEqual(9, out["thresholds"]["complexity"])
             self.assertEqual({"method": "percentile-90", "measured_functions": 10}, out["basis"])
             self.assertEqual([], quality_gates.validate(out))
-        with self.subTest(msg="recommend: nothing measured falls back to Bob's six"):
+        with self.subTest(msg="recommend: nothing measured falls back to NIST SP 500-235's ten"):
             out = quality_gates.recommend({"functions": []})
-            self.assertEqual(quality_gates.BOBS_SIX, out["thresholds"]["complexity"])
-            self.assertEqual("bobs-six", out["basis"]["method"])
+            self.assertEqual(10, out["thresholds"]["complexity"])
+            self.assertEqual("nist-235", out["basis"]["method"])
             self.assertEqual([], quality_gates.validate(out))
         with self.subTest(msg="recommend: single function passes at its own complexity"):
             self.assertEqual(4, quality_gates.recommend({"functions": [{"complexity": 4}]})["thresholds"]["complexity"])

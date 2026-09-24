@@ -31,7 +31,7 @@ RUNNER_CHECKSUM_PATH = PLUGIN_ROOT / "speckit_pro_runner/speckit-pro-runner.sha2
 EXPECTED_DESTINATION_BYTES = (
     b'name = "fixture-agent"\n'
     b'description = "Fixture agent for byte materialization."\n'
-    b'model = "gpt-5.5"\n'
+    b'model = "gpt-6-sol"\n'
     b'model_reasoning_effort = "xhigh"\n'
     b'sandbox_mode = "workspace-write"\n'
     b'developer_instructions = """\n'
@@ -43,7 +43,7 @@ EXPECTED_DESTINATION_BYTES = (
 PARSED_EQUIVALENT_BYTES = (
     b'name="fixture-agent"\n'
     b'description = "Fixture agent for byte materialization."\n'
-    b'model = "gpt-5.5"\n'
+    b'model = "gpt-6-sol"\n'
     b'model_reasoning_effort = "xhigh"\n'
     b'sandbox_mode = "workspace-write"\n'
     b'developer_instructions = """\n'
@@ -54,14 +54,14 @@ PARSED_EQUIVALENT_BYTES = (
 )
 EXPECTED_ROUTE = {
     "agent_name": "fixture-agent",
-    "model": "gpt-5.5",
+    "model": "gpt-6-sol",
     "model_reasoning_effort": "xhigh",
 }
 EXPECTED_PARENT_CONTROLS = {"sandbox_mode": "workspace-write"}
 ROUTE_SOURCE_BYTES = (
     b'name = "fixture-agent"\n'
     b'description = "Fixture agent for route materialization."\n'
-    b'model = "gpt-5.5"\n'
+    b'model = "gpt-6-sol"\n'
     b'model_reasoning_effort = "xhigh"\n'
     b'sandbox_mode = "workspace-write"\n'
     b'tools = ["shell", "apply_patch"]\n'
@@ -76,12 +76,12 @@ ROUTE_SOURCE_BYTES = (
     b'"""\n'
 )
 ROUTE_DESTINATION_BYTES = ROUTE_SOURCE_BYTES.replace(
-    b'model = "gpt-5.5"\nmodel_reasoning_effort = "xhigh"\n',
-    b'model = "gpt-5.4"\nmodel_reasoning_effort = "high"\n',
+    b'model = "gpt-6-sol"\nmodel_reasoning_effort = "xhigh"\n',
+    b'model = "gpt-6-astra"\nmodel_reasoning_effort = "high"\n',
 )
 SELECTED_ROUTE = {
     "agent_name": "fixture-agent",
-    "model": "gpt-5.4",
+    "model": "gpt-6-astra",
     "model_reasoning_effort": "high",
 }
 NON_ROUTE_FIELDS = {
@@ -208,7 +208,7 @@ class AgentMaterializationTests(unittest.TestCase):
     def test_inserts_explicit_route_when_source_inherits_both_route_fields(self) -> None:
         module = self.materializer()
         source_bytes = ROUTE_SOURCE_BYTES.replace(
-            b'model = "gpt-5.5"\nmodel_reasoning_effort = "xhigh"\n',
+            b'model = "gpt-6-sol"\nmodel_reasoning_effort = "xhigh"\n',
             b'',
         )
 
@@ -220,7 +220,7 @@ class AgentMaterializationTests(unittest.TestCase):
         )
 
         self.assertIn(
-            b'model = "gpt-5.4"\nmodel_reasoning_effort = "high"\n',
+            b'model = "gpt-6-astra"\nmodel_reasoning_effort = "high"\n',
             result.destination_bytes,
         )
         source_policy = tomllib.loads(source_bytes.decode("utf-8"))
@@ -239,7 +239,7 @@ class AgentMaterializationTests(unittest.TestCase):
     def test_default_route_preserves_source_that_inherits_both_route_fields(self) -> None:
         module = self.materializer()
         source_bytes = ROUTE_SOURCE_BYTES.replace(
-            b'model = "gpt-5.5"\nmodel_reasoning_effort = "xhigh"\n',
+            b'model = "gpt-6-sol"\nmodel_reasoning_effort = "xhigh"\n',
             b'',
         )
 
@@ -280,7 +280,7 @@ class AgentMaterializationTests(unittest.TestCase):
 
     def test_read_only_analyst_sources_materialize_their_live_route_settings(self) -> None:
         module = self.materializer()
-        for agent_name in ("codebase-analyst", "spec-context-analyst"):
+        for agent_name in ("codebase-analyst", "spec-context-analyst", "domain-researcher"):
             with self.subTest(agent=agent_name):
                 source_path = PLUGIN_ROOT / "codex-agents" / f"{agent_name}.toml"
                 source_bytes = source_path.read_bytes()
@@ -299,15 +299,15 @@ class AgentMaterializationTests(unittest.TestCase):
                         installed_policy.get("model"),
                         installed_policy.get("model_reasoning_effort"),
                     ),
-                    ("gpt-5.6-sol", "low", "gpt-5.6-sol", "low"),
+                    ("gpt-6-luna", "max", "gpt-6-luna", "max"),
                 )
                 self.assertEqual(result.destination_bytes, source_bytes)
 
     def test_legacy_default_route_preserves_original_model_formatting(self) -> None:
         module = self.materializer()
         source_bytes = ROUTE_SOURCE_BYTES.replace(
-            b'model = "gpt-5.5"\nmodel_reasoning_effort = "xhigh"\n',
-            b'model="gpt-5.5"\n',
+            b'model = "gpt-6-sol"\nmodel_reasoning_effort = "xhigh"\n',
+            b'model="gpt-6-sol"\n',
         )
 
         result = module.materialize_agent_policy(

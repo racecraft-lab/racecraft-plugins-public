@@ -112,7 +112,7 @@ into expensive rework.
 **Reasoning effort is inherited, never checked.** Run at whatever the
 operator has set for the session and do not stop, warn, or ask them to
 change it. The bundled subagents carry their own pins: judgment roles
-ship at `effort: max` (`xhigh` on Codex), and bounded rule-applying
+ship at `effort: max` (`xhigh` or `max` on Codex), and bounded rule-applying
 roles that only apply rules to inputs already in their prompt ship at
 the documented default. A pin sets that worker's effort regardless of
 the session and never refuses to run.
@@ -338,8 +338,8 @@ Run the pre-flight sequence before any phase work. STOP on failure.
    helper_id=detect-presets operation=detect-presets mode=read_only
    ```
    Record `on_feature_branch`, `PROJECT_COMMANDS` (including the
-   `COMPLEXITY`, `MUTATION`, and `DEPENDENCY_RULES` slots and their
-   `gates` metadata, per `references/prerequisites.md` Step 0.11),
+   quality-gate slots and their `gates` metadata, per
+   `references/prerequisites.md` Step 0.11),
    `PRESET_CONVENTIONS`, and MCP availability into the workflow file. Pass `PROJECT_COMMANDS`
    and `PRESET_CONVENTIONS` to every subagent prompt.
 4. **Constitution validation** — for each principle in
