@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.33.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.32.1...speckit-pro-v2.33.0) (2026-09-24)
+
+
+### Features
+
+* **speckit-pro:** add Bun quality gates with oxlint complexity and Stryker mutation ([#592](https://github.com/racecraft-lab/racecraft-plugins-public/issues/592)) ([41c244d](https://github.com/racecraft-lab/racecraft-plugins-public/commit/41c244d32a26c5418c56ca1540b44f88df351cc3))
+
+
+### Bug Fixes
+
+* **speckit-pro:** pass Stryker a comma-joined file list and skip unfit hardener delegation ([#593](https://github.com/racecraft-lab/racecraft-plugins-public/issues/593)) ([8c04874](https://github.com/racecraft-lab/racecraft-plugins-public/commit/8c04874099eb4cb13c442865fada639d2ea5ff26))
+* **speckit-pro:** read the lockfile the package-manager command targets ([#595](https://github.com/racecraft-lab/racecraft-plugins-public/issues/595)) ([797f1e6](https://github.com/racecraft-lab/racecraft-plugins-public/commit/797f1e6624651e66f633b2d97d2252e6f7b99f28))
+
 ## [2.32.1](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.32.0...speckit-pro-v2.32.1) (2026-09-21)
 
 
