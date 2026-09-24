@@ -1,0 +1,42 @@
+{
+  "diagnostics": [
+    {
+      "message": "function `simple` has a complexity of 1. Maximum allowed is 0.",
+      "code": "eslint(complexity)",
+      "severity": "warning",
+      "url": "https://oxc.rs/docs/guide/usage/linter/rules/eslint/complexity.html",
+      "filename": "tests/speckit-pro/unit/fixtures/crap-score/sample.ts",
+      "labels": [
+        {
+          "span": {
+            "offset": 7,
+            "length": 54,
+            "line": 1,
+            "column": 8
+          }
+        }
+      ]
+    },
+    {
+      "message": "function `tangled` has a complexity of 9. Maximum allowed is 0.",
+      "code": "eslint(complexity)",
+      "severity": "warning",
+      "url": "https://oxc.rs/docs/guide/usage/linter/rules/eslint/complexity.html",
+      "filename": "tests/speckit-pro/unit/fixtures/crap-score/sample.ts",
+      "labels": [
+        {
+          "span": {
+            "offset": 70,
+            "length": 271,
+            "line": 5,
+            "column": 8
+          }
+        }
+      ]
+    }
+  ],
+  "number_of_files": 1,
+  "number_of_rules": 1,
+  "threads_count": 1,
+  "start_time": 0
+}

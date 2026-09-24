@@ -1567,6 +1567,24 @@ class ReadOnlyHelperTests(unittest.TestCase):
         self.assertEqual(stdout_json["commands"]["UNIT_TEST"], "npm test")
         self.assertEqual(stderr_records, [])
 
+    def test_detect_commands_reads_text_bun_lock_as_bun(self) -> None:
+        if self.helper_filter and self.helper_filter != "detect-commands":
+            self.skipTest("detect-commands text bun.lock case")
+        with helper_project() as project_path:
+            # Bun 1.2 and later write the text bun.lock; bun.lockb is the legacy binary form.
+            (project_path / "bun.lock").write_text("{}\n", encoding="utf-8")
+            (project_path / "package.json").write_text('{"scripts":{"test":"bun test"}}\n', encoding="utf-8")
+            completed, response, stderr_records = run_runner(
+                helper_request("detect-commands", {"repo_root": "."}), cwd=project_path
+            )
+        self.assertEqual(completed.returncode, 0)
+        self.assert_response(response, "ok", 0)
+        stdout_json = response["data"]["stdout_json"]
+        self.assertEqual(stdout_json["package_manager"], "bun")
+        self.assertTrue(stdout_json["commands"]["UNIT_TEST"].startswith("bun "))
+        self.assertEqual(stdout_json["gates"]["COMPLEXITY"]["signal"], "bun.lock")
+        self.assertEqual(stderr_records, [])
+
     def test_detect_commands_subdir_matches_bash_reference_from_effective_cwd(self) -> None:
         if self.helper_filter and self.helper_filter != "detect-commands":
             self.skipTest("detect-commands effective-cwd parity case")

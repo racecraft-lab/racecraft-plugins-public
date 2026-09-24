@@ -1707,7 +1707,7 @@ def detect_commands(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
         package_manager = "pnpm"
     elif trusted_file_exists(root / "yarn.lock", repo_root):
         package_manager = "yarn"
-    elif trusted_file_exists(root / "bun.lockb", repo_root):
+    elif trusted_file_exists(root / "bun.lock", repo_root) or trusted_file_exists(root / "bun.lockb", repo_root):
         package_manager = "bun"
     elif trusted_file_exists(root / "package-lock.json", repo_root):
         package_manager = "npm"

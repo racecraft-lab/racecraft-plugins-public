@@ -85,6 +85,54 @@ class CrapScoreTests(unittest.TestCase):
             self.assertEqual(2, code)
             self.assertIn("unrecognised", stderr)
 
+        oxlint = ("--language", "typescript", "--complexity-tool", "oxlint", "--oxlint-json", f"{FIXTURES}/oxlint.json",
+                  "--coverage-lcov", f"{FIXTURES}/coverage.lcov")
+        with self.subTest(msg="typescript on bun: oxlint spans bound the lcov lines each function owns"):
+            code, report, stderr = run(*oxlint, *tight, "--", f"{FIXTURES}/sample.ts")
+            by_name = {f["name"]: f for f in report["functions"]}
+            self.assertEqual({"function `simple`", "function `tangled`"}, set(by_name))
+            self.assertEqual((1, 1.0), (by_name["function `simple`"]["complexity"], by_name["function `simple`"]["coverage"]))
+            self.assertEqual(9, by_name["function `tangled`"]["complexity"])
+            self.assertAlmostEqual(3 / 8, by_name["function `tangled`"]["coverage"], places=3)
+            self.assertEqual(1, code)
+            self.assertIn("tangled", stderr)
+
+        with self.subTest(msg="typescript on bun: lenient ceilings pass the same input"):
+            code, report, _ = run(*oxlint, "--ceiling", "500", "--complexity-ceiling", "20", "--", f"{FIXTURES}/sample.ts")
+            self.assertEqual((0, 2), (code, report["checked"]))
+
+        with self.subTest(msg="typescript on bun: a file absent from lcov counts as uncovered"):
+            import tempfile
+            with tempfile.TemporaryDirectory() as tmp:
+                lcov = Path(tmp) / "lcov.info"
+                lcov.write_text("SF:other.ts\nDA:1,1\nend_of_record\n", encoding="utf-8")
+                code, report, _ = run(*oxlint[:6], "--coverage-lcov", str(lcov), "--ceiling", "500", "--complexity-ceiling", "20", "--", f"{FIXTURES}/sample.ts")
+                self.assertEqual({0.0}, {f["coverage"] for f in report["functions"]})
+
+        with self.subTest(msg="typescript on bun: unrecognised oxlint wording is a parse failure, not a pass"):
+            import tempfile
+            with tempfile.TemporaryDirectory() as tmp:
+                bad = Path(tmp) / "oxlint.json"
+                data = json.loads((REPO_ROOT / FIXTURES / "oxlint.json").read_text(encoding="utf-8"))
+                data["diagnostics"][0]["message"] = "function `simple` is complicated"
+                bad.write_text(json.dumps(data), encoding="utf-8")
+                code, _, stderr = run("--language", "typescript", "--complexity-tool", "oxlint", "--oxlint-json", str(bad),
+                                      "--coverage-lcov", f"{FIXTURES}/coverage.lcov", *tight, "--", f"{FIXTURES}/sample.ts")
+                self.assertEqual(2, code)
+                self.assertIn("unrecognised", stderr)
+
+        with self.subTest(msg="lcov coverage without oxlint spans is refused, never a pass"):
+            code, _, stderr = run("--language", "typescript", "--eslint-json", f"{FIXTURES}/eslint.json",
+                                  "--coverage-lcov", f"{FIXTURES}/coverage.lcov", *tight, "--", f"{FIXTURES}/sample.ts")
+            self.assertEqual(2, code)
+            self.assertIn("--complexity-tool oxlint", stderr)
+
+        with self.subTest(msg="missing oxlint exits 2 and names it"):
+            code, _, stderr = run("--language", "typescript", "--complexity-tool", "oxlint",
+                                  "--coverage-lcov", f"{FIXTURES}/coverage.lcov", *tight, "--", f"{FIXTURES}/sample.ts")
+            self.assertEqual(2, code)
+            self.assertIn("oxlint", stderr)
+
         with self.subTest(msg="missing tool exits 2 and names it"):
             code, _, stderr = run("--language", "python", *tight, "--", f"{FIXTURES}/sample.py")
             self.assertEqual(2, code)
