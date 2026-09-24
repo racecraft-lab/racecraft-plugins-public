@@ -562,16 +562,6 @@ The canonical closeout. Every row must reach Complete or an explicit
 | Post: Review Remediation | ⏳ Pending | |
 | Post: Retrospective | ⏳ Pending | |
 
-<!-- Populate with your project's quality gates from the constitution -->
-
-- [ ] All tasks marked complete in tasks.md
-- [ ] Linting passes: <!-- e.g., `scripts/lint` -->
-- [ ] Tests pass: <!-- e.g., `pytest` -->
-- [ ] Build succeeds: <!-- e.g., `npm run build` -->
-- [ ] Manual verification complete
-- [ ] PR created and reviewed
-- [ ] Merged to main branch
-
 ---
 
 ## Lessons Learned
