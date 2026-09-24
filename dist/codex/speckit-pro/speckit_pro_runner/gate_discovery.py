@@ -30,7 +30,7 @@ _DRIVE_PREFIX_RE = re.compile(r"^[A-Za-z]:")
 ROW_FIELDS = ("language", "slot", "signal", "tool", "install", "command")
 OPTIONAL_ROW_FIELDS = ("probe",)
 PLACEHOLDERS = frozenset(
-    {"ceiling", "complexity_ceiling", "floor", "survival_ceiling", "rules_path", "paths", "plugin_root"}
+    {"ceiling", "complexity_ceiling", "floor", "survival_ceiling", "rules_path", "paths", "paths_csv", "plugin_root"}
 )
 DEFAULT_TABLE = Path(__file__).resolve().parent / "gate_discovery_table.json"
 REPO_OVERRIDE = ".specify/gate-discovery.json"

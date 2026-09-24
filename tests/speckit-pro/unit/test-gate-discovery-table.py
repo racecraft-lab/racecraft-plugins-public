@@ -239,6 +239,12 @@ class GateSlotResolutionTests(unittest.TestCase):
                 self.assertNotIn("pnpm", slots["COMPLEXITY"]["command"])
                 self.assertEqual("populated", slots["MUTATION"]["status"])
                 self.assertTrue(slots["MUTATION"]["command"].startswith("bunx stryker run --testRunner bun"))
+            with self.subTest(msg="every StrykerJS row takes the comma-joined paths, never the space-joined list"):
+                # A second space-separated path reaches `stryker run` as a config file argument.
+                for row in gate_discovery.load_table()["rows"]:
+                    if "stryker" in row["command"]:
+                        self.assertIn("--mutate {paths_csv}", row["command"])
+                        self.assertNotIn("{paths} ", row["command"] + " ")
 
 
 def build_suite() -> unittest.TestSuite:

@@ -374,7 +374,7 @@ defaults (complexity 8, CRAP 30, mutation-score floor 60) so the
 operator can see what would run; they are not authoritative and
 do not unblock G0.
 
-Two placeholders stay literal in the recorded command and are
+Three placeholders stay literal in the recorded command and are
 filled at every run:
 
 - `{plugin_root}`: the `<plugin-root>` the runner reported as
@@ -388,6 +388,10 @@ filled at every run:
   run a slot with an empty `{paths}`: `crap-score.py` refuses an
   empty list, and the shipped mutation commands would mutate the
   whole tree or fail on a dangling flag.
+- `{paths_csv}`: the same files joined with commas and no spaces.
+  StrykerJS takes `--mutate` as one comma-separated argument and
+  reads a second space-separated path as a config file. The empty
+  rule for `{paths}` applies unchanged.
 
 **G0 is a measurement, never a vacuous pass.** There is no diff
 yet, so each slot records one of these in the `G0 baseline`
