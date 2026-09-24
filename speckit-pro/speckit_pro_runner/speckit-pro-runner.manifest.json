@@ -151,7 +151,7 @@
         "value": "speckit_pro_runner/formal/lifecycle.py",
         "display": "speckit_pro_runner/formal/lifecycle.py"
       },
-      "sha256": "fe653db2c97aa3a5f90b7fe9ea597f7a5539b4683f6d28f58ece6f89f46e00c5"
+      "sha256": "5098a0e10f3c3225ba1c7ee900ccd93f4214fc6c17cd98542a5281ae2141e8d8"
     },
     {
       "path": {
@@ -295,7 +295,7 @@
         "value": "speckit_pro_runner/helpers/pr_emission.py",
         "display": "speckit_pro_runner/helpers/pr_emission.py"
       },
-      "sha256": "d9f67d2b8adf85ffd740f770653987e83a29069d53de6ce13ff9c904f238360c"
+      "sha256": "0a5fc8114223a52995109e3cd9ee888015e2975d42284bd0dfe6c1e6dc4432f6"
     },
     {
       "path": {
