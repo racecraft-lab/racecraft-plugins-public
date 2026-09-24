@@ -455,10 +455,6 @@ def routing_optional_helper() -> str:
 def route_rendered_optional_helper_bytes() -> bytes:
     helper_source = (PLUGIN_ROOT / "codex-agents" / f"{routing_optional_helper()}.toml").read_text(encoding="utf-8")
     return helper_source.replace(
-        'model = "gpt-6-luna"\n',
-        'model = "gpt-5.3-codex-spark"\n',
-        1,
-    ).replace(
         'model_reasoning_effort = "low"\n',
         'model_reasoning_effort = "high"\n',
         1,
@@ -568,7 +564,7 @@ def strict_override_required_miss_manifest(agent_name: str = "analyze-executor")
     manifest = valid_route_policy_manifest()
     policy = manifest["required_agent_policies"][agent_name]
     policy["fallback_routes"][0]["route_id"] = f"required-fallback-miss:{agent_name}"
-    policy["fallback_routes"][0]["model"] = "gpt-5.3-codex-spark"
+    policy["fallback_routes"][0]["model"] = "gpt-6-luna"
     return finalize_route_policy_manifest(manifest)
 
 
@@ -583,7 +579,7 @@ def strict_override_helper_compatible_manifest() -> dict[str, object]:
     manifest = valid_route_policy_manifest()
     helper_compatible_required_route = {
         "route_id": "required-helper-compatible",
-        "model": "gpt-5.3-codex-spark",
+        "model": "gpt-6-luna",
         "model_reasoning_effort": "xhigh",
         "capabilities": ["reasoning", "tools"],
         "probe_id": None,
@@ -770,7 +766,7 @@ class MutationHelperTests(unittest.TestCase):
                 self.assertEqual(record["policy_id"], f"policy:{agent_name}")
                 self.assertEqual(record["terminal_outcome"], "resolved")
                 self.assertEqual(record["selected_route"]["route_id"], selected_route_id)
-                self.assertEqual(record["selected_route"]["model"], "gpt-5.5" if selected_route_id == "required-primary" else "gpt-5.4")
+                self.assertEqual(record["selected_route"]["model"], "gpt-6-sol" if selected_route_id == "required-primary" else "gpt-6-astra")
                 self.assertEqual(record["selected_route"]["model_reasoning_effort"], "xhigh")
                 self.assertEqual(len(record["attempted_routes"]), expected_attempt_count)
                 self.assertEqual(record["attempted_routes"][0]["route_id"], "required-primary")
@@ -804,7 +800,7 @@ class MutationHelperTests(unittest.TestCase):
         self.assertEqual(helper["snapshot_id"], expected_snapshot["snapshot_id"])
         self.assertEqual(helper["policy_id"], f"policy:{routing_optional_helper()}")
         self.assertEqual(helper["selected_route"]["route_id"], "helper-primary")
-        self.assertEqual(helper["selected_route"]["model"], "gpt-5.3-codex-spark")
+        self.assertEqual(helper["selected_route"]["model"], "gpt-6-luna")
         self.assertEqual(helper["selected_route"]["model_reasoning_effort"], "high")
         self.assertEqual([attempt["route_id"] for attempt in helper["attempted_routes"]], ["helper-primary"])
         self.assertEqual(helper["rejection_reasons"], [])
@@ -1457,9 +1453,17 @@ class MutationHelperTests(unittest.TestCase):
                 "reused-route-id-definition-mismatch",
                 lambda manifest: manifest["required_agent_policies"]["analyze-executor"]["preferred_route"].__setitem__(
                     "model",
-                    "model-not-observed-by-route-id",
+                    "gpt-6-luna",
                 ),
                 "route_id_definition_mismatch",
+            ),
+            (
+                "unsupported-gpt-5-route-model",
+                lambda manifest: manifest["optional_helper"]["preferred_route"].__setitem__(
+                    "model",
+                    "gpt-5.3-codex-spark",
+                ),
+                "route_model_unsupported",
             ),
             (
                 "source-roster-missing-optional-helper",
@@ -1501,6 +1505,9 @@ class MutationHelperTests(unittest.TestCase):
 
                     self.assertEqual(result["code"], "invalid_route_policy_manifest")
                     self.assertEqual(result["details"]["reason"], reason)
+                    if reason == "route_model_unsupported":
+                        self.assertEqual(result["details"]["route"], "optional_helper.preferred_route")
+                        self.assertEqual(result["details"]["model"], "gpt-5.3-codex-spark")
 
     def test_codex_route_policy_manifest_path_must_be_trusted_regular_repo_file(self) -> None:
         from speckit_pro_runner.helpers import install
@@ -6409,8 +6416,8 @@ class MutationHelperTests(unittest.TestCase):
             (
                 "normalized-content",
                 rendered_helper.replace(
-                    b'model = "gpt-5.3-codex-spark"\n',
-                    b'model    =    "gpt-5.3-codex-spark"\n',
+                    b'model = "gpt-6-luna"\n',
+                    b'model    =    "gpt-6-luna"\n',
                     1,
                 ),
             ),
@@ -6418,7 +6425,7 @@ class MutationHelperTests(unittest.TestCase):
                 "user-modified-same-name",
                 b'name = "autopilot-fast-helper"\n'
                 b'description = "User-owned helper with the same filename."\n'
-                b'model = "gpt-5.3-codex-spark"\n'
+                b'model = "gpt-6-luna"\n'
                 b'developer_instructions = """Do user-specific work only."""\n',
             ),
         ]
@@ -6460,7 +6467,7 @@ class MutationHelperTests(unittest.TestCase):
             expected_snapshot = routing_capability_snapshot()
             expected_snapshot["available_routes"] = ["required-fallback", "helper-primary"]
             inputs = self.route_aware_inputs(manifest_path, git_root)
-            inputs["strict_model_override"] = "gpt-5.4"
+            inputs["strict_model_override"] = "gpt-6-astra"
             inputs["test_overrides"] = {"codex_capability_snapshot": expected_snapshot}
 
             completed, response, stderr_records = run_runner(
@@ -6477,7 +6484,7 @@ class MutationHelperTests(unittest.TestCase):
             git_root=git_root,
             expected_snapshot=expected_snapshot,
         )
-        self.assert_strict_required_override_evidence(response, model="gpt-5.4", expected_status="compatible")
+        self.assert_strict_required_override_evidence(response, model="gpt-6-astra", expected_status="compatible")
         self.assert_route_aware_no_mutation_yet(response)
 
     def test_install_codex_agents_strict_required_override_miss_reports_all_required_without_writes(self) -> None:
@@ -6488,7 +6495,7 @@ class MutationHelperTests(unittest.TestCase):
             expected_snapshot = routing_capability_snapshot()
             expected_snapshot["available_routes"] = ["required-fallback", "helper-primary"]
             inputs = self.route_aware_inputs(manifest_path, git_root)
-            inputs["strict_model_override"] = "gpt-5.4"
+            inputs["strict_model_override"] = "gpt-6-astra"
             inputs["test_overrides"] = {"codex_capability_snapshot": expected_snapshot}
             destination = git_root / ".codex" / "agents"
 
@@ -6507,7 +6514,7 @@ class MutationHelperTests(unittest.TestCase):
                 expected_snapshot=expected_snapshot,
                 expected_manifest=manifest,
             )
-            self.assert_strict_required_override_evidence(response, model="gpt-5.4", expected_status="incompatible")
+            self.assert_strict_required_override_evidence(response, model="gpt-6-astra", expected_status="incompatible")
             records = {record["agent_name"]: record for record in response["data"]["routing"]["required_agents"]}
             self.assertEqual(records["analyze-executor"]["terminal_outcome"], "unresolved")
             self.assertIsNone(records["analyze-executor"]["selected_route"])
@@ -6565,7 +6572,7 @@ class MutationHelperTests(unittest.TestCase):
             expected_snapshot = routing_capability_snapshot()
             expected_snapshot["available_routes"] = ["required-helper-compatible", "helper-primary"]
             inputs = self.route_aware_inputs(manifest_path, git_root)
-            inputs["strict_model_override"] = "gpt-5.3-codex-spark"
+            inputs["strict_model_override"] = "gpt-6-luna"
             inputs["test_overrides"] = {"codex_capability_snapshot": expected_snapshot}
 
             completed, response, stderr_records = run_runner(
@@ -6585,12 +6592,12 @@ class MutationHelperTests(unittest.TestCase):
         )
         self.assert_strict_helper_override_evidence(
             response,
-            model="gpt-5.3-codex-spark",
+            model="gpt-6-luna",
             helper_status="compatible",
             helper_outcome="installed",
         )
         helper = response["data"]["routing"]["optional_helper_decision"]
-        self.assertEqual(helper["selected_route"]["model"], "gpt-5.3-codex-spark")
+        self.assertEqual(helper["selected_route"]["model"], "gpt-6-luna")
         self.assertEqual(helper["selected_route"]["model_reasoning_effort"], "high")
 
     def test_install_codex_agents_strict_helper_override_uses_valid_no_helper_without_helper_fallback(self) -> None:
@@ -6600,7 +6607,7 @@ class MutationHelperTests(unittest.TestCase):
             expected_snapshot = routing_capability_snapshot()
             expected_snapshot["available_routes"] = ["required-fallback"]
             inputs = self.route_aware_inputs(manifest_path, git_root)
-            inputs["strict_model_override"] = "gpt-5.4"
+            inputs["strict_model_override"] = "gpt-6-astra"
             inputs["test_overrides"] = {"codex_capability_snapshot": expected_snapshot}
 
             completed, response, stderr_records = run_runner(
@@ -6611,10 +6618,10 @@ class MutationHelperTests(unittest.TestCase):
         self.assertEqual(completed.returncode, 0)
         self.assertEqual(stderr_records, [])
         self.assert_response(response, "ok", 0)
-        self.assert_strict_required_override_evidence(response, model="gpt-5.4", expected_status="compatible")
+        self.assert_strict_required_override_evidence(response, model="gpt-6-astra", expected_status="compatible")
         self.assert_strict_helper_override_evidence(
             response,
-            model="gpt-5.4",
+            model="gpt-6-astra",
             helper_status="incompatible_no_helper",
             helper_outcome="omitted",
         )
@@ -6631,7 +6638,7 @@ class MutationHelperTests(unittest.TestCase):
             expected_snapshot = routing_capability_snapshot()
             expected_snapshot["available_routes"] = ["required-fallback"]
             inputs = self.route_aware_inputs(manifest_path, git_root)
-            inputs["strict_model_override"] = "gpt-5.4"
+            inputs["strict_model_override"] = "gpt-6-astra"
             inputs["test_overrides"] = {"codex_capability_snapshot": expected_snapshot}
             destination = git_root / ".codex" / "agents"
 
@@ -6650,10 +6657,10 @@ class MutationHelperTests(unittest.TestCase):
                 expected_snapshot=expected_snapshot,
                 expected_manifest=manifest,
             )
-            self.assert_strict_required_override_evidence(response, model="gpt-5.4", expected_status="compatible")
+            self.assert_strict_required_override_evidence(response, model="gpt-6-astra", expected_status="compatible")
             self.assert_strict_helper_override_evidence(
                 response,
-                model="gpt-5.4",
+                model="gpt-6-astra",
                 helper_status="unresolved",
                 helper_outcome="unresolved",
             )

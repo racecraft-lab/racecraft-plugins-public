@@ -4039,6 +4039,8 @@ def validate_route_policy_route(raw: Any, *, context: str) -> dict[str, Any]:
     for field in ("route_id", "model", "model_reasoning_effort"):
         if not isinstance(raw.get(field), str) or not raw[field]:
             return invalid_route_policy_manifest("route_field_invalid", details={"route": context, "field": field})
+    if raw["model"] not in SUPPORTED_CODEX_AGENT_MODELS:
+        return invalid_route_policy_manifest("route_model_unsupported", details={"route": context, "model": raw["model"]})
     if not isinstance(raw.get("capabilities"), list) or any(not isinstance(item, str) or not item for item in raw["capabilities"]):
         return invalid_route_policy_manifest("route_capabilities_invalid", details={"route": context})
     if raw.get("probe_id") is not None and (not isinstance(raw.get("probe_id"), str) or not raw["probe_id"]):
