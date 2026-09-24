@@ -158,7 +158,7 @@ field.
 Before parsing or mutating the repository, resolve the plugin root and verify by
 running the promoted `install-codex-agents` helper in `dry_run` mode against the
 selected `.codex/agents/` or `~/.codex/agents/` destination and its installed
-model choice. The plan must show every bundled TOML, including
+model and Luna fallback choice. The plan must show every bundled TOML, including
 `uat-runbook-author.toml`, as current. If any required file is missing or stale,
 STOP, instruct the user to run `$install`, restart Codex, and then retry
 scaffold. Do not apply the repair inside scaffold because this process cannot
