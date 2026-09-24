@@ -12,6 +12,3 @@ bin/*
 
 # Local developer environment (direnv). Committing it is the operator's call.
 .envrc
-
-# Eval run output is machine-specific and can be large.
-evals/results/
