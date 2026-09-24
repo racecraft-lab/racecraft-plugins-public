@@ -165,7 +165,7 @@ only the keys you need to the existing table; do not append a duplicate one.
 
 ```toml
 [mcp_servers.jev-openrouter]
-command = "/Users/YOUR_USERNAME/.local/libexec/racecraft-jev/evaluate"
+command = "/path/to/your-home-directory/.local/libexec/racecraft-jev/evaluate"
 args = ["mcp"]
 startup_timeout_sec = 10
 tool_timeout_sec = 75
@@ -173,7 +173,7 @@ tool_timeout_sec = 75
 [mcp_servers.jev-openrouter.env]
 JEV_PROVIDER = "openrouter"
 JEV_MODEL = "~typesafe/jev-latest"
-JEV_API_KEY_FILE = "/Users/YOUR_USERNAME/.config/racecraft-jev/openrouter.key"
+JEV_API_KEY_FILE = "/path/to/your-home-directory/.config/racecraft-jev/openrouter.key"
 JEV_REQUEST_TIMEOUT = "45s"
 ```
 

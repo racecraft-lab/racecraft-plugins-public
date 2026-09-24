@@ -34,7 +34,7 @@ func generate(t *testing.T, cfg Config, exe string, opts setupOptions) string {
 // SET-01: the generated commands name the requested clients, server name, and
 // key-file path, and are quoted so a shell reproduces them exactly.
 func TestSetupGeneratesBothClients(t *testing.T) {
-	const keyFile = "/Users/someone/.config/racecraft-jev/openrouter.key"
+	keyFile := filepath.Join(t.TempDir(), ".config", "racecraft-jev", "openrouter.key")
 	cfg := setupConfig(t, "openrouter", keyFile)
 	got := generate(t, cfg, "/opt/racecraft/evaluate", setupOptions{
 		clients: []string{"claude-code", "codex"},
