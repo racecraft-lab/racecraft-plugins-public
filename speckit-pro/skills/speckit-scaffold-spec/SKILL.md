@@ -306,8 +306,7 @@ this step sets out.
 </hard_constraints>
 
 **Engine.** The pass runs on the already-shipped read-only `codebase-analyst`,
-consumed unmodified. Do not add or edit an agent definition. The existing
-`Agent` grant already makes the dispatch possible.
+consumed unmodified. Do not add or edit an agent definition.
 
 **Dispatch, then await.** Dispatch the analyst, then await its own final summary
 BEFORE the interview begins:
@@ -341,12 +340,10 @@ the recorded outcome.
 | The entry's dependency chain | **required when the entry declares one, under any heading** | Read a renamed variant such as `**Deps:**` as the chain. Only when no declaration exists in any spelling, append the label with the literal `none` and continue on the Scope text alone. Never skip, never report a gap, never infer a chain |
 | The `Key Files` section | **optional hint** | Omit the label entirely and continue. Never report a gap, never skip |
 
-**The two absent-field behaviours differ on purpose. Do not collapse them.**
-`Key Files` is a hint whose absence carries no information, so its label is
-dropped. A missing `Depends On` **is** information, so the literal `none` is
-written instead: reading a renamed `**Deps:**` as an absent field would put
-`none` in the payload for an entry that names several — a false statement rather
-than a missing one.
+**Keep the two absent-field behaviours distinct.** A missing `Key Files` carries
+no information, so its label is dropped. A missing `Depends On` **is**
+information, so the literal `none` is written, and only when the entry declares
+no dependency chain under any heading.
 
 **Payload assembly.** The payload is two parts, in this order: the dispatch
 block, then the appended seed material under these literal labels:
@@ -391,8 +388,8 @@ Seed (optional hint, may be absent): the Key Files section.
 For each Depends On spec whose artifacts are not in the working tree, chase
 it into git history rather than reporting it absent.
 
-Return at most 5 findings, ranked by impact then surprise. Each finding:
-N. **<Title>** - 1-3 sentences, plus a repo-relative file or path pointer.
+Return every finding worth raising, ranked by impact then surprise. Each finding:
+N. **<Title>** - the finding, plus a repo-relative file or path pointer.
    Impact: <what requirement or design decision this would change if true>
    Surprise: <why the roadmap entry's own text does not already say this>
 Then state how many findings you set aside, including when that number is 0.
@@ -416,31 +413,22 @@ test: the rationale is what makes a finding reviewable.
 **A single expired wait is not the third outcome.** A wait expiring is a cue to
 keep waiting; only the pass execution deadline expiring abandons the wait.
 
-**Cap, ranking, and the set-aside count.** At most five findings, and the cap is
-**not operator-configurable**.
+**Ranking and the set-aside count.** The findings have no count limit. Show
+every finding **in the analyst's own order**. Never re-rank, merge, or rewrite
+findings: the ranking is the analyst's, by impact with surprise as the tiebreak.
+**No numeric score** is assigned.
 
-**Scaffold enforces the cap on what it renders.** The reply is model output and
-cannot be relied on to obey. When more than five come back, show the first five
-**in the analyst's own order**, count the remainder, and state that count
-through the truncation string below. Never re-rank, merge, or rewrite findings
-to fit: the ranking is the analyst's. **No numeric score** is assigned. Ranking
-is reviewable rather than deterministic — ordered by impact with surprise as the
-tiebreak, so a reader can check each rationale against the roadmap text.
-
-**Always state the set-aside count, including when it is zero**, in one of these
-three shapes:
+**Always state the set-aside count the analyst names, including when it is
+zero**, in one of these three shapes:
 
 ```text
-Showing the 5 highest-impact findings; N more were set aside
 Showing all N findings; none were set aside
+Showing all N findings; M more were set aside
 The blindspot pass raised no unknown unknowns.
 ```
 
-When five or fewer findings come back and the analyst still names a non-zero
-set-aside count, the second shape carries that count in place of `none`:
-`Showing all N findings; M more were set aside`. Without it the printed line
-would claim none were set aside while the design-concept record below states
-`M`, which is exactly the drift one vocabulary exists to prevent.
+The count in the printed line and the `M` in the design-concept record below
+are the same number.
 
 The third is the **sentinel echoed verbatim**: one string doing two jobs, the
 analyst's signal to scaffold and scaffold's line to the operator, so no second
@@ -460,13 +448,12 @@ vocabulary: `reply carried neither a finding nor the sentinel`,
 `<reason>` clause is reused verbatim in the design-concept header line below, so
 the printed record and the durable record cannot give different reasons.
 
-**The one-word spelling inside the sentinel is deliberate. Do not normalise
-it.** Everywhere scaffold speaks in its own voice — the two degraded lines
-above, and the `**Blind-spot pass:**` header key below — the term is hyphenated,
-so one run can show the operator both spellings. It reads as a typo and is not.
-The sentinel is matched **literally**: normalising it to
-`blind-spot` breaks the usable-reply test silently, classifying the reply as
-**returned nothing usable** on exactly the runs where the pass worked.
+**Do not normalise the one-word spelling inside the sentinel.** Where scaffold
+speaks in its own voice (the two degraded lines above and the
+`**Blind-spot pass:**` header key below), the term is hyphenated, so one run can
+show both spellings. The sentinel is matched **literally**: normalising it to
+`blind-spot` classifies the reply as **returned nothing usable** on exactly the
+runs where the pass worked.
 
 **Fail open.** Do **not** treat the dispatch outcome as a gate, and do **not**
 retry-then-halt. If the dispatch fails or returns nothing usable, continue into
@@ -500,10 +487,9 @@ have no set-aside count to state. The delimiters and the two closing
 instructions **never vary**, which is what lets the block keep one shape in all
 three outcomes.
 
-**Two of the block's lines address the interview, and the operator sees them.**
-That cost is accepted rather than overlooked. **Do not resolve it by forking the
-two copies**, softening the imperatives in one of them, or dropping them from
-the printed half. Any of those is the drift one shape exists to prevent.
+**Print the block's two closing instructions to the operator unchanged.** Do not
+fork the two copies, soften the imperatives in one of them, or drop them from the
+printed half.
 
 The block's second closing instruction is how no finding is dropped silently: a
 finding the interview resolves becomes an entry in the existing
@@ -526,9 +512,9 @@ clause** the status line above carried. A pass that ran and raised nothing is
 the first shape with `N` and `M` both zero — which is what distinguishes it from
 a pass that never ran.
 
-Do **not** add a new section to the design concept, do **not** write a separate
-findings artifact — specifically not `.process/<SPEC-ID>-blind-spots.md` — and
-do **not** change what the interview produces.
+The header line is the pass's only durable record: add no section to the design
+concept, write no separate findings file, and leave what the interview produces
+unchanged.
 
 **Presentation is informational.** The run flows straight from the findings into
 the first interview question. **No confirmation, no curation step, no
@@ -868,8 +854,6 @@ ambiguous or redirect planning commits to main.
 newest commit is the roadmap status flip rather than the workflow-file commit,
 so a last-commit test would fail on every correct run.
 
-Both commands are read-only, so this check adds no machinery.
-
 **What each result selects:**
 
 | Check result | Effect on the hand-off |
@@ -934,8 +918,7 @@ hand-off commands and loses no work.
 
 ### 10. Closing Report
 
-**One report, rendered on every ending the run can reach.** Since scaffold never
-invokes the autopilot, every run ends here, and the report is always owed:
+**One report, rendered on every ending the run can reach:**
 
 ```text
 1. The operator is continuing into planning now.
@@ -960,11 +943,8 @@ The report is **printed, not written to a file.**
 <two-command hand-off block>
 ```
 
-**The heading is one fixed string, `## Ready for Planning`.** It is true on all
-three endings: scaffold's own work is finished and pushed, and the planning
-stage is the next hand-off whether the operator runs it now or later. It leads
-with what is finished rather than with a negation, because none of the three
-endings is a failure and none is the operator's fault.
+**The heading is one fixed string, `## Ready for Planning`**, on all three
+endings.
 
 **Fixed, conditional, and derived.** The heading and the draft-PR line are
 fixed, except that the draft-PR line is conditional on a URL existing. The
@@ -992,8 +972,7 @@ same on all three, because no planning stage ran in any of them:
 | The operator stopped here | the run stopped at the operator's request, everything scaffold owns is committed and pushed, and nothing was rolled back |
 | No structured confirmation mechanism was available | the question was not asked because the session exposes none, everything scaffold owns is committed and pushed, and nothing was rolled back |
 
-Every line closes on **everything scaffold owns is committed and pushed**, the
-fact the operator most needs.
+Every line closes on **everything scaffold owns is committed and pushed**.
 
 **When Step 9's cleanliness test failed, the outcome line carries one added
 clause** naming the uncommitted changes as something to resolve before running
@@ -1011,39 +990,32 @@ plainly that there is none:
 Never omit the line silently, and never fabricate or guess a URL.
 
 **The artifact index enumerates what the run actually produced.** It **must not
-print a path that does not exist, and must not omit an artifact that does.** The
-set genuinely varies per spec, so a derived index stays true where a fixed list
-would not.
+print a path that does not exist, and must not omit an artifact that does.**
 
-**Derived from a closed candidate set.** Exactness in both directions is
-unverifiable against an open set, so the candidates are fixed here:
+**Derived from a closed candidate set:**
 
 | Group | Candidates |
 | ----- | ---------- |
 | Scaffold-owned | `docs/ai/specs/.process/SPEC-<ID>-design-concept.md`, `docs/ai/specs/.process/SPEC-<ID>-workflow.md`, `specs/<feature>/SPEC-MOC.md`, the pushed branch name |
 
-Nothing outside this set is listed, so an unexpected file is a change to this
-list rather than a silent omission. The planning-stage artifacts are **not**
-candidates: no planning stage runs before this report, so none of them exists
-yet.
+Nothing outside this set is listed. The planning-stage artifacts are **not**
+candidates.
 
 **The `SPEC-<ID>` token above is the roadmap identity in full, including whatever
 namespace prefix it carries — it is not a literal `SPEC-` joined to an
 identifier.** A `SPEC-011` run tests `SPEC-011-design-concept.md`. The candidates
 above must be the filenames Steps 4 and 5 actually wrote. Never test a literally
 `SPEC-`-prefixed name for a spec whose identity does not begin with `SPEC-`: that
-path was never written, the read fails, and the report silently omits its own
-primary artifact — the one omission this index may never make.
+path was never written, so the index would omit its primary artifact.
 
 **The existence test is a read of the candidate path, and nothing more.** A path
-that reads is listed; a path that does not read is omitted. This is the only
-existence test inside this skill's declared grant, and it adds no machinery.
+that reads is listed; a path that does not read is omitted.
 Never infer a path from convention, and never list a path that was not tested.
 The pushed branch name is the one candidate that is not a path: it is listed
 from the branch Step 7 pushed and needs no read, so the test above never
 applies to it.
 
 **The next step is the Step 9 two-command hand-off**, in the form that step's
-check selected. There is one rule because there is one heading. Scaffold names
+check selected. Scaffold names
 the planning hand-off as the operator's next action, never as its own action,
 and never asks a second confirmation to offer it.
