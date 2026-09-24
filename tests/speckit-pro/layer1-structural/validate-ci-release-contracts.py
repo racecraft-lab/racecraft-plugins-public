@@ -1000,7 +1000,8 @@ class ValidateReleaseWorkflow(unittest.TestCase):
             self.assertEqual({'speckit-pro', 'typesafe-jev'}, set(packages))
             self.assertEqual(set(packages), set(manifest))
             self.assertIs(True, config.get('separate-pull-requests'))
-            self.assertRegex(str(config.get('last-release-sha', '')), '^[0-9a-f]{40}$')
+            # Both components have release tags; an anchor SHA would only override them.
+            self.assertNotIn('last-release-sha', config)
             typesafe = packages.get('typesafe-jev') or {}
             self.assertEqual('typesafe-jev', typesafe.get('component'))
             self.assertIs(True, typesafe.get('draft'))
