@@ -53,8 +53,10 @@ not the usual application-security list:
 
 ## Scope
 
-In scope: `speckit-pro/`, `scripts/`, `tests/`, `docs-site/` source, and
-`.github/workflows/`.
+In scope: `speckit-pro/`, `typesafe-jev/`, `scripts/`, `tests/`, `docs-site/`
+source, and `.github/workflows/`. For how `typesafe-jev` handles API keys and
+what it sends to TypeSafe or OpenRouter, see
+[typesafe-jev/SECURITY.md](./typesafe-jev/SECURITY.md).
 
 Out of scope: third-party MCP servers and services the plugins call, the
 upstream SpecKit CLI, vendored upstream content, and archived spec artifacts

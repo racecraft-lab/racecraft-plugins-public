@@ -1,0 +1,35 @@
+{
+  "model": "~typesafe/jev-latest",
+  "state": {
+    "incident": "A production checkout service is unavailable and customers cannot complete purchases."
+  },
+  "questions": {
+    "customer_impact": {
+      "type": "noul",
+      "instructions": "Does the incident describe a customer-impacting service failure?",
+      "criteria": {
+        "true": "Customers are unable to complete a normal operation.",
+        "false": "No customer-facing operation is impaired."
+      }
+    },
+    "owner": {
+      "type": "choice",
+      "instructions": "Which team should initially investigate this incident?",
+      "criteria": {
+        "billing": "An invoice, charge, or refund dispute without a service outage.",
+        "engineering": "A technical service failure that prevents a normal operation.",
+        "sales": "A question about purchasing, pricing, or a contract.",
+        "unknown": "The incident does not provide enough evidence to select a team."
+      }
+    },
+    "disruption": {
+      "type": "score",
+      "instructions": "Rate the operational disruption described by the incident.",
+      "criteria": [
+        "Minor disruption: the operation remains available.",
+        "Major disruption: the operation is degraded or intermittently fails.",
+        "Service unavailable: customers cannot complete the operation."
+      ]
+    }
+  }
+}

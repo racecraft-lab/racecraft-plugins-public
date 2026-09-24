@@ -9,7 +9,7 @@ description: >
   or has a workflow file ready for execution.
 user-invocable: true
 disable-model-invocation: true
-allowed-tools: Read Edit Write Glob Grep Skill Agent WebFetch WebSearch ToolSearch
+allowed-tools: Read Edit Write Glob Grep Skill Agent ToolSearch
 license: MIT
 ---
 

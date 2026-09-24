@@ -1,5 +1,7 @@
 {
   "draft-pull-request": true,
+  "separate-pull-requests": true,
+  "last-release-sha": "4644c251cfb6f33ebe4fc8716475aa00f42e277c",
   "packages": {
     "speckit-pro": {
       "release-type": "simple",
@@ -21,6 +23,35 @@
           "type": "json",
           "path": "speckit_pro_runner/speckit-pro-runner.manifest.json",
           "jsonpath": "$.plugin_version"
+        }
+      ]
+    },
+    "typesafe-jev": {
+      "release-type": "go",
+      "component": "typesafe-jev",
+      "changelog-path": "CHANGELOG.md",
+      "bump-minor-pre-major": true,
+      "draft": true,
+      "force-tag-creation": true,
+      "extra-files": [
+        {
+          "type": "json",
+          "path": "plugin/.claude-plugin/plugin.json",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "json",
+          "path": "plugin/.codex-plugin/plugin.json",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "json",
+          "path": "/.agents/plugins/marketplace.json",
+          "jsonpath": "$.plugins[?(@.name==\"typesafe-jev\")].version"
+        },
+        {
+          "type": "generic",
+          "path": "plugin/shared-skills/typed-judgments/SKILL.md"
         }
       ]
     }

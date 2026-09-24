@@ -1,0 +1,19 @@
+{
+  "mcpServers": {
+    "jev": {
+      "command": "python3",
+      "args": [
+        "scripts/evaluate_launch.py"
+      ],
+      "cwd": ".",
+      "env": {
+        "JEV_PROVIDER": "typesafe",
+        "JEV_MODEL": "jev-latest",
+        "JEV_FALLBACK_PROVIDER": "openrouter",
+        "JEV_REQUEST_TIMEOUT": "45s"
+      },
+      "startup_timeout_sec": 10,
+      "tool_timeout_sec": 75
+    }
+  }
+}

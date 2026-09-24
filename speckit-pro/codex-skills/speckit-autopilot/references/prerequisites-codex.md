@@ -15,6 +15,7 @@ checking never installs a runtime implicitly.
 - [Workflow Worktree Binding](#workflow-worktree-binding) — bind one safe execution worktree before any phase work
 - [Step -1: Archive Sweep Startup](#step--1-archive-sweep-startup) — archive previously merged specs before workflow execution
 - [Step 0.0: Resolve Script Paths](#step-00-resolve-script-paths) — locate the plugin's `SKILL_SCRIPTS` directory
+- [Step 0.0b: Research Broker Preflight](#00b-research-broker-preflight) — confirm typesafe-jev is installed and record the research screening mode
 - [Step 0.1–0.7: Environment Checks](#step-01-07-environment-checks) — `check-prerequisites` JSON parsing, branch detection
 - [Step 0.6: Load Settings](#step-06-load-settings) — project settings YAML frontmatter
 - [Step 0.8: Capability Coverage & Plugin Limitation Check](#step-08-capability-coverage--plugin-limitation-check) — informational research/context advisory
@@ -193,6 +194,34 @@ path as prefix.** Never run these scripts from
 `.specify/scripts/<type>/` — that directory contains project-level
 SpecKit scripts (create-new-feature, setup-plan, etc.), which are
 different from the autopilot scripts.
+
+### 0.0b Research Broker Preflight
+
+speckit-pro requires the typesafe-jev plugin. Codex has no plugin dependency
+mechanism, so check it here. Run `codex plugin list` with argv-only execution.
+If `typesafe-jev` is absent, STOP and tell the user to run
+`codex plugin add typesafe-jev@racecraft-plugins-public`, restart Codex, and
+retry.
+
+Then record how the research broker will screen web and docs results:
+
+```text
+'runner helper research-broker-preflight' inputs={}
+```
+
+The helper never reads a key value. Write `data.screening_mode` and every
+`data.warnings[].code` and `data.errors[].code` to the workflow log.
+
+- `ok` with no warnings: research runs in `jev` mode.
+- `ok` with warnings: continue. A missing Jev key or binary means
+  `sanitizer-only` mode. A missing Tavily key means `research_search` returns
+  `search_unavailable` while `docs_query` still works. A key held only in an
+  environment variable may not reach the broker, because Codex forwards only
+  allowlisted variables to MCP servers; prefer the key files. Show each warning
+  message to the user once.
+- `expected_failure`: a credential or binary is configured but broken. Report
+  each `data.errors[].message` and continue. The broker drops every affected
+  result and reports it, so research evidence may be thin until it is fixed.
 
 ### 0.1–0.7 Environment Checks
 

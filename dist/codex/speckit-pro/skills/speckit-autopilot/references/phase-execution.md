@@ -328,8 +328,8 @@ For each clarify session in the workflow file:
 ```
 
 **Layer 1 (executor):** The clarify-executor researches possible
-questions using web search, library docs, codebase exploration, and
-local file analysis (MCP tools preferred when available). It does not
+questions using the research broker's web search and library docs,
+codebase exploration, and local file analysis. It does not
 edit artifacts. It returns questions and recommendations to the parent.
 
 **Layer 2 (consensus):** For items the executor flagged
@@ -464,9 +464,8 @@ For each checklist domain in the workflow file:
 ```
 
 **Layer 1 (executor):** The checklist-executor handles
-gap research and remediation internally using web search,
-codebase exploration, and library docs (MCP tools preferred
-when available).
+gap research and remediation internally using the research
+broker's web search and library docs, and codebase exploration.
 
 **Layer 2 (consensus):** For gaps the executor couldn't
 resolve (shared reservation exhausted, low confidence, security

@@ -45,8 +45,10 @@ own failure patterns.
 
 ## Start Here
 
-A public Claude Code and Codex marketplace; its one plugin, `speckit-pro`,
-installs from `dist/`. Specs and planning artifacts are context on demand.
+A public Claude Code and Codex marketplace with two plugins: `speckit-pro`,
+which installs from `dist/`, and `typesafe-jev`, which installs from
+`typesafe-jev/plugin/` with no generated payload. Specs and planning artifacts
+are context on demand.
 Before editing `speckit-pro/`, `tests/speckit-pro/`, or `docs-site/`, read its
 scoped `AGENTS.md`; Codex loads one only when started inside that directory.
 
@@ -56,6 +58,7 @@ scoped `AGENTS.md`; Codex loads one only when started inside that directory.
 | Codex skills, agents, hooks | `speckit-pro/skills/` overlaid by `speckit-pro/codex-skills/`, `speckit-pro/codex-agents/` (TOML), `speckit-pro/codex-hooks.json` |
 | Python runner | `speckit-pro/speckit_pro_runner/`: gates in `gates/`, helper ids in `helpers/registry.py` |
 | Tests | `tests/speckit-pro/`; layers and default selection in `suite-manifest.json` |
+| typesafe-jev | Go source and Go tests in `typesafe-jev/cmd/evaluate/`; shipped plugin in `typesafe-jev/plugin/`; `python3 scripts/check-go-module.py check` runs its CI checks |
 
 Two optional tools save reading and tokens; work on without them, and no check
 may depend on either. With `ripwire` on PATH (one argument per flag), run
@@ -143,7 +146,9 @@ pnpm --dir docs-site reference:generate
   `specs/...` path as a string is fine; opening one is not, and
   `tests/speckit-pro/lib/test_result.py` enforces the difference at run time.
 - Keep repository-owned tooling on Python 3.11+ standard library unless an
-  existing local toolchain already owns the surface.
+  existing local toolchain already owns the surface. Go is the plugin-owned
+  toolchain for `typesafe-jev/` only; the scripts and tests that build, check,
+  and release it stay Python.
 - Do not add active repository Bash or `jq` dependencies outside existing
   workflow dispatch glue and fixed vendored boundaries.
 - If plugin source or payload-affecting files change, account for the generated
@@ -175,8 +180,9 @@ the two in step when either changes.
 
 - Treat as blocking: manifest or version drift; plugin source changed without
   accounting for the generated artifact contract; malformed loader frontmatter;
-  repository tooling leaving the Python 3.11+ standard library or adding an
-  active Bash or `jq` dependency outside the allowed boundaries; a workflow that
+  repository tooling leaving the Python 3.11+ standard library (Go belongs to
+  `typesafe-jev/` only) or adding an active Bash or `jq` dependency outside the
+  allowed boundaries; a workflow that
   exposes secrets or elevated permissions to untrusted PR content; a script or
   test filename coupled to a temporary spec ID, or test code that reads a
   `specs/<feature>/` path from disk at run time; a correctness bug in repository

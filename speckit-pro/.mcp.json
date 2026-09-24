@@ -19,6 +19,16 @@
       "env": {
         "PYTHONPATH": "${CLAUDE_PLUGIN_ROOT}"
       }
+    },
+    "research-broker": {
+      "command": "python3",
+      "args": [
+        "-m",
+        "speckit_pro_runner.research_broker"
+      ],
+      "env": {
+        "PYTHONPATH": "${CLAUDE_PLUGIN_ROOT}"
+      }
     }
   }
 }

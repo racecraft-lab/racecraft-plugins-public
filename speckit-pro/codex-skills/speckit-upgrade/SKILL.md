@@ -220,6 +220,29 @@ Confirm each upgraded integration shows `installed` and reports the
 new manifest. Report any verification mismatch — do not silently
 continue.
 
+#### Research screening check
+
+speckit-pro requires the typesafe-jev plugin, and Codex has no plugin
+dependency mechanism. Run `codex plugin list` with argv-only execution. If
+`typesafe-jev` is absent, print `codex plugin add
+typesafe-jev@racecraft-plugins-public`, tell the user to restart Codex, and
+stop this step. Otherwise run runner helper `research-broker-preflight` in
+`read_only` mode with empty `inputs`.
+
+Report `data.screening_mode` and each `data.warnings[].message` and
+`data.errors[].message`. The helper never reads a key value.
+
+- A key is optional. With no Jev key or binary, research runs in
+  `sanitizer-only` mode, which is a warning, not a failure.
+- With no Tavily key, `research_search` returns `search_unavailable` and
+  `docs_query` still works through keyless Context7. Point the user to a free
+  Tavily key in `~/.config/speckit-pro/tavily.key` (mode 0600).
+- `expected_failure` means a credential or binary is configured but broken.
+  Report the fix it names. Do not roll back the SpecKit install for it.
+- A key held only in an environment variable is a warning: Codex forwards
+  only allowlisted variables to MCP servers, so the broker may not see it.
+  Prefer the key files.
+
 ### 8. Offer missing curated extensions and presets
 
 speckit-pro maintains a manual recommendation catalog of community extensions

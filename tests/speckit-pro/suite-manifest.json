@@ -100,6 +100,7 @@
         { "path": "tests/speckit-pro/unit/test-release-pr-reconciliation.py", "label": "test-release-pr-reconciliation" },
         { "path": "tests/speckit-pro/unit/test-hosted-windows-preflight.py", "label": "test-hosted-windows-preflight" },
         { "path": "tests/speckit-pro/unit/test-pr-checks-helpers.py", "label": "test-pr-checks-helpers" },
+        { "path": "tests/speckit-pro/unit/test-typesafe-jev-release-build.py", "label": "test-typesafe-jev-release-build" },
         { "path": "tests/speckit-pro/unit/test-docs-artifact.py", "label": "test-docs-artifact" },
         { "path": "tests/speckit-pro/unit/test-sync-marketplace-versions.py", "label": "test-sync-marketplace-versions" },
         { "path": "tests/speckit-pro/unit/test-claude-hooks.py", "label": "test-claude-hooks" },
@@ -158,7 +159,9 @@
         { "path": "tests/speckit-pro/unit/test-consensus-analyst-shared-prose.py", "label": "test-consensus-analyst-shared-prose" },
         { "path": "tests/speckit-pro/unit/test-feedback-sweep-parse.py", "label": "test-feedback-sweep-parse" },
         { "path": "tests/speckit-pro/unit/test-feedback-sweep-isolation.py", "label": "test-feedback-sweep-isolation" },
-        { "path": "tests/speckit-pro/unit/test-artifact-freshness.py", "label": "test-artifact-freshness" }
+        { "path": "tests/speckit-pro/unit/test-artifact-freshness.py", "label": "test-artifact-freshness" },
+        { "path": "tests/speckit-pro/unit/test-research-broker-preflight.py", "label": "test-research-broker-preflight" },
+        { "path": "tests/speckit-pro/unit/test-research-broker.py", "label": "test-research-broker" }
       ]
     },
     {

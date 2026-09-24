@@ -36,3 +36,8 @@ specs/*/.process/pr-packets/
 
 # Private native-evaluation captures, prepared inputs, and grading receipts.
 /.native-eval-output/
+
+# typesafe-jev release build output (scripts/build-typesafe-jev-release.py)
+/typesafe-jev-release/
+/typesafe-jev-release-verify/
+/typesafe-jev-release-smoke/

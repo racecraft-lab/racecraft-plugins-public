@@ -1,0 +1,63 @@
+{
+  "codeSnippets": [
+    {
+      "codeTitle": "Set combined connect and read timeout",
+      "codeDescription": "Applies a single timeout value to both the connect and read timeouts. By default, requests do not time out unless explicitly set.",
+      "codeLanguage": "python",
+      "codeTokens": 58,
+      "codeId": "https://github.com/psf/requests/blob/main/docs/user/advanced.rst",
+      "pageTitle": "Unknown",
+      "codeList": [
+        {
+          "language": "python",
+          "code": "r = requests.get('https://github.com', timeout=5)"
+        }
+      ],
+      "generationDate": "2026-09-18T07:04:39.505Z"
+    },
+    {
+      "codeTitle": "Set separate connect and read timeouts with a tuple",
+      "codeDescription": "Sets the connect and read timeouts individually by passing a tuple of (connect, read) seconds.",
+      "codeLanguage": "python",
+      "codeTokens": 59,
+      "codeId": "https://github.com/psf/requests/blob/main/docs/user/advanced.rst",
+      "pageTitle": "Unknown",
+      "codeList": [
+        {
+          "language": "python",
+          "code": "r = requests.get('https://github.com', timeout=(3.05, 27))"
+        }
+      ],
+      "generationDate": "2026-09-18T07:04:39.505Z"
+    },
+    {
+      "codeTitle": "Disable timeout with None",
+      "codeDescription": "Tells Requests to wait indefinitely for a response by setting timeout to None.",
+      "codeLanguage": "python",
+      "codeTokens": 44,
+      "codeId": "https://github.com/psf/requests/blob/main/docs/user/advanced.rst",
+      "pageTitle": "Unknown",
+      "codeList": [
+        {
+          "language": "python",
+          "code": "r = requests.get('https://github.com', timeout=None)"
+        }
+      ],
+      "generationDate": "2026-09-18T07:04:39.505Z"
+    }
+  ],
+  "infoSnippets": [
+    {
+      "pageId": "https://github.com/psf/requests/blob/main/docs/user/advanced.rst",
+      "breadcrumb": "Timeouts",
+      "content": "Most requests to external servers should have a timeout attached, in case the\nserver is not responding in a timely manner. By default, requests do not time\nout unless a timeout value is set explicitly. Without a timeout, your code may\nhang for minutes or more.\n\nThe **connect** timeout is the number of seconds Requests will wait for your\nclient to establish a connection to a remote machine (corresponding to the\n[connect()](https://linux.die.net/man/2/connect)) call on the socket. It’s a good practice to set connect timeouts\nto slightly larger than a multiple of 3, which is the default [TCP packet\nretransmission window](https://datatracker.ietf.org/doc/html/rfc2988).\n\nOnce your client has connected to the server and sent the HTTP request, the\n**read** timeout is the number of seconds the client will wait for the server\nto send a response. (Specifically, it’s the number of seconds that the client\nwill wait *between* bytes sent from the server. In 99.9% of cases, this is the\ntime before the server sends the first byte).\n\nIf you specify a single value for the timeout, like this:\n\nThe timeout value will be applied to both the `connect` and the `read`\ntimeouts. Specify a tuple if you would like to set the values separately:\n\nIf the remote server is very slow, you can tell Requests to wait forever for\na response, by passing None as a timeout value and then retrieving a cup of\ncoffee.",
+      "contentTokens": 321
+    },
+    {
+      "pageId": "https://github.com/psf/requests/blob/main/docs/user/advanced.rst",
+      "breadcrumb": "Timeouts",
+      "content": "The connect timeout applies to each connection attempt to an IP address.\nIf multiple addresses exist for a domain name, the underlying `urllib3` will\ntry each address sequentially until one successfully connects.\nThis may lead to an effective total connection timeout *multiple* times longer\nthan the specified time, e.g. an unresponsive server having both IPv4 and IPv6\naddresses will have its perceived timeout *doubled*, so take that into account\nwhen setting the connection timeout.",
+      "contentTokens": 98
+    }
+  ]
+}

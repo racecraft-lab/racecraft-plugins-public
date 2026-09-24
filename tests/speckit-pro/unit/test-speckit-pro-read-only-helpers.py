@@ -96,6 +96,7 @@ EXPECTED_HELPERS = [
     "validate-execution-record",
     "parse-consensus-categories",
     "aggregate-crl",
+    "research-broker-preflight",
 ]
 
 JSON_STDOUT_PARITY_HELPERS = {"atomicity-route"}
@@ -151,6 +152,7 @@ HELPER_CASES: dict[str, dict[str, object]] = {
     "validate-pr-workflow-contract": {"title": "feat(FEATURE-001): Validate helper contract"},
     "validate-pr-packet-read-only": {"packet_path": "tests/speckit-pro/unit/fixtures/read-only-helpers/missing-pr-packet.json"},
     "estimate-spec-size": {"user_stories": 2, "files": 3, "frs": 4},
+    "research-broker-preflight": {},
     "sweep-pr-feedback": {
         "workflow_file": "docs/ai/specs/.process/FEATURE-002-workflow.md",
         "self_login": "speckit-pro-bot",
@@ -3753,6 +3755,30 @@ class ReadOnlyHelperTests(unittest.TestCase):
                 if helper_id == "formal-doctor":
                     self.assertEqual(completed.returncode, 0)
                     self.assertEqual(data["verdict"], "disabled")
+                    self.assertFalse(data["writes_state"])
+                    self.assertEqual(stderr_records, [])
+                    continue
+                if helper_id == "research-broker-preflight":
+                    # Rerun against an empty temporary HOME so the real
+                    # machine's binary and key files never decide the result.
+                    with tempfile.TemporaryDirectory(prefix="research-preflight-home-") as home:
+                        completed, response, stderr_records = run_runner(
+                            helper_request(helper_id, HELPER_CASES[helper_id]),
+                            {
+                                "HOME": home,
+                                "EVALUATE_BIN": "",
+                                "JEV_API_KEY_FILE": "",
+                                "JEV_FALLBACK_API_KEY_FILE": "",
+                                "TYPESAFE_API_KEY": "",
+                                "OPENROUTER_API_KEY": "",
+                                "TAVILY_API_KEY": "",
+                                "CONTEXT7_API_KEY": "",
+                            },
+                        )
+                    data = response["data"]
+                    self.assert_response(response, "ok", 0)
+                    self.assertEqual(data["jev"]["state"], "binary_missing")
+                    self.assertEqual(data["screening_mode"], "sanitizer-only")
                     self.assertFalse(data["writes_state"])
                     self.assertEqual(stderr_records, [])
                     continue

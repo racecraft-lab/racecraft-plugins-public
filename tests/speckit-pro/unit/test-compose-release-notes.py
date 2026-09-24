@@ -999,6 +999,84 @@ class ComposeReleaseNotesTests(unittest.TestCase):
         self.assertFalse(json.loads(second_stdout.getvalue())["snapshot_reused"])
 
     @inventory_check
+    def test_components_come_from_the_release_please_config(self) -> None:
+        self.assertEqual(COMPOSER.load_release_components(), frozenset({"speckit-pro", "typesafe-jev"}))
+        components = COMPOSER.load_release_components()
+        self.assertEqual(COMPOSER.release_component("speckit-pro-v2.33.0", components), "speckit-pro")
+        self.assertEqual(COMPOSER.release_component("typesafe-jev-v0.9.0", components), "typesafe-jev")
+        self.assertEqual(COMPOSER.release_component("typesafe-jev-v1.0.0-rc.1", components), "typesafe-jev")
+        self.assertIsNone(COMPOSER.release_component("v0.9.0", components))
+        self.assertIsNone(COMPOSER.release_component("typesafe-jev-0.9.0", components))
+
+    @inventory_check
+    def test_each_component_keeps_only_its_own_scoped_pull_requests(self) -> None:
+        components = frozenset({"speckit-pro", "typesafe-jev"})
+        commits = COMPOSER.discover_commits(
+            compare_payload(
+                "feat(speckit-pro): Add a research broker (#701)",
+                "feat(typesafe-jev): Add a one-shot call command (#702)",
+                "fix(deps): Patch a transitive advisory (#703)",
+                "chore(typesafe-jev): Import the source with its history (#704)",
+            ),
+            {},
+        )
+        pulls = {
+            701: pull("feat(speckit-pro): Add a research broker", "```release-note\nResearch goes through a broker.\n```"),
+            702: pull("feat(typesafe-jev): Add a one-shot call command", "```release-note\nevaluate call runs one judgment.\n```"),
+            703: pull("fix(deps): Patch a transitive advisory"),
+            704: pull("chore(typesafe-jev): Import the source with its history"),
+        }
+        speckit = COMPOSER.compose_release_body(
+            RAW_BODY, commits, pulls, compare_commit_count=4, tag="speckit-pro-v2.34.0", components=components
+        )
+        highlights = speckit.split(COMPOSER.APPENDIX_HEADING)[0]
+        self.assertIn("- Research goes through a broker.", highlights)
+        self.assertIn("- Patch a transitive advisory", highlights)
+        self.assertNotIn("evaluate call", highlights)
+        self.assertNotIn("Import the source", highlights)
+
+        typesafe = COMPOSER.compose_release_body(
+            RAW_BODY, commits, pulls, compare_commit_count=4, tag="typesafe-jev-v0.9.0", components=components
+        )
+        highlights = typesafe.split(COMPOSER.APPENDIX_HEADING)[0]
+        self.assertIn("- evaluate call runs one judgment.", highlights)
+        self.assertIn("- Patch a transitive advisory", highlights)
+        self.assertNotIn("research broker", highlights.lower())
+
+        # Without a tag, or for a tag that names no component, nothing is dropped.
+        unfiltered = COMPOSER.compose_release_body(RAW_BODY, commits, pulls, compare_commit_count=4)
+        self.assertIn("- evaluate call runs one judgment.", unfiltered)
+        self.assertIn("- Research goes through a broker.", unfiltered)
+
+    @inventory_check
+    def test_another_components_block_does_not_change_the_fallback(self) -> None:
+        # Filtering happens before blocks are counted. The typesafe-jev block
+        # must not make speckit-pro's range look like it has one, which would
+        # drop its non-feat/fix subjects from the zero-block fallback.
+        commits = COMPOSER.discover_commits(
+            compare_payload(
+                "feat(typesafe-jev): Add a one-shot call command (#702)",
+                "docs(speckit-pro): Explain the broker (#705)",
+            ),
+            {},
+        )
+        pulls = {
+            702: pull("feat(typesafe-jev): Add a one-shot call command", "```release-note\nevaluate call runs one judgment.\n```"),
+            705: pull("docs(speckit-pro): Explain the broker"),
+        }
+        body = COMPOSER.compose_release_body(
+            RAW_BODY,
+            commits,
+            pulls,
+            compare_commit_count=2,
+            tag="speckit-pro-v2.34.0",
+            components=frozenset({"speckit-pro", "typesafe-jev"}),
+        )
+        highlights = body.split(COMPOSER.APPENDIX_HEADING)[0]
+        self.assertIn("- Explain the broker", highlights)
+        self.assertNotIn("evaluate call", highlights)
+
+    @inventory_check
     def test_networking_and_dependencies_stay_stdlib_only(self) -> None:
         tree = ast.parse(SCRIPT.read_text(encoding="utf-8"))
         imports = {

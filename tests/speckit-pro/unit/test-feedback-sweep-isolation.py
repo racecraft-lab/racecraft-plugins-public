@@ -1132,7 +1132,7 @@ class SurfaceConfinementTests(unittest.TestCase):
 
     def test_plugin_packages_the_local_broker_and_receipt_schema(self) -> None:
         manifest = json.loads((PLUGIN_ROOT / ".mcp.json").read_text(encoding="utf-8"))
-        self.assertEqual({"sweep-broker", "author-broker"}, set(manifest["mcpServers"]))
+        self.assertEqual({"sweep-broker", "author-broker", "research-broker"}, set(manifest["mcpServers"]))
         server = manifest["mcpServers"]["sweep-broker"]
         self.assertEqual(["-m", "speckit_pro_runner.sweep_broker"], server["args"])
         self.assertEqual("${CLAUDE_PLUGIN_ROOT}", server["env"]["PYTHONPATH"])

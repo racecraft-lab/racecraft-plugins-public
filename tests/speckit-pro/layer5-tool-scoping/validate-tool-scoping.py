@@ -8,6 +8,14 @@ attacker-controllable text, so the two agents that read reviewer text declare an
 allowlist instead of inheriting the operator's surface. The exemption is by
 membership rather than by pattern, and pinning that membership by equality is
 what keeps it the only exemption.
+
+``BROKERED_RESEARCHERS`` is the matching carve-out for a pure research role:
+the research broker is its only path to web and library-documentation content,
+so it pins the broker tools plus local reads instead of inheriting whatever
+web tools the operator installed. ``BROKERED_RESEARCH_ROLES`` inherit the
+operator surface but deny the built-in web tools and the common raw research
+servers by name; a raw research server under any other name is covered only
+by their prose rule.
 """
 
 from __future__ import annotations
@@ -40,6 +48,29 @@ READ_ONLY_ROLES = (
     "consensus-synthesizer",
 )
 UNTRUSTED_INPUT_CONSUMERS = ("sweep-classifier", "sweep-analyst")
+RESEARCH_BROKER_TOOLS = {
+    "mcp__plugin_speckit-pro_research-broker__research_search",
+    "mcp__plugin_speckit-pro_research-broker__docs_query",
+}
+BROKERED_RESEARCHERS = ("domain-researcher",)
+BROKERED_RESEARCHER_ALLOWLISTS = {
+    "domain-researcher": {"Read", "Grep", "Glob", *RESEARCH_BROKER_TOOLS},
+}
+BROKERED_RESEARCH_ROLES = (
+    "analyze-executor",
+    "checklist-executor",
+    "clarify-executor",
+    "implement-executor",
+    "phase-executor",
+)
+RAW_RESEARCH_DENIALS = (
+    "WebFetch",
+    "WebSearch",
+    "mcp__tavily",
+    "mcp__tavily-mcp",
+    "mcp__context7",
+    "mcp__plugin_context7_context7",
+)
 PATH_SCOPED_UNTRUSTED_INPUT_AUTHORS = ("formal-model-author",)
 NO_TOOL_OBSERVERS = ("artifact-preview-observer",)
 NO_TOOL_OBSERVER_ALLOWLISTS = {
@@ -54,6 +85,7 @@ PATH_SCOPED_UNTRUSTED_INPUT_AUTHOR_ALLOWLISTS = {
         "Grep",
         "Glob",
         "mcp__plugin_speckit-pro_author-broker__write_formal_file",
+        *RESEARCH_BROKER_TOOLS,
     },
 }
 UNTRUSTED_INPUT_ALLOWLISTS = {
@@ -108,6 +140,9 @@ TEST_METHOD_ORDER = (
     "test_path_scoped_untrusted_input_authors_pin_exact_tool_allowlists",
     "test_no_tool_observers_pin_exact_tool_allowlists",
     "test_claude_only_observer_has_no_codex_twin",
+    "test_brokered_researchers_pin_broker_allowlists",
+    "test_brokered_research_roles_deny_raw_research_tools",
+    "test_research_roles_route_research_through_the_broker_on_both_hosts",
 )
 
 NAMED_TOOL_PATTERN = re.compile(r"mcp__[A-Za-z0-9_-]+__[A-Za-z0-9_-]+")
@@ -203,7 +238,12 @@ class ValidateToolScoping(unittest.TestCase):
 
             # UNTRUSTED_INPUT_CONSUMERS is exempt from this rule and from nothing
             # else in this file; the mcp__ assertion below still binds them.
-            if agent_name not in {*UNTRUSTED_INPUT_CONSUMERS, *PATH_SCOPED_UNTRUSTED_INPUT_AUTHORS, *NO_TOOL_OBSERVERS}:
+            if agent_name not in {
+                *UNTRUSTED_INPUT_CONSUMERS,
+                *PATH_SCOPED_UNTRUSTED_INPUT_AUTHORS,
+                *NO_TOOL_OBSERVERS,
+                *BROKERED_RESEARCHERS,
+            }:
                 with self.subTest(msg=f"{agent_name} has NO tools: allowlist (inherits the operator's full surface)"):
                     self.assertIsNone(
                         re.search(r"^tools:", frontmatter, re.MULTILINE),
@@ -216,6 +256,7 @@ class ValidateToolScoping(unittest.TestCase):
                     UNTRUSTED_INPUT_ALLOWLISTS.get(agent_name, set())
                     | PATH_SCOPED_UNTRUSTED_INPUT_AUTHOR_ALLOWLISTS.get(agent_name, set())
                     | NO_TOOL_OBSERVER_ALLOWLISTS.get(agent_name, set())
+                    | BROKERED_RESEARCHER_ALLOWLISTS.get(agent_name, set())
                 )
                 expected = {tool for tool in combined if tool.startswith("mcp__")}
                 self.assertEqual(expected, tokens)
@@ -466,6 +507,45 @@ class ValidateToolScoping(unittest.TestCase):
     def test_claude_only_observer_has_no_codex_twin(self) -> None:
         with self.subTest(msg="artifact preview observer is Claude-only because Artifact is a Claude tool"):
             self.assertFalse((CODEX_AGENTS_DIR / "artifact-preview-observer.toml").exists())
+
+    def test_brokered_researchers_pin_broker_allowlists(self) -> None:
+        with self.subTest(msg="carve-out: BROKERED_RESEARCHERS is exactly the domain researcher"):
+            self.assertEqual(("domain-researcher",), BROKERED_RESEARCHERS)
+            self.assertEqual(set(BROKERED_RESEARCHERS), set(BROKERED_RESEARCHER_ALLOWLISTS))
+
+        for agent in BROKERED_RESEARCHERS:
+            agent_file = AGENTS_DIR / f"{agent}.md"
+            declared = {item.strip() for item in _yaml_field(agent_file, "tools").split(",") if item.strip()}
+            with self.subTest(msg=f"carve-out: {agent} pins exactly its broker allowlist"):
+                self.assertEqual(BROKERED_RESEARCHER_ALLOWLISTS[agent], declared)
+            for tool in ("Bash", "WebFetch", "WebSearch", "Write", "Edit", "Skill"):
+                with self.subTest(msg=f"carve-out: {agent} excludes {tool}"):
+                    self.assertNotIn(tool, declared)
+
+    def test_brokered_research_roles_deny_raw_research_tools(self) -> None:
+        for agent in BROKERED_RESEARCH_ROLES:
+            denials = _disallowed_tools(AGENTS_DIR / f"{agent}.md")
+            for tool in RAW_RESEARCH_DENIALS:
+                with self.subTest(msg=f"{agent} denies {tool} (research goes through the broker)"):
+                    self.assert_denied(denials, tool, agent)
+            with self.subTest(msg=f"{agent} does not deny the research broker"):
+                self.assertFalse([item for item in denials if "research-broker" in item])
+
+    def test_research_roles_route_research_through_the_broker_on_both_hosts(self) -> None:
+        roles = (*BROKERED_RESEARCHERS, *BROKERED_RESEARCH_ROLES, *PATH_SCOPED_UNTRUSTED_INPUT_AUTHORS)
+        for agent in roles:
+            claude = _md_body(AGENTS_DIR / f"{agent}.md")
+            codex = _toml_prose(CODEX_AGENTS_DIR / f"{agent}.toml")
+            for host, prose in (("claude", claude), ("codex", codex)):
+                flat = " ".join(prose.split())
+                with self.subTest(msg=f"{host} {agent} names both broker tools"):
+                    self.assertIn("`research_search`", flat)
+                    self.assertIn("`docs_query`", flat)
+                with self.subTest(msg=f"{host} {agent} forbids other web tools"):
+                    self.assertIn("Never use another web search, web fetch, or documentation tool", flat)
+                with self.subTest(msg=f"{host} {agent} no longer falls back to native web search"):
+                    self.assertNotIn("native web search", flat)
+
 
 def build_suite() -> unittest.TestSuite:
     suite = unittest.TestSuite()

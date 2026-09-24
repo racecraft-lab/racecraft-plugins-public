@@ -86,7 +86,8 @@ and [quick start](https://github.github.io/spec-kit/quickstart.html).
 ```
 
 Claude Code plugin skills are namespaced, so SpecKit Pro skills use the
-`/speckit-pro:<skill>` form.
+`/speckit-pro:<skill>` form. Installing SpecKit Pro also installs its required
+`typesafe-jev` plugin from the same marketplace.
 
 ### Codex
 
@@ -104,6 +105,13 @@ the plugin at the generated payload in `dist/codex/speckit-pro/`. Do not install
 Codex from the mixed authoring source tree at `speckit-pro/`.
 For personal or local Codex setups, copy or sync `dist/codex/speckit-pro/` and
 point `~/.agents/plugins/marketplace.json` at that copied payload.
+
+SpecKit Pro requires the `typesafe-jev` plugin, and Codex does not install
+plugin dependencies. Add it from the same marketplace:
+
+```text
+codex plugin add typesafe-jev@racecraft-plugins-public
+```
 
 Then run the Codex-only install skill to register the bundled Codex custom
 agents:
@@ -244,6 +252,27 @@ auto-commit: per-phase      # per-phase | batch | none
 | `consensus-mode` | `conservative`, `moderate`, `aggressive` | `moderate` | How much agreement is needed before the workflow applies an answer automatically. |
 | `gate-failure` | `stop`, `skip-and-log` | `stop` | What happens when a phase gate still fails after auto-fix attempts. |
 | `auto-commit` | `per-phase`, `batch`, `none` | `per-phase` | When workflow artifacts are committed. |
+
+### Research keys
+
+Research agents search the web and read library docs only through the bundled
+research broker. It checks each query before it leaves the machine, then
+sanitizes and screens every result before an agent sees it. Every response
+names its `screening_mode`.
+
+| Key | Where | Without it |
+|---|---|---|
+| Tavily (free tier) | `~/.config/speckit-pro/tavily.key`, or `TAVILY_API_KEY` | `research_search` returns `search_unavailable` |
+| Context7 (optional) | `~/.config/speckit-pro/context7.key`, or `CONTEXT7_API_KEY` | `docs_query` uses Context7's rate-limited keyless tier |
+| TypeSafe or OpenRouter (optional) | `~/.config/racecraft-jev/typesafe.key` or `openrouter.key`, read only by the typesafe-jev plugin's `evaluate` binary | Results are screened `sanitizer-only`: any chunk with instruction-like text is dropped |
+
+Key files must be mode 0600 and hold one key. Prefer them to environment
+variables: an MCP server may not inherit your shell, and Codex forwards only
+allowlisted variables. A key file that exists but is broken is an error, not a
+quiet fallback: the affected results are dropped and reported until it is
+fixed. Jev screening sends fetched content and queries to TypeSafe, or to
+OpenRouter on fallback. Runner helper `research-broker-preflight` reports the
+state of every source without printing a value.
 
 ## Best Fit
 

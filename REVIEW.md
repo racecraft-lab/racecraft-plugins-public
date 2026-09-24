@@ -1,9 +1,10 @@
 # Review instructions
 
 This repository is a public Claude Code and Codex plugin marketplace. The
-shipped plugin lives under `speckit-pro/`, repository-only validation under
-`tests/speckit-pro/`, and the documentation site under `docs-site/`. Calibrate
-to that shape: most files are Markdown instructions and Python validation, and
+shipped plugins live under `speckit-pro/` and `typesafe-jev/`, repository-only
+validation under `tests/speckit-pro/`, and the documentation site under
+`docs-site/`. Calibrate to that shape: most files are Markdown instructions and
+Python validation, `typesafe-jev/` holds a Go server and its Go tests, and
 several trees are generated rather than authored.
 
 ## What Important means here
@@ -21,7 +22,9 @@ repository tooling or tests giving a wrong answer:
   malformed.
 - Repository-owned tooling that leaves the Python 3.11+ standard library, or a
   new active Bash or `jq` dependency outside existing workflow dispatch glue and
-  the fixed vendored boundaries.
+  the fixed vendored boundaries. Go is the plugin-owned toolchain for
+  `typesafe-jev/` only; the scripts that build, check, and release it stay
+  Python.
 - A workflow change that grants `pull_request_target` write access to untrusted
   content, unpins a third-party action, or exposes a secret to a fork PR.
 - A repository-authored script or test whose filename is coupled to a temporary

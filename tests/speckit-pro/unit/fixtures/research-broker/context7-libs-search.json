@@ -1,0 +1,33 @@
+{
+  "results": [
+    {
+      "id": "/psf/requests",
+      "title": "Requests",
+      "description": "Requests is a simple, elegant, and widely-used Python HTTP library that makes sending HTTP requests incredibly easy, supporting features like connection pooling, authentication, and automatic content decompression.",
+      "branch": "main",
+      "lastUpdateDate": "2026-09-18T07:04:59.645Z",
+      "state": "finalized",
+      "totalTokens": 33918,
+      "totalSnippets": 361,
+      "stars": 52801,
+      "trustScore": 7.3,
+      "benchmarkScore": 89.34,
+      "versions": []
+    },
+    {
+      "id": "/websites/requests_readthedocs_io_en",
+      "title": "Requests",
+      "description": "Requests is a Python HTTP library that simplifies making HTTP requests with an elegant and user-friendly API.",
+      "branch": "main",
+      "lastUpdateDate": "2026-06-06T01:03:19.354Z",
+      "state": "finalized",
+      "totalTokens": 96240,
+      "totalSnippets": 856,
+      "stars": -1,
+      "trustScore": 8.3,
+      "benchmarkScore": 84.34,
+      "versions": []
+    }
+  ],
+  "searchFilterApplied": false
+}

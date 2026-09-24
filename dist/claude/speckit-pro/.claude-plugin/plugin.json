@@ -16,5 +16,8 @@
     "autonomous",
     "workflow"
   ],
-  "repository": "https://github.com/racecraft-lab/racecraft-plugins-public"
+  "repository": "https://github.com/racecraft-lab/racecraft-plugins-public",
+  "dependencies": [
+    "typesafe-jev"
+  ]
 }

@@ -237,7 +237,7 @@ export default defineConfig({
       sidebar: [
         {
           label: 'Tutorials',
-          items: ['index', 'install/claude-code', 'install/codex', 'first-run'],
+          items: ['index', 'install/claude-code', 'install/codex', 'install/typesafe-jev', 'first-run'],
         },
         {
           label: 'How-to',

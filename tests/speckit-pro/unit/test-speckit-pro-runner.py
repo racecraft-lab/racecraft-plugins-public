@@ -418,7 +418,9 @@ class RunnerFoundationTests(unittest.TestCase):
             "speckit-pro/.codex-plugin/plugin.json",
         }
         allowed_manifest_fields = {
-            "speckit-pro/.claude-plugin/plugin.json": {},
+            "speckit-pro/.claude-plugin/plugin.json": {
+                "dependencies": ["typesafe-jev"]
+            },
             "speckit-pro/.codex-plugin/plugin.json": {
                 "mcpServers": "./.codex-plugin/sweep-mcp.json"
             },

@@ -1,0 +1,24 @@
+{
+  "name": "typesafe-jev",
+  "displayName": "TypeSafe Jev",
+  "version": "0.8.0",
+  "description": "Ask Jev for typed judgments with calibrated probabilities instead of parsing prose, through TypeSafe directly or OpenRouter's Decisions API, with the backend chosen explicitly.",
+  "author": {
+    "name": "Racecraft Lab",
+    "url": "https://github.com/racecraft-lab"
+  },
+  "homepage": "https://github.com/racecraft-lab/racecraft-plugins-public/tree/main/typesafe-jev",
+  "repository": "https://github.com/racecraft-lab/racecraft-plugins-public",
+  "license": "MIT",
+  "keywords": [
+    "typesafe",
+    "jev",
+    "openrouter",
+    "classification",
+    "structured-decisions"
+  ],
+  "skills": [
+    "./shared-skills/"
+  ],
+  "mcpServers": "./mcp/claude.json"
+}
