@@ -94,6 +94,10 @@ type Config struct {
 	// KeyFileDefaulted reports that KeyFile came from --plugin-defaults rather
 	// than from the operator, so a diagnostic can say which.
 	KeyFileDefaulted bool
+	// keyFileVar names the variable KeyFile came from, for diagnostics. It is
+	// empty for the primary, which reads JEV_API_KEY_FILE; fallbackConfig sets
+	// it to JEV_FALLBACK_API_KEY_FILE.
+	keyFileVar string
 	// Fallback is the backend a call moves to when Provider refuses its
 	// credential or is unavailable, or nil. It is set only by the operator
 	// (JEV_FALLBACK_PROVIDER): which keys happen to exist never creates one.
@@ -122,7 +126,16 @@ func (c Config) fallbackConfig() Config {
 		KeyFile:    c.Fallback.KeyFile,
 
 		KeyFileDefaulted: c.Fallback.KeyFileDefaulted,
+		keyFileVar:       pluginFallbackFileEnv,
 	}
+}
+
+// keyFileEnv names the variable that sets this Config's key file.
+func (c Config) keyFileEnv() string {
+	if c.keyFileVar != "" {
+		return c.keyFileVar
+	}
+	return pluginKeyFileEnv
 }
 
 // lookupFunc reports a variable's value and whether it was set at all. The
