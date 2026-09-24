@@ -559,7 +559,6 @@ class ValidatePrChecksSentinel(unittest.TestCase):
             self.assertNotIn('shell=True', dispatch_content)
 validate_release_workflow_WORKFLOW_FILE = REPO_ROOT / '.github' / 'workflows' / 'release.yml'
 PR_CHECKS_WORKFLOW_FILE = REPO_ROOT / '.github' / 'workflows' / 'pr-checks.yml'
-RELEASE_NOTE_WORKFLOW_FILE = REPO_ROOT / '.github' / 'workflows' / 'pr-metadata.yml'
 COMPOSER_FILE = REPO_ROOT / 'scripts' / 'compose-release-notes.py'
 AUDIT_HELPER_FILE = REPO_ROOT / 'scripts' / 'audit-release-notes.py'
 DISPATCH_HELPER_FILE = REPO_ROOT / 'scripts' / 'dispatch-release-pr-checks.py'
@@ -659,7 +658,7 @@ class ValidateReleaseWorkflow(unittest.TestCase):
             self.assertTrue(validate_release_workflow_WORKFLOW_FILE.is_file(), f'file not found: {validate_release_workflow_WORKFLOW_FILE}')
         content = validate_release_workflow_WORKFLOW_FILE.read_text(encoding='utf-8') if validate_release_workflow_WORKFLOW_FILE.is_file() else ''
         pr_checks_content = PR_CHECKS_WORKFLOW_FILE.read_text(encoding='utf-8') if PR_CHECKS_WORKFLOW_FILE.is_file() else ''
-        release_note_workflow_content = RELEASE_NOTE_WORKFLOW_FILE.read_text(encoding='utf-8') if RELEASE_NOTE_WORKFLOW_FILE.is_file() else ''
+        release_note_workflow_content = PR_METADATA_WORKFLOW_FILE.read_text(encoding='utf-8') if PR_METADATA_WORKFLOW_FILE.is_file() else ''
         composer_content = COMPOSER_FILE.read_text(encoding='utf-8') if COMPOSER_FILE.is_file() else ''
         audit_helper_content = AUDIT_HELPER_FILE.read_text(encoding='utf-8') if AUDIT_HELPER_FILE.is_file() else ''
         dispatch_helper_content = DISPATCH_HELPER_FILE.read_text(encoding='utf-8') if DISPATCH_HELPER_FILE.is_file() else ''
