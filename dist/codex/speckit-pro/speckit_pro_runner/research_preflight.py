@@ -82,8 +82,10 @@ SEARCH_CREDENTIALS = {
 }
 MAX_KEY_FILE_BYTES = 8 * 1024
 
-VERSION_TIMEOUT_SECONDS = 10.0
-CHECK_TIMEOUT_SECONDS = 20.0
+# Neither probe touches the network. Short caps keep the broker's first tool
+# call inside the host's MCP tool timeout even when the binary hangs.
+VERSION_TIMEOUT_SECONDS = 5.0
+CHECK_TIMEOUT_SECONDS = 10.0
 VERSION_PATTERN = re.compile(r"\bv?(\d+)\.(\d+)\.(\d+)\b")
 
 SEVERITY_ORDER = {"ok": 0, "warning": 1, "error": 2}

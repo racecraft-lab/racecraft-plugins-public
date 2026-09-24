@@ -86,7 +86,8 @@ and [quick start](https://github.github.io/spec-kit/quickstart.html).
 ```
 
 Claude Code plugin skills are namespaced, so SpecKit Pro skills use the
-`/speckit-pro:<skill>` form.
+`/speckit-pro:<skill>` form. Installing SpecKit Pro also installs its required
+`typesafe-jev` plugin from the same marketplace.
 
 ### Codex
 
@@ -104,6 +105,13 @@ the plugin at the generated payload in `dist/codex/speckit-pro/`. Do not install
 Codex from the mixed authoring source tree at `speckit-pro/`.
 For personal or local Codex setups, copy or sync `dist/codex/speckit-pro/` and
 point `~/.agents/plugins/marketplace.json` at that copied payload.
+
+SpecKit Pro requires the `typesafe-jev` plugin, and Codex does not install
+plugin dependencies. Add it from the same marketplace:
+
+```text
+codex plugin add typesafe-jev@racecraft-plugins-public
+```
 
 Then run the Codex-only install skill to register the bundled Codex custom
 agents:
