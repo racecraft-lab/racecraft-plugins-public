@@ -356,6 +356,14 @@
     {
       "path": {
         "kind": "plugin_relative",
+        "value": "speckit_pro_runner/research_broker.py",
+        "display": "speckit_pro_runner/research_broker.py"
+      },
+      "sha256": "75ca17b27269e0516792c0c7c5e40b65c7a6a9a6856688e2504efc370c824c45"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
         "value": "speckit_pro_runner/research_preflight.py",
         "display": "speckit_pro_runner/research_preflight.py"
       },
