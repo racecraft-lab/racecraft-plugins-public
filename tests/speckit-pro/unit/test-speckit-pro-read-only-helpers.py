@@ -1573,7 +1573,9 @@ class ReadOnlyHelperTests(unittest.TestCase):
         with helper_project() as project_path:
             # Bun 1.2 and later write the text bun.lock; bun.lockb is the legacy binary form.
             (project_path / "bun.lock").write_text("{}\n", encoding="utf-8")
-            (project_path / "package.json").write_text('{"scripts":{"test":"bun test"}}\n', encoding="utf-8")
+            (project_path / "package.json").write_text(
+                '{"scripts":{"build":"bun run scripts/build.ts","test":"bun run scripts/test.ts"}}\n', encoding="utf-8"
+            )
             completed, response, stderr_records = run_runner(
                 helper_request("detect-commands", {"repo_root": "."}), cwd=project_path
             )
@@ -1581,7 +1583,9 @@ class ReadOnlyHelperTests(unittest.TestCase):
         self.assert_response(response, "ok", 0)
         stdout_json = response["data"]["stdout_json"]
         self.assertEqual(stdout_json["package_manager"], "bun")
-        self.assertTrue(stdout_json["commands"]["UNIT_TEST"].startswith("bun "))
+        # `bun test` and `bun build` are built-ins that would bypass these scripts.
+        self.assertEqual(stdout_json["commands"]["UNIT_TEST"], "bun run test")
+        self.assertEqual(stdout_json["commands"]["BUILD"], "bun run build")
         self.assertEqual(stdout_json["gates"]["COMPLEXITY"]["signal"], "bun.lock")
         self.assertEqual(stderr_records, [])
 

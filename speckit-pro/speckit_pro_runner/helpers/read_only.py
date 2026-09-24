@@ -1618,6 +1618,10 @@ def check(name: str, passed: bool, message: str, detail: str) -> dict[str, Any]:
 
 
 def node_script_command(package_manager: str, script: str) -> str:
+    # `bun test` and `bun build` are Bun's own test runner and bundler, not the
+    # package.json scripts of those names, so Bun always goes through `bun run`.
+    if package_manager == "bun":
+        return f"bun run {script}"
     return f"{package_manager} {script}"
 
 
