@@ -3138,6 +3138,95 @@ class ReadOnlyHelperTests(unittest.TestCase):
 
         return json.loads(detect_commands({}, project_path)["stdout"])
 
+    @staticmethod
+    def _helper_json(helper: str, inputs: dict[str, object], project_path: Path) -> tuple[int, dict[str, object]]:
+        from speckit_pro_runner.helpers import read_only
+
+        result = getattr(read_only, helper)(inputs, project_path)
+        return result["exit_code"], json.loads(result["stdout"])
+
+    def test_clarification_counters_match_bare_and_colon_markers(self) -> None:
+        """The spec template writes `[NEEDS CLARIFICATION: ...]`; every counter must see it."""
+        if self.helper_filter and self.helper_filter not in {"validate-gate", "count-markers"}:
+            self.skipTest("marker-form cases use validate-gate and count-markers")
+        with helper_project() as project_path:
+            feature = project_path / "specs" / "001-demo"
+            feature.mkdir(parents=True)
+            (feature / "spec.md").write_text(
+                "- FR-001: Log in via [NEEDS CLARIFICATION: auth method not specified]\n"
+                "- FR-002: Keep data for [NEEDS CLARIFICATION]\n"
+                "The phrase NEEDS CLARIFICATION in plain prose is not a marker.\n"
+                "Neither is [NEEDS CLARIFICATIONS] or (NEEDS CLARIFICATION: x).\n",
+                encoding="utf-8",
+            )
+            (feature / "plan.md").write_text("Plan text [NEEDS CLARIFICATION: storage engine]\n", encoding="utf-8")
+            inputs = {"feature_dir": "specs/001-demo"}
+            for gate in ("G1", "G2"):
+                with self.subTest(gate=gate):
+                    code, payload = self._helper_json("validate_gate", {**inputs, "gate": gate}, project_path)
+                    self.assertEqual(1, code)
+                    self.assertFalse(payload["pass"])
+                    self.assertEqual(2, payload["markers"])
+                    self.assertEqual(2, len(payload["details"]))
+            code, payload = self._helper_json("validate_gate", {**inputs, "gate": "G3"}, project_path)
+            self.assertEqual(1, code)
+            self.assertIn("NC:1", payload["reason"])
+            code, payload = self._helper_json("count_markers", {**inputs, "type": "clarifications"}, project_path)
+            self.assertEqual((0, 3, 2, 1), (code, payload["total"], payload["spec"], payload["plan"]))
+            self.assertEqual(2, len(payload["details"]))
+            code, payload = self._helper_json("count_markers", {**inputs, "type": "all"}, project_path)
+            self.assertEqual(3, payload["clarifications"])
+            (feature / "spec.md").write_text("The phrase NEEDS CLARIFICATION in prose only.\n", encoding="utf-8")
+            code, payload = self._helper_json("validate_gate", {**inputs, "gate": "G2"}, project_path)
+            self.assertEqual((0, True, 0), (code, payload["pass"], payload["markers"]))
+
+    def test_validate_gate_g4_counts_checklist_gaps(self) -> None:
+        if self.helper_filter and self.helper_filter != "validate-gate":
+            self.skipTest("G4 checklist case uses validate-gate")
+        with helper_project() as project_path:
+            feature = project_path / "specs" / "001-demo"
+            (feature / "checklists").mkdir(parents=True)
+            (feature / "spec.md").write_text("spec\n", encoding="utf-8")
+            (feature / "plan.md").write_text("plan\n", encoding="utf-8")
+            (feature / "checklists" / "security.md").write_text(
+                "- [ ] CHK001 Is token expiry defined? [Gap]\n- [ ] CHK002 Are roles listed? [Gap]\n", encoding="utf-8"
+            )
+            code, payload = self._helper_json("validate_gate", {"gate": "G4", "feature_dir": "specs/001-demo"}, project_path)
+            self.assertEqual(1, code)
+            self.assertEqual(2, payload["markers"])
+            self.assertIn("checklists:2", payload["reason"])
+            (feature / "checklists" / "security.md").write_text("- [x] CHK001 Is token expiry defined?\n", encoding="utf-8")
+            code, payload = self._helper_json("validate_gate", {"gate": "G4", "feature_dir": "specs/001-demo"}, project_path)
+            self.assertEqual((0, True), (code, payload["pass"]))
+
+    def test_estimate_reviewable_loc_does_not_pass_when_no_production_file_counts(self) -> None:
+        if self.helper_filter and self.helper_filter != "estimate-reviewable-loc":
+            self.skipTest("estimator stack cases use estimate-reviewable-loc")
+
+        def estimate(project_path: Path, *entries: str) -> dict[str, object]:
+            body = "\n".join(f"- NEW {entry}" for entry in entries)
+            (project_path / "plan.md").write_text(f"# Plan\n\n## Declared File Operations\n\n{body}\n", encoding="utf-8")
+            code, payload = self._helper_json("estimate_reviewable_loc", {"plan_file": "plan.md"}, project_path)
+            self.assertEqual(0, code)
+            return payload
+
+        with helper_project() as project_path:
+            payload = estimate(project_path, "docs/guide.md", "README.md")
+            self.assertEqual("not_estimated", payload["status"])
+            self.assertIsNone(payload["projected"])
+            self.assertIn("no declared entry counted as production", payload["reason"])
+            self.assertEqual(2, payload["declared_files"]["total_entries"])
+            for label, entries, expected in (
+                ("python package", ("mypkg/service.py", "tests/test_service.py"), 1),
+                ("go layout", ("cmd/api/main.go", "internal/store/store.go", "internal/store/store_test.go"), 2),
+                ("rust layout", ("crates/core/src/lib.rs", "crates/core/tests/it.rs"), 1),
+                ("java layout", ("src/main/java/App.java", "service/src/main/kotlin/Api.kt"), 2),
+            ):
+                with self.subTest(layout=label):
+                    payload = estimate(project_path, *entries)
+                    self.assertEqual("pass", payload["status"])
+                    self.assertEqual(expected, payload["declared_files"]["production"])
+
     def test_detect_commands_finds_repository_test_runner(self) -> None:
         """A runner script under tests/ is real, verifiable evidence of a test command.
 

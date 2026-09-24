@@ -1888,6 +1888,12 @@ def detect_presets(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
     return make_result(json_text({"has_presets": bool(presets), "presets": presets, "extensions": extensions, "hooks": hooks, "templates": templates}))
 
 
+# The spec template writes `[NEEDS CLARIFICATION: <question>]`; the bare
+# `[NEEDS CLARIFICATION]` form is still accepted. Prose that names the
+# phrase outside brackets is not a marker.
+NEEDS_CLARIFICATION_MARKER = r"\[NEEDS CLARIFICATION(?::[^\]]*)?\]"
+
+
 def count_markers(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
     marker_type = str(inputs.get("type") or "")
     feature_dir = resolve_input_path(inputs.get("feature_dir") or "", repo_root)
@@ -1902,7 +1908,7 @@ def count_markers(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
     if marker_type == "all":
         obj = {
             "gaps": count_pattern([spec, plan], r"\[Gap\]", repo_root) + count_pattern_dir(checklists, r"\[Gap\]", repo_root),
-            "clarifications": count_pattern([spec, plan], r"\[NEEDS CLARIFICATION\]", repo_root),
+            "clarifications": count_pattern([spec, plan], NEEDS_CLARIFICATION_MARKER, repo_root),
             "critical": count_pattern([spec, plan, tasks], r"\[CRITICAL\]", repo_root),
             "high": count_pattern([spec, plan, tasks], r"\[HIGH\]", repo_root),
             "medium": count_pattern([spec, plan, tasks], r"\[MEDIUM\]", repo_root),
@@ -1935,8 +1941,8 @@ def count_markers(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
             "low": count_pattern([spec, plan, tasks], r"\[LOW\]", repo_root),
         }
         return make_result(json_text({"type": "findings", "total": sum(counts.values()), **counts}))
-    spec_nc = count_pattern([spec], r"\[NEEDS CLARIFICATION\]", repo_root)
-    plan_nc = count_pattern([plan], r"\[NEEDS CLARIFICATION\]", repo_root)
+    spec_nc = count_pattern([spec], NEEDS_CLARIFICATION_MARKER, repo_root)
+    plan_nc = count_pattern([plan], NEEDS_CLARIFICATION_MARKER, repo_root)
     return make_result(
         json_text(
             {
@@ -1944,7 +1950,7 @@ def count_markers(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
                 "total": spec_nc + plan_nc,
                 "spec": spec_nc,
                 "plan": plan_nc,
-                "details": list_pattern(spec, r"\[NEEDS CLARIFICATION\]", repo_root),
+                "details": list_pattern(spec, NEEDS_CLARIFICATION_MARKER, repo_root),
             }
         )
     )
@@ -1965,19 +1971,19 @@ def validate_gate(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
     if gate in {"G1", "G2"}:
         if not trusted_file_exists(spec, repo_root):
             return make_result(json_text({"gate": gate, "pass": False, "reason": "spec.md not found", "markers": 0, "details": []}), exit_code=1)
-        count = count_pattern([spec], r"\[NEEDS CLARIFICATION\]", repo_root)
+        count = count_pattern([spec], NEEDS_CLARIFICATION_MARKER, repo_root)
         if count == 0:
             reason = "spec.md exists with 0 markers" if gate == "G1" else "0 [NEEDS CLARIFICATION] markers"
             return make_result(json_text({"gate": gate, "pass": True, "reason": reason, "markers": 0, "details": []}))
         reason = f"{count} [NEEDS CLARIFICATION] markers remain" if gate == "G1" else f"{count} markers remain"
         return make_result(
-            json_text({"gate": gate, "pass": False, "reason": reason, "markers": count, "details": list_pattern(spec, r"\[NEEDS CLARIFICATION\]", repo_root, limit=10)}),
+            json_text({"gate": gate, "pass": False, "reason": reason, "markers": count, "details": list_pattern(spec, NEEDS_CLARIFICATION_MARKER, repo_root, limit=10)}),
             exit_code=1,
         )
     if gate == "G3":
         if not trusted_file_exists(plan, repo_root):
             return make_result(json_text({"gate": "G3", "pass": False, "reason": "plan.md not found", "markers": 0, "details": []}), exit_code=1)
-        nc_count = count_pattern([plan], r"\[NEEDS CLARIFICATION\]", repo_root)
+        nc_count = count_pattern([plan], NEEDS_CLARIFICATION_MARKER, repo_root)
         todo_count = count_pattern([plan], r"TODO|TKTK|\?\?\?", repo_root)
         count = nc_count + todo_count
         if count == 0:
@@ -1989,11 +1995,20 @@ def validate_gate(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
     if gate == "G4":
         spec_gaps = count_pattern([spec], r"\[Gap\]", repo_root)
         plan_gaps = count_pattern([plan], r"\[Gap\]", repo_root)
-        gaps = spec_gaps + plan_gaps
+        checklist_gaps = count_pattern_dir(feature / "checklists", r"\[Gap\]", repo_root)
+        gaps = spec_gaps + plan_gaps + checklist_gaps
         if gaps == 0:
             return make_result(json_text({"gate": "G4", "pass": True, "reason": "0 [Gap] markers", "markers": 0, "details": []}))
         return make_result(
-            json_text({"gate": "G4", "pass": False, "reason": f"{gaps} [Gap] markers (spec:{spec_gaps}, plan:{plan_gaps})", "markers": gaps, "details": []}),
+            json_text(
+                {
+                    "gate": "G4",
+                    "pass": False,
+                    "reason": f"{gaps} [Gap] markers (spec:{spec_gaps}, plan:{plan_gaps}, checklists:{checklist_gaps})",
+                    "markers": gaps,
+                    "details": [],
+                }
+            ),
             exit_code=1,
         )
     if gate == "G5":
@@ -2131,6 +2146,11 @@ def estimate_reviewable_loc(inputs: dict[str, Any], repo_root: Path) -> dict[str
         "greenfield": greenfield,
         "thresholds": {"warn": warn, "block": block, "greenfield_multiplier": 1.5, "base_warn": 400, "base_block": 800},
     }
+    if production == 0:
+        # Zero is what an unrecognized layout scores, so it is not evidence of a small slice.
+        obj["status"] = "not_estimated"
+        obj["projected"] = None
+        obj["reason"] = "no declared entry counted as production code; the estimator cannot size this layout"
     return make_result(json_text(obj))
 
 
@@ -8259,8 +8279,17 @@ def is_excluded_generated(path: str) -> bool:
     )
 
 
+# Source files of the other stacks detect-commands knows, counted wherever
+# they live (a Python package, cmd/ and internal/, crates/, src/main/java)
+# unless the path or file name marks them as tests.
+PRODUCTION_SOURCE_SUFFIXES = (".py", ".go", ".rs", ".java", ".kt", ".kts", ".swift", ".rb", ".cs")
+_TEST_PATH_RE = re.compile(r"(^|/)(tests?|__tests__|spec|src/test)/|(^|/)test_[^/]*\.py$|_test\.(py|go)$|(Test|Tests|Spec)\.(java|kt|swift|cs)$|_spec\.rb$")
+
+
 def is_production_file(path: str) -> bool:
-    return path.startswith(("src/", "app/", "lib/", "scripts/")) or path.endswith((".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".sql"))
+    if path.startswith(("src/", "app/", "lib/", "scripts/")) or path.endswith((".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".sql")):
+        return True
+    return path.endswith(PRODUCTION_SOURCE_SUFFIXES) and not _TEST_PATH_RE.search(path)
 
 
 def valid_child_spec_path(path: str) -> bool:
