@@ -196,6 +196,29 @@ func TestNoComponentReleaseIsAnError(t *testing.T) {
 	}
 }
 
+// A listing still full at the page cap is an error naming the cap, not a pick
+// from the pages read: a newer release may sit past the last page fetched.
+func TestTruncatedReleaseListingIsAnError(t *testing.T) {
+	var releases []githubRelease
+	for i := range maxReleasePages + 1 {
+		releases = append(releases, githubRelease{TagName: fmt.Sprintf("typesafe-jev-v0.%d.0", i)})
+	}
+	withReleasesAPI(t, fakeReleasesAPI(t, releases), 1)
+	got, _, err := fetchLatestRelease(context.Background())
+	if err == nil {
+		t.Fatalf("picked %s from a listing truncated at the page cap", got.TagName)
+	}
+	if want := fmt.Sprintf("all %d pages", maxReleasePages); !strings.Contains(err.Error(), want) {
+		t.Errorf("error %q does not name the %d-page cap", err, maxReleasePages)
+	}
+
+	// A listing that ends on a short page inside the cap succeeds.
+	withReleasesAPI(t, fakeReleasesAPI(t, releases[:maxReleasePages-1]), 1)
+	if _, _, err := fetchLatestRelease(context.Background()); err != nil {
+		t.Errorf("a listing that ends inside the cap failed: %v", err)
+	}
+}
+
 func TestComponentVersion(t *testing.T) {
 	for tag, want := range map[string]bool{
 		"typesafe-jev-v0.9.0":       true,
