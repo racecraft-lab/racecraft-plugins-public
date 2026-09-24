@@ -7172,6 +7172,41 @@ This line must not be copied.
                 else:
                     self.assertEqual(target.read_bytes(), source.read_bytes(), target.name)
 
+            env_without_fallback = {"SPECKIT_CODEX_MODEL": "gpt-6-sol"}
+            for env_value, expected_status, expected_targets in (
+                ("true", "no_op", []),
+                (None, "planned", sorted(f"{name}.toml" for name in LUNA_CODEX_AGENT_EFFORTS)),
+            ):
+                with self.subTest(env_value=env_value):
+                    overrides = dict(env_without_fallback)
+                    if env_value is not None:
+                        overrides["SPECKIT_CODEX_LUNA_FALLBACK"] = env_value
+                    with patch.dict(os.environ, {}, clear=False):
+                        os.environ.pop("SPECKIT_CODEX_LUNA_FALLBACK", None)
+                        completed, response, stderr_records = run_runner(
+                            helper_request("install-codex-agents", mode="dry_run", inputs={"destination": ".codex/agents"}),
+                            cwd=git_root,
+                            env_overrides=overrides,
+                        )
+                    self.assertEqual(completed.returncode, 0)
+                    self.assertEqual(stderr_records, [])
+                    mutation = response["data"]["mutation"]
+                    self.assertEqual(mutation["mutation_status"], expected_status)
+                    planned = sorted(Path(operation["target"]).name for operation in mutation["planned_operations"])
+                    self.assertEqual(planned, expected_targets)
+
+    def test_install_codex_agents_rejects_unrecognized_luna_fallback_env_value(self) -> None:
+        tmp, git_root = self.temp_clean_git_repo()
+        with tmp:
+            completed, response, stderr_records = run_runner(
+                helper_request("install-codex-agents", mode="dry_run", inputs={"destination": ".codex/agents"}),
+                cwd=git_root,
+                env_overrides={"SPECKIT_CODEX_LUNA_FALLBACK": "yes"},
+            )
+            self.assertEqual(completed.returncode, 2)
+            self.assert_response(response, "input_error", 2)
+            self.assertEqual([diag["code"] for diag in stderr_records], ["invalid_luna_fallback"])
+
     def test_install_codex_agents_rejects_gpt_5_models_and_invalid_luna_fallback_before_writes(self) -> None:
         cases = (
             ({"model": "gpt-5.6-sol"}, "unsupported_codex_model"),

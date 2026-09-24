@@ -59,8 +59,11 @@ the `gpt-6-sol` agents: `gpt-6-sol` (default), `gpt-6-luna`, or the opt-in
 `gpt-6-astra`. GPT-5 models are not accepted. In Enterprise and Edu
 workspaces, an administrator must enable GPT-6 Sol and GPT-6 Luna before
 members can use them. When `gpt-6-luna` is not available, set
-`luna_fallback: true`: the four Luna agents then install on `gpt-6-sol` and
-keep their reasoning effort. The installer rewrites only destination copies.
+`luna_fallback: true` (or `SPECKIT_CODEX_LUNA_FALLBACK=true`): the four Luna
+agents then install on `gpt-6-sol` and keep their reasoning effort. Prefer the
+environment variables for a lasting choice, so the autopilot and scaffold
+pre-flight checks render the same files. The installer rewrites only
+destination copies.
 
 ## Plugin Refresh and Route-aware Modes
 
@@ -113,8 +116,8 @@ Resolve all paths before mutating anything:
    - default: `gpt-6-sol`
    - opt-in: `gpt-6-astra` or `gpt-6-luna` via the installer `model` input
      or `SPECKIT_CODEX_MODEL`
-   - Luna fallback: `luna_fallback: true` only when the user reports that
-     `gpt-6-luna` is unavailable
+   - Luna fallback: `luna_fallback: true` or `SPECKIT_CODEX_LUNA_FALLBACK=true`
+     only when the user reports that `gpt-6-luna` is unavailable
 
 Do not infer a Claude path from a vague request. If the user says only
 "install the agents", use `~/.codex/agents/`.

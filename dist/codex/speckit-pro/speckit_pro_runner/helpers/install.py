@@ -4056,14 +4056,20 @@ def load_codex_agent_bundle(source_dir: Path, inputs: dict[str, Any]) -> tuple[d
             remediation_summary="Choose a supported explicit Codex agent model.",
             remediation_actions=["Set inputs.model to gpt-6-sol (default), gpt-6-luna, or gpt-6-astra."],
         )
-    luna_fallback = inputs.get("luna_fallback", False)
+    if "luna_fallback" in inputs:
+        luna_fallback = inputs["luna_fallback"]
+    else:
+        env_fallback = os.environ.get("SPECKIT_CODEX_LUNA_FALLBACK")
+        luna_fallback = {None: False, "": False, "false": False, "true": True}.get(env_fallback, env_fallback)
     if not isinstance(luna_fallback, bool):
         return diagnostic(
             "invalid_luna_fallback",
             "luna_fallback must be true or false",
             details={"luna_fallback": luna_fallback},
             remediation_summary="Use a boolean to choose whether Luna roles fall back to gpt-6-sol.",
-            remediation_actions=["Set inputs.luna_fallback to true only when gpt-6-luna is unavailable."],
+            remediation_actions=[
+                "Set inputs.luna_fallback or SPECKIT_CODEX_LUNA_FALLBACK to true only when gpt-6-luna is unavailable."
+            ],
         )
     if luna_fallback and raw_model == CODEX_LUNA_SOURCE_MODEL:
         return diagnostic(
