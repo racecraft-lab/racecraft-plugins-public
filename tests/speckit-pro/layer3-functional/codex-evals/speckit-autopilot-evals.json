@@ -81,11 +81,10 @@
     {
       "id": 7,
       "prompt": "What happens during the post-implementation phase of the autopilot after all 7 SDD phases complete? List the specific steps in order, including which ones use extensions and which are built-in.",
-      "expected_output": "Lists all 14 Codex Post plan items in order, identifies the parallel group and serial tail, and distinguishes extension-backed items from built-in work. It states that generate-uat-skeleton is active, final-reviewability-backstop is deferred, detect-stack-manager-plan is out of scope, and pr-packet-output plus validate-pr-packet-write are active packet-preparation helpers. Before PR creation it generates and authors the feature-local UAT runbook, emits or refreshes the feature-local packet, validates it with validate-pr-packet-read-only using data.stdout_json in memory/state, checkpoints packet/body artifacts so validate-pr-packet-write can rerun current validation from a clean worktree and persist it, validates title/scope with validate-pr-workflow-contract, and fails closed only if packet emission or validation fails.",
+      "expected_output": "Lists all 13 Codex Post plan items in order, identifies the parallel group and serial tail, and distinguishes extension-backed items from built-in work. It states that generate-uat-skeleton is active, final-reviewability-backstop is deferred, detect-stack-manager-plan is out of scope, and pr-packet-output plus validate-pr-packet-write are active packet-preparation helpers. Before PR creation it generates and authors the feature-local UAT runbook, emits or refreshes the feature-local packet, validates it with validate-pr-packet-read-only using data.stdout_json in memory/state, checkpoints packet/body artifacts so validate-pr-packet-write can rerun current validation from a clean worktree and persist it, validates title/scope with validate-pr-workflow-contract, and fails closed only if packet emission or validation fails.",
       "expectations": [
-        "Lists all 14 canonical Codex Post items from Doctor Extension Check through Retrospective without collapsing supporting rows",
+        "Lists all 13 canonical Codex Post items from Doctor Extension Check through Retrospective without collapsing supporting rows",
         "Identifies Doctor, Verify Implementation, Verify Tasks Phantom Check, and Retrospective as extension-backed items and keeps Code Review plus Integration Suite built in",
-        "Lists Self-Review (4-question audit) as an always-required built-in step before PR body generation",
         "Lists UAT Runbook Generation as mandatory and fail-open, runs generate-uat-skeleton in dry_run then apply mode, and dispatches uat-runbook-author after the skeleton is written",
         "Lists both Final Reviewability Backstop and PR Packet/Body Generation supporting rows in update_plan and autopilot-state.json",
         "Lists the feature-local packet path specs/<feature>/.process/pr-packets/<packet-id>.json and states pr-packet-output emits the packet JSON and body file while declaring the validation-result path",
@@ -140,7 +139,7 @@
       "expectations": [
         "Names autopilot-fast-helper explicitly",
         "States that only the parent orchestrator may invoke it",
-        "States that it uses gpt-5.6-luna",
+        "States that it uses gpt-6-luna",
         "States that it is optional and not a dependency",
         "States that it is for text-only compression, triage, or query drafting",
         "States that it must not edit artifacts",
@@ -318,17 +317,12 @@
     },
     {
       "id": 25,
-      "prompt": "The Codex autopilot just finished its Post: Integration Suite step and is about to start Post: PR Body Generation. Between those two, there's a new mandatory step called Post: Self-Review. Describe exactly what the autopilot does during Post: Self-Review — list each question the autopilot must answer, what the output block in the workflow log looks like, where the answers also end up, and whether the self-review can stop the PR from being created. Be specific about the block format and how it shows up in update_plan / autopilot-state.json.",
-      "expected_output": "Lists the 4 self-review questions in order (Tests executed? Edge cases? Requirements matched? Follow-up?), describes the block format with Self-Review heading and individual answer paragraphs, records answers in the workflow log, and mirrors them only into a declared editable ## Self-Review Findings region of an already-existing packet-owned body. It clarifies that self-review is reporting, while packet availability and validation remain separate fail-closed PR boundaries. The step appears in update_plan and autopilot-state.json between Reviewability Diff Gate and PR Body Generation.",
+      "prompt": "The Codex autopilot just finished its Post: Reviewability Diff Gate step and is about to start Post: PR Body Generation. Describe exactly what the autopilot does between those two steps: whether a separate self-review step exists, which step is the final review of the change, where the advisory terms lint runs and where its result is recorded, where Post: UAT Runbook Generation sits in the canonical Post list, and how it shows up in update_plan / autopilot-state.json.",
+      "expected_output": "States that the canonical Post list has no separate Self-Review step: Post: Code Review is the single final integration review, and no later step reviews unchanged code a second time. The step after Post: Reviewability Diff Gate is Post: UAT Runbook Generation, position 7 of the 13-entry canonical Codex list, followed by Post: Final Reviewability Backstop. The advisory terms lint runs at the start of UAT Runbook Generation, before its checkpoint, records its note in the workflow log, and never gates. The step appears in update_plan and autopilot-state.json like every other canonical step.",
       "expectations": [
-        "Lists all 4 questions in order: Tests executed? / Edge cases? / Requirements matched? / Follow-up?",
-        "Tests executed? — requires citing the test run timestamp from the workflow log and confirming BUILD/TYPECHECK/LINT/UNIT_TEST/INTEGRATION_TEST each actually ran and exited zero",
-        "Edge cases? — requires naming the test (file:line) for each acceptance criterion's non-happy path; flags criteria with only happy-path tests as [edge-case-gap]",
-        "Requirements matched? — requires cross-walking spec.md FR-XXX list against tasks.md, with each FR tracing to at least one [X] task and each [X] task having implementation evidence (commit hash + passing test)",
-        "Follow-up? — requires every [TODO], [DEFERRED], or [OUT-OF-SCOPE] marker to have an explicit landing place (roadmap entry, tracked issue, PR-body section)",
-        "States the answers remain canonical in the workflow log and are mirrored only when the existing packet-owned body declares an editable ## Self-Review Findings region",
-        "States explicitly that self-review is a reporting step, NOT a gate, while packet availability and validation still fail closed",
-        "Mentions that Post: Self-Review is item position #7 in the canonical 14-entry Codex post-implementation list, between Post: Reviewability Diff Gate and Post: UAT Runbook Generation",
+        "States that the canonical Post list has no separate Self-Review step and that Post: Code Review is the single final integration review, with no later step reviewing unchanged code a second time",
+        "States that the advisory terms lint runs at the start of UAT Runbook Generation, before its checkpoint, records its note in the workflow log, and never gates",
+        "Mentions that Post: UAT Runbook Generation is item position #7 in the canonical 13-entry Codex post-implementation list, between Post: Reviewability Diff Gate and Post: Final Reviewability Backstop",
         "Notes that the step transitions through update_plan + autopilot-state.json in pending → in_progress → completed states like every other canonical step"
       ]
     },
@@ -349,11 +343,11 @@
     },
     {
       "id": 27,
-      "prompt": "The Codex autopilot has finished Post: Self-Review and is about to open the PR. Walk through the current UAT, packet/body, validation, and PR-creation sequence. Name the runner helper IDs and deferred behavior, explain what is committed or skipped, show the gh pr create arguments, and state what happens when current packet emission or validation fails.",
-      "expected_output": "States that Post: UAT Runbook Generation is mandatory, checkpoints only the current workflow and autopilot state after Self-Review, and runs generate-uat-skeleton in dry_run then apply mode from the required clean worktree to deterministically write <feature-dir>/.process/uat-runbook.md before spawning uat-runbook-author. A genuine generator or author failure is recorded fail-open, but helper promotion status never skips the attempt. Then emit or refresh a current schema-valid packet at specs/<feature>/.process/pr-packets/<packet-id>.json with pr-packet-output. Validate it with validate-pr-packet-read-only, consume data.stdout_json in memory/state with writes_state=false, checkpoint packet/body artifacts so validate-pr-packet-write can rerun current validation from a clean worktree and persist it, validate title/scope with validate-pr-workflow-contract, and open only with packet-owned gh pr create --base --head --title --body-file values. Packet emission or validation failure blocks before creation.",
+      "prompt": "The Codex autopilot has finished Post: Reviewability Diff Gate and is about to open the PR. Walk through the current UAT, packet/body, validation, and PR-creation sequence. Name the runner helper IDs and deferred behavior, explain what is committed or skipped, show the gh pr create arguments, and state what happens when current packet emission or validation fails.",
+      "expected_output": "States that Post: UAT Runbook Generation is mandatory, checkpoints only the current workflow and autopilot state after the terms lint, and runs generate-uat-skeleton in dry_run then apply mode from the required clean worktree to deterministically write <feature-dir>/.process/uat-runbook.md before spawning uat-runbook-author. A genuine generator or author failure is recorded fail-open, but helper promotion status never skips the attempt. Then emit or refresh a current schema-valid packet at specs/<feature>/.process/pr-packets/<packet-id>.json with pr-packet-output. Validate it with validate-pr-packet-read-only, consume data.stdout_json in memory/state with writes_state=false, checkpoint packet/body artifacts so validate-pr-packet-write can rerun current validation from a clean worktree and persist it, validate title/scope with validate-pr-workflow-contract, and open only with packet-owned gh pr create --base --head --title --body-file values. Packet emission or validation failure blocks before creation.",
       "expectations": [
         "Runs generate-uat-skeleton in dry_run and then apply mode with spec_path, output_path, workflow_file when available, and project_commands",
-        "Checkpoints only the current workflow and autopilot-state files after Self-Review so generate-uat-skeleton apply runs from the required clean worktree",
+        "Checkpoints only the current workflow and autopilot-state files after the terms lint so generate-uat-skeleton apply runs from the required clean worktree",
         "Writes <feature-dir>/.process/uat-runbook.md deterministically, spawns the author only after generation succeeds, and records genuine generation or authoring failure fail-open",
         "Emits or refreshes a current packet at specs/<feature>/.process/pr-packets/<packet-id>.json with pr-packet-output and persists current validation with validate-pr-packet-write",
         "States generate-pr-body accepts only output_path, title, and sections to write one Markdown body and does not create packet metadata or markers",

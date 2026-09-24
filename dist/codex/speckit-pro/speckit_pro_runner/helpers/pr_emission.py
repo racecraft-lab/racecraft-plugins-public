@@ -200,12 +200,6 @@ def render_uat_runbook(
 
     edge_cases = extract_heading_section(spec_text, "Edge Cases", preserve_blanks=True)
     negative_path = annotate_clarifications(edge_cases) if edge_cases.strip() else "No edge cases identified in spec.md"
-    self_review = "**Self-Review:** <not available — workflow file not provided>"
-    if workflow_text is not None:
-        extracted = extract_heading_section(workflow_text, "Self-Review", limit=40)
-        if extracted:
-            self_review = extracted
-
     rollback = extract_heading_section(spec_text, "Rollback", limit=40)
     if not rollback and plan_text is not None:
         rollback = extract_heading_section(plan_text, "Rollback", limit=40)
@@ -223,7 +217,6 @@ def render_uat_runbook(
         "PER_STORY": per_story,
         "FR_MATRIX": fr_matrix,
         "NEGATIVE_PATH": negative_path,
-        "SELF_REVIEW": self_review,
         "ROLLBACK": rollback,
     }
     for token, value in replacements.items():

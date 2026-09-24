@@ -43,7 +43,7 @@ remaining work; a failed requirement or security gate never becomes a pass.
 **Check:** Determine if clarification is needed.
 
 ```
-Search spec.md for "[NEEDS CLARIFICATION]" markers.
+Search spec.md for "[NEEDS CLARIFICATION]" and "[NEEDS CLARIFICATION: ...]" markers.
 - If markers found → Proceed to Clarify phase
 - If no markers → Skip Clarify, proceed to Plan
 ```
@@ -188,7 +188,8 @@ recorded and must not rewrite their provenance.
 
 ```
 1. Find all checklist files: specs/<feature>/checklists/*.md
-2. Count [Gap] markers across ALL files: grep -c "\[Gap\]" checklists/*.md
+2. Count [Gap] markers across ALL files: grep -c "\[Gap\]" checklists/*.md,
+   plus spec.md and plan.md (runner `validate-gate` G4 counts all three)
 3. Total must be 0
 ```
 
@@ -445,7 +446,7 @@ disagreement is named in `reason`.
        what clears the deduction, so a fix left unrecorded
        fails the gate again on the next iteration. The
        criterion breakdown will not point at those rows: the
-       synthesizer no longer deducts for findings, so they
+       synthesizer does not deduct for findings, so they
        show up in deductions, not in a low criterion.
      - Otherwise identify the lowest-scoring criterion from
        the JSON output and dispatch a focused consensus round
@@ -564,8 +565,9 @@ validation alongside the standard G7 checks. This validates the
 implementation against spec artifacts.
 
 If the `verify-tasks` extension is enabled in `.registry`,
-run the `speckit-verify-tasks-run` skill to complement G5 by detecting
-phantom completions — tasks marked `[X]` that have no real
+run the `speckit-verify-tasks-run` skill once, as the
+`Post: Verify Tasks Phantom Check` item, to detect phantom
+completions — tasks marked `[X]` that have no real
 implementation behind them.
 
 These are extension-installed skills under `.claude/skills/`,

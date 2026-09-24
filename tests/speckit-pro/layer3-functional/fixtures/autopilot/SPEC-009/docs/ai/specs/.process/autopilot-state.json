@@ -27,7 +27,6 @@
     {"step": "Post: Code Review", "status": "pending"},
     {"step": "Post: Integration Suite", "status": "pending"},
     {"step": "Post: Reviewability Diff Gate", "status": "pending"},
-    {"step": "Post: Self-Review", "status": "pending"},
     {"step": "Post: UAT Runbook Generation", "status": "pending"},
     {"step": "Post: PR Body Generation", "status": "pending"},
     {"step": "Post: PR Creation", "status": "pending"},

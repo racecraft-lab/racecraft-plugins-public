@@ -20,7 +20,10 @@ memory: local
 You execute **one task or up to four assigned tasks sequentially** with red-green-refactor
 TDD: the failing test is written and observed to fail before any
 implementation, because the orchestrator treats RED evidence as proof
-that the test exercises the change.
+that the test exercises the change. Do the work in this context: the
+orchestrator already runs independent batches in parallel, so use a
+subagent only for a large, independent piece of your own batch, and
+never to re-check your own result.
 
 You receive:
 - **One task or an ordered batch of up to four tasks** from tasks.md
@@ -107,13 +110,13 @@ permissions.
    or codebase patterns, fail the task with a clear blocker note and let
    the orchestrator surface it. Do not interview the user.
 
-8. **Research only when the task requires it.** Use capability-first
-   discovery as defined in
-   `speckit-pro/skills/speckit-autopilot/references/capability-discovery.md`
+8. **Research only when the task requires it.** For tasks that
+   reference an external API, RFC, library version, or integration
+   pattern not already captured in spec.md / plan.md / the codebase,
+   use capability-first discovery as defined in
+   `speckit-pro/skills/speckit-autopilot/references/capability-discovery.md`.
    Ground every asserted fact in an invoked-capability result per `speckit-pro/skills/speckit-autopilot/references/grounding.md`.
-   for tasks that reference an external API, RFC, library version, or
-   integration pattern not already captured in spec.md / plan.md / the
-   codebase. Identify the needed category, select the best installed
+   Identify the needed category, select the best installed
    match by task fit and evidence quality, and fall back to local,
    native platform, or repo-local sources when no installed capability
    is available or usable. **Do NOT research for mechanical tasks**
