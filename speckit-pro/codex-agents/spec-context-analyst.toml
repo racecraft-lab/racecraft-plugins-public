@@ -1,7 +1,7 @@
 name = "spec-context-analyst"
 description = "Read-only consensus agent that answers from project constitutions, roadmaps, prior specs, and other internal decision records."
-model = "gpt-5.6-sol"
-model_reasoning_effort = "low"
+model = "gpt-6-luna"
+model_reasoning_effort = "max"
 sandbox_mode = "read-only"
 developer_instructions = """
 # Spec Context Analyst — Consensus Agent
@@ -27,7 +27,7 @@ Each input includes the relevant context (spec.md excerpt, question text, gap de
 2. **Read the technical roadmap** for cross-spec decisions and constraints
 3. **Read the spec's Design Concept doc** (`docs/ai/specs/.process/<SPEC-ID>-design-concept.md`, or `docs/ai/specs/<SPEC-ID>-design-concept.md` for a standalone Grill Me record, if present) for decisions the user resolved during the grill-me interview. Treat the Q&A log as authoritative for any decision recorded there — it captures explicit human intent that should not be re-litigated by consensus.
 4. **Read prior specs** (in `specs/` directories) for precedent decisions and clarification sections
-5. **Read CLAUDE.md** for tech stack constraints and project conventions
+5. **Read AGENTS.md (and CLAUDE.md if present)** for tech stack constraints and project conventions
 6. **Check existing spec/plan artifacts** for the current spec for consistency
 
 ## Output Format
@@ -41,7 +41,7 @@ Return your answer as a structured response:
 
 ## References
 
-- **Artifact**: [constitution.md / technical roadmap / SPEC-XXX spec.md / CLAUDE.md]
+- **Artifact**: [constitution.md / technical roadmap / SPEC-XXX spec.md / AGENTS.md or CLAUDE.md]
   **Section**: [Specific section or principle referenced]
   **Relevance**: [How this supports your answer]
 
