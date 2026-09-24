@@ -640,7 +640,8 @@ Replace all placeholders using the roadmap data. At minimum populate:
 - `SPEC_ID`
 - `SPEC_NAME`
 - `BRANCH_NAME`
-- tool count and tool names if the roadmap provides them
+- `DATE`
+- `SPEC_DESCRIPTION`
 
 Then seed each phase prompt with concrete, spec-specific context rather than a
 generic placeholder. Use **both** the roadmap scope/dependencies and the

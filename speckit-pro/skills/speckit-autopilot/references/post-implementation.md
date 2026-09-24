@@ -300,7 +300,7 @@ Agent(
   description: "SPEC-XXX missing integration tests",
   prompt: """
     The implementation phase did not create integration
-    tests for SPEC-XXX. This is NON-NEGOTIABLE.
+    tests for SPEC-XXX. G7 cannot pass until they exist.
 
     1. Read existing integration tests to understand the
        pattern (test structure, setup, teardown)
@@ -641,7 +641,7 @@ Skill("loop", args: "5m
   Step 2 -- If 0 unresolved comments, report 'No unresolved
   comments on PR #42' and stop.
 
-  Step 3 -- Partition by file, parallel across files (WS-F1 / Use site 6):
+  Step 3 -- Partition by file, parallel across files:
 
   a. Scan each thread.body for cross-file hints (rename, "update all
      callers", references to other paths). Mark cross_file = true if so.

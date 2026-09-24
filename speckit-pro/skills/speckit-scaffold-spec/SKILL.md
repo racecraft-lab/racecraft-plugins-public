@@ -178,7 +178,7 @@ Extract:
 - **Spec name** (e.g., "Search & Database")
 - **Short name** for the branch (e.g., "search-database")
 - **Spec number** (e.g., 009)
-- **Tool count** and tool names
+- **Tool count** and tool names, only when the roadmap entry records them
 - **Priority** (P1/P2/P3)
 - **Dependencies** (what it depends on, what depends on it)
 - **Scope description** (the full scope text from the
@@ -553,7 +553,7 @@ invocation — do not attempt to skip grilling.
 ```text
 1. Create the .process/ docs directory in the WORKTREE for the design concept
    (created when absent so the first exhaust artifact lands correctly):
-   Create `.worktrees/<number>-<short-name>/docs/ai/specs/.process/` if absent.
+   Create `<worktree_root>/docs/ai/specs/.process/` if absent.
 
 2. Invoke the grill-me skill with the spec scope as input:
    Skill("grill-me", args: {
@@ -562,7 +562,7 @@ invocation — do not attempt to skip grilling.
      spec_name: "<spec name from roadmap>",
      scope: <full scope description from technical roadmap, with the Step 3.6
              BLIND-SPOT PASS FINDINGS block appended below it>,
-     output_path: ".worktrees/<number>-<short-name>/docs/ai/specs/.process/SPEC-<ID>-design-concept.md"
+     output_path: "<worktree_root>/docs/ai/specs/.process/SPEC-<ID>-design-concept.md"
    })
 
 3. The skill walks the design tree using AskUserQuestion (one question
@@ -571,7 +571,7 @@ invocation — do not attempt to skip grilling.
    at 30 questions and chooses to wrap up, or selects "End interview".
 
 4. Verify the design concept doc exists:
-   Read(".worktrees/<number>-<short-name>/docs/ai/specs/.process/SPEC-<ID>-design-concept.md")
+   Read("<worktree_root>/docs/ai/specs/.process/SPEC-<ID>-design-concept.md")
    Must contain Goals, Non-goals, Module and Interface Deltas, Terms,
    Verification Gates, Design Tree (Q&A log), and Open Questions.
    Must also carry the `**Blind-spot pass:**` key in its header blockquote.
@@ -610,7 +610,7 @@ All file operations happen in the worktree directory.
    prerequisite.
 
    Verify resolution from the worktree:
-   From `.worktrees/<number>-<short-name>/`, run
+   From `<worktree_root>/`, run
    `specify preset resolve spec-template`,
    `specify preset resolve plan-template`, and
    `specify preset resolve tasks-template`.
@@ -619,7 +619,7 @@ All file operations happen in the worktree directory.
    Read("${CLAUDE_PLUGIN_ROOT}/skills/speckit-coach/templates/workflow-template.md")
 
 2. Write the template to the WORKTREE:
-   Write(".worktrees/<number>-<short-name>/docs/ai/specs/.process/SPEC-<ID>-workflow.md",
+   Write("<worktree_root>/docs/ai/specs/.process/SPEC-<ID>-workflow.md",
          content: <template content from step 1>)
 ```
 
@@ -637,14 +637,14 @@ namespace-matches the directory.
 ```text
 1. Create the spec's contract directory in the WORKTREE (scaffold owns this
    early creation; mkdir -p is a no-op if it already exists):
-   Create `.worktrees/<number>-<short-name>/specs/<branch-name>/` if absent.
+   Create `<worktree_root>/specs/<branch-name>/` if absent.
 
 2. Read the spec-MOC template from the plugin:
    Read("${CLAUDE_PLUGIN_ROOT}/skills/speckit-coach/templates/spec-moc-template.md")
 
 3. Token-substitute the template (same {{TOKEN}} mechanism as the workflow
    template) and write it to the contract directory:
-   Write(".worktrees/<number>-<short-name>/specs/<branch-name>/SPEC-MOC.md",
+   Write("<worktree_root>/specs/<branch-name>/SPEC-MOC.md",
          content: <template with the tokens below substituted>)
 
    | Token | Replace With |
@@ -676,8 +676,8 @@ roadmap:
 | `SPEC_ID` | e.g., `SPEC-009` |
 | `SPEC_NAME` | e.g., `Search & Database` |
 | `BRANCH_NAME` | e.g., `009-search-database` |
-| `TOOL_COUNT` | e.g., `10` |
-| `TOOL_NAMES` | e.g., `search_tasks, search_projects, ...` |
+| `DATE` | today's date, `YYYY-MM-DD` |
+| `SPEC_DESCRIPTION` | the Specify prompt's feature description, built as described below |
 
 **Populate the phase prompts** using BOTH the technical roadmap's scope
 description AND the design concept doc from Step 4. The roadmap scope
@@ -707,9 +707,9 @@ with read-only formal-doctor against WORKFLOW_ROOT after population.
 - **Clarify Prompts:** Use the design concept's Open Questions section
   to seed the autopilot's clarify session focuses. Anything still open
   after the grill-me interview is exactly what `/speckit-clarify` should
-  be told to dig into. Generate session focuses based on the tool types
-  and any unresolved branches (e.g., "Session 1: Search API Behavior",
-  "Session 2: Database Operations").
+  be told to dig into. Generate session focuses from the unresolved
+  branches and the spec's main surfaces, one focus per open
+  behavior area.
 
 - **Plan Prompt:** Combine the tech stack from CLAUDE.md, the
   constitution, the roadmap scope description, AND the
@@ -766,7 +766,7 @@ equal the resolver's `branch_name` and must not be `main`; otherwise STOP.
    `chore(SPEC-XXX): add design concept and workflow for autopilot`.
 
 2. Push the WORKTREE BRANCH:
-   From `.worktrees/<number>-<short-name>/`, run `git push`.
+   From `<worktree_root>/`, run `git push`.
 
    If the push fails or the remote rejects it, STOP and report the failure
    instead of continuing as though the scaffold succeeded. The failure report
@@ -818,12 +818,12 @@ WORKTREE (not on main) to mark the spec as `🔄 In Progress`:
 
 ```text
 1. Edit the technical roadmap found in Step 1, using the WORKTREE path:
-   Edit(".worktrees/<number>-<short-name>/<roadmap-path-from-step-1>")
+   Edit("<worktree_root>/<roadmap-path-from-step-1>")
 
 2. Commit IN THE WORKTREE:
    Re-read the active branch first and STOP if it differs from the resolver's
    `branch_name` or equals `main`.
-   From `.worktrees/<number>-<short-name>/`, stage `docs/ai/`, commit with
+   From `<worktree_root>/`, stage `docs/ai/`, commit with
    `chore(SPEC-XXX): mark as In Progress`, and push the branch.
 ```
 

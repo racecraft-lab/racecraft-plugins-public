@@ -1133,7 +1133,7 @@ update the preflight, and resolve it there.
           file's most recent Analysis Results table: fix each one and
           record the fix in that row's Resolution cell, which is what
           clears the deduction. The criterion breakdown will not point
-          at those rows, because the synthesizer no longer deducts for
+          at those rows, because the synthesizer does not deduct for
           findings. When false, read the JSON `criteria` object and
           target the lowest-scoring criterion.
        b. If iteration_count < 3:
