@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.1](https://github.com/racecraft-lab/racecraft-plugins-public/compare/typesafe-jev-v0.9.0...typesafe-jev-v0.9.1) (2026-09-24)
+
+
+### Bug Fixes
+
+* **typesafe-jev:** resolve code-scanning findings ([#628](https://github.com/racecraft-lab/racecraft-plugins-public/issues/628)) ([07e6de4](https://github.com/racecraft-lab/racecraft-plugins-public/commit/07e6de4c5e1dc6b52029591ad56deabbcd5cc6ac))
+
 ## [0.9.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/typesafe-jev-v0.8.0...typesafe-jev-v0.9.0) (2026-09-24)
 
 
