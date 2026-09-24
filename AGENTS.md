@@ -79,6 +79,7 @@ Run from the repository root (Python 3.11+, Node >= 22.12 for docs).
 | Docs, reference mode: reference inputs changed | `pnpm --dir docs-site reference:check`, then `pnpm --dir docs-site validate:quality` | `validate-docs` (no) |
 | Docs, full mode: `docs-site/`, the artifact gallery, or a docs contract file changed (`scripts/classify-docs-validation.py`) | `pnpm --dir docs-site exec playwright install --with-deps chromium` once, then `pnpm --dir docs-site validate` | `validate-docs` (no) |
 | Container preflight: Linux containers rerun the suite when runner, test, or workflow paths change | CI only; its extra requests (`LINUX_REQUESTS` in `tests/speckit-pro/run-container-preflight.py`) also run locally | `container-preflight-linux-amd64`, `-arm64` (yes) |
+| Python lint: ruff F rules (scope in `ruff.toml`); mypy over the `mypy.ini` allowlist (add a module once it passes) | In a virtual environment, `python3 scripts/run-python-lint.py install ruff`, then `run ruff`; the same for `mypy` | `python-lint` (no; built to be required), `mypy-ratchet` (no) |
 | Workflow lint | `actionlint` at the version pinned in `pr-checks.yml`, from the repository root. The CI installer (`scripts/install-actionlint.py`) fetches a Linux amd64 binary only | `validate-workflows` (no; it also checks release-PR ancestry, CI only) |
 
 ## Worktree Preflight
@@ -178,12 +179,12 @@ the two in step when either changes.
   active Bash or `jq` dependency outside the allowed boundaries; a workflow that
   exposes secrets or elevated permissions to untrusted PR content; a script or
   test filename coupled to a temporary spec ID, or test code that reads a
-  `specs/<feature>/` path from disk at run time.
-- Treat style, naming, prose, and refactoring suggestions as minor at most.
+  `specs/<feature>/` path from disk at run time; a correctness bug in repository
+  tooling or tests, such as a check that passes on nothing.
+- Style, naming, prose, and refactoring notes are minor; add none on re-review.
 - Do not review generated reference pages, generated payloads, vendored upstream
-  content, lockfiles, or archived specs.
-- Do not report anything CI already enforces.
-- Require a `file:line` citation for any claim about behavior.
+  content, lockfiles, or archived specs, or report what CI enforces: only the
+  ruff F rules in `python-lint`. Cite `file:line` for any claim about behavior.
 
 ## Agent File Hygiene
 

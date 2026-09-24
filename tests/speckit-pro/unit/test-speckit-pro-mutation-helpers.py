@@ -7127,7 +7127,6 @@ This line must not be copied.
             for target in sorted(destination.glob("*.toml")):
                 if target.name == "autopilot-fast-helper.toml":
                     continue
-                source = PLUGIN_ROOT / "codex-agents" / target.name
                 self.assertIn('model = "gpt-5.4"', target.read_text(encoding="utf-8"), target.name)
                 if target.stem in LOW_EFFORT_CODEX_AGENT_NAMES:
                     installed_policy = tomllib.loads(target.read_text(encoding="utf-8"))

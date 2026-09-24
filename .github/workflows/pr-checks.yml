@@ -250,7 +250,67 @@ jobs:
         run: PYTHONDONTWRITEBYTECODE=1 python3 scripts/refresh-release-artifacts.py --check
 
   # ───────────────────────────────────────────────────────────────────
-  # Job 6: Sentinel aggregator — provides stable check name for branch
+  # Job 6: Python lint. Ruff's pyflakes (F) rules over repository Python;
+  #         ruff.toml sets the scope, scripts/run-python-lint.py pins the
+  #         version. Ruff is a dev-only CI tool, never a runtime dependency.
+  #         Designed to be a required check.
+  # ───────────────────────────────────────────────────────────────────
+  python-lint:
+    name: python-lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.draft == false
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.11"
+
+      - name: Install pinned ruff
+        run: python3 scripts/run-python-lint.py install ruff
+
+      - name: Run ruff pyflakes rules
+        run: python3 scripts/run-python-lint.py run ruff --output-format github
+
+  # ───────────────────────────────────────────────────────────────────
+  # Job 7: mypy ratchet. Type-checks only the modules listed in mypy.ini,
+  #         each clean when added. Not a required check.
+  # ───────────────────────────────────────────────────────────────────
+  mypy-ratchet:
+    name: mypy-ratchet
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.draft == false
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.11"
+
+      - name: Install pinned mypy
+        run: python3 scripts/run-python-lint.py install mypy
+
+      - name: Type-check the mypy.ini allowlist
+        run: python3 scripts/run-python-lint.py run mypy
+
+  # ───────────────────────────────────────────────────────────────────
+  # Job 8: Sentinel aggregator — provides stable check name for branch
   #         protection. Passes if test matrix passed or was skipped.
   # ───────────────────────────────────────────────────────────────────
   validate-plugins:

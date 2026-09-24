@@ -1,0 +1,9 @@
+# Scope for the python-lint CI job in .github/workflows/pr-checks.yml. Ruff is
+# a dev-only CI tool, never a runtime dependency; scripts/run-python-lint.py
+# pins and runs it. Only the pyflakes (F) rules run: they flag real defects
+# such as undefined names, unused imports, and dead assignments.
+extend-exclude = ["dist", "specs"]
+target-version = "py311"
+
+[lint]
+select = ["F"]
