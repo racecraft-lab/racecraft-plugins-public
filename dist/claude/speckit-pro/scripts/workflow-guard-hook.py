@@ -54,6 +54,11 @@ MANAGER_ALIASES = {"npm": "npm", "npx": "npm", "pnpm": "pnpm", "pnpx": "pnpm", "
 # installed-runtime guard does not read this data as shell interpolation.
 SEGMENT_OPERATORS = ("&&", "||", ";", "|", "\n", "\x24(", "(", "`")
 DOUBLE_QUOTED_OPERATORS = ("\x24(", "`")
+# A heredoc body is data, not commands. A quoted delimiter ('EOF', "EOF",
+# \EOF) makes the body literal; an unquoted one still runs command
+# substitution, so its body splits like double-quoted text. `<<-` strips
+# leading tabs, including before the closing delimiter.
+HEREDOC_RE = re.compile(r"<<(-?)[ \t]*(?:'([^'\n]*)'|\"([^\"\n]*)\"|(\\?)([A-Za-z0-9_.-]+))")
 # The directory flag each manager documents for running against another
 # project. Only these, or a leading `cd <dir>`, move the lockfile lookup.
 DIRECTORY_FLAGS = {"pnpm": ("--dir", "-C"), "npm": ("--prefix",), "yarn": ("--cwd",), "bun": ("--cwd",)}
@@ -95,9 +100,25 @@ def split_segments(command: str) -> list[str]:
     segments: list[str] = []
     current: list[str] = []
     quote: str | None = None
+    heredocs: list[tuple[str, bool, bool]] = []
     index = 0
     while index < len(command):
         char = command[index]
+        if char == "\n" and quote is None and heredocs:
+            segments.append("".join(current))
+            current = []
+            index = heredoc_bodies(command, index + 1, heredocs, segments)
+            heredocs = []
+            continue
+        if quote is None and command.startswith("<<", index) and not command.startswith("<<<", index):
+            match = HEREDOC_RE.match(command, index)
+            if match:
+                strip, single, double, backslash, bare = match.groups()
+                delimiter = next(value for value in (single, double, bare) if value is not None)
+                heredocs.append((delimiter, single is not None or double is not None or bool(backslash), strip == "-"))
+                current.append(match.group(0))
+                index = match.end()
+                continue
         if quote == "'":
             quote = None if char == "'" else quote
             current.append(char)
@@ -126,6 +147,26 @@ def split_segments(command: str) -> list[str]:
         index += 1
     segments.append("".join(current))
     return segments
+
+
+def heredoc_bodies(command: str, index: int, heredocs: list[tuple[str, bool, bool]], segments: list[str]) -> int:
+    """Consume the bodies of pending heredocs from ``index``; return where commands resume.
+
+    A literal body adds nothing. An expanding body adds only the text after
+    each substitution opener, as double-quoted text would.
+    """
+    for delimiter, literal, strip in heredocs:
+        while index < len(command):
+            end = command.find("\n", index)
+            end = len(command) if end < 0 else end
+            line = command[index:end]
+            index = end + 1
+            if (line.lstrip("\t") if strip else line) == delimiter:
+                break
+            if not literal:
+                pieces = re.split("|".join(re.escape(op) for op in DOUBLE_QUOTED_OPERATORS), line)
+                segments.extend(pieces[1:])
+    return min(index, len(command))
 
 
 def segment_words(segment: str) -> list[str]:

@@ -84,6 +84,24 @@ class WorkflowGuardHookTests(unittest.TestCase):
                     self.assertEqual({}, run_hook("lockfile", shell(root, command))[1])
             with self.subTest(msg="command substitution inside double quotes is still an invocation"):
                 self.assertEqual("deny", run_hook("lockfile", shell(root, 'echo "$(npm bin)"'))[1]["hookSpecificOutput"]["permissionDecision"])
+            heredoc_data = {
+                "a quoted heredoc body is data": "cat > notes.md <<'EOF'\n- [ ] `npm install` first\nnpm test\nEOF",
+                "a double-quoted delimiter": 'cat > notes.md <<"EOF"\n`npm install`\nEOF',
+                "a backslash-quoted delimiter": "cat > notes.md <<\\EOF\n`npm install`\nEOF",
+                "an unquoted heredoc line is data, not a command": "cat > notes.md <<EOF\nnpm install left-pad\nEOF",
+                "a tab-stripped heredoc ends at its indented delimiter": "cat <<-'EOF' > notes.md\n\t`npm ci`\n\tEOF\npnpm test",
+            }
+            for label, command in heredoc_data.items():
+                with self.subTest(msg=label):
+                    self.assertEqual({}, run_hook("lockfile", shell(root, command))[1])
+            heredoc_runs = {
+                "substitution in an unquoted heredoc body runs": "cat > notes.md <<EOF\nbin: $(npm bin)\nEOF",
+                "a backtick in an unquoted heredoc body runs": "cat > notes.md <<EOF\n`npm bin`\nEOF",
+                "a command after the delimiter runs": "cat > notes.md <<'EOF'\ntext\nEOF\nnpm install",
+            }
+            for label, command in heredoc_runs.items():
+                with self.subTest(msg=label):
+                    self.assertEqual("deny", run_hook("lockfile", shell(root, command))[1]["hookSpecificOutput"]["permissionDecision"])
             with self.subTest(msg="tools without a command string are ignored"):
                 self.assertEqual({}, run_hook("lockfile", {"hook_event_name": "PreToolUse", "tool_name": "Edit", "tool_input": {"file_path": "npm.md"}, "cwd": str(root)})[1])
             (root / "yarn.lock").write_text("", encoding="utf-8")
