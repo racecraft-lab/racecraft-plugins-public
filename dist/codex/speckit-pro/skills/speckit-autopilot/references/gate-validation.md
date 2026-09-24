@@ -564,8 +564,9 @@ validation alongside the standard G7 checks. This validates the
 implementation against spec artifacts.
 
 If the `verify-tasks` extension is enabled in `.registry`,
-run the `speckit-verify-tasks-run` skill to complement G5 by detecting
-phantom completions — tasks marked `[X]` that have no real
+run the `speckit-verify-tasks-run` skill once, as the
+`Post: Verify Tasks Phantom Check` item, to detect phantom
+completions — tasks marked `[X]` that have no real
 implementation behind them.
 
 These are extension-installed skills under `.claude/skills/`,
