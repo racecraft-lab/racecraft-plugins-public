@@ -407,6 +407,38 @@ func TestCallCheckReportsTheSourceWithoutANetworkCall(t *testing.T) {
 	}
 }
 
+// An unusable fallback key file is reported under the variable that named it,
+// by both --check and the server's own credential load, so the operator is
+// sent to JEV_FALLBACK_API_KEY_FILE rather than to the primary's setting.
+func TestFallbackKeyFileDiagnosticsNameTheFallbackVariable(t *testing.T) {
+	home := isolateCallEnv(t)
+	pluginEnv(t)
+	writeDefaultKey(t, home, "typesafe", fixtureKey, 0o600)
+	t.Setenv("JEV_FALLBACK_API_KEY_FILE", writeKeyFile(t, fixtureKey, 0o644))
+	backend := newCountingBackend(t, 200, validAnswer)
+
+	got := runCallForTest(t, callOptions{check: true, pluginDefaults: true, retarget: retargetTo(backend, backend)}, validRequest)
+	var report checkReport
+	if err := json.Unmarshal([]byte(got.stdout), &report); err != nil {
+		t.Fatalf("check report %q: %v", got.stdout, err)
+	}
+	if report.Fallback == nil || report.Fallback.State != "unusable" {
+		t.Fatalf("fallback = %+v, want an unusable explicit file; stderr: %s", report.Fallback, got.stderr)
+	}
+	if !strings.Contains(got.stderr, "JEV_FALLBACK_API_KEY_FILE") || strings.Contains(got.stderr, "JEV_API_KEY_FILE") {
+		t.Errorf("--check diagnostic names the wrong variable: %s", got.stderr)
+	}
+
+	cfg, err := resolveConfig(os.LookupEnv)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := loadCredential(cfg.fallbackConfig()); err == nil ||
+		!strings.Contains(err.Error(), "JEV_FALLBACK_API_KEY_FILE") || strings.Contains(err.Error(), "JEV_API_KEY_FILE") {
+		t.Errorf("server load error = %v, want one naming JEV_FALLBACK_API_KEY_FILE", err)
+	}
+}
+
 // CALL-04: without --plugin-defaults, a key file at the default path is not
 // read. Only the plugin opts in to that path.
 func TestCallWithoutPluginDefaultsIgnoresTheDefaultPath(t *testing.T) {

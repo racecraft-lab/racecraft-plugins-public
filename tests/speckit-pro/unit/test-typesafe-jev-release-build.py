@@ -19,9 +19,9 @@ import sys
 import tarfile
 import tempfile
 import unittest
+import unittest.mock
 from pathlib import Path
 from types import ModuleType
-from unittest import mock
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 LIB_DIR = REPO_ROOT / "tests" / "speckit-pro" / "lib"
@@ -92,7 +92,7 @@ class TypesafeJevReleaseBuildTests(unittest.TestCase):
             self.assertFalse(kwargs["shell"])
             return completed(argv)
 
-        with tempfile.TemporaryDirectory() as out, mock.patch.object(BUILD.subprocess, "run", side_effect=fake_run):
+        with tempfile.TemporaryDirectory() as out, unittest.mock.patch.object(BUILD.subprocess, "run", side_effect=fake_run):
             with contextlib.redirect_stdout(io.StringIO()):
                 BUILD.build("0.9.0", Path(out))
             written = sorted(path.name for path in Path(out).iterdir())
@@ -132,7 +132,7 @@ class TypesafeJevReleaseBuildTests(unittest.TestCase):
                 BUILD.check_assets(directory)
 
     def test_publish_never_marks_the_release_latest(self) -> None:
-        with mock.patch.object(BUILD.subprocess, "run", return_value=completed(["gh"])) as run:
+        with unittest.mock.patch.object(BUILD.subprocess, "run", return_value=completed(["gh"])) as run:
             with contextlib.redirect_stdout(io.StringIO()):
                 BUILD.publish("typesafe-jev-v0.9.0")
         argv = run.call_args.args[0]
