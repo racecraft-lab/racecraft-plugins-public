@@ -13682,10 +13682,6 @@
           "description": "Identifies Doctor, Verify Implementation, Verify Tasks Phantom Check, and Retrospective as extension-backed; Code Review and Integration Suite are built in."
         },
         {
-          "id": "self-review",
-          "description": "Self-Review is an always-required built-in four-question audit before PR body generation."
-        },
-        {
           "id": "uat",
           "description": "UAT Runbook Generation is mandatory and fail-open; generate-uat-skeleton runs dry_run then apply, followed by uat-runbook-author."
         },
@@ -13778,7 +13774,6 @@
               "Post: Code Review",
               "Post: Integration Suite",
               "Post: Reviewability Diff Gate",
-              "Post: Self-Review",
               "Post: UAT Runbook Generation",
               "Post: PR Body Generation",
               "Post: PR Creation",
@@ -13792,7 +13787,6 @@
               "Post: Code Review",
               "Post: Integration Suite",
               "Post: Reviewability Diff Gate",
-              "Post: Self-Review",
               "Post: UAT Runbook Generation",
               "Post: Final Reviewability Backstop",
               "Post: PR Packet/Body Generation",
@@ -13808,12 +13802,6 @@
           "requirement": "extensions",
           "type": "semantic",
           "rubric": "PASS only if the evidence satisfies: Identifies Doctor, Verify Implementation, Verify Tasks Phantom Check, and Retrospective as extension-backed; Code Review and Integration Suite are built in. FAIL if omitted, contradicted, or merely claimed without required evidence."
-        },
-        {
-          "id": "self-review-semantic",
-          "requirement": "self-review",
-          "type": "semantic",
-          "rubric": "PASS only if the evidence satisfies: Self-Review is an always-required built-in four-question audit before PR body generation. FAIL if omitted, contradicted, or merely claimed without required evidence."
         },
         {
           "id": "uat-semantic",
@@ -13887,7 +13875,7 @@
     {
       "id": "functional.speckit-autopilot.case-25",
       "layer": "functional",
-      "capability": "Explain self-review, its evidence, and native plan position.",
+      "capability": "Explain that no separate self-review step exists, where the terms lint runs, and the native UAT plan position.",
       "timeout_seconds": 300,
       "resource_class": "ordinary",
       "requirements": [
@@ -13896,43 +13884,23 @@
           "description": "Activate only the requested autopilot skill."
         },
         {
-          "id": "questions",
-          "description": "Lists Tests executed?, Edge cases?, Requirements matched?, and Follow-up? in that order."
+          "id": "final-review",
+          "description": "No separate Self-Review step exists; Code Review is the single final integration review, and no later step reviews unchanged code a second time."
         },
         {
-          "id": "tests",
-          "description": "Tests executed? cites the workflow-log test timestamp and confirms BUILD/TYPECHECK/LINT/UNIT_TEST/INTEGRATION_TEST actually ran and exited zero."
-        },
-        {
-          "id": "edges",
-          "description": "Edge cases? names a test file:line for each acceptance criterion's non-happy path and marks happy-path-only criteria [edge-case-gap]."
-        },
-        {
-          "id": "traceability",
-          "description": "Requirements matched? cross-walks spec.md FR-XXX to tasks.md: every FR reaches an [X] task and every [X] task has implementation commit and passing-test evidence."
-        },
-        {
-          "id": "followup",
-          "description": "Follow-up? assigns every [TODO], [DEFERRED], or [OUT-OF-SCOPE] marker an explicit roadmap, issue, or PR-body landing place."
-        },
-        {
-          "id": "canonical-log",
-          "description": "Answers remain canonical in the workflow log, with a Self-Review heading and individual answer paragraphs; mirror only into a declared editable ## Self-Review Findings region of an already-existing packet-owned body."
-        },
-        {
-          "id": "reporting",
-          "description": "Self-review reports findings rather than gating PR creation; packet availability and validation remain separate fail-closed boundaries."
+          "id": "terms-lint",
+          "description": "The advisory terms lint runs at the start of UAT Runbook Generation, before its checkpoint; its note is recorded in the workflow log and never gates."
         },
         {
           "id": "position",
-          "description": "Self-Review occupies the native canonical position between Reviewability Diff Gate and UAT Runbook Generation, within the complete native Post list."
+          "description": "UAT Runbook Generation occupies the native canonical position directly after Reviewability Diff Gate, within the complete native Post list."
         },
         {
           "id": "tracking",
           "description": "Describes native task-status progression; where the native contract requires both update_plan and autopilot-state.json, it preserves both rather than substituting the workflow log."
         }
       ],
-      "prompt": "Use {{skill}} to answer this explanation-only request; do not execute the workflow or write files. Describe exactly what Post: Self-Review does: its questions, required evidence, workflow-log block format, mirrors, gate status, native plan position, and status tracking. Output only raw JSON: exactly one top-level object with post_step_count (integer), self_review_position (one-based integer), neighbors (an array containing the immediately preceding and following exact canonical Post names), native_plan_tracking (an object containing exactly method, file, and transitions), and explanation (detailed prose including the four questions and example block structure), with no Markdown fences. native_plan_tracking.file must be null when the host-native contract has no state file and must be the exact state-file name otherwise. Do not execute tasks.",
+      "prompt": "Use {{skill}} to answer this explanation-only request; do not execute the workflow or write files. Explain what the autopilot runs between Post: Reviewability Diff Gate and PR body generation: whether a separate self-review step exists, which step is the final review, where the advisory terms lint runs and is recorded, the native plan position of Post: UAT Runbook Generation, and status tracking. Output only raw JSON: exactly one top-level object with post_step_count (integer), uat_position (one-based integer position of Post: UAT Runbook Generation), neighbors (an array containing the immediately preceding and following exact canonical Post names of Post: UAT Runbook Generation), native_plan_tracking (an object containing exactly method, file, and transitions), and explanation (detailed prose), with no Markdown fences. native_plan_tracking.file must be null when the host-native contract has no state file and must be the exact state-file name otherwise. Do not execute tasks.",
       "fixtures": [],
       "hosts": {
         "claude": {
@@ -13977,8 +13945,8 @@
             "post_step_count"
           ],
           "expected_by_host": {
-            "claude": 12,
-            "codex": 14
+            "claude": 11,
+            "codex": 13
           }
         },
         {
@@ -13986,7 +13954,7 @@
           "requirement": "position",
           "type": "response_json_field",
           "field_path": [
-            "self_review_position"
+            "uat_position"
           ],
           "expected_by_host": {
             "claude": 7,
@@ -14003,55 +13971,25 @@
           "expected_by_host": {
             "claude": [
               "Post: Reviewability Diff Gate",
-              "Post: UAT Runbook Generation"
+              "Post: PR Body Generation"
             ],
             "codex": [
               "Post: Reviewability Diff Gate",
-              "Post: UAT Runbook Generation"
+              "Post: Final Reviewability Backstop"
             ]
           }
         },
         {
-          "id": "questions-semantic",
-          "requirement": "questions",
+          "id": "final-review-semantic",
+          "requirement": "final-review",
           "type": "semantic",
-          "rubric": "PASS only if the evidence satisfies: Lists Tests executed?, Edge cases?, Requirements matched?, and Follow-up? in that order. FAIL if omitted, contradicted, or merely claimed without required evidence."
+          "rubric": "PASS only if the evidence satisfies: No separate Self-Review step exists; Code Review is the single final integration review, and no later step reviews unchanged code a second time. FAIL if omitted, contradicted, or merely claimed without required evidence."
         },
         {
-          "id": "tests-semantic",
-          "requirement": "tests",
+          "id": "terms-lint-semantic",
+          "requirement": "terms-lint",
           "type": "semantic",
-          "rubric": "PASS only if the evidence satisfies: Tests executed? cites the workflow-log test timestamp and confirms BUILD/TYPECHECK/LINT/UNIT_TEST/INTEGRATION_TEST actually ran and exited zero. FAIL if omitted, contradicted, or merely claimed without required evidence."
-        },
-        {
-          "id": "edges-semantic",
-          "requirement": "edges",
-          "type": "semantic",
-          "rubric": "PASS only if the evidence satisfies: Edge cases? names a test file:line for each acceptance criterion's non-happy path and marks happy-path-only criteria [edge-case-gap]. FAIL if omitted, contradicted, or merely claimed without required evidence."
-        },
-        {
-          "id": "traceability-semantic",
-          "requirement": "traceability",
-          "type": "semantic",
-          "rubric": "PASS only if the evidence satisfies: Requirements matched? cross-walks spec.md FR-XXX to tasks.md: every FR reaches an [X] task and every [X] task has implementation commit and passing-test evidence. FAIL if omitted, contradicted, or merely claimed without required evidence."
-        },
-        {
-          "id": "followup-semantic",
-          "requirement": "followup",
-          "type": "semantic",
-          "rubric": "PASS only if the evidence satisfies: Follow-up? assigns every [TODO], [DEFERRED], or [OUT-OF-SCOPE] marker an explicit roadmap, issue, or PR-body landing place. FAIL if omitted, contradicted, or merely claimed without required evidence."
-        },
-        {
-          "id": "canonical-log-semantic",
-          "requirement": "canonical-log",
-          "type": "semantic",
-          "rubric": "PASS only if the evidence satisfies: Answers remain canonical in the workflow log, with a Self-Review heading and individual answer paragraphs; mirror only into a declared editable ## Self-Review Findings region of an already-existing packet-owned body. FAIL if omitted, contradicted, or merely claimed without required evidence."
-        },
-        {
-          "id": "reporting-semantic",
-          "requirement": "reporting",
-          "type": "semantic",
-          "rubric": "PASS only if the evidence satisfies: Self-review reports findings rather than gating PR creation; packet availability and validation remain separate fail-closed boundaries. FAIL if omitted, contradicted, or merely claimed without required evidence."
+          "rubric": "PASS only if the evidence satisfies: The advisory terms lint runs at the start of UAT Runbook Generation, before its checkpoint; its note is recorded in the workflow log and never gates. FAIL if omitted, contradicted, or merely claimed without required evidence."
         },
         {
           "id": "tracking-semantic",
@@ -17783,7 +17721,7 @@
     {
       "id": "functional.speckit-autopilot.case-27",
       "layer": "functional",
-      "capability": "The autopilot has finished Post: Self-Review and is about to open the PR. Walk through the current UAT, packet/body, validation, and PR-creation sequence. Name the runner helper IDs and deferred behavior, explain what is committed or skipped, show the gh pr create arguments, and state what happens when current packet emission or validation fails.",
+      "capability": "The autopilot has finished Post: Reviewability Diff Gate and is about to open the PR. Walk through the current UAT, packet/body, validation, and PR-creation sequence. Name the runner helper IDs and deferred behavior, explain what is committed or skipped, show the gh pr create arguments, and state what happens when current packet emission or validation fails.",
       "timeout_seconds": 300,
       "resource_class": "ordinary",
       "requirements": [
@@ -17797,7 +17735,7 @@
         },
         {
           "id": "legacy-02",
-          "description": "Checkpoints only the current workflow and autopilot-state files after Self-Review so generate-uat-skeleton apply runs from the required clean worktree"
+          "description": "Checkpoints only the current workflow and autopilot-state files after the terms lint so generate-uat-skeleton apply runs from the required clean worktree"
         },
         {
           "id": "legacy-03",
@@ -17844,7 +17782,7 @@
           "description": "States the UAT Post item and generation attempt are mandatory, while genuine generation and authoring failures remain fail-open"
         }
       ],
-      "prompt": "Use {{skill}} to address this bounded request. The autopilot has finished Post: Self-Review and is about to open the PR. Walk through the current UAT, packet/body, validation, and PR-creation sequence. Name the runner helper IDs and deferred behavior, explain what is committed or skipped, show the gh pr create arguments, and state what happens when current packet emission or validation fails.",
+      "prompt": "Use {{skill}} to address this bounded request. The autopilot has finished Post: Reviewability Diff Gate and is about to open the PR. Walk through the current UAT, packet/body, validation, and PR-creation sequence. Name the runner helper IDs and deferred behavior, explain what is committed or skipped, show the gh pr create arguments, and state what happens when current packet emission or validation fails.",
       "fixtures": [],
       "hosts": {
         "claude": {
@@ -17887,7 +17825,7 @@
           "id": "legacy-02-semantic",
           "requirement": "legacy-02",
           "type": "semantic",
-          "rubric": "PASS only if the evidence satisfies: Checkpoints only the current workflow and autopilot-state files after Self-Review so generate-uat-skeleton apply runs from the required clean worktree FAIL if omitted, contradicted, or merely claimed without required evidence."
+          "rubric": "PASS only if the evidence satisfies: Checkpoints only the current workflow and autopilot-state files after the terms lint so generate-uat-skeleton apply runs from the required clean worktree FAIL if omitted, contradicted, or merely claimed without required evidence."
         },
         {
           "id": "legacy-03-semantic",
@@ -19924,7 +19862,7 @@
         },
         {
           "id": "workflow-execution",
-          "description": "The real staged workflow materializes its complete 12-item Claude or 14-item Codex Post list, dispatches its bounded workers, and checkpoints without claiming Post completion."
+          "description": "The real staged workflow materializes its complete 11-item Claude or 13-item Codex Post list, dispatches its bounded workers, and checkpoints without claiming Post completion."
         },
         {
           "id": "correctness",
@@ -20155,7 +20093,7 @@
       },
       "native_differences": [
         "Claude activates speckit-pro:speckit-autopilot in plugin mode; Codex activates speckit-autopilot in an isolated project skill catalog.",
-        "Claude materializes its 12-item canonical Post list; Codex materializes its 14-item combined canonical Post list; semantic outcome parity does not require identical row counts.",
+        "Claude materializes its 11-item canonical Post list; Codex materializes its 13-item combined canonical Post list; semantic outcome parity does not require identical row counts.",
         "Interactive Claude teams are outside this automated case. Each host uses its native ordinary-subagent mechanism, but both must produce the same owned-track, return-before-parent, local-checkpoint, and no-external-mutation evidence."
       ],
       "provenance": [

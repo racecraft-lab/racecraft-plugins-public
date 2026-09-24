@@ -80,7 +80,7 @@ the post-impl parallel group + serial tail plus ordered multi-PR emission.
 The `--from-phase post` flag (or equivalent) skips phases 1-7. Both
 Path A (teams) and Path B (parallel subagents) dispatch the same Doctor /
 Code Review / Verify-chain tracks, then complete Integration Suite,
-Reviewability Diff Gate, Self-Review, UAT Runbook Generation, PR Body
+Reviewability Diff Gate, UAT Runbook Generation, PR Body
 Generation, PR Creation, Review Remediation, and Retrospective. The
 `generate-uat-skeleton` and `final-reviewability-backstop` helpers are
 deferred: reuse committed UAT and reviewability evidence when current, or

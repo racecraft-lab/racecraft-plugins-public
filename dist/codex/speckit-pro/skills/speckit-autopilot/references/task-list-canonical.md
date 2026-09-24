@@ -5,7 +5,7 @@ The complete, prescribed task list the autopilot creates via `TaskCreate` at Ste
 ## Contents
 
 - [Task Naming Pattern](#task-naming-pattern) — phase + post-impl naming conventions
-- [Canonical Post-Implementation Task List](#canonical-post-implementation-task-list) — the 12-entry post-impl set
+- [Canonical Post-Implementation Task List](#canonical-post-implementation-task-list) — the 11-entry post-impl set
 - [Extension Detection Rule](#extension-detection-rule) — `.specify/extensions.yml` / `.registry` / Glob fallback
 - [Out-Of-Stage Entries](#out-of-stage-entries) — how a staged run marks entries outside the resolved stage
 - [Consensus Tasks Are Mandatory](#consensus-tasks-are-mandatory) — every Clarify session, Checklist domain, and Analyze gets a paired Consensus task
@@ -41,7 +41,6 @@ Parsed from the workflow file:
   "Post: Code Review"                   ← built-in independent review (no ext)
   "Post: Integration Suite"             ← always required (no ext)
   "Post: Reviewability Diff Gate"       ← always required (no ext)
-  "Post: Self-Review"                   ← always required (no ext, 4-question audit)
   "Post: UAT Runbook Generation"        ← always required (no ext, skeleton script + author agent)
   "Post: PR Body Generation"            ← always required (no ext)
   "Post: PR Creation"                   ← always required (no ext)

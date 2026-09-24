@@ -207,8 +207,7 @@ Use focused tests per behavior and one independent review per completed
 capability group. Review requirement-linked defects at every severity,
 security/authorization boundaries, and demonstrated regression risk; style
 suggestions are separate and do not trigger repair. Final integration review
-is Post Code Review; Post Self-Review reconciles that review and required
-evidence, not a second independent review of unchanged code.
+is Post Code Review; no later step reviews unchanged code a second time.
 
 After all producing changes and artifact regeneration, execute the complete
 required suite and artifact checks on the final immutable input snapshot.
