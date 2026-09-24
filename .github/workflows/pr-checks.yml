@@ -52,14 +52,23 @@ jobs:
       contents: read
     outputs:
       plugins: ${{ steps.changed.outputs.plugins }}
+      go: ${{ steps.go_changes.outputs.run_go }}
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
 
       - name: Emit Python-gated plugin matrix
         id: changed
         run: python3 scripts/emit-plugin-matrix.py
+
+      - name: Detect Go module changes
+        id: go_changes
+        env:
+          BASE_REF: ${{ github.event_name == 'pull_request' && github.base_ref || inputs.base_ref }}
+        run: python3 scripts/check-go-module.py detect
 
   # ───────────────────────────────────────────────────────────────────
   # Job 2: Run Python-dispatched plugin gates
@@ -275,7 +284,42 @@ jobs:
         run: PYTHONDONTWRITEBYTECODE=1 python3 scripts/refresh-release-artifacts.py --check
 
   # ───────────────────────────────────────────────────────────────────
-  # Job 7: Sentinel aggregator — provides stable check name for branch
+  # Job 7: Go module checks for typesafe-jev. Go is the plugin-owned
+  #         toolchain there; the run body stays a Python dispatch. Runs
+  #         only when the module, its wrapper, or this workflow changed.
+  #         macOS is not redundant with Linux: the key-file permission
+  #         checks are filesystem behaviour.
+  # ───────────────────────────────────────────────────────────────────
+  go:
+    name: "go (${{ matrix.os }})"
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    if: needs.detect.result == 'success' && needs.detect.outputs.go == 'true'
+    needs: [detect]
+    permissions:
+      contents: read
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+      fail-fast: false
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: typesafe-jev/go.mod
+          cache-dependency-path: typesafe-jev/go.sum
+
+      - name: Run Go module checks
+        run: python3 scripts/check-go-module.py check
+
+  # ───────────────────────────────────────────────────────────────────
+  # Job 8: Sentinel aggregator — provides stable check name for branch
   #         protection. Passes if test matrix passed or was skipped.
   # ───────────────────────────────────────────────────────────────────
   validate-plugins:
@@ -283,7 +327,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     if: always()
-    needs: [detect, test, artifact-consistency]
+    needs: [detect, test, artifact-consistency, go]
     permissions:
       contents: read
 
@@ -298,4 +342,5 @@ jobs:
           DETECT_RESULT: ${{ needs.detect.result }}
           TEST_RESULT: ${{ needs.test.result }}
           ARTIFACT_RESULT: ${{ needs.artifact-consistency.result }}
+          GO_RESULT: ${{ needs.go.result }}
         run: python3 scripts/check-pr-workflow-results.py

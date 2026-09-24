@@ -44,6 +44,7 @@ ACTIONLINT = load_script("pr_checks_install_actionlint", "install-actionlint.py"
 DOCS = load_script("pr_checks_classify_docs", "classify-docs-validation.py")
 RESULTS = load_script("pr_checks_results", "check-pr-workflow-results.py")
 MATRIX = load_script("pr_checks_matrix", "emit-plugin-matrix.py")
+GO_MODULE = load_script("pr_checks_go_module", "check-go-module.py")
 
 
 def make_archive(files: dict[str, bytes]) -> bytes:
@@ -336,13 +337,15 @@ class WorkflowResultsHelperTests(unittest.TestCase):
     def test_success_and_skipped_results_pass(self) -> None:
         self.assertEqual(
             "Plugin tests passed or were skipped (result: success); "
-            "artifacts consistent (result: success).",
-            RESULTS.check_workflow_results("success", "success", "success"),
+            "artifacts consistent (result: success); "
+            "Go module checks passed or were skipped (result: success).",
+            RESULTS.check_workflow_results("success", "success", "success", "success"),
         )
         self.assertEqual(
             "Plugin tests passed or were skipped (result: skipped); "
-            "artifacts consistent (result: skipped).",
-            RESULTS.check_workflow_results("success", "skipped", "skipped"),
+            "artifacts consistent (result: skipped); "
+            "Go module checks passed or were skipped (result: skipped).",
+            RESULTS.check_workflow_results("success", "skipped", "skipped", "skipped"),
         )
 
     def test_detect_failure_and_cancellation_fail_first(self) -> None:
@@ -352,7 +355,7 @@ class WorkflowResultsHelperTests(unittest.TestCase):
                     RESULTS.WorkflowResultError,
                     rf"Detect job did not succeed \(result: {result}\)\. Workflow is broken\.",
                 ):
-                    RESULTS.check_workflow_results(result, "skipped", "skipped")
+                    RESULTS.check_workflow_results(result, "skipped", "skipped", "skipped")
 
     def test_test_failure_and_cancellation_fail(self) -> None:
         for result in ("failure", "cancelled"):
@@ -361,7 +364,7 @@ class WorkflowResultsHelperTests(unittest.TestCase):
                     RESULTS.WorkflowResultError,
                     rf"Plugin tests failed or were cancelled \(result: {result}\)\.",
                 ):
-                    RESULTS.check_workflow_results("success", result, "success")
+                    RESULTS.check_workflow_results("success", result, "success", "success")
 
     def test_artifact_failure_and_cancellation_fail(self) -> None:
         for result in ("failure", "cancelled"):
@@ -370,10 +373,19 @@ class WorkflowResultsHelperTests(unittest.TestCase):
                     RESULTS.WorkflowResultError,
                     rf"Generated artifacts drift from source \(result: {result}\)\.",
                 ):
-                    RESULTS.check_workflow_results("success", "success", result)
+                    RESULTS.check_workflow_results("success", "success", result, "success")
+
+    def test_go_failure_cancellation_and_missing_result_fail(self) -> None:
+        for result in ("failure", "cancelled", ""):
+            with self.subTest(result=result):
+                with self.assertRaisesRegex(
+                    RESULTS.WorkflowResultError,
+                    rf"Go module checks failed or were cancelled \(result: {result}\)\.",
+                ):
+                    RESULTS.check_workflow_results("success", "success", "success", result)
 
     def test_detect_skipped_preserves_existing_truth_table(self) -> None:
-        message = RESULTS.check_workflow_results("skipped", "skipped", "skipped")
+        message = RESULTS.check_workflow_results("skipped", "skipped", "skipped", "skipped")
         self.assertIn("Plugin tests passed or were skipped", message)
 
     def test_main_emits_exact_github_error_message(self) -> None:
@@ -385,6 +397,7 @@ class WorkflowResultsHelperTests(unittest.TestCase):
                     "DETECT_RESULT": "success",
                     "TEST_RESULT": "cancelled",
                     "ARTIFACT_RESULT": "success",
+                    "GO_RESULT": "success",
                 },
             ),
             contextlib.redirect_stderr(stderr),
@@ -411,6 +424,93 @@ class PluginMatrixHelperTests(unittest.TestCase):
         )
 
 
+class GoModuleHelperTests(unittest.TestCase):
+    def test_module_wrapper_and_workflow_changes_run_go(self) -> None:
+        for changed in (
+            ["typesafe-jev/cmd/evaluate/main.go"],
+            ["typesafe-jev/go.mod"],
+            ["README.md", "scripts/check-go-module.py"],
+            [".github/workflows/pr-checks.yml"],
+        ):
+            with self.subTest(changed=changed):
+                self.assertTrue(GO_MODULE.go_module_changed(changed))
+
+    def test_other_changes_skip_go(self) -> None:
+        for changed in (
+            [],
+            ["speckit-pro/README.md", "scripts/check-pr-workflow-results.py"],
+            ["typesafe-jev-notes.md", "docs/typesafe-jev/guide.md"],
+        ):
+            with self.subTest(changed=changed):
+                self.assertFalse(GO_MODULE.go_module_changed(changed))
+
+    def test_detect_appends_run_go(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            output_path = Path(temporary_directory) / "github-output"
+            output_path.write_text("existing=value\n", encoding="utf-8")
+            with (
+                mock.patch.object(
+                    GO_MODULE, "changed_files_for_base", return_value=("typesafe-jev/go.sum",)
+                ),
+                mock.patch.dict(os.environ, {"BASE_REF": "main", "GITHUB_OUTPUT": str(output_path)}),
+                contextlib.redirect_stdout(io.StringIO()),
+            ):
+                return_code = GO_MODULE.main(["detect"])
+            content = output_path.read_text(encoding="utf-8")
+        self.assertEqual(0, return_code)
+        self.assertEqual("existing=value\nrun_go=true\n", content)
+
+    def test_missing_base_ref_fails(self) -> None:
+        stderr = io.StringIO()
+        with (
+            mock.patch.dict(os.environ, {"BASE_REF": "", "GITHUB_OUTPUT": ""}),
+            contextlib.redirect_stderr(stderr),
+        ):
+            return_code = GO_MODULE.main(["detect"])
+        self.assertEqual(1, return_code)
+        self.assertEqual("::error::Go module check failed: BASE_REF is not set\n", stderr.getvalue())
+
+    def test_unknown_mode_fails(self) -> None:
+        for argv in ([], ["lint"], ["check", "extra"]):
+            with self.subTest(argv=argv):
+                stderr = io.StringIO()
+                with contextlib.redirect_stderr(stderr):
+                    return_code = GO_MODULE.main(argv)
+                self.assertEqual(1, return_code)
+                self.assertIn("usage: check-go-module.py detect|check", stderr.getvalue())
+
+    def test_failed_go_tool_raises_with_its_argv(self) -> None:
+        completed = subprocess.CompletedProcess(["go", "vet", "./..."], 1, stdout="", stderr="vet: boom\n")
+        with (
+            mock.patch.object(GO_MODULE.subprocess, "run", return_value=completed) as run,
+            contextlib.redirect_stdout(io.StringIO()),
+            contextlib.redirect_stderr(io.StringIO()),
+        ):
+            with self.assertRaisesRegex(GO_MODULE.GoModuleCheckError, r"go vet \./\.\.\. failed with exit code 1"):
+                GO_MODULE.run_go("vet", "./...")
+        self.assertEqual(["go", "vet", "./..."], run.call_args.args[0])
+        self.assertIs(False, run.call_args.kwargs["shell"])
+        self.assertEqual(GO_MODULE.REPO_ROOT / "typesafe-jev", run.call_args.kwargs["cwd"])
+
+    def test_missing_go_tool_is_reported(self) -> None:
+        with (
+            mock.patch.object(GO_MODULE.subprocess, "run", side_effect=FileNotFoundError("gofmt")),
+            contextlib.redirect_stdout(io.StringIO()),
+        ):
+            with self.assertRaisesRegex(GO_MODULE.GoModuleCheckError, r"unable to run gofmt"):
+                GO_MODULE.run_gofmt("-l", ".")
+
+    def test_unformatted_files_fail_the_check(self) -> None:
+        with (
+            mock.patch.object(GO_MODULE, "run_go", return_value="") as run_go,
+            mock.patch.object(GO_MODULE, "run_gofmt", return_value="cmd/evaluate/main.go\n") as run_gofmt,
+        ):
+            with self.assertRaisesRegex(GO_MODULE.GoModuleCheckError, r"gofmt would reformat: cmd/evaluate/main\.go"):
+                GO_MODULE.check()
+        self.assertEqual([mock.call("mod", "verify")], run_go.call_args_list)
+        run_gofmt.assert_called_once_with("-l", ".")
+
+
 def build_suite() -> unittest.TestSuite:
     suite = unittest.TestSuite()
     for test_case in (
@@ -418,6 +518,7 @@ def build_suite() -> unittest.TestSuite:
         DocsClassificationHelperTests,
         WorkflowResultsHelperTests,
         PluginMatrixHelperTests,
+        GoModuleHelperTests,
     ):
         suite.addTests(unittest.defaultTestLoader.loadTestsFromTestCase(test_case))
     return suite

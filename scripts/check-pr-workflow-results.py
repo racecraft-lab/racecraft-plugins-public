@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Evaluate the PR Checks detect, test, and artifact sentinel results."""
+"""Evaluate the PR Checks detect, test, artifact, and Go sentinel results."""
 
 from __future__ import annotations
 
@@ -16,6 +16,7 @@ def check_workflow_results(
     detect_result: str,
     test_result: str,
     artifact_result: str,
+    go_result: str,
 ) -> str:
     if detect_result in {"failure", "cancelled"}:
         raise WorkflowResultError(
@@ -29,9 +30,14 @@ def check_workflow_results(
         raise WorkflowResultError(
             f"Generated artifacts drift from source (result: {artifact_result})."
         )
+    if go_result not in {"success", "skipped"}:
+        raise WorkflowResultError(
+            f"Go module checks failed or were cancelled (result: {go_result})."
+        )
     return (
         "Plugin tests passed or were skipped "
-        f"(result: {test_result}); artifacts consistent (result: {artifact_result})."
+        f"(result: {test_result}); artifacts consistent (result: {artifact_result}); "
+        f"Go module checks passed or were skipped (result: {go_result})."
     )
 
 
@@ -44,6 +50,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             os.environ.get("DETECT_RESULT", ""),
             os.environ.get("TEST_RESULT", ""),
             os.environ.get("ARTIFACT_RESULT", ""),
+            os.environ.get("GO_RESULT", ""),
         )
     except WorkflowResultError as error:
         print(f"::error::{error}", file=sys.stderr)
