@@ -1,5 +1,20 @@
 # Changelog
 
+## [2.34.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.33.0...speckit-pro-v2.34.0) (2026-09-24)
+
+
+### Features
+
+* **speckit-pro:** run Codex agents on GPT-6 models ([#603](https://github.com/racecraft-lab/racecraft-plugins-public/issues/603)) ([f220b1b](https://github.com/racecraft-lab/racecraft-plugins-public/commit/f220b1bfb0de7d854f9e49c39360ad51c4c95392))
+
+
+### Bug Fixes
+
+* **speckit-pro:** correct stale instructions in shipped skills ([#601](https://github.com/racecraft-lab/racecraft-plugins-public/issues/601)) ([732fdb5](https://github.com/racecraft-lab/racecraft-plugins-public/commit/732fdb540cd4b27215aa4577f6be1ffec028206c))
+* **speckit-pro:** fix agent prompt contradictions and wrong paths ([#599](https://github.com/racecraft-lab/racecraft-plugins-public/issues/599)) ([125b625](https://github.com/racecraft-lab/racecraft-plugins-public/commit/125b62543b8d40b81e19c74da6d287b28e743af4))
+* **speckit-pro:** make quality gates catch what they claim to check ([#600](https://github.com/racecraft-lab/racecraft-plugins-public/issues/600)) ([56f526e](https://github.com/racecraft-lab/racecraft-plugins-public/commit/56f526e80176ffcbac1df856c1a8bd88c26d5e79))
+* **speckit-pro:** treat heredoc bodies as data in the lockfile guard ([#621](https://github.com/racecraft-lab/racecraft-plugins-public/issues/621)) ([954b14f](https://github.com/racecraft-lab/racecraft-plugins-public/commit/954b14fa9b723094c6991b34c3c1661e3e33ceb2))
+
 ## [2.33.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.32.1...speckit-pro-v2.33.0) (2026-09-24)
 
 
