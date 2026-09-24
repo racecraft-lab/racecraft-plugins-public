@@ -62,7 +62,8 @@ Decide which of the two jobs you are doing:
   make the judgment yourself from the prose. One call can carry many
   independent questions. When no such tool exists, say so once and make the
   judgment in the ordinary way; do not build an integration to stand in for a
-  missing one. The plugin at `racecraft-lab/typesafe-mcp` is what provides it.
+  missing one. The `typesafe-jev` plugin in
+  `racecraft-lab/racecraft-plugins-public` is what provides it.
 - **An application needs to call TypeSafe in production** — then the rest of
   this skill applies. Read the API or SDK page and write the integration. The
   `evaluate` tool is for this session, not a runtime dependency of the user's

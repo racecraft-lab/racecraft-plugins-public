@@ -7,8 +7,8 @@
     "name": "Racecraft Lab",
     "url": "https://github.com/racecraft-lab"
   },
-  "homepage": "https://github.com/racecraft-lab/typesafe-mcp",
-  "repository": "https://github.com/racecraft-lab/typesafe-mcp",
+  "homepage": "https://github.com/racecraft-lab/racecraft-plugins-public/tree/main/typesafe-jev",
+  "repository": "https://github.com/racecraft-lab/racecraft-plugins-public",
   "license": "MIT",
   "keywords": [
     "typesafe",

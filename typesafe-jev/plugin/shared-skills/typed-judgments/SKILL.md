@@ -170,12 +170,13 @@ Check which of two situations you are in before doing anything else.
 likely through `skills add`, which carries skill files and no MCP server. There
 is nothing to route to. Say so once, make the judgment yourself in the ordinary
 way, and do not offer to build an integration to stand in for it. If typed
-judgments are wanted in a session, the plugin is what provides them:
-`racecraft-lab/typesafe-mcp`.
+judgments are wanted in a session, the plugin is what provides them: the
+`typesafe-jev` plugin in `racecraft-lab/racecraft-plugins-public`. With the
+plugin installed but the binary or a key missing, its server connects with no
+tools, and its instructions say what to set up.
 
-**The tool exists but fails.** The plugin ships a launcher, not the binary, so
-the usual cause is that the binary was never installed. The server reports the
-path it looked at and the command that installs it; pass that on rather than
+**The tool exists but fails.** The error names the cause: usually a key the
+provider refuses, or a provider that cannot be reached. Pass it on rather than
 working around it.
 
 In neither case is writing SDK or HTTP code a substitute for an in-session

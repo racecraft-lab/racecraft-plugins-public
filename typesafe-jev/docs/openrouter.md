@@ -30,7 +30,7 @@ It does not mean the call is free or private. Each call is billed by the
 selected provider, and a retry is billed again.
 
 On the OpenRouter backend, two fixed attribution headers are sent:
-`HTTP-Referer: https://github.com/racecraft-lab/typesafe-mcp` and
+`HTTP-Referer: https://github.com/racecraft-lab/racecraft-plugins-public` and
 `X-OpenRouter-Title: Racecraft Jev MCP`. Neither is derived from your
 filesystem paths or repository content.
 

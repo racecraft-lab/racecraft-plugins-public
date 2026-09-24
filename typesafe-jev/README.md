@@ -24,23 +24,30 @@ This is Racecraft Lab's fork of [itsmostafa/typesafe-mcp](https://github.com/its
 
 ## Install as a plugin, or by hand
 
-This repository is both an MCP server and a plugin for Claude Code and Codex.
-The plugin bundles the `evaluate` tool together with TypeSafe's agent skill,
-adapted to use it: see [docs/plugin.md](docs/plugin.md). Install it **instead
-of** the official `typesafe` plugin, not alongside it.
+This directory is both an MCP server and a plugin for Claude Code and Codex,
+listed in the [Racecraft plugin marketplace](../README.md). The plugin bundles
+the `evaluate` tool together with TypeSafe's agent skill, adapted to use it: see
+[docs/plugin.md](docs/plugin.md). Install it **instead of** the official
+`typesafe` plugin, not alongside it.
 
 ```sh
 # Claude Code
-claude plugin marketplace add racecraft-lab/typesafe-mcp --scope user
-claude plugin install typesafe-jev@racecraft-typesafe --scope user
+claude plugin marketplace add racecraft-lab/racecraft-plugins-public --scope user
+claude plugin install typesafe-jev@racecraft-plugins-public --scope user
 
 # Codex
-codex plugin marketplace add racecraft-lab/typesafe-mcp
-codex plugin add typesafe-jev@racecraft-typesafe
+codex plugin marketplace add racecraft-lab/racecraft-plugins-public
+codex plugin add typesafe-jev@racecraft-plugins-public
 ```
 
+Installed it from the old `racecraft-typesafe` marketplace? Uninstall that copy
+and remove that marketplace first, or the client runs two `jev` servers. The
+binary path and the key files do not change.
+
 The binary is installed separately either way, by step 1 of the quickstart
-below. The plugin carries a launcher, not four platform builds.
+below. The plugin carries a launcher, not four platform builds. Until the binary
+and a key are in place, the plugin's server connects with no tools and says
+what is missing.
 
 In Claude Code you can also invoke either skill by name:
 `/typesafe-jev:typed-judgments` and `/typesafe-jev:typesafe-ai`.
@@ -48,7 +55,8 @@ In Claude Code you can also invoke either skill by name:
 ### Other agents, via skills.sh
 
 Both skills install into twenty-odd other agents with no plugin involved, the
-same way upstream distributes its own:
+same way upstream distributes its own. This path reads the archived standalone
+repository, so its skills stay at the version it last released:
 
 ```sh
 skills add racecraft-lab/typesafe-mcp          # run through npx
@@ -234,11 +242,14 @@ For pi, `evaluate setup pi` writes into `~/.pi/agent/extensions/` (or `$PI_CODIN
 
 ## Contributing
 
-Issues and pull requests are welcome. The repo uses [Task](https://taskfile.dev):
+Issues and pull requests are welcome, in the
+[racecraft-plugins-public](https://github.com/racecraft-lab/racecraft-plugins-public)
+repository. From its root, the same checks CI runs:
 
 ```sh
-task check     # gofmt, go vet, and tests with -race
-task inspect   # open the MCP Inspector against a local build
+python3 scripts/check-go-module.py check   # module checksums, gofmt, vet, tests with -race, cross-compile
 ```
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the rules a change follows.
 
 Upstream fixes are welcome too. Provider support is kept separate from this fork's branding and release changes so it can be offered upstream.

@@ -15,21 +15,30 @@ You need Go. The version is pinned in `go.mod`, and `GOTOOLCHAIN=auto` (the
 default) will fetch it, so an older local Go is fine. Do not lower the
 directive to match your machine.
 
+It lives in the `typesafe-jev/` directory of the Racecraft plugin marketplace.
+From the repository root, one command runs what CI runs: module checksums,
+gofmt, vet, the tests with and without the race detector, and a cross-compile of
+every release target.
+
 ```sh
-git clone https://github.com/racecraft-lab/typesafe-mcp.git
-cd typesafe-mcp
-task check          # gofmt, go vet, and tests with -race
+git clone https://github.com/racecraft-lab/racecraft-plugins-public.git
+cd racecraft-plugins-public
+python3 scripts/check-go-module.py check
 ```
 
-Without [Task](https://taskfile.dev):
+Or run the Go tools directly, from `typesafe-jev/`:
 
 ```sh
 go mod verify
-test -z "$(gofmt -l .)"
+gofmt -l .
 go vet ./...
 go test -count=1 ./...
 go test -race -count=1 ./...
 ```
+
+`gofmt -l .` must print nothing. Go is this plugin's own toolchain. The
+repository's scripts and tests around it stay Python, so add Go only under
+`typesafe-jev/`.
 
 Everything runs offline. No test needs a credential, a network, or your real
 configuration directory, and none should ever gain one.
@@ -93,9 +102,9 @@ rely on it to catch your mistake.
 
 ## Pull requests
 
-Open it as a draft until CI is green. In the description, cover what changed
-and why, anything that behaves differently than before, and what you actually
-ran. If you could not run something, say so and mark it `NOT RUN` rather than
+Open it as a draft until CI is green, and follow the repository's pull request
+template and title rules. In the description, cover what changed and why,
+anything that behaves differently than before, and what you actually ran. If you could not run something, say so and mark it `NOT RUN` rather than
 implying it passed.
 
 CI runs on Linux and macOS. macOS is not redundant: the key-file permission

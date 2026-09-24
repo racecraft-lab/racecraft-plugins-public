@@ -3,7 +3,7 @@
 ## Reporting a vulnerability
 
 Report privately through GitHub's [private vulnerability
-reporting](https://github.com/racecraft-lab/typesafe-mcp/security/advisories/new)
+reporting](https://github.com/racecraft-lab/racecraft-plugins-public/security/advisories/new)
 on this repository. Please do not open a public issue for a vulnerability.
 
 Include what you did, what happened, and what you expected. A minimal

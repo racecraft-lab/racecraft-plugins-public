@@ -888,7 +888,7 @@ class ValidateReleaseWorkflow(unittest.TestCase):
             self.assertIs(True, typesafe.get('draft'))
             self.assertIs(True, typesafe.get('force-tag-creation'))
             extra_paths = {entry.get('path') for entry in typesafe.get('extra-files') or [] if isinstance(entry, dict)}
-            self.assertEqual({'plugin/.claude-plugin/plugin.json', 'plugin/.codex-plugin/plugin.json', 'plugin/shared-skills/typed-judgments/SKILL.md'}, extra_paths)
+            self.assertEqual({'plugin/.claude-plugin/plugin.json', 'plugin/.codex-plugin/plugin.json', '/.agents/plugins/marketplace.json', 'plugin/shared-skills/typed-judgments/SKILL.md'}, extra_paths)
         with self.subTest(msg='release.yml is valid YAML'):
             tab_indented_step = 'name: Invalid\njobs:\n\tbuild:\n\t  runs-on: ubuntu-latest\n'
             valid_nested_step = 'name: Valid\njobs:\n  release:\n    runs-on: ubuntu-latest\n    steps:\n      - name: Publish\n        run: echo valid\n'

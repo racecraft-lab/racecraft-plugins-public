@@ -3,6 +3,8 @@
 This fork is `racecraft-lab/typesafe-mcp`, forked from
 `itsmostafa/typesafe-mcp`. It exists to run Jev through OpenRouter's Decisions
 API from a local stdio MCP server, with the TypeSafe-direct backend kept intact.
+It now lives in the `typesafe-jev/` directory of racecraft-plugins-public, with
+its history. The file lists below record the standalone repository as it was.
 
 ## Base commits
 
@@ -156,7 +158,7 @@ for the OpenRouter integration to work.
 | Model override | tool argument only | tool argument, then `JEV_MODEL`, then backend default |
 | Credential source | environment only | `JEV_API_KEY_FILE` if set, else the selected backend's environment key |
 | Updater version check | string equality | semantic version, upgrade only |
-| Update/install source | `itsmostafa/typesafe-mcp` | `racecraft-lab/typesafe-mcp`, with no upstream fallback |
+| Update/install source | `itsmostafa/typesafe-mcp` | `racecraft-lab/racecraft-plugins-public`, `typesafe-jev-v*` releases only, with no upstream fallback |
 
 ## What was deliberately not changed
 

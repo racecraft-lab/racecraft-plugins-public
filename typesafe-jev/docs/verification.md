@@ -3,6 +3,11 @@
 What was actually run, on what, with what result. A check that did not run is
 marked `NOT RUN`, never inferred from a related one that passed.
 
+This is a historical record of the standalone `racecraft-lab/typesafe-mcp`
+repository before it moved into racecraft-plugins-public. Its `install.sh`,
+Taskfile, and workflows stayed in that archived repository. Today's checks run
+through `python3 scripts/check-go-module.py check` from the repository root.
+
 ```text
 Implementation commit:  4f156b454c41af059aa61eafaac8dc842e778b7a  (PR #1 head)
 Upstream base commit:   2137d0268badd5622243424fa7993a12f3330691  (0.4.0)

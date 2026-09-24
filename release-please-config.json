@@ -45,6 +45,11 @@
           "jsonpath": "$.version"
         },
         {
+          "type": "json",
+          "path": "/.agents/plugins/marketplace.json",
+          "jsonpath": "$.plugins[?(@.name==\"typesafe-jev\")].version"
+        },
+        {
           "type": "generic",
           "path": "plugin/shared-skills/typed-judgments/SKILL.md"
         }

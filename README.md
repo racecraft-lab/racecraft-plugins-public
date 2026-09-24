@@ -5,8 +5,9 @@
 ![Marketplace: public](https://img.shields.io/badge/marketplace-public-lightgrey)
 
 Racecraft Plugins Public is the open-source plugin marketplace from
-[Racecraft Lab](https://github.com/racecraft-lab). It currently publishes
-[SpecKit Pro](./speckit-pro/README.md) for both Claude Code and Codex.
+[Racecraft Lab](https://github.com/racecraft-lab). It publishes
+[SpecKit Pro](./speckit-pro/README.md) and [TypeSafe Jev](./typesafe-jev/README.md)
+for both Claude Code and Codex.
 
 The short version: install this marketplace if you want Racecraft-maintained
 agent workflows you can inspect, version, and update through your coding-agent
@@ -29,6 +30,7 @@ plugin system.
 | Plugin | What it does | Best first step |
 |---|---|---|
 | [SpecKit Pro](./speckit-pro/README.md) | Adds Racecraft workflows around GitHub Spec Kit: coaching, scoping interviews, spec scaffolding, autopilot execution, status, and PR review resolution. | Read the [SpecKit Pro decision guide](./speckit-pro/README.md#should-i-install-speckit-pro). |
+| [TypeSafe Jev](./typesafe-jev/README.md) | Adds one MCP tool, `evaluate`, that asks TypeSafe's Jev model for typed judgments with probabilities, plus two skills for designing those questions. Its Go server binary installs separately, and an API key is optional. | Read the [typesafe-jev install guide](./docs-site/src/content/docs/install/typesafe-jev.md). |
 
 ## Install The Marketplace
 
@@ -36,8 +38,11 @@ This repository exposes the same marketplace through two runtime surfaces:
 
 | Runtime | Marketplace metadata | Install payload |
 |---|---|---|
-| Claude Code | [`.claude-plugin/marketplace.json`](./.claude-plugin/marketplace.json) | [`dist/claude/speckit-pro`](./dist/claude/speckit-pro/) |
-| Codex | [`.agents/plugins/marketplace.json`](./.agents/plugins/marketplace.json) | [`dist/codex/speckit-pro`](./dist/codex/speckit-pro/) |
+| Claude Code | [`.claude-plugin/marketplace.json`](./.claude-plugin/marketplace.json) | [`dist/claude/speckit-pro`](./dist/claude/speckit-pro/), [`typesafe-jev/plugin`](./typesafe-jev/plugin/) |
+| Codex | [`.agents/plugins/marketplace.json`](./.agents/plugins/marketplace.json) | [`dist/codex/speckit-pro`](./dist/codex/speckit-pro/), [`typesafe-jev/plugin`](./typesafe-jev/plugin/) |
+
+`typesafe-jev` has no generated payload: its `plugin/` directory is the whole
+plugin, and the marketplaces point at it directly.
 
 ### Claude Code
 

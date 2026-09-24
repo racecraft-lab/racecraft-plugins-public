@@ -1,8 +1,8 @@
 # Installing as a plugin
 
-This repository is also a plugin for Claude Code and Codex. Installing it gives
-a client both halves at once: the `evaluate` MCP tool, and TypeSafe's agent
-skill adapted to use it.
+This directory is also a plugin for Claude Code and Codex, listed in the
+Racecraft plugin marketplace. Installing it gives a client both halves at once:
+the `evaluate` MCP tool, and TypeSafe's agent skill adapted to use it.
 
 The alternative is [openrouter.md](openrouter.md), which registers the MCP
 server by hand with no plugin involved. Both paths run the same binary. Use one.
@@ -10,20 +10,22 @@ server by hand with no plugin involved. Both paths run the same binary. Use one.
 ## What is in the plugin
 
 The payload lives in `plugin/`, and the two marketplace files at the repository
-root point at it. That separation is what a client caches: everything outside
-`plugin/` (the Go source, the eval suite, the docs) stays out of it.
+root point at it with the source `./typesafe-jev/plugin`. That separation is what
+a client caches: everything outside `plugin/` (the Go source and the docs) stays
+out of it. There is no generated payload: the directory is the whole plugin.
 
 | Path | Purpose |
 |---|---|
-| `.claude-plugin/marketplace.json` | marketplace entry, source `./plugin` |
-| `.agents/plugins/marketplace.json` | marketplace entry Codex prefers, source `./plugin` |
+| `.claude-plugin/marketplace.json` (repository root) | Claude Code marketplace entry |
+| `.agents/plugins/marketplace.json` (repository root) | Codex marketplace entry |
 | `plugin/.claude-plugin/plugin.json` | Claude Code manifest |
 | `plugin/.codex-plugin/plugin.json` | Codex manifest |
 | `plugin/mcp/claude.json` | MCP entry for Claude Code |
 | `plugin/.mcp.json` | MCP entry for Codex |
 | `plugin/shared-skills/typesafe-ai/` | TypeSafe's skill, adapted, with its MIT licence |
 | `plugin/shared-skills/typed-judgments/` | routes an in-session judgment to the tool |
-| `plugin/scripts/evaluate_launch.py` | resolves the binary, checks for a credential, and starts the right server |
+| `plugin/scripts/evaluate_launch.py` | resolves the binary and starts the right server |
+| `plugin/scripts/install_evaluate.py` | installs the release binary that matches the plugin |
 
 Both manifests declare the same name and version, which a test enforces.
 
@@ -87,33 +89,30 @@ those variables at all. A missing TypeSafe key starts the server on OpenRouter;
 a missing OpenRouter key leaves TypeSafe serving alone. No credential
 is stored in any manifest, and a test checks for that.
 
-**3. The plugin.** Each client reads its own marketplace file from this
-repository, so the same source works for both.
+**3. The plugin.** Each client reads its own marketplace file from the
+racecraft-plugins-public repository, so the same source works for both.
 
 Claude Code:
 
 ```sh
-claude plugin marketplace add racecraft-lab/typesafe-mcp --scope user
-claude plugin install typesafe-jev@racecraft-typesafe --scope user
+claude plugin marketplace add racecraft-lab/racecraft-plugins-public --scope user
+claude plugin install typesafe-jev@racecraft-plugins-public --scope user
 ```
 
 Codex, which has no scope flag because marketplaces are global under `~/.codex`:
 
 ```sh
-codex plugin marketplace add racecraft-lab/typesafe-mcp
-codex plugin add typesafe-jev@racecraft-typesafe
+codex plugin marketplace add racecraft-lab/racecraft-plugins-public
+codex plugin add typesafe-jev@racecraft-plugins-public
 ```
 
-Restart the client afterwards. Both commands track `main`. To pin, append
-`@<tag>` to the Claude source or pass `--ref <tag>` to Codex; no release tag
-exists for this fork yet.
+Restart the client afterwards. Both commands track `main`. Releases are tagged
+`typesafe-jev-vX.Y.Z`. The same marketplace also lists `speckit-pro`, which
+releases on its own tags.
 
-Codex reads `.agents/plugins/marketplace.json` when it is present and falls back
-to `.claude-plugin/marketplace.json` when it is not, so it could install this
-plugin before the Codex marketplace file existed. `codex plugin list` prints the
-file it chose. The Codex file is still worth keeping: it is where the display
-name, category and installation policy Codex shows belong, and the fallback is
-behaviour rather than a documented contract.
+If you installed this plugin from the old `racecraft-typesafe` marketplace,
+uninstall that copy and remove that marketplace first. Otherwise the client
+runs two `jev` servers and loads two copies of each skill.
 
 Claude Code and Codex both change these commands from time to time. Check
 `claude plugin --help` and `codex plugin --help` if either is rejected.
