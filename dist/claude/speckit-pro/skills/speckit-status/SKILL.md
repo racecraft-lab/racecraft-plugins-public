@@ -65,7 +65,7 @@ For each spec in the progress table, extract:
 
 - **Spec ID** (e.g., SPEC-006)
 - **Name** (e.g., Notifications)
-- **Tools** count
+- **Tools** count, only when the progress table has that column
 - **Status** (✅ Complete, 🔄 In Progress, ⏳ Pending, ⚠️ Blocked)
 - **Next Phase** or blocker info
 
@@ -91,7 +91,8 @@ For each workflow file found, extract:
 
 Combine technical roadmap and workflow data into a single report (illustrative:
 the table skeletons pin the output format, and every cell holds a placeholder
-rather than real project data):
+rather than real project data; add a Tools column and summary line only when the
+roadmap records tool counts):
 
 ```markdown
 # SpecKit Project Status
@@ -102,24 +103,23 @@ rather than real project data):
 - **Complete:** <n> (SPEC-XXX, SPEC-YYY)
 - **In progress:** <n>
 - **Remaining:** <n>
-- **Tools:** <n> of <n> new tools implemented
 
 ## Completed Specs
 
-| Spec | Name | Tools | PR | Notes |
-|------|------|-------|----|-------|
-| SPEC-XXX | <name> | <n> | #<pr> | <note> |
-| SPEC-YYY | <name> | <n> | #<pr> | <note> |
+| Spec | Name | PR | Notes |
+|------|------|----|-------|
+| SPEC-XXX | <name> | #<pr> | <note> |
+| SPEC-YYY | <name> | #<pr> | <note> |
 
 ## Ready to Start (No Blockers)
 
 These specs have no dependencies beyond the completed foundation and can start now:
 
-| Spec | Name | Tools | Tier | Priority | Notes |
-|------|------|-------|------|----------|-------|
-| SPEC-XXX | <name> | <n> | <tier> | P1 | <note> |
-| SPEC-YYY | <name> | <n> | <tier> | P2 | <note> |
-| ... | ... | ... | ... | ... | ... |
+| Spec | Name | Tier | Priority | Notes |
+|------|------|------|----------|-------|
+| SPEC-XXX | <name> | <tier> | P1 | <note> |
+| SPEC-YYY | <name> | <tier> | P2 | <note> |
+| ... | ... | ... | ... | ... |
 
 ## Blocked
 
@@ -223,8 +223,8 @@ that proposes the next spec to implement.
 4. The **top recommendation** is the first spec in the sorted
    list.
 5. Also list 1-2 **alternatives** from the same or next priority
-   level, especially if they are smaller (fewer tools) for a
-   quicker win.
+   level, especially if they are smaller (a lower Projected
+   reviewable LOC in the roadmap) for a quicker win.
 
 **Output format** (illustrative: the shape is fixed, the values are
 placeholders):
@@ -232,7 +232,7 @@ placeholders):
 ```markdown
 ## Recommended Next
 
-**SPEC-XXX: <name>** (<n> tools, P1, Tier <tier>)
+**SPEC-XXX: <name>** (P1, Tier <tier>)
 
 This is the highest-priority unblocked spec. <one or two sentences of scope,
 taken from the spec's technical roadmap section.>
@@ -248,8 +248,8 @@ Then run `/speckit-pro:speckit-autopilot` to execute it.
 
 **Alternatives** (if you prefer a smaller spec first):
 
-- SPEC-YYY: <name> (<n> tools, P2)
-- SPEC-ZZZ: <name> (<n> tools, P2)
+- SPEC-YYY: <name> (P2)
+- SPEC-ZZZ: <name> (P2)
 ```
 
 **Edge cases:**
