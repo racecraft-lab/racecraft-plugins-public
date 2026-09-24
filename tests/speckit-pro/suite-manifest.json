@@ -159,7 +159,8 @@
         { "path": "tests/speckit-pro/unit/test-feedback-sweep-parse.py", "label": "test-feedback-sweep-parse" },
         { "path": "tests/speckit-pro/unit/test-feedback-sweep-isolation.py", "label": "test-feedback-sweep-isolation" },
         { "path": "tests/speckit-pro/unit/test-artifact-freshness.py", "label": "test-artifact-freshness" },
-        { "path": "tests/speckit-pro/unit/test-research-broker-preflight.py", "label": "test-research-broker-preflight" }
+        { "path": "tests/speckit-pro/unit/test-research-broker-preflight.py", "label": "test-research-broker-preflight" },
+        { "path": "tests/speckit-pro/unit/test-research-broker.py", "label": "test-research-broker" }
       ]
     },
     {
