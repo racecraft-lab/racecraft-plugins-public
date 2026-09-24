@@ -140,7 +140,7 @@
       "expectations": [
         "Names autopilot-fast-helper explicitly",
         "States that only the parent orchestrator may invoke it",
-        "States that it uses gpt-5.6-luna",
+        "States that it uses gpt-6-luna",
         "States that it is optional and not a dependency",
         "States that it is for text-only compression, triage, or query drafting",
         "States that it must not edit artifacts",

@@ -155,7 +155,7 @@ class NativeSetupTests(unittest.TestCase):
                         env = setup.runtime_environment()
                         env["PYTHONPATH"] = str(installed)
                         request = {"schema_version": "1.0", "helper_id": "install-codex-agents", "operation": "install-codex-agents", "mode": "apply",
-                                   "inputs": {"repo_root": str(root), "destination": ".codex/agents", "model": "gpt-5.6-sol"}}
+                                   "inputs": {"repo_root": str(root), "destination": ".codex/agents", "model": "gpt-6-sol"}}
                         materialized = subprocess.run([sys.executable, "-m", "speckit_pro_runner"], input=json.dumps(request), env=env, cwd=root,
                                                       capture_output=True, text=True, check=False, timeout=60)
                         self.assertEqual(0, materialized.returncode, materialized.stdout + materialized.stderr)

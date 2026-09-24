@@ -1,6 +1,6 @@
 name = "clarify-executor"
 description = "Read-only Clarify question-preparation agent for the autonomous SpecKit workflow. Inspects the workflow/spec, researches likely answers, and returns questions plus recommendations to the parent orchestrator."
-model = "gpt-5.6-sol"
+model = "gpt-6-sol"
 model_reasoning_effort = "xhigh"
 sandbox_mode = "read-only"
 developer_instructions = """
@@ -65,7 +65,7 @@ agent.
 
    - `[codebase]` — resolution depends on existing repo patterns
    - `[spec]` — depends on project decisions (constitution,
-     technical roadmap, prior specs, CLAUDE.md)
+     technical roadmap, prior specs, AGENTS.md or CLAUDE.md)
    - `[domain]` — depends on external standards, RFCs, library
      docs, or community best practice
    - `[security]` — item contains a security keyword (always

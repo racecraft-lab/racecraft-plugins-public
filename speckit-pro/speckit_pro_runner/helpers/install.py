@@ -20,7 +20,7 @@ from pathlib import Path, PurePosixPath
 from typing import Any
 
 from ..agent_materialization import materialize_agent_policy
-from ..agent_inventory import CODEX_OPTIONAL_AGENT_NAMES, CODEX_REQUIRED_AGENT_NAMES
+from ..agent_inventory import AGENT_INVENTORY, CODEX_OPTIONAL_AGENT_NAMES, CODEX_REQUIRED_AGENT_NAMES
 from ..envelope import diagnostic, is_diagnostic, response
 from ..path_utils import resolves_to_current_python, sha256_text
 from .mutation import empty_mutation, operation_record, run_mutation_helper, validate_target_path
@@ -34,12 +34,19 @@ MINIMUM_PYTHON = (3, 11, 0)
 if len(CODEX_OPTIONAL_AGENT_NAMES) != 1:
     raise RuntimeError("agent inventory must declare exactly one optional Codex helper")
 CODEX_OPTIONAL_HELPER_NAME = CODEX_OPTIONAL_AGENT_NAMES[0]
-CODEX_LOW_EFFORT_AGENT_NAMES = frozenset({"codebase-analyst", "spec-context-analyst"})
 CODEX_SOURCE_AGENT_TOML_NAMES = tuple(
     sorted((*[f"{name}.toml" for name in CODEX_REQUIRED_AGENT_NAMES], f"{CODEX_OPTIONAL_HELPER_NAME}.toml"))
 )
 REQUIRED_CODEX_AGENT_NAMES = frozenset(CODEX_SOURCE_AGENT_TOML_NAMES)
-SUPPORTED_CODEX_AGENT_MODELS = frozenset({"gpt-5.6-sol", "gpt-5.5", "gpt-5.4"})
+SUPPORTED_CODEX_AGENT_MODELS = frozenset({"gpt-6-sol", "gpt-6-luna", "gpt-6-astra"})
+CODEX_SOL_SOURCE_MODEL = "gpt-6-sol"
+CODEX_LUNA_SOURCE_MODEL = "gpt-6-luna"
+CODEX_LUNA_FALLBACK_MODEL = "gpt-6-sol"
+CODEX_SOURCE_AGENT_POLICIES = {
+    role["name"]: (role["codex"]["model"], role["codex"]["effort"])
+    for role in AGENT_INVENTORY["roles"]
+    if role["codex"]["implementation"] == "custom_agent"
+}
 ROUTE_POLICY_MANIFEST_SCHEMA_VERSION = "1.0.0"
 ROUTE_POLICY_MANIFEST_TOP_LEVEL_KEYS = frozenset(
     {
@@ -4032,6 +4039,8 @@ def validate_route_policy_route(raw: Any, *, context: str) -> dict[str, Any]:
     for field_name in ("route_id", "model", "model_reasoning_effort"):
         if not isinstance(raw.get(field_name), str) or not raw[field_name]:
             return invalid_route_policy_manifest("route_field_invalid", details={"route": context, "field": field_name})
+    if raw["model"] not in SUPPORTED_CODEX_AGENT_MODELS:
+        return invalid_route_policy_manifest("route_model_unsupported", details={"route": context, "model": raw["model"]})
     if not isinstance(raw.get("capabilities"), list) or any(not isinstance(item, str) or not item for item in raw["capabilities"]):
         return invalid_route_policy_manifest("route_capabilities_invalid", details={"route": context})
     if raw.get("probe_id") is not None and (not isinstance(raw.get("probe_id"), str) or not raw["probe_id"]):
@@ -4040,14 +4049,37 @@ def validate_route_policy_route(raw: Any, *, context: str) -> dict[str, Any]:
 
 
 def load_codex_agent_bundle(source_dir: Path, inputs: dict[str, Any]) -> tuple[dict[str, bytes], str] | dict[str, Any]:
-    raw_model = inputs["model"] if "model" in inputs else os.environ.get("SPECKIT_CODEX_MODEL") or "gpt-5.6-sol"
+    raw_model = inputs["model"] if "model" in inputs else os.environ.get("SPECKIT_CODEX_MODEL") or CODEX_SOL_SOURCE_MODEL
     if not isinstance(raw_model, str) or raw_model not in SUPPORTED_CODEX_AGENT_MODELS:
         return diagnostic(
             "unsupported_codex_model",
-            "model must be gpt-5.6-sol, gpt-5.5, or gpt-5.4",
+            "model must be gpt-6-sol, gpt-6-luna, or gpt-6-astra",
             details={"model": raw_model},
             remediation_summary="Choose a supported explicit Codex agent model.",
-            remediation_actions=["Set inputs.model to gpt-5.6-sol, gpt-5.5, or gpt-5.4."],
+            remediation_actions=["Set inputs.model to gpt-6-sol (default), gpt-6-luna, or gpt-6-astra."],
+        )
+    if "luna_fallback" in inputs:
+        luna_fallback = inputs["luna_fallback"]
+    else:
+        env_fallback = os.environ.get("SPECKIT_CODEX_LUNA_FALLBACK")
+        luna_fallback = {None: False, "": False, "false": False, "true": True}.get(env_fallback, env_fallback)
+    if not isinstance(luna_fallback, bool):
+        return diagnostic(
+            "invalid_luna_fallback",
+            "luna_fallback must be true or false",
+            details={"luna_fallback": luna_fallback},
+            remediation_summary="Use a boolean to choose whether Luna roles fall back to gpt-6-sol.",
+            remediation_actions=[
+                "Set inputs.luna_fallback or SPECKIT_CODEX_LUNA_FALLBACK to true only when gpt-6-luna is unavailable."
+            ],
+        )
+    if luna_fallback and raw_model == CODEX_LUNA_SOURCE_MODEL:
+        return diagnostic(
+            "conflicting_luna_fallback",
+            "luna_fallback cannot be combined with model gpt-6-luna",
+            details={"model": raw_model, "luna_fallback": luna_fallback},
+            remediation_summary="The Luna fallback exists for environments where gpt-6-luna is unavailable.",
+            remediation_actions=["Use model gpt-6-sol or gpt-6-astra with luna_fallback, or omit luna_fallback."],
         )
     roster_result = codex_agent_source_roster(source_dir)
     if is_diagnostic(roster_result):
@@ -4063,26 +4095,31 @@ def load_codex_agent_bundle(source_dir: Path, inputs: dict[str, Any]) -> tuple[d
             source_policy = tomllib.loads(source_text)
             if source_policy.get("name") != path.stem:
                 raise ValueError(f"{path.name}: name must match filename")
-            expected_source_model = "gpt-5.6-luna" if path.name == "autopilot-fast-helper.toml" else "gpt-5.6-sol"
+            if path.stem not in CODEX_SOURCE_AGENT_POLICIES:
+                raise ValueError(f"{path.name}: no inventory policy")
+            expected_source_model, expected_source_effort = CODEX_SOURCE_AGENT_POLICIES[path.stem]
             if source_policy.get("model") != expected_source_model:
                 raise ValueError(f"{path.name}: unexpected source model")
-            if (
-                path.stem in CODEX_LOW_EFFORT_AGENT_NAMES
-                and source_policy.get("model_reasoning_effort") != "low"
-            ):
+            if source_policy.get("model_reasoning_effort") != expected_source_effort:
                 raise ValueError(f"{path.name}: unexpected source reasoning effort")
 
-            if raw_model != expected_source_model and expected_source_model == "gpt-5.6-sol":
+            if expected_source_model == CODEX_SOL_SOURCE_MODEL:
+                target_model = raw_model
+            elif expected_source_model == CODEX_LUNA_SOURCE_MODEL and luna_fallback:
+                target_model = CODEX_LUNA_FALLBACK_MODEL
+            else:
+                target_model = expected_source_model
+            if target_model != expected_source_model:
                 rendered_text, replacement_count = re.subn(
-                    r'^model = "gpt-5\.6-sol"$',
-                    f'model = "{raw_model}"',
+                    rf'^model = "{re.escape(expected_source_model)}"$',
+                    f'model = "{target_model}"',
                     source_text,
                     flags=re.MULTILINE,
                 )
                 if replacement_count != 1:
                     raise ValueError(f"{path.name}: expected exactly one model rewrite")
                 rendered_policy = tomllib.loads(rendered_text)
-                if rendered_policy.get("model") != raw_model:
+                if rendered_policy.get("model") != target_model:
                     raise ValueError(f"{path.name}: model rewrite did not validate")
                 rendered[path.name] = rendered_text.encode("utf-8")
             else:
