@@ -421,7 +421,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                         if calls:
                             self.assertEqual(len(list(evidence.glob("*.trial.json"))), len(calls))
                         calls.append(True)
-                        requested_model = "claude-sonnet-test" if host == "claude" else "gpt-5.6-sol"
+                        requested_model = "claude-sonnet-test" if host == "claude" else "gpt-6-sol"
                         receipt = successful_process_evidence(requested_model, host=host)
                         receipt.update(provider_exit_code=7 if scenario == "nonzero" else -15 if scenario == "timeout" else 0,
                                        timed_out=scenario == "timeout")
@@ -439,7 +439,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                     output = io.StringIO()
                     diagnostics = io.StringIO()
                     argv = ["demo", "--evidence-dir", str(evidence), "--timeout", "37",
-                            "--model", "claude-sonnet-test" if host == "claude" else "gpt-5.6-sol"]
+                            "--model", "claude-sonnet-test" if host == "claude" else "gpt-6-sol"]
                     with contextlib.ExitStack() as stack:
                         for name, replacement in (
                             ("find_eval_file", corpus), ("find_skill_source", source),
@@ -3221,7 +3221,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 "Codex --run strips control flags and preserves arguments": "--run" not in delegated_argv
                 and delegated_argv[2:] == ["demo", "--profile", "fast", "tail"],
                 "Codex default effort remains low": engine.DEFAULT_REASONING_EFFORT == "low",
-                "Codex default model remains approved": engine.DEFAULT_MODEL == "gpt-5.6-sol",
+                "Codex default model remains approved": engine.DEFAULT_MODEL == "gpt-6-sol",
                 "Codex preflight pins the qualified CLI build": qualified_codex_preflight[0] is not None
                 and qualified_codex_preflight[0]["version"] == engine.PINNED_CODEX_VERSION
                 and qualified_codex_preflight[0]["request_max_retries"] == 0

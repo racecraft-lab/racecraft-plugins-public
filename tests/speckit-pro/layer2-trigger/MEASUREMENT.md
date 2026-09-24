@@ -46,7 +46,7 @@ or reported retry invalidates preflight or the stream.
 
 ### Codex: `codex-body-read-attestation`
 
-Codex 0.153.3 does not expose a native skill-selection event in its public exec
+Codex 0.156.1 does not expose a native skill-selection event in its public exec
 JSON. The qualified Codex scope therefore uses a behavioral attestation and
 names that limitation rather than claiming native observation.
 
@@ -100,7 +100,7 @@ invalid. A sibling's read-plus-marker is a valid target nonselection. This
 makes the behaviorally selected staged-skill set observable within the declared
 scope, while preserving the distinction from a native activation event.
 
-The runner pins Codex 0.153.3, `gpt-5.6-sol`, and low reasoning. It uses strict
+The runner pins Codex 0.156.1, `gpt-6-sol`, and low reasoning. It uses strict
 configuration isolation, disables unrelated features, and installs a dedicated
 ChatGPT-auth provider with request and stream retries set to zero, WebSockets
 disabled, and unbounded connection retries disabled. The existing Codex login
@@ -189,8 +189,14 @@ not qualified. Provider-side behavior invisible to the pinned public interfaces
 cannot be reconstructed; qualification relies on the explicit no-retry controls
 and rejects every reported retry or error event.
 
-One bounded provider canary per host validated each qualified selection path;
-one earlier Codex transport probe validated the dedicated no-retry provider.
+The record counts nine provider invocations. One Claude canary on 2026-09-11
+validated the Claude selection path; the Codex model change did not recheck it.
+On 2026-09-24, one Codex 0.153.3 transport probe served `gpt-6-sol` but emitted
+an `error` item for missing model metadata, which this contract rejects, so the
+pin moved to 0.156.1, the first build that ships that metadata. One 0.156.1
+transport probe then validated the dedicated no-retry provider and the
+`gpt-6-sol`/low request. Two canonical three-trial canaries validated the target
+and sibling selection paths, with all six trials valid and qualification-eligible.
 The full frozen baseline/candidate matrices, comparator validation, corpus
 dispositions, independent pruning review, and issue #573's broader work remain
 separate gates.
@@ -200,6 +206,6 @@ Sources: [Claude hooks](https://code.claude.com/docs/en/hooks#userpromptexpansio
 [Claude CLI](https://code.claude.com/docs/en/cli-reference),
 [Claude settings](https://code.claude.com/docs/en/settings),
 [Claude model configuration](https://code.claude.com/docs/en/model-config#model-aliases),
-[Codex pinned event schema](https://raw.githubusercontent.com/openai/codex/rust-v0.153.3/codex-rs/exec/src/exec_events.rs),
+[Codex pinned event schema](https://raw.githubusercontent.com/openai/codex/rust-v0.156.1/codex-rs/exec/src/exec_events.rs),
 [Codex non-interactive mode](https://learn.chatgpt.com/docs/non-interactive-mode#make-output-machine-readable),
 and [Codex skills](https://learn.chatgpt.com/docs/build-skills#how-chatgpt-and-codex-use-skills).
