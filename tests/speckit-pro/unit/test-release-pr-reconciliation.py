@@ -14,7 +14,7 @@ import sys
 import tempfile
 import unittest
 import urllib.error
-from contextlib import redirect_stderr
+from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 from unittest import mock
 
@@ -64,9 +64,10 @@ RELEASE_PR = {
 class ConflictingMergeRunner:
     """Fake runner whose base merge conflicts on the supplied paths."""
 
-    def __init__(self, conflicted: list[str]) -> None:
+    def __init__(self, conflicted: list[str], stages: dict[int, str] | None = None) -> None:
         self.commands: list[list[str]] = []
         self.conflicted = conflicted
+        self.stages = stages or {}
         self.fetch_heads = iter(["release-head", "main-head"])
 
     def run(self, argv, _cwd) -> None:
@@ -82,6 +83,9 @@ class ConflictingMergeRunner:
             return next(self.fetch_heads)
         if command == ["git", "diff", "--name-only", "--diff-filter=U"]:
             return "\n".join(self.conflicted)
+        for stage, text in self.stages.items():
+            if command == ["git", "show", f":{stage}:{sync.RELEASE_MANIFEST}"]:
+                return text
         if command == ["git", "status", "--porcelain"]:
             return " M generated-file"
         if command == ["git", "rev-parse", "HEAD"]:
@@ -227,6 +231,105 @@ class ReleasePrReconciliationTests(unittest.TestCase):
             "distribution/notes.md",
         ):
             self.assertFalse(sync.is_regenerated_artifact(path, paths), path)
+
+
+def _manifest(speckit_pro: str, typesafe_jev: str) -> str:
+    return json.dumps({"speckit-pro": speckit_pro, "typesafe-jev": typesafe_jev}, indent=2) + "\n"
+
+
+class ReleaseManifestMergeTests(unittest.TestCase):
+    """Two component release PRs each bump one line of the shared manifest."""
+
+    def git(self, root: Path, *args: str) -> str:
+        completed = subprocess.run(
+            ["git", *args], cwd=root, text=True, capture_output=True, check=True
+        )
+        return completed.stdout.strip()
+
+    def commit_manifest(self, root: Path, text: str, message: str) -> str:
+        (root / sync.RELEASE_MANIFEST).write_text(text, encoding="utf-8")
+        self.git(root, "add", sync.RELEASE_MANIFEST)
+        self.git(root, "commit", "-q", "-m", message)
+        return self.git(root, "rev-parse", "HEAD")
+
+    def test_adjacent_line_bumps_merge_per_component(self) -> None:
+        # The run that released typesafe-jev 0.9.0 on main then merged main into
+        # the speckit-pro 2.35.0 release branch. Git conflicts on the adjacent
+        # lines; the sync keeps each side's own bump.
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self.git(root, "init", "-q")
+            for key, value in (
+                ("user.name", "release test"),
+                ("user.email", "native-eval@example.invalid"),
+                ("commit.gpgsign", "false"),
+                ("core.hooksPath", str(root / "no-hooks")),
+                ("merge.ff", "true"),
+            ):
+                self.git(root, "config", key, value)
+            base = self.commit_manifest(root, _manifest("2.34.0", "0.8.0"), "base")
+            main_sha = self.commit_manifest(root, _manifest("2.34.0", "0.9.0"), "release typesafe-jev")
+            self.git(root, "checkout", "-q", "-b", "release-branch", base)
+            self.commit_manifest(root, _manifest("2.35.0", "0.8.0"), "release speckit-pro")
+
+            output = io.StringIO()
+            with redirect_stdout(output), redirect_stderr(io.StringIO()):
+                sync.merge_release_base(root, main_sha, sync.CommandRunner())
+
+            self.assertIn("resolved 1 manifest or regenerated-artifact conflict(s)", output.getvalue())
+            self.assertEqual(
+                _manifest("2.35.0", "0.9.0"),
+                (root / sync.RELEASE_MANIFEST).read_text(encoding="utf-8"),
+            )
+            self.assertEqual("", self.git(root, "status", "--porcelain"))
+            self.assertEqual(3, len(self.git(root, "rev-list", "--parents", "-n", "1", "HEAD").split()))
+
+    def test_same_key_changed_on_both_sides_fails_closed(self) -> None:
+        runner = ConflictingMergeRunner(
+            [sync.RELEASE_MANIFEST],
+            stages={
+                1: _manifest("2.34.0", "0.8.0"),
+                2: _manifest("2.35.0", "0.8.0"),
+                3: _manifest("2.36.0", "0.9.0"),
+            },
+        )
+        with self.assertRaises(sync.SyncError) as caught:
+            sync.sync_release_branch(REPO_ROOT, RELEASE_PR, "main", runner)
+
+        message = str(caught.exception)
+        self.assertIn("'speckit-pro'", message)
+        self.assertIn("'2.35.0'", message)
+        self.assertIn("'2.36.0'", message)
+        self.assertNotIn(["git", "add", "--", sync.RELEASE_MANIFEST], runner.commands)
+        self.assertNotIn(["git", "commit", "--no-edit"], runner.commands)
+
+    def test_same_key_changed_identically_is_not_a_clash(self) -> None:
+        merged = sync.merge_release_manifest(
+            _manifest("2.34.0", "0.8.0"),
+            _manifest("2.35.0", "0.8.0"),
+            _manifest("2.35.0", "0.9.0"),
+        )
+        self.assertEqual(_manifest("2.35.0", "0.9.0"), merged)
+
+    def test_malformed_manifest_fails_closed(self) -> None:
+        valid = _manifest("2.34.0", "0.8.0")
+        for side, texts in (
+            ("merge base", ("{", valid, valid)),
+            ("release branch", (valid, '{"speckit-pro": 2}', valid)),
+            ("main", (valid, valid, '["speckit-pro"]')),
+        ):
+            with self.subTest(side=side), self.assertRaises(sync.SyncError) as caught:
+                sync.merge_release_manifest(*texts)
+            self.assertIn(f"on the {side} side", str(caught.exception))
+
+    def test_manifest_conflict_beside_an_unmanaged_one_still_fails(self) -> None:
+        runner = ConflictingMergeRunner([sync.RELEASE_MANIFEST, "release-please-config.json"])
+        with self.assertRaises(sync.SyncError) as caught:
+            sync.sync_release_branch(REPO_ROOT, RELEASE_PR, "main", runner)
+
+        self.assertIn("release-please-config.json", str(caught.exception))
+        self.assertNotIn(sync.RELEASE_MANIFEST, str(caught.exception))
+        self.assertNotIn(["git", "commit", "--no-edit"], runner.commands)
 
 
 class ReleasePrDispatchTests(unittest.TestCase):

@@ -11,6 +11,12 @@ typesafe-jev-vX.Y.Z. The binary is stamped with the bare version, because
 
 Modes, in release order:
 
+  resolve        Name the draft release the rest of the chain works on and
+                 write its tag and body to $GITHUB_OUTPUT. A normal run passes
+                 release-please's RELEASE_TAG and RELEASE_BODY through. A
+                 recovery run sets RECOVERY_TAG instead: the tag must be
+                 typesafe-jev-vX.Y.Z, the release must exist and still be a
+                 draft, and its body is read from the GitHub API.
   build          Cross-compile every release target into
                  evaluate-<os>-<arch>.tar.gz (the binary plus LICENSE) and
                  write SHA256SUMS.txt beside them.
@@ -33,7 +39,9 @@ import hashlib
 import io
 import os
 import platform
+import json
 import re
+import secrets
 import shutil
 import subprocess
 import sys
@@ -47,6 +55,9 @@ MODULE_DIR = REPO_ROOT / "typesafe-jev"
 LICENSE_FILE = MODULE_DIR / "LICENSE"
 INSTALLER = MODULE_DIR / "plugin" / "scripts" / "install_evaluate.py"
 TAG_RE = re.compile(r"^typesafe-jev-v(?P<version>[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?)$")
+# A recovery dispatch names an existing release by hand, so it takes only a
+# plain release tag.
+RECOVERY_TAG_RE = re.compile(r"^typesafe-jev-v[0-9]+\.[0-9]+\.[0-9]+$")
 SUMS_NAME = "SHA256SUMS.txt"
 DEFAULT_OUT_DIR = "typesafe-jev-release"
 # The same targets check-go-module.py cross-compiles on every pull request.
@@ -214,6 +225,41 @@ def release_files(out_dir: Path) -> list[str]:
     return [str(out_dir / name) for name in names]
 
 
+def resolve(recovery_tag: str, release_tag: str, release_body: str) -> tuple[str, str]:
+    """Return the tag and raw release-please body of the draft to release."""
+    if not recovery_tag:
+        version_from_tag(release_tag)
+        return release_tag, release_body
+    if RECOVERY_TAG_RE.fullmatch(recovery_tag) is None:
+        raise ReleaseBuildError(f"recovery tag {recovery_tag!r} is not typesafe-jev-vX.Y.Z")
+    completed = run_gh("release", "view", recovery_tag, "--json", "isDraft,tagName,body")
+    _require_success(completed, "gh release view")
+    try:
+        release = json.loads(completed.stdout)
+    except json.JSONDecodeError as error:
+        raise ReleaseBuildError(f"gh release view returned invalid JSON: {error}") from error
+    if not isinstance(release, dict) or release.get("tagName") != recovery_tag:
+        raise ReleaseBuildError(f"gh release view did not return the release {recovery_tag}")
+    # Only a draft still carries release-please's raw body, which the notes
+    # jobs parse for the previous tag and then replace.
+    if release.get("isDraft") is not True:
+        raise ReleaseBuildError(f"release {recovery_tag} is not a draft; only an unpublished draft can be recovered")
+    body = release.get("body")
+    if not isinstance(body, str) or not body.strip():
+        raise ReleaseBuildError(f"draft release {recovery_tag} has no body")
+    return recovery_tag, body
+
+
+def write_github_output(path: Path, outputs: Mapping[str, str]) -> None:
+    """Append multiline-safe step outputs in GitHub's delimiter form."""
+    with path.open("a", encoding="utf-8") as output:
+        for name, value in outputs.items():
+            delimiter = f"EOF_{secrets.token_hex(16)}"
+            while delimiter in value:
+                delimiter = f"EOF_{secrets.token_hex(16)}"
+            output.write(f"{name}<<{delimiter}\n{value}\n{delimiter}\n")
+
+
 def upload(tag: str, out_dir: Path) -> None:
     completed = run_gh("release", "upload", tag, *release_files(out_dir), "--clobber")
     _require_success(completed, "gh release upload")
@@ -320,7 +366,7 @@ def smoke_install(version: str) -> None:
 
 def parse_args(argv: Sequence[str] | None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("mode", choices=("build", "upload", "verify", "publish", "smoke-install"))
+    parser.add_argument("mode", choices=("resolve", "build", "upload", "verify", "publish", "smoke-install"))
     parser.add_argument("--tag", default=os.environ.get("RELEASE_TAG", ""), help="typesafe-jev-vX.Y.Z (default: $RELEASE_TAG)")
     parser.add_argument("--out-dir", default=DEFAULT_OUT_DIR, help="where build writes and upload reads the assets")
     return parser.parse_args(argv)
@@ -329,6 +375,14 @@ def parse_args(argv: Sequence[str] | None) -> argparse.Namespace:
 def main(argv: Sequence[str] | None = None) -> int:
     args = parse_args(argv)
     try:
+        if args.mode == "resolve":
+            output_path = os.environ.get("GITHUB_OUTPUT", "")
+            if not output_path:
+                raise ReleaseBuildError("resolve needs GITHUB_OUTPUT")
+            tag, body = resolve(os.environ.get("RECOVERY_TAG", ""), args.tag, os.environ.get("RELEASE_BODY", ""))
+            write_github_output(Path(output_path), {"tag_name": tag, "body": body})
+            print(f"resolved draft release {tag}")
+            return 0
         version = version_from_tag(args.tag)
         out_dir = Path(args.out_dir)
         if not out_dir.is_absolute():
