@@ -1,0 +1,8 @@
+{
+  "schema_version": "1.0",
+  "request_id": "fixture-research-broker-preflight",
+  "helper_id": "research-broker-preflight",
+  "operation": "research-broker-preflight",
+  "mode": "read_only",
+  "inputs": {}
+}

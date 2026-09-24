@@ -122,6 +122,23 @@ Report to the operator:
 - A reminder to **restart the coding-agent process** (Claude Code or
   Codex CLI) so the newly installed skills/commands are picked up.
 
+#### Research screening check
+
+speckit-pro requires the typesafe-jev plugin, and Claude Code installs it
+with speckit-pro. Run runner helper `research-broker-preflight` in
+`read_only` mode with empty `inputs`.
+
+Report `data.screening_mode` and each `data.warnings[].message` and
+`data.errors[].message`. The helper never reads a key value.
+
+- A key is optional. With no Jev key or binary, research runs in
+  `sanitizer-only` mode, which is a warning, not a failure.
+- With no Tavily key, `research_search` returns `search_unavailable` and
+  `docs_query` still works through keyless Context7. Point the user to a free
+  Tavily key in `~/.config/speckit-pro/tavily.key` (mode 0600).
+- `expected_failure` means a credential or binary is configured but broken.
+  Report the fix it names. Do not roll back the SpecKit install for it.
+
 ## Hard Constraints
 
 - Never run `specify init --here --force` from this command. `--force`

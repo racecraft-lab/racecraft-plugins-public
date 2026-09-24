@@ -8,6 +8,7 @@ The autopilot's pre-flight sequence. Run these before Step 1 (Parse Workflow Sta
 - [Step -1: Archive Sweep Startup](#step--1-archive-sweep-startup) — archive previously merged specs before workflow execution
 - [Step 0.0: Resolve Script Paths](#step-00-resolve-script-paths) — extract `SKILL_SCRIPTS` from the skill header (plugin path)
 - [Step 0.0b: Claude Agent Package Completeness](#step-00b-claude-agent-package-completeness) — verify bundled plugin agents are present
+- [Step 0.0c: Research Broker Preflight](#step-00c-research-broker-preflight) — record the research screening mode (`jev` or `sanitizer-only`)
 - [Step 0.1–0.7: Environment Checks](#step-01-07-environment-checks) — `check-prerequisites` JSON parsing, branch detection
 - [Step 0.6: Load Settings and Resolve Claude Runtime](#step-06-load-settings--resolve-claude-runtime) — local settings plus one versioned subagent-runtime record
 - [Step 0.8: Capability Coverage & Plugin Limitation Check](#step-08-capability-coverage--plugin-limitation-check) — informational research/context advisory + plugin-agent caveats
@@ -154,6 +155,30 @@ If the check fails, STOP. Claude Code loads plugin agents directly from the
 plugin cache, so autopilot cannot safely self-heal a missing Claude agent file.
 Tell the user to update/reinstall `speckit-pro`, run `/reload-plugins`, and
 retry.
+
+## Step 0.0c: Research Broker Preflight
+
+Record how the research broker will screen web and docs results:
+
+```text
+printf '%s\n' '{"schema_version":"1.0","request_id":"autopilot-research-broker-preflight","helper_id":"research-broker-preflight","operation":"research-broker-preflight","mode":"read_only","inputs":{}}' | <resolved_python> -m speckit_pro_runner
+```
+
+The helper never reads a key value. Write `data.screening_mode` and every
+`data.warnings[].code` and `data.errors[].code` to the workflow log.
+
+- `ok` with no warnings: research runs in `jev` mode.
+- `ok` with warnings: continue. A missing Jev key or binary means
+  `sanitizer-only` mode. A missing Tavily key means `research_search` returns
+  `search_unavailable` while `docs_query` still works. Show each warning
+  message to the user once.
+- `expected_failure`: a credential or binary is configured but broken. Report
+  each `data.errors[].message` and continue. The broker drops every affected
+  result and reports it, so research evidence may be thin until it is fixed.
+
+Claude Code installs the typesafe-jev plugin with speckit-pro. If Claude Code
+reports that speckit-pro is disabled by an unsatisfied dependency, tell the
+user to run `claude plugin install typesafe-jev@racecraft-plugins-public`.
 
 ## Step 0.1–0.7: Environment Checks
 

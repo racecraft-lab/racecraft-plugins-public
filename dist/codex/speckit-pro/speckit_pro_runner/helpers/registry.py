@@ -8,6 +8,7 @@ from typing import Any
 from ..envelope import diagnostic, response
 from ..execution_control import run_execution_helper
 from ..formal.helper import run_formal_helper
+from ..research_preflight import run_research_broker_preflight_helper
 from .install import CODEX_OPTIONAL_HELPER_NAME, CODEX_REQUIRED_AGENT_NAMES, run_install_helper
 from .mutation import empty_mutation, run_mutation_helper, run_spec_index_write, run_sweep_apply_result
 from .pr_emission import run_pr_emission_helper
@@ -215,6 +216,16 @@ HELPERS: dict[str, HelperEntry] = {
         "python_authoritative",
         "python_only",
         authoritative_request("resolve-autopilot-stage"),
+    ),
+    # Value-free check of the research broker's screening dependencies: the
+    # typesafe-jev binary, its credential state, and the search key sources.
+    "research-broker-preflight": HelperEntry(
+        "research-broker-preflight",
+        "research-broker-preflight",
+        None,
+        "python_authoritative",
+        "python_only",
+        authoritative_request("research-broker-preflight"),
     ),
     "resolve-claude-subagent-runtime": HelperEntry(
         "resolve-claude-subagent-runtime",
@@ -659,6 +670,8 @@ def dispatch_helper(request: Any) -> dict[str, Any]:
 
     if entry.helper_id == "formal-doctor":
         return run_formal_helper(entry, request)
+    if entry.helper_id == "research-broker-preflight":
+        return run_research_broker_preflight_helper(entry, request)
     return run_registered_helper(entry, request)
 
 
