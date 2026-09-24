@@ -9,7 +9,8 @@ several trees are generated rather than authored.
 ## What Important means here
 
 Reserve Important for findings that would break behavior for a plugin consumer,
-break the generated-artifact contract, or expose the repository:
+break the generated-artifact contract, expose the repository, or leave
+repository tooling or tests giving a wrong answer:
 
 - Invalid JSON or manifest drift: a `plugin.json` version that disagrees with
   the marketplace entry, or a package missing from `release-please-config.json`
@@ -29,6 +30,9 @@ break the generated-artifact contract, or expose the repository:
   feature merges, so the read passes review and fails months later in an
   unrelated cleanup branch. Asserting such a path as a string is fine; opening
   one is not.
+- A correctness bug in repository tooling or tests, for example a check that
+  passes on nothing: an empty glob, a skipped branch, or a fixture that never
+  reaches the code under test.
 
 Style, naming, prose, and refactoring suggestions are Nit at most.
 
@@ -40,7 +44,11 @@ config files can be polished indefinitely.
 
 ## Do not report
 
-- Anything CI already enforces: lint, formatting, type errors, spellcheck.
+- Anything CI already enforces. That is only the pyflakes (F) rules that the
+  `python-lint` job runs with ruff over repository Python. CI does not check
+  formatting or spelling, and the non-required `mypy-ratchet` job type-checks
+  only the modules listed in `mypy.ini`, so a real type error elsewhere is
+  still a finding.
 - Generated reference pages under `docs-site/src/content/docs/reference/`,
   generated payloads, and vendored upstream content.
   Flag the source or generator instead.
@@ -68,8 +76,9 @@ do not post the finding.
 
 ## Re-review convergence
 
-After the first review of a PR, suppress new Nits and post Important findings
-only. A one-line follow-up commit should not draw a fresh round of style notes.
+After the first review of a PR, suppress new style Nits. Still post every
+correctness finding, including one the first review missed. A one-line
+follow-up commit should not draw a fresh round of style notes.
 
 ## Summary shape
 

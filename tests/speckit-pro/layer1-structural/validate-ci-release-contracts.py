@@ -271,6 +271,24 @@ class ValidatePrChecksSentinel(unittest.TestCase):
                         unpinned.append(f'{workflow_path.name}: {reference}')
             self.assertEqual([], unpinned, f'unpinned action references: {unpinned}')
             self.assertIsNone(re.search('@[0-9a-f]{40}$', 'actions/upload-artifact@v7'))
+        with self.subTest(msg='python-lint runs pinned ruff pyflakes rules as a dev-only tool'):
+            lint_block = _job_block(content, 'python-lint')
+            self.assertIn('name: python-lint', lint_block)
+            self.assertRegex(lint_block, SETUP_PYTHON_COMMENTED_PIN_RE)
+            self.assertIn('run: python3 scripts/run-python-lint.py install ruff\n', lint_block)
+            self.assertIn('run: python3 scripts/run-python-lint.py run ruff', lint_block)
+            ruff_config = (REPO_ROOT / 'ruff.toml').read_text(encoding='utf-8') if (REPO_ROOT / 'ruff.toml').is_file() else ''
+            self.assertIn('[lint]\nselect = ["F"]', ruff_config)
+        with self.subTest(msg='mypy-ratchet checks a non-empty allowlist and stays out of the sentinel'):
+            mypy_block = _job_block(content, 'mypy-ratchet')
+            self.assertIn('run: python3 scripts/run-python-lint.py install mypy\n', mypy_block)
+            self.assertIn('run: python3 scripts/run-python-lint.py run mypy\n', mypy_block)
+            mypy_config = (REPO_ROOT / 'mypy.ini').read_text(encoding='utf-8') if (REPO_ROOT / 'mypy.ini').is_file() else ''
+            allowlist = re.findall('(?m)^    (\\S+\\.py),?$', mypy_config)
+            self.assertTrue(allowlist, 'mypy.ini files allowlist is empty')
+            self.assertEqual([], [path for path in allowlist if not (REPO_ROOT / path).is_file()])
+            self.assertIn('follow_imports = silent', mypy_config)
+            self.assertNotIn('mypy-ratchet', _job_block(content, 'validate-plugins'))
         with self.subTest(msg='main pushes rerun the generated-artifact drift check'):
             main_check = MAIN_ARTIFACT_WORKFLOW_FILE.read_text(encoding='utf-8') if MAIN_ARTIFACT_WORKFLOW_FILE.is_file() else ''
             self.assertIn('  push:\n    branches: [main]\n', main_check)

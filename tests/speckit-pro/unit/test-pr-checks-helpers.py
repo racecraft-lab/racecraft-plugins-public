@@ -44,6 +44,7 @@ ACTIONLINT = load_script("pr_checks_install_actionlint", "install-actionlint.py"
 DOCS = load_script("pr_checks_classify_docs", "classify-docs-validation.py")
 RESULTS = load_script("pr_checks_results", "check-pr-workflow-results.py")
 MATRIX = load_script("pr_checks_matrix", "emit-plugin-matrix.py")
+LINT = load_script("pr_checks_python_lint", "run-python-lint.py")
 
 
 def make_archive(files: dict[str, bytes]) -> bytes:
@@ -395,6 +396,53 @@ class WorkflowResultsHelperTests(unittest.TestCase):
             "::error::Plugin tests failed or were cancelled (result: cancelled).\n",
             stderr.getvalue(),
         )
+
+
+class PythonLintHelperTests(unittest.TestCase):
+    def completed(self, argv, **_kwargs):
+        self.calls.append(list(argv))
+        return subprocess.CompletedProcess(argv, self.returncode)
+
+    def setUp(self) -> None:
+        self.calls: list[list[str]] = []
+        self.returncode = 0
+
+    def test_install_pins_the_tool_version_with_pip(self) -> None:
+        self.assertEqual(0, LINT.main(["install", "ruff"], run=self.completed))
+        self.assertEqual(
+            [[sys.executable, "-m", "pip", "install", f"ruff=={LINT.PINNED_VERSIONS['ruff']}"]],
+            self.calls,
+        )
+
+    def test_run_passes_extra_arguments_and_returns_the_tool_exit_code(self) -> None:
+        self.returncode = 3
+        pinned = LINT.PINNED_VERSIONS["ruff"]
+        result = LINT.main(
+            ["run", "ruff", "--output-format", "github"],
+            run=self.completed,
+            version_of=lambda _tool: pinned,
+        )
+        self.assertEqual(3, result)
+        self.assertEqual(
+            [[sys.executable, "-m", "ruff", "check", "--no-cache", "--output-format", "github"]],
+            self.calls,
+        )
+
+    def test_run_refuses_a_missing_or_unpinned_tool_before_running_it(self) -> None:
+        def missing(tool: str) -> str:
+            raise LINT.metadata.PackageNotFoundError(tool)
+
+        for version_of, message in (
+            (missing, "mypy is not installed"),
+            (lambda _tool: "0.0.1", "mypy 0.0.1 is installed, but the pinned version is"),
+        ):
+            with self.subTest(message=message):
+                stderr = io.StringIO()
+                with contextlib.redirect_stderr(stderr):
+                    result = LINT.main(["run", "mypy"], run=self.completed, version_of=version_of)
+                self.assertEqual(1, result)
+                self.assertIn(message, stderr.getvalue())
+        self.assertEqual([], self.calls)
 
 
 class PluginMatrixHelperTests(unittest.TestCase):
