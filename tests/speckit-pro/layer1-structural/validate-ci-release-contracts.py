@@ -185,6 +185,8 @@ def yaml_syntax_sane(text: str) -> bool:
     return True
 validate_pr_checks_sentinel_WORKFLOW_FILE = REPO_ROOT / '.github' / 'workflows' / 'pr-checks.yml'
 PR_METADATA_WORKFLOW_FILE = REPO_ROOT / '.github' / 'workflows' / 'pr-metadata.yml'
+MAIN_ARTIFACT_WORKFLOW_FILE = REPO_ROOT / '.github' / 'workflows' / 'main-artifact-check.yml'
+SCORECARD_WORKFLOW_FILE = REPO_ROOT / '.github' / 'workflows' / 'scorecard.yml'
 ACTIONLINT_HELPER_FILE = REPO_ROOT / 'scripts' / 'install-actionlint.py'
 DOCS_CLASSIFIER_FILE = REPO_ROOT / 'scripts' / 'classify-docs-validation.py'
 RESULTS_HELPER_FILE = REPO_ROOT / 'scripts' / 'check-pr-workflow-results.py'
@@ -216,6 +218,12 @@ def _job_block(content: str, job_id: str) -> str:
     match = re.search(f'(?ms)^  {re.escape(job_id)}:\\n(?P<body>.*?)(?=^  [A-Za-z0-9_-]+:\\n|\\Z)', content)
     return match.group('body') if match else ''
 
+def _job_permissions(content: str, job_id: str) -> dict[str, str]:
+    block = re.search('(?m)^    permissions:\\n(?P<body>(?:      [^\\n]*\\n)+)', _job_block(content, job_id))
+    if block is None:
+        return {}
+    return dict(re.findall('(?m)^      ([a-z-]+):\\s*(read|write|none)\\s*$', block.group('body')))
+
 def _yaml_valid(path: Path) -> bool:
     return yaml_syntax_sane(path.read_text(encoding='utf-8'))
 
@@ -244,6 +252,44 @@ class ValidatePrChecksSentinel(unittest.TestCase):
             self.assertIn('name: validate-plugins', content)
         with self.subTest(msg='history-sensitive plugin tests checkout repository history'):
             self.assertIn('fetch-depth: 0', _job_block(content, 'test'), 'expected history-sensitive plugin tests to checkout repository history')
+        with self.subTest(msg='plugin tests run on the pinned Python 3.11 floor'):
+            test_block = _job_block(content, 'test')
+            self.assertRegex(test_block, SETUP_PYTHON_COMMENTED_PIN_RE)
+            self.assertIn('python-version: "3.11"', test_block)
+            self.assertLess(test_block.index('actions/setup-python@'), test_block.index('run-toolchain-preflight.json'))
+        with self.subTest(msg='PR workflow checkouts never persist credentials'):
+            for workflow_content in (content, metadata_content):
+                checkouts = re.findall('(?m)^        uses: actions/checkout@[^\\n]*\\n(?:        with:\\n(?:          [^\\n]*\\n)+)?', workflow_content)
+                self.assertTrue(checkouts)
+                for checkout in checkouts:
+                    self.assertIn('persist-credentials: false', checkout)
+        with self.subTest(msg='every workflow pins third-party actions to a full commit SHA'):
+            unpinned = []
+            for workflow_path in sorted(WORKFLOWS_DIR.glob('*.yml')):
+                for reference in re.findall('(?m)^\\s*(?:-\\s+)?uses:\\s*([^\\s#]+)', workflow_path.read_text(encoding='utf-8')):
+                    if not reference.startswith('./') and re.search('@[0-9a-f]{40}$', reference) is None:
+                        unpinned.append(f'{workflow_path.name}: {reference}')
+            self.assertEqual([], unpinned, f'unpinned action references: {unpinned}')
+            self.assertIsNone(re.search('@[0-9a-f]{40}$', 'actions/upload-artifact@v7'))
+        with self.subTest(msg='main pushes rerun the generated-artifact drift check'):
+            main_check = MAIN_ARTIFACT_WORKFLOW_FILE.read_text(encoding='utf-8') if MAIN_ARTIFACT_WORKFLOW_FILE.is_file() else ''
+            self.assertIn('  push:\n    branches: [main]\n', main_check)
+            self.assertNotIn('pull_request', main_check)
+            self.assertRegex(main_check, '(?m)^permissions:\\s*\\{\\}\\s*$')
+            self.assertEqual({'contents': 'read'}, _job_permissions(main_check, 'main-artifact-consistency'))
+            self.assertIn('timeout-minutes:', main_check)
+            self.assertIn('persist-credentials: false', main_check)
+            self.assertIn('run: PYTHONDONTWRITEBYTECODE=1 python3 scripts/refresh-release-artifacts.py --check', main_check)
+        with self.subTest(msg='Scorecard publishes from a read-only, approved-actions workflow'):
+            scorecard = SCORECARD_WORKFLOW_FILE.read_text(encoding='utf-8') if SCORECARD_WORKFLOW_FILE.is_file() else ''
+            self.assertRegex(scorecard, '(?m)^permissions: read-all$')
+            self.assertEqual({'security-events': 'write', 'id-token': 'write'}, _job_permissions(scorecard, 'analysis'))
+            self.assertNotRegex(scorecard, '(?m)^(?:env|defaults):')
+            self.assertNotRegex(scorecard, '(?m)^\\s+(?:run|env|defaults|container|services):')
+            used = re.findall('(?m)^\\s*(?:-\\s+)?uses:\\s*([^@\\s]+)@', scorecard)
+            self.assertEqual(['actions/checkout', 'ossf/scorecard-action', 'github/codeql-action/upload-sarif'], used)
+            self.assertIn('results_format: sarif', scorecard)
+            self.assertIn('sarif_file: results.sarif', scorecard)
         for source, kind, name, needles in CONTENT_CHECKS:
             with self.subTest(msg=name):
                 selected_content = sources[source]
@@ -571,6 +617,7 @@ SYNC_HELPER_FILE = REPO_ROOT / 'scripts' / 'sync_release_pr.py'
 RELEASE_CONFIG_FILE = REPO_ROOT / 'release-please-config.json'
 validate_release_workflow_CHECKOUT_PIN_RE = re.compile('actions/checkout@[0-9a-f]{40}')
 UPLOAD_ARTIFACT_PIN_RE = re.compile('actions/upload-artifact@[0-9a-f]{40}')
+RELEASE_PLEASE_PIN_RE = re.compile('uses: googleapis/release-please-action@[0-9a-f]{40} # v5\\.\\d+\\.\\d+')
 DOWNLOAD_ARTIFACT_PIN_RE = re.compile('actions/download-artifact@[0-9a-f]{40}')
 MAIN_PUSH_RE = re.compile('^\\s*git push(\\s|$).*(\\s|\\"|\'|:|/)main(\\s|\\"|\'|:|$)', re.MULTILINE)
 RELEASE_NOTE_EVENTS = ('opened', 'reopened', 'synchronize', 'edited', 'labeled', 'unlabeled', 'ready_for_review')
@@ -668,8 +715,14 @@ class ValidateReleaseWorkflow(unittest.TestCase):
         resolver_content = RESOLVER_FILE.read_text(encoding='utf-8') if RESOLVER_FILE.is_file() else ''
         runner_request_helper_content = RUNNER_REQUEST_HELPER_FILE.read_text(encoding='utf-8') if RUNNER_REQUEST_HELPER_FILE.is_file() else ''
         sync_helper_content = SYNC_HELPER_FILE.read_text(encoding='utf-8') if SYNC_HELPER_FILE.is_file() else ''
-        with self.subTest(msg='release workflow uses release-please'):
-            self.assertIn('googleapis/release-please-action@v5', content)
+        with self.subTest(msg='release workflow uses release-please pinned to a full commit SHA'):
+            self.assertRegex(content, RELEASE_PLEASE_PIN_RE)
+            self.assertNotIn('googleapis/release-please-action@v', content)
+        with self.subTest(msg='release setup-node steps never restore a dependency cache'):
+            setup_node_steps = re.findall('(?m)^        uses: actions/setup-node@[^\\n]*\\n        with:\\n(?:          [^\\n]*\\n)+', content)
+            self.assertEqual(2, len(setup_node_steps))
+            for step in setup_node_steps:
+                self.assertIn('package-manager-cache: false', step)
         with self.subTest(msg='release workflow pins checkout actions'):
             self.assertEqual(4, len(validate_release_workflow_CHECKOUT_PIN_RE.findall(content)), 'release workflow pinned checkout count')
         release_job = _mapping_block(content, 'release', 2)

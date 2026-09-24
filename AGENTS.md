@@ -67,8 +67,7 @@ step, and each call bills a third party, so send no secrets or local paths.
 
 ## Commands
 
-Run from the repository root (Python 3.11+, Node >= 22.12 for docs). The `test`
-job's unpinned, newer `python3` warns on a `"\|"` escape; 3.11 does not.
+Run from the repository root (Python 3.11+, Node >= 22.12 for docs).
 
 | Check | Command | CI job (required?) |
 | --- | --- | --- |

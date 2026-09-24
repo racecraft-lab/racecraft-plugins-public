@@ -60,6 +60,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Emit Python-gated plugin matrix
         id: changed
@@ -86,6 +88,14 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+          persist-credentials: false
+
+      # Run the suite on the supported floor, not the runner image's newer
+      # system python3.
+      - name: Set up Python 3.11
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.11"
 
       - name: Report test toolchain
         env:
@@ -123,6 +133,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Install actionlint
         env:
@@ -155,6 +167,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Detect docs validation surfaces
         id: docs
@@ -196,7 +209,7 @@ jobs:
 
       - name: Upload docs-site smoke evidence
         if: always() && steps.docs.outputs.validation_mode == 'full'
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: docs-site-smoke-evidence
           path: ${{ runner.temp }}/docs-site-smoke-evidence
@@ -230,6 +243,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Refresh generated artifacts and fail on drift
         run: PYTHONDONTWRITEBYTECODE=1 python3 scripts/refresh-release-artifacts.py --check
