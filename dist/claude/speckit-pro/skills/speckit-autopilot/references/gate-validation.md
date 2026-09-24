@@ -43,7 +43,7 @@ remaining work; a failed requirement or security gate never becomes a pass.
 **Check:** Determine if clarification is needed.
 
 ```
-Search spec.md for "[NEEDS CLARIFICATION]" markers.
+Search spec.md for "[NEEDS CLARIFICATION]" and "[NEEDS CLARIFICATION: ...]" markers.
 - If markers found → Proceed to Clarify phase
 - If no markers → Skip Clarify, proceed to Plan
 ```
@@ -188,7 +188,8 @@ recorded and must not rewrite their provenance.
 
 ```
 1. Find all checklist files: specs/<feature>/checklists/*.md
-2. Count [Gap] markers across ALL files: grep -c "\[Gap\]" checklists/*.md
+2. Count [Gap] markers across ALL files: grep -c "\[Gap\]" checklists/*.md,
+   plus spec.md and plan.md (runner `validate-gate` G4 counts all three)
 3. Total must be 0
 ```
 

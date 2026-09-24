@@ -88,6 +88,26 @@ class ExecutionContractTests(unittest.TestCase):
                     "depends_on", "owns", "tdd_unit", "fingerprints"):
             self.assertIn(key, tasks)
 
+    def test_checklist_domain_signals_agree_between_guide_and_template(self):
+        import re
+
+        guide = (PLUGIN / "skills/speckit-coach/references/checklist-domains-guide.md").read_text()
+        template = (PLUGIN / "skills/speckit-coach/templates/workflow-template.md").read_text()
+        in_guide = set(re.findall(r"^\|[^|\n]+\| \*\*([a-z-]+)\*\* \|", guide, re.M))
+        in_template = set(re.findall(r"^\|[^|\n]+\| \*\*([a-z-]+)\*\* \|", template, re.M))
+        self.assertTrue({"privacy", "supply-chain"} <= in_guide, in_guide)
+        # The template's signal table is the guide's list minus the edge domains it leaves to the coach.
+        self.assertEqual(in_template, in_guide - {"integration", "mobile-ux", "reliability"})
+
+    def test_quality_gates_table_has_a_row_per_discovered_slot(self):
+        from speckit_pro_runner.gate_discovery import SLOTS
+
+        template = (PLUGIN / "skills/speckit-coach/templates/workflow-template.md").read_text()
+        table = template.split("### Quality Gates", 1)[1].split("\n---\n", 1)[0]
+        rows = {line.split("|")[1].strip() for line in table.splitlines()
+                if line.startswith("| ") and not line.startswith("| Slot ")}
+        self.assertEqual(set(SLOTS), rows)
+
     def test_paired_executors_preserve_per_task_results_in_batches(self):
         claude = (PLUGIN / "agents/implement-executor.md").read_text()
         codex = tomllib.loads((PLUGIN / "codex-agents/implement-executor.toml").read_text())
