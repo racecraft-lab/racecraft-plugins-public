@@ -651,7 +651,7 @@ algorithms from this entrypoint.
 After Phase 7 passes G7, read and execute
 [`post-implementation-codex.md`](./references/post-implementation-codex.md)
 in canonical order. It owns the parallel group, full integration suite,
-mandatory self-review and UAT runbook, current reviewability evidence and
+mandatory UAT runbook, current reviewability evidence and
 continuation, packet dry-run/apply and current read-only/persisted validation,
 packet-owned base/head/title/body, single- versus split-PR emission, review
 remediation, retrospective, and final summary. Do not start PR side effects

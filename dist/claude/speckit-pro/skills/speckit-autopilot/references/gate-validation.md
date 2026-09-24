@@ -445,7 +445,7 @@ disagreement is named in `reason`.
        what clears the deduction, so a fix left unrecorded
        fails the gate again on the next iteration. The
        criterion breakdown will not point at those rows: the
-       synthesizer no longer deducts for findings, so they
+       synthesizer does not deduct for findings, so they
        show up in deductions, not in a low criterion.
      - Otherwise identify the lowest-scoring criterion from
        the JSON output and dispatch a focused consensus round

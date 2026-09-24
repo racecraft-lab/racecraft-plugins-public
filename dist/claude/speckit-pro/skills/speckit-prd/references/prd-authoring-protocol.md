@@ -45,9 +45,10 @@ acceptance criteria. Use SPIDR seams (Spike, Path, Interface, Data, Rule) and th
 INVEST bar to split oversized work. A layer-only unit such as all models or all
 UI is not independently valuable; re-slice it through the layers it needs.
 
-Prefer natural convergence. Also stop when the user ends the interview. Around
-25-30 questions, recommend wrapping up and place remaining unknowns in Open
-Questions. Do not invent a decision.
+Prefer natural convergence. Stop when the user ends the interview. When the
+open branches that remain are low-consequence, recommend wrapping up and place
+them in Open Questions. While a consequential branch is still open, such as a
+feature boundary, name it and recommend continuing. Do not invent a decision.
 
 ## Author or update the PRD
 

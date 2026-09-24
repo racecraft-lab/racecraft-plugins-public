@@ -40,7 +40,7 @@ captured during scoping.
 | Analyze | `/speckit-analyze` | ⏳ Pending | |
 | Confidence Gate | G6.5 | ⏳ Pending | Pre-Implement composite confidence |
 | Implement | `/speckit-implement` | ⏳ Pending | |
-| Post | Post-Implementation | ⏳ Pending | Canonical 12-item closeout |
+| Post | Post-Implementation | ⏳ Pending | Canonical 11-item closeout |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⏭️ Skipped | ⚠️ Blocked
 
@@ -427,14 +427,11 @@ Do not guess fingerprints or omit ownership to force parallel execution.
 
 ## Atomicity Route
 
-**When this is filled:** After the Tasks phase / gate G5, the autopilot SKILL runs
-the read-only atomicity classifier and records its decision here. This is a
-**placeholder** until then — leave the cells blank during scoping. The classifier
-emits one machine-readable decision; the SKILL is what writes it into this section
-(the script never writes a file of its own). This route is recorded only here in the
-workflow file — never in the spec map. It is read downstream by the layer-planner and
-multi-PR emission work that builds on top of it; recording it now wires no PR creation
-or branch splitting on its own.
+**When this is filled:** After the Tasks phase / gate G5, autopilot runs the
+read-only `atomicity-route` runner helper and records its decision here. Leave
+the cells blank during scoping. The helper writes nothing itself; autopilot
+records the route only in this workflow file, never in the spec map, and runs
+the layer planner only when the route is `split-PR`.
 
 The decision answers "can this change be split into multiple small PRs safely?" by
 inspecting the change's structural seams (independent additive capabilities), not its
@@ -453,8 +450,6 @@ To produce the decision, run the classifier against the feature directory:
 runner helper atomicity-route specs/{{BRANCH_NAME}}
 ```
 
-See the classifier script at
-[`speckit-autopilot/scripts/atomicity-route`](../../speckit-autopilot/scripts/atomicity-route).
 
 ---
 
@@ -493,8 +488,8 @@ Focus on:
 
 ## Phase 6.5: Confidence Gate
 
-**When to run:** After Phase 6 commits and before Phase 7 begins. Gate semantics
-are unchanged; this section records the verdict so a later session can read it.
+**When to run:** After Phase 6 commits and before Phase 7 begins. This section
+records the verdict so a later session can read it.
 
 | Field | Value |
 |-------|-------|
@@ -560,22 +555,11 @@ The canonical closeout. Every row must reach Complete or an explicit
 | Post: Code Review | ⏳ Pending | |
 | Post: Integration Suite | ⏳ Pending | |
 | Post: Reviewability Diff Gate | ⏳ Pending | |
-| Post: Self-Review | ⏳ Pending | |
 | Post: UAT Runbook Generation | ⏳ Pending | |
 | Post: PR Body Generation | ⏳ Pending | |
 | Post: PR Creation | ⏳ Pending | |
 | Post: Review Remediation | ⏳ Pending | |
 | Post: Retrospective | ⏳ Pending | |
-
-<!-- Populate with your project's quality gates from the constitution -->
-
-- [ ] All tasks marked complete in tasks.md
-- [ ] Linting passes: <!-- e.g., `scripts/lint` -->
-- [ ] Tests pass: <!-- e.g., `pytest` -->
-- [ ] Build succeeds: <!-- e.g., `npm run build` -->
-- [ ] Manual verification complete
-- [ ] PR created and reviewed
-- [ ] Merged to main branch
 
 ---
 
