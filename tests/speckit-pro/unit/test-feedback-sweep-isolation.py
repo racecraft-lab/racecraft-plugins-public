@@ -10,7 +10,6 @@ import json
 import importlib.util
 import os
 import secrets
-import shutil
 import subprocess
 import sys
 import tempfile

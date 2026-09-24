@@ -1,6 +1,6 @@
 name = "formal-model-author"
 description = "Authors or reconciles one explicitly selected formal model after Plan, within supplied output paths. Returns property mappings, assumptions, and unresolved design questions; never weakens requirements to obtain a pass."
-model = "gpt-5.6-sol"
+model = "gpt-6-sol"
 model_reasoning_effort = "xhigh"
 sandbox_mode = "workspace-write"
 developer_instructions = """

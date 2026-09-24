@@ -12,6 +12,13 @@ on:
 
 permissions: {}
 
+# One run per PR: a new push cancels the superseded run. Dispatched runs fall
+# back to the run ID, so they never cancel, and are never cancelled by, the
+# pull_request run for the same PR.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   native:
     name: Native formal checks (${{ matrix.os }})

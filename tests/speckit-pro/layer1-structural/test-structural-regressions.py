@@ -120,6 +120,8 @@ class StructuralRegressionTests(unittest.TestCase):
 class CodexAgentRegressionTests(unittest.TestCase):
     def test_codex_agent_validator_rejects_missing_native_command_lifecycle_clause(self) -> None:
         for role in agents.CODEX_AGENT_PROFILES:
+            if role in agents.NATIVE_COMMAND_LIFECYCLE_EXEMPT_ROLES:
+                continue
             with self.subTest(role=role), tempfile.TemporaryDirectory() as temporary:
                 target = Path(temporary) / "codex-agents"
                 shutil.copytree(agents.CODEX_AGENTS_DIR, target)
@@ -142,6 +144,30 @@ class CodexAgentRegressionTests(unittest.TestCase):
                 )
                 self.assertIn(role, failures)
                 self.assertIn("native command lifecycle clauses missing", failures)
+
+    def test_codex_agent_validator_rejects_lifecycle_clause_in_no_command_roles(self) -> None:
+        donor = (agents.CODEX_AGENTS_DIR / "phase-executor.toml").read_text(encoding="utf-8")
+        paragraph = next(
+            line for line in donor.splitlines() if line.startswith("**Native command lifecycle:**")
+        )
+        closing = '"""\n'
+        for role in sorted(agents.NATIVE_COMMAND_LIFECYCLE_EXEMPT_ROLES):
+            with self.subTest(role=role), tempfile.TemporaryDirectory() as temporary:
+                target = Path(temporary) / "codex-agents"
+                shutil.copytree(agents.CODEX_AGENTS_DIR, target)
+                path = target / f"{role}.toml"
+                text = path.read_text(encoding="utf-8")
+                self.assertTrue(text.endswith("\n" + closing), f"{role} must end with its instructions block")
+                path.write_text(text[: -len(closing)] + "\n" + paragraph + "\n" + closing, encoding="utf-8")
+
+                result = run_codex_agent_validator(target)
+                self.assertFalse(result.wasSuccessful(), f"{role} lifecycle injection passed validation")
+                self.assertEqual([], result.errors, f"{role} injection raised instead of asserting")
+                failures = "\n".join(
+                    f"{test}\n{traceback}" for test, traceback in result.failures
+                )
+                self.assertIn(role, failures)
+                self.assertIn("native command lifecycle clauses present", failures)
 
     def test_codex_agent_validator_rejects_newly_covered_role_corruption(self) -> None:
         mutations = (

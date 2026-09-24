@@ -16,8 +16,8 @@
         "additionalProperties": false,
         "required": ["language", "slot", "signal", "tool", "install", "command"],
         "properties": {
-          "language": { "enum": ["python", "typescript"] },
-          "slot": { "enum": ["COMPLEXITY", "MUTATION", "DEPENDENCY_RULES"] },
+          "language": { "enum": ["python", "typescript", "go", "rust"] },
+          "slot": { "enum": ["COMPLEXITY", "MUTATION", "DEPENDENCY_RULES", "DEPENDENCY_AUDIT"] },
           "signal": {
             "type": "object",
             "additionalProperties": false,
@@ -43,7 +43,7 @@
           "command": {
             "type": "string",
             "minLength": 1,
-            "description": "Written into the slot. Placeholders allowed: {ceiling}, {complexity_ceiling}, {floor}, {survival_ceiling}, {rules_path}, {paths}, {paths_csv}, {plugin_root}. Thresholds and {rules_path} are substituted at discovery; {paths}, {paths_csv}, and {plugin_root} stay literal for the orchestrator to fill at run time."
+            "description": "Written into the slot. Placeholders allowed: {ceiling}, {complexity_ceiling}, {floor}, {survival_ceiling}, {rules_path}, {base_branch}, {paths}, {paths_csv}, {plugin_root}. Thresholds, {rules_path}, and {base_branch} (origin/HEAD's target, else origin/main) are substituted at discovery; {paths}, {paths_csv}, and {plugin_root} stay literal for the orchestrator to fill at run time."
           }
         }
       }
