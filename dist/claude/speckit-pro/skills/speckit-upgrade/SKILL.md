@@ -76,9 +76,11 @@ If the operator passed integration keys, use those. Otherwise: ask.
 ### 4. Snapshot the repo state for safety
 
 Create a timestamped backup directory outside the repo, copy
-`.specify/`, and copy any present `.claude/`, `.codex/`, and
-`.github/` directories into that backup using filesystem APIs or
-argv-only file operations. Report the backup path and copied entries.
+`.specify/`, and copy any present `.claude/`, `.codex/`,
+`.agents/skills/`, and `.github/` directories into that backup using
+filesystem APIs or argv-only file operations. Codex skills live in
+`.agents/skills/` (primary) or `.codex/skills/` (legacy); back up
+whichever exists, or both. Report the backup path and copied entries.
 
 Tell the operator: "Repo state snapshotted to `<backup-path>/`. If
 anything goes wrong, restore `.specify/` and any listed integration
@@ -138,9 +140,10 @@ operator wants).
 ### 6. Deduplicate legacy commands when both forms are present
 
 After upgrading, the new `.claude/skills/speckit-*/` and
-`.codex/skills/speckit-*/` directories may now exist alongside the
+`.agents/skills/speckit-*/` directories may now exist alongside the
 old `.claude/commands/speckit.*.md` and `.codex/prompts/speckit.*.md`
-files (if the prior install was in legacy mode).
+files (if the prior install was in legacy mode). A repo may also
+carry Codex skills in the legacy `.codex/skills/speckit-*/` location.
 
 Use filesystem glob checks to detect legacy `.claude/commands/`
 entries and current `.claude/skills/` entries.
@@ -162,7 +165,9 @@ not any commands without the `speckit.` prefix.
 Do the symmetric check for Codex:
 
 Use filesystem glob checks to detect legacy `.codex/prompts/`
-entries and current `.codex/skills/` entries.
+entries and current Codex skills entries. Check both skills paths:
+`.agents/skills/speckit-*/` (primary) and `.codex/skills/speckit-*/`
+(legacy). Either one counts as the skills form.
 
 ### 7. Verify
 

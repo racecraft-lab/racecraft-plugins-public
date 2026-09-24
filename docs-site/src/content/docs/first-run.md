@@ -36,11 +36,11 @@ artifacts to live.
 | Current branch | `git rev-parse --abbrev-ref HEAD` | A feature branch or worktree branch | Inspect branch state before scaffolding or running autopilot. |
 | Clean starting point | `git status --short` | No unrelated changes | Record unrelated work before starting so the tutorial artifacts remain reviewable. |
 
-For a new Codex Spec Kit project, current local CLI evidence supports this
-skills-mode initialization form:
+For a new Codex Spec Kit project, initialize the Codex integration. Skills
+mode is the default and writes the skills to `.agents/skills/speckit-*/`:
 
 ```bash
-specify init --here --integration codex --integration-options="--skills" --script sh
+specify init --here --integration codex --script sh
 ```
 
 Use the [Codex install guide](/racecraft-plugins-public/install/codex/) for the

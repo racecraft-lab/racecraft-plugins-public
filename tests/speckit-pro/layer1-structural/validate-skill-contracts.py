@@ -861,6 +861,54 @@ class ValidateCodexParity(unittest.TestCase):
                         with self.subTest(msg=f'{skill_name}: referenced file exists ({stripped})'):
                             self.assertTrue(resolved.is_file(), f'file not found: {resolved}')
 
+CODEX_SKILLS_PRIMARY = '.agents/skills/'
+CODEX_SKILLS_LEGACY = '.codex/skills/'
+
+
+def _mirrors(skill: str) -> tuple[tuple[str, str], ...]:
+    return tuple(
+        (f'{surface}/{skill}', (PLUGIN_ROOT / surface / skill / 'SKILL.md').read_text(encoding='utf-8'))
+        for surface in ('skills', 'codex-skills')
+    )
+
+
+def _step(text: str, start: str, end: str) -> str:
+    return ' '.join(text.split(start, 1)[1].split(end, 1)[0].split())
+
+
+class ValidateCodexSkillsDualPath(unittest.TestCase):
+    """Codex skills live in .agents/skills (primary) or .codex/skills (legacy)."""
+
+    def test_install_mirrors_name_agents_skills_as_primary(self) -> None:
+        for label, text in _mirrors('speckit-install'):
+            with self.subTest(mirror=label):
+                self.assertIn(f'{CODEX_SKILLS_PRIMARY}speckit-*/', text)
+
+    def test_legacy_codex_skills_path_is_always_labelled_legacy(self) -> None:
+        for skill in ('speckit-install', 'speckit-upgrade'):
+            for label, text in _mirrors(skill):
+                for paragraph in text.split('\n\n'):
+                    if CODEX_SKILLS_LEGACY in paragraph:
+                        with self.subTest(mirror=label, paragraph=paragraph[:80]):
+                            self.assertIn('legacy', paragraph.lower())
+                            self.assertIn(CODEX_SKILLS_PRIMARY, paragraph)
+
+    def test_upgrade_snapshot_backs_up_both_codex_skills_paths(self) -> None:
+        for label, text in _mirrors('speckit-upgrade'):
+            snapshot = _step(text, '### 4. Snapshot', '### 5.')
+            with self.subTest(mirror=label):
+                for directory in ('`.specify/`', '`.claude/`', '`.codex/`', '`.agents/skills/`', '`.github/`'):
+                    self.assertIn(directory, snapshot)
+                self.assertRegex(snapshot, r'`\.agents/skills/` \(primary\) or `\.codex/skills/` \(legacy\); back up whichever exists')
+
+    def test_upgrade_dedupe_detects_both_codex_skills_paths(self) -> None:
+        for label, text in _mirrors('speckit-upgrade'):
+            dedupe = _step(text, '### 6. Deduplicate', '### 7.')
+            with self.subTest(mirror=label):
+                for path in ('`.codex/prompts/', '`.agents/skills/speckit-*/` (primary)', '`.codex/skills/speckit-*/`'):
+                    self.assertIn(path, dedupe)
+
+
 def main() -> int:
     suite = unittest.defaultTestLoader.loadTestsFromModule(sys.modules[__name__])
     return run_counted(suite, label="validate-skill-contracts")

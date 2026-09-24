@@ -87,6 +87,15 @@ class StackManagerTests(unittest.TestCase):
         self.assertEqual("explicit-gh", result["data"]["decision"]["selected_manager"])
         self.assertFalse(result["data"]["decision"]["gh_stack"]["skill_available"])
 
+    def test_codex_user_skill_roots_trust_primary_and_legacy_paths(self):
+        home = Path.home()
+        self.assertEqual(
+            (home / ".claude/skills", home / ".agents/skills", home / ".codex/skills"),
+            stack_manager.TRUSTED_SKILL_PARENTS,
+        )
+        self.assertIn(home / ".agents/skills/gh-stack/SKILL.md", self.original_skill_paths)
+        self.assertIn(home / ".codex/skills/gh-stack/SKILL.md", self.original_skill_paths)
+
     def test_tampered_skill_digest_falls_back(self):
         self.skill.write_text(self.skill.read_text() + "tampered\n")
         with patch.object(stack_manager, "probe", side_effect=self.probe):
