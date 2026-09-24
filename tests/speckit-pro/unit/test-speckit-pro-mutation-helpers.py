@@ -28,7 +28,12 @@ CONTRACT_DIR = FIXTURE_DIR / "contracts"
 REQUEST_SCHEMA = CONTRACT_DIR / "mutation-helper-request.schema.json"
 RESULT_SCHEMA = CONTRACT_DIR / "mutation-helper-result.schema.json"
 CODEX_AGENT_ROUTING_CASES = FIXTURE_DIR / "codex-agent-routing" / "cases.json"
-LOW_EFFORT_CODEX_AGENT_NAMES = frozenset({"codebase-analyst", "spec-context-analyst"})
+LUNA_CODEX_AGENT_EFFORTS = {
+    "codebase-analyst": "max",
+    "spec-context-analyst": "max",
+    "domain-researcher": "max",
+    "autopilot-fast-helper": "low",
+}
 
 
 class FakeWindowsKernel32:
@@ -450,7 +455,7 @@ def routing_optional_helper() -> str:
 def route_rendered_optional_helper_bytes() -> bytes:
     helper_source = (PLUGIN_ROOT / "codex-agents" / f"{routing_optional_helper()}.toml").read_text(encoding="utf-8")
     return helper_source.replace(
-        'model = "gpt-5.6-luna"\n',
+        'model = "gpt-6-luna"\n',
         'model = "gpt-5.3-codex-spark"\n',
         1,
     ).replace(
@@ -6666,7 +6671,7 @@ class MutationHelperTests(unittest.TestCase):
                 helper_id="install-codex-agents",
                 operation="install-codex-agents",
                 mode="dry_run",
-                inputs={"destination": ".codex/agents", "model": "gpt-5.6-sol"},
+                inputs={"destination": ".codex/agents", "model": "gpt-6-sol"},
             )
             old_cwd = Path.cwd()
             os.chdir(git_root)
@@ -6679,7 +6684,7 @@ class MutationHelperTests(unittest.TestCase):
         self.assert_response(response, "ok", 0)
         self.assertNotIn("routing", response["data"])
         self.assertEqual(response["data"]["agent_files"], list(install.CODEX_SOURCE_AGENT_TOML_NAMES))
-        self.assertEqual(response["data"]["model"], "gpt-5.6-sol")
+        self.assertEqual(response["data"]["model"], "gpt-6-sol")
         self.assertEqual(response["data"]["mutation"]["mutation_status"], "planned")
         self.assertEqual(
             len(response["data"]["mutation"]["planned_operations"]),
@@ -7020,7 +7025,7 @@ This line must not be copied.
             unrelated = destination / "user-owned-agent.toml"
             stale.write_text("stale\n", encoding="utf-8")
             unrelated.write_text("user owned\n", encoding="utf-8")
-            inputs = {"destination": ".codex/agents", "model": "gpt-5.6-sol"}
+            inputs = {"destination": ".codex/agents", "model": "gpt-6-sol"}
 
             completed, response, stderr_records = run_runner(
                 helper_request("install-codex-agents", inputs=inputs),
@@ -7079,7 +7084,7 @@ This line must not be copied.
             env = {"HOME": str(fake_home), "USERPROFILE": str(fake_home)}
 
             completed, response, stderr_records = run_runner(
-                helper_request("install-codex-agents", mode="apply", inputs={"model": "gpt-5.6-sol"}),
+                helper_request("install-codex-agents", mode="apply", inputs={"model": "gpt-6-sol"}),
                 cwd=git_root,
                 env_overrides=env,
             )
@@ -7092,12 +7097,14 @@ This line must not be copied.
             for source in sorted((PLUGIN_ROOT / "codex-agents").glob("*.toml")):
                 self.assertEqual((destination / source.name).read_bytes(), source.read_bytes())
                 installed_policy = tomllib.loads((destination / source.name).read_text(encoding="utf-8"))
-                if source.stem in LOW_EFFORT_CODEX_AGENT_NAMES:
-                    self.assertEqual(installed_policy.get("model"), "gpt-5.6-sol")
-                    self.assertEqual(installed_policy.get("model_reasoning_effort"), "low")
+                if source.stem in LUNA_CODEX_AGENT_EFFORTS:
+                    self.assertEqual(installed_policy.get("model"), "gpt-6-luna")
+                    self.assertEqual(installed_policy.get("model_reasoning_effort"), LUNA_CODEX_AGENT_EFFORTS[source.stem])
+                else:
+                    self.assertEqual(installed_policy.get("model"), "gpt-6-sol")
 
             completed, response, stderr_records = run_runner(
-                helper_request("install-codex-agents", mode="apply", inputs={"model": "gpt-5.6-sol"}),
+                helper_request("install-codex-agents", mode="apply", inputs={"model": "gpt-6-sol"}),
                 cwd=git_root,
                 env_overrides=env,
             )
@@ -7106,32 +7113,90 @@ This line must not be copied.
             self.assertEqual(response["data"]["mutation"]["mutation_status"], "no_op")
             self.assertFalse(response["data"]["restart_required"])
 
-    def test_install_codex_agents_applies_strict_gpt_5_4_destination_rewrite(self) -> None:
+    def test_install_codex_agents_applies_opt_in_astra_rewrite_to_sol_roles_only(self) -> None:
         tmp, git_root = self.temp_clean_git_repo()
         with tmp:
             completed, response, stderr_records = run_runner(
                 helper_request(
                     "install-codex-agents",
                     mode="apply",
-                    inputs={"destination": ".codex/agents", "model": "gpt-5.4"},
+                    inputs={"destination": ".codex/agents", "model": "gpt-6-astra"},
                 ),
                 cwd=git_root,
             )
             self.assertEqual(completed.returncode, 0)
             self.assertEqual(stderr_records, [])
             self.assert_response(response, "ok", 0)
+            self.assertEqual(response["data"]["model"], "gpt-6-astra")
             destination = (git_root / ".codex" / "agents").resolve()
-            helper = (destination / "autopilot-fast-helper.toml").read_text(encoding="utf-8")
-            self.assertIn('model = "gpt-5.6-luna"', helper)
-            self.assertIn('model_reasoning_effort = "low"', helper)
             for target in sorted(destination.glob("*.toml")):
-                if target.name == "autopilot-fast-helper.toml":
-                    continue
                 source = PLUGIN_ROOT / "codex-agents" / target.name
-                self.assertIn('model = "gpt-5.4"', target.read_text(encoding="utf-8"), target.name)
-                if target.stem in LOW_EFFORT_CODEX_AGENT_NAMES:
-                    installed_policy = tomllib.loads(target.read_text(encoding="utf-8"))
-                    self.assertEqual(installed_policy.get("model_reasoning_effort"), "low")
+                installed_policy = tomllib.loads(target.read_text(encoding="utf-8"))
+                source_policy = tomllib.loads(source.read_text(encoding="utf-8"))
+                self.assertEqual(installed_policy.get("model_reasoning_effort"), source_policy.get("model_reasoning_effort"), target.name)
+                if target.stem in LUNA_CODEX_AGENT_EFFORTS:
+                    self.assertEqual(target.read_bytes(), source.read_bytes(), target.name)
+                    self.assertEqual(installed_policy.get("model"), "gpt-6-luna", target.name)
+                else:
+                    self.assertEqual(installed_policy.get("model"), "gpt-6-astra", target.name)
+
+    def test_install_codex_agents_luna_fallback_moves_luna_roles_to_sol_and_keeps_effort(self) -> None:
+        tmp, git_root = self.temp_clean_git_repo()
+        with tmp:
+            completed, response, stderr_records = run_runner(
+                helper_request(
+                    "install-codex-agents",
+                    mode="apply",
+                    inputs={"destination": ".codex/agents", "model": "gpt-6-sol", "luna_fallback": True},
+                ),
+                cwd=git_root,
+            )
+            self.assertEqual(completed.returncode, 0)
+            self.assertEqual(stderr_records, [])
+            self.assert_response(response, "ok", 0)
+            self.assertEqual(response["data"]["verification"]["status"], "verified")
+            destination = (git_root / ".codex" / "agents").resolve()
+            installed = sorted(destination.glob("*.toml"))
+            self.assertEqual([path.name for path in installed], sorted(path.name for path in (PLUGIN_ROOT / "codex-agents").glob("*.toml")))
+            for target in installed:
+                source = PLUGIN_ROOT / "codex-agents" / target.name
+                installed_policy = tomllib.loads(target.read_text(encoding="utf-8"))
+                if target.stem in LUNA_CODEX_AGENT_EFFORTS:
+                    self.assertEqual(installed_policy.get("model"), "gpt-6-sol", target.name)
+                    self.assertEqual(installed_policy.get("model_reasoning_effort"), LUNA_CODEX_AGENT_EFFORTS[target.stem], target.name)
+                    self.assertEqual(
+                        target.read_text(encoding="utf-8"),
+                        source.read_text(encoding="utf-8").replace('model = "gpt-6-luna"\n', 'model = "gpt-6-sol"\n', 1),
+                        target.name,
+                    )
+                else:
+                    self.assertEqual(target.read_bytes(), source.read_bytes(), target.name)
+
+    def test_install_codex_agents_rejects_gpt_5_models_and_invalid_luna_fallback_before_writes(self) -> None:
+        cases = (
+            ({"model": "gpt-5.6-sol"}, "unsupported_codex_model"),
+            ({"model": "gpt-5.5"}, "unsupported_codex_model"),
+            ({"model": "gpt-5.4"}, "unsupported_codex_model"),
+            ({"model": "gpt-6-sol", "luna_fallback": "true"}, "invalid_luna_fallback"),
+            ({"model": "gpt-6-luna", "luna_fallback": True}, "conflicting_luna_fallback"),
+        )
+        for extra_inputs, expected_code in cases:
+            with self.subTest(inputs=extra_inputs):
+                tmp, git_root = self.temp_clean_git_repo()
+                with tmp:
+                    destination = (git_root / ".codex" / "agents").resolve()
+                    completed, response, stderr_records = run_runner(
+                        helper_request(
+                            "install-codex-agents",
+                            mode="apply",
+                            inputs={"destination": ".codex/agents", **extra_inputs},
+                        ),
+                        cwd=git_root,
+                    )
+                    self.assertEqual(completed.returncode, 2)
+                    self.assert_response(response, "input_error", 2)
+                    self.assertEqual([diag["code"] for diag in stderr_records], [expected_code])
+                    self.assertFalse(destination.exists())
 
     def test_install_codex_agents_rejects_invalid_model_and_incomplete_source_before_writes(self) -> None:
         tmp, git_root = self.temp_clean_git_repo()
@@ -7159,7 +7224,7 @@ This line must not be copied.
                 helper_id="install-codex-agents",
                 operation="install-codex-agents",
                 mode="dry_run",
-                inputs={"destination": ".codex/agents", "model": "gpt-5.6-sol"},
+                inputs={"destination": ".codex/agents", "model": "gpt-6-sol"},
             )
             from speckit_pro_runner.helpers import install
             from speckit_pro_runner.helpers.registry import MUTATION_HELPERS
@@ -7174,7 +7239,7 @@ This line must not be copied.
             shutil.copytree(PLUGIN_ROOT / "codex-agents", fake_plugin / "codex-agents")
             analyze = fake_plugin / "codex-agents" / "analyze-executor.toml"
             analyze.write_text(
-                analyze.read_text(encoding="utf-8").replace('model = "gpt-5.6-sol"', "model = 'gpt-5.6-sol'", 1),
+                analyze.read_text(encoding="utf-8").replace('model = "gpt-6-sol"', "model = 'gpt-6-sol'", 1),
                 encoding="utf-8",
             )
             request = SimpleNamespace(
@@ -7182,7 +7247,7 @@ This line must not be copied.
                 helper_id="install-codex-agents",
                 operation="install-codex-agents",
                 mode="dry_run",
-                inputs={"destination": ".codex/agents", "model": "gpt-5.4"},
+                inputs={"destination": ".codex/agents", "model": "gpt-6-astra"},
             )
             from speckit_pro_runner.helpers import install
             from speckit_pro_runner.helpers.registry import MUTATION_HELPERS
@@ -7208,7 +7273,7 @@ This line must not be copied.
                 helper_id="install-codex-agents",
                 operation="install-codex-agents",
                 mode="apply",
-                inputs={"destination": ".codex/agents", "model": "gpt-5.6-sol"},
+                inputs={"destination": ".codex/agents", "model": "gpt-6-sol"},
             )
             from speckit_pro_runner.helpers import install
             from speckit_pro_runner.helpers.registry import MUTATION_HELPERS
@@ -7296,7 +7361,7 @@ This line must not be copied.
                 helper_id="install-codex-agents",
                 operation="install-codex-agents",
                 mode="apply",
-                inputs={"destination": ".codex/agents", "model": "gpt-5.6-sol"},
+                inputs={"destination": ".codex/agents", "model": "gpt-6-sol"},
             )
             from speckit_pro_runner.helpers import install
             from speckit_pro_runner.helpers.registry import MUTATION_HELPERS
@@ -7333,7 +7398,7 @@ This line must not be copied.
                 helper_request(
                     "install-codex-agents",
                     mode="apply",
-                    inputs={"destination": "agents", "model": "gpt-5.6-sol"},
+                    inputs={"destination": "agents", "model": "gpt-6-sol"},
                 ),
                 cwd=git_root,
             )
@@ -7352,7 +7417,7 @@ This line must not be copied.
                     helper_request(
                         "install-codex-agents",
                         mode="apply",
-                        inputs={"destination": ".codex/agents", "model": "gpt-5.6-sol"},
+                        inputs={"destination": ".codex/agents", "model": "gpt-6-sol"},
                     ),
                     cwd=git_root,
                 )
@@ -7377,7 +7442,7 @@ This line must not be copied.
                 helper_request(
                     "install-codex-agents",
                     mode="apply",
-                inputs={"destination": ".codex/agents", "model": "gpt-5.6-sol"},
+                inputs={"destination": ".codex/agents", "model": "gpt-6-sol"},
                 ),
                 cwd=git_root,
             )
@@ -7398,7 +7463,7 @@ This line must not be copied.
                 helper_id="install-codex-agents",
                 operation="install-codex-agents",
                 mode="apply",
-                inputs={"destination": ".codex/agents", "model": "gpt-5.6-sol"},
+                inputs={"destination": ".codex/agents", "model": "gpt-6-sol"},
             )
             from speckit_pro_runner.helpers import install
             from speckit_pro_runner.helpers.registry import MUTATION_HELPERS

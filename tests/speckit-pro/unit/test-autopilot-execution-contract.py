@@ -91,7 +91,7 @@ class ExecutionContractTests(unittest.TestCase):
     def test_paired_executors_preserve_per_task_results_in_batches(self):
         claude = (PLUGIN / "agents/implement-executor.md").read_text()
         codex = tomllib.loads((PLUGIN / "codex-agents/implement-executor.toml").read_text())
-        self.assertEqual(codex["model"], "gpt-5.6-sol")
+        self.assertEqual(codex["model"], "gpt-6-sol")
         self.assertEqual(codex["model_reasoning_effort"], "xhigh")
         for text in (claude, codex["developer_instructions"]):
             for contract in ("up to four", "sequentially", "tdd_unit", "## Task Result: <TASK_ID>",

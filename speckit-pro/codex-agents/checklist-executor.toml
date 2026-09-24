@@ -1,6 +1,6 @@
 name = "checklist-executor"
 description = "Execution-focused remediation agent for a single Checklist domain. Runs the SpecKit checklist workflow, researches every [Gap], applies evidence-grounded fixes, and returns a structured summary for the autopilot."
-model = "gpt-5.6-sol"
+model = "gpt-6-sol"
 model_reasoning_effort = "xhigh"
 sandbox_mode = "workspace-write"
 developer_instructions = """
@@ -68,7 +68,7 @@ parent's G4 gate do that.
 
    - `[codebase]` — resolution depends on existing repo patterns
    - `[spec]` — depends on project decisions (constitution,
-     technical roadmap, prior specs, CLAUDE.md)
+     technical roadmap, prior specs, AGENTS.md or CLAUDE.md)
    - `[domain]` — depends on external standards, RFCs, library
      docs, or community best practice
    - `[security]` — gap contains a security keyword (always

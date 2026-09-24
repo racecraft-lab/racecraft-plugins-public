@@ -280,7 +280,7 @@ class AgentMaterializationTests(unittest.TestCase):
 
     def test_read_only_analyst_sources_materialize_their_live_route_settings(self) -> None:
         module = self.materializer()
-        for agent_name in ("codebase-analyst", "spec-context-analyst"):
+        for agent_name in ("codebase-analyst", "spec-context-analyst", "domain-researcher"):
             with self.subTest(agent=agent_name):
                 source_path = PLUGIN_ROOT / "codex-agents" / f"{agent_name}.toml"
                 source_bytes = source_path.read_bytes()
@@ -299,7 +299,7 @@ class AgentMaterializationTests(unittest.TestCase):
                         installed_policy.get("model"),
                         installed_policy.get("model_reasoning_effort"),
                     ),
-                    ("gpt-5.6-sol", "low", "gpt-5.6-sol", "low"),
+                    ("gpt-6-luna", "max", "gpt-6-luna", "max"),
                 )
                 self.assertEqual(result.destination_bytes, source_bytes)
 

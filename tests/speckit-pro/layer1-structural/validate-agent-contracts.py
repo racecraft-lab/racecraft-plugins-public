@@ -215,10 +215,11 @@ CODEX_AGENT_PROFILES = {
     if role['codex']['implementation'] == 'custom_agent'
 }
 validate_codex_agents_AGENTS = (*CODEX_REQUIRED_AGENT_NAMES, *CODEX_OPTIONAL_AGENT_NAMES)
-LOW_EFFORT_ANALYST_ROLES = frozenset({'codebase-analyst', 'spec-context-analyst'})
+CONSENSUS_ANALYST_ROLES = frozenset({'codebase-analyst', 'spec-context-analyst', 'domain-researcher'})
+NATIVE_COMMAND_LIFECYCLE_EXEMPT_ROLES = frozenset({'autopilot-fast-helper', 'consensus-synthesizer'})
 CC_ONLY_FIELDS = ('tools', 'disallowedTools', 'permissionMode', 'color', 'maxTurns', 'background', 'effort')
-validate_codex_agents_MODEL_RE = re.compile('^(gpt-5\\.6-sol|gpt-5\\.6-terra|gpt-5\\.6-luna|gpt-5\\.5|gpt-5\\.4|gpt-5\\.4-mini|gpt-5\\.3-codex|gpt-5\\.3-codex-spark)$')
-EFFORT_RE = re.compile('^(minimal|low|medium|high|xhigh)$')
+validate_codex_agents_MODEL_RE = re.compile('^(gpt-6-sol|gpt-6-luna|gpt-6-astra)$')
+EFFORT_RE = re.compile('^(minimal|low|medium|high|xhigh|max)$')
 SANDBOX_RE = re.compile('^(read-only|workspace-write)$')
 NATIVE_COMMAND_LIFECYCLE_CONTRACT = (
     'inspect the whole returned object, not only its',
@@ -290,11 +291,7 @@ class ValidateCodexAgents(unittest.TestCase):
             model_val = _extract_toml_string(content, 'model')
             with self.subTest(msg=f'{agent}: model is an officially documented Codex GPT model'):
                 self.assertRegex(model_val, validate_codex_agents_MODEL_RE, 'model must be an officially documented Codex GPT model')
-            if model_val == 'gpt-5.3-codex-spark':
-                with self.subTest(msg=f'{agent}: model_reasoning_effort field is absent (Spark does not support reasoning fields)'):
-                    self.assertNotIn('model_reasoning_effort = "', content)
-                effort_val = ''
-            elif agent == 'autopilot-fast-helper' or agent in LOW_EFFORT_ANALYST_ROLES:
+            if agent == 'autopilot-fast-helper':
                 with self.subTest(msg=f'{agent}: has low model_reasoning_effort field'):
                     self.assertIn('model_reasoning_effort = "low"', content)
                 effort_val = _extract_toml_string(content, 'model_reasoning_effort')
@@ -303,7 +300,7 @@ class ValidateCodexAgents(unittest.TestCase):
                     self.assertIn('model_reasoning_effort = "', content)
                 effort_val = _extract_toml_string(content, 'model_reasoning_effort')
                 with self.subTest(msg=f'{agent}: reasoning effort uses supported values'):
-                    self.assertRegex(effort_val, EFFORT_RE, 'reasoning effort must be minimal, low, medium, high, or xhigh')
+                    self.assertRegex(effort_val, EFFORT_RE, 'reasoning effort must be minimal, low, medium, high, xhigh, or max')
             with self.subTest(msg=f'{agent}: has sandbox_mode field'):
                 self.assertIn('sandbox_mode = "', content)
             sandbox_val = _extract_toml_string(content, 'sandbox_mode')
@@ -316,13 +313,21 @@ class ValidateCodexAgents(unittest.TestCase):
             instructions = _extract_developer_instructions(content)
             with self.subTest(msg=f'{agent}: developer_instructions body is non-empty'):
                 self.assertTrue(validate_codex_agents__nonblank(instructions), 'developer_instructions block is empty')
-            with self.subTest(msg=f'{agent}: drains native command handles before dependent work or return'):
-                normalized_instructions = ' '.join(instructions.split())
-                missing = [
-                    phrase for phrase in NATIVE_COMMAND_LIFECYCLE_CONTRACT
-                    if phrase not in normalized_instructions
-                ]
-                self.assertFalse(missing, f'native command lifecycle clauses missing: {missing}')
+            normalized_instructions = ' '.join(instructions.split())
+            if agent in NATIVE_COMMAND_LIFECYCLE_EXEMPT_ROLES:
+                with self.subTest(msg=f'{agent}: omits the native command lifecycle contract (runs no commands)'):
+                    present = [
+                        phrase for phrase in NATIVE_COMMAND_LIFECYCLE_CONTRACT
+                        if phrase in normalized_instructions
+                    ]
+                    self.assertFalse(present, f'native command lifecycle clauses present in a no-command role: {present}')
+            else:
+                with self.subTest(msg=f'{agent}: drains native command handles before dependent work or return'):
+                    missing = [
+                        phrase for phrase in NATIVE_COMMAND_LIFECYCLE_CONTRACT
+                        if phrase not in normalized_instructions
+                    ]
+                    self.assertFalse(missing, f'native command lifecycle clauses missing: {missing}')
             with self.subTest(msg=f'{agent}: no Claude Code-only fields'):
                 bad = [field for field in CC_ONLY_FIELDS if _has_field_line(content, field)]
                 self.assertFalse(bad, f"Claude Code-only fields found: {' '.join(bad)}")
@@ -342,10 +347,10 @@ class ValidateCodexAgents(unittest.TestCase):
     def _check_profile(self, agent: str, model_val: str, effort_val: str, sandbox_val: str, instructions: str) -> None:
         if agent == 'autopilot-fast-helper':
             with self.subTest(msg='autopilot-fast-helper: uses Luna low-effort read-only advisory profile'):
-                self.assertTrue(model_val == 'gpt-5.6-luna' and effort_val == 'low' and (sandbox_val == 'read-only'), f'expected gpt-5.6-luna / low / read-only, got {model_val} / {effort_val} / {sandbox_val}')
+                self.assertTrue(model_val == 'gpt-6-luna' and effort_val == 'low' and (sandbox_val == 'read-only'), f'expected gpt-6-luna / low / read-only, got {model_val} / {effort_val} / {sandbox_val}')
         elif agent == 'clarify-executor':
-            with self.subTest(msg='clarify-executor: uses xhigh GPT-5.6 Sol read-only question-prep profile'):
-                self.assertTrue(model_val == 'gpt-5.6-sol' and effort_val == 'xhigh' and (sandbox_val == 'read-only'), f'expected gpt-5.6-sol / xhigh / read-only, got {model_val} / {effort_val} / {sandbox_val}')
+            with self.subTest(msg='clarify-executor: uses xhigh GPT-6 Sol read-only question-prep profile'):
+                self.assertTrue(model_val == 'gpt-6-sol' and effort_val == 'xhigh' and (sandbox_val == 'read-only'), f'expected gpt-6-sol / xhigh / read-only, got {model_val} / {effort_val} / {sandbox_val}')
             with self.subTest(msg='clarify-executor: returns questions to parent'):
                 self.assertIn('## Clarify Question Set', instructions)
             with self.subTest(msg='clarify-executor: does not claim to be the user'):
@@ -353,17 +358,17 @@ class ValidateCodexAgents(unittest.TestCase):
             with self.subTest(msg='clarify-executor: does not invoke interactive clarify skill'):
                 self.assertNotIn('Run `$speckit-clarify`', instructions)
         elif agent in ('phase-executor', 'checklist-executor', 'analyze-executor', 'formal-model-author'):
-            with self.subTest(msg=f'{agent}: uses xhigh GPT-5.6 Sol executor profile'):
-                self.assertTrue(model_val == 'gpt-5.6-sol' and effort_val == 'xhigh' and (sandbox_val == 'workspace-write'), f'expected gpt-5.6-sol / xhigh / workspace-write, got {model_val} / {effort_val} / {sandbox_val}')
+            with self.subTest(msg=f'{agent}: uses xhigh GPT-6 Sol executor profile'):
+                self.assertTrue(model_val == 'gpt-6-sol' and effort_val == 'xhigh' and (sandbox_val == 'workspace-write'), f'expected gpt-6-sol / xhigh / workspace-write, got {model_val} / {effort_val} / {sandbox_val}')
         elif agent == 'implement-executor':
-            with self.subTest(msg='implement-executor: uses xhigh GPT-5.6 Sol TDD profile'):
-                self.assertTrue(model_val == 'gpt-5.6-sol' and effort_val == 'xhigh' and (sandbox_val == 'workspace-write'), f'expected gpt-5.6-sol / xhigh / workspace-write, got {model_val} / {effort_val} / {sandbox_val}')
-        elif agent in ('codebase-analyst', 'spec-context-analyst'):
-            with self.subTest(msg=f'{agent}: uses low-effort GPT-5.6 Sol in a read-only sandbox'):
-                self.assertTrue(model_val == 'gpt-5.6-sol' and effort_val == 'low' and (sandbox_val == 'read-only'), f'expected gpt-5.6-sol / low / read-only, got {model_val} / {effort_val} / {sandbox_val}')
-        elif agent == 'domain-researcher':
-            with self.subTest(msg='domain-researcher: uses xhigh read-only GPT-5.6 Sol consensus profile'):
-                self.assertTrue(model_val == 'gpt-5.6-sol' and effort_val == 'xhigh' and (sandbox_val == 'read-only'), f'expected gpt-5.6-sol / xhigh / read-only, got {model_val} / {effort_val} / {sandbox_val}')
+            with self.subTest(msg='implement-executor: uses xhigh GPT-6 Sol TDD profile'):
+                self.assertTrue(model_val == 'gpt-6-sol' and effort_val == 'xhigh' and (sandbox_val == 'workspace-write'), f'expected gpt-6-sol / xhigh / workspace-write, got {model_val} / {effort_val} / {sandbox_val}')
+        elif agent in CONSENSUS_ANALYST_ROLES:
+            with self.subTest(msg=f'{agent}: uses max-effort GPT-6 Luna in a read-only sandbox'):
+                self.assertTrue(model_val == 'gpt-6-luna' and effort_val == 'max' and (sandbox_val == 'read-only'), f'expected gpt-6-luna / max / read-only, got {model_val} / {effort_val} / {sandbox_val}')
+        elif agent == 'consensus-synthesizer':
+            with self.subTest(msg='consensus-synthesizer: uses medium-effort GPT-6 Sol read-only synthesis profile'):
+                self.assertTrue(model_val == 'gpt-6-sol' and effort_val == 'medium' and (sandbox_val == 'read-only'), f'expected gpt-6-sol / medium / read-only, got {model_val} / {effort_val} / {sandbox_val}')
 
 AGENT_INSTRUCTION_DIRS = EXPECTED_AGENT_DIRS
 collect_agent_instruction_errors = collect_errors

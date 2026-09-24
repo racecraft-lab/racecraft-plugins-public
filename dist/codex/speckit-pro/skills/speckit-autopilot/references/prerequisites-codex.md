@@ -276,10 +276,10 @@ Read the workflow file's Prerequisites table. If already
 Before phase execution, validate that every bundled SpecKit Pro Codex custom
 agent is current on the selected official Codex runtime path. Run the promoted
 `install-codex-agents` runner helper in `dry_run` mode, using the same
-destination and request-level fallback that `$install` would use:
+destination, `model`, and `luna_fallback` choice that `$install` used:
 
 ```text
-'runner helper install-codex-agents' mode=dry_run inputs={destination?, model?}
+'runner helper install-codex-agents' mode=dry_run inputs={destination?, model?, luna_fallback?}
 ```
 
 The helper validates the bundled `codex-agents/*.toml` contract and compares

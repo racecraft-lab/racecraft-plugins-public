@@ -47,14 +47,20 @@ curate write-capable MCP servers OUT at the profile/config level (`enabled =
 false`, or `enabled_tools`/`disabled_tools`).
 
 The runner-owned policy defines each bundled agent's model and reasoning effort.
-An explicit route manifest materializes its selected model-and-effort tuple. The optional
-`autopilot-fast-helper` remains pinned to `gpt-5.6-luna` at low effort for tiny
-advisory text-only prep, never for SDD reasoning.
+An explicit route manifest materializes its selected model-and-effort tuple.
+Nine bundled agents default to `gpt-6-sol`. The three consensus analysts
+(`codebase-analyst`, `spec-context-analyst`, `domain-researcher`) run on
+`gpt-6-luna` at max effort. The optional `autopilot-fast-helper` runs on
+`gpt-6-luna` at low effort for tiny advisory text-only prep, never for SDD
+reasoning.
 
-If `gpt-5.6-sol` is not available in the current Codex environment, set the
-installer's `model` input to `gpt-5.5` or `gpt-5.4` (or set
-`SPECKIT_CODEX_MODEL` to the selected fallback); the installer rewrites only
-destination copies.
+The installer's `model` input (or `SPECKIT_CODEX_MODEL`) sets the model for
+the `gpt-6-sol` agents: `gpt-6-sol` (default), `gpt-6-luna`, or the opt-in
+`gpt-6-astra`. GPT-5 models are not accepted. In Enterprise and Edu
+workspaces, an administrator must enable GPT-6 Sol and GPT-6 Luna before
+members can use them. When `gpt-6-luna` is not available, set
+`luna_fallback: true`: the four Luna agents then install on `gpt-6-sol` and
+keep their reasoning effort. The installer rewrites only destination copies.
 
 ## Plugin Refresh and Route-aware Modes
 
@@ -103,10 +109,12 @@ Resolve all paths before mutating anything:
 3. Resolve the destination directory:
    - default: `~/.codex/agents/`
    - explicit project scope: `.codex/agents/` in the current project
-4. Resolve the request-level fallback model for pinned bundled agents:
-   - default: `gpt-5.6-sol`
-   - fallback: `gpt-5.5` or `gpt-5.4` via the installer `model` input or
-     `SPECKIT_CODEX_MODEL`
+4. Resolve the request-level model for the `gpt-6-sol` agents:
+   - default: `gpt-6-sol`
+   - opt-in: `gpt-6-astra` or `gpt-6-luna` via the installer `model` input
+     or `SPECKIT_CODEX_MODEL`
+   - Luna fallback: `luna_fallback: true` only when the user reports that
+     `gpt-6-luna` is unavailable
 
 Do not infer a Claude path from a vague request. If the user says only
 "install the agents", use `~/.codex/agents/`.
@@ -126,14 +134,16 @@ If any required file is missing, stop immediately. Do not partially install.
 Use the deterministic installed-runtime helper for `install-codex-agents`
 with the selected destination. Run it first in `dry_run` mode, then in
 `apply` mode after the plan matches the requested destination and model
-override. Use `gpt-5.5` or `gpt-5.4` only when fallback mode was requested.
+override. Use a non-default model or the Luna fallback only when requested.
 
 For static compatibility mode, omit `route_policy_manifest`. The structured
 request inputs are:
 
 - `destination`: omit for `~/.codex/agents/`, or set to `.codex/agents/` for
   current-project scope
-- `model`: `gpt-5.6-sol`, `gpt-5.5`, or `gpt-5.4`
+- `model`: `gpt-6-sol` (default), `gpt-6-luna`, or `gpt-6-astra`
+- `luna_fallback`: optional boolean; `true` installs the Luna agents on
+  `gpt-6-sol`. It cannot be combined with `model: gpt-6-luna`.
 
 For route-aware mode, use only an explicit trusted manifest path:
 
@@ -150,9 +160,11 @@ The helper must be the only mechanism used for copying files. Do not
 re-implement the copy loop inline unless the helper itself is broken and
 you have already reported that failure.
 
-When fallback mode is requested, verify every destination copy whose bundled
-source model is `gpt-5.6-sol` uses the requested legacy model. The Luna helper
-remains unchanged, and all bundled source templates remain byte-identical.
+When a non-default model is requested, verify every destination copy whose
+bundled source model is `gpt-6-sol` uses the requested model. With the Luna
+fallback, verify every destination copy whose bundled source model is
+`gpt-6-luna` uses `gpt-6-sol` with its reasoning effort unchanged. All
+bundled source templates remain byte-identical.
 
 ### 4. Verify the installed destination
 
@@ -161,9 +173,10 @@ After the helper completes:
 1. Verify the destination directory exists.
 2. Verify every expected TOML file now exists in the destination.
 3. Verify the copied files are the same filenames as the bundled source set.
-4. For `gpt-5.6-sol`, verify every destination file is byte-identical to its
-   bundled source. For `gpt-5.5` or `gpt-5.4`, verify only bundled
-   `gpt-5.6-sol` assignments were rewritten.
+4. For the default `gpt-6-sol` without the Luna fallback, verify every
+   destination file is byte-identical to its bundled source. Otherwise,
+   verify only the bundled `model` assignments described above were
+   rewritten.
 5. Preserve any unrelated user files in the destination.
 6. Require the helper's verification status to be `verified` before reporting
    success.
