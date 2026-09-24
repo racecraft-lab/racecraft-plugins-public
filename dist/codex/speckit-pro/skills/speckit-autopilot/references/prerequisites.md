@@ -271,10 +271,11 @@ Read the workflow file's Prerequisites table. If already
    review items (KISS, YAGNI, SOLID), mark `Verified` —
    these are validated during implementation.
 3. Run every populated quality-gate slot from Step 0.11 with an
-   empty `{paths}` (only `DEPENDENCY_RULES` does real work here)
-   and record the baseline in the Quality Gates table
+   empty `{paths}` (only `DEPENDENCY_RULES` and the advisory
+   `DEPENDENCY_AUDIT` do real work here) and record the baseline
+   in the Quality Gates table
 4. Update the workflow file's table with results and baselines
-5. If any check or populated gate fails, STOP — do not proceed
+5. If any check or populated blocking gate fails, STOP — do not proceed
    to Phase 1
 
 ## Step 0.10: Implementation Agent Detection
@@ -330,9 +331,10 @@ across context compactions. Pass them to every subagent.
 
 ### Quality-gate slots
 
-The same result carries three more slots, `COMPLEXITY`,
-`MUTATION`, and `DEPENDENCY_RULES`, plus a `gates` object that
-describes each one. The runner fills them from the shipped
+The same result carries four more slots, `COMPLEXITY`,
+`MUTATION`, `DEPENDENCY_RULES`, and the advisory
+`DEPENDENCY_AUDIT`, plus a `gates` object that describes each
+one. The runner fills them from the shipped
 discovery table (`speckit_pro_runner/gate_discovery_table.json`),
 consulting `.specify/gate-discovery.json` first when that
 override validates. An override row may only re-point a shipped
@@ -356,7 +358,7 @@ Run `/speckit-pro:speckit-coach quality gates` to create it. Agents never edit t
 ```
 
 With the file missing, the slot commands still show the shipped
-defaults (complexity 8, CRAP 30, mutation-score floor 60) so the
+defaults (complexity 10, CRAP 30, mutation-score floor 60) so the
 operator can see what would run; they are not authoritative and
 do not unblock G0.
 
@@ -378,6 +380,16 @@ filled at every run:
   reads a second space-separated path as a config file. The empty
   rule for `{paths}` applies unchanged.
 
+`{base_branch}` is already filled at discovery with the result's
+`base_branch.value`: the target of `origin/HEAD`, else
+`origin/main`. The cosmic-ray row feeds it to `cr-filter-git`
+through `--config -`, because that filter has no branch flag and
+otherwise diffs against `master`. The StrykerJS rows end with
+`mutation-score.py`, which reads `reports/mutation/mutation.json`
+and exits 1 below the floor and 2 when the report is missing or
+holds no valid mutants, since Stryker itself never fails on its
+default thresholds.
+
 **G0 is a measurement, never a vacuous pass.** There is no diff
 yet, so each slot records one of these in the `G0 baseline`
 column:
@@ -395,17 +407,28 @@ column:
   run at G0.
 - `DEPENDENCY_RULES`: a real run against the whole graph. Any
   failure blocks G0.
+- `DEPENDENCY_AUDIT`: a real run when its tool is present,
+  recorded as `pass`, `fail (advisory)`, or `not installed
+  (advisory)`.
 
-**A populated slot that fails blocks** at every phase-group
-verification and at final verification, and at G0 for
-`DEPENDENCY_RULES` and for any exit 2. It is a red gate, not a
+**`DEPENDENCY_AUDIT` is advisory.** Its `gates` entry carries
+`advisory: true`: record the result, never block on it, never ask
+the missing-tool question for it, and never pass it `{paths}`. It
+blocks like `DEPENDENCY_RULES` only when the repository lists it in
+`.specify/quality-gates.json` `enforce`; the entry then has no
+`advisory` field.
+
+**A populated slot that fails blocks**, unless it is advisory, at
+every phase-group verification and at final verification, and at
+G0 for `DEPENDENCY_RULES`, an enforced `DEPENDENCY_AUDIT`, and any
+exit 2. It is a red gate, not a
 warning to note and move past. The final table shows the
 `COMPLEXITY` baseline next to the diff result so the delta is
 visible.
 
 **Missing tool, one question per tool per repository.** For each
-populated slot with `tool_present: false`, look for a recorded
-answer for that tool: first `skips` in `.specify/quality-gates.json`,
+populated slot with `tool_present: false` and no `advisory: true`,
+look for a recorded answer for that tool: first `skips` in `.specify/quality-gates.json`,
 then the workflow file's Quality Gates table, then (only while no
 `quality-gates.json` exists yet) a `skip (repo)` row for the same
 tool in any other `docs/ai/specs/.process/*-workflow.md`. If none
