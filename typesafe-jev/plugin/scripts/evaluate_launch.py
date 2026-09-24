@@ -29,6 +29,7 @@ from __future__ import annotations
 
 import json
 import os
+import shlex
 import sys
 
 KEY_DIRECTORY = os.path.join("~", ".config", "racecraft-jev")
@@ -36,7 +37,7 @@ INSTALLER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "install_ev
 SETUP_TEXT = (
     "Jev is not set up on this machine, so this server offers no tools.\n"
     "To enable the evaluate tool:\n"
-    f"1. Install the evaluate binary that matches this plugin: python3 {INSTALLER}\n"
+    f"1. Install the evaluate binary that matches this plugin: python3 {shlex.quote(INSTALLER)}\n"
     f"2. Put a TypeSafe key in {KEY_DIRECTORY}/typesafe.key, or an OpenRouter key in "
     f"{KEY_DIRECTORY}/openrouter.key, readable only by you (chmod 600).\n"
     "3. Reconnect this MCP server.\n"
@@ -52,10 +53,14 @@ def _say(message: str) -> None:
 
 
 def resolve_binary() -> str:
-    """Return the binary path: EVALUATE_BIN, else the installer's default."""
+    """Return the binary path: EVALUATE_BIN, else the installer's default.
+
+    A leading ~ in EVALUATE_BIN is expanded, as the installer does, so both
+    resolve the same file.
+    """
     explicit = os.environ.get("EVALUATE_BIN")
     if explicit:
-        return explicit
+        return os.path.expanduser(explicit)
     return os.path.join(os.path.expanduser("~"), ".local", "libexec", "racecraft-jev", "evaluate")
 
 

@@ -38,12 +38,12 @@ func (c credential) reveal() string { return string(c) }
 // MCP client means reconnecting it.
 func loadCredential(cfg Config) (credential, error) {
 	if cfg.KeyFile != "" {
-		return readKeyFile(cfg.KeyFile)
+		return readKeyFile(cfg.keyFileEnv(), cfg.KeyFile)
 	}
 	raw, ok := os.LookupEnv(cfg.Provider.APIKeyEnv)
 	if !ok || raw == "" {
-		return "", fmt.Errorf("%s: no credential; set %s, or point JEV_API_KEY_FILE at a private key file",
-			cfg.Provider.Name, cfg.Provider.APIKeyEnv)
+		return "", fmt.Errorf("%s: no credential; set %s, or point %s at a private key file",
+			cfg.Provider.Name, cfg.Provider.APIKeyEnv, cfg.keyFileEnv())
 	}
 	key, err := parseKey(raw)
 	if err != nil {
@@ -54,8 +54,9 @@ func loadCredential(cfg Config) (credential, error) {
 
 // readKeyFile reads a key from a private file. Every check is made against the
 // opened file rather than the path, so a file swapped between the check and the
-// read cannot slip past.
-func readKeyFile(path string) (credential, error) {
+// read cannot slip past. envVar names the variable the path came from, such as
+// JEV_FALLBACK_API_KEY_FILE, so each diagnostic points at the setting to fix.
+func readKeyFile(envVar, path string) (credential, error) {
 	// O_NONBLOCK, because os.Open on a named pipe blocks until a writer
 	// appears, and it does so before any check below has run: the server would
 	// hang at startup with no message rather than refusing a file that is not
@@ -64,41 +65,41 @@ func readKeyFile(path string) (credential, error) {
 	f, err := os.OpenFile(path, os.O_RDONLY|syscall.O_NONBLOCK, 0)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			return "", fmt.Errorf("JEV_API_KEY_FILE %s does not exist", path)
+			return "", fmt.Errorf("%s %s does not exist", envVar, path)
 		}
 		if errors.Is(err, os.ErrPermission) {
-			return "", fmt.Errorf("JEV_API_KEY_FILE %s is not readable", path)
+			return "", fmt.Errorf("%s %s is not readable", envVar, path)
 		}
-		return "", fmt.Errorf("JEV_API_KEY_FILE %s: %w", path, err)
+		return "", fmt.Errorf("%s %s: %w", envVar, path, err)
 	}
 	defer f.Close()
 
 	info, err := f.Stat()
 	if err != nil {
-		return "", fmt.Errorf("JEV_API_KEY_FILE %s: %w", path, err)
+		return "", fmt.Errorf("%s %s: %w", envVar, path, err)
 	}
 	if !info.Mode().IsRegular() {
-		return "", fmt.Errorf("JEV_API_KEY_FILE %s is not a regular file", path)
+		return "", fmt.Errorf("%s %s is not a regular file", envVar, path)
 	}
 	// Protecting a plaintext file is not encryption; it only keeps other
 	// local accounts from reading it. Windows does not carry these bits.
 	if runtime.GOOS != "windows" && info.Mode().Perm()&0o077 != 0 {
-		return "", fmt.Errorf("JEV_API_KEY_FILE %s is readable by group or others (mode %04o); run: chmod 600 %s",
-			path, info.Mode().Perm(), path)
+		return "", fmt.Errorf("%s %s is readable by group or others (mode %04o); run: chmod 600 %s",
+			envVar, path, info.Mode().Perm(), path)
 	}
 	if info.Size() > maxKeyFileBytes {
-		return "", fmt.Errorf("JEV_API_KEY_FILE %s is %d bytes, over the %d byte limit; this is probably not a key file",
-			path, info.Size(), maxKeyFileBytes)
+		return "", fmt.Errorf("%s %s is %d bytes, over the %d byte limit; this is probably not a key file",
+			envVar, path, info.Size(), maxKeyFileBytes)
 	}
 
 	// One byte past the limit distinguishes "exactly at the limit" from
 	// "truncated", for a file that grew after the stat above.
 	b, err := io.ReadAll(io.LimitReader(f, maxKeyFileBytes+1))
 	if err != nil {
-		return "", fmt.Errorf("JEV_API_KEY_FILE %s: %w", path, err)
+		return "", fmt.Errorf("%s %s: %w", envVar, path, err)
 	}
 	if len(b) > maxKeyFileBytes {
-		return "", fmt.Errorf("JEV_API_KEY_FILE %s is over the %d byte limit", path, maxKeyFileBytes)
+		return "", fmt.Errorf("%s %s is over the %d byte limit", envVar, path, maxKeyFileBytes)
 	}
 
 	// A file written by an editor or a heredoc ends with a newline. That one
@@ -109,7 +110,7 @@ func readKeyFile(path string) (credential, error) {
 
 	key, err := parseKey(s)
 	if err != nil {
-		return "", fmt.Errorf("JEV_API_KEY_FILE %s %w", path, err)
+		return "", fmt.Errorf("%s %s %w", envVar, path, err)
 	}
 	return key, nil
 }

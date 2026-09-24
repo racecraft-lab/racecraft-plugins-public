@@ -190,9 +190,14 @@ type githubAsset struct {
 // published typesafe-jev-v* release, with its version. Drafts and pre-releases
 // are skipped, and so is every other component's release, wherever it falls in
 // the listing.
+//
+// A listing whose last page at the maxReleasePages cap is still full may hold
+// a newer release past the cap, so it is an error rather than a quiet pick
+// from the pages read.
 func fetchLatestRelease(ctx context.Context) (*githubRelease, semver, error) {
 	var best *githubRelease
 	var bestVersion semver
+	truncated := true
 	for page := 1; page <= maxReleasePages; page++ {
 		url := fmt.Sprintf("%s/repos/%s/releases?per_page=%d&page=%d", githubAPI, githubRepo, releasesPerPage, page)
 		body, err := download(ctx, url, maxReleaseListBytes)
@@ -217,8 +222,13 @@ func fetchLatestRelease(ctx context.Context) (*githubRelease, semver, error) {
 			}
 		}
 		if len(releases) < releasesPerPage {
+			truncated = false
 			break
 		}
+	}
+	if truncated {
+		return nil, semver{}, fmt.Errorf("the release listing fills all %d pages of %d releases, the updater's cap; a newer typesafe-jev release may be past it",
+			maxReleasePages, releasesPerPage)
 	}
 	if best == nil {
 		return nil, semver{}, errors.New("no published release has a typesafe-jev-v tag")
