@@ -4,8 +4,8 @@ Use this reference when autopilot's G0 stops on a missing or invalid
 `.specify/quality-gates.json`, or when a user asks what the complexity,
 mutation, and dependency gates should be set to. The file is the authority
 for the thresholds the `COMPLEXITY`, `MUTATION`, and `DEPENDENCY_RULES` slots
-run against, for permanent repository-wide skips, and for which advisory slots
-block. The operator owns it:
+run against, for permanent repository-wide skips, and for which opt-in slots
+run. The operator owns it:
 agents never edit it, and this flow ends with the operator confirming the
 proposed content before it is written.
 
@@ -26,7 +26,7 @@ proposed content before it is written.
 | `thresholds.crap` | Maximum CRAP score per changed function (number above 0). CRAP is `cc² × (1 − coverage)³ + cc`, so a well-tested complex function still passes. |
 | `thresholds.mutation_score_floor` | Minimum mutation score in percent. cosmic-ray receives `100 − floor` as its survival ceiling; for StrykerJS the slot chains `scripts/mutation-score.py`, which reads `reports/mutation/mutation.json` and fails below the floor, because Stryker's default `thresholds.break` is `null` and never fails a run. |
 | `skips` | Permanent skips keyed by slot with a reason. A skipped slot is `N/A` in every workflow without asking. Optional. |
-| `enforce` | Advisory slots this repository opts in to blocking on. Only `DEPENDENCY_AUDIT` is advisory today. Optional. |
+| `enforce` | Opt-in slots this repository runs. A listed slot runs and blocks; an unlisted one never runs. Only `DEPENDENCY_AUDIT` is opt-in today. Optional. |
 | `basis` | How the thresholds were chosen. Optional, but record it so the next reviewer knows whether the ceiling was measured or guessed. |
 
 The schema lives at `speckit_pro_runner/contracts/quality-gates.schema.json`;
@@ -47,7 +47,9 @@ gates nothing. Measure, do not guess:
    `pipx install` (or `uv tool install`), never a bare `pip install`, which
    PEP 668 refuses on externally managed interpreters. `coverage` is the
    exception: `coverage run -m pytest` must share pytest's interpreter, so
-   add it to the project's own dev dependencies instead. A Bun project passes
+   add it to the project's own dev dependencies instead (for example
+   `uv add --dev coverage`). The Python `COMPLEXITY` install hint names
+   both steps. A Bun project passes
    `--complexity-tool oxlint --coverage-lcov coverage/lcov.info` so the report
    joins the lcov that `bun test --coverage` writes; oxlint needs no TypeScript
    compiler API, so it also measures TypeScript 7 code.
@@ -101,19 +103,74 @@ does not emit radon's per-function JSON, so the CRAP join in `crap-score.py`
 cannot read it yet: use it to measure the ceiling by hand, record
 `basis.method: operator`, and raise an issue for the CRAP join.
 
-## The advisory dependency audit
+## The opt-in dependency audit
 
-`DEPENDENCY_AUDIT` checks dependencies for known vulnerabilities when the
-repository carries the matching signal: `pip-audit` for `requirements.txt` or
-`pyproject.toml`, `bun audit`, `pnpm audit`, or `npm audit` at level high for
-the matching lockfile, `govulncheck ./...` for `go.mod`, and `cargo audit` for
-`Cargo.lock`. It is advisory: autopilot records the result, never blocks on
-it, and never asks about a missing tool. To make it block, add
-`"enforce": ["DEPENDENCY_AUDIT"]` to this file; it then behaves like
-`DEPENDENCY_RULES`. These tools query an online advisory database, so an
-enforced audit also fails when the network does. Whether `bun audit` exits
-non-zero on a finding at `--audit-level=high` is not verified; check it
-before enforcing the slot on a Bun project.
+`DEPENDENCY_AUDIT` checks dependencies for known vulnerabilities. It never
+runs by default. Autopilot records it as `off` until this file carries
+`"enforce": ["DEPENDENCY_AUDIT"]`; it then runs and blocks like
+`DEPENDENCY_RULES`. Opt in only after reading the risk below.
+
+With the opt-in, the slot fills from the matching signal:
+
+| Signal | Command |
+|---|---|
+| `requirements.txt` | `pip-audit -r requirements.txt --disable-pip --no-deps` |
+| `pylock.toml` | `pip-audit --locked .` |
+| `bun.lock` | `env -i PATH="$PATH" HOME="$HOME" npm_config_userconfig=/dev/null bun audit --audit-level=high --registry=https://registry.npmjs.org/` |
+| `pnpm-lock.yaml` | the same prefix, then `pnpm audit --audit-level high --registry=https://registry.npmjs.org/` |
+| `package-lock.json` | the same prefix, then `npm audit --audit-level=high --registry=https://registry.npmjs.org/` |
+| `go.mod` | `govulncheck -db https://vuln.go.dev ./...` |
+| `Cargo.lock` | `cargo audit --url https://github.com/RustSec/advisory-db.git` |
+
+Why the commands look like this:
+
+- **npm, pnpm, and bun** read the checkout's `.npmrc` (bun also reads
+  `bunfig.toml`). That file can name any registry and expand `${NPM_TOKEN}`
+  or any other variable into the auth header it sends there. `--registry`
+  sends the audit to the public registry. `env -i` leaves only `PATH` and
+  `HOME`, so a `${VAR}` reference expands to nothing secret.
+  `npm_config_userconfig=/dev/null` stops npm and pnpm from loading the
+  tokens in your `~/.npmrc`. bun ignores that variable.
+- **pip-audit** by default installs the requirements, or the project, into
+  a temporary virtual environment with pip. That runs build backends from
+  the checkout and honors `--index-url` lines inside `requirements.txt`.
+  `--disable-pip --no-deps` audits exactly the pinned `==` lines against the
+  PyPI vulnerability service and installs nothing. An unpinned line fails
+  the run, and transitive dependencies are audited only when the file lists
+  them, as a `pip-compile` lock does. `--locked` reads a PEP 751
+  `pylock.toml` the same way. A `pyproject.toml` alone has no safe audit
+  form, so it no longer fills the slot.
+- **govulncheck** and **cargo audit** fetch public advisory databases.
+  The flags pin them, because a checkout's `.cargo/audit.toml` can
+  redirect cargo audit's database URL.
+
+**Residual risk.** Running a dependency audit still resolves the project's
+own dependency sources. What each tool can still reach:
+
+- npm can still fetch package metadata for a vulnerable scoped package
+  from a registry the checkout's `.npmrc` names for that scope. The
+  request carries no secret, but it reveals the dependency names and your
+  address to that host. A proxy setting in the checkout's `.npmrc`
+  applies too.
+- npm still reads the global config file (`$PREFIX/etc/npmrc`). bun still
+  reads `~/.npmrc` and `~/.bunfig.toml`, so any token stored there stays
+  loaded, though the pinned registry is the only host the audit contacts
+  in testing.
+- govulncheck loads packages through the `go` command, which downloads
+  modules from your own `GOPROXY`.
+- A checkout's `.cargo/audit.toml` can still turn off the database fetch
+  or point it at a local copy, which weakens the result without reaching
+  a credential.
+- `env -i` also drops proxy and certificate variables such as
+  `HTTPS_PROXY` and `NODE_EXTRA_CA_CERTS`. An audit behind a corporate
+  proxy may fail; set those in the tool's own config instead.
+- This file lives in the checkout. An untrusted repository can opt itself
+  in, so check `enforce` before you run autopilot on code you do not
+  trust.
+
+These tools query an online advisory database, so an opted-in audit also
+fails when the network does. bun 1.3 exits 1 on a finding at or above
+`--audit-level` and 0 on a clean tree.
 
 ## Record a permanent skip
 

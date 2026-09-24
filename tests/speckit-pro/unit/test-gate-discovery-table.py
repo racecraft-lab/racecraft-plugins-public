@@ -67,11 +67,41 @@ class GateDiscoveryTableTests(unittest.TestCase):
             expected = {(lang, slot) for lang in ("python", "typescript") for slot in gate_discovery.SLOTS}
             expected |= {(lang, "DEPENDENCY_AUDIT") for lang in gate_discovery.LANGUAGES}
             self.assertEqual(expected, covered)
-        with self.subTest(msg="advisory slots are known slots"):
-            self.assertTrue(set(gate_discovery.ADVISORY_SLOTS) <= set(gate_discovery.SLOTS))
+        with self.subTest(msg="opt-in slots are known slots"):
+            self.assertLessEqual(set(gate_discovery.OPT_IN_SLOTS), set(gate_discovery.SLOTS))
         with self.subTest(msg="no install hint uses a bare pip install (PEP 668)"):
             for row in shipped["rows"]:
-                self.assertNotRegex(row["install"], r"(^|&&\s*)pip install", row["tool"])
+                self.assertNotRegex(row["install"], r"(^|[;&|]\s*)pip3? install", row["tool"])
+        with self.subTest(msg="the Python CRAP row names an install for every probed tool"):
+            crap = next(row for row in shipped["rows"] if (row["language"], row["slot"]) == ("python", "COMPLEXITY"))
+            self.assertEqual(["radon", "coverage"], crap["probe"])
+            self.assertTrue(crap["install"].startswith("pipx install radon"), crap["install"])
+            # coverage must run under pytest's interpreter, so it joins the project's dev dependencies.
+            self.assertRegex(crap["install"], r"coverage.*project's dev dependencies")
+            self.assertNotIn("pipx install coverage", crap["install"])
+        audits = [row for row in shipped["rows"] if row["slot"] == "DEPENDENCY_AUDIT"]
+        with self.subTest(msg="npm-family audits pin the public registry and run without credentials"):
+            # A checkout's .npmrc or bunfig.toml can name any registry and expand ${ENV} into its token.
+            node = [row for row in audits if row["language"] == "typescript"]
+            self.assertEqual({"npm audit", "pnpm audit", "bun audit"}, {row["tool"] for row in node})
+            for row in node:
+                self.assertTrue(
+                    row["command"].startswith('env -i PATH="$PATH" HOME="$HOME" npm_config_userconfig=/dev/null '),
+                    row["command"],
+                )
+                self.assertTrue(row["command"].endswith(" --registry=https://registry.npmjs.org/"), row["command"])
+        with self.subTest(msg="pip-audit never resolves or builds through pip"):
+            # pip resolution installs into a venv, runs build backends, and honors index lines in the file.
+            python = [row for row in audits if row["language"] == "python"]
+            self.assertEqual(
+                {"pip-audit -r requirements.txt --disable-pip --no-deps", "pip-audit --locked ."},
+                {row["command"] for row in python},
+            )
+            self.assertNotIn("pyproject.toml", {row["signal"]["path"] for row in python})
+        with self.subTest(msg="go and rust audits pin their public advisory databases"):
+            by_language = {row["language"]: row["command"] for row in audits}
+            self.assertEqual("govulncheck -db https://vuln.go.dev ./...", by_language["go"])
+            self.assertEqual("cargo audit --url https://github.com/RustSec/advisory-db.git", by_language["rust"])
         with self.subTest(msg="Stryker rows enforce the mutation floor from the report"):
             stryker = [row for row in shipped["rows"] if row["slot"] == "MUTATION" and row["language"] == "typescript"]
             self.assertTrue(stryker)
@@ -185,9 +215,12 @@ class GateSlotResolutionTests(unittest.TestCase):
             with self.subTest(msg="unknown stack leaves every slot unconfigured"):
                 slots = self._resolve(root, "makefile")
                 self.assertEqual({"status": "unconfigured", "command": "N/A"}, slots["COMPLEXITY"])
-                self.assertEqual({"status": "unconfigured", "command": "N/A", "advisory": True}, slots["DEPENDENCY_AUDIT"])
+                self.assertEqual(
+                    {"status": "off", "command": "N/A", "reason": gate_discovery.OPT_IN_REASON}, slots["DEPENDENCY_AUDIT"]
+                )
             with self.subTest(msg="python with no signal files stays unconfigured"):
-                self.assertTrue(all(s["status"] == "unconfigured" for s in self._resolve(root, "python").values()))
+                slots = self._resolve(root, "python")
+                self.assertTrue(all(slots[s]["status"] == "unconfigured" for s in gate_discovery.SLOTS if s != "DEPENDENCY_AUDIT"))
             (root / "pyproject.toml").write_text("", encoding="utf-8")
             slots = self._resolve(root, "python", {"radon"})
             with self.subTest(msg="thresholds and rules_path substituted; paths and plugin_root left literal"):
@@ -200,18 +233,31 @@ class GateSlotResolutionTests(unittest.TestCase):
                 self.assertIs(False, slots["COMPLEXITY"]["tool_present"])
                 self.assertIs(True, self._resolve(root, "python", {"radon", "coverage"})["COMPLEXITY"]["tool_present"])
             with self.subTest(msg="populated slot carries tool, install, and signal"):
-                self.assertEqual({"populated", "pipx install radon", "pyproject.toml"},
-                                 {slots["COMPLEXITY"]["status"], slots["COMPLEXITY"]["install"], slots["COMPLEXITY"]["signal"]})
+                self.assertEqual(("populated", "pyproject.toml"), (slots["COMPLEXITY"]["status"], slots["COMPLEXITY"]["signal"]))
+                self.assertTrue(slots["COMPLEXITY"]["install"].startswith("pipx install radon"))
             with self.subTest(msg="mutation slot unconfigured without its signal"):
                 self.assertEqual("N/A", slots["MUTATION"]["command"])
-            with self.subTest(msg="the dependency audit is advisory unless enforced"):
-                self.assertEqual("pip-audit .", slots["DEPENDENCY_AUDIT"]["command"])
-                self.assertIs(True, slots["DEPENDENCY_AUDIT"]["advisory"])
-                self.assertNotIn("advisory", slots["COMPLEXITY"])
-                enforced = gate_discovery.resolve_slots(
-                    root, "python", file_exists=lambda p: p.is_file(), which=lambda n: False, enforce=["DEPENDENCY_AUDIT"]
+            (root / "requirements.txt").write_text("", encoding="utf-8")
+            with self.subTest(msg="the dependency audit never runs without opt-in, even with its signal and tool present"):
+                slots = self._resolve(root, "python", {"radon", "coverage", "pip-audit"})
+                self.assertEqual(
+                    {"status": "off", "command": "N/A", "reason": gate_discovery.OPT_IN_REASON}, slots["DEPENDENCY_AUDIT"]
                 )
-                self.assertNotIn("advisory", enforced["DEPENDENCY_AUDIT"])
+                self.assertIn(".specify/quality-gates.json", gate_discovery.OPT_IN_REASON)
+            with self.subTest(msg="enforce opts the dependency audit in as a blocking slot"):
+                enforced = gate_discovery.resolve_slots(
+                    root, "python", file_exists=lambda p: p.is_file(), which=lambda n: True, enforce=["DEPENDENCY_AUDIT"]
+                )["DEPENDENCY_AUDIT"]
+                self.assertEqual(("populated", "pip-audit -r requirements.txt --disable-pip --no-deps", True),
+                                 (enforced["status"], enforced["command"], enforced["tool_present"]))
+                self.assertNotIn("reason", enforced)
+            with self.subTest(msg="a repository skip wins over enforce"):
+                skipped = gate_discovery.resolve_slots(
+                    root, "python", file_exists=lambda p: p.is_file(), which=lambda n: True,
+                    enforce=["DEPENDENCY_AUDIT"], skips={"DEPENDENCY_AUDIT": {"reason": "offline CI"}},
+                )["DEPENDENCY_AUDIT"]
+                self.assertEqual({"status": "skipped", "command": "N/A", "reason": "offline CI"}, skipped)
+            (root / "requirements.txt").unlink()
             (root / "cosmic-ray.toml").write_text("", encoding="utf-8")
             with self.subTest(msg="the base branch is substituted into the cosmic-ray filter"):
                 self.assertIn("'origin/main' | cr-filter-git", self._resolve(root, "python")["MUTATION"]["command"])
@@ -251,6 +297,13 @@ class GateSlotResolutionTests(unittest.TestCase):
                 slots = self._resolve(root, "python")
                 self.assertEqual("lint-imports --config .importlinter", slots["DEPENDENCY_RULES"]["command"])
                 self.assertTrue(any("rows[0]" in p for p in slots["DEPENDENCY_RULES"]["override_ignored"]))
+            pip_audit = next(row for row in gate_discovery.load_table()["rows"] if row["command"] == "pip-audit --locked .")
+            override.write_text(json.dumps({"schema_version": "1.0", "rows": [{
+                **pip_audit, "signal": {"kind": "file", "path": "pyproject.toml"}}]}), encoding="utf-8")
+            with self.subTest(msg="an override cannot populate the dependency audit without opt-in"):
+                slots = self._resolve(root, "python", {"pip-audit"})
+                self.assertNotIn("override_ignored", slots["DEPENDENCY_AUDIT"])
+                self.assertEqual(("off", "N/A"), (slots["DEPENDENCY_AUDIT"]["status"], slots["DEPENDENCY_AUDIT"]["command"]))
             override.unlink()
             with self.subTest(msg="thresholds from quality-gates.json replace the shipped defaults"):
                 cmd = gate_discovery.resolve_slots(
@@ -268,10 +321,18 @@ class GateSlotResolutionTests(unittest.TestCase):
             with self.subTest(msg="go and rust fill only the dependency audit"):
                 (root / "go.mod").write_text("", encoding="utf-8")
                 (root / "Cargo.lock").write_text("", encoding="utf-8")
-                go = self._resolve(root, "go")
-                self.assertEqual("govulncheck ./...", go["DEPENDENCY_AUDIT"]["command"])
+                def opted_in(stack: str) -> dict:
+                    return gate_discovery.resolve_slots(
+                        root, stack, file_exists=lambda p: p.is_file(), which=lambda n: False, enforce=["DEPENDENCY_AUDIT"]
+                    )
+
+                go = opted_in("go")
+                self.assertEqual("govulncheck -db https://vuln.go.dev ./...", go["DEPENDENCY_AUDIT"]["command"])
                 self.assertEqual("unconfigured", go["COMPLEXITY"]["status"])
-                self.assertEqual("cargo audit", self._resolve(root, "rust")["DEPENDENCY_AUDIT"]["command"])
+                self.assertEqual(
+                    "cargo audit --url https://github.com/RustSec/advisory-db.git", opted_in("rust")["DEPENDENCY_AUDIT"]["command"]
+                )
+                self.assertEqual("off", self._resolve(root, "go")["DEPENDENCY_AUDIT"]["status"])
             with self.subTest(msg="nodejs maps to typescript rows"):
                 (root / "package.json").write_text("{}", encoding="utf-8")
                 self.assertIn("--language typescript", self._resolve(root, "nodejs")["COMPLEXITY"]["command"])

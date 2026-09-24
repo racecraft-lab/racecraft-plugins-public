@@ -93,7 +93,7 @@ Filled from `detect-commands` at Step 0.11. One row per slot; the operator answe
 | COMPLEXITY | <!-- populated / unconfigured --> | <!-- e.g., radon + coverage.py --> | <!-- recorded with `{plugin_root}` and `{paths}` literal --> | <!-- blank until asked --> | <!-- baseline: N checked, V over ceiling (whole tree; exit 2 blocks) --> | <!-- pass / fail / n/a: no source files changed --> |
 | MUTATION | | | | | <!-- deferred: runs on the spec diff at final verification --> | |
 | DEPENDENCY_RULES | | | | | <!-- real run: pass / fail --> | |
-| DEPENDENCY_AUDIT | <!-- populated (advisory unless enforced) / unconfigured --> | | | <!-- advisory: never asked --> | <!-- pass / fail (advisory) / not installed (advisory) --> | |
+| DEPENDENCY_AUDIT | <!-- off (not opted in) / populated (enforce) / unconfigured --> | | | <!-- off: never asked --> | <!-- off: not opted in / pass / fail --> | |
 
 ---
 

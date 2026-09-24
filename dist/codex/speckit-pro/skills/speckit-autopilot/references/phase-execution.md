@@ -212,7 +212,8 @@ it does NOT invoke a `/speckit-*` command.
    slot per the Step 0.11 rule: `COMPLEXITY` on the whole
    tracked source tree (a measurement; only exit 2 blocks),
    `MUTATION` as `deferred`, `DEPENDENCY_RULES` as a real
-   blocking run, `DEPENDENCY_AUDIT` as a real advisory run
+   blocking run, `DEPENDENCY_AUDIT` as a real blocking run only
+   when opted in
 3. Verify structural patterns documented in CLAUDE.md
    (e.g., source code organization, module boundaries)
 4. Record baselines in the workflow file's Prerequisites
@@ -2644,9 +2645,9 @@ Then every populated quality-gate slot on the whole diff:
     record `n/a: no source files changed`
   Any failure blocks. Record each result in the Quality Gates table
   next to its G0 baseline.
-Then Command(DEPENDENCY_AUDIT) when populated and its tool is present:
-  advisory, recorded but never blocking, unless listed in
-  `.specify/quality-gates.json` `enforce`.
+Then Command(DEPENDENCY_AUDIT) only when populated, which requires
+  `.specify/quality-gates.json` to list it in `enforce`; a failure
+  blocks. Otherwise it is `off` and never runs.
 ```
 
 When MUTATION is populated, run the hardener once per spec between the

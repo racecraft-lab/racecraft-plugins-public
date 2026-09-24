@@ -6,7 +6,7 @@
       "slot": "COMPLEXITY",
       "signal": { "kind": "file", "path": "pyproject.toml" },
       "tool": "radon + coverage.py (CRAP join)",
-      "install": "pipx install radon",
+      "install": "pipx install radon; add coverage to this project's dev dependencies (for example uv add --dev coverage), because coverage run -m pytest must use pytest's interpreter",
       "probe": ["radon", "coverage"],
       "command": "coverage run -m pytest -q && python3 {plugin_root}/scripts/crap-score.py --language python --ceiling {ceiling} --complexity-ceiling {complexity_ceiling} -- {paths}"
     },
@@ -107,16 +107,16 @@
       "tool": "pip-audit",
       "install": "pipx install pip-audit",
       "probe": ["pip-audit"],
-      "command": "pip-audit -r requirements.txt"
+      "command": "pip-audit -r requirements.txt --disable-pip --no-deps"
     },
     {
       "language": "python",
       "slot": "DEPENDENCY_AUDIT",
-      "signal": { "kind": "file", "path": "pyproject.toml" },
+      "signal": { "kind": "file", "path": "pylock.toml" },
       "tool": "pip-audit",
       "install": "pipx install pip-audit",
       "probe": ["pip-audit"],
-      "command": "pip-audit ."
+      "command": "pip-audit --locked ."
     },
     {
       "language": "typescript",
@@ -125,7 +125,7 @@
       "tool": "bun audit",
       "install": "npm install -g bun",
       "probe": ["bun"],
-      "command": "bun audit --audit-level=high"
+      "command": "env -i PATH=\"$PATH\" HOME=\"$HOME\" npm_config_userconfig=/dev/null bun audit --audit-level=high --registry=https://registry.npmjs.org/"
     },
     {
       "language": "typescript",
@@ -134,7 +134,7 @@
       "tool": "pnpm audit",
       "install": "corepack enable pnpm",
       "probe": ["pnpm"],
-      "command": "pnpm audit --audit-level high"
+      "command": "env -i PATH=\"$PATH\" HOME=\"$HOME\" npm_config_userconfig=/dev/null pnpm audit --audit-level high --registry=https://registry.npmjs.org/"
     },
     {
       "language": "typescript",
@@ -143,7 +143,7 @@
       "tool": "npm audit",
       "install": "corepack enable npm",
       "probe": ["npm"],
-      "command": "npm audit --audit-level=high"
+      "command": "env -i PATH=\"$PATH\" HOME=\"$HOME\" npm_config_userconfig=/dev/null npm audit --audit-level=high --registry=https://registry.npmjs.org/"
     },
     {
       "language": "go",
@@ -152,7 +152,7 @@
       "tool": "govulncheck",
       "install": "go install golang.org/x/vuln/cmd/govulncheck@latest",
       "probe": ["govulncheck"],
-      "command": "govulncheck ./..."
+      "command": "govulncheck -db https://vuln.go.dev ./..."
     },
     {
       "language": "rust",
@@ -161,7 +161,7 @@
       "tool": "cargo-audit",
       "install": "cargo install cargo-audit --locked",
       "probe": ["cargo-audit"],
-      "command": "cargo audit"
+      "command": "cargo audit --url https://github.com/RustSec/advisory-db.git"
     }
   ]
 }

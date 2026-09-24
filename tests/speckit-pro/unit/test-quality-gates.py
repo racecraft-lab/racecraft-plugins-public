@@ -58,7 +58,7 @@ class QualityGatesTests(unittest.TestCase):
             self.assertEqual(list(quality_gates.THRESHOLD_FIELDS), schema["properties"]["thresholds"]["required"])
             self.assertEqual(list(quality_gates.SLOTS), schema["properties"]["skips"]["propertyNames"]["enum"])
             self.assertEqual(list(quality_gates.BASIS_METHODS), schema["properties"]["basis"]["properties"]["method"]["enum"])
-            self.assertEqual(list(quality_gates.ADVISORY_SLOTS), schema["properties"]["enforce"]["items"]["enum"])
+            self.assertEqual(list(quality_gates.OPT_IN_SLOTS), schema["properties"]["enforce"]["items"]["enum"])
             self.assertEqual(
                 "^(" + "|".join(quality_gates.SLOTS) + ")$", next(iter(schema["properties"]["skips"]["patternProperties"]))
             )
@@ -66,12 +66,12 @@ class QualityGatesTests(unittest.TestCase):
             from speckit_pro_runner import gate_discovery
 
             self.assertEqual(gate_discovery.SLOTS, quality_gates.SLOTS)
-            self.assertEqual(gate_discovery.ADVISORY_SLOTS, quality_gates.ADVISORY_SLOTS)
+            self.assertEqual(gate_discovery.OPT_IN_SLOTS, quality_gates.OPT_IN_SLOTS)
             self.assertEqual(
                 str(quality_gates.SHIPPED_DEFAULTS["complexity"]), gate_discovery.DEFAULT_THRESHOLDS["complexity_ceiling"]
             )
             self.assertEqual(10, quality_gates.SHIPPED_DEFAULTS["complexity"])
-        with self.subTest(msg="an advisory slot may be enforced"):
+        with self.subTest(msg="an opt-in slot may be enforced"):
             self.assertEqual([], quality_gates.validate({**valid(), "enforce": ["DEPENDENCY_AUDIT"]}))
         with self.subTest(msg="a committed bobs-six basis still validates"):
             self.assertEqual([], quality_gates.validate(mutated("basis.method", "bobs-six")))

@@ -71,6 +71,19 @@ class MutationScoreTests(unittest.TestCase):
                 code, summary, stderr = run(root, "--floor", "60.5")
                 self.assertEqual(1, code)
                 self.assertIn("below the floor 60.5", stderr)
+            for detected, valid in ((11999, 20000), (14999, 25000)):
+                # 59.995 and 59.996 both round to 60 or near it at two decimals; the raw score decides.
+                with self.subTest(msg=f"an unrounded score of {detected}/{valid} below the floor fails"):
+                    write(report(*(["Killed"] * detected + ["Survived"] * (valid - detected))))
+                    code, summary, stderr = run(root, "--floor", "60")
+                    self.assertEqual(1, code, stderr)
+                    self.assertLess(summary["score"], 60)
+                    self.assertNotIn("score 60 ", stderr)
+            with self.subTest(msg="a score exactly at the floor passes despite float arithmetic"):
+                # 29 / 100 * 100 is 28.999999999999996 in binary floating point.
+                write(report(*(["Killed"] * 29 + ["Survived"] * 71)))
+                code, summary, stderr = run(root, "--floor", "29")
+                self.assertEqual((0, 29.0), (code, summary["score"]), stderr)
             with self.subTest(msg="an explicit report path is honored"):
                 other = root / "custom.json"
                 other.write_text(json.dumps(report("Killed")), encoding="utf-8")

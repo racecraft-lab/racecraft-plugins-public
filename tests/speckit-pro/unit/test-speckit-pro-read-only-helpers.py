@@ -3358,8 +3358,31 @@ class ReadOnlyHelperTests(unittest.TestCase):
             payload = self._detected(project_path)
             self.assertEqual({"value": "origin/trunk", "source": "origin_head"}, payload["base_branch"])
             self.assertIn("'origin/trunk' | cr-filter-git --config -", payload["commands"]["MUTATION"])
-            self.assertTrue(payload["gates"]["DEPENDENCY_AUDIT"]["advisory"])
-            self.assertEqual("pip-audit .", payload["commands"]["DEPENDENCY_AUDIT"])
+
+    def test_detect_commands_runs_the_dependency_audit_only_on_opt_in(self) -> None:
+        if self.helper_filter and self.helper_filter != "detect-commands":
+            self.skipTest("dependency audit case uses detect-commands")
+        with tempfile.TemporaryDirectory(prefix="read-only-helper-project-") as project:
+            project_path = Path(project).resolve()
+            (project_path / "package.json").write_text("{}", encoding="utf-8")
+            (project_path / "package-lock.json").write_text("{}", encoding="utf-8")
+            payload = self._detected(project_path)
+            self.assertEqual("off", payload["gates"]["DEPENDENCY_AUDIT"]["status"])
+            self.assertEqual("N/A", payload["commands"]["DEPENDENCY_AUDIT"])
+            (project_path / ".specify").mkdir()
+            (project_path / ".specify" / "quality-gates.json").write_text(
+                '{"schema_version":"1.0","thresholds":{"complexity":5,"crap":12,"mutation_score_floor":70},'
+                '"enforce":["DEPENDENCY_AUDIT"]}',
+                encoding="utf-8",
+            )
+            payload = self._detected(project_path)
+            self.assertEqual(["DEPENDENCY_AUDIT"], payload["quality_gates"]["enforce"])
+            self.assertEqual("populated", payload["gates"]["DEPENDENCY_AUDIT"]["status"])
+            self.assertEqual(
+                'env -i PATH="$PATH" HOME="$HOME" npm_config_userconfig=/dev/null '
+                "npm audit --audit-level=high --registry=https://registry.npmjs.org/",
+                payload["commands"]["DEPENDENCY_AUDIT"],
+            )
 
     def test_detect_commands_runner_discovery_is_deterministic(self) -> None:
         if self.helper_filter and self.helper_filter != "detect-commands":

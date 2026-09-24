@@ -11,7 +11,9 @@ The report follows the mutation-testing-report-schema that Stryker's ``json``
 reporter writes (default ``reports/mutation/mutation.json``). The score matches
 mutation-testing-metrics: detected (Killed + Timeout) over valid (detected +
 Survived + NoCoverage), times 100. Ignored, Pending, CompileError, and
-RuntimeError mutants are not valid and do not count.
+RuntimeError mutants are not valid and do not count. The floor check uses the
+exact ratio; the printed score is truncated to two decimals so it never shows
+a failing score as reaching the floor.
 
 Exit 0 when the score reaches the floor, 1 when it is below, 2 when the report
 is missing, unreadable, malformed, or holds no valid mutants. A report with
@@ -25,6 +27,7 @@ import argparse
 import json
 import math
 import sys
+from fractions import Fraction
 from pathlib import Path
 from typing import Any
 
@@ -83,11 +86,12 @@ def main(argv: list[str] | None = None) -> int:
     except ReportError as exc:
         print(f"mutation-score: {exc}; the mutation floor cannot pass without a scored report", file=sys.stderr)
         return 2
-    score = round(detected / valid * 100, 2)
-    summary = {"report": args.report, "floor": args.floor, "score": score, "detected": detected, "valid": valid}
+    score = Fraction(detected * 100, valid)
+    shown = math.floor(score * 100) / 100
+    summary = {"report": args.report, "floor": args.floor, "score": shown, "detected": detected, "valid": valid}
     print(json.dumps(summary, sort_keys=True))
-    if score < args.floor:
-        print(f"mutation-score: score {score:g} is below the floor {args.floor:g} ({detected} of {valid} valid mutants detected)", file=sys.stderr)
+    if score < Fraction(str(args.floor)):
+        print(f"mutation-score: score {shown:g} is below the floor {args.floor:g} ({detected} of {valid} valid mutants detected)", file=sys.stderr)
         return 1
     return 0
 
