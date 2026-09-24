@@ -199,7 +199,7 @@ currently uses neither.
 
 - **AC-10.1**: Post-implementation generates the PR writeup (always), its
   implementation-notes section populated from the ART-012 record.
-- **AC-10.2**: The annotated diff is emitted when Code Review recorded
+- **AC-10.2**: The annotated diff is emitted when Code Review records
   findings or the diff is large; the flowchart is emitted when the spec
   changed an operational flow.
 - **AC-10.3**: The existing draft PR is updated in place (body artifact index
