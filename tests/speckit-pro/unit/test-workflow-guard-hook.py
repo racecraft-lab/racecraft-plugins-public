@@ -79,11 +79,48 @@ class WorkflowGuardHookTests(unittest.TestCase):
             for command in ("CI=1 npm test", "sudo npm install -g x", "ls && npm ci", "echo $(npm bin)", "./node_modules/.bin/npm run x"):
                 with self.subTest(msg=f"a manager in executable position is an invocation: {command}"):
                     self.assertEqual("deny", run_hook("lockfile", shell(root, command))[1]["hookSpecificOutput"]["permissionDecision"])
+            for command in ('grep -rn "a\\|yarn build\\|b" src', "grep -E 'npm run|yarn build' notes.md", 'echo "ok && npm install"'):
+                with self.subTest(msg=f"an operator inside quotes does not start a segment: {command}"):
+                    self.assertEqual({}, run_hook("lockfile", shell(root, command))[1])
+            with self.subTest(msg="command substitution inside double quotes is still an invocation"):
+                self.assertEqual("deny", run_hook("lockfile", shell(root, 'echo "$(npm bin)"'))[1]["hookSpecificOutput"]["permissionDecision"])
             with self.subTest(msg="tools without a command string are ignored"):
                 self.assertEqual({}, run_hook("lockfile", {"hook_event_name": "PreToolUse", "tool_name": "Edit", "tool_input": {"file_path": "npm.md"}, "cwd": str(root)})[1])
             (root / "yarn.lock").write_text("", encoding="utf-8")
             with self.subTest(msg="two lockfile kinds are ambiguous, so no decision"):
                 self.assertEqual({}, run_hook("lockfile", shell(root, "npm install"))[1])
+        with tempfile.TemporaryDirectory() as tmp:
+            # A Bun session whose command targets a sibling pnpm project.
+            base = Path(tmp).resolve()
+            bun_repo = base / "bun-repo"
+            pnpm_repo = base / "pnpm-repo"
+            for repo, lockfile in ((bun_repo, "bun.lock"), (pnpm_repo, "pnpm-lock.yaml")):
+                (repo / ".git").mkdir(parents=True)
+                (repo / lockfile).write_text("", encoding="utf-8")
+            (pnpm_repo / "docs-site").mkdir()
+            (bun_repo / "sub").mkdir()
+            allowed = {
+                "a leading cd moves the lookup to the target project": f"cd {pnpm_repo} && pnpm install",
+                "a relative cd resolves from the session directory": "cd ../pnpm-repo && pnpm test",
+                "pnpm --dir reads the target directory's lockfile": f"pnpm --dir {pnpm_repo}/docs-site install --frozen-lockfile",
+                "pnpm --dir= form": f"pnpm --dir={pnpm_repo}/docs-site install",
+                "pnpm -C form": f"pnpm -C {pnpm_repo} test",
+                "npm --prefix into a directory without a lockfile is not a decision": f"npm audit --prefix {base} --audit-level=high",
+                "a quoted cd path": f'cd "{pnpm_repo}" && pnpm test',
+            }
+            for label, command in allowed.items():
+                with self.subTest(msg=label):
+                    self.assertEqual({}, run_hook("lockfile", shell(bun_repo, command))[1])
+            denied = {
+                "npm at a Bun root is still denied": "npm install",
+                "a directory flag pointing at a Bun project is denied": f"pnpm --dir {bun_repo}/sub install",
+                "cd into a Bun subdirectory keeps the Bun lockfile": "cd sub && npm install",
+                "a flag of another manager does not move the lookup": f"npm --dir {pnpm_repo} install",
+                "cd with extra arguments falls back to the session directory": f"cd {pnpm_repo} extra && pnpm install",
+            }
+            for label, command in denied.items():
+                with self.subTest(msg=label):
+                    self.assertEqual("deny", run_hook("lockfile", shell(bun_repo, command))[1]["hookSpecificOutput"]["permissionDecision"])
         with tempfile.TemporaryDirectory() as tmp:
             with self.subTest(msg="no lockfile means no decision"):
                 self.assertEqual({}, run_hook("lockfile", shell(Path(tmp), "npm install"))[1])
