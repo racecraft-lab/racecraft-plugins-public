@@ -62,10 +62,30 @@ class GateDiscoveryTableTests(unittest.TestCase):
         shipped = gate_discovery.load_table()
         with self.subTest(msg="shipped table validates"):
             self.assertEqual([], gate_discovery.validate_table(shipped))
-        with self.subTest(msg="shipped table covers every slot for both languages"):
+        with self.subTest(msg="shipped table covers every slot for Python and TypeScript, and the audit slot everywhere"):
             covered = {(row["language"], row["slot"]) for row in shipped["rows"]}
-            expected = {(lang, slot) for lang in gate_discovery.LANGUAGES for slot in gate_discovery.SLOTS}
+            expected = {(lang, slot) for lang in ("python", "typescript") for slot in gate_discovery.SLOTS}
+            expected |= {(lang, "DEPENDENCY_AUDIT") for lang in gate_discovery.LANGUAGES}
             self.assertEqual(expected, covered)
+        with self.subTest(msg="advisory slots are known slots"):
+            self.assertTrue(set(gate_discovery.ADVISORY_SLOTS) <= set(gate_discovery.SLOTS))
+        with self.subTest(msg="no install hint uses a bare pip install (PEP 668)"):
+            for row in shipped["rows"]:
+                self.assertNotRegex(row["install"], r"(^|&&\s*)pip install", row["tool"])
+        with self.subTest(msg="Stryker rows enforce the mutation floor from the report"):
+            stryker = [row for row in shipped["rows"] if row["slot"] == "MUTATION" and row["language"] == "typescript"]
+            self.assertTrue(stryker)
+            for row in stryker:
+                self.assertIn("--reporters json", row["command"])
+                self.assertTrue(row["command"].endswith(
+                    "&& python3 {plugin_root}/scripts/mutation-score.py --report reports/mutation/mutation.json --floor {floor}"
+                ), row["command"])
+        with self.subTest(msg="cr-filter-git receives the base branch through its config, never the master default"):
+            cosmic = next(row for row in shipped["rows"] if row["tool"] == "cosmic-ray")
+            self.assertIn(
+                "printf '[cosmic-ray.filters.git-filter]\\nbranch = \"%s\"\\n' '{base_branch}' | cr-filter-git --config - .cosmic-ray.sqlite",
+                cosmic["command"],
+            )
 
         schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
         row_props = schema["properties"]["rows"]["items"]["properties"]
@@ -96,7 +116,7 @@ class GateDiscoveryTableTests(unittest.TestCase):
             "missing field": mutated(install=None),
             "unknown field": mutated(priority=1),
             "empty tool": mutated(tool="  "),
-            "bad language": mutated(language="rust"),
+            "bad language": mutated(language="cobol"),
             "bad slot": mutated(slot="FORMAL_CHECK"),
             "signal not an object": mutated(signal="pyproject.toml"),
             "signal unknown kind": mutated(signal={"kind": "env", "path": "X"}),
@@ -163,15 +183,16 @@ class GateSlotResolutionTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             with self.subTest(msg="unknown stack leaves every slot unconfigured"):
-                slots = self._resolve(root, "rust")
+                slots = self._resolve(root, "makefile")
                 self.assertEqual({"status": "unconfigured", "command": "N/A"}, slots["COMPLEXITY"])
+                self.assertEqual({"status": "unconfigured", "command": "N/A", "advisory": True}, slots["DEPENDENCY_AUDIT"])
             with self.subTest(msg="python with no signal files stays unconfigured"):
                 self.assertTrue(all(s["status"] == "unconfigured" for s in self._resolve(root, "python").values()))
             (root / "pyproject.toml").write_text("", encoding="utf-8")
             slots = self._resolve(root, "python", {"radon"})
             with self.subTest(msg="thresholds and rules_path substituted; paths and plugin_root left literal"):
                 cmd = slots["COMPLEXITY"]["command"]
-                self.assertIn("--ceiling 30 --complexity-ceiling 8", cmd)
+                self.assertIn("--ceiling 30 --complexity-ceiling 10", cmd)
                 self.assertIn("{paths}", cmd)
                 self.assertIn("{plugin_root}/scripts/crap-score.py", cmd)
                 self.assertEqual("lint-imports --config pyproject.toml", slots["DEPENDENCY_RULES"]["command"])
@@ -179,10 +200,27 @@ class GateSlotResolutionTests(unittest.TestCase):
                 self.assertIs(False, slots["COMPLEXITY"]["tool_present"])
                 self.assertIs(True, self._resolve(root, "python", {"radon", "coverage"})["COMPLEXITY"]["tool_present"])
             with self.subTest(msg="populated slot carries tool, install, and signal"):
-                self.assertEqual({"populated", "pip install radon coverage", "pyproject.toml"},
+                self.assertEqual({"populated", "pipx install radon", "pyproject.toml"},
                                  {slots["COMPLEXITY"]["status"], slots["COMPLEXITY"]["install"], slots["COMPLEXITY"]["signal"]})
             with self.subTest(msg="mutation slot unconfigured without its signal"):
                 self.assertEqual("N/A", slots["MUTATION"]["command"])
+            with self.subTest(msg="the dependency audit is advisory unless enforced"):
+                self.assertEqual("pip-audit .", slots["DEPENDENCY_AUDIT"]["command"])
+                self.assertIs(True, slots["DEPENDENCY_AUDIT"]["advisory"])
+                self.assertNotIn("advisory", slots["COMPLEXITY"])
+                enforced = gate_discovery.resolve_slots(
+                    root, "python", file_exists=lambda p: p.is_file(), which=lambda n: False, enforce=["DEPENDENCY_AUDIT"]
+                )
+                self.assertNotIn("advisory", enforced["DEPENDENCY_AUDIT"])
+            (root / "cosmic-ray.toml").write_text("", encoding="utf-8")
+            with self.subTest(msg="the base branch is substituted into the cosmic-ray filter"):
+                self.assertIn("'origin/main' | cr-filter-git", self._resolve(root, "python")["MUTATION"]["command"])
+                cmd = gate_discovery.resolve_slots(
+                    root, "python", file_exists=lambda p: p.is_file(), which=lambda n: False, base_branch="origin/trunk"
+                )["MUTATION"]["command"]
+                self.assertIn("'origin/trunk' | cr-filter-git", cmd)
+                self.assertNotIn("{base_branch}", cmd)
+            (root / "cosmic-ray.toml").unlink()
             (root / ".importlinter").write_text("", encoding="utf-8")
             with self.subTest(msg="first matching row in file order wins"):
                 self.assertEqual("lint-imports --config .importlinter", self._resolve(root, "python")["DEPENDENCY_RULES"]["command"])
@@ -227,6 +265,13 @@ class GateSlotResolutionTests(unittest.TestCase):
                 )
                 self.assertEqual({"status": "skipped", "command": "N/A", "reason": "legacy tree"}, slots["COMPLEXITY"])
                 self.assertEqual("populated", slots["DEPENDENCY_RULES"]["status"])
+            with self.subTest(msg="go and rust fill only the dependency audit"):
+                (root / "go.mod").write_text("", encoding="utf-8")
+                (root / "Cargo.lock").write_text("", encoding="utf-8")
+                go = self._resolve(root, "go")
+                self.assertEqual("govulncheck ./...", go["DEPENDENCY_AUDIT"]["command"])
+                self.assertEqual("unconfigured", go["COMPLEXITY"]["status"])
+                self.assertEqual("cargo audit", self._resolve(root, "rust")["DEPENDENCY_AUDIT"]["command"])
             with self.subTest(msg="nodejs maps to typescript rows"):
                 (root / "package.json").write_text("{}", encoding="utf-8")
                 self.assertIn("--language typescript", self._resolve(root, "nodejs")["COMPLEXITY"]["command"])

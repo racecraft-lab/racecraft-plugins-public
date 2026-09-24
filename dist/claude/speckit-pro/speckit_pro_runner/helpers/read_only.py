@@ -20,7 +20,7 @@ from typing import Any, Callable, cast
 from ..agent_inventory import CLAUDE_REQUIRED_AGENT_NAMES
 from ..envelope import diagnostic, response
 from ..formal.selection import unique_object
-from ..gate_discovery import SLOTS as GATE_SLOTS, resolve_slots as resolve_gate_slots
+from ..gate_discovery import DEFAULT_BASE_BRANCH, SLOTS as GATE_SLOTS, resolve_slots as resolve_gate_slots
 from .. import quality_gates
 from ..runtime import detect_plugin_root
 
@@ -1709,6 +1709,62 @@ def local_node_bin_present(root: Path, name: str, repo_root: Path) -> bool:
         return False
 
 
+# A Python lint or type-check default is proposed only when the project
+# already carries that tool's config or dependency; no signal leaves N/A.
+_RUFF_DEPENDENCY_RE = re.compile(r"""(?m)(^|["'\s])ruff([<>=~!;\[\s"']|$)""")
+
+
+def python_quality_commands(root: Path, repo_root: Path) -> dict[str, str]:
+    pyproject = trusted_text(root / "pyproject.toml", repo_root) or ""
+    setup_cfg = trusted_text(root / "setup.cfg", repo_root) or ""
+    requirements = "\n".join(
+        trusted_text(root / name, repo_root) or ""
+        for name in ("requirements.txt", "requirements-dev.txt", "dev-requirements.txt")
+    )
+    found: dict[str, str] = {}
+    if (
+        any(trusted_file_exists(root / name, repo_root) for name in ("ruff.toml", ".ruff.toml"))
+        or re.search(r"(?m)^\[tool\.ruff[\].]", pyproject)
+        or _RUFF_DEPENDENCY_RE.search(pyproject)
+        or re.search(r"(?m)^ruff\b", requirements)
+    ):
+        found["LINT"] = "ruff check"
+    if (
+        any(trusted_file_exists(root / name, repo_root) for name in ("mypy.ini", ".mypy.ini"))
+        or re.search(r"(?m)^\[tool\.mypy[\].]", pyproject)
+        or re.search(r"(?m)^\[mypy[\]-]", setup_cfg)
+    ):
+        found["TYPECHECK"] = "mypy ."
+    return found
+
+
+_BASE_BRANCH_RE = re.compile(r"^origin/[A-Za-z0-9][A-Za-z0-9._/-]*$")
+
+
+def resolve_base_branch(root: Path) -> dict[str, str]:
+    """The remote default branch the mutation filter diffs against.
+
+    Read from origin/HEAD; anything unreadable or outside a conservative
+    ref-name alphabet (the value is substituted into a shell command) falls
+    back to origin/main, the orchestrator's own change base.
+    """
+    try:
+        completed = subprocess.run(
+            ["git", "-C", str(root), "symbolic-ref", "--quiet", "--short", "refs/remotes/origin/HEAD"],
+            text=True,
+            capture_output=True,
+            shell=False,
+            check=False,
+            timeout=SUBPROCESS_TIMEOUT_SECONDS,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        completed = None
+    value = completed.stdout.strip() if completed is not None and completed.returncode == 0 else ""
+    if _BASE_BRANCH_RE.match(value) and ".." not in value and not value.endswith((".lock", "/", ".")):
+        return {"value": value, "source": "origin_head"}
+    return {"value": DEFAULT_BASE_BRANCH, "source": "default"}
+
+
 def detect_commands(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
     root = resolve_input_path(inputs.get("repo_root") or ".", repo_root)
     commands = {
@@ -1761,11 +1817,11 @@ def detect_commands(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
     elif trusted_file_exists(root / "Cargo.toml", repo_root):
         stack = "rust"
         evidence = "Cargo.toml"
-        commands.update({"BUILD": "cargo build", "UNIT_TEST": "cargo test"})
+        commands.update({"BUILD": "cargo build", "LINT": "cargo clippy -- -D warnings", "UNIT_TEST": "cargo test"})
     elif trusted_file_exists(root / "go.mod", repo_root):
         stack = "go"
         evidence = "go.mod"
-        commands.update({"BUILD": "go build ./...", "UNIT_TEST": "go test ./..."})
+        commands.update({"BUILD": "go build ./...", "LINT": "go vet ./...", "UNIT_TEST": "go test ./..."})
     elif python_marker := next((marker for marker in PYTHON_ROOT_MARKERS if trusted_file_exists(root / marker, repo_root)), ""):
         stack = "python"
         evidence = python_marker
@@ -1785,6 +1841,10 @@ def detect_commands(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
             evidence = runner
             source = "test_runner_script"
             commands["UNIT_TEST"] = f"python3 {runner}"
+    if stack == "python":
+        for key, command in python_quality_commands(root, repo_root).items():
+            if commands[key] == "N/A":
+                commands[key] = command
 
     chain = [commands[key] for key in ("BUILD", "TYPECHECK", "LINT", "UNIT_TEST", "INTEGRATION_TEST") if commands[key] != "N/A"]
     if chain:
@@ -1801,6 +1861,7 @@ def detect_commands(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
         "status": "missing",
         "thresholds": None,
         "skips": {},
+        "enforce": [],
         "coach": "speckit-coach quality gates",
     }
     quality_text = trusted_text(root / quality_gates.FILE_PATH, repo_root)
@@ -1819,6 +1880,8 @@ def detect_commands(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
                 quality["status"] = "present"
                 quality["thresholds"] = quality_data["thresholds"]
                 quality["skips"] = quality_data.get("skips", {})
+                quality["enforce"] = quality_data.get("enforce", [])
+    base_branch = resolve_base_branch(root)
     gates = resolve_gate_slots(
         root,
         stack,
@@ -1826,6 +1889,8 @@ def detect_commands(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
         which=lambda name: bool(shutil.which(name)) or local_node_bin_present(root, name, repo_root),
         thresholds=quality_gates.substitutions(quality["thresholds"]) if quality["thresholds"] else None,
         skips=quality["skips"],
+        enforce=quality["enforce"],
+        base_branch=base_branch["value"],
     )
     for slot in GATE_SLOTS:
         commands[slot] = gates[slot]["command"]
@@ -1839,7 +1904,7 @@ def detect_commands(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
             "No packaging marker or tests/ runner script found. Supply commands from the "
             "project's own documentation instead of treating N/A as 'no checks exist'."
         )
-    return make_result(json_text({"stack": stack, "package_manager": package_manager, "commands": commands, "gates": gates, "quality_gates": quality, "plugin_root": plugin_root.as_posix() if plugin_root else "", "detection": detection}))
+    return make_result(json_text({"stack": stack, "package_manager": package_manager, "commands": commands, "gates": gates, "quality_gates": quality, "base_branch": base_branch, "plugin_root": plugin_root.as_posix() if plugin_root else "", "detection": detection}))
 
 
 def detect_presets(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:

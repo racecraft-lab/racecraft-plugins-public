@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "speckit-pro/quality-gates",
   "title": "Quality gate thresholds",
-  "description": "Repository-owned thresholds for the COMPLEXITY, MUTATION, and DEPENDENCY_RULES gate slots, kept at .specify/quality-gates.json. The operator writes it through the speckit-coach quality-gates flow; agents never edit it. Enforced locally by speckit_pro_runner/quality_gates.py (standard library); this file documents the same rules.",
+  "description": "Repository-owned thresholds for the COMPLEXITY, MUTATION, and DEPENDENCY_RULES gate slots, skips for any slot, and the advisory slots the repository enforces, kept at .specify/quality-gates.json. The operator writes it through the speckit-coach quality-gates flow; agents never edit it. Enforced locally by speckit_pro_runner/quality_gates.py (standard library); this file documents the same rules.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -48,11 +48,12 @@
         "enum": [
           "COMPLEXITY",
           "MUTATION",
-          "DEPENDENCY_RULES"
+          "DEPENDENCY_RULES",
+          "DEPENDENCY_AUDIT"
         ]
       },
       "patternProperties": {
-        "^(COMPLEXITY|MUTATION|DEPENDENCY_RULES)$": {
+        "^(COMPLEXITY|MUTATION|DEPENDENCY_RULES|DEPENDENCY_AUDIT)$": {
           "type": "object",
           "additionalProperties": false,
           "required": [
@@ -72,6 +73,16 @@
         }
       }
     },
+    "enforce": {
+      "type": "array",
+      "uniqueItems": true,
+      "description": "Advisory slots this repository opts in to blocking on. An advisory slot not listed here records its result and never blocks.",
+      "items": {
+        "enum": [
+          "DEPENDENCY_AUDIT"
+        ]
+      }
+    },
     "basis": {
       "type": "object",
       "additionalProperties": false,
@@ -82,6 +93,7 @@
         "method": {
           "enum": [
             "percentile-90",
+            "nist-235",
             "bobs-six",
             "shipped-default",
             "operator"

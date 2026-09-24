@@ -3307,10 +3307,59 @@ class ReadOnlyHelperTests(unittest.TestCase):
             payload = self._detected(project_path)
             self.assertEqual("invalid", payload["quality_gates"]["status"])
             self.assertTrue(payload["quality_gates"]["problems"])
-            self.assertIn("--ceiling 30 --complexity-ceiling 8", payload["commands"]["COMPLEXITY"])
+            self.assertIn("--ceiling 30 --complexity-ceiling 10", payload["commands"]["COMPLEXITY"])
         with tempfile.TemporaryDirectory(prefix="read-only-helper-project-") as project:
             payload = self._detected(Path(project).resolve())
             self.assertEqual({"N/A"}, {payload["commands"][slot] for slot in ("COMPLEXITY", "MUTATION", "DEPENDENCY_RULES")})
+
+    def test_detect_commands_fills_lint_and_typecheck_only_on_a_tool_signal(self) -> None:
+        if self.helper_filter and self.helper_filter != "detect-commands":
+            self.skipTest("lint default case uses detect-commands")
+        cases = (
+            ("no python signal", {"pyproject.toml": "[project]\nname = 'x'\n"}, "N/A", "N/A"),
+            ("ruff.toml", {"pyproject.toml": "", "ruff.toml": ""}, "ruff check", "N/A"),
+            ("tool.ruff and tool.mypy", {"pyproject.toml": "[tool.ruff]\nline-length = 100\n[tool.mypy]\nstrict = true\n"}, "ruff check", "mypy ."),
+            ("ruff dev dependency", {"pyproject.toml": "[dependency-groups]\ndev = [\"ruff>=0.6\"]\n"}, "ruff check", "N/A"),
+            ("requirements pin", {"requirements-dev.txt": "ruff==0.6.0\n", "requirements.txt": ""}, "ruff check", "N/A"),
+            ("mypy.ini", {"setup.py": "", "mypy.ini": "[mypy]\n"}, "N/A", "mypy ."),
+            ("setup.cfg mypy section", {"setup.cfg": "[mypy]\nstrict = True\n"}, "N/A", "mypy ."),
+            ("go", {"go.mod": "module x\n"}, "go vet ./...", "N/A"),
+            ("rust", {"Cargo.toml": "[package]\n"}, "cargo clippy -- -D warnings", "N/A"),
+        )
+        for label, files, lint, typecheck in cases:
+            with self.subTest(case=label):
+                with tempfile.TemporaryDirectory(prefix="read-only-helper-project-") as project:
+                    project_path = Path(project).resolve()
+                    for name, text in files.items():
+                        (project_path / name).write_text(text, encoding="utf-8")
+                    payload = self._detected(project_path)
+                    self.assertEqual((lint, typecheck), (payload["commands"]["LINT"], payload["commands"]["TYPECHECK"]))
+                    if lint != "N/A":
+                        self.assertIn(lint, payload["commands"]["FULL_VERIFY"])
+
+    def test_detect_commands_reports_the_base_branch_for_the_mutation_filter(self) -> None:
+        if self.helper_filter and self.helper_filter != "detect-commands":
+            self.skipTest("base branch case uses detect-commands")
+        git_env = {**os.environ, "GIT_CONFIG_GLOBAL": os.devnull, "GIT_CONFIG_NOSYSTEM": "1"}
+
+        def git(project_path: Path, *args: str) -> None:
+            subprocess.run(["git", "-C", str(project_path), *args], check=True, capture_output=True, env=git_env)
+
+        with tempfile.TemporaryDirectory(prefix="read-only-helper-project-") as project:
+            project_path = Path(project).resolve()
+            (project_path / "pyproject.toml").write_text("", encoding="utf-8")
+            (project_path / "cosmic-ray.toml").write_text("", encoding="utf-8")
+            payload = self._detected(project_path)
+            self.assertEqual({"value": "origin/main", "source": "default"}, payload["base_branch"])
+            git(project_path, "init", "-q", "-b", "trunk")
+            git(project_path, "-c", "user.email=native-eval@example.invalid", "-c", "user.name=t", "commit", "-q", "--allow-empty", "-m", "i")
+            git(project_path, "update-ref", "refs/remotes/origin/trunk", "HEAD")
+            git(project_path, "symbolic-ref", "refs/remotes/origin/HEAD", "refs/remotes/origin/trunk")
+            payload = self._detected(project_path)
+            self.assertEqual({"value": "origin/trunk", "source": "origin_head"}, payload["base_branch"])
+            self.assertIn("'origin/trunk' | cr-filter-git --config -", payload["commands"]["MUTATION"])
+            self.assertTrue(payload["gates"]["DEPENDENCY_AUDIT"]["advisory"])
+            self.assertEqual("pip-audit .", payload["commands"]["DEPENDENCY_AUDIT"])
 
     def test_detect_commands_runner_discovery_is_deterministic(self) -> None:
         if self.helper_filter and self.helper_filter != "detect-commands":

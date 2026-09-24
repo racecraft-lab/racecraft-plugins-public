@@ -353,8 +353,8 @@ Run the pre-flight sequence before any phase work. STOP on failure.
    helper_id=detect-presets operation=detect-presets mode=read_only
    ```
    Record `on_feature_branch`, `PROJECT_COMMANDS` (including the
-   `COMPLEXITY`, `MUTATION`, and `DEPENDENCY_RULES` slots and their
-   `gates` metadata, per `references/prerequisites.md` Step 0.11),
+   quality-gate slots and their `gates` metadata, per
+   `references/prerequisites.md` Step 0.11),
    `PRESET_CONVENTIONS`, and MCP availability into the workflow file. Pass `PROJECT_COMMANDS`
    and `PRESET_CONVENTIONS` to every subagent prompt.
 4. **Constitution validation** — for each principle in
