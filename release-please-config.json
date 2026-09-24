@@ -1,7 +1,6 @@
 {
   "draft-pull-request": true,
   "separate-pull-requests": true,
-  "last-release-sha": "4644c251cfb6f33ebe4fc8716475aa00f42e277c",
   "packages": {
     "speckit-pro": {
       "release-type": "simple",
