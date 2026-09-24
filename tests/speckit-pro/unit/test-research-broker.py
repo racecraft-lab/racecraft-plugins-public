@@ -19,8 +19,8 @@ import tempfile
 import threading
 import time
 import unittest
+import unittest.mock
 from pathlib import Path
-from unittest import mock
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 PLUGIN_ROOT = REPO_ROOT / "speckit-pro"
@@ -458,7 +458,7 @@ class ModeTests(BrokerCase):
         self.write_key("speckit-pro", "tavily.key", TAVILY_VALUE)
         http = default_http()
         broker = self.broker(http=http)
-        with mock.patch.object(rb, "TOOL_BUDGET_SECONDS", 0.5):
+        with unittest.mock.patch.object(rb, "TOOL_BUDGET_SECONDS", 0.5):
             result = broker.research_search(query="timeouts")
         self.assertEqual((result["status"], result["reason"]), ("fetch_failed", "timeout"))
         self.assertEqual(http.requests, [])
@@ -645,7 +645,7 @@ class RedactionAndProtocolTests(BrokerCase):
                 raise AssertionError("broker opened a Jev key file")
             return real_open(path, *args, **kwargs)
 
-        with mock.patch("os.open", guarded):
+        with unittest.mock.patch("os.open", guarded):
             result = self.broker().research_search(query="timeouts")
         self.assertEqual(result["status"], "ok")
 
@@ -673,6 +673,38 @@ class RedactionAndProtocolTests(BrokerCase):
             with self.subTest(arguments=arguments):
                 reply = self.call(broker, "research_search", arguments)
                 self.assertTrue(reply["result"]["isError"])
+
+    def test_a_query_over_400_characters_is_blocked_with_an_envelope(self) -> None:
+        broker = self.broker()
+        for name, arguments in (
+            ("research_search", {"query": "x" * 401}),
+            ("docs_query", {"library": "requests", "query": "x" * 401}),
+        ):
+            with self.subTest(tool=name):
+                reply = self.call(broker, name, arguments)
+                self.assertNotIn("isError", reply["result"])
+                envelope = json.loads(reply["result"]["content"][0]["text"])
+                self.assertEqual(envelope["status"], "query_blocked")
+                self.assertEqual(envelope["reason"], "query_too_long")
+        past_cap = self.call(broker, "research_search", {"query": "x" * (rb.MAX_QUERY_INPUT_CHARS + 1)})
+        self.assertEqual(past_cap["result"]["structuredContent"]["error_code"], "invalid_request")
+
+    def test_a_string_root_is_read_as_a_path(self) -> None:
+        root = self.home / "project"
+        spec = root / "specs" / "feature-a" / "spec.md"
+        spec.parent.mkdir(parents=True)
+        spec.write_text(
+            "The ledger reconciler must retry each unmatched settlement batch three times before it "
+            "escalates the batch to the finance review queue.\n",
+            encoding="utf-8",
+        )
+        broker = rb.ResearchBroker(self.env(), runner=FakeJev(), http=default_http(), root=str(root))
+        self.assertIsInstance(broker._root, Path)
+        leaked = "why would a reconciler must retry each unmatched settlement batch three times before it escalates the batch"
+        result = broker.research_search(query=leaked)
+        self.assertEqual(result["status"], "query_blocked")
+        self.assertEqual(result["reason"], "spec_text_detected")
+        self.assertIsNone(rb.ResearchBroker(self.env(), runner=FakeJev(), http=default_http(), root=None)._root)
 
     def test_every_response_is_labelled(self) -> None:
         broker = self.broker()
