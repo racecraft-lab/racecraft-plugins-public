@@ -2637,7 +2637,8 @@ Execute required PROJECT_COMMANDS slots once:
   Command(UNIT_TEST) && Command(INTEGRATION_TEST)
 Then every populated quality-gate slot on the whole diff:
   Command(COMPLEXITY) && Command(MUTATION) && Command(DEPENDENCY_RULES)
-    with {paths} = changed source files, origin/main...HEAD;
+    with {paths} (space-separated) and {paths_csv} (comma-separated)
+    = changed source files, origin/main...HEAD;
     when that list is empty, skip COMPLEXITY and MUTATION and
     record `n/a: no source files changed`
   Any failure blocks. Record each result in the Quality Gates table

@@ -63,6 +63,15 @@ Preconditions, checked in this order and recorded:
    accepted Qwen profile as healthy. Any other result selects the fallback.
 3. The live checkout is clean apart from the workflow and state files, so
    `qwen_apply` cannot fail on source drift.
+4. `UNIT_TEST` and `MUTATION` can run in the gateway's validation sandbox.
+   That sandbox stages tracked files only, never ignored paths such as
+   `node_modules`; denies the network, so nothing can be installed; and has
+   only its image's toolchain. A command that needs installed dependencies
+   or a runtime the image lacks (for example `bun run test` or
+   `bunx stryker` in a Bun project) cannot pass there. Validation also runs
+   each command twice, so their measured durations, doubled, must fit
+   `maxMinutes`. Otherwise select the fallback and record which condition
+   failed.
 
 Delegation request, one per iteration:
 
@@ -76,7 +85,7 @@ qwen_delegate
   maxMinutes: 20
   repositoryRoot: <absolute path of the worktree>
   allowedPaths: <test files only, see above>
-  validationCommands: [<UNIT_TEST>, <MUTATION with {paths} filled>]
+  validationCommands: [<UNIT_TEST>, <MUTATION with {paths} and {paths_csv} filled>]
   acceptanceCriteria:
     - "Mutation score for the changed files is at least <floor> percent"
     - "UNIT_TEST exits zero"
@@ -108,7 +117,7 @@ Then:
    commands sent. Reject anything else and record why. A rejection consumes the
    same reserved cycle; it does not authorize a new delegation or fallback.
 3. `qwen_apply` with the candidate id and the one-time review nonce.
-4. Re-run `UNIT_TEST`, then `MUTATION` with the same `{paths}`. Record the
+4. Re-run `UNIT_TEST`, then `MUTATION` with the same `{paths}` and `{paths_csv}`. Record the
    new score. Apply the stop rule.
 
 The delegation never runs with `webPolicy: "public-read"` for this loop; the
