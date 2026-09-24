@@ -121,6 +121,9 @@ class TypesafeJevReleaseBuildTests(unittest.TestCase):
             for name, data in archives.items():
                 (directory / name).write_bytes(data)
             (directory / BUILD.SUMS_NAME).write_text(BUILD.sums_text(archives), encoding="utf-8")
+            with self.assertRaisesRegex(BUILD.ReleaseBuildError, BUILD.PROVENANCE_NAME):
+                BUILD.check_assets(directory)
+            (directory / BUILD.PROVENANCE_NAME).write_text("{}", encoding="utf-8")
             self.assertEqual(set(archives), set(BUILD.check_assets(directory)))
 
             (directory / BUILD.asset_name("linux", "arm64")).write_bytes(b"tampered")
@@ -195,6 +198,61 @@ class TypesafeJevReleaseBuildTests(unittest.TestCase):
                 BUILD.publish("typesafe-jev-v0.9.0")
         argv = run.call_args.args[0]
         self.assertEqual(["gh", "release", "edit", "typesafe-jev-v0.9.0", "--draft=false", "--latest=false"], argv)
+
+    def test_upload_attaches_the_provenance_bundle_and_requires_it(self) -> None:
+        with tempfile.TemporaryDirectory() as scratch:
+            out_dir = Path(scratch) / "out"
+            out_dir.mkdir()
+            archives = {BUILD.asset_name(goos, goarch): goarch.encode() for goos, goarch in BUILD.RELEASE_TARGETS}
+            for name, data in archives.items():
+                (out_dir / name).write_bytes(data)
+            sums = BUILD.sums_text(archives)
+            (out_dir / BUILD.SUMS_NAME).write_text(sums, encoding="utf-8")
+            bundle = Path(scratch) / "attestation.json"
+            bundle.write_text('{"bundle": 1}', encoding="utf-8")
+
+            with unittest.mock.patch.object(BUILD.subprocess, "run") as run:
+                with self.assertRaisesRegex(BUILD.ReleaseBuildError, "PROVENANCE_BUNDLE"):
+                    BUILD.upload("typesafe-jev-v0.9.0", out_dir, "")
+                run.assert_not_called()
+
+            with unittest.mock.patch.object(BUILD.subprocess, "run", return_value=completed(["gh"])) as run:
+                with contextlib.redirect_stdout(io.StringIO()):
+                    BUILD.upload("typesafe-jev-v0.9.0", out_dir, str(bundle))
+            argv = run.call_args.args[0]
+            self.assertEqual(["gh", "release", "upload", "typesafe-jev-v0.9.0"], argv[:4])
+            self.assertEqual("--clobber", argv[-1])
+            uploaded = [Path(arg).name for arg in argv[4:-1]]
+            self.assertEqual(
+                [BUILD.asset_name(goos, goarch) for goos, goarch in BUILD.RELEASE_TARGETS] + [BUILD.SUMS_NAME, BUILD.PROVENANCE_NAME],
+                uploaded,
+            )
+            self.assertEqual('{"bundle": 1}', (out_dir / BUILD.PROVENANCE_NAME).read_text(encoding="utf-8"))
+            # The checksums cover only the archives, never the bundle.
+            self.assertEqual(sums, (out_dir / BUILD.SUMS_NAME).read_text(encoding="utf-8"))
+            self.assertEqual(sorted(archives), sorted(BUILD.parse_sums(sums)))
+
+    def test_provenance_verifies_every_archive_against_the_repository(self) -> None:
+        names = [BUILD.asset_name(goos, goarch) for goos, goarch in BUILD.RELEASE_TARGETS]
+        directory = Path("downloaded")
+        with unittest.mock.patch.object(BUILD.subprocess, "run") as run:
+            with self.assertRaisesRegex(BUILD.ReleaseBuildError, "GITHUB_REPOSITORY"):
+                BUILD.verify_provenance(directory, names, "")
+            run.assert_not_called()
+
+        with unittest.mock.patch.object(BUILD.subprocess, "run", return_value=completed(["gh"])) as run:
+            BUILD.verify_provenance(directory, names, "racecraft-lab/racecraft-plugins-public")
+        self.assertEqual(
+            [
+                ["gh", "attestation", "verify", str(directory / name), "--bundle", str(directory / BUILD.PROVENANCE_NAME), "--repo", "racecraft-lab/racecraft-plugins-public"]
+                for name in names
+            ],
+            [call.args[0] for call in run.call_args_list],
+        )
+
+        with unittest.mock.patch.object(BUILD.subprocess, "run", return_value=completed(["gh"], returncode=1)):
+            with self.assertRaisesRegex(BUILD.ReleaseBuildError, "gh attestation verify"):
+                BUILD.verify_provenance(directory, names, "racecraft-lab/racecraft-plugins-public")
 
     def test_binary_checks_require_the_version_and_the_unconfigured_exit(self) -> None:
         BUILD.require_version(completed(["evaluate"], stdout="0.9.0\n"), "0.9.0")

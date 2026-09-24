@@ -53,6 +53,14 @@ binary, and `--version` to pick another release. When the binary is missing,
 the plugin's MCP server says so in its instructions and names the installer's
 full path.
 
+Each release also carries `provenance.sigstore.json`, a signed SLSA build
+provenance for its archives. To check that an archive was built by this
+repository's release workflow:
+
+```text
+gh attestation verify evaluate-darwin-arm64.tar.gz --bundle provenance.sigstore.json --repo racecraft-lab/racecraft-plugins-public
+```
+
 ## Add A Key (Optional)
 
 The plugin uses TypeSafe first and OpenRouter as its fallback, each with its

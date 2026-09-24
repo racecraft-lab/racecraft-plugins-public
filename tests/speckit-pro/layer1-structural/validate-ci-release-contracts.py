@@ -961,7 +961,13 @@ class ValidateReleaseWorkflow(unittest.TestCase):
             self.assertNotIn('ref:', draft_job)
             self.assertEqual(['typesafe-jev-draft'], _scalar_values(assets_job, 'needs', 4))
             self.assertEqual(["${{ always() && !cancelled() && needs.typesafe-jev-draft.result == 'success' }}"], _scalar_values(assets_job, 'if', 4))
-            self.assertEqual({'contents': 'write'}, _permission_map(assets_job))
+            self.assertEqual({'contents': 'write', 'id-token': 'write', 'attestations': 'write'}, _permission_map(assets_job))
+            attest_step = _named_step_block(assets_job, 'Attest the build provenance of the archives')
+            self.assertTrue(_contains_all(attest_step, ('id: attest', 'uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2', 'subject-checksums: typesafe-jev-release/SHA256SUMS.txt')))
+            upload_step = _named_step_block(assets_job, 'Attach the archives and provenance to the draft release')
+            self.assertIn('PROVENANCE_BUNDLE: ${{ steps.attest.outputs.bundle-path }}', upload_step)
+            self.assertLess(assets_job.index('build-typesafe-jev-release.py build'), assets_job.index('actions/attest-build-provenance@'))
+            self.assertLess(assets_job.index('actions/attest-build-provenance@'), assets_job.index('build-typesafe-jev-release.py upload'))
             self.assertEqual(
                 ['python3 scripts/check-go-module.py check', 'python3 scripts/build-typesafe-jev-release.py build', 'python3 scripts/build-typesafe-jev-release.py upload', 'python3 scripts/build-typesafe-jev-release.py verify'],
                 _run_commands(assets_job),

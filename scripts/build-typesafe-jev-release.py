@@ -20,11 +20,14 @@ Modes, in release order:
   build          Cross-compile every release target into
                  evaluate-<os>-<arch>.tar.gz (the binary plus LICENSE) and
                  write SHA256SUMS.txt beside them.
-  upload         Attach the archives and SHA256SUMS.txt to the draft release.
+  upload         Attach the archives, SHA256SUMS.txt, and the build-provenance
+                 bundle named by PROVENANCE_BUNDLE to the draft release. The
+                 bundle is published as provenance.sigstore.json.
   verify         Download the draft's own assets, check every archive against
-                 SHA256SUMS.txt, and run this machine's binary: `version` must
-                 print the tag's version, and `call --check` in an empty home
-                 must exit 3 (no credential configured).
+                 SHA256SUMS.txt and the provenance bundle (issued to
+                 GITHUB_REPOSITORY), and run this machine's binary: `version`
+                 must print the tag's version, and `call --check` in an empty
+                 home must exit 3 (no credential configured).
   publish        Publish the verified draft without marking it the
                  repository's latest release.
   smoke-install  Install the published release with the plugin's own
@@ -59,6 +62,9 @@ TAG_RE = re.compile(r"^typesafe-jev-v(?P<version>[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A
 # plain release tag.
 RECOVERY_TAG_RE = re.compile(r"^typesafe-jev-v[0-9]+\.[0-9]+\.[0-9]+$")
 SUMS_NAME = "SHA256SUMS.txt"
+# The Sigstore bundle actions/attest-build-provenance writes for the archives.
+# It is not listed in SHA256SUMS.txt, which covers only the archives.
+PROVENANCE_NAME = "provenance.sigstore.json"
 DEFAULT_OUT_DIR = "typesafe-jev-release"
 # The same targets check-go-module.py cross-compiles on every pull request.
 RELEASE_TARGETS = (
@@ -260,10 +266,14 @@ def write_github_output(path: Path, outputs: Mapping[str, str]) -> None:
             output.write(f"{name}<<{delimiter}\n{value}\n{delimiter}\n")
 
 
-def upload(tag: str, out_dir: Path) -> None:
-    completed = run_gh("release", "upload", tag, *release_files(out_dir), "--clobber")
+def upload(tag: str, out_dir: Path, bundle: str) -> None:
+    files = release_files(out_dir)
+    if not bundle or not Path(bundle).is_file():
+        raise ReleaseBuildError(f"no provenance bundle at {bundle!r}; set PROVENANCE_BUNDLE")
+    shutil.copyfile(bundle, out_dir / PROVENANCE_NAME)
+    completed = run_gh("release", "upload", tag, *files, str(out_dir / PROVENANCE_NAME), "--clobber")
     _require_success(completed, "gh release upload")
-    print(f"uploaded {len(RELEASE_TARGETS)} archives and {SUMS_NAME} to {tag}")
+    print(f"uploaded {len(RELEASE_TARGETS)} archives, {SUMS_NAME}, and {PROVENANCE_NAME} to {tag}")
 
 
 def host_target() -> tuple[str, str]:
@@ -290,6 +300,8 @@ def check_assets(download_dir: Path) -> dict[str, bytes]:
     sums_path = download_dir / SUMS_NAME
     if not sums_path.is_file():
         raise ReleaseBuildError(f"the release has no {SUMS_NAME}")
+    if not (download_dir / PROVENANCE_NAME).is_file():
+        raise ReleaseBuildError(f"the release has no {PROVENANCE_NAME}")
     sums = parse_sums(sums_path.read_text(encoding="utf-8"))
     archives: dict[str, bytes] = {}
     for goos, goarch in RELEASE_TARGETS:
@@ -303,6 +315,16 @@ def check_assets(download_dir: Path) -> dict[str, bytes]:
             raise ReleaseBuildError(f"{name} does not match {SUMS_NAME}")
         archives[name] = data
     return archives
+
+
+def verify_provenance(download_dir: Path, names: Sequence[str], repository: str) -> None:
+    """Every archive must verify against the bundle as built in `repository`."""
+    if not repository:
+        raise ReleaseBuildError("verify needs GITHUB_REPOSITORY")
+    bundle = str(download_dir / PROVENANCE_NAME)
+    for name in names:
+        completed = run_gh("attestation", "verify", str(download_dir / name), "--bundle", bundle, "--repo", repository)
+        _require_success(completed, f"gh attestation verify {name}")
 
 
 def require_version(completed: subprocess.CompletedProcess[str], version: str) -> None:
@@ -331,11 +353,12 @@ def install_verify_binary(archive: bytes) -> None:
     target.chmod(0o755)
 
 
-def verify(tag: str, version: str) -> None:
+def verify(tag: str, version: str, repository: str) -> None:
     with tempfile.TemporaryDirectory(prefix="typesafe-jev-verify-") as scratch:
         completed = run_gh("release", "download", tag, "--dir", scratch)
         _require_success(completed, "gh release download")
         archives = check_assets(Path(scratch))
+        verify_provenance(Path(scratch), sorted(archives), repository)
     install_verify_binary(archives[asset_name(*host_target())])
     try:
         require_version(run_verify_binary("version"), version)
@@ -343,7 +366,7 @@ def verify(tag: str, version: str) -> None:
             require_unconfigured(run_verify_binary("call", "--check", "--plugin-defaults", env=empty_home_env(home)))
     finally:
         shutil.rmtree(REPO_ROOT / Path(VERIFY_BINARY).parent, ignore_errors=True)
-    print(f"verified {tag}: {len(archives)} archives match {SUMS_NAME}; the binary reports {version}")
+    print(f"verified {tag}: {len(archives)} archives match {SUMS_NAME} and {PROVENANCE_NAME}; the binary reports {version}")
 
 
 def publish(tag: str) -> None:
@@ -390,9 +413,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         if args.mode == "build":
             build(version, out_dir)
         elif args.mode == "upload":
-            upload(args.tag, out_dir)
+            upload(args.tag, out_dir, os.environ.get("PROVENANCE_BUNDLE", ""))
         elif args.mode == "verify":
-            verify(args.tag, version)
+            verify(args.tag, version, os.environ.get("GITHUB_REPOSITORY", ""))
         elif args.mode == "publish":
             publish(args.tag)
         else:
