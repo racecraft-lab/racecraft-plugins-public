@@ -3,7 +3,16 @@ name: Release
 on:
   push:
     branches: [main]
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      typesafe_jev_tag:
+        # Recovery only: rerun the typesafe-jev asset and notes chain for an
+        # existing draft release, such as one left behind when an earlier run
+        # failed after release-please drafted it. Leave empty for a normal run.
+        description: Existing draft typesafe-jev release tag to recover (typesafe-jev-vX.Y.Z)
+        type: string
+        required: false
+        default: ""
 
 permissions: {}
 
@@ -13,6 +22,9 @@ concurrency:
 
 jobs:
   release:
+    # A recovery dispatch works only on an existing draft, so it skips
+    # release-please and the release PR sync entirely.
+    if: ${{ github.event_name != 'workflow_dispatch' || inputs.typesafe_jev_tag == '' }}
     permissions:
       actions: write
       contents: write
@@ -245,9 +257,38 @@ jobs:
   # typesafe-jev releases as a draft with its tag already pushed. Its archives
   # are built from the tag, attached, and checked on the draft before anyone
   # can download them; only then is the release published.
-  typesafe-jev-assets:
+  #
+  # Every typesafe-jev job runs on always() and gates on its own inputs, so a
+  # failure later in the release job (such as the speckit-pro release PR sync)
+  # never strands a draft release-please already created.
+  typesafe-jev-draft:
     needs: release
-    if: ${{ needs.release.outputs.typesafe_jev_release_created == 'true' }}
+    if: ${{ always() && !cancelled() && (needs.release.outputs.typesafe_jev_release_created == 'true' || (github.event_name == 'workflow_dispatch' && inputs.typesafe_jev_tag != '')) }}
+    permissions:
+      # A draft release is visible only to a token with write access.
+      contents: write
+    outputs:
+      tag_name: ${{ steps.resolve.outputs.tag_name }}
+      body: ${{ steps.resolve.outputs.body }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Resolve the typesafe-jev draft release
+        id: resolve
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RECOVERY_TAG: ${{ inputs.typesafe_jev_tag }}
+          RELEASE_BODY: ${{ needs.release.outputs.typesafe_jev_body }}
+          RELEASE_TAG: ${{ needs.release.outputs.typesafe_jev_tag_name }}
+        run: python3 scripts/build-typesafe-jev-release.py resolve
+
+  typesafe-jev-assets:
+    needs: typesafe-jev-draft
+    if: ${{ always() && !cancelled() && needs.typesafe-jev-draft.result == 'success' }}
     permissions:
       contents: write
     runs-on: ubuntu-latest
@@ -255,7 +296,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ needs.release.outputs.typesafe_jev_tag_name }}
+          ref: ${{ needs.typesafe-jev-draft.outputs.tag_name }}
           persist-credentials: false
 
       - name: Set up Go
@@ -269,24 +310,24 @@ jobs:
 
       - name: Build the typesafe-jev release archives
         env:
-          RELEASE_TAG: ${{ needs.release.outputs.typesafe_jev_tag_name }}
+          RELEASE_TAG: ${{ needs.typesafe-jev-draft.outputs.tag_name }}
         run: python3 scripts/build-typesafe-jev-release.py build
 
       - name: Attach the archives to the draft release
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ needs.release.outputs.typesafe_jev_tag_name }}
+          RELEASE_TAG: ${{ needs.typesafe-jev-draft.outputs.tag_name }}
         run: python3 scripts/build-typesafe-jev-release.py upload
 
       - name: Verify the draft release assets
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ needs.release.outputs.typesafe_jev_tag_name }}
+          RELEASE_TAG: ${{ needs.typesafe-jev-draft.outputs.tag_name }}
         run: python3 scripts/build-typesafe-jev-release.py verify
 
   typesafe-jev-publish:
-    needs: [release, typesafe-jev-assets]
-    if: ${{ needs.typesafe-jev-assets.result == 'success' }}
+    needs: [typesafe-jev-draft, typesafe-jev-assets]
+    if: ${{ always() && !cancelled() && needs.typesafe-jev-assets.result == 'success' }}
     environment: release
     permissions:
       contents: write
@@ -295,22 +336,22 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ needs.release.outputs.typesafe_jev_tag_name }}
+          ref: ${{ needs.typesafe-jev-draft.outputs.tag_name }}
           persist-credentials: false
 
       - name: Publish the verified typesafe-jev release
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ needs.release.outputs.typesafe_jev_tag_name }}
+          RELEASE_TAG: ${{ needs.typesafe-jev-draft.outputs.tag_name }}
         run: python3 scripts/build-typesafe-jev-release.py publish
 
       - name: Install the published release as a user would
         env:
-          RELEASE_TAG: ${{ needs.release.outputs.typesafe_jev_tag_name }}
+          RELEASE_TAG: ${{ needs.typesafe-jev-draft.outputs.tag_name }}
         run: python3 scripts/build-typesafe-jev-release.py smoke-install
 
   capture-typesafe-jev-release-note-inputs:
-    needs: [release, typesafe-jev-publish]
+    needs: [typesafe-jev-draft, typesafe-jev-publish]
     if: ${{ always() && needs.typesafe-jev-publish.result == 'success' }}
     permissions:
       contents: read
@@ -332,8 +373,8 @@ jobs:
           GITHUB_API_URL: ${{ github.api_url }}
           GITHUB_TOKEN: ${{ github.token }}
           GITHUB_REPOSITORY: ${{ github.repository }}
-          RELEASE_BODY: ${{ needs.release.outputs.typesafe_jev_body }}
-          RELEASE_TAG: ${{ needs.release.outputs.typesafe_jev_tag_name }}
+          RELEASE_BODY: ${{ needs.typesafe-jev-draft.outputs.body }}
+          RELEASE_TAG: ${{ needs.typesafe-jev-draft.outputs.tag_name }}
         run: python3 scripts/compose-release-notes.py --capture-snapshot --snapshot-output release-note-snapshot.json
 
       - name: Upload immutable release input snapshot
@@ -347,8 +388,8 @@ jobs:
           compression-level: 0
 
   compose-typesafe-jev-release-notes:
-    needs: [release, capture-typesafe-jev-release-note-inputs]
-    if: ${{ always() && !cancelled() && needs.release.outputs.typesafe_jev_release_created == 'true' }}
+    needs: [typesafe-jev-draft, capture-typesafe-jev-release-note-inputs]
+    if: ${{ always() && !cancelled() && needs.typesafe-jev-draft.result == 'success' }}
     permissions:
       contents: write
     outputs:

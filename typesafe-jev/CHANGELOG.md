@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.9.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/typesafe-jev-v0.8.0...typesafe-jev-v0.9.0) (2026-09-24)
+
+
+### Features
+
+* **speckit-pro:** route research agents through the research broker ([5a7edae](https://github.com/racecraft-lab/racecraft-plugins-public/commit/5a7edae48d9cbefeb6a1d7f39dff495634afc3b6))
+* **typesafe-jev:** add a one-shot call command and a value-free credential check ([bb036d6](https://github.com/racecraft-lab/racecraft-plugins-public/commit/bb036d6ad9e94f90264abf6ad930d89b7e97b56f))
+* **typesafe-jev:** list typesafe-jev in the Racecraft plugin marketplace ([cacd384](https://github.com/racecraft-lab/racecraft-plugins-public/commit/cacd3849c17bec993dc4403a7112c01f6e37f269))
+
+
+### Bug Fixes
+
+* **typesafe-jev:** install and update from this repository's tagged releases ([02e6b2c](https://github.com/racecraft-lab/racecraft-plugins-public/commit/02e6b2c5ff4992120515b918432187dee2947005))
+* **typesafe-jev:** name the fallback key-file variable in its diagnostics ([c869986](https://github.com/racecraft-lab/racecraft-plugins-public/commit/c869986ec5182077f573fe0a07b1285692ce20cf))
+* **typesafe-jev:** refuse a truncated release list and expand ~ in EVALUATE_BIN ([e39fa30](https://github.com/racecraft-lab/racecraft-plugins-public/commit/e39fa302dc506f570a8924d9c5f1916810cf2926))
+
 ## [0.8.0](https://github.com/racecraft-lab/typesafe-mcp/compare/v0.7.1...v0.8.0) (2026-09-23)
 
 

@@ -528,3 +528,18 @@ func TestCallNeverPrintsTheKey(t *testing.T) {
 		})
 	}
 }
+
+// readCallRequest takes one JSON object and nothing else. A bare null decodes
+// into the zero request without an error, so it is rejected explicitly, with
+// the same fixed text as every other non-object.
+func TestReadCallRequestRequiresAnObject(t *testing.T) {
+	const want = `stdin is not one JSON object of the form {"state": ..., "questions": {...}, "model": "..."}`
+	for _, input := range []string{`null`, ` null `, `[]`, `"s"`, `1`, `true`} {
+		if _, err := readCallRequest(strings.NewReader(input)); err == nil || err.Error() != want {
+			t.Errorf("readCallRequest(%q) error = %v, want %q", input, err, want)
+		}
+	}
+	if _, err := readCallRequest(strings.NewReader(" \t\r\n" + validRequest)); err != nil {
+		t.Errorf("an object after leading whitespace was rejected: %v", err)
+	}
+}

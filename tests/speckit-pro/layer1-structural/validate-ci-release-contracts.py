@@ -751,7 +751,7 @@ class ValidateReleaseWorkflow(unittest.TestCase):
             for step in setup_node_steps:
                 self.assertIn('package-manager-cache: false', step)
         with self.subTest(msg='release workflow pins checkout actions'):
-            self.assertEqual(8, len(validate_release_workflow_CHECKOUT_PIN_RE.findall(content)), 'release workflow pinned checkout count')
+            self.assertEqual(9, len(validate_release_workflow_CHECKOUT_PIN_RE.findall(content)), 'release workflow pinned checkout count')
         release_job = _mapping_block(content, 'release', 2)
         capture_job = _mapping_block(content, 'capture-release-note-inputs', 2)
         composer_job = _mapping_block(content, 'compose-release-notes', 2)
@@ -926,18 +926,22 @@ class ValidateReleaseWorkflow(unittest.TestCase):
             # assertion above about the pair holds for both.
             typesafe_capture = _mapping_block(content, 'capture-typesafe-jev-release-note-inputs', 2)
             typesafe_composer = _mapping_block(content, 'compose-typesafe-jev-release-notes', 2)
+            # The typesafe-jev pair reads its tag and body from the
+            # typesafe-jev-draft resolver, which covers both a release-please
+            # run and a recovery dispatch.
             capture_renames = (
                 ('capture-typesafe-jev-release-note-inputs:', 'capture-release-note-inputs:'),
-                ('needs: [release, typesafe-jev-publish]', 'needs: release'),
+                ('needs: [typesafe-jev-draft, typesafe-jev-publish]', 'needs: release'),
                 ("if: ${{ always() && needs.typesafe-jev-publish.result == 'success' }}", "if: ${{ always() && needs.release.outputs.release_created == 'true' }}"),
-                ('needs.release.outputs.typesafe_jev_body', 'needs.release.outputs.body'),
-                ('needs.release.outputs.typesafe_jev_tag_name', 'needs.release.outputs.tag_name'),
+                ('needs.typesafe-jev-draft.outputs.body', 'needs.release.outputs.body'),
+                ('needs.typesafe-jev-draft.outputs.tag_name', 'needs.release.outputs.tag_name'),
                 ('release-note-input-typesafe-jev-', 'release-note-input-'),
             )
             composer_renames = (
                 ('compose-typesafe-jev-release-notes:', 'compose-release-notes:'),
+                ('needs: [typesafe-jev-draft, capture-typesafe-jev-release-note-inputs]', 'needs: [release, capture-release-note-inputs]'),
+                ("if: ${{ always() && !cancelled() && needs.typesafe-jev-draft.result == 'success' }}", "if: ${{ always() && !cancelled() && needs.release.outputs.release_created == 'true' }}"),
                 ('capture-typesafe-jev-release-note-inputs', 'capture-release-note-inputs'),
-                ('needs.release.outputs.typesafe_jev_release_created', 'needs.release.outputs.release_created'),
                 ('release-note-audit-typesafe-jev-', 'release-note-audit-'),
             )
             self.assertTrue(typesafe_capture and typesafe_composer, 'missing typesafe-jev capture or compose job')
@@ -946,23 +950,42 @@ class ValidateReleaseWorkflow(unittest.TestCase):
         with self.subTest(msg='typesafe-jev assets are built, attached, and verified on the draft before publishing'):
             release_outputs = _mapping_block(release_job, 'outputs', 4)
             self.assertTrue(_contains_all(release_outputs, ("typesafe_jev_release_created: ${{ steps.release.outputs['typesafe-jev--release_created'] }}", "typesafe_jev_tag_name: ${{ steps.release.outputs['typesafe-jev--tag_name'] }}", "typesafe_jev_body: ${{ steps.release.outputs['typesafe-jev--body'] }}")))
+            draft_job = _mapping_block(content, 'typesafe-jev-draft', 2)
             assets_job = _mapping_block(content, 'typesafe-jev-assets', 2)
             publish_job = _mapping_block(content, 'typesafe-jev-publish', 2)
-            self.assertEqual(["${{ needs.release.outputs.typesafe_jev_release_created == 'true' }}"], _scalar_values(assets_job, 'if', 4))
+            self.assertEqual(['release'], _scalar_values(draft_job, 'needs', 4))
+            self.assertEqual(["${{ always() && !cancelled() && (needs.release.outputs.typesafe_jev_release_created == 'true' || (github.event_name == 'workflow_dispatch' && inputs.typesafe_jev_tag != '')) }}"], _scalar_values(draft_job, 'if', 4))
+            self.assertEqual({'contents': 'write'}, _permission_map(draft_job))
+            self.assertEqual(['python3 scripts/build-typesafe-jev-release.py resolve'], _run_commands(draft_job))
+            self.assertTrue(_contains_all(draft_job, ('tag_name: ${{ steps.resolve.outputs.tag_name }}', 'body: ${{ steps.resolve.outputs.body }}', 'RECOVERY_TAG: ${{ inputs.typesafe_jev_tag }}', 'RELEASE_BODY: ${{ needs.release.outputs.typesafe_jev_body }}', 'RELEASE_TAG: ${{ needs.release.outputs.typesafe_jev_tag_name }}', 'persist-credentials: false')))
+            self.assertNotIn('ref:', draft_job)
+            self.assertEqual(['typesafe-jev-draft'], _scalar_values(assets_job, 'needs', 4))
+            self.assertEqual(["${{ always() && !cancelled() && needs.typesafe-jev-draft.result == 'success' }}"], _scalar_values(assets_job, 'if', 4))
             self.assertEqual({'contents': 'write'}, _permission_map(assets_job))
             self.assertEqual(
                 ['python3 scripts/check-go-module.py check', 'python3 scripts/build-typesafe-jev-release.py build', 'python3 scripts/build-typesafe-jev-release.py upload', 'python3 scripts/build-typesafe-jev-release.py verify'],
                 _run_commands(assets_job),
             )
-            self.assertTrue(_contains_all(assets_job, ('ref: ${{ needs.release.outputs.typesafe_jev_tag_name }}', 'go-version-file: typesafe-jev/go.mod', 'persist-credentials: false')))
-            self.assertEqual(['[release, typesafe-jev-assets]'], _scalar_values(publish_job, 'needs', 4))
+            self.assertTrue(_contains_all(assets_job, ('ref: ${{ needs.typesafe-jev-draft.outputs.tag_name }}', 'go-version-file: typesafe-jev/go.mod', 'persist-credentials: false')))
+            self.assertEqual(['[typesafe-jev-draft, typesafe-jev-assets]'], _scalar_values(publish_job, 'needs', 4))
+            self.assertEqual(["${{ always() && !cancelled() && needs.typesafe-jev-assets.result == 'success' }}"], _scalar_values(publish_job, 'if', 4))
             self.assertEqual(['release'], _scalar_values(publish_job, 'environment', 4))
             self.assertEqual({'contents': 'write'}, _permission_map(publish_job))
             self.assertEqual(
                 ['python3 scripts/build-typesafe-jev-release.py publish', 'python3 scripts/build-typesafe-jev-release.py smoke-install'],
                 _run_commands(publish_job),
             )
-            self.assertNotIn('RELEASE_PLEASE_TOKEN', assets_job + publish_job)
+            self.assertNotIn('RELEASE_PLEASE_TOKEN', draft_job + assets_job + publish_job)
+        with self.subTest(msg='a typesafe_jev_tag dispatch recovers an existing draft without release-please'):
+            dispatch_trigger = _mapping_block(content, 'workflow_dispatch', 2)
+            self.assertTrue(_contains_all(dispatch_trigger, ('typesafe_jev_tag:', 'type: string', 'required: false', 'default: ""')))
+            self.assertEqual(["${{ github.event_name != 'workflow_dispatch' || inputs.typesafe_jev_tag == '' }}"], _scalar_values(release_job, 'if', 4))
+            # The raw input gates two jobs and reaches only the resolver, which
+            # validates the tag and the draft before any job checks it out.
+            self.assertEqual(3, content.count('inputs.typesafe_jev_tag'))
+            self.assertEqual(1, draft_job.count('inputs.typesafe_jev_tag }}'))
+            build_helper_content = (REPO_ROOT / 'scripts' / 'build-typesafe-jev-release.py').read_text(encoding='utf-8')
+            self.assertTrue(_contains_all(build_helper_content, ('RECOVERY_TAG_RE = re.compile(r"^typesafe-jev-v[0-9]+\\.[0-9]+\\.[0-9]+$")', '"release", "view", recovery_tag, "--json", "isDraft,tagName,body"', 'release.get("isDraft") is not True')))
         with self.subTest(msg='release-please releases typesafe-jev as its own drafted component'):
             config = json.loads(RELEASE_CONFIG_FILE.read_text(encoding='utf-8')) if RELEASE_CONFIG_FILE.is_file() else {}
             manifest_file = REPO_ROOT / '.release-please-manifest.json'

@@ -184,6 +184,16 @@ with the plugin's installer. Its release notes are then captured and composed
 like `speckit-pro`'s. The component's history starts at the import merge, which
 `last-release-sha` in `release-please-config.json` names.
 
+The `typesafe-jev` jobs start from `typesafe-jev-draft`, which names the draft
+to release. They still run when a later step of the `release` job fails, such
+as the `speckit-pro` release PR sync. To finish a draft that an earlier run left
+behind, dispatch the workflow on `main` with the `typesafe_jev_tag` input:
+`gh workflow run release.yml --ref main -f typesafe_jev_tag=typesafe-jev-vX.Y.Z`.
+A recovery run skips release-please and the release PR sync. The tag must match
+`typesafe-jev-vX.Y.Z`, and its release must exist and still be a draft. The run
+reads the draft's body from the GitHub API, then attaches assets, publishes, and
+composes notes as a normal run does.
+
 Release-please branches are generated state. Never push a product, security,
 documentation, or review fix directly to a branch whose name starts with
 `release-please--branches--`. Land the fix on `main` through its own pull

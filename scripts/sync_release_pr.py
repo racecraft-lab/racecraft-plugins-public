@@ -18,6 +18,55 @@ class SyncError(RuntimeError):
     """Raised when a release branch cannot be reconciled safely."""
 
 
+RELEASE_MANIFEST = ".release-please-manifest.json"
+
+
+def _manifest_versions(text: str, side: str) -> dict[str, str]:
+    try:
+        value = json.loads(text)
+    except json.JSONDecodeError as exc:
+        raise SyncError(f"{RELEASE_MANIFEST} on the {side} side is not valid JSON: {exc}") from exc
+    if not isinstance(value, dict) or not all(
+        isinstance(key, str) and isinstance(version, str) for key, version in value.items()
+    ):
+        raise SyncError(
+            f"{RELEASE_MANIFEST} on the {side} side is not an object of version strings"
+        )
+    return value
+
+
+def merge_release_manifest(base_text: str, branch_text: str, main_text: str) -> str:
+    """Three-way merge the release-please manifest one component key at a time.
+
+    Each release branch bumps only its own component, while main may already
+    carry another component's released version on the adjacent line. For each
+    key, keep the release branch's value when the branch changed it relative to
+    the merge base, and main's value otherwise. Both sides changing one key to
+    different values is a real conflict and fails the sync.
+    """
+    base = _manifest_versions(base_text, "merge base")
+    branch = _manifest_versions(branch_text, "release branch")
+    main = _manifest_versions(main_text, "main")
+
+    merged: dict[str, str] = {}
+    for key in [*main, *(key for key in branch if key not in main)]:
+        base_value = base.get(key)
+        branch_value = branch.get(key)
+        main_value = main.get(key)
+        if branch_value != base_value:
+            if main_value not in (base_value, branch_value):
+                raise SyncError(
+                    f"{RELEASE_MANIFEST} conflict on {key!r}: release branch has "
+                    f"{branch_value!r}, main has {main_value!r}"
+                )
+            value = branch_value
+        else:
+            value = main_value
+        if value is not None:
+            merged[key] = value
+    return json.dumps(merged, indent=2) + "\n"
+
+
 def regenerated_artifact_paths(repo_root: Path) -> tuple[str, ...]:
     """Return the paths ``refresh-release-artifacts.py`` rewrites from source.
 
@@ -111,8 +160,10 @@ def merge_release_base(
     ``refresh-release-artifacts.py`` runs immediately after this and rewrites
     its managed paths from source, so a conflict confined to those paths has no
     bearing on the result: whichever side is kept, the refresh emits identical
-    bytes. Resolve them to the base side and let the refresh settle them. A
-    conflict anywhere else is a real one and still fails the sync.
+    bytes. Resolve them to the base side and let the refresh settle them. The
+    release-please manifest is merged per component key (see
+    ``merge_release_manifest``). A conflict anywhere else is a real one and
+    still fails the sync.
     """
     try:
         runner.run(["git", "merge", "--no-edit", base_sha], repo_root)
@@ -132,9 +183,10 @@ def merge_release_base(
         # own diagnostic rather than replacing it with a conflict story.
         raise SyncError(f"{merge_error}; no conflicted path was reported") from merge_error
 
-    regenerated = regenerated_artifact_paths(repo_root)
+    generated = [path for path in conflicted if path != RELEASE_MANIFEST]
+    regenerated = regenerated_artifact_paths(repo_root) if generated else ()
     unmanaged = sorted(
-        path for path in conflicted if not is_regenerated_artifact(path, regenerated)
+        path for path in generated if not is_regenerated_artifact(path, regenerated)
     )
     if unmanaged:
         raise SyncError(
@@ -142,11 +194,22 @@ def merge_release_base(
             + ", ".join(unmanaged)
         )
 
-    for path in conflicted:
+    if RELEASE_MANIFEST in conflicted:
+        # Index stages of a conflicted path: 1 is the merge base, 2 the checked
+        # out release branch, 3 the release base (main) being merged in.
+        base_text, branch_text, main_text = (
+            runner.output(["git", "show", f":{stage}:{RELEASE_MANIFEST}"], repo_root)
+            for stage in (1, 2, 3)
+        )
+        merged = merge_release_manifest(base_text, branch_text, main_text)
+        (repo_root / RELEASE_MANIFEST).write_text(merged, encoding="utf-8")
+        runner.run(["git", "add", "--", RELEASE_MANIFEST], repo_root)
+
+    for path in generated:
         runner.run(["git", "checkout", "--theirs", "--", path], repo_root)
         runner.run(["git", "add", "--", path], repo_root)
     runner.run(["git", "commit", "--no-edit"], repo_root)
-    print(f"resolved {len(conflicted)} regenerated-artifact conflict(s) before refresh")
+    print(f"resolved {len(conflicted)} manifest or regenerated-artifact conflict(s) before refresh")
 
 
 def sync_release_branch(
