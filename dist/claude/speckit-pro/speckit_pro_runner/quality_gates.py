@@ -1,8 +1,8 @@
 """Validate the repository quality-gate thresholds file and recommend values.
 
 ``.specify/quality-gates.json`` is the authority for the thresholds the
-COMPLEXITY, MUTATION, and DEPENDENCY_RULES slots run against, and for
-permanent repository-wide skips. The JSON schema in
+COMPLEXITY, MUTATION, and DEPENDENCY_RULES slots run against, for
+permanent repository-wide skips, and for which opt-in slots run. The JSON schema in
 ``contracts/quality-gates.schema.json`` documents the shape; this module
 enforces the same rules with the standard library only. The operator writes
 the file through the speckit-coach quality-gates flow; agents never edit it.
@@ -14,8 +14,8 @@ Usage::
 
 ``validate`` exits 0 when the file is valid, 1 with one violation per line on
 stderr. ``recommend`` prints a thresholds file body whose complexity ceiling
-lets about 90 percent of the measured functions pass, or Bob's six when the
-report measured nothing.
+lets about 90 percent of the measured functions pass, or NIST SP 500-235's
+ten when the report measured nothing.
 """
 
 from __future__ import annotations
@@ -29,13 +29,19 @@ from typing import Any
 SCHEMA_VERSION = "1.0"
 FILE_PATH = ".specify/quality-gates.json"
 THRESHOLD_FIELDS = ("complexity", "crap", "mutation_score_floor")
-SLOTS = ("COMPLEXITY", "MUTATION", "DEPENDENCY_RULES")
-BASIS_METHODS = ("percentile-90", "bobs-six", "shipped-default", "operator")
-BOBS_SIX = 6
+SLOTS = ("COMPLEXITY", "MUTATION", "DEPENDENCY_RULES", "DEPENDENCY_AUDIT")
+# Slots that never run unless listed in `enforce`; listed, they block.
+OPT_IN_SLOTS = ("DEPENDENCY_AUDIT",)
+# `bobs-six` stays valid so thresholds files written before the NIST
+# fallback still validate; `recommend` no longer emits it.
+BASIS_METHODS = ("percentile-90", "nist-235", "bobs-six", "shipped-default", "operator")
+# NIST SP 500-235 (McCabe and Watson, 1996): "Limit the cyclomatic complexity
+# of modules to 10 wherever possible".
+NIST_COMPLEXITY_CEILING = 10
 PASS_FRACTION = 0.9
-# What the shipped table used before this file existed; kept only so
-# `recommend` can fill the non-measured thresholds.
-SHIPPED_DEFAULTS = {"complexity": 8, "crap": 30, "mutation_score_floor": 60}
+# The shipped defaults when nothing is measured; `recommend` fills the
+# non-measured thresholds from these.
+SHIPPED_DEFAULTS = {"complexity": NIST_COMPLEXITY_CEILING, "crap": 30, "mutation_score_floor": 60}
 
 
 def load(path: Path) -> Any:
@@ -47,7 +53,7 @@ def validate(data: Any) -> list[str]:
     problems: list[str] = []
     if not isinstance(data, dict):
         return ["top level must be an object"]
-    extra = sorted(set(data) - {"schema_version", "thresholds", "skips", "basis"})
+    extra = sorted(set(data) - {"schema_version", "thresholds", "skips", "enforce", "basis"})
     if extra:
         problems.append("unknown top-level keys: " + ", ".join(extra))
     if data.get("schema_version") != SCHEMA_VERSION:
@@ -90,6 +96,16 @@ def validate(data: Any) -> list[str]:
                     problems.append(f"skips.{slot}.reason: must be a non-empty string")
                 if "recorded" in entry and (not isinstance(entry["recorded"], str) or not entry["recorded"].strip()):
                     problems.append(f"skips.{slot}.recorded: must be a non-empty string")
+    enforce = data.get("enforce")
+    if "enforce" in data:
+        if not isinstance(enforce, list):
+            problems.append("enforce must be an array of opt-in slots")
+        else:
+            for slot in enforce:
+                if slot not in OPT_IN_SLOTS:
+                    problems.append(f"enforce: {slot!r} must be one of {', '.join(OPT_IN_SLOTS)}")
+            if len(set(map(str, enforce))) != len(enforce):
+                problems.append("enforce: slots must not repeat")
     basis = data.get("basis")
     if "basis" in data:
         if not isinstance(basis, dict):
@@ -124,7 +140,7 @@ def recommend(report: Any) -> dict[str, Any]:
 
     The complexity ceiling is the smallest value at which at least 90 percent
     of the measured functions pass. With nothing measured it falls back to
-    Bob's six, the coached no-code default.
+    NIST SP 500-235's ceiling of 10.
     """
     functions = report.get("functions", []) if isinstance(report, dict) else []
     values = sorted(int(fn["complexity"]) for fn in functions if _is_int(fn.get("complexity")))
@@ -133,8 +149,8 @@ def recommend(report: Any) -> dict[str, Any]:
         complexity = max(1, values[index])
         basis = {"method": "percentile-90", "measured_functions": len(values)}
     else:
-        complexity = BOBS_SIX
-        basis = {"method": "bobs-six", "measured_functions": 0}
+        complexity = NIST_COMPLEXITY_CEILING
+        basis = {"method": "nist-235", "measured_functions": 0}
     return {
         "schema_version": SCHEMA_VERSION,
         "thresholds": {

@@ -290,7 +290,7 @@ def _git_repository(workspace: Path) -> dict[str, object]:
     environment = _git_environment(config)
     _run_git(git, workspace, environment, ["init", "--quiet", "--initial-branch=main", f"--template={template}", "."], "init")
     _run_git(git, workspace, environment, ["add", "--all"], "stage baseline")
-    _run_git(git, workspace, environment, ["-c", f"core.hooksPath={hooks}", "commit", "--quiet", "--no-gpg-sign", "-m", "native-eval baseline"], "commit baseline")
+    _run_git(git, workspace, environment, ["-c", f"core.hooksPath={hooks}", "-c", "maintenance.auto=false", "commit", "--quiet", "--no-gpg-sign", "-m", "native-eval baseline"], "commit baseline")
     baseline_commit = _run_git(git, workspace, environment, ["rev-parse", "HEAD"], "read baseline commit")
     baseline_tree = _run_git(git, workspace, environment, ["rev-parse", "HEAD^{tree}"], "read baseline tree")
     _run_git(git, workspace, environment, ["update-ref", "refs/remotes/origin/main", baseline_commit], "set origin/main")
@@ -345,7 +345,7 @@ def _finish_git_repository(workspace: Path, state: dict[str, object]) -> dict[st
         raise ValueError("git fixture semantic diff check timed out") from exc
     _require(diff.returncode in {0, 1}, "git fixture semantic diff check failed")
     _require(diff.returncode == 1, "git fixture recipe requires a nonempty semantic diff")
-    _run_git(git, workspace, environment, ["-c", f"core.hooksPath={hooks}", "commit", "--quiet", "--no-gpg-sign", "-m", "native-eval feature"], "commit feature")
+    _run_git(git, workspace, environment, ["-c", f"core.hooksPath={hooks}", "-c", "maintenance.auto=false", "commit", "--quiet", "--no-gpg-sign", "-m", "native-eval feature"], "commit feature")
     receipt = _read_git_receipt(workspace, git, environment)
     baseline_commit = state["baseline_commit"]
     baseline_tree = state["baseline_tree"]

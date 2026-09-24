@@ -56,7 +56,7 @@ items.
 **When consensus is triggered:**
 - Executor flagged the item as low-confidence
 - Executor's research sources disagreed
-- Item remained unresolved after 2 remediation loops
+- Item remained unresolved after the executor's one fix pass and re-run
 - Item contains security keywords (always goes to all-three consensus)
 
 ## Category-Routed Dispatch (Tier A)
@@ -429,7 +429,7 @@ Follow your agent instructions for output format
 checklist-executor runs /speckit-checklist domain
     │
     ├── Layer 1: Executor runs checklist, researches each gap,
-    │   applies fixes, re-runs to verify (max 2 loops)
+    │   applies fixes, re-runs once to verify
     │
     ├── Executor returns summary with:
     │   ├── Gaps fixed (with citations)
@@ -470,7 +470,7 @@ confidence.
 
 ## Executor's Attempt
 [Insert what the executor tried, if anything, and why it
-was flagged — remained after 2 loops, low confidence, or
+was flagged — remained after the verification re-run, low confidence, or
 security keyword]
 
 ## Your Task
@@ -488,7 +488,7 @@ Follow your agent instructions for output format.
 analyze-executor runs /speckit-analyze
     │
     ├── Layer 1: Executor runs analysis, researches each finding,
-    │   applies fixes, re-runs to verify (max 2 loops)
+    │   applies fixes, re-runs once to verify
     │
     ├── Executor returns summary with:
     │   ├── Findings fixed (with citations)
@@ -530,7 +530,7 @@ Description: [Insert finding text]
 
 ## Executor's Attempt
 [Insert what the executor tried, if anything, and why it
-was flagged — remained after 2 loops, low confidence, or
+was flagged — remained after the verification re-run, low confidence, or
 security keyword]
 
 ## Your Task

@@ -1,13 +1,17 @@
 name = "phase-executor"
-description = "Phase execution worker for the SpecKit Specify, Plan, and Tasks commands. Runs a single phase command, follows the loaded skill instructions without expansion, and returns a concise artifact summary. Specify and Plan are heavy architectural-reasoning phases per the official SpecKit docs — this agent runs at xhigh reasoning effort so the produced spec.md and plan.md reflect that depth. The model is set by the installer (gpt-5.6-sol in default installs). If your Codex account lacks gpt-5.6-sol access, re-run the installer with `--model=gpt-5.5` or `--model=gpt-5.4` (or set `SPECKIT_CODEX_MODEL` to the selected fallback) to rewrite this file to a supported legacy model."
-model = "gpt-5.6-sol"
+description = "Phase execution worker for the SpecKit Specify, Plan, and Tasks commands. Runs a single phase command, follows the loaded skill instructions without expansion, and returns a concise artifact summary. Specify and Plan are heavy architectural-reasoning phases per the official SpecKit docs — this agent runs at xhigh reasoning effort so the produced spec.md and plan.md reflect that depth."
+model = "gpt-6-sol"
 model_reasoning_effort = "xhigh"
 sandbox_mode = "workspace-write"
 developer_instructions = """
 # Phase Executor
 
 You execute a single SpecKit SDD phase. You receive a workflow
-prompt and a `$speckit-*` skill sigil to run.
+prompt and a `$speckit-*` skill sigil to run. Do the work in this
+thread. Use `spawn_agent` only when the loaded skill directs it, or
+for a large part of the phase that is independent and can run in
+parallel. Never spawn an agent to re-check your own output: the
+orchestrator validates the result at the phase gate.
 
 <hard_constraints>
 

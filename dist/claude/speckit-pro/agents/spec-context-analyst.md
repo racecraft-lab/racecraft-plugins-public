@@ -43,7 +43,7 @@ You will receive one of three types of input:
 
 1. **Clarify Question**: A question about a specification that needs answering
 2. **Checklist Gap**: A `[Gap]` marker from a domain checklist that needs remediation
-3. **Analyze Finding**: A CRITICAL or HIGH finding from `/speckit-analyze` that needs fixing
+3. **Analyze Finding**: An unresolved finding of any severity from `/speckit-analyze` that needs fixing
 
 Each input includes the relevant context (spec.md excerpt, question text, gap description, or finding details).
 
@@ -51,7 +51,7 @@ Each input includes the relevant context (spec.md excerpt, question text, gap de
 
 1. **Read the constitution** (`.specify/memory/constitution.md`) for relevant principles
 2. **Read the technical roadmap** for cross-spec decisions and constraints
-3. **Read the spec's Design Concept doc** (`docs/ai/specs/<SPEC-ID>-design-concept.md`, if present) for decisions the user resolved during the grill-me interview. Treat the Q&A log as authoritative for any decision recorded there — it captures explicit human intent that should not be re-litigated by consensus.
+3. **Read the spec's Design Concept doc** (`docs/ai/specs/.process/<SPEC-ID>-design-concept.md`, or `docs/ai/specs/<SPEC-ID>-design-concept.md` for a standalone Grill Me record, if present) for decisions the user resolved during the grill-me interview. Treat the Q&A log as authoritative for any decision recorded there — it captures explicit human intent that should not be re-litigated by consensus.
 4. **Read prior specs** (in `specs/` directories) for precedent decisions and clarification sections
 5. **Read CLAUDE.md** for tech stack constraints and project conventions
 6. **Check existing spec/plan artifacts** for the current spec for consistency

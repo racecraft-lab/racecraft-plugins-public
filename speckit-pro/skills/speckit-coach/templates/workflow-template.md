@@ -93,6 +93,7 @@ Filled from `detect-commands` at Step 0.11. One row per slot; the operator answe
 | COMPLEXITY | <!-- populated / unconfigured --> | <!-- e.g., radon + coverage.py --> | <!-- recorded with `{plugin_root}` and `{paths}` literal --> | <!-- blank until asked --> | <!-- baseline: N checked, V over ceiling (whole tree; exit 2 blocks) --> | <!-- pass / fail / n/a: no source files changed --> |
 | MUTATION | | | | | <!-- deferred: runs on the spec diff at final verification --> | |
 | DEPENDENCY_RULES | | | | | <!-- real run: pass / fail --> | |
+| DEPENDENCY_AUDIT | <!-- off (not opted in) / populated (enforce) / unconfigured --> | | | <!-- off: never asked --> | <!-- off: not opted in / pass / fail --> | |
 
 ---
 
@@ -304,6 +305,8 @@ Before running any checklists, read `spec.md` and `plan.md` and identify which d
 | SSE, WebSocket, streaming, real-time events | **streaming-protocol** |
 | Error handling, retries, fallbacks, degradation | **error-handling** |
 | State lifecycle, sessions, caching, persistence | **state-management** |
+| Personal data (PII), consent, retention, deletion | **privacy** |
+| New third-party packages or dependency upgrades | **supply-chain** |
 
 **Target: 2-4 domains.** Prioritize domains where the spec has the most complexity or risk.
 
