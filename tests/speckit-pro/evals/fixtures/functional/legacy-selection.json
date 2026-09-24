@@ -5798,7 +5798,7 @@
         "codex:speckit-autopilot:7"
       ],
       "gap_code": "host-divergent-canonical-sequence",
-      "reason": "The legacy Claude requirement has 12 canonical Post rows while Codex has 14. One shared host-blind check cannot enforce both exact sequences.",
+      "reason": "The legacy Claude requirement has 11 canonical Post rows while Codex has 13. One shared host-blind check cannot enforce both exact sequences.",
       "required_replacement": "Add host-scoped expected values or first reconcile the shipped Post-plan contract.",
       "legacy_boundaries": [
         {
@@ -5806,9 +5806,8 @@
           "source": "tests/speckit-pro/layer3-functional/evals/speckit-autopilot-evals.json",
           "eval_id": 7,
           "expectations": [
-            "Lists all 12 canonical Post items from Doctor Extension Check through Retrospective without collapsing or omitting an item",
+            "Lists all 11 canonical Post items from Doctor Extension Check through Retrospective without collapsing or omitting an item",
             "Identifies Doctor, Verify Implementation, Verify Tasks Phantom Check, and Retrospective as extension-backed items and keeps Code Review plus Integration Suite built in",
-            "Lists Self-Review (4-question audit) as an always-required built-in step before PR body generation",
             "Lists UAT Runbook Generation as mandatory and fail-open, runs generate-uat-skeleton in dry_run then apply mode, and dispatches uat-runbook-author after the skeleton is written",
             "Lists the feature-local packet path specs/<feature>/.process/pr-packets/<packet-id>.json and states pr-packet-output emits the packet JSON and body file while declaring the validation-result path",
             "Describes generate-pr-body only as a golden_only one-Markdown-body writer accepting output_path, title, and sections, not as packet emission",
@@ -5825,9 +5824,8 @@
           "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json",
           "eval_id": 7,
           "expectations": [
-            "Lists all 14 canonical Codex Post items from Doctor Extension Check through Retrospective without collapsing supporting rows",
+            "Lists all 13 canonical Codex Post items from Doctor Extension Check through Retrospective without collapsing supporting rows",
             "Identifies Doctor, Verify Implementation, Verify Tasks Phantom Check, and Retrospective as extension-backed items and keeps Code Review plus Integration Suite built in",
-            "Lists Self-Review (4-question audit) as an always-required built-in step before PR body generation",
             "Lists UAT Runbook Generation as mandatory and fail-open, runs generate-uat-skeleton in dry_run then apply mode, and dispatches uat-runbook-author after the skeleton is written",
             "Lists both Final Reviewability Backstop and PR Packet/Body Generation supporting rows in update_plan and autopilot-state.json",
             "Lists the feature-local packet path specs/<feature>/.process/pr-packets/<packet-id>.json and states pr-packet-output emits the packet JSON and body file while declaring the validation-result path",
@@ -5858,42 +5856,38 @@
             },
             {
               "expectation_index": 2,
-              "requirement_id": "self-review"
-            },
-            {
-              "expectation_index": 3,
               "requirement_id": "uat"
             },
             {
-              "expectation_index": 4,
+              "expectation_index": 3,
               "requirement_id": "packet"
             },
             {
-              "expectation_index": 5,
+              "expectation_index": 4,
               "requirement_id": "body"
             },
             {
-              "expectation_index": 6,
+              "expectation_index": 5,
               "requirement_id": "packet-validation"
             },
             {
-              "expectation_index": 7,
+              "expectation_index": 6,
               "requirement_id": "workflow-validation"
             },
             {
-              "expectation_index": 8,
+              "expectation_index": 7,
               "requirement_id": "creation"
             },
             {
-              "expectation_index": 9,
+              "expectation_index": 8,
               "requirement_id": "review-loop"
             },
             {
-              "expectation_index": 10,
+              "expectation_index": 9,
               "requirement_id": "inactive"
             },
             {
-              "expectation_index": 11,
+              "expectation_index": 10,
               "requirement_id": "failure"
             }
           ]
@@ -5913,46 +5907,42 @@
             },
             {
               "expectation_index": 2,
-              "requirement_id": "self-review"
-            },
-            {
-              "expectation_index": 3,
               "requirement_id": "uat"
             },
             {
-              "expectation_index": 4,
+              "expectation_index": 3,
               "requirement_id": "sequence"
             },
             {
-              "expectation_index": 5,
+              "expectation_index": 4,
               "requirement_id": "packet"
             },
             {
-              "expectation_index": 6,
+              "expectation_index": 5,
               "requirement_id": "body"
             },
             {
-              "expectation_index": 7,
+              "expectation_index": 6,
               "requirement_id": "packet-validation"
             },
             {
-              "expectation_index": 8,
+              "expectation_index": 7,
               "requirement_id": "workflow-validation"
             },
             {
-              "expectation_index": 9,
+              "expectation_index": 8,
               "requirement_id": "creation"
             },
             {
-              "expectation_index": 10,
+              "expectation_index": 9,
               "requirement_id": "review-loop"
             },
             {
-              "expectation_index": 11,
+              "expectation_index": 10,
               "requirement_id": "inactive"
             },
             {
-              "expectation_index": 12,
+              "expectation_index": 11,
               "requirement_id": "failure"
             }
           ]
@@ -5966,7 +5956,7 @@
         "codex:speckit-autopilot:25"
       ],
       "gap_code": "host-divergent-canonical-position",
-      "reason": "The legacy Self-Review requirement is position 7 of 12 for Claude and position 7 of 14 for Codex, so a single shared count assertion would weaken one boundary.",
+      "reason": "The neighbors of Post: UAT Runbook Generation differ by host: the 11-entry Claude list follows it with PR Body Generation, while the 13-entry Codex list follows it with Final Reviewability Backstop, so a single shared assertion would weaken one boundary.",
       "required_replacement": "Add host-scoped expected values or reconcile the canonical Post-plan length.",
       "legacy_boundaries": [
         {
@@ -5974,14 +5964,9 @@
           "source": "tests/speckit-pro/layer3-functional/evals/speckit-autopilot-evals.json",
           "eval_id": 21,
           "expectations": [
-            "Lists all 4 questions in order: Tests executed? / Edge cases? / Requirements matched? / Follow-up?",
-            "Tests executed? — requires citing the test run timestamp from the workflow log and confirming BUILD/TYPECHECK/LINT/UNIT_TEST/INTEGRATION_TEST each actually ran and exited zero",
-            "Edge cases? — requires naming the test (file:line) for each acceptance criterion's non-happy path; flags criteria with only happy-path tests as [edge-case-gap]",
-            "Requirements matched? — requires cross-walking spec.md FR-XXX list against tasks.md, with each FR tracing to at least one [X] task and each [X] task having implementation evidence (commit hash + passing test)",
-            "Follow-up? — requires every [TODO], [DEFERRED], or [OUT-OF-SCOPE] marker to have an explicit landing place (roadmap entry, tracked issue, PR-body section)",
-            "States the answers remain canonical in the workflow log and are mirrored only when the existing packet-owned body declares an editable ## Self-Review Findings region",
-            "States explicitly that self-review is a reporting step, NOT a gate, while packet availability and validation still fail closed",
-            "Mentions that Post: Self-Review appears in the canonical post-implementation task list (12 entries total), immediately after Post: Reviewability Diff Gate and before Post: UAT Runbook Generation"
+            "States that the canonical Post list has no separate Self-Review step and that Post: Code Review is the single final integration review, with no later step reviewing unchanged code a second time",
+            "States that the advisory terms lint runs at the start of UAT Runbook Generation, before its checkpoint, records its note in the workflow log, and never gates",
+            "Mentions that Post: UAT Runbook Generation is position #7 in the canonical 11-entry post-implementation list, immediately after Post: Reviewability Diff Gate and before Post: PR Body Generation"
           ]
         },
         {
@@ -5989,14 +5974,9 @@
           "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json",
           "eval_id": 25,
           "expectations": [
-            "Lists all 4 questions in order: Tests executed? / Edge cases? / Requirements matched? / Follow-up?",
-            "Tests executed? — requires citing the test run timestamp from the workflow log and confirming BUILD/TYPECHECK/LINT/UNIT_TEST/INTEGRATION_TEST each actually ran and exited zero",
-            "Edge cases? — requires naming the test (file:line) for each acceptance criterion's non-happy path; flags criteria with only happy-path tests as [edge-case-gap]",
-            "Requirements matched? — requires cross-walking spec.md FR-XXX list against tasks.md, with each FR tracing to at least one [X] task and each [X] task having implementation evidence (commit hash + passing test)",
-            "Follow-up? — requires every [TODO], [DEFERRED], or [OUT-OF-SCOPE] marker to have an explicit landing place (roadmap entry, tracked issue, PR-body section)",
-            "States the answers remain canonical in the workflow log and are mirrored only when the existing packet-owned body declares an editable ## Self-Review Findings region",
-            "States explicitly that self-review is a reporting step, NOT a gate, while packet availability and validation still fail closed",
-            "Mentions that Post: Self-Review is item position #7 in the canonical 14-entry Codex post-implementation list, between Post: Reviewability Diff Gate and Post: UAT Runbook Generation",
+            "States that the canonical Post list has no separate Self-Review step and that Post: Code Review is the single final integration review, with no later step reviewing unchanged code a second time",
+            "States that the advisory terms lint runs at the start of UAT Runbook Generation, before its checkpoint, records its note in the workflow log, and never gates",
+            "Mentions that Post: UAT Runbook Generation is item position #7 in the canonical 13-entry Codex post-implementation list, between Post: Reviewability Diff Gate and Post: Final Reviewability Backstop",
             "Notes that the step transitions through update_plan + autopilot-state.json in pending → in_progress → completed states like every other canonical step"
           ]
         }
@@ -6010,34 +5990,14 @@
           "expectations": [
             {
               "expectation_index": 0,
-              "requirement_id": "questions"
+              "requirement_id": "final-review"
             },
             {
               "expectation_index": 1,
-              "requirement_id": "tests"
+              "requirement_id": "terms-lint"
             },
             {
               "expectation_index": 2,
-              "requirement_id": "edges"
-            },
-            {
-              "expectation_index": 3,
-              "requirement_id": "traceability"
-            },
-            {
-              "expectation_index": 4,
-              "requirement_id": "followup"
-            },
-            {
-              "expectation_index": 5,
-              "requirement_id": "canonical-log"
-            },
-            {
-              "expectation_index": 6,
-              "requirement_id": "reporting"
-            },
-            {
-              "expectation_index": 7,
               "requirement_id": "position"
             }
           ]
@@ -6049,38 +6009,18 @@
           "expectations": [
             {
               "expectation_index": 0,
-              "requirement_id": "questions"
+              "requirement_id": "final-review"
             },
             {
               "expectation_index": 1,
-              "requirement_id": "tests"
+              "requirement_id": "terms-lint"
             },
             {
               "expectation_index": 2,
-              "requirement_id": "edges"
-            },
-            {
-              "expectation_index": 3,
-              "requirement_id": "traceability"
-            },
-            {
-              "expectation_index": 4,
-              "requirement_id": "followup"
-            },
-            {
-              "expectation_index": 5,
-              "requirement_id": "canonical-log"
-            },
-            {
-              "expectation_index": 6,
-              "requirement_id": "reporting"
-            },
-            {
-              "expectation_index": 7,
               "requirement_id": "position"
             },
             {
-              "expectation_index": 8,
+              "expectation_index": 3,
               "requirement_id": "tracking"
             }
           ]

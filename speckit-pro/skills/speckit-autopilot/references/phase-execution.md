@@ -493,27 +493,8 @@ Spawn a subagent.
 **Gate:** G5 — cross-reference every FR in spec.md with
 tasks.md
 
-**Verify Tasks (ALWAYS — plugin skill):**
-After G5 passes, run the `speckit-verify-tasks-run` skill to detect
-phantom completions — tasks marked `[X]` that have no real
-implementation. This catches tasks that were incorrectly
-marked complete during previous iterations.
-
-```text
-TaskUpdate: "Phase 5: Verify Tasks" → in_progress
-Agent(
-  subagent_type: "general-purpose",
-  description: "SPEC-XXX verify tasks",
-  run_in_background: false,
-  prompt: "Run /speckit-verify-tasks-run for SPEC-XXX.
-    Check for phantom completions — tasks marked [X]
-    that have no real implementation. Return findings."
-)
-TaskUpdate: → completed
-```
-
 **Post-G5 reviewability capture (guarded):**
-After G5 and Verify Tasks pass, run the task reviewability gate without letting
+After G5 passes, run the task reviewability gate without letting
 the script's compatibility exit code abort the run:
 
 ```text
@@ -685,7 +666,7 @@ to proceed, surface a remediation hint, or stop.
           table: fix each one and record the fix in that row's
           Resolution cell, which is what clears the deduction. The
           criterion breakdown will not point at those rows, because
-          the synthesizer no longer deducts for findings. When it
+          the synthesizer does not deduct for findings. When it
           is false, read the JSON `criteria` object and target the
           lowest-scoring criterion (lowest numeric value among the
           5 keys).

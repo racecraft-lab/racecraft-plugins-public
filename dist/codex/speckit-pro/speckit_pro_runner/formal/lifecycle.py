@@ -150,7 +150,7 @@ def required_checkpoints(steps: list[tuple[str, str | None]]) -> list[str]:
         required.append("plan")
     if any(name.startswith("Post:") for name in active):
         required.append("final")
-    after_integration = {"Post: Reviewability Diff Gate", "Post: Self-Review", "Post: UAT Runbook Generation", "Post: PR Body Generation", "Post: PR Creation", "Post: Review Remediation", "Post: Retrospective"}
+    after_integration = {"Post: Reviewability Diff Gate", "Post: UAT Runbook Generation", "Post: PR Body Generation", "Post: PR Creation", "Post: Review Remediation", "Post: Retrospective"}
     if "Post: Integration Suite" in completed or active & after_integration:
         required.append("post")
     return required

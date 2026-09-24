@@ -65,7 +65,8 @@ present. Ad-hoc entries are selected explicitly rather than by stage routing.
 
 - `competing_approaches`: planning considered more than one viable approach.
 - `brownfield_change`: the change modifies existing code.
-- `self_review_findings`: self-review recorded at least one actionable gap.
+- `code_review_findings`: Post: Code Review recorded at least one actionable
+  finding in the workflow log.
 - `large_diff`: the repository reviewability gate returned warn or block.
 - `operational_flow_change`: the change alters a multi-step runtime or
   delivery process.
