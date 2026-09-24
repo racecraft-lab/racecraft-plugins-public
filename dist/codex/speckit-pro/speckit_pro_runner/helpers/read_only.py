@@ -20,7 +20,7 @@ from typing import Any, Callable, cast
 from ..agent_inventory import CLAUDE_REQUIRED_AGENT_NAMES
 from ..envelope import diagnostic, response
 from ..formal.selection import unique_object
-from ..gate_discovery import SLOTS as GATE_SLOTS, resolve_slots as resolve_gate_slots
+from ..gate_discovery import DEFAULT_BASE_BRANCH, SLOTS as GATE_SLOTS, resolve_slots as resolve_gate_slots
 from .. import quality_gates
 from ..runtime import detect_plugin_root
 
@@ -1709,6 +1709,62 @@ def local_node_bin_present(root: Path, name: str, repo_root: Path) -> bool:
         return False
 
 
+# A Python lint or type-check default is proposed only when the project
+# already carries that tool's config or dependency; no signal leaves N/A.
+_RUFF_DEPENDENCY_RE = re.compile(r"""(?m)(^|["'\s])ruff([<>=~!;\[\s"']|$)""")
+
+
+def python_quality_commands(root: Path, repo_root: Path) -> dict[str, str]:
+    pyproject = trusted_text(root / "pyproject.toml", repo_root) or ""
+    setup_cfg = trusted_text(root / "setup.cfg", repo_root) or ""
+    requirements = "\n".join(
+        trusted_text(root / name, repo_root) or ""
+        for name in ("requirements.txt", "requirements-dev.txt", "dev-requirements.txt")
+    )
+    found: dict[str, str] = {}
+    if (
+        any(trusted_file_exists(root / name, repo_root) for name in ("ruff.toml", ".ruff.toml"))
+        or re.search(r"(?m)^\[tool\.ruff[\].]", pyproject)
+        or _RUFF_DEPENDENCY_RE.search(pyproject)
+        or re.search(r"(?m)^ruff\b", requirements)
+    ):
+        found["LINT"] = "ruff check"
+    if (
+        any(trusted_file_exists(root / name, repo_root) for name in ("mypy.ini", ".mypy.ini"))
+        or re.search(r"(?m)^\[tool\.mypy[\].]", pyproject)
+        or re.search(r"(?m)^\[mypy[\]-]", setup_cfg)
+    ):
+        found["TYPECHECK"] = "mypy ."
+    return found
+
+
+_BASE_BRANCH_RE = re.compile(r"^origin/[A-Za-z0-9][A-Za-z0-9._/-]*$")
+
+
+def resolve_base_branch(root: Path) -> dict[str, str]:
+    """The remote default branch the mutation filter diffs against.
+
+    Read from origin/HEAD; anything unreadable or outside a conservative
+    ref-name alphabet (the value is substituted into a shell command) falls
+    back to origin/main, the orchestrator's own change base.
+    """
+    try:
+        completed = subprocess.run(
+            ["git", "-C", str(root), "symbolic-ref", "--quiet", "--short", "refs/remotes/origin/HEAD"],
+            text=True,
+            capture_output=True,
+            shell=False,
+            check=False,
+            timeout=SUBPROCESS_TIMEOUT_SECONDS,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        completed = None
+    value = completed.stdout.strip() if completed is not None and completed.returncode == 0 else ""
+    if _BASE_BRANCH_RE.match(value) and ".." not in value and not value.endswith((".lock", "/", ".")):
+        return {"value": value, "source": "origin_head"}
+    return {"value": DEFAULT_BASE_BRANCH, "source": "default"}
+
+
 def detect_commands(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
     root = resolve_input_path(inputs.get("repo_root") or ".", repo_root)
     commands = {
@@ -1761,11 +1817,11 @@ def detect_commands(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
     elif trusted_file_exists(root / "Cargo.toml", repo_root):
         stack = "rust"
         evidence = "Cargo.toml"
-        commands.update({"BUILD": "cargo build", "UNIT_TEST": "cargo test"})
+        commands.update({"BUILD": "cargo build", "LINT": "cargo clippy -- -D warnings", "UNIT_TEST": "cargo test"})
     elif trusted_file_exists(root / "go.mod", repo_root):
         stack = "go"
         evidence = "go.mod"
-        commands.update({"BUILD": "go build ./...", "UNIT_TEST": "go test ./..."})
+        commands.update({"BUILD": "go build ./...", "LINT": "go vet ./...", "UNIT_TEST": "go test ./..."})
     elif python_marker := next((marker for marker in PYTHON_ROOT_MARKERS if trusted_file_exists(root / marker, repo_root)), ""):
         stack = "python"
         evidence = python_marker
@@ -1785,6 +1841,10 @@ def detect_commands(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
             evidence = runner
             source = "test_runner_script"
             commands["UNIT_TEST"] = f"python3 {runner}"
+    if stack == "python":
+        for key, command in python_quality_commands(root, repo_root).items():
+            if commands[key] == "N/A":
+                commands[key] = command
 
     chain = [commands[key] for key in ("BUILD", "TYPECHECK", "LINT", "UNIT_TEST", "INTEGRATION_TEST") if commands[key] != "N/A"]
     if chain:
@@ -1801,6 +1861,7 @@ def detect_commands(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
         "status": "missing",
         "thresholds": None,
         "skips": {},
+        "enforce": [],
         "coach": "speckit-coach quality gates",
     }
     quality_text = trusted_text(root / quality_gates.FILE_PATH, repo_root)
@@ -1819,6 +1880,8 @@ def detect_commands(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
                 quality["status"] = "present"
                 quality["thresholds"] = quality_data["thresholds"]
                 quality["skips"] = quality_data.get("skips", {})
+                quality["enforce"] = quality_data.get("enforce", [])
+    base_branch = resolve_base_branch(root)
     gates = resolve_gate_slots(
         root,
         stack,
@@ -1826,6 +1889,8 @@ def detect_commands(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
         which=lambda name: bool(shutil.which(name)) or local_node_bin_present(root, name, repo_root),
         thresholds=quality_gates.substitutions(quality["thresholds"]) if quality["thresholds"] else None,
         skips=quality["skips"],
+        enforce=quality["enforce"],
+        base_branch=base_branch["value"],
     )
     for slot in GATE_SLOTS:
         commands[slot] = gates[slot]["command"]
@@ -1839,7 +1904,7 @@ def detect_commands(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
             "No packaging marker or tests/ runner script found. Supply commands from the "
             "project's own documentation instead of treating N/A as 'no checks exist'."
         )
-    return make_result(json_text({"stack": stack, "package_manager": package_manager, "commands": commands, "gates": gates, "quality_gates": quality, "plugin_root": plugin_root.as_posix() if plugin_root else "", "detection": detection}))
+    return make_result(json_text({"stack": stack, "package_manager": package_manager, "commands": commands, "gates": gates, "quality_gates": quality, "base_branch": base_branch, "plugin_root": plugin_root.as_posix() if plugin_root else "", "detection": detection}))
 
 
 def detect_presets(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
@@ -1888,6 +1953,12 @@ def detect_presets(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
     return make_result(json_text({"has_presets": bool(presets), "presets": presets, "extensions": extensions, "hooks": hooks, "templates": templates}))
 
 
+# The spec template writes `[NEEDS CLARIFICATION: <question>]`; the bare
+# `[NEEDS CLARIFICATION]` form is still accepted. Prose that names the
+# phrase outside brackets is not a marker.
+NEEDS_CLARIFICATION_MARKER = r"\[NEEDS CLARIFICATION(?::[^\]]*)?\]"
+
+
 def count_markers(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
     marker_type = str(inputs.get("type") or "")
     feature_dir = resolve_input_path(inputs.get("feature_dir") or "", repo_root)
@@ -1902,7 +1973,7 @@ def count_markers(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
     if marker_type == "all":
         obj = {
             "gaps": count_pattern([spec, plan], r"\[Gap\]", repo_root) + count_pattern_dir(checklists, r"\[Gap\]", repo_root),
-            "clarifications": count_pattern([spec, plan], r"\[NEEDS CLARIFICATION\]", repo_root),
+            "clarifications": count_pattern([spec, plan], NEEDS_CLARIFICATION_MARKER, repo_root),
             "critical": count_pattern([spec, plan, tasks], r"\[CRITICAL\]", repo_root),
             "high": count_pattern([spec, plan, tasks], r"\[HIGH\]", repo_root),
             "medium": count_pattern([spec, plan, tasks], r"\[MEDIUM\]", repo_root),
@@ -1935,8 +2006,8 @@ def count_markers(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
             "low": count_pattern([spec, plan, tasks], r"\[LOW\]", repo_root),
         }
         return make_result(json_text({"type": "findings", "total": sum(counts.values()), **counts}))
-    spec_nc = count_pattern([spec], r"\[NEEDS CLARIFICATION\]", repo_root)
-    plan_nc = count_pattern([plan], r"\[NEEDS CLARIFICATION\]", repo_root)
+    spec_nc = count_pattern([spec], NEEDS_CLARIFICATION_MARKER, repo_root)
+    plan_nc = count_pattern([plan], NEEDS_CLARIFICATION_MARKER, repo_root)
     return make_result(
         json_text(
             {
@@ -1944,7 +2015,7 @@ def count_markers(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
                 "total": spec_nc + plan_nc,
                 "spec": spec_nc,
                 "plan": plan_nc,
-                "details": list_pattern(spec, r"\[NEEDS CLARIFICATION\]", repo_root),
+                "details": list_pattern(spec, NEEDS_CLARIFICATION_MARKER, repo_root),
             }
         )
     )
@@ -1965,19 +2036,19 @@ def validate_gate(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
     if gate in {"G1", "G2"}:
         if not trusted_file_exists(spec, repo_root):
             return make_result(json_text({"gate": gate, "pass": False, "reason": "spec.md not found", "markers": 0, "details": []}), exit_code=1)
-        count = count_pattern([spec], r"\[NEEDS CLARIFICATION\]", repo_root)
+        count = count_pattern([spec], NEEDS_CLARIFICATION_MARKER, repo_root)
         if count == 0:
             reason = "spec.md exists with 0 markers" if gate == "G1" else "0 [NEEDS CLARIFICATION] markers"
             return make_result(json_text({"gate": gate, "pass": True, "reason": reason, "markers": 0, "details": []}))
         reason = f"{count} [NEEDS CLARIFICATION] markers remain" if gate == "G1" else f"{count} markers remain"
         return make_result(
-            json_text({"gate": gate, "pass": False, "reason": reason, "markers": count, "details": list_pattern(spec, r"\[NEEDS CLARIFICATION\]", repo_root, limit=10)}),
+            json_text({"gate": gate, "pass": False, "reason": reason, "markers": count, "details": list_pattern(spec, NEEDS_CLARIFICATION_MARKER, repo_root, limit=10)}),
             exit_code=1,
         )
     if gate == "G3":
         if not trusted_file_exists(plan, repo_root):
             return make_result(json_text({"gate": "G3", "pass": False, "reason": "plan.md not found", "markers": 0, "details": []}), exit_code=1)
-        nc_count = count_pattern([plan], r"\[NEEDS CLARIFICATION\]", repo_root)
+        nc_count = count_pattern([plan], NEEDS_CLARIFICATION_MARKER, repo_root)
         todo_count = count_pattern([plan], r"TODO|TKTK|\?\?\?", repo_root)
         count = nc_count + todo_count
         if count == 0:
@@ -1989,11 +2060,20 @@ def validate_gate(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
     if gate == "G4":
         spec_gaps = count_pattern([spec], r"\[Gap\]", repo_root)
         plan_gaps = count_pattern([plan], r"\[Gap\]", repo_root)
-        gaps = spec_gaps + plan_gaps
+        checklist_gaps = count_pattern_dir(feature / "checklists", r"\[Gap\]", repo_root)
+        gaps = spec_gaps + plan_gaps + checklist_gaps
         if gaps == 0:
             return make_result(json_text({"gate": "G4", "pass": True, "reason": "0 [Gap] markers", "markers": 0, "details": []}))
         return make_result(
-            json_text({"gate": "G4", "pass": False, "reason": f"{gaps} [Gap] markers (spec:{spec_gaps}, plan:{plan_gaps})", "markers": gaps, "details": []}),
+            json_text(
+                {
+                    "gate": "G4",
+                    "pass": False,
+                    "reason": f"{gaps} [Gap] markers (spec:{spec_gaps}, plan:{plan_gaps}, checklists:{checklist_gaps})",
+                    "markers": gaps,
+                    "details": [],
+                }
+            ),
             exit_code=1,
         )
     if gate == "G5":
@@ -2131,6 +2211,11 @@ def estimate_reviewable_loc(inputs: dict[str, Any], repo_root: Path) -> dict[str
         "greenfield": greenfield,
         "thresholds": {"warn": warn, "block": block, "greenfield_multiplier": 1.5, "base_warn": 400, "base_block": 800},
     }
+    if production == 0:
+        # Zero is what an unrecognized layout scores, so it is not evidence of a small slice.
+        obj["status"] = "not_estimated"
+        obj["projected"] = None
+        obj["reason"] = "no declared entry counted as production code; the estimator cannot size this layout"
     return make_result(json_text(obj))
 
 
@@ -8259,8 +8344,17 @@ def is_excluded_generated(path: str) -> bool:
     )
 
 
+# Source files of the other stacks detect-commands knows, counted wherever
+# they live (a Python package, cmd/ and internal/, crates/, src/main/java)
+# unless the path or file name marks them as tests.
+PRODUCTION_SOURCE_SUFFIXES = (".py", ".go", ".rs", ".java", ".kt", ".kts", ".swift", ".rb", ".cs")
+_TEST_PATH_RE = re.compile(r"(^|/)(tests?|__tests__|spec|src/test)/|(^|/)test_[^/]*\.py$|_test\.(py|go)$|(Test|Tests|Spec)\.(java|kt|swift|cs)$|_spec\.rb$")
+
+
 def is_production_file(path: str) -> bool:
-    return path.startswith(("src/", "app/", "lib/", "scripts/")) or path.endswith((".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".sql"))
+    if path.startswith(("src/", "app/", "lib/", "scripts/")) or path.endswith((".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".sql")):
+        return True
+    return path.endswith(PRODUCTION_SOURCE_SUFFIXES) and not _TEST_PATH_RE.search(path)
 
 
 def valid_child_spec_path(path: str) -> bool:

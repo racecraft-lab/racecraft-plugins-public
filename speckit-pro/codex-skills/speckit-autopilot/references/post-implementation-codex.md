@@ -419,7 +419,7 @@ the autopilot meant to leave behind.
 Questions (Codex orchestrator answers each in order):
 
 1. **Tests executed?** Did `BUILD`, `TYPECHECK`, `LINT`, `UNIT_TEST`, and
-   `INTEGRATION_TEST`, plus every populated quality-gate slot, each actually
+   `INTEGRATION_TEST`, plus every populated blocking quality-gate slot, each actually
    have current validated native execution evidence and exit zero — or did
    the autopilot infer "no errors reported" from a phase that never invoked
    them? Cite the most recent test run with timestamp from the workflow log.

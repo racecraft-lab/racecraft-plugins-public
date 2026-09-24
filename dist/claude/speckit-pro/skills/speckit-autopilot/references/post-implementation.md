@@ -730,7 +730,7 @@ The four questions, in order, plus one advisory report:
 
 1. **Tests executed?** Did each of `BUILD`, `TYPECHECK`, `LINT`,
    `UNIT_TEST`, and `INTEGRATION_TEST`, plus every populated
-   quality-gate slot, have current validated native execution evidence and exit zero, or did the autopilot infer "no errors
+   blocking quality-gate slot, have current validated native execution evidence and exit zero, or did the autopilot infer "no errors
    reported" from a phase that never invoked them? Cite the most
    recent test run with timestamp from the workflow log.
 
