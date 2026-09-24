@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.35.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.34.0...speckit-pro-v2.35.0) (2026-09-24)
+
+
+### Features
+
+* **speckit-pro:** route research agents through the research broker ([5a7edae](https://github.com/racecraft-lab/racecraft-plugins-public/commit/5a7edae48d9cbefeb6a1d7f39dff495634afc3b6))
+
 ## [2.34.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.33.0...speckit-pro-v2.34.0) (2026-09-24)
 
 
