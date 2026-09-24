@@ -19924,7 +19924,7 @@
         },
         {
           "id": "workflow-execution",
-          "description": "The real staged workflow materializes its complete 12-item Claude or 14-item Codex Post list, dispatches its bounded workers, and checkpoints without claiming Post completion."
+          "description": "The real staged workflow materializes its complete 11-item Claude or 13-item Codex Post list, dispatches its bounded workers, and checkpoints without claiming Post completion."
         },
         {
           "id": "correctness",
@@ -20155,7 +20155,7 @@
       },
       "native_differences": [
         "Claude activates speckit-pro:speckit-autopilot in plugin mode; Codex activates speckit-autopilot in an isolated project skill catalog.",
-        "Claude materializes its 12-item canonical Post list; Codex materializes its 14-item combined canonical Post list; semantic outcome parity does not require identical row counts.",
+        "Claude materializes its 11-item canonical Post list; Codex materializes its 13-item combined canonical Post list; semantic outcome parity does not require identical row counts.",
         "Interactive Claude teams are outside this automated case. Each host uses its native ordinary-subagent mechanism, but both must produce the same owned-track, return-before-parent, local-checkpoint, and no-external-mutation evidence."
       ],
       "provenance": [

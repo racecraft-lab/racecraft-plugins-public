@@ -33,10 +33,10 @@ sites (consensus debate, Phase 7 `[P]` tasks, parallel
 checklist/analyze).
 
 Tasks 10/11/12/13/14 are independent post-implementation work that
-benefits from parallel dispatch. The serial tail — tasks 15-19 — is
+benefits from parallel dispatch. The serial tail, tasks 15-20, is
 **not** part of that parallel group: each step stays strictly sequential
 because of hard dependencies (Reviewability reads the resulting diff, PR
-Body needs the reviewability result and Self-Review, PR Creation needs
+Body needs the reviewability result, PR Creation needs
 PR Body, Review Remediation needs the PR URL, Retrospective needs all of
 the above).
 
@@ -220,8 +220,7 @@ Agent(subagent_type: "general-purpose",
                against spec.md/plan.md and the diff origin/main...HEAD —
                correctness, regressions, scope, missed edge cases. Return
                findings by severity (CRITICAL/HIGH/MEDIUM/LOW). This is a
-               fresh-eyes review, distinct from the orchestrator's
-               Self-Review. No extension required.")
+               fresh-eyes review. No extension required.")
 
 Agent(subagent_type: "general-purpose",
       run_in_background: true,
@@ -711,110 +710,12 @@ variables.
 final summary with PR URL and note that review remediation is
 running in the background via `/loop`.
 
-## Self-Review Before Finalizing
-
-Reconcile the final independent Code Review and requirement-to-test evidence;
-do not commission another review of unchanged code. Required defects remain
-blocking; optional style/reporting gaps remain advisory.
-
-Immediately after G7 passes and before opening the PR (between
-`Post: Integration Suite` and `Post: PR Body Generation`), the
-orchestrator answers four short questions and records the answers
-in the workflow log under a `Self-Review` block. This catches the
-common end-of-run failure modes that gate validation alone
-doesn't reach: tests that didn't actually run, edge cases the
-spec called out but the implementation skipped, requirements
-silently dropped, and TODOs the autopilot meant to leave behind.
-
-The four questions, in order, plus one advisory report:
-
-1. **Tests executed?** Did each of `BUILD`, `TYPECHECK`, `LINT`,
-   `UNIT_TEST`, and `INTEGRATION_TEST`, plus every populated
-   quality-gate slot, have current validated native execution evidence and exit zero, or did the autopilot infer "no errors
-   reported" from a phase that never invoked them? Cite the most
-   recent test run with timestamp from the workflow log.
-
-2. **Edge cases?** Walk the acceptance-criteria list in
-   `spec.md`. For each criterion, name the test (file:line) that
-   exercises its **non-happy** path — error inputs, empty inputs,
-   concurrency, auth failure, schema mismatch. If a criterion has
-   only a happy-path test, flag it as `[edge-case-gap]`.
-
-3. **Requirements matched?** Cross-walk `spec.md`'s FR-XXX list
-   against `tasks.md`. Every FR must trace to at least one
-   `[X]` task, and every `[X]` task must have implementation
-   evidence (commit hash + passing test). List any orphans in
-   either direction.
-
-4. **Follow-up & tidiness?** Are there `[TODO]`, `[DEFERRED]`, or
-   `[OUT-OF-SCOPE]` markers in `spec.md`, `plan.md`, `tasks.md`,
-   or commit messages? Each one needs an explicit landing place
-   — a new spec entry on the technical roadmap, a tracked issue,
-   or a clearly-marked section in the PR body. Silent deferral
-   is a defect. Also scan the diff for leftover scaffolding —
-   debug logging, commented-out code, stray `console.log`/`print`,
-   temporary fixtures, or files the change orphaned — and flag each
-   with a `[tidiness]` note so it is cleaned up or explicitly
-   called out before the PR opens.
-
-5. **Terms lint (advisory).** If `docs/ai/specs/ubiquitous-language.md`
-   exists, run
-   `${CLAUDE_PLUGIN_ROOT}/scripts/ubiquitous-language-lint.py --base origin/main`
-   and record its one-line note plus each unmapped identifier
-   (file:line). Mirror the same lines into the PR body's
-   `## Self-Review Findings` region when the packet declares it.
-   The lint exits 0 by design; an unmapped identifier is a
-   suggestion for a term or a rename, never a gate. Without the
-   document, record `Terms lint: no terms document`.
-
-**Block format in the workflow log:**
-
-```markdown
-### Self-Review (auto-generated)
-
-**Tests executed:** All five (BUILD, TYPECHECK, LINT, UNIT_TEST,
-INTEGRATION_TEST) and the populated quality gates (COMPLEXITY,
-DEPENDENCY_RULES; MUTATION unconfigured) ran at
-2026-05-25T17:42:11Z and exited zero.
-Evidence: workflow log §G7 Verification.
-
-**Edge cases:** All 7 acceptance criteria have non-happy-path
-tests. No `[edge-case-gap]` markers.
-
-**Requirements matched:** FR-001 → T015, T022. FR-002 → T030.
-... [enumerate all]. No orphans.
-
-**Terms lint:** 2 of 9 declared identifiers map to no term:
-src/billing.py:41 `rebuild_cache`, src/api.ts:12 `scheduleReminder`.
-Advisory only.
-
-**Follow-up & tidiness:** 1 deferred item — `[DEFERRED] Postgres
-connection pooling under load testing`. Landed in PR body §Out of
-scope. No silent deferrals. No leftover scaffolding or debug code in
-the diff — no `[tidiness]` flags.
-```
-
-**On advisory gap detection:** the self-review does not add a style-only gate.
-Required behavioral/security defects still block. Advisory gaps it
-surfaces (`[edge-case-gap]`, orphan FR, silent TODO) are recorded in the
-workflow log. If the already-existing packet-owned body declares an editable
-`## Self-Review Findings` region, mirror the findings there without changing
-protected packet content. Running the self-review is mandatory; the finding is
-the deliverable. Packet availability and validation remain separate fail-closed
-PR boundaries.
-
-The self-review is part of the canonical post-implementation
-task list (see `task-list-canonical.md`) and runs whether the
-operator configured strict mode for G6.5 or not. It is a
-reporting step, not a gate — its value is putting the four
-answers in writing so anyone reviewing the PR sees them.
-
 ## UAT Runbook Generation
 
-Immediately after Self-Review and before PR-body generation (between
-`Post: Self-Review` and `Post: PR Body Generation`), the orchestrator records
-UAT runbook status. This row and the generation attempt are mandatory. Invoke
-the registered `generate-uat-skeleton` mutation helper in `dry_run` and then
+Immediately after the Reviewability Diff Gate and before PR-body generation
+(between `Post: Reviewability Diff Gate` and `Post: PR Body Generation`), the
+orchestrator records UAT runbook status. This row and the generation attempt are
+mandatory. Invoke the registered `generate-uat-skeleton` mutation helper in `dry_run` and then
 `apply` mode with:
 
 - `spec_path=<feature-dir>/spec.md`
@@ -822,8 +723,16 @@ the registered `generate-uat-skeleton` mutation helper in `dry_run` and then
 - `workflow_file=<current workflow file>` when available
 - `project_commands=<PROJECT_COMMANDS object>`
 
-Before `dry_run`, checkpoint the just-recorded Self-Review and UAT-pending state
-by staging only the current workflow and autopilot-state files and committing
+**Terms lint (advisory).** When `docs/ai/specs/ubiquitous-language.md` exists,
+run
+`${CLAUDE_PLUGIN_ROOT}/scripts/ubiquitous-language-lint.py --base origin/main`
+and record its one-line note plus each unmapped identifier (file:line) in the
+workflow log. Without the document, record `Terms lint: no terms document`. The
+lint exits 0 by design; an unmapped identifier is a suggestion for a term or a
+rename, never a gate.
+
+Before `dry_run`, checkpoint the just-recorded terms-lint note and UAT-pending
+state by staging only the current workflow and autopilot-state files and committing
 them when that scoped index is non-empty. Do not stage unrelated changes. The
 mutation helper intentionally rejects a dirty worktree, so this checkpoint is
 part of the mandatory generation attempt rather than an optional cleanup.

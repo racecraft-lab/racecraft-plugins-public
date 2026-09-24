@@ -1,5 +1,5 @@
 # Workflow
 
-## Self-Review
+## Terms Lint
 
-- Confirmed the generated runbook remains fail-open for authoring failures.
+- Terms lint: no terms document.

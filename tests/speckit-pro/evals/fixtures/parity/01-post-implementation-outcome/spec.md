@@ -13,7 +13,7 @@ the frozen specification foundation without depending on the other.
 
 ## Requirements
 
-- Use the activated skill's full 12-item Claude or 14-item Codex canonical Post
+- Use the activated skill's full 11-item Claude or 13-item Codex canonical Post
   contract, including its native control-state updates.
 - Use ordinary subagents with exclusive Doctor, Code Review, and Verify-chain
   ownership; Verify-chain preserves Verify, Verify-Tasks, Integration ordering.

@@ -463,7 +463,7 @@ def post_implementation_outcome_violations(bodies: dict[str, str]) -> list[str]:
             "`apply` mode",
         ),
         "clean UAT generation checkpoint": (
-            "checkpoint the just-recorded self-review and uat-pending state",
+            "checkpoint the just-recorded terms-lint note and uat-pending state",
             "staging only the current workflow and autopilot-state files",
             "the mutation helper intentionally rejects a dirty worktree",
         ),
