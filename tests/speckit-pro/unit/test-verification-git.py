@@ -33,7 +33,12 @@ class GitSnapshotTests(unittest.TestCase):
         self.root.mkdir()
         self.env = {key: value for key, value in os.environ.items() if not key.startswith("GIT_")}
         self.env.update({"GIT_CONFIG_NOSYSTEM": "1", "GIT_CONFIG_GLOBAL": os.devnull,
-                         "HOME": str(self.base), "XDG_CONFIG_HOME": str(self.base)})
+                         "HOME": str(self.base), "XDG_CONFIG_HOME": str(self.base),
+                         # Git's detached auto-maintenance can create and delete
+                         # .git/objects/maintenance.lock while a capture walks the tree.
+                         "GIT_CONFIG_COUNT": "2",
+                         "GIT_CONFIG_KEY_0": "maintenance.auto", "GIT_CONFIG_VALUE_0": "false",
+                         "GIT_CONFIG_KEY_1": "gc.auto", "GIT_CONFIG_VALUE_1": "0"})
         self.git("init", "--quiet")
         self.git("config", "user.name", "Snapshot Fixture")
         self.git("config", "user.email", "git@github.com")

@@ -46,6 +46,7 @@
       "scripts": [
         { "path": "tests/speckit-pro/test-run-all.py", "label": "test-run-all" },
         { "path": "tests/speckit-pro/lib/test_lib.py", "label": "test-lib" },
+        { "path": "tests/speckit-pro/unit/test-installed-release-gates.py", "label": "test-installed-release-gates" },
         { "path": "tests/speckit-pro/unit/test-autopilot-phase-coverage.py", "label": "test-autopilot-phase-coverage" },
         { "path": "tests/speckit-pro/unit/test-unit-layout.py", "label": "test-unit-layout" },
         { "path": "tests/speckit-pro/unit/test-check-toolchain.py", "label": "test-check-toolchain" },

@@ -46,6 +46,7 @@ permissions: {}
 jobs:
   detect:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     if: github.event_name == 'workflow_dispatch' || github.event.pull_request.draft == false
     permissions:
       contents: read
@@ -66,6 +67,7 @@ jobs:
   test:
     name: "test (${{ matrix.plugin }})"
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     if: needs.detect.result == 'success' && needs.detect.outputs.plugins != '[]'
     needs: [detect]
     permissions:
@@ -107,6 +109,7 @@ jobs:
   # ───────────────────────────────────────────────────────────────────
   validate-pr-title:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     if: github.event_name == 'workflow_dispatch' || github.event.pull_request.draft == false
     permissions: {}
 
@@ -126,6 +129,7 @@ jobs:
   validate-release-note:
     name: validate-release-note
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     if: github.event_name == 'workflow_dispatch' || github.event.pull_request.draft == false
     permissions:
       contents: read
@@ -150,6 +154,7 @@ jobs:
   validate-workflows:
     name: validate-workflows
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     if: github.event_name == 'workflow_dispatch' || github.event.pull_request.draft == false
     permissions:
       contents: read
@@ -180,6 +185,7 @@ jobs:
   validate-docs:
     name: validate-docs
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     if: github.event_name == 'workflow_dispatch' || github.event.pull_request.draft == false
     permissions:
       contents: read
@@ -256,6 +262,7 @@ jobs:
   artifact-consistency:
     name: artifact-consistency
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     if: github.event_name == 'workflow_dispatch' || github.event.pull_request.draft == false
     permissions:
       contents: read
@@ -274,6 +281,7 @@ jobs:
   validate-plugins:
     name: validate-plugins
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     if: always()
     needs: [detect, test, artifact-consistency]
     permissions:

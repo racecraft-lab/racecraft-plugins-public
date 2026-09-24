@@ -8,6 +8,11 @@ The suite gate (``speckit_pro_runner.gates.suite``) invokes this as an external
 argv command (``python tests/speckit-pro/run-layer-scripts.py --layer <id|key>``) and
 maps the process exit code to a runner status: 0 -> ok, 1 -> expected_failure,
 2 -> input_error, 3 -> missing_prerequisite, 4 -> subprocess_failure.
+
+A layer's scripts run as separate child processes, several at a time. The default
+is 4 or the CPU count, whichever is lower; ``SPECKIT_LAYER_WORKERS`` overrides it
+exactly (``1`` runs them one by one). Results are reported in manifest order
+whatever order the children finish in.
 """
 
 from __future__ import annotations
@@ -17,6 +22,7 @@ import os
 import subprocess
 import sys
 import traceback
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 TEST_LIB = Path(__file__).resolve().parent / "lib"
@@ -26,6 +32,13 @@ if str(TEST_LIB) not in sys.path:
 from test_result import child_check_status  # noqa: E402
 
 SUITE_MANIFEST = "tests/speckit-pro/suite-manifest.json"
+LAYER_WORKERS_VARIABLE = "SPECKIT_LAYER_WORKERS"
+DEFAULT_LAYER_WORKERS = 4
+# Scripts that run alone, after the parallel batch, because their scheduling and
+# timing assertions fail under a loaded host. Each costs a few seconds.
+SERIAL_SCRIPTS = frozenset({
+    "tests/speckit-pro/unit/test-native-eval-execution.py",
+})
 
 
 def resolve_repo_root() -> Path | None:
@@ -91,32 +104,54 @@ def emit_checks(label: str, checks: list[tuple[str, bool, str]]) -> int:
     return 0 if passed == len(checks) else 1
 
 
+def layer_workers() -> int:
+    """Return how many layer scripts may run at once; an unset or invalid value uses the default."""
+    raw = os.environ.get(LAYER_WORKERS_VARIABLE, "")
+    if raw.isdigit() and int(raw) >= 1:
+        return int(raw)
+    return min(DEFAULT_LAYER_WORKERS, os.cpu_count() or 1)
+
+
+def run_script(test_path: Path, repo_root: Path) -> tuple[str, bool, str]:
+    if not test_path.is_file():
+        return (rel(test_path, repo_root), False, "test file missing")
+    if test_path.suffix != ".py":
+        return (rel(test_path, repo_root), False, "non-Python manifest entry")
+    env = python_child_env(repo_root)
+    argv = [sys.executable, rel(test_path, repo_root)]
+    completed = subprocess.run(
+        argv,
+        cwd=repo_root,
+        text=True,
+        capture_output=True,
+        env=env,
+        shell=False,
+        check=False,
+    )
+    ok, detail = child_check_status(completed.returncode, completed.stdout, test_path.stem)
+    if not ok and completed.stderr.strip():
+        # Surface the child's own failure report; the summary line alone hides which unit failed.
+        tail = "\n".join(completed.stderr.rstrip().splitlines()[-40:])
+        detail = f"{detail}\n{tail}"
+    return (rel(test_path, repo_root), ok, detail)
+
+
 def run_script_suite(label: str, tests: list[Path], repo_root: Path) -> int:
-    checks: list[tuple[str, bool, str]] = []
-    for test_path in tests:
-        if not test_path.is_file():
-            checks.append((rel(test_path, repo_root), False, "test file missing"))
-            continue
-        if test_path.suffix != ".py":
-            checks.append((rel(test_path, repo_root), False, "non-Python manifest entry"))
-            continue
-        env = python_child_env(repo_root)
-        argv = [sys.executable, rel(test_path, repo_root)]
-        completed = subprocess.run(
-            argv,
-            cwd=repo_root,
-            text=True,
-            capture_output=True,
-            env=env,
-            shell=False,
-            check=False,
-        )
-        ok, detail = child_check_status(completed.returncode, completed.stdout, test_path.stem)
-        if not ok and completed.stderr.strip():
-            # Surface the child's own failure report; the summary line alone hides which unit failed.
-            tail = "\n".join(completed.stderr.rstrip().splitlines()[-40:])
-            detail = f"{detail}\n{tail}"
-        checks.append((rel(test_path, repo_root), ok, detail))
+    workers = min(layer_workers(), len(tests))
+    if workers <= 1:
+        checks = [run_script(test_path, repo_root) for test_path in tests]
+    else:
+        # Each script is its own child process, and children stay in this
+        # dispatcher's process group, as in the serial loop. Executor.map yields
+        # results in input order, so the PASS/FAIL lines and the summary keep
+        # manifest order.
+        pooled = [test_path for test_path in tests if rel(test_path, repo_root) not in SERIAL_SCRIPTS]
+        with ThreadPoolExecutor(max_workers=workers) as pool:
+            results = dict(zip(pooled, pool.map(run_script, pooled, [repo_root] * len(pooled))))
+        for test_path in tests:
+            if test_path not in results:
+                results[test_path] = run_script(test_path, repo_root)
+        checks = [results[test_path] for test_path in tests]
     return emit_checks(label, checks)
 
 
