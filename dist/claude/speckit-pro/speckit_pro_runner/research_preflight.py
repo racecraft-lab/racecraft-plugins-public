@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import os
 import re
+import shutil
 import stat
 import subprocess
 from dataclasses import dataclass
@@ -37,6 +38,7 @@ CONTRACT_VERSION = 1
 
 # Binary location, identical to the typesafe-jev launcher.
 BINARY_VARIABLE = "EVALUATE_BIN"
+BINARY_NAME = "evaluate"
 DEFAULT_BINARY_PARTS = (".local", "libexec", "racecraft-jev", "evaluate")
 # The first typesafe-jev release that ships `evaluate call`.
 MINIMUM_EVALUATE_VERSION = (0, 9, 0)
@@ -99,10 +101,19 @@ Runner = Callable[[list[str], dict[str, str], "bytes | None", float], ProcessRes
 
 
 def run_process(argv: list[str], env: dict[str, str], stdin: bytes | None, timeout: float) -> ProcessResult:
-    """Run one child without a shell. Its stderr is discarded, never forwarded."""
+    """Run one `evaluate` child without a shell. Its stderr is discarded, never forwarded.
+
+    The executable is re-resolved by its fixed name inside the resolved
+    directory, so the command can only ever be the `evaluate` binary.
+    """
+    candidate = Path(argv[0])
+    # A literal name, so the command is statically the `evaluate` binary.
+    executable = shutil.which("evaluate", path=str(candidate.parent))
+    if executable is None or Path(executable) != candidate:
+        return ProcessResult(None, b"")
     try:
         completed = subprocess.run(
-            argv,
+            [executable, *argv[1:]],
             input=stdin,
             stdin=None if stdin is not None else subprocess.DEVNULL,
             stdout=subprocess.PIPE,
@@ -137,6 +148,10 @@ def display_path(path: Path, home: Path) -> str:
 def resolve_binary(env: Mapping[str, str], home: Path) -> Path | None:
     explicit = _value(env, BINARY_VARIABLE)
     candidate = Path(explicit) if explicit else home.joinpath(*DEFAULT_BINARY_PARTS)
+    # The child is always run by its fixed name, so an override must name a
+    # file called `evaluate`.
+    if candidate.name != BINARY_NAME:
+        return None
     try:
         info = candidate.stat()
     except OSError:

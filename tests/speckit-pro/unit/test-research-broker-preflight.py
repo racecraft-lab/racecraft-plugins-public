@@ -285,6 +285,14 @@ class PreflightStateTests(unittest.TestCase):
         self.assertNotIn("OPENROUTER_API_KEY", child_env)
         self.assertLessEqual(set(child_env), preflight.CHILD_ENVIRONMENT_NAMES)
 
+    def test_evaluate_bin_must_name_an_evaluate_file(self) -> None:
+        other = self.home / "custom" / "jev-binary"
+        other.parent.mkdir(parents=True)
+        other.write_text("placeholder\n", encoding="utf-8")
+        other.chmod(0o755)
+        record = self.run_preflight(self.env(EVALUATE_BIN=str(other)))
+        self.assertEqual(record["jev"]["binary"], "missing")
+
     def test_display_paths_hide_the_home_directory(self) -> None:
         record = self.run_preflight(self.env())
         self.assertNotIn(str(self.home), json.dumps(record))
