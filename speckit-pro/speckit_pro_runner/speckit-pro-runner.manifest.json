@@ -319,7 +319,7 @@
         "value": "speckit_pro_runner/helpers/registry.py",
         "display": "speckit_pro_runner/helpers/registry.py"
       },
-      "sha256": "9597b7d309a74d7ed787819ad2f665b97609a01804987732c55c4058f5aee037"
+      "sha256": "3cdf2c537a2550d44d1cb09d0a8141bd53cbebe30daec5479dac6671ba32762e"
     },
     {
       "path": {
@@ -352,6 +352,14 @@
         "display": "speckit_pro_runner/quality_gates.py"
       },
       "sha256": "55e7507577d7c55fec295da781eb44f44ce649150030fb1d5393e1dedd440813"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
+        "value": "speckit_pro_runner/research_preflight.py",
+        "display": "speckit_pro_runner/research_preflight.py"
+      },
+      "sha256": "ef6587346558e3f33a2d673592abaadfd990cde0d3a994ecbde8af47eddb0c4f"
     },
     {
       "path": {
