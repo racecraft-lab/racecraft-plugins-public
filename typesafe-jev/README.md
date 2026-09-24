@@ -89,7 +89,7 @@ It downloads the release tagged `typesafe-jev-v<version>` for this machine, chec
 go build -trimpath -o ~/.local/libexec/racecraft-jev/evaluate ./cmd/evaluate
 ```
 
-Each release from 0.9.2 on also carries `provenance.sigstore.json`, a signed SLSA build provenance for its archives. To check that an archive you downloaded was built by this repository's release workflow:
+Each release from 0.9.2 on also carries `provenance.sigstore.json`, a signed SLSA build provenance for its archives. It is a separate release asset, not part of any archive. To check that an archive was built by this repository's release workflow, download the archive and `provenance.sigstore.json` from the same release into one directory, then run this there:
 
 ```sh
 gh attestation verify evaluate-darwin-arm64.tar.gz --bundle provenance.sigstore.json --repo racecraft-lab/racecraft-plugins-public
