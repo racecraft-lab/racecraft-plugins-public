@@ -297,13 +297,20 @@ def probe_jev(env: Mapping[str, str], home: Path, runner: Runner = run_process) 
 
 
 def key_file_problem(path: Path) -> str | None:
-    """Presence-only validation of a private key file. Returns a reason code, or None when usable."""
+    """Presence-only validation of a private key file. Returns a reason code, or None when usable.
+
+    The rules match the broker's own load: the path itself must be a regular
+    file (a symlink is refused, as the broker opens with O_NOFOLLOW), readable
+    by this user, with no group or other bits, and 1 byte to 8 KiB.
+    """
     try:
-        info = path.stat()
+        info = path.lstat()
     except OSError:
         return "key_file_unreadable"
     if not stat.S_ISREG(info.st_mode):
         return "key_file_not_regular"
+    if not os.access(path, os.R_OK):
+        return "key_file_unreadable"
     if os.name == "posix" and stat.S_IMODE(info.st_mode) & 0o077:
         return "key_file_permissions"
     if info.st_size == 0:
@@ -381,6 +388,12 @@ def research_broker_preflight(env: Mapping[str, str] | None = None, runner: Runn
     elif docs["state"] == "unusable":
         docs["severity"] = "error"
         record("error", _item("docs_credential_unusable", f"The Context7 key file is unusable ({docs['reason']})."))
+    elif docs["source"] == "environment":
+        docs["severity"] = "warning"
+        record("warning", _item(
+            "docs_environment_only_credential",
+            "The Context7 key is set only as an environment variable, which an MCP server may not see. Use a key file.",
+        ))
     else:
         docs["severity"] = "ok"
 
