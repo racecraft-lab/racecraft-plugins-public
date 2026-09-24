@@ -112,7 +112,7 @@ into expensive rework.
 **Reasoning effort is inherited, never checked.** Run at whatever the
 operator has set for the session and do not stop, warn, or ask them to
 change it. The bundled subagents carry their own pins: judgment roles
-ship at `effort: max` (`xhigh` on Codex), and bounded rule-applying
+ship at `effort: max` (`xhigh` or `max` on Codex), and bounded rule-applying
 roles that only apply rules to inputs already in their prompt ship at
 the documented default. A pin sets that worker's effort regardless of
 the session and never refuses to run.
@@ -338,8 +338,8 @@ Run the pre-flight sequence before any phase work. STOP on failure.
    helper_id=detect-presets operation=detect-presets mode=read_only
    ```
    Record `on_feature_branch`, `PROJECT_COMMANDS` (including the
-   `COMPLEXITY`, `MUTATION`, and `DEPENDENCY_RULES` slots and their
-   `gates` metadata, per `references/prerequisites.md` Step 0.11),
+   quality-gate slots and their `gates` metadata, per
+   `references/prerequisites.md` Step 0.11),
    `PRESET_CONVENTIONS`, and MCP availability into the workflow file. Pass `PROJECT_COMMANDS`
    and `PRESET_CONVENTIONS` to every subagent prompt.
 4. **Constitution validation** — for each principle in
@@ -541,7 +541,7 @@ after. A zero-unresolved Clarify or Checklist task may be skipped; the Analyze
 task still dispatches the synthesizer once for the final five-criterion
 confidence block.
 
-The full **12-entry Post-Implementation task list** and the task
+The full **11-entry Post-Implementation task list** and the task
 naming pattern live in
 [`references/task-list-canonical.md`](./references/task-list-canonical.md).
 Every entry there MUST appear in the visible progress panel before
@@ -702,7 +702,7 @@ contracts from this entrypoint.
 After Phase 7 passes G7, read and execute
 [`references/post-implementation.md`](./references/post-implementation.md)
 in canonical order. It owns the parallel group, integration suite, mandatory
-self-review and UAT runbook, current reviewability evidence and continuation,
+UAT runbook, current reviewability evidence and continuation,
 packet dry-run/apply and validation, single- versus split-PR emission, review
 remediation, retrospective, and final summary. Do not start PR side effects
 without the reference's current evidence and packet contracts, and never report
@@ -760,7 +760,7 @@ in [`references/error-recovery.md`](./references/error-recovery.md).
 - [Phase Execution](./references/phase-execution.md) — Per-phase prompt construction, dispatch templates, branch-aware/Clarify/Multi-prompt prefixes
 - [Consensus Protocol](./references/consensus-protocol.md) — Category-routed dispatch, Round 1/2, per-phase flows, Logging schema
 - [Gate Validation](./references/gate-validation.md) — Programmatic gate checks (G0–G7), auto-fix loops, escalation
-- [Post-Implementation](./references/post-implementation.md) — 12-task post-impl sequence (incl. self-review, UAT runbook), integration suite, PR creation, review loop
+- [Post-Implementation](./references/post-implementation.md) — 11-task post-impl sequence (incl. UAT runbook), integration suite, PR creation, review loop
 - [Task List Canonical](./references/task-list-canonical.md) — Task naming pattern + canonical post-implementation entries
 - [Hardener Delegation](./references/hardener-delegation.md) — Once-per-spec tests-only mutation hardening loop: Qwen delegation with candidate inspection, primary-model fallback, stop rule, record
 - [Workflow File Protocol](./references/workflow-file-protocol.md) — Per-phase update table + `workflow_file` state authority (branch order, verdicts) + Consensus Resolution Log column schema

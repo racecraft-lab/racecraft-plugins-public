@@ -184,9 +184,8 @@ into expensive rework.
 **Before executing any step**, verify:
 
 1. **Model check:** You MUST be running on the highest-capability Codex model
-   tier available. Prefer `gpt-5.6-sol` when it is available
-   in the Codex model picker. `gpt-5.5` or `gpt-5.4` is an acceptable fallback
-   during rollout or when the environment uses API-key authentication. If the
+   tier available. Prefer `gpt-6-sol` when it is available
+   in the Codex model picker; `gpt-6-astra` is also acceptable. If the
    session is explicitly on a mini, fast, Luna, or otherwise reduced-capability
    tier, STOP and instruct the user to relaunch the autopilot on a stronger
    model. `$install` owns bundled-agent installation and fallback configuration.
@@ -194,7 +193,7 @@ into expensive rework.
 **Reasoning effort is inherited, never checked.** Run at whatever
 `model_reasoning_effort` the session already has and do not stop, warn,
 or ask the operator to relaunch. Bundled subagents keep their declared effort;
-the optional `autopilot-fast-helper` is pinned to low effort on gpt-5.6-luna
+the optional `autopilot-fast-helper` is pinned to low effort on gpt-6-luna
 for latency-sensitive prep. Those pins only constrain worker effort and never
 refuse to run. The operator owns the session setting; the plugin does not veto
 it.
@@ -368,7 +367,7 @@ Guardrails:
 - Executor or consensus subagents must never spawn it
 - Use it only for text-only prep work before a real decision
 - Never use it to edit artifacts, vote in consensus, or decide gates
-- If the helper spawn fails because `gpt-5.6-luna` is unavailable,
+- If the helper spawn fails because `gpt-6-luna` is unavailable,
   log the failure briefly and continue without it
 
 This helper is a latency optimization, not a dependency.
@@ -473,12 +472,12 @@ See [prerequisites-codex.md](./references/prerequisites-codex.md) for the full p
 - **Step 0.9: Constitution Validation** — principle checks against current codebase
 - **Step 0.10: Codex Agent Availability Check** — Run the promoted
   `install-codex-agents` helper in `dry_run` mode against the selected project or
-  user destination and its installed model choice. If any required file is
+  user destination and its installed model and Luna fallback choice. If any required file is
   missing or stale, STOP and instruct the user to run `$install`, approve the
   expected local write, and restart Codex. Do not apply the repair inside
   autopilot: the current process cannot reload changed custom agents safely.
 - **Step 0.10b: Implementation Agent Detection** — discover `PROJECT_IMPLEMENTATION_AGENT` from `.codex/agents/`
-- **Step 0.11: Project Command Discovery** — runner helper `detect-commands` → `PROJECT_COMMANDS`, including the `COMPLEXITY`, `MUTATION`, and `DEPENDENCY_RULES` slots and the one-time missing-tool question
+- **Step 0.11: Project Command Discovery** — runner helper `detect-commands` → `PROJECT_COMMANDS`, including the quality-gate slots and the one-time missing-tool question
 - **Step 0.12: Preset and Extension Detection** — runner helper `detect-presets` → `PRESET_CONVENTIONS`
 
 If any check fails, STOP with the error message from the script's JSON output.
@@ -651,7 +650,7 @@ algorithms from this entrypoint.
 After Phase 7 passes G7, read and execute
 [`post-implementation-codex.md`](./references/post-implementation-codex.md)
 in canonical order. It owns the parallel group, full integration suite,
-mandatory self-review and UAT runbook, current reviewability evidence and
+mandatory UAT runbook, current reviewability evidence and
 continuation, packet dry-run/apply and current read-only/persisted validation,
 packet-owned base/head/title/body, single- versus split-PR emission, review
 remediation, retrospective, and final summary. Do not start PR side effects

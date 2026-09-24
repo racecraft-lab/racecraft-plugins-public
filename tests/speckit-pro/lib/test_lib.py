@@ -129,7 +129,6 @@ class SpecsReadGuardTests(unittest.TestCase):
         # hook already installed by this suite's own run_counted rather than
         # installing a second one.
         import os
-        import tempfile
         from pathlib import Path
 
         test_result.install_specs_read_guard()

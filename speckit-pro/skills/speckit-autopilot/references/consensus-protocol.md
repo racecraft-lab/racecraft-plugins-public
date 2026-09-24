@@ -11,7 +11,7 @@ Consensus dispatch runs as batched ordinary subagents; see
 
 - [Two-Layer Resolution Architecture](#two-layer-resolution-architecture) — executor first-pass then consensus second-pass
 - [Category-Routed Dispatch (Tier A)](#category-routed-dispatch-tier-a) — `[codebase|spec|domain|security|ambiguous]` routing rules + escape-hatch
-- [Batched Dispatch](#batched-dispatch) — multi-item fan-out in ONE tool turn (the canonical WS-D1 pattern)
+- [Batched Dispatch](#batched-dispatch) — multi-item fan-out in ONE tool turn
 - [Three-Analyst Consensus Rules (Round 2 / N=3)](#three-analyst-consensus-rules-round-2--n3) — full fan-out behavior
 - [The 3 Perspective Agents](#the-3-perspective-agents) — codebase-analyst / spec-context-analyst / domain-researcher
 - [Consensus Rules](#consensus-rules) — N=1, N=2, N=3 agreement rules + escape-hatch + STOP conditions
@@ -56,7 +56,7 @@ items.
 **When consensus is triggered:**
 - Executor flagged the item as low-confidence
 - Executor's research sources disagreed
-- Item remained unresolved after 2 remediation loops
+- Item remained unresolved after the executor's one fix pass and re-run
 - Item contains security keywords (always goes to all-three consensus)
 
 ## Category-Routed Dispatch (Tier A)
@@ -189,8 +189,8 @@ from the log rather than eyeballed.
 
 When a consensus phase (Clarify, Checklist, Analyze) produces N
 unresolved items, the orchestrator dispatches them in a **batched
-fan-out across items**, not per-item serially. This is the canonical
-WS-D1 pattern and applies to every per-phase consensus invocation.
+fan-out across items**, not per-item serially. This applies to every
+per-phase consensus invocation.
 
 ### Why batched
 
@@ -429,7 +429,7 @@ Follow your agent instructions for output format
 checklist-executor runs /speckit-checklist domain
     │
     ├── Layer 1: Executor runs checklist, researches each gap,
-    │   applies fixes, re-runs to verify (max 2 loops)
+    │   applies fixes, re-runs once to verify
     │
     ├── Executor returns summary with:
     │   ├── Gaps fixed (with citations)
@@ -470,7 +470,7 @@ confidence.
 
 ## Executor's Attempt
 [Insert what the executor tried, if anything, and why it
-was flagged — remained after 2 loops, low confidence, or
+was flagged — remained after the verification re-run, low confidence, or
 security keyword]
 
 ## Your Task
@@ -488,7 +488,7 @@ Follow your agent instructions for output format.
 analyze-executor runs /speckit-analyze
     │
     ├── Layer 1: Executor runs analysis, researches each finding,
-    │   applies fixes, re-runs to verify (max 2 loops)
+    │   applies fixes, re-runs once to verify
     │
     ├── Executor returns summary with:
     │   ├── Findings fixed (with citations)
@@ -530,7 +530,7 @@ Description: [Insert finding text]
 
 ## Executor's Attempt
 [Insert what the executor tried, if anything, and why it
-was flagged — remained after 2 loops, low confidence, or
+was flagged — remained after the verification re-run, low confidence, or
 security keyword]
 
 ## Your Task

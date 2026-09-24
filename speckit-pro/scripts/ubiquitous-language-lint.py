@@ -12,7 +12,7 @@ snake_case. Everything else is reported.
 
 This lint is advisory only: it always exits 0 (2 for a usage error), prints
 a JSON report, and writes it to ``--report`` when asked. It never blocks a
-gate; the orchestrator mirrors the summary into the Self-Review findings.
+gate; the autopilot records the summary in the workflow log.
 A missing terms document lints nothing and says so.
 """
 

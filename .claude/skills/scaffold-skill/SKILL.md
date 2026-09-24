@@ -45,12 +45,12 @@ Optional `references/` and `scripts/` subdirs (only if user said yes).
 
 ## Post-create
 
-Always run from the repository root:
+First, if you created a Codex mirror, add the new skill's name to `validate_codex_skills_SKILLS` in `tests/speckit-pro/layer1-structural/validate-skill-contracts.py`. Layer 1 runs the Codex frontmatter checks only for skills listed there, so a Layer 1 run before registration can pass invalid Codex frontmatter.
+
+Then run Layer 1 from the repository root:
 ```console
 python3 tests/speckit-pro/run-all.py --layer 1
 ```
-
-Add the new Codex skill's name to `validate_codex_skills_SKILLS` in `tests/speckit-pro/layer1-structural/validate-skill-contracts.py`. Layer 1 runs the Codex frontmatter checks only for skills listed there.
 
 If Layer 1 fails, fix the SKILL.md before reporting success. A new skill under `speckit-pro/` changes shipped source, so also run `python3 scripts/refresh-release-artifacts.py`; the `artifact-consistency` CI job fails without it.
 
