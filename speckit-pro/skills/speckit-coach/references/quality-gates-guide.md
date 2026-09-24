@@ -68,6 +68,14 @@ gates nothing. Measure, do not guess:
 4. Show the proposed content and the functions that would fail it today.
    Write `.specify/quality-gates.json` only after the operator confirms.
 
+**The gates judge whole files.** After G0, `COMPLEXITY` and `MUTATION` run
+on every changed source file, and they check every function in each one,
+not only the changed lines. So a spec that edits one line of a file holding
+an older function over the ceiling fails its phase verification until that
+function comes under the ceiling. When you show the proposal, name the
+files that hold today's failing functions. A spec that touches one of them
+must plan the refactor in its tasks.
+
 **No-code fallback.** When nothing can be measured (tool declined, empty
 repository, greenfield), propose Robert Martin's six as the complexity
 ceiling with `basis.method: bobs-six`, and say plainly that it was not
