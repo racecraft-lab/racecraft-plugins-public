@@ -9,9 +9,10 @@ argv command (``python tests/speckit-pro/run-layer-scripts.py --layer <id|key>``
 maps the process exit code to a runner status: 0 -> ok, 1 -> expected_failure,
 2 -> input_error, 3 -> missing_prerequisite, 4 -> subprocess_failure.
 
-A layer's scripts run as separate child processes, up to ``SPECKIT_LAYER_WORKERS``
-at a time (default 4, capped at the CPU count; ``1`` runs them one by one). Results
-are reported in manifest order whatever order the children finish in.
+A layer's scripts run as separate child processes, several at a time. The default
+is 4 or the CPU count, whichever is lower; ``SPECKIT_LAYER_WORKERS`` overrides it
+exactly (``1`` runs them one by one). Results are reported in manifest order
+whatever order the children finish in.
 """
 
 from __future__ import annotations
@@ -33,6 +34,11 @@ from test_result import child_check_status  # noqa: E402
 SUITE_MANIFEST = "tests/speckit-pro/suite-manifest.json"
 LAYER_WORKERS_VARIABLE = "SPECKIT_LAYER_WORKERS"
 DEFAULT_LAYER_WORKERS = 4
+# Scripts that run alone, after the parallel batch, because their scheduling and
+# timing assertions fail under a loaded host. Each costs a few seconds.
+SERIAL_SCRIPTS = frozenset({
+    "tests/speckit-pro/unit/test-native-eval-execution.py",
+})
 
 
 def resolve_repo_root() -> Path | None:
@@ -139,8 +145,13 @@ def run_script_suite(label: str, tests: list[Path], repo_root: Path) -> int:
         # dispatcher's process group, as in the serial loop. Executor.map yields
         # results in input order, so the PASS/FAIL lines and the summary keep
         # manifest order.
+        pooled = [test_path for test_path in tests if rel(test_path, repo_root) not in SERIAL_SCRIPTS]
         with ThreadPoolExecutor(max_workers=workers) as pool:
-            checks = list(pool.map(run_script, tests, [repo_root] * len(tests)))
+            results = dict(zip(pooled, pool.map(run_script, pooled, [repo_root] * len(pooled))))
+        for test_path in tests:
+            if test_path not in results:
+                results[test_path] = run_script(test_path, repo_root)
+        checks = [results[test_path] for test_path in tests]
     return emit_checks(label, checks)
 
 

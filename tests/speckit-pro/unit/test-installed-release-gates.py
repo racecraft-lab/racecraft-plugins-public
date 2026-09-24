@@ -21,6 +21,8 @@ from types import ModuleType
 def load_gate_tests() -> ModuleType:
     path = Path(__file__).resolve().parent / "test-speckit-pro-gates.py"
     spec = importlib.util.spec_from_file_location("speckit_pro_gate_tests", path)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"cannot load gate tests from {path}")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
