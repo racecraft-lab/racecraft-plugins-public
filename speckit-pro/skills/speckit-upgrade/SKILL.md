@@ -155,6 +155,8 @@ operator wants).
 
 ### 6. Deduplicate legacy commands when both forms are present
 
+When the upgraded project has the `claude` integration, use the resolved Python 3.11+ interpreter to run `<resolved_python> "${CLAUDE_PLUGIN_ROOT}/scripts/agent-memory-ignore.py" --mode apply --repo-root "<repository-root>"`. Preserve and commit any `.gitignore` change before clean-worktree-gated helpers. Report tracked memory or overriding nested ignore rules separately; an ignore rule does not untrack files, and this command never deletes memory.
+
 After upgrading, the new `.claude/skills/speckit-*/` and
 `.agents/skills/speckit-*/` directories may now exist alongside the
 old `.claude/commands/speckit.*.md` and `.codex/prompts/speckit.*.md`
