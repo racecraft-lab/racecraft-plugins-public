@@ -292,7 +292,7 @@ class ArtifactReviewTests(unittest.TestCase):
             path = ROOT / f"speckit-pro/{directory}/speckit-autopilot/references/phase-execution{suffix}.md"
             text = path.read_text()
             self.assertIn("artifact-review.md", text)
-            self.assertLess(text.index("6. Take a separate bookkeeping commit"), text.index("7. The parent dispatches `artifact-preview-observer`"))
+            self.assertLess(text.index("Take a separate bookkeeping commit"), text.index("The parent dispatches `artifact-preview-observer`"))
             self.assertIn("preview-only resume", text)
             self.assertIn("direct local file links", text)
 

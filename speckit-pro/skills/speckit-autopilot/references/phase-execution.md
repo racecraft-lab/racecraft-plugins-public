@@ -781,12 +781,13 @@ does not end at the boundary commit above. It runs this sequence, in this order:
 ```text
 1. Generate and validate the artifacts; initialize their pending review record.
 2. Take the stage-boundary commit above.
-3. Push the branch.
-4. Create or refresh the draft pull request.
-5. Write the `Draft PR` record to the workflow file.
-6. Take a separate bookkeeping commit carrying that record, and push it.
-7. The parent dispatches `artifact-preview-observer` for each generated artifact preview; the isolated observer never inherits general repository tools.
-8. Validate and commit/push the workflow-only preview evidence.
+3. On the clean worktree, run `pr-packet-output` dry-run and apply; validate the packet, then commit its packet and body files.
+4. Push the branch.
+5. Create or refresh the draft pull request using the validated packet.
+6. Write the `Draft PR` record to the workflow file.
+7. Take a separate bookkeeping commit carrying that record, and push it.
+8. The parent dispatches `artifact-preview-observer` for each generated artifact preview; the isolated observer never inherits general repository tools.
+9. Validate and commit/push the workflow-only preview evidence.
 ```
 
 **Read the [Artifact Review Handoff contract](./artifact-review.md) before this sequence.**
@@ -1045,11 +1046,13 @@ verification or evidence a draft has not produced.
 Report through the could-not-be-opened shape below rather than opening one whose
 title a human would have to repair.
 
-#### The draft description: exactly two blocks
+#### The draft description: one H1 and two H2 sections
 
-The description carries exactly two blocks and nothing else:
+The description begins with the matching H1 title, followed by exactly two H2 sections, Artifacts and Resume, and no other content:
 
 ```text
+# feat(speckit-pro): Open an example draft
+
 ## Artifacts
 
 | Artifact | Purpose | Open |
@@ -1074,10 +1077,43 @@ pull request sits in draft state, so the repository's PR checks do not run
 against it — no release-note fence is needed or wanted, and a placeholder section
 would read as evidence that does not exist.
 
-**The orchestrator composes both blocks itself.** Emit the packet with
-`runner helper pr-packet-output` in `draft` mode and pass the finished Markdown
-as `inputs.body`; the producer uses that string verbatim. The `build_packet_body`
-fallback stays single/split-shaped and is never reached in draft mode.
+**The orchestrator composes the title and both blocks itself.** Send this complete
+runner request after replacing the example feature, branch, title, and body with
+the current plan-stage values. The top-level `mode` is `dry_run` first; change
+only that field to `apply` after the dry-run succeeds. `inputs.mode` selects the
+draft packet. `inputs.mode_name` is not accepted.
+
+```json
+{
+  "schema_version": "1.0",
+  "request_id": "example-draft-packet",
+  "helper_id": "pr-packet-output",
+  "operation": "pr-packet-output",
+  "mode": "dry_run",
+  "inputs": {
+    "packet_path": "specs/example-feature/.process/pr-packets/example-draft.json",
+    "source_feature_dir": "specs/example-feature",
+    "target": {"base_branch": "main", "head_branch": "codex/example-feature"},
+    "mode": "draft",
+    "title_type": "feat",
+    "title_scope": "speckit-pro",
+    "title_description": "open an example draft",
+    "changed_files": [],
+    "verification_evidence": [],
+    "body": "# feat(speckit-pro): Open an example draft\n\n## Artifacts\n\n| Artifact | Purpose | Open |\n| --- | --- | --- |\n| Implementation Plan | Describe the implementation phases | `open specs/example-feature/artifacts/implementation-plan.html` |\n\n## Resume\n\nStage: plan. Stopped at the plan-stage boundary for review.\nResume with: `/speckit-pro:speckit-autopilot <workflow-file> --stage implement`\n"
+  }
+}
+```
+
+An explicit empty `verification_evidence` array records that a draft has no
+verification yet; supplied records must match the [packet evidence schema](../contracts/pr-packet.schema.json).
+The body must have one H1 matching the generated title, then exactly the
+Artifacts and Resume H2 sections. Validate the emitted packet before opening the
+PR. Commit its packet and body files before another clean-worktree-gated helper
+runs; an unrelated dirty file blocks apply. Correct validation failures through
+the packet helper instead of bypassing them with raw PR creation. The producer
+uses `inputs.body` verbatim; the single/split `build_packet_body` fallback is not
+used for drafts.
 
 #### Fail-open: three sinks, and the runs that reach them
 
