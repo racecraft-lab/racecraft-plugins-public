@@ -2,7 +2,8 @@
 up: "[SpecKit Pro Harness Engineering Uplift Roadmap](harness-engineering-uplift-technical-roadmap.md)"
 related:
   - "[SpecKit Pro Harness Engineering Uplift PRD](../../prd-harness-engineering-uplift.md)"
-status: "Active; HRNS-001 complete/archived; HRNS-002 and HRNS-003 ready"
+  - "[Typed-Judgment Opportunity Catalog](harness-engineering-uplift-jev-catalog.md)"
+status: "Active; HRNS-001 complete/archived; HRNS-002 to HRNS-014 retired; HRNS-015 and HRNS-017 to HRNS-023 ready"
 rank:
 spec_id: "harness-engineering-uplift"
 structureVersion: 1
@@ -10,98 +11,68 @@ structureVersion: 1
 
 # Roadmap - Map of Content
 
-Navigation map for the SpecKit Pro harness-engineering uplift lane.
+Navigation map for the SpecKit Pro harness-engineering uplift lane, which
+absorbed the Continuous Goal Verification roadmap on 2026-09-24.
 
 ## Epics (curated)
 
-### Harness Taxonomy
+### Repair and Foundations
 
-Why: Before implementation starts, SpecKit Pro needs one durable inventory of
-harness surfaces and gaps so future specs use the same workflow boundaries.
+Why: Observed defects keep reaching live runs, and later slices need host
+facts, typed state, a registry contract, a token baseline, and a written eval
+ladder before they can be measured or trusted. None of these depends on
+another.
 
-- HRNS-001 Harness Surface Inventory and Gap Taxonomy
+- HRNS-015 Autopilot, Gate, and PR-Emission Repair
+- HRNS-017 Host Capability Spike
+- HRNS-018 Typed Workflow State
+- HRNS-019 Helper Registry Contract and Tiered Disclosure
+- HRNS-020 Autopilot Token Baseline
+- HRNS-021 Condition-Bound Guidance and Lesson Promotion
+- HRNS-022 Eval Ladder and Model Refresh
+- HRNS-023 Harness Drift Scanner
 
-### Context and Tool Foundations
+### Execution, Safety, and Context Economy
 
-Why: Reliable agent work starts with concise repo-grounded context and explicit
-tool/helper contracts. These two specs can proceed in parallel after HRNS-001
-because they touch separable surfaces.
-
-- HRNS-002 Progressive Context and Durable State Contract
-- HRNS-003 Helper, Tool, and Capability Contract
-
-### Controls and Sensors
-
-Why: Once helper/tool contracts exist, SpecKit Pro can add pre-action controls
-and verification sensors without guessing which operations are read-only,
-mutating, networked, credential-bearing, or approval-required.
-
-- HRNS-004 Permission, Sandbox, and Pre-action Authorization Controls
-- HRNS-005 Feedback Sensors and Eval Readiness Ladder
-
-### Evidence Packets
-
-Why: Permissions and evals need compact, local, replay-friendly evidence. Trace
-and debug packets make helper runs, workflow failures, review packets, and
-delegated-agent work inspectable without dumping raw logs into PRs.
-
-- HRNS-006 Trace, Debug, and Review Evidence Packets
-
-### Resumable Work and Knowledge Foundation
-
-Why: Long-horizon scaffold/autopilot/status/resolve-pr work needs resumable
-state, file ownership, stop conditions, and planner/evaluator separation before
-larger autonomous runs are safe. In parallel, canonical harness knowledge can
-gain a persistent, committed OKF foundation once the shared contracts,
-controls, sensors, and evidence packets exist.
-
-- HRNS-007 Long-horizon Orchestration and Resumption Controls
-- HRNS-009 Host Repository OKF Knowledge Contract and Initialization
-
-### Compounding Knowledge Lifecycle
-
-Why: A persistent wiki compounds only when changed evidence updates affected
-concepts, queries remain source-grounded, and captured answers return through a
-reviewable proposal rather than becoming truth because they appeared in chat.
-
-- HRNS-010 Incremental Evidence Ingest and Knowledge Synthesis
-- HRNS-011 Knowledge Query, Citation, and Compounding Capture
-
-### Knowledge Health and Code Intelligence
-
-Why: Structural conformance, source-grounded health, and derived indexing are
-separate responsibilities. OKF remains useful as files while optional consumers
-can graph and vectorize concepts alongside code without owning canonical writes.
-
-- HRNS-012 Knowledge Conformance, Health, and Drift Maintenance
-- HRNS-013 Code-Intelligence and Vector-Index Interoperability
-
-### External Knowledge Exchange
-
-Why: External OKF bundles are untrusted data. Safe exchange needs bounded local
-validation, extension preservation, three-way conflict detection, explicit
-deletion proposals, durable human decisions, and isolated branch/worktree
-output instead of direct writes or timestamp-based overwrite.
-
-- HRNS-014 External OKF Exchange and Reviewable Reconciliation
-
-### Harness Maintenance
-
-Why: Harnesses drift. Prompts, docs, helper registries, generated payloads,
-examples, sensors, synthesized knowledge, derived indexes, intake state, and
-reconciliation evidence need bounded garbage collection that cites concrete
-repo evidence and avoids speculative cleanup.
-
-- HRNS-008 Harness Drift, Garbage Collection, and Self-healing Remediation
-
-### Per-story Execution
-
-Why: Heavy upfront planning followed by one large implementation pass hides
-architecture drift until the end. SpecKit's templates already make each story
-independently testable with a checkpoint; autopilot should execute, gate,
-harden, check, and review one story at a time.
+Why: Once the foundations land, autopilot can work one story at a time,
+autonomous runs get one permission and egress policy, fan-out roles share
+evidence, handoffs keep their obligations, and operators can watch a run.
 
 - HRNS-016 Per-story Autopilot Execution
+- HRNS-026 Autonomous-Run Permission and Egress Policy
+- HRNS-028 Shared Retrieval Packet for Fan-Out Roles
+- HRNS-029 Visibility Ladder and Handoff Preservation
+- HRNS-037 Live Run Progress Page
 
-<!-- GENERATED:INDEX:START (do not edit; regenerated by generate-spec-index.sh) -->
+### Decision Contract, Journal, and Obligations
+
+Why: Every semantic judgment needs one versioned contract, one replayable
+journal, and frozen obligations to judge against before anything touches the
+wire.
+
+- HRNS-024 Shared Typed-Decision Contract
+- HRNS-025 Run Journal and PR Trace Summary
+- HRNS-030 Obligation and Subgoal Registry
+- HRNS-027 Dual-Host Jev Adapter
+
+### Goal Verification
+
+Why: Shadow pilots at existing handoffs, a phase-boundary verifier, and
+change-triggered re-checking answer whether work is actually complete, and the
+calibration report decides whether any check may advise.
+
+- HRNS-031 Pilot: Requirement-to-Task Semantic Coverage
+- HRNS-032 Pilot: Review-Fix Closure Verification
+- HRNS-033 Pilot: Claim-to-Source Support Annotation
+- HRNS-034 Phase-Boundary Goal-Completion Verifier
+- HRNS-035 Change-Triggered Scheduler and Invalidation
+- HRNS-036 Premature-Stop and Redundant-Continuation Advice
+- HRNS-038 Trajectory Calibration and Gated Live Evaluation
+
+### History
+
+- HRNS-001 Harness Surface Inventory and Gap Taxonomy (complete)
+- HRNS-002 to HRNS-014 retired; see the PRD's retired-features table
+
+<!-- GENERATED:INDEX:START (do not edit; regenerated by generate-spec-index) -->
 <!-- GENERATED:INDEX:END -->
