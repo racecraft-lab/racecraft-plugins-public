@@ -82,6 +82,13 @@ Use `references/gate-validation.md` from the installed `speckit-autopilot` skill
   pointing at `specs/eda-001-attribution-foundation` and must not let the
   `before_specify` git.feature hook create a numbered branch. The
   `brand-001-` and `formal-001-` specs are the local precedent.
+- Local privacy-scan false positive: `tests/speckit-pro/unit/test-privacy-scan.py`
+  derives "local identity" terms from the repository root path
+  (`dynamic_local_pattern`), so this worktree's directory name makes words such
+  as "attribution" and "foundation" match across the whole tree. On 2026-09-25
+  it failed this way before any spec change. A local failure whose hits share
+  only those path-derived terms is not a spec defect; CI runs from a neutral
+  checkout path. Any other hit is real and must be fixed.
 
 Before every phase, verify the active root and branch. Fail closed if the workflow
 is launched from another checkout.

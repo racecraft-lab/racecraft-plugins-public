@@ -104,7 +104,7 @@ Each accepted spec delivers its own observable outcome.
 
 | Spec | Name | Status | Workflow File | Next Phase |
 |------|------|--------|---------------|------------|
-| EDA-001 | Attribution Foundation | ⏳ Pending | — | Specify |
+| EDA-001 | Attribution Foundation | 🔄 In Progress | `docs/ai/specs/.process/EDA-001-workflow.md` | Specify |
 | EDA-002 | Frontier-Round Grilling | ⏳ Pending | — | Blocked by EDA-001 |
 | EDA-003 | Domain Model and ADRs | ⏳ Pending | — | Blocked by EDA-002 |
 | EDA-004 | Prototype Skill | ⏳ Pending | — | Blocked by EDA-002 |
