@@ -54,8 +54,10 @@ cover all three cases.
 
    **Security keyword override (any N):** If the routed categories
    include `[security]` OR any analyst response detects a security
-   keyword in the unresolved item itself, output
-   `[HUMAN REVIEW NEEDED]` regardless of agreement level. The
+   keyword in the unresolved item itself, apply the answer only when
+   all three analysts agree (3/3, high confidence). A 2/3 majority or
+   no agreement outputs `[HUMAN REVIEW NEEDED]` with all three
+   perspectives. A keyword alone never stops the run. The
    orchestrator should never have routed a `[security]` item to
    N < 3 in the first place; if you receive a `[security]` item
    with N < 3, also flag the routing violation.

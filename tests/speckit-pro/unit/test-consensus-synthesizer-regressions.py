@@ -69,7 +69,9 @@ class ConsensusSynthesizerRegressionTests(unittest.TestCase):
             "If all three disagree",
             "[HUMAN REVIEW NEEDED]",
             "Security override at any N",
-            "regardless of agreement",
+            "apply the answer only when all three analysts agree",
+            "A 2/3 majority or no agreement returns `[HUMAN REVIEW NEEDED]`",
+            "a keyword alone never stops the run",
         ))
 
     def test_escape_phrases_and_security_override_are_complete(self) -> None:

@@ -7899,7 +7899,7 @@
         },
         {
           "id": "legacy-05",
-          "description": "Mentions that security findings require human review even when analysts agree"
+          "description": "Mentions that security findings go to human review only when the three analysts do not all agree"
         }
       ],
       "prompt": "Use {{skill}} to address this bounded request. The analyze-executor flagged: '[domain] Finding 3 [HIGH]: cookie SameSite policy is not specified in plan.md.' Which consensus analyst(s) does the native client autopilot spawn, how does the security-keyword override interact with the [domain] tag, does consensus-synthesizer still run, and is human review required even if the analysts agree?",
@@ -7964,7 +7964,7 @@
           "id": "legacy-05-semantic",
           "requirement": "legacy-05",
           "type": "semantic",
-          "rubric": "PASS only if the evidence satisfies: Mentions that security findings require human review even when analysts agree FAIL if omitted, contradicted, or merely claimed without required evidence."
+          "rubric": "PASS only if the evidence satisfies: Mentions that security findings go to human review only when the three analysts do not all agree FAIL if omitted, contradicted, or merely claimed without required evidence."
         }
       ],
       "native_differences": [
@@ -8000,7 +8000,7 @@
         },
         {
           "id": "legacy-04",
-          "description": "Mentions that the synthesizer flags [HUMAN REVIEW NEEDED] for security items regardless of agreement level"
+          "description": "Mentions that the synthesizer flags [HUMAN REVIEW NEEDED] for a security item unless all three analysts agree"
         },
         {
           "id": "legacy-05",
@@ -8063,7 +8063,7 @@
           "id": "legacy-04-semantic",
           "requirement": "legacy-04",
           "type": "semantic",
-          "rubric": "PASS only if the evidence satisfies: Mentions that the synthesizer flags [HUMAN REVIEW NEEDED] for security items regardless of agreement level FAIL if omitted, contradicted, or merely claimed without required evidence."
+          "rubric": "PASS only if the evidence satisfies: Mentions that the synthesizer flags [HUMAN REVIEW NEEDED] for a security item unless all three analysts agree FAIL if omitted, contradicted, or merely claimed without required evidence."
         },
         {
           "id": "legacy-05-semantic",

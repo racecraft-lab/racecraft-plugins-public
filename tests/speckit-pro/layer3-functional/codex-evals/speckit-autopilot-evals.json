@@ -245,7 +245,7 @@
         "States that ALL 3 analysts (codebase-analyst, spec-context-analyst, domain-researcher) are spawned",
         "Explicitly states that [security] is NEVER single-routed — defense-in-depth",
         "References the security keyword override in consensus-synthesizer rules",
-        "Mentions that the synthesizer flags [HUMAN REVIEW NEEDED] for security items regardless of agreement level",
+        "Mentions that the synthesizer flags [HUMAN REVIEW NEEDED] for a security item unless all three analysts agree",
         "Does NOT route this item to a single analyst"
       ]
     },
