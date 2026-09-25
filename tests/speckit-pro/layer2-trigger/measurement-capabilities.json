@@ -1,8 +1,8 @@
 {
   "schema_version": "trigger-capabilities/v2",
-  "checked_on": "2026-09-11",
+  "checked_on": "2026-09-24",
   "qualification_status": "qualified",
-  "provider_trial_invocations": 3,
+  "provider_trial_invocations": 9,
   "scope": "Pinned live host interfaces, canonical launch contracts, qualified selection observations, and owned POSIX process/workspace cleanup",
   "canonical_parameters": {
     "runs_per_query": 3,
@@ -11,7 +11,7 @@
       "model": "claude-sonnet-5"
     },
     "codex": {
-      "model": "gpt-5.6-sol",
+      "model": "gpt-6-sol",
       "reasoning_effort": "low"
     }
   },
@@ -58,7 +58,7 @@
       ]
     },
     "codex": {
-      "cli_version": "0.153.3",
+      "cli_version": "0.156.1",
       "platforms": ["darwin", "linux"],
       "interface": "codex exec --json with pseudo-terminal-isolated positional input, strict isolated config, and a dedicated no-retry ChatGPT-auth provider",
       "observation_scope": "codex-body-read-attestation",
@@ -100,11 +100,11 @@
         "Provider behavior invisible to the configured public client interface"
       ],
       "outer_exit_source": "Python supervisor Popen.returncode; never inferred from a turn event",
-      "model_contract": "Exact gpt-5.6-sol/low request; public exec JSON provides request-only rather than resolved backend identity evidence",
+      "model_contract": "Exact gpt-6-sol/low request; public exec JSON provides request-only rather than resolved backend identity evidence",
       "direct_invocation": "Forced direct invocation is outside the implicit-selection measurement scope and is not qualified by this record",
       "sources": [
-        "https://raw.githubusercontent.com/openai/codex/rust-v0.153.3/codex-rs/exec/src/lib.rs",
-        "https://raw.githubusercontent.com/openai/codex/rust-v0.153.3/codex-rs/exec/src/exec_events.rs",
+        "https://raw.githubusercontent.com/openai/codex/rust-v0.156.1/codex-rs/exec/src/lib.rs",
+        "https://raw.githubusercontent.com/openai/codex/rust-v0.156.1/codex-rs/exec/src/exec_events.rs",
         "https://learn.chatgpt.com/docs/non-interactive-mode#make-output-machine-readable",
         "https://learn.chatgpt.com/docs/config-file/config-reference",
         "https://learn.chatgpt.com/docs/config-file/environment-variables",

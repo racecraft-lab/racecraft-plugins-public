@@ -52,8 +52,8 @@ import trigger_comparison as experiment_evidence  # noqa: E402
 PLUGIN_ROOT = TESTS_ROOT.parents[1] / "speckit-pro"           # <repo>/speckit-pro
 CODEX_WORKSPACE_FIXTURE_ROOT = TESTS_ROOT / "layer2-trigger/fixtures/codex-workspace"
 DEFAULT_REASONING_EFFORT = "low"
-DEFAULT_MODEL = "gpt-5.6-sol"
-PINNED_CODEX_VERSION = "codex-cli 0.153.3"
+DEFAULT_MODEL = "gpt-6-sol"
+PINNED_CODEX_VERSION = "codex-cli 0.156.1"
 QUALIFIED_RUNS = 3
 QUALIFIED_THRESHOLD = 0.5
 MODEL_PROVIDER_ID = "layer2_openai_no_retry"

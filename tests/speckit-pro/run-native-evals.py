@@ -114,8 +114,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--retry-case", action="append", default=[])
     parser.add_argument("--retry-status", choices=("fail", "invalid", "incomplete"))
     parser.add_argument("--claude-model", default="claude-sonnet-5")
-    parser.add_argument("--codex-model", default="gpt-5.6-sol")
-    parser.add_argument("--judge-model", default="gpt-5.6-sol")
+    parser.add_argument("--codex-model", default="gpt-6-sol")
+    parser.add_argument("--judge-model", default="gpt-6-sol")
     return parser
 
 
