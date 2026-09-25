@@ -88,6 +88,13 @@ every defect this spec fixes. Expect, and do not stop on:
   markers. When a checklist or spec describes a marker, quote it in prose
   ("the Gap marker") or verify G4 manually, and record the workaround.
 - The installed setup gate reads the last roadmap entry; record raw output as above.
+- `test-privacy-scan` fails 1 of 11 in this worktree. `dynamic_local_pattern`
+  (`tests/speckit-pro/unit/test-privacy-scan.py:195`) turns every word of
+  `str(REPO_ROOT)` into a local identity term, and this worktree's directory
+  name contains "autopilot" and "emission", so every tracked use of those words
+  is flagged. It passes on CI's neutral checkout path. Confirm the rest of the
+  suite is green, treat this one failure as environmental, and prove the scan on
+  CI; do not edit files to avoid the words.
 
 ---
 
