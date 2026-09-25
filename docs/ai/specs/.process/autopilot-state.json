@@ -5,7 +5,7 @@
   "branch": "hrns-015-autopilot-gate-pr-emission-repair",
   "status": "in_progress",
   "stage": "plan",
-  "active_step": "Phase 2: Clarify - PR Emission Focus",
+  "active_step": "Phase 3: Plan",
   "stage_resolution": {
     "source": "argv",
     "basis": "explicit --stage plan",
@@ -67,23 +67,23 @@
     },
     {
       "step": "Phase 2: Clarify - PR Emission Focus",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 2: Clarify - PR Emission Focus Consensus",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 2: Clarify - Workflow Behavior Focus",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 2: Clarify - Workflow Behavior Focus Consensus",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 3: Plan",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 4: Checklist - Pending domain discovery",
@@ -162,7 +162,7 @@
       "status": "skipped: outside --stage plan"
     }
   ],
-  "updated_at": "2026-09-25T16:59:17.548664+00:00",
+  "updated_at": "2026-09-25T17:43:37.169175+00:00",
   "prerequisites": {
     "status": "completed_with_documented_exception",
     "all_pass": false,
@@ -223,6 +223,12 @@
       "pass": true,
       "markers": 0,
       "reason": "spec.md exists with 0 markers"
+    },
+    "G2": {
+      "pass": true,
+      "markers": 0,
+      "human_review_markers": 0,
+      "reason": "four Clarify sessions complete and decisions documented"
     }
   },
   "specify": {
@@ -237,7 +243,7 @@
     "checklist_failed": 0
   },
   "clarify": {
-    "status": "in_progress",
+    "status": "completed",
     "sessions": [
       {
         "session": 1,
@@ -255,7 +261,37 @@
         "round_2_items": 1,
         "result": "completed",
         "budget_values": "deferred to Plan: reconcile 1362 vs 1442 LOC and production-file projections"
+      },
+      {
+        "session": 3,
+        "focus": "PR emission",
+        "questions": 5,
+        "consensus_items": 1,
+        "round_2_items": 1,
+        "result": "completed",
+        "g65_verdict_source": "Phase 6.5 Verdict field; protected Verification line"
+      },
+      {
+        "session": 4,
+        "focus": "Workflow behavior",
+        "questions": 5,
+        "consensus_items": 4,
+        "result": "completed",
+        "completion_boundary": "persisted workflow and state; 13 completed rows",
+        "teardown": "confirmed child and team cleanup on both hosts; Codex lifetime deferred to HRNS-017",
+        "resolve_pr": "paginate thread and comments; exact remote PR head SHA confirmation",
+        "blind_spot_record": "Design Concept Blind-spot pass line and operator status"
       }
     ]
+  },
+  "tracked_issues": {
+    "637": {
+      "status": "included_in_spec_and_plan_prompt",
+      "url": "https://github.com/racecraft-lab/racecraft-plugins-public/issues/637"
+    },
+    "638": {
+      "status": "included_in_spec_and_plan_prompt",
+      "url": "https://github.com/racecraft-lab/racecraft-plugins-public/issues/638"
+    }
   }
 }

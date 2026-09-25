@@ -23,9 +23,9 @@ As an operator, I can supply a release note while preparing a final pull request
 
 **Acceptance Scenarios**:
 
-1. **Given** a final packet with a release note, **when** its body is emitted, **then** one `## Release note` section contains exactly one `release-note` fence inside the editable markers.
+1. **Given** a final packet with a release note, **when** its body is emitted, **then** one `## Release note` section follows the eight required headings, contains exactly one nonempty `release-note` fence inside its own editable markers, and leaves the single UAT Runbook heading in its required position.
 2. **Given** that emitted body and a `feat` PR title, **when** the host release-note check runs, **then** it passes without a skip label or manual body edit.
-3. **Given** a draft PR or a packet without a release note, **when** its body is emitted, **then** no release-note fence is invented.
+3. **Given** a draft PR or a packet without a release note, **when** its body is emitted, **then** no release-note heading, marker field, or fence is invented; drafts retain zero editable fields.
 
 #### User Story 2 - Packet validation in hosts that track untracked files (Priority: P1) [US2]
 
@@ -37,8 +37,8 @@ As an operator, I can validate or refresh a packet when its own generated files 
 
 **Acceptance Scenarios**:
 
-1. **Given** only this packet's canonical untracked `<id>.json`, `<id>/body.md`, and `<id>/validation.json` files, **when** validation or refresh applies, **then** it succeeds.
-2. **Given** any other changed or untracked path, **when** validation or refresh applies, **then** it blocks and identifies the unrelated change.
+1. **Given** only this packet's canonical untracked `<id>.json`, `<id>/body.md`, and `<id>/validation.json` files under its validated feature directory, **when** validation or refresh applies, **then** it succeeds without requiring those files to be committed.
+2. **Given** another packet, any unrelated changed path, a tracked modification, or unreadable Git status, **when** validation or refresh applies, **then** it blocks without a host ignore-rule workaround.
 
 #### User Story 3 - Confidence visible to reviewers (Priority: P1) [US3]
 
@@ -51,7 +51,8 @@ As a reviewer, I can see the recorded G6.5 confidence verdict in the final PR bo
 **Acceptance Scenarios**:
 
 1. **Given** a recorded G6.5 verdict, **when** the final body is emitted, **then** the verdict is visible and matches the recorded value.
-2. **Given** a refreshed final packet, **when** its body is emitted again, **then** the verdict remains visible and current.
+2. **Given** a refreshed final packet, **when** its body is emitted again, **then** a protected line under `## Verification` shows the current Phase 6.5 `Verdict` value rather than stale body text.
+3. **Given** no valid recorded Phase 6.5 verdict, **when** final PR emission is attempted, **then** emission blocks instead of inferring a verdict from the overview status or score.
 
 ### Slice B — gates and counters
 
@@ -95,8 +96,10 @@ As an operator, I can evaluate the named roadmap entry's reviewability budget wi
 
 1. **Given** a named spec, **when** setup mode evaluates reviewability, **then** it considers only that spec's section and primary surfaces.
 2. **Given** a missing named section or required budget field, **when** setup mode evaluates it, **then** it returns `status: block`, `pass: false`, exit 1, and a blocker naming the spec ID and missing field rather than borrowing another entry's value.
-3. **Given** a valid line-anchored typed exception pragma, **when** the gate evaluates it, **then** its status is `exception`.
-4. **Given** an over-block-line total, **when** the ordered slice list and budget table have exactly one complete, numeric row per slice and every slice is below each block line, **then** setup accepts the split; missing, extra, duplicate, malformed, or over-line rows block.
+3. **Given** a valid line-anchored typed exception in the selected authored roadmap section, **when** the gate evaluates it, **then** its status is `exception` with the exact accepted class; a pragma in another entry or generated text has no effect.
+4. **Given** an over-block-line total, **when** the ordered slice list and budget table have exactly one complete, numeric row per slice and every slice is below each block line, **then** setup reports the aggregate and accepts the split; missing, extra, duplicate, malformed, or over-line rows block.
+5. **Given** a greenfield entry, **when** setup evaluates its budget, **then** the documented 1.5x allowance changes LOC thresholds only; production-file, total-file, and surface thresholds retain their ordinary limits.
+6. **Given** declared slice budgets, **when** setup evaluates them, **then** it aggregates their LOC and file counts for whole-feature reporting and evaluates each slice against the block lines.
 
 #### User Story 7 - Refactor-aware size estimate (Priority: P2) [US7]
 
@@ -149,9 +152,9 @@ As an operator, I receive completion only after every Post row is done and every
 
 **Acceptance Scenarios**:
 
-1. **Given** a pending, in-progress, or missing Post row, **when** autopilot reaches its completion boundary, **then** it refuses completion and identifies the unfinished row.
+1. **Given** a pending, in-progress, missing, or duplicate canonical Post row in the persisted workflow or state, **when** either host reaches its completion boundary, **then** the shared check fails and identifies every affected row.
 2. **Given** every Post row complete, **when** autopilot reaches the boundary, **then** it may report completion.
-3. **Given** a team formed by any team-capable executor, **when** that executor returns, **then** its team has been torn down on both hosts.
+3. **Given** a team formed by any team-capable executor, **when** that executor reports clean completion, **then** it has collected or stopped every child and confirmed team teardown on both hosts; an unconfirmed child is named in its result.
 
 ### Slice C2 — resolve-pr, scaffold, envelopes, and templates
 
@@ -165,9 +168,9 @@ As a PR author, I can rely on resolve-pr to consider all review threads and comm
 
 **Acceptance Scenarios**:
 
-1. **Given** multiple pages of threads or comments, **when** resolve-pr collects feedback, **then** every page is considered before decisions are made.
+1. **Given** multiple pages of threads or nested comments, **when** resolve-pr collects feedback, **then** every connection is exhausted before decisions are made; a failed page or missing continuation cursor blocks replies and resolution.
 2. **Given** an unverified fix, failed push, or remote head that does not match the pushed commit, **when** resolve-pr reaches reply handling, **then** it does not reply or resolve.
-3. **Given** full verification, a successful push, and a matching remote branch head, **when** resolve-pr handles feedback, **then** it replies and resolves in that order.
+3. **Given** full verification, a successful push, and a fresh remote PR head SHA matching the intended commit, **when** resolve-pr handles feedback, **then** it replies and resolves serially and confirms each resolved state.
 
 #### User Story 12 - Wait for the scaffold blind-spot analysis (Priority: P1) [US12]
 
@@ -180,7 +183,7 @@ As an operator, I receive the analyst's findings even when its work takes longer
 **Acceptance Scenarios**:
 
 1. **Given** a dispatched analyst that is still working, **when** five minutes elapse, **then** scaffold continues waiting and later uses its nonempty findings.
-2. **Given** a dispatch error, empty return, or operator abandonment, **when** scaffold continues without findings, **then** it records the specific reason rather than saying the pass did not run.
+2. **Given** a dispatch error, empty return, or explicit operator abandonment, **when** scaffold continues without findings, **then** the Design Concept blind-spot line and operator status show the same specific reason; elapsed time alone never records abandonment.
 
 #### User Story 13 - Complete examples at live helper failure sites (Priority: P2) [US13]
 
@@ -207,6 +210,7 @@ As an operator following a generated roadmap, I can open its workflow links at t
 
 1. **Given** a generated roadmap, **when** its workflow link is followed, **then** it opens the matching file under `docs/ai/specs/.process/`.
 2. **Given** the published guidance, **when** it shows the workflow location, **then** it agrees with the generated link and scaffold output.
+3. **Given** an existing roadmap with a legacy workflow link, **when** scaffold updates it, **then** a link to a verified existing workflow file is preserved; a broken link is corrected to the actual `.process/<SPEC-ID>-workflow.md` output.
 
 ### Edge Cases
 
@@ -225,32 +229,34 @@ As an operator following a generated roadmap, I can open its workflow links at t
 ### Functional Requirements
 
 - **FR-001** [US1]: Final packet creation MUST accept an optional release note without requiring a replacement of the full body.
-- **FR-002** [US1]: When supplied, the final body MUST render exactly one `## Release note` section and one `release-note` fence within the editable markers, and pass the host's release-note check for a feature PR title.
-- **FR-003** [US1]: Draft bodies and final bodies without a supplied release note MUST NOT acquire a release-note fence by default.
-- **FR-004** [US2]: Packet validation and refresh MUST exempt only that packet's canonical untracked metadata, body, and validation files from the clean-worktree guard.
-- **FR-005** [US2]: The same guard MUST continue to block every unrelated tracked or untracked change.
-- **FR-006** [US3]: The final PR body MUST show the recorded G6.5 confidence verdict and preserve it on refresh.
+- **FR-002** [US1]: When supplied, the final body MUST render exactly one `## Release note` section after the eight required headings, with its heading and balanced marker lines protected and exactly one nonempty `release-note` fence in its editable body, and pass the host's release-note check for a feature PR title.
+- **FR-003** [US1]: Draft bodies and final bodies without a supplied release note MUST NOT acquire a release-note heading, editable field, or fence by default; drafts retain zero editable fields.
+- **FR-004** [US2]: `validate-pr-packet-write` and `pr-packet-output` MUST exempt only the current packet's three canonical untracked metadata, body, and validation paths, derived from the validated feature directory and packet ID, from the clean-worktree guard.
+- **FR-005** [US2]: The same guard MUST continue to block every unrelated tracked or untracked change, every tracked modification to packet files, and unreadable Git status; both host instructions MUST allow only the current packet's untracked canonical paths without requiring a force-add or ignore rule.
+- **FR-006** [US3]: Final PR emission MUST require a valid Phase 6.5 `Verdict` field and show its current value in a protected generated line under `## Verification`, including on refresh; it MUST NOT substitute the Workflow Overview status or infer a missing verdict.
 - **FR-007** [US4]: G4 and `count-markers gaps/all` MUST count each real bracket tag with a comma-separated `Gap` token once, including first and later token positions and multiple tags on one line.
 - **FR-008** [US4]: G4 gap counting and G1/G2/G3 and `count-markers clarifications/all` clarification counts and details MUST exclude markers in inline, fenced, and indented Markdown code, while preserving counts in visible prose and leaving other marker types unchanged. Operator instructions MUST describe the same rule.
 - **FR-009** [US5]: Spec-index generation and isolated checking MUST exclude every candidate absent from the source Git index, including files inside tracked spec directories, from backlinks and the roadmap home index; staged additions remain eligible.
 - **FR-010** [US5]: Release-artifact regeneration MUST refresh the spec index; its required `--check` MUST fail on stale tracked index content and name changed index paths.
 - **FR-011** [US6]: Setup reviewability evaluation MUST require a spec identifier, match the complete case-sensitive `### <spec_id>:` roadmap entry heading, and consider only that entry through the next peer-level heading and its primary surfaces.
 - **FR-012** [US6]: Setup reviewability evaluation MUST return `status: block`, `pass: false`, exit 1, and a blocker naming the spec ID and missing field when the named section or any required budget field is missing.
-- **FR-013** [US6]: A valid line-anchored typed reviewability exception MUST produce status `exception` without adding a new exception class.
-- **FR-014** [US6]: An over-block-line spec total MUST be acceptable only when the declared ordered slice IDs match unique complete numeric budget rows exactly and every slice is below each block line; missing, extra, duplicate, malformed, or over-line slice budgets MUST block.
+- **FR-013** [US6]: A valid line-anchored `Reviewability-Exception` with an accepted class in the selected authored roadmap section MUST produce status `exception` with that exact class; other sections, generated text, and new exception classes MUST NOT supply an override.
+- **FR-014** [US6]: An over-block-line spec total MUST be acceptable only when the declared ordered slice IDs match unique complete numeric budget rows exactly and every slice is below each block line; the gate MUST report the aggregate of those rows, and missing, extra, duplicate, malformed, or over-line slice budgets MUST block.
 - **FR-015** [US7]: Size estimation MUST accept a required-refactor signal and account for it in estimated scope and suggested slice count.
 - **FR-016** [US8]: An optional per-slot declared quality command MUST override detection for that slot and identify its source as `declared`; other slots retain normal detection.
 - **FR-017** [US9]: Both hosts MUST use one canonical 13-row Post list with separate Final Reviewability Backstop and PR Packet/Body Generation rows; all stated counts MUST agree.
-- **FR-018** [US10]: At the completion boundary, autopilot MUST refuse completion when any canonical Post row is missing, pending, or in progress.
-- **FR-019** [US10]: Every executor that can form a team MUST tear that team down before it returns, on both hosts.
-- **FR-020** [US11]: Resolve-pr MUST fetch every page of review threads and comments before making resolution decisions.
-- **FR-021** [US11]: Resolve-pr MUST complete full verification, push, and confirmation that the pushed commit matches the remote branch head before it replies to or resolves review feedback.
+- **FR-018** [US10]: Before Claude or Codex reports successful autopilot completion, it MUST run a completion-boundary check against the persisted workflow and `autopilot-state.json`. The check MUST require each of the 13 canonical Post steps to appear exactly once with status `completed`, name every missing or noncompleted step, and fail when any requirement is unmet.
+- **FR-019** [US10]: On both Claude and Codex hosts, each team-capable executor MUST collect the result of every child agent or use a supported stop operation for an unfinished child, request graceful team shutdown, and confirm that no teammate remains active and cleanup has completed before reporting clean completion. Its structured result MUST identify any child result or teardown confirmation that remains unresolved. Codex child lifetime after parent exit remains unverified and is tracked by HRNS-017.
+- **FR-020** [US11]: On each host, resolve-pr MUST collect every page of review threads and every page of comments within each thread. A failed request, incomplete connection, or missing continuation cursor MUST block replies and resolution. The implementation MAY reuse the repository’s existing nested pagination pattern; the exact GitHub API route remains a Plan decision.
+- **FR-021** [US11]: On each host, resolve-pr MUST apply fixes, verify them, commit, and push before replying to or resolving review threads. It MUST compare the intended local commit SHA with a freshly retrieved remote PR head SHA and block replies and resolution on mismatch. It MUST reply to and resolve threads serially and confirm each thread’s resolved state.
 - **FR-022** [US12]: Scaffold MUST wait for a dispatched blind-spot analyst's summary without a fixed five-minute deadline.
-- **FR-023** [US12]: Scaffold MAY proceed without findings only for a dispatch error, empty return, or operator abandonment, and MUST record the distinct reason.
-- **FR-024** [US13]: Both hosts MUST provide complete, tested request examples at the named status, scaffold, and phase-execution helper sites; the broader call-site sweep remains HRNS-019.
-- **FR-025** [US14]: Generated roadmap workflow links and published path guidance MUST point to `docs/ai/specs/.process/`, where scaffold writes workflow files.
+- **FR-023** [US12]: Scaffold MAY proceed without findings only for a dispatch error, empty return, or operator abandonment. It MUST record the outcome and specific reason in the Design Concept’s existing `**Blind-spot pass:**` line and show the same reason in its operator status line. A late nonempty result MUST be recorded as `ran` regardless of elapsed time. `operator abandonment` MUST require explicit operator action; elapsed time alone MUST NOT establish abandonment.
+- **FR-024** [US13]: Both hosts MUST provide complete, tested request envelopes for status `generate-spec-index-check` and `o5-topology`, scaffold reviewability and worktree placement, and phase index writing; the broader call-site sweep remains HRNS-019.
+- **FR-025** [US14]: New roadmap template workflow links and published path guidance MUST resolve to scaffold output under `docs/ai/specs/.process/`; updates to existing roadmaps MUST preserve verified legacy links that resolve to real workflow files and repair broken links to the actual output.
 - **FR-026** [US1–US14]: Every changed host-facing behavior MUST have equivalent Claude Code and Codex instructions in the same review slice and failing-first fixture evidence for its acceptance scenarios.
 - **FR-027** [US1–US14]: The PRD acceptance criteria AC-16.2, AC-16.5, AC-16.8, and AC-16.10, plus the HRNS-015 and HRNS-019 roadmap entries, MUST reflect the decided scope, four-slice budget, and ownership of deferred work.
+- **FR-028** [US6]: The documented 1.5x greenfield allowance MUST apply only to reviewable-LOC thresholds; production-file, total-file, and primary-surface limits MUST retain their ordinary thresholds.
+- **FR-029** [US6]: Setup MUST aggregate every declared slice budget for whole-feature reporting and evaluate each complete slice against the block thresholds, without borrowing another roadmap entry's values.
 
 ### Reviewability Notes
 
@@ -316,6 +322,26 @@ As an operator following a generated roadmap, I can open its workflow links at t
 - Reviewability setup matches the complete, case-sensitive `### <spec_id>:` heading and reads only until the next peer-level roadmap entry. This heading grammar is a new Clarify decision; a missing heading blocks without using neighboring values.
 - Use an ordered `Slices:` ID list and a `Slice Budgets:` Markdown table with columns `Slice`, `Estimated LOC`, `Production files`, and `Total files`. Each listed ID has exactly one row with three nonnegative integer values. Reject missing, extra, duplicate, malformed, or placeholder rows and any row at or above a block threshold. The roadmap template uses placeholders and no concrete accepted exception pragma. This format creates no new split exception.
 - Plan must reconcile Q11's 1,362 LOC aggregate with its 1,442 LOC sum across A, B, C1, and C2, then establish missing production-file projections before recording actual budgets.
+
+### PR Emission
+
+- The optional `## Release note` heading follows the eight required final-body headings. The single `## UAT Runbook` heading stays between `## How To UAT` and `## Verification`. A release note never appears in a draft body.
+- A supplied release note is a fourth final-body editable field. Its heading and balanced marker lines are protected; only the enclosed body is elided from the protected fingerprint. Structure validation checks the heading and markers and exactly one nonempty release-note fence. Final packet schema permits four fields; drafts retain zero.
+- The packet-only dirty-worktree exemption applies to the current packet's untracked `<id>.json`, `<id>/body.md`, and `<id>/validation.json` under its validated feature directory. A second packet, tracked modification, unrelated path, or Git-status failure still blocks both mutation helpers.
+- Claude and Codex Post guidance keeps the packet at canonical local paths, resolves unrelated worktree changes, runs current read-only validation, and then persists validation; it does not require committing the packet or adding ignore rules.
+- The Phase 6.5 table `Verdict` field (`proceed`, `remediate`, or `stop`) is the durable decision. The Workflow Overview Confidence Gate row may remain Pending and is not a verdict source. Draft content may show `Not recorded`; final emission blocks until a valid verdict exists. A protected generated line under `## Verification` shows the current value on first emission and refresh, even when a supplied body would otherwise bypass regeneration.
+
+### Workflow Behavior
+
+- The shared completion-boundary rule reads the persisted workflow and `autopilot-state.json` immediately before either host reports successful completion. The current `status-evidence` rule does not establish that all 13 canonical Post rows are completed.
+- Team-capable executors report child-result and cleanup confirmation; Codex child lifetime after parent exit remains an HRNS-017 question.
+- Resolve-pr exhausts each thread and comment connection before acting, then verifies, commits, pushes, and confirms the fresh remote PR head SHA before serial replies and resolution. Plan selects the exact API route.
+- The Design Concept header’s existing `**Blind-spot pass:**` line is the durable scaffold record. A slow nonempty result is `ran`; dispatch error, empty return, and explicit operator abandonment remain distinct reasons.
+
+### Tracked Issue Reproductions
+
+- [#637](https://github.com/racecraft-lab/racecraft-plugins-public/issues/637): A multi-entry roadmap with an oversized first entry and small last entry must evaluate the requested ID only; an `infra` exception in that selected authored section must be honored; missing budget fields must block. Add greenfield LOC-only and complete-slice aggregation fixtures alongside those original reproductions.
+- [#638](https://github.com/racecraft-lab/racecraft-plugins-public/issues/638): New roadmap-template links must resolve to `.process/<SPEC-ID>-workflow.md`, matching scaffold output. Preserve a legacy layout only when its existing link target is verified; otherwise repair the broken link. Add generated-template and existing-roadmap fixtures.
 
 ## Assumptions
 

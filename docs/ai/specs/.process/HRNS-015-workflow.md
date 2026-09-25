@@ -32,8 +32,8 @@ captured during scoping.
 
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
-| Specify | `/speckit-specify` | ✅ Complete | 14 user stories, 27 functional requirements, 35 acceptance scenarios; G1 passed |
-| Clarify | `/speckit-clarify` | 🔄 In Progress | Sessions 1–2/4 complete; five consensus decisions recorded |
+| Specify | `/speckit-specify` | ✅ Complete | 14 user stories, 29 current functional requirements, 39 acceptance scenarios after Clarify; G1 passed |
+| Clarify | `/speckit-clarify` | ✅ Complete | Four sessions complete; ten consensus decisions recorded; G2 passed with zero markers |
 | Plan | `/speckit-plan` | ⏳ Pending | |
 | Checklist | `/speckit-checklist` | ⏳ Pending | Run for each domain |
 | Tasks | `/speckit-tasks` | ⏳ Pending | |
@@ -322,9 +322,9 @@ Slice C2, resolve-pr, scaffold, envelopes, templates:
 
 | Metric | Value |
 |--------|-------|
-| Functional Requirements | 27 (FR-001 through FR-027) |
+| Functional Requirements | 29 (FR-001 through FR-029 after Clarify) |
 | User Stories | 14 |
-| Acceptance Criteria | 35 scenarios |
+| Acceptance Criteria | 39 scenarios after Clarify |
 
 ### Files Generated
 
@@ -385,8 +385,10 @@ slices' main surfaces.
 |---------|------------|-----------|--------------|
 | 1 | Gap counting and estimation | 4 | Exact case-sensitive `Gap` token grammar; each tag counted across G4 and `count-markers`; code examples excluded for gap and clarification markers; refactor input shape and weight deferred to Plan |
 | 2 | Reviewability gate and spec index | 5 | Exact case-sensitive `### <spec_id>:` section; missing fields block with diagnostics; ordered `Slices:` plus budget table selected in Round 2; refresh/check and source-index membership defined; Plan must reconcile 1,362 versus 1,442 LOC |
-| 3 | PR emission | | |
-| 4 | Workflow behavior | | |
+| 3 | PR emission | 5 | Release note after required headings in fourth editable field; exact current-packet untracked exemption; both-host Post prose updated in plan; G6.5 Phase 6.5 `Verdict` field selected by Round 2 for protected Verification line |
+| 4 | Workflow behavior | 5 | Shared 13-row persisted completion check; explicit executor child/team teardown; complete thread/comment pagination and exact pushed-head confirmation; Design Concept blind-spot reasons; named inline envelope sites |
+
+G2 passed: the runner reported zero clarification markers; the spec has no human-review marker and documents the four sessions’ decisions.
 
 ### Consensus Resolution Log
 
@@ -397,6 +399,11 @@ slices' main surfaces.
 | 3 | Clarify | Required-refactor signal weight | [codebase, spec] | 1 | both-agree | Confirmed required signal and left input shape and weight to Plan; Q11 does not calibrate weight | codebase-analyst, spec-context-analyst |
 | 4 | Clarify | Named roadmap section grammar | [codebase, spec] | 1 | both-agree | Added complete case-sensitive heading and next-entry boundary | codebase-analyst, spec-context-analyst |
 | 5 | Clarify | Per-slice budget syntax | [codebase, spec] | 1→2 | 2/3 | Selected ordered ID list and four-column Markdown table; Plan to reconcile values | codebase-analyst, spec-context-analyst, domain-researcher |
+| 6 | Clarify | G6.5 verdict source and placement | [spec, codebase] | 1→2 | 2/3 | Phase 6.5 `Verdict` field supplies protected Verification line; absent verdict blocks final emission | codebase-analyst, spec-context-analyst, domain-researcher |
+| 7 | Clarify | Persisted 13-row completion boundary | [codebase] | 1 | high-confidence | New shared rule reads workflow and state, requires each Post row exactly once and completed, and runs before success on both hosts | codebase-analyst |
+| 8 | Clarify | Team-capable executor teardown | [codebase, domain] | 1 | both-agree | Collect or stop children, confirm team cleanup before clean result; Codex lifetime remains HRNS-017 | codebase-analyst, domain-researcher |
+| 9 | Clarify | Resolve-pr feedback and pushed head | [codebase, domain] | 1 | both-agree | Exhaust thread/comment pages; verify, commit, push, compare fresh PR head SHA, then serial reply/resolve | codebase-analyst, domain-researcher |
+| 10 | Clarify | Scaffold blind-spot durable reason | [spec] | 1 | high-confidence | Record distinct reason in Design Concept `Blind-spot pass` line and operator status; elapsed time never implies abandonment | spec-context-analyst |
 
 ---
 
@@ -415,7 +422,7 @@ slices' main surfaces.
 - Plugin surfaces: Markdown skills and agents for Claude Code
   (speckit-pro/skills/, speckit-pro/agents/*.md) and Codex
   (speckit-pro/codex-skills/, speckit-pro/codex-agents/*.toml)
-- Contracts: stdlib JSON Schema files under speckit-pro/speckit_pro_runner/contracts/
+- Contracts: runner JSON Schema under speckit-pro/speckit_pro_runner/contracts/; active PR packet schema under speckit-pro/skills/speckit-autopilot/contracts/
 - Testing: Layer 1 structural, Layer 4 unit, Layer 5 tool scoping
   (tests/speckit-pro/suite-manifest.json)
 - Generated outputs: dist/ via scripts/refresh-release-artifacts.py; docs reference
@@ -439,10 +446,14 @@ slices' main surfaces.
   index; --check fails on drift; the AGENTS.md special case is removed.
 - Q11: "Four slices: A, B, C1, C2". Stack order A → B → C1 → C2.
 
+## Tracked issue acceptance
+- #637: Reproduce the oversized-first/small-last roadmap, selected-entry `infra` pragma, and missing-budget pass from the issue; add failing-first fixtures for exact `inputs.spec_id` scoping, selected authored section only, greenfield LOC-only allowance, primary surfaces, and aggregate plus per-slice budget checks.
+- #638: Reproduce the template link that resolves beside the roadmap instead of under `.process/`; verify new template/scaffold output and preserve existing legacy links only when their targets exist. Add failing-first fixtures for generated and existing roadmaps.
+
 ## Module and Interface Deltas (verbatim from the design concept)
 - speckit-pro/speckit_pro_runner/helpers/pr_emission.py: changed. Optional release_note input rendered as a fenced section in editable markers; confidence verdict carried into the body (Q3; evidence: HRNS-025 Pending).
-- speckit-pro/speckit_pro_runner/contracts/pr-packet.schema.json: changed. One optional release_note property under additionalProperties: false (Q3).
-- speckit-pro/speckit_pro_runner/helpers/read_only.py: changed. packet_body_structure_failures and the protected fingerprint accept the release-note section; gap-token matching with code-span skipping; spec-index untracked exclusion for backlinks and the home index; reviewability_gate per-entry scoping, fail-closed fields, pragma, per-slice budgets; estimate_spec_size refactor signal; detect_commands declared commands (Q3 to Q6, Q9, Q10).
+- speckit-pro/skills/speckit-autopilot/contracts/pr-packet.schema.json: changed. One optional release_note property and a fourth final-body editable field under additionalProperties: false (Q3).
+- speckit-pro/speckit_pro_runner/helpers/read_only.py: changed. packet_body_structure_failures and the protected fingerprint accept the release-note section; gap-token matching with code-span skipping; spec-index untracked exclusion for backlinks and the home index; reviewability_gate per-entry scoping, fail-closed fields, exact selected-section pragma, greenfield LOC-only allowance, aggregate declared slices; estimate_spec_size refactor signal; detect_commands declared commands (Q3 to Q6, #637, Q9, Q10).
 - speckit-pro/speckit_pro_runner/helpers/mutation.py: changed. The dirty-worktree guard exempts exactly the canonical paths of the packet under validation (Q7).
 - speckit-pro/speckit_pro_runner/helpers/registry.py: changed if needed. reviewability-gate required args gain spec_id (Q6).
 - scripts/refresh-release-artifacts.py: changed. Regenerates the spec index; --check fails on spec-index drift (Q10).
@@ -451,9 +462,9 @@ slices' main surfaces.
 - speckit-pro/skills/speckit-autopilot/SKILL.md, references/task-list-canonical.md, references/post-implementation.md, references/gate-validation.md, references/phase-execution.md, references/prerequisites.md, references/agent-teams-integration.md, and the Codex mirrors under speckit-pro/codex-skills/speckit-autopilot/: changed prose (Q1, Q3, Q4, Q7, Q8, Q9).
 - speckit-pro/agents/{phase,analyze,checklist,implement}-executor.md and speckit-pro/codex-agents/{phase,analyze,checklist,implement}-executor.toml: changed. Teardown obligation (evidence: PRD AC-16.4).
 - speckit-pro/skills/speckit-resolve-pr/SKILL.md and speckit-pro/codex-skills/speckit-resolve-pr/SKILL.md: changed. Pagination; verify, push, confirm SHA, then reply and resolve (evidence).
-- speckit-pro/skills/speckit-scaffold-spec/SKILL.md and the Codex mirror: changed. Deadline removed; new fail-open reasons; inline envelopes (Q2, Q8).
+- speckit-pro/skills/speckit-scaffold-spec/SKILL.md and the Codex mirror: changed. Deadline removed; new fail-open reasons; inline envelopes (Q2, Q8); `inputs.spec_id` passed to setup gate and workflow-link updates preserve verified legacy targets (#637, #638).
 - speckit-pro/skills/speckit-status/SKILL.md and the Codex mirror: changed. Inline envelopes for generate-spec-index-check and o5-topology (Q8; late blind-spot findings 8 and 10).
-- speckit-pro/skills/speckit-coach/templates/technical-roadmap-template.md: changed. .process/ workflow links (#638) and the slice-budget syntax (Q6).
+- speckit-pro/skills/speckit-coach/templates/technical-roadmap-template.md: changed. `.process/` workflow links (#638) and the slice-budget syntax (Q6); scaffold preserves existing verified legacy link targets.
 - speckit-pro/skills/speckit-coach/templates/workflow-template.md: changed. 13-row Post table (Q1).
 - speckit-pro/README.md: changed. Workflow path at :178 (evidence: #638).
 - AGENTS.md (root): changed. The spec index joins the refresh command; the "freshness: no PR check" row goes (Q10).
