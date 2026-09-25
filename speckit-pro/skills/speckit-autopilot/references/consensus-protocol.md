@@ -308,7 +308,7 @@ with parent-authored synthesis.
 | **2/3 agree** | Use the majority answer. Log the dissenting perspective for context. |
 | **3/3 agree** | Use the answer with high confidence. |
 | **All 3 disagree** | Flag as `[HUMAN REVIEW NEEDED]` with all 3 perspectives. STOP autopilot. |
-| **Security/data-integrity keyword detected** | Always flag for human regardless of consensus. |
+| **Security item** (`[security]` tag or keyword) | Apply only on 3/3 agreement. A 2/3 majority or all-disagree flags `[HUMAN REVIEW NEEDED]`. |
 
 ### Conservative Mode
 
@@ -322,11 +322,11 @@ Same as moderate, but:
 Same as moderate, but:
 - 2/3 agreement auto-answers (same as moderate)
 - Even all-disagree attempts to synthesize best answer and proceed
-- Only security keywords stop for human review
+- Only a security item without 3/3 agreement stops for human review
 
 ## Security Keywords
 
-These keywords in the question, gap, or finding text trigger **mandatory human review** regardless of consensus mode:
+These keywords in the question, gap, or finding text route the item to all three analysts and raise its bar to **unanimous agreement**, in every consensus mode:
 
 ```
 auth, token, secret, encryption, PII, credential, permission, password,
@@ -340,9 +340,9 @@ and `authored` do not trigger the rule.
 
 When a security keyword is detected:
 1. Still spawn all 3 agents to gather perspectives. `parse-consensus-categories` already returns all 3 for these keywords, so dispatching exactly what it returns satisfies this step
-2. Present all 3 answers to the human
-3. Let the human decide which answer to use
-4. Resume autopilot after human decision
+2. When all 3 agree, apply the answer like any other item and continue. A keyword alone never stops autopilot
+3. When they do not all agree, present all 3 answers to the human and let the human decide
+4. Resume autopilot after the human decision
 
 ## Phase-Specific Consensus Flows
 
@@ -384,7 +384,7 @@ clarify-executor prepares read-only Clarify Question Set
         │   (one synthesizer per item).
         │
         ├── Stage 3: apply Artifact Edits SERIALLY in item order:
-        │   ├── Check for security keywords → if found, flag for human
+        │   ├── Security item → apply only on 3/3; otherwise flag for human
         │   ├── N=1 high-confidence | N=2 both-agree | N=3 2/3 or 3/3 agree
         │   │   → Edit spec.md with the consensus answer, remove marker
         │   ├── [ESCAPE_TO_ROUND_2] → enqueue for Round 2 batch
@@ -445,7 +445,7 @@ checklist-executor runs /speckit-checklist domain
         │   (one synthesizer per gap).
         │
         ├── Stage 3: apply Artifact Edits SERIALLY in gap order:
-        │   ├── Security keyword → flag for human
+        │   ├── Security item → apply only on 3/3; otherwise flag for human
         │   ├── N=1 high-confidence | N=2 both-agree | N=3 2/3 or 3/3 agree
         │   │   → Apply edit to spec.md or plan.md, log to workflow
         │   ├── [ESCAPE_TO_ROUND_2] → enqueue for Round 2 batch
@@ -504,7 +504,7 @@ analyze-executor runs /speckit-analyze
         │   (one synthesizer per finding).
         │
         ├── Stage 3: apply Artifact Edits SERIALLY in finding order:
-        │   ├── Security keyword → flag for human
+        │   ├── Security item → apply only on 3/3; otherwise flag for human
         │   ├── N=1 high-confidence | N=2 both-agree | N=3 2/3 or 3/3 agree
         │   │   → Apply fix to tasks.md / spec.md / plan.md, log to workflow
         │   ├── [ESCAPE_TO_ROUND_2] → enqueue for Round 2 batch
@@ -670,7 +670,7 @@ from the log alone.
 | 2 | Gap     | Rate limit thresholds        | [codebase, domain] | 1     | both-agree     | Added to spec §4.2         | codebase-analyst, domain-researcher    |
 | 3 | Finding | Missing integration tests    | [ambiguous]        | 2     | 3/3            | Added task T050            | codebase-analyst, spec-context-analyst, domain-researcher |
 | 4 | Clarify | Bcrypt vs argon2?            | [codebase]         | 1→2   | escape-hatch   | Argon2 (NIST SP 800-63B)   | codebase-analyst (Round 1) + spec-context-analyst, domain-researcher (Round 2) |
-| 5 | Finding | OAuth callback URL handling  | [security]         | 1     | [HUMAN REVIEW] | Surfaced to user           | All (security tag → all-3 mandatory)   |
+| 5 | Finding | OAuth callback URL handling  | [security]         | 1     | [HUMAN REVIEW] | Surfaced to user           | All (security tag → all-3; not unanimous) |
 ```
 
 **`Type` values:** `Clarify`, `Gap`, and `Finding` name the phase that produced

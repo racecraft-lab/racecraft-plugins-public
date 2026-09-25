@@ -26,8 +26,10 @@ Treat `NOT SPAWNED` as absent.
   dissent is preserved. If all three disagree, return
   `[HUMAN REVIEW NEEDED]` with all perspectives and do not choose one.
 - **Security override at any N:** If routed categories include `[security]`, or
-  any response identifies a security keyword in the unresolved item, return
-  `[HUMAN REVIEW NEEDED]` regardless of agreement. Also flag a routing
+  any response identifies a security keyword in the unresolved item, apply the
+  answer only when all three analysts agree. A 2/3 majority or no agreement
+  returns `[HUMAN REVIEW NEEDED]` with all perspectives; a keyword alone never
+  stops the run. Also flag a routing
   violation when a security item arrives with fewer than three responses.
 
 Escape phrases are: `insufficient context`, `not in this codebase`,
