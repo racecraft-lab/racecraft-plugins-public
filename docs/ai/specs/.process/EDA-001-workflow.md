@@ -1,0 +1,761 @@
+# SpecKit Workflow: EDA-001 — Attribution Foundation
+
+**Template Version**: 1.0.0
+**Created**: 2026-09-25
+**Purpose**: Reusable template for executing SpecKit workflows. Copy-paste the prompts below into your AI coding agent.
+
+---
+
+## Design Concept
+
+This workflow file was enriched from a Grill Me interview run during
+`/speckit-pro:speckit-scaffold-spec`. The full Q&A log, Goals, Non-goals, and Open
+Questions live at:
+
+```text
+docs/ai/specs/.process/EDA-001-design-concept.md
+```
+
+Re-read it before each phase if you need to disambiguate a prompt. The
+Specify and Clarify Prompts below were populated from that interview,
+so the design concept doc is the source of truth for any decision
+captured during scoping.
+
+> **Note:** Grill Me is human-in-the-loop only. It is **not** part of
+> the autopilot loop. Once the workflow file is populated and autopilot
+> begins, clarifications happen via `/speckit-clarify` and the
+> consensus protocol — never via grill-me.
+
+---
+
+## Workflow Overview
+
+| Phase | Command | Status | Notes |
+|-------|---------|--------|-------|
+| Specify | `/speckit-specify` | ⏳ Pending | |
+| Clarify | `/speckit-clarify` | ⏳ Pending | Optional but recommended |
+| Plan | `/speckit-plan` | ⏳ Pending | |
+| Checklist | `/speckit-checklist` | ⏳ Pending | Run for each domain |
+| Tasks | `/speckit-tasks` | ⏳ Pending | |
+| Analyze | `/speckit-analyze` | ⏳ Pending | |
+| Confidence Gate | G6.5 | ⏳ Pending | Pre-Implement composite confidence |
+| Implement | `/speckit-implement` | ⏳ Pending | |
+| Post | Post-Implementation | ⏳ Pending | Canonical 11-item closeout |
+
+**Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⏭️ Skipped | ⚠️ Blocked
+
+G6.5 is advisory by default, so no phase of the main loop flips its row. Leaving
+it Pending is legitimate and does not make the rows below it read as out of
+order; record the verdict in [Phase 6.5](#phase-65-confidence-gate) when the
+gate runs.
+
+### Phase Gates
+
+Use `references/gate-validation.md` from the installed `speckit-autopilot` skill as the authority for active criteria and escalation behavior.
+
+| Gate | Checkpoint |
+|------|------------|
+| G1 | After Specify |
+| G2 | After Clarify |
+| G3 | After Plan |
+| G4 | After Checklist |
+| G5 | After Tasks |
+| G6 | After Analyze |
+| G6.5 | Before Implement |
+| G7 | After Each Implementation Phase |
+
+---
+
+## Prerequisites
+
+### Worktree and branch
+
+- Worktree: `.worktrees/eda-001-attribution-foundation`, relative to the
+  repository root.
+- Branch: `eda-001-attribution-foundation`, stacked on
+  `docs/engineering-discipline-adoption` (PR #672, which carries the PRD,
+  roadmap, and roadmap MOC and is not yet merged). Starting commit: `ff68dd4de`.
+- Bootstrap: `pnpm --dir docs-site install --frozen-lockfile` ran with operator
+  approval; the generated-artifact merge driver was already configured for this
+  clone.
+- The branch name is non-numeric. Autopilot needs `.specify/feature.json`
+  pointing at `specs/eda-001-attribution-foundation` and must not let the
+  `before_specify` git.feature hook create a numbered branch. The
+  `brand-001-` and `formal-001-` specs are the local precedent.
+
+Before every phase, verify the active root and branch. Fail closed if the workflow
+is launched from another checkout.
+
+### Preset resolution
+
+These commands resolved to the repository's `speckit-pro-reviewability` preset
+v1.0.0 on 2026-09-25:
+
+```text
+specify preset resolve spec-template
+specify preset resolve plan-template
+specify preset resolve tasks-template
+```
+
+### Constitution Validation
+
+**Before starting any workflow phase**, verify alignment with the project constitution (`.specify/memory/constitution.md`):
+
+| Principle | Requirement | Verification |
+|-----------|-------------|--------------|
+| I. Plugin Structure Compliance | New notice files live under an existing skill's `references/`; tests stay under top-level `tests/speckit-pro/` | `python3 tests/speckit-pro/run-all.py --layer 1` |
+| II. Cross-Platform Runtime & Script Safety | Test is Python 3.11+ standard library; shipped prose carries no `bash`, `jq`, or `$(` instructions | `python3 tests/speckit-pro/run-all.py --layer 4` |
+| III. Semantic Versioning | No manual version edits; release-please owns versions | Layer 1 semantic-version check |
+| IV. Test Coverage Before Merge | New attribution test registered in `tests/speckit-pro/suite-manifest.json` | `python3 tests/speckit-pro/run-all.py` |
+| V. Conventional Commits | `type(speckit-pro): description` commits and PR titles | CI `validate-pr-title` |
+| VI. KISS, Simplicity & YAGNI | JSON via the `json` module; no helper layers beyond what the test needs | Code review |
+
+**Constitution Check:** ✅ / ❌ (mark before proceeding to G1)
+
+### Quality Gates
+
+Filled from `detect-commands` at Step 0.11. One row per slot; the operator answer column holds the one-time missing-tool decision (`install`, `skip (spec)`, `skip (repo)`, or `unanswered`) and is the record that stops the question from firing again. A `skip (repo)` answer is durable only once the operator adds it to `.specify/quality-gates.json` `skips`.
+
+**Thresholds file:** `.specify/quality-gates.json` missing at scaffold time (2026-09-25); autopilot's G0 decides how to proceed. (G0 blocks unless present)
+
+**Hardener:** not run <!-- not needed (score N ≥ floor F) | qwen: iteration k of cap: N → M ... floor reached / cap reached | fallback (reason): ... | rejected candidate: reason --> (fires once per spec when MUTATION is populated)
+
+| Slot | Status | Tool | Command | Operator answer | G0 baseline | Final |
+|------|--------|------|---------|-----------------|-------------|-------|
+| COMPLEXITY | <!-- populated / unconfigured --> | <!-- e.g., radon + coverage.py --> | <!-- recorded with `{plugin_root}` and `{paths}` literal --> | <!-- blank until asked --> | <!-- baseline: N checked, V over ceiling (whole tree; exit 2 blocks) --> | <!-- pass / fail / n/a: no source files changed --> |
+| MUTATION | | | | | <!-- deferred: runs on the spec diff at final verification --> | |
+| DEPENDENCY_RULES | | | | | <!-- real run: pass / fail --> | |
+| DEPENDENCY_AUDIT | <!-- off (not opted in) / populated (enforce) / unconfigured --> | | | <!-- off: never asked --> | <!-- off: not opted in / pass / fail --> | |
+
+---
+
+## Formal Methods
+
+```json
+{
+  "schema_version": "1.0",
+  "status": "none",
+  "rationale": "EDA-001 adds static notice files, a JSON ledger, and a deterministic data-shape test. It has no state machine, concurrency, or protocol whose correctness ordinary tests cannot establish.",
+  "models": []
+}
+```
+
+## Formal Checkpoints
+
+| Checkpoint | Status | Evidence or setup gap |
+|---|---|---|
+| Plan model authoring and G3 | disabled | No selected model |
+| Planning reconciliation | disabled | No selected model |
+| Final model and optional trace checks | disabled | No selected model |
+| Post integration | disabled | No selected model |
+
+## Specification Context
+
+### Basic Information
+
+| Field | Value |
+|-------|-------|
+| **Spec ID** | EDA-001 |
+| **Name** | Attribution Foundation |
+| **Branch** | `eda-001-attribution-foundation` |
+| **Dependencies** | None (stacked on the roadmap PR #672 only because the roadmap lives there) |
+| **Enables** | EDA-002 through EDA-011 |
+| **Priority** | P1 |
+
+### Success Criteria Summary
+
+- [ ] The MIT notice ships in both `dist/claude/speckit-pro/` and `dist/codex/speckit-pro/`, with the license text byte-identical to the fork at `speckit-pro-baseline` (`c55ee46073ed923f86ce59a5eb3b6d895095d1b7`).
+- [ ] `ledger.json` records exactly the 38 upstream skills; every IGNORE row has a reason; ask-matt, wayfinder, and triage carry `not_ported`; `pr` carries a `transitive_sources` entry.
+- [ ] The humanlayer Apache-2.0 notice ships with its LICENSE text verbatim and a pinned source (exact `show-me` commit and path, or humanlayer head with the gap disclosed).
+- [ ] The attribution test fails on each defect it guards, proven by fixtures, and passes on the real tree without looping over an empty set.
+- [ ] The credit header format and `metadata.credits` shape are documented for EDA-002 onward.
+- [ ] `speckit-pro/README.md` acknowledges the upstream work and links the notice.
+
+---
+
+## Phase 1: Specify
+
+**When to run:** At the start of a new feature specification. Focus on **WHAT** and **WHY**, not implementation details. Output: `specs/eda-001-attribution-foundation/spec.md`
+
+### Specify Prompt
+
+```text
+/speckit-specify Publish Matt Pocock's MIT notice for mattpocock/skills and a machine-readable 38-row disposition ledger inside the speckit-coach skill so both plugin payloads ship them, add a second Apache-2.0 notice for the humanlayer show-me text that upstream pr copies, define the file-level credit header every later derivative file must carry, and enforce all of it with an attribution test that cannot pass on nothing, before any derivative content lands.
+```
+
+#### Detailed Prompt (for complex specs)
+
+```text
+/speckit-specify
+
+## Feature: Attribution Foundation
+
+### Problem Statement
+SpecKit Pro will absorb Matt Pocock's MIT-licensed mattpocock/skills (38 skills,
+forked to racecraft-lab/skills and pinned by tag speckit-pro-baseline at
+c55ee46073ed923f86ce59a5eb3b6d895095d1b7) across ten later specs (EDA-002 to
+EDA-011). Every derivative file must credit its source, and one upstream skill
+(pr) itself copies Apache-2.0 text from Dex Horthy's show-me skill in
+humanlayer/humanlayer (Copyright (c) 2024, humanlayer Authors). Without a notice,
+a ledger, and an enforcing test in place first, derivative content could ship
+without attribution and nothing would catch it.
+
+### Users
+- Plugin users and redistributors, who need the license notices in the installed
+  payloads.
+- SpecKit Pro maintainers running EDA-002 onward, who flip ledger rows to landed
+  and need a test that rejects missing credits.
+- Reviewers, who need one place listing what came from upstream and what was
+  deliberately not ported.
+
+### User Stories
+- US1 (P1, slice 1): As a redistributor, I find the MIT notice and the 38-row
+  ledger in both installed payloads, so the license obligation is met.
+- US2 (P1, slice 1): As a maintainer, when I mark a ledger row landed, the
+  attribution test fails unless the destination exists and carries the credit
+  header; the test also rejects a malformed ledger even while no row is landed.
+- US3 (P2, slice 2): As a redistributor, I find a separate Apache-2.0 notice for
+  the humanlayer show-me text, linked from the pr ledger row, with a pinned
+  source.
+
+### Decisions already made (design concept Q1 to Q8)
+- Ledger form (Q1): a JSON sidecar ledger.json beside UPSTREAM-NOTICE.md, one
+  object per upstream skill, ordered by upstream path, pretty-printed one key per
+  line so parallel branches flipping different rows merge cleanly. Fields:
+  upstream_path, bucket, disposition (ABSORB | NEW | IGNORE), destination (null
+  for IGNORE), owner_spec, status (planned | landed; absent for IGNORE),
+  ignore_reason (IGNORE only), not_ported, transitive_sources.
+- Second license (Q2): user chose "Both notices now". A separate notice at
+  references/upstream/humanlayer-show-me/UPSTREAM-NOTICE.md, following the
+  one-notice-per-holder Quint precedent.
+- Pin (Q5, Q6): user chose "Find exact source first", falling back to the
+  humanlayer head pin with the gap disclosed if the source cannot be found.
+- Non-vacuous test (Q3): a frozen 38-path list from the pinned SHA, plus pass and
+  fail credit-header fixtures that exercise the landed-row check before any real
+  row lands.
+- Credit form (Q4): user chose "File header only". One file-level header per
+  derivative file (upstream skill paths, pinned SHA, "Modified derivative: yes",
+  notice path), in the file type's comment syntax, placed after frontmatter
+  where frontmatter exists; SKILL.md files also carry metadata.credits.
+- Partial absorption (Q7): a required not_ported note on exactly ask-matt,
+  wayfinder, and triage; the disposition set stays three values.
+- Slicing (Q8): two vertical slices, each its own PR in the EDA stack. Slice 1 is
+  US1 and US2. Slice 2 is US3 plus transitive_sources enforcement.
+
+### Constraints
+- Notices live under speckit-pro/skills/speckit-coach/references/upstream/ so
+  both payload builders ship them with no payloads.py change.
+- License text is reproduced byte for byte; never reword it.
+- Test is Python 3.11+ standard library, named for durable behavior
+  (test-upstream-skill-attribution.py), and never reads a specs/<feature>/ path
+  at run time.
+- No bash, jq, or $( instructions in shipped prose; no home paths, temp paths,
+  or UUIDs in committed files.
+
+### Out of Scope
+- Any derivative content (EDA-002 onward).
+- Edits in the racecraft-lab/skills fork.
+- Section-level credit markers; a PARTIAL disposition value.
+- Changing other roadmap entries' reviewability budget lines.
+```
+
+### Specify Results
+
+| Metric | Value |
+|--------|-------|
+| Functional Requirements | |
+| User Stories | |
+| Acceptance Criteria | |
+
+### Files Generated
+
+- [ ] `specs/eda-001-attribution-foundation/spec.md`
+
+### SpecKit Traceability Markers
+
+Use these markers in spec.md for traceability through later phases:
+
+| Marker | Purpose | Example |
+|--------|---------|---------|
+| `[US1]`, `[US2]` | User story reference | `[US1] User searches by query` |
+| `[FR-001]` | Functional requirement | `[FR-001] API returns paginated results` |
+| `[NEEDS CLARIFICATION]` | Flag for Clarify phase | `Auth method [NEEDS CLARIFICATION]` |
+| `[P]` | Parallel-safe task | `[P] Can run alongside other tasks` |
+| `[Gap]` | Missing coverage | `[Gap] No task covers error handling` |
+
+---
+
+## Phase 2: Clarify
+
+**When to run:** When spec has areas that could be interpreted multiple ways. 10-20 minutes here saves hours of rework later.
+
+**Best Practice:** Maximum 5 targeted questions per Clarify session.
+
+### Clarify Prompts
+
+#### Session 1: Provenance Focus
+
+```text
+/speckit-clarify Focus on provenance of the show-me text: locate the exact commit and path of Dex Horthy's show-me skill (search humanlayer/humanlayer history, including commits touching .claude/ or commands/, the "shape of the change" wording, and any Dex Horthy repository linked from humanlayer). If it cannot be found, adopt the operator's fallback: pin humanlayer head 99abe673498cf8bdcd5f989aebe9406a27185b3b and disclose the unlocated path in the notice. Also confirm the humanlayer LICENSE is the 15-line Apache-2.0 header and decide how the frozen fixture copy is stored.
+```
+
+#### Session 2: Ledger Contract Focus
+
+```text
+/speckit-clarify Focus on the ledger.json contract: exact field names and types, the bucket values that account for all 38 upstream skills (engineering, productivity, misc, in-progress), whether owner_spec stays informational or is enforced in a checkable form (design concept Open Question), how IGNORE rows represent destination and status, and the ordering and formatting rules that keep parallel row flips merge-clean without the merge=generated driver.
+```
+
+#### Session 3: Test and Credit Header Focus
+
+```text
+/speckit-clarify Focus on the attribution test and credit header: the exact credit header text and its comment syntax per file type (Markdown, TOML, Python), placement after frontmatter, the metadata.credits frontmatter shape for SKILL.md files, how the MIT block is located inside the notice for the byte comparison, and which fixtures prove each failure mode so no check passes on an empty set.
+```
+
+### Clarify Results
+
+| Session | Focus Area | Questions | Key Outcomes |
+|---------|------------|-----------|--------------|
+| 1 | Provenance | | |
+| 2 | Ledger contract | | |
+| 3 | Test and credit header | | |
+
+---
+
+## Phase 3: Plan
+
+**When to run:** After spec is finalized. Generates technical implementation blueprint. Output: `specs/eda-001-attribution-foundation/plan.md`
+
+### Plan Prompt
+
+```text
+/speckit-plan
+
+## Tech Stack
+- Plugin content: Markdown and JSON under speckit-pro/skills/speckit-coach/references/upstream/
+- Tests: Python 3.11+ standard library (unittest), registered in tests/speckit-pro/suite-manifest.json
+- Generated outputs: dist/ payloads via python3 scripts/refresh-release-artifacts.py; docs reference pages via pnpm --dir docs-site reference:generate
+- No new dependencies
+
+## Constraints
+- Re-read docs/ai/specs/.process/EDA-001-design-concept.md; it is the source of truth for scoping decisions.
+- Two vertical slices, each its own PR in the EDA gh-stack on top of docs/engineering-discipline-adoption (Q8, "Two vertical slices"):
+  - Slice 1: MIT notice, ledger.json, attribution test and fixtures, suite registration, README acknowledgement, regenerated artifacts.
+  - Slice 2: show-me source search, humanlayer Apache notice, transitive_sources enforcement.
+- Ledger is a JSON sidecar (Q1, "JSON sidecar"), not a Markdown table. Never route it through the merge=generated driver.
+- Both notices ship (Q2, "Both notices now"); the humanlayer pin follows Q5 ("Find exact source first") with the Q6 fallback ("Fall back to repo-head pin").
+- Credit form is file header only (Q4, "File header only").
+- Partial absorption uses a required not_ported field (Q7).
+- Test must not pass vacuously (Q3, "Frozen set + fixture proof"); mirror tests/speckit-pro/unit/test-quint-reference-attribution.py, which asserts seen > 0 "refusing to pass vacuously", rather than the substring MIT check in tests/speckit-pro/unit/test-artifact-gallery.py:144.
+- Reviewability budget: estimate-spec-size returned 625 LOC, warn, 2 suggested slices; the split above answers it. estimate-reviewable-loc returns not_estimated for Markdown and JSON layouts, and that is never a within-budget pass (speckit-autopilot references/phase-execution.md).
+
+## Module and Interface Deltas (carried verbatim from the design concept)
+- speckit-pro/skills/speckit-coach/references/upstream/mattpocock-skills/UPSTREAM-NOTICE.md: new. It carries the MIT text verbatim; the upstream URL, fork URL, and pinned SHA; a statement that the files the ledger lists as landed are modified derivatives; and a pointer to ledger.json. (Evidence: roadmap Scope; Q1.)
+- speckit-pro/skills/speckit-coach/references/upstream/mattpocock-skills/ledger.json: new interface consumed by the test and by every later EDA spec. One object per upstream skill, ordered by upstream path and pretty-printed with one key per line, so status flips on different rows merge cleanly (Q1). Fields and rules:
+  - upstream_path: required
+  - bucket: required
+  - disposition: ABSORB, NEW, or IGNORE
+  - destination: null for IGNORE
+  - owner_spec: the EDA spec that flips this row
+  - status: planned or landed; absent for IGNORE
+  - ignore_reason: required on IGNORE
+  - not_ported: required on exactly ask-matt, wayfinder, and triage (Q7)
+  - transitive_sources: list of {project, license, holder, notice_path}; present on pr (Q2)
+- speckit-pro/skills/speckit-coach/references/upstream/humanlayer-show-me/UPSTREAM-NOTICE.md: new in slice 2. It holds humanlayer's LICENSE verbatim (a 15-line Apache-2.0 header, "Copyright (c) 2024, humanlayer Authors") and a pin to the located show-me source commit and path. If the source cannot be found, it pins humanlayer's head with the gap disclosed (Q2, Q5, Q6).
+- Credit header (interface for EDA-002 to EDA-011): one file-level header per derivative file, not per section (Q4).
+  - Fields: upstream skill paths, pinned SHA, "Modified derivative: yes", and the repo-relative notice path.
+  - Syntax per file type: an HTML comment in Markdown, # comments in TOML and Python.
+  - Placement: where the file has frontmatter, directly after the frontmatter closes, so loaders still see frontmatter first.
+  - SKILL.md files also carry metadata.credits in frontmatter. validate-skill-contracts.py:28 already allows metadata and validates only top-level keys.
+- tests/speckit-pro/unit/test-upstream-skill-attribution.py: new. It is named for durable behavior, not the spec ID (AGENTS.md Editing Boundaries).
+- tests/speckit-pro/unit/fixtures/upstream-skill-attribution/: new fixtures:
+  - the frozen MIT text;
+  - the frozen humanlayer LICENSE (slice 2);
+  - the frozen 38-path upstream list taken from the pinned SHA;
+  - a credit-header pass fixture and a credit-header fail fixture (Q3).
+- tests/speckit-pro/suite-manifest.json: changed, registering the new test.
+- speckit-pro/README.md: changed, adding an acknowledgements line that links the MIT notice.
+- Generated outputs: changed by regeneration only, never by hand edits:
+  - dist/ payloads;
+  - docs-site/src/content/docs/reference/tests.md (a new test .py, per tests/speckit-pro/AGENTS.md:12);
+  - the Plugin Authoring Source reference page, which reads speckit-pro/README.md (docs-site/scripts/generate-reference-pages.mjs:590).
+- Unchanged grey box: payloads.py, the skill contract validators, and every skill's behavior.
+
+## Architecture Notes
+- Precedents to mirror: speckit-pro/skills/speckit-coach/references/quint/UPSTREAM-NOTICE.md and provenance.json (one notice per license holder, pinned commit, verbatim license block); speckit-pro/artifact-gallery/UPSTREAM-NOTICE.md (MIT notice shape).
+- The fork is a provenance anchor only; the notice cites both github.com/mattpocock/skills and github.com/racecraft-lab/skills at the pinned SHA.
+- The 38-path frozen list comes from the upstream tree at the pinned SHA: engineering, productivity, misc, and in-progress buckets.
+```
+
+### Plan Results
+
+| Artifact | Status | Notes |
+|----------|--------|-------|
+| `plan.md` | ⏳ | Technical context, execution flow |
+| `research.md` | ⏳ | Decision rationales (if needed) |
+| `data-model.md` | ⏳ | Entities and types |
+| `contracts/` | ⏳ | API specifications |
+| `quickstart.md` | ⏳ | Developer onboarding |
+
+---
+
+## Phase 4: Domain Checklists
+
+**When to run:** After `/speckit-plan` — validates both spec AND plan together. Run multiple times for different domains.
+
+**Best Practice:** Don't guess which domains to check. Analyze the spec first, then generate enriched prompts with spec-specific focus areas.
+
+### Step 1: Analyze Spec for Recommended Domains
+
+Before running any checklists, read `spec.md` and `plan.md` and identify which domains apply. Look for these signals:
+
+| Signal in Your Spec/Plan | Recommended Domain |
+|---|---|
+| API endpoints, REST routes, request/response models | **api-contracts** |
+| User-facing UI, components, forms, layouts | **ux** |
+| Keyboard navigation, screen readers, WCAG, ARIA | **accessibility** |
+| Auth, tokens, secrets, input validation, user roles | **security** |
+| Response time budgets, caching, query performance | **performance** |
+| Database schemas, migrations, data validation | **data-integrity** |
+| LLM prompts, model calls, embeddings, token limits | **llm-integration** |
+| SSE, WebSocket, streaming, real-time events | **streaming-protocol** |
+| Error handling, retries, fallbacks, degradation | **error-handling** |
+| State lifecycle, sessions, caching, persistence | **state-management** |
+| Personal data (PII), consent, retention, deletion | **privacy** |
+| New third-party packages or dependency upgrades | **supply-chain** |
+
+**Target: 2-4 domains.** Prioritize domains where the spec has the most complexity or risk.
+
+### Step 2: Run Enriched Checklist Prompts
+
+For each domain, include spec-specific focus areas in the prompt — not just the bare domain name.
+
+#### 1. supply-chain Checklist
+
+Why this domain: the spec redistributes third-party text under two licenses (MIT and Apache-2.0) and must pin its sources exactly.
+
+```text
+/speckit-checklist supply-chain
+
+Focus on Attribution Foundation requirements:
+- MIT and Apache-2.0 texts reproduced byte for byte from pinned commits
+- Every copied source named with project, holder, license, URL, and commit
+- The transitive show-me source recorded on the pr ledger row and its notice
+- Pay special attention to: the fallback pin when the exact show-me path cannot be found, and that the gap is disclosed rather than hidden
+```
+
+#### 2. data-integrity Checklist
+
+Why this domain: ledger.json is a contract that ten later specs edit, and the test must reject every malformed state.
+
+```text
+/speckit-checklist data-integrity
+
+Focus on Attribution Foundation requirements:
+- Exactly 38 rows matching the frozen upstream path list, no duplicates or extras
+- Field rules per disposition (IGNORE reason, not_ported on exactly three rows, transitive_sources on pr)
+- Stable ordering and formatting so parallel row flips merge cleanly
+- Pay special attention to: checks that could pass on an empty set while 0 rows are landed
+```
+
+#### 3. error-handling Checklist
+
+Why this domain: the test's value is in its failure messages, and the credit-header checker must fail closed.
+
+```text
+/speckit-checklist error-handling
+
+Focus on Attribution Foundation requirements:
+- Each guarded defect produces a failure naming the row or file
+- Credit-header pass and fail fixtures prove the checker in both directions
+- Missing notice, missing ledger, and unparseable JSON fail loudly
+- Pay special attention to: a landed row whose destination file has frontmatter, where the header must follow the frontmatter
+```
+
+### Checklist Results
+
+| Checklist | Items | Gaps | Spec References |
+|-----------|-------|------|-----------------|
+| supply-chain | | | |
+| data-integrity | | | |
+| error-handling | | | |
+| **Total** | | | |
+
+### Addressing Gaps
+
+When checklist identifies `[Gap]` items:
+
+1. Review the gap — is it a genuine missing requirement?
+2. Update `spec.md` or `plan.md` to address it
+3. Re-run the checklist to verify coverage
+4. If the gap is intentionally out of scope, document why
+
+---
+
+## Phase 5: Tasks
+
+**When to run:** After checklists complete (all gaps resolved). Output: `specs/eda-001-attribution-foundation/tasks.md`
+
+### Tasks Prompt
+
+```text
+/speckit-tasks
+
+## Task Structure
+- Small, complete behavioral units sized for the whole automated spec's
+  two-hour budget, including startup, implementation, repairs and final checks
+- Clear acceptance criteria referencing FR-xxx
+- Dependency ordering: foundation → components → integration → validation
+- Mark parallel-safe tasks explicitly with [P]
+- Organize by user story, not by technical layer
+- Keep related test and implementation checkboxes in one closed TDD unit;
+  each unit must fit an adjacent batch of at most four tasks
+
+## Execution Metadata
+Produce `specs/eda-001-attribution-foundation/.process/task-execution.json` alongside tasks.md.
+Use `schema_version: task-execution.v1`, `fingerprints` from runner helper
+`validate-task-execution` (`action: fingerprints`, `tasks_file: <tasks.md>`),
+and `tasks` keyed by every task ID. Each entry contains `capability_group`,
+`depends_on` (task IDs), `owns` (repo-relative paths including shared fixtures
+and generated inputs), and `tdd_unit`. Fingerprints bind spec, plan and task
+definitions, excluding checkbox completion. Validate the completed sidecar.
+Do not guess fingerprints or omit ownership to force parallel execution.
+
+## Implementation Phases
+1. Foundation: frozen fixtures (MIT text, 38-path list, credit-header pass and fail fixtures)
+2. User Story 1 (P1, slice 1): MIT notice, ledger.json, README acknowledgement
+3. User Story 2 (P1, slice 1): attribution test red then green, suite-manifest registration
+4. User Story 3 (P2, slice 2): show-me source search, humanlayer notice, transitive_sources enforcement
+5. Polish: regenerate dist/ and docs reference pages, run every verification gate
+
+## Constraints
+- Read spec.md, plan.md, and docs/ai/specs/.process/EDA-001-design-concept.md.
+- Flag any task that crosses a design-concept Non-goal: derivative content, fork edits, section-level credit markers, a PARTIAL disposition, other roadmap entries' budget lines, or routing the ledger through merge=generated.
+- Write each test before the notice or ledger content it guards (Q3's "why": the test must be proven to fail before it passes).
+- Tests live under tests/speckit-pro/unit/; fixtures under tests/speckit-pro/unit/fixtures/upstream-skill-attribution/.
+- Generated files (dist/, docs-site reference pages) change only by regeneration.
+- Mark the slice boundary between US2 and US3 so the atomicity route can emit two PRs.
+```
+
+### Tasks Results
+
+| Metric | Value |
+|--------|-------|
+| **Total Tasks** | |
+| **Phases** | |
+| **Parallel Opportunities** | |
+| **User Stories Covered** | |
+
+---
+
+## Atomicity Route
+
+**When this is filled:** After the Tasks phase / gate G5, autopilot runs the
+read-only `atomicity-route` runner helper and records its decision here. Leave
+the cells blank during scoping. The helper writes nothing itself; autopilot
+records the route only in this workflow file, never in the spec map, and runs
+the layer planner only when the route is `split-PR`.
+
+The decision answers "can this change be split into multiple small PRs safely?" by
+inspecting the change's structural seams (independent additive capabilities), not its
+line count. Surface the four fields the SKILL extracts from the emitted decision:
+
+| Field | Value | Meaning |
+|-------|-------|---------|
+| **Route** | | One of `split-PR`, `one-navigable-PR`, `single-atomic-PR`, `branch-by-abstraction`, or `out-of-scope`. |
+| **Releasable** | | `true`, or `false` for a destructive-migration or concurrency-sensitive change (a passing CI run does not prove such a change is safe to release). |
+| **Signals** | | The decisive detector findings behind the route and releasability reading (may be empty when the classifier abstains). |
+| **Warnings** | | Any release-safety warning attached to the change (empty when there is no releasability risk). |
+
+To produce the decision, send the complete read-only runner request:
+
+```json
+{
+  "schema_version": "1.0",
+  "request_id": "atomicity-route-EDA-001",
+  "helper_id": "atomicity-route",
+  "operation": "atomicity-route",
+  "mode": "read_only",
+  "inputs": {
+    "feature_dir": "specs/eda-001-attribution-foundation",
+    "workflow_file": "docs/ai/specs/.process/EDA-001-workflow.md"
+  }
+}
+```
+
+The workflow path excludes this exact workflow and its sibling
+`autopilot-state.json` from change classification. If an older workflow has
+the positional instruction, replace only that instruction and preserve all
+phase status and operator-authored content.
+
+
+---
+
+## Phase 6: Analyze
+
+**When to run:** Always run after generating tasks to catch issues.
+
+### Analyze Prompt
+
+```text
+/speckit-analyze
+
+Focus on:
+1. Constitution alignment — verify coding standards compliance
+2. Coverage gaps — ensure all FRs and user stories have tasks
+3. Consistency between task file paths and actual project structure
+4. Verify P1 user stories have complete task coverage
+5. Drift from docs/ai/specs/.process/EDA-001-design-concept.md: its Goals, Non-goals, Q1 to Q8 decisions, Module and Interface Deltas, and Verification Gates are the source of truth. A downstream artifact that contradicts them is wrong unless it carries an explicit revision note.
+6. Every ledger field and credit-header rule in plan.md has a test task that proves it fails on a defect
+7. The two-slice boundary (US1 and US2 in slice 1, US3 in slice 2) is consistent across spec, plan, and tasks
+```
+
+### Analyze Severity Levels
+
+| Severity | Meaning | Action Required |
+|----------|---------|-----------------|
+| `CRITICAL` | Blocks implementation, violates constitution | **Must fix before G6 gate** |
+| `HIGH` | Significant gap, impacts quality | Should fix |
+| `MEDIUM` | Improvement opportunity | Review and decide |
+| `LOW` | Minor inconsistency | Note for future |
+
+### Analysis Results
+
+| ID | Severity | Issue | Resolution |
+|----|----------|-------|------------|
+| | | | |
+
+---
+
+## Phase 6.5: Confidence Gate
+
+**When to run:** After Phase 6 commits and before Phase 7 begins. This section
+records the verdict so a later session can read it.
+
+| Field | Value |
+|-------|-------|
+| Mode | <!-- advisory (default) or strict --> |
+| Composite confidence | <!-- 0.00-1.00 --> |
+| Verdict | <!-- proceed / remediate / stop --> |
+| Evidence | <!-- what the score was computed from --> |
+
+---
+
+## Phase 7: Implement
+
+**When to run:** After tasks.md is generated and analyzed (no coverage gaps).
+
+### Implement Prompt
+
+```text
+/speckit-implement
+
+## Approach: TDD-First
+
+For each task, follow this cycle:
+
+1. **RED**: Write failing test defining expected behavior
+2. **GREEN**: Implement minimum code to make test pass
+3. **REFACTOR**: Clean up while tests still pass
+4. **VERIFY**: Manual verification of acceptance criteria
+
+### Pre-Implementation Setup
+
+Before starting any task:
+1. Confirm the active root is .worktrees/eda-001-attribution-foundation and the branch is eda-001-attribution-foundation, never main.
+2. Sync the base: fetch docs/engineering-discipline-adoption and merge it if it moved.
+3. Run python3 tests/speckit-pro/run-all.py and confirm it passes before any change.
+
+### Implementation Notes
+- Read tasks.md, plan.md, and docs/ai/specs/.process/EDA-001-design-concept.md. Consult the Q&A log for the "why" behind each decision. Surface any design-concept decision missing from tasks.md as a gap before coding; do not drop it silently.
+- Take license text only from the pinned sources: the fork LICENSE at speckit-pro-baseline (c55ee46073ed923f86ce59a5eb3b6d895095d1b7) and humanlayer's LICENSE at the pinned commit. Copy bytes exactly.
+- Build the 38-path frozen list from the upstream tree at the pinned SHA, not from roadmap prose.
+- Assert a non-zero count wherever a check loops over rows or files (Q3).
+- Keep every path in committed files repo-relative; no home or temp paths.
+- Use python3 for any scripted step; no bash, jq, or $( in shipped prose.
+
+### Verification Gates (carried verbatim from the design concept)
+- Attribution test: python3 tests/speckit-pro/unit/test-upstream-skill-attribution.py passes. It fails if:
+  - the MIT block differs by any byte from the frozen copy;
+  - the ledger's upstream-path set is not exactly the frozen 38;
+  - an IGNORE row lacks ignore_reason;
+  - not_ported is missing from ask-matt, wayfinder, or triage, or appears on any other row;
+  - the credit checker accepts the fail fixture or rejects the pass fixture;
+  - any landed row's destination is missing or lacks a credit header;
+  - in slice 2, a transitive_sources notice path is missing or its license text differs from its frozen copy.
+  The checks that count rows assert a non-zero count before they pass (Q3; precedent tests/speckit-pro/unit/test-quint-reference-attribution.py:239).
+- Quick suite: python3 tests/speckit-pro/run-all.py passes (AGENTS.md Commands).
+- CI suite: the run-default-suite.json runner command from AGENTS.md passes.
+- Generated artifacts: run python3 scripts/refresh-release-artifacts.py, commit, then python3 scripts/refresh-release-artifacts.py --check exits 0. Both dist/claude/speckit-pro/ and dist/codex/speckit-pro/ contain the notice and ledger.json (roadmap Scope).
+- Docs reference: pnpm --dir docs-site reference:generate, then pnpm --dir docs-site reference:check and pnpm --dir docs-site validate:quality pass (tests/speckit-pro/AGENTS.md:12; AGENTS.md Commands).
+- Privacy scan: tests/speckit-pro/unit/test-privacy-scan.py passes. The notices hold only public names, URLs, and SHAs (AGENTS.md Gotchas).
+- Shipped prose contains no bash, jq, or $( instructions (active_path_guard.py; AGENTS.md Gotchas).
+- PR title and release-note gates pass before each slice's PR is marked ready.
+- Formal methods: none. The spec adds static files and a deterministic data-shape test, with no state machine or concurrency to model (evidence: roadmap Scope).
+```
+
+### Implementation Progress
+
+| Phase | Tasks | Completed | Notes |
+|-------|-------|-----------|-------|
+| 1 - Foundation | | | |
+| 2 - User Story 1 | | | |
+| 3 - User Story 2 | | | |
+| 4 - User Story 3 | | | |
+| 5 - Polish | | | |
+
+---
+
+## Post-Implementation Checklist
+
+The canonical closeout. Every row must reach Complete or an explicit
+`Skipped` before the run may report completion.
+
+| Canonical Item | Status | Evidence |
+|---|---|---|
+| Post: Doctor Extension Check | ⏳ Pending | |
+| Post: Verify Implementation | ⏳ Pending | |
+| Post: Verify Tasks Phantom Check | ⏳ Pending | |
+| Post: Code Review | ⏳ Pending | |
+| Post: Integration Suite | ⏳ Pending | |
+| Post: Reviewability Diff Gate | ⏳ Pending | |
+| Post: UAT Runbook Generation | ⏳ Pending | |
+| Post: PR Body Generation | ⏳ Pending | |
+| Post: PR Creation | ⏳ Pending | |
+| Post: Review Remediation | ⏳ Pending | |
+| Post: Retrospective | ⏳ Pending | |
+
+---
+
+## Lessons Learned
+
+### What Worked Well
+
+-
+
+### Challenges Encountered
+
+-
+
+### Patterns to Reuse
+
+-
+
+---
+
+## Project Structure Reference
+
+```
+speckit-pro/skills/speckit-coach/references/upstream/
+├── mattpocock-skills/
+│   ├── UPSTREAM-NOTICE.md      # MIT notice (slice 1)
+│   └── ledger.json             # 38-row disposition ledger (slice 1)
+└── humanlayer-show-me/
+    └── UPSTREAM-NOTICE.md      # Apache-2.0 notice (slice 2)
+tests/speckit-pro/unit/
+├── test-upstream-skill-attribution.py
+└── fixtures/upstream-skill-attribution/   # frozen license texts, 38-path list, credit fixtures
+tests/speckit-pro/suite-manifest.json      # test registration
+speckit-pro/README.md                      # acknowledgement line
+```
+
+---
