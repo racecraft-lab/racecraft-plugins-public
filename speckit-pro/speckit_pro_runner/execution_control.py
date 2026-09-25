@@ -178,10 +178,6 @@ def clock_reasons(ledger: dict[str, Any], now: float) -> list[str]:
     reasons = []
     if now < ledger["last_observed_at"]:
         reasons.append("clock_moved_backwards")
-    if elapsed(ledger, now, ledger["started_at"]) >= 7200:
-        reasons.append("full_run_budget_exhausted")
-    if elapsed(ledger, now, ledger["slice_started_at"]) >= 5400:
-        reasons.append("slice_budget_exhausted")
     if ledger.get("active_wait"):
         reasons.append("awaiting_external_event")
     if any(item["outcome"] == "unknown" for item in ledger["dispatches"].values()):

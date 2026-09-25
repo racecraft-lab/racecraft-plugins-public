@@ -87,7 +87,7 @@
         "value": "speckit_pro_runner/execution_control.py",
         "display": "speckit_pro_runner/execution_control.py"
       },
-      "sha256": "4e7d4cb832ff8b106adc2936bc84e4e377a569b7c02184cb69c5b79565965058"
+      "sha256": "94faa60981b23f3e2fc6eb3454d089562be3f31ffdb4a47e24466787987c03ba"
     },
     {
       "path": {
@@ -471,7 +471,7 @@
         "value": "speckit_pro_runner/verification_docker_workflow.py",
         "display": "speckit_pro_runner/verification_docker_workflow.py"
       },
-      "sha256": "414d5b5176c33a9e0ae64c17d53983627824da01d71a66473e3d92e8034571a5"
+      "sha256": "e83b17965e15dfcbdb1e287fe2a40158108f8f565f941f1181c2b73eb159d7d5"
     },
     {
       "path": {
@@ -487,7 +487,7 @@
         "value": "speckit_pro_runner/verification_records.py",
         "display": "speckit_pro_runner/verification_records.py"
       },
-      "sha256": "d267f14097b005b2f8f37628ecc9e991278b6b7719fe9f0db31e2657dc13e370"
+      "sha256": "00c2af5a0f9ecaf315b4bdc0663f91d84a7ed9af71c491b723840627a3cca1ef"
     }
   ]
 }

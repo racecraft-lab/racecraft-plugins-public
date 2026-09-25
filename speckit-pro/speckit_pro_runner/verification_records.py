@@ -30,7 +30,7 @@ from pathlib import Path
 from typing import Any
 
 from .agent_materialization import canonical_bytes
-from .execution_control import confined_path, durable_json, elapsed, execution_control, require_text
+from .execution_control import confined_path, durable_json, execution_control, require_text
 
 SCHEMA = "verification-record/v1"
 COMMAND_IDS = {"BUILD", "TYPECHECK", "LINT", "UNIT_TEST", "INTEGRATION_TEST", "FULL_VERIFY",
@@ -44,6 +44,8 @@ ENVIRONMENT_PASSTHROUGH = ("PATH", "LANG", "LC_ALL", "LC_CTYPE", "TZ",
 MAX_FILES = 50000
 MAX_BYTES = 512 * 1024 * 1024
 MAX_RECORD_BYTES = 1024 * 1024
+# Guards one verification command against a hang. A run has no wall-clock limit.
+COMMAND_TIMEOUT_SECONDS = 7200
 PROJECT_PROGRAMS = {"python", "python3", "node", "npm", "npx", "pnpm", "yarn", "bun", "cargo", "go",
                     "make", "pytest", "lint-imports", "uv", "ruff", "mypy"}
 
@@ -333,13 +335,8 @@ def execute_verification(root: Path, inputs: dict[str, Any], mode: str) -> dict[
         outputs.mkdir()
         materialize(snapshot, before)
         environment, environment_sha = environment_binding(outputs)
-        now = time.time()
-        ledger = begun["ledger"]
-        remaining = min(7200 - elapsed(ledger, now, ledger["started_at"]),
-                        5400 - elapsed(ledger, now, ledger["slice_started_at"]))
-        if remaining <= 0:
-            raise ValueError("verification budget exhausted while preparing isolated inputs")
-        exit_code, stdout, stderr, completed = run_snapshot_command(argv, snapshot, environment, remaining, expected_executable=executable)
+        exit_code, stdout, stderr, completed = run_snapshot_command(argv, snapshot, environment, COMMAND_TIMEOUT_SECONDS,
+                                                                   expected_executable=executable)
         snapshot_unchanged = tree_digest(tree_bytes(snapshot, workflow_name)) == snapshot_sha
     unchanged = tree_digest(tree_bytes(root, workflow_name)) == snapshot_sha
     record = {"schema_version": SCHEMA, "execution_id": execution_id, "dispatch_id": dispatch_id, "command_id": command_id,

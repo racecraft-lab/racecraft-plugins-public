@@ -3,7 +3,7 @@
 Detailed procedures for Steps 3.0-3.3 of the autopilot workflow.
 
 Read [Bounded Execution and Verification](./execution-efficiency.md) before
-Post dispatch: all tracks share the same reservations and time budget. Post
+Post dispatch: all tracks share the same reservations. Post
 Code Review is the single final integration review. Verify-chain consumes
 validated final snapshot evidence rather than running unchanged checks again.
 The parent validates genuine native producer observations; a worker's claimed
@@ -250,8 +250,7 @@ synthesizing.
 
 **Path B failure modes:**
 
-- **A track subagent errors:** independent tracks may finish within the remaining
-  time budget. Reconcile missing results read-only once; unknown effects require
+- **A track subagent errors:** independent tracks may finish. Reconcile missing results read-only once; unknown effects require
   a checkpoint, never automatic re-spawn. Record failed/unfinished work honestly.
   Required verification or security failures block PR preparation.
 - **Verify chain stops mid-chain (e.g., verify-tasks fails):** the

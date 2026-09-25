@@ -13,7 +13,7 @@ import time
 from typing import Any
 import uuid
 
-from .execution_control import confined_path, durable_json, elapsed, execution_control, require_text
+from .execution_control import confined_path, durable_json, execution_control, require_text
 from .verification_docker import validate_base_image, validate_location
 from .verification_docker_entrypoint import ENVIRONMENT, QUALIFIED_ENVIRONMENT, validate_argv
 from .verification_docker_image import execute_image, inspect_image
@@ -24,7 +24,7 @@ from .verification_docker_qualification import (
     qualification_reasons, revalidation_input_sha256,
 )
 from .verification_records import (
-    MAX_BYTES, MAX_FILES, PROJECT_PROGRAMS, digest, evidence_directory, runner_binding, sha, tree_bytes, tree_digest, workflow_argv,
+    COMMAND_TIMEOUT_SECONDS, MAX_BYTES, MAX_FILES, PROJECT_PROGRAMS, digest, evidence_directory, runner_binding, sha, tree_bytes, tree_digest, workflow_argv,
 )
 
 
@@ -75,17 +75,12 @@ def docker_workflow_execution(root: Path, workflow_name: str, begun: dict[str, A
     client = None
     result: dict[str, Any] = {"completed": False, "exit_code": None, "stdout": b"", "stderr": b""}
     try:
-        now, ledger = time.time(), begun["ledger"]
-        remaining = min(7200 - elapsed(ledger, now, ledger["started_at"]),
-                        5400 - elapsed(ledger, now, ledger["slice_started_at"]))
-        if remaining <= 0:
-            raise ValueError("verification budget exhausted before Docker preparation")
         client = DockerClient(Path(config["executable"]), config["endpoint"], directory / "cli")
         qualified = config.get("qualification_profile") == PROFILE
         client.qualified = qualified
         if qualified:
             result["engine_before"] = client.engine_binding()
-        image_result = execute_image(client, before, config["base_image"], argv, execution_id, directory / "image", remaining)
+        image_result = execute_image(client, before, config["base_image"], argv, execution_id, directory / "image", COMMAND_TIMEOUT_SECONDS)
         result.update(image_result)
         if qualified:
             result["base_image_after"] = inspect_image(client, config["base_image"])

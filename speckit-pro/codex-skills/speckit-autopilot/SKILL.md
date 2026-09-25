@@ -22,7 +22,7 @@ description: >
 
 At kickoff/resume, read [Bounded Execution and Verification](../../skills/speckit-autopilot/references/execution-efficiency.md).
 Initialize/recover its execution-control ledger before dispatch. Its metadata,
-native batching, proof-reuse, shared repair/time ceilings, and honest checkpoint
+native batching, proof-reuse, shared repair ceilings, and honest checkpoint
 rules govern every phase and Post step; agent replacement never resets budgets.
 
 When a bounded request supplies an exact native command together with an

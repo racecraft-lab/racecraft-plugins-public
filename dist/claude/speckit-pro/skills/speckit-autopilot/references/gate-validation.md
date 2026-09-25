@@ -577,7 +577,7 @@ skip the check and log a recommendation to install it.
 
 ## Failure Escalation Protocol
 
-When the shared corrective reservation or time budget is exhausted:
+When the shared corrective reservation is exhausted:
 
 1. **STOP** execution — do not proceed to the next phase
 2. **Present context** to human:
