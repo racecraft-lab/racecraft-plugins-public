@@ -114,7 +114,7 @@ If the operator passed integration keys as arguments, use them. Otherwise:
 > Which coding-agent integrations should this repo support?
 >
 > - `claude` — Claude Code (default in v0.8.13 installs skills at `.claude/skills/speckit-*/`)
-> - `codex`  — Codex CLI (use `--integration-options="--skills"` for skills mode)
+> - `codex`  — Codex CLI (installs skills at `.agents/skills/speckit-*/`; skills mode is the default)
 > - `both`   — dual-integration (`claude` AND `codex` side-by-side)
 
 Both `claude` and `codex` are declared "Multi-install Safe" by the
@@ -136,10 +136,11 @@ For a fresh install (`.specify/` was ABSENT in Step 2):
    specify init --here --integration <first-key> --script sh
    ```
 
-   For Codex with skills mode (the recommended setup in v0.8.13):
+   For Codex, skills mode is the default and writes
+   `.agents/skills/speckit-*/`, so no extra option is needed:
 
    ```text
-   specify init --here --integration codex --integration-options="--skills" --script sh
+   specify init --here --integration codex --script sh
    ```
 
 3. For each additional integration the operator chose, run:
@@ -148,18 +149,17 @@ For a fresh install (`.specify/` was ABSENT in Step 2):
    specify integration install <key> --script sh
    ```
 
-   For Codex with skills mode:
+   For Codex, the same command installs skills mode by default:
 
    ```text
-   specify integration install codex --integration-options="--skills" --script sh
+   specify integration install codex --script sh
    ```
 
 For adding to an existing install (Step 2 was PRESENT, operator chose
 option (b)):
 
 - Skip the bootstrap `specify init`. For each new integration the
-  operator chose, run `specify integration install <key> --script sh`
-  (with `--integration-options="--skills"` for codex).
+  operator chose, run `specify integration install <key> --script sh`.
 
 If any command returns non-zero, STOP. Do not retry or "fix" without
 operator input — the CLI's error message is the operator's signal.
@@ -197,6 +197,10 @@ Confirm:
 - `specify check` reports the project is ready.
 - Each chosen integration appears as `installed` in the integration
   list.
+- For Codex, `.agents/skills/speckit-*/SKILL.md` exists. That is the
+  primary Codex skills path. A legacy `.codex/skills/` directory may
+  also exist from an older setup; Codex still reads it, so report it
+  and leave it in place.
 
 If verification fails, report the mismatch — do not silently
 continue.
@@ -235,7 +239,7 @@ Return a concise install summary:
 **Repo init:** .specify/ scaffolded (templates, scripts, constitution placeholder)
 **Integrations installed:**
 - claude → .claude/skills/speckit-*/ (skills mode)
-- codex  → .codex/skills/speckit-*/ (skills mode)
+- codex  → .agents/skills/speckit-*/ (skills mode)
 
 **Next steps:**
 1. Restart your coding-agent process (Claude Code or Codex CLI) so

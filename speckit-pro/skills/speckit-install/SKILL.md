@@ -76,7 +76,7 @@ If the operator passed integration keys as arguments (e.g.,
 
 > Which coding-agent integrations should this project support?
 > - `claude` — Claude Code (installs skills at `.claude/skills/speckit-*/`)
-> - `codex` — Codex CLI (installs skills at `.codex/skills/speckit-*/`)
+> - `codex` — Codex CLI (installs skills at `.agents/skills/speckit-*/`)
 > - `both`  — dual-integration (Claude AND Codex side-by-side)
 
 Both Claude and Codex are declared "Multi-install Safe" by the
@@ -128,7 +128,10 @@ Run `specify check` and `specify integration list`.
 Report to the operator:
 
 - Installed SpecKit CLI version.
-- Each integration that was installed and its artifact path.
+- Each integration that was installed and its artifact path. For Codex,
+  the primary path is `.agents/skills/speckit-*/`. A legacy
+  `.codex/skills/` directory may also exist from an older setup; Codex
+  still reads it, so report it and leave it in place.
 - The constitution placeholder at `.specify/memory/constitution.md` —
   next step is `/speckit-pro:speckit-coach create my project constitution`
   or `/speckit-constitution` (or `$speckit-coach` / `$speckit-constitution`

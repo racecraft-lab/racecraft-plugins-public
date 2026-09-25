@@ -10,7 +10,7 @@
         "If the CLI is missing, recommends `uv tool install specify-cli --from git+https://github.com/github/spec-kit.git`",
         "Detects .specify/ presence and confirms it is ABSENT before proceeding",
         "Runs `specify init --here --integration claude` (or similar) as the bootstrap call",
-        "Runs `specify integration install codex` (or `--integration-options=\"--skills\"`) for the second integration",
+        "Runs `specify integration install codex` for the second integration (skills mode is the default; an explicit `--integration-options=\"--skills\"` is also acceptable)",
         "Reports the installed integrations and their artifact paths",
         "Tells the user to restart the coding-agent process so new skills load"
       ]
@@ -29,12 +29,12 @@
     {
       "id": 3,
       "prompt": "Install speckit for codex only with skills mode in this empty repo.",
-      "expected_output": "Initializes the repo with `specify init --here --integration codex --integration-options=\"--skills\"` so the Codex install uses the v0.8.13 skills-mode layout (.codex/skills/speckit-*/) rather than legacy slash commands.",
+      "expected_output": "Initializes the repo with `specify init --here --integration codex` so the Codex install uses the default skills-mode layout (.agents/skills/speckit-*/) rather than legacy slash commands.",
       "expectations": [
         "Uses `--integration codex` (not the deprecated `--ai codex`)",
-        "Includes `--integration-options=\"--skills\"` to opt into skills mode for Codex",
+        "Relies on the default Codex skills mode (an explicit `--integration-options=\"--skills\"` is also acceptable) and does not request legacy prompt mode",
         "Does not install Claude integration when the operator scoped to codex only",
-        "Confirms post-install that .codex/skills/speckit-*/ exists and not .codex/prompts/speckit.*.md"
+        "Confirms post-install that .agents/skills/speckit-*/ exists (a legacy .codex/skills/speckit-*/ directory also counts) and not .codex/prompts/speckit.*.md"
       ]
     }
   ]

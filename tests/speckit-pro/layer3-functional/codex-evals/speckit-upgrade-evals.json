@@ -6,7 +6,7 @@
       "prompt": "Upgrade SpecKit in this repo from 0.6.1 to the latest. I haven't customized anything; just want the new templates.",
       "expected_output": "Snapshots the repo, runs the safe (no --force) `specify integration upgrade` for each installed integration, and reports the new manifest hashes. No restore step needed because nothing was modified.",
       "expectations": [
-        "Snapshots .specify/ (and .claude/, .codex/, .github/ as applicable) to /tmp/specify-upgrade-backup-<STAMP>/ BEFORE running any upgrade",
+        "Snapshots .specify/ (and .claude/, .codex/, .agents/skills/, .github/ as applicable, so Codex skills are backed up from whichever of .agents/skills/ or legacy .codex/skills/ exists) to /tmp/specify-upgrade-backup-<STAMP>/ BEFORE running any upgrade",
         "Runs `specify integration upgrade <key>` without --force on the first attempt for each installed integration",
         "Surfaces the new CLI version and manifest hash deltas",
         "Surfaces the backup path explicitly so the operator knows where to roll back from"
@@ -31,7 +31,7 @@
       "expected_output": "Detects both legacy slash-command files and new skills directories. Offers to dedupe the legacy speckit.*.md files. Hard-guarantees to preserve extension commands (speckit.speckit-utils.*.md) and any non-speckit-prefixed commands. Shows the exact deletion list before running rm.",
       "expectations": [
         "Lists both `.claude/commands/speckit.*.md` and `.claude/skills/speckit-*/SKILL.md` to detect the duplicate state",
-        "Repeats the check for the Codex side (`.codex/prompts/speckit.*.md` vs `.codex/skills/speckit-*/SKILL.md`)",
+        "Repeats the check for the Codex side (`.codex/prompts/speckit.*.md` vs `.agents/skills/speckit-*/SKILL.md`, also checking the legacy `.codex/skills/speckit-*/SKILL.md`)",
         "Offers the operator a dedupe choice with `keep-both` as an option",
         "When deduping: only deletes files matching `speckit.<single-word>.md` (e.g., speckit.constitution.md, speckit.specify.md)",
         "Explicitly preserves `speckit.speckit-utils.*.md` files (these are extension commands, not SpecKit-managed)",
