@@ -1677,6 +1677,52 @@ class ReadOnlyHelperTests(unittest.TestCase):
                 self.assertTrue("invalid threshold" in response["data"]["stdout_json"]["error"] or "invalid mode" in response["data"]["stdout_json"]["error"])
                 self.assertEqual([diag["code"] for diag in stderr_records], [diag["code"] for diag in response["diagnostics"]])
 
+    def test_confidence_gate_runner_classifies_domain_verdicts(self) -> None:
+        if self.helper_filter and self.helper_filter != "confidence-gate":
+            self.skipTest("confidence-gate runner verdict case")
+        with tempfile.TemporaryDirectory(prefix="confidence-runner-", dir=REPO_ROOT) as directory:
+            workflow = Path(directory) / "workflow.md"
+            relative = workflow.relative_to(REPO_ROOT).as_posix()
+            cases = (
+                ("0.90", "advisory", "ok", 0, "proceed"),
+                ("0.80", "advisory", "ok", 2, "continue_with_warning"),
+                ("0.80", "strict", "expected_failure", 2, "stop"),
+                (None, "advisory", "ok", 1, "soft_skip"),
+            )
+            for score, mode, status, exit_code, action in cases:
+                with self.subTest(score=score, mode=mode):
+                    criteria = (score,) * 5 if score is not None else None
+                    workflow.write_text(self.confidence_emit(score, criteria), encoding="utf-8")
+                    completed, response, _ = run_runner(helper_request("confidence-gate", {
+                        "workflow_file": relative, "mode_name": mode, "threshold": "0.90",
+                    }))
+                    self.assertEqual(response["status"], status, response)
+                    self.assertEqual(response["data"]["exit_code"], exit_code)
+                    self.assertEqual(response["data"]["stdout_json"]["recommended_action"], action)
+                    self.assertEqual(completed.returncode, 0 if status == "ok" else 1)
+            workflow.unlink()
+            _, response, _ = run_runner(helper_request("confidence-gate", {"workflow_file": relative}))
+            self.assertNotEqual(response["status"], "ok")
+            quoted_path = f'{relative}"'
+            _, response, _ = run_runner(helper_request("confidence-gate", {"workflow_file": quoted_path}))
+            self.assertEqual(response["status"], "missing_prerequisite", response)
+            self.assertEqual(
+                response["diagnostics"][0]["message"],
+                f"workflow file not found: {quoted_path}",
+            )
+            self.assertIn(relative, str(response["diagnostics"]))
+
+    def test_confidence_gate_error_shape_is_not_promoted(self) -> None:
+        if self.helper_filter and self.helper_filter != "confidence-gate":
+            self.skipTest("confidence-gate error shape case")
+        from speckit_pro_runner.helpers.read_only import confidence_verdict_status
+
+        self.assertIsNone(confidence_verdict_status({"error": "invalid threshold"}, 2))
+        self.assertIsNone(confidence_verdict_status({"pass": False, "recommended_action": "continue_with_warning"}, 2))
+        verdict = self.run_confidence_gate(self.confidence_emit("0.80", ("0.80",) * 5))["json"]
+        verdict["mode"] = []
+        self.assertIsNone(confidence_verdict_status(verdict, 2))
+
     def write_confidence_workflow(self, directory: str, body: str) -> str:
         workflow = Path(directory) / "confidence-workflow.md"
         workflow.write_text(body, encoding="utf-8")
@@ -1940,6 +1986,8 @@ class ReadOnlyHelperTests(unittest.TestCase):
                     runbook.read_text(encoding="utf-8"),
                     f"{runbook.name} documents the exit-2 loop without naming the field it reads first",
                 )
+                self.assertIn("data.exit_code", runbook.read_text(encoding="utf-8"))
+                self.assertIn("recommended_action", runbook.read_text(encoding="utf-8"))
 
     def test_confidence_gate_runbooks_do_not_route_remediation_by_risk_assessment(self) -> None:
         if self.helper_filter and self.helper_filter != "confidence-gate":
@@ -3795,16 +3843,11 @@ class ReadOnlyHelperTests(unittest.TestCase):
                 self.assertEqual(data["stderr"]["limit_bytes"], GENERIC_CAPTURE_LIMIT_BYTES)
                 self.assertEqual(completed.returncode, response["exit_code"])
                 self.assertEqual([diag["code"] for diag in stderr_records], [diag["code"] for diag in response["diagnostics"]])
-                if data["exit_code"] == 0:
-                    self.assert_response(response, "ok", 0)
-                elif data["exit_code"] == 1:
-                    self.assert_response(response, "expected_failure", 1)
-                elif data["exit_code"] == 2:
-                    self.assert_response(response, "input_error", 2)
-                elif data["exit_code"] == 3:
-                    self.assert_response(response, "missing_prerequisite", 3)
-                else:
-                    self.assert_response(response, "subprocess_failure", response["exit_code"])
+                expected_status = {0: "ok", 1: "expected_failure", 2: "input_error", 3: "missing_prerequisite"}.get(data["exit_code"], "subprocess_failure")
+                if helper_id == "confidence-gate" and data.get("stdout_json", {}).get("recommended_action") == "soft_skip":
+                    expected_status = "ok"
+                expected_code = {"ok": 0, "expected_failure": 1, "input_error": 2, "missing_prerequisite": 3}.get(expected_status, response["exit_code"])
+                self.assert_response(response, expected_status, expected_code)
 
 
 def main() -> int:

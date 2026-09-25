@@ -651,7 +651,12 @@ to proceed, surface a remediation hint, or stop.
      runner helper confidence-gate \
        <workflow-file> --threshold <T> --mode <M>
 
-4. Parse exit code + JSON:
+4. Read runner `status`, `data.exit_code`, and
+   `data.stdout_json.recommended_action`. PASS, advisory FAIL, and
+   NO_DATA are valid `ok` responses despite raw exit codes 2 or 1;
+   strict FAIL is `expected_failure`. `input_error` means a malformed
+   request, and a missing or unreadable workflow is a file prerequisite
+   failure. Route the domain verdict by its raw exit code and action:
    - exit 0 (PASS): TaskUpdate G6.5 → completed; advance to Phase 7.
    - exit 1 (NO_DATA): log a warning, surface to operator that the
      synthesizer skipped its confidence emit (treat as a plugin
