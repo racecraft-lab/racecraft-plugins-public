@@ -5,7 +5,7 @@
   "branch": "hrns-015-autopilot-gate-pr-emission-repair",
   "status": "in_progress",
   "stage": "plan",
-  "active_step": "Phase 2: Clarify - Gap Counting and Estimation Focus",
+  "active_step": "Phase 2: Clarify - PR Emission Focus",
   "stage_resolution": {
     "source": "argv",
     "basis": "explicit --stage plan",
@@ -51,23 +51,23 @@
     },
     {
       "step": "Phase 2: Clarify - Gap Counting and Estimation Focus",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 2: Clarify - Gap Counting and Estimation Focus Consensus",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 2: Clarify - Reviewability Gate and Spec Index Focus",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 2: Clarify - Reviewability Gate and Spec Index Focus Consensus",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 2: Clarify - PR Emission Focus",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 2: Clarify - PR Emission Focus Consensus",
@@ -162,7 +162,7 @@
       "status": "skipped: outside --stage plan"
     }
   ],
-  "updated_at": "2026-09-25T16:25:38.173745+00:00",
+  "updated_at": "2026-09-25T16:59:17.548664+00:00",
   "prerequisites": {
     "status": "completed_with_documented_exception",
     "all_pass": false,
@@ -235,5 +235,27 @@
     "success_criteria": 11,
     "checklist_passed": 16,
     "checklist_failed": 0
+  },
+  "clarify": {
+    "status": "in_progress",
+    "sessions": [
+      {
+        "session": 1,
+        "focus": "Gap counting and estimation",
+        "questions": 4,
+        "consensus_items": 3,
+        "result": "completed",
+        "refactor_formula": "deferred to Plan"
+      },
+      {
+        "session": 2,
+        "focus": "Reviewability gate and spec index",
+        "questions": 5,
+        "consensus_items": 2,
+        "round_2_items": 1,
+        "result": "completed",
+        "budget_values": "deferred to Plan: reconcile 1362 vs 1442 LOC and production-file projections"
+      }
+    ]
   }
 }

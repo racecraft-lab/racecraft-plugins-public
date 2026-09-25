@@ -61,12 +61,12 @@ As an operator, I receive a G4 count for actual checklist gap tags, regardless o
 
 **Why this priority**: Live runs reported zero while checklists contained gap tags.
 
-**Independent Test**: Count a checklist containing each supported tag form and quoted examples.
+**Independent Test**: Count a checklist containing each supported tag form, two qualifying tags on one line, and quoted examples through G4 and `count-markers gaps/all`.
 
 **Acceptance Scenarios**:
 
-1. **Given** tags with `Gap` as the first or later comma-separated token, **when** G4 counts gaps, **then** each real tag counts once.
-2. **Given** the same marker text inside an inline code span or fenced block, **when** G4 counts gaps, **then** those examples do not count.
+1. **Given** tags with `Gap` as the first or later comma-separated token, including two qualifying tags on one line, **when** G4 and `count-markers gaps/all` count gaps, **then** each real tag counts once and all entry points agree.
+2. **Given** Gap tags or clarification markers in inline, fenced, or indented Markdown code, **when** G1, G2, G3, G4, or `count-markers` counts or lists them, **then** code examples are excluded while markers in visible prose are counted.
 3. **Given** the operator's gate instructions, **when** they describe counting, **then** they no longer prescribe the literal-only count that misses compound tags.
 
 #### User Story 5 - Spec index freshness in the required artifact check (Priority: P1) [US5]
@@ -79,9 +79,9 @@ As a contributor, I see stale spec-index backlinks and home entries fail the req
 
 **Acceptance Scenarios**:
 
-1. **Given** a stale tracked spec index, **when** artifact consistency is checked, **then** the check fails with the drift identified.
+1. **Given** a stale tracked spec index, **when** artifact consistency is checked, **then** `--check` exits nonzero and names the changed index paths.
 2. **Given** that stale index, **when** release artifacts are regenerated, **then** the index is refreshed and the check passes.
-3. **Given** an untracked file, **when** the index is generated, **then** neither backlinks nor the roadmap home index include it.
+3. **Given** a candidate absent from the source Git index, including a file inside a tracked spec directory, **when** the index is generated or checked in an isolated copy, **then** neither backlinks nor the roadmap home index include it; staged additions remain eligible.
 
 #### User Story 6 - Reviewability budget for the named spec (Priority: P1) [US6]
 
@@ -94,9 +94,9 @@ As an operator, I can evaluate the named roadmap entry's reviewability budget wi
 **Acceptance Scenarios**:
 
 1. **Given** a named spec, **when** setup mode evaluates reviewability, **then** it considers only that spec's section and primary surfaces.
-2. **Given** a missing named section or required budget field, **when** setup mode evaluates it, **then** the result blocks rather than borrowing another entry's value.
+2. **Given** a missing named section or required budget field, **when** setup mode evaluates it, **then** it returns `status: block`, `pass: false`, exit 1, and a blocker naming the spec ID and missing field rather than borrowing another entry's value.
 3. **Given** a valid line-anchored typed exception pragma, **when** the gate evaluates it, **then** its status is `exception`.
-4. **Given** an over-block-line total, **when** every declared slice has a budget below the block line, **then** setup accepts the split; a missing or over-line slice budget blocks.
+4. **Given** an over-block-line total, **when** the ordered slice list and budget table have exactly one complete, numeric row per slice and every slice is below each block line, **then** setup accepts the split; missing, extra, duplicate, malformed, or over-line rows block.
 
 #### User Story 7 - Refactor-aware size estimate (Priority: P2) [US7]
 
@@ -212,7 +212,8 @@ As an operator following a generated roadmap, I can open its workflow links at t
 
 - A release note with fence-like text must still yield one valid release-note fence in the final packet; draft output must remain free of that fence.
 - Packet exemptions are limited to the packet being validated or refreshed; a second packet's untracked files and any unrelated modification still block.
-- Gap-tag matching is by a comma-delimited `Gap` token, not a substring in a larger word; examples inside inline code and fenced blocks do not count.
+- Gap-tag matching uses an exact, case-sensitive comma-delimited `Gap` token in a single-line, non-nested bracket tag, not a substring in a larger word. Spaces and tabs around tokens are ignored.
+- Gap tags and clarification markers in inline, fenced, or indented Markdown code do not count or appear in marker details; the same text in visible prose does.
 - An untracked file that resembles a spec entry cannot become an index backlink or home entry.
 - A missing named roadmap section, missing budget field, or undeclared/over-budget slice fails closed; a typed exception is recorded as an exception rather than silently passing.
 - Completion is refused for missing rows as well as rows with pending or in-progress state.
@@ -229,14 +230,14 @@ As an operator following a generated roadmap, I can open its workflow links at t
 - **FR-004** [US2]: Packet validation and refresh MUST exempt only that packet's canonical untracked metadata, body, and validation files from the clean-worktree guard.
 - **FR-005** [US2]: The same guard MUST continue to block every unrelated tracked or untracked change.
 - **FR-006** [US3]: The final PR body MUST show the recorded G6.5 confidence verdict and preserve it on refresh.
-- **FR-007** [US4]: G4 MUST count each real bracket tag with a comma-separated `Gap` token once, including first and later token positions.
-- **FR-008** [US4]: G4 MUST ignore tag text inside inline code spans and fenced blocks; operator instructions MUST describe the same rule.
-- **FR-009** [US5]: Spec-index generation MUST exclude untracked and ignored files from backlinks and the roadmap home index.
-- **FR-010** [US5]: Release-artifact regeneration MUST refresh the spec index, and its required consistency check MUST fail on stale tracked index content.
-- **FR-011** [US6]: Setup reviewability evaluation MUST require a spec identifier and consider only that roadmap entry's section and primary surfaces.
-- **FR-012** [US6]: Setup reviewability evaluation MUST block when the named section or any required budget field is missing.
+- **FR-007** [US4]: G4 and `count-markers gaps/all` MUST count each real bracket tag with a comma-separated `Gap` token once, including first and later token positions and multiple tags on one line.
+- **FR-008** [US4]: G4 gap counting and G1/G2/G3 and `count-markers clarifications/all` clarification counts and details MUST exclude markers in inline, fenced, and indented Markdown code, while preserving counts in visible prose and leaving other marker types unchanged. Operator instructions MUST describe the same rule.
+- **FR-009** [US5]: Spec-index generation and isolated checking MUST exclude every candidate absent from the source Git index, including files inside tracked spec directories, from backlinks and the roadmap home index; staged additions remain eligible.
+- **FR-010** [US5]: Release-artifact regeneration MUST refresh the spec index; its required `--check` MUST fail on stale tracked index content and name changed index paths.
+- **FR-011** [US6]: Setup reviewability evaluation MUST require a spec identifier, match the complete case-sensitive `### <spec_id>:` roadmap entry heading, and consider only that entry through the next peer-level heading and its primary surfaces.
+- **FR-012** [US6]: Setup reviewability evaluation MUST return `status: block`, `pass: false`, exit 1, and a blocker naming the spec ID and missing field when the named section or any required budget field is missing.
 - **FR-013** [US6]: A valid line-anchored typed reviewability exception MUST produce status `exception` without adding a new exception class.
-- **FR-014** [US6]: An over-block-line spec total MUST be acceptable only when every declared slice has a budget below the block line; missing or over-line slice budgets MUST block.
+- **FR-014** [US6]: An over-block-line spec total MUST be acceptable only when the declared ordered slice IDs match unique complete numeric budget rows exactly and every slice is below each block line; missing, extra, duplicate, malformed, or over-line slice budgets MUST block.
 - **FR-015** [US7]: Size estimation MUST accept a required-refactor signal and account for it in estimated scope and suggested slice count.
 - **FR-016** [US8]: An optional per-slot declared quality command MUST override detection for that slot and identify its source as `declared`; other slots retain normal detection.
 - **FR-017** [US9]: Both hosts MUST use one canonical 13-row Post list with separate Final Reviewability Backstop and PR Packet/Body Generation rows; all stated counts MUST agree.
@@ -289,7 +290,7 @@ As an operator following a generated roadmap, I can open its workflow links at t
 
 - **SC-001**: In representative final-packet cases with a supplied release note, 100% pass the host release-note check without a manual body edit or skip label.
 - **SC-002**: In hosts that do not ignore packets, 100% of packet-only untracked validation and refresh cases succeed, while 100% of cases with another changed path block.
-- **SC-003**: In checklist cases covering first-position and later-position gap tokens plus quoted code examples, G4 reports the exact real-gap count in 100% of cases.
+- **SC-003**: In checklist cases covering first-position and later-position gap tokens, multiple tags on one line, and quoted code examples, G4 and `count-markers gaps/all` report the exact real-gap count in 100% of cases.
 - **SC-004**: In stale-index cases, the required artifact check fails before regeneration and passes afterward; untracked files appear in zero backlinks or home entries.
 - **SC-005**: For the named-spec reviewability scenarios (ordinary, missing field, valid exception, complete split, incomplete split), every gate result matches the declared budget policy without using a neighboring entry.
 - **SC-006**: Both hosts present the same 13 Post rows and reject completion in every tested pending, in-progress, or missing-row case; every team-capable executor tears down its team before returning.
@@ -299,9 +300,26 @@ As an operator following a generated roadmap, I can open its workflow links at t
 - **SC-010**: Each of four PR slices remains at or below 4 production files and below 25 total files, with passing acceptance fixtures and aligned host instructions.
 - **SC-011**: Reviewers can find the recorded confidence verdict, release note, changed-scope explanation, and verification evidence in the final PR artifact without reconstructing them from process files.
 
+## Clarifications
+
+### Gap Counting and Estimation
+
+- Gap counting recognizes the exact, case-sensitive token `Gap` within a single-line, non-nested `[...]` tag. Split the tag contents on commas and trim spaces and tabs around each token. Count each qualifying tag once, whether `Gap` is the first or a later token. For example, `[Gap]`, `[Gap, Exception Flow]`, and `[Coverage, Gap]` each count once; `[gap]`, `[Gapless]`, and nested bracket text do not count. This is a new Clarify decision; the prior Q4 decision did not settle these boundaries.
+- Gap tags and clarification markers share the Markdown code-visibility rule for G1/G2/G3/G4 and the relevant `count-markers` paths. Counts and reported details agree; other marker types retain their existing behavior. This resolves design concept Open Question 1.
+- Required refactor work must affect the size estimate and suggested slice count. Plan defines the input shape and weight, preserves the ordinary estimate when no refactor work is supplied, and preserves spike precedence. Q11 compared scopes with different story, file, and requirement counts, so its 292-to-1,362 LOC change does not establish a refactor weight.
+
+### Reviewability Gate and Spec Index
+
+- A missing `spec_id` input is an invalid request; an existing identifier with no matching roadmap section or an incomplete entry is a reviewability block with a precise diagnostic.
+- Release-artifact refresh runs spec-index generation as a named step after metadata, payload, and marketplace refresh. Its isolated `--check` compares against the source index membership and names changed tracked index paths.
+- Source Git index membership decides whether a spec-index input is tracked. Untracked files remain excluded even within a tracked spec directory; staged additions count as tracked.
+- Reviewability setup matches the complete, case-sensitive `### <spec_id>:` heading and reads only until the next peer-level roadmap entry. This heading grammar is a new Clarify decision; a missing heading blocks without using neighboring values.
+- Use an ordered `Slices:` ID list and a `Slice Budgets:` Markdown table with columns `Slice`, `Estimated LOC`, `Production files`, and `Total files`. Each listed ID has exactly one row with three nonnegative integer values. Reject missing, extra, duplicate, malformed, or placeholder rows and any row at or above a block threshold. The roadmap template uses placeholders and no concrete accepted exception pragma. This format creates no new split exception.
+- Plan must reconcile Q11's 1,362 LOC aggregate with its 1,442 LOC sum across A, B, C1, and C2, then establish missing production-file projections before recording actual budgets.
+
 ## Assumptions
 
-- The design concept's Q1–Q11 answers are ratified scope decisions; planning may choose the precise placement of the confidence verdict, the required-refactor signal's shape and weight, and the slice-budget syntax without changing their observable outcomes.
+- The design concept's Q1–Q11 answers are ratified scope decisions. Planning may choose the precise placement of the confidence verdict and the required-refactor signal's shape and weight, and must reconcile the slice budget values without changing their observable outcomes.
 - The four-slice delivery route (one split-PR run or separate runs) is decided after Tasks; slice order and per-slice budgets hold either way.
 - The current cached plugin cannot benefit from its own repairs until released and refreshed. Interim PR-body repair for this run is operational handling, not a product requirement or a change to host policy.
 - This feature does not decide whether Codex children outlive their parent; the teardown obligation applies to both hosts regardless, while HRNS-017 investigates host behavior.

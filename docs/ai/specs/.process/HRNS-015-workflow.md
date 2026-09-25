@@ -33,7 +33,7 @@ captured during scoping.
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
 | Specify | `/speckit-specify` | ✅ Complete | 14 user stories, 27 functional requirements, 35 acceptance scenarios; G1 passed |
-| Clarify | `/speckit-clarify` | ⏳ Pending | Optional but recommended |
+| Clarify | `/speckit-clarify` | 🔄 In Progress | Sessions 1–2/4 complete; five consensus decisions recorded |
 | Plan | `/speckit-plan` | ⏳ Pending | |
 | Checklist | `/speckit-checklist` | ⏳ Pending | Run for each domain |
 | Tasks | `/speckit-tasks` | ⏳ Pending | |
@@ -383,10 +383,20 @@ slices' main surfaces.
 
 | Session | Focus Area | Questions | Key Outcomes |
 |---------|------------|-----------|--------------|
-| 1 | Gap counting and estimation | | |
-| 2 | Reviewability gate and spec index | | |
+| 1 | Gap counting and estimation | 4 | Exact case-sensitive `Gap` token grammar; each tag counted across G4 and `count-markers`; code examples excluded for gap and clarification markers; refactor input shape and weight deferred to Plan |
+| 2 | Reviewability gate and spec index | 5 | Exact case-sensitive `### <spec_id>:` section; missing fields block with diagnostics; ordered `Slices:` plus budget table selected in Round 2; refresh/check and source-index membership defined; Plan must reconcile 1,362 versus 1,442 LOC |
 | 3 | PR emission | | |
 | 4 | Workflow behavior | | |
+
+### Consensus Resolution Log
+
+| # | Type | Question/Gap/Finding | Categories | Round | Outcome | Resolution | Analysts Used |
+|---|------|----------------------|------------|-------|---------|------------|---------------|
+| 1 | Clarify | Gap token grammar | [spec] | 1 | high-confidence | Added exact token, case, whitespace, and bracket boundaries to spec | spec-context-analyst |
+| 2 | Clarify | Clarification marker code exclusion | [codebase, spec] | 1 | both-agree | Added shared code-visibility rule for counts and details | codebase-analyst, spec-context-analyst |
+| 3 | Clarify | Required-refactor signal weight | [codebase, spec] | 1 | both-agree | Confirmed required signal and left input shape and weight to Plan; Q11 does not calibrate weight | codebase-analyst, spec-context-analyst |
+| 4 | Clarify | Named roadmap section grammar | [codebase, spec] | 1 | both-agree | Added complete case-sensitive heading and next-entry boundary | codebase-analyst, spec-context-analyst |
+| 5 | Clarify | Per-slice budget syntax | [codebase, spec] | 1→2 | 2/3 | Selected ordered ID list and four-column Markdown table; Plan to reconcile values | codebase-analyst, spec-context-analyst, domain-researcher |
 
 ---
 
