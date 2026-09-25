@@ -1,0 +1,329 @@
+# Feature Specification: Autopilot, Gate, and PR-Emission Repair
+
+**Feature Branch**: `hrns-015-autopilot-gate-pr-emission-repair`  
+**Created**: 2026-09-25  
+**Status**: Draft  
+**Input**: Repair observed SpecKit Pro autopilot and scaffold defects on Claude Code and Codex in four review slices, each with failing-first fixtures. The complete request is the Phase 1 Detailed Prompt in [HRNS-015-workflow.md](../../docs/ai/specs/.process/HRNS-015-workflow.md).
+
+**Decision source**: [HRNS-015 design concept](../../docs/ai/specs/.process/HRNS-015-design-concept.md), [harness engineering roadmap, HRNS-015 and HRNS-019](../../docs/ai/specs/harness-engineering-uplift-technical-roadmap.md), and [harness engineering PRD §3.16](../../docs/prd-harness-engineering-uplift.md). The design concept's Q1–Q11 decisions govern this specification.
+
+## User Scenarios & Testing *(mandatory)*
+
+The four review slices ship in order A, B, C1, C2. Each story is independently demonstrable on both supported hosts where the behavior is host-facing. Each slice has a failing-first fixture for its acceptance behavior.
+
+### Slice A — PR emission
+
+#### User Story 1 - Release note in the final packet (Priority: P1) [US1]
+
+As an operator, I can supply a release note while preparing a final pull request, and the emitted body passes the host repository's release-note policy without manual body repair.
+
+**Why this priority**: The observed final PR failed the release-note check, and HRNS-016 depends on the packet repair.
+
+**Independent Test**: Build a final packet with a release note and a feature PR title; validate its emitted body against the host policy.
+
+**Acceptance Scenarios**:
+
+1. **Given** a final packet with a release note, **when** its body is emitted, **then** one `## Release note` section contains exactly one `release-note` fence inside the editable markers.
+2. **Given** that emitted body and a `feat` PR title, **when** the host release-note check runs, **then** it passes without a skip label or manual body edit.
+3. **Given** a draft PR or a packet without a release note, **when** its body is emitted, **then** no release-note fence is invented.
+
+#### User Story 2 - Packet validation in hosts that track untracked files (Priority: P1) [US2]
+
+As an operator, I can validate or refresh a packet when its own generated files are untracked, while unrelated worktree changes still block the operation.
+
+**Why this priority**: A host without packet ignore rules currently blocks on the packet's own files.
+
+**Independent Test**: Run validation and refresh in a host without packet ignore rules, first with only packet files and then with an unrelated file.
+
+**Acceptance Scenarios**:
+
+1. **Given** only this packet's canonical untracked `<id>.json`, `<id>/body.md`, and `<id>/validation.json` files, **when** validation or refresh applies, **then** it succeeds.
+2. **Given** any other changed or untracked path, **when** validation or refresh applies, **then** it blocks and identifies the unrelated change.
+
+#### User Story 3 - Confidence visible to reviewers (Priority: P1) [US3]
+
+As a reviewer, I can see the recorded G6.5 confidence verdict in the final PR body.
+
+**Why this priority**: HRNS-025 remains pending, so this repair must carry the verdict into the review artifact.
+
+**Independent Test**: Record a G6.5 verdict and inspect the final emitted body.
+
+**Acceptance Scenarios**:
+
+1. **Given** a recorded G6.5 verdict, **when** the final body is emitted, **then** the verdict is visible and matches the recorded value.
+2. **Given** a refreshed final packet, **when** its body is emitted again, **then** the verdict remains visible and current.
+
+### Slice B — gates and counters
+
+#### User Story 4 - Accurate checklist gap count (Priority: P1) [US4]
+
+As an operator, I receive a G4 count for actual checklist gap tags, regardless of where `Gap` appears among a tag's comma-separated tokens.
+
+**Why this priority**: Live runs reported zero while checklists contained gap tags.
+
+**Independent Test**: Count a checklist containing each supported tag form and quoted examples.
+
+**Acceptance Scenarios**:
+
+1. **Given** tags with `Gap` as the first or later comma-separated token, **when** G4 counts gaps, **then** each real tag counts once.
+2. **Given** the same marker text inside an inline code span or fenced block, **when** G4 counts gaps, **then** those examples do not count.
+3. **Given** the operator's gate instructions, **when** they describe counting, **then** they no longer prescribe the literal-only count that misses compound tags.
+
+#### User Story 5 - Spec index freshness in the required artifact check (Priority: P1) [US5]
+
+As a contributor, I see stale spec-index backlinks and home entries fail the required artifact consistency check, and regeneration repairs the drift.
+
+**Why this priority**: The required check currently passes with a stale index.
+
+**Independent Test**: Start from a tracked stale index, run the check, regenerate, and run it again while an untracked file exists.
+
+**Acceptance Scenarios**:
+
+1. **Given** a stale tracked spec index, **when** artifact consistency is checked, **then** the check fails with the drift identified.
+2. **Given** that stale index, **when** release artifacts are regenerated, **then** the index is refreshed and the check passes.
+3. **Given** an untracked file, **when** the index is generated, **then** neither backlinks nor the roadmap home index include it.
+
+#### User Story 6 - Reviewability budget for the named spec (Priority: P1) [US6]
+
+As an operator, I can evaluate the named roadmap entry's reviewability budget without another entry's numbers affecting the result.
+
+**Why this priority**: The observed gate read the last roadmap entry instead of HRNS-015.
+
+**Independent Test**: Evaluate two roadmap entries with different budgets and exercise missing fields, typed exceptions, and declared slices.
+
+**Acceptance Scenarios**:
+
+1. **Given** a named spec, **when** setup mode evaluates reviewability, **then** it considers only that spec's section and primary surfaces.
+2. **Given** a missing named section or required budget field, **when** setup mode evaluates it, **then** the result blocks rather than borrowing another entry's value.
+3. **Given** a valid line-anchored typed exception pragma, **when** the gate evaluates it, **then** its status is `exception`.
+4. **Given** an over-block-line total, **when** every declared slice has a budget below the block line, **then** setup accepts the split; a missing or over-line slice budget blocks.
+
+#### User Story 7 - Refactor-aware size estimate (Priority: P2) [US7]
+
+As an operator, I can include required refactor work in the early size estimate so slice planning reflects the expected review burden.
+
+**Why this priority**: The original estimate missed substantial repair work and understated this feature's size.
+
+**Independent Test**: Compare estimates for the same scope with and without a required-refactor signal.
+
+**Acceptance Scenarios**:
+
+1. **Given** required refactor work, **when** size is estimated, **then** the estimate and suggested slice count account for that work.
+2. **Given** no required refactor work, **when** size is estimated, **then** the ordinary estimate remains available.
+
+#### User Story 8 - Host-declared quality commands (Priority: P1) [US8]
+
+As an operator, I can declare the host's quality-gate commands, and those commands take precedence over detected defaults.
+
+**Why this priority**: Detection proposed commands that contradicted this repository's documented verification scope.
+
+**Independent Test**: Declare a command for one slot, leave another slot undeclared, and inspect effective commands and their provenance.
+
+**Acceptance Scenarios**:
+
+1. **Given** a valid declared slot, **when** commands are detected, **then** that slot uses the declared command and reports `source: declared`.
+2. **Given** an undeclared slot, **when** commands are detected, **then** normal detection remains available for that slot.
+
+### Slice C1 — autopilot Post list and team teardown
+
+#### User Story 9 - One complete Post list on both hosts (Priority: P1) [US9]
+
+As an operator on Claude Code or Codex, I see the same 13 Post steps, including Final Reviewability Backstop and PR Packet/Body Generation.
+
+**Why this priority**: Host lists and their prose counts disagree, weakening resume and completion checks.
+
+**Independent Test**: Compare both host lists and their stated counts to the canonical 13-row list.
+
+**Acceptance Scenarios**:
+
+1. **Given** either host, **when** autopilot presents the Post list, **then** all 13 canonical rows appear once with matching names and counts.
+2. **Given** a resumed run, **when** its Post state is reconstructed, **then** the two named resume points retain separate rows.
+
+#### User Story 10 - No premature completion or orphaned team (Priority: P1) [US10]
+
+As an operator, I receive completion only after every Post row is done and every executor-created team has been torn down.
+
+**Why this priority**: Live runs returned with pending Post rows and active teammates.
+
+**Independent Test**: Leave a Post row pending, in progress, or absent; separately form a team and check executor exit behavior on each host.
+
+**Acceptance Scenarios**:
+
+1. **Given** a pending, in-progress, or missing Post row, **when** autopilot reaches its completion boundary, **then** it refuses completion and identifies the unfinished row.
+2. **Given** every Post row complete, **when** autopilot reaches the boundary, **then** it may report completion.
+3. **Given** a team formed by any team-capable executor, **when** that executor returns, **then** its team has been torn down on both hosts.
+
+### Slice C2 — resolve-pr, scaffold, envelopes, and templates
+
+#### User Story 11 - Review-thread resolution after a verified push (Priority: P1) [US11]
+
+As a PR author, I can rely on resolve-pr to consider all review threads and comments and to respond only after the fix is verified on the pushed branch.
+
+**Why this priority**: Current flows can miss later pages and resolve before the fix reaches the remote branch.
+
+**Independent Test**: Provide more than one page of threads and comments; verify event ordering with a failed verification, failed push, and successful confirmed push.
+
+**Acceptance Scenarios**:
+
+1. **Given** multiple pages of threads or comments, **when** resolve-pr collects feedback, **then** every page is considered before decisions are made.
+2. **Given** an unverified fix, failed push, or remote head that does not match the pushed commit, **when** resolve-pr reaches reply handling, **then** it does not reply or resolve.
+3. **Given** full verification, a successful push, and a matching remote branch head, **when** resolve-pr handles feedback, **then** it replies and resolves in that order.
+
+#### User Story 12 - Wait for the scaffold blind-spot analysis (Priority: P1) [US12]
+
+As an operator, I receive the analyst's findings even when its work takes longer than five minutes, or a precise reason why the interview proceeded without them.
+
+**Why this priority**: This feature's analyst returned 11 findings after 18.1 minutes, yet the run recorded the pass as not run.
+
+**Independent Test**: Deliver a late nonempty summary, a dispatch error, an empty return, and an operator abandonment.
+
+**Acceptance Scenarios**:
+
+1. **Given** a dispatched analyst that is still working, **when** five minutes elapse, **then** scaffold continues waiting and later uses its nonempty findings.
+2. **Given** a dispatch error, empty return, or operator abandonment, **when** scaffold continues without findings, **then** it records the specific reason rather than saying the pass did not run.
+
+#### User Story 13 - Complete examples at live helper failure sites (Priority: P2) [US13]
+
+As an operator on either host, I can copy a complete request envelope at each named helper invocation that failed in live use.
+
+**Why this priority**: Bare helper names caused malformed calls; a bounded set of failure sites can be repaired now while the broader sweep remains HRNS-019.
+
+**Independent Test**: Check and execute the examples for status index checking and topology, scaffold reviewability and worktree placement, and phase index writing on both hosts.
+
+**Acceptance Scenarios**:
+
+1. **Given** the named failure sites, **when** an operator follows each example, **then** it supplies the complete request envelope accepted by that helper.
+2. **Given** Claude Code and Codex versions of those instructions, **when** examples are compared, **then** equivalent calls are present on both hosts.
+
+#### User Story 14 - Workflow links point to scaffold output (Priority: P2) [US14]
+
+As an operator following a generated roadmap, I can open its workflow links at the location where scaffold writes the files.
+
+**Why this priority**: The template currently links a different path, making generated roadmaps appear broken.
+
+**Independent Test**: Generate a roadmap and follow its workflow links to scaffold-created files.
+
+**Acceptance Scenarios**:
+
+1. **Given** a generated roadmap, **when** its workflow link is followed, **then** it opens the matching file under `docs/ai/specs/.process/`.
+2. **Given** the published guidance, **when** it shows the workflow location, **then** it agrees with the generated link and scaffold output.
+
+### Edge Cases
+
+- A release note with fence-like text must still yield one valid release-note fence in the final packet; draft output must remain free of that fence.
+- Packet exemptions are limited to the packet being validated or refreshed; a second packet's untracked files and any unrelated modification still block.
+- Gap-tag matching is by a comma-delimited `Gap` token, not a substring in a larger word; examples inside inline code and fenced blocks do not count.
+- An untracked file that resembles a spec entry cannot become an index backlink or home entry.
+- A missing named roadmap section, missing budget field, or undeclared/over-budget slice fails closed; a typed exception is recorded as an exception rather than silently passing.
+- Completion is refused for missing rows as well as rows with pending or in-progress state.
+- A remote head mismatch after push keeps review replies and resolutions pending.
+- A slow, nonempty blind-spot result remains usable; only dispatch error, empty return, or operator abandonment permits proceeding without it.
+
+## Requirements *(mandatory)*
+
+### Functional Requirements
+
+- **FR-001** [US1]: Final packet creation MUST accept an optional release note without requiring a replacement of the full body.
+- **FR-002** [US1]: When supplied, the final body MUST render exactly one `## Release note` section and one `release-note` fence within the editable markers, and pass the host's release-note check for a feature PR title.
+- **FR-003** [US1]: Draft bodies and final bodies without a supplied release note MUST NOT acquire a release-note fence by default.
+- **FR-004** [US2]: Packet validation and refresh MUST exempt only that packet's canonical untracked metadata, body, and validation files from the clean-worktree guard.
+- **FR-005** [US2]: The same guard MUST continue to block every unrelated tracked or untracked change.
+- **FR-006** [US3]: The final PR body MUST show the recorded G6.5 confidence verdict and preserve it on refresh.
+- **FR-007** [US4]: G4 MUST count each real bracket tag with a comma-separated `Gap` token once, including first and later token positions.
+- **FR-008** [US4]: G4 MUST ignore tag text inside inline code spans and fenced blocks; operator instructions MUST describe the same rule.
+- **FR-009** [US5]: Spec-index generation MUST exclude untracked and ignored files from backlinks and the roadmap home index.
+- **FR-010** [US5]: Release-artifact regeneration MUST refresh the spec index, and its required consistency check MUST fail on stale tracked index content.
+- **FR-011** [US6]: Setup reviewability evaluation MUST require a spec identifier and consider only that roadmap entry's section and primary surfaces.
+- **FR-012** [US6]: Setup reviewability evaluation MUST block when the named section or any required budget field is missing.
+- **FR-013** [US6]: A valid line-anchored typed reviewability exception MUST produce status `exception` without adding a new exception class.
+- **FR-014** [US6]: An over-block-line spec total MUST be acceptable only when every declared slice has a budget below the block line; missing or over-line slice budgets MUST block.
+- **FR-015** [US7]: Size estimation MUST accept a required-refactor signal and account for it in estimated scope and suggested slice count.
+- **FR-016** [US8]: An optional per-slot declared quality command MUST override detection for that slot and identify its source as `declared`; other slots retain normal detection.
+- **FR-017** [US9]: Both hosts MUST use one canonical 13-row Post list with separate Final Reviewability Backstop and PR Packet/Body Generation rows; all stated counts MUST agree.
+- **FR-018** [US10]: At the completion boundary, autopilot MUST refuse completion when any canonical Post row is missing, pending, or in progress.
+- **FR-019** [US10]: Every executor that can form a team MUST tear that team down before it returns, on both hosts.
+- **FR-020** [US11]: Resolve-pr MUST fetch every page of review threads and comments before making resolution decisions.
+- **FR-021** [US11]: Resolve-pr MUST complete full verification, push, and confirmation that the pushed commit matches the remote branch head before it replies to or resolves review feedback.
+- **FR-022** [US12]: Scaffold MUST wait for a dispatched blind-spot analyst's summary without a fixed five-minute deadline.
+- **FR-023** [US12]: Scaffold MAY proceed without findings only for a dispatch error, empty return, or operator abandonment, and MUST record the distinct reason.
+- **FR-024** [US13]: Both hosts MUST provide complete, tested request examples at the named status, scaffold, and phase-execution helper sites; the broader call-site sweep remains HRNS-019.
+- **FR-025** [US14]: Generated roadmap workflow links and published path guidance MUST point to `docs/ai/specs/.process/`, where scaffold writes workflow files.
+- **FR-026** [US1–US14]: Every changed host-facing behavior MUST have equivalent Claude Code and Codex instructions in the same review slice and failing-first fixture evidence for its acceptance scenarios.
+- **FR-027** [US1–US14]: The PRD acceptance criteria AC-16.2, AC-16.5, AC-16.8, and AC-16.10, plus the HRNS-015 and HRNS-019 roadmap entries, MUST reflect the decided scope, four-slice budget, and ownership of deferred work.
+
+### Reviewability Notes
+
+- Typed reviewability exceptions remain rare, operator-owned overrides. Accepted classes remain `refactor`, `infra`, and `upgrade`; no fourth class is introduced. Generated templates, generated zones, `.process` files, PR bodies, and code fences are not valid provenance.
+- Each review slice is one reviewable PR, with both hosts represented for each behavior change. Slice A precedes B, C1, and C2 because HRNS-016 depends on its packet repair.
+
+### Reviewability Budget *(mandatory)*
+
+- **Primary surface**: harness/adapter.
+- **Secondary surfaces**: schema/config and docs/process.
+- **Projected reviewable LOC**: approximately 1,442 across all four slices using the design concept's slice estimates: A 282; B 410; C1 335; C2 415. Re-estimate during Plan, including required refactors.
+- **Projected production files**: at most 4 in each slice; shared files may recur across slices, so an across-slice unique count is not asserted here.
+- **Projected total files**: A about 10, B about 14, C1 about 14, C2 about 16; each slice must remain below 25.
+- **Budget result**: split required for the whole feature; each of the four slices is planned below the per-slice block line.
+- **Split decision**: A (PR emission), B (gates and counters), C1 (Post list and team teardown), C2 (resolve-pr, scaffold, envelopes, and template links). If a slice exceeds 4 production files or reaches 25 total files, split or rescope before implementation.
+
+### PR Review Packet Requirements *(mandatory)*
+
+- Each slice PR description MUST include what changed, why, non-goals, review order, scope budget, requirement traceability, verification evidence, known gaps, and rollback or feature-flag notes.
+- Traceability MUST map each major requirement or success criterion to changed files and failing-first verification evidence.
+- Deferred work MUST name HRNS-019 or another explicit follow-up. The packet repair and its release note MUST be represented in the final validated PR body.
+- Review order is A, B, C1, C2. Final PR titles and bodies must pass the host repository's title and release-note policy.
+
+### Key Entities
+
+- **PR packet**: The final review artifact with body, canonical packet files, optional release note, and recorded G6.5 verdict.
+- **Gap tag**: A real bracket tag outside code whose comma-separated tokens include `Gap`.
+- **Spec index**: Tracked backlinks and roadmap home entries derived only from tracked, nonignored spec content.
+- **Reviewability entry and slice budget**: One named roadmap section with required budget fields, primary surfaces, optional typed exception, and complete per-slice budgets.
+- **Post row**: One of 13 canonical completion states shared across hosts.
+- **Review feedback**: Paginated threads and comments whose reply and resolution state follows a verified push.
+- **Blind-spot result**: A nonempty analyst summary or one of three explicit reasons for proceeding without it.
+
+## Success Criteria *(mandatory)*
+
+### Measurable Outcomes
+
+- **SC-001**: In representative final-packet cases with a supplied release note, 100% pass the host release-note check without a manual body edit or skip label.
+- **SC-002**: In hosts that do not ignore packets, 100% of packet-only untracked validation and refresh cases succeed, while 100% of cases with another changed path block.
+- **SC-003**: In checklist cases covering first-position and later-position gap tokens plus quoted code examples, G4 reports the exact real-gap count in 100% of cases.
+- **SC-004**: In stale-index cases, the required artifact check fails before regeneration and passes afterward; untracked files appear in zero backlinks or home entries.
+- **SC-005**: For the named-spec reviewability scenarios (ordinary, missing field, valid exception, complete split, incomplete split), every gate result matches the declared budget policy without using a neighboring entry.
+- **SC-006**: Both hosts present the same 13 Post rows and reject completion in every tested pending, in-progress, or missing-row case; every team-capable executor tears down its team before returning.
+- **SC-007**: In multi-page review cases, 100% of pages are considered, and zero replies or resolutions occur before verification, push, and confirmed matching remote head.
+- **SC-008**: A slow nonempty blind-spot result is used regardless of crossing five minutes; every permitted no-findings continuation records one specific reason.
+- **SC-009**: Operators can execute all five named helper request examples on both hosts without a malformed-envelope error, and generated roadmap workflow links open at the scaffold output path.
+- **SC-010**: Each of four PR slices remains at or below 4 production files and below 25 total files, with passing acceptance fixtures and aligned host instructions.
+- **SC-011**: Reviewers can find the recorded confidence verdict, release note, changed-scope explanation, and verification evidence in the final PR artifact without reconstructing them from process files.
+
+## Assumptions
+
+- The design concept's Q1–Q11 answers are ratified scope decisions; planning may choose the precise placement of the confidence verdict, the required-refactor signal's shape and weight, and the slice-budget syntax without changing their observable outcomes.
+- The four-slice delivery route (one split-PR run or separate runs) is decided after Tasks; slice order and per-slice budgets hold either way.
+- The current cached plugin cannot benefit from its own repairs until released and refreshed. Interim PR-body repair for this run is operational handling, not a product requirement or a change to host policy.
+- This feature does not decide whether Codex children outlive their parent; the teardown obligation applies to both hosts regardless, while HRNS-017 investigates host behavior.
+- Existing required checks, release-note policy, packet schema fields other than the optional note, and draft-body policy remain in force.
+- The historical stale-index example at `b12f1bba1^` is fixture provenance; tests must freeze it under their own fixture tree rather than read a temporary feature-spec path at runtime.
+
+## Delivery and Verification Constraints
+
+- Every behavior change must land on Claude Code and Codex in the same review slice. Each slice has at most 4 production files and fewer than 25 total files.
+- Active repository tooling remains Python 3.11+ standard-library code. The repair does not introduce a Bash or `jq` dependency.
+- Generated plugin payloads, generated reference pages, and the spec index are regenerated from their sources, never edited by hand.
+- Tests must not read a temporary `specs/<feature>/` path at runtime. Any needed historical text, including the pre-fix ART-007 spec-index case from `b12f1bba1^`, is frozen under the test's own fixtures.
+- Generated templates must not gain a literal reviewability-exception pragma example; the existing lifecycle contract prohibits it.
+- Every acceptance behavior has failing-first fixture evidence before its repair. Required checks include the quick and CI suites, artifact consistency, relevant documentation and lint checks, and each slice PR's title and release-note checks.
+- Slice A updates the PRD acceptance criteria AC-16.2, AC-16.5, AC-16.8, and AC-16.10 and the HRNS-015 and HRNS-019 roadmap entries. It removes the stale statement that autopilot wall-clock work from #642 is still in review.
+
+## Out of Scope
+
+- Redesigning the packet schema beyond one optional release-note field or the Post sequence beyond the 13-row unification.
+- Changing any host release-note policy, defaulting to a skip label, or inserting a release-note fence into draft PR bodies.
+- The remaining 58 bare helper call sites and self-describing malformed-request errors; HRNS-019 owns that sweep.
+- Parsing AGENTS.md or CLAUDE.md tables in the runner; operators may seed declared commands from those documents.
+- A new typed reviewability-exception class or host-repository ignore-rule changes.
+- Removing team-capable tools from open executors or introducing an autopilot wall-clock budget (already removed by #642).
+- Unrelated stale prose, duplicate UAT rendering, and other findings deferred by the design concept unless a touched paragraph must be corrected for consistency.

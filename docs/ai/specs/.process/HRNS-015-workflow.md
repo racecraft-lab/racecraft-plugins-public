@@ -32,7 +32,7 @@ captured during scoping.
 
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
-| Specify | `/speckit-specify` | ⏳ Pending | |
+| Specify | `/speckit-specify` | ✅ Complete | 14 user stories, 27 functional requirements, 35 acceptance scenarios; G1 passed |
 | Clarify | `/speckit-clarify` | ⏳ Pending | Optional but recommended |
 | Plan | `/speckit-plan` | ⏳ Pending | |
 | Checklist | `/speckit-checklist` | ⏳ Pending | Run for each domain |
@@ -118,7 +118,7 @@ every defect this spec fixes. Expect, and do not stop on:
 | V. Conventional Commits | Each slice PR title is `<type>(speckit-pro): <plain English>` | `validate-pr-title` gate |
 | VI. KISS, Simplicity & YAGNI | Reuse `POST_STEPS`, `inputs.body`-adjacent rendering, tested fixture envelopes; no new abstraction without a second caller | Plan and code review |
 
-**Constitution Check:** ✅ (validated during scaffold; re-verify at G1)
+**Constitution Check:** ✅ G1 verified the specification and its 16/16 requirements checklist items. Implementation-specific checks remain pending. G0 retains the documented worktree-path privacy-scan exception; CI proof is pending.
 
 ### Quality Gates
 
@@ -131,16 +131,18 @@ virtual environment, with mypy limited to the `mypy.ini` allowlist. Use the
 AGENTS.md Commands table as the effective PROJECT_COMMANDS and record the
 override source.
 
-**Thresholds file:** `.specify/quality-gates.json` <!-- present / missing / invalid --> <!-- complexity N, CRAP N, mutation floor N; basis --> (G0 blocks unless present)
+**Thresholds file:** `.specify/quality-gates.json` present and valid: complexity 15, CRAP 30, mutation floor 60; basis `percentile-90`, 1,858 measured functions (2026-09-25).
 
-**Hardener:** not run <!-- not needed (score N ≥ floor F) | qwen: iteration k of cap: N → M ... floor reached / cap reached | fallback (reason): ... | rejected candidate: reason --> (fires once per spec when MUTATION is populated)
+**G0 verification:** pinned Ruff passed; pinned mypy passed on 47 source files. The full quick suite passed 8,908/8,912 with a temporary `.venv` under this worktree; after removing that environment, the focused privacy scan passed 10/11. Its sole remaining failure is the path-sensitive `dynamic_local_pattern` case documented in Own-Run Hazard. CI proof remains pending; no complete green suite is claimed.
+
+**Hardener:** not run (MUTATION is unconfigured).
 
 | Slot | Status | Tool | Command | Operator answer | G0 baseline | Final |
 |------|--------|------|---------|-----------------|-------------|-------|
-| COMPLEXITY | <!-- populated / unconfigured --> | <!-- e.g., radon + coverage.py --> | <!-- recorded with `{plugin_root}` and `{paths}` literal --> | <!-- blank until asked --> | <!-- baseline: N checked, V over ceiling (whole tree; exit 2 blocks) --> | <!-- pass / fail / n/a: no source files changed --> |
-| MUTATION | | | | | <!-- deferred: runs on the spec diff at final verification --> | |
-| DEPENDENCY_RULES | | | | | <!-- real run: pass / fail --> | |
-| DEPENDENCY_AUDIT | <!-- off (not opted in) / populated (enforce) / unconfigured --> | | | <!-- off: never asked --> | <!-- off: not opted in / pass / fail --> | |
+| COMPLEXITY | unconfigured | N/A | N/A | n/a: no configured signal | n/a: no command discovered | n/a |
+| MUTATION | unconfigured | N/A | N/A | n/a: no configured signal | n/a: runs only on a populated spec diff | n/a |
+| DEPENDENCY_RULES | unconfigured | N/A | N/A | n/a: no configured signal | n/a: no command discovered | n/a |
+| DEPENDENCY_AUDIT | off | N/A | N/A | n/a: not opted in | off: not opted in | n/a |
 
 ---
 
@@ -320,13 +322,13 @@ Slice C2, resolve-pr, scaffold, envelopes, templates:
 
 | Metric | Value |
 |--------|-------|
-| Functional Requirements | <!-- e.g., FR-001 through FR-020 --> |
-| User Stories | <!-- Count --> |
-| Acceptance Criteria | <!-- Count --> |
+| Functional Requirements | 27 (FR-001 through FR-027) |
+| User Stories | 14 |
+| Acceptance Criteria | 35 scenarios |
 
 ### Files Generated
 
-- [ ] `specs/hrns-015-autopilot-gate-pr-emission-repair/spec.md`
+- [x] `specs/hrns-015-autopilot-gate-pr-emission-repair/spec.md`
 
 ### SpecKit Traceability Markers
 
