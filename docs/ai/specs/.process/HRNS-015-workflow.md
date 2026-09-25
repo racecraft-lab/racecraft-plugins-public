@@ -37,7 +37,7 @@ captured during scoping.
 | Plan | `/speckit-plan` | ✅ Complete | G3 passed; advisory file-based estimate not estimated because the declared Slice A inventory is partial |
 | Checklist | `/speckit-checklist` | ✅ Complete | Three domains, 51 items, 11 gaps resolved; G4 passed with zero markers |
 | Tasks | `/speckit-tasks` | ✅ Complete | 31 tasks in 21 groups, all 14 stories and FR-001–029; sidecar valid; G5 passed; C1a/C1b inventoried, A/B/C2 over path cap |
-| Analyze | `/speckit-analyze` | 🔄 In Progress | Ten findings; H1/H2 resolved; A/B/C2 path-cap findings await a ratified allocation |
+| Analyze | `/speckit-analyze` | 🔄 In Progress | Twelve findings; H1/H2 resolved, H3–H7 still open on marker identity and complete per-PR paths |
 | Confidence Gate | G6.5 | ⏳ Pending | Pre-Implement composite confidence |
 | Implement | `/speckit-implement` | ⏳ Pending | |
 | Post | Post-Implementation | ⏳ Pending | Canonical 13-item closeout |
@@ -675,7 +675,7 @@ Do not guess fingerprints or omit ownership to force parallel execution.
 | **Parallel Opportunities** | 3 [P] tasks in one planned wave |
 | **User Stories Covered** | 14 of 14; FR-001–029 |
 
-Tasks-phase reviewability: installed `reviewability-gate` tasks mode is deferred and was not invoked. Scaffold setup mode was `status: warn`, `pass: true`; Plan's file-based result remains `not_estimated` because the declared inventories were partial. The Tasks inventory proved the original C1 needs at least 29 changed paths against a 24-path maximum. The user has ratified splitting C1 into C1a and C1b as a fifth PR; their planned path sets are now inventoried but actual diffs and LOC remain unqualified. A, B, and C2 each exceed the path cap on required-path lower bounds, so Analyze remains blocked on a further ratified allocation.
+Tasks-phase reviewability: installed `reviewability-gate` tasks mode is deferred and was not invoked. Scaffold setup mode was `status: warn`, `pass: true`; Plan's file-based result remains `not_estimated` because the declared inventories were partial. The Tasks inventory proved the original C1 needs at least 29 changed paths against a 24-path maximum. The owner ratified the C1a/C1b split and then directed resolution of the remaining budget blockers. An eleven-increment candidate inventory now covers all requirements, but its cross-story marker boundaries and omitted recurring process paths keep Analyze blocked. Actual diffs and LOC remain unqualified.
 
 ---
 
@@ -698,9 +698,9 @@ line count. Surface the four fields the SKILL extracts from the emitted decision
 | **Signals** | `change-shape:modify-heavy` | The decisive detector findings behind the route and releasability reading (may be empty when the classifier abstains). |
 | **Warnings** | None | Any release-safety warning attached to the change (empty when there is no releasability risk). |
 
-Original scoping expected `split-PR` and four layers (design concept Q11, Open Question 4). The user subsequently ratified five ordered PR slices, A → B → C1a → C1b → C2, after the C1 budget breach.
+Original scoping expected `split-PR` and four layers (design concept Q11, Open Question 4). The user subsequently ratified five ordered PR slices, A → B → C1a → C1b → C2, after the C1 budget breach, then directed resolution of further path-cap blockers while preserving scope.
 
-Actual classifier result: `one-navigable-PR` (`change-shape:modify-heavy`), releasable `true`, no warnings. Preserve this advisory result; the layer planner remains skipped because the route is not `split-PR`. Before multi-PR emission, derive and validate a current five-slice `pr_marker_plan` from tasks, reviewability, declared scope, and hazard evidence. The marker plan, when validated, supplies PR membership and order. No `split-PR` classifier result or separate-run mode is inferred. Multi-PR emission remains pending a revised, owner-ratified allocation, a current marker plan, and per-slice budget qualification.
+Actual classifier result: `one-navigable-PR` (`change-shape:modify-heavy`), releasable `true`, no warnings. Preserve this advisory result; the layer planner remains skipped because the route is not `split-PR`. Before multi-PR emission, derive and validate a current `pr_marker_plan` from tasks, reviewability, declared scope, and hazard evidence. The marker plan, when validated, supplies PR membership and order. No `split-PR` classifier result or separate-run mode is inferred. Multi-PR emission remains pending a story-compatible allocation with complete path accounting, a current marker plan, and per-slice budget qualification.
 
 To produce the decision, run the classifier against the feature directory:
 
@@ -750,11 +750,13 @@ Focus on:
 
 | ID | Severity | Issue | Resolution |
 |----|----------|-------|------------|
-| H1 | HIGH | Original C1 requires at least 29 changed paths, above the 24-path maximum. | User ratified C1a/C1b. Planned distinct paths are inventoried at 24/22; actual LOC and final diff gates remain unqualified. |
+| H1 | HIGH | Original C1 requires at least 29 changed paths, above the 24-path maximum. | User ratified C1a/C1b. A later eleven-increment proposal subdivides C1a into C1a1/C1a2 and inventories C1a1/C1a2/C1b at 20/15/23 before recurring process paths. Actual LOC and final diff gates remain unqualified. |
 | H2 | HIGH | Advisory one-navigable-PR route differs from the user's multi-PR direction. | Preserve the classifier result. Derive and validate a current pr_marker_plan from tasks, scope, reviewability, and hazard evidence only after a compliant allocation is ratified. |
-| H3 | HIGH | A requires at least 31 changed paths, above the 24-path maximum. | Open. A1/A2 boundaries are provisional; fixture/reference fan-out and T008 integration are not allocated. Await complete inventory and owner direction. |
-| H4 | HIGH | B requires at least 28 changed paths, above the 24-path maximum. | Open. Two- and three-part candidate boundaries are provisional; fixture/reference fan-out is uncounted. Await complete inventory and owner direction. |
-| H5 | HIGH | C2 requires at least 30 changed paths, above the 24-path maximum. | Open. C2a/C2b boundaries are provisional; fixture/reference fan-out is uncounted. Await complete inventory and owner direction. |
+| H3 | HIGH | A requires at least 31 changed paths, above the 24-path maximum. | Open. Proposed A1/A2/A3 candidate sets are 24/16/21, but recurring tracked process paths were omitted and A1 already exceeds the cap when they are counted. |
+| H4 | HIGH | B requires at least 28 changed paths, above the 24-path maximum. | Open. Proposed B1/B2/B3 candidate sets are 22/22/17 before recurring process paths; B1 and B3 also cross user-story marker identities. |
+| H5 | HIGH | C2 requires at least 30 changed paths, above the 24-path maximum. | Open. Proposed C2a/C2b candidate sets are 18/23 before recurring process paths; both cross user-story marker identities, and C2b exceeds the cap once workflow/state paths are counted. |
+| H6 | HIGH | A marker identity binds to one user story, but four proposed increments combine stories. | Open. B1, B3, C2a, and C2b cannot be labelled as one `usN` marker without misstating their task boundary. Split at story boundaries or change the product contract with independent evidence. |
+| H7 | HIGH | The candidate inventory omitted recurring tracked workflow and state paths. | Open. If both change in each marker PR, A1 rises from 24 to at least 26 paths, C1b from 23 to at least 25, and C2b from 23 to at least 25; checkpoint/evidence carriers and the shared inventory still need exact accounting. |
 | M1 | MEDIUM | Preliminary design-concept size figures were presented as a qualified Plan budget. | Spec and Plan now label them preliminary and retain the refactor-inclusive not_estimated verdict. |
 | M2 | MEDIUM | Plan named nonexistent test layer directories. | Corrected the named structural and tool-scoping directories and listed the Tasks sidecar. |
 | L1 | LOW | Requirements checklist had stale scenario and FR counts. | Corrected to 40 scenarios and 29 FRs. |
@@ -763,13 +765,13 @@ Focus on:
 
 ### Analyze blocked checkpoint — reviewability
 
-The user's C1 revision is applied to spec.md, plan.md, tasks.md, and the task-execution sidecar. The C1a/C1b inventory records 24 and 22 planned paths. Neither is a measured final diff or a qualified LOC result. The five-slice order A → B → C1a → C1b → C2 remains the current planning direction, not a passing allocation: A, B, and C2 have required-path lower bounds of 31, 28, and 30 against a maximum of 24 each. Full fixture, generated-reference, refactor, and LOC inventories remain incomplete. If all scope stays, at least eight PRs are arithmetically required; no eight-PR boundary is qualified.
+The user's C1 revision is applied to spec.md, plan.md, tasks.md, and the task-execution sidecar. A subsequent eleven-increment proposal preserves all 29 requirements and names fixture children, generated payloads, trust files, and reference candidates. Its listed counts are 15–24 paths per increment, but they omit recurring tracked workflow/state paths and do not form a valid marker plan for mixed-story increments. These are candidate lower bounds, not measured final diffs or qualified LOC results. H6 and H7 remain open.
 
-Analyze consensus resolved H1 and H2. H3 A and H4 B reached unanimous Round 2 agreement on the cap violation and need for an owner-ratified allocation; H5 C2 reached both-analyst Round 1 agreement. Their proposed subdivisions are provisional. The owner decision between further splitting and scope reduction is pending. Do not start behavior tasks, establish a marker plan, or claim G6 while this decision and the exact inventories are open.
+Analyze consensus resolved H1 and H2. H3 A and H4 B reached unanimous Round 2 agreement on the original cap violation; H5 C2 reached both-analyst Round 1 agreement. The owner subsequently directed resolution while retaining the feature scope. The new eleven-increment proposal has not cleared marker identity or complete path accounting. H6/H7 have not completed consensus. Do not start behavior tasks, establish a marker plan, or claim G6 while these findings remain open.
 
 The execution-control bug that had blocked FR-026 was reproduced and filed as issue #673; the source repair is PR #674. This same HRNS-015 ledger was bound once to the 29 approved spec invariants without changing its run identity or earlier dispatch. Its original Tasks corrective cycle remains in the unresolved family. The FR-026 Analyze corrective cycle is reserved as hrns015-analyze-c1-rescope-20260925, reservation 420e70c8bf1b436493f77ef2df90f5d9; the global corrective count is two. The ledger now permits this Analyze correction, so execution-control is no longer the blocker. Keep that reservation for the current Analyze pass and do not open a new corrective cycle.
 
-The task-execution sidecar validates for 31 tasks and all 29 FR mappings after the C1 revision. On the owner's scope direction, complete every affected slice inventory, revise spec/plan/tasks and the sidecar, rerun Analyze and budget checks, then attempt G6. Autonomy Boundary Preflight, G6.5, the plan-stage boundary commit, and draft PR emission have not run. Phase 7 implementation is outside this --stage plan request.
+The task-execution sidecar validates for 31 tasks and all 29 FR mappings after the eleven-increment revision. The Analyze executor's follow-up result was not delivered after it identified H6/H7; reconcile that dispatch before a replacement. Reallocate at story boundaries, count all process and evidence paths, rerun Analyze and budget checks, then attempt G6. The shared-path product defect is issue #675 with repair PR #676; it is not yet in the installed validator. Autonomy Boundary Preflight, G6.5, and draft HRNS-015 PR emission have not run. Phase 7 implementation is outside this --stage plan request.
 
 ---
 

@@ -1,9 +1,9 @@
 {
   "schema_version": "task-execution.v1",
   "fingerprints": {
-    "plan_sha256": "8b39eec7b196fbd3ac213cf66c8711d5fddcd4f8f2062cb709c7a7f15685732d",
-    "spec_sha256": "405cbea2ded5c846af1e0df127fd0e0f2548cdd0369a0f76c6f10c225f9da5ca",
-    "tasks_sha256": "3267c1ed68ae56e54d7430b9899b5606b554476637a6c24b12dbf1c7b3499097"
+    "plan_sha256": "4b9e7c4dbe3026a464695c5da45eb2639b461277404892b4b41df0018e7230b7",
+    "spec_sha256": "2da9e747488404d3492c9c0581eb840c166f9966becd4c83bf055853dbc77d4f",
+    "tasks_sha256": "8fa9720a5cd6a34dafce855eec9eb7fb20bbd15acab467660e6cfdeb65eb7d15"
   },
   "tasks": {
     "T001": {
@@ -30,7 +30,7 @@
         "T002"
       ],
       "owns": [
-        "tests/speckit-pro/unit/fixtures/pr-packet-repair",
+        "tests/speckit-pro/unit/fixtures/pr-packet-repair/final-note.json",
         "tests/speckit-pro/unit/test-pr-packet-repair.py"
       ],
       "tdd_unit": "us1-note"
@@ -45,7 +45,11 @@
         "speckit-pro/skills/speckit-autopilot/SKILL.md",
         "speckit-pro/skills/speckit-autopilot/contracts/pr-packet.schema.json",
         "speckit-pro/speckit_pro_runner/helpers/pr_emission.py",
-        "speckit-pro/speckit_pro_runner/helpers/read_only.py"
+        "speckit-pro/speckit_pro_runner/helpers/read_only.py",
+        "dist",
+        "docs-site/src/content/docs/reference",
+        "specs/hrns-015-autopilot-gate-pr-emission-repair/.process/slice-inventory.md",
+        "tests/speckit-pro/suite-manifest.json"
       ],
       "tdd_unit": "us1-note"
     },
@@ -58,8 +62,11 @@
         "speckit-pro/codex-skills/speckit-autopilot/references/post-implementation-codex.md",
         "speckit-pro/skills/speckit-autopilot/references/post-implementation.md",
         "speckit-pro/speckit_pro_runner/helpers/mutation.py",
-        "tests/speckit-pro/unit/fixtures/pr-packet-repair",
-        "tests/speckit-pro/unit/test-pr-packet-repair.py"
+        "tests/speckit-pro/unit/fixtures/pr-packet-repair/packet-only-untracked.json",
+        "tests/speckit-pro/unit/test-pr-packet-repair.py",
+        "dist",
+        "docs-site/src/content/docs/reference",
+        "specs/hrns-015-autopilot-gate-pr-emission-repair/.process/slice-inventory.md"
       ],
       "tdd_unit": "task-005"
     },
@@ -73,7 +80,7 @@
         "speckit-pro/skills/speckit-autopilot/SKILL.md",
         "speckit-pro/speckit_pro_runner/helpers/pr_emission.py",
         "speckit-pro/speckit_pro_runner/helpers/read_only.py",
-        "tests/speckit-pro/unit/fixtures/pr-packet-repair",
+        "tests/speckit-pro/unit/fixtures/pr-packet-repair/current-verdict.json",
         "tests/speckit-pro/unit/test-pr-packet-repair.py"
       ],
       "tdd_unit": "task-006"
@@ -110,7 +117,7 @@
       "owns": [
         "speckit-pro/skills/speckit-autopilot/references/gate-validation.md",
         "speckit-pro/speckit_pro_runner/helpers/read_only.py",
-        "tests/speckit-pro/unit/fixtures/marker-visibility",
+        "tests/speckit-pro/unit/fixtures/marker-visibility/cases.json",
         "tests/speckit-pro/unit/test-marker-visibility.py"
       ],
       "tdd_unit": "task-009"
@@ -125,8 +132,12 @@
         "scripts/refresh-release-artifacts.py",
         "speckit-pro/speckit_pro_runner/helpers/read_only.py",
         "specs/formal-001-selective-formal-methods/SPEC-MOC.md",
-        "tests/speckit-pro/unit/fixtures/spec-index-freshness",
-        "tests/speckit-pro/unit/test-spec-index-freshness.py"
+        "tests/speckit-pro/unit/fixtures/spec-index-freshness/historical-stale-index.md",
+        "tests/speckit-pro/unit/test-spec-index-freshness.py",
+        "dist",
+        "docs-site/src/content/docs/reference",
+        "specs/hrns-015-autopilot-gate-pr-emission-repair/.process/slice-inventory.md",
+        "tests/speckit-pro/suite-manifest.json"
       ],
       "tdd_unit": "task-010"
     },
@@ -136,7 +147,7 @@
         "T010"
       ],
       "owns": [
-        "tests/speckit-pro/unit/fixtures/reviewability-scope",
+        "tests/speckit-pro/unit/fixtures/reviewability-scope/cases.json",
         "tests/speckit-pro/unit/test-reviewability-scope.py"
       ],
       "tdd_unit": "us6-entry"
@@ -149,7 +160,7 @@
       "owns": [
         "speckit-pro/speckit_pro_runner/helpers/read_only.py",
         "speckit-pro/speckit_pro_runner/helpers/registry.py",
-        "tests/speckit-pro/unit/fixtures/reviewability-scope",
+        "tests/speckit-pro/unit/fixtures/reviewability-scope/cases.json",
         "tests/speckit-pro/unit/test-reviewability-scope.py"
       ],
       "tdd_unit": "us6-entry"
@@ -160,7 +171,7 @@
         "T012"
       ],
       "owns": [
-        "tests/speckit-pro/unit/fixtures/reviewability-scope",
+        "tests/speckit-pro/unit/fixtures/reviewability-scope/cases.json",
         "tests/speckit-pro/unit/test-reviewability-scope.py"
       ],
       "tdd_unit": "us6-slices"
@@ -174,7 +185,11 @@
         "speckit-pro/skills/speckit-autopilot/references/gate-validation.md",
         "speckit-pro/skills/speckit-coach/templates/technical-roadmap-template.md",
         "speckit-pro/speckit_pro_runner/helpers/read_only.py",
-        "tests/speckit-pro/unit/test-reviewability-scope.py"
+        "tests/speckit-pro/unit/test-reviewability-scope.py",
+        "dist",
+        "docs-site/src/content/docs/reference",
+        "specs/hrns-015-autopilot-gate-pr-emission-repair/.process/slice-inventory.md",
+        "tests/speckit-pro/suite-manifest.json"
       ],
       "tdd_unit": "us6-slices"
     },
@@ -227,7 +242,11 @@
         "speckit-pro/skills/speckit-autopilot/references/task-list-canonical.md",
         "speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py",
         "speckit-pro/skills/speckit-coach/templates/workflow-template.md",
-        "tests/speckit-pro/unit/test-post-completion.py"
+        "tests/speckit-pro/unit/test-post-completion.py",
+        "dist",
+        "docs-site/src/content/docs/reference",
+        "specs/hrns-015-autopilot-gate-pr-emission-repair/.process/slice-inventory.md",
+        "tests/speckit-pro/suite-manifest.json"
       ],
       "tdd_unit": "task-018"
     },
@@ -244,7 +263,6 @@
         "speckit-pro/skills/speckit-autopilot/SKILL.md",
         "speckit-pro/skills/speckit-autopilot/references/post-implementation.md",
         "speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py",
-        "tests/speckit-pro/suite-manifest.json",
         "tests/speckit-pro/unit/test-post-completion.py"
       ],
       "tdd_unit": "task-019"
@@ -319,14 +337,19 @@
       "owns": [
         "speckit-pro/codex-skills/speckit-status/SKILL.md",
         "speckit-pro/skills/speckit-status/SKILL.md",
-        "tests/speckit-pro/unit/test-status-envelope-contract.py"
+        "tests/speckit-pro/unit/test-status-envelope-contract.py",
+        "dist",
+        "docs-site/src/content/docs/reference",
+        "specs/hrns-015-autopilot-gate-pr-emission-repair/.process/slice-inventory.md",
+        "tests/speckit-pro/suite-manifest.json"
       ],
       "tdd_unit": "task-025"
     },
     "T026": {
       "capability_group": "scaffold-envelopes",
       "depends_on": [
-        "T024"
+        "T024",
+        "T025"
       ],
       "owns": [
         "speckit-pro/codex-skills/speckit-scaffold-spec/SKILL.md",
@@ -338,7 +361,8 @@
     "T027": {
       "capability_group": "phase-envelopes",
       "depends_on": [
-        "T024"
+        "T024",
+        "T025"
       ],
       "owns": [
         "speckit-pro/codex-skills/speckit-autopilot/references/phase-execution-codex.md",
@@ -355,7 +379,7 @@
         "T027"
       ],
       "owns": [
-        "tests/speckit-pro/unit/fixtures/roadmap-workflow-links",
+        "tests/speckit-pro/unit/fixtures/roadmap-workflow-links/cases.json",
         "tests/speckit-pro/unit/test-roadmap-workflow-links.py"
       ],
       "tdd_unit": "us14-links"
