@@ -5,7 +5,7 @@
   "branch": "hrns-015-autopilot-gate-pr-emission-repair",
   "status": "in_progress",
   "stage": "plan",
-  "active_step": "Phase 4: Checklist complete; Phase 5: Tasks pending",
+  "active_step": "Phase 6: Analyze",
   "stage_resolution": {
     "source": "argv",
     "basis": "explicit --stage plan",
@@ -111,11 +111,11 @@
     },
     {
       "step": "Phase 5: Tasks",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 6: Analyze",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 6: Analyze - Consensus",
@@ -126,7 +126,87 @@
       "status": "pending"
     },
     {
-      "step": "Phase 7: Implement - Pending task decomposition",
+      "step": "Phase 7: Implement - Setup (shared evidence) (T001)",
+      "status": "skipped: outside --stage plan"
+    },
+    {
+      "step": "Phase 7: Implement - Foundational budget gate (T002)",
+      "status": "skipped: outside --stage plan"
+    },
+    {
+      "step": "Phase 7: Implement - User Story 1 \u2014 final release note (P1, Slice A) (T003, T004)",
+      "status": "skipped: outside --stage plan"
+    },
+    {
+      "step": "Phase 7: Implement - User Story 2 \u2014 packet-only untracked files (P1, Slice A) (T005)",
+      "status": "skipped: outside --stage plan"
+    },
+    {
+      "step": "Phase 7: Implement - User Story 3 \u2014 current confidence verdict (P1, Slice A) (T006)",
+      "status": "skipped: outside --stage plan"
+    },
+    {
+      "step": "Phase 7: Implement - Slice A integration and validation (T007, T008)",
+      "status": "skipped: outside --stage plan"
+    },
+    {
+      "step": "Phase 7: Implement - User Story 4 \u2014 visible marker counts (P1, Slice B) (T009)",
+      "status": "skipped: outside --stage plan"
+    },
+    {
+      "step": "Phase 7: Implement - User Story 5 \u2014 tracked spec index (P1, Slice B) (T010)",
+      "status": "skipped: outside --stage plan"
+    },
+    {
+      "step": "Phase 7: Implement - User Story 6 \u2014 named reviewability entry (P1, Slice B) (T011, T012, T013, T014)",
+      "status": "skipped: outside --stage plan"
+    },
+    {
+      "step": "Phase 7: Implement - User Story 7 \u2014 refactor-aware estimate (P2, Slice B) (T015)",
+      "status": "skipped: outside --stage plan"
+    },
+    {
+      "step": "Phase 7: Implement - User Story 8 \u2014 declared quality commands (P1, Slice B) (T016)",
+      "status": "skipped: outside --stage plan"
+    },
+    {
+      "step": "Phase 7: Implement - Slice B integration and validation (T017)",
+      "status": "skipped: outside --stage plan"
+    },
+    {
+      "step": "Phase 7: Implement - User Story 9 \u2014 13 canonical Post rows (P1, Slice C1) (T018)",
+      "status": "skipped: outside --stage plan"
+    },
+    {
+      "step": "Phase 7: Implement - User Story 10 \u2014 complete Post and teams (P1, Slice C1) (T019, T020)",
+      "status": "skipped: outside --stage plan"
+    },
+    {
+      "step": "Phase 7: Implement - Slice C1 integration and validation (T021)",
+      "status": "skipped: outside --stage plan"
+    },
+    {
+      "step": "Phase 7: Implement - User Story 11 \u2014 complete review feedback after push (P1, Slice C2) (T022, T023)",
+      "status": "skipped: outside --stage plan"
+    },
+    {
+      "step": "Phase 7: Implement - User Story 12 \u2014 wait for blind-spot result (P1, Slice C2) (T024)",
+      "status": "skipped: outside --stage plan"
+    },
+    {
+      "step": "Phase 7: Implement - User Story 13 \u2014 complete named helper requests (P2, Slice C2) (T025, T026, T027)",
+      "status": "skipped: outside --stage plan"
+    },
+    {
+      "step": "Phase 7: Implement - User Story 14 \u2014 real workflow links (P2, Slice C2) (T028, T029)",
+      "status": "skipped: outside --stage plan"
+    },
+    {
+      "step": "Phase 7: Implement - Slice C2 integration and validation (T030)",
+      "status": "skipped: outside --stage plan"
+    },
+    {
+      "step": "Phase 7: Implement - Polish and cross-cutting validation (T031)",
       "status": "skipped: outside --stage plan"
     },
     {
@@ -260,6 +340,12 @@
       "pass": true,
       "markers": 0,
       "reason": "three checklists, 51 items, 11 resolved gaps; zero remaining Gap markers"
+    },
+    "G5": {
+      "pass": true,
+      "markers": 0,
+      "task_count": 31,
+      "reason": "tasks.md and required task-execution sidecar validated"
     }
   },
   "specify": {
@@ -364,5 +450,28 @@
         "status": "completed"
       }
     }
+  },
+  "tasks": {
+    "status": "completed",
+    "tasks_file": "specs/hrns-015-autopilot-gate-pr-emission-repair/tasks.md",
+    "execution_file": "specs/hrns-015-autopilot-gate-pr-emission-repair/.process/task-execution.json",
+    "task_count": 31,
+    "phase_groups": 21,
+    "story_count": 14,
+    "all_fr_ids_covered": true,
+    "reviewability_budget": "unqualified: C1 at least 29 changed paths; maximum 24"
+  },
+  "atomicity_route": {
+    "route": "one-navigable-PR",
+    "releasable": true,
+    "signals": [
+      "change-shape:modify-heavy"
+    ],
+    "warnings": [],
+    "hints": []
+  },
+  "layer_plan": {
+    "status": "skipped",
+    "reason": "atomicity-route is one-navigable-PR, not split-PR"
   }
 }

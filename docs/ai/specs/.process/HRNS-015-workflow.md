@@ -36,8 +36,8 @@ captured during scoping.
 | Clarify | `/speckit-clarify` | ✅ Complete | Four sessions complete; ten consensus decisions recorded; G2 passed with zero markers |
 | Plan | `/speckit-plan` | ✅ Complete | G3 passed; advisory file-based estimate not estimated because the declared Slice A inventory is partial |
 | Checklist | `/speckit-checklist` | ✅ Complete | Three domains, 51 items, 11 gaps resolved; G4 passed with zero markers |
-| Tasks | `/speckit-tasks` | ⏳ Pending | |
-| Analyze | `/speckit-analyze` | ⏳ Pending | |
+| Tasks | `/speckit-tasks` | ✅ Complete | 31 tasks in 21 groups, all 14 stories and FR-001–029; sidecar valid; G5 passed, C1 budget unqualified |
+| Analyze | `/speckit-analyze` | 🔄 In Progress | Checking the task plan, C1 file cap, and atomicity-route conflict |
 | Confidence Gate | G6.5 | ⏳ Pending | Pre-Implement composite confidence |
 | Implement | `/speckit-implement` | ⏳ Pending | |
 | Post | Post-Implementation | ⏳ Pending | Canonical 13-item closeout |
@@ -665,10 +665,12 @@ Do not guess fingerprints or omit ownership to force parallel execution.
 
 | Metric | Value |
 |--------|-------|
-| **Total Tasks** | |
-| **Phases** | |
-| **Parallel Opportunities** | |
-| **User Stories Covered** | |
+| **Total Tasks** | 31 |
+| **Phases** | 21 |
+| **Parallel Opportunities** | 3 [P] tasks in one planned wave |
+| **User Stories Covered** | 14 of 14; FR-001–029 |
+
+Tasks-phase reviewability: installed `reviewability-gate` tasks mode is deferred and was not invoked. Scaffold setup mode was `status: warn`, `pass: true`; Plan's file-based result remains `not_estimated` because the declared inventories were partial. Q11 ratified four slices, but the Tasks inventory proves C1 needs at least 29 changed paths against a 24-path maximum. This is a size/reviewability blocker for implementation, not a qualified four-PR budget. Analyze and G6.5 must resolve and ratify a rescope before C1 implementation or publication.
 
 ---
 
@@ -686,13 +688,15 @@ line count. Surface the four fields the SKILL extracts from the emitted decision
 
 | Field | Value | Meaning |
 |-------|-------|---------|
-| **Route** | | One of `split-PR`, `one-navigable-PR`, `single-atomic-PR`, `branch-by-abstraction`, or `out-of-scope`. |
-| **Releasable** | | `true`, or `false` for a destructive-migration or concurrency-sensitive change (a passing CI run does not prove such a change is safe to release). |
-| **Signals** | | The decisive detector findings behind the route and releasability reading (may be empty when the classifier abstains). |
-| **Warnings** | | Any release-safety warning attached to the change (empty when there is no releasability risk). |
+| **Route** | `one-navigable-PR` | One of `split-PR`, `one-navigable-PR`, `single-atomic-PR`, `branch-by-abstraction`, or `out-of-scope`. |
+| **Releasable** | `true` | `true`, or `false` for a destructive-migration or concurrency-sensitive change (a passing CI run does not prove such a change is safe to release). |
+| **Signals** | `change-shape:modify-heavy` | The decisive detector findings behind the route and releasability reading (may be empty when the classifier abstains). |
+| **Warnings** | None | Any release-safety warning attached to the change (empty when there is no releasability risk). |
 
 Expected route from scoping: `split-PR`, four layers in stack order A → B → C1 → C2
 (design concept Q11, Open Question 4).
+
+Actual classifier result: `one-navigable-PR` (`change-shape:modify-heavy`), releasable `true`, no warnings. The layer planner is skipped because the route is not `split-PR`. This differs from Q11's ratified four-slice expectation and accompanies the confirmed C1 29-path floor; Analyze must reconcile the design before implementation.
 
 To produce the decision, run the classifier against the feature directory:
 
