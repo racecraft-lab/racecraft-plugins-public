@@ -837,10 +837,13 @@ not an arbitrary filesystem-path selector:
 <https://learn.chatgpt.com/docs/environments/git-worktrees>. This hand-off does
 not pretend to move the task or change its checkout. Autopilot instead binds
 every operation and agent explicitly to the registered nested `WORKFLOW_ROOT`.
-If Step 1 cannot prove that binding, print this recovery instruction instead:
+If Step 1 cannot prove a registered, canonical binding, report its concrete
+`binding_status` and `problems[]` and stop before mutation. A later user may
+explicitly select the absolute workflow path from the same Codex task; the
+autopilot checks that selection and permissions at invocation time:
 
 ```text
-Open a new Codex task rooted at <worktree>, then run $speckit-autopilot <absolute-workflow-file> --stage plan.
+$speckit-autopilot <absolute-workflow-file> --stage plan
 ```
 
 The leading `$speckit-autopilot` token is the invocation form this skill set

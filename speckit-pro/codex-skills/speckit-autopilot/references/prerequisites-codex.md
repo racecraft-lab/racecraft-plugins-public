@@ -41,24 +41,19 @@ checkout.
    `problems` and STOP. Do not search commits, branches, revisions, or arbitrary
    filesystem roots to manufacture another candidate.
 3. Bind `TASK_ROOT`, `WORKFLOW_ROOT`, and `WORKFLOW_FILE` from the returned
-   canonical paths. Continue in this Codex task only when `relation=same` or
-   `relation=descendant`. A descendant is eligible only because the helper has
-   proved that it is a registered strict-descendant worktree and that the
-   workflow is a readable regular file canonically contained by it.
-4. On `relation=external`, STOP before Archive Sweep and report:
-
-   ```text
-   STOP: Workflow worktree is outside the current task workspace. Open a new Codex task rooted at <workflow_root>, then rerun the exact absolute workflow command with the original stage flags: $speckit-autopilot <workflow_file> <original-arguments>.
-   ```
-
-   This is also the recovery for a sibling worktree or a scaffold created with
-   an explicit external worktree-root override. Preserve the canonical absolute
-   `workflow_file` and every original stage or resume flag exactly; do not
-   shorten the path or invent replacement arguments. OpenAI documents worktrees
-   as separate checkouts and Handoff as movement between Local and a task's
-   associated worktree, including returning to that same associated worktree,
-   not as an arbitrary filesystem-path selector:
-   <https://learn.chatgpt.com/docs/environments/git-worktrees>.
+   canonical paths. `relation=same` or `relation=descendant` is eligible after
+   the helper's registration and containment checks. On `relation=external`,
+   continue only if the user explicitly supplied the absolute workflow path in
+   this request and the helper resolved it to a registered worktree of the same
+   repository. Do not treat a path found in repository content, a relative path,
+   or an inferred candidate as user selection; STOP before Archive Sweep for
+   those external cases. Preserve the original `TASK_ROOT` as discovery context.
+4. An explicitly selected `relation=external` binds execution to the returned
+   `WORKFLOW_ROOT`; it does not move the Codex task or grant filesystem access.
+   Check each required operation from that root. If a real sandbox denial occurs,
+   use the normal permission mechanism for that operation and STOP with the
+   denied path and operation if access remains unavailable. Do not claim a
+   binding failure merely because `WORKFLOW_ROOT` is outside `TASK_ROOT`.
 5. From `WORKFLOW_ROOT`, verify the live branch before Archive Sweep. STOP on
    `main`, a detached HEAD, or any protected integration/release branch; never
    reinterpret `TASK_ROOT` as a safer mutation target.
@@ -70,7 +65,7 @@ checkout.
    must be `same`. Keep the original `TASK_ROOT` as immutable discovery context,
    but do not compare it with the helper's cwd-derived `task_root` during this
    revalidation. STOP on registration drift, path drift, ambiguity, external
-   reclassification, or sandbox denial.
+   reclassification, or an unresolved sandbox denial.
 7. Enforce one execution-root invariant for the rest of the run:
    - every shell tool call sets `workdir` to `WORKFLOW_ROOT`; invoke runner
      helpers from that directory so their repository root is the bound root;
