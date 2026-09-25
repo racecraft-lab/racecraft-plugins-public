@@ -2634,7 +2634,7 @@ When MUTATION is populated, run the hardener once per spec between the
 MUTATION run and its block decision, per
 [Hardener Delegation](./hardener-delegation.md): delegate a tests-only
 loop to local Qwen when `qwen_health` is good, else run it on the primary
-model; stop at the floor or the shared corrective/time ceiling; record the outcome on the
+model; stop at the floor or the shared corrective ceiling; record the outcome on the
 Quality Gates table's `Hardener` line. Only after the hardener records its
 ending does a still-failing MUTATION block. MUTATION fails on its exit
 status: `cr-rate --fail-over` for cosmic-ray, and the chained

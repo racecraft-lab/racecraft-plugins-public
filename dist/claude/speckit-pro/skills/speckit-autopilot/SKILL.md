@@ -123,8 +123,9 @@ The operator owns the session setting; the plugin does not veto it.
 
 At kickoff/resume, read [Bounded Execution and Verification](./references/execution-efficiency.md).
 Initialize/recover its durable execution-control ledger before phase dispatch.
-It owns task metadata, native batching, proof reuse, and the shared repair/time
-ceilings across every phase, nested worker, and Post step.
+It owns task metadata, native batching, proof reuse, and the shared repair
+ceilings across every phase, nested worker, and Post step. A run has no
+wall-clock limit.
 
 When a bounded request supplies an exact native command together with an
 invocation count or order, that command is the authority. Execute each listed
@@ -742,7 +743,7 @@ directions; do not infer a broader precedence rule.
 
 - **Resume:** `/speckit-pro:speckit-autopilot workflow.md --from-phase
   <next-pending-phase>` — the workflow file persists all state.
-- **Repair or time budget exhausted:** checkpoint with the exact gate output
+- **Repair budget exhausted:** checkpoint with the exact gate output
   and remaining work; no phase or nested worker has an independent retry budget.
 - **Consensus all-disagree** (Round 2): flag `[HUMAN REVIEW NEEDED]`,
   STOP, and present all 3 perspectives to the user.

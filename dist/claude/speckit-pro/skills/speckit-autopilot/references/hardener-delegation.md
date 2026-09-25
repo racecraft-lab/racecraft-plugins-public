@@ -49,7 +49,7 @@ Reserve the stable mutation-coverage failure invariant through execution-control
 before corrective work. One cycle per failure family and two cycles per spec
 are shared with every enclosing gate/repair loop; the hardener has no allowance
 of its own. Nested execution carries the parent's reservation_id.
-Stop when the score reaches the floor or that reservation/time budget ends.
+Stop when the score reaches the floor or that reservation ends.
 On exhaustion retain the failing MUTATION result and checkpoint; never count
 fallback, rejection, or a renamed error as a fresh repair family.
 

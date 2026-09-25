@@ -130,10 +130,12 @@ class ExecutionControlTests(_ExecutionControlFixture, unittest.TestCase):
         with self.assertRaises(ValueError):
             self.invoke("complete", dispatch_id="verify", outcome="expected_tdd_red")
 
-    def test_wall_limits_unknown_clock_and_self_asserted_pause_fail_closed(self):
+    def test_no_wall_clock_limit_but_unknown_clock_and_self_asserted_pause_fail_closed(self):
         self.invoke("start")
-        self.now += 5400
-        self.assertEqual(self.invoke("reserve", dispatch_id="late", kind="implementation")["disposition"], "checkpoint_required")
+        self.now += 86400
+        late = self.invoke("reserve", dispatch_id="late", kind="implementation")
+        self.assertEqual(late["disposition"], "continue")
+        self.assertEqual(late["reasons"], [])
         self.now = 900
         self.assertIn("clock_moved_backwards", self.invoke("status", mode="read_only")["reasons"])
         with self.assertRaises(ValueError):

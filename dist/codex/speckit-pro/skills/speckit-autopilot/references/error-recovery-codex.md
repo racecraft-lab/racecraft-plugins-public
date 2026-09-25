@@ -35,7 +35,7 @@ $speckit-autopilot workflow.md --from-phase <next-pending-phase>
    reuse only agents confirmed present and owned by this autopilot run. Without
    inspection, treat prior-session effects as unknown; do not spawn fresh. Use
    the shared execution-control ledger's one read-only reconciliation. Loop
-   bounded `wait_agent` calls while time budget remains until each required result is
+   bounded `wait_agent` calls until each required result is
    actually consumed; use `close_agent` only when exposed and only for
    run-owned agents confirmed present, including reconciled agents.
 

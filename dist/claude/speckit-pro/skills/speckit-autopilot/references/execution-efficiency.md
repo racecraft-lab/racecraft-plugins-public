@@ -4,7 +4,7 @@ Read at kickoff/resume and before Tasks, implementation dispatch, corrective
 work, or final verification. This shared contract governs both native hosts;
 it does not replace their dispatch, authorization, or mandatory gate rules.
 
-## Durable run budget
+## Durable run ledger
 
 Invoke runner helper `execution-control`, operation `execution-control`, with
 `inputs.workflow_file` and `inputs.action`. Use `mode=apply` for ledger changes
@@ -51,7 +51,7 @@ ownership from the caller's current workflow.
   `outcome=completed|failed|expected_tdd_red`. Without that genuine event,
   unknown remains a checkpoint; worker text or a receipt cannot clear it.
 - `checkpoint`: persist the 45-minute completed-work marker without resetting
-  the slice, run, or repair budget. `pause`/`resume` excludes only human-UAT or
+  the repair budget. `pause`/`resume` excludes only human-UAT or
   external-approval waits with independent parent `native_observation` carrying
   `native_event_id`, `run_id`, `kind=human_uat|external_approval`, and
   `action=wait_started|wait_ended`. Resume additionally requires
@@ -88,20 +88,20 @@ are the shared ceilings. Reserve before repairs in G3 provenance, G4/G6
 remediation, review, formal checks, or hardening. Pass the parent's
 `reservation_id` to nested work on the same failure; a nested loop has no
 independent allowance. A rejected candidate or failed repair does not create
-a new family. Pure read-only diagnosis may continue inside the time budget.
+a new family. Pure read-only diagnosis may continue.
 
-Check `status` before advancing and while waiting. `checkpoint_due` calls for
-a completed-work checkpoint at 45 minutes; the slice ceiling is 90 minutes
-and the full automated-run budget is 120 minutes. Include startup, tools,
-model waits, repairs, tests, artifacts, and automated review in elapsed time.
-Only separately evidenced human-UAT/external-approval waits are excluded.
+Check `status` before advancing and while waiting. A run has no wall-clock
+limit: elapsed time never stops it. `checkpoint_due` calls for a
+completed-work checkpoint (commit and push progress) every 45 minutes, and the
+run then continues. `elapsed_seconds` reports time for the record and excludes
+only separately evidenced human-UAT/external-approval waits.
 If `disposition=checkpoint_required`, stop new work and record remaining work,
 owned in-flight dispatches, unknown effects, consumed reservations, elapsed
 time, and the required operator decision. Never call this completion or a
 successful runtime measurement. Keep existing run status `in_progress` or
 `awaiting_review` as applicable and mirror the execution-control disposition;
 do not invent a top-level status. Independent approved work can continue only
-when the helper permits it within the remaining budget.
+when the helper permits it.
 
 ## Tasks metadata and native batches
 
