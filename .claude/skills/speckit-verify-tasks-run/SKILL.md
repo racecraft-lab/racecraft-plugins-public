@@ -4,7 +4,7 @@ description: Verify tasks marked [X] in tasks.md are implemented, not phantom co
   (marked done but backed by missing or dead code).
 compatibility: Requires spec-kit project structure with .specify/ directory
 metadata:
-  author: github-spec-kit
+  author: DataStone Inc.
   source: extension:verify-tasks
 user-invocable: true
 disable-model-invocation: false

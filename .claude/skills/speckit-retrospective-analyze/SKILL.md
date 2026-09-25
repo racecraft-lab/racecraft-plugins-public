@@ -4,7 +4,7 @@ description: Perform a post-implementation retrospective analysis measuring spec
   implementation deviations, and lessons learned.
 compatibility: Requires spec-kit project structure with .specify/ directory
 metadata:
-  author: github-spec-kit
+  author: emi-dm
   source: extension:retrospective
 user-invocable: true
 disable-model-invocation: false

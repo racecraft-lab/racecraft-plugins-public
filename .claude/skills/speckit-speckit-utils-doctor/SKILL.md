@@ -4,7 +4,7 @@ description: 'Validate project health: templates, agent config, Python runner/he
   constitution, and feature artifacts'
 compatibility: Requires spec-kit project structure with .specify/ directory
 metadata:
-  author: github-spec-kit
+  author: Matt Van Horn
   source: extension:speckit-utils
 user-invocable: true
 disable-model-invocation: false

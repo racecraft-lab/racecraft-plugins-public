@@ -4,7 +4,7 @@ description: Resume an interrupted session by detecting feature state and sugges
   the next command
 compatibility: Requires spec-kit project structure with .specify/ directory
 metadata:
-  author: github-spec-kit
+  author: Matt Van Horn
   source: extension:speckit-utils
 user-invocable: true
 disable-model-invocation: false
