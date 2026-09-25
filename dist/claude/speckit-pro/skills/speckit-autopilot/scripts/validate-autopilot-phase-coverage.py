@@ -1916,6 +1916,61 @@ def _load_json_bytes(value: bytes | None) -> dict[str, Any] | None:
     return parsed if isinstance(parsed, dict) else None
 
 
+def _shared_checkpoint_content_errors(
+    repo_root: Path,
+    base_commit: str,
+    authorized_tree: dict[str, str],
+    verified_trees: dict[str, dict[str, str] | None],
+    markers: list[Any],
+    expected_owners: dict[str, set[str]],
+    shared_paths: set[str],
+) -> list[str]:
+    base_tree = _git_tree_entries(repo_root, base_commit)
+    if base_tree is None:
+        return ["PR base tree is unavailable for shared marker content binding"]
+    errors: list[str] = []
+    for path in sorted(shared_paths):
+        previous_commit = base_commit
+        previous_blob = base_tree.get(path)
+        if previous_blob is None:
+            errors.append(f"shared marker path {path} is absent from the PR base")
+            continue
+        for marker_index, marker in enumerate(markers):
+            if not isinstance(marker, dict):
+                continue
+            checkpoint = marker.get("implementation_checkpoint")
+            if not isinstance(checkpoint, dict) or checkpoint.get("status") != "complete":
+                continue
+            current_commit = checkpoint.get("commit_sha")
+            current_tree = (
+                verified_trees.get(current_commit)
+                if isinstance(current_commit, str)
+                else None
+            )
+            if current_tree is None or not isinstance(current_commit, str):
+                continue
+            if not _git_commit_is_ancestor(repo_root, previous_commit, current_commit):
+                errors.append(
+                    f"shared marker path {path} checkpoint {marker_index} is out of commit order"
+                )
+                continue
+            current_blob = current_tree.get(path)
+            owns_path = marker.get("id") in expected_owners[path]
+            if owns_path and (current_blob is None or current_blob == previous_blob):
+                errors.append(
+                    f"shared marker path {path} is unchanged at declared checkpoint {marker_index}"
+                )
+            elif not owns_path and current_blob != previous_blob:
+                errors.append(
+                    f"shared marker path {path} changed at undeclared checkpoint {marker_index}"
+                )
+            previous_commit = current_commit
+            previous_blob = current_blob
+        if previous_blob != authorized_tree.get(path):
+            errors.append(f"shared marker path {path} differs from the last complete checkpoint")
+    return errors
+
+
 def validate_changed_file_manifest(
     state: dict[str, Any],
     state_path: Path,
@@ -2092,6 +2147,7 @@ def validate_changed_file_manifest(
 
     declared: dict[str, tuple[str, str | None]] = {}
     expected_owners: dict[str, set[str]] = {}
+    declared_owner_order: dict[str, list[str]] = {}
     expected_source_owners: dict[str, set[str]] = {}
     rename_sources: set[str] = set()
     structural_errors: list[str] = []
@@ -2115,8 +2171,14 @@ def validate_changed_file_manifest(
             structural_errors.append(f"files[{index}].provenance is invalid")
         marker_ids = entry.get("marker_ids")
         marker_values = _string_list(marker_ids)
-        if marker_values is None or len(marker_values) != 1:
-            structural_errors.append(f"files[{index}].marker_ids must contain exactly one marker owner")
+        if marker_values is None or not marker_values:
+            structural_errors.append(f"files[{index}].marker_ids must contain a marker owner")
+        elif len(marker_values) > 1 and (
+            operation != "MODIFIED" or entry.get("category") == "process"
+        ):
+            structural_errors.append(
+                f"files[{index}].marker_ids shared ownership requires a MODIFIED non-process path"
+            )
         source_path = entry.get("source_path")
         if operation == "RENAMED":
             if (
@@ -2134,6 +2196,7 @@ def validate_changed_file_manifest(
             structural_errors.append(f"files[{index}].source_path is only valid for RENAMED")
         declared[path] = (operation, source_path if isinstance(source_path, str) else None)
         expected_owners[path] = set(marker_values or ())
+        declared_owner_order[path] = marker_values or []
     if rename_sources & set(declared):
         structural_errors.append("changed-file manifest rename source paths overlap destination paths")
     if structural_errors:
@@ -2201,9 +2264,21 @@ def validate_changed_file_manifest(
         marker.get("id") for marker in markers
         if isinstance(marker, dict) and isinstance(marker.get("id"), str)
     }
+    marker_order = {
+        marker.get("id"): index
+        for index, marker in enumerate(markers)
+        if isinstance(marker, dict) and isinstance(marker.get("id"), str)
+    }
     for path, owners in expected_owners.items():
         if not owners <= declared_marker_ids:
             errors.append(f"changed-file manifest marker owner for {path} is not declared")
+        owner_order = declared_owner_order[path]
+        if (
+            len(owner_order) > 1
+            and all(owner in marker_order for owner in owner_order)
+            and owner_order != sorted(owner_order, key=marker_order.__getitem__)
+        ):
+            errors.append(f"changed-file manifest marker owners for {path} are out of review order")
     for marker_index, marker in enumerate(markers):
         if not isinstance(marker, dict) or not isinstance(marker.get("id"), str):
             errors.append(f"pr_marker_plan.markers[{marker_index}] is invalid")
@@ -2260,6 +2335,9 @@ def validate_changed_file_manifest(
         if authorized_tree is None:
             errors.append("authorized PR head tree is unavailable for checkpoint content binding")
         else:
+            shared_paths = {
+                path for path, owners in expected_owners.items() if len(owners) > 1
+            }
             verified_trees: dict[str, dict[str, str] | None] = {}
             for marker_index, marker in enumerate(markers):
                 if not isinstance(marker, dict):
@@ -2344,6 +2422,8 @@ def validate_changed_file_manifest(
                     path = record.get("path")
                     if not isinstance(path, str) or path in carrier_paths:
                         continue
+                    if path in shared_paths:
+                        continue
                     if verified_tree.get(path) != authorized_tree.get(path):
                         errors.append(
                             f"completed marker {marker_id or marker_index} file {path} differs from its verified commit"
@@ -2358,6 +2438,13 @@ def validate_changed_file_manifest(
                         errors.append(
                             f"completed marker {marker_id or marker_index} rename source {source_path} differs from its verified commit"
                         )
+            if shared_paths:
+                errors.extend(
+                    _shared_checkpoint_content_errors(
+                        repo_root, base_commit, authorized_tree, verified_trees,
+                        markers, expected_owners, shared_paths,
+                    )
+                )
     return {"changed_file_manifest_errors": errors}
 
 
@@ -2525,7 +2612,7 @@ def validate_projection_integrity(
         seen_marker_ids: set[str] = set()
         seen_review_orders: set[int] = set()
         task_owners: dict[str, str] = {}
-        file_owners: dict[str, str] = {}
+        file_owners: dict[str, tuple[str, str | None]] = {}
         for index, raw_marker in enumerate(markers):
             if not isinstance(raw_marker, dict):
                 continue
@@ -2643,12 +2730,19 @@ def validate_projection_integrity(
                         )
                     for path_kind, owned_path in owned_paths:
                         owner = file_owners.get(owned_path)
-                        if owner is not None:
+                        sequential_modify = (
+                            path_kind == "file"
+                            and operation == "MODIFIED"
+                            and owner is not None
+                            and owner[1] == "MODIFIED"
+                            and owner[0] != marker_id
+                        )
+                        if owner is not None and not sequential_modify:
                             marker_plan_status_errors.append(
-                                f"pr_marker_plan {path_kind} {owned_path!r} is owned by both {owner!r} and {marker_id!r}"
+                                f"pr_marker_plan {path_kind} {owned_path!r} is owned by both {owner[0]!r} and {marker_id!r}"
                             )
                         else:
-                            file_owners[owned_path] = marker_id
+                            file_owners[owned_path] = (marker_id, operation)
 
             reviewability = raw_marker.get("reviewability")
             if strict_contract and isinstance(reviewability, dict) and "evidence_path" in reviewability:

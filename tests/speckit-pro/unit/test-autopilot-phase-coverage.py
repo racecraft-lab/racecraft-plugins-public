@@ -956,6 +956,133 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
         self.assertIn("pr_marker_plan task 'T001' is owned by both 'us1' and 'us1'", errors)
         self.assertIn("pr_marker_plan file 'src/shared.py' is owned by both 'us1' and 'us1'", errors)
 
+    def test_marker_contract_allows_ordered_shared_modifications_only(self) -> None:
+        state = self.projected_state(
+            plan_status="in_progress",
+            phase_status="in_progress",
+            checkpoint={"status": "pending"},
+        )
+        first = state["pr_marker_plan"]["markers"][0]
+        first["declared_files"] = [{"operation": "MODIFIED", "path": "src/shared.py"}]
+        second = json.loads(json.dumps(first))
+        second["id"] = "us2"
+        second["review_order"] = 2
+        second["source_boundary"] = {
+            "section": "User Story 2", "story_id": 2,
+            "start_task_id": "T002", "end_task_id": "T002",
+        }
+        second["task_ids"] = ["T002"]
+        state["pr_marker_plan"]["markers"].append(second)
+        _exit_code, report = self.run_validator(workflow_text(), state)
+        self.assertFalse(
+            any("src/shared.py' is owned by both" in error for error in report["marker_plan_status_errors"]),
+            report,
+        )
+
+        second["declared_files"] = [{"operation": "DELETED", "path": "src/shared.py"}]
+        _exit_code, report = self.run_validator(workflow_text(), state)
+        self.assertIn(
+            "pr_marker_plan file 'src/shared.py' is owned by both 'us1' and 'us2'",
+            report["marker_plan_status_errors"],
+        )
+
+    def test_shared_modified_path_binds_each_completed_checkpoint(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            shared_path = root / "shared.txt"
+            schema_path = root / CANONICAL_SCHEMA_PATHS[1].relative_to(REPO_ROOT)
+            schema_path.parent.mkdir(parents=True)
+            shutil.copy2(CANONICAL_SCHEMA_PATHS[1], schema_path)
+            shared_path.write_text("base\n", encoding="utf-8")
+            subprocess.run(["git", "init", "-q", str(root)], check=True)
+            subprocess.run(["git", "-C", str(root), "add", "."], check=True)
+            commit_test_repo(root, "base")
+            base_commit = subprocess.run(
+                ["git", "-C", str(root), "rev-parse", "HEAD"],
+                text=True, capture_output=True, check=True,
+            ).stdout.strip()
+            shared_path.write_text("first marker\n", encoding="utf-8")
+            subprocess.run(["git", "-C", str(root), "add", "shared.txt"], check=True)
+            commit_test_repo(root, "first marker")
+            first_commit = subprocess.run(
+                ["git", "-C", str(root), "rev-parse", "HEAD"],
+                text=True, capture_output=True, check=True,
+            ).stdout.strip()
+            shared_path.write_text("second marker\n", encoding="utf-8")
+            subprocess.run(["git", "-C", str(root), "add", "shared.txt"], check=True)
+            commit_test_repo(root, "second marker")
+            second_commit = subprocess.run(
+                ["git", "-C", str(root), "rev-parse", "HEAD"],
+                text=True, capture_output=True, check=True,
+            ).stdout.strip()
+
+            manifest = {
+                "schema_version": "changed-file-manifest.v1",
+                "feature_id": "SPEC-EXAMPLE",
+                "base_commit": base_commit,
+                "comparison_ref": "HEAD",
+                "files": [
+                    {"path": "autopilot-state.json", "operation": "NEW", "category": "process", "provenance": "authored", "marker_ids": ["us2"]},
+                    {"path": "changed-file-manifest.json", "operation": "NEW", "category": "process", "provenance": "authored", "marker_ids": ["us2"]},
+                    {"path": "shared.txt", "operation": "MODIFIED", "category": "plugin_source", "provenance": "authored", "marker_ids": ["us1", "us2"]},
+                ],
+            }
+            manifest_path = root / "changed-file-manifest.json"
+            manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+            manifest_sha = "sha256:" + hashlib.sha256(manifest_path.read_bytes()).hexdigest()
+            state = {
+                "spec_id": "SPEC-EXAMPLE",
+                "changed_file_manifest": "changed-file-manifest.json",
+                "changed_file_manifest_base_commit": base_commit,
+                "current_source_fingerprint": {"changed_file_manifest_sha": manifest_sha},
+                "pr_marker_plan": {
+                    "schema_version": "pr-marker-plan.v2",
+                    "feature_id": "SPEC-EXAMPLE",
+                    "source_fingerprint": {"changed_file_manifest_sha": manifest_sha},
+                    "markers": [
+                        {"id": "us1", "declared_files": [{"path": "shared.txt", "operation": "MODIFIED"}], "implementation_checkpoint": {"status": "complete", "commit_sha": first_commit}},
+                        {"id": "us2", "declared_files": [
+                            {"path": "shared.txt", "operation": "MODIFIED"},
+                            {"path": "autopilot-state.json", "operation": "NEW"},
+                            {"path": "changed-file-manifest.json", "operation": "NEW"},
+                        ], "implementation_checkpoint": {"status": "complete", "commit_sha": second_commit}},
+                    ],
+                },
+            }
+            state_path = root / "autopilot-state.json"
+            state_path.write_text(json.dumps(state), encoding="utf-8")
+            subprocess.run(["git", "-C", str(root), "add", "autopilot-state.json", "changed-file-manifest.json"], check=True)
+            commit_test_repo(root, "marker evidence")
+            head_commit = subprocess.run(
+                ["git", "-C", str(root), "rev-parse", "HEAD"],
+                text=True, capture_output=True, check=True,
+            ).stdout.strip()
+            with mock.patch.object(VALIDATOR_MODULE, "CHANGED_FILE_MANIFEST_SCHEMA_PATH", schema_path):
+                report = VALIDATOR_MODULE.validate_changed_file_manifest(
+                    state, state_path,
+                    expected_base_commit=base_commit,
+                    expected_head_commit=head_commit,
+                )
+                self.assertEqual(report["changed_file_manifest_errors"], [])
+
+                state["pr_marker_plan"]["markers"][1]["implementation_checkpoint"]["commit_sha"] = first_commit
+                state_path.write_text(json.dumps(state), encoding="utf-8")
+                subprocess.run(["git", "-C", str(root), "add", "autopilot-state.json"], check=True)
+                commit_test_repo(root, "stale second checkpoint")
+                stale_head = subprocess.run(
+                    ["git", "-C", str(root), "rev-parse", "HEAD"],
+                    text=True, capture_output=True, check=True,
+                ).stdout.strip()
+                report = VALIDATOR_MODULE.validate_changed_file_manifest(
+                    state, state_path,
+                    expected_base_commit=base_commit,
+                    expected_head_commit=stale_head,
+                )
+                self.assertIn(
+                    "shared marker path shared.txt is unchanged at declared checkpoint 1",
+                    report["changed_file_manifest_errors"],
+                )
+
     def test_marker_contract_rejects_unsafe_paths_invalid_identity_and_non_utc_timestamps(self) -> None:
         state = self.projected_state(
             plan_status="in_progress",
@@ -1375,7 +1502,6 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
             tracked_manifest_entry = next(
                 entry for entry in manifest["files"] if entry["path"] == "tracked.txt"
             )
-            tracked_manifest_index = manifest["files"].index(tracked_manifest_entry)
             manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
             manifest_sha = "sha256:" + hashlib.sha256(manifest_path.read_bytes()).hexdigest()
             evidence_sha = "sha256:" + hashlib.sha256(evidence_path.read_bytes()).hexdigest()
@@ -2447,8 +2573,7 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
             exit_code, report = self.run_validator_paths(workflow_path, state_path)
             self.assertEqual(exit_code, 1)
             self.assertIn(
-                "changed-file manifest schema: "
-                f"changed_file_manifest.files[{tracked_manifest_index}].marker_ids has too many items",
+                "changed-file manifest marker owner for tracked.txt is not declared",
                 report["changed_file_manifest_errors"],
             )
 
