@@ -1,6 +1,6 @@
-# Continuous Goal Verification Backlog Catalog
+# Harness Engineering Uplift Typed-Judgment Opportunity Catalog
 
-**Source of record for all 71 typed-judgment opportunities (JEV-001 through JEV-071).**
+**Source of record for all 75 typed-judgment opportunities (JEV-001 through JEV-075).**
 
 This catalog replaces the external handoff bundle. It carries every field a
 future spec needs for a deferred item: bind-at surfaces, required evidence,
@@ -8,8 +8,9 @@ proposed behavior, authority boundary, evaluation metric, dependencies, and
 the disposition this roadmap gave it. It is a reference document read on
 demand, not always-on agent context.
 
-**Source PRD:** [../../prd-continuous-goal-verification.md](../../prd-continuous-goal-verification.md)
-**Roadmap:** [continuous-goal-verification-technical-roadmap.md](continuous-goal-verification-technical-roadmap.md)
+**Source PRD:** [../../prd-harness-engineering-uplift.md](../../prd-harness-engineering-uplift.md)
+**Roadmap:** [harness-engineering-uplift-technical-roadmap.md](harness-engineering-uplift-technical-roadmap.md)
+**History:** Derived for the Continuous Goal Verification PRD, which merged into the Harness Engineering Uplift PRD on 2026-09-24. Its `VRFY-###` identifiers are retired; every disposition below names an `HRNS-###` spec. JEV-072 to JEV-075 were added at the merge from an external working note on Jev engineering for coding agents.
 **Derived from:** handoff bundle v2.0, backlog schema 1.1, research dated 2026-09-18 and revised 2026-09-19 (America/Chicago).
 **Bundle status at derivation:** `proposal_not_implemented_or_benchmarked`. Nothing here is implemented; every entry is a proposal.
 
@@ -21,9 +22,9 @@ prose, this catalog says "the delegation runtime."
 
 ## How to turn a deferred entry into a spec
 
-1. Confirm VRFY-002, VRFY-003, and VRFY-004 are merged; every deferred entry is a consumer of that foundation.
+1. Confirm HRNS-024, HRNS-025, and HRNS-027 are merged; every deferred entry is a consumer of that foundation.
 2. Check the entry's **Depends on** list; each dependency must be delivered or explicitly waived.
-3. Add a Feature to the PRD with `AC-N.*` criteria derived from **Required evidence**, **Proposed behavior**, **Authority boundary**, and any listed **Acceptance** bullets, then a matching roadmap entry. Allocate the next `VRFY-###` above all historical use.
+3. Add a Feature to the PRD with `AC-N.*` criteria derived from **Required evidence**, **Proposed behavior**, **Authority boundary**, and any listed **Acceptance** bullets, then a matching roadmap entry. Allocate the next `HRNS-###` above all historical use.
 4. Add one rubric to the shared catalog under its **Primitive**, string-only, pinned to the qualified model version.
 5. Ship both host bindings in the same PR. Insert at the **Bind at** surface as an annotation; change no gate result.
 6. Record a baseline for the **Measure** metric before enabling anything beyond shadow.
@@ -52,7 +53,7 @@ Never ask the model to: count markers; compute cost or LOC; resolve paths; deter
 - Current model `jev-1.13.0`; aliases `jev-latest` and `jev-preview` move on release, so pin the versioned id and record the reported id.
 - Budgets: 64k tokens for state plus all questions; 32k for state plus the longest question. Text only.
 - Documented weaknesses: literal reading, counting and arithmetic, date comparison, indirection, distractor-heavy state, adversarial state, contradictory instruction and criteria, structural invariants across separate questions, generation. Keep identities, counts, and permissions in code.
-- The plugin defaults to the OpenRouter backend, which accepts only string instructions and criteria.
+- Revised 2026-09-24: `typesafe-mcp` is archived. The `typesafe-jev` plugin in this repository ships the `evaluate` tool for Claude Code and Codex, defaults to the TypeSafe backend with model `jev-latest`, and falls back to OpenRouter only when an operator configures it. OpenRouter accepts only string instructions and criteria, so the shared rubric format stays string-only. Recheck the model version and budgets at HRNS-017.
 
 ### Source-review dispositions carried from the bundle
 
@@ -83,7 +84,7 @@ These were observed in the delegation runtime's existing typed-judgment consumer
 
 - **enablement:** off until explicit per-project activation
 - **first enabled mode:** shadow
-- **provider network access:** existing typesafe-mcp only, through a qualified trusted-parent adapter
+- **provider network access:** the `typesafe-jev` plugin's `evaluate` tool only, through a qualified trusted-parent adapter
 - **repository and data consent:** required before every outbound request; data classes and provider are explicit
 - **live evaluations:** separate authorization; never in ordinary CI
 - **authority:** existing parent, human permissions, deterministic gates and ledgers; no new authority from a judgment or journal
@@ -101,11 +102,15 @@ These were observed in the delegation runtime's existing typed-judgment consumer
 
 | Disposition | Count | IDs |
 |---|---|---|
-| Deferred: P2 in source | 23 | 001, 006, 007, 012, 014, 020, 024, 026, 027, 029, 030, 031, 035, 039, 040, 042, 045, 046, 047, 049, 050, 051, 054 |
-| Deferred: P1 single-artifact check | 26 | 002, 003, 004, 008, 009, 010, 011, 013, 015, 016, 017, 018, 019, 021, 022, 025, 028, 032, 033, 034, 036, 037, 041, 043, 044, 052 |
-| In scope (see each entry for its VRFY spec) | 13 | 005, 023, 038, 053, 055, 056, 057, 058, 061, 062, 063, 064, 070 |
-| Deferred (bundle tranche T4): second-host visibility and cross-repository causality | 3 | 048, 059, 069 |
-| Deferred (bundle tranche T5): conditional extension | 6 | 060, 065, 066, 067, 068, 071 |
+| In scope (see each entry for its HRNS spec) | 13 | 005, 023, 038, 053, 055, 056, 057, 058, 061, 062, 063, 064, 070 |
+| Promoted into a merged spec | 11 | 002, 003, 004, 028, 029, 030, 036, 045, 046, 048, 068 |
+| Added at the merge | 4 | 072, 073, 074, 075 |
+| Partly delivered by shipped work | 3 | 006, 013, 052 |
+| Delegation-owned | 1 | 031 |
+| Deferred: P1 single-artifact check | 19 | 008, 009, 010, 011, 015, 016, 017, 018, 019, 021, 022, 025, 032, 033, 034, 037, 041, 043, 044 |
+| Deferred: P2 in source | 17 | 001, 007, 012, 014, 020, 024, 026, 027, 035, 039, 040, 042, 047, 049, 050, 051, 054 |
+| Deferred (bundle tranche T4): second-host visibility and cross-repository causality | 2 | 059, 069 |
+| Deferred (bundle tranche T5): conditional extension | 5 | 060, 065, 066, 067, 071 |
 
 ---
 
@@ -128,7 +133,7 @@ These were observed in the delegation runtime's existing typed-judgment consumer
 
 #### JEV-002: Targeted reference retrieval
 
-**Priority:** P1 | **Kind:** semantic_judgment | **Introduced in:** bundle v1.0 | **Disposition:** Deferred: P1 single-artifact check; a consumer of VRFY-002 through VRFY-004 that needs its own measured baseline
+**Priority:** P1 | **Kind:** semantic_judgment | **Introduced in:** bundle v1.0 | **Disposition:** Promoted: HRNS-029 shadow check (reference-section relevance), active only with HRNS-027
 
 - **Primitive:** Noul relevance
 - **Bind at:** speckit-coach; shared reference library; spec-context-analyst
@@ -141,7 +146,7 @@ These were observed in the delegation runtime's existing typed-judgment consumer
 
 #### JEV-003: Code-context reranking
 
-**Priority:** P1 | **Kind:** semantic_judgment | **Introduced in:** bundle v1.0 | **Disposition:** Deferred: P1 single-artifact check; a consumer of VRFY-002 through VRFY-004 that needs its own measured baseline
+**Priority:** P1 | **Kind:** semantic_judgment | **Introduced in:** bundle v1.0 | **Disposition:** Promoted: HRNS-028 shadow check (code-context ranking in the shared retrieval packet), active only with HRNS-027
 
 - **Primitive:** Noul per candidate
 - **Bind at:** codebase-analyst; scaffold blind-spot pass; implementation context
@@ -154,7 +159,7 @@ These were observed in the delegation runtime's existing typed-judgment consumer
 
 #### JEV-004: Research-passage filtering and ranking
 
-**Priority:** P1 | **Kind:** semantic_judgment | **Introduced in:** bundle v1.0 | **Disposition:** Deferred: P1 single-artifact check; a consumer of VRFY-002 through VRFY-004 that needs its own measured baseline
+**Priority:** P1 | **Kind:** semantic_judgment | **Introduced in:** bundle v1.0 | **Disposition:** Promoted: HRNS-028 shadow check (research-passage relevance), active only with HRNS-027
 
 - **Primitive:** Noul + Choice relation
 - **Bind at:** domain-researcher; Plan research; checklist/analyze remediation
@@ -167,7 +172,7 @@ These were observed in the delegation runtime's existing typed-judgment consumer
 
 #### JEV-005: Claim-to-source support checking
 
-**Priority:** P1 | **Kind:** semantic_judgment | **Introduced in:** bundle v1.0 | **Revised in:** v2.0 | **Disposition:** In scope: VRFY-007
+**Priority:** P1 | **Kind:** semantic_judgment | **Introduced in:** bundle v1.0 | **Revised in:** v2.0 | **Disposition:** In scope: HRNS-033 (claim-to-source pilot)
 
 - **Primitive:** Choice: supports / contradicts / insufficient
 - **Bind at:** Shared grounding boundary; all analyst reports; PR and handoff summaries
@@ -182,7 +187,7 @@ These were observed in the delegation runtime's existing typed-judgment consumer
 
 #### JEV-006: Instruction-bearing evidence flags
 
-**Priority:** P2 | **Kind:** semantic_judgment | **Introduced in:** bundle v1.0 | **Disposition:** Deferred: P2 in source; validate value first
+**Priority:** P2 | **Kind:** semantic_judgment | **Introduced in:** bundle v1.0 | **Disposition:** Partly delivered: the research broker screening and the sweep isolation boundary cover their surfaces; the general check stays deferred
 
 - **Primitive:** Noul
 - **Bind at:** Trusted parent handling external/reviewer-derived reports
@@ -210,7 +215,7 @@ These were observed in the delegation runtime's existing typed-judgment consumer
 
 #### JEV-008: Interview-to-record fidelity
 
-**Priority:** P1 | **Kind:** semantic_judgment | **Introduced in:** bundle v1.0 | **Revised in:** v2.0 | **Disposition:** Deferred: P1 single-artifact check; a consumer of VRFY-002 through VRFY-004 that needs its own measured baseline
+**Priority:** P1 | **Kind:** semantic_judgment | **Introduced in:** bundle v1.0 | **Revised in:** v2.0 | **Disposition:** Deferred: P1 single-artifact check; a consumer of HRNS-024 and HRNS-027 that needs its own measured baseline
 
 - **Primitive:** Choice entailment + Noul
 - **Bind at:** Grill Me Design Concept; PRD interview records
@@ -225,7 +230,7 @@ These were observed in the delegation runtime's existing typed-judgment consumer
 
 #### JEV-009: Atomic and observable acceptance criteria
 
-**Priority:** P1 | **Kind:** semantic_judgment | **Introduced in:** bundle v1.0 | **Disposition:** Deferred: P1 single-artifact check; a consumer of VRFY-002 through VRFY-004 that needs its own measured baseline
+**Priority:** P1 | **Kind:** semantic_judgment | **Introduced in:** bundle v1.0 | **Disposition:** Deferred: P1 single-artifact check; a consumer of HRNS-024 and HRNS-027 that needs its own measured baseline
 
 - **Primitive:** Noul per criterion
 - **Bind at:** speckit-prd; Specify
@@ -238,7 +243,7 @@ These were observed in the delegation runtime's existing typed-judgment consumer
 
 #### JEV-010: Semantic PRD-to-roadmap crosswalk
 
-**Priority:** P1 | **Kind:** semantic_judgment | **Introduced in:** bundle v1.0 | **Disposition:** Deferred: P1 single-artifact check; a consumer of VRFY-002 through VRFY-004 that needs its own measured baseline
+**Priority:** P1 | **Kind:** semantic_judgment | **Introduced in:** bundle v1.0 | **Disposition:** Deferred: P1 single-artifact check; a consumer of HRNS-024 and HRNS-027 that needs its own measured baseline
 
 - **Primitive:** Noul coverage + pairwise equivalence
 - **Bind at:** speckit-prd; Coach roadmap workflow
@@ -251,7 +256,7 @@ These were observed in the delegation runtime's existing typed-judgment consumer
 
 #### JEV-011: Non-goal and constraint drift
 
-**Priority:** P1 | **Kind:** semantic_judgment | **Introduced in:** bundle v1.0 | **Disposition:** Deferred: P1 single-artifact check; a consumer of VRFY-002 through VRFY-004 that needs its own measured baseline
+**Priority:** P1 | **Kind:** semantic_judgment | **Introduced in:** bundle v1.0 | **Disposition:** Deferred: P1 single-artifact check; a consumer of HRNS-024 and HRNS-027 that needs its own measured baseline
 
 - **Primitive:** Noul + Choice relation
 - **Bind at:** PRD; Design Concept; Plan; review boundaries
@@ -277,7 +282,7 @@ These were observed in the delegation runtime's existing typed-judgment consumer
 
 #### JEV-013: Glossary entity alignment
 
-**Priority:** P1 | **Kind:** semantic_judgment | **Introduced in:** bundle v1.0 | **Disposition:** Deferred: P1 single-artifact check; a consumer of VRFY-002 through VRFY-004 that needs its own measured baseline
+**Priority:** P1 | **Kind:** semantic_judgment | **Introduced in:** bundle v1.0 | **Disposition:** Partly delivered: the ubiquitous-language skill ships the deterministic lint (#541); the Jev check stays deferred
 
 - **Primitive:** Choice with no-match + Noul
 - **Bind at:** ubiquitous-language; advisory identifier lint
@@ -305,7 +310,7 @@ These were observed in the delegation runtime's existing typed-judgment consumer
 
 #### JEV-015: Blind-spot evidence triage
 
-**Priority:** P1 | **Kind:** semantic_judgment | **Introduced in:** bundle v1.0 | **Disposition:** Deferred: P1 single-artifact check; a consumer of VRFY-002 through VRFY-004 that needs its own measured baseline
+**Priority:** P1 | **Kind:** semantic_judgment | **Introduced in:** bundle v1.0 | **Disposition:** Deferred: P1 single-artifact check; a consumer of HRNS-024 and HRNS-027 that needs its own measured baseline
 
 - **Primitive:** Support Choice + relevance Noul
 - **Bind at:** speckit-scaffold-spec blind-spot pass
@@ -318,7 +323,7 @@ These were observed in the delegation runtime's existing typed-judgment consumer
 
 #### JEV-016: Workflow-prompt fidelity
 
-**Priority:** P1 | **Kind:** semantic_judgment | **Introduced in:** bundle v1.0 | **Disposition:** Deferred: P1 single-artifact check; a consumer of VRFY-002 through VRFY-004 that needs its own measured baseline
+**Priority:** P1 | **Kind:** semantic_judgment | **Introduced in:** bundle v1.0 | **Disposition:** Deferred: P1 single-artifact check; a consumer of HRNS-024 and HRNS-027 that needs its own measured baseline
 
 - **Primitive:** Noul per ratified obligation
 - **Bind at:** speckit-scaffold-spec prompt population
@@ -331,7 +336,7 @@ These were observed in the delegation runtime's existing typed-judgment consumer
 
 #### JEV-017: Marker-free ambiguity detection
 
-**Priority:** P1 | **Kind:** semantic_judgment | **Introduced in:** bundle v1.0 | **Revised in:** v2.0 | **Disposition:** Deferred: P1 single-artifact check; a consumer of VRFY-002 through VRFY-004 that needs its own measured baseline
+**Priority:** P1 | **Kind:** semantic_judgment | **Introduced in:** bundle v1.0 | **Revised in:** v2.0 | **Disposition:** Deferred: P1 single-artifact check; a consumer of HRNS-024 and HRNS-027 that needs its own measured baseline
 
 - **Primitive:** Noul per requirement
 - **Bind at:** After Specify, alongside G1
@@ -346,7 +351,7 @@ These were observed in the delegation runtime's existing typed-judgment consumer
 
 #### JEV-018: Semantic clarification closure
 
-**Priority:** P1 | **Kind:** semantic_judgment | **Introduced in:** bundle v1.0 | **Disposition:** Deferred: P1 single-artifact check; a consumer of VRFY-002 through VRFY-004 that needs its own measured baseline
+**Priority:** P1 | **Kind:** semantic_judgment | **Introduced in:** bundle v1.0 | **Disposition:** Deferred: P1 single-artifact check; a consumer of HRNS-024 and HRNS-027 that needs its own measured baseline
 
 - **Primitive:** Choice relation + Noul sufficiency
 - **Bind at:** Clarify executor return; parent edits; G2
@@ -359,7 +364,7 @@ These were observed in the delegation runtime's existing typed-judgment consumer
 
 #### JEV-019: Plan-to-requirement coverage
 
-**Priority:** P1 | **Kind:** semantic_judgment | **Introduced in:** bundle v1.0 | **Disposition:** Deferred: P1 single-artifact check; a consumer of VRFY-002 through VRFY-004 that needs its own measured baseline
+**Priority:** P1 | **Kind:** semantic_judgment | **Introduced in:** bundle v1.0 | **Disposition:** Deferred: P1 single-artifact check; a consumer of HRNS-024 and HRNS-027 that needs its own measured baseline
 
 - **Primitive:** Noul per obligation
 - **Bind at:** Plan/G3; spec-context-analyst
@@ -385,7 +390,7 @@ These were observed in the delegation runtime's existing typed-judgment consumer
 
 #### JEV-021: Checklist-domain applicability
 
-**Priority:** P1 | **Kind:** semantic_judgment | **Introduced in:** bundle v1.0 | **Disposition:** Deferred: P1 single-artifact check; a consumer of VRFY-002 through VRFY-004 that needs its own measured baseline
+**Priority:** P1 | **Kind:** semantic_judgment | **Introduced in:** bundle v1.0 | **Disposition:** Deferred: P1 single-artifact check; a consumer of HRNS-024 and HRNS-027 that needs its own measured baseline
 
 - **Primitive:** Independent Noul per domain
 - **Bind at:** Coach checklist selection; autopilot Checklist
@@ -398,7 +403,7 @@ These were observed in the delegation runtime's existing typed-judgment consumer
 
 #### JEV-022: Gap-remediation validation
 
-**Priority:** P1 | **Kind:** semantic_judgment | **Introduced in:** bundle v1.0 | **Disposition:** Deferred: P1 single-artifact check; a consumer of VRFY-002 through VRFY-004 that needs its own measured baseline
+**Priority:** P1 | **Kind:** semantic_judgment | **Introduced in:** bundle v1.0 | **Disposition:** Deferred: P1 single-artifact check; a consumer of HRNS-024 and HRNS-027 that needs its own measured baseline
 
 - **Primitive:** Noul + source relation Choice
 - **Bind at:** Checklist G4; Analyze repair loop; Converge boundaries
@@ -411,7 +416,7 @@ These were observed in the delegation runtime's existing typed-judgment consumer
 
 #### JEV-023: Requirement-to-task semantic coverage
 
-**Priority:** P1 | **Kind:** semantic_judgment | **Introduced in:** bundle v1.0 | **Revised in:** v2.0 | **Disposition:** In scope: VRFY-005
+**Priority:** P1 | **Kind:** semantic_judgment | **Introduced in:** bundle v1.0 | **Revised in:** v2.0 | **Disposition:** In scope: HRNS-031
 
 - **Primitive:** Noul per atomic obligation
 - **Bind at:** Tasks/G5; task sidecar production
@@ -439,7 +444,7 @@ These were observed in the delegation runtime's existing typed-judgment consumer
 
 #### JEV-025: Analyze finding normalization
 
-**Priority:** P1 | **Kind:** semantic_judgment | **Introduced in:** bundle v1.0 | **Disposition:** Deferred: P1 single-artifact check; a consumer of VRFY-002 through VRFY-004 that needs its own measured baseline
+**Priority:** P1 | **Kind:** semantic_judgment | **Introduced in:** bundle v1.0 | **Disposition:** Deferred: P1 single-artifact check; a consumer of HRNS-024 and HRNS-027 that needs its own measured baseline
 
 - **Primitive:** Choice + pairwise equivalence
 - **Bind at:** Analyze/G6; consensus intake
@@ -483,7 +488,7 @@ These were observed in the delegation runtime's existing typed-judgment consumer
 
 #### JEV-028: Evidence-backed readiness vector
 
-**Priority:** P1 | **Kind:** semantic_judgment | **Introduced in:** bundle v1.0 | **Revised in:** v2.0 | **Disposition:** Deferred: P1 single-artifact check; a consumer of VRFY-002 through VRFY-004 that needs its own measured baseline
+**Priority:** P1 | **Kind:** semantic_judgment | **Introduced in:** bundle v1.0 | **Revised in:** v2.0 | **Disposition:** Promoted: HRNS-034 (readiness vector beside G6.5)
 
 - **Primitive:** Independent Nouls/Choices
 - **Bind at:** G6.5 confidence-gate companion output
@@ -498,7 +503,7 @@ These were observed in the delegation runtime's existing typed-judgment consumer
 
 #### JEV-029: Semantic parallelism warnings
 
-**Priority:** P2 | **Kind:** semantic_judgment | **Introduced in:** bundle v1.0 | **Disposition:** Deferred: P2 in source; validate value first
+**Priority:** P2 | **Kind:** semantic_judgment | **Introduced in:** bundle v1.0 | **Disposition:** Promoted: HRNS-028 shadow check (coupling warnings beside read/write task typing), active only with HRNS-027
 
 - **Primitive:** Noul per candidate task pair
 - **Bind at:** Phase 7 batching; PR-resolution partitions; task execution control
@@ -511,7 +516,7 @@ These were observed in the delegation runtime's existing typed-judgment consumer
 
 #### JEV-030: Stable repair-family recognition
 
-**Priority:** P2 | **Kind:** semantic_judgment | **Introduced in:** bundle v1.0 | **Revised in:** v2.0 | **Disposition:** Deferred: P2 in source; validate value first
+**Priority:** P2 | **Kind:** semantic_judgment | **Introduced in:** bundle v1.0 | **Revised in:** v2.0 | **Disposition:** Promoted: HRNS-030 shadow check (repair-family recognition), active only with HRNS-027
 
 - **Primitive:** Pairwise equivalence Noul/Choice
 - **Bind at:** Shared execution-control ledger; recurring review findings
@@ -526,7 +531,7 @@ These were observed in the delegation runtime's existing typed-judgment consumer
 
 #### JEV-031: Bounded escalation advice
 
-**Priority:** P2 | **Kind:** semantic_judgment | **Introduced in:** bundle v1.0 | **Revised in:** v2.0 | **Disposition:** Deferred: P2 in source; validate value first
+**Priority:** P2 | **Kind:** semantic_judgment | **Introduced in:** bundle v1.0 | **Revised in:** v2.0 | **Disposition:** Delegation-owned: escalation advice belongs to the delegation runtime; no speckit-pro consumer is planned
 
 - **Primitive:** Responsiveness/coverage Nouls + route Choice
 - **Bind at:** Main orchestrator; optional delegation-runtime handoff
@@ -543,7 +548,7 @@ These were observed in the delegation runtime's existing typed-judgment consumer
 
 #### JEV-032: Behavioral test-assertion coverage
 
-**Priority:** P1 | **Kind:** semantic_judgment | **Introduced in:** bundle v1.0 | **Disposition:** Deferred: P1 single-artifact check; a consumer of VRFY-002 through VRFY-004 that needs its own measured baseline
+**Priority:** P1 | **Kind:** semantic_judgment | **Introduced in:** bundle v1.0 | **Disposition:** Deferred: P1 single-artifact check; a consumer of HRNS-024 and HRNS-027 that needs its own measured baseline
 
 - **Primitive:** Noul per behavior
 - **Bind at:** Implement executor; TDD; UAT preparation
@@ -556,7 +561,7 @@ These were observed in the delegation runtime's existing typed-judgment consumer
 
 #### JEV-033: Phantom implementation screening
 
-**Priority:** P1 | **Kind:** semantic_judgment | **Introduced in:** bundle v1.0 | **Disposition:** Deferred: P1 single-artifact check; a consumer of VRFY-002 through VRFY-004 that needs its own measured baseline
+**Priority:** P1 | **Kind:** semantic_judgment | **Introduced in:** bundle v1.0 | **Disposition:** Deferred: P1 single-artifact check; a consumer of HRNS-024 and HRNS-027 that needs its own measured baseline
 
 - **Primitive:** Noul per task outcome
 - **Bind at:** Post Verify Implementation and Verify Tasks
@@ -569,7 +574,7 @@ These were observed in the delegation runtime's existing typed-judgment consumer
 
 #### JEV-034: Patch scope and guard-weakening review
 
-**Priority:** P1 | **Kind:** semantic_judgment | **Introduced in:** bundle v1.0 | **Disposition:** Deferred: P1 single-artifact check; a consumer of VRFY-002 through VRFY-004 that needs its own measured baseline
+**Priority:** P1 | **Kind:** semantic_judgment | **Introduced in:** bundle v1.0 | **Disposition:** Deferred: P1 single-artifact check; a consumer of HRNS-024 and HRNS-027 that needs its own measured baseline
 
 - **Primitive:** Atomic Nouls + contextual Score
 - **Bind at:** Implementation return; review-fix return; final integration review
@@ -595,7 +600,7 @@ These were observed in the delegation runtime's existing typed-judgment consumer
 
 #### JEV-036: Verification-claim reconciliation
 
-**Priority:** P1 | **Kind:** semantic_judgment | **Introduced in:** bundle v1.0 | **Revised in:** v2.0 | **Disposition:** Deferred: P1 single-artifact check; a consumer of VRFY-002 through VRFY-004 that needs its own measured baseline
+**Priority:** P1 | **Kind:** semantic_judgment | **Introduced in:** bundle v1.0 | **Revised in:** v2.0 | **Disposition:** Promoted: HRNS-036 (verification-claim reconciliation in the stop advisory)
 
 - **Primitive:** Choice entailment
 - **Bind at:** Post reports; task_results; final handoff
@@ -612,7 +617,7 @@ These were observed in the delegation runtime's existing typed-judgment consumer
 
 #### JEV-037: Review feedback routing and cross-file hints
 
-**Priority:** P1 | **Kind:** semantic_judgment | **Introduced in:** bundle v1.0 | **Disposition:** Deferred: P1 single-artifact check; a consumer of VRFY-002 through VRFY-004 that needs its own measured baseline
+**Priority:** P1 | **Kind:** semantic_judgment | **Introduced in:** bundle v1.0 | **Disposition:** Deferred: P1 single-artifact check; a consumer of HRNS-024 and HRNS-027 that needs its own measured baseline
 
 - **Primitive:** Choice + Noul
 - **Bind at:** speckit-resolve-pr; trusted review coordinator
@@ -625,7 +630,7 @@ These were observed in the delegation runtime's existing typed-judgment consumer
 
 #### JEV-038: Review-fix closure verification
 
-**Priority:** P1 | **Kind:** semantic_judgment | **Introduced in:** bundle v1.0 | **Revised in:** v2.0 | **Disposition:** In scope: VRFY-006
+**Priority:** P1 | **Kind:** semantic_judgment | **Introduced in:** bundle v1.0 | **Revised in:** v2.0 | **Disposition:** In scope: HRNS-032; the deterministic pagination and ordering prerequisite is HRNS-015
 
 - **Primitive:** Noul + Choice entailment
 - **Bind at:** Immediately before reply/resolution, after final verification and push confirmation
@@ -666,7 +671,7 @@ These were observed in the delegation runtime's existing typed-judgment consumer
 
 #### JEV-041: Formal-property intent and weakening checks
 
-**Priority:** P1 | **Kind:** semantic_judgment | **Introduced in:** bundle v1.0 | **Disposition:** Deferred: P1 single-artifact check; a consumer of VRFY-002 through VRFY-004 that needs its own measured baseline
+**Priority:** P1 | **Kind:** semantic_judgment | **Introduced in:** bundle v1.0 | **Disposition:** Deferred: P1 single-artifact check; a consumer of HRNS-024 and HRNS-027 that needs its own measured baseline
 
 - **Primitive:** Choice relation + atomic Nouls
 - **Bind at:** Formal author return; Plan/planning/final/Post reconciliation
@@ -692,7 +697,7 @@ These were observed in the delegation runtime's existing typed-judgment consumer
 
 #### JEV-043: Artifact content fidelity
 
-**Priority:** P1 | **Kind:** semantic_judgment | **Introduced in:** bundle v1.0 | **Disposition:** Deferred: P1 single-artifact check; a consumer of VRFY-002 through VRFY-004 that needs its own measured baseline
+**Priority:** P1 | **Kind:** semantic_judgment | **Introduced in:** bundle v1.0 | **Disposition:** Deferred: P1 single-artifact check; a consumer of HRNS-024 and HRNS-027 that needs its own measured baseline
 
 - **Primitive:** Choice support + Noul coverage
 - **Bind at:** Artifact author/parent handoff
@@ -705,7 +710,7 @@ These were observed in the delegation runtime's existing typed-judgment consumer
 
 #### JEV-044: UAT scenario completeness
 
-**Priority:** P1 | **Kind:** semantic_judgment | **Introduced in:** bundle v1.0 | **Disposition:** Deferred: P1 single-artifact check; a consumer of VRFY-002 through VRFY-004 that needs its own measured baseline
+**Priority:** P1 | **Kind:** semantic_judgment | **Introduced in:** bundle v1.0 | **Disposition:** Deferred: P1 single-artifact check; a consumer of HRNS-024 and HRNS-027 that needs its own measured baseline
 
 - **Primitive:** Noul per acceptance condition
 - **Bind at:** uat-runbook-author; implementation handoff
@@ -720,7 +725,7 @@ These were observed in the delegation runtime's existing typed-judgment consumer
 
 #### JEV-045: Durable lesson triage
 
-**Priority:** P2 | **Kind:** semantic_judgment | **Introduced in:** bundle v1.0 | **Disposition:** Deferred: P2 in source; validate value first
+**Priority:** P2 | **Kind:** semantic_judgment | **Introduced in:** bundle v1.0 | **Disposition:** Promoted: HRNS-021 shadow check (lesson durability triage), active only with HRNS-027
 
 - **Primitive:** Separate support/utility/durability Nouls
 - **Bind at:** Eligible implement/codebase/spec-context memory; retrospective proposals
@@ -733,7 +738,7 @@ These were observed in the delegation runtime's existing typed-judgment consumer
 
 #### JEV-046: Semantic retrieval of approved memory
 
-**Priority:** P2 | **Kind:** semantic_judgment | **Introduced in:** bundle v1.0 | **Disposition:** Deferred: P2 in source; validate value first
+**Priority:** P2 | **Kind:** semantic_judgment | **Introduced in:** bundle v1.0 | **Disposition:** Promoted: HRNS-021 shadow check (approved-lesson retrieval), active only with HRNS-027
 
 - **Primitive:** Noul relevance
 - **Bind at:** Eligible agents and approved durable project records
@@ -759,7 +764,7 @@ These were observed in the delegation runtime's existing typed-judgment consumer
 
 #### JEV-048: Semantic health on the read-only dashboard
 
-**Priority:** P1 | **Kind:** derived_view | **Introduced in:** bundle v1.0 | **Revised in:** v2.0 | **Disposition:** Deferred (bundle tranche T4): second-host visibility and cross-repository causality; follow-on PRD
+**Priority:** P1 | **Kind:** derived_view | **Introduced in:** bundle v1.0 | **Revised in:** v2.0 | **Disposition:** Promoted: HRNS-037 (semantic health on the progress page, once HRNS-034 exists)
 
 - **Primitive:** No new evaluation by default; receipt rendering
 - **Bind at:** speckit-status
@@ -815,7 +820,7 @@ These were observed in the delegation runtime's existing typed-judgment consumer
 
 #### JEV-052: Skill activation regression evaluation
 
-**Priority:** P1 | **Kind:** evaluation | **Introduced in:** bundle v1.0 | **Disposition:** Deferred: P1 single-artifact check; a consumer of VRFY-002 through VRFY-004 that needs its own measured baseline
+**Priority:** P1 | **Kind:** evaluation | **Introduced in:** bundle v1.0 | **Disposition:** Partly delivered: native Layer 2 trigger evaluations cover description changes (#578); Jev-assisted routing comparison stays deferred
 
 - **Primitive:** Choice + applicability Nouls in offline/replayed evaluation
 - **Bind at:** tests/speckit-pro; skill-description changes
@@ -828,10 +833,10 @@ These were observed in the delegation runtime's existing typed-judgment consumer
 
 #### JEV-053: Rubric and model-version regression harness
 
-**Priority:** P1 | **Kind:** evaluation | **Introduced in:** bundle v1.0 | **Revised in:** v2.0 | **Disposition:** In scope: VRFY-002 (harness) and VRFY-012 (corpus and holdout)
+**Priority:** P1 | **Kind:** evaluation | **Introduced in:** bundle v1.0 | **Revised in:** v2.0 | **Disposition:** In scope: HRNS-024 (harness) and HRNS-038 (corpus and holdout)
 
 - **Primitive:** All primitives; replay plus opt-in live evaluation
-- **Bind at:** Shared semantic-check test corpus; typesafe-mcp and delegation-runtime contract fixtures
+- **Bind at:** Shared semantic-check test corpus; typesafe-jev and delegation-runtime contract fixtures
 - **Required evidence:** Human-labeled real failures, counterexamples, provider fixtures, and frozen rubric/model versions.
 - **Proposed behavior:** Measure calibration, abstention, coverage, and end-to-end outcomes before changing prompts, thresholds, or model aliases. Separate historical policy replay, counterfactual policy simulation, and separately authorized live model reevaluation; add frozen full-run trajectories for sequential verifier evaluation.
 - **Authority boundary:** No paid nondeterministic calls in normal unit tests or secrets exposed to untrusted fork PRs; separate training and holdout cases. Live reevaluation is neither deterministic replay nor permission to repeat historical side effects. Model judgments are not gold labels.
@@ -856,7 +861,7 @@ These were observed in the delegation runtime's existing typed-judgment consumer
 
 #### JEV-055: Instruction-policy contradiction review
 
-**Priority:** P2 | **Kind:** semantic_judgment | **Introduced in:** bundle v1.0 | **Revised in:** v2.0 | **Disposition:** In scope: VRFY-001 and VRFY-004 (parity portion)
+**Priority:** P2 | **Kind:** semantic_judgment | **Introduced in:** bundle v1.0 | **Revised in:** v2.0 | **Disposition:** In scope: HRNS-017 and HRNS-027 (parity portion)
 
 - **Primitive:** Pairwise Choice/Noul
 - **Bind at:** Authored agent and shared-reference changes; Claude/Codex parity review
@@ -874,10 +879,10 @@ These were observed in the delegation runtime's existing typed-judgment consumer
 
 #### JEV-056: Versioned Racecraft Decision Contract
 
-**Priority:** P1 | **Kind:** infrastructure | **Introduced in:** bundle v2.0 | **Disposition:** In scope: VRFY-002
+**Priority:** P1 | **Kind:** infrastructure | **Introduced in:** bundle v2.0 | **Disposition:** In scope: HRNS-024; the schema and conformance fixtures live in the typesafe-jev plugin
 
 - **Primitive:** No model call; contract for all primitives
-- **Bind at:** typesafe-mcp consumer contracts; delegation-runtime Jev adapters; SpecKit prepare/assess operations
+- **Bind at:** typesafe-jev contract fixtures; delegation-runtime Jev adapters; SpecKit prepare/assess operations
 - **Required evidence:** Current provider schemas, canonical source identities, rubric definitions, applicable policy and host authority records.
 - **Proposed behavior:** Define one language-neutral contract with independent decision, projection, rubric, normalizer and policy versions; explicit evidence requirements, result types, observation binding, coverage and allowed advisory outcomes. Share test fixtures, not a new cross-language runtime.
 - **Authority boundary:** The MCP remains a provider adapter. Domain IDs stay consumer-local unless an explicitly reviewed local-only extension is added. A decision result grants no permission and contains no executable command.
@@ -895,7 +900,7 @@ These were observed in the delegation runtime's existing typed-judgment consumer
 
 #### JEV-057: Append-only decision and observation journal
 
-**Priority:** P1 | **Kind:** infrastructure | **Introduced in:** bundle v2.0 | **Disposition:** In scope: VRFY-003
+**Priority:** P1 | **Kind:** infrastructure | **Introduced in:** bundle v2.0 | **Disposition:** In scope: HRNS-025
 
 - **Primitive:** No model call; durable recordkeeping
 - **Bind at:** delegation-runtime consumer return boundaries; SpecKit .process diagnostics and parent result consumption
@@ -916,7 +921,7 @@ These were observed in the delegation runtime's existing typed-judgment consumer
 
 #### JEV-058: Historical and counterfactual decision replay
 
-**Priority:** P1 | **Kind:** infrastructure | **Introduced in:** bundle v2.0 | **Disposition:** In scope: VRFY-003
+**Priority:** P1 | **Kind:** infrastructure | **Introduced in:** bundle v2.0 | **Disposition:** In scope: HRNS-025
 
 - **Primitive:** Offline reducer/policy replay; live reevaluation is a separate opt-in mode
 - **Bind at:** Shared evaluation harness; delegation-runtime and SpecKit recorded decision fixtures
@@ -937,7 +942,7 @@ These were observed in the delegation runtime's existing typed-judgment consumer
 
 #### JEV-059: Cross-repository causal handoff receipts
 
-**Priority:** P1 | **Kind:** integration_protocol | **Introduced in:** bundle v2.0 | **Disposition:** Deferred (bundle tranche T4): second-host visibility and cross-repository causality; follow-on PRD
+**Priority:** P1 | **Kind:** integration_protocol | **Introduced in:** bundle v2.0 | **Disposition:** Deferred (bundle tranche T4): second-host visibility and cross-repository causality; follow-on PRD; co-owned with the delegation runtime
 
 - **Primitive:** Deterministic protocol; optional semantic coverage annotations
 - **Bind at:** SpecKit native parent and delegation-runtime dispatch/status/candidate boundary
@@ -958,7 +963,7 @@ These were observed in the delegation runtime's existing typed-judgment consumer
 
 #### JEV-060: Effect-intent reconciliation and duplicate prevention
 
-**Priority:** P2 | **Kind:** infrastructure | **Introduced in:** bundle v2.0 | **Disposition:** Deferred (bundle tranche T5): conditional extension; needs the VRFY-012 calibration report
+**Priority:** P2 | **Kind:** infrastructure | **Introduced in:** bundle v2.0 | **Disposition:** Deferred (bundle tranche T5): conditional extension; needs the HRNS-038 calibration report; deterministic subgoal dedup is HRNS-030 and does not use this entry
 
 - **Primitive:** Deterministic effect lifecycle; no Jev decision
 - **Bind at:** Future event-driven dispatch/publication adapters; existing runner mutation/ledger boundaries
@@ -981,7 +986,7 @@ These were observed in the delegation runtime's existing typed-judgment consumer
 
 #### JEV-061: Frozen goal and obligation registry
 
-**Priority:** P1 | **Kind:** infrastructure | **Introduced in:** bundle v2.0 | **Disposition:** In scope: VRFY-008
+**Priority:** P1 | **Kind:** infrastructure | **Introduced in:** bundle v2.0 | **Disposition:** In scope: HRNS-030
 
 - **Primitive:** Deterministic IDs/versions; optional atomic-criterion assistance
 - **Bind at:** Autopilot kickoff/resume; PRD/Design Concept handoff; phase and task metadata
@@ -1002,7 +1007,7 @@ These were observed in the delegation runtime's existing typed-judgment consumer
 
 #### JEV-062: Incremental goal-completion verifier
 
-**Priority:** P1 | **Kind:** semantic_judgment | **Introduced in:** bundle v2.0 | **Disposition:** In scope: VRFY-009
+**Priority:** P1 | **Kind:** semantic_judgment | **Introduced in:** bundle v2.0 | **Disposition:** In scope: HRNS-034
 
 - **Primitive:** Atomic Noul/Choice judgments plus deterministic conjunction
 - **Bind at:** Trusted parent after consumed worker results, relevant artifact changes and before terminal handoff
@@ -1024,7 +1029,7 @@ These were observed in the delegation runtime's existing typed-judgment consumer
 
 #### JEV-063: Change-triggered verification scheduler and invalidation
 
-**Priority:** P1 | **Kind:** infrastructure | **Introduced in:** bundle v2.0 | **Disposition:** In scope: VRFY-010
+**Priority:** P1 | **Kind:** infrastructure | **Introduced in:** bundle v2.0 | **Disposition:** In scope: HRNS-035
 
 - **Primitive:** Deterministic scheduling/cache policy
 - **Bind at:** Parent-observed lifecycle adapters; semantic preparation; run budget
@@ -1046,7 +1051,7 @@ These were observed in the delegation runtime's existing typed-judgment consumer
 
 #### JEV-064: Premature-stop and redundant-continuation advice
 
-**Priority:** P1 | **Kind:** semantic_judgment | **Introduced in:** bundle v2.0 | **Disposition:** In scope: VRFY-011
+**Priority:** P1 | **Kind:** semantic_judgment | **Introduced in:** bundle v2.0 | **Disposition:** In scope: HRNS-036
 
 - **Primitive:** Noul/Choice over goal evidence; deterministic eligibility
 - **Bind at:** Autopilot pre-terminal summary and parent continuation decisions
@@ -1067,7 +1072,7 @@ These were observed in the delegation runtime's existing typed-judgment consumer
 
 #### JEV-065: Evidence-based stagnation and regression detection
 
-**Priority:** P2 | **Kind:** semantic_judgment | **Introduced in:** bundle v2.0 | **Disposition:** Deferred (bundle tranche T5): conditional extension; needs the VRFY-012 calibration report
+**Priority:** P2 | **Kind:** semantic_judgment | **Introduced in:** bundle v2.0 | **Disposition:** Deferred (bundle tranche T5): conditional extension; needs the HRNS-038 calibration report
 
 - **Primitive:** Noul/Choice on evidence deltas; counters in code
 - **Bind at:** Long-running phases, delegated read results and remediation loops
@@ -1088,7 +1093,7 @@ These were observed in the delegation runtime's existing typed-judgment consumer
 
 #### JEV-066: Obligation-targeted verifier feedback packets
 
-**Priority:** P1 | **Kind:** integration_protocol | **Introduced in:** bundle v2.0 | **Disposition:** Deferred (bundle tranche T5): conditional extension; needs the VRFY-012 calibration report
+**Priority:** P1 | **Kind:** integration_protocol | **Introduced in:** bundle v2.0 | **Disposition:** Deferred (bundle tranche T5): conditional extension; needs the HRNS-038 calibration report
 
 - **Primitive:** Semantic defect description already evaluated; deterministic ownership routing
 - **Bind at:** Parent -> task/phase executor or required named synthesizer; delegation-runtime follow-up boundary
@@ -1109,7 +1114,7 @@ These were observed in the delegation runtime's existing typed-judgment consumer
 
 #### JEV-067: Budgeted verifier cascade and candidate comparison
 
-**Priority:** P2 | **Kind:** experimental_optimization | **Introduced in:** bundle v2.0 | **Disposition:** Deferred (bundle tranche T5): conditional extension; needs the VRFY-012 calibration report
+**Priority:** P2 | **Kind:** experimental_optimization | **Introduced in:** bundle v2.0 | **Disposition:** Deferred (bundle tranche T5): conditional extension; needs the HRNS-038 calibration report
 
 - **Primitive:** Noul/Choice comparisons; resource allocation in policy
 - **Bind at:** Authorized alternative proposals; optional deeper review; evaluation harness
@@ -1130,7 +1135,7 @@ These were observed in the delegation runtime's existing typed-judgment consumer
 
 #### JEV-068: Compaction and handoff obligation-preservation check
 
-**Priority:** P1 | **Kind:** semantic_judgment | **Introduced in:** bundle v2.0 | **Disposition:** Deferred (bundle tranche T5): conditional extension; needs the VRFY-012 calibration report
+**Priority:** P1 | **Kind:** semantic_judgment | **Introduced in:** bundle v2.0 | **Disposition:** Promoted: HRNS-029 shadow check (handoff obligation preservation), active only with HRNS-027
 
 - **Primitive:** Choice entailment plus per-obligation Noul
 - **Bind at:** Parent-authored resume packet; compacted context; cross-agent summary
@@ -1176,7 +1181,7 @@ These were observed in the delegation runtime's existing typed-judgment consumer
 
 #### JEV-070: Sequential verifier calibration and anti-gaming evaluation
 
-**Priority:** P1 | **Kind:** evaluation | **Introduced in:** bundle v2.0 | **Disposition:** In scope: VRFY-012
+**Priority:** P1 | **Kind:** evaluation | **Introduced in:** bundle v2.0 | **Disposition:** In scope: HRNS-038
 
 - **Primitive:** Offline trajectory evaluation; opt-in live judgments
 - **Bind at:** JEV-053 holdout corpus, continuous-verifier rollout and model/rubric promotion
@@ -1199,7 +1204,7 @@ These were observed in the delegation runtime's existing typed-judgment consumer
 
 #### JEV-071: Decision-policy invariant and crash-sequence testing
 
-**Priority:** P2 | **Kind:** evaluation | **Introduced in:** bundle v2.0 | **Disposition:** Deferred (bundle tranche T5): conditional extension; needs the VRFY-012 calibration report
+**Priority:** P2 | **Kind:** evaluation | **Introduced in:** bundle v2.0 | **Disposition:** Deferred (bundle tranche T5): conditional extension; needs the HRNS-038 calibration report
 
 - **Primitive:** Deterministic state-machine tests; optional selected formal checker
 - **Bind at:** Consumer policy reducers, decision journal and cross-repository adapters
@@ -1220,12 +1225,80 @@ These were observed in the delegation runtime's existing typed-judgment consumer
 
 ---
 
+### Per-turn decision points (added at the merge)
+
+These four come from the working note's table of per-turn decision points
+(context, cache, permissions, security). Its routing and tool-selection rows
+are not added: routing belongs to the delegation runtime, and tool disclosure
+is deterministic in HRNS-019.
+
+#### JEV-072: Evidence visibility level
+
+**Priority:** P2 | **Kind:** semantic_judgment | **Introduced in:** merge 2026-09-24 | **Disposition:** Added at the merge: HRNS-029 shadow check, active only with HRNS-027
+
+- **Primitive:** Choice over `hide`, `short`, `long`, `full`, `uncertain`
+- **Bind at:** Parent dispatch and subagent return boundaries; command and test output handoff
+- **Required evidence:** The next question or task, the candidate chunk, its kind and source identity, and whether a check requires it.
+- **Proposed behavior:** Suggest how much of each chunk the next consumer needs. The same chunk can be hidden for one question and shown in full for the next, without being deleted from state.
+- **Authority boundary:** Required evidence, acceptance criteria, unresolved errors, and dependency closure are never hidden. `uncertain` keeps the larger view. Every lower view keeps a raw handle.
+- **Measure:** Tokens handed forward, fetch-on-demand rate, and downstream outcome on the native evals versus the deterministic ladder alone.
+- **Default mode:** off; shadow after explicit activation
+- **Depends on:** JEV-056
+- **Related:** JEV-002, JEV-003, JEV-068
+- **Sources:** N1
+
+#### JEV-073: Subagent reuse versus respawn
+
+**Priority:** P2 | **Kind:** semantic_judgment | **Introduced in:** merge 2026-09-24 | **Disposition:** Added at the merge: HRNS-029 shadow check, active only with HRNS-027
+
+- **Primitive:** Noul on whether an existing subagent's context still answers the next question
+- **Bind at:** Parent dispatch decision before continuing an existing subagent or starting a fresh one
+- **Required evidence:** The next question, the existing subagent's task, its recorded inputs and outputs, and what changed since.
+- **Proposed behavior:** Advise continuing when the prior context still serves the next question and starting fresh when it has gone stale or off-task. Cost arithmetic stays in code.
+- **Authority boundary:** Advisory only. The documented deterministic rule decides; ownership, worktree, and budget checks are unchanged.
+- **Measure:** Repeated reads avoided and wrong-context continuations caught, against the rule alone.
+- **Default mode:** off; shadow after explicit activation
+- **Depends on:** JEV-056
+- **Related:** JEV-068
+- **Sources:** N1
+
+#### JEV-074: Ambiguous-command risk advice
+
+**Priority:** P2 | **Kind:** semantic_judgment | **Introduced in:** merge 2026-09-24 | **Disposition:** Added at the merge: HRNS-026 shadow check, active only with HRNS-027
+
+- **Primitive:** Choice over `allow`, `ask`, `deny`, `insufficient`
+- **Bind at:** Autonomous-run command policy, only for commands the deterministic rules leave undecided
+- **Required evidence:** The command, the inspected script contents when it runs a file, the working directory relative to the worktree, and the task scope.
+- **Proposed behavior:** Advise whether an undecided command should run, with the reason, so a human reviewing the run sees risky commands the rules missed.
+- **Authority boundary:** Deterministic rules decide. Advice can only move a command toward `ask`; it can never allow a command the rules deny or leave undecided. This entry does not choose permission rules.
+- **Measure:** Risky commands flagged that the rules missed, and false alarms.
+- **Default mode:** off; shadow after explicit activation
+- **Depends on:** JEV-056
+- **Related:** JEV-006
+- **Sources:** N1
+
+#### JEV-075: Content sensitivity label
+
+**Priority:** P2 | **Kind:** semantic_judgment | **Introduced in:** merge 2026-09-24 | **Disposition:** Added at the merge: HRNS-026 shadow check, active only with HRNS-027
+
+- **Primitive:** Choice over `open`, `standard`, `restricted`, `custom`, `insufficient`
+- **Bind at:** Egress preflight for Jev provider calls, the research broker, and handoffs to the delegation runtime
+- **Required evidence:** Paths and content already permitted to leave, and the project's sensitivity policy.
+- **Proposed behavior:** Suggest a stricter label when content looks more sensitive than its path-based classification.
+- **Authority boundary:** A label can only narrow what leaves the machine. It never authorizes egress the deterministic policy forbids, and the classification call itself sends only content already permitted to leave.
+- **Measure:** Over-permissive classifications caught, and needless restrictions.
+- **Default mode:** off; shadow after explicit activation
+- **Depends on:** JEV-056
+- **Related:** JEV-006
+- **Sources:** N1
+
 ## Source index
 
 Public sources cited above. Private delegation-runtime sources (nine entries in the bundle) are withheld; their findings are summarized under "Inherited findings to revalidate."
 
 | Key | Title | Location |
 |---|---|---|
+| N1 | Jev Engineering for Coding Agents, an independent working note (September 2026) | External PDF; not committed |
 | D1 | Jev introduction | `https://docs.typesafe.ai/introduction` |
 | D2 | Noul | `https://docs.typesafe.ai/primitives/noul` |
 | D3 | Choice | `https://docs.typesafe.ai/primitives/choice` |
