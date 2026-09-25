@@ -15,7 +15,12 @@ BRANCH = re.compile(r"(?!-)(?!.*\.\.)(?!.*//)[A-Za-z0-9._/-]{1,255}\Z")
 REPOSITORY = re.compile(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+\Z")
 QUALIFIED_VERSION = "0.1.1"
 SKILL_SHA256 = "f90eec41187457b44640f3d85d2b6069dc702c898b923c79759e7858597d62f7"
-TRUSTED_SKILL_PARENTS = (Path.home() / ".claude/skills", Path.home() / ".codex/skills")
+# Codex reads user skills from ~/.agents/skills (primary) and ~/.codex/skills (legacy).
+TRUSTED_SKILL_PARENTS = (
+    Path.home() / ".claude/skills",
+    Path.home() / ".agents/skills",
+    Path.home() / ".codex/skills",
+)
 TRUSTED_SKILL_PATHS = tuple(parent / "gh-stack/SKILL.md" for parent in TRUSTED_SKILL_PARENTS)
 
 

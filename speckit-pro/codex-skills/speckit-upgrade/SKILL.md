@@ -16,7 +16,7 @@ If `.specify/` is missing, hands off to `$speckit-install` —
 upgrade only operates on existing installs.
 
 This skill is **mutation-heavy** (it modifies files in `.specify/`,
-`.claude/`, `.codex/`, and writes backups to `/tmp/`). It runs only
+`.claude/`, `.codex/`, `.agents/skills/`, and writes backups to `/tmp/`). It runs only
 on explicit operator request and never auto-fires from other
 skills.
 
@@ -127,9 +127,11 @@ If the operator passed keys, use them. Otherwise ask:
 ### 4. Snapshot the repo state
 
 Create a timestamped backup directory outside the repo, copy
-`.specify/`, and copy any present `.claude/`, `.codex/`, and
-`.github/` directories into that backup using filesystem APIs or
-argv-only file operations. Report the backup path and copied entries.
+`.specify/`, and copy any present `.claude/`, `.codex/`,
+`.agents/skills/`, and `.github/` directories into that backup using
+filesystem APIs or argv-only file operations. Codex skills live in
+`.agents/skills/` (primary) or `.codex/skills/` (legacy); back up
+whichever exists, or both. Report the backup path and copied entries.
 
 Tell the operator: "Repo state snapshotted to `<backup-path>/`.
 Manual rollback: restore `.specify/` and any listed integration
@@ -192,7 +194,13 @@ After upgrading, the new skills directories may now exist alongside
 the legacy slash-command files. Detect:
 
 Use filesystem glob checks to detect legacy command/prompt entries
-and current skills entries for Claude and Codex.
+and current skills entries for Claude and Codex:
+
+- Claude: legacy `.claude/commands/speckit.*.md`; skills
+  `.claude/skills/speckit-*/`.
+- Codex: legacy `.codex/prompts/speckit.*.md`; skills
+  `.agents/skills/speckit-*/` (primary) or `.codex/skills/speckit-*/`
+  (legacy). Either skills path counts as the skills form.
 
 If BOTH legacy and skills paths exist for an integration:
 
