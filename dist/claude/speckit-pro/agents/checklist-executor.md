@@ -11,7 +11,7 @@ model: opus
 disallowedTools: WebFetch, WebSearch, mcp__tavily, mcp__tavily-mcp, mcp__context7, mcp__plugin_context7_context7
 color: yellow
 maxTurns: 100
-effort: max
+effort: high
 ---
 
 # Checklist Executor

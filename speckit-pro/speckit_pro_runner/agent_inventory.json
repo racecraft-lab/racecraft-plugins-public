@@ -5,35 +5,35 @@
       "name": "phase-executor",
       "category": "shared",
       "exception_reason": null,
-      "claude_code": {"implementation": "plugin_agent", "source": "agents/phase-executor.md", "install_status": "required", "order": 0, "model": "opus", "effort": "max", "sandbox": "tool-policy", "memory": "none"},
+      "claude_code": {"implementation": "plugin_agent", "source": "agents/phase-executor.md", "install_status": "required", "order": 0, "model": "opus", "effort": "high", "sandbox": "tool-policy", "memory": "none"},
       "codex": {"implementation": "custom_agent", "source": "codex-agents/phase-executor.toml", "install_status": "required", "order": 8, "model": "gpt-6-sol", "effort": "xhigh", "sandbox": "workspace-write", "memory": "none"}
     },
     {
       "name": "clarify-executor",
       "category": "shared",
       "exception_reason": null,
-      "claude_code": {"implementation": "plugin_agent", "source": "agents/clarify-executor.md", "install_status": "required", "order": 1, "model": "opus", "effort": "max", "sandbox": "tool-policy-read-only", "memory": "none"},
+      "claude_code": {"implementation": "plugin_agent", "source": "agents/clarify-executor.md", "install_status": "required", "order": 1, "model": "opus", "effort": "high", "sandbox": "tool-policy-read-only", "memory": "none"},
       "codex": {"implementation": "custom_agent", "source": "codex-agents/clarify-executor.toml", "install_status": "required", "order": 3, "model": "gpt-6-sol", "effort": "xhigh", "sandbox": "read-only", "memory": "none"}
     },
     {
       "name": "checklist-executor",
       "category": "shared",
       "exception_reason": null,
-      "claude_code": {"implementation": "plugin_agent", "source": "agents/checklist-executor.md", "install_status": "required", "order": 2, "model": "opus", "effort": "max", "sandbox": "tool-policy", "memory": "none"},
+      "claude_code": {"implementation": "plugin_agent", "source": "agents/checklist-executor.md", "install_status": "required", "order": 2, "model": "opus", "effort": "high", "sandbox": "tool-policy", "memory": "none"},
       "codex": {"implementation": "custom_agent", "source": "codex-agents/checklist-executor.toml", "install_status": "required", "order": 2, "model": "gpt-6-sol", "effort": "xhigh", "sandbox": "workspace-write", "memory": "none"}
     },
     {
       "name": "analyze-executor",
       "category": "shared",
       "exception_reason": null,
-      "claude_code": {"implementation": "plugin_agent", "source": "agents/analyze-executor.md", "install_status": "required", "order": 3, "model": "opus", "effort": "max", "sandbox": "tool-policy", "memory": "none"},
+      "claude_code": {"implementation": "plugin_agent", "source": "agents/analyze-executor.md", "install_status": "required", "order": 3, "model": "opus", "effort": "high", "sandbox": "tool-policy", "memory": "none"},
       "codex": {"implementation": "custom_agent", "source": "codex-agents/analyze-executor.toml", "install_status": "required", "order": 0, "model": "gpt-6-sol", "effort": "xhigh", "sandbox": "workspace-write", "memory": "none"}
     },
     {
       "name": "implement-executor",
       "category": "shared",
       "exception_reason": null,
-      "claude_code": {"implementation": "plugin_agent", "source": "agents/implement-executor.md", "install_status": "required", "order": 4, "model": "opus", "effort": "max", "sandbox": "tool-policy", "memory": "local"},
+      "claude_code": {"implementation": "plugin_agent", "source": "agents/implement-executor.md", "install_status": "required", "order": 4, "model": "opus", "effort": "xhigh", "sandbox": "tool-policy", "memory": "local"},
       "codex": {"implementation": "custom_agent", "source": "codex-agents/implement-executor.toml", "install_status": "required", "order": 7, "model": "gpt-6-sol", "effort": "xhigh", "sandbox": "workspace-write", "memory": "none"}
     },
     {
