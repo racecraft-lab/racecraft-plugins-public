@@ -1026,9 +1026,9 @@ verification or evidence a draft has not produced.
 Report through the could-not-be-opened shape below rather than opening one whose
 title a human would have to repair.
 
-#### The draft description: exactly two blocks
+#### The draft description: one H1 and two H2 sections
 
-The description carries exactly two blocks and nothing else:
+The description begins with the matching H1 title, followed by exactly two H2 sections, Artifacts and Resume, and no other content:
 
 ```text
 # feat(speckit-pro): Open an example draft

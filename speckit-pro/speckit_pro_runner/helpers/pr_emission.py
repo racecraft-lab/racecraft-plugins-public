@@ -1086,7 +1086,7 @@ def invalid_packet_input(message: str, *, field: str, details: dict[str, Any] | 
             remediation_summary="Correct the named PR packet input.",
             remediation_actions=[
                 "Use inputs.mode for single, split, or draft; include packet_path, source_feature_dir, target, title_type, title_scope, and title_description.",
-                "Use verification_evidence records from speckit-pro/skills/speckit-autopilot/contracts/pr-packet.schema.json; an explicit empty array is valid for draft packets.",
+                "Use verification_evidence records from the plugin-root-relative skills/speckit-autopilot/contracts/pr-packet.schema.json; an explicit empty array is valid for draft packets.",
             ],
         )
     }
