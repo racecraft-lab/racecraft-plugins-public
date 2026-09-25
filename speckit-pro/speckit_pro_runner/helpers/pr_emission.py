@@ -527,6 +527,11 @@ def normalize_packet_input(request: Any) -> dict[str, Any]:
     # Resolved before the evidence normalizers because draft mode relaxes what they
     # accept. Left below them, a draft packet dies in input normalization before the
     # gate is ever reached.
+    if "mode_name" in inputs:
+        return invalid_packet_input(
+            "inputs.mode is the packet mode field; remove inputs.mode_name and set inputs.mode to single, split, or draft",
+            field="mode_name",
+        )
     mode = inputs.get("mode")
     if mode is None:
         mode = "single"
@@ -1078,8 +1083,11 @@ def invalid_packet_input(message: str, *, field: str, details: dict[str, Any] | 
             "invalid_input",
             message,
             details=extra,
-            remediation_summary="Send the required PR packet fields.",
-            remediation_actions=["Retry with packet_path, source_feature_dir, target, title, scope, and verification evidence."],
+            remediation_summary="Correct the named PR packet input.",
+            remediation_actions=[
+                "Use inputs.mode for single, split, or draft; include packet_path, source_feature_dir, target, title_type, title_scope, and title_description.",
+                "Use verification_evidence records from speckit-pro/skills/speckit-autopilot/contracts/pr-packet.schema.json; an explicit empty array is valid for draft packets.",
+            ],
         )
     }
 
