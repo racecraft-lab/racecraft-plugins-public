@@ -445,9 +445,9 @@ class ValidateCodexSkills(unittest.TestCase):
         with self.subTest(msg='speckit-autopilot: fails closed to the install skill when subagents are missing'):
             prerequisites = _read(skill_dir / 'references' / 'prerequisites-codex.md')
             self.assertTrue('$install' in body and '$install' in prerequisites and ('install-codex-agents' in prerequisites) and ('dry_run' in prerequisites) and ('validate-agent-install' not in prerequisites) and ('--autoheal' not in prerequisites), 'expected read-only installer dry-run preflight and install/restart fail-closed guidance')
-        with self.subTest(msg='speckit-autopilot: external recovery opens a correctly rooted task'):
+        with self.subTest(msg='speckit-autopilot: explicit external workflow binds to its registered worktree'):
             prerequisites = _read(skill_dir / 'references' / 'prerequisites-codex.md')
-            self.assertTrue('Open a new Codex task rooted at <workflow_root>' in prerequisites and 'exact absolute workflow command' in prerequisites and ('original stage flags' in prerequisites) and ('Use Codex Handoff to move this task to' not in prerequisites), 'expected fail-closed external recovery without arbitrary-path Handoff claims')
+            self.assertTrue('explicitly supplied the absolute workflow path' in prerequisites and 'relation=external' in prerequisites and 'registered worktree' in prerequisites and 'real sandbox denial' in prerequisites and ('Open a new Codex task rooted at <workflow_root>' not in prerequisites), 'expected explicit registered-worktree binding with permission failures reported at the actual operation')
         with self.subTest(msg='speckit-autopilot: documents the optional Luna helper'):
             self.assertIn('autopilot-fast-helper', body)
         with self.subTest(msg='speckit-autopilot: keeps the Luna helper advisory and parent-only'):
