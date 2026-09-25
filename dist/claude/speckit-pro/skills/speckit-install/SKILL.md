@@ -88,6 +88,8 @@ chose option (b)):
 
 Pass `--script sh` explicitly on macOS/Linux to avoid prompting.
 
+When `claude` was installed, use the resolved Python 3.11+ interpreter to run `<resolved_python> "${CLAUDE_PLUGIN_ROOT}/scripts/agent-memory-ignore.py" --mode apply --repo-root "<repository-root>"` before any memory-enabled plugin agent runs. Include the resulting `.gitignore` change in the setup commit before clean-worktree-gated helpers. If the command reports tracked memory or an ineffective nested override, stop and report its paths; never remove memory automatically.
+
 ### 5. Offer to install the curated set of extensions and presets
 
 speckit-pro recommends a small set of community extensions and presets
