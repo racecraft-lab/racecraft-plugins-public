@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -79,6 +80,37 @@ def task_plan(*, dependency: bool = False, shared: bool = False, one_seam: bool 
 
 
 class AtomicityAdditiveRoutingTests(unittest.TestCase):
+    def test_shipped_atomicity_request_executes_with_registered_fixture(self) -> None:
+        template = (REPO_ROOT / "speckit-pro/skills/speckit-coach/templates/workflow-template.md").read_text()
+        marker = "To produce the decision, send the complete read-only runner request:"
+        self.assertIn(marker, template)
+        example = template.partition(marker)[2]
+        self.assertIn("```json\n", example)
+        fenced = example.partition("```json\n")[2]
+        self.assertIn("\n```", fenced)
+        request_text = fenced.partition("\n```")[0]
+        request = json.loads(request_text)
+        self.assertEqual(set(request["inputs"]), {"feature_dir", "workflow_file"})
+        fixture = json.loads((TEST_ROOT / "unit/fixtures/read-only-helpers/requests/atomicity-route.json").read_text())
+        request["inputs"] = fixture["inputs"]
+        environment = os.environ.copy()
+        environment["PYTHONPATH"] = str(REPO_ROOT / "speckit-pro")
+        result = subprocess.run(
+            [sys.executable, "-m", "speckit_pro_runner"], input=json.dumps(request),
+            cwd=REPO_ROOT, env=environment, text=True, capture_output=True, check=False,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(json.loads(result.stdout)["status"], "ok")
+        for path in (
+            "speckit-pro/skills/speckit-autopilot/SKILL.md",
+            "speckit-pro/codex-skills/speckit-autopilot/SKILL.md",
+            "speckit-pro/skills/speckit-autopilot/references/phase-execution.md",
+        ):
+            with self.subTest(path=path):
+                guidance = (REPO_ROOT / path).read_text()
+                self.assertIn("inputs.feature_dir", guidance)
+                self.assertIn("inputs.workflow_file", guidance)
+
     def repository(
         self,
         tasks: str,

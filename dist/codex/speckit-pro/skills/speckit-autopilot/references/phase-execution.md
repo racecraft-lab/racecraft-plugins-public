@@ -544,11 +544,26 @@ no file of its own; **the SKILL records that decision** into the
 workflow file's `## Atomicity Route` section. It is advisory-only —
 no outcome blocks the run.
 
-```text
-# Single positional arg = the feature dir holding tasks.md/plan.md/spec.md.
-# Emits {route, releasable, signals[], hints[], warnings[]} (or {"error":…}).
-out=<command output>
+```json
+{
+  "schema_version": "1.0",
+  "request_id": "atomicity-route-after-g5",
+  "helper_id": "atomicity-route",
+  "operation": "atomicity-route",
+  "mode": "read_only",
+  "inputs": {
+    "feature_dir": "<feature-dir>",
+    "workflow_file": "<bound-workflow-file>"
+  }
+}
 ```
+
+Send this request through the runner envelope with both `inputs.feature_dir`
+and `inputs.workflow_file`. The workflow input must name
+the real bound workflow file; it excludes that file and its exact sibling
+`autopilot-state.json` from change classification. An omitted or nonexistent
+workflow path is an input error. The helper emits `{route, releasable,
+signals[], hints[], warnings[]}` or an error and writes no file.
 
 Then record the four surfaced fields (`route`, `releasable`,
 `signals`, `warnings`) into the workflow file's `## Atomicity Route`
