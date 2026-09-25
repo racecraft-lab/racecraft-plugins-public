@@ -34,7 +34,7 @@ input.
 
 ## Roadmap Overview
 
-The roadmap currently tracks **20 specifications** overall; **13** of them are mapped into **6 dependency
+The roadmap currently tracks **21 specifications** overall; **13** of them are mapped into **6 dependency
 tiers**:
 
 | Tier | Specs | Purpose | Parallelization |
@@ -136,12 +136,13 @@ ART-006 (Autopilot Staging) ──────────┼──────�
 | ART-012 | Implementation-Notes Capture | ✅ Complete / Archived | [.process/ART-012-workflow.md](.process/ART-012-workflow.md) | PR #426; archived 2026-08-12. The record contract and the executor reporting field live on both platforms outside `specs/**`. Budget re-estimated at every amendment (115 at scaffold → 155 → 162 → 190 once the operator restored the literal per-task guarantee), and the final six production files matched the declaration exactly |
 | ART-013 | Documentation | ⏳ Pending | - | Blocked by all |
 | ART-014 | Phase-Guard Enforcement Repair | ✅ Complete / Archived | [.process/ART-014-workflow.md](.process/ART-014-workflow.md) | PR #433; archived 2026-08-13. The guard, its tests, and both platforms' authority documentation live outside `specs/**`. Declared 337 reviewable LOC and shipped 906 added across six authored files, 488 across the five production ones; the overrun is the classification record and the tests, and it argues for ART-015. Found during ART-006, which deliberately did not fix it. Opened ART-016, ART-017 and ART-018 |
-| ART-015 | Spec-Size Re-Estimation Trigger | ⏳ Ready | - | No dependencies; found during ART-006 — the estimator is sound but is never re-fed |
+| ART-015 | Spec-Size Re-Estimation Trigger | ⏳ Ready | - | No dependencies; found during ART-006 — the estimator is sound but is never re-fed. HRNS-015 Slice B adds a required-refactor input; this entry keeps the re-invocation (reconciled 2026-09-25) |
 | ART-016 | Claude-Side Live PR Commit Authority | ⏳ Ready | - | No dependencies; opened from ART-014, which documents the gap and names this entry in the shipped Claude `SKILL.md` |
 | ART-017 | Arm The Accidentally-Advisory State Bookkeeping Checks | ✅ Complete / Archived | [.process/ART-017-workflow.md](.process/ART-017-workflow.md) | PR #490, merged 2026-08-23 at `070a36c2b`; archived 2026-08-25. 31/31 tasks and 20/20 FRs, with a same-tree 7896/7896 suite. The guard, its contract and its tests live outside `specs/**`. Opened from ART-014's advisory audit; the defect was reproduced by execution rather than argued. A manual UAT executed all 9 acceptance scenarios and is preserved at [.process/ART-017-manual-uat.md](.process/ART-017-manual-uat.md) |
-| ART-018 | Repair The Silently-Clean Governance Matchers | ⏳ Ready | - | No dependencies; opened from ART-014's retrospective. Three helpers report clean on input they should catch, each hit live during that run |
+| ART-018 | Repair The Silently-Clean Governance Matchers | ⏳ Ready | - | No dependencies; opened from ART-014's retrospective. Reconciled 2026-09-25: #600 fixed the clarification-marker and production-file matchers, the `[Gap]` counter moved to HRNS-015 Slice B, and the decorated task-ID counter plus every negative control remain |
 | ART-019 | Documented Best-Practice Alignment | ⏳ Ready | - | No dependencies; opened 2026-08-13 from a seven-surface audit against the live official docs. Zero documented rules broken; the gap is that the repo's gates are blind to the documented metrics. Ships as ordered child slices |
 | ART-020 | Keyboard-Reachable Scroll Containers In The Shipped Gallery | ⏭️ Superseded / Shipped | [.process/ART-004-workflow.md](.process/ART-004-workflow.md) | Superseded by ART-004 on 2026-08-17; its five existing-container fixes, accessible names, global Layer 4 assertion, negative fixture, keyboard UAT, and generated-artifact updates shipped in PR #450 |
+| ART-021 | Architecture Viewer | ⏳ Ready | - | Added 2026-09-25. Dependencies satisfied: ART-001 (single-file page contract), ART-007 (draft PR), and the DEPENDENCY_RULES quality-gate slot (2026-09-06). The data contract is [architecture-viewer-contract.md](architecture-viewer-contract.md) |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⏭️ Superseded | ⚠️ Blocked
 
@@ -828,6 +829,14 @@ Codex parity checks; payload regeneration.
 **Update-in-place + flip (2026-07-28):** the draft PR is the one PR; the
 implement stage refreshes and flips it rather than opening a second PR.
 
+**Reconciliation (2026-09-25):** HRNS-015's scoping confirmed the flip is still
+unbuilt: `phase-execution.md` refers to "the later ready flip", but no
+`gh pr ready` exists anywhere under `speckit-pro/skills/speckit-autopilot/`. A
+flipped `feat` or `fix` PR must also pass this repository's `validate-release-note`
+check, which skips drafts only. HRNS-015 Slice A adds an optional `release_note`
+packet field that renders the required fence; this entry's refresh should fill it
+before the flip, and must not reimplement it.
+
 **Key Files:**
 - `speckit-pro/skills/speckit-autopilot/references/post-implementation.md` — final artifact step + flip
 - `speckit-pro/agents/artifact-author.md` — final-set generation prompts
@@ -1129,6 +1138,13 @@ of ART-006's overrun was that the estimator underestimates. Re-invoking it with
 final signals returned a figure consistent with the outcome, which relocated the
 defect from the model to the absent trigger.
 
+**Overlap with HRNS-015 (2026-09-25):** HRNS-015 Slice B adds a required-refactor
+input to `estimate-spec-size`, which changes the formula this entry leaves alone.
+The two halves are separate: HRNS-015 owns the new signal, and this entry still
+owns re-invoking the operation at G3 and G5 and recording its output. HRNS-015's
+own scaffold is a second worked example: its roadmap budget of 292 LOC re-ran at
+1,362 after the scoping interview.
+
 **Key Files:**
 - `speckit-pro/speckit_pro_runner/helpers/read_only.py` — the estimator
 - `speckit-pro/skills/speckit-autopilot/references/gate-validation.md` — G3/G5 gates
@@ -1298,6 +1314,19 @@ problem. The third differs in mechanism and consumer. They belong in one entry
 anyway, because what decides whether they ship together is the verification all
 four lack, and it is identical.
 
+**Status on `main` (2026-09-25):**
+
+| Row | Status |
+|---|---|
+| `validate-gate` clarification markers | Fixed by #600: every counter matches `[NEEDS CLARIFICATION: <question>]` (`read_only.py:1959`) |
+| `count-markers` gaps | Moved to HRNS-015 Slice B, which counts any bracket tag with a `Gap` token and skips code spans and fences. Out of this entry's scope |
+| `estimate-reviewable-loc` production files | Fixed by #600: Python and other compiled-language sources outside test paths count, and an unrecognized layout reports `not_estimated` (`read_only.py:8350-8357`) |
+| `count_tasks` / `count_done_tasks` | Still open: the matchers at `read_only.py:8306` and `:8314` still require `T[0-9]` directly after the checkbox |
+
+What remains here: the decorated task-ID matcher, its negative control, and the
+proof that G7 ran. At scaffold, check whether #600's tests already prove the two
+rows it fixed can detect one; add a control only where they do not.
+
 **A second ART-003 observation belongs to this entry's verification rather than its
 scope.** Slice 1 recorded `G7 PASS, 40/40 tasks` in its workflow file. Slices 2 and
 3 declare G7 in their gate tables and record no G7 result at all, while merging with
@@ -1337,7 +1366,7 @@ and lose the pattern that makes them worth fixing. **The task counter joined on
 had nothing to do with ART-014.
 
 **Key Files:**
-- `speckit-pro/speckit_pro_runner/helpers/read_only.py` — all four matchers; the task counters at `:4143` and `:4151`, and the G7 consumer at `:935`
+- `speckit-pro/speckit_pro_runner/helpers/read_only.py` — the task counters at `:8306` and `:8314`, and the G7 consumer at `:2098` (line numbers as of 2026-09-25)
 - `speckit-pro/skills/speckit-coach/templates/spec-template.md` — the prescribed colon form
 - `.specify/templates/tasks-template.md` — the prescribed plain task-ID form
 - `tests/speckit-pro/unit/` — the four missing negative controls
@@ -1401,6 +1430,9 @@ green.
 5. **The Codex 8000-word cap is this repository's invention**, not a documented Codex
    limit. It is load-bearing for scoping and should be re-anchored to the documented
    under-500-lines guidance or justified in its own right.
+
+**Status on `main` (2026-09-25):** #530 removed the 8000-word gate, so item 5's cap
+is gone. Item 1 is now wider: no gate measures `SKILL.md` size at all.
 
 **Scope:**
 - **A. Shipped-reference accuracy.** Correct the false `background: true` claim and
@@ -1545,6 +1577,86 @@ either.
 - `speckit-pro/artifact-gallery/templates/module-map.html`
 - `speckit-pro/artifact-gallery/templates/annotated-diff.html` — the pattern to copy
 - `tests/speckit-pro/unit/test-artifact-gallery.py` — where the assertion belongs
+
+---
+
+### ART-021: Architecture Viewer
+
+**Priority:** P2 | **Depends On:** ART-001, ART-007, and the DEPENDENCY_RULES quality-gate slot (all shipped) | **Enables:** ART-013 documenting the page
+
+**Goal:** Ship the gallery's Architecture Viewer: a producer that turns the
+DEPENDENCY_RULES tool's output and the plan's Module and Interface Deltas into a
+validated `architecture-graph.json`, and the `architecture-viewer.html` page that
+renders it, so a reviewer sees where a brownfield change sits before reading the
+diff.
+
+**Reviewability Budget:** Primary surface: harness/adapter |
+Projected reviewable LOC: 515 (estimate-spec-size: 2 stories, 7 FRs, 9 files, new) |
+Production files: ~4 |
+Total files: ~9 |
+Budget result: over the 400 warn line as one PR; ships as two slices (producer, then page and routing)
+
+**Problem:** The data contract
+([architecture-viewer-contract.md](architecture-viewer-contract.md), 2026-09-06)
+fixed the graph JSON, the manifest row, and the one-hop scope rule, and shipped the
+schema and validator. It deliberately landed no producer and no page. The manifest
+row is `planned`, so every brownfield draft PR reports the page as missing because
+the gallery ships no template for it. That report is the designed fail-open path,
+and tests lock it (`tests/speckit-pro/unit/test-architecture-graph.py:95-100`,
+`docs-site/tests/artifact-gallery.spec.mjs:166`), but no roadmap entry owned the
+remaining work until this one (added 2026-09-25).
+
+**Scope:**
+- **Slice 1, producer.** Derive the graph from the DEPENDENCY_RULES tool the gate
+  tooling record picked (dependency-cruiser JSON for TypeScript; pydeps for Python,
+  with the `ast` fallback the record names). Join the plan's Module and Interface
+  Deltas as node `delta` values, validate with `speckit_pro_runner.architecture_graph`,
+  and write `specs/<feature>/artifacts/architecture-graph.json` only when
+  validation passes.
+- **Slice 2, page and routing.** Author `architecture-viewer.html` under the
+  single-file artifact contract with the slot inventory the data contract fixes.
+  Flip the manifest row to `shipped` with no other change. Teach the artifact
+  author on both hosts to fill it from the graph. The markdown export is the
+  adjacency list, one line per edge.
+- The whole-repository view renders only on explicit request
+  (`scope.kind: repository`), never by default.
+
+**Out of Scope:**
+- A new analysis tool; the graph comes from the DEPENDENCY_RULES tool only.
+- Parsing import-linter's text report for per-edge Python violations. Until that
+  parser exists, Python edges carry no `valid` field (data contract §1).
+- A second manifest entry for the whole-repository view.
+
+**Open Questions:**
+- **Which modules count as touched at draft-PR time.** The manifest routes the
+  page at the `draft-pr` stage, which ends the plan stage before any code exists,
+  while the data contract takes `scope.touched` from
+  `git diff --name-only <base>...HEAD`. At that point the diff holds only planning
+  documents, so the graph would be empty. Resolve at scaffold: take the touched set
+  from the plan's declared files at draft time and from the real diff when ART-010
+  refreshes the page, or move the page to the final stage.
+- The two items the data contract lists as unverified: `depcruise --affected`
+  semantics, and pydeps with namespace packages and `src/` layouts.
+
+**Verification:**
+- Failing-first fixtures: the producer writes nothing, and the page is a named
+  gap, when the slot is missing or validation fails; a two-hop node is rejected
+  under `pr` scope.
+- The absent-template assertions in `test-architecture-graph.py` and
+  `artifact-gallery.spec.mjs` flip to present-template assertions in the same PR
+  as the template.
+- The gallery's single-file and CSP tests pass for the new page, and
+  `pnpm --dir docs-site validate` passes, since the gallery is a docs contract
+  input.
+- Both hosts: the Codex artifact author fills the page too.
+
+**Key Files:**
+- `docs/ai/specs/architecture-viewer-contract.md` — the data contract, slot inventory, and scope rule
+- `speckit-pro/speckit_pro_runner/architecture_graph.py` and `speckit-pro/speckit_pro_runner/contracts/architecture-graph.schema.json` — the shipped validator and schema
+- `speckit-pro/artifact-gallery/manifest.json` — the `planned` row to flip
+- `speckit-pro/agents/artifact-author.md` and `speckit-pro/codex-agents/artifact-author.toml` — fill routing
+- `docs/ai/specs/gate-tooling-decision.md` — the DEPENDENCY_RULES tools and their graph output
+- `tests/speckit-pro/unit/test-architecture-graph.py` and `docs-site/tests/artifact-gallery.spec.mjs` — the absent-template assertions
 
 ---
 
