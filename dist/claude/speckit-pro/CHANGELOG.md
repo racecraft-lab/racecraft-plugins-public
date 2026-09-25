@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.36.2](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.36.1...speckit-pro-v2.36.2) (2026-09-25)
+
+
+### Bug Fixes
+
+* **speckit-pro:** classify confidence verdicts in runner responses ([#660](https://github.com/racecraft-lab/racecraft-plugins-public/issues/660)) ([fd93220](https://github.com/racecraft-lab/racecraft-plugins-public/commit/fd9322045d9db5dd0718bf397cc86b680fe4169c))
+* **speckit-pro:** honor explicit Codex workflow worktree selection ([#657](https://github.com/racecraft-lab/racecraft-plugins-public/issues/657)) ([0fa9c4b](https://github.com/racecraft-lab/racecraft-plugins-public/commit/0fa9c4bc97574f68a15350f23bebc3f97c035c6a))
+* **speckit-pro:** ignore persistent Claude agent memory in consumer worktrees ([#659](https://github.com/racecraft-lab/racecraft-plugins-public/issues/659)) ([d5b64ea](https://github.com/racecraft-lab/racecraft-plugins-public/commit/d5b64eac0122c416c3173ab07f1035b6a6a53573))
+* **speckit-pro:** make draft packet instructions executable ([#669](https://github.com/racecraft-lab/racecraft-plugins-public/issues/669)) ([c85cb4c](https://github.com/racecraft-lab/racecraft-plugins-public/commit/c85cb4c8a96f9876bc0eb78b17cace26787919d9))
+* **speckit-pro:** parse adjacent task code spans independently ([#658](https://github.com/racecraft-lab/racecraft-plugins-public/issues/658)) ([0a093a3](https://github.com/racecraft-lab/racecraft-plugins-public/commit/0a093a325f53cec6d4c85ff25f6c1d93be49d0d8))
+* **speckit-pro:** pass the workflow file to atomicity evaluation ([#668](https://github.com/racecraft-lab/racecraft-plugins-public/issues/668)) ([648d964](https://github.com/racecraft-lab/racecraft-plugins-public/commit/648d9643d76066dece071a652448910228ca6bd7))
+* **speckit-pro:** record broker preview observation time ([#670](https://github.com/racecraft-lab/racecraft-plugins-public/issues/670)) ([ebcf930](https://github.com/racecraft-lab/racecraft-plugins-public/commit/ebcf930ac6e3b4d03ad1119abafe246fdc14ff1a))
+
 ## [2.36.1](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.36.0...speckit-pro-v2.36.1) (2026-09-25)
 
 
