@@ -33,7 +33,7 @@
     "ledger_path": "docs/ai/specs/.process/.process/execution-control/ac068cab59ef67faf15646a7.json",
     "disposition": "continue",
     "reasons": [],
-    "elapsed_seconds": 16855.41946697235,
+    "elapsed_seconds": 20042.628268957138,
     "checkpoint_due": false
   },
   "plan": [
@@ -262,7 +262,7 @@
       "status": "skipped: outside --stage plan"
     }
   ],
-  "updated_at": "2026-09-25T18:16:48.697994+00:00",
+  "updated_at": "2026-09-25T19:58:04Z",
   "prerequisites": {
     "status": "completed_with_documented_exception",
     "all_pass": false,
@@ -473,5 +473,33 @@
   "layer_plan": {
     "status": "skipped",
     "reason": "atomicity-route is one-navigable-PR, not split-PR"
+  },
+  "analyze": {
+    "status": "blocked",
+    "findings_total": 7,
+    "findings_resolved": 5,
+    "open_findings": [
+      "H1",
+      "H2"
+    ],
+    "g6": "not_run",
+    "user_decision": "Split C1 into C1a and C1b as fifth PR; order A -> B -> C1a -> C1b -> C2",
+    "user_decision_applied": false,
+    "blocking_dispatch": {
+      "dispatch_id": "hrns015-analyze-c1-rescope-20260925",
+      "kind": "corrective",
+      "failure_invariant": "FR-026",
+      "helper_status": "expected_failure",
+      "disposition": "checkpoint_required",
+      "reason": "failure_family_budget_exhausted"
+    },
+    "in_flight_dispatches": [],
+    "remaining": [
+      "reconcile corrective budget without resetting ledger",
+      "apply five-slice decision",
+      "inventory and qualify each affected slice",
+      "finish H2 consensus",
+      "rerun Analyze, sidecar, and G6"
+    ]
   }
 }

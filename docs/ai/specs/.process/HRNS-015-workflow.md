@@ -37,7 +37,7 @@ captured during scoping.
 | Plan | `/speckit-plan` | ✅ Complete | G3 passed; advisory file-based estimate not estimated because the declared Slice A inventory is partial |
 | Checklist | `/speckit-checklist` | ✅ Complete | Three domains, 51 items, 11 gaps resolved; G4 passed with zero markers |
 | Tasks | `/speckit-tasks` | ✅ Complete | 31 tasks in 21 groups, all 14 stories and FR-001–029; sidecar valid; G5 passed, C1 budget unqualified |
-| Analyze | `/speckit-analyze` | 🔄 In Progress | Checking the task plan, C1 file cap, and atomicity-route conflict |
+| Analyze | `/speckit-analyze` | 🔄 In Progress | Seven findings; two design findings open; corrective dispatch refused by execution ledger |
 | Confidence Gate | G6.5 | ⏳ Pending | Pre-Implement composite confidence |
 | Implement | `/speckit-implement` | ⏳ Pending | |
 | Post | Post-Implementation | ⏳ Pending | Canonical 13-item closeout |
@@ -746,7 +746,23 @@ Focus on:
 
 | ID | Severity | Issue | Resolution |
 |----|----------|-------|------------|
-| | | | |
+| H1 | HIGH | C1 planned minimum is at least 29 changed paths, above the 24-path maximum; the newly selected C1a/C1b split is not yet inventoried or reflected in the planning artifacts. | |
+| H2 | HIGH | The recorded `one-navigable-PR` classifier route would emit one PR from this run, while the user now selects five ordered PRs. The delivery mode and planning controls remain unrecorded. | |
+| M1 | MEDIUM | Preliminary design-concept size figures were presented as a qualified Plan budget. | Spec and Plan now label them preliminary and retain the refactor-inclusive `not_estimated` verdict. |
+| M2 | MEDIUM | Plan named nonexistent test layer directories. | Corrected the named structural and tool-scoping directories and listed the Tasks sidecar. |
+| L1 | LOW | Requirements checklist had stale scenario and FR counts. | Corrected to 40 scenarios and 29 FRs. |
+| L2 | LOW | Workflow had a stale acceptance-scenario count. | Corrected both references to 40. |
+| L3 | LOW | Plan described Tasks as a later phase after Tasks had completed. | Updated the structure diagram. |
+
+### Analyze blocked checkpoint
+
+The user chose five ordered PR slices, A → B → C1a → C1b → C2, in response to the confirmed C1 budget conflict. This revises Q11's earlier four-PR choice as a planning direction. The decision has **not** been applied to spec.md, plan.md, tasks.md, or the task sidecar; neither new slice has a complete path or LOC inventory, and no budget passes are claimed.
+
+The H1 Round 1 consensus found no established compliant four-PR allocation and requested this user decision. H2 Round 1 escaped to three perspectives; Round 2 did not reach a synthesizer result. The independent `atomicity-route` output remains `one-navigable-PR`; it has not been rewritten as `split-PR`.
+
+A corrective `execution-control` reservation for FR-026 (`hrns015-analyze-c1-rescope-20260925`) returned `expected_failure`, disposition `checkpoint_required`, reason `failure_family_budget_exhausted`. The ledger froze no approved invariant IDs at kickoff; its earlier Tasks prefix repair used the sole `unresolved` family cycle. This run must stop new repair dispatches. The completed Analyze corrections were committed and pushed at `6106d333f`; the later read-only H2 audit was cancelled and cleaned up. No dispatch remains in flight.
+
+Remaining work on a permitted continuation: reconcile the execution-control budget without resetting this run's ledger; apply the user's five-slice decision; inventory and qualify C1a/C1b and every affected slice including generated outputs; finish H2 consensus, rerun Analyze and the task sidecar, then attempt G6. G6, Autonomy Boundary Preflight, G6.5, the plan-stage boundary commit, and draft PR emission have not run. Phase 7 implementation is outside this `--stage plan` request.
 
 ---
 
