@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.36.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.35.0...speckit-pro-v2.36.0) (2026-09-25)
+
+
+### Features
+
+* **speckit-pro:** run five Claude executors at a lower, measured effort ([#641](https://github.com/racecraft-lab/racecraft-plugins-public/issues/641)) ([5129ffb](https://github.com/racecraft-lab/racecraft-plugins-public/commit/5129ffbb04fae36e4e7247ddac8541904b22e24b))
+
+
+### Bug Fixes
+
+* **speckit-pro:** install Codex skills in .agents/skills and keep .codex/skills as legacy ([#635](https://github.com/racecraft-lab/racecraft-plugins-public/issues/635)) ([dc949a2](https://github.com/racecraft-lab/racecraft-plugins-public/commit/dc949a2cba277b2236618339d8dfdb39a4de6609))
+
 ## [2.35.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.34.0...speckit-pro-v2.35.0) (2026-09-24)
 
 
