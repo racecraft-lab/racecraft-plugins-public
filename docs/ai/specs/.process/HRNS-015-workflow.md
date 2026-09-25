@@ -95,6 +95,11 @@ every defect this spec fixes. Expect, and do not stop on:
   is flagged. It passes on CI's neutral checkout path. Confirm the rest of the
   suite is green, treat this one failure as environmental, and prove the scan on
   CI; do not edit files to avoid the words.
+- Every `generate-spec-index-write` apply rewrites
+  `specs/formal-001-selective-formal-methods/SPEC-MOC.md`, because `main` is
+  stale on it (its backlinks miss three tracked files). The regeneration is
+  correct and Slice B owns it: commit it once when it first appears, then stop
+  restoring it.
 
 ---
 
