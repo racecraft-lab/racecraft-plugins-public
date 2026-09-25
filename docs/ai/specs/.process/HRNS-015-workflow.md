@@ -35,7 +35,7 @@ captured during scoping.
 | Specify | `/speckit-specify` | ✅ Complete | 14 user stories, 29 current functional requirements, 39 acceptance scenarios after Clarify; G1 passed |
 | Clarify | `/speckit-clarify` | ✅ Complete | Four sessions complete; ten consensus decisions recorded; G2 passed with zero markers |
 | Plan | `/speckit-plan` | ✅ Complete | G3 passed; advisory file-based estimate not estimated because the declared Slice A inventory is partial |
-| Checklist | `/speckit-checklist` | ⏳ Pending | Run for each domain |
+| Checklist | `/speckit-checklist` | 🔄 In Progress | api-contracts, error-handling, state-management selected from the spec and Plan |
 | Tasks | `/speckit-tasks` | ⏳ Pending | |
 | Analyze | `/speckit-analyze` | ⏳ Pending | |
 | Confidence Gate | G6.5 | ⏳ Pending | Pre-Implement composite confidence |
@@ -404,6 +404,9 @@ G2 passed: the runner reported zero clarification markers; the spec has no human
 | 8 | Clarify | Team-capable executor teardown | [codebase, domain] | 1 | both-agree | Collect or stop children, confirm team cleanup before clean result; Codex lifetime remains HRNS-017 | codebase-analyst, domain-researcher |
 | 9 | Clarify | Resolve-pr feedback and pushed head | [codebase, domain] | 1 | both-agree | Exhaust thread/comment pages; verify, commit, push, compare fresh PR head SHA, then serial reply/resolve | codebase-analyst, domain-researcher |
 | 10 | Clarify | Scaffold blind-spot durable reason | [spec] | 1 | high-confidence | Record distinct reason in Design Concept `Blind-spot pass` line and operator status; elapsed time never implies abandonment | spec-context-analyst |
+| 11 | Checklist | Per-slice result shape | [codebase] | 1→2 | 3/3 | Ordered `slice_results` rows report slice ID, counts, status, pass, warnings, and blockers; complete row sums populate existing top-level fields, malformed or over-line slices block, and no-split callers keep the existing shape | codebase-analyst, spec-context-analyst, domain-researcher |
+| 12 | Checklist | Declared command scope and provenance | [codebase] | 1→2 | 3/3 | Limit declarations to the four existing quality slots, reject malformed declarations, preserve string-valued commands, and add `command_sources` plus quality-gate provenance | codebase-analyst, spec-context-analyst, domain-researcher |
+| 13 | Checklist | Legacy 11-row Post resume policy | [codebase, spec] | 1 | both-agree | Preserve only exact-name canonical statuses; missing or renamed rows start pending and never inherit completion from row position or predecessor | codebase-analyst, spec-context-analyst |
 
 ---
 
@@ -588,9 +591,9 @@ Focus on Autopilot, Gate, and PR-Emission Repair requirements:
 
 | Checklist | Items | Gaps | Spec References |
 |-----------|-------|------|-----------------|
-| api-contracts | | | |
-| error-handling | | | |
-| state-management | | | |
+| api-contracts | 15 | 3 found and resolved; 0 remaining | FR-001–FR-003, FR-011–FR-016, FR-024, FR-028–FR-029 |
+| error-handling | 17 | 4 found and resolved; 0 remaining | FR-001–FR-006, FR-011–FR-014, FR-016, FR-018–FR-023, FR-028–FR-029 |
+| state-management | 19 | 4 found; 3 resolved, 1 in consensus | FR-010, FR-017–FR-019, FR-025, FR-027 |
 | **Total** | | | |
 
 ### Addressing Gaps
