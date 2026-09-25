@@ -6,6 +6,9 @@ record. The gallery manifest carries the entry as `planned`, which per the
 single-file artifact contract means no template file exists yet and the
 artifact author skips it.
 
+Owner: ART-021 on the [html-artifacts roadmap](html-artifacts-technical-roadmap.md#art-021-architecture-viewer)
+(added 2026-09-25) builds the producer and the page.
+
 This is the "Quality Gauntlet" memo's item 10. It fixes three things so the
 producer and the page can be built independently:
 
