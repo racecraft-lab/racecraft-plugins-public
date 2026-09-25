@@ -34,7 +34,7 @@ captured during scoping.
 |-------|---------|--------|-------|
 | Specify | `/speckit-specify` | ✅ Complete | 14 user stories, 29 current functional requirements, 39 acceptance scenarios after Clarify; G1 passed |
 | Clarify | `/speckit-clarify` | ✅ Complete | Four sessions complete; ten consensus decisions recorded; G2 passed with zero markers |
-| Plan | `/speckit-plan` | ⏳ Pending | |
+| Plan | `/speckit-plan` | ✅ Complete | G3 passed; advisory file-based estimate not estimated because the declared Slice A inventory is partial |
 | Checklist | `/speckit-checklist` | ⏳ Pending | Run for each domain |
 | Tasks | `/speckit-tasks` | ⏳ Pending | |
 | Analyze | `/speckit-analyze` | ⏳ Pending | |
@@ -497,11 +497,13 @@ G2 passed: the runner reported zero clarification markers; the spec has no human
 
 | Artifact | Status | Notes |
 |----------|--------|-------|
-| `plan.md` | ⏳ | Technical context, execution flow |
-| `research.md` | ⏳ | Decision rationales (if needed) |
-| `data-model.md` | ⏳ | Entities and types |
-| `contracts/` | ⏳ | API specifications |
-| `quickstart.md` | ⏳ | Developer onboarding |
+| `plan.md` | ✅ Complete | Four-slice architecture and module deltas; preliminary budget distinguished from Plan sizing stress check |
+| `research.md` | ✅ Complete | Decisions, issue reproductions, and external documentation limitation |
+| `data-model.md` | ✅ Complete | Runner, packet, roadmap, and workflow state entities |
+| `contracts/` | ✅ Complete | `runner-and-roadmap.md` and `workflow-and-pr.md` |
+| `quickstart.md` | ✅ Complete | Failing-first workflow and verification commands |
+
+G3 passed with zero unresolved markers. No formal model is selected. The standalone `estimate-reviewable-loc` helper returned `not_estimated` (`projected: null`, zero parseable declared file operations) because Slice A’s ten named operations are a partial subset of its 16-file projection. The current size helper’s 1,932-LOC/five-slice stress check uses 77 provisional file touches and ignores the required-refactor input; it is not a refactor-inclusive estimate. Tasks must complete distinct file and refactor inventories before claiming the four-slice budget is qualified.
 
 ---
 

@@ -83,7 +83,7 @@
     },
     {
       "step": "Phase 3: Plan",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 4: Checklist - Pending domain discovery",
@@ -162,7 +162,7 @@
       "status": "skipped: outside --stage plan"
     }
   ],
-  "updated_at": "2026-09-25T17:43:37.169175+00:00",
+  "updated_at": "2026-09-25T18:11:56.903500+00:00",
   "prerequisites": {
     "status": "completed_with_documented_exception",
     "all_pass": false,
@@ -229,6 +229,12 @@
       "markers": 0,
       "human_review_markers": 0,
       "reason": "four Clarify sessions complete and decisions documented"
+    },
+    "G3": {
+      "pass": true,
+      "markers": 0,
+      "formal_selection": "none",
+      "reason": "plan.md exists with 0 unresolved markers"
     }
   },
   "specify": {
@@ -292,6 +298,18 @@
     "638": {
       "status": "included_in_spec_and_plan_prompt",
       "url": "https://github.com/racecraft-lab/racecraft-plugins-public/issues/638"
+    }
+  },
+  "plan_reviewability": {
+    "status": "not_estimated",
+    "projected": null,
+    "declared_production_files": 0,
+    "reason": "partial Slice A file operations; complete inventory required in Tasks",
+    "size_stress_check": {
+      "estimated_loc": 1932,
+      "suggested_slices": 5,
+      "files_input": "77 provisional slice touches, not distinct files",
+      "required_refactor_included": false
     }
   }
 }
