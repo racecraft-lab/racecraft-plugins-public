@@ -102,6 +102,70 @@ def registry_report(helpers: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def confidence_verdict_status(payload: Any, exit_code: int) -> str | None:
+    """Classify only complete confidence verdicts, never error-shaped output."""
+    required = {"pass", "composite", "criteria", "threshold", "mode", "recommended_action", "reason", "composite_source", "criteria_mean", "deductions", "deductions_applied", "input"}
+    if not isinstance(payload, dict) or not required.issubset(payload):
+        return None
+    if not isinstance(payload["criteria"], dict) or not isinstance(payload["deductions"], dict):
+        return None
+    if not {"critical", "high", "amount"}.issubset(payload["deductions"]):
+        return None
+    if any(type(payload["deductions"][key]) is not int for key in ("critical", "high")):
+        return None
+    if not isinstance(payload["deductions"]["amount"], (int, float)) or isinstance(payload["deductions"]["amount"], bool) or not math.isfinite(payload["deductions"]["amount"]):
+        return None
+    if not isinstance(payload["threshold"], (int, float)) or isinstance(payload["threshold"], bool) or not math.isfinite(payload["threshold"]) or not 0 <= payload["threshold"] <= 1:
+        return None
+    if not isinstance(payload["reason"], str) or not isinstance(payload["input"], str):
+        return None
+    if not isinstance(payload["deductions_applied"], bool):
+        return None
+    if not isinstance(payload["mode"], str) or not isinstance(payload["recommended_action"], str):
+        return None
+    if payload["pass"] is None:
+        if payload["composite"] is not None or payload["criteria"] or payload["composite_source"] is not None or payload["criteria_mean"] is not None:
+            return None
+        if payload["deductions"] != {"critical": 0, "high": 0, "amount": 0.0} or payload["deductions_applied"]:
+            return None
+    elif type(payload["pass"]) is bool:
+        if not isinstance(payload["composite"], (int, float)) or isinstance(payload["composite"], bool) or not math.isfinite(payload["composite"]) or not 0 <= payload["composite"] <= 1:
+            return None
+        if set(payload["criteria"]) != {"task_understanding", "approach_clarity", "requirements_alignment", "risk_assessment", "completeness"}:
+            return None
+        if any(value is not None and (not isinstance(value, (int, float)) or isinstance(value, bool) or not math.isfinite(value)) for value in payload["criteria"].values()):
+            return None
+        if not isinstance(payload["composite_source"], str) or payload["composite_source"] not in {"stated", "computed"}:
+            return None
+        if payload["criteria_mean"] is not None and (not isinstance(payload["criteria_mean"], (int, float)) or isinstance(payload["criteria_mean"], bool)):
+            return None
+    else:
+        return None
+    verdict = (payload["pass"], payload["mode"], payload["recommended_action"], exit_code)
+    if verdict in {(True, "advisory", "proceed", 0), (True, "strict", "proceed", 0), (False, "advisory", "continue_with_warning", 2), (None, "advisory", "soft_skip", 1), (None, "strict", "soft_skip", 1)}:
+        return "ok"
+    if verdict == (False, "strict", "stop", 2):
+        return "expected_failure"
+    return None
+
+
+def confidence_runner_response(request_id: str, data: dict[str, Any], exit_code: int, stderr: dict[str, Any]) -> dict[str, Any] | None:
+    status = confidence_verdict_status(data.get("stdout_json"), exit_code)
+    if status == "ok":
+        return response("ok", request_id=request_id, data=data)
+    if status == "expected_failure":
+        return response(status, request_id=request_id, data=data, diagnostics=[diagnostic("validation_failure", "confidence is below threshold in strict mode")])
+    if exit_code != 1:
+        return None
+    try:
+        file_error = json.loads(stderr["text"])
+    except (TypeError, ValueError):
+        return None
+    if isinstance(file_error, dict) and isinstance(file_error.get("error"), str) and file_error["error"].startswith(("workflow file not found:", "workflow file unreadable:")):
+        return response("missing_prerequisite", request_id=request_id, data=data, diagnostics=[diagnostic("missing_prerequisite", file_error["error"])])
+    return None
+
+
 def run_registered_helper(entry: Any, request: Any) -> dict[str, Any]:
     repo_root_result = resolve_repo_root(request.inputs)
     if isinstance(repo_root_result, dict):
@@ -138,6 +202,10 @@ def run_registered_helper(entry: Any, request: Any) -> dict[str, Any]:
     exit_code = int(result["exit_code"])
     status = EXIT_STATUS.get(exit_code, "subprocess_failure")
     data = helper_result_data(entry, inputs, argv_result, repo_root, exit_code, stdout, stderr, duration_ms)
+    if entry.helper_id == "confidence-gate":
+        classified = confidence_runner_response(request.request_id, data, exit_code, stderr)
+        if classified is not None:
+            return classified
     if status == "ok":
         return response("ok", request_id=request.request_id, data=data)
     return response(
@@ -4533,7 +4601,9 @@ def confidence_gate(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
         return make_result('{"error":"Usage: confidence-gate <workflow-file> [--threshold N.NN] [--mode advisory|strict]"}\n', exit_code=1)
     if not trusted_file_exists(workflow, repo_root):
         return make_result("", f'{{"error":"workflow file not found: {workflow_raw}"}}\n', 1)
-    text = trusted_text(workflow, repo_root) or ""
+    text = trusted_text(workflow, repo_root)
+    if text is None:
+        return make_result("", json_text({"error": f"workflow file unreadable: {workflow_raw}"}), 1)
     matches = re.findall(r"^📊 Confidence: ([01]\.[0-9]{2})$", text, flags=re.M)
     try:
         threshold = float(threshold_text)
