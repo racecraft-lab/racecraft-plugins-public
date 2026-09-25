@@ -32,7 +32,7 @@ captured during scoping.
 
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
-| Specify | `/speckit-specify` | ✅ Complete | 14 user stories, 29 current functional requirements, 39 acceptance scenarios after Clarify; G1 passed |
+| Specify | `/speckit-specify` | ✅ Complete | 14 user stories, 29 current functional requirements, 40 acceptance scenarios after Clarify; G1 passed |
 | Clarify | `/speckit-clarify` | ✅ Complete | Four sessions complete; ten consensus decisions recorded; G2 passed with zero markers |
 | Plan | `/speckit-plan` | ✅ Complete | G3 passed; advisory file-based estimate not estimated because the declared Slice A inventory is partial |
 | Checklist | `/speckit-checklist` | ✅ Complete | Three domains, 51 items, 11 gaps resolved; G4 passed with zero markers |
@@ -324,7 +324,7 @@ Slice C2, resolve-pr, scaffold, envelopes, templates:
 |--------|-------|
 | Functional Requirements | 29 (FR-001 through FR-029 after Clarify) |
 | User Stories | 14 |
-| Acceptance Criteria | 39 scenarios after Clarify |
+| Acceptance Criteria | 40 scenarios after Clarify |
 
 ### Files Generated
 

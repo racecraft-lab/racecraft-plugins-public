@@ -1,9 +1,9 @@
 {
   "schema_version": "task-execution.v1",
   "fingerprints": {
-    "plan_sha256": "44e825a1be20c621c66c470af7abb93882b348468f1395eaeae63664b70eee03",
-    "spec_sha256": "3c7f9d00a71d19a56fa61c67e4e822357a21902f2c30ca4bfa97a033446e1906",
-    "tasks_sha256": "6cef9a8d2f5014bf2d33cc76c622fc28a0577416cb059765c4f7c7e1591e93fa"
+    "plan_sha256": "88d7b31ad36e7d4b9d6f581f962cffeac6c1b6dc6bd60430ab1d79c19fc62f66",
+    "spec_sha256": "ed3a6503db7ff972a1814b74e4670021f6e58a687d0d076af366b089be54aae0",
+    "tasks_sha256": "509271686e4e0d627b82a80488df392f32092612bc207c74d2ad4a51ab4cfc86"
   },
   "tasks": {
     "T001": {

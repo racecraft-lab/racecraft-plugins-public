@@ -2,7 +2,7 @@
 
 **Input**: HRNS-015 spec, plan, research, data model, contracts, quickstart, workflow Tasks Prompt, and ratified design concept. **Execution limit**: the entire automated implementation, startup, repair, and final checks has a two-hour budget. Every behavior task begins with a failing fixture and records RED before its minimal fix and GREEN. No task may be checked off from prose alone. Both hosts ship together for every host-facing behavior. Tests live under `tests/speckit-pro/` and freeze any needed historical prose in their own fixtures; tests never open a temporary feature spec path at run time.
 
-**Reviewability status**: **unqualified**. The Plan-phase refactor-inclusive result is `not_estimated`; its 1,442 LOC and file counts are provisional. T001 records complete *distinct* authored and generated path operations and distinct required-refactor files for each slice. T002 enforces the budget before any implementation; T017 reruns the updated refactor-aware estimator. Each slice must have no more than four production files, fewer than 25 total changed paths including generated outputs, and a passing actual LOC gate. A task that would exceed any bound stops for split or rescope before its fix. Q11's A → B → C1 → C2 decision remains the design baseline; the C1 conflict below is a blocking Analyze/G6.5 decision, not an approved extra PR or exception.
+**Reviewability status**: **unqualified**. The Plan-phase refactor-inclusive result is `not_estimated`; its 1,442 LOC and file counts are provisional. T001 records complete *distinct* authored and generated path operations and distinct required-refactor files for each slice. T002 enforces the budget before any implementation and records the `atomicity-route` result (`one-navigable-PR`, `change-shape:modify-heavy`) against Q11's four-PR decision; T017 reruns the updated refactor-aware estimator. Each slice must have no more than four production files, fewer than 25 total changed paths including generated outputs, and a passing actual LOC gate. A task that would exceed any bound stops for split or rescope before its fix. Q11's A → B → C1 → C2 decision remains the design baseline; the C1 conflict below is a blocking Analyze/G6.5 decision, not an approved extra PR or exception.
 
 ## Confirmed C1 file-budget conflict
 
@@ -25,7 +25,7 @@ The *minimum* C1 source set in the Plan contains 12 distinct authored paths: the
 
 **Goal**: Keep a two-hour, four-slice delivery reviewable. **Independent test**: no behavior task starts while any slice lacks a complete distinct inventory, exceeds four production files or 24 total files, or has an unqualified refactor-inclusive estimate; C1's confirmed conflict is surfaced for Analyze/G6.5 rather than marked pass.
 
-- [ ] T002 Reconcile the inventory, the Plan's `not_estimated` result, slice LOC warn/block lines, and the four-PR decision in `specs/hrns-015-autopilot-gate-pr-emission-repair/.process/slice-inventory.md`; stop the affected slice on an incomplete or over-limit inventory and propose the smallest reviewable rescope for ratification (FR-026).
+- [ ] T002 Reconcile the inventory, the Plan's `not_estimated` result, slice LOC warn/block lines, Q11's four-PR decision, and the classifier's `one-navigable-PR` route in `specs/hrns-015-autopilot-gate-pr-emission-repair/.process/slice-inventory.md`; stop the affected slice on an incomplete or over-limit inventory and propose the smallest reviewable rescope for ratification (FR-026).
 
 ## Phase 3: User Story 1 — final release note (P1, Slice A)
 

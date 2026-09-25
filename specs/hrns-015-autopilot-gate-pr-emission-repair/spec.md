@@ -268,10 +268,10 @@ As an operator following a generated roadmap, I can open its workflow links at t
 
 - **Primary surface**: harness/adapter.
 - **Secondary surfaces**: schema/config and docs/process.
-- **Projected reviewable LOC**: approximately 1,442 across all four slices using the design concept's slice estimates: A 282; B 410; C1 335; C2 415. Re-estimate during Plan, including required refactors.
+- **Projected reviewable LOC**: the design concept's preliminary four-slice sum is approximately 1,442 (A 282; B 410; C1 335; C2 415). The Plan-phase refactor-inclusive estimate remains `not_estimated`; its legacy 1,932-LOC stress result is not an approved replacement budget.
 - **Projected production files**: at most 4 in each slice; shared files may recur across slices, so an across-slice unique count is not asserted here.
-- **Projected total files**: A about 10, B about 14, C1 about 14, C2 about 16; each slice must remain below 25.
-- **Budget result**: split required for the whole feature; each of the four slices is planned below the per-slice block line.
+- **Projected total files**: the design concept initially projected A about 10, B about 14, C1 about 14, and C2 about 16. Tasks subsequently proved a C1 planned lower bound of at least 29 distinct authored/generated/test paths, above the 24-path maximum; the other slice counts remain provisional.
+- **Budget result**: split required for the whole feature; C1 currently fails the per-slice total-file limit, so the ratified four-PR plan is not budget-qualified. Analyze/G6.5 must record a ratified rescope or revised PR split before C1 implementation or publication.
 - **Split decision**: A (PR emission), B (gates and counters), C1 (Post list and team teardown), C2 (resolve-pr, scaffold, envelopes, and template links). If a slice exceeds 4 production files or reaches 25 total files, split or rescope before implementation.
 
 ### PR Review Packet Requirements *(mandatory)*

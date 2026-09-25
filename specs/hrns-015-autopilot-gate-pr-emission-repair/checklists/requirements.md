@@ -17,14 +17,14 @@
 - [x] Requirements are testable and unambiguous.
 - [x] Success criteria are measurable.
 - [x] Success criteria describe observable outcomes rather than implementation details.
-- [x] All 14 user stories have acceptance scenarios (35 total).
+- [x] All 14 user stories have acceptance scenarios (40 total).
 - [x] Edge cases are identified.
 - [x] Scope is bounded by four slices and explicit out-of-scope decisions.
 - [x] Dependencies and assumptions are identified.
 
 ## Feature Readiness
 
-- [x] All 27 functional requirements trace to user stories and acceptance scenarios.
+- [x] All 29 functional requirements trace to user stories and acceptance scenarios.
 - [x] User scenarios cover the primary operator and reviewer flows on both hosts.
 - [x] The 11 measurable outcomes cover the feature's acceptance intent.
 - [x] No implementation design leaks into the specification.

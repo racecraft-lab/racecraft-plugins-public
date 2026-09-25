@@ -31,14 +31,14 @@ The table is an authored-file projection, including host instructions, schemas/c
 | --- | --- | ---: | ---: | ---: | --- |
 | A — packet and PR emission | `pr_emission.py`, `read_only.py`, `mutation.py`, PR packet schema | 4 | 282 | 16 | Within block lines |
 | B — gates and counters | `read_only.py`, `registry.py`, `refresh-release-artifacts.py`, quality-gates config | 4 | 410 | 19 | LOC warn; below block |
-| C1 — Post and teardown | phase coverage guard, `formal/lifecycle.py` only if its name subset needs correction | 1–2 | 335 | 24 | Within block lines, one-file headroom |
+| C1 — Post and teardown | phase coverage guard, `formal/lifecycle.py` only if its name subset needs correction | 1–2 | 335 | ≥29 planned paths | Blocks: exceeds the 24-path maximum |
 | C2 — resolve-pr and scaffold | no Python/schema/config production file planned; paired host skills and roadmap template | 0 | 415 | 18 | LOC warn; below block |
 
-C1's 24-file projection includes its paired executor/host instructions and targeted fixtures; optional prose cleanup or generated fan-out must displace another planned file or force a split. Slice A's 16-file projection consists of **10 named candidate source/document operations below plus six provisional test/generated/support paths not yet identified**; the ten-name subset is not a complete estimator input. Every projected total is provisional, and the actual diff, including generated output, determines the gate. Every slice has one primary surface; secondary schema/config and docs/process changes support that surface. The four PRs are ordered A, B, C1, C2 whether Tasks later selects one split-PR run or separate runs. Deferred scope is recorded against HRNS-019 and HRNS-017.
+Design-concept revision note: its C1 projection of about 14 files and this Plan's former 24-file projection are superseded for execution by the Tasks inventory: 12 mandatory authored paths, 14 generated counterparts, two test modules, and one suite-manifest path give at least 29 distinct planned paths before other guidance, fixtures, or reference pages. This exceeds the 24-path maximum. Q11's four-slice decision remains ratified; the budget conflict requires an explicit rescope or revised PR split before C1 implementation. Slice A's 16-file projection consists of **10 named candidate source/document operations below plus six provisional test/generated/support paths not yet identified**; the ten-name subset is not a complete estimator input. Every projected total is provisional, and the actual diff, including generated output, determines the gate. Every slice has one primary surface; secondary schema/config and docs/process changes support that surface. The four PRs are ordered A, B, C1, C2 whether Tasks later selects one split-PR run or separate runs. Deferred scope is recorded against HRNS-019 and HRNS-017.
 
 ### Plan-phase size check
 
-On 2026-09-25, the current `estimate_spec_size` helper was called with `user_stories=14`, `frs=29`, `files=77` (the **sum of provisional slice file-touch projections** 16+19+24+18, including repeat touches), `new_vs_modify=modify`, and no spike. It returned `estimated_loc=1932`, `suggested_slices=5`, `status=warn`. Passing `required_refactor_files=1` returned the **same** result, confirming that this installed helper does not yet represent the specified refactor input. The 77 touch count is not a unique-file inventory and this legacy output is a sizing stress check, not a refactor-inclusive budget or a replacement for the preliminary 1,442 LOC. **Full Plan-phase re-estimate including required refactors: not estimated** because the current helper ignores that input and the distinct required-refactor file count is unmeasured. During Tasks, identify actual files and distinct required-refactor work, then run the updated estimator and recalculate each slice; before each PR, measure the actual LOC and file diff. If the stricter slice limits fail, split or rescope before implementation completion.
+On 2026-09-25, the current `estimate_spec_size` helper was called with `user_stories=14`, `frs=29`, `files=77` (the **sum of superseded provisional slice file-touch projections** 16+19+24+18, including repeat touches), `new_vs_modify=modify`, and no spike. It returned `estimated_loc=1932`, `suggested_slices=5`, `status=warn`. Passing `required_refactor_files=1` returned the **same** result, confirming that this installed helper does not yet represent the specified refactor input. The 77 touch count is not a unique-file inventory and this legacy output is a sizing stress check, not a refactor-inclusive budget or a replacement for the preliminary 1,442 LOC. **Full Plan-phase re-estimate including required refactors: not estimated** because the current helper ignores that input and the distinct required-refactor file count is unmeasured. During Tasks, identify actual files and distinct required-refactor work, then run the updated estimator and recalculate each slice; before each PR, measure the actual LOC and file diff. If the stricter slice limits fail, split or rescope before implementation completion.
 
 ## Module and Interface Deltas
 
@@ -115,7 +115,8 @@ specs/hrns-015-autopilot-gate-pr-emission-repair/
 ├── contracts/
 │   ├── runner-and-roadmap.md
 │   └── workflow-and-pr.md
-└── tasks.md                 # generated by the later Tasks phase
+├── tasks.md                 # generated in the Tasks phase
+└── .process/task-execution.json  # task definitions and source fingerprints
 ~~~
 
 ### Source and validation surfaces
@@ -130,7 +131,7 @@ speckit-pro/
 ├── agents/{phase,analyze,checklist,implement}-executor.md
 └── codex-agents/{phase,analyze,checklist,implement}-executor.toml
 scripts/refresh-release-artifacts.py
-tests/speckit-pro/{unit,layer-1,layer-5}/
+tests/speckit-pro/{unit,layer1-structural,layer5-tool-scoping}/
 docs/ai/specs/
 docs/prd-harness-engineering-uplift.md
 ~~~
@@ -144,7 +145,7 @@ docs/prd-harness-engineering-uplift.md
 3. **C1 — Post and teardown.** Freeze 13-row template/host mismatch and persisted workflow/state cases with missing, duplicate, pending, in-progress, mismatched, and unjustifiably skipped rows, including a legacy 11-row record whose new or renamed rows stay pending while unique exact-name statuses are preserved. Assert the workflow `✅ Complete` to state `completed` mapping and the sole optional-extension skip: both records use identical `skipped: <extension> not installed` only for a canonical extension-dependent row, and supported registry plus directory checks confirm absence. An out-of-stage skip reactivates as pending when its stage resumes. Build the new completion rule from `POST_STEPS` and call it on both hosts immediately before successful full-run return after Post; a staged-run return does not invoke the full Post completion boundary. Existing `status-evidence` remains a separate audit and cannot prove Post completion. Freeze child result/stop and teardown evidence for all eight executor definitions; their clean completion requires confirmed cleanup. Review formal lifecycle's Post subset.
 4. **C2 — feedback, scaffold, envelopes, links.** Freeze >100 thread, >100 comment, missing cursor, failed page, verification failure, push failure, mismatched fresh `headRefOid`, serial reply/resolve, and resolved-state confirmation. Use the existing GraphQL route and query the PR head again after push. Freeze late nonempty analyst and all three explicit no-findings reasons, with the existing Design Concept header line as durable record. Freeze full request envelopes at only the named failure sites. Reproduce issue #638's broken template link and test new `.process/` output, verified legacy target preservation, and broken legacy repair.
 
-Each slice follows red fixture → minimal repair → targeted green test → quick suite → generated source refresh/check → applicable docs/lint/CI suite. PR packet traceability maps every story and success criterion to source, fixture, and result. The exact four-PR emission route is selected after Tasks, while the A→B→C1→C2 dependency order stays fixed.
+Each slice follows red fixture → minimal repair → targeted green test → quick suite → generated source refresh/check → applicable docs/lint/CI suite. PR packet traceability maps every story and success criterion to source, fixture, and result. The post-Tasks `atomicity-route` classifier returned `one-navigable-PR` with `change-shape:modify-heavy` and `releasable: true`, contradicting Q11's ratified four-PR decision. The workflow records the result; it does not authorize a silent route change. Analyze/G6.5 must reconcile this route with Q11 and the C1 budget breach before implementation. The A→B→C1→C2 dependency order remains the baseline.
 
 ## PR review packet source
 
