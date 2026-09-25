@@ -65,13 +65,13 @@ def task_references(title: str, root: Path) -> list[str]:
     """
     references: set[str] = set()
     root_names = {"Makefile", "Dockerfile", "Justfile", "Gemfile", "Rakefile", "Procfile", "LICENSE", "NOTICE", "README"}
-    for code_span, prose in re.findall(r"`([^`]+)`|(\S+)", title):
+    for code_span, prose in re.findall(r"`([^`]+)`|([^`\s]+)", title):
         for word in (code_span or prose).split():
             token = word.strip("`'\"()[]{}").rstrip(",;.!?")
             if not token or "://" in token:
                 continue
             token = re.sub(r":\d+(?:-\d+)?$", "", token).split("#", 1)[0]
-            explicit_path = (bool(code_span) and "/" in token) or token.startswith(("./", "../", "/", "~/")) or "\\" in token
+            explicit_path = (bool(code_span) and "/" in token) or (token != "/" and token.startswith(("./", "../", "/", "~/"))) or "\\" in token
             if explicit_path or re.search(r"\.[A-Za-z][A-Za-z0-9_-]*$", token) or token in root_names or (root / token).is_file():
                 references.add(token)
     return sorted(references)
