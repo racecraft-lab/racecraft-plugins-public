@@ -35,12 +35,12 @@ captured during scoping.
 | Specify | `/speckit-specify` | ✅ Complete | 14 user stories, 29 current functional requirements, 39 acceptance scenarios after Clarify; G1 passed |
 | Clarify | `/speckit-clarify` | ✅ Complete | Four sessions complete; ten consensus decisions recorded; G2 passed with zero markers |
 | Plan | `/speckit-plan` | ✅ Complete | G3 passed; advisory file-based estimate not estimated because the declared Slice A inventory is partial |
-| Checklist | `/speckit-checklist` | 🔄 In Progress | api-contracts, error-handling, state-management selected from the spec and Plan |
+| Checklist | `/speckit-checklist` | ✅ Complete | Three domains, 51 items, 11 gaps resolved; G4 passed with zero markers |
 | Tasks | `/speckit-tasks` | ⏳ Pending | |
 | Analyze | `/speckit-analyze` | ⏳ Pending | |
 | Confidence Gate | G6.5 | ⏳ Pending | Pre-Implement composite confidence |
 | Implement | `/speckit-implement` | ⏳ Pending | |
-| Post | Post-Implementation | ⏳ Pending | Canonical 11-item closeout |
+| Post | Post-Implementation | ⏳ Pending | Canonical 13-item closeout |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⏭️ Skipped | ⚠️ Blocked
 
@@ -407,6 +407,7 @@ G2 passed: the runner reported zero clarification markers; the spec has no human
 | 11 | Checklist | Per-slice result shape | [codebase] | 1→2 | 3/3 | Ordered `slice_results` rows report slice ID, counts, status, pass, warnings, and blockers; complete row sums populate existing top-level fields, malformed or over-line slices block, and no-split callers keep the existing shape | codebase-analyst, spec-context-analyst, domain-researcher |
 | 12 | Checklist | Declared command scope and provenance | [codebase] | 1→2 | 3/3 | Limit declarations to the four existing quality slots, reject malformed declarations, preserve string-valued commands, and add `command_sources` plus quality-gate provenance | codebase-analyst, spec-context-analyst, domain-researcher |
 | 13 | Checklist | Legacy 11-row Post resume policy | [codebase, spec] | 1 | both-agree | Preserve only exact-name canonical statuses; missing or renamed rows start pending and never inherit completion from row position or predecessor | codebase-analyst, spec-context-analyst |
+| 14 | Checklist | Optional-extension Post skip | [codebase, spec] | 1→2 | 2/3 | Accept only a reason-coded skip for an optional Post extension verified absent in both persisted records; all other skips and incomplete rows block. Spec-context dissented because Q1 did not ratify skip policy | codebase-analyst, spec-context-analyst, domain-researcher |
 
 ---
 
@@ -593,8 +594,8 @@ Focus on Autopilot, Gate, and PR-Emission Repair requirements:
 |-----------|-------|------|-----------------|
 | api-contracts | 15 | 3 found and resolved; 0 remaining | FR-001–FR-003, FR-011–FR-016, FR-024, FR-028–FR-029 |
 | error-handling | 17 | 4 found and resolved; 0 remaining | FR-001–FR-006, FR-011–FR-014, FR-016, FR-018–FR-023, FR-028–FR-029 |
-| state-management | 19 | 4 found; 3 resolved, 1 in consensus | FR-010, FR-017–FR-019, FR-025, FR-027 |
-| **Total** | | | |
+| state-management | 19 | 4 found and resolved; 0 remaining | FR-010, FR-017–FR-019, FR-025, FR-027 |
+| **Total** | 51 | 11 found and resolved; 0 remaining | Three selected domains |
 
 ### Addressing Gaps
 

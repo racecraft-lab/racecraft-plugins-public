@@ -21,7 +21,7 @@
 
 - [ ] CHK007 Are successful full-run completion and successful staged-run return distinguished when out-of-stage Post rows are persisted as skipped? [Clarity, Spec §FR-018]
 - [ ] CHK008 Are the persisted Markdown status and state-file status mapped to the required `completed` completion state without ambiguity? [Clarity, Spec §FR-018]
-- [ ] CHK009 Is the treatment of intentionally skipped extension-dependent Post rows consistent with the all-rows-completed completion rule? [Gap] [Spec §FR-018]
+- [ ] CHK009 Is the sole verified absent-extension skip distinguished from out-of-stage or unjustified skips at the full-run completion boundary? [Consistency, Spec §FR-018]
 - [ ] CHK010 Is the canonical Post list stated as one source rather than independently numbered lists on the hosts? [Consistency, Spec §FR-017; Plan §C1]
 - [ ] CHK011 Is the source-index rule consistent between plain refresh and isolated `--check`, including a candidate inside a tracked directory? [Consistency, Spec §FR-009]
 - [ ] CHK012 Is the formal-001 baseline handled as generated output rather than as an authored exception? [Consistency, Spec §FR-010; Plan §Slice B]
@@ -44,4 +44,4 @@
 - Mark items `[x]` only after review confirms the requirement-quality criterion is satisfied.
 - `/speckit-implement` reads checklist checkbox state as a gate and must not modify markers.
 - This checklist evaluates the written requirements; it does not assert implementation behavior.
-- CHK009 remains open because the existing canonical task-list rule persists unavailable extension tasks as `skipped: <reason>`, while FR-018 requires every full-run Post row to be `completed`. The project must choose the persisted-status contract before a verification fixture can be unambiguous.
+- CHK009 was resolved by Round 2 consensus: only a canonical optional extension-dependent row with a verified absent extension and identical reason-coded skip in both persisted records may satisfy full-run completion; all other skips remain blockers.

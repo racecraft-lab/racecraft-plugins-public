@@ -28,6 +28,9 @@ slice artifacts in the body below.
 - [research.md](research.md)
 - [contracts/runner-and-roadmap.md](contracts/runner-and-roadmap.md)
 - [contracts/workflow-and-pr.md](contracts/workflow-and-pr.md)
+- [checklists/api-contracts.md](checklists/api-contracts.md)
+- [checklists/error-handling.md](checklists/error-handling.md)
 - [checklists/requirements.md](checklists/requirements.md)
+- [checklists/state-management.md](checklists/state-management.md)
 - [quickstart.md](quickstart.md)
 <!-- GENERATED:BACKLINKS:END -->

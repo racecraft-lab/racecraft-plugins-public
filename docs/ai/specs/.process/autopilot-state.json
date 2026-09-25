@@ -5,7 +5,7 @@
   "branch": "hrns-015-autopilot-gate-pr-emission-repair",
   "status": "in_progress",
   "stage": "plan",
-  "active_step": "Phase 4: Checklist - state-management Consensus",
+  "active_step": "Phase 4: Checklist complete; Phase 5: Tasks pending",
   "stage_resolution": {
     "source": "argv",
     "basis": "explicit --stage plan",
@@ -33,8 +33,8 @@
     "ledger_path": "docs/ai/specs/.process/.process/execution-control/ac068cab59ef67faf15646a7.json",
     "disposition": "continue",
     "reasons": [],
-    "elapsed_seconds": 14028.649794101715,
-    "checkpoint_due": true
+    "elapsed_seconds": 16855.41946697235,
+    "checkpoint_due": false
   },
   "plan": [
     {
@@ -107,7 +107,7 @@
     },
     {
       "step": "Phase 4: Checklist - state-management Consensus",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 5: Tasks",
@@ -255,6 +255,11 @@
       "markers": 0,
       "formal_selection": "none",
       "reason": "plan.md exists with 0 unresolved markers"
+    },
+    "G4": {
+      "pass": true,
+      "markers": 0,
+      "reason": "three checklists, 51 items, 11 resolved gaps; zero remaining Gap markers"
     }
   },
   "specify": {
@@ -333,7 +338,7 @@
     }
   },
   "checklist": {
-    "status": "in_progress",
+    "status": "completed",
     "domains": [
       "api-contracts",
       "error-handling",
@@ -355,8 +360,8 @@
       "state-management": {
         "items": 19,
         "gaps_found": 4,
-        "gaps_remaining": 1,
-        "status": "awaiting_consensus"
+        "gaps_remaining": 0,
+        "status": "completed"
       }
     }
   }
