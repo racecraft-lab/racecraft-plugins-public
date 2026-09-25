@@ -75,7 +75,7 @@ tests, and config do not contribute to the reviewable-LOC count.
   non-goals, review order, scope budget, traceability, verification evidence,
   known gaps, and rollback/flag notes.
 
-Projected LOC below comes from runner operation `estimate-spec-size` on 2026-09-25. EDA-004, EDA-007, and EDA-010 each returned `suggested_slices: 2` with status `ok`; their content is mostly new Markdown under the greenfield allowance, so no split is planned. Re-check at Tasks.
+Projected LOC below comes from runner operation `estimate-spec-size` on 2026-09-25. EDA-004, EDA-007, and EDA-010 each returned `suggested_slices: 2` with status `ok`. Each sits above the 400-LOC warn line and below the 800-LOC block line; the warning is accepted and no split is planned. Re-check at Tasks.
 
 ---
 
@@ -104,17 +104,17 @@ Each accepted spec delivers its own observable outcome.
 
 | Spec | Name | Status | Workflow File | Next Phase |
 |------|------|--------|---------------|------------|
-| EDA-001 | Attribution Foundation | ⏳ Pending | Not scaffolded | Specify |
-| EDA-002 | Frontier-Round Grilling | ⏳ Pending | Not scaffolded | Blocked by EDA-001 |
-| EDA-003 | Domain Model and ADRs | ⏳ Pending | Not scaffolded | Blocked by EDA-002 |
-| EDA-004 | Prototype Skill | ⏳ Pending | Not scaffolded | Blocked by EDA-002 |
-| EDA-005 | Deep-Module Planning and Slicing | ⏳ Pending | Not scaffolded | Blocked by EDA-003 |
-| EDA-006 | Seams-First TDD | ⏳ Pending | Not scaffolded | Blocked by EDA-005 |
-| EDA-007 | Diagnose Skill | ⏳ Pending | Not scaffolded | Blocked by EDA-001 |
-| EDA-008 | Post-Implementation Discipline | ⏳ Pending | Not scaffolded | Blocked by EDA-001 |
-| EDA-009 | Context Hygiene and Agent Writing | ⏳ Pending | Not scaffolded | Blocked by EDA-001 |
-| EDA-010 | Architecture Review Skill | ⏳ Pending | Not scaffolded | Blocked by EDA-003, EDA-005 |
-| EDA-011 | Adoption Close-out | ⏳ Pending | Not scaffolded | Blocked by EDA-001 through EDA-010 |
+| EDA-001 | Attribution Foundation | ⏳ Pending | — | Specify |
+| EDA-002 | Frontier-Round Grilling | ⏳ Pending | — | Blocked by EDA-001 |
+| EDA-003 | Domain Model and ADRs | ⏳ Pending | — | Blocked by EDA-002 |
+| EDA-004 | Prototype Skill | ⏳ Pending | — | Blocked by EDA-002 |
+| EDA-005 | Deep-Module Planning and Slicing | ⏳ Pending | — | Blocked by EDA-003 |
+| EDA-006 | Seams-First TDD | ⏳ Pending | — | Blocked by EDA-005 |
+| EDA-007 | Diagnose Skill | ⏳ Pending | — | Blocked by EDA-001 |
+| EDA-008 | Post-Implementation Discipline | ⏳ Pending | — | Blocked by EDA-001 |
+| EDA-009 | Context Hygiene and Agent Writing | ⏳ Pending | — | Blocked by EDA-001 |
+| EDA-010 | Architecture Review Skill | ⏳ Pending | — | Blocked by EDA-003, EDA-005 |
+| EDA-011 | Adoption Close-out | ⏳ Pending | — | Blocked by EDA-001 through EDA-010 |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⚠️ Blocked
 
@@ -253,7 +253,7 @@ Budget result: within budget
 Projected reviewable LOC: 580 |
 Production files: 5 |
 Total files: 12-15 |
-Budget result: within budget under the greenfield allowance (warn 600)
+Budget result: warning accepted (580 is above the 400 warn line and below the 800 block line; the slice also modifies existing files, so the greenfield allowance does not apply)
 
 **Scope:**
 - Add `speckit-prototype` (model-invoked) on Claude and Codex, adapted from Matt's `prototype`, `LOGIC.md`, and `UI.md`: a logic branch (one self-contained HTML file with a state panel, free-play controls, and guided walkthroughs over a pure logic module) and a UI branch (three to five structurally different variants behind a switcher).
@@ -355,7 +355,7 @@ Budget result: within budget
 Projected reviewable LOC: 580 |
 Production files: 5 |
 Total files: 12-15 |
-Budget result: within budget under the greenfield allowance (warn 600)
+Budget result: warning accepted (580 is above the 400 warn line and below the 800 block line; the slice also modifies existing files, so the greenfield allowance does not apply)
 
 **Scope:**
 - Add `speckit-diagnose` (model-invoked) on Claude and Codex, adapted from `diagnosing-bugs`: six gated phases; the feedback-loop ladder; "no red-capable command, no Phase 2"; minimise until every element is load-bearing; three to five ranked falsifiable hypotheses shown before testing; one variable at a time; tagged debug instrumentation with a cleanup proof; regression test at a correct seam, or a finding that none exists; redaction of secrets.
@@ -463,7 +463,7 @@ Budget result: within budget
 Projected reviewable LOC: 635 |
 Production files: 5 |
 Total files: 12-15 |
-Budget result: warning accepted under the greenfield allowance (warn 600, block 1200)
+Budget result: warning accepted (635 is above the 400 warn line and below the 800 block line; the slice also modifies existing files, so the greenfield allowance does not apply)
 
 **Scope:**
 - Add `speckit-architecture-review` (user-invoked: `disable-model-invocation: true`, `allow_implicit_invocation: false`) on Claude and Codex, adapted from `improve-codebase-architecture` and `HTML-REPORT.md`.
