@@ -31,9 +31,11 @@
   "execution_control": {
     "run_id": "e7fbc9a6636945ed8a8c2abd42cbb892",
     "ledger_path": "docs/ai/specs/.process/.process/execution-control/ac068cab59ef67faf15646a7.json",
-    "disposition": "continue",
-    "reasons": [],
-    "elapsed_seconds": 20042.628268957138,
+    "disposition": "checkpoint_required",
+    "reasons": [
+      "unknown_side_effects_require_operator_reconciliation"
+    ],
+    "elapsed_seconds": 34550.53631591797,
     "checkpoint_due": false,
     "approved_invariants": 29,
     "corrective_cycles": 2
