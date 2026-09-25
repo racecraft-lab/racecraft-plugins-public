@@ -59,6 +59,57 @@ def _assert_relocation_event_reuse_rejected(test, path, common):
     path.write_bytes(before)
 
 
+class GreenfieldInvariantBindingTests(_ExecutionControlFixture, unittest.TestCase):
+    def test_greenfield_run_binds_first_spec_once_without_resetting_repair_budget(self):
+        spec = self.root / "feature/spec.md"
+        spec.unlink()
+        started = self.invoke("start")
+        self.assertEqual(started["ledger"]["approved_invariants"], [])
+        self.invoke("reserve", dispatch_id="tasks-prefix", kind="corrective",
+                    failure_invariant="not-yet-in-spec")
+        self.invoke("complete", dispatch_id="tasks-prefix", outcome="completed")
+        before = self.invoke("status", mode="read_only")["ledger"]
+        spec.write_text("- FR-001: preserve data\n- FR-002: no secrets\n")
+
+        bound = self.invoke("bind-invariants", spec_file="feature/spec.md")["ledger"]
+        for key in ("run_id", "started_at", "slice_started_at", "checkpoint_at",
+                    "corrective_cycles", "reservations", "dispatches"):
+            self.assertEqual(bound[key], before[key], key)
+        self.assertEqual(bound["approved_invariants"], ["FR-001", "FR-002"])
+        self.assertEqual(next(iter(bound["reservations"].values()))["family"], "unresolved")
+        second = self.invoke("reserve", dispatch_id="analyze-repair", kind="corrective",
+                             failure_invariant="FR-002")
+        self.assertEqual(second["disposition"], "continue")
+        self.assertEqual(second["ledger"]["corrective_cycles"], 2)
+        self.assertEqual(self.invoke("reserve", dispatch_id="third-repair", kind="corrective",
+                                     failure_invariant="FR-001")["disposition"], "checkpoint_required")
+
+    def test_late_binding_rejects_missing_empty_and_repeated_specs_without_mutation(self):
+        spec = self.root / "feature/spec.md"
+        spec.unlink()
+        started = self.invoke("start")
+        path = self.root / started["ledger_path"]
+        before = path.read_bytes()
+        with self.assertRaises(ValueError):
+            self.invoke("bind-invariants")
+        self.assertEqual(path.read_bytes(), before)
+        spec.write_text("# No approved requirements yet\n")
+        with self.assertRaises(ValueError):
+            self.invoke("bind-invariants", spec_file="feature/spec.md")
+        self.assertEqual(path.read_bytes(), before)
+        spec.write_text("- FR-001: preserve data\n")
+        self.invoke("bind-invariants", spec_file="feature/spec.md")
+        bound = path.read_bytes()
+        spec.write_text("- FR-001: preserve data\n- FR-002: added later\n")
+        with self.assertRaises(ValueError):
+            self.invoke("bind-invariants", spec_file="feature/spec.md")
+        self.assertEqual(path.read_bytes(), bound)
+        malformed = json.loads(bound)
+        malformed["invariant_binding"] = None
+        path.write_text(json.dumps(malformed))
+        with self.assertRaises(ValueError):
+            self.invoke("status", mode="read_only")
+
 class ExecutionControlTests(_ExecutionControlFixture, unittest.TestCase):
     def test_start_is_idempotent_and_phase_changes_do_not_reset_clock(self):
         first = self.invoke("start")
@@ -650,6 +701,7 @@ class DockerVerificationTests(VerificationTests):
 
 if __name__ == "__main__":
     suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case)
-                               for case in (ExecutionControlTests, WorkflowIdentityTests, VerificationTests, RunnerDispatchTests))
+                               for case in (GreenfieldInvariantBindingTests, ExecutionControlTests,
+                                            WorkflowIdentityTests, VerificationTests, RunnerDispatchTests))
     suite.addTests(DockerVerificationTests(name) for name in DockerVerificationTests.__dict__ if name.startswith("test_docker_"))
     raise SystemExit(run_counted(suite, label="test-execution-control"))

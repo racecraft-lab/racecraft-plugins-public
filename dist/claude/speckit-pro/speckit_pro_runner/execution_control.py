@@ -109,6 +109,24 @@ def _validate_workflow_identity(value: Any) -> dict[str, Any]:
     return value
 
 
+def _validate_invariant_binding(ledger: dict[str, Any]) -> None:
+    if "invariant_binding" not in ledger:
+        return
+    binding = ledger["invariant_binding"]
+    if (not isinstance(binding, dict) or set(binding) != {"spec_file", "spec_sha256", "bound_at"}
+            or not ledger["approved_invariants"]):
+        raise ValueError("invalid invariant binding")
+    bound_spec = require_text(binding["spec_file"], "bound spec_file")
+    if (Path(bound_spec).is_absolute() or Path(bound_spec).as_posix() != bound_spec
+            or any(part in {"..", ".git"} for part in Path(bound_spec).parts)
+            or not isinstance(binding["spec_sha256"], str)
+            or not re.fullmatch(r"[0-9a-f]{64}", binding["spec_sha256"])):
+        raise ValueError("invalid invariant binding provenance")
+    if (type(binding["bound_at"]) not in (int, float)
+            or not ledger["started_at"] <= binding["bound_at"] < float("inf")):
+        raise ValueError("invalid invariant binding clock")
+
+
 def validate_ledger(value: Any) -> None:
     if not isinstance(value, dict) or value.get("schema_version") != SCHEMA:
         raise ValueError("invalid execution ledger schema")
@@ -124,6 +142,7 @@ def validate_ledger(value: Any) -> None:
     validate_intervals(value)
     if not isinstance(value.get("approved_invariants"), list) or not all(isinstance(v, str) for v in value["approved_invariants"]):
         raise ValueError("invalid invariant registry")
+    _validate_invariant_binding(value)
     if not isinstance(value.get("reservations"), dict) or not isinstance(value.get("dispatches"), dict):
         raise ValueError("invalid execution reservations")
     if len(value["reservations"]) != value["corrective_cycles"]:
@@ -322,6 +341,28 @@ def _relocate_workflow(ledger: dict[str, Any], inputs: dict[str, Any], workflow_
     identity["relocation_event_ids"].append(event_id)
 
 
+def _bind_invariants_if_requested(root: Path, inputs: dict[str, Any], spec: Path,
+                                  ledger: dict[str, Any], now: float, reasons: list[str]) -> None:
+    if inputs.get("action") != "bind-invariants":
+        return
+    if inputs.get("spec_file") is None:
+        raise ValueError("bind-invariants requires an explicit spec_file")
+    if reasons:
+        return
+    if ledger["approved_invariants"] or "invariant_binding" in ledger:
+        raise ValueError("invariant registry is already frozen for this run")
+    spec_bytes = spec.read_bytes()
+    invariants = sorted(set(re.findall(r"\b(?:FR|NFR|INV)-[A-Za-z0-9]+\b",
+                                       spec_bytes.decode("utf-8"))))
+    if not invariants:
+        raise ValueError("spec_file contains no requirement or invariant IDs")
+    ledger["approved_invariants"] = invariants
+    ledger["invariant_binding"] = {
+        "spec_file": spec.relative_to(root.resolve()).as_posix(),
+        "spec_sha256": hashlib.sha256(spec_bytes).hexdigest(), "bound_at": now,
+    }
+
+
 def execution_control(root: Path, inputs: dict[str, Any], mode: str) -> dict[str, Any]:
     """Runner adapter returns a disposition without changing autopilot top-state."""
     workflow_name = require_text(inputs.get("workflow_file"), "workflow_file")
@@ -334,7 +375,7 @@ def execution_control(root: Path, inputs: dict[str, Any], mode: str) -> dict[str
     if spec_name is not None and not spec.is_file():
         raise ValueError("spec_file must be an existing contained file")
     action = inputs.get("action", "status")
-    if action not in {"start", "status", "reserve", "begin-verification", "complete", "reconcile", "checkpoint", "pause", "resume", "relocate-workflow"}:
+    if action not in {"start", "status", "bind-invariants", "reserve", "begin-verification", "complete", "reconcile", "checkpoint", "pause", "resume", "relocate-workflow"}:
         raise ValueError("unsupported action; pauses/resets require verified native authorization")
     if mode not in {"read_only", "dry_run", "apply"} or (mode == "read_only" and action != "status"):
         raise ValueError("ledger mutations require dry_run or apply")
@@ -375,6 +416,7 @@ def execution_control(root: Path, inputs: dict[str, Any], mode: str) -> dict[str
         extra: dict[str, Any] = {}
         if "clock_moved_backwards" in reasons and action not in {"status", "start"}:
             raise ValueError("clock moved backwards; preserve the ledger and reconcile time before continuing")
+        _bind_invariants_if_requested(root, inputs, spec, ledger, now, reasons)
         if action == "reserve" and not reasons:
             extra = reserve(ledger, inputs, now)
         elif action == "begin-verification" and not reasons:
