@@ -82,7 +82,13 @@ def task_plan(*, dependency: bool = False, shared: bool = False, one_seam: bool 
 class AtomicityAdditiveRoutingTests(unittest.TestCase):
     def test_shipped_atomicity_request_executes_with_registered_fixture(self) -> None:
         template = (REPO_ROOT / "speckit-pro/skills/speckit-coach/templates/workflow-template.md").read_text()
-        request_text = template.split("To produce the decision, send the complete read-only runner request:", 1)[1].split("```json\n", 1)[1].split("\n```", 1)[0]
+        marker = "To produce the decision, send the complete read-only runner request:"
+        self.assertIn(marker, template)
+        example = template.partition(marker)[2]
+        self.assertIn("```json\n", example)
+        fenced = example.partition("```json\n")[2]
+        self.assertIn("\n```", fenced)
+        request_text = fenced.partition("\n```")[0]
         request = json.loads(request_text)
         self.assertEqual(set(request["inputs"]), {"feature_dir", "workflow_file"})
         fixture = json.loads((TEST_ROOT / "unit/fixtures/read-only-helpers/requests/atomicity-route.json").read_text())
