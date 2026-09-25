@@ -24,7 +24,6 @@ import stat
 import subprocess
 import sys
 import tempfile
-import time
 from pathlib import Path
 from typing import Any
 
@@ -190,6 +189,7 @@ def run_codex_preview(
         repo_root=str(repo_root), artifact_path=artifact_path, expected_sha256=expected_sha256
     )
     capability = session["capability"]
+    session_closed = False
     try:
         with tempfile.TemporaryDirectory(prefix="speckit-preview-codex-") as temporary:
             runtime_root = Path(temporary) / "runtime"
@@ -233,28 +233,49 @@ def run_codex_preview(
                 parsed = json.loads(output_path.read_text(encoding="utf-8"))
             except (OSError, json.JSONDecodeError) as exc:
                 raise LauncherViolation("isolated Codex preview returned no schema-valid verdict") from exc
-        return preview_observation(parsed, expected_sha256)
+        observation = _close_preview_session(capability)
+        session_closed = True
+        return preview_observation(parsed, observation, expected_sha256)
     finally:
-        try:
-            author_broker.close_session(capability=capability)
-        except author_broker.BrokerViolation:
-            # The session may already be closed or expired. A failed close is not
-            # evidence about the page, and must not mask the verdict just returned.
-            pass
+        if not session_closed:
+            _discard_preview_session(capability)
 
 
-def preview_observation(parsed: Any, expected_sha256: str) -> dict[str, Any]:
-    """Project the isolated output onto the record's brokered observation shape."""
+def _discard_preview_session(capability: str) -> None:
+    try:
+        author_broker.close_session(capability=capability)
+    except author_broker.BrokerViolation:
+        # Failure cleanup cannot turn the attempt into a verified preview.
+        pass
+
+
+def _close_preview_session(capability: str) -> dict[str, Any]:
+    try:
+        closed = author_broker.close_session(capability=capability)
+    except author_broker.BrokerViolation as exc:
+        raise LauncherViolation("broker preview close failed") from exc
+    observation = closed.get("observation")
+    if observation is None:
+        raise LauncherViolation("broker preview had no submitted observation")
+    return observation
+
+
+def preview_observation(parsed: Any, broker_observation: Any, expected_sha256: str) -> dict[str, Any]:
+    """Compare isolated output with broker read-back before recording it."""
     if not isinstance(parsed, dict) or set(parsed) != {"verdict", "artifact_sha256"}:
         raise LauncherViolation("isolated Codex preview output contains non-verdict fields")
-    verdict = parsed["verdict"]
+    if not isinstance(broker_observation, dict) or set(broker_observation) != {"verdict", "artifact_sha256", "observed_at"}:
+        raise LauncherViolation("broker preview returned no complete observation")
+    verdict = broker_observation["verdict"]
     if verdict not in author_broker.PREVIEW_VERDICTS:
-        raise LauncherViolation("isolated Codex preview verdict is outside the closed vocabulary")
-    if parsed["artifact_sha256"] != expected_sha256:
-        raise LauncherViolation("isolated Codex preview verdict is bound to different artifact bytes")
+        raise LauncherViolation("broker preview verdict is outside the closed vocabulary")
+    if broker_observation["artifact_sha256"] != expected_sha256 or parsed != {"verdict": verdict, "artifact_sha256": expected_sha256}:
+        raise LauncherViolation("isolated Codex preview output disagrees with broker read-back")
+    if not isinstance(broker_observation["observed_at"], str) or not broker_observation["observed_at"]:
+        raise LauncherViolation("broker preview returned no observation time")
     return {
         "kind": "brokered",
         "verdict": verdict,
         "artifact_sha256": expected_sha256,
-        "observed_at": time.strftime("%Y-%m-%dT%H:%M:%S+00:00", time.gmtime()),
+        "observed_at": broker_observation["observed_at"],
     }

@@ -8,6 +8,7 @@ import json
 import tempfile
 import unittest
 import unittest.mock
+from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -20,7 +21,7 @@ from speckit_pro_runner import author_broker
 from test_result import run_counted
 
 
-class AuthorBrokerTests(unittest.TestCase):
+class BrokerFixture(unittest.TestCase):
     def setUp(self) -> None:
         self.repo_temp = tempfile.TemporaryDirectory()
         self.state_temp = tempfile.TemporaryDirectory()
@@ -32,6 +33,17 @@ class AuthorBrokerTests(unittest.TestCase):
         patcher.start()
         self.addCleanup(patcher.stop)
 
+    def preview_session(self) -> tuple[Path, str, dict]:
+        artifact = self.root / "artifacts/plan.html"
+        artifact.parent.mkdir(parents=True)
+        artifact.write_bytes(b"<html><body>plan</body></html>\n")
+        expected = hashlib.sha256(artifact.read_bytes()).hexdigest()
+        session = author_broker.create_preview_session(
+            repo_root=str(self.root), artifact_path="artifacts/plan.html", expected_sha256=expected,
+        )
+        return artifact, expected, session
+
+class AuthorBrokerTests(BrokerFixture):
     def test_formal_write_is_path_scoped_and_atomic(self) -> None:
         target = self.root / "formal/counter/Counter.tla"
         target.parent.mkdir(parents=True)
@@ -49,7 +61,10 @@ class AuthorBrokerTests(unittest.TestCase):
         self.assertEqual(result["target"], "formal/counter/Counter.tla")
         self.assertEqual(result["sha256"], hashlib.sha256(target.read_bytes()).hexdigest())
         self.assertEqual(target.read_text(), "Init == TRUE\n")
-        author_broker.close_session(capability=session["capability"])
+        self.assertEqual(
+            author_broker.close_session(capability=session["capability"]),
+            {"session_id": session["session_id"], "status": "closed"},
+        )
 
     def test_formal_write_rejects_off_list_target(self) -> None:
         target = self.root / "formal/counter/Counter.tla"
@@ -123,18 +138,16 @@ class AuthorBrokerTests(unittest.TestCase):
         )
         self.assertEqual(set(result), {"verdict", "artifact_sha256"})
         self.assertEqual(result, {"verdict": "verified", "artifact_sha256": expected})
-        author_broker.close_session(capability=session["capability"])
+        saved = author_broker._read_state(self.state_root, session["session_id"])["preview_submission"]
+        self.assertEqual(saved["verdict"], "verified")
+        self.assertEqual(saved["artifact_sha256"], expected)
+        self.assertEqual(datetime.fromisoformat(saved["observed_at"]).utcoffset(), timezone.utc.utcoffset(None))
+        closed = author_broker.close_session(capability=session["capability"])
+        self.assertEqual(closed["observation"], saved)
+        self.assertFalse((self.state_root / session["session_id"]).exists())
 
     def test_preview_verdict_rejects_drift(self) -> None:
-        artifact = self.root / "artifacts/plan.html"
-        artifact.parent.mkdir(parents=True)
-        artifact.write_bytes(b"<html><body>plan</body></html>\n")
-        expected = hashlib.sha256(artifact.read_bytes()).hexdigest()
-        session = author_broker.create_preview_session(
-            repo_root=str(self.root),
-            artifact_path="artifacts/plan.html",
-            expected_sha256=expected,
-        )
+        artifact, _, session = self.preview_session()
         artifact.write_bytes(b"<html><body>changed</body></html>\n")
         with self.assertRaisesRegex(author_broker.BrokerViolation, "changed after session creation"):
             author_broker.submit_preview_verdict(
@@ -208,8 +221,85 @@ class AuthorBrokerTests(unittest.TestCase):
         )
 
 
-class PreviewLauncherTests(unittest.TestCase):
-    """The isolated Codex preview observer's invocation boundary."""
+class PreviewBrokerProvenanceTests(BrokerFixture):
+    def test_preview_close_without_submission_has_no_observation(self) -> None:
+        artifact = self.root / "artifacts/plan.html"
+        artifact.parent.mkdir(parents=True)
+        artifact.write_bytes(b"<html><body>plan</body></html>\n")
+        session = author_broker.create_preview_session(
+            repo_root=str(self.root), artifact_path="artifacts/plan.html",
+            expected_sha256=hashlib.sha256(artifact.read_bytes()).hexdigest(),
+        )
+        closed = author_broker.close_session(capability=session["capability"])
+        self.assertNotIn("observation", closed)
+
+    def test_preview_submission_is_single_use_and_close_rechecks_bytes(self) -> None:
+        artifact, _, session = self.preview_session()
+        author_broker.submit_preview_verdict(capability=session["capability"], verdict="verified")
+        with self.assertRaisesRegex(author_broker.BrokerViolation, "already submitted"):
+            author_broker.submit_preview_verdict(capability=session["capability"], verdict="denied")
+        artifact.write_bytes(b"changed\n")
+        with self.assertRaisesRegex(author_broker.BrokerViolation, "changed after verdict submission"):
+            author_broker.close_session(capability=session["capability"])
+        self.assertFalse((self.state_root / session["session_id"]).exists())
+
+    def test_preview_close_failure_cannot_return_an_observation(self) -> None:
+        artifact = self.root / "artifacts/plan.html"
+        artifact.parent.mkdir(parents=True)
+        artifact.write_bytes(b"<html><body>plan</body></html>\n")
+        session = author_broker.create_preview_session(
+            repo_root=str(self.root), artifact_path="artifacts/plan.html",
+            expected_sha256=hashlib.sha256(artifact.read_bytes()).hexdigest(),
+        )
+        author_broker.submit_preview_verdict(capability=session["capability"], verdict="verified")
+        with unittest.mock.patch.object(Path, "rmdir", side_effect=OSError("cleanup failed")):
+            with self.assertRaisesRegex(author_broker.BrokerViolation, "could not close safely"):
+                author_broker.close_session(capability=session["capability"])
+
+    def test_preview_close_rejects_swapped_session_directory(self) -> None:
+        _, _, session = self.preview_session()
+        outside = self.root / "outside"
+        outside.mkdir()
+        sentinel = outside / "state.json"
+        sentinel.write_text("keep\n", encoding="utf-8")
+        original_resolve = author_broker._resolve_capability
+
+        def swap_after_resolution(capability: str) -> dict:
+            state = original_resolve(capability)
+            session_path = self.state_root / session["session_id"]
+            session_path.rename(self.state_root / "saved-session")
+            session_path.symlink_to(outside, target_is_directory=True)
+            return state
+
+        with unittest.mock.patch.object(author_broker, "_resolve_capability", side_effect=swap_after_resolution):
+            with self.assertRaisesRegex(author_broker.BrokerViolation, "session directory is unsafe"):
+                author_broker.close_session(capability=session["capability"])
+        self.assertEqual(sentinel.read_text(encoding="utf-8"), "keep\n")
+
+    def test_expired_or_invalid_preview_capability_cannot_submit(self) -> None:
+        artifact = self.root / "artifacts/plan.html"
+        artifact.parent.mkdir(parents=True)
+        artifact.write_bytes(b"<html><body>plan</body></html>\n")
+        session = author_broker.create_preview_session(
+            repo_root=str(self.root), artifact_path="artifacts/plan.html",
+            expected_sha256=hashlib.sha256(artifact.read_bytes()).hexdigest(),
+            ttl_seconds=60,
+        )
+        with self.assertRaisesRegex(author_broker.BrokerViolation, "invalid"):
+            author_broker.submit_preview_verdict(
+                capability=session["capability"][:-1] + ("0" if session["capability"][-1] != "0" else "1"),
+                verdict="verified",
+            )
+        expires_at = author_broker._read_state(self.state_root, session["session_id"])["expires_at"]
+        with unittest.mock.patch.object(author_broker.time, "time", return_value=expires_at + 1):
+            with self.assertRaisesRegex(author_broker.BrokerViolation, "expired"):
+                author_broker.submit_preview_verdict(
+                    capability=session["capability"], verdict="verified"
+                )
+        self.assertNotIn("observation", author_broker.close_session(capability=session["capability"]))
+
+class PreviewLauncherFixture(unittest.TestCase):
+    """Shared isolated Codex preview invocation fixture."""
 
     def setUp(self) -> None:
         from speckit_pro_runner import preview_launcher
@@ -221,6 +311,7 @@ class PreviewLauncherTests(unittest.TestCase):
         self.runtime_root = Path(self.temp.name) / "runtime"
         self.runtime_root.mkdir()
 
+class PreviewLauncherTests(PreviewLauncherFixture):
     def command(self) -> list[str]:
         # The runtimes are stubbed the way the sweep launcher's own tests stub
         # them: this asserts the invocation this launcher builds, and CI runners
@@ -278,7 +369,10 @@ class PreviewLauncherTests(unittest.TestCase):
 
     def test_observation_rejects_output_the_observer_must_not_produce(self) -> None:
         digest = "b" * 64
-        self.assertEqual("unavailable", self.launcher.preview_observation({"verdict": "unavailable", "artifact_sha256": digest}, digest)["verdict"])
+        receipt = {"verdict": "unavailable", "artifact_sha256": digest, "observed_at": "2026-09-25T16:00:00+00:00"}
+        observation = self.launcher.preview_observation({"verdict": "unavailable", "artifact_sha256": digest}, receipt, digest)
+        self.assertEqual(observation["verdict"], "unavailable")
+        self.assertEqual(observation["observed_at"], receipt["observed_at"])
         for bad in (
             {"verdict": "unavailable", "artifact_sha256": digest, "page_title": "leaked"},
             {"verdict": "looks-fine", "artifact_sha256": digest},
@@ -287,7 +381,15 @@ class PreviewLauncherTests(unittest.TestCase):
             "verified",
         ):
             with self.assertRaises(self.launcher.LauncherViolation):
-                self.launcher.preview_observation(bad, digest)
+                self.launcher.preview_observation(bad, receipt, digest)
+        with self.assertRaisesRegex(self.launcher.LauncherViolation, "disagrees with broker"):
+            self.launcher.preview_observation(
+                {"verdict": "verified", "artifact_sha256": digest}, receipt, digest
+            )
+        with self.assertRaisesRegex(self.launcher.LauncherViolation, "no complete observation"):
+            self.launcher.preview_observation(
+                {"verdict": "unavailable", "artifact_sha256": digest}, {}, digest
+            )
 
     def test_broker_rejection_closes_as_blocked_rather_than_raising(self) -> None:
         from speckit_pro_runner.helpers.read_only import preview_isolation_session
@@ -325,9 +427,72 @@ class PreviewLauncherTests(unittest.TestCase):
         self.assertEqual("python_authoritative", entry.promotion_status)
 
 
+class PreviewReadbackTests(PreviewLauncherFixture):
+    def test_codex_launcher_requires_matching_broker_submission(self) -> None:
+        repo = Path(self.temp.name) / "repo"
+        (repo / "artifacts").mkdir(parents=True)
+        artifact = repo / "artifacts/plan.html"
+        artifact.write_bytes(b"<html><body>plan</body></html>\n")
+        digest = hashlib.sha256(artifact.read_bytes()).hexdigest()
+        state_root = Path(self.temp.name) / "state"
+        codex_runtime = Path(self.temp.name) / "codex"
+
+        for submitted, output, close_fails in (
+            ("verified", "verified", False),
+            ("verified", "denied", False),
+            (None, "verified", False),
+            ("verified", "verified", True),
+        ):
+            with self.subTest(submitted=submitted, output=output, close_fails=close_fails):
+                invocation = {}
+
+                def command(**kwargs):
+                    invocation.update(kwargs)
+                    return [str(codex_runtime)]
+
+                def run(*_args, **_kwargs):
+                    if submitted is not None:
+                        author_broker.submit_preview_verdict(
+                            capability=invocation["capability"], verdict=submitted
+                        )
+                    invocation["output_path"].write_text(
+                        json.dumps({"verdict": output, "artifact_sha256": digest}), encoding="utf-8"
+                    )
+                    return unittest.mock.Mock(returncode=0)
+
+                with unittest.mock.patch.object(author_broker, "_state_root", return_value=state_root), \
+                        unittest.mock.patch.object(self.launcher, "verify_preview_boundary"), \
+                        unittest.mock.patch.object(self.launcher, "codex_preview_command", side_effect=command), \
+                        unittest.mock.patch.object(self.launcher.shutil, "which", return_value=str(codex_runtime)), \
+                        unittest.mock.patch.object(self.launcher, "_trusted_executable", return_value=codex_runtime), \
+                        unittest.mock.patch.object(self.launcher.subprocess, "run", side_effect=run):
+                    if close_fails:
+                        with unittest.mock.patch.object(author_broker, "close_session", side_effect=author_broker.BrokerViolation("cleanup failed")):
+                            with self.assertRaises(self.launcher.LauncherViolation):
+                                self.launcher.run_codex_preview(
+                                    plugin_root=self.plugin_root, repo_root=repo,
+                                    artifact_path="artifacts/plan.html", expected_sha256=digest,
+                                )
+                    elif submitted == output:
+                        observation = self.launcher.run_codex_preview(
+                            plugin_root=self.plugin_root, repo_root=repo,
+                            artifact_path="artifacts/plan.html", expected_sha256=digest,
+                        )
+                        self.assertEqual(observation["kind"], "brokered")
+                        self.assertEqual(observation["verdict"], submitted)
+                        self.assertEqual(datetime.fromisoformat(observation["observed_at"]).utcoffset(), timezone.utc.utcoffset(None))
+                    else:
+                        with self.assertRaises(self.launcher.LauncherViolation):
+                            self.launcher.run_codex_preview(
+                                plugin_root=self.plugin_root, repo_root=repo,
+                                artifact_path="artifacts/plan.html", expected_sha256=digest,
+                            )
+
 if __name__ == "__main__":
     suite = unittest.TestSuite([
         unittest.defaultTestLoader.loadTestsFromTestCase(AuthorBrokerTests),
+        unittest.defaultTestLoader.loadTestsFromTestCase(PreviewBrokerProvenanceTests),
         unittest.defaultTestLoader.loadTestsFromTestCase(PreviewLauncherTests),
+        unittest.defaultTestLoader.loadTestsFromTestCase(PreviewReadbackTests),
     ])
     raise SystemExit(run_counted(suite, label="test-author-broker"))

@@ -71,7 +71,7 @@
         "value": "speckit_pro_runner/author_broker.py",
         "display": "speckit_pro_runner/author_broker.py"
       },
-      "sha256": "16bbe6a8ed15ee2dff57ebc4c2c59374916a527082c4c34b949ecaacfc2835ae"
+      "sha256": "d944c930af75d5fc3f3ba620808693efb3700376e81dbd4d705f46b7e390b5c4"
     },
     {
       "path": {
@@ -343,7 +343,7 @@
         "value": "speckit_pro_runner/preview_launcher.py",
         "display": "speckit_pro_runner/preview_launcher.py"
       },
-      "sha256": "e617de91256b609e31a76400b594ecd7a13c1d6b2aba22d3d3b53c0a35fb8d8d"
+      "sha256": "8bc57fd90cc1c9be1755146178ec35c5ac23d3a4d25959a05099333d893ba98f"
     },
     {
       "path": {

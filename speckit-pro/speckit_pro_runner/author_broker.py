@@ -11,6 +11,7 @@ import secrets
 import stat
 import tempfile
 import time
+from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
 from typing import Any
 import sys
@@ -292,21 +293,63 @@ def submit_preview_verdict(*, capability: str, verdict: str) -> dict[str, Any]:
         raise BrokerViolation("preview verdict is outside the closed vocabulary")
     root = Path(state["repo_root"])
     artifact = root / state["artifact_path"]
-    digest = _hash_file(artifact)
+    if validate_target_path(state["artifact_path"], root) is not None:
+        raise BrokerViolation("preview artifact changed after session creation")
+    try:
+        digest = _hash_file(artifact)
+    except OSError as exc:
+        raise BrokerViolation("preview artifact changed after session creation") from exc
     if digest != state["expected_sha256"]:
         raise BrokerViolation("preview artifact changed after session creation")
+    session_path = _safe_session_path(_state_root(), state["session_id"])
+    claim = session_path / "preview-submitted"
+    try:
+        fd = os.open(claim, os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0), 0o600)
+    except FileExistsError as exc:
+        raise BrokerViolation("preview verdict was already submitted") from exc
+    except OSError as exc:
+        raise BrokerViolation("preview verdict could not be recorded") from exc
+    os.close(fd)
+    state["preview_submission"] = {
+        "verdict": verdict,
+        "artifact_sha256": digest,
+        "observed_at": datetime.now(timezone.utc).isoformat(),
+    }
+    try:
+        _write_state(session_path / "state.json", state)
+    except OSError as exc:
+        raise BrokerViolation("preview verdict could not be recorded") from exc
     return {"verdict": verdict, "artifact_sha256": digest}
 
 
 def close_session(*, capability: str) -> dict[str, Any]:
     state = _resolve_capability(capability)
-    session_path = _state_root() / state["session_id"]
+    session_path = _safe_session_path(_state_root(), state["session_id"])
+    observation = state.get("preview_submission") if state["kind"] == "preview" else None
+    artifact_changed = False
+    if observation is not None:
+        root = Path(state["repo_root"])
+        artifact = root / state["artifact_path"]
+        if not isinstance(observation, dict) or set(observation) != {"verdict", "artifact_sha256", "observed_at"} or validate_target_path(state["artifact_path"], root) is not None:
+            artifact_changed = True
+        else:
+            try:
+                artifact_changed = _hash_file(artifact) != observation["artifact_sha256"] or observation["artifact_sha256"] != state["expected_sha256"]
+            except OSError:
+                artifact_changed = True
     try:
         (session_path / "state.json").unlink()
+        if state["kind"] == "preview":
+            (session_path / "preview-submitted").unlink(missing_ok=True)
         session_path.rmdir()
     except OSError as exc:
         raise BrokerViolation("author broker session could not close safely") from exc
-    return {"session_id": state["session_id"], "status": "closed"}
+    if artifact_changed:
+        raise BrokerViolation("preview artifact changed after verdict submission")
+    result = {"session_id": state["session_id"], "status": "closed"}
+    if observation is not None:
+        result["observation"] = observation
+    return result
 
 
 def _tool_schema(properties: dict[str, Any] | None = None, required: list[str] | None = None) -> dict[str, Any]:

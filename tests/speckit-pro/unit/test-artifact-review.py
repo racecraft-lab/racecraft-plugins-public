@@ -296,6 +296,12 @@ class ArtifactReviewTests(unittest.TestCase):
             self.assertIn("preview-only resume", text)
             self.assertIn("direct local file links", text)
 
+    def test_preview_guidance_requires_broker_readback_before_verification(self) -> None:
+        text = (ROOT / "speckit-pro/skills/speckit-autopilot/references/artifact-review.md").read_text()
+        self.assertIn("`close_session`", text)
+        self.assertIn("Compare the observer's closed verdict and", text)
+        self.assertIn("Never create `observed_at` in the parent", text)
+
     def test_default_resume_returns_to_preview_without_redefining_planning_complete(self) -> None:
         result = self.resolve()
         self.assertEqual(result["exit_code"], 0)
