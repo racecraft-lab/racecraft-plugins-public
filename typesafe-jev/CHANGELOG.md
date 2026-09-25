@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.2](https://github.com/racecraft-lab/racecraft-plugins-public/compare/typesafe-jev-v0.9.1...typesafe-jev-v0.9.2) (2026-09-25)
+
+
+### Documentation
+
+* **typesafe-jev:** explain how to verify release provenance ([#634](https://github.com/racecraft-lab/racecraft-plugins-public/issues/634)) ([e439894](https://github.com/racecraft-lab/racecraft-plugins-public/commit/e43989468f9a9f841048b4cf3368534eb7fba42d))
+
 ## [0.9.1](https://github.com/racecraft-lab/racecraft-plugins-public/compare/typesafe-jev-v0.9.0...typesafe-jev-v0.9.1) (2026-09-24)
 
 
