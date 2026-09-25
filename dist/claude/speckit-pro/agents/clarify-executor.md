@@ -10,7 +10,7 @@ model: opus
 color: pink
 disallowedTools: Write, Edit, MultiEdit, NotebookEdit, Skill, Agent, SendMessage, WebFetch, WebSearch, mcp__tavily, mcp__tavily-mcp, mcp__context7, mcp__plugin_context7_context7
 maxTurns: 35
-effort: max
+effort: high
 ---
 
 # Clarify Executor

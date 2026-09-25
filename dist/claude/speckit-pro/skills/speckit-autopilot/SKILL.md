@@ -112,7 +112,8 @@ into expensive rework.
 **Reasoning effort is inherited, never checked.** Run at whatever the
 operator has set for the session and do not stop, warn, or ask them to
 change it. The bundled subagents carry their own pins: judgment roles
-ship at `effort: max` (`xhigh` or `max` on Codex), and bounded rule-applying
+ship at a measured high effort (`high`, `xhigh`, or `max` on Claude;
+`xhigh` or `max` on Codex), and bounded rule-applying
 roles that only apply rules to inputs already in their prompt ship at
 the documented default. A pin sets that worker's effort regardless of
 the session and never refuses to run.

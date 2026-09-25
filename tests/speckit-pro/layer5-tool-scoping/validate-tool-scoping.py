@@ -327,8 +327,8 @@ class ValidateToolScoping(unittest.TestCase):
             with self.subTest(msg=f"{agent_name} does not reference retired TeamCreate tooling"):
                 self.assertNotIn("TeamCreate", _read(agent_file))
 
-        with self.subTest(msg="phase-executor effort is max (max-thinking policy)"):
-            self.assertEqual("max", _yaml_field(AGENTS_DIR / "phase-executor.md", "effort"))
+        with self.subTest(msg="phase-executor effort is high (measured against max, no quality loss)"):
+            self.assertEqual("high", _yaml_field(AGENTS_DIR / "phase-executor.md", "effort"))
 
         with self.subTest(msg="consensus-synthesizer model is sonnet"):
             self.assertEqual("sonnet", _yaml_field(AGENTS_DIR / "consensus-synthesizer.md", "model"))

@@ -11,7 +11,7 @@ model: opus
 color: red
 disallowedTools: Skill, WebFetch, WebSearch, mcp__tavily, mcp__tavily-mcp, mcp__context7, mcp__plugin_context7_context7
 maxTurns: 100
-effort: max
+effort: xhigh
 memory: local
 ---
 

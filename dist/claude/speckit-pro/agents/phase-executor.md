@@ -10,7 +10,7 @@ model: opus
 disallowedTools: WebFetch, WebSearch, mcp__tavily, mcp__tavily-mcp, mcp__context7, mcp__plugin_context7_context7
 color: cyan
 maxTurns: 100
-effort: max
+effort: high
 ---
 
 # Phase Executor
