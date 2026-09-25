@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.36.1](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.36.0...speckit-pro-v2.36.1) (2026-09-25)
+
+
+### Bug Fixes
+
+* **speckit-pro:** remove the wall-clock limit on autopilot runs ([#642](https://github.com/racecraft-lab/racecraft-plugins-public/issues/642)) ([63a9143](https://github.com/racecraft-lab/racecraft-plugins-public/commit/63a9143452214582724df8eb9c6624180182b4ff))
+* **speckit-pro:** stop pausing autopilot for security keywords when analysts agree ([#647](https://github.com/racecraft-lab/racecraft-plugins-public/issues/647)) ([aa79532](https://github.com/racecraft-lab/racecraft-plugins-public/commit/aa79532319f8e84d382f0230b4122dbb2447694e))
+
 ## [2.36.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.35.0...speckit-pro-v2.36.0) (2026-09-25)
 
 
