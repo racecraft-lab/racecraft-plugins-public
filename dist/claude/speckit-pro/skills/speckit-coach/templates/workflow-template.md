@@ -447,11 +447,26 @@ line count. Surface the four fields the SKILL extracts from the emitted decision
 | **Signals** | | The decisive detector findings behind the route and releasability reading (may be empty when the classifier abstains). |
 | **Warnings** | | Any release-safety warning attached to the change (empty when there is no releasability risk). |
 
-To produce the decision, run the classifier against the feature directory:
+To produce the decision, send the complete read-only runner request:
 
-```text
-runner helper atomicity-route specs/{{BRANCH_NAME}}
+```json
+{
+  "schema_version": "1.0",
+  "request_id": "atomicity-route-{{SPEC_ID}}",
+  "helper_id": "atomicity-route",
+  "operation": "atomicity-route",
+  "mode": "read_only",
+  "inputs": {
+    "feature_dir": "specs/{{BRANCH_NAME}}",
+    "workflow_file": "docs/ai/specs/.process/{{SPEC_ID}}-workflow.md"
+  }
+}
 ```
+
+The workflow path excludes this exact workflow and its sibling
+`autopilot-state.json` from change classification. If an older workflow has
+the positional instruction, replace only that instruction and preserve all
+phase status and operator-authored content.
 
 
 ---

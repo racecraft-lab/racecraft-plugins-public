@@ -605,10 +605,15 @@ code, recording the outcome to the workflow file and
 After G5, reconcile the Phase 7 placeholder against `tasks.md` in both state
 stores, then apply the tasks-phase reviewability fallback without invoking the
 deferred tasks mode of `reviewability-gate`. Persist any required marker-plan
-state, record the read-only `atomicity-route`, and run
+state, record the read-only `atomicity-route` with both
+`inputs.feature_dir` and the actual bound `inputs.workflow_file`, and run
 `plan-layers-feature-dir` if and only if the route is `split-PR`. Persist the
 route and the full versioned layer-plan envelope to the workflow and
 `autopilot-state.json`; for a non-split route record the layer plan as skipped.
+The workflow input excludes that exact workflow file and its sibling
+`autopilot-state.json` from change classification. For an existing generated
+workflow with the old positional instruction, replace only that instruction;
+preserve phase status and operator-authored content.
 Exit 1 is `invalid_plan`: STOP before implementation and print
 `STOP: Layer planner returned invalid_plan (exit 1) for <feature-dir>; implementation has not started. Fix tasks.md using the planner diagnostics below, then rerun autopilot from the Layer Plan step.`
 before the diagnostics. Exit 2 is `input_error`: STOP separately and show its

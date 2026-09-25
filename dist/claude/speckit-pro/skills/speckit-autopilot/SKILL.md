@@ -630,11 +630,18 @@ for phase in PHASES starting from first_pending:
        gate evidence, invalid JSON, missing status/mode, stale
        fingerprints, and non-size safety findings.
     8c. After Tasks (G5 pass), run runner helper `atomicity-route`
-        for `<feature-dir>`
+        with both `inputs.feature_dir` and the actual bound
+        `inputs.workflow_file` (the complete request is in
+        `references/phase-execution.md`)
         and record the emitted JSON decision into the workflow
         file's "## Atomicity Route" section. READ-ONLY + ADVISORY —
         the script writes nothing and never blocks; the SKILL is
         what records it.
+        The workflow path excludes that exact workflow file and its
+        sibling `autopilot-state.json` from change classification.
+        For an existing generated workflow with the old positional
+        instruction, replace only that instruction; preserve phase
+        status and operator-authored content.
         The Phase 7 placeholder is invalid after G5. Parse `tasks.md` and
         replace that placeholder in both the native visible progress plan and
         `autopilot-state.json` with concrete task-group items and task IDs;
