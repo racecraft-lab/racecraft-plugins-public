@@ -1692,7 +1692,7 @@ class ReadOnlyHelperTests(unittest.TestCase):
             for score, mode, status, exit_code, action in cases:
                 with self.subTest(score=score, mode=mode):
                     criteria = (score,) * 5 if score is not None else None
-                    workflow.write_text(self.confidence_emit(score, criteria))
+                    workflow.write_text(self.confidence_emit(score, criteria), encoding="utf-8")
                     completed, response, _ = run_runner(helper_request("confidence-gate", {
                         "workflow_file": relative, "mode_name": mode, "threshold": "0.90",
                     }))
@@ -1703,6 +1703,13 @@ class ReadOnlyHelperTests(unittest.TestCase):
             workflow.unlink()
             _, response, _ = run_runner(helper_request("confidence-gate", {"workflow_file": relative}))
             self.assertNotEqual(response["status"], "ok")
+            quoted_path = f'{relative}"'
+            _, response, _ = run_runner(helper_request("confidence-gate", {"workflow_file": quoted_path}))
+            self.assertEqual(response["status"], "missing_prerequisite", response)
+            self.assertEqual(
+                response["diagnostics"][0]["message"],
+                f"workflow file not found: {quoted_path}",
+            )
             self.assertIn(relative, str(response["diagnostics"]))
 
     def test_confidence_gate_error_shape_is_not_promoted(self) -> None:

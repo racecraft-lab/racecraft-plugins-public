@@ -4600,7 +4600,7 @@ def confidence_gate(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
     if not workflow_raw:
         return make_result('{"error":"Usage: confidence-gate <workflow-file> [--threshold N.NN] [--mode advisory|strict]"}\n', exit_code=1)
     if not trusted_file_exists(workflow, repo_root):
-        return make_result("", f'{{"error":"workflow file not found: {workflow_raw}"}}\n', 1)
+        return make_result("", json_text({"error": f"workflow file not found: {workflow_raw}"}), 1)
     text = trusted_text(workflow, repo_root)
     if text is None:
         return make_result("", json_text({"error": f"workflow file unreadable: {workflow_raw}"}), 1)
