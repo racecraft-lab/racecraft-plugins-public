@@ -1,9 +1,9 @@
 {
   "schema_version": "task-execution.v1",
   "fingerprints": {
-    "plan_sha256": "88d7b31ad36e7d4b9d6f581f962cffeac6c1b6dc6bd60430ab1d79c19fc62f66",
-    "spec_sha256": "ed3a6503db7ff972a1814b74e4670021f6e58a687d0d076af366b089be54aae0",
-    "tasks_sha256": "509271686e4e0d627b82a80488df392f32092612bc207c74d2ad4a51ab4cfc86"
+    "plan_sha256": "8b39eec7b196fbd3ac213cf66c8711d5fddcd4f8f2062cb709c7a7f15685732d",
+    "spec_sha256": "405cbea2ded5c846af1e0df127fd0e0f2548cdd0369a0f76c6f10c225f9da5ca",
+    "tasks_sha256": "3267c1ed68ae56e54d7430b9899b5606b554476637a6c24b12dbf1c7b3499097"
   },
   "tasks": {
     "T001": {
@@ -237,9 +237,14 @@
         "T018"
       ],
       "owns": [
+        "dist",
+        "docs-site/src/content/docs/reference",
         "speckit-pro/codex-skills/speckit-autopilot/SKILL.md",
+        "speckit-pro/codex-skills/speckit-autopilot/references/post-implementation-codex.md",
         "speckit-pro/skills/speckit-autopilot/SKILL.md",
+        "speckit-pro/skills/speckit-autopilot/references/post-implementation.md",
         "speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py",
+        "tests/speckit-pro/suite-manifest.json",
         "tests/speckit-pro/unit/test-post-completion.py"
       ],
       "tdd_unit": "task-019"
@@ -252,7 +257,7 @@
       "owns": [
         "speckit-pro/agents",
         "speckit-pro/codex-agents",
-        "speckit-pro/speckit_pro_runner/formal/lifecycle.py",
+        "speckit-pro/skills/speckit-autopilot/references/agent-teams-integration.md",
         "tests/speckit-pro/layer1-structural/test-team-teardown.py"
       ],
       "tdd_unit": "task-020"

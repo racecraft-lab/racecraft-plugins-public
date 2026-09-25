@@ -2,30 +2,31 @@
 
 **Input**: HRNS-015 spec, plan, research, data model, contracts, quickstart, workflow Tasks Prompt, and ratified design concept. **Execution limit**: the entire automated implementation, startup, repair, and final checks has a two-hour budget. Every behavior task begins with a failing fixture and records RED before its minimal fix and GREEN. No task may be checked off from prose alone. Both hosts ship together for every host-facing behavior. Tests live under `tests/speckit-pro/` and freeze any needed historical prose in their own fixtures; tests never open a temporary feature spec path at run time.
 
-**Reviewability status**: **unqualified**. The Plan-phase refactor-inclusive result is `not_estimated`; its 1,442 LOC and file counts are provisional. T001 records complete *distinct* authored and generated path operations and distinct required-refactor files for each slice. T002 enforces the budget before any implementation and records the `atomicity-route` result (`one-navigable-PR`, `change-shape:modify-heavy`) against Q11's four-PR decision; T017 reruns the updated refactor-aware estimator. Each slice must have no more than four production files, fewer than 25 total changed paths including generated outputs, and a passing actual LOC gate. A task that would exceed any bound stops for split or rescope before its fix. Q11's A → B → C1 → C2 decision remains the design baseline; the C1 conflict below is a blocking Analyze/G6.5 decision, not an approved extra PR or exception.
+**Reviewability status**: **five-slice allocation blocked by A/B/C2 path lower bounds; C1a/C1b planned paths provisionally under cap, actual gates unqualified**. The user ratified five ordered PRs A → B → C1a → C1b → C2 after the former C1 exceeded the 24-path limit. T001/T002 use the [slice inventory](.process/slice-inventory.md): A/B/C2 already require at least 31/28/30 paths before full fixture/reference fan-out, so no five-PR budget pass is claimed. They must obtain a complete, compliant, owner-ratified scope allocation before behavior tasks. T017 reruns the refactor-aware estimator after its repair. The installed legacy estimator warns at C1a 520 LOC and C1b 460 LOC and ignores required refactors; actual LOC and changed-path results remain unmeasured. Each slice is limited to four production files and 24 total changed paths including generated output. A marker with an extra path, unresolved scope, or failing measured gate stops before emission. The advisory `atomicity-route` remains `one-navigable-PR`; current `pr_marker_plan` evidence, not a relabeled classifier result, governs five-PR emission.
 
-## Confirmed C1 file-budget conflict
+## Ratified C1 split and marker boundaries
 
-The *minimum* C1 source set in the Plan contains 12 distinct authored paths: the Post guard, Claude and Codex autopilot `SKILL.md`, the workflow template, and four Claude plus four Codex executor definitions. Existing dist packaging gives those paths 14 distinct generated counterparts: two guard copies, two autopilot SKILL copies, two workflow-template copies, and eight executor copies. **12 + 14 = 26 paths before tests**. The planned new Post and teardown test modules plus required suite-manifest registration make the confirmed planned lower bound **at least 29**, five above the maximum of 24. This excludes task-list, Post guidance, phase/gate references, lifecycle review, reference pages, and additional fixtures. T021 cannot claim a passing C1 budget. A reviewable alternative for Analyze/G6.5 is to separate C1 Post completion from executor teardown into C1a/C1b PRs, then remeasure each; that changes Q11's four-PR decision and requires explicit ratification before implementation. A policy exception or omitted generated paths is not assumed.
+The former C1 had a confirmed lower bound of at least 29 paths and is retired. C1a owns US9 plus US10's Post completion boundary (FR-017/018); C1b owns US10's team teardown (FR-019). Their complete planned path sets are 24 and 22 respectively in `.process/slice-inventory.md`, with generated counterparts and reserved reference pages counted. C1a runs T018–T019 and its validation checkpoint before C1b starts T020–T021. Five review markers group A (T003–T008), B (T009–T017), C1a (T018–T019), C1b (T020–T021), and C2 (T022–T030), with T001/T002 as foundation and T031 folded only where its exact changed-file scope and safety checks permit. Each marker needs current task/scope/hazard fingerprints and a measured gate before emission; the final `pr_marker_plan` is persisted outside this file.
 
 | Slice | Known production candidates | Budget evidence before implementation |
 | --- | --- | --- |
-| A | `pr_emission.py`, `read_only.py`, `mutation.py`, packet schema | Four candidates; generated/test/document paths still require T001 inventory. |
-| B | `read_only.py`, `registry.py`, `refresh-release-artifacts.py`, quality-gates config | Four candidates; exact distinct refactor and generated/index paths still require T001 inventory. |
-| C1 | Post guard; optional formal lifecycle module only if the 13-row contract requires it | 26-path minimum already breaches total-file limit; T001 must enumerate all paths. |
-| C2 | No Python/schema/config change planned | Host, template, fixture, generated, and reference path inventory still required. |
+| A | `pr_emission.py`, `read_only.py`, `mutation.py`, packet schema | At least 31 required paths (12 authored + 13 dist + 6 runner trust outputs); blocks the 24-path cap. Fixture contents/reference fan-out/LOC still missing. |
+| B | `read_only.py`, `registry.py`, `refresh-release-artifacts.py`, quality-gates config | At least 28 required paths (14 authored + 8 dist + 6 runner trust outputs); blocks the 24-path cap. Fixture contents/reference fan-out/LOC still missing. |
+| C1a | Post guard | 10 authored + 12 dist + 2 reserved reference = 24 paths; legacy LOC 520 `warn`, actual unmeasured. |
+| C1b | Four Codex executor TOMLs counted as active config; Claude executor Markdown also counts in total paths | 11 authored + 10 dist + 1 reserved reference = 22 paths; legacy LOC 460 `warn`, actual unmeasured. |
+| C2 | No Python/schema/config change planned | At least 30 required paths (17 authored + 13 dist); blocks the 24-path cap. Fixture contents/reference fan-out/LOC still missing. |
 
 ## Phase 1: Setup (shared evidence)
 
-**Goal**: Establish exact reviewable ownership before any code change. **Independent test**: each of A, B, C1, C2 has a distinct, source/generated/test/refactor path ledger with production classification and a measured or explicitly unmeasured result.
+**Goal**: Establish exact reviewable ownership before any code change. **Independent test**: each of A, B, C1a, C1b, C2 has a distinct, source/generated/test/refactor path ledger with production classification and a measured or explicitly unmeasured result.
 
 - [ ] T001 Inventory every planned authored, fixture, shared input, `dist`, reference, and index path per slice and distinct required-refactor files; record operation, owner, production classification, and counts in `specs/hrns-015-autopilot-gate-pr-emission-repair/.process/slice-inventory.md` (FR-026; do not infer generated fan-out or count repeat touches as distinct).
 
 ## Phase 2: Foundational budget gate
 
-**Goal**: Keep a two-hour, four-slice delivery reviewable. **Independent test**: no behavior task starts while any slice lacks a complete distinct inventory, exceeds four production files or 24 total files, or has an unqualified refactor-inclusive estimate; C1's confirmed conflict is surfaced for Analyze/G6.5 rather than marked pass.
+**Goal**: Keep a two-hour, five-slice delivery reviewable. **Independent test**: no behavior task starts while any slice lacks a complete distinct inventory, exceeds four production files or 24 total files, or has an unqualified refactor-inclusive estimate; A/B/C2 already fail on lower-bound path counts and need a new ratified allocation; C1a/C1b path inventories are explicit but actual LOC and final diffs remain unmeasured.
 
-- [ ] T002 Reconcile the inventory, the Plan's `not_estimated` result, slice LOC warn/block lines, Q11's four-PR decision, and the classifier's `one-navigable-PR` route in `specs/hrns-015-autopilot-gate-pr-emission-repair/.process/slice-inventory.md`; stop the affected slice on an incomplete or over-limit inventory and propose the smallest reviewable rescope for ratification (FR-026).
+- [ ] T002 Reconcile the inventory, the Plan's `not_estimated` result, slice LOC warn/block lines, the user's five-PR revision of Q11, and the advisory classifier's `one-navigable-PR` route and current five-marker-plan scope in `specs/hrns-015-autopilot-gate-pr-emission-repair/.process/slice-inventory.md`; treat the A/B/C2 lower bounds as hard blocks, enumerate missing fixture and generated-reference paths, stop every incomplete or over-limit slice, and propose the smallest compliant scope allocation for owner ratification (FR-026).
 
 ## Phase 3: User Story 1 — final release note (P1, Slice A)
 
@@ -50,7 +51,7 @@ The *minimum* C1 source set in the Plan contains 12 distinct authored paths: the
 
 **Goal**: Preserve the packet contract and amend the approved PRD and roadmap scope. **Independent test**: A fixtures, quick suite, generated refresh, reference check, title and release-note checks pass; measured path/LOC budget fits.
 
-- [ ] T007 Amend AC-16.2/16.5/16.8/16.10 and HRNS-015/HRNS-019 four-slice/deferred scope in `docs/prd-harness-engineering-uplift.md` and `docs/ai/specs/harness-engineering-uplift-technical-roadmap.md`; remove stale #642 status and verify against FR-027.
+- [ ] T007 Amend AC-16.2/16.5/16.8/16.10 and HRNS-015/HRNS-019 five-slice/deferred scope in `docs/prd-harness-engineering-uplift.md` and `docs/ai/specs/harness-engineering-uplift-technical-roadmap.md`; remove stale #642 status and verify against FR-027.
 - [ ] T008 Register the new A tests in `tests/speckit-pro/suite-manifest.json`, regenerate `dist` and `docs-site/src/content/docs/reference`, run A fixtures and the quick suite, measure all authored/generated changed paths and LOC, and record red/green, host parity, and budget evidence in `specs/hrns-015-autopilot-gate-pr-emission-repair/.process/slice-inventory.md`; stop before publication if A exceeds limits (FR-001, FR-002, FR-003, FR-004, FR-005, FR-006, FR-026, FR-027).
 
 ## Phase 7: User Story 4 — visible marker counts (P1, Slice B)
@@ -92,24 +93,24 @@ The *minimum* C1 source set in the Plan contains 12 distinct authored paths: the
 
 - [ ] T017 Recalculate the **distinct** required-refactor estimate using the repaired helper, register the new B tests in `tests/speckit-pro/suite-manifest.json`, regenerate `dist`, `docs-site/src/content/docs/reference`, and the tracked index, run B fixtures and quick suite, and record measured file/LOC/host-parity evidence in `specs/hrns-015-autopilot-gate-pr-emission-repair/.process/slice-inventory.md`; stop on any over-limit or incomplete B inventory (FR-007, FR-008, FR-009, FR-010, FR-011, FR-012, FR-013, FR-014, FR-015, FR-016, FR-026, FR-028, FR-029).
 
-## Phase 13: User Story 9 — 13 canonical Post rows (P1, Slice C1)
+## Phase 13: User Story 9 — 13 canonical Post rows (P1, Slice C1a)
 
 **Goal**: Claude, Codex, and workflow template show the same 13 names. **Independent test**: exact once/order/count match and legacy 11-row resume preserves only unique exact-name statuses (FR-017–018, FR-026).
 
 - [ ] T018 [US9] First add failing RED 11-versus-13 and legacy resume fixtures, then align the canonical guard, both host skill/list guidance, and workflow template in `tests/speckit-pro/unit/test-post-completion.py`, `speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py`, `speckit-pro/skills/speckit-autopilot/SKILL.md`, `speckit-pro/codex-skills/speckit-autopilot/SKILL.md`, `speckit-pro/skills/speckit-autopilot/references/task-list-canonical.md`, `speckit-pro/codex-skills/speckit-autopilot/references/task-list-canonical-codex.md`, and `speckit-pro/skills/speckit-coach/templates/workflow-template.md`; record GREEN (FR-017, FR-018, FR-026).
 
-## Phase 14: User Story 10 — complete Post and teams (P1, Slice C1)
+## Phase 14: User Story 10 — complete Post and teams (P1, C1a then C1b)
 
 **Goal**: Full completion has a verified Post state and no active executor team. **Independent test**: both persisted records reject missing/duplicate/pending/in-progress/mismatch/unjustified skips; only validated extension absence permits identical skip, and each team-capable executor proves cleanup (FR-018–019, FR-026).
 
-- [ ] T019 [US10] First add failing RED completion-boundary fixtures for both records, `✅ Complete` mapping, legacy 11 rows, out-of-stage skip reactivation, and the sole registry-plus-directory-validated `skipped: <extension> not installed` case; then repair the guard and both host completion call sites in `tests/speckit-pro/unit/test-post-completion.py`, `speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py`, `speckit-pro/skills/speckit-autopilot/SKILL.md`, and `speckit-pro/codex-skills/speckit-autopilot/SKILL.md`; record GREEN and keep staged-run return distinct (FR-018, FR-026).
-- [ ] T020 [US10] First add failing RED structural/result fixtures for all eight executor definitions, then require child result or supported stop, graceful shutdown, no-active-child and completed-cleanup evidence in `tests/speckit-pro/layer1-structural/test-team-teardown.py`, `speckit-pro/agents`, and `speckit-pro/codex-agents`; review `speckit-pro/speckit_pro_runner/formal/lifecycle.py` and edit it only if its Post subset fails; record GREEN and unresolved confirmations (FR-019, FR-026).
+- [ ] T019 [US10, C1a] First add failing RED completion-boundary cases for both records, `✅ Complete` mapping, legacy 11 rows, out-of-stage skip reactivation, and the sole registry-plus-directory-validated `skipped: <extension> not installed` case; then repair the guard and both host completion call sites in `tests/speckit-pro/unit/test-post-completion.py`, `speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py`, `speckit-pro/skills/speckit-autopilot/SKILL.md` and `speckit-pro/codex-skills/speckit-autopilot/SKILL.md`, and both post-implementation references. Keep staged-run return distinct. Before T020, register the C1a unit test in `tests/speckit-pro/suite-manifest.json`, refresh its exact dist/reference outputs, run C1a fixtures and quick suite, and record RED/GREEN, host parity, actual 24-path/production/LOC gate, and marker checkpoint evidence; stop on any new path or failed gate (FR-017, FR-018, FR-026).
+- [ ] T020 [US10, C1b] First add failing RED structural/result cases for all eight executor definitions, then require child result or supported stop, graceful shutdown, no-active-child and completed-cleanup evidence in `tests/speckit-pro/layer1-structural/test-team-teardown.py`, `speckit-pro/agents`, `speckit-pro/codex-agents`, and the shared `speckit-pro/skills/speckit-autopilot/references/agent-teams-integration.md`; review the formal lifecycle Post subset read-only and stop for re-inventory before any edit; record GREEN and unresolved confirmations (FR-019, FR-026).
 
-## Phase 15: Slice C1 integration and validation
+## Phase 15: Slice C1b integration and validation
 
-**Goal**: Confirm C1 behavior and resolve its file-budget conflict before publication. **Independent test**: C1 fixtures, quick suite, generated refresh/reference check and complete path accounting; the confirmed 29-path planned floor cannot be marked pass under the current limit.
+**Goal**: Confirm executor teardown after C1a has passed its marker checkpoint. **Independent test**: the eight-definition structural fixture, quick suite, generated refresh/reference check, and measured 22-path/production/LOC gate pass.
 
-- [ ] T021 Register the new C1 tests in `tests/speckit-pro/suite-manifest.json`, regenerate `dist` and `docs-site/src/content/docs/reference`, run C1 fixtures and quick suite, and record actual distinct files/LOC and an Analyze/G6.5 rescope decision in `specs/hrns-015-autopilot-gate-pr-emission-repair/.process/slice-inventory.md`; do not publish C1 while it remains above 24 files (FR-017, FR-018, FR-019, FR-026).
+- [ ] T021 Register the C1b structural test in `tests/speckit-pro/suite-manifest.json`, regenerate its exact `dist` outputs and reserved `docs-site/src/content/docs/reference/agents.md`, run C1b fixtures and quick suite, and record actual distinct paths/LOC, host parity, and marker checkpoint evidence in the PR packet; stop before C1b emission if any new path or measured limit fails (FR-019, FR-026).
 
 ## Phase 16: User Story 11 — complete review feedback after push (P1, Slice C2)
 
@@ -147,16 +148,16 @@ The *minimum* C1 source set in the Plan contains 12 distinct authored paths: the
 
 ## Phase 21: Polish and cross-cutting validation
 
-**Goal**: Prove the exact four planned increments before release. **Independent test**: full CI suite, artifact consistency, docs quality, lint, PR title/release-note fences, and requirement-to-file/red-green traceability pass with recorded commands and outcomes.
+**Goal**: Prove the exact five planned increments before release. **Independent test**: full CI suite, artifact consistency, docs quality, lint, PR title/release-note fences, and requirement-to-file/red-green traceability pass with recorded commands and outcomes.
 
 - [ ] T031 Run final acceptance, full CI, artifact, docs, lint, exact title/release-note, and per-slice budget gates; record every FR-001, FR-002, FR-003, FR-004, FR-005, FR-006, FR-007, FR-008, FR-009, FR-010, FR-011, FR-012, FR-013, FR-014, FR-015, FR-016, FR-017, FR-018, FR-019, FR-020, FR-021, FR-022, FR-023, FR-024, FR-025, FR-026, FR-027, FR-028, FR-029/SC-001–011 fixture and result plus non-goals/deferred HRNS-019/017 in `specs/hrns-015-autopilot-gate-pr-emission-repair/.process/slice-inventory.md`; any unavailable or failed check remains explicit (FR-001, FR-002, FR-003, FR-004, FR-005, FR-006, FR-007, FR-008, FR-009, FR-010, FR-011, FR-012, FR-013, FR-014, FR-015, FR-016, FR-017, FR-018, FR-019, FR-020, FR-021, FR-022, FR-023, FR-024, FR-025, FR-026, FR-027, FR-028, FR-029).
 
 ## Dependencies and execution order
 
-- T001 → T002 blocks every story. Slice A runs US1 → US2 → US3 → T007/T008; Slice B runs US4 → US5 → US6 → US7 → US8 → T017; Slice C1 runs US9 → US10 → T021; Slice C2 runs US11 → US12 → US13 → US14 → T030; T031 follows all four slice gates.
+- T001 → T002 blocks every story. Slice A runs US1 → US2 → US3 → T007/T008; Slice B runs US4 → US5 → US6 → US7 → US8 → T017; Slice C1a runs US9 → US10 Post boundary → C1a checkpoint at T019; Slice C1b runs US10 teardown → T021; Slice C2 runs US11 → US12 → US13 → US14 → T030; T031 follows all five slice gates.
 - In each two-checkbox TDD unit (T003–004, T011–012, T013–014, T028–029), the fixture must fail before its paired fix and the pair stays in one adjacent batch. Every single-checkbox behavior task explicitly runs RED → repair → GREEN within the same task. Batches contain at most four tasks.
 - T025, T026, and T027 are parallel-safe only after T024: they edit disjoint status, scaffold, and phase files with separate fixture files. All other shared helper/host paths are ordered to avoid concurrent edits. A parallel unit never owns a path another active unit owns.
-- The planned C1 lower-bound breach is a hard stop. Analyze/G6.5 must determine a ratified rescope or PR split, with a fresh inventory and budget, before C1 implementation can be considered complete. Do not silently exclude generated paths or downgrade FR-018/019.
+- The former C1 breach is resolved in planning by the user-ratified C1a/C1b allocation, but A/B/C2 now have blocking lower bounds of at least 31/28/30 paths. T001/T002 must secure a further ratified compliant allocation before any behavior task. C1a has 24 reserved paths and zero headroom: any extra generated/reference path blocks it. Each marker also stops on an actual over-cap diff, an unmeasured or failed LOC gate, stale `pr_marker_plan` fingerprints, or an unsafe fold. Do not exclude generated paths or downgrade FR-018/019.
 
 ## Implementation strategy
 

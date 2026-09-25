@@ -3,13 +3,13 @@
 **Feature Branch**: `hrns-015-autopilot-gate-pr-emission-repair`  
 **Created**: 2026-09-25  
 **Status**: Draft  
-**Input**: Repair observed SpecKit Pro autopilot and scaffold defects on Claude Code and Codex in four review slices, each with failing-first fixtures. The complete request is the Phase 1 Detailed Prompt in [HRNS-015-workflow.md](../../docs/ai/specs/.process/HRNS-015-workflow.md).
+**Input**: Repair observed SpecKit Pro autopilot and scaffold defects on Claude Code and Codex in five ordered review slices, each with failing-first fixtures. The complete request is the Phase 1 Detailed Prompt in [HRNS-015-workflow.md](../../docs/ai/specs/.process/HRNS-015-workflow.md).
 
 **Decision source**: [HRNS-015 design concept](../../docs/ai/specs/.process/HRNS-015-design-concept.md), [harness engineering roadmap, HRNS-015 and HRNS-019](../../docs/ai/specs/harness-engineering-uplift-technical-roadmap.md), and [harness engineering PRD §3.16](../../docs/prd-harness-engineering-uplift.md). The design concept's Q1–Q11 decisions govern this specification.
 
 ## User Scenarios & Testing *(mandatory)*
 
-The four review slices ship in order A, B, C1, C2. Each story is independently demonstrable on both supported hosts where the behavior is host-facing. Each slice has a failing-first fixture for its acceptance behavior.
+The five review slices ship in order A, B, C1a, C1b, C2. The user ratified this Analyze revision after the C1 file inventory exceeded the delivery cap; it replaces Q11's four-slice delivery count while preserving its scope and sequence. Each story is independently demonstrable on both supported hosts where the behavior is host-facing. Each slice has a failing-first fixture for its acceptance behavior.
 
 ### Slice A — PR emission
 
@@ -127,7 +127,7 @@ As an operator, I can declare the host's quality-gate commands, and those comman
 1. **Given** a valid declared slot, **when** commands are detected, **then** that slot uses the declared command and reports `source: declared`.
 2. **Given** an undeclared slot, **when** commands are detected, **then** normal detection remains available for that slot.
 
-### Slice C1 — autopilot Post list and team teardown
+### Slice C1a — autopilot Post list and completion boundary
 
 #### User Story 9 - One complete Post list on both hosts (Priority: P1) [US9]
 
@@ -156,6 +156,10 @@ As an operator, I receive completion only after every Post row is done and every
 1. **Given** a pending, in-progress, missing, or duplicate canonical Post row in the persisted workflow or state, **when** either host reaches its completion boundary, **then** the shared check fails and identifies every affected row.
 2. **Given** every Post row complete, **when** autopilot reaches the boundary, **then** it may report completion.
 3. **Given** a team formed by any team-capable executor, **when** that executor reports clean completion, **then** it has collected or stopped every child and confirmed team teardown on both hosts; an unconfirmed child is named in its result.
+
+### Slice C1b — executor team teardown
+
+US10 acceptance scenario 3 and FR-019 ship here after C1a. The four Claude and four Codex executor definitions receive paired teardown evidence in this slice; C1a owns the persisted Post completion boundary.
 
 ### Slice C2 — resolve-pr, scaffold, envelopes, and templates
 
@@ -255,31 +259,31 @@ As an operator following a generated roadmap, I can open its workflow links at t
 - **FR-024** [US13]: Both hosts MUST provide complete, tested request envelopes for status `generate-spec-index-check` and `o5-topology`, scaffold reviewability and worktree placement, and phase index writing; the broader call-site sweep remains HRNS-019.
 - **FR-025** [US14]: New roadmap template workflow links and published path guidance MUST resolve to scaffold output under `docs/ai/specs/.process/`; updates to existing roadmaps MUST preserve verified legacy links that resolve to real workflow files and repair broken links to the actual output.
 - **FR-026** [US1–US14]: Every changed host-facing behavior MUST have equivalent Claude Code and Codex instructions in the same review slice and failing-first fixture evidence for its acceptance scenarios.
-- **FR-027** [US1–US14]: The PRD acceptance criteria AC-16.2, AC-16.5, AC-16.8, and AC-16.10, plus the HRNS-015 and HRNS-019 roadmap entries, MUST reflect the decided scope, four-slice budget, and ownership of deferred work.
+- **FR-027** [US1–US14]: The PRD acceptance criteria AC-16.2, AC-16.5, AC-16.8, and AC-16.10, plus the HRNS-015 and HRNS-019 roadmap entries, MUST reflect the decided scope, five-slice budget, and ownership of deferred work.
 - **FR-028** [US6]: The documented 1.5x greenfield allowance MUST apply only to reviewable-LOC thresholds; production-file, total-file, and primary-surface limits MUST retain their ordinary thresholds.
 - **FR-029** [US6]: Setup MUST aggregate every declared slice budget for whole-feature reporting and evaluate each complete slice against the block thresholds, without borrowing another roadmap entry's values.
 
 ### Reviewability Notes
 
 - Typed reviewability exceptions remain rare, operator-owned overrides. Accepted classes remain `refactor`, `infra`, and `upgrade`; no fourth class is introduced. Generated templates, generated zones, `.process` files, PR bodies, and code fences are not valid provenance.
-- Each review slice is one reviewable PR, with both hosts represented for each behavior change. Slice A precedes B, C1, and C2 because HRNS-016 depends on its packet repair.
+- Each review slice is one reviewable PR, with both hosts represented for each behavior change. Review order is A → B → C1a → C1b → C2; Slice A precedes the rest because HRNS-016 depends on its packet repair.
 
 ### Reviewability Budget *(mandatory)*
 
 - **Primary surface**: harness/adapter.
 - **Secondary surfaces**: schema/config and docs/process.
-- **Projected reviewable LOC**: the design concept's preliminary four-slice sum is approximately 1,442 (A 282; B 410; C1 335; C2 415). The Plan-phase refactor-inclusive estimate remains `not_estimated`; its legacy 1,932-LOC stress result is not an approved replacement budget.
+- **Projected reviewable LOC**: the design concept's 1,442-LOC four-slice sum is historical. For the ratified five-slice plan, the installed legacy estimator returns C1a 520 LOC and C1b 460 LOC (`warn`, two suggested slices each) from their complete 24/22-path planning inventories, but ignores required refactors. Actual reviewable LOC and the refactor-inclusive feature estimate remain `not_estimated`; neither slice has a measured LOC pass.
 - **Projected production files**: at most 4 in each slice; shared files may recur across slices, so an across-slice unique count is not asserted here.
-- **Projected total files**: the design concept initially projected A about 10, B about 14, C1 about 14, and C2 about 16. Tasks subsequently proved a C1 planned lower bound of at least 29 distinct authored/generated/test paths, above the 24-path maximum; the other slice counts remain provisional.
-- **Budget result**: split required for the whole feature; C1 currently fails the per-slice total-file limit, so the ratified four-PR plan is not budget-qualified. Analyze/G6.5 must record a ratified rescope or revised PR split before C1 implementation or publication.
-- **Split decision**: A (PR emission), B (gates and counters), C1 (Post list and team teardown), C2 (resolve-pr, scaffold, envelopes, and template links). If a slice exceeds 4 production files or reaches 25 total files, split or rescope before implementation.
+- **Projected total files**: the former C1 plan had at least 29 distinct paths. The ratified split assigns an explicit 24-path planned inventory to C1a and 22 paths to C1b, including authored, generated, tests, manifest, and reserved reference pages; [slice-inventory.md](.process/slice-inventory.md) names each path. A, B, and C2 already have task-derived required-path lower bounds of at least 31, 28, and 30, above the 24-path maximum. Their fixture contents, generated reference fan-out, distinct refactor files, and actual diffs remain incomplete; [slice-inventory.md](.process/slice-inventory.md) records the audit.
+- **Budget result**: the five-slice allocation is blocked by A/B/C2 path lower bounds and requires a further owner-ratified compliant allocation. The former C1 allocation is retired. C1a and C1b are under the 25-path planned cap and at or below four classified production files, but their actual changed-path and LOC gates remain unqualified until each marker checkpoint. C1a has zero spare paths. Any additional changed path or failed measured limit blocks that slice before PR emission.
+- **Split decision**: A (PR emission), B (gates and counters), C1a (Post list and completion), C1b (team teardown), C2 (resolve-pr, scaffold, envelopes, and template links). If a slice exceeds 4 production files or reaches 25 total files, split or rescope before implementation.
 
 ### PR Review Packet Requirements *(mandatory)*
 
 - Each slice PR description MUST include what changed, why, non-goals, review order, scope budget, requirement traceability, verification evidence, known gaps, and rollback or feature-flag notes.
 - Traceability MUST map each major requirement or success criterion to changed files and failing-first verification evidence.
 - Deferred work MUST name HRNS-019 or another explicit follow-up. The packet repair and its release note MUST be represented in the final validated PR body.
-- Review order is A, B, C1, C2. Final PR titles and bodies must pass the host repository's title and release-note policy.
+- Review order is A, B, C1a, C1b, C2. Final PR titles and bodies must pass the host repository's title and release-note policy.
 
 ### Key Entities
 
@@ -304,7 +308,7 @@ As an operator following a generated roadmap, I can open its workflow links at t
 - **SC-007**: In multi-page review cases, 100% of pages are considered, and zero replies or resolutions occur before verification, push, and confirmed matching remote head.
 - **SC-008**: A slow nonempty blind-spot result is used regardless of crossing five minutes; every permitted no-findings continuation records one specific reason.
 - **SC-009**: Operators can execute all five named helper request examples on both hosts without a malformed-envelope error, and generated roadmap workflow links open at the scaffold output path.
-- **SC-010**: Each of four PR slices remains at or below 4 production files and below 25 total files, with passing acceptance fixtures and aligned host instructions.
+- **SC-010**: Each of five PR slices remains at or below 4 production files and below 25 total files, with passing acceptance fixtures and aligned host instructions.
 - **SC-011**: Reviewers can find the recorded confidence verdict, release note, changed-scope explanation, and verification evidence in the final PR artifact without reconstructing them from process files.
 
 ## Clarifications
@@ -347,7 +351,7 @@ As an operator following a generated roadmap, I can open its workflow links at t
 ## Assumptions
 
 - The design concept's Q1–Q11 answers are ratified scope decisions. Planning may choose the precise placement of the confidence verdict and the required-refactor signal's shape and weight, and must reconcile the slice budget values without changing their observable outcomes.
-- The four-slice delivery route (one split-PR run or separate runs) is decided after Tasks; slice order and per-slice budgets hold either way.
+- The user ratified five ordered PRs after Tasks. The advisory atomicity classifier remains `one-navigable-PR`; current marker-plan evidence, not a relabeled `split-PR` classifier or separate-run claim, must control five-PR emission. The workflow/state `pr_marker_plan` remains subject to fresh fingerprint, scope, checkpoint, and hazard validation before use.
 - The current cached plugin cannot benefit from its own repairs until released and refreshed. Interim PR-body repair for this run is operational handling, not a product requirement or a change to host policy.
 - This feature does not decide whether Codex children outlive their parent; the teardown obligation applies to both hosts regardless, while HRNS-017 investigates host behavior.
 - Existing required checks, release-note policy, packet schema fields other than the optional note, and draft-body policy remain in force.

@@ -36,8 +36,8 @@ captured during scoping.
 | Clarify | `/speckit-clarify` | ✅ Complete | Four sessions complete; ten consensus decisions recorded; G2 passed with zero markers |
 | Plan | `/speckit-plan` | ✅ Complete | G3 passed; advisory file-based estimate not estimated because the declared Slice A inventory is partial |
 | Checklist | `/speckit-checklist` | ✅ Complete | Three domains, 51 items, 11 gaps resolved; G4 passed with zero markers |
-| Tasks | `/speckit-tasks` | ✅ Complete | 31 tasks in 21 groups, all 14 stories and FR-001–029; sidecar valid; G5 passed, C1 budget unqualified |
-| Analyze | `/speckit-analyze` | 🔄 In Progress | Seven findings; two design findings open; corrective dispatch refused by execution ledger |
+| Tasks | `/speckit-tasks` | ✅ Complete | 31 tasks in 21 groups, all 14 stories and FR-001–029; sidecar valid; G5 passed; C1a/C1b inventoried, A/B/C2 over path cap |
+| Analyze | `/speckit-analyze` | 🔄 In Progress | Ten findings; H1/H2 resolved; A/B/C2 path-cap findings await a ratified allocation |
 | Confidence Gate | G6.5 | ⏳ Pending | Pre-Implement composite confidence |
 | Implement | `/speckit-implement` | ⏳ Pending | |
 | Post | Post-Implementation | ⏳ Pending | Canonical 13-item closeout |
@@ -408,6 +408,11 @@ G2 passed: the runner reported zero clarification markers; the spec has no human
 | 12 | Checklist | Declared command scope and provenance | [codebase] | 1→2 | 3/3 | Limit declarations to the four existing quality slots, reject malformed declarations, preserve string-valued commands, and add `command_sources` plus quality-gate provenance | codebase-analyst, spec-context-analyst, domain-researcher |
 | 13 | Checklist | Legacy 11-row Post resume policy | [codebase, spec] | 1 | both-agree | Preserve only exact-name canonical statuses; missing or renamed rows start pending and never inherit completion from row position or predecessor | codebase-analyst, spec-context-analyst |
 | 14 | Checklist | Optional-extension Post skip | [codebase, spec] | 1→2 | 2/3 | Accept only a reason-coded skip for an optional Post extension verified absent in both persisted records; all other skips and incomplete rows block. Spec-context dissented because Q1 did not ratify skip policy | codebase-analyst, spec-context-analyst, domain-researcher |
+| 15 | Analyze | H1 C1 path-cap conflict | [codebase, spec] | 1 | owner-ratified revision | C1a/C1b planned paths recorded at 24/22; actual LOC and final diffs remain unqualified | codebase-analyst, spec-context-analyst |
+| 16 | Analyze | H2 advisory atomicity route | [codebase, spec, domain] | 1→2 | supported route | Preserve one-navigable-PR advice; derive a current marker plan only after scope and safety validation | codebase-analyst, spec-context-analyst, domain-researcher |
+| 17 | Analyze | H3 A path-cap conflict | [codebase, spec, domain] | 1→2 | 3/3; human review needed | At least 31 paths blocks one A PR; provisional boundaries need complete inventory and owner ratification | codebase-analyst, spec-context-analyst, domain-researcher |
+| 18 | Analyze | H4 B path-cap conflict | [codebase, spec, domain] | 1→2 | 3/3; human review needed | At least 28 paths blocks one B PR; provisional partitions need complete inventory and owner ratification | codebase-analyst, spec-context-analyst, domain-researcher |
+| 19 | Analyze | H5 C2 path-cap conflict | [codebase, spec] | 1 | both-agree; human review needed | At least 30 paths blocks one C2 PR; provisional boundaries need complete inventory and owner ratification | codebase-analyst, spec-context-analyst |
 
 ---
 
@@ -501,13 +506,13 @@ G2 passed: the runner reported zero clarification markers; the spec has no human
 
 | Artifact | Status | Notes |
 |----------|--------|-------|
-| `plan.md` | ✅ Complete | Four-slice architecture and module deltas; preliminary budget distinguished from Plan sizing stress check |
+| `plan.md` | ✅ Complete | Five-slice revision and module deltas; A/B/C2 path-cap conflicts remain open |
 | `research.md` | ✅ Complete | Decisions, issue reproductions, and external documentation limitation |
 | `data-model.md` | ✅ Complete | Runner, packet, roadmap, and workflow state entities |
 | `contracts/` | ✅ Complete | `runner-and-roadmap.md` and `workflow-and-pr.md` |
 | `quickstart.md` | ✅ Complete | Failing-first workflow and verification commands |
 
-G3 passed with zero unresolved markers. No formal model is selected. The standalone `estimate-reviewable-loc` helper returned `not_estimated` (`projected: null`, zero parseable declared file operations) because Slice A’s ten named operations are a partial subset of its 16-file projection. The current size helper’s 1,932-LOC/five-slice stress check uses 77 provisional file touches and ignores the required-refactor input; it is not a refactor-inclusive estimate. Tasks must complete distinct file and refactor inventories before claiming the four-slice budget is qualified.
+G3 passed with zero unresolved markers. No formal model is selected. The standalone `estimate-reviewable-loc` helper returned `not_estimated` (`projected: null`, zero parseable declared file operations) because Slice A’s ten named operations are a partial subset of its 16-file projection. The current size helper’s 1,932-LOC/five-slice stress check uses 77 provisional file touches and ignores the required-refactor input; it is not a refactor-inclusive estimate. Tasks must complete distinct file and refactor inventories before claiming any revised slice budget is qualified.
 
 ---
 
@@ -670,7 +675,7 @@ Do not guess fingerprints or omit ownership to force parallel execution.
 | **Parallel Opportunities** | 3 [P] tasks in one planned wave |
 | **User Stories Covered** | 14 of 14; FR-001–029 |
 
-Tasks-phase reviewability: installed `reviewability-gate` tasks mode is deferred and was not invoked. Scaffold setup mode was `status: warn`, `pass: true`; Plan's file-based result remains `not_estimated` because the declared inventories were partial. Q11 ratified four slices, but the Tasks inventory proves C1 needs at least 29 changed paths against a 24-path maximum. This is a size/reviewability blocker for implementation, not a qualified four-PR budget. Analyze and G6.5 must resolve and ratify a rescope before C1 implementation or publication.
+Tasks-phase reviewability: installed `reviewability-gate` tasks mode is deferred and was not invoked. Scaffold setup mode was `status: warn`, `pass: true`; Plan's file-based result remains `not_estimated` because the declared inventories were partial. The Tasks inventory proved the original C1 needs at least 29 changed paths against a 24-path maximum. The user has ratified splitting C1 into C1a and C1b as a fifth PR; their planned path sets are now inventoried but actual diffs and LOC remain unqualified. A, B, and C2 each exceed the path cap on required-path lower bounds, so Analyze remains blocked on a further ratified allocation.
 
 ---
 
@@ -693,10 +698,9 @@ line count. Surface the four fields the SKILL extracts from the emitted decision
 | **Signals** | `change-shape:modify-heavy` | The decisive detector findings behind the route and releasability reading (may be empty when the classifier abstains). |
 | **Warnings** | None | Any release-safety warning attached to the change (empty when there is no releasability risk). |
 
-Expected route from scoping: `split-PR`, four layers in stack order A → B → C1 → C2
-(design concept Q11, Open Question 4).
+Original scoping expected `split-PR` and four layers (design concept Q11, Open Question 4). The user subsequently ratified five ordered PR slices, A → B → C1a → C1b → C2, after the C1 budget breach.
 
-Actual classifier result: `one-navigable-PR` (`change-shape:modify-heavy`), releasable `true`, no warnings. The layer planner is skipped because the route is not `split-PR`. This differs from Q11's ratified four-slice expectation and accompanies the confirmed C1 29-path floor; Analyze must reconcile the design before implementation.
+Actual classifier result: `one-navigable-PR` (`change-shape:modify-heavy`), releasable `true`, no warnings. Preserve this advisory result; the layer planner remains skipped because the route is not `split-PR`. Before multi-PR emission, derive and validate a current five-slice `pr_marker_plan` from tasks, reviewability, declared scope, and hazard evidence. The marker plan, when validated, supplies PR membership and order. No `split-PR` classifier result or separate-run mode is inferred. Multi-PR emission remains pending a revised, owner-ratified allocation, a current marker plan, and per-slice budget qualification.
 
 To produce the decision, run the classifier against the feature directory:
 
@@ -746,23 +750,26 @@ Focus on:
 
 | ID | Severity | Issue | Resolution |
 |----|----------|-------|------------|
-| H1 | HIGH | C1 planned minimum is at least 29 changed paths, above the 24-path maximum; the newly selected C1a/C1b split is not yet inventoried or reflected in the planning artifacts. | |
-| H2 | HIGH | The recorded `one-navigable-PR` classifier route would emit one PR from this run, while the user now selects five ordered PRs. The delivery mode and planning controls remain unrecorded. | |
-| M1 | MEDIUM | Preliminary design-concept size figures were presented as a qualified Plan budget. | Spec and Plan now label them preliminary and retain the refactor-inclusive `not_estimated` verdict. |
+| H1 | HIGH | Original C1 requires at least 29 changed paths, above the 24-path maximum. | User ratified C1a/C1b. Planned distinct paths are inventoried at 24/22; actual LOC and final diff gates remain unqualified. |
+| H2 | HIGH | Advisory one-navigable-PR route differs from the user's multi-PR direction. | Preserve the classifier result. Derive and validate a current pr_marker_plan from tasks, scope, reviewability, and hazard evidence only after a compliant allocation is ratified. |
+| H3 | HIGH | A requires at least 31 changed paths, above the 24-path maximum. | Open. A1/A2 boundaries are provisional; fixture/reference fan-out and T008 integration are not allocated. Await complete inventory and owner direction. |
+| H4 | HIGH | B requires at least 28 changed paths, above the 24-path maximum. | Open. Two- and three-part candidate boundaries are provisional; fixture/reference fan-out is uncounted. Await complete inventory and owner direction. |
+| H5 | HIGH | C2 requires at least 30 changed paths, above the 24-path maximum. | Open. C2a/C2b boundaries are provisional; fixture/reference fan-out is uncounted. Await complete inventory and owner direction. |
+| M1 | MEDIUM | Preliminary design-concept size figures were presented as a qualified Plan budget. | Spec and Plan now label them preliminary and retain the refactor-inclusive not_estimated verdict. |
 | M2 | MEDIUM | Plan named nonexistent test layer directories. | Corrected the named structural and tool-scoping directories and listed the Tasks sidecar. |
 | L1 | LOW | Requirements checklist had stale scenario and FR counts. | Corrected to 40 scenarios and 29 FRs. |
 | L2 | LOW | Workflow had a stale acceptance-scenario count. | Corrected both references to 40. |
 | L3 | LOW | Plan described Tasks as a later phase after Tasks had completed. | Updated the structure diagram. |
 
-### Analyze blocked checkpoint
+### Analyze blocked checkpoint — reviewability
 
-The user chose five ordered PR slices, A → B → C1a → C1b → C2, in response to the confirmed C1 budget conflict. This revises Q11's earlier four-PR choice as a planning direction. The decision has **not** been applied to spec.md, plan.md, tasks.md, or the task sidecar; neither new slice has a complete path or LOC inventory, and no budget passes are claimed.
+The user's C1 revision is applied to spec.md, plan.md, tasks.md, and the task-execution sidecar. The C1a/C1b inventory records 24 and 22 planned paths. Neither is a measured final diff or a qualified LOC result. The five-slice order A → B → C1a → C1b → C2 remains the current planning direction, not a passing allocation: A, B, and C2 have required-path lower bounds of 31, 28, and 30 against a maximum of 24 each. Full fixture, generated-reference, refactor, and LOC inventories remain incomplete. If all scope stays, at least eight PRs are arithmetically required; no eight-PR boundary is qualified.
 
-The H1 Round 1 consensus found no established compliant four-PR allocation and requested this user decision. H2 Round 1 escaped to three perspectives; Round 2 did not reach a synthesizer result. The independent `atomicity-route` output remains `one-navigable-PR`; it has not been rewritten as `split-PR`.
+Analyze consensus resolved H1 and H2. H3 A and H4 B reached unanimous Round 2 agreement on the cap violation and need for an owner-ratified allocation; H5 C2 reached both-analyst Round 1 agreement. Their proposed subdivisions are provisional. The owner decision between further splitting and scope reduction is pending. Do not start behavior tasks, establish a marker plan, or claim G6 while this decision and the exact inventories are open.
 
-A corrective `execution-control` reservation for FR-026 (`hrns015-analyze-c1-rescope-20260925`) returned `expected_failure`, disposition `checkpoint_required`, reason `failure_family_budget_exhausted`. The ledger froze no approved invariant IDs at kickoff; its earlier Tasks prefix repair used the sole `unresolved` family cycle. This run must stop new repair dispatches. The completed Analyze corrections were committed and pushed at `6106d333f`; the later read-only H2 audit was cancelled and cleaned up. No dispatch remains in flight.
+The execution-control bug that had blocked FR-026 was reproduced and filed as issue #673; the source repair is PR #674. This same HRNS-015 ledger was bound once to the 29 approved spec invariants without changing its run identity or earlier dispatch. Its original Tasks corrective cycle remains in the unresolved family. The FR-026 Analyze corrective cycle is reserved as hrns015-analyze-c1-rescope-20260925, reservation 420e70c8bf1b436493f77ef2df90f5d9; the global corrective count is two. The ledger now permits this Analyze correction, so execution-control is no longer the blocker. Keep that reservation for the current Analyze pass and do not open a new corrective cycle.
 
-Remaining work on a permitted continuation: reconcile the execution-control budget without resetting this run's ledger; apply the user's five-slice decision; inventory and qualify C1a/C1b and every affected slice including generated outputs; finish H2 consensus, rerun Analyze and the task sidecar, then attempt G6. G6, Autonomy Boundary Preflight, G6.5, the plan-stage boundary commit, and draft PR emission have not run. Phase 7 implementation is outside this `--stage plan` request.
+The task-execution sidecar validates for 31 tasks and all 29 FR mappings after the C1 revision. On the owner's scope direction, complete every affected slice inventory, revise spec/plan/tasks and the sidecar, rerun Analyze and budget checks, then attempt G6. Autonomy Boundary Preflight, G6.5, the plan-stage boundary commit, and draft PR emission have not run. Phase 7 implementation is outside this --stage plan request.
 
 ---
 

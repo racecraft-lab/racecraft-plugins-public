@@ -34,7 +34,9 @@
     "disposition": "continue",
     "reasons": [],
     "elapsed_seconds": 20042.628268957138,
-    "checkpoint_due": false
+    "checkpoint_due": false,
+    "approved_invariants": 29,
+    "corrective_cycles": 2
   },
   "plan": [
     {
@@ -476,30 +478,29 @@
   },
   "analyze": {
     "status": "blocked",
-    "findings_total": 7,
-    "findings_resolved": 5,
+    "findings_total": 10,
+    "findings_resolved": 7,
     "open_findings": [
-      "H1",
-      "H2"
+      "H3",
+      "H4",
+      "H5"
     ],
     "g6": "not_run",
     "user_decision": "Split C1 into C1a and C1b as fifth PR; order A -> B -> C1a -> C1b -> C2",
-    "user_decision_applied": false,
-    "blocking_dispatch": {
-      "dispatch_id": "hrns015-analyze-c1-rescope-20260925",
-      "kind": "corrective",
-      "failure_invariant": "FR-026",
-      "helper_status": "expected_failure",
-      "disposition": "checkpoint_required",
-      "reason": "failure_family_budget_exhausted"
-    },
+    "user_decision_applied": true,
     "in_flight_dispatches": [],
     "remaining": [
-      "reconcile corrective budget without resetting ledger",
-      "apply five-slice decision",
-      "inventory and qualify each affected slice",
-      "finish H2 consensus",
-      "rerun Analyze, sidecar, and G6"
-    ]
+      "obtain owner direction for A/B/C2 scope",
+      "complete path, generated-output, refactor, and LOC inventories for every revised slice",
+      "revise spec, plan, tasks, and task sidecar after ratification",
+      "rerun Analyze and budget checks, then attempt G6"
+    ],
+    "pending_user_decision": "Split A, B, and C2 further or reduce their scope; the five-slice allocation exceeds the 24-path cap.",
+    "repair_reservation": {
+      "dispatch_id": "hrns015-analyze-c1-rescope-20260925",
+      "failure_invariant": "FR-026",
+      "reservation_id": "420e70c8bf1b436493f77ef2df90f5d9",
+      "status": "reserved"
+    }
   }
 }
