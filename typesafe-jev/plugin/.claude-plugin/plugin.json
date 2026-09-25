@@ -1,7 +1,7 @@
 {
   "name": "typesafe-jev",
   "displayName": "TypeSafe Jev",
-  "version": "0.9.1",
+  "version": "0.9.2",
   "description": "Ask Jev for typed judgments with calibrated probabilities instead of parsing prose, through TypeSafe directly or OpenRouter's Decisions API, with the backend chosen explicitly.",
   "author": {
     "name": "Racecraft Lab",
