@@ -324,7 +324,7 @@ def submit_preview_verdict(*, capability: str, verdict: str) -> dict[str, Any]:
 
 def close_session(*, capability: str) -> dict[str, Any]:
     state = _resolve_capability(capability)
-    session_path = _state_root() / state["session_id"]
+    session_path = _safe_session_path(_state_root(), state["session_id"])
     observation = state.get("preview_submission") if state["kind"] == "preview" else None
     artifact_changed = False
     if observation is not None:

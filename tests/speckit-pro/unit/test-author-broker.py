@@ -256,6 +256,26 @@ class PreviewBrokerProvenanceTests(BrokerFixture):
             with self.assertRaisesRegex(author_broker.BrokerViolation, "could not close safely"):
                 author_broker.close_session(capability=session["capability"])
 
+    def test_preview_close_rejects_swapped_session_directory(self) -> None:
+        _, _, session = self.preview_session()
+        outside = self.root / "outside"
+        outside.mkdir()
+        sentinel = outside / "state.json"
+        sentinel.write_text("keep\n", encoding="utf-8")
+        original_resolve = author_broker._resolve_capability
+
+        def swap_after_resolution(capability: str) -> dict:
+            state = original_resolve(capability)
+            session_path = self.state_root / session["session_id"]
+            session_path.rename(self.state_root / "saved-session")
+            session_path.symlink_to(outside, target_is_directory=True)
+            return state
+
+        with unittest.mock.patch.object(author_broker, "_resolve_capability", side_effect=swap_after_resolution):
+            with self.assertRaisesRegex(author_broker.BrokerViolation, "session directory is unsafe"):
+                author_broker.close_session(capability=session["capability"])
+        self.assertEqual(sentinel.read_text(encoding="utf-8"), "keep\n")
+
     def test_expired_or_invalid_preview_capability_cannot_submit(self) -> None:
         artifact = self.root / "artifacts/plan.html"
         artifact.parent.mkdir(parents=True)
