@@ -326,7 +326,7 @@ Use these markers in spec.md for traceability through later phases:
 | Session | Focus Area | Questions | Key Outcomes |
 |---------|------------|-----------|--------------|
 | 1 | Provenance | 2 | Exact source pinned to `humanlayer/skills@bba9d13`; operator selected its MIT license for the separate notice |
-| 2 | Ledger contract | | |
+| 2 | Ledger contract | 4 | Closed typed `entries` schema; exact four-bucket path mapping; checked roadmap owner mapping with EDA-001 on IGNORE; canonical row formatting |
 | 3 | Test and credit header | | |
 
 ### Operator decision after Session 1
@@ -339,6 +339,8 @@ The operator answered `MIT` in the active Codex chat. Keep both notices: the Mat
 |---|------|----------------------|------------|-------|---------|------------|---------------|
 | 1 | Clarify | Exact copied `show-me` source | [spec, domain] | 1→2 | 2/3 | Pinned `humanlayer/skills@bba9d13` and retired repo-head fallback in FR-016 | spec-context-analyst, domain-researcher, codebase-analyst |
 | 2 | Clarify | License bytes for separate HumanLayer notice | [codebase, domain] | 1 | [HUMAN REVIEW] | Operator answered `MIT`; preserve two notices and use the pinned source repository license | codebase-analyst, domain-researcher |
+| 3 | Clarify | Exact bucket mapping for 38 upstream skills | [spec, domain] | 1 | both-agree | Four buckets match the immediate directory after `skills/` in the pinned tree; 18/7/4/9 paths | spec-context-analyst, domain-researcher |
+| 4 | Clarify | Checked `owner_spec` mapping and IGNORE ownership | [spec] | 1→2 | 3/3 | Freeze exact path-to-owner map; EDA-001 owns IGNORE, EDA-002–EDA-010 own delivery, EDA-011 verifies close-out | spec-context-analyst, codebase-analyst, domain-researcher |
 
 ---
 
@@ -369,18 +371,19 @@ The operator answered `MIT` in the active Codex chat. Keep both notices: the Mat
 - Test must not pass vacuously (Q3, "Frozen set + fixture proof"); mirror tests/speckit-pro/unit/test-quint-reference-attribution.py, which asserts seen > 0 "refusing to pass vacuously", rather than the substring MIT check in tests/speckit-pro/unit/test-artifact-gallery.py:144.
 - Reviewability budget: estimate-spec-size returned 625 LOC, warn, 2 suggested slices; the split above answers it. estimate-reviewable-loc returns not_estimated for Markdown and JSON layouts, and that is never a within-budget pass (speckit-autopilot references/phase-execution.md).
 
-## Module and Interface Deltas (carried verbatim from the design concept)
+## Module and Interface Deltas (refined by Clarify Sessions 1–2)
 - speckit-pro/skills/speckit-coach/references/upstream/mattpocock-skills/UPSTREAM-NOTICE.md: new. It carries the MIT text verbatim; the upstream URL, fork URL, and pinned SHA; a statement that the files the ledger lists as landed are modified derivatives; and a pointer to ledger.json. (Evidence: roadmap Scope; Q1.)
-- speckit-pro/skills/speckit-coach/references/upstream/mattpocock-skills/ledger.json: new interface consumed by the test and by every later EDA spec. One object per upstream skill, ordered by upstream path and pretty-printed with one key per line, so status flips on different rows merge cleanly (Q1). Fields and rules:
-  - upstream_path: required
-  - bucket: required
-  - disposition: ABSORB, NEW, or IGNORE
-  - destination: null for IGNORE
-  - owner_spec: the EDA spec that flips this row
-  - status: planned or landed; absent for IGNORE
-  - ignore_reason: required on IGNORE
-  - not_ported: required on exactly ask-matt, wayfinder, and triage (Q7)
-  - transitive_sources: list of {project, license, holder, notice_path}; present on pr (Q2)
+- speckit-pro/skills/speckit-coach/references/upstream/mattpocock-skills/ledger.json: new interface consumed by the test and by every later EDA spec. Its only root key is `entries`, with 38 objects sorted lexicographically by full `upstream_path`. Use two-space indentation, LF line endings, one final newline, and fixed present-key order to keep row flips reviewable; never route this file through `merge=generated` (Q1, Clarify Session 2). Fields and rules:
+  - `upstream_path`: exact pinned `skills/<bucket>/<skill>/SKILL.md` string
+  - `bucket`: `engineering`, `productivity`, `misc`, or `in-progress`, matching the path; the pinned tree has 18/7/4/9 paths respectively
+  - `disposition`: `ABSORB`, `NEW`, or `IGNORE`
+  - `destination`: repository-relative path string for `ABSORB`/`NEW`, `null` for `IGNORE`
+  - `owner_spec`: exact frozen path-to-owner mapping; EDA-001 for `IGNORE`, roadmap EDA-002–EDA-010 delivery owner otherwise; EDA-011 owns no row
+  - `status`: `planned` or `landed` for `ABSORB`/`NEW`; absent for `IGNORE`
+  - `ignore_reason`: substantive string on `IGNORE`; absent otherwise
+  - `not_ported`: substantive string on exactly `ask-matt`, `wayfinder`, and `triage`; `null` elsewhere (Q7)
+  - `transitive_sources`: array, empty except the initial `pr` entry; each entry has string `project`, `commit`, `path`, `license`, `holder`, `notice_path` fields (Q2, Clarify Session 1)
+  - Reject unknown root, row, or transitive-source keys and invalid types before landed-row checks.
 - speckit-pro/skills/speckit-coach/references/upstream/humanlayer-show-me/UPSTREAM-NOTICE.md: new in slice 2. It holds the MIT LICENSE text verbatim from `humanlayer/skills@bba9d13ab34f0a87f1cc33df4dd196372393ddfc/LICENSE`, including Copyright (c) 2026 HumanLayer, and pins `plugins/show-me/skills/show-me/SKILL.md` at that same commit (Q2, Q5, Clarify Session 1).
 - Credit header (interface for EDA-002 to EDA-011): one file-level header per derivative file, not per section (Q4).
   - Fields: upstream skill paths, pinned SHA, "Modified derivative: yes", and the repo-relative notice path.

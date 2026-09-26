@@ -5,7 +5,7 @@
   "branch": "eda-001-attribution-foundation",
   "status": "in_progress",
   "stage": "plan",
-  "active_step": "Phase 2: Clarify - Ledger Contract Focus",
+  "active_step": "Phase 2: Clarify - Test and Credit Header Focus",
   "stage_resolution": {
     "basis": "explicit --stage plan",
     "confidence_gate_status": "\u23f3 Pending",
@@ -52,15 +52,15 @@
     },
     {
       "step": "Phase 2: Clarify - Ledger Contract Focus",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 2: Clarify - Ledger Contract Focus Consensus",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 2: Clarify - Test and Credit Header Focus",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 2: Clarify - Test and Credit Header Focus Consensus",
@@ -171,8 +171,8 @@
     "ledger_path": "docs/ai/specs/.process/.process/execution-control/4e8762387d1ed8b61c01a9de.json",
     "disposition": "continue",
     "reasons": [],
-    "elapsed_seconds": 14653.212682008743,
-    "checkpoint_due": false,
+    "elapsed_seconds": 16127.55709695816,
+    "checkpoint_due": true,
     "run_id": "47805d8f53dd4babaf524ca9b62869ae"
   },
   "prerequisites": {
@@ -225,7 +225,7 @@
     "version": "1.0.0"
   },
   "dispatches": [],
-  "updated_at": "2026-09-26T01:23:49.170603+00:00",
+  "updated_at": "2026-09-26T01:46:04.987248+00:00",
   "recovery": {
     "status": "recovered_and_continuing",
     "plugin_version": "2.36.2",
@@ -376,6 +376,15 @@
       "operator_decision": "MIT",
       "unresolved_markers": 0,
       "review_resolution": "Keep both notices; separate HumanLayer notice uses source MIT LICENSE; Apache premise retired"
+    },
+    "clarify_ledger": {
+      "status": "completed",
+      "questions": 4,
+      "unresolved_markers": 0,
+      "bucket_mapping": "38 pinned SKILL.md paths: engineering 18, productivity 7, misc 4, in-progress 9; bucket equals pinned path segment",
+      "owner_mapping": "checked exact path-to-owner fixture; IGNORE EDA-001, delivery EDA-002 through EDA-010, EDA-011 close-out only",
+      "consensus": "Q2 both-agree in round 1; Q3 3/3 in round 2",
+      "format": "closed entries root; fixed key order, two-space indentation, LF, final newline"
     }
   }
 }

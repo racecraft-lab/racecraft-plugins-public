@@ -67,20 +67,20 @@ As a redistributor, I find a separate MIT notice for HumanLayer `show-me` text c
 ### Functional Requirements
 
 - **FR-001**: Both installed payloads MUST include a Matt Pocock `UPSTREAM-NOTICE.md` under `speckit-pro/skills/speckit-coach/references/upstream/` with byte-exact MIT license text and the pinned upstream repository, fork, tag, and commit.
-- **FR-002**: A `ledger.json` beside that notice MUST have one object per upstream skill, exactly 38, ordered by upstream path and pretty-printed with one key per line.
-- **FR-003**: Each row MUST contain `upstream_path`, `bucket`, `disposition`, `destination`, `owner_spec`, `not_ported`, and `transitive_sources`, plus its disposition-dependent fields.
+- **FR-002**: A `ledger.json` beside that notice MUST be a JSON object with only an `entries` array of exactly 38 row objects, sorted lexicographically by full `upstream_path`. It MUST use UTF-8, LF line endings, two-space indentation, one final newline, and a fixed order for present row keys: `upstream_path`, `bucket`, `disposition`, `destination`, `owner_spec`, `status` or `ignore_reason`, `not_ported`, `transitive_sources`. Each key occupies its own line; a row flip changes only that row.
+- **FR-003**: Each row MUST contain string `upstream_path`, `bucket`, `disposition`, and `owner_spec`; `destination` as a repository-relative path string or `null`; `not_ported` as a substantive string or `null`; and `transitive_sources` as an array, plus its disposition-dependent fields. `bucket` MUST be `engineering`, `productivity`, `misc`, or `in-progress`, matching the directory immediately after `skills/` in its pinned `upstream_path`. Each transitive source MUST contain only string `project`, `commit`, `path`, `license`, `holder`, and `notice_path` keys. The root, rows, and transitive sources MUST reject unknown keys.
 - **FR-004**: `disposition` MUST be `ABSORB`, `NEW`, or `IGNORE`. `ABSORB` and `NEW` MUST have a non-null destination and `status` of `planned` or `landed`, with no `ignore_reason`. `IGNORE` MUST have a null destination, no `status`, and a substantive `ignore_reason`.
-- **FR-005**: Every row MUST identify its EDA-002 through EDA-011 owner and let a reviewer distinguish absorption, newly authored treatment, and deliberate omission.
-- **FR-006**: Exactly `ask-matt`, `wayfinder`, and `triage` MUST have substantive `not_ported` notes; every other row MUST have no omission note. No `PARTIAL` disposition is allowed.
-- **FR-007**: Validation MUST compare ledger paths with a frozen 38-path list from commit `c55ee46073ed923f86ce59a5eb3b6d895095d1b7` and reject missing, duplicate, extra, or unordered paths even if no row is landed.
-- **FR-008**: Validation MUST reject invalid row fields, types, values, owner references, and disposition-specific combinations before landed-row checks.
+- **FR-005**: Every row MUST identify exactly one `owner_spec` matching a frozen, exact `upstream_path`-to-owner mapping derived from the roadmap Disposition Summary and stored with the durable attribution test or its fixtures. The 14 `IGNORE` rows belong to EDA-001; `ABSORB` and `NEW` rows belong to their assigned EDA-002 through EDA-010 delivery specs; EDA-011 owns no row and performs close-out. Validation MUST reject a mismatched owner even when no row is landed. This checks declared ownership, not Git branch or commit authorship.
+- **FR-006**: Exactly `ask-matt`, `wayfinder`, and `triage` MUST have substantive `not_ported` strings; every other row MUST set `not_ported` to `null`. No `PARTIAL` disposition is allowed.
+- **FR-007**: Validation MUST compare each ledger path and bucket with a frozen 38-path inventory from commit `c55ee46073ed923f86ce59a5eb3b6d895095d1b7`, rejecting missing, duplicate, extra, unordered, or misbucketed paths even if no row is landed. The inventory has 18 `engineering`, 7 `productivity`, 4 `misc`, and 9 `in-progress` paths; those counts do not replace the exact path checks.
+- **FR-008**: Validation MUST reject invalid root or row fields, types, values, owner references, disposition-specific combinations, and noncanonical ordering or formatting before landed-row checks.
 - **FR-009**: For every `landed` row, validation MUST require the declared destination to exist and each represented derivative file to carry its own matching file-level credit header.
 - **FR-010**: Each derivative header MUST use its file type's comment syntax, appear after frontmatter if present, and identify the upstream skill path or paths, pinned SHA, `Modified derivative: yes`, and the notice path.
 - **FR-011**: Each derivative `SKILL.md` MUST additionally have `metadata.credits` consistent with its header.
 - **FR-012**: Pass and fail credit-header fixtures MUST exercise landed-row enforcement before a real ledger row lands.
 - **FR-013**: Slice 1 MUST deliver the MIT notice, complete ledger, and validation before EDA-002 through EDA-011 add derivatives.
 - **FR-014**: Slice 2 MUST deliver `references/upstream/humanlayer-show-me/UPSTREAM-NOTICE.md` in both payloads with the byte-exact MIT license text from `humanlayer/skills@bba9d13ab34f0a87f1cc33df4dd196372393ddfc/LICENSE` and Copyright (c) 2026 HumanLayer.
-- **FR-015**: Slice 2 MUST link that notice and the pinned `humanlayer/skills` source from `pr`'s `transitive_sources`; validation MUST reject an absent or malformed required transitive source, MIT license identification, notice, or pin.
+- **FR-015**: Slice 2 MUST put the pinned `humanlayer/skills` source in `pr`'s `transitive_sources` as one entry with `project`, `commit`, `path`, `license`, `holder`, and `notice_path`; all other initial rows have an empty array. Validation MUST reject an absent or malformed required transitive source, MIT license identification, notice, or pin.
 - **FR-016**: The `pr` transitive-source entry MUST identify `humanlayer/skills` at commit `bba9d13ab34f0a87f1cc33df4dd196372393ddfc`, path `plugins/show-me/skills/show-me/SKILL.md`, as the exact copied `show-me` source.
 - **FR-017**: The repository test MUST be named `test-upstream-skill-attribution.py`, use only the Python 3.11+ standard library, and never read a `specs/<feature>/` path at run time.
 - **FR-018**: Shipped notices and credits MUST contain no shell-specific execution instructions, private home or temporary paths, or machine-specific identifiers. The feature MUST add no derivative content or fork edits.
@@ -88,7 +88,7 @@ As a redistributor, I find a separate MIT notice for HumanLayer `show-me` text c
 
 ### Reviewability Notes
 
-- Explicit row ownership and credit syntax support independent updates by EDA-002 through EDA-011. No typed reviewability exception is requested.
+- Fixed row order and formatting keep distinct row edits reviewable and usually text-mergeable; stacked branches may still need rebasing. Credit syntax supports later EDA updates. No typed reviewability exception is requested.
 
 ### Reviewability Budget *(mandatory)*
 
@@ -128,7 +128,7 @@ As a redistributor, I find a separate MIT notice for HumanLayer `show-me` text c
 ## Assumptions
 
 - The stated 38-skill count and Matt Pocock SHA are authoritative for this spec; implementation extracts the frozen path list from that commit.
-- A destination names a derivative file or directory whose authored derivative files each need credit. Later specs mark their rows landed.
+- A destination names a derivative file or directory whose authored derivative files each need credit. Later specs mark their rows landed. The test freezes the upstream path, bucket, and owner mapping under its own fixtures and never reads a temporary feature spec at run time.
 - All initial non-`IGNORE` rows are planned; fixtures prove landed behavior.
 - The exact copied `show-me` source was located in `humanlayer/skills`; the repository-head fallback is not needed for this source.
 - Existing payload builders include the specified upstream reference directory.
@@ -141,6 +141,13 @@ As a redistributor, I find a separate MIT notice for HumanLayer `show-me` text c
 - The identified source repository's `LICENSE` at that commit is MIT, Copyright (c) 2026 HumanLayer. The 15-line Apache-2.0 header belongs to a separate repository, `humanlayer/humanlayer`, at the previously proposed head pin.
 - The operator answered `MIT` in the active Codex chat. The feature keeps two notices: Matt Pocock's MIT notice and a separate HumanLayer MIT notice from the identified source repository. The earlier Apache-2.0 premise and repository-head fallback are superseded.
 - Primary evidence: [upstream `pr` metadata](https://github.com/mattpocock/skills/blob/c55ee46073ed923f86ce59a5eb3b6d895095d1b7/skills/in-progress/pr/SKILL.md), [upstream credits](https://github.com/mattpocock/skills/blob/c55ee46073ed923f86ce59a5eb3b6d895095d1b7/skills/in-progress/pr/CREDITS.md), [exact `show-me` source](https://github.com/humanlayer/skills/blob/bba9d13ab34f0a87f1cc33df4dd196372393ddfc/plugins/show-me/skills/show-me/SKILL.md), [its MIT LICENSE](https://github.com/humanlayer/skills/blob/bba9d13ab34f0a87f1cc33df4dd196372393ddfc/LICENSE), and [the separate Apache LICENSE](https://github.com/humanlayer/humanlayer/blob/99abe673498cf8bdcd5f989aebe9406a27185b3b/LICENSE).
+
+### Session 2: Ledger contract — resolved
+
+- `ledger.json` has a closed `entries` root, typed rows, fixed key order, two-space indentation, LF line endings, and one final newline. `IGNORE` has `destination: null`, omits `status`, and requires an `ignore_reason`; the three partial absorptions have substantive `not_ported` strings and all other rows use `null`.
+- The pinned upstream tree contains 38 `SKILL.md` paths in four buckets: 18 `engineering`, 7 `productivity`, 4 `misc`, and 9 `in-progress`. Each ledger bucket must match the directory immediately after `skills/` in its exact pinned path. [Pinned tree](https://api.github.com/repos/mattpocock/skills/git/trees/c55ee46073ed923f86ce59a5eb3b6d895095d1b7?recursive=1).
+- `owner_spec` is checked against a frozen path-to-owner mapping: 14 `IGNORE` rows are EDA-001; other rows use their roadmap delivery owner in EDA-002–EDA-010. EDA-011 verifies close-out and owns no row. This validates the declaration, not Git authorship.
+- Distinct row edits remain reviewable and can text-merge, while stacked branches may still require rebasing. The ledger stays outside the generated merge driver.
 
 ## Out of Scope
 

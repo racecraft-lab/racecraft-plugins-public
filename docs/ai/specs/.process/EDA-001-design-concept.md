@@ -88,7 +88,7 @@ The operator answered `MIT` during EDA-001 Clarify Session 1. The upstream `pr` 
   | `bucket` | required |
   | `disposition` | ABSORB, NEW, or IGNORE |
   | `destination` | null for IGNORE |
-  | `owner_spec` | the EDA spec that flips this row |
+  | `owner_spec` | checked against the pinned path-to-owner mapping; EDA-001 owns IGNORE rows, EDA-002–EDA-010 own delivery rows, and EDA-011 owns none (Clarify Session 2) |
   | `status` | `planned` or `landed`; absent for IGNORE |
   | `ignore_reason` | required on IGNORE |
   | `not_ported` | required on exactly ask-matt, wayfinder, and triage (Q7) |
@@ -276,12 +276,7 @@ operator.
   **Suggested next step:** Record EDA-001's budget as the `estimate-spec-size`
   result (625 LOC, warn, split into 2 slices). Raise a roadmap wording fix
   separately.
-- **What:** Ledger row ownership when Tier 2 specs run in parallel.
-  **Why deferred:** The JSON layout (Q1) removes adjacent-line conflicts, but
-  stacked PRs that touch one file still go `dirty` when a lower branch changes.
-  **Suggested next step:** Clarify: decide whether `owner_spec` stays
-  informational (each EDA spec flips only its own rows by convention) or whether
-  the test enforces it in some checkable form.
+- **Resolved in Clarify Session 2:** The attribution test checks each ledger row against a frozen path-to-owner mapping in its durable fixture. The 14 `IGNORE` rows belong to EDA-001, delivery rows to EDA-002–EDA-010, and EDA-011 owns no row. This validates declared ownership, not Git authorship. The JSON layout keeps distinct row edits reviewable; stacked PRs may still need rebasing.
 
 ## Recommended Next Step
 

@@ -5,6 +5,70 @@
   "checkpoint_at": 1790384047.005624,
   "corrective_cycles": 1,
   "dispatches": {
+    "consensus-clarify-ledger-q2-domain-r1": {
+      "completed_at": 1790386500.488744,
+      "kind": "infrastructure",
+      "outcome": "completed",
+      "reconciliations": 0,
+      "reservation_id": null,
+      "reserved_at": 1790386253.667736
+    },
+    "consensus-clarify-ledger-q2-spec-r1": {
+      "completed_at": 1790386497.362828,
+      "kind": "infrastructure",
+      "outcome": "completed",
+      "reconciliations": 0,
+      "reservation_id": null,
+      "reserved_at": 1790386250.7553
+    },
+    "consensus-clarify-ledger-q2-synth-r1": {
+      "completed_at": 1790386644.597575,
+      "kind": "infrastructure",
+      "outcome": "completed",
+      "reconciliations": 0,
+      "reservation_id": null,
+      "reserved_at": 1790386589.405362
+    },
+    "consensus-clarify-ledger-q3-codebase-r2": {
+      "completed_at": 1790386963.880737,
+      "kind": "infrastructure",
+      "outcome": "completed",
+      "reconciliations": 0,
+      "reservation_id": null,
+      "reserved_at": 1790386680.987992
+    },
+    "consensus-clarify-ledger-q3-domain-r2": {
+      "completed_at": 1790386968.6588569,
+      "kind": "infrastructure",
+      "outcome": "completed",
+      "reconciliations": 0,
+      "reservation_id": null,
+      "reserved_at": 1790386684.415701
+    },
+    "consensus-clarify-ledger-q3-spec-r1": {
+      "completed_at": 1790386584.383266,
+      "kind": "infrastructure",
+      "outcome": "completed",
+      "reconciliations": 0,
+      "reservation_id": null,
+      "reserved_at": 1790386257.15577
+    },
+    "consensus-clarify-ledger-q3-synth-r1": {
+      "completed_at": 1790386648.1103292,
+      "kind": "infrastructure",
+      "outcome": "completed",
+      "reconciliations": 0,
+      "reservation_id": null,
+      "reserved_at": 1790386595.480327
+    },
+    "consensus-clarify-ledger-q3-synth-r2": {
+      "completed_at": 1790387024.6220212,
+      "kind": "infrastructure",
+      "outcome": "completed",
+      "reconciliations": 0,
+      "reservation_id": null,
+      "reserved_at": 1790386971.951295
+    },
     "consensus-clarify-provenance-q1-codebase-r2": {
       "completed_at": 1790385175.8310359,
       "kind": "infrastructure",
@@ -166,6 +230,14 @@
       "reservation_id": null,
       "reserved_at": 1790383776.827552
     },
+    "phase2-clarify-ledger-1": {
+      "completed_at": 1790386190.133437,
+      "kind": "infrastructure",
+      "outcome": "completed",
+      "reconciliations": 0,
+      "reservation_id": null,
+      "reserved_at": 1790385923.844455
+    },
     "phase2-clarify-provenance-1": {
       "completed_at": 1790384487.625335,
       "kind": "infrastructure",
@@ -176,7 +248,7 @@
     }
   },
   "excluded_intervals": [],
-  "last_observed_at": 1790385248.4250062,
+  "last_observed_at": 1790387024.6220212,
   "reservations": {
     "a02de8a1ea1d4f02bd03770cacecd0dd": {
       "dispatch_id": "g0-privacy-scan-path-collision-repair-1",
