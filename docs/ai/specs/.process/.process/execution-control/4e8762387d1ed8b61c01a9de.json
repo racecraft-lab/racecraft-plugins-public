@@ -2,7 +2,7 @@
   "active_wait": null,
   "approved_invariants": [],
   "authorization_granted": false,
-  "checkpoint_at": 1790393250.3923872,
+  "checkpoint_at": 1790394891.778953,
   "corrective_cycles": 1,
   "dispatches": {
     "checkpoint-supply-proposal-verify-1": {
@@ -294,6 +294,14 @@
       "reservation_id": null,
       "reserved_at": 1790393117.46608
     },
+    "g5-tasks-verification-1": {
+      "completed_at": 1790394888.0389938,
+      "kind": "verification",
+      "outcome": "completed",
+      "reconciliations": 0,
+      "reservation_id": null,
+      "reserved_at": 1790394363.8825002
+    },
     "phase1-specify-1": {
       "completed_at": 1790383658.66255,
       "kind": "infrastructure",
@@ -382,6 +390,14 @@
       "reservation_id": null,
       "reserved_at": 1790391867.66094
     },
+    "phase5-tasks-1": {
+      "completed_at": 1790394357.715492,
+      "kind": "infrastructure",
+      "outcome": "completed",
+      "reconciliations": 0,
+      "reservation_id": null,
+      "reserved_at": 1790393315.5228858
+    },
     "plan-estimator-after-checklists-1": {
       "completed_at": 1790393166.99381,
       "kind": "verification",
@@ -416,7 +432,7 @@
     }
   },
   "excluded_intervals": [],
-  "last_observed_at": 1790393250.3923872,
+  "last_observed_at": 1790394891.778953,
   "reservations": {
     "a02de8a1ea1d4f02bd03770cacecd0dd": {
       "dispatch_id": "g0-privacy-scan-path-collision-repair-1",

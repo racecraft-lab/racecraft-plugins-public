@@ -37,7 +37,7 @@ captured during scoping.
 | Clarify | `/speckit-clarify` | ✅ Complete | Three sessions resolved; G2 passed with 0 markers |
 | Plan | `/speckit-plan` | ✅ Complete | Seven artifacts, G3 pass, and privacy 13/13 after approved wording correction |
 | Checklist | `/speckit-checklist` | ✅ Complete | 88 items; 3 gaps resolved; G3/G4 pass with 0 markers |
-| Tasks | `/speckit-tasks` | 🔄 In Progress | Execution metadata required |
+| Tasks | `/speckit-tasks` | ✅ Complete | 27 tasks; 19/19 FRs; valid required execution metadata; G5 pass |
 | Analyze | `/speckit-analyze` | ⏳ Pending | |
 | Confidence Gate | G6.5 | ⏳ Pending | Pre-Implement composite confidence |
 | Implement | `/speckit-implement` | ⏳ Pending | |
@@ -569,10 +569,10 @@ Do not guess fingerprints or omit ownership to force parallel execution.
 
 | Metric | Value |
 |--------|-------|
-| **Total Tasks** | |
-| **Phases** | |
-| **Parallel Opportunities** | |
-| **User Stories Covered** | |
+| **Total Tasks** | 27 (all unchecked) |
+| **Phases** | 6 |
+| **Parallel Opportunities** | T002 and T003 only; shared-file behavioral units are serial |
+| **User Stories Covered** | US1, US2, US3; all 19 FRs |
 
 ---
 
@@ -590,10 +590,10 @@ line count. Surface the four fields the SKILL extracts from the emitted decision
 
 | Field | Value | Meaning |
 |-------|-------|---------|
-| **Route** | | One of `split-PR`, `one-navigable-PR`, `single-atomic-PR`, `branch-by-abstraction`, or `out-of-scope`. |
-| **Releasable** | | `true`, or `false` for a destructive-migration or concurrency-sensitive change (a passing CI run does not prove such a change is safe to release). |
-| **Signals** | | The decisive detector findings behind the route and releasability reading (may be empty when the classifier abstains). |
-| **Warnings** | | Any release-safety warning attached to the change (empty when there is no releasability risk). |
+| **Route** | one-navigable-PR | One of `split-PR`, `one-navigable-PR`, `single-atomic-PR`, `branch-by-abstraction`, or `out-of-scope`. |
+| **Releasable** | true | `true`, or `false` for a destructive-migration or concurrency-sensitive change (a passing CI run does not prove such a change is safe to release). |
+| **Signals** | change-shape:modify-heavy | The decisive detector findings behind the route and releasability reading (may be empty when the classifier abstains). |
+| **Warnings** | [] | Any release-safety warning attached to the change (empty when there is no releasability risk). |
 
 To produce the decision, send the complete read-only runner request:
 
@@ -853,3 +853,79 @@ The operator explicitly approved installing pinned mypy 2.3.1 in an isolated env
 **Error-handling outcome:** 32 sequential, traceable requirements-quality questions; two planning gaps closed under explicit operator continuation. FR-008/FR-012 and Plan/ledger/notice contracts now require missing-ledger, unparseable-JSON, and missing-notice failures with file-specific diagnostics. FR-010/FR-012 and Plan/credits contract require positive and negative frontmatter-placement fixtures. Count-markers and diff/structure checks pass with zero gaps. No unresolved consensus or implementation tests. The advisory Ripwire test audit reported four planning-prose symbols as untested; it is not an implementation test verdict. All 88 checklist questions retain honest reviewer-owned states.
 
 **Checklist phase boundary:** Parent G3 and G4 each passed with 0 markers after all corrections. The refreshed Plan sizing result is `not_estimated` (same 11 declared files), with no unsupported budget-pass claim. The EDA SPEC-MOC navigation was regenerated and the required elapsed-time checkpoint recorded. Tasks begins from this corrected snapshot.
+
+### Tasks phase boundary evidence
+
+The atomicity verdict classifies the current planning change. It does not revoke Q8's two future implementation PRs. Layer emission is skipped for this non-split planning route; the optional complete compatibility diagnostic is preserved with its actual warnings. Phase 7 is decomposed into 19 concrete task groups, all skipped outside this plan stage.
+
+```json
+{
+  "g5": {
+    "gate": "G5",
+    "markers": 0,
+    "pass": true,
+    "reason": "27 tasks found",
+    "task_count": 27,
+    "functional_requirements": 19,
+    "unmapped_requirements": [],
+    "coverage_mode": "explicit references and inclusive FR ranges",
+    "task_execution_valid": true,
+    "fingerprints": {
+      "plan_sha256": "9ce69bf6cbe2151db68d2a2737db593a879149ffbd0489c05ab775a148f23be1",
+      "spec_sha256": "52481b25ec692937c47adb4f8db9b0a6d73385ba431ea0ee70160258a738d0d7",
+      "tasks_sha256": "18001ad6f6372d494b2590b9ad5f331d91850b53496c322878f729f4d1b5575c"
+    }
+  },
+  "execution_metadata": {
+    "sidecar": "specs/eda-001-attribution-foundation/.process/task-execution.json",
+    "fingerprints": {
+      "plan_sha256": "9ce69bf6cbe2151db68d2a2737db593a879149ffbd0489c05ab775a148f23be1",
+      "spec_sha256": "52481b25ec692937c47adb4f8db9b0a6d73385ba431ea0ee70160258a738d0d7",
+      "tasks_sha256": "18001ad6f6372d494b2590b9ad5f331d91850b53496c322878f729f4d1b5575c"
+    },
+    "units": 19,
+    "waves": 18,
+    "implementation_started": false
+  },
+  "reviewability": {
+    "helper_id": "reviewability-gate",
+    "requested_mode": "tasks",
+    "status": "deferred",
+    "reason": "Installed runner supports setup mode only; tasks mode was not invoked.",
+    "fallback_decision": "proceed",
+    "fallback_evidence": [
+      "Current setup mode pass",
+      "Current Plan not_estimated; no budget-pass claim",
+      "Operator-ratified two vertical implementation slices from Q8"
+    ],
+    "fingerprint_status": "current",
+    "warning": "Final implementation diff size remains unmeasured; measure each implementation PR."
+  },
+  "atomicity_route": {
+    "hints": [],
+    "releasable": true,
+    "route": "one-navigable-PR",
+    "signals": [
+      "change-shape:modify-heavy"
+    ],
+    "warnings": []
+  },
+  "layer_plan": {
+    "status": "skipped",
+    "reason": "Authoritative atomicity-route for the current planning changes is one-navigable-PR. Optional compatibility diagnostic is preserved separately.",
+    "diagnostic_evidence": {
+      "path": "specs/eda-001-attribution-foundation/.process/layer-plan-diagnostic.json",
+      "sha256": "ac4ef7626616d638f7e6a65d86adf116e9ee7263cad736abfd60388efbc90289",
+      "status": "ok",
+      "task_count": 27,
+      "warnings": 32,
+      "warning_reason": "Nine declared NEW implementation files do not exist during planning."
+    }
+  },
+  "ratified_future_implementation_prs": {
+    "slice_1": "T001\u2013T019: US1+US2 with packaging/checkpoint",
+    "slice_2": "T020\u2013T027: US3 with final packaging/checkpoint"
+  },
+  "repair": "User-authorized format-only producer repair; the refused corrective reservation remains preserved. Layer compatibility diagnostic recognizes all 27 tasks."
+}
+```

@@ -5,7 +5,7 @@
   "branch": "eda-001-attribution-foundation",
   "status": "in_progress",
   "stage": "plan",
-  "active_step": "Phase 5: Tasks",
+  "active_step": "Phase 5: Tasks complete; Analyze next",
   "stage_resolution": {
     "basis": "explicit --stage plan",
     "confidence_gate_status": "\u23f3 Pending",
@@ -96,7 +96,7 @@
     },
     {
       "step": "Phase 5: Tasks",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 6: Analyze",
@@ -111,8 +111,600 @@
       "status": "pending"
     },
     {
-      "step": "Phase 7: Implement - Pending task decomposition",
-      "status": "skipped: outside plan stage"
+      "step": "Phase 7: Implement - B001 T001",
+      "status": "skipped: outside plan stage",
+      "task_ids": [
+        "T001"
+      ],
+      "depends_on": [],
+      "tdd_units": [
+        "scope-readiness"
+      ],
+      "tdd_protocol": "Each closed unit runs its actual failing test before implementation and ends green; maximum four adjacent tasks per dispatch.",
+      "PROJECT_COMMANDS": {
+        "BUILD": "N/A",
+        "COMPLEXITY": "N/A",
+        "DEPENDENCY_AUDIT": "N/A",
+        "DEPENDENCY_RULES": "N/A",
+        "FULL_VERIFY": "python3 tests/speckit-pro/run-all.py",
+        "INTEGRATION_TEST": "N/A",
+        "LINT": "python3 scripts/run-python-lint.py run ruff",
+        "LINT_FIX": "N/A",
+        "MUTATION": "N/A",
+        "SINGLE_FILE_INTEGRATION": "N/A",
+        "SINGLE_FILE_TEST": "N/A",
+        "TYPECHECK": "python3 scripts/run-python-lint.py run mypy",
+        "UNIT_TEST": "python3 tests/speckit-pro/run-all.py"
+      },
+      "COMPLETED_TASKS": [],
+      "agent_route": "speckit-pro:implement-executor"
+    },
+    {
+      "step": "Phase 7: Implement - B002 T002",
+      "status": "skipped: outside plan stage",
+      "task_ids": [
+        "T002"
+      ],
+      "depends_on": [
+        "T001"
+      ],
+      "tdd_units": [
+        "matt-evidence"
+      ],
+      "tdd_protocol": "Each closed unit runs its actual failing test before implementation and ends green; maximum four adjacent tasks per dispatch.",
+      "PROJECT_COMMANDS": {
+        "BUILD": "N/A",
+        "COMPLEXITY": "N/A",
+        "DEPENDENCY_AUDIT": "N/A",
+        "DEPENDENCY_RULES": "N/A",
+        "FULL_VERIFY": "python3 tests/speckit-pro/run-all.py",
+        "INTEGRATION_TEST": "N/A",
+        "LINT": "python3 scripts/run-python-lint.py run ruff",
+        "LINT_FIX": "N/A",
+        "MUTATION": "N/A",
+        "SINGLE_FILE_INTEGRATION": "N/A",
+        "SINGLE_FILE_TEST": "N/A",
+        "TYPECHECK": "python3 scripts/run-python-lint.py run mypy",
+        "UNIT_TEST": "python3 tests/speckit-pro/run-all.py"
+      },
+      "COMPLETED_TASKS": [],
+      "agent_route": "speckit-pro:implement-executor"
+    },
+    {
+      "step": "Phase 7: Implement - B003 T003",
+      "status": "skipped: outside plan stage",
+      "task_ids": [
+        "T003"
+      ],
+      "depends_on": [
+        "T001"
+      ],
+      "tdd_units": [
+        "credit-evidence"
+      ],
+      "tdd_protocol": "Each closed unit runs its actual failing test before implementation and ends green; maximum four adjacent tasks per dispatch.",
+      "PROJECT_COMMANDS": {
+        "BUILD": "N/A",
+        "COMPLEXITY": "N/A",
+        "DEPENDENCY_AUDIT": "N/A",
+        "DEPENDENCY_RULES": "N/A",
+        "FULL_VERIFY": "python3 tests/speckit-pro/run-all.py",
+        "INTEGRATION_TEST": "N/A",
+        "LINT": "python3 scripts/run-python-lint.py run ruff",
+        "LINT_FIX": "N/A",
+        "MUTATION": "N/A",
+        "SINGLE_FILE_INTEGRATION": "N/A",
+        "SINGLE_FILE_TEST": "N/A",
+        "TYPECHECK": "python3 scripts/run-python-lint.py run mypy",
+        "UNIT_TEST": "python3 tests/speckit-pro/run-all.py"
+      },
+      "COMPLETED_TASKS": [],
+      "agent_route": "speckit-pro:implement-executor"
+    },
+    {
+      "step": "Phase 7: Implement - B004 T004",
+      "status": "skipped: outside plan stage",
+      "task_ids": [
+        "T004"
+      ],
+      "depends_on": [
+        "T002",
+        "T003"
+      ],
+      "tdd_units": [
+        "zero-landed-evidence"
+      ],
+      "tdd_protocol": "Each closed unit runs its actual failing test before implementation and ends green; maximum four adjacent tasks per dispatch.",
+      "PROJECT_COMMANDS": {
+        "BUILD": "N/A",
+        "COMPLEXITY": "N/A",
+        "DEPENDENCY_AUDIT": "N/A",
+        "DEPENDENCY_RULES": "N/A",
+        "FULL_VERIFY": "python3 tests/speckit-pro/run-all.py",
+        "INTEGRATION_TEST": "N/A",
+        "LINT": "python3 scripts/run-python-lint.py run ruff",
+        "LINT_FIX": "N/A",
+        "MUTATION": "N/A",
+        "SINGLE_FILE_INTEGRATION": "N/A",
+        "SINGLE_FILE_TEST": "N/A",
+        "TYPECHECK": "python3 scripts/run-python-lint.py run mypy",
+        "UNIT_TEST": "python3 tests/speckit-pro/run-all.py"
+      },
+      "COMPLETED_TASKS": [],
+      "agent_route": "speckit-pro:implement-executor"
+    },
+    {
+      "step": "Phase 7: Implement - B005 T005, T006",
+      "status": "skipped: outside plan stage",
+      "task_ids": [
+        "T005",
+        "T006"
+      ],
+      "depends_on": [
+        "T004"
+      ],
+      "tdd_units": [
+        "matt-notice"
+      ],
+      "tdd_protocol": "Each closed unit runs its actual failing test before implementation and ends green; maximum four adjacent tasks per dispatch.",
+      "PROJECT_COMMANDS": {
+        "BUILD": "N/A",
+        "COMPLEXITY": "N/A",
+        "DEPENDENCY_AUDIT": "N/A",
+        "DEPENDENCY_RULES": "N/A",
+        "FULL_VERIFY": "python3 tests/speckit-pro/run-all.py",
+        "INTEGRATION_TEST": "N/A",
+        "LINT": "python3 scripts/run-python-lint.py run ruff",
+        "LINT_FIX": "N/A",
+        "MUTATION": "N/A",
+        "SINGLE_FILE_INTEGRATION": "N/A",
+        "SINGLE_FILE_TEST": "N/A",
+        "TYPECHECK": "python3 scripts/run-python-lint.py run mypy",
+        "UNIT_TEST": "python3 tests/speckit-pro/run-all.py"
+      },
+      "COMPLETED_TASKS": [],
+      "agent_route": "speckit-pro:implement-executor"
+    },
+    {
+      "step": "Phase 7: Implement - B006 T007, T008",
+      "status": "skipped: outside plan stage",
+      "task_ids": [
+        "T007",
+        "T008"
+      ],
+      "depends_on": [
+        "T006"
+      ],
+      "tdd_units": [
+        "ledger-contract"
+      ],
+      "tdd_protocol": "Each closed unit runs its actual failing test before implementation and ends green; maximum four adjacent tasks per dispatch.",
+      "PROJECT_COMMANDS": {
+        "BUILD": "N/A",
+        "COMPLEXITY": "N/A",
+        "DEPENDENCY_AUDIT": "N/A",
+        "DEPENDENCY_RULES": "N/A",
+        "FULL_VERIFY": "python3 tests/speckit-pro/run-all.py",
+        "INTEGRATION_TEST": "N/A",
+        "LINT": "python3 scripts/run-python-lint.py run ruff",
+        "LINT_FIX": "N/A",
+        "MUTATION": "N/A",
+        "SINGLE_FILE_INTEGRATION": "N/A",
+        "SINGLE_FILE_TEST": "N/A",
+        "TYPECHECK": "python3 scripts/run-python-lint.py run mypy",
+        "UNIT_TEST": "python3 tests/speckit-pro/run-all.py"
+      },
+      "COMPLETED_TASKS": [],
+      "agent_route": "speckit-pro:implement-executor"
+    },
+    {
+      "step": "Phase 7: Implement - B007 T009, T010",
+      "status": "skipped: outside plan stage",
+      "task_ids": [
+        "T009",
+        "T010"
+      ],
+      "depends_on": [
+        "T008"
+      ],
+      "tdd_units": [
+        "destination-selection"
+      ],
+      "tdd_protocol": "Each closed unit runs its actual failing test before implementation and ends green; maximum four adjacent tasks per dispatch.",
+      "PROJECT_COMMANDS": {
+        "BUILD": "N/A",
+        "COMPLEXITY": "N/A",
+        "DEPENDENCY_AUDIT": "N/A",
+        "DEPENDENCY_RULES": "N/A",
+        "FULL_VERIFY": "python3 tests/speckit-pro/run-all.py",
+        "INTEGRATION_TEST": "N/A",
+        "LINT": "python3 scripts/run-python-lint.py run ruff",
+        "LINT_FIX": "N/A",
+        "MUTATION": "N/A",
+        "SINGLE_FILE_INTEGRATION": "N/A",
+        "SINGLE_FILE_TEST": "N/A",
+        "TYPECHECK": "python3 scripts/run-python-lint.py run mypy",
+        "UNIT_TEST": "python3 tests/speckit-pro/run-all.py"
+      },
+      "COMPLETED_TASKS": [],
+      "agent_route": "speckit-pro:implement-executor"
+    },
+    {
+      "step": "Phase 7: Implement - B008 T011, T012",
+      "status": "skipped: outside plan stage",
+      "task_ids": [
+        "T011",
+        "T012"
+      ],
+      "depends_on": [
+        "T010"
+      ],
+      "tdd_units": [
+        "credit-headers"
+      ],
+      "tdd_protocol": "Each closed unit runs its actual failing test before implementation and ends green; maximum four adjacent tasks per dispatch.",
+      "PROJECT_COMMANDS": {
+        "BUILD": "N/A",
+        "COMPLEXITY": "N/A",
+        "DEPENDENCY_AUDIT": "N/A",
+        "DEPENDENCY_RULES": "N/A",
+        "FULL_VERIFY": "python3 tests/speckit-pro/run-all.py",
+        "INTEGRATION_TEST": "N/A",
+        "LINT": "python3 scripts/run-python-lint.py run ruff",
+        "LINT_FIX": "N/A",
+        "MUTATION": "N/A",
+        "SINGLE_FILE_INTEGRATION": "N/A",
+        "SINGLE_FILE_TEST": "N/A",
+        "TYPECHECK": "python3 scripts/run-python-lint.py run mypy",
+        "UNIT_TEST": "python3 tests/speckit-pro/run-all.py"
+      },
+      "COMPLETED_TASKS": [],
+      "agent_route": "speckit-pro:implement-executor"
+    },
+    {
+      "step": "Phase 7: Implement - B009 T013, T014",
+      "status": "skipped: outside plan stage",
+      "task_ids": [
+        "T013",
+        "T014"
+      ],
+      "depends_on": [
+        "T012"
+      ],
+      "tdd_units": [
+        "credit-metadata"
+      ],
+      "tdd_protocol": "Each closed unit runs its actual failing test before implementation and ends green; maximum four adjacent tasks per dispatch.",
+      "PROJECT_COMMANDS": {
+        "BUILD": "N/A",
+        "COMPLEXITY": "N/A",
+        "DEPENDENCY_AUDIT": "N/A",
+        "DEPENDENCY_RULES": "N/A",
+        "FULL_VERIFY": "python3 tests/speckit-pro/run-all.py",
+        "INTEGRATION_TEST": "N/A",
+        "LINT": "python3 scripts/run-python-lint.py run ruff",
+        "LINT_FIX": "N/A",
+        "MUTATION": "N/A",
+        "SINGLE_FILE_INTEGRATION": "N/A",
+        "SINGLE_FILE_TEST": "N/A",
+        "TYPECHECK": "python3 scripts/run-python-lint.py run mypy",
+        "UNIT_TEST": "python3 tests/speckit-pro/run-all.py"
+      },
+      "COMPLETED_TASKS": [],
+      "agent_route": "speckit-pro:implement-executor"
+    },
+    {
+      "step": "Phase 7: Implement - B010 T015, T016",
+      "status": "skipped: outside plan stage",
+      "task_ids": [
+        "T015",
+        "T016"
+      ],
+      "depends_on": [
+        "T014"
+      ],
+      "tdd_units": [
+        "attribution-suite"
+      ],
+      "tdd_protocol": "Each closed unit runs its actual failing test before implementation and ends green; maximum four adjacent tasks per dispatch.",
+      "PROJECT_COMMANDS": {
+        "BUILD": "N/A",
+        "COMPLEXITY": "N/A",
+        "DEPENDENCY_AUDIT": "N/A",
+        "DEPENDENCY_RULES": "N/A",
+        "FULL_VERIFY": "python3 tests/speckit-pro/run-all.py",
+        "INTEGRATION_TEST": "N/A",
+        "LINT": "python3 scripts/run-python-lint.py run ruff",
+        "LINT_FIX": "N/A",
+        "MUTATION": "N/A",
+        "SINGLE_FILE_INTEGRATION": "N/A",
+        "SINGLE_FILE_TEST": "N/A",
+        "TYPECHECK": "python3 scripts/run-python-lint.py run mypy",
+        "UNIT_TEST": "python3 tests/speckit-pro/run-all.py"
+      },
+      "COMPLETED_TASKS": [],
+      "agent_route": "speckit-pro:implement-executor"
+    },
+    {
+      "step": "Phase 7: Implement - B011 T017",
+      "status": "skipped: outside plan stage",
+      "task_ids": [
+        "T017"
+      ],
+      "depends_on": [
+        "T016"
+      ],
+      "tdd_units": [
+        "slice-one-package"
+      ],
+      "tdd_protocol": "Each closed unit runs its actual failing test before implementation and ends green; maximum four adjacent tasks per dispatch.",
+      "PROJECT_COMMANDS": {
+        "BUILD": "N/A",
+        "COMPLEXITY": "N/A",
+        "DEPENDENCY_AUDIT": "N/A",
+        "DEPENDENCY_RULES": "N/A",
+        "FULL_VERIFY": "python3 tests/speckit-pro/run-all.py",
+        "INTEGRATION_TEST": "N/A",
+        "LINT": "python3 scripts/run-python-lint.py run ruff",
+        "LINT_FIX": "N/A",
+        "MUTATION": "N/A",
+        "SINGLE_FILE_INTEGRATION": "N/A",
+        "SINGLE_FILE_TEST": "N/A",
+        "TYPECHECK": "python3 scripts/run-python-lint.py run mypy",
+        "UNIT_TEST": "python3 tests/speckit-pro/run-all.py"
+      },
+      "COMPLETED_TASKS": [],
+      "agent_route": "speckit-pro:implement-executor"
+    },
+    {
+      "step": "Phase 7: Implement - B012 T018",
+      "status": "skipped: outside plan stage",
+      "task_ids": [
+        "T018"
+      ],
+      "depends_on": [
+        "T017"
+      ],
+      "tdd_units": [
+        "slice-one-verify"
+      ],
+      "tdd_protocol": "Each closed unit runs its actual failing test before implementation and ends green; maximum four adjacent tasks per dispatch.",
+      "PROJECT_COMMANDS": {
+        "BUILD": "N/A",
+        "COMPLEXITY": "N/A",
+        "DEPENDENCY_AUDIT": "N/A",
+        "DEPENDENCY_RULES": "N/A",
+        "FULL_VERIFY": "python3 tests/speckit-pro/run-all.py",
+        "INTEGRATION_TEST": "N/A",
+        "LINT": "python3 scripts/run-python-lint.py run ruff",
+        "LINT_FIX": "N/A",
+        "MUTATION": "N/A",
+        "SINGLE_FILE_INTEGRATION": "N/A",
+        "SINGLE_FILE_TEST": "N/A",
+        "TYPECHECK": "python3 scripts/run-python-lint.py run mypy",
+        "UNIT_TEST": "python3 tests/speckit-pro/run-all.py"
+      },
+      "COMPLETED_TASKS": [],
+      "agent_route": "orchestrator-direct"
+    },
+    {
+      "step": "Phase 7: Implement - B013 T019",
+      "status": "skipped: outside plan stage",
+      "task_ids": [
+        "T019"
+      ],
+      "depends_on": [
+        "T018"
+      ],
+      "tdd_units": [
+        "slice-one-review"
+      ],
+      "tdd_protocol": "Each closed unit runs its actual failing test before implementation and ends green; maximum four adjacent tasks per dispatch.",
+      "PROJECT_COMMANDS": {
+        "BUILD": "N/A",
+        "COMPLEXITY": "N/A",
+        "DEPENDENCY_AUDIT": "N/A",
+        "DEPENDENCY_RULES": "N/A",
+        "FULL_VERIFY": "python3 tests/speckit-pro/run-all.py",
+        "INTEGRATION_TEST": "N/A",
+        "LINT": "python3 scripts/run-python-lint.py run ruff",
+        "LINT_FIX": "N/A",
+        "MUTATION": "N/A",
+        "SINGLE_FILE_INTEGRATION": "N/A",
+        "SINGLE_FILE_TEST": "N/A",
+        "TYPECHECK": "python3 scripts/run-python-lint.py run mypy",
+        "UNIT_TEST": "python3 tests/speckit-pro/run-all.py"
+      },
+      "COMPLETED_TASKS": [],
+      "agent_route": "speckit-pro:implement-executor"
+    },
+    {
+      "step": "Phase 7: Implement - B014 T020",
+      "status": "skipped: outside plan stage",
+      "task_ids": [
+        "T020"
+      ],
+      "depends_on": [
+        "T019"
+      ],
+      "tdd_units": [
+        "humanlayer-evidence"
+      ],
+      "tdd_protocol": "Each closed unit runs its actual failing test before implementation and ends green; maximum four adjacent tasks per dispatch.",
+      "PROJECT_COMMANDS": {
+        "BUILD": "N/A",
+        "COMPLEXITY": "N/A",
+        "DEPENDENCY_AUDIT": "N/A",
+        "DEPENDENCY_RULES": "N/A",
+        "FULL_VERIFY": "python3 tests/speckit-pro/run-all.py",
+        "INTEGRATION_TEST": "N/A",
+        "LINT": "python3 scripts/run-python-lint.py run ruff",
+        "LINT_FIX": "N/A",
+        "MUTATION": "N/A",
+        "SINGLE_FILE_INTEGRATION": "N/A",
+        "SINGLE_FILE_TEST": "N/A",
+        "TYPECHECK": "python3 scripts/run-python-lint.py run mypy",
+        "UNIT_TEST": "python3 tests/speckit-pro/run-all.py"
+      },
+      "COMPLETED_TASKS": [],
+      "agent_route": "speckit-pro:implement-executor"
+    },
+    {
+      "step": "Phase 7: Implement - B015 T021, T022",
+      "status": "skipped: outside plan stage",
+      "task_ids": [
+        "T021",
+        "T022"
+      ],
+      "depends_on": [
+        "T020"
+      ],
+      "tdd_units": [
+        "humanlayer-notice"
+      ],
+      "tdd_protocol": "Each closed unit runs its actual failing test before implementation and ends green; maximum four adjacent tasks per dispatch.",
+      "PROJECT_COMMANDS": {
+        "BUILD": "N/A",
+        "COMPLEXITY": "N/A",
+        "DEPENDENCY_AUDIT": "N/A",
+        "DEPENDENCY_RULES": "N/A",
+        "FULL_VERIFY": "python3 tests/speckit-pro/run-all.py",
+        "INTEGRATION_TEST": "N/A",
+        "LINT": "python3 scripts/run-python-lint.py run ruff",
+        "LINT_FIX": "N/A",
+        "MUTATION": "N/A",
+        "SINGLE_FILE_INTEGRATION": "N/A",
+        "SINGLE_FILE_TEST": "N/A",
+        "TYPECHECK": "python3 scripts/run-python-lint.py run mypy",
+        "UNIT_TEST": "python3 tests/speckit-pro/run-all.py"
+      },
+      "COMPLETED_TASKS": [],
+      "agent_route": "speckit-pro:implement-executor"
+    },
+    {
+      "step": "Phase 7: Implement - B016 T023, T024",
+      "status": "skipped: outside plan stage",
+      "task_ids": [
+        "T023",
+        "T024"
+      ],
+      "depends_on": [
+        "T022"
+      ],
+      "tdd_units": [
+        "transitive-linkage"
+      ],
+      "tdd_protocol": "Each closed unit runs its actual failing test before implementation and ends green; maximum four adjacent tasks per dispatch.",
+      "PROJECT_COMMANDS": {
+        "BUILD": "N/A",
+        "COMPLEXITY": "N/A",
+        "DEPENDENCY_AUDIT": "N/A",
+        "DEPENDENCY_RULES": "N/A",
+        "FULL_VERIFY": "python3 tests/speckit-pro/run-all.py",
+        "INTEGRATION_TEST": "N/A",
+        "LINT": "python3 scripts/run-python-lint.py run ruff",
+        "LINT_FIX": "N/A",
+        "MUTATION": "N/A",
+        "SINGLE_FILE_INTEGRATION": "N/A",
+        "SINGLE_FILE_TEST": "N/A",
+        "TYPECHECK": "python3 scripts/run-python-lint.py run mypy",
+        "UNIT_TEST": "python3 tests/speckit-pro/run-all.py"
+      },
+      "COMPLETED_TASKS": [],
+      "agent_route": "speckit-pro:implement-executor"
+    },
+    {
+      "step": "Phase 7: Implement - B017 T025",
+      "status": "skipped: outside plan stage",
+      "task_ids": [
+        "T025"
+      ],
+      "depends_on": [
+        "T024"
+      ],
+      "tdd_units": [
+        "final-package"
+      ],
+      "tdd_protocol": "Each closed unit runs its actual failing test before implementation and ends green; maximum four adjacent tasks per dispatch.",
+      "PROJECT_COMMANDS": {
+        "BUILD": "N/A",
+        "COMPLEXITY": "N/A",
+        "DEPENDENCY_AUDIT": "N/A",
+        "DEPENDENCY_RULES": "N/A",
+        "FULL_VERIFY": "python3 tests/speckit-pro/run-all.py",
+        "INTEGRATION_TEST": "N/A",
+        "LINT": "python3 scripts/run-python-lint.py run ruff",
+        "LINT_FIX": "N/A",
+        "MUTATION": "N/A",
+        "SINGLE_FILE_INTEGRATION": "N/A",
+        "SINGLE_FILE_TEST": "N/A",
+        "TYPECHECK": "python3 scripts/run-python-lint.py run mypy",
+        "UNIT_TEST": "python3 tests/speckit-pro/run-all.py"
+      },
+      "COMPLETED_TASKS": [],
+      "agent_route": "speckit-pro:implement-executor"
+    },
+    {
+      "step": "Phase 7: Implement - B018 T026",
+      "status": "skipped: outside plan stage",
+      "task_ids": [
+        "T026"
+      ],
+      "depends_on": [
+        "T025"
+      ],
+      "tdd_units": [
+        "final-verify"
+      ],
+      "tdd_protocol": "Each closed unit runs its actual failing test before implementation and ends green; maximum four adjacent tasks per dispatch.",
+      "PROJECT_COMMANDS": {
+        "BUILD": "N/A",
+        "COMPLEXITY": "N/A",
+        "DEPENDENCY_AUDIT": "N/A",
+        "DEPENDENCY_RULES": "N/A",
+        "FULL_VERIFY": "python3 tests/speckit-pro/run-all.py",
+        "INTEGRATION_TEST": "N/A",
+        "LINT": "python3 scripts/run-python-lint.py run ruff",
+        "LINT_FIX": "N/A",
+        "MUTATION": "N/A",
+        "SINGLE_FILE_INTEGRATION": "N/A",
+        "SINGLE_FILE_TEST": "N/A",
+        "TYPECHECK": "python3 scripts/run-python-lint.py run mypy",
+        "UNIT_TEST": "python3 tests/speckit-pro/run-all.py"
+      },
+      "COMPLETED_TASKS": [],
+      "agent_route": "orchestrator-direct"
+    },
+    {
+      "step": "Phase 7: Implement - B019 T027",
+      "status": "skipped: outside plan stage",
+      "task_ids": [
+        "T027"
+      ],
+      "depends_on": [
+        "T026"
+      ],
+      "tdd_units": [
+        "final-review"
+      ],
+      "tdd_protocol": "Each closed unit runs its actual failing test before implementation and ends green; maximum four adjacent tasks per dispatch.",
+      "PROJECT_COMMANDS": {
+        "BUILD": "N/A",
+        "COMPLEXITY": "N/A",
+        "DEPENDENCY_AUDIT": "N/A",
+        "DEPENDENCY_RULES": "N/A",
+        "FULL_VERIFY": "python3 tests/speckit-pro/run-all.py",
+        "INTEGRATION_TEST": "N/A",
+        "LINT": "python3 scripts/run-python-lint.py run ruff",
+        "LINT_FIX": "N/A",
+        "MUTATION": "N/A",
+        "SINGLE_FILE_INTEGRATION": "N/A",
+        "SINGLE_FILE_TEST": "N/A",
+        "TYPECHECK": "python3 scripts/run-python-lint.py run mypy",
+        "UNIT_TEST": "python3 tests/speckit-pro/run-all.py"
+      },
+      "COMPLETED_TASKS": [],
+      "agent_route": "speckit-pro:implement-executor"
     },
     {
       "step": "Post: Doctor Extension Check",
@@ -171,7 +763,7 @@
     "ledger_path": "docs/ai/specs/.process/.process/execution-control/4e8762387d1ed8b61c01a9de.json",
     "disposition": "continue",
     "reasons": [],
-    "elapsed_seconds": 22238.306403160095,
+    "elapsed_seconds": 23879.692969083786,
     "checkpoint_due": false,
     "run_id": "47805d8f53dd4babaf524ca9b62869ae"
   },
@@ -225,7 +817,7 @@
     "version": "1.0.0"
   },
   "dispatches": [],
-  "updated_at": "2026-09-26T02:27:25.627532+00:00",
+  "updated_at": "2026-09-26T03:55:04.822893+00:00",
   "recovery": {
     "status": "recovered_and_continuing",
     "plugin_version": "2.36.2",
@@ -371,6 +963,22 @@
       "markers": 0,
       "pass": true,
       "reason": "0 [Gap] markers"
+    },
+    "G5": {
+      "gate": "G5",
+      "markers": 0,
+      "pass": true,
+      "reason": "27 tasks found",
+      "task_count": 27,
+      "functional_requirements": 19,
+      "unmapped_requirements": [],
+      "coverage_mode": "explicit references and inclusive FR ranges",
+      "task_execution_valid": true,
+      "fingerprints": {
+        "plan_sha256": "9ce69bf6cbe2151db68d2a2737db593a879149ffbd0489c05ab775a148f23be1",
+        "spec_sha256": "52481b25ec692937c47adb4f8db9b0a6d73385ba431ea0ee70160258a738d0d7",
+        "tasks_sha256": "18001ad6f6372d494b2590b9ad5f331d91850b53496c322878f729f4d1b5575c"
+      }
     }
   },
   "operator_authorized_recovery": {
@@ -461,6 +1069,28 @@
       "setup": "existing Specify CLI Python with PyYAML; no new dependency",
       "evidence_limits": "broker unavailable; supplied primary Python/Agent Skills documentation recorded; implementation gates unrun",
       "g3_passed": true
+    },
+    "tasks": {
+      "status": "completed",
+      "task_count": 27,
+      "phase_count": 6,
+      "stories": {
+        "US1": 4,
+        "US2": 8,
+        "US3": 5
+      },
+      "execution_units": 19,
+      "waves": 18,
+      "maximum_unit_size": 2,
+      "slice_1": [
+        "T001",
+        "T019"
+      ],
+      "slice_2": [
+        "T020",
+        "T027"
+      ],
+      "implementation_started": false
     }
   },
   "operator_authorized_plan_recovery": {
@@ -657,7 +1287,21 @@
       "total_files": 0,
       "warnings": []
     },
-    "setup_evidence_context": "Recovered setup-mode gate against current workflow; 0 current declared metrics, not a final implementation-diff size measurement."
+    "setup_evidence_context": "Recovered setup-mode gate against current workflow; 0 current declared metrics, not a final implementation-diff size measurement.",
+    "tasks_deferred": {
+      "helper_id": "reviewability-gate",
+      "requested_mode": "tasks",
+      "status": "deferred",
+      "reason": "Installed runner supports setup mode only; tasks mode was not invoked.",
+      "fallback_decision": "proceed",
+      "fallback_evidence": [
+        "Current setup mode pass",
+        "Current Plan not_estimated; no budget-pass claim",
+        "Operator-ratified two vertical implementation slices from Q8"
+      ],
+      "fingerprint_status": "current",
+      "warning": "Final implementation diff size remains unmeasured; measure each implementation PR."
+    }
   },
   "checklist_phase": {
     "items": 88,
@@ -667,5 +1311,346 @@
     "gate": "G4 passed",
     "hooks": "before/after Git hooks skipped as duplicates of parent phase commit",
     "spec_index": "EDA SPEC-MOC regenerated; unrelated generated formal map restored"
+  },
+  "active_dispatch": null,
+  "task_layer_compatibility": {
+    "status": "repaired and revalidated",
+    "initial_verdict": {
+      "contract_version": 1,
+      "errors": [
+        {
+          "code": "missing_required_heading",
+          "details": {
+            "required_heading": "## Dependencies & Execution Order"
+          },
+          "message": "Missing required dependency heading.",
+          "severity": "error",
+          "source": {
+            "line": null,
+            "path": "specs/eda-001-attribution-foundation/tasks.md"
+          }
+        },
+        {
+          "code": "missing_required_heading",
+          "details": {
+            "required_heading": "### Incremental Delivery"
+          },
+          "message": "Missing required incremental delivery heading.",
+          "severity": "error",
+          "source": {
+            "line": null,
+            "path": "specs/eda-001-attribution-foundation/tasks.md"
+          }
+        }
+      ],
+      "feature_dir": "specs/eda-001-attribution-foundation",
+      "increments": [
+        {
+          "advisory_size": {
+            "distinct_file_count": 5,
+            "distinct_test_count": 4,
+            "file_reference_count": 5,
+            "task_count": 4,
+            "test_reference_count": 4
+          },
+          "depends_on": [],
+          "files": [
+            "docs/ai/specs/engineering-discipline-adoption-technical-roadmap.md",
+            "specs/eda-001-attribution-foundation/contracts/credits.md",
+            "specs/eda-001-attribution-foundation/data-model.md",
+            "specs/eda-001-attribution-foundation/plan.md",
+            "specs/eda-001-attribution-foundation/tasks.md"
+          ],
+          "id": "foundation",
+          "kind": "foundation",
+          "name": "Foundation",
+          "order": 0,
+          "source": {
+            "heading": "## Phase 1: Setup and scope checkpoint",
+            "line": 18,
+            "path": "specs/eda-001-attribution-foundation/tasks.md"
+          },
+          "tasks": [
+            {
+              "files": [
+                "specs/eda-001-attribution-foundation/plan.md",
+                "specs/eda-001-attribution-foundation/tasks.md"
+              ],
+              "id": "T001",
+              "increment_id": "foundation",
+              "parallel": false,
+              "source": {
+                "line": 22,
+                "path": "specs/eda-001-attribution-foundation/tasks.md"
+              },
+              "status": "todo",
+              "story": null,
+              "tests": [],
+              "title": "Confirm the two-slice scope in `specs/eda-001-attribution-foundation/plan.md` against `specs/eda-001-attribution-foundation/tasks.md`, check the 11 declared authored files and one primary surface against the reviewability preset, and give the parent a pre-implementation scope receipt; verify the prepared Python/lint/docs environments and applicable scoped agent instructions. Acceptance: preserve US1+US2 in slice 1 and US3 in slice 2; report any concrete budget expansion before implementation, with no guessed budget pass (FR-013, FR-017, FR-018)."
+            },
+            {
+              "files": [
+                "specs/eda-001-attribution-foundation/data-model.md"
+              ],
+              "id": "T002",
+              "increment_id": "foundation",
+              "parallel": true,
+              "source": {
+                "line": 28,
+                "path": "specs/eda-001-attribution-foundation/tasks.md"
+              },
+              "status": "todo",
+              "story": null,
+              "tests": [
+                "tests/speckit-pro/unit/fixtures/upstream-skill-attribution/inventory.json",
+                "tests/speckit-pro/unit/fixtures/upstream-skill-attribution/mattpocock-LICENSE.txt"
+              ],
+              "title": "Freeze the raw fork MIT bytes at `c55ee46073ed923f86ce59a5eb3b6d895095d1b7` in `tests/speckit-pro/unit/fixtures/upstream-skill-attribution/mattpocock-LICENSE.txt` and extract the exact pinned tree into `tests/speckit-pro/unit/fixtures/upstream-skill-attribution/inventory.json`, joining the unique skill names to the owner/disposition map in `specs/eda-001-attribution-foundation/data-model.md`. Acceptance: nonempty license with its final newline; exactly 38 sorted paths, bucket totals 18/7/4/9, 14 IGNORE owners EDA-001, 24 delivery owners EDA-002\u2013EDA-010, no EDA-011 owner; missing, duplicate, or ambiguous joins fail (FR-001, FR-005, FR-007, FR-017)."
+            },
+            {
+              "files": [
+                "specs/eda-001-attribution-foundation/contracts/credits.md"
+              ],
+              "id": "T003",
+              "increment_id": "foundation",
+              "parallel": true,
+              "source": {
+                "line": 29,
+                "path": "specs/eda-001-attribution-foundation/tasks.md"
+              },
+              "status": "todo",
+              "story": null,
+              "tests": [
+                "tests/speckit-pro/unit/fixtures/upstream-skill-attribution/credit-cases.json"
+              ],
+              "title": "Create `tests/speckit-pro/unit/fixtures/upstream-skill-attribution/credit-cases.json` with synthetic Markdown, frontmatter-bearing Markdown, skill entry-point, TOML, and Python bodies, both quoted metadata styles, allowed Python prefixes, directory selections, and a shared-file multi-source case; include named header pass/fail cases and isolated frontmatter-placement mutations from `specs/eda-001-attribution-foundation/contracts/credits.md`. Acceptance: each positive case declares a nonempty expected file/source set; before/inside frontmatter, after body text, and unclosed-frontmatter negatives retain otherwise valid inputs and target placement diagnostics; no actual derivative is authored (FR-009\u2013FR-012, FR-018)."
+            },
+            {
+              "files": [
+                "docs/ai/specs/engineering-discipline-adoption-technical-roadmap.md"
+              ],
+              "id": "T004",
+              "increment_id": "foundation",
+              "parallel": false,
+              "source": {
+                "line": 30,
+                "path": "specs/eda-001-attribution-foundation/tasks.md"
+              },
+              "status": "todo",
+              "story": null,
+              "tests": [
+                "tests/speckit-pro/unit/fixtures/upstream-skill-attribution/valid-ledger.json"
+              ],
+              "title": "Create `tests/speckit-pro/unit/fixtures/upstream-skill-attribution/valid-ledger.json` independently of the future shipped ledger, using the frozen inventory and the owning destination surfaces in `docs/ai/specs/engineering-discipline-adoption-technical-roadmap.md`. Acceptance: complete canonical 38-row zero-landed state with all 24 delivery rows planned, 14 explanatory IGNORE reasons, substantive omission notes only on ask-matt/wayfinder/triage, exact owners and buckets, and empty slice-1 transitive arrays; planned destinations are safe repository-relative paths and are not created by this feature (FR-002\u2013FR-008, FR-013, FR-017, FR-018)."
+            }
+          ],
+          "tests": [
+            "tests/speckit-pro/unit/fixtures/upstream-skill-attribution/credit-cases.json",
+            "tests/speckit-pro/unit/fixtures/upstream-skill-attribution/inventory.json",
+            "tests/speckit-pro/unit/fixtures/upstream-skill-attribution/mattpocock-LICENSE.txt",
+            "tests/speckit-pro/unit/fixtures/upstream-skill-attribution/valid-ledger.json"
+          ]
+        },
+        {
+          "advisory_size": {
+            "distinct_file_count": 3,
+            "distinct_test_count": 2,
+            "file_reference_count": 4,
+            "task_count": 3,
+            "test_reference_count": 2
+          },
+          "depends_on": [],
+          "files": [
+            "scripts/refresh-release-artifacts.py",
+            "specs/eda-001-attribution-foundation/plan.md",
+            "specs/eda-001-attribution-foundation/quickstart.md"
+          ],
+          "id": "polish",
+          "kind": "polish",
+          "name": "Polish and final acceptance (slice 2)",
+          "order": 1,
+          "source": {
+            "heading": "## Phase 7: Polish and final acceptance (slice 2)",
+            "line": 106,
+            "path": "specs/eda-001-attribution-foundation/tasks.md"
+          },
+          "tasks": [
+            {
+              "files": [
+                "scripts/refresh-release-artifacts.py"
+              ],
+              "id": "T025",
+              "increment_id": "polish",
+              "parallel": false,
+              "source": {
+                "line": 110,
+                "path": "specs/eda-001-attribution-foundation/tasks.md"
+              },
+              "status": "todo",
+              "story": null,
+              "tests": [],
+              "title": "Regenerate final `dist` with `scripts/refresh-release-artifacts.py` and `docs-site/src/content/docs/reference` with the existing reference generator, carrying all authored `speckit-pro` and `tests/speckit-pro` inputs. Acceptance: record actual generated paths/counts, compare both Matt notice/ledger and HumanLayer notice raw bytes in Claude and Codex payloads, and reject unexpected behavior, manual payload changes, or version changes (FR-001, FR-014\u2013FR-018)."
+            },
+            {
+              "files": [
+                "specs/eda-001-attribution-foundation/quickstart.md"
+              ],
+              "id": "T026",
+              "increment_id": "polish",
+              "parallel": false,
+              "source": {
+                "line": 111,
+                "path": "specs/eda-001-attribution-foundation/tasks.md"
+              },
+              "status": "todo",
+              "story": null,
+              "tests": [
+                "tests/speckit-pro/suite-manifest.json",
+                "tests/speckit-pro/unit/test-upstream-skill-attribution.py"
+              ],
+              "title": "Run every final verification command below for `tests/speckit-pro/unit/test-upstream-skill-attribution.py`, `tests/speckit-pro/suite-manifest.json`, `dist`, and `docs-site`, including all quickstart scenarios in `specs/eda-001-attribution-foundation/quickstart.md`. Acceptance: actual integer exit code zero for focused tests, quick/CI suites, privacy, configured lint/type, docs, and post-parent-commit artifact consistency; record hosted required-check outcomes separately, retain all negative proofs and nonzero positive selections, and do not substitute pending commands or partial checks for success (FR-001\u2013FR-019)."
+            },
+            {
+              "files": [
+                "specs/eda-001-attribution-foundation/plan.md",
+                "specs/eda-001-attribution-foundation/quickstart.md"
+              ],
+              "id": "T027",
+              "increment_id": "polish",
+              "parallel": false,
+              "source": {
+                "line": 112,
+                "path": "specs/eda-001-attribution-foundation/tasks.md"
+              },
+              "status": "todo",
+              "story": null,
+              "tests": [],
+              "title": "Assemble the final slice-2 review receipt from `specs/eda-001-attribution-foundation/plan.md`, `specs/eda-001-attribution-foundation/quickstart.md`, and actual source/generated changes for the parent. Acceptance: measured budget and traceability, exact HumanLayer source/public URL, notice/license/link proofs, all verification outcomes, no unresolved scope additions, known limitations and rollback are reviewable; parent validates the actual final title/release-note fence and required hosted checks before ready state. The ledger keeps ordinary text merges; derivatives, fork edits, section markers, PARTIAL, and other roadmap budget changes are absent (FR-013\u2013FR-019)."
+            }
+          ],
+          "tests": [
+            "tests/speckit-pro/suite-manifest.json",
+            "tests/speckit-pro/unit/test-upstream-skill-attribution.py"
+          ]
+        }
+      ],
+      "status": "invalid_plan",
+      "summary": {
+        "error_count": 2,
+        "increment_count": 2,
+        "message": "Layer plan invalid: 2 error(s).",
+        "task_count": 7,
+        "warning_count": 5
+      },
+      "tasks_file": "specs/eda-001-attribution-foundation/tasks.md",
+      "tool": "plan-layers",
+      "warnings": [
+        {
+          "code": "reference_not_found",
+          "details": {
+            "kind": "test",
+            "reference": "tests/speckit-pro/unit/fixtures/upstream-skill-attribution/mattpocock-LICENSE.txt",
+            "task_id": "T002"
+          },
+          "message": "test reference not found: tests/speckit-pro/unit/fixtures/upstream-skill-attribution/mattpocock-LICENSE.txt",
+          "severity": "warning",
+          "source": {
+            "line": 28,
+            "path": "specs/eda-001-attribution-foundation/tasks.md"
+          }
+        },
+        {
+          "code": "reference_not_found",
+          "details": {
+            "kind": "test",
+            "reference": "tests/speckit-pro/unit/fixtures/upstream-skill-attribution/inventory.json",
+            "task_id": "T002"
+          },
+          "message": "test reference not found: tests/speckit-pro/unit/fixtures/upstream-skill-attribution/inventory.json",
+          "severity": "warning",
+          "source": {
+            "line": 28,
+            "path": "specs/eda-001-attribution-foundation/tasks.md"
+          }
+        },
+        {
+          "code": "reference_not_found",
+          "details": {
+            "kind": "test",
+            "reference": "tests/speckit-pro/unit/fixtures/upstream-skill-attribution/credit-cases.json",
+            "task_id": "T003"
+          },
+          "message": "test reference not found: tests/speckit-pro/unit/fixtures/upstream-skill-attribution/credit-cases.json",
+          "severity": "warning",
+          "source": {
+            "line": 29,
+            "path": "specs/eda-001-attribution-foundation/tasks.md"
+          }
+        },
+        {
+          "code": "reference_not_found",
+          "details": {
+            "kind": "test",
+            "reference": "tests/speckit-pro/unit/fixtures/upstream-skill-attribution/valid-ledger.json",
+            "task_id": "T004"
+          },
+          "message": "test reference not found: tests/speckit-pro/unit/fixtures/upstream-skill-attribution/valid-ledger.json",
+          "severity": "warning",
+          "source": {
+            "line": 30,
+            "path": "specs/eda-001-attribution-foundation/tasks.md"
+          }
+        },
+        {
+          "code": "reference_not_found",
+          "details": {
+            "kind": "test",
+            "reference": "tests/speckit-pro/unit/test-upstream-skill-attribution.py",
+            "task_id": "T026"
+          },
+          "message": "test reference not found: tests/speckit-pro/unit/test-upstream-skill-attribution.py",
+          "severity": "warning",
+          "source": {
+            "line": 111,
+            "path": "specs/eda-001-attribution-foundation/tasks.md"
+          }
+        }
+      ]
+    },
+    "budget_disposition": "checkpoint_required",
+    "budget_reasons": [
+      "failure_family_budget_exhausted"
+    ],
+    "authorization": "User: YOU WILL RECOVER AND CONTINUE; stopping is forbidden, finish the plan phase.",
+    "repair_scope": "Exact producer headings and preserved two-slice dependency/delivery metadata; refresh native sidecar fingerprints and revalidate. No implementation or helper changes.",
+    "final_evidence": {
+      "path": "specs/eda-001-attribution-foundation/.process/layer-plan-diagnostic.json",
+      "sha256": "ac4ef7626616d638f7e6a65d86adf116e9ee7263cad736abfd60388efbc90289",
+      "status": "ok",
+      "task_count": 27,
+      "warnings": 32,
+      "warning_reason": "Nine declared NEW implementation files do not exist during planning."
+    }
+  },
+  "atomicity_route": {
+    "hints": [],
+    "releasable": true,
+    "route": "one-navigable-PR",
+    "signals": [
+      "change-shape:modify-heavy"
+    ],
+    "warnings": []
+  },
+  "layer_plan": {
+    "status": "skipped",
+    "reason": "Authoritative atomicity-route for the current planning changes is one-navigable-PR. Optional compatibility diagnostic is preserved separately.",
+    "diagnostic_evidence": {
+      "path": "specs/eda-001-attribution-foundation/.process/layer-plan-diagnostic.json",
+      "sha256": "ac4ef7626616d638f7e6a65d86adf116e9ee7263cad736abfd60388efbc90289",
+      "status": "ok",
+      "task_count": 27,
+      "warnings": 32,
+      "warning_reason": "Nine declared NEW implementation files do not exist during planning."
+    }
   }
 }
