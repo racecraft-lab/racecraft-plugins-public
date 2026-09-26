@@ -62,7 +62,7 @@ item with no block is treated as a missing synthesis result.
 **Protocol:** <absolute path of the active consensus-protocol.md>
 **Unresolved Item:** <question/gap/finding text>
 **Routed Categories:** [<categories>]
-**Security Route:** tag | keyword | none
+**Security Route:** tag | keyword | none (the helper's JSON null is written as none)
 **Round:** 1 | 2
 
 **Codebase Analyst Response:**

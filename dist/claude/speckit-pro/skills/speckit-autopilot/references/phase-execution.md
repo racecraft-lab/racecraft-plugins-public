@@ -41,7 +41,8 @@ gate and spawns the next subagent.
 
 Executors resolve project skills and paths against the bound
 `<WORKFLOW_ROOT>`, never the checkout that launched the run; name
-that root in every executor prompt.
+that root in every executor prompt with a `Workflow root:` line, as
+the template below shows.
 
 ### Subagent Prompt Template
 
@@ -58,6 +59,7 @@ Agent(
   prompt: """
     Run the /speckit-<phase> command.
     Use: Skill("speckit-<phase>", args: "<workflow prompt>")
+    Workflow root: <WORKFLOW_ROOT>
 
     <branch prefix if ON_FEATURE_BRANCH>
 
