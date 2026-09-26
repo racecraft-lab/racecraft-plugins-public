@@ -9,6 +9,9 @@ keep changes intentional and scoped.
 - Do not add stray Markdown files under `agents/`; agent definitions need the
   expected frontmatter.
 - Keep shipped Python runtime code on Python 3.11+ standard library.
+- Put a new runner helper in its own module under `speckit_pro_runner/helpers/`
+  and add it to the root `mypy.ini`; `read_only.py` and `mutation.py` sit
+  outside the type-check ratchet.
 - If a source change can affect packaged output, run or account for the release
   artifact generator before finishing.
 - Do not duplicate long workflow, test, or release procedures here; use root
