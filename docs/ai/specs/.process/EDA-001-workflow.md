@@ -35,8 +35,8 @@ captured during scoping.
 | Stage | plan | ✅ Complete | Explicit --stage plan resolved; planning phases continue |
 | Specify | `/speckit-specify` | ✅ Complete | 3 stories, 19 FRs; G1 routes provenance marker to Clarify |
 | Clarify | `/speckit-clarify` | ✅ Complete | Three sessions resolved; G2 passed with 0 markers |
-| Plan | `/speckit-plan` | ⚠️ Blocked | Seven artifacts and G3 pass; privacy wording repair needs operator decision |
-| Checklist | `/speckit-checklist` | ⏳ Pending | Held at Plan privacy checkpoint |
+| Plan | `/speckit-plan` | ✅ Complete | Seven artifacts, G3 pass, and privacy 13/13 after approved wording correction |
+| Checklist | `/speckit-checklist` | 🔄 In Progress | Three enriched domains |
 | Tasks | `/speckit-tasks` | ⏳ Pending | |
 | Analyze | `/speckit-analyze` | ⏳ Pending | |
 | Confidence Gate | G6.5 | ⏳ Pending | Pre-Implement composite confidence |
@@ -836,3 +836,5 @@ The operator explicitly approved installing pinned mypy 2.3.1 in an isolated env
 - Focused diagnostic: `dynamic_local_pattern` includes terms derived from this worktree path. Its failure preview flags ordinary repository text containing words such as "foundational" and "attribute". This is consistent with the documented local path collision; no G0 pass or waiver is claimed.
 - Execution ledger: `continue` after app native event `exec-0757115d-63d8-4508-94bc-59e5f342aee0` resolved the original `g0-quick-suite` dispatch as failed (exit code `-1`). Zero corrective cycles consumed; no phase agent dispatched.
 - Bounded G0 privacy repair consumed one corrective cycle. The scanner now omits only the `.worktrees` feature-name directory from dynamic identity terms and exempts typed app `exec-` event IDs from its bare-UUID rule. The focused privacy test passed 13/13, and the full post-repair suite passed 8,948/8,948. Ruff, pinned mypy, and docs reference checks passed.
+
+**Operator-authorized Plan recovery:** The user answered “continue,” authorizing the exact wording correction above and remaining plan-stage work. The contract now says “absolute paths, home prefixes, or temporary prefixes.” The original execution ledger and counters remain intact; the refused reservation is not treated as a dispatched repair. Privacy revalidation passed 13/13 (exit 0), and `git diff --check` passed. The elapsed-time checkpoint was refreshed without changing run identity or repair counters. Planning continues with the three domain checklists.

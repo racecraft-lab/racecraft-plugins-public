@@ -20,7 +20,7 @@ Every row requires `upstream_path`, `bucket`, `disposition`, `destination`, `own
 
 Substantive reason/omission text means an actual explanatory statement, with deterministic rejection of missing, empty, whitespace-only, or wrong-type values. Review verifies that the prose explains the roadmap decision; the test does not invent an LLM-based semantic grader.
 
-Repository-relative path strings use forward slashes, name a file/directory beneath the supplied repository root, and do not contain parent traversal or absolute/home/temp prefixes. Planned paths are not required to exist. Resolved landed paths must remain within the repository. Later specs own any new destination contents.
+Repository-relative path strings use forward slashes, name a file/directory beneath the supplied repository root, and do not contain parent traversal or absolute paths, home prefixes, or temporary prefixes. Planned paths are not required to exist. Resolved landed paths must remain within the repository. Later specs own any new destination contents.
 
 ## Canonical bytes
 

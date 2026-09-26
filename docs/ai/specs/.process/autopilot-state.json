@@ -3,9 +3,9 @@
   "spec_id": "EDA-001",
   "feature_dir": "specs/eda-001-attribution-foundation",
   "branch": "eda-001-attribution-foundation",
-  "status": "awaiting_review",
+  "status": "in_progress",
   "stage": "plan",
-  "active_step": "Phase 3: Plan",
+  "active_step": "Phase 4: Checklist - supply-chain",
   "stage_resolution": {
     "basis": "explicit --stage plan",
     "confidence_gate_status": "\u23f3 Pending",
@@ -68,11 +68,11 @@
     },
     {
       "step": "Phase 3: Plan",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 4: Checklist - supply-chain",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 4: Checklist - supply-chain Consensus",
@@ -169,11 +169,9 @@
   ],
   "execution_control": {
     "ledger_path": "docs/ai/specs/.process/.process/execution-control/4e8762387d1ed8b61c01a9de.json",
-    "disposition": "checkpoint_required",
-    "reasons": [
-      "failure_family_budget_exhausted"
-    ],
-    "elapsed_seconds": 18440.1652469635,
+    "disposition": "continue",
+    "reasons": [],
+    "elapsed_seconds": 19091.131600141525,
     "checkpoint_due": false,
     "run_id": "47805d8f53dd4babaf524ca9b62869ae"
   },
@@ -347,15 +345,22 @@
       "formal_selection": "disabled"
     },
     "PlanPrivacy": {
-      "pass": false,
+      "pass": true,
       "command": "python3 tests/speckit-pro/unit/test-privacy-scan.py",
-      "exit_code": 1,
-      "passed": 12,
+      "exit_code": 0,
+      "passed": 13,
       "total": 13,
       "target": "specs/eda-001-attribution-foundation/contracts/ledger.md:23",
-      "reason": "slash-separated absolute, home, and temp wording matches the absolute-home-path regex; no private path leak identified",
+      "reason": "Approved one-line wording correction; focused privacy check passes 13/13; git diff --check passes",
       "proposed_replacement": "absolute paths, home prefixes, or temporary prefixes",
-      "reservation": "plan-privacy-wording-repair-1 refused with failure_family_budget_exhausted; no repair applied"
+      "reservation": "plan-privacy-recheck-1 completed",
+      "previous_failure": {
+        "exit_code": 1,
+        "passed": 12,
+        "total": 13,
+        "reason": "slash-separated absolute, home, and temp wording matches the absolute-home-path regex; no private path leak identified",
+        "reservation": "plan-privacy-wording-repair-1 refused with failure_family_budget_exhausted; no repair applied"
+      }
     }
   },
   "operator_authorized_recovery": {
@@ -448,19 +453,26 @@
       "g3_passed": true
     }
   },
-  "operator_action_required": {
-    "action": "Authorize the one-line contract wording correction, rerun privacy validation, and continue the remaining plan-stage workflow",
-    "proposed_text": "absolute paths, home prefixes, or temporary prefixes",
-    "basis": "Shared unresolved failure family already consumed one corrective cycle in G0; new reserve refused",
-    "corrective_cycles_consumed": 1,
-    "unknown_effects": [],
-    "owned_in_flight_dispatches": [],
-    "remaining": [
-      "Phase 3 wording repair and privacy recheck",
-      "Phase 4 three domain checklists and consensus",
-      "Phase 5 Tasks and G5",
-      "Phase 6 Analyze and consensus/G6",
-      "Phase 6.5 confidence/autonomy boundary and stage-boundary commit"
-    ]
+  "operator_authorized_plan_recovery": {
+    "authorization": "User answered continue to the exact one-line wording correction, privacy recheck, and remaining plan-stage workflow.",
+    "recorded_at": "2026-09-26T02:33:52.071725+00:00",
+    "approved_action": {
+      "action": "Authorize the one-line contract wording correction, rerun privacy validation, and continue the remaining plan-stage workflow",
+      "proposed_text": "absolute paths, home prefixes, or temporary prefixes",
+      "basis": "Shared unresolved failure family already consumed one corrective cycle in G0; new reserve refused",
+      "corrective_cycles_consumed": 1,
+      "unknown_effects": [],
+      "owned_in_flight_dispatches": [],
+      "remaining": [
+        "Phase 3 wording repair and privacy recheck",
+        "Phase 4 three domain checklists and consensus",
+        "Phase 5 Tasks and G5",
+        "Phase 6 Analyze and consensus/G6",
+        "Phase 6.5 confidence/autonomy boundary and stage-boundary commit"
+      ]
+    },
+    "correction_applied": true,
+    "privacy_recheck": "passed: 13/13, exit 0",
+    "ledger_policy": "Original run identity, corrective-cycle counters, and refused reservation remain unchanged. The user-authorized correction is recorded independently."
   }
 }

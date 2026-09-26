@@ -2,7 +2,7 @@
   "active_wait": null,
   "approved_invariants": [],
   "authorization_granted": false,
-  "checkpoint_at": 1790387236.048098,
+  "checkpoint_at": 1790390103.2175841,
   "corrective_cycles": 1,
   "dispatches": {
     "consensus-clarify-header-q2-codebase-r1": {
@@ -301,10 +301,18 @@
       "reconciliations": 0,
       "reservation_id": null,
       "reserved_at": 1790388303.172537
+    },
+    "plan-privacy-recheck-1": {
+      "completed_at": 1790390099.0439959,
+      "kind": "verification",
+      "outcome": "completed",
+      "reconciliations": 0,
+      "reservation_id": null,
+      "reserved_at": 1790390046.2162418
     }
   },
   "excluded_intervals": [],
-  "last_observed_at": 1790389452.251231,
+  "last_observed_at": 1790390103.2175841,
   "reservations": {
     "a02de8a1ea1d4f02bd03770cacecd0dd": {
       "dispatch_id": "g0-privacy-scan-path-collision-repair-1",
