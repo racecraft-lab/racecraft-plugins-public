@@ -7703,6 +7703,25 @@ This line must not be copied.
                     else:
                         self.assertEqual([diag["code"] for diag in stderr_records], ["dirty_worktree"])
 
+    def test_apply_refuses_worktree_rename_of_a_real_file_into_a_byproduct_directory(self) -> None:
+        tmp, git_root = self.temp_clean_git_repo()
+        with tmp:
+            moved = git_root / "docs" / ".process" / "verification" / "moved.txt"
+            moved.parent.mkdir(parents=True)
+            (git_root / ".gitkeep").rename(moved)
+            self.run_git(git_root, "add", "--intent-to-add", "docs/.process/verification/moved.txt")
+            completed, response, stderr_records = run_runner(
+                helper_request(
+                    "mutation-foundation",
+                    mode="apply",
+                    inputs={"operations": [{"operation_id": "renamed", "kind": "write_file",
+                                            "target": "generated/renamed-output.md", "content": "no\n"}]},
+                ),
+                cwd=git_root,
+            )
+            self.assertEqual([diag["code"] for diag in stderr_records], ["dirty_worktree"], response)
+            self.assertFalse((git_root / "generated" / "renamed-output.md").exists())
+
     def test_apply_rechecks_dirty_worktree_after_lock_acquisition(self) -> None:
         tmp, git_root = self.temp_clean_git_repo()
         with tmp:
