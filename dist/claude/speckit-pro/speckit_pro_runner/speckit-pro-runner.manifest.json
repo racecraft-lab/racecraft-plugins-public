@@ -3,7 +3,7 @@
   "runner_contract_id": "speckit-pro-runner",
   "selected_runtime_name": "python-stdlib-runner",
   "contract_version": "1.0",
-  "plugin_version": "2.36.1",
+  "plugin_version": "2.36.2",
   "runner_version": "0.1.0",
   "python_minimum_version": "3.11",
   "specify_required": true,
@@ -87,7 +87,7 @@
         "value": "speckit_pro_runner/execution_control.py",
         "display": "speckit_pro_runner/execution_control.py"
       },
-      "sha256": "8bbb18dc8d8b598115331ed03c53791c5a7865a87d080fc6a9747c6f802515c7"
+      "sha256": "c9e9b7db9a27c5484b423848941bba32df8566692945a0db14b78e48a5b40720"
     },
     {
       "path": {
