@@ -206,6 +206,18 @@ HELPER_CASES: dict[str, dict[str, object]] = {
 }
 
 
+def roadmap_budget_entry(spec_id: str, name: str, surface: str, loc: int, prod: int, total: int) -> str:
+    return (
+        f"### {spec_id}: {name}\n\n"
+        "**Priority:** P1 | **Depends On:** None | **Enables:** None\n\n"
+        f"**Reviewability Budget:** Primary surface: {surface} |\n"
+        f"Projected reviewable LOC: {loc} |\n"
+        f"Production files: {prod} |\n"
+        f"Total files: {total} |\n"
+        "Budget result: within budget\n\n"
+    )
+
+
 def runner_env() -> dict[str, str]:
     env = os.environ.copy()
     existing = env.get("PYTHONPATH")
@@ -3121,6 +3133,93 @@ class ReadOnlyHelperTests(unittest.TestCase):
             )
             payload = self._feature_state(project_path)
             self.assertTrue(payload["on_feature_branch"])
+
+    def setup_gate_for_spec(self, roadmap: str, spec_id: str) -> tuple[dict[str, object], int]:
+        from speckit_pro_runner.helpers.read_only import reviewability_gate
+
+        with helper_project() as project:
+            (project / "roadmap.md").write_text(roadmap, encoding="utf-8")
+            result = reviewability_gate(
+                {"mode_name": "setup", "target": "roadmap.md", "spec_id": spec_id}, project,
+            )
+        return json.loads(result["stdout"]), int(result["exit_code"])
+
+    def test_reviewability_setup_gate_reads_only_the_requested_spec_section(self) -> None:
+        if self.helper_filter and self.helper_filter != "reviewability-gate":
+            self.skipTest("setup spec-scope case uses reviewability-gate")
+        roadmap = "# Demo Roadmap\n\n" + "".join((
+            roadmap_budget_entry("SPEC-001", "Oversized first spec", "API", 900, 9, 30),
+            roadmap_budget_entry("SPEC-002", "Middle spec", "UI", 120, 2, 5),
+            roadmap_budget_entry("SPEC-003", "Small last spec", "docs/process", 40, 1, 3),
+        ))
+        payload, exit_code = self.setup_gate_for_spec(roadmap, "SPEC-001")
+        self.assertEqual(exit_code, 1)
+        self.assertEqual(payload["status"], "block")
+        self.assertFalse(payload["pass"])
+        self.assertEqual(payload["spec_id"], "SPEC-001")
+        self.assertEqual(
+            (payload["reviewable_loc"], payload["production_files"], payload["total_files"]), (900, 9, 30),
+        )
+        self.assertEqual(payload["primary_surfaces"], ["API"])
+        self.assertFalse(any("primary surfaces" in warning for warning in payload["warnings"]))
+
+        payload, exit_code = self.setup_gate_for_spec(roadmap, "SPEC-003")
+        self.assertEqual((payload["status"], exit_code), ("pass", 0))
+        self.assertEqual(payload["primary_surfaces"], ["docs/process"])
+
+    def test_reviewability_setup_gate_honors_typed_exception_in_spec_section(self) -> None:
+        if self.helper_filter and self.helper_filter != "reviewability-gate":
+            self.skipTest("setup exception case uses reviewability-gate")
+        entry = roadmap_budget_entry("SPEC-001", "Infra spec with a typed exception", "scheduler/runtime", 900, 9, 20)
+        payload, exit_code = self.setup_gate_for_spec(
+            f"# Demo Roadmap\n\n{entry}Reviewability-Exception: infra\n", "SPEC-001",
+        )
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(payload["status"], "exception")
+        self.assertTrue(payload["pass"])
+        self.assertTrue(payload["exception_honored"])
+        self.assertEqual(payload["exception_class"], "infra")
+        self.assertEqual(payload["exceptions"]["accepted"], ["infra"])
+
+        for pragma in ("Reviewability-Exception: <class>", "Reviewability-Exception: Infra",
+                       "Reviewability-Exception: infra because it is big"):
+            with self.subTest(pragma=pragma):
+                payload, exit_code = self.setup_gate_for_spec(
+                    f"# Demo Roadmap\n\n{entry}{pragma}\n", "SPEC-001",
+                )
+                self.assertEqual((payload["status"], exit_code), ("block", 1))
+                self.assertFalse(payload["exception_honored"])
+                self.assertIsNone(payload["exception_class"])
+                self.assertEqual(payload["exceptions"]["rejected"], [pragma])
+
+        other = roadmap_budget_entry("SPEC-002", "Other spec", "API", 100, 1, 2)
+        payload, _ = self.setup_gate_for_spec(
+            f"# Demo Roadmap\n\n{entry}{other}Reviewability-Exception: infra\n", "SPEC-001",
+        )
+        self.assertEqual(payload["status"], "block", "another section's pragma must not excuse SPEC-001")
+
+    def test_reviewability_setup_gate_fails_closed_without_spec_budget(self) -> None:
+        if self.helper_filter and self.helper_filter != "reviewability-gate":
+            self.skipTest("setup missing-budget case uses reviewability-gate")
+        roadmap = (
+            "# Demo Roadmap\n\n### SPEC-001: Entry with no budget fields\n\n"
+            "**Priority:** P1 | **Depends On:** None | **Enables:** None\n"
+        )
+        payload, exit_code = self.setup_gate_for_spec(roadmap, "SPEC-001")
+        self.assertEqual(exit_code, 1)
+        self.assertEqual(payload["status"], "block")
+        self.assertFalse(payload["pass"])
+        self.assertEqual(len(payload["blockers"]), 3)
+        self.assertTrue(all("missing" in blocker for blocker in payload["blockers"]))
+
+        payload, exit_code = self.setup_gate_for_spec(
+            roadmap + "Reviewability-Exception: infra\n", "SPEC-001",
+        )
+        self.assertEqual((payload["status"], exit_code), ("block", 1), "a pragma never excuses a missing budget")
+
+        payload, exit_code = self.setup_gate_for_spec(roadmap, "SPEC-009")
+        self.assertEqual(exit_code, 2)
+        self.assertIn("SPEC-009", payload["error"])
 
     def test_check_prerequisites_does_not_invent_a_cli_version(self) -> None:
         if self.helper_filter and self.helper_filter != "check-prerequisites":

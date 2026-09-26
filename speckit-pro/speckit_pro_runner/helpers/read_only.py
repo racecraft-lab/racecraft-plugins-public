@@ -2186,6 +2186,32 @@ def validate_gate(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
     return make_result(json_text({"gate": gate, "pass": False, "reason": f"{count} CRITICAL/HIGH findings remain", "markers": count, "details": []}), exit_code=1)
 
 
+REVIEWABILITY_THRESHOLDS = {
+    "warn": {"reviewable_loc": 400, "production_files": 6, "total_files": 15, "primary_surfaces": 1},
+    "block": {"reviewable_loc": 800, "production_files": 8, "total_files": 25, "primary_surfaces": 1},
+}
+
+
+def reviewability_budget_findings(loc: int, prod: int, total: int, surface_count: int) -> tuple[list[str], list[str]]:
+    warnings = []
+    blockers = []
+    if loc > 400:
+        warnings.append(f"reviewable LOC {loc} exceeds warn threshold 400")
+    if prod > 6:
+        warnings.append(f"production files {prod} exceeds warn threshold 6")
+    if total > 15:
+        warnings.append(f"total files {total} exceeds warn threshold 15")
+    if surface_count > 1:
+        warnings.append(f"primary surfaces {surface_count} exceeds warn threshold 1")
+    if loc > 800:
+        blockers.append(f"reviewable LOC {loc} exceeds block threshold 800")
+    if prod > 8:
+        blockers.append(f"production files {prod} exceeds block threshold 8")
+    if total > 25:
+        blockers.append(f"total files {total} exceeds block threshold 25")
+    return warnings, blockers
+
+
 def reviewability_gate(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
     mode = str(inputs.get("mode_name") or "")
     target = resolve_input_path(inputs.get("target") or "", repo_root)
@@ -2194,6 +2220,9 @@ def reviewability_gate(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any
     if not trusted_file_exists(target, repo_root):
         return make_result(json_text({"error": f"file not found: {inputs.get('target') or ''}"}), exit_code=2)
     text = trusted_text(target, repo_root) or ""
+    spec_id = str(inputs.get("spec_id") or "")
+    if spec_id:
+        return reviewability_setup_spec_gate(text, spec_id, str(inputs.get("target") or ""))
     loc = last_number(text, r"(?:projected reviewable loc|reviewable loc)[^0-9]{0,40}([0-9]+)")
     prod = last_number(text, r"(?:projected production files|production files)[^0-9]{0,40}([0-9]+)")
     total = last_number(text, r"(?:projected total files|total files)[^0-9]{0,40}([0-9]+)")
@@ -2204,22 +2233,7 @@ def reviewability_gate(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any
     if not surface_values:
         surface_values = ["docs/process"]
     surface_values = sorted(set(surface_values))
-    warnings = []
-    blockers = []
-    if loc > 400:
-        warnings.append(f"reviewable LOC {loc} exceeds warn threshold 400")
-    if prod > 6:
-        warnings.append(f"production files {prod} exceeds warn threshold 6")
-    if total > 15:
-        warnings.append(f"total files {total} exceeds warn threshold 15")
-    if len(surface_values) > 1:
-        warnings.append(f"primary surfaces {len(surface_values)} exceeds warn threshold 1")
-    if loc > 800:
-        blockers.append(f"reviewable LOC {loc} exceeds block threshold 800")
-    if prod > 8:
-        blockers.append(f"production files {prod} exceeds block threshold 8")
-    if total > 25:
-        blockers.append(f"total files {total} exceeds block threshold 25")
+    warnings, blockers = reviewability_budget_findings(loc, prod, total, len(surface_values))
     status = "block" if blockers else "warn" if warnings else "pass"
     obj = {
         "mode": "setup",
@@ -2231,15 +2245,72 @@ def reviewability_gate(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any
         "primary_surface_count": len(surface_values),
         "primary_surfaces": surface_values,
         "greenfield": False,
-        "thresholds": {
-            "warn": {"reviewable_loc": 400, "production_files": 6, "total_files": 15, "primary_surfaces": 1},
-            "block": {"reviewable_loc": 800, "production_files": 8, "total_files": 25, "primary_surfaces": 1},
-        },
+        "thresholds": REVIEWABILITY_THRESHOLDS,
         "exception_honored": False,
         "exception_class": None,
         "exceptions": {"accepted": [], "rejected": []},
         "warnings": warnings,
         "blockers": blockers,
+    }
+    return make_result(json_text(obj), exit_code=1 if status == "block" else 0)
+
+
+REVIEWABILITY_BUDGET_FIELDS = (
+    ("reviewable_loc", "Projected reviewable LOC", r"(?:projected reviewable loc|reviewable loc)[^0-9]{0,40}([0-9]+)"),
+    ("production_files", "Production files", r"(?:projected production files|production files)[^0-9]{0,40}([0-9]+)"),
+    ("total_files", "Total files", r"(?:projected total files|total files)[^0-9]{0,40}([0-9]+)"),
+)
+REVIEWABILITY_EXCEPTION_PRAGMA = re.compile(r"^Reviewability-Exception: (refactor|infra|upgrade)$", re.M)
+
+
+def reviewability_setup_spec_gate(text: str, spec_id: str, target_display: str) -> dict[str, Any]:
+    """Judge one roadmap entry: its own budget numbers, surfaces, and exception pragma."""
+    heading = re.search(rf"^###\s+{re.escape(spec_id)}:.*$", text, flags=re.M)
+    if heading is None:
+        return make_result(json_text({"error": f"spec_id {spec_id} section not found in {target_display}"}), exit_code=2)
+    following = re.search(r"^#{1,3}\s", text[heading.end():], flags=re.M)
+    section = text[heading.end():heading.end() + following.start()] if following else text[heading.end():]
+    numbers: dict[str, int | None] = {}
+    missing = []
+    for key, label, pattern in REVIEWABILITY_BUDGET_FIELDS:
+        match = re.search(pattern, section, flags=re.I)
+        numbers[key] = int(match.group(1)) if match else None
+        if match is None:
+            missing.append(f"{spec_id}: {label} is missing from the roadmap entry")
+    surface_values = []
+    for surface in re.findall(r"(?:primary surface|primary surfaces)[^:\n]*:\s*([A-Za-z/ ,_-]+)", section, flags=re.I):
+        surface_values.extend(item.strip() for item in surface.split(",") if item.strip())
+    surface_values = sorted(set(surface_values or ["docs/process"]))
+    accepted = REVIEWABILITY_EXCEPTION_PRAGMA.findall(section)
+    rejected = [
+        line.strip() for line in section.splitlines()
+        if line.lstrip().startswith("Reviewability-Exception:") and not REVIEWABILITY_EXCEPTION_PRAGMA.fullmatch(line)
+    ]
+    loc, prod, total = (numbers[key] or 0 for key, _, _ in REVIEWABILITY_BUDGET_FIELDS)
+    warnings, blockers = reviewability_budget_findings(loc, prod, total, len(surface_values))
+    # A missing budget is never exceptable; only size blockers are.
+    exception_class = accepted[0] if accepted and blockers and not missing else None
+    if missing:
+        status = "block"
+    elif exception_class:
+        status = "exception"
+    else:
+        status = "block" if blockers else "warn" if warnings else "pass"
+    obj = {
+        "mode": "setup",
+        "spec_id": spec_id,
+        "status": status,
+        "pass": status in {"pass", "warn", "exception"},
+        **numbers,
+        "primary_surface_count": len(surface_values),
+        "primary_surfaces": surface_values,
+        "greenfield": False,
+        "thresholds": REVIEWABILITY_THRESHOLDS,
+        "exception_honored": exception_class is not None,
+        "exception_class": exception_class,
+        "exceptions": {"accepted": accepted, "rejected": rejected},
+        "warnings": warnings,
+        "blockers": missing + blockers,
     }
     return make_result(json_text(obj), exit_code=1 if status == "block" else 0)
 
