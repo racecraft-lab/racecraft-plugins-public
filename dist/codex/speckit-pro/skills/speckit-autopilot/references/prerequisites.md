@@ -151,6 +151,13 @@ The helper resolves the loaded plugin root that owns
 including `uat-runbook-author.md`. If `plugin_root` is supplied in `inputs`,
 it must equal that loaded root.
 
+Keep the returned `plugin_root`. Every consensus-synthesizer,
+clarify-executor, checklist-executor, and analyze-executor prompt carries a `Protocol:` line
+set to `<plugin_root>/skills/speckit-autopilot/references/consensus-protocol.md`,
+so those agents read the active protocol and never a cached copy from another
+version. Check the `**Protocol:**` path each one reports against that line,
+and never copy that expanded path into the workflow file.
+
 If the check fails, STOP. Claude Code loads plugin agents directly from the
 plugin cache, so autopilot cannot safely self-heal a missing Claude agent file.
 Tell the user to update/reinstall `speckit-pro`, run `/reload-plugins`, and

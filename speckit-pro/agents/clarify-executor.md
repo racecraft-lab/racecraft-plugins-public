@@ -95,7 +95,12 @@ agent.
    Multi-category tags are allowed: `[codebase, domain]` spawns
    both `codebase-analyst` and `domain-researcher`. Untagged items
    default to `[ambiguous]` but explicit tagging is the discipline.
-   See `references/consensus-protocol.md` for full routing rules.
+   For full routing rules, read the consensus protocol
+   only from the absolute path on your prompt's `Protocol:` line,
+   which the orchestrator resolves from the loaded plugin root, and
+   never search the plugin cache for another copy. Report that path
+   as `**Protocol:**` in your summary, or `not provided` when the
+   prompt has none.
 
    Still answer the question with your best guess — the consensus
    may confirm or override your answer.
@@ -132,6 +137,8 @@ agent.
 
 ```text
 ## Clarify Question Set
+
+**Protocol:** <the path on your prompt's `Protocol:` line> | not provided
 
 **Files inspected:**
 - <path> — <why it mattered>
