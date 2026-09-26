@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0",
+  "thresholds": {
+    "complexity": 15,
+    "crap": 30,
+    "mutation_score_floor": 60
+  },
+  "basis": {
+    "method": "percentile-90",
+    "measured_functions": 1858,
+    "recorded": "2026-09-25"
+  }
+}

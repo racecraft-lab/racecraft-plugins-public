@@ -1,0 +1,734 @@
+<!doctype html>
+<!--
+  Upstream repository: anthropics/html-effectiveness
+  Upstream file: 14-research-feature-explainer.html
+  License: MIT
+  License text: UPSTREAM-NOTICE.md
+  Modified derivative: yes — re-skinned with Racecraft brand tokens; not the upstream original
+  Copyright (c) 2026 Anthropic PBC
+-->
+<!--
+  Slot: document-title | Fills: the browser title using the artifact kind, feature identifier, and feature name | Source: spec.md
+  Slot: feature-header | Fills: the feature's identifier, name, and one-line intent | Source: spec.md
+  Slot: tldr | Fills: a short plain-English summary of what the feature does | Source: spec.md
+  Slot: goals | Fills: what the feature sets out to achieve | Source: spec.md
+  Slot: non-goals | Fills: what the feature deliberately leaves out | Source: design-concept.md, spec.md
+  Slot: acceptance-criteria | Fills: one foldable entry per acceptance criterion | Source: spec.md
+  Slot: clarification-faq | Fills: one question and answer per recorded clarification | Source: spec.md, design-concept.md
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<!-- GALLERY-HEAD:START -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'; frame-src 'none'; connect-src 'none'; worker-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src data: https://fonts.gstatic.com; img-src data:">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&amp;family=Geist:wght@400;500;600&amp;family=Fira+Code:wght@400;500&amp;display=swap">
+<script>
+(function () {
+  'use strict';
+
+  var LIGHT = 'light';
+  var DARK = 'dark';
+  var STORAGE_KEY = 'speckit-pro:artifact-gallery:theme';
+  var LABEL = 'Dark theme';
+  var root = document.documentElement;
+
+  /* The read is wrapped because a browser may refuse storage to a local file and
+     throw. That catch covers the throw only: the closed set comparison below is
+     what validates the value, so a value written by some other local document is
+     discarded rather than swallowed. */
+  function storedTheme() {
+    var raw = null;
+    try {
+      raw = window.localStorage.getItem(STORAGE_KEY);
+    } catch (unavailable) {
+      raw = null;
+    }
+    if (raw === DARK) {
+      return DARK;
+    }
+    if (raw === LIGHT) {
+      return LIGHT;
+    }
+    return null;
+  }
+
+  function systemTheme() {
+    return window.matchMedia
+      && window.matchMedia('(prefers-color-scheme: dark)').matches ? DARK : LIGHT;
+  }
+
+  /* theme is always one of the two literals above, never the string read back.
+     The scheme is set alongside the attribute so the browser's own surfaces,
+     form widgets and scrollbars, follow the chosen theme rather than the
+     operating system preference. */
+  function applyTheme(theme) {
+    root.setAttribute('data-theme', theme);
+    root.style.setProperty('color-scheme', theme);
+  }
+
+  function rememberTheme(theme) {
+    try {
+      window.localStorage.setItem(STORAGE_KEY, theme);
+    } catch (unavailable) {
+      /* Storage refused: the override still applies for this session and
+         nothing is surfaced to the reader as an error. */
+    }
+  }
+
+  /* Runs while the head is parsing, so the theme is on the root element before
+     first paint and a dark theme reader sees no flash of light.
+
+     data-theme is written on BOTH paths, not only when an override is stored.
+     Leaving it absent by default had two costs: the contract tells a template to
+     read data-theme to learn the current theme, and on the default path there was
+     nothing to read; and `active` held a snapshot of the operating-system theme
+     that nothing kept current. A reader who flipped their system theme after load
+     got a repainted page with a stale control — announced as "not pressed" on a
+     dark page — and a first click that changed nothing visible, so reaching the
+     other theme took two presses. */
+  var override = storedTheme();
+  var active = override || systemTheme();
+  applyTheme(active);
+
+  /* Reassigned once the control exists. A no-op until then, so the media
+     listener below can call it unconditionally — including before the control is
+     built, which is when an early system change would otherwise be lost. */
+  var announce = function () {};
+
+  /* While no override is stored the operating system is still the authority, so
+     a later change to it has to be followed rather than snapshotted. Storing an
+     override ends this: from then on the reader's choice wins, which is why the
+     listener checks `override` on every fire rather than being torn down. */
+  var media = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)');
+  if (media) {
+    var followSystem = function (event) {
+      if (override) {
+        return;
+      }
+      active = event.matches ? DARK : LIGHT;
+      applyTheme(active);
+      announce();
+    };
+    if (media.addEventListener) {
+      media.addEventListener('change', followSystem);
+    } else if (media.addListener) {
+      media.addListener(followSystem);  /* older engines: removed from the platform, still shipped */
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    var control = document.createElement('button');
+    control.type = 'button';
+    control.className = 'rc-theme-toggle';
+    /* The name is carried both as the visible label and as an explicit
+       accessible name, identical to each other, so it is stable across theme
+       positions and never derived from an icon glyph. The pressed state is what
+       changes between positions. */
+    control.textContent = LABEL;
+    control.setAttribute('aria-label', LABEL);
+    announce = function () {
+      control.setAttribute('aria-pressed', active === DARK ? 'true' : 'false');
+    };
+    announce();
+    control.addEventListener('click', function () {
+      active = active === DARK ? LIGHT : DARK;
+      /* The reader has now chosen, so the operating system stops being the
+         authority and the media listener above stands down. */
+      override = active;
+      applyTheme(active);
+      rememberTheme(active);
+      announce();
+    });
+    document.body.insertBefore(control, document.body.firstChild);
+
+    /* The Racecraft mark, decided once here so all 21 artifacts carry the same
+       artwork, and mounted only where a template asks for it — a template opts in
+       with an empty element carrying data-rc-brand-mark, so an artifact that has no
+       sensible place for a mark simply does not provide one. The neutral fill is
+       currentColor rather than a literal, so the mark follows the theme; the source
+       artwork hard-codes the light text value, which would be near-invisible on the
+       dark surface. Brand red is kept as-is: it is a primitive, identical in both
+       themes, and a logo mark carries no contrast obligation. */
+    var marks = document.querySelectorAll('[data-rc-brand-mark]');
+    for (var i = 0; i < marks.length; i += 1) {
+      if (!marks[i].firstElementChild) {
+        marks[i].innerHTML = '<svg class="rc-brand-mark" aria-hidden="true" focusable="false" viewBox="0 0 1250 1041" xmlns="http://www.w3.org/2000/svg"><g id="Layer-1"><g id="Group"><path id="Path" fill="none" stroke="none" d="M 469.2146 466.481079 C 475.719025 466.913025 479.789063 467.417053 483.859436 467.419189 C 564.027405 467.459656 644.205872 468.200745 724.358704 467.082886 C 758.932922 466.600647 793.701721 464.031494 827.943237 459.259766 C 887.535583 450.955139 931.979431 421.172302 952.822693 362.165222 C 966.562134 323.269104 955.263794 299.261963 915.212158 290.790527 C 885.175415 284.437683 854.049622 286.777832 823.338196 286.262207 L 551.617859 285.865051 C 547.658691 289.279785 544.522156 294.119812 541.683289 300.907715 C 518.750977 355.742432 494.148651 409.87854 469.2146 466.481079 Z"/><path id="path1" fill="currentColor" stroke="none" d="M 724.358704 467.082886 C 644.205872 468.200745 564.027405 467.459656 483.859436 467.419189 C 479.789063 467.417053 475.719025 466.913025 469.2146 466.481079 C 494.148651 409.87854 518.750977 355.742432 541.683289 300.907715 C 544.522156 294.119812 547.658691 289.279785 551.617859 285.865051 L 342.342896 285.559387 C 260.177399 469.638306 179.055176 654.182251 97.632225 838.592102 C 90.298721 855.201111 83.153061 871.893066 75 890.665649 C 81.568802 890.665649 86.0662 890.665649 90.563942 890.665649 C 149.156647 890.665649 207.754974 890.243164 266.338196 891.003296 C 278.828583 891.165405 283.973541 886.742615 288.748108 875.762939 C 327.223907 787.282959 366.557587 699.17688 405.200134 610.769043 C 409.149872 601.732727 413.847748 598.350708 423.879456 598.412598 C 495.594299 598.855835 567.316162 598.97644 639.028259 598.338074 C 651.588257 598.226196 656.575989 601.980713 660.146179 614.129578 C 686.022888 702.187134 712.782104 789.985413 739.30249 877.853333 C 741.274719 884.387329 741.97821 890.943481 752.262817 890.889709 C 827.716675 890.49646 903.174438 890.596313 978.629028 890.981812 L 868.0047 581.535278 L 827.943237 459.259766 C 793.701721 464.031494 758.932922 466.600647 724.358704 467.082886 Z"/><path id="path2" fill="#dc143c" stroke="none" d="M 1106.95105 175.728577 C 1083.181885 166.424988 1057.712158 158.817505 1032.460938 156.494568 C 977.976929 151.482605 923.15033 148.620117 868.431335 148.060852 C 749.383118 146.844177 630.314148 147.752014 511.253937 147.520203 C 459.6539 147.419922 416.363739 164.23291 387.122986 208.566345 C 371.954071 231.564331 356.125244 254.671082 344.959869 279.677917 C 344.085083 281.637085 343.217316 283.599854 342.342896 285.559387 L 551.617859 285.865051 L 823.338196 286.262207 C 854.049622 286.777832 885.175415 284.437683 915.212158 290.790527 C 955.263794 299.261963 966.562134 323.269104 952.822693 362.165222 C 931.979431 421.172302 887.535583 450.955139 827.943237 459.259766 L 868.0047 581.535278 C 890.488831 576.130737 911.725342 572.328369 932.138062 565.907288 C 1059.137085 525.957703 1144.790894 444.708496 1178.169067 313.813171 C 1195.045044 247.631958 1170.367798 200.550781 1106.95105 175.728577 Z"/></g></g></svg>';
+      }
+    }
+  });
+})();
+</script>
+<!-- GALLERY-HEAD:END -->
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- FILL:document-title:START -->
+<title>Spec Explainer — HRNS-015 Autopilot, Gate, and PR-Emission Repair</title>
+<!-- FILL:document-title:END -->
+<style>
+/* BRAND-KIT:START */
+:root {
+  /* Declares support for both schemes so the browser's own surfaces — form
+   * controls, scrollbars, the default canvas — start from the reader's
+   * operating-system preference. This is NOT sufficient on its own: it
+   * resolves against the OS, not against this document's data-theme. The two
+   * data-theme blocks below therefore set color-scheme explicitly in each
+   * direction. */
+  color-scheme: light dark;
+
+  /* ---- Surfaces — the 70% warm neutral, dominant by area ---------------- */
+  --rc-surface: #F7F6F4;
+  --rc-surface-raised: #FFFFFF;
+  --rc-surface-sunken: #F1F0EC;
+  --rc-surface-muted: #EDEBE6;
+
+  /* ---- Borders --------------------------------------------------------- */
+  /* Decorative only. Measures 1.13–1.34 here and 1.50–1.78 dark, so it never
+   * carries meaning — see prohibition rule 1. */
+  --rc-border-subtle: #E0DED9;
+  /* Meaningful non-text: form-control edges, state borders, the focus ring.
+   * Audited to at least 3:1 on all four surfaces in both themes. */
+  --rc-border-strong: #8A8578;
+
+  /* ---- Text ------------------------------------------------------------ */
+  --rc-text: #111827;
+  --rc-text-muted: #4B5563;
+  --rc-link: #2A6A99;
+
+  /* ---- TOKEN CLASSES ---------------------------------------------------
+   * A FUNCTIONAL token exists to serve a stated purpose, and must clear its
+   * contrast floor against every surface it may pair with. When it does not,
+   * its value is corrected.
+   *
+   * A BRAND PRIMITIVE is not re-valued by engineering to resolve a contrast
+   * failure. The need it cannot serve is routed instead to a functional
+   * sibling that can, and that sibling is named here beside it so an author
+   * reading one sees the other. Any restriction on a primitive is stated as
+   * narrowly as the measurement supports — the failing pairing, in the
+   * failing role, in the failing theme — never as a blanket ban.
+   *
+   * Before either remedy, check the SURFACE. Both classes above describe what
+   * to do about a foreground, and twice in this kit's history the foreground
+   * was not at fault: a raised surface borrowed from navigation chrome held
+   * brand red to 2.94, and a muted surface one step too dark held the accent
+   * to 2.99 and forced --rc-border-strong off its brand value. Correcting each
+   * surface lifted every foreground measured against it at once. Neither
+   * remedy below currently has a live instance, because both causes were
+   * removed at the surface. See corrections 2 and 3 in the header.
+   * -------------------------------------------------------------------- */
+
+  /* Brand primitive. 20% of the palette. Role: large text (at least 24px, or
+   * at least 18.66px bold) and meaningful non-text only — it is not body-safe
+   * in either theme. Clears the 3:1 non-text floor on all four surfaces here
+   * (3.16–3.76), so it carries no prohibition. */
+  --rc-accent: #3C89C6;
+
+  /* Brand primitive. 10% of the palette, punctuation-level emphasis. Role:
+   * large text and meaningful non-text only.
+   *
+   * Permitted on all four surfaces in BOTH themes — 4.19–4.99 light and
+   * 3.11–3.69 dark — so this primitive carries no prohibition of its own. It
+   * once did: against a raised surface of #1F2937 it measured 2.94. That was
+   * resolved by correcting the surface rather than by re-valuing the primitive
+   * or routing around it, which is why no exception is needed here. As a
+   * BACKGROUND carrying #FFFFFF text it measures 4.99 and is available in
+   * both themes. */
+  --rc-brand-red: #dc143c;
+
+  /* Functional sibling of --rc-brand-red: the AA-body-safe red, for red text
+   * at body size and for anywhere brand red cannot go. Re-valued per theme —
+   * that is what makes it functional rather than a primitive. */
+  --rc-danger-text: #C4102F;
+
+  /* ---- USE OF COLOUR ---------------------------------------------------
+   * A separate obligation from contrast and from the punctuation-level
+   * reservation above, and neither of those discharges it.
+   *
+   * Brand red must never be the SOLE visual means of conveying information,
+   * indicating an action, prompting a response, or distinguishing an element.
+   * Wherever red carries a status or a distinction, that meaning must also be
+   * available without colour — as text, a shape, a glyph, or a position — so
+   * it survives for a reader who cannot perceive the hue and in a monochrome
+   * print or screenshot. A red that clears its ratio still fails this rule if
+   * colour is the only thing setting the element apart.
+   *
+   * The reservation is a rule about HOW MUCH red is used and at what sizes.
+   * This is a rule about what red is allowed to MEAN on its own. Satisfying
+   * one says nothing about the other.
+   * -------------------------------------------------------------------- */
+
+  /* ---- Typefaces -------------------------------------------------------
+   * The brand face leads every stack. font-family is a preference list and
+   * the first AVAILABLE face wins, so a system face placed first would shadow
+   * the brand face permanently.
+   *
+   * The display and body brand faces are both sans-serif, so their fallback
+   * stacks name DIFFERENT concrete faces rather than both collapsing onto the
+   * same system face. Where a platform has neither named fallback, hierarchy
+   * still holds: it is carried by semantic heading level, size, and weight
+   * below, never by typeface identity. Offline the rendering degrades in
+   * appearance only, never in structure.
+   * -------------------------------------------------------------------- */
+  --rc-font-display: 'Space Grotesk', 'Trebuchet MS', 'Segoe UI', system-ui, sans-serif;
+  --rc-font-body: 'Geist', 'Helvetica Neue', Arial, system-ui, sans-serif;
+  --rc-font-mono: 'Fira Code', ui-monospace, Menlo, Consolas, monospace;
+}
+
+/* Dark values follow the reader's operating-system preference by default. */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --rc-surface: #1A1A1A;
+    --rc-surface-raised: #242424;
+    --rc-surface-sunken: #141414;
+    --rc-surface-muted: #1E1E1E;
+
+    --rc-border-subtle: #404040;
+    --rc-border-strong: #6B7280;
+
+    --rc-text: #E6E6E6;
+    --rc-text-muted: #9CA3AF;
+    --rc-link: #7CB3DD;
+
+    --rc-accent: #3C89C6;
+
+    /* Brand primitive, identical in both themes — a primitive is not
+     * re-valued. Clears the 3:1 non-text floor on all four surfaces here
+     * (3.11–3.69), so it carries no exception. */
+    --rc-brand-red: #dc143c;
+
+    /* Functional token, re-valued for this theme. */
+    --rc-danger-text: #FF6B85;
+  }
+}
+
+/* An explicit reader choice wins over the operating-system preference, and
+ * sets the browser's own scheme with it so native controls follow. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --rc-surface: #1A1A1A;
+  --rc-surface-raised: #242424;
+  --rc-surface-sunken: #141414;
+  --rc-surface-muted: #1E1E1E;
+
+  --rc-border-subtle: #404040;
+  --rc-border-strong: #6B7280;
+
+  --rc-text: #E6E6E6;
+  --rc-text-muted: #9CA3AF;
+  --rc-link: #7CB3DD;
+
+  --rc-accent: #3C89C6;
+
+  /* Brand primitive, identical in both themes. Clears the 3:1 non-text floor
+   * on all four surfaces here (3.11–3.69), so it carries no exception. */
+  --rc-brand-red: #dc143c;
+
+  --rc-danger-text: #FF6B85;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  --rc-surface: #F7F6F4;
+  --rc-surface-raised: #FFFFFF;
+  --rc-surface-sunken: #F1F0EC;
+  --rc-surface-muted: #EDEBE6;
+
+  --rc-border-subtle: #E0DED9;
+  --rc-border-strong: #8A8578;
+
+  --rc-text: #111827;
+  --rc-text-muted: #4B5563;
+  --rc-link: #2A6A99;
+
+  --rc-accent: #3C89C6;
+  --rc-brand-red: #dc143c;
+  --rc-danger-text: #C4102F;
+}
+
+/* Hierarchy is carried by level, size, and weight so it survives the brand
+ * faces being unavailable. */
+body {
+  background-color: var(--rc-surface);
+  color: var(--rc-text);
+  font-family: var(--rc-font-body);
+  font-size: 1rem;
+  line-height: 1.6;
+  /* The cross-theme colour change — the kit's one animation, and what the
+   * reduced-motion block below exists to neutralise. */
+  transition: background-color 160ms linear, color 160ms linear;
+}
+
+/* The display face carries h1 and h2 only. From h3 down the brand system uses the
+ * body face at a heavier weight, so the geometric display face against the humanist
+ * body face stays a deliberate contrast at the top of the page rather than becoming
+ * the texture of the whole document. Applying the display face to every level was a
+ * fidelity defect, caught against the brand source. */
+h1,
+h2 {
+  font-family: var(--rc-font-display);
+  line-height: 1.25;
+}
+
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--rc-font-body);
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+h1 {
+  font-size: 2rem;
+  font-weight: 700;
+}
+
+h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+h4,
+h5,
+h6 {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+code,
+kbd,
+pre,
+samp {
+  font-family: var(--rc-font-mono);
+  font-size: 0.9375rem;
+}
+
+a {
+  color: var(--rc-link);
+}
+
+/* Every interactive element carries a visible keyboard focus indicator, and
+ * the indicator is never suppressed without an equivalent replacement
+ * (WCAG 2.4.7). --rc-link clears the 3:1 non-text floor on every
+ * surface it can appear on in both themes. */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+summary:focus-visible,
+details:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--rc-link);
+  outline-offset: 2px;
+}
+
+/* A reader who asks for reduced motion gets none, including the cross-theme
+ * colour transition above. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* The theme control the head block creates at run time.
+ *
+ * The block sets this class on the button it builds, so the kit has to carry the
+ * rule — otherwise the control renders as a browser default in every artifact and
+ * all 21 ports style it independently, which is exactly what embedding a shared
+ * block is meant to prevent. Ports may override; they should not have to.
+ *
+ * It is placed as the first element in the body, so it is positioned rather than
+ * left to sit above the content. Focus is deliberately not restyled here: the
+ * focus-visible rule above already covers `button`, and this control is a real
+ * button. */
+.rc-theme-toggle {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 10;
+  font: inherit;
+  font-size: 0.875rem;
+  line-height: 1;
+  padding: 0.5rem 0.75rem;
+  color: var(--rc-text);
+  background: var(--rc-surface-raised);
+  border: 1px solid var(--rc-border-strong);
+  border-radius: 0.375rem;
+  cursor: pointer;
+}
+
+.rc-theme-toggle:hover {
+  border-color: var(--rc-link);
+}
+
+/* The brand mark the head block mounts. Sized here so a template only supplies a
+ * container; the neutral areas inherit colour via currentColor, so the mark tracks
+ * the theme without a second copy of the artwork. */
+.rc-brand-mark {
+  display: block;
+  width: auto;
+  height: 2rem;
+  color: var(--rc-text);
+}
+/* BRAND-KIT:END */
+
+/* ==========================================================================
+ * Template styling — spec-explainer
+ * ==========================================================================
+ *
+ * Everything below sits outside the canonical block above and is this
+ * template's own. It introduces no colour value: every rule names a token the
+ * brand kit defines, so every pairing is one the kit's published audit already
+ * measured against all four surfaces in both themes.
+ *
+ * The pairings used here, read off that audit (light / dark):
+ *   --rc-text        on --rc-surface         16.42 / 13.94   body
+ *   --rc-text        on --rc-surface-raised  17.74 / 12.44   body
+ *   --rc-text-muted  on --rc-surface          7.00 /  6.86   body
+ *   --rc-text-muted  on --rc-surface-raised   7.56 /  6.11   body
+ *   --rc-text-muted  on --rc-surface-muted    6.34 /  6.57   body
+ *   --rc-border-strong on all four surfaces   3.09+ / 3.21+  meaningful non-text
+ *   --rc-brand-red   on --rc-surface-raised   4.99 /  3.11   non-text mark only
+ *
+ * --rc-border-subtle appears nowhere: every boundary this template draws
+ * separates a panel from the page and therefore carries meaning, which is the
+ * one role that token is prohibited in. --rc-brand-red appears once, as the
+ * TL;DR panel's edge — a non-text mark, which is the role it is audited for.
+ * No text is drawn in it, and it carries no meaning of its own: the panel is
+ * labelled "TL;DR" in words, so the colour is decoration and the label is the
+ * carrier.
+ * ========================================================================== */
+
+body {
+  margin: 0;
+  padding: 3.5rem 1.5rem 6rem;
+}
+
+.page {
+  max-width: 46rem;
+  margin: 0 auto;
+}
+
+header {
+  margin-bottom: 2rem;
+}
+
+h1 {
+  margin: 0 0 0.75rem;
+}
+
+h2 {
+  margin: 2.5rem 0 0.75rem;
+}
+
+p {
+  margin: 0 0 0.75rem;
+}
+
+.eyebrow {
+  font-family: var(--rc-font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--rc-text-muted);
+  margin: 1rem 0 0.5rem;
+}
+
+/* The rendered statement that what follows is a worked example. It sits inside
+ * the feature-header region on purpose, so the first fill removes it. */
+.notice {
+  border: 1px solid var(--rc-border-strong);
+  border-radius: 0.5rem;
+  background: var(--rc-surface-muted);
+  color: var(--rc-text-muted);
+  font-size: 0.875rem;
+  padding: 0.625rem 0.875rem;
+  margin: 0;
+}
+
+.tldr {
+  border: 1px solid var(--rc-border-strong);
+  border-left: 3px solid var(--rc-brand-red);
+  border-radius: 0.625rem;
+  background: var(--rc-surface-raised);
+  padding: 1rem 1.125rem;
+}
+
+.tldr p:last-child {
+  margin-bottom: 0;
+}
+
+ul.points {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+ul.points li {
+  margin-bottom: 0.5rem;
+}
+
+ul.points li:last-child {
+  margin-bottom: 0;
+}
+
+/* ── The acceptance-criteria fold ──────────────────────────────────────────
+ * The native disclosure element. It needs no script, it reports its own
+ * expanded state, and it opens and closes from the keyboard on its own. The
+ * kit's :focus-visible rule already reaches `summary`, so the indicator is
+ * inherited rather than restyled here, and nothing suppresses it.
+ *
+ * Upstream animated the caret with an unguarded `transition: transform 120ms`
+ * on this same pseudo-element. The port DROPS that declaration and keeps only
+ * the rotation, which is an instant state change rather than motion. This
+ * template therefore adds no animation and no transition at all, so there is
+ * nothing left for a reduced-motion preference to suppress.
+ * ------------------------------------------------------------------------ */
+details {
+  border: 1px solid var(--rc-border-strong);
+  border-radius: 0.625rem;
+  background: var(--rc-surface-raised);
+  margin: 0.75rem 0;
+  overflow: hidden;
+}
+
+summary {
+  list-style: none;
+  cursor: pointer;
+  font-weight: 600;
+  padding: 0.875rem 1rem;
+}
+
+summary::-webkit-details-marker {
+  display: none;
+}
+
+summary::before {
+  content: "\25B8";
+  display: inline-block;
+  width: 1.125em;
+  color: var(--rc-text-muted);
+}
+
+details[open] summary::before {
+  transform: rotate(90deg);
+}
+
+details .body {
+  padding: 0 1rem 1rem;
+}
+
+details .body p {
+  color: var(--rc-text-muted);
+  margin: 0;
+}
+
+dl.faq {
+  margin: 0;
+}
+
+dl.faq dt {
+  font-weight: 600;
+  margin-top: 1.25rem;
+}
+
+dl.faq dt:first-child {
+  margin-top: 0;
+}
+
+dl.faq dd {
+  color: var(--rc-text-muted);
+  margin: 0.25rem 0 0;
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header>
+    <span data-rc-brand-mark></span>
+    <!-- FILL:feature-header:START -->
+<p class="eyebrow"><span id="feature-id">HRNS-015</span> · plan-only draft review</p><h1 id="feature-name">Autopilot, Gate, and PR-Emission Repair</h1><p class="lede">Repair packet emission, deterministic gates, completion boundaries, and scaffold guidance on Claude Code and Codex.</p><p>19 proposed increments; owner acceptance is pending. T002 blocks behavior tasks. No validated marker plan or implementation approval.</p><p class="caption">Capability path: Feature scope -&gt; planning-record file read; Evidence: specs/hrns-015-autopilot-gate-pr-emission-repair/spec.md; specs/hrns-015-autopilot-gate-pr-emission-repair/plan.md; docs/ai/specs/.process/HRNS-015-workflow.md:748–886; Confidence: high</p>
+<!-- FILL:feature-header:END -->
+  </header>
+
+  <main>
+
+    <!-- FILL:tldr:START -->
+<div class="tldr"><p>HRNS-015 repairs observed autopilot and scaffold defects through 19 proposed ordered one-story increments. The plan defines 33 tasks, 14 stories, 29 requirements, and 40 acceptance scenarios. Analyze is complete for plan-only review; H3–H7 remain open and spec qualification is unqualified.</p><p>Prior owner ratification covered five PRs. Owner acceptance of 19 PRs is pending. Candidate inventories have 14–24 paths including six recurring process/evidence candidates; actual base/head diffs, generated outputs, LOC, and marker fingerprints remain unqualified. T002 blocks behavior tasks. The installed marker validator rejects legitimate sequential shared paths, so no valid marker plan or implementation approval exists.</p><p>G6 mechanically returned zero findings despite five open HIGH findings (issue #682); that false pass does not qualify this spec. Default advisory G6.5 records 0.43 = mean 0.93 − 0.50, below 0.90, with continue_with_warning for the planning handoff only.</p></div><p class="caption">Capability path: Current planning status -&gt; planning-record file read; Evidence: specs/hrns-015-autopilot-gate-pr-emission-repair/plan.md:7–58; specs/hrns-015-autopilot-gate-pr-emission-repair/tasks.md:1–45; docs/ai/specs/.process/HRNS-015-workflow.md:748–886; Confidence: high</p>
+<!-- FILL:tldr:END -->
+
+    <h2>Goals</h2>
+    <!-- FILL:goals:START -->
+<ul class="points"><li><b>Packet acceptance.</b> US1–US3: optional final release note, only-current-packet untracked exemptions, and protected current G6.5 verdict.</li><li><b>Accurate gates.</b> US4–US8: visible exact Gap tokens, tracked spec indexes, selected roadmap budgets, refactor-aware estimates, and host-declared commands.</li><li><b>Trustworthy completion.</b> US9–US10: one canonical 13-row Post list, persisted workflow/state checks, and verified executor team cleanup.</li><li><b>Complete feedback and scaffold output.</b> US11–US14: exhaust feedback pages, verify and push before replies, await analyst findings, supply five named request envelopes, and link real workflows.</li><li><b>Reviewable delivery.</b> Every host-facing change ships on Claude Code and Codex in the same increment, with failing-first fixtures and actual diff gates.</li></ul><p class="caption">Capability path: Feature goals -&gt; planning-record file read; Evidence: specs/hrns-015-autopilot-gate-pr-emission-repair/spec.md:11–216;234–262; Confidence: high</p>
+<!-- FILL:goals:END -->
+
+    <h2>Non-goals</h2>
+    <!-- FILL:non-goals:START -->
+<ul class="points"><li>Redesigning the packet schema beyond one optional release-note field or the Post sequence beyond the 13-row unification.</li><li>Changing any host release-note policy, defaulting to a skip label, or inserting a release-note fence into draft PR bodies.</li><li>The remaining 58 bare helper call sites and self-describing malformed-request errors; HRNS-019 owns that sweep.</li><li>Parsing AGENTS.md or CLAUDE.md tables in the runner; operators may seed declared commands from those documents.</li><li>A new typed reviewability-exception class or host-repository ignore-rule changes.</li><li>Removing team-capable tools from open executors or introducing an autopilot wall-clock budget (already removed by #642).</li><li>Unrelated stale prose, duplicate UAT rendering, and other findings deferred by the design concept unless a touched paragraph must be corrected for consistency.</li></ul><p class="caption">Capability path: Non-goals -&gt; planning-record file read; Evidence: specs/hrns-015-autopilot-gate-pr-emission-repair/spec.md:370–378; docs/ai/specs/.process/HRNS-015-design-concept.md:106–124; Confidence: high</p>
+<!-- FILL:non-goals:END -->
+
+    <h2>Acceptance criteria</h2>
+    <!-- FILL:acceptance-criteria:START -->
+<p>40 acceptance scenarios across 14 stories. These are required outcomes, not implementation test results.</p><details open><summary>US1 · Release note in the final packet (Priority: P1) · scenario 1</summary><div class="body"><p>Given a final packet with a release note, when its body is emitted, then one `## Release note` section follows the eight required headings, contains exactly one nonempty `release-note` fence inside its own editable markers, and leaves the single UAT Runbook heading in its required position.</p></div></details>
+<details><summary>US1 · Release note in the final packet (Priority: P1) · scenario 2</summary><div class="body"><p>Given that emitted body and a `feat` PR title, when the host release-note check runs, then it passes without a skip label or manual body edit.</p></div></details>
+<details><summary>US1 · Release note in the final packet (Priority: P1) · scenario 3</summary><div class="body"><p>Given a draft PR or a packet without a release note, when its body is emitted, then no release-note heading, marker field, or fence is invented; drafts retain zero editable fields.</p></div></details>
+<details><summary>US2 · Packet validation in hosts that track untracked files (Priority: P1) · scenario 1</summary><div class="body"><p>Given only this packet&#x27;s canonical untracked `&lt;id&gt;.json`, `&lt;id&gt;/body.md`, and `&lt;id&gt;/validation.json` files under its validated feature directory, when validation or refresh applies, then it succeeds without requiring those files to be committed.</p></div></details>
+<details><summary>US2 · Packet validation in hosts that track untracked files (Priority: P1) · scenario 2</summary><div class="body"><p>Given another packet, any unrelated changed path, a tracked modification, or unreadable Git status, when validation or refresh applies, then it blocks without a host ignore-rule workaround.</p></div></details>
+<details><summary>US3 · Confidence visible to reviewers (Priority: P1) · scenario 1</summary><div class="body"><p>Given a recorded G6.5 verdict, when the final body is emitted, then the verdict is visible and matches the recorded value.</p></div></details>
+<details><summary>US3 · Confidence visible to reviewers (Priority: P1) · scenario 2</summary><div class="body"><p>Given a refreshed final packet, when its body is emitted again, then a protected line under `## Verification` shows the current Phase 6.5 `Verdict` value rather than stale body text.</p></div></details>
+<details><summary>US3 · Confidence visible to reviewers (Priority: P1) · scenario 3</summary><div class="body"><p>Given no valid recorded Phase 6.5 verdict, when final PR emission is attempted, then emission blocks instead of inferring a verdict from the overview status or score.</p></div></details>
+<details><summary>US4 · Accurate checklist gap count (Priority: P1) · scenario 1</summary><div class="body"><p>Given tags with `Gap` as the first or later comma-separated token, including two qualifying tags on one line, when G4 and `count-markers gaps/all` count gaps, then each real tag counts once and all entry points agree.</p></div></details>
+<details><summary>US4 · Accurate checklist gap count (Priority: P1) · scenario 2</summary><div class="body"><p>Given Gap tags or clarification markers in inline, fenced, or indented Markdown code, when G1, G2, G3, G4, or `count-markers` counts or lists them, then code examples are excluded while markers in visible prose are counted.</p></div></details>
+<details><summary>US4 · Accurate checklist gap count (Priority: P1) · scenario 3</summary><div class="body"><p>Given the operator&#x27;s gate instructions, when they describe counting, then they no longer prescribe the literal-only count that misses compound tags.</p></div></details>
+<details><summary>US5 · Spec index freshness in the required artifact check (Priority: P1) · scenario 1</summary><div class="body"><p>Given a stale tracked spec index, when artifact consistency is checked, then `--check` exits nonzero and names the changed index paths.</p></div></details>
+<details><summary>US5 · Spec index freshness in the required artifact check (Priority: P1) · scenario 2</summary><div class="body"><p>Given that stale index, when release artifacts are regenerated, then the index is refreshed and the check passes.</p></div></details>
+<details><summary>US5 · Spec index freshness in the required artifact check (Priority: P1) · scenario 3</summary><div class="body"><p>Given a candidate absent from the source Git index, including a file inside a tracked spec directory, when the index is generated or checked in an isolated copy, then neither backlinks nor the roadmap home index include it; staged additions remain eligible.</p></div></details>
+<details><summary>US6 · Reviewability budget for the named spec (Priority: P1) · scenario 1</summary><div class="body"><p>Given a named spec, when setup mode evaluates reviewability, then it considers only that spec&#x27;s section and primary surfaces.</p></div></details>
+<details><summary>US6 · Reviewability budget for the named spec (Priority: P1) · scenario 2</summary><div class="body"><p>Given a missing named section or required budget field, when setup mode evaluates it, then it returns `status: block`, `pass: false`, exit 1, and a blocker naming the spec ID and missing field rather than borrowing another entry&#x27;s value.</p></div></details>
+<details><summary>US6 · Reviewability budget for the named spec (Priority: P1) · scenario 3</summary><div class="body"><p>Given a valid line-anchored typed exception in the selected authored roadmap section, when the gate evaluates it, then its status is `exception` with the exact accepted class; a pragma in another entry or generated text has no effect.</p></div></details>
+<details><summary>US6 · Reviewability budget for the named spec (Priority: P1) · scenario 4</summary><div class="body"><p>Given an over-block-line total, when the ordered slice list and budget table have exactly one complete, numeric row per slice and every slice is below each block line, then setup reports the aggregate and accepts the split; missing, extra, duplicate, malformed, or over-line rows block.</p></div></details>
+<details><summary>US6 · Reviewability budget for the named spec (Priority: P1) · scenario 5</summary><div class="body"><p>Given a greenfield entry, when setup evaluates its budget, then the documented 1.5x allowance changes LOC thresholds only; production-file, total-file, and surface thresholds retain their ordinary limits.</p></div></details>
+<details><summary>US6 · Reviewability budget for the named spec (Priority: P1) · scenario 6</summary><div class="body"><p>Given declared slice budgets, when setup evaluates them, then it aggregates their LOC and file counts for whole-feature reporting and evaluates each slice against the block lines.</p></div></details>
+<details><summary>US7 · Refactor-aware size estimate (Priority: P2) · scenario 1</summary><div class="body"><p>Given required refactor work, when size is estimated, then the estimate and suggested slice count account for that work.</p></div></details>
+<details><summary>US7 · Refactor-aware size estimate (Priority: P2) · scenario 2</summary><div class="body"><p>Given no required refactor work, when size is estimated, then the ordinary estimate remains available.</p></div></details>
+<details><summary>US8 · Host-declared quality commands (Priority: P1) · scenario 1</summary><div class="body"><p>Given a valid declared slot, when commands are detected, then that slot uses the declared command and reports `source: declared`.</p></div></details>
+<details><summary>US8 · Host-declared quality commands (Priority: P1) · scenario 2</summary><div class="body"><p>Given an undeclared slot, when commands are detected, then normal detection remains available for that slot.</p></div></details>
+<details><summary>US9 · One complete Post list on both hosts (Priority: P1) · scenario 1</summary><div class="body"><p>Given either host, when autopilot presents the Post list, then all 13 canonical rows appear once with matching names and counts.</p></div></details>
+<details><summary>US9 · One complete Post list on both hosts (Priority: P1) · scenario 2</summary><div class="body"><p>Given a resumed run, when its Post state is reconstructed, then the two named resume points retain separate rows.</p></div></details>
+<details><summary>US9 · One complete Post list on both hosts (Priority: P1) · scenario 3</summary><div class="body"><p>Given persisted state from the older 11-row Post list, when the 13-row guard reads it, then it identifies each missing canonical row, retains the status of each exact-name row, and does not infer completion for a new or renamed row.</p></div></details>
+<details><summary>US10 · No premature completion or orphaned team (Priority: P1) · scenario 1</summary><div class="body"><p>Given a pending, in-progress, missing, or duplicate canonical Post row in the persisted workflow or state, when either host reaches its completion boundary, then the shared check fails and identifies every affected row.</p></div></details>
+<details><summary>US10 · No premature completion or orphaned team (Priority: P1) · scenario 2</summary><div class="body"><p>Given every Post row complete, when autopilot reaches the boundary, then it may report completion.</p></div></details>
+<details><summary>US10 · No premature completion or orphaned team (Priority: P1) · scenario 3</summary><div class="body"><p>Given a team formed by any team-capable executor, when that executor reports clean completion, then it has collected or stopped every child and confirmed team teardown on both hosts; an unconfirmed child is named in its result.</p></div></details>
+<details><summary>US11 · Review-thread resolution after a verified push (Priority: P1) · scenario 1</summary><div class="body"><p>Given multiple pages of threads or nested comments, when resolve-pr collects feedback, then every connection is exhausted before decisions are made; a failed page or missing continuation cursor blocks replies and resolution.</p></div></details>
+<details><summary>US11 · Review-thread resolution after a verified push (Priority: P1) · scenario 2</summary><div class="body"><p>Given an unverified fix, failed push, or remote head that does not match the pushed commit, when resolve-pr reaches reply handling, then it does not reply or resolve.</p></div></details>
+<details><summary>US11 · Review-thread resolution after a verified push (Priority: P1) · scenario 3</summary><div class="body"><p>Given full verification, a successful push, and a fresh remote PR head SHA matching the intended commit, when resolve-pr handles feedback, then it replies and resolves serially and confirms each resolved state.</p></div></details>
+<details><summary>US12 · Wait for the scaffold blind-spot analysis (Priority: P1) · scenario 1</summary><div class="body"><p>Given a dispatched analyst that is still working, when five minutes elapse, then scaffold continues waiting and later uses its nonempty findings.</p></div></details>
+<details><summary>US12 · Wait for the scaffold blind-spot analysis (Priority: P1) · scenario 2</summary><div class="body"><p>Given a dispatch error, empty return, or explicit operator abandonment, when scaffold continues without findings, then the Design Concept blind-spot line and operator status show the same specific reason; elapsed time alone never records abandonment.</p></div></details>
+<details><summary>US13 · Complete examples at live helper failure sites (Priority: P2) · scenario 1</summary><div class="body"><p>Given the named failure sites, when an operator follows each example, then it supplies the complete request envelope accepted by that helper.</p></div></details>
+<details><summary>US13 · Complete examples at live helper failure sites (Priority: P2) · scenario 2</summary><div class="body"><p>Given Claude Code and Codex versions of those instructions, when examples are compared, then equivalent calls are present on both hosts.</p></div></details>
+<details><summary>US14 · Workflow links point to scaffold output (Priority: P2) · scenario 1</summary><div class="body"><p>Given a generated roadmap, when its workflow link is followed, then it opens the matching file under `docs/ai/specs/.process/`.</p></div></details>
+<details><summary>US14 · Workflow links point to scaffold output (Priority: P2) · scenario 2</summary><div class="body"><p>Given the published guidance, when it shows the workflow location, then it agrees with the generated link and scaffold output.</p></div></details>
+<details><summary>US14 · Workflow links point to scaffold output (Priority: P2) · scenario 3</summary><div class="body"><p>Given an existing roadmap with a legacy workflow link, when scaffold updates it, then a link to a verified existing workflow file is preserved; a broken link is corrected to the actual `.process/&lt;SPEC-ID&gt;-workflow.md` output.</p></div></details><p class="caption">Capability path: Acceptance scenarios -&gt; planning-record file read; Evidence: specs/hrns-015-autopilot-gate-pr-emission-repair/spec.md:11–216; Confidence: high</p>
+<!-- FILL:acceptance-criteria:END -->
+
+    <h2>Clarification FAQ</h2>
+    <!-- FILL:clarification-faq:START -->
+<dl class="faq"><dt>Which Gap tags count?</dt><dd>Gap counting recognizes the exact, case-sensitive token `Gap` within a single-line, non-nested `[...]` tag. Split the tag contents on commas and trim spaces and tabs around each token. Count each qualifying tag once, whether `Gap` is the first or a later token. For example, a bracket tag containing only `Gap`, one containing `Gap, Exception Flow`, and one containing `Coverage, Gap` each count once; `[gap]`, `[Gapless]`, and nested bracket text do not count. This is a new Clarify decision; the prior Q4 decision did not settle these boundaries.</dd><dt>Which Markdown examples are excluded from marker counts?</dt><dd>Gap tags and clarification markers share the Markdown code-visibility rule for G1/G2/G3/G4 and the relevant `count-markers` paths. Counts and reported details agree; other marker types retain their existing behavior. This resolves design concept Open Question 1.</dd><dt>How must required refactors affect size estimation?</dt><dd>Required refactor work must affect the size estimate and suggested slice count. Plan defines the input shape and weight, preserves the ordinary estimate when no refactor work is supplied, and preserves spike precedence. Q11 compared scopes with different story, file, and requirement counts, so its 292-to-1,362 LOC change does not establish a refactor weight.</dd><dt>How does a missing spec identifier differ from a missing roadmap section?</dt><dd>A missing `spec_id` input is an invalid request; an existing identifier with no matching roadmap section or an incomplete entry is a reviewability block with a precise diagnostic.</dd><dt>When does release-artifact refresh regenerate the spec index?</dt><dd>Release-artifact refresh runs spec-index generation as a named step after metadata, payload, and marketplace refresh. Its isolated `--check` compares against the source index membership and names changed tracked index paths.</dd><dt>Which Git membership makes an index input eligible?</dt><dd>Source Git index membership decides whether a spec-index input is tracked. Untracked files remain excluded even within a tracked spec directory; staged additions count as tracked.</dd><dt>Where does the named roadmap section start and end?</dt><dd>Reviewability setup matches the complete, case-sensitive `### &lt;spec_id&gt;:` heading and reads only until the next peer-level roadmap entry. This heading grammar is a new Clarify decision; a missing heading blocks without using neighboring values.</dd><dt>What is the required slice-budget format?</dt><dd>Use an ordered `Slices:` ID list and a `Slice Budgets:` Markdown table with columns `Slice`, `Estimated LOC`, `Production files`, and `Total files`. Each listed ID has exactly one row with three nonnegative integer values. Reject missing, extra, duplicate, malformed, or placeholder rows and any row at or above a block threshold. The roadmap template uses placeholders and no concrete accepted exception pragma. This format creates no new split exception.</dd><dt>Which historical size figures still require reconciliation?</dt><dd>Plan must reconcile Q11&#x27;s 1,362 LOC aggregate with its 1,442 LOC sum across A, B, C1, and C2, then establish missing production-file projections before recording actual budgets.</dd><dt>Where does the Release note heading appear?</dt><dd>The optional `## Release note` heading follows the eight required final-body headings. The single `## UAT Runbook` heading stays between `## How To UAT` and `## Verification`. A release note never appears in a draft body.</dd><dt>Which parts of a supplied release note are editable?</dt><dd>A supplied nonblank, unfenced Markdown release-note string is a fourth final-body editable field; explicit non-string, blank, or fence-breaking input is invalid rather than omitted. Its heading and balanced marker lines are protected; only the enclosed body is elided from the protected fingerprint. Structure validation checks the heading and markers and exactly one nonempty release-note fence. Final packet schema permits four fields; drafts retain zero.</dd><dt>Which packet paths may be exempted from the dirty-worktree guard?</dt><dd>The packet-only dirty-worktree exemption applies to the current packet&#x27;s untracked `&lt;id&gt;.json`, `&lt;id&gt;/body.md`, and `&lt;id&gt;/validation.json` under its validated feature directory. A second packet, tracked modification, unrelated path, or Git-status failure still blocks both mutation helpers.</dd><dt>What do both host packet instructions require?</dt><dd>Claude and Codex Post guidance keeps the packet at canonical local paths, resolves unrelated worktree changes, runs current read-only validation, and then persists validation; it does not require committing the packet or adding ignore rules.</dd><dt>Where does final emission obtain the confidence verdict?</dt><dd>The Phase 6.5 table `Verdict` field (`proceed`, `remediate`, or `stop`) is the durable decision. The Workflow Overview Confidence Gate row may remain Pending and is not a verdict source. Draft content may show `Not recorded`; final emission blocks until a valid verdict exists. A protected generated line under `## Verification` shows the current value on first emission and refresh, even when a supplied body would otherwise bypass regeneration.</dd><dt>When is the full Post completion boundary enforced?</dt><dd>The shared completion-boundary rule reads the persisted workflow and `autopilot-state.json` immediately before either host reports successful full completion after Post. A `--stage plan` or `--stage implement` return does not claim that full completion; its out-of-stage rows remain explicitly skipped and the full Post boundary has not been reached. At that boundary, only a verified `skipped: &lt;extension&gt; not installed` status for an optional extension-dependent row can substitute for completion; all other skips block. The current `status-evidence` rule does not establish that the 13 canonical Post rows have reached acceptable terminal states.</dd><dt>What executor cleanup evidence is required?</dt><dd>Team-capable executors report child-result and cleanup confirmation; Codex child lifetime after parent exit remains an HRNS-017 question.</dd><dt>What is the feedback verification and publication order?</dt><dd>Resolve-pr exhausts each thread and comment connection before acting, then verifies, commits, pushes, and confirms the fresh remote PR head SHA before serial replies and resolution. Plan selects the exact API route.</dd><dt>Where is the blind-spot outcome recorded?</dt><dd>The Design Concept header’s existing `**Blind-spot pass:**` line is the durable scaffold record. A slow nonempty result is `ran`; dispatch error, empty return, and explicit operator abandonment remain distinct reasons.</dd><dt>Which original issue #637 reproductions must be tested?</dt><dd>[#637](https://github.com/racecraft-lab/racecraft-plugins-public/issues/637): A multi-entry roadmap with an oversized first entry and small last entry must evaluate the requested ID only; an `infra` exception in that selected authored section must be honored; missing budget fields must block. Add greenfield LOC-only and complete-slice aggregation fixtures alongside those original reproductions.</dd><dt>Which original issue #638 link cases must be tested?</dt><dd>[#638](https://github.com/racecraft-lab/racecraft-plugins-public/issues/638): New roadmap-template links must resolve to `.process/&lt;SPEC-ID&gt;-workflow.md`, matching scaffold output. Preserve a legacy layout only when its existing link target is verified; otherwise repair the broken link. Add generated-template and existing-roadmap fixtures.</dd></dl><p class="caption">Capability path: Recorded clarifications -&gt; planning-record file read; Evidence: specs/hrns-015-autopilot-gate-pr-emission-repair/spec.md:314–349; Confidence: high</p>
+<!-- FILL:clarification-faq:END -->
+
+  </main>
+
+</div>
+</body>
+</html>

@@ -24,4 +24,7 @@ in tasks.md; checker qualification and manual onboarding remain distinct.
 - [plan.md](plan.md)
 - [tasks.md](tasks.md)
 - [acceptance.md](acceptance.md)
+- [harness-review.md](harness-review.md)
+- [onboarding-uat.md](onboarding-uat.md)
+- [stack-uat.md](stack-uat.md)
 <!-- GENERATED:BACKLINKS:END -->

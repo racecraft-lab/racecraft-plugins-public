@@ -1,0 +1,41 @@
+{
+  "body_file": "specs/hrns-015-autopilot-gate-pr-emission-repair/.process/pr-packets/hrns015-draft/body.md",
+  "error_class": "none",
+  "exit_code": 0,
+  "failures": [],
+  "mode": "draft",
+  "packet_id": "hrns015-draft",
+  "pr_blocked": false,
+  "remediation_evidence": [],
+  "rule_outcomes": [
+    {
+      "evidence": "no failures",
+      "rule": "packet.validation",
+      "status": "passed"
+    }
+  ],
+  "schema_version": "1.0.0",
+  "source_fingerprints": {
+    "body": {
+      "algorithm": "sha256",
+      "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/.process/pr-packets/hrns015-draft/body.md",
+      "sha256": "443e1fd4fb817f62627abe1a244b0763ef03cb723ee36de2736e30ce05a0007a",
+      "size_bytes": 2687
+    },
+    "packet": {
+      "algorithm": "sha256",
+      "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/.process/pr-packets/hrns015-draft.json",
+      "sha256": "1b595f18600dfac1c0260ea3b607e06f634cd4ee838eee525b5e62766653c593",
+      "size_bytes": 1988
+    }
+  },
+  "status": "passed",
+  "stderr_line": "",
+  "target": {
+    "base_branch": "main",
+    "head_branch": "hrns-015-autopilot-gate-pr-emission-repair"
+  },
+  "timestamp": "2026-09-26T03:47:09Z",
+  "title_value": "chore(speckit-pro): Plan autopilot gate and PR emission repair",
+  "validation_result_path": "specs/hrns-015-autopilot-gate-pr-emission-repair/.process/pr-packets/hrns015-draft/validation.json"
+}

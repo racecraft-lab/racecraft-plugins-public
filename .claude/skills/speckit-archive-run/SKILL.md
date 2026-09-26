@@ -4,7 +4,7 @@ description: Archive merged feature specs into project memory with provenance, s
   discovery, and gated cleanup
 compatibility: Requires spec-kit project structure with .specify/ directory
 metadata:
-  author: github-spec-kit
+  author: Racecraft Lab; based on work by Stanislav Deviatov
   source: extension:archive
 user-invocable: true
 disable-model-invocation: false

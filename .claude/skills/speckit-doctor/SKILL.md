@@ -3,7 +3,7 @@ name: speckit-doctor
 description: 'Validate project health: templates, agent config, Python runner/helpers, constitution, and feature artifacts'
 compatibility: Requires spec-kit project structure with .specify/ directory
 metadata:
-  author: github-spec-kit
+  author: Matt Van Horn
   source: speckit-utils:commands/doctor.md
 ---
 

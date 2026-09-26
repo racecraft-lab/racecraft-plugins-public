@@ -124,7 +124,9 @@
           "speckit.verify.run"
         ]
       },
-      "registered_skills": [],
+      "registered_skills": [
+        "speckit-verify-run"
+      ],
       "installed_at": "2026-08-27T19:56:31.633309+00:00"
     }
   }

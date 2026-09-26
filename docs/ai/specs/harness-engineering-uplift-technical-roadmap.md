@@ -16,7 +16,7 @@ roadmap as its input.
 **Typed-judgment catalog:** [harness-engineering-uplift-jev-catalog.md](harness-engineering-uplift-jev-catalog.md)
 **Spec ID prefix:** `HRNS-###`
 **Status:** Active. HRNS-001 is complete and archived. HRNS-002 to HRNS-014
-are retired. HRNS-015 and HRNS-017 to HRNS-023 are ready. On 2026-09-24 this
+are retired. HRNS-015 is in progress. HRNS-017 to HRNS-023 are ready. On 2026-09-24 this
 roadmap absorbed the Continuous Goal Verification roadmap, whose `VRFY-###`
 identifiers are retired unscaffolded.
 
@@ -148,7 +148,7 @@ HRNS-021 Guidance, HRNS-022 Eval ladder, HRNS-023 Drift scanner: independent
 | HRNS-012 | Knowledge Conformance, Health, and Drift Maintenance | Retired | - | Dropped |
 | HRNS-013 | Code-Intelligence and Vector-Index Interoperability | Retired | - | Dropped |
 | HRNS-014 | External OKF Exchange and Reviewable Reconciliation | Retired | - | Dropped |
-| HRNS-015 | Autopilot, Gate, and PR-Emission Repair | ⏳ Ready | - | Specify |
+| HRNS-015 | Autopilot, Gate, and PR-Emission Repair | 🔄 In Progress | `.process/HRNS-015-workflow.md` | Specify |
 | HRNS-016 | Per-story Autopilot Execution | ⏳ Pending | - | HRNS-015 |
 | HRNS-017 | Host Capability Spike | ⏳ Ready | - | Specify |
 | HRNS-018 | Typed Workflow State | ⏳ Ready | - | Specify |
@@ -257,8 +257,7 @@ running this workflow on other repositories.
 
 - Redesigning the PR-packet schema or the post-implementation sequence.
 - Changing any host repository's release-note policy; the gate is correct.
-- Removing autopilot's wall-clock budgets, which is separate work already in
-  review.
+- Removing autopilot's wall-clock budgets, which #642 already did.
 
 **Module and Interface Deltas:**
 
