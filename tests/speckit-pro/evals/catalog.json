@@ -7877,7 +7877,7 @@
     {
       "id": "functional.speckit-autopilot.case-18",
       "layer": "functional",
-      "capability": "Widens an apparently domain-only item to all three analysts when a security keyword appears anywhere in the item, preserving the defense-in-depth override.",
+      "capability": "Widens an apparently domain-only item to all three analysts when a security keyword appears anywhere in the item, preserving the defense-in-depth override, and keeps the unanimity bar conditional on the analysts' `security_relevant` answers.",
       "timeout_seconds": 300,
       "resource_class": "ordinary",
       "requirements": [
@@ -7903,10 +7903,10 @@
         },
         {
           "id": "legacy-05",
-          "description": "Mentions that security findings go to human review only when the three analysts do not all agree"
+          "description": "States that the [domain] tag makes this a keyword-routed item, not a [security]-tagged one, so a 2/3 majority goes to human review only when at least one analyst returns `security_relevant: true`; when every analyst returns `security_relevant: false`, the ordinary 2/3 majority applies. An answer that demands 3/3 for every security-keyword item, or applies 2/3 without regard to `security_relevant`, contradicts this."
         }
       ],
-      "prompt": "Use {{skill}} to address this bounded request. The analyze-executor flagged: '[domain] Finding 3 [HIGH]: cookie SameSite policy is not specified in plan.md.' Which consensus analyst(s) does the native client autopilot spawn, how does the security-keyword override interact with the [domain] tag, does consensus-synthesizer still run, and is human review required even if the analysts agree?",
+      "prompt": "Use {{skill}} to address this bounded request. The analyze-executor flagged: '[domain] Finding 3 [HIGH]: cookie SameSite policy is not specified in plan.md.' Which consensus analyst(s) does the native client autopilot spawn, how does the security-keyword override interact with the [domain] tag, does consensus-synthesizer still run, and when two analysts agree and one dissents, does autopilot apply the majority answer or stop for human review?",
       "fixtures": [],
       "hosts": {
         "claude": {
@@ -7968,7 +7968,7 @@
           "id": "legacy-05-semantic",
           "requirement": "legacy-05",
           "type": "semantic",
-          "rubric": "PASS only if the evidence satisfies: Mentions that security findings go to human review only when the three analysts do not all agree FAIL if omitted, contradicted, or merely claimed without required evidence."
+          "rubric": "PASS only if the evidence satisfies: States that the [domain] tag makes this a keyword-routed item, not a [security]-tagged one, so a 2/3 majority goes to human review only when at least one analyst returns `security_relevant: true`; when every analyst returns `security_relevant: false`, the ordinary 2/3 majority applies. An answer that demands 3/3 for every security-keyword item, or applies 2/3 without regard to `security_relevant`, contradicts this. FAIL if omitted, contradicted, or merely claimed without required evidence."
         }
       ],
       "native_differences": [
@@ -14050,7 +14050,7 @@
           "description": "Attribute each recommendation to its exact retained analyst source without fabricated evidence."
         }
       ],
-      "prompt": "First invoke {{skill}} through the client's native skill-loading mechanism. Execute only one bounded Clarify consensus-synthesis observation. Read `scenario-inputs/analysts/codebase-analyst.md` and `scenario-inputs/analysts/domain-researcher.md` completely, using a separate native tool call for each analyst file; parallel calls are allowed. They are retained analyst returns for one Clarify Round-1 item routed to `[codebase, domain]`; do not dispatch replacement analysts and do not research beyond these inputs. Dispatch the installed client's named consensus-synthesizer, wait for its actual returned result, and use that result before writing the artifact. The parent must not perform or silently replace synthesis. Then write only `scenario-output/consensus-result.json` as strict JSON with exactly these keys: `decision` (string or null), `retained_options` (distinct recommendation tokens in input order), `agreement` (one of `single-analyst`, `both-agree`, `two-analyst-disagreement`, `3/3-unanimous`, `2/3-majority`, `0/3-all-disagree`), `confidence` (`high` or `low`), `next_action` (`apply`, `escape_to_round_2`, or `human_review`), and `evidence` (input-order objects with exactly `analyst`, `source`, and `recommendation`). When the result escapes, the exact `next_action` token is `escape_to_round_2`; never substitute `escalate_to_round_2` or prose. Use the same concise option token in `retained_options`, in `decision` when non-null, and in each `evidence.recommendation`; do not put explanatory sentences in these token fields. Each evidence object must name the canonical analyst, its exact staged source path, and only the recommendation supported by that source. Do not copy an expected answer from elsewhere, do not edit the inputs, and stop after the artifact is written.",
+      "prompt": "First invoke {{skill}} through the client's native skill-loading mechanism. Execute only one bounded Clarify consensus-synthesis observation. Read `scenario-inputs/analysts/codebase-analyst.md` and `scenario-inputs/analysts/domain-researcher.md` completely, using a separate native tool call for each analyst file; parallel calls are allowed. They are retained analyst returns for one Clarify Round-1 item, `[codebase, domain] Q2: Which hashing algorithm should new login records use, bcrypt or argon2id?`, which parse-consensus-categories routed to `[codebase, domain]` with `security_route: null`; do not dispatch replacement analysts and do not research beyond these inputs. Dispatch the installed client's named consensus-synthesizer with the protocol's synthesis input, including the `**Unresolved Item:**` line, `**Routed Categories:** [codebase, domain]`, `**Security Route:** none`, `**Round:** 1`, both analyst responses in full, and `NOT SPAWNED (not routed)` for the spec context analyst. Wait for its actual returned result, and use that result before writing the artifact. The parent must not perform or silently replace synthesis. Then write only `scenario-output/consensus-result.json` as strict JSON with exactly these keys: `decision` (string or null), `retained_options` (distinct recommendation tokens in input order), `agreement` (one of `single-analyst`, `both-agree`, `two-analyst-disagreement`, `3/3-unanimous`, `2/3-majority`, `0/3-all-disagree`), `confidence` (`high` or `low`), `next_action` (`apply`, `escape_to_round_2`, or `human_review`), and `evidence` (input-order objects with exactly `analyst`, `source`, and `recommendation`). When the result escapes, the exact `next_action` token is `escape_to_round_2`; never substitute `escalate_to_round_2` or prose. Use the same concise option token in `retained_options`, in `decision` when non-null, and in each `evidence.recommendation`; do not put explanatory sentences in these token fields. Each evidence object must name the canonical analyst, its exact staged source path, and only the recommendation supported by that source. Do not copy an expected answer from elsewhere, do not edit the inputs, and stop after the artifact is written.",
       "fixtures": [
         {
           "source": "tests/speckit-pro/evals/fixtures/integration-return-contracts/return-01-synthesizer-disagreement/codebase-analyst.md",
@@ -14232,14 +14232,14 @@
           "requirement": "inputs",
           "type": "text",
           "source": "scenario-inputs/analysts/codebase-analyst.md",
-          "pattern": "\\A\\#\\#\\ Answer\\\n\\\nStay\\ on\\ bcrypt\\ for\\ consistency\\ with\\ the\\ existing\\ implementation\\.\\\n\\\n\\#\\#\\ Evidence\\\n\\\n\\-\\ \\*\\*File\\*\\*:\\ `src/auth/password\\.ts`\\ \\(line\\ 14\\)\\\n\\ \\ \\*\\*Pattern\\*\\*:\\ The\\ retained\\ fixture\\ records\\ bcrypt\\ with\\ cost\\ factor\\ 12\\ as\\ the\\\n\\ \\ existing\\ password\\-hashing\\ pattern\\.\\\n\\\n\\-\\ \\*\\*File\\*\\*:\\ `src/auth/password\\.ts`\\ \\(line\\ 1\\-40\\)\\\n\\ \\ \\*\\*Pattern\\*\\*:\\ The\\ retained\\ fixture\\ reports\\ no\\ Argon2\\ implementation\\ in\\ this\\\n\\ \\ source\\ file\\.\\\n\\\n\\#\\#\\ Confidence\\\n\\\nmedium\\\n\\\n\\*\\*Rationale\\*\\*:\\ The\\ recommendation\\ follows\\ the\\ one\\ retained\\ codebase\\ pattern,\\\nbut\\ it\\ does\\ not\\ establish\\ which\\ algorithm\\ should\\ be\\ preferred\\ for\\ new\\ code\\.\\\n\\Z"
+          "pattern": "\\A\\#\\#\\ Answer\\\n\\\nStay\\ on\\ bcrypt\\ for\\ consistency\\ with\\ the\\ existing\\ implementation\\.\\\n\\\n\\#\\#\\ Evidence\\\n\\\n\\-\\ \\*\\*File\\*\\*:\\ `src/auth/password\\.ts`\\ \\(line\\ 14\\)\\\n\\ \\ \\*\\*Pattern\\*\\*:\\ The\\ retained\\ fixture\\ records\\ bcrypt\\ with\\ cost\\ factor\\ 12\\ as\\ the\\\n\\ \\ existing\\ password\\-hashing\\ pattern\\.\\\n\\\n\\-\\ \\*\\*File\\*\\*:\\ `src/auth/password\\.ts`\\ \\(line\\ 1\\-40\\)\\\n\\ \\ \\*\\*Pattern\\*\\*:\\ The\\ retained\\ fixture\\ reports\\ no\\ Argon2\\ implementation\\ in\\ this\\\n\\ \\ source\\ file\\.\\\n\\\n\\#\\#\\ Confidence\\\n\\\nmedium\\\n\\\n\\*\\*Rationale\\*\\*:\\ The\\ recommendation\\ follows\\ the\\ one\\ retained\\ codebase\\ pattern,\\\nbut\\ it\\ does\\ not\\ establish\\ which\\ algorithm\\ should\\ be\\ preferred\\ for\\ new\\ code\\.\\\n\\\n\\#\\#\\ Security\\ Relevance\\\n\\\nsecurity_relevant:\\ false\\\n\\Z"
         },
         {
           "id": "unchanged-domain-researcher",
           "requirement": "inputs",
           "type": "text",
           "source": "scenario-inputs/analysts/domain-researcher.md",
-          "pattern": "\\A\\#\\#\\ Answer\\\n\\\nPrefer\\ argon2id\\ for\\ a\\ new\\ implementation\\ path\\.\\\n\\\n\\#\\#\\ Citations\\\n\\\n\\-\\ \\*\\*Source\\*\\*:\\ OWASP\\ Password\\ Storage\\ Cheat\\ Sheet\\ \\(retained\\ fixture\\ evidence\\)\\\n\\ \\ \\*\\*Title\\*\\*:\\ Password\\ Hashing\\ Algorithms\\\n\\ \\ \\*\\*Excerpt\\*\\*:\\ The\\ retained\\ analyst\\ response\\ identifies\\ argon2id\\ as\\ the\\\n\\ \\ preferred\\ default\\ for\\ new\\ applications\\ and\\ bcrypt\\ as\\ an\\ acceptable\\ fallback\\.\\\n\\\n\\#\\#\\ Confidence\\\n\\\nhigh\\\n\\\n\\*\\*Rationale\\*\\*:\\ The\\ retained\\ response\\ cites\\ the\\ external\\ standard\\ directly,\\ but\\\nit\\ does\\ not\\ resolve\\ the\\ codebase\\ compatibility\\ concern\\ raised\\ by\\ the\\ other\\\nanalyst\\.\\\n\\Z"
+          "pattern": "\\A\\#\\#\\ Answer\\\n\\\nPrefer\\ argon2id\\ for\\ a\\ new\\ implementation\\ path\\.\\\n\\\n\\#\\#\\ Citations\\\n\\\n\\-\\ \\*\\*Source\\*\\*:\\ OWASP\\ Password\\ Storage\\ Cheat\\ Sheet\\ \\(retained\\ fixture\\ evidence\\)\\\n\\ \\ \\*\\*Title\\*\\*:\\ Password\\ Hashing\\ Algorithms\\\n\\ \\ \\*\\*Excerpt\\*\\*:\\ The\\ retained\\ analyst\\ response\\ identifies\\ argon2id\\ as\\ the\\\n\\ \\ preferred\\ default\\ for\\ new\\ applications\\ and\\ bcrypt\\ as\\ an\\ acceptable\\ fallback\\.\\\n\\\n\\#\\#\\ Confidence\\\n\\\nhigh\\\n\\\n\\*\\*Rationale\\*\\*:\\ The\\ retained\\ response\\ cites\\ the\\ external\\ standard\\ directly,\\ but\\\nit\\ does\\ not\\ resolve\\ the\\ codebase\\ compatibility\\ concern\\ raised\\ by\\ the\\ other\\\nanalyst\\.\\\n\\\n\\#\\#\\ Security\\ Relevance\\\n\\\nsecurity_relevant:\\ false\\\n\\Z"
         }
       ],
       "native_differences": [
@@ -14581,9 +14581,13 @@
         {
           "id": "result",
           "description": "Persist exactly one canonical confidence block with all five retained criterion scores and the correct arithmetic mean."
+        },
+        {
+          "id": "protocol",
+          "description": "Send the synthesizer the active consensus protocol path on a `Protocol:` line, and use only a returned result that reports the same path."
         }
       ],
-      "prompt": "First invoke {{skill}} through the client's native skill-loading mechanism. Execute only the final Analyze confidence synthesis for a clean pass with zero findings. Read `scenario-inputs/analyze-result.md` completely using its own standalone read operation; do not combine that read with any other file or command. Do not run Analyze again, dispatch analysts, edit the input, or gather new evidence. Dispatch the installed client's named consensus-synthesizer with the retained Analyze result, wait for its actual returned result, validate that it contains all five canonical criterion lines exactly once, and use that returned result before writing the artifact. The parent must not perform or silently replace synthesis. Extract and persist only the canonical six-line confidence block from the returned result: discard headings, dispositions, zero-findings commentary, and every other returned line. Write only `scenario-output/analyze-confidence.md`, containing exactly that one confidence block and no other text, then stop.",
+      "prompt": "First invoke {{skill}} through the client's native skill-loading mechanism. Execute only the final Analyze confidence synthesis for a clean pass with zero findings. Read `scenario-inputs/analyze-result.md` completely using its own standalone read operation; do not combine that read with any other file or command. Do not run Analyze again, dispatch analysts, edit the input, or gather new evidence. Dispatch the installed client's named consensus-synthesizer with the retained Analyze result and a `Protocol:` line naming the absolute path of the active `references/consensus-protocol.md` beside the loaded speckit-autopilot skill, wait for its actual returned result, validate that it contains all five canonical criterion lines exactly once, and use that returned result before writing the artifact. The parent must not perform or silently replace synthesis. Extract and persist only the canonical six-line confidence block from the returned result: discard headings, dispositions, zero-findings commentary, and every other returned line. Write only `scenario-output/analyze-confidence.md`, containing exactly that one confidence block and no other text, then stop.",
       "fixtures": [
         {
           "source": "tests/speckit-pro/evals/fixtures/integration-return-contracts/return-03-analyze-confidence/analyze-result.md",
@@ -14656,6 +14660,12 @@
           "exists": true
         },
         {
+          "id": "protocol-line",
+          "requirement": "protocol",
+          "type": "semantic",
+          "rubric": "PASS only if retained tool evidence shows the consensus-synthesizer dispatch prompt carried a `Protocol:` line whose absolute path ends in `references/consensus-protocol.md` beside the loaded speckit-autopilot skill, and the returned result either reports that same path on its `**Protocol:**` line or reports no Protocol line. FAIL if the dispatch prompt has no `Protocol:` line, names another file or a relative path, or the result reports a different path or `not provided`."
+        },
+        {
           "id": "confidence-block",
           "requirement": "result",
           "type": "text",
@@ -14668,6 +14678,516 @@
         "Codex dispatches the consensus-synthesizer custom agent through its native collaboration transport; both clients require the returned confidence result before the parent persists the block."
       ],
       "provenance": [
+        "speckit-pro/skills/speckit-autopilot/references/consensus-protocol.md"
+      ]
+    },
+    {
+      "id": "integration.return-04-keyword-only-majority",
+      "layer": "integration",
+      "capability": "Resolve a Clarify item that a security keyword alone widened to all three analysts, where every analyst returns `security_relevant: false`, by applying the ordinary 2/3 majority rather than stopping for human review.",
+      "timeout_seconds": 300,
+      "resource_class": "nested",
+      "requirements": [
+        {
+          "id": "selection",
+          "description": "Activate speckit-autopilot through the native client mechanism."
+        },
+        {
+          "id": "inputs",
+          "description": "Read all three retained analyst Markdown inputs in full."
+        },
+        {
+          "id": "mechanism",
+          "description": "Use the installed product's actual native synthesis mechanism and retain its actual result before materializing the observation artifact."
+        },
+        {
+          "id": "decision",
+          "description": "Apply the 2/3 majority answer: the item was routed by keyword alone and every analyst returned `security_relevant: false`, so the ordinary agreement rule applies."
+        },
+        {
+          "id": "options",
+          "description": "Retain both analyst-supported options without inventing a third option."
+        },
+        {
+          "id": "agreement",
+          "description": "Record the two-of-three majority using the declared normalization enum."
+        },
+        {
+          "id": "evidence",
+          "description": "Attribute each recommendation to its exact retained analyst source without fabricated evidence."
+        }
+      ],
+      "prompt": "First invoke {{skill}} through the client's native skill-loading mechanism. Execute only one bounded Clarify consensus-synthesis observation. Read `scenario-inputs/analysts/codebase-analyst.md`, `scenario-inputs/analysts/domain-researcher.md`, and `scenario-inputs/analysts/spec-context-analyst.md` completely, using a separate native tool call for each analyst file; parallel calls are allowed. They are retained analyst returns for one Clarify Round-1 item, `[domain] I1: Should the usage report count tokens per LLM request or per billing period?`, which parse-consensus-categories widened from `[domain]` to all three analysts because `tokens` is a security keyword, returning `security_route: keyword`; do not dispatch replacement analysts and do not research beyond these inputs. Dispatch the installed client's named consensus-synthesizer with the protocol's synthesis input, including the `**Unresolved Item:**` line, `**Routed Categories:** [domain]`, `**Security Route:** keyword`, `**Round:** 1`, and all three analyst responses in full. Wait for its actual returned result, and use that result before writing the artifact. The parent must not perform or silently replace synthesis. Then write only `scenario-output/consensus-result.json` as strict JSON with exactly these keys: `decision` (string or null), `retained_options` (distinct recommendation tokens in input order), `agreement` (one of `single-analyst`, `both-agree`, `two-analyst-disagreement`, `3/3-unanimous`, `2/3-majority`, `0/3-all-disagree`), `confidence` (`high` or `low`), `next_action` (`apply`, `escape_to_round_2`, or `human_review`), and `evidence` (input-order objects with exactly `analyst`, `source`, and `recommendation`). Use the same concise option token in `retained_options`, in `decision` when non-null, and in each `evidence.recommendation`; do not put explanatory sentences in these token fields. Each evidence object must name the canonical analyst, its exact staged source path, and only the recommendation supported by that source. Do not copy an expected answer from elsewhere, do not edit the inputs, and stop after the artifact is written.",
+      "fixtures": [
+        {
+          "source": "tests/speckit-pro/evals/fixtures/integration-return-contracts/return-04-keyword-only-majority/codebase-analyst.md",
+          "destination": "scenario-inputs/analysts/codebase-analyst.md"
+        },
+        {
+          "source": "tests/speckit-pro/evals/fixtures/integration-return-contracts/return-04-keyword-only-majority/domain-researcher.md",
+          "destination": "scenario-inputs/analysts/domain-researcher.md"
+        },
+        {
+          "source": "tests/speckit-pro/evals/fixtures/integration-return-contracts/return-04-keyword-only-majority/spec-context-analyst.md",
+          "destination": "scenario-inputs/analysts/spec-context-analyst.md"
+        }
+      ],
+      "hosts": {
+        "claude": {
+          "skill": "speckit-pro:speckit-autopilot",
+          "allowed_tools": [
+            "Skill",
+            "Read",
+            "Write",
+            "Agent"
+          ],
+          "modes": [
+            "plugin"
+          ]
+        },
+        "codex": {
+          "skill": "speckit-autopilot",
+          "allowed_tools": [
+            "command_execution",
+            "file_change",
+            "spawn_agent"
+          ],
+          "modes": [
+            "project"
+          ]
+        }
+      },
+      "checks": [
+        {
+          "id": "selection",
+          "requirement": "selection",
+          "type": "selection",
+          "expected": [
+            "speckit-autopilot"
+          ],
+          "allowed_extra": []
+        },
+        {
+          "id": "native-mechanism",
+          "requirement": "mechanism",
+          "type": "native_synthesis_mechanism",
+          "artifact_path": "scenario-output/consensus-result.json",
+          "per_host": {
+            "claude": {
+              "mode": "dedicated_subagent",
+              "role": "speckit-pro:consensus-synthesizer"
+            },
+            "codex": {
+              "mode": "dedicated_subagent",
+              "role": "consensus-synthesizer"
+            }
+          }
+        },
+        {
+          "id": "read-codebase",
+          "requirement": "inputs",
+          "type": "file_access",
+          "operation": "read_file",
+          "path": "scenario-inputs/analysts/codebase-analyst.md"
+        },
+        {
+          "id": "read-domain",
+          "requirement": "inputs",
+          "type": "file_access",
+          "operation": "read_file",
+          "path": "scenario-inputs/analysts/domain-researcher.md"
+        },
+        {
+          "id": "read-spec-context",
+          "requirement": "inputs",
+          "type": "file_access",
+          "operation": "read_file",
+          "path": "scenario-inputs/analysts/spec-context-analyst.md"
+        },
+        {
+          "id": "result-exists",
+          "requirement": "decision",
+          "type": "file_exists",
+          "path": "scenario-output/consensus-result.json",
+          "exists": true
+        },
+        {
+          "id": "mechanism-evidence",
+          "requirement": "mechanism",
+          "type": "semantic",
+          "rubric": "PASS only if retained tool evidence and the captured artifact demonstrate the installed native synthesis mechanism rather than a final-response claim. When a subagent call is present, there must be exactly one successful call identifying consensus-synthesizer, its actual nonempty returned result must support the artifact, and the parent artifact write must follow that return. When no subagent call is present, the exact declared analyst reads and artifact write must occur in the parent and no child synthesis role may be claimed. FAIL for a wrong or invented role, an empty or missing child return, multiple synthesis calls, write-before-return, or an artifact unsupported by observed work."
+        },
+        {
+          "id": "decision",
+          "requirement": "decision",
+          "type": "json_field",
+          "path": "scenario-output/consensus-result.json",
+          "field_path": [
+            "decision"
+          ],
+          "expected": "per-request"
+        },
+        {
+          "id": "apply-action",
+          "requirement": "decision",
+          "type": "json_field",
+          "path": "scenario-output/consensus-result.json",
+          "field_path": [
+            "next_action"
+          ],
+          "expected": "apply"
+        },
+        {
+          "id": "retained-options",
+          "requirement": "options",
+          "type": "json_field",
+          "path": "scenario-output/consensus-result.json",
+          "field_path": [
+            "retained_options"
+          ],
+          "expected": [
+            "per-request",
+            "per-billing-period"
+          ]
+        },
+        {
+          "id": "agreement",
+          "requirement": "agreement",
+          "type": "json_field",
+          "path": "scenario-output/consensus-result.json",
+          "field_path": [
+            "agreement"
+          ],
+          "expected": "2/3-majority"
+        },
+        {
+          "id": "evidence",
+          "requirement": "evidence",
+          "type": "json_field",
+          "path": "scenario-output/consensus-result.json",
+          "field_path": [
+            "evidence"
+          ],
+          "expected": [
+            {
+              "analyst": "codebase-analyst",
+              "source": "scenario-inputs/analysts/codebase-analyst.md",
+              "recommendation": "per-request"
+            },
+            {
+              "analyst": "domain-researcher",
+              "source": "scenario-inputs/analysts/domain-researcher.md",
+              "recommendation": "per-billing-period"
+            },
+            {
+              "analyst": "spec-context-analyst",
+              "source": "scenario-inputs/analysts/spec-context-analyst.md",
+              "recommendation": "per-request"
+            }
+          ],
+          "alternatives": [
+            [
+              {
+                "analyst": "speckit-pro:codebase-analyst",
+                "source": "scenario-inputs/analysts/codebase-analyst.md",
+                "recommendation": "per-request"
+              },
+              {
+                "analyst": "speckit-pro:domain-researcher",
+                "source": "scenario-inputs/analysts/domain-researcher.md",
+                "recommendation": "per-billing-period"
+              },
+              {
+                "analyst": "speckit-pro:spec-context-analyst",
+                "source": "scenario-inputs/analysts/spec-context-analyst.md",
+                "recommendation": "per-request"
+              }
+            ]
+          ]
+        },
+        {
+          "id": "unchanged-codebase-analyst",
+          "requirement": "inputs",
+          "type": "text",
+          "source": "scenario-inputs/analysts/codebase-analyst.md",
+          "pattern": "\\A\\#\\#\\ Answer\\\n\\\nCount\\ tokens\\ `per\\-request`\\.\\\n\\\n\\#\\#\\ Evidence\\\n\\\n\\-\\ \\*\\*File\\*\\*:\\ `src/usage/recorder\\.ts`\\ \\(line\\ 22\\)\\\n\\ \\ \\*\\*Pattern\\*\\*:\\ The\\ retained\\ fixture\\ records\\ one\\ usage\\ row\\ per\\ LLM\\ request,\\\n\\ \\ with\\ its\\ prompt\\ and\\ completion\\ token\\ counts\\.\\\n\\\n\\#\\#\\ Confidence\\\n\\\nhigh\\\n\\\n\\*\\*Rationale\\*\\*:\\ The\\ existing\\ recorder\\ already\\ stores\\ counts\\ at\\ this\\ grain\\.\\\n\\\n\\#\\#\\ Security\\ Relevance\\\n\\\nsecurity_relevant:\\ false\\\n\\Z"
+        },
+        {
+          "id": "unchanged-domain-researcher",
+          "requirement": "inputs",
+          "type": "text",
+          "source": "scenario-inputs/analysts/domain-researcher.md",
+          "pattern": "\\A\\#\\#\\ Answer\\\n\\\nCount\\ tokens\\ `per\\-billing\\-period`\\.\\\n\\\n\\#\\#\\ Citations\\\n\\\n\\-\\ \\*\\*Source\\*\\*:\\ LLM\\ provider\\ billing\\ documentation\\ \\(retained\\ fixture\\ evidence\\)\\\n\\ \\ \\*\\*Title\\*\\*:\\ Usage\\ and\\ billing\\\n\\ \\ \\*\\*Excerpt\\*\\*:\\ The\\ retained\\ analyst\\ response\\ notes\\ that\\ providers\\ invoice\\\n\\ \\ token\\ usage\\ in\\ aggregate\\ for\\ each\\ billing\\ period\\.\\\n\\\n\\#\\#\\ Confidence\\\n\\\nmedium\\\n\\\n\\*\\*Rationale\\*\\*:\\ This\\ matches\\ how\\ providers\\ bill,\\ but\\ it\\ does\\ not\\ address\\ the\\\nreport's\\ per\\-request\\ audit\\ need\\.\\\n\\\n\\#\\#\\ Security\\ Relevance\\\n\\\nsecurity_relevant:\\ false\\\n\\Z"
+        },
+        {
+          "id": "unchanged-spec-context-analyst",
+          "requirement": "inputs",
+          "type": "text",
+          "source": "scenario-inputs/analysts/spec-context-analyst.md",
+          "pattern": "\\A\\#\\#\\ Answer\\\n\\\nCount\\ tokens\\ `per\\-request`\\.\\\n\\\n\\#\\#\\ References\\\n\\\n\\-\\ \\*\\*Artifact\\*\\*:\\ Technical\\ roadmap\\\n\\ \\ \\*\\*Section\\*\\*:\\ Usage\\ reporting\\\n\\ \\ \\*\\*Relevance\\*\\*:\\ The\\ retained\\ fixture\\ records\\ a\\ roadmap\\ decision\\ to\\ report\\\n\\ \\ LLM\\ token\\ usage\\ for\\ each\\ request\\.\\\n\\\n\\#\\#\\ Confidence\\\n\\\nhigh\\\n\\\n\\*\\*Rationale\\*\\*:\\ The\\ roadmap\\ decision\\ addresses\\ the\\ report's\\ grain\\ directly\\.\\\n\\\n\\#\\#\\ Security\\ Relevance\\\n\\\nsecurity_relevant:\\ false\\\n\\Z"
+        }
+      ],
+      "native_differences": [
+        "Claude dispatches the namespaced speckit-pro:consensus-synthesizer role through its native Agent transport.",
+        "Codex dispatches the consensus-synthesizer custom agent through its native collaboration transport; both clients require an actual nonempty returned result before the parent writes the artifact."
+      ],
+      "provenance": [
+        "tests/speckit-pro/layer6-integration/return-format-fixtures/04-synthesizer-keyword-only-majority",
+        "speckit-pro/skills/speckit-autopilot/references/consensus-protocol.md"
+      ]
+    },
+    {
+      "id": "integration.return-05-keyword-security-relevant",
+      "layer": "integration",
+      "capability": "Resolve the same keyword-routed Clarify item when one analyst returns `security_relevant: true`, by keeping the unanimity bar and stopping a 2/3 majority for human review.",
+      "timeout_seconds": 300,
+      "resource_class": "nested",
+      "requirements": [
+        {
+          "id": "selection",
+          "description": "Activate speckit-autopilot through the native client mechanism."
+        },
+        {
+          "id": "inputs",
+          "description": "Read all three retained analyst Markdown inputs in full."
+        },
+        {
+          "id": "mechanism",
+          "description": "Use the installed product's actual native synthesis mechanism and retain its actual result before materializing the observation artifact."
+        },
+        {
+          "id": "decision",
+          "description": "Do not apply a decision: one analyst returned `security_relevant: true`, so the item needs 3/3 agreement and a 2/3 majority goes to human review."
+        },
+        {
+          "id": "options",
+          "description": "Retain both analyst-supported options without inventing a third option."
+        },
+        {
+          "id": "agreement",
+          "description": "Record the two-of-three majority using the declared normalization enum."
+        },
+        {
+          "id": "evidence",
+          "description": "Attribute each recommendation to its exact retained analyst source without fabricated evidence."
+        }
+      ],
+      "prompt": "First invoke {{skill}} through the client's native skill-loading mechanism. Execute only one bounded Clarify consensus-synthesis observation. Read `scenario-inputs/analysts/codebase-analyst.md`, `scenario-inputs/analysts/domain-researcher.md`, and `scenario-inputs/analysts/spec-context-analyst.md` completely, using a separate native tool call for each analyst file; parallel calls are allowed. They are retained analyst returns for one Clarify Round-1 item, `[domain] I1: Should the usage report count tokens per LLM request or per billing period?`, which parse-consensus-categories widened from `[domain]` to all three analysts because `tokens` is a security keyword, returning `security_route: keyword`; do not dispatch replacement analysts and do not research beyond these inputs. Dispatch the installed client's named consensus-synthesizer with the protocol's synthesis input, including the `**Unresolved Item:**` line, `**Routed Categories:** [domain]`, `**Security Route:** keyword`, `**Round:** 1`, and all three analyst responses in full. Wait for its actual returned result, and use that result before writing the artifact. The parent must not perform or silently replace synthesis. Then write only `scenario-output/consensus-result.json` as strict JSON with exactly these keys: `decision` (string or null), `retained_options` (distinct recommendation tokens in input order), `agreement` (one of `single-analyst`, `both-agree`, `two-analyst-disagreement`, `3/3-unanimous`, `2/3-majority`, `0/3-all-disagree`), `confidence` (`high` or `low`), `next_action` (`apply`, `escape_to_round_2`, or `human_review`), and `evidence` (input-order objects with exactly `analyst`, `source`, and `recommendation`). Use the same concise option token in `retained_options`, in `decision` when non-null, and in each `evidence.recommendation`; do not put explanatory sentences in these token fields. Each evidence object must name the canonical analyst, its exact staged source path, and only the recommendation supported by that source. Do not copy an expected answer from elsewhere, do not edit the inputs, and stop after the artifact is written.",
+      "fixtures": [
+        {
+          "source": "tests/speckit-pro/evals/fixtures/integration-return-contracts/return-05-keyword-security-relevant/codebase-analyst.md",
+          "destination": "scenario-inputs/analysts/codebase-analyst.md"
+        },
+        {
+          "source": "tests/speckit-pro/evals/fixtures/integration-return-contracts/return-05-keyword-security-relevant/domain-researcher.md",
+          "destination": "scenario-inputs/analysts/domain-researcher.md"
+        },
+        {
+          "source": "tests/speckit-pro/evals/fixtures/integration-return-contracts/return-05-keyword-security-relevant/spec-context-analyst.md",
+          "destination": "scenario-inputs/analysts/spec-context-analyst.md"
+        }
+      ],
+      "hosts": {
+        "claude": {
+          "skill": "speckit-pro:speckit-autopilot",
+          "allowed_tools": [
+            "Skill",
+            "Read",
+            "Write",
+            "Agent"
+          ],
+          "modes": [
+            "plugin"
+          ]
+        },
+        "codex": {
+          "skill": "speckit-autopilot",
+          "allowed_tools": [
+            "command_execution",
+            "file_change",
+            "spawn_agent"
+          ],
+          "modes": [
+            "project"
+          ]
+        }
+      },
+      "checks": [
+        {
+          "id": "selection",
+          "requirement": "selection",
+          "type": "selection",
+          "expected": [
+            "speckit-autopilot"
+          ],
+          "allowed_extra": []
+        },
+        {
+          "id": "native-mechanism",
+          "requirement": "mechanism",
+          "type": "native_synthesis_mechanism",
+          "artifact_path": "scenario-output/consensus-result.json",
+          "per_host": {
+            "claude": {
+              "mode": "dedicated_subagent",
+              "role": "speckit-pro:consensus-synthesizer"
+            },
+            "codex": {
+              "mode": "dedicated_subagent",
+              "role": "consensus-synthesizer"
+            }
+          }
+        },
+        {
+          "id": "read-codebase",
+          "requirement": "inputs",
+          "type": "file_access",
+          "operation": "read_file",
+          "path": "scenario-inputs/analysts/codebase-analyst.md"
+        },
+        {
+          "id": "read-domain",
+          "requirement": "inputs",
+          "type": "file_access",
+          "operation": "read_file",
+          "path": "scenario-inputs/analysts/domain-researcher.md"
+        },
+        {
+          "id": "read-spec-context",
+          "requirement": "inputs",
+          "type": "file_access",
+          "operation": "read_file",
+          "path": "scenario-inputs/analysts/spec-context-analyst.md"
+        },
+        {
+          "id": "result-exists",
+          "requirement": "decision",
+          "type": "file_exists",
+          "path": "scenario-output/consensus-result.json",
+          "exists": true
+        },
+        {
+          "id": "mechanism-evidence",
+          "requirement": "mechanism",
+          "type": "semantic",
+          "rubric": "PASS only if retained tool evidence and the captured artifact demonstrate the installed native synthesis mechanism rather than a final-response claim. When a subagent call is present, there must be exactly one successful call identifying consensus-synthesizer, its actual nonempty returned result must support the artifact, and the parent artifact write must follow that return. When no subagent call is present, the exact declared analyst reads and artifact write must occur in the parent and no child synthesis role may be claimed. FAIL for a wrong or invented role, an empty or missing child return, multiple synthesis calls, write-before-return, or an artifact unsupported by observed work."
+        },
+        {
+          "id": "decision-null",
+          "requirement": "decision",
+          "type": "json_field",
+          "path": "scenario-output/consensus-result.json",
+          "field_path": [
+            "decision"
+          ],
+          "expected": null
+        },
+        {
+          "id": "human-review-action",
+          "requirement": "decision",
+          "type": "json_field",
+          "path": "scenario-output/consensus-result.json",
+          "field_path": [
+            "next_action"
+          ],
+          "expected": "human_review"
+        },
+        {
+          "id": "retained-options",
+          "requirement": "options",
+          "type": "json_field",
+          "path": "scenario-output/consensus-result.json",
+          "field_path": [
+            "retained_options"
+          ],
+          "expected": [
+            "per-request",
+            "per-billing-period"
+          ]
+        },
+        {
+          "id": "agreement",
+          "requirement": "agreement",
+          "type": "json_field",
+          "path": "scenario-output/consensus-result.json",
+          "field_path": [
+            "agreement"
+          ],
+          "expected": "2/3-majority"
+        },
+        {
+          "id": "evidence",
+          "requirement": "evidence",
+          "type": "json_field",
+          "path": "scenario-output/consensus-result.json",
+          "field_path": [
+            "evidence"
+          ],
+          "expected": [
+            {
+              "analyst": "codebase-analyst",
+              "source": "scenario-inputs/analysts/codebase-analyst.md",
+              "recommendation": "per-request"
+            },
+            {
+              "analyst": "domain-researcher",
+              "source": "scenario-inputs/analysts/domain-researcher.md",
+              "recommendation": "per-billing-period"
+            },
+            {
+              "analyst": "spec-context-analyst",
+              "source": "scenario-inputs/analysts/spec-context-analyst.md",
+              "recommendation": "per-request"
+            }
+          ],
+          "alternatives": [
+            [
+              {
+                "analyst": "speckit-pro:codebase-analyst",
+                "source": "scenario-inputs/analysts/codebase-analyst.md",
+                "recommendation": "per-request"
+              },
+              {
+                "analyst": "speckit-pro:domain-researcher",
+                "source": "scenario-inputs/analysts/domain-researcher.md",
+                "recommendation": "per-billing-period"
+              },
+              {
+                "analyst": "speckit-pro:spec-context-analyst",
+                "source": "scenario-inputs/analysts/spec-context-analyst.md",
+                "recommendation": "per-request"
+              }
+            ]
+          ]
+        },
+        {
+          "id": "unchanged-codebase-analyst",
+          "requirement": "inputs",
+          "type": "text",
+          "source": "scenario-inputs/analysts/codebase-analyst.md",
+          "pattern": "\\A\\#\\#\\ Answer\\\n\\\nCount\\ tokens\\ `per\\-request`\\.\\\n\\\n\\#\\#\\ Evidence\\\n\\\n\\-\\ \\*\\*File\\*\\*:\\ `src/usage/recorder\\.ts`\\ \\(line\\ 22\\)\\\n\\ \\ \\*\\*Pattern\\*\\*:\\ The\\ retained\\ fixture\\ records\\ one\\ usage\\ row\\ per\\ LLM\\ request,\\\n\\ \\ with\\ its\\ prompt\\ and\\ completion\\ token\\ counts\\.\\\n\\\n\\#\\#\\ Confidence\\\n\\\nhigh\\\n\\\n\\*\\*Rationale\\*\\*:\\ The\\ existing\\ recorder\\ already\\ stores\\ counts\\ at\\ this\\ grain\\.\\\n\\\n\\#\\#\\ Security\\ Relevance\\\n\\\nsecurity_relevant:\\ false\\\n\\Z"
+        },
+        {
+          "id": "unchanged-domain-researcher",
+          "requirement": "inputs",
+          "type": "text",
+          "source": "scenario-inputs/analysts/domain-researcher.md",
+          "pattern": "\\A\\#\\#\\ Answer\\\n\\\nCount\\ tokens\\ `per\\-billing\\-period`\\.\\\n\\\n\\#\\#\\ Citations\\\n\\\n\\-\\ \\*\\*Source\\*\\*:\\ LLM\\ provider\\ billing\\ documentation\\ \\(retained\\ fixture\\ evidence\\)\\\n\\ \\ \\*\\*Title\\*\\*:\\ Usage\\ and\\ billing\\\n\\ \\ \\*\\*Excerpt\\*\\*:\\ The\\ retained\\ analyst\\ response\\ notes\\ that\\ providers\\ invoice\\\n\\ \\ token\\ usage\\ in\\ aggregate\\ for\\ each\\ billing\\ period\\.\\\n\\\n\\#\\#\\ Confidence\\\n\\\nmedium\\\n\\\n\\*\\*Rationale\\*\\*:\\ This\\ matches\\ how\\ providers\\ bill\\.\\ Per\\-request\\ token\\ records\\ tie\\\nusage\\ to\\ individual\\ users,\\ which\\ makes\\ them\\ personal\\ data,\\ so\\ aggregate\\ counts\\\nexpose\\ less\\.\\\n\\\n\\#\\#\\ Security\\ Relevance\\\n\\\nsecurity_relevant:\\ true\\\n\\Z"
+        },
+        {
+          "id": "unchanged-spec-context-analyst",
+          "requirement": "inputs",
+          "type": "text",
+          "source": "scenario-inputs/analysts/spec-context-analyst.md",
+          "pattern": "\\A\\#\\#\\ Answer\\\n\\\nCount\\ tokens\\ `per\\-request`\\.\\\n\\\n\\#\\#\\ References\\\n\\\n\\-\\ \\*\\*Artifact\\*\\*:\\ Technical\\ roadmap\\\n\\ \\ \\*\\*Section\\*\\*:\\ Usage\\ reporting\\\n\\ \\ \\*\\*Relevance\\*\\*:\\ The\\ retained\\ fixture\\ records\\ a\\ roadmap\\ decision\\ to\\ report\\\n\\ \\ LLM\\ token\\ usage\\ for\\ each\\ request\\.\\\n\\\n\\#\\#\\ Confidence\\\n\\\nhigh\\\n\\\n\\*\\*Rationale\\*\\*:\\ The\\ roadmap\\ decision\\ addresses\\ the\\ report's\\ grain\\ directly\\.\\\n\\\n\\#\\#\\ Security\\ Relevance\\\n\\\nsecurity_relevant:\\ false\\\n\\Z"
+        }
+      ],
+      "native_differences": [
+        "Claude dispatches the namespaced speckit-pro:consensus-synthesizer role through its native Agent transport.",
+        "Codex dispatches the consensus-synthesizer custom agent through its native collaboration transport; both clients require an actual nonempty returned result before the parent writes the artifact."
+      ],
+      "provenance": [
+        "tests/speckit-pro/layer6-integration/return-format-fixtures/05-synthesizer-keyword-security-relevant",
         "speckit-pro/skills/speckit-autopilot/references/consensus-protocol.md"
       ]
     },

@@ -35,11 +35,15 @@ class NativeReturnCatalogTests(unittest.TestCase):
         self.analyze = self.cases[
             "integration.return-03-analyze-zero-findings-confidence"
         ]
+        self.keyword_majority = self.cases["integration.return-04-keyword-only-majority"]
+        self.keyword_security = self.cases["integration.return-05-keyword-security-relevant"]
 
     def test_return_cases_preserve_two_and_three_input_boundaries(self) -> None:
         for case, names in (
             (self.disagreement, ["codebase-analyst", "domain-researcher"]),
             (self.majority, ["codebase-analyst", "domain-researcher", "spec-context-analyst"]),
+            (self.keyword_majority, ["codebase-analyst", "domain-researcher", "spec-context-analyst"]),
+            (self.keyword_security, ["codebase-analyst", "domain-researcher", "spec-context-analyst"]),
         ):
             with self.subTest(case=case["id"]):
                 paths = [f"scenario-inputs/analysts/{name}.md" for name in names]
@@ -61,7 +65,9 @@ class NativeReturnCatalogTests(unittest.TestCase):
         )
 
     def test_native_mechanisms_align_responsibilities_with_platform_role_names(self) -> None:
-        for case in (self.disagreement, self.majority, self.analyze):
+        cases = (self.disagreement, self.majority, self.analyze,
+                 self.keyword_majority, self.keyword_security)
+        for case in cases:
             mechanism = [check for check in case["checks"]
                          if check["type"] == "native_synthesis_mechanism"]
             self.assertEqual(len(mechanism), 1)
@@ -72,9 +78,18 @@ class NativeReturnCatalogTests(unittest.TestCase):
             self.assertEqual(case["resource_class"], "nested")
             self.assertEqual(case["layer"], "integration")
         self.assertEqual(
-            len(plan_trials([self.disagreement, self.majority, self.analyze])),
-            6,
+            len(plan_trials(list(cases))),
+            10,
         )
+
+    def test_analyze_case_requires_the_synthesizer_protocol_line(self) -> None:
+        self.assertIn("`Protocol:` line naming the absolute path of the active", self.analyze["prompt"])
+        requirement = next(row for row in self.analyze["requirements"] if row["id"] == "protocol")
+        self.assertIn("`Protocol:`", requirement["description"])
+        check = next(check for check in self.analyze["checks"] if check["requirement"] == "protocol")
+        self.assertEqual(check["type"], "semantic")
+        for needle in ("dispatch prompt", "`Protocol:` line", "consensus-protocol.md", "same path"):
+            self.assertIn(needle, check["rubric"])
 
     def test_representative_phase_cases_cover_clarify_checklist_and_clean_analyze(self) -> None:
         self.assertIn("Clarify", self.disagreement["capability"])
@@ -94,6 +109,12 @@ class NativeReturnCatalogTests(unittest.TestCase):
             (self.majority, {"decision": "JSON", "next_action": "apply",
                              "agreement": "3/3-unanimous", "confidence": "high",
                              "retained_options": ["JSON"]}),
+            (self.keyword_majority, {"decision": "per-request", "next_action": "apply",
+                                     "agreement": "2/3-majority",
+                                     "retained_options": ["per-request", "per-billing-period"]}),
+            (self.keyword_security, {"decision": None, "next_action": "human_review",
+                                     "agreement": "2/3-majority",
+                                     "retained_options": ["per-request", "per-billing-period"]}),
         ):
             checks = [check for check in case["checks"] if check["type"] == "json_field"
                       and check["field_path"] != ["evidence"]]
@@ -137,8 +158,24 @@ class NativeReturnCatalogTests(unittest.TestCase):
                 self.assertEqual(grade_observation(focused, bad)["status"], "fail")
 
 
+    def test_keyword_route_cases_differ_only_in_one_security_relevant_answer(self) -> None:
+        item = "`[domain] I1: Should the usage report count tokens per LLM request or per billing period?`"
+        for case in (self.keyword_majority, self.keyword_security):
+            with self.subTest(case=case["id"]):
+                self.assertIn(item, case["prompt"])
+                self.assertIn("`**Security Route:** keyword`", case["prompt"])
+        inputs = {}
+        for case in (self.keyword_majority, self.keyword_security):
+            inputs[case["id"]] = {fixture["destination"]: (ROOT / fixture["source"]).read_text(encoding="utf-8")
+                                  for fixture in case["fixtures"]}
+        majority, security = inputs.values()
+        changed = [path for path in majority if majority[path] != security[path]]
+        self.assertEqual(changed, ["scenario-inputs/analysts/domain-researcher.md"])
+        self.assertTrue(all("security_relevant: false" in text for text in majority.values()))
+        self.assertIn("security_relevant: true", security["scenario-inputs/analysts/domain-researcher.md"])
+
     def test_namespaced_analyst_labels_preserve_identity_and_attribution(self) -> None:
-        for case in (self.disagreement, self.majority):
+        for case in (self.disagreement, self.majority, self.keyword_majority, self.keyword_security):
             check = next(check for check in case["checks"] if check["id"] == "evidence")
             focused = focused_case(case, [check])
             evidence = [{**row, "analyst": "speckit-pro:" + row["analyst"]}

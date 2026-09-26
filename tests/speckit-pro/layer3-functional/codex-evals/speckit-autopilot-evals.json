@@ -227,14 +227,14 @@
     },
     {
       "id": 18,
-      "prompt": "The analyze-executor flagged: '[domain] Finding 3 [HIGH]: cookie SameSite policy is not specified in plan.md.' Which consensus analyst(s) does the Codex autopilot spawn for this finding? Why?",
-      "expected_output": "Spawns only domain-researcher via spawn_agent because [domain] indicates resolution depends on external standards (RFC 6265bis, browser behavior). codebase-analyst and spec-context-analyst are NOT spawned in Round 1.",
+      "prompt": "The analyze-executor flagged: '[domain] Finding 3 [HIGH]: cookie SameSite policy is not specified in plan.md.' Which consensus analyst(s) does the Codex autopilot spawn for this finding, and why? If two analysts agree and one dissents, does autopilot apply the majority answer or stop for human review?",
+      "expected_output": "Spawns all three analysts (codebase-analyst, spec-context-analyst, domain-researcher) via spawn_agent because cookie is a security keyword: parse-consensus-categories reads the whole item line and widens the narrow [domain] tag, returning security_route keyword. The consensus-synthesizer still runs after all three return. Because the route is keyword, not an explicit [security] tag, the bar depends on the analysts: if any returns security_relevant: true, only 3/3 applies and a 2/3 majority goes to human review; if every analyst returns security_relevant: false, the ordinary 2/3 majority applies.",
       "expectations": [
-        "States that ONLY domain-researcher is spawned in Round 1",
-        "Justifies the single-analyst dispatch by referencing the [domain] tag's meaning (external standards / RFCs / library docs)",
-        "Does NOT spawn codebase-analyst or spec-context-analyst in Round 1",
-        "Mentions that the consensus-synthesizer step still runs to apply the artifact edit",
-        "Mentions Round 2 fallback if domain-researcher returns low confidence or escape-hatch keywords"
+        "States that all three analysts are spawned because cookie is a security keyword",
+        "Explains that the security-keyword override widens a narrow category tag",
+        "Does not single-route the item to domain-researcher",
+        "Mentions that consensus-synthesizer still runs after all three analyst results",
+        "States that the [domain] tag makes this a keyword-routed item, not a [security]-tagged one, so a 2/3 majority goes to human review only when at least one analyst returns `security_relevant: true`; when every analyst returns `security_relevant: false`, the ordinary 2/3 majority applies. An answer that demands 3/3 for every security-keyword item, or applies 2/3 without regard to `security_relevant`, contradicts this."
       ]
     },
     {

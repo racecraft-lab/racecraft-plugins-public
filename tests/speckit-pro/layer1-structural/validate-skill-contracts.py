@@ -457,6 +457,15 @@ class ValidateCodexSkills(unittest.TestCase):
             eval_106 = json.dumps(next(item for item in evals['evals'] if item['id'] == 106))
             self.assertNotIn('open a new Codex task rooted', eval_106, 'expected eval 106 to follow the explicit-selection binding rule')
             self.assertIn('WORKFLOW_ROOT', eval_106, 'expected eval 106 to bind execution to the returned workflow root')
+        with self.subTest(msg='speckit-autopilot: the cookie keyword eval widens to all three with a conditional bar'):
+            for legacy_path, eval_id in (
+                ('tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json', 18),
+                ('tests/speckit-pro/layer3-functional/evals/speckit-autopilot-evals.json', 14),
+            ):
+                legacy = json.loads(_read(REPO_ROOT / legacy_path))
+                cookie_eval = json.dumps(next(item for item in legacy['evals'] if item['id'] == eval_id))
+                self.assertNotIn('ONLY domain-researcher', cookie_eval, f'expected eval {eval_id} to widen a keyword item to all three analysts')
+                self.assertIn('security_relevant', cookie_eval, f'expected eval {eval_id} to tie the unanimity bar to security_relevant')
         with self.subTest(msg='speckit-autopilot: documents the optional Luna helper'):
             self.assertIn('autopilot-fast-helper', body)
         with self.subTest(msg='speckit-autopilot: keeps the Luna helper advisory and parent-only'):
