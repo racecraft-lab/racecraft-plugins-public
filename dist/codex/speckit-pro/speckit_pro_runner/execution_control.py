@@ -23,6 +23,7 @@ from .formal.selection import require_text as require_nonempty_text
 SCHEMA = "execution-control/v1"
 KINDS = {"implementation", "corrective", "verification", "infrastructure"}
 OUTCOMES = {"completed", "failed", "unknown", "expected_tdd_red"}
+CORRECTIVE_REFUSALS = {"failure_family_budget_exhausted", "corrective_run_budget_exhausted"}
 RUNNER_BYPRODUCT_DIRECTORIES = frozenset({(".process", "execution-control"), (".process", "verification")})
 
 
@@ -160,6 +161,7 @@ def validate_ledger(value: Any) -> None:
         raise ValueError("invalid execution reservations")
     if len(value["reservations"]) != value["corrective_cycles"]:
         raise ValueError("reservation counter disagrees with ledger")
+    exception_reservation = _validate_corrective_exception(value)
     families = [item.get("family") for item in value["reservations"].values() if isinstance(item, dict)]
     if len(families) != len(value["reservations"]) or len(set(families)) != len(families):
         raise ValueError("duplicate or malformed corrective family")
@@ -169,10 +171,39 @@ def validate_ledger(value: Any) -> None:
         if type(item.get("reconciliations")) is not int or not 0 <= item["reconciliations"] <= 1:
             raise ValueError("invalid reconciliation counter")
         reservation = item.get("reservation_id")
-        if item["kind"] == "corrective" and reservation not in value["reservations"]:
+        if (item["kind"] == "corrective" and reservation not in value["reservations"]
+                and (exception_reservation is None or reservation != exception_reservation)):
             raise ValueError("corrective dispatch has no reservation")
     validate_recovery_records(value)
     validate_continuation_records(value)
+
+
+def _validate_corrective_exception(ledger: dict[str, Any]) -> str | None:
+    """Validate the run's optional single operator-approved corrective exception."""
+    if "corrective_exception" not in ledger:
+        return None
+    record = ledger["corrective_exception"]
+    keys = {"reservation_id", "dispatch_id", "failure_invariant", "refusal_reason", "scope_sha256",
+            "spec_sha256", "operator_exception_event_id", "authorized_at"}
+    if not isinstance(record, dict) or set(record) != keys:
+        raise ValueError("invalid corrective exception")
+    reservation = require_text(record["reservation_id"], "corrective exception reservation_id")
+    dispatch_id = require_text(record["dispatch_id"], "corrective exception dispatch_id")
+    require_text(record["operator_exception_event_id"], "operator_exception_event_id")
+    if (record["failure_invariant"] not in ledger["approved_invariants"]
+            or record["refusal_reason"] not in CORRECTIVE_REFUSALS
+            or not all(isinstance(record[key], str) and re.fullmatch(r"[0-9a-f]{64}", record[key])
+                       for key in ("scope_sha256", "spec_sha256"))
+            or record["spec_sha256"] != ledger.get("invariant_binding", {}).get("spec_sha256")
+            or type(record["authorized_at"]) not in (int, float)
+            or not ledger["started_at"] <= record["authorized_at"] < float("inf")
+            or reservation in ledger["reservations"]):
+        raise ValueError("invalid corrective exception binding")
+    members = [key for key, item in ledger["dispatches"].items()
+               if isinstance(item, dict) and item.get("reservation_id") == reservation]
+    if members != [dispatch_id] or ledger["dispatches"][dispatch_id].get("kind") != "corrective":
+        raise ValueError("corrective exception must own exactly one corrective dispatch")
+    return reservation
 
 
 def validate_recovery_records(ledger: dict[str, Any]) -> None:
@@ -218,6 +249,8 @@ def validate_continuation_records(ledger: dict[str, Any]) -> None:
                         if "resolution_event_id" in record)
     other_events.update(record["operator_recovery_event_id"] for record in ledger["dispatches"].values()
                         if "operator_recovery_event_id" in record)
+    if "corrective_exception" in ledger:
+        other_events.add(ledger["corrective_exception"]["operator_exception_event_id"])
     for dispatch_id, item in ledger["dispatches"].items():
         present = keys & item.keys()
         if not present:
@@ -303,7 +336,30 @@ def _consumed_native_event_ids(ledger: dict[str, Any]) -> set[str]:
                     if "operator_recovery_event_id" in item)
     consumed.update(item["operator_continuation_event_id"] for item in ledger["dispatches"].values()
                     if "operator_continuation_event_id" in item)
+    if "corrective_exception" in ledger:
+        consumed.add(ledger["corrective_exception"]["operator_exception_event_id"])
     return consumed
+
+
+def _operator_event(ledger: dict[str, Any], inputs: dict[str, Any], keys: set[str],
+                    name: str) -> tuple[dict[str, Any], str]:
+    """One bounded, unconsumed parent-observed operator event; binding is the caller's check."""
+    event = inputs.get("native_observation")
+    if not isinstance(event, dict) or set(event) != keys:
+        raise ValueError(f"{name} requires one bounded operator native event")
+    event_id = require_text(event.get("native_event_id"), "native_event_id")
+    if event_id in _consumed_native_event_ids(ledger):
+        raise ValueError(f"operator {name} event was already consumed")
+    return event, event_id
+
+
+def _corrective_refusal(ledger: dict[str, Any], family: str) -> str | None:
+    """The reason an ordinary new corrective reservation for this family would be refused."""
+    if any(item["family"] == family for item in ledger["reservations"].values()):
+        return "failure_family_budget_exhausted"
+    if ledger["corrective_cycles"] >= 2:
+        return "corrective_run_budget_exhausted"
+    return None
 
 
 def reserve(ledger: dict[str, Any], inputs: dict[str, Any], now: float) -> dict[str, Any]:
@@ -327,10 +383,9 @@ def reserve(ledger: dict[str, Any], inputs: dict[str, Any], now: float) -> dict[
         else:
             invariant = inputs.get("failure_invariant")
             family = invariant if invariant in ledger["approved_invariants"] else "unresolved"
-            if any(item["family"] == family for item in ledger["reservations"].values()):
-                return {"reasons": ["failure_family_budget_exhausted"]}
-            if ledger["corrective_cycles"] >= 2:
-                return {"reasons": ["corrective_run_budget_exhausted"]}
+            refusal = _corrective_refusal(ledger, family)
+            if refusal is not None:
+                return {"reasons": [refusal]}
             reservation = uuid.uuid4().hex
             ledger["reservations"][reservation] = {"family": family, "dispatch_id": dispatch_id, "reserved_at": now}
             ledger["corrective_cycles"] += 1
@@ -345,19 +400,16 @@ def authorize_corrective_retry(ledger: dict[str, Any], inputs: dict[str, Any], n
     dispatch_id = require_text(inputs.get("dispatch_id"), "dispatch_id")
     failed_id = require_text(inputs.get("failed_dispatch_id"), "failed_dispatch_id")
     reservation = require_text(inputs.get("reservation_id"), "reservation_id")
-    event = inputs.get("native_observation")
     keys = {"native_event_id", "run_id", "action", "failed_dispatch_id", "failed_native_event_id",
             "retry_dispatch_id", "reservation_id", "failure_kind"}
-    if not isinstance(event, dict) or set(event) != keys:
-        raise ValueError("corrective retry requires one bounded operator native event")
-    event_id = require_text(event.get("native_event_id"), "native_event_id")
+    event, event_id = _operator_event(ledger, inputs, keys, "corrective retry")
     failed = ledger["dispatches"].get(failed_id)
     binding = (event.get("run_id"), event.get("action"), event.get("failed_dispatch_id"),
                event.get("retry_dispatch_id"), event.get("reservation_id"), event.get("failure_kind"))
     expected = (ledger["run_id"], "corrective_retry_approved", failed_id, dispatch_id,
                 reservation, "infrastructure")
-    if binding != expected or event_id in _consumed_native_event_ids(ledger):
-        raise ValueError("operator recovery event does not match this run or was consumed")
+    if binding != expected:
+        raise ValueError("operator recovery event does not match this run")
     if (dispatch_id in ledger["dispatches"] or ledger["corrective_cycles"] != 2 or
             not isinstance(failed, dict) or failed.get("kind") != "corrective" or
             failed.get("outcome") != "failed" or failed.get("reservation_id") != reservation or
@@ -377,18 +429,15 @@ def authorize_corrective_continuation(ledger: dict[str, Any], inputs: dict[str, 
     dispatch_id = require_text(inputs.get("dispatch_id"), "dispatch_id")
     source_id = require_text(inputs.get("completed_dispatch_id"), "completed_dispatch_id")
     reservation = require_text(inputs.get("reservation_id"), "reservation_id")
-    event = inputs.get("native_observation")
     keys = {"native_event_id", "run_id", "action", "completed_dispatch_id",
             "continuation_dispatch_id", "reservation_id", "purpose"}
-    if not isinstance(event, dict) or set(event) != keys:
-        raise ValueError("corrective continuation requires one bounded operator native event")
-    event_id = require_text(event.get("native_event_id"), "native_event_id")
+    event, event_id = _operator_event(ledger, inputs, keys, "corrective continuation")
     expected = (ledger["run_id"], "corrective_continuation_approved", source_id, dispatch_id,
                 reservation, "task_metadata_reconciliation")
     binding = (event.get("run_id"), event.get("action"), event.get("completed_dispatch_id"),
                event.get("continuation_dispatch_id"), event.get("reservation_id"), event.get("purpose"))
-    if binding != expected or event_id in _consumed_native_event_ids(ledger):
-        raise ValueError("operator continuation event does not match this run or was consumed")
+    if binding != expected:
+        raise ValueError("operator continuation event does not match this run")
     source = ledger["dispatches"].get(source_id)
     owner_id = ledger["reservations"].get(reservation, {}).get("dispatch_id")
     owner = ledger["dispatches"].get(owner_id)
@@ -406,6 +455,40 @@ def authorize_corrective_continuation(ledger: dict[str, Any], inputs: dict[str, 
                                          "operator_continuation_event_id": event_id,
                                          "continuation_purpose": "task_metadata_reconciliation"}
     return {"reservation_id": reservation, "dispatch_id": dispatch_id, "continuation_of": source_id}
+
+
+def authorize_corrective_exception(ledger: dict[str, Any], inputs: dict[str, Any], now: float) -> dict[str, Any]:
+    """Reserve the run's one operator-approved correction that an ordinary reserve would refuse."""
+    dispatch_id = require_text(inputs.get("dispatch_id"), "dispatch_id")
+    invariant = require_text(inputs.get("failure_invariant"), "failure_invariant")
+    scope = inputs.get("scope_sha256")
+    keys = {"native_event_id", "run_id", "action", "failure_invariant", "dispatch_id", "failure_kind",
+            "refusal_reason", "scope_sha256", "spec_sha256"}
+    event, event_id = _operator_event(ledger, inputs, keys, "corrective exception")
+    spec_digest = ledger.get("invariant_binding", {}).get("spec_sha256")
+    refusal = _corrective_refusal(ledger, invariant)
+    binding = (event.get("run_id"), event.get("action"), event.get("failure_invariant"), event.get("dispatch_id"),
+               event.get("failure_kind"), event.get("refusal_reason"), event.get("scope_sha256"),
+               event.get("spec_sha256"))
+    expected = (ledger["run_id"], "corrective_exception_approved", invariant, dispatch_id, "application",
+                refusal, scope, spec_digest)
+    if binding != expected:
+        raise ValueError("operator exception event does not match this run, scope, spec, and refusal")
+    family = next((key for key, item in ledger["reservations"].items() if item["family"] == invariant), None)
+    if ("corrective_exception" in ledger or dispatch_id in ledger["dispatches"] or spec_digest is None or
+            refusal is None or invariant not in ledger["approved_invariants"] or
+            not isinstance(scope, str) or not re.fullmatch(r"[0-9a-f]{64}", scope) or
+            any(item.get("reservation_id") == family and item["outcome"] not in {"completed", "failed"}
+                for item in ledger["dispatches"].values() if family is not None)):
+        raise ValueError("correction is not eligible for the run's one operator-approved exception")
+    reservation = uuid.uuid4().hex
+    ledger["corrective_exception"] = {"reservation_id": reservation, "dispatch_id": dispatch_id,
+                                      "failure_invariant": invariant, "refusal_reason": refusal,
+                                      "scope_sha256": scope, "spec_sha256": spec_digest,
+                                      "operator_exception_event_id": event_id, "authorized_at": now}
+    ledger["dispatches"][dispatch_id] = {"kind": "corrective", "outcome": "reserved", "reserved_at": now,
+                                         "reservation_id": reservation, "reconciliations": 0}
+    return {"reservation_id": reservation, "dispatch_id": dispatch_id}
 
 
 def record_result(ledger: dict[str, Any], inputs: dict[str, Any], now: float) -> dict[str, Any]:
@@ -533,7 +616,7 @@ def execution_control(root: Path, inputs: dict[str, Any], mode: str) -> dict[str
     if spec_name is not None and not spec.is_file():
         raise ValueError("spec_file must be an existing contained file")
     action = inputs.get("action", "status")
-    if action not in {"start", "status", "bind-invariants", "reserve", "authorize-corrective-retry", "authorize-corrective-continuation", "begin-verification", "complete", "reconcile", "checkpoint", "pause", "resume", "relocate-workflow"}:
+    if action not in {"start", "status", "bind-invariants", "reserve", "authorize-corrective-retry", "authorize-corrective-continuation", "authorize-corrective-exception", "begin-verification", "complete", "reconcile", "checkpoint", "pause", "resume", "relocate-workflow"}:
         raise ValueError("unsupported action; pauses/resets require verified native authorization")
     if mode not in {"read_only", "dry_run", "apply"} or (mode == "read_only" and action != "status"):
         raise ValueError("ledger mutations require dry_run or apply")
@@ -581,6 +664,8 @@ def execution_control(root: Path, inputs: dict[str, Any], mode: str) -> dict[str
             extra = authorize_corrective_retry(ledger, inputs, now)
         elif action == "authorize-corrective-continuation" and not reasons:
             extra = authorize_corrective_continuation(ledger, inputs, now)
+        elif action == "authorize-corrective-exception" and not reasons:
+            extra = authorize_corrective_exception(ledger, inputs, now)
         elif action == "begin-verification" and not reasons:
             extra = begin_verification(ledger, inputs)
         elif action in {"complete", "reconcile"}:

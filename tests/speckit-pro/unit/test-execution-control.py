@@ -464,6 +464,185 @@ class CorrectiveRecoveryTests(_ExecutionControlFixture, unittest.TestCase):
                             "reservation_id": other_reservation})
 
 
+class CorrectiveExceptionTests(_ExecutionControlFixture, unittest.TestCase):
+    SCOPE = "a" * 64
+
+    def greenfield_run(self, consume_unresolved=True):
+        spec = self.root / "feature/spec.md"
+        spec.unlink()
+        self.invoke("start")
+        if consume_unresolved:
+            self.invoke("reserve", dispatch_id="fix-a", kind="corrective", failure_invariant="FR-001")
+            self.invoke("complete", dispatch_id="fix-a", outcome="failed")
+        spec.write_text("- FR-001: preserve data\n- FR-002: no secrets\n")
+        bound = self.invoke("bind-invariants", spec_file="feature/spec.md")["ledger"]
+        return bound["invariant_binding"]["spec_sha256"]
+
+    def approval(self, spec_digest, **changes):
+        event = {"native_event_id": "operator-exception", "run_id": self.run_id,
+                 "action": "corrective_exception_approved", "failure_invariant": "FR-001",
+                 "dispatch_id": "fix-c", "failure_kind": "application",
+                 "refusal_reason": "corrective_run_budget_exhausted",
+                 "scope_sha256": self.SCOPE, "spec_sha256": spec_digest}
+        return {**event, **changes}
+
+    def authorize(self, event, mode="apply", **inputs):
+        request = {"dispatch_id": "fix-c", "failure_invariant": "FR-001", "scope_sha256": self.SCOPE,
+                   "native_observation": event, **inputs}
+        return self.invoke("authorize-corrective-exception", mode=mode, **request)
+
+    def test_exhausted_run_budget_recovers_only_the_approved_correction(self):
+        digest_value = self.greenfield_run()
+        self.invoke("reserve", dispatch_id="fix-b", kind="corrective", failure_invariant="FR-002")
+        self.invoke("complete", dispatch_id="fix-b", outcome="failed")
+        refused = self.invoke("reserve", dispatch_id="fix-c", kind="corrective", failure_invariant="FR-001")
+        self.assertEqual(refused["reasons"], ["corrective_run_budget_exhausted"])
+        before = self.invoke("status", mode="read_only")["ledger"]
+        preview = self.authorize(self.approval(digest_value), mode="dry_run")
+        self.assertEqual(preview["disposition"], "continue")
+        self.assertNotIn("corrective_exception", self.invoke("status", mode="read_only")["ledger"])
+
+        granted = self.authorize(self.approval(digest_value))
+        ledger = granted["ledger"]
+        self.assertEqual(granted["disposition"], "continue")
+        for key in ("run_id", "started_at", "corrective_cycles", "reservations", "approved_invariants",
+                    "invariant_binding"):
+            self.assertEqual(ledger[key], before[key], key)
+        for dispatch_id in ("fix-a", "fix-b"):
+            self.assertEqual(ledger["dispatches"][dispatch_id], before["dispatches"][dispatch_id])
+        exception = ledger["corrective_exception"]
+        self.assertEqual({key: exception[key] for key in ("dispatch_id", "failure_invariant", "refusal_reason",
+                                                          "scope_sha256", "spec_sha256", "operator_exception_event_id")},
+                         {"dispatch_id": "fix-c", "failure_invariant": "FR-001",
+                          "refusal_reason": "corrective_run_budget_exhausted", "scope_sha256": self.SCOPE,
+                          "spec_sha256": digest_value, "operator_exception_event_id": "operator-exception"})
+        self.assertEqual(ledger["dispatches"]["fix-c"]["reservation_id"], exception["reservation_id"])
+        self.assertEqual(ledger["dispatches"]["fix-c"]["kind"], "corrective")
+        self.assertNotIn(exception["reservation_id"], ledger["reservations"])
+        self.assertEqual(granted["reservation_id"], exception["reservation_id"])
+        schema = json.loads((Path(__file__).resolve().parents[3] /
+                             "speckit-pro/speckit_pro_runner/contracts/execution-control.schema.json").read_text())
+        self.assertEqual(json_schema_failures(ledger, schema, schema, "ledger"), [])
+
+        self.invoke("complete", dispatch_id="fix-c", outcome="failed")
+        self.assertEqual(self.invoke("status", mode="read_only")["disposition"], "continue")
+        path = self.root / granted["ledger_path"]
+        after = path.read_bytes()
+        self.assertEqual(self.invoke("reserve", dispatch_id="fix-d", kind="corrective", failure_invariant="FR-001",
+                                     mode="dry_run")["reasons"], ["corrective_run_budget_exhausted"])
+        refusals = (
+            lambda: self.authorize(self.approval(digest_value, native_event_id="second-exception", dispatch_id="fix-d"),
+                                   dispatch_id="fix-d"),
+            lambda: self.invoke("reserve", dispatch_id="nested", kind="corrective",
+                                reservation_id=exception["reservation_id"]),
+            lambda: self.invoke("authorize-corrective-retry", dispatch_id="fix-c-retry", failed_dispatch_id="fix-c",
+                                reservation_id=exception["reservation_id"], native_observation={
+                                    "native_event_id": "retry-message", "run_id": self.run_id,
+                                    "action": "corrective_retry_approved", "failed_dispatch_id": "fix-c",
+                                    "failed_native_event_id": "none", "retry_dispatch_id": "fix-c-retry",
+                                    "reservation_id": exception["reservation_id"], "failure_kind": "infrastructure"}),
+            lambda: self.invoke("pause", native_observation={"native_event_id": "operator-exception",
+                                                             "run_id": self.run_id, "kind": "human_uat",
+                                                             "action": "wait_started"}),
+        )
+        for index, refusal in enumerate(refusals):
+            with self.subTest(refusal=index):
+                with self.assertRaises(ValueError):
+                    refusal()
+                self.assertEqual(path.read_bytes(), after)
+
+    def test_repeat_of_reserved_family_is_recoverable_without_consuming_a_cycle(self):
+        digest_value = self.greenfield_run(consume_unresolved=False)
+        self.invoke("reserve", dispatch_id="fix-b", kind="corrective", failure_invariant="FR-001")
+        path = self.root / self.invoke("status", mode="read_only")["ledger_path"]
+        before = path.read_bytes()
+        in_flight = self.approval(digest_value, refusal_reason="failure_family_budget_exhausted")
+        with self.assertRaises(ValueError):
+            self.authorize(in_flight)
+        self.assertEqual(path.read_bytes(), before)
+        self.invoke("complete", dispatch_id="fix-b", outcome="failed")
+        self.assertEqual(self.invoke("reserve", dispatch_id="fix-c", kind="corrective", failure_invariant="FR-001",
+                                     mode="dry_run")["reasons"], ["failure_family_budget_exhausted"])
+        granted = self.authorize(in_flight)
+        self.assertEqual(granted["disposition"], "continue")
+        self.assertEqual(granted["ledger"]["corrective_cycles"], 1)
+        self.invoke("complete", dispatch_id="fix-c", outcome="completed")
+        self.assertEqual(self.invoke("reserve", dispatch_id="fix-d", kind="corrective",
+                                     failure_invariant="FR-002")["disposition"], "continue")
+        self.assertEqual(self.invoke("reserve", dispatch_id="fix-e", kind="corrective", failure_invariant="NFR-001",
+                                     mode="dry_run")["reasons"], ["corrective_run_budget_exhausted"])
+        with self.assertRaises(ValueError):
+            self.invoke("authorize-corrective-continuation", dispatch_id="fix-c-metadata",
+                        completed_dispatch_id="fix-c", reservation_id=granted["reservation_id"],
+                        native_observation={"native_event_id": "continuation-message", "run_id": self.run_id,
+                                            "action": "corrective_continuation_approved",
+                                            "completed_dispatch_id": "fix-c",
+                                            "continuation_dispatch_id": "fix-c-metadata",
+                                            "reservation_id": granted["reservation_id"],
+                                            "purpose": "task_metadata_reconciliation"})
+
+    def test_unbound_mismatched_or_ordinary_requests_are_refused_without_mutation(self):
+        digest_value = self.greenfield_run()
+        self.invoke("reserve", dispatch_id="fix-b", kind="corrective", failure_invariant="FR-002")
+        self.invoke("complete", dispatch_id="fix-b", outcome="failed")
+        path = self.root / self.invoke("status", mode="read_only")["ledger_path"]
+        before = path.read_bytes()
+        approval = self.approval(digest_value)
+        cases = (
+            ({"event": None}, {}),
+            ({"event": {**approval, "extra": "field"}}, {}),
+            ({"event": self.approval(digest_value, run_id="other-run")}, {}),
+            ({"event": self.approval(digest_value, action="corrective_retry_approved")}, {}),
+            ({"event": self.approval(digest_value, failure_kind="infrastructure")}, {}),
+            ({"event": self.approval(digest_value, failure_invariant="FR-002")}, {}),
+            ({"event": self.approval(digest_value, dispatch_id="other-dispatch")}, {}),
+            ({"event": self.approval(digest_value, refusal_reason="failure_family_budget_exhausted")}, {}),
+            ({"event": self.approval(digest_value, scope_sha256="b" * 64)}, {}),
+            ({"event": self.approval(digest_value, spec_sha256="c" * 64)}, {}),
+            ({"event": self.approval(digest_value, failure_invariant="unresolved",
+                                     refusal_reason="failure_family_budget_exhausted")},
+             {"failure_invariant": "unresolved"}),
+            ({"event": self.approval(digest_value, failure_invariant="FR-999")}, {"failure_invariant": "FR-999"}),
+            ({"event": self.approval(digest_value, dispatch_id="fix-b")}, {"dispatch_id": "fix-b"}),
+            ({"event": self.approval(digest_value, scope_sha256="not-a-digest")}, {"scope_sha256": "not-a-digest"}),
+        )
+        for index, (event, inputs) in enumerate(cases):
+            with self.subTest(case=index):
+                with self.assertRaises(ValueError):
+                    self.authorize(event["event"], **inputs)
+                self.assertEqual(path.read_bytes(), before)
+        granted = self.authorize(approval)["ledger"]
+        for change in ({"spec_sha256": "c" * 64}, {"failure_invariant": "unresolved"}, {"dispatch_id": "fix-b"}):
+            with self.subTest(tamper=change):
+                path.write_text(json.dumps({**granted, "corrective_exception": {**granted["corrective_exception"],
+                                                                                **change}}))
+                with self.assertRaises(ValueError):
+                    self.invoke("status", mode="read_only")
+
+    def test_exception_needs_a_refusing_ordinary_reserve_and_a_bound_spec(self):
+        digest_value = self.greenfield_run()
+        path = self.root / self.invoke("status", mode="read_only")["ledger_path"]
+        before = path.read_bytes()
+        for reason in ("corrective_run_budget_exhausted", "failure_family_budget_exhausted"):
+            with self.subTest(reason=reason):
+                with self.assertRaises(ValueError):
+                    self.authorize(self.approval(digest_value, failure_invariant="FR-002", refusal_reason=reason),
+                                   failure_invariant="FR-002")
+                self.assertEqual(path.read_bytes(), before)
+        other = tempfile.TemporaryDirectory()
+        self.addCleanup(other.cleanup)
+        self.root, self.run_id = Path(other.name), None
+        (self.root / "feature").mkdir()
+        (self.root / "feature/workflow.md").write_text("# Workflow\n")
+        (self.root / "feature/spec.md").write_text("- FR-001: preserve data\n- FR-002: no secrets\n")
+        self.invoke("start")
+        for dispatch_id, invariant in (("fix-a", "FR-001"), ("fix-b", "FR-002")):
+            self.invoke("reserve", dispatch_id=dispatch_id, kind="corrective", failure_invariant=invariant)
+            self.invoke("complete", dispatch_id=dispatch_id, outcome="failed")
+        with self.assertRaises(ValueError):
+            self.authorize(self.approval(digest_value))
+
+
 class WorkflowIdentityTests(_ExecutionControlFixture, unittest.TestCase):
     def test_different_workflows_cannot_adopt_an_existing_ledger(self):
         first = self.invoke("start")
@@ -928,7 +1107,7 @@ class DockerVerificationTests(VerificationTests):
 if __name__ == "__main__":
     suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case)
                                for case in (GreenfieldInvariantBindingTests, ExecutionControlTests, CorrectiveRecoveryTests,
-                                            CorrectiveContinuationTests, WorkflowIdentityTests, VerificationTests,
-                                            RunnerDispatchTests))
+                                            CorrectiveContinuationTests, CorrectiveExceptionTests, WorkflowIdentityTests,
+                                            VerificationTests, RunnerDispatchTests))
     suite.addTests(DockerVerificationTests(name) for name in DockerVerificationTests.__dict__ if name.startswith("test_docker_"))
     raise SystemExit(run_counted(suite, label="test-execution-control"))
