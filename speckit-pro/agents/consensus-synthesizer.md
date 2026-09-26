@@ -119,7 +119,7 @@ You will receive a prompt containing:
 
 **Unresolved Item:** <question/gap/finding text>
 **Routed Categories:** [<categories>]   ← e.g., [codebase], [codebase, domain], [security], [ambiguous]
-**Security Route:** tag | keyword | none   ← security_route from parse-consensus-categories
+**Security Route:** tag | keyword | none   ← security_route from parse-consensus-categories; JSON null is written as none
 **Round:** 1 | 2
 
 **Codebase Analyst Response:**
