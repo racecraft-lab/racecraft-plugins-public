@@ -50,8 +50,13 @@ $speckit-autopilot workflow.md --from-phase <next-pending-phase>
   budget used by every nested worker; checkpoint with exact output on exhaustion.
   One operator-approved application correction past it uses
   `authorize-corrective-exception`; never reset or bypass the ledger.
-- **Consensus agents all disagree:** Flag `[HUMAN REVIEW NEEDED]`
-  and STOP. Present all 3 perspectives to the user.
+- **Consensus agents all disagree:** Flag `[HUMAN REVIEW NEEDED]`.
+  In an interactive task, ask the operator in place with
+  `request_user_input` (the analysts' positions as options, the synthesizer's
+  recommendation first, and a `Stop the run` option), apply the answer with
+  the `human answer` label, and continue. In an unattended run, or when
+  `request_user_input` is absent, STOP and present all 3 perspectives. See
+  [consensus-protocol.md §Human Review Needed](consensus-protocol.md#human-review-needed).
 - **MCP tool unavailable:** Skip research that depends on it. Use
   file search and read fallbacks for codebase analysis. Log warning.
 - **Lifecycle action unavailable, or a subagent appears stuck/frozen:** Missing

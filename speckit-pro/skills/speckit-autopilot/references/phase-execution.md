@@ -331,6 +331,7 @@ For each clarify session in the workflow file:
         Stage 3: apply each synthesizer's Artifact Edit SERIALLY
                  to spec.md (preserves write contention safety).
         Round 2 escape-hatch: also batched across all queued items.
+        [HUMAN REVIEW NEEDED]: consensus-protocol.md#human-review-needed
      c. TaskUpdate: "<session> Consensus" → completed
   7. After accepted consensus edits, re-scan spec.md and update the recorded
      remaining-marker count
@@ -346,7 +347,10 @@ edit artifacts. It returns questions and recommendations to the parent.
 **Layer 2 (consensus):** For items the executor flagged
 (low confidence, conflicting sources, security keywords),
 the main session spawns 3 consensus agents to get distinct
-perspectives and applies consensus rules.
+perspectives and applies consensus rules. An item that ends in
+`[HUMAN REVIEW NEEDED]` goes to the operator through `AskUserQuestion` when
+the session is interactive; an unattended run stops, as in every phase that
+runs consensus.
 
 **Why after each session:** Session 2 may depend on
 Session 1's resolved questions. Both layers complete
@@ -472,6 +476,7 @@ For each checklist domain in the workflow file:
         Stage 3: apply each synthesizer's Artifact Edit SERIALLY
                  to spec.md or plan.md.
         Round 2 escape-hatch: also batched across all queued gaps.
+        [HUMAN REVIEW NEEDED]: consensus-protocol.md#human-review-needed
      c. Re-run domain checklist to verify gaps closed
      d. TaskUpdate: "<domain> Consensus" → completed
   5. TaskUpdate: domain task → completed
@@ -649,6 +654,7 @@ Items it can't resolve are flagged in its
       Stage 3: apply each synthesizer's Artifact Edit SERIALLY to
                tasks.md, spec.md, or plan.md.
       Round 2 escape-hatch: also batched across all queued findings.
+      [HUMAN REVIEW NEEDED]: consensus-protocol.md#human-review-needed
    c. Re-run analyze to verify findings resolved
    d. TaskUpdate: "Analyze - Consensus" → completed
 5. TaskUpdate: "Analyze" → completed

@@ -229,6 +229,47 @@ class ConsensusSynthesizerRegressionTests(unittest.TestCase):
             dispatch_block(scaffold, 'Agent(subagent_type: "speckit-pro:codebase-analyst"'),
         )
 
+    def test_human_review_asks_in_place_only_in_an_interactive_run(self) -> None:
+        # An operator who is present can answer a [HUMAN REVIEW NEEDED] item
+        # through the host's native question tool; an unattended run still
+        # stops. Each host names only its own tool.
+        protocol = " ".join(PROTOCOL.read_text(encoding="utf-8").split())
+        assert_contains(self, protocol, (
+            "## Human Review Needed",
+            "`AskUserQuestion` on Claude Code",
+            "`request_user_input` on Codex",
+            "the synthesizer's recommendation first",
+            "`Stop the run`",
+            "label its source `human answer`",
+            "`claude -p`, `codex exec`, CI, or a background agent",
+            "stop exactly as before",
+            "Never ask through free text or `grill-me`",
+            "IF Flags includes [HUMAN REVIEW NEEDED]: resolve per §Human Review Needed",
+        ))
+        anchor = "consensus-protocol.md#human-review-needed"
+        claude_files = (
+            AUTOPILOT_SKILLS[0],
+            REFERENCES / "error-recovery.md",
+            REFERENCES / "phase-execution.md",
+        )
+        codex_refs = CODEX_AUTOPILOT.parent / "references"
+        codex_files = (
+            codex_refs / "error-recovery-codex.md",
+            CODEX_PHASE_EXECUTION,
+        )
+        for path in claude_files:
+            flat = " ".join(path.read_text(encoding="utf-8").split())
+            with self.subTest(host="claude", path=path.name):
+                assert_contains(self, flat, (anchor, "`AskUserQuestion`", "unattended run"))
+                self.assertNotIn("request_user_input", flat)
+        for path in codex_files:
+            flat = " ".join(path.read_text(encoding="utf-8").split())
+            with self.subTest(host="codex", path=path.name):
+                assert_contains(self, flat, (anchor, "`request_user_input`", "unattended run"))
+                self.assertNotIn("AskUserQuestion", flat)
+        phase = phase_execution_text()
+        self.assertEqual(phase.count(anchor), 3, "Clarify, Checklist, and Analyze each route human review")
+
     def test_escape_phrases_and_security_override_are_complete(self) -> None:
         text = instructions()
         assert_contains(self, text, (
