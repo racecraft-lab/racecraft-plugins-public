@@ -152,7 +152,7 @@ including `uat-runbook-author.md`. If `plugin_root` is supplied in `inputs`,
 it must equal that loaded root.
 
 Keep the returned `plugin_root`. Every consensus-synthesizer,
-checklist-executor, and analyze-executor prompt carries a `Protocol:` line
+clarify-executor, checklist-executor, and analyze-executor prompt carries a `Protocol:` line
 set to `<plugin_root>/skills/speckit-autopilot/references/consensus-protocol.md`,
 so those agents read the active protocol and never a cached copy from another
 version. Check the `**Protocol:**` path each one reports against that line,
