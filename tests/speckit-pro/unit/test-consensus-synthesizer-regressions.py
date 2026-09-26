@@ -107,10 +107,11 @@ class ConsensusSynthesizerRegressionTests(unittest.TestCase):
             flat = " ".join(text.split())
             with self.subTest(platform=label):
                 assert_contains(self, text, (route_line,))
+                self.assertIn("null is written as none", flat)
                 assert_contains(self, flat, (rule, fail_closed, "a 2/3 majority wins at N = 3"))
         protocol = " ".join(PROTOCOL.read_text(encoding="utf-8").split())
         assert_contains(self, protocol, (
-            "**Security Route:** <security_route from parse-consensus-categories: tag | keyword | none>",
+            "**Security Route:** <security_route from parse-consensus-categories: tag | keyword | none; write JSON null as none>",
             "every routed analyst returns `security_relevant: false`",
             "An explicit `[security]` tag, or any analyst returning `security_relevant: true`, keeps unanimity",
         ))

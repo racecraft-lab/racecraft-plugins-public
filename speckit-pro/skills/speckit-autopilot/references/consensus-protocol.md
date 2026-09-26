@@ -227,7 +227,7 @@ Stage 2 — All synthesizers, ONE assistant message:
             **Protocol:** <plugin_root>/skills/speckit-autopilot/references/consensus-protocol.md
             **Unresolved Item:** <item Ix text>
             **Routed Categories:** [<categories from prefix>]
-            **Security Route:** <security_route from parse-consensus-categories: tag | keyword | none>
+            **Security Route:** <security_route from parse-consensus-categories: tag | keyword | none; write JSON null as none>
             **Round:** 1
             **<Analyst> Response:** <response> | NOT SPAWNED (not routed)
             ... (one row per analyst, NOT SPAWNED if not in Sx)
