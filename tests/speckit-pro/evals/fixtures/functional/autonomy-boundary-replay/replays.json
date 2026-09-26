@@ -325,6 +325,29 @@
       }
     },
     {
+      "id": "symlinked-private-record",
+      "description": "A receipt whose private record is a symlink to a matching file fails the full guard.",
+      "boundary": "receipt",
+      "private_record": "symlinked",
+      "require_autonomy_boundary": true,
+      "current": {
+        "--current-execution-environment": "local",
+        "--current-sandbox-mode": "workspace-write",
+        "--current-approval-reviewer": "auto_review"
+      },
+      "current_writable_roots": [
+        "shared",
+        "checkout"
+      ],
+      "expect": {
+        "passes": false,
+        "autonomy_boundary_errors": [
+          "autonomy boundary private record is missing or unreadable"
+        ],
+        "private_record_matches": false
+      }
+    },
+    {
       "id": "unparseable-private-record",
       "description": "A receipt whose private record is not valid JSON fails the full guard.",
       "boundary": "receipt",
