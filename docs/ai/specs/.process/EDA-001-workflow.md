@@ -32,7 +32,7 @@ captured during scoping.
 
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
-| Stage | plan | ✅ Complete | Planning gates passed; 27 implementation tasks remain unchecked; draft handoff follows |
+| Stage | plan | ✅ Complete | Planning complete; 27 implementation tasks unchecked; draft handoff published; preview observation follows |
 | Specify | `/speckit-specify` | ✅ Complete | 3 stories, 19 FRs; G1 routes provenance marker to Clarify |
 | Clarify | `/speckit-clarify` | ✅ Complete | Three sessions resolved; G2 passed with 0 markers |
 | Plan | `/speckit-plan` | ✅ Complete | Seven artifacts, G3 pass, and privacy 13/13 after approved wording correction |
@@ -166,6 +166,7 @@ Filled from `detect-commands` at Step 0.11. One row per slot; the operator answe
 | **Spec ID** | EDA-001 |
 | **Name** | Attribution Foundation |
 | **Branch** | `eda-001-attribution-foundation` |
+| **Draft PR** | [#686](https://github.com/racecraft-lab/racecraft-plugins-public/pull/686) |
 | **Dependencies** | None (stacked on the roadmap PR #672 only because the roadmap lives there) |
 | **Enables** | EDA-002 through EDA-011 |
 | **Priority** | P1 |
