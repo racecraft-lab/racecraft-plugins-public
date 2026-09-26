@@ -257,6 +257,12 @@ python3 tests/speckit-pro/layer6-integration/reduce-transcript-fixture.py \
   > path/to/parser-fixture.jsonl
 ```
 
+The reducer keeps dispatch prompts and the orchestrator's own text, because
+`must_include_terms` checks read them in replay. It redacts both with the
+privacy scan's patterns (`tests/speckit-pro/lib/privacy_patterns.py`), and
+drops skill arguments and subagent text. Tool results become synthesized
+responses built from `expected.json`.
+
 ## Live-mode side effects (read this before running `--live`)
 
 `--live` invocations spawn real subagents that may produce real

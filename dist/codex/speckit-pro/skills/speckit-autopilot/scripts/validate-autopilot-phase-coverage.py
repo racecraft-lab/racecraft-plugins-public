@@ -4612,6 +4612,85 @@ def _autonomy_current_execution_errors(
     return []
 
 
+AUTONOMY_RUN_ID_RE = re.compile(r"[0-9a-f]{32}")
+
+
+def _git_common_dir(repo_root: Path) -> Path | None:
+    """`git rev-parse --git-common-dir` resolved against the worktree, or None."""
+    try:
+        completed = subprocess.run(
+            ["git", "-C", str(repo_root), "rev-parse", "--git-common-dir"],
+            capture_output=True,
+            text=True,
+            env=_git_env(),
+            shell=False,
+            check=False,
+        )
+    except (OSError, ValueError):
+        return None
+    common = completed.stdout.strip()
+    if completed.returncode != 0 or not common:
+        return None
+    return repo_root / common
+
+
+def _read_private_record_bytes(path: Path) -> bytes | None:
+    """Read a regular, non-symlink private record file, or None."""
+    try:
+        descriptor = os.open(path, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
+    except OSError:
+        return None
+    try:
+        metadata = os.fstat(descriptor)
+        if not stat.S_ISREG(metadata.st_mode) or metadata.st_size > MAX_REPO_FILE_BYTES:
+            return None
+        with os.fdopen(descriptor, "rb", closefd=False) as handle:
+            content = handle.read(MAX_REPO_FILE_BYTES + 1)
+    except OSError:
+        return None
+    finally:
+        os.close(descriptor)
+    return content if len(content) <= MAX_REPO_FILE_BYTES else None
+
+
+def _autonomy_private_record_errors(
+    state: dict[str, Any],
+    boundary: dict[str, Any],
+    repo_root: Path | None,
+) -> list[str]:
+    """Check the private record behind a receipt still hashes to its digest.
+
+    The record lives at `<git-common-dir>/speckit-pro/autonomy-boundary/<run-id>.json`,
+    where `<run-id>` is the execution-control ledger's run id mirrored in state.
+    Errors never name the path or the run id, which are machine-local.
+    """
+    control = state.get("execution_control")
+    run_id = control.get("run_id") if isinstance(control, dict) else None
+    if not isinstance(run_id, str) or not AUTONOMY_RUN_ID_RE.fullmatch(run_id):
+        return [
+            "autonomy boundary private record cannot be located: "
+            "autopilot_state.execution_control.run_id is missing or malformed"
+        ]
+    common_dir = _git_common_dir(repo_root) if repo_root is not None else None
+    if common_dir is None:
+        return [
+            "autonomy boundary private record cannot be located: "
+            "the git common directory is unavailable"
+        ]
+    path = common_dir / "speckit-pro" / "autonomy-boundary" / f"{run_id}.json"
+    content = _read_private_record_bytes(path)
+    if content is None:
+        return ["autonomy boundary private record is missing or unreadable"]
+    try:
+        record = _strict_json_loads(content)
+    except (RecursionError, ValueError):
+        return ["autonomy boundary private record is not valid JSON"]
+    digest = _canonical_json_sha256(record)
+    if digest is None or digest != boundary.get("private_record_sha256"):
+        return ["autonomy boundary private record does not match private_record_sha256"]
+    return []
+
+
 def _autonomy_authorization_errors(
     prefix: str,
     authorization: object,
@@ -4733,6 +4812,8 @@ def validate_autonomy_boundary(
     receipt = boundary.get("schema_version") == AUTONOMY_RECEIPT_VERSION
     execution_errors, execution_sha = _autonomy_execution_errors(boundary, receipt)
     errors.extend(execution_errors)
+    if receipt and boundary_required:
+        errors.extend(_autonomy_private_record_errors(state, boundary, repo_root))
     if execution_sha is not None:
         errors.extend(
             _autonomy_current_execution_errors(

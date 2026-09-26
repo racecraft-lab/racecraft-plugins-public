@@ -10,4 +10,6 @@ and are never copied into the subject workspace.
 The disagreement fixture intentionally contains two analyst responses because
 that is the legacy input set. Under the current consensus contract, disagreement
 between two Round 1 analysts escapes to Round 2; it is not by itself a terminal
-three-analyst no-majority decision.
+three-analyst no-majority decision. The item's `Security Route` is `none`, so a
+`security_relevant: true` answer from either analyst would not change that: only
+a `tag` or `keyword` route raises the bar to unanimity.

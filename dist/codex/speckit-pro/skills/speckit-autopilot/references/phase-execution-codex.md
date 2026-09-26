@@ -830,7 +830,11 @@ for phase in PHASES starting from first_pending:
        calling close_agent only when exposed and never exceeding the derived
        subagent_slots limit (dispatch in waves when items × analysts exceeds
        the cap) → apply consensus rules → edit
-       artifacts → mark the corresponding Consensus item complete in both stores
+       artifacts → mark the corresponding Consensus item complete in both stores.
+       An item that ends in [HUMAN REVIEW NEEDED] follows
+       consensus-protocol.md#human-review-needed: ask the operator in place
+       with `request_user_input` when it is present in an interactive task;
+       an unattended run stops.
     6. Check .specify/extensions.yml for after_<phase> hooks
        → run accepted hooks (non-destructive), skip duplicates
     7. Validate gate directly in the main session:
@@ -1149,10 +1153,14 @@ The full guard replays the receipt without the private roots. It recomputes
 the execution-boundary digest from the live `--current-*` values and compares
 it with the receipt's `execution_boundary.sha256`, then checks each action's
 `execution_boundary_sha256`, its authorization `scope_sha256`, and the
-dispositions. Recompute an action's `scope_sha256` from the private record,
-after confirming the record's canonical digest still equals
-`private_record_sha256`. Never drop `--require-autonomy-boundary` or a
-`--current-*` value to get a passing check; the receipt passes the full guard.
+dispositions. It also opens the private record at the location above, taking
+`<run-id>` from the state's `execution_control.run_id` mirror, and fails closed
+when that mirror is absent, the record is missing, unreadable, or not valid
+JSON, or its canonical digest differs from `private_record_sha256`. Keep that
+mirror current, since the guard cannot locate the record without it. Recompute
+an action's `scope_sha256` from the verified private record. Never drop
+`--require-autonomy-boundary` or a `--current-*` value to get a passing check;
+the receipt passes the full guard.
 
 An in-flight state may hold the earlier `autonomy_boundary_private_receipt`
 object (`status`, `sha256`, `public_details`, `validation`, `contract_gap`)

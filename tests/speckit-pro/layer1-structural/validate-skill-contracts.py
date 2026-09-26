@@ -466,6 +466,35 @@ class ValidateCodexSkills(unittest.TestCase):
                 cookie_eval = json.dumps(next(item for item in legacy['evals'] if item['id'] == eval_id))
                 self.assertNotIn('ONLY domain-researcher', cookie_eval, f'expected eval {eval_id} to widen a keyword item to all three analysts')
                 self.assertIn('security_relevant', cookie_eval, f'expected eval {eval_id} to tie the unanimity bar to security_relevant')
+        with self.subTest(msg='speckit-autopilot: the security-tag eval requires 3/3 instead of always flagging review'):
+            stale = 'fires automatically for security items'
+            corrected = 'a unanimous 3/3 answer applies and the run continues'
+            for legacy_path, eval_id in (
+                ('tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json', 19),
+                ('tests/speckit-pro/layer3-functional/evals/speckit-autopilot-evals.json', 15),
+            ):
+                legacy = json.loads(_read(REPO_ROOT / legacy_path))
+                tag_eval = next(item for item in legacy['evals'] if item['id'] == eval_id)
+                self.assertNotIn(stale, tag_eval['expected_output'], f'expected eval {eval_id} to drop the always-review claim')
+                self.assertIn(corrected, tag_eval['expected_output'], f'expected eval {eval_id} to apply a unanimous security answer')
+            catalog = json.loads(_read(REPO_ROOT / 'tests/speckit-pro/evals/catalog.json'))
+            case_19 = next(case for case in catalog['cases'] if case['id'] == 'functional.speckit-autopilot.case-19')
+            self.assertNotIn(stale, case_19['capability'], 'expected catalog case-19 to drop the always-review claim')
+            self.assertIn(corrected, case_19['capability'], 'expected catalog case-19 to apply a unanimous security answer')
+        with self.subTest(msg='speckit-coach: eval 4 lets an interactive run answer human review in place'):
+            stale = 'surfaced for human review and stops advancement'
+            corrected = 'asked in place in an interactive run'
+            for legacy_path in (
+                'tests/speckit-pro/layer3-functional/codex-evals/speckit-coach-evals.json',
+                'tests/speckit-pro/layer3-functional/evals/speckit-coach-evals.json',
+            ):
+                legacy = json.loads(_read(REPO_ROOT / legacy_path))
+                coach_eval = json.dumps(next(item for item in legacy['evals'] if item['id'] == 4))
+                self.assertNotIn(stale, coach_eval, f'expected {legacy_path} eval 4 to allow an in-place answer')
+                self.assertIn(corrected, coach_eval, f'expected {legacy_path} eval 4 to name the in-place answer')
+            catalog = json.dumps(next(case for case in json.loads(_read(REPO_ROOT / 'tests/speckit-pro/evals/catalog.json'))['cases'] if case['id'] == 'functional.speckit-coach.case-4'))
+            self.assertNotIn(stale, catalog, 'expected catalog coach case-4 to allow an in-place answer')
+            self.assertIn(corrected, catalog, 'expected catalog coach case-4 to name the in-place answer')
         with self.subTest(msg='speckit-autopilot: documents the optional Luna helper'):
             self.assertIn('autopilot-fast-helper', body)
         with self.subTest(msg='speckit-autopilot: keeps the Luna helper advisory and parent-only'):
