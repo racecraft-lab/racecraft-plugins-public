@@ -830,7 +830,11 @@ for phase in PHASES starting from first_pending:
        calling close_agent only when exposed and never exceeding the derived
        subagent_slots limit (dispatch in waves when items × analysts exceeds
        the cap) → apply consensus rules → edit
-       artifacts → mark the corresponding Consensus item complete in both stores
+       artifacts → mark the corresponding Consensus item complete in both stores.
+       An item that ends in [HUMAN REVIEW NEEDED] follows
+       consensus-protocol.md#human-review-needed: ask the operator in place
+       with `request_user_input` when it is present in an interactive task;
+       an unattended run stops.
     6. Check .specify/extensions.yml for after_<phase> hooks
        → run accepted hooks (non-destructive), skip duplicates
     7. Validate gate directly in the main session:
