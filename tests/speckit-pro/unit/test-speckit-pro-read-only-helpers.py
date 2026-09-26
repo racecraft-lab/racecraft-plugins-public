@@ -3213,6 +3213,8 @@ class ReadOnlyHelperTests(unittest.TestCase):
             (payload["reviewable_loc"], payload["production_files"], payload["total_files"]), (900, 9, 30),
         )
         self.assertEqual(payload["primary_surfaces"], ["API"])
+        self.assertNotIn("primary_surfaces", payload["thresholds"]["block"])
+        self.assertEqual(payload["thresholds"]["block"]["reviewable_loc"], 800)
         self.assertFalse(any("primary surfaces" in warning for warning in payload["warnings"]))
 
         payload, exit_code = self.setup_gate_for_spec(roadmap, "SPEC-003")

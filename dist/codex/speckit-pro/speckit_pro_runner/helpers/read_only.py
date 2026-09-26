@@ -2202,28 +2202,24 @@ def validate_gate(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
 
 REVIEWABILITY_THRESHOLDS = {
     "warn": {"reviewable_loc": 400, "production_files": 6, "total_files": 15, "primary_surfaces": 1},
-    "block": {"reviewable_loc": 800, "production_files": 8, "total_files": 25, "primary_surfaces": 1},
+    "block": {"reviewable_loc": 800, "production_files": 8, "total_files": 25},
+}
+REVIEWABILITY_LABELS = {
+    "reviewable_loc": "reviewable LOC",
+    "production_files": "production files",
+    "total_files": "total files",
+    "primary_surfaces": "primary surfaces",
 }
 
 
 def reviewability_budget_findings(loc: int, prod: int, total: int, surface_count: int) -> tuple[list[str], list[str]]:
-    warnings = []
-    blockers = []
-    if loc > 400:
-        warnings.append(f"reviewable LOC {loc} exceeds warn threshold 400")
-    if prod > 6:
-        warnings.append(f"production files {prod} exceeds warn threshold 6")
-    if total > 15:
-        warnings.append(f"total files {total} exceeds warn threshold 15")
-    if surface_count > 1:
-        warnings.append(f"primary surfaces {surface_count} exceeds warn threshold 1")
-    if loc > 800:
-        blockers.append(f"reviewable LOC {loc} exceeds block threshold 800")
-    if prod > 8:
-        blockers.append(f"production files {prod} exceeds block threshold 8")
-    if total > 25:
-        blockers.append(f"total files {total} exceeds block threshold 25")
-    return warnings, blockers
+    values = {"reviewable_loc": loc, "production_files": prod, "total_files": total, "primary_surfaces": surface_count}
+    findings: dict[str, list[str]] = {"warn": [], "block": []}
+    for level, limits in REVIEWABILITY_THRESHOLDS.items():
+        for key, limit in limits.items():
+            if values[key] > limit:
+                findings[level].append(f"{REVIEWABILITY_LABELS[key]} {values[key]} exceeds {level} threshold {limit}")
+    return findings["warn"], findings["block"]
 
 
 def reviewability_gate(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:

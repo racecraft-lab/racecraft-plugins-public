@@ -189,7 +189,10 @@ def _validate_corrective_exception(ledger: dict[str, Any]) -> str | None:
         raise ValueError("invalid corrective exception")
     reservation = require_text(record["reservation_id"], "corrective exception reservation_id")
     dispatch_id = require_text(record["dispatch_id"], "corrective exception dispatch_id")
-    require_text(record["operator_exception_event_id"], "operator_exception_event_id")
+    event_id = require_text(record["operator_exception_event_id"], "operator_exception_event_id")
+    if event_id in _consumed_native_event_ids({key: value for key, value in ledger.items()
+                                               if key != "corrective_exception"}):
+        raise ValueError("corrective exception event id was already consumed")
     if (record["failure_invariant"] not in ledger["approved_invariants"]
             or record["refusal_reason"] not in CORRECTIVE_REFUSALS
             or not all(isinstance(record[key], str) and re.fullmatch(r"[0-9a-f]{64}", record[key])

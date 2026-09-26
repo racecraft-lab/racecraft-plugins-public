@@ -107,10 +107,11 @@ class ConsensusSynthesizerRegressionTests(unittest.TestCase):
             flat = " ".join(text.split())
             with self.subTest(platform=label):
                 assert_contains(self, text, (route_line,))
+                self.assertIn("null is written as none", flat)
                 assert_contains(self, flat, (rule, fail_closed, "a 2/3 majority wins at N = 3"))
         protocol = " ".join(PROTOCOL.read_text(encoding="utf-8").split())
         assert_contains(self, protocol, (
-            "**Security Route:** <security_route from parse-consensus-categories: tag | keyword | none>",
+            "**Security Route:** <security_route from parse-consensus-categories: tag | keyword | none; write JSON null as none>",
             "every routed analyst returns `security_relevant: false`",
             "An explicit `[security]` tag, or any analyst returning `security_relevant: true`, keeps unanimity",
         ))
@@ -133,8 +134,9 @@ class ConsensusSynthesizerRegressionTests(unittest.TestCase):
         phase = phase_execution_text()
         self.assertIn(f'prompt: "Run /speckit-checklist with: <domain prompt>\\nProtocol: {ACTIVE_PROTOCOL}")', phase)
         self.assertIn(f'prompt: "Run /speckit-analyze with: <prompt>\\nProtocol: {ACTIVE_PROTOCOL}")', phase)
-        self.assertIn(f"Prepare a Clarify Question Set for: <session prompt>\n            Protocol: {ACTIVE_PROTOCOL}", phase)
         flat = " ".join(phase.split())
+        self.assertIn(f"Prepare a Clarify Question Set for: <session prompt> Protocol: {ACTIVE_PROTOCOL}", flat)
+        self.assertIn("Workflow root: <WORKFLOW_ROOT>", phase)
         self.assertIn("consensus-synthesizer agent (single fan-out), with the `Protocol:` line,", flat)
         self.assertIn("never the checkout that launched the run", flat)
         prerequisites = " ".join((REFERENCES / "prerequisites.md").read_text(encoding="utf-8").split())
