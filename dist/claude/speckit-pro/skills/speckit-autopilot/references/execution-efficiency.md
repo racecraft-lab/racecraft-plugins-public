@@ -20,7 +20,9 @@ shared fixed file for every workflow in a directory.
 The default ledger lives in `.process/execution-control/` beside the workflow,
 or in `execution-control/` when the workflow already sits in a `.process`
 directory. An earlier `.process/.process/execution-control/` ledger stays valid
-when passed as `ledger_path`. Untracked ledger and verification evidence under
+when passed as `ledger_path`. Verification evidence follows the same rule in
+`verification/`; a record already under `.process/.process/verification/`
+still validates. Untracked ledger and verification evidence under
 `.process/execution-control/` or `.process/verification/` never make the
 worktree dirty for mutation helpers; any other change still refuses `apply`.
 An existing ledger belongs to its recorded canonical workflow path. An explicit

@@ -16,7 +16,7 @@ from unittest.mock import patch
 sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "speckit-pro"))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "lib"))
 from test_result import run_counted
-from speckit_pro_runner.execution_control import durable_json, execution_control
+from speckit_pro_runner.execution_control import durable_json, execution_control, is_runner_byproduct
 from speckit_pro_runner.helpers.read_only import json_schema_failures, validate_task_execution
 from speckit_pro_runner.task_execution import fingerprints
 from speckit_pro_runner.verification_records import digest, execute_verification, project_command, run_snapshot_command, tree_bytes, validate_execution_record
@@ -985,6 +985,34 @@ class VerificationTests(unittest.TestCase):
             process.returncode = 0
             run_snapshot_command(["python3", "check.py"], self.root, {"PATH": str(interpreter.parent)}, 1, expected_executable=str(interpreter))
             self.assertEqual(popen.call_args.args[0], [str(interpreter), "check.py"])
+
+    def test_process_directory_workflow_evidence_is_not_doubled_and_legacy_record_is_read(self):
+        workflow = "docs/ai/specs/.process/workflow.md"
+        # An in-flight run already holds the doubled evidence directory.
+        (self.root / "docs/ai/specs/.process/.process/verification").mkdir(parents=True)
+        (self.root / workflow).write_text((self.root / "feature/workflow.md").read_text())
+        inputs = {"workflow_file": workflow, "command_id": "UNIT_TEST"}
+        run_id = execution_control(self.root, {"workflow_file": workflow, "action": "start"}, "apply")["ledger"]["run_id"]
+        execution_control(self.root, {"workflow_file": workflow, "action": "reserve", "dispatch_id": "verify-1",
+                                      "kind": "verification", "expected_run_id": run_id}, "apply")
+        result = execute_verification(self.root, {**inputs, "dispatch_id": "verify-1", "expected_run_id": run_id}, "apply")
+        name = Path(result["record_path"]).name
+        self.assertEqual(result["record_path"], f"docs/ai/specs/.process/verification/{name}")
+        self.assertTrue((self.root / result["record_path"]).is_file())
+        self.assertFalse([path for path in tree_bytes(self.root, workflow) if "verification" in path])
+        current = validate_execution_record(self.root, {**inputs, "record_path": result["record_path"]})
+        self.assertFalse([reason for reason in current["reasons"] if reason.startswith("unverifiable_record")])
+
+        legacy = f"docs/ai/specs/.process/.process/verification/{name}"
+        (self.root / result["record_path"]).rename(self.root / legacy)
+        self.assertFalse([path for path in tree_bytes(self.root, workflow) if "verification" in path])
+        self.assertTrue(is_runner_byproduct(legacy) and is_runner_byproduct(result["record_path"]))
+        self.assertEqual(validate_execution_record(self.root, {**inputs, "record_path": legacy}), current)
+        stray = f"docs/ai/specs/verification/{name}"
+        (self.root / stray).parent.mkdir(parents=True)
+        (self.root / legacy).rename(self.root / stray)
+        self.assertIn("unverifiable_record: record_path is not this workflow's verification evidence",
+                      validate_execution_record(self.root, {**inputs, "record_path": stray})["reasons"])
 
 
 class RunnerDispatchTests(unittest.TestCase):

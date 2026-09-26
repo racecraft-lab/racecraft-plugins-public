@@ -11,7 +11,7 @@ import tempfile
 from typing import Any
 
 from .execution_control import confined_path, require_text
-from .verification_records import _read_bounded_regular, digest, evidence_directory, runner_binding, sha, tree_digest, workflow_argv
+from .verification_records import _read_bounded_regular, digest, evidence_directories, runner_binding, sha, tree_digest, workflow_argv
 
 SCHEMA = "docker-verification-record/v2"
 PROFILE = "docker-qualified/v2"
@@ -162,8 +162,10 @@ def validate_docker_record(root: Path, workflow_name: str, command_id: str, reco
         if record.get("output_contract") != "streams_only" or record.get("isolation_mode") != "docker_readonly_qualified" or record.get("producer") != "runner-docker-project-command/v2":
             raise ValueError("Docker verification record contract is not qualified v2")
         execution_id = require_text(record.get("execution_id"), "execution_id")
-        directory_name = f"{evidence_directory(workflow_name)}/{execution_id}"
-        if record.get("output_directory") != directory_name or Path(record_name).stem != execution_id:
+        record_directory = Path(record_name).parent.as_posix()
+        directory_name = f"{record_directory}/{execution_id}"
+        if (record_directory not in evidence_directories(workflow_name) or record.get("output_directory") != directory_name
+                or Path(record_name).stem != execution_id):
             raise ValueError("Docker evidence path is not bound to the execution identity")
         directory = confined_path(root, directory_name)
         evidence_body = _read_bounded_regular(directory / "docker-evidence.json", MAX_EVIDENCE_BYTES,

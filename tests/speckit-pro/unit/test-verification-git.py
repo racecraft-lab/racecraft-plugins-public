@@ -276,10 +276,10 @@ class GitSnapshotTests(unittest.TestCase):
         self.assertEqual(evidence["git_snapshot"]["profile"], "git-readonly-metadata/v1")
         self.assertIn("git_metadata_profile_not_independently_qualified", result["limitations"])
 
-    def test_v2_producer_and_consumer_require_retained_native_and_current_closures(self):
-        started = execution_control(self.root, {"workflow_file": "workflow.md", "action": "start"}, "apply")
+    def produce_qualified(self, workflow):
+        started = execution_control(self.root, {"workflow_file": workflow, "action": "start"}, "apply")
         run_id = started["ledger"]["run_id"]
-        execution_control(self.root, {"workflow_file": "workflow.md", "action": "reserve", "dispatch_id": "qualified",
+        execution_control(self.root, {"workflow_file": workflow, "action": "reserve", "dispatch_id": "qualified",
                                      "kind": "verification", "expected_run_id": run_id}, "apply")
         engine = {"schema_version": "docker-engine-binding/v2", "cli": {"path": "/usr/local/bin/docker", "sha256": "1" * 64},
                   "endpoint": "unix:///tmp/docker.sock", "version": {"bound": True}, "info": {"bound": True}}
@@ -311,13 +311,42 @@ class GitSnapshotTests(unittest.TestCase):
                     "post_input_readback": {"verified": True}, "runtime_attestation": {"bound": True},
                     "cleanup_confirmed": True, "image_tag_cleanup_confirmed": True}
 
-        qualified = {**self.inputs, "docker": {**self.inputs["docker"], "qualification_profile": "docker-qualified/v2"},
+        qualified = {**self.inputs, "workflow_file": workflow,
+                     "docker": {**self.inputs["docker"], "qualification_profile": "docker-qualified/v2"},
                      "dispatch_id": "qualified", "expected_run_id": run_id}
         with patch.object(docker_workflow, "DockerClient", FakeClient), patch.object(docker_workflow, "execute_image", side_effect=image_run), \
              patch.object(docker_workflow, "inspect_image", return_value=base):
             produced = docker_workflow.execute_docker_verification(self.root, qualified, "apply")
         self.assertEqual(produced["record"]["schema_version"], "docker-verification-record/v2")
         self.assertFalse(produced["reusable"])
+        return produced, engine, base
+
+    def test_v2_record_at_the_legacy_doubled_evidence_path_still_validates(self):
+        workflow = ".process/workflow.md"
+        # An in-flight run already holds the doubled evidence directory.
+        (self.root / ".process/.process/verification").mkdir(parents=True)
+        (self.root / workflow).write_text((self.root / "workflow.md").read_text())
+        with patch.object(docker_workflow, "evidence_directory",
+                          lambda name: (Path(name).parent / ".process/verification").as_posix()):
+            produced, engine, base = self.produce_qualified(workflow)
+        self.assertTrue(produced["record_path"].startswith(".process/.process/verification/"))
+
+        class ValidationClient:
+            def __init__(self, *args):
+                pass
+            def engine_binding(self):
+                return engine
+
+        observation = {"native_event_id": "retained-real-tool-event", **produced["observation_material"]}
+        with patch("speckit_pro_runner.verification_docker_runtime.DockerClient", ValidationClient), \
+             patch("speckit_pro_runner.verification_docker_image.inspect_image", return_value=base):
+            result = validate_execution_record(self.root, {"workflow_file": workflow, "command_id": "UNIT_TEST",
+                                                           "record_path": produced["record_path"],
+                                                           "native_observation": observation})
+        self.assertTrue(result["reusable"], result["reasons"])
+
+    def test_v2_producer_and_consumer_require_retained_native_and_current_closures(self):
+        produced, engine, base = self.produce_qualified("workflow.md")
         observation = {"native_event_id": "retained-real-tool-event", **produced["observation_material"]}
         record_path = self.root / produced["record_path"]
         record_body = record_path.read_bytes()

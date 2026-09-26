@@ -33,10 +33,15 @@ def is_runner_byproduct(relative: str) -> bool:
     return any(pair in RUNNER_BYPRODUCT_DIRECTORIES for pair in zip(parts, parts[1:]))
 
 
+def workflow_process_directory(workflow_name: str) -> PurePosixPath:
+    """The workflow's `.process` directory, without doubling a `.process` parent."""
+    parent = PurePosixPath(workflow_name).parent
+    return parent if parent.name == ".process" else parent / ".process"
+
+
 def default_ledger_directory(workflow_name: str) -> str:
     """The workflow's ledger directory, without doubling a `.process` parent."""
-    parent = PurePosixPath(workflow_name).parent
-    return (parent if parent.name == ".process" else parent / ".process").joinpath("execution-control").as_posix()
+    return workflow_process_directory(workflow_name).joinpath("execution-control").as_posix()
 
 
 def confined_path(root: Path, value: str) -> Path:
