@@ -6051,6 +6051,10 @@
         {
           "source": "tests/speckit-pro/evals/fixtures/functional/local-command/baseline.md",
           "destination": "scenario-inputs/read-only-helper-feature/tasks.md"
+        },
+        {
+          "source": "tests/speckit-pro/evals/fixtures/functional/local-command/workflow.md",
+          "destination": "scenario-inputs/workflow.md"
         }
       ],
       "git_fixture": {
