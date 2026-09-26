@@ -92,7 +92,7 @@ class ConsensusSynthesizerRegressionTests(unittest.TestCase):
             "A 2/3 majority wins while the dissent is preserved",
             "If all three disagree",
             "[HUMAN REVIEW NEEDED]",
-            "Security override at any N",
+            "Security override on a security route",
             "apply the answer only when all three analysts agree",
             "A 2/3 majority or no agreement returns `[HUMAN REVIEW NEEDED]`",
             "a keyword alone never stops the run",
@@ -121,7 +121,36 @@ class ConsensusSynthesizerRegressionTests(unittest.TestCase):
         assert_contains(self, protocol, (
             "**Security Route:** <security_route from parse-consensus-categories: tag | keyword | none; write JSON null as none>",
             "every routed analyst returns `security_relevant: false`",
-            "An explicit `[security]` tag, or any analyst returning `security_relevant: true`, keeps unanimity",
+            "An explicit `[security]` tag, or, on a keyword route, any analyst returning `security_relevant: true`, keeps unanimity",
+        ))
+
+    def test_security_relevant_raises_the_bar_only_on_a_security_route(self) -> None:
+        # A `true` from one analyst on a two-analyst non-security route must
+        # not skip the Round 2 escape and send the item to human review. Only
+        # a `tag` or `keyword` route can raise the bar to unanimity.
+        none_route = (
+            "When the route is `none`, a `security_relevant: true` answer does "
+            "not raise the bar: apply the ordinary rule for N above, so two "
+            "disagreeing analysts still escape to Round 2"
+        )
+        for label, text in (
+            ("codex", instructions()),
+            ("claude", CLAUDE_SYNTHESIZER.read_text(encoding="utf-8")),
+        ):
+            flat = " ".join(text.split())
+            with self.subTest(platform=label):
+                self.assertNotIn("at any N", flat)
+                self.assertNotIn("(any N)", flat)
+                assert_contains(self, flat, (
+                    "When the route is `tag`, apply the answer only when all three analysts agree",
+                    "When the route is `keyword` and any routed response returns `security_relevant: true`, or omits the field",
+                    none_route,
+                ))
+        protocol = " ".join(PROTOCOL.read_text(encoding="utf-8").split())
+        assert_contains(self, protocol, (
+            "| **Non-security route** (`Security Route: none`) |",
+            "a `security_relevant: true` answer does not raise the bar",
+            "two disagreeing Round 1 analysts still escape to Round 2",
         ))
 
     def test_executors_reserve_the_security_tag_for_security_substance(self) -> None:

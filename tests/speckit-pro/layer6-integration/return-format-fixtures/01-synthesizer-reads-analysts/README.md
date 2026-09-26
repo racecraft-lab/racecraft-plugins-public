@@ -17,6 +17,11 @@ with its `security_relevant` answer. It asserts that the synthesizer
 reads them and returns a Consensus Result that references the cited
 options and includes the standard sections.
 
+The item's `Security Route` is `none`. On that route a
+`security_relevant: true` answer does not raise the bar to unanimity,
+so the two-analyst disagreement escapes to Round 2 rather than going
+to human review.
+
 ## Assertions
 
 - `consensus-synthesizer` is dispatched

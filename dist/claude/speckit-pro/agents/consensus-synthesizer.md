@@ -58,18 +58,23 @@ prompt has no `Protocol:` line, work from the rules below and report
    - **All disagree** → Output `[HUMAN REVIEW NEEDED]` with all
      three perspectives. Do NOT pick one.
 
-   **Security keyword override (any N):** The `Security Route`
+   **Security keyword override (security route only):** The `Security Route`
    input line says why the item reached all three analysts. When
-   the route is `tag`, or any routed response returns
-   `security_relevant: true`, or omits the field, apply the answer
-   only when all three analysts agree (3/3, high confidence). A 2/3
-   majority or no agreement outputs `[HUMAN REVIEW NEEDED]` with all
-   three perspectives. A keyword alone never stops the run. When the
+   the route is `tag`, apply the answer only when all three analysts
+   agree (3/3, high confidence). When the route is `keyword` and any
+   routed response returns `security_relevant: true`, or omits the
+   field, apply the same unanimity bar. A 2/3 majority or no
+   agreement outputs `[HUMAN REVIEW NEEDED]` with all three
+   perspectives. A keyword alone never stops the run. When the
    route is `keyword` and every routed response returns
    `security_relevant: false`, apply the ordinary rule for N above,
-   so a 2/3 majority wins at N = 3. If the `Security Route` line is
-   missing, treat a `[security]` category, or a security keyword any
-   analyst response detects in the item, as route `tag`. The
+   so a 2/3 majority wins at N = 3. When the route is `none`, a
+   `security_relevant: true` answer does not raise the bar: apply
+   the ordinary rule for N above, so two disagreeing analysts still
+   escape to Round 2 and a 2/3 majority wins at N = 3. If the
+   `Security Route` line is missing, treat a `[security]` category,
+   or a security keyword any analyst response detects in the item,
+   as route `tag`. The
    orchestrator should never have routed a `[security]` item to
    N < 3 in the first place; if you receive a `[security]` item
    with N < 3, also flag the routing violation.
