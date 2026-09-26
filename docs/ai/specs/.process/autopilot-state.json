@@ -31,11 +31,9 @@
   "execution_control": {
     "run_id": "e7fbc9a6636945ed8a8c2abd42cbb892",
     "ledger_path": "docs/ai/specs/.process/.process/execution-control/ac068cab59ef67faf15646a7.json",
-    "disposition": "checkpoint_required",
-    "reasons": [
-      "unknown_side_effects_require_operator_reconciliation"
-    ],
-    "elapsed_seconds": 34550.53631591797,
+    "disposition": "continue",
+    "reasons": [],
+    "elapsed_seconds": 34991.07294201851,
     "checkpoint_due": false,
     "approved_invariants": 29,
     "corrective_cycles": 2
@@ -480,29 +478,30 @@
   },
   "analyze": {
     "status": "blocked",
-    "findings_total": 10,
+    "findings_total": 12,
     "findings_resolved": 7,
     "open_findings": [
       "H3",
       "H4",
-      "H5"
+      "H5",
+      "H6",
+      "H7"
     ],
     "g6": "not_run",
     "user_decision": "Split C1 into C1a and C1b as fifth PR; order A -> B -> C1a -> C1b -> C2",
     "user_decision_applied": true,
     "in_flight_dispatches": [],
     "remaining": [
-      "obtain owner direction for A/B/C2 scope",
-      "complete path, generated-output, refactor, and LOC inventories for every revised slice",
-      "revise spec, plan, tasks, and task sidecar after ratification",
-      "rerun Analyze and budget checks, then attempt G6"
+      "resolve the exhausted corrective-cycle policy before further remediation",
+      "split mixed-story increments and count every recurring process and evidence path",
+      "rerun Analyze and budget checks, then attempt G6 after a valid allocation"
     ],
-    "pending_user_decision": "Split A, B, and C2 further or reduce their scope; the five-slice allocation exceeds the 24-path cap.",
+    "pending_user_decision": "The genuine native Analyze dispatch failed during Codex authentication. Both allowed corrective cycles are consumed; the current policy permits no further corrective dispatch.",
     "repair_reservation": {
       "dispatch_id": "hrns015-analyze-c1-rescope-20260925",
       "failure_invariant": "FR-026",
       "reservation_id": "420e70c8bf1b436493f77ef2df90f5d9",
-      "status": "reserved"
+      "status": "failed"
     }
   }
 }
