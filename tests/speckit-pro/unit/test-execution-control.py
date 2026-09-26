@@ -551,6 +551,13 @@ class CorrectiveExceptionTests(_ExecutionControlFixture, unittest.TestCase):
                     refusal()
                 self.assertEqual(path.read_bytes(), after)
 
+        tampered = json.loads(after)
+        tampered["workflow_identity"]["relocation_event_ids"].append("operator-exception")
+        path.write_text(json.dumps(tampered), encoding="utf-8")
+        with self.assertRaises(ValueError):
+            self.invoke("status", mode="read_only")
+        path.write_bytes(after)
+
     def test_repeat_of_reserved_family_is_recoverable_without_consuming_a_cycle(self):
         digest_value = self.greenfield_run(consume_unresolved=False)
         self.invoke("reserve", dispatch_id="fix-b", kind="corrective", failure_invariant="FR-001")
