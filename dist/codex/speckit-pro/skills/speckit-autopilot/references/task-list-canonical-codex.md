@@ -183,11 +183,61 @@ rule — which is why this clause is recorded here and not mirrored back.
 ```
 
 After Phase 6.5 starts, the same top-level object also carries
-`autonomy_boundary`. The executable shape is
-[`autonomy-boundary.schema.json`](../contracts/autonomy-boundary.schema.json),
-and `--rule status-evidence` validates its schema, planning bytes, execution
-boundary digest, action scope digest, authorization scope, and disposition
-consistency before Phase 7:
+`autonomy_boundary`: the portable `autonomy-boundary-receipt.v1` public
+receipt. The complete `autonomy-boundary.v1` record it is projected from stays
+private at `<git-common-dir>/speckit-pro/autonomy-boundary/<run-id>.json`
+(see [Phase Execution](./phase-execution-codex.md#autonomy-boundary-preflight)).
+Both shapes are in
+[`autonomy-boundary.schema.json`](../contracts/autonomy-boundary.schema.json).
+Before Phase 7, `--rule status-evidence` validates the receipt's schema and
+planning bytes, replays its execution-boundary digest against the current
+`--current-*` values, and checks each action's boundary binding,
+authorization scope, and disposition consistency:
+
+```json
+{
+  "autonomy_boundary": {
+    "schema_version": "autonomy-boundary-receipt.v1",
+    "status": "ready",
+    "planning_fingerprints": {
+      "plan_md": {
+        "path": "docs/ai/specs/SPEC-013/plan.md",
+        "sha256": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "size_bytes": 4096
+      },
+      "tasks_md": {
+        "path": "docs/ai/specs/SPEC-013/tasks.md",
+        "sha256": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "size_bytes": 8192
+      }
+    },
+    "execution_boundary": {
+      "execution_environment": "local",
+      "sandbox_mode": "workspace-write",
+      "approval_reviewer": "auto_review",
+      "sha256": "sha256:08060a2bdcd7ff0f4b22702a3648f47fb9ba3a8d84d7d6f9aab7f970f50c6b16"
+    },
+    "actions": [
+      {
+        "action_id": "install-runtime",
+        "category": "privileged_command",
+        "execution_boundary_sha256": "sha256:08060a2bdcd7ff0f4b22702a3648f47fb9ba3a8d84d7d6f9aab7f970f50c6b16",
+        "scope_sha256": "sha256:d5c9445477f5b8bad43850f80d0c784a72c19aeea27c62075360f7dce9db71cf",
+        "disposition": "ready",
+        "authorization": {
+          "status": "explicit_user",
+          "scope_sha256": "sha256:d5c9445477f5b8bad43850f80d0c784a72c19aeea27c62075360f7dce9db71cf"
+        }
+      }
+    ],
+    "private_record_sha256": "sha256:130abe30df3dcf9efc3c8d95d0587445be550e8f42a2621a002f12d8467d6e83"
+  }
+}
+```
+
+The private file behind that receipt holds the complete v1 `autonomy_boundary`
+object below. That object's canonical JSON digest is the receipt's
+`private_record_sha256`:
 
 ```json
 {

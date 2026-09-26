@@ -266,9 +266,14 @@ Do this before the first Phase 7 dispatch, including for a resumed workflow
 whose implementation is already marked in progress.
 
 Recompute the recorded planning fingerprint from the current files and compare
-the recorded execution boundary with the current surface. A missing record, a
-digest mismatch, a changed writable-root or approval boundary, or a planned
-action absent from the record makes it stale. Re-enter the complete Phase 6.5
+the recorded execution boundary with the current surface. The state holds the
+public receipt; the complete record is the private file at
+`<git-common-dir>/speckit-pro/autonomy-boundary/<run-id>.json`. Replay the
+receipt with the full guard (`--require-autonomy-boundary` plus every
+`--current-*` value). To recheck an action's scope, open the private file and
+confirm its canonical digest equals `private_record_sha256` first. A missing
+record or private file, a digest mismatch, a changed writable-root or approval
+boundary, or a planned action absent from the record makes it stale. Re-enter the complete Phase 6.5
 preflight and persist a current result before dispatching any implementation
 worker. Exact explicit user authorization persists across turns, compaction,
 and resume when the recorded action category, command or tool, target, lasting
