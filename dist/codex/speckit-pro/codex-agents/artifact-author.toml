@@ -139,6 +139,14 @@ the same shortfall reads identically everywhere it is reported.
 **A page with any unfilled slot is a gap for that page, not a partial success.**
 Do not ship a half-filled page and call it generated.
 
+**Reserve your last turns for the result.** Each page takes several turns
+(read the template, render, validate, publish, re-validate). When your turn
+budget runs low, start no new page and return the outcomes you have:
+`generated` for each page that finished and passed its checks, and `gap` with
+the reason `turn budget exhausted` for each page you did not reach. Report
+those partial outcomes rather than nothing: a missing result is a whole-set gap,
+and the orchestrator then removes every page, including the finished ones.
+
 ## Fail open — never block the pull request
 
 Artifact generation never blocks pull-request creation. You never raise to your

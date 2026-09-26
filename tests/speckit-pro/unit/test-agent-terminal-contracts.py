@@ -37,6 +37,18 @@ NO_SPAWN_ROLES = (
 )
 
 
+TURN_BUDGETS = {"consensus-synthesizer": 30, "artifact-author": 60, "codebase-analyst": 60}
+RESERVE_CLAUSE_ROLES = ("consensus-synthesizer", "artifact-author")
+
+
+def claude_max_turns(name: str) -> int:
+    frontmatter = (CLAUDE_DIR / f"{name}.md").read_text(encoding="utf-8").split("\n---\n", 1)[0]
+    match = re.search(r"^maxTurns: (\d+)$", frontmatter, re.M)
+    if match is None:
+        raise AssertionError(f"{name}: no maxTurns in frontmatter")
+    return int(match.group(1))
+
+
 def claude_body(name: str) -> str:
     text = (CLAUDE_DIR / f"{name}.md").read_text(encoding="utf-8")
     return text.split("\n---\n", 1)[1]
@@ -97,6 +109,24 @@ class AgentTerminalContractTests(unittest.TestCase):
             with self.subTest(codex=name):
                 self.assertIn("`Protocol:` line", instructions)
                 self.assertIn("**Protocol:** <", codex_policy(name)["developer_instructions"])
+
+    def test_turn_budgets_leave_room_for_the_report(self) -> None:
+        # Each of these ran out of turns mid-task in a plan-stage run and
+        # returned nothing until resumed.
+        for name, budget in TURN_BUDGETS.items():
+            with self.subTest(agent=name):
+                self.assertEqual(claude_max_turns(name), budget)
+
+    def test_budget_bound_roles_reserve_their_last_turns_for_partial_results(self) -> None:
+        for name in RESERVE_CLAUSE_ROLES:
+            for platform, text in (
+                ("claude", claude_body(name)),
+                ("codex", codex_policy(name)["developer_instructions"]),
+            ):
+                flat = " ".join(text.split())
+                with self.subTest(agent=name, platform=platform):
+                    self.assertIn("Reserve your last turns for the result.", flat)
+                    self.assertIn("rather than nothing", flat)
 
     def test_consensus_synthesizer_is_read_only_terminal_and_evidence_closed(self) -> None:
         policy = codex_policy("consensus-synthesizer")
