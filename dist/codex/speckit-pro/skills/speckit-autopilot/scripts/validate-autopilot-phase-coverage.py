@@ -1956,7 +1956,11 @@ def _shared_checkpoint_content_errors(
                 continue
             current_blob = current_tree.get(path)
             owns_path = marker.get("id") in expected_owners[path]
-            if owns_path and (current_blob is None or current_blob == previous_blob):
+            if owns_path and current_blob is None:
+                errors.append(
+                    f"shared marker path {path} is missing at declared checkpoint {marker_index}"
+                )
+            elif owns_path and current_blob == previous_blob:
                 errors.append(
                     f"shared marker path {path} is unchanged at declared checkpoint {marker_index}"
                 )
@@ -2173,6 +2177,8 @@ def validate_changed_file_manifest(
         marker_values = _string_list(marker_ids)
         if marker_values is None or not marker_values:
             structural_errors.append(f"files[{index}].marker_ids must contain a marker owner")
+        elif len(set(marker_values)) != len(marker_values):
+            structural_errors.append(f"files[{index}].marker_ids must not repeat a marker owner")
         elif len(marker_values) > 1 and (
             operation != "MODIFIED" or entry.get("category") == "process"
         ):
