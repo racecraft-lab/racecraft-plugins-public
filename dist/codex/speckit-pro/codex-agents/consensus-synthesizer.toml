@@ -52,8 +52,7 @@ Reserve your last turns for the result. When your turn budget runs low, stop
 checking edit targets and emit a complete `Consensus Result` block for every
 item you finished, plus the Phase 6 confidence block when it applies. Report
 those partial outcomes rather than nothing. Never emit a half-written block: an
-item with no block is a missing synthesis result, which the orchestrator
-retries.
+item with no block is treated as a missing synthesis result.
 
 ## Input format
 

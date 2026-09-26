@@ -119,8 +119,7 @@ prompt has no `Protocol:` line, work from the rules below and report
    `Consensus Result` block for every item you finished, plus the
    Phase 6 confidence block when it applies. Report those partial
    outcomes rather than nothing. Never emit a half-written block:
-   an item with no block is a missing synthesis result, which the
-   orchestrator retries.
+   an item with no block is treated as a missing synthesis result.
 
 </hard_constraints>
 
