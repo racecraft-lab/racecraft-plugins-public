@@ -50,9 +50,9 @@ ownership from the caller's current workflow.
   `dispatch_id`, `action=dispatch_result`, and matching
   `outcome=completed|failed|expected_tdd_red`. Without that genuine event,
   unknown remains a checkpoint; worker text or a receipt cannot clear it.
-- `authorize-corrective-retry`: after a corrective reservation owner has a
-  recovered, failed host result caused by infrastructure, and the operator has
-  explicitly approved recovery, atomically reserve one retry under that same
+- `authorize-corrective-retry`: after a corrective reservation owner's
+  dispatch has failed because of an infrastructure error in the host result,
+  and the operator has explicitly approved recovery, atomically reserve one retry under that same
   reservation. Pass a new `dispatch_id`, the original `failed_dispatch_id` and
   `reservation_id`, plus a parent `native_observation` with the operator's
   actual `native_event_id`, `run_id`, `action=corrective_retry_approved`,
