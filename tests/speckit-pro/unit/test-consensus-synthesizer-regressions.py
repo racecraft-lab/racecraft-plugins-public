@@ -121,6 +121,7 @@ class ConsensusSynthesizerRegressionTests(unittest.TestCase):
         for path in EXECUTORS:
             flat = " ".join(path.read_text(encoding="utf-8").split())
             with self.subTest(path=f"{path.parent.name}/{path.name}"):
+                self.assertNotIn("contains a security keyword (always", flat)
                 self.assertIn("substance is about security", flat)
                 self.assertIn("A security keyword alone needs no tag", flat)
 
