@@ -1,0 +1,466 @@
+{
+  "schema_version": "task-execution.v1",
+  "fingerprints": {
+    "plan_sha256": "9ce69bf6cbe2151db68d2a2737db593a879149ffbd0489c05ab775a148f23be1",
+    "spec_sha256": "52481b25ec692937c47adb4f8db9b0a6d73385ba431ea0ee70160258a738d0d7",
+    "tasks_sha256": "e2a555ce5b51b7a50e41bab7ca9b6c1930ffa94b4d95b5189e96183d60d7b390"
+  },
+  "tasks": {
+    "T001": {
+      "capability_group": "scope-readiness",
+      "depends_on": [],
+      "owns": [
+        "specs/eda-001-attribution-foundation/plan.md",
+        "specs/eda-001-attribution-foundation/tasks.md",
+        ".specify/presets/speckit-pro-reviewability",
+        ".specify/memory/constitution.md",
+        "AGENTS.md",
+        "speckit-pro/AGENTS.md",
+        "tests/speckit-pro/AGENTS.md",
+        "docs-site/AGENTS.md"
+      ],
+      "tdd_unit": "scope-readiness"
+    },
+    "T002": {
+      "capability_group": "frozen-source-evidence",
+      "depends_on": [
+        "T001"
+      ],
+      "owns": [
+        "tests/speckit-pro/unit/fixtures/upstream-skill-attribution/mattpocock-LICENSE.txt",
+        "tests/speckit-pro/unit/fixtures/upstream-skill-attribution/inventory.json",
+        "specs/eda-001-attribution-foundation/data-model.md",
+        "LICENSE"
+      ],
+      "tdd_unit": "matt-evidence"
+    },
+    "T003": {
+      "capability_group": "synthetic-credit-evidence",
+      "depends_on": [
+        "T001"
+      ],
+      "owns": [
+        "tests/speckit-pro/unit/fixtures/upstream-skill-attribution/credit-cases.json",
+        "specs/eda-001-attribution-foundation/contracts/credits.md"
+      ],
+      "tdd_unit": "credit-evidence"
+    },
+    "T004": {
+      "capability_group": "frozen-ledger-evidence",
+      "depends_on": [
+        "T002",
+        "T003"
+      ],
+      "owns": [
+        "tests/speckit-pro/unit/fixtures/upstream-skill-attribution/valid-ledger.json",
+        "tests/speckit-pro/unit/fixtures/upstream-skill-attribution/inventory.json",
+        "docs/ai/specs/engineering-discipline-adoption-technical-roadmap.md",
+        "specs/eda-001-attribution-foundation/data-model.md"
+      ],
+      "tdd_unit": "zero-landed-evidence"
+    },
+    "T005": {
+      "capability_group": "matt-notice",
+      "depends_on": [
+        "T004"
+      ],
+      "owns": [
+        "tests/speckit-pro/unit/test-upstream-skill-attribution.py",
+        "tests/speckit-pro/unit/fixtures/upstream-skill-attribution",
+        "speckit-pro/skills/speckit-coach/references/upstream/mattpocock-skills/UPSTREAM-NOTICE.md",
+        "speckit-pro/skills/speckit-coach/references/upstream/mattpocock-skills/ledger.json",
+        "speckit-pro/README.md",
+        "LICENSE"
+      ],
+      "tdd_unit": "matt-notice"
+    },
+    "T006": {
+      "capability_group": "matt-notice",
+      "depends_on": [
+        "T005"
+      ],
+      "owns": [
+        "tests/speckit-pro/unit/test-upstream-skill-attribution.py",
+        "tests/speckit-pro/unit/fixtures/upstream-skill-attribution",
+        "speckit-pro/skills/speckit-coach/references/upstream/mattpocock-skills/UPSTREAM-NOTICE.md",
+        "speckit-pro/skills/speckit-coach/references/upstream/mattpocock-skills/ledger.json",
+        "speckit-pro/README.md",
+        "LICENSE"
+      ],
+      "tdd_unit": "matt-notice"
+    },
+    "T007": {
+      "capability_group": "ledger-contract",
+      "depends_on": [
+        "T006"
+      ],
+      "owns": [
+        "tests/speckit-pro/unit/test-upstream-skill-attribution.py",
+        "tests/speckit-pro/unit/fixtures/upstream-skill-attribution",
+        "speckit-pro/skills/speckit-coach/references/upstream/mattpocock-skills/ledger.json",
+        "speckit-pro/skills/speckit-coach/references/upstream/mattpocock-skills/UPSTREAM-NOTICE.md"
+      ],
+      "tdd_unit": "ledger-contract"
+    },
+    "T008": {
+      "capability_group": "ledger-contract",
+      "depends_on": [
+        "T007"
+      ],
+      "owns": [
+        "tests/speckit-pro/unit/test-upstream-skill-attribution.py",
+        "tests/speckit-pro/unit/fixtures/upstream-skill-attribution",
+        "speckit-pro/skills/speckit-coach/references/upstream/mattpocock-skills/ledger.json",
+        "speckit-pro/skills/speckit-coach/references/upstream/mattpocock-skills/UPSTREAM-NOTICE.md"
+      ],
+      "tdd_unit": "ledger-contract"
+    },
+    "T009": {
+      "capability_group": "destination-selection",
+      "depends_on": [
+        "T008"
+      ],
+      "owns": [
+        "tests/speckit-pro/unit/test-upstream-skill-attribution.py",
+        "tests/speckit-pro/unit/fixtures/upstream-skill-attribution",
+        "speckit-pro/skills/speckit-coach/references/upstream/mattpocock-skills/ledger.json",
+        "speckit-pro/skills/speckit-coach/references/upstream/mattpocock-skills/UPSTREAM-NOTICE.md"
+      ],
+      "tdd_unit": "destination-selection"
+    },
+    "T010": {
+      "capability_group": "destination-selection",
+      "depends_on": [
+        "T009"
+      ],
+      "owns": [
+        "tests/speckit-pro/unit/test-upstream-skill-attribution.py",
+        "tests/speckit-pro/unit/fixtures/upstream-skill-attribution",
+        "speckit-pro/skills/speckit-coach/references/upstream/mattpocock-skills/ledger.json",
+        "speckit-pro/skills/speckit-coach/references/upstream/mattpocock-skills/UPSTREAM-NOTICE.md"
+      ],
+      "tdd_unit": "destination-selection"
+    },
+    "T011": {
+      "capability_group": "credit-headers",
+      "depends_on": [
+        "T010"
+      ],
+      "owns": [
+        "tests/speckit-pro/unit/test-upstream-skill-attribution.py",
+        "tests/speckit-pro/unit/fixtures/upstream-skill-attribution",
+        "speckit-pro/skills/speckit-coach/references/upstream/mattpocock-skills/ledger.json",
+        "speckit-pro/skills/speckit-coach/references/upstream/mattpocock-skills/UPSTREAM-NOTICE.md"
+      ],
+      "tdd_unit": "credit-headers"
+    },
+    "T012": {
+      "capability_group": "credit-headers",
+      "depends_on": [
+        "T011"
+      ],
+      "owns": [
+        "tests/speckit-pro/unit/test-upstream-skill-attribution.py",
+        "tests/speckit-pro/unit/fixtures/upstream-skill-attribution",
+        "speckit-pro/skills/speckit-coach/references/upstream/mattpocock-skills/ledger.json",
+        "speckit-pro/skills/speckit-coach/references/upstream/mattpocock-skills/UPSTREAM-NOTICE.md"
+      ],
+      "tdd_unit": "credit-headers"
+    },
+    "T013": {
+      "capability_group": "credit-metadata",
+      "depends_on": [
+        "T012"
+      ],
+      "owns": [
+        "tests/speckit-pro/unit/test-upstream-skill-attribution.py",
+        "tests/speckit-pro/unit/fixtures/upstream-skill-attribution",
+        "speckit-pro/skills/speckit-coach/references/upstream/mattpocock-skills/ledger.json",
+        "speckit-pro/skills/speckit-coach/references/upstream/mattpocock-skills/UPSTREAM-NOTICE.md"
+      ],
+      "tdd_unit": "credit-metadata"
+    },
+    "T014": {
+      "capability_group": "credit-metadata",
+      "depends_on": [
+        "T013"
+      ],
+      "owns": [
+        "tests/speckit-pro/unit/test-upstream-skill-attribution.py",
+        "tests/speckit-pro/unit/fixtures/upstream-skill-attribution",
+        "speckit-pro/skills/speckit-coach/references/upstream/mattpocock-skills/ledger.json",
+        "speckit-pro/skills/speckit-coach/references/upstream/mattpocock-skills/UPSTREAM-NOTICE.md"
+      ],
+      "tdd_unit": "credit-metadata"
+    },
+    "T015": {
+      "capability_group": "attribution-suite",
+      "depends_on": [
+        "T014"
+      ],
+      "owns": [
+        "tests/speckit-pro/unit/test-upstream-skill-attribution.py",
+        "tests/speckit-pro/unit/fixtures/upstream-skill-attribution",
+        "speckit-pro/skills/speckit-coach/references/upstream/mattpocock-skills/ledger.json",
+        "speckit-pro/skills/speckit-coach/references/upstream/mattpocock-skills/UPSTREAM-NOTICE.md",
+        "tests/speckit-pro/suite-manifest.json"
+      ],
+      "tdd_unit": "attribution-suite"
+    },
+    "T016": {
+      "capability_group": "attribution-suite",
+      "depends_on": [
+        "T015"
+      ],
+      "owns": [
+        "tests/speckit-pro/unit/test-upstream-skill-attribution.py",
+        "tests/speckit-pro/unit/fixtures/upstream-skill-attribution",
+        "speckit-pro/skills/speckit-coach/references/upstream/mattpocock-skills/ledger.json",
+        "speckit-pro/skills/speckit-coach/references/upstream/mattpocock-skills/UPSTREAM-NOTICE.md",
+        "tests/speckit-pro/suite-manifest.json"
+      ],
+      "tdd_unit": "attribution-suite"
+    },
+    "T017": {
+      "capability_group": "slice-one-package",
+      "depends_on": [
+        "T016"
+      ],
+      "owns": [
+        "dist",
+        "speckit-pro",
+        "tests/speckit-pro",
+        "scripts",
+        ".claude-plugin",
+        ".codex-plugin",
+        "README.md",
+        "docs-site/src",
+        "docs-site/scripts",
+        "docs-site/public",
+        "docs-site/tests",
+        "docs-site/AGENTS.md",
+        "docs-site/astro.config.mjs",
+        "docs-site/package.json",
+        "docs-site/playwright.config.mjs",
+        "docs-site/playwright.gallery.config.mjs",
+        "docs-site/pnpm-lock.yaml",
+        "docs-site/tsconfig.json"
+      ],
+      "tdd_unit": "slice-one-package"
+    },
+    "T018": {
+      "capability_group": "slice-one-verify",
+      "depends_on": [
+        "T017"
+      ],
+      "owns": [
+        "dist",
+        "speckit-pro",
+        "tests/speckit-pro",
+        "scripts",
+        ".claude-plugin",
+        ".codex-plugin",
+        "README.md",
+        "specs/eda-001-attribution-foundation/quickstart.md",
+        "docs-site/src",
+        "docs-site/scripts",
+        "docs-site/public",
+        "docs-site/tests",
+        "docs-site/AGENTS.md",
+        "docs-site/astro.config.mjs",
+        "docs-site/package.json",
+        "docs-site/playwright.config.mjs",
+        "docs-site/playwright.gallery.config.mjs",
+        "docs-site/pnpm-lock.yaml",
+        "docs-site/tsconfig.json"
+      ],
+      "tdd_unit": "slice-one-verify"
+    },
+    "T019": {
+      "capability_group": "slice-one-review",
+      "depends_on": [
+        "T018"
+      ],
+      "owns": [
+        "dist",
+        "speckit-pro",
+        "tests/speckit-pro",
+        "scripts",
+        ".claude-plugin",
+        ".codex-plugin",
+        "README.md",
+        "specs/eda-001-attribution-foundation/plan.md",
+        "specs/eda-001-attribution-foundation/quickstart.md",
+        ".gitattributes",
+        "docs-site/src",
+        "docs-site/scripts",
+        "docs-site/public",
+        "docs-site/tests",
+        "docs-site/AGENTS.md",
+        "docs-site/astro.config.mjs",
+        "docs-site/package.json",
+        "docs-site/playwright.config.mjs",
+        "docs-site/playwright.gallery.config.mjs",
+        "docs-site/pnpm-lock.yaml",
+        "docs-site/tsconfig.json"
+      ],
+      "tdd_unit": "slice-one-review"
+    },
+    "T020": {
+      "capability_group": "humanlayer-evidence",
+      "depends_on": [
+        "T019"
+      ],
+      "owns": [
+        "tests/speckit-pro/unit/fixtures/upstream-skill-attribution/humanlayer-LICENSE.txt",
+        "LICENSE"
+      ],
+      "tdd_unit": "humanlayer-evidence"
+    },
+    "T021": {
+      "capability_group": "humanlayer-notice",
+      "depends_on": [
+        "T020"
+      ],
+      "owns": [
+        "tests/speckit-pro/unit/test-upstream-skill-attribution.py",
+        "tests/speckit-pro/unit/fixtures/upstream-skill-attribution",
+        "speckit-pro/skills/speckit-coach/references/upstream/humanlayer-show-me/UPSTREAM-NOTICE.md",
+        "speckit-pro/skills/speckit-coach/references/upstream/mattpocock-skills/ledger.json",
+        "speckit-pro/skills/speckit-coach/references/upstream/mattpocock-skills/UPSTREAM-NOTICE.md",
+        "LICENSE"
+      ],
+      "tdd_unit": "humanlayer-notice"
+    },
+    "T022": {
+      "capability_group": "humanlayer-notice",
+      "depends_on": [
+        "T021"
+      ],
+      "owns": [
+        "tests/speckit-pro/unit/test-upstream-skill-attribution.py",
+        "tests/speckit-pro/unit/fixtures/upstream-skill-attribution",
+        "speckit-pro/skills/speckit-coach/references/upstream/humanlayer-show-me/UPSTREAM-NOTICE.md",
+        "speckit-pro/skills/speckit-coach/references/upstream/mattpocock-skills/ledger.json",
+        "speckit-pro/skills/speckit-coach/references/upstream/mattpocock-skills/UPSTREAM-NOTICE.md",
+        "LICENSE"
+      ],
+      "tdd_unit": "humanlayer-notice"
+    },
+    "T023": {
+      "capability_group": "transitive-linkage",
+      "depends_on": [
+        "T022"
+      ],
+      "owns": [
+        "tests/speckit-pro/unit/test-upstream-skill-attribution.py",
+        "tests/speckit-pro/unit/fixtures/upstream-skill-attribution",
+        "speckit-pro/skills/speckit-coach/references/upstream/humanlayer-show-me/UPSTREAM-NOTICE.md",
+        "speckit-pro/skills/speckit-coach/references/upstream/mattpocock-skills/ledger.json",
+        "speckit-pro/skills/speckit-coach/references/upstream/mattpocock-skills/UPSTREAM-NOTICE.md",
+        "LICENSE"
+      ],
+      "tdd_unit": "transitive-linkage"
+    },
+    "T024": {
+      "capability_group": "transitive-linkage",
+      "depends_on": [
+        "T023"
+      ],
+      "owns": [
+        "tests/speckit-pro/unit/test-upstream-skill-attribution.py",
+        "tests/speckit-pro/unit/fixtures/upstream-skill-attribution",
+        "speckit-pro/skills/speckit-coach/references/upstream/humanlayer-show-me/UPSTREAM-NOTICE.md",
+        "speckit-pro/skills/speckit-coach/references/upstream/mattpocock-skills/ledger.json",
+        "speckit-pro/skills/speckit-coach/references/upstream/mattpocock-skills/UPSTREAM-NOTICE.md",
+        "LICENSE"
+      ],
+      "tdd_unit": "transitive-linkage"
+    },
+    "T025": {
+      "capability_group": "final-package",
+      "depends_on": [
+        "T024"
+      ],
+      "owns": [
+        "dist",
+        "speckit-pro",
+        "tests/speckit-pro",
+        "scripts",
+        ".claude-plugin",
+        ".codex-plugin",
+        "README.md",
+        "docs-site/src",
+        "docs-site/scripts",
+        "docs-site/public",
+        "docs-site/tests",
+        "docs-site/AGENTS.md",
+        "docs-site/astro.config.mjs",
+        "docs-site/package.json",
+        "docs-site/playwright.config.mjs",
+        "docs-site/playwright.gallery.config.mjs",
+        "docs-site/pnpm-lock.yaml",
+        "docs-site/tsconfig.json"
+      ],
+      "tdd_unit": "final-package"
+    },
+    "T026": {
+      "capability_group": "final-verify",
+      "depends_on": [
+        "T025"
+      ],
+      "owns": [
+        "dist",
+        "speckit-pro",
+        "tests/speckit-pro",
+        "scripts",
+        ".claude-plugin",
+        ".codex-plugin",
+        "README.md",
+        "specs/eda-001-attribution-foundation/quickstart.md",
+        "docs-site/src",
+        "docs-site/scripts",
+        "docs-site/public",
+        "docs-site/tests",
+        "docs-site/AGENTS.md",
+        "docs-site/astro.config.mjs",
+        "docs-site/package.json",
+        "docs-site/playwright.config.mjs",
+        "docs-site/playwright.gallery.config.mjs",
+        "docs-site/pnpm-lock.yaml",
+        "docs-site/tsconfig.json"
+      ],
+      "tdd_unit": "final-verify"
+    },
+    "T027": {
+      "capability_group": "final-review",
+      "depends_on": [
+        "T026"
+      ],
+      "owns": [
+        "dist",
+        "speckit-pro",
+        "tests/speckit-pro",
+        "scripts",
+        ".claude-plugin",
+        ".codex-plugin",
+        "README.md",
+        "specs/eda-001-attribution-foundation/plan.md",
+        "specs/eda-001-attribution-foundation/quickstart.md",
+        ".gitattributes",
+        "docs-site/src",
+        "docs-site/scripts",
+        "docs-site/public",
+        "docs-site/tests",
+        "docs-site/AGENTS.md",
+        "docs-site/astro.config.mjs",
+        "docs-site/package.json",
+        "docs-site/playwright.config.mjs",
+        "docs-site/playwright.gallery.config.mjs",
+        "docs-site/pnpm-lock.yaml",
+        "docs-site/tsconfig.json"
+      ],
+      "tdd_unit": "final-review"
+    }
+  }
+}
