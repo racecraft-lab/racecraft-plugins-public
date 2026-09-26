@@ -194,6 +194,69 @@ class LayerExecutionRegressionTests(unittest.TestCase):
                         expected,
                     )
 
+    def test_failing_child_prints_its_failing_test_ids_and_traceback_tails(self) -> None:
+        layer = {
+            "id": "4",
+            "label": "Script unit tests",
+            "integration": False,
+            "scripts": [{"path": "tests/speckit-pro/nested-aggregate.py"}],
+        }
+        long_traceback = [f'  File "child.py", line {index}, in test_first' for index in range(60)]
+        child_output = "\n".join(
+            [
+                "nested-aggregate: 1/3 passed",
+                "nested-aggregate FAILED child.Case.test_first",
+                "Traceback (most recent call last):",
+                *long_traceback,
+                "AssertionError: first broke",
+                "nested-aggregate FAILED child.Case.test_second",
+                "Traceback (most recent call last):",
+                "AssertionError: second broke",
+            ]
+        ) + "\n"
+        output = io.StringIO()
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            child = root / layer["scripts"][0]["path"]
+            child.parent.mkdir(parents=True)
+            child.touch()
+            with (
+                mock.patch.object(run_all, "dispatch_script", return_value=(child_output, 1)),
+                contextlib.redirect_stdout(output),
+            ):
+                run_all.run_execute_layer(layer, run_all.parse_args(["--layer", "4"]), root)
+        printed = output.getvalue()
+        self.assertIn("FAIL nested-aggregate (1/3, 2 failed)", printed)
+        self.assertIn("nested-aggregate FAILED child.Case.test_first", printed)
+        self.assertIn("AssertionError: first broke", printed)
+        self.assertIn("nested-aggregate FAILED child.Case.test_second", printed)
+        self.assertIn("AssertionError: second broke", printed)
+        self.assertNotIn(long_traceback[0] + "\n", printed)
+
+    def test_passing_child_prints_no_failure_detail(self) -> None:
+        layer = {
+            "id": "4",
+            "label": "Script unit tests",
+            "integration": False,
+            "scripts": [{"path": "tests/speckit-pro/nested-aggregate.py"}],
+        }
+        output = io.StringIO()
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            child = root / layer["scripts"][0]["path"]
+            child.parent.mkdir(parents=True)
+            child.touch()
+            with (
+                mock.patch.object(
+                    run_all,
+                    "dispatch_script",
+                    return_value=("warning on stderr\nnested-aggregate: 2/2 passed\n", 0),
+                ),
+                contextlib.redirect_stdout(output),
+            ):
+                run_all.run_execute_layer(layer, run_all.parse_args(["--layer", "4"]), root)
+        self.assertNotIn("warning on stderr", output.getvalue())
+
     def test_integration_layer_uses_its_aggregate_summary_once(self) -> None:
         layer = {
             "id": "7",
