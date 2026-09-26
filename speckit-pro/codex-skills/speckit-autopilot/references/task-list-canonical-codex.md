@@ -192,7 +192,9 @@ Both shapes are in
 Before Phase 7, `--rule status-evidence` validates the receipt's schema and
 planning bytes, replays its execution-boundary digest against the current
 `--current-*` values, and checks each action's boundary binding,
-authorization scope, and disposition consistency:
+authorization scope, and disposition consistency. It also reads the private
+file named by the state's `execution_control.run_id` and fails unless its
+canonical digest equals `private_record_sha256`:
 
 ```json
 {
@@ -235,9 +237,9 @@ authorization scope, and disposition consistency:
 }
 ```
 
-The private file behind that receipt holds the complete v1 `autonomy_boundary`
-object below. That object's canonical JSON digest is the receipt's
-`private_record_sha256`:
+The private file behind that receipt holds the complete v1 object under the
+`autonomy_boundary` key below, without the key. That object's canonical JSON
+digest is the receipt's `private_record_sha256`:
 
 ```json
 {

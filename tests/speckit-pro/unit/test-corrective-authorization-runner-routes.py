@@ -49,6 +49,10 @@ def _field(value: object, dotted: str) -> object:
 
 class CorrectiveAuthorizationReplayTests(unittest.TestCase):
     def setUp(self) -> None:
+        self.reset_repository()
+
+    def reset_repository(self) -> None:
+        """Give each scenario a fresh consumer repository and no ledger."""
         temporary = tempfile.TemporaryDirectory()
         self.addCleanup(temporary.cleanup)
         self.root = Path(temporary.name)
@@ -129,7 +133,7 @@ class CorrectiveAuthorizationReplayTests(unittest.TestCase):
         for name in SCENARIOS:
             scenario = json.loads((FIXTURE_ROOT / name).read_text(encoding="utf-8"))
             self.assertEqual(scenario["schema"], "corrective-authorization-replay/v1")
-            self.setUp()
+            self.reset_repository()
             for step in scenario["steps"]:
                 with self.subTest(scenario=name, step=step["id"]):
                     if "place_spec" in step:

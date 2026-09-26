@@ -173,6 +173,37 @@ def autonomy_public_receipt(record: dict[str, object]) -> dict[str, object]:
         "private_record_sha256": VALIDATOR_MODULE._canonical_json_sha256(record),
     }
 
+
+AUTONOMY_RUN_ID = "0" * 32
+
+
+def autonomy_execution_control(run_id: str = AUTONOMY_RUN_ID) -> dict[str, object]:
+    """The state's execution-control mirror; its run id locates the private record."""
+    return {
+        "ledger_path": ".process/execution-control/workflow.json",
+        "run_id": run_id,
+        "disposition": "continue",
+        "reasons": [],
+        "elapsed_seconds": 0,
+        "checkpoint_due": False,
+    }
+
+
+def write_autonomy_private_record(
+    repo_root: Path, record: object, run_id: str = AUTONOMY_RUN_ID,
+) -> Path:
+    """Write the private record owner-only where the full guard reads it.
+
+    `repo_root` must be a `git init` checkout, so its git common directory is
+    `repo_root/.git`.
+    """
+    directory = repo_root / ".git" / "speckit-pro" / "autonomy-boundary"
+    directory.mkdir(parents=True, exist_ok=True, mode=0o700)
+    path = directory / f"{run_id}.json"
+    path.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
+    path.chmod(0o600)
+    return path
+
 POST_STEPS = [
     "Post: Doctor Extension Check",
     "Post: Verify Implementation",
@@ -3413,6 +3444,7 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
         state = state_json()
         state["workflow_file"] = "workflow.md"
         state["stage"] = "implement"
+        state["execution_control"] = autonomy_execution_control()
         state[boundary_key] = boundary
         return state
 
@@ -3423,10 +3455,11 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
         current_roots = [temp_root, home_root]
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
-            (root / ".git").mkdir()
+            subprocess.run(["git", "init", "-q", str(root)], check=True)
             record = autonomy_private_record(root, current_roots)
             receipt = autonomy_public_receipt(record)
             state = self.autonomy_state("autonomy_boundary", receipt)
+            write_autonomy_private_record(root, record)
 
             report = self.run_autonomy_guard(root, state, list(reversed(current_roots)))
             self.assertEqual(report["autonomy_boundary_errors"], [], report)

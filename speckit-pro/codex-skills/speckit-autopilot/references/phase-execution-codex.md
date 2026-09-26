@@ -1144,10 +1144,14 @@ The full guard replays the receipt without the private roots. It recomputes
 the execution-boundary digest from the live `--current-*` values and compares
 it with the receipt's `execution_boundary.sha256`, then checks each action's
 `execution_boundary_sha256`, its authorization `scope_sha256`, and the
-dispositions. Recompute an action's `scope_sha256` from the private record,
-after confirming the record's canonical digest still equals
-`private_record_sha256`. Never drop `--require-autonomy-boundary` or a
-`--current-*` value to get a passing check; the receipt passes the full guard.
+dispositions. It also opens the private record at the location above, taking
+`<run-id>` from the state's `execution_control.run_id` mirror, and fails closed
+when that mirror is absent, the record is missing, unreadable, or not valid
+JSON, or its canonical digest differs from `private_record_sha256`. Keep that
+mirror current, since the guard cannot locate the record without it. Recompute
+an action's `scope_sha256` from the verified private record. Never drop
+`--require-autonomy-boundary` or a `--current-*` value to get a passing check;
+the receipt passes the full guard.
 
 An in-flight state may hold the earlier `autonomy_boundary_private_receipt`
 object (`status`, `sha256`, `public_details`, `validation`, `contract_gap`)

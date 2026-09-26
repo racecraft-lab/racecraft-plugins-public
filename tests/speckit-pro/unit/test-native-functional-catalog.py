@@ -696,6 +696,17 @@ def _normalized(text: str) -> str:
     return " ".join(text.split())
 
 
+def _stdout_json(result: subprocess.CompletedProcess[str], label: str) -> dict:
+    """Parse a subprocess's JSON stdout, or fail with its exit code and stderr."""
+    try:
+        return json.loads(result.stdout)
+    except json.JSONDecodeError as error:
+        raise AssertionError(
+            f"{label} exited {result.returncode} without JSON stdout ({error}); "
+            f"stdout={result.stdout[:2000]!r} stderr={result.stderr[:2000]!r}"
+        ) from None
+
+
 def _run_coverage_guard(workflow: Path, state: Path) -> dict:
     script = (
         REPO_ROOT / "speckit-pro" / "skills" / "speckit-autopilot" / "scripts"
@@ -706,7 +717,7 @@ def _run_coverage_guard(workflow: Path, state: Path) -> dict:
          "--rule", "coverage"],
         text=True, capture_output=True, check=False,
     )
-    return json.loads(result.stdout)
+    return _stdout_json(result, "validate-autopilot-phase-coverage.py")
 
 
 def _derive_orchestration_answers(case: dict) -> dict:
@@ -804,7 +815,7 @@ def _run_reviewability_request(case: dict, *, spec_scoped: bool = True) -> tuple
             text=True, capture_output=True, cwd=root, check=False,
             env={**os.environ, "PYTHONPATH": str(REPO_ROOT / "speckit-pro")},
         )
-        return result.returncode, json.loads(result.stdout)["data"]["stdout_json"]
+        return result.returncode, _stdout_json(result, "speckit_pro_runner")["data"]["stdout_json"]
 
 
 class NativeFunctionalCatalogTests(unittest.TestCase):
