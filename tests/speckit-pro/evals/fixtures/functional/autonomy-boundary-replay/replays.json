@@ -234,7 +234,7 @@
     },
     {
       "id": "tampered-private-record",
-      "description": "A private record changed after its receipt was published fails the agent-side digest check; the validator never reads the private record, so the guard alone still passes.",
+      "description": "A private record changed after its receipt was published no longer hashes to private_record_sha256, so the full guard fails.",
       "boundary": "receipt",
       "private_record": "tampered",
       "require_autonomy_boundary": true,
@@ -248,14 +248,16 @@
         "checkout"
       ],
       "expect": {
-        "passes": true,
-        "autonomy_boundary_errors": [],
+        "passes": false,
+        "autonomy_boundary_errors": [
+          "autonomy boundary private record does not match private_record_sha256"
+        ],
         "private_record_matches": false
       }
     },
     {
       "id": "tampered-receipt-digest",
-      "description": "A receipt whose private_record_sha256 was rewritten fails the agent-side digest check.",
+      "description": "A receipt whose private_record_sha256 was rewritten no longer matches the private record, so the full guard fails.",
       "boundary": "receipt",
       "private_record": "receipt-rewritten",
       "require_autonomy_boundary": true,
@@ -269,8 +271,125 @@
         "checkout"
       ],
       "expect": {
-        "passes": true,
-        "autonomy_boundary_errors": [],
+        "passes": false,
+        "autonomy_boundary_errors": [
+          "autonomy boundary private record does not match private_record_sha256"
+        ],
+        "private_record_matches": false
+      }
+    },
+    {
+      "id": "missing-private-record",
+      "description": "A receipt whose private record is missing fails the full guard.",
+      "boundary": "receipt",
+      "private_record": "missing",
+      "require_autonomy_boundary": true,
+      "current": {
+        "--current-execution-environment": "local",
+        "--current-sandbox-mode": "workspace-write",
+        "--current-approval-reviewer": "auto_review"
+      },
+      "current_writable_roots": [
+        "shared",
+        "checkout"
+      ],
+      "expect": {
+        "passes": false,
+        "autonomy_boundary_errors": [
+          "autonomy boundary private record is missing or unreadable"
+        ],
+        "private_record_matches": false
+      }
+    },
+    {
+      "id": "unreadable-private-record",
+      "description": "A receipt whose private record path cannot be read as a file fails the full guard.",
+      "boundary": "receipt",
+      "private_record": "unreadable",
+      "require_autonomy_boundary": true,
+      "current": {
+        "--current-execution-environment": "local",
+        "--current-sandbox-mode": "workspace-write",
+        "--current-approval-reviewer": "auto_review"
+      },
+      "current_writable_roots": [
+        "shared",
+        "checkout"
+      ],
+      "expect": {
+        "passes": false,
+        "autonomy_boundary_errors": [
+          "autonomy boundary private record is missing or unreadable"
+        ],
+        "private_record_matches": false
+      }
+    },
+    {
+      "id": "symlinked-private-record",
+      "description": "A receipt whose private record is a symlink to a matching file fails the full guard.",
+      "boundary": "receipt",
+      "private_record": "symlinked",
+      "require_autonomy_boundary": true,
+      "current": {
+        "--current-execution-environment": "local",
+        "--current-sandbox-mode": "workspace-write",
+        "--current-approval-reviewer": "auto_review"
+      },
+      "current_writable_roots": [
+        "shared",
+        "checkout"
+      ],
+      "expect": {
+        "passes": false,
+        "autonomy_boundary_errors": [
+          "autonomy boundary private record is missing or unreadable"
+        ],
+        "private_record_matches": false
+      }
+    },
+    {
+      "id": "unparseable-private-record",
+      "description": "A receipt whose private record is not valid JSON fails the full guard.",
+      "boundary": "receipt",
+      "private_record": "unparseable",
+      "require_autonomy_boundary": true,
+      "current": {
+        "--current-execution-environment": "local",
+        "--current-sandbox-mode": "workspace-write",
+        "--current-approval-reviewer": "auto_review"
+      },
+      "current_writable_roots": [
+        "shared",
+        "checkout"
+      ],
+      "expect": {
+        "passes": false,
+        "autonomy_boundary_errors": [
+          "autonomy boundary private record is not valid JSON"
+        ],
+        "private_record_matches": false
+      }
+    },
+    {
+      "id": "unlocatable-private-record",
+      "description": "A state without the execution_control.run_id mirror cannot locate the private record, so the full guard fails.",
+      "boundary": "receipt",
+      "private_record": "unlocatable",
+      "require_autonomy_boundary": true,
+      "current": {
+        "--current-execution-environment": "local",
+        "--current-sandbox-mode": "workspace-write",
+        "--current-approval-reviewer": "auto_review"
+      },
+      "current_writable_roots": [
+        "shared",
+        "checkout"
+      ],
+      "expect": {
+        "passes": false,
+        "autonomy_boundary_errors": [
+          "autonomy boundary private record cannot be located: autopilot_state.execution_control.run_id is missing or malformed"
+        ],
         "private_record_matches": false
       }
     }

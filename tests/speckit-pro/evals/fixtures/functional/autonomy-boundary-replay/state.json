@@ -100,5 +100,13 @@
       "status": "pending"
     }
   ],
-  "stage": "implement"
+  "stage": "implement",
+  "execution_control": {
+    "ledger_path": ".process/execution-control/workflow.json",
+    "run_id": "00000000000000000000000000000000",
+    "disposition": "continue",
+    "reasons": [],
+    "elapsed_seconds": 0,
+    "checkpoint_due": false
+  }
 }
