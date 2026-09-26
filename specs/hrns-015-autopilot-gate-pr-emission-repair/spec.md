@@ -9,9 +9,7 @@
 
 ## User Scenarios & Testing *(mandatory)*
 
-The user first ratified A → B → C1a → C1b → C2 after C1 exceeded the delivery cap. The complete generated-path inventory later proved A, B, and C2 also exceed the cap, and C1a's new test adds a generated reference path. The proposed eleven-PR order is A1 → A2 → A3 → B1 → B2 → B3 → C1a1 → C1a2 → C1b → C2a → C2b, preserving Q11's full scope and sequence. [slice-inventory.md](.process/slice-inventory.md) names every planned candidate path, including repeated shared paths, with 15–24 candidates per increment. This is a proposed allocation: actual reviewable LOC, final changed paths, and a valid current `pr_marker_plan` remain unverified. Each story is independently demonstrable on both supported hosts where host-facing, with a failing-first fixture before its fix.
-
-### Slice A — PR emission
+The user first ratified A → B → C1a → C1b → C2 after C1 exceeded the delivery cap. A complete path inventory later proved A, B, and C2 also exceed the cap. The 19-increment revision is A1a → A1b → A2 → A3 → B1a → B1b → B2a → B2b → B3a → B3b → C1a1 → C1a2 → C1b1 → C1b2 → C2a1 → C2a2 → C2a3 → C2b1 → C2b2. Every increment carries exactly one story identity; repeated parts use unique `usN-partK` marker IDs with `parent_marker_id=usN` and conservatively counts six recurring tracked workflow/process/evidence paths. [slice-inventory.md](.process/slice-inventory.md) names all 14–24 candidate paths per increment. A1a delivers a prefilled protected note; A1b completes the editable-field contract by changing both renderer and validator. This is a proposed allocation: actual reviewable LOC, final changed paths, and a valid current `pr_marker_plan` remain unverified. Each story remains independently demonstrable with failing-first acceptance cases and both host variants where host-facing.
 
 #### User Story 1 - Release note in the final packet (Priority: P1) [US1]
 
@@ -259,24 +257,25 @@ As an operator following a generated roadmap, I can open its workflow links at t
 - **FR-024** [US13]: Both hosts MUST provide complete, tested request envelopes for status `generate-spec-index-check` and `o5-topology`, scaffold reviewability and worktree placement, and phase index writing; the broader call-site sweep remains HRNS-019.
 - **FR-025** [US14]: New roadmap template workflow links and published path guidance MUST resolve to scaffold output under `docs/ai/specs/.process/`; updates to existing roadmaps MUST preserve verified legacy links that resolve to real workflow files and repair broken links to the actual output.
 - **FR-026** [US1–US14]: Every changed host-facing behavior MUST have equivalent Claude Code and Codex instructions in the same review slice and failing-first fixture evidence for its acceptance scenarios.
-- **FR-027** [US1–US14]: The PRD acceptance criteria AC-16.2, AC-16.5, AC-16.8, and AC-16.10, plus the HRNS-015 and HRNS-019 roadmap entries, MUST reflect the decided scope, eleven-increment proposed budget, and ownership of deferred work.
+- **FR-027** [US1–US14]: The PRD acceptance criteria AC-16.2, AC-16.5, AC-16.8, and AC-16.10, plus the HRNS-015 and HRNS-019 roadmap entries, MUST reflect the decided scope, 19-increment proposed budget, and ownership of deferred work.
 - **FR-028** [US6]: The documented 1.5x greenfield allowance MUST apply only to reviewable-LOC thresholds; production-file, total-file, and primary-surface limits MUST retain their ordinary thresholds.
 - **FR-029** [US6]: Setup MUST aggregate every declared slice budget for whole-feature reporting and evaluate each complete slice against the block thresholds, without borrowing another roadmap entry's values.
 
 ### Reviewability Notes
 
 - Typed reviewability exceptions remain rare, operator-owned overrides. Accepted classes remain `refactor`, `infra`, and `upgrade`; no fourth class is introduced. Generated templates, generated zones, `.process` files, PR bodies, and code fences are not valid provenance.
-- Each review slice is one reviewable PR, with both hosts represented for each behavior change. Proposed review order is A1 → A2 → A3 → B1 → B2 → B3 → C1a1 → C1a2 → C1b → C2a → C2b; A1/A2/A3 precede the rest because HRNS-016 depends on packet repair.
+- Each review slice is one reviewable PR, with both hosts represented for each behavior change. Proposed review order is A1a → A1b → A2 → A3 → B1a → B1b → B2a → B2b → B3a → B3b → C1a1 → C1a2 → C1b1 → C1b2 → C2a1 → C2a2 → C2a3 → C2b1 → C2b2; A1a/A1b/A2/A3 precede the rest because HRNS-016 depends on packet repair.
 
 ### Reviewability Budget *(mandatory)*
 
 - **Primary surface**: harness/adapter.
 - **Secondary surfaces**: schema/config and docs/process.
 - **Projected reviewable LOC**: Q11's 1,442-LOC four-slice sum and the legacy five-slice C1a 520/C1b 460 estimates are historical advisory evidence. The current estimator ignores required refactors, and no per-increment actual reviewable LOC or refactor-inclusive estimate is qualified.
-- **Projected production files**: 0–4 per proposed increment. Shared production files may recur in later PRs; count each PR's actual diff separately.
-- **Projected total files**: the eleven-increment candidate inventory lists A1 24, A2 16, A3 21, B1 22, B2 22, B3 17, C1a1 20, C1a2 15, C1b 23, C2a 18, and C2b 23 paths, including named fixtures, generated payloads, trust outputs, and conservative reference-page candidates. No count is an actual changed-file or LOC pass.
-- **Budget result**: all eleven **planned candidate** sets fit the 24-path and four-production ceiling. This does not qualify G6: actual LOC/diffs and current marker validation remain outstanding. Shared paths recur across PRs, and the installed marker validator rejects their duplicate declared ownership; resolve its contract before persisting a marker plan or emitting PRs.
-- **Split decision**: preserve full story and requirement scope in eleven proposed review increments. If a measured increment exceeds four production files or reaches 25 total files, split or rescope before implementation.
+- **Projected production files**: 0–2 per proposed increment. Shared production files may recur in later PRs; count each PR’s actual diff separately.
+- A production path may recur across ordered PRs only when it appears in each marker’s exact base/head diff. Count that path separately in each PR’s changed-path and LOC measurements. Overlap in candidate path lists alone does not establish a repeated changed path.
+- **Projected total files**: the 19-increment candidate inventory lists A1a 24, A1b 24, A2 24, A3 24, B1a 22, B1b 23, B2a 22, B2b 23, B3a 18, B3b 22, C1a1 24, C1a2 21, C1b1 21, C1b2 21, C2a1 14, C2a2 14, C2a3 14, C2b1 21, C2b2 22 paths. Each includes the six recurring tracked workflow/process/evidence candidates and relevant generated payload, trust, fixture, and reference paths. No count is an actual changed-file or LOC pass.
+- **Budget result**: all 19 **planned candidate** sets fit ≤4 production and ≤24 total paths. This does not qualify G6: actual LOC/diffs and current marker validation remain outstanding. The installed marker validator rejects legitimate sequential reuse; repair its contract before persisting a marker plan or emitting PRs.
+- **Split decision**: preserve all 14 stories and 29 FRs in 19 single-story proposed increments. If a measured increment exceeds four production files or reaches 25 total files, split or rescope before implementation.
 
 
 ### PR Review Packet Requirements *(mandatory)*
@@ -284,7 +283,7 @@ As an operator following a generated roadmap, I can open its workflow links at t
 - Each slice PR description MUST include what changed, why, non-goals, review order, scope budget, requirement traceability, verification evidence, known gaps, and rollback or feature-flag notes.
 - Traceability MUST map each major requirement or success criterion to changed files and failing-first verification evidence.
 - Deferred work MUST name HRNS-019 or another explicit follow-up. The packet repair and its release note MUST be represented in the final validated PR body.
-- Proposed review order is A1, A2, A3, B1, B2, B3, C1a1, C1a2, C1b, C2a, C2b. Final PR titles and bodies must pass the host repository's title and release-note policy.
+- Proposed review order is A1a → A1b → A2 → A3 → B1a → B1b → B2a → B2b → B3a → B3b → C1a1 → C1a2 → C1b1 → C1b2 → C2a1 → C2a2 → C2a3 → C2b1 → C2b2. Final PR titles and bodies must pass the host repository's title and release-note policy.
 
 ### Key Entities
 
@@ -352,7 +351,7 @@ As an operator following a generated roadmap, I can open its workflow links at t
 ## Assumptions
 
 - The design concept's Q1–Q11 answers are ratified scope decisions. Planning may choose the precise placement of the confidence verdict and the required-refactor signal's shape and weight, and must reconcile the slice budget values without changing their observable outcomes.
-- The user ratified five ordered PRs after Tasks, then directed resolution of the remaining path-cap blockers. The eleven-increment inventory is the resulting proposed full-scope allocation; it also corrects C1a's omitted generated `tests.md` path by splitting T018/T019. The advisory atomicity classifier remains `one-navigable-PR`; current marker-plan evidence, not a relabeled `split-PR` classifier or separate-run claim, must control multi-PR emission. The current marker validator rejects repeated shared paths across declared markers, so no valid `pr_marker_plan` or G6 pass is claimed until that contract is repaired and fresh fingerprint, scope, checkpoint, and hazard validation pass.
+- The user ratified five ordered PRs after Tasks, then directed resolution of the remaining path-cap blockers. The 19-increment inventory is the resulting proposed full-scope allocation; it counts recurring tracked workflow/process/evidence paths and gives each marker one story identity. C1a’s omitted generated `tests.md` candidate was corrected by reusing a registered test module. The advisory atomicity classifier remains `one-navigable-PR`; current marker-plan evidence, not a relabeled `split-PR` classifier or separate-run claim, must control multi-PR emission. The current marker validator rejects repeated shared paths across declared markers, so no valid `pr_marker_plan` or G6 pass is claimed until that contract is repaired and fresh fingerprint, scope, checkpoint, and hazard validation pass.
 - The current cached plugin cannot benefit from its own repairs until released and refreshed. Interim PR-body repair for this run is operational handling, not a product requirement or a change to host policy.
 - This feature does not decide whether Codex children outlive their parent; the teardown obligation applies to both hosts regardless, while HRNS-017 investigates host behavior.
 - Existing required checks, release-note policy, packet schema fields other than the optional note, and draft-body policy remain in force.
@@ -366,7 +365,7 @@ As an operator following a generated roadmap, I can open its workflow links at t
 - Tests must not read a temporary `specs/<feature>/` path at runtime. Any needed historical text, including the pre-fix ART-007 spec-index case from `b12f1bba1^`, is frozen under the test's own fixtures.
 - Generated templates must not gain a literal reviewability-exception pragma example; the existing lifecycle contract prohibits it.
 - Every acceptance behavior has failing-first fixture evidence before its repair. Required checks include the quick and CI suites, artifact consistency, relevant documentation and lint checks, and each slice PR's title and release-note checks.
-- A3 updates the PRD acceptance criteria AC-16.2, AC-16.5, AC-16.8, and AC-16.10 and the HRNS-015 and HRNS-019 roadmap entries. It removes the stale statement that autopilot wall-clock work from #642 is still in review.
+- A2 updates the PRD acceptance criteria AC-16.2, AC-16.5, AC-16.8, and AC-16.10 and the HRNS-015 and HRNS-019 roadmap entries. It removes the stale statement that autopilot wall-clock work from #642 is still in review.
 
 ## Out of Scope
 
