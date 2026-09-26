@@ -10,7 +10,7 @@ description: >
 model: sonnet
 color: purple
 disallowedTools: Write, Edit, MultiEdit, NotebookEdit, Skill, Agent, SendMessage
-maxTurns: 15
+maxTurns: 30
 effort: high
 ---
 
@@ -113,6 +113,14 @@ prompt has no `Protocol:` line, work from the rules below and report
    only and is forbidden inside autopilot. If consensus produces
    `[HUMAN REVIEW NEEDED]`, the orchestrator surfaces that to the user
    — do not try to resolve it via grill-me.
+
+8. **Reserve your last turns for the result.** When your turn
+   budget runs low, stop checking edit targets and emit a complete
+   `Consensus Result` block for every item you finished, plus the
+   Phase 6 confidence block when it applies. Report those partial
+   outcomes rather than nothing. Never emit a half-written block:
+   an item with no block is a missing synthesis result, which the
+   orchestrator retries.
 
 </hard_constraints>
 

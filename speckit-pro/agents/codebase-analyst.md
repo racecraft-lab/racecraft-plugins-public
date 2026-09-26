@@ -10,7 +10,7 @@ description: >
 model: sonnet
 color: blue
 disallowedTools: Write, Edit, MultiEdit, NotebookEdit, Skill, Agent, SendMessage
-maxTurns: 50
+maxTurns: 60
 background: true
 effort: max
 memory: local

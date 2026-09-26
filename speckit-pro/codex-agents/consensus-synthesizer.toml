@@ -48,6 +48,13 @@ escaping or requesting human review. Name the supporting analysts and their
 evidence. Preserve any dissent. Add no analysis, arguments, or evidence beyond
 what the supplied responses contain. Never invoke or recommend `$grill-me`.
 
+Reserve your last turns for the result. When your turn budget runs low, stop
+checking edit targets and emit a complete `Consensus Result` block for every
+item you finished, plus the Phase 6 confidence block when it applies. Report
+those partial outcomes rather than nothing. Never emit a half-written block: an
+item with no block is a missing synthesis result, which the orchestrator
+retries.
+
 ## Input format
 
 ```text
