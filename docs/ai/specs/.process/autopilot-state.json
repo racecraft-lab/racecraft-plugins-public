@@ -5,7 +5,7 @@
   "branch": "eda-001-attribution-foundation",
   "status": "in_progress",
   "stage": "plan",
-  "active_step": "Phase 1: Specify",
+  "active_step": "Phase 2: Clarify - Provenance Focus",
   "stage_resolution": {
     "basis": "explicit --stage plan",
     "confidence_gate_status": "\u23f3 Pending",
@@ -40,11 +40,11 @@
     },
     {
       "step": "Phase 1: Specify",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 2: Clarify - Provenance Focus",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 2: Clarify - Provenance Focus Consensus",
@@ -171,8 +171,8 @@
     "ledger_path": "docs/ai/specs/.process/.process/execution-control/4e8762387d1ed8b61c01a9de.json",
     "disposition": "continue",
     "reasons": [],
-    "elapsed_seconds": 11592.785113096237,
-    "checkpoint_due": false,
+    "elapsed_seconds": 12906.121125936508,
+    "checkpoint_due": true,
     "run_id": "47805d8f53dd4babaf524ca9b62869ae"
   },
   "prerequisites": {
@@ -225,7 +225,7 @@
     "version": "1.0.0"
   },
   "dispatches": [],
-  "updated_at": "2026-09-26T00:35:27.724392+00:00",
+  "updated_at": "2026-09-26T00:52:33.962130+00:00",
   "recovery": {
     "status": "recovered_and_continuing",
     "plugin_version": "2.36.2",
@@ -235,13 +235,14 @@
     "suite_outcome": "failed",
     "suite_process_alive": false,
     "retained_terminal_result": true,
-    "corrective_cycles_consumed": 0,
-    "phase_agents_started": 0,
-    "operator_action": "Resolve the replacement privacy-scan failure and obtain a passing G0 result before Phase 1.",
+    "corrective_cycles_consumed": 1,
+    "phase_agents_started": 1,
+    "operator_action": "None; replacement G0 passed and Phase 1 Specify is in progress.",
     "evidence": "Codex app read_thread returned the original commandExecution in the EDA-001 worktree with status failed and exitCode -1; execution-control accepted that exact event as a failed dispatch. No test summary was recovered.",
     "native_event_id": "exec-0757115d-63d8-4508-94bc-59e5f342aee0",
     "native_exit_code": -1,
-    "test_verdict": "unavailable"
+    "test_verdict": "unavailable",
+    "replacement_test_verdict": "8948/8948 passed"
   },
   "gates": {
     "G0": {
@@ -320,6 +321,15 @@
         "DEPENDENCY_AUDIT": "off"
       },
       "constitution_note": "Planning checks I-IV and VI pass; final PR title pending. Historical checkpoint commit uses spec-ID scope because repository hook blocked exact-lease rewrite; future commits use speckit-pro scope."
+    },
+    "G1": {
+      "pass": false,
+      "routing": "clarify",
+      "markers": 1,
+      "helper_status": "expected_failure",
+      "exit_code": 1,
+      "reason": "One unresolved exact humanlayer show-me source-pin marker; continue Clarify Session 1",
+      "spec_file": "specs/eda-001-attribution-foundation/spec.md"
     }
   },
   "operator_authorized_recovery": {
@@ -344,5 +354,17 @@
     "privacy_diagnostic": "dynamic_local_pattern derives terms from this worktree path; failure preview flags ordinary repository text including foundational and attribute. No G0 waiver claimed.",
     "original_resolution_event_id": "exec-0757115d-63d8-4508-94bc-59e5f342aee0",
     "original_native_exit_code": -1
+  },
+  "phase_results": {
+    "specify": {
+      "status": "completed",
+      "spec_file": "specs/eda-001-attribution-foundation/spec.md",
+      "checklist_file": "specs/eda-001-attribution-foundation/checklists/requirements.md",
+      "user_stories": 3,
+      "acceptance_scenarios": 11,
+      "functional_requirements": 19,
+      "success_criteria": 6,
+      "unresolved_markers": 1
+    }
   }
 }

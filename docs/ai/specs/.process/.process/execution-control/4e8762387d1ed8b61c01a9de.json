@@ -69,10 +69,42 @@
       "reconciliations": 0,
       "reservation_id": null,
       "reserved_at": 1790381917.3366022
+    },
+    "g1-specify-gate-1": {
+      "completed_at": 1790383760.5519302,
+      "kind": "verification",
+      "outcome": "completed",
+      "reconciliations": 0,
+      "reservation_id": null,
+      "reserved_at": 1790383692.58587
+    },
+    "g1-specify-gate-after-scope-1": {
+      "completed_at": 1790383903.356697,
+      "kind": "verification",
+      "outcome": "completed",
+      "reconciliations": 0,
+      "reservation_id": null,
+      "reserved_at": 1790383877.16552
+    },
+    "phase1-specify-1": {
+      "completed_at": 1790383658.66255,
+      "kind": "infrastructure",
+      "outcome": "completed",
+      "reconciliations": 0,
+      "reservation_id": null,
+      "reserved_at": 1790383152.1205812
+    },
+    "phase1-specify-scope-completion-1": {
+      "completed_at": 1790383872.364325,
+      "kind": "implementation",
+      "outcome": "completed",
+      "reconciliations": 0,
+      "reservation_id": null,
+      "reserved_at": 1790383776.827552
     }
   },
   "excluded_intervals": [],
-  "last_observed_at": 1790382604.871097,
+  "last_observed_at": 1790383903.356697,
   "reservations": {
     "a02de8a1ea1d4f02bd03770cacecd0dd": {
       "dispatch_id": "g0-privacy-scan-path-collision-repair-1",

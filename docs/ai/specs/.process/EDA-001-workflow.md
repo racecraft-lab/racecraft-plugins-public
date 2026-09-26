@@ -32,9 +32,9 @@ captured during scoping.
 
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
-| Stage | plan | 🔄 In Progress | Explicit --stage plan |
-| Specify | `/speckit-specify` | 🔄 In Progress | G0 passed; executor pending |
-| Clarify | `/speckit-clarify` | ⏳ Pending | Optional but recommended |
+| Stage | plan | ✅ Complete | Explicit --stage plan resolved; planning phases continue |
+| Specify | `/speckit-specify` | ✅ Complete | 3 stories, 19 FRs; G1 routes provenance marker to Clarify |
+| Clarify | `/speckit-clarify` | 🔄 In Progress | Three workflow sessions; provenance first |
 | Plan | `/speckit-plan` | ⏳ Pending | |
 | Checklist | `/speckit-checklist` | ⏳ Pending | Run for each domain |
 | Tasks | `/speckit-tasks` | ⏳ Pending | |
@@ -271,13 +271,15 @@ without attribution and nothing would catch it.
 
 | Metric | Value |
 |--------|-------|
-| Functional Requirements | |
-| User Stories | |
-| Acceptance Criteria | |
+| Functional Requirements | 19 |
+| User Stories | 3 |
+| Acceptance Criteria | 11 scenarios; 6 success criteria |
 
 ### Files Generated
 
-- [ ] `specs/eda-001-attribution-foundation/spec.md`
+- [x] `specs/eda-001-attribution-foundation/spec.md`
+
+G1 routed one unresolved humanlayer source-pin marker to Clarify Session 1. The installed gate helper returned `expected_failure` with `markers=1`; this is the documented clarification route, not a completed provenance claim.
 
 ### SpecKit Traceability Markers
 
