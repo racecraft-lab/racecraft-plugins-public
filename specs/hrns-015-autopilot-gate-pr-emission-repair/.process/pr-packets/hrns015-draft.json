@@ -1,0 +1,58 @@
+{
+  "body_file": "specs/hrns-015-autopilot-gate-pr-emission-repair/.process/pr-packets/hrns015-draft/body.md",
+  "editable_fields": [],
+  "generated_title": {
+    "description": "Plan autopilot gate and PR emission repair",
+    "rejected_candidates": [],
+    "scope": "speckit-pro",
+    "source_evidence": {
+      "kind": "workflow",
+      "source": "autopilot-state",
+      "summary": "Title generated from active SpecKit workflow evidence."
+    },
+    "type": "chore",
+    "value": "chore(speckit-pro): Plan autopilot gate and PR emission repair"
+  },
+  "mode": "draft",
+  "packet_id": "hrns015-draft",
+  "protected_body_fingerprint": {
+    "algorithm": "sha256",
+    "elided_fields": [],
+    "normalization": "LF line endings; trailing whitespace trimmed; final newline ensured; editable block bodies replaced by <elided:field_id> before sha256.",
+    "value": "443e1fd4fb817f62627abe1a244b0763ef03cb723ee36de2736e30ce05a0007a"
+  },
+  "required_headings": [
+    "Artifacts",
+    "Resume"
+  ],
+  "schema_version": "1.0.0",
+  "scope_evidence": {
+    "budget_result": "within_budget",
+    "changed_files": [],
+    "non_goals": [
+      "No runtime, dependency, or generated payload changes unless listed in changed_files."
+    ],
+    "production_files": 0,
+    "reviewable_loc": 0,
+    "total_files": 0
+  },
+  "source_feature_dir": "specs/hrns-015-autopilot-gate-pr-emission-repair",
+  "source_markers": [
+    {
+      "marker_id": "hrns015-draft",
+      "rendered_text": "chore(speckit-pro): Plan autopilot gate and PR emission repair",
+      "source": "specs/hrns-015-autopilot-gate-pr-emission-repair"
+    }
+  ],
+  "target": {
+    "base_branch": "main",
+    "head_branch": "hrns-015-autopilot-gate-pr-emission-repair"
+  },
+  "uat": {
+    "how_to_uat": "",
+    "uat_runbook_heading": "",
+    "uat_source": "packet-input"
+  },
+  "validation_result_path": "specs/hrns-015-autopilot-gate-pr-emission-repair/.process/pr-packets/hrns015-draft/validation.json",
+  "verification_evidence": []
+}
