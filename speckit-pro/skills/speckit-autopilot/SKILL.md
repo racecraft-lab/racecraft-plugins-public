@@ -188,8 +188,8 @@ not issue a second invocation to obtain a file, exit code, stdout, or stderr.
 **Do not invoke `grill-me` from any autopilot phase or agent — ever.**
 
 `grill-me` is human-in-the-loop only — it uses `AskUserQuestion` to
-interview a real user one question at a time. Inside autopilot there
-is no user available; calling it would block indefinitely or produce
+interview a real user one question at a time. Autopilot may run
+unattended, with no user available; calling it would block indefinitely or produce
 low-value automated output that defeats its purpose.
 
 Autopilot's Clarify phase uses `/speckit-clarify` with the multi-agent

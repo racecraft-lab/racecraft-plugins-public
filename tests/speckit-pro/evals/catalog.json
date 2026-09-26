@@ -10226,7 +10226,7 @@
         },
         {
           "id": "legacy-04",
-          "description": "Explains that unresolved Round 2 disagreement is surfaced for human review and stops advancement"
+          "description": "Explains that unresolved Round 2 disagreement is surfaced for human review: asked in place in an interactive run, and stopping advancement in an unattended run"
         }
       ],
       "prompt": "Use {{skill}} to address this bounded request. How does the consensus protocol work in the autopilot workflow? I heard there are always 3 agents that vote, but I want the current contract.",
@@ -10281,7 +10281,7 @@
           "id": "legacy-04-semantic",
           "requirement": "legacy-04",
           "type": "semantic",
-          "rubric": "PASS only if the evidence satisfies: Explains that unresolved Round 2 disagreement is surfaced for human review and stops advancement FAIL if omitted, contradicted, or merely claimed without required evidence."
+          "rubric": "PASS only if the evidence satisfies: Explains that unresolved Round 2 disagreement is surfaced for human review: asked in place in an interactive run, and stopping advancement in an unattended run FAIL if omitted, contradicted, or merely claimed without required evidence."
         }
       ],
       "native_differences": [

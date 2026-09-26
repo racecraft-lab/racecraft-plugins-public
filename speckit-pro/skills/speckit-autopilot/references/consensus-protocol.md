@@ -259,8 +259,8 @@ Stage 3 — Apply Artifact Edits SERIALLY (orchestrator's own Edit calls):
     IF Flags includes [ESCAPE_TO_ROUND_2] OR low confidence:
       Push (Ix, Sx) onto ROUND_2_QUEUE
     IF Flags includes [HUMAN REVIEW NEEDED]: resolve per §Human Review Needed
-      after this batch: ask the operator in place, or write CRL row with
-      Outcome=human-review and STOP autopilot
+      after this batch: ask the operator in place and record the answer, or
+      write CRL row with Outcome=human-review and STOP autopilot
 
 If ROUND_2_QUEUE non-empty:
   Stage 4 — All Round-2 analysts (the remaining (3 − |Sx|) per queued item) in ONE message
