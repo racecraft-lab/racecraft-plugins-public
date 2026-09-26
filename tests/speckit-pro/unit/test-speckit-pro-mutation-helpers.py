@@ -8826,6 +8826,13 @@ This line must not be copied.
                 self.assert_response(response, "input_error", 2)
                 self.assertEqual([diag["code"] for diag in stderr_records], ["invalid_input"])
 
+    def test_generated_title_keeps_the_description_case_as_given(self) -> None:
+        title = pr_emission.normalize_generated_title(
+            {"title_type": "feat", "title_scope": "demo", "title_description": "add a demo feature"}
+        )
+        self.assertEqual(title["value"], "feat(demo): add a demo feature")
+        self.assertEqual(title["description"], "add a demo feature")
+
     def test_documented_draft_packet_requests_execute_and_validate(self) -> None:
         docs = [
             PLUGIN_ROOT / "skills/speckit-autopilot/references/phase-execution.md",
@@ -8852,10 +8859,11 @@ This line must not be copied.
 
                     invalid_requests = {
                         "missing_h1": {"body": request["inputs"]["body"].split("\n", 2)[2]},
-                        "mismatched_title": {"body": request["inputs"]["body"].replace("# feat(speckit-pro): Open an example draft", "# feat(speckit-pro): Another draft", 1)},
+                        "mismatched_title": {"body": request["inputs"]["body"].replace("# feat(speckit-pro): open an example draft", "# feat(speckit-pro): another draft", 1)},
                         "missing_evidence": {"verification_evidence": None},
                         "string_evidence": {"verification_evidence": "none"},
                     }
+                    self.assertNotEqual(invalid_requests["mismatched_title"]["body"], request["inputs"]["body"])
                     for case, overrides in invalid_requests.items():
                         with self.subTest(doc=doc_path.name, case=case):
                             invalid = json.loads(json.dumps(request))

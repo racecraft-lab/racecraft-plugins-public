@@ -294,9 +294,19 @@ DRAFT_PR_ROW_CASES = (
 
 # (label, prose written after the link, expected `gap_note`)
 # The grammar template is `[#<number>](<url>) — <gap note>`, which places the
-# separator outside the placeholder: the note is the prose, not the dash.
+# separator outside the placeholder: the note is the prose, not the dash. A
+# hyphen or colon separator is dropped the same way, and a note with no
+# separator is kept whole, so a style guide that forbids em dashes never turns
+# the row into an absent one.
 DRAFT_PR_GAP_NOTE_CASES = (
     ("a plain shortfall note", "— 2 of 4 artifacts missing", "2 of 4 artifacts missing"),
+    ("a hyphen separator", "- 2 of 4 artifacts missing", "2 of 4 artifacts missing"),
+    ("a colon separator", ": 2 of 4 artifacts missing", "2 of 4 artifacts missing"),
+    (
+        "a parenthesized note with no separator",
+        "(1 of 5 artifacts missing: data-model)",
+        "(1 of 5 artifacts missing: data-model)",
+    ),
     # A note carrying its own parentheses. A greedy link-target capture would
     # swallow the rest of the cell into `url` and lose the identity entirely,
     # which is the failure FR-011 corroboration would then blame on GitHub.
