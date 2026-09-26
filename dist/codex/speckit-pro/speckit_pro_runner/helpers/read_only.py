@@ -399,7 +399,7 @@ def canonicalize_inputs(helper_id: str, inputs: dict[str, Any], repo_root: Path)
         "detect-commands": {"repo_root"},
         "detect-presets": {"repo_root"},
         "count-markers": {"feature_dir"},
-        "validate-gate": {"feature_dir"},
+        "validate-gate": {"feature_dir", "workflow_file"},
         "reviewability-gate": {"target"},
         "estimate-reviewable-loc": {"plan_file"},
         "resolve-confidence-mode": {"config_path"},
@@ -2180,10 +2180,24 @@ def validate_gate(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
             ),
             exit_code=1,
         )
+    # G6: bracketed markers in the planning files plus the open CRITICAL/HIGH
+    # rows of the workflow's Analysis Results table, where Analyze records its
+    # findings. Zero markers alone never asserts zero open findings, so missing
+    # table evidence fails closed.
     count = count_pattern([spec, plan, tasks], r"\[CRITICAL\]|\[HIGH\]", repo_root)
+    workflow_raw = str(inputs.get("workflow_file") or "")
+    text = trusted_text(resolve_input_path(workflow_raw, repo_root), repo_root) if workflow_raw else None
+    if text is None:
+        reason = f"workflow file not found or unreadable: {workflow_raw}" if workflow_raw else "workflow_file is required to read the Analysis Results table"
+        return make_result(json_text({"gate": gate, "pass": False, "reason": reason, "markers": count, "details": []}), exit_code=1)
+    findings = open_analysis_findings(text)
+    if findings is None:
+        reason = f"workflow file has no Analysis Results table: {workflow_raw}"
+        return make_result(json_text({"gate": gate, "pass": False, "reason": reason, "markers": count, "details": []}), exit_code=1)
+    count += findings["critical"] + findings["high"]
     if count == 0:
-        return make_result(json_text({"gate": gate, "pass": True, "reason": "0 CRITICAL/HIGH findings", "markers": 0, "details": []}))
-    return make_result(json_text({"gate": gate, "pass": False, "reason": f"{count} CRITICAL/HIGH findings remain", "markers": count, "details": []}), exit_code=1)
+        return make_result(json_text({"gate": gate, "pass": True, "reason": "0 CRITICAL/HIGH findings", "markers": 0, "analysis_findings": findings, "details": []}))
+    return make_result(json_text({"gate": gate, "pass": False, "reason": f"{count} CRITICAL/HIGH findings remain", "markers": count, "analysis_findings": findings, "details": []}), exit_code=1)
 
 
 def reviewability_gate(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
@@ -4542,12 +4556,13 @@ def analysis_results_rows(text: str) -> tuple[list[str], list[list[str]]]:
     findings table also carries `Resolution`. A Phase 6 log can hold one table
     per Analyze pass, and only the last one describes the current state, so each
     header seen resets the rows. Anything that is not a table row ends the run,
-    which is where a Markdown table ends.
+    which is where a Markdown table ends. HTML comment spans are blanked first,
+    as `workflow_stage_signals` does, so a commented-out example is not evidence.
     """
     header: list[str] = []
     rows: list[list[str]] = []
     collecting = False
-    for raw in text.splitlines():
+    for raw in HTML_COMMENT_RE.sub("", text).splitlines():
         stripped = raw.strip()
         if not stripped.startswith("|"):
             collecting = False
@@ -4563,7 +4578,7 @@ def analysis_results_rows(text: str) -> tuple[list[str], list[list[str]]]:
     return header, rows
 
 
-def open_analysis_findings(text: str) -> dict[str, int]:
+def open_analysis_findings(text: str) -> dict[str, int] | None:
     """Unresolved CRITICAL and HIGH rows of the workflow's Analysis Results table.
 
     A `[CRITICAL]` or `[HIGH]` marker in the log body cannot answer this. The
@@ -4573,12 +4588,13 @@ def open_analysis_findings(text: str) -> dict[str, int]:
     table carries the discriminator the log otherwise lacks: remediation fills
     the row's Resolution cell, as the shipped workflow template records it. A row
     whose cell count disagrees with its header is skipped rather than guessed at,
-    which fails toward no deduction.
+    which fails toward no deduction. Returns None when the text has no Analysis
+    Results table, so a caller can tell missing evidence from zero open rows.
     """
     header, rows = analysis_results_rows(text)
-    counts = {"critical": 0, "high": 0}
     if not header:
-        return counts
+        return None
+    counts = {"critical": 0, "high": 0}
     severity_index = header.index(ANALYSIS_SEVERITY_COLUMN)
     resolution_index = header.index(ANALYSIS_RESOLUTION_COLUMN)
     for cells in rows:
@@ -4643,7 +4659,7 @@ def confidence_gate(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
     else:
         composite_source = "computed"
         criteria_mean = round(sum(scores) / len(scores), 2)
-        open_findings = open_analysis_findings(text)
+        open_findings = open_analysis_findings(text) or {"critical": 0, "high": 0}
         critical = open_findings["critical"]
         high = open_findings["high"]
         deductions = {"critical": critical, "high": high, "amount": round(0.30 * critical + 0.10 * high, 2)}

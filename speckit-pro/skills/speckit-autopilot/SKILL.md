@@ -614,8 +614,8 @@ for phase in PHASES starting from first_pending:
     5. Run after_<phase> hooks
     6. Validate the gate (G1-G7): run runner helper
        `helper_id=validate-gate operation=validate-gate mode=read_only`
-       with `gate=G<N>` and `feature_dir=<feature-dir>`, then branch on
-       the JSON `pass` field
+       with `gate=G<N>`, `feature_dir=<feature-dir>`, and
+       `workflow_file=<workflow-file>`, then branch on the JSON `pass` field
        On FAIL: reserve a corrective cycle through execution-control;
        honor its shared family/spec budget and checkpoint disposition
     7. Update workflow file; auto-commit if configured
