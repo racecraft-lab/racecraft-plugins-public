@@ -1,0 +1,12 @@
+{
+  "schema_version": "1.0",
+  "request_id": "scaffold-reviewability-setup",
+  "helper_id": "reviewability-gate",
+  "operation": "reviewability-gate",
+  "mode": "read_only",
+  "inputs": {
+    "mode_name": "setup",
+    "target": "docs/ai/current-technical-roadmap.md",
+    "spec_id": "SPEC-841"
+  }
+}

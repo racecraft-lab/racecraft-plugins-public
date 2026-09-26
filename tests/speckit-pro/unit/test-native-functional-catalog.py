@@ -218,6 +218,47 @@ ORCHESTRATION_REQUIRING_TEXT = {
     ),
 }
 ORCHESTRATION_IDS = set(ORCHESTRATION_REQUIRING_TEXT)
+# Native-only scaffold cases for the spec-scoped reviewability setup gate. The
+# staged roadmap puts the over-budget target first and a small entry last, so a
+# roadmap-wide or last-entry reading returns a different answer.
+SCAFFOLD_REVIEWABILITY_FIXTURE_ROOT = "tests/speckit-pro/evals/fixtures/functional/scaffold-reviewability/"
+SCAFFOLD_REVIEWABILITY_REQUIRING_TEXT = (
+    ("speckit-pro/skills/speckit-scaffold-spec/SKILL.md",
+     "Run runner helper reviewability-gate in setup mode for <technical-roadmap-path> with spec_id <SPEC-ID>."),
+    ("speckit-pro/skills/speckit-scaffold-spec/SKILL.md",
+     "If it returns an unexcepted `block`, STOP and split the spec first."),
+    ("speckit-pro/codex-skills/speckit-scaffold-spec/SKILL.md",
+     "Run runner helper reviewability-gate in setup mode for <technical-roadmap-path> with spec_id <SPEC-ID>."),
+    ("speckit-pro/codex-skills/speckit-scaffold-spec/SKILL.md",
+     "If the gate returns `block` without a ratified split exception, stop setup"),
+    ("speckit-pro/skills/speckit-autopilot/references/gate-validation.md",
+     "The gate then reads only that `### <SPEC-ID>:` section"),
+    ("speckit-pro/skills/speckit-coach/templates/technical-roadmap-template.md",
+     "A block-sized slice may be allowed only by a typed, auditable exception pragma on its own line"),
+)
+SCAFFOLD_REVIEWABILITY_EXPECTED = {
+    "functional.speckit-scaffold-spec.reviewability-target-block": {
+        "gate_status": "block", "target_reviewable_loc": 1180,
+        "exception_class": None, "setup_may_continue": False,
+    },
+    "functional.speckit-scaffold-spec.reviewability-target-exception": {
+        "gate_status": "exception", "target_reviewable_loc": 1180,
+        "exception_class": "infra", "setup_may_continue": True,
+    },
+}
+# The answers a roadmap-wide or last-entry reading produces; each must grade fail.
+SCAFFOLD_REVIEWABILITY_FAILURE_ANSWERS = {
+    "functional.speckit-scaffold-spec.reviewability-target-block": {
+        "gate_status": "warn", "target_reviewable_loc": 260,
+        "exception_class": "infra", "setup_may_continue": True,
+    },
+    "functional.speckit-scaffold-spec.reviewability-target-exception": {
+        "gate_status": "warn", "target_reviewable_loc": 260,
+        "exception_class": None, "setup_may_continue": False,
+    },
+}
+SCAFFOLD_REVIEWABILITY_IDS = set(SCAFFOLD_REVIEWABILITY_EXPECTED)
+NATIVE_ONLY_IDS = ORCHESTRATION_IDS | SCAFFOLD_REVIEWABILITY_IDS
 # The graded failure each semantic rubric must name, so a rubric cannot pass the
 # recorded failure and the correct behaviour alike.
 ORCHESTRATION_FAILURE_PHRASES = {
@@ -534,7 +575,7 @@ def _assert_case_check_accounting(
         | COACH_ARCHIVE_IDS | AUTOPILOT_PREREQ_IDS | STATUS_WORKTREE_IDS
         | SCAFFOLD_HANDOFF_IDS | SCENARIO_IDS | LOCAL_COMMAND_IDS | REDIRECT_IDS
         | NATIVE_RESPONSE_IDS | DASHBOARD_IDS | WORKTREE_MIGRATION_IDS
-        | TASK_LIST_CONTRACT_IDS | AUTOPILOT_REDIRECT_IDS | ORCHESTRATION_IDS
+        | TASK_LIST_CONTRACT_IDS | AUTOPILOT_REDIRECT_IDS | NATIVE_ONLY_IDS
     )
     case_id = case["id"]
     if case_id in exempt_ids:
@@ -744,6 +785,28 @@ def _derive_orchestration_answers(case: dict) -> dict:
     raise AssertionError(f"unknown orchestration scenario {case['id']}")
 
 
+def _run_reviewability_request(case: dict, *, spec_scoped: bool = True) -> tuple[int, dict]:
+    """Run the staged gate request in a workspace built from the case fixtures."""
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        for fixture in case["fixtures"]:
+            target = root / fixture["destination"]
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(REPO_ROOT / fixture["source"], target)
+        request_path = next(
+            check["request_path"] for check in case["checks"] if check["type"] == "native_runner_result"
+        )
+        request = json.loads((root / request_path).read_text(encoding="utf-8"))
+        if not spec_scoped:
+            request["inputs"].pop("spec_id")
+        result = subprocess.run(
+            [sys.executable, "-m", "speckit_pro_runner"], input=json.dumps(request),
+            text=True, capture_output=True, cwd=root, check=False,
+            env={**os.environ, "PYTHONPATH": str(REPO_ROOT / "speckit-pro")},
+        )
+        return result.returncode, json.loads(result.stdout)["data"]["stdout_json"]
+
+
 class NativeFunctionalCatalogTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
@@ -765,11 +828,11 @@ class NativeFunctionalCatalogTests(unittest.TestCase):
             - REDIRECT_IDS - WORKTREE_MIGRATION_IDS - TASK_LIST_CONTRACT_IDS
         )
         self.assertEqual(len(response_only_ids), 59)
-        self.assertEqual(len(self.all_cases), 211)
-        self.assertEqual(len(self.catalog["cases"]), 97)
+        self.assertEqual(len(self.all_cases), 213)
+        self.assertEqual(len(self.catalog["cases"]), 99)
         self.assertEqual(
             set(self.cases),
-            selected_ids | GROUNDED_IDS | NATIVE_RESPONSE_IDS | DASHBOARD_IDS | ORCHESTRATION_IDS,
+            selected_ids | GROUNDED_IDS | NATIVE_RESPONSE_IDS | DASHBOARD_IDS | NATIVE_ONLY_IDS,
         )
         selected = {row["case_id"]: row for row in self.selection["selected"]}
         for case in self.catalog["cases"]:
@@ -797,7 +860,7 @@ class NativeFunctionalCatalogTests(unittest.TestCase):
         }
         self.assertEqual([row["canonical_case_id"] for row in reused],
                          ["functional.speckit-scaffold-spec.case-8"])
-        self.assertEqual(len(set(self.cases) - ORCHESTRATION_IDS) + len(reused), 94)
+        self.assertEqual(len(set(self.cases) - NATIVE_ONLY_IDS) + len(reused), 94)
         for row in reused:
             self.assertEqual(row["disposition"], "merge")
             self.assertNotIn(row["canonical_case_id"], self.all_cases)
@@ -915,7 +978,7 @@ class NativeFunctionalCatalogTests(unittest.TestCase):
         self.assertEqual(frozen_inventory["response_only"], 65)
         self.assertEqual(frozen_inventory["file_grounded"], 28)
         self.assertEqual(frozen_inventory["held_early_candidates"], current_gaps)
-        legacy_cases = len(set(self.cases) - ORCHESTRATION_IDS)
+        legacy_cases = len(set(self.cases) - NATIVE_ONLY_IDS)
         self.assertEqual(
             frozen_inventory["represented"],
             legacy_cases + len(self.selection["cross_layer_reuse"]),
@@ -971,8 +1034,8 @@ class NativeFunctionalCatalogTests(unittest.TestCase):
         held = {row["case_id"] for row in self.selection["excluded"]}
         self.assertFalse(set(self.cases) & held)
         self.assertFalse(selected & resolved)
-        self.assertFalse(ORCHESTRATION_IDS & (selected | resolved | held))
-        self.assertEqual(set(self.cases) - ORCHESTRATION_IDS, selected | resolved)
+        self.assertFalse(NATIVE_ONLY_IDS & (selected | resolved | held))
+        self.assertEqual(set(self.cases) - NATIVE_ONLY_IDS, selected | resolved)
         self.assertEqual(len(resolved), len(self.selection.get("resolved_exclusions", [])))
 
     def test_dashboard_facts_fail_independently_of_semantic_judgment(self) -> None:
@@ -1057,7 +1120,7 @@ class NativeFunctionalCatalogTests(unittest.TestCase):
 
     def test_fixtures_are_dedicated_existing_and_never_runtime_specs_paths(self) -> None:
         for case in self.catalog["cases"]:
-            if case["id"] not in GROUNDED_IDS | SCAFFOLD_FIXTURE_IDS | SCAFFOLD_DIAGNOSTIC_IDS | STATUS_SEARCH_IDS | CHILD_ABORT_IDS | WORKTREE_BINDING_IDS | ARCHIVE_EXTENSION_IDS | COACH_INSTALLED_IDS | COACH_ARCHIVE_IDS | AUTOPILOT_PREREQ_IDS | STATUS_WORKTREE_IDS | SCAFFOLD_HANDOFF_IDS | SCENARIO_IDS | LOCAL_COMMAND_IDS | REDIRECT_IDS | DASHBOARD_IDS | WORKTREE_MIGRATION_IDS | TASK_LIST_CONTRACT_IDS | ORCHESTRATION_IDS:
+            if case["id"] not in GROUNDED_IDS | SCAFFOLD_FIXTURE_IDS | SCAFFOLD_DIAGNOSTIC_IDS | STATUS_SEARCH_IDS | CHILD_ABORT_IDS | WORKTREE_BINDING_IDS | ARCHIVE_EXTENSION_IDS | COACH_INSTALLED_IDS | COACH_ARCHIVE_IDS | AUTOPILOT_PREREQ_IDS | STATUS_WORKTREE_IDS | SCAFFOLD_HANDOFF_IDS | SCENARIO_IDS | LOCAL_COMMAND_IDS | REDIRECT_IDS | DASHBOARD_IDS | WORKTREE_MIGRATION_IDS | TASK_LIST_CONTRACT_IDS | NATIVE_ONLY_IDS:
                 self.assertEqual(case["fixtures"], [], case["id"])
                 continue
             if case["id"] in SCAFFOLD_FIXTURE_IDS:
@@ -1094,16 +1157,29 @@ class NativeFunctionalCatalogTests(unittest.TestCase):
                     )
                     self.assertTrue((REPO_ROOT / fixture["source"]).is_file(), fixture)
                 continue
-            if case["id"] in ORCHESTRATION_IDS:
+            if case["id"] in NATIVE_ONLY_IDS:
                 self.assertTrue(case["fixtures"], case["id"])
+                root = (
+                    ORCHESTRATION_FIXTURE_ROOT if case["id"] in ORCHESTRATION_IDS
+                    else SCAFFOLD_REVIEWABILITY_FIXTURE_ROOT
+                )
                 for fixture in case["fixtures"]:
-                    self.assertTrue(fixture["source"].startswith(ORCHESTRATION_FIXTURE_ROOT), fixture)
+                    self.assertTrue(fixture["source"].startswith(root), fixture)
                     self.assertTrue((REPO_ROOT / fixture["source"]).is_file(), fixture)
                 reads = {
                     check["path"] for check in case["checks"]
                     if check["type"] == "file_access" and check["operation"] == "read_file"
                 }
-                self.assertEqual(reads, {fixture["destination"] for fixture in case["fixtures"]})
+                runner_requests = {
+                    check["request_path"] for check in case["checks"]
+                    if check["type"] == "native_runner_result"
+                }
+                # The runner locates the project through its `.specify/` marker.
+                support = {".specify/project.json"} if case["id"] in SCAFFOLD_REVIEWABILITY_IDS else set()
+                self.assertEqual(
+                    reads | runner_requests | support,
+                    {fixture["destination"] for fixture in case["fixtures"]},
+                )
                 continue
             if case["id"] in TASK_LIST_CONTRACT_IDS:
                 for fixture in case["fixtures"]:
@@ -1980,7 +2056,7 @@ class NativeFunctionalCatalogTests(unittest.TestCase):
 
     def test_semantic_checks_are_narrow_and_not_action_claim_substitutes(self) -> None:
         for case in self.catalog["cases"]:
-            if case["id"] in GROUNDED_IDS | SCENARIO_IDS | LOCAL_COMMAND_IDS | REDIRECT_IDS | DASHBOARD_IDS | WORKTREE_MIGRATION_IDS | SCAFFOLD_DIAGNOSTIC_IDS | STATUS_SEARCH_IDS | CHILD_ABORT_IDS | WORKTREE_BINDING_IDS | ARCHIVE_EXTENSION_IDS | COACH_INSTALLED_IDS | COACH_ARCHIVE_IDS | AUTOPILOT_PREREQ_IDS | STATUS_WORKTREE_IDS | SCAFFOLD_HANDOFF_IDS | ORCHESTRATION_IDS:
+            if case["id"] in GROUNDED_IDS | SCENARIO_IDS | LOCAL_COMMAND_IDS | REDIRECT_IDS | DASHBOARD_IDS | WORKTREE_MIGRATION_IDS | SCAFFOLD_DIAGNOSTIC_IDS | STATUS_SEARCH_IDS | CHILD_ABORT_IDS | WORKTREE_BINDING_IDS | ARCHIVE_EXTENSION_IDS | COACH_INSTALLED_IDS | COACH_ARCHIVE_IDS | AUTOPILOT_PREREQ_IDS | STATUS_WORKTREE_IDS | SCAFFOLD_HANDOFF_IDS | NATIVE_ONLY_IDS:
                 continue
             requirement_ids = {row["id"] for row in case["requirements"]}
             for check in case["checks"]:
@@ -2188,6 +2264,79 @@ class NativeFunctionalCatalogTests(unittest.TestCase):
                     grade_observation(case, unread, semantic_verdicts(case, True), host=host)["status"],
                     "fail", (case_id, host),
                 )
+
+    def test_scaffold_reviewability_cases_cite_current_requiring_text(self) -> None:
+        paths = list(dict.fromkeys(path for path, _ in SCAFFOLD_REVIEWABILITY_REQUIRING_TEXT))
+        for path, snippet in SCAFFOLD_REVIEWABILITY_REQUIRING_TEXT:
+            source = _normalized((REPO_ROOT / path).read_text(encoding="utf-8"))
+            self.assertIn(_normalized(snippet), source, path)
+        names = {Path(path).name for path in paths}
+        for case_id in sorted(SCAFFOLD_REVIEWABILITY_IDS):
+            case = self.cases[case_id]
+            self.assertEqual(case["provenance"], paths, case_id)
+            for requirement in case["requirements"]:
+                if requirement["id"] != "selection":
+                    self.assertTrue(
+                        any(name in requirement["description"] for name in names),
+                        (case_id, requirement["id"]),
+                    )
+
+    def test_scaffold_reviewability_fixtures_separate_the_target_from_a_roadmap_wide_reading(self) -> None:
+        for case_id, expected in SCAFFOLD_REVIEWABILITY_EXPECTED.items():
+            case = self.cases[case_id]
+            fields = {
+                check["field_path"][0]: check for check in case["checks"]
+                if check["type"] == "response_json_field"
+            }
+            self.assertEqual(set(fields), set(expected), case_id)
+            for field, check in fields.items():
+                self.assertEqual(check["expected_by_host"], {"claude": expected[field], "codex": expected[field]})
+            runner = next(check for check in case["checks"] if check["type"] == "native_runner_result")
+            exit_code, scoped = _run_reviewability_request(case)
+            self.assertEqual(exit_code, runner["expected_exit_code"], case_id)
+            self.assertEqual(scoped["spec_id"], "SPEC-841", case_id)
+            self.assertEqual(scoped["status"], expected["gate_status"], case_id)
+            self.assertEqual(scoped["status"], runner["expected_stdout_value"], case_id)
+            self.assertEqual(scoped["reviewable_loc"], expected["target_reviewable_loc"], case_id)
+            self.assertEqual(scoped["exception_class"], expected["exception_class"], case_id)
+            _, roadmap_wide = _run_reviewability_request(case, spec_scoped=False)
+            failure = SCAFFOLD_REVIEWABILITY_FAILURE_ANSWERS[case_id]
+            self.assertEqual(roadmap_wide["status"], failure["gate_status"], case_id)
+            self.assertEqual(roadmap_wide["reviewable_loc"], failure["target_reviewable_loc"], case_id)
+            self.assertFalse(roadmap_wide["exception_honored"], case_id)
+
+    def test_scaffold_reviewability_grading_fails_a_roadmap_wide_reading(self) -> None:
+        for case_id, expected in SCAFFOLD_REVIEWABILITY_EXPECTED.items():
+            case = self.cases[case_id]
+            checks = [
+                check for check in case["checks"]
+                if check["type"] in {"selection", "response_json_field", "semantic"}
+            ]
+            covered = {check["requirement"] for check in checks}
+            graded = {
+                "requirements": [row for row in case["requirements"] if row["id"] in covered],
+                "checks": checks,
+            }
+            semantic = [check for check in graded["checks"] if check["type"] == "semantic"]
+            self.assertTrue(
+                any("roadmap-wide or last-entry reading" in check["rubric"] for check in semantic), case_id,
+            )
+            body = {**expected, "explanation": "mock response, not native evidence"}
+            for host in ("claude", "codex"):
+                correct = observation(activation="speckit-scaffold-spec", final_text=json.dumps(body))
+                self.assertEqual(
+                    grade_observation(graded, correct, semantic_verdicts(case, True), host=host)["status"],
+                    "pass", (case_id, host),
+                )
+                for field, failure in SCAFFOLD_REVIEWABILITY_FAILURE_ANSWERS[case_id].items():
+                    self.assertNotEqual(failure, expected[field], (case_id, field))
+                    wrong = observation(
+                        activation="speckit-scaffold-spec", final_text=json.dumps({**body, field: failure}),
+                    )
+                    self.assertEqual(
+                        grade_observation(graded, wrong, semantic_verdicts(case, True), host=host)["status"],
+                        "fail", (case_id, host, field),
+                    )
 
 if __name__ == "__main__":
     suite = unittest.defaultTestLoader.loadTestsFromTestCase(NativeFunctionalCatalogTests)

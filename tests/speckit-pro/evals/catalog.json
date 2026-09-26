@@ -12716,6 +12716,346 @@
       ]
     },
     {
+      "id": "functional.speckit-scaffold-spec.reviewability-target-block",
+      "layer": "functional",
+      "capability": "Runs the spec-scoped reviewability setup gate on a two-entry roadmap and stops setup on the over-budget target entry instead of reading the roadmap's last entry.",
+      "timeout_seconds": 300,
+      "resource_class": "ordinary",
+      "requirements": [
+        {
+          "id": "selection",
+          "description": "The host-native speckit-scaffold-spec capability is activated."
+        },
+        {
+          "id": "gate",
+          "description": "Runs the reviewability setup gate for the roadmap with spec_id SPEC-841 exactly once and preserves its result (scaffold SKILL.md and Codex SKILL.md: \"Run runner helper reviewability-gate in setup mode for <technical-roadmap-path> with spec_id <SPEC-ID>\"; gate-validation.md: \"The gate then reads only that `### <SPEC-ID>:` section\")."
+        },
+        {
+          "id": "target",
+          "description": "Reports the target entry's own budget, not a roadmap-wide or last-entry reading (gate-validation.md: \"its budget numbers, its `Primary surface:` values\")."
+        },
+        {
+          "id": "block",
+          "description": "An over-budget target entry without an exception pragma blocks setup before any worktree is created, even when the roadmap's last entry is within budget (scaffold SKILL.md: \"If it returns an unexcepted `block`, STOP and split the spec first\"; Codex SKILL.md: \"If the gate returns `block` without a ratified split exception, stop setup\")."
+        }
+      ],
+      "prompt": "Use {{skill}} to run only the reviewability setup gate for SPEC-841 from docs/ai/current-technical-roadmap.md. Do not run the interview, create a branch, worktree, or workflow, or write any file. Invoke the staged protected Python runner exactly once as one default-shell command: {{resolved_python}} -m speckit_pro_runner < scenario-inputs/reviewability-request.json. Use no shell variable, prefix, suffix, pipe, or output redirection other than the required input redirection. Then read docs/ai/current-technical-roadmap.md as one exact file read. Output only raw JSON: exactly one top-level object with helper_result, gate_status, target_reviewable_loc, exception_class, setup_may_continue, and explanation, with no diagnostic prefix, prose, Markdown, or code fences. helper_result must equal only the parsed helper payload inside the runner response's data.stdout_json field. gate_status is that payload's status; exception_class is the honored exception class or null; setup_may_continue says whether scaffold setup may proceed to the worktree step. Do not use a shell fallback or fabricate the result.",
+      "fixtures": [
+        {
+          "source": "tests/speckit-pro/evals/fixtures/functional/scaffold-reviewability/block/reviewability-request.json",
+          "destination": "scenario-inputs/reviewability-request.json"
+        },
+        {
+          "source": "tests/speckit-pro/evals/fixtures/functional/scaffold-reviewability/block/current-technical-roadmap.md",
+          "destination": "docs/ai/current-technical-roadmap.md"
+        },
+        {
+          "source": "tests/speckit-pro/evals/fixtures/functional/scaffold-reviewability/project.json",
+          "destination": ".specify/project.json"
+        }
+      ],
+      "hosts": {
+        "claude": {
+          "skill": "speckit-pro:speckit-scaffold-spec",
+          "allowed_tools": [
+            "Skill",
+            "Read",
+            "Bash"
+          ],
+          "modes": [
+            "plugin"
+          ]
+        },
+        "codex": {
+          "skill": "speckit-scaffold-spec",
+          "allowed_tools": [
+            "read_file",
+            "command_execution"
+          ],
+          "modes": [
+            "project"
+          ]
+        }
+      },
+      "checks": [
+        {
+          "id": "selection",
+          "requirement": "selection",
+          "type": "selection",
+          "expected": [
+            "speckit-scaffold-spec"
+          ],
+          "allowed_extra": []
+        },
+        {
+          "id": "gate-result",
+          "requirement": "gate",
+          "type": "native_runner_result",
+          "request_path": "scenario-inputs/reviewability-request.json",
+          "helper_id": "reviewability-gate",
+          "operation": "reviewability-gate",
+          "mode": "read_only",
+          "expected_status": "expected_failure",
+          "expected_exit_code": 1,
+          "stdout_field_path": [
+            "status"
+          ],
+          "expected_stdout_value": "block",
+          "response_field_path": [
+            "helper_result"
+          ],
+          "response_value_path": [
+            "data",
+            "stdout_json"
+          ]
+        },
+        {
+          "id": "read-roadmap",
+          "requirement": "target",
+          "type": "file_access",
+          "operation": "read_file",
+          "path": "docs/ai/current-technical-roadmap.md"
+        },
+        {
+          "id": "gate-status",
+          "requirement": "block",
+          "type": "response_json_field",
+          "field_path": [
+            "gate_status"
+          ],
+          "expected_by_host": {
+            "claude": "block",
+            "codex": "block"
+          }
+        },
+        {
+          "id": "target-loc",
+          "requirement": "target",
+          "type": "response_json_field",
+          "field_path": [
+            "target_reviewable_loc"
+          ],
+          "expected_by_host": {
+            "claude": 1180,
+            "codex": 1180
+          }
+        },
+        {
+          "id": "exception-class",
+          "requirement": "block",
+          "type": "response_json_field",
+          "field_path": [
+            "exception_class"
+          ],
+          "expected_by_host": {
+            "claude": null,
+            "codex": null
+          }
+        },
+        {
+          "id": "setup-decision",
+          "requirement": "block",
+          "type": "response_json_field",
+          "field_path": [
+            "setup_may_continue"
+          ],
+          "expected_by_host": {
+            "claude": false,
+            "codex": false
+          }
+        },
+        {
+          "id": "block-semantic",
+          "requirement": "block",
+          "type": "semantic",
+          "rubric": "PASS only if the response reports that SPEC-841's own entry exceeds the block thresholds (1180 reviewable LOC, 9 production files), so setup stops before creating a worktree and the spec must be split first. FAIL if it uses a roadmap-wide or last-entry reading, such as SPEC-842's 260 LOC or a warn verdict, or continues setup on that basis."
+        }
+      ],
+      "native_differences": [
+        "Claude and Codex use their native command surfaces to invoke the same protected runner with the same staged request.",
+        "The roadmap puts the over-budget target first and a within-budget entry last, so the spec-scoped verdict and the verdict shared by both hosts differ from a roadmap-wide reading."
+      ],
+      "provenance": [
+        "speckit-pro/skills/speckit-scaffold-spec/SKILL.md",
+        "speckit-pro/codex-skills/speckit-scaffold-spec/SKILL.md",
+        "speckit-pro/skills/speckit-autopilot/references/gate-validation.md",
+        "speckit-pro/skills/speckit-coach/templates/technical-roadmap-template.md"
+      ],
+      "required_tools": [
+        "specify"
+      ]
+    },
+    {
+      "id": "functional.speckit-scaffold-spec.reviewability-target-exception",
+      "layer": "functional",
+      "capability": "Runs the spec-scoped reviewability setup gate on a two-entry roadmap and records the target entry's infra exception instead of reading the roadmap's last entry.",
+      "timeout_seconds": 300,
+      "resource_class": "ordinary",
+      "requirements": [
+        {
+          "id": "selection",
+          "description": "The host-native speckit-scaffold-spec capability is activated."
+        },
+        {
+          "id": "gate",
+          "description": "Runs the reviewability setup gate for the roadmap with spec_id SPEC-841 exactly once and preserves its result (scaffold SKILL.md and Codex SKILL.md: \"Run runner helper reviewability-gate in setup mode for <technical-roadmap-path> with spec_id <SPEC-ID>\"; gate-validation.md: \"The gate then reads only that `### <SPEC-ID>:` section\")."
+        },
+        {
+          "id": "target",
+          "description": "Reports the target entry's own budget, not a roadmap-wide or last-entry reading (gate-validation.md: \"its budget numbers, its `Primary surface:` values\")."
+        },
+        {
+          "id": "exception",
+          "description": "A `Reviewability-Exception: infra` pragma on the target entry's own line turns its size block into a recorded exception, and setup may continue with that exception recorded (gate-validation.md: \"a line-anchored `Reviewability-Exception: refactor|infra|upgrade` pragma, which turns a size `block` into `exception`\"; technical-roadmap-template.md; scaffold SKILL.md: \"If it returns an unexcepted `block`, STOP\"; Codex SKILL.md: \"`block` without a ratified split exception\")."
+        }
+      ],
+      "prompt": "Use {{skill}} to run only the reviewability setup gate for SPEC-841 from docs/ai/current-technical-roadmap.md. Do not run the interview, create a branch, worktree, or workflow, or write any file. Invoke the staged protected Python runner exactly once as one default-shell command: {{resolved_python}} -m speckit_pro_runner < scenario-inputs/reviewability-request.json. Use no shell variable, prefix, suffix, pipe, or output redirection other than the required input redirection. Then read docs/ai/current-technical-roadmap.md as one exact file read. Output only raw JSON: exactly one top-level object with helper_result, gate_status, target_reviewable_loc, exception_class, setup_may_continue, and explanation, with no diagnostic prefix, prose, Markdown, or code fences. helper_result must equal only the parsed helper payload inside the runner response's data.stdout_json field. gate_status is that payload's status; exception_class is the honored exception class or null; setup_may_continue says whether scaffold setup may proceed to the worktree step. Do not use a shell fallback or fabricate the result.",
+      "fixtures": [
+        {
+          "source": "tests/speckit-pro/evals/fixtures/functional/scaffold-reviewability/exception/reviewability-request.json",
+          "destination": "scenario-inputs/reviewability-request.json"
+        },
+        {
+          "source": "tests/speckit-pro/evals/fixtures/functional/scaffold-reviewability/exception/current-technical-roadmap.md",
+          "destination": "docs/ai/current-technical-roadmap.md"
+        },
+        {
+          "source": "tests/speckit-pro/evals/fixtures/functional/scaffold-reviewability/project.json",
+          "destination": ".specify/project.json"
+        }
+      ],
+      "hosts": {
+        "claude": {
+          "skill": "speckit-pro:speckit-scaffold-spec",
+          "allowed_tools": [
+            "Skill",
+            "Read",
+            "Bash"
+          ],
+          "modes": [
+            "plugin"
+          ]
+        },
+        "codex": {
+          "skill": "speckit-scaffold-spec",
+          "allowed_tools": [
+            "read_file",
+            "command_execution"
+          ],
+          "modes": [
+            "project"
+          ]
+        }
+      },
+      "checks": [
+        {
+          "id": "selection",
+          "requirement": "selection",
+          "type": "selection",
+          "expected": [
+            "speckit-scaffold-spec"
+          ],
+          "allowed_extra": []
+        },
+        {
+          "id": "gate-result",
+          "requirement": "gate",
+          "type": "native_runner_result",
+          "request_path": "scenario-inputs/reviewability-request.json",
+          "helper_id": "reviewability-gate",
+          "operation": "reviewability-gate",
+          "mode": "read_only",
+          "expected_status": "ok",
+          "expected_exit_code": 0,
+          "stdout_field_path": [
+            "status"
+          ],
+          "expected_stdout_value": "exception",
+          "response_field_path": [
+            "helper_result"
+          ],
+          "response_value_path": [
+            "data",
+            "stdout_json"
+          ]
+        },
+        {
+          "id": "read-roadmap",
+          "requirement": "target",
+          "type": "file_access",
+          "operation": "read_file",
+          "path": "docs/ai/current-technical-roadmap.md"
+        },
+        {
+          "id": "gate-status",
+          "requirement": "exception",
+          "type": "response_json_field",
+          "field_path": [
+            "gate_status"
+          ],
+          "expected_by_host": {
+            "claude": "exception",
+            "codex": "exception"
+          }
+        },
+        {
+          "id": "target-loc",
+          "requirement": "target",
+          "type": "response_json_field",
+          "field_path": [
+            "target_reviewable_loc"
+          ],
+          "expected_by_host": {
+            "claude": 1180,
+            "codex": 1180
+          }
+        },
+        {
+          "id": "exception-class",
+          "requirement": "exception",
+          "type": "response_json_field",
+          "field_path": [
+            "exception_class"
+          ],
+          "expected_by_host": {
+            "claude": "infra",
+            "codex": "infra"
+          }
+        },
+        {
+          "id": "setup-decision",
+          "requirement": "exception",
+          "type": "response_json_field",
+          "field_path": [
+            "setup_may_continue"
+          ],
+          "expected_by_host": {
+            "claude": true,
+            "codex": true
+          }
+        },
+        {
+          "id": "exception-semantic",
+          "requirement": "exception",
+          "type": "semantic",
+          "rubric": "PASS only if the response reports that SPEC-841's own entry is over the block thresholds (1180 reviewable LOC, 9 production files) and that its `Reviewability-Exception: infra` pragma records an infra exception, so setup may continue only with that exception recorded. FAIL if it uses a roadmap-wide or last-entry reading, such as SPEC-842's 260 LOC or a warn verdict, or treats the pragma as missing and blocks setup."
+        }
+      ],
+      "native_differences": [
+        "Claude and Codex use their native command surfaces to invoke the same protected runner with the same staged request.",
+        "The roadmap puts the over-budget target first and a within-budget entry last, so the spec-scoped verdict and the verdict shared by both hosts differ from a roadmap-wide reading."
+      ],
+      "provenance": [
+        "speckit-pro/skills/speckit-scaffold-spec/SKILL.md",
+        "speckit-pro/codex-skills/speckit-scaffold-spec/SKILL.md",
+        "speckit-pro/skills/speckit-autopilot/references/gate-validation.md",
+        "speckit-pro/skills/speckit-coach/templates/technical-roadmap-template.md"
+      ],
+      "required_tools": [
+        "specify"
+      ]
+    },
+    {
       "id": "functional.speckit-autopilot.case-29",
       "layer": "functional",
       "capability": "Inspect adjacent spec directories, identify only the eligible Tier-2 relocation candidate, preserve all process artifacts, and truthfully report that the deferred relocation operation and its durable gap record cannot be invoked during this read-only inspection.",
