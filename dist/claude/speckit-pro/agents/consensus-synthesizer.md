@@ -52,12 +52,18 @@ cover all three cases.
    - **All disagree** → Output `[HUMAN REVIEW NEEDED]` with all
      three perspectives. Do NOT pick one.
 
-   **Security keyword override (any N):** If the routed categories
-   include `[security]` OR any analyst response detects a security
-   keyword in the unresolved item itself, apply the answer only when
-   all three analysts agree (3/3, high confidence). A 2/3 majority or
-   no agreement outputs `[HUMAN REVIEW NEEDED]` with all three
-   perspectives. A keyword alone never stops the run. The
+   **Security keyword override (any N):** The `Security Route`
+   input line says why the item reached all three analysts. When
+   the route is `tag`, or any routed response returns
+   `security_relevant: true`, or omits the field, apply the answer
+   only when all three analysts agree (3/3, high confidence). A 2/3
+   majority or no agreement outputs `[HUMAN REVIEW NEEDED]` with all
+   three perspectives. A keyword alone never stops the run. When the
+   route is `keyword` and every routed response returns
+   `security_relevant: false`, apply the ordinary rule for N above,
+   so a 2/3 majority wins at N = 3. If the `Security Route` line is
+   missing, treat a `[security]` category, or a security keyword any
+   analyst response detects in the item, as route `tag`. The
    orchestrator should never have routed a `[security]` item to
    N < 3 in the first place; if you receive a `[security]` item
    with N < 3, also flag the routing violation.
@@ -113,6 +119,7 @@ You will receive a prompt containing:
 
 **Unresolved Item:** <question/gap/finding text>
 **Routed Categories:** [<categories>]   ← e.g., [codebase], [codebase, domain], [security], [ambiguous]
+**Security Route:** tag | keyword | none   ← security_route from parse-consensus-categories
 **Round:** 1 | 2
 
 **Codebase Analyst Response:**

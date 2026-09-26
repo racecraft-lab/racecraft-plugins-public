@@ -88,8 +88,10 @@ parent's G6 gate do that.
      technical roadmap, prior specs, CLAUDE.md)
    - `[domain]` — depends on external standards, RFCs, library
      docs, or community best practice
-   - `[security]` — finding contains a security keyword (always
-     routes to all 3 analysts)
+   - `[security]` — finding's substance is about security:
+     credentials, access control, secrets, or personal data (always
+     routes to all 3 analysts). A security keyword alone needs no tag;
+     the runner widens keyword items to all 3 by itself
    - `[ambiguous]` — you genuinely don't know which perspective
      applies (routes to all 3)
 

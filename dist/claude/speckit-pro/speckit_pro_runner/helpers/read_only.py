@@ -4747,14 +4747,23 @@ def parse_consensus_categories(inputs: dict[str, Any], repo_root: Path) -> dict[
     `[security]` by the keywords the item text carries, so the text is scanned
     too: an executor that tags a keyword-bearing item narrowly still gets all
     three, which is the defense in depth the reference promises.
+
+    `security_route` says which security rule widened the item: `tag` for an
+    explicit `[security]` tag, `keyword` for a keyword in the text alone, and
+    None otherwise. The synthesizer keeps a tag at unanimous agreement and lets
+    a keyword-only route use the item's own rule when no analyst finds security
+    content in it.
     """
     line = str(inputs.get("line") or "")
     tags = consensus_category_tags(line)
     unknown = next((tag for tag in tags if tag not in CONSENSUS_ROUTED_ANALYSTS), None)
     keyword = CONSENSUS_SECURITY_RE.search(line)
+    security_route: str | None = None
     if "security" in tags:
+        security_route = "tag"
         reason = "security tag: all three analysts (defense in depth)"
     elif keyword is not None:
+        security_route = "keyword"
         reason = f"security keyword {keyword.group(0).casefold()} in item text: all three analysts (defense in depth)"
     elif not tags:
         reason = "no category prefix: all three analysts (safe default)"
@@ -4765,8 +4774,21 @@ def parse_consensus_categories(inputs: dict[str, Any], repo_root: Path) -> dict[
     else:
         routed = {CONSENSUS_ROUTED_ANALYSTS[tag] for tag in tags}
         analysts = [name for name in CONSENSUS_ALL_ANALYSTS if name in routed]
-        return make_result(json_text({"tags": tags, "analysts": analysts, "reason": "category-routed dispatch"}))
-    return make_result(json_text({"tags": tags, "analysts": list(CONSENSUS_ALL_ANALYSTS), "reason": reason}))
+        return make_result(
+            json_text(
+                {"tags": tags, "analysts": analysts, "reason": "category-routed dispatch", "security_route": None}
+            )
+        )
+    return make_result(
+        json_text(
+            {
+                "tags": tags,
+                "analysts": list(CONSENSUS_ALL_ANALYSTS),
+                "reason": reason,
+                "security_route": security_route,
+            }
+        )
+    )
 
 
 CRL_HEADING = "Consensus Resolution Log"
