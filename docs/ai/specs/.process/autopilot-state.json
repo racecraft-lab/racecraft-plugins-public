@@ -31,9 +31,11 @@
   "execution_control": {
     "run_id": "e7fbc9a6636945ed8a8c2abd42cbb892",
     "ledger_path": "docs/ai/specs/.process/.process/execution-control/ac068cab59ef67faf15646a7.json",
-    "disposition": "continue",
-    "reasons": [],
-    "elapsed_seconds": 34991.07294201851,
+    "disposition": "checkpoint_required",
+    "reasons": [
+      "failure_family_budget_exhausted"
+    ],
+    "elapsed_seconds": 35330.446211099625,
     "checkpoint_due": false,
     "approved_invariants": 29,
     "corrective_cycles": 2
@@ -496,7 +498,7 @@
       "split mixed-story increments and count every recurring process and evidence path",
       "rerun Analyze and budget checks, then attempt G6 after a valid allocation"
     ],
-    "pending_user_decision": "The genuine native Analyze dispatch failed during Codex authentication. Both allowed corrective cycles are consumed; the current policy permits no further corrective dispatch.",
+    "pending_user_decision": "The genuine native Analyze dispatch failed during Codex authentication. The next FR-026 corrective reservation was denied with failure_family_budget_exhausted; an audited policy recovery is required before further remediation.",
     "repair_reservation": {
       "dispatch_id": "hrns015-analyze-c1-rescope-20260925",
       "failure_invariant": "FR-026",
