@@ -17,6 +17,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "speckit-pro"))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "lib"))
 from test_result import run_counted
 from speckit_pro_runner.execution_control import durable_json, execution_control
+from speckit_pro_runner.helpers.read_only import json_schema_failures
 from speckit_pro_runner.verification_records import digest, execute_verification, project_command, run_snapshot_command, validate_execution_record
 
 
@@ -243,6 +244,9 @@ class CorrectiveRecoveryTests(_ExecutionControlFixture, unittest.TestCase):
         self.assertEqual(retry["ledger"]["dispatches"]["owner-retry"]["outcome"], "reserved")
         self.assertEqual(retry["ledger"]["dispatches"]["owner-retry"]["recovery_of"], "owner")
         self.assertEqual(retry["ledger"]["dispatches"]["owner-retry"]["operator_recovery_event_id"], "operator-message")
+        schema = json.loads((Path(__file__).resolve().parents[3] /
+                             "speckit-pro/speckit_pro_runner/contracts/execution-control.schema.json").read_text())
+        self.assertEqual(json_schema_failures(retry["ledger"], schema, schema, "ledger"), [])
         self.invoke("complete", dispatch_id="owner-retry", outcome="completed")
         self.assertEqual(self.invoke("status", mode="read_only")["disposition"], "continue")
         with self.assertRaises(ValueError):
