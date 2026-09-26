@@ -27,10 +27,22 @@ ownership from the caller's current workflow.
   Pass `inputs.spec_file` as the resolved repo-relative feature spec path when
   available; the workflow can live elsewhere. If omitted, only an existing
   adjacent spec can supply requirement IDs, otherwise failures use `unresolved`.
-  The registry freezes at start; later paths or contents never reset counters.
+  An existing spec's registry freezes at start; later paths or contents never
+  reset counters.
   Agent replacement, compaction, stage changes, a reclaimed state mirror, and
   resume never reset it. Preserve another workflow's ledger when reclaiming
   the one-run `autopilot-state.json` mirror.
+- `bind-invariants`: for a greenfield run that started with an empty registry,
+  call once after Specify has produced the feature spec, before the next
+  corrective reservation. Pass the same `workflow_file`, `expected_run_id`,
+  `ledger_path`, and an explicit repo-relative `spec_file`. The helper requires
+  at least one FR, NFR, or INV ID and records the spec path and content digest.
+  It refuses an already populated or previously bound registry. Later spec
+  edits do not silently import new IDs; a second bind is refused. This action
+  preserves the run identity, clocks, dispatches, reservations, and consumed
+  corrective cycles. Earlier `unresolved` reservations remain `unresolved`;
+  do not use a new ID to retry the same failure. Do not bind while an external
+  wait or unknown dispatch outcome needs reconciliation.
 - `reserve`: before each native dispatch or command, supply `dispatch_id` and
   `kind=implementation|corrective|verification|infrastructure`. A corrective
   dispatch supplies `failure_invariant`: a stable approved requirement or
