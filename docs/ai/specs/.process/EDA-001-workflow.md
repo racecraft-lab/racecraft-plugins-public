@@ -32,6 +32,7 @@ captured during scoping.
 
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
+| Stage | plan | 🔄 In Progress | Explicit --stage plan |
 | Specify | `/speckit-specify` | ⏳ Pending | |
 | Clarify | `/speckit-clarify` | ⏳ Pending | Optional but recommended |
 | Plan | `/speckit-plan` | ⏳ Pending | |
@@ -766,3 +767,51 @@ speckit-pro/README.md                      # acknowledgement line
 ```
 
 ---
+
+## PROJECT_COMMANDS
+
+```json
+{
+  "BUILD": "N/A",
+  "COMPLEXITY": "N/A",
+  "DEPENDENCY_AUDIT": "N/A",
+  "DEPENDENCY_RULES": "N/A",
+  "FULL_VERIFY": "python3 tests/speckit-pro/run-all.py",
+  "INTEGRATION_TEST": "N/A",
+  "LINT": "python3 scripts/run-python-lint.py run ruff",
+  "LINT_FIX": "N/A",
+  "MUTATION": "N/A",
+  "SINGLE_FILE_INTEGRATION": "N/A",
+  "SINGLE_FILE_TEST": "N/A",
+  "TYPECHECK": "python3 scripts/run-python-lint.py run mypy",
+  "UNIT_TEST": "python3 tests/speckit-pro/run-all.py"
+}
+```
+
+## Autopilot Preflight
+
+- Stage: plan, explicit operator invocation. Draft PR: no_record.
+- Workflow binding: resolved in the EDA-001 worktree; feature branch retained.
+- Agent installation: 13 agents matched plugin 2.36.1 before interruption; 2.36.2 revalidation is not yet run.
+- Quality gates: thresholds file validates; complexity, mutation, and dependency rules remain unconfigured; dependency audit is off.
+- Research broker: jev screening; warning search_environment_only_credential.
+- Archive sweep: current spec excluded; no other spec proven merged; no cleanup applied.
+- Constitution baseline: blocked. Ruff passed; pinned mypy 2.3.1 passed in an isolated environment; the replacement quick suite failed its privacy scan; the interrupted quick-suite result remains unknown.
+
+## Recovery Checkpoint
+
+- Planning remains at Phase 0; no phase agent has started.
+- Installed plugin is now 2.36.2; the former 2.36.1 installation is no longer available.
+- The original quick-suite native session is unavailable; process inspection found no surviving suite process; retained output has no terminal test verdict.
+- Execution control requires a checkpoint. The original run identity, counters, and unknown test outcome are preserved. Zero corrective cycles have been consumed.
+- Next operator action: reconcile the original interrupted dispatch using a genuine retained native result if one becomes available. The current execution ledger remains at `checkpoint_required`; the replacement privacy-scan failure also needs resolution before G0 can pass.
+- No implementation or Post work was performed; those items remain outside the requested plan stage.
+
+### Operator-authorized baseline replacement
+
+The operator explicitly approved installing pinned mypy 2.3.1 in an isolated environment and running a fresh G0 baseline. Preserve the original interrupted suite outcome as unknown and record the replacement independently. This approval does not turn the interrupted test run into a pass.
+
+- Approved recovery: pinned mypy 2.3.1 installed in an isolated environment. Type checking passed for 47 source files after granting worktree cache-write permission.
+- Replacement quick-suite baseline: finished with exit code 1; 8,945/8,946 tests passed. The sole failure was `test-privacy-scan` (10/11). The original interrupted outcome remains unknown.
+- Focused diagnostic: `dynamic_local_pattern` includes terms derived from this worktree path. Its failure preview flags ordinary repository text containing words such as "foundational" and "attribute". This is consistent with the documented local path collision; no G0 pass or waiver is claimed.
+- Execution ledger: `checkpoint_required` for the original unknown `g0-quick-suite` dispatch. Zero corrective cycles consumed; no phase agent dispatched.

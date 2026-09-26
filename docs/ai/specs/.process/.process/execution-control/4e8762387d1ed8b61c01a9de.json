@@ -1,0 +1,44 @@
+{
+  "active_wait": null,
+  "approved_invariants": [],
+  "authorization_granted": false,
+  "checkpoint_at": 1790380789.963952,
+  "corrective_cycles": 0,
+  "dispatches": {
+    "g0-mypy": {
+      "completed_at": 1790371287.961833,
+      "kind": "verification",
+      "outcome": "failed",
+      "reconciliations": 0,
+      "reservation_id": null,
+      "reserved_at": 1790371241.175308
+    },
+    "g0-quick-suite": {
+      "kind": "verification",
+      "outcome": "unknown",
+      "reconciliations": 1,
+      "reservation_id": null,
+      "reserved_at": 1790371084.596255
+    },
+    "g0-ruff": {
+      "completed_at": 1790371284.144026,
+      "kind": "verification",
+      "outcome": "completed",
+      "reconciliations": 0,
+      "reservation_id": null,
+      "reserved_at": 1790371237.3202078
+    }
+  },
+  "excluded_intervals": [],
+  "last_observed_at": 1790380789.963952,
+  "reservations": {},
+  "run_id": "47805d8f53dd4babaf524ca9b62869ae",
+  "schema_version": "execution-control/v1",
+  "slice_started_at": 1790371012.085984,
+  "started_at": 1790371012.085984,
+  "workflow_identity": {
+    "current_workflow_file": "docs/ai/specs/.process/EDA-001-workflow.md",
+    "original_workflow_file": "docs/ai/specs/.process/EDA-001-workflow.md",
+    "relocation_event_ids": []
+  }
+}
