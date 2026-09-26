@@ -2,7 +2,7 @@
   "schema_version": "task-execution.v1",
   "fingerprints": {
     "plan_sha256": "10d972bb68d3f637a2ad96024467bd600c2dbbfc637cca074cf408d95fb6b9b5",
-    "spec_sha256": "7c905cbe35fccc354c3abda26b64d474036a8ce8313d28fc7dd5b39ede2fcfe2",
+    "spec_sha256": "01d46bbfe49807eae7d93e90cb2277104530848ea43ec72a0fd0b437abc0e05c",
     "tasks_sha256": "aa80f377f3219c8de8919b7a50382afd9b83e823852eff43cb7748ff02bf1ae8"
   },
   "tasks": {

@@ -5,7 +5,7 @@
   "branch": "hrns-015-autopilot-gate-pr-emission-repair",
   "status": "in_progress",
   "stage": "plan",
-  "active_step": "Phase 6: Analyze",
+  "active_step": "Phase 6.5: Confidence Gate",
   "stage_resolution": {
     "source": "argv",
     "basis": "explicit --stage plan",
@@ -29,12 +29,12 @@
     "safeToApplyCleanup": false
   },
   "execution_control": {
+    "run_id": "e7fbc9a6636945ed8a8c2abd42cbb892",
     "ledger_path": "docs/ai/specs/.process/.process/execution-control/ac068cab59ef67faf15646a7.json",
     "disposition": "continue",
     "reasons": [],
-    "elapsed_seconds": 44313.652998924255,
-    "checkpoint_due": false,
-    "run_id": "e7fbc9a6636945ed8a8c2abd42cbb892"
+    "elapsed_seconds": 46936.035455942154,
+    "checkpoint_due": true
   },
   "plan": [
     {
@@ -111,11 +111,11 @@
     },
     {
       "step": "Phase 5: Tasks",
-      "status": "checkpointing"
+      "status": "completed"
     },
     {
       "step": "Phase 6: Analyze",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 6: Analyze - Consensus",
@@ -262,7 +262,7 @@
       "status": "skipped: outside --stage plan"
     }
   ],
-  "updated_at": "2026-09-26T02:41:33Z",
+  "updated_at": "2026-09-26T03:26:18Z",
   "prerequisites": {
     "status": "completed_with_documented_exception",
     "all_pass": false,
@@ -342,10 +342,29 @@
       "reason": "three checklists, 51 items, 11 resolved gaps; zero remaining Gap markers"
     },
     "G5": {
-      "pass": false,
+      "gate": "G5",
       "markers": 0,
+      "pass": true,
+      "reason": "33 tasks found",
       "task_count": 33,
-      "reason": "Historical 31-task pass invalidated; current sidecar source fingerprints are stale after accepted Analyze spec clarification"
+      "task_execution_valid": true
+    },
+    "G6": {
+      "details": [],
+      "gate": "G6",
+      "markers": 0,
+      "pass": true,
+      "reason": "0 CRITICAL/HIGH findings",
+      "spec_qualification_pass": false,
+      "qualification_status": "unqualified",
+      "open_findings": [
+        "H3",
+        "H4",
+        "H5",
+        "H6",
+        "H7"
+      ],
+      "limitation": "The helper reported zero findings; the latest Analysis Results has five open HIGH rows. No implementation readiness is claimed."
     }
   },
   "specify": {
@@ -452,7 +471,7 @@
     }
   },
   "tasks": {
-    "status": "checkpointing",
+    "status": "completed",
     "tasks_file": "specs/hrns-015-autopilot-gate-pr-emission-repair/tasks.md",
     "execution_file": "specs/hrns-015-autopilot-gate-pr-emission-repair/.process/task-execution.json",
     "task_count": 33,
@@ -460,7 +479,7 @@
     "story_count": 14,
     "all_fr_ids_covered": true,
     "reviewability_budget": "19 proposed increments, 14\u201324 candidate paths each; actual diffs and LOC unqualified",
-    "fingerprint_status": "stale after accepted Analyze spec clarification; Tasks producer reconciliation blocked by closed corrective cycle"
+    "fingerprint_status": "valid after the one-time Tasks producer reconciliation"
   },
   "atomicity_route": {
     "route": "one-navigable-PR",
@@ -476,7 +495,7 @@
     "reason": "atomicity-route is one-navigable-PR, not split-PR"
   },
   "analyze": {
-    "status": "in_progress",
+    "status": "completed_with_open_qualification_findings",
     "findings_total": 12,
     "findings_resolved": 7,
     "open_findings": [
@@ -486,14 +505,13 @@
       "H6",
       "H7"
     ],
-    "g6": "not_run",
+    "g6": "unqualified: five open HIGH qualification conditions; deterministic helper reported pass with zero findings",
     "user_decision": "Split C1 into C1a and C1b as fifth PR; order A -> B -> C1a -> C1b -> C2",
     "user_decision_applied": true,
     "in_flight_dispatches": [],
     "remaining": [
-      "obtain fresh operator approval for the tested PR #680 one-time metadata continuation, then reconcile Tasks fingerprints and revalidate G5",
-      "obtain owner acceptance of the proposed 19-PR direction",
-      "qualify exact per-PR diffs, reviewable LOC, generated outputs, and marker fingerprints; resolve H3\u2013H7 and run G6"
+      "owner review of the proposed 19-PR implementation direction",
+      "T002 actual per-PR diff, LOC, generated-output, marker-fingerprint and repeated-path qualification before behavior tasks"
     ],
     "pending_user_decision": null,
     "repair_reservation": {
@@ -512,6 +530,8 @@
       "disposition": "checkpoint_required",
       "reason": "corrective_cycle_already_closed",
       "ledger_mutation": false
-    }
+    },
+    "final_synthesis_completed": true,
+    "handoff_authorization": "The latest explicit operator instruction directs completion of the plan-only draft review handoff; implementation qualification and ratification remain pending."
   }
 }
