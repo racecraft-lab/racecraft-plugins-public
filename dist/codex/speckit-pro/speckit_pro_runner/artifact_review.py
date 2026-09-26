@@ -6,7 +6,7 @@ import hashlib
 import json
 import re
 from collections.abc import Callable
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from pathlib import Path, PurePosixPath
 from typing import Any
 
@@ -17,6 +17,8 @@ GALLERY = Path(__file__).resolve().parents[1] / "artifact-gallery"
 PREVIEW_STATUSES = ("pending", "verified", "unavailable", "denied")
 BROKERED_PREVIEW_VERDICTS = ("verified", "unavailable", "denied")
 OBSERVER = "artifact-preview-observer"
+# The broker stamps observed_at itself; allow only ordinary clock skew beyond now.
+OBSERVATION_CLOCK_SKEW = timedelta(minutes=5)
 FILL_MARKER = re.compile(rb"<!--\s*FILL:([a-z0-9-]+):(START|END)\s*-->")
 FileReader = Callable[[Path, Path], bytes | None]
 
@@ -141,8 +143,11 @@ def _observation(value: Any) -> None:
         raise ValueError("brokered preview verdict is outside the closed vocabulary")
     _hash(value["artifact_sha256"], "observation.artifact_sha256")
     require_text(value["observed_at"], "observation.observed_at")
-    if datetime.fromisoformat(value["observed_at"]).tzinfo is None:
+    observed_at = datetime.fromisoformat(value["observed_at"])
+    if observed_at.tzinfo is None:
         raise ValueError("brokered preview observation must include a timezone")
+    if observed_at > datetime.now(timezone.utc) + OBSERVATION_CLOCK_SKEW:
+        raise ValueError("brokered preview observation time is in the future")
 
 
 def _preview(page: dict[str, Any]) -> None:

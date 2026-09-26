@@ -35,7 +35,7 @@ class BrokerFixture(unittest.TestCase):
 
     def preview_session(self) -> tuple[Path, str, dict]:
         artifact = self.root / "artifacts/plan.html"
-        artifact.parent.mkdir(parents=True)
+        artifact.parent.mkdir(parents=True, exist_ok=True)
         artifact.write_bytes(b"<html><body>plan</body></html>\n")
         expected = hashlib.sha256(artifact.read_bytes()).hexdigest()
         session = author_broker.create_preview_session(
@@ -255,6 +255,24 @@ class PreviewBrokerProvenanceTests(BrokerFixture):
         with unittest.mock.patch.object(Path, "rmdir", side_effect=OSError("cleanup failed")):
             with self.assertRaisesRegex(author_broker.BrokerViolation, "could not close safely"):
                 author_broker.close_session(capability=session["capability"])
+
+    def test_preview_close_rejects_an_implausible_observation_time(self) -> None:
+        for label, shift in (("before session creation", -3600.0), ("in the future", 3600.0)):
+            with self.subTest(label=label):
+                _, _, session = self.preview_session()
+                author_broker.submit_preview_verdict(capability=session["capability"], verdict="verified")
+                state = author_broker._read_state(self.state_root, session["session_id"])
+                anchor = state["created_at"] if shift < 0 else datetime.now(timezone.utc).timestamp()
+                state["preview_submission"]["observed_at"] = datetime.fromtimestamp(anchor + shift, timezone.utc).isoformat()
+                author_broker._write_state(self.state_root / session["session_id"] / "state.json", state)
+                with self.assertRaisesRegex(author_broker.BrokerViolation, "observation time is implausible"):
+                    author_broker.close_session(capability=session["capability"])
+                self.assertFalse((self.state_root / session["session_id"]).exists())
+
+    def test_close_session_description_names_the_observation(self) -> None:
+        tool = next(tool for tool in author_broker.TOOLS if tool["name"] == "close_session")
+        for field in ("observation", "verdict", "artifact_sha256", "observed_at"):
+            self.assertIn(field, tool["description"])
 
     def test_preview_close_rejects_swapped_session_directory(self) -> None:
         _, _, session = self.preview_session()

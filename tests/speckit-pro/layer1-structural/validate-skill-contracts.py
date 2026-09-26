@@ -448,6 +448,11 @@ class ValidateCodexSkills(unittest.TestCase):
         with self.subTest(msg='speckit-autopilot: explicit external workflow binds to its registered worktree'):
             prerequisites = _read(skill_dir / 'references' / 'prerequisites-codex.md')
             self.assertTrue('explicitly supplied the absolute workflow path' in prerequisites and 'relation=external' in prerequisites and 'registered worktree' in prerequisites and 'real sandbox denial' in prerequisites and ('Open a new Codex task rooted at <workflow_root>' not in prerequisites), 'expected explicit registered-worktree binding with permission failures reported at the actual operation')
+        with self.subTest(msg='speckit-autopilot: eval 106 expects an explicit external workflow to bind and continue'):
+            evals = json.loads(_read(REPO_ROOT / 'tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json'))
+            eval_106 = json.dumps(next(item for item in evals['evals'] if item['id'] == 106))
+            self.assertNotIn('open a new Codex task rooted', eval_106, 'expected eval 106 to follow the explicit-selection binding rule')
+            self.assertIn('WORKFLOW_ROOT', eval_106, 'expected eval 106 to bind execution to the returned workflow root')
         with self.subTest(msg='speckit-autopilot: documents the optional Luna helper'):
             self.assertIn('autopilot-fast-helper', body)
         with self.subTest(msg='speckit-autopilot: keeps the Luna helper advisory and parent-only'):
