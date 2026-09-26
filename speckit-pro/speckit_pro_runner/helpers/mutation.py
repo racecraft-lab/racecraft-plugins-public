@@ -1461,7 +1461,7 @@ def git_worktree_status(repo_root: Path) -> bool | dict[str, Any]:
         if len(entry) < 4 or entry[2] != " ":
             return git_status_unavailable(repo_root, "git_status")
         paths = [entry[3:]]
-        if entry[0] in "RC":
+        if "R" in entry[:2] or "C" in entry[:2]:
             if not entries or not entries[0]:
                 return git_status_unavailable(repo_root, "git_status")
             paths.append(entries.pop(0))
