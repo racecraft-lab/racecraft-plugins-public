@@ -2350,6 +2350,41 @@ class GateFoundationTests(unittest.TestCase):
                 with patch.object(dispatcher.subprocess, "run", return_value=completed):
                     self.assertEqual(dispatcher.run_script_suite("layer", [test_path], REPO_ROOT), 1)
 
+    def test_layer_dispatcher_names_every_failing_test_with_a_bounded_traceback(self) -> None:
+        import contextlib
+        import io
+
+        dispatcher = load_layer_script_dispatcher()
+        test_path = REPO_ROOT / "tests" / "speckit-pro" / "run-layer-scripts.py"
+        long_traceback = [f'  File "child.py", line {index}, in test_first' for index in range(60)]
+        stderr = "\n".join(
+            [
+                "run-layer-scripts FAILED child.Case.test_first",
+                "Traceback (most recent call last):",
+                *long_traceback,
+                "AssertionError: first broke",
+                "run-layer-scripts FAILED child.Case.test_second",
+                "Traceback (most recent call last):",
+                "AssertionError: second broke",
+            ]
+        ) + "\n"
+        completed = subprocess.CompletedProcess(
+            [sys.executable, "child.py"], 1, stdout="run-layer-scripts: 1/3 passed\n", stderr=stderr
+        )
+        captured = io.StringIO()
+        with (
+            patch.object(dispatcher.subprocess, "run", return_value=completed),
+            contextlib.redirect_stderr(captured),
+            contextlib.redirect_stdout(io.StringIO()),
+        ):
+            self.assertEqual(dispatcher.run_script_suite("layer", [test_path], REPO_ROOT), 1)
+        reported = captured.getvalue()
+        self.assertIn("run-layer-scripts FAILED child.Case.test_first", reported)
+        self.assertIn("AssertionError: first broke", reported)
+        self.assertIn("run-layer-scripts FAILED child.Case.test_second", reported)
+        self.assertIn("AssertionError: second broke", reported)
+        self.assertNotIn(long_traceback[0] + "\n", reported)
+
     def test_missing_executable_treats_windows_altsep_paths_as_repo_relative(self) -> None:
         from speckit_pro_runner.gates import suite as suite_gate
 
