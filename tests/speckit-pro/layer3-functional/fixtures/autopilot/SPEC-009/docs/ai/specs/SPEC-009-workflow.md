@@ -178,6 +178,12 @@ pre-Implement gate. Do not edit implementation code and do not invoke grill-me.
 **Expected setup input:** `phase-artifacts/analysis.md` contains no analysis
 verdict. The Analyze consensus task is mandatory when findings are unresolved.
 
+### Analysis Results
+
+| ID | Severity | Issue | Resolution |
+|----|----------|-------|------------|
+| | | | |
+
 ## Phase 6.5: Confidence Gate
 
 This gate is resolved from the actual Analyze emit and configured mode. The actor
