@@ -34,7 +34,7 @@ captured during scoping.
 |-------|---------|--------|-------|
 | Stage | plan | ✅ Complete | Explicit --stage plan resolved; planning phases continue |
 | Specify | `/speckit-specify` | ✅ Complete | 3 stories, 19 FRs; G1 routes provenance marker to Clarify |
-| Clarify | `/speckit-clarify` | ⚠️ Blocked | Session 1 found exact source; license notice choice awaits operator review |
+| Clarify | `/speckit-clarify` | 🔄 In Progress | Session 1 resolved with MIT; sessions 2 and 3 pending |
 | Plan | `/speckit-plan` | ⏳ Pending | |
 | Checklist | `/speckit-checklist` | ⏳ Pending | Run for each domain |
 | Tasks | `/speckit-tasks` | ⏳ Pending | |
@@ -174,7 +174,7 @@ Filled from `detect-commands` at Step 0.11. One row per slot; the operator answe
 
 - [ ] The MIT notice ships in both `dist/claude/speckit-pro/` and `dist/codex/speckit-pro/`, with the license text byte-identical to the fork at `speckit-pro-baseline` (`c55ee46073ed923f86ce59a5eb3b6d895095d1b7`).
 - [ ] `ledger.json` records exactly the 38 upstream skills; every IGNORE row has a reason; ask-matt, wayfinder, and triage carry `not_ported`; `pr` carries a `transitive_sources` entry.
-- [ ] The humanlayer Apache-2.0 notice ships with its LICENSE text verbatim and a pinned source (exact `show-me` commit and path, or humanlayer head with the gap disclosed).
+- [ ] The separate HumanLayer MIT notice ships with the source repository LICENSE text verbatim and the exact `show-me` commit and path.
 - [ ] The attribution test fails on each defect it guards, proven by fixtures, and passes on the real tree without looping over an empty set.
 - [ ] The credit header format and `metadata.credits` shape are documented for EDA-002 onward.
 - [ ] `speckit-pro/README.md` acknowledges the upstream work and links the notice.
@@ -325,16 +325,20 @@ Use these markers in spec.md for traceability through later phases:
 
 | Session | Focus Area | Questions | Key Outcomes |
 |---------|------------|-----------|--------------|
-| 1 | Provenance | 2 | Exact source pinned to `humanlayer/skills@bba9d13`; MIT source license conflicts with planned Apache notice; operator decision pending |
+| 1 | Provenance | 2 | Exact source pinned to `humanlayer/skills@bba9d13`; operator selected its MIT license for the separate notice |
 | 2 | Ledger contract | | |
 | 3 | Test and credit header | | |
+
+### Operator decision after Session 1
+
+The operator answered `MIT` in the active Codex chat. Keep both notices: the Matt Pocock notice and a separate HumanLayer notice using the MIT `LICENSE` from `humanlayer/skills@bba9d13ab34f0a87f1cc33df4dd196372393ddfc`. The exact `show-me` source is `plugins/show-me/skills/show-me/SKILL.md` at that commit. This decision supersedes Apache and repository-head fallback language in the historical Specify and Clarify prompts above. Future phase prompts and artifacts use this resolved source and license.
 
 ### Consensus Resolution Log
 
 | # | Type | Question/Gap/Finding | Categories | Round | Outcome | Resolution | Analysts Used |
 |---|------|----------------------|------------|-------|---------|------------|---------------|
 | 1 | Clarify | Exact copied `show-me` source | [spec, domain] | 1→2 | 2/3 | Pinned `humanlayer/skills@bba9d13` and retired repo-head fallback in FR-016 | spec-context-analyst, domain-researcher, codebase-analyst |
-| 2 | Clarify | License bytes for separate HumanLayer notice | [codebase, domain] | 1 | [HUMAN REVIEW] | Source MIT and separate-repo Apache conflict with operator-authored notice terms; decision pending | codebase-analyst, domain-researcher |
+| 2 | Clarify | License bytes for separate HumanLayer notice | [codebase, domain] | 1 | [HUMAN REVIEW] | Operator answered `MIT`; preserve two notices and use the pinned source repository license | codebase-analyst, domain-researcher |
 
 ---
 
@@ -357,9 +361,9 @@ Use these markers in spec.md for traceability through later phases:
 - Re-read docs/ai/specs/.process/EDA-001-design-concept.md; it is the source of truth for scoping decisions.
 - Two vertical slices, each its own PR in the EDA gh-stack on top of docs/engineering-discipline-adoption (Q8, "Two vertical slices"):
   - Slice 1: MIT notice, ledger.json, attribution test and fixtures, suite registration, README acknowledgement, regenerated artifacts.
-  - Slice 2: show-me source search, humanlayer Apache notice, transitive_sources enforcement.
+  - Slice 2: exact `show-me` source pin, separate HumanLayer MIT notice, transitive_sources enforcement.
 - Ledger is a JSON sidecar (Q1, "JSON sidecar"), not a Markdown table. Never route it through the merge=generated driver.
-- Both notices ship (Q2, "Both notices now"); the humanlayer pin follows Q5 ("Find exact source first") with the Q6 fallback ("Fall back to repo-head pin").
+- Both notices ship (Q2, "Both notices now"). Clarify Session 1 located the exact `humanlayer/skills@bba9d13` source and the operator selected that repository's MIT license; the Q6 repo-head fallback is retired.
 - Credit form is file header only (Q4, "File header only").
 - Partial absorption uses a required not_ported field (Q7).
 - Test must not pass vacuously (Q3, "Frozen set + fixture proof"); mirror tests/speckit-pro/unit/test-quint-reference-attribution.py, which asserts seen > 0 "refusing to pass vacuously", rather than the substring MIT check in tests/speckit-pro/unit/test-artifact-gallery.py:144.
@@ -377,7 +381,7 @@ Use these markers in spec.md for traceability through later phases:
   - ignore_reason: required on IGNORE
   - not_ported: required on exactly ask-matt, wayfinder, and triage (Q7)
   - transitive_sources: list of {project, license, holder, notice_path}; present on pr (Q2)
-- speckit-pro/skills/speckit-coach/references/upstream/humanlayer-show-me/UPSTREAM-NOTICE.md: new in slice 2. It holds humanlayer's LICENSE verbatim (a 15-line Apache-2.0 header, "Copyright (c) 2024, humanlayer Authors") and a pin to the located show-me source commit and path. If the source cannot be found, it pins humanlayer's head with the gap disclosed (Q2, Q5, Q6).
+- speckit-pro/skills/speckit-coach/references/upstream/humanlayer-show-me/UPSTREAM-NOTICE.md: new in slice 2. It holds the MIT LICENSE text verbatim from `humanlayer/skills@bba9d13ab34f0a87f1cc33df4dd196372393ddfc/LICENSE`, including Copyright (c) 2026 HumanLayer, and pins `plugins/show-me/skills/show-me/SKILL.md` at that same commit (Q2, Q5, Clarify Session 1).
 - Credit header (interface for EDA-002 to EDA-011): one file-level header per derivative file, not per section (Q4).
   - Fields: upstream skill paths, pinned SHA, "Modified derivative: yes", and the repo-relative notice path.
   - Syntax per file type: an HTML comment in Markdown, # comments in TOML and Python.
@@ -386,7 +390,7 @@ Use these markers in spec.md for traceability through later phases:
 - tests/speckit-pro/unit/test-upstream-skill-attribution.py: new. It is named for durable behavior, not the spec ID (AGENTS.md Editing Boundaries).
 - tests/speckit-pro/unit/fixtures/upstream-skill-attribution/: new fixtures:
   - the frozen MIT text;
-  - the frozen humanlayer LICENSE (slice 2);
+  - the frozen `humanlayer/skills@bba9d13` MIT LICENSE (slice 2);
   - the frozen 38-path upstream list taken from the pinned SHA;
   - a credit-header pass fixture and a credit-header fail fixture (Q3).
 - tests/speckit-pro/suite-manifest.json: changed, registering the new test.
@@ -448,16 +452,16 @@ For each domain, include spec-specific focus areas in the prompt — not just th
 
 #### 1. supply-chain Checklist
 
-Why this domain: the spec redistributes third-party text under two licenses (MIT and Apache-2.0) and must pin its sources exactly.
+Why this domain: the spec redistributes third-party text from two MIT-licensed source repositories and must pin each source exactly.
 
 ```text
 /speckit-checklist supply-chain
 
 Focus on Attribution Foundation requirements:
-- MIT and Apache-2.0 texts reproduced byte for byte from pinned commits
+- Both holder-specific MIT license texts reproduced byte for byte from their pinned source commits
 - Every copied source named with project, holder, license, URL, and commit
 - The transitive show-me source recorded on the pr ledger row and its notice
-- Pay special attention to: the fallback pin when the exact show-me path cannot be found, and that the gap is disclosed rather than hidden
+- Pay special attention to: the exact `humanlayer/skills` commit and path; the superseded repository-head fallback must not appear as the source pin
 ```
 
 #### 2. data-integrity Checklist
@@ -541,7 +545,7 @@ Do not guess fingerprints or omit ownership to force parallel execution.
 1. Foundation: frozen fixtures (MIT text, 38-path list, credit-header pass and fail fixtures)
 2. User Story 1 (P1, slice 1): MIT notice, ledger.json, README acknowledgement
 3. User Story 2 (P1, slice 1): attribution test red then green, suite-manifest registration
-4. User Story 3 (P2, slice 2): show-me source search, humanlayer notice, transitive_sources enforcement
+4. User Story 3 (P2, slice 2): pinned `show-me` source, separate HumanLayer MIT notice, transitive_sources enforcement
 5. Polish: regenerate dist/ and docs reference pages, run every verification gate
 
 ## Constraints
@@ -767,7 +771,7 @@ speckit-pro/skills/speckit-coach/references/upstream/
 │   ├── UPSTREAM-NOTICE.md      # MIT notice (slice 1)
 │   └── ledger.json             # 38-row disposition ledger (slice 1)
 └── humanlayer-show-me/
-    └── UPSTREAM-NOTICE.md      # Apache-2.0 notice (slice 2)
+    └── UPSTREAM-NOTICE.md      # HumanLayer MIT notice (slice 2)
 tests/speckit-pro/unit/
 ├── test-upstream-skill-attribution.py
 └── fixtures/upstream-skill-attribution/   # frozen license texts, 38-path list, credit fixtures

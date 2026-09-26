@@ -24,6 +24,10 @@ The blind-spot analyst replied about 16 minutes after dispatch, past the
 treated as unverified input: each one used below was re-checked against the
 repository or the upstream repositories before it shaped a question.
 
+## Superseding provenance and license clarification
+
+The operator answered `MIT` during EDA-001 Clarify Session 1. The upstream `pr` skill credits `humanlayer/skills/plugins/show-me/skills/show-me/SKILL.md`, present at commit `bba9d13ab34f0a87f1cc33df4dd196372393ddfc`; that repository's pinned `LICENSE` is MIT, Copyright (c) 2026 HumanLayer. Keep the Q2 decision to ship two notices now, but use a separate HumanLayer MIT notice. Earlier Apache-2.0 descriptions, the `humanlayer/humanlayer` license reference, and the repository-head fallback in the historical interview below are superseded for this copied source. The original Q&A is retained as the decision record.
+
 ## Goals
 
 - Publish Matt Pocock's MIT notice (text verbatim from the fork at tag

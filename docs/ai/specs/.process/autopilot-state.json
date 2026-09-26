@@ -3,9 +3,9 @@
   "spec_id": "EDA-001",
   "feature_dir": "specs/eda-001-attribution-foundation",
   "branch": "eda-001-attribution-foundation",
-  "status": "awaiting_review",
+  "status": "in_progress",
   "stage": "plan",
-  "active_step": "Phase 2: Clarify - Provenance Focus Consensus",
+  "active_step": "Phase 2: Clarify - Ledger Contract Focus",
   "stage_resolution": {
     "basis": "explicit --stage plan",
     "confidence_gate_status": "\u23f3 Pending",
@@ -48,11 +48,11 @@
     },
     {
       "step": "Phase 2: Clarify - Provenance Focus Consensus",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 2: Clarify - Ledger Contract Focus",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 2: Clarify - Ledger Contract Focus Consensus",
@@ -171,7 +171,7 @@
     "ledger_path": "docs/ai/specs/.process/.process/execution-control/4e8762387d1ed8b61c01a9de.json",
     "disposition": "continue",
     "reasons": [],
-    "elapsed_seconds": 14236.339022159576,
+    "elapsed_seconds": 14653.212682008743,
     "checkpoint_due": false,
     "run_id": "47805d8f53dd4babaf524ca9b62869ae"
   },
@@ -225,7 +225,7 @@
     "version": "1.0.0"
   },
   "dispatches": [],
-  "updated_at": "2026-09-26T01:15:54.975253+00:00",
+  "updated_at": "2026-09-26T01:23:49.170603+00:00",
   "recovery": {
     "status": "recovered_and_continuing",
     "plugin_version": "2.36.2",
@@ -367,14 +367,15 @@
       "unresolved_markers": 1
     },
     "clarify_provenance": {
-      "status": "awaiting_review",
+      "status": "completed",
       "exact_source_repo": "humanlayer/skills",
       "exact_source_commit": "bba9d13ab34f0a87f1cc33df4dd196372393ddfc",
       "exact_source_path": "plugins/show-me/skills/show-me/SKILL.md",
-      "source_license": "MIT at pinned source commit",
+      "source_license": "MIT at pinned humanlayer/skills source commit",
       "conflicting_license_claim": "Apache-2.0 from separate humanlayer/humanlayer repository",
-      "operator_decision": "pending",
-      "unresolved_markers": 1
+      "operator_decision": "MIT",
+      "unresolved_markers": 0,
+      "review_resolution": "Keep both notices; separate HumanLayer notice uses source MIT LICENSE; Apache premise retired"
     }
   }
 }

@@ -41,9 +41,9 @@ As a maintainer, I mark a ledger row landed and receive a failing attribution ch
 
 ---
 
-### User Story 3 - Find the transitive Apache notice (Priority: P2; Slice 2)
+### User Story 3 - Find the separate HumanLayer notice (Priority: P2; Slice 2)
 
-As a redistributor, I find a separate Apache-2.0 notice for humanlayer `show-me` text copied into upstream `pr`, linked from that row and pinned to a source.
+As a redistributor, I find a separate MIT notice for HumanLayer `show-me` text copied into upstream `pr`, linked from that row and pinned to the identified source.
 
 **Why this priority**: The transitive holder needs its own notice before `pr` derivatives land.
 
@@ -51,9 +51,9 @@ As a redistributor, I find a separate Apache-2.0 notice for humanlayer `show-me`
 
 **Acceptance Scenarios**:
 
-1. **Given** either installed payload, **When** I follow `pr`'s transitive source, **Then** I find the separate unaltered Apache-2.0 notice crediting Copyright (c) 2024, humanlayer Authors.
+1. **Given** either installed payload, **When** I follow `pr`'s transitive source, **Then** I find the separate unaltered MIT notice crediting Copyright (c) 2026 HumanLayer.
 2. **Given** the `pr` row, **When** validation runs, **Then** it requires the separate notice and pinned humanlayer source.
-3. **Given** the exact copied source cannot be established, **When** the notice is prepared, **Then** a humanlayer repository head is pinned and the exact-source gap is disclosed.
+3. **Given** the identified `show-me` source, **When** the notice is prepared, **Then** it records the exact `humanlayer/skills` commit and path rather than the retired repository-head fallback.
 
 ### Edge Cases
 
@@ -79,8 +79,8 @@ As a redistributor, I find a separate Apache-2.0 notice for humanlayer `show-me`
 - **FR-011**: Each derivative `SKILL.md` MUST additionally have `metadata.credits` consistent with its header.
 - **FR-012**: Pass and fail credit-header fixtures MUST exercise landed-row enforcement before a real ledger row lands.
 - **FR-013**: Slice 1 MUST deliver the MIT notice, complete ledger, and validation before EDA-002 through EDA-011 add derivatives.
-- **FR-014**: Slice 2 MUST deliver `references/upstream/humanlayer-show-me/UPSTREAM-NOTICE.md` in both payloads with a separate byte-exact Apache-2.0 notice and Copyright (c) 2024, humanlayer Authors.
-- **FR-015**: Slice 2 MUST link that notice and a pinned humanlayer source from `pr`'s `transitive_sources`; validation MUST reject an absent or malformed required transitive source, notice, or pin.
+- **FR-014**: Slice 2 MUST deliver `references/upstream/humanlayer-show-me/UPSTREAM-NOTICE.md` in both payloads with the byte-exact MIT license text from `humanlayer/skills@bba9d13ab34f0a87f1cc33df4dd196372393ddfc/LICENSE` and Copyright (c) 2026 HumanLayer.
+- **FR-015**: Slice 2 MUST link that notice and the pinned `humanlayer/skills` source from `pr`'s `transitive_sources`; validation MUST reject an absent or malformed required transitive source, MIT license identification, notice, or pin.
 - **FR-016**: The `pr` transitive-source entry MUST identify `humanlayer/skills` at commit `bba9d13ab34f0a87f1cc33df4dd196372393ddfc`, path `plugins/show-me/skills/show-me/SKILL.md`, as the exact copied `show-me` source.
 - **FR-017**: The repository test MUST be named `test-upstream-skill-attribution.py`, use only the Python 3.11+ standard library, and never read a `specs/<feature>/` path at run time.
 - **FR-018**: Shipped notices and credits MUST contain no shell-specific execution instructions, private home or temporary paths, or machine-specific identifiers. The feature MUST add no derivative content or fork edits.
@@ -105,7 +105,7 @@ As a redistributor, I find a separate Apache-2.0 notice for humanlayer `show-me`
 - Each PR description MUST include what changed, why, non-goals, review order, scope budget, traceability, verification evidence, known gaps, and rollback or feature-flag notes.
 - Traceability MUST map each major requirement or success criterion to changed files and verification evidence.
 - Deferred work MUST name its owning EDA-002 through EDA-011 spec or issue.
-- Slice 2 MUST state whether the exact humanlayer source was verified or the disclosed head-pin fallback was used.
+- Slice 2 MUST identify the verified `humanlayer/skills` source commit and path and the separate MIT notice.
 
 ### Key Entities
 
@@ -121,7 +121,7 @@ As a redistributor, I find a separate Apache-2.0 notice for humanlayer `show-me`
 - **SC-001**: Redistributors can locate the complete MIT notice and all 38 records in each of two installed payloads.
 - **SC-002**: The ledger accounts for 100% of pinned upstream skill paths exactly once, with a reviewable disposition and owner for each.
 - **SC-003**: Validation rejects all specified malformed-ledger and missing-credit cases, including zero-landed-row cases, and accepts the valid landed fixture.
-- **SC-004**: In Slice 2, redistributors can trace `pr` to one separate Apache-2.0 notice and a pinned humanlayer source in each payload; any fallback is visibly disclosed.
+- **SC-004**: In Slice 2, redistributors can trace `pr` to one separate MIT notice and the exact pinned `humanlayer/skills` source in each payload.
 - **SC-005**: Before EDA-002 begins, maintainers can demonstrate one passing and one failing landed-row case without editing the real ledger.
 - **SC-006**: The SpecKit Pro README contains one visible upstream acknowledgment with a working link to the MIT notice.
 
@@ -135,11 +135,11 @@ As a redistributor, I find a separate Apache-2.0 notice for humanlayer `show-me`
 
 ## Clarifications
 
-### Session 1: Provenance — pending license decision
+### Session 1: Provenance — resolved
 
 - The pinned upstream `pr` skill credits `humanlayer/skills/plugins/show-me/skills/show-me/SKILL.md`; its adjacent credits say the text was reproduced almost word for word. That file exists at commit `bba9d13ab34f0a87f1cc33df4dd196372393ddfc`, before the upstream copy commit. The exact-source fallback is retired.
 - The identified source repository's `LICENSE` at that commit is MIT, Copyright (c) 2026 HumanLayer. The 15-line Apache-2.0 header belongs to a separate repository, `humanlayer/humanlayer`, at the previously proposed head pin.
-- [NEEDS CLARIFICATION: The operator selected a separate HumanLayer notice and the current US3, FR-014, and SC-004 call it Apache-2.0. Should those requirements use the identified source repository's MIT notice instead, while retaining two separate notices?]
+- The operator answered `MIT` in the active Codex chat. The feature keeps two notices: Matt Pocock's MIT notice and a separate HumanLayer MIT notice from the identified source repository. The earlier Apache-2.0 premise and repository-head fallback are superseded.
 - Primary evidence: [upstream `pr` metadata](https://github.com/mattpocock/skills/blob/c55ee46073ed923f86ce59a5eb3b6d895095d1b7/skills/in-progress/pr/SKILL.md), [upstream credits](https://github.com/mattpocock/skills/blob/c55ee46073ed923f86ce59a5eb3b6d895095d1b7/skills/in-progress/pr/CREDITS.md), [exact `show-me` source](https://github.com/humanlayer/skills/blob/bba9d13ab34f0a87f1cc33df4dd196372393ddfc/plugins/show-me/skills/show-me/SKILL.md), [its MIT LICENSE](https://github.com/humanlayer/skills/blob/bba9d13ab34f0a87f1cc33df4dd196372393ddfc/LICENSE), and [the separate Apache LICENSE](https://github.com/humanlayer/humanlayer/blob/99abe673498cf8bdcd5f989aebe9406a27185b3b/LICENSE).
 
 ## Out of Scope
