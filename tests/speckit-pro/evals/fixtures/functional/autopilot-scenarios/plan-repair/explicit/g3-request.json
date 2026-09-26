@@ -6,6 +6,7 @@
   "mode": "read_only",
   "inputs": {
     "gate": "G3",
-    "feature_dir": "scenario-inputs/feature"
+    "feature_dir": "scenario-inputs/feature",
+    "workflow_file": "docs/ai/specs/.process/SPEC-112-workflow.md"
   }
 }

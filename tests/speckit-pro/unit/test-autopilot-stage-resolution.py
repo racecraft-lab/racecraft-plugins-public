@@ -1660,6 +1660,44 @@ class OpenAnalysisFindingTests(unittest.TestCase):
         text = OPEN_FINDING_WORKFLOW.replace(OPEN_FINDING_ROW, f"<!-- {OPEN_FINDING_ROW} -->")
         self.assertEqual(resolve_envelope(text)["stage"], "implement")
 
+    def test_g6_and_stage_resolution_agree_through_the_runner(self) -> None:
+        """The skill's G6 and stage requests, run on one workflow, give one verdict."""
+        variants = {
+            "open": (OPEN_FINDING_WORKFLOW, 1, False, "plan"),
+            "resolved": (OPEN_FINDING_WORKFLOW.replace(OPEN_FINDING_ROW, RESOLVED_FINDING_ROW), 0, True, "implement"),
+        }
+        for name, (text, high, complete, stage) in variants.items():
+            with self.subTest(variant=name), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                (root / ".specify").mkdir()
+                (root / "feature").mkdir()
+                (root / "workflow.md").write_text(text, encoding="utf-8")
+                envelopes = {}
+                for helper_id, inputs in (
+                    ("validate-gate", {"gate": "G6", "feature_dir": "feature", "workflow_file": "workflow.md"}),
+                    ("resolve-autopilot-stage", {"workflow_file": "workflow.md", "autopilot_args": []}),
+                ):
+                    request = {
+                        "schema_version": "1.0", "request_id": f"test-{helper_id}",
+                        "helper_id": helper_id, "operation": helper_id, "mode": "read_only",
+                        "inputs": inputs,
+                    }
+                    completed = subprocess.run(
+                        [sys.executable, "-m", "speckit_pro_runner"],
+                        input=json.dumps(request), cwd=root, env=runner_env(),
+                        text=True, capture_output=True, check=False,
+                    )
+                    envelopes[helper_id] = (completed.returncode, json.loads(completed.stdout))
+                gate_exit, gate = envelopes["validate-gate"]
+                self.assertEqual(gate_exit, 0 if complete else 1)
+                self.assertEqual(gate["status"], "ok" if complete else "expected_failure")
+                self.assertIs(gate["data"]["stdout_json"]["pass"], complete)
+                self.assertEqual(gate["data"]["stdout_json"]["analysis_findings"], {"critical": 0, "high": high})
+                stage_exit, resolved = envelopes["resolve-autopilot-stage"]
+                self.assertEqual((stage_exit, resolved["status"]), (0, "ok"))
+                self.assertEqual(resolved["data"]["stdout_json"]["stage"], stage)
+                self.assertIs(resolved["data"]["stdout_json"]["planning_complete"], complete)
+
     def test_an_explicit_stage_still_wins_over_open_findings(self) -> None:
         envelope = resolve_envelope(OPEN_FINDING_WORKFLOW, ["--stage", "implement"])
         self.assertEqual(envelope["stage"], "implement")

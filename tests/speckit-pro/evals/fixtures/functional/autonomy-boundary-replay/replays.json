@@ -1,0 +1,278 @@
+{
+  "schema": "autonomy-boundary-replay/v1",
+  "description": "Replays of one autonomy-boundary-receipt.v1 against the shipped phase-coverage validator. $root:<name> is an absolute path under the run-time repository root.",
+  "tamper": {
+    "private_record_field": [
+      "actions",
+      0,
+      "target"
+    ],
+    "private_record_value": "$root:shared-config/other-settings.json"
+  },
+  "cases": [
+    {
+      "id": "full-guard",
+      "description": "The receipt replays under --require-autonomy-boundary and every --current-* value, with roots in any order.",
+      "boundary": "receipt",
+      "private_record": "match",
+      "require_autonomy_boundary": true,
+      "current": {
+        "--current-execution-environment": "local",
+        "--current-sandbox-mode": "workspace-write",
+        "--current-approval-reviewer": "auto_review"
+      },
+      "current_writable_roots": [
+        "shared",
+        "checkout"
+      ],
+      "expect": {
+        "passes": true,
+        "autonomy_boundary_errors": [],
+        "private_record_matches": true
+      }
+    },
+    {
+      "id": "omitted--current-execution-environment",
+      "description": "Omitting --current-execution-environment fails the full guard.",
+      "boundary": "receipt",
+      "private_record": "match",
+      "require_autonomy_boundary": true,
+      "current": {
+        "--current-sandbox-mode": "workspace-write",
+        "--current-approval-reviewer": "auto_review"
+      },
+      "current_writable_roots": [
+        "shared",
+        "checkout"
+      ],
+      "expect": {
+        "passes": false,
+        "autonomy_boundary_errors": [
+          "current execution boundary is incomplete or malformed"
+        ],
+        "private_record_matches": true
+      }
+    },
+    {
+      "id": "omitted--current-sandbox-mode",
+      "description": "Omitting --current-sandbox-mode fails the full guard.",
+      "boundary": "receipt",
+      "private_record": "match",
+      "require_autonomy_boundary": true,
+      "current": {
+        "--current-execution-environment": "local",
+        "--current-approval-reviewer": "auto_review"
+      },
+      "current_writable_roots": [
+        "shared",
+        "checkout"
+      ],
+      "expect": {
+        "passes": false,
+        "autonomy_boundary_errors": [
+          "current execution boundary is incomplete or malformed"
+        ],
+        "private_record_matches": true
+      }
+    },
+    {
+      "id": "omitted--current-approval-reviewer",
+      "description": "Omitting --current-approval-reviewer fails the full guard.",
+      "boundary": "receipt",
+      "private_record": "match",
+      "require_autonomy_boundary": true,
+      "current": {
+        "--current-execution-environment": "local",
+        "--current-sandbox-mode": "workspace-write"
+      },
+      "current_writable_roots": [
+        "shared",
+        "checkout"
+      ],
+      "expect": {
+        "passes": false,
+        "autonomy_boundary_errors": [
+          "current execution boundary is incomplete or malformed"
+        ],
+        "private_record_matches": true
+      }
+    },
+    {
+      "id": "omitted--current-writable-root",
+      "description": "Omitting every --current-writable-root fails the full guard.",
+      "boundary": "receipt",
+      "private_record": "match",
+      "require_autonomy_boundary": true,
+      "current": {
+        "--current-execution-environment": "local",
+        "--current-sandbox-mode": "workspace-write",
+        "--current-approval-reviewer": "auto_review"
+      },
+      "current_writable_roots": [],
+      "expect": {
+        "passes": false,
+        "autonomy_boundary_errors": [
+          "current execution boundary writable_roots are incomplete or malformed"
+        ],
+        "private_record_matches": true
+      }
+    },
+    {
+      "id": "omitted-all-current",
+      "description": "Omitting every --current-* value fails the full guard.",
+      "boundary": "receipt",
+      "private_record": "match",
+      "require_autonomy_boundary": true,
+      "current": {},
+      "current_writable_roots": [],
+      "expect": {
+        "passes": false,
+        "autonomy_boundary_errors": [
+          "current execution boundary is unavailable"
+        ],
+        "private_record_matches": true
+      }
+    },
+    {
+      "id": "missing-boundary",
+      "description": "A state without a boundary fails the full guard.",
+      "boundary": "absent",
+      "private_record": "match",
+      "require_autonomy_boundary": true,
+      "current": {},
+      "current_writable_roots": [],
+      "expect": {
+        "passes": false,
+        "autonomy_boundary_errors": [
+          "autopilot_state.autonomy_boundary is required before this active run can reach Phase 7"
+        ],
+        "private_record_matches": true
+      }
+    },
+    {
+      "id": "missing-boundary-weakened",
+      "description": "Dropping --require-autonomy-boundary and the --current-* values passes on nothing, so only the full guard proves a boundary.",
+      "boundary": "absent",
+      "private_record": "match",
+      "require_autonomy_boundary": false,
+      "current": {},
+      "current_writable_roots": [],
+      "expect": {
+        "passes": true,
+        "autonomy_boundary_errors": [],
+        "private_record_matches": true
+      }
+    },
+    {
+      "id": "dropped-root",
+      "description": "A dropped current writable root no longer matches the persisted execution-boundary digest.",
+      "boundary": "receipt",
+      "private_record": "match",
+      "require_autonomy_boundary": true,
+      "current": {
+        "--current-execution-environment": "local",
+        "--current-sandbox-mode": "workspace-write",
+        "--current-approval-reviewer": "auto_review"
+      },
+      "current_writable_roots": [
+        "checkout"
+      ],
+      "expect": {
+        "passes": false,
+        "autonomy_boundary_errors": [
+          "current execution boundary does not match the persisted execution boundary"
+        ],
+        "private_record_matches": true
+      }
+    },
+    {
+      "id": "added-root",
+      "description": "An added current writable root no longer matches the persisted execution-boundary digest.",
+      "boundary": "receipt",
+      "private_record": "match",
+      "require_autonomy_boundary": true,
+      "current": {
+        "--current-execution-environment": "local",
+        "--current-sandbox-mode": "workspace-write",
+        "--current-approval-reviewer": "auto_review"
+      },
+      "current_writable_roots": [
+        "checkout",
+        "shared",
+        "elsewhere"
+      ],
+      "expect": {
+        "passes": false,
+        "autonomy_boundary_errors": [
+          "current execution boundary does not match the persisted execution boundary"
+        ],
+        "private_record_matches": true
+      }
+    },
+    {
+      "id": "changed-sandbox",
+      "description": "A changed sandbox mode no longer matches the persisted execution-boundary digest.",
+      "boundary": "receipt",
+      "private_record": "match",
+      "require_autonomy_boundary": true,
+      "current": {
+        "--current-execution-environment": "local",
+        "--current-sandbox-mode": "danger-full-access",
+        "--current-approval-reviewer": "auto_review"
+      },
+      "current_writable_roots": [
+        "shared",
+        "checkout"
+      ],
+      "expect": {
+        "passes": false,
+        "autonomy_boundary_errors": [
+          "current execution boundary does not match the persisted execution boundary"
+        ],
+        "private_record_matches": true
+      }
+    },
+    {
+      "id": "tampered-private-record",
+      "description": "A private record changed after its receipt was published fails the agent-side digest check; the validator never reads the private record, so the guard alone still passes.",
+      "boundary": "receipt",
+      "private_record": "tampered",
+      "require_autonomy_boundary": true,
+      "current": {
+        "--current-execution-environment": "local",
+        "--current-sandbox-mode": "workspace-write",
+        "--current-approval-reviewer": "auto_review"
+      },
+      "current_writable_roots": [
+        "shared",
+        "checkout"
+      ],
+      "expect": {
+        "passes": true,
+        "autonomy_boundary_errors": [],
+        "private_record_matches": false
+      }
+    },
+    {
+      "id": "tampered-receipt-digest",
+      "description": "A receipt whose private_record_sha256 was rewritten fails the agent-side digest check.",
+      "boundary": "receipt",
+      "private_record": "receipt-rewritten",
+      "require_autonomy_boundary": true,
+      "current": {
+        "--current-execution-environment": "local",
+        "--current-sandbox-mode": "workspace-write",
+        "--current-approval-reviewer": "auto_review"
+      },
+      "current_writable_roots": [
+        "shared",
+        "checkout"
+      ],
+      "expect": {
+        "passes": true,
+        "autonomy_boundary_errors": [],
+        "private_record_matches": false
+      }
+    }
+  ]
+}

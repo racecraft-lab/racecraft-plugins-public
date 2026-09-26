@@ -1,0 +1,91 @@
+You are running speckit-autopilot's consensus synthesis stage.
+
+Round 1 has completed for one Clarify item. The executor tagged it
+`[domain]`, but `tokens` is a security keyword, so
+parse-consensus-categories routed it to all three analysts and returned
+`security_route: keyword`. Two analysts recommend `per-request`; the
+domain researcher dissents. Every analyst returned `security_relevant:
+false`: the keyword was used in another sense (tokens counting LLM
+usage). Dispatch `consensus-synthesizer` with exactly this Stage 2 input
+and have it produce its standard Consensus Result.
+
+---
+## Consensus Resolution
+
+**Protocol:** speckit-pro/skills/speckit-autopilot/references/consensus-protocol.md
+**Unresolved Item:** [domain] I1: Should the usage report count tokens per LLM request or per billing period?
+**Routed Categories:** [domain]
+**Security Route:** keyword
+**Round:** 1
+
+**Codebase Analyst Response:**
+## Answer
+
+Count tokens `per-request`.
+
+## Evidence
+
+- **File**: `src/usage/recorder.ts` (line 22)
+  **Pattern**: The retained fixture records one usage row per LLM request,
+  with its prompt and completion token counts.
+
+## Confidence
+
+high
+
+**Rationale**: The existing recorder already stores counts at this grain.
+
+## Security Relevance
+
+security_relevant: false
+
+**Spec Context Analyst Response:**
+## Answer
+
+Count tokens `per-request`.
+
+## References
+
+- **Artifact**: Technical roadmap
+  **Section**: Usage reporting
+  **Relevance**: The retained fixture records a roadmap decision to report
+  LLM token usage for each request.
+
+## Confidence
+
+high
+
+**Rationale**: The roadmap decision addresses the report's grain directly.
+
+## Security Relevance
+
+security_relevant: false
+
+**Domain Researcher Response:**
+## Answer
+
+Count tokens `per-billing-period`.
+
+## Citations
+
+- **Source**: LLM provider billing documentation (retained fixture evidence)
+  **Title**: Usage and billing
+  **Excerpt**: The retained analyst response notes that providers invoice
+  token usage in aggregate for each billing period.
+
+## Confidence
+
+medium
+
+**Rationale**: This matches how providers bill, but it does not address the
+report's per-request audit need.
+
+## Security Relevance
+
+security_relevant: false
+---
+
+The `**Protocol:**` line is the repository-relative path of the active
+consensus protocol in this checkout. Dispatch `consensus-synthesizer`
+with the input above, unchanged. Stop after the synthesizer returns.
+Do not write to disk.

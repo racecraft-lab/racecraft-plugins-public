@@ -6,6 +6,7 @@
   "mode": "read_only",
   "inputs": {
     "gate": "G7",
-    "feature_dir": "scenario-inputs/read-only-helper-feature"
+    "feature_dir": "scenario-inputs/read-only-helper-feature",
+    "workflow_file": "scenario-inputs/workflow.md"
   }
 }

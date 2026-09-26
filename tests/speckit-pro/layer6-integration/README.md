@@ -43,7 +43,7 @@ exercise:
 | 03 | `[codebase, domain]` (in clarify→analyst chain) | redelegation chain |
 | 04 | `[domain]` | domain-researcher |
 | 05 | `[spec]` | spec-context-analyst |
-| 06 | `[security]` | all 3 (defense-in-depth) |
+| 06 | `[security]` | all 3 (defense-in-depth); a security keyword alone widens any tag to all 3 too, and only the agreement bar differs |
 | 07 | `[ambiguous]` | all 3 (uncertainty fan-out) |
 | 08 | `[codebase, spec]` | codebase-analyst + spec-context-analyst |
 | 09 | `[domain, spec]` | domain-researcher + spec-context-analyst |
@@ -65,13 +65,15 @@ exercise:
 |---|---|
 | 17 | Phase-executor returns error → orchestrator does not retry blindly, does not escalate to grill-me |
 
-### Cross-agent parsing (Class 2, fixtures 01–03)
+### Cross-agent parsing (Class 2, fixtures 01–05)
 
 | Fixture | Cross-agent flow |
 |---|---|
-| 01 | analysts disagree → synthesizer emits no-majority result |
-| 02 | analysts agree → synthesizer emits majority decision |
+| 01 | two routed analysts disagree → synthesizer escapes to Round 2 |
+| 02 | 2 of 3 analysts agree → synthesizer emits majority decision |
 | 03 | checklist-executor output → orchestrator parses gaps + remediations |
+| 04 | keyword-only item, every analyst `security_relevant: false` → 2/3 majority applies |
+| 05 | same keyword item, one analyst `security_relevant: true` → 2/3 majority flags human review |
 
 ### End-to-end (Class 3, fixtures 01–02)
 
@@ -92,7 +94,7 @@ Every named subagent appears in at least one fixture:
 - ✅ `codebase-analyst` — fixtures 01, 02, 03, 06, 07, 08, 10
 - ✅ `domain-researcher` — fixtures 02, 03, 04, 06, 07, 09, 10, 11
 - ✅ `spec-context-analyst` — fixtures 05, 06, 07, 08, 09, 10, 11
-- ✅ `consensus-synthesizer` — Class 2 fixtures 01, 02
+- ✅ `consensus-synthesizer` — Class 2 fixtures 01, 02, 04, 05
 
 ### What is asserted negative on every fixture
 
@@ -179,9 +181,11 @@ python3 tests/speckit-pro/layer6-integration/run-all-fixtures.py --live
     {
       "subagent_type": "speckit-pro:consensus-synthesizer",
       "must_contain_any": ["bcrypt", "argon2"],
-      "must_contain_section_keywords": ["decision", "rationale"]
+      "must_not_contain_any": ["HUMAN REVIEW NEEDED"],
+      "must_contain_section_keywords": ["agreement", "confidence"]
     }
-  ]
+  ],
+  "must_include_terms": ["Protocol:"]  // also checked by Class 1
 }
 ```
 

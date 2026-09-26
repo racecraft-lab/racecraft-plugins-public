@@ -165,6 +165,23 @@ class NativeEvalVerificationTests(unittest.TestCase):
         )
         self.assertEqual(record_directories(native_case()), (".process/verification",))
 
+    def test_process_directory_workflow_evidence_is_not_doubled(self) -> None:
+        workflow = "docs/ai/specs/.process/SPEC-001-workflow.md"
+        evidence_dir = "docs/ai/specs/.process/verification"
+        case = {**native_case(), "checks": [{**check(), "workflow_file": workflow}]}
+        self.assertEqual(record_directories(case), (evidence_dir,))
+        value = record(workflow=workflow)
+        current = response(value=value)
+        current["data"]["record_path"] = f"{evidence_dir}/{EXECUTION_ID}.json"
+        parsed = parse_runner_result(json.dumps(current))
+        self.assertEqual(parsed["record_path"], f"{evidence_dir}/{EXECUTION_ID}.json")
+        doubled = response(value=value)
+        doubled["data"]["record_path"] = (
+            f"docs/ai/specs/.process/.process/verification/{EXECUTION_ID}.json"
+        )
+        with self.assertRaises(VerificationError):
+            parse_runner_result(json.dumps(doubled))
+
     def test_claude_capture_retains_dynamic_record_bytes_with_the_pointer(self) -> None:
         with tempfile.TemporaryDirectory(prefix="native-verification-capture-") as temporary:
             root = Path(temporary)
