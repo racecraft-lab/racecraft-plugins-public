@@ -30,7 +30,8 @@ from pathlib import Path
 from typing import Any
 
 from .agent_materialization import canonical_bytes
-from .execution_control import confined_path, default_ledger_directory, durable_json, execution_control, require_text
+from .execution_control import (confined_path, default_ledger_directory, durable_json, execution_control, require_text,
+                                workflow_process_directory)
 
 SCHEMA = "verification-record/v1"
 COMMAND_IDS = {"BUILD", "TYPECHECK", "LINT", "UNIT_TEST", "INTEGRATION_TEST", "FULL_VERIFY",
@@ -124,11 +125,16 @@ def project_command(workflow: Path, command_id: str) -> list[str]:
 
 
 def evidence_directory(workflow_name: str) -> str:
-    return (Path(workflow_name).parent / ".process/verification").as_posix()
+    return workflow_process_directory(workflow_name).joinpath("verification").as_posix()
+
+
+def evidence_directories(workflow_name: str) -> set[str]:
+    """The current evidence directory plus the earlier doubled `.process/.process` one, still read."""
+    return {evidence_directory(workflow_name), (Path(workflow_name).parent / ".process/verification").as_posix()}
 
 
 def tree_bytes(root: Path, workflow_name: str) -> dict[str, tuple[int, bytes | None]]:
-    excluded = {evidence_directory(workflow_name), default_ledger_directory(workflow_name),
+    excluded = {*evidence_directories(workflow_name), default_ledger_directory(workflow_name),
                 (Path(workflow_name).parent / ".process/execution-control").as_posix()}
     files: dict[str, tuple[int, bytes | None]] = {}
     walk_errors: list[OSError] = []
@@ -386,7 +392,7 @@ def validate_execution_record(root: Path, inputs: dict[str, Any]) -> dict[str, A
         workflow_name = require_text(inputs.get("workflow_file"), "workflow_file")
         command_id = require_text(inputs.get("command_id"), "command_id")
         name = require_text(inputs.get("record_path"), "record_path")
-        if Path(name).parent.as_posix() != evidence_directory(workflow_name):
+        if Path(name).parent.as_posix() not in evidence_directories(workflow_name):
             raise ValueError("record_path is not this workflow's verification evidence")
         record_path = confined_path(root, name)
         record_body = _read_bounded_regular(record_path, MAX_RECORD_BYTES, "verification record")
