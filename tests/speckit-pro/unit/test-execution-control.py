@@ -17,7 +17,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "speckit-pro"))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "lib"))
 from test_result import run_counted
 from speckit_pro_runner.execution_control import durable_json, execution_control
-from speckit_pro_runner.helpers.read_only import json_schema_failures
+from speckit_pro_runner.helpers.read_only import json_schema_failures, validate_task_execution
+from speckit_pro_runner.task_execution import fingerprints
 from speckit_pro_runner.verification_records import digest, execute_verification, project_command, run_snapshot_command, validate_execution_record
 
 
@@ -213,6 +214,123 @@ class ExecutionControlTests(_ExecutionControlFixture, unittest.TestCase):
             self.invoke("reserve", dispatch_id="blocked", kind="corrective", failure_invariant="FR-001")
         self.assertEqual(json.loads(path.read_text())["corrective_cycles"], 0)
 
+
+class CorrectiveContinuationTests(_ExecutionControlFixture, unittest.TestCase):
+    def test_consensus_continuation_rejects_unbound_or_replayed_approval(self):
+        self.invoke("start")
+        owner = self.invoke("reserve", dispatch_id="analyze", kind="corrective", failure_invariant="FR-001")
+        reservation = owner["reservation_id"]
+        self.invoke("complete", dispatch_id="analyze", outcome="completed")
+        self.invoke("reserve", dispatch_id="other-family", kind="corrective", failure_invariant="FR-002")
+        approval = {"native_event_id": "operator-consensus-message", "run_id": self.run_id,
+                    "action": "corrective_continuation_approved", "completed_dispatch_id": "analyze",
+                    "continuation_dispatch_id": "metadata", "reservation_id": reservation,
+                    "purpose": "task_metadata_reconciliation"}
+        path = next((self.root / "feature/.process/execution-control").glob("*.json"))
+        before = path.read_bytes()
+        bad_events = (None, {**approval, "run_id": "wrong-run"},
+                      {**approval, "action": "corrective_retry_approved"},
+                      {**approval, "completed_dispatch_id": "other-family"},
+                      {**approval, "continuation_dispatch_id": "different"},
+                      {**approval, "reservation_id": "different"},
+                      {**approval, "purpose": "unbounded_repair"})
+        for event in bad_events:
+            with self.subTest(event=event), self.assertRaises(ValueError):
+                self.invoke("authorize-corrective-continuation", dispatch_id="metadata",
+                            completed_dispatch_id="analyze", reservation_id=reservation,
+                            native_observation=event)
+            self.assertEqual(path.read_bytes(), before)
+        accepted = self.invoke("authorize-corrective-continuation", dispatch_id="metadata",
+                               completed_dispatch_id="analyze", reservation_id=reservation,
+                               native_observation=approval)
+        self.assertEqual(accepted["ledger"]["corrective_cycles"], 2)
+        with self.assertRaises(ValueError):
+            self.invoke("pause", native_observation={"native_event_id": "operator-consensus-message",
+                                                     "run_id": self.run_id, "kind": "human_uat",
+                                                     "action": "wait_started"})
+        with self.assertRaises(ValueError):
+            self.invoke("authorize-corrective-continuation", dispatch_id="metadata-two",
+                        completed_dispatch_id="analyze", reservation_id=reservation,
+                        native_observation={**approval, "native_event_id": "second-message",
+                                            "continuation_dispatch_id": "metadata-two"})
+        recorded = path.read_bytes()
+        tampered = json.loads(recorded)
+        tampered["dispatches"]["metadata"]["continuation_purpose"] = "unbounded_repair"
+        path.write_text(json.dumps(tampered))
+        with self.assertRaises(ValueError):
+            self.invoke("status", mode="read_only")
+        path.write_bytes(recorded)
+
+    def test_approved_consensus_metadata_continuation_after_completed_retry(self):
+        started = self.invoke("start")
+        owner = self.invoke("reserve", dispatch_id="analyze", kind="corrective", failure_invariant="FR-001")
+        reservation = owner["reservation_id"]
+        self.invoke("reconcile", dispatch_id="analyze")
+        self.invoke("complete", dispatch_id="analyze", outcome="failed", native_observation={
+            "native_event_id": "host-auth-error", "run_id": self.run_id,
+            "dispatch_id": "analyze", "action": "dispatch_result", "outcome": "failed"})
+        self.invoke("reserve", dispatch_id="other-family", kind="corrective", failure_invariant="FR-002")
+        self.invoke("authorize-corrective-retry", dispatch_id="analyze-retry", failed_dispatch_id="analyze",
+                    reservation_id=reservation, native_observation={
+            "native_event_id": "operator-retry-message", "run_id": self.run_id,
+            "action": "corrective_retry_approved", "failed_dispatch_id": "analyze",
+            "failed_native_event_id": "host-auth-error", "retry_dispatch_id": "analyze-retry",
+            "reservation_id": reservation, "failure_kind": "infrastructure"})
+        self.invoke("complete", dispatch_id="analyze-retry", outcome="completed")
+        feature = self.root / "feature"
+        (feature / ".process").mkdir(exist_ok=True)
+        (feature / "plan.md").write_text("plan\n")
+        tasks = "## Phase 1\n- [ ] T001 Reconcile metadata after consensus\n"
+        (feature / "tasks.md").write_text(tasks)
+        sidecar = feature / ".process/task-execution.json"
+        metadata = {"schema_version": "task-execution.v1",
+                    "fingerprints": fingerprints((feature / "spec.md").read_text(), "plan\n", tasks),
+                    "tasks": {"T001": {"capability_group": "metadata", "depends_on": [],
+                                       "owns": ["feature/.process/task-execution.json"],
+                                       "tdd_unit": "metadata"}}}
+        sidecar.write_text(json.dumps(metadata))
+        request = {"tasks_file": "feature/tasks.md", "task_execution_required": True}
+        initial_validation = validate_task_execution(request, self.root.resolve())
+        self.assertEqual(initial_validation["exit_code"], 0, initial_validation)
+        (feature / "spec.md").write_text("- FR-001: preserve data\n- FR-002: no secrets\nconsensus clarification\n")
+        self.assertEqual(validate_task_execution(request, self.root.resolve())["exit_code"], 2)
+        self.assertEqual(self.invoke("reserve", dispatch_id="metadata-ordinary", kind="corrective",
+                                     reservation_id=reservation)["reasons"], ["corrective_cycle_already_closed"])
+
+        approval = {"native_event_id": "operator-consensus-message", "run_id": self.run_id,
+                    "action": "corrective_continuation_approved", "completed_dispatch_id": "analyze-retry",
+                    "continuation_dispatch_id": "metadata", "reservation_id": reservation,
+                    "purpose": "task_metadata_reconciliation"}
+        before = self.invoke("status", mode="read_only")["ledger"]
+        preview = self.invoke("authorize-corrective-continuation", mode="dry_run", dispatch_id="metadata",
+                              completed_dispatch_id="analyze-retry", reservation_id=reservation,
+                              native_observation=approval)
+        self.assertEqual(preview["ledger"]["corrective_cycles"], 2)
+        self.assertEqual(self.invoke("status", mode="read_only")["ledger"], before)
+        continued = self.invoke("authorize-corrective-continuation", dispatch_id="metadata",
+                                completed_dispatch_id="analyze-retry", reservation_id=reservation,
+                                native_observation=approval)
+        self.assertEqual(continued["disposition"], "continue")
+        self.assertEqual(continued["ledger"]["run_id"], started["ledger"]["run_id"])
+        self.assertEqual(continued["ledger"]["corrective_cycles"], 2)
+        self.assertEqual(continued["ledger"]["dispatches"]["analyze"]["outcome"], "failed")
+        self.assertEqual(continued["ledger"]["dispatches"]["analyze-retry"]["outcome"], "completed")
+        self.assertEqual(continued["ledger"]["dispatches"]["metadata"]["continuation_of"], "analyze-retry")
+        self.assertEqual(continued["ledger"]["dispatches"]["metadata"]["operator_continuation_event_id"],
+                         "operator-consensus-message")
+        schema = json.loads((Path(__file__).resolve().parents[3] /
+                             "speckit-pro/speckit_pro_runner/contracts/execution-control.schema.json").read_text())
+        self.assertEqual(json_schema_failures(continued["ledger"], schema, schema, "ledger"), [])
+        metadata["fingerprints"] = fingerprints((feature / "spec.md").read_text(), "plan\n", tasks)
+        sidecar.write_text(json.dumps(metadata))
+        self.assertEqual(validate_task_execution(request, self.root.resolve())["exit_code"], 0)
+        self.invoke("complete", dispatch_id="metadata", outcome="completed")
+        self.assertEqual(self.invoke("status", mode="read_only")["disposition"], "continue")
+        with self.assertRaises(ValueError):
+            self.invoke("authorize-corrective-continuation", dispatch_id="metadata-again",
+                        completed_dispatch_id="analyze-retry", reservation_id=reservation,
+                        native_observation={**approval, "native_event_id": "operator-second-message",
+                                            "continuation_dispatch_id": "metadata-again"})
 
 class CorrectiveRecoveryTests(_ExecutionControlFixture, unittest.TestCase):
     def test_operator_approved_infrastructure_retry_preserves_failed_attempt_and_budget(self):
@@ -732,7 +850,7 @@ class DockerVerificationTests(VerificationTests):
 
 if __name__ == "__main__":
     suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case)
-                               for case in (ExecutionControlTests, CorrectiveRecoveryTests, WorkflowIdentityTests,
+                               for case in (ExecutionControlTests, CorrectiveRecoveryTests, CorrectiveContinuationTests, WorkflowIdentityTests,
                                             VerificationTests, RunnerDispatchTests))
     suite.addTests(DockerVerificationTests(name) for name in DockerVerificationTests.__dict__ if name.startswith("test_docker_"))
     raise SystemExit(run_counted(suite, label="test-execution-control"))
