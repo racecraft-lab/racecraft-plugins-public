@@ -975,6 +975,18 @@ def resolve_workflow_binding(inputs: dict[str, Any], repo_root: Path) -> dict[st
             for _, root in worktrees:
                 if is_lexically_relative_to(root, task_root):
                     lexical_worktrees.append((lexical_task_root / root.relative_to(task_root), root))
+        # Resolve symlinks above a worktree root, such as a symlinked temp directory, but keep
+        # the root's own name literal, so a symlink that aliases the root itself stays refused.
+        spelled = Path(os.path.abspath(str(supplied)))
+        for ancestor in (spelled, *spelled.parents):
+            if ancestor.parent == ancestor:
+                break
+            try:
+                spelled_root = ancestor.parent.resolve(strict=False) / ancestor.name
+            except (OSError, RuntimeError, ValueError):
+                continue
+            if spelled_root in roots:
+                lexical_worktrees.append((ancestor, spelled_root))
         lexical_owner = registered_lexical_owner(supplied, lexical_worktrees)
         canonical_owner = max(canonical_owners, key=lambda root: len(root.parts), default=None)
         if lexical_owner is None:
