@@ -5,6 +5,30 @@
   "checkpoint_at": 1790387236.048098,
   "corrective_cycles": 1,
   "dispatches": {
+    "consensus-clarify-header-q2-codebase-r1": {
+      "completed_at": 1790387933.571438,
+      "kind": "infrastructure",
+      "outcome": "completed",
+      "reconciliations": 0,
+      "reservation_id": null,
+      "reserved_at": 1790387566.957571
+    },
+    "consensus-clarify-header-q2-domain-r1": {
+      "completed_at": 1790387937.1750112,
+      "kind": "infrastructure",
+      "outcome": "completed",
+      "reconciliations": 0,
+      "reservation_id": null,
+      "reserved_at": 1790387570.767024
+    },
+    "consensus-clarify-header-q2-synth-r1": {
+      "completed_at": 1790387984.937481,
+      "kind": "infrastructure",
+      "outcome": "completed",
+      "reconciliations": 0,
+      "reservation_id": null,
+      "reserved_at": 1790387941.739403
+    },
     "consensus-clarify-ledger-q2-domain-r1": {
       "completed_at": 1790386500.488744,
       "kind": "infrastructure",
@@ -214,6 +238,14 @@
       "reservation_id": null,
       "reserved_at": 1790383877.16552
     },
+    "g2-clarify-gate-1": {
+      "completed_at": 1790388138.560479,
+      "kind": "verification",
+      "outcome": "completed",
+      "reconciliations": 0,
+      "reservation_id": null,
+      "reserved_at": 1790388080.23452
+    },
     "phase1-specify-1": {
       "completed_at": 1790383658.66255,
       "kind": "infrastructure",
@@ -229,6 +261,14 @@
       "reconciliations": 0,
       "reservation_id": null,
       "reserved_at": 1790383776.827552
+    },
+    "phase2-clarify-header-1": {
+      "completed_at": 1790387561.468141,
+      "kind": "infrastructure",
+      "outcome": "completed",
+      "reconciliations": 0,
+      "reservation_id": null,
+      "reserved_at": 1790387301.313905
     },
     "phase2-clarify-ledger-1": {
       "completed_at": 1790386190.133437,
@@ -248,7 +288,7 @@
     }
   },
   "excluded_intervals": [],
-  "last_observed_at": 1790387236.048098,
+  "last_observed_at": 1790388138.560479,
   "reservations": {
     "a02de8a1ea1d4f02bd03770cacecd0dd": {
       "dispatch_id": "g0-privacy-scan-path-collision-repair-1",

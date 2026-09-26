@@ -34,8 +34,8 @@ captured during scoping.
 |-------|---------|--------|-------|
 | Stage | plan | ✅ Complete | Explicit --stage plan resolved; planning phases continue |
 | Specify | `/speckit-specify` | ✅ Complete | 3 stories, 19 FRs; G1 routes provenance marker to Clarify |
-| Clarify | `/speckit-clarify` | 🔄 In Progress | Session 1 resolved with MIT; sessions 2 and 3 pending |
-| Plan | `/speckit-plan` | ⏳ Pending | |
+| Clarify | `/speckit-clarify` | ✅ Complete | Three sessions resolved; G2 passed with 0 markers |
+| Plan | `/speckit-plan` | 🔄 In Progress | |
 | Checklist | `/speckit-checklist` | ⏳ Pending | Run for each domain |
 | Tasks | `/speckit-tasks` | ⏳ Pending | |
 | Analyze | `/speckit-analyze` | ⏳ Pending | |
@@ -327,7 +327,7 @@ Use these markers in spec.md for traceability through later phases:
 |---------|------------|-----------|--------------|
 | 1 | Provenance | 2 | Exact source pinned to `humanlayer/skills@bba9d13`; operator selected its MIT license for the separate notice |
 | 2 | Ledger contract | 4 | Closed typed `entries` schema; exact four-bucket path mapping; checked roadmap owner mapping with EDA-001 on IGNORE; canonical row formatting |
-| 3 | Test and credit header | | |
+| 3 | Test and credit header | 5 | Fixed file-level header; quoted string `metadata.credits`; one byte-exact fenced license block per notice; recursive nonempty landed-file checks and targeted fixtures |
 
 ### Operator decision after Session 1
 
@@ -341,6 +341,7 @@ The operator answered `MIT` in the active Codex chat. Keep both notices: the Mat
 | 2 | Clarify | License bytes for separate HumanLayer notice | [codebase, domain] | 1 | [HUMAN REVIEW] | Operator answered `MIT`; preserve two notices and use the pinned source repository license | codebase-analyst, domain-researcher |
 | 3 | Clarify | Exact bucket mapping for 38 upstream skills | [spec, domain] | 1 | both-agree | Four buckets match the immediate directory after `skills/` in the pinned tree; 18/7/4/9 paths | spec-context-analyst, domain-researcher |
 | 4 | Clarify | Checked `owner_spec` mapping and IGNORE ownership | [spec] | 1→2 | 3/3 | Freeze exact path-to-owner map; EDA-001 owns IGNORE, EDA-002–EDA-010 own delivery, EDA-011 verifies close-out | spec-context-analyst, codebase-analyst, domain-researcher |
+| 5 | Clarify | `metadata.credits` frontmatter shape | [codebase, domain] | 1 | both-agree | Use a quoted string of sorted `mattpocock/skills@SHA:path` identifiers separated by `; `; repository check owns semantics | codebase-analyst, domain-researcher |
 
 ---
 
@@ -385,17 +386,16 @@ The operator answered `MIT` in the active Codex chat. Keep both notices: the Mat
   - `transitive_sources`: array, empty except the initial `pr` entry; each entry has string `project`, `commit`, `path`, `license`, `holder`, `notice_path` fields (Q2, Clarify Session 1)
   - Reject unknown root, row, or transitive-source keys and invalid types before landed-row checks.
 - speckit-pro/skills/speckit-coach/references/upstream/humanlayer-show-me/UPSTREAM-NOTICE.md: new in slice 2. It holds the MIT LICENSE text verbatim from `humanlayer/skills@bba9d13ab34f0a87f1cc33df4dd196372393ddfc/LICENSE`, including Copyright (c) 2026 HumanLayer, and pins `plugins/show-me/skills/show-me/SKILL.md` at that same commit (Q2, Q5, Clarify Session 1).
-- Credit header (interface for EDA-002 to EDA-011): one file-level header per derivative file, not per section (Q4).
-  - Fields: upstream skill paths, pinned SHA, "Modified derivative: yes", and the repo-relative notice path.
-  - Syntax per file type: an HTML comment in Markdown, # comments in TOML and Python.
-  - Placement: where the file has frontmatter, directly after the frontmatter closes, so loaders still see frontmatter first.
-  - SKILL.md files also carry metadata.credits in frontmatter. validate-skill-contracts.py:28 already allows metadata and validates only top-level keys.
+- Credit header (interface for EDA-002 to EDA-011): one file-level header per derivative file, not per section (Q4, Clarify Session 3).
+  - Exact lines in order: `Upstream repository: mattpocock/skills`; sorted `Upstream skill: <upstream_path>` lines; `Pinned commit: c55ee46073ed923f86ce59a5eb3b6d895095d1b7`; `Modified derivative: yes`; `License notice: speckit-pro/skills/speckit-coach/references/upstream/mattpocock-skills/UPSTREAM-NOTICE.md`.
+  - Syntax: one HTML comment in Markdown, or each line prefixed `# ` in TOML and Python. Place it as the first nonblank body block after frontmatter; Python may have a shebang and encoding declaration first.
+  - `SKILL.md` frontmatter also carries `metadata.credits` as one quoted string of sorted `mattpocock/skills@SHA:<upstream_path>` identifiers joined with `; `; the attribution test checks it against the header. The Agent Skills specification requires string values in `metadata`; no host presentation behavior is assumed.
 - tests/speckit-pro/unit/test-upstream-skill-attribution.py: new. It is named for durable behavior, not the spec ID (AGENTS.md Editing Boundaries).
 - tests/speckit-pro/unit/fixtures/upstream-skill-attribution/: new fixtures:
   - the frozen MIT text;
   - the frozen `humanlayer/skills@bba9d13` MIT LICENSE (slice 2);
   - the frozen 38-path upstream list taken from the pinned SHA;
-  - a credit-header pass fixture and a credit-header fail fixture (Q3).
+  - positive zero-landed and landed Markdown/TOML/Python fixtures, including SKILL.md metadata, plus targeted negative mutations for inventory/schema/owner, empty or missing destinations, absent or mismatched headers or metadata, and missing/duplicate/altered notice license blocks (Q3, Clarify Session 3).
 - tests/speckit-pro/suite-manifest.json: changed, registering the new test.
 - speckit-pro/README.md: changed, adding an acknowledgements line that links the MIT notice.
 - Generated outputs: changed by regeneration only, never by hand edits:
