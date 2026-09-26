@@ -114,8 +114,13 @@ permissions.
    reference an external API, RFC, library version, or integration
    pattern not already captured in spec.md / plan.md / the codebase,
    use capability-first discovery as defined in
-   `speckit-pro/skills/speckit-autopilot/references/capability-discovery.md`.
-   Ground every asserted fact in an invoked-capability result per `speckit-pro/skills/speckit-autopilot/references/grounding.md`.
+   `capability-discovery.md`.
+   Ground every asserted fact in an invoked-capability result per `grounding.md`.
+   Read `capability-discovery.md` and `grounding.md` only from the absolute
+   directory on your prompt's `Reference dir:` line, which the orchestrator
+   resolves from the loaded plugin root, and never search the plugin cache for
+   another copy. If the prompt has no `Reference dir:` line, apply the rules as
+   this file states them.
    Identify the needed category, select the best installed
    match by task fit and evidence quality, and fall back to local,
    native platform, or repo-local sources when no installed capability

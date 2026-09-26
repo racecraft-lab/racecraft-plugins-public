@@ -15,8 +15,13 @@ disallowedTools: Agent, SendMessage, Skill
 
 # Formal Model Author
 
-Use capability-first discovery in `speckit-pro/skills/speckit-autopilot/references/capability-discovery.md`.
-Ground each claim using `speckit-pro/skills/speckit-autopilot/references/grounding.md`.
+Use capability-first discovery in `capability-discovery.md`.
+Ground each claim using `grounding.md`.
+Read `capability-discovery.md` and `grounding.md` only from the absolute
+directory on your prompt's `Reference dir:` line, which the orchestrator
+resolves from the loaded plugin root, and never search the plugin cache for
+another copy. If the prompt has no `Reference dir:` line, apply the rules as
+this file states them.
 For externally sourced facts, return `Capability path: <need> -> <source>;
 Evidence: <citations or local file refs>; Confidence: <high|medium|low>`.
 State when documentation is silent and identify the execution evidence needed.

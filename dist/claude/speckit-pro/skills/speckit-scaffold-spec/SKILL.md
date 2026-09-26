@@ -300,7 +300,8 @@ consumed unmodified. Do not add or edit an agent definition.
 BEFORE the interview begins:
 
 ```text
-Agent(subagent_type: "speckit-pro:codebase-analyst", run_in_background: true, ...)
+Agent(subagent_type: "speckit-pro:codebase-analyst", run_in_background: true,
+      prompt: "...\nReference dir: ${CLAUDE_PLUGIN_ROOT}/skills/speckit-autopilot/references/")
 ```
 
 The await is not optional: the Claude agent definition carries

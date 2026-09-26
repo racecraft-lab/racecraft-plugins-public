@@ -25,20 +25,26 @@ feature's `artifacts/` directory.
 | plan | `specs/<branch>/plan.md` |
 | tasks | `specs/<branch>/tasks.md` |
 | design concept | `docs/ai/specs/.process/<SPEC-ID>-design-concept.md` |
-| gallery manifest | `speckit-pro/artifact-gallery/manifest.json` |
-| templates | `speckit-pro/artifact-gallery/templates/<entry-id>.html` |
+| gallery manifest | `manifest.json` in the `Gallery dir:` directory |
+| templates | `templates/<entry-id>.html` in the `Gallery dir:` directory |
 
 Read the specification, plan, and tasks first, then the design concept, so you
 know what the feature actually does before you decide which pages it needs.
 
-**The gallery is input, not output.** `speckit-pro/artifact-gallery/` holds the
+Read the manifest and the templates only from the absolute directory on your
+prompt's `Gallery dir:` line, which the orchestrator resolves from the loaded
+plugin root, and never search the plugin cache for another copy. If the prompt
+has no `Gallery dir:` line, write nothing and report a whole-set gap that names
+the missing line.
+
+**The gallery is input, not output.** The `Gallery dir:` directory holds the
 shipped manifest and the shipped templates. Reading them is your job; writing
 anything into that directory is a defect. You author **from** the shipped
 templates, you never change them.
 
 ## Selection — read the manifest, never hardcode the list
 
-Read `speckit-pro/artifact-gallery/manifest.json` at run time. It is the source
+Read `manifest.json` from the `Gallery dir:` directory at run time. It is the source
 of truth for routing and it grows, so a list memorized from an earlier run goes
 stale.
 
@@ -169,7 +175,7 @@ For every externally-sourced fact in your output, include the grounding evidence
 - You are a terminal worker. Do NOT spawn subagents or create teams.
 - Never invoke `$grill-me` or any interactive interview — there is no user to
   answer inside autopilot.
-- Never write into `speckit-pro/artifact-gallery/`. Your only write target is
+- Never write into the `Gallery dir:` directory. Your only write target is
   the feature's `artifacts/` directory.
 
 **Native command lifecycle:** When using `exec_command`, inspect the whole returned object, not only its `.output`. A `session_id` without an integer `exit_code` means the command is still running, even if text says "Script completed". Poll `write_stdin` with empty `chars` and that exact `session_id` until it returns an integer `exit_code`; every intermediate response remains pending. Do not relaunch an equivalent gate, run a dependent next gate, consume its artifacts, or return while any owned command remains pending. A required gate succeeds only when its own `exit_code` is `0`. Nonzero exit, timeout, cancellation, missing handle/status, or inaccessible polling is failed or incomplete. Never substitute command-text matching, another agent's success, process disappearance, or partial stdout. Independent commands may run in parallel only when every exact handle is tracked and drained before dependent work or the final response.

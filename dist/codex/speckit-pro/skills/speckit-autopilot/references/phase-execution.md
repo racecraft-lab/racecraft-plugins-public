@@ -312,9 +312,11 @@ For each clarify session in the workflow file:
           prompt: """
             Prepare a Clarify Question Set for: <session prompt>
             Protocol: <plugin_root>/skills/speckit-autopilot/references/consensus-protocol.md
+            Reference dir: <plugin_root>/skills/speckit-autopilot/references/
           """)
-     The `Protocol:` line is built from the `plugin_root` that
-     `validate-agent-install` returned (prerequisites.md Step 0.0b).
+     The `Protocol:` and `Reference dir:` lines are built from the
+     `plugin_root` that `validate-agent-install` returned
+     (prerequisites.md Step 0.0b).
   3. Parent answers returned questions and edits spec/workflow/state
   4. Re-scan spec.md for `[NEEDS CLARIFICATION]` markers and record the
      remaining count in the session result
@@ -453,8 +455,9 @@ For each checklist domain in the workflow file:
   1. TaskUpdate: domain task → in_progress
   2. Agent(subagent_type: "speckit-pro:checklist-executor",
           run_in_background: false,
-          prompt: "Run /speckit-checklist with: <domain prompt>\nProtocol: <plugin_root>/skills/speckit-autopilot/references/consensus-protocol.md")
-     The `Protocol:` line is the active consensus protocol,
+          prompt: "Run /speckit-checklist with: <domain prompt>\nProtocol: <plugin_root>/skills/speckit-autopilot/references/consensus-protocol.md\nReference dir: <plugin_root>/skills/speckit-autopilot/references/")
+     The `Protocol:` line is the active consensus protocol and
+     `Reference dir:` is the directory that holds it, both
      built from the `plugin_root` that `validate-agent-install`
      returned (prerequisites.md Step 0.0b).
      The checklist-executor runs the checklist, researches
@@ -633,8 +636,8 @@ Items it can't resolve are flagged in its
 1. TaskUpdate: "Analyze" → in_progress
 2. Agent(subagent_type: "speckit-pro:analyze-executor",
         run_in_background: false,
-        prompt: "Run /speckit-analyze with: <prompt>\nProtocol: <plugin_root>/skills/speckit-autopilot/references/consensus-protocol.md")
-   The `Protocol:` line is built as in Phase 4.
+        prompt: "Run /speckit-analyze with: <prompt>\nProtocol: <plugin_root>/skills/speckit-autopilot/references/consensus-protocol.md\nReference dir: <plugin_root>/skills/speckit-autopilot/references/")
+   The `Protocol:` and `Reference dir:` lines are built as in Phase 4.
    The executor handles research + remediation (Layer 1)
 3. Parse executor's "Unresolved for consensus" section
 4. If unresolved findings exist:
@@ -880,8 +883,9 @@ Agent(
     - Plan: specs/<feature>/plan.md
     - Tasks: specs/<feature>/tasks.md
     - Design concept: docs/ai/specs/.process/<SPEC-ID>-design-concept.md
-    - Gallery manifest: speckit-pro/artifact-gallery/manifest.json
-    - Templates: speckit-pro/artifact-gallery/templates/<entry-id>.html
+
+    Reference dir: <plugin_root>/skills/speckit-autopilot/references/
+    Gallery dir: <plugin_root>/artifact-gallery/
 
     Select, fill, and report per your agent instructions. Return one outcome
     per selected page.
@@ -890,13 +894,13 @@ Agent(
 ```
 
 **Selection lives inside the agent and is driven by the manifest.** The
-orchestrator names no page list of its own. The agent reads
-`speckit-pro/artifact-gallery/manifest.json`, keeps the entries whose `stage` is
+orchestrator names no page list of its own. The agent reads `manifest.json`
+from the `Gallery dir:` directory, built from `plugin_root`, and keeps the entries whose `stage` is
 `draft-pr`, and applies each surviving entry's `trigger`: `{"always": true}`
 selects on every run, and `{"any_of": [...]}` selects only when the feature
 carries at least one signal the entry names.
 
-**The gallery is input, never output.** `speckit-pro/artifact-gallery/` holds
+**The gallery is input, never output.** `<plugin_root>/artifact-gallery/` holds
 the shipped manifest and the shipped templates, and writing anything into that
 directory is a defect. Finished pages are written to
 `specs/<feature>/artifacts/`, one per selected entry, keeping the manifest
@@ -951,7 +955,7 @@ For each page written to `specs/<feature>/artifacts/`, two positive tests:
 
 | Test | The page fails when |
 | --- | --- |
-| it is not its own template | the file is byte-identical to `speckit-pro/artifact-gallery/templates/<entry-id>.html` |
+| it is not its own template | the file is byte-identical to `<plugin_root>/artifact-gallery/templates/<entry-id>.html` |
 | it is not still sample content | the body carries a sample-banner element: `class="sample-notice"`, `class="notice"`, or `class="note"` |
 
 **The banner test covers only the templates that carry a banner.** Seven of the
@@ -2572,6 +2576,7 @@ Agent(
     <if implementation/project-agent route>
     <tdd_protocol><TDD_PROTOCOL contents></tdd_protocol>
     </if>
+    Reference dir: <plugin_root>/skills/speckit-autopilot/references/
     PROJECT_COMMANDS: <discovered commands, including focused tests>
     PRESET_CONVENTIONS: <when configured>
     COMPLETED_TASKS: <relevant verified prior task results>

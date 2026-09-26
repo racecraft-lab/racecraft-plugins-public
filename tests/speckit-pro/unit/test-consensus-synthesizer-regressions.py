@@ -34,11 +34,19 @@ CODEX_PHASE_EXECUTION = (
     / "phase-execution-codex.md"
 )
 ACTIVE_PROTOCOL = "<plugin_root>/skills/speckit-autopilot/references/consensus-protocol.md"
+ACTIVE_REFERENCES = "Reference dir: <plugin_root>/skills/speckit-autopilot/references/"
+SCAFFOLD_SKILL = REPO_ROOT / "speckit-pro" / "skills" / "speckit-scaffold-spec" / "SKILL.md"
 EXECUTORS = tuple(
     REPO_ROOT / "speckit-pro" / folder / f"{role}-executor{suffix}"
     for role in ("clarify", "analyze", "checklist")
     for folder, suffix in (("agents", ".md"), ("codex-agents", ".toml"))
 )
+
+
+def dispatch_block(text: str, anchor: str) -> str:
+    """Return the fenced dispatch text from ``anchor`` to its closing fence."""
+    start = text.index(anchor)
+    return text[start:text.index("\n```", start)]
 
 
 def phase_execution_text() -> str:
@@ -132,8 +140,8 @@ class ConsensusSynthesizerRegressionTests(unittest.TestCase):
         protocol = PROTOCOL.read_text(encoding="utf-8")
         self.assertIn(f"**Protocol:** {ACTIVE_PROTOCOL}", protocol)
         phase = phase_execution_text()
-        self.assertIn(f'prompt: "Run /speckit-checklist with: <domain prompt>\\nProtocol: {ACTIVE_PROTOCOL}")', phase)
-        self.assertIn(f'prompt: "Run /speckit-analyze with: <prompt>\\nProtocol: {ACTIVE_PROTOCOL}")', phase)
+        self.assertIn(f'prompt: "Run /speckit-checklist with: <domain prompt>\\nProtocol: {ACTIVE_PROTOCOL}\\n', phase)
+        self.assertIn(f'prompt: "Run /speckit-analyze with: <prompt>\\nProtocol: {ACTIVE_PROTOCOL}\\n', phase)
         flat = " ".join(phase.split())
         self.assertIn(f"Prepare a Clarify Question Set for: <session prompt> Protocol: {ACTIVE_PROTOCOL}", flat)
         self.assertIn("Workflow root: <WORKFLOW_ROOT>", phase)
@@ -143,6 +151,54 @@ class ConsensusSynthesizerRegressionTests(unittest.TestCase):
         self.assertIn("Keep the returned `plugin_root`", prerequisites)
         codex = " ".join(CODEX_PHASE_EXECUTION.read_text(encoding="utf-8").split())
         self.assertIn("`Protocol:` line with `<plugin-root>/skills/speckit-autopilot/references/consensus-protocol.md`", codex)
+
+    def test_orchestrator_passes_the_active_reference_directory(self) -> None:
+        # Every dispatch of an agent that reads capability-discovery.md and
+        # grounding.md carries the directory resolved from the loaded plugin
+        # root, so the agent never searches the plugin cache for a copy.
+        sites = {
+            "phase-execution.md": (
+                'subagent_type: "speckit-pro:clarify-executor"',
+                'subagent_type: "speckit-pro:checklist-executor"',
+                'subagent_type: "speckit-pro:analyze-executor"',
+                'subagent_type: "speckit-pro:artifact-author"',
+                'subagent_type: "<batch.agent>"',
+            ),
+            "post-implementation.md": (
+                'subagent_type: "speckit-pro:implement-executor"',
+                'subagent_type: "speckit-pro:uat-runbook-author"',
+            ),
+            "consensus-protocol.md": (
+                "clarification question that the executor could not resolve",
+                "checklist gap that the executor could not resolve",
+                "analysis finding that the executor could not resolve",
+            ),
+        }
+        for name, anchors in sites.items():
+            text = (REFERENCES / name).read_text(encoding="utf-8")
+            for anchor in anchors:
+                with self.subTest(file=name, dispatch=anchor):
+                    self.assertIn(ACTIVE_REFERENCES, dispatch_block(text, anchor))
+        formal = " ".join((REFERENCES / "formal-methods.md").read_text(encoding="utf-8").split())
+        self.assertIn(f"`{ACTIVE_REFERENCES}` line", formal)
+        prerequisites = " ".join((REFERENCES / "prerequisites.md").read_text(encoding="utf-8").split())
+        self.assertIn(f"`{ACTIVE_REFERENCES}`", prerequisites)
+        phase = phase_execution_text()
+        author = dispatch_block(phase, 'subagent_type: "speckit-pro:artifact-author"')
+        self.assertIn("Gallery dir: <plugin_root>/artifact-gallery/", author)
+        self.assertNotIn("speckit-pro/artifact-gallery/", phase)
+        codex = CODEX_PHASE_EXECUTION.read_text(encoding="utf-8")
+        self.assertIn(
+            "Gallery dir: <plugin-root>/artifact-gallery/",
+            dispatch_block(codex, 'spawn_agent("artifact-author"'),
+        )
+        self.assertNotIn("speckit-pro/artifact-gallery/", codex)
+        self.assertIn("`Gallery dir: <plugin_root>/artifact-gallery/`", prerequisites)
+        scaffold = SCAFFOLD_SKILL.read_text(encoding="utf-8")
+        self.assertIn(
+            "Reference dir: ${CLAUDE_PLUGIN_ROOT}/skills/speckit-autopilot/references/",
+            dispatch_block(scaffold, 'Agent(subagent_type: "speckit-pro:codebase-analyst"'),
+        )
 
     def test_escape_phrases_and_security_override_are_complete(self) -> None:
         text = instructions()
