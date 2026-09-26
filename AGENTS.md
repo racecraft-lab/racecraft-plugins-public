@@ -176,9 +176,11 @@ draft skips every other PR Checks job, and `validate-plugins` passes anyway.
 
 - Generated outputs are committed with their source; `--check`, both suites, and
   required checks pass, as do docs checks and actionlint when their inputs
-  changed. When Python changed, ruff and mypy pass locally too; `mypy-ratchet`
-  is not a required check, so CI will not stop a regression. Only `feat` and `fix` PRs fill the `release-note` fence, required
-  unless labeled `release-note/skip`; any unlabeled fence is published.
+  changed.
+- When Python changed, ruff and mypy pass locally too; `mypy-ratchet` is not a
+  required check, so CI will not stop a regression.
+- Only `feat` and `fix` PRs fill the `release-note` fence, required unless
+  labeled `release-note/skip`; any unlabeled fence is published.
 
 ## Code Review Rules
 
