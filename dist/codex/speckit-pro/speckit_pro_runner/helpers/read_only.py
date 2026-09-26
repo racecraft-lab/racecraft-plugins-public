@@ -2437,6 +2437,7 @@ AUTOPILOT_PLANNING_PREDICATE_PHASES = (
 )
 AUTOPILOT_GATE_PHASE = "Confidence Gate"
 AUTOPILOT_OVERVIEW_HEADING = "## Workflow Overview"
+ANALYSIS_OPEN_FINDINGS_STATUS = "open CRITICAL/HIGH findings"
 AUTOPILOT_BASIC_INFO_HEADING = "### Basic Information"
 HTML_COMMENT_RE = re.compile(r"(?s)<!--.*?-->")
 
@@ -2498,6 +2499,13 @@ def workflow_stage_signals(text: str) -> dict[str, Any]:
     formal = checkpoint_signal(text)
     if first_open is None and not formal["complete"]:
         first_open = ("Formal Check", formal["verdict"])
+    if first_open is None:
+        # A terminal Analyze label is not evidence that its findings are closed.
+        # A missing table does not block: legacy workflows predate it.
+        findings = open_analysis_findings(text)
+        open_count = findings["critical"] + findings["high"] if findings else 0
+        if open_count:
+            first_open = ("Analyze", f"{open_count} {ANALYSIS_OPEN_FINDINGS_STATUS}")
     return {
         "parsed": True,
         "recorded_stage": workflow_recorded_stage(lines),
@@ -2860,6 +2868,11 @@ def auto_detect_basis(first_open: tuple[str, str | None] | None) -> str:
     if first_open is None:
         return "auto-detect: every planning phase and the confidence gate are terminal"
     phase, status = first_open
+    if status and status.endswith(ANALYSIS_OPEN_FINDINGS_STATUS):
+        return (
+            f"auto-detect: every planning phase is terminal, but {phase}'s"
+            f" Analysis Results table still has {status}"
+        )
     # A row absent from the table has no status to name; printing a bare `None`
     # would read as a status the workflow file actually records.
     reason = f"is {status}" if status else "has no row in the status table"

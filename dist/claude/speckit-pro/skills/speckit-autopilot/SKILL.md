@@ -391,6 +391,9 @@ Run the pre-flight sequence before any phase work. STOP on failure.
    has to act on; `plan` after a strict-mode gate stop reads
    `the first non-terminal planning phase is Confidence Gate, which is
    ⚠️ Blocked` rather than an unexplained stage token.
+   Open CRITICAL/HIGH rows in the workflow's Analysis Results table also keep
+   planning incomplete, even when every row reads Complete; the basis then names
+   the open-finding count.
    If Step 0.6d reclaimed the slot, append
    `reclaimed the state slot from <prior workflow file> (prior status:
    <prior_run_note>)` to the same report. A `prior_run_note` of
