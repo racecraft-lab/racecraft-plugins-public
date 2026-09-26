@@ -29,7 +29,7 @@ TEST_LIB = Path(__file__).resolve().parent / "lib"
 if str(TEST_LIB) not in sys.path:
     sys.path.insert(0, str(TEST_LIB))
 
-from test_result import child_check_status  # noqa: E402
+from test_result import child_check_status, failure_report  # noqa: E402
 
 SUITE_MANIFEST = "tests/speckit-pro/suite-manifest.json"
 LAYER_WORKERS_VARIABLE = "SPECKIT_LAYER_WORKERS"
@@ -134,9 +134,8 @@ def run_script(test_path: Path, repo_root: Path) -> tuple[str, bool, str]:
     )
     ok, detail = child_check_status(completed.returncode, completed.stdout, test_path.stem)
     if not ok and completed.stderr.strip():
-        # Surface the child's own failure report; the summary line alone hides which unit failed.
-        tail = "\n".join(completed.stderr.rstrip().splitlines()[-40:])
-        detail = f"{detail}\n{tail}"
+        # Name every failing unit with a bounded traceback; the summary line alone hides which one failed.
+        detail = f"{detail}\n{failure_report(completed.stderr, test_path.stem)}"
     return (rel(test_path, repo_root), ok, detail)
 
 
