@@ -387,8 +387,7 @@ When checklist identifies `[Gap]` items:
 /speckit-tasks
 
 ## Task Structure
-- Small, complete behavioral units sized for the whole automated spec's
-  two-hour budget, including startup, implementation, repairs and final checks
+- Small, complete behavioral units
 - Clear acceptance criteria referencing FR-xxx
 - Dependency ordering: foundation → components → integration → validation
 - Mark parallel-safe tasks explicitly with [P]
