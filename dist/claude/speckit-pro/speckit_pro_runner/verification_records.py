@@ -30,7 +30,7 @@ from pathlib import Path
 from typing import Any
 
 from .agent_materialization import canonical_bytes
-from .execution_control import confined_path, durable_json, execution_control, require_text
+from .execution_control import confined_path, default_ledger_directory, durable_json, execution_control, require_text
 
 SCHEMA = "verification-record/v1"
 COMMAND_IDS = {"BUILD", "TYPECHECK", "LINT", "UNIT_TEST", "INTEGRATION_TEST", "FULL_VERIFY",
@@ -128,7 +128,7 @@ def evidence_directory(workflow_name: str) -> str:
 
 
 def tree_bytes(root: Path, workflow_name: str) -> dict[str, tuple[int, bytes | None]]:
-    excluded = {evidence_directory(workflow_name),
+    excluded = {evidence_directory(workflow_name), default_ledger_directory(workflow_name),
                 (Path(workflow_name).parent / ".process/execution-control").as_posix()}
     files: dict[str, tuple[int, bytes | None]] = {}
     walk_errors: list[OSError] = []

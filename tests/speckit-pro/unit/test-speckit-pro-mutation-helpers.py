@@ -7669,6 +7669,59 @@ This line must not be copied.
             self.assertEqual(response["data"]["mutation"]["dirty_worktree"], True)
             self.assertFalse(target.exists())
 
+    def test_apply_ignores_only_runner_byproduct_directories(self) -> None:
+        ledger = "docs/ai/specs/.process/execution-control/0123456789abcdef01234567.json"
+        evidence = "docs/ai/specs/.process/verification/run/record.json"
+        cases = (
+            ((ledger, evidence), True),
+            ((ledger, "untracked.txt"), False),
+            (("specs/other/.process/runner-record.json",), False),
+            (("docs/execution-control/record.json",), False),
+        )
+        for untracked, clean in cases:
+            with self.subTest(untracked=untracked):
+                tmp, git_root = self.temp_clean_git_repo()
+                with tmp:
+                    for relative in untracked:
+                        path = git_root / relative
+                        path.parent.mkdir(parents=True, exist_ok=True)
+                        path.write_text("{}\n", encoding="utf-8")
+                    target = git_root / "generated" / "byproduct-output.md"
+                    completed, response, stderr_records = run_runner(
+                        helper_request(
+                            "mutation-foundation",
+                            mode="apply",
+                            inputs={"operations": [{"operation_id": "byproduct", "kind": "write_file",
+                                                    "target": "generated/byproduct-output.md", "content": "ok\n"}]},
+                        ),
+                        cwd=git_root,
+                    )
+                    self.assertEqual(response["data"]["mutation"]["dirty_worktree"], not clean)
+                    self.assertEqual(target.exists(), clean)
+                    if clean:
+                        self.assertEqual(completed.returncode, 0, response)
+                    else:
+                        self.assertEqual([diag["code"] for diag in stderr_records], ["dirty_worktree"])
+
+    def test_apply_refuses_worktree_rename_of_a_real_file_into_a_byproduct_directory(self) -> None:
+        tmp, git_root = self.temp_clean_git_repo()
+        with tmp:
+            moved = git_root / "docs" / ".process" / "verification" / "moved.txt"
+            moved.parent.mkdir(parents=True)
+            (git_root / ".gitkeep").rename(moved)
+            self.run_git(git_root, "add", "--intent-to-add", "docs/.process/verification/moved.txt")
+            completed, response, stderr_records = run_runner(
+                helper_request(
+                    "mutation-foundation",
+                    mode="apply",
+                    inputs={"operations": [{"operation_id": "renamed", "kind": "write_file",
+                                            "target": "generated/renamed-output.md", "content": "no\n"}]},
+                ),
+                cwd=git_root,
+            )
+            self.assertEqual([diag["code"] for diag in stderr_records], ["dirty_worktree"], response)
+            self.assertFalse((git_root / "generated" / "renamed-output.md").exists())
+
     def test_apply_rechecks_dirty_worktree_after_lock_acquisition(self) -> None:
         tmp, git_root = self.temp_clean_git_repo()
         with tmp:

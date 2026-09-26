@@ -19,7 +19,7 @@ from test_result import run_counted
 from speckit_pro_runner.execution_control import durable_json, execution_control
 from speckit_pro_runner.helpers.read_only import json_schema_failures, validate_task_execution
 from speckit_pro_runner.task_execution import fingerprints
-from speckit_pro_runner.verification_records import digest, execute_verification, project_command, run_snapshot_command, validate_execution_record
+from speckit_pro_runner.verification_records import digest, execute_verification, project_command, run_snapshot_command, tree_bytes, validate_execution_record
 
 
 class _ExecutionControlFixture:
@@ -523,6 +523,32 @@ class WorkflowIdentityTests(_ExecutionControlFixture, unittest.TestCase):
         self.assertEqual(resumed["ledger"]["run_id"], self.run_id)
         with self.assertRaises(ValueError):
             self.invoke("start")
+
+    def test_process_directory_workflow_ledger_is_not_doubled_and_legacy_path_is_accepted(self):
+        workflow = "docs/ai/specs/.process/SPEC-workflow.md"
+        (self.root / "docs/ai/specs/.process").mkdir(parents=True)
+        (self.root / workflow).write_text("# Workflow\n")
+        (self.root / "docs/ai/specs/.process/spec.md").write_text("- FR-001: preserve data\n")
+        started = execution_control(self.root, {"workflow_file": workflow, "action": "start"}, "apply")
+        key = Path(started["ledger_path"]).name
+        self.assertEqual(started["ledger_path"], f"docs/ai/specs/.process/execution-control/{key}")
+        self.assertTrue((self.root / started["ledger_path"]).is_file())
+        snapshot = tree_bytes(self.root, workflow)
+        self.assertFalse([path for path in snapshot if "execution-control" in path])
+
+        legacy = f"docs/ai/specs/.process/.process/execution-control/{key}"
+        (self.root / legacy).parent.mkdir(parents=True)
+        (self.root / started["ledger_path"]).rename(self.root / legacy)
+        common = {"workflow_file": workflow, "ledger_path": legacy, "expected_run_id": started["ledger"]["run_id"]}
+        status = execution_control(self.root, {**common, "action": "status"}, "read_only")
+        self.assertEqual((status["ledger_path"], status["ledger"]["run_id"]), (legacy, started["ledger"]["run_id"]))
+        reserved = execution_control(self.root, {**common, "action": "reserve", "dispatch_id": "impl-1",
+                                                 "kind": "implementation"}, "apply")
+        self.assertEqual(reserved["disposition"], "continue")
+        self.assertTrue((self.root / legacy).is_file())
+        self.assertFalse((self.root / started["ledger_path"]).exists())
+        snapshot = tree_bytes(self.root, workflow)
+        self.assertFalse([path for path in snapshot if "execution-control" in path])
 
 
 class VerificationTests(unittest.TestCase):

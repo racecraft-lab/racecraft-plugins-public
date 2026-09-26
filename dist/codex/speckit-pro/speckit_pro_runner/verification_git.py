@@ -15,6 +15,7 @@ import stat
 from typing import Any
 from urllib.parse import urlsplit
 
+from .execution_control import is_runner_byproduct
 from .verification_records import MAX_BYTES, MAX_FILES, digest, sha, tree_digest
 
 COMMON_INPUTS = ("objects", "refs", "info", "packed-refs", "config")
@@ -153,7 +154,7 @@ def reject_unqualified_git_dependencies(root: Path, common: Path) -> None:
         relative = Path(directory).relative_to(root)
         if relative == Path("."):
             names[:] = [name for name in names if name != ".git"]
-        if tuple(relative.parts[-2:]) in {(".process", "verification"), (".process", "execution-control")}:
+        if is_runner_byproduct(relative.as_posix()):
             names[:] = []
             continue
         if relative != Path(".") and (".git" in names or ".git" in filenames):

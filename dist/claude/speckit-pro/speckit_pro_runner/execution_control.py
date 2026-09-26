@@ -15,7 +15,7 @@ import tempfile
 import time
 import uuid
 from contextlib import contextmanager
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any
 
 from .formal.selection import require_text as require_nonempty_text
@@ -23,6 +23,19 @@ from .formal.selection import require_text as require_nonempty_text
 SCHEMA = "execution-control/v1"
 KINDS = {"implementation", "corrective", "verification", "infrastructure"}
 OUTCOMES = {"completed", "failed", "unknown", "expected_tdd_red"}
+RUNNER_BYPRODUCT_DIRECTORIES = frozenset({(".process", "execution-control"), (".process", "verification")})
+
+
+def is_runner_byproduct(relative: str) -> bool:
+    """True for a repo-relative path inside a runner-owned ledger or evidence directory."""
+    parts = PurePosixPath(relative).parts
+    return any(pair in RUNNER_BYPRODUCT_DIRECTORIES for pair in zip(parts, parts[1:]))
+
+
+def default_ledger_directory(workflow_name: str) -> str:
+    """The workflow's ledger directory, without doubling a `.process` parent."""
+    parent = PurePosixPath(workflow_name).parent
+    return (parent if parent.name == ".process" else parent / ".process").joinpath("execution-control").as_posix()
 
 
 def confined_path(root: Path, value: str) -> Path:
@@ -530,7 +543,7 @@ def execution_control(root: Path, inputs: dict[str, Any], mode: str) -> dict[str
     elif action != "start":
         raise ValueError("expected_run_id is required after the explicit first kickoff")
     workflow_key = hashlib.sha256(workflow_name.encode("utf-8")).hexdigest()[:24]
-    relative = inputs.get("ledger_path") or (Path(workflow_name).parent / ".process/execution-control" / f"{workflow_key}.json").as_posix()
+    relative = inputs.get("ledger_path") or f"{default_ledger_directory(workflow_name)}/{workflow_key}.json"
     if Path(relative).parent.name != "execution-control" or Path(relative).suffix != ".json":
         raise ValueError("ledger_path must reference an owned execution-control JSON record")
     path = confined_path(root, relative)

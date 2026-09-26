@@ -17,6 +17,12 @@ a new kickoff. Preserve the `ledger_path` returned by the helper and pass it
 when resuming or relocating the workflow; never construct a filename or use a
 new workflow path to reset counters. Ledger names are workflow-keyed, not a
 shared fixed file for every workflow in a directory.
+The default ledger lives in `.process/execution-control/` beside the workflow,
+or in `execution-control/` when the workflow already sits in a `.process`
+directory. An earlier `.process/.process/execution-control/` ledger stays valid
+when passed as `ledger_path`. Untracked ledger and verification evidence under
+`.process/execution-control/` or `.process/verification/` never make the
+worktree dirty for mutation helpers; any other change still refuses `apply`.
 An existing ledger belongs to its recorded canonical workflow path. An explicit
 `ledger_path` does not authorize a different workflow to adopt that run; an
 existing explicit ledger also requires the parent's `expected_run_id` on start.
