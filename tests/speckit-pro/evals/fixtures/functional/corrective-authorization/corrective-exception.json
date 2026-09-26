@@ -1,0 +1,281 @@
+{
+  "schema": "corrective-authorization-replay/v1",
+  "description": "One operator-approved corrective exception after the run budget is exhausted on a bound spec; mismatched, replayed, and second approvals are refused.",
+  "steps": [
+    {
+      "id": "greenfield",
+      "place_spec": "absent"
+    },
+    {
+      "id": "start",
+      "action": "start",
+      "expect": {
+        "exit_code": 0,
+        "status": "ok",
+        "disposition": "continue"
+      }
+    },
+    {
+      "id": "reserve-fix-a",
+      "action": "reserve",
+      "inputs": {
+        "dispatch_id": "fix-a",
+        "kind": "corrective",
+        "failure_invariant": "FR-001"
+      },
+      "expect": {
+        "exit_code": 0,
+        "status": "ok",
+        "disposition": "continue"
+      }
+    },
+    {
+      "id": "fix-a-failed",
+      "action": "complete",
+      "inputs": {
+        "dispatch_id": "fix-a",
+        "outcome": "failed"
+      },
+      "expect": {
+        "exit_code": 0,
+        "status": "ok",
+        "disposition": "continue"
+      }
+    },
+    {
+      "id": "spec-written",
+      "place_spec": "spec.md"
+    },
+    {
+      "id": "bind",
+      "action": "bind-invariants",
+      "inputs": {
+        "spec_file": "$spec_file"
+      },
+      "expect": {
+        "exit_code": 0,
+        "status": "ok",
+        "disposition": "continue"
+      }
+    },
+    {
+      "id": "reserve-fix-b",
+      "action": "reserve",
+      "inputs": {
+        "dispatch_id": "fix-b",
+        "kind": "corrective",
+        "failure_invariant": "FR-002"
+      },
+      "expect": {
+        "exit_code": 0,
+        "status": "ok",
+        "disposition": "continue"
+      }
+    },
+    {
+      "id": "fix-b-failed",
+      "action": "complete",
+      "inputs": {
+        "dispatch_id": "fix-b",
+        "outcome": "failed"
+      },
+      "expect": {
+        "exit_code": 0,
+        "status": "ok",
+        "disposition": "continue"
+      }
+    },
+    {
+      "id": "ordinary-reserve-refused",
+      "action": "reserve",
+      "inputs": {
+        "dispatch_id": "fix-c",
+        "kind": "corrective",
+        "failure_invariant": "FR-001"
+      },
+      "expect": {
+        "exit_code": 1,
+        "status": "expected_failure",
+        "reasons": [
+          "corrective_run_budget_exhausted"
+        ]
+      }
+    },
+    {
+      "id": "missing-event",
+      "action": "authorize-corrective-exception",
+      "inputs": {
+        "dispatch_id": "fix-c",
+        "failure_invariant": "FR-001",
+        "scope_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "refused": "requires one bounded operator native event"
+    },
+    {
+      "id": "other-run",
+      "action": "authorize-corrective-exception",
+      "inputs": {
+        "dispatch_id": "fix-c",
+        "failure_invariant": "FR-001",
+        "scope_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "native_observation": {
+          "native_event_id": "operator-exception",
+          "run_id": "other-run",
+          "action": "corrective_exception_approved",
+          "failure_invariant": "FR-001",
+          "dispatch_id": "fix-c",
+          "failure_kind": "application",
+          "refusal_reason": "corrective_run_budget_exhausted",
+          "scope_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "spec_sha256": "$spec_sha256"
+        }
+      },
+      "refused": ""
+    },
+    {
+      "id": "spec-digest-mismatch",
+      "action": "authorize-corrective-exception",
+      "inputs": {
+        "dispatch_id": "fix-c",
+        "failure_invariant": "FR-001",
+        "scope_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "native_observation": {
+          "native_event_id": "operator-exception",
+          "run_id": "$run_id",
+          "action": "corrective_exception_approved",
+          "failure_invariant": "FR-001",
+          "dispatch_id": "fix-c",
+          "failure_kind": "application",
+          "refusal_reason": "corrective_run_budget_exhausted",
+          "scope_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "spec_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+        }
+      },
+      "refused": ""
+    },
+    {
+      "id": "scope-mismatch",
+      "action": "authorize-corrective-exception",
+      "inputs": {
+        "dispatch_id": "fix-c",
+        "failure_invariant": "FR-001",
+        "scope_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "native_observation": {
+          "native_event_id": "operator-exception",
+          "run_id": "$run_id",
+          "action": "corrective_exception_approved",
+          "failure_invariant": "FR-001",
+          "dispatch_id": "fix-c",
+          "failure_kind": "application",
+          "refusal_reason": "corrective_run_budget_exhausted",
+          "scope_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "spec_sha256": "$spec_sha256"
+        }
+      },
+      "refused": ""
+    },
+    {
+      "id": "wrong-refusal",
+      "action": "authorize-corrective-exception",
+      "inputs": {
+        "dispatch_id": "fix-c",
+        "failure_invariant": "FR-001",
+        "scope_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "native_observation": {
+          "native_event_id": "operator-exception",
+          "run_id": "$run_id",
+          "action": "corrective_exception_approved",
+          "failure_invariant": "FR-001",
+          "dispatch_id": "fix-c",
+          "failure_kind": "application",
+          "refusal_reason": "failure_family_budget_exhausted",
+          "scope_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "spec_sha256": "$spec_sha256"
+        }
+      },
+      "refused": ""
+    },
+    {
+      "id": "approved-exception",
+      "action": "authorize-corrective-exception",
+      "inputs": {
+        "dispatch_id": "fix-c",
+        "failure_invariant": "FR-001",
+        "scope_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "native_observation": {
+          "native_event_id": "operator-exception",
+          "run_id": "$run_id",
+          "action": "corrective_exception_approved",
+          "failure_invariant": "FR-001",
+          "dispatch_id": "fix-c",
+          "failure_kind": "application",
+          "refusal_reason": "corrective_run_budget_exhausted",
+          "scope_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "spec_sha256": "$spec_sha256"
+        }
+      },
+      "expect": {
+        "exit_code": 0,
+        "status": "ok",
+        "disposition": "continue",
+        "preserves": [
+          "run_id",
+          "corrective_cycles",
+          "reservations",
+          "invariant_binding"
+        ],
+        "ledger": {
+          "corrective_exception.dispatch_id": "fix-c",
+          "corrective_exception.operator_exception_event_id": "operator-exception"
+        }
+      }
+    },
+    {
+      "id": "fix-c-failed",
+      "action": "complete",
+      "inputs": {
+        "dispatch_id": "fix-c",
+        "outcome": "failed"
+      },
+      "expect": {
+        "exit_code": 0,
+        "status": "ok",
+        "disposition": "continue"
+      }
+    },
+    {
+      "id": "second-exception",
+      "action": "authorize-corrective-exception",
+      "inputs": {
+        "dispatch_id": "fix-d",
+        "failure_invariant": "FR-001",
+        "scope_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "native_observation": {
+          "native_event_id": "second-exception",
+          "run_id": "$run_id",
+          "action": "corrective_exception_approved",
+          "failure_invariant": "FR-001",
+          "dispatch_id": "fix-d",
+          "failure_kind": "application",
+          "refusal_reason": "corrective_run_budget_exhausted",
+          "scope_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "spec_sha256": "$spec_sha256"
+        }
+      },
+      "refused": ""
+    },
+    {
+      "id": "replayed-approval",
+      "action": "pause",
+      "inputs": {
+        "native_observation": {
+          "native_event_id": "operator-exception",
+          "run_id": "$run_id",
+          "kind": "human_uat",
+          "action": "wait_started"
+        }
+      },
+      "refused": "already consumed"
+    }
+  ]
+}

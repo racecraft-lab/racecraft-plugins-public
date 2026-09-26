@@ -1,0 +1,245 @@
+{
+  "schema": "corrective-authorization-replay/v1",
+  "description": "One operator-approved infrastructure retry under the failed owner's reservation; unbound, replayed, and second approvals are refused.",
+  "steps": [
+    {
+      "id": "spec",
+      "place_spec": "spec.md"
+    },
+    {
+      "id": "start",
+      "action": "start",
+      "expect": {
+        "exit_code": 0,
+        "status": "ok",
+        "disposition": "continue"
+      }
+    },
+    {
+      "id": "reserve-owner",
+      "action": "reserve",
+      "inputs": {
+        "dispatch_id": "owner",
+        "kind": "corrective",
+        "failure_invariant": "FR-001"
+      },
+      "expect": {
+        "exit_code": 0,
+        "status": "ok",
+        "disposition": "continue"
+      }
+    },
+    {
+      "id": "reconcile-owner",
+      "action": "reconcile",
+      "inputs": {
+        "dispatch_id": "owner"
+      },
+      "expect": {
+        "exit_code": 1,
+        "status": "expected_failure",
+        "disposition": "checkpoint_required"
+      }
+    },
+    {
+      "id": "owner-host-failure",
+      "action": "complete",
+      "inputs": {
+        "dispatch_id": "owner",
+        "outcome": "failed",
+        "native_observation": {
+          "native_event_id": "host-auth-error",
+          "run_id": "$run_id",
+          "dispatch_id": "owner",
+          "action": "dispatch_result",
+          "outcome": "failed"
+        }
+      },
+      "expect": {
+        "exit_code": 0,
+        "status": "ok",
+        "disposition": "continue"
+      }
+    },
+    {
+      "id": "reserve-other-family",
+      "action": "reserve",
+      "inputs": {
+        "dispatch_id": "other-family",
+        "kind": "corrective",
+        "failure_invariant": "FR-002"
+      },
+      "expect": {
+        "exit_code": 0,
+        "status": "ok",
+        "disposition": "continue"
+      }
+    },
+    {
+      "id": "missing-event",
+      "action": "authorize-corrective-retry",
+      "inputs": {
+        "dispatch_id": "owner-retry",
+        "failed_dispatch_id": "owner",
+        "reservation_id": "$reservation:owner"
+      },
+      "refused": "requires one bounded operator native event"
+    },
+    {
+      "id": "other-run",
+      "action": "authorize-corrective-retry",
+      "inputs": {
+        "dispatch_id": "owner-retry",
+        "failed_dispatch_id": "owner",
+        "reservation_id": "$reservation:owner",
+        "native_observation": {
+          "native_event_id": "operator-retry-message",
+          "run_id": "other-run",
+          "action": "corrective_retry_approved",
+          "failed_dispatch_id": "owner",
+          "failed_native_event_id": "host-auth-error",
+          "retry_dispatch_id": "owner-retry",
+          "reservation_id": "$reservation:owner",
+          "failure_kind": "infrastructure"
+        }
+      },
+      "refused": ""
+    },
+    {
+      "id": "replayed-host-event",
+      "action": "authorize-corrective-retry",
+      "inputs": {
+        "dispatch_id": "owner-retry",
+        "failed_dispatch_id": "owner",
+        "reservation_id": "$reservation:owner",
+        "native_observation": {
+          "native_event_id": "host-auth-error",
+          "run_id": "$run_id",
+          "action": "corrective_retry_approved",
+          "failed_dispatch_id": "owner",
+          "failed_native_event_id": "host-auth-error",
+          "retry_dispatch_id": "owner-retry",
+          "reservation_id": "$reservation:owner",
+          "failure_kind": "infrastructure"
+        }
+      },
+      "refused": "already consumed"
+    },
+    {
+      "id": "unrecorded-failure",
+      "action": "authorize-corrective-retry",
+      "inputs": {
+        "dispatch_id": "owner-retry",
+        "failed_dispatch_id": "owner",
+        "reservation_id": "$reservation:owner",
+        "native_observation": {
+          "native_event_id": "operator-retry-message",
+          "run_id": "$run_id",
+          "action": "corrective_retry_approved",
+          "failed_dispatch_id": "owner",
+          "failed_native_event_id": "other-host-event",
+          "retry_dispatch_id": "owner-retry",
+          "reservation_id": "$reservation:owner",
+          "failure_kind": "infrastructure"
+        }
+      },
+      "refused": ""
+    },
+    {
+      "id": "application-failure",
+      "action": "authorize-corrective-retry",
+      "inputs": {
+        "dispatch_id": "owner-retry",
+        "failed_dispatch_id": "owner",
+        "reservation_id": "$reservation:owner",
+        "native_observation": {
+          "native_event_id": "operator-retry-message",
+          "run_id": "$run_id",
+          "action": "corrective_retry_approved",
+          "failed_dispatch_id": "owner",
+          "failed_native_event_id": "host-auth-error",
+          "retry_dispatch_id": "owner-retry",
+          "reservation_id": "$reservation:owner",
+          "failure_kind": "application"
+        }
+      },
+      "refused": ""
+    },
+    {
+      "id": "approved-retry",
+      "action": "authorize-corrective-retry",
+      "inputs": {
+        "dispatch_id": "owner-retry",
+        "failed_dispatch_id": "owner",
+        "reservation_id": "$reservation:owner",
+        "native_observation": {
+          "native_event_id": "operator-retry-message",
+          "run_id": "$run_id",
+          "action": "corrective_retry_approved",
+          "failed_dispatch_id": "owner",
+          "failed_native_event_id": "host-auth-error",
+          "retry_dispatch_id": "owner-retry",
+          "reservation_id": "$reservation:owner",
+          "failure_kind": "infrastructure"
+        }
+      },
+      "expect": {
+        "exit_code": 0,
+        "status": "ok",
+        "disposition": "continue",
+        "ledger": {
+          "corrective_cycles": 2,
+          "dispatches.owner.outcome": "failed",
+          "dispatches.owner-retry.recovery_of": "owner",
+          "dispatches.owner-retry.operator_recovery_event_id": "operator-retry-message"
+        }
+      }
+    },
+    {
+      "id": "retry-completed",
+      "action": "complete",
+      "inputs": {
+        "dispatch_id": "owner-retry",
+        "outcome": "completed"
+      },
+      "expect": {
+        "exit_code": 0,
+        "status": "ok",
+        "disposition": "continue"
+      }
+    },
+    {
+      "id": "second-retry",
+      "action": "authorize-corrective-retry",
+      "inputs": {
+        "dispatch_id": "second-retry",
+        "failed_dispatch_id": "owner",
+        "reservation_id": "$reservation:owner",
+        "native_observation": {
+          "native_event_id": "second-message",
+          "run_id": "$run_id",
+          "action": "corrective_retry_approved",
+          "failed_dispatch_id": "owner",
+          "failed_native_event_id": "host-auth-error",
+          "retry_dispatch_id": "second-retry",
+          "reservation_id": "$reservation:owner",
+          "failure_kind": "infrastructure"
+        }
+      },
+      "refused": ""
+    },
+    {
+      "id": "replayed-approval",
+      "action": "pause",
+      "inputs": {
+        "native_observation": {
+          "native_event_id": "operator-retry-message",
+          "run_id": "$run_id",
+          "kind": "human_uat",
+          "action": "wait_started"
+        }
+      },
+      "refused": ""
+    }
+  ]
+}

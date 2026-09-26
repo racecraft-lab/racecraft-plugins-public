@@ -1,0 +1,80 @@
+{
+  "schema": "corrective-authorization-replay/v1",
+  "description": "A greenfield run binds its first spec once; a missing spec_file and a second bind are refused.",
+  "steps": [
+    {
+      "id": "greenfield",
+      "place_spec": "absent"
+    },
+    {
+      "id": "start",
+      "action": "start",
+      "expect": {
+        "exit_code": 0,
+        "status": "ok",
+        "disposition": "continue",
+        "ledger": {
+          "approved_invariants": []
+        }
+      }
+    },
+    {
+      "id": "bind-without-spec",
+      "action": "bind-invariants",
+      "refused": "requires an explicit spec_file"
+    },
+    {
+      "id": "spec-written",
+      "place_spec": "spec.md"
+    },
+    {
+      "id": "bind",
+      "action": "bind-invariants",
+      "inputs": {
+        "spec_file": "$spec_file"
+      },
+      "expect": {
+        "exit_code": 0,
+        "status": "ok",
+        "disposition": "continue",
+        "ledger": {
+          "approved_invariants": [
+            "FR-001",
+            "FR-002"
+          ]
+        },
+        "preserves": [
+          "run_id",
+          "started_at"
+        ]
+      }
+    },
+    {
+      "id": "spec-amended",
+      "place_spec": "spec-amended.md"
+    },
+    {
+      "id": "second-bind",
+      "action": "bind-invariants",
+      "inputs": {
+        "spec_file": "$spec_file"
+      },
+      "refused": "already frozen"
+    },
+    {
+      "id": "status",
+      "action": "status",
+      "mode": "read_only",
+      "expect": {
+        "exit_code": 0,
+        "status": "ok",
+        "ledger": {
+          "approved_invariants": [
+            "FR-001",
+            "FR-002"
+          ]
+        }
+      }
+    }
+  ]
+}
