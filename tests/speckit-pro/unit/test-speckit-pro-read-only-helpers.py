@@ -985,6 +985,70 @@ class ReadOnlyHelperTests(unittest.TestCase):
             )
             self.assertEqual(task_state(), before)
 
+    def test_resolve_workflow_binding_binds_explicit_path_through_symlinked_parent_directory(self) -> None:
+        # A symlinked spelling of a worktree's parent directory, such as macOS /tmp, binds like the real path (issue 702).
+        if self.helper_filter and self.helper_filter != "resolve-workflow-binding":
+            self.skipTest("workflow-binding cases use resolve-workflow-binding")
+        with tempfile.TemporaryDirectory() as temp:
+            base = Path(temp).resolve()
+            real_base = base / "real"
+            real_base.mkdir()
+            task_root, _, sibling_root = self.build_binding_worktrees(real_base)
+            workflow = sibling_root / "docs" / "ai" / "specs" / ".process" / "DEMO-001-workflow.md"
+            workflow.parent.mkdir(parents=True)
+            workflow.write_text("# demo\n", encoding="utf-8")
+            alias_base = base / "alias"
+            try:
+                alias_base.symlink_to(real_base, target_is_directory=True)
+            except OSError as exc:
+                self.skipTest(f"symlinks unavailable: {exc}")
+            aliased_workflow = alias_base / workflow.relative_to(real_base)
+
+            real_payload, real_exit = self.binding_result(task_root, str(workflow))
+            payload, exit_code = self.binding_result(task_root, str(aliased_workflow))
+
+            self.assertEqual(
+                (payload["binding_status"], payload["relation"], exit_code),
+                ("resolved", "external", 0),
+            )
+            self.assertEqual((payload, exit_code), (real_payload, real_exit))
+            self.assertEqual(payload["workflow_root"], sibling_root.resolve().as_posix())
+            self.assertEqual(payload["workflow_file"], workflow.resolve().as_posix())
+
+            aliased_task, exit_code = self.binding_result(alias_base / task_root.name, str(aliased_workflow))
+            self.assertEqual((aliased_task, exit_code), (real_payload, real_exit))
+
+    def test_resolve_workflow_binding_rejects_escape_through_symlinked_parent_directory(self) -> None:
+        if self.helper_filter and self.helper_filter != "resolve-workflow-binding":
+            self.skipTest("workflow-binding cases use resolve-workflow-binding")
+        with tempfile.TemporaryDirectory() as temp:
+            base = Path(temp).resolve()
+            real_base = base / "real"
+            real_base.mkdir()
+            task_root, _, sibling_root = self.build_binding_worktrees(real_base)
+            outside = base / "outside-workflow.md"
+            outside.write_text("# outside\n", encoding="utf-8")
+            escape = sibling_root / "escape-workflow.md"
+            alias_base = base / "alias"
+            root_alias = base / "root-alias"
+            try:
+                escape.symlink_to(outside)
+                alias_base.symlink_to(real_base, target_is_directory=True)
+                root_alias.symlink_to(sibling_root, target_is_directory=True)
+            except OSError as exc:
+                self.skipTest(f"symlinks unavailable: {exc}")
+            (sibling_root / "aliased-workflow.md").write_text("# sibling\n", encoding="utf-8")
+
+            for supplied in (
+                alias_base / escape.relative_to(real_base),
+                root_alias / "aliased-workflow.md",
+            ):
+                with self.subTest(supplied=supplied.relative_to(base).as_posix()):
+                    payload, exit_code = self.binding_result(task_root, str(supplied))
+                    self.assertEqual((payload["binding_status"], exit_code), ("invalid", 1))
+                    self.assertIsNone(payload["workflow_root"])
+                    self.assertIsNone(payload["workflow_file"])
+
     def test_resolve_scaffold_placement_anchors_to_detached_task_root_and_revalidates(self) -> None:
         if self.helper_filter and self.helper_filter != "resolve-scaffold-worktree-placement":
             self.skipTest("scaffold-placement cases use resolve-scaffold-worktree-placement")
