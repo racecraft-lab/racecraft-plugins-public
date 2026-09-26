@@ -165,6 +165,108 @@ WORKTREE_MIGRATION_IDS = {"functional.speckit-autopilot.case-107"}
 NATIVE_RESPONSE_IDS = {
     "functional.speckit-autopilot.case-7", "functional.speckit-autopilot.case-25",
 }
+# Native-only orchestration regressions. They have no legacy Layer 3 source, so
+# they sit outside the frozen legacy inventory and its selection ledger.
+ORCHESTRATION_FIXTURE_ROOT = "tests/speckit-pro/evals/fixtures/functional/native-orchestration/"
+ORCHESTRATION_REQUIRING_TEXT = {
+    "functional.speckit-autopilot.skill-root-binding": (
+        ("speckit-pro/skills/speckit-autopilot/references/phase-execution.md",
+         "Executors resolve project skills and paths against the bound `<WORKFLOW_ROOT>`, "
+         "never the checkout that launched the run"),
+        ("speckit-pro/codex-skills/speckit-autopilot/references/phase-execution-codex.md",
+         "Never infer the execution root from the task's default checkout."),
+    ),
+    "functional.speckit-autopilot.plan-research-dispatch": (
+        ("speckit-pro/agents/phase-executor.md",
+         "Use a subagent only when the loaded command directs one"),
+        ("speckit-pro/agents/phase-executor.md",
+         "After the Skill loads, execute its steps."),
+        ("speckit-pro/codex-agents/phase-executor.toml",
+         "Use `spawn_agent` only when the loaded skill directs it"),
+        ("speckit-pro/codex-agents/phase-executor.toml",
+         "After the skill loads, execute its steps."),
+        ("speckit-pro/skills/speckit-autopilot/references/error-recovery.md",
+         "**MCP tool unavailable:** Skip research that depends on it."),
+        ("speckit-pro/codex-skills/speckit-autopilot/references/error-recovery-codex.md",
+         "**MCP tool unavailable:** Skip research that depends on it."),
+        ("speckit-pro/skills/speckit-autopilot/references/capability-discovery.md",
+         "use the fallback rule below and state the gap"),
+    ),
+    "functional.speckit-autopilot.clarify-answer-provenance": (
+        ("speckit-pro/skills/speckit-autopilot/references/workflow-file-protocol.md",
+         "Clarify Results must preserve each accepted human answer separately from the "
+         "executor's recommendation or later consensus."),
+        ("speckit-pro/skills/speckit-autopilot/references/workflow-file-protocol.md",
+         "label its source `human answer`"),
+        ("speckit-pro/codex-skills/speckit-autopilot/references/workflow-file-protocol-codex.md",
+         "Clarify Results must preserve each accepted human answer separately from the "
+         "executor's recommendation or later consensus."),
+        ("speckit-pro/codex-skills/speckit-autopilot/references/workflow-file-protocol-codex.md",
+         "label its source `human answer`"),
+    ),
+    "functional.speckit-autopilot.progress-projection-mid-run": (
+        ("speckit-pro/skills/speckit-autopilot/references/task-list-canonical.md",
+         "Do NOT omit, collapse, or defer entries"),
+        ("speckit-pro/skills/speckit-autopilot/SKILL.md",
+         "Exit 0 is required; on nonzero, repair the plan and the workflow status table, "
+         "then repeat before executing this phase."),
+        ("speckit-pro/codex-skills/speckit-autopilot/references/task-list-canonical-codex.md",
+         "do NOT collapse them"),
+        ("speckit-pro/codex-skills/speckit-autopilot/references/phase-execution-codex.md",
+         "If Archive Sweep or any canonical phase family is missing, STOP and repair the "
+         "plan before executing this phase."),
+    ),
+}
+ORCHESTRATION_IDS = set(ORCHESTRATION_REQUIRING_TEXT)
+# Native-only scaffold cases for the spec-scoped reviewability setup gate. The
+# staged roadmap puts the over-budget target first and a small entry last, so a
+# roadmap-wide or last-entry reading returns a different answer.
+SCAFFOLD_REVIEWABILITY_FIXTURE_ROOT = "tests/speckit-pro/evals/fixtures/functional/scaffold-reviewability/"
+SCAFFOLD_REVIEWABILITY_REQUIRING_TEXT = (
+    ("speckit-pro/skills/speckit-scaffold-spec/SKILL.md",
+     "Run runner helper reviewability-gate in setup mode for <technical-roadmap-path> with spec_id <SPEC-ID>."),
+    ("speckit-pro/skills/speckit-scaffold-spec/SKILL.md",
+     "If it returns an unexcepted `block`, STOP and split the spec first."),
+    ("speckit-pro/codex-skills/speckit-scaffold-spec/SKILL.md",
+     "Run runner helper reviewability-gate in setup mode for <technical-roadmap-path> with spec_id <SPEC-ID>."),
+    ("speckit-pro/codex-skills/speckit-scaffold-spec/SKILL.md",
+     "If the gate returns `block` without a ratified split exception, stop setup"),
+    ("speckit-pro/skills/speckit-autopilot/references/gate-validation.md",
+     "The gate then reads only that `### <SPEC-ID>:` section"),
+    ("speckit-pro/skills/speckit-coach/templates/technical-roadmap-template.md",
+     "A block-sized slice may be allowed only by a typed, auditable exception pragma on its own line"),
+)
+SCAFFOLD_REVIEWABILITY_EXPECTED = {
+    "functional.speckit-scaffold-spec.reviewability-target-block": {
+        "gate_status": "block", "target_reviewable_loc": 1180,
+        "exception_class": None, "setup_may_continue": False,
+    },
+    "functional.speckit-scaffold-spec.reviewability-target-exception": {
+        "gate_status": "exception", "target_reviewable_loc": 1180,
+        "exception_class": "infra", "setup_may_continue": True,
+    },
+}
+# The answers a roadmap-wide or last-entry reading produces; each must grade fail.
+SCAFFOLD_REVIEWABILITY_FAILURE_ANSWERS = {
+    "functional.speckit-scaffold-spec.reviewability-target-block": {
+        "gate_status": "warn", "target_reviewable_loc": 260,
+        "exception_class": "infra", "setup_may_continue": True,
+    },
+    "functional.speckit-scaffold-spec.reviewability-target-exception": {
+        "gate_status": "warn", "target_reviewable_loc": 260,
+        "exception_class": None, "setup_may_continue": False,
+    },
+}
+SCAFFOLD_REVIEWABILITY_IDS = set(SCAFFOLD_REVIEWABILITY_EXPECTED)
+NATIVE_ONLY_IDS = ORCHESTRATION_IDS | SCAFFOLD_REVIEWABILITY_IDS
+# The graded failure each semantic rubric must name, so a rubric cannot pass the
+# recorded failure and the correct behaviour alike.
+ORCHESTRATION_FAILURE_PHRASES = {
+    "functional.speckit-autopilot.skill-root-binding": "accepts the skill copy from the launching checkout",
+    "functional.speckit-autopilot.plan-research-dispatch": "direct research-broker calls as a substitute",
+    "functional.speckit-autopilot.clarify-answer-provenance": "consensus answer as a human answer",
+    "functional.speckit-autopilot.progress-projection-mid-run": "summary rows as an acceptable projection",
+}
 LOCAL_COMMAND_LEGACY_SOURCES = {
     "functional.speckit-autopilot.case-2": (
         ("layer3-functional/evals/speckit-autopilot-evals.json", 2),
@@ -473,7 +575,7 @@ def _assert_case_check_accounting(
         | COACH_ARCHIVE_IDS | AUTOPILOT_PREREQ_IDS | STATUS_WORKTREE_IDS
         | SCAFFOLD_HANDOFF_IDS | SCENARIO_IDS | LOCAL_COMMAND_IDS | REDIRECT_IDS
         | NATIVE_RESPONSE_IDS | DASHBOARD_IDS | WORKTREE_MIGRATION_IDS
-        | TASK_LIST_CONTRACT_IDS | AUTOPILOT_REDIRECT_IDS
+        | TASK_LIST_CONTRACT_IDS | AUTOPILOT_REDIRECT_IDS | NATIVE_ONLY_IDS
     )
     case_id = case["id"]
     if case_id in exempt_ids:
@@ -563,6 +665,159 @@ def _assert_renderer_context_proof(
     test.assertTrue(proof["complete_preceding_json_found"])
 
 
+ORCHESTRATION_FAILURE_ANSWERS = {
+    "functional.speckit-autopilot.skill-root-binding": {
+        "skill_root_used": "/workspace/.worktrees/spec-820",
+        "skill_root_required": "/workspace",
+        "dispatch_compliant": True,
+    },
+    "functional.speckit-autopilot.plan-research-dispatch": {
+        "research_dispatch_required": False,
+        "research_dispatch_observed": True,
+        "unavailable_research_recorded": True,
+        "plan_phase_compliant": True,
+    },
+    "functional.speckit-autopilot.clarify-answer-provenance": {
+        "human_answer_sessions": [1, 2],
+        "mislabeled_sessions": [],
+        "unrecorded_sessions": [],
+        "clarify_record_compliant": True,
+    },
+    "functional.speckit-autopilot.progress-projection-mid-run": {
+        "canonical_rows_present": True,
+        "projection_acceptable": True,
+        "may_dispatch_plan_executor": True,
+        "repair_before_dispatch": False,
+    },
+}
+
+
+def _normalized(text: str) -> str:
+    return " ".join(text.split())
+
+
+def _stdout_json(result: subprocess.CompletedProcess[str], label: str) -> dict:
+    """Parse a subprocess's JSON stdout, or fail with its exit code and stderr."""
+    try:
+        return json.loads(result.stdout)
+    except json.JSONDecodeError as error:
+        raise AssertionError(
+            f"{label} exited {result.returncode} without JSON stdout ({error}); "
+            f"stdout={result.stdout[:2000]!r} stderr={result.stderr[:2000]!r}"
+        ) from None
+
+
+def _run_coverage_guard(workflow: Path, state: Path) -> dict:
+    script = (
+        REPO_ROOT / "speckit-pro" / "skills" / "speckit-autopilot" / "scripts"
+        / "validate-autopilot-phase-coverage.py"
+    )
+    result = subprocess.run(
+        [sys.executable, str(script), "--workflow", str(workflow), "--state", str(state),
+         "--rule", "coverage"],
+        text=True, capture_output=True, check=False,
+    )
+    return _stdout_json(result, "validate-autopilot-phase-coverage.py")
+
+
+def _derive_orchestration_answers(case: dict) -> dict:
+    """Derive every graded response field from the staged evidence alone."""
+    sources = {row["destination"]: REPO_ROOT / row["source"] for row in case["fixtures"]}
+
+    def read(destination: str) -> str:
+        return sources[destination].read_text(encoding="utf-8")
+
+    scenario = case["id"].rsplit(".", 1)[-1]
+    if scenario == "skill-root-binding":
+        binding = json.loads(read("scenario-inputs/binding-result.json"))
+        record = json.loads(read("scenario-inputs/plan-dispatch-record.json"))
+        used = record["project_skill"]["resolved_from_root"]
+        return {
+            "skill_root_used": used,
+            "skill_root_required": binding["workflow_root"],
+            "dispatch_compliant": used == binding["workflow_root"],
+        }
+    if scenario == "plan-research-dispatch":
+        record = json.loads(read("scenario-inputs/plan-executor-record.json"))
+        command = _normalized(read("scenario-inputs/speckit-plan-phase0.md"))
+        research = read("scenario-inputs/research.md").lower()
+        required = "Generate and dispatch research agents" in command and bool(
+            record["technical_context_unknowns"]
+        )
+        observed = bool(record["subagent_dispatches"])
+        unavailable = any(call["result"] == "search_unavailable" for call in record["tool_calls"])
+        recorded = not unavailable or "unavailable" in research
+        return {
+            "research_dispatch_required": required,
+            "research_dispatch_observed": observed,
+            "unavailable_research_recorded": recorded,
+            "plan_phase_compliant": (observed or not required) and recorded,
+        }
+    if scenario == "clarify-answer-provenance":
+        replies: dict[int, bool] = {}
+        session = None
+        for line in read("scenario-inputs/clarify-session-record.md").splitlines():
+            heading = re.match(r"## Session (\d+):", line)
+            if heading:
+                session = int(heading.group(1))
+            reply = re.match(r"- Operator reply: (.+)$", line)
+            if reply and session is not None:
+                replies[session] = reply.group(1).strip() != "none"
+        labels: dict[int, str] = {}
+        for line in read("scenario-inputs/clarify-results.md").splitlines():
+            cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
+            if line.startswith("|") and cells[0].isdigit():
+                labels[int(cells[0])] = cells[-1]
+        labeled = {key for key, value in labels.items() if value.startswith("human answer")}
+        mislabeled = sorted(key for key in labeled if not replies[key])
+        unrecorded = sorted(key for key in replies if key not in labels)
+        return {
+            "human_answer_sessions": sorted(key for key in labeled if replies[key]),
+            "mislabeled_sessions": mislabeled,
+            "unrecorded_sessions": unrecorded,
+            "clarify_record_compliant": not mislabeled and not unrecorded,
+        }
+    if scenario == "progress-projection-mid-run":
+        workflow = "docs/ai/specs/.process/SPEC-830-workflow.md"
+        state_path = "docs/ai/specs/.process/autopilot-state.json"
+        report = _run_coverage_guard(sources[workflow], sources[state_path])
+        visible = json.loads(read("scenario-inputs/visible-plan.json"))["plan"]
+        state = json.loads(read(state_path))["plan"]
+        present = (
+            not report["missing_state_prefixes"] and not report["missing_state_post_items"]
+            and [row["step"] for row in visible] == [row["step"] for row in state]
+        )
+        return {
+            "canonical_rows_present": present,
+            "projection_acceptable": present,
+            "may_dispatch_plan_executor": present,
+            "repair_before_dispatch": not present,
+        }
+    raise AssertionError(f"unknown orchestration scenario {case['id']}")
+
+
+def _run_reviewability_request(case: dict, *, spec_scoped: bool = True) -> tuple[int, dict]:
+    """Run the staged gate request in a workspace built from the case fixtures."""
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        for fixture in case["fixtures"]:
+            target = root / fixture["destination"]
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(REPO_ROOT / fixture["source"], target)
+        request_path = next(
+            check["request_path"] for check in case["checks"] if check["type"] == "native_runner_result"
+        )
+        request = json.loads((root / request_path).read_text(encoding="utf-8"))
+        if not spec_scoped:
+            request["inputs"].pop("spec_id")
+        result = subprocess.run(
+            [sys.executable, "-m", "speckit_pro_runner"], input=json.dumps(request),
+            text=True, capture_output=True, cwd=root, check=False,
+            env={**os.environ, "PYTHONPATH": str(REPO_ROOT / "speckit-pro")},
+        )
+        return result.returncode, _stdout_json(result, "speckit_pro_runner")["data"]["stdout_json"]
+
+
 class NativeFunctionalCatalogTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
@@ -584,9 +839,12 @@ class NativeFunctionalCatalogTests(unittest.TestCase):
             - REDIRECT_IDS - WORKTREE_MIGRATION_IDS - TASK_LIST_CONTRACT_IDS
         )
         self.assertEqual(len(response_only_ids), 59)
-        self.assertEqual(len(self.all_cases), 209)
-        self.assertEqual(len(self.catalog["cases"]), 93)
-        self.assertEqual(set(self.cases), selected_ids | GROUNDED_IDS | NATIVE_RESPONSE_IDS | DASHBOARD_IDS)
+        self.assertEqual(len(self.all_cases), 215)
+        self.assertEqual(len(self.catalog["cases"]), 99)
+        self.assertEqual(
+            set(self.cases),
+            selected_ids | GROUNDED_IDS | NATIVE_RESPONSE_IDS | DASHBOARD_IDS | NATIVE_ONLY_IDS,
+        )
         selected = {row["case_id"]: row for row in self.selection["selected"]}
         for case in self.catalog["cases"]:
             self.assertEqual(case["layer"], "functional")
@@ -613,7 +871,7 @@ class NativeFunctionalCatalogTests(unittest.TestCase):
         }
         self.assertEqual([row["canonical_case_id"] for row in reused],
                          ["functional.speckit-scaffold-spec.case-8"])
-        self.assertEqual(len(self.cases) + len(reused), 94)
+        self.assertEqual(len(set(self.cases) - NATIVE_ONLY_IDS) + len(reused), 94)
         for row in reused:
             self.assertEqual(row["disposition"], "merge")
             self.assertNotIn(row["canonical_case_id"], self.all_cases)
@@ -731,15 +989,16 @@ class NativeFunctionalCatalogTests(unittest.TestCase):
         self.assertEqual(frozen_inventory["response_only"], 65)
         self.assertEqual(frozen_inventory["file_grounded"], 28)
         self.assertEqual(frozen_inventory["held_early_candidates"], current_gaps)
+        legacy_cases = len(set(self.cases) - NATIVE_ONLY_IDS)
         self.assertEqual(
             frozen_inventory["represented"],
-            len(self.cases) + len(self.selection["cross_layer_reuse"]),
+            legacy_cases + len(self.selection["cross_layer_reuse"]),
         )
         self.assertEqual(
             frozen_inventory["held"],
-            127 - len(self.catalog["cases"]) - len(self.selection["cross_layer_reuse"]),
+            127 - legacy_cases - len(self.selection["cross_layer_reuse"]),
         )
-        self.assertEqual(127 - len(self.catalog["cases"]) - len(self.selection["cross_layer_reuse"]), 33)
+        self.assertEqual(127 - legacy_cases - len(self.selection["cross_layer_reuse"]), 33)
 
     def test_native_response_contracts_keep_exact_source_steps_and_legacy_coverage(self) -> None:
         case = self.cases["functional.speckit-autopilot.case-7"]
@@ -786,7 +1045,8 @@ class NativeFunctionalCatalogTests(unittest.TestCase):
         held = {row["case_id"] for row in self.selection["excluded"]}
         self.assertFalse(set(self.cases) & held)
         self.assertFalse(selected & resolved)
-        self.assertEqual(set(self.cases), selected | resolved)
+        self.assertFalse(NATIVE_ONLY_IDS & (selected | resolved | held))
+        self.assertEqual(set(self.cases) - NATIVE_ONLY_IDS, selected | resolved)
         self.assertEqual(len(resolved), len(self.selection.get("resolved_exclusions", [])))
 
     def test_dashboard_facts_fail_independently_of_semantic_judgment(self) -> None:
@@ -871,7 +1131,7 @@ class NativeFunctionalCatalogTests(unittest.TestCase):
 
     def test_fixtures_are_dedicated_existing_and_never_runtime_specs_paths(self) -> None:
         for case in self.catalog["cases"]:
-            if case["id"] not in GROUNDED_IDS | SCAFFOLD_FIXTURE_IDS | SCAFFOLD_DIAGNOSTIC_IDS | STATUS_SEARCH_IDS | CHILD_ABORT_IDS | WORKTREE_BINDING_IDS | ARCHIVE_EXTENSION_IDS | COACH_INSTALLED_IDS | COACH_ARCHIVE_IDS | AUTOPILOT_PREREQ_IDS | STATUS_WORKTREE_IDS | SCAFFOLD_HANDOFF_IDS | SCENARIO_IDS | LOCAL_COMMAND_IDS | REDIRECT_IDS | DASHBOARD_IDS | WORKTREE_MIGRATION_IDS | TASK_LIST_CONTRACT_IDS:
+            if case["id"] not in GROUNDED_IDS | SCAFFOLD_FIXTURE_IDS | SCAFFOLD_DIAGNOSTIC_IDS | STATUS_SEARCH_IDS | CHILD_ABORT_IDS | WORKTREE_BINDING_IDS | ARCHIVE_EXTENSION_IDS | COACH_INSTALLED_IDS | COACH_ARCHIVE_IDS | AUTOPILOT_PREREQ_IDS | STATUS_WORKTREE_IDS | SCAFFOLD_HANDOFF_IDS | SCENARIO_IDS | LOCAL_COMMAND_IDS | REDIRECT_IDS | DASHBOARD_IDS | WORKTREE_MIGRATION_IDS | TASK_LIST_CONTRACT_IDS | NATIVE_ONLY_IDS:
                 self.assertEqual(case["fixtures"], [], case["id"])
                 continue
             if case["id"] in SCAFFOLD_FIXTURE_IDS:
@@ -907,6 +1167,30 @@ class NativeFunctionalCatalogTests(unittest.TestCase):
                         fixture,
                     )
                     self.assertTrue((REPO_ROOT / fixture["source"]).is_file(), fixture)
+                continue
+            if case["id"] in NATIVE_ONLY_IDS:
+                self.assertTrue(case["fixtures"], case["id"])
+                root = (
+                    ORCHESTRATION_FIXTURE_ROOT if case["id"] in ORCHESTRATION_IDS
+                    else SCAFFOLD_REVIEWABILITY_FIXTURE_ROOT
+                )
+                for fixture in case["fixtures"]:
+                    self.assertTrue(fixture["source"].startswith(root), fixture)
+                    self.assertTrue((REPO_ROOT / fixture["source"]).is_file(), fixture)
+                reads = {
+                    check["path"] for check in case["checks"]
+                    if check["type"] == "file_access" and check["operation"] == "read_file"
+                }
+                runner_requests = {
+                    check["request_path"] for check in case["checks"]
+                    if check["type"] == "native_runner_result"
+                }
+                # The runner locates the project through its `.specify/` marker.
+                support = {".specify/project.json"} if case["id"] in SCAFFOLD_REVIEWABILITY_IDS else set()
+                self.assertEqual(
+                    reads | runner_requests | support,
+                    {fixture["destination"] for fixture in case["fixtures"]},
+                )
                 continue
             if case["id"] in TASK_LIST_CONTRACT_IDS:
                 for fixture in case["fixtures"]:
@@ -1797,7 +2081,7 @@ class NativeFunctionalCatalogTests(unittest.TestCase):
 
     def test_semantic_checks_are_narrow_and_not_action_claim_substitutes(self) -> None:
         for case in self.catalog["cases"]:
-            if case["id"] in GROUNDED_IDS | SCENARIO_IDS | LOCAL_COMMAND_IDS | REDIRECT_IDS | DASHBOARD_IDS | WORKTREE_MIGRATION_IDS | SCAFFOLD_DIAGNOSTIC_IDS | STATUS_SEARCH_IDS | CHILD_ABORT_IDS | WORKTREE_BINDING_IDS | ARCHIVE_EXTENSION_IDS | COACH_INSTALLED_IDS | COACH_ARCHIVE_IDS | AUTOPILOT_PREREQ_IDS | STATUS_WORKTREE_IDS | SCAFFOLD_HANDOFF_IDS:
+            if case["id"] in GROUNDED_IDS | SCENARIO_IDS | LOCAL_COMMAND_IDS | REDIRECT_IDS | DASHBOARD_IDS | WORKTREE_MIGRATION_IDS | SCAFFOLD_DIAGNOSTIC_IDS | STATUS_SEARCH_IDS | CHILD_ABORT_IDS | WORKTREE_BINDING_IDS | ARCHIVE_EXTENSION_IDS | COACH_INSTALLED_IDS | COACH_ARCHIVE_IDS | AUTOPILOT_PREREQ_IDS | STATUS_WORKTREE_IDS | SCAFFOLD_HANDOFF_IDS | NATIVE_ONLY_IDS:
                 continue
             requirement_ids = {row["id"] for row in case["requirements"]}
             for check in case["checks"]:
@@ -1927,6 +2211,157 @@ class NativeFunctionalCatalogTests(unittest.TestCase):
             self.assertEqual(passed["status"], "pass", (row["case_id"], passed))
             self.assertEqual(failed["status"], "fail", (row["case_id"], failed))
 
+
+    def test_orchestration_regressions_cite_current_requiring_text(self) -> None:
+        for case_id, citations in ORCHESTRATION_REQUIRING_TEXT.items():
+            case = self.cases[case_id]
+            paths = list(dict.fromkeys(path for path, _ in citations))
+            self.assertEqual(case["provenance"], paths, case_id)
+            for path, snippet in citations:
+                source = _normalized((REPO_ROOT / path).read_text(encoding="utf-8"))
+                self.assertIn(_normalized(snippet), source, (case_id, path))
+            names = {Path(path).name for path in paths}
+            for requirement in case["requirements"]:
+                if requirement["id"] == "selection":
+                    continue
+                self.assertTrue(
+                    any(name in requirement["description"] for name in names),
+                    (case_id, requirement["id"]),
+                )
+
+    def test_orchestration_fixtures_derive_the_graded_answers(self) -> None:
+        for case_id in sorted(ORCHESTRATION_IDS):
+            case = self.cases[case_id]
+            fields = {
+                check["field_path"][0]: check for check in case["checks"]
+                if check["type"] == "response_json_field"
+            }
+            derived = _derive_orchestration_answers(case)
+            self.assertEqual(set(derived), set(fields), case_id)
+            self.assertEqual(set(ORCHESTRATION_FAILURE_ANSWERS[case_id]), set(fields), case_id)
+            for field, check in fields.items():
+                self.assertEqual(check["field_path"], [field], case_id)
+                self.assertEqual(check["expected_by_host"]["claude"], derived[field], (case_id, field))
+                self.assertEqual(check["expected_by_host"]["codex"], derived[field], (case_id, field))
+                self.assertNotEqual(ORCHESTRATION_FAILURE_ANSWERS[case_id][field], derived[field])
+        control = _run_coverage_guard(
+            REPO_ROOT / ORCHESTRATION_FIXTURE_ROOT / "progress-projection" / "workflow.md",
+            REPO_ROOT / ORCHESTRATION_FIXTURE_ROOT / "progress-projection" / "canonical-state.json",
+        )
+        self.assertEqual(control["missing_state_prefixes"], [])
+        self.assertEqual(control["missing_state_post_items"], [])
+
+    def test_orchestration_grading_separates_the_failure_from_correct_behaviour(self) -> None:
+        for case_id in sorted(ORCHESTRATION_IDS):
+            case = self.cases[case_id]
+            fields = [check for check in case["checks"] if check["type"] == "response_json_field"]
+            semantic = [check for check in case["checks"] if check["type"] == "semantic"]
+            self.assertTrue(semantic, case_id)
+            for check in semantic:
+                self.assertTrue(check["rubric"].startswith("PASS only if "), (case_id, check["id"]))
+                self.assertIn(" FAIL if ", check["rubric"], (case_id, check["id"]))
+            self.assertTrue(
+                any(ORCHESTRATION_FAILURE_PHRASES[case_id] in check["rubric"] for check in semantic),
+                case_id,
+            )
+            for host in ("claude", "codex"):
+                body = {check["field_path"][0]: check["expected_by_host"][host] for check in fields}
+                body["explanation"] = "mock response, not native evidence"
+                correct = grounded_observation(case, host, final_text=json.dumps(body))
+                self.assertEqual(
+                    grade_observation(case, correct, semantic_verdicts(case, True), host=host)["status"],
+                    "pass", (case_id, host),
+                )
+                self.assertEqual(grade_observation(case, correct, host=host)["status"], "needs_judge")
+                self.assertEqual(
+                    grade_observation(case, correct, semantic_verdicts(case, False), host=host)["status"],
+                    "fail", (case_id, host),
+                )
+                for field, failure in ORCHESTRATION_FAILURE_ANSWERS[case_id].items():
+                    recorded_failure = {**body, field: failure}
+                    observed = grounded_observation(case, host, final_text=json.dumps(recorded_failure))
+                    self.assertEqual(
+                        grade_observation(case, observed, semantic_verdicts(case, True), host=host)["status"],
+                        "fail", (case_id, host, field),
+                    )
+                unread = observation(activation="speckit-autopilot", final_text=json.dumps(body))
+                self.assertEqual(
+                    grade_observation(case, unread, semantic_verdicts(case, True), host=host)["status"],
+                    "fail", (case_id, host),
+                )
+
+    def test_scaffold_reviewability_cases_cite_current_requiring_text(self) -> None:
+        paths = list(dict.fromkeys(path for path, _ in SCAFFOLD_REVIEWABILITY_REQUIRING_TEXT))
+        for path, snippet in SCAFFOLD_REVIEWABILITY_REQUIRING_TEXT:
+            source = _normalized((REPO_ROOT / path).read_text(encoding="utf-8"))
+            self.assertIn(_normalized(snippet), source, path)
+        names = {Path(path).name for path in paths}
+        for case_id in sorted(SCAFFOLD_REVIEWABILITY_IDS):
+            case = self.cases[case_id]
+            self.assertEqual(case["provenance"], paths, case_id)
+            for requirement in case["requirements"]:
+                if requirement["id"] != "selection":
+                    self.assertTrue(
+                        any(name in requirement["description"] for name in names),
+                        (case_id, requirement["id"]),
+                    )
+
+    def test_scaffold_reviewability_fixtures_separate_the_target_from_a_roadmap_wide_reading(self) -> None:
+        for case_id, expected in SCAFFOLD_REVIEWABILITY_EXPECTED.items():
+            case = self.cases[case_id]
+            fields = {
+                check["field_path"][0]: check for check in case["checks"]
+                if check["type"] == "response_json_field"
+            }
+            self.assertEqual(set(fields), set(expected), case_id)
+            for field, check in fields.items():
+                self.assertEqual(check["expected_by_host"], {"claude": expected[field], "codex": expected[field]})
+            runner = next(check for check in case["checks"] if check["type"] == "native_runner_result")
+            exit_code, scoped = _run_reviewability_request(case)
+            self.assertEqual(exit_code, runner["expected_exit_code"], case_id)
+            self.assertEqual(scoped["spec_id"], "SPEC-841", case_id)
+            self.assertEqual(scoped["status"], expected["gate_status"], case_id)
+            self.assertEqual(scoped["status"], runner["expected_stdout_value"], case_id)
+            self.assertEqual(scoped["reviewable_loc"], expected["target_reviewable_loc"], case_id)
+            self.assertEqual(scoped["exception_class"], expected["exception_class"], case_id)
+            _, roadmap_wide = _run_reviewability_request(case, spec_scoped=False)
+            failure = SCAFFOLD_REVIEWABILITY_FAILURE_ANSWERS[case_id]
+            self.assertEqual(roadmap_wide["status"], failure["gate_status"], case_id)
+            self.assertEqual(roadmap_wide["reviewable_loc"], failure["target_reviewable_loc"], case_id)
+            self.assertFalse(roadmap_wide["exception_honored"], case_id)
+
+    def test_scaffold_reviewability_grading_fails_a_roadmap_wide_reading(self) -> None:
+        for case_id, expected in SCAFFOLD_REVIEWABILITY_EXPECTED.items():
+            case = self.cases[case_id]
+            checks = [
+                check for check in case["checks"]
+                if check["type"] in {"selection", "response_json_field", "semantic"}
+            ]
+            covered = {check["requirement"] for check in checks}
+            graded = {
+                "requirements": [row for row in case["requirements"] if row["id"] in covered],
+                "checks": checks,
+            }
+            semantic = [check for check in graded["checks"] if check["type"] == "semantic"]
+            self.assertTrue(
+                any("roadmap-wide or last-entry reading" in check["rubric"] for check in semantic), case_id,
+            )
+            body = {**expected, "explanation": "mock response, not native evidence"}
+            for host in ("claude", "codex"):
+                correct = observation(activation="speckit-scaffold-spec", final_text=json.dumps(body))
+                self.assertEqual(
+                    grade_observation(graded, correct, semantic_verdicts(case, True), host=host)["status"],
+                    "pass", (case_id, host),
+                )
+                for field, failure in SCAFFOLD_REVIEWABILITY_FAILURE_ANSWERS[case_id].items():
+                    self.assertNotEqual(failure, expected[field], (case_id, field))
+                    wrong = observation(
+                        activation="speckit-scaffold-spec", final_text=json.dumps({**body, field: failure}),
+                    )
+                    self.assertEqual(
+                        grade_observation(graded, wrong, semantic_verdicts(case, True), host=host)["status"],
+                        "fail", (case_id, host, field),
+                    )
 
 if __name__ == "__main__":
     suite = unittest.defaultTestLoader.loadTestsFromTestCase(NativeFunctionalCatalogTests)
