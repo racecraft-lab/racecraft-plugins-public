@@ -103,7 +103,7 @@
           "failure_kind": "infrastructure"
         }
       },
-      "refused": ""
+      "refused": "does not match this run"
     },
     {
       "id": "replayed-host-event",
@@ -143,7 +143,7 @@
           "failure_kind": "infrastructure"
         }
       },
-      "refused": ""
+      "refused": "not eligible for a one-time infrastructure retry"
     },
     {
       "id": "application-failure",
@@ -163,7 +163,7 @@
           "failure_kind": "application"
         }
       },
-      "refused": ""
+      "refused": "does not match this run"
     },
     {
       "id": "approved-retry",
@@ -226,7 +226,7 @@
           "failure_kind": "infrastructure"
         }
       },
-      "refused": ""
+      "refused": "not eligible for a one-time infrastructure retry"
     },
     {
       "id": "replayed-approval",
@@ -239,7 +239,7 @@
           "action": "wait_started"
         }
       },
-      "refused": ""
+      "refused": "already consumed"
     }
   ]
 }

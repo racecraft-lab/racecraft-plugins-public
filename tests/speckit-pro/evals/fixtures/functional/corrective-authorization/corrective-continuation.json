@@ -83,7 +83,7 @@
           "purpose": "task_metadata_reconciliation"
         }
       },
-      "refused": ""
+      "refused": "does not match this run"
     },
     {
       "id": "retry-approval",
@@ -102,7 +102,7 @@
           "purpose": "task_metadata_reconciliation"
         }
       },
-      "refused": ""
+      "refused": "does not match this run"
     },
     {
       "id": "unrelated-source",
@@ -121,7 +121,7 @@
           "purpose": "task_metadata_reconciliation"
         }
       },
-      "refused": ""
+      "refused": "does not match this run"
     },
     {
       "id": "general-repair",
@@ -140,7 +140,7 @@
           "purpose": "unbounded_repair"
         }
       },
-      "refused": ""
+      "refused": "does not match this run"
     },
     {
       "id": "approved-continuation",
@@ -187,7 +187,7 @@
           "purpose": "task_metadata_reconciliation"
         }
       },
-      "refused": ""
+      "refused": "not eligible for one metadata continuation"
     },
     {
       "id": "replayed-approval",

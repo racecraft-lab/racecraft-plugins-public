@@ -108,6 +108,7 @@ class CorrectiveAuthorizationReplayTests(unittest.TestCase):
             self.assertEqual({"exit_code": code, "status": envelope["status"]}, REFUSED, envelope)
             diagnostic = envelope["diagnostics"][0]
             self.assertEqual(diagnostic["code"], "invalid_execution_request", envelope)
+            self.assertTrue(step["refused"], "a refusal step must name its expected reason")
             self.assertIn(step["refused"], diagnostic["message"])
             self.assertEqual(self.ledger_path.read_bytes(), before_bytes, "a refusal mutated the ledger")
             return

@@ -130,7 +130,7 @@
           "spec_sha256": "$spec_sha256"
         }
       },
-      "refused": ""
+      "refused": "does not match this run, scope, spec, and refusal"
     },
     {
       "id": "spec-digest-mismatch",
@@ -151,7 +151,7 @@
           "spec_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
         }
       },
-      "refused": ""
+      "refused": "does not match this run, scope, spec, and refusal"
     },
     {
       "id": "scope-mismatch",
@@ -172,7 +172,7 @@
           "spec_sha256": "$spec_sha256"
         }
       },
-      "refused": ""
+      "refused": "does not match this run, scope, spec, and refusal"
     },
     {
       "id": "wrong-refusal",
@@ -193,7 +193,7 @@
           "spec_sha256": "$spec_sha256"
         }
       },
-      "refused": ""
+      "refused": "does not match this run, scope, spec, and refusal"
     },
     {
       "id": "approved-exception",
@@ -262,7 +262,7 @@
           "spec_sha256": "$spec_sha256"
         }
       },
-      "refused": ""
+      "refused": "not eligible for the run's one operator-approved exception"
     },
     {
       "id": "replayed-approval",
