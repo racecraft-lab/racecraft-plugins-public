@@ -5,6 +5,30 @@
   "checkpoint_at": 1790390103.2175841,
   "corrective_cycles": 1,
   "dispatches": {
+    "checkpoint-supply-proposal-verify-1": {
+      "completed_at": 1790391052.285224,
+      "kind": "verification",
+      "outcome": "completed",
+      "reconciliations": 0,
+      "reservation_id": null,
+      "reserved_at": 1790391048.209895
+    },
+    "consensus-checklist-supply-chain-url-spec-r1": {
+      "completed_at": 1790390860.8857741,
+      "kind": "infrastructure",
+      "outcome": "completed",
+      "reconciliations": 0,
+      "reservation_id": null,
+      "reserved_at": 1790390626.04863
+    },
+    "consensus-checklist-supply-chain-url-synth-r1": {
+      "completed_at": 1790390957.521228,
+      "kind": "infrastructure",
+      "outcome": "completed",
+      "reconciliations": 0,
+      "reservation_id": null,
+      "reserved_at": 1790390864.988666
+    },
     "consensus-clarify-header-q2-codebase-r1": {
       "completed_at": 1790387933.571438,
       "kind": "infrastructure",
@@ -302,6 +326,14 @@
       "reservation_id": null,
       "reserved_at": 1790388303.172537
     },
+    "phase4-checklist-supply-chain-1": {
+      "completed_at": 1790390620.599282,
+      "kind": "infrastructure",
+      "outcome": "completed",
+      "reconciliations": 0,
+      "reservation_id": null,
+      "reserved_at": 1790390211.0332239
+    },
     "plan-privacy-recheck-1": {
       "completed_at": 1790390099.0439959,
       "kind": "verification",
@@ -312,7 +344,7 @@
     }
   },
   "excluded_intervals": [],
-  "last_observed_at": 1790390103.2175841,
+  "last_observed_at": 1790391052.285224,
   "reservations": {
     "a02de8a1ea1d4f02bd03770cacecd0dd": {
       "dispatch_id": "g0-privacy-scan-path-collision-repair-1",

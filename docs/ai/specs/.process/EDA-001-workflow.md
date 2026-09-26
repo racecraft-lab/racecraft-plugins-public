@@ -36,7 +36,7 @@ captured during scoping.
 | Specify | `/speckit-specify` | ✅ Complete | 3 stories, 19 FRs; G1 routes provenance marker to Clarify |
 | Clarify | `/speckit-clarify` | ✅ Complete | Three sessions resolved; G2 passed with 0 markers |
 | Plan | `/speckit-plan` | ✅ Complete | Seven artifacts, G3 pass, and privacy 13/13 after approved wording correction |
-| Checklist | `/speckit-checklist` | 🔄 In Progress | Three enriched domains |
+| Checklist | `/speckit-checklist` | ⚠️ Blocked | Supply-chain: 28 items, 1 URL requirement gap; reviewed proposal awaits operator decision |
 | Tasks | `/speckit-tasks` | ⏳ Pending | |
 | Analyze | `/speckit-analyze` | ⏳ Pending | |
 | Confidence Gate | G6.5 | ⏳ Pending | Pre-Implement composite confidence |
@@ -342,6 +342,7 @@ The operator answered `MIT` in the active Codex chat. Keep both notices: the Mat
 | 3 | Clarify | Exact bucket mapping for 38 upstream skills | [spec, domain] | 1 | both-agree | Four buckets match the immediate directory after `skills/` in the pinned tree; 18/7/4/9 paths | spec-context-analyst, domain-researcher |
 | 4 | Clarify | Checked `owner_spec` mapping and IGNORE ownership | [spec] | 1→2 | 3/3 | Freeze exact path-to-owner map; EDA-001 owns IGNORE, EDA-002–EDA-010 own delivery, EDA-011 verifies close-out | spec-context-analyst, codebase-analyst, domain-researcher |
 | 5 | Clarify | `metadata.credits` frontmatter shape | [codebase, domain] | 1 | both-agree | Use a quoted string of sorted `mattpocock/skills@SHA:path` identifiers separated by `; `; repository check owns semantics | codebase-analyst, domain-researcher |
+| 6 | Gap | CHK007: HumanLayer public pinned copied-source URL | [spec] | 1 | high-confidence | Exact FR-014 and notice-contract proposal accepted; unapplied after shared corrective reservation refusal | spec-context-analyst; named consensus-synthesizer |
 
 ---
 
@@ -503,7 +504,7 @@ Focus on Attribution Foundation requirements:
 
 | Checklist | Items | Gaps | Spec References |
 |-----------|-------|------|-----------------|
-| supply-chain | | | |
+| supply-chain | 28 | 1 remaining | FR-001–003, FR-005, FR-007, FR-009–016, FR-018 |
 | data-integrity | | | |
 | error-handling | | | |
 | **Total** | | | |
@@ -838,3 +839,7 @@ The operator explicitly approved installing pinned mypy 2.3.1 in an isolated env
 - Bounded G0 privacy repair consumed one corrective cycle. The scanner now omits only the `.worktrees` feature-name directory from dynamic identity terms and exempts typed app `exec-` event IDs from its bare-UUID rule. The focused privacy test passed 13/13, and the full post-repair suite passed 8,948/8,948. Ruff, pinned mypy, and docs reference checks passed.
 
 **Operator-authorized Plan recovery:** The user answered “continue,” authorizing the exact wording correction above and remaining plan-stage work. The contract now says “absolute paths, home prefixes, or temporary prefixes.” The original execution ledger and counters remain intact; the refused reservation is not treated as a dispatched repair. Privacy revalidation passed 13/13 (exit 0), and `git diff --check` passed. The elapsed-time checkpoint was refreshed without changing run identity or repair counters. Planning continues with the three domain checklists.
+
+**Supply-chain checklist checkpoint:** The executor returned 28 requirements-quality questions and one unremediated gap (CHK007): the HumanLayer notice contract lacks an explicit pinned public copied-source URL requirement. The URL is already recorded in `research.md`. Read-only consensus is in progress. The shared corrective reservation `checklist-supply-chain-url-repair-1` was refused with `failure_family_budget_exhausted`; no corrective edit was applied.
+
+**Reviewed supply-chain recovery checkpoint:** Named spec-context analysis and named consensus synthesis returned high confidence with no flags. The exact proposal adds the public pinned copied-source URL to FR-014 and `contracts/notices.md`, without changing the closed ledger schema or requiring runtime network access. The Gap remains unresolved because the shared corrective reservation was refused. All dispatches are terminal, unknown effects are empty, and the original run retains one consumed corrective cycle. G4, the other domains, Tasks, Analyze, G6.5, and the plan-stage artifact/draft handoff remain incomplete.

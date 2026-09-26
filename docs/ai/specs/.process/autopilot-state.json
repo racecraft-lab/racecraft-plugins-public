@@ -3,9 +3,9 @@
   "spec_id": "EDA-001",
   "feature_dir": "specs/eda-001-attribution-foundation",
   "branch": "eda-001-attribution-foundation",
-  "status": "in_progress",
+  "status": "awaiting_review",
   "stage": "plan",
-  "active_step": "Phase 4: Checklist - supply-chain",
+  "active_step": "Phase 4: Checklist - supply-chain Consensus",
   "stage_resolution": {
     "basis": "explicit --stage plan",
     "confidence_gate_status": "\u23f3 Pending",
@@ -72,11 +72,11 @@
     },
     {
       "step": "Phase 4: Checklist - supply-chain",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 4: Checklist - supply-chain Consensus",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 4: Checklist - data-integrity",
@@ -171,7 +171,7 @@
     "ledger_path": "docs/ai/specs/.process/.process/execution-control/4e8762387d1ed8b61c01a9de.json",
     "disposition": "continue",
     "reasons": [],
-    "elapsed_seconds": 19091.131600141525,
+    "elapsed_seconds": 20040.199239969254,
     "checkpoint_due": false,
     "run_id": "47805d8f53dd4babaf524ca9b62869ae"
   },
@@ -474,5 +474,68 @@
     "correction_applied": true,
     "privacy_recheck": "passed: 13/13, exit 0",
     "ledger_policy": "Original run identity, corrective-cycle counters, and refused reservation remain unchanged. The user-authorized correction is recorded independently."
+  },
+  "checklists": {
+    "supply-chain": {
+      "agent": "/root/eda001_checklist_supply_chain",
+      "file": "specs/eda-001-attribution-foundation/checklists/supply-chain.md",
+      "items": 28,
+      "gaps_found": 1,
+      "gaps_remaining": 1,
+      "unresolved": [
+        "[spec] HumanLayer notice lacks an explicit pinned public source URL requirement"
+      ],
+      "implementation_tests": "not run",
+      "consensus": {
+        "round": 1,
+        "categories": [
+          "spec"
+        ],
+        "analysts": [
+          "spec-context-analyst"
+        ],
+        "synthesizer": "/root/eda001_supply_url_synth",
+        "outcome": "high-confidence",
+        "proposal_accepted": true,
+        "applied": false,
+        "flags": []
+      }
+    }
+  },
+  "refused_corrective_request": {
+    "dispatch_id": "checklist-supply-chain-url-repair-1",
+    "failure_family": "unresolved",
+    "reason": "failure_family_budget_exhausted",
+    "applied": false,
+    "corrective_cycles_consumed": 1
+  },
+  "operator_action_required": {
+    "action": "Authorize the exact two-file pinned HumanLayer source URL requirement correction, checklist revalidation, and continued plan-stage workflow",
+    "files": [
+      "specs/eda-001-attribution-foundation/spec.md",
+      "specs/eda-001-attribution-foundation/contracts/notices.md"
+    ],
+    "approved_proposal": "Add the already-recorded pinned public copied-source URL to FR-014 and the HumanLayer notice identity paragraph",
+    "source_url": "https://github.com/humanlayer/skills/blob/bba9d13ab34f0a87f1cc33df4dd196372393ddfc/plugins/show-me/skills/show-me/SKILL.md",
+    "basis": "Corrective reservation checklist-supply-chain-url-repair-1 was refused with failure_family_budget_exhausted",
+    "corrective_cycles_consumed": 1,
+    "read_only_consensus_completed": true,
+    "owned_in_flight_dispatches": [],
+    "unknown_effects": [],
+    "remaining": [
+      "Apply reviewed CHK007 correction and revalidate supply-chain checklist",
+      "data-integrity checklist and consensus",
+      "error-handling checklist and consensus",
+      "G4",
+      "Tasks, execution metadata, G5, and atomicity/reviewability routing",
+      "Analyze, consensus, and G6",
+      "Autonomy preflight, G6.5, artifact/draft handoff, and distinct plan-stage boundary commit"
+    ],
+    "proposal_validation": {
+      "git_apply_check": "passed",
+      "git_diff_check": "passed",
+      "phase_coverage": "passed",
+      "proposal_applied": false
+    }
   }
 }
