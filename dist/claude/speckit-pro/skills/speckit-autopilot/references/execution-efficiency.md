@@ -17,6 +17,12 @@ a new kickoff. Preserve the `ledger_path` returned by the helper and pass it
 when resuming or relocating the workflow; never construct a filename or use a
 new workflow path to reset counters. Ledger names are workflow-keyed, not a
 shared fixed file for every workflow in a directory.
+The default ledger lives in `.process/execution-control/` beside the workflow,
+or in `execution-control/` when the workflow already sits in a `.process`
+directory. An earlier `.process/.process/execution-control/` ledger stays valid
+when passed as `ledger_path`. Untracked ledger and verification evidence under
+`.process/execution-control/` or `.process/verification/` never make the
+worktree dirty for mutation helpers; any other change still refuses `apply`.
 An existing ledger belongs to its recorded canonical workflow path. An explicit
 `ledger_path` does not authorize a different workflow to adopt that run; an
 existing explicit ledger also requires the parent's `expected_run_id` on start.
@@ -95,6 +101,24 @@ ownership from the caller's current workflow.
   The Tasks producer may update only source-bound metadata, then the parent
   revalidates G5 before G6. A second continuation or a failed/unknown source
   remains blocked; this action is not a general repair-budget reset.
+- `authorize-corrective-exception`: when an ordinary corrective `reserve` for a
+  reproduced application failure returns `corrective_run_budget_exhausted` or
+  `failure_family_budget_exhausted` (a repeat of an already reserved family
+  whose work has completed or failed), checkpoint and obtain explicit operator
+  approval for that exact correction. Pass a new `dispatch_id`, the approved
+  `failure_invariant`, and the approved correction's `scope_sha256`, plus the
+  operator's independently observed `native_observation`: `native_event_id`,
+  `run_id`, `action=corrective_exception_approved`, `failure_invariant`,
+  `dispatch_id`, `failure_kind=application`, `refusal_reason` (the refusal the
+  ordinary reserve returned), `scope_sha256`, and `spec_sha256` matching the
+  ledger's `invariant_binding`. The invariant must be an approved ID, never
+  `unresolved`, and the run must have bound its spec with `bind-invariants`.
+  The helper records one top-level `corrective_exception` per run and reserves
+  that single dispatch under it. It leaves `corrective_cycles`, reservations,
+  earlier results, and ordinary ceilings unchanged, and refuses replay, a
+  second exception, a mismatched identity, scope, or spec, and any request an
+  ordinary reserve would accept. The exception dispatch has no nested,
+  retry, or continuation allowance.
 - `checkpoint`: persist the 45-minute completed-work marker without resetting
   the repair budget. `pause`/`resume` excludes only human-UAT or
   external-approval waits with independent parent `native_observation` carrying
@@ -114,7 +138,8 @@ ownership from the caller's current workflow.
   relocation events cannot authorize another move.
 
 Each `native_event_id` is single-use across workflow moves, wait boundaries,
-and recovered dispatch results. Changing the action or kind does not make a
+and recovered dispatch results. Operator retry, continuation, and exception
+approvals share that rule. Changing the action or kind does not make a
 consumed event new; obtain a distinct genuine parent event for each transition.
 
 After a successful or `expected_failure` ledger response, the native orchestrator

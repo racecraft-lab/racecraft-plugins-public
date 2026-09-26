@@ -466,7 +466,8 @@ See [prerequisites-codex.md](./references/prerequisites-codex.md) for the full p
 - **Step 0.8b: Capability Enumeration, Grounding & Feed-down** — you are the only component that discovers openly. Enumerate the tools and installed skills this session actually exposes and select best-fit per the capability-discovery directive (speckit-pro/skills/speckit-autopilot/references/capability-discovery.md); assume no fixed set — the user may have installed anything. Most subagents inherit that surface and follow the directive; read-only roles select read/research only, and the two untrusted-input consumers pin closed allowlists. Still pass the discovered evidence a subagent needs directly in each prompt: shared context beats re-discovery. Ground your OWN output (gate decisions, consensus synthesis, PR bodies) per the grounding contract (speckit-pro/skills/speckit-autopilot/references/grounding.md): cite a real tool/skill/file result for every external fact, and abstain when none grounds it.
 - **Step 0.8c: Resumed Autonomy Boundary Preflight** — when `plan.md` and
   `tasks.md` already exist and the resolved stage can enter Implement, validate
-  the durable `autonomy_boundary` record before the first Phase 7 dispatch.
+  the durable `autonomy_boundary` record (a public receipt of a private
+  record kept outside the repository) before the first Phase 7 dispatch.
   Missing or stale evidence re-enters the full Phase 6.5 Autonomy Boundary
   Preflight. Exact explicit user authorization remains valid while its recorded
   action scope and execution boundary still match and no later instruction
