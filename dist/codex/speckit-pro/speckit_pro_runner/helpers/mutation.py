@@ -1456,15 +1456,18 @@ def git_worktree_status(repo_root: Path) -> bool | dict[str, Any]:
         return git_status_unavailable(repo_root, "git_status")
     if entries[-1:] == [""]:
         entries.pop()
-    while entries:
-        entry = entries.pop(0)
+    index = 0
+    while index < len(entries):
+        entry = entries[index]
+        index += 1
         if len(entry) < 4 or entry[2] != " ":
             return git_status_unavailable(repo_root, "git_status")
         paths = [entry[3:]]
         if "R" in entry[:2] or "C" in entry[:2]:
-            if not entries or not entries[0]:
+            if index >= len(entries) or not entries[index]:
                 return git_status_unavailable(repo_root, "git_status")
-            paths.append(entries.pop(0))
+            paths.append(entries[index])
+            index += 1
         if not all(is_runner_byproduct(path) for path in paths):
             return True
     return False
