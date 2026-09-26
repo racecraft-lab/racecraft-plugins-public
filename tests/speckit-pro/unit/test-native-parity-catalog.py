@@ -722,6 +722,15 @@ class NativeParityCatalogTests(unittest.TestCase):
         request_path = ".process/execution-control/native-eval-execute-verification-request.json"
         self.assertIn(request_path, self.case["prompt"])
         self.assertIn(request_path, safety)
+        # Runner byproducts no longer dirty the tree, so a structural check
+        # proves the transient request is gone from the final workspace.
+        absent = [
+            check for check in self.case["checks"]
+            if check["type"] == "file_exists" and check["path"] == request_path
+        ]
+        self.assertEqual(len(absent), 1, absent)
+        self.assertIs(absent[0]["exists"], False)
+        self.assertEqual(absent[0]["requirement"], "safety")
         self.assertIn("Delete that transient request immediately", self.case["prompt"])
         self.assertIn("do not create or pass a changed-files evidence file", self.case["prompt"])
         self.assertIn("without a changed-files evidence file", safety)
@@ -899,6 +908,8 @@ class NativeParityCatalogTests(unittest.TestCase):
                     "output": "blocked",
                     "success": False,
                 }])
+            elif check["type"] == "file_exists" and check["exists"] is False:
+                tested = observation(artifacts={check["path"]: "{}\n"})
             result = grade_observation(one_check_case(self.case, check), tested)
             self.assertIn(result["status"], {"fail", "invalid"}, (check["id"], result))
 

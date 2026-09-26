@@ -88,14 +88,20 @@ def pointer_artifacts(case: Mapping[str, object]) -> tuple[str, ...]:
     return tuple(result)
 
 
+def _evidence_directory(workflow_file: str) -> PurePosixPath:
+    """Mirror the runner: a workflow already in `.process` keeps evidence in `verification/`."""
+
+    parent = PurePosixPath(workflow_file).parent
+    return (parent if parent.name == ".process" else parent / ".process") / "verification"
+
+
 def record_directories(case: Mapping[str, object]) -> tuple[str, ...]:
     """Return confined dynamic record directories implied by workflow files."""
 
     result = []
     for check in verification_checks(case):
         validate_check(check, "native_verification_pointer check")
-        directory = (PurePosixPath(str(check["workflow_file"])).parent
-                     / ".process" / "verification").as_posix()
+        directory = _evidence_directory(str(check["workflow_file"])).as_posix()
         if directory not in result:
             result.append(directory)
     return tuple(result)
@@ -213,8 +219,7 @@ def parse_runner_result(output: object) -> dict[str, Any]:
     _need(type(reusable) is bool and type(data.get("rerun_required")) is bool,
           "native verification reuse status is malformed")
     record_path = data.get("record_path")
-    expected_path = (PurePosixPath(workflow).parent / ".process" / "verification"
-                     / f"{execution_id}.json").as_posix()
+    expected_path = (_evidence_directory(workflow) / f"{execution_id}.json").as_posix()
     _need(record_path == expected_path, "native verification record path is inconsistent")
     encoded = json.dumps(
         response, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False,
