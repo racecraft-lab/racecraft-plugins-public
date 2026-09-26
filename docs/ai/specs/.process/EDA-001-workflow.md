@@ -32,7 +32,7 @@ captured during scoping.
 
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
-| Stage | plan | ✅ Complete | Planning complete; 27 implementation tasks unchecked; draft handoff published; preview observation follows |
+| Stage | plan | ✅ Complete | Planning complete; 27 implementation tasks unchecked; draft published; four preview dispositions recorded as unavailable |
 | Specify | `/speckit-specify` | ✅ Complete | 3 stories, 19 FRs; G1 routes provenance marker to Clarify |
 | Clarify | `/speckit-clarify` | ✅ Complete | Three sessions resolved; G2 passed with 0 markers |
 | Plan | `/speckit-plan` | ✅ Complete | Seven artifacts, G3 pass, and privacy 13/13 after approved wording correction |
@@ -1069,8 +1069,8 @@ The native confidence helper exited 0 with computed composite 0.97, threshold 0.
       "expected_title": "Implementation Plan — EDA-001 Attribution Foundation",
       "expected_content": "The 27 implementation tasks remain unchecked; T001–T019 form the first future PR, and T020–T027 form the dependent second PR.",
       "preview": {
-        "status": "pending",
-        "blocker": "Not observed yet",
+        "status": "unavailable",
+        "blocker": "Isolated Codex preview unavailable: observe_codex returned exit 3, preview_boundary_unavailable; rendered page not verified.",
         "observation": null
       }
     },
@@ -1082,8 +1082,8 @@ The native confidence helper exited 0 with computed composite 0.97, threshold 0.
       "expected_title": "Spec Explainer — EDA-001 Attribution Foundation",
       "expected_content": "A valid zero-landed ledger must still validate all 38 paths; synthetic landed cases separately prove that file-credit checks select at least one file.",
       "preview": {
-        "status": "pending",
-        "blocker": "Not observed yet",
+        "status": "unavailable",
+        "blocker": "Isolated Codex preview unavailable: observe_codex returned exit 3, preview_boundary_unavailable; rendered page not verified.",
         "observation": null
       }
     },
@@ -1095,8 +1095,8 @@ The native confidence helper exited 0 with computed composite 0.97, threshold 0.
       "expected_title": "Code Approaches — EDA-001 Attribution Foundation",
       "expected_content": "Planning chose a canonical JSON sidecar over Markdown ledgers so exact schema and byte checks can run before any delivery row lands.",
       "preview": {
-        "status": "pending",
-        "blocker": "Not observed yet",
+        "status": "unavailable",
+        "blocker": "Isolated Codex preview unavailable: observe_codex returned exit 3, preview_boundary_unavailable; rendered page not verified.",
         "observation": null
       }
     },
@@ -1108,8 +1108,8 @@ The native confidence helper exited 0 with computed composite 0.97, threshold 0.
       "expected_title": "Module Map — EDA-001 Attribution Foundation",
       "expected_content": "The planned attribution test joins independent fixtures to authored notices and ledger inputs; suite registration dispatches it, while existing generators package the static content.",
       "preview": {
-        "status": "pending",
-        "blocker": "Not observed yet",
+        "status": "unavailable",
+        "blocker": "Isolated Codex preview unavailable: observe_codex returned exit 3, preview_boundary_unavailable; rendered page not verified.",
         "observation": null
       }
     },
@@ -1128,4 +1128,4 @@ The clean publication snapshot passed the focused privacy test and all 39 phase-
 
 ### Runtime-state publication repair — applied scope
 
-Named three-perspective synthesis accepted the exact repair unanimously with high confidence and no flags. The full canonical runtime state stays local at its original path; removing Git tracking retained its bytes. The new bounded action was recorded first without changing the execution boundary or existing six action scopes. The two generic fixture files are exact reviewed copies, explicitly synthetic and pending before G6.5; they provide generic bookkeeping coverage, never EDA live-boundary evidence. The normal plan-boundary state-staging enumeration yields narrowly to the user-provided privacy rule. Fresh-checkout resume reconstructs the one-run state mirror from this durable workflow, then requires full current-boundary Phase 6.5 validation before any later explicitly invoked implementation. The native corrective reservation was refused with failure_family_budget_exhausted; the existing explicit finish-plan instruction authorizes this bounded repair, with the original refusal and one consumed corrective cycle preserved. Final current-checkout verification and draft publication remain pending.
+Named three-perspective synthesis accepted the exact repair unanimously with high confidence and no flags. The full canonical runtime state stays local at its original path; removing Git tracking retained its bytes. The new bounded action was recorded first without changing the execution boundary or existing six action scopes. The two generic fixture files are exact reviewed copies, explicitly synthetic and pending before G6.5; they provide generic bookkeeping coverage, never EDA live-boundary evidence. The normal plan-boundary state-staging enumeration yields narrowly to the user-provided privacy rule. Fresh-checkout resume reconstructs the one-run state mirror from this durable workflow, then requires full current-boundary Phase 6.5 validation before any later explicitly invoked implementation. The native corrective reservation was refused with failure_family_budget_exhausted; the existing explicit finish-plan instruction authorizes this bounded repair, with the original refusal and one consumed corrective cycle preserved. Final current-checkout quick and CI suites, privacy, full live autonomy coverage, generated-artifact consistency, and applicable docs checks passed. The draft is published. All four isolated observe_codex attempts returned exit 3 with preview_boundary_unavailable; their unavailable dispositions retain null observations and do not verify rendered delivery.
