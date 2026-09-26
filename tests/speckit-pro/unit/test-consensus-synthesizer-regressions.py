@@ -28,11 +28,21 @@ AUTOPILOT_SKILLS = (
     REPO_ROOT / "speckit-pro" / "codex-skills" / "speckit-autopilot" / "SKILL.md",
 )
 CODEX_AUTOPILOT = AUTOPILOT_SKILLS[1]
+REFERENCES = REPO_ROOT / "speckit-pro" / "skills" / "speckit-autopilot" / "references"
+CODEX_PHASE_EXECUTION = (
+    REPO_ROOT / "speckit-pro" / "codex-skills" / "speckit-autopilot" / "references"
+    / "phase-execution-codex.md"
+)
+ACTIVE_PROTOCOL = "<plugin_root>/skills/speckit-autopilot/references/consensus-protocol.md"
 EXECUTORS = tuple(
     REPO_ROOT / "speckit-pro" / folder / f"{role}-executor{suffix}"
     for role in ("clarify", "analyze", "checklist")
     for folder, suffix in (("agents", ".md"), ("codex-agents", ".toml"))
 )
+
+
+def phase_execution_text() -> str:
+    return (REFERENCES / "phase-execution.md").read_text(encoding="utf-8")
 
 
 def instructions() -> str:
@@ -113,6 +123,22 @@ class ConsensusSynthesizerRegressionTests(unittest.TestCase):
             with self.subTest(path=f"{path.parent.name}/{path.name}"):
                 self.assertIn("substance is about security", flat)
                 self.assertIn("A security keyword alone needs no tag", flat)
+
+    def test_orchestrator_passes_the_active_protocol_path(self) -> None:
+        # Every synthesizer and every analyze or checklist executor prompt
+        # carries the protocol path resolved from the loaded plugin root.
+        protocol = PROTOCOL.read_text(encoding="utf-8")
+        self.assertIn(f"**Protocol:** {ACTIVE_PROTOCOL}", protocol)
+        phase = phase_execution_text()
+        self.assertIn(f'prompt: "Run /speckit-checklist with: <domain prompt>\\nProtocol: {ACTIVE_PROTOCOL}")', phase)
+        self.assertIn(f'prompt: "Run /speckit-analyze with: <prompt>\\nProtocol: {ACTIVE_PROTOCOL}")', phase)
+        flat = " ".join(phase.split())
+        self.assertIn("consensus-synthesizer agent (single fan-out), with the `Protocol:` line,", flat)
+        self.assertIn("never the checkout that launched the run", flat)
+        prerequisites = " ".join((REFERENCES / "prerequisites.md").read_text(encoding="utf-8").split())
+        self.assertIn("Keep the returned `plugin_root`", prerequisites)
+        codex = " ".join(CODEX_PHASE_EXECUTION.read_text(encoding="utf-8").split())
+        self.assertIn("`Protocol:` line with `<plugin-root>/skills/speckit-autopilot/references/consensus-protocol.md`", codex)
 
     def test_escape_phrases_and_security_override_are_complete(self) -> None:
         text = instructions()

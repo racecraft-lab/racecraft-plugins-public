@@ -27,6 +27,7 @@ TERMINAL_RESULT_ROLES = (
     "spec-context-analyst",
     "domain-researcher",
 )
+PROTOCOL_READERS = ("consensus-synthesizer", "analyze-executor", "checklist-executor")
 NO_SPAWN_ROLES = (
     "clarify-executor",
     "formal-model-author",
@@ -73,6 +74,29 @@ class AgentTerminalContractTests(unittest.TestCase):
                     "Do NOT spawn subagents or create teams.",
                     codex_policy(name)["developer_instructions"],
                 )
+
+    def test_protocol_readers_use_the_path_the_orchestrator_passes(self) -> None:
+        # A path relative to the agent file never resolves from the consumer
+        # repository, so the agent searched the plugin cache and could read a
+        # stale version. The orchestrator passes the active path instead, and
+        # the agent reports the path it read so the parent can check it.
+        for name in PROTOCOL_READERS:
+            body = claude_body(name)
+            flat = " ".join(body.split())
+            with self.subTest(agent=name):
+                self.assertNotIn("../skills/speckit-autopilot/references/", body)
+                self.assertIn("`Protocol:` line", flat)
+                self.assertIn("never search the plugin cache", flat)
+                self.assertIn("**Protocol:** <", body)
+        self.assertIn(
+            "**Protocol:** <the path copied from the prompt's `Protocol:` line>",
+            codex_policy("consensus-synthesizer")["developer_instructions"],
+        )
+        for name in ("analyze-executor", "checklist-executor"):
+            instructions = " ".join(codex_policy(name)["developer_instructions"].split())
+            with self.subTest(codex=name):
+                self.assertIn("`Protocol:` line", instructions)
+                self.assertIn("**Protocol:** <", codex_policy(name)["developer_instructions"])
 
     def test_consensus_synthesizer_is_read_only_terminal_and_evidence_closed(self) -> None:
         policy = codex_policy("consensus-synthesizer")

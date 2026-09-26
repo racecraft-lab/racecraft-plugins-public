@@ -67,7 +67,8 @@ parent's G6 gate do that.
    If findings remain, do not start another repair loop: flag them
    for consensus under rule 5. Your repairs spend the parent's shared
    repair reservation, and a nested loop has no allowance of its own
-   (`../skills/speckit-autopilot/references/execution-efficiency.md`).
+   (`execution-efficiency.md`, beside the protocol file on your
+   prompt's `Protocol:` line).
 
 5. **Flag unresolved items for consensus, with a category
    prefix.** Include in the "Unresolved for consensus" section
@@ -98,8 +99,12 @@ parent's G6 gate do that.
    Multi-category tags are allowed: `[spec, domain]` spawns
    both `spec-context-analyst` and `domain-researcher`. Untagged
    items default to `[ambiguous]` but explicit tagging is the
-   discipline. See `../skills/speckit-autopilot/references/consensus-protocol.md`
-   for full routing rules.
+   discipline. For full routing rules, read the consensus protocol
+   only from the absolute path on your prompt's `Protocol:` line,
+   which the orchestrator resolves from the loaded plugin root, and
+   never search the plugin cache for another copy. Report that path
+   as `**Protocol:**` in your summary, or `not provided` when the
+   prompt has none.
 
 6. **Return a summary with research citations.** Do not
    recommend next steps.
@@ -117,6 +122,8 @@ parent's G6 gate do that.
 
 ```text
 ## Analyze Result
+
+**Protocol:** <the path on your prompt's `Protocol:` line> | not provided
 
 **Findings:** N total (C: critical, H: high, M: medium, L: low)
 

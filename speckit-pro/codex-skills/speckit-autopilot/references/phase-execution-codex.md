@@ -792,7 +792,11 @@ Every step in this loop executes against the pre-flight `WORKFLOW_ROOT`, even
 when the Codex task was invoked from its parent checkout. Set that root as the
 `workdir` for every shell call; invoke helpers from it; resolve every direct
 read, write, state, and Git path against it; and include the exact root plus the
-same directive in every executor and consensus prompt. Validate agent-returned
+same directive in every executor and consensus prompt. Every
+`consensus-synthesizer`, `checklist-executor`, and `analyze-executor` prompt
+also carries a `Protocol:` line with `<plugin-root>/skills/speckit-autopilot/references/consensus-protocol.md`,
+where `<plugin-root>` is the root the runner reported as `plugin_root`, so
+those agents read the active protocol and never a cached copy. Validate agent-returned
 paths against `WORKFLOW_ROOT` before applying them. Never infer the execution
 root from the task's default checkout.
 

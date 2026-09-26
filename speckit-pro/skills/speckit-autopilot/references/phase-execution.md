@@ -39,6 +39,10 @@ The parent receives the summary as a tool result, which keeps
 the parent's agent loop alive. The parent then validates the
 gate and spawns the next subagent.
 
+Executors resolve project skills and paths against the bound
+`<WORKFLOW_ROOT>`, never the checkout that launched the run; name
+that root in every executor prompt.
+
 ### Subagent Prompt Template
 
 Use `speckit-pro:phase-executor` for Specify, Plan, and Tasks; Clarify,
@@ -444,7 +448,10 @@ For each checklist domain in the workflow file:
   1. TaskUpdate: domain task → in_progress
   2. Agent(subagent_type: "speckit-pro:checklist-executor",
           run_in_background: false,
-          prompt: "Run /speckit-checklist with: <domain prompt>")
+          prompt: "Run /speckit-checklist with: <domain prompt>\nProtocol: <plugin_root>/skills/speckit-autopilot/references/consensus-protocol.md")
+     The `Protocol:` line is the active consensus protocol,
+     built from the `plugin_root` that `validate-agent-install`
+     returned (prerequisites.md Step 0.0b).
      The checklist-executor runs the checklist, researches
      gaps, applies fixes, and re-runs to verify (Layer 1)
   3. Parse executor's "Unresolved for consensus" section
@@ -621,7 +628,8 @@ Items it can't resolve are flagged in its
 1. TaskUpdate: "Analyze" → in_progress
 2. Agent(subagent_type: "speckit-pro:analyze-executor",
         run_in_background: false,
-        prompt: "Run /speckit-analyze with: <prompt>")
+        prompt: "Run /speckit-analyze with: <prompt>\nProtocol: <plugin_root>/skills/speckit-autopilot/references/consensus-protocol.md")
+   The `Protocol:` line is built as in Phase 4.
    The executor handles research + remediation (Layer 1)
 3. Parse executor's "Unresolved for consensus" section
 4. If unresolved findings exist:
@@ -702,9 +710,9 @@ to proceed, surface a remediation hint, or stop.
               re-pass; "completeness" lowest → re-verify artifact
               presence).
             - After remediation completes, dispatch the
-              consensus-synthesizer agent (single fan-out) to
-              re-emit the pre-Implement Confidence block to the
-              workflow file.
+              consensus-synthesizer agent (single fan-out), with the
+              `Protocol:` line, to re-emit the pre-Implement
+              Confidence block to the workflow file.
             - Re-run confidence-gate.
             - Increment iteration_count.
        c. If iteration_count == 3 OR exit 0 reached: stop iterating.

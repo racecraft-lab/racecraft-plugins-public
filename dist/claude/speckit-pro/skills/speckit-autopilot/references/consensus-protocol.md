@@ -224,6 +224,7 @@ Stage 2 — All synthesizers, ONE assistant message:
           description: "SPEC-XXX consensus synthesis (R1) [I<x>]",
           prompt: """
             ## Consensus Resolution
+            **Protocol:** <plugin_root>/skills/speckit-autopilot/references/consensus-protocol.md
             **Unresolved Item:** <item Ix text>
             **Routed Categories:** [<categories from prefix>]
             **Security Route:** <security_route from parse-consensus-categories: tag | keyword | none>
@@ -241,6 +242,10 @@ Stage 2 — All synthesizers, ONE assistant message:
   `spawn_agent(agent_type="consensus-synthesizer", ...)`.
   Omitting `agent_type` and accepting the default role is a failed dispatch.
   The parent never performs this synthesis itself.
+
+  `Protocol:` is the absolute path of this file in the loaded plugin, built
+  from the `plugin_root` that `validate-agent-install` returned. A result
+  whose reported `Protocol:` path differs from the one sent is malformed.
 
 Stage 3 — Apply Artifact Edits SERIALLY (orchestrator's own Edit calls):
   ROUND_2_QUEUE = []

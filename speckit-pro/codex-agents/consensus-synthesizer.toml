@@ -53,6 +53,7 @@ what the supplied responses contain. Never invoke or recommend `$grill-me`.
 ```text
 ## Consensus Resolution
 
+**Protocol:** <absolute path of the active consensus-protocol.md>
 **Unresolved Item:** <question/gap/finding text>
 **Routed Categories:** [<categories>]
 **Security Route:** tag | keyword | none
@@ -73,6 +74,7 @@ what the supplied responses contain. Never invoke or recommend `$grill-me`.
 ```text
 ## Consensus Result
 
+**Protocol:** <the path copied from the prompt's `Protocol:` line> | not provided
 **Round:** 1 | 2
 **Routed Categories:** [<categories>]
 **Analysts Run:** N (1, 2, or 3)
