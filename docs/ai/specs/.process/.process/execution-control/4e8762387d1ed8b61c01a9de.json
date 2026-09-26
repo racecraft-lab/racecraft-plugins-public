@@ -2,7 +2,7 @@
   "active_wait": null,
   "approved_invariants": [],
   "authorization_granted": false,
-  "checkpoint_at": 1790400685.3569112,
+  "checkpoint_at": 1790435958.814301,
   "corrective_cycles": 1,
   "dispatches": {
     "autonomy-local-state-codebase-2": {
@@ -382,6 +382,22 @@
       "reservation_id": null,
       "reserved_at": 1790395469.9946811
     },
+    "implement-base-sync-1": {
+      "completed_at": 1790435471.599987,
+      "kind": "infrastructure",
+      "outcome": "completed",
+      "reconciliations": 0,
+      "reservation_id": null,
+      "reserved_at": 1790435148.805451
+    },
+    "implement-feedback-sweep-capture-1": {
+      "completed_at": 1790435955.718743,
+      "kind": "infrastructure",
+      "outcome": "completed",
+      "reconciliations": 0,
+      "reservation_id": null,
+      "reserved_at": 1790435475.631576
+    },
     "phase1-specify-1": {
       "completed_at": 1790383658.66255,
       "kind": "infrastructure",
@@ -544,7 +560,7 @@
     }
   },
   "excluded_intervals": [],
-  "last_observed_at": 1790400685.3569112,
+  "last_observed_at": 1790435958.814301,
   "reservations": {
     "a02de8a1ea1d4f02bd03770cacecd0dd": {
       "dispatch_id": "g0-privacy-scan-path-collision-repair-1",

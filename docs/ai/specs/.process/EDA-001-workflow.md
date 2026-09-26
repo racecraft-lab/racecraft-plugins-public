@@ -32,7 +32,6 @@ captured during scoping.
 
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
-| Stage | plan | ✅ Complete | Planning complete; 27 implementation tasks unchecked; draft published; four preview dispositions recorded as unavailable |
 | Specify | `/speckit-specify` | ✅ Complete | 3 stories, 19 FRs; G1 routes provenance marker to Clarify |
 | Clarify | `/speckit-clarify` | ✅ Complete | Three sessions resolved; G2 passed with 0 markers |
 | Plan | `/speckit-plan` | ✅ Complete | Seven artifacts, G3 pass, and privacy 13/13 after approved wording correction |
@@ -40,7 +39,7 @@ captured during scoping.
 | Tasks | `/speckit-tasks` | ✅ Complete | 27 tasks; 19/19 FRs; valid required execution metadata; G5 pass |
 | Analyze | `/speckit-analyze` | ✅ Complete | One LOW resolved; 0 remaining required findings; G6 pass; dedicated named final synthesis complete |
 | Confidence Gate | G6.5 | ✅ Complete | Native advisory pass 0.97; exact live autonomy validation and final privacy/CI checks pass |
-| Implement | `/speckit-implement` | ⏳ Pending | |
+| Implement | `/speckit-implement` | 🔄 In Progress | Preflight and required baseline; no implementation task dispatched yet |
 | Post | Post-Implementation | ⏳ Pending | Canonical 11-item closeout |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⏭️ Skipped | ⚠️ Blocked
@@ -166,6 +165,7 @@ Filled from `detect-commands` at Step 0.11. One row per slot; the operator answe
 | **Spec ID** | EDA-001 |
 | **Name** | Attribution Foundation |
 | **Branch** | `eda-001-attribution-foundation` |
+| **Stage** | implement |
 | **Draft PR** | [#686](https://github.com/racecraft-lab/racecraft-plugins-public/pull/686) |
 | **Dependencies** | None (stacked on the roadmap PR #672 only because the roadmap lives there) |
 | **Enables** | EDA-002 through EDA-011 |
@@ -960,7 +960,7 @@ No findings remain after the verified Analyze correction. The dedicated `consens
 
 ### Phase 6.5 Autonomy Boundary Preflight
 
-The active conversation supplies explicit bounded authorization for the plan-stage actions. Auto-review is the execution reviewer and does not grant permission. No privileged/system-wide install or interactive authentication is required for this handoff. Canonical full action and execution-boundary records are in the typed state object; this matching workflow result binds their exact digests. Production implementation remains outside this invocation.
+The active conversation supplies explicit bounded authorization for the plan-stage actions. Auto-review is the execution reviewer and does not grant permission. No privileged/system-wide install or interactive authentication is required for this handoff. Canonical full action and execution-boundary records are in the typed state object; this matching workflow result binds their exact digests. The later explicit implementation invocation renews the bounded action inventory below; original plan-stage authorizations remain preserved.
 
 ```json
 {
@@ -1028,10 +1028,45 @@ The active conversation supplies explicit bounded authorization for the plan-sta
       "disposition": "ready",
       "scope_sha256": "sha256:c41817e4333e6af3dac23da9815315ce5c7cb6963aefa75025fb7628782c4c49",
       "authorization_status": "explicit_user"
+    },
+    {
+      "action_id": "eda-implementation-writes",
+      "category": "outside_writable_roots",
+      "disposition": "ready",
+      "scope_sha256": "sha256:f0b2af33ec6b901fba5529d9279a30e2b10fd2ef55fa5b838f2f98c45b5aad15",
+      "authorization_status": "explicit_user"
+    },
+    {
+      "action_id": "eda-implementation-git",
+      "category": "outside_writable_roots",
+      "disposition": "ready",
+      "scope_sha256": "sha256:2e7b0ed6b8bfa217e87781eb3e74dbba8d23bd4cd9ae94fb08592abb651db9ff",
+      "authorization_status": "explicit_user"
+    },
+    {
+      "action_id": "eda-implementation-publication",
+      "category": "external_side_effect",
+      "disposition": "ready",
+      "scope_sha256": "sha256:03279d2b34a2cc9c5305c4875b3123aab6def2497603d59999683b064d0710ae",
+      "authorization_status": "explicit_user"
+    },
+    {
+      "action_id": "eda-implementation-workers",
+      "category": "external_side_effect",
+      "disposition": "ready",
+      "scope_sha256": "sha256:792eee6df6d408febd93ac47bf5be7f460ffdbaf2fe11f36f8fab2ead60aa96a",
+      "authorization_status": "explicit_user"
+    },
+    {
+      "action_id": "eda-feedback-sweep",
+      "category": "external_side_effect",
+      "disposition": "ready",
+      "scope_sha256": "sha256:b5e4352409e6a35d6a97824eb0503d1848c533d33d1704c5448ba5637667afd0",
+      "authorization_status": "explicit_user"
     }
   ],
   "authoritative_record": "docs/ai/specs/.process/autopilot-state.json#autonomy_boundary",
-  "stage_scope": "plan only; implementation action inventory must be renewed on explicit implementation-stage invocation"
+  "stage_scope": "Implementation renewed by explicit --stage implement; original plan actions retained unchanged; no merge or release."
 }
 ```
 
@@ -1129,3 +1164,7 @@ The clean publication snapshot passed the focused privacy test and all 39 phase-
 ### Runtime-state publication repair — applied scope
 
 Named three-perspective synthesis accepted the exact repair unanimously with high confidence and no flags. The full canonical runtime state stays local at its original path; removing Git tracking retained its bytes. The new bounded action was recorded first without changing the execution boundary or existing six action scopes. The two generic fixture files are exact reviewed copies, explicitly synthetic and pending before G6.5; they provide generic bookkeeping coverage, never EDA live-boundary evidence. The normal plan-boundary state-staging enumeration yields narrowly to the user-provided privacy rule. Fresh-checkout resume reconstructs the one-run state mirror from this durable workflow, then requires full current-boundary Phase 6.5 validation before any later explicitly invoked implementation. The native corrective reservation was refused with failure_family_budget_exhausted; the existing explicit finish-plan instruction authorizes this bounded repair, with the original refusal and one consumed corrective cycle preserved. Final current-checkout quick and CI suites, privacy, full live autonomy coverage, generated-artifact consistency, and applicable docs checks passed. The draft is published. All four isolated observe_codex attempts returned exit 3 with preview_boundary_unavailable; their unavailable dispositions retain null observations and do not verify rendered delivery.
+
+### Implementation-stage feedback sweep
+
+The isolated Codex capture observed zero review/conversation comments and zero exclusions. No amendment, log row or reply was produced. Planning artifacts are current as of 6e1c07a7; no regeneration or description refresh was required. The trusted close operation removed private sweep state. Explicit implementation proceeds after the required baseline and task-routing reconciliation.
