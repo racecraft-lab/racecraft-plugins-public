@@ -5,7 +5,7 @@
   "branch": "eda-001-attribution-foundation",
   "status": "in_progress",
   "stage": "plan",
-  "active_step": "Phase 5: Tasks complete; Analyze next",
+  "active_step": "Phase 6 complete; autonomy preflight next",
   "stage_resolution": {
     "basis": "explicit --stage plan",
     "confidence_gate_status": "\u23f3 Pending",
@@ -100,11 +100,11 @@
     },
     {
       "step": "Phase 6: Analyze",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 6: Analyze - Consensus",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 6.5: Confidence Gate",
@@ -763,7 +763,7 @@
     "ledger_path": "docs/ai/specs/.process/.process/execution-control/4e8762387d1ed8b61c01a9de.json",
     "disposition": "continue",
     "reasons": [],
-    "elapsed_seconds": 23879.692969083786,
+    "elapsed_seconds": 24674.128127098083,
     "checkpoint_due": false,
     "run_id": "47805d8f53dd4babaf524ca9b62869ae"
   },
@@ -817,7 +817,7 @@
     "version": "1.0.0"
   },
   "dispatches": [],
-  "updated_at": "2026-09-26T03:55:04.822893+00:00",
+  "updated_at": "2026-09-26T04:08:13.127485+00:00",
   "recovery": {
     "status": "recovered_and_continuing",
     "plugin_version": "2.36.2",
@@ -937,7 +937,8 @@
       "formal_selection": "disabled",
       "details": [],
       "gate": "G3",
-      "revalidated_after_checklists": true
+      "revalidated_after_checklists": true,
+      "revalidated_after_analyze": true
     },
     "PlanPrivacy": {
       "pass": true,
@@ -955,6 +956,12 @@
         "total": 13,
         "reason": "slash-separated absolute, home, and temp wording matches the absolute-home-path regex; no private path leak identified",
         "reservation": "plan-privacy-wording-repair-1 refused with failure_family_budget_exhausted; no repair applied"
+      },
+      "latest_after_analyze": {
+        "command": "python3 tests/speckit-pro/unit/test-privacy-scan.py",
+        "exit_code": 0,
+        "passed": 13,
+        "total": 13
       }
     },
     "G4": {
@@ -962,7 +969,8 @@
       "gate": "G4",
       "markers": 0,
       "pass": true,
-      "reason": "0 [Gap] markers"
+      "reason": "0 [Gap] markers",
+      "revalidated_after_analyze": true
     },
     "G5": {
       "gate": "G5",
@@ -977,8 +985,36 @@
       "fingerprints": {
         "plan_sha256": "9ce69bf6cbe2151db68d2a2737db593a879149ffbd0489c05ab775a148f23be1",
         "spec_sha256": "52481b25ec692937c47adb4f8db9b0a6d73385ba431ea0ee70160258a738d0d7",
-        "tasks_sha256": "18001ad6f6372d494b2590b9ad5f331d91850b53496c322878f729f4d1b5575c"
-      }
+        "tasks_sha256": "e2a555ce5b51b7a50e41bab7ca9b6c1930ffa94b4d95b5189e96183d60d7b390"
+      },
+      "revalidated_after_analyze": true
+    },
+    "G6": {
+      "details": [],
+      "gate": "G6",
+      "markers": 0,
+      "pass": true,
+      "reason": "0 CRITICAL/HIGH findings",
+      "revalidated_after_analyze": true,
+      "required_defects_all_severities": 0,
+      "initial_findings": {
+        "CRITICAL": 0,
+        "HIGH": 0,
+        "MEDIUM": 0,
+        "LOW": 1
+      },
+      "final_findings": {
+        "CRITICAL": 0,
+        "HIGH": 0,
+        "MEDIUM": 0,
+        "LOW": 0
+      },
+      "agent_verified_all_required_severities": true
+    },
+    "ArtifactConsistencyPlanning": {
+      "command": "python3 scripts/refresh-release-artifacts.py --check",
+      "exit_code": 0,
+      "result": "Generated release artifacts match the source tree."
     }
   },
   "operator_authorized_recovery": {
@@ -1091,6 +1127,27 @@
         "T027"
       ],
       "implementation_started": false
+    },
+    "analyze": {
+      "status": "completed",
+      "initial_required_findings": 1,
+      "resolved_required_findings": 1,
+      "remaining_required_findings": 0,
+      "optional_suggestions": 0,
+      "coverage": {
+        "FRs": "19/19",
+        "success_criteria": "6/6",
+        "user_stories": "3/3"
+      },
+      "report": "specs/eda-001-attribution-foundation/.process/analyze-report.md",
+      "implementation_tests_run": false
+    },
+    "analyze_consensus": {
+      "status": "completed",
+      "agent": "/root/eda001_analyze_synthesis",
+      "remaining_required_defects": 0,
+      "confidence_block_sha256": "ad8efe2470e88621832029c9baf8c80aa7acb5cdf74d10b40678e49aaa1dfef6",
+      "evidence_mode": "Actual named synthesis of parent-supplied native gates and Analyze report; no independent implementation qualification."
     }
   },
   "operator_authorized_plan_recovery": {
@@ -1652,5 +1709,18 @@
       "warnings": 32,
       "warning_reason": "Nine declared NEW implementation files do not exist during planning."
     }
+  },
+  "analyze_authorized_repair": {
+    "dispatch_id": "analyze-dependency-summary-repair-1",
+    "budget_disposition": "checkpoint_required",
+    "budget_reasons": [
+      "failure_family_budget_exhausted"
+    ],
+    "agent": "/root/eda001_analyze",
+    "finding": "LOW: Foundation dependency-summary sentence omits T001; table, sidecar and parallel examples already require T001.",
+    "scope": "Correct only the sentence and refresh actual task fingerprints, then revalidate planning artifacts.",
+    "authorization": "Explicit user instruction to finish all remaining plan-stage work; original corrective ceiling/refusal remains preserved.",
+    "status": "completed and verified",
+    "tasks_fingerprint": "e2a555ce5b51b7a50e41bab7ca9b6c1930ffa94b4d95b5189e96183d60d7b390"
   }
 }

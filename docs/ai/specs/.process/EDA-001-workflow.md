@@ -38,7 +38,7 @@ captured during scoping.
 | Plan | `/speckit-plan` | ✅ Complete | Seven artifacts, G3 pass, and privacy 13/13 after approved wording correction |
 | Checklist | `/speckit-checklist` | ✅ Complete | 88 items; 3 gaps resolved; G3/G4 pass with 0 markers |
 | Tasks | `/speckit-tasks` | ✅ Complete | 27 tasks; 19/19 FRs; valid required execution metadata; G5 pass |
-| Analyze | `/speckit-analyze` | ⏳ Pending | |
+| Analyze | `/speckit-analyze` | ✅ Complete | One LOW resolved; 0 remaining required findings; G6 pass; dedicated named final synthesis complete |
 | Confidence Gate | G6.5 | ⏳ Pending | Pre-Implement composite confidence |
 | Implement | `/speckit-implement` | ⏳ Pending | |
 | Post | Post-Implementation | ⏳ Pending | Canonical 11-item closeout |
@@ -651,7 +651,7 @@ Focus on:
 
 | ID | Severity | Issue | Resolution |
 |----|----------|-------|------------|
-| | | | |
+| I1 | LOW | Foundation prerequisite summary contradicted T001 dependency in phase table and sidecar | Resolved: tasks.md:139 now requires T001, permits T002/T003 together, waits for both before T004; refreshed native fingerprints; re-analysis 0 findings |
 
 ---
 
@@ -929,3 +929,29 @@ The atomicity verdict classifies the current planning change. It does not revoke
   "repair": "User-authorized format-only producer repair; the refused corrective reservation remains preserved. Layer compatibility diagnostic recognizes all 27 tasks."
 }
 ```
+
+### Analyze phase verification evidence
+
+All required severities were assessed. Initial: 0 CRITICAL, 0 HIGH, 0 MEDIUM, 1 LOW; final: zero at every severity. Native marker counts and required metadata validation passed. Parent G3, G4, G5, and G6 passed after the correction. Coverage is 19/19 FRs, 6/6 success criteria, 3/3 stories; optional suggestions are empty. The complete report is `specs/eda-001-attribution-foundation/.process/analyze-report.md`. Implementation gates remain unrun.
+
+Current native planning fingerprints:
+
+```json
+{
+  "plan_sha256": "9ce69bf6cbe2151db68d2a2737db593a879149ffbd0489c05ab775a148f23be1",
+  "spec_sha256": "52481b25ec692937c47adb4f8db9b0a6d73385ba431ea0ee70160258a738d0d7",
+  "tasks_sha256": "e2a555ce5b51b7a50e41bab7ca9b6c1930ffa94b4d95b5189e96183d60d7b390"
+}
+```
+
+### Final Analyze consensus
+
+No findings remain after the verified Analyze correction. The dedicated `consensus-synthesizer` returned this exact block for the current Analyze pass. Its evidence is the supplied native gates and Analyze report; it does not independently qualify implementation behavior or measured final size.
+
+📊 Confidence: 0.97
+
+- Task understanding: 0.98
+- Approach clarity: 0.96
+- Requirements alignment: 0.98
+- Risk assessment: 0.94
+- Completeness: 0.97

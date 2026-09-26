@@ -136,7 +136,7 @@ Both payload roots are `dist/claude/speckit-pro/` and `dist/codex/speckit-pro/`;
 
 ### Phase Dependencies
 
-- **Foundation**: Depends on no prerequisites.
+- **Foundation**: Depends on the T001 scope/environment checkpoint; T002 and T003 may then run in parallel, and T004 waits for both.
 - **User Story 1 (P1)**: Depends on Foundation.
 - **User Story 2 (P1)**: Depends on Foundation and User Story 1.
 - **User Story 3 (P2)**: Depends on Foundation and User Story 2, including accepted slice-1 packaging T017–T019.

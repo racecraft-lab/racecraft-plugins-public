@@ -32,6 +32,7 @@ slice artifacts in the body below.
 - [checklists/error-handling.md](checklists/error-handling.md)
 - [checklists/requirements.md](checklists/requirements.md)
 - [checklists/supply-chain.md](checklists/supply-chain.md)
+- [.process/analyze-report.md](.process/analyze-report.md)
 - [.process/layer-plan-diagnostic.json](.process/layer-plan-diagnostic.json)
 - [.process/task-execution.json](.process/task-execution.json)
 - [quickstart.md](quickstart.md)
