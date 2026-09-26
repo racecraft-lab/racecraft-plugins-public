@@ -35,8 +35,8 @@ captured during scoping.
 | Stage | plan | ✅ Complete | Explicit --stage plan resolved; planning phases continue |
 | Specify | `/speckit-specify` | ✅ Complete | 3 stories, 19 FRs; G1 routes provenance marker to Clarify |
 | Clarify | `/speckit-clarify` | ✅ Complete | Three sessions resolved; G2 passed with 0 markers |
-| Plan | `/speckit-plan` | 🔄 In Progress | |
-| Checklist | `/speckit-checklist` | ⏳ Pending | Run for each domain |
+| Plan | `/speckit-plan` | ⚠️ Blocked | Seven artifacts and G3 pass; privacy wording repair needs operator decision |
+| Checklist | `/speckit-checklist` | ⏳ Pending | Held at Plan privacy checkpoint |
 | Tasks | `/speckit-tasks` | ⏳ Pending | |
 | Analyze | `/speckit-analyze` | ⏳ Pending | |
 | Confidence Gate | G6.5 | ⏳ Pending | Pre-Implement composite confidence |
@@ -372,7 +372,7 @@ The operator answered `MIT` in the active Codex chat. Keep both notices: the Mat
 - Test must not pass vacuously (Q3, "Frozen set + fixture proof"); mirror tests/speckit-pro/unit/test-quint-reference-attribution.py, which asserts seen > 0 "refusing to pass vacuously", rather than the substring MIT check in tests/speckit-pro/unit/test-artifact-gallery.py:144.
 - Reviewability budget: estimate-spec-size returned 625 LOC, warn, 2 suggested slices; the split above answers it. estimate-reviewable-loc returns not_estimated for Markdown and JSON layouts, and that is never a within-budget pass (speckit-autopilot references/phase-execution.md).
 
-## Module and Interface Deltas (refined by Clarify Sessions 1–2)
+## Module and Interface Deltas (refined by Clarify Sessions 1–3)
 - speckit-pro/skills/speckit-coach/references/upstream/mattpocock-skills/UPSTREAM-NOTICE.md: new. It carries the MIT text verbatim; the upstream URL, fork URL, and pinned SHA; a statement that the files the ledger lists as landed are modified derivatives; and a pointer to ledger.json. (Evidence: roadmap Scope; Q1.)
 - speckit-pro/skills/speckit-coach/references/upstream/mattpocock-skills/ledger.json: new interface consumed by the test and by every later EDA spec. Its only root key is `entries`, with 38 objects sorted lexicographically by full `upstream_path`. Use two-space indentation, LF line endings, one final newline, and fixed present-key order to keep row flips reviewable; never route this file through `merge=generated` (Q1, Clarify Session 2). Fields and rules:
   - `upstream_path`: exact pinned `skills/<bucket>/<skill>/SKILL.md` string
@@ -414,11 +414,15 @@ The operator answered `MIT` in the active Codex chat. Keep both notices: the Mat
 
 | Artifact | Status | Notes |
 |----------|--------|-------|
-| `plan.md` | ⏳ | Technical context, execution flow |
-| `research.md` | ⏳ | Decision rationales (if needed) |
-| `data-model.md` | ⏳ | Entities and types |
-| `contracts/` | ⏳ | API specifications |
-| `quickstart.md` | ⏳ | Developer onboarding |
+| `plan.md` | ✅ | Two slices, technical flow, 19 FRs; G3 passed |
+| `research.md` | ✅ | Six decisions; broker outage and supplied primary evidence distinguished |
+| `data-model.md` | ✅ | Closed ledger, inventory/owners, source/credit entities |
+| `contracts/` | ✅ | ledger.md, credits.md, notices.md |
+| `quickstart.md` | ✅ | Slice acceptance and required verification commands |
+
+G3 passed after the ordinary Plan executor returned. All seven planning artifacts are nonempty and contain no unresolved markers or failing constitution checks. The optional post-Plan traceability hook requires `tasks.md`, which Phase 5 creates; Git hooks duplicate the parent phase commits and were skipped. Plan setup used the existing Specify CLI Python environment with PyYAML, without adding dependencies.
+
+**Recovery checkpoint:** The focused privacy check returned 12/13 after Plan. `contracts/ledger.md:23` used slash-separated absolute, home, and temp wording that matches the home-path regex. The concrete correction is to say “absolute paths, home prefixes, or temporary prefixes.” The execution-control reservation `plan-privacy-wording-repair-1` was refused with `failure_family_budget_exhausted`; no repair was applied. The run retains its existing identity and one consumed corrective cycle, has no in-flight dispatch or unknown effect, and awaits the operator decision before checklists, Tasks, Analyze, and G6.5. G3 remains a recorded pass; the plan stage is not complete.
 
 ---
 

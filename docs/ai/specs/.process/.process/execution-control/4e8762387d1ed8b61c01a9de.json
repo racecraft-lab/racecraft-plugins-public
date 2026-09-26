@@ -246,6 +246,14 @@
       "reservation_id": null,
       "reserved_at": 1790388080.23452
     },
+    "g3-plan-gate-1": {
+      "completed_at": 1790389271.391487,
+      "kind": "verification",
+      "outcome": "completed",
+      "reconciliations": 0,
+      "reservation_id": null,
+      "reserved_at": 1790389195.161221
+    },
     "phase1-specify-1": {
       "completed_at": 1790383658.66255,
       "kind": "infrastructure",
@@ -285,10 +293,18 @@
       "reconciliations": 0,
       "reservation_id": null,
       "reserved_at": 1790384162.496404
+    },
+    "phase3-plan-1": {
+      "completed_at": 1790389146.138122,
+      "kind": "infrastructure",
+      "outcome": "completed",
+      "reconciliations": 0,
+      "reservation_id": null,
+      "reserved_at": 1790388303.172537
     }
   },
   "excluded_intervals": [],
-  "last_observed_at": 1790388138.560479,
+  "last_observed_at": 1790389452.251231,
   "reservations": {
     "a02de8a1ea1d4f02bd03770cacecd0dd": {
       "dispatch_id": "g0-privacy-scan-path-collision-repair-1",
