@@ -1015,6 +1015,30 @@ class RunnerDispatchTests(unittest.TestCase):
         self.assertEqual(code, 1, validated)
         self.assertFalse(validated["data"]["stdout_json"]["reusable"])
 
+    def test_corrective_exception_is_a_real_runner_route(self):
+        self.call_runner("execution-control", "apply", action="start")
+        self.call_runner("execution-control", "apply", action="reserve", dispatch_id="fix-a", kind="corrective",
+                         failure_invariant="FR-001")
+        self.call_runner("execution-control", "apply", action="complete", dispatch_id="fix-a", outcome="failed")
+        (self.root / "feature/spec.md").write_text("- FR-001: preserve data\n- FR-002: no secrets\n")
+        code, bound = self.call_runner("execution-control", "apply", action="bind-invariants",
+                                       spec_file="feature/spec.md")
+        self.assertEqual(code, 0, bound)
+        self.call_runner("execution-control", "apply", action="reserve", dispatch_id="fix-b", kind="corrective",
+                         failure_invariant="FR-002")
+        self.call_runner("execution-control", "apply", action="complete", dispatch_id="fix-b", outcome="failed")
+        event = {"native_event_id": "operator-exception", "run_id": self.run_id,
+                 "action": "corrective_exception_approved", "failure_invariant": "FR-001", "dispatch_id": "fix-c",
+                 "failure_kind": "application", "refusal_reason": "corrective_run_budget_exhausted",
+                 "scope_sha256": "a" * 64,
+                 "spec_sha256": bound["data"]["ledger"]["invariant_binding"]["spec_sha256"]}
+        code, granted = self.call_runner("execution-control", "apply", action="authorize-corrective-exception",
+                                         dispatch_id="fix-c", failure_invariant="FR-001", scope_sha256="a" * 64,
+                                         native_observation=event)
+        self.assertEqual(code, 0, granted)
+        self.assertEqual(granted["data"]["disposition"], "continue")
+        self.assertEqual(granted["data"]["ledger"]["corrective_exception"]["dispatch_id"], "fix-c")
+
     def test_task_metadata_helper_is_registered_and_read_only(self):
         (self.root / "feature/tasks.md").write_text("# Tasks\n## Phase 1: Setup\n- [ ] T001 Create fixture in `fixture.txt`\n")
         (self.root / "feature/spec.md").write_text("# Spec\n")
