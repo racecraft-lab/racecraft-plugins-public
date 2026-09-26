@@ -1,6 +1,6 @@
 {
   "fixture_id": "02-synthesizer-majority",
-  "purpose": "Verify the consensus-synthesizer emits a real decision in the 2-of-3+ majority case (Class 2 fixture 01 captured the no-majority branch; this captures the majority branch).",
+  "purpose": "Verify the consensus-synthesizer emits a real decision in the 2-of-3 majority case (fixture 01 captures the two-analyst disagreement branch; this captures the majority branch).",
   "must_dispatch_to": [
     "speckit-pro:consensus-synthesizer"
   ],
@@ -12,7 +12,7 @@
         "JSON",
         "json"
       ],
-      "rationale": "All three analysts agreed on JSON; the synthesizer's decision must reference it"
+      "rationale": "Two of three analysts recommend JSON; the synthesizer's majority decision must reference it"
     },
     {
       "subagent_type": "speckit-pro:consensus-synthesizer",
@@ -20,7 +20,7 @@
         "agreement",
         "confidence"
       ],
-      "rationale": "Synthesizer's standard format includes Agreement (3/3 here) and Confidence sections"
+      "rationale": "Synthesizer's standard format includes Agreement (2/3 majority here) and Confidence sections"
     }
   ],
   "must_not_invoke_skill": [

@@ -1,54 +1,109 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "SpecKit autopilot autonomy boundary",
-  "description": "Versioned execution-boundary and scoped-authorization record persisted in autopilot-state.json before Phase 7.",
+  "description": "Versioned execution-boundary and scoped-authorization record for the Phase 6.5 Autonomy Boundary Preflight. The complete autonomy-boundary.v1 record carries machine-local roots, targets, and evidence and stays private outside the repository; autopilot-state.json carries the autonomy-boundary-receipt.v1 public receipt projected from it. Complete v1 records already persisted in state still validate.",
   "type": "object",
-  "additionalProperties": false,
-  "required": [
-    "schema_version",
-    "status",
-    "planning_fingerprints",
-    "execution_boundary",
-    "actions"
-  ],
-  "properties": {
-    "schema_version": {
-      "const": "autonomy-boundary.v1"
-    },
-    "status": {
-      "type": "string",
-      "enum": [
-        "ready",
-        "operator_action_required"
-      ]
-    },
-    "planning_fingerprints": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "plan_md",
-        "tasks_md"
-      ],
-      "properties": {
-        "plan_md": {
-          "$ref": "#/$defs/file_fingerprint"
-        },
-        "tasks_md": {
-          "$ref": "#/$defs/file_fingerprint"
-        }
-      }
-    },
-    "execution_boundary": {
-      "$ref": "#/$defs/execution_boundary"
-    },
-    "actions": {
-      "type": "array",
-      "items": {
-        "$ref": "#/$defs/action"
+  "if": {
+    "type": "object",
+    "required": [
+      "schema_version"
+    ],
+    "properties": {
+      "schema_version": {
+        "const": "autonomy-boundary-receipt.v1"
       }
     }
   },
+  "then": {
+    "$ref": "#/$defs/public_receipt"
+  },
+  "else": {
+    "$ref": "#/$defs/private_record"
+  },
   "$defs": {
+    "private_record": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "status",
+        "planning_fingerprints",
+        "execution_boundary",
+        "actions"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "autonomy-boundary.v1"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "ready",
+            "operator_action_required"
+          ]
+        },
+        "planning_fingerprints": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "plan_md",
+            "tasks_md"
+          ],
+          "properties": {
+            "plan_md": {
+              "$ref": "#/$defs/file_fingerprint"
+            },
+            "tasks_md": {
+              "$ref": "#/$defs/file_fingerprint"
+            }
+          }
+        },
+        "execution_boundary": {
+          "$ref": "#/$defs/execution_boundary"
+        },
+        "actions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/action"
+          }
+        }
+      }
+    },
+    "public_receipt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "status",
+        "planning_fingerprints",
+        "execution_boundary",
+        "actions",
+        "private_record_sha256"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "autonomy-boundary-receipt.v1"
+        },
+        "status": {
+          "$ref": "#/$defs/private_record/properties/status"
+        },
+        "planning_fingerprints": {
+          "$ref": "#/$defs/private_record/properties/planning_fingerprints"
+        },
+        "execution_boundary": {
+          "$ref": "#/$defs/receipt_execution_boundary"
+        },
+        "actions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/receipt_action"
+          }
+        },
+        "private_record_sha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
     "sha256": {
       "type": "string",
       "pattern": "^sha256:[0-9a-f]{64}$"
@@ -204,6 +259,78 @@
         },
         "authorization": {
           "$ref": "#/$defs/authorization"
+        }
+      }
+    },
+    "receipt_execution_boundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "execution_environment",
+        "sandbox_mode",
+        "approval_reviewer",
+        "sha256"
+      ],
+      "properties": {
+        "execution_environment": {
+          "$ref": "#/$defs/execution_boundary/properties/execution_environment"
+        },
+        "sandbox_mode": {
+          "$ref": "#/$defs/execution_boundary/properties/sandbox_mode"
+        },
+        "approval_reviewer": {
+          "$ref": "#/$defs/execution_boundary/properties/approval_reviewer"
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "receipt_authorization": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "scope_sha256"
+      ],
+      "properties": {
+        "status": {
+          "$ref": "#/$defs/authorization/properties/status"
+        },
+        "scope_sha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "receipt_action": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "action_id",
+        "category",
+        "execution_boundary_sha256",
+        "scope_sha256",
+        "disposition",
+        "authorization"
+      ],
+      "properties": {
+        "action_id": {
+          "$ref": "#/$defs/action/properties/action_id"
+        },
+        "category": {
+          "$ref": "#/$defs/action/properties/category"
+        },
+        "execution_boundary_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "scope_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "disposition": {
+          "$ref": "#/$defs/action/properties/disposition"
+        },
+        "authorization": {
+          "$ref": "#/$defs/receipt_authorization"
         }
       }
     }

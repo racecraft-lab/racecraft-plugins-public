@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
-"""Reduce a scrubbed transcript to the fields required for parser replay."""
+"""Reduce a scrubbed transcript to the fields required for parser replay.
+
+Replay checks such as ``must_include_terms`` read dispatch prompts and the
+orchestrator's own text, so both are kept, redacted with the privacy scan's
+patterns. Skill arguments, subagent (sidechain) text and tool results are not.
+"""
 
 from __future__ import annotations
 
@@ -8,6 +13,11 @@ import sys
 from pathlib import Path
 from typing import Any, TextIO
 
+TEST_LIB = Path(__file__).resolve().parents[1] / "lib"
+if str(TEST_LIB) not in sys.path:
+    sys.path.insert(0, str(TEST_LIB))
+
+from privacy_patterns import redact_private_text  # noqa: E402
 
 JsonObject = dict[str, Any]
 
@@ -70,7 +80,11 @@ def reduce_transcript(events: list[JsonObject], expected: JsonObject) -> list[Js
     for event in events:
         if event.get("type") == "assistant":
             output_blocks: list[JsonObject] = []
+            is_sidechain = boolean_or_default(event.get("isSidechain", False))
             for block in _blocks(event):
+                if block.get("type") == "text" and not is_sidechain and isinstance(block.get("text"), str):
+                    output_blocks.append({"type": "text", "text": redact_private_text(block["text"])})
+                    continue
                 if block.get("type") != "tool_use" or block.get("name") not in {"Agent", "Skill"}:
                     continue
                 sequence += 1
@@ -90,7 +104,7 @@ def reduce_transcript(events: list[JsonObject], expected: JsonObject) -> list[Js
                             "input": {
                                 "subagent_type": subagent_type,
                                 "description": jq_coalesce_empty(inputs.get("description", "")),
-                                "prompt": "",
+                                "prompt": redact_private_text(str(jq_coalesce_empty(inputs.get("prompt", "")))),
                             },
                         }
                     )
@@ -107,7 +121,7 @@ def reduce_transcript(events: list[JsonObject], expected: JsonObject) -> list[Js
                 reduced.append(
                     {
                         "type": "assistant",
-                        "isSidechain": boolean_or_default(event.get("isSidechain", False)),
+                        "isSidechain": is_sidechain,
                         "message": {"role": "assistant", "content": output_blocks},
                     }
                 )

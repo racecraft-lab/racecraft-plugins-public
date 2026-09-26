@@ -1,0 +1,119 @@
+{
+  "workflow_file": "docs/ai/specs/.process/SPEC-830-workflow.md",
+  "updated_at": "2026-09-20T15:04:00Z",
+  "active_step": "Phase 3: Plan",
+  "plan": [
+    {
+      "step": "Archive Sweep: previously merged specs dry-run/apply eligibility",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 0: Prerequisites",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 1: Specify",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 2: Clarify - Security",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 2: Clarify - Security Consensus",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 2: Clarify - Data Retention",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 2: Clarify - Data Retention Consensus",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 3: Plan",
+      "status": "in_progress"
+    },
+    {
+      "step": "Phase 4: Checklist - api",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 4: Checklist - api Consensus",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 4: Checklist - security",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 4: Checklist - security Consensus",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 5: Tasks",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 6: Analyze",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 6: Analyze - Consensus",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 6.5: Confidence Gate",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 7: Implement - Pending task decomposition",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Doctor Extension Check",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Verify Implementation",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Verify Tasks Phantom Check",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Code Review",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Integration Suite",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Reviewability Diff Gate",
+      "status": "pending"
+    },
+    {
+      "step": "Post: UAT Runbook Generation",
+      "status": "pending"
+    },
+    {
+      "step": "Post: PR Body Generation",
+      "status": "pending"
+    },
+    {
+      "step": "Post: PR Creation",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Review Remediation",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Retrospective",
+      "status": "pending"
+    }
+  ]
+}

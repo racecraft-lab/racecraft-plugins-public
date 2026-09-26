@@ -84,6 +84,9 @@ class ExecutionContractTests(unittest.TestCase):
         template = (PLUGIN / "skills/speckit-coach/templates/workflow-template.md").read_text()
         tasks = template.split("## Phase 5: Tasks", 1)[1].split("### Tasks Results", 1)[0]
         self.assertNotIn("1-2 hours each", tasks)
+        # A run has no wall-clock limit, so task sizing must not cite a two-hour budget.
+        self.assertNotIn("two-hour", " ".join(tasks.split()))
+        self.assertIn("Small, complete behavioral units", tasks)
         for key in ("task-execution.v1", "task-execution.json", "capability_group",
                     "depends_on", "owns", "tdd_unit", "fingerprints"):
             self.assertIn(key, tasks)
@@ -126,6 +129,28 @@ class ExecutionContractTests(unittest.TestCase):
             self.assertNotIn("make one fresh retry", text)
             self.assertNotIn("Re-spawn with the", text)
             self.assertIn("read-only reconciliation", text)
+
+    def test_plan_rescope_reconciles_every_plan_artifact_before_g3_on_both_hosts(self):
+        # A rescope once left research.md, quickstart.md, and the requirements
+        # checklist on the old slice count while plan.md moved on, and no gate caught it.
+        rule = (
+            "After a rescope changes plan.md's scope, slices, or delivery order, the parent "
+            "reconciles every Plan artifact before G3: `research.md`, `quickstart.md`, "
+            "`data-model.md`, `contracts/`, and every file under `checklists/`. Record what "
+            "changed in each artifact in the workflow file's Plan Results."
+        )
+        claude = " ".join((SHARED / "references/phase-execution.md").read_text().split())
+        plan = claude.split("### Phase 3: Plan", 1)[1].split("**Gate:** G3", 1)[0]
+        self.assertIn(rule, plan)
+        codex = " ".join((CODEX / "references/phase-execution-codex.md").read_text().split())
+        loop = codex.split("7. Validate gate directly in the main session:", 1)[1].split(
+            "8. If gate fails:", 1)[0]
+        self.assertIn(rule, loop)
+        for executor in (PLUGIN / "agents/phase-executor.md",
+                         PLUGIN / "codex-agents/phase-executor.toml"):
+            with self.subTest(executor=executor.name):
+                text = " ".join(executor.read_text().split())
+                self.assertIn("Plan reports artifact status and any rescope of plan.md", text)
 
     def test_native_dispatch_keeps_direct_route_and_owned_cleanup(self):
         phase = (SHARED / "references/phase-execution.md").read_text()

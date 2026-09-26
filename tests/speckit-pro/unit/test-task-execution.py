@@ -294,6 +294,27 @@ class TaskExecutionTests(unittest.TestCase):
         value, code = self.run_partition()
         self.assertEqual(code, 0, value)
 
+    def test_slash_between_code_spans_does_not_invent_path(self):
+        for title in ("Record `item_seq`/`item_id`", "Update `src/unit1.py`/`src/unit2.py`"):
+            with self.subTest(title=title):
+                if "src/unit2.py" in title:
+                    self.meta["tasks"]["T001"]["owns"].append("src/unit2.py")
+                self.body = self.body.replace("Add capability behavior 1\n", title + "\n")
+                self.meta["fingerprints"] = fingerprints("spec\n", "plan\n", self.body)
+                value, code = self.run_partition()
+                self.assertEqual(code, 0, value)
+                result = validate_task_execution({"tasks_file": "feature/tasks.md"}, self.root)
+                self.assertEqual(result["exit_code"], 0, result)
+                self.body = self.body.replace(title + "\n", "Add capability behavior 1\n")
+                self.meta["tasks"]["T001"]["owns"] = ["src/unit1.py"]
+
+    def test_slash_between_code_spans_preserves_independent_ownership(self):
+        self.body = self.body.replace("Add capability behavior 1\n", "Update `src/unit1.py`/`src/unit2.py`\n")
+        self.meta["fingerprints"] = fingerprints("spec\n", "plan\n", self.body)
+        self.assertEqual(self.run_partition()[1], 2)
+        result = validate_task_execution({"tasks_file": "feature/tasks.md"}, self.root)
+        self.assertNotEqual(result["exit_code"], 0)
+
     def test_explicit_extensionless_paths_still_require_ownership(self):
         self.body = self.body.replace("behavior 1\n", "behavior 1 in `src/policy`\n")
         self.meta["fingerprints"] = fingerprints("spec\n", "plan\n", self.body)

@@ -1916,6 +1916,65 @@ def _load_json_bytes(value: bytes | None) -> dict[str, Any] | None:
     return parsed if isinstance(parsed, dict) else None
 
 
+def _shared_checkpoint_content_errors(
+    repo_root: Path,
+    base_commit: str,
+    authorized_tree: dict[str, str],
+    verified_trees: dict[str, dict[str, str] | None],
+    markers: list[Any],
+    expected_owners: dict[str, set[str]],
+    shared_paths: set[str],
+) -> list[str]:
+    base_tree = _git_tree_entries(repo_root, base_commit)
+    if base_tree is None:
+        return ["PR base tree is unavailable for shared marker content binding"]
+    errors: list[str] = []
+    for path in sorted(shared_paths):
+        previous_commit = base_commit
+        previous_blob = base_tree.get(path)
+        if previous_blob is None:
+            errors.append(f"shared marker path {path} is absent from the PR base")
+            continue
+        for marker_index, marker in enumerate(markers):
+            if not isinstance(marker, dict):
+                continue
+            checkpoint = marker.get("implementation_checkpoint")
+            if not isinstance(checkpoint, dict) or checkpoint.get("status") != "complete":
+                continue
+            current_commit = checkpoint.get("commit_sha")
+            current_tree = (
+                verified_trees.get(current_commit)
+                if isinstance(current_commit, str)
+                else None
+            )
+            if current_tree is None or not isinstance(current_commit, str):
+                continue
+            if not _git_commit_is_ancestor(repo_root, previous_commit, current_commit):
+                errors.append(
+                    f"shared marker path {path} checkpoint {marker_index} is out of commit order"
+                )
+                continue
+            current_blob = current_tree.get(path)
+            owns_path = marker.get("id") in expected_owners[path]
+            if owns_path and current_blob is None:
+                errors.append(
+                    f"shared marker path {path} is missing at declared checkpoint {marker_index}"
+                )
+            elif owns_path and current_blob == previous_blob:
+                errors.append(
+                    f"shared marker path {path} is unchanged at declared checkpoint {marker_index}"
+                )
+            elif not owns_path and current_blob != previous_blob:
+                errors.append(
+                    f"shared marker path {path} changed at undeclared checkpoint {marker_index}"
+                )
+            previous_commit = current_commit
+            previous_blob = current_blob
+        if previous_blob != authorized_tree.get(path):
+            errors.append(f"shared marker path {path} differs from the last complete checkpoint")
+    return errors
+
+
 def validate_changed_file_manifest(
     state: dict[str, Any],
     state_path: Path,
@@ -2092,6 +2151,7 @@ def validate_changed_file_manifest(
 
     declared: dict[str, tuple[str, str | None]] = {}
     expected_owners: dict[str, set[str]] = {}
+    declared_owner_order: dict[str, list[str]] = {}
     expected_source_owners: dict[str, set[str]] = {}
     rename_sources: set[str] = set()
     structural_errors: list[str] = []
@@ -2115,8 +2175,16 @@ def validate_changed_file_manifest(
             structural_errors.append(f"files[{index}].provenance is invalid")
         marker_ids = entry.get("marker_ids")
         marker_values = _string_list(marker_ids)
-        if marker_values is None or len(marker_values) != 1:
-            structural_errors.append(f"files[{index}].marker_ids must contain exactly one marker owner")
+        if marker_values is None or not marker_values:
+            structural_errors.append(f"files[{index}].marker_ids must contain a marker owner")
+        elif len(set(marker_values)) != len(marker_values):
+            structural_errors.append(f"files[{index}].marker_ids must not repeat a marker owner")
+        elif len(marker_values) > 1 and (
+            operation != "MODIFIED" or entry.get("category") == "process"
+        ):
+            structural_errors.append(
+                f"files[{index}].marker_ids shared ownership requires a MODIFIED non-process path"
+            )
         source_path = entry.get("source_path")
         if operation == "RENAMED":
             if (
@@ -2134,6 +2202,7 @@ def validate_changed_file_manifest(
             structural_errors.append(f"files[{index}].source_path is only valid for RENAMED")
         declared[path] = (operation, source_path if isinstance(source_path, str) else None)
         expected_owners[path] = set(marker_values or ())
+        declared_owner_order[path] = marker_values or []
     if rename_sources & set(declared):
         structural_errors.append("changed-file manifest rename source paths overlap destination paths")
     if structural_errors:
@@ -2201,9 +2270,21 @@ def validate_changed_file_manifest(
         marker.get("id") for marker in markers
         if isinstance(marker, dict) and isinstance(marker.get("id"), str)
     }
+    marker_order = {
+        marker.get("id"): index
+        for index, marker in enumerate(markers)
+        if isinstance(marker, dict) and isinstance(marker.get("id"), str)
+    }
     for path, owners in expected_owners.items():
         if not owners <= declared_marker_ids:
             errors.append(f"changed-file manifest marker owner for {path} is not declared")
+        owner_order = declared_owner_order[path]
+        if (
+            len(owner_order) > 1
+            and all(owner in marker_order for owner in owner_order)
+            and owner_order != sorted(owner_order, key=marker_order.__getitem__)
+        ):
+            errors.append(f"changed-file manifest marker owners for {path} are out of review order")
     for marker_index, marker in enumerate(markers):
         if not isinstance(marker, dict) or not isinstance(marker.get("id"), str):
             errors.append(f"pr_marker_plan.markers[{marker_index}] is invalid")
@@ -2260,6 +2341,9 @@ def validate_changed_file_manifest(
         if authorized_tree is None:
             errors.append("authorized PR head tree is unavailable for checkpoint content binding")
         else:
+            shared_paths = {
+                path for path, owners in expected_owners.items() if len(owners) > 1
+            }
             verified_trees: dict[str, dict[str, str] | None] = {}
             for marker_index, marker in enumerate(markers):
                 if not isinstance(marker, dict):
@@ -2344,6 +2428,8 @@ def validate_changed_file_manifest(
                     path = record.get("path")
                     if not isinstance(path, str) or path in carrier_paths:
                         continue
+                    if path in shared_paths:
+                        continue
                     if verified_tree.get(path) != authorized_tree.get(path):
                         errors.append(
                             f"completed marker {marker_id or marker_index} file {path} differs from its verified commit"
@@ -2358,6 +2444,13 @@ def validate_changed_file_manifest(
                         errors.append(
                             f"completed marker {marker_id or marker_index} rename source {source_path} differs from its verified commit"
                         )
+            if shared_paths:
+                errors.extend(
+                    _shared_checkpoint_content_errors(
+                        repo_root, base_commit, authorized_tree, verified_trees,
+                        markers, expected_owners, shared_paths,
+                    )
+                )
     return {"changed_file_manifest_errors": errors}
 
 
@@ -2525,7 +2618,7 @@ def validate_projection_integrity(
         seen_marker_ids: set[str] = set()
         seen_review_orders: set[int] = set()
         task_owners: dict[str, str] = {}
-        file_owners: dict[str, str] = {}
+        file_owners: dict[str, tuple[str, str | None]] = {}
         for index, raw_marker in enumerate(markers):
             if not isinstance(raw_marker, dict):
                 continue
@@ -2643,12 +2736,19 @@ def validate_projection_integrity(
                         )
                     for path_kind, owned_path in owned_paths:
                         owner = file_owners.get(owned_path)
-                        if owner is not None:
+                        sequential_modify = (
+                            path_kind == "file"
+                            and operation == "MODIFIED"
+                            and owner is not None
+                            and owner[1] == "MODIFIED"
+                            and owner[0] != marker_id
+                        )
+                        if owner is not None and not sequential_modify:
                             marker_plan_status_errors.append(
-                                f"pr_marker_plan {path_kind} {owned_path!r} is owned by both {owner!r} and {marker_id!r}"
+                                f"pr_marker_plan {path_kind} {owned_path!r} is owned by both {owner[0]!r} and {marker_id!r}"
                             )
                         else:
-                            file_owners[owned_path] = marker_id
+                            file_owners[owned_path] = (marker_id, operation)
 
             reviewability = raw_marker.get("reviewability")
             if strict_contract and isinstance(reviewability, dict) and "evidence_path" in reviewability:
@@ -4371,6 +4471,8 @@ def _autonomy_boundary_required(
     return phase_7_started or (stage in {"plan", "full"} and phase_65_started)
 
 
+AUTONOMY_RECEIPT_VERSION = "autonomy-boundary-receipt.v1"
+AUTONOMY_LEGACY_RECEIPT_KEY = "autonomy_boundary_private_receipt"
 AUTONOMY_EXECUTION_FIELDS = (
     "execution_environment",
     "sandbox_mode",
@@ -4439,9 +4541,18 @@ def _autonomy_planning_errors(
 
 def _autonomy_execution_errors(
     boundary: dict[str, Any],
+    receipt: bool = False,
 ) -> tuple[list[str], object]:
     execution = boundary.get("execution_boundary")
     if not isinstance(execution, dict):
+        return [], None
+    if receipt:
+        # The public receipt omits the roots, so its digest cannot be recomputed
+        # from the record itself. The recorded digest is replayed against the
+        # current execution boundary instead, which is the check that matters.
+        recorded = execution.get("sha256")
+        if isinstance(recorded, str) and re.fullmatch(r"sha256:[0-9a-f]{64}", recorded):
+            return [], recorded
         return [], None
     errors: list[str] = []
     roots = execution.get("writable_roots")
@@ -4501,11 +4612,98 @@ def _autonomy_current_execution_errors(
     return []
 
 
+AUTONOMY_RUN_ID_RE = re.compile(r"[0-9a-f]{32}")
+
+
+def _git_common_dir(repo_root: Path) -> Path | None:
+    """`git rev-parse --git-common-dir` resolved against the worktree, or None."""
+    try:
+        completed = subprocess.run(
+            ["git", "-C", str(repo_root), "rev-parse", "--git-common-dir"],
+            capture_output=True,
+            text=True,
+            env=_git_env(),
+            shell=False,
+            check=False,
+        )
+    except (OSError, ValueError):
+        return None
+    common = completed.stdout.strip()
+    if completed.returncode != 0 or not common:
+        return None
+    return repo_root / common
+
+
+def _read_private_record_bytes(path: Path) -> bytes | None:
+    """Read a regular, non-symlink private record file, or None."""
+    try:
+        # O_NOFOLLOW closes the race where it exists; the lstat check keeps the
+        # symlink refusal on platforms that lack it.
+        if stat.S_ISLNK(os.lstat(path).st_mode):
+            return None
+        descriptor = os.open(
+            path,
+            os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0),
+        )
+    except OSError:
+        return None
+    try:
+        metadata = os.fstat(descriptor)
+        if not stat.S_ISREG(metadata.st_mode) or metadata.st_size > MAX_REPO_FILE_BYTES:
+            return None
+        with os.fdopen(descriptor, "rb", closefd=False) as handle:
+            content = handle.read(MAX_REPO_FILE_BYTES + 1)
+    except OSError:
+        return None
+    finally:
+        os.close(descriptor)
+    return content if len(content) <= MAX_REPO_FILE_BYTES else None
+
+
+def _autonomy_private_record_errors(
+    state: dict[str, Any],
+    boundary: dict[str, Any],
+    repo_root: Path | None,
+) -> list[str]:
+    """Check the private record behind a receipt still hashes to its digest.
+
+    The record lives at `<git-common-dir>/speckit-pro/autonomy-boundary/<run-id>.json`,
+    where `<run-id>` is the execution-control ledger's run id mirrored in state.
+    Errors never name the path or the run id, which are machine-local.
+    """
+    control = state.get("execution_control")
+    run_id = control.get("run_id") if isinstance(control, dict) else None
+    if not isinstance(run_id, str) or not AUTONOMY_RUN_ID_RE.fullmatch(run_id):
+        return [
+            "autonomy boundary private record cannot be located: "
+            "autopilot_state.execution_control.run_id is missing or malformed"
+        ]
+    common_dir = _git_common_dir(repo_root) if repo_root is not None else None
+    if common_dir is None:
+        return [
+            "autonomy boundary private record cannot be located: "
+            "the git common directory is unavailable"
+        ]
+    path = common_dir / "speckit-pro" / "autonomy-boundary" / f"{run_id}.json"
+    content = _read_private_record_bytes(path)
+    if content is None:
+        return ["autonomy boundary private record is missing or unreadable"]
+    try:
+        record = _strict_json_loads(content)
+    except (RecursionError, ValueError):
+        return ["autonomy boundary private record is not valid JSON"]
+    digest = _canonical_json_sha256(record)
+    if digest is None or digest != boundary.get("private_record_sha256"):
+        return ["autonomy boundary private record does not match private_record_sha256"]
+    return []
+
+
 def _autonomy_authorization_errors(
     prefix: str,
     authorization: object,
     disposition: object,
     scope_sha: object,
+    receipt: bool = False,
 ) -> list[str]:
     if not isinstance(authorization, dict):
         return []
@@ -4521,7 +4719,10 @@ def _autonomy_authorization_errors(
     if disposition in allowed and status not in allowed[disposition]:
         errors.append(f"{prefix}.authorization status cannot support disposition {disposition!r}")
     revocation = authorization.get("revocation_evidence")
-    if status == "revoked" and not (isinstance(revocation, str) and revocation.strip()):
+    # A receipt keeps revocation evidence in the private record only.
+    if status == "revoked" and not receipt and not (
+        isinstance(revocation, str) and revocation.strip()
+    ):
         errors.append(f"{prefix}.authorization requires revocation_evidence")
     if status != "revoked" and revocation is not None:
         errors.append(f"{prefix}.authorization has unexpected revocation_evidence")
@@ -4532,20 +4733,27 @@ def _autonomy_action_errors(
     action: dict[str, Any],
     index: int,
     execution_sha: object,
+    receipt: bool = False,
 ) -> list[str]:
     prefix = f"autopilot_state.autonomy_boundary.actions[{index}]"
     errors: list[str] = []
     if execution_sha is not None and action.get("execution_boundary_sha256") != execution_sha:
         errors.append(f"{prefix}.execution_boundary_sha256 is stale")
-    scope_sha = _canonical_json_sha256(_autonomy_scope(action, AUTONOMY_ACTION_FIELDS))
-    if action.get("scope_sha256") != scope_sha:
-        errors.append(f"{prefix}.scope_sha256 does not match its action scope")
+    if receipt:
+        # The scope fields stay private; the receipt binds authorization to the
+        # recorded scope digest instead of recomputing it.
+        scope_sha = action.get("scope_sha256")
+    else:
+        scope_sha = _canonical_json_sha256(_autonomy_scope(action, AUTONOMY_ACTION_FIELDS))
+        if action.get("scope_sha256") != scope_sha:
+            errors.append(f"{prefix}.scope_sha256 does not match its action scope")
     errors.extend(
         _autonomy_authorization_errors(
             prefix,
             action.get("authorization"),
             action.get("disposition"),
             scope_sha,
+            receipt,
         )
     )
     return errors
@@ -4554,6 +4762,7 @@ def _autonomy_action_errors(
 def _autonomy_actions_errors(
     boundary: dict[str, Any],
     execution_sha: object,
+    receipt: bool = False,
 ) -> list[str]:
     actions = boundary.get("actions")
     if not isinstance(actions, list):
@@ -4562,7 +4771,7 @@ def _autonomy_actions_errors(
     records = [action for action in actions if isinstance(action, dict)]
     for index, action in enumerate(actions):
         if isinstance(action, dict):
-            errors.extend(_autonomy_action_errors(action, index, execution_sha))
+            errors.extend(_autonomy_action_errors(action, index, execution_sha, receipt))
     action_ids = [action.get("action_id") for action in records]
     comparable = [action_id for action_id in action_ids if isinstance(action_id, str)]
     if len(comparable) != len(set(comparable)):
@@ -4586,7 +4795,14 @@ def validate_autonomy_boundary(
     boundary = state.get("autonomy_boundary")
     if boundary is None:
         errors = []
-        if boundary_required:
+        if boundary_required and AUTONOMY_LEGACY_RECEIPT_KEY in state:
+            errors.append(
+                f"autopilot_state.{AUTONOMY_LEGACY_RECEIPT_KEY} has no execution-boundary "
+                "digest to replay against the current execution boundary; migrate it to an "
+                f"{AUTONOMY_RECEIPT_VERSION} autopilot_state.autonomy_boundary projected "
+                "from the private record before this active run can reach Phase 7"
+            )
+        elif boundary_required:
             errors.append(
                 "autopilot_state.autonomy_boundary is required before this active run can reach Phase 7"
             )
@@ -4600,8 +4816,11 @@ def validate_autonomy_boundary(
         return {"autonomy_boundary_errors": errors}
     errors.extend(_json_schema_errors(boundary, schema, schema, "autopilot_state.autonomy_boundary"))
     errors.extend(_autonomy_planning_errors(boundary, repo_root))
-    execution_errors, execution_sha = _autonomy_execution_errors(boundary)
+    receipt = boundary.get("schema_version") == AUTONOMY_RECEIPT_VERSION
+    execution_errors, execution_sha = _autonomy_execution_errors(boundary, receipt)
     errors.extend(execution_errors)
+    if receipt and boundary_required:
+        errors.extend(_autonomy_private_record_errors(state, boundary, repo_root))
     if execution_sha is not None:
         errors.extend(
             _autonomy_current_execution_errors(
@@ -4610,7 +4829,7 @@ def validate_autonomy_boundary(
                 boundary_required,
             )
         )
-    errors.extend(_autonomy_actions_errors(boundary, execution_sha))
+    errors.extend(_autonomy_actions_errors(boundary, execution_sha, receipt))
     return {"autonomy_boundary_errors": errors}
 
 

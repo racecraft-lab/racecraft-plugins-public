@@ -80,7 +80,7 @@ validates the result at the phase gate.
 ```
 
 Adjust the metrics section based on the phase — Specify
-reports FR/story counts, Plan reports artifact status,
+reports FR/story counts, Plan reports artifact status and any rescope of plan.md,
 Tasks reports task counts.
 
 ### Terminal Deliverable

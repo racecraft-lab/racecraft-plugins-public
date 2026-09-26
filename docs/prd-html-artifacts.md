@@ -240,6 +240,27 @@ currently uses neither.
   README) describes the staged scaffold → draft PR → autopilot flow.
 - **AC-13.3**: `pnpm --dir docs-site validate` passes.
 
+### 3.14 Architecture Viewer *(→ ART-021)*
+
+Added 2026-09-25. The data contract is
+[architecture-viewer-contract.md](ai/specs/architecture-viewer-contract.md).
+
+- **AC-14.1**: A producer derives `specs/<feature>/artifacts/architecture-graph.json`
+  from the DEPENDENCY_RULES tool's output joined with the plan's Module and
+  Interface Deltas, validates it with `speckit_pro_runner.architecture_graph`,
+  and writes nothing when validation fails.
+- **AC-14.2**: `architecture-viewer.html` ships under the single-file artifact
+  contract and renders the touched modules, their one-hop neighbours, rule
+  violations drawn red, and each node's interface delta, with no external
+  request.
+- **AC-14.3**: The manifest row flips from `planned` to `shipped` with no other
+  change; a brownfield change selects the page and a greenfield change never does.
+- **AC-14.4**: A missing DEPENDENCY_RULES slot or an invalid graph produces no page
+  and a named gap, never an empty page.
+- **AC-14.5**: The whole-repository view renders only on explicit request.
+- **AC-14.6**: The markdown export is the adjacency list, one line per edge.
+- **AC-14.7**: The artifact author fills the page on both Claude Code and Codex.
+
 ## 4. Migration Path (phased — one phase per tier)
 
 - **Phase 1 (ART-001) — Foundation**: brand kit, manifest schema, SPA
@@ -255,6 +276,8 @@ currently uses neither.
 - **Phase 5 (ART-010) — Final PR**: writeup, companions, ready flip;
   integrates Phases 3–4.
 - **Phase 6 (ART-013) — Docs**: lands last, documents shipped behavior.
+- **ART-021 — Architecture Viewer** (added 2026-09-25): outside the original
+  tiers; every dependency has shipped, so it can start at any time before ART-013.
 
 ## 5. Constraints
 
@@ -333,6 +356,7 @@ currently uses neither.
 | Scaffold Integration | AC-11.* | ART-011 | ART-006 | P1 |
 | Implementation-Notes Capture | AC-12.* | ART-012 | ART-006 | P2 |
 | Documentation | AC-13.* | ART-013 | ART-001…012 | P2 |
+| Architecture Viewer | AC-14.* | ART-021 | ART-001, ART-007 | P2 |
 
 ## 8. Success Criteria
 

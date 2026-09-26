@@ -18,6 +18,7 @@ from test_result import run_counted  # noqa: E402
 
 
 SYNTHESIZER = REPO_ROOT / "speckit-pro" / "codex-agents" / "consensus-synthesizer.toml"
+CLAUDE_SYNTHESIZER = REPO_ROOT / "speckit-pro" / "agents" / "consensus-synthesizer.md"
 PROTOCOL = (
     REPO_ROOT / "speckit-pro" / "skills" / "speckit-autopilot" / "references"
     / "consensus-protocol.md"
@@ -27,6 +28,29 @@ AUTOPILOT_SKILLS = (
     REPO_ROOT / "speckit-pro" / "codex-skills" / "speckit-autopilot" / "SKILL.md",
 )
 CODEX_AUTOPILOT = AUTOPILOT_SKILLS[1]
+REFERENCES = REPO_ROOT / "speckit-pro" / "skills" / "speckit-autopilot" / "references"
+CODEX_PHASE_EXECUTION = (
+    REPO_ROOT / "speckit-pro" / "codex-skills" / "speckit-autopilot" / "references"
+    / "phase-execution-codex.md"
+)
+ACTIVE_PROTOCOL = "<plugin_root>/skills/speckit-autopilot/references/consensus-protocol.md"
+ACTIVE_REFERENCES = "Reference dir: <plugin_root>/skills/speckit-autopilot/references/"
+SCAFFOLD_SKILL = REPO_ROOT / "speckit-pro" / "skills" / "speckit-scaffold-spec" / "SKILL.md"
+EXECUTORS = tuple(
+    REPO_ROOT / "speckit-pro" / folder / f"{role}-executor{suffix}"
+    for role in ("clarify", "analyze", "checklist")
+    for folder, suffix in (("agents", ".md"), ("codex-agents", ".toml"))
+)
+
+
+def dispatch_block(text: str, anchor: str) -> str:
+    """Return the fenced dispatch text from ``anchor`` to its closing fence."""
+    start = text.index(anchor)
+    return text[start:text.index("\n```", start)]
+
+
+def phase_execution_text() -> str:
+    return (REFERENCES / "phase-execution.md").read_text(encoding="utf-8")
 
 
 def instructions() -> str:
@@ -68,11 +92,183 @@ class ConsensusSynthesizerRegressionTests(unittest.TestCase):
             "A 2/3 majority wins while the dissent is preserved",
             "If all three disagree",
             "[HUMAN REVIEW NEEDED]",
-            "Security override at any N",
+            "Security override on a security route",
             "apply the answer only when all three analysts agree",
             "A 2/3 majority or no agreement returns `[HUMAN REVIEW NEEDED]`",
             "a keyword alone never stops the run",
         ))
+
+    def test_keyword_only_route_uses_the_items_own_rule_when_no_analyst_flags_security(self) -> None:
+        # A keyword such as `tokens` meaning LLM usage counts must not force
+        # unanimity when every analyst says the item has no security content.
+        # A tag, a `true`, or a missing field still fails toward unanimity.
+        route_line = "**Security Route:** tag | keyword | none"
+        rule = (
+            "When the route is `keyword` and every routed response returns "
+            "`security_relevant: false`, apply the ordinary rule for N above"
+        )
+        fail_closed = "returns `security_relevant: true`, or omits the field"
+        for label, text in (
+            ("codex", instructions()),
+            ("claude", CLAUDE_SYNTHESIZER.read_text(encoding="utf-8")),
+        ):
+            flat = " ".join(text.split())
+            with self.subTest(platform=label):
+                assert_contains(self, text, (route_line,))
+                self.assertIn("null is written as none", flat)
+                assert_contains(self, flat, (rule, fail_closed, "a 2/3 majority wins at N = 3"))
+        protocol = " ".join(PROTOCOL.read_text(encoding="utf-8").split())
+        assert_contains(self, protocol, (
+            "**Security Route:** <security_route from parse-consensus-categories: tag | keyword | none; write JSON null as none>",
+            "every routed analyst returns `security_relevant: false`",
+            "An explicit `[security]` tag, or, on a keyword route, any analyst returning `security_relevant: true`, keeps unanimity",
+        ))
+
+    def test_security_relevant_raises_the_bar_only_on_a_security_route(self) -> None:
+        # A `true` from one analyst on a two-analyst non-security route must
+        # not skip the Round 2 escape and send the item to human review. Only
+        # a `tag` or `keyword` route can raise the bar to unanimity.
+        none_route = (
+            "When the route is `none`, a `security_relevant: true` answer does "
+            "not raise the bar: apply the ordinary rule for N above, so two "
+            "disagreeing analysts still escape to Round 2"
+        )
+        for label, text in (
+            ("codex", instructions()),
+            ("claude", CLAUDE_SYNTHESIZER.read_text(encoding="utf-8")),
+        ):
+            flat = " ".join(text.split())
+            with self.subTest(platform=label):
+                self.assertNotIn("at any N", flat)
+                self.assertNotIn("(any N)", flat)
+                assert_contains(self, flat, (
+                    "When the route is `tag`, apply the answer only when all three analysts agree",
+                    "When the route is `keyword` and any routed response returns `security_relevant: true`, or omits the field",
+                    none_route,
+                ))
+        protocol = " ".join(PROTOCOL.read_text(encoding="utf-8").split())
+        assert_contains(self, protocol, (
+            "| **Non-security route** (`Security Route: none`) |",
+            "a `security_relevant: true` answer does not raise the bar",
+            "two disagreeing Round 1 analysts still escape to Round 2",
+        ))
+
+    def test_executors_reserve_the_security_tag_for_security_substance(self) -> None:
+        # A `[security]` tag always keeps unanimity, so an executor that tags
+        # every keyword-bearing item would defeat the keyword-only relief.
+        for path in EXECUTORS:
+            flat = " ".join(path.read_text(encoding="utf-8").split())
+            with self.subTest(path=f"{path.parent.name}/{path.name}"):
+                self.assertNotIn("contains a security keyword (always", flat)
+                self.assertIn("substance is about security", flat)
+                self.assertIn("A security keyword alone needs no tag", flat)
+
+    def test_orchestrator_passes_the_active_protocol_path(self) -> None:
+        # Every synthesizer and every analyze or checklist executor prompt
+        # carries the protocol path resolved from the loaded plugin root.
+        protocol = PROTOCOL.read_text(encoding="utf-8")
+        self.assertIn(f"**Protocol:** {ACTIVE_PROTOCOL}", protocol)
+        phase = phase_execution_text()
+        self.assertIn(f'prompt: "Run /speckit-checklist with: <domain prompt>\\nProtocol: {ACTIVE_PROTOCOL}\\n', phase)
+        self.assertIn(f'prompt: "Run /speckit-analyze with: <prompt>\\nProtocol: {ACTIVE_PROTOCOL}\\n', phase)
+        flat = " ".join(phase.split())
+        self.assertIn(f"Prepare a Clarify Question Set for: <session prompt> Protocol: {ACTIVE_PROTOCOL}", flat)
+        self.assertIn("Workflow root: <WORKFLOW_ROOT>", phase)
+        self.assertIn("consensus-synthesizer agent (single fan-out), with the `Protocol:` line,", flat)
+        self.assertIn("never the checkout that launched the run", flat)
+        prerequisites = " ".join((REFERENCES / "prerequisites.md").read_text(encoding="utf-8").split())
+        self.assertIn("Keep the returned `plugin_root`", prerequisites)
+        codex = " ".join(CODEX_PHASE_EXECUTION.read_text(encoding="utf-8").split())
+        self.assertIn("`Protocol:` line with `<plugin-root>/skills/speckit-autopilot/references/consensus-protocol.md`", codex)
+
+    def test_orchestrator_passes_the_active_reference_directory(self) -> None:
+        # Every dispatch of an agent that reads capability-discovery.md and
+        # grounding.md carries the directory resolved from the loaded plugin
+        # root, so the agent never searches the plugin cache for a copy.
+        sites = {
+            "phase-execution.md": (
+                'subagent_type: "speckit-pro:clarify-executor"',
+                'subagent_type: "speckit-pro:checklist-executor"',
+                'subagent_type: "speckit-pro:analyze-executor"',
+                'subagent_type: "speckit-pro:artifact-author"',
+                'subagent_type: "<batch.agent>"',
+            ),
+            "post-implementation.md": (
+                'subagent_type: "speckit-pro:implement-executor"',
+                'subagent_type: "speckit-pro:uat-runbook-author"',
+            ),
+            "consensus-protocol.md": (
+                "clarification question that the executor could not resolve",
+                "checklist gap that the executor could not resolve",
+                "analysis finding that the executor could not resolve",
+            ),
+        }
+        for name, anchors in sites.items():
+            text = (REFERENCES / name).read_text(encoding="utf-8")
+            for anchor in anchors:
+                with self.subTest(file=name, dispatch=anchor):
+                    self.assertIn(ACTIVE_REFERENCES, dispatch_block(text, anchor))
+        formal = " ".join((REFERENCES / "formal-methods.md").read_text(encoding="utf-8").split())
+        self.assertIn(f"`{ACTIVE_REFERENCES}` line", formal)
+        prerequisites = " ".join((REFERENCES / "prerequisites.md").read_text(encoding="utf-8").split())
+        self.assertIn(f"`{ACTIVE_REFERENCES}`", prerequisites)
+        phase = phase_execution_text()
+        author = dispatch_block(phase, 'subagent_type: "speckit-pro:artifact-author"')
+        self.assertIn("Gallery dir: <plugin_root>/artifact-gallery/", author)
+        self.assertNotIn("speckit-pro/artifact-gallery/", phase)
+        codex = CODEX_PHASE_EXECUTION.read_text(encoding="utf-8")
+        self.assertIn(
+            "Gallery dir: <plugin-root>/artifact-gallery/",
+            dispatch_block(codex, 'spawn_agent("artifact-author"'),
+        )
+        self.assertNotIn("speckit-pro/artifact-gallery/", codex)
+        self.assertIn("`Gallery dir: <plugin_root>/artifact-gallery/`", prerequisites)
+        scaffold = SCAFFOLD_SKILL.read_text(encoding="utf-8")
+        self.assertIn(
+            "Reference dir: ${CLAUDE_PLUGIN_ROOT}/skills/speckit-autopilot/references/",
+            dispatch_block(scaffold, 'Agent(subagent_type: "speckit-pro:codebase-analyst"'),
+        )
+
+    def test_human_review_asks_in_place_only_in_an_interactive_run(self) -> None:
+        # An operator who is present can answer a [HUMAN REVIEW NEEDED] item
+        # through the host's native question tool; an unattended run still
+        # stops. Each host names only its own tool.
+        protocol = " ".join(PROTOCOL.read_text(encoding="utf-8").split())
+        assert_contains(self, protocol, (
+            "## Human Review Needed",
+            "`AskUserQuestion` on Claude Code",
+            "`request_user_input` on Codex",
+            "the synthesizer's recommendation first",
+            "`Stop the run`",
+            "label its source `human answer`",
+            "`claude -p`, `codex exec`, CI, or a background agent",
+            "stop exactly as before",
+            "Never ask through free text or `grill-me`",
+            "IF Flags includes [HUMAN REVIEW NEEDED]: resolve per §Human Review Needed",
+        ))
+        anchor = "consensus-protocol.md#human-review-needed"
+        claude_files = (
+            AUTOPILOT_SKILLS[0],
+            REFERENCES / "error-recovery.md",
+            REFERENCES / "phase-execution.md",
+        )
+        codex_refs = CODEX_AUTOPILOT.parent / "references"
+        codex_files = (
+            codex_refs / "error-recovery-codex.md",
+            CODEX_PHASE_EXECUTION,
+        )
+        for path in claude_files:
+            flat = " ".join(path.read_text(encoding="utf-8").split())
+            with self.subTest(host="claude", path=path.name):
+                assert_contains(self, flat, (anchor, "`AskUserQuestion`", "unattended run"))
+                self.assertNotIn("request_user_input", flat)
+        for path in codex_files:
+            flat = " ".join(path.read_text(encoding="utf-8").split())
+            with self.subTest(host="codex", path=path.name):
+                assert_contains(self, flat, (anchor, "`request_user_input`", "unattended run"))
+                self.assertNotIn("AskUserQuestion", flat)
+        phase = phase_execution_text()
+        self.assertEqual(phase.count(anchor), 3, "Clarify, Checklist, and Analyze each route human review")
 
     def test_escape_phrases_and_security_override_are_complete(self) -> None:
         text = instructions()

@@ -7669,6 +7669,59 @@ This line must not be copied.
             self.assertEqual(response["data"]["mutation"]["dirty_worktree"], True)
             self.assertFalse(target.exists())
 
+    def test_apply_ignores_only_runner_byproduct_directories(self) -> None:
+        ledger = "docs/ai/specs/.process/execution-control/0123456789abcdef01234567.json"
+        evidence = "docs/ai/specs/.process/verification/run/record.json"
+        cases = (
+            ((ledger, evidence), True),
+            ((ledger, "untracked.txt"), False),
+            (("specs/other/.process/runner-record.json",), False),
+            (("docs/execution-control/record.json",), False),
+        )
+        for untracked, clean in cases:
+            with self.subTest(untracked=untracked):
+                tmp, git_root = self.temp_clean_git_repo()
+                with tmp:
+                    for relative in untracked:
+                        path = git_root / relative
+                        path.parent.mkdir(parents=True, exist_ok=True)
+                        path.write_text("{}\n", encoding="utf-8")
+                    target = git_root / "generated" / "byproduct-output.md"
+                    completed, response, stderr_records = run_runner(
+                        helper_request(
+                            "mutation-foundation",
+                            mode="apply",
+                            inputs={"operations": [{"operation_id": "byproduct", "kind": "write_file",
+                                                    "target": "generated/byproduct-output.md", "content": "ok\n"}]},
+                        ),
+                        cwd=git_root,
+                    )
+                    self.assertEqual(response["data"]["mutation"]["dirty_worktree"], not clean)
+                    self.assertEqual(target.exists(), clean)
+                    if clean:
+                        self.assertEqual(completed.returncode, 0, response)
+                    else:
+                        self.assertEqual([diag["code"] for diag in stderr_records], ["dirty_worktree"])
+
+    def test_apply_refuses_worktree_rename_of_a_real_file_into_a_byproduct_directory(self) -> None:
+        tmp, git_root = self.temp_clean_git_repo()
+        with tmp:
+            moved = git_root / "docs" / ".process" / "verification" / "moved.txt"
+            moved.parent.mkdir(parents=True)
+            (git_root / ".gitkeep").rename(moved)
+            self.run_git(git_root, "add", "--intent-to-add", "docs/.process/verification/moved.txt")
+            completed, response, stderr_records = run_runner(
+                helper_request(
+                    "mutation-foundation",
+                    mode="apply",
+                    inputs={"operations": [{"operation_id": "renamed", "kind": "write_file",
+                                            "target": "generated/renamed-output.md", "content": "no\n"}]},
+                ),
+                cwd=git_root,
+            )
+            self.assertEqual([diag["code"] for diag in stderr_records], ["dirty_worktree"], response)
+            self.assertFalse((git_root / "generated" / "renamed-output.md").exists())
+
     def test_apply_rechecks_dirty_worktree_after_lock_acquisition(self) -> None:
         tmp, git_root = self.temp_clean_git_repo()
         with tmp:
@@ -8826,6 +8879,88 @@ This line must not be copied.
                 self.assert_response(response, "input_error", 2)
                 self.assertEqual([diag["code"] for diag in stderr_records], ["invalid_input"])
 
+    def test_generated_title_keeps_the_description_case_as_given(self) -> None:
+        title = pr_emission.normalize_generated_title(
+            {"title_type": "feat", "title_scope": "demo", "title_description": "add a demo feature"}
+        )
+        self.assertEqual(title["value"], "feat(demo): add a demo feature")
+        self.assertEqual(title["description"], "add a demo feature")
+
+    def test_documented_draft_packet_requests_execute_and_validate(self) -> None:
+        docs = [
+            PLUGIN_ROOT / "skills/speckit-autopilot/references/phase-execution.md",
+            PLUGIN_ROOT / "codex-skills/speckit-autopilot/references/phase-execution-codex.md",
+        ]
+        for doc_path in docs:
+            with self.subTest(doc=doc_path.name):
+                document = doc_path.read_text(encoding="utf-8")
+                marker = document.index('"request_id": "example-draft-packet"')
+                start = document.rfind("```json\n", 0, marker) + len("```json\n")
+                end = document.index("\n```", marker)
+                request = json.loads(document[start:end])
+                self.assertEqual(request["mode"], "dry_run")
+                self.assertEqual(request["inputs"]["mode"], "draft")
+                self.assertEqual(request["inputs"]["verification_evidence"], [])
+
+                tmp, git_root = self.temp_clean_git_repo()
+                with tmp:
+                    completed, response, stderr_records = run_runner(request, cwd=git_root)
+                    self.assertEqual(stderr_records, [])
+                    self.assertEqual(completed.returncode, 0)
+                    self.assert_response(response, "ok", 0)
+                    self.assertFalse((git_root / request["inputs"]["packet_path"]).exists())
+
+                    invalid_requests = {
+                        "missing_h1": {"body": request["inputs"]["body"].split("\n", 2)[2]},
+                        "mismatched_title": {"body": request["inputs"]["body"].replace("# feat(speckit-pro): open an example draft", "# feat(speckit-pro): another draft", 1)},
+                        "missing_evidence": {"verification_evidence": None},
+                        "string_evidence": {"verification_evidence": "none"},
+                    }
+                    self.assertNotEqual(invalid_requests["mismatched_title"]["body"], request["inputs"]["body"])
+                    for case, overrides in invalid_requests.items():
+                        with self.subTest(doc=doc_path.name, case=case):
+                            invalid = json.loads(json.dumps(request))
+                            if case == "missing_evidence":
+                                del invalid["inputs"]["verification_evidence"]
+                            else:
+                                invalid["inputs"].update(overrides)
+                            completed, response, _ = run_runner(invalid, cwd=git_root)
+                            self.assertEqual(completed.returncode, 2)
+                            self.assert_response(response, "input_error", 2)
+
+                    invalid = json.loads(json.dumps(request))
+                    invalid["mode"] = "draft"
+                    completed, response, _ = run_runner(invalid, cwd=git_root)
+                    self.assertEqual(completed.returncode, 2)
+                    self.assert_response(response, "input_error", 2)
+
+                    request["mode"] = "apply"
+                    unrelated = git_root / "unrelated.txt"
+                    unrelated.write_text("uncommitted\n", encoding="utf-8")
+                    completed, response, stderr_records = run_runner(request, cwd=git_root)
+                    self.assertEqual(completed.returncode, 1)
+                    self.assert_response(response, "expected_failure", 1)
+                    self.assertEqual([diag["code"] for diag in stderr_records], ["dirty_worktree"])
+                    unrelated.unlink()
+
+                    completed, response, stderr_records = run_runner(request, cwd=git_root)
+                    self.assertEqual(stderr_records, [])
+                    self.assertEqual(completed.returncode, 0)
+                    self.assert_response(response, "ok", 0)
+
+                    completed, response, stderr_records = run_runner(
+                        helper_request(
+                            "validate-pr-packet-read-only",
+                            mode="read_only",
+                            inputs={"packet_path": request["inputs"]["packet_path"]},
+                        ),
+                        cwd=git_root,
+                    )
+                    self.assertEqual(stderr_records, [])
+                    self.assertEqual(completed.returncode, 0)
+                    self.assert_response(response, "ok", 0)
+                    self.assertEqual(response["data"]["stdout_json"]["status"], "passed")
+
     def test_pr_packet_output_draft_mode_emits_two_block_packet_that_passes_read_only_validation(self) -> None:
         from speckit_pro_runner.helpers.read_only import protected_body_sha256
 
@@ -8958,6 +9093,18 @@ This line must not be copied.
             stderr_records[0]["message"],
             "mode must be single, split, or draft when provided",
         )
+
+        inputs.pop("mode")
+        inputs["mode_name"] = "draft"
+        inputs["changed_files"] = []
+        inputs["verification_evidence"] = []
+        completed, response, stderr_records = run_runner(
+            helper_request("pr-packet-output", inputs=inputs)
+        )
+        self.assertEqual(completed.returncode, 2)
+        self.assert_response(response, "input_error", 2)
+        self.assertEqual([diag["code"] for diag in stderr_records], ["invalid_input"])
+        self.assertIn("inputs.mode", stderr_records[0]["message"])
 
     def test_required_headings_returns_draft_blocks_and_preserves_reviewer_headings(self) -> None:
         from speckit_pro_runner.helpers.pr_emission import required_headings

@@ -190,6 +190,8 @@ Ask whether to restore (file-by-file or all-at-once):
 
 ### 6. Deduplicate legacy commands when both forms are present
 
+When the upgraded project has the `claude` integration, use a resolved Python 3.11+ interpreter to run `<resolved_python> <plugin-root>/scripts/agent-memory-ignore.py --mode apply --repo-root <repository-root>` with argv-only execution. Preserve and commit any `.gitignore` change before clean-worktree-gated helpers. Report tracked memory or overriding nested ignore rules separately; an ignore rule does not untrack files, and this command never deletes memory.
+
 After upgrading, the new skills directories may now exist alongside
 the legacy slash-command files. Detect:
 

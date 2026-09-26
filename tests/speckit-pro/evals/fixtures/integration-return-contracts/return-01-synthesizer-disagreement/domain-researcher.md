@@ -16,3 +16,7 @@ high
 **Rationale**: The retained response cites the external standard directly, but
 it does not resolve the codebase compatibility concern raised by the other
 analyst.
+
+## Security Relevance
+
+security_relevant: false

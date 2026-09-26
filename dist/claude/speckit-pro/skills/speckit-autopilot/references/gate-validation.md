@@ -32,6 +32,12 @@ remaining work; a failed requirement or security gate never becomes a pass.
    `runner helper reviewability-gate setup <workflow-or-roadmap>`
    must be `pass`, `warn`, or a recorded `exception`; `block` stops before
    Specify and requires spec decomposition.
+   When the target is the technical roadmap (scaffold), pass `spec_id`. The
+   gate then reads only that `### <SPEC-ID>:` section: its budget numbers,
+   its `Primary surface:` values, and a line-anchored
+   `Reviewability-Exception: refactor|infra|upgrade` pragma, which turns a
+   size `block` into `exception`. A missing section is a gate error; a
+   missing budget number is a `block` that no pragma excuses.
 ```
 
 **Auto-Fix:** Not applicable — if the codebase doesn't pass typecheck/test/build, the user must fix it before starting a new spec workflow. These are foundational health checks.
@@ -330,6 +336,9 @@ evidence and the state mirror are required at the planning boundary.
 
 **Check:** All requirement-linked defects and safety findings resolved at every
 severity. Keep optional style/naming suggestions distinct from blocking defects.
+The runner's G6 counts open CRITICAL/HIGH rows (empty Resolution) in the
+workflow's Analysis Results table, plus bracketed markers in the planning files,
+and fails closed when the workflow or that table is missing.
 
 ```
 1. Run /speckit-analyze and capture output
@@ -426,7 +435,14 @@ disagreement is named in `reason`.
 
 ```
 1. Run confidence-gate against the workflow file
-2. Read exit code + JSON output:
+2. Read the runner envelope `status`, `data.exit_code`, and
+   `data.stdout_json.recommended_action`. Valid PASS, advisory FAIL,
+   and NO_DATA verdicts have runner status `ok`; strict FAIL has
+   `expected_failure`. The raw domain exit code remains in
+   `data.exit_code`. `input_error` means a malformed mode or threshold,
+   while a missing or unreadable workflow is a file prerequisite failure.
+   Do not treat advisory FAIL or NO_DATA as invalid input.
+   Then route the domain verdict:
    - exit 0 (PASS, composite ≥ threshold) → proceed to G7 / Phase 7
    - exit 1 (NO_DATA, no synthesizer emit found) → soft-skip:
         log a warning and proceed. NO_DATA usually indicates a

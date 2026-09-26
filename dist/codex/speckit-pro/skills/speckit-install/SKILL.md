@@ -164,6 +164,8 @@ option (b)):
 If any command returns non-zero, STOP. Do not retry or "fix" without
 operator input — the CLI's error message is the operator's signal.
 
+When `claude` was installed, use a resolved Python 3.11+ interpreter to run `<resolved_python> <plugin-root>/scripts/agent-memory-ignore.py --mode apply --repo-root <repository-root>` with argv-only execution. Include the resulting `.gitignore` change in the setup commit before clean-worktree-gated helpers. If the command reports tracked memory or an ineffective nested override, stop and report its paths; never remove memory automatically.
+
 ### 5. Offer to install the curated set of extensions and presets
 
 speckit-pro recommends a small set of community extensions and presets

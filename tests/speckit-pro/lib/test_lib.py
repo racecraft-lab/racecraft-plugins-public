@@ -167,11 +167,68 @@ class SpecsReadGuardTests(unittest.TestCase):
             os.unlink(outside)
 
 
+class FailureReportTests(unittest.TestCase):
+    """``failure_report`` names every failing unit and bounds each traceback."""
+
+    @staticmethod
+    def _traceback(test_id: str, length: int) -> list[str]:
+        lines = ["Traceback (most recent call last):"]
+        lines += [f'  File "child.py", line {index}, in {test_id}' for index in range(1, length - 1)]
+        lines.append(f"AssertionError: {test_id} broke")
+        return lines
+
+    def test_each_failure_keeps_its_id_and_a_bounded_tail(self) -> None:
+        tail = test_result.FAILURE_TAIL_LINES
+        long_body = self._traceback("test_long", tail + 20)
+        short_body = self._traceback("test_short", 4)
+        stderr = "\n".join(
+            ["child warning printed while tests ran"]
+            + ["child FAILED test_long (child.Case.test_long)"]
+            + long_body
+            + ["child FAILED test_short (child.Case.test_short)"]
+            + short_body
+        ) + "\n"
+        report = test_result.failure_report("child: 1/3 passed\n" + stderr, "child")
+        lines = report.splitlines()
+        self.assertIn("child FAILED test_long (child.Case.test_long)", lines)
+        self.assertIn("child FAILED test_short (child.Case.test_short)", lines)
+        self.assertIn("AssertionError: test_long broke", lines)
+        self.assertIn("  ... 20 earlier lines omitted", lines)
+        self.assertNotIn(long_body[0], lines[: lines.index("child FAILED test_short (child.Case.test_short)")])
+        self.assertEqual(lines[-len(short_body):], short_body)
+        self.assertNotIn("child warning printed while tests ran", lines)
+        self.assertNotIn("child: 1/3 passed", lines)
+        self.assertLessEqual(len(lines), 2 * (tail + 2))
+
+    def test_output_without_failure_headers_falls_back_to_a_bounded_tail(self) -> None:
+        tail = test_result.FAILURE_TAIL_LINES
+        crash = [f"crash line {index}" for index in range(tail + 5)]
+        report = test_result.failure_report("\n".join(crash) + "\n", "child")
+        self.assertEqual(report.splitlines(), ["  ... 5 earlier lines omitted", *crash[-tail:]])
+        self.assertEqual(test_result.failure_report("", "child"), "")
+
+    def test_run_counted_emits_headers_the_report_reads(self) -> None:
+        import contextlib
+        import io
+
+        stderr = io.StringIO()
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(_Sample)
+        with contextlib.redirect_stderr(stderr):
+            test_result.run_counted(suite, label="sample", stream=io.StringIO())
+        report = test_result.failure_report(stderr.getvalue(), "sample")
+        headers = [line for line in report.splitlines() if line.startswith("sample FAILED ")]
+        self.assertTrue(any(line.endswith("._Sample.test_plain_fail") for line in headers), headers)
+        self.assertTrue(any("._Sample.test_loop" in line for line in headers), headers)
+        self.assertIn("gamma check", report)
+        self.assertIn("AssertionError: 2 != 3", report)
+
+
 def main() -> int:
     suite = unittest.TestSuite()
     loader = unittest.defaultTestLoader
     suite.addTests(loader.loadTestsFromTestCase(CountingTestResultTests))
     suite.addTests(loader.loadTestsFromTestCase(SpecsReadGuardTests))
+    suite.addTests(loader.loadTestsFromTestCase(FailureReportTests))
     return test_result.run_counted(suite, label="test_lib")
 
 

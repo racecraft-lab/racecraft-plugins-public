@@ -1,0 +1,2 @@
+- FR-001: preserve data
+- FR-002: no secrets

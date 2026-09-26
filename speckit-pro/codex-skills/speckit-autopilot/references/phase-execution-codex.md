@@ -137,12 +137,13 @@ does not end at the boundary commit above. It runs this sequence, in this order:
 ```text
 1. Generate and validate the artifacts; initialize their pending review record.
 2. Take the stage-boundary commit above.
-3. Push the branch.
-4. Create or refresh the draft pull request.
-5. Write the `Draft PR` record to the workflow file.
-6. Take a separate bookkeeping commit carrying that record, and push it.
-7. The parent dispatches `artifact-preview-observer` for each generated artifact preview; the isolated observer never inherits general repository tools.
-8. Validate and commit/push the workflow-only preview evidence.
+3. On the clean worktree, run `pr-packet-output` dry-run and apply; validate the packet, then commit its packet and body files.
+4. Push the branch.
+5. Create or refresh the draft pull request using the validated packet.
+6. Write the `Draft PR` record to the workflow file.
+7. Take a separate bookkeeping commit carrying that record, and push it.
+8. The parent dispatches `artifact-preview-observer` for each generated artifact preview; the isolated observer never inherits general repository tools.
+9. Validate and commit/push the workflow-only preview evidence.
 ```
 
 Dispatch step 7 through the runner, never by running the observer yourself:
@@ -245,8 +246,8 @@ spawn_agent("artifact-author", prompt="""
   - Plan: specs/<feature>/plan.md
   - Tasks: specs/<feature>/tasks.md
   - Design concept: docs/ai/specs/.process/<SPEC-ID>-design-concept.md
-  - Gallery manifest: speckit-pro/artifact-gallery/manifest.json
-  - Templates: speckit-pro/artifact-gallery/templates/<entry-id>.html
+
+  Gallery dir: <plugin-root>/artifact-gallery/
 
   Select, fill, and report per your agent instructions. Return one outcome
   per selected page.
@@ -268,13 +269,14 @@ or confirmed no-progress condition may use the recovery lifecycle in the parent
 skill; absent that evidence, a poll timeout is non-terminal.
 
 **The orchestrator supplies no page list — the agent selects from the
-manifest.** It reads `speckit-pro/artifact-gallery/manifest.json`, discards
+manifest.** It reads `manifest.json` from its `Gallery dir:` line, where
+`<plugin-root>` is the root the runner reported as `plugin_root`, discards
 every entry whose `stage` is not `draft-pr`, and evaluates the `trigger` on each
 entry that survives. `{"always": true}` selects unconditionally.
 `{"any_of": [...]}` selects only when the feature carries one or more of the
 signals that entry lists.
 
-**Nothing is ever written into `speckit-pro/artifact-gallery/`.** The manifest
+**Nothing is ever written into `<plugin-root>/artifact-gallery/`.** The manifest
 and the templates are shipped inputs, and a write into that directory is a
 defect. The filled pages go to `specs/<feature>/artifacts/`, one file per
 selected entry, named for that entry's manifest `id`.
@@ -333,7 +335,7 @@ Two positive tests per page under `specs/<feature>/artifacts/`:
 
 | Test | The page fails when |
 | --- | --- |
-| it is not its own template | the bytes match `speckit-pro/artifact-gallery/templates/<entry-id>.html` exactly |
+| it is not its own template | the bytes match `<plugin-root>/artifact-gallery/templates/<entry-id>.html` exactly |
 | it is not still sample content | the body carries a sample-banner element: `class="sample-notice"`, `class="notice"`, or `class="note"` |
 
 **The banner test reaches only templates that carry a banner.** Seven shipped
@@ -450,11 +452,13 @@ verification or evidence a draft has not produced.
 Report through the could-not-be-opened shape below rather than opening one whose
 title a human would have to repair.
 
-#### The draft description: exactly two blocks
+#### The draft description: one H1 and two H2 sections
 
-The description carries exactly two blocks and nothing else:
+The description begins with the matching H1 title, followed by exactly two H2 sections, Artifacts and Resume, and no other content:
 
 ```text
+# feat(speckit-pro): open an example draft
+
 ## Artifacts
 
 | Artifact | Purpose | Open |
@@ -479,10 +483,43 @@ pull request sits in draft state, so the repository's PR checks do not run
 against it — no release-note fence is needed or wanted, and a placeholder section
 would read as evidence that does not exist.
 
-**The parent session composes both blocks itself.** Emit the packet with runner
-helper `pr-packet-output` in `draft` mode and pass the finished Markdown as
-`inputs.body`; the producer uses that string verbatim. The `build_packet_body`
-fallback stays single/split-shaped and is never reached in draft mode.
+**The parent session composes the title and both blocks itself.** Send this
+complete runner request after replacing the example feature, branch, title, and
+body with the current plan-stage values. The top-level `mode` is `dry_run`
+first; change only that field to `apply` after the dry-run succeeds.
+`inputs.mode` selects the draft packet. `inputs.mode_name` is not accepted.
+
+```json
+{
+  "schema_version": "1.0",
+  "request_id": "example-draft-packet",
+  "helper_id": "pr-packet-output",
+  "operation": "pr-packet-output",
+  "mode": "dry_run",
+  "inputs": {
+    "packet_path": "specs/example-feature/.process/pr-packets/example-draft.json",
+    "source_feature_dir": "specs/example-feature",
+    "target": {"base_branch": "main", "head_branch": "codex/example-feature"},
+    "mode": "draft",
+    "title_type": "feat",
+    "title_scope": "speckit-pro",
+    "title_description": "open an example draft",
+    "changed_files": [],
+    "verification_evidence": [],
+    "body": "# feat(speckit-pro): open an example draft\n\n## Artifacts\n\n| Artifact | Purpose | Open |\n| --- | --- | --- |\n| Implementation Plan | Describe the implementation phases | `open specs/example-feature/artifacts/implementation-plan.html` |\n\n## Resume\n\nStage: plan. Stopped at the plan-stage boundary for review.\nResume with: `$speckit-autopilot <workflow-file> --stage implement`\n"
+  }
+}
+```
+
+An explicit empty `verification_evidence` array records that a draft has no
+verification yet; supplied records must match the [packet evidence schema](../../../skills/speckit-autopilot/contracts/pr-packet.schema.json).
+The body must have one H1 matching the generated title, then exactly the
+Artifacts and Resume H2 sections. Validate the emitted packet before opening the
+PR. Commit its packet and body files before another clean-worktree-gated helper
+runs; an unrelated dirty file blocks apply. Correct validation failures through
+the packet helper instead of bypassing them with raw PR creation. The producer
+uses `inputs.body` verbatim; the single/split `build_packet_body` fallback is not
+used for drafts.
 
 #### Fail-open: three sinks, and the runs that reach them
 
@@ -756,7 +793,11 @@ Every step in this loop executes against the pre-flight `WORKFLOW_ROOT`, even
 when the Codex task was invoked from its parent checkout. Set that root as the
 `workdir` for every shell call; invoke helpers from it; resolve every direct
 read, write, state, and Git path against it; and include the exact root plus the
-same directive in every executor and consensus prompt. Validate agent-returned
+same directive in every executor and consensus prompt. Every
+`consensus-synthesizer`, `clarify-executor`, `checklist-executor`, and `analyze-executor` prompt
+also carries a `Protocol:` line with `<plugin-root>/skills/speckit-autopilot/references/consensus-protocol.md`,
+where `<plugin-root>` is the root the runner reported as `plugin_root`, so
+those agents read the active protocol and never a cached copy. Validate agent-returned
 paths against `WORKFLOW_ROOT` before applying them. Never infer the execution
 root from the task's default checkout.
 
@@ -789,7 +830,11 @@ for phase in PHASES starting from first_pending:
        calling close_agent only when exposed and never exceeding the derived
        subagent_slots limit (dispatch in waves when items × analysts exceeds
        the cap) → apply consensus rules → edit
-       artifacts → mark the corresponding Consensus item complete in both stores
+       artifacts → mark the corresponding Consensus item complete in both stores.
+       An item that ends in [HUMAN REVIEW NEEDED] follows
+       consensus-protocol.md#human-review-needed: ask the operator in place
+       with `request_user_input` when it is present in an interactive task;
+       an unattended run stops.
     6. Check .specify/extensions.yml for after_<phase> hooks
        → run accepted hooks (non-destructive), skip duplicates
     7. Validate gate directly in the main session:
@@ -802,6 +847,11 @@ for phase in PHASES starting from first_pending:
        from the shared formal-methods.md contract. Keep Plan/G3 incomplete until
        the selected checks pass; refresh formal-doctor after authoring. Do not
        append this work to phase-executor's single-command prompt.
+       After a rescope changes plan.md's scope, slices, or delivery order, the
+       parent reconciles every Plan artifact before G3: `research.md`,
+       `quickstart.md`, `data-model.md`, `contracts/`, and every file under
+       `checklists/`. Record what changed in each artifact in the workflow
+       file's Plan Results.
        Run 'runner helper validate-gate' for gate G<N>
        against <feature_dir> from the orchestrator using the
        resolved scripts path for this skill.
@@ -1061,10 +1111,32 @@ that requires it. The word "autonomous" alone is also not authorization for a
 persistent system mutation, account change, or external effect that the active
 conversation has not already authorized.
 
-Persist one `autonomy_boundary` object in `autopilot-state.json` and a matching
-Phase 6.5 result in the workflow file. Its canonical versioned shape is
+Keep the complete record private and publish only its receipt. The complete
+`autonomy-boundary.v1` record holds writable roots, targets, free-text
+evidence, and any native event identity. Those values are machine-local, so
+the record never goes in a tracked or untracked repository file; the privacy
+scan reads both. Write it with owner-only permissions (directory `0700`, file
+`0600`) to `<git-common-dir>/speckit-pro/autonomy-boundary/<run-id>.json`.
+`<git-common-dir>` is `git rev-parse --git-common-dir` resolved against the
+worktree, and `<run-id>` is the execution-control ledger's `run_id`. That
+directory is outside every worktree's file listing, is shared by all worktrees
+of the clone, and survives worktree removal and reboots, so a resume can reopen
+it.
+
+Persist the `autonomy-boundary-receipt.v1` projection of that record as the one
+`autonomy_boundary` object in `autopilot-state.json`, with a matching Phase 6.5
+result in the workflow file that cites only receipt values. Both shapes are in
 [autonomy-boundary.schema.json](../../../skills/speckit-autopilot/contracts/autonomy-boundary.schema.json), and
-the reference state shows the complete field set. Each planning fingerprint
+the reference state shows both. The receipt copies `status`,
+`planning_fingerprints`, and the `execution_environment`, `sandbox_mode`,
+`approval_reviewer`, and `sha256` of `execution_boundary`. For each action it
+copies `action_id`, `category`, `execution_boundary_sha256`, `scope_sha256`,
+`disposition`, and the authorization `status` and `scope_sha256`. It adds
+`private_record_sha256`, the canonical JSON digest (defined below) of the
+complete private record. It never carries `writable_roots`, `summary`,
+`command_or_tool`, `target`, `effect`, `evidence`, or `revocation_evidence`;
+the schema rejects a receipt that does. A complete v1 record already in state
+still validates, but new runs write the receipt. Each planning fingerprint
 records the normalized repository-relative path, byte length, and lowercase
 `sha256:` digest for `plan.md` or `tasks.md`.
 
@@ -1076,6 +1148,29 @@ containing only `category`, `command_or_tool`, `target`, `effect`, and
 extra whitespace, preserves Unicode, and rejects non-finite numbers. Prefix the
 lowercase hexadecimal SHA-256 with `sha256:`. The authorization
 `scope_sha256` must equal its action's scope digest.
+
+The full guard replays the receipt without the private roots. It recomputes
+the execution-boundary digest from the live `--current-*` values and compares
+it with the receipt's `execution_boundary.sha256`, then checks each action's
+`execution_boundary_sha256`, its authorization `scope_sha256`, and the
+dispositions. It also opens the private record at the location above, taking
+`<run-id>` from the state's `execution_control.run_id` mirror, and fails closed
+when that mirror is absent, the record is missing, unreadable, or not valid
+JSON, or its canonical digest differs from `private_record_sha256`. Keep that
+mirror current, since the guard cannot locate the record without it. Recompute
+an action's `scope_sha256` from the verified private record. Never drop
+`--require-autonomy-boundary` or a `--current-*` value to get a passing check;
+the receipt passes the full guard.
+
+An in-flight state may hold the earlier `autonomy_boundary_private_receipt`
+object (`status`, `sha256`, `public_details`, `validation`, `contract_gap`)
+instead of a receipt. It has no execution-boundary digest to replay, so
+`--require-autonomy-boundary` rejects it with a migration error. To migrate,
+open the private record it names and confirm its bytes still hash to the
+recorded `sha256`. Move the record to the run-keyed location above, replace the
+legacy object with the receipt projected from it, and rerun the full guard. If
+the private record is missing, changed, or stale against the current boundary,
+rerun this preflight instead.
 
 Only `authorization.status=explicit_user` can make an inventoried boundary
 action `ready`. Exact explicit user authorization persists across turns,
@@ -1123,7 +1218,12 @@ update the preflight, and resolve it there.
      'runner helper confidence-gate' \
        <workflow-file> --threshold <T> --mode <M>
 
-4. Parse exit code + JSON:
+4. Read runner `status`, `data.exit_code`, and
+   `data.stdout_json.recommended_action`. PASS, advisory FAIL, and
+   NO_DATA are valid `ok` responses despite raw exit codes 2 or 1;
+   strict FAIL is `expected_failure`. `input_error` means a malformed
+   request, and a missing or unreadable workflow is a file prerequisite
+   failure. Route the domain verdict by its raw exit code and action:
    - exit 0 (PASS): update_plan G6.5 → completed. Advance to Phase 7.
    - exit 1 (NO_DATA): log a warning, treat as plugin regression to
      report. update_plan G6.5 → completed with `no_data: true`.

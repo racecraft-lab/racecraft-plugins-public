@@ -87,6 +87,13 @@ Only after the draft PR identity bookkeeping commit and push succeed:
    existence, HTTP success, a tab URL, generic open success, and `queued` are
    never rendered evidence. Use the observer's bounded wait when needed; an
    inconclusive observation ends this attempt as pending, not an endless poll.
+   After the observer finishes, the trusted parent calls the broker's
+   `close_session` with the same capability and reads its `observation` before
+   the broker deletes session state. Compare the observer's closed verdict and
+   artifact hash with that read-back. The broker rechecks the artifact bytes at
+   close; a missing submission, disagreement, changed artifact, or failed
+   close leaves the preview pending. Never create `observed_at` in the parent
+   or accept a timestamp merely because it has the right format.
 4. After each page, persist only the closed disposition in the workflow file.
    `verified` requires `blocker: null` and this brokered observation object:
 
@@ -95,7 +102,8 @@ Only after the draft PR identity bookkeeping commit and push succeed:
    ```
 
    Never store page title, body text, route, reference, or other rendered text
-   in the record. Wrong,
+   in the record. Existing records remain readable, but their historical
+   timestamps do not gain broker provenance from this change. Wrong,
    blank, error, or title-only pages stay `pending`. Use `unavailable` when no
    usable preview/observer exists and `denied` for a policy denial. Both remain
    unverified. Other unverified states also require a nonempty blocker; an open

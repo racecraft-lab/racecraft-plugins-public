@@ -3,7 +3,7 @@
   "runner_contract_id": "speckit-pro-runner",
   "selected_runtime_name": "python-stdlib-runner",
   "contract_version": "1.0",
-  "plugin_version": "2.36.1",
+  "plugin_version": "2.37.0",
   "runner_version": "0.1.0",
   "python_minimum_version": "3.11",
   "specify_required": true,
@@ -63,7 +63,7 @@
         "value": "speckit_pro_runner/artifact_review.py",
         "display": "speckit_pro_runner/artifact_review.py"
       },
-      "sha256": "0da10ad39fd07e7d1084dd7c3308123be8280e527d438977260595fae899b1ca"
+      "sha256": "aac24e601b64258d0dcb3f7088dbea3a7d4e50f9987ffcc10ed42f60e316e9d6"
     },
     {
       "path": {
@@ -71,7 +71,7 @@
         "value": "speckit_pro_runner/author_broker.py",
         "display": "speckit_pro_runner/author_broker.py"
       },
-      "sha256": "16bbe6a8ed15ee2dff57ebc4c2c59374916a527082c4c34b949ecaacfc2835ae"
+      "sha256": "444c45f2d37891d1a888262f61ac367cf2012ee33cda2913000ddfe350b79073"
     },
     {
       "path": {
@@ -87,7 +87,7 @@
         "value": "speckit_pro_runner/execution_control.py",
         "display": "speckit_pro_runner/execution_control.py"
       },
-      "sha256": "94faa60981b23f3e2fc6eb3454d089562be3f31ffdb4a47e24466787987c03ba"
+      "sha256": "b422d2eca93d2718ca9a4911cc3041b1600a39aeb19603704d31b9cf0d89b084"
     },
     {
       "path": {
@@ -287,7 +287,7 @@
         "value": "speckit_pro_runner/helpers/mutation.py",
         "display": "speckit_pro_runner/helpers/mutation.py"
       },
-      "sha256": "bf87c4e9f70dab3ae4c4f8f86afd928d825b61625eb7f00581ba5753815861c8"
+      "sha256": "555a29cd02e33bdbc00ac8040e5442eee96c563a8fa563e4b17997cfd1830e73"
     },
     {
       "path": {
@@ -295,7 +295,7 @@
         "value": "speckit_pro_runner/helpers/pr_emission.py",
         "display": "speckit_pro_runner/helpers/pr_emission.py"
       },
-      "sha256": "0a5fc8114223a52995109e3cd9ee888015e2975d42284bd0dfe6c1e6dc4432f6"
+      "sha256": "14f3b67788725898eb703c02c228b54c5a209b00233893e1fb20526f25ae3444"
     },
     {
       "path": {
@@ -311,7 +311,7 @@
         "value": "speckit_pro_runner/helpers/read_only.py",
         "display": "speckit_pro_runner/helpers/read_only.py"
       },
-      "sha256": "55279016582ae99079a6694cb6780a0d80bc43daba34cfbf3997664a5c0b4b1a"
+      "sha256": "b573140fc1ca89ead0f4a006af9ce003019cce441081b2dca8508409412a4cf9"
     },
     {
       "path": {
@@ -343,7 +343,7 @@
         "value": "speckit_pro_runner/preview_launcher.py",
         "display": "speckit_pro_runner/preview_launcher.py"
       },
-      "sha256": "e617de91256b609e31a76400b594ecd7a13c1d6b2aba22d3d3b53c0a35fb8d8d"
+      "sha256": "8bc57fd90cc1c9be1755146178ec35c5ac23d3a4d25959a05099333d893ba98f"
     },
     {
       "path": {
@@ -407,7 +407,7 @@
         "value": "speckit_pro_runner/task_execution.py",
         "display": "speckit_pro_runner/task_execution.py"
       },
-      "sha256": "aa003317963d5735b780ca5287f2d771aab01ccc6e2bdc525e6d71c6090f741a"
+      "sha256": "ed2fac632aaac48c9b5265047724cc5bece5366220ec972ee79f53c3395990b1"
     },
     {
       "path": {
@@ -447,7 +447,7 @@
         "value": "speckit_pro_runner/verification_docker_qualification.py",
         "display": "speckit_pro_runner/verification_docker_qualification.py"
       },
-      "sha256": "d9c182705b80a04e0c5488f591b0ab32ca941dd81a76c4e16d4bd89d379dd388"
+      "sha256": "9198977e7bcf81a622ad8b5256c394ad78db8d8b68ee2e6c93ba0552bec7cffd"
     },
     {
       "path": {
@@ -479,7 +479,7 @@
         "value": "speckit_pro_runner/verification_git.py",
         "display": "speckit_pro_runner/verification_git.py"
       },
-      "sha256": "e4635098731606632c578087f5be23cc7c22b26c36f84bcdeefb133bc870b558"
+      "sha256": "af1895e44a18748d89382cd919235998c651775abf5eb248fa185c03cfecbafa"
     },
     {
       "path": {
@@ -487,7 +487,7 @@
         "value": "speckit_pro_runner/verification_records.py",
         "display": "speckit_pro_runner/verification_records.py"
       },
-      "sha256": "00c2af5a0f9ecaf315b4bdc0663f91d84a7ed9af71c491b723840627a3cca1ef"
+      "sha256": "4022cfea8301b0fa3f2526379c0cf976da23ebcd78c2aff32eafc582fc33d642"
     }
   ]
 }

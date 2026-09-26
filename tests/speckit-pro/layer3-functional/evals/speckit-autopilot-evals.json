@@ -164,20 +164,20 @@
     },
     {
       "id": 14,
-      "prompt": "The analyze-executor flagged: '[domain] Finding 3 [HIGH]: cookie SameSite policy is not specified in plan.md.' Which consensus analyst(s) does the autopilot spawn for this finding? Why?",
-      "expected_output": "Spawns only domain-researcher because [domain] indicates resolution depends on external standards (RFC 6265bis cookie spec, browser behavior). codebase-analyst and spec-context-analyst are NOT spawned in Round 1.",
+      "prompt": "The analyze-executor flagged: '[domain] Finding 3 [HIGH]: cookie SameSite policy is not specified in plan.md.' Which consensus analyst(s) does the autopilot spawn for this finding, and why? If two analysts agree and one dissents, does autopilot apply the majority answer or stop for human review?",
+      "expected_output": "Spawns all three analysts (codebase-analyst, spec-context-analyst, domain-researcher) because cookie is a security keyword: parse-consensus-categories reads the whole item line and widens the narrow [domain] tag, returning security_route keyword. consensus-synthesizer still runs after all three return. Because the route is keyword, not an explicit [security] tag, the bar depends on the analysts: if any returns security_relevant: true, only 3/3 applies and a 2/3 majority goes to human review; if every analyst returns security_relevant: false, the ordinary 2/3 majority applies.",
       "expectations": [
-        "States that ONLY domain-researcher is spawned in Round 1",
-        "Justifies the single-analyst dispatch by referencing the [domain] tag's meaning (external standards / RFCs / library docs)",
-        "Does NOT spawn codebase-analyst or spec-context-analyst in Round 1",
-        "Mentions that consensus-synthesizer still runs to apply the artifact edit",
-        "Mentions Round 2 fallback if domain-researcher returns low confidence or escape-hatch keywords"
+        "States that all three analysts are spawned because cookie is a security keyword",
+        "Explains that the security-keyword override widens a narrow category tag",
+        "Does not single-route the item to domain-researcher",
+        "Mentions that consensus-synthesizer still runs after all three analyst results",
+        "States that the [domain] tag makes this a keyword-routed item, not a [security]-tagged one, so a 2/3 majority goes to human review only when at least one analyst returns `security_relevant: true`; when every analyst returns `security_relevant: false`, the ordinary 2/3 majority applies. An answer that demands 3/3 for every security-keyword item, or applies 2/3 without regard to `security_relevant`, contradicts this."
       ]
     },
     {
       "id": 15,
       "prompt": "The clarify-executor flagged: '[security] Q5: How should we hash and rotate API keys in the new admin endpoints?' How does the autopilot route this consensus? Can it ever be single-analyst routed?",
-      "expected_output": "[security] tag forces all 3 analysts (codebase-analyst, spec-context-analyst, domain-researcher) regardless of any other tag. Defense-in-depth: security items are NEVER single-routed. The orchestrator skips Round 1 single-routing and dispatches all 3 in parallel directly. The synthesizer-emitted [HUMAN REVIEW NEEDED] flag also fires automatically for security items per the override rule.",
+      "expected_output": "[security] tag forces all 3 analysts (codebase-analyst, spec-context-analyst, domain-researcher) regardless of any other tag. Defense-in-depth: security items are NEVER single-routed. The orchestrator skips Round 1 single-routing and dispatches all 3 in parallel directly. The security override then requires 3/3 agreement: a unanimous 3/3 answer applies and the run continues, while a 2/3 majority or all-disagree makes the synthesizer flag [HUMAN REVIEW NEEDED].",
       "expectations": [
         "States that ALL 3 analysts (codebase-analyst, spec-context-analyst, domain-researcher) are spawned",
         "Explicitly states that [security] is NEVER single-routed — defense-in-depth",

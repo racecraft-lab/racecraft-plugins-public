@@ -102,6 +102,70 @@ def registry_report(helpers: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def confidence_verdict_status(payload: Any, exit_code: int) -> str | None:
+    """Classify only complete confidence verdicts, never error-shaped output."""
+    required = {"pass", "composite", "criteria", "threshold", "mode", "recommended_action", "reason", "composite_source", "criteria_mean", "deductions", "deductions_applied", "input"}
+    if not isinstance(payload, dict) or not required.issubset(payload):
+        return None
+    if not isinstance(payload["criteria"], dict) or not isinstance(payload["deductions"], dict):
+        return None
+    if not {"critical", "high", "amount"}.issubset(payload["deductions"]):
+        return None
+    if any(type(payload["deductions"][key]) is not int for key in ("critical", "high")):
+        return None
+    if not isinstance(payload["deductions"]["amount"], (int, float)) or isinstance(payload["deductions"]["amount"], bool) or not math.isfinite(payload["deductions"]["amount"]):
+        return None
+    if not isinstance(payload["threshold"], (int, float)) or isinstance(payload["threshold"], bool) or not math.isfinite(payload["threshold"]) or not 0 <= payload["threshold"] <= 1:
+        return None
+    if not isinstance(payload["reason"], str) or not isinstance(payload["input"], str):
+        return None
+    if not isinstance(payload["deductions_applied"], bool):
+        return None
+    if not isinstance(payload["mode"], str) or not isinstance(payload["recommended_action"], str):
+        return None
+    if payload["pass"] is None:
+        if payload["composite"] is not None or payload["criteria"] or payload["composite_source"] is not None or payload["criteria_mean"] is not None:
+            return None
+        if payload["deductions"] != {"critical": 0, "high": 0, "amount": 0.0} or payload["deductions_applied"]:
+            return None
+    elif type(payload["pass"]) is bool:
+        if not isinstance(payload["composite"], (int, float)) or isinstance(payload["composite"], bool) or not math.isfinite(payload["composite"]) or not 0 <= payload["composite"] <= 1:
+            return None
+        if set(payload["criteria"]) != {"task_understanding", "approach_clarity", "requirements_alignment", "risk_assessment", "completeness"}:
+            return None
+        if any(value is not None and (not isinstance(value, (int, float)) or isinstance(value, bool) or not math.isfinite(value)) for value in payload["criteria"].values()):
+            return None
+        if not isinstance(payload["composite_source"], str) or payload["composite_source"] not in {"stated", "computed"}:
+            return None
+        if payload["criteria_mean"] is not None and (not isinstance(payload["criteria_mean"], (int, float)) or isinstance(payload["criteria_mean"], bool)):
+            return None
+    else:
+        return None
+    verdict = (payload["pass"], payload["mode"], payload["recommended_action"], exit_code)
+    if verdict in {(True, "advisory", "proceed", 0), (True, "strict", "proceed", 0), (False, "advisory", "continue_with_warning", 2), (None, "advisory", "soft_skip", 1), (None, "strict", "soft_skip", 1)}:
+        return "ok"
+    if verdict == (False, "strict", "stop", 2):
+        return "expected_failure"
+    return None
+
+
+def confidence_runner_response(request_id: str, data: dict[str, Any], exit_code: int, stderr: dict[str, Any]) -> dict[str, Any] | None:
+    status = confidence_verdict_status(data.get("stdout_json"), exit_code)
+    if status == "ok":
+        return response("ok", request_id=request_id, data=data)
+    if status == "expected_failure":
+        return response(status, request_id=request_id, data=data, diagnostics=[diagnostic("validation_failure", "confidence is below threshold in strict mode")])
+    if exit_code != 1:
+        return None
+    try:
+        file_error = json.loads(stderr["text"])
+    except (TypeError, ValueError):
+        return None
+    if isinstance(file_error, dict) and isinstance(file_error.get("error"), str) and file_error["error"].startswith(("workflow file not found:", "workflow file unreadable:")):
+        return response("missing_prerequisite", request_id=request_id, data=data, diagnostics=[diagnostic("missing_prerequisite", file_error["error"])])
+    return None
+
+
 def run_registered_helper(entry: Any, request: Any) -> dict[str, Any]:
     repo_root_result = resolve_repo_root(request.inputs)
     if isinstance(repo_root_result, dict):
@@ -138,6 +202,10 @@ def run_registered_helper(entry: Any, request: Any) -> dict[str, Any]:
     exit_code = int(result["exit_code"])
     status = EXIT_STATUS.get(exit_code, "subprocess_failure")
     data = helper_result_data(entry, inputs, argv_result, repo_root, exit_code, stdout, stderr, duration_ms)
+    if entry.helper_id == "confidence-gate":
+        classified = confidence_runner_response(request.request_id, data, exit_code, stderr)
+        if classified is not None:
+            return classified
     if status == "ok":
         return response("ok", request_id=request.request_id, data=data)
     return response(
@@ -331,7 +399,7 @@ def canonicalize_inputs(helper_id: str, inputs: dict[str, Any], repo_root: Path)
         "detect-commands": {"repo_root"},
         "detect-presets": {"repo_root"},
         "count-markers": {"feature_dir"},
-        "validate-gate": {"feature_dir"},
+        "validate-gate": {"feature_dir", "workflow_file"},
         "reviewability-gate": {"target"},
         "estimate-reviewable-loc": {"plan_file"},
         "resolve-confidence-mode": {"config_path"},
@@ -907,6 +975,18 @@ def resolve_workflow_binding(inputs: dict[str, Any], repo_root: Path) -> dict[st
             for _, root in worktrees:
                 if is_lexically_relative_to(root, task_root):
                     lexical_worktrees.append((lexical_task_root / root.relative_to(task_root), root))
+        # Resolve symlinks above a worktree root, such as a symlinked temp directory, but keep
+        # the root's own name literal, so a symlink that aliases the root itself stays refused.
+        spelled = Path(os.path.abspath(str(supplied)))
+        for ancestor in (spelled, *spelled.parents):
+            if ancestor.parent == ancestor:
+                break
+            try:
+                spelled_root = ancestor.parent.resolve(strict=False) / ancestor.name
+            except (OSError, RuntimeError, ValueError):
+                continue
+            if spelled_root in roots:
+                lexical_worktrees.append((ancestor, spelled_root))
         lexical_owner = registered_lexical_owner(supplied, lexical_worktrees)
         canonical_owner = max(canonical_owners, key=lambda root: len(root.parts), default=None)
         if lexical_owner is None:
@@ -2112,10 +2192,46 @@ def validate_gate(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
             ),
             exit_code=1,
         )
+    # G6: bracketed markers in the planning files plus the open CRITICAL/HIGH
+    # rows of the workflow's Analysis Results table, where Analyze records its
+    # findings. Zero markers alone never asserts zero open findings, so missing
+    # table evidence fails closed.
     count = count_pattern([spec, plan, tasks], r"\[CRITICAL\]|\[HIGH\]", repo_root)
+    workflow_raw = str(inputs.get("workflow_file") or "")
+    text = trusted_text(resolve_input_path(workflow_raw, repo_root), repo_root) if workflow_raw else None
+    if text is None:
+        reason = f"workflow file not found or unreadable: {workflow_raw}" if workflow_raw else "workflow_file is required to read the Analysis Results table"
+        return make_result(json_text({"gate": gate, "pass": False, "reason": reason, "markers": count, "details": []}), exit_code=1)
+    findings = open_analysis_findings(text)
+    if findings is None:
+        reason = f"workflow file has no Analysis Results table: {workflow_raw}"
+        return make_result(json_text({"gate": gate, "pass": False, "reason": reason, "markers": count, "details": []}), exit_code=1)
+    count += findings["critical"] + findings["high"]
     if count == 0:
-        return make_result(json_text({"gate": gate, "pass": True, "reason": "0 CRITICAL/HIGH findings", "markers": 0, "details": []}))
-    return make_result(json_text({"gate": gate, "pass": False, "reason": f"{count} CRITICAL/HIGH findings remain", "markers": count, "details": []}), exit_code=1)
+        return make_result(json_text({"gate": gate, "pass": True, "reason": "0 CRITICAL/HIGH findings", "markers": 0, "analysis_findings": findings, "details": []}))
+    return make_result(json_text({"gate": gate, "pass": False, "reason": f"{count} CRITICAL/HIGH findings remain", "markers": count, "analysis_findings": findings, "details": []}), exit_code=1)
+
+
+REVIEWABILITY_THRESHOLDS = {
+    "warn": {"reviewable_loc": 400, "production_files": 6, "total_files": 15, "primary_surfaces": 1},
+    "block": {"reviewable_loc": 800, "production_files": 8, "total_files": 25},
+}
+REVIEWABILITY_LABELS = {
+    "reviewable_loc": "reviewable LOC",
+    "production_files": "production files",
+    "total_files": "total files",
+    "primary_surfaces": "primary surfaces",
+}
+
+
+def reviewability_budget_findings(loc: int, prod: int, total: int, surface_count: int) -> tuple[list[str], list[str]]:
+    values = {"reviewable_loc": loc, "production_files": prod, "total_files": total, "primary_surfaces": surface_count}
+    findings: dict[str, list[str]] = {"warn": [], "block": []}
+    for level, limits in REVIEWABILITY_THRESHOLDS.items():
+        for key, limit in limits.items():
+            if values[key] > limit:
+                findings[level].append(f"{REVIEWABILITY_LABELS[key]} {values[key]} exceeds {level} threshold {limit}")
+    return findings["warn"], findings["block"]
 
 
 def reviewability_gate(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
@@ -2126,6 +2242,9 @@ def reviewability_gate(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any
     if not trusted_file_exists(target, repo_root):
         return make_result(json_text({"error": f"file not found: {inputs.get('target') or ''}"}), exit_code=2)
     text = trusted_text(target, repo_root) or ""
+    spec_id = str(inputs.get("spec_id") or "")
+    if spec_id:
+        return reviewability_setup_spec_gate(text, spec_id, str(inputs.get("target") or ""))
     loc = last_number(text, r"(?:projected reviewable loc|reviewable loc)[^0-9]{0,40}([0-9]+)")
     prod = last_number(text, r"(?:projected production files|production files)[^0-9]{0,40}([0-9]+)")
     total = last_number(text, r"(?:projected total files|total files)[^0-9]{0,40}([0-9]+)")
@@ -2136,22 +2255,7 @@ def reviewability_gate(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any
     if not surface_values:
         surface_values = ["docs/process"]
     surface_values = sorted(set(surface_values))
-    warnings = []
-    blockers = []
-    if loc > 400:
-        warnings.append(f"reviewable LOC {loc} exceeds warn threshold 400")
-    if prod > 6:
-        warnings.append(f"production files {prod} exceeds warn threshold 6")
-    if total > 15:
-        warnings.append(f"total files {total} exceeds warn threshold 15")
-    if len(surface_values) > 1:
-        warnings.append(f"primary surfaces {len(surface_values)} exceeds warn threshold 1")
-    if loc > 800:
-        blockers.append(f"reviewable LOC {loc} exceeds block threshold 800")
-    if prod > 8:
-        blockers.append(f"production files {prod} exceeds block threshold 8")
-    if total > 25:
-        blockers.append(f"total files {total} exceeds block threshold 25")
+    warnings, blockers = reviewability_budget_findings(loc, prod, total, len(surface_values))
     status = "block" if blockers else "warn" if warnings else "pass"
     obj = {
         "mode": "setup",
@@ -2163,15 +2267,72 @@ def reviewability_gate(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any
         "primary_surface_count": len(surface_values),
         "primary_surfaces": surface_values,
         "greenfield": False,
-        "thresholds": {
-            "warn": {"reviewable_loc": 400, "production_files": 6, "total_files": 15, "primary_surfaces": 1},
-            "block": {"reviewable_loc": 800, "production_files": 8, "total_files": 25, "primary_surfaces": 1},
-        },
+        "thresholds": REVIEWABILITY_THRESHOLDS,
         "exception_honored": False,
         "exception_class": None,
         "exceptions": {"accepted": [], "rejected": []},
         "warnings": warnings,
         "blockers": blockers,
+    }
+    return make_result(json_text(obj), exit_code=1 if status == "block" else 0)
+
+
+REVIEWABILITY_BUDGET_FIELDS = (
+    ("reviewable_loc", "Projected reviewable LOC", r"(?:projected reviewable loc|reviewable loc)[^0-9]{0,40}([0-9]+)"),
+    ("production_files", "Production files", r"(?:projected production files|production files)[^0-9]{0,40}([0-9]+)"),
+    ("total_files", "Total files", r"(?:projected total files|total files)[^0-9]{0,40}([0-9]+)"),
+)
+REVIEWABILITY_EXCEPTION_PRAGMA = re.compile(r"^Reviewability-Exception: (refactor|infra|upgrade)$", re.M)
+
+
+def reviewability_setup_spec_gate(text: str, spec_id: str, target_display: str) -> dict[str, Any]:
+    """Judge one roadmap entry: its own budget numbers, surfaces, and exception pragma."""
+    heading = re.search(rf"^###\s+{re.escape(spec_id)}:.*$", text, flags=re.M)
+    if heading is None:
+        return make_result(json_text({"error": f"spec_id {spec_id} section not found in {target_display}"}), exit_code=2)
+    following = re.search(r"^#{1,3}\s", text[heading.end():], flags=re.M)
+    section = text[heading.end():heading.end() + following.start()] if following else text[heading.end():]
+    numbers: dict[str, int | None] = {}
+    missing = []
+    for key, label, pattern in REVIEWABILITY_BUDGET_FIELDS:
+        match = re.search(pattern, section, flags=re.I)
+        numbers[key] = int(match.group(1)) if match else None
+        if match is None:
+            missing.append(f"{spec_id}: {label} is missing from the roadmap entry")
+    surface_values = []
+    for surface in re.findall(r"(?:primary surface|primary surfaces)[^:\n]*:\s*([A-Za-z/ ,_-]+)", section, flags=re.I):
+        surface_values.extend(item.strip() for item in surface.split(",") if item.strip())
+    surface_values = sorted(set(surface_values or ["docs/process"]))
+    accepted = REVIEWABILITY_EXCEPTION_PRAGMA.findall(section)
+    rejected = [
+        line.strip() for line in section.splitlines()
+        if line.lstrip().startswith("Reviewability-Exception:") and not REVIEWABILITY_EXCEPTION_PRAGMA.fullmatch(line)
+    ]
+    loc, prod, total = (numbers[key] or 0 for key, _, _ in REVIEWABILITY_BUDGET_FIELDS)
+    warnings, blockers = reviewability_budget_findings(loc, prod, total, len(surface_values))
+    # A missing budget is never exceptable; only size blockers are.
+    exception_class = accepted[0] if accepted and blockers and not missing else None
+    if missing:
+        status = "block"
+    elif exception_class:
+        status = "exception"
+    else:
+        status = "block" if blockers else "warn" if warnings else "pass"
+    obj = {
+        "mode": "setup",
+        "spec_id": spec_id,
+        "status": status,
+        "pass": status in {"pass", "warn", "exception"},
+        **numbers,
+        "primary_surface_count": len(surface_values),
+        "primary_surfaces": surface_values,
+        "greenfield": False,
+        "thresholds": REVIEWABILITY_THRESHOLDS,
+        "exception_honored": exception_class is not None,
+        "exception_class": exception_class,
+        "exceptions": {"accepted": accepted, "rejected": rejected},
+        "warnings": warnings,
+        "blockers": missing + blockers,
     }
     return make_result(json_text(obj), exit_code=1 if status == "block" else 0)
 
@@ -2355,6 +2516,7 @@ AUTOPILOT_PLANNING_PREDICATE_PHASES = (
 )
 AUTOPILOT_GATE_PHASE = "Confidence Gate"
 AUTOPILOT_OVERVIEW_HEADING = "## Workflow Overview"
+ANALYSIS_OPEN_FINDINGS_STATUS = "open CRITICAL/HIGH findings"
 AUTOPILOT_BASIC_INFO_HEADING = "### Basic Information"
 HTML_COMMENT_RE = re.compile(r"(?s)<!--.*?-->")
 
@@ -2416,6 +2578,13 @@ def workflow_stage_signals(text: str) -> dict[str, Any]:
     formal = checkpoint_signal(text)
     if first_open is None and not formal["complete"]:
         first_open = ("Formal Check", formal["verdict"])
+    if first_open is None:
+        # A terminal Analyze label is not evidence that its findings are closed.
+        # A missing table does not block: legacy workflows predate it.
+        findings = open_analysis_findings(text)
+        open_count = findings["critical"] + findings["high"] if findings else 0
+        if open_count:
+            first_open = ("Analyze", f"{open_count} {ANALYSIS_OPEN_FINDINGS_STATUS}")
     return {
         "parsed": True,
         "recorded_stage": workflow_recorded_stage(lines),
@@ -2451,9 +2620,10 @@ def workflow_draft_pr_row(lines: list[str]) -> dict[str, Any] | None:
         if len(cells) >= 2 and cells[0].strip("*` ").casefold() == "draft pr":
             # The link target admits neither whitespace nor parentheses, so a gap note
             # carrying its own parentheses or a second link cannot be swallowed into
-            # the URL and corrupt the identity. The em dash is the separator, not part
-            # of the note; no other separator form is specified.
-            match = re.fullmatch(r"\[#(\d+)\]\(([^()\s]+)\)(?: — (.+))?", cells[1])
+            # the URL and corrupt the identity. Any text after the link is the gap
+            # note; a leading em dash, hyphen, or colon separator is dropped, so a
+            # style guide that forbids em dashes cannot make the row read as absent.
+            match = re.fullmatch(r"\[#(\d+)\]\(([^()\s]+)\)(?:\s*(?:[—:-]\s*)?(.+))?", cells[1])
             if match is None:
                 return None
             return {"number": int(match.group(1)), "url": match.group(2), "gap_note": match.group(3)}
@@ -2778,6 +2948,11 @@ def auto_detect_basis(first_open: tuple[str, str | None] | None) -> str:
     if first_open is None:
         return "auto-detect: every planning phase and the confidence gate are terminal"
     phase, status = first_open
+    if status and status.endswith(ANALYSIS_OPEN_FINDINGS_STATUS):
+        return (
+            f"auto-detect: every planning phase is terminal, but {phase}'s"
+            f" Analysis Results table still has {status}"
+        )
     # A row absent from the table has no status to name; printing a bare `None`
     # would read as a status the workflow file actually records.
     reason = f"is {status}" if status else "has no row in the status table"
@@ -4474,12 +4649,13 @@ def analysis_results_rows(text: str) -> tuple[list[str], list[list[str]]]:
     findings table also carries `Resolution`. A Phase 6 log can hold one table
     per Analyze pass, and only the last one describes the current state, so each
     header seen resets the rows. Anything that is not a table row ends the run,
-    which is where a Markdown table ends.
+    which is where a Markdown table ends. HTML comment spans are blanked first,
+    as `workflow_stage_signals` does, so a commented-out example is not evidence.
     """
     header: list[str] = []
     rows: list[list[str]] = []
     collecting = False
-    for raw in text.splitlines():
+    for raw in HTML_COMMENT_RE.sub("", text).splitlines():
         stripped = raw.strip()
         if not stripped.startswith("|"):
             collecting = False
@@ -4495,7 +4671,7 @@ def analysis_results_rows(text: str) -> tuple[list[str], list[list[str]]]:
     return header, rows
 
 
-def open_analysis_findings(text: str) -> dict[str, int]:
+def open_analysis_findings(text: str) -> dict[str, int] | None:
     """Unresolved CRITICAL and HIGH rows of the workflow's Analysis Results table.
 
     A `[CRITICAL]` or `[HIGH]` marker in the log body cannot answer this. The
@@ -4505,12 +4681,13 @@ def open_analysis_findings(text: str) -> dict[str, int]:
     table carries the discriminator the log otherwise lacks: remediation fills
     the row's Resolution cell, as the shipped workflow template records it. A row
     whose cell count disagrees with its header is skipped rather than guessed at,
-    which fails toward no deduction.
+    which fails toward no deduction. Returns None when the text has no Analysis
+    Results table, so a caller can tell missing evidence from zero open rows.
     """
     header, rows = analysis_results_rows(text)
-    counts = {"critical": 0, "high": 0}
     if not header:
-        return counts
+        return None
+    counts = {"critical": 0, "high": 0}
     severity_index = header.index(ANALYSIS_SEVERITY_COLUMN)
     resolution_index = header.index(ANALYSIS_RESOLUTION_COLUMN)
     for cells in rows:
@@ -4532,8 +4709,10 @@ def confidence_gate(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
     if not workflow_raw:
         return make_result('{"error":"Usage: confidence-gate <workflow-file> [--threshold N.NN] [--mode advisory|strict]"}\n', exit_code=1)
     if not trusted_file_exists(workflow, repo_root):
-        return make_result("", f'{{"error":"workflow file not found: {workflow_raw}"}}\n', 1)
-    text = trusted_text(workflow, repo_root) or ""
+        return make_result("", json_text({"error": f"workflow file not found: {workflow_raw}"}), 1)
+    text = trusted_text(workflow, repo_root)
+    if text is None:
+        return make_result("", json_text({"error": f"workflow file unreadable: {workflow_raw}"}), 1)
     matches = re.findall(r"^📊 Confidence: ([01]\.[0-9]{2})$", text, flags=re.M)
     try:
         threshold = float(threshold_text)
@@ -4573,7 +4752,7 @@ def confidence_gate(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
     else:
         composite_source = "computed"
         criteria_mean = round(sum(scores) / len(scores), 2)
-        open_findings = open_analysis_findings(text)
+        open_findings = open_analysis_findings(text) or {"critical": 0, "high": 0}
         critical = open_findings["critical"]
         high = open_findings["high"]
         deductions = {"critical": critical, "high": high, "amount": round(0.30 * critical + 0.10 * high, 2)}
@@ -4677,14 +4856,23 @@ def parse_consensus_categories(inputs: dict[str, Any], repo_root: Path) -> dict[
     `[security]` by the keywords the item text carries, so the text is scanned
     too: an executor that tags a keyword-bearing item narrowly still gets all
     three, which is the defense in depth the reference promises.
+
+    `security_route` says which security rule widened the item: `tag` for an
+    explicit `[security]` tag, `keyword` for a keyword in the text alone, and
+    None otherwise. The synthesizer keeps a tag at unanimous agreement and lets
+    a keyword-only route use the item's own rule when no analyst finds security
+    content in it.
     """
     line = str(inputs.get("line") or "")
     tags = consensus_category_tags(line)
     unknown = next((tag for tag in tags if tag not in CONSENSUS_ROUTED_ANALYSTS), None)
     keyword = CONSENSUS_SECURITY_RE.search(line)
+    security_route: str | None = None
     if "security" in tags:
+        security_route = "tag"
         reason = "security tag: all three analysts (defense in depth)"
     elif keyword is not None:
+        security_route = "keyword"
         reason = f"security keyword {keyword.group(0).casefold()} in item text: all three analysts (defense in depth)"
     elif not tags:
         reason = "no category prefix: all three analysts (safe default)"
@@ -4695,8 +4883,21 @@ def parse_consensus_categories(inputs: dict[str, Any], repo_root: Path) -> dict[
     else:
         routed = {CONSENSUS_ROUTED_ANALYSTS[tag] for tag in tags}
         analysts = [name for name in CONSENSUS_ALL_ANALYSTS if name in routed]
-        return make_result(json_text({"tags": tags, "analysts": analysts, "reason": "category-routed dispatch"}))
-    return make_result(json_text({"tags": tags, "analysts": list(CONSENSUS_ALL_ANALYSTS), "reason": reason}))
+        return make_result(
+            json_text(
+                {"tags": tags, "analysts": analysts, "reason": "category-routed dispatch", "security_route": None}
+            )
+        )
+    return make_result(
+        json_text(
+            {
+                "tags": tags,
+                "analysts": list(CONSENSUS_ALL_ANALYSTS),
+                "reason": reason,
+                "security_route": security_route,
+            }
+        )
+    )
 
 
 CRL_HEADING = "Consensus Resolution Log"

@@ -39,6 +39,11 @@ The parent receives the summary as a tool result, which keeps
 the parent's agent loop alive. The parent then validates the
 gate and spawns the next subagent.
 
+Executors resolve project skills and paths against the bound
+`<WORKFLOW_ROOT>`, never the checkout that launched the run; name
+that root in every executor prompt with a `Workflow root:` line, as
+the template below shows.
+
 ### Subagent Prompt Template
 
 Use `speckit-pro:phase-executor` for Specify, Plan, and Tasks; Clarify,
@@ -54,6 +59,7 @@ Agent(
   prompt: """
     Run the /speckit-<phase> command.
     Use: Skill("speckit-<phase>", args: "<workflow prompt>")
+    Workflow root: <WORKFLOW_ROOT>
 
     <branch prefix if ON_FEATURE_BRANCH>
 
@@ -305,7 +311,12 @@ For each clarify session in the workflow file:
           run_in_background: false,
           prompt: """
             Prepare a Clarify Question Set for: <session prompt>
+            Protocol: <plugin_root>/skills/speckit-autopilot/references/consensus-protocol.md
+            Reference dir: <plugin_root>/skills/speckit-autopilot/references/
           """)
+     The `Protocol:` and `Reference dir:` lines are built from the
+     `plugin_root` that `validate-agent-install` returned
+     (prerequisites.md Step 0.0b).
   3. Parent answers returned questions and edits spec/workflow/state
   4. Re-scan spec.md for `[NEEDS CLARIFICATION]` markers and record the
      remaining count in the session result
@@ -320,6 +331,7 @@ For each clarify session in the workflow file:
         Stage 3: apply each synthesizer's Artifact Edit SERIALLY
                  to spec.md (preserves write contention safety).
         Round 2 escape-hatch: also batched across all queued items.
+        [HUMAN REVIEW NEEDED]: consensus-protocol.md#human-review-needed
      c. TaskUpdate: "<session> Consensus" → completed
   7. After accepted consensus edits, re-scan spec.md and update the recorded
      remaining-marker count
@@ -335,7 +347,10 @@ edit artifacts. It returns questions and recommendations to the parent.
 **Layer 2 (consensus):** For items the executor flagged
 (low confidence, conflicting sources, security keywords),
 the main session spawns 3 consensus agents to get distinct
-perspectives and applies consensus rules.
+perspectives and applies consensus rules. An item that ends in
+`[HUMAN REVIEW NEEDED]` goes to the operator through `AskUserQuestion` when
+the session is interactive; an unattended run stops, as in every phase that
+runs consensus.
 
 **Why after each session:** Session 2 may depend on
 Session 1's resolved questions. Both layers complete
@@ -362,6 +377,12 @@ in [formal checkpoints](./formal-methods.md#plan-authoring-checkpoint). Keep Pla
 and G3 incomplete until the selected checks pass; refresh discovery after authoring.
 The phase executor itself still runs only its supplied command. Formal failure
 stops independently of generic skip-and-log or confidence settings.
+
+**Rescope reconciliation:** After a rescope changes plan.md's scope, slices, or
+delivery order, the parent reconciles every Plan artifact before G3:
+`research.md`, `quickstart.md`, `data-model.md`, `contracts/`, and every file
+under `checklists/`. Record what changed in each artifact in the workflow
+file's Plan Results.
 
 **Plan-phase reviewability budget:**
 After `plan.md` exists, run the standalone plan-phase estimator to project
@@ -444,7 +465,11 @@ For each checklist domain in the workflow file:
   1. TaskUpdate: domain task → in_progress
   2. Agent(subagent_type: "speckit-pro:checklist-executor",
           run_in_background: false,
-          prompt: "Run /speckit-checklist with: <domain prompt>")
+          prompt: "Run /speckit-checklist with: <domain prompt>\nProtocol: <plugin_root>/skills/speckit-autopilot/references/consensus-protocol.md\nReference dir: <plugin_root>/skills/speckit-autopilot/references/")
+     The `Protocol:` line is the active consensus protocol and
+     `Reference dir:` is the directory that holds it, both
+     built from the `plugin_root` that `validate-agent-install`
+     returned (prerequisites.md Step 0.0b).
      The checklist-executor runs the checklist, researches
      gaps, applies fixes, and re-runs to verify (Layer 1)
   3. Parse executor's "Unresolved for consensus" section
@@ -457,6 +482,7 @@ For each checklist domain in the workflow file:
         Stage 3: apply each synthesizer's Artifact Edit SERIALLY
                  to spec.md or plan.md.
         Round 2 escape-hatch: also batched across all queued gaps.
+        [HUMAN REVIEW NEEDED]: consensus-protocol.md#human-review-needed
      c. Re-run domain checklist to verify gaps closed
      d. TaskUpdate: "<domain> Consensus" → completed
   5. TaskUpdate: domain task → completed
@@ -544,11 +570,26 @@ no file of its own; **the SKILL records that decision** into the
 workflow file's `## Atomicity Route` section. It is advisory-only —
 no outcome blocks the run.
 
-```text
-# Single positional arg = the feature dir holding tasks.md/plan.md/spec.md.
-# Emits {route, releasable, signals[], hints[], warnings[]} (or {"error":…}).
-out=<command output>
+```json
+{
+  "schema_version": "1.0",
+  "request_id": "atomicity-route-after-g5",
+  "helper_id": "atomicity-route",
+  "operation": "atomicity-route",
+  "mode": "read_only",
+  "inputs": {
+    "feature_dir": "<feature-dir>",
+    "workflow_file": "<bound-workflow-file>"
+  }
+}
 ```
+
+Send this request through the runner envelope with both `inputs.feature_dir`
+and `inputs.workflow_file`. The workflow input must name
+the real bound workflow file; it excludes that file and its exact sibling
+`autopilot-state.json` from change classification. An omitted or nonexistent
+workflow path is an input error. The helper emits `{route, releasable,
+signals[], hints[], warnings[]}` or an error and writes no file.
 
 Then record the four surfaced fields (`route`, `releasable`,
 `signals`, `warnings`) into the workflow file's `## Atomicity Route`
@@ -575,6 +616,12 @@ marker_split placeholder, packet validation placeholder, and PR mappings
 placeholder in the workflow file. `tasks.md` remains the task source, not
 authoritative marker state.
 
+When ordered markers each modify an existing shared file, declare `MODIFIED`
+for that path in each marker and list those marker IDs in review order in the
+changed-file manifest. Each completed marker checkpoint must change that file;
+an undeclared marker checkpoint must leave it unchanged. New, deleted, renamed,
+and process files retain a single marker owner.
+
 On resume, validate the source fingerprint before reusing checkpoints or
 emission evidence. A changed fingerprint, malformed/stale marker state, missing
 marker membership, changed order, or changed fold target clears affected
@@ -600,7 +647,8 @@ Items it can't resolve are flagged in its
 1. TaskUpdate: "Analyze" → in_progress
 2. Agent(subagent_type: "speckit-pro:analyze-executor",
         run_in_background: false,
-        prompt: "Run /speckit-analyze with: <prompt>")
+        prompt: "Run /speckit-analyze with: <prompt>\nProtocol: <plugin_root>/skills/speckit-autopilot/references/consensus-protocol.md\nReference dir: <plugin_root>/skills/speckit-autopilot/references/")
+   The `Protocol:` and `Reference dir:` lines are built as in Phase 4.
    The executor handles research + remediation (Layer 1)
 3. Parse executor's "Unresolved for consensus" section
 4. If unresolved findings exist:
@@ -612,6 +660,7 @@ Items it can't resolve are flagged in its
       Stage 3: apply each synthesizer's Artifact Edit SERIALLY to
                tasks.md, spec.md, or plan.md.
       Round 2 escape-hatch: also batched across all queued findings.
+      [HUMAN REVIEW NEEDED]: consensus-protocol.md#human-review-needed
    c. Re-run analyze to verify findings resolved
    d. TaskUpdate: "Analyze - Consensus" → completed
 5. TaskUpdate: "Analyze" → completed
@@ -651,7 +700,12 @@ to proceed, surface a remediation hint, or stop.
      runner helper confidence-gate \
        <workflow-file> --threshold <T> --mode <M>
 
-4. Parse exit code + JSON:
+4. Read runner `status`, `data.exit_code`, and
+   `data.stdout_json.recommended_action`. PASS, advisory FAIL, and
+   NO_DATA are valid `ok` responses despite raw exit codes 2 or 1;
+   strict FAIL is `expected_failure`. `input_error` means a malformed
+   request, and a missing or unreadable workflow is a file prerequisite
+   failure. Route the domain verdict by its raw exit code and action:
    - exit 0 (PASS): TaskUpdate G6.5 → completed; advance to Phase 7.
    - exit 1 (NO_DATA): log a warning, surface to operator that the
      synthesizer skipped its confidence emit (treat as a plugin
@@ -676,9 +730,9 @@ to proceed, surface a remediation hint, or stop.
               re-pass; "completeness" lowest → re-verify artifact
               presence).
             - After remediation completes, dispatch the
-              consensus-synthesizer agent (single fan-out) to
-              re-emit the pre-Implement Confidence block to the
-              workflow file.
+              consensus-synthesizer agent (single fan-out), with the
+              `Protocol:` line, to re-emit the pre-Implement
+              Confidence block to the workflow file.
             - Re-run confidence-gate.
             - Increment iteration_count.
        c. If iteration_count == 3 OR exit 0 reached: stop iterating.
@@ -761,12 +815,13 @@ does not end at the boundary commit above. It runs this sequence, in this order:
 ```text
 1. Generate and validate the artifacts; initialize their pending review record.
 2. Take the stage-boundary commit above.
-3. Push the branch.
-4. Create or refresh the draft pull request.
-5. Write the `Draft PR` record to the workflow file.
-6. Take a separate bookkeeping commit carrying that record, and push it.
-7. The parent dispatches `artifact-preview-observer` for each generated artifact preview; the isolated observer never inherits general repository tools.
-8. Validate and commit/push the workflow-only preview evidence.
+3. On the clean worktree, run `pr-packet-output` dry-run and apply; validate the packet, then commit its packet and body files.
+4. Push the branch.
+5. Create or refresh the draft pull request using the validated packet.
+6. Write the `Draft PR` record to the workflow file.
+7. Take a separate bookkeeping commit carrying that record, and push it.
+8. The parent dispatches `artifact-preview-observer` for each generated artifact preview; the isolated observer never inherits general repository tools.
+9. Validate and commit/push the workflow-only preview evidence.
 ```
 
 **Read the [Artifact Review Handoff contract](./artifact-review.md) before this sequence.**
@@ -840,8 +895,9 @@ Agent(
     - Plan: specs/<feature>/plan.md
     - Tasks: specs/<feature>/tasks.md
     - Design concept: docs/ai/specs/.process/<SPEC-ID>-design-concept.md
-    - Gallery manifest: speckit-pro/artifact-gallery/manifest.json
-    - Templates: speckit-pro/artifact-gallery/templates/<entry-id>.html
+
+    Reference dir: <plugin_root>/skills/speckit-autopilot/references/
+    Gallery dir: <plugin_root>/artifact-gallery/
 
     Select, fill, and report per your agent instructions. Return one outcome
     per selected page.
@@ -850,13 +906,13 @@ Agent(
 ```
 
 **Selection lives inside the agent and is driven by the manifest.** The
-orchestrator names no page list of its own. The agent reads
-`speckit-pro/artifact-gallery/manifest.json`, keeps the entries whose `stage` is
+orchestrator names no page list of its own. The agent reads `manifest.json`
+from the `Gallery dir:` directory, built from `plugin_root`, and keeps the entries whose `stage` is
 `draft-pr`, and applies each surviving entry's `trigger`: `{"always": true}`
 selects on every run, and `{"any_of": [...]}` selects only when the feature
 carries at least one signal the entry names.
 
-**The gallery is input, never output.** `speckit-pro/artifact-gallery/` holds
+**The gallery is input, never output.** `<plugin_root>/artifact-gallery/` holds
 the shipped manifest and the shipped templates, and writing anything into that
 directory is a defect. Finished pages are written to
 `specs/<feature>/artifacts/`, one per selected entry, keeping the manifest
@@ -911,7 +967,7 @@ For each page written to `specs/<feature>/artifacts/`, two positive tests:
 
 | Test | The page fails when |
 | --- | --- |
-| it is not its own template | the file is byte-identical to `speckit-pro/artifact-gallery/templates/<entry-id>.html` |
+| it is not its own template | the file is byte-identical to `<plugin_root>/artifact-gallery/templates/<entry-id>.html` |
 | it is not still sample content | the body carries a sample-banner element: `class="sample-notice"`, `class="notice"`, or `class="note"` |
 
 **The banner test covers only the templates that carry a banner.** Seven of the
@@ -1025,11 +1081,13 @@ verification or evidence a draft has not produced.
 Report through the could-not-be-opened shape below rather than opening one whose
 title a human would have to repair.
 
-#### The draft description: exactly two blocks
+#### The draft description: one H1 and two H2 sections
 
-The description carries exactly two blocks and nothing else:
+The description begins with the matching H1 title, followed by exactly two H2 sections, Artifacts and Resume, and no other content:
 
 ```text
+# feat(speckit-pro): open an example draft
+
 ## Artifacts
 
 | Artifact | Purpose | Open |
@@ -1054,10 +1112,43 @@ pull request sits in draft state, so the repository's PR checks do not run
 against it — no release-note fence is needed or wanted, and a placeholder section
 would read as evidence that does not exist.
 
-**The orchestrator composes both blocks itself.** Emit the packet with
-`runner helper pr-packet-output` in `draft` mode and pass the finished Markdown
-as `inputs.body`; the producer uses that string verbatim. The `build_packet_body`
-fallback stays single/split-shaped and is never reached in draft mode.
+**The orchestrator composes the title and both blocks itself.** Send this complete
+runner request after replacing the example feature, branch, title, and body with
+the current plan-stage values. The top-level `mode` is `dry_run` first; change
+only that field to `apply` after the dry-run succeeds. `inputs.mode` selects the
+draft packet. `inputs.mode_name` is not accepted.
+
+```json
+{
+  "schema_version": "1.0",
+  "request_id": "example-draft-packet",
+  "helper_id": "pr-packet-output",
+  "operation": "pr-packet-output",
+  "mode": "dry_run",
+  "inputs": {
+    "packet_path": "specs/example-feature/.process/pr-packets/example-draft.json",
+    "source_feature_dir": "specs/example-feature",
+    "target": {"base_branch": "main", "head_branch": "codex/example-feature"},
+    "mode": "draft",
+    "title_type": "feat",
+    "title_scope": "speckit-pro",
+    "title_description": "open an example draft",
+    "changed_files": [],
+    "verification_evidence": [],
+    "body": "# feat(speckit-pro): open an example draft\n\n## Artifacts\n\n| Artifact | Purpose | Open |\n| --- | --- | --- |\n| Implementation Plan | Describe the implementation phases | `open specs/example-feature/artifacts/implementation-plan.html` |\n\n## Resume\n\nStage: plan. Stopped at the plan-stage boundary for review.\nResume with: `/speckit-pro:speckit-autopilot <workflow-file> --stage implement`\n"
+  }
+}
+```
+
+An explicit empty `verification_evidence` array records that a draft has no
+verification yet; supplied records must match the [packet evidence schema](../contracts/pr-packet.schema.json).
+The body must have one H1 matching the generated title, then exactly the
+Artifacts and Resume H2 sections. Validate the emitted packet before opening the
+PR. Commit its packet and body files before another clean-worktree-gated helper
+runs; an unrelated dirty file blocks apply. Correct validation failures through
+the packet helper instead of bypassing them with raw PR creation. The producer
+uses `inputs.body` verbatim; the single/split `build_packet_body` fallback is not
+used for drafts.
 
 #### Fail-open: three sinks, and the runs that reach them
 
@@ -2497,6 +2588,7 @@ Agent(
     <if implementation/project-agent route>
     <tdd_protocol><TDD_PROTOCOL contents></tdd_protocol>
     </if>
+    Reference dir: <plugin_root>/skills/speckit-autopilot/references/
     PROJECT_COMMANDS: <discovered commands, including focused tests>
     PRESET_CONVENTIONS: <when configured>
     COMPLETED_TASKS: <relevant verified prior task results>

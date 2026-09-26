@@ -206,6 +206,18 @@ HELPER_CASES: dict[str, dict[str, object]] = {
 }
 
 
+def roadmap_budget_entry(spec_id: str, name: str, surface: str, loc: int, prod: int, total: int) -> str:
+    return (
+        f"### {spec_id}: {name}\n\n"
+        "**Priority:** P1 | **Depends On:** None | **Enables:** None\n\n"
+        f"**Reviewability Budget:** Primary surface: {surface} |\n"
+        f"Projected reviewable LOC: {loc} |\n"
+        f"Production files: {prod} |\n"
+        f"Total files: {total} |\n"
+        "Budget result: within budget\n\n"
+    )
+
+
 def runner_env() -> dict[str, str]:
     env = os.environ.copy()
     existing = env.get("PYTHONPATH")
@@ -920,6 +932,122 @@ class ReadOnlyHelperTests(unittest.TestCase):
                 ("resolved", "external", 0),
             )
             self.assertEqual(payload["workflow_root"], external_root.resolve().as_posix())
+
+    def test_resolve_workflow_binding_binds_explicit_sibling_worktree_without_touching_task_root(self) -> None:
+        # Codex prerequisites bind an explicit absolute sibling workflow in the same task (issue 656).
+        if self.helper_filter and self.helper_filter != "resolve-workflow-binding":
+            self.skipTest("workflow-binding cases use resolve-workflow-binding")
+        with tempfile.TemporaryDirectory() as temp:
+            # A canonical base keeps the explicit path free of temp-directory symlink aliases.
+            task_root, _, sibling_root = self.build_binding_worktrees(Path(temp).resolve())
+            workflow = sibling_root / "docs" / "ai" / "specs" / ".process" / "DEMO-001-workflow.md"
+            workflow.parent.mkdir(parents=True)
+            workflow.write_text("# demo\n", encoding="utf-8")
+            shared = Path("shared-workflow.md")
+            (task_root / shared).write_text("# task\n", encoding="utf-8")
+            (sibling_root / shared).write_text("# sibling\n", encoding="utf-8")
+
+            def task_state() -> tuple[str, str]:
+                def git(*args: str) -> str:
+                    return subprocess.run(
+                        ["git", "-C", str(task_root), *args],
+                        text=True, capture_output=True, shell=False, check=True,
+                    ).stdout
+                return git("rev-parse", "--abbrev-ref", "HEAD"), git("status", "--porcelain")
+
+            before = task_state()
+            payload, exit_code = self.binding_result(task_root, str(workflow))
+            self.assertEqual(
+                (payload["binding_status"], payload["relation"], exit_code),
+                ("resolved", "external", 0),
+            )
+            self.assertEqual(payload["task_root"], task_root.resolve().as_posix())
+            self.assertEqual(payload["workflow_root"], sibling_root.resolve().as_posix())
+            self.assertEqual(payload["workflow_file"], workflow.resolve().as_posix())
+            self.assertEqual(task_state(), before)
+
+            revalidated, exit_code = self.binding_result(sibling_root, payload["workflow_file"])
+            self.assertEqual(
+                (revalidated["binding_status"], revalidated["relation"], exit_code),
+                ("resolved", "same", 0),
+            )
+            self.assertEqual(revalidated["task_root"], payload["workflow_root"])
+            self.assertEqual(revalidated["workflow_root"], payload["workflow_root"])
+            self.assertEqual(revalidated["workflow_file"], payload["workflow_file"])
+
+            ambiguous, exit_code = self.binding_result(task_root, shared.as_posix())
+            self.assertEqual((ambiguous["binding_status"], exit_code), ("ambiguous", 1))
+            self.assertIsNone(ambiguous["workflow_root"])
+            self.assertIsNone(ambiguous["relation"])
+            self.assertEqual(
+                ambiguous["candidates"],
+                sorted([task_root.resolve().as_posix(), sibling_root.resolve().as_posix()]),
+            )
+            self.assertEqual(task_state(), before)
+
+    def test_resolve_workflow_binding_binds_explicit_path_through_symlinked_parent_directory(self) -> None:
+        # A symlinked spelling of a worktree's parent directory, such as macOS /tmp, binds like the real path (issue 702).
+        if self.helper_filter and self.helper_filter != "resolve-workflow-binding":
+            self.skipTest("workflow-binding cases use resolve-workflow-binding")
+        with tempfile.TemporaryDirectory() as temp:
+            base = Path(temp).resolve()
+            real_base = base / "real"
+            real_base.mkdir()
+            task_root, _, sibling_root = self.build_binding_worktrees(real_base)
+            workflow = sibling_root / "docs" / "ai" / "specs" / ".process" / "DEMO-001-workflow.md"
+            workflow.parent.mkdir(parents=True)
+            workflow.write_text("# demo\n", encoding="utf-8")
+            alias_base = base / "alias"
+            try:
+                alias_base.symlink_to(real_base, target_is_directory=True)
+            except OSError as exc:
+                self.skipTest(f"symlinks unavailable: {exc}")
+            aliased_workflow = alias_base / workflow.relative_to(real_base)
+
+            real_payload, real_exit = self.binding_result(task_root, str(workflow))
+            payload, exit_code = self.binding_result(task_root, str(aliased_workflow))
+
+            self.assertEqual(
+                (payload["binding_status"], payload["relation"], exit_code),
+                ("resolved", "external", 0),
+            )
+            self.assertEqual((payload, exit_code), (real_payload, real_exit))
+            self.assertEqual(payload["workflow_root"], sibling_root.resolve().as_posix())
+            self.assertEqual(payload["workflow_file"], workflow.resolve().as_posix())
+
+            aliased_task, exit_code = self.binding_result(alias_base / task_root.name, str(aliased_workflow))
+            self.assertEqual((aliased_task, exit_code), (real_payload, real_exit))
+
+    def test_resolve_workflow_binding_rejects_escape_through_symlinked_parent_directory(self) -> None:
+        if self.helper_filter and self.helper_filter != "resolve-workflow-binding":
+            self.skipTest("workflow-binding cases use resolve-workflow-binding")
+        with tempfile.TemporaryDirectory() as temp:
+            base = Path(temp).resolve()
+            real_base = base / "real"
+            real_base.mkdir()
+            task_root, _, sibling_root = self.build_binding_worktrees(real_base)
+            outside = base / "outside-workflow.md"
+            outside.write_text("# outside\n", encoding="utf-8")
+            escape = sibling_root / "escape-workflow.md"
+            alias_base = base / "alias"
+            root_alias = base / "root-alias"
+            try:
+                escape.symlink_to(outside)
+                alias_base.symlink_to(real_base, target_is_directory=True)
+                root_alias.symlink_to(sibling_root, target_is_directory=True)
+            except OSError as exc:
+                self.skipTest(f"symlinks unavailable: {exc}")
+            (sibling_root / "aliased-workflow.md").write_text("# sibling\n", encoding="utf-8")
+
+            for supplied in (
+                alias_base / escape.relative_to(real_base),
+                root_alias / "aliased-workflow.md",
+            ):
+                with self.subTest(supplied=supplied.relative_to(base).as_posix()):
+                    payload, exit_code = self.binding_result(task_root, str(supplied))
+                    self.assertEqual((payload["binding_status"], exit_code), ("invalid", 1))
+                    self.assertIsNone(payload["workflow_root"])
+                    self.assertIsNone(payload["workflow_file"])
 
     def test_resolve_scaffold_placement_anchors_to_detached_task_root_and_revalidates(self) -> None:
         if self.helper_filter and self.helper_filter != "resolve-scaffold-worktree-placement":
@@ -1677,6 +1805,52 @@ class ReadOnlyHelperTests(unittest.TestCase):
                 self.assertTrue("invalid threshold" in response["data"]["stdout_json"]["error"] or "invalid mode" in response["data"]["stdout_json"]["error"])
                 self.assertEqual([diag["code"] for diag in stderr_records], [diag["code"] for diag in response["diagnostics"]])
 
+    def test_confidence_gate_runner_classifies_domain_verdicts(self) -> None:
+        if self.helper_filter and self.helper_filter != "confidence-gate":
+            self.skipTest("confidence-gate runner verdict case")
+        with tempfile.TemporaryDirectory(prefix="confidence-runner-", dir=REPO_ROOT) as directory:
+            workflow = Path(directory) / "workflow.md"
+            relative = workflow.relative_to(REPO_ROOT).as_posix()
+            cases = (
+                ("0.90", "advisory", "ok", 0, "proceed"),
+                ("0.80", "advisory", "ok", 2, "continue_with_warning"),
+                ("0.80", "strict", "expected_failure", 2, "stop"),
+                (None, "advisory", "ok", 1, "soft_skip"),
+            )
+            for score, mode, status, exit_code, action in cases:
+                with self.subTest(score=score, mode=mode):
+                    criteria = (score,) * 5 if score is not None else None
+                    workflow.write_text(self.confidence_emit(score, criteria), encoding="utf-8")
+                    completed, response, _ = run_runner(helper_request("confidence-gate", {
+                        "workflow_file": relative, "mode_name": mode, "threshold": "0.90",
+                    }))
+                    self.assertEqual(response["status"], status, response)
+                    self.assertEqual(response["data"]["exit_code"], exit_code)
+                    self.assertEqual(response["data"]["stdout_json"]["recommended_action"], action)
+                    self.assertEqual(completed.returncode, 0 if status == "ok" else 1)
+            workflow.unlink()
+            _, response, _ = run_runner(helper_request("confidence-gate", {"workflow_file": relative}))
+            self.assertNotEqual(response["status"], "ok")
+            quoted_path = f'{relative}"'
+            _, response, _ = run_runner(helper_request("confidence-gate", {"workflow_file": quoted_path}))
+            self.assertEqual(response["status"], "missing_prerequisite", response)
+            self.assertEqual(
+                response["diagnostics"][0]["message"],
+                f"workflow file not found: {quoted_path}",
+            )
+            self.assertIn(relative, str(response["diagnostics"]))
+
+    def test_confidence_gate_error_shape_is_not_promoted(self) -> None:
+        if self.helper_filter and self.helper_filter != "confidence-gate":
+            self.skipTest("confidence-gate error shape case")
+        from speckit_pro_runner.helpers.read_only import confidence_verdict_status
+
+        self.assertIsNone(confidence_verdict_status({"error": "invalid threshold"}, 2))
+        self.assertIsNone(confidence_verdict_status({"pass": False, "recommended_action": "continue_with_warning"}, 2))
+        verdict = self.run_confidence_gate(self.confidence_emit("0.80", ("0.80",) * 5))["json"]
+        verdict["mode"] = []
+        self.assertIsNone(confidence_verdict_status(verdict, 2))
+
     def write_confidence_workflow(self, directory: str, body: str) -> str:
         workflow = Path(directory) / "confidence-workflow.md"
         workflow.write_text(body, encoding="utf-8")
@@ -1940,6 +2114,8 @@ class ReadOnlyHelperTests(unittest.TestCase):
                     runbook.read_text(encoding="utf-8"),
                     f"{runbook.name} documents the exit-2 loop without naming the field it reads first",
                 )
+                self.assertIn("data.exit_code", runbook.read_text(encoding="utf-8"))
+                self.assertIn("recommended_action", runbook.read_text(encoding="utf-8"))
 
     def test_confidence_gate_runbooks_do_not_route_remediation_by_risk_assessment(self) -> None:
         if self.helper_filter and self.helper_filter != "confidence-gate":
@@ -3074,6 +3250,95 @@ class ReadOnlyHelperTests(unittest.TestCase):
             payload = self._feature_state(project_path)
             self.assertTrue(payload["on_feature_branch"])
 
+    def setup_gate_for_spec(self, roadmap: str, spec_id: str) -> tuple[dict[str, object], int]:
+        from speckit_pro_runner.helpers.read_only import reviewability_gate
+
+        with helper_project() as project:
+            (project / "roadmap.md").write_text(roadmap, encoding="utf-8")
+            result = reviewability_gate(
+                {"mode_name": "setup", "target": "roadmap.md", "spec_id": spec_id}, project,
+            )
+        return json.loads(result["stdout"]), int(result["exit_code"])
+
+    def test_reviewability_setup_gate_reads_only_the_requested_spec_section(self) -> None:
+        if self.helper_filter and self.helper_filter != "reviewability-gate":
+            self.skipTest("setup spec-scope case uses reviewability-gate")
+        roadmap = "# Demo Roadmap\n\n" + "".join((
+            roadmap_budget_entry("SPEC-001", "Oversized first spec", "API", 900, 9, 30),
+            roadmap_budget_entry("SPEC-002", "Middle spec", "UI", 120, 2, 5),
+            roadmap_budget_entry("SPEC-003", "Small last spec", "docs/process", 40, 1, 3),
+        ))
+        payload, exit_code = self.setup_gate_for_spec(roadmap, "SPEC-001")
+        self.assertEqual(exit_code, 1)
+        self.assertEqual(payload["status"], "block")
+        self.assertFalse(payload["pass"])
+        self.assertEqual(payload["spec_id"], "SPEC-001")
+        self.assertEqual(
+            (payload["reviewable_loc"], payload["production_files"], payload["total_files"]), (900, 9, 30),
+        )
+        self.assertEqual(payload["primary_surfaces"], ["API"])
+        self.assertNotIn("primary_surfaces", payload["thresholds"]["block"])
+        self.assertEqual(payload["thresholds"]["block"]["reviewable_loc"], 800)
+        self.assertFalse(any("primary surfaces" in warning for warning in payload["warnings"]))
+
+        payload, exit_code = self.setup_gate_for_spec(roadmap, "SPEC-003")
+        self.assertEqual((payload["status"], exit_code), ("pass", 0))
+        self.assertEqual(payload["primary_surfaces"], ["docs/process"])
+
+    def test_reviewability_setup_gate_honors_typed_exception_in_spec_section(self) -> None:
+        if self.helper_filter and self.helper_filter != "reviewability-gate":
+            self.skipTest("setup exception case uses reviewability-gate")
+        entry = roadmap_budget_entry("SPEC-001", "Infra spec with a typed exception", "scheduler/runtime", 900, 9, 20)
+        payload, exit_code = self.setup_gate_for_spec(
+            f"# Demo Roadmap\n\n{entry}Reviewability-Exception: infra\n", "SPEC-001",
+        )
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(payload["status"], "exception")
+        self.assertTrue(payload["pass"])
+        self.assertTrue(payload["exception_honored"])
+        self.assertEqual(payload["exception_class"], "infra")
+        self.assertEqual(payload["exceptions"]["accepted"], ["infra"])
+
+        for pragma in ("Reviewability-Exception: <class>", "Reviewability-Exception: Infra",
+                       "Reviewability-Exception: infra because it is big"):
+            with self.subTest(pragma=pragma):
+                payload, exit_code = self.setup_gate_for_spec(
+                    f"# Demo Roadmap\n\n{entry}{pragma}\n", "SPEC-001",
+                )
+                self.assertEqual((payload["status"], exit_code), ("block", 1))
+                self.assertFalse(payload["exception_honored"])
+                self.assertIsNone(payload["exception_class"])
+                self.assertEqual(payload["exceptions"]["rejected"], [pragma])
+
+        other = roadmap_budget_entry("SPEC-002", "Other spec", "API", 100, 1, 2)
+        payload, _ = self.setup_gate_for_spec(
+            f"# Demo Roadmap\n\n{entry}{other}Reviewability-Exception: infra\n", "SPEC-001",
+        )
+        self.assertEqual(payload["status"], "block", "another section's pragma must not excuse SPEC-001")
+
+    def test_reviewability_setup_gate_fails_closed_without_spec_budget(self) -> None:
+        if self.helper_filter and self.helper_filter != "reviewability-gate":
+            self.skipTest("setup missing-budget case uses reviewability-gate")
+        roadmap = (
+            "# Demo Roadmap\n\n### SPEC-001: Entry with no budget fields\n\n"
+            "**Priority:** P1 | **Depends On:** None | **Enables:** None\n"
+        )
+        payload, exit_code = self.setup_gate_for_spec(roadmap, "SPEC-001")
+        self.assertEqual(exit_code, 1)
+        self.assertEqual(payload["status"], "block")
+        self.assertFalse(payload["pass"])
+        self.assertEqual(len(payload["blockers"]), 3)
+        self.assertTrue(all("missing" in blocker for blocker in payload["blockers"]))
+
+        payload, exit_code = self.setup_gate_for_spec(
+            roadmap + "Reviewability-Exception: infra\n", "SPEC-001",
+        )
+        self.assertEqual((payload["status"], exit_code), ("block", 1), "a pragma never excuses a missing budget")
+
+        payload, exit_code = self.setup_gate_for_spec(roadmap, "SPEC-009")
+        self.assertEqual(exit_code, 2)
+        self.assertIn("SPEC-009", payload["error"])
+
     def test_check_prerequisites_does_not_invent_a_cli_version(self) -> None:
         if self.helper_filter and self.helper_filter != "check-prerequisites":
             self.skipTest("CLI presence case uses check-prerequisites")
@@ -3200,6 +3465,99 @@ class ReadOnlyHelperTests(unittest.TestCase):
             (feature / "checklists" / "security.md").write_text("- [x] CHK001 Is token expiry defined?\n", encoding="utf-8")
             code, payload = self._helper_json("validate_gate", {"gate": "G4", "feature_dir": "specs/001-demo"}, project_path)
             self.assertEqual((0, True), (code, payload["pass"]))
+
+    @contextmanager
+    def _g6_project(self) -> Iterator[Path]:
+        """A clean planning tree: no bracketed severity marker in spec, plan, or tasks."""
+        with helper_project() as project_path:
+            feature = project_path / "specs" / "001-demo"
+            feature.mkdir(parents=True)
+            for name in ("spec.md", "plan.md", "tasks.md"):
+                (feature / name).write_text(f"# {name}\n\nNo open markers.\n", encoding="utf-8")
+            yield project_path
+
+    def _g6(self, project_path: Path, workflow: str | None) -> tuple[int, dict[str, object]]:
+        inputs: dict[str, object] = {"gate": "G6", "feature_dir": "specs/001-demo"}
+        if workflow is not None:
+            (project_path / "workflow.md").write_text(workflow, encoding="utf-8")
+            inputs["workflow_file"] = "workflow.md"
+        return self._helper_json("validate_gate", inputs, project_path)
+
+    def test_validate_gate_g6_counts_open_workflow_analysis_rows(self) -> None:
+        """#682: open HIGH rows in the workflow table fail G6 even when the planning files are clean."""
+        if self.helper_filter and self.helper_filter != "validate-gate":
+            self.skipTest("G6 workflow-table case uses validate-gate")
+        open_rows = tuple((f"H{i}", "HIGH", f"required defect {i}", "") for i in range(3, 8))
+        workflow = "\n".join(
+            ("# Workflow", "", self.SEVERITY_LEGEND, "", "### Analysis Results", "", self.analysis_table(open_rows), "")
+        )
+        with self._g6_project() as project_path:
+            code, payload = self._g6(project_path, workflow)
+            self.assertEqual((1, False, 5), (code, payload["pass"], payload["markers"]))
+            self.assertEqual({"critical": 0, "high": 5}, payload["analysis_findings"])
+            self.assertEqual("5 CRITICAL/HIGH findings remain", payload["reason"])
+
+    def test_validate_gate_g6_passes_once_every_resolution_cell_is_filled(self) -> None:
+        if self.helper_filter and self.helper_filter != "validate-gate":
+            self.skipTest("G6 workflow-table case uses validate-gate")
+        rows = (
+            ("C1", "CRITICAL", "contract undefined", "Contract added to `contracts/api.md`."),
+            ("H1", "HIGH", "cookie policy unspecified", "Policy stated in `plan.md`."),
+            ("M1", "MEDIUM", "naming drift", ""),
+            ("X1", "HIGH", "<!-- example row -->", "<!-- not a resolution -->"),
+        )
+        workflow = "\n".join(("# Workflow", "", "### Analysis Results", "", self.analysis_table(rows), ""))
+        with self._g6_project() as project_path:
+            code, payload = self._g6(project_path, workflow)
+            self.assertEqual((1, False, 1), (code, payload["pass"], payload["markers"]))
+            code, payload = self._g6(project_path, workflow.replace("<!-- not a resolution -->", "Fixed in `tasks.md`."))
+            self.assertEqual((0, True, 0), (code, payload["pass"], payload["markers"]))
+            self.assertEqual({"critical": 0, "high": 0}, payload["analysis_findings"])
+            (project_path / "specs" / "001-demo" / "plan.md").write_text("- [HIGH] open marker\n", encoding="utf-8")
+            code, payload = self._g6(project_path, workflow.replace("<!-- not a resolution -->", "Fixed."))
+            self.assertEqual((1, False, 1), (code, payload["pass"], payload["markers"]))
+
+    def test_validate_gate_g6_fails_closed_without_analysis_results_evidence(self) -> None:
+        if self.helper_filter and self.helper_filter != "validate-gate":
+            self.skipTest("G6 workflow-table case uses validate-gate")
+        commented_table = "\n".join(
+            ("# Workflow", "", "<!--", "### Analysis Results", "", self.analysis_table((("H1", "HIGH", "x", "done"),)), "-->", "")
+        )
+        with self._g6_project() as project_path:
+            for label, workflow in (
+                ("no workflow_file", None),
+                ("no table", "# Workflow\n\n" + self.SEVERITY_LEGEND + "\n"),
+                ("commented-out table", commented_table),
+            ):
+                with self.subTest(case=label):
+                    code, payload = self._g6(project_path, workflow)
+                    self.assertEqual((1, False), (code, payload["pass"]))
+                    self.assertNotIn("0 CRITICAL/HIGH", payload["reason"])
+            code, payload = self._helper_json(
+                "validate_gate",
+                {"gate": "G6", "feature_dir": "specs/001-demo", "workflow_file": "missing-workflow.md"},
+                project_path,
+            )
+            self.assertEqual((1, False), (code, payload["pass"]))
+
+    def test_validate_gate_g6_workflow_path_is_canonicalized(self) -> None:
+        if self.helper_filter and self.helper_filter != "validate-gate":
+            self.skipTest("G6 canonical workflow path case uses validate-gate")
+        with self._g6_project() as project_path:
+            (project_path / "docs").mkdir()
+            (project_path / "workflow.md").write_text("# Workflow\n", encoding="utf-8")
+            completed, response, _ = run_runner(
+                helper_request(
+                    "validate-gate",
+                    {"gate": "G6", "feature_dir": "specs/001-demo", "workflow_file": "docs/../workflow.md"},
+                ),
+                cwd=project_path,
+            )
+            self.assertEqual(1, completed.returncode)
+            payload = response["data"]["stdout_json"]
+            self.assertFalse(payload["pass"])
+            self.assertIn("workflow.md", payload["reason"])
+            self.assertNotIn("..", payload["reason"])
 
     def test_estimate_reviewable_loc_does_not_pass_when_no_production_file_counts(self) -> None:
         if self.helper_filter and self.helper_filter != "estimate-reviewable-loc":
@@ -3795,16 +4153,11 @@ class ReadOnlyHelperTests(unittest.TestCase):
                 self.assertEqual(data["stderr"]["limit_bytes"], GENERIC_CAPTURE_LIMIT_BYTES)
                 self.assertEqual(completed.returncode, response["exit_code"])
                 self.assertEqual([diag["code"] for diag in stderr_records], [diag["code"] for diag in response["diagnostics"]])
-                if data["exit_code"] == 0:
-                    self.assert_response(response, "ok", 0)
-                elif data["exit_code"] == 1:
-                    self.assert_response(response, "expected_failure", 1)
-                elif data["exit_code"] == 2:
-                    self.assert_response(response, "input_error", 2)
-                elif data["exit_code"] == 3:
-                    self.assert_response(response, "missing_prerequisite", 3)
-                else:
-                    self.assert_response(response, "subprocess_failure", response["exit_code"])
+                expected_status = {0: "ok", 1: "expected_failure", 2: "input_error", 3: "missing_prerequisite"}.get(data["exit_code"], "subprocess_failure")
+                if helper_id == "confidence-gate" and data.get("stdout_json", {}).get("recommended_action") == "soft_skip":
+                    expected_status = "ok"
+                expected_code = {"ok": 0, "expected_failure": 1, "input_error": 2, "missing_prerequisite": 3}.get(expected_status, response["exit_code"])
+                self.assert_response(response, expected_status, expected_code)
 
 
 def main() -> int:

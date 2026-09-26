@@ -12,6 +12,8 @@ Three blocks are shared word for word across the three Claude bodies:
 
 * the ``## Input`` bullets and the sentence that closes them,
 * the grounding-evidence note under ``## Output Format``,
+* the ``security_relevant`` field line inside the Output Format block and the
+  note after it that says how to set it,
 * the ``### Terminal Deliverable`` paragraph, which differs only in the
   ``(Answer / X / Confidence)`` section-name triple and is compared with that
   triple normalized out.
@@ -81,6 +83,8 @@ RESEARCH_TASK_BULLET = (
 BULLET_RE = re.compile(r"^\d+\. \*\*", re.MULTILINE)
 LEAD_RE = re.compile(r"^You will receive one of (\w+) types of input:$", re.MULTILINE)
 GROUNDING_PREFIX = "For every externally-sourced fact in your output,"
+SECURITY_FIELD_LINE = "security_relevant: [true | false]"
+SECURITY_NOTE_PREFIX = "Set `security_relevant` to `true`"
 SECTION_TRIPLE_RE = re.compile(r"\(Answer / \w+ / Confidence\)")
 
 
@@ -133,6 +137,20 @@ def _grounding_note(text: str) -> str:
     raise AssertionError(f"no line starting {GROUNDING_PREFIX!r}")
 
 
+def _security_note(text: str) -> str:
+    for line in text.splitlines():
+        if line.startswith(SECURITY_NOTE_PREFIX):
+            return line
+    raise AssertionError(f"no line starting {SECURITY_NOTE_PREFIX!r}")
+
+
+def _output_format(text: str) -> str:
+    match = re.search(r"^## Output Format\n(.*?)(?=^### Terminal Deliverable$)", text, re.S | re.M)
+    if match is None:
+        raise AssertionError("no '## Output Format' section ending at '### Terminal Deliverable'")
+    return match.group(1)
+
+
 def _terminal_deliverable(text: str) -> str:
     match = re.search(
         r"^### Terminal Deliverable\n(.*?)(?=^#{2,3} )", text, re.S | re.M
@@ -178,6 +196,37 @@ class ConsensusAnalystSharedProseTests(unittest.TestCase):
             f"[{SHARED_GROUP}] the grounding-evidence note diverged across the three "
             f"consensus analysts: {notes}",
         )
+
+    def test_security_relevant_field_is_in_every_output_format(self) -> None:
+        # The synthesizer lets a keyword-only security route use the item's own
+        # agreement rule only when every routed analyst returns false, so every
+        # analyst must return the closed field on both platforms.
+        for name in ANALYSTS:
+            for platform, body in (("claude", _claude_body(name)), ("codex", _codex_body(name))):
+                with self.subTest(agent=name, platform=platform):
+                    self.assertIn(
+                        SECURITY_FIELD_LINE,
+                        _output_format(body),
+                        f"[{SHARED_GROUP}] {name} ({platform}): the Output Format block must "
+                        "carry the closed security_relevant field",
+                    )
+
+    def test_security_relevant_note_is_byte_identical(self) -> None:
+        notes = {name: _security_note(_claude_body(name)) for name in ANALYSTS}
+        self.assertEqual(
+            len(set(notes.values())),
+            1,
+            f"[{SHARED_GROUP}] the security_relevant note diverged across the three "
+            f"consensus analysts: {notes}",
+        )
+        for name in ANALYSTS:
+            with self.subTest(agent=name):
+                self.assertEqual(
+                    _security_note(_codex_body(name)),
+                    notes[name],
+                    f"[{CODEX_GROUP}] {name}: the Codex security_relevant note must match "
+                    "its Claude counterpart byte for byte",
+                )
 
     def test_terminal_deliverable_is_identical_modulo_the_section_triple(self) -> None:
         normalized = {

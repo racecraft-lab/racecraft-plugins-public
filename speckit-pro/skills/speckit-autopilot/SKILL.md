@@ -188,8 +188,8 @@ not issue a second invocation to obtain a file, exit code, stdout, or stderr.
 **Do not invoke `grill-me` from any autopilot phase or agent — ever.**
 
 `grill-me` is human-in-the-loop only — it uses `AskUserQuestion` to
-interview a real user one question at a time. Inside autopilot there
-is no user available; calling it would block indefinitely or produce
+interview a real user one question at a time. Autopilot may run
+unattended, with no user available; calling it would block indefinitely or produce
 low-value automated output that defeats its purpose.
 
 Autopilot's Clarify phase uses `/speckit-clarify` with the multi-agent
@@ -406,6 +406,9 @@ Run the pre-flight sequence before any phase work. STOP on failure.
    has to act on; `plan` after a strict-mode gate stop reads
    `the first non-terminal planning phase is Confidence Gate, which is
    ⚠️ Blocked` rather than an unexplained stage token.
+   Open CRITICAL/HIGH rows in the workflow's Analysis Results table also keep
+   planning incomplete, even when every row reads Complete; the basis then names
+   the open-finding count.
    If Step 0.6d reclaimed the slot, append
    `reclaimed the state slot from <prior workflow file> (prior status:
    <prior_run_note>)` to the same report. A `prior_run_note` of
@@ -614,8 +617,8 @@ for phase in PHASES starting from first_pending:
     5. Run after_<phase> hooks
     6. Validate the gate (G1-G7): run runner helper
        `helper_id=validate-gate operation=validate-gate mode=read_only`
-       with `gate=G<N>` and `feature_dir=<feature-dir>`, then branch on
-       the JSON `pass` field
+       with `gate=G<N>`, `feature_dir=<feature-dir>`, and
+       `workflow_file=<workflow-file>`, then branch on the JSON `pass` field
        On FAIL: reserve a corrective cycle through execution-control;
        honor its shared family/spec budget and checkpoint disposition
     7. Update workflow file; auto-commit if configured
@@ -645,11 +648,18 @@ for phase in PHASES starting from first_pending:
        gate evidence, invalid JSON, missing status/mode, stale
        fingerprints, and non-size safety findings.
     8c. After Tasks (G5 pass), run runner helper `atomicity-route`
-        for `<feature-dir>`
+        with both `inputs.feature_dir` and the actual bound
+        `inputs.workflow_file` (the complete request is in
+        `references/phase-execution.md`)
         and record the emitted JSON decision into the workflow
         file's "## Atomicity Route" section. READ-ONLY + ADVISORY —
         the script writes nothing and never blocks; the SKILL is
         what records it.
+        The workflow path excludes that exact workflow file and its
+        sibling `autopilot-state.json` from change classification.
+        For an existing generated workflow with the old positional
+        instruction, replace only that instruction; preserve phase
+        status and operator-authored content.
         The Phase 7 placeholder is invalid after G5. Parse `tasks.md` and
         replace that placeholder in both the native visible progress plan and
         `autopilot-state.json` with concrete task-group items and task IDs;
@@ -760,8 +770,13 @@ directions; do not infer a broader precedence rule.
   <next-pending-phase>` — the workflow file persists all state.
 - **Repair budget exhausted:** checkpoint with the exact gate output
   and remaining work; no phase or nested worker has an independent retry budget.
-- **Consensus all-disagree** (Round 2): flag `[HUMAN REVIEW NEEDED]`,
-  STOP, and present all 3 perspectives to the user.
+  One operator-approved application correction past it uses
+  `authorize-corrective-exception`; never reset or bypass the ledger.
+- **Consensus all-disagree** (Round 2): flag `[HUMAN REVIEW NEEDED]`.
+  In an interactive session, ask the operator in place with
+  `AskUserQuestion`, apply the answer, and continue; in an unattended run,
+  STOP and present all 3 perspectives. See
+  [consensus-protocol.md §Human Review Needed](./references/consensus-protocol.md#human-review-needed).
 - **Research/context capability unavailable:** use the next acceptable
   evidence path, record any confidence impact, and escalate only when no
   acceptable evidence path remains or a true gate fails.

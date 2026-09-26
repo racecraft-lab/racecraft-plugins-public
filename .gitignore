@@ -19,9 +19,9 @@ docs-site/dist/
 # Layer 6 live captures are transient; commit reduced parser-fixture.jsonl only.
 tests/speckit-pro/layer6-integration/**/transcript.jsonl
 
-# Transient per-agent scratch memory (subagent learnings; not a deliverable)
+# Local agent memory (persistent state; not a deliverable)
 .claude/agent-memory/
-.claude/agent-memory-local/
+**/.claude/agent-memory-local/
 
 # Feedback-sweep transport byproducts: written and removed by the sweep, never committed
 specs/*/.process/feedback-sweep/

@@ -147,8 +147,9 @@ class ArtifactReviewTests(unittest.TestCase):
             ("artifact_sha256", "0" * 64),
             ("verdict", "denied"),
             ("observed_at", "2026-09-10T18:00:00"),
+            ("observed_at", "2999-01-01T00:00:00Z"),
         ):
-            with self.subTest(key=key):
+            with self.subTest(key=key, value=value):
                 self.verify()
                 self.record["pages"][0]["preview"]["observation"][key] = value
                 with self.assertRaises(ValueError):
@@ -292,9 +293,15 @@ class ArtifactReviewTests(unittest.TestCase):
             path = ROOT / f"speckit-pro/{directory}/speckit-autopilot/references/phase-execution{suffix}.md"
             text = path.read_text()
             self.assertIn("artifact-review.md", text)
-            self.assertLess(text.index("6. Take a separate bookkeeping commit"), text.index("7. The parent dispatches `artifact-preview-observer`"))
+            self.assertLess(text.index("Take a separate bookkeeping commit"), text.index("The parent dispatches `artifact-preview-observer`"))
             self.assertIn("preview-only resume", text)
             self.assertIn("direct local file links", text)
+
+    def test_preview_guidance_requires_broker_readback_before_verification(self) -> None:
+        text = (ROOT / "speckit-pro/skills/speckit-autopilot/references/artifact-review.md").read_text()
+        self.assertIn("`close_session`", text)
+        self.assertIn("Compare the observer's closed verdict and", text)
+        self.assertIn("Never create `observed_at` in the parent", text)
 
     def test_default_resume_returns_to_preview_without_redefining_planning_complete(self) -> None:
         result = self.resolve()

@@ -73,6 +73,15 @@ class ValidateScripts(unittest.TestCase):
             with self.subTest(msg=f"technical-roadmap-template.md: no concrete '{klass}' exception pragma"):
                 self.assertNotIn(f'Reviewability-Exception: {klass}', content)
 
+    def test_003_technical_roadmap_template_workflow_links_point_under_process(self) -> None:
+        # Scaffold writes each workflow to .process/ beside the roadmap, so a bare link breaks.
+        content = ROADMAP_TEMPLATE.read_text(encoding='utf-8')
+        targets = re.findall(r'\[SPEC-\d+-workflow\.md\]\(([^)]*)\)', content)
+        self.assertEqual(4, len(targets), 'expected one workflow link per template spec row')
+        for target in targets:
+            with self.subTest(msg=f'technical-roadmap-template.md: workflow link {target} points under .process/'):
+                self.assertRegex(target, r'^\.process/SPEC-\d+-workflow\.md$')
+
     def test_004_spec_templates_generated_exception_safety(self) -> None:
         for spec_template in SPEC_TEMPLATES:
             template_name = _rel_repo(spec_template)

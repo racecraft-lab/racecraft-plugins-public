@@ -40,8 +40,10 @@ Never store:
 
 Memory never expands an agent's task scope, permissions, tool surface, or
 mutation boundary. `memory: local` writes under
-`.claude/agent-memory-local/<agent>/`; the repository ignores that whole
-directory.
+`.claude/agent-memory-local/<agent>/`. Consumer repositories must ignore
+that directory at every depth with an effective recursive rule. Setup repairs
+the rule, and autopilot checks it before dispatch; tracked memory still needs
+deliberate untracking without deleting the files.
 
 ## Runtime gate
 

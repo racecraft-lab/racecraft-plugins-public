@@ -181,7 +181,8 @@ Offer to help the user add or correct the roadmap entry with
 Run the reviewability setup gate before creating the worktree:
 
 ```text
-Run runner helper reviewability-gate in setup mode for <technical-roadmap-path>.
+Run runner helper reviewability-gate in setup mode for <technical-roadmap-path>
+with spec_id <SPEC-ID>.
 ```
 
 If it returns an unexcepted `block`, STOP and split the spec first. Warnings
@@ -299,7 +300,8 @@ consumed unmodified. Do not add or edit an agent definition.
 BEFORE the interview begins:
 
 ```text
-Agent(subagent_type: "speckit-pro:codebase-analyst", run_in_background: true, ...)
+Agent(subagent_type: "speckit-pro:codebase-analyst", run_in_background: true,
+      prompt: "...\nReference dir: ${CLAUDE_PLUGIN_ROOT}/skills/speckit-autopilot/references/")
 ```
 
 The await is not optional: the Claude agent definition carries

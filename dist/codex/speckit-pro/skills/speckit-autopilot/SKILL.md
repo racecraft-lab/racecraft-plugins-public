@@ -428,7 +428,9 @@ See [prerequisites-codex.md](./references/prerequisites-codex.md) for the full p
    handoff can auto-resolve `plan` even when `planning_complete` is true; explicit
    stages still win and started implementation is never routed backward. An explicit `--stage`
   always wins; with none given the stage is resolved from the workflow
-  file's `## Workflow Overview` table. If the operation exits 2, STOP
+  file's `## Workflow Overview` table. Open CRITICAL/HIGH rows in its
+  Analysis Results table also keep planning incomplete, even when every row
+  reads Complete. If the operation exits 2, STOP
   before Phase 0 with that one-line message — the same fail-fast shape
   0.6b uses. **Print the resolved stage and its basis before any phase
   work begins.**
@@ -464,7 +466,8 @@ See [prerequisites-codex.md](./references/prerequisites-codex.md) for the full p
 - **Step 0.8b: Capability Enumeration, Grounding & Feed-down** — you are the only component that discovers openly. Enumerate the tools and installed skills this session actually exposes and select best-fit per the capability-discovery directive (speckit-pro/skills/speckit-autopilot/references/capability-discovery.md); assume no fixed set — the user may have installed anything. Most subagents inherit that surface and follow the directive; read-only roles select read/research only, and the two untrusted-input consumers pin closed allowlists. Still pass the discovered evidence a subagent needs directly in each prompt: shared context beats re-discovery. Ground your OWN output (gate decisions, consensus synthesis, PR bodies) per the grounding contract (speckit-pro/skills/speckit-autopilot/references/grounding.md): cite a real tool/skill/file result for every external fact, and abstain when none grounds it.
 - **Step 0.8c: Resumed Autonomy Boundary Preflight** — when `plan.md` and
   `tasks.md` already exist and the resolved stage can enter Implement, validate
-  the durable `autonomy_boundary` record before the first Phase 7 dispatch.
+  the durable `autonomy_boundary` record (a public receipt of a private
+  record kept outside the repository) before the first Phase 7 dispatch.
   Missing or stale evidence re-enters the full Phase 6.5 Autonomy Boundary
   Preflight. Exact explicit user authorization remains valid while its recorded
   action scope and execution boundary still match and no later instruction
@@ -605,10 +608,15 @@ code, recording the outcome to the workflow file and
 After G5, reconcile the Phase 7 placeholder against `tasks.md` in both state
 stores, then apply the tasks-phase reviewability fallback without invoking the
 deferred tasks mode of `reviewability-gate`. Persist any required marker-plan
-state, record the read-only `atomicity-route`, and run
+state, record the read-only `atomicity-route` with both
+`inputs.feature_dir` and the actual bound `inputs.workflow_file`, and run
 `plan-layers-feature-dir` if and only if the route is `split-PR`. Persist the
 route and the full versioned layer-plan envelope to the workflow and
 `autopilot-state.json`; for a non-split route record the layer plan as skipped.
+The workflow input excludes that exact workflow file and its sibling
+`autopilot-state.json` from change classification. For an existing generated
+workflow with the old positional instruction, replace only that instruction;
+preserve phase status and operator-authored content.
 Exit 1 is `invalid_plan`: STOP before implementation and print
 `STOP: Layer planner returned invalid_plan (exit 1) for <feature-dir>; implementation has not started. Fix tasks.md using the planner diagnostics below, then rerun autopilot from the Layer Plan step.`
 before the diagnostics. Exit 2 is `input_error`: STOP separately and show its

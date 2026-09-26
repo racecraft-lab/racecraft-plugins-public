@@ -17,6 +17,14 @@ a new kickoff. Preserve the `ledger_path` returned by the helper and pass it
 when resuming or relocating the workflow; never construct a filename or use a
 new workflow path to reset counters. Ledger names are workflow-keyed, not a
 shared fixed file for every workflow in a directory.
+The default ledger lives in `.process/execution-control/` beside the workflow,
+or in `execution-control/` when the workflow already sits in a `.process`
+directory. An earlier `.process/.process/execution-control/` ledger stays valid
+when passed as `ledger_path`. Verification evidence follows the same rule in
+`verification/`; a record already under `.process/.process/verification/`
+still validates. Untracked ledger and verification evidence under
+`.process/execution-control/` or `.process/verification/` never make the
+worktree dirty for mutation helpers; any other change still refuses `apply`.
 An existing ledger belongs to its recorded canonical workflow path. An explicit
 `ledger_path` does not authorize a different workflow to adopt that run; an
 existing explicit ledger also requires the parent's `expected_run_id` on start.
@@ -27,10 +35,22 @@ ownership from the caller's current workflow.
   Pass `inputs.spec_file` as the resolved repo-relative feature spec path when
   available; the workflow can live elsewhere. If omitted, only an existing
   adjacent spec can supply requirement IDs, otherwise failures use `unresolved`.
-  The registry freezes at start; later paths or contents never reset counters.
+  An existing spec's registry freezes at start; later paths or contents never
+  reset counters.
   Agent replacement, compaction, stage changes, a reclaimed state mirror, and
   resume never reset it. Preserve another workflow's ledger when reclaiming
   the one-run `autopilot-state.json` mirror.
+- `bind-invariants`: for a greenfield run that started with an empty registry,
+  call once after Specify has produced the feature spec, before the next
+  corrective reservation. Pass the same `workflow_file`, `expected_run_id`,
+  `ledger_path`, and an explicit repo-relative `spec_file`. The helper requires
+  at least one FR, NFR, or INV ID and records the spec path and content digest.
+  It refuses an already populated or previously bound registry. Later spec
+  edits do not silently import new IDs; a second bind is refused. This action
+  preserves the run identity, clocks, dispatches, reservations, and consumed
+  corrective cycles. Earlier `unresolved` reservations remain `unresolved`;
+  do not use a new ID to retry the same failure. Do not bind while an external
+  wait or unknown dispatch outcome needs reconciliation.
 - `reserve`: before each native dispatch or command, supply `dispatch_id` and
   `kind=implementation|corrective|verification|infrastructure`. A corrective
   dispatch supplies `failure_invariant`: a stable approved requirement or
@@ -50,6 +70,57 @@ ownership from the caller's current workflow.
   `dispatch_id`, `action=dispatch_result`, and matching
   `outcome=completed|failed|expected_tdd_red`. Without that genuine event,
   unknown remains a checkpoint; worker text or a receipt cannot clear it.
+- `authorize-corrective-retry`: after a corrective reservation owner's
+  dispatch has failed because of an infrastructure error in the host result,
+  and the operator has explicitly approved recovery, atomically reserve one retry under that same
+  reservation. Pass a new `dispatch_id`, the original `failed_dispatch_id` and
+  `reservation_id`, plus a parent `native_observation` with the operator's
+  actual `native_event_id`, `run_id`, `action=corrective_retry_approved`,
+  `failed_dispatch_id`, `failed_native_event_id` matching the recorded failure,
+  `retry_dispatch_id`, `reservation_id`, and `failure_kind=infrastructure`.
+  The parent verifies the host error and user message before supplying this
+  event; matching fields in the helper are validation, not authentication.
+  The helper preserves the failed dispatch and both consumed cycles, and
+  permits one retry only when the two-cycle ceiling is reached and no sibling
+  dispatch used that reservation. Dispatch only after it returns `continue`.
+  A second retry, self-asserted approval, or a failed result without a recorded
+  native failure event remains blocked.
+- `authorize-corrective-continuation`: after a corrective executor or its
+  authorized infrastructure retry completes, a required Analyze consensus
+  edit can make the Tasks metadata fingerprint stale. If the two-cycle ceiling
+  is reached, checkpoint the work and obtain explicit operator approval for
+  exactly one Tasks metadata reconciliation under that same reservation. Pass
+  the completed `completed_dispatch_id`, a new `dispatch_id`, and the original
+  `reservation_id`, plus the operator's independently observed
+  `native_observation`: `native_event_id`, `run_id`,
+  `action=corrective_continuation_approved`, `completed_dispatch_id`,
+  `continuation_dispatch_id`, `reservation_id`, and
+  `purpose=task_metadata_reconciliation`. Verify the actual operator message
+  before supplying it; the helper only validates its binding. It requires the
+  completed corrective dispatch to be the reservation owner or its recorded
+  recovery, rejects unrelated work in that reservation and reused event IDs,
+  and reserves one continuation without changing run identity or cycle counts.
+  The Tasks producer may update only source-bound metadata, then the parent
+  revalidates G5 before G6. A second continuation or a failed/unknown source
+  remains blocked; this action is not a general repair-budget reset.
+- `authorize-corrective-exception`: when an ordinary corrective `reserve` for a
+  reproduced application failure returns `corrective_run_budget_exhausted` or
+  `failure_family_budget_exhausted` (a repeat of an already reserved family
+  whose work has completed or failed), checkpoint and obtain explicit operator
+  approval for that exact correction. Pass a new `dispatch_id`, the approved
+  `failure_invariant`, and the approved correction's `scope_sha256`, plus the
+  operator's independently observed `native_observation`: `native_event_id`,
+  `run_id`, `action=corrective_exception_approved`, `failure_invariant`,
+  `dispatch_id`, `failure_kind=application`, `refusal_reason` (the refusal the
+  ordinary reserve returned), `scope_sha256`, and `spec_sha256` matching the
+  ledger's `invariant_binding`. The invariant must be an approved ID, never
+  `unresolved`, and the run must have bound its spec with `bind-invariants`.
+  The helper records one top-level `corrective_exception` per run and reserves
+  that single dispatch under it. It leaves `corrective_cycles`, reservations,
+  earlier results, and ordinary ceilings unchanged, and refuses replay, a
+  second exception, a mismatched identity, scope, or spec, and any request an
+  ordinary reserve would accept. The exception dispatch has no nested,
+  retry, or continuation allowance.
 - `checkpoint`: persist the 45-minute completed-work marker without resetting
   the repair budget. `pause`/`resume` excludes only human-UAT or
   external-approval waits with independent parent `native_observation` carrying
@@ -69,7 +140,8 @@ ownership from the caller's current workflow.
   relocation events cannot authorize another move.
 
 Each `native_event_id` is single-use across workflow moves, wait boundaries,
-and recovered dispatch results. Changing the action or kind does not make a
+and recovered dispatch results. Operator retry, continuation, and exception
+approvals share that rule. Changing the action or kind does not make a
 consumed event new; obtain a distinct genuine parent event for each transition.
 
 After a successful or `expected_failure` ledger response, the native orchestrator
@@ -84,8 +156,10 @@ a stale mirror never initializes, overwrites, or resets a ledger. This record
 is for user visibility, not independent proof of authority or completed work.
 
 One corrective cycle per failure family and two corrective cycles per spec
-are the shared ceilings. Reserve before repairs in G3 provenance, G4/G6
-remediation, review, formal checks, or hardening. Pass the parent's
+are the shared ceilings. The operator-approved infrastructure recovery above
+reuses an existing reservation without changing either count. Reserve before
+repairs in G3 provenance, G4/G6 remediation, review, formal checks, or
+hardening. Pass the parent's
 `reservation_id` to nested work on the same failure; a nested loop has no
 independent allowance. A rejected candidate or failed repair does not create
 a new family. Pure read-only diagnosis may continue.

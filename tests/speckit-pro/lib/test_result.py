@@ -24,6 +24,42 @@ _SPECS_GUARD_INSTALLED = False
 _COUNTED_SUMMARY_RE = re.compile(
     r"^(?P<label>[^:]+):\s*(?P<passed>\d+)/(?P<total>\d+) passed\s*$"
 )
+# Layer runs keep at most this many traceback lines per failing unit.
+FAILURE_TAIL_LINES = 40
+
+
+def failure_header(label: str, test_id: str) -> str:
+    """Return the stderr line ``run_counted`` writes before a failing unit's traceback."""
+    return f"{label} FAILED {test_id}"
+
+
+def _bounded_tail(lines: list[str], limit: int) -> list[str]:
+    if len(lines) <= limit:
+        return lines
+    return [f"  ... {len(lines) - limit} earlier lines omitted", *lines[-limit:]]
+
+
+def failure_report(output: str, label: str, tail_lines: int = FAILURE_TAIL_LINES) -> str:
+    """Name each failing unit a counted child reported, with the tail of its traceback.
+
+    ``output`` is the child's captured text. Every ``failure_header`` line for
+    ``label`` starts a block that runs to the next header or the end of the text;
+    each block keeps its header and at most ``tail_lines`` lines of traceback, so
+    a long traceback cannot push its own test id out of the report. A child that
+    wrote no header (a crash before ``run_counted`` reported) gets the last
+    ``tail_lines`` lines of its whole output instead.
+    """
+    prefix = failure_header(label, "")
+    lines = output.rstrip().splitlines()
+    starts = [index for index, line in enumerate(lines) if line.startswith(prefix)]
+    if not starts:
+        return "\n".join(_bounded_tail(lines, tail_lines))
+    report: list[str] = []
+    for position, start in enumerate(starts):
+        end = starts[position + 1] if position + 1 < len(starts) else len(lines)
+        report.append(lines[start])
+        report.extend(_bounded_tail(lines[start + 1 : end], tail_lines))
+    return "\n".join(report)
 
 
 def classify_counted_child(
@@ -262,7 +298,7 @@ def run_counted(
     suite.run(result)
     for failed_test, traceback_text in result.failures + result.errors:
         # The layer runner keeps only the summary line, so name the failing unit on stderr.
-        sys.stderr.write(f"{label} FAILED {failed_test.id()}\n{traceback_text.rstrip()}\n")
+        sys.stderr.write(f"{failure_header(label, failed_test.id())}\n{traceback_text.rstrip()}\n")
     out.write(f"{label}: {result.units_passed}/{result.units_total} passed\n")
     ok = result.units_total > 0 and (result.units_passed == result.units_total) and not result.failures and not result.errors
     return 0 if ok else 1
@@ -270,7 +306,10 @@ def run_counted(
 
 __all__ = (
     "CountingTestResult",
+    "FAILURE_TAIL_LINES",
     "child_check_status",
+    "failure_header",
+    "failure_report",
     "install_specs_read_guard",
     "run_counted",
 )

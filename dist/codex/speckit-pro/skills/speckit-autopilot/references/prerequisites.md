@@ -151,6 +151,22 @@ The helper resolves the loaded plugin root that owns
 including `uat-runbook-author.md`. If `plugin_root` is supplied in `inputs`,
 it must equal that loaded root.
 
+Keep the returned `plugin_root`. Every consensus-synthesizer,
+clarify-executor, checklist-executor, and analyze-executor prompt carries a `Protocol:` line
+set to `<plugin_root>/skills/speckit-autopilot/references/consensus-protocol.md`,
+so those agents read the active protocol and never a cached copy from another
+version. Check the `**Protocol:**` path each one reports against that line,
+and never copy that expanded path into the workflow file.
+
+Every clarify-, checklist-, analyze-, and implement-executor prompt, every
+consensus analyst prompt, and every artifact-author, formal-model-author, and
+uat-runbook-author prompt also carries a
+`Reference dir: <plugin_root>/skills/speckit-autopilot/references/` line. Those agents read
+`capability-discovery.md` and `grounding.md` only from that directory and never
+search the plugin cache for another copy. The artifact-author prompt also
+carries a `Gallery dir: <plugin_root>/artifact-gallery/` line, and the agent reads the
+manifest and templates only from that directory.
+
 If the check fails, STOP. Claude Code loads plugin agents directly from the
 plugin cache, so autopilot cannot safely self-heal a missing Claude agent file.
 Tell the user to update/reinstall `speckit-pro`, run `/reload-plugins`, and
@@ -200,6 +216,8 @@ Skill tool invocations. The autopilot handles branch context by
 adjusting how it invokes each phase (see Phase Dispatch).
 
 ## Step 0.6: Load Settings + Resolve Claude Runtime
+
+Before dispatching any memory-enabled Claude agent in the bound workflow worktree, run `<resolved_python> "${CLAUDE_PLUGIN_ROOT}/scripts/agent-memory-ignore.py" --mode check --repo-root "<WORKFLOW_ROOT>"`. A nonzero result is a setup diagnostic: run the same command with `--mode apply`, commit the ignore repair before clean-worktree-gated helpers, and deliberately untrack any reported tracked memory without deleting it. Recheck after changing workflow roots. Do not dispatch memory-enabled agents while effective root or nested ignores are missing.
 
 ### Settings file
 

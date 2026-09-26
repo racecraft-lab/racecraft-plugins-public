@@ -38,8 +38,13 @@ is generated.
 Read the skeleton first, then spec.md and plan.md (and quickstart.md /
 the diff as needed) to understand what the PR actually does.
 
-Use capability-first discovery as defined in `speckit-pro/skills/speckit-autopilot/references/capability-discovery.md`.
-Ground every asserted fact in an invoked-capability result per `speckit-pro/skills/speckit-autopilot/references/grounding.md`.
+Use capability-first discovery as defined in `capability-discovery.md`.
+Ground every asserted fact in an invoked-capability result per `grounding.md`.
+Read `capability-discovery.md` and `grounding.md` only from the absolute
+directory on your prompt's `Reference dir:` line, which the orchestrator
+resolves from the loaded plugin root, and never search the plugin cache for
+another copy. If the prompt has no `Reference dir:` line, apply the rules as
+this file states them.
 
 ## What you produce — edit the skeleton in place
 

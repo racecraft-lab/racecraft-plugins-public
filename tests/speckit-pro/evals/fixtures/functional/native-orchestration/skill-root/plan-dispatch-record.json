@@ -1,0 +1,18 @@
+{
+  "phase": "Plan",
+  "executor": "phase-executor",
+  "dispatch_prompt": [
+    "Run the speckit-plan command with the workflow prompt.",
+    "Workflow root: /workspace/.worktrees/spec-820",
+    "Workflow prompt: the Phase 3 Plan prompt from SPEC-820-workflow.md"
+  ],
+  "project_skill": {
+    "name": "speckit-plan",
+    "resolved_from_root": "/workspace"
+  },
+  "artifacts_written": [
+    "/workspace/.worktrees/spec-820/specs/820-token-service/plan.md",
+    "/workspace/.worktrees/spec-820/specs/820-token-service/research.md",
+    "/workspace/.worktrees/spec-820/specs/820-token-service/data-model.md"
+  ]
+}

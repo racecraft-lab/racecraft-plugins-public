@@ -527,6 +527,11 @@ def normalize_packet_input(request: Any) -> dict[str, Any]:
     # Resolved before the evidence normalizers because draft mode relaxes what they
     # accept. Left below them, a draft packet dies in input normalization before the
     # gate is ever reached.
+    if "mode_name" in inputs:
+        return invalid_packet_input(
+            "inputs.mode is the packet mode field; remove inputs.mode_name and set inputs.mode to single, split, or draft",
+            field="mode_name",
+        )
     mode = inputs.get("mode")
     if mode is None:
         mode = "single"
@@ -821,13 +826,12 @@ def normalize_generated_title(inputs: dict[str, Any]) -> dict[str, Any]:
         return invalid_packet_input("title_description must be at least 8 characters", field="title_description")
     if not isinstance(title_type, str) or title_type not in {"feat", "fix", "chore", "docs", "refactor", "test"}:
         return invalid_packet_input("title_type must be a supported conventional commit type", field="title_type")
-    description = title_description[0].upper() + title_description[1:]
-    value = f"{title_type}({title_scope}): {description}"
+    value = f"{title_type}({title_scope}): {title_description}"
     return {
         "value": value,
         "type": title_type,
         "scope": title_scope,
-        "description": description,
+        "description": title_description,
         "source_evidence": {
             "kind": "workflow",
             "source": str(inputs.get("title_source") or "autopilot-state"),
@@ -1078,8 +1082,11 @@ def invalid_packet_input(message: str, *, field: str, details: dict[str, Any] | 
             "invalid_input",
             message,
             details=extra,
-            remediation_summary="Send the required PR packet fields.",
-            remediation_actions=["Retry with packet_path, source_feature_dir, target, title, scope, and verification evidence."],
+            remediation_summary="Correct the named PR packet input.",
+            remediation_actions=[
+                "Use inputs.mode for single, split, or draft; include packet_path, source_feature_dir, target, title_type, title_scope, and title_description.",
+                "Use verification_evidence records from the plugin-root-relative skills/speckit-autopilot/contracts/pr-packet.schema.json; an explicit empty array is valid for draft packets.",
+            ],
         )
     }
 
