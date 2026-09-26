@@ -1,5 +1,22 @@
 # Changelog
 
+## [2.37.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.36.3...speckit-pro-v2.37.0) (2026-09-26)
+
+
+### Features
+
+* **speckit-pro:** ask the operator in place when consensus needs human review ([#727](https://github.com/racecraft-lab/racecraft-plugins-public/issues/727)) ([9652a50](https://github.com/racecraft-lab/racecraft-plugins-public/commit/9652a502477de73bd57155f4506458234186386c))
+
+
+### Bug Fixes
+
+* **speckit-pro:** bind an explicit workflow path given through a symlink ([#708](https://github.com/racecraft-lab/racecraft-plugins-public/issues/708)) ([25be262](https://github.com/racecraft-lab/racecraft-plugins-public/commit/25be262aaf47623d8041f967503e20a52b94ab08)), closes [#702](https://github.com/racecraft-lab/racecraft-plugins-public/issues/702)
+* **speckit-pro:** keep two-analyst disagreements out of human review ([#726](https://github.com/racecraft-lab/racecraft-plugins-public/issues/726)) ([2c07798](https://github.com/racecraft-lab/racecraft-plugins-public/commit/2c07798d48c6e36fb6371d641e0e5deb783c771f))
+* **speckit-pro:** pass the active reference paths to agents ([#709](https://github.com/racecraft-lab/racecraft-plugins-public/issues/709)) ([89e6af4](https://github.com/racecraft-lab/racecraft-plugins-public/commit/89e6af4b2124f83cd1b5ae7d10b9ba6d5471f1d6)), closes [#703](https://github.com/racecraft-lab/racecraft-plugins-public/issues/703)
+* **speckit-pro:** reconcile Plan artifacts after a rescope ([#728](https://github.com/racecraft-lab/racecraft-plugins-public/issues/728)) ([657320f](https://github.com/racecraft-lab/racecraft-plugins-public/commit/657320f69ccc7cd0fabe0aa57bc69eef266851fc))
+* **speckit-pro:** stop doubling .process for verification evidence ([#707](https://github.com/racecraft-lab/racecraft-plugins-public/issues/707)) ([a3aea5f](https://github.com/racecraft-lab/racecraft-plugins-public/commit/a3aea5f5f1650c9290dd214ea469633a61edefbd)), closes [#704](https://github.com/racecraft-lab/racecraft-plugins-public/issues/704)
+* **speckit-pro:** verify the private autonomy record in the boundary guard ([#725](https://github.com/racecraft-lab/racecraft-plugins-public/issues/725)) ([57201e8](https://github.com/racecraft-lab/racecraft-plugins-public/commit/57201e8c280b7066fe432cc1bc7140f59f7e5690))
+
 ## [2.36.3](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.36.2...speckit-pro-v2.36.3) (2026-09-26)
 
 
