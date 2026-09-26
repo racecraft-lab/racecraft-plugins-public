@@ -260,12 +260,12 @@ Stage 3 — Apply Artifact Edits SERIALLY (orchestrator's own Edit calls):
       Push (Ix, Sx) onto ROUND_2_QUEUE
     IF Flags includes [HUMAN REVIEW NEEDED]: resolve per §Human Review Needed
       after this batch: ask the operator in place and record the answer, or
-      write CRL row with Outcome=human-review and STOP autopilot
+      write CRL row with Outcome=[HUMAN REVIEW] and STOP autopilot
 
 If ROUND_2_QUEUE non-empty:
   Stage 4 — All Round-2 analysts (the remaining (3 − |Sx|) per queued item) in ONE message
   Stage 5 — All Round-2 synthesizers in ONE message
-  Stage 6 — Apply Round-2 edits serially (same as Stage 3); HUMAN REVIEW STOPs.
+  Stage 6 — Apply Round-2 edits serially (same as Stage 3), including §Human Review Needed.
 ```
 
 ### What stays serial — and why
