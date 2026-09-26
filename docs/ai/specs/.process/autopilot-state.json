@@ -33,7 +33,7 @@
     "ledger_path": "docs/ai/specs/.process/.process/execution-control/ac068cab59ef67faf15646a7.json",
     "disposition": "continue",
     "reasons": [],
-    "elapsed_seconds": 40948.125057935715,
+    "elapsed_seconds": 43128.16757297516,
     "checkpoint_due": false
   },
   "plan": [
@@ -262,7 +262,7 @@
       "status": "skipped: outside --stage plan"
     }
   ],
-  "updated_at": "2026-09-26T01:45:33Z",
+  "updated_at": "2026-09-26T02:21:47Z",
   "prerequisites": {
     "status": "completed_with_documented_exception",
     "all_pass": false,
@@ -491,7 +491,7 @@
     "user_decision_applied": true,
     "in_flight_dispatches": [],
     "remaining": [
-      "reconcile stale Tasks sidecar fingerprints within an authorized execution-control path and revalidate G5",
+      "review PR #680 and obtain operator approval for one same-reservation metadata continuation, then reconcile Tasks fingerprints and revalidate G5",
       "obtain owner acceptance of the proposed 19-PR direction",
       "qualify exact per-PR diffs, reviewable LOC, generated outputs, and marker fingerprints; resolve H3\u2013H7 and run G6"
     ],
