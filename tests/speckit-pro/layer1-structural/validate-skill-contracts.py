@@ -581,6 +581,14 @@ class ValidateCapabilityResolution(unittest.TestCase):
             text = agent_file.read_text(encoding='utf-8', errors='replace')
             if validate_capability_resolution_DIRECTIVE_MARKER not in text:
                 continue
+            if runtime == 'claude':
+                # A repo-relative path does not exist in the consumer repository; Claude
+                # agents read both files from the directory the orchestrator passes.
+                with self.subTest(msg=f"claude: in-scope agent '{agent_name}' names no repo-relative contract path"):
+                    self.assertFalse(validate_capability_resolution_PATH_TOKEN_RE.findall(text) or validate_capability_resolution_GROUNDING_TOKEN_RE.findall(text), f'repo-relative contract path in {validate_capability_resolution__rel(agent_file)}')
+                with self.subTest(msg=f"claude: in-scope agent '{agent_name}' reads the contracts from its `Reference dir:` line"):
+                    self.assertIn("prompt's `Reference dir:` line", ' '.join(text.split()), f'no Reference dir directive in {validate_capability_resolution__rel(agent_file)}')
+                continue
             directive_tokens = sorted(set(validate_capability_resolution_PATH_TOKEN_RE.findall(text)))
             for token in directive_tokens:
                 if token not in found_tokens:

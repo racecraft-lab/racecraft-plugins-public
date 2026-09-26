@@ -214,6 +214,8 @@ Stage 1 — All routed analysts, ONE assistant message:
             description: "SPEC-XXX consensus R1 [I<x>]: <item>",
             prompt: <consensus prompt for item Ix from a's perspective>)
   Total dispatches in one message: Σ |Sx|
+  Each analyst prompt ends with the `Reference dir:` line, built from the
+  `plugin_root` that `validate-agent-install` returned.
   ↓
   Await ALL spawned analysts to complete.
 
@@ -432,6 +434,8 @@ alternative.
 
 Follow your agent instructions for output format
 (Answer, Evidence/References/Citations, Confidence).
+
+Reference dir: <plugin_root>/skills/speckit-autopilot/references/
 ```
 
 ### Checklist Gap Consensus
@@ -491,6 +495,8 @@ Propose how to close this gap. Specifically:
 3. Where in the artifact should the edit go? (section name)
 
 Follow your agent instructions for output format.
+
+Reference dir: <plugin_root>/skills/speckit-autopilot/references/
 ```
 
 ### Analyze Finding Consensus
@@ -551,6 +557,8 @@ Propose how to fix this finding. Specifically:
 3. Does this fix introduce any new concerns?
 
 Follow your agent instructions for output format.
+
+Reference dir: <plugin_root>/skills/speckit-autopilot/references/
 ```
 
 ### Pre-Implement Confidence Emit (end of Phase 6 Analyze)

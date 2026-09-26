@@ -37,8 +37,13 @@ agent.
 
 3. **Research before recommending.** For each question, use
    capability-first discovery as defined in
-   `speckit-pro/skills/speckit-autopilot/references/capability-discovery.md`.
-   Ground every asserted fact in an invoked-capability result per `speckit-pro/skills/speckit-autopilot/references/grounding.md`.
+   `capability-discovery.md`.
+   Ground every asserted fact in an invoked-capability result per `grounding.md`.
+   Read `capability-discovery.md` and `grounding.md` only from the absolute
+   directory on your prompt's `Reference dir:` line, which the orchestrator
+   resolves from the loaded plugin root, and never search the plugin cache for
+   another copy. If the prompt has no `Reference dir:` line, apply the rules as
+   this file states them.
    For web and library-documentation research, use only the research broker's
    `research_search` and `docs_query` tools. Never use another
    web search, web fetch, or documentation tool, even when one is installed:

@@ -246,8 +246,8 @@ spawn_agent("artifact-author", prompt="""
   - Plan: specs/<feature>/plan.md
   - Tasks: specs/<feature>/tasks.md
   - Design concept: docs/ai/specs/.process/<SPEC-ID>-design-concept.md
-  - Gallery manifest: speckit-pro/artifact-gallery/manifest.json
-  - Templates: speckit-pro/artifact-gallery/templates/<entry-id>.html
+
+  Gallery dir: <plugin-root>/artifact-gallery/
 
   Select, fill, and report per your agent instructions. Return one outcome
   per selected page.
@@ -269,13 +269,14 @@ or confirmed no-progress condition may use the recovery lifecycle in the parent
 skill; absent that evidence, a poll timeout is non-terminal.
 
 **The orchestrator supplies no page list — the agent selects from the
-manifest.** It reads `speckit-pro/artifact-gallery/manifest.json`, discards
+manifest.** It reads `manifest.json` from its `Gallery dir:` line, where
+`<plugin-root>` is the root the runner reported as `plugin_root`, discards
 every entry whose `stage` is not `draft-pr`, and evaluates the `trigger` on each
 entry that survives. `{"always": true}` selects unconditionally.
 `{"any_of": [...]}` selects only when the feature carries one or more of the
 signals that entry lists.
 
-**Nothing is ever written into `speckit-pro/artifact-gallery/`.** The manifest
+**Nothing is ever written into `<plugin-root>/artifact-gallery/`.** The manifest
 and the templates are shipped inputs, and a write into that directory is a
 defect. The filled pages go to `specs/<feature>/artifacts/`, one file per
 selected entry, named for that entry's manifest `id`.
@@ -334,7 +335,7 @@ Two positive tests per page under `specs/<feature>/artifacts/`:
 
 | Test | The page fails when |
 | --- | --- |
-| it is not its own template | the bytes match `speckit-pro/artifact-gallery/templates/<entry-id>.html` exactly |
+| it is not its own template | the bytes match `<plugin-root>/artifact-gallery/templates/<entry-id>.html` exactly |
 | it is not still sample content | the body carries a sample-banner element: `class="sample-notice"`, `class="notice"`, or `class="note"` |
 
 **The banner test reaches only templates that carry a banner.** Seven shipped
