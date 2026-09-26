@@ -2,7 +2,7 @@
   "active_wait": null,
   "approved_invariants": [],
   "authorization_granted": false,
-  "checkpoint_at": 1790390103.2175841,
+  "checkpoint_at": 1790393250.3923872,
   "corrective_cycles": 1,
   "dispatches": {
     "checkpoint-supply-proposal-verify-1": {
@@ -270,6 +270,14 @@
       "reservation_id": null,
       "reserved_at": 1790388080.23452
     },
+    "g3-checklist-boundary-1": {
+      "completed_at": 1790393113.209952,
+      "kind": "verification",
+      "outcome": "completed",
+      "reconciliations": 0,
+      "reservation_id": null,
+      "reserved_at": 1790393108.9674098
+    },
     "g3-plan-gate-1": {
       "completed_at": 1790389271.391487,
       "kind": "verification",
@@ -277,6 +285,14 @@
       "reconciliations": 0,
       "reservation_id": null,
       "reserved_at": 1790389195.161221
+    },
+    "g4-checklist-boundary-1": {
+      "completed_at": 1790393122.239684,
+      "kind": "verification",
+      "outcome": "completed",
+      "reconciliations": 0,
+      "reservation_id": null,
+      "reserved_at": 1790393117.46608
     },
     "phase1-specify-1": {
       "completed_at": 1790383658.66255,
@@ -326,6 +342,22 @@
       "reservation_id": null,
       "reserved_at": 1790388303.172537
     },
+    "phase4-checklist-data-integrity-1": {
+      "completed_at": 1790392488.8079202,
+      "kind": "infrastructure",
+      "outcome": "completed",
+      "reconciliations": 0,
+      "reservation_id": null,
+      "reserved_at": 1790392117.008233
+    },
+    "phase4-checklist-error-handling-1": {
+      "completed_at": 1790393097.771028,
+      "kind": "infrastructure",
+      "outcome": "completed",
+      "reconciliations": 0,
+      "reservation_id": null,
+      "reserved_at": 1790392501.901294
+    },
     "phase4-checklist-supply-chain-1": {
       "completed_at": 1790390620.599282,
       "kind": "infrastructure",
@@ -334,6 +366,30 @@
       "reservation_id": null,
       "reserved_at": 1790390211.0332239
     },
+    "phase4-spec-index-refresh-1": {
+      "completed_at": 1790393245.398525,
+      "kind": "infrastructure",
+      "outcome": "completed",
+      "reconciliations": 0,
+      "reservation_id": null,
+      "reserved_at": 1790393171.2772748
+    },
+    "phase4-supply-chain-revalidation-1": {
+      "completed_at": 1790392084.887619,
+      "kind": "infrastructure",
+      "outcome": "completed",
+      "reconciliations": 0,
+      "reservation_id": null,
+      "reserved_at": 1790391867.66094
+    },
+    "plan-estimator-after-checklists-1": {
+      "completed_at": 1790393166.99381,
+      "kind": "verification",
+      "outcome": "completed",
+      "reconciliations": 0,
+      "reservation_id": null,
+      "reserved_at": 1790393162.871642
+    },
     "plan-privacy-recheck-1": {
       "completed_at": 1790390099.0439959,
       "kind": "verification",
@@ -341,10 +397,26 @@
       "reconciliations": 0,
       "reservation_id": null,
       "reserved_at": 1790390046.2162418
+    },
+    "plan-reviewability-estimator-recovery-1": {
+      "completed_at": 1790391975.5590541,
+      "kind": "verification",
+      "outcome": "completed",
+      "reconciliations": 0,
+      "reservation_id": null,
+      "reserved_at": 1790391971.0936909
+    },
+    "planning-reviewability-setup-recovery-1": {
+      "completed_at": 1790392194.0204659,
+      "kind": "verification",
+      "outcome": "completed",
+      "reconciliations": 0,
+      "reservation_id": null,
+      "reserved_at": 1790392189.4592152
     }
   },
   "excluded_intervals": [],
-  "last_observed_at": 1790391052.285224,
+  "last_observed_at": 1790393250.3923872,
   "reservations": {
     "a02de8a1ea1d4f02bd03770cacecd0dd": {
       "dispatch_id": "g0-privacy-scan-path-collision-repair-1",

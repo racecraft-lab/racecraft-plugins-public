@@ -12,13 +12,13 @@
 
 ## Requirement Completeness
 
-- [ ] CHK001 Are separate Matt Pocock and HumanLayer MIT notices required before the complete EDA-001 foundation permits derivative delivery? [Completeness, Spec §FR-001, Spec §FR-013, Spec §FR-014, Plan §Vertical slices]
+- [ ] CHK001 Are separate Matt Pocock and HumanLayer MIT notices required before the complete EDA-001 foundation permits derivative delivery? [Completeness, Spec §FR-001, Spec §FR-013, Spec §FR-014, Plan §Split decision and dependency boundary]
 - [ ] CHK002 Are the Matt notice requirements explicit about upstream project, holder, MIT license, source and fork URLs, baseline tag, and immutable commit? [Completeness, Spec §FR-001, Contract notices §Matt Pocock notice]
 - [ ] CHK003 Are HumanLayer project, holder, MIT license, exact commit, and copied file path mandatory identity components of its separate notice? [Completeness, Spec §FR-014, Spec §FR-016, Contract notices §HumanLayer notice, slice 2]
 - [ ] CHK004 Are the inventory requirements complete for all 38 pinned upstream paths, including their bucket and exactly one owner, rather than only their count? [Completeness, Spec §FR-002, Spec §FR-005, Spec §FR-007]
 - [ ] CHK005 Does the final initial pr row require one exact transitive-source record and a link to the separate holder notice even while pr remains planned? [Completeness, Spec §FR-015, Contract ledger §Slice-2 pr source]
 - [ ] CHK006 Are both holder-specific pinned LICENSE fixtures required to be independently harvested before authoring their notices? [Completeness, Contract notices §Matt Pocock notice, Contract notices §HumanLayer notice, slice 2, Plan §Phase 1: Design and validation flow]
-- [ ] CHK007 Is an explicit public source URL required in the HumanLayer notice, alongside the existing project, holder, license, commit, and copied path, so the shipped provenance fulfills every requested identity component? [Gap] [Completeness, Spec §FR-014, Contract notices §HumanLayer notice, slice 2]
+- [ ] CHK007 Is an explicit public source URL required in the HumanLayer notice, alongside the existing project, holder, license, commit, and copied path, so the shipped provenance fulfills every requested identity component? [Completeness, Spec §FR-014, Contract notices §HumanLayer notice, slice 2]
 
 ## Requirement Clarity
 
@@ -32,7 +32,7 @@
 
 - [ ] CHK013 Do the active spec, plan, and notice/ledger contracts agree that the HumanLayer source is MIT and that historical Apache and repository-head pins are superseded? [Consistency, Spec §Clarifications: Session 1, Plan §Summary, Contract notices §HumanLayer notice, slice 2]
 - [ ] CHK014 Is the exact HumanLayer commit and copied path consistent between the required pr record and its notice identity? [Consistency, Spec §FR-014, Spec §FR-016, Contract ledger §Slice-2 pr source, Contract notices §HumanLayer notice, slice 2]
-- [ ] CHK015 Are slice-1 empty transitive arrays and slice-2 mandatory pr linkage consistently specified, avoiding a dangling notice link in the first slice? [Consistency, Spec §FR-014, Spec §FR-015, Plan §Vertical slices, Data model §Transitive source]
+- [ ] CHK015 Are slice-1 empty transitive arrays and slice-2 mandatory pr linkage consistently specified, avoiding a dangling notice link in the first slice? [Consistency, Spec §FR-014, Spec §FR-015, Plan §Split decision and dependency boundary, Data model §Transitive source]
 - [ ] CHK016 Are holder-specific notices kept distinct even though both use MIT, without allowing the Matt notice to substitute for the HumanLayer notice? [Consistency, Spec §Edge Cases, Spec §FR-014, Contract notices §HumanLayer notice, slice 2]
 
 ## Acceptance Criteria Quality
@@ -59,6 +59,6 @@
 ## Notes
 
 - Reviewer approval of requirements quality owns checkbox state. `/speckit-implement` reads it as a gate and must not modify markers.
-- CHK007 identifies one missing explicit shipped source-URL requirement. Research links already identify the exact copied source, but the HumanLayer notice's required identity list does not require a URL. This is a requirements gap, not an implementation failure.
+- Revalidation 2026-09-25: CHK007 is resolved by the explicit pinned HumanLayer copied-source URL requirement now present in spec.md FR-014 and contracts/notices.md, HumanLayer notice, slice 2. The URL matches research.md Decision 1. The gap marker is removed; reviewer-owned checkbox state is preserved. Existing requirements retain both holder-specific byte-exact MIT fixtures, the exact HumanLayer commit/path and pr linkage, and retirement of the repository-head fallback. No additional supply-chain requirements gap was found; no implementation checks were run.
 - The source decision is grounded in completed Clarify Session 1 and its recorded primary evidence. This checklist does not claim fresh external-source fetching or extraction of raw license bytes.
 - Capability path: provenance requirements -> local completed spec clarifications and notice/ledger contracts; Evidence: spec.md FR-001/FR-014–FR-016 and Clarifications Session 1, contracts/notices.md, contracts/ledger.md, research.md Decision 1; Confidence: high for the stated planning requirements, medium for previously recorded upstream facts not fetched again in this checklist invocation.

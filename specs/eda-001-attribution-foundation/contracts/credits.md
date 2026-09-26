@@ -41,7 +41,7 @@ Join multiple identifiers with exactly `; `. Single-quoted and double-quoted str
 ## Required proof cases
 
 - Valid zero-landed 38-row ledger.
-- Landed Markdown without frontmatter; Markdown after frontmatter; SKILL.md with metadata; TOML; Python with and without permitted prefixes.
+- Landed Markdown without frontmatter; Markdown after frontmatter; SKILL.md with metadata; TOML; Python with and without permitted prefixes. For frontmatter-bearing Markdown and SKILL.md, require a passing header as the first nonblank body block after the closing delimiter and isolated negatives with the header before frontmatter, inside frontmatter, after body text, or following unclosed frontmatter. Each negative asserts the landed upstream path, selected filename, and placement defect; SKILL.md placement cases retain otherwise valid matching metadata where closed frontmatter allows it.
 - Directory selection with one or more eligible files, plus a shared-file multi-source case.
 - Missing destination; empty directory; only excluded files; missing or misplaced header; wrong syntax; each mismatched ordered field; empty or extra source set.
 - Missing metadata; mismatched value; wrong scalar type/quote form; duplicate metadata/credits declarations.

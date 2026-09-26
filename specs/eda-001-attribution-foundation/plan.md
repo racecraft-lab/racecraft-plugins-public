@@ -148,10 +148,10 @@ tests/speckit-pro/
 1. Freeze the two authoritative license files in their respective slices; extract the 38 upstream paths from the pinned tree and join their names to the roadmap's explicit owner/disposition mapping. Fail extraction if the join is missing, duplicate, or ambiguous.
 2. Establish a valid 38-row, zero-landed fixture independently of shipped ledger serialization. Keep initial delivery rows planned. Keep synthetic destination contents within the fixture workspace.
 3. Write the failing notice/ledger/header tests before the content they guard, then make the smallest content change that turns each unit green. A test that begins green on absent content does not establish the required red proof.
-4. Validate inputs in order: files/bytes/JSON parsing → closed schema and canonical formatting → exact path/bucket/disposition-owner rules → Matt notice bytes → selected landed destinations and credits → slice-2 transitive notice and exact pin.
+4. Validate inputs in order: files/bytes/JSON parsing → closed schema and canonical formatting → exact path/bucket/disposition-owner rules → Matt notice bytes → selected landed destinations and credits → slice-2 transitive notice and exact pin. Missing ledger and unparseable ledger JSON fail nonzero with the ledger filename and input defect before row checks; a missing required notice fails with its filename. Attach row/path and field context when available without inventing row identity for pre-parse failures.
 5. Aggregate landed rows by destination/file, so a shared file is checked once against the sorted complete source set selected by those rows. A directory must select at least one eligible authored file; each selected file needs its own header.
 6. Validate SKILL metadata against the same expected sources without depending on host behavior or a general YAML library. Decode only the frontmatter metadata scalar required by the credit contract; test both quoted styles and reject ambiguous duplicates.
-7. Run isolated mutations for every guarded defect and assert the relevant diagnostic. Require the inventory count of 38 and a nonzero checked-file count for each positive landed case. Zero real landed rows are legitimate and are not treated as positive file coverage.
+7. Run isolated mutations for every guarded defect and assert the relevant diagnostic, including missing notice, missing ledger, and unparseable JSON inputs. Pair a passing frontmatter-bearing Markdown and SKILL.md case with isolated placement failures before or inside frontmatter, after body text, and for unclosed frontmatter, as defined in the credit contract. Require the inventory count of 38 and a nonzero checked-file count for each positive landed case. Zero real landed rows are legitimate and are not treated as positive file coverage.
 8. Register the test, link the README acknowledgment, regenerate both payloads and docs references, and execute the relevant release checks for each slice.
 
 The test's small local seams accept an explicit repository root, fixture root/evidence, and parsed inputs. Synthetic tests use temporary repository-shaped trees; production discovery excludes test fixtures. No new public API or runtime validator is shipped. Exclusion rules and metadata/byte contracts are specified in the supporting contracts; failure messages identify a file/path/field without hiding underlying failures.
@@ -161,8 +161,8 @@ The test's small local seams accept an explicit repository root, fixture root/ev
 | Requirement | Design/changed surface | Required evidence |
 | --- | --- | --- |
 | FR-001, FR-014 | Holder notices; notice contract | Missing/duplicate/changed fenced blocks fail; raw license bytes match; both payload copies present |
-| FR-002–FR-008 | Ledger; inventory/owner fixture; ledger contract | Valid zero-landed pass; targeted inventory/schema/owner/format failures |
-| FR-009–FR-011 | Credits contract; synthetic cases | Markdown/TOML/Python positive passes; empty destination and header/metadata defects fail |
+| FR-002–FR-008 | Ledger; inventory/owner fixture; ledger contract | Valid zero-landed pass; missing ledger/unparseable JSON filename diagnostics; targeted inventory/schema/owner/format failures |
+| FR-009–FR-011 | Credits contract; synthetic cases | Markdown/TOML/Python positive passes; frontmatter placement pass/fail pairs; empty destination and header/metadata defects fail |
 | FR-012, FR-017 | Stdlib attribution test and fixtures | Nonzero positive selections; isolated diagnostic assertions; no runtime spec reads |
 | FR-013 | Slice 1 | Complete foundation validation precedes derivative work |
 | FR-015–FR-016 | Slice 2 `pr` entry and HumanLayer fixture | Required source pin, holder, license, path, and separate notice rejection proofs |

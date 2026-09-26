@@ -36,8 +36,8 @@ captured during scoping.
 | Specify | `/speckit-specify` | ✅ Complete | 3 stories, 19 FRs; G1 routes provenance marker to Clarify |
 | Clarify | `/speckit-clarify` | ✅ Complete | Three sessions resolved; G2 passed with 0 markers |
 | Plan | `/speckit-plan` | ✅ Complete | Seven artifacts, G3 pass, and privacy 13/13 after approved wording correction |
-| Checklist | `/speckit-checklist` | ⚠️ Blocked | Supply-chain: 28 items, 1 URL requirement gap; reviewed proposal awaits operator decision |
-| Tasks | `/speckit-tasks` | ⏳ Pending | |
+| Checklist | `/speckit-checklist` | ✅ Complete | 88 items; 3 gaps resolved; G3/G4 pass with 0 markers |
+| Tasks | `/speckit-tasks` | 🔄 In Progress | Execution metadata required |
 | Analyze | `/speckit-analyze` | ⏳ Pending | |
 | Confidence Gate | G6.5 | ⏳ Pending | Pre-Implement composite confidence |
 | Implement | `/speckit-implement` | ⏳ Pending | |
@@ -342,7 +342,7 @@ The operator answered `MIT` in the active Codex chat. Keep both notices: the Mat
 | 3 | Clarify | Exact bucket mapping for 38 upstream skills | [spec, domain] | 1 | both-agree | Four buckets match the immediate directory after `skills/` in the pinned tree; 18/7/4/9 paths | spec-context-analyst, domain-researcher |
 | 4 | Clarify | Checked `owner_spec` mapping and IGNORE ownership | [spec] | 1→2 | 3/3 | Freeze exact path-to-owner map; EDA-001 owns IGNORE, EDA-002–EDA-010 own delivery, EDA-011 verifies close-out | spec-context-analyst, codebase-analyst, domain-researcher |
 | 5 | Clarify | `metadata.credits` frontmatter shape | [codebase, domain] | 1 | both-agree | Use a quoted string of sorted `mattpocock/skills@SHA:path` identifiers separated by `; `; repository check owns semantics | codebase-analyst, domain-researcher |
-| 6 | Gap | CHK007: HumanLayer public pinned copied-source URL | [spec] | 1 | high-confidence | Exact FR-014 and notice-contract proposal accepted; unapplied after shared corrective reservation refusal | spec-context-analyst; named consensus-synthesizer |
+| 6 | Gap | CHK007: HumanLayer public pinned copied-source URL | [spec] | 1 | high-confidence | Exact FR-014 and notice-contract proposal applied under explicit operator override; revalidated with 0 gaps | spec-context-analyst; named consensus-synthesizer |
 
 ---
 
@@ -504,10 +504,10 @@ Focus on Attribution Foundation requirements:
 
 | Checklist | Items | Gaps | Spec References |
 |-----------|-------|------|-----------------|
-| supply-chain | 28 | 1 remaining | FR-001–003, FR-005, FR-007, FR-009–016, FR-018 |
-| data-integrity | | | |
-| error-handling | | | |
-| **Total** | | | |
+| supply-chain | 28 | 0 remaining | FR-001–003, FR-005, FR-007, FR-009–016, FR-018 |
+| data-integrity | 28 | 0 | FR-002–009, FR-012, FR-014–017; SC-003/005 |
+| error-handling | 32 | 0 | FR-008, FR-010–014; file diagnostics and frontmatter proof |
+| **Total** | 88 | 0 remaining; 3 resolved | Three domains |
 
 ### Addressing Gaps
 
@@ -843,3 +843,13 @@ The operator explicitly approved installing pinned mypy 2.3.1 in an isolated env
 **Supply-chain checklist checkpoint:** The executor returned 28 requirements-quality questions and one unremediated gap (CHK007): the HumanLayer notice contract lacks an explicit pinned public copied-source URL requirement. The URL is already recorded in `research.md`. Read-only consensus is in progress. The shared corrective reservation `checklist-supply-chain-url-repair-1` was refused with `failure_family_budget_exhausted`; no corrective edit was applied.
 
 **Reviewed supply-chain recovery checkpoint:** Named spec-context analysis and named consensus synthesis returned high confidence with no flags. The exact proposal adds the public pinned copied-source URL to FR-014 and `contracts/notices.md`, without changing the closed ledger schema or requiring runtime network access. The Gap remains unresolved because the shared corrective reservation was refused. All dispatches are terminal, unknown effects are empty, and the original run retains one consumed corrective cycle. G4, the other domains, Tasks, Analyze, G6.5, and the plan-stage artifact/draft handoff remain incomplete.
+
+**Operator-authorized plan-stage continuation:** The user explicitly instructed recovery and completion of the plan stage without further stops. This supersedes automatic repair ceilings within the remaining planning scope. The exact named-consensus FR-014 and HumanLayer notice-contract correction has been applied; revalidation is pending. The original run identity, consumed counters, and refused reservations remain recorded. Actual gate outcomes remain authoritative.
+
+**Supply-chain revalidation:** 28 reviewer-owned questions preserved; CHK007 correction confirmed in FR-014 and notice contract. Gap counts are zero across spec, plan, and checklist; no implementation tests ran. Parent Plan estimator returned `status=not_estimated`, `projected=null`, with 11 declared files (2 modified, 9 new) and zero entries classed as production code. This is recorded as no sizing estimate, never a budget pass. The operator-ratified two-slice decision remains the planning basis.
+
+**Data-integrity outcome:** 28 unique, sequential, traceable requirements-quality questions; initial and final gap counts are zero. No requirement correction or consensus dispatch needed. Optional duplicate Git hooks were skipped in favor of parent commits. The vendored prerequisite option mismatch was resolved using supported runner and wrapper contracts; no implementation tests ran.
+
+**Error-handling outcome:** 32 sequential, traceable requirements-quality questions; two planning gaps closed under explicit operator continuation. FR-008/FR-012 and Plan/ledger/notice contracts now require missing-ledger, unparseable-JSON, and missing-notice failures with file-specific diagnostics. FR-010/FR-012 and Plan/credits contract require positive and negative frontmatter-placement fixtures. Count-markers and diff/structure checks pass with zero gaps. No unresolved consensus or implementation tests. The advisory Ripwire test audit reported four planning-prose symbols as untested; it is not an implementation test verdict. All 88 checklist questions retain honest reviewer-owned states.
+
+**Checklist phase boundary:** Parent G3 and G4 each passed with 0 markers after all corrections. The refreshed Plan sizing result is `not_estimated` (same 11 declared files), with no unsupported budget-pass claim. The EDA SPEC-MOC navigation was regenerated and the required elapsed-time checkpoint recorded. Tasks begins from this corrected snapshot.

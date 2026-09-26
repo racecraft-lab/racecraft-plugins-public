@@ -3,9 +3,9 @@
   "spec_id": "EDA-001",
   "feature_dir": "specs/eda-001-attribution-foundation",
   "branch": "eda-001-attribution-foundation",
-  "status": "awaiting_review",
+  "status": "in_progress",
   "stage": "plan",
-  "active_step": "Phase 4: Checklist - supply-chain Consensus",
+  "active_step": "Phase 5: Tasks",
   "stage_resolution": {
     "basis": "explicit --stage plan",
     "confidence_gate_status": "\u23f3 Pending",
@@ -76,27 +76,27 @@
     },
     {
       "step": "Phase 4: Checklist - supply-chain Consensus",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 4: Checklist - data-integrity",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 4: Checklist - data-integrity Consensus",
-      "status": "pending"
+      "status": "skipped: zero unresolved"
     },
     {
       "step": "Phase 4: Checklist - error-handling",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 4: Checklist - error-handling Consensus",
-      "status": "pending"
+      "status": "skipped: zero unresolved"
     },
     {
       "step": "Phase 5: Tasks",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 6: Analyze",
@@ -171,7 +171,7 @@
     "ledger_path": "docs/ai/specs/.process/.process/execution-control/4e8762387d1ed8b61c01a9de.json",
     "disposition": "continue",
     "reasons": [],
-    "elapsed_seconds": 20040.199239969254,
+    "elapsed_seconds": 22238.306403160095,
     "checkpoint_due": false,
     "run_id": "47805d8f53dd4babaf524ca9b62869ae"
   },
@@ -339,10 +339,13 @@
     "G3": {
       "pass": true,
       "markers": 0,
-      "reason": "plan.md exists with 0 unresolved markers; seven artifacts nonempty; no failing constitution checks",
+      "reason": "plan.md exists with 0 unresolved markers",
       "artifact_checks": true,
       "constitution_check": true,
-      "formal_selection": "disabled"
+      "formal_selection": "disabled",
+      "details": [],
+      "gate": "G3",
+      "revalidated_after_checklists": true
     },
     "PlanPrivacy": {
       "pass": true,
@@ -361,6 +364,13 @@
         "reason": "slash-separated absolute, home, and temp wording matches the absolute-home-path regex; no private path leak identified",
         "reservation": "plan-privacy-wording-repair-1 refused with failure_family_budget_exhausted; no repair applied"
       }
+    },
+    "G4": {
+      "details": [],
+      "gate": "G4",
+      "markers": 0,
+      "pass": true,
+      "reason": "0 [Gap] markers"
     }
   },
   "operator_authorized_recovery": {
@@ -481,10 +491,8 @@
       "file": "specs/eda-001-attribution-foundation/checklists/supply-chain.md",
       "items": 28,
       "gaps_found": 1,
-      "gaps_remaining": 1,
-      "unresolved": [
-        "[spec] HumanLayer notice lacks an explicit pinned public source URL requirement"
-      ],
+      "gaps_remaining": 0,
+      "unresolved": [],
       "implementation_tests": "not run",
       "consensus": {
         "round": 1,
@@ -497,9 +505,33 @@
         "synthesizer": "/root/eda001_supply_url_synth",
         "outcome": "high-confidence",
         "proposal_accepted": true,
-        "applied": false,
+        "applied": true,
         "flags": []
-      }
+      },
+      "revalidation": "phase4-supply-chain-revalidation-1: count-markers total 0; 28 items; no implementation tests"
+    },
+    "data-integrity": {
+      "agent": "/root/eda001_checklist_data_integrity",
+      "file": "specs/eda-001-attribution-foundation/checklists/data-integrity.md",
+      "items": 28,
+      "gaps_found": 0,
+      "gaps_remaining": 0,
+      "unresolved": [],
+      "consensus": "skipped: zero unresolved",
+      "verification": "initial and final count-markers total 0; 28 unique sequential IDs and traceable items",
+      "implementation_tests": "not run"
+    },
+    "error-handling": {
+      "agent": "/root/eda001_checklist_error_handling",
+      "file": "specs/eda-001-attribution-foundation/checklists/error-handling.md",
+      "items": 32,
+      "gaps_found": 2,
+      "gaps_remaining": 0,
+      "unresolved": [],
+      "consensus": "skipped: zero unresolved",
+      "verification": "count-markers total 0; 32 sequential, traceable unchecked items; diff check passed",
+      "implementation_tests": "not run",
+      "advisory_ripwire_test_audit": "exit 4: four planning-prose symbols reported as untested"
     }
   },
   "refused_corrective_request": {
@@ -509,33 +541,131 @@
     "applied": false,
     "corrective_cycles_consumed": 1
   },
-  "operator_action_required": {
-    "action": "Authorize the exact two-file pinned HumanLayer source URL requirement correction, checklist revalidation, and continued plan-stage workflow",
-    "files": [
-      "specs/eda-001-attribution-foundation/spec.md",
-      "specs/eda-001-attribution-foundation/contracts/notices.md"
-    ],
-    "approved_proposal": "Add the already-recorded pinned public copied-source URL to FR-014 and the HumanLayer notice identity paragraph",
-    "source_url": "https://github.com/humanlayer/skills/blob/bba9d13ab34f0a87f1cc33df4dd196372393ddfc/plugins/show-me/skills/show-me/SKILL.md",
-    "basis": "Corrective reservation checklist-supply-chain-url-repair-1 was refused with failure_family_budget_exhausted",
-    "corrective_cycles_consumed": 1,
-    "read_only_consensus_completed": true,
-    "owned_in_flight_dispatches": [],
-    "unknown_effects": [],
-    "remaining": [
-      "Apply reviewed CHK007 correction and revalidate supply-chain checklist",
-      "data-integrity checklist and consensus",
-      "error-handling checklist and consensus",
-      "G4",
-      "Tasks, execution metadata, G5, and atomicity/reviewability routing",
-      "Analyze, consensus, and G6",
-      "Autonomy preflight, G6.5, artifact/draft handoff, and distinct plan-stage boundary commit"
-    ],
-    "proposal_validation": {
-      "git_apply_check": "passed",
-      "git_diff_check": "passed",
-      "phase_coverage": "passed",
-      "proposal_applied": false
-    }
+  "operator_authorized_continuation": {
+    "authorization": "User explicitly instructed: YOU WILL RECOVER AND CONTINUE; stopping is forbidden, finish the plan phase.",
+    "recorded_at": "2026-09-26T03:03:29.621698+00:00",
+    "scope": "Complete the remaining plan stage, including required planning-artifact corrections, revalidation, commits, and the skill-defined draft handoff.",
+    "skill_override": "The user instruction supersedes automatic corrective ceilings for this remaining plan-stage scope. Preserve original run identity, counters, refused reservations, and actual gate outcomes. No implementation phase is authorized by this plan-stage invocation.",
+    "previous_operator_checkpoint": {
+      "action": "Authorize the exact two-file pinned HumanLayer source URL requirement correction, checklist revalidation, and continued plan-stage workflow",
+      "files": [
+        "specs/eda-001-attribution-foundation/spec.md",
+        "specs/eda-001-attribution-foundation/contracts/notices.md"
+      ],
+      "approved_proposal": "Add the already-recorded pinned public copied-source URL to FR-014 and the HumanLayer notice identity paragraph",
+      "source_url": "https://github.com/humanlayer/skills/blob/bba9d13ab34f0a87f1cc33df4dd196372393ddfc/plugins/show-me/skills/show-me/SKILL.md",
+      "basis": "Corrective reservation checklist-supply-chain-url-repair-1 was refused with failure_family_budget_exhausted",
+      "corrective_cycles_consumed": 1,
+      "read_only_consensus_completed": true,
+      "owned_in_flight_dispatches": [],
+      "unknown_effects": [],
+      "remaining": [
+        "Apply reviewed CHK007 correction and revalidate supply-chain checklist",
+        "data-integrity checklist and consensus",
+        "error-handling checklist and consensus",
+        "G4",
+        "Tasks, execution metadata, G5, and atomicity/reviewability routing",
+        "Analyze, consensus, and G6",
+        "Autonomy preflight, G6.5, artifact/draft handoff, and distinct plan-stage boundary commit"
+      ],
+      "proposal_validation": {
+        "git_apply_check": "passed",
+        "git_diff_check": "passed",
+        "phase_coverage": "passed",
+        "proposal_applied": false
+      }
+    },
+    "applied_corrections": [
+      {
+        "files": [
+          "specs/eda-001-attribution-foundation/spec.md",
+          "specs/eda-001-attribution-foundation/contracts/notices.md"
+        ],
+        "change": "Exact named-consensus proposal: explicit pinned HumanLayer copied-source URL in FR-014 and notice contract",
+        "status": "applied and revalidated: zero gaps"
+      },
+      {
+        "change": "FR-008/FR-012, Plan and ledger/notice contracts explicitly require missing/unparseable-file fixtures and file-specific diagnostics",
+        "evidence": "workflow error-handling prompt and existing diagnostics contract",
+        "status": "applied and revalidated: zero gaps"
+      },
+      {
+        "change": "FR-010/FR-012, Plan and credits contract explicitly require frontmatter-positive/negative placement fixtures",
+        "evidence": "workflow error-handling prompt; design-concept placement decision; credits contract",
+        "status": "applied and revalidated: zero gaps"
+      }
+    ]
+  },
+  "reviewability": {
+    "plan": {
+      "runner_status": "ok",
+      "exit_code": 0,
+      "verdict": {
+        "declared_files": {
+          "modified": 2,
+          "new": 9,
+          "production": 0,
+          "total_entries": 11
+        },
+        "greenfield": false,
+        "projected": null,
+        "reason": "no declared entry counted as production code; the estimator cannot size this layout",
+        "status": "not_estimated",
+        "thresholds": {
+          "base_block": 800,
+          "base_warn": 400,
+          "block": 800,
+          "greenfield_multiplier": 1.5,
+          "warn": 400
+        },
+        "tool": "estimate-reviewable-loc"
+      },
+      "plan_sha256": "9ce69bf6cbe2151db68d2a2737db593a879149ffbd0489c05ab775a148f23be1"
+    },
+    "setup": {
+      "blockers": [],
+      "exception_class": null,
+      "exception_honored": false,
+      "exceptions": {
+        "accepted": [],
+        "rejected": []
+      },
+      "greenfield": false,
+      "mode": "setup",
+      "pass": true,
+      "primary_surface_count": 1,
+      "primary_surfaces": [
+        "docs/process"
+      ],
+      "production_files": 0,
+      "reviewable_loc": 0,
+      "status": "pass",
+      "thresholds": {
+        "block": {
+          "primary_surfaces": 1,
+          "production_files": 8,
+          "reviewable_loc": 800,
+          "total_files": 25
+        },
+        "warn": {
+          "primary_surfaces": 1,
+          "production_files": 6,
+          "reviewable_loc": 400,
+          "total_files": 15
+        }
+      },
+      "total_files": 0,
+      "warnings": []
+    },
+    "setup_evidence_context": "Recovered setup-mode gate against current workflow; 0 current declared metrics, not a final implementation-diff size measurement."
+  },
+  "checklist_phase": {
+    "items": 88,
+    "gaps_found": 3,
+    "gaps_resolved": 3,
+    "gaps_remaining": 0,
+    "gate": "G4 passed",
+    "hooks": "before/after Git hooks skipped as duplicates of parent phase commit",
+    "spec_index": "EDA SPEC-MOC regenerated; unrelated generated formal map restored"
   }
 }
