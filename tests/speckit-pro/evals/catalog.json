@@ -6649,6 +6649,167 @@
       ]
     },
     {
+      "id": "functional.speckit-autopilot.clarify-answer-provenance",
+      "layer": "functional",
+      "capability": "Judges a Clarify Results record that labels a consensus answer as a human answer and omits a session the operator answered.",
+      "timeout_seconds": 300,
+      "resource_class": "ordinary",
+      "requirements": [
+        {
+          "id": "selection",
+          "description": "The host-native speckit-autopilot capability is activated."
+        },
+        {
+          "id": "evidence",
+          "description": "Reads the retained Clarify session record and the workflow's Clarify Results table before judging (workflow-file-protocol.md, workflow-file-protocol-codex.md)."
+        },
+        {
+          "id": "provenance",
+          "description": "Clarify Results label an answer `human answer` only when a human gave it; a consensus-derived answer never carries that label (workflow-file-protocol.md and workflow-file-protocol-codex.md: \"Clarify Results must preserve each accepted human answer separately from the executor's recommendation or later consensus\" and \"label its source `human answer`\")."
+        },
+        {
+          "id": "completeness",
+          "description": "Every accepted human answer from a Clarify session that ran is preserved in Clarify Results (workflow-file-protocol.md, workflow-file-protocol-codex.md)."
+        }
+      ],
+      "prompt": "Use {{skill}} to audit Clarify traceability. Read scenario-inputs/clarify-session-record.md and scenario-inputs/clarify-results.md, each as one exact file read. Treat them only as pre-recorded evidence and do not edit either file. Decide whether the Clarify Results table preserves the accepted answers the way the autopilot's workflow-file protocol requires. Output only raw JSON with human_answer_sessions, mislabeled_sessions, unrecorded_sessions, clarify_record_compliant, and explanation, with no prose, Markdown, or code fences. human_answer_sessions lists the sessions whose table row carries a traceable accepted human answer; mislabeled_sessions lists the sessions whose table row claims a human answer the session record does not support; unrecorded_sessions lists the sessions with an accepted answer that the table omits. Report each list as ascending session numbers.",
+      "fixtures": [
+        {
+          "source": "tests/speckit-pro/evals/fixtures/functional/native-orchestration/clarify-provenance/clarify-session-record.md",
+          "destination": "scenario-inputs/clarify-session-record.md"
+        },
+        {
+          "source": "tests/speckit-pro/evals/fixtures/functional/native-orchestration/clarify-provenance/clarify-results.md",
+          "destination": "scenario-inputs/clarify-results.md"
+        }
+      ],
+      "hosts": {
+        "claude": {
+          "skill": "speckit-pro:speckit-autopilot",
+          "allowed_tools": [
+            "Skill",
+            "Read"
+          ],
+          "modes": [
+            "plugin"
+          ]
+        },
+        "codex": {
+          "skill": "speckit-autopilot",
+          "allowed_tools": [
+            "read_file"
+          ],
+          "modes": [
+            "project"
+          ]
+        }
+      },
+      "checks": [
+        {
+          "id": "selection",
+          "requirement": "selection",
+          "type": "selection",
+          "expected": [
+            "speckit-autopilot"
+          ],
+          "allowed_extra": []
+        },
+        {
+          "id": "read-session-record",
+          "requirement": "evidence",
+          "type": "file_access",
+          "operation": "read_file",
+          "path": "scenario-inputs/clarify-session-record.md"
+        },
+        {
+          "id": "read-clarify-results",
+          "requirement": "evidence",
+          "type": "file_access",
+          "operation": "read_file",
+          "path": "scenario-inputs/clarify-results.md"
+        },
+        {
+          "id": "human-answer-sessions",
+          "requirement": "provenance",
+          "type": "response_json_field",
+          "field_path": [
+            "human_answer_sessions"
+          ],
+          "expected_by_host": {
+            "claude": [
+              1
+            ],
+            "codex": [
+              1
+            ]
+          }
+        },
+        {
+          "id": "mislabeled-sessions",
+          "requirement": "provenance",
+          "type": "response_json_field",
+          "field_path": [
+            "mislabeled_sessions"
+          ],
+          "expected_by_host": {
+            "claude": [
+              2
+            ],
+            "codex": [
+              2
+            ]
+          }
+        },
+        {
+          "id": "unrecorded-sessions",
+          "requirement": "completeness",
+          "type": "response_json_field",
+          "field_path": [
+            "unrecorded_sessions"
+          ],
+          "expected_by_host": {
+            "claude": [
+              3
+            ],
+            "codex": [
+              3
+            ]
+          }
+        },
+        {
+          "id": "record-not-compliant",
+          "requirement": "provenance",
+          "type": "response_json_field",
+          "field_path": [
+            "clarify_record_compliant"
+          ],
+          "expected_by_host": {
+            "claude": false,
+            "codex": false
+          }
+        },
+        {
+          "id": "provenance-semantic",
+          "requirement": "provenance",
+          "type": "semantic",
+          "rubric": "PASS only if the response identifies that session 2 had no operator reply and its accepted answer came from 2-of-3 analyst consensus, so the table's human answer label on session 2 is unsupported. FAIL if it accepts the consensus answer as a human answer, or treats the executor recommendation or analyst agreement as human ratification."
+        },
+        {
+          "id": "completeness-semantic",
+          "requirement": "completeness",
+          "type": "semantic",
+          "rubric": "PASS only if the response identifies that session 3's accepted operator answer, JSON Lines, is missing from Clarify Results. FAIL if it treats the table as complete, or substitutes the executor recommendation CSV for the operator's answer."
+        }
+      ],
+      "native_differences": [
+        "Both hosts read the same shared workflow-file protocol rule; the Codex reference mirrors the Claude text."
+      ],
+      "provenance": [
+        "speckit-pro/skills/speckit-autopilot/references/workflow-file-protocol.md",
+        "speckit-pro/codex-skills/speckit-autopilot/references/workflow-file-protocol-codex.md"
+      ]
+    },
+    {
       "id": "functional.speckit-autopilot.case-6",
       "layer": "functional",
       "capability": "Explains the gate failure remediation loop: the autopilot re-runs the checklist phase to fix gaps, then re-validates G4, with a maximum retry count.",
@@ -7305,6 +7466,169 @@
       ],
       "provenance": [
         "tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json#eval-id=12"
+      ]
+    },
+    {
+      "id": "functional.speckit-autopilot.progress-projection-mid-run",
+      "layer": "functional",
+      "capability": "Refuses to dispatch the next phase mid-run when six summary rows have replaced the canonical visible-progress and state rows.",
+      "timeout_seconds": 300,
+      "resource_class": "ordinary",
+      "requirements": [
+        {
+          "id": "selection",
+          "description": "The host-native speckit-autopilot capability is activated."
+        },
+        {
+          "id": "evidence",
+          "description": "Reads the workflow, autopilot-state.json, and the recorded visible progress plan before deciding (task-list-canonical.md, task-list-canonical-codex.md)."
+        },
+        {
+          "id": "projection",
+          "description": "Mid-run, the visible progress plan and autopilot-state.json keep every canonical row; summary rows never replace them (task-list-canonical.md: \"Do NOT omit, collapse, or defer entries\"; task-list-canonical-codex.md: \"do NOT collapse them\")."
+        },
+        {
+          "id": "dispatch-guard",
+          "description": "Before executing each phase the orchestrator re-audits plan coverage and repairs a missing canonical family before dispatch (SKILL.md, main loop step 0: \"on nonzero, repair the plan and the workflow status table, then repeat before executing this phase\"; phase-execution-codex.md, main loop step 0: \"If Archive Sweep or any canonical phase family is missing, STOP and repair the plan before executing this phase\")."
+        }
+      ],
+      "prompt": "Use {{skill}} to decide whether a resumed run may continue. Plan is the current phase. Read docs/ai/specs/.process/SPEC-830-workflow.md, docs/ai/specs/.process/autopilot-state.json, and scenario-inputs/visible-plan.json, each as one exact file read; the last file is the host-native visible progress plan as recorded. Treat them only as pre-recorded evidence: do not run helpers, dispatch agents, or edit any file. Output only raw JSON with canonical_rows_present, projection_acceptable, may_dispatch_plan_executor, repair_before_dispatch, and explanation, with no prose, Markdown, or code fences.",
+      "fixtures": [
+        {
+          "source": "tests/speckit-pro/evals/fixtures/functional/native-orchestration/progress-projection/workflow.md",
+          "destination": "docs/ai/specs/.process/SPEC-830-workflow.md"
+        },
+        {
+          "source": "tests/speckit-pro/evals/fixtures/functional/native-orchestration/progress-projection/autopilot-state.json",
+          "destination": "docs/ai/specs/.process/autopilot-state.json"
+        },
+        {
+          "source": "tests/speckit-pro/evals/fixtures/functional/native-orchestration/progress-projection/visible-plan.json",
+          "destination": "scenario-inputs/visible-plan.json"
+        }
+      ],
+      "hosts": {
+        "claude": {
+          "skill": "speckit-pro:speckit-autopilot",
+          "allowed_tools": [
+            "Skill",
+            "Read"
+          ],
+          "modes": [
+            "plugin"
+          ]
+        },
+        "codex": {
+          "skill": "speckit-autopilot",
+          "allowed_tools": [
+            "read_file"
+          ],
+          "modes": [
+            "project"
+          ]
+        }
+      },
+      "checks": [
+        {
+          "id": "selection",
+          "requirement": "selection",
+          "type": "selection",
+          "expected": [
+            "speckit-autopilot"
+          ],
+          "allowed_extra": []
+        },
+        {
+          "id": "read-workflow",
+          "requirement": "evidence",
+          "type": "file_access",
+          "operation": "read_file",
+          "path": "docs/ai/specs/.process/SPEC-830-workflow.md"
+        },
+        {
+          "id": "read-state",
+          "requirement": "evidence",
+          "type": "file_access",
+          "operation": "read_file",
+          "path": "docs/ai/specs/.process/autopilot-state.json"
+        },
+        {
+          "id": "read-visible-plan",
+          "requirement": "evidence",
+          "type": "file_access",
+          "operation": "read_file",
+          "path": "scenario-inputs/visible-plan.json"
+        },
+        {
+          "id": "canonical-rows-absent",
+          "requirement": "projection",
+          "type": "response_json_field",
+          "field_path": [
+            "canonical_rows_present"
+          ],
+          "expected_by_host": {
+            "claude": false,
+            "codex": false
+          }
+        },
+        {
+          "id": "projection-rejected",
+          "requirement": "projection",
+          "type": "response_json_field",
+          "field_path": [
+            "projection_acceptable"
+          ],
+          "expected_by_host": {
+            "claude": false,
+            "codex": false
+          }
+        },
+        {
+          "id": "no-dispatch",
+          "requirement": "dispatch-guard",
+          "type": "response_json_field",
+          "field_path": [
+            "may_dispatch_plan_executor"
+          ],
+          "expected_by_host": {
+            "claude": false,
+            "codex": false
+          }
+        },
+        {
+          "id": "repair-first",
+          "requirement": "dispatch-guard",
+          "type": "response_json_field",
+          "field_path": [
+            "repair_before_dispatch"
+          ],
+          "expected_by_host": {
+            "claude": true,
+            "codex": true
+          }
+        },
+        {
+          "id": "projection-semantic",
+          "requirement": "projection",
+          "type": "semantic",
+          "rubric": "PASS only if the response says the six summary rows collapse the canonical Archive Sweep, per-phase, per-session and per-domain Consensus, Phase 6.5, Phase 7, and Post rows, and that the visible plan and autopilot-state.json must both carry the canonical rows again. FAIL if it accepts the summary rows as an acceptable projection because they cover the same phases or because the workflow file remains authoritative."
+        },
+        {
+          "id": "dispatch-guard-semantic",
+          "requirement": "dispatch-guard",
+          "type": "semantic",
+          "rubric": "PASS only if the response restores the canonical rows before the Plan executor is dispatched. FAIL if it dispatches Plan first and defers the repair to a later phase or to the pre-final completion audit."
+        }
+      ],
+      "native_differences": [
+        "Claude's visible progress plan is TaskCreate and TaskUpdate; Codex's is update_plan. Both mirror the same canonical names into autopilot-state.json.",
+        "Case 12 covers the plan before Phase 1; this case covers the projection after phases have run."
+      ],
+      "provenance": [
+        "speckit-pro/skills/speckit-autopilot/references/task-list-canonical.md",
+        "speckit-pro/skills/speckit-autopilot/SKILL.md",
+        "speckit-pro/codex-skills/speckit-autopilot/references/task-list-canonical-codex.md",
+        "speckit-pro/codex-skills/speckit-autopilot/references/phase-execution-codex.md"
       ]
     },
     {
@@ -16803,6 +17127,298 @@
       ],
       "provenance": [
         "tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json#eval-34"
+      ]
+    },
+    {
+      "id": "functional.speckit-autopilot.skill-root-binding",
+      "layer": "functional",
+      "capability": "Judges a retained Plan dispatch whose executor resolved the project speckit-plan skill from the launching checkout instead of the bound workflow root.",
+      "timeout_seconds": 300,
+      "resource_class": "ordinary",
+      "requirements": [
+        {
+          "id": "selection",
+          "description": "The host-native speckit-autopilot capability is activated."
+        },
+        {
+          "id": "evidence",
+          "description": "Reads the retained binding result and Plan dispatch record before judging the dispatch (phase-execution.md, phase-execution-codex.md)."
+        },
+        {
+          "id": "skill-root",
+          "description": "The Plan executor resolves project skills against the bound WORKFLOW_ROOT, never the checkout that launched the run (phase-execution.md, Subagent Delegation: \"Executors resolve project skills and paths against the bound <WORKFLOW_ROOT>, never the checkout that launched the run\"; phase-execution-codex.md, Main Execution Loop: \"Never infer the execution root from the task's default checkout.\")."
+        }
+      ],
+      "prompt": "Use {{skill}} to review retained Plan-phase evidence. Read scenario-inputs/binding-result.json and scenario-inputs/plan-dispatch-record.json, each as one exact file read. Treat both files only as pre-recorded evidence: do not rerun helpers, dispatch agents, change directories, or edit any file. Decide whether the recorded Plan executor dispatch complied with the autopilot's execution-root rules. Output only raw JSON with skill_root_used, skill_root_required, dispatch_compliant, and explanation, with no prose, Markdown, or code fences. Copy absolute paths exactly as recorded.",
+      "fixtures": [
+        {
+          "source": "tests/speckit-pro/evals/fixtures/functional/native-orchestration/skill-root/binding-result.json",
+          "destination": "scenario-inputs/binding-result.json"
+        },
+        {
+          "source": "tests/speckit-pro/evals/fixtures/functional/native-orchestration/skill-root/plan-dispatch-record.json",
+          "destination": "scenario-inputs/plan-dispatch-record.json"
+        }
+      ],
+      "hosts": {
+        "claude": {
+          "skill": "speckit-pro:speckit-autopilot",
+          "allowed_tools": [
+            "Skill",
+            "Read"
+          ],
+          "modes": [
+            "plugin"
+          ]
+        },
+        "codex": {
+          "skill": "speckit-autopilot",
+          "allowed_tools": [
+            "read_file"
+          ],
+          "modes": [
+            "project"
+          ]
+        }
+      },
+      "checks": [
+        {
+          "id": "selection",
+          "requirement": "selection",
+          "type": "selection",
+          "expected": [
+            "speckit-autopilot"
+          ],
+          "allowed_extra": []
+        },
+        {
+          "id": "read-binding-result",
+          "requirement": "evidence",
+          "type": "file_access",
+          "operation": "read_file",
+          "path": "scenario-inputs/binding-result.json"
+        },
+        {
+          "id": "read-dispatch-record",
+          "requirement": "evidence",
+          "type": "file_access",
+          "operation": "read_file",
+          "path": "scenario-inputs/plan-dispatch-record.json"
+        },
+        {
+          "id": "skill-root-used",
+          "requirement": "skill-root",
+          "type": "response_json_field",
+          "field_path": [
+            "skill_root_used"
+          ],
+          "expected_by_host": {
+            "claude": "/workspace",
+            "codex": "/workspace"
+          }
+        },
+        {
+          "id": "skill-root-required",
+          "requirement": "skill-root",
+          "type": "response_json_field",
+          "field_path": [
+            "skill_root_required"
+          ],
+          "expected_by_host": {
+            "claude": "/workspace/.worktrees/spec-820",
+            "codex": "/workspace/.worktrees/spec-820"
+          }
+        },
+        {
+          "id": "dispatch-not-compliant",
+          "requirement": "skill-root",
+          "type": "response_json_field",
+          "field_path": [
+            "dispatch_compliant"
+          ],
+          "expected_by_host": {
+            "claude": false,
+            "codex": false
+          }
+        },
+        {
+          "id": "skill-root-semantic",
+          "requirement": "skill-root",
+          "type": "semantic",
+          "rubric": "PASS only if the response judges the recorded Plan dispatch against the bound workflow root /workspace/.worktrees/spec-820 and names the project skill resolved from /workspace as non-compliant, because executors resolve project skills against the bound workflow root. FAIL if it accepts the skill copy from the launching checkout, treats the matching skill name or the dispatch's Workflow root line as sufficient, or treats the executor's writes inside the workflow root as making the skill source irrelevant."
+        }
+      ],
+      "native_differences": [
+        "Claude stops at a descendant binding and requires /cd before any dispatch; Codex may bind the registered descendant in the same task. Both judge the recorded dispatch against the same bound workflow root.",
+        "Both hosts receive the same pre-recorded evidence and must not rerun the binding helper."
+      ],
+      "provenance": [
+        "speckit-pro/skills/speckit-autopilot/references/phase-execution.md",
+        "speckit-pro/codex-skills/speckit-autopilot/references/phase-execution-codex.md"
+      ]
+    },
+    {
+      "id": "functional.speckit-autopilot.plan-research-dispatch",
+      "layer": "functional",
+      "capability": "Judges a retained Plan phase whose executor skipped the research-agent dispatch its loaded command directed and presented unavailable research as settled evidence.",
+      "timeout_seconds": 300,
+      "resource_class": "ordinary",
+      "requirements": [
+        {
+          "id": "selection",
+          "description": "The host-native speckit-autopilot capability is activated."
+        },
+        {
+          "id": "evidence",
+          "description": "Reads the loaded command's Phase 0 step, the retained Plan executor record, and research.md before judging the phase (phase-executor.md, phase-executor.toml)."
+        },
+        {
+          "id": "dispatch",
+          "description": "The Plan executor follows the loaded speckit-plan command's research-agent dispatch step for Technical Context unknowns; its own direct research-broker calls do not replace that dispatch (phase-executor.md: \"Use a subagent only when the loaded command directs one\" and Rule 2, \"After the Skill loads, execute its steps\"; phase-executor.toml: \"Use `spawn_agent` only when the loaded skill directs it\" and Rule 2)."
+        },
+        {
+          "id": "gap-record",
+          "description": "Unavailable research is recorded as a gap, not presented as obtained evidence (error-recovery.md and error-recovery-codex.md: \"MCP tool unavailable: Skip research that depends on it ... Log warning\"; capability-discovery.md: \"use the fallback rule below and state the gap\")."
+        }
+      ],
+      "prompt": "Use {{skill}} to review a retained Plan phase. Read scenario-inputs/speckit-plan-phase0.md (the Phase 0 step of the command the executor loaded), scenario-inputs/plan-executor-record.json, and scenario-inputs/research.md, each as one exact file read. Treat them only as pre-recorded evidence: do not rerun Plan, dispatch agents, search, or edit any file. Decide whether the Plan executor followed its loaded command and the autopilot's research-evidence rules. Output only raw JSON with research_dispatch_required, research_dispatch_observed, unavailable_research_recorded, plan_phase_compliant, and explanation, with no prose, Markdown, or code fences.",
+      "fixtures": [
+        {
+          "source": "tests/speckit-pro/evals/fixtures/functional/native-orchestration/plan-research/speckit-plan-phase0.md",
+          "destination": "scenario-inputs/speckit-plan-phase0.md"
+        },
+        {
+          "source": "tests/speckit-pro/evals/fixtures/functional/native-orchestration/plan-research/plan-executor-record.json",
+          "destination": "scenario-inputs/plan-executor-record.json"
+        },
+        {
+          "source": "tests/speckit-pro/evals/fixtures/functional/native-orchestration/plan-research/research.md",
+          "destination": "scenario-inputs/research.md"
+        }
+      ],
+      "hosts": {
+        "claude": {
+          "skill": "speckit-pro:speckit-autopilot",
+          "allowed_tools": [
+            "Skill",
+            "Read"
+          ],
+          "modes": [
+            "plugin"
+          ]
+        },
+        "codex": {
+          "skill": "speckit-autopilot",
+          "allowed_tools": [
+            "read_file"
+          ],
+          "modes": [
+            "project"
+          ]
+        }
+      },
+      "checks": [
+        {
+          "id": "selection",
+          "requirement": "selection",
+          "type": "selection",
+          "expected": [
+            "speckit-autopilot"
+          ],
+          "allowed_extra": []
+        },
+        {
+          "id": "read-command-step",
+          "requirement": "evidence",
+          "type": "file_access",
+          "operation": "read_file",
+          "path": "scenario-inputs/speckit-plan-phase0.md"
+        },
+        {
+          "id": "read-executor-record",
+          "requirement": "evidence",
+          "type": "file_access",
+          "operation": "read_file",
+          "path": "scenario-inputs/plan-executor-record.json"
+        },
+        {
+          "id": "read-research",
+          "requirement": "evidence",
+          "type": "file_access",
+          "operation": "read_file",
+          "path": "scenario-inputs/research.md"
+        },
+        {
+          "id": "dispatch-required",
+          "requirement": "dispatch",
+          "type": "response_json_field",
+          "field_path": [
+            "research_dispatch_required"
+          ],
+          "expected_by_host": {
+            "claude": true,
+            "codex": true
+          }
+        },
+        {
+          "id": "dispatch-not-observed",
+          "requirement": "dispatch",
+          "type": "response_json_field",
+          "field_path": [
+            "research_dispatch_observed"
+          ],
+          "expected_by_host": {
+            "claude": false,
+            "codex": false
+          }
+        },
+        {
+          "id": "gap-not-recorded",
+          "requirement": "gap-record",
+          "type": "response_json_field",
+          "field_path": [
+            "unavailable_research_recorded"
+          ],
+          "expected_by_host": {
+            "claude": false,
+            "codex": false
+          }
+        },
+        {
+          "id": "phase-not-compliant",
+          "requirement": "dispatch",
+          "type": "response_json_field",
+          "field_path": [
+            "plan_phase_compliant"
+          ],
+          "expected_by_host": {
+            "claude": false,
+            "codex": false
+          }
+        },
+        {
+          "id": "dispatch-semantic",
+          "requirement": "dispatch",
+          "type": "semantic",
+          "rubric": "PASS only if the response says the loaded command directed research-agent dispatch for the two Technical Context unknowns and the recorded executor dispatched none. FAIL if it treats the executor's direct research-broker calls as a substitute for the directed dispatch, or accepts the Plan phase because its artifacts exist."
+        },
+        {
+          "id": "gap-record-semantic",
+          "requirement": "gap-record",
+          "type": "semantic",
+          "rubric": "PASS only if the response says every recorded research call returned search_unavailable while research.md still presents both decisions as sourced from guidance or provider documentation without recording that gap. FAIL if it accepts research.md as resolved evidence or invents a source for either decision."
+        }
+      ],
+      "native_differences": [
+        "Claude's executor dispatches research agents through Agent; Codex's through spawn_agent. The loaded command's step and the evidence rule are shared.",
+        "The command step is a frozen excerpt of the SpecKit plan command, so the case does not depend on an installed project skill."
+      ],
+      "provenance": [
+        "speckit-pro/agents/phase-executor.md",
+        "speckit-pro/codex-agents/phase-executor.toml",
+        "speckit-pro/skills/speckit-autopilot/references/error-recovery.md",
+        "speckit-pro/codex-skills/speckit-autopilot/references/error-recovery-codex.md",
+        "speckit-pro/skills/speckit-autopilot/references/capability-discovery.md"
       ]
     },
     {

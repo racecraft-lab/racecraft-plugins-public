@@ -1,0 +1,31 @@
+{
+  "workflow_file": "docs/ai/specs/.process/SPEC-830-workflow.md",
+  "updated_at": "2026-09-20T15:04:00Z",
+  "active_step": "Plan",
+  "plan": [
+    {
+      "step": "Setup and archive sweep",
+      "status": "completed"
+    },
+    {
+      "step": "Specify and Clarify",
+      "status": "completed"
+    },
+    {
+      "step": "Plan",
+      "status": "in_progress"
+    },
+    {
+      "step": "Checklist, Tasks, and Analyze",
+      "status": "pending"
+    },
+    {
+      "step": "Implement",
+      "status": "pending"
+    },
+    {
+      "step": "Post-implementation",
+      "status": "pending"
+    }
+  ]
+}

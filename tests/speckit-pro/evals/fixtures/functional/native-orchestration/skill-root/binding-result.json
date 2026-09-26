@@ -1,0 +1,10 @@
+{
+  "binding_status": "resolved",
+  "relation": "descendant",
+  "task_root": "/workspace",
+  "workflow_root": "/workspace/.worktrees/spec-820",
+  "workflow_file": "/workspace/.worktrees/spec-820/docs/ai/specs/.process/SPEC-820-workflow.md",
+  "branch": "scenario/spec-820",
+  "branch_protected": false,
+  "stage": "plan"
+}

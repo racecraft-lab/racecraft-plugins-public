@@ -1,0 +1,28 @@
+{
+  "plan": [
+    {
+      "step": "Setup and archive sweep",
+      "status": "completed"
+    },
+    {
+      "step": "Specify and Clarify",
+      "status": "completed"
+    },
+    {
+      "step": "Plan",
+      "status": "in_progress"
+    },
+    {
+      "step": "Checklist, Tasks, and Analyze",
+      "status": "pending"
+    },
+    {
+      "step": "Implement",
+      "status": "pending"
+    },
+    {
+      "step": "Post-implementation",
+      "status": "pending"
+    }
+  ]
+}
