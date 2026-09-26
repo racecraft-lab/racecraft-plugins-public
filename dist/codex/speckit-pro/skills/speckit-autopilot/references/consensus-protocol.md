@@ -318,6 +318,7 @@ with parent-authored synthesis.
 | **All 3 disagree** | Flag as `[HUMAN REVIEW NEEDED]` with all 3 perspectives. STOP autopilot. |
 | **Security item** (`[security]` tag, or keyword with any analyst returning `security_relevant: true`) | Apply only on 3/3 agreement. A 2/3 majority or all-disagree flags `[HUMAN REVIEW NEEDED]`. |
 | **Keyword-only item** (every routed analyst returns `security_relevant: false`) | Use the ordinary rules above: a 2/3 majority applies. |
+| **Non-security route** (`Security Route: none`) | Use the item's own rule: a `security_relevant: true` answer does not raise the bar, so two disagreeing Round 1 analysts still escape to Round 2 and a 2/3 majority applies at N = 3. |
 
 ### Conservative Mode
 
@@ -353,7 +354,7 @@ When a security keyword is detected:
 1. Still spawn all 3 agents to gather perspectives. `parse-consensus-categories` already returns all 3 for these keywords, so dispatching exactly what it returns satisfies this step
 2. Pass the helper's `security_route` to the synthesizer as its `Security Route` line
 3. When every routed analyst returns `security_relevant: false`, the keyword was used in another sense (for example `tokens` counting LLM usage), so apply the ordinary agreement rule for the item: a 2/3 majority applies at N = 3
-4. An explicit `[security]` tag, or any analyst returning `security_relevant: true`, keeps unanimity: when all 3 agree, apply the answer like any other item and continue. A keyword alone never stops autopilot
+4. An explicit `[security]` tag, or, on a keyword route, any analyst returning `security_relevant: true`, keeps unanimity: when all 3 agree, apply the answer like any other item and continue. A keyword alone never stops autopilot
 5. When a unanimity item's analysts do not all agree, present all 3 answers to the human and let the human decide
 6. Resume autopilot after the human decision
 
