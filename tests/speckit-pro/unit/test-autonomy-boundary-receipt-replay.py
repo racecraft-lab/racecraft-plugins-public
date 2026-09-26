@@ -7,9 +7,11 @@ belongs to, and the replays to run. The test builds the record's machine-local
 roots under a repository created at run time, fills in its digests, writes it
 owner-only under the git common directory, and publishes its
 `autonomy-boundary-receipt.v1` projection in `autopilot-state.json`. Each replay
-then does what a resume does: confirm the private record still hashes to
-`private_record_sha256`, and run the shipped phase-coverage validator with the
-case's `--require-autonomy-boundary` and `--current-*` values.
+then does what a resume does: run the shipped phase-coverage validator with the
+case's `--require-autonomy-boundary` and `--current-*` values. Under the full
+guard the validator locates the private record by the state's
+`execution_control.run_id` and checks that it still hashes to
+`private_record_sha256`; the test recomputes that match independently.
 """
 
 from __future__ import annotations
@@ -17,7 +19,6 @@ from __future__ import annotations
 import copy
 import importlib.util
 import json
-import os
 import shutil
 import subprocess
 import sys
@@ -49,7 +50,7 @@ BUILDERS = _load_coverage_tests()
 VALIDATOR = BUILDERS.VALIDATOR
 canonical_sha256 = BUILDERS.VALIDATOR_MODULE._canonical_json_sha256
 sha256_bytes = BUILDERS.VALIDATOR_MODULE._sha256_bytes
-RUN_ID = "0" * 32
+RUN_ID = BUILDERS.AUTONOMY_RUN_ID
 EXECUTION_FIELDS = ("execution_environment", "sandbox_mode", "approval_reviewer", "writable_roots")
 ACTION_FIELDS = ("category", "command_or_tool", "target", "effect", "execution_boundary_sha256")
 
@@ -63,7 +64,7 @@ class AutonomyBoundaryReceiptReplayTests(unittest.TestCase):
         temporary = tempfile.TemporaryDirectory()
         self.addCleanup(temporary.cleanup)
         root = Path(temporary.name)
-        (root / ".git").mkdir()
+        subprocess.run(["git", "init", "-q", str(root)], check=True)
         (root / "specs" / "demo").mkdir(parents=True)
         for name in ("plan.md", "tasks.md"):
             shutil.copyfile(FIXTURE_ROOT / name, root / "specs" / "demo" / name)
@@ -95,14 +96,6 @@ class AutonomyBoundaryReceiptReplayTests(unittest.TestCase):
             action["authorization"]["scope_sha256"] = action["scope_sha256"]
         return record
 
-    def write_private_record(self, root: Path, record: dict) -> Path:
-        directory = root / ".git" / "speckit-pro" / "autonomy-boundary"
-        directory.mkdir(parents=True, exist_ok=True, mode=0o700)
-        path = directory / f"{RUN_ID}.json"
-        path.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
-        os.chmod(path, 0o600)
-        return path
-
     def replay(self, case: dict, tamper: dict) -> tuple[bool, int, list[str]]:
         root = self.stage()
         record = self.private_record(root)
@@ -117,14 +110,28 @@ class AutonomyBoundaryReceiptReplayTests(unittest.TestCase):
             record = changed
         elif case["private_record"] == "receipt-rewritten":
             receipt["private_record_sha256"] = "sha256:" + "0" * 64
-        private_path = self.write_private_record(root, record)
+        private_path = BUILDERS.write_autonomy_private_record(root, record, RUN_ID)
+        if case["private_record"] == "missing":
+            private_path.unlink()
+        elif case["private_record"] == "unreadable":
+            private_path.unlink()
+            private_path.mkdir()
+        elif case["private_record"] == "unparseable":
+            private_path.write_text("{not json\n", encoding="utf-8")
         state = _fixture_json("state.json")
+        if case["private_record"] == "unlocatable":
+            del state["execution_control"]
         if case["boundary"] == "receipt":
             state["autonomy_boundary"] = receipt
         (root / "autopilot-state.json").write_text(json.dumps(state, indent=2) + "\n", encoding="utf-8")
 
-        stored = json.loads(private_path.read_text(encoding="utf-8"))
-        matches = canonical_sha256(stored) == receipt["private_record_sha256"]
+        try:
+            stored = json.loads(private_path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            stored = None
+        matches = stored is not None and canonical_sha256(stored) == receipt["private_record_sha256"]
+        if case["private_record"] == "unlocatable":
+            matches = False
         command = [sys.executable, str(VALIDATOR), "--workflow", str(root / "workflow.md"),
                    "--state", str(root / "autopilot-state.json")]
         if case["require_autonomy_boundary"]:
@@ -137,7 +144,11 @@ class AutonomyBoundaryReceiptReplayTests(unittest.TestCase):
         completed = subprocess.run(command, text=True, capture_output=True,
                                    timeout=120, check=False, shell=False)
         report = json.loads(completed.stdout)
-        return matches, completed.returncode, report["autonomy_boundary_errors"]
+        errors = report["autonomy_boundary_errors"]
+        for error in errors:
+            self.assertNotIn(str(root), error)
+            self.assertNotIn(RUN_ID, error)
+        return matches, completed.returncode, errors
 
     def test_fixture_replays_against_the_shipped_validator(self) -> None:
         fixture = _fixture_json("replays.json")
@@ -162,6 +173,20 @@ class AutonomyBoundaryReceiptReplayTests(unittest.TestCase):
         self.assertTrue(any(not case["expect"]["private_record_matches"] for case in cases))
         self.assertTrue(any("does not match the persisted execution boundary" in error
                             for case in cases for error in case["expect"]["autonomy_boundary_errors"]))
+
+    def test_every_private_record_failure_fails_the_full_guard(self) -> None:
+        cases = _fixture_json("replays.json")["cases"]
+        modes = {case["private_record"] for case in cases
+                 if case["require_autonomy_boundary"] and case["boundary"] == "receipt"
+                 and not case["expect"]["passes"]}
+        self.assertLessEqual(
+            {"tampered", "receipt-rewritten", "missing", "unreadable", "unparseable", "unlocatable"},
+            modes,
+        )
+        for case in cases:
+            if case["boundary"] == "receipt" and not case["expect"]["private_record_matches"]:
+                with self.subTest(case=case["id"]):
+                    self.assertFalse(case["expect"]["passes"])
 
 
 if __name__ == "__main__":

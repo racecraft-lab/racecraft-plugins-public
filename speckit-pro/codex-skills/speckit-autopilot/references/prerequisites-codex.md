@@ -270,8 +270,9 @@ the recorded execution boundary with the current surface. The state holds the
 public receipt; the complete record is the private file at
 `<git-common-dir>/speckit-pro/autonomy-boundary/<run-id>.json`. Replay the
 receipt with the full guard (`--require-autonomy-boundary` plus every
-`--current-*` value). To recheck an action's scope, open the private file and
-confirm its canonical digest equals `private_record_sha256` first. A missing
+`--current-*` value). The guard locates the private file through the state's
+`execution_control.run_id` and fails when it is missing, unreadable, or its
+canonical digest differs from `private_record_sha256`. A missing
 record or private file, a digest mismatch, a changed writable-root or approval
 boundary, or a planned action absent from the record makes it stale. Re-enter the complete Phase 6.5
 preflight and persist a current result before dispatching any implementation
