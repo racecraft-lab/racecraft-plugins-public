@@ -847,6 +847,11 @@ for phase in PHASES starting from first_pending:
        from the shared formal-methods.md contract. Keep Plan/G3 incomplete until
        the selected checks pass; refresh formal-doctor after authoring. Do not
        append this work to phase-executor's single-command prompt.
+       After a rescope changes plan.md's scope, slices, or delivery order, the
+       parent reconciles every Plan artifact before G3: `research.md`,
+       `quickstart.md`, `data-model.md`, `contracts/`, and every file under
+       `checklists/`. Record what changed in each artifact in the workflow
+       file's Plan Results.
        Run 'runner helper validate-gate' for gate G<N>
        against <feature_dir> from the orchestrator using the
        resolved scripts path for this skill.

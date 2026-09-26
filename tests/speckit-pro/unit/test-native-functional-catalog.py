@@ -168,6 +168,12 @@ NATIVE_RESPONSE_IDS = {
 # Native-only orchestration regressions. They have no legacy Layer 3 source, so
 # they sit outside the frozen legacy inventory and its selection ledger.
 ORCHESTRATION_FIXTURE_ROOT = "tests/speckit-pro/evals/fixtures/functional/native-orchestration/"
+RESCOPE_RECONCILIATION_RULE = (
+    "After a rescope changes plan.md's scope, slices, or delivery order, the parent "
+    "reconciles every Plan artifact before G3: `research.md`, `quickstart.md`, "
+    "`data-model.md`, `contracts/`, and every file under `checklists/`. Record what "
+    "changed in each artifact in the workflow file's Plan Results."
+)
 ORCHESTRATION_REQUIRING_TEXT = {
     "functional.speckit-autopilot.skill-root-binding": (
         ("speckit-pro/skills/speckit-autopilot/references/phase-execution.md",
@@ -215,6 +221,12 @@ ORCHESTRATION_REQUIRING_TEXT = {
         ("speckit-pro/codex-skills/speckit-autopilot/references/phase-execution-codex.md",
          "If Archive Sweep or any canonical phase family is missing, STOP and repair the "
          "plan before executing this phase."),
+    ),
+    "functional.speckit-autopilot.rescope-reconciliation": (
+        ("speckit-pro/skills/speckit-autopilot/references/phase-execution.md",
+         RESCOPE_RECONCILIATION_RULE),
+        ("speckit-pro/codex-skills/speckit-autopilot/references/phase-execution-codex.md",
+         RESCOPE_RECONCILIATION_RULE),
     ),
 }
 ORCHESTRATION_IDS = set(ORCHESTRATION_REQUIRING_TEXT)
@@ -266,6 +278,7 @@ ORCHESTRATION_FAILURE_PHRASES = {
     "functional.speckit-autopilot.plan-research-dispatch": "direct research-broker calls as a substitute",
     "functional.speckit-autopilot.clarify-answer-provenance": "consensus answer as a human answer",
     "functional.speckit-autopilot.progress-projection-mid-run": "summary rows as an acceptable projection",
+    "functional.speckit-autopilot.rescope-reconciliation": "accepts the rescoped plan.md alone",
 }
 LOCAL_COMMAND_LEGACY_SOURCES = {
     "functional.speckit-autopilot.case-2": (
@@ -689,6 +702,12 @@ ORCHESTRATION_FAILURE_ANSWERS = {
         "may_dispatch_plan_executor": True,
         "repair_before_dispatch": False,
     },
+    "functional.speckit-autopilot.rescope-reconciliation": {
+        "plan_increment_count": 4,
+        "stale_artifacts": [],
+        "g3_may_run": True,
+        "reconcile_before_g3": False,
+    },
 }
 
 
@@ -793,6 +812,23 @@ def _derive_orchestration_answers(case: dict) -> dict:
             "may_dispatch_plan_executor": present,
             "repair_before_dispatch": not present,
         }
+    if scenario == "rescope-reconciliation":
+        feature = "scenario-inputs/feature/"
+        plan = read(feature + "plan.md").split("## Delivery Increments", 1)[1]
+        increments = sum(1 for line in plan.splitlines() if re.match(r"\| \d+ \|", line))
+        stale = sorted(
+            destination.removeprefix(feature) for destination in sources
+            if destination != feature + "plan.md" and any(
+                int(count) != increments
+                for count in re.findall(r"\b(\d+) (?:slices|increments)\b", read(destination))
+            )
+        )
+        return {
+            "plan_increment_count": increments,
+            "stale_artifacts": stale,
+            "g3_may_run": not stale,
+            "reconcile_before_g3": bool(stale),
+        }
     raise AssertionError(f"unknown orchestration scenario {case['id']}")
 
 
@@ -839,8 +875,8 @@ class NativeFunctionalCatalogTests(unittest.TestCase):
             - REDIRECT_IDS - WORKTREE_MIGRATION_IDS - TASK_LIST_CONTRACT_IDS
         )
         self.assertEqual(len(response_only_ids), 59)
-        self.assertEqual(len(self.all_cases), 215)
-        self.assertEqual(len(self.catalog["cases"]), 99)
+        self.assertEqual(len(self.all_cases), 216)
+        self.assertEqual(len(self.catalog["cases"]), 100)
         self.assertEqual(
             set(self.cases),
             selected_ids | GROUNDED_IDS | NATIVE_RESPONSE_IDS | DASHBOARD_IDS | NATIVE_ONLY_IDS,

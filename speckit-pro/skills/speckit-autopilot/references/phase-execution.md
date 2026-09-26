@@ -378,6 +378,12 @@ and G3 incomplete until the selected checks pass; refresh discovery after author
 The phase executor itself still runs only its supplied command. Formal failure
 stops independently of generic skip-and-log or confidence settings.
 
+**Rescope reconciliation:** After a rescope changes plan.md's scope, slices, or
+delivery order, the parent reconciles every Plan artifact before G3:
+`research.md`, `quickstart.md`, `data-model.md`, `contracts/`, and every file
+under `checklists/`. Record what changed in each artifact in the workflow
+file's Plan Results.
+
 **Plan-phase reviewability budget:**
 After `plan.md` exists, run the standalone plan-phase estimator to project
 each slice's production-LOC footprint from `plan.md`'s declared file structure.
