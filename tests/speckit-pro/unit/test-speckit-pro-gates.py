@@ -2385,6 +2385,24 @@ class GateFoundationTests(unittest.TestCase):
         self.assertIn("AssertionError: second broke", reported)
         self.assertNotIn(long_traceback[0] + "\n", reported)
 
+    def test_layer_dispatcher_shows_the_tail_of_a_crash_that_wrote_only_stdout(self) -> None:
+        import contextlib
+        import io
+
+        dispatcher = load_layer_script_dispatcher()
+        test_path = REPO_ROOT / "tests" / "speckit-pro" / "run-layer-scripts.py"
+        completed = subprocess.CompletedProcess(
+            [sys.executable, "child.py"], 1, stdout="fixture loader crashed before any test ran\n", stderr=""
+        )
+        captured = io.StringIO()
+        with (
+            patch.object(dispatcher.subprocess, "run", return_value=completed),
+            contextlib.redirect_stderr(captured),
+            contextlib.redirect_stdout(io.StringIO()),
+        ):
+            self.assertEqual(dispatcher.run_script_suite("layer", [test_path], REPO_ROOT), 1)
+        self.assertIn("fixture loader crashed before any test ran", captured.getvalue())
+
     def test_missing_executable_treats_windows_altsep_paths_as_repo_relative(self) -> None:
         from speckit_pro_runner.gates import suite as suite_gate
 

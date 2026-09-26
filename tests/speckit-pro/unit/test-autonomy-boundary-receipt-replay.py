@@ -116,6 +116,10 @@ class AutonomyBoundaryReceiptReplayTests(unittest.TestCase):
         elif case["private_record"] == "unreadable":
             private_path.unlink()
             private_path.mkdir()
+        elif case["private_record"] == "symlinked":
+            decoy = private_path.with_name("decoy.json")
+            private_path.rename(decoy)
+            private_path.symlink_to(decoy)
         elif case["private_record"] == "unparseable":
             private_path.write_text("{not json\n", encoding="utf-8")
         state = _fixture_json("state.json")
@@ -130,7 +134,7 @@ class AutonomyBoundaryReceiptReplayTests(unittest.TestCase):
         except (OSError, ValueError):
             stored = None
         matches = stored is not None and canonical_sha256(stored) == receipt["private_record_sha256"]
-        if case["private_record"] == "unlocatable":
+        if case["private_record"] in ("unlocatable", "symlinked"):
             matches = False
         command = [sys.executable, str(VALIDATOR), "--workflow", str(root / "workflow.md"),
                    "--state", str(root / "autopilot-state.json")]
@@ -180,7 +184,8 @@ class AutonomyBoundaryReceiptReplayTests(unittest.TestCase):
                  if case["require_autonomy_boundary"] and case["boundary"] == "receipt"
                  and not case["expect"]["passes"]}
         self.assertLessEqual(
-            {"tampered", "receipt-rewritten", "missing", "unreadable", "unparseable", "unlocatable"},
+            {"tampered", "receipt-rewritten", "missing", "unreadable", "symlinked", "unparseable",
+             "unlocatable"},
             modes,
         )
         for case in cases:

@@ -260,12 +260,12 @@ Stage 3 — Apply Artifact Edits SERIALLY (orchestrator's own Edit calls):
       Push (Ix, Sx) onto ROUND_2_QUEUE
     IF Flags includes [HUMAN REVIEW NEEDED]: resolve per §Human Review Needed
       after this batch: ask the operator in place and record the answer, or
-      write CRL row with Outcome=human-review and STOP autopilot
+      write CRL row with Outcome=[HUMAN REVIEW] and STOP autopilot
 
 If ROUND_2_QUEUE non-empty:
   Stage 4 — All Round-2 analysts (the remaining (3 − |Sx|) per queued item) in ONE message
   Stage 5 — All Round-2 synthesizers in ONE message
-  Stage 6 — Apply Round-2 edits serially (same as Stage 3); HUMAN REVIEW STOPs.
+  Stage 6 — Apply Round-2 edits serially (same as Stage 3), including §Human Review Needed.
 ```
 
 ### What stays serial — and why
@@ -318,7 +318,7 @@ with parent-authored synthesis.
 | **2/3 agree** | Use the majority answer. Log the dissenting perspective for context. |
 | **3/3 agree** | Use the answer with high confidence. |
 | **All 3 disagree** | Flag as `[HUMAN REVIEW NEEDED]` with all 3 perspectives. Ask in place or STOP autopilot, per [Human Review Needed](#human-review-needed). |
-| **Security item** (`[security]` tag, or keyword with any analyst returning `security_relevant: true`) | Apply only on 3/3 agreement. A 2/3 majority or all-disagree flags `[HUMAN REVIEW NEEDED]`. |
+| **Security item** (`[security]` tag, or keyword with any analyst returning `security_relevant: true` or omitting the field) | Apply only on 3/3 agreement. A 2/3 majority or all-disagree flags `[HUMAN REVIEW NEEDED]`. |
 | **Keyword-only item** (every routed analyst returns `security_relevant: false`) | Use the ordinary rules above: a 2/3 majority applies. |
 | **Non-security route** (`Security Route: none`) | Use the item's own rule: a `security_relevant: true` answer does not raise the bar, so two disagreeing Round 1 analysts still escape to Round 2 and a 2/3 majority applies at N = 3. |
 

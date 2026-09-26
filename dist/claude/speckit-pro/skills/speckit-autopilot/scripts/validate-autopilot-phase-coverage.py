@@ -4637,7 +4637,14 @@ def _git_common_dir(repo_root: Path) -> Path | None:
 def _read_private_record_bytes(path: Path) -> bytes | None:
     """Read a regular, non-symlink private record file, or None."""
     try:
-        descriptor = os.open(path, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
+        # O_NOFOLLOW closes the race where it exists; the lstat check keeps the
+        # symlink refusal on platforms that lack it.
+        if stat.S_ISLNK(os.lstat(path).st_mode):
+            return None
+        descriptor = os.open(
+            path,
+            os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0),
+        )
     except OSError:
         return None
     try:
