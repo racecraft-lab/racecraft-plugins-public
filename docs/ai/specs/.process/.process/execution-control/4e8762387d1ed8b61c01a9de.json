@@ -3,8 +3,16 @@
   "approved_invariants": [],
   "authorization_granted": false,
   "checkpoint_at": 1790380789.963952,
-  "corrective_cycles": 0,
+  "corrective_cycles": 1,
   "dispatches": {
+    "g0-docs-reference-check-1": {
+      "completed_at": 1790381984.324668,
+      "kind": "verification",
+      "outcome": "completed",
+      "reconciliations": 0,
+      "reservation_id": null,
+      "reserved_at": 1790381961.276841
+    },
     "g0-mypy": {
       "completed_at": 1790371287.961833,
       "kind": "verification",
@@ -13,12 +21,38 @@
       "reservation_id": null,
       "reserved_at": 1790371241.175308
     },
-    "g0-quick-suite": {
+    "g0-mypy-post-privacy-repair-1": {
+      "completed_at": 1790382604.871097,
       "kind": "verification",
-      "outcome": "unknown",
+      "outcome": "completed",
+      "reconciliations": 0,
+      "reservation_id": null,
+      "reserved_at": 1790382577.6998122
+    },
+    "g0-privacy-scan-path-collision-repair-1": {
+      "completed_at": 1790382533.447822,
+      "kind": "corrective",
+      "outcome": "completed",
+      "reconciliations": 0,
+      "reservation_id": "a02de8a1ea1d4f02bd03770cacecd0dd",
+      "reserved_at": 1790381606.027633
+    },
+    "g0-quick-suite": {
+      "completed_at": 1790381444.671055,
+      "kind": "verification",
+      "outcome": "failed",
       "reconciliations": 1,
       "reservation_id": null,
-      "reserved_at": 1790371084.596255
+      "reserved_at": 1790371084.596255,
+      "resolution_event_id": "exec-0757115d-63d8-4508-94bc-59e5f342aee0"
+    },
+    "g0-quick-suite-after-privacy-repair-1": {
+      "completed_at": 1790382517.153344,
+      "kind": "verification",
+      "outcome": "completed",
+      "reconciliations": 0,
+      "reservation_id": null,
+      "reserved_at": 1790382004.57066
     },
     "g0-ruff": {
       "completed_at": 1790371284.144026,
@@ -27,11 +61,25 @@
       "reconciliations": 0,
       "reservation_id": null,
       "reserved_at": 1790371237.3202078
+    },
+    "g0-ruff-post-privacy-repair-1": {
+      "completed_at": 1790381941.478755,
+      "kind": "verification",
+      "outcome": "completed",
+      "reconciliations": 0,
+      "reservation_id": null,
+      "reserved_at": 1790381917.3366022
     }
   },
   "excluded_intervals": [],
-  "last_observed_at": 1790380789.963952,
-  "reservations": {},
+  "last_observed_at": 1790382604.871097,
+  "reservations": {
+    "a02de8a1ea1d4f02bd03770cacecd0dd": {
+      "dispatch_id": "g0-privacy-scan-path-collision-repair-1",
+      "family": "unresolved",
+      "reserved_at": 1790381606.027633
+    }
+  },
   "run_id": "47805d8f53dd4babaf524ca9b62869ae",
   "schema_version": "execution-control/v1",
   "slice_started_at": 1790371012.085984,
