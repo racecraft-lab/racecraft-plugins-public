@@ -48,6 +48,8 @@ $speckit-autopilot workflow.md --from-phase <next-pending-phase>
   unfinished work after reconciliation proves it is safe.
 - **Gate needs repair:** Reserve against the same durable failure-family/spec
   budget used by every nested worker; checkpoint with exact output on exhaustion.
+  One operator-approved application correction past it uses
+  `authorize-corrective-exception`; never reset or bypass the ledger.
 - **Consensus agents all disagree:** Flag `[HUMAN REVIEW NEEDED]`
   and STOP. Present all 3 perspectives to the user.
 - **MCP tool unavailable:** Skip research that depends on it. Use
