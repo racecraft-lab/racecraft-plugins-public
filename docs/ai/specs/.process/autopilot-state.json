@@ -29,12 +29,12 @@
     "safeToApplyCleanup": false
   },
   "execution_control": {
-    "run_id": "e7fbc9a6636945ed8a8c2abd42cbb892",
     "ledger_path": "docs/ai/specs/.process/.process/execution-control/ac068cab59ef67faf15646a7.json",
     "disposition": "continue",
     "reasons": [],
-    "elapsed_seconds": 43960.36163306236,
-    "checkpoint_due": false
+    "elapsed_seconds": 44313.652998924255,
+    "checkpoint_due": false,
+    "run_id": "e7fbc9a6636945ed8a8c2abd42cbb892"
   },
   "plan": [
     {
@@ -262,7 +262,7 @@
       "status": "skipped: outside --stage plan"
     }
   ],
-  "updated_at": "2026-09-26T02:35:44Z",
+  "updated_at": "2026-09-26T02:41:33Z",
   "prerequisites": {
     "status": "completed_with_documented_exception",
     "all_pass": false,
