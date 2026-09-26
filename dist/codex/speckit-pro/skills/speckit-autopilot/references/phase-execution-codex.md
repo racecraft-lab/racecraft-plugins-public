@@ -456,7 +456,7 @@ title a human would have to repair.
 The description begins with the matching H1 title, followed by exactly two H2 sections, Artifacts and Resume, and no other content:
 
 ```text
-# feat(speckit-pro): Open an example draft
+# feat(speckit-pro): open an example draft
 
 ## Artifacts
 
@@ -505,7 +505,7 @@ first; change only that field to `apply` after the dry-run succeeds.
     "title_description": "open an example draft",
     "changed_files": [],
     "verification_evidence": [],
-    "body": "# feat(speckit-pro): Open an example draft\n\n## Artifacts\n\n| Artifact | Purpose | Open |\n| --- | --- | --- |\n| Implementation Plan | Describe the implementation phases | `open specs/example-feature/artifacts/implementation-plan.html` |\n\n## Resume\n\nStage: plan. Stopped at the plan-stage boundary for review.\nResume with: `$speckit-autopilot <workflow-file> --stage implement`\n"
+    "body": "# feat(speckit-pro): open an example draft\n\n## Artifacts\n\n| Artifact | Purpose | Open |\n| --- | --- | --- |\n| Implementation Plan | Describe the implementation phases | `open specs/example-feature/artifacts/implementation-plan.html` |\n\n## Resume\n\nStage: plan. Stopped at the plan-stage boundary for review.\nResume with: `$speckit-autopilot <workflow-file> --stage implement`\n"
   }
 }
 ```
@@ -1101,10 +1101,32 @@ that requires it. The word "autonomous" alone is also not authorization for a
 persistent system mutation, account change, or external effect that the active
 conversation has not already authorized.
 
-Persist one `autonomy_boundary` object in `autopilot-state.json` and a matching
-Phase 6.5 result in the workflow file. Its canonical versioned shape is
+Keep the complete record private and publish only its receipt. The complete
+`autonomy-boundary.v1` record holds writable roots, targets, free-text
+evidence, and any native event identity. Those values are machine-local, so
+the record never goes in a tracked or untracked repository file; the privacy
+scan reads both. Write it with owner-only permissions (directory `0700`, file
+`0600`) to `<git-common-dir>/speckit-pro/autonomy-boundary/<run-id>.json`.
+`<git-common-dir>` is `git rev-parse --git-common-dir` resolved against the
+worktree, and `<run-id>` is the execution-control ledger's `run_id`. That
+directory is outside every worktree's file listing, is shared by all worktrees
+of the clone, and survives worktree removal and reboots, so a resume can reopen
+it.
+
+Persist the `autonomy-boundary-receipt.v1` projection of that record as the one
+`autonomy_boundary` object in `autopilot-state.json`, with a matching Phase 6.5
+result in the workflow file that cites only receipt values. Both shapes are in
 [autonomy-boundary.schema.json](../contracts/autonomy-boundary.schema.json), and
-the reference state shows the complete field set. Each planning fingerprint
+the reference state shows both. The receipt copies `status`,
+`planning_fingerprints`, and the `execution_environment`, `sandbox_mode`,
+`approval_reviewer`, and `sha256` of `execution_boundary`. For each action it
+copies `action_id`, `category`, `execution_boundary_sha256`, `scope_sha256`,
+`disposition`, and the authorization `status` and `scope_sha256`. It adds
+`private_record_sha256`, the canonical JSON digest (defined below) of the
+complete private record. It never carries `writable_roots`, `summary`,
+`command_or_tool`, `target`, `effect`, `evidence`, or `revocation_evidence`;
+the schema rejects a receipt that does. A complete v1 record already in state
+still validates, but new runs write the receipt. Each planning fingerprint
 records the normalized repository-relative path, byte length, and lowercase
 `sha256:` digest for `plan.md` or `tasks.md`.
 
@@ -1116,6 +1138,25 @@ containing only `category`, `command_or_tool`, `target`, `effect`, and
 extra whitespace, preserves Unicode, and rejects non-finite numbers. Prefix the
 lowercase hexadecimal SHA-256 with `sha256:`. The authorization
 `scope_sha256` must equal its action's scope digest.
+
+The full guard replays the receipt without the private roots. It recomputes
+the execution-boundary digest from the live `--current-*` values and compares
+it with the receipt's `execution_boundary.sha256`, then checks each action's
+`execution_boundary_sha256`, its authorization `scope_sha256`, and the
+dispositions. Recompute an action's `scope_sha256` from the private record,
+after confirming the record's canonical digest still equals
+`private_record_sha256`. Never drop `--require-autonomy-boundary` or a
+`--current-*` value to get a passing check; the receipt passes the full guard.
+
+An in-flight state may hold the earlier `autonomy_boundary_private_receipt`
+object (`status`, `sha256`, `public_details`, `validation`, `contract_gap`)
+instead of a receipt. It has no execution-boundary digest to replay, so
+`--require-autonomy-boundary` rejects it with a migration error. To migrate,
+open the private record it names and confirm its bytes still hash to the
+recorded `sha256`. Move the record to the run-keyed location above, replace the
+legacy object with the receipt projected from it, and rerun the full guard. If
+the private record is missing, changed, or stale against the current boundary,
+rerun this preflight instead.
 
 Only `authorization.status=explicit_user` can make an inventoried boundary
 action `ready`. Exact explicit user authorization persists across turns,
