@@ -1,45 +1,88 @@
 You are running speckit-autopilot's consensus synthesis stage.
 
-Round 1 has completed with three analyst outputs that AGREE on the
-recommendation. Dispatch `consensus-synthesizer` with these inputs and
-have it produce its standard decision artifact in the 2-of-3 majority
+Round 1 has completed for one Checklist gap. parse-consensus-categories
+routed it to all three analysts (`[ambiguous]`, `security_route:
+null`). Two analysts recommend JSON; the domain researcher dissents.
+Dispatch `consensus-synthesizer` with exactly this Stage 2 input and
+have it produce its standard Consensus Result for the 2-of-3 majority
 case.
 
 ---
-ANALYST OUTPUT 1 — codebase-analyst:
+## Consensus Resolution
 
-## Codebase findings (codebase-analyst)
-- Existing pattern: `JSON.stringify` is the universal serializer in
-  `src/api/serializer.ts:8` for outbound payloads.
-- No alternative serializer is referenced in the codebase.
+**Protocol:** speckit-pro/skills/speckit-autopilot/references/consensus-protocol.md
+**Unresolved Item:** [ambiguous] Gap: Which wire format should the new usage-export endpoint use?
+**Routed Categories:** [ambiguous]
+**Security Route:** none
+**Round:** 1
 
-**Recommendation:** use JSON for the new endpoint.
-**Confidence:** high.
+**Codebase Analyst Response:**
+## Answer
 
+Use JSON for the new endpoint.
+
+## Evidence
+
+- **File**: `src/api/serializer.ts` (line 8)
+  **Pattern**: `JSON.stringify` is the universal serializer for outbound
+  payloads; no alternative serializer exists in the codebase.
+
+## Confidence
+
+high
+
+**Rationale**: Every existing endpoint follows this pattern.
+
+## Security Relevance
+
+security_relevant: false
+
+**Spec Context Analyst Response:**
+## Answer
+
+Use JSON.
+
+## References
+
+- **Artifact**: constitution.md
+  **Section**: 3.2 Wire formats
+  **Relevance**: The constitution mandates JSON for all public APIs.
+
+## Confidence
+
+high
+
+**Rationale**: The constitution addresses this directly.
+
+## Security Relevance
+
+security_relevant: false
+
+**Domain Researcher Response:**
+## Answer
+
+Use MessagePack, with JSON offered through content negotiation.
+
+## Citations
+
+- **Source**: MessagePack specification
+  **Title**: Overview
+  **Excerpt**: A binary format that is smaller and faster to parse than
+  JSON for large, repetitive payloads such as usage exports.
+
+## Confidence
+
+medium
+
+**Rationale**: The size benefit is real, but JSON remains the default
+for first-party HTTP APIs.
+
+## Security Relevance
+
+security_relevant: false
 ---
-ANALYST OUTPUT 2 — domain-researcher:
 
-## Domain findings (domain-researcher)
-- JSON is the de-facto industry standard for HTTP APIs in 2025.
-- MessagePack and Protobuf exist but require explicit content
-  negotiation; neither is the default for first-party REST APIs.
-
-**Recommendation:** use JSON for the new endpoint.
-**Confidence:** high.
-
----
-ANALYST OUTPUT 3 — spec-context-analyst:
-
-## Spec findings (spec-context-analyst)
-- The project constitution mandates JSON for all public APIs (section
-  3.2: "Wire formats").
-
-**Recommendation:** use JSON.
-**Confidence:** high.
-
----
-
-All three analysts agree (3/3 majority). Dispatch
-`consensus-synthesizer` so it can emit its decision artifact for the
-agreement case. Stop after the synthesizer returns. Do not write
-files.
+The `**Protocol:**` line is the repository-relative path of the active
+consensus protocol in this checkout. Dispatch `consensus-synthesizer`
+with the input above, unchanged. Stop after the synthesizer returns.
+Do not write files.
