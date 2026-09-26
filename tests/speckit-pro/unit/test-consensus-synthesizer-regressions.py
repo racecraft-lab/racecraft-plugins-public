@@ -121,6 +121,7 @@ class ConsensusSynthesizerRegressionTests(unittest.TestCase):
         for path in EXECUTORS:
             flat = " ".join(path.read_text(encoding="utf-8").split())
             with self.subTest(path=f"{path.parent.name}/{path.name}"):
+                self.assertNotIn("contains a security keyword (always", flat)
                 self.assertIn("substance is about security", flat)
                 self.assertIn("A security keyword alone needs no tag", flat)
 
@@ -132,6 +133,7 @@ class ConsensusSynthesizerRegressionTests(unittest.TestCase):
         phase = phase_execution_text()
         self.assertIn(f'prompt: "Run /speckit-checklist with: <domain prompt>\\nProtocol: {ACTIVE_PROTOCOL}")', phase)
         self.assertIn(f'prompt: "Run /speckit-analyze with: <prompt>\\nProtocol: {ACTIVE_PROTOCOL}")', phase)
+        self.assertIn(f"Prepare a Clarify Question Set for: <session prompt>\n            Protocol: {ACTIVE_PROTOCOL}", phase)
         flat = " ".join(phase.split())
         self.assertIn("consensus-synthesizer agent (single fan-out), with the `Protocol:` line,", flat)
         self.assertIn("never the checkout that launched the run", flat)

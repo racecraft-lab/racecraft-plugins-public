@@ -309,7 +309,10 @@ For each clarify session in the workflow file:
           run_in_background: false,
           prompt: """
             Prepare a Clarify Question Set for: <session prompt>
+            Protocol: <plugin_root>/skills/speckit-autopilot/references/consensus-protocol.md
           """)
+     The `Protocol:` line is built from the `plugin_root` that
+     `validate-agent-install` returned (prerequisites.md Step 0.0b).
   3. Parent answers returned questions and edits spec/workflow/state
   4. Re-scan spec.md for `[NEEDS CLARIFICATION]` markers and record the
      remaining count in the session result

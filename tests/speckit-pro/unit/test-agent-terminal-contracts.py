@@ -27,7 +27,7 @@ TERMINAL_RESULT_ROLES = (
     "spec-context-analyst",
     "domain-researcher",
 )
-PROTOCOL_READERS = ("consensus-synthesizer", "analyze-executor", "checklist-executor")
+PROTOCOL_READERS = ("consensus-synthesizer", "analyze-executor", "checklist-executor", "clarify-executor")
 NO_SPAWN_ROLES = (
     "clarify-executor",
     "formal-model-author",
@@ -104,7 +104,7 @@ class AgentTerminalContractTests(unittest.TestCase):
             "**Protocol:** <the path copied from the prompt's `Protocol:` line>",
             codex_policy("consensus-synthesizer")["developer_instructions"],
         )
-        for name in ("analyze-executor", "checklist-executor"):
+        for name in ("analyze-executor", "checklist-executor", "clarify-executor"):
             instructions = " ".join(codex_policy(name)["developer_instructions"].split())
             with self.subTest(codex=name):
                 self.assertIn("`Protocol:` line", instructions)
