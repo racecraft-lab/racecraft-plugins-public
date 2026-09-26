@@ -11,6 +11,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import uuid
 from pathlib import Path
 from unittest import mock
 
@@ -71,6 +72,106 @@ def load_validator_module() -> object:
 
 
 VALIDATOR_MODULE = load_validator_module()
+
+
+def load_privacy_scan_module() -> object:
+    """Reuse the Layer-4 privacy patterns instead of copying their regexes."""
+    path = REPO_ROOT / "tests" / "speckit-pro" / "unit" / "test-privacy-scan.py"
+    spec = importlib.util.spec_from_file_location("speckit_privacy_scan_patterns", path)
+    if spec is None or spec.loader is None:
+        raise RuntimeError("could not load the privacy scan module")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def autonomy_private_record(repo_root: Path, writable_roots: list[str]) -> dict[str, object]:
+    """A complete v1 boundary record whose roots and target are machine-local."""
+    feature = repo_root / "specs" / "demo"
+    feature.mkdir(parents=True, exist_ok=True)
+    fingerprints: dict[str, object] = {}
+    for label, name, content in (
+        ("plan_md", "plan.md", b"# Plan\n"),
+        ("tasks_md", "tasks.md", b"# Tasks\n"),
+    ):
+        (feature / name).write_bytes(content)
+        fingerprints[label] = {
+            "path": f"specs/demo/{name}",
+            "sha256": VALIDATOR_MODULE._sha256_bytes(content),
+            "size_bytes": len(content),
+        }
+    execution_scope = {
+        "execution_environment": "local",
+        "sandbox_mode": "workspace-write",
+        "approval_reviewer": "auto_review",
+        "writable_roots": sorted(writable_roots),
+    }
+    execution_sha = VALIDATOR_MODULE._canonical_json_sha256(execution_scope)
+    action_scope = {
+        "category": "outside_writable_roots",
+        "command_or_tool": "apply_patch",
+        "target": str(Path(writable_roots[0]).parent / "shared-config" / "settings.json"),
+        "effect": "persistent edit of a machine-local file",
+        "execution_boundary_sha256": execution_sha,
+    }
+    scope_sha = VALIDATOR_MODULE._canonical_json_sha256(action_scope)
+    return {
+        "schema_version": "autonomy-boundary.v1",
+        "status": "ready",
+        "planning_fingerprints": fingerprints,
+        "execution_boundary": {
+            **execution_scope,
+            "summary": f"Writes stay inside {writable_roots[0]}.",
+            "sha256": execution_sha,
+        },
+        "actions": [
+            {
+                "action_id": "edit-shared-config",
+                **action_scope,
+                "scope_sha256": scope_sha,
+                "disposition": "ready",
+                "authorization": {
+                    "status": "explicit_user",
+                    # A dashed native event id guarantees a privacy-pattern hit on
+                    # every platform, whatever the home and temp roots are.
+                    "evidence": (
+                        f"user approved the edit at {action_scope['target']} "
+                        f"in native event {uuid.uuid4()}"
+                    ),
+                    "scope_sha256": scope_sha,
+                },
+            }
+        ],
+    }
+
+
+def autonomy_public_receipt(record: dict[str, object]) -> dict[str, object]:
+    """Project a private boundary record onto its portable public receipt."""
+    execution = record["execution_boundary"]
+    return {
+        "schema_version": "autonomy-boundary-receipt.v1",
+        "status": record["status"],
+        "planning_fingerprints": record["planning_fingerprints"],
+        "execution_boundary": {
+            key: execution[key]
+            for key in ("execution_environment", "sandbox_mode", "approval_reviewer", "sha256")
+        },
+        "actions": [
+            {
+                "action_id": action["action_id"],
+                "category": action["category"],
+                "execution_boundary_sha256": action["execution_boundary_sha256"],
+                "scope_sha256": action["scope_sha256"],
+                "disposition": action["disposition"],
+                "authorization": {
+                    "status": action["authorization"]["status"],
+                    "scope_sha256": action["authorization"]["scope_sha256"],
+                },
+            }
+            for action in record["actions"]
+        ],
+        "private_record_sha256": VALIDATOR_MODULE._canonical_json_sha256(record),
+    }
 
 POST_STEPS = [
     "Post: Doctor Extension Check",
@@ -3245,6 +3346,159 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
             self.assertIn(required, report)
         self.assertNotIn("workflow_file", report)
         self.assertNotIn("plan_step_count", report)
+
+    def run_autonomy_guard(
+        self, root: Path, state: dict[str, object], current_roots: list[str],
+    ) -> dict[str, object]:
+        workflow_path = root / "workflow.md"
+        workflow_path.write_text(workflow_text(), encoding="utf-8")
+        state_path = root / "autopilot-state.json"
+        state_path.write_text(json.dumps(state, indent=2) + "\n", encoding="utf-8")
+        command = [
+            sys.executable, str(VALIDATOR),
+            "--workflow", str(workflow_path), "--state", str(state_path),
+            "--require-autonomy-boundary",
+            "--current-execution-environment", "local",
+            "--current-sandbox-mode", "workspace-write",
+            "--current-approval-reviewer", "auto_review",
+        ]
+        for current_root in current_roots:
+            command.extend(["--current-writable-root", current_root])
+        command.extend(["--rule", "status-evidence"])
+        completed = subprocess.run(command, text=True, capture_output=True, check=False)
+        return json.loads(completed.stdout)
+
+    def autonomy_state(self, boundary_key: str, boundary: object) -> dict[str, object]:
+        state = state_json()
+        state["workflow_file"] = "workflow.md"
+        state["stage"] = "implement"
+        state[boundary_key] = boundary
+        return state
+
+    def test_redacted_public_receipt_passes_full_guard_and_privacy_scan(self) -> None:
+        privacy = load_privacy_scan_module()
+        home_root = str(Path.home() / "work" / "demo-checkout")
+        temp_root = str(Path(tempfile.gettempdir()).resolve())
+        current_roots = [temp_root, home_root]
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            (root / ".git").mkdir()
+            record = autonomy_private_record(root, current_roots)
+            receipt = autonomy_public_receipt(record)
+            state = self.autonomy_state("autonomy_boundary", receipt)
+
+            report = self.run_autonomy_guard(root, state, list(reversed(current_roots)))
+            self.assertEqual(report["autonomy_boundary_errors"], [], report)
+
+            drifted = self.run_autonomy_guard(root, state, [home_root])
+            self.assertIn(
+                "current execution boundary does not match the persisted execution boundary",
+                drifted["autonomy_boundary_errors"],
+            )
+
+            private_path = root / "private-record.json"
+            private_path.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
+            state_path = root / "autopilot-state.json"
+            state_path.write_text(json.dumps(state, indent=2) + "\n", encoding="utf-8")
+            patterns = (
+                privacy.HOME_PATH_PATTERN,
+                privacy.HYPHENATED_HOME_PATH_PATTERN,
+                privacy.PRIVATE_VAR_PATTERN,
+                privacy.TMP_TRANSCRIPT_PATTERN,
+                privacy.UUID_PATTERN,
+            )
+            dynamic = privacy.dynamic_local_pattern()
+            private_hits = [
+                hit for pattern in patterns for hit in privacy.scan_for(pattern, [private_path])
+            ]
+            if dynamic is not None:
+                private_hits.extend(privacy.dynamic_local_hits(dynamic, [private_path]))
+            self.assertTrue(private_hits, "the private record fixture must carry local paths")
+            public_hits = [
+                hit for pattern in patterns for hit in privacy.scan_for(pattern, [state_path])
+            ]
+            public_hits.extend(privacy.scan_for_non_allowlisted_email([state_path]))
+            if dynamic is not None:
+                public_hits.extend(privacy.dynamic_local_hits(dynamic, [state_path]))
+            self.assertEqual(public_hits, [])
+
+    def test_receipt_rejects_private_fields_and_stale_action_binding(self) -> None:
+        home_root = str(Path.home() / "work" / "demo-checkout")
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            (root / ".git").mkdir()
+            record = autonomy_private_record(root, [home_root])
+            leaked = autonomy_public_receipt(record)
+            leaked["execution_boundary"]["writable_roots"] = [home_root]
+            leaked["actions"][0]["target"] = record["actions"][0]["target"]
+            errors = VALIDATOR_MODULE.validate_autonomy_boundary(
+                self.autonomy_state("autonomy_boundary", leaked), root,
+                current_execution_boundary={
+                    "execution_environment": "local",
+                    "sandbox_mode": "workspace-write",
+                    "approval_reviewer": "auto_review",
+                    "writable_roots": [home_root],
+                },
+                require_boundary=True,
+            )["autonomy_boundary_errors"]
+            self.assertTrue(any("writable_roots" in error for error in errors), errors)
+            self.assertTrue(any("target" in error for error in errors), errors)
+
+            stale = autonomy_public_receipt(record)
+            stale["actions"][0]["authorization"]["scope_sha256"] = "sha256:" + "0" * 64
+            stale["actions"][0]["execution_boundary_sha256"] = "sha256:" + "1" * 64
+            errors = VALIDATOR_MODULE.validate_autonomy_boundary(
+                self.autonomy_state("autonomy_boundary", stale), root,
+                current_execution_boundary={
+                    "execution_environment": "local",
+                    "sandbox_mode": "workspace-write",
+                    "approval_reviewer": "auto_review",
+                    "writable_roots": [home_root],
+                },
+                require_boundary=True,
+            )["autonomy_boundary_errors"]
+            self.assertIn(
+                "autopilot_state.autonomy_boundary.actions[0].execution_boundary_sha256 is stale",
+                errors,
+            )
+            self.assertIn(
+                "autopilot_state.autonomy_boundary.actions[0].authorization.scope_sha256 "
+                "does not match its action scope",
+                errors,
+            )
+
+    def test_full_v1_record_with_writable_roots_still_validates(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            (root / ".git").mkdir()
+            record = autonomy_private_record(root, [str(root)])
+            report = self.run_autonomy_guard(
+                root, self.autonomy_state("autonomy_boundary", record), [str(root)],
+            )
+        self.assertEqual(report["autonomy_boundary_errors"], [], report)
+
+    def test_legacy_private_receipt_requires_migration_under_full_guard(self) -> None:
+        legacy = {
+            "status": "ready",
+            "sha256": "0" * 64,
+            "public_details": "redacted to honor the repository privacy rule",
+            "validation": "exact current-boundary preflight passed before G6.5",
+            "contract_gap": "public replay of the exact boundary remains unavailable",
+        }
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            (root / ".git").mkdir()
+            state = self.autonomy_state("autonomy_boundary_private_receipt", legacy)
+            required = VALIDATOR_MODULE.validate_autonomy_boundary(
+                state, root, require_boundary=True,
+            )["autonomy_boundary_errors"]
+            advisory = VALIDATOR_MODULE.validate_autonomy_boundary(
+                state, root, require_boundary=False,
+            )["autonomy_boundary_errors"]
+        self.assertEqual(advisory, [])
+        self.assertEqual(len(required), 1, required)
+        self.assertIn("autonomy_boundary_private_receipt", required[0])
+        self.assertIn("migrate", required[0])
 
 
 if __name__ == "__main__":

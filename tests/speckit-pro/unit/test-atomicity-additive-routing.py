@@ -169,6 +169,8 @@ class AtomicityAdditiveRoutingTests(unittest.TestCase):
             result = self.route(root)
             write(root, WORKFLOW, "# Atomicity workflow\n\nRoute pending.\n")
             write(root, "docs/ai/specs/.process/autopilot-state.json", "{}\n")
+            write(root, "docs/ai/specs/.process/execution-control/0123456789abcdef01234567.json", "{}\n")
+            write(root, "docs/ai/specs/.process/.process/execution-control/0123456789abcdef01234567.json", "{}\n")
             control_state_result = self.route(root)
             write(root, ".autopilot-requests/request.json", "{}\n")
             write(root, f"{FEATURE}/.autopilot-requests/request.json", "{}\n")
