@@ -311,7 +311,11 @@ class TranscriptToolTests(unittest.TestCase):
                 if not expected.is_file() or not parser_fixture.is_file():
                     continue
                 terms = json.loads(expected.read_text(encoding="utf-8")).get("must_include_terms", [])
-                if not terms:
+                with self.subTest(fixture=f"{family}/{fixture.name}", field="must_include_terms"):
+                    # The fixture runners read only a JSON list of strings; a string would iterate by character.
+                    self.assertIsInstance(terms, list)
+                    self.assertTrue(all(isinstance(term, str) for term in terms), terms)
+                if not isinstance(terms, list) or not terms:
                     continue
                 reduced = run_script(REDUCE, str(parser_fixture), str(expected))
                 self.assertEqual(reduced.returncode, 0, reduced.stderr)
