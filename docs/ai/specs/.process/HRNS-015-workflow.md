@@ -178,6 +178,7 @@ An explicit operator waiver is recorded separately and is never a passing check.
 | **Name** | Autopilot, Gate, and PR-Emission Repair |
 | **Branch** | `hrns-015-autopilot-gate-pr-emission-repair` |
 | **Stage** | `plan` |
+| **Draft PR** | [#685](https://github.com/racecraft-lab/racecraft-plugins-public/pull/685) — generation gap: architecture-viewer template absent |
 | **Dependencies** | None |
 | **Enables** | HRNS-016 (needs Slice A's packet release-note and untracked-packet repairs) |
 | **Priority** | P1 |
@@ -930,6 +931,10 @@ racecraft-plugins-public/
 ```
 
 ---
+
+### Plan publication recovery
+
+Issue #684 tracks the native packet apply refusal when only this run’s private execution ledger was untracked. The rejected apply made no writes. A command-scoped Git exclusion removed only that exact private file from status; the identical apply then succeeded and the packet validator passed. No ledger relocation, deletion, staging, global ignore, repository ignore, or persistent Git configuration change occurred. The draft was created through gh-stack from the validated packet.
 
 ### Plan handoff structural checks
 
