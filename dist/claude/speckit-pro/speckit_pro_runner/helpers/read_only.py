@@ -2590,9 +2590,10 @@ def workflow_draft_pr_row(lines: list[str]) -> dict[str, Any] | None:
         if len(cells) >= 2 and cells[0].strip("*` ").casefold() == "draft pr":
             # The link target admits neither whitespace nor parentheses, so a gap note
             # carrying its own parentheses or a second link cannot be swallowed into
-            # the URL and corrupt the identity. The em dash is the separator, not part
-            # of the note; no other separator form is specified.
-            match = re.fullmatch(r"\[#(\d+)\]\(([^()\s]+)\)(?: — (.+))?", cells[1])
+            # the URL and corrupt the identity. Any text after the link is the gap
+            # note; a leading em dash, hyphen, or colon separator is dropped, so a
+            # style guide that forbids em dashes cannot make the row read as absent.
+            match = re.fullmatch(r"\[#(\d+)\]\(([^()\s]+)\)(?:\s*(?:[—:-]\s*)?(.+))?", cells[1])
             if match is None:
                 return None
             return {"number": int(match.group(1)), "url": match.group(2), "gap_note": match.group(3)}
