@@ -1083,6 +1083,47 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
                     report["changed_file_manifest_errors"],
                 )
 
+                subprocess.run(["git", "-C", str(root), "rm", "-q", "shared.txt"], check=True)
+                commit_test_repo(root, "delete shared path")
+                deleted_commit = subprocess.run(
+                    ["git", "-C", str(root), "rev-parse", "HEAD"],
+                    text=True, capture_output=True, check=True,
+                ).stdout.strip()
+                state["pr_marker_plan"]["markers"][1]["implementation_checkpoint"]["commit_sha"] = deleted_commit
+                state_path.write_text(json.dumps(state), encoding="utf-8")
+                subprocess.run(["git", "-C", str(root), "add", "autopilot-state.json"], check=True)
+                commit_test_repo(root, "deleted second checkpoint")
+                deleted_head = subprocess.run(
+                    ["git", "-C", str(root), "rev-parse", "HEAD"],
+                    text=True, capture_output=True, check=True,
+                ).stdout.strip()
+                report = VALIDATOR_MODULE.validate_changed_file_manifest(
+                    state, state_path,
+                    expected_base_commit=base_commit,
+                    expected_head_commit=deleted_head,
+                )
+                self.assertIn(
+                    "shared marker path shared.txt is missing at declared checkpoint 1",
+                    report["changed_file_manifest_errors"],
+                )
+                self.assertNotIn(
+                    "shared marker path shared.txt is unchanged at declared checkpoint 1",
+                    report["changed_file_manifest_errors"],
+                )
+
+                manifest["files"][2]["marker_ids"] = ["us1", "us1"]
+                manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+                report = VALIDATOR_MODULE.validate_changed_file_manifest(
+                    state, state_path,
+                    expected_base_commit=base_commit,
+                    expected_head_commit=deleted_head,
+                )
+                self.assertTrue(
+                    any("marker_ids" in error and ("unique" in error or "repeat" in error)
+                        for error in report["changed_file_manifest_errors"]),
+                    report,
+                )
+
     def test_marker_contract_rejects_unsafe_paths_invalid_identity_and_non_utc_timestamps(self) -> None:
         state = self.projected_state(
             plan_status="in_progress",
