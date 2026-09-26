@@ -391,6 +391,9 @@ Run the pre-flight sequence before any phase work. STOP on failure.
    has to act on; `plan` after a strict-mode gate stop reads
    `the first non-terminal planning phase is Confidence Gate, which is
    ⚠️ Blocked` rather than an unexplained stage token.
+   Open CRITICAL/HIGH rows in the workflow's Analysis Results table also keep
+   planning incomplete, even when every row reads Complete; the basis then names
+   the open-finding count.
    If Step 0.6d reclaimed the slot, append
    `reclaimed the state slot from <prior workflow file> (prior status:
    <prior_run_note>)` to the same report. A `prior_run_note` of
@@ -599,8 +602,8 @@ for phase in PHASES starting from first_pending:
     5. Run after_<phase> hooks
     6. Validate the gate (G1-G7): run runner helper
        `helper_id=validate-gate operation=validate-gate mode=read_only`
-       with `gate=G<N>` and `feature_dir=<feature-dir>`, then branch on
-       the JSON `pass` field
+       with `gate=G<N>`, `feature_dir=<feature-dir>`, and
+       `workflow_file=<workflow-file>`, then branch on the JSON `pass` field
        On FAIL: reserve a corrective cycle through execution-control;
        honor its shared family/spec budget and checkpoint disposition
     7. Update workflow file; auto-commit if configured
@@ -752,6 +755,8 @@ directions; do not infer a broader precedence rule.
   <next-pending-phase>` — the workflow file persists all state.
 - **Repair budget exhausted:** checkpoint with the exact gate output
   and remaining work; no phase or nested worker has an independent retry budget.
+  One operator-approved application correction past it uses
+  `authorize-corrective-exception`; never reset or bypass the ledger.
 - **Consensus all-disagree** (Round 2): flag `[HUMAN REVIEW NEEDED]`,
   STOP, and present all 3 perspectives to the user.
 - **Research/context capability unavailable:** use the next acceptable

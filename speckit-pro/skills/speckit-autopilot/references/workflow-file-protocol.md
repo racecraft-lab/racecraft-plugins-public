@@ -104,7 +104,10 @@ that treats those rows as phase records.
 value begins with one Markdown link whose text is `#<number>` and whose target is
 the pull request URL. The number and the URL are one linked reference, not two
 columns: readers take the number from the link text and the URL from the link
-target. An optional gap note may follow the link in the same cell.
+target. An optional gap note may follow the link in the same cell. Any text
+after the link is the note: readers drop one leading em dash, hyphen, or colon
+separator, and keep a note with no separator, such as a parenthesized one,
+whole. Writers use the em dash form shown above.
 
 **Two states, both legal.** A row that is absent means no pull request has been
 opened for this feature. That is information, never a fault, and it is the same

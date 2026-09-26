@@ -18,6 +18,7 @@ from test_result import run_counted  # noqa: E402
 
 
 SYNTHESIZER = REPO_ROOT / "speckit-pro" / "codex-agents" / "consensus-synthesizer.toml"
+CLAUDE_SYNTHESIZER = REPO_ROOT / "speckit-pro" / "agents" / "consensus-synthesizer.md"
 PROTOCOL = (
     REPO_ROOT / "speckit-pro" / "skills" / "speckit-autopilot" / "references"
     / "consensus-protocol.md"
@@ -27,6 +28,21 @@ AUTOPILOT_SKILLS = (
     REPO_ROOT / "speckit-pro" / "codex-skills" / "speckit-autopilot" / "SKILL.md",
 )
 CODEX_AUTOPILOT = AUTOPILOT_SKILLS[1]
+REFERENCES = REPO_ROOT / "speckit-pro" / "skills" / "speckit-autopilot" / "references"
+CODEX_PHASE_EXECUTION = (
+    REPO_ROOT / "speckit-pro" / "codex-skills" / "speckit-autopilot" / "references"
+    / "phase-execution-codex.md"
+)
+ACTIVE_PROTOCOL = "<plugin_root>/skills/speckit-autopilot/references/consensus-protocol.md"
+EXECUTORS = tuple(
+    REPO_ROOT / "speckit-pro" / folder / f"{role}-executor{suffix}"
+    for role in ("clarify", "analyze", "checklist")
+    for folder, suffix in (("agents", ".md"), ("codex-agents", ".toml"))
+)
+
+
+def phase_execution_text() -> str:
+    return (REFERENCES / "phase-execution.md").read_text(encoding="utf-8")
 
 
 def instructions() -> str:
@@ -73,6 +89,58 @@ class ConsensusSynthesizerRegressionTests(unittest.TestCase):
             "A 2/3 majority or no agreement returns `[HUMAN REVIEW NEEDED]`",
             "a keyword alone never stops the run",
         ))
+
+    def test_keyword_only_route_uses_the_items_own_rule_when_no_analyst_flags_security(self) -> None:
+        # A keyword such as `tokens` meaning LLM usage counts must not force
+        # unanimity when every analyst says the item has no security content.
+        # A tag, a `true`, or a missing field still fails toward unanimity.
+        route_line = "**Security Route:** tag | keyword | none"
+        rule = (
+            "When the route is `keyword` and every routed response returns "
+            "`security_relevant: false`, apply the ordinary rule for N above"
+        )
+        fail_closed = "returns `security_relevant: true`, or omits the field"
+        for label, text in (
+            ("codex", instructions()),
+            ("claude", CLAUDE_SYNTHESIZER.read_text(encoding="utf-8")),
+        ):
+            flat = " ".join(text.split())
+            with self.subTest(platform=label):
+                assert_contains(self, text, (route_line,))
+                assert_contains(self, flat, (rule, fail_closed, "a 2/3 majority wins at N = 3"))
+        protocol = " ".join(PROTOCOL.read_text(encoding="utf-8").split())
+        assert_contains(self, protocol, (
+            "**Security Route:** <security_route from parse-consensus-categories: tag | keyword | none>",
+            "every routed analyst returns `security_relevant: false`",
+            "An explicit `[security]` tag, or any analyst returning `security_relevant: true`, keeps unanimity",
+        ))
+
+    def test_executors_reserve_the_security_tag_for_security_substance(self) -> None:
+        # A `[security]` tag always keeps unanimity, so an executor that tags
+        # every keyword-bearing item would defeat the keyword-only relief.
+        for path in EXECUTORS:
+            flat = " ".join(path.read_text(encoding="utf-8").split())
+            with self.subTest(path=f"{path.parent.name}/{path.name}"):
+                self.assertNotIn("contains a security keyword (always", flat)
+                self.assertIn("substance is about security", flat)
+                self.assertIn("A security keyword alone needs no tag", flat)
+
+    def test_orchestrator_passes_the_active_protocol_path(self) -> None:
+        # Every synthesizer and every analyze or checklist executor prompt
+        # carries the protocol path resolved from the loaded plugin root.
+        protocol = PROTOCOL.read_text(encoding="utf-8")
+        self.assertIn(f"**Protocol:** {ACTIVE_PROTOCOL}", protocol)
+        phase = phase_execution_text()
+        self.assertIn(f'prompt: "Run /speckit-checklist with: <domain prompt>\\nProtocol: {ACTIVE_PROTOCOL}")', phase)
+        self.assertIn(f'prompt: "Run /speckit-analyze with: <prompt>\\nProtocol: {ACTIVE_PROTOCOL}")', phase)
+        self.assertIn(f"Prepare a Clarify Question Set for: <session prompt>\n            Protocol: {ACTIVE_PROTOCOL}", phase)
+        flat = " ".join(phase.split())
+        self.assertIn("consensus-synthesizer agent (single fan-out), with the `Protocol:` line,", flat)
+        self.assertIn("never the checkout that launched the run", flat)
+        prerequisites = " ".join((REFERENCES / "prerequisites.md").read_text(encoding="utf-8").split())
+        self.assertIn("Keep the returned `plugin_root`", prerequisites)
+        codex = " ".join(CODEX_PHASE_EXECUTION.read_text(encoding="utf-8").split())
+        self.assertIn("`Protocol:` line with `<plugin-root>/skills/speckit-autopilot/references/consensus-protocol.md`", codex)
 
     def test_escape_phrases_and_security_override_are_complete(self) -> None:
         text = instructions()

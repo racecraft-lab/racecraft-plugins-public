@@ -65,7 +65,8 @@ parent's G4 gate do that.
    If gaps remain, do not start another repair loop: flag them
    for consensus under rule 5. Your repairs spend the parent's shared
    repair reservation, and a nested loop has no allowance of its own
-   (`../skills/speckit-autopilot/references/execution-efficiency.md`).
+   (`execution-efficiency.md`, beside the protocol file on your
+   prompt's `Protocol:` line).
 
 5. **Flag unresolved items for consensus, with a category
    prefix.** Include in the "Unresolved for consensus" section
@@ -86,16 +87,22 @@ parent's G4 gate do that.
      technical roadmap, prior specs, CLAUDE.md)
    - `[domain]` — depends on external standards, RFCs, library
      docs, or community best practice
-   - `[security]` — gap contains a security keyword (always
-     routes to all 3 analysts)
+   - `[security]` — gap's substance is about security:
+     credentials, access control, secrets, or personal data (always
+     routes to all 3 analysts). A security keyword alone needs no tag;
+     the runner widens keyword items to all 3 by itself
    - `[ambiguous]` — you genuinely don't know which perspective
      applies (routes to all 3)
 
    Multi-category tags are allowed: `[codebase, spec]` spawns
    both `codebase-analyst` and `spec-context-analyst`. Untagged
    items default to `[ambiguous]` but explicit tagging is the
-   discipline. See `../skills/speckit-autopilot/references/consensus-protocol.md`
-   for full routing rules.
+   discipline. For full routing rules, read the consensus protocol
+   only from the absolute path on your prompt's `Protocol:` line,
+   which the orchestrator resolves from the loaded plugin root, and
+   never search the plugin cache for another copy. Report that path
+   as `**Protocol:**` in your summary, or `not provided` when the
+   prompt has none.
 
 6. **Return a summary with research citations.** Do not
    recommend next steps.
@@ -119,6 +126,8 @@ counts from them to decide whether the next gate can run.
 ## Checklist Domain Result
 
 ## Domain: <domain name>
+
+**Protocol:** <the path on your prompt's `Protocol:` line> | not provided
 
 **Checklist file:** <actual repo-relative path produced by the command; never substitute a guessed path> (re-read it; it must contain N `- [ ] CHKNNN ...` item lines)
 
