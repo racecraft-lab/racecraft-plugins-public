@@ -1350,6 +1350,9 @@ class NativeFunctionalCatalogTests(unittest.TestCase):
                 case_id,
             )
             fixtures = {row["destination"]: REPO_ROOT / row["source"] for row in case["fixtures"]}
+            workflow = f"docs/ai/specs/.process/SPEC-{case_id.rsplit('-', 1)[1]}-workflow.md"
+            request = json.loads(fixtures[check["g3_request_path"]].read_text(encoding="utf-8"))
+            self.assertEqual(request["inputs"].get("workflow_file"), workflow, case_id)
             with tempfile.TemporaryDirectory() as tmp:
                 root = Path(tmp)
                 (root / ".specify").mkdir()
@@ -1357,6 +1360,8 @@ class NativeFunctionalCatalogTests(unittest.TestCase):
                 feature = root / "scenario-inputs/feature"
                 feature.mkdir(parents=True)
                 shutil.copyfile(fixtures["scenario-inputs/feature/plan.md"], feature / "plan.md")
+                (root / workflow).parent.mkdir(parents=True)
+                shutil.copyfile(fixtures[workflow], root / workflow)
                 env = {**os.environ, "PYTHONPATH": str(REPO_ROOT / "speckit-pro")}
                 result = subprocess.run(
                     [sys.executable, "-m", "speckit_pro_runner"],
@@ -1391,6 +1396,10 @@ class NativeFunctionalCatalogTests(unittest.TestCase):
                     "source": "tests/speckit-pro/evals/fixtures/functional/local-command/baseline.md",
                     "destination": "scenario-inputs/read-only-helper-feature/tasks.md",
                 },
+                {
+                    "source": "tests/speckit-pro/evals/fixtures/functional/local-command/workflow.md",
+                    "destination": "scenario-inputs/workflow.md",
+                },
             ],
         )
         self.assertIn("Bash prerequisite", " ".join(g7["native_differences"]))
@@ -1399,6 +1408,7 @@ class NativeFunctionalCatalogTests(unittest.TestCase):
         request = json.loads(
             (TEST_ROOT / "evals/fixtures/functional/local-command/validate-g7-request.json").read_text()
         )
+        self.assertEqual(request["inputs"].get("workflow_file"), "scenario-inputs/workflow.md")
         task_text = (
             TEST_ROOT / "evals/fixtures/functional/local-command/baseline.md"
         ).read_text(encoding="utf-8")
@@ -1500,6 +1510,10 @@ class NativeFunctionalCatalogTests(unittest.TestCase):
             feature = root / "scenario-inputs/read-only-helper-feature"
             feature.mkdir(parents=True)
             shutil.copyfile(task_fixture, feature / "tasks.md")
+            shutil.copyfile(
+                TEST_ROOT / "evals/fixtures/functional/local-command/workflow.md",
+                root / "scenario-inputs/workflow.md",
+            )
             before = (feature / "tasks.md").read_bytes()
             env = {**os.environ, "PYTHONPATH": str(REPO_ROOT / "speckit-pro")}
             result = subprocess.run(

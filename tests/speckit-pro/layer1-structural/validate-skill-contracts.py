@@ -250,6 +250,8 @@ class ValidateSkills(unittest.TestCase):
                     self.assertIn('The failure report identifies the existing local branch, canonical worktree, workflow file, and local commit', normalized)
                     self.assertIn('retry the push from that same existing worktree', normalized)
                     self.assertIn('Do not recreate the branch or worktree, regenerate the workflow, or replace the existing commit', normalized)
+                with self.subTest(msg='speckit-scaffold-spec: reviewability setup gate is scoped to the SPEC-ID'):
+                    self.assertIn('Run runner helper reviewability-gate in setup mode for <technical-roadmap-path> with spec_id <SPEC-ID>.', normalized)
                 with self.subTest(msg='speckit-scaffold-spec: resolver ordering gates mutation and interview'):
                     self.assertIn('the first resolver result comes before `git worktree add`, artifact writes, or roadmap mutation', normalized)
                     self.assertIn('A second resolver check then runs after creation or reuse and immediately before bootstrap or Grill Me', normalized)
@@ -332,6 +334,8 @@ class ValidateCodexSkills(unittest.TestCase):
                 dispatch_section = content.split('**Dispatch, then await.**', 1)[-1].split('**The bound.', 1)[0]
                 with self.subTest(msg='speckit-scaffold-spec: blind-spot custom agent uses an isolated fork'):
                     self.assertTrue('`agent_type: "codebase-analyst"`' in dispatch_section and '`fork_turns: "none"`' in dispatch_section and ('`fork_turns: "all"`' in dispatch_section) and ('self-contained' in dispatch_section), 'expected blind-spot dispatch to select codebase-analyst with an explicit isolated fork')
+                with self.subTest(msg='speckit-scaffold-spec: Codex reviewability setup gate is scoped to the SPEC-ID'):
+                    self.assertIn('Run runner helper reviewability-gate in setup mode for <technical-roadmap-path> with spec_id <SPEC-ID>.', ' '.join(content.split()))
                 with self.subTest(msg='speckit-scaffold-spec: placement is task-root-bound before mutation'):
                     self.assertTrue('resolve-scaffold-worktree-placement' in content and 'Before `git worktree add` or any artifact or roadmap write' in content and ('`TASK_ROOT/.worktrees/<branch-name>`' in content) and ('Never derive worktree placement from' in content) and ('`git rev-parse --git-common-dir`' in content) and ('the primary checkout, or the first' in content) and ('`placement_status=resolved`' in content) and ('`relation=same` or `relation=descendant`' in content), 'expected scaffold to resolve task-root placement before any mutation')
                 with self.subTest(msg='speckit-scaffold-spec: placement is revalidated before bootstrap'):
