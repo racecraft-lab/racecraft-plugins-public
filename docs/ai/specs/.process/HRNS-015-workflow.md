@@ -970,8 +970,8 @@ Ripwire quality-delta returned exit 2 for canonical process-state verbosity. Its
       "expected_title": "Implementation Plan \u2014 HRNS-015 Autopilot, Gate, and PR-Emission Repair",
       "expected_content": "33 tasks \u00b7 14 stories \u00b7 29 requirements \u00b7 40 acceptance scenarios. All tasks remain unchecked. Prior owner ratification was five PRs; acceptance of the 19-PR proposal remains pending.",
       "preview": {
-        "status": "pending",
-        "blocker": "Not observed yet",
+        "status": "unavailable",
+        "blocker": "The attested Codex observe_codex runner returned missing_prerequisite (domain exit 3): preview_boundary_unavailable. No isolated observer verdict was produced; browser preview remains unverified.",
         "observation": null
       }
     },
@@ -983,8 +983,8 @@ Ripwire quality-delta returned exit 2 for canonical process-state verbosity. Its
       "expected_title": "Spec Explainer \u2014 HRNS-015 Autopilot, Gate, and PR-Emission Repair",
       "expected_content": "HRNS-015 repairs observed autopilot and scaffold defects through 19 proposed ordered one-story increments. The plan defines 33 tasks, 14 stories, 29 requirements, and 40 acceptance scenarios. Analyze is complete for plan-only review; H3\u2013H7 remain open and spec qualification is unqualified.",
       "preview": {
-        "status": "pending",
-        "blocker": "Not observed yet",
+        "status": "unavailable",
+        "blocker": "The attested Codex observe_codex runner returned missing_prerequisite (domain exit 3): preview_boundary_unavailable. No isolated observer verdict was produced; browser preview remains unverified.",
         "observation": null
       }
     },
@@ -996,8 +996,8 @@ Ripwire quality-delta returned exit 2 for canonical process-state verbosity. Its
       "expected_title": "Code Approaches \u2014 HRNS-015 Autopilot, Gate, and PR-Emission Repair",
       "expected_content": "The 19 proposed increments supersede the original four-slice estimate and previously ratified five-PR order. Owner acceptance of the changed count remains pending. H3\u2013H7 stay open; actual base/head diffs, generated outputs, reviewable LOC, and marker fingerprints are unqualified. The installed repeated-path marker validator must be repaired before a current marker plan can validate. T002 blocks all behavior tasks.",
       "preview": {
-        "status": "pending",
-        "blocker": "Not observed yet",
+        "status": "unavailable",
+        "blocker": "The attested Codex observe_codex runner returned missing_prerequisite (domain exit 3): preview_boundary_unavailable. No isolated observer verdict was produced; browser preview remains unverified.",
         "observation": null
       }
     },
@@ -1009,8 +1009,8 @@ Ripwire quality-delta returned exit 2 for canonical process-state verbosity. Its
       "expected_title": "Module Map \u2014 HRNS-015 Autopilot, Gate, and PR-Emission Repair",
       "expected_content": "19 proposed increments contain 14\u201324 candidate paths each, including six recurring process/evidence candidates. Actual base/head diffs, generated outputs, LOC, and marker fingerprints are unqualified. Owner acceptance is pending; T002 blocks behavior tasks. No current validated marker plan or implementation approval is recorded.",
       "preview": {
-        "status": "pending",
-        "blocker": "Not observed yet",
+        "status": "unavailable",
+        "blocker": "The attested Codex observe_codex runner returned missing_prerequisite (domain exit 3): preview_boundary_unavailable. No isolated observer verdict was produced; browser preview remains unverified.",
         "observation": null
       }
     },
