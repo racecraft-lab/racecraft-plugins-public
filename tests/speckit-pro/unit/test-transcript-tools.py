@@ -9,6 +9,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import uuid
 from pathlib import Path
 from typing import Callable
 
@@ -193,14 +194,14 @@ class TranscriptToolTests(unittest.TestCase):
             )
             checks.append(
                 (
-                    "reduce clears prompts",
+                    "reduce keeps dispatch prompts and clears skill args",
                     lambda: self.assertEqual(
                         (
                             reduced_events()[0]["message"]["content"][0]["input"]["prompt"],
                             reduced_events()[0]["message"]["content"][1]["input"]["args"],
                             reduced_events()[0]["message"]["content"][4]["input"]["args"],
                         ),
-                        ("", "", ""),
+                        ("private prompt", "", ""),
                     ),
                 )
             )
@@ -246,6 +247,79 @@ class TranscriptToolTests(unittest.TestCase):
             for name, check in checks:
                 with self.subTest(msg=name):
                     check()
+
+
+    def test_reduce_redacts_kept_prompts_and_orchestrator_text(self) -> None:
+        # Built at run time so this source never holds a value the privacy scan rejects.
+        private_values = {
+            "home path": "/" + "Users/" + "operator/work",
+            "hyphenated home": "-" + "Users-operator-work",
+            "temp transcript": "/private/" + "tmp/claude-" + "501/session",
+            "temp folder": "/private/" + "var/folders/ab/cd",
+            "uuid": str(uuid.uuid4()),
+            "email": "someone" + "@" + "example.invalid",
+        }
+        prompt = "Protocol: analyze " + " ".join(private_values.values())
+        events = [
+            {
+                "type": "assistant",
+                "isSidechain": False,
+                "message": {
+                    "role": "assistant",
+                    "content": [
+                        {"type": "text", "text": "orchestrator notes mutation_boundary in " + private_values["home path"]},
+                        {
+                            "type": "tool_use",
+                            "id": "original-agent-id",
+                            "name": "Agent",
+                            "input": {"subagent_type": "speckit-pro:analyze-executor", "description": "Analyze", "prompt": prompt},
+                        },
+                    ],
+                },
+            },
+            {
+                "type": "assistant",
+                "isSidechain": True,
+                "message": {"role": "assistant", "content": [{"type": "text", "text": "subagent chatter"}]},
+            },
+        ]
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            transcript = root / "transcript.jsonl"
+            transcript.write_text("".join(json.dumps(event) + "\n" for event in events), encoding="utf-8")
+            expected = root / "expected.json"
+            expected.write_text("{}", encoding="utf-8")
+            reduced = run_script(REDUCE, str(transcript), str(expected))
+        self.assertEqual(reduced.returncode, 0, reduced.stderr)
+        reduced_events = [json.loads(line) for line in reduced.stdout.splitlines()]
+        self.assertEqual(len(reduced_events), 1)
+        blocks = reduced_events[0]["message"]["content"]
+        self.assertEqual([block["type"] for block in blocks], ["text", "tool_use"])
+        self.assertIn("mutation_boundary", blocks[0]["text"])
+        self.assertTrue(blocks[1]["input"]["prompt"].startswith("Protocol: analyze "))
+        self.assertNotIn("subagent chatter", reduced.stdout)
+        for name, value in private_values.items():
+            with self.subTest(private_value=name):
+                self.assertNotIn(value, reduced.stdout)
+
+    def test_reduced_replay_fixtures_keep_their_must_include_terms(self) -> None:
+        checked = 0
+        for family in ("dispatch-fixtures", "return-format-fixtures"):
+            for fixture in sorted((LAYER6 / family).iterdir()):
+                expected = fixture / "expected.json"
+                parser_fixture = fixture / "parser-fixture.jsonl"
+                if not expected.is_file() or not parser_fixture.is_file():
+                    continue
+                terms = json.loads(expected.read_text(encoding="utf-8")).get("must_include_terms", [])
+                if not terms:
+                    continue
+                reduced = run_script(REDUCE, str(parser_fixture), str(expected))
+                self.assertEqual(reduced.returncode, 0, reduced.stderr)
+                for term in terms:
+                    checked += 1
+                    with self.subTest(fixture=f"{family}/{fixture.name}", term=term):
+                        self.assertIn(term, reduced.stdout)
+        self.assertGreater(checked, 0, "no replay fixture declares must_include_terms")
 
 
 if __name__ == "__main__":
