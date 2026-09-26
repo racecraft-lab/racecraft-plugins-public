@@ -382,7 +382,7 @@ def reserve(ledger: dict[str, Any], inputs: dict[str, Any], now: float) -> dict[
                 return {"reasons": ["corrective_cycle_failed_no_nested_retry"]}
         else:
             invariant = inputs.get("failure_invariant")
-            family = invariant if invariant in ledger["approved_invariants"] else "unresolved"
+            family = str(invariant) if invariant in ledger["approved_invariants"] else "unresolved"
             refusal = _corrective_refusal(ledger, family)
             if refusal is not None:
                 return {"reasons": [refusal]}
