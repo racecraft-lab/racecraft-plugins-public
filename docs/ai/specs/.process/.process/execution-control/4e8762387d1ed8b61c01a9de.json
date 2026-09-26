@@ -2,9 +2,81 @@
   "active_wait": null,
   "approved_invariants": [],
   "authorization_granted": false,
-  "checkpoint_at": 1790394891.778953,
+  "checkpoint_at": 1790397832.797486,
   "corrective_cycles": 1,
   "dispatches": {
+    "autonomy-local-state-codebase-2": {
+      "completed_at": 1790398690.257039,
+      "kind": "infrastructure",
+      "outcome": "completed",
+      "reconciliations": 0,
+      "reservation_id": null,
+      "reserved_at": 1790396965.101421
+    },
+    "autonomy-local-state-codebase-3": {
+      "completed_at": 1790399459.0559208,
+      "kind": "infrastructure",
+      "outcome": "completed",
+      "reconciliations": 0,
+      "reservation_id": null,
+      "reserved_at": 1790398697.642252
+    },
+    "autonomy-local-state-domain-2": {
+      "completed_at": 1790399387.330765,
+      "kind": "infrastructure",
+      "outcome": "completed",
+      "reconciliations": 0,
+      "reservation_id": null,
+      "reserved_at": 1790398426.561986
+    },
+    "autonomy-local-state-spec-2": {
+      "completed_at": 1790397804.653284,
+      "kind": "infrastructure",
+      "outcome": "completed",
+      "reconciliations": 0,
+      "reservation_id": null,
+      "reserved_at": 1790396970.131736
+    },
+    "autonomy-local-state-spec-3": {
+      "completed_at": 1790399375.1461,
+      "kind": "infrastructure",
+      "outcome": "completed",
+      "reconciliations": 0,
+      "reservation_id": null,
+      "reserved_at": 1790398702.546561
+    },
+    "autonomy-local-state-synthesis-1": {
+      "completed_at": 1790398416.086268,
+      "kind": "infrastructure",
+      "outcome": "completed",
+      "reconciliations": 0,
+      "reservation_id": null,
+      "reserved_at": 1790398332.193722
+    },
+    "autonomy-local-state-synthesis-2": {
+      "completed_at": 1790399511.156559,
+      "kind": "infrastructure",
+      "outcome": "completed",
+      "reconciliations": 0,
+      "reservation_id": null,
+      "reserved_at": 1790399391.673599
+    },
+    "autonomy-privacy-codebase-1": {
+      "completed_at": 1790396945.622963,
+      "kind": "infrastructure",
+      "outcome": "completed",
+      "reconciliations": 0,
+      "reservation_id": null,
+      "reserved_at": 1790395959.607808
+    },
+    "autonomy-privacy-spec-1": {
+      "completed_at": 1790396949.815737,
+      "kind": "infrastructure",
+      "outcome": "completed",
+      "reconciliations": 0,
+      "reservation_id": null,
+      "reserved_at": 1790395963.288446
+    },
     "checkpoint-supply-proposal-verify-1": {
       "completed_at": 1790391052.285224,
       "kind": "verification",
@@ -446,6 +518,22 @@
       "reservation_id": null,
       "reserved_at": 1790391971.0936909
     },
+    "plan-stage-artifact-author-1": {
+      "completed_at": 1790396955.3004448,
+      "kind": "infrastructure",
+      "outcome": "completed",
+      "reconciliations": 0,
+      "reservation_id": null,
+      "reserved_at": 1790396038.869144
+    },
+    "plan-stage-final-verification-1": {
+      "completed_at": 1790400626.755724,
+      "kind": "infrastructure",
+      "outcome": "completed",
+      "reconciliations": 0,
+      "reservation_id": null,
+      "reserved_at": 1790398023.527601
+    },
     "planning-reviewability-setup-recovery-1": {
       "completed_at": 1790392194.0204659,
       "kind": "verification",
@@ -456,7 +544,7 @@
     }
   },
   "excluded_intervals": [],
-  "last_observed_at": 1790395686.214111,
+  "last_observed_at": 1790400626.755724,
   "reservations": {
     "a02de8a1ea1d4f02bd03770cacecd0dd": {
       "dispatch_id": "g0-privacy-scan-path-collision-repair-1",

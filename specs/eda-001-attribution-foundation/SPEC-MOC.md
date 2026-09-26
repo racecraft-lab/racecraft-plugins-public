@@ -35,5 +35,9 @@ slice artifacts in the body below.
 - [.process/analyze-report.md](.process/analyze-report.md)
 - [.process/layer-plan-diagnostic.json](.process/layer-plan-diagnostic.json)
 - [.process/task-execution.json](.process/task-execution.json)
+- [artifacts/code-approaches.html](artifacts/code-approaches.html)
+- [artifacts/implementation-plan.html](artifacts/implementation-plan.html)
+- [artifacts/module-map.html](artifacts/module-map.html)
+- [artifacts/spec-explainer.html](artifacts/spec-explainer.html)
 - [quickstart.md](quickstart.md)
 <!-- GENERATED:BACKLINKS:END -->

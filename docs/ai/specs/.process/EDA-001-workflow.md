@@ -32,14 +32,14 @@ captured during scoping.
 
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
-| Stage | plan | ✅ Complete | Explicit --stage plan resolved; planning phases continue |
+| Stage | plan | ✅ Complete | Planning gates passed; 27 implementation tasks remain unchecked; draft handoff follows |
 | Specify | `/speckit-specify` | ✅ Complete | 3 stories, 19 FRs; G1 routes provenance marker to Clarify |
 | Clarify | `/speckit-clarify` | ✅ Complete | Three sessions resolved; G2 passed with 0 markers |
 | Plan | `/speckit-plan` | ✅ Complete | Seven artifacts, G3 pass, and privacy 13/13 after approved wording correction |
 | Checklist | `/speckit-checklist` | ✅ Complete | 88 items; 3 gaps resolved; G3/G4 pass with 0 markers |
 | Tasks | `/speckit-tasks` | ✅ Complete | 27 tasks; 19/19 FRs; valid required execution metadata; G5 pass |
 | Analyze | `/speckit-analyze` | ✅ Complete | One LOW resolved; 0 remaining required findings; G6 pass; dedicated named final synthesis complete |
-| Confidence Gate | G6.5 | ⏳ Pending | Pre-Implement composite confidence |
+| Confidence Gate | G6.5 | ✅ Complete | Native advisory pass 0.97; exact live autonomy validation and final privacy/CI checks pass |
 | Implement | `/speckit-implement` | ⏳ Pending | |
 | Post | Post-Implementation | ⏳ Pending | Canonical 11-item closeout |
 
@@ -343,6 +343,7 @@ The operator answered `MIT` in the active Codex chat. Keep both notices: the Mat
 | 4 | Clarify | Checked `owner_spec` mapping and IGNORE ownership | [spec] | 1→2 | 3/3 | Freeze exact path-to-owner map; EDA-001 owns IGNORE, EDA-002–EDA-010 own delivery, EDA-011 verifies close-out | spec-context-analyst, codebase-analyst, domain-researcher |
 | 5 | Clarify | `metadata.credits` frontmatter shape | [codebase, domain] | 1 | both-agree | Use a quoted string of sorted `mattpocock/skills@SHA:path` identifiers separated by `; `; repository check owns semantics | codebase-analyst, domain-researcher |
 | 6 | Gap | CHK007: HumanLayer public pinned copied-source URL | [spec] | 1 | high-confidence | Exact FR-014 and notice-contract proposal applied under explicit operator override; revalidated with 0 gaps | spec-context-analyst; named consensus-synthesizer |
+| 7 | Finding | Runtime-state privacy and nonempty tracked-pair CI corpus | [codebase, spec, security] | 1→2 | 3/3 | Preserve full runtime state locally; exact ignore/untrack plus independently labelled pending fixture pair; unchanged focused guards pass | codebase-analyst, spec-context-analyst, domain-researcher; named consensus-synthesizer |
 
 ---
 
@@ -955,3 +956,175 @@ No findings remain after the verified Analyze correction. The dedicated `consens
 - Requirements alignment: 0.98
 - Risk assessment: 0.94
 - Completeness: 0.97
+
+### Phase 6.5 Autonomy Boundary Preflight
+
+The active conversation supplies explicit bounded authorization for the plan-stage actions. Auto-review is the execution reviewer and does not grant permission. No privileged/system-wide install or interactive authentication is required for this handoff. Canonical full action and execution-boundary records are in the typed state object; this matching workflow result binds their exact digests. Production implementation remains outside this invocation.
+
+```json
+{
+  "schema_version": "autonomy-boundary.v1",
+  "status": "ready",
+  "planning_fingerprints": {
+    "plan_md": {
+      "path": "specs/eda-001-attribution-foundation/plan.md",
+      "sha256": "sha256:9ce69bf6cbe2151db68d2a2737db593a879149ffbd0489c05ab775a148f23be1",
+      "size_bytes": 16874
+    },
+    "tasks_md": {
+      "path": "specs/eda-001-attribution-foundation/tasks.md",
+      "sha256": "sha256:e2a555ce5b51b7a50e41bab7ca9b6c1930ffa94b4d95b5189e96183d60d7b390",
+      "size_bytes": 27674
+    }
+  },
+  "execution_boundary_sha256": "sha256:4804d6285f6caeaac5e2e81c2576f0f6aefdd2a83cfb6be41bfc93fd11d0fe0d",
+  "action_scopes": [
+    {
+      "action_id": "eda-planning-writes",
+      "category": "outside_writable_roots",
+      "disposition": "ready",
+      "scope_sha256": "sha256:3ae538498077f379fe93d8d9a26bd4be56796b52ba61d3c01c1dee554bfec35d",
+      "authorization_status": "explicit_user"
+    },
+    {
+      "action_id": "eda-git-checkpoints",
+      "category": "outside_writable_roots",
+      "disposition": "ready",
+      "scope_sha256": "sha256:c408e3b159eb3de7c0db7ebd038c497c28d6e7c4334a3ff26e8fe3e8e8e2b122",
+      "authorization_status": "explicit_user"
+    },
+    {
+      "action_id": "eda-remote-checkpoints",
+      "category": "external_side_effect",
+      "disposition": "ready",
+      "scope_sha256": "sha256:87fcccd213846acbb6c893025f40b508f726fc7e092d8edfc42c1d8e0991db8e",
+      "authorization_status": "explicit_user"
+    },
+    {
+      "action_id": "eda-draft-publication",
+      "category": "external_side_effect",
+      "disposition": "ready",
+      "scope_sha256": "sha256:0e56523f486f1082ded18491200fc5aded6d7dcf5544f82e3b6b17bf5fd9f6e0",
+      "authorization_status": "explicit_user"
+    },
+    {
+      "action_id": "eda-planning-agent-inference",
+      "category": "external_side_effect",
+      "disposition": "ready",
+      "scope_sha256": "sha256:d2fa9682fd7a57d7e82232f24b27ec30db4d1100d1d48f63b281b69a88a57864",
+      "authorization_status": "explicit_user"
+    },
+    {
+      "action_id": "eda-isolated-preview",
+      "category": "external_side_effect",
+      "disposition": "ready",
+      "scope_sha256": "sha256:b4baaff612945a1a49c992b3f6b127a9ac27c5a804d208ac2486ea53ae51ba2f",
+      "authorization_status": "explicit_user"
+    },
+    {
+      "action_id": "eda-runtime-state-publication-privacy",
+      "category": "outside_writable_roots",
+      "disposition": "ready",
+      "scope_sha256": "sha256:c41817e4333e6af3dac23da9815315ce5c7cb6963aefa75025fb7628782c4c49",
+      "authorization_status": "explicit_user"
+    }
+  ],
+  "authoritative_record": "docs/ai/specs/.process/autopilot-state.json#autonomy_boundary",
+  "stage_scope": "plan only; implementation action inventory must be renewed on explicit implementation-stage invocation"
+}
+```
+
+### Confidence execution checkpoint
+
+The native confidence helper exited 0 with computed composite 0.97, threshold 0.90, no deductions, and recommended_action proceed. The runtime-state publication repair is resolved by exact local retention plus the separately labelled generic fixture pair. Final current-checkout privacy passed 13/13; live coverage passed with 52 plan items and no errors; the quick suite passed 8949/8949 including toolchain preflight; the native CI suite passed all six dispatches with no failures or skips. Generated test references are current and DOC-010 quality validation passes. Ripwire has zero gating regressions; its exit-4 test map identifies fixture files, while the actual unchanged focused tests and both suites pass. Planning is complete. The distinct boundary commit and artifact/draft terminal handoff follow; implementation remains outside this invocation.
+
+## Artifact Review Handoff
+
+```json
+{
+  "schema_version": "1.0",
+  "feature_dir": "specs/eda-001-attribution-foundation",
+  "input_hashes": {
+    "specs/eda-001-attribution-foundation/spec.md": "52481b25ec692937c47adb4f8db9b0a6d73385ba431ea0ee70160258a738d0d7",
+    "specs/eda-001-attribution-foundation/plan.md": "9ce69bf6cbe2151db68d2a2737db593a879149ffbd0489c05ab775a148f23be1",
+    "specs/eda-001-attribution-foundation/tasks.md": "e2a555ce5b51b7a50e41bab7ca9b6c1930ffa94b4d95b5189e96183d60d7b390",
+    "docs/ai/specs/.process/EDA-001-design-concept.md": "03443badd328a1dabc45b421cdde439bd754aff664a2a3bc554cd7338c82fc9d"
+  },
+  "manifest_sha256": "c90a240c9ae6d007e6aa1586612891de78337d2c0f7892ec121fb4fe316d25a0",
+  "template_hashes": {
+    "implementation-plan": "781bd0ea88a97bd5d0b38d4791b96bf04479042f544994488d5a7b7444c088b9",
+    "spec-explainer": "b8a4c87b550aeae38ff3dc645367676439b88292107e821e188a5553b053f555",
+    "code-approaches": "28631395c17a39b03060704aef3cf0462a7e0212fb2fa139219af93290b05e03",
+    "module-map": "9cb043012178506be09a0e5b987df67507c34e2ca12f6ea198bfdab3a1c528e5",
+    "architecture-viewer": null
+  },
+  "generation_error": null,
+  "pages": [
+    {
+      "id": "implementation-plan",
+      "generation": "generated",
+      "path": "specs/eda-001-attribution-foundation/artifacts/implementation-plan.html",
+      "sha256": "3430f02ac1a51fe2eff69b5fa1e656b434d449016f1037fca0d5f6e66650cd00",
+      "expected_title": "Implementation Plan — EDA-001 Attribution Foundation",
+      "expected_content": "The 27 implementation tasks remain unchecked; T001–T019 form the first future PR, and T020–T027 form the dependent second PR.",
+      "preview": {
+        "status": "pending",
+        "blocker": "Not observed yet",
+        "observation": null
+      }
+    },
+    {
+      "id": "spec-explainer",
+      "generation": "generated",
+      "path": "specs/eda-001-attribution-foundation/artifacts/spec-explainer.html",
+      "sha256": "2ba0b92645818f187c3349baff1e8da5ce7a82168b7d5b723f119dc4079ce130",
+      "expected_title": "Spec Explainer — EDA-001 Attribution Foundation",
+      "expected_content": "A valid zero-landed ledger must still validate all 38 paths; synthetic landed cases separately prove that file-credit checks select at least one file.",
+      "preview": {
+        "status": "pending",
+        "blocker": "Not observed yet",
+        "observation": null
+      }
+    },
+    {
+      "id": "code-approaches",
+      "generation": "generated",
+      "path": "specs/eda-001-attribution-foundation/artifacts/code-approaches.html",
+      "sha256": "787323dc6556a9f673e41cb34395db393f9247ef22a6fb31e049c7cf6aee4181",
+      "expected_title": "Code Approaches — EDA-001 Attribution Foundation",
+      "expected_content": "Planning chose a canonical JSON sidecar over Markdown ledgers so exact schema and byte checks can run before any delivery row lands.",
+      "preview": {
+        "status": "pending",
+        "blocker": "Not observed yet",
+        "observation": null
+      }
+    },
+    {
+      "id": "module-map",
+      "generation": "generated",
+      "path": "specs/eda-001-attribution-foundation/artifacts/module-map.html",
+      "sha256": "6297a2dd50e0484febadfa495d2f34f373d1185ed56b6bb39abe6225c25ae828",
+      "expected_title": "Module Map — EDA-001 Attribution Foundation",
+      "expected_content": "The planned attribution test joins independent fixtures to authored notices and ledger inputs; suite registration dispatches it, while existing generators package the static content.",
+      "preview": {
+        "status": "pending",
+        "blocker": "Not observed yet",
+        "observation": null
+      }
+    },
+    {
+      "id": "architecture-viewer",
+      "generation": "gap",
+      "reason": "Manifest status planned; no shipped architecture-viewer template exists."
+    }
+  ]
+}
+```
+
+### Runtime-state publication repair — CI diagnosis
+
+The clean publication snapshot passed the focused privacy test and all 39 phase-coverage tests. The unchanged bookkeeping guard returned 242/243: its tracked-pair corpus assertion requires at least one eligible tracked workflow/state pair, and removing the only live state leaves zero. The earlier broad-suite exit 1 lacks retained diagnostics and is not treated as a qualified suite result. The current additive proposal preserves full canonical runtime state privately and supplies a separate generic, explicitly synthetic pending fixture pair to exercise the unchanged corpus check. Named codebase proof, spec-context review and the required third domain perspective are in progress; no ignore/untrack or fixture repair has been applied.
+
+### Runtime-state publication repair — applied scope
+
+Named three-perspective synthesis accepted the exact repair unanimously with high confidence and no flags. The full canonical runtime state stays local at its original path; removing Git tracking retained its bytes. The new bounded action was recorded first without changing the execution boundary or existing six action scopes. The two generic fixture files are exact reviewed copies, explicitly synthetic and pending before G6.5; they provide generic bookkeeping coverage, never EDA live-boundary evidence. The normal plan-boundary state-staging enumeration yields narrowly to the user-provided privacy rule. Fresh-checkout resume reconstructs the one-run state mirror from this durable workflow, then requires full current-boundary Phase 6.5 validation before any later explicitly invoked implementation. The native corrective reservation was refused with failure_family_budget_exhausted; the existing explicit finish-plan instruction authorizes this bounded repair, with the original refusal and one consumed corrective cycle preserved. Final current-checkout verification and draft publication remain pending.
