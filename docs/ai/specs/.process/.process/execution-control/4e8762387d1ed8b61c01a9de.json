@@ -2,7 +2,7 @@
   "active_wait": null,
   "approved_invariants": [],
   "authorization_granted": false,
-  "checkpoint_at": 1790397832.797486,
+  "checkpoint_at": 1790400685.3569112,
   "corrective_cycles": 1,
   "dispatches": {
     "autonomy-local-state-codebase-2": {
@@ -544,7 +544,7 @@
     }
   },
   "excluded_intervals": [],
-  "last_observed_at": 1790400626.755724,
+  "last_observed_at": 1790400685.3569112,
   "reservations": {
     "a02de8a1ea1d4f02bd03770cacecd0dd": {
       "dispatch_id": "g0-privacy-scan-path-collision-repair-1",
