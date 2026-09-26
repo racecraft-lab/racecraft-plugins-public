@@ -11,6 +11,15 @@ dispatch** with TDD protocol — each task routes to `implement-executor`
 which performs red-green-refactor.
 
 Dispatch `implement-executor` for task T001 with the standard TDD
-prompt. Use the Agent tool with subagent_type
+prompt, including these two lines:
+
+    Reference dir: speckit-pro/skills/speckit-autopilot/references/
+    Workflow root: .
+
+These paths are repository-relative because this fixture runs from the
+repository root; in a real run they are built from the loaded plugin
+root and the bound workflow root.
+
+Use the Agent tool with subagent_type
 "speckit-pro:implement-executor". Stop after the subagent returns.
 Do not run any other phase.

@@ -1,35 +1,70 @@
 You are running speckit-autopilot's consensus synthesis stage.
 
-Round 1 has completed. The analyst outputs below need synthesis into a
-single decision. Dispatch `consensus-synthesizer` with these inputs and
-have it produce its standard decision artifact.
+Round 1 has completed for one Clarify item. parse-consensus-categories
+routed it to `[codebase, domain]` with `security_route: null`, so the
+spec context analyst was not spawned. Dispatch `consensus-synthesizer`
+with exactly this Stage 2 input and have it produce its standard
+Consensus Result.
 
 ---
-ANALYST OUTPUT 1 — codebase-analyst:
+## Consensus Resolution
 
-## Codebase findings (codebase-analyst)
-- Existing pattern: `bcrypt` is used in `src/auth/password.ts:14`
-  (cost factor 12) for legacy compatibility.
-- No reference to `argon2` anywhere in the codebase.
+**Protocol:** speckit-pro/skills/speckit-autopilot/references/consensus-protocol.md
+**Unresolved Item:** [codebase, domain] Q2: Which hashing algorithm should new login records use, bcrypt or argon2id?
+**Routed Categories:** [codebase, domain]
+**Security Route:** none
+**Round:** 1
 
-**Recommendation:** stay on bcrypt for consistency.
-**Confidence:** medium.
+**Codebase Analyst Response:**
+## Answer
 
+Stay on bcrypt for consistency with the existing implementation.
+
+## Evidence
+
+- **File**: `src/auth/password.ts` (line 14)
+  **Pattern**: bcrypt with cost factor 12 is the existing hashing pattern.
+
+- **File**: `src/auth/password.ts` (line 1-40)
+  **Pattern**: No argon2 implementation exists in this source file.
+
+## Confidence
+
+medium
+
+**Rationale**: Follows the one existing codebase pattern.
+
+## Security Relevance
+
+security_relevant: false
+
+**Spec Context Analyst Response:**
+NOT SPAWNED (reason: not routed)
+
+**Domain Researcher Response:**
+## Answer
+
+Prefer argon2id for new code paths.
+
+## Citations
+
+- **Source**: OWASP Password Storage Cheat Sheet
+  **Title**: Password Hashing Algorithms
+  **Excerpt**: argon2id is the preferred default for new applications;
+  bcrypt remains an acceptable fallback.
+
+## Confidence
+
+high
+
+**Rationale**: The external standard states the preference directly.
+
+## Security Relevance
+
+security_relevant: false
 ---
-ANALYST OUTPUT 2 — domain-researcher:
 
-## Domain findings (domain-researcher)
-- OWASP Password Storage Cheat Sheet (2024) recommends argon2id as
-  the default for new applications.
-- bcrypt remains acceptable but is no longer the OWASP-preferred default.
-
-**Recommendation:** prefer argon2id for new code paths.
-**Confidence:** high.
-
----
-
-Dispatch `consensus-synthesizer` with both analyst outputs. The
-synthesizer must produce a structured decision in its standard format
-(decision, rationale, citations, confidence).
-
-Stop after the synthesizer returns. Do not write to disk.
+The `**Protocol:**` line is the repository-relative path of the active
+consensus protocol in this checkout. Dispatch `consensus-synthesizer`
+with the input above, unchanged. Stop after the synthesizer returns.
+Do not write to disk.

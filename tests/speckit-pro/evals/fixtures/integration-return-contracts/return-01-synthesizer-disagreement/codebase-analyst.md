@@ -18,3 +18,7 @@ medium
 
 **Rationale**: The recommendation follows the one retained codebase pattern,
 but it does not establish which algorithm should be preferred for new code.
+
+## Security Relevance
+
+security_relevant: false

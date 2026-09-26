@@ -11,6 +11,20 @@ Do NOT write artifacts to disk. Do NOT invoke grill-me. Do NOT run
 `/speckit-pro:autopilot` end-to-end (it does extensive preflight that
 is out of scope for this dispatch-graph test).
 
+End every dispatch prompt with this line:
+
+    Workflow root: .
+
+End the Clarify, Checklist, and Analyze prompts, before that line, with
+these two lines, and the Implement prompt with only the second:
+
+    Protocol: speckit-pro/skills/speckit-autopilot/references/consensus-protocol.md
+    Reference dir: speckit-pro/skills/speckit-autopilot/references/
+
+These paths are repository-relative because this fixture runs from the
+repository root; in a real run they are built from the loaded plugin
+root and the bound workflow root.
+
 Standard phase order to dispatch:
 
 1. **Specify** → `speckit-pro:phase-executor`
