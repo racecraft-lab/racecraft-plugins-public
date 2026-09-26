@@ -309,6 +309,7 @@ Agent(
 
     Spec: specs/<number>-<name>/spec.md
     Plan: specs/<number>-<name>/plan.md
+    Reference dir: <plugin_root>/skills/speckit-autopilot/references/
   """
 )
 ```
@@ -763,6 +764,8 @@ Agent(
     - PROJECT_COMMANDS: <PROJECT_COMMANDS as JSON>
     - Diff range: origin/main...HEAD
     - Feature dir: <feature-dir>
+
+    Reference dir: <plugin_root>/skills/speckit-autopilot/references/
 
     Apply all three mandatory rewrites — plain-prose Env Setup, concrete
     do-this-see-that per-story steps, and a real (or removed) FR Coverage

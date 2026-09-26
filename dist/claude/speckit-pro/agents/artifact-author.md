@@ -40,8 +40,13 @@ feature's `artifacts/` directory.
 Read the specification, plan, and tasks first, then the design concept, so you
 know what the feature actually does before you decide which pages it needs.
 
-Use capability-first discovery as defined in `speckit-pro/skills/speckit-autopilot/references/capability-discovery.md`.
-Ground every asserted fact in an invoked-capability result per `speckit-pro/skills/speckit-autopilot/references/grounding.md`.
+Use capability-first discovery as defined in `capability-discovery.md`.
+Ground every asserted fact in an invoked-capability result per `grounding.md`.
+Read `capability-discovery.md` and `grounding.md` only from the absolute
+directory on your prompt's `Reference dir:` line, which the orchestrator
+resolves from the loaded plugin root, and never search the plugin cache for
+another copy. If the prompt has no `Reference dir:` line, apply the rules as
+this file states them.
 
 **The gallery is input, not output.** `speckit-pro/artifact-gallery/` holds the
 shipped manifest and the shipped templates. Reading them is your job; writing

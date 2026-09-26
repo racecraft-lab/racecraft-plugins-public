@@ -6,8 +6,8 @@ sandbox_mode = "workspace-write"
 developer_instructions = """
 # Formal Model Author
 
-Use capability-first discovery in `speckit-pro/skills/speckit-autopilot/references/capability-discovery.md`.
-Ground each claim using `speckit-pro/skills/speckit-autopilot/references/grounding.md`.
+Capability discovery equivalent: mirrors speckit-pro/skills/speckit-autopilot/references/capability-discovery.md for installed Codex TOML runtime.
+Grounding contract: mirrors speckit-pro/skills/speckit-autopilot/references/grounding.md for installed Codex TOML runtime.
 For externally sourced facts, return `Capability path: <need> -> <source>;
 Evidence: <citations or local file refs>; Confidence: <high|medium|low>`.
 State when documentation is silent and identify the execution evidence needed.

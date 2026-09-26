@@ -28,6 +28,18 @@ TERMINAL_RESULT_ROLES = (
     "domain-researcher",
 )
 PROTOCOL_READERS = ("consensus-synthesizer", "analyze-executor", "checklist-executor", "clarify-executor")
+REFERENCE_READERS = (
+    "analyze-executor",
+    "artifact-author",
+    "checklist-executor",
+    "clarify-executor",
+    "codebase-analyst",
+    "domain-researcher",
+    "formal-model-author",
+    "implement-executor",
+    "spec-context-analyst",
+    "uat-runbook-author",
+)
 NO_SPAWN_ROLES = (
     "clarify-executor",
     "formal-model-author",
@@ -127,6 +139,29 @@ class AgentTerminalContractTests(unittest.TestCase):
                 with self.subTest(agent=name, platform=platform):
                     self.assertIn("Reserve your last turns for the result.", flat)
                     self.assertIn("rather than nothing", flat)
+
+    def test_reference_readers_use_the_directory_the_orchestrator_passes(self) -> None:
+        # A repository-relative speckit-pro/skills/ path does not exist in the
+        # consumer repository, so the agent searched the plugin cache and could
+        # read another version. The orchestrator passes the active directory.
+        for agent_file in sorted(CLAUDE_DIR.glob("*.md")):
+            with self.subTest(claude_agent=agent_file.stem):
+                self.assertNotIn("speckit-pro/skills/", agent_file.read_text(encoding="utf-8"))
+        codex_formal = codex_policy("formal-model-author")["developer_instructions"]
+        self.assertNotIn("Use capability-first discovery in `speckit-pro/skills/", codex_formal)
+        self.assertNotIn("Ground each claim using `speckit-pro/skills/", codex_formal)
+        for name in REFERENCE_READERS:
+            flat = " ".join(claude_body(name).split())
+            with self.subTest(agent=name):
+                self.assertIn("`capability-discovery.md`", flat)
+                self.assertIn("`grounding.md`", flat)
+                self.assertIn(
+                    "only from the absolute directory on your prompt's `Reference dir:` line,"
+                    " which the orchestrator resolves from the loaded plugin root,"
+                    " and never search the plugin cache for another copy.",
+                    flat,
+                )
+                self.assertIn("If the prompt has no `Reference dir:` line", flat)
 
     def test_consensus_synthesizer_is_read_only_terminal_and_evidence_closed(self) -> None:
         policy = codex_policy("consensus-synthesizer")
