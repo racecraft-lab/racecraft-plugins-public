@@ -19,6 +19,15 @@ SHARED_LIB = TESTS_ROOT / "lib"
 if str(SHARED_LIB) not in sys.path:
     sys.path.insert(0, str(SHARED_LIB))
 
+from privacy_patterns import (  # noqa: E402
+    ALLOWED_EMAILS,
+    EMAIL_PATTERN,
+    HOME_PATH_PATTERN,
+    HYPHENATED_HOME_PATH_PATTERN,
+    PRIVATE_VAR_PATTERN,
+    TMP_TRANSCRIPT_PATTERN,
+    UUID_PATTERN,
+)
 from test_result import run_counted  # noqa: E402
 
 
@@ -26,26 +35,12 @@ SCHEMA_PATH = REPO_ROOT / "docs-site" / "src" / "lib" / "schema.ts"
 TOOLING_SOURCE_PATHS = (
     Path("tests/speckit-pro/unit/test-privacy-scan.py"),
     Path("tests/speckit-pro/layer6-integration/scrub-transcript.py"),
+    Path("tests/speckit-pro/lib/privacy_patterns.py"),
 )
 PUBLIC_IDENTITY_PATHS = {
     Path("docs-site/src/lib/schema.ts"),
     Path("docs-site/tests/seo-schema-org.spec.mjs"),
 }
-
-EMAIL_PATTERN = re.compile(r"[A-Za-z0-9_.%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}", re.IGNORECASE)
-HOME_PATH_PATTERN = re.compile(
-    r"(?:/(?:Users|home)/|[A-Za-z]:[\\/]+Users[\\/]+)[A-Za-z0-9_.\-]+",
-    re.IGNORECASE,
-)
-HYPHENATED_HOME_PATH_PATTERN = re.compile(r"-Users-[A-Za-z0-9_.\-]+", re.IGNORECASE)
-PRIVATE_VAR_PATTERN = re.compile(r"/private/var/folders/[A-Za-z0-9_/\.\-]+", re.IGNORECASE)
-TMP_TRANSCRIPT_PATTERN = re.compile(r"/private/tmp/claude-[0-9]+", re.IGNORECASE)
-UUID_PATTERN = re.compile(
-    r"[A-Fa-f0-9]{8}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{12}",
-    re.IGNORECASE,
-)
-# Controller-owned, no-network Git identity used only by native-eval fixtures.
-ALLOWED_EMAILS = {"support@openai.com", "git@github.com", "native-eval@example.invalid"}
 
 CURRENT_INVENTORY = [
     "all-alpha identities still emit sliding-window fragments",
