@@ -221,7 +221,8 @@ Before creating the worktree, run the reviewability setup gate against the
 roadmap or extracted spec entry:
 
 ```text
-Run runner helper reviewability-gate in setup mode for <technical-roadmap-path>.
+Run runner helper reviewability-gate in setup mode for <technical-roadmap-path>
+with spec_id <SPEC-ID>.
 ```
 
 If the gate returns `block` without a ratified split exception, stop setup and

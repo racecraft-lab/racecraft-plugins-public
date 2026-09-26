@@ -194,7 +194,8 @@ Offer to help the user add or correct the roadmap entry with
 Run the reviewability setup gate before creating the worktree:
 
 ```text
-Run runner helper reviewability-gate in setup mode for <technical-roadmap-path>.
+Run runner helper reviewability-gate in setup mode for <technical-roadmap-path>
+with spec_id <SPEC-ID>.
 ```
 
 If it returns an unexcepted `block`, STOP and split the spec first. Warnings

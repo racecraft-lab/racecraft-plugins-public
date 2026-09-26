@@ -32,6 +32,12 @@ remaining work; a failed requirement or security gate never becomes a pass.
    `runner helper reviewability-gate setup <workflow-or-roadmap>`
    must be `pass`, `warn`, or a recorded `exception`; `block` stops before
    Specify and requires spec decomposition.
+   When the target is the technical roadmap (scaffold), pass `spec_id`. The
+   gate then reads only that `### <SPEC-ID>:` section: its budget numbers,
+   its `Primary surface:` values, and a line-anchored
+   `Reviewability-Exception: refactor|infra|upgrade` pragma, which turns a
+   size `block` into `exception`. A missing section is a gate error; a
+   missing budget number is a `block` that no pragma excuses.
 ```
 
 **Auto-Fix:** Not applicable — if the codebase doesn't pass typecheck/test/build, the user must fix it before starting a new spec workflow. These are foundational health checks.
