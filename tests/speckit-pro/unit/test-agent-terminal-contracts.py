@@ -146,7 +146,15 @@ class AgentTerminalContractTests(unittest.TestCase):
         # read another version. The orchestrator passes the active directory.
         for agent_file in sorted(CLAUDE_DIR.glob("*.md")):
             with self.subTest(claude_agent=agent_file.stem):
-                self.assertNotIn("speckit-pro/skills/", agent_file.read_text(encoding="utf-8"))
+                self.assertNotIn("speckit-pro/", agent_file.read_text(encoding="utf-8"))
+        for agent_file in sorted(CODEX_DIR.glob("*.toml")):
+            # Codex agents may name a repository path only in the mirror note.
+            lines = agent_file.read_text(encoding="utf-8").splitlines()
+            with self.subTest(codex_agent=agent_file.stem):
+                self.assertEqual(
+                    [],
+                    [line for line in lines if "speckit-pro/" in line and "mirrors speckit-pro/skills/" not in line],
+                )
         codex_formal = codex_policy("formal-model-author")["developer_instructions"]
         self.assertNotIn("Use capability-first discovery in `speckit-pro/skills/", codex_formal)
         self.assertNotIn("Ground each claim using `speckit-pro/skills/", codex_formal)
@@ -162,6 +170,23 @@ class AgentTerminalContractTests(unittest.TestCase):
                     flat,
                 )
                 self.assertIn("If the prompt has no `Reference dir:` line", flat)
+
+    def test_artifact_author_reads_the_gallery_the_orchestrator_passes(self) -> None:
+        # The gallery ships inside the plugin, so a repository-relative
+        # speckit-pro/artifact-gallery/ path does not exist in a user's repository.
+        directive = (
+            "only from the absolute directory on your prompt's `Gallery dir:` line,"
+            " which the orchestrator resolves from the loaded plugin root,"
+            " and never search the plugin cache for another copy."
+        )
+        for runtime, text in (
+            ("claude", claude_body("artifact-author")),
+            ("codex", codex_policy("artifact-author")["developer_instructions"]),
+        ):
+            flat = " ".join(text.split())
+            with self.subTest(runtime=runtime):
+                self.assertIn(directive, flat)
+                self.assertIn("If the prompt has no `Gallery dir:` line", flat)
 
     def test_consensus_synthesizer_is_read_only_terminal_and_evidence_closed(self) -> None:
         policy = codex_policy("consensus-synthesizer")

@@ -183,6 +183,17 @@ class ConsensusSynthesizerRegressionTests(unittest.TestCase):
         self.assertIn(f"`{ACTIVE_REFERENCES}` line", formal)
         prerequisites = " ".join((REFERENCES / "prerequisites.md").read_text(encoding="utf-8").split())
         self.assertIn(f"`{ACTIVE_REFERENCES}`", prerequisites)
+        phase = phase_execution_text()
+        author = dispatch_block(phase, 'subagent_type: "speckit-pro:artifact-author"')
+        self.assertIn("Gallery dir: <plugin_root>/artifact-gallery/", author)
+        self.assertNotIn("speckit-pro/artifact-gallery/", phase)
+        codex = CODEX_PHASE_EXECUTION.read_text(encoding="utf-8")
+        self.assertIn(
+            "Gallery dir: <plugin-root>/artifact-gallery/",
+            dispatch_block(codex, 'spawn_agent("artifact-author"'),
+        )
+        self.assertNotIn("speckit-pro/artifact-gallery/", codex)
+        self.assertIn("`Gallery dir: <plugin_root>/artifact-gallery/`", prerequisites)
         scaffold = SCAFFOLD_SKILL.read_text(encoding="utf-8")
         self.assertIn(
             "Reference dir: ${CLAUDE_PLUGIN_ROOT}/skills/speckit-autopilot/references/",

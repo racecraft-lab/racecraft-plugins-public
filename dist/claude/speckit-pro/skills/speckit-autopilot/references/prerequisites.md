@@ -163,7 +163,9 @@ consensus analyst prompt, and every artifact-author, formal-model-author, and
 uat-runbook-author prompt also carries a
 `Reference dir: <plugin_root>/skills/speckit-autopilot/references/` line. Those agents read
 `capability-discovery.md` and `grounding.md` only from that directory and never
-search the plugin cache for another copy.
+search the plugin cache for another copy. The artifact-author prompt also
+carries a `Gallery dir: <plugin_root>/artifact-gallery/` line, and the agent reads the
+manifest and templates only from that directory.
 
 If the check fails, STOP. Claude Code loads plugin agents directly from the
 plugin cache, so autopilot cannot safely self-heal a missing Claude agent file.
