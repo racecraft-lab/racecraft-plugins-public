@@ -34,7 +34,7 @@ captured during scoping.
 |-------|---------|--------|-------|
 | Stage | plan | ✅ Complete | Explicit --stage plan resolved; planning phases continue |
 | Specify | `/speckit-specify` | ✅ Complete | 3 stories, 19 FRs; G1 routes provenance marker to Clarify |
-| Clarify | `/speckit-clarify` | 🔄 In Progress | Three workflow sessions; provenance first |
+| Clarify | `/speckit-clarify` | ⚠️ Blocked | Session 1 found exact source; license notice choice awaits operator review |
 | Plan | `/speckit-plan` | ⏳ Pending | |
 | Checklist | `/speckit-checklist` | ⏳ Pending | Run for each domain |
 | Tasks | `/speckit-tasks` | ⏳ Pending | |
@@ -325,9 +325,16 @@ Use these markers in spec.md for traceability through later phases:
 
 | Session | Focus Area | Questions | Key Outcomes |
 |---------|------------|-----------|--------------|
-| 1 | Provenance | | |
+| 1 | Provenance | 2 | Exact source pinned to `humanlayer/skills@bba9d13`; MIT source license conflicts with planned Apache notice; operator decision pending |
 | 2 | Ledger contract | | |
 | 3 | Test and credit header | | |
+
+### Consensus Resolution Log
+
+| # | Type | Question/Gap/Finding | Categories | Round | Outcome | Resolution | Analysts Used |
+|---|------|----------------------|------------|-------|---------|------------|---------------|
+| 1 | Clarify | Exact copied `show-me` source | [spec, domain] | 1→2 | 2/3 | Pinned `humanlayer/skills@bba9d13` and retired repo-head fallback in FR-016 | spec-context-analyst, domain-researcher, codebase-analyst |
+| 2 | Clarify | License bytes for separate HumanLayer notice | [codebase, domain] | 1 | [HUMAN REVIEW] | Source MIT and separate-repo Apache conflict with operator-authored notice terms; decision pending | codebase-analyst, domain-researcher |
 
 ---
 

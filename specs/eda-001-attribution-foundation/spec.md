@@ -81,7 +81,7 @@ As a redistributor, I find a separate Apache-2.0 notice for humanlayer `show-me`
 - **FR-013**: Slice 1 MUST deliver the MIT notice, complete ledger, and validation before EDA-002 through EDA-011 add derivatives.
 - **FR-014**: Slice 2 MUST deliver `references/upstream/humanlayer-show-me/UPSTREAM-NOTICE.md` in both payloads with a separate byte-exact Apache-2.0 notice and Copyright (c) 2024, humanlayer Authors.
 - **FR-015**: Slice 2 MUST link that notice and a pinned humanlayer source from `pr`'s `transitive_sources`; validation MUST reject an absent or malformed required transitive source, notice, or pin.
-- **FR-016**: The humanlayer pin MUST identify the exact copied `show-me` source if established; otherwise it MUST use a pinned humanlayer repository head and disclose the unresolved exact-source gap. [NEEDS CLARIFICATION: Which exact humanlayer `show-me` commit and path contain the text copied into upstream `pr`? Search in Clarify Session 1 before using the disclosed head-pin fallback.]
+- **FR-016**: The `pr` transitive-source entry MUST identify `humanlayer/skills` at commit `bba9d13ab34f0a87f1cc33df4dd196372393ddfc`, path `plugins/show-me/skills/show-me/SKILL.md`, as the exact copied `show-me` source.
 - **FR-017**: The repository test MUST be named `test-upstream-skill-attribution.py`, use only the Python 3.11+ standard library, and never read a `specs/<feature>/` path at run time.
 - **FR-018**: Shipped notices and credits MUST contain no shell-specific execution instructions, private home or temporary paths, or machine-specific identifiers. The feature MUST add no derivative content or fork edits.
 - **FR-019**: `speckit-pro/README.md` MUST acknowledge Matt Pocock's upstream skills and link directly to the MIT `UPSTREAM-NOTICE.md` included by this feature.
@@ -130,8 +130,17 @@ As a redistributor, I find a separate Apache-2.0 notice for humanlayer `show-me`
 - The stated 38-skill count and Matt Pocock SHA are authoritative for this spec; implementation extracts the frozen path list from that commit.
 - A destination names a derivative file or directory whose authored derivative files each need credit. Later specs mark their rows landed.
 - All initial non-`IGNORE` rows are planned; fixtures prove landed behavior.
-- The exact humanlayer copied source is unresolved evidence for Slice 2. A head pin with explicit disclosure is the agreed fallback.
+- The exact copied `show-me` source was located in `humanlayer/skills`; the repository-head fallback is not needed for this source.
 - Existing payload builders include the specified upstream reference directory.
+
+## Clarifications
+
+### Session 1: Provenance — pending license decision
+
+- The pinned upstream `pr` skill credits `humanlayer/skills/plugins/show-me/skills/show-me/SKILL.md`; its adjacent credits say the text was reproduced almost word for word. That file exists at commit `bba9d13ab34f0a87f1cc33df4dd196372393ddfc`, before the upstream copy commit. The exact-source fallback is retired.
+- The identified source repository's `LICENSE` at that commit is MIT, Copyright (c) 2026 HumanLayer. The 15-line Apache-2.0 header belongs to a separate repository, `humanlayer/humanlayer`, at the previously proposed head pin.
+- [NEEDS CLARIFICATION: The operator selected a separate HumanLayer notice and the current US3, FR-014, and SC-004 call it Apache-2.0. Should those requirements use the identified source repository's MIT notice instead, while retaining two separate notices?]
+- Primary evidence: [upstream `pr` metadata](https://github.com/mattpocock/skills/blob/c55ee46073ed923f86ce59a5eb3b6d895095d1b7/skills/in-progress/pr/SKILL.md), [upstream credits](https://github.com/mattpocock/skills/blob/c55ee46073ed923f86ce59a5eb3b6d895095d1b7/skills/in-progress/pr/CREDITS.md), [exact `show-me` source](https://github.com/humanlayer/skills/blob/bba9d13ab34f0a87f1cc33df4dd196372393ddfc/plugins/show-me/skills/show-me/SKILL.md), [its MIT LICENSE](https://github.com/humanlayer/skills/blob/bba9d13ab34f0a87f1cc33df4dd196372393ddfc/LICENSE), and [the separate Apache LICENSE](https://github.com/humanlayer/humanlayer/blob/99abe673498cf8bdcd5f989aebe9406a27185b3b/LICENSE).
 
 ## Out of Scope
 
