@@ -16,6 +16,7 @@ from pathlib import Path, PurePosixPath
 from typing import Any
 import sys
 
+from .artifact_review import OBSERVATION_CLOCK_SKEW
 from .helpers.mutation import validate_target_path, write_file_atomic
 from .helpers.read_only import repo_relative, resolve_input_path
 
@@ -322,11 +323,24 @@ def submit_preview_verdict(*, capability: str, verdict: str) -> dict[str, Any]:
     return {"verdict": verdict, "artifact_sha256": digest}
 
 
+def _implausible_observation_time(observed_at: Any, created_at: Any) -> bool:
+    """A stored observation must fall between session creation and now."""
+    try:
+        moment = datetime.fromisoformat(observed_at)
+        created = float(created_at)
+    except (TypeError, ValueError):
+        return True
+    if moment.tzinfo is None:
+        return True
+    return moment.timestamp() < created or moment > datetime.now(timezone.utc) + OBSERVATION_CLOCK_SKEW
+
+
 def close_session(*, capability: str) -> dict[str, Any]:
     state = _resolve_capability(capability)
     session_path = _safe_session_path(_state_root(), state["session_id"])
     observation = state.get("preview_submission") if state["kind"] == "preview" else None
     artifact_changed = False
+    implausible_time = False
     if observation is not None:
         root = Path(state["repo_root"])
         artifact = root / state["artifact_path"]
@@ -337,6 +351,7 @@ def close_session(*, capability: str) -> dict[str, Any]:
                 artifact_changed = _hash_file(artifact) != observation["artifact_sha256"] or observation["artifact_sha256"] != state["expected_sha256"]
             except OSError:
                 artifact_changed = True
+            implausible_time = _implausible_observation_time(observation["observed_at"], state.get("created_at"))
     try:
         (session_path / "state.json").unlink()
         if state["kind"] == "preview":
@@ -346,6 +361,8 @@ def close_session(*, capability: str) -> dict[str, Any]:
         raise BrokerViolation("author broker session could not close safely") from exc
     if artifact_changed:
         raise BrokerViolation("preview artifact changed after verdict submission")
+    if implausible_time:
+        raise BrokerViolation("preview observation time is implausible")
     result = {"session_id": state["session_id"], "status": "closed"}
     if observation is not None:
         result["observation"] = observation
@@ -396,7 +413,7 @@ TOOLS = (
     },
     {
         "name": "close_session",
-        "description": "Close one author-broker session and remove its private state. Intended for the trusted parent after the bounded agent call completes.",
+        "description": "Close one author-broker session and remove its private state. Intended for the trusted parent after the bounded agent call completes. Returns the session id and status; after a preview verdict it also returns `observation` with the verdict, artifact_sha256, and the broker-stamped observed_at time.",
         "inputSchema": _tool_schema({"capability": {"type": "string", "minLength": 1}}, ["capability"]),
     },
 )

@@ -147,6 +147,7 @@ class ArtifactReviewTests(unittest.TestCase):
             ("artifact_sha256", "0" * 64),
             ("verdict", "denied"),
             ("observed_at", "2026-09-10T18:00:00"),
+            ("observed_at", "2999-01-01T00:00:00Z"),
         ):
             with self.subTest(key=key):
                 self.verify()

@@ -921,6 +921,58 @@ class ReadOnlyHelperTests(unittest.TestCase):
             )
             self.assertEqual(payload["workflow_root"], external_root.resolve().as_posix())
 
+    def test_resolve_workflow_binding_binds_explicit_sibling_worktree_without_touching_task_root(self) -> None:
+        # Codex prerequisites bind an explicit absolute sibling workflow in the same task (issue 656).
+        if self.helper_filter and self.helper_filter != "resolve-workflow-binding":
+            self.skipTest("workflow-binding cases use resolve-workflow-binding")
+        with tempfile.TemporaryDirectory() as temp:
+            # A canonical base keeps the explicit path free of temp-directory symlink aliases.
+            task_root, _, sibling_root = self.build_binding_worktrees(Path(temp).resolve())
+            workflow = sibling_root / "docs" / "ai" / "specs" / ".process" / "DEMO-001-workflow.md"
+            workflow.parent.mkdir(parents=True)
+            workflow.write_text("# demo\n", encoding="utf-8")
+            shared = Path("shared-workflow.md")
+            (task_root / shared).write_text("# task\n", encoding="utf-8")
+            (sibling_root / shared).write_text("# sibling\n", encoding="utf-8")
+
+            def task_state() -> tuple[str, str]:
+                def git(*args: str) -> str:
+                    return subprocess.run(
+                        ["git", "-C", str(task_root), *args],
+                        text=True, capture_output=True, shell=False, check=True,
+                    ).stdout
+                return git("rev-parse", "--abbrev-ref", "HEAD"), git("status", "--porcelain")
+
+            before = task_state()
+            payload, exit_code = self.binding_result(task_root, str(workflow))
+            self.assertEqual(
+                (payload["binding_status"], payload["relation"], exit_code),
+                ("resolved", "external", 0),
+            )
+            self.assertEqual(payload["task_root"], task_root.resolve().as_posix())
+            self.assertEqual(payload["workflow_root"], sibling_root.resolve().as_posix())
+            self.assertEqual(payload["workflow_file"], workflow.resolve().as_posix())
+            self.assertEqual(task_state(), before)
+
+            revalidated, exit_code = self.binding_result(sibling_root, payload["workflow_file"])
+            self.assertEqual(
+                (revalidated["binding_status"], revalidated["relation"], exit_code),
+                ("resolved", "same", 0),
+            )
+            self.assertEqual(revalidated["task_root"], payload["workflow_root"])
+            self.assertEqual(revalidated["workflow_root"], payload["workflow_root"])
+            self.assertEqual(revalidated["workflow_file"], payload["workflow_file"])
+
+            ambiguous, exit_code = self.binding_result(task_root, shared.as_posix())
+            self.assertEqual((ambiguous["binding_status"], exit_code), ("ambiguous", 1))
+            self.assertIsNone(ambiguous["workflow_root"])
+            self.assertIsNone(ambiguous["relation"])
+            self.assertEqual(
+                ambiguous["candidates"],
+                sorted([task_root.resolve().as_posix(), sibling_root.resolve().as_posix()]),
+            )
+            self.assertEqual(task_state(), before)
+
     def test_resolve_scaffold_placement_anchors_to_detached_task_root_and_revalidates(self) -> None:
         if self.helper_filter and self.helper_filter != "resolve-scaffold-worktree-placement":
             self.skipTest("scaffold-placement cases use resolve-scaffold-worktree-placement")
