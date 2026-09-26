@@ -5,13 +5,13 @@
   "branch": "hrns-015-autopilot-gate-pr-emission-repair",
   "status": "in_progress",
   "stage": "plan",
-  "active_step": "Phase 6.5: Confidence Gate",
+  "active_step": "Plan stage: commit and publish draft",
   "stage_resolution": {
     "source": "argv",
     "basis": "explicit --stage plan",
     "recorded_stage": null,
-    "planning_complete": false,
-    "confidence_gate_status": "\u23f3 Pending",
+    "planning_complete": true,
+    "confidence_gate_status": "\u2705 Complete",
     "corroboration": {
       "status": "no_record"
     }
@@ -33,7 +33,7 @@
     "ledger_path": "docs/ai/specs/.process/.process/execution-control/ac068cab59ef67faf15646a7.json",
     "disposition": "continue",
     "reasons": [],
-    "elapsed_seconds": 46936.035455942154,
+    "elapsed_seconds": 48067.791205883026,
     "checkpoint_due": true
   },
   "plan": [
@@ -123,7 +123,7 @@
     },
     {
       "step": "Phase 6.5: Confidence Gate",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 7: Implement - Setup (shared evidence) (T001)",
@@ -262,7 +262,7 @@
       "status": "skipped: outside --stage plan"
     }
   ],
-  "updated_at": "2026-09-26T03:26:18Z",
+  "updated_at": "2026-09-26T03:44:07Z",
   "prerequisites": {
     "status": "completed_with_documented_exception",
     "all_pass": false,
@@ -276,7 +276,8 @@
     "ruff": "passed, pinned 0.16.8",
     "mypy": "passed, pinned 2.3.1, 47 source files",
     "unit_test": "8908/8912 passed with temporary .venv in tree; after cleanup focused privacy scan 10/11, sole remaining failure is worktree path term documented in workflow Own-Run Hazard",
-    "ci_privacy_proof": "pending"
+    "ci_privacy_proof": "pending",
+    "plan_handoff_privacy": "10/11 passed with only the exact private ledger excluded for this command; home-path, specific-temp-path and UUID checks passed; remaining failure is the documented path-sensitive dynamic_local_pattern."
   },
   "project_commands": {
     "BUILD": "N/A",
@@ -365,6 +366,30 @@
         "H7"
       ],
       "limitation": "The helper reported zero findings; the latest Analysis Results has five open HIGH rows. No implementation readiness is claimed."
+    },
+    "G6.5": {
+      "composite": 0.43,
+      "composite_source": "computed",
+      "criteria": {
+        "approach_clarity": 0.84,
+        "completeness": 0.94,
+        "requirements_alignment": 0.97,
+        "risk_assessment": 0.96,
+        "task_understanding": 0.94
+      },
+      "criteria_mean": 0.93,
+      "deductions": {
+        "amount": 0.5,
+        "critical": 0,
+        "high": 5
+      },
+      "deductions_applied": true,
+      "input": "docs/ai/specs/.process/HRNS-015-workflow.md",
+      "mode": "advisory",
+      "pass": false,
+      "reason": "composite below threshold in advisory mode",
+      "recommended_action": "continue_with_warning",
+      "threshold": 0.9
     }
   },
   "specify": {
@@ -520,7 +545,7 @@
       "reservation_id": "420e70c8bf1b436493f77ef2df90f5d9",
       "status": "completed",
       "recovery_of": "hrns015-analyze-c1-rescope-20260925",
-      "operator_recovery_event_id": "msg_01a0db0f-cca6-7f12-8d1a-b964a2abf087"
+      "operator_recovery_event_sha256": "707600b30719d67d5e39f3e69d31f7710885b607c50499cac3dddcc01ed3a08d"
     },
     "task_count": 33,
     "proposed_increment_count": 19,
@@ -533,5 +558,45 @@
     },
     "final_synthesis_completed": true,
     "handoff_authorization": "The latest explicit operator instruction directs completion of the plan-only draft review handoff; implementation qualification and ratification remain pending."
+  },
+  "confidence_gate": {
+    "status": "completed_with_advisory_warning",
+    "composite": 0.43,
+    "composite_source": "computed",
+    "criteria": {
+      "approach_clarity": 0.84,
+      "completeness": 0.94,
+      "requirements_alignment": 0.97,
+      "risk_assessment": 0.96,
+      "task_understanding": 0.94
+    },
+    "criteria_mean": 0.93,
+    "deductions": {
+      "amount": 0.5,
+      "critical": 0,
+      "high": 5
+    },
+    "deductions_applied": true,
+    "input": "docs/ai/specs/.process/HRNS-015-workflow.md",
+    "mode": "advisory",
+    "pass": false,
+    "reason": "composite below threshold in advisory mode",
+    "recommended_action": "continue_with_warning",
+    "threshold": 0.9,
+    "planning_review_only": true
+  },
+  "autonomy_boundary_private_receipt": {
+    "status": "ready",
+    "sha256": "104b21e273eb949564a1ecdb23664d31113735b14843538f312863e9cc9f0949",
+    "public_details": "redacted to honor the repository privacy rule",
+    "validation": "The exact current-boundary preflight passed before G6.5; full execution roots and native event identity retained privately.",
+    "contract_gap": "The shipped autonomy schema requires private absolute roots in committed public files. Public replay of the exact boundary remains unavailable."
+  },
+  "structural_checks": {
+    "quality_delta_exit": 2,
+    "quality_delta_reason": "Canonical process-state verbosity",
+    "test_gate_exit": 4,
+    "test_gate_reason": "Five planning-document symbols without mapped tests",
+    "classification": "advisory planning-document limits; no runtime qualification claimed"
   }
 }

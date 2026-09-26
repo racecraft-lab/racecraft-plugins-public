@@ -38,16 +38,13 @@ captured during scoping.
 | Checklist | `/speckit-checklist` | ✅ Complete | Three domains, 51 items, 11 gaps resolved; G4 passed with zero markers |
 | Tasks | `/speckit-tasks` | ✅ Complete | 33 tasks in 21 groups; metadata reconciled without changing definitions; sidecar valid and G5 passed with zero markers |
 | Analyze | `/speckit-analyze` | ✅ Complete | Analysis complete for operator-directed plan review; H3–H7 remain open and spec qualification is unqualified |
-| Confidence Gate | G6.5 | ⏳ Pending | Pre-Implement composite confidence |
-| Implement | `/speckit-implement` | ⏳ Pending | |
-| Post | Post-Implementation | ⏳ Pending | Canonical 13-item closeout |
+| Confidence Gate | G6.5 | ✅ Complete | Advisory warning: composite 0.43 versus 0.90; proceed with planning review only |
+| Implement | `/speckit-implement` | ⏭️ Skipped | Outside --stage plan; qualification and owner ratification remain pending |
+| Post | Post-Implementation | ⏭️ Skipped | Outside --stage plan; canonical 13-item closeout remains for implementation |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⏭️ Skipped | ⚠️ Blocked
 
-G6.5 is advisory by default, so no phase of the main loop flips its row. Leaving
-it Pending is legitimate and does not make the rows below it read as out of
-order; record the verdict in [Phase 6.5](#phase-65-confidence-gate) when the
-gate runs.
+G6.5 completed in default advisory mode. Its warning is recorded in [Phase 6.5](#phase-65-confidence-gate); this plan-only handoff does not approve implementation.
 
 ### Phase Gates
 
@@ -180,6 +177,7 @@ An explicit operator waiver is recorded separately and is never a passing check.
 | **Spec ID** | HRNS-015 |
 | **Name** | Autopilot, Gate, and PR-Emission Repair |
 | **Branch** | `hrns-015-autopilot-gate-pr-emission-repair` |
+| **Stage** | `plan` |
 | **Dependencies** | None |
 | **Enables** | HRNS-016 (needs Slice A's packet release-note and untracked-packet repairs) |
 | **Priority** | P1 |
@@ -775,7 +773,7 @@ The execution-control bug that had blocked FR-026 was reproduced and filed as is
 
 The 33-task sidecar validated before the accepted Round 2 spec clarification; a fresh `validate-task-execution` now rejects stale source fingerprints. A same-reservation Tasks-producer dispatch was denied with `corrective_cycle_already_closed`, while the live ledger status still reports `continue` and retains two consumed cycles. Issue #679 records this separate SpecKit Pro orchestration gap; repair PR #680 is ready for required review and adds one operator-approved metadata continuation under the same reservation without resetting counters. Its final local suite passed 8,960/8,960 checks; the CI-equivalent suite passed all six groups; generated-artifact consistency, reference freshness, docs quality, Ruff, and mypy passed. GitHub CI passed on head `98193af799434a0d93bd1bd4747a8a006d5a9f6d`, including the required suite and both Linux container architectures. Copilot reported no findings; required review is still outstanding. The owner subsequently directed completion of the plan stage without stopping. The parent observed that fresh native instruction and used it for exactly one metadata continuation under the original completed Analyze reservation. The guarded action returned continue on the original run with both corrective cycles preserved. The Tasks producer now owns source-bound metadata reconciliation only; task definitions remain unchanged. The metadata producer completed, sidecar validation passed, and G5 returned pass with 33 tasks and zero markers. The dedicated final Analyze synthesis is complete. Actual per-PR diffs, reviewable LOC, and marker fingerprints remain unqualified. The shared-path product gap is issue #675 with repair PR #676; it is not yet in the installed validator. The authorized Tasks metadata continuation completed. It changed only spec_sha256 in task-execution.json, preserving all 33 task entries and spec/plan/tasks bytes. Installed sidecar validation returned valid=true with no errors; G5 returned pass=true with 33 tasks and zero markers. Both consumed corrective cycles remain recorded. PR #680's local and CI evidence qualifies its metadata-continuation repair, not HRNS-015 implementation.
 
-The installed G6 helper returned pass=true, markers=0, reason="0 CRITICAL/HIGH findings" despite the five open HIGH rows above. This mechanical result does not qualify the current spec’s G6 conditions. The parent retains the five findings, pending owner ratification, and T002 gates.
+Issue #682 tracks the reproduced G6 false pass. The installed G6 helper returned pass=true, markers=0, reason="0 CRITICAL/HIGH findings" despite the five open HIGH rows above. This mechanical result does not qualify the current spec’s G6 conditions. The parent retains the five findings, pending owner ratification, and T002 gates.
 
 This dedicated final Analyze synthesis completes the planning analysis. The operator's latest direction governs the timing of the plan-only draft handoff while all unqualified requirements remain visible. Retain owner_ratification=pending, T002 qualification outstanding, and Phase 7 skipped outside this stage-plan request. No implementation PR count, marker plan, behavior task, or implementation result is approved by this handoff.
 
@@ -794,15 +792,19 @@ This dedicated final Analyze synthesis completes the planning analysis. The oper
 
 ## Phase 6.5: Confidence Gate
 
+### Autonomy Boundary Preflight
+
+Status: ready. The exact current-boundary validation passed before G6.5 using the existing explicit authorization for this plan-only handoff. The complete record remains private to honor the repository privacy rule. Public receipt SHA-256: `104b21e273eb949564a1ecdb23664d31113735b14843538f312863e9cc9f0949`. The public-bookkeeping privacy check returned 10/11: home-path, specific-temp-path, and UUID checks passed; only the documented worktree-path dynamic-local-term check failed. The exact private ledger was excluded for that command. Issue #683 tracks the shipped autonomy schema’s requirement for private absolute roots in committed public files; exact public replay remains unavailable. This exception does not qualify implementation.
+
 **When to run:** After Phase 6 commits and before Phase 7 begins. This section
 records the verdict so a later session can read it.
 
 | Field | Value |
 |-------|-------|
-| Mode | <!-- advisory (default) or strict --> |
-| Composite confidence | <!-- 0.00-1.00 --> |
-| Verdict | <!-- proceed / remediate / stop --> |
-| Evidence | <!-- what the score was computed from --> |
+| Mode | advisory (default; native mode resolver) |
+| Composite confidence | 0.43; threshold 0.90 |
+| Verdict | proceed with warning — plan-only draft review; implementation remains unqualified |
+| Evidence | Computed from the dedicated synthesizer’s five criteria: mean 0.93 minus five open HIGH findings (0.50); native domain exit 2, recommended_action=continue_with_warning. Lowest criterion: approach clarity 0.84. |
 
 ---
 
@@ -928,3 +930,90 @@ racecraft-plugins-public/
 ```
 
 ---
+
+### Plan handoff structural checks
+
+Ripwire quality-delta returned exit 2 for canonical process-state verbosity. Its test-gate returned exit 4 for five planning-document symbols without mapped tests. These are reported advisory limits for this documentation handoff; no runtime or complete-suite pass is claimed. The phase/status guard and artifact record validation passed.
+
+## Artifact Review Handoff
+
+```json
+{
+  "schema_version": "1.0",
+  "feature_dir": "specs/hrns-015-autopilot-gate-pr-emission-repair",
+  "input_hashes": {
+    "specs/hrns-015-autopilot-gate-pr-emission-repair/spec.md": "01d46bbfe49807eae7d93e90cb2277104530848ea43ec72a0fd0b437abc0e05c",
+    "specs/hrns-015-autopilot-gate-pr-emission-repair/plan.md": "10d972bb68d3f637a2ad96024467bd600c2dbbfc637cca074cf408d95fb6b9b5",
+    "specs/hrns-015-autopilot-gate-pr-emission-repair/tasks.md": "aa80f377f3219c8de8919b7a50382afd9b83e823852eff43cb7748ff02bf1ae8",
+    "docs/ai/specs/.process/HRNS-015-design-concept.md": "2179b6c3fb8ab3b5bfe0a326ccf1af68b3b0ce7160286745a01713d4264ccba2"
+  },
+  "manifest_sha256": "c90a240c9ae6d007e6aa1586612891de78337d2c0f7892ec121fb4fe316d25a0",
+  "template_hashes": {
+    "implementation-plan": "781bd0ea88a97bd5d0b38d4791b96bf04479042f544994488d5a7b7444c088b9",
+    "spec-explainer": "b8a4c87b550aeae38ff3dc645367676439b88292107e821e188a5553b053f555",
+    "code-approaches": "28631395c17a39b03060704aef3cf0462a7e0212fb2fa139219af93290b05e03",
+    "module-map": "9cb043012178506be09a0e5b987df67507c34e2ca12f6ea198bfdab3a1c528e5",
+    "architecture-viewer": null
+  },
+  "generation_error": null,
+  "pages": [
+    {
+      "id": "implementation-plan",
+      "generation": "generated",
+      "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/artifacts/implementation-plan.html",
+      "sha256": "1380062e3a5353c6d7ad128f624267410276e4b3e9ecb222660d888c057fc214",
+      "expected_title": "Implementation Plan \u2014 HRNS-015 Autopilot, Gate, and PR-Emission Repair",
+      "expected_content": "33 tasks \u00b7 14 stories \u00b7 29 requirements \u00b7 40 acceptance scenarios. All tasks remain unchecked. Prior owner ratification was five PRs; acceptance of the 19-PR proposal remains pending.",
+      "preview": {
+        "status": "pending",
+        "blocker": "Not observed yet",
+        "observation": null
+      }
+    },
+    {
+      "id": "spec-explainer",
+      "generation": "generated",
+      "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/artifacts/spec-explainer.html",
+      "sha256": "69f28d8b56973ec6a55cef2e14b850f8b03dc9d50128ea952f03373034ea1bf3",
+      "expected_title": "Spec Explainer \u2014 HRNS-015 Autopilot, Gate, and PR-Emission Repair",
+      "expected_content": "HRNS-015 repairs observed autopilot and scaffold defects through 19 proposed ordered one-story increments. The plan defines 33 tasks, 14 stories, 29 requirements, and 40 acceptance scenarios. Analyze is complete for plan-only review; H3\u2013H7 remain open and spec qualification is unqualified.",
+      "preview": {
+        "status": "pending",
+        "blocker": "Not observed yet",
+        "observation": null
+      }
+    },
+    {
+      "id": "code-approaches",
+      "generation": "generated",
+      "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/artifacts/code-approaches.html",
+      "sha256": "7743c7a577b2e316f2be54892f89ac4955d7323e3c0d35cef7741618329b3bd7",
+      "expected_title": "Code Approaches \u2014 HRNS-015 Autopilot, Gate, and PR-Emission Repair",
+      "expected_content": "The 19 proposed increments supersede the original four-slice estimate and previously ratified five-PR order. Owner acceptance of the changed count remains pending. H3\u2013H7 stay open; actual base/head diffs, generated outputs, reviewable LOC, and marker fingerprints are unqualified. The installed repeated-path marker validator must be repaired before a current marker plan can validate. T002 blocks all behavior tasks.",
+      "preview": {
+        "status": "pending",
+        "blocker": "Not observed yet",
+        "observation": null
+      }
+    },
+    {
+      "id": "module-map",
+      "generation": "generated",
+      "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/artifacts/module-map.html",
+      "sha256": "dcfc28ce3b04f12d87623db23f4a9702b88fc5914b0ccead781a9c3d33198c9f",
+      "expected_title": "Module Map \u2014 HRNS-015 Autopilot, Gate, and PR-Emission Repair",
+      "expected_content": "19 proposed increments contain 14\u201324 candidate paths each, including six recurring process/evidence candidates. Actual base/head diffs, generated outputs, LOC, and marker fingerprints are unqualified. Owner acceptance is pending; T002 blocks behavior tasks. No current validated marker plan or implementation approval is recorded.",
+      "preview": {
+        "status": "pending",
+        "blocker": "Not observed yet",
+        "observation": null
+      }
+    },
+    {
+      "id": "architecture-viewer",
+      "generation": "gap",
+      "reason": "Selected draft-pr entry architecture-viewer has status planned, but the active installed gallery has no templates/architecture-viewer.html."
+    }
+  ]
+}
+```
