@@ -133,9 +133,11 @@ def run_script(test_path: Path, repo_root: Path) -> tuple[str, bool, str]:
         check=False,
     )
     ok, detail = child_check_status(completed.returncode, completed.stdout, test_path.stem)
-    if not ok and completed.stderr.strip():
+    output = completed.stdout + completed.stderr
+    if not ok and output.strip():
         # Name every failing unit with a bounded traceback; the summary line alone hides which one failed.
-        detail = f"{detail}\n{failure_report(completed.stderr, test_path.stem)}"
+        # Pass both streams, as run-all.py does, so a crash that writes only to stdout still shows its tail.
+        detail = f"{detail}\n{failure_report(output, test_path.stem)}"
     return (rel(test_path, repo_root), ok, detail)
 
 
