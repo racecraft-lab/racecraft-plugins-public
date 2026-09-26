@@ -3348,6 +3348,99 @@ class ReadOnlyHelperTests(unittest.TestCase):
             code, payload = self._helper_json("validate_gate", {"gate": "G4", "feature_dir": "specs/001-demo"}, project_path)
             self.assertEqual((0, True), (code, payload["pass"]))
 
+    @contextmanager
+    def _g6_project(self) -> Iterator[Path]:
+        """A clean planning tree: no bracketed severity marker in spec, plan, or tasks."""
+        with helper_project() as project_path:
+            feature = project_path / "specs" / "001-demo"
+            feature.mkdir(parents=True)
+            for name in ("spec.md", "plan.md", "tasks.md"):
+                (feature / name).write_text(f"# {name}\n\nNo open markers.\n", encoding="utf-8")
+            yield project_path
+
+    def _g6(self, project_path: Path, workflow: str | None) -> tuple[int, dict[str, object]]:
+        inputs: dict[str, object] = {"gate": "G6", "feature_dir": "specs/001-demo"}
+        if workflow is not None:
+            (project_path / "workflow.md").write_text(workflow, encoding="utf-8")
+            inputs["workflow_file"] = "workflow.md"
+        return self._helper_json("validate_gate", inputs, project_path)
+
+    def test_validate_gate_g6_counts_open_workflow_analysis_rows(self) -> None:
+        """#682: open HIGH rows in the workflow table fail G6 even when the planning files are clean."""
+        if self.helper_filter and self.helper_filter != "validate-gate":
+            self.skipTest("G6 workflow-table case uses validate-gate")
+        open_rows = tuple((f"H{i}", "HIGH", f"required defect {i}", "") for i in range(3, 8))
+        workflow = "\n".join(
+            ("# Workflow", "", self.SEVERITY_LEGEND, "", "### Analysis Results", "", self.analysis_table(open_rows), "")
+        )
+        with self._g6_project() as project_path:
+            code, payload = self._g6(project_path, workflow)
+            self.assertEqual((1, False, 5), (code, payload["pass"], payload["markers"]))
+            self.assertEqual({"critical": 0, "high": 5}, payload["analysis_findings"])
+            self.assertEqual("5 CRITICAL/HIGH findings remain", payload["reason"])
+
+    def test_validate_gate_g6_passes_once_every_resolution_cell_is_filled(self) -> None:
+        if self.helper_filter and self.helper_filter != "validate-gate":
+            self.skipTest("G6 workflow-table case uses validate-gate")
+        rows = (
+            ("C1", "CRITICAL", "contract undefined", "Contract added to `contracts/api.md`."),
+            ("H1", "HIGH", "cookie policy unspecified", "Policy stated in `plan.md`."),
+            ("M1", "MEDIUM", "naming drift", ""),
+            ("X1", "HIGH", "<!-- example row -->", "<!-- not a resolution -->"),
+        )
+        workflow = "\n".join(("# Workflow", "", "### Analysis Results", "", self.analysis_table(rows), ""))
+        with self._g6_project() as project_path:
+            code, payload = self._g6(project_path, workflow)
+            self.assertEqual((1, False, 1), (code, payload["pass"], payload["markers"]))
+            code, payload = self._g6(project_path, workflow.replace("<!-- not a resolution -->", "Fixed in `tasks.md`."))
+            self.assertEqual((0, True, 0), (code, payload["pass"], payload["markers"]))
+            self.assertEqual({"critical": 0, "high": 0}, payload["analysis_findings"])
+            (project_path / "specs" / "001-demo" / "plan.md").write_text("- [HIGH] open marker\n", encoding="utf-8")
+            code, payload = self._g6(project_path, workflow.replace("<!-- not a resolution -->", "Fixed."))
+            self.assertEqual((1, False, 1), (code, payload["pass"], payload["markers"]))
+
+    def test_validate_gate_g6_fails_closed_without_analysis_results_evidence(self) -> None:
+        if self.helper_filter and self.helper_filter != "validate-gate":
+            self.skipTest("G6 workflow-table case uses validate-gate")
+        commented_table = "\n".join(
+            ("# Workflow", "", "<!--", "### Analysis Results", "", self.analysis_table((("H1", "HIGH", "x", "done"),)), "-->", "")
+        )
+        with self._g6_project() as project_path:
+            for label, workflow in (
+                ("no workflow_file", None),
+                ("no table", "# Workflow\n\n" + self.SEVERITY_LEGEND + "\n"),
+                ("commented-out table", commented_table),
+            ):
+                with self.subTest(case=label):
+                    code, payload = self._g6(project_path, workflow)
+                    self.assertEqual((1, False), (code, payload["pass"]))
+                    self.assertNotIn("0 CRITICAL/HIGH", payload["reason"])
+            code, payload = self._helper_json(
+                "validate_gate",
+                {"gate": "G6", "feature_dir": "specs/001-demo", "workflow_file": "missing-workflow.md"},
+                project_path,
+            )
+            self.assertEqual((1, False), (code, payload["pass"]))
+
+    def test_validate_gate_g6_workflow_path_is_canonicalized(self) -> None:
+        if self.helper_filter and self.helper_filter != "validate-gate":
+            self.skipTest("G6 canonical workflow path case uses validate-gate")
+        with self._g6_project() as project_path:
+            (project_path / "docs").mkdir()
+            (project_path / "workflow.md").write_text("# Workflow\n", encoding="utf-8")
+            completed, response, _ = run_runner(
+                helper_request(
+                    "validate-gate",
+                    {"gate": "G6", "feature_dir": "specs/001-demo", "workflow_file": "docs/../workflow.md"},
+                ),
+                cwd=project_path,
+            )
+            self.assertEqual(1, completed.returncode)
+            payload = response["data"]["stdout_json"]
+            self.assertFalse(payload["pass"])
+            self.assertIn("workflow.md", payload["reason"])
+            self.assertNotIn("..", payload["reason"])
+
     def test_estimate_reviewable_loc_does_not_pass_when_no_production_file_counts(self) -> None:
         if self.helper_filter and self.helper_filter != "estimate-reviewable-loc":
             self.skipTest("estimator stack cases use estimate-reviewable-loc")

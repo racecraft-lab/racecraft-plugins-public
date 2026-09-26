@@ -336,6 +336,9 @@ evidence and the state mirror are required at the planning boundary.
 
 **Check:** All requirement-linked defects and safety findings resolved at every
 severity. Keep optional style/naming suggestions distinct from blocking defects.
+The runner's G6 counts open CRITICAL/HIGH rows (empty Resolution) in the
+workflow's Analysis Results table, plus bracketed markers in the planning files,
+and fails closed when the workflow or that table is missing.
 
 ```
 1. Run /speckit-analyze and capture output

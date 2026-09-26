@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from ..envelope import diagnostic, response
+from ..execution_control import is_runner_byproduct
 from .read_only import (
     RenderedSpecIndexMap,
     SpecIndexRenderError,
@@ -1438,8 +1439,7 @@ def git_worktree_status(repo_root: Path) -> bool | dict[str, Any]:
 
     try:
         completed = subprocess.run(
-            ["git", "-C", str(repo_root), "status", "--porcelain=v1", "--untracked-files=all"],
-            text=True,
+            ["git", "-C", str(repo_root), "status", "--porcelain=v1", "-z", "--untracked-files=all"],
             capture_output=True,
             shell=False,
             check=False,
@@ -1449,7 +1449,25 @@ def git_worktree_status(repo_root: Path) -> bool | dict[str, Any]:
         return git_status_unavailable(repo_root, "git_status")
     if completed.returncode != 0:
         return git_status_unavailable(repo_root, "git_status")
-    return bool(completed.stdout.strip())
+    # The runner's own ledger and verification evidence never make the worktree dirty.
+    try:
+        entries = completed.stdout.decode("utf-8", "strict").split("\0")
+    except UnicodeDecodeError:
+        return git_status_unavailable(repo_root, "git_status")
+    if entries[-1:] == [""]:
+        entries.pop()
+    while entries:
+        entry = entries.pop(0)
+        if len(entry) < 4 or entry[2] != " ":
+            return git_status_unavailable(repo_root, "git_status")
+        paths = [entry[3:]]
+        if "R" in entry[:2] or "C" in entry[:2]:
+            if not entries or not entries[0]:
+                return git_status_unavailable(repo_root, "git_status")
+            paths.append(entries.pop(0))
+        if not all(is_runner_byproduct(path) for path in paths):
+            return True
+    return False
 
 
 def capture_write_snapshots(
