@@ -772,8 +772,11 @@ directions; do not infer a broader precedence rule.
   and remaining work; no phase or nested worker has an independent retry budget.
   One operator-approved application correction past it uses
   `authorize-corrective-exception`; never reset or bypass the ledger.
-- **Consensus all-disagree** (Round 2): flag `[HUMAN REVIEW NEEDED]`,
-  STOP, and present all 3 perspectives to the user.
+- **Consensus all-disagree** (Round 2): flag `[HUMAN REVIEW NEEDED]`.
+  In an interactive session, ask the operator in place with
+  `AskUserQuestion`, apply the answer, and continue; in an unattended run,
+  STOP and present all 3 perspectives. See
+  [consensus-protocol.md §Human Review Needed](./references/consensus-protocol.md#human-review-needed).
 - **Research/context capability unavailable:** use the next acceptable
   evidence path, record any confidence impact, and escalate only when no
   acceptable evidence path remains or a true gate fails.
