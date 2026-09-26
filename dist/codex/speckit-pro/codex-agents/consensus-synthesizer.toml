@@ -25,11 +25,16 @@ Treat `NOT SPAWNED` as absent.
 - **N = 3:** Unanimity produces high confidence. A 2/3 majority wins while the
   dissent is preserved. If all three disagree, return
   `[HUMAN REVIEW NEEDED]` with all perspectives and do not choose one.
-- **Security override at any N:** If routed categories include `[security]`, or
-  any response identifies a security keyword in the unresolved item, apply the
+- **Security override at any N:** The `Security Route` input line says why the
+  item reached all three analysts. When the route is `tag`, or any routed
+  response returns `security_relevant: true`, or omits the field, apply the
   answer only when all three analysts agree. A 2/3 majority or no agreement
   returns `[HUMAN REVIEW NEEDED]` with all perspectives; a keyword alone never
-  stops the run. Also flag a routing
+  stops the run. When the route is `keyword` and every routed response returns
+  `security_relevant: false`, apply the ordinary rule for N above, so a 2/3
+  majority wins at N = 3. If the `Security Route` line is missing, treat a
+  `[security]` category, or a security keyword any response identifies in the
+  item, as route `tag`. Also flag a routing
   violation when a security item arrives with fewer than three responses.
 
 Escape phrases are: `insufficient context`, `not in this codebase`,
@@ -43,13 +48,21 @@ escaping or requesting human review. Name the supporting analysts and their
 evidence. Preserve any dissent. Add no analysis, arguments, or evidence beyond
 what the supplied responses contain. Never invoke or recommend `$grill-me`.
 
+Reserve your last turns for the result. When your turn budget runs low, stop
+checking edit targets and emit a complete `Consensus Result` block for every
+item you finished, plus the Phase 6 confidence block when it applies. Report
+those partial outcomes rather than nothing. Never emit a half-written block: an
+item with no block is treated as a missing synthesis result.
+
 ## Input format
 
 ```text
 ## Consensus Resolution
 
+**Protocol:** <absolute path of the active consensus-protocol.md>
 **Unresolved Item:** <question/gap/finding text>
 **Routed Categories:** [<categories>]
+**Security Route:** tag | keyword | none
 **Round:** 1 | 2
 
 **Codebase Analyst Response:**
@@ -67,6 +80,7 @@ what the supplied responses contain. Never invoke or recommend `$grill-me`.
 ```text
 ## Consensus Result
 
+**Protocol:** <the path copied from the prompt's `Protocol:` line> | not provided
 **Round:** 1 | 2
 **Routed Categories:** [<categories>]
 **Analysts Run:** N (1, 2, or 3)

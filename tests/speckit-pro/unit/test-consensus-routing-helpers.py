@@ -150,6 +150,25 @@ class RoutingTests(unittest.TestCase):
         self.assertEqual(payload["analysts"], ALL_THREE)
         self.assertIn("security keyword", payload["reason"])
 
+    def test_security_route_names_why_the_item_widened(self) -> None:
+        # The synthesizer keeps unanimity for a tag but lets a keyword-only
+        # route fall back to the item's own agreement rule when no analyst
+        # finds security content, so the helper must say which one fired.
+        for line, expected in (
+            ("[security] Q2: how is the session token stored?", "tag"),
+            ("[codebase, security] Q3: which module owns it?", "tag"),
+            ("[codebase] Q: where is the session token stored?", "keyword"),
+            ("[spec] Q: how many tokens does one run use?", "keyword"),
+            ("[codebase] Q: which tokenizer does the parser use?", None),
+            ("Q: no prefix and no keyword here", None),
+            ("[ambiguous] Q: unclear which perspective applies", None),
+        ):
+            with self.subTest(line=line):
+                payload, exit_code = route(line)
+                self.assertEqual(exit_code, 0)
+                self.assertIn("security_route", payload)
+                self.assertEqual(payload["security_route"], expected)
+
     def test_hyphenated_and_shouted_keywords_still_widen(self) -> None:
         for line in (
             "[spec] Q: how often do we rotate the API-Key?",
