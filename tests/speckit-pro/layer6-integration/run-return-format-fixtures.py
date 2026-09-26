@@ -38,7 +38,7 @@ def response_assertions(expected: dict[str, object], fixture_id: str) -> list[di
         subagent_type = assertion.get("subagent_type")
         if not isinstance(subagent_type, str) or not subagent_type:
             raise ValueError(f"{fixture_id}: response_assertions[{index}].subagent_type must be a non-empty string")
-        for field in ("must_contain_any", "must_contain_section_keywords"):
+        for field in ("must_contain_any", "must_not_contain_any", "must_contain_section_keywords"):
             if field not in assertion:
                 continue
             value = assertion[field]
@@ -84,6 +84,13 @@ def assert_fixture(fixture: Path, mode: str, reporter: Reporter) -> None:
             f"skill matching {pattern!r} was invoked",
         )
 
+    for term in string_list(expected.get("must_include_terms")):
+        reporter.check(
+            f"{fixture_id}: transcript includes term: {term}",
+            helpers.assert_transcript_contains_term(transcript, term),
+            f"expected transcript to include {term!r}",
+        )
+
     for assertion in response_assertions(expected, fixture_id):
         subagent_type = assertion["subagent_type"]
         content = helpers.get_response_content(transcript, subagent_type)
@@ -93,6 +100,12 @@ def assert_fixture(fixture: Path, mode: str, reporter: Reporter) -> None:
                 f"{fixture_id}: {subagent_type} response contains any of allowed substrings",
                 any(needle in content for needle in needles),
                 f"none of the expected substrings found in {subagent_type} response",
+            )
+        for needle in string_list(assertion.get("must_not_contain_any")):
+            reporter.check(
+                f"{fixture_id}: {subagent_type} response excludes {needle!r}",
+                needle not in content,
+                f"forbidden substring {needle!r} found in {subagent_type} response",
             )
         for keyword in string_list(assertion.get("must_contain_section_keywords")):
             reporter.check(

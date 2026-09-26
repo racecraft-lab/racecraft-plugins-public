@@ -15,6 +15,9 @@
       "rationale": "Checklist-executor must report which domain it ran and reference gaps (found / remediated / remaining) so the orchestrator can decide whether to advance the next gate."
     }
   ],
+  "must_include_terms": [
+    "Protocol:"
+  ],
   "must_not_invoke_skill": [
     "grill-me"
   ]
