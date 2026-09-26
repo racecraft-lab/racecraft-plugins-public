@@ -590,6 +590,12 @@ marker_split placeholder, packet validation placeholder, and PR mappings
 placeholder in the workflow file. `tasks.md` remains the task source, not
 authoritative marker state.
 
+When ordered markers each modify an existing shared file, declare `MODIFIED`
+for that path in each marker and list those marker IDs in review order in the
+changed-file manifest. Each completed marker checkpoint must change that file;
+an undeclared marker checkpoint must leave it unchanged. New, deleted, renamed,
+and process files retain a single marker owner.
+
 On resume, validate the source fingerprint before reusing checkpoints or
 emission evidence. A changed fingerprint, malformed/stale marker state, missing
 marker membership, changed order, or changed fold target clears affected
