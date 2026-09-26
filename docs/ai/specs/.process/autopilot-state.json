@@ -3,13 +3,13 @@
   "spec_id": "HRNS-015",
   "feature_dir": "specs/hrns-015-autopilot-gate-pr-emission-repair",
   "branch": "hrns-015-autopilot-gate-pr-emission-repair",
-  "status": "in_progress",
+  "status": "awaiting_review",
   "stage": "plan",
-  "active_step": "Plan stage: commit and publish draft",
+  "active_step": "Plan stage complete: draft published; awaiting owner review",
   "stage_resolution": {
     "source": "argv",
     "basis": "explicit --stage plan",
-    "recorded_stage": null,
+    "recorded_stage": "plan",
     "planning_complete": true,
     "confidence_gate_status": "\u2705 Complete",
     "corroboration": {
@@ -33,8 +33,8 @@
     "ledger_path": "docs/ai/specs/.process/.process/execution-control/ac068cab59ef67faf15646a7.json",
     "disposition": "continue",
     "reasons": [],
-    "elapsed_seconds": 48067.791205883026,
-    "checkpoint_due": true
+    "elapsed_seconds": 48634.095886707306,
+    "checkpoint_due": false
   },
   "plan": [
     {
@@ -262,7 +262,7 @@
       "status": "skipped: outside --stage plan"
     }
   ],
-  "updated_at": "2026-09-26T03:44:07Z",
+  "updated_at": "2026-09-26T03:55:07Z",
   "prerequisites": {
     "status": "completed_with_documented_exception",
     "all_pass": false,
@@ -598,5 +598,30 @@
     "test_gate_exit": 4,
     "test_gate_reason": "Five planning-document symbols without mapped tests",
     "classification": "advisory planning-document limits; no runtime qualification claimed"
+  },
+  "plan_stage_completion": {
+    "planning_complete": true,
+    "stage_boundary_commit": "2ef49696",
+    "draft_packet_validation": "passed",
+    "draft_published": true,
+    "canonical_rows": 56,
+    "task_count": 33,
+    "generated_pages": 4,
+    "generation_gaps": [
+      "architecture-viewer"
+    ],
+    "preview_verified": 0,
+    "preview_unavailable": 4,
+    "owner_ratification": "pending",
+    "implementation_qualification": "unqualified",
+    "open_high_findings": [
+      "H3",
+      "H4",
+      "H5",
+      "H6",
+      "H7"
+    ],
+    "in_flight_dispatches": [],
+    "completed_at": "2026-09-26T03:55:07Z"
   }
 }
