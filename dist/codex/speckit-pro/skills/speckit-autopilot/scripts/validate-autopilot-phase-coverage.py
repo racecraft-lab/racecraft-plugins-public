@@ -4465,6 +4465,8 @@ def _autonomy_boundary_required(
     return phase_7_started or (stage in {"plan", "full"} and phase_65_started)
 
 
+AUTONOMY_RECEIPT_VERSION = "autonomy-boundary-receipt.v1"
+AUTONOMY_LEGACY_RECEIPT_KEY = "autonomy_boundary_private_receipt"
 AUTONOMY_EXECUTION_FIELDS = (
     "execution_environment",
     "sandbox_mode",
@@ -4533,9 +4535,18 @@ def _autonomy_planning_errors(
 
 def _autonomy_execution_errors(
     boundary: dict[str, Any],
+    receipt: bool = False,
 ) -> tuple[list[str], object]:
     execution = boundary.get("execution_boundary")
     if not isinstance(execution, dict):
+        return [], None
+    if receipt:
+        # The public receipt omits the roots, so its digest cannot be recomputed
+        # from the record itself. The recorded digest is replayed against the
+        # current execution boundary instead, which is the check that matters.
+        recorded = execution.get("sha256")
+        if isinstance(recorded, str) and re.fullmatch(r"sha256:[0-9a-f]{64}", recorded):
+            return [], recorded
         return [], None
     errors: list[str] = []
     roots = execution.get("writable_roots")
@@ -4600,6 +4611,7 @@ def _autonomy_authorization_errors(
     authorization: object,
     disposition: object,
     scope_sha: object,
+    receipt: bool = False,
 ) -> list[str]:
     if not isinstance(authorization, dict):
         return []
@@ -4615,7 +4627,10 @@ def _autonomy_authorization_errors(
     if disposition in allowed and status not in allowed[disposition]:
         errors.append(f"{prefix}.authorization status cannot support disposition {disposition!r}")
     revocation = authorization.get("revocation_evidence")
-    if status == "revoked" and not (isinstance(revocation, str) and revocation.strip()):
+    # A receipt keeps revocation evidence in the private record only.
+    if status == "revoked" and not receipt and not (
+        isinstance(revocation, str) and revocation.strip()
+    ):
         errors.append(f"{prefix}.authorization requires revocation_evidence")
     if status != "revoked" and revocation is not None:
         errors.append(f"{prefix}.authorization has unexpected revocation_evidence")
@@ -4626,20 +4641,27 @@ def _autonomy_action_errors(
     action: dict[str, Any],
     index: int,
     execution_sha: object,
+    receipt: bool = False,
 ) -> list[str]:
     prefix = f"autopilot_state.autonomy_boundary.actions[{index}]"
     errors: list[str] = []
     if execution_sha is not None and action.get("execution_boundary_sha256") != execution_sha:
         errors.append(f"{prefix}.execution_boundary_sha256 is stale")
-    scope_sha = _canonical_json_sha256(_autonomy_scope(action, AUTONOMY_ACTION_FIELDS))
-    if action.get("scope_sha256") != scope_sha:
-        errors.append(f"{prefix}.scope_sha256 does not match its action scope")
+    if receipt:
+        # The scope fields stay private; the receipt binds authorization to the
+        # recorded scope digest instead of recomputing it.
+        scope_sha = action.get("scope_sha256")
+    else:
+        scope_sha = _canonical_json_sha256(_autonomy_scope(action, AUTONOMY_ACTION_FIELDS))
+        if action.get("scope_sha256") != scope_sha:
+            errors.append(f"{prefix}.scope_sha256 does not match its action scope")
     errors.extend(
         _autonomy_authorization_errors(
             prefix,
             action.get("authorization"),
             action.get("disposition"),
             scope_sha,
+            receipt,
         )
     )
     return errors
@@ -4648,6 +4670,7 @@ def _autonomy_action_errors(
 def _autonomy_actions_errors(
     boundary: dict[str, Any],
     execution_sha: object,
+    receipt: bool = False,
 ) -> list[str]:
     actions = boundary.get("actions")
     if not isinstance(actions, list):
@@ -4656,7 +4679,7 @@ def _autonomy_actions_errors(
     records = [action for action in actions if isinstance(action, dict)]
     for index, action in enumerate(actions):
         if isinstance(action, dict):
-            errors.extend(_autonomy_action_errors(action, index, execution_sha))
+            errors.extend(_autonomy_action_errors(action, index, execution_sha, receipt))
     action_ids = [action.get("action_id") for action in records]
     comparable = [action_id for action_id in action_ids if isinstance(action_id, str)]
     if len(comparable) != len(set(comparable)):
@@ -4680,7 +4703,14 @@ def validate_autonomy_boundary(
     boundary = state.get("autonomy_boundary")
     if boundary is None:
         errors = []
-        if boundary_required:
+        if boundary_required and AUTONOMY_LEGACY_RECEIPT_KEY in state:
+            errors.append(
+                f"autopilot_state.{AUTONOMY_LEGACY_RECEIPT_KEY} has no execution-boundary "
+                "digest to replay against the current execution boundary; migrate it to an "
+                f"{AUTONOMY_RECEIPT_VERSION} autopilot_state.autonomy_boundary projected "
+                "from the private record before this active run can reach Phase 7"
+            )
+        elif boundary_required:
             errors.append(
                 "autopilot_state.autonomy_boundary is required before this active run can reach Phase 7"
             )
@@ -4694,7 +4724,8 @@ def validate_autonomy_boundary(
         return {"autonomy_boundary_errors": errors}
     errors.extend(_json_schema_errors(boundary, schema, schema, "autopilot_state.autonomy_boundary"))
     errors.extend(_autonomy_planning_errors(boundary, repo_root))
-    execution_errors, execution_sha = _autonomy_execution_errors(boundary)
+    receipt = boundary.get("schema_version") == AUTONOMY_RECEIPT_VERSION
+    execution_errors, execution_sha = _autonomy_execution_errors(boundary, receipt)
     errors.extend(execution_errors)
     if execution_sha is not None:
         errors.extend(
@@ -4704,7 +4735,7 @@ def validate_autonomy_boundary(
                 boundary_required,
             )
         )
-    errors.extend(_autonomy_actions_errors(boundary, execution_sha))
+    errors.extend(_autonomy_actions_errors(boundary, execution_sha, receipt))
     return {"autonomy_boundary_errors": errors}
 
 

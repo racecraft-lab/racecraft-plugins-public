@@ -826,13 +826,12 @@ def normalize_generated_title(inputs: dict[str, Any]) -> dict[str, Any]:
         return invalid_packet_input("title_description must be at least 8 characters", field="title_description")
     if not isinstance(title_type, str) or title_type not in {"feat", "fix", "chore", "docs", "refactor", "test"}:
         return invalid_packet_input("title_type must be a supported conventional commit type", field="title_type")
-    description = title_description[0].upper() + title_description[1:]
-    value = f"{title_type}({title_scope}): {description}"
+    value = f"{title_type}({title_scope}): {title_description}"
     return {
         "value": value,
         "type": title_type,
         "scope": title_scope,
-        "description": description,
+        "description": title_description,
         "source_evidence": {
             "kind": "workflow",
             "source": str(inputs.get("title_source") or "autopilot-state"),
