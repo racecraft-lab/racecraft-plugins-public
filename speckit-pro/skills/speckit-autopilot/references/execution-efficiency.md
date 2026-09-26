@@ -65,6 +65,24 @@ ownership from the caller's current workflow.
   dispatch used that reservation. Dispatch only after it returns `continue`.
   A second retry, self-asserted approval, or a failed result without a recorded
   native failure event remains blocked.
+- `authorize-corrective-continuation`: after a corrective executor or its
+  authorized infrastructure retry completes, a required Analyze consensus
+  edit can make the Tasks metadata fingerprint stale. If the two-cycle ceiling
+  is reached, checkpoint the work and obtain explicit operator approval for
+  exactly one Tasks metadata reconciliation under that same reservation. Pass
+  the completed `completed_dispatch_id`, a new `dispatch_id`, and the original
+  `reservation_id`, plus the operator's independently observed
+  `native_observation`: `native_event_id`, `run_id`,
+  `action=corrective_continuation_approved`, `completed_dispatch_id`,
+  `continuation_dispatch_id`, `reservation_id`, and
+  `purpose=task_metadata_reconciliation`. Verify the actual operator message
+  before supplying it; the helper only validates its binding. It requires the
+  completed corrective dispatch to be the reservation owner or its recorded
+  recovery, rejects unrelated work in that reservation and reused event IDs,
+  and reserves one continuation without changing run identity or cycle counts.
+  The Tasks producer may update only source-bound metadata, then the parent
+  revalidates G5 before G6. A second continuation or a failed/unknown source
+  remains blocked; this action is not a general repair-budget reset.
 - `checkpoint`: persist the 45-minute completed-work marker without resetting
   the repair budget. `pause`/`resume` excludes only human-UAT or
   external-approval waits with independent parent `native_observation` carrying
