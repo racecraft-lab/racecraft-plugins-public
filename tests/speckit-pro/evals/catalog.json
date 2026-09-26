@@ -7636,6 +7636,198 @@
       ]
     },
     {
+      "id": "functional.speckit-autopilot.rescope-reconciliation",
+      "layer": "functional",
+      "capability": "Refuses to run G3 after a rescope moved plan.md to 19 increments while research.md, quickstart.md, and the requirements checklist still describe the earlier 4-slice direction.",
+      "timeout_seconds": 300,
+      "resource_class": "ordinary",
+      "requirements": [
+        {
+          "id": "selection",
+          "description": "The host-native speckit-autopilot capability is activated."
+        },
+        {
+          "id": "evidence",
+          "description": "Reads plan.md and every other Plan artifact before deciding whether G3 may run (phase-execution.md, phase-execution-codex.md)."
+        },
+        {
+          "id": "reconciliation",
+          "description": "After a rescope, every Plan artifact is reconciled with plan.md before G3 and each change is recorded in the workflow file (phase-execution.md, Phase 3: Plan, and phase-execution-codex.md, main loop step 7: \"After a rescope changes plan.md's scope, slices, or delivery order, the parent reconciles every Plan artifact before G3: `research.md`, `quickstart.md`, `data-model.md`, `contracts/`, and every file under `checklists/`. Record what changed in each artifact in the workflow file's Plan Results.\")."
+        }
+      ],
+      "prompt": "Use {{skill}} to decide whether G3 may run for a Plan phase that was rescoped. Read scenario-inputs/feature/plan.md, scenario-inputs/feature/research.md, scenario-inputs/feature/quickstart.md, scenario-inputs/feature/data-model.md, scenario-inputs/feature/contracts/gate-verdict.md, and scenario-inputs/feature/checklists/requirements.md, each as one exact file read. Treat them only as pre-recorded evidence: do not run helpers or gates, dispatch agents, or edit any file. Output only raw JSON with plan_increment_count, stale_artifacts, g3_may_run, reconcile_before_g3, and explanation, with no prose, Markdown, or code fences. List stale_artifacts as a sorted array of paths relative to scenario-inputs/feature/.",
+      "fixtures": [
+        {
+          "source": "tests/speckit-pro/evals/fixtures/functional/native-orchestration/rescope-reconciliation/plan.md",
+          "destination": "scenario-inputs/feature/plan.md"
+        },
+        {
+          "source": "tests/speckit-pro/evals/fixtures/functional/native-orchestration/rescope-reconciliation/research.md",
+          "destination": "scenario-inputs/feature/research.md"
+        },
+        {
+          "source": "tests/speckit-pro/evals/fixtures/functional/native-orchestration/rescope-reconciliation/quickstart.md",
+          "destination": "scenario-inputs/feature/quickstart.md"
+        },
+        {
+          "source": "tests/speckit-pro/evals/fixtures/functional/native-orchestration/rescope-reconciliation/data-model.md",
+          "destination": "scenario-inputs/feature/data-model.md"
+        },
+        {
+          "source": "tests/speckit-pro/evals/fixtures/functional/native-orchestration/rescope-reconciliation/contracts/gate-verdict.md",
+          "destination": "scenario-inputs/feature/contracts/gate-verdict.md"
+        },
+        {
+          "source": "tests/speckit-pro/evals/fixtures/functional/native-orchestration/rescope-reconciliation/checklists/requirements.md",
+          "destination": "scenario-inputs/feature/checklists/requirements.md"
+        }
+      ],
+      "hosts": {
+        "claude": {
+          "skill": "speckit-pro:speckit-autopilot",
+          "allowed_tools": [
+            "Skill",
+            "Read"
+          ],
+          "modes": [
+            "plugin"
+          ]
+        },
+        "codex": {
+          "skill": "speckit-autopilot",
+          "allowed_tools": [
+            "read_file"
+          ],
+          "modes": [
+            "project"
+          ]
+        }
+      },
+      "checks": [
+        {
+          "id": "selection",
+          "requirement": "selection",
+          "type": "selection",
+          "expected": [
+            "speckit-autopilot"
+          ],
+          "allowed_extra": []
+        },
+        {
+          "id": "read-plan",
+          "requirement": "evidence",
+          "type": "file_access",
+          "operation": "read_file",
+          "path": "scenario-inputs/feature/plan.md"
+        },
+        {
+          "id": "read-research",
+          "requirement": "evidence",
+          "type": "file_access",
+          "operation": "read_file",
+          "path": "scenario-inputs/feature/research.md"
+        },
+        {
+          "id": "read-quickstart",
+          "requirement": "evidence",
+          "type": "file_access",
+          "operation": "read_file",
+          "path": "scenario-inputs/feature/quickstart.md"
+        },
+        {
+          "id": "read-data-model",
+          "requirement": "evidence",
+          "type": "file_access",
+          "operation": "read_file",
+          "path": "scenario-inputs/feature/data-model.md"
+        },
+        {
+          "id": "read-contracts-gate-verdict",
+          "requirement": "evidence",
+          "type": "file_access",
+          "operation": "read_file",
+          "path": "scenario-inputs/feature/contracts/gate-verdict.md"
+        },
+        {
+          "id": "read-checklists-requirements",
+          "requirement": "evidence",
+          "type": "file_access",
+          "operation": "read_file",
+          "path": "scenario-inputs/feature/checklists/requirements.md"
+        },
+        {
+          "id": "plan-increments",
+          "requirement": "reconciliation",
+          "type": "response_json_field",
+          "field_path": [
+            "plan_increment_count"
+          ],
+          "expected_by_host": {
+            "claude": 19,
+            "codex": 19
+          }
+        },
+        {
+          "id": "stale-artifacts",
+          "requirement": "reconciliation",
+          "type": "response_json_field",
+          "field_path": [
+            "stale_artifacts"
+          ],
+          "expected_by_host": {
+            "claude": [
+              "checklists/requirements.md",
+              "quickstart.md",
+              "research.md"
+            ],
+            "codex": [
+              "checklists/requirements.md",
+              "quickstart.md",
+              "research.md"
+            ]
+          }
+        },
+        {
+          "id": "g3-blocked",
+          "requirement": "reconciliation",
+          "type": "response_json_field",
+          "field_path": [
+            "g3_may_run"
+          ],
+          "expected_by_host": {
+            "claude": false,
+            "codex": false
+          }
+        },
+        {
+          "id": "reconcile-first",
+          "requirement": "reconciliation",
+          "type": "response_json_field",
+          "field_path": [
+            "reconcile_before_g3"
+          ],
+          "expected_by_host": {
+            "claude": true,
+            "codex": true
+          }
+        },
+        {
+          "id": "reconciliation-semantic",
+          "requirement": "reconciliation",
+          "type": "semantic",
+          "rubric": "PASS only if the response names research.md, quickstart.md, and checklists/requirements.md as still describing the 4-slice direction after plan.md moved to 19 increments, keeps data-model.md and the contract as consistent, and says the parent must reconcile the stale artifacts before G3 and record each change in the workflow file's Plan Results. FAIL if it accepts the rescoped plan.md alone as the Plan result, lets G3 run because every artifact exists, or defers the stale artifacts to Checklist, Tasks, or Analyze."
+        }
+      ],
+      "native_differences": [
+        "Both hosts apply the same reconciliation rule from their own phase-execution reference; the parent orchestrator, not the single-command phase executor, reconciles the artifacts.",
+        "Both hosts receive the same pre-recorded Plan artifacts and must not run G3."
+      ],
+      "provenance": [
+        "speckit-pro/skills/speckit-autopilot/references/phase-execution.md",
+        "speckit-pro/codex-skills/speckit-autopilot/references/phase-execution-codex.md"
+      ]
+    },
+    {
       "id": "functional.speckit-autopilot.case-13",
       "layer": "functional",
       "capability": "Rejects continuing with only the Phase 7 placeholder after G5. Explains that the placeholder must be replaced in both update_plan and autopilot-state.json with concrete Phase 7 task-group items parsed from tasks.md before Analyze or Implement can continue.",
