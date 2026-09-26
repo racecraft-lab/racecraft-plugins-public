@@ -213,6 +213,84 @@ class ExecutionControlTests(_ExecutionControlFixture, unittest.TestCase):
         self.assertEqual(json.loads(path.read_text())["corrective_cycles"], 0)
 
 
+class CorrectiveRecoveryTests(_ExecutionControlFixture, unittest.TestCase):
+    def test_operator_approved_infrastructure_retry_preserves_failed_attempt_and_budget(self):
+        started = self.invoke("start")
+        first = self.invoke("reserve", dispatch_id="owner", kind="corrective", failure_invariant="FR-001")
+        reservation = first["reservation_id"]
+        self.invoke("reconcile", dispatch_id="owner")
+        self.invoke("complete", dispatch_id="owner", outcome="failed", native_observation={
+            "native_event_id": "host-auth-error", "run_id": self.run_id,
+            "dispatch_id": "owner", "action": "dispatch_result", "outcome": "failed"})
+        self.invoke("reserve", dispatch_id="other-family", kind="corrective", failure_invariant="FR-002")
+        self.assertEqual(self.invoke("reserve", dispatch_id="ordinary-retry", kind="corrective",
+                                     failure_invariant="FR-001")["reasons"], ["failure_family_budget_exhausted"])
+        approval = {"native_event_id": "operator-message", "run_id": self.run_id,
+                    "action": "corrective_retry_approved", "failed_dispatch_id": "owner",
+                    "failed_native_event_id": "host-auth-error", "retry_dispatch_id": "owner-retry",
+                    "reservation_id": reservation, "failure_kind": "infrastructure"}
+        preview = self.invoke("authorize-corrective-retry", mode="dry_run", dispatch_id="owner-retry",
+                              reservation_id=reservation, failed_dispatch_id="owner", native_observation=approval)
+        self.assertEqual(preview["ledger"]["corrective_cycles"], 2)
+        self.assertNotIn("owner-retry", self.invoke("status", mode="read_only")["ledger"]["dispatches"])
+        retry = self.invoke("authorize-corrective-retry", dispatch_id="owner-retry",
+                            reservation_id=reservation, failed_dispatch_id="owner", native_observation=approval)
+        self.assertEqual(retry["disposition"], "continue")
+        self.assertEqual(retry["ledger"]["run_id"], started["ledger"]["run_id"])
+        self.assertEqual(retry["ledger"]["corrective_cycles"], 2)
+        self.assertEqual(len(retry["ledger"]["reservations"]), 2)
+        self.assertEqual(retry["ledger"]["dispatches"]["owner"]["outcome"], "failed")
+        self.assertEqual(retry["ledger"]["dispatches"]["owner-retry"]["outcome"], "reserved")
+        self.assertEqual(retry["ledger"]["dispatches"]["owner-retry"]["recovery_of"], "owner")
+        self.assertEqual(retry["ledger"]["dispatches"]["owner-retry"]["operator_recovery_event_id"], "operator-message")
+        self.invoke("complete", dispatch_id="owner-retry", outcome="completed")
+        self.assertEqual(self.invoke("status", mode="read_only")["disposition"], "continue")
+        with self.assertRaises(ValueError):
+            self.invoke("authorize-corrective-retry", dispatch_id="second-retry",
+                        reservation_id=reservation, failed_dispatch_id="owner",
+                        native_observation={**approval, "native_event_id": "second-message",
+                                            "retry_dispatch_id": "second-retry"})
+        with self.assertRaises(ValueError):
+            self.invoke("pause", native_observation={"native_event_id": "operator-message", "run_id": self.run_id,
+                                                     "kind": "human_uat", "action": "wait_started"})
+
+    def test_infrastructure_retry_rejects_unbound_or_replayed_approval(self):
+        self.invoke("start")
+        first = self.invoke("reserve", dispatch_id="owner", kind="corrective", failure_invariant="FR-001")
+        reservation = first["reservation_id"]
+        self.invoke("reconcile", dispatch_id="owner")
+        self.invoke("complete", dispatch_id="owner", outcome="failed", native_observation={
+            "native_event_id": "host-error", "run_id": self.run_id,
+            "dispatch_id": "owner", "action": "dispatch_result", "outcome": "failed"})
+        self.invoke("reserve", dispatch_id="other-family", kind="corrective", failure_invariant="FR-002")
+        approval = {"native_event_id": "operator-message", "run_id": self.run_id,
+                    "action": "corrective_retry_approved", "failed_dispatch_id": "owner",
+                    "failed_native_event_id": "host-error", "retry_dispatch_id": "owner-retry",
+                    "reservation_id": reservation, "failure_kind": "infrastructure"}
+        path = self.root / "feature/.process/execution-control"
+        ledger = next(path.glob("*.json"))
+        before = ledger.read_bytes()
+        bad_events = (None, {**approval, "run_id": "different-run"},
+                      {**approval, "failed_native_event_id": "different-host-event"},
+                      {**approval, "failure_kind": "assertion_failure"},
+                      {**approval, "native_event_id": "host-error"},
+                      {**approval, "retry_dispatch_id": "different-retry"})
+        for event in bad_events:
+            with self.subTest(event=event):
+                with self.assertRaises(ValueError):
+                    self.invoke("authorize-corrective-retry", dispatch_id="owner-retry",
+                                reservation_id=reservation, failed_dispatch_id="owner", native_observation=event)
+                self.assertEqual(ledger.read_bytes(), before)
+        self.invoke("complete", dispatch_id="other-family", outcome="failed")
+        other_reservation = self.invoke("status", mode="read_only")["ledger"]["dispatches"]["other-family"]["reservation_id"]
+        with self.assertRaises(ValueError):
+            self.invoke("authorize-corrective-retry", dispatch_id="other-retry", reservation_id=other_reservation,
+                        failed_dispatch_id="other-family", native_observation={**approval,
+                            "native_event_id": "another-message", "failed_dispatch_id": "other-family",
+                            "failed_native_event_id": "missing-host-event", "retry_dispatch_id": "other-retry",
+                            "reservation_id": other_reservation})
+
+
 class WorkflowIdentityTests(_ExecutionControlFixture, unittest.TestCase):
     def test_different_workflows_cannot_adopt_an_existing_ledger(self):
         first = self.invoke("start")
@@ -650,6 +728,7 @@ class DockerVerificationTests(VerificationTests):
 
 if __name__ == "__main__":
     suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case)
-                               for case in (ExecutionControlTests, WorkflowIdentityTests, VerificationTests, RunnerDispatchTests))
+                               for case in (ExecutionControlTests, CorrectiveRecoveryTests, WorkflowIdentityTests,
+                                            VerificationTests, RunnerDispatchTests))
     suite.addTests(DockerVerificationTests(name) for name in DockerVerificationTests.__dict__ if name.startswith("test_docker_"))
     raise SystemExit(run_counted(suite, label="test-execution-control"))

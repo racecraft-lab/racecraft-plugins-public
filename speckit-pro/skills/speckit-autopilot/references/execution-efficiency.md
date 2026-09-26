@@ -50,6 +50,21 @@ ownership from the caller's current workflow.
   `dispatch_id`, `action=dispatch_result`, and matching
   `outcome=completed|failed|expected_tdd_red`. Without that genuine event,
   unknown remains a checkpoint; worker text or a receipt cannot clear it.
+- `authorize-corrective-retry`: after a corrective reservation owner has a
+  recovered, failed host result caused by infrastructure, and the operator has
+  explicitly approved recovery, atomically reserve one retry under that same
+  reservation. Pass a new `dispatch_id`, the original `failed_dispatch_id` and
+  `reservation_id`, plus a parent `native_observation` with the operator's
+  actual `native_event_id`, `run_id`, `action=corrective_retry_approved`,
+  `failed_dispatch_id`, `failed_native_event_id` matching the recorded failure,
+  `retry_dispatch_id`, `reservation_id`, and `failure_kind=infrastructure`.
+  The parent verifies the host error and user message before supplying this
+  event; matching fields in the helper are validation, not authentication.
+  The helper preserves the failed dispatch and both consumed cycles, and
+  permits one retry only when the two-cycle ceiling is reached and no sibling
+  dispatch used that reservation. Dispatch only after it returns `continue`.
+  A second retry, self-asserted approval, or a failed result without a recorded
+  native failure event remains blocked.
 - `checkpoint`: persist the 45-minute completed-work marker without resetting
   the repair budget. `pause`/`resume` excludes only human-UAT or
   external-approval waits with independent parent `native_observation` carrying
@@ -84,8 +99,10 @@ a stale mirror never initializes, overwrites, or resets a ledger. This record
 is for user visibility, not independent proof of authority or completed work.
 
 One corrective cycle per failure family and two corrective cycles per spec
-are the shared ceilings. Reserve before repairs in G3 provenance, G4/G6
-remediation, review, formal checks, or hardening. Pass the parent's
+are the shared ceilings. The operator-approved infrastructure recovery above
+reuses an existing reservation without changing either count. Reserve before
+repairs in G3 provenance, G4/G6 remediation, review, formal checks, or
+hardening. Pass the parent's
 `reservation_id` to nested work on the same failure; a nested loop has no
 independent allowance. A rejected candidate or failed repair does not create
 a new family. Pure read-only diagnosis may continue.
