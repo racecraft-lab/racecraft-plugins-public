@@ -11,8 +11,8 @@
       typesafe-jev layout added)
     - II. Cross-Platform Runtime & Script Safety (Go toolchain exception for
       typesafe-jev)
-    - III. Semantic Versioning (Claude and Codex manifests; the one sanctioned
-      runner-manifest hand edit)
+    - III. Semantic Versioning (which manifests carry `version`; the one
+      sanctioned runner-manifest hand edit)
     - IV. Test Coverage Before Merge (CI suite adds Layers 6 and 7; ruff and
       mypy when Python changes)
     - V. Conventional Commits (required lowercase scope; types from the live
@@ -48,8 +48,8 @@
 Every plugin MUST follow the Claude Code and Codex plugin layouts it ships:
 
 - `.claude-plugin/plugin.json` and `.codex-plugin/plugin.json` manifests with
-  required fields: `name` (kebab-case), `version` (semver), and
-  `description` (non-empty)
+  required fields `name` (kebab-case) and `description` (non-empty), plus
+  `version` (semver) wherever Principle III requires it
 - `agents/` — Claude subagent definitions as `.md` files with valid
   frontmatter; `codex-agents/` — their Codex twins as `.toml` files
 - `skills/` — skill directories with `SKILL.md` entry points;
@@ -94,9 +94,12 @@ Plugins MUST use `MAJOR.MINOR.PATCH` versioning matching the pattern
 `^[0-9]+\.[0-9]+\.[0-9]+$`. Breaking changes MUST bump MAJOR. New features
 MUST bump MINOR. Bug fixes MUST bump PATCH.
 
-Release-please owns every version: `.release-please-manifest.json`, both
-plugin manifests, and the marketplace entries it keeps in step. Manual version
-edits are prohibited, with one sanctioned exception: after merging a release
+Release-please owns every version: `.release-please-manifest.json` and each
+versioned file it keeps in step. For speckit-pro those are the Codex manifest,
+the Codex marketplace entry, and the runner manifest's `plugin_version`; its
+Claude manifest and Claude marketplace entry deliberately carry no `version`,
+and the release-readiness version-sync check enforces that split. typesafe-jev
+versions both of its manifests. Manual version edits are prohibited, with one sanctioned exception: after merging a release
 into a branch that also changed speckit-pro's runner manifest, set its
 `plugin_version` to the `.codex-plugin/plugin.json` version before
 regenerating artifacts.
@@ -198,8 +201,10 @@ finding) and the regression test in the fixing change
 
 This repository is public. Committed files, PR titles and bodies, branch
 names, and commit messages MUST NOT contain local home paths, host temporary
-paths, raw UUIDs or native session identifiers, non-allowlisted emails, or
-names of private infrastructure. Use repository-relative paths and
+paths, raw UUIDs, native session or event identifiers from local runs,
+non-allowlisted emails, or names of private infrastructure. The public session
+attribution link the contribution workflow appends to commits and PRs is
+permitted. Use repository-relative paths and
 placeholders. Sensitive execution records MUST live outside the working tree
 and be published only as portable receipts.
 
