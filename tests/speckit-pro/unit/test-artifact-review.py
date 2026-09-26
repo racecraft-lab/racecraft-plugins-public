@@ -149,7 +149,7 @@ class ArtifactReviewTests(unittest.TestCase):
             ("observed_at", "2026-09-10T18:00:00"),
             ("observed_at", "2999-01-01T00:00:00Z"),
         ):
-            with self.subTest(key=key):
+            with self.subTest(key=key, value=value):
                 self.verify()
                 self.record["pages"][0]["preview"]["observation"][key] = value
                 with self.assertRaises(ValueError):
