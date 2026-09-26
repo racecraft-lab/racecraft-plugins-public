@@ -36,6 +36,8 @@ own failure patterns.
 ### 4. Verify success explicitly
 
 - Decide the relevant check before coding.
+- Fix a bug red first: add the test that fails on the bug, see it fail, then
+  make it pass.
 - Prefer the smallest useful check while iterating, then run the broader gate
   when the changed surface warrants it.
 - Before creating a PR or marking it ready, validate the exact final title with
@@ -151,6 +153,11 @@ pnpm --dir docs-site reference:generate
   and release it stay Python.
 - Do not add active repository Bash or `jq` dependencies outside existing
   workflow dispatch glue and fixed vendored boundaries.
+- Gates and validators fail closed: missing, unreadable, or unparseable
+  evidence yields a failure or an explicit unknown, never a pass.
+- Keep one source per contract: when code and a doc state the same request
+  shape, threshold, or path, execute the doc's example in a test or derive one
+  from the other.
 - If plugin source or payload-affecting files change, account for the generated
   artifact contract before calling the work done.
 
@@ -169,7 +176,8 @@ draft skips every other PR Checks job, and `validate-plugins` passes anyway.
 
 - Generated outputs are committed with their source; `--check`, both suites, and
   required checks pass, as do docs checks and actionlint when their inputs
-  changed. Only `feat` and `fix` PRs fill the `release-note` fence, required
+  changed. When Python changed, ruff and mypy pass locally too; `mypy-ratchet`
+  is not a required check, so CI will not stop a regression. Only `feat` and `fix` PRs fill the `release-note` fence, required
   unless labeled `release-note/skip`; any unlabeled fence is published.
 
 ## Code Review Rules
