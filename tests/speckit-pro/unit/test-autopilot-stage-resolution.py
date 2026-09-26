@@ -1600,6 +1600,73 @@ class AutoDetectionTests(unittest.TestCase):
         self.assertTrue(str(envelope["basis"]).startswith("auto-detect"), envelope["basis"])
 
 
+# Issue #688's synthetic reproduction, verbatim: every row Complete, one open HIGH.
+OPEN_FINDING_WORKFLOW = """# Synthetic incomplete planning run
+
+### Basic Information
+
+| Item | Value |
+| --- | --- |
+| Stage | plan |
+
+## Workflow Overview
+
+| Phase | Command | Status | Gate |
+| --- | --- | --- | --- |
+| Specify | speckit.specify | ✅ Complete | G1 |
+| Clarify | speckit.clarify | ✅ Complete | G2 |
+| Plan | speckit.plan | ✅ Complete | G3 |
+| Checklist | speckit.checklist | ✅ Complete | G4 |
+| Tasks | speckit.tasks | ✅ Complete | G5 |
+| Analyze | speckit.analyze | ✅ Complete | G6 |
+| Confidence Gate | confidence | ✅ Complete | G6.5 |
+
+## Analysis Results
+
+| ID | Severity | Finding | Resolution |
+| --- | --- | --- | --- |
+| H1 | HIGH | Required contract defect remains unresolved. | |
+"""
+OPEN_FINDING_ROW = "| H1 | HIGH | Required contract defect remains unresolved. | |"
+RESOLVED_FINDING_ROW = "| H1 | HIGH | Required contract defect remains unresolved. | Contract added to plan.md. |"
+
+
+class OpenAnalysisFindingTests(unittest.TestCase):
+    """#688: terminal phase labels cannot complete planning over open Analyze findings."""
+
+    def test_an_open_high_row_keeps_planning_incomplete(self) -> None:
+        envelope = resolve_envelope(OPEN_FINDING_WORKFLOW)
+        self.assertEqual(envelope["stage"], "plan")
+        self.assertEqual(envelope["source"], "auto-detect")
+        self.assertFalse(envelope["planning_complete"])
+        self.assertIn("Analyze", str(envelope["basis"]))
+        self.assertIn("1 open CRITICAL/HIGH", str(envelope["basis"]))
+        signals = read_only.workflow_stage_signals(OPEN_FINDING_WORKFLOW)
+        self.assertEqual(signals["first_open"], ("Analyze", "1 open CRITICAL/HIGH findings"))
+
+    def test_a_resolved_row_lets_planning_complete(self) -> None:
+        text = OPEN_FINDING_WORKFLOW.replace(OPEN_FINDING_ROW, RESOLVED_FINDING_ROW)
+        envelope = resolve_envelope(text)
+        self.assertEqual(envelope["stage"], "implement")
+        self.assertTrue(envelope["planning_complete"])
+
+    def test_a_legacy_workflow_without_the_table_still_resolves_implement(self) -> None:
+        text = OPEN_FINDING_WORKFLOW.split("## Analysis Results", 1)[0]
+        envelope = resolve_envelope(text)
+        self.assertEqual(envelope["stage"], "implement")
+        self.assertTrue(envelope["planning_complete"])
+
+    def test_a_commented_out_open_row_is_not_evidence(self) -> None:
+        text = OPEN_FINDING_WORKFLOW.replace(OPEN_FINDING_ROW, f"<!-- {OPEN_FINDING_ROW} -->")
+        self.assertEqual(resolve_envelope(text)["stage"], "implement")
+
+    def test_an_explicit_stage_still_wins_over_open_findings(self) -> None:
+        envelope = resolve_envelope(OPEN_FINDING_WORKFLOW, ["--stage", "implement"])
+        self.assertEqual(envelope["stage"], "implement")
+        self.assertEqual(envelope["source"], "argv")
+        self.assertFalse(envelope["planning_complete"])
+
+
 class PlanningStageCanonicalListTests(unittest.TestCase):
     """T013 — FR-011: out-of-stage entries are marked, never truncated."""
 
@@ -1758,6 +1825,7 @@ def build_suite() -> unittest.TestSuite:
         DraftPrCorroborationTests,
         ConfidenceGateVerdictTests,
         AutoDetectionTests,
+        OpenAnalysisFindingTests,
         PlanningStageCanonicalListTests,
         CrossDistributionArgvParityTests,
     ):
