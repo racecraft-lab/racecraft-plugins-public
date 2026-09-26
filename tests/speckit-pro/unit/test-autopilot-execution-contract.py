@@ -84,6 +84,9 @@ class ExecutionContractTests(unittest.TestCase):
         template = (PLUGIN / "skills/speckit-coach/templates/workflow-template.md").read_text()
         tasks = template.split("## Phase 5: Tasks", 1)[1].split("### Tasks Results", 1)[0]
         self.assertNotIn("1-2 hours each", tasks)
+        # A run has no wall-clock limit, so task sizing must not cite a two-hour budget.
+        self.assertNotIn("two-hour", " ".join(tasks.split()))
+        self.assertIn("Small, complete behavioral units", tasks)
         for key in ("task-execution.v1", "task-execution.json", "capability_group",
                     "depends_on", "owns", "tdd_unit", "fingerprints"):
             self.assertIn(key, tasks)
