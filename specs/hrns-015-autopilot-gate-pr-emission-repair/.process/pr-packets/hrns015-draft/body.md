@@ -12,5 +12,5 @@
 
 ## Resume
 
-Stage: plan. Planning is complete and stopped at the plan-stage boundary for review.
-Resume with: `$speckit-autopilot docs/ai/specs/.process/HRNS-015-workflow.md --stage implement`
+Stage: implement. The approved bounded Tasks re-plan is complete: T001 and T002 use native verification routes. Planning gates pass; implementation remains 0/31 tasks with all eighteen increment checkpoints pending.
+Continue with: `$speckit-autopilot docs/ai/specs/.process/HRNS-015-workflow.md --stage implement`

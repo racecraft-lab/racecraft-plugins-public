@@ -19,7 +19,7 @@
     "algorithm": "sha256",
     "elided_fields": [],
     "normalization": "LF line endings; trailing whitespace trimmed; final newline ensured; editable block bodies replaced by <elided:field_id> before sha256.",
-    "value": "0b78edee076aee67e8d6d5e88d116725f83fb18f134b186ab4b7c085a6bfef64"
+    "value": "3e0864f43983ff51cf55924fdec8d7770d6112e596f89dbdcdf13870fdf32f2c"
   },
   "required_headings": [
     "Artifacts",
