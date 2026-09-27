@@ -17,9 +17,9 @@
 
 ## Reviewability setup contract
 
-- [ ] CHK006 Is `spec_id` required and case-sensitive, with invalid-request treatment distinct from a missing selected roadmap section? [Clarity, Spec §FR-011–FR-012]
-- [ ] CHK007 Are selected-section bounds, required budget fields, primary surfaces, and typed exception provenance specified without borrowing neighboring entries? [Coverage, Spec §FR-011–FR-013]
-- [ ] CHK008 Are the result fields for an accepted typed exception and valid or invalid slice budget, including aggregate and per-slice evidence, named sufficiently for callers to distinguish their outcomes? [Completeness] [Spec §FR-013–FR-014, §FR-029]
+- [ ] CHK006 Is `spec_id` required and case-sensitive, with invalid-request treatment distinct from a missing selected roadmap section? [Clarity, Plan §Slice B; #694 compatibility baseline]
+- [ ] CHK007 Are selected-section bounds, required budget fields, primary surfaces, and typed exception provenance specified without borrowing neighboring entries? [Coverage, Plan §Slice B; #694 compatibility baseline]
+- [ ] CHK008 Are the result fields for an accepted typed exception and valid or invalid slice budget, including aggregate and per-slice evidence, named sufficiently for callers to distinguish their outcomes? [Completeness] [Spec §FR-014, §FR-029; #694 typed-exception compatibility baseline]
 - [ ] CHK009 Is the ordered `Slices:` list and `Slice Budgets:` table grammar complete for missing, duplicate, extra, malformed, and at-block rows? [Edge Case, Spec §FR-014]
 - [ ] CHK010 Is the greenfield allowance limited to LOC while the ordinary file and surface limits remain in force? [Consistency, Spec §FR-028]
 
@@ -29,7 +29,9 @@
 - [ ] CHK012 Is the declared command's response provenance field and invalid or unknown declaration behavior specified while preserving the existing command map for callers that omit `commands`? [Completeness] [Spec §FR-016]
 - [ ] CHK013 Are the approved quality-gate thresholds and basis preserved when optional declared commands are added? [Consistency, Spec §FR-016]
 - [ ] CHK014 Are all five named helper invocation sites required to use complete registered envelopes on both hosts, with a passing fixture defining the exact operation and mode? [Traceability, Spec §FR-024]
-- [ ] CHK015 Do the requirements preserve legacy behavior for omitted optional note, refactor, and command inputs while explicitly requiring `spec_id` in setup mode? [Compatibility, Spec §FR-001, §FR-011, §FR-015–FR-016]
+- [ ] CHK015 Do the requirements preserve legacy behavior for omitted optional note, refactor, and command inputs while explicitly requiring `spec_id` in setup mode? [Compatibility, Spec §FR-001, §FR-015–FR-016; #694 required-spec_id compatibility baseline]
+
+- [ ] CHK016 Are verified existing legacy workflow targets preserved and broken targets repaired relative to the containing roadmap? [Completeness, Spec §FR-025]
 
 ## Notes
 
@@ -38,3 +40,5 @@
 - `checklists/requirements.md` follows its separate built-in lifecycle.
 
 **Second checklist pass**: Re-evaluated the same API-contracts prompt after the spec and contract repairs. No new requirements-quality item was needed; CHK003, CHK008, and CHK012 remain unchecked for reviewer evaluation, with their resolved gap markers removed.
+
+- Plan rescope reconciliation: removed FR-011–FR-013 remain compatibility baseline only. The requested thirteen-row Post behavior and HRNS-017 host-lifetime limits remain unchanged. Existing checkbox ownership is preserved; domain reevaluation is pending.

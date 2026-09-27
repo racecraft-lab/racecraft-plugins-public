@@ -15,14 +15,14 @@
 - [ ] CHK003 Is the handling of an older persisted 11-row Post list defined when a newer 13-row completion guard reads it, without silently treating absent rows as done? [Coverage, Spec §FR-018]
 - [ ] CHK004 Are the source Git-index membership and staged-addition rules defined for both spec backlinks and the roadmap home index? [Completeness, Spec §FR-009]
 - [ ] CHK005 Are the refresh, isolated check, stale-path diagnostic, and historical formal-001 fixture requirements defined? [Completeness, Spec §FR-010; Plan §Slice B]
-- [ ] CHK006 Are child-result or supported-stop evidence, graceful shutdown, no-active-child confirmation, and cleanup completion required for every team-capable executor on both hosts? [Completeness, Spec §FR-019]
+- [ ] CHK006 Are child-result or supported-stop evidence, graceful shutdown, no-active-child confirmation, and cleanup completion required for every team-capable executor on both hosts? [Completeness, Spec §FR-019; Plan §Slice C1b]
 
 ## Requirement Clarity and Consistency
 
 - [ ] CHK007 Are successful full-run completion and successful staged-run return distinguished when out-of-stage Post rows are persisted as skipped? [Clarity, Spec §FR-018]
 - [ ] CHK008 Are the persisted Markdown status and state-file status mapped to the required `completed` completion state without ambiguity? [Clarity, Spec §FR-018]
 - [ ] CHK009 Is the sole verified absent-extension skip distinguished from out-of-stage or unjustified skips at the full-run completion boundary? [Consistency, Spec §FR-018]
-- [ ] CHK010 Is the canonical Post list stated as one source rather than independently numbered lists on the hosts? [Consistency, Spec §FR-017; Plan §C1]
+- [ ] CHK010 Is the canonical Post list stated as one source rather than independently numbered lists on the hosts? [Consistency, Spec §FR-017; Plan §Slice C1a]
 - [ ] CHK011 Is the source-index rule consistent between plain refresh and isolated `--check`, including a candidate inside a tracked directory? [Consistency, Spec §FR-009]
 - [ ] CHK012 Is the formal-001 baseline handled as generated output rather than as an authored exception? [Consistency, Spec §FR-010; Plan §Slice B]
 
@@ -31,7 +31,7 @@
 - [ ] CHK013 Are partial-resume cases defined so completed Post rows remain distinguishable from pending rows and the two named resume points are not collapsed? [Coverage, Spec §US9]
 - [ ] CHK014 Are missing, duplicate, pending, and in-progress Post rows covered in either persisted representation with named diagnostics? [Coverage, Spec §US10]
 - [ ] CHK015 Are untracked-in-tracked-directory candidates excluded while staged additions stay eligible in refresh and check scenarios? [Coverage, Spec §US5]
-- [ ] CHK016 Are unresolved child results and teardown confirmations required to appear in the executor result instead of allowing clean completion? [Coverage, Spec §FR-019]
+- [ ] CHK016 Are unresolved child results and teardown confirmations required to appear in the executor result instead of allowing clean completion? [Coverage, Spec §FR-019; Plan §Slice C1b]
 - [ ] CHK017 Is the unknown Codex child lifetime explicitly scoped to HRNS-017 without weakening this executor-return contract? [Assumption, Spec §FR-019]
 
 ## Verification Rerun
@@ -45,3 +45,5 @@
 - `/speckit-implement` reads checklist checkbox state as a gate and must not modify markers.
 - This checklist evaluates the written requirements; it does not assert implementation behavior.
 - CHK009 was resolved by Round 2 consensus: only a canonical optional extension-dependent row with a verified absent extension and identical reason-coded skip in both persisted records may satisfy full-run completion; all other skips remain blockers.
+
+- Plan rescope reconciliation: removed FR-011–FR-013 remain compatibility baseline only. The requested thirteen-row Post behavior and HRNS-017 host-lifetime limits remain unchanged. Existing checkbox ownership is preserved; domain reevaluation is pending.

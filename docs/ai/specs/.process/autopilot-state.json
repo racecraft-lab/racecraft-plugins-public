@@ -5,15 +5,26 @@
   "branch": "hrns-015-autopilot-gate-pr-emission-repair",
   "status": "in_progress",
   "stage": "plan",
-  "active_step": "Phase 3: Plan",
+  "active_step": "Phase 4: Checklist - api-contracts",
   "stage_resolution": {
     "source": "argv",
     "basis": "explicit --stage plan",
     "recorded_stage": "plan",
-    "planning_complete": true,
-    "confidence_gate_status": "✅ Complete",
+    "planning_complete": false,
+    "confidence_gate_status": "⏳ Pending",
     "corroboration": {
-      "status": "no_record"
+      "merged": null,
+      "observed": {
+        "number": 685,
+        "state": "OPEN",
+        "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/685"
+      },
+      "reason": null,
+      "recorded": {
+        "number": 685,
+        "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/685"
+      },
+      "status": "match"
     }
   },
   "archive_sweep": {
@@ -42,8 +53,8 @@
     "ledger_path": "docs/ai/specs/.process/execution-control/ac068cab59ef67faf15646a7.json",
     "disposition": "continue",
     "reasons": [],
-    "elapsed_seconds": 123428.10354995728,
-    "checkpoint_due": true,
+    "elapsed_seconds": 124517.59845089912,
+    "checkpoint_due": false,
     "run_id": "e7fbc9a6636945ed8a8c2abd42cbb892"
   },
   "plan": [
@@ -93,11 +104,11 @@
     },
     {
       "step": "Phase 3: Plan",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 4: Checklist - api-contracts",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 4: Checklist - api-contracts Consensus",
@@ -272,7 +283,7 @@
       "status": "skipped: outside --stage plan"
     }
   ],
-  "updated_at": "2026-09-27T00:24:06.438277+00:00",
+  "updated_at": "2026-09-27T00:59:27.203640+00:00",
   "prerequisites": {
     "status": "completed_with_documented_exception",
     "all_pass": false,
@@ -633,8 +644,8 @@
     "planning_fingerprints": {
       "plan_md": {
         "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/plan.md",
-        "size_bytes": 23635,
-        "sha256": "sha256:10d972bb68d3f637a2ad96024467bd600c2dbbfc637cca074cf408d95fb6b9b5"
+        "size_bytes": 24706,
+        "sha256": "sha256:4b478c1045429ed3040529532ff6e6fe9c76f326d91b94d717270292a4debb5c"
       },
       "tasks_md": {
         "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/tasks.md",
@@ -694,6 +705,38 @@
         }
       }
     ],
-    "private_record_sha256": "sha256:37e917d99a50fe3a2aac087a4b5fad3540ec4ee07789325488c31e232564ce45"
+    "private_record_sha256": "sha256:58a9b930a5eb5457b91361b78dd80b54252b0aa78d78bd9f728ad0f5d30f4363"
+  },
+  "plan_resume_result": {
+    "version": "2.37.0",
+    "status": "artifacts_written",
+    "artifact_count": 6,
+    "active_requirements": 26,
+    "historical_requirement_ids": 29,
+    "stories": 14,
+    "acceptance_scenarios": 37,
+    "owner_ratification": "pending",
+    "proposed_increments": 18,
+    "g3": "pass",
+    "research_limitation": "Search unavailable; documentation rate limited; independent local delegation unavailable before file reads."
+  },
+  "plan_reviewability_budget": {
+    "declared_files": {
+      "modified": 40,
+      "new": 15,
+      "production": 5,
+      "total_entries": 55
+    },
+    "greenfield": false,
+    "projected": 200,
+    "status": "pass",
+    "thresholds": {
+      "base_block": 800,
+      "base_warn": 400,
+      "block": 800,
+      "greenfield_multiplier": 1.5,
+      "warn": 400
+    },
+    "tool": "estimate-reviewable-loc"
   }
 }

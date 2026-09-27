@@ -1,5 +1,7 @@
 # Workflow, Packet, and Review Contract Deltas
 
+**Updated**: 2026-09-26. Approved delivery: A → B → C1a → C1b → C2; eighteen candidate subdivisions remain unratified. These are desired contracts, not claims that the installed runtime currently lacks or satisfies them. External GitHub/schema documentation was unavailable; exact runtime shapes require fixture validation.
+
 ## Final PR packet
 
 The final packet input accepts one optional `release_note` property: an unfenced Markdown string with nonempty trimmed content. The renderer creates the sole `release-note` fence. An explicit non-string, blank, or fence-breaking input is an invalid request, not an omitted note; an absent property retains existing final behavior. Its JSON schema remains closed to unknown properties. When supplied, the renderer appends one `## Release note` after the eight required headings. The section has its own balanced editable markers; only the enclosed note body is editable. Structure validation requires exactly one nonempty `release-note` fence inside it. The heading and markers remain in the protected fingerprint, and a note body change may vary without changing protected content. Final editable-field count becomes four when the note is supplied; without it, the existing field set remains. Drafts retain zero fields and no release-note section.

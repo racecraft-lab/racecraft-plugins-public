@@ -34,8 +34,8 @@ captured during scoping.
 |-------|---------|--------|-------|
 | Specify | `/speckit-specify` | ✅ Complete | 14 user stories, 29 current functional requirements, 40 acceptance scenarios after Clarify; G1 passed |
 | Clarify | `/speckit-clarify` | ✅ Complete | Four sessions complete; ten consensus decisions recorded; G2 passed with zero markers |
-| Plan | `/speckit-plan` | 🔄 In Progress | G3 passed; advisory file-based estimate not estimated because the declared Slice A inventory is partial |
-| Checklist | `/speckit-checklist` | ⏳ Pending | Three domains, 51 items, 11 gaps resolved; G4 passed with zero markers |
+| Plan | `/speckit-plan` | ✅ Complete | G3 passed; advisory file-based estimate not estimated because the declared Slice A inventory is partial |
+| Checklist | `/speckit-checklist` | 🔄 In Progress | Three domains, 51 items, 11 gaps resolved; G4 passed with zero markers |
 | Tasks | `/speckit-tasks` | ⏳ Pending | 33 tasks in 21 groups; metadata reconciled without changing definitions; sidecar valid and G5 passed with zero markers |
 | Analyze | `/speckit-analyze` | ⏳ Pending | Analysis complete for operator-directed plan review; H3–H7 remain open and spec qualification is unqualified |
 | Confidence Gate | G6.5 | ⏳ Pending | Advisory warning: composite 0.43 versus 0.90; proceed with planning review only |
@@ -505,15 +505,21 @@ G2 passed: the runner reported zero clarification markers; the spec has no human
 
 ### Plan Results
 
+Current advisory estimator: pass, projected 200 reviewable LOC from 55 declared entries (5 recognized production files). This coarse file-based signal does not qualify the eighteen candidate increments, generated fan-out, or actual diffs. Optional traceability hook is deferred until Tasks; optional Git hooks are covered by the parent phase checkpoint.
+
+Artifact reconciliation: plan/research/quickstart now distinguish approved scope, candidate delivery, and unavailable evidence; data-model and both contracts retain substantive definitions with scope/baseline updates. Requirements checklist counts are current; API and error checklists reference #694 baseline and add FR-025 coverage; state checklist separates C1a Post behavior from C1b teardown. Custom checkbox states are retained. G3 after checklist reconciliation passed with zero markers. This artifact gate does not ratify the delivery proposal or qualify implementation diffs.
+
+Current 2.37.0 Plan executor result consumed: six design files written and checked; 26 active requirements, 29 historical IDs, 14 stories, 37 scenarios. Candidate unions are A 39, B 36, C1a 29, C1b 29, C2 34 total paths. The eighteen-increment alternative remains unratified; actual diffs and LOC remain unqualified. G3 passed for the reconciled artifact set. Official-source research and independent source audit were unavailable; no such verification is claimed.
+
 | Artifact | Status | Notes |
 |----------|--------|-------|
-| `plan.md` | ✅ Complete | Five-slice revision and module deltas; A/B/C2 path-cap conflicts remain open |
+| `plan.md` | ✅ Complete | Six-artifact 2.37.0 regeneration; approved five groups and unratified eighteen-increment alternative |
 | `research.md` | ✅ Complete | Decisions, issue reproductions, and external documentation limitation |
 | `data-model.md` | ✅ Complete | Runner, packet, roadmap, and workflow state entities |
 | `contracts/` | ✅ Complete | `runner-and-roadmap.md` and `workflow-and-pr.md` |
 | `quickstart.md` | ✅ Complete | Failing-first workflow and verification commands |
 
-The earlier Plan gate result is superseded by the explicit 2.37.0 resume; current G3 validation has not run. No formal model is selected. The standalone `estimate-reviewable-loc` helper returned `not_estimated` (`projected: null`, zero parseable declared file operations) because Slice A’s ten named operations are a partial subset of its 16-file projection. The current size helper’s 1,932-LOC/five-slice stress check uses 77 provisional file touches and ignores the required-refactor input; it is not a refactor-inclusive estimate. Tasks must complete distinct file and refactor inventories before claiming any revised slice budget is qualified.
+The earlier Plan gate result is superseded by the explicit 2.37.0 resume; current G3 passed (zero unresolved markers). No formal model is selected. The standalone `estimate-reviewable-loc` helper returned `not_estimated` (`projected: null`, zero parseable declared file operations) because Slice A’s ten named operations are a partial subset of its 16-file projection. The current size helper’s 1,932-LOC/five-slice stress check uses 77 provisional file touches and ignores the required-refactor input; it is not a refactor-inclusive estimate. Tasks must complete distinct file and refactor inventories before claiming any revised slice budget is qualified.
 
 ---
 
@@ -626,8 +632,8 @@ When checklist identifies `[Gap]` items:
 Read spec.md, plan.md, and docs/ai/specs/.process/HRNS-015-design-concept.md.
 
 ## Task Structure
-- Small, complete behavioral units sized for the whole automated spec's
-  two-hour budget, including startup, implementation, repairs and final checks
+- Small, complete behavioral units under the current execution-control contract;
+  no wall-clock run limit. Preserve shared corrective counters and checkpoint completed work every 45 minutes.
 - Clear acceptance criteria referencing FR-xxx
 - Dependency ordering: foundation → components → integration → validation
 - Mark parallel-safe tasks explicitly with [P]

@@ -1,6 +1,12 @@
 # Data Model: HRNS-015
 
-The feature stores Markdown, JSON, Git-index membership, and GitHub PR state. These entities describe existing records and the new validation contracts; they do not imply a database.
+**Updated**: 2026-09-26. Approved delivery is A → B → C1a → C1b → C2; eighteen candidate subdivisions remain unratified. The feature stores existing Markdown, JSON, Git-index membership and GitHub PR state; these entities define desired validation contracts, not implemented behavior or a new database.
+
+## Planning authority and baseline
+
+A delivery decision has an existing source instruction/reference, approved order, proposed alternative and ratification status in the planning record. Original Q11's four slices are historical; the explicit C1 split approves five. Candidate path counts and actual per-PR diff/LOC evidence are different records; the latter cannot be inferred from the former. No new runtime store is required for this distinction.
+
+Named-entry/pragma/missing-budget selection (FR-011–FR-013), new-template workflow links and sequential marker reuse are shipped rescope inputs, preserved as compatibility baseline. Remaining RoadmapEntry changes are slice aggregation and LOC-only greenfield limits; remaining WorkflowLink changes are verified existing legacy preservation/repair. Current independent behavior qualification remains unavailable as recorded in research.md.
 
 ## Roadmap entry and slice budget
 

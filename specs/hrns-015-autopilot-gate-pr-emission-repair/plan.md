@@ -1,128 +1,210 @@
 # Implementation Plan: Autopilot, Gate, and PR-Emission Repair
 
-**Branch**: `hrns-015-autopilot-gate-pr-emission-repair` | **Date**: 2026-09-25 | **Spec**: [spec.md](spec.md)
+**Branch**: `hrns-015-autopilot-gate-pr-emission-repair` | **Date**: 2026-09-26 | **Spec**: [spec.md](spec.md)
 
-**Input**: The complete Phase 3 Plan Prompt in docs/ai/specs/.process/HRNS-015-workflow.md, the clarified spec, and the HRNS-015 design concept.
+**Input**: The exact Phase 3 Plan Prompt in [HRNS-015-workflow.md](../../docs/ai/specs/.process/HRNS-015-workflow.md), the current spec, the design concept Q&A, and the explicit owner decision splitting C1 into C1a/C1b.
+
+**Design status**: Plan artifacts regenerated together. Delivery ratification and downstream gates remain outstanding; this document is not an implementation or G3/G6 qualification.
 
 ## Summary
 
-Repair the observed packet, gate, Post, resolve-pr, and scaffold defects in 19 ordered, single-story candidate review increments: A1a → A1b → A2 → A3 → B1a → B1b → B2a → B2b → B3a → B3b → C1a1 → C1a2 → C1b1 → C1b2 → C2a1 → C2a2 → C2a3 → C2b1 → C2b2. Repeated story identities represent sequential vertical behavior checkpoints. Every behavior starts with a failing acceptance case and reaches Claude Code and Codex in the same increment. The runner stays Python 3.11+ standard library; generated dist and reference pages follow their source changes.
+Design the remaining packet, gate, Post, executor, review-feedback, and scaffold repairs using the existing Python runner and paired Claude Code/Codex surfaces. Preserve 14 stories, 26 active functional requirements (29 historical IDs, with FR-011–FR-013 removed), 37 acceptance scenarios, and 11 success criteria. Every remaining behavior change begins with a failing fixture, and generated outputs follow their source in the same PR.
 
-The design concept’s preliminary four-slice 1,442-LOC sum and later five-slice C1a/C1b decision are historical planning evidence. The earlier eleven-increment allocation omitted recurring tracked workflow, state, task, evidence, and index paths and mixed story identities. The revised path ledger includes six recurring candidates in each increment. Its 14–24 candidate paths and 0–2 production paths per increment fit the planned cap; actual reviewable LOC, final diffs, marker fingerprints, and G6 are unqualified. The installed marker validator still rejects legitimate repeated paths across sequential markers, so no valid marker plan or PR emission is claimed.
+The approved delivery is **A → B → C1a → C1b → C2**. Original Q11's four slices are historical authority superseded only by the explicit C1 split. The existing nineteen-part inventory becomes an **eighteen-part proposal** after already-shipped B2a leaves scope. It is not an approved eighteen-PR plan. Five candidate path unions exceed the 24-path cap, so owner ratification or explicit rescope is required before Tasks may treat additional PRs as the delivery authority.
+
+### Authority and rescope
+
+| Record | Meaning at this Plan pass |
+| --- | --- |
+| Design Q11: "Four slices: A, B, C1, C2" | Original owner decision; retain its provenance. |
+| Owner: split C1 into two PRs | Approved five-PR order A → B → C1a → C1b → C2. |
+| Previous nineteen increments | An unratified candidate allocation, not permission to change the approved PR count. |
+| 2026-09-26 rescope | FR-011–FR-013/#637 are satisfied by #694; new-template links/#638 by #698; sequential repeated-path marker support by #676. These are explicit rescope inputs, not new behavior qualifications in this pass. |
+| Current eighteen increments | Proposed alternative omitting B2a and unnecessary new-template/README link repair. Ratification remains pending. |
+
+Installed runtime 2.37.0 is the execution baseline. Historical claims that every own-run hazard persists, the marker validator still rejects sequential reuse, or the plugin must remain pre-fix are obsolete. No independent complete audit of every remaining behavior was obtained; the research broker and local delegation limitations are recorded in [research.md](research.md). A historical observation is not evidence that a released fix still fails.
 
 ## Technical Context
 
-- **Language/Version**: Python 3.11+ for runner, validation, and repository tools; Markdown skills for Claude Code and Codex; Codex agent TOML.
-- **Primary Dependencies**: Python standard library, Git, existing `gh` CLI integration, existing SpecKit runner and test harness. No new runtime package.
-- **Storage**: Git-tracked roadmap/spec/workflow Markdown, `.specify/quality-gates.json`, PR packet JSON/Markdown, and local `autopilot-state.json`.
-- **Testing**: Failing-first Layer 4 unit and Layer 1 structural fixtures, Layer 5 scoping when host tool prose changes, existing quick and CI suites, generated-artifact check, docs reference validation, ruff F and mypy ratchet.
-- **Target Platform**: Claude Code and Codex plugin hosts on supported desktop/CI environments; GitHub PR API via the existing `gh api graphql` route.
-- **Project Type**: Plugin skills and deterministic Python runner/repository tools.
-- **Performance Goals**: No fixed blind-spot analyst deadline; bounded page size with complete cursor traversal; no regression to deterministic local gates.
-- **Constraints**: No active Bash or jq dependency, no hand-edited generated payload/reference pages, no runtime test read of a temporary feature spec path, no new exception class, no draft release-note fence.
-- **Scale/Scope**: 29 functional requirements, 14 user stories, 11 success criteria, 19 proposed review increments. HRNS-019 owns the broad helper-envelope sweep; HRNS-017 owns the unknown Codex child-lifetime behavior.
-- **Primary review surface**: harness/adapter. Secondary surfaces: schema/config and docs/process.
+- **Language/Version**: Python 3.11+ standard library for runner and repository tooling; Markdown for host skills/Claude agents and TOML for Codex agents.
+- **Primary Dependencies**: Existing Git, GitHub CLI integration, runner request contracts and repository test harness. No new runtime dependency or service.
+- **Storage**: Existing Git-tracked Markdown/JSON, quality configuration, packet artifacts, and persisted workflow/state. Sensitive live execution records remain private; publish portable receipts only.
+- **Testing**: Red-first Layer 4 fixtures, Layer 1 host/schema/template contracts, Layer 5 tool scoping where applicable, Layer 7 parity, quick and CI suites, generated checks, pinned ruff/mypy environment and relevant docs checks.
+- **Target Platform**: Claude Code and Codex on the repository's supported desktop/CI environments; existing GitHub GraphQL integration for review feedback.
+- **Project Type**: Plugin instruction surfaces plus deterministic runner and repository utilities.
+- **Performance Goals**: Await native results without a fixed wall-clock cap; paginate bounded connections completely; preserve deterministic local validation.
+- **Constraints**: ≤4 production and ≤24 total changed paths per eventual PR, both hosts together, generated paths counted; no Bash/jq dependency, manual generated edit, new exception class, draft release-note fence, or runtime fixture read of a temporary feature spec.
+- **Scale/Scope**: 14 stories / 26 active FRs. HRNS-019 owns the broad envelope sweep; HRNS-017 owns unverified host child-lifetime behavior.
+- **Primary review surface**: harness/adapter. Secondary surfaces: schema/config and docs/process. Per-increment surface coherence still requires qualification.
+- **Reviewability Budget**: Candidate path evidence below; reviewable LOC and exact base/head diffs are not measured. The preset's ordinary LOC/surface limits also remain in force; this feature's stricter path caps do not replace them.
 
-### Reviewability budget and slice decision
+### Five approved slices and budget evidence
 
-For repeated stories, the current marker contract uses unique `usN-partK` IDs with `kind=user_story_part` and `parent_marker_id=usN`; unsplit stories use `kind=user_story` and `id=usN`. The proposed 19-increment allocation supersedes the original four/five-slice and eleven-increment candidates after counting all generated fan-out, six recurring tracked process/evidence paths, and one user-story identity per marker. The user’s directive preserves all 29 FRs, all 14 stories, the C1a/C1b distinction, and both host variants. [slice-inventory.md](.process/slice-inventory.md) is the path-by-path authority. The recurring paths are workflow, `autopilot-state.json`, `tasks.md`, `task-execution.json`, the slice inventory, and the HRNS-015 generated `SPEC-MOC.md` PR/index candidate. Reused registered unit modules keep A1, B2, and C1a within the cap while retaining RED/GREEN cases. The following are conservative candidates, not actual diff or reviewable-LOC passes.
+The counts below are unique unions of the existing path inventory's candidate rows, omitting B2a. Production is the inventory's code/schema/active-config class, including Codex TOML. Generated payload, runner trust, docs reference and recurring process/evidence paths are included. These are conservative candidate sets, not proven changed-file minimums or measured diff passes.
 
-| Proposed increment | Primary surface | Production paths | Candidate total | Budget evidence |
-| --- | --- | ---: | ---: | --- |
-| A1a | US1 optional note render/schema | 2 | 24 | Candidate only; actual LOC/diff unmeasured |
-| A1b | US1 protected note validation | 2 | 24 | Candidate only; actual LOC/diff unmeasured |
-| A2 | US2 packet guard and scope prose | 1 | 24 | Candidate only; actual LOC/diff unmeasured |
-| A3 | US3 current verdict | 2 | 24 | Candidate only; actual LOC/diff unmeasured |
-| B1a | US4 visible markers | 1 | 22 | Candidate only; actual LOC/diff unmeasured |
-| B1b | US5 tracked spec index | 2 | 23 | Candidate only; actual LOC/diff unmeasured |
-| B2a | US6 named entry/exception | 2 | 22 | Candidate only; actual LOC/diff unmeasured |
-| B2b | US6 slice/greenfield budgets | 1 | 23 | Candidate only; actual LOC/diff unmeasured |
-| B3a | US7 refactor estimate | 1 | 18 | Candidate only; actual LOC/diff unmeasured |
-| B3b | US8 declared commands | 2 | 22 | Candidate only; actual LOC/diff unmeasured |
-| C1a1 | US9 Post list | 1 | 24 | Candidate only; actual LOC/diff unmeasured |
-| C1a2 | US10 completion boundary | 1 | 21 | Candidate only; actual LOC/diff unmeasured |
-| C1b1 | US10 phase/analyze teardown | 2 | 21 | Candidate only; actual LOC/diff unmeasured |
-| C1b2 | US10 checklist/implement teardown | 2 | 21 | Candidate only; actual LOC/diff unmeasured |
-| C2a1 | US11 review feedback | 0 | 14 | Candidate only; actual LOC/diff unmeasured |
-| C2a2 | US12 blind spot | 0 | 14 | Candidate only; actual LOC/diff unmeasured |
-| C2a3 | US13 status envelopes | 0 | 14 | Candidate only; actual LOC/diff unmeasured |
-| C2b1 | US13 scaffold/phase envelopes | 0 | 21 | Candidate only; actual LOC/diff unmeasured |
-| C2b2 | US14 workflow links | 0 | 22 | Candidate only; actual LOC/diff unmeasured |
+| Approved slice | Production candidates | Total candidates | Projected reviewable LOC | Against ≤4/≤24 paths |
+| --- | ---: | ---: | --- | --- |
+| A — packet and body | 4 | 39 | Not estimated for current remaining scope | Total over cap by 15 |
+| B — gates/index/commands | 3 | 36 | Not estimated for current remaining scope | Total over cap by 12 |
+| C1a — Post/completion | 1 | 29 | Not estimated for current remaining scope | Total over cap by 5 |
+| C1b — executor teardown | 4 | 29 | Not estimated for current remaining scope | Total over cap by 5 |
+| C2 — feedback/scaffold/envelopes/legacy links | 0 | 34 | Not estimated for current remaining scope | Total over cap by 10 |
 
-A1a emits a prefilled release note as protected content; A1b introduces the fourth editable marker pair and changes both renderer and fingerprint/structure validator. This preserves a passing intermediate packet without claiming the final editable contract early.
+C2's stored union is 40; removing the six already-shipped link-only README/template source/payload candidates yields 34. The roadmap template remains a B dependency for slice-budget syntax. The inventory itself is stale and must be reconciled after the owner decision. The six recurring candidates are the bound workflow, state, tasks, task sidecar, inventory and generated feature SPEC-MOC; their actual changes must be proven in each diff rather than assumed from membership.
 
-The per-PR limits remain at most four production Python/schema/active-config files and fewer than 25 changed paths, including generated output and process evidence. Q11’s 1,442/1,932-LOC totals are historical and not comparable to per-increment actual diffs. The installed estimator still ignores required-refactor input, so the full refactor-inclusive estimate is `not_estimated`; no distinct extra refactor path is presently named, and T016 confirms that during implementation. The advisory `atomicity-route=one-navigable-PR` is retained. The marker validator rejects legitimate repeated declarations; no current valid `pr_marker_plan`, G6 pass, or PR emission is claimed. If an actual changed path is missing or an increment reaches 25 paths, exceeds four production paths, or fails the LOC gate, stop and reallocate before its PR.
+**Concrete delivery decision**: Ratify the eighteen-part candidate alternative below, or explicitly rescope/defer remaining requirements to retain five PRs. Neither option may silently waive the caps, omit a host, hide generated paths, reset execution budgets, or drop requirements. Pending this decision, design is reviewable and implementation is not authorized by this Plan pass.
 
-### Plan-phase size check
+### Eighteen proposed increments — not owner approved
 
-On 2026-09-25, the current `estimate_spec_size` helper was called with `user_stories=14`, `frs=29`, `files=77` (the **sum of superseded provisional slice file-touch projections** 16+19+24+18, including repeat touches), `new_vs_modify=modify`, and no spike. It returned `estimated_loc=1932`, `suggested_slices=5`, `status=warn`. Passing `required_refactor_files=1` returned the **same** result, confirming that this installed helper does not yet represent the specified refactor input. The 77 touch count is not a unique-file inventory and this legacy output is a sizing stress check, not a refactor-inclusive budget or a replacement for the preliminary 1,442 LOC. **Full Plan-phase re-estimate including required refactors: not estimated** because the current helper ignores that input and the distinct required-refactor file count is unmeasured. The named Tasks inventory identifies planned files and zero extra distinct refactor paths; T016 must confirm this after the helper repair. Before each PR, measure the actual LOC and file diff. If the stricter slice limits fail, split or rescope before implementation completion.
+| Parent slice | Proposed increment/story | Production candidates | Stored candidate total |
+| --- | --- | ---: | ---: |
+| A | A1a / US1 note renderer-schema | 2 | 24 |
+| A | A1b / US1 editable note validation | 2 | 24 |
+| A | A2 / US2 current-packet guard | 1 | 24 |
+| A | A3 / US3 current verdict | 2 | 24 |
+| B | B1a / US4 marker visibility | 1 | 22 |
+| B | B1b / US5 tracked index-refresh | 2 | 23 |
+| B | B2b / US6 split/greenfield budgets | 1 | 23 |
+| B | B3a / US7 refactor estimate | 1 | 18 |
+| B | B3b / US8 declared commands | 2 | 22 |
+| C1a | C1a1 / US9 Post names | 1 | 24 |
+| C1a | C1a2 / US10 completion boundary | 1 | 21 |
+| C1b | C1b1 / US10 phase/analyze teardown | 2 | 21 |
+| C1b | C1b2 / US10 checklist/implement teardown | 2 | 21 |
+| C2 | C2a1 / US11 review feedback | 0 | 14 |
+| C2 | C2a2 / US12 blind-spot wait | 0 | 14 |
+| C2 | C2a3 / US13 status envelopes | 0 | 14 |
+| C2 | C2b1 / US13 scaffold/phase envelopes | 0 | 21 |
+| C2 | C2b2 / US14 existing legacy links | 0 | 22, before removal of shipped link-only candidates |
+
+Each count comes from the existing [candidate inventory](.process/slice-inventory.md); none is an actual scope/LOC qualification. A1a is a passing protected-note checkpoint and A1b completes editable validation; the final FR-002 contract is not claimed at the first checkpoint. Repeated story parts use unique marker IDs and current sequential-reuse rules, with actual base/head diffs and required evidence at each marker. A proposal that passes path estimates can still fail LOC, surface, checkpoint, fingerprint or hazard validation.
+
+### Estimate reconciliation
+
+Q11's historical whole-feature 1,362 LOC and A 282 + B 410 + C1 335 + C2 415 = 1,442 LOC came from different scopes/signals; the 80-LOC difference is not a measured refactor weight. Later C1a 520 / C1b 460 projections and the old 1,932-LOC output are also historical. The old 77 file-touch input double-counted repeated slice paths and cannot be a current unique inventory. Do not present any of these as a current per-PR LOC pass. The parent runs the current Plan advisory estimator after G3; Tasks then reconciles the inventory and records fresh route/layer decisions. The refactor-inclusive estimate stays explicitly unqualified until the input and implementation contract are validated.
 
 ## Module and Interface Deltas
 
-### Slice A1a/A1b/A2/A3
+### Slice A — packet and body
 
-- `speckit-pro/speckit_pro_runner/helpers/pr_emission.py` — changed: optional `release_note` input, one final-body editable section, and protected current Phase 6.5 verdict under Verification.
-- `speckit-pro/skills/speckit-autopilot/contracts/pr-packet.schema.json` — changed: one optional note property and fourth final editable field, preserving `additionalProperties: false` and zero draft fields. The design concept names a runner/contracts location, but this is the verified repository source path; this is a path correction with no scope change.
-- `speckit-pro/speckit_pro_runner/helpers/read_only.py` — changed: body structure and protected fingerprint accept only the specified final release-note section.
-- `speckit-pro/speckit_pro_runner/helpers/mutation.py` — changed: both packet mutation paths exempt exactly the current packet's three canonical untracked files.
-- Claude/Codex autopilot PR packet and Post guidance — changed together: validated packet body is the PR source; no instruction to commit ignored packet files or add ignore rules.
-- `docs/prd-harness-engineering-uplift.md` and `docs/ai/specs/harness-engineering-uplift-technical-roadmap.md` — changed: AC-16.2/16.5/16.8/16.10, **both the HRNS-015 and HRNS-019 roadmap entries** (19-increment proposal and deferred envelope sweep), A2, and the stale #642 status.
+- `helpers/pr_emission.py` — changed: one optional nonblank unfenced `release_note`, final rendering and a protected current Phase 6.5 Verdict under Verification, including refresh.
+- `skills/speckit-autopilot/contracts/pr-packet.schema.json` — changed: optional note and conditional fourth final editable field under the existing closed schema; drafts keep zero fields. This is the repository's packet-schema source path, correcting the old design concept location without changing scope.
+- `helpers/read_only.py` — changed: exact release-note structure and protected fingerprint boundaries.
+- `helpers/mutation.py` — changed: packet validation/output exempt only the current packet's three canonical untracked paths; tracked or unrelated changes still block.
+- Paired autopilot/Post host guidance — changed together with those behaviors. Packet source, host policy and provenance stay consistent.
+- PRD and HRNS-015/019 roadmap entries — amend decided scope, acceptance and deferred ownership after delivery ratification; do not describe a proposal as accepted.
 
-### Slice B1a/B1b/B2a/B2b/B3a/B3b
+### Slice B — gates, index, estimate and commands
 
-- `speckit-pro/speckit_pro_runner/helpers/read_only.py` — changed: exact comma-token Gap parser, shared Markdown code-visibility filter for Gap and clarification counts/details, tracked-only spec index, section-scoped reviewability, declared commands, and refactor-aware estimate.
-- `speckit-pro/speckit_pro_runner/helpers/registry.py` — changed if required: `reviewability-gate` setup request requires `spec_id`; missing input is a request error.
-- `scripts/refresh-release-artifacts.py` — changed: named spec-index refresh/check step after other generated metadata/payload/marketplace steps; check names drifted tracked index paths.
-- `.specify/quality-gates.json` — changed: optional `commands` map limited to the four existing quality-gate slots, preserving approved thresholds and basis.
-- `speckit-pro/skills/speckit-coach/templates/technical-roadmap-template.md` — changed: ordered Slices and Slice Budgets placeholders, without a literal exception pragma example.
-- Both hosts' gate-validation/prerequisites instructions, root `AGENTS.md`, PRD and roadmap entry — changed to describe the actual counters, command precedence, and required artifact check.
-- `specs/formal-001-selective-formal-methods/SPEC-MOC.md` — regenerated by the spec-index source step, never hand-edited.
+- `helpers/read_only.py` — changed: comma-token Gap matching plus shared code visibility for clarification counts/details; tracked-only spec index; complete split budget aggregation and LOC-only greenfield allowance; required-refactor estimate; per-quality-slot declarations.
+- Named-entry selection, selected pragma and missing-budget blocking — **baseline, not new work** after #694. Keep compatibility fixtures; do not manufacture pre-fix failure for shipped behavior or require a registry edit solely for removed FR-011–FR-013.
+- `scripts/refresh-release-artifacts.py` — changed: existing index generator joins plain refresh and isolated check; check names stale tracked index paths. Existing required artifact-consistency job remains the CI owner.
+- `.specify/quality-gates.json` — changed only for optional validated quality-slot commands if needed; preserve approved complexity15, CRAP30, mutation floor60, thresholds and basis. Do not map general lint commands into unrelated quality slots.
+- Roadmap template — changed for ordered Slices/Slice Budgets syntax without literal accepted exception pragmas; its new-template workflow links are already shipped and stay baseline.
+- Both hosts' gate/prerequisite guidance and root `AGENTS.md` — align with real counters, command precedence and index refresh. `specs/formal-001-selective-formal-methods/SPEC-MOC.md` is regenerated, not authored by hand.
 
-### Slice C1a1/C1a2
+### Slice C1a — Post list and completion
 
-- The existing phase-coverage guard gains 13 canonical `POST_STEPS` and a completion-boundary rule against persisted workflow and `autopilot-state.json`; `status-evidence` alone remains insufficient.
-- Claude and Codex autopilot SKILL, task-list-canonical, and post-implementation instructions, plus the workflow template, are updated together. Gate-validation, phase-execution, and agent-teams-integration references are reviewed but not edited in C1a; any newly required edit must first fit a remeasured cap.
-- The existing registered `test-autopilot-phase-coverage.py` gains inline RED/GREEN cases. C1a1 owns 24 conservative candidate paths for the list, and C1a2 owns 21 for the persisted completion boundary, each including the six process/evidence paths.
+- Existing phase-coverage script — changed to the requested canonical13 `POST_STEPS` and full completion-boundary rule over persisted workflow/state, distinct from ordinary status-evidence validation.
+- Both hosts' autopilot, canonical task list, Post guidance and workflow template — align names/order/counts and invoke the full boundary at actual full-run success.
+- `formal/lifecycle.py` — read-only compatibility review required; a discovered necessary edit adds a path and requires remeasurement. No formal model is selected for this run.
+- Existing registered phase-coverage test — add red-first completion/list/resume cases; do not infer missing rows completed.
 
-### Slice C1b1/C1b2
+### Slice C1b — executor teardown
 
-- Four Claude Markdown and four Codex TOML executor definitions gain child result/stop and verified teardown obligations. The shared agent-teams-integration source is updated for both payloads.
-- One new Layer 1 structural test covers all eight definitions. C1b1 owns the Claude/Codex phase and analyze pairs; C1b2 owns checklist and implement pairs. Each has 21 conservative candidate paths, including generated agent/test references and six process/evidence paths. `formal/lifecycle.py` is reviewed read-only; editing it requires a fresh inventory.
+- Four Claude executor Markdown definitions and four Codex TOML twins — paired child-result or supported-stop, graceful shutdown, no-active-child/cleanup evidence and unresolved-result reporting obligations.
+- Shared agent-team guidance — align with actual host operations. Unsupported teardown confirmation remains unresolved; absence of a close operation must not be replaced by a fabricated cleanup receipt.
+- Structural coverage — cover all eight definitions. Runtime lifecycle conclusions require actual host evidence; HRNS-017 retains the separate child-lifetime question.
 
-### Slice C2a1/C2a2/C2a3/C2b1/C2b2
+### Slice C2 — feedback, scaffold, envelopes and legacy links
 
-- `speckit-pro/skills/speckit-resolve-pr/SKILL.md` and its Codex mirror — changed: full thread and per-thread comment pagination, then verify → commit → push → fresh remote PR head comparison → serial reply and confirmed resolution.
-- `speckit-pro/skills/speckit-scaffold-spec/SKILL.md` and its Codex mirror — changed: await the analyst without a fixed timeout, record the durable Design Concept `Blind-spot pass` outcome/reason, pass `inputs.spec_id`, use full request envelopes, and preserve verified existing workflow links.
-- `speckit-pro/skills/speckit-status/SKILL.md` and its Codex mirror — changed: complete `generate-spec-index-check` and `o5-topology` request envelopes.
-- Both hosts' autopilot phase index-writing examples — changed with a tested full envelope.
-- `speckit-pro/skills/speckit-coach/templates/technical-roadmap-template.md` — changed: new links target `docs/ai/specs/.process/<SPEC-ID>-workflow.md`; existing legacy links survive only when their actual target exists.
-- `speckit-pro/README.md` — changed: workflow path guidance matches scaffold output.
+- Both resolve-pr skills — independently paginate thread and comment connections; fixes → full verify → commit → push → fresh matching PR head → serial reply/resolve/readback. Failures retain local commits and unresolved threads as specified.
+- Both scaffold skills — await actual analyst result without a fixed deadline; distinct dispatch-error/empty-return/explicit-abandonment reasons in the existing Design Concept line and operator status.
+- Both status skills plus named scaffold/phase examples — complete tested registered request envelopes only at the five specified failure sites; HRNS-019 owns the broader sweep.
+- Existing-roadmap updates — preserve verified legacy targets and repair broken ones to actual scaffold output. New-template `.process/` links and README guidance are already baseline from #698; remove their redundant repair operations.
 
-For every slice, the affected test fixture envelopes live under `tests/speckit-pro/unit/fixtures/`, structural checks under `tests/speckit-pro/`, and generated `dist/**` plus `docs-site/src/content/docs/reference/**` follow their source changes. `.github/workflows/pr-checks.yml` is unchanged: the existing required artifact-consistency job runs the refreshed check. Packet schema properties besides the optional note, draft emission, and multi-pr emission remain unchanged.
+All helper paths above are under `speckit-pro/speckit_pro_runner/`; skill paths are under `speckit-pro/`. Authored source and host twins produce `dist/**`, runner trust files and relevant docs-reference output. Generated paths remain counted and regenerated. `.github/workflows/pr-checks.yml`, unrelated packet fields, draft emission and multi-pr-emission remain unchanged grey boxes.
 
-## Historical Slice A File Operations (superseded; not estimator input)
+## Declared File Operations
 
-These ten named operations were the initial A subset before generated fan-out was counted. The complete A1a/A1b/A2/A3 named candidate inventory is now in [slice-inventory.md](.process/slice-inventory.md). This historical list is not a declaration for the estimator or a passing budget.
+These authored candidate operations are the estimator input for the remaining behavior design; they are not a final changed-file manifest. Generated fan-out and recurring evidence are counted separately in the inventory/table above. Tasks must reconcile this list after ratification and current-source review; a nonexistent planned fixture is not a test already run.
+
+- MODIFIED .specify/quality-gates.json
+- MODIFIED AGENTS.md
+- MODIFIED docs/ai/specs/harness-engineering-uplift-technical-roadmap.md
+- MODIFIED docs/prd-harness-engineering-uplift.md
+- MODIFIED scripts/refresh-release-artifacts.py
+- MODIFIED speckit-pro/agents/analyze-executor.md
+- MODIFIED speckit-pro/agents/checklist-executor.md
+- MODIFIED speckit-pro/agents/implement-executor.md
+- MODIFIED speckit-pro/agents/phase-executor.md
+- MODIFIED speckit-pro/codex-agents/analyze-executor.toml
+- MODIFIED speckit-pro/codex-agents/checklist-executor.toml
+- MODIFIED speckit-pro/codex-agents/implement-executor.toml
+- MODIFIED speckit-pro/codex-agents/phase-executor.toml
+- MODIFIED speckit-pro/codex-skills/speckit-autopilot/SKILL.md
+- MODIFIED speckit-pro/codex-skills/speckit-autopilot/references/phase-execution-codex.md
+- MODIFIED speckit-pro/codex-skills/speckit-autopilot/references/post-implementation-codex.md
+- MODIFIED speckit-pro/codex-skills/speckit-autopilot/references/task-list-canonical-codex.md
+- MODIFIED speckit-pro/codex-skills/speckit-resolve-pr/SKILL.md
+- MODIFIED speckit-pro/codex-skills/speckit-scaffold-spec/SKILL.md
+- MODIFIED speckit-pro/codex-skills/speckit-status/SKILL.md
+- MODIFIED speckit-pro/skills/speckit-autopilot/SKILL.md
+- MODIFIED speckit-pro/skills/speckit-autopilot/contracts/pr-packet.schema.json
+- MODIFIED speckit-pro/skills/speckit-autopilot/references/agent-teams-integration.md
+- MODIFIED speckit-pro/skills/speckit-autopilot/references/gate-validation.md
+- MODIFIED speckit-pro/skills/speckit-autopilot/references/phase-execution.md
+- MODIFIED speckit-pro/skills/speckit-autopilot/references/post-implementation.md
+- MODIFIED speckit-pro/skills/speckit-autopilot/references/task-list-canonical.md
+- MODIFIED speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py
+- MODIFIED speckit-pro/skills/speckit-coach/templates/technical-roadmap-template.md
+- MODIFIED speckit-pro/skills/speckit-coach/templates/workflow-template.md
+- MODIFIED speckit-pro/skills/speckit-resolve-pr/SKILL.md
+- MODIFIED speckit-pro/skills/speckit-scaffold-spec/SKILL.md
+- MODIFIED speckit-pro/skills/speckit-status/SKILL.md
+- MODIFIED speckit-pro/speckit_pro_runner/helpers/mutation.py
 - MODIFIED speckit-pro/speckit_pro_runner/helpers/pr_emission.py
 - MODIFIED speckit-pro/speckit_pro_runner/helpers/read_only.py
-- MODIFIED speckit-pro/speckit_pro_runner/helpers/mutation.py
-- MODIFIED speckit-pro/skills/speckit-autopilot/contracts/pr-packet.schema.json
-- MODIFIED speckit-pro/skills/speckit-autopilot/SKILL.md
-- MODIFIED speckit-pro/codex-skills/speckit-autopilot/SKILL.md
-- MODIFIED speckit-pro/skills/speckit-autopilot/references/post-implementation.md
-- MODIFIED speckit-pro/codex-skills/speckit-autopilot/references/post-implementation-codex.md
-- MODIFIED docs/prd-harness-engineering-uplift.md
-- MODIFIED docs/ai/specs/harness-engineering-uplift-technical-roadmap.md
+- NEW tests/speckit-pro/layer1-structural/test-team-teardown.py
+- MODIFIED tests/speckit-pro/suite-manifest.json
+- NEW tests/speckit-pro/unit/fixtures/marker-visibility/cases.json
+- NEW tests/speckit-pro/unit/fixtures/pr-packet-repair/packet-only-untracked.json
+- NEW tests/speckit-pro/unit/fixtures/roadmap-workflow-links/cases.json
+- NEW tests/speckit-pro/unit/fixtures/spec-index-freshness/historical-stale-index.md
+- MODIFIED tests/speckit-pro/unit/test-autopilot-phase-coverage.py
+- NEW tests/speckit-pro/unit/test-declared-quality-commands.py
+- NEW tests/speckit-pro/unit/test-marker-visibility.py
+- NEW tests/speckit-pro/unit/test-phase-envelope-contract.py
+- NEW tests/speckit-pro/unit/test-resolve-pr-protocol.py
+- NEW tests/speckit-pro/unit/test-roadmap-workflow-links.py
+- NEW tests/speckit-pro/unit/test-scaffold-blindspot.py
+- NEW tests/speckit-pro/unit/test-scaffold-envelope-contract.py
+- NEW tests/speckit-pro/unit/test-size-estimate-refactors.py
+- NEW tests/speckit-pro/unit/test-spec-index-freshness.py
+- MODIFIED tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py
+- MODIFIED tests/speckit-pro/unit/test-speckit-pro-read-only-helpers.py
+- NEW tests/speckit-pro/unit/test-status-envelope-contract.py
 
 ## Constitution Check
 
-**Before Phase 0 — planned path allocation revised; marker contract and measured gates remain blocked.** Existing plugin structure and manifest versioning remain intact; repository Python stays standard-library and no active Bash/jq is added; new deterministic helper behavior receives Layer 4 fixtures and host components Layer 1/5 coverage; conventional commit/PR-title gates apply at delivery; no new abstraction or plugin is introduced. The former five-slice order was user-ratified but A/B/C2 exceeded the 24-path cap. T001/T002 now document 19 named candidate sets within the cap; actual LOC/diff remains unmeasured and the marker validator cannot yet represent repeated shared paths. No marker emits until that contract and current per-increment gates pass. Typed `Reviewability-Exception` classes remain `refactor`, `infra`, and `upgrade`, with no automatic split exception.
+*Evaluate before research and again after design; the parent owns the programmatic gates.*
 
-**After Phase 1 design — conditional on the Tasks sizing checkpoint and per-slice diff gate.** The data model and contracts below preserve existing request/result envelopes and host parity. The API pagination behavior and explicit operator signal are pinned in [research.md](research.md); Codex post-parent child lifetime is deliberately outside scope and does not weaken the teardown result contract. The refactor-inclusive size estimate remains explicitly `not_estimated` on the installed helper; T001/T002 now provide 19 complete named candidate inventories; the current marker validator still rejects legitimate repeated paths, and each actual marker diff must close the remaining evidence gap before any budget is qualified. Before each PR, count actual authored and generated changed paths and reviewable LOC; if any increment reaches 25 total files, exceeds four production files, or crosses a block threshold, split/rescope before implementation completion.
+| Principle | Before Phase 0 research | After Phase 1 design |
+| --- | --- | --- |
+| I Plugin structure | Use existing runner/host/agent locations. | No new plugin or source layout. |
+| II Runtime safety | Python 3.11+ stdlib; vendored setup is not release proof. | Structured request/JSON/path handling; no active Bash/jq dependency added. |
+| III Versioning | Release-please owns versions. | No manual version/manifest change planned. |
+| IV Coverage | Red-first registered fixtures and full checks required. | Guide identifies existing entrypoints and later fixture work; no tests claimed run. |
+| V Commits/PRs | Existing exact-title/release-note gates. | Validated packet is body source; no skip-label workaround. |
+| VI Simplicity | Extend existing mechanisms only. | No new runtime framework or speculative abstraction. |
+| VII Generated artifacts | Refresh from source, include fan-out. | Generated files counted per eventual diff, never hand-edited. |
+| VIII Host parity | Each behavior reaches both hosts in one PR. | Paired skill/agent scopes retained. |
+| IX Fail closed | Missing evidence is failure/unknown. | Scope/LOC/marker qualification and delivery authority remain unqualified. |
+| X Privacy | Private execution records outside working tree. | Portable receipts only; no local identities in published artifacts. |
+
+**Reviewability exception**: None approved. Five approved candidate groups exceed the strict path cap. The eighteen-part proposal provides a concrete decision; it does not waive the cap or satisfy owner approval. Post-design constitution qualification is conditional on that ratification and actual per-increment scope/LOC evidence. These are retained blockers, not an architecture justification for exceeding the budget.
 
 ## Project Structure
-
-### Documentation for this feature
 
 ~~~text
 specs/hrns-015-autopilot-gate-pr-emission-repair/
@@ -131,46 +213,36 @@ specs/hrns-015-autopilot-gate-pr-emission-repair/
 ├── research.md
 ├── data-model.md
 ├── quickstart.md
-├── contracts/
-│   ├── runner-and-roadmap.md
-│   └── workflow-and-pr.md
-├── tasks.md                 # generated in the Tasks phase
-└── .process/task-execution.json  # task definitions and source fingerprints
-~~~
-
-### Source and validation surfaces
-
-~~~text
+├── contracts/{runner-and-roadmap,workflow-and-pr}.md
+├── tasks.md
+└── .process/{slice-inventory.md,task-execution.json}
 speckit-pro/
-├── speckit_pro_runner/
-│   ├── helpers/{pr_emission,read_only,mutation,registry}.py
-│   └── formal/lifecycle.py
+├── speckit_pro_runner/helpers/{pr_emission,read_only,mutation,registry}.py
+├── speckit_pro_runner/formal/lifecycle.py
 ├── skills/{speckit-autopilot,speckit-resolve-pr,speckit-scaffold-spec,speckit-status,speckit-coach}/
 ├── codex-skills/{speckit-autopilot,speckit-resolve-pr,speckit-scaffold-spec,speckit-status}/
 ├── agents/{phase,analyze,checklist,implement}-executor.md
 └── codex-agents/{phase,analyze,checklist,implement}-executor.toml
 scripts/refresh-release-artifacts.py
 tests/speckit-pro/{unit,layer1-structural,layer5-tool-scoping}/
-docs/ai/specs/
-docs/prd-harness-engineering-uplift.md
 ~~~
 
-**Structure decision**: Extend the existing runner helpers and host skill mirrors. Keep packet/body parsing in existing helpers, the canonical Post list in its existing guard, and generated output in the existing refresh script. No new runtime package or service.
+**Structure decision**: Extend existing helpers, packet contracts and host mirrors. Existing docs generation, suite registration, runner trust and index generation remain the mechanisms used for delivery.
 
-## Execution design by slice
+## Execution Design by Slice
 
-1. **A — packet acceptance first.** Freeze failing cases for final note/fence/host policy, missing verdict, refresh of a stale supplied body, draft absence, packet-only untracked files, another packet, tracked modification, and unreadable Git status. Extend packet input/schema and renderer, then body structure/fingerprint and current-packet dirty guard. Keep the eight existing required headings, single UAT heading, and protected generated Verdict line. Update both host packet instructions together.
-2. **B — gates and counters.** Freeze issue #637's original `multi`, `pragma`, and `nobudget` reproductions plus missing `spec_id`, selected authored section only, primary surfaces, greenfield LOC-only, complete ordered slices, and aggregate reporting. Add gap/clarification visibility cases, including two tags on a line and inline/fenced/indented code. Freeze untracked-in-tracked-directory and staged spec-index cases; regenerate ART-007 historical text under test fixtures, not from an active spec at runtime. Add declared-command precedence and refactor-signal cases. Change runner and refresh source, then both host instructions.
-3. **C1a — Post and completion.** Freeze 13-row template/host mismatch and persisted workflow/state cases with missing, duplicate, pending, in-progress, mismatched, and unjustifiably skipped rows, including a legacy 11-row record whose new or renamed rows stay pending while unique exact-name statuses are preserved. Assert the workflow `✅ Complete` to state `completed` mapping and the sole optional-extension skip: both records use identical `skipped: <extension> not installed` only for a canonical extension-dependent row, and supported registry plus directory checks confirm absence. An out-of-stage skip reactivates as pending when its stage resumes. Build the new completion rule from `POST_STEPS` and call it on both hosts immediately before successful full-run return after Post; a staged-run return does not invoke the full Post completion boundary. Existing `status-evidence` remains a separate audit and cannot prove Post completion. C1a1 checkpoints after T019, and C1a2 checkpoints after T020; each runs its unit test, registered suite, generated refresh/reference check, host parity, and actual LOC/path gate before C1b begins.
-4. **C1b — executor teardown.** Freeze child result/stop and teardown evidence for all eight executor definitions; their clean completion requires confirmed cleanup. Review formal lifecycle's Post subset without an assumed edit. Run its structural test, registered suite, generated refresh/reference check, host parity, and actual LOC/path gate at the C1b1 and C1b2 marker checkpoints.
-5. **C2 — feedback, scaffold, envelopes, links.** Freeze >100 thread, >100 comment, missing cursor, failed page, verification failure, push failure, mismatched fresh `headRefOid`, serial reply/resolve, and resolved-state confirmation. Use the existing GraphQL route and query the PR head again after push. Freeze late nonempty analyst and all three explicit no-findings reasons, with the existing Design Concept header line as durable record. Freeze full request envelopes at only the named failure sites. Reproduce issue #638's broken template link and test new `.process/` output, verified legacy target preservation, and broken legacy repair.
+1. **A**: Freeze note type/blank/fence-breaking/absence/draft cases, current-verdict creation/refresh failures and exact current-packet/unrelated/tracked/unreadable-status cases. Add optional schema/rendering then editable structure/fingerprint and packet guard. The supplied body's refresh cannot retain a stale protected Verdict. Final release-note policy uses the exact title and body.
+2. **B**: Preserve green baseline #637 cases; start red only for split/aggregate/greenfield extensions. Include missing/extra/duplicate/placeholder/at-block rows, ordinary surface limits, multiple visible Gap tags and all code forms, tracked/staged versus untracked index candidates, stale index before/after refresh, per-slot declarations/invalid config and non-double-counted refactor signals. Freeze historical index text in test-owned fixtures.
+3. **C1a**: Derive 13 names from POST_STEPS; test both persisted representations for every missing/duplicate/pending/in-progress/mismatch/unjustified skip. Only the same absent-extension reason can substitute for completion of a canonical optional extension row after registry and directory absence proof. Preserve unique exact-name legacy statuses; new/renamed rows start pending. Out-of-stage returns do not claim full Post completion.
+4. **C1b**: Test the required return contract across all executor twins; a missing child result or supported stop/teardown confirmation prohibits clean completion. Consume actual child summaries and actual native command exits; host thread retention is not automatically evidence of active work or cleanup completion.
+5. **C2**: Exercise >one thread/comment page, missing cursor/page failure, verify/push/head-query/mismatch failures, serial reply/resolve confirmation, late analyst results and all explicit no-findings reasons, complete five-site envelopes and existing verified/broken roadmap targets. Already-shipped link cases remain green compatibility coverage.
 
-Each increment follows red fixture → minimal repair → targeted green test → quick suite → generated source refresh/check → applicable docs/lint/CI suite. PR packet traceability maps every story and success criterion to source, fixture, and result. The post-Tasks advisory `atomicity-route` result remains `one-navigable-PR` (`change-shape:modify-heavy`, `releasable: true`); the layer planner remains skipped because the classifier did not emit `split-PR`. The later user-ratified five-PR order and the eleven-increment candidate are historical. The proposed order is A1a → A1b → A2 → A3 → B1a → B1b → B2a → B2b → B3a → B3b → C1a1 → C1a2 → C1b1 → C1b2 → C2a1 → C2a2 → C2a3 → C2b1 → C2b2. A top-level `pr_marker_plan` would be derived from these task boundaries, file/test scopes, reviewability evidence, and hazard route, then checked for fingerprints, membership/order, checkpoint evidence, and unsafe folds. The current validator rejects repeated shared paths, so no valid marker plan or PR emission is claimed.
+After owner ratification, Tasks creates exact boundaries/ownership, recomputes the path inventory and task sidecar, and records fresh atomicity route and conditional layer plan. An advisory one-navigable-PR classification cannot override an approved PR split; do not reuse an old route as new proof. Each eventual increment needs targeted red/green, applicable suites/lint/docs/generated checks and actual base/head scope/LOC before valid marker evidence or emission. Required gate failures remain blocking; G6.5 advisory confidence is not a waiver of G6. No implementation begins in this `--stage plan` pass.
 
-## PR review packet source
+## PR Review Packet Source
 
-Each slice PR body is generated from its validated packet and records: changed behavior and cause, explicit non-goals, review order in the proposed 19-increment sequence, actual LOC/production/total-file budget, requirement-to-file and failing-first-fixture traceability, verification commands/results, known gaps (including unavailable external-doc lookup if still relevant), and rollback/flags. A1a/A1b supply the release-note fence through the packet input. The Phase 6.5 Verdict is a protected generated value from the workflow table, not the overview row or editable body. PR title and release-note policy are checked against the final exact title/body.
+For each approved increment, the validated packet supplies changed behavior/cause, non-goals, approved order, actual budget, requirement/file/fixture traceability, exact verification results, evidence gaps and rollback. Optional release_note rendering and protected current Verdict follow [workflow-and-pr.md](contracts/workflow-and-pr.md). Final title/body pass repository policy; draft or partial CI does not qualify implementation.
 
 ## Complexity Tracking
 
-No constitution violation is approved. A slice that exceeds its actual gate is split or rescoped rather than explained away.
+No constitution violation or budget exception is approved. The owner delivery decision, unavailable independent/official research, and actual scope/LOC/marker evidence remain explicit limitations. Preserve run identity and consumed repair reservations; no restart resets their counters.

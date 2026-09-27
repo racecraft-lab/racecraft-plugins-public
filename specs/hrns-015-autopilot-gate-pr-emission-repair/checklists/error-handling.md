@@ -15,9 +15,9 @@
 
 ## Reviewability and quality-gate failures
 
-- [ ] CHK004 Are missing `spec_id`, missing selected section, and missing required budget fields given distinct invalid-request or blocking outcomes with named diagnostics and nonzero exits? [Completeness, Spec §FR-011–FR-012]
-- [ ] CHK005 Does the contract explicitly reject a malformed, mis-cased, placeholder, or unsupported selected-section `Reviewability-Exception` with a named reason, preserve normal budget evaluation, and block an over-budget result? [Clarity, Spec §FR-013]
-- [ ] CHK006 Are unrelated-section, generated-text, code-fence, and non-line-anchored pragmas barred from overriding the selected budget? [Coverage, Spec §FR-011–FR-013]
+- [ ] CHK004 Are missing `spec_id`, missing selected section, and missing required budget fields given distinct invalid-request or blocking outcomes with named diagnostics and nonzero exits? [Completeness, Plan §Slice B; #694 compatibility baseline]
+- [ ] CHK005 Does the contract explicitly reject a malformed, mis-cased, placeholder, or unsupported selected-section `Reviewability-Exception` with a named reason, preserve normal budget evaluation, and block an over-budget result? [Clarity, Plan §Slice B; #694 compatibility baseline]
+- [ ] CHK006 Are unrelated-section, generated-text, code-fence, and non-line-anchored pragmas barred from overriding the selected budget? [Coverage, Plan §Slice B; #694 compatibility baseline]
 - [ ] CHK007 Are missing, extra, duplicate, placeholder, nonnumeric, and at-block slice rows specified to block with the offending slice or field named? [Edge Case, Spec §FR-014, §FR-029]
 - [ ] CHK008 Is an over-block aggregate acceptable only when every complete declared slice is below its applicable block line, with ordinary file and surface thresholds maintained for greenfield? [Consistency, Spec §FR-014, §FR-028–FR-029]
 - [ ] CHK009 Is a malformed or unknown declared quality command required to fail G0 with a named config diagnostic rather than letting a detected or absent command yield a green result? [Clarity, Spec §FR-016]
@@ -36,6 +36,8 @@
 - [ ] CHK016 Is the outcome after a failed push, fresh-head query, or remote-head mismatch specified as pending review threads with no reply or resolution, retained local commit, and an actionable retry condition? [Recovery, Spec §FR-021]
 - [ ] CHK017 Are serial reply, resolution, and read-back confirmation specified only after a successful push and fresh matching PR head, so no success path can pass on incomplete evidence? [Consistency, Spec §FR-020–FR-021]
 
+- [ ] CHK018 Does legacy-link handling distinguish a verified existing target from a broken target, with repair bound to the actual scaffold output and containing roadmap? [Failure Boundary, Spec §FR-025]
+
 ## Notes
 
 - Mark items `[x]` only after reviewer evaluation of requirements quality.
@@ -43,3 +45,5 @@
 - `checklists/requirements.md` follows its separate built-in lifecycle.
 
 **Second checklist pass**: Re-evaluated `/speckit-checklist error-handling` after the four requirements repairs. No new item was needed; CHK005, CHK009, CHK015, and CHK016 stay unchecked for reviewer evaluation, with their resolved gap markers removed.
+
+- Plan rescope reconciliation: removed FR-011–FR-013 remain compatibility baseline only. The requested thirteen-row Post behavior and HRNS-017 host-lifetime limits remain unchanged. Existing checkbox ownership is preserved; domain reevaluation is pending.

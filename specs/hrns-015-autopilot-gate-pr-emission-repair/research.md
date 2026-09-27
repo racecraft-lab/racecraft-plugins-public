@@ -1,91 +1,111 @@
 # Research: HRNS-015 Planning Decisions
 
-This record resolves design choices left to Plan by the clarified [spec](spec.md) and the design concept's Q1–Q11 log. It does not change those decisions. External documentation lookup through the SpecKit research broker was attempted on 2026-09-25: web search was unavailable without a Tavily key and documentation lookup was provider-rate-limited. The GitHub route below is grounded in the existing repository GraphQL pattern and must pass failing-first fixtures before release; the unavailable lookup is not treated as verification.
+**Updated**: 2026-09-26. This Plan research pass used the bound project-local skill, native setup once, and three read-only research roles; the domain role received a bounded documentation follow-up. Actual results were consumed. Decisions below distinguish supplied owner authority, local artifact evidence, design choices and unqualified runtime behavior.
 
-## R1 — Four review slices and estimate reconciliation
+## Evidence and Capability Status
 
-**Decision:** Ship A → B → C1 → C2. Use the conservative 1,442-LOC sum of A 282, B 410, C1 335, and C2 415 for current aggregate planning. Recalculate actual diff and file counts at each PR boundary.
+- Native setup returned the existing feature/Plan paths and branch with exit0; it retained the existing Plan instead of overwriting it from the template. The reviewability preset Plan/spec/tasks templates and constitution 2.0.0 were loaded directly.
+- Local mandatory context: current spec, design concept Q&A/Open Questions, six existing Plan artifacts and four checklists. A narrow inventory parser counted candidate unions; these are not actual base/head diffs.
+- Domain research: four broker research_search calls returned search_unavailable, followed by three docs_query calls (Python, JSON Schema, GitHub) returning fetch_failed/rate_limited. Every result reported screening_mode=jev, no chunks, no dropped results and no source URLs. No official-source factual claim was obtained.
+- Independent repository/spec research: the cloud read was denied for private-context transmission; the explicitly selected local read failed before files were read. No alternate cloud route was used. Independent source-behavior and checklist audits therefore remain unavailable.
+- Bounded child local evidence identified registered packet/read-only, phase-coverage, spec-index, scaffold and lifecycle tests; HEAD 7a994ba01 / origin/main 09c4c5ada checkout state is evidence of history, not proof of each behavior.
 
-**Rationale:** Q11's 1,362-LOC value was a separate whole-feature estimate with different signals before C was split. The four slice values sum to 1,442; neither number may silently replace the other. The 80-LOC difference is an estimator artifact to investigate, not a measured refactor size. C1's host and executor inventory brings its file projection to 24, leaving one-file headroom under the strict less-than-25 limit.
+**Fallback disclosure**: No installed official-documentation capability was usable; used the supplied workflow decisions and local contract/artifact evidence. Confidence is medium for the local design and low for unverified external API/schema/runtime behavior. No installed independent repository-reading capability was usable; used mandatory Plan context and narrow local metadata searches, with medium confidence in artifact consistency and low confidence in complete shipped-versus-remaining behavior coverage.
 
-**Alternatives considered:** Three slices leaves C above the file limit; five slices is unnecessary without measured overage. Treating the 1,362 aggregate as the sum would be arithmetically false.
+**Capability path**: requirements/context → bound spec/design/preset/constitution reads; candidate sizing → local inventory metadata parser; official docs → research broker unavailable; independent code/spec audit → local delegation unavailable. Evidence: [spec](spec.md), [design concept](../../docs/ai/specs/.process/HRNS-015-design-concept.md), [inventory](.process/slice-inventory.md), native setup result and consumed research-agent summaries. Runtime correctness still requires failing-first acceptance fixtures.
 
-## R2 — Required-refactor estimator signal
+## R1 — Approved Delivery and Current Proposal
 
-**Decision:** Add optional `required_refactor_files` to `estimate-spec-size`. It is a nonnegative integer count of additional existing files whose required refactor work is not already included in `files`. The existing baseline remains unchanged; add 40 LOC per such file **after** the existing modify discount. The 400-LOC ceiling and ceil-based suggested slice count then use the new total. `spike` still returns its fixed result first. Missing/invalid values normalize to zero through the existing size-signal policy.
+**Decision**: Retain owner-approved A → B → C1a → C1b → C2. Present eighteen candidate increments only as the owner-review alternative after B2a leaves scope. Do not convert the instruction to resolve blockers into approval of eighteen PRs.
 
-**Rationale:** The existing estimator gives a 40-LOC file weight. Using that weight for distinct required refactor files is the smallest explainable extension and ensures mandatory refactor work survives the generic modify discount. The caller must avoid double counting by supplying only files excluded from `files`. Q11's 292-to-1,362 drift involved different stories, files, and FRs and does not justify an inferred weight.
+**Rationale**: The inventory's five union counts are A 4 production / 39 total, B 3 / 36, C1a 1 / 29, C1b 4 / 29 and C2 0 / 40; removing shipped link-only README/template paths makes C2 34. Every approved group exceeds 24 candidate paths. These conservative candidates may not all change in the actual diff and the source/generated fan-out still needs review; none is a qualified changed-file minimum.
 
-**Alternatives considered:** A boolean surcharge has no scope measure; multiplying every estimate would distort unaffected calls; deriving 80 LOC from Q11 would assert causation not in the evidence.
+**Alternatives considered**: Silently keeping four slices contradicts the explicit C1 split; silently adopting eighteen PRs fabricates ratification; excluding generated/process paths or waiving strict caps contradicts scope policy. Explicit owner rescope is the alternative to ratifying the candidate split.
 
-## R3 — Reviewability gate and issue #637
+Historical Q11 signals differ: 1,362 whole-feature versus 1,442 sum (282+410+335+415); later estimates are also not current diff proof. No refactor weight is inferred from their differences. Current per-slice LOC remains not estimated. See [Plan budget](plan.md#five-approved-slices-and-budget-evidence).
 
-**Decision:** `reviewability-gate` setup requires `inputs.spec_id`. Match exactly one case-sensitive `### <spec_id>:` authored roadmap heading, ending at the next peer-level entry. Read all required budget fields and primary surfaces only from that section. A missing input is an invalid request; missing section or field is `status: block`, `pass: false`, exit 1, with the spec ID and field in the blocker. Honor only a line-anchored accepted `Reviewability-Exception` in that selected authored section; keep accepted classes `refactor`, `infra`, `upgrade`. Reject malformed, mis-cased, placeholder, or unsupported selected-section candidates with a named `exceptions.rejected` reason and ordinary budget evaluation; an over-block budget remains blocked. For a split, use ordered `Slices:` IDs and `Slice Budgets:` table columns `Slice`, `Estimated LOC`, `Production files`, `Total files`; require a unique complete nonnegative-integer row for each ID and no other rows. Report sum across rows and judge each row below block thresholds. The 1.5x greenfield multiplier changes LOC warn/block only.
+## R2 — Refactor Estimate
 
-**Rationale:** This directly covers issue #637's oversized first/small last entry, selected `infra` pragma, and missing-budget reproduction. It prevents a neighboring entry or generated text from changing the named result and preserves the existing typed override vocabulary.
+**Decision**: Retain optional required_refactor_files as additional distinct existing-file work absent from files. Use the existing 40 LOC file weight after the ordinary modify discount, preserving the existing base result and spike precedence. Invalid/absent signals use the existing normalization policy rather than a new exception path.
 
-**Alternatives considered:** Last-match regex repeats the bug; defaulting a missing field to zero is false evidence; a new `split` exception avoids checking slice budgets; multiplying file/surface thresholds for greenfield exceeds the documented allowance.
+**Rationale**: The spec delegates shape/weight to Plan; extending the existing signal is simpler than introducing a second estimator. This is a design contract, not a fresh proof that the current implementation supports it.
 
-## R4 — Spec index in required artifact check
+**Alternatives considered**: A boolean has no scope measure; a global multiplier distorts unrelated estimates; historical292→1,362 or80LOC drift cannot establish a measured weight.
 
-**Decision:** Determine candidate membership from the source Git index, including staged additions but excluding all untracked files even inside a tracked directory. The refresh script calls the existing spec-index generator as a named step after metadata, payload, and marketplace generation. Plain refresh writes; `--check` compares in an isolated copy and names stale tracked index paths.
+## R3 — Scoped Baseline, Split Syntax and Greenfield
 
-**Rationale:** The required artifact-consistency job already runs that script. This makes stale backlinks and roadmap home entries fail without a new CI workflow step.
+**Decision**: Preserve #694's named-entry/pragma/missing-budget baseline. Remaining changes are ordered complete slice aggregation and LOC-only 1.5x greenfield allowance. Exactly one nonnegative integer row per declared ID; reject missing/extra/duplicate/placeholder/nonnumeric/at-block rows and report ordered slice_results plus aggregate existing count fields. Ordinary file/surface limits and typed classes refactor/infra/upgrade remain.
 
-**Alternatives considered:** A separate optional docs gate leaves required CI green; filesystem-only scanning includes untracked files and can yield a local-only backlink.
+**Design Concept Open Question 3 — slice-budget syntax**: Ordered Slices IDs and a Slice Budgets Markdown table with columns Slice, Estimated LOC, Production files, Total files. No literal accepted exception pragma in generated templates.
 
-## R5 — Marker visibility and command precedence
+**Rationale**: Q6 settles per-slice policy; Open Question 3 leaves syntax to Plan. FR-011–FR-013 are explicitly removed by the current rescope; shipped baseline fixtures must stay green, not be claimed as new red-first repairs.
 
-**Decision:** Tokenize a single-line non-nested bracket tag by comma, trim spaces/tabs, and count one exact case-sensitive `Gap` token per qualifying tag. Use one Markdown visibility filter for gap and clarification count/detail paths that excludes inline, fenced, and indented code. Keep other marker types' behavior. In quality-gates config, an optional per-slot command overrides detection for that slot and reports `source: declared`; undeclared slots follow existing detection.
+**Alternatives considered**: Last-match values or zero defaults hide missing evidence; a new split exception bypasses actual budgets; applying greenfield to file/surface limits changes the agreed allowance.
 
-**Rationale:** This covers both checklist forms and quoted examples while avoiding a separate rule in each gate. A slot map follows the existing detector's output shape without parsing host AGENTS documents.
+## R4 — Tracked Spec Index and Required Refresh
 
-**Alternatives considered:** Prefix matching misses later-token Gap; raw-line matching counts examples; parsing arbitrary prose command tables makes the runner depend on host documentation structure.
+**Decision**: Source Git-index membership decides inputs, including staged additions and excluding every untracked candidate, even within a tracked directory. Existing generator joins release-artifact refresh; isolated check names stale tracked output paths. Preserve source membership in isolated validation.
 
-## R6 — Packet and Post contracts
+**Rationale**: Q10 chooses the existing required artifact job; no new workflow job or optional-only docs gate. Generated historical formal-001 text belongs in test-owned fixtures, not a runtime read of this active feature.
 
-**Design Concept Open Question 3 — optional release_note:** Adopt one optional `release_note` packet input and a fourth final-body editable field, as Q3 decided; do not rely on a full-body override or post-packet manual edit.
+**Alternatives considered**: Filesystem-only scanning can create local-only links; manual generated edits and a separate optional gate do not meet the required check contract.
 
-**Decision:** A final packet may carry one optional release-note field after the eight required headings, with one editable body and protected heading/markers; draft packets never gain it. The generated Phase 6.5 Verdict line sits under Verification, is protected, and is recomputed on refresh from the workflow table. The packet dirty guard ignores only the current packet's canonical untracked JSON/body/validation paths. Make `POST_STEPS` the 13-row source for a **new completion-boundary rule** that reads persisted workflow and state and rejects missing, duplicate, pending, or in-progress rows. Both hosts invoke it immediately before success. Existing `status-evidence` remains an audit, not this gate.
+## R5 — Marker Visibility and Quality Commands
 
-**Rationale:** Q1, Q3, and Q7 explicitly decided these observable behaviors. The current phase-coverage guard has only 11 Post names and its `status-evidence` rule does not prove every row completed.
+**Decision**: Each visible single-line non-nested bracket tag counts once if comma-separated, whitespace-trimmed tokens contain exact case-sensitive Gap. Gap and clarification count/detail paths share exclusion of inline/fenced/indented code. Other marker types stay unchanged.
 
-**Alternatives considered:** Hand editing PR body breaks packet provenance; treating overview Confidence Gate status as Verdict is wrong; broad untracked exemptions admit unrelated changes; re-invoking `status-evidence` without a new rule misses the defect.
+Quality commands are an optional validated map of the four existing quality slots. Declarations override only their slot; effective commands remain strings, with additive command_sources and quality-gate source=declared. Invalid object/key/value fails G0 with a named diagnostic; absent/undeclared slots retain detection. Preserve approved thresholds/basis.
 
-## R7 — Team completion evidence
+**Rationale**: Q4/Q5 and clarified boundaries define real markers; Q9 chooses explicit config rather than parsing arbitrary agent prose. General detected mypy/ruff commands do not authorize executing them outside the repository's pinned lint environment.
 
-**Decision:** Each team-capable executor on both hosts reports clean completion only after it has collected each child result or used a supported stop operation for an unfinished child, requested graceful shutdown, and confirmed no active child plus cleanup complete. Its structured result names any unresolved child or teardown confirmation. Do not infer Codex child lifetime from Claude behavior; HRNS-017 retains that host observation.
+**Alternatives considered**: Prefix/raw-line matching misses real compound tags or counts examples; parsing arbitrary AGENTS tables adds a fragile convention; fallback on invalid declarations hides config failure.
 
-**Rationale:** The requirement is about evidence at executor return, independent of whether a host would auto-clean children on parent exit.
+## R6 — Packet Rendering and Confidence Placement
 
-**Alternatives considered:** Disabling team tools conflicts with existing tool scope; assuming host auto-cleanup would make the result unverifiable.
+**Decision**: One optional nonblank unfenced release_note adds exactly one final Release note heading after the eight required headings and one renderer-created release-note fence in a fourth editable field. Reject explicit wrong-type/blank/fence-breaking inputs. Heading and balanced marker lines are protected; only enclosed note content is editable. No absent-note or draft default is invented.
 
-## R8 — Resolve-pr GitHub API route and ordering
+**Design Concept Open Question 8 — verdict placement**: Render the current Phase 6.5 table Verdict as a protected generated line under Verification, including refresh with a supplied body. Missing/invalid verdict blocks final emission; overview status/score is not a substitute. Retain the single UAT Runbook heading between How To UAT and Verification.
 
-**Decision:** Reuse `gh api graphql`, already used by the Claude resolve-pr skill for `repository.pullRequest.reviewThreads(first: 100)`. Traverse the review-thread connection through `pageInfo.hasNextPage/endCursor` and each thread's comments connection independently through its own cursor, never relying on the first ten comments. For a nested continuation, query that thread by its GraphQL node ID; treat missing cursor or any failed page as incomplete feedback and stop. After all fixes and full verification, commit and push; then make a fresh GraphQL query for the PR's `headRefOid` (the field is already used in `scripts/validate-release-pr-integrity.py`) and compare it with the intended local commit SHA. Only a match permits serial reply, resolve, and confirmed resolved-state readback. Failed verification prevents push and leaves any earlier local fix commits identified in the failure report; failed push/query/mismatch leaves the commit local and threads pending. Retry requires full verification, push, and a new matching remote-head query.
+**Rationale**: Q3 chooses an optional packet input; Open Question 8 leaves the location to Plan. These are distinct from Open Question 3 and Q8's envelope scope.
 
-**Rationale:** One GraphQL API route provides thread IDs, comment pagination, and PR-head identity. The fresh post-push query prevents a locally verified but unpublished fix from being treated as available to reviewers. General GitHub cursor pagination and the repository's existing route support the shape; exact schema/CLI behavior is acceptance-fixture work because the broker could not fetch new documentation during Plan.
+**Alternatives considered**: Hand-writing an entire body or post-packet edit breaks provenance; a new standalone verdict section adds an unnecessary heading; stale supplied body text is not current evidence.
 
-**Alternatives considered:** The existing single-page query truncates feedback; reply before push races publication; a separate REST ref route adds a second API pattern without an identified need.
+## R7 — Packet Guard, Post and Executor Return
 
-## R9 — Blind-spot completion and explicit abandonment
+**Decision**: Exempt only this validated packet's three canonical untracked paths; unrelated changes, tracked modifications, another packet or unreadable status still block. Derive the requested 13 Post names from POST_STEPS and enforce full completion against both persisted records. Unique exact-name legacy progress survives; missing/renamed rows start pending. Only identical verified absent-extension reason-coded skips for optional canonical extension rows qualify at full-run success; staged returns do not claim full completion.
 
-**Decision:** Remove the fixed five-minute wait. A nonempty late analyst result records `ran` in the Design Concept header's existing `**Blind-spot pass:**` line. A no-findings continuation records exactly one of `dispatch error: <message>`, `empty return`, or `operator abandonment: <instruction reference>` there and uses the same reason in the operator status line. “Operator abandonment” is accepted only from an explicit operator instruction to proceed without those findings, visible in the active conversation; elapsed time, a silent child, or parent exit is not that signal. A request to stop the entire workflow stops it rather than continuing.
+Team-capable executor clean return requires actual child results or supported stops and genuine teardown/no-active-child/cleanup confirmation. Missing capability/evidence stays unresolved in the result; HRNS-017 owns separate lifetime observations.
 
-**Rationale:** This is an auditable signal without a new timer, state store, or guessed host lifecycle. It preserves the record location found in the current scaffold/design concept.
+**Rationale**: Q1/Q7 and FR-018/019 choose these outcomes. Historical list counts are not assertions about current 2.37.0; the requested 13-row invariant must be tested. Ordinary status-evidence validation and an advisory confidence score are separate contracts.
 
-**Alternatives considered:** A longer fixed deadline can still discard valid late results; interpreting timeout as abandonment fabricates operator intent; a new UI field is outside this slice.
+**Alternatives considered**: Broad untracked exemptions, inferred progress by row position, or assumed host cleanup fabricate evidence. No host-policy ignore or force-add workaround is designed.
 
-## R10 — Full request examples and issue #638 links
+## R8 — Review Feedback API and Ordering
 
-**Design Concept Open Question 8 — bounded inline envelopes:** Repair only the named live failure sites on both hosts with complete registered request envelopes; HRNS-019 owns the remaining broad sweep.
+**Decision**: Reuse the existing gh api graphql pattern. Independently traverse reviewThreads and each thread's comments via pageInfo.hasNextPage/endCursor; a missing cursor or failed/inconsistent page blocks mutation. A thread-node query handles nested continuation. Fix, fully verify, commit, push, query fresh PR headRefOid, compare intended commit, then serially reply/resolve/read back each resolved state.
 
-**Decision:** Replace bare names only at the five named live failure sites with complete existing runner envelopes, on both hosts. New roadmap template links point under `docs/ai/specs/.process/<SPEC-ID>-workflow.md`. When scaffold updates an existing roadmap, it resolves a legacy link against its containing document; preserve it only when its target exists, otherwise write the actual new output location.
+**Rationale**: The local prior design records this integration shape; no fresh official schema/documentation result was returned. Exact query/mutation field behavior is therefore a validation obligation, not an externally verified fact. Failed verification prevents push; failed push/query/mismatch leaves local commits and review threads pending.
 
-**Rationale:** This fixes observed malformed calls and issue #638's broken generated link while leaving the full call-site sweep to HRNS-019. The target-existence rule avoids breaking legitimate legacy layouts.
+**Alternatives considered**: One-page collection truncates feedback; replying before remote-head match races publication; a second API route adds a pattern without evidence of need.
 
-**Alternatives considered:** Rewriting every bare call expands scope into HRNS-019; always rewriting legacy links changes working documents; preserving every legacy link retains broken output.
+## R9 — Analyst Results and Explicit Abandonment
 
-## Research status
+**Decision**: No fixed blind-spot or whole-workflow wall-clock limit. Await the actual summary. Late nonempty result is ran; only dispatch error, empty return or explicit operator abandonment permits continuation without findings. Record the same specific reason in the existing Blind-spot pass header and operator status. Silence/time is not abandonment; an entire-workflow stop means stop.
 
-All Plan-level choices are recorded. The exact external GitHub schema was not freshly fetched because the research broker was unavailable/rate-limited; the route is based on existing repository usage and requires failing-first fixture validation. The operational decision between a single split-PR run and separate runs belongs to the Atomicity Route after Tasks. Codex child survival after parent exit belongs to HRNS-017; neither item blocks this design.
+**Rationale**: Q2 removed the deadline and #642 already removed the autopilot wall-clock budget. The stale Tasks two-hour instruction is a workflow reconciliation defect, not a new owner-imposed cap.
+
+**Alternatives considered**: A larger timeout can still discard findings; inferring abandonment invents intent; a new state/UI field is unnecessary.
+
+## R10 — Bounded Envelopes and Existing Links
+
+**Decision**: Q8 remains failure sites now, rest to HRNS-019. Both hosts get complete tested registry envelopes for status index-check/topology, scaffold reviewability/worktree placement and phase index-writing only. No broad sweep or self-describing-error redesign.
+
+For existing roadmaps, resolve a legacy target relative to its containing document; preserve only a real verified workflow file, otherwise repair to actual .process output. The new-template/README link fix is baseline from #698 and is not a new operation in C2.
+
+**Rationale**: This preserves Q8 and the surviving half of FR-025 without duplicating shipped scope.
+
+**Alternatives considered**: All 58 bare sites expand into HRNS-019; unconditional legacy rewrite breaks working links; unconditional preservation keeps broken links.
+
+## Research Completion Limits
+
+Plan choices delegated by the clarified requirements are recorded; Open Questions3/8 are explicitly answered. Actual owner delivery ratification is still pending. Official API/schema/runtime facts and an independent full source audit were unavailable. Source rescope assertions come from the exact workflow/spec inputs, with no claim of fresh behavior qualification. Tasks/Analyze must reconcile remaining inventory/state/checklists and run current gates. Nothing here claims implementation, G3/G6, actual LOC or valid marker emission.
