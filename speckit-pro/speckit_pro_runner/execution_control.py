@@ -24,7 +24,8 @@ SCHEMA = "execution-control/v1"
 KINDS = {"implementation", "corrective", "verification", "infrastructure"}
 OUTCOMES = {"completed", "failed", "unknown", "expected_tdd_red"}
 CORRECTIVE_REFUSALS = {"failure_family_budget_exhausted", "corrective_run_budget_exhausted"}
-RUNNER_BYPRODUCT_DIRECTORIES = frozenset({(".process", "execution-control"), (".process", "verification")})
+RUNNER_BYPRODUCT_DIRECTORIES = frozenset({(".process", "execution-control"), (".process", "verification"),
+                                          (".process", "task-results")})
 
 
 def is_runner_byproduct(relative: str) -> bool:

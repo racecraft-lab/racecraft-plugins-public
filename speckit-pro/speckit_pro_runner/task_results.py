@@ -305,7 +305,7 @@ def task_results(root: Path, inputs: dict[str, Any], mode: str) -> dict[str, Any
     blocks. This JSON boundary cannot establish that a caller is that parent.
     Deterministic fixture success is therefore always native-unqualified.
     """
-    from .execution_control import exclusive_ledger
+    from .execution_control import exclusive_ledger, ignore_owned_directory
     from .helpers.mutation import write_file_atomic
 
     action = inputs.get("action")
@@ -338,6 +338,7 @@ def task_results(root: Path, inputs: dict[str, Any], mode: str) -> dict[str, Any
                 if current_binding(root, tasks)[0] != binding:
                     raise ValueError("source changed before journal commit")
                 validate_lineage(root, path, journal)
+                ignore_owned_directory(path.parent)
                 write_file_atomic(path, canonical_bytes(journal).decode("utf-8") + "\n", trust_root=root, expected_snapshot=snapshot)
             latest = {report["batch_id"]: report for report in journal["reports"]}
             unfinished = any(r["status"] == "unfinished" for report in latest.values() for r in report["results"])

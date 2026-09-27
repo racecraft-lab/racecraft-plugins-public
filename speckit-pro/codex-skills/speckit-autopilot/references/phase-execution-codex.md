@@ -877,8 +877,9 @@ for phase in PHASES starting from first_pending:
        For phase 7 (implement): run: git add -A && git commit
        (implementation changes include src/, tests/, etc.)
        Runner byproducts are never committed: the runner writes a
-       .gitignore holding * into .process/execution-control/ and
-       .process/verification/, so git add -A cannot stage them. If
+       .gitignore holding * into .process/execution-control/,
+       .process/verification/, and .process/task-results/, so
+       git add -A cannot stage them. If
        git ls-files shows such a path already tracked (from an older
        plugin version), run git rm -r --cached -- <path> before this commit.
    11. Advance to next phase (next iteration of loop) and write the new
