@@ -9,7 +9,9 @@
 
 ## User Scenarios & Testing *(mandatory)*
 
-The user first ratified A → B → C1a → C1b → C2 after C1 exceeded the delivery cap. A complete path inventory later proved A, B, and C2 also exceed the cap. The 19-increment revision is A1a → A1b → A2 → A3 → B1a → B1b → B2a → B2b → B3a → B3b → C1a1 → C1a2 → C1b1 → C1b2 → C2a1 → C2a2 → C2a3 → C2b1 → C2b2. Every increment carries exactly one story identity; repeated parts use unique `usN-partK` marker IDs with `parent_marker_id=usN` and conservatively counts six recurring tracked workflow/process/evidence paths. [slice-inventory.md](.process/slice-inventory.md) names all 14–24 candidate paths per increment. A1a delivers a prefilled protected note; A1b completes the editable-field contract by changing both renderer and validator. This is a proposed allocation: actual reviewable LOC, final changed paths, and a valid current `pr_marker_plan` remain unverified. Each story remains independently demonstrable with failing-first acceptance cases and both host variants where host-facing.
+The user first ratified A → B → C1a → C1b → C2 after C1 exceeded the delivery cap. A complete path inventory later proved A, B, and C2 also exceed the cap. The 19-increment revision, less B2a after the 2026-09-26 rescope, is A1a → A1b → A2 → A3 → B1a → B1b → B2b → B3a → B3b → C1a1 → C1a2 → C1b1 → C1b2 → C2a1 → C2a2 → C2a3 → C2b1 → C2b2. Every increment carries exactly one story identity; repeated parts use unique `usN-partK` marker IDs with `parent_marker_id=usN` and conservatively counts six recurring tracked workflow/process/evidence paths. [slice-inventory.md](.process/slice-inventory.md) names all 14–24 candidate paths per increment. A1a delivers a prefilled protected note; A1b completes the editable-field contract by changing both renderer and validator. This is a proposed allocation: actual reviewable LOC, final changed paths, and a valid current `pr_marker_plan` remain unverified. Each story remains independently demonstrable with failing-first acceptance cases and both host variants where host-facing.
+
+**Rescope (2026-09-26)**: speckit-pro 2.37.0 on `main` already satisfies FR-011–FR-013 (#637, fixed by #694), the new-template half of FR-025 (#638, fixed by #698), and the repeated-path marker contract gap (#675, fixed by #676). Those requirements and the B2a increment leave this spec; US6 keeps only slice budgets and the greenfield allowance, and FR-025 keeps only legacy-link preservation and repair. The proposed order is now 18 increments.
 
 #### User Story 1 - Release note in the final packet (Priority: P1) [US1]
 
@@ -82,22 +84,19 @@ As a contributor, I see stale spec-index backlinks and home entries fail the req
 2. **Given** that stale index, **when** release artifacts are regenerated, **then** the index is refreshed and the check passes.
 3. **Given** a candidate absent from the source Git index, including a file inside a tracked spec directory, **when** the index is generated or checked in an isolated copy, **then** neither backlinks nor the roadmap home index include it; staged additions remain eligible.
 
-#### User Story 6 - Reviewability budget for the named spec (Priority: P1) [US6]
+#### User Story 6 - Slice budgets and greenfield allowance for the named spec (Priority: P1) [US6]
 
-As an operator, I can evaluate the named roadmap entry's reviewability budget without another entry's numbers affecting the result.
+As an operator, I can split an over-budget roadmap entry into declared slices and have setup judge each slice, with the greenfield allowance applied only where it belongs.
 
-**Why this priority**: The observed gate read the last roadmap entry instead of HRNS-015.
+**Why this priority**: Setup-mode scoping to the named entry shipped in #694; without slice budgets, a legitimately split spec still blocks as one oversized total.
 
-**Independent Test**: Evaluate two roadmap entries with different budgets and exercise missing fields, typed exceptions, and declared slices.
+**Independent Test**: Evaluate a named entry with complete, incomplete, duplicate, extra, malformed, and over-line slice rows, and a greenfield entry.
 
 **Acceptance Scenarios**:
 
-1. **Given** a named spec, **when** setup mode evaluates reviewability, **then** it considers only that spec's section and primary surfaces.
-2. **Given** a missing named section or required budget field, **when** setup mode evaluates it, **then** it returns `status: block`, `pass: false`, exit 1, and a blocker naming the spec ID and missing field rather than borrowing another entry's value.
-3. **Given** a valid line-anchored typed exception in the selected authored roadmap section, **when** the gate evaluates it, **then** its status is `exception` with the exact accepted class; a pragma in another entry or generated text has no effect.
-4. **Given** an over-block-line total, **when** the ordered slice list and budget table have exactly one complete, numeric row per slice and every slice is below each block line, **then** setup reports the aggregate and accepts the split; missing, extra, duplicate, malformed, or over-line rows block.
-5. **Given** a greenfield entry, **when** setup evaluates its budget, **then** the documented 1.5x allowance changes LOC thresholds only; production-file, total-file, and surface thresholds retain their ordinary limits.
-6. **Given** declared slice budgets, **when** setup evaluates them, **then** it aggregates their LOC and file counts for whole-feature reporting and evaluates each slice against the block lines.
+1. **Given** an over-block-line total, **when** the ordered slice list and budget table have exactly one complete, numeric row per slice and every slice is below each block line, **then** setup reports the aggregate and accepts the split; missing, extra, duplicate, malformed, or over-line rows block.
+2. **Given** a greenfield entry, **when** setup evaluates its budget, **then** the documented 1.5x allowance changes LOC thresholds only; production-file, total-file, and surface thresholds retain their ordinary limits.
+3. **Given** declared slice budgets, **when** setup evaluates them, **then** it aggregates their LOC and file counts for whole-feature reporting and evaluates each slice against the block lines.
 
 #### User Story 7 - Refactor-aware size estimate (Priority: P2) [US7]
 
@@ -241,9 +240,9 @@ As an operator following a generated roadmap, I can open its workflow links at t
 - **FR-008** [US4]: G4 gap counting and G1/G2/G3 and `count-markers clarifications/all` clarification counts and details MUST exclude markers in inline, fenced, and indented Markdown code, while preserving counts in visible prose and leaving other marker types unchanged. Operator instructions MUST describe the same rule.
 - **FR-009** [US5]: Spec-index generation and isolated checking MUST exclude every candidate absent from the source Git index, including files inside tracked spec directories, from backlinks and the roadmap home index; staged additions remain eligible.
 - **FR-010** [US5]: Release-artifact regeneration MUST refresh the spec index; its required `--check` MUST fail on stale tracked index content and name changed index paths.
-- **FR-011** [US6]: Setup reviewability evaluation MUST require a spec identifier, match the complete case-sensitive `### <spec_id>:` roadmap entry heading, and consider only that entry through the next peer-level heading and its primary surfaces.
-- **FR-012** [US6]: Setup reviewability evaluation MUST return `status: block`, `pass: false`, exit 1, and a blocker naming the spec ID and missing field when the named section or any required budget field is missing.
-- **FR-013** [US6]: A valid line-anchored `Reviewability-Exception` with an accepted class in the selected authored roadmap section MUST produce `status: exception`, `pass: true`, and an `exception_class` field containing that exact class. A malformed, mis-cased, placeholder, or unsupported candidate pragma in that selected authored section MUST be reported as a rejected exception with a named reason and MUST NOT override the ordinary budget result; an over-block budget therefore remains `status: block`, `pass: false`, exit 1. Other sections and generated text MUST NOT supply an override.
+- **FR-011** [US6]: *Removed 2026-09-26: satisfied on `main` by #694 (issue #637).*
+- **FR-012** [US6]: *Removed 2026-09-26: satisfied on `main` by #694 (issue #637).*
+- **FR-013** [US6]: *Removed 2026-09-26: satisfied on `main` by #694 (issue #637).*
 - **FR-014** [US6]: An over-block-line spec total MUST be acceptable only when the declared ordered slice IDs match unique complete numeric budget rows exactly and every slice is below each block line. For a complete split, the gate MUST report row-sum aggregates in its existing top-level LOC and file-count fields and an ordered `slice_results` array with each slice ID, three counts, status, pass value, warnings, and blockers. Missing, extra, duplicate, malformed, or over-line slice budgets MUST block with `pass: false` and exit 1; a caller without a split retains the existing response shape.
 - **FR-015** [US7]: Size estimation MUST accept a required-refactor signal and account for it in estimated scope and suggested slice count.
 - **FR-016** [US8]: An optional `commands` object in `.specify/quality-gates.json` MAY declare a nonblank command string for each existing quality slot `COMPLEXITY`, `MUTATION`, `DEPENDENCY_RULES`, or `DEPENDENCY_AUDIT`. Each declaration MUST override detection only for that slot while retaining the string-valued `detect-commands.commands` map and reporting `declared` in an additive `command_sources` map and that quality slot's `gates` record. A non-object `commands` value, unknown key, or blank/non-string command MUST invalidate the config, fail G0 with a nonzero exit and a diagnostic naming the invalid field, and MUST NOT fall back to detection as a green result; omitted `commands` and undeclared slots MUST preserve normal detection and existing response fields.
@@ -255,16 +254,16 @@ As an operator following a generated roadmap, I can open its workflow links at t
 - **FR-022** [US12]: Scaffold MUST wait for a dispatched blind-spot analyst's summary without a fixed five-minute deadline.
 - **FR-023** [US12]: Scaffold MAY proceed without findings only for a dispatch error, empty return, or operator abandonment. It MUST record the outcome and specific reason in the Design Concept’s existing `**Blind-spot pass:**` line and show the same reason in its operator status line. A late nonempty result MUST be recorded as `ran` regardless of elapsed time. `operator abandonment` MUST require explicit operator action; elapsed time alone MUST NOT establish abandonment.
 - **FR-024** [US13]: Both hosts MUST provide complete, tested request envelopes for status `generate-spec-index-check` and `o5-topology`, scaffold reviewability and worktree placement, and phase index writing; the broader call-site sweep remains HRNS-019.
-- **FR-025** [US14]: New roadmap template workflow links and published path guidance MUST resolve to scaffold output under `docs/ai/specs/.process/`; updates to existing roadmaps MUST preserve verified legacy links that resolve to real workflow files and repair broken links to the actual output.
+- **FR-025** [US14]: Updates to existing roadmaps MUST preserve verified legacy workflow links that resolve to real workflow files and repair broken links to the actual scaffold output under `docs/ai/specs/.process/`. (The new-template links already resolve there on `main`, from #698.)
 - **FR-026** [US1–US14]: Every changed host-facing behavior MUST have equivalent Claude Code and Codex instructions in the same review slice and failing-first fixture evidence for its acceptance scenarios.
-- **FR-027** [US1–US14]: The PRD acceptance criteria AC-16.2, AC-16.5, AC-16.8, and AC-16.10, plus the HRNS-015 and HRNS-019 roadmap entries, MUST reflect the decided scope, 19-increment proposed budget, and ownership of deferred work.
+- **FR-027** [US1–US14]: The PRD acceptance criteria AC-16.2, AC-16.5, AC-16.8, and AC-16.10, plus the HRNS-015 and HRNS-019 roadmap entries, MUST reflect the decided scope, 18-increment proposed budget, and ownership of deferred work.
 - **FR-028** [US6]: The documented 1.5x greenfield allowance MUST apply only to reviewable-LOC thresholds; production-file, total-file, and primary-surface limits MUST retain their ordinary thresholds.
 - **FR-029** [US6]: Setup MUST aggregate every declared slice budget for whole-feature reporting and evaluate each complete slice against the block thresholds, without borrowing another roadmap entry's values.
 
 ### Reviewability Notes
 
 - Typed reviewability exceptions remain rare, operator-owned overrides. Accepted classes remain `refactor`, `infra`, and `upgrade`; no fourth class is introduced. Generated templates, generated zones, `.process` files, PR bodies, and code fences are not valid provenance.
-- Each review slice is one reviewable PR, with both hosts represented for each behavior change. Proposed review order is A1a → A1b → A2 → A3 → B1a → B1b → B2a → B2b → B3a → B3b → C1a1 → C1a2 → C1b1 → C1b2 → C2a1 → C2a2 → C2a3 → C2b1 → C2b2; A1a/A1b/A2/A3 precede the rest because HRNS-016 depends on packet repair.
+- Each review slice is one reviewable PR, with both hosts represented for each behavior change. Proposed review order is A1a → A1b → A2 → A3 → B1a → B1b → B2b → B3a → B3b → C1a1 → C1a2 → C1b1 → C1b2 → C2a1 → C2a2 → C2a3 → C2b1 → C2b2; A1a/A1b/A2/A3 precede the rest because HRNS-016 depends on packet repair.
 
 ### Reviewability Budget *(mandatory)*
 
@@ -273,9 +272,9 @@ As an operator following a generated roadmap, I can open its workflow links at t
 - **Projected reviewable LOC**: Q11's 1,442-LOC four-slice sum and the legacy five-slice C1a 520/C1b 460 estimates are historical advisory evidence. The current estimator ignores required refactors, and no per-increment actual reviewable LOC or refactor-inclusive estimate is qualified.
 - **Projected production files**: 0–2 per proposed increment. Shared production files may recur in later PRs; count each PR’s actual diff separately.
 - A production path may recur across ordered PRs only when it appears in each marker’s exact base/head diff. Count that path separately in each PR’s changed-path and LOC measurements. Overlap in candidate path lists alone does not establish a repeated changed path.
-- **Projected total files**: the 19-increment candidate inventory lists A1a 24, A1b 24, A2 24, A3 24, B1a 22, B1b 23, B2a 22, B2b 23, B3a 18, B3b 22, C1a1 24, C1a2 21, C1b1 21, C1b2 21, C2a1 14, C2a2 14, C2a3 14, C2b1 21, C2b2 22 paths. Each includes the six recurring tracked workflow/process/evidence candidates and relevant generated payload, trust, fixture, and reference paths. No count is an actual changed-file or LOC pass.
-- **Budget result**: all 19 **planned candidate** sets fit ≤4 production and ≤24 total paths. This does not qualify G6: actual LOC/diffs and current marker validation remain outstanding. The installed marker validator rejects legitimate sequential reuse; repair its contract before persisting a marker plan or emitting PRs.
-- **Split decision**: preserve all 14 stories and 29 FRs in 19 single-story proposed increments. If a measured increment exceeds four production files or reaches 25 total files, split or rescope before implementation.
+- **Projected total files**: the 18-increment candidate inventory lists A1a 24, A1b 24, A2 24, A3 24, B1a 22, B1b 23, B2b 23, B3a 18, B3b 22, C1a1 24, C1a2 21, C1b1 21, C1b2 21, C2a1 14, C2a2 14, C2a3 14, C2b1 21, C2b2 22 paths. Each includes the six recurring tracked workflow/process/evidence candidates and relevant generated payload, trust, fixture, and reference paths. No count is an actual changed-file or LOC pass.
+- **Budget result**: all 18 **planned candidate** sets fit ≤4 production and ≤24 total paths. This does not qualify G6: actual LOC/diffs and current marker validation remain outstanding. The marker validator's sequential-reuse gap (#675) is fixed on `main` by #676; a marker plan may persist once actual diffs qualify.
+- **Split decision**: preserve all 14 stories and the 26 active FRs in 18 single-story proposed increments. If a measured increment exceeds four production files or reaches 25 total files, split or rescope before implementation.
 
 
 ### PR Review Packet Requirements *(mandatory)*
@@ -283,7 +282,7 @@ As an operator following a generated roadmap, I can open its workflow links at t
 - Each slice PR description MUST include what changed, why, non-goals, review order, scope budget, requirement traceability, verification evidence, known gaps, and rollback or feature-flag notes.
 - Traceability MUST map each major requirement or success criterion to changed files and failing-first verification evidence.
 - Deferred work MUST name HRNS-019 or another explicit follow-up. The packet repair and its release note MUST be represented in the final validated PR body.
-- Proposed review order is A1a → A1b → A2 → A3 → B1a → B1b → B2a → B2b → B3a → B3b → C1a1 → C1a2 → C1b1 → C1b2 → C2a1 → C2a2 → C2a3 → C2b1 → C2b2. Final PR titles and bodies must pass the host repository's title and release-note policy.
+- Proposed review order is A1a → A1b → A2 → A3 → B1a → B1b → B2b → B3a → B3b → C1a1 → C1a2 → C1b1 → C1b2 → C2a1 → C2a2 → C2a3 → C2b1 → C2b2. Final PR titles and bodies must pass the host repository's title and release-note policy.
 
 ### Key Entities
 
@@ -345,8 +344,8 @@ As an operator following a generated roadmap, I can open its workflow links at t
 
 ### Tracked Issue Reproductions
 
-- [#637](https://github.com/racecraft-lab/racecraft-plugins-public/issues/637): A multi-entry roadmap with an oversized first entry and small last entry must evaluate the requested ID only; an `infra` exception in that selected authored section must be honored; missing budget fields must block. Add greenfield LOC-only and complete-slice aggregation fixtures alongside those original reproductions.
-- [#638](https://github.com/racecraft-lab/racecraft-plugins-public/issues/638): New roadmap-template links must resolve to `.process/<SPEC-ID>-workflow.md`, matching scaffold output. Preserve a legacy layout only when its existing link target is verified; otherwise repair the broken link. Add generated-template and existing-roadmap fixtures.
+- [#637](https://github.com/racecraft-lab/racecraft-plugins-public/issues/637): Named-entry scoping, the selected-section pragma, and missing-budget blocking are fixed on `main` by #694. This spec keeps only the greenfield LOC-only and complete-slice aggregation fixtures.
+- [#638](https://github.com/racecraft-lab/racecraft-plugins-public/issues/638): New roadmap-template links resolve to `.process/<SPEC-ID>-workflow.md` on `main` (#698). This spec keeps legacy-link handling: preserve a legacy link only when its target is verified; otherwise repair it. Add existing-roadmap fixtures.
 
 ## Assumptions
 

@@ -192,7 +192,7 @@ From PRD §3.16 (AC-16.1 to AC-16.10) as amended by the design concept:
 - [ ] The G6.5 verdict appears in the final PR body
 - [ ] The gap counter counts every Gap-token tag form and ignores code spans and fences, with fixtures (AC-16.5 widened; Q4, Q5)
 - [ ] The spec-index walk excludes untracked files; `refresh-release-artifacts.py --check` fails on spec-index drift; formal-001 is regenerated (AC-16.6; Q10)
-- [ ] Setup mode scopes to `inputs.spec_id`, fails closed on missing fields, honors the pragma, and checks per-slice budgets; #637 fixture (AC-16.9; Q6)
+- [ ] Setup mode checks per-slice budgets and applies the greenfield allowance to LOC only (AC-16.9; Q6). `inputs.spec_id` scoping, fail-closed fields, and the pragma shipped on `main` in #694 (rescope 2026-09-26)
 - [ ] `estimate-spec-size` accepts a required-refactor signal (AC-16.8)
 - [ ] `detect-commands` honors a declared `commands` block in `.specify/quality-gates.json` (AC-16.8; Q9)
 - [ ] One 13-item Post list on both hosts, sourced from `POST_STEPS`, and a completion-boundary check refuses pending rows on both hosts (AC-16.2; Q1)
@@ -200,7 +200,7 @@ From PRD §3.16 (AC-16.1 to AC-16.10) as amended by the design concept:
 - [ ] `speckit-resolve-pr` paginates threads and comments and replies/resolves only after verify, push, and a confirmed pushed SHA, on both hosts (AC-16.7)
 - [ ] The blind-spot pass has no fixed deadline and fails open only on dispatch error, empty return, or operator abandonment (AC-16.8 amended; Q2)
 - [ ] Tested request envelopes at the live-failure sites; the full sweep moves to HRNS-019 (AC-16.10 narrowed; Q8)
-- [ ] The roadmap template and README link `.process/` workflow files; #638 fixture (AC-16.9)
+- [ ] Updates to existing roadmaps keep verified legacy workflow links and repair broken ones (AC-16.9). The template and README `.process/` links shipped on `main` in #698 (rescope 2026-09-26)
 
 ---
 
@@ -457,8 +457,8 @@ G2 passed: the runner reported zero clarification markers; the spec has no human
 - Q11: "Four slices: A, B, C1, C2". Stack order A → B → C1 → C2.
 
 ## Tracked issue acceptance
-- #637: Reproduce the oversized-first/small-last roadmap, selected-entry `infra` pragma, and missing-budget pass from the issue; add failing-first fixtures for exact `inputs.spec_id` scoping, selected authored section only, greenfield LOC-only allowance, primary surfaces, and aggregate plus per-slice budget checks.
-- #638: Reproduce the template link that resolves beside the roadmap instead of under `.process/`; verify new template/scaffold output and preserve existing legacy links only when their targets exist. Add failing-first fixtures for generated and existing roadmaps.
+- #637: Named-entry scoping, the selected-entry pragma, and missing-budget blocking shipped on `main` in #694 (rescope 2026-09-26). Add failing-first fixtures for the greenfield LOC-only allowance and aggregate plus per-slice budget checks.
+- #638: The new-template link fix shipped on `main` in #698 (rescope 2026-09-26). Preserve existing legacy links only when their targets exist and repair broken ones; add failing-first fixtures for existing roadmaps.
 
 ## Module and Interface Deltas (verbatim from the design concept)
 - speckit-pro/speckit_pro_runner/helpers/pr_emission.py: changed. Optional release_note input rendered as a fenced section in editable markers; confidence verdict carried into the body (Q3; evidence: HRNS-025 Pending).
@@ -472,11 +472,11 @@ G2 passed: the runner reported zero clarification markers; the spec has no human
 - speckit-pro/skills/speckit-autopilot/SKILL.md, references/task-list-canonical.md, references/post-implementation.md, references/gate-validation.md, references/phase-execution.md, references/prerequisites.md, references/agent-teams-integration.md, and the Codex mirrors under speckit-pro/codex-skills/speckit-autopilot/: changed prose (Q1, Q3, Q4, Q7, Q8, Q9).
 - speckit-pro/agents/{phase,analyze,checklist,implement}-executor.md and speckit-pro/codex-agents/{phase,analyze,checklist,implement}-executor.toml: changed. Teardown obligation (evidence: PRD AC-16.4).
 - speckit-pro/skills/speckit-resolve-pr/SKILL.md and speckit-pro/codex-skills/speckit-resolve-pr/SKILL.md: changed. Pagination; verify, push, confirm SHA, then reply and resolve (evidence).
-- speckit-pro/skills/speckit-scaffold-spec/SKILL.md and the Codex mirror: changed. Deadline removed; new fail-open reasons; inline envelopes (Q2, Q8); `inputs.spec_id` passed to setup gate and workflow-link updates preserve verified legacy targets (#637, #638).
+- speckit-pro/skills/speckit-scaffold-spec/SKILL.md and the Codex mirror: changed. Deadline removed; new fail-open reasons; inline envelopes (Q2, Q8); workflow-link updates preserve verified legacy targets (#638; `inputs.spec_id` already passed on `main` by #694).
 - speckit-pro/skills/speckit-status/SKILL.md and the Codex mirror: changed. Inline envelopes for generate-spec-index-check and o5-topology (Q8; late blind-spot findings 8 and 10).
-- speckit-pro/skills/speckit-coach/templates/technical-roadmap-template.md: changed. `.process/` workflow links (#638) and the slice-budget syntax (Q6); scaffold preserves existing verified legacy link targets.
+- speckit-pro/skills/speckit-coach/templates/technical-roadmap-template.md: changed. The slice-budget syntax (Q6); scaffold preserves existing verified legacy link targets. The `.process/` links already shipped in #698.
 - speckit-pro/skills/speckit-coach/templates/workflow-template.md: changed. 13-row Post table (Q1).
-- speckit-pro/README.md: changed. Workflow path at :178 (evidence: #638).
+- speckit-pro/README.md: unchanged. The workflow path fix shipped on `main` in #698 (rescope 2026-09-26).
 - AGENTS.md (root): changed. The spec index joins the refresh command; the "freshness: no PR check" row goes (Q10).
 - specs/formal-001-selective-formal-methods/SPEC-MOC.md: regenerated (Q10).
 - docs/prd-harness-engineering-uplift.md and docs/ai/specs/harness-engineering-uplift-technical-roadmap.md: changed. AC and entry amendments (Goals, Slice A).
