@@ -149,8 +149,23 @@ class ArchiveSweepCandidateTests(unittest.TestCase):
         self.assertEqual(["specs/-leading-dash"], data["unknown"])
         self.assertEqual([], self.calls)
 
+    def test_backslash_current_target_is_still_excluded(self) -> None:
+        for name in ("001-first", "004-current"):
+            self.spec(name)
+        data = self.request(current_target="specs\\004-current\\")["data"]
+        self.assertEqual("specs/004-current", data["excluded_current_spec"])
+        queried = [argv[argv.index("--head") + 1] for argv in self.calls]
+        self.assertNotIn("004-current", queried)
+
     def test_current_target_is_required_and_repo_relative(self) -> None:
-        for inputs in ({}, {"current_target": ""}, {"current_target": "../specs/x"}, {"current_target": 7}):
+        for inputs in (
+            {},
+            {"current_target": ""},
+            {"current_target": "../specs/x"},
+            {"current_target": 7},
+            {"current_target": "C:\\repo\\specs\\x"},
+            {"current_target": "\\\\server\\share\\specs\\x"},
+        ):
             with self.subTest(inputs=inputs):
                 result = self.request(**inputs)
                 self.assertEqual("input_error", result["status"], result)

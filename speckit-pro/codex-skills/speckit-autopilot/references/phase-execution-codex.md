@@ -1228,12 +1228,21 @@ task id or reason). Show its output unchanged; do not write the text by hand.
 - A proposed `auto_review.extra_policy` fragment for the operator's own
   `~/.codex/config.toml`. Codex appends `extra_policy` to the default reviewer
   policy; `auto_review.policy` replaces the default reviewer policy, so propose
-  `extra_policy` and never `auto_review.policy`. The fragment covers only this
-  repository and the destinations this run needs. It states that it never
-  approves edits to autonomy-boundary files, their schema, or their recorded
-  digests, edits to `AGENTS.md` or `.codex/`, a push to the default branch, a
-  force push, a `--mirror` push, or a remote change. The operator installs it
-  once.
+  `extra_policy` and never `auto_review.policy`. It needs Codex 0.158 or later;
+  earlier versions ignore the key. The fragment scopes itself to checkouts whose
+  `git remote get-url --push origin` is this repository's GitHub URL, and it
+  pre-authorizes only the payload and destination of each listed action. Its
+  human stops are "Outcome rule: deny" lines that win over those grants: edits
+  to autonomy-boundary files, their schema, or their recorded digests, or to
+  `AGENTS.md` or `.codex/`; any other destination or data class; a push to the
+  default branch, a force push, a `--mirror` push, or a remote ref deletion; and
+  a remote change. The operator installs it once.
+
+The reviewer does not see every command. A command reaches the reviewer only
+when it escalates, for example a network request or a write outside the
+sandbox; a command that matches no rule runs in the sandbox without review. So
+the fragment cannot stop an in-sandbox edit to a schema or digest in the
+checkout; CI and the boundary validator catch those.
 
 The plugin never writes the authorization message or the fragment into
 `~/.codex`, into the repository's `.codex/` directory, or into `AGENTS.md`:

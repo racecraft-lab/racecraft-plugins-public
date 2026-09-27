@@ -59,11 +59,16 @@ def merged_pr_query(branch: str) -> list[str]:
     ]
 
 
+WINDOWS_ABSOLUTE = re.compile(r"^(?:[A-Za-z]:/|//)")
+
+
 def canonical_target(raw: Any, repo_root: Path) -> str | None:
     """The current target as a repo-relative POSIX path, or None when unusable."""
     if not isinstance(raw, str) or not raw.strip():
         return None
-    value = raw.strip()
+    value = raw.strip().replace("\\", "/")
+    if WINDOWS_ABSOLUTE.match(value):
+        return None
     if os.path.isabs(value):
         try:
             value = Path(value).resolve(strict=False).relative_to(repo_root).as_posix()

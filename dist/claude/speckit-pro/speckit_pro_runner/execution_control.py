@@ -63,6 +63,8 @@ def ignore_owned_directory(directory: Path) -> None:
     """Keep a runner-owned directory out of every commit, `git add -A` included."""
     directory.mkdir(parents=True, exist_ok=True)
     marker = directory / ".gitignore"
+    if marker.is_dir() and not marker.is_symlink():
+        raise ValueError(f"{marker} is not a regular file; remove it so the runner can write its ignore rule")
     if marker.is_symlink() or not marker.is_file() or marker.read_bytes() != b"*\n":
         marker.unlink(missing_ok=True)
         marker.write_bytes(b"*\n")
