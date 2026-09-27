@@ -189,9 +189,11 @@ def git_config(key: str) -> str:
 
 def main_checkout_root() -> Path:
     """Return the main checkout that owns this tree, even from a linked worktree."""
-    result = git_output("rev-parse", "--path-format=absolute", "--git-common-dir")
+    result = git_output("rev-parse", "--git-common-dir")
     if result.returncode == 0:
         common_dir = Path(result.stdout.decode("utf-8", errors="replace").strip())
+        if not common_dir.is_absolute():
+            common_dir = REPO_ROOT / common_dir  # git prints it relative to the working tree
         if common_dir.name == ".git":
             return common_dir.parent.resolve()
     return REPO_ROOT

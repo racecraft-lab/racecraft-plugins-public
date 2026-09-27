@@ -87,9 +87,9 @@ to archive previously merged specs.
    `racecraft-lab/spec-kit-archive` fork accepts the same single-feature form
    and the same modifiers. The union updates `.specify/memory/spec.md`,
    `plan.md`, and `changelog.md` and leaves out the agent context files
-   (stock step 5.3, fork step 6.3). SpecKit Pro overrides that step: an
-   archive run never writes per-spec history to `AGENTS.md`, `CLAUDE.md`, or
-   `GEMINI.md`, even if an installed contract does not honor the union.
+   (stock step 5.3, fork step 6.3). If an archive run still changes
+   `AGENTS.md`, `CLAUDE.md`, or `GEMINI.md`, the installed contract ignored the
+   union: treat that run as failed, and do not commit the agent context change.
    If a run fails, STOP before Phase 0 with that spec and the command's error.
 
    **`main`, a release branch, or any protected integration branch** (dry-run
