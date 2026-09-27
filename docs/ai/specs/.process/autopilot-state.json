@@ -3,27 +3,31 @@
   "spec_id": "HRNS-015",
   "feature_dir": "specs/hrns-015-autopilot-gate-pr-emission-repair",
   "branch": "hrns-015-autopilot-gate-pr-emission-repair",
-  "status": "completed_pr_open",
-  "stage": "plan",
-  "active_step": null,
+  "status": "in_progress",
+  "stage": "implement",
+  "active_step": "Phase 6.5: Confidence Gate",
   "stage_resolution": {
-    "basis": "explicit --stage plan",
+    "basis": "explicit --stage implement",
     "confidence_gate_status": "\u2705 Complete",
     "corroboration": {
       "merged": null,
-      "observed": null,
-      "reason": "no observation supplied",
+      "observed": {
+        "number": 685,
+        "state": "OPEN",
+        "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/685"
+      },
+      "reason": null,
       "recorded": {
         "number": 685,
         "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/685"
       },
-      "status": "skipped"
+      "status": "match"
     },
     "from_phase": null,
     "planning_complete": true,
     "recorded_stage": "plan",
     "source": "argv",
-    "stage": "plan",
+    "stage": "implement",
     "tool": "resolve-autopilot-stage"
   },
   "archive_sweep": {
@@ -40,11 +44,7 @@
     "retained_candidates": [
       {
         "spec": "formal-001-selective-formal-methods",
-        "reason": "Implementation in progress; no merged provenance found"
-      },
-      {
-        "spec": "brand-001-racecraft-identity-system",
-        "reason": "Navigation-only directory; no spec/plan or merged provenance found"
+        "reason": "no merged pull request has this head branch"
       }
     ],
     "resume_verified": true
@@ -53,8 +53,8 @@
     "ledger_path": "docs/ai/specs/.process/execution-control/ac068cab59ef67faf15646a7.json",
     "disposition": "continue",
     "reasons": [],
-    "elapsed_seconds": 181306.1757838726,
-    "checkpoint_due": false,
+    "elapsed_seconds": 190564.71161293983,
+    "checkpoint_due": true,
     "run_id": "e7fbc9a6636945ed8a8c2abd42cbb892"
   },
   "plan": [
@@ -144,131 +144,131 @@
     },
     {
       "step": "Phase 6.5: Confidence Gate",
-      "status": "completed"
+      "status": "in_progress"
     },
     {
       "step": "Plan stage: Draft artifact refresh and handoff",
-      "status": "completed"
+      "status": "pending"
     },
     {
       "step": "Phase 7: Implement - Setup (T001)",
-      "status": "skipped: outside --stage plan"
+      "status": "pending"
     },
     {
       "step": "Phase 7: Implement - Foundational reviewability checkpoint (T002)",
-      "status": "skipped: outside --stage plan"
+      "status": "pending"
     },
     {
       "step": "Phase 7: Implement - User Story 1 \u2014 final release note (P1, A1a then A1b) (T003, T004, T005)",
-      "status": "skipped: outside --stage plan"
+      "status": "pending"
     },
     {
       "step": "Phase 7: Implement - User Story 2 \u2014 packet-only untracked files (P1, Increment A2) (T006, T007)",
-      "status": "skipped: outside --stage plan"
+      "status": "pending"
     },
     {
       "step": "Phase 7: Implement - User Story 3 \u2014 current confidence verdict (P1, Increment A3) (T008, T009)",
-      "status": "skipped: outside --stage plan"
+      "status": "pending"
     },
     {
       "step": "Phase 7: Implement - User Story 4 \u2014 visible marker counts (P1, Increment B1a) (T010)",
-      "status": "skipped: outside --stage plan"
+      "status": "pending"
     },
     {
       "step": "Phase 7: Implement - User Story 5 \u2014 tracked spec index (P1, Increment B1b) (T011)",
-      "status": "skipped: outside --stage plan"
+      "status": "pending"
     },
     {
       "step": "Phase 7: Implement - User Story 6 \u2014 slice budgets and greenfield allowance (P1, B2b) (T012, T013)",
-      "status": "skipped: outside --stage plan"
+      "status": "pending"
     },
     {
       "step": "Phase 7: Implement - User Story 7 \u2014 refactor-aware estimate (P2, Increment B3a) (T014)",
-      "status": "skipped: outside --stage plan"
+      "status": "pending"
     },
     {
       "step": "Phase 7: Implement - User Story 8 \u2014 declared quality commands (P1, Increment B3b) (T015, T016)",
-      "status": "skipped: outside --stage plan"
+      "status": "pending"
     },
     {
       "step": "Phase 7: Implement - User Story 9 \u2014 13 canonical Post rows (P1, Increment C1a1) (T017)",
-      "status": "skipped: outside --stage plan"
+      "status": "pending"
     },
     {
       "step": "Phase 7: Implement - User Story 10 \u2014 complete Post and teams (P1, C1a2 then C1b1/C1b2) (T018, T019, T020, T021)",
-      "status": "skipped: outside --stage plan"
+      "status": "pending"
     },
     {
       "step": "Phase 7: Implement - User Story 11 \u2014 complete review feedback after push (P1, Increment C2a1) (T022, T023)",
-      "status": "skipped: outside --stage plan"
+      "status": "pending"
     },
     {
       "step": "Phase 7: Implement - User Story 12 \u2014 wait for blind-spot result (P1, Increment C2a2) (T024)",
-      "status": "skipped: outside --stage plan"
+      "status": "pending"
     },
     {
       "step": "Phase 7: Implement - User Story 13 \u2014 complete named helper requests (P2, C2a3 then C2b1) (T025, T026, T027)",
-      "status": "skipped: outside --stage plan"
+      "status": "pending"
     },
     {
       "step": "Phase 7: Implement - User Story 14 \u2014 real workflow links (P2, Increment C2b2) (T028, T029, T030)",
-      "status": "skipped: outside --stage plan"
+      "status": "pending"
     },
     {
       "step": "Phase 7: Implement - Polish and cross-cutting validation (T031)",
-      "status": "skipped: outside --stage plan"
+      "status": "pending"
     },
     {
       "step": "Post: Doctor Extension Check",
-      "status": "skipped: outside --stage plan"
+      "status": "pending"
     },
     {
       "step": "Post: Verify Implementation",
-      "status": "skipped: outside --stage plan"
+      "status": "pending"
     },
     {
       "step": "Post: Verify Tasks Phantom Check",
-      "status": "skipped: outside --stage plan"
+      "status": "pending"
     },
     {
       "step": "Post: Code Review",
-      "status": "skipped: outside --stage plan"
+      "status": "pending"
     },
     {
       "step": "Post: Integration Suite",
-      "status": "skipped: outside --stage plan"
+      "status": "pending"
     },
     {
       "step": "Post: Reviewability Diff Gate",
-      "status": "skipped: outside --stage plan"
+      "status": "pending"
     },
     {
       "step": "Post: UAT Runbook Generation",
-      "status": "skipped: outside --stage plan"
+      "status": "pending"
     },
     {
       "step": "Post: Final Reviewability Backstop",
-      "status": "skipped: outside --stage plan"
+      "status": "pending"
     },
     {
       "step": "Post: PR Packet/Body Generation",
-      "status": "skipped: outside --stage plan"
+      "status": "pending"
     },
     {
       "step": "Post: PR Body Generation",
-      "status": "skipped: outside --stage plan"
+      "status": "pending"
     },
     {
       "step": "Post: PR Creation",
-      "status": "skipped: outside --stage plan"
+      "status": "pending"
     },
     {
       "step": "Post: Review Remediation",
-      "status": "skipped: outside --stage plan"
+      "status": "pending"
     },
     {
       "step": "Post: Retrospective",
-      "status": "skipped: outside --stage plan"
+      "status": "pending"
     }
   ],
   "updated_at": "2026-09-27T16:44:55.907584+00:00",
@@ -549,7 +549,8 @@
       "M3"
     ],
     "unresolved": [],
-    "confidence_emit": "dedicated named consensus-synthesizer; 0.95; all five criteria persisted once for this pass"
+    "confidence_emit": "dedicated named consensus-synthesizer; 0.94; all five criteria persisted once for bounded routing re-plan",
+    "routing_replan_verified": true
   },
   "confidence_gate": {
     "status": "pass",
@@ -566,16 +567,17 @@
     "classification": "Planning-document diagnostics; native planning and packet gates passed."
   },
   "plan_stage_completion": {
-    "planning_complete": true,
+    "planning_complete": false,
     "stage_boundary_commit": "72a4e956",
     "analyze_checkpoint_commit": "de3950bd",
     "draft_handoff_complete": true,
-    "remaining": [],
+    "remaining": [
+      "bounded routing re-plan downstream gates and handoff"
+    ],
     "implementation_started": false,
     "preview_delivery": "unavailable; see workflow-only Artifact Review Handoff"
   },
   "autonomy_boundary": {
-    "schema_version": "autonomy-boundary-receipt.v1",
     "status": "ready",
     "planning_fingerprints": {
       "plan_md": {
@@ -585,10 +587,11 @@
       },
       "tasks_md": {
         "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/tasks.md",
-        "size_bytes": 30481,
-        "sha256": "sha256:46302f5321c2df17acb65799305a2fd8de82b051f1e9b0bd630f45b3767febe3"
+        "size_bytes": 30479,
+        "sha256": "sha256:c5373d4f33f0ec316c2421d3e690888fc5844fb1989fd5f5db9b4a8d4d1f7d46"
       }
     },
+    "schema_version": "autonomy-boundary-receipt.v1",
     "execution_boundary": {
       "execution_environment": "local",
       "sandbox_mode": "workspace-write",
@@ -639,9 +642,75 @@
           "status": "explicit_user",
           "scope_sha256": "sha256:3e72979f8ee3cb3fa8cb8388fe4920043faacb58933a2d0103c6d63740f72283"
         }
+      },
+      {
+        "action_id": "implementation-worktree-writes",
+        "category": "outside_writable_roots",
+        "execution_boundary_sha256": "sha256:ee564925cb2d6d82f50ac8fa5c810111fdad1e6a33089402b77c55927c5207b8",
+        "scope_sha256": "sha256:35f5789ee630cd2a32956b6bb3cbab507d0a8190d9837d62a10d0412abd0a559",
+        "disposition": "ready",
+        "authorization": {
+          "status": "explicit_user",
+          "scope_sha256": "sha256:35f5789ee630cd2a32956b6bb3cbab507d0a8190d9837d62a10d0412abd0a559"
+        }
+      },
+      {
+        "action_id": "implementation-git-metadata",
+        "category": "outside_writable_roots",
+        "execution_boundary_sha256": "sha256:ee564925cb2d6d82f50ac8fa5c810111fdad1e6a33089402b77c55927c5207b8",
+        "scope_sha256": "sha256:c8e278bece45e9b77716d72b6561923690727f8ea80ab8ae1e122612d47e7a75",
+        "disposition": "ready",
+        "authorization": {
+          "status": "explicit_user",
+          "scope_sha256": "sha256:c8e278bece45e9b77716d72b6561923690727f8ea80ab8ae1e122612d47e7a75"
+        }
+      },
+      {
+        "action_id": "implementation-boundary-record",
+        "category": "outside_writable_roots",
+        "execution_boundary_sha256": "sha256:ee564925cb2d6d82f50ac8fa5c810111fdad1e6a33089402b77c55927c5207b8",
+        "scope_sha256": "sha256:bbdd3bf8fc7c8815eba1d38d7f90b5cee94aaa3e93e746bed4751d112218492e",
+        "disposition": "ready",
+        "authorization": {
+          "status": "explicit_user",
+          "scope_sha256": "sha256:bbdd3bf8fc7c8815eba1d38d7f90b5cee94aaa3e93e746bed4751d112218492e"
+        }
+      },
+      {
+        "action_id": "implementation-github-publication",
+        "category": "external_side_effect",
+        "execution_boundary_sha256": "sha256:ee564925cb2d6d82f50ac8fa5c810111fdad1e6a33089402b77c55927c5207b8",
+        "scope_sha256": "sha256:3e94304cd14551b0dd6cf2537cbfe3308112d119ff4b95ba5f6041ea6e933f0e",
+        "disposition": "ready",
+        "authorization": {
+          "status": "explicit_user",
+          "scope_sha256": "sha256:3e94304cd14551b0dd6cf2537cbfe3308112d119ff4b95ba5f6041ea6e933f0e"
+        }
+      },
+      {
+        "action_id": "implementation-local-delegation",
+        "category": "external_side_effect",
+        "execution_boundary_sha256": "sha256:ee564925cb2d6d82f50ac8fa5c810111fdad1e6a33089402b77c55927c5207b8",
+        "scope_sha256": "sha256:719dabf544ee1f0614c0155578893f34a1c35aa0e1935a254456d1ebabb41feb",
+        "disposition": "ready",
+        "authorization": {
+          "status": "explicit_user",
+          "scope_sha256": "sha256:719dabf544ee1f0614c0155578893f34a1c35aa0e1935a254456d1ebabb41feb"
+        }
+      },
+      {
+        "action_id": "implementation-public-research",
+        "category": "external_side_effect",
+        "execution_boundary_sha256": "sha256:ee564925cb2d6d82f50ac8fa5c810111fdad1e6a33089402b77c55927c5207b8",
+        "scope_sha256": "sha256:de66a55b0cf6212fc6cf0f29e504b89edd14f03596f3e480c27f9403ead3a358",
+        "disposition": "ready",
+        "authorization": {
+          "status": "explicit_user",
+          "scope_sha256": "sha256:de66a55b0cf6212fc6cf0f29e504b89edd14f03596f3e480c27f9403ead3a358"
+        }
       }
     ],
-    "private_record_sha256": "sha256:aee0f387809bf3cf96445f8d27e5ec5a9e8b29368839b019345e41e8dac9ec4f"
+    "private_record_sha256": "sha256:18a8beac92995f4b37a1cc199e72318e518d8c6d83903009d47c9cb0e2e40285"
   },
   "plan_resume_result": {
     "version": "2.37.1",
@@ -889,7 +958,7 @@
     "source_fingerprint": {
       "feature_spec_sha": "sha256:18c93677aaaee5f73aa8399b2cea052cc58ed2724fe6e74d93be96a47eae7e58",
       "plan_declared_scope_sha": "sha256:8381e50f0c0daf7491b6fb6f6e431adea30a89277d0b3073fd476194e6a8d759",
-      "tasks_sha": "sha256:46302f5321c2df17acb65799305a2fd8de82b051f1e9b0bd630f45b3767febe3",
+      "tasks_sha": "sha256:c5373d4f33f0ec316c2421d3e690888fc5844fb1989fd5f5db9b4a8d4d1f7d46",
       "reviewability_sha": "sha256:4efa6739751bbef3183ebc677bde97f4971dfc61554ecf27a147af5d65aabefc",
       "hazard_route_sha": "sha256:f4259204cb8f92f1978ddf3b70195aba948d317567082f50f585fb0f4e0ef9c4"
     },
@@ -3246,7 +3315,7 @@
   "current_source_fingerprint": {
     "feature_spec_sha": "sha256:18c93677aaaee5f73aa8399b2cea052cc58ed2724fe6e74d93be96a47eae7e58",
     "plan_declared_scope_sha": "sha256:8381e50f0c0daf7491b6fb6f6e431adea30a89277d0b3073fd476194e6a8d759",
-    "tasks_sha": "sha256:46302f5321c2df17acb65799305a2fd8de82b051f1e9b0bd630f45b3767febe3",
+    "tasks_sha": "sha256:c5373d4f33f0ec316c2421d3e690888fc5844fb1989fd5f5db9b4a8d4d1f7d46",
     "reviewability_sha": "sha256:4efa6739751bbef3183ebc677bde97f4971dfc61554ecf27a147af5d65aabefc",
     "hazard_route_sha": "sha256:f4259204cb8f92f1978ddf3b70195aba948d317567082f50f585fb0f4e0ef9c4"
   },
@@ -3305,5 +3374,116 @@
     "failure_invariant": "FR-026",
     "scope_sha256": "7157f49ae21dc48d5477d4684ad27ff719937faf8a4d1b61054f102cdacfad91",
     "dispatch_id": "hrns015-analyze-path-exception-2371"
+  },
+  "implementation_startup": {
+    "plugin_version": "2.38.0",
+    "prerequisites": "pass",
+    "agents": "no_op; no restart required",
+    "formal_selection": "none; formal-doctor disabled",
+    "metadata_validation": "pass; 31 tasks, current fingerprints",
+    "feedback_sweep": {
+      "status": "complete",
+      "head": "b21309e112f8281e25a9672aa5d812e43cbcb830",
+      "observed": 0,
+      "candidates": 0,
+      "amendments": 0,
+      "replies": 0,
+      "log_rows": 0,
+      "private_session_removed": true,
+      "artifact_freshness": "current",
+      "artifacts_commit": "72a4e9569c0fe96001520670c166c01ba1bebe02"
+    },
+    "delegation": {
+      "route": "local",
+      "status": "failed_infrastructure",
+      "reason": "HAL model endpoint unavailable; no token usage or report; cleanup confirmed",
+      "fallback": "native installed executor; no cloud route",
+      "task_id_sha256": "08c86a9278ba7e1bb1e2880a57f9fb48ff1fd4651aa8fafc0a656fc206ef49fc"
+    },
+    "research_screening_mode": "jev",
+    "research_warnings": [
+      "search_environment_only_credential"
+    ],
+    "baseline_suite": {
+      "status": "fail",
+      "passed": 9445,
+      "total": 9448,
+      "failures": 3,
+      "failing_check": "test-privacy-scan",
+      "owned_native_exit_code": 1,
+      "log_sha256": "7bdaf632770f75ef59899656dfed8dc7d754b8bcadf75aaae4c858463ee0c6f8",
+      "public_bookkeeping_projection": "normalized runner result and hashed delegation identity; original failed result preserved",
+      "dynamic_workspace_scan": "unresolved; common autopilot text reported as local workspace term"
+    },
+    "completed_tasks": [],
+    "routing_checkpoint": {
+      "status": "awaiting_operator_replan_approval",
+      "failure_invariant": "FR-026",
+      "reason": "failure_family_budget_exhausted",
+      "current_routes": {
+        "T001": "speckit-pro:implement-executor",
+        "T002": "speckit-pro:implement-executor"
+      },
+      "verified_proposed_routes": {
+        "T001": "orchestrator-direct",
+        "T002": "orchestrator-direct"
+      },
+      "definition_changes": {
+        "T001": "Confirm to Verify",
+        "T002": "Recheck to Verify"
+      },
+      "scope_sha256": "09d7e137cb15091761fa0d4b3f34dd509a39f5e149a329b3503dfa00e5c7a476",
+      "corrective_cycles": 2,
+      "implementation_started": false
+    },
+    "task_journal": {
+      "journal_file": "specs/hrns-015-autopilot-gate-pr-emission-repair/.process/task-results/e7fbc9a6636945ed8a8c2abd42cbb892.json",
+      "producer_request_id": "hrns015-task-results-start-2380",
+      "parent_retained_partition_sha256": "166e4b5382d65f2319d5362f9755330672a2515b8645bc34a595000b00d30090",
+      "completed_tasks": []
+    },
+    "routing_replan": {
+      "status": "in_progress",
+      "corrective_epoch": 2,
+      "dispatch_id": "hrns015-routing-tasks-replan-2380",
+      "approved_patch": "T001 Confirm -> Verify; T002 Recheck -> Verify",
+      "prior_journal_preserved": true,
+      "confidence_emit_persisted": true,
+      "confidence_criteria": {
+        "task_understanding": 0.96,
+        "approach_clarity": 0.95,
+        "requirements_alignment": 0.96,
+        "risk_assessment": 0.91,
+        "completeness": 0.94
+      },
+      "artifact_refresh": {
+        "implementation-plan": "generated: exact two task verbs refreshed",
+        "spec-explainer": "verified_no_change",
+        "code-approaches": "verified_no_change",
+        "module-map": "verified_no_change",
+        "architecture-viewer": "gap: selected template absent",
+        "preview": "unqualified"
+      },
+      "docs_validation": {
+        "full_command_exit_code": 1,
+        "failure": "Playwright webServer exited early",
+        "prior_components": "reference check, Astro check/build, internal links, safe aids and docs quality passed",
+        "focused_smoke": "88 passed, native exit0; exact same-worktree preview process/cwd verified",
+        "gallery": "4 passed, native exit0",
+        "owned_server_cleanup": "completed",
+        "aggregate_command_rerun": false
+      }
+    },
+    "privacy_normalization": {
+      "status": "documented_environmental_exception",
+      "focused_result": "10/11 passed; remaining dynamic local identity case derives autopilo and utopilot from worktree path",
+      "full_baseline_result": "9445/9448 passed before normalization",
+      "ci_proof": "pending"
+    },
+    "successor_journal": {
+      "journal_path": "specs/hrns-015-autopilot-gate-pr-emission-repair/.process/task-results/e7fbc9a6636945ed8a8c2abd42cbb892-routing-epoch2.json",
+      "partition_sha256": "0a0054ea8b8b8411bd35e8b7ef6573042502ac316bff1e8def7ddf86a6274b6c",
+      "native_qualification": "pending"
+    }
   }
 }

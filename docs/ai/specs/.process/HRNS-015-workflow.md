@@ -177,7 +177,7 @@ An explicit operator waiver is recorded separately and is never a passing check.
 | **Spec ID** | HRNS-015 |
 | **Name** | Autopilot, Gate, and PR-Emission Repair |
 | **Branch** | `hrns-015-autopilot-gate-pr-emission-repair` |
-| **Stage** | `plan` |
+| **Stage** | `implement` |
 | **Draft PR** | [#685](https://github.com/racecraft-lab/racecraft-plugins-public/pull/685) — refreshed for completed 2.37.1 planning; four generated artifacts; architecture-viewer template absent; previews unavailable (0/4 verified) |
 | **Dependencies** | None |
 | **Enables** | HRNS-016 (needs Slice A's packet release-note and untracked-packet repairs) |
@@ -809,7 +809,7 @@ This dedicated final Analyze synthesis completes the planning analysis. The oper
 
 ### Autonomy Boundary Preflight
 
-Status: ready. The current private record and public receipt match this session's actual writable roots and permissions, with the user's explicit authorization limited to planning edits, commits, draft refresh and public-documentation research. The current phase-coverage guard returned no autonomy errors. Private record digest: `sha256:aee0f387809bf3cf96445f8d27e5ec5a9e8b29368839b019345e41e8dac9ec4f`. Implementation remains outside this authorization.
+Status: ready. The user approved the exact implementation scope: bounded source/test/docs edits and verification, commits and normal feature/stack pushes, eighteen increment PRs and review replies, public-documentation research, offline local HAL delegation, the existing private record refresh, T011 root agent guidance and inventory-generated runner trust outputs. The current execution boundary and planning fingerprints are preserved. No ledger reset, private-repository export, cloud delegation, deployment, credential change, main push or force push is authorized. Private record digest: `sha256:18a8beac92995f4b37a1cc199e72318e518d8c6d83903009d47c9cb0e2e40285`.
 
 **When to run:** After Phase 6 commits and before Phase 7 begins. Analyze checkpoint: `de3950bd`.
 
@@ -887,11 +887,7 @@ Before starting any task:
 
 ## Post-Implementation Checklist
 
-The canonical closeout. Every row must reach Complete or an explicit
-`Skipped` before the run may report completion.
-
-This run uses the installed autopilot's 11-row list. The 13-row list is a
-Slice C1 deliverable (see Own-Run Hazard).
+The installed 2.38.0 canonical closeout has thirteen distinct Post rows. Every row must reach Complete or an allowed explicit Skipped result before the implementation run may report completion. Historical own-run notes remain provenance; installed runtime authority governs this invocation.
 
 | Canonical Item | Status | Evidence |
 |---|---|---|
@@ -902,6 +898,8 @@ Slice C1 deliverable (see Own-Run Hazard).
 | Post: Integration Suite | ⏳ Pending | |
 | Post: Reviewability Diff Gate | ⏳ Pending | |
 | Post: UAT Runbook Generation | ⏳ Pending | |
+| Post: Final Reviewability Backstop | ⏳ Pending | |
+| Post: PR Packet/Body Generation | ⏳ Pending | |
 | Post: PR Body Generation | ⏳ Pending | |
 | Post: PR Creation | ⏳ Pending | |
 | Post: Review Remediation | ⏳ Pending | |
@@ -1052,7 +1050,7 @@ Ripwire quality-delta returned exit 2 for canonical process-state verbosity. Its
 | --- | --- |
 | Feature spec | `sha256:18c93677aaaee5f73aa8399b2cea052cc58ed2724fe6e74d93be96a47eae7e58` |
 | Plan declared scope | `sha256:8381e50f0c0daf7491b6fb6f6e431adea30a89277d0b3073fd476194e6a8d759` |
-| Tasks | `sha256:46302f5321c2df17acb65799305a2fd8de82b051f1e9b0bd630f45b3767febe3` |
+| Tasks | `sha256:c5373d4f33f0ec316c2421d3e690888fc5844fb1989fd5f5db9b4a8d4d1f7d46` |
 | Reviewability | `sha256:4efa6739751bbef3183ebc677bde97f4971dfc61554ecf27a147af5d65aabefc` |
 | Hazard route | `sha256:f4259204cb8f92f1978ddf3b70195aba948d317567082f50f585fb0f4e0ef9c4` |
 
@@ -1126,3 +1124,45 @@ Planning complete. Current G3, G4, G5, G6 and G6.5 passed; confidence is 0.95 ag
 The workflow-only Artifact Review Handoff records the architecture-viewer missing-template gap and four unavailable previews (preview_boundary_unavailable), with zero fabricated observations. Manual review remains possible from the generated files.
 
 Structural diagnostics: ripwire quality-delta returned 2 for the required gate-record JSON growing from 50 to 75 lines; this is an advisory planning-data verbosity finding. Its test-gate returned 0 with no changed call-graph symbols or selected tests. No implementation verification is claimed. Native planning, metadata, phase coverage, title and draft packet validation passed. All native worker final results were consumed; no owned worker remains running.
+
+## Implementation Startup — 2.38.0
+
+Stage: implement, resolved from explicit invocation. Draft PR corroboration: match (#685 open draft). Planning phases and the recorded advisory G6.5 verdict are retained; no confidence gate was rerun. Native prerequisites, agent registrations, formal selection none, current task metadata and the implementation autonomy receipt pass. Archive Sweep has no eligible merged candidate and performs no cleanup. The isolated feedback capture at the exact current head observed zero comments: no amendment, no sweep-log row and no reply.
+
+Offline HAL inventory delegation failed because the production-model endpoint was unavailable, with zero token usage, no findings or repository changes, and completed cleanup. Continue through the native installed executor fallback without a cloud export. The unchanged-branch baseline suite and all 31 tasks remain pending.
+
+### Implementation routing checkpoint
+
+The native journal froze T001 and T002 as implementation batches, requiring ordered RED/GREEN/refactor evidence for procedural inventory checks. Direct evaluation of the installed scheduler confirms changing only each leading verb to Verify routes both to orchestrator-direct with verification evidence. No requirement, stable task ID, dependency, owner, increment budget or implementation checkpoint changes. The ordinary FR-026 corrective reserve refused failure_family_budget_exhausted; two corrective cycles and the epoch exception are already spent. A bounded operator-approved Tasks re-plan is requested. The original native journal and its parent-retained partition identity are preserved, with zero task reports or completed tasks. The baseline suite remains owned and in flight; no replacement or implementation dispatch has started. Feedback sweep: no comments observed, no amendment, no row and no reply; private state removed. Artifacts are current as of 72a4e956.
+
+### Baseline result and public-record normalization
+
+The owned baseline completed with native exit1: 9445/9448 passed, with three privacy checks failing. Two findings were parent public-bookkeeping serialization defects: a raw runner envelope contained an interpreter path, and a delegation identity was copied as a raw UUID. The state now uses the helper result projection and an opaque identity digest. The third dynamic-local-term finding includes common autopilot prose in repository files; its original failed result is retained pending focused diagnosis. No test or requirement is weakened, and the baseline is not marked passing. Every startup native dispatch is settled; all31 tasks and thirteen Post rows remain pending.
+
+### Approved bounded routing re-plan — 2.38.0
+
+The operator ordered the exact two-word Tasks re-plan and approved a fresh allowance. Native begin-replan-epoch preserved the run, clocks, consumed events and prior ledger history in epoch 2. One ordinary FR-026 correction owns T001 Confirm → Verify and T002 Recheck → Verify with no requirement, task-ID, dependency, ownership or budget change. The original task journal remains unchanged; a source-bound successor and downstream planning gates are pending. All eighteen marker checkpoints remain exactly pending.
+
+The focused privacy verification now passes 10/11 checks. Both parent public-serialization defects are cleared. The remaining dynamic local case derives autopilo and utopilot from the bound worktree path and matches existing autopilot prose; this is the documented Own-Run Hazard exception. No privacy rule was weakened; neutral-checkout CI proof remains pending. The original 9445/9448 baseline failure is retained.
+
+### Analyze after the bounded routing re-plan
+
+Current Analyze found zero Critical, High, Medium or Low findings. It verified all26 active requirements,31 pending tasks, unchanged task ownership/dependencies and eighteen ordered planned markers. Every checkpoint remains exactly pending. Native source/metadata validation and successor lineage are current. Actual diff/LOC/checkpoint evidence and any tracked journal path contributions remain mandatory before emission.
+
+### Pre-Implement Confidence — bounded routing re-plan
+
+The named synthesizer finds no unresolved planning finding. Actual diff budgets, LOC, checkpoints, journal contributions and CI remain unqualified before emission. The documented privacy-check exception remains a verification limitation.
+
+📊 Confidence: 0.94
+
+- Task understanding: 0.96
+- Approach clarity: 0.95
+- Requirements alignment: 0.96
+- Risk assessment: 0.91
+- Completeness: 0.94
+
+The artifact author refreshed only T001/T002 verbs in Implementation Plan and validated all four existing pages against the current shipped templates. The selected Architecture Viewer template remains absent; no preview proof is claimed.
+
+### Bounded re-plan documentation verification
+
+The full docs command exited1 at Playwright web-server startup after reference/check/build, internal links, safe-install aids and docs quality passed. Focused diagnostic smoke then passed88 tests with native exit0 against the exact same-worktree preview server; its process and cwd were independently verified. The remaining gallery check passed4 tests with native exit0. The owned leftover preview server was stopped. The initial failed aggregate result remains recorded; no aggregate rerun or authored fix was substituted. Spec index dry-run/apply both returned no-op; local journals were restored byte-identically and do not enter generated backlinks.
