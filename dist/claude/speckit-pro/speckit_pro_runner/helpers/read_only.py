@@ -8750,7 +8750,12 @@ def is_excluded_generated(path: str) -> bool:
 # they live (a Python package, cmd/ and internal/, crates/, src/main/java)
 # unless the path or file name marks them as tests.
 PRODUCTION_SOURCE_SUFFIXES = (".py", ".go", ".rs", ".java", ".kt", ".kts", ".swift", ".rb", ".cs")
-_TEST_PATH_RE = re.compile(r"(^|/)(tests?|__tests__|spec|src/test)/|(^|/)test_[^/]*\.py$|_test\.(py|go)$|(Test|Tests|Spec)\.(java|kt|swift|cs)$|_spec\.rb$")
+_TEST_PATH_RE = re.compile(r"(^|/)(tests?|__tests__|spec|src/test)/|(^|/)test_[^/]*\.py$|_test\.(py|go)$|(Test|Tests|Spec)\.(java|kt|swift|cs)$|_spec\.rb$|\.(test|spec)\.[cm]?[jt]sx?$")
+
+
+def is_test_path(path: str) -> bool:
+    """True when the path or file name marks a test file in any stack detect-commands knows."""
+    return bool(_TEST_PATH_RE.search(path))
 
 
 def is_production_file(path: str) -> bool:

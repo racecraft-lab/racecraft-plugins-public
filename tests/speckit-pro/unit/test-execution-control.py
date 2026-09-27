@@ -651,6 +651,174 @@ class CorrectiveExceptionTests(_ExecutionControlFixture, unittest.TestCase):
             self.authorize(self.approval(digest_value))
 
 
+class CorrectiveFailureClassTests(_ExecutionControlFixture, unittest.TestCase):
+    """One operator approval scoped to a failure class covers its follow-ups (issue 785)."""
+
+    SCOPE = "a" * 64
+    CLASS = {"test_file": "tests/cli.test.ts", "failure_signature": "Test timed out in 5000ms",
+             "change_kind": "test_timeout"}
+
+    def exhausted_run(self):
+        spec = self.root / "feature/spec.md"
+        text = spec.read_text()
+        spec.unlink()
+        self.invoke("start")
+        spec.write_text(text)
+        spec_digest = self.invoke("bind-invariants", spec_file="feature/spec.md")["ledger"]["invariant_binding"]["spec_sha256"]
+        for dispatch_id, invariant in (("fix-a", "FR-001"), ("fix-b", "FR-002")):
+            self.invoke("reserve", dispatch_id=dispatch_id, kind="corrective", failure_invariant=invariant)
+            self.invoke("complete", dispatch_id=dispatch_id, outcome="failed")
+        return spec_digest
+
+    def approve_class(self, spec_digest, failure_class=None, mode="apply", **changes):
+        failure_class = dict(self.CLASS if failure_class is None else failure_class)
+        event = {"native_event_id": "operator-class", "run_id": self.run_id,
+                 "action": "corrective_exception_approved", "failure_invariant": "FR-001",
+                 "dispatch_id": "fix-c", "failure_kind": "application",
+                 "refusal_reason": "failure_family_budget_exhausted", "scope_sha256": self.SCOPE,
+                 "spec_sha256": spec_digest, "failure_class": failure_class, **changes}
+        return self.invoke("authorize-corrective-exception", mode=mode, dispatch_id="fix-c",
+                           failure_invariant="FR-001", scope_sha256=self.SCOPE,
+                           failure_class=failure_class, native_observation=event)
+
+    def follow_up(self, dispatch_id, mode="apply", **changes):
+        return self.invoke("reserve-class-correction", mode=mode, dispatch_id=dispatch_id,
+                           failure_class={**self.CLASS, **changes})
+
+    def test_class_approval_admits_follow_ups_inside_the_exact_scope(self):
+        digest_value = self.exhausted_run()
+        granted = self.approve_class(digest_value)
+        self.assertEqual(granted["disposition"], "continue")
+        exception = granted["ledger"]["corrective_exception"]
+        self.assertEqual(exception["failure_class"], {**self.CLASS, "follow_up_dispatch_ids": []})
+        # The approved class-level fix lands, then the rerun times out different
+        # tests in the same file with the same signature: no new question.
+        self.invoke("complete", dispatch_id="fix-c", outcome="completed")
+        preview = self.follow_up("fix-d", mode="dry_run")
+        self.assertEqual(preview["disposition"], "continue")
+        admitted = self.follow_up("fix-d")
+        self.assertEqual(admitted["disposition"], "continue")
+        ledger = admitted["ledger"]
+        self.assertEqual(ledger["dispatches"]["fix-d"]["reservation_id"], exception["reservation_id"])
+        self.assertEqual(ledger["dispatches"]["fix-d"]["kind"], "corrective")
+        self.assertEqual(ledger["corrective_exception"]["failure_class"]["follow_up_dispatch_ids"], ["fix-d"])
+        self.assertEqual(ledger["corrective_cycles"], 2)
+        self.assertEqual(ledger["corrective_exception"]["operator_exception_event_id"], "operator-class")
+        schema = json.loads((Path(__file__).resolve().parents[3] /
+                             "speckit-pro/speckit_pro_runner/contracts/execution-control.schema.json").read_text())
+        self.assertEqual(json_schema_failures(ledger, schema, schema, "ledger"), [])
+        self.invoke("complete", dispatch_id="fix-d", outcome="completed")
+        self.assertEqual(self.follow_up("fix-e")["disposition"], "continue")
+        self.invoke("complete", dispatch_id="fix-e", outcome="completed")
+        path = self.root / admitted["ledger_path"]
+        capped = path.read_bytes()
+        with self.assertRaises(ValueError):
+            self.follow_up("fix-f")
+        self.assertEqual(path.read_bytes(), capped)
+
+    def test_follow_ups_outside_the_scope_or_after_an_unsettled_fix_are_refused(self):
+        digest_value = self.exhausted_run()
+        self.approve_class(digest_value)
+        path = self.root / self.invoke("status", mode="read_only")["ledger_path"]
+        in_flight = path.read_bytes()
+        with self.assertRaises(ValueError):
+            self.follow_up("fix-d")
+        self.assertEqual(path.read_bytes(), in_flight)
+        self.invoke("complete", dispatch_id="fix-c", outcome="completed")
+        before = path.read_bytes()
+        cases = (
+            {"test_file": "tests/other.test.ts"},
+            {"failure_signature": "Expected 2 to equal 3"},
+            {"change_kind": "assertion_update"},
+            {"test_file": "src/cli.ts"},
+            {"test_file": "feature/.process/execution-control/cli.test.ts"},
+            {"test_file": "../tests/cli.test.ts"},
+        )
+        for changes in cases:
+            with self.subTest(changes=changes):
+                with self.assertRaises(ValueError):
+                    self.follow_up("fix-d", **changes)
+                self.assertEqual(path.read_bytes(), before)
+        for dispatch_id in ("fix-a", "fix-c"):
+            with self.subTest(reused=dispatch_id):
+                with self.assertRaises(ValueError):
+                    self.follow_up(dispatch_id)
+                self.assertEqual(path.read_bytes(), before)
+        with self.assertRaises(ValueError):
+            self.invoke("reserve-class-correction", dispatch_id="fix-d",
+                        failure_class={**self.CLASS, "extra": "field"})
+        self.assertEqual(path.read_bytes(), before)
+        self.follow_up("fix-d")
+        self.invoke("complete", dispatch_id="fix-d", outcome="failed")
+        failed = path.read_bytes()
+        with self.assertRaises(ValueError):
+            self.follow_up("fix-e")
+        self.assertEqual(path.read_bytes(), failed)
+
+    def test_exact_diff_exception_and_production_class_admit_no_follow_up(self):
+        digest_value = self.exhausted_run()
+        path = self.root / self.invoke("status", mode="read_only")["ledger_path"]
+        before = path.read_bytes()
+        for failure_class in ({**self.CLASS, "test_file": "src/cli.ts"},
+                              {**self.CLASS, "change_kind": "production_timeout"},
+                              {**self.CLASS, "failure_signature": ""}):
+            with self.subTest(failure_class=failure_class):
+                with self.assertRaises(ValueError):
+                    self.approve_class(digest_value, failure_class=failure_class)
+                self.assertEqual(path.read_bytes(), before)
+        event = {"native_event_id": "operator-class", "run_id": self.run_id,
+                 "action": "corrective_exception_approved", "failure_invariant": "FR-001",
+                 "dispatch_id": "fix-c", "failure_kind": "application",
+                 "refusal_reason": "failure_family_budget_exhausted", "scope_sha256": self.SCOPE,
+                 "spec_sha256": digest_value, "failure_class": {**self.CLASS, "test_file": "tests/other.test.ts"}}
+        with self.assertRaises(ValueError):
+            self.invoke("authorize-corrective-exception", dispatch_id="fix-c", failure_invariant="FR-001",
+                        scope_sha256=self.SCOPE, failure_class=self.CLASS, native_observation=event)
+        self.assertEqual(path.read_bytes(), before)
+        exact = {key: value for key, value in event.items() if key != "failure_class"}
+        self.invoke("authorize-corrective-exception", dispatch_id="fix-c", failure_invariant="FR-001",
+                    scope_sha256=self.SCOPE, native_observation=exact)
+        self.invoke("complete", dispatch_id="fix-c", outcome="completed")
+        settled = path.read_bytes()
+        with self.assertRaises(ValueError):
+            self.follow_up("fix-d")
+        self.assertEqual(path.read_bytes(), settled)
+
+    def test_class_scope_is_tamper_checked_and_archived_by_a_replan(self):
+        digest_value = self.exhausted_run()
+        self.approve_class(digest_value)
+        self.invoke("complete", dispatch_id="fix-c", outcome="completed")
+        ledger = self.follow_up("fix-d")["ledger"]
+        path = self.root / self.invoke("status", mode="read_only")["ledger_path"]
+        good = path.read_bytes()
+        exception = ledger["corrective_exception"]
+        tampers = (
+            {**exception, "failure_class": {**exception["failure_class"], "test_file": "src/cli.ts"}},
+            {**exception, "failure_class": {**exception["failure_class"], "change_kind": "other"}},
+            {**exception, "failure_class": {**exception["failure_class"], "follow_up_dispatch_ids": []}},
+            {**exception, "failure_class": {**exception["failure_class"],
+                                            "follow_up_dispatch_ids": ["fix-d", "fix-e", "fix-f"]}},
+        )
+        for index, tampered in enumerate(tampers):
+            with self.subTest(tamper=index):
+                path.write_text(json.dumps({**ledger, "corrective_exception": tampered}))
+                with self.assertRaises(ValueError):
+                    self.invoke("status", mode="read_only")
+        path.write_bytes(good)
+        self.invoke("complete", dispatch_id="fix-d", outcome="completed")
+        spec = self.root / "feature/spec.md"
+        spec.write_text("- FR-001: preserve data\n- FR-002: no secrets\n- FR-003: explain refusals\n")
+        rotated = self.invoke("begin-replan-epoch", spec_file="feature/spec.md", native_observation={
+            "native_event_id": "operator-replan", "run_id": self.run_id, "action": "replan_epoch_approved",
+            "spec_sha256": hashlib.sha256(spec.read_bytes()).hexdigest()})["ledger"]
+        self.assertEqual(rotated["corrective_epochs"][0]["corrective_exception"]["failure_class"]
+                         ["follow_up_dispatch_ids"], ["fix-d"])
+        archived = path.read_bytes()
+        with self.assertRaises(ValueError):
+            self.follow_up("fix-e")
+        self.assertEqual(path.read_bytes(), archived)
+
+
 class ReplanEpochTests(_ExecutionControlFixture, unittest.TestCase):
     SCOPE = "a" * 64
 
@@ -1231,6 +1399,38 @@ class RunnerDispatchTests(unittest.TestCase):
                                           kind="corrective", failure_invariant="FR-003")
         self.assertEqual(code, 0, reserved)
 
+    def test_class_correction_is_a_real_runner_route(self):
+        self.call_runner("execution-control", "apply", action="start")
+        (self.root / "feature/spec.md").write_text("- FR-001: preserve data\n- FR-002: no secrets\n")
+        code, bound = self.call_runner("execution-control", "apply", action="bind-invariants",
+                                       spec_file="feature/spec.md")
+        self.assertEqual(code, 0, bound)
+        for dispatch_id, invariant in (("fix-a", "FR-001"), ("fix-b", "FR-002")):
+            self.call_runner("execution-control", "apply", action="reserve", dispatch_id=dispatch_id,
+                             kind="corrective", failure_invariant=invariant)
+            self.call_runner("execution-control", "apply", action="complete", dispatch_id=dispatch_id,
+                             outcome="failed")
+        failure_class = {"test_file": "tests/cli.test.ts", "failure_signature": "Test timed out in 5000ms",
+                         "change_kind": "test_timeout"}
+        event = {"native_event_id": "operator-class", "run_id": self.run_id,
+                 "action": "corrective_exception_approved", "failure_invariant": "FR-001", "dispatch_id": "fix-c",
+                 "failure_kind": "application", "refusal_reason": "failure_family_budget_exhausted",
+                 "scope_sha256": "a" * 64, "failure_class": failure_class,
+                 "spec_sha256": bound["data"]["ledger"]["invariant_binding"]["spec_sha256"]}
+        code, granted = self.call_runner("execution-control", "apply", action="authorize-corrective-exception",
+                                         dispatch_id="fix-c", failure_invariant="FR-001", scope_sha256="a" * 64,
+                                         failure_class=failure_class, native_observation=event)
+        self.assertEqual(code, 0, granted)
+        self.call_runner("execution-control", "apply", action="complete", dispatch_id="fix-c", outcome="completed")
+        code, admitted = self.call_runner("execution-control", "apply", action="reserve-class-correction",
+                                          dispatch_id="fix-d", failure_class=failure_class)
+        self.assertEqual(code, 0, admitted)
+        self.assertEqual(admitted["data"]["disposition"], "continue")
+        code, refused = self.call_runner("execution-control", "apply", action="reserve-class-correction",
+                                         dispatch_id="fix-e", failure_class={**failure_class,
+                                                                             "test_file": "src/cli.ts"})
+        self.assertEqual(code, 2, refused)
+
     def test_task_metadata_helper_is_registered_and_read_only(self):
         (self.root / "feature/tasks.md").write_text("# Tasks\n## Phase 1: Setup\n- [ ] T001 Create fixture in `fixture.txt`\n")
         (self.root / "feature/spec.md").write_text("# Spec\n")
@@ -1326,7 +1526,8 @@ class DockerVerificationTests(VerificationTests):
 if __name__ == "__main__":
     suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case)
                                for case in (GreenfieldInvariantBindingTests, ExecutionControlTests, CorrectiveRecoveryTests,
-                                            CorrectiveContinuationTests, CorrectiveExceptionTests, ReplanEpochTests, WorkflowIdentityTests,
+                                            CorrectiveContinuationTests, CorrectiveExceptionTests, CorrectiveFailureClassTests,
+                                            ReplanEpochTests, WorkflowIdentityTests,
                                             VerificationTests, RunnerDispatchTests))
     suite.addTests(DockerVerificationTests(name) for name in DockerVerificationTests.__dict__ if name.startswith("test_docker_"))
     raise SystemExit(run_counted(suite, label="test-execution-control"))

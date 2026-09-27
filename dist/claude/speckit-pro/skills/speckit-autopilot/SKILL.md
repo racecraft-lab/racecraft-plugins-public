@@ -766,7 +766,8 @@ directions; do not infer a broader precedence rule.
   One operator-approved application correction past it uses
   `authorize-corrective-exception`. After an operator-ordered re-plan,
   `begin-replan-epoch` opens a fresh allowance with the operator's approval;
-  never reset or bypass the ledger otherwise.
+  never reset or bypass the ledger otherwise. A class-scoped exception covers
+  later same-class fixes through `reserve-class-correction`.
 - **Consensus all-disagree** (Round 2): flag `[HUMAN REVIEW NEEDED]`.
   In an interactive session, ask the operator in place with
   `AskUserQuestion`, apply the answer, and continue; in an unattended run,

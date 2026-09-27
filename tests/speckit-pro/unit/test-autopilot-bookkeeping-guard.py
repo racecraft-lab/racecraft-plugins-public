@@ -687,6 +687,56 @@ class BlockedActionDeferralSourceContractTests(unittest.TestCase):
         self.assertIn(BLOCKED_ACTION_HEADING, recovery)
 
 
+FAILURE_CLASS_HEADING = "Repeated Gate Failures: Diagnose One Class, Approve It Once"
+
+
+class FailureClassApprovalSourceContractTests(unittest.TestCase):
+    """Repeated same-signature gate failures are one class with one approval (issue 785)."""
+
+    def assert_class_rules(self, section: str) -> None:
+        for phrase in (
+            "same failure signature in the same test file",
+            "even when the failing tests differ",
+            "one failure class",
+            "one class-level fix",
+            "never per-test diffs",
+            "`failure_class`",
+            "`authorize-corrective-exception`",
+            "`reserve-class-correction`",
+            "without a new question",
+            "at most once",
+            "production",
+            "consolidated operator request",
+        ):
+            self.assertIn(phrase, section)
+
+    def test_codex_phase_execution_states_the_class_rule(self) -> None:
+        phase = _flat(CODEX_AUTOPILOT_SKILL.parent / "references" / "phase-execution-codex.md")
+        section = _section(phase, f"### {FAILURE_CLASS_HEADING}", "## PR Packet and Body Boundary")
+        self.assert_class_rules(section)
+        recovery = _flat(CODEX_AUTOPILOT_SKILL.parent / "references" / "error-recovery-codex.md")
+        self.assertIn(FAILURE_CLASS_HEADING, recovery)
+        self.assertIn("`reserve-class-correction`", recovery)
+
+    def test_claude_phase_execution_states_the_class_rule(self) -> None:
+        references = CLAUDE_AUTOPILOT_SKILL.parent / "references"
+        phase = _flat(references / "phase-execution.md")
+        section = _section(phase, f"#### {FAILURE_CLASS_HEADING}", "#### Append Contract")
+        self.assert_class_rules(section)
+        recovery = _flat(references / "error-recovery.md")
+        self.assertIn(FAILURE_CLASS_HEADING, recovery)
+        self.assertIn("`reserve-class-correction`", recovery)
+        skill = _flat(CLAUDE_AUTOPILOT_SKILL)
+        self.assertIn("`reserve-class-correction`", _section(skill, "## Error Recovery", "## References"))
+
+    def test_ledger_reference_documents_the_class_request_shape(self) -> None:
+        efficiency = _flat(CLAUDE_AUTOPILOT_SKILL.parent / "references" / "execution-efficiency.md")
+        section = _section(efficiency, "- `reserve-class-correction`:", "- `begin-replan-epoch`:")
+        for phrase in ("`test_file`", "`failure_signature`", "`change_kind`", "`test_timeout`",
+                       "`follow_up_dispatch_ids`", "completed", "two follow-ups"):
+            self.assertIn(phrase, section)
+
+
 class AutonomyBoundaryAuthorizationTests(unittest.TestCase):
     def test_matching_explicit_authorization_remains_valid_on_resume(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
@@ -1739,6 +1789,7 @@ def build_suite() -> unittest.TestSuite:
         StateStatusSchemaTests,
         AutonomyBoundarySourceContractTests,
         BlockedActionDeferralSourceContractTests,
+        FailureClassApprovalSourceContractTests,
         AutonomyBoundaryAuthorizationTests,
         AutonomyBoundaryFreshnessTests,
         AutonomyBoundaryMalformedExecutionTests,

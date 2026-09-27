@@ -24,6 +24,8 @@ SCHEMA = "execution-control/v1"
 KINDS = {"implementation", "corrective", "verification", "infrastructure"}
 OUTCOMES = {"completed", "failed", "unknown", "expected_tdd_red"}
 CORRECTIVE_REFUSALS = {"failure_family_budget_exhausted", "corrective_run_budget_exhausted"}
+CLASS_CHANGE_KINDS = {"test_timeout"}
+CLASS_FOLLOW_UP_LIMIT = 2
 RUNNER_BYPRODUCT_DIRECTORIES = frozenset({(".process", "execution-control"), (".process", "verification")})
 
 
@@ -261,7 +263,7 @@ def _validate_corrective_exception(ledger: dict[str, Any]) -> str | None:
     record = ledger["corrective_exception"]
     keys = {"reservation_id", "dispatch_id", "failure_invariant", "refusal_reason", "scope_sha256",
             "spec_sha256", "operator_exception_event_id", "authorized_at"}
-    if not isinstance(record, dict) or set(record) != keys:
+    if not isinstance(record, dict) or set(record) - {"failure_class"} != keys:
         raise ValueError("invalid corrective exception")
     reservation = require_text(record["reservation_id"], "corrective exception reservation_id")
     dispatch_id = require_text(record["dispatch_id"], "corrective exception dispatch_id")
@@ -278,11 +280,46 @@ def _validate_corrective_exception(ledger: dict[str, Any]) -> str | None:
             or not ledger["started_at"] <= record["authorized_at"] < float("inf")
             or reservation in ledger["reservations"]):
         raise ValueError("invalid corrective exception binding")
+    follow_ups = _validate_failure_class(record["failure_class"]) if "failure_class" in record else []
     members = [key for key, item in ledger["dispatches"].items()
                if isinstance(item, dict) and item.get("reservation_id") == reservation]
-    if members != [dispatch_id] or ledger["dispatches"][dispatch_id].get("kind") != "corrective":
-        raise ValueError("corrective exception must own exactly one corrective dispatch")
+    if (members != [dispatch_id, *follow_ups]
+            or any(ledger["dispatches"][member].get("kind") != "corrective" for member in members)):
+        raise ValueError("corrective exception must own its approved corrective dispatches")
+    if any(ledger["dispatches"][member].get("outcome") != "completed" for member in members[:-1]):
+        raise ValueError("a class follow-up requires every earlier class correction to have completed")
     return reservation
+
+
+def _class_scope(value: Any) -> dict[str, str]:
+    """One test file, one normalized failure signature, and one change kind."""
+    keys = {"test_file", "failure_signature", "change_kind"}
+    if not isinstance(value, dict) or set(value) != keys:
+        raise ValueError("failure_class requires exactly test_file, failure_signature, and change_kind")
+    from .helpers.read_only import is_test_path
+
+    test_file = require_text(value["test_file"], "failure_class test_file")
+    path = PurePosixPath(test_file)
+    if (path.is_absolute() or path.as_posix() != test_file or any(part in {"..", ".git"} for part in path.parts)
+            or is_runner_byproduct(test_file) or not is_test_path(test_file)):
+        raise ValueError("failure_class test_file must be a canonical repository-relative test file")
+    if value["change_kind"] not in CLASS_CHANGE_KINDS:
+        raise ValueError("unsupported failure_class change_kind")
+    return {"test_file": test_file,
+            "failure_signature": require_text(value["failure_signature"], "failure_class failure_signature"),
+            "change_kind": value["change_kind"]}
+
+
+def _validate_failure_class(value: Any) -> list[str]:
+    if not isinstance(value, dict):
+        raise ValueError("invalid failure_class")
+    _class_scope({key: item for key, item in value.items() if key != "follow_up_dispatch_ids"})
+    follow_ups = value.get("follow_up_dispatch_ids")
+    if (not isinstance(follow_ups, list) or len(follow_ups) > CLASS_FOLLOW_UP_LIMIT
+            or not all(isinstance(item, str) and item.strip() for item in follow_ups)
+            or len(set(follow_ups)) != len(follow_ups)):
+        raise ValueError("invalid failure_class follow-up registry")
+    return follow_ups
 
 
 def validate_recovery_records(ledger: dict[str, Any]) -> None:
@@ -544,9 +581,12 @@ def authorize_corrective_exception(ledger: dict[str, Any], inputs: dict[str, Any
     dispatch_id = require_text(inputs.get("dispatch_id"), "dispatch_id")
     invariant = require_text(inputs.get("failure_invariant"), "failure_invariant")
     scope = inputs.get("scope_sha256")
+    failure_class = _class_scope(inputs["failure_class"]) if inputs.get("failure_class") is not None else None
     keys = {"native_event_id", "run_id", "action", "failure_invariant", "dispatch_id", "failure_kind",
-            "refusal_reason", "scope_sha256", "spec_sha256"}
+            "refusal_reason", "scope_sha256", "spec_sha256"} | ({"failure_class"} if failure_class else set())
     event, event_id = _operator_event(ledger, inputs, keys, "corrective exception")
+    if failure_class is not None and event.get("failure_class") != failure_class:
+        raise ValueError("operator exception event does not approve this failure class")
     spec_digest = ledger.get("invariant_binding", {}).get("spec_sha256")
     refusal = _corrective_refusal(ledger, invariant)
     binding = (event.get("run_id"), event.get("action"), event.get("failure_invariant"), event.get("dispatch_id"),
@@ -568,6 +608,31 @@ def authorize_corrective_exception(ledger: dict[str, Any], inputs: dict[str, Any
                                       "failure_invariant": invariant, "refusal_reason": refusal,
                                       "scope_sha256": scope, "spec_sha256": spec_digest,
                                       "operator_exception_event_id": event_id, "authorized_at": now}
+    if failure_class is not None:
+        ledger["corrective_exception"]["failure_class"] = {**failure_class, "follow_up_dispatch_ids": []}
+    ledger["dispatches"][dispatch_id] = {"kind": "corrective", "outcome": "reserved", "reserved_at": now,
+                                         "reservation_id": reservation, "reconciliations": 0}
+    return {"reservation_id": reservation, "dispatch_id": dispatch_id}
+
+
+def reserve_class_correction(ledger: dict[str, Any], inputs: dict[str, Any], now: float) -> dict[str, Any]:
+    """Reserve a follow-up inside the operator-approved failure class, with no new approval.
+
+    The scope must match exactly, every earlier correction in the class must have
+    completed, and at most CLASS_FOLLOW_UP_LIMIT follow-ups share one approval.
+    """
+    dispatch_id = require_text(inputs.get("dispatch_id"), "dispatch_id")
+    scope = _class_scope(inputs.get("failure_class"))
+    exception = ledger.get("corrective_exception")
+    approved = exception.get("failure_class") if isinstance(exception, dict) else None
+    if not isinstance(approved, dict) or {key: approved[key] for key in scope} != scope:
+        raise ValueError("no operator approval covers this failure class in the current corrective epoch")
+    reservation = exception["reservation_id"]
+    members = [item for item in ledger["dispatches"].values() if item.get("reservation_id") == reservation]
+    if (dispatch_id in _used_dispatch_ids(ledger) or len(approved["follow_up_dispatch_ids"]) >= CLASS_FOLLOW_UP_LIMIT
+            or any(item["outcome"] != "completed" for item in members)):
+        raise ValueError("class correction needs a new dispatch id, completed earlier fixes, and an unspent class allowance")
+    approved["follow_up_dispatch_ids"].append(dispatch_id)
     ledger["dispatches"][dispatch_id] = {"kind": "corrective", "outcome": "reserved", "reserved_at": now,
                                          "reservation_id": reservation, "reconciliations": 0}
     return {"reservation_id": reservation, "dispatch_id": dispatch_id}
@@ -725,7 +790,7 @@ def execution_control(root: Path, inputs: dict[str, Any], mode: str) -> dict[str
     if spec_name is not None and not spec.is_file():
         raise ValueError("spec_file must be an existing contained file")
     action = inputs.get("action", "status")
-    if action not in {"start", "status", "bind-invariants", "reserve", "authorize-corrective-retry", "authorize-corrective-continuation", "authorize-corrective-exception", "begin-replan-epoch", "begin-verification", "complete", "reconcile", "checkpoint", "pause", "resume", "relocate-workflow"}:
+    if action not in {"start", "status", "bind-invariants", "reserve", "authorize-corrective-retry", "authorize-corrective-continuation", "authorize-corrective-exception", "reserve-class-correction", "begin-replan-epoch", "begin-verification", "complete", "reconcile", "checkpoint", "pause", "resume", "relocate-workflow"}:
         raise ValueError("unsupported action; pauses/resets require verified native authorization")
     if mode not in {"read_only", "dry_run", "apply"} or (mode == "read_only" and action != "status"):
         raise ValueError("ledger mutations require dry_run or apply")
@@ -775,6 +840,8 @@ def execution_control(root: Path, inputs: dict[str, Any], mode: str) -> dict[str
             extra = authorize_corrective_continuation(ledger, inputs, now)
         elif action == "authorize-corrective-exception" and not reasons:
             extra = authorize_corrective_exception(ledger, inputs, now)
+        elif action == "reserve-class-correction" and not reasons:
+            extra = reserve_class_correction(ledger, inputs, now)
         elif action == "begin-replan-epoch" and not reasons:
             extra = begin_replan_epoch(root, ledger, inputs, spec, now)
         elif action == "begin-verification" and not reasons:

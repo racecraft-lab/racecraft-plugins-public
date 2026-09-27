@@ -2735,6 +2735,31 @@ unknown side effects, an execution-control `checkpoint_required` disposition
 (including an exhausted repair budget), a ledger or clock error, invalid or
 stale state, and a failed gate whose repair is out of scope.
 
+#### Repeated Gate Failures: Diagnose One Class, Approve It Once
+
+When consecutive runs of a gate fail with the same failure signature in the
+same test file, even when the failing tests differ, the cause is one failure
+class. The usual case is a timeout that several slow tests in one file sit
+close to. Diagnose it as one failure class, name it in the gate evidence, and
+propose one class-level fix (for example, a file-level timeout default),
+never per-test diffs for whichever tests failed this time.
+
+1. **Normalize the signature.** Strip test names, durations, and counts from
+   the failure message so two runs of the same class compare equal.
+2. **Ask at most once.** When the repair budget is exhausted and the fix needs
+   operator approval, request `authorize-corrective-exception` with a
+   `failure_class` scope: the repo-relative test file, the normalized
+   signature, and the change kind (`test_timeout`). The approval never covers
+   production code, another file, or another signature.
+3. **Use the approval for follow-ups.** If a later run fails again inside that
+   exact class after the approved fix completed, reserve the next correction
+   with `reserve-class-correction` and apply it without a new question. The
+   helper allows two follow-ups per approval.
+4. **Defer anything outside it.** A correction outside the approved class, a
+   class whose follow-ups are spent, or a second approval request is never
+   asked in place. Defer it to the one consolidated operator request at the
+   end of the run and keep executing independent work.
+
 #### Append Contract: One Entry Per Dispatched Attempt
 
 Every attempt Step 3 dispatched gets one entry in the record the Phase 7 setup

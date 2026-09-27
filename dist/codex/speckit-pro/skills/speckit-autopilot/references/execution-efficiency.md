@@ -121,7 +121,25 @@ ownership from the caller's current workflow.
   earlier results, and ordinary ceilings unchanged, and refuses replay, a
   second exception, a mismatched identity, scope, or spec, and any request an
   ordinary reserve would accept. The exception dispatch has no nested,
-  retry, or continuation allowance.
+  retry, or continuation allowance. When the correction fixes a failure class
+  in one test file (see the phase guidance on repeated gate failures), pass
+  `failure_class` as well: `test_file` (repo-relative), `failure_signature`
+  (the normalized failure message, with test names, durations, and counts
+  stripped), and `change_kind`. The operator event carries the same
+  `failure_class` object. The helper refuses a production path, an unknown
+  change kind, or an event whose class differs from the request.
+- `reserve-class-correction`: after a class-scoped exception, reserve a
+  follow-up correction inside that exact class without a new operator event.
+  Pass a new `dispatch_id` and the same `failure_class`: `test_file`,
+  `failure_signature`, and `change_kind` (only `test_timeout` today). All three
+  must equal the approved class exactly; the parent normalizes the signature
+  the same way both times. `test_file` must be a test path under the runner's
+  existing test-file classifier, never a production path. Every earlier
+  correction in the class must have completed; a failed or unknown one needs
+  the operator. One approval covers at most two follow-ups, recorded in the
+  exception's `follow_up_dispatch_ids`. A different file, signature, or change
+  kind, a reused dispatch ID, an exact-diff exception, or an archived epoch is
+  refused without mutation.
 - `begin-replan-epoch`: when the operator orders a re-plan (a rescope, or a
   `--from-phase` rerun of planning phases the run already completed) after the
   run has spent corrective allowance, ask the operator to approve a fresh
