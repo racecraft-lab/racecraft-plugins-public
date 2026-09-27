@@ -38,7 +38,7 @@ captured during scoping.
 | Checklist | `/speckit-checklist` | ✅ Complete | API 24, error handling 21, state management 22; zero gaps; G4 passed |
 | Tasks | `/speckit-tasks` | ✅ Complete | 31 unchecked tasks, 17 groups, current metadata, G5 pass; 18 pending-only v1 markers validated |
 | Analyze | `/speckit-analyze` | ✅ Complete | All current findings resolved; 26 active FRs covered; G6 passed; final confidence synthesis 0.95 |
-| Confidence Gate | G6.5 | 🔄 In Progress | Analyze checkpoint complete; current autonomy preflight and advisory gate next |
+| Confidence Gate | G6.5 | ✅ Complete | Current autonomy ready; advisory PASS, computed 0.95 ≥ 0.90, no deductions |
 | Implement | `/speckit-implement` | ⏳ Pending | Outside --stage plan; actual per-PR diffs, LOC and checkpoints remain mandatory before emission |
 | Post | Post-Implementation | ⏳ Pending | Outside --stage plan; canonical 13-item closeout remains for implementation |
 
@@ -807,17 +807,16 @@ This dedicated final Analyze synthesis completes the planning analysis. The oper
 
 ### Autonomy Boundary Preflight
 
-Status: ready. The exact current-boundary validation passed before G6.5 using the existing explicit authorization for this plan-only handoff. The complete record remains private to honor the repository privacy rule. Public receipt SHA-256: `104b21e273eb949564a1ecdb23664d31113735b14843538f312863e9cc9f0949`. The public-bookkeeping privacy check returned 10/11: home-path, specific-temp-path, and UUID checks passed; only the documented worktree-path dynamic-local-term check failed. The exact private ledger was excluded for that command. Issue #683 tracks the shipped autonomy schema’s requirement for private absolute roots in committed public files; exact public replay remains unavailable. This exception does not qualify implementation.
+Status: ready. The current private record and public receipt match this session's actual writable roots and permissions, with the user's explicit authorization limited to planning edits, commits, draft refresh and public-documentation research. The current phase-coverage guard returned no autonomy errors. Private record digest: `sha256:aee0f387809bf3cf96445f8d27e5ec5a9e8b29368839b019345e41e8dac9ec4f`. Implementation remains outside this authorization.
 
-**When to run:** After Phase 6 commits and before Phase 7 begins. This section
-records the verdict so a later session can read it.
+**When to run:** After Phase 6 commits and before Phase 7 begins. Analyze checkpoint: `de3950bd`.
 
 | Field | Value |
-|-------|-------|
+| --- | --- |
 | Mode | advisory (default; native mode resolver) |
-| Composite confidence | 0.43; threshold 0.90 |
-| Verdict | proceed with warning — plan-only draft review; implementation remains unqualified |
-| Evidence | Computed from the dedicated synthesizer’s five criteria: mean 0.93 minus five open HIGH findings (0.50); native domain exit 2, recommended_action=continue_with_warning. Lowest criterion: approach clarity 0.84. |
+| Composite confidence | 0.95; threshold 0.90 |
+| Verdict | PASS — proceed to plan-stage artifact and draft handoff |
+| Evidence | Native confidence-gate exit 0, computed from all five current criteria; no open CRITICAL/HIGH deductions; recommended_action=proceed. |
 
 ---
 
@@ -959,9 +958,9 @@ Ripwire quality-delta returned exit 2 for canonical process-state verbosity. Its
   "schema_version": "1.0",
   "feature_dir": "specs/hrns-015-autopilot-gate-pr-emission-repair",
   "input_hashes": {
-    "specs/hrns-015-autopilot-gate-pr-emission-repair/spec.md": "01d46bbfe49807eae7d93e90cb2277104530848ea43ec72a0fd0b437abc0e05c",
-    "specs/hrns-015-autopilot-gate-pr-emission-repair/plan.md": "10d972bb68d3f637a2ad96024467bd600c2dbbfc637cca074cf408d95fb6b9b5",
-    "specs/hrns-015-autopilot-gate-pr-emission-repair/tasks.md": "aa80f377f3219c8de8919b7a50382afd9b83e823852eff43cb7748ff02bf1ae8",
+    "specs/hrns-015-autopilot-gate-pr-emission-repair/spec.md": "18c93677aaaee5f73aa8399b2cea052cc58ed2724fe6e74d93be96a47eae7e58",
+    "specs/hrns-015-autopilot-gate-pr-emission-repair/plan.md": "8381e50f0c0daf7491b6fb6f6e431adea30a89277d0b3073fd476194e6a8d759",
+    "specs/hrns-015-autopilot-gate-pr-emission-repair/tasks.md": "46302f5321c2df17acb65799305a2fd8de82b051f1e9b0bd630f45b3767febe3",
     "docs/ai/specs/.process/HRNS-015-design-concept.md": "2179b6c3fb8ab3b5bfe0a326ccf1af68b3b0ce7160286745a01713d4264ccba2"
   },
   "manifest_sha256": "c90a240c9ae6d007e6aa1586612891de78337d2c0f7892ec121fb4fe316d25a0",
@@ -978,12 +977,12 @@ Ripwire quality-delta returned exit 2 for canonical process-state verbosity. Its
       "id": "implementation-plan",
       "generation": "generated",
       "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/artifacts/implementation-plan.html",
-      "sha256": "1380062e3a5353c6d7ad128f624267410276e4b3e9ecb222660d888c057fc214",
+      "sha256": "eb159ce32229e60be7a56b02d07b795784c933a525d053af8328c5b0317533d0",
       "expected_title": "Implementation Plan \u2014 HRNS-015 Autopilot, Gate, and PR-Emission Repair",
-      "expected_content": "33 tasks \u00b7 14 stories \u00b7 29 requirements \u00b7 40 acceptance scenarios. All tasks remain unchecked. Prior owner ratification was five PRs; acceptance of the 19-PR proposal remains pending.",
+      "expected_content": "Eighteen approved review increments repair packet emission, gates, completion and scaffold flows on Claude Code and Codex.",
       "preview": {
-        "status": "unavailable",
-        "blocker": "The attested Codex observe_codex runner returned missing_prerequisite (domain exit 3): preview_boundary_unavailable. No isolated observer verdict was produced; browser preview remains unverified.",
+        "status": "pending",
+        "blocker": "Not observed yet",
         "observation": null
       }
     },
@@ -991,12 +990,12 @@ Ripwire quality-delta returned exit 2 for canonical process-state verbosity. Its
       "id": "spec-explainer",
       "generation": "generated",
       "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/artifacts/spec-explainer.html",
-      "sha256": "69f28d8b56973ec6a55cef2e14b850f8b03dc9d50128ea952f03373034ea1bf3",
+      "sha256": "9d2c15aed91814c9768b2085708a8453eaf6e509077c301b699eab1d6f132979",
       "expected_title": "Spec Explainer \u2014 HRNS-015 Autopilot, Gate, and PR-Emission Repair",
-      "expected_content": "HRNS-015 repairs observed autopilot and scaffold defects through 19 proposed ordered one-story increments. The plan defines 33 tasks, 14 stories, 29 requirements, and 40 acceptance scenarios. Analyze is complete for plan-only review; H3\u2013H7 remain open and spec qualification is unqualified.",
+      "expected_content": "All implementation checkpoints remain pending.",
       "preview": {
-        "status": "unavailable",
-        "blocker": "The attested Codex observe_codex runner returned missing_prerequisite (domain exit 3): preview_boundary_unavailable. No isolated observer verdict was produced; browser preview remains unverified.",
+        "status": "pending",
+        "blocker": "Not observed yet",
         "observation": null
       }
     },
@@ -1004,12 +1003,12 @@ Ripwire quality-delta returned exit 2 for canonical process-state verbosity. Its
       "id": "code-approaches",
       "generation": "generated",
       "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/artifacts/code-approaches.html",
-      "sha256": "7743c7a577b2e316f2be54892f89ac4955d7323e3c0d35cef7741618329b3bd7",
+      "sha256": "a3862645012b57c3e35105f1d76942216c21d7da769306805138a3a90af9ccbb",
       "expected_title": "Code Approaches \u2014 HRNS-015 Autopilot, Gate, and PR-Emission Repair",
-      "expected_content": "The 19 proposed increments supersede the original four-slice estimate and previously ratified five-PR order. Owner acceptance of the changed count remains pending. H3\u2013H7 stay open; actual base/head diffs, generated outputs, reviewable LOC, and marker fingerprints are unqualified. The installed repeated-path marker validator must be repaired before a current marker plan can validate. T002 blocks all behavior tasks.",
+      "expected_content": "How should a supplied release note reach a final PR without separating its body from the validated packet?",
       "preview": {
-        "status": "unavailable",
-        "blocker": "The attested Codex observe_codex runner returned missing_prerequisite (domain exit 3): preview_boundary_unavailable. No isolated observer verdict was produced; browser preview remains unverified.",
+        "status": "pending",
+        "blocker": "Not observed yet",
         "observation": null
       }
     },
@@ -1017,93 +1016,23 @@ Ripwire quality-delta returned exit 2 for canonical process-state verbosity. Its
       "id": "module-map",
       "generation": "generated",
       "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/artifacts/module-map.html",
-      "sha256": "dcfc28ce3b04f12d87623db23f4a9702b88fc5914b0ccead781a9c3d33198c9f",
+      "sha256": "2fd57d9a2e74d03cbd27533264bb7a8ab3503b7d42c8d323d1f3595db88e0d9d",
       "expected_title": "Module Map \u2014 HRNS-015 Autopilot, Gate, and PR-Emission Repair",
-      "expected_content": "19 proposed increments contain 14\u201324 candidate paths each, including six recurring process/evidence candidates. Actual base/head diffs, generated outputs, LOC, and marker fingerprints are unqualified. Owner acceptance is pending; T002 blocks behavior tasks. No current validated marker plan or implementation approval is recorded.",
+      "expected_content": "Fourteen stories cover 26 active requirements in eighteen ordered increments.",
       "preview": {
-        "status": "unavailable",
-        "blocker": "The attested Codex observe_codex runner returned missing_prerequisite (domain exit 3): preview_boundary_unavailable. No isolated observer verdict was produced; browser preview remains unverified.",
+        "status": "pending",
+        "blocker": "Not observed yet",
         "observation": null
       }
     },
     {
       "id": "architecture-viewer",
       "generation": "gap",
-      "reason": "Selected draft-pr entry architecture-viewer has status planned, but the active installed gallery has no templates/architecture-viewer.html."
+      "reason": "The selected entry is planned in the shipped manifest, but templates/architecture-viewer.html is absent."
     }
   ]
 }
 ```
-
-### Planning Resume — installed 2.37.0
-
-Explicit resume from Plan after agent restart. Prior Plan-to-confidence results are historical and are being revalidated. Archive contract sweep retained both other active directories because merged provenance was not established; current target excluded. Research broker screening mode: jev; warning: search_environment_only_credential. No implementation dispatched. Private autonomy proof is retained outside repository files; current public receipt schema is autonomy-boundary-receipt.v1.
-
-### API Checklist Resume — 2.37.0
-
-The named checklist executor completed the bound command protocol using supported setup and the skill-authorized canonical template fallback. It appended CHK017–CHK024, preserving custom reviewer ownership. One gap remains: CHK022/FR-024 literal fixture identity. Round 1 spec/codebase analysts disagreed; the named synthesizer escaped to Round 2. The domain analyst joined; final named synthesis accepted the exact addition “Each documented inline request envelope must match a passing fixture byte for byte.” by 2/3 majority at high confidence, with codebase dissent preserved. No contract repair is applied.
-
-| Phase | Item | Categories | Round | Outcome | Analysts Used |
-| --- | --- | --- | --- | --- | --- |
-| Checklist | `/speckit-checklist` | ⏳ Pending | Revalidate after current re-plan |
-| Checklist | `/speckit-checklist` | ⏳ Pending | Revalidate after current re-plan |
-
-Execution-control refused FR-024 correction with corrective_run_budget_exhausted; both prior cycles remain consumed. Current state is an incomplete checkpoint with explicit correction approval requested. The eighteen-part delivery direction also awaits the owner. Checklist, Tasks, Analyze, confidence and draft-artifact refresh remain incomplete. All dispatched agents and native commands have terminal results consumed; no unknown effects or implementation dispatch.
-
-Setup mismatch: installed checklist skill passes unsupported --template; standalone template resolver reports missing PyYAML. Supported --json setup passed; canonical fallback permitted continuation. Tracked in [issue #733](https://github.com/racecraft-lab/racecraft-plugins-public/issues/733); upstream versus upgrade integration ownership remains unconfirmed.
-
-### Cloud Delegation Recovery
-
-The user corrected the delegation route. Prior HAL failures used an explicit local override; they did not establish an automatic-routing defect. Default routing completed an independent read-only planning audit on Ollama Cloud (deepseek-v4.1-flash:cloud, routeReason cloud:default), with cleanup complete and no changed files. The audit corroborated candidate arithmetic for the proposed eighteen increments; actual changed diffs, reviewable LOC, current markers and G6 remain unqualified.
-
-Parent review confirmed obsolete nineteen-increment and repeated-path-blocker wording remains in spec Assumptions; the later Tasks phase must also regenerate stale scope/timing claims in tasks and inventory. The broader fixture additions proposed by the auditor are not accepted as new requirements; the already-consumed FR-024 consensus remains the exact pending correction. The five-group/18-part delivery decision and corrective exception still await explicit answers. Infrastructure recovery neither approves those decisions nor resets either consumed repair cycle.
-
-### Owner Approval — eighteen-part delivery and FR-024
-
-Owner response: “approved now GO” to the two pending decisions. Eighteen ordered delivery increments are approved under the existing strict budgets and complete remaining scope. The exact FR-024 contract sentence was added under Host request examples; only CHK022’s gap marker was removed, retaining reviewer checkbox ownership. Native marker verification returned zero gaps across spec, plan and checklists. The same-run one-time corrective exception completed; both earlier repair cycles remain consumed. Plan artifacts are being reconciled to this new approval before current G3 is revalidated. Previous G3 results are historical for the pre-approval artifact set.
-
-Approved-delivery Plan reconciliation completed in all six artifacts. Parent G3 passed with zero unresolved markers; current advisory estimate passed at 200 projected LOC from 55 declared entries (5 recognized production files). Actual delivery evidence remains separately required. Spec-index preview is a clean no-op. API checklist is being rechecked against the applied, approved FR-024 clarification; remaining Checklist domains, Tasks and Analyze follow.
-
-API checklist post-correction verification completed: 24 unique reviewer-owned unchecked items, zero gaps, no new unresolved items. Prior named consensus and its approved exact correction are fully applied and verified. Error-handling review follows.
-
-Error-handling resume: 21 unchecked requirements-review items; zero gaps. Supported setup, count-markers and scoped whitespace checks passed. No consensus needed. State-management review is next.
-
-State-management resume: 22 unchecked review items; zero gaps. No consensus required. Parent G4 passed with zero markers. Optional Git hooks are covered by the phase checkpoint.
-
-Tasks setup environment recovery: the required setup command returned exit 1 because the first Python on PATH lacked PyYAML. No owned task artifacts changed. The existing SpecKit CLI environment was independently verified as Python 3.13.13 with PyYAML 6.0.3. A bounded infrastructure continuation uses that installed environment first on PATH; no dependency installation or repository tooling modification is needed.
-
-### Planned-marker contract diagnostic
-
-The installed 2.37.0 v2 marker schema rejects an otherwise complete synthetic planned record with an unstarted checkpoint: `implementation_checkpoint is missing required fields: commit_sha, evidence_path`. The diagnostic remained in memory and was never inserted into workflow state. Tracked in [issue #740](https://github.com/racecraft-lab/racecraft-plugins-public/issues/740). Current v1 compatibility is supported, but an explicit owner decision is pending on using a planned v1 record and moving actual implementation diff/LOC/checkpoint qualification to its proper pre-emission boundary. Scope and file caps are unchanged.
-
-A separate cloud contract audit was rejected by automatic approval review before dispatch because it would export private repository source; no gateway task or candidate was created. The parent used local read-only schema inspection and a synthetic in-memory validator diagnostic instead.
-
-### Approved-plan checkpoint after Tasks
-
-Checklist checkpoint `8ce521dc` and Tasks checkpoint `b671bf03` are pushed. G4, G5, task sidecar validation and the 52-row coverage guard passed. The current task plan has not run Analyze or confidence; older verdicts are historical and are not reused. No executor or native command remains in flight. The operator timing decision above is pending before marker persistence, Analyze, confidence and final artifact regeneration/draft refresh. No implementation work started.
-
-### Approved re-plan — 2.37.1
-
-The operator ordered a re-plan from Plan and approved a fresh correction allowance. The guarded begin-replan-epoch action archived the spent allowance and retained the existing run identity. The approved G6 timing correction is reserved as an ordinary FR-026 correction. Planning validates requirement coverage, task consistency, candidate budgets, and a current planned marker record. Actual per-PR diffs, LOC, and checkpoint evidence remain mandatory before PR emission. Pre-implementation markers use pr-marker-plan.v1 with pending-only checkpoints. Prior completion and qualification statements above are historical.
-
-Current binding is resolved/same at the selected feature worktree; all check-prerequisites checks pass, including setup_contract and template_resolution. All 13 installed agents match 2.37.1. Formal selection remains none. Archive command contract inspection retained the two other specs without merged provenance and excluded HRNS-015; no cleanup is eligible. Research screening is jev; search_environment_only_credential remains a warning. Archive delegation was rejected before dispatch for private-source export risk; the contract inspection was completed locally.
-
-### Plan revalidation — 2.37.1
-
-Plan, research, data model, quickstart and both contracts now reflect the approved planning/emission boundary and pending-only v1 marker design. All 18 increments, 14 stories and 26 active requirements remain. G3 passed with zero unresolved markers; advisory estimate passed at 200 projected LOC across 55 declared entries. Three broker documentation queries returned no usable chunks; prior evidence is retained with its limits. Checklists need no preemptive prose edits; each domain is revalidated next. Optional Git hooks are covered by the phase checkpoint; the traceability hook is covered by the subsequent G5/Analyze checks.
-
-### API checklist revalidation — 2.37.1
-
-24 reviewer-owned unchecked items, zero gaps, zero unresolved findings. The approved FR-024/CHK022 requirement remains satisfied. Native binding, setup, pre/post marker counts and whitespace checks passed. Consensus is skipped because no unresolved item remains. Ripwire's advisory test-gate reports an untested documentation link; no implementation-test pass is claimed.
-
-### Error-handling revalidation — 2.37.1
-
-21 reviewer-owned unchecked criteria remain byte-identical; zero gaps and unresolved items. Native binding, prerequisites, setup, final marker counts and scoped whitespace checks passed. Existing failure/retry contracts remain intact. Stale Tasks timing prose is assigned to the scheduled Tasks producer; it is not an unresolved requirements question. Consensus is skipped.
-
-### Checklist completion — 2.37.1
-
-State-management revalidation preserved all 22 unchecked criteria and found zero gaps. All three domain results were consumed; none required consensus. Parent G4 passed with zero markers. Only dated review evidence was appended to the three checklists. Tasks now reconciles the approved planning/emission boundary and regenerates its source fingerprints.
-
 
 ## PR Marker Plan Evidence
 

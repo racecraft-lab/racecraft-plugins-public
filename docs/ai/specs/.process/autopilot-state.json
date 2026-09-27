@@ -5,65 +5,22 @@
   "branch": "hrns-015-autopilot-gate-pr-emission-repair",
   "status": "in_progress",
   "stage": "plan",
-  "active_step": "Phase 6.5: Confidence Gate",
+  "active_step": "Plan stage: Draft artifact refresh and handoff",
   "stage_resolution": {
-    "artifact_review": {
-      "feature_dir": "specs/hrns-015-autopilot-gate-pr-emission-repair",
-      "generated": 4,
-      "generation_error": null,
-      "generation_gaps": [
-        "architecture-viewer"
-      ],
-      "observer": "artifact-preview-observer",
-      "pages": [
-        {
-          "blocker": "Generation inputs or artifact bytes changed; revalidate generation",
-          "id": "implementation-plan",
-          "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/artifacts/implementation-plan.html",
-          "status": "pending"
-        },
-        {
-          "blocker": "Generation inputs or artifact bytes changed; revalidate generation",
-          "id": "spec-explainer",
-          "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/artifacts/spec-explainer.html",
-          "status": "pending"
-        },
-        {
-          "blocker": "Generation inputs or artifact bytes changed; revalidate generation",
-          "id": "code-approaches",
-          "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/artifacts/code-approaches.html",
-          "status": "pending"
-        },
-        {
-          "blocker": "Generation inputs or artifact bytes changed; revalidate generation",
-          "id": "module-map",
-          "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/artifacts/module-map.html",
-          "status": "pending"
-        }
-      ],
-      "resume_action": "generate",
-      "reuse_artifacts": false,
-      "status": "pending",
-      "verified": 0
-    },
     "basis": "explicit --stage plan",
-    "confidence_gate_status": "\u23f3 Pending",
+    "confidence_gate_status": "\u2705 Complete",
     "corroboration": {
       "merged": null,
-      "observed": {
-        "number": 685,
-        "state": "OPEN",
-        "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/685"
-      },
-      "reason": null,
+      "observed": null,
+      "reason": "no observation supplied",
       "recorded": {
         "number": 685,
         "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/685"
       },
-      "status": "match"
+      "status": "skipped"
     },
-    "from_phase": "plan",
-    "planning_complete": false,
+    "from_phase": null,
+    "planning_complete": true,
     "recorded_stage": "plan",
     "source": "argv",
     "stage": "plan",
@@ -96,7 +53,7 @@
     "ledger_path": "docs/ai/specs/.process/execution-control/ac068cab59ef67faf15646a7.json",
     "disposition": "continue",
     "reasons": [],
-    "elapsed_seconds": 179896.459761858,
+    "elapsed_seconds": 180809.9141047001,
     "checkpoint_due": false,
     "run_id": "e7fbc9a6636945ed8a8c2abd42cbb892"
   },
@@ -187,6 +144,10 @@
     },
     {
       "step": "Phase 6.5: Confidence Gate",
+      "status": "completed"
+    },
+    {
+      "step": "Plan stage: Draft artifact refresh and handoff",
       "status": "in_progress"
     },
     {
@@ -310,7 +271,7 @@
       "status": "skipped: outside --stage plan"
     }
   ],
-  "updated_at": "2026-09-27T16:22:05.992231+00:00",
+  "updated_at": "2026-09-27T16:24:36.540414+00:00",
   "prerequisites": {
     "status": "completed",
     "all_pass": true,
@@ -412,8 +373,28 @@
       "reason": "0 CRITICAL/HIGH findings"
     },
     "G6.5": {
-      "status": "not_run_current_plan",
-      "mode": "advisory"
+      "composite": 0.95,
+      "composite_source": "computed",
+      "criteria": {
+        "approach_clarity": 0.95,
+        "completeness": 0.95,
+        "requirements_alignment": 0.96,
+        "risk_assessment": 0.93,
+        "task_understanding": 0.96
+      },
+      "criteria_mean": 0.95,
+      "deductions": {
+        "amount": 0.0,
+        "critical": 0,
+        "high": 0
+      },
+      "deductions_applied": false,
+      "input": "docs/ai/specs/.process/HRNS-015-workflow.md",
+      "mode": "advisory",
+      "pass": true,
+      "reason": "composite at or above threshold",
+      "recommended_action": "proceed",
+      "threshold": 0.9
     }
   },
   "specify": {
@@ -571,8 +552,11 @@
     "confidence_emit": "dedicated named consensus-synthesizer; 0.95; all five criteria persisted once for this pass"
   },
   "confidence_gate": {
-    "status": "pending",
-    "mode": "advisory"
+    "status": "pass",
+    "mode": "advisory",
+    "composite": 0.95,
+    "threshold": 0.9,
+    "deductions": 0
   },
   "structural_checks": {
     "quality_delta_exit": 2,
@@ -582,9 +566,8 @@
     "classification": "advisory planning-document limits; no runtime qualification claimed"
   },
   "plan_stage_completion": {
-    "planning_complete": false,
+    "planning_complete": true,
     "remaining": [
-      "autonomy and confidence gate",
       "artifact regeneration and draft handoff"
     ],
     "implementation_started": false
