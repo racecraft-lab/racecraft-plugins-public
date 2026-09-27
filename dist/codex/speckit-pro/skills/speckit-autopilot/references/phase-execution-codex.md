@@ -1491,7 +1491,7 @@ current workflow section (`owner_ratification=ratified`,
 `ratified_by=autopilot`, and the reason) and continue without a question.
 Ask the operator only when the helper returns `decision=operator_required`;
 its findings name the cause: `scope_added`, `scope_dropped`, `group_added`,
-`group_dropped`, `group_reordered`, `group_merged`, or
+`group_dropped`, `group_reordered`, `group_merged`, `scope_duplicated`, or
 `reviewability_exception_needed`. Record `data.record`
 (`owner_ratification=pending` with the blockers), then ask. An `input_error`,
 a missing budget, or unreadable evidence also goes to the operator; never
