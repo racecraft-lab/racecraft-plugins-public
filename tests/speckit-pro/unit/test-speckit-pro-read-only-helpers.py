@@ -97,6 +97,7 @@ EXPECTED_HELPERS = [
     "parse-consensus-categories",
     "aggregate-crl",
     "research-broker-preflight",
+    "list-archive-candidates",
 ]
 
 JSON_STDOUT_PARITY_HELPERS = {"atomicity-route"}
@@ -153,6 +154,7 @@ HELPER_CASES: dict[str, dict[str, object]] = {
     "validate-pr-packet-read-only": {"packet_path": "tests/speckit-pro/unit/fixtures/read-only-helpers/missing-pr-packet.json"},
     "estimate-spec-size": {"user_stories": 2, "files": 3, "frs": 4},
     "research-broker-preflight": {},
+    "list-archive-candidates": {"current_target": "specs/001-current-feature"},
     "sweep-pr-feedback": {
         "workflow_file": "docs/ai/specs/.process/FEATURE-002-workflow.md",
         "self_login": "speckit-pro-bot",
@@ -4139,6 +4141,28 @@ class ReadOnlyHelperTests(unittest.TestCase):
                     self.assertEqual(data["screening_mode"], "sanitizer-only")
                     self.assertFalse(data["writes_state"])
                     self.assertEqual(stderr_records, [])
+                    continue
+                if helper_id == "list-archive-candidates":
+                    # A throwaway repository with no gh on PATH: the prior spec
+                    # has no readable merge evidence, so it stays active.
+                    with tempfile.TemporaryDirectory(prefix="archive-sweep-repo-") as repo:
+                        root = Path(repo)
+                        (root / ".specify").mkdir()
+                        for name in ("000-prior-feature", "001-current-feature"):
+                            (root / "specs" / name).mkdir(parents=True)
+                            (root / "specs" / name / "spec.md").write_text("# spec\n", encoding="utf-8")
+                        completed, response, stderr_records = run_runner(
+                            helper_request(helper_id, HELPER_CASES[helper_id]),
+                            {"PATH": str(root / "empty-path")},
+                            cwd=root,
+                        )
+                    data = response["data"]
+                    self.assert_response(response, "ok", 0)
+                    self.assertEqual(stderr_records, [])
+                    self.assertFalse(data["writes_state"])
+                    self.assertEqual(data["excluded_current_spec"], "specs/001-current-feature")
+                    self.assertEqual(data["archive_order"], [])
+                    self.assertEqual(data["unknown"], ["specs/000-prior-feature"])
                     continue
                 self.assertEqual(data["shell"], False)
                 self.assertEqual(data["argv"][-2:], ["-m", "speckit_pro_runner"])
