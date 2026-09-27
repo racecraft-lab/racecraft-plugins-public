@@ -633,7 +633,9 @@ state, and no-side-effect boundaries.
 Before the confidence gate, stage-boundary commit, or first Phase 7 dispatch,
 run the same reference's **Autonomy Boundary Preflight**. It inventories
 predictable writes beyond current writable roots, privileged commands,
-interactive authentication, and externally visible side effects; proves each
+interactive authentication, externally visible side effects, and data egress
+to a model service or other third party (including live model evaluations);
+proves each
 is runnable or already authorized; and records the result durably. A blocked
 result stops before Phase 7 with one consolidated operator action instead of
 surprising the operator from inside an implementation task.
