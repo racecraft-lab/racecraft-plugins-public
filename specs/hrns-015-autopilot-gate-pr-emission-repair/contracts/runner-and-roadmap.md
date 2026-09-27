@@ -1,6 +1,6 @@
 # Runner and Roadmap Contract Deltas
 
-**Updated**: 2026-09-26. Approved delivery: A → B → C1a → C1b → C2; eighteen candidate subdivisions remain proposed. Contracts describe required behavior, not completed implementation. The scoped setup contract below preserves the #694 baseline (removed FR-011–FR-013); new work is split aggregation and LOC-only greenfield allowances.
+**Updated**: 2026-09-26. The eighteen-part delivery direction is owner-approved, grouped under A → B → C1a → C1b → C2; actual per-increment qualification remains pending. Contracts describe required behavior, not completed implementation. The scoped setup contract below preserves the #694 baseline (removed FR-011–FR-013); new work is split aggregation and LOC-only greenfield allowances.
 
 These are changes within the existing runner request/result envelope. `schema_version`, `helper_id`, `operation`, `mode`, and `inputs` retain the registry's established shape; implementation fixtures must use the exact registered operation and mode. This document defines the new inputs and observable results, not a second request protocol.
 
@@ -31,6 +31,8 @@ The spec-index source set is Git-index members at the source checkout, including
 ## Host request examples
 
 Both hosts must publish complete tested envelopes for the named live failure sites: status `generate-spec-index-check` and `o5-topology`; scaffold reviewability and worktree placement; and phase index writing. Use registered fixture envelopes as the source of field/mode names, including `tests/speckit-pro/unit/fixtures/read-only-helpers/requests/` and the lifecycle contract at `validate-spec-lifecycle-contracts.py`. The rest of the bare-call sweep belongs to HRNS-019.
+
+Each documented inline request envelope must match a passing fixture byte for byte.
 
 ## Roadmap link contract
 

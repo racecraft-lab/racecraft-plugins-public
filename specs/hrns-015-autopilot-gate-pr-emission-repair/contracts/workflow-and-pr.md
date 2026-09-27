@@ -1,6 +1,6 @@
 # Workflow, Packet, and Review Contract Deltas
 
-**Updated**: 2026-09-26. Approved delivery: A → B → C1a → C1b → C2; eighteen candidate subdivisions remain unratified. These are desired contracts, not claims that the installed runtime currently lacks or satisfies them. External GitHub/schema documentation was unavailable; exact runtime shapes require fixture validation.
+**Updated**: 2026-09-26. The eighteen-part delivery direction is owner-approved, grouped under A → B → C1a → C1b → C2; actual per-increment qualification remains pending. These are desired contracts, not claims that the installed runtime currently lacks or satisfies them. External GitHub/schema documentation was unavailable; exact runtime shapes require fixture validation.
 
 ## Final PR packet
 

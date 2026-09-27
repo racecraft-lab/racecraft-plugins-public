@@ -5,27 +5,65 @@
   "branch": "hrns-015-autopilot-gate-pr-emission-repair",
   "status": "in_progress",
   "stage": "plan",
-  "active_step": "Phase 4: Checklist - api-contracts Consensus",
+  "active_step": "Phase 4: Checklist - api-contracts",
   "stage_resolution": {
-    "source": "argv",
+    "artifact_review": {
+      "feature_dir": "specs/hrns-015-autopilot-gate-pr-emission-repair",
+      "generated": 4,
+      "generation_error": null,
+      "generation_gaps": [
+        "architecture-viewer"
+      ],
+      "observer": "artifact-preview-observer",
+      "pages": [
+        {
+          "blocker": "Generation inputs or artifact bytes changed; revalidate generation",
+          "id": "implementation-plan",
+          "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/artifacts/implementation-plan.html",
+          "status": "pending"
+        },
+        {
+          "blocker": "Generation inputs or artifact bytes changed; revalidate generation",
+          "id": "spec-explainer",
+          "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/artifacts/spec-explainer.html",
+          "status": "pending"
+        },
+        {
+          "blocker": "Generation inputs or artifact bytes changed; revalidate generation",
+          "id": "code-approaches",
+          "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/artifacts/code-approaches.html",
+          "status": "pending"
+        },
+        {
+          "blocker": "Generation inputs or artifact bytes changed; revalidate generation",
+          "id": "module-map",
+          "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/artifacts/module-map.html",
+          "status": "pending"
+        }
+      ],
+      "resume_action": "generate",
+      "reuse_artifacts": false,
+      "status": "pending",
+      "verified": 0
+    },
     "basis": "explicit --stage plan",
-    "recorded_stage": "plan",
-    "planning_complete": false,
     "confidence_gate_status": "⏳ Pending",
     "corroboration": {
       "merged": null,
-      "observed": {
-        "number": 685,
-        "state": "OPEN",
-        "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/685"
-      },
-      "reason": null,
+      "observed": null,
+      "reason": "The single scoped gh pr list observation failed with a connection error.",
       "recorded": {
         "number": 685,
         "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/685"
       },
-      "status": "match"
-    }
+      "status": "skipped"
+    },
+    "from_phase": "plan",
+    "planning_complete": false,
+    "recorded_stage": "plan",
+    "source": "argv",
+    "stage": "plan",
+    "tool": "resolve-autopilot-stage"
   },
   "archive_sweep": {
     "status": "no_candidates",
@@ -53,7 +91,7 @@
     "ledger_path": "docs/ai/specs/.process/execution-control/ac068cab59ef67faf15646a7.json",
     "disposition": "continue",
     "reasons": [],
-    "elapsed_seconds": 126590.00620007515,
+    "elapsed_seconds": 127345.76532292366,
     "checkpoint_due": true,
     "run_id": "e7fbc9a6636945ed8a8c2abd42cbb892"
   },
@@ -108,11 +146,11 @@
     },
     {
       "step": "Phase 4: Checklist - api-contracts",
-      "status": "completed"
+      "status": "in_progress"
     },
     {
       "step": "Phase 4: Checklist - api-contracts Consensus",
-      "status": "in_progress"
+      "status": "pending"
     },
     {
       "step": "Phase 4: Checklist - error-handling",
@@ -283,7 +321,7 @@
       "status": "skipped: outside --stage plan"
     }
   ],
-  "updated_at": "2026-09-27T00:59:27.203640+00:00",
+  "updated_at": "2026-09-27T01:46:21.230113+00:00",
   "prerequisites": {
     "status": "completed_with_documented_exception",
     "all_pass": false,
@@ -644,8 +682,8 @@
     "planning_fingerprints": {
       "plan_md": {
         "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/plan.md",
-        "size_bytes": 24706,
-        "sha256": "sha256:4b478c1045429ed3040529532ff6e6fe9c76f326d91b94d717270292a4debb5c"
+        "size_bytes": 25511,
+        "sha256": "sha256:87ffe7682f171aab23411927cfbfc1179f2f67fcf951980208fa2cd87237fe0c"
       },
       "tasks_md": {
         "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/tasks.md",
@@ -705,7 +743,7 @@
         }
       }
     ],
-    "private_record_sha256": "sha256:58a9b930a5eb5457b91361b78dd80b54252b0aa78d78bd9f728ad0f5d30f4363"
+    "private_record_sha256": "sha256:28359a995b43d84db7513822f7fa399935a90e5edc2c5a19054603e5fa9b98da"
   },
   "plan_resume_result": {
     "version": "2.37.0",
@@ -715,9 +753,9 @@
     "historical_requirement_ids": 29,
     "stories": 14,
     "acceptance_scenarios": 37,
-    "owner_ratification": "pending",
+    "owner_ratification": "approved_18_part_direction",
     "proposed_increments": 18,
-    "g3": "pass",
+    "g3": "pass_after_owner_approval",
     "research_limitation": "Search unavailable; documentation rate limited; independent local delegation unavailable before file reads."
   },
   "plan_reviewability_budget": {
@@ -740,7 +778,7 @@
     "tool": "estimate-reviewable-loc"
   },
   "pending_corrective_exception": {
-    "status": "awaiting_explicit_approval",
+    "status": "completed",
     "refusal_reason": "corrective_run_budget_exhausted",
     "scope": {
       "failure_invariant": "FR-024",
@@ -752,18 +790,20 @@
       "allowed_followup": "Remove only CHK022 gap marker after verification; retain unchecked reviewer ownership; record consensus and gate evidence."
     },
     "scope_sha256": "ec76ae0f40b62385cc84388b09fccf980fcabb4b69d903494425ce235122884c",
-    "proposed_dispatch_id": "hrns015-api-chk022-exception-2370"
+    "proposed_dispatch_id": "hrns015-api-chk022-exception-2370",
+    "approval_evidence": "Owner: approved now GO, responding to the eighteen-part delivery and exact FR-024 correction decisions."
   },
   "api_checklist_resume": {
     "items": 24,
     "gaps_found": 1,
-    "gaps_remaining": 1,
+    "gaps_remaining": 0,
     "consensus_rounds": 2,
     "agreement": "2/3 majority",
     "confidence": "high",
-    "repair_applied": false,
+    "repair_applied": true,
     "setup_fallback": "Supported --json prerequisite invocation and skill-authorized canonical template structure",
-    "integration_issue": "https://github.com/racecraft-lab/racecraft-plugins-public/issues/733"
+    "integration_issue": "https://github.com/racecraft-lab/racecraft-plugins-public/issues/733",
+    "consensus_application": "completed under approved FR-024 exception"
   },
   "cloud_planning_audit": {
     "status": "completed",
@@ -785,5 +825,17 @@
       "Do not add per-site fixture mechanisms beyond accepted consensus merely because the read-only auditor proposed them",
       "Model baseline grouping and C2 count explanation are not established behavior defects"
     ]
+  },
+  "approved_delivery": {
+    "increments": 18,
+    "parent_groups": [
+      "A",
+      "B",
+      "C1a",
+      "C1b",
+      "C2"
+    ],
+    "actual_diff_loc_qualification": "pending",
+    "requirements_preserved": true
   }
 }

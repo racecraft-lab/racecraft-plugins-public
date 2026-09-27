@@ -2,25 +2,26 @@
 
 **Branch**: `hrns-015-autopilot-gate-pr-emission-repair` | **Date**: 2026-09-26 | **Spec**: [spec.md](spec.md)
 
-**Input**: The exact Phase 3 Plan Prompt in [HRNS-015-workflow.md](../../docs/ai/specs/.process/HRNS-015-workflow.md), the current spec, the design concept Q&A, and the explicit owner decision splitting C1 into C1a/C1b.
+**Input**: The exact Phase 3 Plan Prompt in [HRNS-015-workflow.md](../../docs/ai/specs/.process/HRNS-015-workflow.md), the current spec, the design concept Q&A, the historical owner decision splitting C1 into C1a/C1b, and the subsequent explicit approval of eighteen delivery increments and the FR-024 sentence.
 
-**Design status**: Plan artifacts regenerated together. Delivery ratification and downstream gates remain outstanding; this document is not an implementation or G3/G6 qualification.
+**Design status**: Plan artifacts regenerated together. The eighteen-part delivery direction and exact FR-024 sentence are owner-approved; downstream evidence and gates remain outstanding; this document is not an implementation or G3/G6 qualification.
 
 ## Summary
 
 Design the remaining packet, gate, Post, executor, review-feedback, and scaffold repairs using the existing Python runner and paired Claude Code/Codex surfaces. Preserve 14 stories, 26 active functional requirements (29 historical IDs, with FR-011–FR-013 removed), 37 acceptance scenarios, and 11 success criteria. Every remaining behavior change begins with a failing fixture, and generated outputs follow their source in the same PR.
 
-The approved delivery is **A → B → C1a → C1b → C2**. Original Q11's four slices are historical authority superseded only by the explicit C1 split. The existing nineteen-part inventory becomes an **eighteen-part proposal** after already-shipped B2a leaves scope. It is not an approved eighteen-PR plan. Five candidate path unions exceed the 24-path cap, so owner ratification or explicit rescope is required before Tasks may treat additional PRs as the delivery authority.
+The owner has explicitly approved the **eighteen-part delivery direction**, preserving every active requirement and the strict per-PR budgets: **A1a → A1b → A2 → A3 → B1a → B1b → B2b → B3a → B3b → C1a1 → C1a2 → C1b1 → C1b2 → C2a1 → C2a2 → C2a3 → C2b1 → C2b2**. Original Q11's four slices and the later five-PR C1 split remain historical provenance; the new approval supersedes the delivery count. A/B/C1a/C1b/C2 remain scope families, with each approved increment a separate review PR. Already-shipped B2a leaves the former nineteen-part inventory. Candidate path arithmetic, including C2's six shipped link-only exclusions, remains planning evidence rather than measured implementation scope.
 
 ### Authority and rescope
 
 | Record | Meaning at this Plan pass |
 | --- | --- |
 | Design Q11: "Four slices: A, B, C1, C2" | Original owner decision; retain its provenance. |
-| Owner: split C1 into two PRs | Approved five-PR order A → B → C1a → C1b → C2. |
+| Owner: split C1 into two PRs | Historical five-PR order A → B → C1a → C1b → C2; retained as provenance. |
 | Previous nineteen increments | An unratified candidate allocation, not permission to change the approved PR count. |
 | 2026-09-26 rescope | FR-011–FR-013/#637 are satisfied by #694; new-template links/#638 by #698; sequential repeated-path marker support by #676. These are explicit rescope inputs, not new behavior qualifications in this pass. |
-| Current eighteen increments | Proposed alternative omitting B2a and unnecessary new-template/README link repair. Ratification remains pending. |
+| Current eighteen increments | Explicitly owner-approved direction omitting B2a and unnecessary new-template/README link repair; all active requirements and strict budgets preserved. |
+| FR-024 contract sentence | Explicitly owner-approved: Each documented inline request envelope must match a passing fixture byte for byte. |
 
 Installed runtime 2.37.0 is the execution baseline. Historical claims that every own-run hazard persists, the marker validator still rejects sequential reuse, or the plugin must remain pre-fix are obsolete. No independent complete audit of every remaining behavior was obtained; the research broker and local delegation limitations are recorded in [research.md](research.md). A historical observation is not evidence that a released fix still fails.
 
@@ -38,11 +39,11 @@ Installed runtime 2.37.0 is the execution baseline. Historical claims that every
 - **Primary review surface**: harness/adapter. Secondary surfaces: schema/config and docs/process. Per-increment surface coherence still requires qualification.
 - **Reviewability Budget**: Candidate path evidence below; reviewable LOC and exact base/head diffs are not measured. The preset's ordinary LOC/surface limits also remain in force; this feature's stricter path caps do not replace them.
 
-### Five approved slices and budget evidence
+### Historical five-group budget evidence
 
 The counts below are unique unions of the existing path inventory's candidate rows, omitting B2a. Production is the inventory's code/schema/active-config class, including Codex TOML. Generated payload, runner trust, docs reference and recurring process/evidence paths are included. These are conservative candidate sets, not proven changed-file minimums or measured diff passes.
 
-| Approved slice | Production candidates | Total candidates | Projected reviewable LOC | Against ≤4/≤24 paths |
+| Historical group | Production candidates | Total candidates | Projected reviewable LOC | Against ≤4/≤24 paths |
 | --- | ---: | ---: | --- | --- |
 | A — packet and body | 4 | 39 | Not estimated for current remaining scope | Total over cap by 15 |
 | B — gates/index/commands | 3 | 36 | Not estimated for current remaining scope | Total over cap by 12 |
@@ -50,13 +51,13 @@ The counts below are unique unions of the existing path inventory's candidate ro
 | C1b — executor teardown | 4 | 29 | Not estimated for current remaining scope | Total over cap by 5 |
 | C2 — feedback/scaffold/envelopes/legacy links | 0 | 34 | Not estimated for current remaining scope | Total over cap by 10 |
 
-C2's stored union is 40; removing the six already-shipped link-only README/template source/payload candidates yields 34. The roadmap template remains a B dependency for slice-budget syntax. The inventory itself is stale and must be reconciled after the owner decision. The six recurring candidates are the bound workflow, state, tasks, task sidecar, inventory and generated feature SPEC-MOC; their actual changes must be proven in each diff rather than assumed from membership.
+C2's stored union is 40; removing the six already-shipped link-only README/template source/payload candidates yields 34. The roadmap template remains a B dependency for slice-budget syntax. The inventory itself is stale and must be reconciled to the approved eighteen-part direction during Tasks. The six recurring candidates are the bound workflow, state, tasks, task sidecar, inventory and generated feature SPEC-MOC; their actual changes must be proven in each diff rather than assumed from membership.
 
-**Concrete delivery decision**: Ratify the eighteen-part candidate alternative below, or explicitly rescope/defer remaining requirements to retain five PRs. Neither option may silently waive the caps, omit a host, hide generated paths, reset execution budgets, or drop requirements. Pending this decision, design is reviewable and implementation is not authorized by this Plan pass.
+**Delivery approval recorded**: The owner approved the eighteen-part direction below and the exact FR-024 sentence. The delivery decision is resolved. This approval does not waive caps, omit a host, hide generated paths, reset execution budgets, drop requirements or qualify actual diff/LOC/marker evidence. This remains a Plan-stage pass.
 
-### Eighteen proposed increments — not owner approved
+### Eighteen approved increments — candidate sizing only
 
-| Parent slice | Proposed increment/story | Production candidates | Stored candidate total |
+| Scope family | Approved increment/story | Production candidates | Stored candidate total |
 | --- | --- | ---: | ---: |
 | A | A1a / US1 note renderer-schema | 2 | 24 |
 | A | A1b / US1 editable note validation | 2 | 24 |
@@ -77,7 +78,7 @@ C2's stored union is 40; removing the six already-shipped link-only README/templ
 | C2 | C2b1 / US13 scaffold/phase envelopes | 0 | 21 |
 | C2 | C2b2 / US14 existing legacy links | 0 | 22, before removal of shipped link-only candidates |
 
-Each count comes from the existing [candidate inventory](.process/slice-inventory.md); none is an actual scope/LOC qualification. A1a is a passing protected-note checkpoint and A1b completes editable validation; the final FR-002 contract is not claimed at the first checkpoint. Repeated story parts use unique marker IDs and current sequential-reuse rules, with actual base/head diffs and required evidence at each marker. A proposal that passes path estimates can still fail LOC, surface, checkpoint, fingerprint or hazard validation.
+Each count comes from the existing [candidate inventory](.process/slice-inventory.md); none is an actual scope/LOC qualification. A1a is a passing protected-note checkpoint and A1b completes editable validation; the final FR-002 contract is not claimed at the first checkpoint. Repeated story parts use unique marker IDs and current sequential-reuse rules, with actual base/head diffs and required evidence at each marker. An approved allocation that fits candidate path estimates can still fail actual LOC, surface, checkpoint, fingerprint or hazard validation.
 
 ### Estimate reconciliation
 
@@ -92,7 +93,7 @@ Q11's historical whole-feature 1,362 LOC and A 282 + B 410 + C1 335 + C2 415 = 1
 - `helpers/read_only.py` — changed: exact release-note structure and protected fingerprint boundaries.
 - `helpers/mutation.py` — changed: packet validation/output exempt only the current packet's three canonical untracked paths; tracked or unrelated changes still block.
 - Paired autopilot/Post host guidance — changed together with those behaviors. Packet source, host policy and provenance stay consistent.
-- PRD and HRNS-015/019 roadmap entries — amend decided scope, acceptance and deferred ownership after delivery ratification; do not describe a proposal as accepted.
+- PRD and HRNS-015/019 roadmap entries — amend scope, acceptance and deferred ownership to the approved eighteen-part direction; retain genuine evidence limits.
 
 ### Slice B — gates, index, estimate and commands
 
@@ -120,14 +121,14 @@ Q11's historical whole-feature 1,362 LOC and A 282 + B 410 + C1 335 + C2 415 = 1
 
 - Both resolve-pr skills — independently paginate thread and comment connections; fixes → full verify → commit → push → fresh matching PR head → serial reply/resolve/readback. Failures retain local commits and unresolved threads as specified.
 - Both scaffold skills — await actual analyst result without a fixed deadline; distinct dispatch-error/empty-return/explicit-abandonment reasons in the existing Design Concept line and operator status.
-- Both status skills plus named scaffold/phase examples — complete tested registered request envelopes only at the five specified failure sites; HRNS-019 owns the broader sweep.
+- Both status skills plus named scaffold/phase examples — complete tested registered request envelopes only at the five specified failure sites; HRNS-019 owns the broader sweep. Each documented inline request envelope must match a passing fixture byte for byte.
 - Existing-roadmap updates — preserve verified legacy targets and repair broken ones to actual scaffold output. New-template `.process/` links and README guidance are already baseline from #698; remove their redundant repair operations.
 
 All helper paths above are under `speckit-pro/speckit_pro_runner/`; skill paths are under `speckit-pro/`. Authored source and host twins produce `dist/**`, runner trust files and relevant docs-reference output. Generated paths remain counted and regenerated. `.github/workflows/pr-checks.yml`, unrelated packet fields, draft emission and multi-pr-emission remain unchanged grey boxes.
 
 ## Declared File Operations
 
-These authored candidate operations are the estimator input for the remaining behavior design; they are not a final changed-file manifest. Generated fan-out and recurring evidence are counted separately in the inventory/table above. Tasks must reconcile this list after ratification and current-source review; a nonexistent planned fixture is not a test already run.
+These authored candidate operations are the estimator input for the remaining behavior design; they are not a final changed-file manifest. Generated fan-out and recurring evidence are counted separately in the inventory/table above. Tasks must reconcile this list to the approved direction and current-source review; a nonexistent planned fixture is not a test already run.
 
 - MODIFIED .specify/quality-gates.json
 - MODIFIED AGENTS.md
@@ -202,7 +203,7 @@ These authored candidate operations are the estimator input for the remaining be
 | IX Fail closed | Missing evidence is failure/unknown. | Scope/LOC/marker qualification and delivery authority remain unqualified. |
 | X Privacy | Private execution records outside working tree. | Portable receipts only; no local identities in published artifacts. |
 
-**Reviewability exception**: None approved. Five approved candidate groups exceed the strict path cap. The eighteen-part proposal provides a concrete decision; it does not waive the cap or satisfy owner approval. Post-design constitution qualification is conditional on that ratification and actual per-increment scope/LOC evidence. These are retained blockers, not an architecture justification for exceeding the budget.
+**Reviewability exception**: None approved. The historical five-group candidate unions exceeded the strict path cap and motivated the now-approved eighteen-part split. The delivery decision is resolved; the approval preserves the caps. Actual per-increment scope/LOC/marker qualification remains pending. The separately approved FR-024 sentence does not waive any reviewability requirement.
 
 ## Project Structure
 
@@ -237,7 +238,7 @@ tests/speckit-pro/{unit,layer1-structural,layer5-tool-scoping}/
 4. **C1b**: Test the required return contract across all executor twins; a missing child result or supported stop/teardown confirmation prohibits clean completion. Consume actual child summaries and actual native command exits; host thread retention is not automatically evidence of active work or cleanup completion.
 5. **C2**: Exercise >one thread/comment page, missing cursor/page failure, verify/push/head-query/mismatch failures, serial reply/resolve confirmation, late analyst results and all explicit no-findings reasons, complete five-site envelopes and existing verified/broken roadmap targets. Already-shipped link cases remain green compatibility coverage.
 
-After owner ratification, Tasks creates exact boundaries/ownership, recomputes the path inventory and task sidecar, and records fresh atomicity route and conditional layer plan. An advisory one-navigable-PR classification cannot override an approved PR split; do not reuse an old route as new proof. Each eventual increment needs targeted red/green, applicable suites/lint/docs/generated checks and actual base/head scope/LOC before valid marker evidence or emission. Required gate failures remain blocking; G6.5 advisory confidence is not a waiver of G6. No implementation begins in this `--stage plan` pass.
+With delivery approval recorded, Tasks creates exact boundaries/ownership, recomputes the path inventory and task sidecar, and records fresh atomicity route and conditional layer plan. An advisory one-navigable-PR classification cannot override an approved PR split; do not reuse an old route as new proof. Each eventual increment needs targeted red/green, applicable suites/lint/docs/generated checks and actual base/head scope/LOC before valid marker evidence or emission. Required gate failures remain blocking; G6.5 advisory confidence is not a waiver of G6. No implementation begins in this `--stage plan` pass.
 
 ## PR Review Packet Source
 
@@ -245,4 +246,4 @@ For each approved increment, the validated packet supplies changed behavior/caus
 
 ## Complexity Tracking
 
-No constitution violation or budget exception is approved. The owner delivery decision, unavailable independent/official research, and actual scope/LOC/marker evidence remain explicit limitations. Preserve run identity and consumed repair reservations; no restart resets their counters.
+No constitution violation or budget exception is approved. The owner delivery decision is resolved. Official documentation, independent source/fixture behavior verification and actual scope/LOC/marker evidence remain explicit limitations; the independent artifact audit corroborated the recorded arithmetic. Preserve run identity and consumed repair reservations; no restart resets their counters.

@@ -19,7 +19,7 @@
 - [x] Success criteria describe observable outcomes rather than implementation details.
 - [x] All 14 user stories have acceptance scenarios (37 total).
 - [x] Edge cases are identified.
-- [ ] Approved five-group direction is recorded; the eighteen-part delivery proposal awaits owner ratification and exact scope/LOC qualification.
+- [ ] The owner-approved eighteen-part delivery direction is recorded; exact scope/LOC qualification remains required.
 - [x] Dependencies and assumptions are identified.
 
 ## Feature Readiness
@@ -35,4 +35,4 @@
 - No blocking clarification is needed for Specify. The design concept leaves the refactor-signal shape, slice-budget syntax, verdict placement, and delivery route for Plan or later route selection without changing the agreed outcomes.
 - Acceptance fixtures and required checks belong to later implementation and phase gates; this checklist evaluates the specification only.
 
-- Plan resume reconciliation: FR-011–FR-013 are removed from active scope by the supplied #694 baseline; delivery qualification remains open. Counts reflect the current spec.
+- Plan resume reconciliation: FR-011–FR-013 are removed from active scope by the supplied #694 baseline; delivery direction is owner-approved and actual qualification remains open. Counts reflect the current spec.

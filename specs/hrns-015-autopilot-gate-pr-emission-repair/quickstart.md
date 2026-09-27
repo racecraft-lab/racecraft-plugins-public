@@ -1,6 +1,6 @@
 # Quickstart Validation Guide: HRNS-015
 
-**Updated**: 2026-09-26. Approved order: A → B → C1a → C1b → C2. The eighteen-part alternative remains proposed; do not use it as an approved execution order until ratified. This guide defines validation after fixtures/repairs exist, not a report that this Plan pass ran implementation tests.
+**Updated**: 2026-09-26. The eighteen-part delivery direction is owner-approved in the order recorded in plan.md, grouped under A → B → C1a → C1b → C2. Historical four/five-PR directions remain provenance. This guide defines validation after fixtures/repairs exist, not a report that this Plan pass ran implementation tests.
 
 ## Prerequisites and Setup
 
@@ -8,7 +8,7 @@
 2. Use Python 3.11+ and the existing runner/test harness. No added Bash/jq/runtime dependency. Keep any historical or synthetic spec content under the test's own fixtures; tests must not open the active feature spec at runtime.
 3. In a fresh worktree, prepare locked docs dependencies before docs commands: `pnpm --dir docs-site install --frozen-lockfile`.
 4. For Python checks, use the repository's configured lint environment and `scripts/run-python-lint.py`; do not run detected raw `mypy .` across the tree or replace it with an invented gate.
-5. Ratify the delivery direction, reconcile tasks/inventory and current marker contracts, then freeze each remaining acceptance case. Capture actual failing exit/result before its repair and passing exit/result after. Already-shipped #694/#698/#676 behaviors are baseline compatibility cases and should remain green.
+5. Reconcile tasks/inventory to the approved eighteen-part direction and current marker contracts, then freeze each remaining acceptance case. Capture actual failing exit/result before its repair and passing exit/result after. Already-shipped #694/#698/#676 behaviors are baseline compatibility cases and should remain green.
 
 ## Existing Runnable Test Entry Points
 
@@ -63,7 +63,7 @@ Tasks names new fixture/test files before implementation, registers them in suit
 1. Use offline mocked review connections with multiple thread pages and multiple comment pages inside a thread. Exhaust each independent cursor. A failed page/missing cursor/inconsistent connection blocks all replies and resolutions.
 2. Record verify, commit, push, fresh matching headRefOid, reply, resolution and readback events. Failed verification yields no push/reply/resolve; failed push/query/mismatch yields no reply/resolve and retains the local commit. A success allows only serial reply/resolve after the fresh head match, with confirmed state.
 3. Deliver a late nonempty analyst result: consume it and record ran regardless of duration. Separately exercise dispatch error, empty return and explicit operator abandonment: same specific reason in Design Concept/operator status. Silence/time/whole-workflow stop never invent abandonment.
-4. Execute the five registered request envelopes on both hosts in fixture-safe modes: status index-check/topology, scaffold reviewability/worktree-placement and phase index-writing. Expect accepted exact envelopes and no malformed-request error. The broader sweep remains HRNS-019.
+4. Apply the approved FR-024 contract: Each documented inline request envelope must match a passing fixture byte for byte. Execute the five registered request envelopes on both hosts in fixture-safe modes: status index-check/topology, scaffold reviewability/worktree-placement and phase index-writing. Expect accepted exact envelopes and no malformed-request error. The broader sweep remains HRNS-019.
 5. Keep new-template #698 links green. Update an existing roadmap with a real verified legacy target: preserve it. Update a broken legacy link: repair to actual .process output. Resolve targets relative to the containing roadmap.
 
 ## Repository Verification and Each PR Boundary
