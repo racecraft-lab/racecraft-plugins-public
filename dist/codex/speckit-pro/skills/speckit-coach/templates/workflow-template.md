@@ -86,7 +86,7 @@ Filled from `detect-commands` at Step 0.11. One row per slot; the operator answe
 
 **Thresholds file:** `.specify/quality-gates.json` <!-- present / missing / invalid --> <!-- complexity N, CRAP N, mutation floor N; basis --> (G0 blocks unless present)
 
-**Hardener:** not run <!-- not needed (score N ≥ floor F) | qwen: iteration k of cap: N → M ... floor reached / cap reached | fallback (reason): ... | rejected candidate: reason --> (fires once per spec when MUTATION is populated)
+**Hardener:** not run <!-- not needed (score N ≥ floor F) | delegated: iteration k of cap: N → M ... floor reached / cap reached | fallback (reason): ... | rejected candidate: reason --> (fires once per spec when MUTATION is populated)
 
 | Slot | Status | Tool | Command | Operator answer | G0 baseline | Final |
 |------|--------|------|---------|-----------------|-------------|-------|
@@ -394,6 +394,11 @@ When checklist identifies `[Gap]` items:
 - Organize by user story, not by technical layer
 - Keep related test and implementation checkboxes in one closed TDD unit;
   each unit must fit an adjacent batch of at most four tasks
+- Open a check-only task (one that changes no code) with a verification verb:
+  `verify`, `run`, `check`, `build`, `lint`, `confirm`, `recheck`. The scheduler
+  routes only these to verification; any other leading verb routes the task
+  as implementation or research work. Open implementation work with
+  `Implement`, `Add`, or `Create`
 
 ## Execution Metadata
 Produce `specs/{{BRANCH_NAME}}/.process/task-execution.json` alongside tasks.md.

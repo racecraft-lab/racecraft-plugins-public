@@ -541,6 +541,40 @@ JSON, unreadable artifacts, missing reviewability status/mode, stale
 fingerprints, or any non-size safety finding. These stops fire before Analyze or
 Implement.
 
+**Budget-driven split ratification:**
+When the per-PR path budget makes the planner split an approved PR order into
+smaller increments, do not park the split for a human. Run runner helper
+`helper_id=ratify-pr-split operation=ratify-pr-split mode=read_only` with
+these inputs:
+
+- `approved_groups`: the approved PR groups in approved order, each with
+  `group_id` and `scope` (its requirement, story, and task IDs);
+- `increments`: the proposed increments in delivery order, each with
+  `increment_id`, the `group_id` it splits, `scope`, `production_paths`, and
+  `total_paths`;
+- `active_scope`: every active requirement, story, and task ID;
+- `path_budget`: the repository's per-PR `production_paths` and `total_paths`
+  caps.
+
+The helper ratifies only a split that divides approved groups without merging
+or dropping any, keeps the approved order and each group's scope, keeps every
+active requirement, story, and task, and keeps each increment within the
+budget. On `decision=autopilot_ratified`, write `data.record` verbatim to the
+current workflow section (`owner_ratification=ratified`,
+`ratified_by=autopilot`, and the reason) and continue without a question.
+Ask the operator only when the helper returns `decision=operator_required`;
+its findings name the cause: `scope_added`, `scope_dropped`, `group_added`,
+`group_dropped`, `group_reordered`, `group_merged`, or
+`reviewability_exception_needed`. Record `data.record`
+(`owner_ratification=pending` with the blockers), then ask. An `input_error`,
+a missing budget, or unreadable evidence also goes to the operator; never
+ratify it yourself.
+
+Keep only one live `owner_ratification` value in the workflow file. When a
+later section records a ratification, change each earlier
+`owner_ratification=` line to `owner_ratification=superseded` and add
+`superseded_by=<later section heading>` beside it.
+
 **Optional: Tasks to GitHub Issues:**
 If the project uses GitHub Issues for tracking and the GitHub
 MCP server is available, export tasks to issues:
@@ -2735,6 +2769,41 @@ unknown side effects, an execution-control `checkpoint_required` disposition
 (including an exhausted repair budget), a ledger or clock error, invalid or
 stale state, and a failed gate whose repair is out of scope.
 
+#### Plugin Update Mid-Run: Record, Re-resolve, Continue
+
+The Step 0.0b agent-package check and its "update or reinstall, then run
+`/reload-plugins`" rule apply only at setup or run start, before any phase
+work. Once phase work has begun, a plugin update is never a stop. The run
+continues on the agents it already has.
+
+1. **Cache drift: re-resolve and retry.** When the plugin root the run started
+   from changed or vanished (a plugin update replaced the cached version
+   directory), runner and bookkeeping calls can fail. Then re-resolve the
+   plugin root against the live install and rerun `validate-agent-install`,
+   taking its returned `plugin_root` as the new root. Re-read the Installed
+   Runtime Contract in the autopilot SKILL.md once against that root, build
+   every later `Protocol:`, `Reference dir:`, and `Gallery dir:` line from it,
+   and retry each failed bookkeeping call once.
+2. **Agent unavailable: defer that dispatch.** If a dispatch fails because its
+   agent file is missing after the update, defer only that dispatch under
+   [Blocked Actions Mid-Run: Fall Back or Defer, Never Stop](#blocked-actions-mid-run-fall-back-or-defer-never-stop)
+   and keep executing everything else.
+3. **Record the drift.** In both cases, record the drift in the current phase's
+   result in the workflow file and in the final report: the plugin version the
+   run started on, the version now installed, and the calls retried. Then
+   continue.
+4. **Any reload goes to the end.** A `/reload-plugins` or restart that is still
+   needed is not a deferred task. Add it as one line to the single end-of-run
+   consolidated request, or, when no such request is made, print it as plain
+   text in the final message. Keep it out of `known_gaps` and the PR body,
+   because it is an operator-environment note, not a gap in the feature. Never
+   ask for it mid-run, and never set a workflow row or progress item to blocked
+   for it.
+
+Drift itself is never a stop, but the correctness stops above still apply. If a
+retried bookkeeping call fails again, or the ledger or state is invalid after
+the retry, stop on that error, not on the drift.
+
 #### Append Contract: One Entry Per Dispatched Attempt
 
 Every attempt Step 3 dispatched gets one entry in the record the Phase 7 setup
@@ -2823,7 +2892,8 @@ Then Command(DEPENDENCY_AUDIT) only when populated, which requires
 When MUTATION is populated, run the hardener once per spec between the
 MUTATION run and its block decision, per
 [Hardener Delegation](./hardener-delegation.md): delegate a tests-only
-loop to local Qwen when `qwen_health` is good, else run it on the primary
+loop to the delegation gateway on `route: "auto"` when `delegate_health` is
+good, else run it on the primary
 model; stop at the floor or the shared corrective ceiling; record the outcome on the
 Quality Gates table's `Hardener` line. Only after the hardener records its
 ending does a still-failing MUTATION block. MUTATION fails on its exit
@@ -2837,7 +2907,7 @@ status: `cr-rate --fail-over` for cosmic-ray, and the chained
 | Contract/unit/integration tests | `speckit-pro:implement-executor` | Yes |
 | Implementation needing project patterns | PROJECT_IMPLEMENTATION_AGENT | Yes |
 | Research / API investigation | `speckit-pro:domain-researcher` | No |
-| Verification-only, by leading verb (`verify`, `run`, `check`, `build`, `lint`) | orchestrator-direct (command tool) | No |
+| Verification-only, by leading verb (`verify`, `run`, `check`, `build`, `lint`, `confirm`, `recheck`) | orchestrator-direct (command tool) | No |
 
 Every agent receiving implementation work gets the TDD protocol
 injected. Agent selection is about DOMAIN EXPERTISE — the

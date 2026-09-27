@@ -78,12 +78,18 @@ to archive previously merged specs.
    command once per `archive_order` entry, in that order, and let each run
    finish before the next starts:
    ```text
-   /speckit-archive-run specs/<merged-spec-dir>
+   /speckit-archive-run specs/<merged-spec-dir> --spec-only --plan-only --changelog-only
    ```
-   Pass only the feature directory. The stock archive extension
-   (`stn1slv/spec-kit-archive`) archives one feature per run and rejects
-   `--sweep`, `--current-target`, and `--dry-run`; the vendored
-   `racecraft-lab/spec-kit-archive` fork accepts the same single-feature form.
+   Pass the feature directory first, then exactly these three scope
+   modifiers. The stock archive extension (`stn1slv/spec-kit-archive`)
+   archives one feature per run, treats several scope modifiers as a union,
+   and rejects `--sweep`, `--current-target`, and `--dry-run`; the vendored
+   `racecraft-lab/spec-kit-archive` fork accepts the same single-feature form
+   and the same modifiers. The union updates `.specify/memory/spec.md`,
+   `plan.md`, and `changelog.md` and leaves out the agent context files
+   (stock step 5.3, fork step 6.3). SpecKit Pro overrides that step: an
+   archive run never writes per-spec history to `AGENTS.md`, `CLAUDE.md`, or
+   `GEMINI.md`, even if an installed contract does not honor the union.
    If a run fails, STOP before Phase 0 with that spec and the command's error.
 
    **`main`, a release branch, or any protected integration branch** (dry-run
@@ -189,6 +195,11 @@ If the check fails, STOP. Claude Code loads plugin agents directly from the
 plugin cache, so autopilot cannot safely self-heal a missing Claude agent file.
 Tell the user to update/reinstall `speckit-pro`, run `/reload-plugins`, and
 retry.
+
+This check and its stop apply at setup or run start, before any phase work.
+Once phase work has begun, a plugin update is never a stop: follow
+§Plugin Update Mid-Run: Record, Re-resolve, Continue in
+[phase-execution.md](./phase-execution.md).
 
 ## Step 0.0c: Research Broker Preflight
 

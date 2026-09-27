@@ -203,6 +203,10 @@ def _validate_corrective_state(value: dict[str, Any]) -> None:
 
 EPOCH_STATE_KEYS = ("corrective_cycles", "reservations", "dispatches", "approved_invariants")
 EPOCH_OPTIONAL_KEYS = ("invariant_binding", "corrective_exception")
+# An operator's explicit stage start closes the prior stage's allowance under a
+# runner-derived event ID, so each stage opens at most one allowance per run.
+STAGE_EPOCH_STAGES = ("implement",)
+STAGE_EPOCH_PREFIX = "stage-transition:"
 
 
 def _epoch_view(ledger: dict[str, Any], epoch: dict[str, Any]) -> dict[str, Any]:
@@ -221,12 +225,17 @@ def _validate_corrective_epochs(ledger: dict[str, Any]) -> None:
     if not isinstance(epochs, list) or not epochs:
         raise ValueError("invalid corrective epoch history")
     required = {*EPOCH_STATE_KEYS, "epoch_event_id", "closed_at"}
+    allowed = required | set(EPOCH_OPTIONAL_KEYS) | {"stage_transition"}
     dispatch_ids = set(ledger["dispatches"])
     event_ids = _consumed_native_event_ids({key: value for key, value in ledger.items() if key != "corrective_epochs"})
     previous_close = ledger["started_at"]
     for epoch in epochs:
-        if not isinstance(epoch, dict) or not required <= set(epoch) <= required | set(EPOCH_OPTIONAL_KEYS):
+        if not isinstance(epoch, dict) or not required <= set(epoch) <= allowed:
             raise ValueError("invalid corrective epoch record")
+        stage = epoch.get("stage_transition")
+        if (("stage_transition" in epoch or str(epoch["epoch_event_id"]).startswith(STAGE_EPOCH_PREFIX))
+                and (stage not in STAGE_EPOCH_STAGES or epoch["epoch_event_id"] != STAGE_EPOCH_PREFIX + stage)):
+            raise ValueError("invalid stage transition epoch")
         closed_at = epoch["closed_at"]
         if type(closed_at) not in (int, float) or not previous_close <= closed_at < float("inf"):
             raise ValueError("invalid corrective epoch clock")
@@ -696,6 +705,49 @@ def begin_replan_epoch(root: Path, ledger: dict[str, Any], inputs: dict[str, Any
     return {"corrective_epoch": len(ledger["corrective_epochs"])}
 
 
+def begin_stage_epoch(root: Path, ledger: dict[str, Any], inputs: dict[str, Any], workflow: Path,
+                      now: float) -> dict[str, Any]:
+    """Archive the prior stage's allowance when the operator explicitly starts the implement stage.
+
+    The runner derives every piece of evidence itself: the invocation argv names
+    the stage explicitly, and the workflow file records planning complete with
+    its `Stage` row already written for this invocation. No operator event is
+    needed, and the derived event ID makes a second opening for the stage a no-op.
+    """
+    from .helpers.read_only import parse_stage_args, trusted_text, workflow_stage_signals
+
+    args = inputs.get("autopilot_args")
+    if not isinstance(args, list) or not all(isinstance(arg, str) for arg in args):
+        raise ValueError("begin-stage-epoch requires autopilot_args, the invocation argv as an array of strings")
+    parsed = parse_stage_args(args)
+    stage = parsed["stage"]
+    if parsed["error"] or stage not in STAGE_EPOCH_STAGES:
+        raise ValueError("begin-stage-epoch requires an explicit --stage implement in the invocation argv")
+    text = trusted_text(workflow, root)
+    signals = workflow_stage_signals(text) if text is not None else {"parsed": False}
+    if not signals["parsed"] or not signals["planning_complete"]:
+        raise ValueError("begin-stage-epoch requires a workflow file whose planning stage is complete")
+    if signals["recorded_stage"] != stage:
+        raise ValueError(f"begin-stage-epoch requires the workflow Stage row to record {stage}; "
+                         "write the resolved Stage row before opening the stage allowance")
+    event_id = STAGE_EPOCH_PREFIX + stage
+    if any(epoch.get("stage_transition") == stage for epoch in ledger.get("corrective_epochs", [])):
+        return {"stage_epoch_opened": False, "corrective_epoch": len(ledger["corrective_epochs"])}
+    if event_id in _consumed_native_event_ids(ledger):
+        raise ValueError("the stage transition event ID was already consumed by another event")
+    if ledger.get("active_wait") or any(item["outcome"] not in OUTCOMES - {"unknown"}
+                                        for item in ledger["dispatches"].values()):
+        raise ValueError("settle every dispatch and wait before opening a new corrective epoch")
+    epoch = {key: ledger.pop(key) for key in (*EPOCH_STATE_KEYS, *EPOCH_OPTIONAL_KEYS) if key in ledger}
+    ledger.update(corrective_cycles=0, reservations={}, dispatches={},
+                  approved_invariants=list(epoch["approved_invariants"]))
+    if "invariant_binding" in epoch:
+        ledger["invariant_binding"] = dict(epoch["invariant_binding"])
+    epoch.update(epoch_event_id=event_id, closed_at=now, stage_transition=stage)
+    ledger.setdefault("corrective_epochs", []).append(epoch)
+    return {"stage_epoch_opened": True, "corrective_epoch": len(ledger["corrective_epochs"])}
+
+
 def _bind_invariants_if_requested(root: Path, inputs: dict[str, Any], spec: Path,
                                   ledger: dict[str, Any], now: float, reasons: list[str]) -> None:
     if inputs.get("action") != "bind-invariants":
@@ -726,7 +778,7 @@ def execution_control(root: Path, inputs: dict[str, Any], mode: str) -> dict[str
     if spec_name is not None and not spec.is_file():
         raise ValueError("spec_file must be an existing contained file")
     action = inputs.get("action", "status")
-    if action not in {"start", "status", "bind-invariants", "reserve", "authorize-corrective-retry", "authorize-corrective-continuation", "authorize-corrective-exception", "begin-replan-epoch", "begin-verification", "complete", "reconcile", "checkpoint", "pause", "resume", "relocate-workflow"}:
+    if action not in {"start", "status", "bind-invariants", "reserve", "authorize-corrective-retry", "authorize-corrective-continuation", "authorize-corrective-exception", "begin-replan-epoch", "begin-stage-epoch", "begin-verification", "complete", "reconcile", "checkpoint", "pause", "resume", "relocate-workflow"}:
         raise ValueError("unsupported action; pauses/resets require verified native authorization")
     if mode not in {"read_only", "dry_run", "apply"} or (mode == "read_only" and action != "status"):
         raise ValueError("ledger mutations require dry_run or apply")
@@ -778,6 +830,8 @@ def execution_control(root: Path, inputs: dict[str, Any], mode: str) -> dict[str
             extra = authorize_corrective_exception(ledger, inputs, now)
         elif action == "begin-replan-epoch" and not reasons:
             extra = begin_replan_epoch(root, ledger, inputs, spec, now)
+        elif action == "begin-stage-epoch" and not reasons:
+            extra = begin_stage_epoch(root, ledger, inputs, workflow, now)
         elif action == "begin-verification" and not reasons:
             extra = begin_verification(ledger, inputs)
         elif action in {"complete", "reconcile"}:

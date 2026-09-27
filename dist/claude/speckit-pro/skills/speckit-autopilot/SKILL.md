@@ -327,8 +327,9 @@ Run the pre-flight sequence before any phase work. STOP on failure.
    plugin-local script files.
 2. **Archive Sweep** — run helper `list-archive-candidates` with the current
    spec directory, then on feature/spec branches run
-   `/speckit-archive-run specs/<merged-spec-dir>` once per `archive_order`
-   entry, in order. On `main`, release, or any protected integration branch,
+   `/speckit-archive-run specs/<merged-spec-dir> --spec-only --plan-only --changelog-only` once per
+   `archive_order` entry, in order. The three scope modifiers keep the run out
+   of agent context files (stock extension step 5.3). On `main`, release, or any protected integration branch,
    record the helper report as a dry run and archive nothing. Skip if the
    archive extension is absent. Excludes the current target spec. Distinguish
    an absent extension from a broken installation: if the extension is present
@@ -374,7 +375,11 @@ Run the pre-flight sequence before any phase work. STOP on failure.
    with the invocation argv and the workflow file path. It returns one
    JSON envelope; record `stage` as `AUTOPILOT_STAGE` and keep `source`,
    `basis`, `recorded_stage`, `planning_complete`, and
-   `confidence_gate_status` for the phase loop. Keep optional `artifact_review` for
+   `confidence_gate_status` for the phase loop. The committed
+   `autopilot-state.json` stores only those decision fields: never the raw
+   envelope, its `argv`, an absolute path, or an external task or session id,
+   such as a delegation `task_id` (a digest or short redacted reference is fine). The Step 1.1 guard fails on
+   them as `state_privacy_errors`. Keep optional `artifact_review` for
    terminal-step routing and print its unresolved preview dispositions. A pending
    handoff can auto-resolve `plan` even when `planning_complete` is true; explicit
    stages still win and started implementation is never routed backward. An explicit `--stage`
@@ -567,10 +572,10 @@ one enforcement path instead of two prose descriptions of one:
 Command("<resolved_python> '<plugin-root>/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py' --workflow <workflow-file-path> --state <workflow-directory>/autopilot-state.json --rule status-evidence")
 ```
 
-`--rule status-evidence` gates the **exit code** on the five workflow/state
+`--rule status-evidence` gates the **exit code** on the six workflow/state
 status-evidence checks (`workflow_status_evidence_errors`,
 `state_status_errors`, `autonomy_boundary_errors`, `stage_mirror_errors`,
-`workflow_authority_errors`) and
+`workflow_authority_errors`, `state_privacy_errors`) and
 the three current-run state-plan invariants (`in_progress_errors`,
 `duplicate_state_steps`, `state_order_errors`). The full report is still
 printed; structural coverage checks and every advisory key are visible but
@@ -625,7 +630,11 @@ for phase in PHASES starting from first_pending:
        workflow file, then continue on the fallback evidence chain: the
        setup-mode gate result recorded at scaffold, the plan-phase
        `estimate-reviewable-loc` verdict from step 7b, and any
-       operator-ratified split decision in the workflow file.
+       ratified split decision (autopilot or operator) in the workflow file.
+       When the per-PR path budget forces a split of the approved PR
+       order, run runner helper `ratify-pr-split` before asking anyone
+       and record its `data.record` (see Budget-driven split
+       ratification in `references/phase-execution.md`).
        In that committed evidence, `pass`, `warn`, honored exception,
        and valid current size-only `block` are marker-planning inputs.
        A valid current size-only block continues into marker planning
@@ -764,9 +773,10 @@ directions; do not infer a broader precedence rule.
 - **Repair budget exhausted:** checkpoint with the exact gate output
   and remaining work; no phase or nested worker has an independent retry budget.
   One operator-approved application correction past it uses
-  `authorize-corrective-exception`. After an operator-ordered re-plan,
-  `begin-replan-epoch` opens a fresh allowance with the operator's approval;
-  never reset or bypass the ledger otherwise.
+  `authorize-corrective-exception`. An explicit `--stage implement` opens the
+  implement stage's own allowance through `begin-stage-epoch`. After an
+  operator-ordered re-plan, `begin-replan-epoch` opens a fresh allowance with
+  the operator's approval; never reset or bypass the ledger otherwise.
 - **Consensus all-disagree** (Round 2): flag `[HUMAN REVIEW NEEDED]`.
   In an interactive session, ask the operator in place with
   `AskUserQuestion`, apply the answer, and continue; in an unattended run,
@@ -789,7 +799,7 @@ in [`references/error-recovery.md`](./references/error-recovery.md).
 - [Gate Validation](./references/gate-validation.md) — Programmatic gate checks (G0–G7), auto-fix loops, escalation
 - [Post-Implementation](./references/post-implementation.md) — 11-task post-impl sequence (incl. UAT runbook), integration suite, PR creation, review loop
 - [Task List Canonical](./references/task-list-canonical.md) — Task naming pattern + canonical post-implementation entries
-- [Hardener Delegation](./references/hardener-delegation.md) — Once-per-spec tests-only mutation hardening loop: Qwen delegation with candidate inspection, primary-model fallback, stop rule, record
+- [Hardener Delegation](./references/hardener-delegation.md) — Once-per-spec tests-only mutation hardening loop: gateway delegation with candidate inspection, primary-model fallback, stop rule, record
 - [Workflow File Protocol](./references/workflow-file-protocol.md) — Per-phase update table + `workflow_file` state authority (branch order, verdicts) + Consensus Resolution Log column schema
 - [Error Recovery](./references/error-recovery.md) — Resume, common issues, context-window management
 - [TDD Protocol](./references/tdd-protocol.md) — Red-green-refactor rules injected into implementation agent prompts

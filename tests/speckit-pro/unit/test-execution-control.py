@@ -651,6 +651,21 @@ class CorrectiveExceptionTests(_ExecutionControlFixture, unittest.TestCase):
             self.authorize(self.approval(digest_value))
 
 
+PLANNING_PHASES = ("Specify", "Clarify", "Plan", "Checklist", "Tasks", "Analyze", "Confidence Gate")
+
+
+def stage_workflow(stage="implement", analyze="✅ Complete"):
+    """A workflow file whose planning stage is complete and whose Stage row names ``stage``."""
+    rows = [(phase, analyze if phase == "Analyze" else "✅ Complete") for phase in PLANNING_PHASES]
+    rows.append(("Implement", "⏳ Pending"))
+    stage_row = f"| **Stage** | {stage} |\n" if stage else ""
+    return ("# Workflow\n\n## Workflow Overview\n\n| Phase | Command | Status | Notes |\n"
+            + "|-------|---------|--------|-------|\n"
+            + "".join(f"| {phase} | `/speckit-run` | {status} | |\n" for phase, status in rows)
+            + "\n### Basic Information\n\n| Field | Value |\n|-------|-------|\n"
+            + "| **Branch** | `test-branch` |\n" + stage_row)
+
+
 class ReplanEpochTests(_ExecutionControlFixture, unittest.TestCase):
     SCOPE = "a" * 64
 
@@ -761,6 +776,137 @@ class ReplanEpochTests(_ExecutionControlFixture, unittest.TestCase):
             self.invoke("status", mode="read_only")
         path.write_bytes(running)
 
+
+class StageEpochTests(_ExecutionControlFixture, unittest.TestCase):
+    """An operator's explicit `--stage implement` after a complete plan opens one fresh allowance."""
+
+    SCOPE = ReplanEpochTests.SCOPE
+    greenfield = ReplanEpochTests.greenfield
+    IMPLEMENT = ["--stage", "implement"]
+
+    def begin(self, args, mode="apply"):
+        return self.invoke("begin-stage-epoch", mode=mode, autopilot_args=args)
+
+    def test_operator_stage_transition_opens_a_fresh_allowance_and_keeps_history(self):
+        self.greenfield()
+        (self.root / "feature/workflow.md").write_text(stage_workflow())
+        before = self.invoke("status", mode="read_only")["ledger"]
+        self.assertEqual(self.invoke("reserve", dispatch_id="fix-d", kind="corrective", failure_invariant="FR-001",
+                                     mode="dry_run")["reasons"], ["failure_family_budget_exhausted"])
+        preview = self.begin(self.IMPLEMENT, mode="dry_run")
+        self.assertEqual(preview["disposition"], "continue")
+        self.assertNotIn("corrective_epochs", self.invoke("status", mode="read_only")["ledger"])
+
+        opened = self.begin(self.IMPLEMENT)
+        self.assertEqual((opened["disposition"], opened["stage_epoch_opened"], opened["corrective_epoch"]),
+                         ("continue", True, 1))
+        ledger = opened["ledger"]
+        self.assertEqual((ledger["run_id"], ledger["started_at"]), (before["run_id"], before["started_at"]))
+        self.assertEqual((ledger["corrective_cycles"], ledger["reservations"], ledger["dispatches"]), (0, {}, {}))
+        self.assertNotIn("corrective_exception", ledger)
+        self.assertEqual(ledger["approved_invariants"], before["approved_invariants"])
+        self.assertEqual(ledger["invariant_binding"], before["invariant_binding"])
+        [epoch] = ledger["corrective_epochs"]
+        for key in ("corrective_cycles", "reservations", "dispatches", "approved_invariants",
+                    "invariant_binding", "corrective_exception"):
+            self.assertEqual(epoch[key], before[key], key)
+        self.assertEqual((epoch["epoch_event_id"], epoch["stage_transition"]),
+                         ("stage-transition:implement", "implement"))
+        schema = json.loads((Path(__file__).resolve().parents[3] /
+                             "speckit-pro/speckit_pro_runner/contracts/execution-control.schema.json").read_text())
+        self.assertEqual(json_schema_failures(ledger, schema, schema, "ledger"), [])
+
+        granted = self.invoke("reserve", dispatch_id="fix-d", kind="corrective", failure_invariant="FR-001")
+        self.assertEqual(granted["disposition"], "continue")
+        self.assertEqual(self.invoke("reserve", dispatch_id="fix-a", kind="corrective", failure_invariant="FR-002",
+                                     mode="dry_run")["reasons"], ["dispatch_already_reserved_no_relaunch"])
+
+    def test_a_resumed_implement_invocation_does_not_open_a_second_allowance(self):
+        self.greenfield()
+        (self.root / "feature/workflow.md").write_text(stage_workflow())
+        self.begin(self.IMPLEMENT)
+        self.invoke("reserve", dispatch_id="fix-d", kind="corrective", failure_invariant="FR-001")
+        self.invoke("complete", dispatch_id="fix-d", outcome="completed")
+        path = self.root / self.invoke("status", mode="read_only")["ledger_path"]
+        spent = path.read_bytes()
+        again = self.begin(self.IMPLEMENT)
+        self.assertEqual((again["disposition"], again["stage_epoch_opened"]), ("continue", False))
+        self.assertEqual(again["ledger"]["corrective_cycles"], 1)
+        self.assertEqual(len(again["ledger"]["corrective_epochs"]), 1)
+        self.assertEqual(json.loads(path.read_bytes())["dispatches"], json.loads(spent)["dispatches"])
+        with self.assertRaises(ValueError):
+            self.invoke("begin-replan-epoch", spec_file="feature/spec.md",
+                        native_observation={"native_event_id": "stage-transition:implement", "run_id": self.run_id,
+                                            "action": "replan_epoch_approved",
+                                            "spec_sha256": hashlib.sha256((self.root / "feature/spec.md").read_bytes()).hexdigest()})
+
+    def test_only_an_explicit_implement_stage_after_complete_planning_opens_an_allowance(self):
+        self.greenfield()
+        workflow = self.root / "feature/workflow.md"
+        path = self.root / self.invoke("status", mode="read_only")["ledger_path"]
+        before = path.read_bytes()
+        refusals = (
+            ("auto-detected stage", [], stage_workflow()),
+            ("full stage", ["--stage", "full"], stage_workflow("full")),
+            ("plan stage", ["--stage", "plan"], stage_workflow("plan")),
+            ("conflicting stages", ["--stage", "implement", "--stage", "plan"], stage_workflow()),
+            ("argv is not a string list", "--stage implement", stage_workflow()),
+            ("planning incomplete", self.IMPLEMENT, stage_workflow(analyze="⏳ Pending")),
+            ("stage row not yet written", self.IMPLEMENT, stage_workflow("plan")),
+            ("no stage row", self.IMPLEMENT, stage_workflow("")),
+            ("no overview table", self.IMPLEMENT, "# Workflow\n"),
+        )
+        for label, args, text in refusals:
+            with self.subTest(refusal=label):
+                workflow.write_text(text)
+                with self.assertRaises(ValueError):
+                    self.begin(args)
+                self.assertEqual(path.read_bytes(), before)
+
+        workflow.write_text(stage_workflow())
+        self.invoke("reserve", dispatch_id="verify-1", kind="verification")
+        running = path.read_bytes()
+        with self.assertRaises(ValueError):
+            self.begin(self.IMPLEMENT)
+        self.assertEqual(path.read_bytes(), running)
+
+    def test_a_forged_stage_epoch_record_fails_validation(self):
+        self.greenfield()
+        (self.root / "feature/workflow.md").write_text(stage_workflow())
+        self.begin(self.IMPLEMENT)
+        path = self.root / self.invoke("status", mode="read_only")["ledger_path"]
+        opened = path.read_bytes()
+        forgeries = (
+            ("unknown stage", {"stage_transition": "plan"}),
+            ("event id disagrees", {"epoch_event_id": "operator-replan"}),
+            ("reserved id without a stage", {"stage_transition": None}),
+        )
+        for label, change in forgeries:
+            with self.subTest(forgery=label):
+                tampered = json.loads(opened)
+                epoch = tampered["corrective_epochs"][0]
+                for key, value in change.items():
+                    if value is None:
+                        epoch.pop(key)
+                    else:
+                        epoch[key] = value
+                path.write_text(json.dumps(tampered), encoding="utf-8")
+                with self.assertRaises(ValueError):
+                    self.invoke("status", mode="read_only")
+        path.write_bytes(opened)
+
+
+    def test_both_hosts_document_the_stage_allowance(self):
+        plugin = Path(__file__).resolve().parents[3] / "speckit-pro"
+        shared = (plugin / "skills/speckit-autopilot/references/execution-efficiency.md").read_text()
+        for phrase in ("`begin-stage-epoch`", "`autopilot_args`", "`stage-transition:implement`",
+                       "`stage_epoch_opened=false`", "admission is deferred"):
+            self.assertIn(phrase, shared)
+        self.assertNotIn("stage changes, a reclaimed state mirror", shared)
+        for host in ("skills/speckit-autopilot/SKILL.md", "skills/speckit-autopilot/references/error-recovery.md",
+                     "codex-skills/speckit-autopilot/references/error-recovery-codex.md"):
+            with self.subTest(host=host):
+                self.assertIn("`begin-stage-epoch`", " ".join((plugin / host).read_text().split()))
 
 class WorkflowIdentityTests(_ExecutionControlFixture, unittest.TestCase):
     def test_different_workflows_cannot_adopt_an_existing_ledger(self):
@@ -1231,6 +1377,25 @@ class RunnerDispatchTests(unittest.TestCase):
                                           kind="corrective", failure_invariant="FR-003")
         self.assertEqual(code, 0, reserved)
 
+    def test_stage_epoch_is_a_real_runner_route(self):
+        self.call_runner("execution-control", "apply", action="start")
+        for dispatch_id, invariant in (("fix-a", "FR-001"), ("fix-b", "FR-002")):
+            self.call_runner("execution-control", "apply", action="reserve", dispatch_id=dispatch_id,
+                             kind="corrective", failure_invariant=invariant)
+            self.call_runner("execution-control", "apply", action="complete", dispatch_id=dispatch_id,
+                             outcome="failed")
+        (self.root / "feature/workflow.md").write_text(stage_workflow())
+        code, preview = self.call_runner("execution-control", "dry_run", action="begin-stage-epoch",
+                                         autopilot_args=["--stage", "implement"])
+        self.assertEqual(code, 0, preview)
+        code, opened = self.call_runner("execution-control", "apply", action="begin-stage-epoch",
+                                        autopilot_args=["--stage", "implement"])
+        self.assertEqual(code, 0, opened)
+        self.assertEqual((opened["data"]["corrective_epoch"], opened["data"]["stage_epoch_opened"]), (1, True))
+        code, reserved = self.call_runner("execution-control", "apply", action="reserve", dispatch_id="fix-c",
+                                          kind="corrective", failure_invariant="FR-001")
+        self.assertEqual(code, 0, reserved)
+
     def test_task_metadata_helper_is_registered_and_read_only(self):
         (self.root / "feature/tasks.md").write_text("# Tasks\n## Phase 1: Setup\n- [ ] T001 Create fixture in `fixture.txt`\n")
         (self.root / "feature/spec.md").write_text("# Spec\n")
@@ -1326,7 +1491,7 @@ class DockerVerificationTests(VerificationTests):
 if __name__ == "__main__":
     suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case)
                                for case in (GreenfieldInvariantBindingTests, ExecutionControlTests, CorrectiveRecoveryTests,
-                                            CorrectiveContinuationTests, CorrectiveExceptionTests, ReplanEpochTests, WorkflowIdentityTests,
+                                            CorrectiveContinuationTests, CorrectiveExceptionTests, ReplanEpochTests, StageEpochTests, WorkflowIdentityTests,
                                             VerificationTests, RunnerDispatchTests))
     suite.addTests(DockerVerificationTests(name) for name in DockerVerificationTests.__dict__ if name.startswith("test_docker_"))
     raise SystemExit(run_counted(suite, label="test-execution-control"))
