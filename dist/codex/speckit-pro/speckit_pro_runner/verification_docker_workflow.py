@@ -13,7 +13,7 @@ import time
 from typing import Any
 import uuid
 
-from .execution_control import confined_path, durable_json, execution_control, require_text
+from .execution_control import confined_path, durable_json, execution_control, ignore_owned_directory, require_text
 from .verification_docker import validate_base_image, validate_location
 from .verification_docker_entrypoint import ENVIRONMENT, QUALIFIED_ENVIRONMENT, validate_argv
 from .verification_docker_image import execute_image, inspect_image
@@ -177,7 +177,7 @@ def execute_docker_verification(root: Path, inputs: dict[str, Any], mode: str) -
     execution_id, started = uuid.uuid4().hex, time.monotonic()
     directory_name = f"{evidence_directory(workflow_name)}/{execution_id}"
     directory = confined_path(root, directory_name)
-    directory.parent.mkdir(parents=True, exist_ok=True)
+    ignore_owned_directory(directory.parent)
     directory.mkdir(mode=0o700)
     source_binding = runner_binding()
     result, evidence = docker_workflow_execution(root, workflow_name, begun, config, argv,

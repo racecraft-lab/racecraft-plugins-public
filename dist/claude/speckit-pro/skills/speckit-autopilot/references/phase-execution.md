@@ -2440,6 +2440,42 @@ repository because GitHub writes require a body file. Remove the private
 session and temporary reply file on success or failure. The run report names
 only that private cleanup completed, never its absolute path or contents.
 
+#### Phase 7 Setup: Record the Implement Checklist Gate
+
+Stock `/speckit-implement` stops when a domain checklist has unticked items.
+Spec Kit's checklist template makes those items reviewer-owned: a reviewer
+ticks a box, and implement must not change the markers. Autopilot does not run
+that stop. It records the gate decision instead, once, before the first Phase 7
+dispatch:
+
+- **The decision is `deferred-to-review`.** Unticked reviewer-owned items in
+  `specs/<feature>/checklists/*.md` pass to PR review as they are. Autopilot
+  never ticks a reviewer-owned item, and neither does any executor it
+  dispatches.
+- **`[Gap]` markers are not deferred: they stay blocking through G4.** Take
+  the `[Gap]` count from the recorded G4 verdict. Do not recount it here.
+- **Write the record** in the workflow file under `## Phase 7: Implement`, as a
+  `### Implement Checklist Gate` subsection placed before
+  `### Implementation Progress`. Create the subsection when it is absent. On a
+  resume, leave an existing record as found.
+
+```text
+### Implement Checklist Gate
+
+| Field | Value |
+|-------|-------|
+| Decision | deferred-to-review |
+| Reviewer-owned items | <unticked> of <total> unticked across <n> checklist files |
+| [Gap] markers | <count from the G4 verdict> (blocking through G4) |
+```
+
+- **Fail closed on missing evidence.** When `checklists/` is absent or a file
+  cannot be read, write `unknown` and the reason in the Reviewer-owned items
+  cell. Never write a zero you did not count.
+
+This gate is not a stop condition and never asks the operator. The PR body
+tells the reviewer the boxes are theirs (post-implementation.md step 6).
+
 #### Phase 7 Setup: Open the Implementation-Notes Record
 
 Run this before Step 1, so the record exists before the first task is
@@ -2607,6 +2643,8 @@ Agent(
     <exact assigned descriptions and per-task execution metadata>
     Execute sequentially within declared ownership. Return a separate
     ## Task Result: <TASK_ID> for every ID, including unfinished work.
+    Checklist items are reviewer-owned and deferred to PR review: do not
+    stop on unticked ones, and never edit a checklist marker.
   """
 )
 ```
@@ -2644,7 +2682,58 @@ stop, whatever the accompanying prose says.
 **The two legitimate reasons to yield mid-phase** are a dispatch still running,
 which will wake the run, and a genuine stop condition this reference names, which
 is reported through the run report. Nothing else qualifies. Waiting on a worker
-is not a stop; neither is a compaction (SKILL.md §Scope).
+is not a stop; neither is a compaction (SKILL.md §Scope). A blocked action is not
+a stop condition either; the next section says what to do instead.
+
+#### Blocked Actions Mid-Run: Fall Back or Defer, Never Stop
+
+Once Phase 7 is running, human input is for exceptional cases only; the
+operator's launch of the run is the one normal human touchpoint. A blocked
+action is any planned command, tool call, or side effect that cannot run as
+planned: an approval-reviewer veto (a permission-classifier or reviewer
+denial), a missing approval, or an unavailable tool or route.
+
+1. **Take the task's own fallback.** When the fallback that the task,
+   `tasks.md`, or the spec itself defines covers this case (for example, "if the
+   refresh cannot run, keep the file unchanged and state the mismatch in the PR
+   body"), apply it without asking. Record it as an auto-applied fallback: quote
+   the defining text, name the blocked action and why it was blocked, and write
+   it in the task's implementation-notes entry and the workflow file's Phase 7
+   result. Then continue. Only a fallback the task or spec defines qualifies. An
+   alternative the autopilot invents is a workaround and is not allowed.
+2. **With no defined fallback, defer that task.** Leave its checkbox unchecked,
+   record it as deferred with the blocked action and the reason, and mark
+   deferred every task and Post item that depends on it. Then keep executing
+   every independent task, gate, and Post check. A deferral reserves no
+   execution-control budget, is not a failure family, and is never retried by
+   another route. Never ask the operator from inside the task, and never set a
+   workflow row or progress item to blocked while runnable work remains.
+3. **Ask once, at the end.** Only after every runnable item has finished, and
+   only if deferred items remain, make one consolidated operator request with
+   `AskUserQuestion`. It names each deferred item, the blocked action, why the
+   requirement needs it, the smallest operator action that unblocks it, and the
+   resume command. Always print the same question as plain text in the final
+   message too, so a question that does not render still reaches the operator.
+   In an unattended run, or when `AskUserQuestion` is unavailable, the plain-text
+   copy is the request. Only then may the rows holding deferred work move to
+   `⚠ Blocked`.
+4. **Report what happened.** The final report and the PR body list every
+   fallback taken and every deferred item. Pass them to `pr-packet-output` as
+   `known_gaps`, so they appear under the body's `## Known Gaps` heading. A run
+   with deferred items reports an honest incomplete checkpoint, never
+   completion.
+
+G7 and Post run on the implemented snapshot. A requirement whose only task is
+deferred is listed as deferred in the G7 evidence and in `known_gaps`; it
+neither fails G7 nor counts as covered by it.
+
+The run must never bypass a veto: never change approval, sandbox, or reviewer
+configuration, never rerun the vetoed action under a different command or tool,
+and never treat an earlier answer as authorization for the vetoed action. The
+correctness stops in this reference are unchanged and still stop the run:
+unknown side effects, an execution-control `checkpoint_required` disposition
+(including an exhausted repair budget), a ledger or clock error, invalid or
+stale state, and a failed gate whose repair is out of scope.
 
 #### Append Contract: One Entry Per Dispatched Attempt
 
@@ -2780,6 +2869,13 @@ one research task.
 
 **Commit:**
 `git add -A && git commit -m "feat(SPEC-XXX): implement phase"`
+
+Runner byproducts are never committed. The runner writes a `.gitignore`
+holding `*` into each directory it owns (`.process/execution-control/` and
+`.process/verification/`), so `git add -A` cannot stage the ledger or the
+verification evidence. If `git ls-files` shows such a path already tracked
+(from an older plugin version), run `git rm -r --cached -- <path>` before this
+commit.
 
 **After G7 passes:** Validate/reuse Integration/E2E proof,
 then execute PR Creation Protocol (see below).

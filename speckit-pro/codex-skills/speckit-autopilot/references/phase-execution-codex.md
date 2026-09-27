@@ -876,6 +876,11 @@ for phase in PHASES starting from first_pending:
        ownership and exclude ignored raw formal-runs output.
        For phase 7 (implement): run: git add -A && git commit
        (implementation changes include src/, tests/, etc.)
+       Runner byproducts are never committed: the runner writes a
+       .gitignore holding * into .process/execution-control/ and
+       .process/verification/, so git add -A cannot stage them. If
+       git ls-files shows such a path already tracked (from an older
+       plugin version), run git rm -r --cached -- <path> before this commit.
    11. Advance to next phase (next iteration of loop) and write the new
        in_progress item to both update_plan and autopilot-state.json.
        Never mark the run complete while a later phase family still has
@@ -1083,7 +1088,15 @@ planned action in any of these categories:
   installation;
 - interactive authentication, credential provisioning, or an account change;
 - an externally visible side effect such as a provider request, deployment,
-  message, publication, or remote mutation.
+  message, publication, or remote mutation;
+- data egress: sending repository-derived content (source, skills, prompts,
+  specs, or private project data) to a model service or other third party,
+  including a live model evaluation or `--run` eval, a cloud or delegation
+  worker, and a push or PR to a remote. Record it as `external_side_effect`
+  whose `target` names the exact destination (model service, remote
+  repository, or worker) and whose `effect` names the data class sent. Scan
+  `tasks.md` and the Post list for such tasks; a task that runs a live provider
+  is data egress even when it has no visible side effect.
 
 For each action, record its category, exact command or tool when known, target,
 durability or data effect, required execution boundary, existing authorization
@@ -1170,10 +1183,16 @@ open the private record it names and confirm its bytes still hash to the
 recorded `sha256`. Move the record to the run-keyed location above, replace the
 legacy object with the receipt projected from it, and rerun the full guard. If
 the private record is missing, changed, or stale against the current boundary,
-rerun this preflight instead.
+rerun this preflight instead. A resume does this at its start, in the Step 0.8c
+re-attestation in [prerequisites-codex.md](./prerequisites-codex.md), before the
+Step 1.1 coverage guard runs.
 
 Only `authorization.status=explicit_user` can make an inventoried boundary
-action `ready`. Exact explicit user authorization persists across turns,
+action `ready`. For data egress, explicit_user evidence is an operator answer
+in this thread to the consolidated request that names the exact destination and
+data class; the automatic reviewer judges only from the transcript, so a general
+instruction to proceed or "you have approval" is not egress authorization.
+Exact explicit user authorization persists across turns,
 compaction, and resume while the recorded action scope and execution-boundary
 digest still match and no later user instruction revokes or narrows it. When a
 later instruction does so, record `authorization.status=revoked`, add non-secret
@@ -1185,11 +1204,54 @@ Never persist credentials, tokens, cookies, or session material.
 When any action is `operator_action_required`, set the object status to that
 exact value and make the Phase 6.5 row non-terminal and blocked. Present one
 consolidated request that names every exact target, lasting or external effect,
+every data-egress destination and data class,
 why the requirement needs it, the smallest required operator action, and the
 resume command. Commit the blocked record through the current stage's bounded
 bookkeeping path; for a plan-stage run, use the normal stage-boundary commit.
 Then **STOP before Phase 7**. A denial routes back to planning for a
 contract-preserving alternative; it never triggers a workaround.
+
+When that request includes data egress, it also carries two artifacts for the
+operator to review. Codex's automatic reviewer trusts user and developer
+messages, `AGENTS.md`, and question replies, but treats skill and plugin text
+as untrusted. It approves egress only when the transcript names the payload
+and the destination. Render both artifacts with the registered read-only
+`render-egress-authorization` runner helper. Pass the repository name, its
+default branch, and every data-egress action as `action_id`, `target` (the
+exact destination), `effect` (the data class), and an optional `purpose` (the
+task id or reason). Show its output unchanged; do not write the text by hand.
+
+- A paste-ready authorization message: one short block the operator sends as
+  a user message in this thread. It lists each action as "Send <data class>
+  from <repository> to <destination> for <purpose>". The operator's reply that
+  carries it is the explicit_user evidence described above.
+- A proposed `auto_review.extra_policy` fragment for the operator's own
+  `~/.codex/config.toml`. Codex appends `extra_policy` to the default reviewer
+  policy; `auto_review.policy` replaces the default reviewer policy, so propose
+  `extra_policy` and never `auto_review.policy`. It needs Codex 0.158 or later;
+  earlier versions ignore the key. The fragment scopes itself to checkouts whose
+  `git remote get-url --push origin` is this repository's GitHub URL, and it
+  pre-authorizes only the payload and destination of each listed action. Its
+  human stops are "Outcome rule: deny" lines that win over those grants: edits
+  to autonomy-boundary files, their schema, or their recorded digests, or to
+  `AGENTS.md` or `.codex/`; any other destination or data class; a push to the
+  default branch, a force push, a `--mirror` push, or a remote ref deletion; and
+  a remote change. The operator installs it once.
+
+The reviewer does not see every command. A command reaches the reviewer only
+when it escalates, for example a network request or a write outside the
+sandbox; a command that matches no rule runs in the sandbox without review. So
+the fragment cannot stop an in-sandbox edit to a schema or digest in the
+checkout; CI and the boundary validator catch those.
+
+The plugin never writes the authorization message or the fragment into
+`~/.codex`, into the repository's `.codex/` directory, or into `AGENTS.md`:
+the reviewer trusts `AGENTS.md`, and any pull-request branch could rewrite it. Record that the authorization was
+presented without a schema change: set each egress action's private
+`authorization.evidence` to cite the helper's `authorization_message_sha256`
+while it waits (`authorization.status=missing`), then cite that digest again
+with the operator's reply when recording `explicit_user`. The digest stays in
+the private record; the receipt and the Phase 6.5 row never carry it.
 
 When every action is `ready` or `rerouted`, set status to `ready` and continue
 with the confidence steps below. A `plan` run takes its boundary commit and
@@ -1203,7 +1265,11 @@ missing, malformed, or stale record. A new or changed action reruns this
 preflight. If a worker discovers a predictable boundary that the record
 omitted, do not let the worker attempt it or ask from inside the task: record
 that the late discovery is an autopilot defect, return control to the parent,
-update the preflight, and resolve it there.
+and update the preflight there. The pre-Phase-7 stop above does not apply
+mid-run: when the refreshed disposition is `operator_action_required`, the
+parent defers only that task under
+[Blocked Actions Mid-Run: Fall Back or Defer, Never Stop](#blocked-actions-mid-run-fall-back-or-defer-never-stop)
+and keeps executing independent work.
 
 ```text
 1. Read mode from `CONFIDENCE_GATE_MODE` (set at Step 0.6b in
@@ -1281,7 +1347,9 @@ reconcile retained complete/unfinished results rather than renumbering batches.
 Dispatch one `spawn_agent` per implementation or research batch; verification
 routes stay orchestrator-direct with no agent. Supply TDD only to implementation
 and project agents, up to four adjacent assigned tasks sequentially, with shared
-context/reservation once. Never exceed derived
+context/reservation once. Tell every implementation and project agent that
+checklist items are reviewer-owned and deferred to PR review: do not stop on
+unticked ones, and never edit a checklist marker. Never exceed derived
 `subagent_slots`. Consume every real per-task result, update both state stores,
 and call `task-results` `action=record` with every frozen task's full result
 block plus independently captured parent `native_observations` before marking
@@ -2306,6 +2374,40 @@ owner-only temporary file outside the repository because GitHub writes require
 a body file. Remove private state on success or failure and report only that
 cleanup completed, never its absolute path or contents.
 
+**Record the Implement Checklist Gate before the first Phase 7 dispatch.**
+Stock `$speckit-implement` stops when a domain checklist has unticked items.
+Spec Kit's checklist template makes those items reviewer-owned: a reviewer
+ticks a box, and implement must not change the markers. The parent session does
+not run that stop. It records the gate decision instead, once:
+
+- **The decision is `deferred-to-review`.** Unticked reviewer-owned items in
+  `<FEATURE_DIR>/checklists/*.md` pass to PR review as they are. Autopilot
+  never ticks a reviewer-owned item, and neither does any executor it spawns.
+- **`[Gap]` markers are not deferred: they stay blocking through G4.** Take
+  the `[Gap]` count from the recorded G4 verdict. Do not recount it here.
+- **Write the record** in the workflow file under `## Phase 7: Implement`, as a
+  `### Implement Checklist Gate` subsection placed before
+  `### Implementation Progress`. Create the subsection when it is absent. On a
+  resume, leave an existing record as found.
+
+```text
+### Implement Checklist Gate
+
+| Field | Value |
+|-------|-------|
+| Decision | deferred-to-review |
+| Reviewer-owned items | <unticked> of <total> unticked across <n> checklist files |
+| [Gap] markers | <count from the G4 verdict> (blocking through G4) |
+```
+
+- **Fail closed on missing evidence.** When `checklists/` is absent or a file
+  cannot be read, write `unknown` and the reason in the Reviewer-owned items
+  cell. Never write a zero you did not count.
+
+This gate is not a stop condition and never asks the operator. The PR body
+tells the reviewer the boxes are theirs (see the PR packet `how_to_review`
+rule in post-implementation-codex.md).
+
 **Open the implementation-notes record before the first task is dispatched.**
 This is parent-session work, not delegated work, and it runs ahead of the first
 `spawn_agent` call rather than lazily on the first append: a phase interrupted
@@ -2423,6 +2525,59 @@ verification evidence path, fingerprint status, checkpoint commit SHA
 warnings, and any blocked/fixed tasks. The marker checkpoint SHA is the source
 commit for later live marker PR branches. Do not infer a new marker order from
 changed files or reviewability warnings.
+
+### Blocked Actions Mid-Run: Fall Back or Defer, Never Stop
+
+Once Phase 7 is running, human input is for exceptional cases only. The Phase
+6.5 preflight is the one normal human touchpoint; a single blocked action after
+it is not a reason to stop the run. A blocked action is any planned command,
+tool call, or side effect that cannot run as planned: an approval-reviewer veto
+(including one on an action the preflight recorded as `ready`), a missing
+approval, an unavailable tool or route, or a late-discovered boundary action
+whose refreshed preflight disposition is `operator_action_required`.
+
+1. **Take the task's own fallback.** When the fallback that the task,
+   `tasks.md`, or the spec itself defines covers this case (for example, "if the
+   refresh cannot run, keep the file unchanged and state the mismatch in the PR
+   body"), apply it without asking. Record it as an auto-applied fallback: quote
+   the defining text, name the blocked action and why it was blocked, and write
+   it in the task's implementation-notes entry and the workflow file's Phase 7
+   result. Then continue. Only a fallback the task or spec defines qualifies. An
+   alternative the autopilot invents is a workaround and is not allowed.
+2. **With no defined fallback, defer that task.** Leave its checkbox unchecked,
+   record it as deferred with the blocked action and the reason, and mark
+   deferred every task and Post item that depends on it. Then keep executing
+   every independent task, gate, and Post check. A deferral reserves no
+   execution-control budget, is not a failure family, and is never retried by
+   another route. Never ask the operator from inside the task, and never set a
+   workflow row, plan item, or the thread goal to blocked while runnable work
+   remains.
+3. **Ask once, at the end.** Only after every runnable item has finished, and
+   only if deferred items remain, make one consolidated operator request with
+   `request_user_input`. It names each deferred item, the blocked action, why
+   the requirement needs it, the smallest operator action that unblocks it, and
+   the resume command. Always print the same question as plain text in the
+   final message too, even when `request_user_input` returns, because the
+   question UI can fail to render in a thread. In an unattended run, or when
+   `request_user_input` is absent, the plain-text copy is the request. Only then
+   may the rows holding deferred work move to `⚠ Blocked`.
+4. **Report what happened.** The final report and the PR body list every
+   fallback taken and every deferred item. Pass them to `pr-packet-output` as
+   `known_gaps`, so they appear under the body's `## Known Gaps` heading. A run
+   with deferred items reports an honest incomplete checkpoint, never
+   completion.
+
+G7 and Post run on the implemented snapshot. A requirement whose only task is
+deferred is listed as deferred in the G7 evidence and in `known_gaps`; it
+neither fails G7 nor counts as covered by it.
+
+The run must never bypass a veto: never change approval, sandbox, or reviewer
+configuration, never rerun the vetoed action under a different command or tool, and never
+treat an earlier answer as authorization for the vetoed action. The
+correctness stops above are unchanged and still stop the run: unknown side
+effects, an execution-control `checkpoint_required` disposition (including an
+exhausted repair budget), a ledger or clock error, invalid or stale state, and
+a failed gate whose repair is out of scope.
 
 ## PR Packet and Body Boundary
 

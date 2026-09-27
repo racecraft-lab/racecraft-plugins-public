@@ -403,10 +403,12 @@ and the precedence rule documented there.
 
 See [prerequisites-codex.md](./references/prerequisites-codex.md) for the full pre-flight sequence:
 
-- **Step -1: Archive Sweep Startup** — execute the installed archive
-  extension's project-local command contract directly in Codex, use the
-  Codex-native worktree binding for path prerequisites, and fail closed on a
-  broken installed extension
+- **Step -1: Archive Sweep Startup** — list merged prior specs with helper
+  `list-archive-candidates`, then execute the installed archive extension's
+  project-local command contract directly in Codex once per `archive_order`
+  entry (`archive command: specs/<merged-spec-dir>`; none on `main` or a
+  protected branch), use the Codex-native worktree binding for path
+  prerequisites, and fail closed on a broken installed extension
 - **Step 0.0: Use Runner Operations** — invoke `speckit_pro_runner` helper IDs with one JSON request on stdin
 - **Step 0.1–0.7: Environment Checks** — `check-prerequisites` JSON parsing, branch detection
 - **Step 0.6: Load Settings** — `consensus-mode`, `gate-failure`, `auto-commit`, `security-keywords`
@@ -471,7 +473,11 @@ See [prerequisites-codex.md](./references/prerequisites-codex.md) for the full p
   Missing or stale evidence re-enters the full Phase 6.5 Autonomy Boundary
   Preflight. Exact explicit user authorization remains valid while its recorded
   action scope and execution boundary still match and no later instruction
-  revokes or narrows it; an older run outcome alone grants nothing.
+  revokes or narrows it; an older run outcome alone grants nothing. When a
+  persisted `autonomy_boundary` receipt exists, at any stage, probe it against
+  the live boundary before the Step 1.1 coverage guard; a new thread's writable
+  roots make it stale, so re-attest it with one operator request up front, as
+  [prerequisites-codex.md](./references/prerequisites-codex.md) describes.
 - **Step 0.9: Constitution Validation** — principle checks against current codebase
 - **Step 0.10: Codex Agent Availability Check** — Run the promoted
   `install-codex-agents` helper in `dry_run` mode against the selected project or
@@ -629,10 +635,21 @@ state, and no-side-effect boundaries.
 Before the confidence gate, stage-boundary commit, or first Phase 7 dispatch,
 run the same reference's **Autonomy Boundary Preflight**. It inventories
 predictable writes beyond current writable roots, privileged commands,
-interactive authentication, and externally visible side effects; proves each
+interactive authentication, externally visible side effects, and data egress
+to a model service or other third party (including live model evaluations);
+proves each
 is runnable or already authorized; and records the result durably. A blocked
 result stops before Phase 7 with one consolidated operator action instead of
-surprising the operator from inside an implementation task.
+surprising the operator from inside an implementation task. When that action
+covers data egress, it shows the operator a paste-ready authorization message
+and a proposed `auto_review.extra_policy` fragment, both rendered by runner
+helper `render-egress-authorization`; the plugin never writes either one.
+
+That preflight is the one normal human touchpoint. Once Phase 7 runs, one
+blocked action never stops the run: take the task's own fallback, or defer that
+task and keep executing independent work, then ask once at the end. Follow
+§Blocked Actions Mid-Run: Fall Back or Defer, Never Stop in
+[`phase-execution-codex.md`](./references/phase-execution-codex.md#blocked-actions-mid-run-fall-back-or-defer-never-stop).
 
 The marker planning step must preserve correctness stops for malformed or stale state,
 failed verification, invalid packets, unsafe output, unusable gate evidence,
@@ -675,6 +692,11 @@ Exception: `execution_control.disposition=checkpoint_required` permits an
 honest checkpoint response stating the run is **not complete**, remaining Post
 work, consumed budget, unknown effects, and the operator decision required.
 Keep pending rows and current status; never mark them completed to stop.
+The same honest checkpoint applies when every runnable item has finished and
+deferred items remain under §Blocked Actions Mid-Run: Fall Back or Defer, Never
+Stop. Make the one consolidated `request_user_input` request, print the same
+question as plain text in the final message, and list every fallback taken and
+every deferred item. Never report completion while a deferred item remains.
 If the audit finds incomplete Post work, set the first
 incomplete item to `in_progress` in both state stores and continue the
 autopilot loop instead of summarizing. `Post: Retrospective` is the final

@@ -126,31 +126,47 @@ to archive previously merged specs.
    manual `specs/` inventory, mark the Archive Sweep plan item completed, or
    advance Phase 0.
 
-5. After the command and prerequisite pass, determine the sweep mode from the
-   current branch:
+5. After the command and prerequisite pass, invoke the read-only runner helper
+   `list-archive-candidates` with the current target as
+   `inputs.current_target`. The helper lists `specs/*/spec.md`, excludes the
+   current target, and asks `gh` for each remaining spec's merged pull
+   request. `archive_order` lists the specs with merged-PR evidence in
+   ascending order. Specs in `not_merged` or `unknown` stay active; never
+   archive a spec that is not in `archive_order`. Then determine the archive
+   mode from the current branch:
 
-   **Feature / spec worktree branch** (normal autopilot case — run with actual
-   cleanup):
+   **Feature / spec worktree branch** (normal autopilot case): follow the
+   command contract once per `archive_order` entry, in that order, and let
+   each run finish before the next starts:
    ```text
-   archive command: --sweep --current-target <current-spec-dir>
+   archive command: specs/<merged-spec-dir>
    ```
+   Pass only the feature directory as `$ARGUMENTS`. The stock archive
+   extension (`stn1slv/spec-kit-archive`) archives one feature per run and
+   rejects `--sweep`, `--current-target`, and `--dry-run`; the vendored
+   `racecraft-lab/spec-kit-archive` fork accepts the same single-feature form.
+   If a run fails, record `status=blocked` with that spec and the command's
+   error under `archive_sweep`, then STOP before Phase 0.
 
    **`main`, a release branch, or any protected integration branch** (dry-run
-   only — do not delete spec folders on the integration branch):
-   ```text
-   archive command: --sweep --current-target <current-spec-dir> --dry-run
-   ```
+   only): do not follow the command contract, because every archive run
+   writes project memory. Record the helper's `archive_order` as the specs a
+   feature branch run would archive.
 
-6. Archive Sweep may archive/clean up only previously merged specs. It MUST
-   exclude the current target spec until a later run sees that spec as merged.
+6. Archive Sweep may archive only previously merged specs. It MUST exclude the
+   current target spec until a later run sees that spec as merged; the helper
+   reports it as `excluded_current_spec` and never lists it.
 7. Persist sweep output into `autopilot-state.json` under `archive_sweep`,
    including `status`, `execution_path=extension_contract`,
    `invocation_available`, `prerequisite_available`, `prerequisite_mode`,
-   eligible previous specs, excluded current spec, archive extension installed
-   state, cleanup mode, and `safeToApplyCleanup`.
-8. When the executed sweep finds no prior candidates, record
-   `status=no_candidates`, empty eligible previous specs, the excluded current
-   spec, and `safeToApplyCleanup=false`. This is a successful no-op and may
+   eligible previous specs (`archive_order`), excluded current spec, specs
+   left active with their `not_merged` or `unknown` reason, archive extension
+   installed state, cleanup mode (`apply` on a feature branch, `dry_run`
+   otherwise), and `safeToApplyCleanup=false` (the sweep never passes
+   `--apply-cleanup`, so it never removes spec folders).
+8. When the helper's `archive_order` is empty, record `status=no_candidates`,
+   empty eligible previous specs, the excluded current spec, and
+   `safeToApplyCleanup=false`. This is a successful no-op and may
    complete the Archive Sweep plan item. It is not a fallback for a broken or
    unexecuted command path.
 9. Add/update the canonical `Archive Sweep: previously merged specs
@@ -259,11 +275,14 @@ prerequisite/gate fails.
 
 ### 0.8c Resumed Autonomy Boundary Preflight
 
-When an existing `plan.md` and `tasks.md` are present and the resolved stage
-can enter Implement, inspect the durable `autonomy_boundary` record described
-in [Phase Execution](./phase-execution-codex.md#autonomy-boundary-preflight).
-Do this before the first Phase 7 dispatch, including for a resumed workflow
-whose implementation is already marked in progress.
+This step has two triggers. When an existing `plan.md` and `tasks.md` are
+present and the resolved stage can enter Implement, inspect the durable
+`autonomy_boundary` record described in
+[Phase Execution](./phase-execution-codex.md#autonomy-boundary-preflight)
+before the first Phase 7 dispatch, including for a resumed workflow whose
+implementation is already marked in progress. Separately, re-attest a stale
+boundary at resume start whenever a persisted receipt exists, even when the run
+cannot yet enter Implement (see below).
 
 Recompute the recorded planning fingerprint from the current files and compare
 the recorded execution boundary with the current surface. The state holds the
@@ -274,7 +293,7 @@ receipt with the full guard (`--require-autonomy-boundary` plus every
 `execution_control.run_id` and fails when it is missing, unreadable, or its
 canonical digest differs from `private_record_sha256`. A missing
 record or private file, a digest mismatch, a changed writable-root or approval
-boundary, or a planned action absent from the record makes it stale. Re-enter the complete Phase 6.5
+boundary, or a planned action absent from the record (including a data-egress task such as a live model evaluation) makes it stale. Re-enter the complete Phase 6.5
 preflight and persist a current result before dispatching any implementation
 worker. Exact explicit user authorization persists across turns, compaction,
 and resume when the recorded action category, command or tool, target, lasting
@@ -282,6 +301,29 @@ or external effect, and execution-boundary fingerprint all still match and no
 later user instruction revokes or narrows it. Prior execution, an earlier
 automatic review, or the fact that an older task crossed the boundary is never
 authorization by itself.
+
+**Re-attest a stale boundary at resume start.** When `autopilot-state.json`
+already holds a persisted `autonomy_boundary` receipt, at any stage, including a
+plan-stage resume or re-plan epoch, run this check before the Step 1.1 coverage
+guard and before any other phase work. The execution boundary includes the
+session's writable roots, so a new Codex thread or worktree root normally makes
+the persisted record stale. Run the Step 1.1 guard command once, unchanged, as a
+read-only probe, and read `autonomy_boundary_errors` from its printed JSON. Its
+nonzero exit here is a branch, not a stop: do not stop because the probe
+exited nonzero. When the list is empty, continue. When it holds `current execution boundary
+does not match the persisted execution boundary`, or any other stale-record
+error above, rerun the complete Phase 6.5 preflight against the live boundary
+now. Present one consolidated operator request, in the `operator_action_required`
+shape, that names the changed boundary and every action whose authorization it
+invalidates. When a data-egress action is among them, include the
+paste-ready authorization message and `auto_review.extra_policy` fragment that
+request carries. Record the operator's answer as `authorization.status=explicit_user`,
+then write the refreshed private record, its receipt, and the matching Phase 6.5
+row before Step 1.1 runs. Present the refresh as this up-front re-attestation,
+never as a guard-failure repair. A denial or no answer stops the run before the
+guard. A mismatch still blocks: keep `--require-autonomy-boundary` and every
+live `--current-*` value on the Step 1.1 command, and take those values from the
+current thread, never from the workflow or state.
 
 ### 0.9 Constitution Validation
 
