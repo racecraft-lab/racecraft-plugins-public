@@ -221,6 +221,11 @@ class SplitRatificationSourceContractTests(unittest.TestCase):
                 self.assertNotIn("operator-ratified split decision", text)
                 self.assertIn("ratified split decision (autopilot or operator)", text)
 
+    def test_claude_skill_loop_runs_the_helper_before_asking(self) -> None:
+        text = _flat(CLAUDE_SKILL)
+        self.assertIn("run runner helper `ratify-pr-split`", text)
+        self.assertIn("Budget-driven split ratification", text)
+
 
 if __name__ == "__main__":
     loader = unittest.defaultTestLoader

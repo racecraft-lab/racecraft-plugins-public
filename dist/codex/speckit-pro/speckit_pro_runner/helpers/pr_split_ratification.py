@@ -122,7 +122,6 @@ def _findings(
     def note(code: str, detail: str) -> None:
         found.setdefault(code, []).append(detail)
 
-    covered: dict[str, set[str]] = {group["group_id"]: set() for group in groups}
     # An item moved into another group is reported once, as group_merged.
     carried = {item for increment in increments for item in increment["scope"]}
     for increment in increments:
@@ -135,8 +134,6 @@ def _findings(
                 note("scope_added", f"{name} carries {item}, which no approved group holds")
             elif owner[item] != group_id:
                 note("group_merged", f"{name} in group {group_id} carries {item} from group {owner[item]}")
-            else:
-                covered[group_id].add(item)
         over = [
             f"{increment[field]} {field.replace('_', ' ')} (cap {budget[field]})"
             for field in sorted(BUDGET_FIELDS)
