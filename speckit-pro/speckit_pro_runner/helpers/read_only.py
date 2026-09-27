@@ -1661,6 +1661,22 @@ def check_prerequisites(inputs: dict[str, Any], repo_root: Path) -> dict[str, An
         all_pass = False
     else:
         checks.append(check("commands", True, "All SpecKit commands installed", ""))
+    setup_mismatches = setup_contract_mismatches(repo_root)
+    if setup_mismatches:
+        checks.append(check(
+            "setup_contract", False,
+            "SpecKit skills call script options their .specify scripts reject. Refresh shared infrastructure: "
+            "specify integration upgrade <key> --force --script sh, then restore local edits",
+            "; ".join(setup_mismatches)))
+        all_pass = False
+    else:
+        checks.append(check("setup_contract", True, "SpecKit skills match their .specify scripts", ""))
+    resolution_error = template_resolution_error(repo_root)
+    if resolution_error:
+        checks.append(check("template_resolution", False, resolution_error, ""))
+        all_pass = False
+    else:
+        checks.append(check("template_resolution", True, "SpecKit can resolve preset templates", ""))
 
     if workflow:
         workflow_path = resolve_input_path(workflow, repo_root)
@@ -1691,6 +1707,80 @@ def check_prerequisites(inputs: dict[str, Any], repo_root: Path) -> dict[str, An
         )
     )
     return make_result(json_text({"all_pass": all_pass, "branch": branch, "is_worktree": is_worktree, "on_feature_branch": on_feature, "checks": checks}), exit_code=0 if all_pass else 1)
+
+
+SETUP_SCRIPT_CALL_RE = re.compile(r"`\.specify/scripts/bash/([A-Za-z0-9_.-]+\.sh)((?:\s+[^`\s]+)*)`")
+
+
+def setup_contract_mismatches(repo_root: Path) -> list[str]:
+    """Options project SpecKit skills pass to `.specify` scripts that the scripts reject.
+
+    A SpecKit upgrade can refresh the skills while leaving an older shared script
+    in place; the skill then fails at setup, long after prerequisites passed.
+    """
+    mismatches: list[str] = []
+    scripts: dict[str, str | None] = {}
+    for skills_dir in (".claude/skills", ".agents/skills", ".codex/skills"):
+        for skill in sorted((repo_root / skills_dir).glob("speckit-*/SKILL.md")):
+            text = trusted_text(skill, repo_root)
+            if text is None:
+                continue
+            label = skill.relative_to(repo_root).as_posix()
+            for name, arguments in SETUP_SCRIPT_CALL_RE.findall(text):
+                if name not in scripts:
+                    scripts[name] = trusted_text(repo_root / ".specify/scripts/bash" / name, repo_root)
+                script = scripts[name]
+                if script is None:
+                    mismatches.append(f"{label}: {name} is missing")
+                    continue
+                for option in (token for token in arguments.split() if token.startswith("--")):
+                    if not re.search(rf"(?:^|[\s|]){re.escape(option)}(?:\||\))", script, re.MULTILINE):
+                        mismatches.append(f"{label}: {name} {option}")
+    return sorted(set(mismatches))
+
+
+PYTHON_MAJOR_3_PROBE = "import sys; raise SystemExit(sys.version_info.major != 3)"
+
+
+def _path_python_succeeds(name: str, code: str) -> bool:
+    """Run `name -c code` exactly as SpecKit's shell scripts do: by bare name on PATH."""
+    try:
+        if name == "python3":
+            completed = subprocess.run(["python3", "-c", code], shell=False, capture_output=True, text=True, timeout=30)
+        else:
+            completed = subprocess.run(["python", "-c", code], shell=False, capture_output=True, text=True, timeout=30)
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+    return completed.returncode == 0
+
+
+def template_resolution_error(repo_root: Path) -> str | None:
+    """Why SpecKit cannot resolve templates here, or None.
+
+    With any preset manifest installed (SpecKit Pro installs one), SpecKit's
+    template resolver parses it with PyYAML from the interpreter that
+    `common.sh` `_python3_command` picks: `python3` on PATH, else `python`,
+    whichever reports major version 3. Upstream tracks this as
+    github/spec-kit#4443: a uv or pipx install keeps PyYAML in its own tool
+    environment, which that bare `python3` does not see. Only POSIX is
+    checked: there `subprocess` finds a bare name through the same PATH search
+    as the shell, while Windows resolves it through `CreateProcess`.
+    """
+    if sys.platform == "win32":
+        return None
+    if not any(trusted_file_exists(manifest, repo_root)
+               for manifest in (repo_root / ".specify/presets").glob("*/preset.yml")):
+        return None
+    for name in ("python3", "python"):
+        if shutil.which(name) and _path_python_succeeds(name, PYTHON_MAJOR_3_PROBE):
+            break
+    else:
+        return "SpecKit preset templates need Python 3 with PyYAML on PATH, and no Python 3 is on PATH"
+    if _path_python_succeeds(name, "import yaml"):
+        return None
+    interpreter = shutil.which(name)
+    return (f"SpecKit resolves preset templates with {interpreter}, which cannot import PyYAML. "
+            f"Install it there ({interpreter} -m pip install pyyaml) or put a Python 3 that has it first on PATH")
 
 
 def check(name: str, passed: bool, message: str, detail: str) -> dict[str, Any]:
@@ -4103,7 +4193,7 @@ def sweep_analyst_payload(inputs: dict[str, Any], comment_id: str) -> dict[str, 
         return sweep_error(
             f"matched_lines must be an array of 1-based integers for comment {comment_id}"
         )
-    if any(earlier >= later for earlier, later in zip(matched_lines, matched_lines[1:])):
+    if any(earlier >= later for earlier, later in zip(matched_lines, matched_lines[1:], strict=False)):
         return sweep_error(f"matched_lines must ascend for comment {comment_id}")
     if inputs.get("lines") is not None:
         # The leg fixes the request shape, so a request carrying both shapes is a
@@ -5568,7 +5658,7 @@ def _spec_index_zone_positions(lines: list[str], path: Path) -> dict[str, tuple[
         intervals.append((start, end, zone))
 
     intervals.sort()
-    for (_, previous_end, _), (next_start, _, _) in zip(intervals, intervals[1:]):
+    for (_, previous_end, _), (next_start, _, _) in zip(intervals, intervals[1:], strict=False):
         if next_start <= previous_end:
             raise SpecIndexRenderError(f"overlapping GENERATED marker zones in: {path}")
     return positions
@@ -6576,6 +6666,24 @@ def pr_packet_schema_failures(data: dict[str, Any], schema: dict[str, Any]) -> l
     return unique
 
 
+# The stdlib validator asserts the JSON Schema 2020-12 keywords the shipped
+# contracts use. Annotation keywords are accepted and assert nothing; `format`
+# is annotation-only, as in the 2020-12 default vocabulary. Any other keyword
+# is a definition failure, so a constraint the validator cannot check never
+# passes on nothing.
+ASSERTED_SCHEMA_KEYWORDS = frozenset({
+    "$ref", "oneOf", "anyOf", "allOf", "not", "if", "then", "else", "type", "const", "enum",
+    "properties", "patternProperties", "additionalProperties", "propertyNames", "required",
+    "dependentRequired", "minProperties", "maxProperties",
+    "minItems", "maxItems", "prefixItems", "items", "contains", "uniqueItems",
+    "minLength", "maxLength", "pattern", "minimum", "exclusiveMinimum", "maximum",
+})
+ANNOTATION_SCHEMA_KEYWORDS = frozenset({
+    "$schema", "$id", "$defs", "$comment", "title", "description", "default", "examples",
+    "format", "deprecated", "readOnly", "writeOnly",
+})
+
+
 def json_schema_failures(
     value: Any,
     schema: Any,
@@ -6588,6 +6696,8 @@ def json_schema_failures(
         return [schema_failure("definition", field, "Value is rejected by the packet schema.")]
 
     failures: list[dict[str, Any]] = []
+    for keyword in sorted(schema.keys() - ASSERTED_SCHEMA_KEYWORDS - ANNOTATION_SCHEMA_KEYWORDS):
+        failures.append(schema_failure("definition", field, f"Unsupported schema keyword: {keyword}"))
     reference = schema.get("$ref")
     if isinstance(reference, str):
         resolved = resolve_local_schema_reference(reference, root_schema)
@@ -6598,10 +6708,7 @@ def json_schema_failures(
 
     one_of = schema.get("oneOf")
     if isinstance(one_of, list):
-        matches = sum(
-            not json_schema_failures(value, candidate, root_schema, field)
-            for candidate in one_of
-        )
+        matches = sum(json_schema_probe(value, candidate, root_schema, field, failures) for candidate in one_of)
         if matches != 1:
             failures.append(
                 schema_failure("one_of", field, "Value must match exactly one allowed packet schema shape.")
@@ -6619,6 +6726,12 @@ def json_schema_failures(
     if isinstance(enum, list) and not any(json_values_equal(value, candidate) for candidate in enum):
         failures.append(schema_failure("enum", field, "Value is not one of the schema's allowed values."))
 
+    any_of = schema.get("anyOf")
+    if isinstance(any_of, list) and not any(
+        [json_schema_probe(value, candidate, root_schema, field, failures) for candidate in any_of]
+    ):
+        failures.append(schema_failure("any_of", field, "Value must match at least one allowed schema shape."))
+
     all_of = schema.get("allOf")
     if isinstance(all_of, list):
         for candidate in all_of:
@@ -6626,21 +6739,46 @@ def json_schema_failures(
 
     condition = schema.get("if")
     if isinstance(condition, dict):
-        branch = schema.get("then") if not json_schema_failures(value, condition, root_schema, field) else schema.get("else")
+        branch = schema.get("then") if json_schema_probe(value, condition, root_schema, field, failures) else schema.get("else")
         if branch is not None:
             failures.extend(json_schema_failures(value, branch, root_schema, field))
 
     negated = schema.get("not")
-    if isinstance(negated, dict) and not json_schema_failures(value, negated, root_schema, field):
+    if isinstance(negated, dict) and json_schema_probe(value, negated, root_schema, field, failures):
         failures.append(schema_failure("not", field, "Value matches a packet schema shape that is forbidden here."))
 
     if isinstance(value, dict):
         properties = schema.get("properties") if isinstance(schema.get("properties"), dict) else {}
         required = schema.get("required") if isinstance(schema.get("required"), list) else []
+        pattern_properties = schema.get("patternProperties") if isinstance(schema.get("patternProperties"), dict) else {}
         minimum_properties = schema.get("minProperties")
         if isinstance(minimum_properties, int) and len(value) < minimum_properties:
             noun = "property" if minimum_properties == 1 else "properties"
             failures.append(schema_failure("min_properties", field, f"Object must contain at least {minimum_properties} {noun}."))
+        maximum_properties = schema.get("maxProperties")
+        if isinstance(maximum_properties, int) and len(value) > maximum_properties:
+            failures.append(schema_failure("max_properties", field, f"Object must contain at most {maximum_properties} properties."))
+        dependent_required = schema.get("dependentRequired")
+        if isinstance(dependent_required, dict):
+            for trigger, dependencies in dependent_required.items():
+                if trigger in value and isinstance(dependencies, list):
+                    for key in dependencies:
+                        if isinstance(key, str) and key not in value:
+                            missing_field = schema_child_field(field, key)
+                            failures.append(
+                                schema_failure(
+                                    "dependent_required",
+                                    missing_field,
+                                    f"Schema field {missing_field} is required when {schema_child_field(field, str(trigger))} is present.",
+                                )
+                            )
+        name_schema = schema.get("propertyNames")
+        if name_schema is not None:
+            for key in sorted(value.keys()):
+                if not json_schema_probe(key, name_schema, root_schema, schema_child_field(field, str(key)), failures):
+                    failures.append(
+                        schema_failure("property_names", schema_child_field(field, str(key)), "Property name is not allowed by the schema.")
+                    )
         for key in required:
             if isinstance(key, str) and key not in value:
                 missing_field = schema_child_field(field, key)
@@ -6657,8 +6795,22 @@ def json_schema_failures(
                         schema_child_field(field, key),
                     )
                 )
+        pattern_matched: set[str] = set()
+        for key in sorted(value.keys()):
+            for key_pattern, child_schema in pattern_properties.items():
+                try:
+                    matched = re.search(key_pattern, key) is not None
+                except re.error:
+                    failures.append(schema_failure("definition", field, f"Invalid patternProperties pattern: {key_pattern}"))
+                    continue
+                if matched:
+                    pattern_matched.add(key)
+                    failures.extend(
+                        json_schema_failures(value[key], child_schema, root_schema, schema_child_field(field, key))
+                    )
+        additional_keys = value.keys() - properties.keys() - pattern_matched
         if schema.get("additionalProperties") is False:
-            for key in sorted(value.keys() - properties.keys()):
+            for key in sorted(additional_keys):
                 extra_field = schema_child_field(field, str(key))
                 failures.append(
                     schema_failure(
@@ -6669,7 +6821,7 @@ def json_schema_failures(
                 )
         elif isinstance(schema.get("additionalProperties"), dict):
             additional_schema = schema["additionalProperties"]
-            for key in sorted(value.keys() - properties.keys()):
+            for key in sorted(additional_keys):
                 failures.extend(
                     json_schema_failures(
                         value[key],
@@ -6697,11 +6849,23 @@ def json_schema_failures(
                 failures.extend(
                     json_schema_failures(value[index], item_schema, root_schema, f"{field}[{index}]")
                 )
+        contains = schema.get("contains")
+        if contains is not None and not any(
+            [json_schema_probe(item, contains, root_schema, field, failures) for item in value]
+        ):
+            failures.append(schema_failure("contains", field, "Array must contain at least one item matching the schema."))
+        if schema.get("uniqueItems") is True:
+            identities = [json_value_identity(item) for item in value]
+            if len(set(identities)) != len(identities):
+                failures.append(schema_failure("unique_items", field, "Array items must be unique."))
 
     if isinstance(value, str):
         minimum_length = schema.get("minLength")
         if isinstance(minimum_length, int) and len(value) < minimum_length:
             failures.append(schema_failure("min_length", field, f"String must contain at least {minimum_length} character(s)."))
+        maximum_length = schema.get("maxLength")
+        if isinstance(maximum_length, int) and len(value) > maximum_length:
+            failures.append(schema_failure("max_length", field, f"String must contain at most {maximum_length} character(s)."))
         pattern = schema.get("pattern")
         if isinstance(pattern, str):
             try:
@@ -6715,11 +6879,35 @@ def json_schema_failures(
     if isinstance(minimum, (int, float)) and isinstance(value, (int, float)) and not isinstance(value, bool):
         if value < minimum:
             failures.append(schema_failure("minimum", field, f"Number must be at least {minimum}."))
+    exclusive_minimum = schema.get("exclusiveMinimum")
+    if isinstance(exclusive_minimum, (int, float)) and isinstance(value, (int, float)) and not isinstance(value, bool):
+        if value <= exclusive_minimum:
+            failures.append(schema_failure("exclusive_minimum", field, f"Number must be greater than {exclusive_minimum}."))
     maximum = schema.get("maximum")
     if isinstance(maximum, (int, float)) and isinstance(value, (int, float)) and not isinstance(value, bool):
         if value > maximum:
             failures.append(schema_failure("maximum", field, f"Number must be at most {maximum}."))
     return failures
+
+
+def json_schema_probe(
+    value: Any,
+    schema: Any,
+    root_schema: dict[str, Any],
+    field: str,
+    failures: list[dict[str, Any]],
+) -> bool:
+    """Report whether value matches schema, keeping any definition failures.
+
+    Applicators such as anyOf, oneOf, not, if, contains, and propertyNames only
+    need to know whether a subschema matched, but an unsupported keyword inside
+    that subschema must still fail the whole validation.
+    """
+    found = json_schema_failures(value, schema, root_schema, field)
+    for failure in found:
+        if failure["rule"] == "packet.schema.definition" and failure not in failures:
+            failures.append(failure)
+    return not found
 
 
 def resolve_local_schema_reference(reference: str, root_schema: dict[str, Any]) -> Any | None:
@@ -6754,6 +6942,19 @@ def json_values_equal(left: Any, right: Any) -> bool:
     if isinstance(left, (int, float)) and isinstance(right, (int, float)):
         return left == right
     return type(left) is type(right) and left == right
+
+
+def json_value_identity(value: Any) -> Any:
+    """A hashable key under which two values are equal exactly when JSON says so."""
+    if isinstance(value, bool) or value is None or isinstance(value, str):
+        return (type(value).__name__, value)
+    if isinstance(value, (int, float)):
+        return ("number", value)
+    if isinstance(value, list):
+        return ("array", tuple(json_value_identity(item) for item in value))
+    if isinstance(value, dict):
+        return ("object", tuple(sorted((key, json_value_identity(item)) for key, item in value.items())))
+    return ("other", repr(value))
 
 
 def schema_child_field(parent: str, child: str) -> str:
@@ -6917,7 +7118,7 @@ def packet_body_structure_failures(data: dict[str, Any], body_text: str) -> list
                 )
                 continue
             spans.append((start_index, end_index, field_id))
-        for previous, current in zip(sorted(spans), sorted(spans)[1:]):
+        for previous, current in zip(sorted(spans), sorted(spans)[1:], strict=False):
             if previous[1] >= current[0]:
                 failures.append(
                     {

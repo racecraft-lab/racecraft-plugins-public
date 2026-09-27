@@ -301,7 +301,7 @@ def audit_release_notes(
         )
     except AuditFailure as error:
         return error.returncode
-    except Exception as error:
+    except Exception as error:  # noqa: BLE001 - boundary: any failure becomes an explicit error
         try:
             fail(f"release note audit raised {type(error).__name__}: {error}")
         except AuditFailure as failure:

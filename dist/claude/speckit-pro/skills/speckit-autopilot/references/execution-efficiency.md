@@ -38,7 +38,8 @@ ownership from the caller's current workflow.
   An existing spec's registry freezes at start; later paths or contents never
   reset counters.
   Agent replacement, compaction, stage changes, a reclaimed state mirror, and
-  resume never reset it. Preserve another workflow's ledger when reclaiming
+  resume never reset it; only an operator-approved `begin-replan-epoch` opens
+  a fresh allowance. Preserve another workflow's ledger when reclaiming
   the one-run `autopilot-state.json` mirror.
 - `bind-invariants`: for a greenfield run that started with an empty registry,
   call once after Specify has produced the feature spec, before the next
@@ -115,12 +116,25 @@ ownership from the caller's current workflow.
   ordinary reserve returned), `scope_sha256`, and `spec_sha256` matching the
   ledger's `invariant_binding`. The invariant must be an approved ID, never
   `unresolved`, and the run must have bound its spec with `bind-invariants`.
-  The helper records one top-level `corrective_exception` per run and reserves
-  that single dispatch under it. It leaves `corrective_cycles`, reservations,
+  The helper records one top-level `corrective_exception` per corrective epoch
+  and reserves that single dispatch under it. It leaves `corrective_cycles`, reservations,
   earlier results, and ordinary ceilings unchanged, and refuses replay, a
   second exception, a mismatched identity, scope, or spec, and any request an
   ordinary reserve would accept. The exception dispatch has no nested,
   retry, or continuation allowance.
+- `begin-replan-epoch`: when the operator orders a re-plan (a rescope, or a
+  `--from-phase` rerun of planning phases the run already completed) after the
+  run has spent corrective allowance, ask the operator to approve a fresh
+  allowance for the re-plan. Pass the explicit repo-relative `spec_file` and
+  the operator's independently observed `native_observation`:
+  `native_event_id`, `run_id`, `action=replan_epoch_approved`, and
+  `spec_sha256`, the digest of that spec file as it stands now. Every dispatch
+  must be settled and no wait may be open. The helper moves the spent
+  counters, reservations, dispatches, invariant registry, and exception into
+  `corrective_epochs`, rebinds the registry to the current spec, and resets
+  the counters. The run ID, clocks, and consumed events carry over; archived
+  dispatch IDs and events can never be reused. A re-plan the operator did not
+  order is not grounds for a new epoch.
 - `checkpoint`: persist the 45-minute completed-work marker without resetting
   the repair budget. `pause`/`resume` excludes only human-UAT or
   external-approval waits with independent parent `native_observation` carrying

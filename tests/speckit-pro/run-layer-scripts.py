@@ -152,7 +152,7 @@ def run_script_suite(label: str, tests: list[Path], repo_root: Path) -> int:
         # manifest order.
         pooled = [test_path for test_path in tests if rel(test_path, repo_root) not in SERIAL_SCRIPTS]
         with ThreadPoolExecutor(max_workers=workers) as pool:
-            results = dict(zip(pooled, pool.map(run_script, pooled, [repo_root] * len(pooled))))
+            results = dict(zip(pooled, pool.map(run_script, pooled, [repo_root] * len(pooled)), strict=True))
         for test_path in tests:
             if test_path not in results:
                 results[test_path] = run_script(test_path, repo_root)
@@ -192,7 +192,7 @@ def main(argv: list[str]) -> int:
 if __name__ == "__main__":
     try:
         exit_code = main(sys.argv[1:])
-    except Exception:
+    except Exception:  # noqa: BLE001 - boundary: any failure becomes an explicit error
         traceback.print_exc()
         exit_code = 4
     raise SystemExit(exit_code)

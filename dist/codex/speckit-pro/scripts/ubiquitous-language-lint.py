@@ -55,7 +55,7 @@ def parse_terms(text: str) -> list[dict[str, Any]]:
             continue
         if all(set(c) <= set("-: ") for c in cells):
             continue
-        row = dict(zip(columns, cells))
+        row = dict(zip(columns, cells, strict=False))
         term = row.get("term", "").strip("`* ")
         if not term:
             continue

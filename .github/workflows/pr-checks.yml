@@ -258,7 +258,7 @@ jobs:
         run: PYTHONDONTWRITEBYTECODE=1 python3 scripts/refresh-release-artifacts.py --check
 
   # ───────────────────────────────────────────────────────────────────
-  # Job 6: Python lint. Ruff's pyflakes (F) rules over repository Python;
+  # Job 6: Python lint. Ruff's F, B, and BLE rules over repository Python;
   #         ruff.toml sets the scope, scripts/run-python-lint.py pins the
   #         version. Ruff is a dev-only CI tool, never a runtime dependency.
   #         Designed to be a required check.
@@ -285,7 +285,7 @@ jobs:
       - name: Install pinned ruff
         run: python3 scripts/run-python-lint.py install ruff
 
-      - name: Run ruff pyflakes rules
+      - name: Run ruff lint rules
         run: python3 scripts/run-python-lint.py run ruff --output-format github
 
   # ───────────────────────────────────────────────────────────────────

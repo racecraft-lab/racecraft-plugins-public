@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.37.1](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.37.0...speckit-pro-v2.37.1) (2026-09-27)
+
+
+### Bug Fixes
+
+* **speckit-pro:** add the setup checks to the Codex upgrade skill and document PyYAML ([#746](https://github.com/racecraft-lab/racecraft-plugins-public/issues/746)) ([c953426](https://github.com/racecraft-lab/racecraft-plugins-public/commit/c953426f141942e6359818211ced158beb37d4a0))
+* **speckit-pro:** catch SpecKit skills calling options their scripts reject ([#744](https://github.com/racecraft-lab/racecraft-plugins-public/issues/744)) ([b6bf23f](https://github.com/racecraft-lab/racecraft-plugins-public/commit/b6bf23f96cc556be9bb977390030f8a2bfdb8980))
+* **speckit-pro:** fail closed on JSON Schema keywords the runner validator ignores ([#736](https://github.com/racecraft-lab/racecraft-plugins-public/issues/736)) ([bf4f503](https://github.com/racecraft-lab/racecraft-plugins-public/commit/bf4f5039e11c53d800d9769849ec1337985f64f9))
+* **speckit-pro:** let planned PR markers wait for their first checkpoint ([#742](https://github.com/racecraft-lab/racecraft-plugins-public/issues/742)) ([c07587e](https://github.com/racecraft-lab/racecraft-plugins-public/commit/c07587e9f1db925c372a08f4ac9c596596c92c7c))
+* **speckit-pro:** negotiate the MCP protocol version in the stdio brokers ([#737](https://github.com/racecraft-lab/racecraft-plugins-public/issues/737)) ([b6b36b7](https://github.com/racecraft-lab/racecraft-plugins-public/commit/b6b36b7f77bb4a80a5b4d356991b97e68d26c9f4))
+* **speckit-pro:** open a fresh correction allowance on an approved re-plan ([#743](https://github.com/racecraft-lab/racecraft-plugins-public/issues/743)) ([1f3846c](https://github.com/racecraft-lab/racecraft-plugins-public/commit/1f3846c7f9cb689d555b4c39a75a860b27cfaacb))
+
 ## [2.37.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.36.3...speckit-pro-v2.37.0) (2026-09-26)
 
 

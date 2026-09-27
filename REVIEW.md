@@ -20,7 +20,14 @@ repository tooling or tests giving a wrong answer:
   the generated artifact contract, leaving generated output stale.
 - A skill, command, or agent whose frontmatter its loader requires is missing or
   malformed.
-- Repository-owned tooling that leaves the Python 3.11+ standard library, or a
+- Shipped plugin code (`speckit-pro/`, `typesafe-jev/plugin/`, `dist/`) or the
+  default local suite (`tests/speckit-pro/run-all.py`) that leaves the Python
+  3.11+ standard library. A dev or
+  test package is allowed only when it is pinned in one repository-owned
+  source, installed by a repository Python script into an isolated virtual
+  environment, never imported by shipped code, and needed only by a check in
+  its own layer or CI job that fails, never skips, when the package is missing
+  (constitution II). Also blocking: a
   new active Bash or `jq` dependency outside existing workflow dispatch glue and
   the fixed vendored boundaries. Go is the plugin-owned toolchain for
   `typesafe-jev/` only; the scripts that build, check, and release it stay
@@ -47,8 +54,9 @@ config files can be polished indefinitely.
 
 ## Do not report
 
-- Anything CI already enforces. That is only the pyflakes (F) rules that the
-  `python-lint` job runs with ruff over repository Python. CI does not check
+- Anything CI already enforces. That is only the ruff rules selected in
+  `ruff.toml` (pyflakes F, bugbear B, blind except BLE) that the
+  `python-lint` job runs over repository Python. CI does not check
   formatting or spelling, and the non-required `mypy-ratchet` job type-checks
   only the modules listed in `mypy.ini`, so a real type error elsewhere is
   still a finding.

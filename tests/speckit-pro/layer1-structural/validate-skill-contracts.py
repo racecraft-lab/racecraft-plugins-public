@@ -732,7 +732,7 @@ class ValidatePrdWorkflowContract(unittest.TestCase):
             protocol_contract = f'{label}: Workflow requires protocol read/follow before authoring'
             with self.subTest(msg=protocol_contract):
                 self.assertIn(f'Read and follow the [shared PRD authoring protocol]({protocol_link}) before authoring.', normalized_workflow, protocol_contract)
-            for (resource, expected_target), link in zip(PRD_WORKFLOW_TARGETS, links):
+            for (resource, expected_target), link in zip(PRD_WORKFLOW_TARGETS, links, strict=True):
                 route_contract = f'{label}: Workflow links {resource} at its host root'
                 with self.subTest(msg=route_contract):
                     self.assertIn(f'[{resource}]({link})', normalized_workflow, route_contract)

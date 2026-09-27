@@ -45,6 +45,9 @@ You need:
 - GitHub Spec Kit installed from the official GitHub source
 - A repository initialized for Spec Kit
 - Python 3.11 or newer available to the installed agent runtime
+- PyYAML importable by the first `python3` on the agent's `PATH`, because Spec
+  Kit parses preset manifests with it and SpecKit Pro installs a preset (see
+  below)
 - `gh` for PR creation and review-comment workflows
 - `git` for branch, diff, reviewability, and workflow-state checks
 
@@ -63,6 +66,16 @@ plugin's examples use the same GitHub source:
 ```text
 uv tool install specify-cli --from git+https://github.com/github/spec-kit.git
 ```
+
+A `uv tool` or `pipx` install keeps PyYAML inside Spec Kit's own environment,
+where the project scripts' bare `python3` cannot see it
+([github/spec-kit#4443](https://github.com/github/spec-kit/issues/4443)). The
+agents also start different shells: Codex runs each command in a
+non-interactive login shell, which reads `~/.zprofile` but not `~/.zshrc`, so
+a Python set up only in `~/.zshrc` (pyenv, for example) is missing there. Make
+the same Python 3 with PyYAML first on `PATH` in both files, as the pyenv
+README advises for non-interactive login shells. The autopilot's prerequisite
+check fails with the interpreter's path when this is not the case.
 
 Initialize your repo with the Spec Kit integration for the agent you use. From
 the project directory, the Claude Code setup is:

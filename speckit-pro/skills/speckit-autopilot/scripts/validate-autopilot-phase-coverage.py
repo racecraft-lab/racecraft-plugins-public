@@ -1229,7 +1229,7 @@ def _read_repo_file_by_descriptor(
                 raise OSError("repository root changed while it was being read")
             for component, expected_identity in zip(
                 relative.parts[:-1],
-                directory_identities[1:],
+                directory_identities[1:], strict=True
             ):
                 next_descriptor = os.open(component, directory_flags, dir_fd=verifier)
                 verifier_descriptors.append(next_descriptor)

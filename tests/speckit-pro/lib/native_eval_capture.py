@@ -1063,7 +1063,7 @@ def claude_continuation_layout(events: list[dict[str, Any]]) -> dict[str, Any]:
             and event.get("parent_tool_use_id") is None]
     if not starts or not ends or starts[0] != 0 or ends[-1] != len(events) - 1 or len(starts) != len(ends):
         raise CaptureError("Claude lifecycle is missing, duplicated, or out of order")
-    if any(start >= end for start, end in zip(starts, ends)):
+    if any(start >= end for start, end in zip(starts, ends, strict=True)):
         raise CaptureError("Claude result precedes its initialization")
     bridges: list[dict[str, Any]] = []
     if len(starts) > 1:
@@ -1102,7 +1102,7 @@ def claude_continuation_layout(events: list[dict[str, Any]]) -> dict[str, Any]:
     if any(event["type"] == "error" for event in events):
         raise CaptureError("Claude capture includes a native error event")
     turns = []
-    for turn, (start, end) in enumerate(zip(starts, ends)):
+    for turn, (start, end) in enumerate(zip(starts, ends, strict=True)):
         terminal = events[end]
         turns.append({
             "turn_index": turn,

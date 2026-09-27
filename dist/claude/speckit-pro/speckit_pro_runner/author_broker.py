@@ -16,6 +16,7 @@ from pathlib import Path, PurePosixPath
 from typing import Any
 import sys
 
+from .mcp_protocol import negotiate_protocol_version
 from .artifact_review import OBSERVATION_CLOCK_SKEW
 from .helpers.mutation import validate_target_path, write_file_atomic
 from .helpers.read_only import repo_relative, resolve_input_path
@@ -466,8 +467,7 @@ def handle_message(message: Any) -> dict[str, Any] | None:
     if method == "notifications/initialized":
         return None
     if method == "initialize":
-        requested = message.get("params", {}).get("protocolVersion", "2024-11-05")
-        return _response(request_id, {"protocolVersion": requested, "capabilities": {"tools": {"listChanged": False}}, "serverInfo": SERVER_INFO})
+        return _response(request_id, {"protocolVersion": negotiate_protocol_version(message.get("params")), "capabilities": {"tools": {"listChanged": False}}, "serverInfo": SERVER_INFO})
     if method == "ping":
         return _response(request_id, {})
     if method == "tools/list":
@@ -478,7 +478,7 @@ def handle_message(message: Any) -> dict[str, Any] | None:
             return _error(request_id, -32602, "invalid tool parameters")
         try:
             result = call_tool(params.get("name"), params.get("arguments", {}))
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001 - boundary: any failure becomes an explicit error
             code = _error_code(exc)
             return _response(request_id, {"isError": True, "content": [{"type": "text", "text": f"broker_error:{code}"}], "structuredContent": {"error_code": code}})
         text = result if isinstance(result, str) else json.dumps(result, sort_keys=True, separators=(",", ":"))

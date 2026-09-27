@@ -304,10 +304,21 @@ if __name__ == "__main__":
     parser.add_argument("--quint-root")
     parser.add_argument("--typescript-compiler", help="Installed TypeScript bin/tsc path (native qualification only)")
     parser.add_argument("--typescript-type-roots", help="Installed @types directory containing Node.js declarations")
+    parser.add_argument("--typescript-from-docs-site", action="store_true",
+                        help="Resolve both TypeScript paths from docs-site's locked pnpm install")
     parser.add_argument("--checker", choices=("apalache", "tlc"), default="apalache")
     OPTIONS = parser.parse_args()
     if OPTIONS.checker == "tlc" and not OPTIONS.tlc_jar:
         parser.error("--checker=tlc requires --tlc-jar")
+    if OPTIONS.typescript_from_docs_site:
+        # Dependabot bumps move the pnpm store paths, so resolve them from the
+        # installed tree; each must match exactly one path.
+        store = REPO_ROOT / "docs-site/node_modules/.pnpm"
+        compilers = sorted(store.glob("typescript@*/node_modules/typescript/bin/tsc"))
+        type_roots = sorted(store.glob("@types+node@*/node_modules/@types"))
+        if len(compilers) != 1 or len(type_roots) != 1:
+            parser.error(f"expected one locked tsc and one @types/node under {store}: {compilers} {type_roots}")
+        OPTIONS.typescript_compiler, OPTIONS.typescript_type_roots = str(compilers[0]), str(type_roots[0])
     if OPTIONS.apalache_jar and not (OPTIONS.typescript_compiler and OPTIONS.typescript_type_roots):
         parser.error("native trace qualification requires explicit TypeScript compiler and type-root paths")
     suite = unittest.defaultTestLoader.loadTestsFromTestCase(TraceContractTests)

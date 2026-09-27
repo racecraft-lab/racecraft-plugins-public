@@ -8451,7 +8451,7 @@ This line must not be copied.
                 },
             )
             injected = OSError("injected")
-            setattr(injected, "cleanup_errors", ["nested:OSError"])
+            injected.cleanup_errors = ["nested:OSError"]
 
             old_cwd = Path.cwd()
             os.chdir(git_root)

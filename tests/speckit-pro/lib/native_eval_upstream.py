@@ -510,7 +510,7 @@ def _stage_files(source: Path, destination: Path, identity: Mapping[str, object]
             except FileExistsError:
                 metadata = current.lstat()
                 if stat.S_ISLNK(metadata.st_mode) or not stat.S_ISDIR(metadata.st_mode):
-                    raise UpstreamStageError("upstream output parent is unsafe")
+                    raise UpstreamStageError("upstream output parent is unsafe") from None
         source_body = (source / relative).read_bytes()
         flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0)
         try:

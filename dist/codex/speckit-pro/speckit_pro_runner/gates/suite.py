@@ -480,7 +480,7 @@ def run_internal_command(command: CommandSpec, repo_root: Path) -> dict[str, Any
         duration_ms = int((time.monotonic() - started) * 1000)
         status = STATUS_BY_EXIT_CODE.get(exit_code, "subprocess_failure")
         return command_result(command, status, exit_code, stdout_buffer.getvalue(), stderr_buffer.getvalue(), duration_ms)
-    except Exception as exc:  # pragma: no cover - defensive envelope boundary
+    except Exception as exc:  # pragma: no cover - defensive envelope boundary  # noqa: BLE001
         duration_ms = int((time.monotonic() - started) * 1000)
         return command_result(command, "subprocess_failure", 4, stdout_buffer.getvalue(), f"{type(exc).__name__}: {exc}\n", duration_ms)
 

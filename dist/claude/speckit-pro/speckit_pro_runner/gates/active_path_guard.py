@@ -1207,7 +1207,7 @@ def repo_bash_runtime_diagnostic_findings(path: str, content: str) -> list[RawFi
             if isinstance(node, ast.keyword) and node.arg in REPO_BASH_RUNTIME_OUTPUT_KEYS:
                 expressions.append(node.value)
             elif isinstance(node, ast.Dict):
-                for key, value in zip(node.keys, node.values):
+                for key, value in zip(node.keys, node.values, strict=True):
                     if isinstance(key, ast.Constant) and key.value in REPO_BASH_RUNTIME_OUTPUT_KEYS:
                         expressions.append(value)
             elif isinstance(node, ast.Call) and repo_bash_call_name(node.func) == "diagnostic" and len(node.args) >= 2:
@@ -1369,7 +1369,7 @@ def repo_bash_guidance_resolution(
                 for value in node.right.elts[:REPO_BASH_RESOLUTION_MAX_ITEMS]
             ]
         elif isinstance(node.right, ast.Dict):
-            for key, value in zip(node.right.keys, node.right.values):
+            for key, value in zip(node.right.keys, node.right.values, strict=True):
                 if not isinstance(key, ast.Constant) or not isinstance(key.value, str):
                     return repo_bash_dynamic_guidance(node)
                 mapping[key.value] = repo_bash_guidance_resolution(

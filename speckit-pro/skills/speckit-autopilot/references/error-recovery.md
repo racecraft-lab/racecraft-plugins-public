@@ -31,7 +31,9 @@ when its disposition permits. Resume and agent replacement never reset budget.
   completion order. The resolver reserves one slot for recovery. An invalid
   concurrency override forces wave size 1 and emits a warning.
 - **Gate needs repair:** Use the shared one-cycle-per-family/two-cycle-per-spec
-  reservation limits. On exhaustion, checkpoint and show the gate output.
+  reservation limits. On exhaustion, checkpoint and show the gate output. After
+  an operator-ordered re-plan, `begin-replan-epoch` opens a fresh allowance with
+  the operator's approval ([Bounded Execution](./execution-efficiency.md)).
 - **Consensus agents all disagree:** Flag `[HUMAN REVIEW NEEDED]`.
   In an interactive session, ask the operator in place with
   `AskUserQuestion` (the analysts' positions as options, the synthesizer's

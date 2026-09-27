@@ -686,12 +686,8 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
         )
         exit_code, report = self.run_validator(workflow_text(), state)
         self.assertEqual(exit_code, 1)
-        self.assertTrue(
-            any(
-                "implementation_checkpoint is missing required fields: commit_sha, evidence_path"
-                in error
-                for error in report["marker_plan_status_errors"]
-            )
+        self.assertFalse(
+            any("implementation_checkpoint" in error for error in report["marker_plan_status_errors"])
         )
         self.assertIn(
             "pr_marker_plan.markers[0] pending checkpoint with phase claims requires evidence_path",
@@ -705,6 +701,40 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
             "workflow must contain exactly one current checkpoint claim for marker 'us1'",
             report["workflow_checkpoint_errors"],
         )
+
+    def test_unstarted_pending_checkpoint_needs_no_commit_or_evidence(self) -> None:
+        state = self.projected_state(
+            plan_status="pending",
+            phase_status="pending",
+            checkpoint={"status": "pending"},
+        )
+        _, report = self.run_validator(workflow_text(), state)
+        self.assertEqual(
+            [],
+            [error for error in report["marker_plan_status_errors"] if "implementation_checkpoint" in error],
+        )
+        self.assertEqual(
+            [],
+            [error for error in report["checkpoint_evidence_errors"] if "pending checkpoint" in error],
+        )
+
+    def test_pending_checkpoint_commit_and_evidence_travel_together(self) -> None:
+        for present, missing in (("commit_sha", "evidence_path"), ("evidence_path", "commit_sha")):
+            with self.subTest(present=present):
+                value = "a" * 40 if present == "commit_sha" else "docs/evidence.md"
+                state = self.projected_state(
+                    plan_status="pending",
+                    phase_status="pending",
+                    checkpoint={"status": "pending", present: value},
+                )
+                _, report = self.run_validator(workflow_text(), state)
+                self.assertTrue(
+                    any(
+                        f"implementation_checkpoint is missing required fields: {missing}" in error
+                        for error in report["marker_plan_status_errors"]
+                    ),
+                    report["marker_plan_status_errors"],
+                )
 
     def test_completed_phase_rejects_pending_verification_fields(self) -> None:
         state = self.projected_state(
@@ -1064,7 +1094,7 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
                 candidate = json.loads(json.dumps(state))
                 for marker, review_order in zip(
                     candidate["pr_marker_plan"]["markers"],
-                    review_orders,
+                    review_orders, strict=True
                 ):
                     marker["review_order"] = review_order
                 exit_code, report = self.run_validator(workflow_text(), candidate)
@@ -1785,7 +1815,7 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
                 "verification report",
             )
             for schema_path, error_bucket, schema_label in zip(
-                local_schema_paths, schema_error_buckets, schema_labels,
+                local_schema_paths, schema_error_buckets, schema_labels, strict=True
             ):
                 clean_schema_bytes = schema_path.read_bytes()
                 schema_path.write_bytes(clean_schema_bytes + b"\n")

@@ -1920,7 +1920,7 @@ class ReadOnlyHelperTests(unittest.TestCase):
             lines.extend([f"📊 Confidence: {stated}", ""])
         if criteria is not None:
             labels = ("Task understanding", "Approach clarity", "Requirements alignment", "Risk assessment", "Completeness")
-            lines.extend(f"- {label}: {score}" for label, score in zip(labels, criteria))
+            lines.extend(f"- {label}: {score}" for label, score in zip(labels, criteria, strict=True))
         return "\n".join(lines) + "\n"
 
     def test_confidence_gate_computes_composite_from_criterion_mean(self) -> None:

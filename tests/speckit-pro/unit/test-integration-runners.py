@@ -202,7 +202,7 @@ class Layer6RunnerTests(unittest.TestCase):
             ):
                 try:
                     fixture_runner.capture_live(fixture, "1.25")
-                except Exception as exc:  # pragma: no cover - exercised by assertions below
+                except Exception as exc:  # pragma: no cover - exercised by assertions below  # noqa: BLE001
                     scrub_failure = exc
             checks.append(("scrub failure raises runtime error", lambda: self.assertIsInstance(scrub_failure, RuntimeError)))
             checks.append(("scrub failure reports scrub stderr", lambda: self.assertEqual(str(scrub_failure), "scrub failed")))
