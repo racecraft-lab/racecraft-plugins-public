@@ -1246,7 +1246,8 @@ class WindowsAnchoredAgentDir(AnchoredAgentDir):
                 raise OSError("destination changed before anchored operation")
         except OSError as exc:
             close_error = codex_agent_windows_close_handle(handle)
-            raise codex_agent_note_close_error(exc, close_error)  # noqa: B904 - re-raises exc itself
+            codex_agent_note_close_error(exc, close_error)
+            raise
         return cls(destination, handle_identity, handle)
 
     def close(self, close_errors: list[OSError] | None = None) -> None:
