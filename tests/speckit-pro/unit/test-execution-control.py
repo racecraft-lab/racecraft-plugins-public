@@ -650,6 +650,118 @@ class CorrectiveExceptionTests(_ExecutionControlFixture, unittest.TestCase):
             self.authorize(self.approval(digest_value))
 
 
+class ReplanEpochTests(_ExecutionControlFixture, unittest.TestCase):
+    SCOPE = "a" * 64
+
+    def rescope(self):
+        spec = self.root / "feature/spec.md"
+        spec.write_text("- FR-001: preserve data\n- FR-002: no secrets\n- FR-003: explain refusals\n")
+        import hashlib
+        return hashlib.sha256(spec.read_bytes()).hexdigest()
+
+    def epoch_event(self, spec_digest, **changes):
+        event = {"native_event_id": "operator-replan", "run_id": self.run_id,
+                 "action": "replan_epoch_approved", "spec_sha256": spec_digest}
+        return {**event, **changes}
+
+    def begin(self, event, mode="apply"):
+        return self.invoke("begin-replan-epoch", mode=mode, spec_file="feature/spec.md", native_observation=event)
+
+    def greenfield(self):
+        spec = self.root / "feature/spec.md"
+        text = spec.read_text()
+        spec.unlink()
+        self.invoke("start")
+        spec.write_text(text)
+        self.invoke("bind-invariants", spec_file="feature/spec.md")
+        for dispatch_id, invariant in (("fix-a", "FR-001"), ("fix-b", "FR-002")):
+            self.invoke("reserve", dispatch_id=dispatch_id, kind="corrective", failure_invariant=invariant)
+            self.invoke("complete", dispatch_id=dispatch_id, outcome="failed")
+        spec_digest = self.invoke("status", mode="read_only")["ledger"]["invariant_binding"]["spec_sha256"]
+        event = {"native_event_id": "operator-exception", "run_id": self.run_id,
+                 "action": "corrective_exception_approved", "failure_invariant": "FR-001", "dispatch_id": "fix-c",
+                 "failure_kind": "application", "refusal_reason": "failure_family_budget_exhausted",
+                 "scope_sha256": self.SCOPE, "spec_sha256": spec_digest}
+        self.invoke("authorize-corrective-exception", dispatch_id="fix-c", failure_invariant="FR-001",
+                    scope_sha256=self.SCOPE, native_observation=event)
+        self.invoke("complete", dispatch_id="fix-c", outcome="completed")
+
+    def test_approved_replan_opens_a_fresh_allowance_and_keeps_history(self):
+        self.greenfield()
+        before = self.invoke("status", mode="read_only")["ledger"]
+        self.assertEqual(self.invoke("reserve", dispatch_id="fix-d", kind="corrective", failure_invariant="FR-002",
+                                     mode="dry_run")["reasons"], ["failure_family_budget_exhausted"])
+        new_digest = self.rescope()
+        preview = self.begin(self.epoch_event(new_digest), mode="dry_run")
+        self.assertEqual(preview["disposition"], "continue")
+        self.assertNotIn("corrective_epochs", self.invoke("status", mode="read_only")["ledger"])
+
+        ledger = self.begin(self.epoch_event(new_digest))["ledger"]
+        self.assertEqual(ledger["run_id"], before["run_id"])
+        self.assertEqual(ledger["started_at"], before["started_at"])
+        self.assertEqual((ledger["corrective_cycles"], ledger["reservations"], ledger["dispatches"]), (0, {}, {}))
+        self.assertNotIn("corrective_exception", ledger)
+        self.assertEqual(ledger["approved_invariants"], ["FR-001", "FR-002", "FR-003"])
+        self.assertEqual(ledger["invariant_binding"]["spec_sha256"], new_digest)
+        [epoch] = ledger["corrective_epochs"]
+        for key in ("corrective_cycles", "reservations", "dispatches", "approved_invariants",
+                    "invariant_binding", "corrective_exception"):
+            self.assertEqual(epoch[key], before[key], key)
+        self.assertEqual(epoch["epoch_event_id"], "operator-replan")
+        schema = json.loads((Path(__file__).resolve().parents[3] /
+                             "speckit-pro/speckit_pro_runner/contracts/execution-control.schema.json").read_text())
+        self.assertEqual(json_schema_failures(ledger, schema, schema, "ledger"), [])
+
+        granted = self.invoke("reserve", dispatch_id="fix-d", kind="corrective", failure_invariant="FR-003")
+        self.assertEqual(granted["disposition"], "continue")
+        self.assertIn(granted["reservation_id"], granted["ledger"]["reservations"])
+        self.assertEqual(self.invoke("reserve", dispatch_id="fix-a", kind="corrective", failure_invariant="FR-001",
+                                     mode="dry_run")["reasons"], ["dispatch_already_reserved_no_relaunch"])
+        self.assertEqual(self.invoke("status", mode="read_only")["disposition"], "continue")
+
+    def test_replan_refuses_replay_mismatch_and_unsettled_work_without_mutation(self):
+        self.greenfield()
+        new_digest = self.rescope()
+        path = self.root / self.invoke("status", mode="read_only")["ledger_path"]
+        before = path.read_bytes()
+        refusals = (
+            self.epoch_event(new_digest, run_id="another-run"),
+            self.epoch_event(new_digest, action="corrective_exception_approved"),
+            self.epoch_event("b" * 64),
+            self.epoch_event(new_digest, native_event_id="operator-exception"),
+            {k: v for k, v in self.epoch_event(new_digest).items() if k != "spec_sha256"},
+        )
+        for index, event in enumerate(refusals):
+            with self.subTest(refusal=index):
+                with self.assertRaises(ValueError):
+                    self.begin(event)
+                self.assertEqual(path.read_bytes(), before)
+
+        self.begin(self.epoch_event(new_digest))
+        rotated = path.read_bytes()
+        with self.assertRaises(ValueError):
+            self.begin(self.epoch_event(new_digest))
+        self.assertEqual(path.read_bytes(), rotated)
+
+        self.invoke("reserve", dispatch_id="fix-d", kind="corrective", failure_invariant="FR-003")
+        running = path.read_bytes()
+        with self.assertRaises(ValueError):
+            self.begin(self.epoch_event(new_digest, native_event_id="operator-replan-2"))
+        self.assertEqual(path.read_bytes(), running)
+
+        tampered = json.loads(running)
+        tampered["corrective_epochs"][0]["corrective_cycles"] = 1
+        path.write_text(json.dumps(tampered), encoding="utf-8")
+        with self.assertRaises(ValueError):
+            self.invoke("status", mode="read_only")
+        tampered = json.loads(running)
+        tampered["dispatches"]["fix-a"] = tampered["corrective_epochs"][0]["dispatches"]["fix-a"]
+        path.write_text(json.dumps(tampered), encoding="utf-8")
+        with self.assertRaises(ValueError):
+            self.invoke("status", mode="read_only")
+        path.write_bytes(running)
+
+
 class WorkflowIdentityTests(_ExecutionControlFixture, unittest.TestCase):
     def test_different_workflows_cannot_adopt_an_existing_ledger(self):
         first = self.invoke("start")
@@ -1166,7 +1278,7 @@ class DockerVerificationTests(VerificationTests):
 if __name__ == "__main__":
     suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case)
                                for case in (GreenfieldInvariantBindingTests, ExecutionControlTests, CorrectiveRecoveryTests,
-                                            CorrectiveContinuationTests, CorrectiveExceptionTests, WorkflowIdentityTests,
+                                            CorrectiveContinuationTests, CorrectiveExceptionTests, ReplanEpochTests, WorkflowIdentityTests,
                                             VerificationTests, RunnerDispatchTests))
     suite.addTests(DockerVerificationTests(name) for name in DockerVerificationTests.__dict__ if name.startswith("test_docker_"))
     raise SystemExit(run_counted(suite, label="test-execution-control"))
