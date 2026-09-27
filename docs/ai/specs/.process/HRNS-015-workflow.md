@@ -178,7 +178,7 @@ An explicit operator waiver is recorded separately and is never a passing check.
 | **Name** | Autopilot, Gate, and PR-Emission Repair |
 | **Branch** | `hrns-015-autopilot-gate-pr-emission-repair` |
 | **Stage** | `plan` |
-| **Draft PR** | [#685](https://github.com/racecraft-lab/racecraft-plugins-public/pull/685) — generation gap: architecture-viewer template absent |
+| **Draft PR** | [#685](https://github.com/racecraft-lab/racecraft-plugins-public/pull/685) — refreshed for completed 2.37.1 planning; four generated artifacts; architecture-viewer template absent; preview disposition pending |
 | **Dependencies** | None |
 | **Enables** | HRNS-016 (needs Slice A's packet release-note and untracked-packet repairs) |
 | **Priority** | P1 |
