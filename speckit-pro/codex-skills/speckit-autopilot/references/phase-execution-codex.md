@@ -1343,6 +1343,15 @@ placeholder, and PR mappings placeholder in the workflow evidence. `tasks.md`
 stays the task source; it is not authoritative marker state. Use repo-relative
 evidence paths.
 
+Before implementation starts, write the plan as `pr-marker-plan.v1` and give
+each marker `implementation_checkpoint` `{"status": "pending"}` with no commit
+or evidence fields. A v2 plan also needs a changed-file manifest that the
+phase-coverage guard checks against the pull request's actual diff, which does
+not exist until code is written, so move to `pr-marker-plan.v2` at the first
+implementation checkpoint. Under v2, a pending checkpoint needs `commit_sha`
+and `evidence_path` together, and needs them only once a phase result is
+recorded for its marker; the guard does not check v1 checkpoints.
+
 On resume, validate the marker-plan fingerprint against the current spec,
 plan-declared file/test scope, tasks, reviewability evidence, and hazard route.
 Missing, malformed, stale, or fingerprint-mismatched marker plans are

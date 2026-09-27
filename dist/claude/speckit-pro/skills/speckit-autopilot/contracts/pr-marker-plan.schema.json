@@ -160,8 +160,16 @@
                         "required": ["status"]
                       },
                       "then": {
-                        "required": ["evidence_path", "commit_sha"],
                         "allOf": [
+                          {
+                            "if": {
+                              "anyOf": [
+                                {"required": ["evidence_path"]},
+                                {"required": ["commit_sha"]}
+                              ]
+                            },
+                            "then": {"required": ["evidence_path", "commit_sha"]}
+                          },
                           {
                             "if": {
                               "anyOf": [

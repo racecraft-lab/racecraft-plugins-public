@@ -487,8 +487,9 @@ class ReviewabilityMarkerGuidanceTests(unittest.TestCase):
                 "freshness",
             ],
         )
+        self.assertNotIn("required", strict_checkpoint["allOf"][1]["then"])
         self.assertEqual(
-            strict_checkpoint["allOf"][1]["then"]["required"],
+            strict_checkpoint["allOf"][1]["then"]["allOf"][0]["then"]["required"],
             ["evidence_path", "commit_sha"],
         )
         self.assertEqual(
