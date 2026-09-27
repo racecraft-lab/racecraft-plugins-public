@@ -1,0 +1,139 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SpecKit PR marker checkpoint evidence",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "feature_id",
+    "marker_id",
+    "status",
+    "task_ids",
+    "implementation_checkpoint_sha",
+    "tasks_sha"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "marker-checkpoint.v1"
+    },
+    "feature_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "marker_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "status": {
+      "enum": ["pending", "complete"]
+    },
+    "task_ids": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/non_empty_string"}
+    },
+    "implementation_checkpoint_sha": {"$ref": "#/$defs/commit_sha"},
+    "last_reviewed_head_sha": {"$ref": "#/$defs/commit_sha"},
+    "tasks_sha": {"$ref": "#/$defs/sha256_digest"},
+    "verification_evidence_sha": {"$ref": "#/$defs/sha256_digest"},
+    "required_verification_gate_ids": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/non_empty_string"}
+    },
+    "verification": {
+      "type": "object"
+    },
+    "source_fingerprint_status": {
+      "type": "string"
+    },
+    "completed_at": {"$ref": "#/$defs/utc_timestamp"}
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {"status": {"const": "complete"}},
+        "required": ["status"]
+      },
+      "then": {
+        "required": [
+          "completed_at",
+          "verification",
+          "verification_evidence_sha",
+          "required_verification_gate_ids",
+          "source_fingerprint_status"
+        ],
+        "properties": {
+          "source_fingerprint_status": {"const": "current"},
+          "verification": {
+            "type": "object",
+            "minProperties": 1,
+            "additionalProperties": {"$ref": "#/$defs/passing_gate_result"}
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "non_empty_string": {
+      "type": "string",
+      "minLength": 1
+    },
+    "commit_sha": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "sha256_digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "utc_timestamp": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+    },
+    "passing_gate_result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "evidence"],
+      "properties": {
+        "status": {"const": "pass"},
+        "evidence": {"$ref": "#/$defs/non_empty_string"}
+      }
+    },
+    "checkpoint_correction_record": {
+      "type": "object",
+      "required": [
+        "schema_version",
+        "feature_id",
+        "marker_id",
+        "sequence",
+        "supersedes_evidence_path",
+        "supersedes_evidence_commit_sha",
+        "supersedes_evidence_sha",
+        "remove_evidence_owners"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "marker-checkpoint-correction.v1"
+        },
+        "feature_id": {"$ref": "#/$defs/non_empty_string"},
+        "marker_id": {"$ref": "#/$defs/non_empty_string"},
+        "sequence": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "supersedes_evidence_path": {"$ref": "#/$defs/non_empty_string"},
+        "supersedes_evidence_commit_sha": {"$ref": "#/$defs/commit_sha"},
+        "supersedes_evidence_sha": {"$ref": "#/$defs/sha256_digest"},
+        "remove_evidence_owners": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[^.]+[.].+$"
+          }
+        },
+        "reason": {"type": "string"}
+      }
+    }
+  }
+}

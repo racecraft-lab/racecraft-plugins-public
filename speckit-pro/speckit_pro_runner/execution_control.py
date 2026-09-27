@@ -29,6 +29,13 @@ CLASS_FOLLOW_UP_LIMIT = 2
 # Review fixes inside one increment's own owned paths get this many rounds per
 # increment, outside the run-wide corrective budget.
 INCREMENT_REVIEW_ROUNDS = 2
+# A planning gate's own remediation gets this many rounds per gate, outside the
+# run-wide corrective budget, when every path is a planning document of the
+# bound feature. Anything else (code, tests, formal models, contracts) is run-wide.
+GATE_REMEDIATION_ROUNDS = 2
+REMEDIATION_GATES = ("G2", "G3", "G4", "G5", "G6", "G7")
+PLANNING_DOCUMENTS = frozenset({"spec.md", "plan.md", "research.md", "tasks.md", "data-model.md", "quickstart.md",
+                                ".process/task-execution.json"})
 # A refusal because an allowance is spent defers the blocked unit to the end-of-run
 # request instead of stopping the run. Each reason names the kind of unit it blocks.
 DEFER_REASONS = {"failure_family_budget_exhausted": "failure_family",
@@ -36,6 +43,7 @@ DEFER_REASONS = {"failure_family_budget_exhausted": "failure_family",
                  "corrective_cycle_failed_no_nested_retry": "failure_family",
                  "corrective_cycle_already_closed": "failure_family",
                  "increment_review_allowance_exhausted": "increment",
+                 "gate_remediation_allowance_exhausted": "gate",
                  "failure_class_allowance_exhausted": "failure_class"}
 DEFERRAL_KEYS = {"dispatch_id", "reason", "unit_kind", "unit", "deferred_at"}
 # Verification evidence the runner itself records; never a helper-request action.
@@ -205,6 +213,7 @@ def _validate_corrective_state(value: dict[str, Any]) -> None:
     exception_reservation = _validate_corrective_exception(value)
     allowances = _validate_increment_allowances(value)
     _validate_deferrals(value)
+    gate_allowances = _validate_gate_allowances(value)
     families = [item.get("family") for item in value["reservations"].values() if isinstance(item, dict)]
     if len(families) != len(value["reservations"]) or len(set(families)) != len(families):
         raise ValueError("duplicate or malformed corrective family")
@@ -216,10 +225,16 @@ def _validate_corrective_state(value: dict[str, Any]) -> None:
         if type(item.get("reconciliations")) is not int or not 0 <= item["reconciliations"] <= 1:
             raise ValueError("invalid reconciliation counter")
         reservation = item.get("reservation_id")
+        if "increment" in item and "gate" in item:
+            raise ValueError("a corrective dispatch draws on one allowance, not an increment and a gate")
         if "increment" in item:
             if (item["kind"] != "corrective" or reservation is not None
                     or dispatch_id not in allowances.get(item["increment"], {}).get("dispatch_ids", [])):
                 raise ValueError("increment review dispatch is not recorded in its increment allowance")
+        elif "gate" in item:
+            if (item["kind"] != "corrective" or reservation is not None
+                    or dispatch_id not in gate_allowances.get(item["gate"], {}).get("dispatch_ids", [])):
+                raise ValueError("gate remediation dispatch is not recorded in its gate allowance")
         elif (item["kind"] == "corrective" and reservation not in value["reservations"]
                 and (exception_reservation is None or reservation != exception_reservation)):
             raise ValueError("corrective dispatch has no reservation")
@@ -229,7 +244,8 @@ def _validate_corrective_state(value: dict[str, Any]) -> None:
 
 
 EPOCH_STATE_KEYS = ("corrective_cycles", "reservations", "dispatches", "approved_invariants")
-EPOCH_OPTIONAL_KEYS = ("invariant_binding", "corrective_exception", "increment_allowances", "deferred")
+EPOCH_OPTIONAL_KEYS = ("invariant_binding", "corrective_exception", "increment_allowances", "gate_allowances",
+                       "deferred")
 # An operator's explicit stage start closes the prior stage's allowance under a
 # runner-derived event ID, so each stage opens at most one allowance per run.
 STAGE_EPOCH_STAGES = ("implement",)
@@ -378,12 +394,34 @@ def _validate_increment_allowances(ledger: dict[str, Any]) -> dict[str, Any]:
     return allowances
 
 
+def _validate_gate_allowances(ledger: dict[str, Any]) -> dict[str, Any]:
+    """Each gate's remediation rounds match its own recorded, unreserved corrective dispatches."""
+    if "gate_allowances" not in ledger:
+        return {}
+    allowances = ledger["gate_allowances"]
+    if not isinstance(allowances, dict) or not allowances:
+        raise ValueError("invalid gate remediation allowances")
+    for gate, record in allowances.items():
+        if (gate not in REMEDIATION_GATES or not isinstance(record, dict) or set(record) != {"rounds", "dispatch_ids"}
+                or type(record["rounds"]) is not int or not 1 <= record["rounds"] <= GATE_REMEDIATION_ROUNDS
+                or not isinstance(record["dispatch_ids"], list) or len(record["dispatch_ids"]) != record["rounds"]
+                or len(set(record["dispatch_ids"])) != record["rounds"]):
+            raise ValueError("gate remediation rounds disagree with the ledger")
+        for dispatch_id in record["dispatch_ids"]:
+            item = ledger["dispatches"].get(dispatch_id)
+            if not isinstance(item, dict) or item.get("gate") != gate:
+                raise ValueError("gate remediation allowance lists a dispatch it does not own")
+    return allowances
+
+
 def _allowance_spent(ledger: dict[str, Any], reason: str, unit: str) -> bool:
     """True when the ledger itself shows the allowance a deferral names as spent."""
     if reason in {"failure_family_budget_exhausted", "corrective_run_budget_exhausted"}:
         return _corrective_refusal(ledger, unit) == reason
     if reason == "increment_review_allowance_exhausted":
         return ledger.get("increment_allowances", {}).get(unit, {}).get("rounds") == INCREMENT_REVIEW_ROUNDS
+    if reason == "gate_remediation_allowance_exhausted":
+        return ledger.get("gate_allowances", {}).get(unit, {}).get("rounds") == GATE_REMEDIATION_ROUNDS
     if reason == "failure_class_allowance_exhausted":
         approved = ledger.get("corrective_exception", {}).get("failure_class")
         return (isinstance(approved, dict) and approved.get("test_file") == unit
@@ -865,6 +903,70 @@ def _increment_ineligibility(root: Path, spec: Path, request: dict[str, Any]) ->
     return None
 
 
+def _gate_remediation(inputs: dict[str, Any]) -> dict[str, Any] | None:
+    """The optional `gate_remediation` request: one planning gate and the paths the fix touches."""
+    request = inputs.get("gate_remediation")
+    if request is None:
+        return None
+    if (not isinstance(request, dict) or set(request) != {"gate", "paths"} or request["gate"] not in REMEDIATION_GATES
+            or not isinstance(request["paths"], list) or not all(isinstance(path, str) for path in request["paths"])):
+        raise ValueError("gate_remediation requires exactly a gate from G2 to G7 and a paths array of strings")
+    if inputs.get("review_remediation") is not None:
+        raise ValueError("a corrective dispatch names review_remediation or gate_remediation, never both")
+    if inputs.get("kind") != "corrective" or inputs.get("reservation_id") is not None:
+        raise ValueError("gate_remediation applies only to a new corrective dispatch")
+    if inputs.get("spec_file") is None:
+        raise ValueError("gate_remediation requires an explicit spec_file naming the feature spec")
+    return request
+
+
+def _gate_ineligibility(root: Path, spec: Path, ledger: dict[str, Any], paths: list[str]) -> str | None:
+    """Why a gate remediation does not qualify for its gate's allowance, or None when it does.
+
+    The feature directory is the explicit spec's; when the ledger has bound a spec,
+    it must be the same one. Every path must name a planning document on the closed
+    list inside that directory, or a checklist directly under its `checklists/`.
+    """
+    feature = PurePosixPath(spec.parent.relative_to(root.resolve()).as_posix())
+    binding = ledger.get("invariant_binding")
+    if binding is not None and PurePosixPath(binding["spec_file"]).parent != feature:
+        return "feature_binding_mismatch"
+    if not paths:
+        return "no_remediation_paths"
+    for value in paths:
+        path = PurePosixPath(value)
+        if (not value or path.is_absolute() or path.as_posix() != value
+                or any(part in {"..", ".", ".git"} for part in path.parts) or path.parent == path):
+            return "path_outside_planning_documents"
+        try:
+            relative = path.relative_to(feature).as_posix()
+        except ValueError:
+            return "path_outside_planning_documents"
+        checklist = PurePosixPath(relative)
+        if relative not in PLANNING_DOCUMENTS and not (
+                len(checklist.parts) == 2 and checklist.parts[0] == "checklists" and checklist.suffix == ".md"):
+            return "path_outside_planning_documents"
+        try:
+            confined_path(root, value)
+        except ValueError:
+            return "path_outside_planning_documents"
+    return None
+
+
+def _reserve_gate_remediation(ledger: dict[str, Any], dispatch_id: str, gate: str, now: float) -> dict[str, Any]:
+    """Spend one of the gate's own remediation rounds; never touches the run-wide counter."""
+    allowances = ledger.get("gate_allowances", {})
+    record = allowances.get(gate, {"rounds": 0, "dispatch_ids": []})
+    if record["rounds"] >= GATE_REMEDIATION_ROUNDS:
+        return {**_defer(ledger, dispatch_id, "gate_remediation_allowance_exhausted", gate, now),
+                "remediation_allowance": "gate"}
+    ledger["gate_allowances"] = {**allowances, gate: {"rounds": record["rounds"] + 1,
+                                                      "dispatch_ids": [*record["dispatch_ids"], dispatch_id]}}
+    ledger["dispatches"][dispatch_id] = {"kind": "corrective", "outcome": "reserved", "reserved_at": now,
+                                         "reservation_id": None, "reconciliations": 0, "gate": gate}
+    return {"reservation_id": None, "dispatch_id": dispatch_id, "remediation_allowance": "gate"}
+
+
 def _reserve_increment_review(ledger: dict[str, Any], dispatch_id: str, unit: str, now: float) -> dict[str, Any]:
     """Spend one of the increment's own review rounds; never touches the run-wide counter."""
     allowances = ledger.get("increment_allowances", {})
@@ -885,6 +987,7 @@ def reserve(ledger: dict[str, Any], inputs: dict[str, Any], now: float, root: Pa
     if kind not in KINDS:
         raise ValueError("unknown execution kind")
     review = _review_remediation(inputs)
+    gate_request = _gate_remediation(inputs)
     if dispatch_id in _used_dispatch_ids(ledger):
         return {"reasons": ["dispatch_already_reserved_no_relaunch"]}
     reservation = inputs.get("reservation_id")
@@ -894,6 +997,11 @@ def reserve(ledger: dict[str, Any], inputs: dict[str, Any], now: float, root: Pa
         if ineligible is None:
             return _reserve_increment_review(ledger, dispatch_id, review["tdd_unit"], now)
         note = {"review_allowance": "run_wide", "increment_ineligible": ineligible}
+    if gate_request is not None:
+        ineligible = _gate_ineligibility(root, spec, ledger, gate_request["paths"])
+        if ineligible is None:
+            return _reserve_gate_remediation(ledger, dispatch_id, gate_request["gate"], now)
+        note = {"remediation_allowance": "run_wide", "gate_ineligible": ineligible}
     if kind == "corrective":
         if reservation is not None:
             if reservation not in ledger["reservations"]:

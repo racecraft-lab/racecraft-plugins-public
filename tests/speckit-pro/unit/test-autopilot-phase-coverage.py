@@ -26,6 +26,7 @@ CANONICAL_SCHEMA_PATHS = tuple(
         "verification-report.schema.json",
     )
 )
+MARKER_CHECKPOINT_SCHEMA = VALIDATOR.parents[1] / "contracts" / "marker-checkpoint.schema.json"
 REPORT_SCHEMA = (
     REPO_ROOT
     / "tests"
@@ -323,6 +324,9 @@ def state_json(*, include_confidence: bool = True, include_post: bool = True, co
 class AutopilotPhaseCoverageTests(unittest.TestCase):
     def run_validator_paths(self, workflow_path: Path, state_path: Path) -> tuple[int, dict[str, object]]:
         local_validator = state_path.parent / VALIDATOR.relative_to(REPO_ROOT)
+        installed_validator = getattr(self, "_installed_validator", None)
+        if installed_validator is not None:
+            local_validator = installed_validator
         command = [
             sys.executable,
             str(local_validator if local_validator.is_file() else VALIDATOR),
@@ -1311,8 +1315,107 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
         self.assertTrue(any("pr_number is only valid after emission" in error for error in report["emission_mapping_errors"]))
 
     def test_changed_file_manifest_must_match_base_to_head(self) -> None:
+        self.assert_changed_file_manifest_scenario(feature_local_schema=True)
+
+    def test_checkpoint_evidence_uses_the_shipped_schema_without_a_feature_schema(self) -> None:
+        self.assert_changed_file_manifest_scenario(feature_local_schema=False)
+
+    def test_canonical_schemas_load_from_a_plugin_installed_outside_the_repository(self) -> None:
+        self.assert_changed_file_manifest_scenario(
+            feature_local_schema=False, plugin_inside_repo=False,
+        )
+
+    def test_canonical_schema_outside_repository_and_plugin_root_is_refused(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
+            stray = Path(tmp) / "stray.schema.json"
+            stray.write_text("{}", encoding="utf-8")
+            repo = Path(tmp) / "repo"
+            repo.mkdir()
+            schema, errors = VALIDATOR_MODULE._canonical_schema(
+                stray, "stray", repo_root=repo, expected_head_commit="a" * 40,
+            )
+        self.assertIsNone(schema)
+        self.assertEqual(
+            ["canonical stray schema is outside the installed plugin root"], errors
+        )
+
+    def test_shipped_marker_checkpoint_schema_compiles(self) -> None:
+        schema = VALIDATOR_MODULE._strict_json_loads(
+            MARKER_CHECKPOINT_SCHEMA.read_text(encoding="utf-8")
+        )
+        self.assertIsInstance(schema, dict)
+        self.assertEqual(
+            schema["properties"]["schema_version"], {"const": "marker-checkpoint.v1"}
+        )
+        self.assertIsInstance(
+            VALIDATOR_MODULE._resolve_schema_reference(
+                schema, "#/$defs/checkpoint_correction_record"
+            ),
+            dict,
+        )
+        complete = {
+            "schema_version": "marker-checkpoint.v1",
+            "feature_id": "SPEC-EXAMPLE",
+            "marker_id": "us1",
+            "status": "complete",
+            "task_ids": ["T001"],
+            "implementation_checkpoint_sha": "a" * 40,
+            "last_reviewed_head_sha": "a" * 40,
+            "verification": {"tests": {"status": "pass", "evidence": "tests passed"}},
+            "verification_evidence_sha": "sha256:" + "b" * 64,
+            "required_verification_gate_ids": ["tests"],
+            "source_fingerprint_status": "current",
+            "tasks_sha": "sha256:" + "c" * 64,
+            "completed_at": "2026-07-19T00:00:00Z",
+        }
+        self.assertEqual(
+            VALIDATOR_MODULE._json_schema_errors(complete, schema, schema, "evidence"), []
+        )
+        for field in ("tasks_sha", "verification", "completed_at"):
+            broken = dict(complete)
+            broken.pop(field)
+            self.assertTrue(
+                VALIDATOR_MODULE._json_schema_errors(broken, schema, schema, "evidence"),
+                field,
+            )
+        failing = dict(complete, verification={"tests": {"status": "fail", "evidence": "x"}})
+        self.assertTrue(
+            VALIDATOR_MODULE._json_schema_errors(failing, schema, schema, "evidence")
+        )
+        correction = {
+            "schema_version": "marker-checkpoint-correction.v1",
+            "feature_id": "SPEC-EXAMPLE",
+            "marker_id": "us1",
+            "sequence": 1,
+            "supersedes_evidence_path": "specs/spec-example/.process/checkpoints/us1.json",
+            "supersedes_evidence_commit_sha": "a" * 40,
+            "supersedes_evidence_sha": "sha256:" + "b" * 64,
+            "remove_evidence_owners": ["verification.tests"],
+            "reason": "Correct a stale owner.",
+        }
+        correction_schema = {"$ref": "#/$defs/checkpoint_correction_record"}
+        self.assertEqual(
+            VALIDATOR_MODULE._json_schema_errors(
+                correction, correction_schema, schema, "correction"
+            ),
+            [],
+        )
+        self.assertTrue(
+            VALIDATOR_MODULE._json_schema_errors(
+                dict(correction, remove_evidence_owners=[1]),
+                correction_schema,
+                schema,
+                "correction",
+            )
+        )
+
+    def assert_changed_file_manifest_scenario(
+        self, *, feature_local_schema: bool, plugin_inside_repo: bool = True,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as tmp, tempfile.TemporaryDirectory() as plugin_tmp:
             root = Path(tmp)
+            # An installed plugin lives outside the repository it validates.
+            plugin_home = root if plugin_inside_repo else Path(plugin_tmp)
             workflow_path = root / "workflow.md"
             alternate_workflow_path = root / "alternate-workflow.md"
             state_path = root / "autopilot-state.json"
@@ -1344,43 +1447,50 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
             tasks_path.parent.mkdir(parents=True)
             tasks_path.write_text("# Tasks\n\n- [x] T001 Marker task\n- [ ] T002 Other task\n", encoding="utf-8")
             checkpoint_schema_path.parent.mkdir(parents=True)
-            checkpoint_schema_path.write_text(
-                json.dumps(
-                    {
-                        "type": "object",
-                        "required": [
-                            "schema_version", "feature_id", "marker_id", "status",
-                            "task_ids", "implementation_checkpoint_sha", "verification",
-                            "source_fingerprint_status", "tasks_sha",
-                        ],
-                        "properties": {
-                            "schema_version": {"const": "marker-checkpoint.v1"},
-                            "feature_id": {"const": "SPEC-EXAMPLE"},
-                            "marker_id": {"const": "us1"},
-                            "status": {"enum": ["pending", "complete"]},
-                            "task_ids": {"type": "array", "minItems": 1},
-                            "implementation_checkpoint_sha": {
-                                "type": "string", "pattern": "^[0-9a-f]{40}$",
+            if feature_local_schema:
+                checkpoint_schema_path.write_text(
+                    json.dumps(
+                        {
+                            "type": "object",
+                            "required": [
+                                "schema_version", "feature_id", "marker_id", "status",
+                                "task_ids", "implementation_checkpoint_sha", "verification",
+                                "source_fingerprint_status", "tasks_sha",
+                            ],
+                            "properties": {
+                                "schema_version": {"const": "marker-checkpoint.v1"},
+                                "feature_id": {"const": "SPEC-EXAMPLE"},
+                                "marker_id": {"const": "us1"},
+                                "status": {"enum": ["pending", "complete"]},
+                                "task_ids": {"type": "array", "minItems": 1},
+                                "implementation_checkpoint_sha": {
+                                    "type": "string", "pattern": "^[0-9a-f]{40}$",
+                                },
+                                "verification": {"type": "object", "minProperties": 1},
+                                "source_fingerprint_status": {"type": "string"},
+                                "tasks_sha": {
+                                    "type": "string", "pattern": "^sha256:[0-9a-f]{64}$",
+                                },
                             },
-                            "verification": {"type": "object", "minProperties": 1},
-                            "source_fingerprint_status": {"type": "string"},
-                            "tasks_sha": {
-                                "type": "string", "pattern": "^sha256:[0-9a-f]{64}$",
-                            },
-                        },
-                    }
-                ),
-                encoding="utf-8",
-            )
-            local_validator = root / VALIDATOR.relative_to(REPO_ROOT)
+                        }
+                    ),
+                    encoding="utf-8",
+                )
+            local_validator = plugin_home / VALIDATOR.relative_to(REPO_ROOT)
             local_validator.parent.mkdir(parents=True)
             shutil.copy2(VALIDATOR, local_validator)
+            if not plugin_inside_repo:
+                self._installed_validator = local_validator
+                self.addCleanup(delattr, self, "_installed_validator")
             local_schema_paths: list[Path] = []
             for source_schema in CANONICAL_SCHEMA_PATHS:
-                local_schema = root / source_schema.relative_to(REPO_ROOT)
+                local_schema = plugin_home / source_schema.relative_to(REPO_ROOT)
                 local_schema.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(source_schema, local_schema)
                 local_schema_paths.append(local_schema)
+            local_checkpoint_schema = plugin_home / MARKER_CHECKPOINT_SCHEMA.relative_to(REPO_ROOT)
+            if MARKER_CHECKPOINT_SCHEMA.is_file():
+                shutil.copy2(MARKER_CHECKPOINT_SCHEMA, local_checkpoint_schema)
             subprocess.run(["git", "init", "-q", str(root)], check=True)
             subprocess.run(["git", "-C", str(root), "add", "."], check=True)
             commit_test_repo(root, "base")
@@ -1780,6 +1890,30 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
             self.assertEqual(report["changed_file_manifest_errors"], [])
             self.assertEqual(report["checkpoint_source_fingerprint_errors"], [])
 
+            if not feature_local_schema:
+                valid_evidence = evidence_path.read_bytes()
+                malformed_evidence = json.loads(valid_evidence)
+                malformed_evidence["tasks_sha"] = "not-a-digest"
+                evidence_path.write_text(json.dumps(malformed_evidence), encoding="utf-8")
+                subprocess.run(
+                    ["git", "-C", str(root), "add", str(evidence_path)], check=True,
+                )
+                commit_test_repo(root, "malformed checkpoint evidence")
+                exit_code, report = self.run_validator_paths(workflow_path, state_path)
+                self.assertEqual(exit_code, 1)
+                self.assertIn(
+                    "pr_marker_plan.markers[0] checkpoint evidence schema: "
+                    + "checkpoint_evidence.tasks_sha does not match its schema pattern",
+                    report["checkpoint_evidence_errors"],
+                )
+                evidence_path.write_bytes(valid_evidence)
+                subprocess.run(
+                    ["git", "-C", str(root), "add", str(evidence_path)], check=True,
+                )
+                commit_test_repo(root, "restore checkpoint evidence")
+                exit_code, report = self.run_validator_paths(workflow_path, state_path)
+                self.assertEqual(exit_code, 0, report)
+
             current_workflow = workflow_path.read_bytes()
             workflow_path.write_text(
                 workflow_path.read_text(encoding="utf-8").replace(
@@ -1814,9 +1948,17 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
                 "changed-file manifest",
                 "verification report",
             )
-            for schema_path, error_bucket, schema_label in zip(
-                local_schema_paths, schema_error_buckets, schema_labels, strict=True
-            ):
+            schema_cases = list(
+                zip(local_schema_paths, schema_error_buckets, schema_labels, strict=True)
+            )
+            if not feature_local_schema:
+                schema_cases.append(
+                    (local_checkpoint_schema, "checkpoint_evidence_errors", "marker-checkpoint")
+                )
+            if not plugin_inside_repo:
+                # Outside the repository there is no PR head to pin the plugin's contracts to.
+                schema_cases = []
+            for schema_path, error_bucket, schema_label in schema_cases:
                 clean_schema_bytes = schema_path.read_bytes()
                 schema_path.write_bytes(clean_schema_bytes + b"\n")
                 exit_code, report = self.run_validator_paths(workflow_path, state_path)

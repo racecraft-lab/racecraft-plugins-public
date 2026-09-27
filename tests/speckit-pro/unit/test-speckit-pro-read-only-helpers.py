@@ -3584,6 +3584,53 @@ class ReadOnlyHelperTests(unittest.TestCase):
         self.assertEqual((1, False), (code, payload["pass"]))
         self.assertIn("validate-task-execution", payload["reason"])
 
+    G5_COVERAGE_TASKS = (
+        "## Phase 3: User Story 1\n\n"
+        + "- [ ] T001 [US1] Implement the parser in src/parser.py\n"
+        + "- [ ] T002 [US1] Implement the writer in src/writer.py\n\n"
+        + "## Requirement Coverage\n\n"
+        + "| Requirement | Tasks |\n"
+        + "|---|---|\n"
+        + "| FR-005 parse input | T001 (US1) |\n"
+        + "| FR-006 write output |  () |\n"
+        + "| FR-007 keep order |   |\n"
+        + "| FR-008 report errors | T001, T002 |\n"
+    )
+
+    def test_validate_gate_g5_fails_empty_requirement_coverage_rows(self) -> None:
+        """#794: a coverage row with an empty or placeholder task cell fails G5 and names the row."""
+        if self.helper_filter and self.helper_filter != "validate-gate":
+            self.skipTest("G5 coverage-row case uses validate-gate")
+        with helper_project() as project_path:
+            code, payload = self._g5(project_path, self.G5_COVERAGE_TASKS, None)
+        self.assertEqual((1, False), (code, payload["pass"]), payload)
+        self.assertEqual(["FR-006", "FR-007"], [row["requirement"] for row in payload["empty_coverage_rows"]])
+        self.assertIn("2 requirement coverage row(s)", payload["reason"])
+        detail = " ".join(payload["details"])
+        self.assertIn("FR-006", detail)
+        self.assertIn("FR-007", detail)
+        self.assertIn("task IDs", detail)
+
+    def test_validate_gate_g5_passes_filled_or_absent_coverage_tables(self) -> None:
+        if self.helper_filter and self.helper_filter != "validate-gate":
+            self.skipTest("G5 coverage-row case uses validate-gate")
+        filled = self.G5_COVERAGE_TASKS.replace("|  () |", "| T002 (US1) |").replace("|   |", "| T001-T002 |")
+        other_table = self.G5_COVERAGE_TASKS.replace("| Requirement | Tasks |", "| Requirement | Notes |")
+        absent = self.G5_COVERAGE_TASKS.split("## Requirement Coverage")[0]
+        for name, tasks in (("filled", filled), ("no task column", other_table), ("no table", absent)):
+            with self.subTest(case=name), helper_project() as project_path:
+                code, payload = self._g5(project_path, tasks, None)
+                self.assertEqual((0, True), (code, payload["pass"]), payload)
+                self.assertNotIn("empty_coverage_rows", payload)
+
+    def test_tasks_prompt_tells_the_producer_to_fill_every_coverage_row(self) -> None:
+        template = Path(__file__).resolve().parents[3] / "speckit-pro/skills/speckit-coach/templates/workflow-template.md"
+        text = template.read_text(encoding="utf-8")
+        prompt = " ".join(text[text.index("### Tasks Prompt"):text.index("### Tasks Results")].split())
+        self.assertIn("requirement coverage table", prompt)
+        self.assertIn("every row", prompt)
+        self.assertIn("G5 fails", prompt)
+
     @contextmanager
     def _g6_project(self) -> Iterator[Path]:
         """A clean planning tree: no bracketed severity marker in spec, plan, or tasks."""
@@ -3704,6 +3751,32 @@ class ReadOnlyHelperTests(unittest.TestCase):
                     payload = estimate(project_path, *entries)
                     self.assertEqual("pass", payload["status"])
                     self.assertEqual(expected, payload["declared_files"]["production"])
+
+    def test_estimate_reviewable_loc_does_not_count_marker_evidence_toward_the_path_budget(self) -> None:
+        if self.helper_filter and self.helper_filter != "estimate-reviewable-loc":
+            self.skipTest("marker evidence case uses estimate-reviewable-loc")
+        cap = 24
+        entries = [f"src/module_{index:02d}.py" for index in range(4)]
+        entries += [f"docs/page_{index:02d}.md" for index in range(cap - len(entries) - 1)]
+        entries.append("specs/001-demo/.process/reviewability/us1.json")
+        evidence = [
+            "specs/001-demo/.process/checkpoints/us1.json",
+            "specs/001-demo/.process/verification/us1.json",
+        ]
+        body = "\n".join(f"- NEW {entry}" for entry in entries + evidence)
+        with helper_project() as project_path:
+            (project_path / "plan.md").write_text(
+                f"# Plan\n\n## Declared File Operations\n\n{body}\n", encoding="utf-8"
+            )
+            code, payload = self._helper_json(
+                "estimate_reviewable_loc", {"plan_file": "plan.md"}, project_path
+            )
+        self.assertEqual(0, code)
+        declared = payload["declared_files"]
+        self.assertEqual(cap, declared["total_entries"])
+        self.assertEqual(cap, declared["new"])
+        self.assertEqual(4, declared["production"])
+        self.assertEqual(len(evidence), declared["marker_evidence"])
 
     def test_detect_commands_finds_repository_test_runner(self) -> None:
         """A runner script under tests/ is real, verifiable evidence of a test command.

@@ -2262,6 +2262,17 @@ def validate_gate(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
         }
         if passed:
             obj.update(g5_gate_task_loops(tasks, repo_root))
+            rows = g5_empty_coverage_rows(trusted_text(tasks, repo_root) or "")
+            if rows:
+                reason = (f"{len(rows)} requirement coverage row(s) have no task IDs: "
+                          + ", ".join(row["requirement"] for row in rows))
+                obj["reason"] = reason if obj["pass"] else f"{obj['reason']}; {reason}"
+                obj["details"] = [*obj.get("details", []), *(
+                    f"Line {row['line']}: {row['requirement']} has an empty or placeholder task cell "
+                    + f"('{row['cell']}'). Fill it with the task IDs that cover the requirement."
+                    for row in rows)]
+                obj["empty_coverage_rows"] = rows
+                obj["pass"] = False
             passed = obj["pass"]
         return make_result(json_text(obj), exit_code=0 if passed else 1)
     if gate == "G7":
@@ -2305,6 +2316,40 @@ def validate_gate(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
     if count == 0:
         return make_result(json_text({"gate": gate, "pass": True, "reason": "0 CRITICAL/HIGH findings", "markers": 0, "analysis_findings": findings, "details": []}))
     return make_result(json_text({"gate": gate, "pass": False, "reason": f"{count} CRITICAL/HIGH findings remain", "markers": count, "analysis_findings": findings, "details": []}), exit_code=1)
+
+
+COVERAGE_TASK_HEADER = re.compile(r"tasks?(?:\s*\(s\)|\s*ids?)?", re.IGNORECASE)
+COVERAGE_REQUIREMENT = re.compile(r"(?:FR|NFR|SC|AC|INV|REQ)-[A-Za-z0-9.]+")
+COVERAGE_TASK_ID = re.compile(r"\bT\d+[a-z]?\b")
+
+
+def g5_empty_coverage_rows(text: str) -> list[dict[str, Any]]:
+    """Requirement coverage rows whose task column names no task ID (#794).
+
+    A coverage table is any Markdown table with a `Task`, `Tasks`, `Task IDs`,
+    or `Task(s)` column. Its rows that open with a requirement ID must cite at
+    least one task ID; blank, whitespace, and `()` cells fail. No table passes.
+    """
+    rows: list[dict[str, Any]] = []
+    task_column: int | None = None
+    previous_was_table = False
+    for number, line in enumerate(text.splitlines(), start=1):
+        stripped = line.strip()
+        if not stripped.startswith("|"):
+            previous_was_table = False
+            continue
+        cells = [cell.strip() for cell in stripped.strip("|").split("|")]
+        if not previous_was_table:
+            previous_was_table = True
+            task_column = next((index for index, cell in enumerate(cells)
+                                if COVERAGE_TASK_HEADER.fullmatch(cell.strip("*_` "))), None)
+            continue
+        if task_column is None or task_column >= len(cells):
+            continue
+        requirement = COVERAGE_REQUIREMENT.match(cells[0])
+        if requirement and not COVERAGE_TASK_ID.search(cells[task_column]):
+            rows.append({"line": number, "requirement": requirement.group(0), "cell": cells[task_column]})
+    return rows
 
 
 def g5_gate_task_loops(tasks: Path, repo_root: Path) -> dict[str, Any]:
@@ -2477,7 +2522,7 @@ def estimate_reviewable_loc(inputs: dict[str, Any], repo_root: Path) -> dict[str
             "tool": "estimate-reviewable-loc",
             "status": "not_estimated",
             "projected": None,
-            "declared_files": {"production": 0, "new": 0, "modified": 0, "total_entries": 0},
+            "declared_files": {"production": 0, "new": 0, "modified": 0, "total_entries": 0, "marker_evidence": 0},
             "greenfield": False,
             "thresholds": {"warn": 400, "block": 800, "greenfield_multiplier": 1.5, "base_warn": 400, "base_block": 800},
         }
@@ -2486,6 +2531,9 @@ def estimate_reviewable_loc(inputs: dict[str, Any], repo_root: Path) -> dict[str
     for status, path in lines:
         if path not in dedup or status == "MODIFIED":
             dedup[path] = status
+    marker_evidence = [path for path in dedup if is_marker_evidence(path)]
+    for path in marker_evidence:
+        del dedup[path]
     new = sum(1 for status in dedup.values() if status == "NEW")
     modified = sum(1 for status in dedup.values() if status == "MODIFIED")
     production = sum(1 for path in dedup if is_production_file(path) and not is_excluded_generated(path))
@@ -2497,7 +2545,8 @@ def estimate_reviewable_loc(inputs: dict[str, Any], repo_root: Path) -> dict[str
         "tool": "estimate-reviewable-loc",
         "status": "over_budget" if projected > block else "pass",
         "projected": projected,
-        "declared_files": {"production": production, "new": new, "modified": modified, "total_entries": len(dedup)},
+        "declared_files": {"production": production, "new": new, "modified": modified, "total_entries": len(dedup),
+                           "marker_evidence": len(marker_evidence)},
         "greenfield": greenfield,
         "thresholds": {"warn": warn, "block": block, "greenfield_multiplier": 1.5, "base_warn": 400, "base_block": 800},
     }
@@ -8783,6 +8832,12 @@ def is_excluded_generated(path: str) -> bool:
         or path.startswith(("vendor/", "vendors/", "third_party/", "generated/", "dist/", "build/"))
         or "/generated/" in path
     )
+
+
+def is_marker_evidence(path: str) -> bool:
+    """True for a marker's runner-owned checkpoint or verification record, which the path budget does not count."""
+    parts = PurePosixPath(path).parts
+    return len(parts) >= 3 and parts[-3] == ".process" and parts[-2] in {"checkpoints", "verification"} and parts[-1].endswith(".json")
 
 
 # Source files of the other stacks detect-commands knows, counted wherever
