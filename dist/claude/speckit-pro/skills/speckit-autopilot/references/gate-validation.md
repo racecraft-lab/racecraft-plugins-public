@@ -282,7 +282,7 @@ implementation obligations and any requested trace work; follow [the shared cont
    the deferred-mode diagnostics (helper ID, requested mode, deferral
    reason), then gather the fallback evidence chain: the setup-mode gate
    result recorded at scaffold, the plan-phase `estimate-reviewable-loc`
-   verdict, and any operator-ratified split decision in the workflow file.
+   verdict, and any ratified split decision (autopilot or operator) in the workflow file.
 6. Apply the post-G5 reviewability proceed/stop matrix below to that
    committed evidence. A valid current size-only `status=block` continues
    into marker planning and later marker emission; it is not a manual
