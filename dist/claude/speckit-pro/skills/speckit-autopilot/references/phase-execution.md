@@ -2746,16 +2746,21 @@ never per-test diffs for whichever tests failed this time.
 
 1. **Normalize the signature.** Strip test names, durations, and counts from
    the failure message so two runs of the same class compare equal.
-2. **Ask at most once.** When the repair budget is exhausted and the fix needs
+2. **Check the environment first.** When timeouts move between different
+   tests across reruns with the same signature, treat that as an environment
+   signal first. Check host load and temp-directory size, then rerun the gate
+   once, before proposing any timeout change. Propose the class-level fix only
+   if the rerun still fails with the same signature.
+3. **Ask at most once.** When the repair budget is exhausted and the fix needs
    operator approval, request `authorize-corrective-exception` with a
    `failure_class` scope: the repo-relative test file, the normalized
    signature, and the change kind (`test_timeout`). The approval never covers
    production code, another file, or another signature.
-3. **Use the approval for follow-ups.** If a later run fails again inside that
+4. **Use the approval for follow-ups.** If a later run fails again inside that
    exact class after the approved fix completed, reserve the next correction
    with `reserve-class-correction` and apply it without a new question. The
    helper allows two follow-ups per approval.
-4. **Defer anything outside it.** A correction outside the approved class, a
+5. **Defer anything outside it.** A correction outside the approved class, a
    class whose follow-ups are spent, or a second approval request is never
    asked in place. Defer it to the one consolidated operator request at the
    end of the run and keep executing independent work.
