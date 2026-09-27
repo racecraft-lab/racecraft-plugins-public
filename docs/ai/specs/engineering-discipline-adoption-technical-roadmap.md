@@ -2,7 +2,7 @@
 
 **Fold Matt Pocock's MIT-licensed engineering skills into SpecKit Pro, phase by phase, with test-enforced attribution.**
 
-This document defines the **SPEC catalog** for Engineering Discipline Adoption: an ordered set of specifications derived from the source PRD. Each SPEC corresponds 1:1 to a Feature / Acceptance-Criteria group in the PRD (`AC-N.*`), preserving traceability from PRD -> roadmap -> spec. Each specification is executed end-to-end through the SpecKit workflow (specify -> clarify -> plan -> checklist -> tasks -> analyze -> implement) before moving to the next, and is prepared for autopilot with `/speckit-pro:speckit-scaffold-spec EDA-NNN`, which reads this roadmap as its input.
+This document defines the **SPEC catalog** for Engineering Discipline Adoption: an ordered set of specifications derived from the source PRD. Each SPEC corresponds 1:1 to a Feature / Acceptance-Criteria group in the PRD (`AC-N.*`), preserving traceability from PRD -> roadmap -> spec. Each specification is executed end-to-end through the SpecKit workflow (specify -> clarify -> plan -> checklist -> tasks -> analyze -> implement); specs whose dependencies are met, such as the Tier 2 specs, may run in parallel. Each is prepared for autopilot with `/speckit-pro:speckit-scaffold-spec EDA-NNN`, which reads this roadmap as its input.
 
 **Source PRD:** [../../prd-engineering-discipline-adoption.md](../../prd-engineering-discipline-adoption.md)
 **Roadmap MOC:** [engineering-discipline-adoption-roadmap-MOC.md](engineering-discipline-adoption-roadmap-MOC.md)
@@ -87,7 +87,7 @@ EDA-001 (Attribution Foundation)
   │      ├──► EDA-003 (Domain Model and ADRs)
   │      │      └──► EDA-005 (Deep-Module Planning and Slicing)
   │      │             ├──► EDA-006 (Seams-First TDD)
-  │      │             └──► EDA-010 (Architecture Review Skill) ◄── EDA-003
+  │      │             └──► EDA-010 (Architecture Review Skill; also depends on EDA-003)
   │      └──► EDA-004 (Prototype Skill)
   ├──► EDA-007 (Diagnose Skill)
   ├──► EDA-008 (Post-Implementation Discipline)
@@ -532,7 +532,7 @@ When breaking a feature into specs:
    first slice that needs it.
 5. **Cross-slice work earns its own spec**: do not reserve a final
    integration-only spec unless it delivers a separately valuable outcome.
-6. **Each spec gets its own directory**: `specs/<number>-<name>/`
+6. **Each spec gets its own directory**: `specs/eda-<number>-<name>/`
 
 ## Environment & Deployment Context
 
