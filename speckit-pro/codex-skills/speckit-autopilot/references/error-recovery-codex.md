@@ -47,12 +47,16 @@ $speckit-autopilot workflow.md --from-phase <next-pending-phase>
   or direct shell retry. Retain verified partial task results; reserve only
   unfinished work after reconciliation proves it is safe.
 - **Gate needs repair:** Reserve against the same durable failure-family/spec
-  budget used by every nested worker; checkpoint with exact output on exhaustion.
-  One operator-approved application correction past it uses
-  `authorize-corrective-exception`. An explicit `--stage implement` opens the
-  implement stage's own allowance through `begin-stage-epoch`. After an
-  operator-ordered re-plan, `begin-replan-epoch` opens a fresh allowance with
-  the operator's approval; never reset or bypass the ledger otherwise. Repeated
+  budget used by every nested worker. An exhausted allowance returns
+  `disposition=defer`: record the deferral with the exact output, keep
+  executing every independent task, increment, and gate, and list it in the
+  one end-of-run consolidated request. It is never a mid-run question and
+  never sets the thread goal blocked. `authorize-corrective-exception` (one
+  operator-approved application correction) and `begin-replan-epoch` are
+  end-of-run tools that act on the operator's answer to that request. An
+  explicit `--stage implement` opens the implement stage's own allowance
+  through `begin-stage-epoch`. Never reset or bypass the ledger otherwise;
+  `checkpoint_required` and ledger integrity errors still stop. Repeated
   failures with one signature in one test file are one class: one approval
   covers its follow-ups through `reserve-class-correction`. See
   [Repeated Gate Failures: Diagnose One Class, Approve It Once](./phase-execution-codex.md#repeated-gate-failures-diagnose-one-class-approve-it-once).

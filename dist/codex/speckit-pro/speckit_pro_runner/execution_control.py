@@ -29,6 +29,15 @@ CLASS_FOLLOW_UP_LIMIT = 2
 # Review fixes inside one increment's own owned paths get this many rounds per
 # increment, outside the run-wide corrective budget.
 INCREMENT_REVIEW_ROUNDS = 2
+# A refusal because an allowance is spent defers the blocked unit to the end-of-run
+# request instead of stopping the run. Each reason names the kind of unit it blocks.
+DEFER_REASONS = {"failure_family_budget_exhausted": "failure_family",
+                 "corrective_run_budget_exhausted": "failure_family",
+                 "corrective_cycle_failed_no_nested_retry": "failure_family",
+                 "corrective_cycle_already_closed": "failure_family",
+                 "increment_review_allowance_exhausted": "increment",
+                 "failure_class_allowance_exhausted": "failure_class"}
+DEFERRAL_KEYS = {"dispatch_id", "reason", "unit_kind", "unit", "deferred_at"}
 RUNNER_BYPRODUCT_DIRECTORIES = frozenset({(".process", "execution-control"), (".process", "verification"),
                                           (".process", "task-results")})
 
@@ -191,6 +200,7 @@ def _validate_corrective_state(value: dict[str, Any]) -> None:
         raise ValueError("reservation counter disagrees with ledger")
     exception_reservation = _validate_corrective_exception(value)
     allowances = _validate_increment_allowances(value)
+    _validate_deferrals(value)
     families = [item.get("family") for item in value["reservations"].values() if isinstance(item, dict)]
     if len(families) != len(value["reservations"]) or len(set(families)) != len(families):
         raise ValueError("duplicate or malformed corrective family")
@@ -212,7 +222,7 @@ def _validate_corrective_state(value: dict[str, Any]) -> None:
 
 
 EPOCH_STATE_KEYS = ("corrective_cycles", "reservations", "dispatches", "approved_invariants")
-EPOCH_OPTIONAL_KEYS = ("invariant_binding", "corrective_exception", "increment_allowances")
+EPOCH_OPTIONAL_KEYS = ("invariant_binding", "corrective_exception", "increment_allowances", "deferred")
 # An operator's explicit stage start closes the prior stage's allowance under a
 # runner-derived event ID, so each stage opens at most one allowance per run.
 STAGE_EPOCH_STAGES = ("implement",)
@@ -359,6 +369,56 @@ def _validate_increment_allowances(ledger: dict[str, Any]) -> dict[str, Any]:
             if not isinstance(item, dict) or item.get("increment") != unit:
                 raise ValueError("increment review allowance lists a dispatch it does not own")
     return allowances
+
+
+def _allowance_spent(ledger: dict[str, Any], reason: str, unit: str) -> bool:
+    """True when the ledger itself shows the allowance a deferral names as spent."""
+    if reason in {"failure_family_budget_exhausted", "corrective_run_budget_exhausted"}:
+        return _corrective_refusal(ledger, unit) == reason
+    if reason == "increment_review_allowance_exhausted":
+        return ledger.get("increment_allowances", {}).get(unit, {}).get("rounds") == INCREMENT_REVIEW_ROUNDS
+    if reason == "failure_class_allowance_exhausted":
+        approved = ledger.get("corrective_exception", {}).get("failure_class")
+        return (isinstance(approved, dict) and approved.get("test_file") == unit
+                and len(approved.get("follow_up_dispatch_ids", [])) >= CLASS_FOLLOW_UP_LIMIT)
+    return any(item["family"] == unit for item in ledger["reservations"].values())
+
+
+def _validate_deferrals(ledger: dict[str, Any]) -> None:
+    """Each deferral is well formed, recorded once, in clock order, and names a spent allowance."""
+    if "deferred" not in ledger:
+        return
+    entries = ledger["deferred"]
+    if not isinstance(entries, list) or not entries:
+        raise ValueError("invalid deferral record")
+    seen: set[str] = set()
+    previous = ledger["started_at"]
+    for entry in entries:
+        if (not isinstance(entry, dict) or set(entry) != DEFERRAL_KEYS
+                or DEFER_REASONS.get(entry["reason"]) != entry["unit_kind"]):
+            raise ValueError("invalid deferral record")
+        dispatch_id = require_text(entry["dispatch_id"], "deferred dispatch_id")
+        unit = require_text(entry["unit"], "deferred unit")
+        if dispatch_id in seen:
+            raise ValueError("duplicate deferral")
+        seen.add(dispatch_id)
+        deferred_at = entry["deferred_at"]
+        if type(deferred_at) not in (int, float) or not previous <= deferred_at < float("inf"):
+            raise ValueError("invalid deferral clock")
+        previous = deferred_at
+        if not _allowance_spent(ledger, entry["reason"], unit):
+            raise ValueError("deferral names an allowance the ledger does not show as spent")
+
+
+def _defer(ledger: dict[str, Any], dispatch_id: str, reason: str, unit: str, now: float) -> dict[str, Any]:
+    """Refuse the dispatch and record its blocked unit once for the end-of-run request."""
+    entries = ledger.setdefault("deferred", [])
+    entry = next((item for item in entries if item["dispatch_id"] == dispatch_id), None)
+    if entry is None:
+        entry = {"dispatch_id": dispatch_id, "reason": reason, "unit_kind": DEFER_REASONS[reason],
+                 "unit": unit, "deferred_at": now}
+        entries.append(entry)
+    return {"reasons": [entry["reason"]], "deferred": dict(entry)}
 
 
 def validate_recovery_records(ledger: dict[str, Any]) -> None:
@@ -590,7 +650,8 @@ def _reserve_increment_review(ledger: dict[str, Any], dispatch_id: str, unit: st
     allowances = ledger.get("increment_allowances", {})
     record = allowances.get(unit, {"rounds": 0, "dispatch_ids": []})
     if record["rounds"] >= INCREMENT_REVIEW_ROUNDS:
-        return {"reasons": ["increment_review_allowance_exhausted"], "review_allowance": "increment"}
+        return {**_defer(ledger, dispatch_id, "increment_review_allowance_exhausted", unit, now),
+                "review_allowance": "increment"}
     ledger["increment_allowances"] = {**allowances, unit: {"rounds": record["rounds"] + 1,
                                                            "dispatch_ids": [*record["dispatch_ids"], dispatch_id]}}
     ledger["dispatches"][dispatch_id] = {"kind": "corrective", "outcome": "reserved", "reserved_at": now,
@@ -618,17 +679,18 @@ def reserve(ledger: dict[str, Any], inputs: dict[str, Any], now: float, root: Pa
             if reservation not in ledger["reservations"]:
                 raise ValueError("nested correction requires an existing run reservation")
             owner = ledger["reservations"][reservation]["dispatch_id"]
+            family = ledger["reservations"][reservation]["family"]
             if ledger["dispatches"][owner]["outcome"] != "reserved":
-                return {"reasons": ["corrective_cycle_already_closed"]}
+                return _defer(ledger, dispatch_id, "corrective_cycle_already_closed", family, now)
             if any(item.get("reservation_id") == reservation and item["outcome"] in {"failed", "unknown"}
                    for item in ledger["dispatches"].values()):
-                return {"reasons": ["corrective_cycle_failed_no_nested_retry"]}
+                return _defer(ledger, dispatch_id, "corrective_cycle_failed_no_nested_retry", family, now)
         else:
             invariant = inputs.get("failure_invariant")
             family = str(invariant) if invariant in ledger["approved_invariants"] else "unresolved"
             refusal = _corrective_refusal(ledger, family)
             if refusal is not None:
-                return {"reasons": [refusal], **note}
+                return {**_defer(ledger, dispatch_id, refusal, family, now), **note}
             reservation = uuid.uuid4().hex
             ledger["reservations"][reservation] = {"family": family, "dispatch_id": dispatch_id, "reserved_at": now}
             ledger["corrective_cycles"] += 1
@@ -743,7 +805,8 @@ def reserve_class_correction(ledger: dict[str, Any], inputs: dict[str, Any], now
     """Reserve a follow-up inside the operator-approved failure class, with no new approval.
 
     The scope must match exactly, every earlier correction in the class must have
-    completed, and at most CLASS_FOLLOW_UP_LIMIT follow-ups share one approval.
+    completed, and at most CLASS_FOLLOW_UP_LIMIT follow-ups share one approval. A
+    follow-up past that limit is deferred to the end-of-run request.
     """
     dispatch_id = require_text(inputs.get("dispatch_id"), "dispatch_id")
     scope = _class_scope(inputs.get("failure_class"))
@@ -753,9 +816,10 @@ def reserve_class_correction(ledger: dict[str, Any], inputs: dict[str, Any], now
         raise ValueError("no operator approval covers this failure class in the current corrective epoch")
     reservation = exception["reservation_id"]
     members = [item for item in ledger["dispatches"].values() if item.get("reservation_id") == reservation]
-    if (dispatch_id in _used_dispatch_ids(ledger) or len(approved["follow_up_dispatch_ids"]) >= CLASS_FOLLOW_UP_LIMIT
-            or any(item["outcome"] != "completed" for item in members)):
-        raise ValueError("class correction needs a new dispatch id, completed earlier fixes, and an unspent class allowance")
+    if dispatch_id in _used_dispatch_ids(ledger) or any(item["outcome"] != "completed" for item in members):
+        raise ValueError("class correction needs a new dispatch id and completed earlier fixes")
+    if len(approved["follow_up_dispatch_ids"]) >= CLASS_FOLLOW_UP_LIMIT:
+        return _defer(ledger, dispatch_id, "failure_class_allowance_exhausted", scope["test_file"], now)
     approved["follow_up_dispatch_ids"].append(dispatch_id)
     ledger["dispatches"][dispatch_id] = {"kind": "corrective", "outcome": "reserved", "reserved_at": now,
                                          "reservation_id": reservation, "reconciliations": 0}
@@ -1025,7 +1089,9 @@ def execution_control(root: Path, inputs: dict[str, Any], mode: str) -> dict[str
         if mode == "apply":
             ledger["last_observed_at"] = max(now, ledger["last_observed_at"])
             durable_json(path, ledger)
-        return {"ledger": ledger, "ledger_path": relative, "disposition": "checkpoint_required" if reasons else "continue",
+        disposition = ("continue" if not reasons else "defer" if all(reason in DEFER_REASONS for reason in reasons)
+                       else "checkpoint_required")
+        return {"ledger": ledger, "ledger_path": relative, "disposition": disposition,
                 "reasons": reasons, "elapsed_seconds": elapsed(ledger, now, ledger["started_at"]),
                 "checkpoint_due": elapsed(ledger, now, ledger["checkpoint_at"]) >= 2700,
                 "authorization_granted": False, "writes_state": mode == "apply", **extra}
@@ -1057,7 +1123,9 @@ def run_execution_helper(entry: Any, request: Any) -> dict[str, Any]:
     except (ValueError, OSError, TypeError) as exc:
         return response("input_error", request_id=request.request_id,
                         diagnostics=[diagnostic("invalid_execution_request", str(exc))])
-    failed = result.get("helper_exit_code") == 1 if entry.helper_id == "task-results" else result.get("disposition") == "checkpoint_required"
+    # A deferral refuses the dispatch, so it is an expected failure just like a checkpoint.
+    failed = (result.get("helper_exit_code") == 1 if entry.helper_id == "task-results"
+              else result.get("disposition") in {"checkpoint_required", "defer"})
     status = "expected_failure" if failed else "ok"
     result.update(helper_id=entry.helper_id, operation=entry.operation, mode=request.mode,
                   promotion_status=entry.promotion_status)

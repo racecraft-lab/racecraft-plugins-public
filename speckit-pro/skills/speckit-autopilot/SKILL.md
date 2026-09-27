@@ -768,7 +768,8 @@ Never Stop in
 [`phase-execution.md`](./references/phase-execution.md#blocked-actions-mid-run-fall-back-or-defer-never-stop),
 report that checkpoint with one consolidated `AskUserQuestion` request, print
 the same question as plain text in the final message, and list every fallback
-taken and every deferred item.
+taken and every deferred item, including each entry of the ledger's `deferred`
+list.
 
 ## Workflow File Update Protocol
 
@@ -785,15 +786,19 @@ directions; do not infer a broader precedence rule.
 
 - **Resume:** `/speckit-pro:speckit-autopilot workflow.md --from-phase
   <next-pending-phase>` — the workflow file persists all state.
-- **Repair budget exhausted:** checkpoint with the exact gate output
-  and remaining work; no phase or nested worker has an independent retry budget.
-  One operator-approved application correction past it uses
-  `authorize-corrective-exception`; a class-scoped exception covers later
-  same-class fixes through `reserve-class-correction`. An explicit
-  `--stage implement` opens the implement stage's own allowance through
-  `begin-stage-epoch`. After an operator-ordered re-plan, `begin-replan-epoch`
-  opens a fresh allowance with the operator's approval; never reset or bypass
-  the ledger otherwise.
+- **Repair budget exhausted: defer and continue.** An exhausted allowance
+  returns `disposition=defer`: the ledger refuses that dispatch and records
+  the blocked unit in its `deferred` list. Record the deferred item with the
+  exact gate output, keep executing every independent task, increment, and
+  gate, and list it in the one end-of-run consolidated request. It is never a
+  mid-run question and never a stop; no phase or nested worker has an
+  independent retry budget. `authorize-corrective-exception` (one
+  operator-approved application correction; a class-scoped exception covers
+  later same-class fixes through `reserve-class-correction`) and
+  `begin-replan-epoch` are end-of-run tools that act on the operator's answer
+  to that request. An explicit `--stage implement` opens the implement stage's
+  own allowance through `begin-stage-epoch`. Never reset or bypass the ledger
+  otherwise; `checkpoint_required` and ledger integrity errors still stop.
 - **Consensus all-disagree** (Round 2): flag `[HUMAN REVIEW NEEDED]`.
   In an interactive session, ask the operator in place with
   `AskUserQuestion`, apply the answer, and continue; in an unattended run,

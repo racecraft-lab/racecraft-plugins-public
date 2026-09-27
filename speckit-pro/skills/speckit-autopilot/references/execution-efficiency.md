@@ -75,10 +75,10 @@ ownership from the caller's current workflow.
   `increment_not_in_ownership_evidence`, `no_remediation_paths`,
   `path_outside_increment_ownership`, or `path_reopens_another_increment`).
   Missing ownership evidence never grants a free allowance. A third round for
-  the same unit returns `increment_review_allowance_exhausted`: defer that
-  increment to the end-of-run request and continue with independent
-  increments. Increment allowances archive with the rest of the allowance in
-  `corrective_epochs`.
+  the same unit returns `disposition=defer` with
+  `increment_review_allowance_exhausted`: defer that increment to the
+  end-of-run request and continue with independent increments. Increment
+  allowances archive with the rest of the allowance in `corrective_epochs`.
 - `complete`: record the same `dispatch_id` and actual
   `outcome=completed|failed|unknown|expected_tdd_red`. Expected assertion RED is
   implementation work, not corrective work. Infrastructure failures remain
@@ -127,10 +127,13 @@ ownership from the caller's current workflow.
   revalidates G5 before G6. A second continuation or a failed/unknown source
   remains blocked; this action is not a general repair-budget reset.
 - `authorize-corrective-exception`: when an ordinary corrective `reserve` for a
-  reproduced application failure returns `corrective_run_budget_exhausted` or
-  `failure_family_budget_exhausted` (a repeat of an already reserved family
-  whose work has completed or failed), checkpoint and obtain explicit operator
-  approval for that exact correction. Pass a new `dispatch_id`, the approved
+  reproduced application failure returns `disposition=defer` with
+  `corrective_run_budget_exhausted` or `failure_family_budget_exhausted` (a
+  repeat of an already reserved family whose work has completed or failed),
+  defer that correction and name it in the one end-of-run consolidated
+  request. This is an end-of-run tool, never a mid-run question: call it only
+  after the operator approves that exact correction in answer to that request.
+  Pass a new `dispatch_id` (or the deferred one), the approved
   `failure_invariant`, and the approved correction's `scope_sha256`, plus the
   operator's independently observed `native_observation`: `native_event_id`,
   `run_id`, `action=corrective_exception_approved`, `failure_invariant`,
@@ -159,13 +162,18 @@ ownership from the caller's current workflow.
   existing test-file classifier, never a production path. Every earlier
   correction in the class must have completed; a failed or unknown one needs
   the operator. One approval covers at most two follow-ups, recorded in the
-  exception's `follow_up_dispatch_ids`. A different file, signature, or change
-  kind, a reused dispatch ID, an exact-diff exception, or an archived epoch is
-  refused without mutation.
+  exception's `follow_up_dispatch_ids`. A third follow-up returns
+  `disposition=defer` with `failure_class_allowance_exhausted`: defer it to the
+  end-of-run request. A different file, signature, or change kind, a reused
+  dispatch ID, an exact-diff exception, or an archived epoch is refused
+  without mutation.
 - `begin-replan-epoch`: when the operator orders a re-plan (a rescope, or a
   `--from-phase` rerun of planning phases the run already completed) after the
-  run has spent corrective allowance, ask the operator to approve a fresh
-  allowance for the re-plan. Pass the explicit repo-relative `spec_file` and
+  run has spent corrective allowance, open a fresh allowance for the re-plan
+  with the operator's approval. This is an end-of-run tool, never a mid-run
+  question: offer the re-plan in the one end-of-run consolidated request, or
+  take it from an operator-ordered rerun. Pass the explicit repo-relative
+  `spec_file` and
   the operator's independently observed `native_observation`:
   `native_event_id`, `run_id`, `action=replan_epoch_approved`, and
   `spec_sha256`, the digest of that spec file as it stands now. Every dispatch
@@ -189,8 +197,8 @@ ownership from the caller's current workflow.
   `stage-transition:implement`, keeps the invariant registry and its binding,
   and resets the counters. A stage opens one allowance per run: a resumed
   `--stage implement` invocation returns `stage_epoch_opened=false` and
-  changes nothing. Ask the operator only when this stage's own allowance is
-  spent by real corrections.
+  changes nothing. When real corrections spend this stage's own allowance,
+  defer the blocked work to the end-of-run request; never ask mid-run.
   A metadata-only correction (for example a task verb reworded so the task
   routes to verification) still reserves an ordinary cycle. Admitting it
   without one needs a runner-observed baseline of the task definitions to
@@ -244,6 +252,27 @@ limit: elapsed time never stops it. `checkpoint_due` calls for a
 completed-work checkpoint (commit and push progress) every 45 minutes, and the
 run then continues. `elapsed_seconds` reports time for the record and excludes
 only separately evidenced human-UAT/external-approval waits.
+If `disposition=defer`, the helper refused that one dispatch because its
+allowance is spent: an exhausted failure family or run budget, a spent
+reservation (`corrective_cycle_failed_no_nested_retry` or
+`corrective_cycle_already_closed`), `increment_review_allowance_exhausted`, or
+`failure_class_allowance_exhausted`. The envelope status is
+`expected_failure` and no reservation was made, so do not dispatch it. The
+ledger records the refusal once in its `deferred` list and returns the same
+entry as `deferred`: `dispatch_id`, `reason`, `unit_kind` (`failure_family`,
+`increment`, or `failure_class`), `unit`, and `deferred_at`. A repeated
+`reserve` for the same `dispatch_id` returns that entry again. Record the
+deferred item with the task or gate it blocks and the exact gate output, then
+keep executing every independent task, increment, gate, and Post check. A
+deferral is never a stop and never a mid-run question. At the end, list every
+entry of the current `deferred` list in the one end-of-run consolidated
+request. `authorize-corrective-exception` and `begin-replan-epoch` are
+end-of-run tools that act on the operator's answer to that request. A new
+allowance archives the list into `corrective_epochs` with the rest of the
+spent allowance. The ledger validates every entry on each call: an entry whose
+allowance the ledger does not show as spent, a duplicate, or an out-of-order
+clock is an integrity failure that stops the run.
+
 If `disposition=checkpoint_required`, stop new work and record remaining work,
 owned in-flight dispatches, unknown effects, consumed reservations, elapsed
 time, and the required operator decision. Never call this completion or a

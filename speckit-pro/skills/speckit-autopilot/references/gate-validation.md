@@ -3,15 +3,16 @@
 Programmatic gate checks performed after each SDD phase. Before every repair,
 use [Bounded Execution and Verification](./execution-efficiency.md): one corrective
 cycle per stable failure family and two across the spec, including nested work.
-No gate has an independent retry allowance. Time/budget exhaustion checkpoints
-remaining work; a failed requirement or security gate never becomes a pass.
+No gate has an independent retry allowance. An exhausted repair budget defers
+that gate's repair to the end-of-run request; a failed requirement or security
+gate never becomes a pass.
 
 ## Contents
 
 - [Gate Definitions](#gate-definitions) — G0 (prerequisites) through G7 (post-implement), with Check + Auto-Fix + Failure Escalation per gate
 - [Gate Summary Table](#gate-summary-table) — at-a-glance phase → gate → script mapping
 - [Additional Verification (Extension Commands)](#additional-verification-extension-commands) — `/speckit.verify`, `/speckit.verify-tasks`
-- [Failure Escalation Protocol](#failure-escalation-protocol) — when to STOP vs. retry vs. skip-and-log
+- [Failure Escalation Protocol](#failure-escalation-protocol) — defer an exhausted repair and ask once at the end
 
 ## Gate Definitions
 
@@ -612,16 +613,23 @@ skip the check and log a recommendation to install it.
 
 ## Failure Escalation Protocol
 
-When the shared corrective reservation is exhausted:
+When the shared corrective reservation is exhausted, the ledger returns
+`disposition=defer` and records the blocked unit in its `deferred` list:
 
-1. **STOP** execution — do not proceed to the next phase
-2. **Present context** to human:
+1. **Defer the repair.** Record the deferred gate with its failure. Never
+   pass the gate, and never start work that depends on it.
+2. **Continue independent work.** Keep executing every task, increment, gate,
+   and Post check that does not depend on the deferred gate. It is never a
+   mid-run question.
+3. **Ask once, at the end.** Put the gate into the one end-of-run consolidated
+   request with its context:
    - Which gate failed
    - What the specific failure is
    - What auto-fix attempts were made
    - Research findings from codebase exploration and web search (for G4/G6)
-3. **Wait for guidance** — the human can:
-   - Provide a fix and resume: "Fix X, then continue"
-   - Skip the gate: "Proceed anyway" (logged as a deliberate override)
-   - Abort: "Stop the autopilot"
-4. **Resume** from the failed phase after human intervention
+
+   The operator can approve one correction (`authorize-corrective-exception`)
+   or a re-plan (`begin-replan-epoch`), provide a fix and resume, skip the
+   gate ("Proceed anyway", logged as a deliberate override), or stop the
+   autopilot.
+4. **Resume** from the failed phase after the operator answers.

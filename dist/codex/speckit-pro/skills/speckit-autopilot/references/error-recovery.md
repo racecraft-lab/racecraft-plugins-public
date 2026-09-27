@@ -31,10 +31,13 @@ when its disposition permits. Resume and agent replacement never reset budget.
   completion order. The resolver reserves one slot for recovery. An invalid
   concurrency override forces wave size 1 and emits a warning.
 - **Gate needs repair:** Use the shared one-cycle-per-family/two-cycle-per-spec
-  reservation limits. On exhaustion, checkpoint and show the gate output. An
-  explicit `--stage implement` opens the implement stage's own allowance
-  through `begin-stage-epoch`. After an operator-ordered re-plan,
-  `begin-replan-epoch` opens a fresh allowance with the operator's approval
+  reservation limits. An exhausted allowance returns `disposition=defer`:
+  record the deferral with the gate output, keep executing every independent
+  task, increment, and gate, and list it in the one end-of-run consolidated
+  request. It is never a mid-run question. `authorize-corrective-exception`
+  and `begin-replan-epoch` are end-of-run tools that act on the operator's
+  answer to that request. An explicit `--stage implement` opens the implement
+  stage's own allowance through `begin-stage-epoch`
   ([Bounded Execution](./execution-efficiency.md)).
   Repeated failures with one signature in one test file are one class: one
   approval covers its follow-ups through `reserve-class-correction`. See
