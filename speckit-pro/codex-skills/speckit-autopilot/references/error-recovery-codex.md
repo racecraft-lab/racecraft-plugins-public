@@ -66,6 +66,11 @@ $speckit-autopilot workflow.md --from-phase <next-pending-phase>
   own fallback, or defer that task and keep executing independent work, then
   ask once at the end. See
   [Blocked Actions Mid-Run: Fall Back or Defer, Never Stop](./phase-execution-codex.md#blocked-actions-mid-run-fall-back-or-defer-never-stop).
+- **Plugin updated mid-run:** A plugin cache that changed or vanished, or an
+  agent refreshed after phase work began, is not a stop. Re-resolve the plugin
+  root, retry the failed bookkeeping calls once, record the drift, and
+  continue; any restart goes into the end-of-run request. See
+  [Plugin Update Mid-Run: Record, Re-resolve, Continue](./phase-execution-codex.md#plugin-update-mid-run-record-re-resolve-continue).
 - **Lifecycle action unavailable, or a subagent appears stuck/frozen:** Missing
   `close_agent` is expected on hosted Responses Multi-agent and MUST NOT stop
   the run. When explicit closure is exposed but returns already-gone, log and

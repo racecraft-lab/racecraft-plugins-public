@@ -71,7 +71,18 @@ completed specs.
 
 Read the archive extension command contract before making archive edits when it
 is present. Treat it as the local policy for source directories, memory files,
-cleanup eligibility, and extension hooks.
+cleanup eligibility, and extension hooks, with one override: SpecKit Pro
+replaces the contract's agent-context step (stock `stn1slv/spec-kit-archive`
+step 5.3, vendored fork step 6.3) with step 3 below. If you also run the
+archive command alongside step 2, scope it so it cannot reach that step:
+
+```text
+/speckit-archive-run specs/<merged-spec-dir> --spec-only --plan-only --changelog-only
+```
+
+Several scope modifiers form a union, so this run updates
+`.specify/memory/spec.md`, `plan.md`, and `changelog.md` and leaves the agent
+context files alone.
 
 Then update the project state in this order:
 
@@ -88,7 +99,7 @@ Then update the project state in this order:
    files ONLY to remove or correct references that still describe the merged
    spec as pending, in progress, or blocking downstream work. Never append
    per-spec history entries (archive notes, Active Technologies bullets, or
-   Recent Changes bullets) to agent context files — the archive report and
+   Recent Changes bullets) to agent context files. The archive report and
    `.specify/memory/` records are the system of record for history, and agent
    context files must stay small (Codex reads AGENTS.md under a 32 KiB budget).
 4. Update `docs/ai/specs/.process/autopilot-state.json` only if it exists and
@@ -96,8 +107,18 @@ Then update the project state in this order:
    completed archive state, with the cleanup applied and post-merge archive
    phase completed.
 5. Remove the completed active spec directory under `specs/`. Keep `specs/.gitkeep`.
-6. Regenerate the active spec index with the repository's existing generator,
-   then run its `--check` mode.
+6. Regenerate the active spec index with SpecKit Pro's runner helpers.
+   Send each request as one JSON object on stdin to
+   `resolved_python -m speckit_pro_runner`, run from the repository root. Run
+   runner helper `generate-spec-index-write` in `apply` mode first:
+   ```json
+   {"schema_version":"1.0","request_id":"archive-cleanup-spec-index-write","helper_id":"generate-spec-index-write","operation":"generate-spec-index-write","mode":"apply","inputs":{"repo_root":"."}}
+   ```
+   Then run runner helper `generate-spec-index-check`. A `validation_failure`
+   result means the index is still stale; do not commit until it passes:
+   ```json
+   {"schema_version":"1.0","request_id":"archive-cleanup-spec-index-check","helper_id":"generate-spec-index-check","operation":"generate-spec-index-check","mode":"read_only","inputs":{"repo_root":"."}}
+   ```
 
 Prefer local helper scripts over hand-maintaining generated files. If the repo
 has docs-site generated reference pages or generated plugin payloads affected by
@@ -130,7 +151,7 @@ checks if plugin or generated payload files changed. Typical checks:
 
 - active spec listing shows only expected active specs and `specs/.gitkeep`
 - `resolved_python -m json.tool docs/ai/specs/.process/autopilot-state.json`
-- SpecKit index generation and `--check`
+- `generate-spec-index-write` in `apply` mode, then `generate-spec-index-check`
 - docs-site reference generation/checks when reference pages changed
 - payload builder and payload parity checks when plugin source changed
 - `git diff --check`

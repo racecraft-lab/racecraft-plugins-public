@@ -483,8 +483,9 @@ class AutonomyBoundarySourceContractTests(unittest.TestCase):
     def test_resume_re_attests_a_stale_boundary_before_the_coverage_guard(self) -> None:
         """A new thread's writable roots make the persisted boundary stale (issue 747).
 
-        The resume must re-attest it up front with one operator request, before
-        the Step 1.1 guard, for every stage, including a plan-stage resume.
+        The resume must re-attest it up front, before the Step 1.1 guard, for
+        every stage, including a plan-stage resume. Since issue 764 a covered
+        inventory asks no question and an uncovered action is deferred.
         """
         skill = " ".join(CODEX_AUTOPILOT_SKILL.read_text(encoding="utf-8").split())
         prerequisites = (
@@ -507,8 +508,8 @@ class AutonomyBoundarySourceContractTests(unittest.TestCase):
             section,
         )
         self.assertIn("a branch, not a stop", section)
-        self.assertIn("one consolidated operator request", section)
-        self.assertIn("`authorization.status=explicit_user`", section)
+        self.assertIn("standing policy coverage", section)
+        self.assertIn("the one end-of-run request", section)
         self.assertIn("never as a guard-failure repair", section)
         self.assertIn("A mismatch still blocks", section)
         self.assertIn("at any stage", skill)
@@ -688,6 +689,162 @@ class BlockedActionDeferralSourceContractTests(unittest.TestCase):
         self.assertIn(BLOCKED_ACTION_HEADING, audit)
         self.assertIn("Action blocked mid-run", recovery)
         self.assertIn(BLOCKED_ACTION_HEADING, recovery)
+
+
+PLUGIN_DRIFT_HEADING = "Plugin Update Mid-Run: Record, Re-resolve, Continue"
+
+
+class MidRunPluginDriftSourceContractTests(unittest.TestCase):
+    """A plugin update during a run is recorded, never a restart stop (issue 767)."""
+
+    def assert_drift_rules(self, section: str) -> None:
+        for phrase in (
+            "at setup or run start",
+            "changed or vanished",
+            "re-resolve",
+            "`plugin_root`",
+            "Installed Runtime Contract",
+            "retry each failed bookkeeping call once",
+            "record the drift",
+            "never a stop",
+            "single end-of-run consolidated request",
+            "not a deferred task",
+            "correctness stops",
+        ):
+            self.assertIn(phrase, section)
+
+    def test_codex_phase_seven_records_drift_and_continues(self) -> None:
+        references = CODEX_AUTOPILOT_SKILL.parent / "references"
+        phase = _flat(references / "phase-execution-codex.md")
+        section = _section(
+            phase, f"### {PLUGIN_DRIFT_HEADING}", "## PR Packet and Body Boundary"
+        )
+        self.assertLess(phase.index(f"### {BLOCKED_ACTION_HEADING}"), phase.index(section))
+        self.assert_drift_rules(section)
+        # Codex 0.158 re-reads a registered role file at spawn time, but the
+        # role list is fixed when the session starts.
+        self.assertIn("next `spawn_agent`", section)
+        self.assertIn("when the session starts", section)
+
+    def test_codex_restart_rule_is_scoped_to_setup_or_run_start(self) -> None:
+        skill = _flat(CODEX_AUTOPILOT_SKILL)
+        prerequisites = _flat(CODEX_AUTOPILOT_SKILL.parent / "references" / "prerequisites-codex.md")
+        recovery = _flat(CODEX_AUTOPILOT_SKILL.parent / "references" / "error-recovery-codex.md")
+        for text in (skill, prerequisites):
+            self.assertNotIn("cannot reload changed custom agents safely", text)
+            self.assertNotIn("cannot load refreshed custom-agent definitions safely", text)
+        guard = _section(skill, "Do not translate this skill into Claude-only", "## Prerequisites — Model")
+        mapping = _section(skill, "Concrete Codex mapping:", "Spawn each agent with")
+        availability = _section(skill, "**Step 0.10: Codex Agent Availability Check**", "**Step 0.10b")
+        preflight = _section(prerequisites, "### 0.10 Codex Agent Availability Check", "### 0.10b")
+        for text in (guard, mapping, availability, preflight):
+            self.assertIn("at setup or run start", text)
+            self.assertIn(PLUGIN_DRIFT_HEADING, text)
+        self.assertIn("next `spawn_agent`", preflight)
+        self.assertIn("Plugin updated mid-run", recovery)
+        self.assertIn(PLUGIN_DRIFT_HEADING, recovery)
+
+    def test_claude_phase_seven_mirrors_the_drift_rule(self) -> None:
+        references = CLAUDE_AUTOPILOT_SKILL.parent / "references"
+        phase = _flat(references / "phase-execution.md")
+        section = _section(phase, f"#### {PLUGIN_DRIFT_HEADING}", "#### Append Contract")
+        self.assertLess(phase.index(f"#### {BLOCKED_ACTION_HEADING}"), phase.index(section))
+        self.assert_drift_rules(section)
+        self.assertIn("`validate-agent-install`", section)
+        self.assertIn("`/reload-plugins`", section)
+        prerequisites = _flat(references / "prerequisites.md")
+        install_check = _section(prerequisites, "If the check fails, STOP.", "## Step 0.0c")
+        self.assertIn("at setup or run start", install_check)
+        self.assertIn(PLUGIN_DRIFT_HEADING, install_check)
+        recovery = _flat(references / "error-recovery.md")
+        self.assertIn("Plugin updated mid-run", recovery)
+        self.assertIn(PLUGIN_DRIFT_HEADING, recovery)
+
+
+class StandingPolicyPreflightSourceContractTests(unittest.TestCase):
+    """A ratified plan's ordinary work needs no up-front question (issue 764)."""
+
+    def setUp(self) -> None:
+        references = CODEX_AUTOPILOT_SKILL.parent / "references"
+        phase = _flat(references / "phase-execution-codex.md")
+        self.preflight = _section(
+            phase, "### Autonomy Boundary Preflight", "1. Read mode from `CONFIDENCE_GATE_MODE`"
+        )
+        self.resume = _section(
+            _flat(references / "prerequisites-codex.md"),
+            "### 0.8c Resumed Autonomy Boundary Preflight",
+            "### 0.9",
+        )
+        self.skill = _flat(CODEX_AUTOPILOT_SKILL)
+
+    def test_covered_inventory_asks_no_question_including_a_stage_change(self) -> None:
+        for phrase in (
+            "`render-egress-authorization`",
+            "`scope=standing`",
+            "standing policy",
+            "the operator's autopilot invocation in this thread and the ratified plan",
+            "only the standing policy's classes",
+            "asks no question",
+            "planning-to-implementation stage change",
+        ):
+            self.assertIn(phrase, self.preflight)
+        for phrase in ("asks no question", "planning-to-implementation stage change"):
+            self.assertIn(phrase, self.resume)
+        self.assertNotIn("A denial or no answer stops the run", self.resume)
+        self.assertIn("standing policy", self.skill)
+        self.assertIn("asks no question", self.skill)
+        self.assertNotIn("re-attest it with one operator request up front", self.skill)
+
+    def test_uncovered_destination_is_deferred_to_the_end_of_run_request(self) -> None:
+        for phrase in (
+            "a new destination or data class",
+            "never an up-front question",
+            "the one end-of-run request",
+            BLOCKED_ACTION_HEADING,
+        ):
+            self.assertIn(phrase, self.preflight)
+        self.assertNotIn("STOP before Phase 7", self.preflight)
+        self.assertNotIn("A blocked result stops before Phase 7", self.skill)
+        self.assertIn("never an up-front question", self.resume)
+
+    def test_ratified_boundary_file_edit_is_deferred_not_a_start_blocker(self) -> None:
+        for phrase in (
+            "boundary-file edit named in the ratified plan",
+            "never blocks the start of the run",
+            "the reviewer trusts `AGENTS.md`",
+            "never dispatch that task",
+        ):
+            self.assertIn(phrase, self.preflight)
+
+    def test_missing_standing_policy_is_a_setup_gap_and_the_run_proceeds(self) -> None:
+        for phrase in ("setup gap", "reported once", "The run still proceeds"):
+            self.assertIn(phrase, self.preflight)
+        for setup in ("speckit-install", "speckit-upgrade"):
+            with self.subTest(setup=setup):
+                text = _flat(CODEX_AUTOPILOT_SKILL.parents[1] / setup / "SKILL.md")
+                self.assertIn("`render-egress-authorization`", text)
+                self.assertIn("`scope=standing`", text)
+                self.assertIn("never `auto_review.policy`", text)
+                self.assertIn("never writes", text)
+
+    def test_claude_autopilot_has_no_autonomy_preflight_to_mirror(self) -> None:
+        references = CLAUDE_AUTOPILOT_SKILL.parent / "references"
+        texts = [_flat(CLAUDE_AUTOPILOT_SKILL)] + [_flat(path) for path in sorted(references.glob("*.md"))]
+        for text in texts:
+            self.assertNotIn("Autonomy Boundary Preflight", text)
+            self.assertNotIn("auto_review", text)
+
+    def test_deferred_action_record_passes_the_phase_seven_guard(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            state = _autonomy_boundary_state(root)
+            boundary = state["autonomy_boundary"]
+            action = boundary["actions"][0]
+            action["disposition"] = "operator_action_required"
+            action["authorization"]["status"] = "missing"
+            boundary["status"] = "operator_action_required"
+            state["plan"][1]["status"] = "in_progress"
+            self.assertEqual(_autonomy_errors(state, root), [])
 
 
 class AutonomyBoundaryAuthorizationTests(unittest.TestCase):
@@ -1841,6 +1998,8 @@ def build_suite() -> unittest.TestSuite:
         StateStatusSchemaTests,
         AutonomyBoundarySourceContractTests,
         BlockedActionDeferralSourceContractTests,
+        MidRunPluginDriftSourceContractTests,
+        StandingPolicyPreflightSourceContractTests,
         AutonomyBoundaryAuthorizationTests,
         AutonomyBoundaryFreshnessTests,
         AutonomyBoundaryMalformedExecutionTests,

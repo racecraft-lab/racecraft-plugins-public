@@ -169,9 +169,12 @@ Bind the workflow to actual Codex primitives:
 Do not translate this skill into Claude-only primitives such as legacy
 task-list tools or legacy Claude agent/shell placeholders. Do not read the
 bundled TOML templates and inline them as ad hoc prompts. Validate that the
-required custom subagents are installed, then spawn them by agent name. If any
-required SpecKit Pro subagent is missing, STOP and instruct the user to run
-`$install` from the SpecKit Pro plugin, then restart Codex.
+required custom subagents are installed, then spawn them by agent name. Before
+any phase work, at setup or run start, if any required SpecKit Pro subagent is
+missing, STOP and instruct the user to run `$install` from the SpecKit Pro
+plugin, then restart Codex. After phase work has begun, a plugin update or agent
+refresh is never a stop: follow §Plugin Update Mid-Run: Record, Re-resolve,
+Continue in [phase-execution-codex.md](./references/phase-execution-codex.md).
 
 ## Prerequisites — Model
 
@@ -278,8 +281,9 @@ Concrete Codex mapping:
   agents for Codex.
 - Resolve the installed agent from `.codex/agents/<agent>.toml` first, then
   `~/.codex/agents/<agent>.toml`
-- If the installed agent is missing, STOP and tell the user to run `$install`,
-  then restart Codex
+- If the installed agent is missing at setup or run start, STOP and tell the
+  user to run `$install`, then restart Codex. Mid-run, follow §Plugin Update
+  Mid-Run: Record, Re-resolve, Continue instead
 - Build the phase prompt in the parent session
 - Call `spawn_agent` with `agent_type="<installed-agent-name>"` plus the
   workflow prompt
@@ -406,8 +410,8 @@ See [prerequisites-codex.md](./references/prerequisites-codex.md) for the full p
 - **Step -1: Archive Sweep Startup** — list merged prior specs with helper
   `list-archive-candidates`, then execute the installed archive extension's
   project-local command contract directly in Codex once per `archive_order`
-  entry (`archive command: specs/<merged-spec-dir>`; none on `main` or a
-  protected branch), use the Codex-native worktree binding for path
+  entry (`archive command: specs/<merged-spec-dir> --spec-only --plan-only --changelog-only`, which keeps
+  agent context files out of scope; none on `main` or a protected branch), use the Codex-native worktree binding for path
   prerequisites, and fail closed on a broken installed extension
 - **Step 0.0: Use Runner Operations** — invoke `speckit_pro_runner` helper IDs with one JSON request on stdin
 - **Step 0.1–0.7: Environment Checks** — `check-prerequisites` JSON parsing, branch detection
@@ -480,15 +484,20 @@ See [prerequisites-codex.md](./references/prerequisites-codex.md) for the full p
   revokes or narrows it; an older run outcome alone grants nothing. When a
   persisted `autonomy_boundary` receipt exists, at any stage, probe it against
   the live boundary before the Step 1.1 coverage guard; a new thread's writable
-  roots make it stale, so re-attest it with one operator request up front, as
-  [prerequisites-codex.md](./references/prerequisites-codex.md) describes.
+  roots make it stale, so rerun the preflight up front, as
+  [prerequisites-codex.md](./references/prerequisites-codex.md) describes. A
+  covered inventory asks no question, including a planning-to-implementation
+  stage change.
 - **Step 0.9: Constitution Validation** — principle checks against current codebase
 - **Step 0.10: Codex Agent Availability Check** — Run the promoted
   `install-codex-agents` helper in `dry_run` mode against the selected project or
-  user destination and its installed model and Luna fallback choice. If any required file is
+  user destination and its installed model and Luna fallback choice. This check
+  runs at setup or run start, before any phase work. If any required file is
   missing or stale, STOP and instruct the user to run `$install`, approve the
   expected local write, and restart Codex. Do not apply the repair inside
-  autopilot: the current process cannot reload changed custom agents safely.
+  autopilot: Codex fixes its list of custom agents when the session starts. Once
+  phase work has begun, a stale or refreshed agent file is recorded, never a
+  stop: see §Plugin Update Mid-Run: Record, Re-resolve, Continue.
 - **Step 0.10b: Implementation Agent Detection** — discover `PROJECT_IMPLEMENTATION_AGENT` from `.codex/agents/`
 - **Step 0.11: Project Command Discovery** — runner helper `detect-commands` → `PROJECT_COMMANDS`, including the quality-gate slots and the one-time missing-tool question
 - **Step 0.12: Preset and Extension Detection** — runner helper `detect-presets` → `PRESET_CONVENTIONS`
@@ -642,14 +651,19 @@ predictable writes beyond current writable roots, privileged commands,
 interactive authentication, externally visible side effects, and data egress
 to a model service or other third party (including live model evaluations);
 proves each
-is runnable or already authorized; and records the result durably. A blocked
-result stops before Phase 7 with one consolidated operator action instead of
-surprising the operator from inside an implementation task. When that action
-covers data egress, it shows the operator a paste-ready authorization message
-and a proposed `auto_review.extra_policy` fragment, both rendered by runner
-helper `render-egress-authorization`; the plugin never writes either one.
+is runnable or already authorized; and records the result durably. The
+operator's invocation and the ratified plan authorize the ordinary actions in
+the repository's standing policy, which the operator installs once at setup
+(runner helper `render-egress-authorization` with `scope=standing`). When every
+action is covered, the preflight asks no question. A missing standing policy is
+reported once as a setup gap, and the run still proceeds. An uncovered action,
+including a boundary-file edit the plan names, is deferred to the one
+end-of-run request, never an up-front question. When that request covers data
+egress, it shows the operator a paste-ready authorization message and a
+proposed `auto_review.extra_policy` fragment, both rendered by the same helper;
+the plugin never writes either one.
 
-That preflight is the one normal human touchpoint. Once Phase 7 runs, one
+Once autopilot is running, human input is for exceptional cases only. Once Phase 7 runs, one
 blocked action never stops the run: take the task's own fallback, or defer that
 task and keep executing independent work, then ask once at the end. Follow
 §Blocked Actions Mid-Run: Fall Back or Defer, Never Stop in
@@ -767,7 +781,7 @@ PR URL.
   permissionMode, hooks, mcpServers restrictions for plugin agents;
   research/context capability coverage and fallback behavior
 - [Hardener Delegation](../../skills/speckit-autopilot/references/hardener-delegation.md) —
-  once-per-spec tests-only mutation hardening loop with Qwen delegation,
+  once-per-spec tests-only mutation hardening loop with gateway delegation,
   candidate inspection, primary-model fallback, stop rule, and record
 - [Token Discipline](../../skills/speckit-autopilot/references/token-discipline.md) —
   Opt-in compressed vocabulary for inter-agent transcripts
