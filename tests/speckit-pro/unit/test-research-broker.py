@@ -527,7 +527,7 @@ class ProviderTests(BrokerCase):
         self.assertTrue(docs["chunks"])
         self.assertEqual(docs["chunks"][0]["provenance"]["provider"], "context7")
         self.assertTrue(docs["chunks"][0]["provenance"]["source_url"].startswith("https://github.com/psf/requests"))
-        for method, url, headers, _ in http.requests:
+        for _method, _url, headers, _ in http.requests:
             self.assertNotIn("Authorization", headers)
         self.assertEqual([r[1].split("?")[0] for r in http.requests], [rb.CONTEXT7_SEARCH_URL, rb.CONTEXT7_CONTEXT_URL])
 

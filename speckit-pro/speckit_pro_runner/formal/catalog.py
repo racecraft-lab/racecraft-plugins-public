@@ -164,8 +164,8 @@ def validate_model_paths(model: dict[str, Any], root: Path, selected: dict[str, 
         raise SelectionError("model.inputs must explicitly list model, configuration, and imported files")
     if len(set(inputs)) != len(inputs):
         raise SelectionError("model.inputs cannot repeat paths")
-    suffix = ".qnt" if model.get("language") == "quint" else ".tla"
-    for field, suffix in (("module", suffix), ("config", ".cfg")):
+    model_suffix = ".qnt" if model.get("language") == "quint" else ".tla"
+    for field, suffix in (("module", model_suffix), ("config", ".cfg")):
         path = require_text(model[field], field)
         if path not in inputs or not path.endswith(suffix):
             raise SelectionError(f"{field} must be a declared {suffix} input")

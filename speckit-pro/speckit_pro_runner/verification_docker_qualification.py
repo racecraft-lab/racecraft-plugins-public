@@ -75,7 +75,7 @@ def event_sequence_reasons(events: Any) -> list[str]:
                 ("image", "inspect"), ("version",), ("info",)]
     if not isinstance(events, list) or len(events) != len(expected):
         return ["docker_event_sequence_incomplete"]
-    for event, prefix in zip(events, expected):
+    for event, prefix in zip(events, expected, strict=True):
         if not isinstance(event, dict):
             return ["docker_event_shape_invalid"]
         argv = event.get("argv")

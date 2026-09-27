@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Install and run the pinned Python lint tools for the PR Checks lint jobs.
 
-Ruff (pyflakes F rules, scoped by ruff.toml) and mypy (the mypy.ini allowlist)
+Ruff (the F, B, and BLE rules selected in ruff.toml) and mypy (the mypy.ini allowlist)
 are dev-only CI tools, never runtime dependencies. Their versions are pinned
 here so the workflow and local runs use the same ones. Install into a virtual
 environment locally; the system Python may refuse pip installs.

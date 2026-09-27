@@ -425,7 +425,7 @@ class NativeEvalRuntimeTests(unittest.TestCase):
         def worker() -> None:
             try:
                 results.append(runtime._load_product_apis())
-            except BaseException as exc:  # pragma: no cover - asserted below
+            except BaseException as exc:  # pragma: no cover - asserted below  # noqa: BLE001
                 errors.append(exc)
 
         with (

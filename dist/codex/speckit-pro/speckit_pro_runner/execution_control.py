@@ -30,7 +30,7 @@ RUNNER_BYPRODUCT_DIRECTORIES = frozenset({(".process", "execution-control"), (".
 def is_runner_byproduct(relative: str) -> bool:
     """True for a repo-relative path inside a runner-owned ledger or evidence directory."""
     parts = PurePosixPath(relative).parts
-    return any(pair in RUNNER_BYPRODUCT_DIRECTORIES for pair in zip(parts, parts[1:]))
+    return any(pair in RUNNER_BYPRODUCT_DIRECTORIES for pair in zip(parts, parts[1:], strict=False))
 
 
 def workflow_process_directory(workflow_name: str) -> PurePosixPath:

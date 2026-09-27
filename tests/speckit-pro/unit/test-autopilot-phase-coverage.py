@@ -1064,7 +1064,7 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
                 candidate = json.loads(json.dumps(state))
                 for marker, review_order in zip(
                     candidate["pr_marker_plan"]["markers"],
-                    review_orders,
+                    review_orders, strict=True
                 ):
                     marker["review_order"] = review_order
                 exit_code, report = self.run_validator(workflow_text(), candidate)
@@ -1785,7 +1785,7 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
                 "verification report",
             )
             for schema_path, error_bucket, schema_label in zip(
-                local_schema_paths, schema_error_buckets, schema_labels,
+                local_schema_paths, schema_error_buckets, schema_labels, strict=True
             ):
                 clean_schema_bytes = schema_path.read_bytes()
                 schema_path.write_bytes(clean_schema_bytes + b"\n")

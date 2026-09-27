@@ -61,7 +61,7 @@ jobs:
         run: pnpm --dir docs-site install --frozen-lockfile
       - name: Check Python, TypeScript, Swift and Quint implementation traces
         if: runner.os == 'macOS'
-        run: python3 tests/speckit-pro/unit/test-formal-traces.py --apalache-jar .specify/tools/formal/apalache-0.62.2/apalache.jar --quint-root .specify/tools/formal/quint-0.32.0 --typescript-compiler docs-site/node_modules/.pnpm/typescript@6.0.3/node_modules/typescript/bin/tsc --typescript-type-roots docs-site/node_modules/.pnpm/@types+node@24.13.2/node_modules/@types
+        run: python3 tests/speckit-pro/unit/test-formal-traces.py --apalache-jar .specify/tools/formal/apalache-0.62.2/apalache.jar --quint-root .specify/tools/formal/quint-0.32.0 --typescript-from-docs-site
       - name: Check the same implementation traces with TLC
         if: runner.os == 'macOS'
-        run: python3 tests/speckit-pro/unit/test-formal-traces.py --checker tlc --apalache-jar .specify/tools/formal/apalache-0.62.2/apalache.jar --tlc-jar .specify/tools/formal/tlc-1.7.4/tla2tools.jar --typescript-compiler docs-site/node_modules/.pnpm/typescript@6.0.3/node_modules/typescript/bin/tsc --typescript-type-roots docs-site/node_modules/.pnpm/@types+node@24.13.2/node_modules/@types
+        run: python3 tests/speckit-pro/unit/test-formal-traces.py --checker tlc --apalache-jar .specify/tools/formal/apalache-0.62.2/apalache.jar --tlc-jar .specify/tools/formal/tlc-1.7.4/tla2tools.jar --typescript-from-docs-site

@@ -767,7 +767,7 @@ def run_moc_orphan(argv: list[str]) -> int:
     if argv:
         try:
             violations = scan_moc_orphans(Path(argv[0]))
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001 - boundary: any failure becomes an explicit error
             print(f"ERROR: validate-spec-lifecycle-contracts.py --moc-orphan: internal failure ({exc.__class__.__name__}: {exc})", file=sys.stderr)
             return 2
         return 1 if violations > 0 else 0
@@ -777,13 +777,13 @@ def run_moc_stale(argv: list[str]) -> int:
     if argv:
         try:
             violations = scan_stale_moc_links(Path(argv[0]), emit=True)
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001 - boundary: any failure becomes an explicit error
             print(f"ERROR: validate-spec-lifecycle-contracts.py --moc-stale: internal failure ({exc})", file=sys.stderr)
             return 2
         return 1 if violations else 0
     try:
         return run_counted(unittest.defaultTestLoader.loadTestsFromTestCase(ValidateMocStaleIndex), label="validate-spec-lifecycle-contracts", allow_live_specs=True)
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - boundary: any failure becomes an explicit error
         print(f"ERROR: validate-spec-lifecycle-contracts.py --moc-stale: internal failure ({exc})", file=sys.stderr)
         return 2
 

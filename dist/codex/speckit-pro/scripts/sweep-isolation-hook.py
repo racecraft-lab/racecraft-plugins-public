@@ -250,7 +250,7 @@ def main(argv: list[str]) -> int:
         raise HookRefusal(HookReason.HOOK_MODE)
     except HookRefusal as refusal:
         return _refuse(refusal.reason)
-    except Exception:
+    except Exception:  # noqa: BLE001 - boundary: any failure becomes an explicit error
         # Every other failure, named or not, still fails closed with one reason
         # class. A traceback would exit 1, which the hook contract treats as
         # allow, and would print exception text the model must never read.

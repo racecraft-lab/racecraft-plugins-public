@@ -4103,7 +4103,7 @@ def sweep_analyst_payload(inputs: dict[str, Any], comment_id: str) -> dict[str, 
         return sweep_error(
             f"matched_lines must be an array of 1-based integers for comment {comment_id}"
         )
-    if any(earlier >= later for earlier, later in zip(matched_lines, matched_lines[1:])):
+    if any(earlier >= later for earlier, later in zip(matched_lines, matched_lines[1:], strict=False)):
         return sweep_error(f"matched_lines must ascend for comment {comment_id}")
     if inputs.get("lines") is not None:
         # The leg fixes the request shape, so a request carrying both shapes is a
@@ -5568,7 +5568,7 @@ def _spec_index_zone_positions(lines: list[str], path: Path) -> dict[str, tuple[
         intervals.append((start, end, zone))
 
     intervals.sort()
-    for (_, previous_end, _), (next_start, _, _) in zip(intervals, intervals[1:]):
+    for (_, previous_end, _), (next_start, _, _) in zip(intervals, intervals[1:], strict=False):
         if next_start <= previous_end:
             raise SpecIndexRenderError(f"overlapping GENERATED marker zones in: {path}")
     return positions
@@ -7028,7 +7028,7 @@ def packet_body_structure_failures(data: dict[str, Any], body_text: str) -> list
                 )
                 continue
             spans.append((start_index, end_index, field_id))
-        for previous, current in zip(sorted(spans), sorted(spans)[1:]):
+        for previous, current in zip(sorted(spans), sorted(spans)[1:], strict=False):
             if previous[1] >= current[0]:
                 failures.append(
                     {

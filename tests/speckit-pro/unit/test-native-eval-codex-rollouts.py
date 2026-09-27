@@ -883,7 +883,7 @@ class NativeCodexDeliveryTests(unittest.TestCase):
             "[[work-item:dispatch-i1]]",
             "[[work-item:dispatch-i1]] then [[work-item:other-item]]",
         )
-        for message, expected in zip(messages, ([], ["dispatch-i1"], ["dispatch-i1", "other-item"])):
+        for message, expected in zip(messages, ([], ["dispatch-i1"], ["dispatch-i1", "other-item"]), strict=True):
             with self.subTest(message=message):
                 tree = fixture_tree()
                 tree[ROOT] = raw(root_records(message=message))

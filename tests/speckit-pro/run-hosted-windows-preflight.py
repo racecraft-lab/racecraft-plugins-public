@@ -495,7 +495,7 @@ def main(argv: list[str] | None = None) -> int:
     args = _parse_args(sys.argv[1:] if argv is None else argv)
     try:
         return _run(args)
-    except Exception as exc:  # pragma: no cover - hosted fail-safe
+    except Exception as exc:  # pragma: no cover - hosted fail-safe  # noqa: BLE001
         args.evidence_dir.mkdir(parents=True, exist_ok=True)
         (args.evidence_dir / "helper-error.txt").write_text(
             f"{type(exc).__name__}: {exc}\n", encoding="utf-8"

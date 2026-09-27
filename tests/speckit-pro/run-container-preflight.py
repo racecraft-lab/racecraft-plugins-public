@@ -855,7 +855,7 @@ def main() -> int:
         if handler is None:
             raise PreflightError(f"unsupported operation: {operation or '<empty>'}")
         return handler()
-    except Exception as exc:  # pragma: no cover - hosted fail-safe
+    except Exception as exc:  # pragma: no cover - hosted fail-safe  # noqa: BLE001
         _write_dispatch_failure(operation, exc)
         print(f"container preflight {operation or '<empty>'} failed: {exc}", file=sys.stderr)
         return 1
