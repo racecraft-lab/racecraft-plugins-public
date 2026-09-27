@@ -616,6 +616,15 @@ marker_split placeholder, packet validation placeholder, and PR mappings
 placeholder in the workflow file. `tasks.md` remains the task source, not
 authoritative marker state.
 
+Before implementation starts, write the plan as `pr-marker-plan.v1` and give
+each marker `implementation_checkpoint` `{"status": "pending"}` with no commit
+or evidence fields. A v2 plan also needs a changed-file manifest that the
+phase-coverage guard checks against the pull request's actual diff, which does
+not exist until code is written, so move to `pr-marker-plan.v2` at the first
+implementation checkpoint. In either version, a pending checkpoint needs
+`commit_sha` and `evidence_path` together, and needs them only once a phase
+result is recorded for its marker.
+
 When ordered markers each modify an existing shared file, declare `MODIFIED`
 for that path in each marker and list those marker IDs in review order in the
 changed-file manifest. Each completed marker checkpoint must change that file;
