@@ -284,6 +284,14 @@
     {
       "path": {
         "kind": "plugin_relative",
+        "value": "speckit_pro_runner/helpers/egress_authorization.py",
+        "display": "speckit_pro_runner/helpers/egress_authorization.py"
+      },
+      "sha256": "847e486f4a28ee19dfddc7e81b2fcf0b403a65362c9834c74e0a01dd2eca689a"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
         "value": "speckit_pro_runner/helpers/install.py",
         "display": "speckit_pro_runner/helpers/install.py"
       },
@@ -327,7 +335,7 @@
         "value": "speckit_pro_runner/helpers/registry.py",
         "display": "speckit_pro_runner/helpers/registry.py"
       },
-      "sha256": "08a79d2325530049088ccbf187f392b72378d016bc6a717380dd8e308b06eda4"
+      "sha256": "19720c8859bc5e8984a2230f3722713d7dbc94d292e3c53ef838ddfc398a2598"
     },
     {
       "path": {

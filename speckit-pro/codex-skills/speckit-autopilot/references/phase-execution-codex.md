@@ -1211,6 +1211,48 @@ bookkeeping path; for a plan-stage run, use the normal stage-boundary commit.
 Then **STOP before Phase 7**. A denial routes back to planning for a
 contract-preserving alternative; it never triggers a workaround.
 
+When that request includes data egress, it also carries two artifacts for the
+operator to review. Codex's automatic reviewer trusts user and developer
+messages, `AGENTS.md`, and question replies, but treats skill and plugin text
+as untrusted. It approves egress only when the transcript names the payload
+and the destination. Render both artifacts with the registered read-only
+`render-egress-authorization` runner helper. Pass the repository name, its
+default branch, and every data-egress action as `action_id`, `target` (the
+exact destination), `effect` (the data class), and an optional `purpose` (the
+task id or reason). Show its output unchanged; do not write the text by hand.
+
+- A paste-ready authorization message: one short block the operator sends as
+  a user message in this thread. It lists each action as "Send <data class>
+  from <repository> to <destination> for <purpose>". The operator's reply that
+  carries it is the explicit_user evidence described above.
+- A proposed `auto_review.extra_policy` fragment for the operator's own
+  `~/.codex/config.toml`. Codex appends `extra_policy` to the default reviewer
+  policy; `auto_review.policy` replaces the default reviewer policy, so propose
+  `extra_policy` and never `auto_review.policy`. It needs Codex 0.158 or later;
+  earlier versions ignore the key. The fragment scopes itself to checkouts whose
+  `git remote get-url --push origin` is this repository's GitHub URL, and it
+  pre-authorizes only the payload and destination of each listed action. Its
+  human stops are "Outcome rule: deny" lines that win over those grants: edits
+  to autonomy-boundary files, their schema, or their recorded digests, or to
+  `AGENTS.md` or `.codex/`; any other destination or data class; a push to the
+  default branch, a force push, a `--mirror` push, or a remote ref deletion; and
+  a remote change. The operator installs it once.
+
+The reviewer does not see every command. A command reaches the reviewer only
+when it escalates, for example a network request or a write outside the
+sandbox; a command that matches no rule runs in the sandbox without review. So
+the fragment cannot stop an in-sandbox edit to a schema or digest in the
+checkout; CI and the boundary validator catch those.
+
+The plugin never writes the authorization message or the fragment into
+`~/.codex`, into the repository's `.codex/` directory, or into `AGENTS.md`:
+the reviewer trusts `AGENTS.md`, and any pull-request branch could rewrite it. Record that the authorization was
+presented without a schema change: set each egress action's private
+`authorization.evidence` to cite the helper's `authorization_message_sha256`
+while it waits (`authorization.status=missing`), then cite that digest again
+with the operator's reply when recording `explicit_user`. The digest stays in
+the private record; the receipt and the Phase 6.5 row never carry it.
+
 When every action is `ready` or `rerouted`, set status to `ready` and continue
 with the confidence steps below. A `plan` run takes its boundary commit and
 stops at the plan terminal step even when the record is `ready`; it never

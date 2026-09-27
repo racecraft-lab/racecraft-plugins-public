@@ -12,6 +12,7 @@ from ..research_preflight import run_research_broker_preflight_helper
 from .archive_sweep import run_archive_sweep_helper
 # The two CODEX_ names are re-exported: tests read them through the registry.
 from .install import CODEX_OPTIONAL_HELPER_NAME, CODEX_REQUIRED_AGENT_NAMES, run_install_helper  # noqa: F401
+from .egress_authorization import run_egress_authorization_helper
 from .mutation import empty_mutation, run_mutation_helper, run_spec_index_write, run_sweep_apply_result
 from .pr_emission import run_pr_emission_helper
 from .promotion import promotion_record
@@ -238,6 +239,14 @@ HELPERS: dict[str, HelperEntry] = {
         "python_authoritative",
         "python_only",
         authoritative_request("research-broker-preflight"),
+    ),
+    "render-egress-authorization": HelperEntry(
+        "render-egress-authorization",
+        "render-egress-authorization",
+        None,
+        "python_authoritative",
+        "python_only",
+        authoritative_request("render-egress-authorization"),
     ),
     "resolve-claude-subagent-runtime": HelperEntry(
         "resolve-claude-subagent-runtime",
@@ -684,6 +693,8 @@ def dispatch_helper(request: Any) -> dict[str, Any]:
         return run_formal_helper(entry, request)
     if entry.helper_id == "research-broker-preflight":
         return run_research_broker_preflight_helper(entry, request)
+    if entry.helper_id == "render-egress-authorization":
+        return run_egress_authorization_helper(entry, request)
     if entry.helper_id == "list-archive-candidates":
         return run_archive_sweep_helper(entry, request)
     return run_registered_helper(entry, request)

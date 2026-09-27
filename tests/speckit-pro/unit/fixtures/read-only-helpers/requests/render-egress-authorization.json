@@ -1,0 +1,24 @@
+{
+  "schema_version": "1.0",
+  "request_id": "fixture-render-egress-authorization",
+  "helper_id": "render-egress-authorization",
+  "operation": "render-egress-authorization",
+  "mode": "read_only",
+  "inputs": {
+    "repository": "example-org/example-repo",
+    "default_branch": "main",
+    "actions": [
+      {
+        "action_id": "live-skill-eval",
+        "target": "api.example.com model service",
+        "effect": "skill prompts and spec excerpts",
+        "purpose": "task T012 live evaluation"
+      },
+      {
+        "action_id": "push-feature-branch",
+        "target": "github.com/example-org/example-repo branch feat/example",
+        "effect": "committed source changes"
+      }
+    ]
+  }
+}
