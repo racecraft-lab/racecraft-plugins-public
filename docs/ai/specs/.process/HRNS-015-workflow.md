@@ -35,7 +35,7 @@ captured during scoping.
 | Specify | `/speckit-specify` | ✅ Complete | 14 user stories, 29 current functional requirements, 40 acceptance scenarios after Clarify; G1 passed |
 | Clarify | `/speckit-clarify` | ✅ Complete | Four sessions complete; ten consensus decisions recorded; G2 passed with zero markers |
 | Plan | `/speckit-plan` | ✅ Complete | G3 passed; advisory file-based estimate not estimated because the declared Slice A inventory is partial |
-| Checklist | `/speckit-checklist` | 🔄 In Progress | Three domains, 51 items, 11 gaps resolved; G4 passed with zero markers |
+| Checklist | `/speckit-checklist` | ✅ Complete | Three domains, 51 items, 11 gaps resolved; G4 passed with zero markers |
 | Tasks | `/speckit-tasks` | ⏳ Pending | 33 tasks in 21 groups; metadata reconciled without changing definitions; sidecar valid and G5 passed with zero markers |
 | Analyze | `/speckit-analyze` | ⏳ Pending | Analysis complete for operator-directed plan review; H3–H7 remain open and spec qualification is unqualified |
 | Confidence Gate | G6.5 | ⏳ Pending | Advisory warning: composite 0.43 versus 0.90; proceed with planning review only |
@@ -602,12 +602,14 @@ Focus on Autopilot, Gate, and PR-Emission Repair requirements:
 
 ### Checklist Results
 
+Current approved-plan rerun: all three named executors completed requirements review; 67 reviewer-owned checkboxes remain unchecked. The prior pass recorded eleven repaired gaps; the current API pass verified the approved FR-024 correction. Error-handling and state-management found no new gaps.
+
 | Checklist | Items | Gaps | Spec References |
 |-----------|-------|------|-----------------|
-| api-contracts | 15 | 3 found and resolved; 0 remaining | FR-001–FR-003, FR-011–FR-016, FR-024, FR-028–FR-029 |
-| error-handling | 17 | 4 found and resolved; 0 remaining | FR-001–FR-006, FR-011–FR-014, FR-016, FR-018–FR-023, FR-028–FR-029 |
-| state-management | 19 | 4 found and resolved; 0 remaining | FR-010, FR-017–FR-019, FR-025, FR-027 |
-| **Total** | 51 | 11 found and resolved; 0 remaining | Three selected domains |
+| api-contracts | 24 | FR-024 correction verified; 0 remaining | Current contract and specification references in each item |
+| error-handling | 21 | 0 new; 0 remaining | Current failure-boundary requirements in each item |
+| state-management | 22 | 0 new; 0 remaining | Current migration, index and teardown requirements in each item |
+| **Total** | 67 | 0 remaining | All three selected domains; parent G4 passed |
 
 ### Addressing Gaps
 
@@ -1057,3 +1059,9 @@ Parent review confirmed obsolete nineteen-increment and repeated-path-blocker wo
 Owner response: “approved now GO” to the two pending decisions. Eighteen ordered delivery increments are approved under the existing strict budgets and complete remaining scope. The exact FR-024 contract sentence was added under Host request examples; only CHK022’s gap marker was removed, retaining reviewer checkbox ownership. Native marker verification returned zero gaps across spec, plan and checklists. The same-run one-time corrective exception completed; both earlier repair cycles remain consumed. Plan artifacts are being reconciled to this new approval before current G3 is revalidated. Previous G3 results are historical for the pre-approval artifact set.
 
 Approved-delivery Plan reconciliation completed in all six artifacts. Parent G3 passed with zero unresolved markers; current advisory estimate passed at 200 projected LOC from 55 declared entries (5 recognized production files). Actual delivery evidence remains separately required. Spec-index preview is a clean no-op. API checklist is being rechecked against the applied, approved FR-024 clarification; remaining Checklist domains, Tasks and Analyze follow.
+
+API checklist post-correction verification completed: 24 unique reviewer-owned unchecked items, zero gaps, no new unresolved items. Prior named consensus and its approved exact correction are fully applied and verified. Error-handling review follows.
+
+Error-handling resume: 21 unchecked requirements-review items; zero gaps. Supported setup, count-markers and scoped whitespace checks passed. No consensus needed. State-management review is next.
+
+State-management resume: 22 unchecked review items; zero gaps. No consensus required. Parent G4 passed with zero markers. Optional Git hooks are covered by the phase checkpoint.

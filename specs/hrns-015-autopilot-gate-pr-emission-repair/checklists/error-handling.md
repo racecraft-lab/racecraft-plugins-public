@@ -47,3 +47,14 @@
 **Second checklist pass**: Re-evaluated `/speckit-checklist error-handling` after the four requirements repairs. No new item was needed; CHK005, CHK009, CHK015, and CHK016 stay unchecked for reviewer evaluation, with their resolved gap markers removed.
 
 - Plan rescope reconciliation: removed FR-011–FR-013 remain compatibility baseline only. The requested thirteen-row Post behavior and HRNS-017 host-lifetime limits remain unchanged. Existing checkbox ownership is preserved; domain reevaluation is pending.
+
+
+## Approved Plan failure-boundary review
+
+- [ ] CHK019 Are missing, mismatched, or unjustified optional-extension skip reasons required to block full completion, with registry and directory absence required before the same named reason can substitute in both persisted records? [Completeness, Spec §FR-018; Plan §Execution Design by Slice]
+- [ ] CHK020 Does the recovery contract require full verification, a successful push, and a freshly retrieved matching PR head on retry after verification, push, or head-query failure, rather than relying on an earlier result? [Recovery, Spec §FR-021; Plan §Slice C2]
+- [ ] CHK021 Are approved candidate path budgets distinguished from actual scope, LOC, checkpoint, fingerprint, and hazard evidence, so missing implementation qualification cannot become a passing gate or emission result? [Acceptance Criteria, Spec §Assumptions; Plan §Approved Delivery Direction, §Execution Design by Slice]
+
+**Approved Plan checklist pass — 2026-09-26**: Re-evaluated the requested error-handling domain against the approved eighteen-part Plan and current requirement scope. CHK001–CHK018 remain preserved and unchecked. CHK019–CHK021 extend requirements-quality coverage; no missing requirement was identified. The #694 setup failure cases remain compatibility requirements rather than new repair scope.
+
+**Verification re-run — 2026-09-26**: Re-ran `/speckit-checklist error-handling` using the supported prerequisite command and canonical template fallback. Re-evaluated all 21 criteria against the current spec, Plan and contract sections; no further criterion or requirement repair was needed. All reviewer checkboxes remain unchecked.

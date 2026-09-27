@@ -47,3 +47,11 @@
 - CHK009 was resolved by Round 2 consensus: only a canonical optional extension-dependent row with a verified absent extension and identical reason-coded skip in both persisted records may satisfy full-run completion; all other skips remain blockers.
 
 - Plan rescope reconciliation: removed FR-011–FR-013 remain compatibility baseline only. The requested thirteen-row Post behavior and HRNS-017 host-lifetime limits remain unchanged. Existing checkbox ownership is preserved; domain reevaluation is pending.
+
+## Approved Plan State Review — 2026-09-26
+
+- [ ] CHK020 Does the documented absent-extension exception require both supported-registry absence and extension-directory absence, the same extension name, and the matching `extension_not_installed` reason in both persisted records? [Completeness, Spec §FR-018; Plan §Execution Design by Slice, C1a]
+- [ ] CHK021 Are executor-return requirements clear that retained native host threads alone establish neither active work nor completed cleanup, while unresolved child results or cleanup confirmations must be identified in the structured result? [Clarity, Spec §FR-019; Plan §Execution Design by Slice, C1b]
+- [ ] CHK022 Are historical formal-001 index examples specified as test-owned fixtures so the acceptance baseline does not depend on reading an active feature directory at test runtime? [Dependency, Spec §FR-010; Plan §Execution Design by Slice, B]
+
+The current state-management review applies to the approved eighteen delivery increments, fourteen stories, and twenty-six active requirements. The earlier pending reevaluation note records the preapproval checkpoint. All reviewer-owned checkboxes remain unchecked; requirements review does not establish implementation completion.
