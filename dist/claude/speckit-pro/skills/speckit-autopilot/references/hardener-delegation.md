@@ -59,8 +59,8 @@ fallback, rejection, or a renamed error as a fresh repair family.
 Preconditions, checked in this order and recorded:
 
 1. The `delegate_health`, `delegate_task`, `delegate_status`,
-   `delegate_candidate`, `delegate_apply`, and `delegate_read` tools are
-   present in this session (capability discovery).
+   `delegate_reply`, `delegate_candidate`, `delegate_apply`, and
+   `delegate_read` tools are present in this session (capability discovery).
 2. `delegate_health` reports the sandbox boundary, default-deny policy, and
    the `route: "auto"` worker as healthy. Any other result selects the
    fallback. Never switch to an explicit local route to get past a failed
