@@ -2661,6 +2661,22 @@ suggestions separately; they do not require another repair/review cycle.
 Research a vendor claim using relevant official documentation only when needed;
 reuse still-current evidence and do not repeat generic web/code/history passes.
 
+**Review fixes inside one increment.** When an increment's required review
+finds defects in code that increment just wrote, reserve the fix with
+`kind=corrective`, its `failure_invariant`, and `review_remediation`: the
+increment's `tdd_unit` and every repository-relative path the fix will touch.
+When the task-execution sidecar is current and every path sits inside that
+TDD unit's own `owns` and no other unit's, the ledger admits the fix under
+that increment's own allowance of two review rounds. It never draws on the
+run-wide corrective budget, so a spent run-wide budget does not stop the next
+increment's review loop. A fix that touches a path outside the increment's
+ownership, reopens another increment's accepted work, or lacks current
+ownership evidence goes through the run-wide budget unchanged. When the
+reserve returns `increment_review_allowance_exhausted`, defer that increment
+under [Blocked Actions Mid-Run: Fall Back or Defer, Never Stop](#blocked-actions-mid-run-fall-back-or-defer-never-stop): record its
+open findings, keep its dependents deferred, and continue with independent
+increments. It is never a mid-run question and never a stop.
+
 ##### Step 3c: Agent Prompt Template
 
 ```text
@@ -2771,7 +2787,8 @@ configuration, never rerun the vetoed action under a different command or tool,
 and never treat an earlier answer as authorization for the vetoed action. The
 correctness stops in this reference are unchanged and still stop the run:
 unknown side effects, an execution-control `checkpoint_required` disposition
-(including an exhausted repair budget), a ledger or clock error, invalid or
+(including an exhausted repair budget, except `increment_review_allowance_exhausted`,
+which defers its increment), a ledger or clock error, invalid or
 stale state, and a failed gate whose repair is out of scope.
 
 #### Ambiguous Task Wording: Apply the Recorded Decision, Else Defer
