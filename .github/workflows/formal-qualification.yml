@@ -59,19 +59,9 @@ jobs:
       - name: Install locked TypeScript validation dependencies
         if: runner.os == 'macOS'
         run: pnpm --dir docs-site install --frozen-lockfile
-      - name: Resolve the locked TypeScript compiler and Node types
-        if: runner.os == 'macOS'
-        # Dependabot bumps change the pnpm store paths, so resolve them from the
-        # installed tree and fail unless each resolves to exactly one path.
-        run: >-
-          python3 -c "import glob, os, sys;
-          found = {name: glob.glob(pattern) for name, pattern in (('FORMAL_TSC', 'docs-site/node_modules/.pnpm/typescript@*/node_modules/typescript/bin/tsc'), ('FORMAL_TYPE_ROOTS', 'docs-site/node_modules/.pnpm/@types+node@*/node_modules/@types'))};
-          bad = [name for name, paths in found.items() if len(paths) != 1];
-          sys.exit(f'expected exactly one path for {bad}: {found}') if bad else None;
-          open(os.environ['GITHUB_ENV'], 'a').write(''.join(f'{name}={paths[0]}\\n' for name, paths in found.items()))"
       - name: Check Python, TypeScript, Swift and Quint implementation traces
         if: runner.os == 'macOS'
-        run: python3 tests/speckit-pro/unit/test-formal-traces.py --apalache-jar .specify/tools/formal/apalache-0.62.2/apalache.jar --quint-root .specify/tools/formal/quint-0.32.0 --typescript-compiler "$FORMAL_TSC" --typescript-type-roots "$FORMAL_TYPE_ROOTS"
+        run: python3 tests/speckit-pro/unit/test-formal-traces.py --apalache-jar .specify/tools/formal/apalache-0.62.2/apalache.jar --quint-root .specify/tools/formal/quint-0.32.0 --typescript-from-docs-site
       - name: Check the same implementation traces with TLC
         if: runner.os == 'macOS'
-        run: python3 tests/speckit-pro/unit/test-formal-traces.py --checker tlc --apalache-jar .specify/tools/formal/apalache-0.62.2/apalache.jar --tlc-jar .specify/tools/formal/tlc-1.7.4/tla2tools.jar --typescript-compiler "$FORMAL_TSC" --typescript-type-roots "$FORMAL_TYPE_ROOTS"
+        run: python3 tests/speckit-pro/unit/test-formal-traces.py --checker tlc --apalache-jar .specify/tools/formal/apalache-0.62.2/apalache.jar --tlc-jar .specify/tools/formal/tlc-1.7.4/tla2tools.jar --typescript-from-docs-site
