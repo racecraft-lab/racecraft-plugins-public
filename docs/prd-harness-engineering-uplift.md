@@ -96,8 +96,11 @@ turn. Every feature below binds to a boundary the plugin controls.
 - Expanding sweep-worker capabilities. Sweep roles keep their closed broker
   surface.
 - Adopting an external harness, orchestration, eval, trace, or guardrail
-  framework, or comparing them. Native eval runners (#578) and stdlib JSON
-  Schema are the chosen substrates.
+  framework in shipped plugin code. The runner stays on the standard library,
+  and native eval runners (#578) and stdlib JSON Schema remain the runtime
+  substrates. The 2026-09-26 framework comparison (see HRNS-019, HRNS-022 and
+  HRNS-025) allows pinned dev and test packages under constitution II, such as
+  jsonschema as a CI reference validator.
 - Paid Jev calls in ordinary CI or unit tests.
 
 ## 3. Acceptance Criteria

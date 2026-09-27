@@ -502,7 +502,9 @@ Budget result: within budget
 
 **Out of Scope:**
 
-- Adopting a schema library; stdlib JSON Schema stays.
+- Adopting a schema library in the runner; stdlib JSON Schema stays at run
+  time. A pinned jsonschema may check the runner's validator in CI under
+  constitution II.
 
 **Module and Interface Deltas:**
 
@@ -641,7 +643,9 @@ Budget result: within budget
 
 **Out of Scope:**
 
-- Comparing external eval products; the native runners (#578) are chosen.
+- Replacing the native runners (#578). Dev-only eval tools (`claude plugin
+  eval`, skill-creator's description loop, standalone GEPA, an Inspect AI
+  spike) may supplement them under constitution II.
 - Live qualification runs themselves; they follow the procedure.
 
 **Module and Interface Deltas:**

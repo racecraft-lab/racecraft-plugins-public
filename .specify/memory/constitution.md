@@ -1,34 +1,19 @@
 <!--
   Sync Impact Report
   ==================
-  Version change: 1.2.0 → 2.0.0
-  Bump rationale: MAJOR. Principle I drops `commands/` from the required
-    layout and moves typesafe-jev tests out of `tests/<plugin>/`; Principle
-    VI replaces the master-plan requirement. Both are incompatible
-    redefinitions under the versioning policy below.
+  Version change: 2.0.0 → 2.1.0
+  Bump rationale: MINOR. Principle II is expanded: dev and test tooling may
+    use pinned third-party Python packages under four conditions. Shipped
+    plugin code stays on the standard library, and nothing compliant under
+    2.0.0 becomes non-compliant, so this is not a MAJOR redefinition.
   Modified principles:
-    - I. Plugin Structure Compliance (commands/ removed; Codex surfaces and
-      typesafe-jev layout added)
-    - II. Cross-Platform Runtime & Script Safety (Go toolchain exception for
-      typesafe-jev)
-    - III. Semantic Versioning (which manifests carry `version`; the one
-      sanctioned runner-manifest hand edit)
-    - IV. Test Coverage Before Merge (CI suite adds Layers 6 and 7; ruff and
-      mypy when Python changes)
-    - V. Conventional Commits (required lowercase scope; types from the live
-      title gate)
-    - VI. KISS, Simplicity & YAGNI (PRD, technical roadmap, and roadmap MOC
-      replace the master plan)
-  Added principles:
-    - VII. Generated Artifact Contract
-    - VIII. Two-Host Parity
-    - IX. Fail-Closed Gates and Red-First Fixes
-    - X. Public-Repository Privacy
+    - II. Cross-Platform Runtime & Script Safety (standard-library rule scoped
+      to shipped plugin code; conditional allowance for dev and test packages)
+  Added principles: None
   Added sections: None
   Removed sections: None
   Modified sections:
-    - Quality Gates (rows for Principles VII–X; CI suite and lint rows)
-    - Development Workflow (stack squash merges, review ruleset, artifact sync)
+    - Quality Gates (row for dev-only dependencies)
   Templates requiring updates:
     - .specify/templates/plan-template.md — ✅ No update needed
       (Constitution Check section is dynamically populated from principles)
@@ -36,6 +21,8 @@
       (principle-agnostic template)
     - .specify/templates/tasks-template.md — ✅ No update needed
       (principle-agnostic template)
+  Dependent guidance updated in the same change: AGENTS.md, REVIEW.md,
+    tests/speckit-pro/AGENTS.md
   Follow-up TODOs: None
 -->
 
@@ -69,8 +56,26 @@ typesafe-jev, `python3 scripts/check-go-module.py check`
 
 ### II. Cross-Platform Runtime & Script Safety
 
-Active repository tooling MUST run on Python 3.11+ standard library without
-requiring Bash, `jq`, PowerShell helper scripts, or package installation.
+Shipped plugin code, meaning each plugin's install payload (`speckit-pro/`,
+`typesafe-jev/plugin/`, and `dist/`), MUST run on Python 3.11+ standard
+library without package installation. Active repository tooling MUST run
+without requiring Bash, `jq`, or PowerShell helper scripts.
+
+Repository dev and test tooling MAY use third-party Python packages only when
+all of these hold:
+
+- Every package is pinned to an exact version in one repository-owned source
+  and installed by a repository Python script into an isolated virtual
+  environment, never into a shipped payload. Hash-locked requirements are
+  preferred.
+- No shipped module imports it.
+- A check that needs it runs in its own named suite layer or CI job, and fails,
+  never skips, when a declared package is missing where that check runs.
+- The default local suite (`tests/speckit-pro/run-all.py`) keeps running on
+  the standard library alone.
+
+`scripts/run-python-lint.py` (ruff and mypy) is the reference pattern.
+
 Python entry points MUST use structured parsers, platform-safe path APIs,
 argument arrays, `shell=False`, explicit return-code handling, and
 deterministic UTF-8 I/O.
@@ -220,6 +225,7 @@ and untracked files)
 | Structural validation | I. Plugin Structure | `python3 tests/speckit-pro/run-all.py --layer 1` |
 | Go module checks | I. Plugin Structure | `python3 scripts/check-go-module.py check` |
 | Runtime and script safety | II. Cross-Platform Safety | `python3 tests/speckit-pro/run-all.py --layer 4` |
+| Dev-only dependencies | II. Cross-Platform Safety | Code review: pinned source, isolated environment, own layer or job |
 | Version format | III. Semantic Versioning | Layer 1 `validate-plugin` |
 | Test coverage | IV. Test Coverage | CI suite: Layers 1, 4, 5, 6, 7 |
 | Python lint | IV. Test Coverage | `scripts/run-python-lint.py run ruff` and `run mypy` |
@@ -270,4 +276,4 @@ MUST be corrected.
 in the plan's Complexity Tracking table with the violation, rationale, and why
 the simpler alternative was rejected.
 
-**Version**: 2.0.0 | **Ratified**: 2026-03-24 | **Last Amended**: 2026-09-26
+**Version**: 2.1.0 | **Ratified**: 2026-03-24 | **Last Amended**: 2026-09-26
