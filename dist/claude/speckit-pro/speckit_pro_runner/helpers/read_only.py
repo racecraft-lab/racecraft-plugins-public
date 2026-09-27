@@ -6618,10 +6618,7 @@ def json_schema_failures(
 
     one_of = schema.get("oneOf")
     if isinstance(one_of, list):
-        matches = sum(
-            not json_schema_failures(value, candidate, root_schema, field)
-            for candidate in one_of
-        )
+        matches = sum(json_schema_probe(value, candidate, root_schema, field, failures) for candidate in one_of)
         if matches != 1:
             failures.append(
                 schema_failure("one_of", field, "Value must match exactly one allowed packet schema shape.")
@@ -6641,7 +6638,7 @@ def json_schema_failures(
 
     any_of = schema.get("anyOf")
     if isinstance(any_of, list) and not any(
-        not json_schema_failures(value, candidate, root_schema, field) for candidate in any_of
+        [json_schema_probe(value, candidate, root_schema, field, failures) for candidate in any_of]
     ):
         failures.append(schema_failure("any_of", field, "Value must match at least one allowed schema shape."))
 
@@ -6652,12 +6649,12 @@ def json_schema_failures(
 
     condition = schema.get("if")
     if isinstance(condition, dict):
-        branch = schema.get("then") if not json_schema_failures(value, condition, root_schema, field) else schema.get("else")
+        branch = schema.get("then") if json_schema_probe(value, condition, root_schema, field, failures) else schema.get("else")
         if branch is not None:
             failures.extend(json_schema_failures(value, branch, root_schema, field))
 
     negated = schema.get("not")
-    if isinstance(negated, dict) and not json_schema_failures(value, negated, root_schema, field):
+    if isinstance(negated, dict) and json_schema_probe(value, negated, root_schema, field, failures):
         failures.append(schema_failure("not", field, "Value matches a packet schema shape that is forbidden here."))
 
     if isinstance(value, dict):
@@ -6688,7 +6685,7 @@ def json_schema_failures(
         name_schema = schema.get("propertyNames")
         if name_schema is not None:
             for key in sorted(value.keys()):
-                if json_schema_failures(key, name_schema, root_schema, schema_child_field(field, str(key))):
+                if not json_schema_probe(key, name_schema, root_schema, schema_child_field(field, str(key)), failures):
                     failures.append(
                         schema_failure("property_names", schema_child_field(field, str(key)), "Property name is not allowed by the schema.")
                     )
@@ -6764,7 +6761,7 @@ def json_schema_failures(
                 )
         contains = schema.get("contains")
         if contains is not None and not any(
-            not json_schema_failures(item, contains, root_schema, field) for item in value
+            [json_schema_probe(item, contains, root_schema, field, failures) for item in value]
         ):
             failures.append(schema_failure("contains", field, "Array must contain at least one item matching the schema."))
         if schema.get("uniqueItems") is True:
@@ -6801,6 +6798,26 @@ def json_schema_failures(
         if value > maximum:
             failures.append(schema_failure("maximum", field, f"Number must be at most {maximum}."))
     return failures
+
+
+def json_schema_probe(
+    value: Any,
+    schema: Any,
+    root_schema: dict[str, Any],
+    field: str,
+    failures: list[dict[str, Any]],
+) -> bool:
+    """Report whether value matches schema, keeping any definition failures.
+
+    Applicators such as anyOf, oneOf, not, if, contains, and propertyNames only
+    need to know whether a subschema matched, but an unsupported keyword inside
+    that subschema must still fail the whole validation.
+    """
+    found = json_schema_failures(value, schema, root_schema, field)
+    for failure in found:
+        if failure["rule"] == "packet.schema.definition" and failure not in failures:
+            failures.append(failure)
+    return not found
 
 
 def resolve_local_schema_reference(reference: str, root_schema: dict[str, Any]) -> Any | None:
