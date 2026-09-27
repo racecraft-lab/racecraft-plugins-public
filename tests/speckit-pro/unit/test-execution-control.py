@@ -17,7 +17,7 @@ from unittest.mock import patch
 sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "speckit-pro"))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "lib"))
 from test_result import run_counted
-from speckit_pro_runner.execution_control import durable_json, execution_control, is_runner_byproduct
+from speckit_pro_runner.execution_control import durable_json, execution_control, ignore_owned_directory, is_runner_byproduct
 from speckit_pro_runner.helpers.read_only import json_schema_failures, validate_task_execution
 from speckit_pro_runner.task_execution import fingerprints
 from speckit_pro_runner.verification_records import digest, execute_verification, project_command, run_snapshot_command, tree_bytes, validate_execution_record
@@ -876,6 +876,13 @@ class VerificationTests(unittest.TestCase):
 
     def validate(self, result, observation=None):
         return validate_execution_record(self.root, {**self.inputs, "record_path": result["record_path"], "native_observation": observation})
+
+    def test_directory_named_gitignore_fails_with_a_clear_error(self):
+        owned = self.root / "feature/.process/execution-control"
+        (owned / ".gitignore").mkdir(parents=True)
+        with self.assertRaisesRegex(ValueError, r"\.gitignore is not a regular file"):
+            ignore_owned_directory(owned)
+        self.assertTrue((owned / ".gitignore").is_dir())
 
     def test_directory_wide_add_never_stages_ledger_or_verification_evidence(self):
         environment = {**os.environ, "GIT_CONFIG_GLOBAL": os.devnull, "GIT_CONFIG_NOSYSTEM": "1"}
