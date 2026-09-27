@@ -34,11 +34,11 @@ captured during scoping.
 |-------|---------|--------|-------|
 | Specify | `/speckit-specify` | ✅ Complete | 14 user stories, 29 current functional requirements, 40 acceptance scenarios after Clarify; G1 passed |
 | Clarify | `/speckit-clarify` | ✅ Complete | Four sessions complete; ten consensus decisions recorded; G2 passed with zero markers |
-| Plan | `/speckit-plan` | ✅ Complete | G3 passed; advisory file-based estimate not estimated because the declared Slice A inventory is partial |
-| Checklist | `/speckit-checklist` | ✅ Complete | Three domains, 51 items, 11 gaps resolved; G4 passed with zero markers |
-| Tasks | `/speckit-tasks` | 🔄 In Progress | 33 tasks in 21 groups; metadata reconciled without changing definitions; sidecar valid and G5 passed with zero markers |
-| Analyze | `/speckit-analyze` | ⏳ Pending | Analysis complete for operator-directed plan review; H3–H7 remain open and spec qualification is unqualified |
-| Confidence Gate | G6.5 | ⏳ Pending | Advisory warning: composite 0.43 versus 0.90; proceed with planning review only |
+| Plan | `/speckit-plan` | ✅ Complete | G3 passed; six Plan artifacts reconciled to the approved eighteen-part direction; advisory estimator pass, projected 200 |
+| Checklist | `/speckit-checklist` | ✅ Complete | Three domains, 67 unchecked review items, zero remaining gaps; G4 passed |
+| Tasks | `/speckit-tasks` | 🔄 In Progress | 31 tasks in 17 groups; native sidecar validation and G5 passed; marker timing decision pending |
+| Analyze | `/speckit-analyze` | ⏳ Pending | Pending current task plan and post-G5 marker boundary; older H3–H7 analysis is historical |
+| Confidence Gate | G6.5 | ⏳ Pending | Pending current Analyze; advisory mode retained, older composite not reused |
 | Implement | `/speckit-implement` | ⏳ Pending | Outside --stage plan; qualification and owner ratification remain pending |
 | Post | Post-Implementation | ⏳ Pending | Outside --stage plan; canonical 13-item closeout remains for implementation |
 
