@@ -1077,3 +1077,7 @@ Tasks setup environment recovery: the required setup command returned exit 1 bec
 The installed 2.37.0 v2 marker schema rejects an otherwise complete synthetic planned record with an unstarted checkpoint: `implementation_checkpoint is missing required fields: commit_sha, evidence_path`. The diagnostic remained in memory and was never inserted into workflow state. Tracked in [issue #740](https://github.com/racecraft-lab/racecraft-plugins-public/issues/740). Current v1 compatibility is supported, but an explicit owner decision is pending on using a planned v1 record and moving actual implementation diff/LOC/checkpoint qualification to its proper pre-emission boundary. Scope and file caps are unchanged.
 
 A separate cloud contract audit was rejected by automatic approval review before dispatch because it would export private repository source; no gateway task or candidate was created. The parent used local read-only schema inspection and a synthetic in-memory validator diagnostic instead.
+
+### Approved-plan checkpoint after Tasks
+
+Checklist checkpoint `8ce521dc` and Tasks checkpoint `b671bf03` are pushed. G4, G5, task sidecar validation and the 52-row coverage guard passed. The current task plan has not run Analyze or confidence; older verdicts are historical and are not reused. No executor or native command remains in flight. The operator timing decision above is pending before marker persistence, Analyze, confidence and final artifact regeneration/draft refresh. No implementation work started.

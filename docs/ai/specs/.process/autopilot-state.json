@@ -91,7 +91,7 @@
     "ledger_path": "docs/ai/specs/.process/execution-control/ac068cab59ef67faf15646a7.json",
     "disposition": "continue",
     "reasons": [],
-    "elapsed_seconds": 128579.17292690277,
+    "elapsed_seconds": 129743.89590406418,
     "checkpoint_due": false,
     "run_id": "e7fbc9a6636945ed8a8c2abd42cbb892"
   },
@@ -396,45 +396,13 @@
       "task_execution_valid": true
     },
     "G6": {
-      "details": [],
-      "gate": "G6",
-      "markers": 0,
-      "pass": true,
-      "reason": "0 CRITICAL/HIGH findings",
-      "spec_qualification_pass": false,
-      "qualification_status": "unqualified",
-      "open_findings": [
-        "H3",
-        "H4",
-        "H5",
-        "H6",
-        "H7"
-      ],
-      "limitation": "The helper reported zero findings; the latest Analysis Results has five open HIGH rows. No implementation readiness is claimed."
+      "pass": false,
+      "status": "not_run_current_plan",
+      "reason": "Analyze pending marker-boundary decision"
     },
     "G6.5": {
-      "composite": 0.43,
-      "composite_source": "computed",
-      "criteria": {
-        "approach_clarity": 0.84,
-        "completeness": 0.94,
-        "requirements_alignment": 0.97,
-        "risk_assessment": 0.96,
-        "task_understanding": 0.94
-      },
-      "criteria_mean": 0.93,
-      "deductions": {
-        "amount": 0.5,
-        "critical": 0,
-        "high": 5
-      },
-      "deductions_applied": true,
-      "input": "docs/ai/specs/.process/HRNS-015-workflow.md",
-      "mode": "advisory",
-      "pass": false,
-      "reason": "composite below threshold in advisory mode",
-      "recommended_action": "continue_with_warning",
-      "threshold": 0.9
+      "status": "not_run_current_plan",
+      "mode": "advisory"
     }
   },
   "specify": {
@@ -576,70 +544,12 @@
     "reason": "Classifier returned one-navigable-PR; plan-layers-feature-dir not invoked"
   },
   "analyze": {
-    "status": "completed_with_open_qualification_findings",
-    "findings_total": 12,
-    "findings_resolved": 7,
-    "open_findings": [
-      "H3",
-      "H4",
-      "H5",
-      "H6",
-      "H7"
-    ],
-    "g6": "unqualified: five open HIGH qualification conditions; deterministic helper reported pass with zero findings",
-    "user_decision": "Split C1 into C1a and C1b as fifth PR; order A -> B -> C1a -> C1b -> C2",
-    "user_decision_applied": true,
-    "in_flight_dispatches": [],
-    "remaining": [
-      "owner review of the proposed 19-PR implementation direction",
-      "T002 actual per-PR diff, LOC, generated-output, marker-fingerprint and repeated-path qualification before behavior tasks"
-    ],
-    "pending_user_decision": null,
-    "repair_reservation": {
-      "dispatch_id": "hrns015-analyze-auth-recovery-20260926",
-      "failure_invariant": "FR-026",
-      "reservation_id": "420e70c8bf1b436493f77ef2df90f5d9",
-      "status": "completed",
-      "recovery_of": "hrns015-analyze-c1-rescope-20260925",
-      "operator_recovery_event_sha256": "707600b30719d67d5e39f3e69d31f7710885b607c50499cac3dddcc01ed3a08d"
-    },
-    "task_count": 33,
-    "proposed_increment_count": 19,
-    "owner_ratification": "pending",
-    "last_denied_dispatch": {
-      "dispatch_id": "hrns015-tasks-fingerprint-reconcile-20260926",
-      "disposition": "checkpoint_required",
-      "reason": "corrective_cycle_already_closed",
-      "ledger_mutation": false
-    },
-    "final_synthesis_completed": true,
-    "handoff_authorization": "The latest explicit operator instruction directs completion of the plan-only draft review handoff; implementation qualification and ratification remain pending."
+    "status": "pending",
+    "reason": "Current 31-task plan has not entered Analyze; post-G5 marker timing decision pending"
   },
   "confidence_gate": {
-    "status": "completed_with_advisory_warning",
-    "composite": 0.43,
-    "composite_source": "computed",
-    "criteria": {
-      "approach_clarity": 0.84,
-      "completeness": 0.94,
-      "requirements_alignment": 0.97,
-      "risk_assessment": 0.96,
-      "task_understanding": 0.94
-    },
-    "criteria_mean": 0.93,
-    "deductions": {
-      "amount": 0.5,
-      "critical": 0,
-      "high": 5
-    },
-    "deductions_applied": true,
-    "input": "docs/ai/specs/.process/HRNS-015-workflow.md",
-    "mode": "advisory",
-    "pass": false,
-    "reason": "composite below threshold in advisory mode",
-    "recommended_action": "continue_with_warning",
-    "threshold": 0.9,
-    "planning_review_only": true
+    "status": "pending",
+    "mode": "advisory"
   },
   "structural_checks": {
     "quality_delta_exit": 2,
@@ -649,29 +559,15 @@
     "classification": "advisory planning-document limits; no runtime qualification claimed"
   },
   "plan_stage_completion": {
-    "planning_complete": true,
-    "stage_boundary_commit": "2ef49696",
-    "draft_packet_validation": "passed",
-    "draft_published": true,
-    "canonical_rows": 56,
-    "task_count": 33,
-    "generated_pages": 4,
-    "generation_gaps": [
-      "architecture-viewer"
+    "planning_complete": false,
+    "checkpoint_commit": "b671bf03",
+    "remaining": [
+      "post-G5 marker boundary",
+      "Analyze and consensus",
+      "confidence gate",
+      "artifact regeneration and draft handoff"
     ],
-    "preview_verified": 0,
-    "preview_unavailable": 4,
-    "owner_ratification": "pending",
-    "implementation_qualification": "unqualified",
-    "open_high_findings": [
-      "H3",
-      "H4",
-      "H5",
-      "H6",
-      "H7"
-    ],
-    "in_flight_dispatches": [],
-    "completed_at": "2026-09-26T03:55:07Z"
+    "implementation_started": false
   },
   "autonomy_boundary": {
     "schema_version": "autonomy-boundary-receipt.v1",
@@ -841,5 +737,139 @@
     "proposed_text": "G6 validates requirement coverage, task consistency, candidate budgets, and a current planned marker record. Actual per-PR diffs, LOC, and implementation checkpoint evidence remain mandatory before PR emission.",
     "planned_format": "pr-marker-plan.v1; checkpoints pending",
     "scope_change": false
+  },
+  "historical_before_approved_tasks": {
+    "analyze": {
+      "status": "completed_with_open_qualification_findings",
+      "findings_total": 12,
+      "findings_resolved": 7,
+      "open_findings": [
+        "H3",
+        "H4",
+        "H5",
+        "H6",
+        "H7"
+      ],
+      "g6": "unqualified: five open HIGH qualification conditions; deterministic helper reported pass with zero findings",
+      "user_decision": "Split C1 into C1a and C1b as fifth PR; order A -> B -> C1a -> C1b -> C2",
+      "user_decision_applied": true,
+      "in_flight_dispatches": [],
+      "remaining": [
+        "owner review of the proposed 19-PR implementation direction",
+        "T002 actual per-PR diff, LOC, generated-output, marker-fingerprint and repeated-path qualification before behavior tasks"
+      ],
+      "pending_user_decision": null,
+      "repair_reservation": {
+        "dispatch_id": "hrns015-analyze-auth-recovery-20260926",
+        "failure_invariant": "FR-026",
+        "reservation_id": "420e70c8bf1b436493f77ef2df90f5d9",
+        "status": "completed",
+        "recovery_of": "hrns015-analyze-c1-rescope-20260925",
+        "operator_recovery_event_sha256": "707600b30719d67d5e39f3e69d31f7710885b607c50499cac3dddcc01ed3a08d"
+      },
+      "task_count": 33,
+      "proposed_increment_count": 19,
+      "owner_ratification": "pending",
+      "last_denied_dispatch": {
+        "dispatch_id": "hrns015-tasks-fingerprint-reconcile-20260926",
+        "disposition": "checkpoint_required",
+        "reason": "corrective_cycle_already_closed",
+        "ledger_mutation": false
+      },
+      "final_synthesis_completed": true,
+      "handoff_authorization": "The latest explicit operator instruction directs completion of the plan-only draft review handoff; implementation qualification and ratification remain pending."
+    },
+    "confidence_gate": {
+      "status": "completed_with_advisory_warning",
+      "composite": 0.43,
+      "composite_source": "computed",
+      "criteria": {
+        "approach_clarity": 0.84,
+        "completeness": 0.94,
+        "requirements_alignment": 0.97,
+        "risk_assessment": 0.96,
+        "task_understanding": 0.94
+      },
+      "criteria_mean": 0.93,
+      "deductions": {
+        "amount": 0.5,
+        "critical": 0,
+        "high": 5
+      },
+      "deductions_applied": true,
+      "input": "docs/ai/specs/.process/HRNS-015-workflow.md",
+      "mode": "advisory",
+      "pass": false,
+      "reason": "composite below threshold in advisory mode",
+      "recommended_action": "continue_with_warning",
+      "threshold": 0.9,
+      "planning_review_only": true
+    },
+    "plan_stage_completion": {
+      "planning_complete": true,
+      "stage_boundary_commit": "2ef49696",
+      "draft_packet_validation": "passed",
+      "draft_published": true,
+      "canonical_rows": 56,
+      "task_count": 33,
+      "generated_pages": 4,
+      "generation_gaps": [
+        "architecture-viewer"
+      ],
+      "preview_verified": 0,
+      "preview_unavailable": 4,
+      "owner_ratification": "pending",
+      "implementation_qualification": "unqualified",
+      "open_high_findings": [
+        "H3",
+        "H4",
+        "H5",
+        "H6",
+        "H7"
+      ],
+      "in_flight_dispatches": [],
+      "completed_at": "2026-09-26T03:55:07Z"
+    },
+    "G6": {
+      "details": [],
+      "gate": "G6",
+      "markers": 0,
+      "pass": true,
+      "reason": "0 CRITICAL/HIGH findings",
+      "spec_qualification_pass": false,
+      "qualification_status": "unqualified",
+      "open_findings": [
+        "H3",
+        "H4",
+        "H5",
+        "H6",
+        "H7"
+      ],
+      "limitation": "The helper reported zero findings; the latest Analysis Results has five open HIGH rows. No implementation readiness is claimed."
+    },
+    "G6.5": {
+      "composite": 0.43,
+      "composite_source": "computed",
+      "criteria": {
+        "approach_clarity": 0.84,
+        "completeness": 0.94,
+        "requirements_alignment": 0.97,
+        "risk_assessment": 0.96,
+        "task_understanding": 0.94
+      },
+      "criteria_mean": 0.93,
+      "deductions": {
+        "amount": 0.5,
+        "critical": 0,
+        "high": 5
+      },
+      "deductions_applied": true,
+      "input": "docs/ai/specs/.process/HRNS-015-workflow.md",
+      "mode": "advisory",
+      "pass": false,
+      "reason": "composite below threshold in advisory mode",
+      "recommended_action": "continue_with_warning",
+      "threshold": 0.9
+    }
   }
 }
