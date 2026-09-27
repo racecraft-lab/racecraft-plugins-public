@@ -85,8 +85,12 @@ def writes_agent_context(arguments: str) -> bool:
     No modifier means every artifact is in scope; `--agent-only` names the
     agent file directly.
     """
-    modifiers = {token for token in arguments.split()[1:] if token in SCOPE_MODIFIERS}
-    return not modifiers or "--agent-only" in modifiers
+    modifiers: set[str] = set()
+    for token in arguments.split()[1:]:
+        if not token.startswith("--"):
+            break  # the contract reads scope only from the leading flag run
+        modifiers.add(token)
+    return not (modifiers & SCOPE_MODIFIERS) or "--agent-only" in modifiers
 
 
 def prescribed_invocations(root: Path) -> list[tuple[str, int, str]]:
@@ -112,6 +116,8 @@ class ArchiveInvocationContractTests(unittest.TestCase):
         self.assertTrue(writes_agent_context("specs/007-a --agent-only"))
         self.assertTrue(writes_agent_context("specs/007-a --spec-only --agent-only"))
         self.assertFalse(writes_agent_context("specs/007-a --spec-only --plan-only --changelog-only"))
+        # Scope comes only from the leading flag run; a later modifier is not scope.
+        self.assertTrue(writes_agent_context("specs/007-a note --spec-only --plan-only --changelog-only"))
 
     def test_each_host_prescribes_an_autopilot_archive_invocation(self) -> None:
         for host, directory in AUTOPILOT_DIRS.items():
