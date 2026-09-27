@@ -1170,7 +1170,9 @@ open the private record it names and confirm its bytes still hash to the
 recorded `sha256`. Move the record to the run-keyed location above, replace the
 legacy object with the receipt projected from it, and rerun the full guard. If
 the private record is missing, changed, or stale against the current boundary,
-rerun this preflight instead.
+rerun this preflight instead. A resume does this at its start, in the Step 0.8c
+re-attestation in [prerequisites-codex.md](./prerequisites-codex.md), before the
+Step 1.1 coverage guard runs.
 
 Only `authorization.status=explicit_user` can make an inventoried boundary
 action `ready`. Exact explicit user authorization persists across turns,

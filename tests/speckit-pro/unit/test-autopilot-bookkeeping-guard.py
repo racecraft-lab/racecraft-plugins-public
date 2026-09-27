@@ -477,6 +477,41 @@ class AutonomyBoundarySourceContractTests(unittest.TestCase):
             self.assertIn(flag, skill)
             self.assertIn(flag, phase_execution)
 
+    def test_resume_re_attests_a_stale_boundary_before_the_coverage_guard(self) -> None:
+        """A new thread's writable roots make the persisted boundary stale (issue 747).
+
+        The resume must re-attest it up front with one operator request, before
+        the Step 1.1 guard, for every stage, including a plan-stage resume.
+        """
+        skill = " ".join(CODEX_AUTOPILOT_SKILL.read_text(encoding="utf-8").split())
+        prerequisites = (
+            CODEX_AUTOPILOT_SKILL.parent / "references" / "prerequisites-codex.md"
+        ).read_text(encoding="utf-8")
+        phase_execution = " ".join(
+            (CODEX_AUTOPILOT_SKILL.parent / "references" / "phase-execution-codex.md")
+            .read_text(encoding="utf-8")
+            .split()
+        )
+        start = prerequisites.index("### 0.8c Resumed Autonomy Boundary Preflight")
+        end = prerequisites.index("### 0.9", start)
+        section = " ".join(prerequisites[start:end].split())
+
+        self.assertIn("persisted `autonomy_boundary` receipt, at any stage", section)
+        self.assertIn("including a plan-stage resume", section)
+        self.assertIn("before the Step 1.1 coverage guard", section)
+        self.assertIn(
+            "current execution boundary does not match the persisted execution boundary",
+            section,
+        )
+        self.assertIn("a branch, not a stop", section)
+        self.assertIn("one consolidated operator request", section)
+        self.assertIn("`authorization.status=explicit_user`", section)
+        self.assertIn("never as a guard-failure repair", section)
+        self.assertIn("A mismatch still blocks", section)
+        self.assertIn("at any stage", skill)
+        self.assertIn("before the Step 1.1 coverage guard", skill)
+        self.assertIn("Step 0.8c", phase_execution)
+
     def test_canonical_schema_excludes_automatic_and_prior_execution_authorization(self) -> None:
         schema = json.loads(
             validator.AUTONOMY_BOUNDARY_SCHEMA_PATH.read_text(

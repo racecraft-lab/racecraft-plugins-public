@@ -283,6 +283,27 @@ later user instruction revokes or narrows it. Prior execution, an earlier
 automatic review, or the fact that an older task crossed the boundary is never
 authorization by itself.
 
+**Re-attest a stale boundary at resume start.** When `autopilot-state.json`
+already holds a persisted `autonomy_boundary` receipt, at any stage, including a
+plan-stage resume or re-plan epoch, run this check before the Step 1.1 coverage
+guard and before any other phase work. The execution boundary includes the
+session's writable roots, so a new Codex thread or worktree root normally makes
+the persisted record stale. Run the Step 1.1 guard command once, unchanged, as a
+read-only probe, and read `autonomy_boundary_errors` from its printed JSON. Its
+nonzero exit here is a branch, not a stop; only the Step 1.1 guard stops the
+run. When the list is empty, continue. When it holds `current execution boundary
+does not match the persisted execution boundary`, or any other stale-record
+error above, rerun the complete Phase 6.5 preflight against the live boundary
+now. Present one consolidated operator request, in the `operator_action_required`
+shape, that names the changed boundary and every action whose authorization it
+invalidates. Record the operator's answer as `authorization.status=explicit_user`,
+then write the refreshed private record, its receipt, and the matching Phase 6.5
+row before Step 1.1 runs. Present the refresh as this up-front re-attestation,
+never as a guard-failure repair. A denial or no answer stops the run before the
+guard. A mismatch still blocks: keep `--require-autonomy-boundary` and every
+live `--current-*` value on the Step 1.1 command, and take those values from the
+current thread, never from the workflow or state.
+
 ### 0.9 Constitution Validation
 
 Read the workflow file's Prerequisites table. If already
