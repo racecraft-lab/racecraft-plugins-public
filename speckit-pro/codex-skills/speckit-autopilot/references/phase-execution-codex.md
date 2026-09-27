@@ -1345,7 +1345,8 @@ it as `expected_partition_sha256` on every later start, inspect, or record;
 never reconstruct it from the journal's current plan. On resume, use `action=inspect` and
 reconcile retained complete/unfinished results rather than renumbering batches.
 Dispatch one `spawn_agent` per implementation or research batch; verification
-routes stay orchestrator-direct with no agent. Supply TDD only to implementation
+routes stay orchestrator-direct with no agent. A task routes to verification
+by its leading verb: `verify`, `run`, `check`, `build`, `lint`, `confirm`, `recheck`. Supply TDD only to implementation
 and project agents, up to four adjacent assigned tasks sequentially, with shared
 context/reservation once. Tell every implementation and project agent that
 checklist items are reviewer-owned and deferred to PR review: do not stop on
