@@ -36,7 +36,7 @@ captured during scoping.
 | Clarify | `/speckit-clarify` | ✅ Complete | Four sessions complete; ten consensus decisions recorded; G2 passed with zero markers |
 | Plan | `/speckit-plan` | ✅ Complete | G3 passed; advisory file-based estimate not estimated because the declared Slice A inventory is partial |
 | Checklist | `/speckit-checklist` | ✅ Complete | Three domains, 51 items, 11 gaps resolved; G4 passed with zero markers |
-| Tasks | `/speckit-tasks` | ⏳ Pending | 33 tasks in 21 groups; metadata reconciled without changing definitions; sidecar valid and G5 passed with zero markers |
+| Tasks | `/speckit-tasks` | 🔄 In Progress | 33 tasks in 21 groups; metadata reconciled without changing definitions; sidecar valid and G5 passed with zero markers |
 | Analyze | `/speckit-analyze` | ⏳ Pending | Analysis complete for operator-directed plan review; H3–H7 remain open and spec qualification is unqualified |
 | Confidence Gate | G6.5 | ⏳ Pending | Advisory warning: composite 0.43 versus 0.90; proceed with planning review only |
 | Implement | `/speckit-implement` | ⏳ Pending | Outside --stage plan; qualification and owner ratification remain pending |
@@ -679,12 +679,16 @@ Do not guess fingerprints or omit ownership to force parallel execution.
 
 | Metric | Value |
 |--------|-------|
-| **Total Tasks** | 33 |
-| **Phases** | 21 |
-| **Parallel Opportunities** | No `[P]` tasks; T028/T029 conditionally parallel only with disjoint ownership |
-| **User Stories Covered** | 14 of 14; FR-001–029 |
+| **Total Tasks** | 31 |
+| **Phases** | 17 user-story-oriented groups; 21 closed units, at most 3 adjacent tasks each |
+| **Parallel Opportunities** | None; shared ownership and approved ordering require sequential execution |
+| **User Stories Covered** | 14 of 14; 26 active FRs, 37 acceptance scenarios, 11 success criteria |
 
-Tasks-phase reviewability: installed `reviewability-gate` tasks mode is deferred and was not invoked. Scaffold setup mode was `status: warn`, `pass: true`; Plan's file-based result remains `not_estimated` because the declared inventories were partial. The Tasks inventory proved the original C1 needs at least 29 changed paths against a 24-path maximum. The owner ratified the C1a/C1b split and then directed resolution of the remaining budget blockers. The current 19-increment, one-story candidate inventory includes six recurring tracked process/evidence paths per increment and covers all requirements. It changes the ratified five-PR count and awaits owner acceptance. Actual per-PR diffs, reviewable LOC, and marker fingerprints remain unqualified. The Tasks producer reconciled the source-bound sidecar after the accepted Analyze spec clarification; all 33 task definitions remained unchanged. Sidecar validation and G5 passed with zero markers.
+Approved-plan regeneration removed shipped B2a implementation work and renumbered remaining tasks contiguously. The sidecar binds every current definition and ownership path to native fingerprints. Parent G5 passed with zero markers and 31 tasks; parent validate-task-execution returned status ok and outer/helper exit 0 (detailed stdout truncated). The inventory retains eighteen approved increments. C2b2 now counts 16 candidate paths after six shipped-link exclusions; the upstream conservative 22-before-exclusions number remains explicitly documented.
+
+Tasks-phase reviewability: helper `reviewability-gate`, requested mode `tasks`, is registry-deferred and was not invoked. The fallback evidence is the scaffold setup warn/pass, current Plan estimator pass/projected 200 (advisory whole-Plan estimate), and owner approval of eighteen increments. Candidate counts are not per-PR actual-diff or LOC proof. Atomicity-route freshly returned one-navigable-PR, releasable true, change-shape:modify-heavy, no warnings; the conditional layer planner was skipped.
+
+Post-G5 marker boundary remains pending the explicit owner timing decision documented below. No Analyze or implementation dispatch has occurred in this resume. The current v2 planned-checkpoint requirement is tracked in issue #740; no invented commit or evidence was persisted.
 
 ---
 
@@ -1065,3 +1069,11 @@ API checklist post-correction verification completed: 24 unique reviewer-owned u
 Error-handling resume: 21 unchecked requirements-review items; zero gaps. Supported setup, count-markers and scoped whitespace checks passed. No consensus needed. State-management review is next.
 
 State-management resume: 22 unchecked review items; zero gaps. No consensus required. Parent G4 passed with zero markers. Optional Git hooks are covered by the phase checkpoint.
+
+Tasks setup environment recovery: the required setup command returned exit 1 because the first Python on PATH lacked PyYAML. No owned task artifacts changed. The existing SpecKit CLI environment was independently verified as Python 3.13.13 with PyYAML 6.0.3. A bounded infrastructure continuation uses that installed environment first on PATH; no dependency installation or repository tooling modification is needed.
+
+### Planned-marker contract diagnostic
+
+The installed 2.37.0 v2 marker schema rejects an otherwise complete synthetic planned record with an unstarted checkpoint: `implementation_checkpoint is missing required fields: commit_sha, evidence_path`. The diagnostic remained in memory and was never inserted into workflow state. Tracked in [issue #740](https://github.com/racecraft-lab/racecraft-plugins-public/issues/740). Current v1 compatibility is supported, but an explicit owner decision is pending on using a planned v1 record and moving actual implementation diff/LOC/checkpoint qualification to its proper pre-emission boundary. Scope and file caps are unchanged.
+
+A separate cloud contract audit was rejected by automatic approval review before dispatch because it would export private repository source; no gateway task or candidate was created. The parent used local read-only schema inspection and a synthetic in-memory validator diagnostic instead.

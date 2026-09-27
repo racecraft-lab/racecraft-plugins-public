@@ -1,14 +1,14 @@
-# HRNS-015 proposed review-increment path inventory
+# HRNS-015 approved delivery candidate path inventory
 
-This is a conservative **per-PR candidate ledger** after the user directed repair of the original A/B/C2 budget breaches while retaining all 29 FRs. Q11’s four-slice estimate and the later five-slice C1a/C1b decision are historical; this 19-increment revision keeps those behavior boundaries and gives every marker exactly one user-story identity. It is not an emitted or validated marker plan. Actual changed files, reviewable LOC, fingerprints, and RED/GREEN results remain unmeasured.
+This is the conservative **per-PR candidate ledger** for the owner-approved eighteen-increment delivery direction. It preserves fourteen stories and 26 active functional requirements (29 historical IDs; FR-011–FR-013 are removed by the supplied #694 rescope). Q11’s four-slice estimate and the later five-group C1a/C1b split are historical provenance. Actual changed paths, reviewable LOC, marker fingerprints, and RED/GREEN results remain unmeasured. This is not an emitted or validated marker plan.
 
 ## Counting contract and recurring paths
 
-- Each increment includes the six tracked workflow/process/evidence candidates listed in every table: `HRNS-015-workflow.md`, `autopilot-state.json`, `tasks.md`, `task-execution.json`, `slice-inventory.md`, and HRNS-015 `SPEC-MOC.md`. The last is a conservative generated PR/index candidate; any proven no-diff path can fall out of the actual gate, while a new path must be added and re-budgeted before publication. The parent owns workflow/state updates during this Analyze dispatch.
+- Each increment includes the six tracked workflow/process/evidence candidates listed in every table: `HRNS-015-workflow.md`, `autopilot-state.json`, `tasks.md`, `task-execution.json`, `slice-inventory.md`, and HRNS-015 `SPEC-MOC.md`. The last is a conservative generated PR/index candidate; any proven no-diff path can fall out of the actual gate, while a new path must be added and re-budgeted before publication. The parent owns workflow/state updates during this Tasks phase.
 - A path is counted once per PR, including repeated helper, trust, manifest, and host paths in later PRs. Limits are ≤4 production paths and ≤24 total changed paths. Dist and reference rows are candidates requiring exact refresh/diff measurement. Packet files ignored by this repository are local process outputs, not committed PR diff candidates.
-- A1a emits a prefilled note as protected content; A1b adds the fourth editable marker pair and its fingerprint/structure rules in both `pr_emission.py` and `read_only.py`. Existing registered test modules are reused where needed to keep the vertical behavior slices inside the cap: A1a/A1b use the packet mutation/read-only tests, B2a/B2b use the read-only helper tests, and C1a1/C1a2 use the phase-coverage tests. New acceptance cases are inline in those modules; tests still begin RED. Adding a fixture/module or changing a generated page beyond this ledger requires re-inventory and reallocation.
+- A1a emits a prefilled note as protected content; A1b adds the fourth editable marker pair and its fingerprint/structure rules in both `pr_emission.py` and `read_only.py`. Existing registered test modules are reused where needed to keep the vertical behavior slices inside the cap: A1a/A1b use the packet mutation/read-only tests, B2b use the read-only helper tests, and C1a1/C1a2 use the phase-coverage tests. New acceptance cases are inline in those modules; tests still begin RED. Adding a fixture/module or changing a generated page beyond this ledger requires re-inventory and reallocation.
 - Each increment has its own passing RED → fix → GREEN checkpoint, host parity check, generated refresh, exact changed-path and reviewable-LOC measurement, and title/release-note gate before PR emission. Production paths count source Python, schema, active config, and Codex agent TOMLs; Claude agent Markdown is host guidance. The refactor-inclusive estimate is still `not_estimated`; no implementation diff has been measured.
-- The current `pr_marker_plan` validator rejects legitimate sequential reuse of declared paths. Do not persist a marker plan or claim G6/PR emission until that product contract is repaired and its independent gate passes. The advisory `atomicity-route=one-navigable-PR` is retained as an advisory result.
+- Supplied #676 establishes sequential repeated-path marker support as baseline. Current scope, fingerprints, checkpoint/hazard validation and exact base/head qualification are still required; no marker plan or G6 pass is claimed. Preserve the supplied `atomicity-route=one-navigable-PR` advisory without treating it as approval. Upstream spec.md:276 permits marker persistence only once actual diffs qualify; that timing remains a provenance limitation for Analyze, not an invented pre-implementation diff.
 
 ## Exact candidate counts
 
@@ -22,19 +22,34 @@ The current marker contract uses `kind=user_story`, `id=usN` for an unsplit stor
 | A3 | `us3` | US3 | T008–T009 | 2 | 24 | Candidate only; actual diff/LOC unmeasured |
 | B1a | `us4` | US4 | T010 | 1 | 22 | Candidate only; actual diff/LOC unmeasured |
 | B1b | `us5` | US5 | T011 | 2 | 23 | Candidate only; actual diff/LOC unmeasured |
-| B2a | `us6-part1` | US6 | T012–T013 | 2 | 22 | Candidate only; actual diff/LOC unmeasured |
-| B2b | `us6-part2` | US6 | T014–T015 | 1 | 23 | Candidate only; actual diff/LOC unmeasured |
-| B3a | `us7` | US7 | T016 | 1 | 18 | Candidate only; actual diff/LOC unmeasured |
-| B3b | `us8` | US8 | T017–T018 | 2 | 22 | Candidate only; actual diff/LOC unmeasured |
-| C1a1 | `us9` | US9 | T019 | 1 | 24 | Candidate only; actual diff/LOC unmeasured |
-| C1a2 | `us10-part1` | US10 | T020 | 1 | 21 | Candidate only; actual diff/LOC unmeasured |
-| C1b1 | `us10-part2` | US10 | T021 | 2 | 21 | Candidate only; actual diff/LOC unmeasured |
-| C1b2 | `us10-part3` | US10 | T022–T023 | 2 | 21 | Candidate only; actual diff/LOC unmeasured |
-| C2a1 | `us11` | US11 | T024–T025 | 0 | 14 | Candidate only; actual diff/LOC unmeasured |
-| C2a2 | `us12` | US12 | T026 | 0 | 14 | Candidate only; actual diff/LOC unmeasured |
-| C2a3 | `us13-part1` | US13 | T027 | 0 | 14 | Candidate only; actual diff/LOC unmeasured |
-| C2b1 | `us13-part2` | US13 | T028–T029 | 0 | 21 | Candidate only; actual diff/LOC unmeasured |
-| C2b2 | `us14` | US14 | T030–T032 | 0 | 22 | Candidate only; actual diff/LOC unmeasured |
+| B2b | `us6` | US6 | T012–T013 | 1 | 23 | Candidate only; actual diff/LOC unmeasured |
+| B3a | `us7` | US7 | T014 | 1 | 18 | Candidate only; actual diff/LOC unmeasured |
+| B3b | `us8` | US8 | T015–T016 | 2 | 22 | Candidate only; actual diff/LOC unmeasured |
+| C1a1 | `us9` | US9 | T017 | 1 | 24 | Candidate only; actual diff/LOC unmeasured |
+| C1a2 | `us10-part1` | US10 | T018 | 1 | 21 | Candidate only; actual diff/LOC unmeasured |
+| C1b1 | `us10-part2` | US10 | T019 | 2 | 21 | Candidate only; actual diff/LOC unmeasured |
+| C1b2 | `us10-part3` | US10 | T020–T021 | 2 | 21 | Candidate only; actual diff/LOC unmeasured |
+| C2a1 | `us11` | US11 | T022–T023 | 0 | 14 | Candidate only; actual diff/LOC unmeasured |
+| C2a2 | `us12` | US12 | T024 | 0 | 14 | Candidate only; actual diff/LOC unmeasured |
+| C2a3 | `us13-part1` | US13 | T025 | 0 | 14 | Candidate only; actual diff/LOC unmeasured |
+| C2b1 | `us13-part2` | US13 | T026–T027 | 0 | 21 | Candidate only; actual diff/LOC unmeasured |
+| C2b2 | `us14` | US14 | T028–T030 | 0 | 16 | Candidate only; actual diff/LOC unmeasured |
+
+
+### Shipped-scope exclusions and count provenance
+
+The B2a implementation increment and historical T012/T013 are retired: #694 supplies named-entry scoping, exact selected pragma and missing-budget blocking. Keep those fixtures GREEN as compatibility evidence in B2b; new aggregate and greenfield behavior still starts RED.
+
+C2b2 excludes these six shipped link-only candidates, leaving sixteen exact candidates below. The approved Plan/spec retain the conservative twenty-two-before-exclusions figure; this Tasks ledger performs the explicit removal rather than claiming new scope approval. The roadmap template remains owned by B2b for new slice-budget syntax.
+
+- `dist/claude/speckit-pro/README.md`
+- `dist/claude/speckit-pro/skills/speckit-coach/templates/technical-roadmap-template.md`
+- `dist/codex/speckit-pro/README.md`
+- `dist/codex/speckit-pro/skills/speckit-coach/templates/technical-roadmap-template.md`
+- `speckit-pro/README.md`
+- `speckit-pro/skills/speckit-coach/templates/technical-roadmap-template.md`
+
+Candidate group unions are A: 39 total/4 production; B: 36/3; C1a: 29/1; C1b: 29/4; C2: 34/0 after these exclusions. Only the eighteen per-PR sets are within the strict caps; the group unions do not qualify as individual PRs.
 
 ## Exact path operations
 
@@ -221,38 +236,9 @@ Tasks: T011. Requirements: FR-009, FR-010, FR-026. **23 candidate paths; 2 produ
 | process/evidence | modify | `specs/hrns-015-autopilot-gate-pr-emission-repair/.process/slice-inventory.md` | RED/GREEN and measured budget evidence |
 | generated index | regenerate | `specs/hrns-015-autopilot-gate-pr-emission-repair/SPEC-MOC.md` | PR/index refresh candidate |
 
-### B2a — US6 named entry and typed exception
-
-Tasks: T012–T013. Requirements: FR-011–FR-013, FR-026. **22 candidate paths; 2 production.**
-
-| Class | Operation | Path | Basis |
-| --- | --- | --- | --- |
-| production | modify | `speckit-pro/speckit_pro_runner/helpers/read_only.py` | task |
-| generated | regenerate | `dist/claude/speckit-pro/speckit_pro_runner/helpers/read_only.py` | source payload |
-| generated | regenerate | `dist/codex/speckit-pro/speckit_pro_runner/helpers/read_only.py` | source payload |
-| production | modify | `speckit-pro/speckit_pro_runner/helpers/registry.py` | task |
-| generated | regenerate | `dist/claude/speckit-pro/speckit_pro_runner/helpers/registry.py` | source payload |
-| generated | regenerate | `dist/codex/speckit-pro/speckit_pro_runner/helpers/registry.py` | source payload |
-| host/support | modify | `speckit-pro/skills/speckit-autopilot/references/gate-validation.md` | task |
-| generated | regenerate | `dist/claude/speckit-pro/skills/speckit-autopilot/references/gate-validation.md` | source payload |
-| generated | regenerate | `dist/codex/speckit-pro/skills/speckit-autopilot/references/gate-validation.md` | source payload |
-| generated trust | regenerate | `speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json` | runner source edited |
-| generated trust | regenerate | `speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.sha256` | runner source edited |
-| generated trust | regenerate | `dist/claude/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json` | runner source edited |
-| generated trust | regenerate | `dist/claude/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.sha256` | runner source edited |
-| generated trust | regenerate | `dist/codex/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json` | runner source edited |
-| generated trust | regenerate | `dist/codex/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.sha256` | runner source edited |
-| test/manifest | modify | `tests/speckit-pro/unit/test-speckit-pro-read-only-helpers.py` | existing registered helper test; inline cases |
-| process/evidence | modify | `docs/ai/specs/.process/HRNS-015-workflow.md` | per-marker workflow checkpoint |
-| process/evidence | modify | `docs/ai/specs/.process/autopilot-state.json` | per-marker persisted state |
-| process/evidence | modify | `specs/hrns-015-autopilot-gate-pr-emission-repair/tasks.md` | task completion checkboxes |
-| process/evidence | modify | `specs/hrns-015-autopilot-gate-pr-emission-repair/.process/task-execution.json` | tasks source fingerprint |
-| process/evidence | modify | `specs/hrns-015-autopilot-gate-pr-emission-repair/.process/slice-inventory.md` | RED/GREEN and measured budget evidence |
-| generated index | regenerate | `specs/hrns-015-autopilot-gate-pr-emission-repair/SPEC-MOC.md` | PR/index refresh candidate |
-
 ### B2b — US6 complete slice and greenfield budgets
 
-Tasks: T014–T015. Requirements: FR-014, FR-028, FR-029, FR-026. **23 candidate paths; 1 production.**
+Tasks: T012–T013. Requirements: FR-014, FR-028, FR-029, FR-026. **23 candidate paths; 1 production.**
 
 | Class | Operation | Path | Basis |
 | --- | --- | --- | --- |
@@ -282,7 +268,7 @@ Tasks: T014–T015. Requirements: FR-014, FR-028, FR-029, FR-026. **23 candidate
 
 ### B3a — US7 required-refactor estimate
 
-Tasks: T016. Requirements: FR-015, FR-026. **18 candidate paths; 1 production.**
+Tasks: T014. Requirements: FR-015, FR-026. **18 candidate paths; 1 production.**
 
 | Class | Operation | Path | Basis |
 | --- | --- | --- | --- |
@@ -307,7 +293,7 @@ Tasks: T016. Requirements: FR-015, FR-026. **18 candidate paths; 1 production.**
 
 ### B3b — US8 declared quality commands
 
-Tasks: T017–T018. Requirements: FR-016, FR-026. **22 candidate paths; 2 production.**
+Tasks: T015–T016. Requirements: FR-016, FR-026. **22 candidate paths; 2 production.**
 
 | Class | Operation | Path | Basis |
 | --- | --- | --- | --- |
@@ -336,7 +322,7 @@ Tasks: T017–T018. Requirements: FR-016, FR-026. **22 candidate paths; 2 produc
 
 ### C1a1 — US9 canonical Post list
 
-Tasks: T019. Requirements: FR-017, FR-026. **24 candidate paths; 1 production.**
+Tasks: T017. Requirements: FR-017, FR-026. **24 candidate paths; 1 production.**
 
 | Class | Operation | Path | Basis |
 | --- | --- | --- | --- |
@@ -367,7 +353,7 @@ Tasks: T019. Requirements: FR-017, FR-026. **24 candidate paths; 1 production.**
 
 ### C1a2 — US10 persisted completion boundary
 
-Tasks: T020. Requirements: FR-018, FR-026. **21 candidate paths; 1 production.**
+Tasks: T018. Requirements: FR-018, FR-026. **21 candidate paths; 1 production.**
 
 | Class | Operation | Path | Basis |
 | --- | --- | --- | --- |
@@ -395,7 +381,7 @@ Tasks: T020. Requirements: FR-018, FR-026. **21 candidate paths; 1 production.**
 
 ### C1b1 — US10 phase/analyze team teardown
 
-Tasks: T021. Requirements: FR-019, FR-026. **21 candidate paths; 2 production.**
+Tasks: T019. Requirements: FR-019, FR-026. **21 candidate paths; 2 production.**
 
 | Class | Operation | Path | Basis |
 | --- | --- | --- | --- |
@@ -423,7 +409,7 @@ Tasks: T021. Requirements: FR-019, FR-026. **21 candidate paths; 2 production.**
 
 ### C1b2 — US10 checklist/implement team teardown
 
-Tasks: T022–T023. Requirements: FR-019, FR-026. **21 candidate paths; 2 production.**
+Tasks: T020–T021. Requirements: FR-019, FR-026. **21 candidate paths; 2 production.**
 
 | Class | Operation | Path | Basis |
 | --- | --- | --- | --- |
@@ -451,7 +437,7 @@ Tasks: T022–T023. Requirements: FR-019, FR-026. **21 candidate paths; 2 produc
 
 ### C2a1 — US11 complete review feedback after verified push
 
-Tasks: T024–T025. Requirements: FR-020, FR-021, FR-026. **14 candidate paths; 0 production.**
+Tasks: T022–T023. Requirements: FR-020, FR-021, FR-026. **14 candidate paths; 0 production.**
 
 | Class | Operation | Path | Basis |
 | --- | --- | --- | --- |
@@ -472,7 +458,7 @@ Tasks: T024–T025. Requirements: FR-020, FR-021, FR-026. **14 candidate paths; 
 
 ### C2a2 — US12 await blind-spot result
 
-Tasks: T026. Requirements: FR-022, FR-023, FR-026. **14 candidate paths; 0 production.**
+Tasks: T024. Requirements: FR-022, FR-023, FR-026. **14 candidate paths; 0 production.**
 
 | Class | Operation | Path | Basis |
 | --- | --- | --- | --- |
@@ -493,7 +479,7 @@ Tasks: T026. Requirements: FR-022, FR-023, FR-026. **14 candidate paths; 0 produ
 
 ### C2a3 — US13 status request envelopes
 
-Tasks: T027. Requirements: FR-024, FR-026. **14 candidate paths; 0 production.**
+Tasks: T025. Requirements: FR-024, FR-026. **14 candidate paths; 0 production.**
 
 | Class | Operation | Path | Basis |
 | --- | --- | --- | --- |
@@ -514,7 +500,7 @@ Tasks: T027. Requirements: FR-024, FR-026. **14 candidate paths; 0 production.**
 
 ### C2b1 — US13 scaffold/phase request envelopes
 
-Tasks: T028–T029. Requirements: FR-024, FR-026. **21 candidate paths; 0 production.**
+Tasks: T026–T027. Requirements: FR-024, FR-026. **21 candidate paths; 0 production.**
 
 | Class | Operation | Path | Basis |
 | --- | --- | --- | --- |
@@ -540,9 +526,9 @@ Tasks: T028–T029. Requirements: FR-024, FR-026. **21 candidate paths; 0 produc
 | process/evidence | modify | `specs/hrns-015-autopilot-gate-pr-emission-repair/.process/slice-inventory.md` | RED/GREEN and measured budget evidence |
 | generated index | regenerate | `specs/hrns-015-autopilot-gate-pr-emission-repair/SPEC-MOC.md` | PR/index refresh candidate |
 
-### C2b2 — US14 workflow links
+### C2b2 — US14 existing legacy workflow links
 
-Tasks: T030–T032. Requirements: FR-025, FR-026. **22 candidate paths; 0 production.**
+Tasks: T028–T030. Requirements: FR-025, FR-026. **16 candidate paths; 0 production.**
 
 | Class | Operation | Path | Basis |
 | --- | --- | --- | --- |
@@ -550,12 +536,6 @@ Tasks: T030–T032. Requirements: FR-025, FR-026. **22 candidate paths; 0 produc
 | generated | regenerate | `dist/claude/speckit-pro/skills/speckit-scaffold-spec/SKILL.md` | Claude payload |
 | host/support | modify | `speckit-pro/codex-skills/speckit-scaffold-spec/SKILL.md` | task |
 | generated | regenerate | `dist/codex/speckit-pro/skills/speckit-scaffold-spec/SKILL.md` | Codex overlay |
-| host/support | modify | `speckit-pro/skills/speckit-coach/templates/technical-roadmap-template.md` | task |
-| generated | regenerate | `dist/claude/speckit-pro/skills/speckit-coach/templates/technical-roadmap-template.md` | source payload |
-| generated | regenerate | `dist/codex/speckit-pro/skills/speckit-coach/templates/technical-roadmap-template.md` | source payload |
-| host/support | modify | `speckit-pro/README.md` | task |
-| generated | regenerate | `dist/claude/speckit-pro/README.md` | source payload |
-| generated | regenerate | `dist/codex/speckit-pro/README.md` | source payload |
 | test/manifest | add | `tests/speckit-pro/unit/test-roadmap-workflow-links.py` | task |
 | test/manifest | add | `tests/speckit-pro/unit/fixtures/roadmap-workflow-links/cases.json` | task |
 | test/manifest | modify | `tests/speckit-pro/suite-manifest.json` | task |
@@ -571,6 +551,6 @@ Tasks: T030–T032. Requirements: FR-025, FR-026. **22 candidate paths; 0 produc
 
 ## Qualification and stop conditions
 
-The tables are complete named candidates under the present task design, not measured final diffs. Regenerate `dist`, runner trust outputs, spec indexes, and reference pages at each owning checkpoint; compare against the exact marker base/head. If an output changes outside this ledger, a fixture needs another child, a refactor adds a path, production exceeds four, total reaches 25, or LOC crosses a block line, stop and reallocate before that PR. T033 records full cross-feature verification. No implementation checkbox is complete.
+The tables are complete named candidates under the present task design, not measured final diffs. Regenerate `dist`, runner trust outputs, spec indexes, and reference pages at each owning checkpoint; compare against the exact marker base/head. If an output changes outside this ledger, a fixture needs another child, a refactor adds a path, production exceeds four, total reaches 25, or LOC crosses a block line, stop and reallocate before that PR. T031 records full cross-feature verification. No implementation checkbox is complete.
 
-The installed changed-file-manifest validator treats a repeated path as globally owned by one marker. This conflicts with sequential reuse of the runner, suite manifest, host guidance, process evidence, and trust outputs here. Do not remove repeated declarations to satisfy it; repair and test the product contract before persisting markers. Actual changed paths, LOC, and G6 remain unqualified.
+Sequential repeated-path support is supplied as shipped in #676; do not remove honest repeated declarations. Actual changed paths, LOC, current marker validation, and G6 remain unqualified. No future implementation diff is fabricated to satisfy a planning gate.
