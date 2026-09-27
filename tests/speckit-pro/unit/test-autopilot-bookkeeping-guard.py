@@ -590,6 +590,99 @@ class AutonomyBoundarySourceContractTests(unittest.TestCase):
         self.assertNotIn("auto_review", statuses)
         self.assertNotIn("prior_execution", statuses)
 
+
+def _flat(path: Path) -> str:
+    return " ".join(path.read_text(encoding="utf-8").split())
+
+
+def _section(text: str, heading: str, next_heading: str) -> str:
+    start = text.index(heading)
+    return text[start : text.index(next_heading, start + len(heading))]
+
+
+BLOCKED_ACTION_HEADING = "Blocked Actions Mid-Run: Fall Back or Defer, Never Stop"
+
+
+class BlockedActionDeferralSourceContractTests(unittest.TestCase):
+    """One blocked action mid-run must not stop independent work (issue 752)."""
+
+    def assert_deferral_rules(self, section: str, ask_tool: str) -> None:
+        for phrase in (
+            "approval-reviewer veto",
+            "missing approval",
+            "unavailable tool",
+            "fallback that the task, `tasks.md`, or the spec itself defines",
+            "auto-applied fallback",
+            "defer that task",
+            "every task and Post item that depends on it",
+            "keep executing every independent task, gate, and Post check",
+            "while runnable work remains",
+            "reserves no execution-control budget",
+            "one consolidated operator request",
+            ask_tool,
+            "plain text in the final message",
+            "known_gaps",
+            "every fallback taken and every deferred item",
+            "never bypass",
+            "never change approval, sandbox, or reviewer configuration",
+            "unknown side effects",
+            "`checkpoint_required`",
+        ):
+            self.assertIn(phrase, section)
+
+    def test_codex_phase_seven_defers_a_blocked_action_and_continues(self) -> None:
+        references = CODEX_AUTOPILOT_SKILL.parent / "references"
+        phase = _flat(references / "phase-execution-codex.md")
+        section = _section(
+            phase, f"### {BLOCKED_ACTION_HEADING}", "## PR Packet and Body Boundary"
+        )
+        self.assertLess(phase.index("## Phase 7: Implement"), phase.index(section))
+        self.assert_deferral_rules(section, "`request_user_input`")
+        self.assertIn("even when `request_user_input` returns", section)
+        # The late-discovery rule no longer routes a mid-run boundary into the
+        # pre-Phase-7 stop.
+        late = _section(phase, "If a worker discovers a predictable boundary", "```text")
+        self.assertIn("defers only that task", late)
+        self.assertIn(BLOCKED_ACTION_HEADING, late)
+
+    def test_codex_entrypoint_and_post_audit_allow_an_honest_deferred_end(self) -> None:
+        skill = _flat(CODEX_AUTOPILOT_SKILL)
+        references = CODEX_AUTOPILOT_SKILL.parent / "references"
+        post = _flat(references / "post-implementation-codex.md")
+        recovery = _flat(references / "error-recovery-codex.md")
+        self.assertIn(BLOCKED_ACTION_HEADING, skill)
+        audit = _section(skill, "### 3.4 Pre-final completion audit", "Only after every Post item")
+        self.assertIn("deferred items remain", audit)
+        self.assertIn("plain text in the final message", audit)
+        self.assertIn("deferred items remain", post)
+        self.assertIn("known_gaps", post)
+        self.assertIn("Action blocked mid-run", recovery)
+        self.assertIn(BLOCKED_ACTION_HEADING, recovery)
+
+    def test_claude_phase_seven_mirrors_the_deferral_rule(self) -> None:
+        references = CLAUDE_AUTOPILOT_SKILL.parent / "references"
+        phase = _flat(references / "phase-execution.md")
+        section = _section(
+            phase, f"#### {BLOCKED_ACTION_HEADING}", "#### Append Contract"
+        )
+        self.assertLess(phase.index("#### Never Yield With Nothing In Flight"), phase.index(section))
+        self.assert_deferral_rules(section, "`AskUserQuestion`")
+        never_yield = _section(
+            phase, "#### Never Yield With Nothing In Flight", f"#### {BLOCKED_ACTION_HEADING}"
+        )
+        self.assertIn("A blocked action is not a stop condition", never_yield)
+
+    def test_claude_entrypoint_and_recovery_mirror_the_deferred_end(self) -> None:
+        skill = _flat(CLAUDE_AUTOPILOT_SKILL)
+        recovery = _flat(CLAUDE_AUTOPILOT_SKILL.parent / "references" / "error-recovery.md")
+        audit = _section(skill, "### 3.4 Pre-final completion audit", "## Workflow File Update Protocol")
+        self.assertIn("deferred items remain", audit)
+        self.assertIn("plain text in the final message", audit)
+        self.assertIn(BLOCKED_ACTION_HEADING, audit)
+        self.assertIn("Action blocked mid-run", recovery)
+        self.assertIn(BLOCKED_ACTION_HEADING, recovery)
+
+
 class AutonomyBoundaryAuthorizationTests(unittest.TestCase):
     def test_matching_explicit_authorization_remains_valid_on_resume(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
@@ -1641,6 +1734,7 @@ def build_suite() -> unittest.TestSuite:
         WorkflowStatusEvidenceTests,
         StateStatusSchemaTests,
         AutonomyBoundarySourceContractTests,
+        BlockedActionDeferralSourceContractTests,
         AutonomyBoundaryAuthorizationTests,
         AutonomyBoundaryFreshnessTests,
         AutonomyBoundaryMalformedExecutionTests,

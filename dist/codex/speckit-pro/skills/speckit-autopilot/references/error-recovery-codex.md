@@ -61,6 +61,11 @@ $speckit-autopilot workflow.md --from-phase <next-pending-phase>
   [consensus-protocol.md §Human Review Needed](consensus-protocol.md#human-review-needed).
 - **MCP tool unavailable:** Skip research that depends on it. Use
   file search and read fallbacks for codebase analysis. Log warning.
+- **Action blocked mid-run:** An approval-reviewer veto, a missing approval,
+  or an unavailable tool inside Phase 7 or Post is not a stop. Take the task's
+  own fallback, or defer that task and keep executing independent work, then
+  ask once at the end. See
+  [Blocked Actions Mid-Run: Fall Back or Defer, Never Stop](./phase-execution-codex.md#blocked-actions-mid-run-fall-back-or-defer-never-stop).
 - **Lifecycle action unavailable, or a subagent appears stuck/frozen:** Missing
   `close_agent` is expected on hosted Responses Multi-agent and MUST NOT stop
   the run. When explicit closure is exposed but returns already-gone, log and
