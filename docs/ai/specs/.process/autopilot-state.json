@@ -3,15 +3,15 @@
   "spec_id": "HRNS-015",
   "feature_dir": "specs/hrns-015-autopilot-gate-pr-emission-repair",
   "branch": "hrns-015-autopilot-gate-pr-emission-repair",
-  "status": "awaiting_review",
+  "status": "in_progress",
   "stage": "plan",
-  "active_step": "Plan stage complete: draft published; awaiting owner review",
+  "active_step": "Phase 3: Plan",
   "stage_resolution": {
     "source": "argv",
     "basis": "explicit --stage plan",
     "recorded_stage": "plan",
     "planning_complete": true,
-    "confidence_gate_status": "\u2705 Complete",
+    "confidence_gate_status": "✅ Complete",
     "corroboration": {
       "status": "no_record"
     }
@@ -26,15 +26,25 @@
     "cleanup_mode": "apply",
     "eligible_previous_specs": [],
     "excluded_current_spec": "specs/hrns-015-autopilot-gate-pr-emission-repair",
-    "safeToApplyCleanup": false
+    "safeToApplyCleanup": false,
+    "retained_candidates": [
+      {
+        "spec": "formal-001-selective-formal-methods",
+        "reason": "Implementation in progress; no merged provenance found"
+      },
+      {
+        "spec": "brand-001-racecraft-identity-system",
+        "reason": "Navigation-only directory; no spec/plan or merged provenance found"
+      }
+    ]
   },
   "execution_control": {
-    "run_id": "e7fbc9a6636945ed8a8c2abd42cbb892",
     "ledger_path": "docs/ai/specs/.process/execution-control/ac068cab59ef67faf15646a7.json",
     "disposition": "continue",
     "reasons": [],
-    "elapsed_seconds": 48634.095886707306,
-    "checkpoint_due": false
+    "elapsed_seconds": 123428.10354995728,
+    "checkpoint_due": true,
+    "run_id": "e7fbc9a6636945ed8a8c2abd42cbb892"
   },
   "plan": [
     {
@@ -83,47 +93,47 @@
     },
     {
       "step": "Phase 3: Plan",
-      "status": "completed"
+      "status": "in_progress"
     },
     {
       "step": "Phase 4: Checklist - api-contracts",
-      "status": "completed"
+      "status": "pending"
     },
     {
       "step": "Phase 4: Checklist - api-contracts Consensus",
-      "status": "completed"
+      "status": "pending"
     },
     {
       "step": "Phase 4: Checklist - error-handling",
-      "status": "completed"
+      "status": "pending"
     },
     {
       "step": "Phase 4: Checklist - error-handling Consensus",
-      "status": "skipped: no unresolved items"
+      "status": "pending"
     },
     {
       "step": "Phase 4: Checklist - state-management",
-      "status": "completed"
+      "status": "pending"
     },
     {
       "step": "Phase 4: Checklist - state-management Consensus",
-      "status": "completed"
+      "status": "pending"
     },
     {
       "step": "Phase 5: Tasks",
-      "status": "completed"
+      "status": "pending"
     },
     {
       "step": "Phase 6: Analyze",
-      "status": "completed"
+      "status": "pending"
     },
     {
       "step": "Phase 6: Analyze - Consensus",
-      "status": "completed"
+      "status": "pending"
     },
     {
       "step": "Phase 6.5: Confidence Gate",
-      "status": "completed"
+      "status": "pending"
     },
     {
       "step": "Phase 7: Implement - Setup (shared evidence) (T001)",
@@ -134,15 +144,15 @@
       "status": "skipped: outside --stage plan"
     },
     {
-      "step": "Phase 7: Implement - User Story 1 \u2014 final release note (A1a/A1b) (T003\u2013T005)",
+      "step": "Phase 7: Implement - User Story 1 — final release note (A1a/A1b) (T003–T005)",
       "status": "skipped: outside --stage plan"
     },
     {
-      "step": "Phase 7: Implement - User Story 2 \u2014 packet-only untracked files (A2) (T006\u2013T007)",
+      "step": "Phase 7: Implement - User Story 2 — packet-only untracked files (A2) (T006–T007)",
       "status": "skipped: outside --stage plan"
     },
     {
-      "step": "Phase 7: Implement - User Story 3 \u2014 current confidence verdict (A3) (T008)",
+      "step": "Phase 7: Implement - User Story 3 — current confidence verdict (A3) (T008)",
       "status": "skipped: outside --stage plan"
     },
     {
@@ -150,23 +160,23 @@
       "status": "skipped: outside --stage plan"
     },
     {
-      "step": "Phase 7: Implement - User Story 4 \u2014 visible marker counts (B1a) (T010)",
+      "step": "Phase 7: Implement - User Story 4 — visible marker counts (B1a) (T010)",
       "status": "skipped: outside --stage plan"
     },
     {
-      "step": "Phase 7: Implement - User Story 5 \u2014 tracked spec index (B1b) (T011)",
+      "step": "Phase 7: Implement - User Story 5 — tracked spec index (B1b) (T011)",
       "status": "skipped: outside --stage plan"
     },
     {
-      "step": "Phase 7: Implement - User Story 6 \u2014 named reviewability entry (B2a/B2b) (T012\u2013T015)",
+      "step": "Phase 7: Implement - User Story 6 — named reviewability entry (B2a/B2b) (T012–T015)",
       "status": "skipped: outside --stage plan"
     },
     {
-      "step": "Phase 7: Implement - User Story 7 \u2014 refactor-aware estimate (B3a) (T016)",
+      "step": "Phase 7: Implement - User Story 7 — refactor-aware estimate (B3a) (T016)",
       "status": "skipped: outside --stage plan"
     },
     {
-      "step": "Phase 7: Implement - User Story 8 \u2014 declared quality commands (B3b) (T017)",
+      "step": "Phase 7: Implement - User Story 8 — declared quality commands (B3b) (T017)",
       "status": "skipped: outside --stage plan"
     },
     {
@@ -174,11 +184,11 @@
       "status": "skipped: outside --stage plan"
     },
     {
-      "step": "Phase 7: Implement - User Story 9 \u2014 13 canonical Post rows (C1a1) (T019)",
+      "step": "Phase 7: Implement - User Story 9 — 13 canonical Post rows (C1a1) (T019)",
       "status": "skipped: outside --stage plan"
     },
     {
-      "step": "Phase 7: Implement - User Story 10 \u2014 complete Post and teams (C1a2/C1b1/C1b2) (T020\u2013T022)",
+      "step": "Phase 7: Implement - User Story 10 — complete Post and teams (C1a2/C1b1/C1b2) (T020–T022)",
       "status": "skipped: outside --stage plan"
     },
     {
@@ -186,19 +196,19 @@
       "status": "skipped: outside --stage plan"
     },
     {
-      "step": "Phase 7: Implement - User Story 11 \u2014 complete review feedback after push (C2a1) (T024\u2013T025)",
+      "step": "Phase 7: Implement - User Story 11 — complete review feedback after push (C2a1) (T024–T025)",
       "status": "skipped: outside --stage plan"
     },
     {
-      "step": "Phase 7: Implement - User Story 12 \u2014 wait for blind-spot result (C2a2) (T026)",
+      "step": "Phase 7: Implement - User Story 12 — wait for blind-spot result (C2a2) (T026)",
       "status": "skipped: outside --stage plan"
     },
     {
-      "step": "Phase 7: Implement - User Story 13 \u2014 complete named helper requests (C2a3/C2b1) (T027\u2013T029)",
+      "step": "Phase 7: Implement - User Story 13 — complete named helper requests (C2a3/C2b1) (T027–T029)",
       "status": "skipped: outside --stage plan"
     },
     {
-      "step": "Phase 7: Implement - User Story 14 \u2014 real workflow links (C2b2) (T030\u2013T031)",
+      "step": "Phase 7: Implement - User Story 14 — real workflow links (C2b2) (T030–T031)",
       "status": "skipped: outside --stage plan"
     },
     {
@@ -262,7 +272,7 @@
       "status": "skipped: outside --stage plan"
     }
   ],
-  "updated_at": "2026-09-26T03:55:07Z",
+  "updated_at": "2026-09-27T00:24:06.438277+00:00",
   "prerequisites": {
     "status": "completed_with_documented_exception",
     "all_pass": false,
@@ -503,7 +513,7 @@
     "phase_groups": 21,
     "story_count": 14,
     "all_fr_ids_covered": true,
-    "reviewability_budget": "19 proposed increments, 14\u201324 candidate paths each; actual diffs and LOC unqualified",
+    "reviewability_budget": "19 proposed increments, 14–24 candidate paths each; actual diffs and LOC unqualified",
     "fingerprint_status": "valid after the one-time Tasks producer reconciliation"
   },
   "atomicity_route": {
@@ -585,13 +595,6 @@
     "threshold": 0.9,
     "planning_review_only": true
   },
-  "autonomy_boundary_private_receipt": {
-    "status": "ready",
-    "sha256": "104b21e273eb949564a1ecdb23664d31113735b14843538f312863e9cc9f0949",
-    "public_details": "redacted to honor the repository privacy rule",
-    "validation": "The exact current-boundary preflight passed before G6.5; full execution roots and native event identity retained privately.",
-    "contract_gap": "The shipped autonomy schema requires private absolute roots in committed public files. Public replay of the exact boundary remains unavailable."
-  },
   "structural_checks": {
     "quality_delta_exit": 2,
     "quality_delta_reason": "Canonical process-state verbosity",
@@ -623,5 +626,74 @@
     ],
     "in_flight_dispatches": [],
     "completed_at": "2026-09-26T03:55:07Z"
+  },
+  "autonomy_boundary": {
+    "schema_version": "autonomy-boundary-receipt.v1",
+    "status": "ready",
+    "planning_fingerprints": {
+      "plan_md": {
+        "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/plan.md",
+        "size_bytes": 23635,
+        "sha256": "sha256:10d972bb68d3f637a2ad96024467bd600c2dbbfc637cca074cf408d95fb6b9b5"
+      },
+      "tasks_md": {
+        "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/tasks.md",
+        "size_bytes": 23487,
+        "sha256": "sha256:aa80f377f3219c8de8919b7a50382afd9b83e823852eff43cb7748ff02bf1ae8"
+      }
+    },
+    "execution_boundary": {
+      "execution_environment": "local",
+      "sandbox_mode": "workspace-write",
+      "approval_reviewer": "auto_review",
+      "sha256": "sha256:bdfd35cd13a06a85d4191cc2daf958a71ee401e808006c2eefe0103f40a66740"
+    },
+    "actions": [
+      {
+        "action_id": "planning-worktree-writes",
+        "category": "outside_writable_roots",
+        "execution_boundary_sha256": "sha256:bdfd35cd13a06a85d4191cc2daf958a71ee401e808006c2eefe0103f40a66740",
+        "scope_sha256": "sha256:ccb11ab2cfef6c4393f01e1331026709ccc943137b1052491d065d8ddbc2f4c4",
+        "disposition": "ready",
+        "authorization": {
+          "status": "explicit_user",
+          "scope_sha256": "sha256:ccb11ab2cfef6c4393f01e1331026709ccc943137b1052491d065d8ddbc2f4c4"
+        }
+      },
+      {
+        "action_id": "planning-git-metadata",
+        "category": "outside_writable_roots",
+        "execution_boundary_sha256": "sha256:bdfd35cd13a06a85d4191cc2daf958a71ee401e808006c2eefe0103f40a66740",
+        "scope_sha256": "sha256:e641861a7be3c496057c42330c8190ead043a09c634cd98b5b19735d7cd570ee",
+        "disposition": "ready",
+        "authorization": {
+          "status": "explicit_user",
+          "scope_sha256": "sha256:e641861a7be3c496057c42330c8190ead043a09c634cd98b5b19735d7cd570ee"
+        }
+      },
+      {
+        "action_id": "planning-research",
+        "category": "external_side_effect",
+        "execution_boundary_sha256": "sha256:bdfd35cd13a06a85d4191cc2daf958a71ee401e808006c2eefe0103f40a66740",
+        "scope_sha256": "sha256:f7a84b66d17fb7dcd78a4fae9b2382a1886610c2444c2768ffcd9e825de5532d",
+        "disposition": "ready",
+        "authorization": {
+          "status": "explicit_user",
+          "scope_sha256": "sha256:f7a84b66d17fb7dcd78a4fae9b2382a1886610c2444c2768ffcd9e825de5532d"
+        }
+      },
+      {
+        "action_id": "planning-draft-publication",
+        "category": "external_side_effect",
+        "execution_boundary_sha256": "sha256:bdfd35cd13a06a85d4191cc2daf958a71ee401e808006c2eefe0103f40a66740",
+        "scope_sha256": "sha256:a15e2a55a577bf26b0acd167c44be9a8c7feae383907825894aa8b680a6f0b63",
+        "disposition": "ready",
+        "authorization": {
+          "status": "explicit_user",
+          "scope_sha256": "sha256:a15e2a55a577bf26b0acd167c44be9a8c7feae383907825894aa8b680a6f0b63"
+        }
+      }
+    ],
+    "private_record_sha256": "sha256:37e917d99a50fe3a2aac087a4b5fad3540ec4ee07789325488c31e232564ce45"
   }
 }

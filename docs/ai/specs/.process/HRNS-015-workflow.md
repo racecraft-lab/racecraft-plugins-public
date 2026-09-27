@@ -34,13 +34,13 @@ captured during scoping.
 |-------|---------|--------|-------|
 | Specify | `/speckit-specify` | ✅ Complete | 14 user stories, 29 current functional requirements, 40 acceptance scenarios after Clarify; G1 passed |
 | Clarify | `/speckit-clarify` | ✅ Complete | Four sessions complete; ten consensus decisions recorded; G2 passed with zero markers |
-| Plan | `/speckit-plan` | ✅ Complete | G3 passed; advisory file-based estimate not estimated because the declared Slice A inventory is partial |
-| Checklist | `/speckit-checklist` | ✅ Complete | Three domains, 51 items, 11 gaps resolved; G4 passed with zero markers |
-| Tasks | `/speckit-tasks` | ✅ Complete | 33 tasks in 21 groups; metadata reconciled without changing definitions; sidecar valid and G5 passed with zero markers |
-| Analyze | `/speckit-analyze` | ✅ Complete | Analysis complete for operator-directed plan review; H3–H7 remain open and spec qualification is unqualified |
-| Confidence Gate | G6.5 | ✅ Complete | Advisory warning: composite 0.43 versus 0.90; proceed with planning review only |
-| Implement | `/speckit-implement` | ⏭️ Skipped | Outside --stage plan; qualification and owner ratification remain pending |
-| Post | Post-Implementation | ⏭️ Skipped | Outside --stage plan; canonical 13-item closeout remains for implementation |
+| Plan | `/speckit-plan` | 🔄 In Progress | G3 passed; advisory file-based estimate not estimated because the declared Slice A inventory is partial |
+| Checklist | `/speckit-checklist` | ⏳ Pending | Three domains, 51 items, 11 gaps resolved; G4 passed with zero markers |
+| Tasks | `/speckit-tasks` | ⏳ Pending | 33 tasks in 21 groups; metadata reconciled without changing definitions; sidecar valid and G5 passed with zero markers |
+| Analyze | `/speckit-analyze` | ⏳ Pending | Analysis complete for operator-directed plan review; H3–H7 remain open and spec qualification is unqualified |
+| Confidence Gate | G6.5 | ⏳ Pending | Advisory warning: composite 0.43 versus 0.90; proceed with planning review only |
+| Implement | `/speckit-implement` | ⏳ Pending | Outside --stage plan; qualification and owner ratification remain pending |
+| Post | Post-Implementation | ⏳ Pending | Outside --stage plan; canonical 13-item closeout remains for implementation |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⏭️ Skipped | ⚠️ Blocked
 
@@ -513,7 +513,7 @@ G2 passed: the runner reported zero clarification markers; the spec has no human
 | `contracts/` | ✅ Complete | `runner-and-roadmap.md` and `workflow-and-pr.md` |
 | `quickstart.md` | ✅ Complete | Failing-first workflow and verification commands |
 
-G3 passed with zero unresolved markers. No formal model is selected. The standalone `estimate-reviewable-loc` helper returned `not_estimated` (`projected: null`, zero parseable declared file operations) because Slice A’s ten named operations are a partial subset of its 16-file projection. The current size helper’s 1,932-LOC/five-slice stress check uses 77 provisional file touches and ignores the required-refactor input; it is not a refactor-inclusive estimate. Tasks must complete distinct file and refactor inventories before claiming any revised slice budget is qualified.
+The earlier Plan gate result is superseded by the explicit 2.37.0 resume; current G3 validation has not run. No formal model is selected. The standalone `estimate-reviewable-loc` helper returned `not_estimated` (`projected: null`, zero parseable declared file operations) because Slice A’s ten named operations are a partial subset of its 16-file projection. The current size helper’s 1,932-LOC/five-slice stress check uses 77 provisional file touches and ignores the required-refactor input; it is not a refactor-inclusive estimate. Tasks must complete distinct file and refactor inventories before claiming any revised slice budget is qualified.
 
 ---
 
@@ -1022,3 +1022,7 @@ Ripwire quality-delta returned exit 2 for canonical process-state verbosity. Its
   ]
 }
 ```
+
+### Planning Resume — installed 2.37.0
+
+Explicit resume from Plan after agent restart. Prior Plan-to-confidence results are historical and are being revalidated. Archive contract sweep retained both other active directories because merged provenance was not established; current target excluded. Research broker screening mode: jev; warning: search_environment_only_credential. No implementation dispatched. Private autonomy proof is retained outside repository files; current public receipt schema is autonomy-boundary-receipt.v1.
