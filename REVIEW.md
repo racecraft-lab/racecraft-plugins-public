@@ -21,7 +21,8 @@ repository tooling or tests giving a wrong answer:
 - A skill, command, or agent whose frontmatter its loader requires is missing or
   malformed.
 - Shipped plugin code (`speckit-pro/`, `typesafe-jev/plugin/`, `dist/`) or the
-  default local suite that leaves the Python 3.11+ standard library. A dev or
+  default local suite (`tests/speckit-pro/run-all.py`) that leaves the Python
+  3.11+ standard library. A dev or
   test package is allowed only when it is pinned in one repository-owned
   source, installed by a repository Python script into an isolated virtual
   environment, never imported by shipped code, and needed only by a check in

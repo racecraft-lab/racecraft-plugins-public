@@ -148,7 +148,8 @@ pnpm --dir docs-site reference:generate
   `specs/...` path as a string is fine; opening one is not, and
   `tests/speckit-pro/lib/test_result.py` enforces the difference at run time.
 - Keep shipped plugin code (`speckit-pro/`, `typesafe-jev/plugin/`, `dist/`)
-  and the default local suite on Python 3.11+ standard library. Dev and test
+  and the default local suite (`tests/speckit-pro/run-all.py`) on Python 3.11+
+  standard library. Dev and test
   tooling may use a third-party package only when it is pinned in one
   repository-owned source, installed by a repository Python script into an
   isolated virtual environment, never imported by shipped code, and needed
