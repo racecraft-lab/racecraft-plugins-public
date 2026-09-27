@@ -78,7 +78,9 @@ PHASE7_RESEARCH_AGENT = "speckit-pro:domain-researcher"
 PHASE7_VERIFY_AGENT = "orchestrator-direct"
 PHASE7_TEST_KEYWORDS = ("contract test", "unit test", "integration", "test")
 PHASE7_RESEARCH_KEYWORDS = ("research", "investigate", "explore api")
-PHASE7_VERIFY_KEYWORDS = ("verify", "run", "check", "build", "lint")
+# The one list of check-only task verbs. The Tasks guidance and both hosts'
+# routing prose name exactly these words; a contract test holds them together.
+PHASE7_VERIFY_KEYWORDS = ("verify", "run", "check", "build", "lint", "confirm", "recheck")
 PHASE7_CODE_SPAN = re.compile(r"`[^`]*`")
 PHASE7_LEADING_VERB = re.compile(r"^[\s*_]*([A-Za-z]+)")
 

@@ -22,9 +22,9 @@ or in `execution-control/` when the workflow already sits in a `.process`
 directory. An earlier `.process/.process/execution-control/` ledger stays valid
 when passed as `ledger_path`. Verification evidence follows the same rule in
 `verification/`; a record already under `.process/.process/verification/`
-still validates. Untracked ledger and verification evidence under
-`.process/execution-control/` or `.process/verification/` never make the
-worktree dirty for mutation helpers; any other change still refuses `apply`.
+still validates. Untracked ledger, verification evidence, and task-results
+journals under `.process/execution-control/`, `.process/verification/`, or
+`.process/task-results/` never make the worktree dirty for mutation helpers; any other change still refuses `apply`.
 An existing ledger belongs to its recorded canonical workflow path. An explicit
 `ledger_path` does not authorize a different workflow to adopt that run; an
 existing explicit ledger also requires the parent's `expected_run_id` on start.
@@ -37,9 +37,10 @@ ownership from the caller's current workflow.
   adjacent spec can supply requirement IDs, otherwise failures use `unresolved`.
   An existing spec's registry freezes at start; later paths or contents never
   reset counters.
-  Agent replacement, compaction, stage changes, a reclaimed state mirror, and
-  resume never reset it; only an operator-approved `begin-replan-epoch` opens
-  a fresh allowance. Preserve another workflow's ledger when reclaiming
+  Agent replacement, compaction, a reclaimed state mirror, and resume never
+  reset it. Only two actions open a fresh allowance: `begin-stage-epoch` when
+  the operator explicitly starts the implement stage, and an operator-approved
+  `begin-replan-epoch`. Preserve another workflow's ledger when reclaiming
   the one-run `autopilot-state.json` mirror.
 - `bind-invariants`: for a greenfield run that started with an empty registry,
   call once after Specify has produced the feature spec, before the next
@@ -135,6 +136,27 @@ ownership from the caller's current workflow.
   the counters. The run ID, clocks, and consumed events carry over; archived
   dispatch IDs and events can never be reused. A re-plan the operator did not
   order is not grounds for a new epoch.
+- `begin-stage-epoch`: when the invocation argv names `--stage implement`,
+  call it once after `start`, after Step 0.6c has written the resolved `Stage`
+  row. Pass `autopilot_args`, the same invocation argv given to
+  `resolve-autopilot-stage`. No operator event is needed: the operator's
+  explicit stage request is the approval. The helper reads its own evidence and
+  refuses unless the argv names `--stage implement` explicitly (an
+  auto-detected stage, `full`, and `plan` never qualify), the workflow file
+  records every planning phase complete, and its `Stage` row already reads
+  `implement`. Every dispatch must be settled and no wait may be open. It moves
+  the planning stage's spent counters, reservations, dispatches, and exception
+  into `corrective_epochs` under the runner-derived event ID
+  `stage-transition:implement`, keeps the invariant registry and its binding,
+  and resets the counters. A stage opens one allowance per run: a resumed
+  `--stage implement` invocation returns `stage_epoch_opened=false` and
+  changes nothing. Ask the operator only when this stage's own allowance is
+  spent by real corrections.
+  A metadata-only correction (for example a task verb reworded so the task
+  routes to verification) still reserves an ordinary cycle. Admitting it
+  without one needs a runner-observed baseline of the task definitions to
+  prove that no requirement, task ID, dependency, ownership, or budget
+  changed; the runner has no such baseline yet, so that admission is deferred.
 - `checkpoint`: persist the 45-minute completed-work marker without resetting
   the repair budget. `pause`/`resume` excludes only human-UAT or
   external-approval waits with independent parent `native_observation` carrying
