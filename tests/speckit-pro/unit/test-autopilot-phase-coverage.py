@@ -324,6 +324,9 @@ def state_json(*, include_confidence: bool = True, include_post: bool = True, co
 class AutopilotPhaseCoverageTests(unittest.TestCase):
     def run_validator_paths(self, workflow_path: Path, state_path: Path) -> tuple[int, dict[str, object]]:
         local_validator = state_path.parent / VALIDATOR.relative_to(REPO_ROOT)
+        installed_validator = getattr(self, "_installed_validator", None)
+        if installed_validator is not None:
+            local_validator = installed_validator
         command = [
             sys.executable,
             str(local_validator if local_validator.is_file() else VALIDATOR),
@@ -1317,6 +1320,25 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
     def test_checkpoint_evidence_uses_the_shipped_schema_without_a_feature_schema(self) -> None:
         self.assert_changed_file_manifest_scenario(feature_local_schema=False)
 
+    def test_canonical_schemas_load_from_a_plugin_installed_outside_the_repository(self) -> None:
+        self.assert_changed_file_manifest_scenario(
+            feature_local_schema=False, plugin_inside_repo=False,
+        )
+
+    def test_canonical_schema_outside_repository_and_plugin_root_is_refused(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            stray = Path(tmp) / "stray.schema.json"
+            stray.write_text("{}", encoding="utf-8")
+            repo = Path(tmp) / "repo"
+            repo.mkdir()
+            schema, errors = VALIDATOR_MODULE._canonical_schema(
+                stray, "stray", repo_root=repo, expected_head_commit="a" * 40,
+            )
+        self.assertIsNone(schema)
+        self.assertEqual(
+            ["canonical stray schema is outside the installed plugin root"], errors
+        )
+
     def test_shipped_marker_checkpoint_schema_compiles(self) -> None:
         schema = VALIDATOR_MODULE._strict_json_loads(
             MARKER_CHECKPOINT_SCHEMA.read_text(encoding="utf-8")
@@ -1387,9 +1409,13 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
             )
         )
 
-    def assert_changed_file_manifest_scenario(self, *, feature_local_schema: bool) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
+    def assert_changed_file_manifest_scenario(
+        self, *, feature_local_schema: bool, plugin_inside_repo: bool = True,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as tmp, tempfile.TemporaryDirectory() as plugin_tmp:
             root = Path(tmp)
+            # An installed plugin lives outside the repository it validates.
+            plugin_home = root if plugin_inside_repo else Path(plugin_tmp)
             workflow_path = root / "workflow.md"
             alternate_workflow_path = root / "alternate-workflow.md"
             state_path = root / "autopilot-state.json"
@@ -1450,16 +1476,19 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
                     ),
                     encoding="utf-8",
                 )
-            local_validator = root / VALIDATOR.relative_to(REPO_ROOT)
+            local_validator = plugin_home / VALIDATOR.relative_to(REPO_ROOT)
             local_validator.parent.mkdir(parents=True)
             shutil.copy2(VALIDATOR, local_validator)
+            if not plugin_inside_repo:
+                self._installed_validator = local_validator
+                self.addCleanup(delattr, self, "_installed_validator")
             local_schema_paths: list[Path] = []
             for source_schema in CANONICAL_SCHEMA_PATHS:
-                local_schema = root / source_schema.relative_to(REPO_ROOT)
+                local_schema = plugin_home / source_schema.relative_to(REPO_ROOT)
                 local_schema.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(source_schema, local_schema)
                 local_schema_paths.append(local_schema)
-            local_checkpoint_schema = root / MARKER_CHECKPOINT_SCHEMA.relative_to(REPO_ROOT)
+            local_checkpoint_schema = plugin_home / MARKER_CHECKPOINT_SCHEMA.relative_to(REPO_ROOT)
             if MARKER_CHECKPOINT_SCHEMA.is_file():
                 shutil.copy2(MARKER_CHECKPOINT_SCHEMA, local_checkpoint_schema)
             subprocess.run(["git", "init", "-q", str(root)], check=True)
@@ -1926,6 +1955,9 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
                 schema_cases.append(
                     (local_checkpoint_schema, "checkpoint_evidence_errors", "marker-checkpoint")
                 )
+            if not plugin_inside_repo:
+                # Outside the repository there is no PR head to pin the plugin's contracts to.
+                schema_cases = []
             for schema_path, error_bucket, schema_label in schema_cases:
                 clean_schema_bytes = schema_path.read_bytes()
                 schema_path.write_bytes(clean_schema_bytes + b"\n")
