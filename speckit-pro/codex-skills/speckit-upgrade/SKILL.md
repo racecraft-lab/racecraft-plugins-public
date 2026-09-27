@@ -146,8 +146,39 @@ For each integration the operator chose:
 Invoke `specify integration upgrade <key> --script sh` with argv-only
 execution.
 
-The CLI is diff-aware. If it succeeds, capture output and move to
-the next integration.
+The CLI is diff-aware. If it succeeds, capture its output and read
+it before moving to the next integration.
+
+A successful upgrade can still leave shared infrastructure behind.
+It refreshes the integration's skills but not the shared
+`.specify/scripts/` and `.specify/templates/` files, and it says so
+with one or both of these warnings:
+
+- `shared infrastructure path(s) already exist and were not updated`
+- `Preserved N customized shared infrastructure file(s)`
+
+Never report such an upgrade as complete. The new skills may call
+script options the old scripts reject. List every path the warnings
+name and treat them as the modified files in 5b: offer
+`force-and-restore`, `keep-mine`, or `manual-merge`. After this step,
+invoke `[resolved_python, "-m", "speckit_pro_runner"]` with this
+request on stdin:
+
+```json
+{"schema_version":"1.0","request_id":"upgrade-setup-contract","helper_id":"check-prerequisites","operation":"check-prerequisites","mode":"read_only","inputs":{"workflow_file":""}}
+```
+
+Parse `data.stdout.text` as JSON. Its `setup_contract` check must pass
+(the missing workflow file fails a separate check; ignore that one
+here). A failing `setup_contract` names each skill that still calls an
+option its script rejects. Its `template_resolution` check must pass
+too: SpecKit parses preset manifests with PyYAML from the first
+`python3` on `PATH`, and a `uv tool` or `pipx` install keeps PyYAML in
+its own environment. Codex runs commands in a non-interactive login
+shell, which does not read `~/.zshrc`, so a Python set up only there
+(for example by pyenv) is not the one SpecKit finds. If the check
+fails, show its message; installing packages or editing shell startup
+files is the operator's call.
 
 #### 5b. If blocked: structured triage
 
