@@ -1089,7 +1089,10 @@ class AnchoredAgentDir:
                     return remember(result)
                 return remember(CodexAgentCleanupResult())
             finally:
-                codex_agent_close_descriptor_nonmasking(held_fd)
+                try:
+                    os.close(held_fd)
+                except OSError:
+                    pass
         finally:
             if private_dir_fd is not None:
                 try:
