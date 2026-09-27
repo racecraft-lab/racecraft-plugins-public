@@ -178,7 +178,7 @@ An explicit operator waiver is recorded separately and is never a passing check.
 | **Name** | Autopilot, Gate, and PR-Emission Repair |
 | **Branch** | `hrns-015-autopilot-gate-pr-emission-repair` |
 | **Stage** | `plan` |
-| **Draft PR** | [#685](https://github.com/racecraft-lab/racecraft-plugins-public/pull/685) — refreshed for completed 2.37.1 planning; four generated artifacts; architecture-viewer template absent; preview disposition pending |
+| **Draft PR** | [#685](https://github.com/racecraft-lab/racecraft-plugins-public/pull/685) — refreshed for completed 2.37.1 planning; four generated artifacts; architecture-viewer template absent; previews unavailable (0/4 verified) |
 | **Dependencies** | None |
 | **Enables** | HRNS-016 (needs Slice A's packet release-note and untracked-packet repairs) |
 | **Priority** | P1 |
@@ -981,8 +981,8 @@ Ripwire quality-delta returned exit 2 for canonical process-state verbosity. Its
       "expected_title": "Implementation Plan \u2014 HRNS-015 Autopilot, Gate, and PR-Emission Repair",
       "expected_content": "Eighteen approved review increments repair packet emission, gates, completion and scaffold flows on Claude Code and Codex.",
       "preview": {
-        "status": "pending",
-        "blocker": "Not observed yet",
+        "status": "unavailable",
+        "blocker": "preview-isolation-session observe_codex returned missing_prerequisite: preview_boundary_unavailable; no isolated observation was produced.",
         "observation": null
       }
     },
@@ -994,8 +994,8 @@ Ripwire quality-delta returned exit 2 for canonical process-state verbosity. Its
       "expected_title": "Spec Explainer \u2014 HRNS-015 Autopilot, Gate, and PR-Emission Repair",
       "expected_content": "All implementation checkpoints remain pending.",
       "preview": {
-        "status": "pending",
-        "blocker": "Not observed yet",
+        "status": "unavailable",
+        "blocker": "preview-isolation-session observe_codex returned missing_prerequisite: preview_boundary_unavailable; no isolated observation was produced.",
         "observation": null
       }
     },
@@ -1007,8 +1007,8 @@ Ripwire quality-delta returned exit 2 for canonical process-state verbosity. Its
       "expected_title": "Code Approaches \u2014 HRNS-015 Autopilot, Gate, and PR-Emission Repair",
       "expected_content": "How should a supplied release note reach a final PR without separating its body from the validated packet?",
       "preview": {
-        "status": "pending",
-        "blocker": "Not observed yet",
+        "status": "unavailable",
+        "blocker": "preview-isolation-session observe_codex returned missing_prerequisite: preview_boundary_unavailable; no isolated observation was produced.",
         "observation": null
       }
     },
@@ -1020,8 +1020,8 @@ Ripwire quality-delta returned exit 2 for canonical process-state verbosity. Its
       "expected_title": "Module Map \u2014 HRNS-015 Autopilot, Gate, and PR-Emission Repair",
       "expected_content": "Fourteen stories cover 26 active requirements in eighteen ordered increments.",
       "preview": {
-        "status": "pending",
-        "blocker": "Not observed yet",
+        "status": "unavailable",
+        "blocker": "preview-isolation-session observe_codex returned missing_prerequisite: preview_boundary_unavailable; no isolated observation was produced.",
         "observation": null
       }
     },
