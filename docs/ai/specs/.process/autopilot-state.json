@@ -3,9 +3,9 @@
   "spec_id": "HRNS-015",
   "feature_dir": "specs/hrns-015-autopilot-gate-pr-emission-repair",
   "branch": "hrns-015-autopilot-gate-pr-emission-repair",
-  "status": "in_progress",
+  "status": "plan_complete",
   "stage": "plan",
-  "active_step": "Plan stage: Draft artifact refresh and handoff",
+  "active_step": null,
   "stage_resolution": {
     "basis": "explicit --stage plan",
     "confidence_gate_status": "\u2705 Complete",
@@ -53,7 +53,7 @@
     "ledger_path": "docs/ai/specs/.process/execution-control/ac068cab59ef67faf15646a7.json",
     "disposition": "continue",
     "reasons": [],
-    "elapsed_seconds": 180809.9141047001,
+    "elapsed_seconds": 181306.1757838726,
     "checkpoint_due": false,
     "run_id": "e7fbc9a6636945ed8a8c2abd42cbb892"
   },
@@ -148,7 +148,7 @@
     },
     {
       "step": "Plan stage: Draft artifact refresh and handoff",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 7: Implement - Setup (T001)",
@@ -271,7 +271,7 @@
       "status": "skipped: outside --stage plan"
     }
   ],
-  "updated_at": "2026-09-27T16:24:36.540414+00:00",
+  "updated_at": "2026-09-27T16:44:55.907584+00:00",
   "prerequisites": {
     "status": "completed",
     "all_pass": true,
@@ -560,17 +560,19 @@
   },
   "structural_checks": {
     "quality_delta_exit": 2,
-    "quality_delta_reason": "Canonical process-state verbosity",
-    "test_gate_exit": 4,
-    "test_gate_reason": "Five planning-document symbols without mapped tests",
-    "classification": "advisory planning-document limits; no runtime qualification claimed"
+    "quality_delta_reason": "Advisory JSON-record verbosity: gates grew from 50 to 75 lines with required current gate receipts; no runtime source changed.",
+    "test_gate_exit": 0,
+    "test_gate_reason": "No changed call-graph symbols or selected tests at the committed planning snapshot; not an implementation test run.",
+    "classification": "Planning-document diagnostics; native planning and packet gates passed."
   },
   "plan_stage_completion": {
     "planning_complete": true,
-    "remaining": [
-      "artifact regeneration and draft handoff"
-    ],
-    "implementation_started": false
+    "stage_boundary_commit": "72a4e956",
+    "analyze_checkpoint_commit": "de3950bd",
+    "draft_handoff_complete": true,
+    "remaining": [],
+    "implementation_started": false,
+    "preview_delivery": "unavailable; see workflow-only Artifact Review Handoff"
   },
   "autonomy_boundary": {
     "schema_version": "autonomy-boundary-receipt.v1",
@@ -643,7 +645,7 @@
   },
   "plan_resume_result": {
     "version": "2.37.1",
-    "status": "analyze_complete",
+    "status": "plan_complete",
     "artifact_count": 6,
     "active_requirements": 26,
     "historical_requirement_ids": 29,
