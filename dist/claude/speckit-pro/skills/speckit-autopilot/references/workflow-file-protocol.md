@@ -15,7 +15,7 @@ across context compactions and `--from-phase` resumes.
 | **Checklist** | Checklist Results table, Addressing Gaps section |
 | **Tasks** | Tasks Results table (total, phases, parallel, coverage) |
 | **Analyze** | Analysis Results table (ID, severity, issue, resolution) |
-| **Implement** | Implementation Progress, Post-Implementation Checklist, Success Criteria |
+| **Implement** | Implement Checklist Gate (before the first dispatch), Implementation Progress, Post-Implementation Checklist, Success Criteria |
 
 Clarify Results must preserve each accepted human answer separately from the
 executor's recommendation or later consensus. Record the answer directly when

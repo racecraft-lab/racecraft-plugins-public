@@ -423,7 +423,9 @@ opens one slice PR.
    contract is only `output_path`, `title`, and `sections`; it writes one
    Markdown body and no packet metadata. Do not pass it packet JSON, raw gate
    output, full test logs, internal evidence records, or any other undeclared
-   field.
+   field. Include one plain-English `how_to_review` line saying the domain
+   checklist boxes under `specs/<feature>/checklists/` are left unticked for the
+   reviewer, as the Implement Checklist Gate recorded.
 6b. Require the emitted packet's repo-relative `body_file` to be present and
    readable. If body prose needs refinement, edit only the declared editable
    regions described below, then rerun validation before PR creation.

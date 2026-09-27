@@ -107,6 +107,11 @@ You receive:
    and lower your confidence. Keep queries generic: no secrets, local paths,
    or copied spec text.
 
+9. **Do not stop on unticked domain checklist items.** Items in
+   `checklists/*.md` are reviewer-owned, and the orchestrator has already
+   recorded them as deferred to PR review. Never edit a checklist marker: do not
+   tick, untick, or rewrite any checklist item.
+
 </hard_constraints>
 
 ## Task Execution

@@ -2440,6 +2440,42 @@ repository because GitHub writes require a body file. Remove the private
 session and temporary reply file on success or failure. The run report names
 only that private cleanup completed, never its absolute path or contents.
 
+#### Phase 7 Setup: Record the Implement Checklist Gate
+
+Stock `/speckit-implement` stops when a domain checklist has unticked items.
+Spec Kit's checklist template makes those items reviewer-owned: a reviewer
+ticks a box, and implement must not change the markers. Autopilot does not run
+that stop. It records the gate decision instead, once, before the first Phase 7
+dispatch:
+
+- **The decision is `deferred-to-review`.** Unticked reviewer-owned items in
+  `specs/<feature>/checklists/*.md` pass to PR review as they are. Autopilot
+  never ticks a reviewer-owned item, and neither does any executor it
+  dispatches.
+- **`[Gap]` markers are not deferred: they stay blocking through G4.** Take
+  the `[Gap]` count from the recorded G4 verdict. Do not recount it here.
+- **Write the record** in the workflow file under `## Phase 7: Implement`, as a
+  `### Implement Checklist Gate` subsection placed before
+  `### Implementation Progress`. Create the subsection when it is absent. On a
+  resume, leave an existing record as found.
+
+```text
+### Implement Checklist Gate
+
+| Field | Value |
+|-------|-------|
+| Decision | deferred-to-review |
+| Reviewer-owned items | <unticked> of <total> unticked across <n> checklist files |
+| [Gap] markers | <count from the G4 verdict> (blocking through G4) |
+```
+
+- **Fail closed on missing evidence.** When `checklists/` is absent or a file
+  cannot be read, write `unknown` and the reason in the Reviewer-owned items
+  cell. Never write a zero you did not count.
+
+This gate is not a stop condition and never asks the operator. The PR body
+tells the reviewer the boxes are theirs (post-implementation.md step 6).
+
 #### Phase 7 Setup: Open the Implementation-Notes Record
 
 Run this before Step 1, so the record exists before the first task is
@@ -2607,6 +2643,8 @@ Agent(
     <exact assigned descriptions and per-task execution metadata>
     Execute sequentially within declared ownership. Return a separate
     ## Task Result: <TASK_ID> for every ID, including unfinished work.
+    Checklist items are reviewer-owned and deferred to PR review: do not
+    stop on unticked ones, and never edit a checklist marker.
   """
 )
 ```

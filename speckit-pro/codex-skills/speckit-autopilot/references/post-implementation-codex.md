@@ -207,7 +207,9 @@ packet-owned body before `gh pr create`. The packet path remains
 title, target branches, changed-file scope, verification evidence, UAT text,
 non-goals, and known gaps must come from current workflow or marker-plan
 evidence. Run `pr-packet-output` in `dry_run` first, then `apply`. Do not choose
-an arbitrary older packet.
+an arbitrary older packet. Include one plain-English `how_to_review` line saying
+the domain checklist boxes under `specs/<feature>/checklists/` are left unticked
+for the reviewer, as the Implement Checklist Gate recorded.
 
 `generate-pr-body` is a body-only `golden_only` operation. Its complete input
 contract is `output_path`, `title`, and `sections`, and it writes one Markdown
