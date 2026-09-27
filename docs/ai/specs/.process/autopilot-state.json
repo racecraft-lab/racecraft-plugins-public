@@ -30,7 +30,7 @@
   },
   "execution_control": {
     "run_id": "e7fbc9a6636945ed8a8c2abd42cbb892",
-    "ledger_path": "docs/ai/specs/.process/.process/execution-control/ac068cab59ef67faf15646a7.json",
+    "ledger_path": "docs/ai/specs/.process/execution-control/ac068cab59ef67faf15646a7.json",
     "disposition": "continue",
     "reasons": [],
     "elapsed_seconds": 48634.095886707306,
