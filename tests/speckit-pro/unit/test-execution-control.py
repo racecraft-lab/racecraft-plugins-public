@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import subprocess
@@ -656,7 +657,6 @@ class ReplanEpochTests(_ExecutionControlFixture, unittest.TestCase):
     def rescope(self):
         spec = self.root / "feature/spec.md"
         spec.write_text("- FR-001: preserve data\n- FR-002: no secrets\n- FR-003: explain refusals\n")
-        import hashlib
         return hashlib.sha256(spec.read_bytes()).hexdigest()
 
     def epoch_event(self, spec_digest, **changes):
@@ -1185,6 +1185,28 @@ class RunnerDispatchTests(unittest.TestCase):
         self.assertEqual(code, 0, granted)
         self.assertEqual(granted["data"]["disposition"], "continue")
         self.assertEqual(granted["data"]["ledger"]["corrective_exception"]["dispatch_id"], "fix-c")
+
+    def test_replan_epoch_is_a_real_runner_route(self):
+        self.call_runner("execution-control", "apply", action="start")
+        for dispatch_id, invariant in (("fix-a", "FR-001"), ("fix-b", "FR-002")):
+            self.call_runner("execution-control", "apply", action="reserve", dispatch_id=dispatch_id,
+                             kind="corrective", failure_invariant=invariant)
+            self.call_runner("execution-control", "apply", action="complete", dispatch_id=dispatch_id,
+                             outcome="failed")
+        spec = self.root / "feature/spec.md"
+        spec.write_text("- FR-001: preserve data\n- FR-002: no secrets\n- FR-003: explain refusals\n")
+        event = {"native_event_id": "operator-replan", "run_id": self.run_id,
+                 "action": "replan_epoch_approved", "spec_sha256": hashlib.sha256(spec.read_bytes()).hexdigest()}
+        code, preview = self.call_runner("execution-control", "dry_run", action="begin-replan-epoch",
+                                         spec_file="feature/spec.md", native_observation=event)
+        self.assertEqual(code, 0, preview)
+        code, rotated = self.call_runner("execution-control", "apply", action="begin-replan-epoch",
+                                         spec_file="feature/spec.md", native_observation=event)
+        self.assertEqual(code, 0, rotated)
+        self.assertEqual(rotated["data"]["corrective_epoch"], 1)
+        code, reserved = self.call_runner("execution-control", "apply", action="reserve", dispatch_id="fix-c",
+                                          kind="corrective", failure_invariant="FR-003")
+        self.assertEqual(code, 0, reserved)
 
     def test_task_metadata_helper_is_registered_and_read_only(self):
         (self.root / "feature/tasks.md").write_text("# Tasks\n## Phase 1: Setup\n- [ ] T001 Create fixture in `fixture.txt`\n")

@@ -771,7 +771,9 @@ directions; do not infer a broader precedence rule.
 - **Repair budget exhausted:** checkpoint with the exact gate output
   and remaining work; no phase or nested worker has an independent retry budget.
   One operator-approved application correction past it uses
-  `authorize-corrective-exception`; never reset or bypass the ledger.
+  `authorize-corrective-exception`. After an operator-ordered re-plan,
+  `begin-replan-epoch` opens a fresh allowance with the operator's approval;
+  never reset or bypass the ledger otherwise.
 - **Consensus all-disagree** (Round 2): flag `[HUMAN REVIEW NEEDED]`.
   In an interactive session, ask the operator in place with
   `AskUserQuestion`, apply the answer, and continue; in an unattended run,
