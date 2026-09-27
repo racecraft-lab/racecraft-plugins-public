@@ -49,11 +49,12 @@ $speckit-autopilot workflow.md --from-phase <next-pending-phase>
 - **Gate needs repair:** Reserve against the same durable failure-family/spec
   budget used by every nested worker; checkpoint with exact output on exhaustion.
   One operator-approved application correction past it uses
-  `authorize-corrective-exception`. After an operator-ordered re-plan,
-  `begin-replan-epoch` opens a fresh allowance with the operator's approval;
-  never reset or bypass the ledger otherwise. Repeated failures with one
-  signature in one test file are one class: one approval covers its follow-ups
-  through `reserve-class-correction`. See
+  `authorize-corrective-exception`. An explicit `--stage implement` opens the
+  implement stage's own allowance through `begin-stage-epoch`. After an
+  operator-ordered re-plan, `begin-replan-epoch` opens a fresh allowance with
+  the operator's approval; never reset or bypass the ledger otherwise. Repeated
+  failures with one signature in one test file are one class: one approval
+  covers its follow-ups through `reserve-class-correction`. See
   [Repeated Gate Failures: Diagnose One Class, Approve It Once](./phase-execution-codex.md#repeated-gate-failures-diagnose-one-class-approve-it-once).
 - **Consensus agents all disagree:** Flag `[HUMAN REVIEW NEEDED]`.
   In an interactive task, ask the operator in place with
@@ -69,6 +70,11 @@ $speckit-autopilot workflow.md --from-phase <next-pending-phase>
   own fallback, or defer that task and keep executing independent work, then
   ask once at the end. See
   [Blocked Actions Mid-Run: Fall Back or Defer, Never Stop](./phase-execution-codex.md#blocked-actions-mid-run-fall-back-or-defer-never-stop).
+- **Plugin updated mid-run:** A plugin cache that changed or vanished, or an
+  agent refreshed after phase work began, is not a stop. Re-resolve the plugin
+  root, retry the failed bookkeeping calls once, record the drift, and
+  continue; any restart goes into the end-of-run request. See
+  [Plugin Update Mid-Run: Record, Re-resolve, Continue](./phase-execution-codex.md#plugin-update-mid-run-record-re-resolve-continue).
 - **Lifecycle action unavailable, or a subagent appears stuck/frozen:** Missing
   `close_agent` is expected on hosted Responses Multi-agent and MUST NOT stop
   the run. When explicit closure is exposed but returns already-gone, log and
