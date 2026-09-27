@@ -327,8 +327,9 @@ Run the pre-flight sequence before any phase work. STOP on failure.
    plugin-local script files.
 2. **Archive Sweep** — run helper `list-archive-candidates` with the current
    spec directory, then on feature/spec branches run
-   `/speckit-archive-run specs/<merged-spec-dir>` once per `archive_order`
-   entry, in order. On `main`, release, or any protected integration branch,
+   `/speckit-archive-run specs/<merged-spec-dir> --spec-only --plan-only --changelog-only` once per
+   `archive_order` entry, in order. The three scope modifiers keep the run out
+   of agent context files (stock extension step 5.3). On `main`, release, or any protected integration branch,
    record the helper report as a dry run and archive nothing. Skip if the
    archive extension is absent. Excludes the current target spec. Distinguish
    an absent extension from a broken installation: if the extension is present
@@ -625,7 +626,11 @@ for phase in PHASES starting from first_pending:
        workflow file, then continue on the fallback evidence chain: the
        setup-mode gate result recorded at scaffold, the plan-phase
        `estimate-reviewable-loc` verdict from step 7b, and any
-       operator-ratified split decision in the workflow file.
+       ratified split decision (autopilot or operator) in the workflow file.
+       When the per-PR path budget forces a split of the approved PR
+       order, run runner helper `ratify-pr-split` before asking anyone
+       and record its `data.record` (see Budget-driven split
+       ratification in `references/phase-execution.md`).
        In that committed evidence, `pass`, `warn`, honored exception,
        and valid current size-only `block` are marker-planning inputs.
        A valid current size-only block continues into marker planning
@@ -789,7 +794,7 @@ in [`references/error-recovery.md`](./references/error-recovery.md).
 - [Gate Validation](./references/gate-validation.md) — Programmatic gate checks (G0–G7), auto-fix loops, escalation
 - [Post-Implementation](./references/post-implementation.md) — 11-task post-impl sequence (incl. UAT runbook), integration suite, PR creation, review loop
 - [Task List Canonical](./references/task-list-canonical.md) — Task naming pattern + canonical post-implementation entries
-- [Hardener Delegation](./references/hardener-delegation.md) — Once-per-spec tests-only mutation hardening loop: Qwen delegation with candidate inspection, primary-model fallback, stop rule, record
+- [Hardener Delegation](./references/hardener-delegation.md) — Once-per-spec tests-only mutation hardening loop: gateway delegation with candidate inspection, primary-model fallback, stop rule, record
 - [Workflow File Protocol](./references/workflow-file-protocol.md) — Per-phase update table + `workflow_file` state authority (branch order, verdicts) + Consensus Resolution Log column schema
 - [Error Recovery](./references/error-recovery.md) — Resume, common issues, context-window management
 - [TDD Protocol](./references/tdd-protocol.md) — Red-green-refactor rules injected into implementation agent prompts
