@@ -320,15 +320,16 @@ nonzero exit here is a branch, not a stop: do not stop because the probe
 exited nonzero. When the list is empty, continue. When it holds `current execution boundary
 does not match the persisted execution boundary`, or any other stale-record
 error above, rerun the complete Phase 6.5 preflight against the live boundary
-now. Present one consolidated operator request, in the `operator_action_required`
-shape, that names the changed boundary and every action whose authorization it
-invalidates. When a data-egress action is among them, include the
-paste-ready authorization message and `auto_review.extra_policy` fragment that
-request carries. Record the operator's answer as `authorization.status=explicit_user`,
-then write the refreshed private record, its receipt, and the matching Phase 6.5
-row before Step 1.1 runs. Present the refresh as this up-front re-attestation,
-never as a guard-failure repair. A denial or no answer stops the run before the
-guard. A mismatch still blocks: keep `--require-autonomy-boundary` and every
+now, applying its standing policy coverage. A covered inventory asks no
+question, including a planning-to-implementation stage change such as an
+explicit `--stage implement` run of a plan whose earlier record covered only
+planning: record the coverage and proceed. An uncovered action is deferred to
+the one end-of-run request, never an up-front question; when it is data egress,
+that request carries the paste-ready authorization message and
+`auto_review.extra_policy` fragment. Write the refreshed private record, its
+receipt, and the matching Phase 6.5 row before Step 1.1 runs. Present the
+refresh as this up-front re-attestation, never as a guard-failure repair. A
+mismatch still blocks: keep `--require-autonomy-boundary` and every
 live `--current-*` value on the Step 1.1 command, and take those values from the
 current thread, never from the workflow or state.
 
