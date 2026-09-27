@@ -139,12 +139,19 @@ to archive previously merged specs.
    command contract once per `archive_order` entry, in that order, and let
    each run finish before the next starts:
    ```text
-   archive command: specs/<merged-spec-dir>
+   archive command: specs/<merged-spec-dir> --spec-only --plan-only --changelog-only
    ```
-   Pass only the feature directory as `$ARGUMENTS`. The stock archive
-   extension (`stn1slv/spec-kit-archive`) archives one feature per run and
-   rejects `--sweep`, `--current-target`, and `--dry-run`; the vendored
-   `racecraft-lab/spec-kit-archive` fork accepts the same single-feature form.
+   Pass the feature directory first, then exactly these three scope
+   modifiers, as `$ARGUMENTS`. The stock archive extension
+   (`stn1slv/spec-kit-archive`) archives one feature per run, treats several
+   scope modifiers as a union, and rejects `--sweep`, `--current-target`, and
+   `--dry-run`; the vendored `racecraft-lab/spec-kit-archive` fork accepts the
+   same single-feature form and the same modifiers. The union updates
+   `.specify/memory/spec.md`, `plan.md`, and `changelog.md` and leaves out the
+   agent context files (stock step 5.3, fork step 6.3). SpecKit Pro overrides
+   that step: an archive run never writes per-spec history to `AGENTS.md`,
+   `CLAUDE.md`, or `GEMINI.md`, even if an installed contract does not honor
+   the union.
    If a run fails, record `status=blocked` with that spec and the command's
    error under `archive_sweep`, then STOP before Phase 0.
 

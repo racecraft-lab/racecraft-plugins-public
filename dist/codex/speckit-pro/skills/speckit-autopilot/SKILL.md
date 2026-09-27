@@ -406,8 +406,8 @@ See [prerequisites-codex.md](./references/prerequisites-codex.md) for the full p
 - **Step -1: Archive Sweep Startup** — list merged prior specs with helper
   `list-archive-candidates`, then execute the installed archive extension's
   project-local command contract directly in Codex once per `archive_order`
-  entry (`archive command: specs/<merged-spec-dir>`; none on `main` or a
-  protected branch), use the Codex-native worktree binding for path
+  entry (`archive command: specs/<merged-spec-dir> --spec-only --plan-only --changelog-only`, which keeps
+  agent context files out of scope; none on `main` or a protected branch), use the Codex-native worktree binding for path
   prerequisites, and fail closed on a broken installed extension
 - **Step 0.0: Use Runner Operations** — invoke `speckit_pro_runner` helper IDs with one JSON request on stdin
 - **Step 0.1–0.7: Environment Checks** — `check-prerequisites` JSON parsing, branch detection

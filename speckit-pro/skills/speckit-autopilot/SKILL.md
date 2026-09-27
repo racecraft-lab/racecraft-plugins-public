@@ -342,8 +342,9 @@ Run the pre-flight sequence before any phase work. STOP on failure.
    plugin-local script files.
 2. **Archive Sweep** — run helper `list-archive-candidates` with the current
    spec directory, then on feature/spec branches run
-   `/speckit-archive-run specs/<merged-spec-dir>` once per `archive_order`
-   entry, in order. On `main`, release, or any protected integration branch,
+   `/speckit-archive-run specs/<merged-spec-dir> --spec-only --plan-only --changelog-only` once per
+   `archive_order` entry, in order. The three scope modifiers keep the run out
+   of agent context files (stock extension step 5.3). On `main`, release, or any protected integration branch,
    record the helper report as a dry run and archive nothing. Skip if the
    archive extension is absent. Excludes the current target spec. Distinguish
    an absent extension from a broken installation: if the extension is present
