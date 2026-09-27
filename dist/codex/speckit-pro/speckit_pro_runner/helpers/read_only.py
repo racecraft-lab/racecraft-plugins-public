@@ -2522,7 +2522,7 @@ def estimate_reviewable_loc(inputs: dict[str, Any], repo_root: Path) -> dict[str
             "tool": "estimate-reviewable-loc",
             "status": "not_estimated",
             "projected": None,
-            "declared_files": {"production": 0, "new": 0, "modified": 0, "total_entries": 0},
+            "declared_files": {"production": 0, "new": 0, "modified": 0, "total_entries": 0, "marker_evidence": 0},
             "greenfield": False,
             "thresholds": {"warn": 400, "block": 800, "greenfield_multiplier": 1.5, "base_warn": 400, "base_block": 800},
         }
@@ -2531,6 +2531,9 @@ def estimate_reviewable_loc(inputs: dict[str, Any], repo_root: Path) -> dict[str
     for status, path in lines:
         if path not in dedup or status == "MODIFIED":
             dedup[path] = status
+    marker_evidence = [path for path in dedup if is_marker_evidence(path)]
+    for path in marker_evidence:
+        del dedup[path]
     new = sum(1 for status in dedup.values() if status == "NEW")
     modified = sum(1 for status in dedup.values() if status == "MODIFIED")
     production = sum(1 for path in dedup if is_production_file(path) and not is_excluded_generated(path))
@@ -2542,7 +2545,8 @@ def estimate_reviewable_loc(inputs: dict[str, Any], repo_root: Path) -> dict[str
         "tool": "estimate-reviewable-loc",
         "status": "over_budget" if projected > block else "pass",
         "projected": projected,
-        "declared_files": {"production": production, "new": new, "modified": modified, "total_entries": len(dedup)},
+        "declared_files": {"production": production, "new": new, "modified": modified, "total_entries": len(dedup),
+                           "marker_evidence": len(marker_evidence)},
         "greenfield": greenfield,
         "thresholds": {"warn": warn, "block": block, "greenfield_multiplier": 1.5, "base_warn": 400, "base_block": 800},
     }
@@ -8828,6 +8832,12 @@ def is_excluded_generated(path: str) -> bool:
         or path.startswith(("vendor/", "vendors/", "third_party/", "generated/", "dist/", "build/"))
         or "/generated/" in path
     )
+
+
+def is_marker_evidence(path: str) -> bool:
+    """True for a marker's runner-owned checkpoint or verification record, which the path budget does not count."""
+    parts = PurePosixPath(path).parts
+    return len(parts) >= 3 and parts[-3] == ".process" and parts[-2] in {"checkpoints", "verification"} and parts[-1].endswith(".json")
 
 
 # Source files of the other stacks detect-commands knows, counted wherever
