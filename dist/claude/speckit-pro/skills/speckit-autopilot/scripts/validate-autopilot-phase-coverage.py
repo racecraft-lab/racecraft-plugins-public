@@ -128,6 +128,9 @@ CHANGED_FILE_MANIFEST_SCHEMA_PATH = (
 VERIFICATION_REPORT_SCHEMA_PATH = (
     Path(__file__).resolve().parents[1] / "contracts" / "verification-report.schema.json"
 )
+MARKER_CHECKPOINT_SCHEMA_PATH = (
+    Path(__file__).resolve().parents[1] / "contracts" / "marker-checkpoint.schema.json"
+)
 MARKER_PLAN_STATUSES = frozenset({
     "planned", "checkpointing", "emission_ready", "emitting", "emitted",
     "collapsed", "stale", "invalid",
@@ -2580,9 +2583,18 @@ def validate_projection_integrity(
             )
             worktree_schema_bytes = _read_repo_bytes(repo_root, checkpoint_schema_ref)
             if committed_schema_bytes is None:
-                checkpoint_evidence_errors.append(
-                    "checkpoint evidence schema is absent from the authorized PR head"
+                # No feature-local schema: validate against the plugin's own contract.
+                checkpoint_evidence_schema, checkpoint_schema_errors = _canonical_schema(
+                    MARKER_CHECKPOINT_SCHEMA_PATH,
+                    "marker-checkpoint",
+                    repo_root=repo_root,
+                    expected_head_commit=expected_head_commit,
                 )
+                checkpoint_evidence_errors.extend(checkpoint_schema_errors)
+                if worktree_schema_bytes is not None:
+                    checkpoint_file_errors.append(
+                        "checkpoint evidence schema differs from the authorized PR head"
+                    )
             else:
                 if worktree_schema_bytes != committed_schema_bytes:
                     checkpoint_file_errors.append(
