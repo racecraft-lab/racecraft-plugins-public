@@ -621,9 +621,9 @@ each marker `implementation_checkpoint` `{"status": "pending"}` with no commit
 or evidence fields. A v2 plan also needs a changed-file manifest that the
 phase-coverage guard checks against the pull request's actual diff, which does
 not exist until code is written, so move to `pr-marker-plan.v2` at the first
-implementation checkpoint. In either version, a pending checkpoint needs
-`commit_sha` and `evidence_path` together, and needs them only once a phase
-result is recorded for its marker.
+implementation checkpoint. Under v2, a pending checkpoint needs `commit_sha`
+and `evidence_path` together, and needs them only once a phase result is
+recorded for its marker; the guard does not check v1 checkpoints.
 
 When ordered markers each modify an existing shared file, declare `MODIFIED`
 for that path in each marker and list those marker IDs in review order in the
