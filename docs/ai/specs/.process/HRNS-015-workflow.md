@@ -37,7 +37,7 @@ captured during scoping.
 | Plan | `/speckit-plan` | ✅ Complete | 2.37.1 re-plan: six artifacts reconciled, 18 increments preserved, G3 pass, advisory projected LOC 200 |
 | Checklist | `/speckit-checklist` | ✅ Complete | API 24, error handling 21, state management 22; zero gaps; G4 passed |
 | Tasks | `/speckit-tasks` | ✅ Complete | 31 unchecked tasks, 17 groups, current metadata, G5 pass; 18 pending-only v1 markers validated |
-| Analyze | `/speckit-analyze` | 🔄 In Progress | Reviewing current 18-increment snapshot; prior Analysis Results are historical |
+| Analyze | `/speckit-analyze` | 🔄 In Progress | Current review complete; H8 checksum paths and M3 derived union require a guarded correction |
 | Confidence Gate | G6.5 | ⏳ Pending | Pending current Analyze; advisory mode retained, older composite not reused |
 | Implement | `/speckit-implement` | ⏳ Pending | Outside --stage plan; qualification and owner ratification remain pending |
 | Post | Post-Implementation | ⏳ Pending | Outside --stage plan; canonical 13-item closeout remains for implementation |
@@ -1151,3 +1151,19 @@ State-management revalidation preserved all 22 unchecked criteria and found zero
 The interrupted Tasks dispatch had no writes or final result; its host-confirmed interruption was recorded and the authorized resume completed. Native metadata validation and G5 passed for 31 unchecked tasks. The final advisory estimator returned pass/projected 200, with 40 modified and 16 new declarations. All eighteen candidate sets remain within limits.
 
 Marker authoring exposed a duplicate NEW teardown-test allocation. An ordinary FR-019 correction in the approved epoch assigned distinct phase/analyze and checklist/implement test files, preserving 21 paths and two production files in each increment. The regenerated pr-marker-plan.v1 validates with eighteen checkpoints containing only `{"status":"pending"}`. Actual per-PR diffs, LOC and checkpoint evidence remain required before implementation PR emission. Both ordinary corrections in the new epoch are recorded; prior history remains archived in the same ledger.
+
+### Analysis Results — 2.37.1 current re-plan
+
+| ID | Severity | Issue | Resolution |
+| --- | --- | --- | --- |
+| H1 | HIGH | Original C1 exceeds the path cap. | Approved C1a1/C1a2/C1b1/C1b2 candidates are 24/21/21/21 paths and at most two production paths. |
+| H2 | HIGH | Advisory route differs from delivery direction. | Preserve one-navigable-PR as advisory; explicit eighteen-increment owner authority governs delivery. |
+| H3 | HIGH | A allocation and approval outstanding. | Approval recorded; all four A sets contain 24 candidate paths. Actual emission evidence remains mandatory later. |
+| H4 | HIGH | B allocation and approval outstanding. | Five remaining B sets contain 22/23/23/18/22 paths; shipped B2a retired. |
+| H5 | HIGH | C2 allocation and approval outstanding. | Five C2 sets contain 14/14/14/21/16 paths; six shipped C2b2 exclusions documented. |
+| H6 | HIGH | Story identities and marker record outstanding. | Eighteen ordered markers cover fourteen stories and all 31 tasks; checkpoints exactly pending. H8 separately tracks incorrect declared checksum paths. |
+| H7 | HIGH | Recurring evidence and qualifications outstanding. | Six recurring evidence paths included; current hashes match. Approved timing requires actual diff/LOC/checkpoint proof at emission. H8 tracks current path-consistency defect. |
+| H8 | HIGH | Nine A/B increments name nonexistent speckit-pro-runner.manifest.sha256 instead of speckit-pro-runner.sha256 in inventory, task ownership and marker declarations. |  |
+| M3 | MEDIUM | C1b candidate group union says 29 although distinct teardown tests produce 30; individual increments remain 21/2. |  |
+
+Current Analyze confirms full active FR/task coverage, paired-host delivery, candidate caps and matching pending-marker fingerprints. H8 is established by refresh-release-artifacts.py:36,306 and gates/payloads.py:543,545. The ordinary FR-026 corrective reserve returned failure_family_budget_exhausted; no correction was applied. The proposed repair changes only checksum path names in three derived records and C1b's group-union count from 29 to 30, followed by metadata/marker validation. Both individual C1b increments remain 21 total and two production paths.

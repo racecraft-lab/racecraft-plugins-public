@@ -96,8 +96,8 @@
     "ledger_path": "docs/ai/specs/.process/execution-control/ac068cab59ef67faf15646a7.json",
     "disposition": "continue",
     "reasons": [],
-    "elapsed_seconds": 178633.27089309692,
-    "checkpoint_due": true,
+    "elapsed_seconds": 179260.61967372894,
+    "checkpoint_due": false,
     "run_id": "e7fbc9a6636945ed8a8c2abd42cbb892"
   },
   "plan": [
@@ -310,7 +310,7 @@
       "status": "skipped: outside --stage plan"
     }
   ],
-  "updated_at": "2026-09-27T16:01:25.800960+00:00",
+  "updated_at": "2026-09-27T16:10:54.971441+00:00",
   "prerequisites": {
     "status": "completed",
     "all_pass": true,
@@ -550,8 +550,24 @@
     "reason": "Classifier returned one-navigable-PR; plan-layers-feature-dir not invoked"
   },
   "analyze": {
-    "status": "in_progress",
-    "reason": "Current planning snapshot and valid planned markers ready for Analyze"
+    "status": "findings_pending_correction",
+    "findings": {
+      "critical": 0,
+      "high": 1,
+      "medium": 1,
+      "low": 0
+    },
+    "unresolved": [
+      "H8",
+      "M3"
+    ],
+    "coverage": {
+      "active_fr": 26,
+      "tasks": 31,
+      "stories": 14,
+      "scenarios": 37,
+      "success_criteria": 11
+    }
   },
   "confidence_gate": {
     "status": "pending",
@@ -3296,5 +3312,15 @@
       "warnings": []
     },
     "hash_contract": "Raw file bytes; canonical sorted compact UTF-8 JSON for reviewability and hazard route."
+  },
+  "pending_planning_correction": {
+    "status": "approval_required",
+    "refusal_reason": "failure_family_budget_exhausted",
+    "failure_invariant": "FR-026",
+    "findings": [
+      "H8",
+      "M3"
+    ],
+    "dispatch_id": "hrns015-analyze-path-exception-2371"
   }
 }
