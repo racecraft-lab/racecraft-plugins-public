@@ -623,8 +623,8 @@ def reserve_class_correction(ledger: dict[str, Any], inputs: dict[str, Any], now
     """
     dispatch_id = require_text(inputs.get("dispatch_id"), "dispatch_id")
     scope = _class_scope(inputs.get("failure_class"))
-    exception = ledger.get("corrective_exception")
-    approved = exception.get("failure_class") if isinstance(exception, dict) else None
+    exception: dict[str, Any] = ledger.get("corrective_exception") or {}
+    approved = exception.get("failure_class")
     if not isinstance(approved, dict) or {key: approved[key] for key in scope} != scope:
         raise ValueError("no operator approval covers this failure class in the current corrective epoch")
     reservation = exception["reservation_id"]
