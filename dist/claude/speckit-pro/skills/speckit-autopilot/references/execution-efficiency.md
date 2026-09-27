@@ -79,6 +79,31 @@ ownership from the caller's current workflow.
   `increment_review_allowance_exhausted`: defer that increment to the
   end-of-run request and continue with independent increments. Increment
   allowances archive with the rest of the allowance in `corrective_epochs`.
+  A planning gate's own remediation (G2 through G7, most often G6 Analyze)
+  instead supplies `gate_remediation`: `{"gate": "G6", "paths": [<every
+  repo-relative path the fix touches>]}`, plus the same explicit `spec_file`.
+  The feature directory is that spec's directory; when the ledger has already
+  bound a spec in `invariant_binding`, it must be the same one. When every path
+  is a planning document of that feature (`spec.md`, `plan.md`, `research.md`,
+  `tasks.md`, `data-model.md`, `quickstart.md`, `.process/task-execution.json`,
+  or a `checklists/<name>.md`), the helper reserves the fix under the gate's own
+  allowance: two rounds per gate, recorded in `gate_allowances` and returned as
+  `remediation_allowance=gate`. It never draws on the run-wide
+  `corrective_cycles` budget and needs no operator event. A fix that touches
+  code, tests, formal models, `contracts/`, or any other path takes the
+  ordinary run-wide path unchanged, and the result carries
+  `remediation_allowance=run_wide` and the reason in `gate_ineligible`
+  (`feature_binding_mismatch`, `no_remediation_paths`, or
+  `path_outside_planning_documents`). The helper judges paths only: a
+  threshold or scope change written inside a planning document is the
+  orchestrator's call, so omit `gate_remediation` and reserve it run-wide. Missing evidence never grants a free
+  allowance. A third round for the same gate returns `disposition=defer` with
+  `gate_remediation_allowance_exhausted` and a `deferred` entry whose
+  `unit_kind` is `gate`: record the open findings for the end-of-run request
+  and continue; it is never a mid-run stop. Planning documents produce no
+  runner-parsed failing checks, so a gate allowance has no convergence
+  admission; its two rounds are its fixed bound. Gate allowances
+  archive in `corrective_epochs` like increment allowances.
 - `complete`: record the same `dispatch_id` and actual
   `outcome=completed|failed|unknown|expected_tdd_red`. Expected assertion RED is
   implementation work, not corrective work. Infrastructure failures remain

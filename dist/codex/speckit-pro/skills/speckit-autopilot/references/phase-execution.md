@@ -561,6 +561,14 @@ these inputs:
 - `path_budget`: the repository's per-PR `production_paths` and `total_paths`
   caps.
 
+Each marker's evidence records, `<feature>/.process/checkpoints/<marker-id>.json`
+and `<feature>/.process/verification/<marker-id>.json`, are runner-owned and
+never count toward `production_paths` or `total_paths`, so recording them never
+needs a re-plan or an operator approval. `estimate-reviewable-loc` leaves them
+out of its counts too and reports them as `declared_files.marker_evidence`. Still
+list both files in that marker's `declared_files` and in the changed-file
+manifest, which must match the pull request's diff.
+
 The helper ratifies only a split that divides approved groups without merging
 or dropping any, keeps the approved order and each group's scope, keeps every
 active requirement, story, and task, and keeps each increment within the
@@ -716,6 +724,24 @@ Items it can't resolve are flagged in its
 
 If 0 unresolved items from executor, skip consensus and
 advance immediately.
+
+**Documentation-only remediation at a planning gate.** When a gate's
+remediation, most often Analyze (G6), edits only planning documents of the
+feature (`spec.md`, `plan.md`, `research.md`, `tasks.md`, `data-model.md`,
+`quickstart.md`, `.process/task-execution.json`, or a `checklists/<name>.md`),
+reserve it with `kind=corrective`, its `failure_invariant`, the explicit
+`spec_file`, and `gate_remediation`: the gate and every repository-relative
+path the fix will touch. The ledger admits it under that gate's own allowance
+of two rounds, so a run-wide budget spent at an earlier gate never stalls it,
+and it needs no operator approval. A remediation that touches code, tests,
+formal models, `contracts/`, or any path outside those documents goes through
+the run-wide budget with the reason in `gate_ineligible`. The helper judges
+paths only, so a threshold or scope change written inside a planning document
+is the orchestrator's call: omit `gate_remediation` and reserve it run-wide.
+When the
+reserve returns `gate_remediation_allowance_exhausted`, record the open findings
+for the end-of-run request and continue. It is never a mid-run question and
+never a stop.
 
 **Gate:** G6 — verify 0 CRITICAL findings
 
@@ -2802,7 +2828,7 @@ fallback: a correction that made no measurable progress, returned to an
 earlier failing set, left unparsed output, or followed a spec change meets the
 fixed allowances, and then the ledger returns
 `disposition=defer`, refuses that dispatch, and records the blocked failure
-family, increment, or failure class in its `deferred` list. Defer that work
+family, increment, gate, or failure class in its `deferred` list. Defer that work
 under rule 2, name the task or gate it blocks, and keep executing every
 independent task, increment, gate, and Post check. Rule 3's end-of-run
 request lists every ledger deferral; there the operator can approve
@@ -3033,6 +3059,13 @@ cannot stage the ledger, the verification evidence, or the task-results
 journals. If `git ls-files` shows such a path already tracked
 (from an older plugin version), run `git rm -r --cached -- <path>` before this
 commit.
+
+One exception: a marker's verification record,
+`<feature>/.process/verification/<marker-id>.json`, is committed evidence that
+the phase-coverage guard reads from the pull request head. When the workflow
+file sits in the feature's `.process/` directory, the runner's ignore rule
+covers that directory, so stage the record by path with
+`git add --force -- <path>`, and never untrack it.
 
 **After G7 passes:** Validate/reuse Integration/E2E proof,
 then execute PR Creation Protocol (see below).
