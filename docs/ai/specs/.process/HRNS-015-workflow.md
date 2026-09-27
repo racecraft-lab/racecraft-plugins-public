@@ -38,7 +38,7 @@ captured during scoping.
 | Checklist | `/speckit-checklist` | ✅ Complete | API 24, error handling 21, state management 22; zero gaps; G4 passed |
 | Tasks | `/speckit-tasks` | ✅ Complete | 31 unchecked tasks, 17 groups, current metadata, G5 pass; 18 pending-only v1 markers validated |
 | Analyze | `/speckit-analyze` | ✅ Complete | All current findings resolved; 26 active FRs covered; G6 passed; final confidence synthesis 0.95 |
-| Confidence Gate | G6.5 | ✅ Complete | Current autonomy ready; advisory PASS, computed 0.95 ≥ 0.90, no deductions |
+| Confidence Gate | G6.5 | ✅ Complete | Current autonomy ready; bounded re-plan advisory PASS, computed 0.94 ≥ 0.90, no deductions |
 | Implement | `/speckit-implement` | ⏳ Pending | Outside --stage plan; actual per-PR diffs, LOC and checkpoints remain mandatory before emission |
 | Post | Post-Implementation | ⏳ Pending | Outside --stage plan; canonical 13-item closeout remains for implementation |
 
@@ -178,7 +178,7 @@ An explicit operator waiver is recorded separately and is never a passing check.
 | **Name** | Autopilot, Gate, and PR-Emission Repair |
 | **Branch** | `hrns-015-autopilot-gate-pr-emission-repair` |
 | **Stage** | `implement` |
-| **Draft PR** | [#685](https://github.com/racecraft-lab/racecraft-plugins-public/pull/685) — refreshed for completed 2.37.1 planning; four generated artifacts; architecture-viewer template absent; previews unavailable (0/4 verified) |
+| **Draft PR** | [#685](https://github.com/racecraft-lab/racecraft-plugins-public/pull/685) — refreshed after bounded 2.38.0 Tasks re-plan; native draft packet passed; four current artifacts; architecture-viewer template absent; previews unqualified (0/4 verified); implementation0/31 |
 | **Dependencies** | None |
 | **Enables** | HRNS-016 (needs Slice A's packet release-note and untracked-packet repairs) |
 | **Priority** | P1 |
@@ -1170,3 +1170,9 @@ The full docs command exited1 at Playwright web-server startup after reference/c
 ### Bounded planning re-plan stage boundary
 
 G5 and G6 passed on the current sources. Native advisory G6.5 computed0.94 from the five new canonical criterion lines, above0.90, with zero deductions. The refreshed autonomy/phase coverage guard passed all error arrays empty. The ledger checkpoint preserved the run and one consumed ordinary correction in epoch2. The draft artifact handoff is in progress; implementation remains0/31 and all13 Post rows remain pending.
+
+### Bounded re-plan handoff complete; implementation resumes
+
+The native draft packet/body and validation receipt are committed and pushed, and draft#685 was refreshed from that validated body. Native apply first refused the two untracked local journals. Only those journals were stashed using the helper-recommended remedy; their exact byte hashes were retained and verified after restoration. The stash remains a recovery backup. No source change was hidden, no ignore rule changed, and the initial refusal remains recorded. The existing run and original journal are preserved.
+
+Planning gates and artifact refresh are complete. Stage implement resumes at T001; no task completion or actual increment evidence is claimed. All13 Post rows remain pending. The initial feedback sweep proceeded with zero comments: no sweep commit, no row, no reply; its private state was removed. Pages were current as of72a4e956 before the bounded task-word refresh at1c9bfb60. The validated draft description refresh completed. Continue the existing implementation stage from current native journal evidence.
