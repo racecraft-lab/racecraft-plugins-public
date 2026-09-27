@@ -186,8 +186,8 @@ def run_pr_split_ratification_helper(entry: Any, request: Any) -> dict[str, Any]
                     remediation_summary="The split evidence is incomplete, so ask the operator to ratify the split.",
                     remediation_actions=[
                         "Pass the approved groups in order with their scope, the increments in order with their "
-                        "group, scope, and path counts, the active requirement, story, and task IDs, and the "
-                        "per-PR path budget.",
+                        + "group, scope, and path counts, the active requirement, story, and task IDs, and the "
+                        + "per-PR path budget.",
                         "Retry the request, or record owner_ratification=pending and ask the operator.",
                     ],
                 )
