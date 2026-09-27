@@ -631,11 +631,18 @@ def _corrective_refusal(ledger: dict[str, Any], family: str) -> str | None:
     return None
 
 
-def _spec_digest(spec: Path) -> str | None:
+def _spec_digest(root: Path, spec_file: str) -> str | None:
     try:
+        spec = confined_path(root, spec_file)
         return hashlib.sha256(spec.read_bytes()).hexdigest() if spec.is_file() else None
-    except OSError:
+    except (OSError, ValueError):
         return None
+
+
+def _chain_spec_file(ledger: dict[str, Any], root: Path, spec: Path) -> str:
+    """The spec a family's first correction pins: the bound spec when the run has one, else the resolved spec."""
+    bound = ledger.get("invariant_binding", {}).get("spec_file")
+    return bound if isinstance(bound, str) else spec.relative_to(root.resolve()).as_posix()
 
 
 def _latest_evidence(ledger: dict[str, Any], since: float, until: float, command_id: str | None) -> str | None:
@@ -693,8 +700,9 @@ def _progress(ledger: dict[str, Any], reservation: str, previous_id: str, spec_s
     dispatches = ledger["dispatches"]
     chain = _progress_chain(ledger, reservation, previous_id)
     previous = dispatches[previous_id]
-    members = [item for item in dispatches.values()
-               if item.get("reservation_id") == reservation and item["reserved_at"] <= previous["reserved_at"]]
+    members = [dispatches[key] for key in chain] + [item for item in dispatches.values()
+                                                    if item.get("reservation_id") == reservation
+                                                    and "progress_of" not in item]
     if chain[-1] != previous_id or any(item["outcome"] != "completed" for item in members):
         return None, "previous_correction_unsettled", None
     if "baseline" not in previous:
@@ -730,14 +738,15 @@ def _progress(ledger: dict[str, Any], reservation: str, previous_id: str, spec_s
     return change, "", after_id
 
 
-def _admit_progress(ledger: dict[str, Any], dispatch_id: str, family: str, spec: Path,
+def _admit_progress(ledger: dict[str, Any], dispatch_id: str, family: str, root: Path,
                     now: float) -> tuple[dict[str, Any] | None, dict[str, Any]]:
     """Admit a correction past the family cap when the previous one converged, with no operator event."""
     if family not in ledger["approved_invariants"]:
         return None, {"admitted": False, "reason": "unresolved_family"}
     reservation = next(key for key, item in ledger["reservations"].items() if item["family"] == family)
     tail = _progress_chain(ledger, reservation)[-1]
-    spec_sha256 = _spec_digest(spec)
+    spec_file = ledger["dispatches"][tail].get("spec_file")
+    spec_sha256 = _spec_digest(root, spec_file) if isinstance(spec_file, str) else None
     change, reason, after_id = _progress(ledger, reservation, tail, spec_sha256, now)
     if change is None or after_id is None:
         return None, {"admitted": False, "reason": reason}
@@ -746,7 +755,7 @@ def _admit_progress(ledger: dict[str, Any], dispatch_id: str, family: str, spec:
         return None, {"admitted": False, "reason": "no_new_evidence"}
     ledger["dispatches"][dispatch_id] = {"kind": "corrective", "outcome": "reserved", "reserved_at": now,
                                          "reservation_id": reservation, "reconciliations": 0, "progress_of": tail,
-                                         "baseline": after_id, "spec_sha256": spec_sha256}
+                                         "baseline": after_id, "spec_file": spec_file, "spec_sha256": spec_sha256}
     return ({"reservation_id": reservation, "dispatch_id": dispatch_id},
             {"admitted": True, "change": change, "previous_dispatch_id": tail, "baseline": after_id})
 
@@ -759,12 +768,14 @@ def _validate_progress(ledger: dict[str, Any]) -> None:
     if len(successors) != len(set(successors)):
         raise ValueError("progress history forks")
     recorded = {key: item for key, item in dispatches.items()
-                if {"baseline", "spec_sha256", "progress_of"} & item.keys()}
+                if {"baseline", "spec_file", "spec_sha256", "progress_of"} & item.keys()}
+    bound = ledger.get("invariant_binding", {}).get("spec_file")
     baselines: set[tuple[Any, Any]] = set()
     for item in recorded.values():
         reservation, baseline = item.get("reservation_id"), item.get("baseline")
         evidence = dispatches.get(baseline, {}).get("failing_checks") if isinstance(baseline, str) else None
-        if ({"baseline", "spec_sha256"} - item.keys() or item["kind"] != "corrective"
+        if ({"baseline", "spec_file", "spec_sha256"} - item.keys() or item["kind"] != "corrective"
+                or not isinstance(item["spec_file"], str) or (bound is not None and item["spec_file"] != bound)
                 or reservation not in ledger["reservations"] or (reservation, baseline) in baselines
                 or not isinstance(evidence, dict) or not evidence["failing"]
                 or not isinstance(item["spec_sha256"], str) or not re.fullmatch(r"[0-9a-f]{64}", item["spec_sha256"])):
@@ -779,6 +790,7 @@ def _validate_progress(ledger: dict[str, Any]) -> None:
             continue
         previous = dispatches.get(item["progress_of"])
         if (not isinstance(previous, dict) or previous.get("reservation_id") != reservation
+                or previous.get("spec_file") != item["spec_file"]
                 or type(previous.get("completed_at")) not in (int, float)
                 or previous["completed_at"] > item["reserved_at"]):
             raise ValueError("invalid correction progress record")
@@ -898,7 +910,7 @@ def reserve(ledger: dict[str, Any], inputs: dict[str, Any], now: float, root: Pa
             family = str(invariant) if invariant in ledger["approved_invariants"] else "unresolved"
             refusal = _corrective_refusal(ledger, family)
             if refusal == "failure_family_budget_exhausted":
-                admitted, progress = _admit_progress(ledger, dispatch_id, family, spec, now)
+                admitted, progress = _admit_progress(ledger, dispatch_id, family, root, now)
                 if admitted is not None:
                     return {**admitted, "progress": progress, **note}
                 return {**_defer(ledger, dispatch_id, refusal, family, now), "progress": progress, **note}
@@ -907,11 +919,13 @@ def reserve(ledger: dict[str, Any], inputs: dict[str, Any], now: float, root: Pa
             reservation = uuid.uuid4().hex
             ledger["reservations"][reservation] = {"family": family, "dispatch_id": dispatch_id, "reserved_at": now}
             ledger["corrective_cycles"] += 1
-            baseline, spec_sha256 = _correction_baseline(ledger, now), _spec_digest(spec)
+            spec_file = _chain_spec_file(ledger, root, spec)
+            baseline, spec_sha256 = _correction_baseline(ledger, now), _spec_digest(root, spec_file)
             if family in ledger["approved_invariants"] and baseline is not None and spec_sha256 is not None:
                 ledger["dispatches"][dispatch_id] = {"kind": kind, "outcome": "reserved", "reserved_at": now,
                                                      "reservation_id": reservation, "reconciliations": 0,
-                                                     "baseline": baseline, "spec_sha256": spec_sha256}
+                                                     "baseline": baseline, "spec_file": spec_file,
+                                                     "spec_sha256": spec_sha256}
                 return {"reservation_id": reservation, "dispatch_id": dispatch_id, **note}
     elif reservation is not None:
         raise ValueError("only corrective dispatches use corrective reservations")

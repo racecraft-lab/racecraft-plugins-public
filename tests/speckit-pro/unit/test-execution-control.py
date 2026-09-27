@@ -1573,9 +1573,9 @@ class CorrectionProgressTests(_ExecutionControlFixture, unittest.TestCase):
         self.invoke("complete", dispatch_id=dispatch_id, outcome="failed" if exit_code else "completed")
         return dispatch_id
 
-    def correct(self, dispatch_id, invariant="FR-001", outcome="completed"):
+    def correct(self, dispatch_id, invariant="FR-001", outcome="completed", **inputs):
         self.now += 10
-        result = self.invoke("reserve", dispatch_id=dispatch_id, kind="corrective", failure_invariant=invariant)
+        result = self.invoke("reserve", dispatch_id=dispatch_id, kind="corrective", failure_invariant=invariant, **inputs)
         if result["disposition"] == "continue" and outcome is not None:
             self.now += 10
             self.invoke("complete", dispatch_id=dispatch_id, outcome=outcome)
@@ -1641,9 +1641,11 @@ class CorrectionProgressTests(_ExecutionControlFixture, unittest.TestCase):
         self.verify(unittest_output("test_a", "test_b"))
         self.correct("fix-1")
         spec = self.root / "feature/spec.md"
+        (self.root / "feature/unchanged-copy.md").write_bytes(spec.read_bytes())
         spec.write_text(spec.read_text() + "- FR-003: accept any output\n")
         self.verify(unittest_output("test_a"))
         self.assert_deferred_for(self.correct("fix-2"), "spec_changed")
+        self.assert_deferred_for(self.correct("fix-2b", spec_file="feature/unchanged-copy.md"), "spec_changed")
         self.verify(unittest_output("test_x", "test_y"))
         self.correct("fix-u1", invariant="words that name no requirement")
         self.verify(unittest_output("test_x"))
@@ -1667,6 +1669,16 @@ class CorrectionProgressTests(_ExecutionControlFixture, unittest.TestCase):
         self.verify(unittest_output("test_x", "test_y"))
         self.correct("fix-3", invariant="FR-002")
         self.assert_deferred_for(self.correct("fix-4", invariant="FR-002"), "no_new_evidence")
+
+    def test_a_failed_nested_correction_under_the_first_one_blocks_progress(self):
+        self.verify(unittest_output("test_a", "test_b"))
+        reservation = self.correct("fix-1", outcome=None)["reservation_id"]
+        self.now += 10
+        self.invoke("reserve", dispatch_id="nested-1", kind="corrective", reservation_id=reservation)
+        self.invoke("complete", dispatch_id="nested-1", outcome="failed")
+        self.invoke("complete", dispatch_id="fix-1", outcome="completed")
+        self.verify(unittest_output("test_a"))
+        self.assert_deferred_for(self.correct("fix-2"), "previous_correction_unsettled")
 
     def test_disjoint_failures_need_every_prior_failure_named_as_passing(self):
         self.verify(unittest_output("test_a"))
@@ -1726,6 +1738,10 @@ class CorrectionProgressTests(_ExecutionControlFixture, unittest.TestCase):
             "baseline names no dispatch": lambda ledger: dispatches(ledger)["fix-1"].update(baseline="verify-9"),
             "owner baseline removed": lambda ledger: [dispatches(ledger)["fix-1"].pop(key) for key in ("baseline", "spec_sha256")],
             "first evidence removed": lambda ledger: dispatches(ledger)["verify-1"].pop("failing_checks"),
+            "spec path swapped": lambda ledger: dispatches(ledger)["fix-3"].update(spec_file="feature/other.md"),
+            "failed nested correction": lambda ledger: dispatches(ledger).update({"nested-x": {
+                "kind": "corrective", "outcome": "failed", "reserved_at": dispatches(ledger)["fix-1"]["reserved_at"] + 1,
+                "reservation_id": dispatches(ledger)["fix-1"]["reservation_id"], "reconciliations": 0}}),
         }
         for name, tamper in tampers.items():
             for order in ("recorded", "reversed"):
@@ -2441,6 +2457,9 @@ class DockerVerificationTests(VerificationTests):
         self.assertFalse(result["record"]["completed"] or result["reusable"])
         self.assertIsNone(result["record"]["toolchain"]["image_id"])
         self.assertTrue((self.root / result["evidence_path"]).is_file())
+        ledger_file = next((self.root / "feature/.process/execution-control").glob("*.json"))
+        evidence = json.loads(ledger_file.read_text())["dispatches"][result["record"]["dispatch_id"]]["failing_checks"]
+        self.assertEqual((evidence["command_id"], evidence["format"], evidence["failing"]), ("UNIT_TEST", "unparsed", None))
         with patch.object(workflow_backend, "DockerClient") as client, \
              self.assertRaisesRegex(ValueError, "dispatch_already_started_no_relaunch"):
             execute_verification(self.root, {**self.inputs, "dispatch_id": result["record"]["dispatch_id"],

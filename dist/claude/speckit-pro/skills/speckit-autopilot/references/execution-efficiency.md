@@ -264,10 +264,12 @@ supported format, output matching two formats, a nonzero exit naming no
 failure, or a command that did not finish records `failing: null`.
 
 A family's first correction stores the newest recorded failure as its
-`baseline`, with the spec digest. The next correction in that family is
+`baseline`, and pins `spec_file` (the bound spec when the run has one, else
+the resolved spec) with its `spec_sha256`. Later checks reread that pinned
+file and ignore a request's `spec_file`. The next correction in that family is
 admitted with no operator event, no new reservation, and no change to
-`corrective_cycles` when all of these hold: the previous correction and every
-earlier one in its reservation completed; the spec digest is unchanged; and
+`corrective_cycles` when all of these hold: every correction in its
+reservation, nested ones included, completed; the pinned spec is unchanged; and
 the newest `failing_checks` for the same `command_id`, recorded after the
 previous correction completed, ran the same argv and at least as many checks,
 and is either a strict subset of that correction's baseline set or disjoint
@@ -276,7 +278,8 @@ It must also differ from every failing set the family already had. The
 admitted dispatch records `progress_of` (the previous correction) and its own
 `baseline`, so the chain of baselines is the family's history. The response
 carries `progress` with `admitted=true`, `change` (`shrank` or `moved`),
-`previous_dispatch_id`, and `baseline`. Dispatch it through the executor with
+`previous_dispatch_id`, and `baseline`. An admitted correction has no nested
+allowance of its own. Dispatch it through the executor with
 the consensus agents' diagnosis, rerun verification, and reserve the next
 correction the same way.
 
