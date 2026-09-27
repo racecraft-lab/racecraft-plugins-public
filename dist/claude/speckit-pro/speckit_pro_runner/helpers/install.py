@@ -83,6 +83,7 @@ ROUTE_POLICY_SHA256_IDENTITY = re.compile(r"^sha256:[0-9a-f]{64}$")
 ROUTE_POLICY_SHA256_HEX = re.compile(r"^[0-9a-f]{64}$")
 CODEX_AGENT_STATE_UNSET = object()
 CODEX_AGENT_OPEN_SUPPORTS_DIR_FD = os.open in os.supports_dir_fd
+CODEX_AGENT_UNLINK_SUPPORTS_DIR_FD = os.unlink in os.supports_dir_fd
 WINDOWS_GENERIC_READ = 0x80000000
 WINDOWS_GENERIC_WRITE = 0x40000000
 WINDOWS_DELETE = 0x00010000
@@ -559,7 +560,7 @@ class AnchoredAgentDir:
     def open(cls, destination: Path, identity: tuple[int, int] | None = None) -> "AnchoredAgentDir":
         if os.name == "nt":
             return WindowsAnchoredAgentDir.open(destination, identity)
-        if not CODEX_AGENT_OPEN_SUPPORTS_DIR_FD:
+        if not (CODEX_AGENT_OPEN_SUPPORTS_DIR_FD and CODEX_AGENT_UNLINK_SUPPORTS_DIR_FD):
             raise OSError(errno.ENOTSUP, "descriptor-relative anchored directory operations are unavailable")
         if identity is None:
             identity = codex_agent_destination_identity(destination)
@@ -729,7 +730,7 @@ class AnchoredAgentDir:
         self._validate_name(target_name)
         codex_agent_native_rename_no_replace(self.directory_fd, source_name, target_name)
 
-    def preserved_cleanup_entry(self, path: str, error: str = "fd_bound_delete_unavailable") -> dict[str, str]:
+    def preserved_cleanup_entry(self, path: str, error: str) -> dict[str, str]:
         return {
             "kind": "preserved_cleanup_entry",
             "target": path,
@@ -977,7 +978,7 @@ class AnchoredAgentDir:
             if private_state is None:
                 return [], []
             if private_state == expected_state:
-                return [private_path], [self.preserved_cleanup_entry(private_path)]
+                return [private_path], [self.preserved_cleanup_entry(private_path, error)]
             return [private_path], [self.preserved_concurrent_file(private_path, error)]
 
         def classified_quarantine_result(error: str) -> CodexAgentCleanupResult:
@@ -1048,7 +1049,50 @@ class AnchoredAgentDir:
                 return remember(classified_quarantine_result("private_quarantine_collision"))
             except OSError:
                 return remember(classified_quarantine_result("private_quarantine_move_failed"))
-            return remember(classified_quarantine_result("private_quarantine_identity_mismatch"))
+            # POSIX has no delete-by-descriptor. Hold the verified inode open, unlink its
+            # name inside the private directory, then require the held inode to have lost
+            # its last link. A swapped name leaves the held inode linked: fail closed.
+            try:
+                held_fd = os.open(
+                    private_entry_name,
+                    os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_CLOEXEC", 0),
+                    dir_fd=private_dir_fd,
+                )
+            except OSError:
+                return remember(classified_quarantine_result("private_quarantine_identity_mismatch"))
+            try:
+                try:
+                    held_metadata = os.fstat(held_fd)
+                    private_state = codex_agent_previous_state_at(private_dir_fd, private_entry_name)
+                except OSError:
+                    return remember(classified_quarantine_result("private_quarantine_identity_mismatch"))
+                if (
+                    private_state != expected_state
+                    or (held_metadata.st_dev, held_metadata.st_ino) != (expected_state.device, expected_state.inode)
+                ):
+                    return remember(classified_quarantine_result("private_quarantine_identity_mismatch"))
+                if held_metadata.st_nlink != 1:
+                    return remember(classified_quarantine_result("private_quarantine_multiple_links"))
+                if not self.is_current():
+                    return remember(classified_quarantine_result("private_quarantine_destination_changed"))
+                try:
+                    os.unlink(private_entry_name, dir_fd=private_dir_fd)
+                except OSError:
+                    return remember(classified_quarantine_result("private_quarantine_unlink_failed"))
+                try:
+                    unlinked = os.fstat(held_fd).st_nlink == 0
+                except OSError:
+                    unlinked = False
+                if not unlinked:
+                    result = classified_quarantine_result("private_quarantine_unlink_identity_mismatch")
+                    append_private_dir_unknown(result, "private_quarantine_unlink_identity_mismatch")
+                    return remember(result)
+                return remember(CodexAgentCleanupResult())
+            finally:
+                try:
+                    os.close(held_fd)
+                except OSError:
+                    pass
         finally:
             if private_dir_fd is not None:
                 try:

@@ -819,6 +819,21 @@ class CorrectiveFailureClassTests(_ExecutionControlFixture, unittest.TestCase):
         self.assertEqual(path.read_bytes(), archived)
 
 
+PLANNING_PHASES = ("Specify", "Clarify", "Plan", "Checklist", "Tasks", "Analyze", "Confidence Gate")
+
+
+def stage_workflow(stage="implement", analyze="✅ Complete"):
+    """A workflow file whose planning stage is complete and whose Stage row names ``stage``."""
+    rows = [(phase, analyze if phase == "Analyze" else "✅ Complete") for phase in PLANNING_PHASES]
+    rows.append(("Implement", "⏳ Pending"))
+    stage_row = f"| **Stage** | {stage} |\n" if stage else ""
+    return ("# Workflow\n\n## Workflow Overview\n\n| Phase | Command | Status | Notes |\n"
+            + "|-------|---------|--------|-------|\n"
+            + "".join(f"| {phase} | `/speckit-run` | {status} | |\n" for phase, status in rows)
+            + "\n### Basic Information\n\n| Field | Value |\n|-------|-------|\n"
+            + "| **Branch** | `test-branch` |\n" + stage_row)
+
+
 class ReplanEpochTests(_ExecutionControlFixture, unittest.TestCase):
     SCOPE = "a" * 64
 
@@ -928,6 +943,330 @@ class ReplanEpochTests(_ExecutionControlFixture, unittest.TestCase):
         with self.assertRaises(ValueError):
             self.invoke("status", mode="read_only")
         path.write_bytes(running)
+
+
+class StageEpochTests(_ExecutionControlFixture, unittest.TestCase):
+    """An operator's explicit `--stage implement` after a complete plan opens one fresh allowance."""
+
+    SCOPE = ReplanEpochTests.SCOPE
+    greenfield = ReplanEpochTests.greenfield
+    IMPLEMENT = ["--stage", "implement"]
+
+    def begin(self, args, mode="apply"):
+        return self.invoke("begin-stage-epoch", mode=mode, autopilot_args=args)
+
+    def test_operator_stage_transition_opens_a_fresh_allowance_and_keeps_history(self):
+        self.greenfield()
+        (self.root / "feature/workflow.md").write_text(stage_workflow())
+        before = self.invoke("status", mode="read_only")["ledger"]
+        self.assertEqual(self.invoke("reserve", dispatch_id="fix-d", kind="corrective", failure_invariant="FR-001",
+                                     mode="dry_run")["reasons"], ["failure_family_budget_exhausted"])
+        preview = self.begin(self.IMPLEMENT, mode="dry_run")
+        self.assertEqual(preview["disposition"], "continue")
+        self.assertNotIn("corrective_epochs", self.invoke("status", mode="read_only")["ledger"])
+
+        opened = self.begin(self.IMPLEMENT)
+        self.assertEqual((opened["disposition"], opened["stage_epoch_opened"], opened["corrective_epoch"]),
+                         ("continue", True, 1))
+        ledger = opened["ledger"]
+        self.assertEqual((ledger["run_id"], ledger["started_at"]), (before["run_id"], before["started_at"]))
+        self.assertEqual((ledger["corrective_cycles"], ledger["reservations"], ledger["dispatches"]), (0, {}, {}))
+        self.assertNotIn("corrective_exception", ledger)
+        self.assertEqual(ledger["approved_invariants"], before["approved_invariants"])
+        self.assertEqual(ledger["invariant_binding"], before["invariant_binding"])
+        [epoch] = ledger["corrective_epochs"]
+        for key in ("corrective_cycles", "reservations", "dispatches", "approved_invariants",
+                    "invariant_binding", "corrective_exception"):
+            self.assertEqual(epoch[key], before[key], key)
+        self.assertEqual((epoch["epoch_event_id"], epoch["stage_transition"]),
+                         ("stage-transition:implement", "implement"))
+        schema = json.loads((Path(__file__).resolve().parents[3] /
+                             "speckit-pro/speckit_pro_runner/contracts/execution-control.schema.json").read_text())
+        self.assertEqual(json_schema_failures(ledger, schema, schema, "ledger"), [])
+
+        granted = self.invoke("reserve", dispatch_id="fix-d", kind="corrective", failure_invariant="FR-001")
+        self.assertEqual(granted["disposition"], "continue")
+        self.assertEqual(self.invoke("reserve", dispatch_id="fix-a", kind="corrective", failure_invariant="FR-002",
+                                     mode="dry_run")["reasons"], ["dispatch_already_reserved_no_relaunch"])
+
+    def test_a_resumed_implement_invocation_does_not_open_a_second_allowance(self):
+        self.greenfield()
+        (self.root / "feature/workflow.md").write_text(stage_workflow())
+        self.begin(self.IMPLEMENT)
+        self.invoke("reserve", dispatch_id="fix-d", kind="corrective", failure_invariant="FR-001")
+        self.invoke("complete", dispatch_id="fix-d", outcome="completed")
+        path = self.root / self.invoke("status", mode="read_only")["ledger_path"]
+        spent = path.read_bytes()
+        again = self.begin(self.IMPLEMENT)
+        self.assertEqual((again["disposition"], again["stage_epoch_opened"]), ("continue", False))
+        self.assertEqual(again["ledger"]["corrective_cycles"], 1)
+        self.assertEqual(len(again["ledger"]["corrective_epochs"]), 1)
+        self.assertEqual(json.loads(path.read_bytes())["dispatches"], json.loads(spent)["dispatches"])
+        with self.assertRaises(ValueError):
+            self.invoke("begin-replan-epoch", spec_file="feature/spec.md",
+                        native_observation={"native_event_id": "stage-transition:implement", "run_id": self.run_id,
+                                            "action": "replan_epoch_approved",
+                                            "spec_sha256": hashlib.sha256((self.root / "feature/spec.md").read_bytes()).hexdigest()})
+
+    def test_only_an_explicit_implement_stage_after_complete_planning_opens_an_allowance(self):
+        self.greenfield()
+        workflow = self.root / "feature/workflow.md"
+        path = self.root / self.invoke("status", mode="read_only")["ledger_path"]
+        before = path.read_bytes()
+        refusals = (
+            ("auto-detected stage", [], stage_workflow()),
+            ("full stage", ["--stage", "full"], stage_workflow("full")),
+            ("plan stage", ["--stage", "plan"], stage_workflow("plan")),
+            ("conflicting stages", ["--stage", "implement", "--stage", "plan"], stage_workflow()),
+            ("argv is not a string list", "--stage implement", stage_workflow()),
+            ("planning incomplete", self.IMPLEMENT, stage_workflow(analyze="⏳ Pending")),
+            ("stage row not yet written", self.IMPLEMENT, stage_workflow("plan")),
+            ("no stage row", self.IMPLEMENT, stage_workflow("")),
+            ("no overview table", self.IMPLEMENT, "# Workflow\n"),
+        )
+        for label, args, text in refusals:
+            with self.subTest(refusal=label):
+                workflow.write_text(text)
+                with self.assertRaises(ValueError):
+                    self.begin(args)
+                self.assertEqual(path.read_bytes(), before)
+
+        workflow.write_text(stage_workflow())
+        self.invoke("reserve", dispatch_id="verify-1", kind="verification")
+        running = path.read_bytes()
+        with self.assertRaises(ValueError):
+            self.begin(self.IMPLEMENT)
+        self.assertEqual(path.read_bytes(), running)
+
+    def test_a_forged_stage_epoch_record_fails_validation(self):
+        self.greenfield()
+        (self.root / "feature/workflow.md").write_text(stage_workflow())
+        self.begin(self.IMPLEMENT)
+        path = self.root / self.invoke("status", mode="read_only")["ledger_path"]
+        opened = path.read_bytes()
+        forgeries = (
+            ("unknown stage", {"stage_transition": "plan"}),
+            ("event id disagrees", {"epoch_event_id": "operator-replan"}),
+            ("reserved id without a stage", {"stage_transition": None}),
+        )
+        for label, change in forgeries:
+            with self.subTest(forgery=label):
+                tampered = json.loads(opened)
+                epoch = tampered["corrective_epochs"][0]
+                for key, value in change.items():
+                    if value is None:
+                        epoch.pop(key)
+                    else:
+                        epoch[key] = value
+                path.write_text(json.dumps(tampered), encoding="utf-8")
+                with self.assertRaises(ValueError):
+                    self.invoke("status", mode="read_only")
+        path.write_bytes(opened)
+
+
+    def test_both_hosts_document_the_stage_allowance(self):
+        plugin = Path(__file__).resolve().parents[3] / "speckit-pro"
+        shared = (plugin / "skills/speckit-autopilot/references/execution-efficiency.md").read_text()
+        for phrase in ("`begin-stage-epoch`", "`autopilot_args`", "`stage-transition:implement`",
+                       "`stage_epoch_opened=false`", "admission is deferred"):
+            self.assertIn(phrase, shared)
+        self.assertNotIn("stage changes, a reclaimed state mirror", shared)
+        for host in ("skills/speckit-autopilot/SKILL.md", "skills/speckit-autopilot/references/error-recovery.md",
+                     "codex-skills/speckit-autopilot/references/error-recovery-codex.md"):
+            with self.subTest(host=host):
+                self.assertIn("`begin-stage-epoch`", " ".join((plugin / host).read_text().split()))
+
+class IncrementReviewAllowanceTests(_ExecutionControlFixture, unittest.TestCase):
+    """Review fixes inside one increment's owned paths draw on that increment's own bound."""
+
+    TASKS = ("## Phase 3: Stories\n- [ ] T001 Build the alpha increment\n"
+             + "- [ ] T002 Build the beta increment\n- [ ] T003 Build the gamma increment\n")
+    OWNERSHIP = {"T001": ("alpha", ["src/alpha", "src/common.py"]), "T002": ("beta", ["src/beta"]),
+                 "T003": ("gamma", ["src/common.py"])}
+
+    def write_sidecar(self, **changes):
+        feature = self.root / "feature"
+        (feature / ".process").mkdir(exist_ok=True)
+        (feature / "plan.md").write_text("plan\n")
+        (feature / "tasks.md").write_text(self.TASKS)
+        tasks = {task_id: {"capability_group": "stories", "depends_on": [], "owns": owns, "tdd_unit": unit}
+                 for task_id, (unit, owns) in self.OWNERSHIP.items()}
+        metadata = {"schema_version": "task-execution.v1",
+                    "fingerprints": fingerprints((feature / "spec.md").read_text(), "plan\n", self.TASKS),
+                    "tasks": tasks, **changes}
+        (feature / ".process/task-execution.json").write_text(json.dumps(metadata))
+
+    def spend_run_wide_budget(self):
+        self.invoke("start")
+        for dispatch_id, invariant in (("fix-a", "FR-001"), ("fix-b", "FR-002")):
+            self.invoke("reserve", dispatch_id=dispatch_id, kind="corrective", failure_invariant=invariant)
+            self.invoke("complete", dispatch_id=dispatch_id, outcome="completed")
+        self.assertEqual(self.invoke("reserve", dispatch_id="ordinary", kind="corrective", mode="dry_run",
+                                     failure_invariant="FR-001")["reasons"], ["failure_family_budget_exhausted"])
+
+    def review_fix(self, dispatch_id, unit, paths, mode="apply"):
+        return self.invoke("reserve", mode=mode, dispatch_id=dispatch_id, kind="corrective", spec_file="feature/spec.md",
+                           failure_invariant="FR-001", review_remediation={"tdd_unit": unit, "paths": paths})
+
+    def test_review_fix_names_the_feature_spec_when_the_workflow_lives_elsewhere(self):
+        self.write_sidecar()
+        workflow = "docs/ai/specs/.process/SPEC-001-workflow.md"
+        (self.root / workflow).parent.mkdir(parents=True)
+        (self.root / workflow).write_text("# Workflow\n")
+        run_id = execution_control(self.root, {"workflow_file": workflow, "action": "start"}, "apply")["ledger"]["run_id"]
+        request = {"workflow_file": workflow, "action": "reserve", "expected_run_id": run_id, "kind": "corrective",
+                   "dispatch_id": "alpha-review", "failure_invariant": "FR-001",
+                   "review_remediation": {"tdd_unit": "alpha", "paths": ["src/alpha/core.py"]}}
+        with self.assertRaisesRegex(ValueError, "explicit spec_file"):
+            execution_control(self.root, request, "apply")
+        admitted = execution_control(self.root, {**request, "spec_file": "feature/spec.md"}, "apply")
+        self.assertEqual((admitted["disposition"], admitted["review_allowance"]), ("continue", "increment"))
+
+    def test_review_fix_inside_owned_paths_is_admitted_after_run_wide_exhaustion_up_to_the_bound(self):
+        self.write_sidecar()
+        self.spend_run_wide_budget()
+        first = self.review_fix("alpha-review-1", "alpha", ["src/alpha/core.py", "src/alpha"])
+        self.assertEqual((first["disposition"], first["review_allowance"]), ("continue", "increment"))
+        self.assertIsNone(first["reservation_id"])
+        self.assertEqual(first["ledger"]["corrective_cycles"], 2)
+        self.assertEqual(first["ledger"]["increment_allowances"]["alpha"],
+                         {"rounds": 1, "dispatch_ids": ["alpha-review-1"]})
+        self.assertEqual(first["ledger"]["dispatches"]["alpha-review-1"]["increment"], "alpha")
+        self.invoke("complete", dispatch_id="alpha-review-1", outcome="completed")
+        second = self.review_fix("alpha-review-2", "alpha", ["src/alpha/core.py"])
+        self.assertEqual(second["disposition"], "continue")
+        self.invoke("complete", dispatch_id="alpha-review-2", outcome="failed")
+        path = self.root / second["ledger_path"]
+        before = path.read_bytes()
+        spent = self.review_fix("alpha-review-3", "alpha", ["src/alpha/core.py"])
+        self.assertEqual(spent["reasons"], ["increment_review_allowance_exhausted"])
+        self.assertEqual(spent["disposition"], "checkpoint_required")
+        self.assertNotIn("alpha-review-3", spent["ledger"]["dispatches"])
+        self.assertEqual(json.loads(path.read_bytes())["increment_allowances"],
+                         json.loads(before)["increment_allowances"])
+        self.assertEqual(self.review_fix("alpha-review-1", "beta", ["src/beta/b.py"])["reasons"],
+                         ["dispatch_already_reserved_no_relaunch"])
+        independent = self.review_fix("beta-review-1", "beta", ["src/beta/b.py"])
+        self.assertEqual((independent["disposition"], independent["review_allowance"]), ("continue", "increment"))
+        schema = json.loads((Path(__file__).resolve().parents[3] /
+                             "speckit-pro/speckit_pro_runner/contracts/execution-control.schema.json").read_text())
+        self.assertEqual(json_schema_failures(independent["ledger"], schema, schema, "ledger"), [])
+
+    def test_fix_outside_ownership_or_reopening_accepted_work_uses_the_run_wide_budget(self):
+        self.write_sidecar()
+        self.invoke("start")
+        outside = self.review_fix("alpha-reaches-beta", "alpha", ["src/alpha/core.py", "src/beta/b.py"])
+        self.assertEqual((outside["disposition"], outside["review_allowance"]), ("continue", "run_wide"))
+        self.assertEqual(outside["increment_ineligible"], "path_outside_increment_ownership")
+        self.assertEqual(outside["ledger"]["corrective_cycles"], 1)
+        self.assertNotIn("increment_allowances", outside["ledger"])
+        self.invoke("complete", dispatch_id="alpha-reaches-beta", outcome="completed")
+        self.invoke("reserve", dispatch_id="fix-b", kind="corrective", failure_invariant="FR-002")
+        self.invoke("complete", dispatch_id="fix-b", outcome="completed")
+        for paths in (["src/beta/b.py"], ["src/common.py"], ["src"]):
+            with self.subTest(paths=paths):
+                refused = self.review_fix("alpha-refused", "alpha", paths)
+                self.assertEqual(refused["reasons"], ["failure_family_budget_exhausted"])
+                self.assertEqual(refused["review_allowance"], "run_wide")
+                self.assertNotIn("alpha-refused", refused["ledger"]["dispatches"])
+        self.assertEqual(self.review_fix("alpha-refused", "alpha", ["src/common.py"])["increment_ineligible"],
+                         "path_reopens_another_increment")
+
+    def test_missing_stale_or_unknown_ownership_evidence_never_grants_a_free_allowance(self):
+        self.spend_run_wide_budget()
+        cases = (("no_sidecar", None, "alpha", ["src/alpha/core.py"]),
+                 ("stale_fingerprints", {"fingerprints": {"spec_sha256": "0" * 64, "plan_sha256": "0" * 64,
+                                                          "tasks_sha256": "0" * 64}}, "alpha", ["src/alpha/core.py"]),
+                 ("unknown_unit", {}, "delta", ["src/alpha/core.py"]),
+                 ("escaping_path", {}, "alpha", ["src/alpha/../../outside.py"]),
+                 ("empty_paths", {}, "alpha", []),
+                 ("malformed_owns", {"tasks": {"T001": {"tdd_unit": "alpha", "owns": "src/alpha"}}},
+                  "alpha", ["src/alpha/core.py"]))
+        for name, changes, unit, paths in cases:
+            with self.subTest(case=name):
+                sidecar = self.root / "feature/.process/task-execution.json"
+                sidecar.unlink(missing_ok=True)
+                if changes is not None:
+                    self.write_sidecar(**changes)
+                refused = self.review_fix("review-" + name.replace("_", "-"), unit, paths)
+                self.assertEqual(refused["reasons"], ["failure_family_budget_exhausted"])
+                self.assertEqual(refused["review_allowance"], "run_wide")
+                self.assertNotIn("increment_allowances", refused["ledger"])
+        for malformed in ({"tdd_unit": "alpha"}, {"tdd_unit": "alpha", "paths": "src/alpha"},
+                          {"tdd_unit": "", "paths": ["src/alpha"]}, ["alpha"]):
+            with self.subTest(malformed=malformed), self.assertRaises(ValueError):
+                self.invoke("reserve", dispatch_id="malformed", kind="corrective", spec_file="feature/spec.md",
+                            review_remediation=malformed)
+        with self.assertRaises(ValueError):
+            self.invoke("reserve", dispatch_id="not-corrective", kind="implementation", spec_file="feature/spec.md",
+                        review_remediation={"tdd_unit": "alpha", "paths": ["src/alpha/core.py"]})
+
+    def test_forged_or_overspent_increment_records_fail_closed(self):
+        self.write_sidecar()
+        self.spend_run_wide_budget()
+        admitted = self.review_fix("alpha-review-1", "alpha", ["src/alpha/core.py"])
+        path = self.root / admitted["ledger_path"]
+        valid = path.read_bytes()
+        forged_dispatch = {"kind": "corrective", "outcome": "reserved", "reserved_at": self.now,
+                           "reservation_id": None, "reconciliations": 0, "increment": "alpha"}
+        tampers = {
+            "unlisted increment dispatch": lambda ledger: ledger["dispatches"].update(forged=forged_dispatch),
+            "rounds over the bound": lambda ledger: (
+                ledger["dispatches"].update({"a2": forged_dispatch, "a3": forged_dispatch}),
+                ledger["increment_allowances"]["alpha"].update(
+                    rounds=3, dispatch_ids=["alpha-review-1", "a2", "a3"])),
+            "counter disagrees": lambda ledger: ledger["increment_allowances"]["alpha"].update(rounds=2),
+            "allowance record dropped": lambda ledger: ledger.pop("increment_allowances"),
+            "unreserved corrective": lambda ledger: ledger["dispatches"]["alpha-review-1"].pop("increment"),
+            "increment on a reservation": lambda ledger: ledger["dispatches"]["alpha-review-1"].update(
+                reservation_id=next(iter(ledger["reservations"]))),
+        }
+        for name, tamper in tampers.items():
+            with self.subTest(tamper=name):
+                ledger = json.loads(valid)
+                tamper(ledger)
+                path.write_text(json.dumps(ledger), encoding="utf-8")
+                with self.assertRaises(ValueError):
+                    self.invoke("status", mode="read_only")
+        path.write_bytes(valid)
+        self.assertEqual(self.invoke("status", mode="read_only")["disposition"], "continue")
+
+    def test_stage_epoch_archives_increment_allowances(self):
+        self.write_sidecar()
+        self.spend_run_wide_budget()
+        for number in (1, 2):
+            self.review_fix(f"alpha-review-{number}", "alpha", ["src/alpha/core.py"])
+            self.invoke("complete", dispatch_id=f"alpha-review-{number}", outcome="completed")
+        (self.root / "feature/workflow.md").write_text(stage_workflow())
+        opened = self.invoke("begin-stage-epoch", autopilot_args=["--stage", "implement"])
+        self.assertEqual(opened["ledger"]["corrective_epochs"][0]["increment_allowances"]["alpha"]["rounds"], 2)
+        self.assertNotIn("increment_allowances", opened["ledger"])
+        self.assertEqual(self.review_fix("alpha-review-1", "alpha", ["src/alpha/core.py"])["reasons"],
+                         ["dispatch_already_reserved_no_relaunch"])
+        fresh = self.review_fix("alpha-review-3", "alpha", ["src/alpha/core.py"])
+        self.assertEqual((fresh["disposition"], fresh["ledger"]["increment_allowances"]["alpha"]["rounds"]),
+                         ("continue", 1))
+        schema = json.loads((Path(__file__).resolve().parents[3] /
+                             "speckit-pro/speckit_pro_runner/contracts/execution-control.schema.json").read_text())
+        self.assertEqual(json_schema_failures(fresh["ledger"], schema, schema, "ledger"), [])
+
+    def test_both_hosts_document_the_increment_review_allowance(self):
+        plugin = Path(__file__).resolve().parents[3] / "speckit-pro"
+        shared = " ".join((plugin / "skills/speckit-autopilot/references/execution-efficiency.md").read_text().split())
+        for phrase in ("`review_remediation`", "an explicit `spec_file`", "`increment_review_allowance_exhausted`",
+                       "`review_allowance=increment`", "`review_allowance=run_wide`",
+                       "`increment_ineligible`", "never draws on the run-wide"):
+            self.assertIn(phrase, shared)
+        for host in ("skills/speckit-autopilot/references/phase-execution.md",
+                     "codex-skills/speckit-autopilot/references/phase-execution-codex.md"):
+            with self.subTest(host=host):
+                text = " ".join((plugin / host).read_text().split())
+                self.assertIn("`review_remediation`", text)
+                self.assertIn("`spec_file`", text)
+                self.assertIn("`increment_review_allowance_exhausted`", text)
+                self.assertIn("defer that increment", text)
+                self.assertIn("never a mid-run question", text)
+                self.assertIn("except `increment_review_allowance_exhausted`", text)
 
 
 class WorkflowIdentityTests(_ExecutionControlFixture, unittest.TestCase):
@@ -1431,6 +1770,41 @@ class RunnerDispatchTests(unittest.TestCase):
                                                                              "test_file": "src/cli.ts"})
         self.assertEqual(code, 2, refused)
 
+    def test_increment_review_allowance_is_a_real_runner_route(self):
+        (self.root / "feature/spec.md").write_text("- FR-001: preserve data\n- FR-002: no secrets\n")
+        self.TASKS, self.OWNERSHIP = IncrementReviewAllowanceTests.TASKS, IncrementReviewAllowanceTests.OWNERSHIP
+        IncrementReviewAllowanceTests.write_sidecar(self)
+        self.call_runner("execution-control", "apply", action="start")
+        for dispatch_id, invariant in (("fix-a", "FR-001"), ("fix-b", "FR-002")):
+            self.call_runner("execution-control", "apply", action="reserve", dispatch_id=dispatch_id,
+                             kind="corrective", failure_invariant=invariant)
+            self.call_runner("execution-control", "apply", action="complete", dispatch_id=dispatch_id,
+                             outcome="completed")
+        code, admitted = self.call_runner("execution-control", "apply", action="reserve", dispatch_id="alpha-review",
+                                          kind="corrective", failure_invariant="FR-001", spec_file="feature/spec.md",
+                                          review_remediation={"tdd_unit": "alpha", "paths": ["src/alpha/core.py"]})
+        self.assertEqual(code, 0, admitted)
+        self.assertEqual(admitted["data"]["review_allowance"], "increment")
+
+    def test_stage_epoch_is_a_real_runner_route(self):
+        self.call_runner("execution-control", "apply", action="start")
+        for dispatch_id, invariant in (("fix-a", "FR-001"), ("fix-b", "FR-002")):
+            self.call_runner("execution-control", "apply", action="reserve", dispatch_id=dispatch_id,
+                             kind="corrective", failure_invariant=invariant)
+            self.call_runner("execution-control", "apply", action="complete", dispatch_id=dispatch_id,
+                             outcome="failed")
+        (self.root / "feature/workflow.md").write_text(stage_workflow())
+        code, preview = self.call_runner("execution-control", "dry_run", action="begin-stage-epoch",
+                                         autopilot_args=["--stage", "implement"])
+        self.assertEqual(code, 0, preview)
+        code, opened = self.call_runner("execution-control", "apply", action="begin-stage-epoch",
+                                        autopilot_args=["--stage", "implement"])
+        self.assertEqual(code, 0, opened)
+        self.assertEqual((opened["data"]["corrective_epoch"], opened["data"]["stage_epoch_opened"]), (1, True))
+        code, reserved = self.call_runner("execution-control", "apply", action="reserve", dispatch_id="fix-c",
+                                          kind="corrective", failure_invariant="FR-001")
+        self.assertEqual(code, 0, reserved)
+
     def test_task_metadata_helper_is_registered_and_read_only(self):
         (self.root / "feature/tasks.md").write_text("# Tasks\n## Phase 1: Setup\n- [ ] T001 Create fixture in `fixture.txt`\n")
         (self.root / "feature/spec.md").write_text("# Spec\n")
@@ -1527,7 +1901,7 @@ if __name__ == "__main__":
     suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case)
                                for case in (GreenfieldInvariantBindingTests, ExecutionControlTests, CorrectiveRecoveryTests,
                                             CorrectiveContinuationTests, CorrectiveExceptionTests, CorrectiveFailureClassTests,
-                                            ReplanEpochTests, WorkflowIdentityTests,
-                                            VerificationTests, RunnerDispatchTests))
+                                            ReplanEpochTests, StageEpochTests, IncrementReviewAllowanceTests,
+                                            WorkflowIdentityTests, VerificationTests, RunnerDispatchTests))
     suite.addTests(DockerVerificationTests(name) for name in DockerVerificationTests.__dict__ if name.startswith("test_docker_"))
     raise SystemExit(run_counted(suite, label="test-execution-control"))

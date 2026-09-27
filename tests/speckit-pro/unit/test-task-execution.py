@@ -14,7 +14,7 @@ sys.path.insert(0, str(REPO_ROOT / "speckit-pro"))
 sys.path.insert(0, str(REPO_ROOT / "tests/speckit-pro/lib"))
 from test_result import run_counted
 from speckit_pro_runner.helpers.read_only import partition_phase7_tasks, validate_task_execution
-from speckit_pro_runner.task_execution import fingerprints
+from speckit_pro_runner.task_execution import fingerprints, gate_task_loops
 
 
 class TaskExecutionTests(unittest.TestCase):
@@ -326,6 +326,18 @@ class TaskExecutionTests(unittest.TestCase):
         self.meta["tasks"]["T001"]["owns"] = ["src"]
         self.assertEqual(self.run_partition()[1], 2)
 
+
+    def test_gate_loop_ignores_dependents_missing_from_tasks_md(self):
+        tasks = (
+            "## Phase 3: User Story 1\n"
+            "- [ ] T010 Verify candidate inventory before the first implementation checkpoint\n"
+            "## Phase 9: Polish\n"
+            "- [ ] T020 Reconcile actual diffs\n"
+        )
+        # T099 is a stale sidecar entry with no row in tasks.md.
+        self.assertEqual(gate_task_loops(tasks, {"T099": ["T010"], "T020": ["T010"]}), [])
+        loops = gate_task_loops(tasks.replace("## Phase 9: Polish", "## Phase 4: User Story 2"), {"T020": ["T010"]})
+        self.assertEqual([loop["task"] for loop in loops], ["T010"])
 
 if __name__ == "__main__":
     raise SystemExit(run_counted(unittest.defaultTestLoader.loadTestsFromTestCase(TaskExecutionTests), label="test-task-execution"))

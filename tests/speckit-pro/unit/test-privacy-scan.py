@@ -187,6 +187,29 @@ def git_config(key: str) -> str:
     return result.stdout.decode("utf-8", errors="replace").strip()
 
 
+def main_checkout_root() -> Path:
+    """Return the main checkout that owns this tree, even from a linked worktree."""
+    result = git_output("rev-parse", "--git-common-dir")
+    if result.returncode == 0:
+        common_dir = Path(result.stdout.decode("utf-8", errors="replace").strip())
+        if not common_dir.is_absolute():
+            common_dir = REPO_ROOT / common_dir  # git prints it relative to the working tree
+        if common_dir.name == ".git":
+            return common_dir.parent.resolve()
+    return REPO_ROOT
+
+
+def checkout_identity_value(repo_root: Path, checkout_root: Path) -> str:
+    """Return the part of the checkout path that can carry identity.
+
+    Segments at or below the checkout root (the repository folder, and a
+    `.worktrees/<name>` folder under it) are named for the work, not the person,
+    so only the path above the checkout contributes terms.
+    """
+    anchor = checkout_root if repo_root.is_relative_to(checkout_root) else repo_root
+    return str(anchor.parent)
+
+
 def dynamic_local_pattern() -> re.Pattern[str] | None:
     git_email = git_config("user.email")
     email_local = git_email.rsplit("@", maxsplit=1)[0]
@@ -198,7 +221,7 @@ def dynamic_local_pattern() -> re.Pattern[str] | None:
         os.environ.get("USERNAME", ""),
         git_config("user.name"),
         email_local,
-        str(REPO_ROOT),
+        checkout_identity_value(REPO_ROOT, main_checkout_root()),
     )
     declared_public_terms = {
         term
@@ -285,6 +308,38 @@ class PublicIdentityTests(unittest.TestCase):
         self.assertIsNotNone(HOME_PATH_PATTERN.search(public_home))
 
 
+class CheckoutPathTermTests(unittest.TestCase):
+    """Issue 771: worktree folder names are not identity; the path above is."""
+
+    def pattern_for(self, repo_root: Path, checkout_root: Path, env: dict[str, str]) -> re.Pattern[str] | None:
+        with patch.dict(os.environ, env, clear=True), \
+                patch(f"{__name__}.git_config", return_value=""), \
+                patch(f"{__name__}.REPO_ROOT", repo_root), \
+                patch(f"{__name__}.main_checkout_root", return_value=checkout_root):
+            return dynamic_local_pattern()
+
+    def test_worktree_folder_words_are_not_identity_terms(self) -> None:
+        home = Path("/", "home", "zebrafinchoperator")
+        checkout = home / "code" / "shopfront"
+        worktree = checkout / ".worktrees" / "shop-015-autopilot-byproduct"
+        env = {"HOME": str(home), "USER": "zebrafinchoperator"}
+        for label, repo_root in (("worktree", worktree), ("main checkout", checkout)):
+            with self.subTest(checkout=label):
+                pattern = self.pattern_for(repo_root, checkout, env)
+                self.assertIsNotNone(pattern)
+                for ordinary in ("autopilot", "byproduct", "shopfront"):
+                    self.assertIsNone(pattern.search(f"the {ordinary} step"), ordinary)
+                self.assertIsNotNone(pattern.search("merged by zebrafinchoperator"))
+
+    def test_user_name_above_the_checkout_is_still_an_identity_term(self) -> None:
+        checkout = Path("/", "Users", "quokkaoperator", "code", "shopfront")
+        worktree = checkout / ".worktrees" / "shop-015-autopilot-byproduct"
+        pattern = self.pattern_for(worktree, checkout, {})
+        self.assertIsNotNone(pattern)
+        self.assertIsNotNone(pattern.search("owned by quokkaoperator"))
+        self.assertIsNone(pattern.search("the autopilot byproduct"))
+
+
 class PrivacyScanTests(unittest.TestCase):
     def test_privacy_scan_contract(self) -> None:
         paths = current_tree_files()
@@ -355,6 +410,7 @@ class PrivacyScanTests(unittest.TestCase):
 def main() -> int:
     suite = unittest.TestSuite([
         unittest.defaultTestLoader.loadTestsFromTestCase(PublicIdentityTests),
+        unittest.defaultTestLoader.loadTestsFromTestCase(CheckoutPathTermTests),
         unittest.defaultTestLoader.loadTestsFromTestCase(PrivacyScanTests),
     ])
     # Sweeps whatever specs exist rather than depending on a named one, so

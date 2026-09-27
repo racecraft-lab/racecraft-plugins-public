@@ -518,6 +518,11 @@ Spawn a subagent.
 **Gate:** G5 — cross-reference every FR in spec.md with
 tasks.md
 
+G5 also fails a gate task that waits on evidence its own dependents produce,
+and lists it under `gate_task_loops` (see [G5](gate-validation.md#g5--after-tasks)).
+Split each listed task: a candidate check now, with the reconciliation against
+actual evidence attached to the emission step. Then rerun G5.
+
 **Post-G5 reviewability capture (guarded):**
 After G5 passes, run the task reviewability gate without letting
 the script's compatibility exit code abort the run:
@@ -540,6 +545,40 @@ verification, invalid packet, unsafe output, unusable gate evidence, invalid
 JSON, unreadable artifacts, missing reviewability status/mode, stale
 fingerprints, or any non-size safety finding. These stops fire before Analyze or
 Implement.
+
+**Budget-driven split ratification:**
+When the per-PR path budget makes the planner split an approved PR order into
+smaller increments, do not park the split for a human. Run runner helper
+`helper_id=ratify-pr-split operation=ratify-pr-split mode=read_only` with
+these inputs:
+
+- `approved_groups`: the approved PR groups in approved order, each with
+  `group_id` and `scope` (its requirement, story, and task IDs);
+- `increments`: the proposed increments in delivery order, each with
+  `increment_id`, the `group_id` it splits, `scope`, `production_paths`, and
+  `total_paths`;
+- `active_scope`: every active requirement, story, and task ID;
+- `path_budget`: the repository's per-PR `production_paths` and `total_paths`
+  caps.
+
+The helper ratifies only a split that divides approved groups without merging
+or dropping any, keeps the approved order and each group's scope, keeps every
+active requirement, story, and task, and keeps each increment within the
+budget. On `decision=autopilot_ratified`, write `data.record` verbatim to the
+current workflow section (`owner_ratification=ratified`,
+`ratified_by=autopilot`, and the reason) and continue without a question.
+Ask the operator only when the helper returns `decision=operator_required`;
+its findings name the cause: `scope_added`, `scope_dropped`, `group_added`,
+`group_dropped`, `group_reordered`, `group_merged`, `scope_duplicated`, or
+`reviewability_exception_needed`. Record `data.record`
+(`owner_ratification=pending` with the blockers), then ask. An `input_error`,
+a missing budget, or unreadable evidence also goes to the operator; never
+ratify it yourself.
+
+Keep only one live `owner_ratification` value in the workflow file. When a
+later section records a ratification, change each earlier
+`owner_ratification=` line to `owner_ratification=superseded` and add
+`superseded_by=<later section heading>` beside it.
 
 **Optional: Tasks to GitHub Issues:**
 If the project uses GitHub Issues for tracking and the GitHub
@@ -2622,6 +2661,23 @@ suggestions separately; they do not require another repair/review cycle.
 Research a vendor claim using relevant official documentation only when needed;
 reuse still-current evidence and do not repeat generic web/code/history passes.
 
+**Review fixes inside one increment.** When an increment's required review
+finds defects in code that increment just wrote, reserve the fix with
+`kind=corrective`, its `failure_invariant`, the feature's `spec_file`, and
+`review_remediation`: the increment's `tdd_unit` and every repository-relative
+path the fix will touch.
+When the task-execution sidecar is current and every path sits inside that
+TDD unit's own `owns` and no other unit's, the ledger admits the fix under
+that increment's own allowance of two review rounds. It never draws on the
+run-wide corrective budget, so a spent run-wide budget does not stop the next
+increment's review loop. A fix that touches a path outside the increment's
+ownership, reopens another increment's accepted work, or lacks current
+ownership evidence goes through the run-wide budget unchanged. When the
+reserve returns `increment_review_allowance_exhausted`, defer that increment
+under [Blocked Actions Mid-Run: Fall Back or Defer, Never Stop](#blocked-actions-mid-run-fall-back-or-defer-never-stop): record its
+open findings, keep its dependents deferred, and continue with independent
+increments. It is never a mid-run question and never a stop.
+
 ##### Step 3c: Agent Prompt Template
 
 ```text
@@ -2732,7 +2788,8 @@ configuration, never rerun the vetoed action under a different command or tool,
 and never treat an earlier answer as authorization for the vetoed action. The
 correctness stops in this reference are unchanged and still stop the run:
 unknown side effects, an execution-control `checkpoint_required` disposition
-(including an exhausted repair budget), a ledger or clock error, invalid or
+(including an exhausted repair budget, except `increment_review_allowance_exhausted`,
+which defers its increment), a ledger or clock error, invalid or
 stale state, and a failed gate whose repair is out of scope.
 
 #### Repeated Gate Failures: Diagnose One Class, Approve It Once
@@ -2764,6 +2821,54 @@ never per-test diffs for whichever tests failed this time.
    class whose follow-ups are spent, or a second approval request is never
    asked in place. Defer it to the one consolidated operator request at the
    end of the run and keep executing independent work.
+
+#### Ambiguous Task Wording: Apply the Recorded Decision, Else Defer
+
+When a task's wording is ambiguous, for example whether an approved timing
+decision covers a gate task, look in the workflow file for a recorded owner
+decision that covers it: a Clarify answer, a consensus resolution, an Analyze
+remediation, or an operator decision the workflow records. If one covers it,
+apply that decision, record the interpretation with a reference to that
+decision in the task's implementation-notes entry and the workflow file's
+Phase 7 result, and then continue. If no recorded decision covers it, defer the
+item under [Blocked Actions Mid-Run: Fall Back or Defer, Never Stop](#blocked-actions-mid-run-fall-back-or-defer-never-stop)
+and name it in the end-of-run request. Never ask the operator mid-run to
+interpret task wording.
+
+#### Plugin Update Mid-Run: Record, Re-resolve, Continue
+
+The Step 0.0b agent-package check and its "update or reinstall, then run
+`/reload-plugins`" rule apply only at setup or run start, before any phase
+work. Once phase work has begun, a plugin update is never a stop. The run
+continues on the agents it already has.
+
+1. **Cache drift: re-resolve and retry.** When the plugin root the run started
+   from changed or vanished (a plugin update replaced the cached version
+   directory), runner and bookkeeping calls can fail. Then re-resolve the
+   plugin root against the live install and rerun `validate-agent-install`,
+   taking its returned `plugin_root` as the new root. Re-read the Installed
+   Runtime Contract in the autopilot SKILL.md once against that root, build
+   every later `Protocol:`, `Reference dir:`, and `Gallery dir:` line from it,
+   and retry each failed bookkeeping call once.
+2. **Agent unavailable: defer that dispatch.** If a dispatch fails because its
+   agent file is missing after the update, defer only that dispatch under
+   [Blocked Actions Mid-Run: Fall Back or Defer, Never Stop](#blocked-actions-mid-run-fall-back-or-defer-never-stop)
+   and keep executing everything else.
+3. **Record the drift.** In both cases, record the drift in the current phase's
+   result in the workflow file and in the final report: the plugin version the
+   run started on, the version now installed, and the calls retried. Then
+   continue.
+4. **Any reload goes to the end.** A `/reload-plugins` or restart that is still
+   needed is not a deferred task. Add it as one line to the single end-of-run
+   consolidated request, or, when no such request is made, print it as plain
+   text in the final message. Keep it out of `known_gaps` and the PR body,
+   because it is an operator-environment note, not a gap in the feature. Never
+   ask for it mid-run, and never set a workflow row or progress item to blocked
+   for it.
+
+Drift itself is never a stop, but the correctness stops above still apply. If a
+retried bookkeeping call fails again, or the ledger or state is invalid after
+the retry, stop on that error, not on the drift.
 
 #### Append Contract: One Entry Per Dispatched Attempt
 
@@ -2853,7 +2958,8 @@ Then Command(DEPENDENCY_AUDIT) only when populated, which requires
 When MUTATION is populated, run the hardener once per spec between the
 MUTATION run and its block decision, per
 [Hardener Delegation](./hardener-delegation.md): delegate a tests-only
-loop to local Qwen when `qwen_health` is good, else run it on the primary
+loop to the delegation gateway on `route: "auto"` when `delegate_health` is
+good, else run it on the primary
 model; stop at the floor or the shared corrective ceiling; record the outcome on the
 Quality Gates table's `Hardener` line. Only after the hardener records its
 ending does a still-failing MUTATION block. MUTATION fails on its exit
@@ -2867,7 +2973,7 @@ status: `cr-rate --fail-over` for cosmic-ray, and the chained
 | Contract/unit/integration tests | `speckit-pro:implement-executor` | Yes |
 | Implementation needing project patterns | PROJECT_IMPLEMENTATION_AGENT | Yes |
 | Research / API investigation | `speckit-pro:domain-researcher` | No |
-| Verification-only, by leading verb (`verify`, `run`, `check`, `build`, `lint`) | orchestrator-direct (command tool) | No |
+| Verification-only, by leading verb (`verify`, `run`, `check`, `build`, `lint`, `confirm`, `recheck`) | orchestrator-direct (command tool) | No |
 
 Every agent receiving implementation work gets the TDD protocol
 injected. Agent selection is about DOMAIN EXPERTISE — the
@@ -2901,9 +3007,10 @@ one research task.
 `git add -A && git commit -m "feat(SPEC-XXX): implement phase"`
 
 Runner byproducts are never committed. The runner writes a `.gitignore`
-holding `*` into each directory it owns (`.process/execution-control/` and
-`.process/verification/`), so `git add -A` cannot stage the ledger or the
-verification evidence. If `git ls-files` shows such a path already tracked
+holding `*` into each directory it owns (`.process/execution-control/`,
+`.process/verification/`, and `.process/task-results/`), so `git add -A`
+cannot stage the ledger, the verification evidence, or the task-results
+journals. If `git ls-files` shows such a path already tracked
 (from an older plugin version), run `git rm -r --cached -- <path>` before this
 commit.
 
