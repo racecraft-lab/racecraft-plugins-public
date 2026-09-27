@@ -494,14 +494,16 @@ def _review_remediation(inputs: dict[str, Any]) -> dict[str, Any] | None:
     require_text(request["tdd_unit"], "review_remediation tdd_unit")
     if inputs.get("kind") != "corrective" or inputs.get("reservation_id") is not None:
         raise ValueError("review_remediation applies only to a new corrective dispatch")
+    if inputs.get("spec_file") is None:
+        raise ValueError("review_remediation requires an explicit spec_file naming the feature spec")
     return request
 
 
 def _increment_ineligibility(root: Path, spec: Path, request: dict[str, Any]) -> str | None:
     """Why a review fix does not qualify for its increment's allowance, or None when it does.
 
-    Ownership comes only from the task-execution sidecar beside the feature's
-    tasks, bound to the current spec, plan, and tasks by their fingerprints.
+    Ownership comes only from the task-execution sidecar beside the explicit
+    feature spec's tasks, bound to the current spec, plan, and tasks by their fingerprints.
     Missing, stale, or malformed evidence never qualifies.
     """
     from .task_execution import TaskExecutionError, fingerprints, owned_path, overlaps, path_key

@@ -937,8 +937,22 @@ class IncrementReviewAllowanceTests(_ExecutionControlFixture, unittest.TestCase)
                                      failure_invariant="FR-001")["reasons"], ["failure_family_budget_exhausted"])
 
     def review_fix(self, dispatch_id, unit, paths, mode="apply"):
-        return self.invoke("reserve", mode=mode, dispatch_id=dispatch_id, kind="corrective",
+        return self.invoke("reserve", mode=mode, dispatch_id=dispatch_id, kind="corrective", spec_file="feature/spec.md",
                            failure_invariant="FR-001", review_remediation={"tdd_unit": unit, "paths": paths})
+
+    def test_review_fix_names_the_feature_spec_when_the_workflow_lives_elsewhere(self):
+        self.write_sidecar()
+        workflow = "docs/ai/specs/.process/SPEC-001-workflow.md"
+        (self.root / workflow).parent.mkdir(parents=True)
+        (self.root / workflow).write_text("# Workflow\n")
+        run_id = execution_control(self.root, {"workflow_file": workflow, "action": "start"}, "apply")["ledger"]["run_id"]
+        request = {"workflow_file": workflow, "action": "reserve", "expected_run_id": run_id, "kind": "corrective",
+                   "dispatch_id": "alpha-review", "failure_invariant": "FR-001",
+                   "review_remediation": {"tdd_unit": "alpha", "paths": ["src/alpha/core.py"]}}
+        with self.assertRaisesRegex(ValueError, "explicit spec_file"):
+            execution_control(self.root, request, "apply")
+        admitted = execution_control(self.root, {**request, "spec_file": "feature/spec.md"}, "apply")
+        self.assertEqual((admitted["disposition"], admitted["review_allowance"]), ("continue", "increment"))
 
     def test_review_fix_inside_owned_paths_is_admitted_after_run_wide_exhaustion_up_to_the_bound(self):
         self.write_sidecar()
@@ -1013,9 +1027,10 @@ class IncrementReviewAllowanceTests(_ExecutionControlFixture, unittest.TestCase)
         for malformed in ({"tdd_unit": "alpha"}, {"tdd_unit": "alpha", "paths": "src/alpha"},
                           {"tdd_unit": "", "paths": ["src/alpha"]}, ["alpha"]):
             with self.subTest(malformed=malformed), self.assertRaises(ValueError):
-                self.invoke("reserve", dispatch_id="malformed", kind="corrective", review_remediation=malformed)
+                self.invoke("reserve", dispatch_id="malformed", kind="corrective", spec_file="feature/spec.md",
+                            review_remediation=malformed)
         with self.assertRaises(ValueError):
-            self.invoke("reserve", dispatch_id="not-corrective", kind="implementation",
+            self.invoke("reserve", dispatch_id="not-corrective", kind="implementation", spec_file="feature/spec.md",
                         review_remediation={"tdd_unit": "alpha", "paths": ["src/alpha/core.py"]})
 
     def test_forged_or_overspent_increment_records_fail_closed(self):
@@ -1070,7 +1085,7 @@ class IncrementReviewAllowanceTests(_ExecutionControlFixture, unittest.TestCase)
     def test_both_hosts_document_the_increment_review_allowance(self):
         plugin = Path(__file__).resolve().parents[3] / "speckit-pro"
         shared = " ".join((plugin / "skills/speckit-autopilot/references/execution-efficiency.md").read_text().split())
-        for phrase in ("`review_remediation`", "`increment_review_allowance_exhausted`",
+        for phrase in ("`review_remediation`", "an explicit `spec_file`", "`increment_review_allowance_exhausted`",
                        "`review_allowance=increment`", "`review_allowance=run_wide`",
                        "`increment_ineligible`", "never draws on the run-wide"):
             self.assertIn(phrase, shared)
@@ -1079,6 +1094,7 @@ class IncrementReviewAllowanceTests(_ExecutionControlFixture, unittest.TestCase)
             with self.subTest(host=host):
                 text = " ".join((plugin / host).read_text().split())
                 self.assertIn("`review_remediation`", text)
+                self.assertIn("`spec_file`", text)
                 self.assertIn("`increment_review_allowance_exhausted`", text)
                 self.assertIn("defer that increment", text)
                 self.assertIn("never a mid-run question", text)
@@ -1565,7 +1581,7 @@ class RunnerDispatchTests(unittest.TestCase):
             self.call_runner("execution-control", "apply", action="complete", dispatch_id=dispatch_id,
                              outcome="completed")
         code, admitted = self.call_runner("execution-control", "apply", action="reserve", dispatch_id="alpha-review",
-                                          kind="corrective", failure_invariant="FR-001",
+                                          kind="corrective", failure_invariant="FR-001", spec_file="feature/spec.md",
                                           review_remediation={"tdd_unit": "alpha", "paths": ["src/alpha/core.py"]})
         self.assertEqual(code, 0, admitted)
         self.assertEqual(admitted["data"]["review_allowance"], "increment")

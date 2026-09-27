@@ -2663,8 +2663,9 @@ reuse still-current evidence and do not repeat generic web/code/history passes.
 
 **Review fixes inside one increment.** When an increment's required review
 finds defects in code that increment just wrote, reserve the fix with
-`kind=corrective`, its `failure_invariant`, and `review_remediation`: the
-increment's `tdd_unit` and every repository-relative path the fix will touch.
+`kind=corrective`, its `failure_invariant`, the feature's `spec_file`, and
+`review_remediation`: the increment's `tdd_unit` and every repository-relative
+path the fix will touch.
 When the task-execution sidecar is current and every path sits inside that
 TDD unit's own `owns` and no other unit's, the ledger admits the fix under
 that increment's own allowance of two review rounds. It never draws on the

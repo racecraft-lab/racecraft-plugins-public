@@ -60,8 +60,10 @@ ownership from the caller's current workflow.
   agents, and commits are not new families.
   A review fix for the increment under review also supplies
   `review_remediation`: `{"tdd_unit": <the increment's TDD unit>, "paths":
-  [<every repo-relative path the fix touches>]}`. The helper reads ownership
-  only from the feature's `.process/task-execution.json`, and only when its
+  [<every repo-relative path the fix touches>]}`, plus an explicit `spec_file`
+  naming the feature spec, since the workflow file usually lives outside the
+  feature directory. The helper reads ownership only from the
+  `.process/task-execution.json` beside that spec, and only when its
   fingerprints match the current spec, plan, and tasks. When every path sits
   inside that unit's `owns` and overlaps no other unit's, it reserves the fix
   under the increment's own allowance: two rounds per TDD unit, recorded in
