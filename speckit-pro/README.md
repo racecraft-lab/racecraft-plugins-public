@@ -460,6 +460,10 @@ troubleshooting, update, rollback, permission, stale-cache, and security depth.
 
 </details>
 
+## Acknowledgments
+
+We acknowledge Matt Pocock's upstream skills. See the [MIT notice](skills/speckit-coach/references/upstream/mattpocock-skills/UPSTREAM-NOTICE.md) for their source, pinned baseline, and license terms.
+
 ## Author
 
 [Racecraft Lab](https://github.com/racecraft-lab)

@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0",
+  "thresholds": {
+    "complexity": 8,
+    "crap": 30,
+    "mutation_score_floor": 60
+  },
+  "skips": {},
+  "enforce": [],
+  "basis": {
+    "method": "operator",
+    "recorded": "2026-09-25"
+  }
+}

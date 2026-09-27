@@ -1,0 +1,234 @@
+{
+  "source_repository": "racecraft-lab/skills",
+  "source_commit": "c55ee46073ed923f86ce59a5eb3b6d895095d1b7",
+  "entries": [
+    {
+      "upstream_path": "skills/engineering/ask-matt/SKILL.md",
+      "bucket": "engineering",
+      "disposition": "ABSORB",
+      "owner_spec": "EDA-009"
+    },
+    {
+      "upstream_path": "skills/engineering/code-review/SKILL.md",
+      "bucket": "engineering",
+      "disposition": "ABSORB",
+      "owner_spec": "EDA-008"
+    },
+    {
+      "upstream_path": "skills/engineering/codebase-design/SKILL.md",
+      "bucket": "engineering",
+      "disposition": "ABSORB",
+      "owner_spec": "EDA-005"
+    },
+    {
+      "upstream_path": "skills/engineering/diagnosing-bugs/SKILL.md",
+      "bucket": "engineering",
+      "disposition": "NEW",
+      "owner_spec": "EDA-007"
+    },
+    {
+      "upstream_path": "skills/engineering/domain-modeling/SKILL.md",
+      "bucket": "engineering",
+      "disposition": "ABSORB",
+      "owner_spec": "EDA-003"
+    },
+    {
+      "upstream_path": "skills/engineering/grill-with-docs/SKILL.md",
+      "bucket": "engineering",
+      "disposition": "ABSORB",
+      "owner_spec": "EDA-003"
+    },
+    {
+      "upstream_path": "skills/engineering/implement/SKILL.md",
+      "bucket": "engineering",
+      "disposition": "IGNORE",
+      "owner_spec": "EDA-001"
+    },
+    {
+      "upstream_path": "skills/engineering/improve-codebase-architecture/SKILL.md",
+      "bucket": "engineering",
+      "disposition": "NEW",
+      "owner_spec": "EDA-010"
+    },
+    {
+      "upstream_path": "skills/engineering/prototype/SKILL.md",
+      "bucket": "engineering",
+      "disposition": "NEW",
+      "owner_spec": "EDA-004"
+    },
+    {
+      "upstream_path": "skills/engineering/research/SKILL.md",
+      "bucket": "engineering",
+      "disposition": "ABSORB",
+      "owner_spec": "EDA-009"
+    },
+    {
+      "upstream_path": "skills/engineering/resolving-merge-conflicts/SKILL.md",
+      "bucket": "engineering",
+      "disposition": "ABSORB",
+      "owner_spec": "EDA-008"
+    },
+    {
+      "upstream_path": "skills/engineering/setup-matt-pocock-skills/SKILL.md",
+      "bucket": "engineering",
+      "disposition": "IGNORE",
+      "owner_spec": "EDA-001"
+    },
+    {
+      "upstream_path": "skills/engineering/tdd/SKILL.md",
+      "bucket": "engineering",
+      "disposition": "ABSORB",
+      "owner_spec": "EDA-006"
+    },
+    {
+      "upstream_path": "skills/engineering/to-spec/SKILL.md",
+      "bucket": "engineering",
+      "disposition": "ABSORB",
+      "owner_spec": "EDA-005"
+    },
+    {
+      "upstream_path": "skills/engineering/to-tickets/SKILL.md",
+      "bucket": "engineering",
+      "disposition": "ABSORB",
+      "owner_spec": "EDA-005"
+    },
+    {
+      "upstream_path": "skills/engineering/triage/SKILL.md",
+      "bucket": "engineering",
+      "disposition": "ABSORB",
+      "owner_spec": "EDA-005"
+    },
+    {
+      "upstream_path": "skills/engineering/wayfinder/SKILL.md",
+      "bucket": "engineering",
+      "disposition": "ABSORB",
+      "owner_spec": "EDA-005"
+    },
+    {
+      "upstream_path": "skills/engineering/wizard/SKILL.md",
+      "bucket": "engineering",
+      "disposition": "IGNORE",
+      "owner_spec": "EDA-001"
+    },
+    {
+      "upstream_path": "skills/in-progress/claude-handoff/SKILL.md",
+      "bucket": "in-progress",
+      "disposition": "IGNORE",
+      "owner_spec": "EDA-001"
+    },
+    {
+      "upstream_path": "skills/in-progress/implement-spec/SKILL.md",
+      "bucket": "in-progress",
+      "disposition": "IGNORE",
+      "owner_spec": "EDA-001"
+    },
+    {
+      "upstream_path": "skills/in-progress/loop-me/SKILL.md",
+      "bucket": "in-progress",
+      "disposition": "IGNORE",
+      "owner_spec": "EDA-001"
+    },
+    {
+      "upstream_path": "skills/in-progress/pr/SKILL.md",
+      "bucket": "in-progress",
+      "disposition": "ABSORB",
+      "owner_spec": "EDA-008"
+    },
+    {
+      "upstream_path": "skills/in-progress/retro/SKILL.md",
+      "bucket": "in-progress",
+      "disposition": "ABSORB",
+      "owner_spec": "EDA-008"
+    },
+    {
+      "upstream_path": "skills/in-progress/setup-ts-deep-modules/SKILL.md",
+      "bucket": "in-progress",
+      "disposition": "ABSORB",
+      "owner_spec": "EDA-009"
+    },
+    {
+      "upstream_path": "skills/in-progress/writing-beats/SKILL.md",
+      "bucket": "in-progress",
+      "disposition": "IGNORE",
+      "owner_spec": "EDA-001"
+    },
+    {
+      "upstream_path": "skills/in-progress/writing-fragments/SKILL.md",
+      "bucket": "in-progress",
+      "disposition": "IGNORE",
+      "owner_spec": "EDA-001"
+    },
+    {
+      "upstream_path": "skills/in-progress/writing-shape/SKILL.md",
+      "bucket": "in-progress",
+      "disposition": "IGNORE",
+      "owner_spec": "EDA-001"
+    },
+    {
+      "upstream_path": "skills/misc/git-guardrails-claude-code/SKILL.md",
+      "bucket": "misc",
+      "disposition": "IGNORE",
+      "owner_spec": "EDA-001"
+    },
+    {
+      "upstream_path": "skills/misc/migrate-to-shoehorn/SKILL.md",
+      "bucket": "misc",
+      "disposition": "IGNORE",
+      "owner_spec": "EDA-001"
+    },
+    {
+      "upstream_path": "skills/misc/scaffold-exercises/SKILL.md",
+      "bucket": "misc",
+      "disposition": "IGNORE",
+      "owner_spec": "EDA-001"
+    },
+    {
+      "upstream_path": "skills/misc/setup-pre-commit/SKILL.md",
+      "bucket": "misc",
+      "disposition": "ABSORB",
+      "owner_spec": "EDA-009"
+    },
+    {
+      "upstream_path": "skills/productivity/grill-me/SKILL.md",
+      "bucket": "productivity",
+      "disposition": "ABSORB",
+      "owner_spec": "EDA-002"
+    },
+    {
+      "upstream_path": "skills/productivity/grilling/SKILL.md",
+      "bucket": "productivity",
+      "disposition": "ABSORB",
+      "owner_spec": "EDA-002"
+    },
+    {
+      "upstream_path": "skills/productivity/handoff/SKILL.md",
+      "bucket": "productivity",
+      "disposition": "ABSORB",
+      "owner_spec": "EDA-009"
+    },
+    {
+      "upstream_path": "skills/productivity/teach/SKILL.md",
+      "bucket": "productivity",
+      "disposition": "IGNORE",
+      "owner_spec": "EDA-001"
+    },
+    {
+      "upstream_path": "skills/productivity/to-questionnaire/SKILL.md",
+      "bucket": "productivity",
+      "disposition": "ABSORB",
+      "owner_spec": "EDA-002"
+    },
+    {
+      "upstream_path": "skills/productivity/wait-what/SKILL.md",
+      "bucket": "productivity",
+      "disposition": "IGNORE",
+      "owner_spec": "EDA-001"
+    },
+    {
+      "upstream_path": "skills/productivity/writing-for-agents/SKILL.md",
+      "bucket": "productivity",
+      "disposition": "ABSORB",
+      "owner_spec": "EDA-009"
+    }
+  ]
+}

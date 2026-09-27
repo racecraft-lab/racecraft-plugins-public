@@ -1,0 +1,58 @@
+{
+  "body_file": "specs/eda-001-attribution-foundation/.process/pr-packets/eda-plan-draft/body.md",
+  "editable_fields": [],
+  "generated_title": {
+    "description": "Plan upstream skill attribution foundation",
+    "rejected_candidates": [],
+    "scope": "speckit-pro",
+    "source_evidence": {
+      "kind": "workflow",
+      "source": "docs/ai/specs/.process/EDA-001-workflow.md",
+      "summary": "Title generated from active SpecKit workflow evidence."
+    },
+    "type": "docs",
+    "value": "docs(speckit-pro): Plan upstream skill attribution foundation"
+  },
+  "mode": "draft",
+  "packet_id": "eda-plan-draft",
+  "protected_body_fingerprint": {
+    "algorithm": "sha256",
+    "elided_fields": [],
+    "normalization": "LF line endings; trailing whitespace trimmed; final newline ensured; editable block bodies replaced by <elided:field_id> before sha256.",
+    "value": "3ddae43588c969f0152c1e9fb5b60212b15e8ec7dddcd334d4114a3ba999f1f3"
+  },
+  "required_headings": [
+    "Artifacts",
+    "Resume"
+  ],
+  "schema_version": "1.0.0",
+  "scope_evidence": {
+    "budget_result": "within_budget",
+    "changed_files": [],
+    "non_goals": [
+      "No runtime, dependency, or generated payload changes unless listed in changed_files."
+    ],
+    "production_files": 0,
+    "reviewable_loc": 0,
+    "total_files": 0
+  },
+  "source_feature_dir": "specs/eda-001-attribution-foundation",
+  "source_markers": [
+    {
+      "marker_id": "eda-plan-draft",
+      "rendered_text": "docs(speckit-pro): Plan upstream skill attribution foundation",
+      "source": "specs/eda-001-attribution-foundation"
+    }
+  ],
+  "target": {
+    "base_branch": "docs/engineering-discipline-adoption",
+    "head_branch": "eda-001-attribution-foundation"
+  },
+  "uat": {
+    "how_to_uat": "",
+    "uat_runbook_heading": "",
+    "uat_source": "packet-input"
+  },
+  "validation_result_path": "specs/eda-001-attribution-foundation/.process/pr-packets/eda-plan-draft/validation.json",
+  "verification_evidence": []
+}

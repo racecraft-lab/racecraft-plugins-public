@@ -1,0 +1,1275 @@
+{
+  "cases": [
+    {
+      "name": "destination-missing",
+      "landed_sources": [
+        {
+          "upstream_path": "skills/in-progress/pr/SKILL.md",
+          "destination": "speckit-pro/skills/synthetic-credit/missing.md"
+        }
+      ],
+      "directories": [],
+      "files": {},
+      "expected_files": [],
+      "expected_sources": {},
+      "expected_error": {
+        "field": "destination",
+        "upstream_path": "skills/in-progress/pr/SKILL.md",
+        "path": "speckit-pro/skills/synthetic-credit/missing.md"
+      }
+    },
+    {
+      "name": "directory-authored-references-valid",
+      "landed_sources": [
+        {
+          "upstream_path": "skills/in-progress/pr/SKILL.md",
+          "destination": "speckit-pro/skills/synthetic-credit"
+        }
+      ],
+      "directories": [
+        "speckit-pro/skills/synthetic-credit",
+        "speckit-pro/skills/synthetic-credit/references"
+      ],
+      "files": {
+        "speckit-pro/skills/synthetic-credit/references/guide.md": "<!--\nUpstream repository: mattpocock/skills\nUpstream skill: skills/in-progress/pr/SKILL.md\nPinned commit: c55ee46073ed923f86ce59a5eb3b6d895095d1b7\nModified derivative: yes\nLicense notice: speckit-pro/skills/speckit-coach/references/upstream/mattpocock-skills/UPSTREAM-NOTICE.md\n-->\n\n# Synthetic credit\n\nFixture body only.\n"
+      },
+      "expected_files": [
+        "speckit-pro/skills/synthetic-credit/references/guide.md"
+      ],
+      "expected_sources": {
+        "speckit-pro/skills/synthetic-credit/references/guide.md": [
+          "skills/in-progress/pr/SKILL.md"
+        ]
+      },
+      "expected_error": null
+    },
+    {
+      "name": "directory-empty",
+      "landed_sources": [
+        {
+          "upstream_path": "skills/in-progress/pr/SKILL.md",
+          "destination": "speckit-pro/skills/synthetic-credit"
+        }
+      ],
+      "directories": [
+        "speckit-pro/skills/synthetic-credit"
+      ],
+      "files": {},
+      "expected_files": [],
+      "expected_sources": {},
+      "expected_error": {
+        "field": "destination",
+        "upstream_path": "skills/in-progress/pr/SKILL.md",
+        "path": "speckit-pro/skills/synthetic-credit"
+      }
+    },
+    {
+      "name": "directory-only-excluded",
+      "landed_sources": [
+        {
+          "upstream_path": "skills/in-progress/pr/SKILL.md",
+          "destination": "speckit-pro/skills/synthetic-credit"
+        }
+      ],
+      "directories": [
+        "speckit-pro/skills/synthetic-credit"
+      ],
+      "files": {
+        "speckit-pro/skills/synthetic-credit/UPSTREAM-NOTICE.md": "# Synthetic notice\n\nFixture body only.\n"
+      },
+      "expected_files": [],
+      "expected_sources": {},
+      "expected_error": {
+        "field": "destination",
+        "upstream_path": "skills/in-progress/pr/SKILL.md",
+        "path": "speckit-pro/skills/synthetic-credit"
+      }
+    },
+    {
+      "name": "directory-valid",
+      "landed_sources": [
+        {
+          "upstream_path": "skills/in-progress/pr/SKILL.md",
+          "destination": "speckit-pro/skills/synthetic-credit"
+        }
+      ],
+      "directories": [
+        "speckit-pro/skills/synthetic-credit",
+        "speckit-pro/skills/synthetic-credit/tools"
+      ],
+      "files": {
+        "speckit-pro/skills/synthetic-credit/agent.toml": "# Upstream repository: mattpocock/skills\n# Upstream skill: skills/in-progress/pr/SKILL.md\n# Pinned commit: c55ee46073ed923f86ce59a5eb3b6d895095d1b7\n# Modified derivative: yes\n# License notice: speckit-pro/skills/speckit-coach/references/upstream/mattpocock-skills/UPSTREAM-NOTICE.md\n\nname = \"synthetic\"\n",
+        "speckit-pro/skills/synthetic-credit/guide.md": "<!--\nUpstream repository: mattpocock/skills\nUpstream skill: skills/in-progress/pr/SKILL.md\nPinned commit: c55ee46073ed923f86ce59a5eb3b6d895095d1b7\nModified derivative: yes\nLicense notice: speckit-pro/skills/speckit-coach/references/upstream/mattpocock-skills/UPSTREAM-NOTICE.md\n-->\n\n# Synthetic credit\n\nFixture body only.\n",
+        "speckit-pro/skills/synthetic-credit/image.svg": "<svg xmlns=\"http://www.w3.org/2000/svg\"></svg>\n",
+        "speckit-pro/skills/synthetic-credit/tools/helper.py": "# Upstream repository: mattpocock/skills\n# Upstream skill: skills/in-progress/pr/SKILL.md\n# Pinned commit: c55ee46073ed923f86ce59a5eb3b6d895095d1b7\n# Modified derivative: yes\n# License notice: speckit-pro/skills/speckit-coach/references/upstream/mattpocock-skills/UPSTREAM-NOTICE.md\n\nVALUE = \"synthetic\"\n"
+      },
+      "expected_files": [
+        "speckit-pro/skills/synthetic-credit/agent.toml",
+        "speckit-pro/skills/synthetic-credit/guide.md",
+        "speckit-pro/skills/synthetic-credit/tools/helper.py"
+      ],
+      "expected_sources": {
+        "speckit-pro/skills/synthetic-credit/agent.toml": [
+          "skills/in-progress/pr/SKILL.md"
+        ],
+        "speckit-pro/skills/synthetic-credit/guide.md": [
+          "skills/in-progress/pr/SKILL.md"
+        ],
+        "speckit-pro/skills/synthetic-credit/tools/helper.py": [
+          "skills/in-progress/pr/SKILL.md"
+        ]
+      },
+      "expected_error": null
+    },
+    {
+      "name": "header-after-body",
+      "landed_sources": [
+        {
+          "upstream_path": "skills/in-progress/pr/SKILL.md",
+          "destination": "speckit-pro/skills/synthetic-credit/guide.md"
+        }
+      ],
+      "directories": [],
+      "files": {
+        "speckit-pro/skills/synthetic-credit/guide.md": "\n# Synthetic credit\n\nFixture body only.\n<!--\nUpstream repository: mattpocock/skills\nUpstream skill: skills/in-progress/pr/SKILL.md\nPinned commit: c55ee46073ed923f86ce59a5eb3b6d895095d1b7\nModified derivative: yes\nLicense notice: speckit-pro/skills/speckit-coach/references/upstream/mattpocock-skills/UPSTREAM-NOTICE.md\n-->\n"
+      },
+      "expected_files": [
+        "speckit-pro/skills/synthetic-credit/guide.md"
+      ],
+      "expected_sources": {
+        "speckit-pro/skills/synthetic-credit/guide.md": [
+          "skills/in-progress/pr/SKILL.md"
+        ]
+      },
+      "expected_error": {
+        "field": "placement",
+        "upstream_path": "skills/in-progress/pr/SKILL.md",
+        "path": "speckit-pro/skills/synthetic-credit/guide.md"
+      }
+    },
+    {
+      "name": "header-duplicate-block",
+      "landed_sources": [
+        {
+          "upstream_path": "skills/in-progress/pr/SKILL.md",
+          "destination": "speckit-pro/skills/synthetic-credit/guide.md"
+        }
+      ],
+      "directories": [],
+      "files": {
+        "speckit-pro/skills/synthetic-credit/guide.md": "<!--\nUpstream repository: mattpocock/skills\nUpstream skill: skills/in-progress/pr/SKILL.md\nPinned commit: c55ee46073ed923f86ce59a5eb3b6d895095d1b7\nModified derivative: yes\nLicense notice: speckit-pro/skills/speckit-coach/references/upstream/mattpocock-skills/UPSTREAM-NOTICE.md\n-->\n<!--\nUpstream repository: mattpocock/skills\nUpstream skill: skills/in-progress/pr/SKILL.md\nPinned commit: c55ee46073ed923f86ce59a5eb3b6d895095d1b7\nModified derivative: yes\nLicense notice: speckit-pro/skills/speckit-coach/references/upstream/mattpocock-skills/UPSTREAM-NOTICE.md\n-->\n\n# Synthetic credit\n\nFixture body only.\n"
+      },
+      "expected_files": [
+        "speckit-pro/skills/synthetic-credit/guide.md"
+      ],
+      "expected_sources": {
+        "speckit-pro/skills/synthetic-credit/guide.md": [
+          "skills/in-progress/pr/SKILL.md"
+        ]
+      },
+      "expected_error": {
+        "field": "header",
+        "upstream_path": "skills/in-progress/pr/SKILL.md",
+        "path": "speckit-pro/skills/synthetic-credit/guide.md"
+      }
+    },
+    {
+      "name": "header-duplicate-source",
+      "landed_sources": [
+        {
+          "upstream_path": "skills/in-progress/pr/SKILL.md",
+          "destination": "speckit-pro/skills/synthetic-credit/guide.md"
+        }
+      ],
+      "directories": [],
+      "files": {
+        "speckit-pro/skills/synthetic-credit/guide.md": "<!--\nUpstream repository: mattpocock/skills\nUpstream skill: skills/in-progress/pr/SKILL.md\nUpstream skill: skills/in-progress/pr/SKILL.md\nPinned commit: c55ee46073ed923f86ce59a5eb3b6d895095d1b7\nModified derivative: yes\nLicense notice: speckit-pro/skills/speckit-coach/references/upstream/mattpocock-skills/UPSTREAM-NOTICE.md\n-->\n\n# Synthetic credit\n\nFixture body only.\n"
+      },
+      "expected_files": [
+        "speckit-pro/skills/synthetic-credit/guide.md"
+      ],
+      "expected_sources": {
+        "speckit-pro/skills/synthetic-credit/guide.md": [
+          "skills/in-progress/pr/SKILL.md"
+        ]
+      },
+      "expected_error": {
+        "field": "header",
+        "upstream_path": "skills/in-progress/pr/SKILL.md",
+        "path": "speckit-pro/skills/synthetic-credit/guide.md"
+      }
+    },
+    {
+      "name": "header-extra-source",
+      "landed_sources": [
+        {
+          "upstream_path": "skills/in-progress/pr/SKILL.md",
+          "destination": "speckit-pro/skills/synthetic-credit/guide.md"
+        }
+      ],
+      "directories": [],
+      "files": {
+        "speckit-pro/skills/synthetic-credit/guide.md": "<!--\nUpstream repository: mattpocock/skills\nUpstream skill: skills/engineering/code-review/SKILL.md\nUpstream skill: skills/in-progress/pr/SKILL.md\nPinned commit: c55ee46073ed923f86ce59a5eb3b6d895095d1b7\nModified derivative: yes\nLicense notice: speckit-pro/skills/speckit-coach/references/upstream/mattpocock-skills/UPSTREAM-NOTICE.md\n-->\n\n# Synthetic credit\n\nFixture body only.\n"
+      },
+      "expected_files": [
+        "speckit-pro/skills/synthetic-credit/guide.md"
+      ],
+      "expected_sources": {
+        "speckit-pro/skills/synthetic-credit/guide.md": [
+          "skills/in-progress/pr/SKILL.md"
+        ]
+      },
+      "expected_error": {
+        "field": "header",
+        "upstream_path": "skills/in-progress/pr/SKILL.md",
+        "path": "speckit-pro/skills/synthetic-credit/guide.md"
+      }
+    },
+    {
+      "name": "header-missing",
+      "landed_sources": [
+        {
+          "upstream_path": "skills/in-progress/pr/SKILL.md",
+          "destination": "speckit-pro/skills/synthetic-credit/guide.md"
+        }
+      ],
+      "directories": [],
+      "files": {
+        "speckit-pro/skills/synthetic-credit/guide.md": "\n# Synthetic credit\n\nFixture body only.\n"
+      },
+      "expected_files": [
+        "speckit-pro/skills/synthetic-credit/guide.md"
+      ],
+      "expected_sources": {
+        "speckit-pro/skills/synthetic-credit/guide.md": [
+          "skills/in-progress/pr/SKILL.md"
+        ]
+      },
+      "expected_error": {
+        "field": "header",
+        "upstream_path": "skills/in-progress/pr/SKILL.md",
+        "path": "speckit-pro/skills/synthetic-credit/guide.md"
+      }
+    },
+    {
+      "name": "header-missing-source",
+      "landed_sources": [
+        {
+          "upstream_path": "skills/in-progress/pr/SKILL.md",
+          "destination": "speckit-pro/skills/synthetic-credit/guide.md"
+        }
+      ],
+      "directories": [],
+      "files": {
+        "speckit-pro/skills/synthetic-credit/guide.md": "<!--\nUpstream repository: mattpocock/skills\nPinned commit: c55ee46073ed923f86ce59a5eb3b6d895095d1b7\nModified derivative: yes\nLicense notice: speckit-pro/skills/speckit-coach/references/upstream/mattpocock-skills/UPSTREAM-NOTICE.md\n-->\n\n# Synthetic credit\n\nFixture body only.\n"
+      },
+      "expected_files": [
+        "speckit-pro/skills/synthetic-credit/guide.md"
+      ],
+      "expected_sources": {
+        "speckit-pro/skills/synthetic-credit/guide.md": [
+          "skills/in-progress/pr/SKILL.md"
+        ]
+      },
+      "expected_error": {
+        "field": "header",
+        "upstream_path": "skills/in-progress/pr/SKILL.md",
+        "path": "speckit-pro/skills/synthetic-credit/guide.md"
+      }
+    },
+    {
+      "name": "header-unsorted-sources",
+      "landed_sources": [
+        {
+          "upstream_path": "skills/engineering/code-review/SKILL.md",
+          "destination": "speckit-pro/skills/synthetic-credit/SKILL.md"
+        },
+        {
+          "upstream_path": "skills/in-progress/pr/SKILL.md",
+          "destination": "speckit-pro/skills/synthetic-credit/SKILL.md"
+        }
+      ],
+      "directories": [],
+      "files": {
+        "speckit-pro/skills/synthetic-credit/SKILL.md": "---\nname: synthetic-credit\ndescription: Fixture body only.\nmetadata:\n  credits: \"mattpocock/skills@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/code-review/SKILL.md; mattpocock/skills@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/in-progress/pr/SKILL.md\"\n---\n\n<!--\nUpstream repository: mattpocock/skills\nUpstream skill: skills/in-progress/pr/SKILL.md\nUpstream skill: skills/engineering/code-review/SKILL.md\nPinned commit: c55ee46073ed923f86ce59a5eb3b6d895095d1b7\nModified derivative: yes\nLicense notice: speckit-pro/skills/speckit-coach/references/upstream/mattpocock-skills/UPSTREAM-NOTICE.md\n-->\n\n# Synthetic credit\n\nFixture body only.\n"
+      },
+      "expected_files": [
+        "speckit-pro/skills/synthetic-credit/SKILL.md"
+      ],
+      "expected_sources": {
+        "speckit-pro/skills/synthetic-credit/SKILL.md": [
+          "skills/engineering/code-review/SKILL.md",
+          "skills/in-progress/pr/SKILL.md"
+        ]
+      },
+      "expected_error": {
+        "field": "header",
+        "upstream_path": "skills/in-progress/pr/SKILL.md",
+        "path": "speckit-pro/skills/synthetic-credit/SKILL.md"
+      }
+    },
+    {
+      "name": "header-wrong-commit",
+      "landed_sources": [
+        {
+          "upstream_path": "skills/in-progress/pr/SKILL.md",
+          "destination": "speckit-pro/skills/synthetic-credit/guide.md"
+        }
+      ],
+      "directories": [],
+      "files": {
+        "speckit-pro/skills/synthetic-credit/guide.md": "<!--\nUpstream repository: mattpocock/skills\nUpstream skill: skills/in-progress/pr/SKILL.md\nPinned commit: 0000000000000000000000000000000000000000\nModified derivative: yes\nLicense notice: speckit-pro/skills/speckit-coach/references/upstream/mattpocock-skills/UPSTREAM-NOTICE.md\n-->\n\n# Synthetic credit\n\nFixture body only.\n"
+      },
+      "expected_files": [
+        "speckit-pro/skills/synthetic-credit/guide.md"
+      ],
+      "expected_sources": {
+        "speckit-pro/skills/synthetic-credit/guide.md": [
+          "skills/in-progress/pr/SKILL.md"
+        ]
+      },
+      "expected_error": {
+        "field": "header",
+        "upstream_path": "skills/in-progress/pr/SKILL.md",
+        "path": "speckit-pro/skills/synthetic-credit/guide.md"
+      }
+    },
+    {
+      "name": "header-wrong-modified",
+      "landed_sources": [
+        {
+          "upstream_path": "skills/in-progress/pr/SKILL.md",
+          "destination": "speckit-pro/skills/synthetic-credit/guide.md"
+        }
+      ],
+      "directories": [],
+      "files": {
+        "speckit-pro/skills/synthetic-credit/guide.md": "<!--\nUpstream repository: mattpocock/skills\nUpstream skill: skills/in-progress/pr/SKILL.md\nPinned commit: c55ee46073ed923f86ce59a5eb3b6d895095d1b7\nModified derivative: no\nLicense notice: speckit-pro/skills/speckit-coach/references/upstream/mattpocock-skills/UPSTREAM-NOTICE.md\n-->\n\n# Synthetic credit\n\nFixture body only.\n"
+      },
+      "expected_files": [
+        "speckit-pro/skills/synthetic-credit/guide.md"
+      ],
+      "expected_sources": {
+        "speckit-pro/skills/synthetic-credit/guide.md": [
+          "skills/in-progress/pr/SKILL.md"
+        ]
+      },
+      "expected_error": {
+        "field": "header",
+        "upstream_path": "skills/in-progress/pr/SKILL.md",
+        "path": "speckit-pro/skills/synthetic-credit/guide.md"
+      }
+    },
+    {
+      "name": "header-wrong-notice",
+      "landed_sources": [
+        {
+          "upstream_path": "skills/in-progress/pr/SKILL.md",
+          "destination": "speckit-pro/skills/synthetic-credit/guide.md"
+        }
+      ],
+      "directories": [],
+      "files": {
+        "speckit-pro/skills/synthetic-credit/guide.md": "<!--\nUpstream repository: mattpocock/skills\nUpstream skill: skills/in-progress/pr/SKILL.md\nPinned commit: c55ee46073ed923f86ce59a5eb3b6d895095d1b7\nModified derivative: yes\nLicense notice: notices/UPSTREAM-NOTICE.md\n-->\n\n# Synthetic credit\n\nFixture body only.\n"
+      },
+      "expected_files": [
+        "speckit-pro/skills/synthetic-credit/guide.md"
+      ],
+      "expected_sources": {
+        "speckit-pro/skills/synthetic-credit/guide.md": [
+          "skills/in-progress/pr/SKILL.md"
+        ]
+      },
+      "expected_error": {
+        "field": "header",
+        "upstream_path": "skills/in-progress/pr/SKILL.md",
+        "path": "speckit-pro/skills/synthetic-credit/guide.md"
+      }
+    },
+    {
+      "name": "header-wrong-order",
+      "landed_sources": [
+        {
+          "upstream_path": "skills/in-progress/pr/SKILL.md",
+          "destination": "speckit-pro/skills/synthetic-credit/guide.md"
+        }
+      ],
+      "directories": [],
+      "files": {
+        "speckit-pro/skills/synthetic-credit/guide.md": "<!--\nUpstream repository: mattpocock/skills\nUpstream skill: skills/in-progress/pr/SKILL.md\nModified derivative: yes\nPinned commit: c55ee46073ed923f86ce59a5eb3b6d895095d1b7\nLicense notice: speckit-pro/skills/speckit-coach/references/upstream/mattpocock-skills/UPSTREAM-NOTICE.md\n-->\n\n# Synthetic credit\n\nFixture body only.\n"
+      },
+      "expected_files": [
+        "speckit-pro/skills/synthetic-credit/guide.md"
+      ],
+      "expected_sources": {
+        "speckit-pro/skills/synthetic-credit/guide.md": [
+          "skills/in-progress/pr/SKILL.md"
+        ]
+      },
+      "expected_error": {
+        "field": "header",
+        "upstream_path": "skills/in-progress/pr/SKILL.md",
+        "path": "speckit-pro/skills/synthetic-credit/guide.md"
+      }
+    },
+    {
+      "name": "header-wrong-repository",
+      "landed_sources": [
+        {
+          "upstream_path": "skills/in-progress/pr/SKILL.md",
+          "destination": "speckit-pro/skills/synthetic-credit/guide.md"
+        }
+      ],
+      "directories": [],
+      "files": {
+        "speckit-pro/skills/synthetic-credit/guide.md": "<!--\nUpstream repository: example/skills\nUpstream skill: skills/in-progress/pr/SKILL.md\nPinned commit: c55ee46073ed923f86ce59a5eb3b6d895095d1b7\nModified derivative: yes\nLicense notice: speckit-pro/skills/speckit-coach/references/upstream/mattpocock-skills/UPSTREAM-NOTICE.md\n-->\n\n# Synthetic credit\n\nFixture body only.\n"
+      },
+      "expected_files": [
+        "speckit-pro/skills/synthetic-credit/guide.md"
+      ],
+      "expected_sources": {
+        "speckit-pro/skills/synthetic-credit/guide.md": [
+          "skills/in-progress/pr/SKILL.md"
+        ]
+      },
+      "expected_error": {
+        "field": "header",
+        "upstream_path": "skills/in-progress/pr/SKILL.md",
+        "path": "speckit-pro/skills/synthetic-credit/guide.md"
+      }
+    },
+    {
+      "name": "header-wrong-source",
+      "landed_sources": [
+        {
+          "upstream_path": "skills/in-progress/pr/SKILL.md",
+          "destination": "speckit-pro/skills/synthetic-credit/guide.md"
+        }
+      ],
+      "directories": [],
+      "files": {
+        "speckit-pro/skills/synthetic-credit/guide.md": "<!--\nUpstream repository: mattpocock/skills\nUpstream skill: skills/engineering/code-review/SKILL.md\nPinned commit: c55ee46073ed923f86ce59a5eb3b6d895095d1b7\nModified derivative: yes\nLicense notice: speckit-pro/skills/speckit-coach/references/upstream/mattpocock-skills/UPSTREAM-NOTICE.md\n-->\n\n# Synthetic credit\n\nFixture body only.\n"
+      },
+      "expected_files": [
+        "speckit-pro/skills/synthetic-credit/guide.md"
+      ],
+      "expected_sources": {
+        "speckit-pro/skills/synthetic-credit/guide.md": [
+          "skills/in-progress/pr/SKILL.md"
+        ]
+      },
+      "expected_error": {
+        "field": "header",
+        "upstream_path": "skills/in-progress/pr/SKILL.md",
+        "path": "speckit-pro/skills/synthetic-credit/guide.md"
+      }
+    },
+    {
+      "name": "markdown-frontmatter-valid",
+      "landed_sources": [
+        {
+          "upstream_path": "skills/in-progress/pr/SKILL.md",
+          "destination": "speckit-pro/skills/synthetic-credit/frontmatter.md"
+        }
+      ],
+      "directories": [],
+      "files": {
+        "speckit-pro/skills/synthetic-credit/frontmatter.md": "---\nname: synthetic-credit\ndescription: Fixture body only.\n---\n\n<!--\nUpstream repository: mattpocock/skills\nUpstream skill: skills/in-progress/pr/SKILL.md\nPinned commit: c55ee46073ed923f86ce59a5eb3b6d895095d1b7\nModified derivative: yes\nLicense notice: speckit-pro/skills/speckit-coach/references/upstream/mattpocock-skills/UPSTREAM-NOTICE.md\n-->\n\n# Synthetic credit\n\nFixture body only.\n"
+      },
+      "expected_files": [
+        "speckit-pro/skills/synthetic-credit/frontmatter.md"
+      ],
+      "expected_sources": {
+        "speckit-pro/skills/synthetic-credit/frontmatter.md": [
+          "skills/in-progress/pr/SKILL.md"
+        ]
+      },
+      "expected_error": null
+    },
+    {
+      "name": "markdown-placement-after-body",
+      "landed_sources": [
+        {
+          "upstream_path": "skills/in-progress/pr/SKILL.md",
+          "destination": "speckit-pro/skills/synthetic-credit/frontmatter.md"
+        }
+      ],
+      "directories": [],
+      "files": {
+        "speckit-pro/skills/synthetic-credit/frontmatter.md": "---\nname: synthetic-credit\ndescription: Fixture body only.\n---\n\n\n# Synthetic credit\n\nFixture body only.\n<!--\nUpstream repository: mattpocock/skills\nUpstream skill: skills/in-progress/pr/SKILL.md\nPinned commit: c55ee46073ed923f86ce59a5eb3b6d895095d1b7\nModified derivative: yes\nLicense notice: speckit-pro/skills/speckit-coach/references/upstream/mattpocock-skills/UPSTREAM-NOTICE.md\n-->\n"
+      },
+      "expected_files": [
+        "speckit-pro/skills/synthetic-credit/frontmatter.md"
+      ],
+      "expected_sources": {
+        "speckit-pro/skills/synthetic-credit/frontmatter.md": [
+          "skills/in-progress/pr/SKILL.md"
+        ]
+      },
+      "expected_error": {
+        "field": "placement",
+        "upstream_path": "skills/in-progress/pr/SKILL.md",
+        "path": "speckit-pro/skills/synthetic-credit/frontmatter.md"
+      }
+    },
+    {
+      "name": "markdown-placement-before-frontmatter",
+      "landed_sources": [
+        {
+          "upstream_path": "skills/in-progress/pr/SKILL.md",
+          "destination": "speckit-pro/skills/synthetic-credit/frontmatter.md"
+        }
+      ],
+      "directories": [],
+      "files": {
+        "speckit-pro/skills/synthetic-credit/frontmatter.md": "<!--\nUpstream repository: mattpocock/skills\nUpstream skill: skills/in-progress/pr/SKILL.md\nPinned commit: c55ee46073ed923f86ce59a5eb3b6d895095d1b7\nModified derivative: yes\nLicense notice: speckit-pro/skills/speckit-coach/references/upstream/mattpocock-skills/UPSTREAM-NOTICE.md\n-->\n---\nname: synthetic-credit\ndescription: Fixture body only.\n---\n\n\n# Synthetic credit\n\nFixture body only.\n"
+      },
+      "expected_files": [
+        "speckit-pro/skills/synthetic-credit/frontmatter.md"
+      ],
+      "expected_sources": {
+        "speckit-pro/skills/synthetic-credit/frontmatter.md": [
+          "skills/in-progress/pr/SKILL.md"
+        ]
+      },
+      "expected_error": {
+        "field": "placement",
+        "upstream_path": "skills/in-progress/pr/SKILL.md",
+        "path": "speckit-pro/skills/synthetic-credit/frontmatter.md"
+      }
+    },
+    {
+      "name": "markdown-placement-inside-frontmatter",
+      "landed_sources": [
+        {
+          "upstream_path": "skills/in-progress/pr/SKILL.md",
+          "destination": "speckit-pro/skills/synthetic-credit/frontmatter.md"
+        }
+      ],
+      "directories": [],
+      "files": {
+        "speckit-pro/skills/synthetic-credit/frontmatter.md": "---\nname: synthetic-credit\ndescription: Fixture body only.\n<!--\nUpstream repository: mattpocock/skills\nUpstream skill: skills/in-progress/pr/SKILL.md\nPinned commit: c55ee46073ed923f86ce59a5eb3b6d895095d1b7\nModified derivative: yes\nLicense notice: speckit-pro/skills/speckit-coach/references/upstream/mattpocock-skills/UPSTREAM-NOTICE.md\n-->\n---\n\n\n# Synthetic credit\n\nFixture body only.\n"
+      },
+      "expected_files": [
+        "speckit-pro/skills/synthetic-credit/frontmatter.md"
+      ],
+      "expected_sources": {
+        "speckit-pro/skills/synthetic-credit/frontmatter.md": [
+          "skills/in-progress/pr/SKILL.md"
+        ]
+      },
+      "expected_error": {
+        "field": "placement",
+        "upstream_path": "skills/in-progress/pr/SKILL.md",
+        "path": "speckit-pro/skills/synthetic-credit/frontmatter.md"
+      }
+    },
+    {
+      "name": "markdown-placement-unclosed-frontmatter",
+      "landed_sources": [
+        {
+          "upstream_path": "skills/in-progress/pr/SKILL.md",
+          "destination": "speckit-pro/skills/synthetic-credit/frontmatter.md"
+        }
+      ],
+      "directories": [],
+      "files": {
+        "speckit-pro/skills/synthetic-credit/frontmatter.md": "---\nname: synthetic-credit\ndescription: Fixture body only.\n\n<!--\nUpstream repository: mattpocock/skills\nUpstream skill: skills/in-progress/pr/SKILL.md\nPinned commit: c55ee46073ed923f86ce59a5eb3b6d895095d1b7\nModified derivative: yes\nLicense notice: speckit-pro/skills/speckit-coach/references/upstream/mattpocock-skills/UPSTREAM-NOTICE.md\n-->\n\n# Synthetic credit\n\nFixture body only.\n"
+      },
+      "expected_files": [
+        "speckit-pro/skills/synthetic-credit/frontmatter.md"
+      ],
+      "expected_sources": {
+        "speckit-pro/skills/synthetic-credit/frontmatter.md": [
+          "skills/in-progress/pr/SKILL.md"
+        ]
+      },
+      "expected_error": {
+        "field": "placement",
+        "upstream_path": "skills/in-progress/pr/SKILL.md",
+        "path": "speckit-pro/skills/synthetic-credit/frontmatter.md"
+      }
+    },
+    {
+      "name": "markdown-valid",
+      "landed_sources": [
+        {
+          "upstream_path": "skills/in-progress/pr/SKILL.md",
+          "destination": "speckit-pro/skills/synthetic-credit/guide.md"
+        }
+      ],
+      "directories": [],
+      "files": {
+        "speckit-pro/skills/synthetic-credit/guide.md": "<!--\nUpstream repository: mattpocock/skills\nUpstream skill: skills/in-progress/pr/SKILL.md\nPinned commit: c55ee46073ed923f86ce59a5eb3b6d895095d1b7\nModified derivative: yes\nLicense notice: speckit-pro/skills/speckit-coach/references/upstream/mattpocock-skills/UPSTREAM-NOTICE.md\n-->\n\n# Synthetic credit\n\nFixture body only.\n"
+      },
+      "expected_files": [
+        "speckit-pro/skills/synthetic-credit/guide.md"
+      ],
+      "expected_sources": {
+        "speckit-pro/skills/synthetic-credit/guide.md": [
+          "skills/in-progress/pr/SKILL.md"
+        ]
+      },
+      "expected_error": null
+    },
+    {
+      "name": "markdown-wrong-syntax",
+      "landed_sources": [
+        {
+          "upstream_path": "skills/in-progress/pr/SKILL.md",
+          "destination": "speckit-pro/skills/synthetic-credit/guide.md"
+        }
+      ],
+      "directories": [],
+      "files": {
+        "speckit-pro/skills/synthetic-credit/guide.md": "# Upstream repository: mattpocock/skills\n# Upstream skill: skills/in-progress/pr/SKILL.md\n# Pinned commit: c55ee46073ed923f86ce59a5eb3b6d895095d1b7\n# Modified derivative: yes\n# License notice: speckit-pro/skills/speckit-coach/references/upstream/mattpocock-skills/UPSTREAM-NOTICE.md\n\n# Synthetic credit\n\nFixture body only.\n"
+      },
+      "expected_files": [
+        "speckit-pro/skills/synthetic-credit/guide.md"
+      ],
+      "expected_sources": {
+        "speckit-pro/skills/synthetic-credit/guide.md": [
+          "skills/in-progress/pr/SKILL.md"
+        ]
+      },
+      "expected_error": {
+        "field": "header",
+        "upstream_path": "skills/in-progress/pr/SKILL.md",
+        "path": "speckit-pro/skills/synthetic-credit/guide.md"
+      }
+    },
+    {
+      "name": "metadata-block",
+      "landed_sources": [
+        {
+          "upstream_path": "skills/in-progress/pr/SKILL.md",
+          "destination": "speckit-pro/skills/synthetic-credit/SKILL.md"
+        }
+      ],
+      "directories": [],
+      "files": {
+        "speckit-pro/skills/synthetic-credit/SKILL.md": "---\nname: synthetic-credit\ndescription: Fixture body only.\nmetadata:\n  credits: |\n    mattpocock/skills@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/in-progress/pr/SKILL.md\n---\n\n<!--\nUpstream repository: mattpocock/skills\nUpstream skill: skills/in-progress/pr/SKILL.md\nPinned commit: c55ee46073ed923f86ce59a5eb3b6d895095d1b7\nModified derivative: yes\nLicense notice: speckit-pro/skills/speckit-coach/references/upstream/mattpocock-skills/UPSTREAM-NOTICE.md\n-->\n\n# Synthetic credit\n\nFixture body only.\n"
+      },
+      "expected_files": [
+        "speckit-pro/skills/synthetic-credit/SKILL.md"
+      ],
+      "expected_sources": {
+        "speckit-pro/skills/synthetic-credit/SKILL.md": [
+          "skills/in-progress/pr/SKILL.md"
+        ]
+      },
+      "expected_error": {
+        "field": "metadata.credits",
+        "upstream_path": "skills/in-progress/pr/SKILL.md",
+        "path": "speckit-pro/skills/synthetic-credit/SKILL.md"
+      }
+    },
+    {
+      "name": "metadata-collection",
+      "landed_sources": [
+        {
+          "upstream_path": "skills/in-progress/pr/SKILL.md",
+          "destination": "speckit-pro/skills/synthetic-credit/SKILL.md"
+        }
+      ],
+      "directories": [],
+      "files": {
+        "speckit-pro/skills/synthetic-credit/SKILL.md": "---\nname: synthetic-credit\ndescription: Fixture body only.\nmetadata:\n  credits: [\"mattpocock/skills@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/in-progress/pr/SKILL.md\"]\n---\n\n<!--\nUpstream repository: mattpocock/skills\nUpstream skill: skills/in-progress/pr/SKILL.md\nPinned commit: c55ee46073ed923f86ce59a5eb3b6d895095d1b7\nModified derivative: yes\nLicense notice: speckit-pro/skills/speckit-coach/references/upstream/mattpocock-skills/UPSTREAM-NOTICE.md\n-->\n\n# Synthetic credit\n\nFixture body only.\n"
+      },
+      "expected_files": [
+        "speckit-pro/skills/synthetic-credit/SKILL.md"
+      ],
+      "expected_sources": {
+        "speckit-pro/skills/synthetic-credit/SKILL.md": [
+          "skills/in-progress/pr/SKILL.md"
+        ]
+      },
+      "expected_error": {
+        "field": "metadata.credits",
+        "upstream_path": "skills/in-progress/pr/SKILL.md",
+        "path": "speckit-pro/skills/synthetic-credit/SKILL.md"
+      }
+    },
+    {
+      "name": "metadata-duplicate",
+      "landed_sources": [
+        {
+          "upstream_path": "skills/in-progress/pr/SKILL.md",
+          "destination": "speckit-pro/skills/synthetic-credit/SKILL.md"
+        }
+      ],
+      "directories": [],
+      "files": {
+        "speckit-pro/skills/synthetic-credit/SKILL.md": "---\nname: synthetic-credit\ndescription: Fixture body only.\nmetadata:\n  label: synthetic\nmetadata:\n  credits: \"mattpocock/skills@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/in-progress/pr/SKILL.md\"\n---\n\n<!--\nUpstream repository: mattpocock/skills\nUpstream skill: skills/in-progress/pr/SKILL.md\nPinned commit: c55ee46073ed923f86ce59a5eb3b6d895095d1b7\nModified derivative: yes\nLicense notice: speckit-pro/skills/speckit-coach/references/upstream/mattpocock-skills/UPSTREAM-NOTICE.md\n-->\n\n# Synthetic credit\n\nFixture body only.\n"
+      },
+      "expected_files": [
+        "speckit-pro/skills/synthetic-credit/SKILL.md"
+      ],
+      "expected_sources": {
+        "speckit-pro/skills/synthetic-credit/SKILL.md": [
+          "skills/in-progress/pr/SKILL.md"
+        ]
+      },
+      "expected_error": {
+        "field": "metadata.credits",
+        "upstream_path": "skills/in-progress/pr/SKILL.md",
+        "path": "speckit-pro/skills/synthetic-credit/SKILL.md"
+      }
+    },
+    {
+      "name": "metadata-duplicate-credits",
+      "landed_sources": [
+        {
+          "upstream_path": "skills/in-progress/pr/SKILL.md",
+          "destination": "speckit-pro/skills/synthetic-credit/SKILL.md"
+        }
+      ],
+      "directories": [],
+      "files": {
+        "speckit-pro/skills/synthetic-credit/SKILL.md": "---\nname: synthetic-credit\ndescription: Fixture body only.\nmetadata:\n  credits: \"mattpocock/skills@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/in-progress/pr/SKILL.md\"\n  credits: \"mattpocock/skills@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/in-progress/pr/SKILL.md\"\n---\n\n<!--\nUpstream repository: mattpocock/skills\nUpstream skill: skills/in-progress/pr/SKILL.md\nPinned commit: c55ee46073ed923f86ce59a5eb3b6d895095d1b7\nModified derivative: yes\nLicense notice: speckit-pro/skills/speckit-coach/references/upstream/mattpocock-skills/UPSTREAM-NOTICE.md\n-->\n\n# Synthetic credit\n\nFixture body only.\n"
+      },
+      "expected_files": [
+        "speckit-pro/skills/synthetic-credit/SKILL.md"
+      ],
+      "expected_sources": {
+        "speckit-pro/skills/synthetic-credit/SKILL.md": [
+          "skills/in-progress/pr/SKILL.md"
+        ]
+      },
+      "expected_error": {
+        "field": "metadata.credits",
+        "upstream_path": "skills/in-progress/pr/SKILL.md",
+        "path": "speckit-pro/skills/synthetic-credit/SKILL.md"
+      }
+    },
+    {
+      "name": "metadata-invalid-quote",
+      "landed_sources": [
+        {
+          "upstream_path": "skills/in-progress/pr/SKILL.md",
+          "destination": "speckit-pro/skills/synthetic-credit/SKILL.md"
+        }
+      ],
+      "directories": [],
+      "files": {
+        "speckit-pro/skills/synthetic-credit/SKILL.md": "---\nname: synthetic-credit\ndescription: Fixture body only.\nmetadata:\n  credits: \"mattpocock/skills@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/in-progress/pr/SKILL.md\n---\n\n<!--\nUpstream repository: mattpocock/skills\nUpstream skill: skills/in-progress/pr/SKILL.md\nPinned commit: c55ee46073ed923f86ce59a5eb3b6d895095d1b7\nModified derivative: yes\nLicense notice: speckit-pro/skills/speckit-coach/references/upstream/mattpocock-skills/UPSTREAM-NOTICE.md\n-->\n\n# Synthetic credit\n\nFixture body only.\n"
+      },
+      "expected_files": [
+        "speckit-pro/skills/synthetic-credit/SKILL.md"
+      ],
+      "expected_sources": {
+        "speckit-pro/skills/synthetic-credit/SKILL.md": [
+          "skills/in-progress/pr/SKILL.md"
+        ]
+      },
+      "expected_error": {
+        "field": "metadata.credits",
+        "upstream_path": "skills/in-progress/pr/SKILL.md",
+        "path": "speckit-pro/skills/synthetic-credit/SKILL.md"
+      }
+    },
+    {
+      "name": "metadata-mismatched",
+      "landed_sources": [
+        {
+          "upstream_path": "skills/in-progress/pr/SKILL.md",
+          "destination": "speckit-pro/skills/synthetic-credit/SKILL.md"
+        }
+      ],
+      "directories": [],
+      "files": {
+        "speckit-pro/skills/synthetic-credit/SKILL.md": "---\nname: synthetic-credit\ndescription: Fixture body only.\nmetadata:\n  credits: \"mattpocock/skills@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/code-review/SKILL.md\"\n---\n\n<!--\nUpstream repository: mattpocock/skills\nUpstream skill: skills/in-progress/pr/SKILL.md\nPinned commit: c55ee46073ed923f86ce59a5eb3b6d895095d1b7\nModified derivative: yes\nLicense notice: speckit-pro/skills/speckit-coach/references/upstream/mattpocock-skills/UPSTREAM-NOTICE.md\n-->\n\n# Synthetic credit\n\nFixture body only.\n"
+      },
+      "expected_files": [
+        "speckit-pro/skills/synthetic-credit/SKILL.md"
+      ],
+      "expected_sources": {
+        "speckit-pro/skills/synthetic-credit/SKILL.md": [
+          "skills/in-progress/pr/SKILL.md"
+        ]
+      },
+      "expected_error": {
+        "field": "metadata.credits",
+        "upstream_path": "skills/in-progress/pr/SKILL.md",
+        "path": "speckit-pro/skills/synthetic-credit/SKILL.md"
+      }
+    },
+    {
+      "name": "metadata-missing",
+      "landed_sources": [
+        {
+          "upstream_path": "skills/in-progress/pr/SKILL.md",
+          "destination": "speckit-pro/skills/synthetic-credit/SKILL.md"
+        }
+      ],
+      "directories": [],
+      "files": {
+        "speckit-pro/skills/synthetic-credit/SKILL.md": "---\nname: synthetic-credit\ndescription: Fixture body only.\nmetadata:\n  label: synthetic\n---\n\n<!--\nUpstream repository: mattpocock/skills\nUpstream skill: skills/in-progress/pr/SKILL.md\nPinned commit: c55ee46073ed923f86ce59a5eb3b6d895095d1b7\nModified derivative: yes\nLicense notice: speckit-pro/skills/speckit-coach/references/upstream/mattpocock-skills/UPSTREAM-NOTICE.md\n-->\n\n# Synthetic credit\n\nFixture body only.\n"
+      },
+      "expected_files": [
+        "speckit-pro/skills/synthetic-credit/SKILL.md"
+      ],
+      "expected_sources": {
+        "speckit-pro/skills/synthetic-credit/SKILL.md": [
+          "skills/in-progress/pr/SKILL.md"
+        ]
+      },
+      "expected_error": {
+        "field": "metadata.credits",
+        "upstream_path": "skills/in-progress/pr/SKILL.md",
+        "path": "speckit-pro/skills/synthetic-credit/SKILL.md"
+      }
+    },
+    {
+      "name": "metadata-numeric",
+      "landed_sources": [
+        {
+          "upstream_path": "skills/in-progress/pr/SKILL.md",
+          "destination": "speckit-pro/skills/synthetic-credit/SKILL.md"
+        }
+      ],
+      "directories": [],
+      "files": {
+        "speckit-pro/skills/synthetic-credit/SKILL.md": "---\nname: synthetic-credit\ndescription: Fixture body only.\nmetadata:\n  credits: 123\n---\n\n<!--\nUpstream repository: mattpocock/skills\nUpstream skill: skills/in-progress/pr/SKILL.md\nPinned commit: c55ee46073ed923f86ce59a5eb3b6d895095d1b7\nModified derivative: yes\nLicense notice: speckit-pro/skills/speckit-coach/references/upstream/mattpocock-skills/UPSTREAM-NOTICE.md\n-->\n\n# Synthetic credit\n\nFixture body only.\n"
+      },
+      "expected_files": [
+        "speckit-pro/skills/synthetic-credit/SKILL.md"
+      ],
+      "expected_sources": {
+        "speckit-pro/skills/synthetic-credit/SKILL.md": [
+          "skills/in-progress/pr/SKILL.md"
+        ]
+      },
+      "expected_error": {
+        "field": "metadata.credits",
+        "upstream_path": "skills/in-progress/pr/SKILL.md",
+        "path": "speckit-pro/skills/synthetic-credit/SKILL.md"
+      }
+    },
+    {
+      "name": "metadata-unquoted",
+      "landed_sources": [
+        {
+          "upstream_path": "skills/in-progress/pr/SKILL.md",
+          "destination": "speckit-pro/skills/synthetic-credit/SKILL.md"
+        }
+      ],
+      "directories": [],
+      "files": {
+        "speckit-pro/skills/synthetic-credit/SKILL.md": "---\nname: synthetic-credit\ndescription: Fixture body only.\nmetadata:\n  credits: mattpocock/skills@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/in-progress/pr/SKILL.md\n---\n\n<!--\nUpstream repository: mattpocock/skills\nUpstream skill: skills/in-progress/pr/SKILL.md\nPinned commit: c55ee46073ed923f86ce59a5eb3b6d895095d1b7\nModified derivative: yes\nLicense notice: speckit-pro/skills/speckit-coach/references/upstream/mattpocock-skills/UPSTREAM-NOTICE.md\n-->\n\n# Synthetic credit\n\nFixture body only.\n"
+      },
+      "expected_files": [
+        "speckit-pro/skills/synthetic-credit/SKILL.md"
+      ],
+      "expected_sources": {
+        "speckit-pro/skills/synthetic-credit/SKILL.md": [
+          "skills/in-progress/pr/SKILL.md"
+        ]
+      },
+      "expected_error": {
+        "field": "metadata.credits",
+        "upstream_path": "skills/in-progress/pr/SKILL.md",
+        "path": "speckit-pro/skills/synthetic-credit/SKILL.md"
+      }
+    },
+    {
+      "name": "metadata-unsorted",
+      "landed_sources": [
+        {
+          "upstream_path": "skills/engineering/code-review/SKILL.md",
+          "destination": "speckit-pro/skills/synthetic-credit/SKILL.md"
+        },
+        {
+          "upstream_path": "skills/in-progress/pr/SKILL.md",
+          "destination": "speckit-pro/skills/synthetic-credit/SKILL.md"
+        }
+      ],
+      "directories": [],
+      "files": {
+        "speckit-pro/skills/synthetic-credit/SKILL.md": "---\nname: synthetic-credit\ndescription: Fixture body only.\nmetadata:\n  credits: \"mattpocock/skills@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/in-progress/pr/SKILL.md; mattpocock/skills@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/code-review/SKILL.md\"\n---\n\n<!--\nUpstream repository: mattpocock/skills\nUpstream skill: skills/engineering/code-review/SKILL.md\nUpstream skill: skills/in-progress/pr/SKILL.md\nPinned commit: c55ee46073ed923f86ce59a5eb3b6d895095d1b7\nModified derivative: yes\nLicense notice: speckit-pro/skills/speckit-coach/references/upstream/mattpocock-skills/UPSTREAM-NOTICE.md\n-->\n\n# Synthetic credit\n\nFixture body only.\n"
+      },
+      "expected_files": [
+        "speckit-pro/skills/synthetic-credit/SKILL.md"
+      ],
+      "expected_sources": {
+        "speckit-pro/skills/synthetic-credit/SKILL.md": [
+          "skills/engineering/code-review/SKILL.md",
+          "skills/in-progress/pr/SKILL.md"
+        ]
+      },
+      "expected_error": {
+        "field": "metadata.credits",
+        "upstream_path": "skills/in-progress/pr/SKILL.md",
+        "path": "speckit-pro/skills/synthetic-credit/SKILL.md"
+      }
+    },
+    {
+      "name": "metadata-wrong-separator",
+      "landed_sources": [
+        {
+          "upstream_path": "skills/engineering/code-review/SKILL.md",
+          "destination": "speckit-pro/skills/synthetic-credit/SKILL.md"
+        },
+        {
+          "upstream_path": "skills/in-progress/pr/SKILL.md",
+          "destination": "speckit-pro/skills/synthetic-credit/SKILL.md"
+        }
+      ],
+      "directories": [],
+      "files": {
+        "speckit-pro/skills/synthetic-credit/SKILL.md": "---\nname: synthetic-credit\ndescription: Fixture body only.\nmetadata:\n  credits: \"mattpocock/skills@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/code-review/SKILL.md;mattpocock/skills@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/in-progress/pr/SKILL.md\"\n---\n\n<!--\nUpstream repository: mattpocock/skills\nUpstream skill: skills/engineering/code-review/SKILL.md\nUpstream skill: skills/in-progress/pr/SKILL.md\nPinned commit: c55ee46073ed923f86ce59a5eb3b6d895095d1b7\nModified derivative: yes\nLicense notice: speckit-pro/skills/speckit-coach/references/upstream/mattpocock-skills/UPSTREAM-NOTICE.md\n-->\n\n# Synthetic credit\n\nFixture body only.\n"
+      },
+      "expected_files": [
+        "speckit-pro/skills/synthetic-credit/SKILL.md"
+      ],
+      "expected_sources": {
+        "speckit-pro/skills/synthetic-credit/SKILL.md": [
+          "skills/engineering/code-review/SKILL.md",
+          "skills/in-progress/pr/SKILL.md"
+        ]
+      },
+      "expected_error": {
+        "field": "metadata.credits",
+        "upstream_path": "skills/in-progress/pr/SKILL.md",
+        "path": "speckit-pro/skills/synthetic-credit/SKILL.md"
+      }
+    },
+    {
+      "name": "python-both-prefixes-valid",
+      "landed_sources": [
+        {
+          "upstream_path": "skills/in-progress/pr/SKILL.md",
+          "destination": "speckit-pro/scripts/synthetic-credit.py"
+        }
+      ],
+      "directories": [],
+      "files": {
+        "speckit-pro/scripts/synthetic-credit.py": "#!/usr/bin/env python3\n# -*- coding: utf-8 -*-\n# Upstream repository: mattpocock/skills\n# Upstream skill: skills/in-progress/pr/SKILL.md\n# Pinned commit: c55ee46073ed923f86ce59a5eb3b6d895095d1b7\n# Modified derivative: yes\n# License notice: speckit-pro/skills/speckit-coach/references/upstream/mattpocock-skills/UPSTREAM-NOTICE.md\n\nVALUE = \"synthetic\"\n"
+      },
+      "expected_files": [
+        "speckit-pro/scripts/synthetic-credit.py"
+      ],
+      "expected_sources": {
+        "speckit-pro/scripts/synthetic-credit.py": [
+          "skills/in-progress/pr/SKILL.md"
+        ]
+      },
+      "expected_error": null
+    },
+    {
+      "name": "python-encoding-valid",
+      "landed_sources": [
+        {
+          "upstream_path": "skills/in-progress/pr/SKILL.md",
+          "destination": "speckit-pro/scripts/synthetic-credit.py"
+        }
+      ],
+      "directories": [],
+      "files": {
+        "speckit-pro/scripts/synthetic-credit.py": "# -*- coding: utf-8 -*-\n# Upstream repository: mattpocock/skills\n# Upstream skill: skills/in-progress/pr/SKILL.md\n# Pinned commit: c55ee46073ed923f86ce59a5eb3b6d895095d1b7\n# Modified derivative: yes\n# License notice: speckit-pro/skills/speckit-coach/references/upstream/mattpocock-skills/UPSTREAM-NOTICE.md\n\nVALUE = \"synthetic\"\n"
+      },
+      "expected_files": [
+        "speckit-pro/scripts/synthetic-credit.py"
+      ],
+      "expected_sources": {
+        "speckit-pro/scripts/synthetic-credit.py": [
+          "skills/in-progress/pr/SKILL.md"
+        ]
+      },
+      "expected_error": null
+    },
+    {
+      "name": "python-shebang-valid",
+      "landed_sources": [
+        {
+          "upstream_path": "skills/in-progress/pr/SKILL.md",
+          "destination": "speckit-pro/scripts/synthetic-credit.py"
+        }
+      ],
+      "directories": [],
+      "files": {
+        "speckit-pro/scripts/synthetic-credit.py": "#!/usr/bin/env python3\n# Upstream repository: mattpocock/skills\n# Upstream skill: skills/in-progress/pr/SKILL.md\n# Pinned commit: c55ee46073ed923f86ce59a5eb3b6d895095d1b7\n# Modified derivative: yes\n# License notice: speckit-pro/skills/speckit-coach/references/upstream/mattpocock-skills/UPSTREAM-NOTICE.md\n\nVALUE = \"synthetic\"\n"
+      },
+      "expected_files": [
+        "speckit-pro/scripts/synthetic-credit.py"
+      ],
+      "expected_sources": {
+        "speckit-pro/scripts/synthetic-credit.py": [
+          "skills/in-progress/pr/SKILL.md"
+        ]
+      },
+      "expected_error": null
+    },
+    {
+      "name": "python-valid",
+      "landed_sources": [
+        {
+          "upstream_path": "skills/in-progress/pr/SKILL.md",
+          "destination": "speckit-pro/scripts/synthetic-credit.py"
+        }
+      ],
+      "directories": [],
+      "files": {
+        "speckit-pro/scripts/synthetic-credit.py": "# Upstream repository: mattpocock/skills\n# Upstream skill: skills/in-progress/pr/SKILL.md\n# Pinned commit: c55ee46073ed923f86ce59a5eb3b6d895095d1b7\n# Modified derivative: yes\n# License notice: speckit-pro/skills/speckit-coach/references/upstream/mattpocock-skills/UPSTREAM-NOTICE.md\n\nVALUE = \"synthetic\"\n"
+      },
+      "expected_files": [
+        "speckit-pro/scripts/synthetic-credit.py"
+      ],
+      "expected_sources": {
+        "speckit-pro/scripts/synthetic-credit.py": [
+          "skills/in-progress/pr/SKILL.md"
+        ]
+      },
+      "expected_error": null
+    },
+    {
+      "name": "python-wrong-syntax",
+      "landed_sources": [
+        {
+          "upstream_path": "skills/in-progress/pr/SKILL.md",
+          "destination": "speckit-pro/scripts/synthetic-credit.py"
+        }
+      ],
+      "directories": [],
+      "files": {
+        "speckit-pro/scripts/synthetic-credit.py": "<!--\nUpstream repository: mattpocock/skills\nUpstream skill: skills/in-progress/pr/SKILL.md\nPinned commit: c55ee46073ed923f86ce59a5eb3b6d895095d1b7\nModified derivative: yes\nLicense notice: speckit-pro/skills/speckit-coach/references/upstream/mattpocock-skills/UPSTREAM-NOTICE.md\n-->\n\nVALUE = \"synthetic\"\n"
+      },
+      "expected_files": [
+        "speckit-pro/scripts/synthetic-credit.py"
+      ],
+      "expected_sources": {
+        "speckit-pro/scripts/synthetic-credit.py": [
+          "skills/in-progress/pr/SKILL.md"
+        ]
+      },
+      "expected_error": {
+        "field": "header",
+        "upstream_path": "skills/in-progress/pr/SKILL.md",
+        "path": "speckit-pro/scripts/synthetic-credit.py"
+      }
+    },
+    {
+      "name": "shared-file-valid",
+      "landed_sources": [
+        {
+          "upstream_path": "skills/engineering/code-review/SKILL.md",
+          "destination": "speckit-pro/skills/synthetic-credit/SKILL.md"
+        },
+        {
+          "upstream_path": "skills/in-progress/pr/SKILL.md",
+          "destination": "speckit-pro/skills/synthetic-credit/SKILL.md"
+        }
+      ],
+      "directories": [],
+      "files": {
+        "speckit-pro/skills/synthetic-credit/SKILL.md": "---\nname: synthetic-credit\ndescription: Fixture body only.\nmetadata:\n  credits: \"mattpocock/skills@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/code-review/SKILL.md; mattpocock/skills@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/in-progress/pr/SKILL.md\"\n---\n\n<!--\nUpstream repository: mattpocock/skills\nUpstream skill: skills/engineering/code-review/SKILL.md\nUpstream skill: skills/in-progress/pr/SKILL.md\nPinned commit: c55ee46073ed923f86ce59a5eb3b6d895095d1b7\nModified derivative: yes\nLicense notice: speckit-pro/skills/speckit-coach/references/upstream/mattpocock-skills/UPSTREAM-NOTICE.md\n-->\n\n# Synthetic credit\n\nFixture body only.\n"
+      },
+      "expected_files": [
+        "speckit-pro/skills/synthetic-credit/SKILL.md"
+      ],
+      "expected_sources": {
+        "speckit-pro/skills/synthetic-credit/SKILL.md": [
+          "skills/engineering/code-review/SKILL.md",
+          "skills/in-progress/pr/SKILL.md"
+        ]
+      },
+      "expected_error": null
+    },
+    {
+      "name": "skill-double-quoted-valid",
+      "landed_sources": [
+        {
+          "upstream_path": "skills/in-progress/pr/SKILL.md",
+          "destination": "speckit-pro/skills/synthetic-credit/SKILL.md"
+        }
+      ],
+      "directories": [],
+      "files": {
+        "speckit-pro/skills/synthetic-credit/SKILL.md": "---\nname: synthetic-credit\ndescription: Fixture body only.\nmetadata:\n  credits: \"mattpocock/skills@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/in-progress/pr/SKILL.md\"\n---\n\n<!--\nUpstream repository: mattpocock/skills\nUpstream skill: skills/in-progress/pr/SKILL.md\nPinned commit: c55ee46073ed923f86ce59a5eb3b6d895095d1b7\nModified derivative: yes\nLicense notice: speckit-pro/skills/speckit-coach/references/upstream/mattpocock-skills/UPSTREAM-NOTICE.md\n-->\n\n# Synthetic credit\n\nFixture body only.\n"
+      },
+      "expected_files": [
+        "speckit-pro/skills/synthetic-credit/SKILL.md"
+      ],
+      "expected_sources": {
+        "speckit-pro/skills/synthetic-credit/SKILL.md": [
+          "skills/in-progress/pr/SKILL.md"
+        ]
+      },
+      "expected_error": null
+    },
+    {
+      "name": "skill-placement-after-body",
+      "landed_sources": [
+        {
+          "upstream_path": "skills/in-progress/pr/SKILL.md",
+          "destination": "speckit-pro/skills/synthetic-credit/SKILL.md"
+        }
+      ],
+      "directories": [],
+      "files": {
+        "speckit-pro/skills/synthetic-credit/SKILL.md": "---\nname: synthetic-credit\ndescription: Fixture body only.\nmetadata:\n  credits: \"mattpocock/skills@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/in-progress/pr/SKILL.md\"\n---\n\n\n# Synthetic credit\n\nFixture body only.\n<!--\nUpstream repository: mattpocock/skills\nUpstream skill: skills/in-progress/pr/SKILL.md\nPinned commit: c55ee46073ed923f86ce59a5eb3b6d895095d1b7\nModified derivative: yes\nLicense notice: speckit-pro/skills/speckit-coach/references/upstream/mattpocock-skills/UPSTREAM-NOTICE.md\n-->\n"
+      },
+      "expected_files": [
+        "speckit-pro/skills/synthetic-credit/SKILL.md"
+      ],
+      "expected_sources": {
+        "speckit-pro/skills/synthetic-credit/SKILL.md": [
+          "skills/in-progress/pr/SKILL.md"
+        ]
+      },
+      "expected_error": {
+        "field": "placement",
+        "upstream_path": "skills/in-progress/pr/SKILL.md",
+        "path": "speckit-pro/skills/synthetic-credit/SKILL.md"
+      }
+    },
+    {
+      "name": "skill-placement-before-frontmatter",
+      "landed_sources": [
+        {
+          "upstream_path": "skills/in-progress/pr/SKILL.md",
+          "destination": "speckit-pro/skills/synthetic-credit/SKILL.md"
+        }
+      ],
+      "directories": [],
+      "files": {
+        "speckit-pro/skills/synthetic-credit/SKILL.md": "<!--\nUpstream repository: mattpocock/skills\nUpstream skill: skills/in-progress/pr/SKILL.md\nPinned commit: c55ee46073ed923f86ce59a5eb3b6d895095d1b7\nModified derivative: yes\nLicense notice: speckit-pro/skills/speckit-coach/references/upstream/mattpocock-skills/UPSTREAM-NOTICE.md\n-->\n---\nname: synthetic-credit\ndescription: Fixture body only.\nmetadata:\n  credits: \"mattpocock/skills@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/in-progress/pr/SKILL.md\"\n---\n\n\n# Synthetic credit\n\nFixture body only.\n"
+      },
+      "expected_files": [
+        "speckit-pro/skills/synthetic-credit/SKILL.md"
+      ],
+      "expected_sources": {
+        "speckit-pro/skills/synthetic-credit/SKILL.md": [
+          "skills/in-progress/pr/SKILL.md"
+        ]
+      },
+      "expected_error": {
+        "field": "placement",
+        "upstream_path": "skills/in-progress/pr/SKILL.md",
+        "path": "speckit-pro/skills/synthetic-credit/SKILL.md"
+      }
+    },
+    {
+      "name": "skill-placement-inside-frontmatter",
+      "landed_sources": [
+        {
+          "upstream_path": "skills/in-progress/pr/SKILL.md",
+          "destination": "speckit-pro/skills/synthetic-credit/SKILL.md"
+        }
+      ],
+      "directories": [],
+      "files": {
+        "speckit-pro/skills/synthetic-credit/SKILL.md": "---\nname: synthetic-credit\ndescription: Fixture body only.\nmetadata:\n  credits: \"mattpocock/skills@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/in-progress/pr/SKILL.md\"\n<!--\nUpstream repository: mattpocock/skills\nUpstream skill: skills/in-progress/pr/SKILL.md\nPinned commit: c55ee46073ed923f86ce59a5eb3b6d895095d1b7\nModified derivative: yes\nLicense notice: speckit-pro/skills/speckit-coach/references/upstream/mattpocock-skills/UPSTREAM-NOTICE.md\n-->\n---\n\n\n# Synthetic credit\n\nFixture body only.\n"
+      },
+      "expected_files": [
+        "speckit-pro/skills/synthetic-credit/SKILL.md"
+      ],
+      "expected_sources": {
+        "speckit-pro/skills/synthetic-credit/SKILL.md": [
+          "skills/in-progress/pr/SKILL.md"
+        ]
+      },
+      "expected_error": {
+        "field": "placement",
+        "upstream_path": "skills/in-progress/pr/SKILL.md",
+        "path": "speckit-pro/skills/synthetic-credit/SKILL.md"
+      }
+    },
+    {
+      "name": "skill-placement-unclosed-frontmatter",
+      "landed_sources": [
+        {
+          "upstream_path": "skills/in-progress/pr/SKILL.md",
+          "destination": "speckit-pro/skills/synthetic-credit/SKILL.md"
+        }
+      ],
+      "directories": [],
+      "files": {
+        "speckit-pro/skills/synthetic-credit/SKILL.md": "---\nname: synthetic-credit\ndescription: Fixture body only.\nmetadata:\n  credits: \"mattpocock/skills@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/in-progress/pr/SKILL.md\"\n\n<!--\nUpstream repository: mattpocock/skills\nUpstream skill: skills/in-progress/pr/SKILL.md\nPinned commit: c55ee46073ed923f86ce59a5eb3b6d895095d1b7\nModified derivative: yes\nLicense notice: speckit-pro/skills/speckit-coach/references/upstream/mattpocock-skills/UPSTREAM-NOTICE.md\n-->\n\n# Synthetic credit\n\nFixture body only.\n"
+      },
+      "expected_files": [
+        "speckit-pro/skills/synthetic-credit/SKILL.md"
+      ],
+      "expected_sources": {
+        "speckit-pro/skills/synthetic-credit/SKILL.md": [
+          "skills/in-progress/pr/SKILL.md"
+        ]
+      },
+      "expected_error": {
+        "field": "placement",
+        "upstream_path": "skills/in-progress/pr/SKILL.md",
+        "path": "speckit-pro/skills/synthetic-credit/SKILL.md"
+      }
+    },
+    {
+      "name": "skill-single-quoted-valid",
+      "landed_sources": [
+        {
+          "upstream_path": "skills/in-progress/pr/SKILL.md",
+          "destination": "speckit-pro/skills/synthetic-credit/SKILL.md"
+        }
+      ],
+      "directories": [],
+      "files": {
+        "speckit-pro/skills/synthetic-credit/SKILL.md": "---\nname: synthetic-credit\ndescription: Fixture body only.\nmetadata:\n  credits: 'mattpocock/skills@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/in-progress/pr/SKILL.md'\n---\n\n<!--\nUpstream repository: mattpocock/skills\nUpstream skill: skills/in-progress/pr/SKILL.md\nPinned commit: c55ee46073ed923f86ce59a5eb3b6d895095d1b7\nModified derivative: yes\nLicense notice: speckit-pro/skills/speckit-coach/references/upstream/mattpocock-skills/UPSTREAM-NOTICE.md\n-->\n\n# Synthetic credit\n\nFixture body only.\n"
+      },
+      "expected_files": [
+        "speckit-pro/skills/synthetic-credit/SKILL.md"
+      ],
+      "expected_sources": {
+        "speckit-pro/skills/synthetic-credit/SKILL.md": [
+          "skills/in-progress/pr/SKILL.md"
+        ]
+      },
+      "expected_error": null
+    },
+    {
+      "name": "toml-valid",
+      "landed_sources": [
+        {
+          "upstream_path": "skills/in-progress/pr/SKILL.md",
+          "destination": "speckit-pro/codex-agents/synthetic-credit.toml"
+        }
+      ],
+      "directories": [],
+      "files": {
+        "speckit-pro/codex-agents/synthetic-credit.toml": "\n# Upstream repository: mattpocock/skills\n# Upstream skill: skills/in-progress/pr/SKILL.md\n# Pinned commit: c55ee46073ed923f86ce59a5eb3b6d895095d1b7\n# Modified derivative: yes\n# License notice: speckit-pro/skills/speckit-coach/references/upstream/mattpocock-skills/UPSTREAM-NOTICE.md\n\nname = \"synthetic\"\n"
+      },
+      "expected_files": [
+        "speckit-pro/codex-agents/synthetic-credit.toml"
+      ],
+      "expected_sources": {
+        "speckit-pro/codex-agents/synthetic-credit.toml": [
+          "skills/in-progress/pr/SKILL.md"
+        ]
+      },
+      "expected_error": null
+    },
+    {
+      "name": "toml-wrong-syntax",
+      "landed_sources": [
+        {
+          "upstream_path": "skills/in-progress/pr/SKILL.md",
+          "destination": "speckit-pro/codex-agents/synthetic-credit.toml"
+        }
+      ],
+      "directories": [],
+      "files": {
+        "speckit-pro/codex-agents/synthetic-credit.toml": "\n<!--\nUpstream repository: mattpocock/skills\nUpstream skill: skills/in-progress/pr/SKILL.md\nPinned commit: c55ee46073ed923f86ce59a5eb3b6d895095d1b7\nModified derivative: yes\nLicense notice: speckit-pro/skills/speckit-coach/references/upstream/mattpocock-skills/UPSTREAM-NOTICE.md\n-->\n\nname = \"synthetic\"\n"
+      },
+      "expected_files": [
+        "speckit-pro/codex-agents/synthetic-credit.toml"
+      ],
+      "expected_sources": {
+        "speckit-pro/codex-agents/synthetic-credit.toml": [
+          "skills/in-progress/pr/SKILL.md"
+        ]
+      },
+      "expected_error": {
+        "field": "header",
+        "upstream_path": "skills/in-progress/pr/SKILL.md",
+        "path": "speckit-pro/codex-agents/synthetic-credit.toml"
+      }
+    }
+  ]
+}

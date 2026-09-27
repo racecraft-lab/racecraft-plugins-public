@@ -40,8 +40,9 @@ HOME_PATH_PATTERN = re.compile(
 HYPHENATED_HOME_PATH_PATTERN = re.compile(r"-Users-[A-Za-z0-9_.\-]+", re.IGNORECASE)
 PRIVATE_VAR_PATTERN = re.compile(r"/private/var/folders/[A-Za-z0-9_/\.\-]+", re.IGNORECASE)
 TMP_TRANSCRIPT_PATTERN = re.compile(r"/private/tmp/claude-[0-9]+", re.IGNORECASE)
+# Typed app execution IDs are evidence records; bare UUIDs remain privacy hits.
 UUID_PATTERN = re.compile(
-    r"[A-Fa-f0-9]{8}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{12}",
+    r"(?<!exec-)[A-Fa-f0-9]{8}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{12}",
     re.IGNORECASE,
 )
 # Controller-owned, no-network Git identity used only by native-eval fixtures.
@@ -195,6 +196,7 @@ def git_config(key: str) -> str:
 def dynamic_local_pattern() -> re.Pattern[str] | None:
     git_email = git_config("user.email")
     email_local = git_email.rsplit("@", maxsplit=1)[0]
+    repo_identity_root = REPO_ROOT.parent if REPO_ROOT.parent.name == ".worktrees" else REPO_ROOT
     values = (
         os.environ.get("HOME", ""),
         os.environ.get("USER", ""),
@@ -203,7 +205,7 @@ def dynamic_local_pattern() -> re.Pattern[str] | None:
         os.environ.get("USERNAME", ""),
         git_config("user.name"),
         email_local,
-        str(REPO_ROOT),
+        str(repo_identity_root),
     )
     declared_public_terms = {
         term
@@ -288,6 +290,24 @@ class PublicIdentityTests(unittest.TestCase):
         self.assertIsNotNone(pattern.search("privateoperator"))
         public_home = "/" + "Users/" + "fgabelmannjr/project"
         self.assertIsNotNone(HOME_PATH_PATTERN.search(public_home))
+
+    def test_worktree_feature_name_is_not_private_identity(self) -> None:
+        worktree_root = Path("/qwertyuiopasdfgh/.worktrees/topic-001-attribution-foundation")
+        with patch.dict(os.environ, {"HOME": "/qwertyuiopasdfgh"}, clear=True), \
+                patch(f"{__name__}.REPO_ROOT", worktree_root), \
+                patch(f"{__name__}.git_config", return_value=""), \
+                patch(f"{__name__}.public_identity_literals", return_value=()):
+            pattern = dynamic_local_pattern()
+        self.assertIsNotNone(pattern)
+        self.assertIsNone(pattern.search("attribution foundation"))
+        self.assertIsNone(pattern.search("foundational attribute"))
+        self.assertIsNotNone(pattern.search("qwertyuiopasdfgh"))
+
+    def test_native_exec_id_is_not_a_raw_uuid(self) -> None:
+        sample_uuid = "-".join(("01234567", "89ab", "cdef", "0123", "456789abcdef"))
+        self.assertIsNone(UUID_PATTERN.search(f"exec-{sample_uuid}"))
+        self.assertIsNotNone(UUID_PATTERN.search(sample_uuid))
+        self.assertIsNotNone(UUID_PATTERN.search(f"other-{sample_uuid}"))
 
 
 class PrivacyScanTests(unittest.TestCase):

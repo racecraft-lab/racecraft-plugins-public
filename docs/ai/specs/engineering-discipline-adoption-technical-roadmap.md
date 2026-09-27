@@ -50,7 +50,7 @@ The feature is decomposed into **11 specifications** across **6 dependency tiers
 - EDA-006 requires EDA-005: TDD tests only at seams the plan agreed.
 - EDA-010 requires EDA-003 and EDA-005: candidates leave as ADRs and are described in deep-module vocabulary.
 - EDA-007, EDA-008, and EDA-009 are independent of each other and of EDA-002.
-- EDA-011 requires every other spec: it resolves the last ledger rows and the Layer 2 inventory.
+- EDA-011 requires every other spec: it verifies that each ledger row is resolved by its assigned owner and updates the Layer 2 inventory.
 
 ## Reviewability Contract
 
@@ -104,7 +104,7 @@ Each accepted spec delivers its own observable outcome.
 
 | Spec | Name | Status | Workflow File | Next Phase |
 |------|------|--------|---------------|------------|
-| EDA-001 | Attribution Foundation | ⏳ Pending | — | Specify |
+| EDA-001 | Attribution Foundation | 🔄 In Progress | `docs/ai/specs/.process/EDA-001-workflow.md` | Specify |
 | EDA-002 | Frontier-Round Grilling | ⏳ Pending | — | Blocked by EDA-001 |
 | EDA-003 | Domain Model and ADRs | ⏳ Pending | — | Blocked by EDA-002 |
 | EDA-004 | Prototype Skill | ⏳ Pending | — | Blocked by EDA-002 |

@@ -41,3 +41,6 @@ specs/*/.process/pr-packets/
 /typesafe-jev-release/
 /typesafe-jev-release-verify/
 /typesafe-jev-release-smoke/
+
+# Local autopilot runtime state; rebuilt from the durable workflow.
+/docs/ai/specs/.process/autopilot-state.json
