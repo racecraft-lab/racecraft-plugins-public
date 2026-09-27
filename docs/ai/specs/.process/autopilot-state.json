@@ -51,12 +51,10 @@
   },
   "execution_control": {
     "ledger_path": "docs/ai/specs/.process/execution-control/ac068cab59ef67faf15646a7.json",
-    "disposition": "checkpoint_required",
-    "reasons": [
-      "corrective_run_budget_exhausted"
-    ],
-    "elapsed_seconds": 125639.94520497322,
-    "checkpoint_due": false,
+    "disposition": "continue",
+    "reasons": [],
+    "elapsed_seconds": 126590.00620007515,
+    "checkpoint_due": true,
     "run_id": "e7fbc9a6636945ed8a8c2abd42cbb892"
   },
   "plan": [
@@ -766,5 +764,26 @@
     "repair_applied": false,
     "setup_fallback": "Supported --json prerequisite invocation and skill-authorized canonical template structure",
     "integration_issue": "https://github.com/racecraft-lab/racecraft-plugins-public/issues/733"
+  },
+  "cloud_planning_audit": {
+    "status": "completed",
+    "provider": "ollama-local",
+    "model": "deepseek-v4.1-flash:cloud",
+    "route_reason": "cloud:default",
+    "cleanup_completed": true,
+    "changed_paths": [],
+    "candidate_accounting": "corroborated; no actual diff/LOC qualification",
+    "remaining_decisions": [
+      "delivery direction",
+      "existing FR-024 corrective exception"
+    ],
+    "remaining_reconciliation": [
+      "spec Assumptions retain obsolete nineteen-increment and repeated-path blocker wording",
+      "Tasks/inventory retain superseded scope and timing claims pending their authorized phase"
+    ],
+    "rejected_expansions": [
+      "Do not add per-site fixture mechanisms beyond accepted consensus merely because the read-only auditor proposed them",
+      "Model baseline grouping and C2 count explanation are not established behavior defects"
+    ]
   }
 }
