@@ -98,8 +98,8 @@ to archive previously merged specs.
    (`archive_order`), excluded current spec, specs left active with their
    `not_merged` or `unknown` reason, archive extension installed state,
    cleanup mode (`apply` on a feature branch, `dry_run` otherwise), and
-   `safeToApplyCleanup=false` (a single-feature archive run never removes spec
-   folders).
+   `safeToApplyCleanup=false` (the sweep never passes `--apply-cleanup`, so it
+   never removes spec folders).
 7. Add an `Archive Sweep: previously merged specs archived` task before Phase 0
    in the visible task list.
 
