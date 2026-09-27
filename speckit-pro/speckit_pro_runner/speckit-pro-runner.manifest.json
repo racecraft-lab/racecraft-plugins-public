@@ -316,6 +316,14 @@
     {
       "path": {
         "kind": "plugin_relative",
+        "value": "speckit_pro_runner/helpers/pr_split_ratification.py",
+        "display": "speckit_pro_runner/helpers/pr_split_ratification.py"
+      },
+      "sha256": "4390574592873dc139eef9086676a22a4c9f4bf404fab385f521d27957bc6dba"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
         "value": "speckit_pro_runner/helpers/promotion.py",
         "display": "speckit_pro_runner/helpers/promotion.py"
       },
@@ -335,7 +343,7 @@
         "value": "speckit_pro_runner/helpers/registry.py",
         "display": "speckit_pro_runner/helpers/registry.py"
       },
-      "sha256": "19720c8859bc5e8984a2230f3722713d7dbc94d292e3c53ef838ddfc398a2598"
+      "sha256": "f9fa42e33ba6a1a866cc07facf371a6e0de7660b0b08a4b0eff2f77d0500c88e"
     },
     {
       "path": {

@@ -98,6 +98,7 @@ EXPECTED_HELPERS = [
     "aggregate-crl",
     "research-broker-preflight",
     "render-egress-authorization",
+    "ratify-pr-split",
     "list-archive-candidates",
 ]
 
@@ -157,6 +158,10 @@ HELPER_CASES: dict[str, dict[str, object]] = {
     "research-broker-preflight": {},
     "render-egress-authorization": json.loads(
         (REPO_ROOT / "tests/speckit-pro/unit/fixtures/read-only-helpers/requests/render-egress-authorization.json")
+        .read_text(encoding="utf-8")
+    )["inputs"],
+    "ratify-pr-split": json.loads(
+        (REPO_ROOT / "tests/speckit-pro/unit/fixtures/read-only-helpers/requests/ratify-pr-split.json")
         .read_text(encoding="utf-8")
     )["inputs"],
     "list-archive-candidates": {"current_target": "specs/001-current-feature"},
@@ -4152,6 +4157,13 @@ class ReadOnlyHelperTests(unittest.TestCase):
                     self.assertFalse(data["writes_state"])
                     self.assertEqual(data["action_ids"], ["live-skill-eval", "push-feature-branch"])
                     self.assertIn("[auto_review]\nextra_policy = ", data["extra_policy_fragment"])
+                    self.assertEqual(stderr_records, [])
+                    continue
+                if helper_id == "ratify-pr-split":
+                    self.assert_response(response, "ok", 0)
+                    self.assertFalse(data["writes_state"])
+                    self.assertEqual(data["decision"], "autopilot_ratified")
+                    self.assertEqual(data["ratified_by"], "autopilot")
                     self.assertEqual(stderr_records, [])
                     continue
                 if helper_id == "list-archive-candidates":

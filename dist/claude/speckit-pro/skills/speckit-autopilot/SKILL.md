@@ -625,7 +625,7 @@ for phase in PHASES starting from first_pending:
        workflow file, then continue on the fallback evidence chain: the
        setup-mode gate result recorded at scaffold, the plan-phase
        `estimate-reviewable-loc` verdict from step 7b, and any
-       operator-ratified split decision in the workflow file.
+       ratified split decision (autopilot or operator) in the workflow file.
        In that committed evidence, `pass`, `warn`, honored exception,
        and valid current size-only `block` are marker-planning inputs.
        A valid current size-only block continues into marker planning
