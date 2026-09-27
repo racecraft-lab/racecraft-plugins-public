@@ -883,6 +883,12 @@ for phase in PHASES starting from first_pending:
        git add -A cannot stage them. If
        git ls-files shows such a path already tracked (from an older
        plugin version), run git rm -r --cached -- <path> before this commit.
+       One exception: a marker's verification record,
+       <feature>/.process/verification/<marker-id>.json, is committed
+       evidence the phase-coverage guard reads from the pull request head.
+       When the workflow file sits in the feature's .process/ directory,
+       the runner's ignore rule covers it, so stage the record by path with
+       git add --force -- <path>, and never untrack it.
    11. Advance to next phase (next iteration of loop) and write the new
        in_progress item to both update_plan and autopilot-state.json.
        Never mark the run complete while a later phase family still has
@@ -1524,6 +1530,14 @@ these inputs:
 - `active_scope`: every active requirement, story, and task ID;
 - `path_budget`: the repository's per-PR `production_paths` and `total_paths`
   caps.
+
+Each marker's evidence records, `<feature>/.process/checkpoints/<marker-id>.json`
+and `<feature>/.process/verification/<marker-id>.json`, are runner-owned and
+never count toward `production_paths` or `total_paths`, so recording them never
+needs a re-plan or an operator approval. `estimate-reviewable-loc` leaves them
+out of its counts too and reports them as `declared_files.marker_evidence`. Still
+list both files in that marker's `declared_files` and in the changed-file
+manifest, which must match the pull request's diff.
 
 The helper ratifies only a split that divides approved groups without merging
 or dropping any, keeps the approved order and each group's scope, keeps every
