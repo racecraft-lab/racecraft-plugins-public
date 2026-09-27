@@ -471,7 +471,11 @@ See [prerequisites-codex.md](./references/prerequisites-codex.md) for the full p
   Missing or stale evidence re-enters the full Phase 6.5 Autonomy Boundary
   Preflight. Exact explicit user authorization remains valid while its recorded
   action scope and execution boundary still match and no later instruction
-  revokes or narrows it; an older run outcome alone grants nothing.
+  revokes or narrows it; an older run outcome alone grants nothing. When a
+  persisted `autonomy_boundary` receipt exists, at any stage, probe it against
+  the live boundary before the Step 1.1 coverage guard; a new thread's writable
+  roots make it stale, so re-attest it with one operator request up front, as
+  [prerequisites-codex.md](./references/prerequisites-codex.md) describes.
 - **Step 0.9: Constitution Validation** — principle checks against current codebase
 - **Step 0.10: Codex Agent Availability Check** — Run the promoted
   `install-codex-agents` helper in `dry_run` mode against the selected project or

@@ -259,11 +259,14 @@ prerequisite/gate fails.
 
 ### 0.8c Resumed Autonomy Boundary Preflight
 
-When an existing `plan.md` and `tasks.md` are present and the resolved stage
-can enter Implement, inspect the durable `autonomy_boundary` record described
-in [Phase Execution](./phase-execution-codex.md#autonomy-boundary-preflight).
-Do this before the first Phase 7 dispatch, including for a resumed workflow
-whose implementation is already marked in progress.
+This step has two triggers. When an existing `plan.md` and `tasks.md` are
+present and the resolved stage can enter Implement, inspect the durable
+`autonomy_boundary` record described in
+[Phase Execution](./phase-execution-codex.md#autonomy-boundary-preflight)
+before the first Phase 7 dispatch, including for a resumed workflow whose
+implementation is already marked in progress. Separately, re-attest a stale
+boundary at resume start whenever a persisted receipt exists, even when the run
+cannot yet enter Implement (see below).
 
 Recompute the recorded planning fingerprint from the current files and compare
 the recorded execution boundary with the current surface. The state holds the
@@ -282,6 +285,27 @@ or external effect, and execution-boundary fingerprint all still match and no
 later user instruction revokes or narrows it. Prior execution, an earlier
 automatic review, or the fact that an older task crossed the boundary is never
 authorization by itself.
+
+**Re-attest a stale boundary at resume start.** When `autopilot-state.json`
+already holds a persisted `autonomy_boundary` receipt, at any stage, including a
+plan-stage resume or re-plan epoch, run this check before the Step 1.1 coverage
+guard and before any other phase work. The execution boundary includes the
+session's writable roots, so a new Codex thread or worktree root normally makes
+the persisted record stale. Run the Step 1.1 guard command once, unchanged, as a
+read-only probe, and read `autonomy_boundary_errors` from its printed JSON. Its
+nonzero exit here is a branch, not a stop: do not stop because the probe
+exited nonzero. When the list is empty, continue. When it holds `current execution boundary
+does not match the persisted execution boundary`, or any other stale-record
+error above, rerun the complete Phase 6.5 preflight against the live boundary
+now. Present one consolidated operator request, in the `operator_action_required`
+shape, that names the changed boundary and every action whose authorization it
+invalidates. Record the operator's answer as `authorization.status=explicit_user`,
+then write the refreshed private record, its receipt, and the matching Phase 6.5
+row before Step 1.1 runs. Present the refresh as this up-front re-attestation,
+never as a guard-failure repair. A denial or no answer stops the run before the
+guard. A mismatch still blocks: keep `--require-autonomy-boundary` and every
+live `--current-*` value on the Step 1.1 command, and take those values from the
+current thread, never from the workflow or state.
 
 ### 0.9 Constitution Validation
 
