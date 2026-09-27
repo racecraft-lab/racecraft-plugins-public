@@ -19,13 +19,13 @@
     "body": {
       "algorithm": "sha256",
       "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/.process/pr-packets/hrns015-draft/body.md",
-      "sha256": "0b78edee076aee67e8d6d5e88d116725f83fb18f134b186ab4b7c085a6bfef64",
-      "size_bytes": 1044
+      "sha256": "3e0864f43983ff51cf55924fdec8d7770d6112e596f89dbdcdf13870fdf32f2c",
+      "size_bytes": 1177
     },
     "packet": {
       "algorithm": "sha256",
       "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/.process/pr-packets/hrns015-draft.json",
-      "sha256": "522824c1b4755ae92a1a91ea34913d92df9f6c3c6a20ab97e7ccf575e8be2a92",
+      "sha256": "1da3a1e4ed8f14c5ca2da6b1115cef26af605568aa0d8fdfce57e55b6fa9425e",
       "size_bytes": 1988
     }
   },
@@ -35,7 +35,7 @@
     "base_branch": "main",
     "head_branch": "hrns-015-autopilot-gate-pr-emission-repair"
   },
-  "timestamp": "2026-09-27T16:39:44Z",
+  "timestamp": "2026-09-27T19:26:04Z",
   "title_value": "chore(speckit-pro): Plan autopilot gate and PR emission repair",
   "validation_result_path": "specs/hrns-015-autopilot-gate-pr-emission-repair/.process/pr-packets/hrns015-draft/validation.json"
 }
