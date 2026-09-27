@@ -2258,6 +2258,9 @@ def validate_gate(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
             "markers": 0,
             "task_count": count,
         }
+        if passed:
+            obj.update(g5_gate_task_loops(tasks, repo_root))
+            passed = obj["pass"]
         return make_result(json_text(obj), exit_code=0 if passed else 1)
     if gate == "G7":
         if not trusted_file_exists(tasks, repo_root):
@@ -2300,6 +2303,40 @@ def validate_gate(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
     if count == 0:
         return make_result(json_text({"gate": gate, "pass": True, "reason": "0 CRITICAL/HIGH findings", "markers": 0, "analysis_findings": findings, "details": []}))
     return make_result(json_text({"gate": gate, "pass": False, "reason": f"{count} CRITICAL/HIGH findings remain", "markers": count, "analysis_findings": findings, "details": []}), exit_code=1)
+
+
+def g5_gate_task_loops(tasks: Path, repo_root: Path) -> dict[str, Any]:
+    """Fail G5 when a task gating source work needs evidence its dependents produce (#773)."""
+    from ..task_execution import TaskExecutionError, gate_task_loops, sidecar_dependencies
+
+    sidecar = tasks.parent / ".process" / "task-execution.json"
+    depends_on = None
+    if sidecar.exists() or sidecar.is_symlink():
+        sidecar_text = trusted_text(sidecar, repo_root)
+        try:
+            if sidecar_text is None:
+                raise TaskExecutionError("metadata unreadable")
+            depends_on = sidecar_dependencies(sidecar_text)
+        except TaskExecutionError as exc:
+            reason = f"task-execution metadata cannot be read for the gate-task check ({exc}); run validate-task-execution"
+            return {"pass": False, "reason": reason, "details": []}
+    loops = gate_task_loops(trusted_text(tasks, repo_root) or "", depends_on)
+    if not loops:
+        return {}
+    details = [
+        f"{loop['task']} gates source work (phase: {loop['phase'] or 'none'}; dependents: "
+        + (", ".join(loop["dependents"]) or "none")
+        + f") but needs post-implementation evidence ('{loop['evidence']}'), so it can never complete. "
+        + "Split it: keep a candidate check in this task, and attach the reconciliation against actual "
+        + "evidence to the emission step."
+        for loop in loops
+    ]
+    return {
+        "pass": False,
+        "reason": f"{len(loops)} gate task(s) wait on evidence only their dependents produce",
+        "gate_task_loops": loops,
+        "details": details,
+    }
 
 
 REVIEWABILITY_THRESHOLDS = {

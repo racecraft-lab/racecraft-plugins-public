@@ -289,6 +289,20 @@ implementation obligations and any requested trace work; follow [the shared cont
    re-slicing stop.
 ```
 
+**Gate-task loop check:** `validate-gate` G5 also fails when an open task
+gates later source work and its text requires post-implementation evidence. A
+task gates source work when it sits in a setup or foundation phase, or when a
+task outside the polish or emission phase depends on it, directly or through
+the sidecar's `depends_on`. The evidence phrases are a closed list: "first
+implementation checkpoint" (with or without "actual"), "actual diff", "actual
+per-PR diff", "actual LOC", and "before PR emission". Such a task can never
+complete, because only its dependents produce that evidence. The failing
+payload lists each one under `gate_task_loops`. Fix it by splitting the task: a
+candidate check now, and the reconciliation attached to the emission step. A
+clause that hands the evidence to a later step passes: it says "later",
+"defer", "attached to", "handled by", "emission step", or "emission task". An
+unreadable sidecar fails the gate closed.
+
 **Auto-Fix:** For each unmapped FR:
 - Generate a task that covers the requirement
 - Place it in the appropriate user story phase
@@ -573,7 +587,7 @@ unexcepted block or gate error stops PR preparation and records the
 | G2 | Clarify | 0 markers remain | Re-run clarify | Shared |
 | G3 | Plan | Artifacts exist, gates pass | Re-run plan | Shared |
 | G4 | Checklist | 0 [Gap] markers | Research + consensus remediation | Shared |
-| G5 | Tasks | FR coverage and valid required execution metadata | Generate missing tasks | Shared |
+| G5 | Tasks | FR coverage, valid required execution metadata, and no gate task waiting on its own dependents | Generate missing tasks; split looping gate tasks | Shared |
 | G6 | Analyze | 0 required defects (all severities) | Research + consensus remediation | Shared |
 | G6.5 | (between Analyze and Implement) | Pre-Implement confidence ≥ 0.90 (advisory default; strict opt-in via `.claude/speckit-pro.local.md`) | Re-route consensus on lowest-scoring criterion, re-emit confidence | Shared |
 | G7 | Implement | Build+type+lint+test pass, integration tests exist, 0 placeholders, TDD evidence | Fix errors, replace placeholders, create real tests | Shared |

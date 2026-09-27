@@ -268,3 +268,88 @@ def can_share_wave(batch: dict[str, Any], pending: list[dict[str, Any]], wave_si
         if any(overlaps(left, right) for left in batch["owns"] for right in other["owns"]):
             return False
     return True
+
+
+# G5 gate-task loop check (issue 773). A task that gates later source work
+# cannot wait on evidence only that source work produces. The phrase list and
+# the deferral cues are closed so the check stays deterministic and quiet: a
+# clause that names the evidence but hands it to a later step passes.
+POST_IMPLEMENTATION_EVIDENCE = (
+    re.compile(r"\bfirst (?:actual )?implementation checkpoint\b", re.I),
+    re.compile(r"\bactual (?:per-pr )?diff\b", re.I),
+    re.compile(r"\bactual loc\b", re.I),
+    re.compile(r"\bbefore pr emission\b", re.I),
+)
+LATER_STEP_CUES = re.compile(r"\blater\b|\bdefer|\battached to\b|\bhandled by\b|\bemission (?:step|task)\b", re.I)
+FOUNDATION_PHASE = re.compile(r"setup|foundation", re.I)
+LATE_PHASE = re.compile(r"polish|cross-cutting|final|emission", re.I)
+
+
+def gate_task_loops(tasks_text: str, depends_on: dict[str, list[str]] | None) -> list[dict[str, Any]]:
+    """Return open tasks that gate source work yet need post-implementation evidence.
+
+    A task gates source work when it sits in a setup/foundation phase or when
+    a task outside the polish/emission phases depends on it, directly or
+    transitively. ``depends_on`` comes from the task-execution sidecar; without
+    one only the phase rule applies.
+    """
+    phase = ""
+    tasks: list[tuple[str, str, str, bool]] = []
+    for line in tasks_text.splitlines():
+        if line.startswith("## "):
+            phase = line[3:].strip()
+            continue
+        match = re.match(r"^\s*-\s+\[([ xX])\]\s+(T[0-9]{3,})\b(.*)$", line)
+        if match:
+            tasks.append((match.group(2), match.group(3).strip(), phase, match.group(1) == " "))
+    phases = {task_id: task_phase for task_id, _, task_phase, _ in tasks}
+    dependents: dict[str, set[str]] = {}
+    for task_id, deps in (depends_on or {}).items():
+        for dep in deps:
+            dependents.setdefault(dep, set()).add(task_id)
+    loops: list[dict[str, Any]] = []
+    for task_id, text, task_phase, is_open in tasks:
+        evidence = post_implementation_evidence(text)
+        if not is_open or evidence is None:
+            continue
+        closure: set[str] = set()
+        pending = list(dependents.get(task_id, ()))
+        while pending:
+            current = pending.pop()
+            if current not in closure:
+                closure.add(current)
+                pending.extend(dependents.get(current, ()))
+        source = sorted(t for t in closure if not LATE_PHASE.search(phases.get(t, "")))
+        if FOUNDATION_PHASE.search(task_phase) or source:
+            loops.append({"task": task_id, "phase": task_phase, "dependents": source, "evidence": evidence})
+    return loops
+
+
+def post_implementation_evidence(text: str) -> str | None:
+    """Return the first evidence phrase a clause requires, skipping handed-off clauses."""
+    for clause in re.split(r"[;.!?](?:\s|$)", text):
+        if LATER_STEP_CUES.search(clause):
+            continue
+        for pattern in POST_IMPLEMENTATION_EVIDENCE:
+            found = pattern.search(clause)
+            if found:
+                return found.group(0)
+    return None
+
+
+def sidecar_dependencies(text: str) -> dict[str, list[str]]:
+    """Read only ``depends_on`` from the sidecar; any other shape fails closed."""
+    try:
+        data = json.loads(text)
+    except (json.JSONDecodeError, UnicodeError) as exc:
+        raise TaskExecutionError(f"invalid metadata JSON: {exc}") from exc
+    tasks = data.get("tasks") if isinstance(data, dict) else None
+    if not isinstance(tasks, dict):
+        raise TaskExecutionError("metadata requires a tasks object")
+    result: dict[str, list[str]] = {}
+    for task_id, entry in tasks.items():
+        deps = entry.get("depends_on") if isinstance(entry, dict) else None
+        if not isinstance(deps, list) or not all(isinstance(dep, str) for dep in deps):
+            raise TaskExecutionError(f"{task_id}.depends_on must be an array of task IDs")
+        result[task_id] = deps
+    return result

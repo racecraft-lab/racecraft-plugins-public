@@ -394,6 +394,10 @@ When checklist identifies `[Gap]` items:
 - Organize by user story, not by technical layer
 - Keep related test and implementation checkboxes in one closed TDD unit;
   each unit must fit an adjacent batch of at most four tasks
+- Write a setup or foundation gate task as a candidate check that can finish
+  before source work starts. Attach any reconciliation against the actual diff,
+  actual LOC, or an implementation checkpoint to the emission step. G5 rejects
+  a gate task that waits on evidence only its own dependents produce.
 
 ## Execution Metadata
 Produce `specs/{{BRANCH_NAME}}/.process/task-execution.json` alongside tasks.md.

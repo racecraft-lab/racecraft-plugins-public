@@ -327,7 +327,7 @@
         "value": "speckit_pro_runner/helpers/read_only.py",
         "display": "speckit_pro_runner/helpers/read_only.py"
       },
-      "sha256": "e9ed139859712d9093ecef94b06ed39b6395043df5373ac31dc960a3701d807c"
+      "sha256": "7b6c84e1128bb423af5c953f6e08736ab50146224b9ac1d2c2e8aa9356c03bf9"
     },
     {
       "path": {
@@ -431,7 +431,7 @@
         "value": "speckit_pro_runner/task_execution.py",
         "display": "speckit_pro_runner/task_execution.py"
       },
-      "sha256": "12861327304397cfad31dc4cab15e3a964e05654c7fae35e81e964390266857b"
+      "sha256": "f2055eef37a666b34f65c735e2a247b85509e103e21e5f203cf7f5a210a2b7a6"
     },
     {
       "path": {

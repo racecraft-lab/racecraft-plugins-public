@@ -518,6 +518,11 @@ Spawn a subagent.
 **Gate:** G5 — cross-reference every FR in spec.md with
 tasks.md
 
+G5 also fails a gate task that waits on evidence its own dependents produce,
+and lists it under `gate_task_loops` (see [G5](gate-validation.md#g5--after-tasks)).
+Split each listed task: a candidate check now, with the reconciliation against
+actual evidence attached to the emission step. Then rerun G5.
+
 **Post-G5 reviewability capture (guarded):**
 After G5 passes, run the task reviewability gate without letting
 the script's compatibility exit code abort the run:
@@ -2734,6 +2739,19 @@ correctness stops in this reference are unchanged and still stop the run:
 unknown side effects, an execution-control `checkpoint_required` disposition
 (including an exhausted repair budget), a ledger or clock error, invalid or
 stale state, and a failed gate whose repair is out of scope.
+
+#### Ambiguous Task Wording: Apply the Recorded Decision, Else Defer
+
+When a task's wording is ambiguous, for example whether an approved timing
+decision covers a gate task, look in the workflow file for a recorded owner
+decision that covers it: a Clarify answer, a consensus resolution, an Analyze
+remediation, or an operator decision the workflow records. If one covers it,
+apply that decision, record the interpretation with a reference to that
+decision in the task's implementation-notes entry and the workflow file's
+Phase 7 result, and then continue. If no recorded decision covers it, defer the
+item under [Blocked Actions Mid-Run: Fall Back or Defer, Never Stop](#blocked-actions-mid-run-fall-back-or-defer-never-stop)
+and name it in the end-of-run request. Never ask the operator mid-run to
+interpret task wording.
 
 #### Append Contract: One Entry Per Dispatched Attempt
 

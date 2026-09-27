@@ -3473,6 +3473,112 @@ class ReadOnlyHelperTests(unittest.TestCase):
             code, payload = self._helper_json("validate_gate", {"gate": "G4", "feature_dir": "specs/001-demo"}, project_path)
             self.assertEqual((0, True), (code, payload["pass"]))
 
+    def _g5(self, project_path: Path, tasks: str, depends_on: dict[str, list[str]] | None) -> tuple[int, dict[str, object]]:
+        feature = project_path / "specs" / "001-demo"
+        feature.mkdir(parents=True, exist_ok=True)
+        (feature / "tasks.md").write_text(tasks, encoding="utf-8")
+        if depends_on is not None:
+            (feature / ".process").mkdir(exist_ok=True)
+            sidecar = {
+                "schema_version": "task-execution.v1",
+                "fingerprints": {},
+                "tasks": {
+                    task_id: {"capability_group": "demo", "depends_on": deps, "owns": ["src"], "tdd_unit": task_id.lower()}
+                    for task_id, deps in depends_on.items()
+                },
+            }
+            (feature / ".process" / "task-execution.json").write_text(json.dumps(sidecar), encoding="utf-8")
+        return self._helper_json("validate_gate", {"gate": "G5", "feature_dir": "specs/001-demo"}, project_path)
+
+    G5_LOOP_TASKS = (
+        "## Phase 1: Setup\n\n"
+        + "- [ ] T001 Inventory the candidate PR markers and reconcile them against the first actual implementation checkpoint\n"
+        + "- [ ] T002 Confirm the marker plan recorded by T001\n\n"
+        + "## Phase 3: User Story 1\n\n"
+        + "- [ ] T003 [US1] Implement the parser in src/parser.py\n"
+    )
+    G5_LOOP_DEPENDS = {"T001": [], "T002": ["T001"], "T003": ["T002"]}
+
+    def test_validate_gate_g5_rejects_a_gate_task_that_waits_on_its_dependents(self) -> None:
+        """#773: a setup gate that needs implementation evidence can never complete."""
+        if self.helper_filter and self.helper_filter != "validate-gate":
+            self.skipTest("G5 gate-task loop case uses validate-gate")
+        with helper_project() as project_path:
+            code, payload = self._g5(project_path, self.G5_LOOP_TASKS, self.G5_LOOP_DEPENDS)
+        self.assertEqual((1, False), (code, payload["pass"]))
+        self.assertEqual(3, payload["task_count"])
+        loops = payload["gate_task_loops"]
+        self.assertEqual(["T001"], [loop["task"] for loop in loops])
+        self.assertEqual(["T002", "T003"], loops[0]["dependents"])
+        self.assertEqual("first actual implementation checkpoint", loops[0]["evidence"])
+        detail = " ".join(payload["details"])
+        self.assertIn("T001", detail)
+        self.assertIn("Split it", detail)
+        self.assertIn("candidate check", detail)
+        self.assertIn("emission step", detail)
+
+    def test_validate_gate_g5_passes_the_split_gate_form(self) -> None:
+        if self.helper_filter and self.helper_filter != "validate-gate":
+            self.skipTest("G5 gate-task loop case uses validate-gate")
+        tasks = (
+            "## Phase 1: Setup\n\n"
+            + "- [ ] T001 Inventory the candidate PR markers as a candidate check\n"
+            + "- [ ] T002 Confirm the candidate marker plan recorded by T001\n\n"
+            + "## Phase 3: User Story 1\n\n"
+            + "- [ ] T003 [US1] Implement the parser in src/parser.py\n\n"
+            + "## Phase 4: Polish & Cross-Cutting Concerns\n\n"
+            + "- [ ] T004 Before PR emission, reconcile the markers against the actual per-PR diff, actual LOC and checkpoint evidence\n"
+            + "- [ ] T005 Emit the PR body from the reconciled markers of T004\n"
+        )
+        depends = {"T001": [], "T002": ["T001"], "T003": ["T002"], "T004": ["T003"], "T005": ["T004"]}
+        with helper_project() as project_path:
+            code, payload = self._g5(project_path, tasks, depends)
+        self.assertEqual((0, True), (code, payload["pass"]), payload)
+        self.assertNotIn("gate_task_loops", payload)
+
+    def test_validate_gate_g5_passes_a_gate_that_only_names_the_later_emission_step(self) -> None:
+        if self.helper_filter and self.helper_filter != "validate-gate":
+            self.skipTest("G5 gate-task loop case uses validate-gate")
+        tasks = self.G5_LOOP_TASKS.replace(
+            "reconcile them against the first actual implementation checkpoint",
+            "check them now; reconciliation against the actual diff happens later in T004 before PR emission",
+        )
+        with helper_project() as project_path:
+            code, payload = self._g5(project_path, tasks, self.G5_LOOP_DEPENDS)
+        self.assertEqual((0, True), (code, payload["pass"]), payload)
+
+    def test_validate_gate_g5_uses_sidecar_dependents_outside_the_setup_phase(self) -> None:
+        if self.helper_filter and self.helper_filter != "validate-gate":
+            self.skipTest("G5 gate-task loop case uses validate-gate")
+        tasks = (
+            "## Phase 3: User Story 1\n\n"
+            + "- [ ] T001 [US1] Record the actual LOC before starting the parser\n"
+            + "- [ ] T002 [US1] Implement the parser in src/parser.py\n"
+        )
+        with helper_project() as project_path:
+            code, payload = self._g5(project_path, tasks, {"T001": [], "T002": ["T001"]})
+            self.assertEqual((1, False), (code, payload["pass"]))
+            self.assertEqual(["T002"], payload["gate_task_loops"][0]["dependents"])
+            code, payload = self._g5(project_path, tasks, {"T001": [], "T002": []})
+            self.assertEqual((0, True), (code, payload["pass"]), payload)
+        with helper_project() as project_path:
+            # Without a sidecar only the setup/foundation phase rule applies.
+            code, payload = self._g5(project_path, tasks, None)
+        self.assertEqual((0, True), (code, payload["pass"]), payload)
+
+    def test_validate_gate_g5_ignores_completed_tasks_and_fails_closed_on_a_bad_sidecar(self) -> None:
+        if self.helper_filter and self.helper_filter != "validate-gate":
+            self.skipTest("G5 gate-task loop case uses validate-gate")
+        with helper_project() as project_path:
+            done = self.G5_LOOP_TASKS.replace("- [ ] T001", "- [x] T001")
+            code, payload = self._g5(project_path, done, self.G5_LOOP_DEPENDS)
+            self.assertEqual((0, True), (code, payload["pass"]), payload)
+            sidecar = project_path / "specs" / "001-demo" / ".process" / "task-execution.json"
+            sidecar.write_text("{not json", encoding="utf-8")
+            code, payload = self._g5(project_path, self.G5_LOOP_TASKS.replace("first actual implementation", "first"), None)
+        self.assertEqual((1, False), (code, payload["pass"]))
+        self.assertIn("validate-task-execution", payload["reason"])
+
     @contextmanager
     def _g6_project(self) -> Iterator[Path]:
         """A clean planning tree: no bracketed severity marker in spec, plan, or tasks."""
