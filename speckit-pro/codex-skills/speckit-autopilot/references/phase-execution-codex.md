@@ -1443,7 +1443,7 @@ do not invoke it as an active helper. Record the deferred-mode diagnostics
 (helper ID, requested mode, deferral reason) in the workflow file, then
 evaluate the fallback evidence chain: the setup-mode gate result recorded at
 scaffold, the plan-phase `estimate-reviewable-loc` verdict, and any
-operator-ratified split decision in the workflow file. If that committed
+ratified split decision (autopilot or operator) in the workflow file. If that committed
 evidence shows `pass`, `warn`, or an honored typed exception, continue. If it
 shows a valid current size-only `status=block`, continue into marker
 planning and later marker emission; it is not a manual re-slicing stop.
@@ -1458,6 +1458,40 @@ fingerprints, or any non-size safety finding.
 
 If any check fails, repair both state stores and print the corrected checklist
 summary before continuing.
+
+**Budget-driven split ratification:**
+When the per-PR path budget makes the planner split an approved PR order into
+smaller increments, do not park the split for a human. Run runner helper
+`helper_id=ratify-pr-split operation=ratify-pr-split mode=read_only` with
+these inputs:
+
+- `approved_groups`: the approved PR groups in approved order, each with
+  `group_id` and `scope` (its requirement, story, and task IDs);
+- `increments`: the proposed increments in delivery order, each with
+  `increment_id`, the `group_id` it splits, `scope`, `production_paths`, and
+  `total_paths`;
+- `active_scope`: every active requirement, story, and task ID;
+- `path_budget`: the repository's per-PR `production_paths` and `total_paths`
+  caps.
+
+The helper ratifies only a split that divides approved groups without merging
+or dropping any, keeps the approved order and each group's scope, keeps every
+active requirement, story, and task, and keeps each increment within the
+budget. On `decision=autopilot_ratified`, write `data.record` verbatim to the
+current workflow section (`owner_ratification=ratified`,
+`ratified_by=autopilot`, and the reason) and continue without a question.
+Ask the operator only when the helper returns `decision=operator_required`;
+its findings name the cause: `scope_added`, `scope_dropped`, `group_added`,
+`group_dropped`, `group_reordered`, `group_merged`, or
+`reviewability_exception_needed`. Record `data.record`
+(`owner_ratification=pending` with the blockers), then ask. An `input_error`,
+a missing budget, or unreadable evidence also goes to the operator; never
+ratify it yourself.
+
+Keep only one live `owner_ratification` value in the workflow file. When a
+later section records a ratification, change each earlier
+`owner_ratification=` line to `owner_ratification=superseded` and add
+`superseded_by=<later section heading>` beside it.
 
 When reviewability evidence is marker-planning input, persist top-level
 `pr_marker_plan` in `autopilot-state.json` and mirror the same schema version,
