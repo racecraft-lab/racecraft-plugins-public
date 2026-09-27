@@ -3584,6 +3584,53 @@ class ReadOnlyHelperTests(unittest.TestCase):
         self.assertEqual((1, False), (code, payload["pass"]))
         self.assertIn("validate-task-execution", payload["reason"])
 
+    G5_COVERAGE_TASKS = (
+        "## Phase 3: User Story 1\n\n"
+        + "- [ ] T001 [US1] Implement the parser in src/parser.py\n"
+        + "- [ ] T002 [US1] Implement the writer in src/writer.py\n\n"
+        + "## Requirement Coverage\n\n"
+        + "| Requirement | Tasks |\n"
+        + "|---|---|\n"
+        + "| FR-005 parse input | T001 (US1) |\n"
+        + "| FR-006 write output |  () |\n"
+        + "| FR-007 keep order |   |\n"
+        + "| FR-008 report errors | T001, T002 |\n"
+    )
+
+    def test_validate_gate_g5_fails_empty_requirement_coverage_rows(self) -> None:
+        """#794: a coverage row with an empty or placeholder task cell fails G5 and names the row."""
+        if self.helper_filter and self.helper_filter != "validate-gate":
+            self.skipTest("G5 coverage-row case uses validate-gate")
+        with helper_project() as project_path:
+            code, payload = self._g5(project_path, self.G5_COVERAGE_TASKS, None)
+        self.assertEqual((1, False), (code, payload["pass"]), payload)
+        self.assertEqual(["FR-006", "FR-007"], [row["requirement"] for row in payload["empty_coverage_rows"]])
+        self.assertIn("2 requirement coverage row(s)", payload["reason"])
+        detail = " ".join(payload["details"])
+        self.assertIn("FR-006", detail)
+        self.assertIn("FR-007", detail)
+        self.assertIn("task IDs", detail)
+
+    def test_validate_gate_g5_passes_filled_or_absent_coverage_tables(self) -> None:
+        if self.helper_filter and self.helper_filter != "validate-gate":
+            self.skipTest("G5 coverage-row case uses validate-gate")
+        filled = self.G5_COVERAGE_TASKS.replace("|  () |", "| T002 (US1) |").replace("|   |", "| T001-T002 |")
+        other_table = self.G5_COVERAGE_TASKS.replace("| Requirement | Tasks |", "| Requirement | Notes |")
+        absent = self.G5_COVERAGE_TASKS.split("## Requirement Coverage")[0]
+        for name, tasks in (("filled", filled), ("no task column", other_table), ("no table", absent)):
+            with self.subTest(case=name), helper_project() as project_path:
+                code, payload = self._g5(project_path, tasks, None)
+                self.assertEqual((0, True), (code, payload["pass"]), payload)
+                self.assertNotIn("empty_coverage_rows", payload)
+
+    def test_tasks_prompt_tells_the_producer_to_fill_every_coverage_row(self) -> None:
+        template = Path(__file__).resolve().parents[3] / "speckit-pro/skills/speckit-coach/templates/workflow-template.md"
+        text = template.read_text(encoding="utf-8")
+        prompt = " ".join(text[text.index("### Tasks Prompt"):text.index("### Tasks Results")].split())
+        self.assertIn("requirement coverage table", prompt)
+        self.assertIn("every row", prompt)
+        self.assertIn("G5 fails", prompt)
+
     @contextmanager
     def _g6_project(self) -> Iterator[Path]:
         """A clean planning tree: no bracketed severity marker in spec, plan, or tasks."""

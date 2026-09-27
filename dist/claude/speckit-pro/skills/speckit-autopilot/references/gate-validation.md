@@ -269,7 +269,12 @@ For enabled formal selection, require the current `planning` checkpoint and
 pass `workflow_file` to `validate-gate`. Tasks must include the selected model's
 implementation obligations and any requested trace work; follow [the shared contract](formal-methods.md).
 
-**Check:** Every functional requirement has at least one task.
+**Check:** Every functional requirement has at least one task. When tasks.md
+has a requirement coverage table (a Markdown table with a `Task`, `Tasks`, or
+`Task IDs` column), `validate-gate` G5 also fails every row that opens with a
+requirement ID but whose task cell names no task ID, such as a blank cell or
+`()`. The failure lists those rows in `empty_coverage_rows`; fill each from the
+task list.
 
 ```
 1. Extract all FR-XXX markers from spec.md

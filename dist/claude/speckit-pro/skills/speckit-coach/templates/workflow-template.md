@@ -403,6 +403,9 @@ When checklist identifies `[Gap]` items:
   routes only these to verification; any other leading verb routes the task
   as implementation or research work. Open implementation work with
   `Implement`, `Add`, or `Create`
+- When tasks.md includes a requirement coverage table, fill every row's task
+  cell from the task list above, for every requirement. G5 fails a row whose
+  task cell is blank or a placeholder such as `()`
 
 ## Execution Metadata
 Produce `specs/{{BRANCH_NAME}}/.process/task-execution.json` alongside tasks.md.
