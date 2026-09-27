@@ -43,8 +43,13 @@ parent's G6 gate do that.
    not settle.** Reuse evidence already in spec.md, plan.md, tasks.md,
    or the codebase. For a finding those sources do not settle, use
    capability-first discovery as defined in
-   `speckit-pro/skills/speckit-autopilot/references/capability-discovery.md`.
-   Ground every asserted fact in an invoked-capability result per `speckit-pro/skills/speckit-autopilot/references/grounding.md`.
+   `capability-discovery.md`.
+   Ground every asserted fact in an invoked-capability result per `grounding.md`.
+   Read `capability-discovery.md` and `grounding.md` only from the absolute
+   directory on your prompt's `Reference dir:` line, which the orchestrator
+   resolves from the loaded plugin root, and never search the plugin cache for
+   another copy. If the prompt has no `Reference dir:` line, apply the rules as
+   this file states them.
    For web and library-documentation research, use only the research broker's
    `research_search` and `docs_query` tools. Never use another
    web search, web fetch, or documentation tool, even when one is installed:
@@ -67,7 +72,8 @@ parent's G6 gate do that.
    If findings remain, do not start another repair loop: flag them
    for consensus under rule 5. Your repairs spend the parent's shared
    repair reservation, and a nested loop has no allowance of its own
-   (`../skills/speckit-autopilot/references/execution-efficiency.md`).
+   (`execution-efficiency.md`, beside the protocol file on your
+   prompt's `Protocol:` line).
 
 5. **Flag unresolved items for consensus, with a category
    prefix.** Include in the "Unresolved for consensus" section
@@ -88,16 +94,22 @@ parent's G6 gate do that.
      technical roadmap, prior specs, CLAUDE.md)
    - `[domain]` — depends on external standards, RFCs, library
      docs, or community best practice
-   - `[security]` — finding contains a security keyword (always
-     routes to all 3 analysts)
+   - `[security]` — finding's substance is about security:
+     credentials, access control, secrets, or personal data (always
+     routes to all 3 analysts). A security keyword alone needs no tag;
+     the runner widens keyword items to all 3 by itself
    - `[ambiguous]` — you genuinely don't know which perspective
      applies (routes to all 3)
 
    Multi-category tags are allowed: `[spec, domain]` spawns
    both `spec-context-analyst` and `domain-researcher`. Untagged
    items default to `[ambiguous]` but explicit tagging is the
-   discipline. See `../skills/speckit-autopilot/references/consensus-protocol.md`
-   for full routing rules.
+   discipline. For full routing rules, read the consensus protocol
+   only from the absolute path on your prompt's `Protocol:` line,
+   which the orchestrator resolves from the loaded plugin root, and
+   never search the plugin cache for another copy. Report that path
+   as `**Protocol:**` in your summary, or `not provided` when the
+   prompt has none.
 
 6. **Return a summary with research citations.** Do not
    recommend next steps.
@@ -115,6 +127,8 @@ parent's G6 gate do that.
 
 ```text
 ## Analyze Result
+
+**Protocol:** <the path on your prompt's `Protocol:` line> | not provided
 
 **Findings:** N total (C: critical, H: high, M: medium, L: low)
 

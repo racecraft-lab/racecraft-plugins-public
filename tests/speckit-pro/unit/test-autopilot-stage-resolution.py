@@ -294,9 +294,19 @@ DRAFT_PR_ROW_CASES = (
 
 # (label, prose written after the link, expected `gap_note`)
 # The grammar template is `[#<number>](<url>) — <gap note>`, which places the
-# separator outside the placeholder: the note is the prose, not the dash.
+# separator outside the placeholder: the note is the prose, not the dash. A
+# hyphen or colon separator is dropped the same way, and a note with no
+# separator is kept whole, so a style guide that forbids em dashes never turns
+# the row into an absent one.
 DRAFT_PR_GAP_NOTE_CASES = (
     ("a plain shortfall note", "— 2 of 4 artifacts missing", "2 of 4 artifacts missing"),
+    ("a hyphen separator", "- 2 of 4 artifacts missing", "2 of 4 artifacts missing"),
+    ("a colon separator", ": 2 of 4 artifacts missing", "2 of 4 artifacts missing"),
+    (
+        "a parenthesized note with no separator",
+        "(1 of 5 artifacts missing: data-model)",
+        "(1 of 5 artifacts missing: data-model)",
+    ),
     # A note carrying its own parentheses. A greedy link-target capture would
     # swallow the rest of the cell into `url` and lose the identity entirely,
     # which is the failure FR-011 corroboration would then blame on GitHub.
@@ -1590,6 +1600,111 @@ class AutoDetectionTests(unittest.TestCase):
         self.assertTrue(str(envelope["basis"]).startswith("auto-detect"), envelope["basis"])
 
 
+# Issue #688's synthetic reproduction, verbatim: every row Complete, one open HIGH.
+OPEN_FINDING_WORKFLOW = """# Synthetic incomplete planning run
+
+### Basic Information
+
+| Item | Value |
+| --- | --- |
+| Stage | plan |
+
+## Workflow Overview
+
+| Phase | Command | Status | Gate |
+| --- | --- | --- | --- |
+| Specify | speckit.specify | ✅ Complete | G1 |
+| Clarify | speckit.clarify | ✅ Complete | G2 |
+| Plan | speckit.plan | ✅ Complete | G3 |
+| Checklist | speckit.checklist | ✅ Complete | G4 |
+| Tasks | speckit.tasks | ✅ Complete | G5 |
+| Analyze | speckit.analyze | ✅ Complete | G6 |
+| Confidence Gate | confidence | ✅ Complete | G6.5 |
+
+## Analysis Results
+
+| ID | Severity | Finding | Resolution |
+| --- | --- | --- | --- |
+| H1 | HIGH | Required contract defect remains unresolved. | |
+"""
+OPEN_FINDING_ROW = "| H1 | HIGH | Required contract defect remains unresolved. | |"
+RESOLVED_FINDING_ROW = "| H1 | HIGH | Required contract defect remains unresolved. | Contract added to plan.md. |"
+
+
+class OpenAnalysisFindingTests(unittest.TestCase):
+    """#688: terminal phase labels cannot complete planning over open Analyze findings."""
+
+    def test_an_open_high_row_keeps_planning_incomplete(self) -> None:
+        envelope = resolve_envelope(OPEN_FINDING_WORKFLOW)
+        self.assertEqual(envelope["stage"], "plan")
+        self.assertEqual(envelope["source"], "auto-detect")
+        self.assertFalse(envelope["planning_complete"])
+        self.assertIn("Analyze", str(envelope["basis"]))
+        self.assertIn("1 open CRITICAL/HIGH", str(envelope["basis"]))
+        signals = read_only.workflow_stage_signals(OPEN_FINDING_WORKFLOW)
+        self.assertEqual(signals["first_open"], ("Analyze", "1 open CRITICAL/HIGH findings"))
+
+    def test_a_resolved_row_lets_planning_complete(self) -> None:
+        text = OPEN_FINDING_WORKFLOW.replace(OPEN_FINDING_ROW, RESOLVED_FINDING_ROW)
+        envelope = resolve_envelope(text)
+        self.assertEqual(envelope["stage"], "implement")
+        self.assertTrue(envelope["planning_complete"])
+
+    def test_a_legacy_workflow_without_the_table_still_resolves_implement(self) -> None:
+        text = OPEN_FINDING_WORKFLOW.split("## Analysis Results", 1)[0]
+        envelope = resolve_envelope(text)
+        self.assertEqual(envelope["stage"], "implement")
+        self.assertTrue(envelope["planning_complete"])
+
+    def test_a_commented_out_open_row_is_not_evidence(self) -> None:
+        text = OPEN_FINDING_WORKFLOW.replace(OPEN_FINDING_ROW, f"<!-- {OPEN_FINDING_ROW} -->")
+        self.assertEqual(resolve_envelope(text)["stage"], "implement")
+
+    def test_g6_and_stage_resolution_agree_through_the_runner(self) -> None:
+        """The skill's G6 and stage requests, run on one workflow, give one verdict."""
+        variants = {
+            "open": (OPEN_FINDING_WORKFLOW, 1, False, "plan"),
+            "resolved": (OPEN_FINDING_WORKFLOW.replace(OPEN_FINDING_ROW, RESOLVED_FINDING_ROW), 0, True, "implement"),
+        }
+        for name, (text, high, complete, stage) in variants.items():
+            with self.subTest(variant=name), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                (root / ".specify").mkdir()
+                (root / "feature").mkdir()
+                (root / "workflow.md").write_text(text, encoding="utf-8")
+                envelopes = {}
+                for helper_id, inputs in (
+                    ("validate-gate", {"gate": "G6", "feature_dir": "feature", "workflow_file": "workflow.md"}),
+                    ("resolve-autopilot-stage", {"workflow_file": "workflow.md", "autopilot_args": []}),
+                ):
+                    request = {
+                        "schema_version": "1.0", "request_id": f"test-{helper_id}",
+                        "helper_id": helper_id, "operation": helper_id, "mode": "read_only",
+                        "inputs": inputs,
+                    }
+                    completed = subprocess.run(
+                        [sys.executable, "-m", "speckit_pro_runner"],
+                        input=json.dumps(request), cwd=root, env=runner_env(),
+                        text=True, capture_output=True, check=False,
+                    )
+                    envelopes[helper_id] = (completed.returncode, json.loads(completed.stdout))
+                gate_exit, gate = envelopes["validate-gate"]
+                self.assertEqual(gate_exit, 0 if complete else 1)
+                self.assertEqual(gate["status"], "ok" if complete else "expected_failure")
+                self.assertIs(gate["data"]["stdout_json"]["pass"], complete)
+                self.assertEqual(gate["data"]["stdout_json"]["analysis_findings"], {"critical": 0, "high": high})
+                stage_exit, resolved = envelopes["resolve-autopilot-stage"]
+                self.assertEqual((stage_exit, resolved["status"]), (0, "ok"))
+                self.assertEqual(resolved["data"]["stdout_json"]["stage"], stage)
+                self.assertIs(resolved["data"]["stdout_json"]["planning_complete"], complete)
+
+    def test_an_explicit_stage_still_wins_over_open_findings(self) -> None:
+        envelope = resolve_envelope(OPEN_FINDING_WORKFLOW, ["--stage", "implement"])
+        self.assertEqual(envelope["stage"], "implement")
+        self.assertEqual(envelope["source"], "argv")
+        self.assertFalse(envelope["planning_complete"])
+
+
 class PlanningStageCanonicalListTests(unittest.TestCase):
     """T013 — FR-011: out-of-stage entries are marked, never truncated."""
 
@@ -1748,6 +1863,7 @@ def build_suite() -> unittest.TestSuite:
         DraftPrCorroborationTests,
         ConfidenceGateVerdictTests,
         AutoDetectionTests,
+        OpenAnalysisFindingTests,
         PlanningStageCanonicalListTests,
         CrossDistributionArgvParityTests,
     ):

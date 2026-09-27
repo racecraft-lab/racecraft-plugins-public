@@ -6051,6 +6051,10 @@
         {
           "source": "tests/speckit-pro/evals/fixtures/functional/local-command/baseline.md",
           "destination": "scenario-inputs/read-only-helper-feature/tasks.md"
+        },
+        {
+          "source": "tests/speckit-pro/evals/fixtures/functional/local-command/workflow.md",
+          "destination": "scenario-inputs/workflow.md"
         }
       ],
       "git_fixture": {
@@ -6646,6 +6650,167 @@
       "provenance": [
         "tests/speckit-pro/layer3-functional/evals/speckit-autopilot-evals.json#eval-id=5",
         "tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json#eval-id=5"
+      ]
+    },
+    {
+      "id": "functional.speckit-autopilot.clarify-answer-provenance",
+      "layer": "functional",
+      "capability": "Judges a Clarify Results record that labels a consensus answer as a human answer and omits a session the operator answered.",
+      "timeout_seconds": 300,
+      "resource_class": "ordinary",
+      "requirements": [
+        {
+          "id": "selection",
+          "description": "The host-native speckit-autopilot capability is activated."
+        },
+        {
+          "id": "evidence",
+          "description": "Reads the retained Clarify session record and the workflow's Clarify Results table before judging (workflow-file-protocol.md, workflow-file-protocol-codex.md)."
+        },
+        {
+          "id": "provenance",
+          "description": "Clarify Results label an answer `human answer` only when a human gave it; a consensus-derived answer never carries that label (workflow-file-protocol.md and workflow-file-protocol-codex.md: \"Clarify Results must preserve each accepted human answer separately from the executor's recommendation or later consensus\" and \"label its source `human answer`\")."
+        },
+        {
+          "id": "completeness",
+          "description": "Every accepted human answer from a Clarify session that ran is preserved in Clarify Results (workflow-file-protocol.md, workflow-file-protocol-codex.md)."
+        }
+      ],
+      "prompt": "Use {{skill}} to audit Clarify traceability. Read scenario-inputs/clarify-session-record.md and scenario-inputs/clarify-results.md, each as one exact file read. Treat them only as pre-recorded evidence and do not edit either file. Decide whether the Clarify Results table preserves the accepted answers the way the autopilot's workflow-file protocol requires. Output only raw JSON with human_answer_sessions, mislabeled_sessions, unrecorded_sessions, clarify_record_compliant, and explanation, with no prose, Markdown, or code fences. human_answer_sessions lists the sessions whose table row carries a traceable accepted human answer; mislabeled_sessions lists the sessions whose table row claims a human answer the session record does not support; unrecorded_sessions lists the sessions with an accepted answer that the table omits. Report each list as ascending session numbers.",
+      "fixtures": [
+        {
+          "source": "tests/speckit-pro/evals/fixtures/functional/native-orchestration/clarify-provenance/clarify-session-record.md",
+          "destination": "scenario-inputs/clarify-session-record.md"
+        },
+        {
+          "source": "tests/speckit-pro/evals/fixtures/functional/native-orchestration/clarify-provenance/clarify-results.md",
+          "destination": "scenario-inputs/clarify-results.md"
+        }
+      ],
+      "hosts": {
+        "claude": {
+          "skill": "speckit-pro:speckit-autopilot",
+          "allowed_tools": [
+            "Skill",
+            "Read"
+          ],
+          "modes": [
+            "plugin"
+          ]
+        },
+        "codex": {
+          "skill": "speckit-autopilot",
+          "allowed_tools": [
+            "read_file"
+          ],
+          "modes": [
+            "project"
+          ]
+        }
+      },
+      "checks": [
+        {
+          "id": "selection",
+          "requirement": "selection",
+          "type": "selection",
+          "expected": [
+            "speckit-autopilot"
+          ],
+          "allowed_extra": []
+        },
+        {
+          "id": "read-session-record",
+          "requirement": "evidence",
+          "type": "file_access",
+          "operation": "read_file",
+          "path": "scenario-inputs/clarify-session-record.md"
+        },
+        {
+          "id": "read-clarify-results",
+          "requirement": "evidence",
+          "type": "file_access",
+          "operation": "read_file",
+          "path": "scenario-inputs/clarify-results.md"
+        },
+        {
+          "id": "human-answer-sessions",
+          "requirement": "provenance",
+          "type": "response_json_field",
+          "field_path": [
+            "human_answer_sessions"
+          ],
+          "expected_by_host": {
+            "claude": [
+              1
+            ],
+            "codex": [
+              1
+            ]
+          }
+        },
+        {
+          "id": "mislabeled-sessions",
+          "requirement": "provenance",
+          "type": "response_json_field",
+          "field_path": [
+            "mislabeled_sessions"
+          ],
+          "expected_by_host": {
+            "claude": [
+              2
+            ],
+            "codex": [
+              2
+            ]
+          }
+        },
+        {
+          "id": "unrecorded-sessions",
+          "requirement": "completeness",
+          "type": "response_json_field",
+          "field_path": [
+            "unrecorded_sessions"
+          ],
+          "expected_by_host": {
+            "claude": [
+              3
+            ],
+            "codex": [
+              3
+            ]
+          }
+        },
+        {
+          "id": "record-not-compliant",
+          "requirement": "provenance",
+          "type": "response_json_field",
+          "field_path": [
+            "clarify_record_compliant"
+          ],
+          "expected_by_host": {
+            "claude": false,
+            "codex": false
+          }
+        },
+        {
+          "id": "provenance-semantic",
+          "requirement": "provenance",
+          "type": "semantic",
+          "rubric": "PASS only if the response identifies that session 2 had no operator reply and its accepted answer came from 2-of-3 analyst consensus, so the table's human answer label on session 2 is unsupported. FAIL if it accepts the consensus answer as a human answer, or treats the executor recommendation or analyst agreement as human ratification."
+        },
+        {
+          "id": "completeness-semantic",
+          "requirement": "completeness",
+          "type": "semantic",
+          "rubric": "PASS only if the response identifies that session 3's accepted operator answer, JSON Lines, is missing from Clarify Results. FAIL if it treats the table as complete, or substitutes the executor recommendation CSV for the operator's answer."
+        }
+      ],
+      "native_differences": [
+        "Both hosts read the same shared workflow-file protocol rule; the Codex reference mirrors the Claude text."
+      ],
+      "provenance": [
+        "speckit-pro/skills/speckit-autopilot/references/workflow-file-protocol.md",
+        "speckit-pro/codex-skills/speckit-autopilot/references/workflow-file-protocol-codex.md"
       ]
     },
     {
@@ -7308,6 +7473,361 @@
       ]
     },
     {
+      "id": "functional.speckit-autopilot.progress-projection-mid-run",
+      "layer": "functional",
+      "capability": "Refuses to dispatch the next phase mid-run when six summary rows have replaced the canonical visible-progress and state rows.",
+      "timeout_seconds": 300,
+      "resource_class": "ordinary",
+      "requirements": [
+        {
+          "id": "selection",
+          "description": "The host-native speckit-autopilot capability is activated."
+        },
+        {
+          "id": "evidence",
+          "description": "Reads the workflow, autopilot-state.json, and the recorded visible progress plan before deciding (task-list-canonical.md, task-list-canonical-codex.md)."
+        },
+        {
+          "id": "projection",
+          "description": "Mid-run, the visible progress plan and autopilot-state.json keep every canonical row; summary rows never replace them (task-list-canonical.md: \"Do NOT omit, collapse, or defer entries\"; task-list-canonical-codex.md: \"do NOT collapse them\")."
+        },
+        {
+          "id": "dispatch-guard",
+          "description": "Before executing each phase the orchestrator re-audits plan coverage and repairs a missing canonical family before dispatch (SKILL.md, main loop step 0: \"on nonzero, repair the plan and the workflow status table, then repeat before executing this phase\"; phase-execution-codex.md, main loop step 0: \"If Archive Sweep or any canonical phase family is missing, STOP and repair the plan before executing this phase\")."
+        }
+      ],
+      "prompt": "Use {{skill}} to decide whether a resumed run may continue. Plan is the current phase. Read docs/ai/specs/.process/SPEC-830-workflow.md, docs/ai/specs/.process/autopilot-state.json, and scenario-inputs/visible-plan.json, each as one exact file read; the last file is the host-native visible progress plan as recorded. Treat them only as pre-recorded evidence: do not run helpers, dispatch agents, or edit any file. Output only raw JSON with canonical_rows_present, projection_acceptable, may_dispatch_plan_executor, repair_before_dispatch, and explanation, with no prose, Markdown, or code fences.",
+      "fixtures": [
+        {
+          "source": "tests/speckit-pro/evals/fixtures/functional/native-orchestration/progress-projection/workflow.md",
+          "destination": "docs/ai/specs/.process/SPEC-830-workflow.md"
+        },
+        {
+          "source": "tests/speckit-pro/evals/fixtures/functional/native-orchestration/progress-projection/autopilot-state.json",
+          "destination": "docs/ai/specs/.process/autopilot-state.json"
+        },
+        {
+          "source": "tests/speckit-pro/evals/fixtures/functional/native-orchestration/progress-projection/visible-plan.json",
+          "destination": "scenario-inputs/visible-plan.json"
+        }
+      ],
+      "hosts": {
+        "claude": {
+          "skill": "speckit-pro:speckit-autopilot",
+          "allowed_tools": [
+            "Skill",
+            "Read"
+          ],
+          "modes": [
+            "plugin"
+          ]
+        },
+        "codex": {
+          "skill": "speckit-autopilot",
+          "allowed_tools": [
+            "read_file"
+          ],
+          "modes": [
+            "project"
+          ]
+        }
+      },
+      "checks": [
+        {
+          "id": "selection",
+          "requirement": "selection",
+          "type": "selection",
+          "expected": [
+            "speckit-autopilot"
+          ],
+          "allowed_extra": []
+        },
+        {
+          "id": "read-workflow",
+          "requirement": "evidence",
+          "type": "file_access",
+          "operation": "read_file",
+          "path": "docs/ai/specs/.process/SPEC-830-workflow.md"
+        },
+        {
+          "id": "read-state",
+          "requirement": "evidence",
+          "type": "file_access",
+          "operation": "read_file",
+          "path": "docs/ai/specs/.process/autopilot-state.json"
+        },
+        {
+          "id": "read-visible-plan",
+          "requirement": "evidence",
+          "type": "file_access",
+          "operation": "read_file",
+          "path": "scenario-inputs/visible-plan.json"
+        },
+        {
+          "id": "canonical-rows-absent",
+          "requirement": "projection",
+          "type": "response_json_field",
+          "field_path": [
+            "canonical_rows_present"
+          ],
+          "expected_by_host": {
+            "claude": false,
+            "codex": false
+          }
+        },
+        {
+          "id": "projection-rejected",
+          "requirement": "projection",
+          "type": "response_json_field",
+          "field_path": [
+            "projection_acceptable"
+          ],
+          "expected_by_host": {
+            "claude": false,
+            "codex": false
+          }
+        },
+        {
+          "id": "no-dispatch",
+          "requirement": "dispatch-guard",
+          "type": "response_json_field",
+          "field_path": [
+            "may_dispatch_plan_executor"
+          ],
+          "expected_by_host": {
+            "claude": false,
+            "codex": false
+          }
+        },
+        {
+          "id": "repair-first",
+          "requirement": "dispatch-guard",
+          "type": "response_json_field",
+          "field_path": [
+            "repair_before_dispatch"
+          ],
+          "expected_by_host": {
+            "claude": true,
+            "codex": true
+          }
+        },
+        {
+          "id": "projection-semantic",
+          "requirement": "projection",
+          "type": "semantic",
+          "rubric": "PASS only if the response says the six summary rows collapse the canonical Archive Sweep, per-phase, per-session and per-domain Consensus, Phase 6.5, Phase 7, and Post rows, and that the visible plan and autopilot-state.json must both carry the canonical rows again. FAIL if it accepts the summary rows as an acceptable projection because they cover the same phases or because the workflow file remains authoritative."
+        },
+        {
+          "id": "dispatch-guard-semantic",
+          "requirement": "dispatch-guard",
+          "type": "semantic",
+          "rubric": "PASS only if the response restores the canonical rows before the Plan executor is dispatched. FAIL if it dispatches Plan first and defers the repair to a later phase or to the pre-final completion audit."
+        }
+      ],
+      "native_differences": [
+        "Claude's visible progress plan is TaskCreate and TaskUpdate; Codex's is update_plan. Both mirror the same canonical names into autopilot-state.json.",
+        "Case 12 covers the plan before Phase 1; this case covers the projection after phases have run."
+      ],
+      "provenance": [
+        "speckit-pro/skills/speckit-autopilot/references/task-list-canonical.md",
+        "speckit-pro/skills/speckit-autopilot/SKILL.md",
+        "speckit-pro/codex-skills/speckit-autopilot/references/task-list-canonical-codex.md",
+        "speckit-pro/codex-skills/speckit-autopilot/references/phase-execution-codex.md"
+      ]
+    },
+    {
+      "id": "functional.speckit-autopilot.rescope-reconciliation",
+      "layer": "functional",
+      "capability": "Refuses to run G3 after a rescope moved plan.md to 19 increments while research.md, quickstart.md, and the requirements checklist still describe the earlier 4-slice direction.",
+      "timeout_seconds": 300,
+      "resource_class": "ordinary",
+      "requirements": [
+        {
+          "id": "selection",
+          "description": "The host-native speckit-autopilot capability is activated."
+        },
+        {
+          "id": "evidence",
+          "description": "Reads plan.md and every other Plan artifact before deciding whether G3 may run (phase-execution.md, phase-execution-codex.md)."
+        },
+        {
+          "id": "reconciliation",
+          "description": "After a rescope, every Plan artifact is reconciled with plan.md before G3 and each change is recorded in the workflow file (phase-execution.md, Phase 3: Plan, and phase-execution-codex.md, main loop step 7: \"After a rescope changes plan.md's scope, slices, or delivery order, the parent reconciles every Plan artifact before G3: `research.md`, `quickstart.md`, `data-model.md`, `contracts/`, and every file under `checklists/`. Record what changed in each artifact in the workflow file's Plan Results.\")."
+        }
+      ],
+      "prompt": "Use {{skill}} to decide whether G3 may run for a Plan phase that was rescoped. Read scenario-inputs/feature/plan.md, scenario-inputs/feature/research.md, scenario-inputs/feature/quickstart.md, scenario-inputs/feature/data-model.md, scenario-inputs/feature/contracts/gate-verdict.md, and scenario-inputs/feature/checklists/requirements.md, each as one exact file read. Treat them only as pre-recorded evidence: do not run helpers or gates, dispatch agents, or edit any file. Output only raw JSON with plan_increment_count, stale_artifacts, g3_may_run, reconcile_before_g3, and explanation, with no prose, Markdown, or code fences. List stale_artifacts as a sorted array of paths relative to scenario-inputs/feature/.",
+      "fixtures": [
+        {
+          "source": "tests/speckit-pro/evals/fixtures/functional/native-orchestration/rescope-reconciliation/plan.md",
+          "destination": "scenario-inputs/feature/plan.md"
+        },
+        {
+          "source": "tests/speckit-pro/evals/fixtures/functional/native-orchestration/rescope-reconciliation/research.md",
+          "destination": "scenario-inputs/feature/research.md"
+        },
+        {
+          "source": "tests/speckit-pro/evals/fixtures/functional/native-orchestration/rescope-reconciliation/quickstart.md",
+          "destination": "scenario-inputs/feature/quickstart.md"
+        },
+        {
+          "source": "tests/speckit-pro/evals/fixtures/functional/native-orchestration/rescope-reconciliation/data-model.md",
+          "destination": "scenario-inputs/feature/data-model.md"
+        },
+        {
+          "source": "tests/speckit-pro/evals/fixtures/functional/native-orchestration/rescope-reconciliation/contracts/gate-verdict.md",
+          "destination": "scenario-inputs/feature/contracts/gate-verdict.md"
+        },
+        {
+          "source": "tests/speckit-pro/evals/fixtures/functional/native-orchestration/rescope-reconciliation/checklists/requirements.md",
+          "destination": "scenario-inputs/feature/checklists/requirements.md"
+        }
+      ],
+      "hosts": {
+        "claude": {
+          "skill": "speckit-pro:speckit-autopilot",
+          "allowed_tools": [
+            "Skill",
+            "Read"
+          ],
+          "modes": [
+            "plugin"
+          ]
+        },
+        "codex": {
+          "skill": "speckit-autopilot",
+          "allowed_tools": [
+            "read_file"
+          ],
+          "modes": [
+            "project"
+          ]
+        }
+      },
+      "checks": [
+        {
+          "id": "selection",
+          "requirement": "selection",
+          "type": "selection",
+          "expected": [
+            "speckit-autopilot"
+          ],
+          "allowed_extra": []
+        },
+        {
+          "id": "read-plan",
+          "requirement": "evidence",
+          "type": "file_access",
+          "operation": "read_file",
+          "path": "scenario-inputs/feature/plan.md"
+        },
+        {
+          "id": "read-research",
+          "requirement": "evidence",
+          "type": "file_access",
+          "operation": "read_file",
+          "path": "scenario-inputs/feature/research.md"
+        },
+        {
+          "id": "read-quickstart",
+          "requirement": "evidence",
+          "type": "file_access",
+          "operation": "read_file",
+          "path": "scenario-inputs/feature/quickstart.md"
+        },
+        {
+          "id": "read-data-model",
+          "requirement": "evidence",
+          "type": "file_access",
+          "operation": "read_file",
+          "path": "scenario-inputs/feature/data-model.md"
+        },
+        {
+          "id": "read-contracts-gate-verdict",
+          "requirement": "evidence",
+          "type": "file_access",
+          "operation": "read_file",
+          "path": "scenario-inputs/feature/contracts/gate-verdict.md"
+        },
+        {
+          "id": "read-checklists-requirements",
+          "requirement": "evidence",
+          "type": "file_access",
+          "operation": "read_file",
+          "path": "scenario-inputs/feature/checklists/requirements.md"
+        },
+        {
+          "id": "plan-increments",
+          "requirement": "reconciliation",
+          "type": "response_json_field",
+          "field_path": [
+            "plan_increment_count"
+          ],
+          "expected_by_host": {
+            "claude": 19,
+            "codex": 19
+          }
+        },
+        {
+          "id": "stale-artifacts",
+          "requirement": "reconciliation",
+          "type": "response_json_field",
+          "field_path": [
+            "stale_artifacts"
+          ],
+          "expected_by_host": {
+            "claude": [
+              "checklists/requirements.md",
+              "quickstart.md",
+              "research.md"
+            ],
+            "codex": [
+              "checklists/requirements.md",
+              "quickstart.md",
+              "research.md"
+            ]
+          }
+        },
+        {
+          "id": "g3-blocked",
+          "requirement": "reconciliation",
+          "type": "response_json_field",
+          "field_path": [
+            "g3_may_run"
+          ],
+          "expected_by_host": {
+            "claude": false,
+            "codex": false
+          }
+        },
+        {
+          "id": "reconcile-first",
+          "requirement": "reconciliation",
+          "type": "response_json_field",
+          "field_path": [
+            "reconcile_before_g3"
+          ],
+          "expected_by_host": {
+            "claude": true,
+            "codex": true
+          }
+        },
+        {
+          "id": "reconciliation-semantic",
+          "requirement": "reconciliation",
+          "type": "semantic",
+          "rubric": "PASS only if the response names research.md, quickstart.md, and checklists/requirements.md as still describing the 4-slice direction after plan.md moved to 19 increments, keeps data-model.md and the contract as consistent, and says the parent must reconcile the stale artifacts before G3 and record each change in the workflow file's Plan Results. FAIL if it accepts the rescoped plan.md alone as the Plan result, lets G3 run because every artifact exists, or defers the stale artifacts to Checklist, Tasks, or Analyze."
+        }
+      ],
+      "native_differences": [
+        "Both hosts apply the same reconciliation rule from their own phase-execution reference; the parent orchestrator, not the single-command phase executor, reconciles the artifacts.",
+        "Both hosts receive the same pre-recorded Plan artifacts and must not run G3."
+      ],
+      "provenance": [
+        "speckit-pro/skills/speckit-autopilot/references/phase-execution.md",
+        "speckit-pro/codex-skills/speckit-autopilot/references/phase-execution-codex.md"
+      ]
+    },
+    {
       "id": "functional.speckit-autopilot.case-13",
       "layer": "functional",
       "capability": "Rejects continuing with only the Phase 7 placeholder after G5. Explains that the placeholder must be replaced in both update_plan and autopilot-state.json with concrete Phase 7 task-group items parsed from tasks.md before Analyze or Implement can continue.",
@@ -7873,7 +8393,7 @@
     {
       "id": "functional.speckit-autopilot.case-18",
       "layer": "functional",
-      "capability": "Widens an apparently domain-only item to all three analysts when a security keyword appears anywhere in the item, preserving the defense-in-depth override.",
+      "capability": "Widens an apparently domain-only item to all three analysts when a security keyword appears anywhere in the item, preserving the defense-in-depth override, and keeps the unanimity bar conditional on the analysts' `security_relevant` answers.",
       "timeout_seconds": 300,
       "resource_class": "ordinary",
       "requirements": [
@@ -7899,10 +8419,10 @@
         },
         {
           "id": "legacy-05",
-          "description": "Mentions that security findings go to human review only when the three analysts do not all agree"
+          "description": "States that the [domain] tag makes this a keyword-routed item, not a [security]-tagged one, so a 2/3 majority goes to human review only when at least one analyst returns `security_relevant: true`; when every analyst returns `security_relevant: false`, the ordinary 2/3 majority applies. An answer that demands 3/3 for every security-keyword item, or applies 2/3 without regard to `security_relevant`, contradicts this."
         }
       ],
-      "prompt": "Use {{skill}} to address this bounded request. The analyze-executor flagged: '[domain] Finding 3 [HIGH]: cookie SameSite policy is not specified in plan.md.' Which consensus analyst(s) does the native client autopilot spawn, how does the security-keyword override interact with the [domain] tag, does consensus-synthesizer still run, and is human review required even if the analysts agree?",
+      "prompt": "Use {{skill}} to address this bounded request. The analyze-executor flagged: '[domain] Finding 3 [HIGH]: cookie SameSite policy is not specified in plan.md.' Which consensus analyst(s) does the native client autopilot spawn, how does the security-keyword override interact with the [domain] tag, does consensus-synthesizer still run, and when two analysts agree and one dissents, does autopilot apply the majority answer or stop for human review?",
       "fixtures": [],
       "hosts": {
         "claude": {
@@ -7964,7 +8484,7 @@
           "id": "legacy-05-semantic",
           "requirement": "legacy-05",
           "type": "semantic",
-          "rubric": "PASS only if the evidence satisfies: Mentions that security findings go to human review only when the three analysts do not all agree FAIL if omitted, contradicted, or merely claimed without required evidence."
+          "rubric": "PASS only if the evidence satisfies: States that the [domain] tag makes this a keyword-routed item, not a [security]-tagged one, so a 2/3 majority goes to human review only when at least one analyst returns `security_relevant: true`; when every analyst returns `security_relevant: false`, the ordinary 2/3 majority applies. An answer that demands 3/3 for every security-keyword item, or applies 2/3 without regard to `security_relevant`, contradicts this. FAIL if omitted, contradicted, or merely claimed without required evidence."
         }
       ],
       "native_differences": [
@@ -7978,7 +8498,7 @@
     {
       "id": "functional.speckit-autopilot.case-19",
       "layer": "functional",
-      "capability": "[security] tag forces all 3 analysts (codebase-analyst, spec-context-analyst, domain-researcher) regardless of any other tag. Defense-in-depth: security items are NEVER single-routed. The orchestrator skips Round 1 single-routing and dispatches all 3 in parallel directly. The synthesizer-emitted [HUMAN REVIEW NEEDED] flag also fires automatically for security items per the override rule.",
+      "capability": "[security] tag forces all 3 analysts (codebase-analyst, spec-context-analyst, domain-researcher) regardless of any other tag. Defense-in-depth: security items are NEVER single-routed. The orchestrator skips Round 1 single-routing and dispatches all 3 in parallel directly. The security override then requires 3/3 agreement: a unanimous 3/3 answer applies and the run continues, while a 2/3 majority or all-disagree makes the synthesizer flag [HUMAN REVIEW NEEDED].",
       "timeout_seconds": 300,
       "resource_class": "ordinary",
       "requirements": [
@@ -9898,7 +10418,7 @@
         },
         {
           "id": "legacy-04",
-          "description": "Explains that unresolved Round 2 disagreement is surfaced for human review and stops advancement"
+          "description": "Explains that unresolved Round 2 disagreement is surfaced for human review: asked in place in an interactive run, and stopping advancement in an unattended run"
         }
       ],
       "prompt": "Use {{skill}} to address this bounded request. How does the consensus protocol work in the autopilot workflow? I heard there are always 3 agents that vote, but I want the current contract.",
@@ -9953,7 +10473,7 @@
           "id": "legacy-04-semantic",
           "requirement": "legacy-04",
           "type": "semantic",
-          "rubric": "PASS only if the evidence satisfies: Explains that unresolved Round 2 disagreement is surfaced for human review and stops advancement FAIL if omitted, contradicted, or merely claimed without required evidence."
+          "rubric": "PASS only if the evidence satisfies: Explains that unresolved Round 2 disagreement is surfaced for human review: asked in place in an interactive run, and stopping advancement in an unattended run FAIL if omitted, contradicted, or merely claimed without required evidence."
         }
       ],
       "native_differences": [
@@ -12392,6 +12912,346 @@
       ]
     },
     {
+      "id": "functional.speckit-scaffold-spec.reviewability-target-block",
+      "layer": "functional",
+      "capability": "Runs the spec-scoped reviewability setup gate on a two-entry roadmap and stops setup on the over-budget target entry instead of reading the roadmap's last entry.",
+      "timeout_seconds": 300,
+      "resource_class": "ordinary",
+      "requirements": [
+        {
+          "id": "selection",
+          "description": "The host-native speckit-scaffold-spec capability is activated."
+        },
+        {
+          "id": "gate",
+          "description": "Runs the reviewability setup gate for the roadmap with spec_id SPEC-841 exactly once and preserves its result (scaffold SKILL.md and Codex SKILL.md: \"Run runner helper reviewability-gate in setup mode for <technical-roadmap-path> with spec_id <SPEC-ID>\"; gate-validation.md: \"The gate then reads only that `### <SPEC-ID>:` section\")."
+        },
+        {
+          "id": "target",
+          "description": "Reports the target entry's own budget, not a roadmap-wide or last-entry reading (gate-validation.md: \"its budget numbers, its `Primary surface:` values\")."
+        },
+        {
+          "id": "block",
+          "description": "An over-budget target entry without an exception pragma blocks setup before any worktree is created, even when the roadmap's last entry is within budget (scaffold SKILL.md: \"If it returns an unexcepted `block`, STOP and split the spec first\"; Codex SKILL.md: \"If the gate returns `block` without a ratified split exception, stop setup\")."
+        }
+      ],
+      "prompt": "Use {{skill}} to run only the reviewability setup gate for SPEC-841 from docs/ai/current-technical-roadmap.md. Do not run the interview, create a branch, worktree, or workflow, or write any file. Invoke the staged protected Python runner exactly once as one default-shell command: {{resolved_python}} -m speckit_pro_runner < scenario-inputs/reviewability-request.json. Use no shell variable, prefix, suffix, pipe, or output redirection other than the required input redirection. Then read docs/ai/current-technical-roadmap.md as one exact file read. Output only raw JSON: exactly one top-level object with helper_result, gate_status, target_reviewable_loc, exception_class, setup_may_continue, and explanation, with no diagnostic prefix, prose, Markdown, or code fences. helper_result must equal only the parsed helper payload inside the runner response's data.stdout_json field. gate_status is that payload's status; exception_class is the honored exception class or null; setup_may_continue says whether scaffold setup may proceed to the worktree step. Do not use a shell fallback or fabricate the result.",
+      "fixtures": [
+        {
+          "source": "tests/speckit-pro/evals/fixtures/functional/scaffold-reviewability/block/reviewability-request.json",
+          "destination": "scenario-inputs/reviewability-request.json"
+        },
+        {
+          "source": "tests/speckit-pro/evals/fixtures/functional/scaffold-reviewability/block/current-technical-roadmap.md",
+          "destination": "docs/ai/current-technical-roadmap.md"
+        },
+        {
+          "source": "tests/speckit-pro/evals/fixtures/functional/scaffold-reviewability/project.json",
+          "destination": ".specify/project.json"
+        }
+      ],
+      "hosts": {
+        "claude": {
+          "skill": "speckit-pro:speckit-scaffold-spec",
+          "allowed_tools": [
+            "Skill",
+            "Read",
+            "Bash"
+          ],
+          "modes": [
+            "plugin"
+          ]
+        },
+        "codex": {
+          "skill": "speckit-scaffold-spec",
+          "allowed_tools": [
+            "read_file",
+            "command_execution"
+          ],
+          "modes": [
+            "project"
+          ]
+        }
+      },
+      "checks": [
+        {
+          "id": "selection",
+          "requirement": "selection",
+          "type": "selection",
+          "expected": [
+            "speckit-scaffold-spec"
+          ],
+          "allowed_extra": []
+        },
+        {
+          "id": "gate-result",
+          "requirement": "gate",
+          "type": "native_runner_result",
+          "request_path": "scenario-inputs/reviewability-request.json",
+          "helper_id": "reviewability-gate",
+          "operation": "reviewability-gate",
+          "mode": "read_only",
+          "expected_status": "expected_failure",
+          "expected_exit_code": 1,
+          "stdout_field_path": [
+            "status"
+          ],
+          "expected_stdout_value": "block",
+          "response_field_path": [
+            "helper_result"
+          ],
+          "response_value_path": [
+            "data",
+            "stdout_json"
+          ]
+        },
+        {
+          "id": "read-roadmap",
+          "requirement": "target",
+          "type": "file_access",
+          "operation": "read_file",
+          "path": "docs/ai/current-technical-roadmap.md"
+        },
+        {
+          "id": "gate-status",
+          "requirement": "block",
+          "type": "response_json_field",
+          "field_path": [
+            "gate_status"
+          ],
+          "expected_by_host": {
+            "claude": "block",
+            "codex": "block"
+          }
+        },
+        {
+          "id": "target-loc",
+          "requirement": "target",
+          "type": "response_json_field",
+          "field_path": [
+            "target_reviewable_loc"
+          ],
+          "expected_by_host": {
+            "claude": 1180,
+            "codex": 1180
+          }
+        },
+        {
+          "id": "exception-class",
+          "requirement": "block",
+          "type": "response_json_field",
+          "field_path": [
+            "exception_class"
+          ],
+          "expected_by_host": {
+            "claude": null,
+            "codex": null
+          }
+        },
+        {
+          "id": "setup-decision",
+          "requirement": "block",
+          "type": "response_json_field",
+          "field_path": [
+            "setup_may_continue"
+          ],
+          "expected_by_host": {
+            "claude": false,
+            "codex": false
+          }
+        },
+        {
+          "id": "block-semantic",
+          "requirement": "block",
+          "type": "semantic",
+          "rubric": "PASS only if the response reports that SPEC-841's own entry exceeds the block thresholds (1180 reviewable LOC, 9 production files), so setup stops before creating a worktree and the spec must be split first. FAIL if it uses a roadmap-wide or last-entry reading, such as SPEC-842's 260 LOC or a warn verdict, or continues setup on that basis."
+        }
+      ],
+      "native_differences": [
+        "Claude and Codex use their native command surfaces to invoke the same protected runner with the same staged request.",
+        "The roadmap puts the over-budget target first and a within-budget entry last, so the spec-scoped verdict and the verdict shared by both hosts differ from a roadmap-wide reading."
+      ],
+      "provenance": [
+        "speckit-pro/skills/speckit-scaffold-spec/SKILL.md",
+        "speckit-pro/codex-skills/speckit-scaffold-spec/SKILL.md",
+        "speckit-pro/skills/speckit-autopilot/references/gate-validation.md",
+        "speckit-pro/skills/speckit-coach/templates/technical-roadmap-template.md"
+      ],
+      "required_tools": [
+        "specify"
+      ]
+    },
+    {
+      "id": "functional.speckit-scaffold-spec.reviewability-target-exception",
+      "layer": "functional",
+      "capability": "Runs the spec-scoped reviewability setup gate on a two-entry roadmap and records the target entry's infra exception instead of reading the roadmap's last entry.",
+      "timeout_seconds": 300,
+      "resource_class": "ordinary",
+      "requirements": [
+        {
+          "id": "selection",
+          "description": "The host-native speckit-scaffold-spec capability is activated."
+        },
+        {
+          "id": "gate",
+          "description": "Runs the reviewability setup gate for the roadmap with spec_id SPEC-841 exactly once and preserves its result (scaffold SKILL.md and Codex SKILL.md: \"Run runner helper reviewability-gate in setup mode for <technical-roadmap-path> with spec_id <SPEC-ID>\"; gate-validation.md: \"The gate then reads only that `### <SPEC-ID>:` section\")."
+        },
+        {
+          "id": "target",
+          "description": "Reports the target entry's own budget, not a roadmap-wide or last-entry reading (gate-validation.md: \"its budget numbers, its `Primary surface:` values\")."
+        },
+        {
+          "id": "exception",
+          "description": "A `Reviewability-Exception: infra` pragma on the target entry's own line turns its size block into a recorded exception, and setup may continue with that exception recorded (gate-validation.md: \"a line-anchored `Reviewability-Exception: refactor|infra|upgrade` pragma, which turns a size `block` into `exception`\"; technical-roadmap-template.md; scaffold SKILL.md: \"If it returns an unexcepted `block`, STOP\"; Codex SKILL.md: \"`block` without a ratified split exception\")."
+        }
+      ],
+      "prompt": "Use {{skill}} to run only the reviewability setup gate for SPEC-841 from docs/ai/current-technical-roadmap.md. Do not run the interview, create a branch, worktree, or workflow, or write any file. Invoke the staged protected Python runner exactly once as one default-shell command: {{resolved_python}} -m speckit_pro_runner < scenario-inputs/reviewability-request.json. Use no shell variable, prefix, suffix, pipe, or output redirection other than the required input redirection. Then read docs/ai/current-technical-roadmap.md as one exact file read. Output only raw JSON: exactly one top-level object with helper_result, gate_status, target_reviewable_loc, exception_class, setup_may_continue, and explanation, with no diagnostic prefix, prose, Markdown, or code fences. helper_result must equal only the parsed helper payload inside the runner response's data.stdout_json field. gate_status is that payload's status; exception_class is the honored exception class or null; setup_may_continue says whether scaffold setup may proceed to the worktree step. Do not use a shell fallback or fabricate the result.",
+      "fixtures": [
+        {
+          "source": "tests/speckit-pro/evals/fixtures/functional/scaffold-reviewability/exception/reviewability-request.json",
+          "destination": "scenario-inputs/reviewability-request.json"
+        },
+        {
+          "source": "tests/speckit-pro/evals/fixtures/functional/scaffold-reviewability/exception/current-technical-roadmap.md",
+          "destination": "docs/ai/current-technical-roadmap.md"
+        },
+        {
+          "source": "tests/speckit-pro/evals/fixtures/functional/scaffold-reviewability/project.json",
+          "destination": ".specify/project.json"
+        }
+      ],
+      "hosts": {
+        "claude": {
+          "skill": "speckit-pro:speckit-scaffold-spec",
+          "allowed_tools": [
+            "Skill",
+            "Read",
+            "Bash"
+          ],
+          "modes": [
+            "plugin"
+          ]
+        },
+        "codex": {
+          "skill": "speckit-scaffold-spec",
+          "allowed_tools": [
+            "read_file",
+            "command_execution"
+          ],
+          "modes": [
+            "project"
+          ]
+        }
+      },
+      "checks": [
+        {
+          "id": "selection",
+          "requirement": "selection",
+          "type": "selection",
+          "expected": [
+            "speckit-scaffold-spec"
+          ],
+          "allowed_extra": []
+        },
+        {
+          "id": "gate-result",
+          "requirement": "gate",
+          "type": "native_runner_result",
+          "request_path": "scenario-inputs/reviewability-request.json",
+          "helper_id": "reviewability-gate",
+          "operation": "reviewability-gate",
+          "mode": "read_only",
+          "expected_status": "ok",
+          "expected_exit_code": 0,
+          "stdout_field_path": [
+            "status"
+          ],
+          "expected_stdout_value": "exception",
+          "response_field_path": [
+            "helper_result"
+          ],
+          "response_value_path": [
+            "data",
+            "stdout_json"
+          ]
+        },
+        {
+          "id": "read-roadmap",
+          "requirement": "target",
+          "type": "file_access",
+          "operation": "read_file",
+          "path": "docs/ai/current-technical-roadmap.md"
+        },
+        {
+          "id": "gate-status",
+          "requirement": "exception",
+          "type": "response_json_field",
+          "field_path": [
+            "gate_status"
+          ],
+          "expected_by_host": {
+            "claude": "exception",
+            "codex": "exception"
+          }
+        },
+        {
+          "id": "target-loc",
+          "requirement": "target",
+          "type": "response_json_field",
+          "field_path": [
+            "target_reviewable_loc"
+          ],
+          "expected_by_host": {
+            "claude": 1180,
+            "codex": 1180
+          }
+        },
+        {
+          "id": "exception-class",
+          "requirement": "exception",
+          "type": "response_json_field",
+          "field_path": [
+            "exception_class"
+          ],
+          "expected_by_host": {
+            "claude": "infra",
+            "codex": "infra"
+          }
+        },
+        {
+          "id": "setup-decision",
+          "requirement": "exception",
+          "type": "response_json_field",
+          "field_path": [
+            "setup_may_continue"
+          ],
+          "expected_by_host": {
+            "claude": true,
+            "codex": true
+          }
+        },
+        {
+          "id": "exception-semantic",
+          "requirement": "exception",
+          "type": "semantic",
+          "rubric": "PASS only if the response reports that SPEC-841's own entry is over the block thresholds (1180 reviewable LOC, 9 production files) and that its `Reviewability-Exception: infra` pragma records an infra exception, so setup may continue only with that exception recorded. FAIL if it uses a roadmap-wide or last-entry reading, such as SPEC-842's 260 LOC or a warn verdict, or treats the pragma as missing and blocks setup."
+        }
+      ],
+      "native_differences": [
+        "Claude and Codex use their native command surfaces to invoke the same protected runner with the same staged request.",
+        "The roadmap puts the over-budget target first and a within-budget entry last, so the spec-scoped verdict and the verdict shared by both hosts differ from a roadmap-wide reading."
+      ],
+      "provenance": [
+        "speckit-pro/skills/speckit-scaffold-spec/SKILL.md",
+        "speckit-pro/codex-skills/speckit-scaffold-spec/SKILL.md",
+        "speckit-pro/skills/speckit-autopilot/references/gate-validation.md",
+        "speckit-pro/skills/speckit-coach/templates/technical-roadmap-template.md"
+      ],
+      "required_tools": [
+        "specify"
+      ]
+    },
+    {
       "id": "functional.speckit-autopilot.case-29",
       "layer": "functional",
       "capability": "Inspect adjacent spec directories, identify only the eligible Tier-2 relocation candidate, preserve all process artifacts, and truthfully report that the deferred relocation operation and its durable gap record cannot be invoked during this read-only inspection.",
@@ -14046,7 +14906,7 @@
           "description": "Attribute each recommendation to its exact retained analyst source without fabricated evidence."
         }
       ],
-      "prompt": "First invoke {{skill}} through the client's native skill-loading mechanism. Execute only one bounded Clarify consensus-synthesis observation. Read `scenario-inputs/analysts/codebase-analyst.md` and `scenario-inputs/analysts/domain-researcher.md` completely, using a separate native tool call for each analyst file; parallel calls are allowed. They are retained analyst returns for one Clarify Round-1 item routed to `[codebase, domain]`; do not dispatch replacement analysts and do not research beyond these inputs. Dispatch the installed client's named consensus-synthesizer, wait for its actual returned result, and use that result before writing the artifact. The parent must not perform or silently replace synthesis. Then write only `scenario-output/consensus-result.json` as strict JSON with exactly these keys: `decision` (string or null), `retained_options` (distinct recommendation tokens in input order), `agreement` (one of `single-analyst`, `both-agree`, `two-analyst-disagreement`, `3/3-unanimous`, `2/3-majority`, `0/3-all-disagree`), `confidence` (`high` or `low`), `next_action` (`apply`, `escape_to_round_2`, or `human_review`), and `evidence` (input-order objects with exactly `analyst`, `source`, and `recommendation`). When the result escapes, the exact `next_action` token is `escape_to_round_2`; never substitute `escalate_to_round_2` or prose. Use the same concise option token in `retained_options`, in `decision` when non-null, and in each `evidence.recommendation`; do not put explanatory sentences in these token fields. Each evidence object must name the canonical analyst, its exact staged source path, and only the recommendation supported by that source. Do not copy an expected answer from elsewhere, do not edit the inputs, and stop after the artifact is written.",
+      "prompt": "First invoke {{skill}} through the client's native skill-loading mechanism. Execute only one bounded Clarify consensus-synthesis observation. Read `scenario-inputs/analysts/codebase-analyst.md` and `scenario-inputs/analysts/domain-researcher.md` completely, using a separate native tool call for each analyst file; parallel calls are allowed. They are retained analyst returns for one Clarify Round-1 item, `[codebase, domain] Q2: Which hashing algorithm should new login records use, bcrypt or argon2id?`, which parse-consensus-categories routed to `[codebase, domain]` with `security_route: null`; do not dispatch replacement analysts and do not research beyond these inputs. Dispatch the installed client's named consensus-synthesizer with the protocol's synthesis input, including the `**Unresolved Item:**` line, `**Routed Categories:** [codebase, domain]`, `**Security Route:** none`, `**Round:** 1`, both analyst responses in full, and `NOT SPAWNED (not routed)` for the spec context analyst. Wait for its actual returned result, and use that result before writing the artifact. The parent must not perform or silently replace synthesis. Then write only `scenario-output/consensus-result.json` as strict JSON with exactly these keys: `decision` (string or null), `retained_options` (distinct recommendation tokens in input order), `agreement` (one of `single-analyst`, `both-agree`, `two-analyst-disagreement`, `3/3-unanimous`, `2/3-majority`, `0/3-all-disagree`), `confidence` (`high` or `low`), `next_action` (`apply`, `escape_to_round_2`, or `human_review`), and `evidence` (input-order objects with exactly `analyst`, `source`, and `recommendation`). When the result escapes, the exact `next_action` token is `escape_to_round_2`; never substitute `escalate_to_round_2` or prose. Use the same concise option token in `retained_options`, in `decision` when non-null, and in each `evidence.recommendation`; do not put explanatory sentences in these token fields. Each evidence object must name the canonical analyst, its exact staged source path, and only the recommendation supported by that source. Do not copy an expected answer from elsewhere, do not edit the inputs, and stop after the artifact is written.",
       "fixtures": [
         {
           "source": "tests/speckit-pro/evals/fixtures/integration-return-contracts/return-01-synthesizer-disagreement/codebase-analyst.md",
@@ -14228,14 +15088,14 @@
           "requirement": "inputs",
           "type": "text",
           "source": "scenario-inputs/analysts/codebase-analyst.md",
-          "pattern": "\\A\\#\\#\\ Answer\\\n\\\nStay\\ on\\ bcrypt\\ for\\ consistency\\ with\\ the\\ existing\\ implementation\\.\\\n\\\n\\#\\#\\ Evidence\\\n\\\n\\-\\ \\*\\*File\\*\\*:\\ `src/auth/password\\.ts`\\ \\(line\\ 14\\)\\\n\\ \\ \\*\\*Pattern\\*\\*:\\ The\\ retained\\ fixture\\ records\\ bcrypt\\ with\\ cost\\ factor\\ 12\\ as\\ the\\\n\\ \\ existing\\ password\\-hashing\\ pattern\\.\\\n\\\n\\-\\ \\*\\*File\\*\\*:\\ `src/auth/password\\.ts`\\ \\(line\\ 1\\-40\\)\\\n\\ \\ \\*\\*Pattern\\*\\*:\\ The\\ retained\\ fixture\\ reports\\ no\\ Argon2\\ implementation\\ in\\ this\\\n\\ \\ source\\ file\\.\\\n\\\n\\#\\#\\ Confidence\\\n\\\nmedium\\\n\\\n\\*\\*Rationale\\*\\*:\\ The\\ recommendation\\ follows\\ the\\ one\\ retained\\ codebase\\ pattern,\\\nbut\\ it\\ does\\ not\\ establish\\ which\\ algorithm\\ should\\ be\\ preferred\\ for\\ new\\ code\\.\\\n\\Z"
+          "pattern": "\\A\\#\\#\\ Answer\\\n\\\nStay\\ on\\ bcrypt\\ for\\ consistency\\ with\\ the\\ existing\\ implementation\\.\\\n\\\n\\#\\#\\ Evidence\\\n\\\n\\-\\ \\*\\*File\\*\\*:\\ `src/auth/password\\.ts`\\ \\(line\\ 14\\)\\\n\\ \\ \\*\\*Pattern\\*\\*:\\ The\\ retained\\ fixture\\ records\\ bcrypt\\ with\\ cost\\ factor\\ 12\\ as\\ the\\\n\\ \\ existing\\ password\\-hashing\\ pattern\\.\\\n\\\n\\-\\ \\*\\*File\\*\\*:\\ `src/auth/password\\.ts`\\ \\(line\\ 1\\-40\\)\\\n\\ \\ \\*\\*Pattern\\*\\*:\\ The\\ retained\\ fixture\\ reports\\ no\\ Argon2\\ implementation\\ in\\ this\\\n\\ \\ source\\ file\\.\\\n\\\n\\#\\#\\ Confidence\\\n\\\nmedium\\\n\\\n\\*\\*Rationale\\*\\*:\\ The\\ recommendation\\ follows\\ the\\ one\\ retained\\ codebase\\ pattern,\\\nbut\\ it\\ does\\ not\\ establish\\ which\\ algorithm\\ should\\ be\\ preferred\\ for\\ new\\ code\\.\\\n\\\n\\#\\#\\ Security\\ Relevance\\\n\\\nsecurity_relevant:\\ false\\\n\\Z"
         },
         {
           "id": "unchanged-domain-researcher",
           "requirement": "inputs",
           "type": "text",
           "source": "scenario-inputs/analysts/domain-researcher.md",
-          "pattern": "\\A\\#\\#\\ Answer\\\n\\\nPrefer\\ argon2id\\ for\\ a\\ new\\ implementation\\ path\\.\\\n\\\n\\#\\#\\ Citations\\\n\\\n\\-\\ \\*\\*Source\\*\\*:\\ OWASP\\ Password\\ Storage\\ Cheat\\ Sheet\\ \\(retained\\ fixture\\ evidence\\)\\\n\\ \\ \\*\\*Title\\*\\*:\\ Password\\ Hashing\\ Algorithms\\\n\\ \\ \\*\\*Excerpt\\*\\*:\\ The\\ retained\\ analyst\\ response\\ identifies\\ argon2id\\ as\\ the\\\n\\ \\ preferred\\ default\\ for\\ new\\ applications\\ and\\ bcrypt\\ as\\ an\\ acceptable\\ fallback\\.\\\n\\\n\\#\\#\\ Confidence\\\n\\\nhigh\\\n\\\n\\*\\*Rationale\\*\\*:\\ The\\ retained\\ response\\ cites\\ the\\ external\\ standard\\ directly,\\ but\\\nit\\ does\\ not\\ resolve\\ the\\ codebase\\ compatibility\\ concern\\ raised\\ by\\ the\\ other\\\nanalyst\\.\\\n\\Z"
+          "pattern": "\\A\\#\\#\\ Answer\\\n\\\nPrefer\\ argon2id\\ for\\ a\\ new\\ implementation\\ path\\.\\\n\\\n\\#\\#\\ Citations\\\n\\\n\\-\\ \\*\\*Source\\*\\*:\\ OWASP\\ Password\\ Storage\\ Cheat\\ Sheet\\ \\(retained\\ fixture\\ evidence\\)\\\n\\ \\ \\*\\*Title\\*\\*:\\ Password\\ Hashing\\ Algorithms\\\n\\ \\ \\*\\*Excerpt\\*\\*:\\ The\\ retained\\ analyst\\ response\\ identifies\\ argon2id\\ as\\ the\\\n\\ \\ preferred\\ default\\ for\\ new\\ applications\\ and\\ bcrypt\\ as\\ an\\ acceptable\\ fallback\\.\\\n\\\n\\#\\#\\ Confidence\\\n\\\nhigh\\\n\\\n\\*\\*Rationale\\*\\*:\\ The\\ retained\\ response\\ cites\\ the\\ external\\ standard\\ directly,\\ but\\\nit\\ does\\ not\\ resolve\\ the\\ codebase\\ compatibility\\ concern\\ raised\\ by\\ the\\ other\\\nanalyst\\.\\\n\\\n\\#\\#\\ Security\\ Relevance\\\n\\\nsecurity_relevant:\\ false\\\n\\Z"
         }
       ],
       "native_differences": [
@@ -14577,9 +15437,13 @@
         {
           "id": "result",
           "description": "Persist exactly one canonical confidence block with all five retained criterion scores and the correct arithmetic mean."
+        },
+        {
+          "id": "protocol",
+          "description": "Send the synthesizer the active consensus protocol path on a `Protocol:` line, and use only a returned result that reports the same path."
         }
       ],
-      "prompt": "First invoke {{skill}} through the client's native skill-loading mechanism. Execute only the final Analyze confidence synthesis for a clean pass with zero findings. Read `scenario-inputs/analyze-result.md` completely using its own standalone read operation; do not combine that read with any other file or command. Do not run Analyze again, dispatch analysts, edit the input, or gather new evidence. Dispatch the installed client's named consensus-synthesizer with the retained Analyze result, wait for its actual returned result, validate that it contains all five canonical criterion lines exactly once, and use that returned result before writing the artifact. The parent must not perform or silently replace synthesis. Extract and persist only the canonical six-line confidence block from the returned result: discard headings, dispositions, zero-findings commentary, and every other returned line. Write only `scenario-output/analyze-confidence.md`, containing exactly that one confidence block and no other text, then stop.",
+      "prompt": "First invoke {{skill}} through the client's native skill-loading mechanism. Execute only the final Analyze confidence synthesis for a clean pass with zero findings. Read `scenario-inputs/analyze-result.md` completely using its own standalone read operation; do not combine that read with any other file or command. Do not run Analyze again, dispatch analysts, edit the input, or gather new evidence. Dispatch the installed client's named consensus-synthesizer with the retained Analyze result and a `Protocol:` line naming the absolute path of the active `references/consensus-protocol.md` beside the loaded speckit-autopilot skill, wait for its actual returned result, validate that it contains all five canonical criterion lines exactly once, and use that returned result before writing the artifact. The parent must not perform or silently replace synthesis. Extract and persist only the canonical six-line confidence block from the returned result: discard headings, dispositions, zero-findings commentary, and every other returned line. Write only `scenario-output/analyze-confidence.md`, containing exactly that one confidence block and no other text, then stop.",
       "fixtures": [
         {
           "source": "tests/speckit-pro/evals/fixtures/integration-return-contracts/return-03-analyze-confidence/analyze-result.md",
@@ -14652,6 +15516,12 @@
           "exists": true
         },
         {
+          "id": "protocol-line",
+          "requirement": "protocol",
+          "type": "semantic",
+          "rubric": "PASS only if retained tool evidence shows the consensus-synthesizer dispatch prompt carried a `Protocol:` line whose absolute path ends in `references/consensus-protocol.md` beside the loaded speckit-autopilot skill, and the returned result either reports that same path on its `**Protocol:**` line or reports no Protocol line. FAIL if the dispatch prompt has no `Protocol:` line, names another file or a relative path, or the result reports a different path or `not provided`."
+        },
+        {
           "id": "confidence-block",
           "requirement": "result",
           "type": "text",
@@ -14664,6 +15534,516 @@
         "Codex dispatches the consensus-synthesizer custom agent through its native collaboration transport; both clients require the returned confidence result before the parent persists the block."
       ],
       "provenance": [
+        "speckit-pro/skills/speckit-autopilot/references/consensus-protocol.md"
+      ]
+    },
+    {
+      "id": "integration.return-04-keyword-only-majority",
+      "layer": "integration",
+      "capability": "Resolve a Clarify item that a security keyword alone widened to all three analysts, where every analyst returns `security_relevant: false`, by applying the ordinary 2/3 majority rather than stopping for human review.",
+      "timeout_seconds": 300,
+      "resource_class": "nested",
+      "requirements": [
+        {
+          "id": "selection",
+          "description": "Activate speckit-autopilot through the native client mechanism."
+        },
+        {
+          "id": "inputs",
+          "description": "Read all three retained analyst Markdown inputs in full."
+        },
+        {
+          "id": "mechanism",
+          "description": "Use the installed product's actual native synthesis mechanism and retain its actual result before materializing the observation artifact."
+        },
+        {
+          "id": "decision",
+          "description": "Apply the 2/3 majority answer: the item was routed by keyword alone and every analyst returned `security_relevant: false`, so the ordinary agreement rule applies."
+        },
+        {
+          "id": "options",
+          "description": "Retain both analyst-supported options without inventing a third option."
+        },
+        {
+          "id": "agreement",
+          "description": "Record the two-of-three majority using the declared normalization enum."
+        },
+        {
+          "id": "evidence",
+          "description": "Attribute each recommendation to its exact retained analyst source without fabricated evidence."
+        }
+      ],
+      "prompt": "First invoke {{skill}} through the client's native skill-loading mechanism. Execute only one bounded Clarify consensus-synthesis observation. Read `scenario-inputs/analysts/codebase-analyst.md`, `scenario-inputs/analysts/domain-researcher.md`, and `scenario-inputs/analysts/spec-context-analyst.md` completely, using a separate native tool call for each analyst file; parallel calls are allowed. They are retained analyst returns for one Clarify Round-1 item, `[domain] I1: Should the usage report count tokens per LLM request or per billing period?`, which parse-consensus-categories widened from `[domain]` to all three analysts because `tokens` is a security keyword, returning `security_route: keyword`; do not dispatch replacement analysts and do not research beyond these inputs. Dispatch the installed client's named consensus-synthesizer with the protocol's synthesis input, including the `**Unresolved Item:**` line, `**Routed Categories:** [domain]`, `**Security Route:** keyword`, `**Round:** 1`, and all three analyst responses in full. Wait for its actual returned result, and use that result before writing the artifact. The parent must not perform or silently replace synthesis. Then write only `scenario-output/consensus-result.json` as strict JSON with exactly these keys: `decision` (string or null), `retained_options` (distinct recommendation tokens in input order), `agreement` (one of `single-analyst`, `both-agree`, `two-analyst-disagreement`, `3/3-unanimous`, `2/3-majority`, `0/3-all-disagree`), `confidence` (`high` or `low`), `next_action` (`apply`, `escape_to_round_2`, or `human_review`), and `evidence` (input-order objects with exactly `analyst`, `source`, and `recommendation`). Use the same concise option token in `retained_options`, in `decision` when non-null, and in each `evidence.recommendation`; do not put explanatory sentences in these token fields. Each evidence object must name the canonical analyst, its exact staged source path, and only the recommendation supported by that source. Do not copy an expected answer from elsewhere, do not edit the inputs, and stop after the artifact is written.",
+      "fixtures": [
+        {
+          "source": "tests/speckit-pro/evals/fixtures/integration-return-contracts/return-04-keyword-only-majority/codebase-analyst.md",
+          "destination": "scenario-inputs/analysts/codebase-analyst.md"
+        },
+        {
+          "source": "tests/speckit-pro/evals/fixtures/integration-return-contracts/return-04-keyword-only-majority/domain-researcher.md",
+          "destination": "scenario-inputs/analysts/domain-researcher.md"
+        },
+        {
+          "source": "tests/speckit-pro/evals/fixtures/integration-return-contracts/return-04-keyword-only-majority/spec-context-analyst.md",
+          "destination": "scenario-inputs/analysts/spec-context-analyst.md"
+        }
+      ],
+      "hosts": {
+        "claude": {
+          "skill": "speckit-pro:speckit-autopilot",
+          "allowed_tools": [
+            "Skill",
+            "Read",
+            "Write",
+            "Agent"
+          ],
+          "modes": [
+            "plugin"
+          ]
+        },
+        "codex": {
+          "skill": "speckit-autopilot",
+          "allowed_tools": [
+            "command_execution",
+            "file_change",
+            "spawn_agent"
+          ],
+          "modes": [
+            "project"
+          ]
+        }
+      },
+      "checks": [
+        {
+          "id": "selection",
+          "requirement": "selection",
+          "type": "selection",
+          "expected": [
+            "speckit-autopilot"
+          ],
+          "allowed_extra": []
+        },
+        {
+          "id": "native-mechanism",
+          "requirement": "mechanism",
+          "type": "native_synthesis_mechanism",
+          "artifact_path": "scenario-output/consensus-result.json",
+          "per_host": {
+            "claude": {
+              "mode": "dedicated_subagent",
+              "role": "speckit-pro:consensus-synthesizer"
+            },
+            "codex": {
+              "mode": "dedicated_subagent",
+              "role": "consensus-synthesizer"
+            }
+          }
+        },
+        {
+          "id": "read-codebase",
+          "requirement": "inputs",
+          "type": "file_access",
+          "operation": "read_file",
+          "path": "scenario-inputs/analysts/codebase-analyst.md"
+        },
+        {
+          "id": "read-domain",
+          "requirement": "inputs",
+          "type": "file_access",
+          "operation": "read_file",
+          "path": "scenario-inputs/analysts/domain-researcher.md"
+        },
+        {
+          "id": "read-spec-context",
+          "requirement": "inputs",
+          "type": "file_access",
+          "operation": "read_file",
+          "path": "scenario-inputs/analysts/spec-context-analyst.md"
+        },
+        {
+          "id": "result-exists",
+          "requirement": "decision",
+          "type": "file_exists",
+          "path": "scenario-output/consensus-result.json",
+          "exists": true
+        },
+        {
+          "id": "mechanism-evidence",
+          "requirement": "mechanism",
+          "type": "semantic",
+          "rubric": "PASS only if retained tool evidence and the captured artifact demonstrate the installed native synthesis mechanism rather than a final-response claim. When a subagent call is present, there must be exactly one successful call identifying consensus-synthesizer, its actual nonempty returned result must support the artifact, and the parent artifact write must follow that return. When no subagent call is present, the exact declared analyst reads and artifact write must occur in the parent and no child synthesis role may be claimed. FAIL for a wrong or invented role, an empty or missing child return, multiple synthesis calls, write-before-return, or an artifact unsupported by observed work."
+        },
+        {
+          "id": "decision",
+          "requirement": "decision",
+          "type": "json_field",
+          "path": "scenario-output/consensus-result.json",
+          "field_path": [
+            "decision"
+          ],
+          "expected": "per-request"
+        },
+        {
+          "id": "apply-action",
+          "requirement": "decision",
+          "type": "json_field",
+          "path": "scenario-output/consensus-result.json",
+          "field_path": [
+            "next_action"
+          ],
+          "expected": "apply"
+        },
+        {
+          "id": "retained-options",
+          "requirement": "options",
+          "type": "json_field",
+          "path": "scenario-output/consensus-result.json",
+          "field_path": [
+            "retained_options"
+          ],
+          "expected": [
+            "per-request",
+            "per-billing-period"
+          ]
+        },
+        {
+          "id": "agreement",
+          "requirement": "agreement",
+          "type": "json_field",
+          "path": "scenario-output/consensus-result.json",
+          "field_path": [
+            "agreement"
+          ],
+          "expected": "2/3-majority"
+        },
+        {
+          "id": "evidence",
+          "requirement": "evidence",
+          "type": "json_field",
+          "path": "scenario-output/consensus-result.json",
+          "field_path": [
+            "evidence"
+          ],
+          "expected": [
+            {
+              "analyst": "codebase-analyst",
+              "source": "scenario-inputs/analysts/codebase-analyst.md",
+              "recommendation": "per-request"
+            },
+            {
+              "analyst": "domain-researcher",
+              "source": "scenario-inputs/analysts/domain-researcher.md",
+              "recommendation": "per-billing-period"
+            },
+            {
+              "analyst": "spec-context-analyst",
+              "source": "scenario-inputs/analysts/spec-context-analyst.md",
+              "recommendation": "per-request"
+            }
+          ],
+          "alternatives": [
+            [
+              {
+                "analyst": "speckit-pro:codebase-analyst",
+                "source": "scenario-inputs/analysts/codebase-analyst.md",
+                "recommendation": "per-request"
+              },
+              {
+                "analyst": "speckit-pro:domain-researcher",
+                "source": "scenario-inputs/analysts/domain-researcher.md",
+                "recommendation": "per-billing-period"
+              },
+              {
+                "analyst": "speckit-pro:spec-context-analyst",
+                "source": "scenario-inputs/analysts/spec-context-analyst.md",
+                "recommendation": "per-request"
+              }
+            ]
+          ]
+        },
+        {
+          "id": "unchanged-codebase-analyst",
+          "requirement": "inputs",
+          "type": "text",
+          "source": "scenario-inputs/analysts/codebase-analyst.md",
+          "pattern": "\\A\\#\\#\\ Answer\\\n\\\nCount\\ tokens\\ `per\\-request`\\.\\\n\\\n\\#\\#\\ Evidence\\\n\\\n\\-\\ \\*\\*File\\*\\*:\\ `src/usage/recorder\\.ts`\\ \\(line\\ 22\\)\\\n\\ \\ \\*\\*Pattern\\*\\*:\\ The\\ retained\\ fixture\\ records\\ one\\ usage\\ row\\ per\\ LLM\\ request,\\\n\\ \\ with\\ its\\ prompt\\ and\\ completion\\ token\\ counts\\.\\\n\\\n\\#\\#\\ Confidence\\\n\\\nhigh\\\n\\\n\\*\\*Rationale\\*\\*:\\ The\\ existing\\ recorder\\ already\\ stores\\ counts\\ at\\ this\\ grain\\.\\\n\\\n\\#\\#\\ Security\\ Relevance\\\n\\\nsecurity_relevant:\\ false\\\n\\Z"
+        },
+        {
+          "id": "unchanged-domain-researcher",
+          "requirement": "inputs",
+          "type": "text",
+          "source": "scenario-inputs/analysts/domain-researcher.md",
+          "pattern": "\\A\\#\\#\\ Answer\\\n\\\nCount\\ tokens\\ `per\\-billing\\-period`\\.\\\n\\\n\\#\\#\\ Citations\\\n\\\n\\-\\ \\*\\*Source\\*\\*:\\ LLM\\ provider\\ billing\\ documentation\\ \\(retained\\ fixture\\ evidence\\)\\\n\\ \\ \\*\\*Title\\*\\*:\\ Usage\\ and\\ billing\\\n\\ \\ \\*\\*Excerpt\\*\\*:\\ The\\ retained\\ analyst\\ response\\ notes\\ that\\ providers\\ invoice\\\n\\ \\ token\\ usage\\ in\\ aggregate\\ for\\ each\\ billing\\ period\\.\\\n\\\n\\#\\#\\ Confidence\\\n\\\nmedium\\\n\\\n\\*\\*Rationale\\*\\*:\\ This\\ matches\\ how\\ providers\\ bill,\\ but\\ it\\ does\\ not\\ address\\ the\\\nreport's\\ per\\-request\\ audit\\ need\\.\\\n\\\n\\#\\#\\ Security\\ Relevance\\\n\\\nsecurity_relevant:\\ false\\\n\\Z"
+        },
+        {
+          "id": "unchanged-spec-context-analyst",
+          "requirement": "inputs",
+          "type": "text",
+          "source": "scenario-inputs/analysts/spec-context-analyst.md",
+          "pattern": "\\A\\#\\#\\ Answer\\\n\\\nCount\\ tokens\\ `per\\-request`\\.\\\n\\\n\\#\\#\\ References\\\n\\\n\\-\\ \\*\\*Artifact\\*\\*:\\ Technical\\ roadmap\\\n\\ \\ \\*\\*Section\\*\\*:\\ Usage\\ reporting\\\n\\ \\ \\*\\*Relevance\\*\\*:\\ The\\ retained\\ fixture\\ records\\ a\\ roadmap\\ decision\\ to\\ report\\\n\\ \\ LLM\\ token\\ usage\\ for\\ each\\ request\\.\\\n\\\n\\#\\#\\ Confidence\\\n\\\nhigh\\\n\\\n\\*\\*Rationale\\*\\*:\\ The\\ roadmap\\ decision\\ addresses\\ the\\ report's\\ grain\\ directly\\.\\\n\\\n\\#\\#\\ Security\\ Relevance\\\n\\\nsecurity_relevant:\\ false\\\n\\Z"
+        }
+      ],
+      "native_differences": [
+        "Claude dispatches the namespaced speckit-pro:consensus-synthesizer role through its native Agent transport.",
+        "Codex dispatches the consensus-synthesizer custom agent through its native collaboration transport; both clients require an actual nonempty returned result before the parent writes the artifact."
+      ],
+      "provenance": [
+        "tests/speckit-pro/layer6-integration/return-format-fixtures/04-synthesizer-keyword-only-majority",
+        "speckit-pro/skills/speckit-autopilot/references/consensus-protocol.md"
+      ]
+    },
+    {
+      "id": "integration.return-05-keyword-security-relevant",
+      "layer": "integration",
+      "capability": "Resolve the same keyword-routed Clarify item when one analyst returns `security_relevant: true`, by keeping the unanimity bar and stopping a 2/3 majority for human review.",
+      "timeout_seconds": 300,
+      "resource_class": "nested",
+      "requirements": [
+        {
+          "id": "selection",
+          "description": "Activate speckit-autopilot through the native client mechanism."
+        },
+        {
+          "id": "inputs",
+          "description": "Read all three retained analyst Markdown inputs in full."
+        },
+        {
+          "id": "mechanism",
+          "description": "Use the installed product's actual native synthesis mechanism and retain its actual result before materializing the observation artifact."
+        },
+        {
+          "id": "decision",
+          "description": "Do not apply a decision: one analyst returned `security_relevant: true`, so the item needs 3/3 agreement and a 2/3 majority goes to human review."
+        },
+        {
+          "id": "options",
+          "description": "Retain both analyst-supported options without inventing a third option."
+        },
+        {
+          "id": "agreement",
+          "description": "Record the two-of-three majority using the declared normalization enum."
+        },
+        {
+          "id": "evidence",
+          "description": "Attribute each recommendation to its exact retained analyst source without fabricated evidence."
+        }
+      ],
+      "prompt": "First invoke {{skill}} through the client's native skill-loading mechanism. Execute only one bounded Clarify consensus-synthesis observation. Read `scenario-inputs/analysts/codebase-analyst.md`, `scenario-inputs/analysts/domain-researcher.md`, and `scenario-inputs/analysts/spec-context-analyst.md` completely, using a separate native tool call for each analyst file; parallel calls are allowed. They are retained analyst returns for one Clarify Round-1 item, `[domain] I1: Should the usage report count tokens per LLM request or per billing period?`, which parse-consensus-categories widened from `[domain]` to all three analysts because `tokens` is a security keyword, returning `security_route: keyword`; do not dispatch replacement analysts and do not research beyond these inputs. Dispatch the installed client's named consensus-synthesizer with the protocol's synthesis input, including the `**Unresolved Item:**` line, `**Routed Categories:** [domain]`, `**Security Route:** keyword`, `**Round:** 1`, and all three analyst responses in full. Wait for its actual returned result, and use that result before writing the artifact. The parent must not perform or silently replace synthesis. Then write only `scenario-output/consensus-result.json` as strict JSON with exactly these keys: `decision` (string or null), `retained_options` (distinct recommendation tokens in input order), `agreement` (one of `single-analyst`, `both-agree`, `two-analyst-disagreement`, `3/3-unanimous`, `2/3-majority`, `0/3-all-disagree`), `confidence` (`high` or `low`), `next_action` (`apply`, `escape_to_round_2`, or `human_review`), and `evidence` (input-order objects with exactly `analyst`, `source`, and `recommendation`). Use the same concise option token in `retained_options`, in `decision` when non-null, and in each `evidence.recommendation`; do not put explanatory sentences in these token fields. Each evidence object must name the canonical analyst, its exact staged source path, and only the recommendation supported by that source. Do not copy an expected answer from elsewhere, do not edit the inputs, and stop after the artifact is written.",
+      "fixtures": [
+        {
+          "source": "tests/speckit-pro/evals/fixtures/integration-return-contracts/return-05-keyword-security-relevant/codebase-analyst.md",
+          "destination": "scenario-inputs/analysts/codebase-analyst.md"
+        },
+        {
+          "source": "tests/speckit-pro/evals/fixtures/integration-return-contracts/return-05-keyword-security-relevant/domain-researcher.md",
+          "destination": "scenario-inputs/analysts/domain-researcher.md"
+        },
+        {
+          "source": "tests/speckit-pro/evals/fixtures/integration-return-contracts/return-05-keyword-security-relevant/spec-context-analyst.md",
+          "destination": "scenario-inputs/analysts/spec-context-analyst.md"
+        }
+      ],
+      "hosts": {
+        "claude": {
+          "skill": "speckit-pro:speckit-autopilot",
+          "allowed_tools": [
+            "Skill",
+            "Read",
+            "Write",
+            "Agent"
+          ],
+          "modes": [
+            "plugin"
+          ]
+        },
+        "codex": {
+          "skill": "speckit-autopilot",
+          "allowed_tools": [
+            "command_execution",
+            "file_change",
+            "spawn_agent"
+          ],
+          "modes": [
+            "project"
+          ]
+        }
+      },
+      "checks": [
+        {
+          "id": "selection",
+          "requirement": "selection",
+          "type": "selection",
+          "expected": [
+            "speckit-autopilot"
+          ],
+          "allowed_extra": []
+        },
+        {
+          "id": "native-mechanism",
+          "requirement": "mechanism",
+          "type": "native_synthesis_mechanism",
+          "artifact_path": "scenario-output/consensus-result.json",
+          "per_host": {
+            "claude": {
+              "mode": "dedicated_subagent",
+              "role": "speckit-pro:consensus-synthesizer"
+            },
+            "codex": {
+              "mode": "dedicated_subagent",
+              "role": "consensus-synthesizer"
+            }
+          }
+        },
+        {
+          "id": "read-codebase",
+          "requirement": "inputs",
+          "type": "file_access",
+          "operation": "read_file",
+          "path": "scenario-inputs/analysts/codebase-analyst.md"
+        },
+        {
+          "id": "read-domain",
+          "requirement": "inputs",
+          "type": "file_access",
+          "operation": "read_file",
+          "path": "scenario-inputs/analysts/domain-researcher.md"
+        },
+        {
+          "id": "read-spec-context",
+          "requirement": "inputs",
+          "type": "file_access",
+          "operation": "read_file",
+          "path": "scenario-inputs/analysts/spec-context-analyst.md"
+        },
+        {
+          "id": "result-exists",
+          "requirement": "decision",
+          "type": "file_exists",
+          "path": "scenario-output/consensus-result.json",
+          "exists": true
+        },
+        {
+          "id": "mechanism-evidence",
+          "requirement": "mechanism",
+          "type": "semantic",
+          "rubric": "PASS only if retained tool evidence and the captured artifact demonstrate the installed native synthesis mechanism rather than a final-response claim. When a subagent call is present, there must be exactly one successful call identifying consensus-synthesizer, its actual nonempty returned result must support the artifact, and the parent artifact write must follow that return. When no subagent call is present, the exact declared analyst reads and artifact write must occur in the parent and no child synthesis role may be claimed. FAIL for a wrong or invented role, an empty or missing child return, multiple synthesis calls, write-before-return, or an artifact unsupported by observed work."
+        },
+        {
+          "id": "decision-null",
+          "requirement": "decision",
+          "type": "json_field",
+          "path": "scenario-output/consensus-result.json",
+          "field_path": [
+            "decision"
+          ],
+          "expected": null
+        },
+        {
+          "id": "human-review-action",
+          "requirement": "decision",
+          "type": "json_field",
+          "path": "scenario-output/consensus-result.json",
+          "field_path": [
+            "next_action"
+          ],
+          "expected": "human_review"
+        },
+        {
+          "id": "retained-options",
+          "requirement": "options",
+          "type": "json_field",
+          "path": "scenario-output/consensus-result.json",
+          "field_path": [
+            "retained_options"
+          ],
+          "expected": [
+            "per-request",
+            "per-billing-period"
+          ]
+        },
+        {
+          "id": "agreement",
+          "requirement": "agreement",
+          "type": "json_field",
+          "path": "scenario-output/consensus-result.json",
+          "field_path": [
+            "agreement"
+          ],
+          "expected": "2/3-majority"
+        },
+        {
+          "id": "evidence",
+          "requirement": "evidence",
+          "type": "json_field",
+          "path": "scenario-output/consensus-result.json",
+          "field_path": [
+            "evidence"
+          ],
+          "expected": [
+            {
+              "analyst": "codebase-analyst",
+              "source": "scenario-inputs/analysts/codebase-analyst.md",
+              "recommendation": "per-request"
+            },
+            {
+              "analyst": "domain-researcher",
+              "source": "scenario-inputs/analysts/domain-researcher.md",
+              "recommendation": "per-billing-period"
+            },
+            {
+              "analyst": "spec-context-analyst",
+              "source": "scenario-inputs/analysts/spec-context-analyst.md",
+              "recommendation": "per-request"
+            }
+          ],
+          "alternatives": [
+            [
+              {
+                "analyst": "speckit-pro:codebase-analyst",
+                "source": "scenario-inputs/analysts/codebase-analyst.md",
+                "recommendation": "per-request"
+              },
+              {
+                "analyst": "speckit-pro:domain-researcher",
+                "source": "scenario-inputs/analysts/domain-researcher.md",
+                "recommendation": "per-billing-period"
+              },
+              {
+                "analyst": "speckit-pro:spec-context-analyst",
+                "source": "scenario-inputs/analysts/spec-context-analyst.md",
+                "recommendation": "per-request"
+              }
+            ]
+          ]
+        },
+        {
+          "id": "unchanged-codebase-analyst",
+          "requirement": "inputs",
+          "type": "text",
+          "source": "scenario-inputs/analysts/codebase-analyst.md",
+          "pattern": "\\A\\#\\#\\ Answer\\\n\\\nCount\\ tokens\\ `per\\-request`\\.\\\n\\\n\\#\\#\\ Evidence\\\n\\\n\\-\\ \\*\\*File\\*\\*:\\ `src/usage/recorder\\.ts`\\ \\(line\\ 22\\)\\\n\\ \\ \\*\\*Pattern\\*\\*:\\ The\\ retained\\ fixture\\ records\\ one\\ usage\\ row\\ per\\ LLM\\ request,\\\n\\ \\ with\\ its\\ prompt\\ and\\ completion\\ token\\ counts\\.\\\n\\\n\\#\\#\\ Confidence\\\n\\\nhigh\\\n\\\n\\*\\*Rationale\\*\\*:\\ The\\ existing\\ recorder\\ already\\ stores\\ counts\\ at\\ this\\ grain\\.\\\n\\\n\\#\\#\\ Security\\ Relevance\\\n\\\nsecurity_relevant:\\ false\\\n\\Z"
+        },
+        {
+          "id": "unchanged-domain-researcher",
+          "requirement": "inputs",
+          "type": "text",
+          "source": "scenario-inputs/analysts/domain-researcher.md",
+          "pattern": "\\A\\#\\#\\ Answer\\\n\\\nCount\\ tokens\\ `per\\-billing\\-period`\\.\\\n\\\n\\#\\#\\ Citations\\\n\\\n\\-\\ \\*\\*Source\\*\\*:\\ LLM\\ provider\\ billing\\ documentation\\ \\(retained\\ fixture\\ evidence\\)\\\n\\ \\ \\*\\*Title\\*\\*:\\ Usage\\ and\\ billing\\\n\\ \\ \\*\\*Excerpt\\*\\*:\\ The\\ retained\\ analyst\\ response\\ notes\\ that\\ providers\\ invoice\\\n\\ \\ token\\ usage\\ in\\ aggregate\\ for\\ each\\ billing\\ period\\.\\\n\\\n\\#\\#\\ Confidence\\\n\\\nmedium\\\n\\\n\\*\\*Rationale\\*\\*:\\ This\\ matches\\ how\\ providers\\ bill\\.\\ Per\\-request\\ token\\ records\\ tie\\\nusage\\ to\\ individual\\ users,\\ which\\ makes\\ them\\ personal\\ data,\\ so\\ aggregate\\ counts\\\nexpose\\ less\\.\\\n\\\n\\#\\#\\ Security\\ Relevance\\\n\\\nsecurity_relevant:\\ true\\\n\\Z"
+        },
+        {
+          "id": "unchanged-spec-context-analyst",
+          "requirement": "inputs",
+          "type": "text",
+          "source": "scenario-inputs/analysts/spec-context-analyst.md",
+          "pattern": "\\A\\#\\#\\ Answer\\\n\\\nCount\\ tokens\\ `per\\-request`\\.\\\n\\\n\\#\\#\\ References\\\n\\\n\\-\\ \\*\\*Artifact\\*\\*:\\ Technical\\ roadmap\\\n\\ \\ \\*\\*Section\\*\\*:\\ Usage\\ reporting\\\n\\ \\ \\*\\*Relevance\\*\\*:\\ The\\ retained\\ fixture\\ records\\ a\\ roadmap\\ decision\\ to\\ report\\\n\\ \\ LLM\\ token\\ usage\\ for\\ each\\ request\\.\\\n\\\n\\#\\#\\ Confidence\\\n\\\nhigh\\\n\\\n\\*\\*Rationale\\*\\*:\\ The\\ roadmap\\ decision\\ addresses\\ the\\ report's\\ grain\\ directly\\.\\\n\\\n\\#\\#\\ Security\\ Relevance\\\n\\\nsecurity_relevant:\\ false\\\n\\Z"
+        }
+      ],
+      "native_differences": [
+        "Claude dispatches the namespaced speckit-pro:consensus-synthesizer role through its native Agent transport.",
+        "Codex dispatches the consensus-synthesizer custom agent through its native collaboration transport; both clients require an actual nonempty returned result before the parent writes the artifact."
+      ],
+      "provenance": [
+        "tests/speckit-pro/layer6-integration/return-format-fixtures/05-synthesizer-keyword-security-relevant",
         "speckit-pro/skills/speckit-autopilot/references/consensus-protocol.md"
       ]
     },
@@ -15653,7 +17033,7 @@
     {
       "id": "functional.speckit-autopilot.case-106",
       "layer": "functional",
-      "capability": "Stops before Archive Sweep and all mutation when pre-recorded binding evidence proves the workflow is in an external worktree. Claude prints its documented same-session /cd retry; Codex directs the operator to open a new task rooted at the external worktree. Neither host claims the handoff or post-handoff verification already happened.",
+      "capability": "Uses pre-recorded binding evidence for an absolute workflow the operator explicitly supplied, which resolved to a registered external worktree. Claude stops before Archive Sweep and prints its documented same-session /cd retry; Codex binds WORKFLOW_ROOT to the external worktree in the same task and keeps TASK_ROOT as discovery context. Both require live binding and branch verification from the workflow root before any mutation, and neither claims those checks already happened.",
       "timeout_seconds": 300,
       "resource_class": "ordinary",
       "requirements": [
@@ -15663,18 +17043,18 @@
         },
         {
           "id": "binding",
-          "description": "A resolved external worktree is treated as non-executable in the original task."
+          "description": "An explicitly supplied absolute workflow that resolved to relation=external follows the host's documented mechanism: Claude stops for its /cd retry, and Codex binds WORKFLOW_ROOT in the same task."
         },
         {
           "id": "safety",
-          "description": "The run stops before Archive Sweep, Phase 0, repository mutation, arbitrary-path handoff, revision reconstruction, or write-capable child dispatch."
+          "description": "Neither host runs Archive Sweep, Phase 0, repository mutation, arbitrary-path handoff, revision reconstruction, or write-capable child dispatch before live binding revalidation and a branch check from the workflow root."
         },
         {
           "id": "honesty",
           "description": "The response identifies the binding as pre-recorded evidence and does not claim that the handoff, a post-handoff binding rerun, or live branch verification occurred."
         }
       ],
-      "prompt": "Use {{skill}} to read scenario-inputs/binding-result.json as one exact file read. Treat it only as pre-recorded binding evidence; do not claim to rerun the helper, change a task's checkout, complete a handoff, verify the post-handoff relation, or inspect the live external branch. Output only raw JSON with binding_status, relation, decision, directory_action, workflow_command, and live_post_handoff_verified. Use the host's documented mechanism. directory_action must use the staged canonical absolute workflow root, and workflow_command must use the staged canonical absolute workflow file plus the requested stage exactly. Do not run Archive Sweep, mutate either worktree, reconstruct the workflow, or dispatch a write-capable agent.",
+      "prompt": "Use {{skill}} to read scenario-inputs/binding-result.json as one exact file read. The operator explicitly supplied the staged absolute workflow file in this request. Treat it only as pre-recorded binding evidence; do not claim to rerun the helper, change a task's checkout, complete a handoff, verify the post-handoff relation, or inspect the live external branch. Output only raw JSON with binding_status, relation, decision, directory_action, workflow_command, and live_post_handoff_verified. decision must be exactly stop when the host's documented rule stops before Archive Sweep for this binding, or bind when it binds the workflow root in the same task. Use the host's documented mechanism. directory_action must use the staged canonical absolute workflow root, and workflow_command must use the staged canonical absolute workflow file plus the requested stage exactly. Do not run Archive Sweep, mutate either worktree, reconstruct the workflow, or dispatch a write-capable agent.",
       "fixtures": [
         {
           "source": "tests/speckit-pro/evals/fixtures/functional/registered-worktree-migration/external/binding-result.json",
@@ -15737,6 +17117,13 @@
           "expected_by_host": {"claude": "external", "codex": "external"}
         },
         {
+          "id": "decision",
+          "requirement": "binding",
+          "type": "response_json_field",
+          "field_path": ["decision"],
+          "expected_by_host": {"claude": "stop", "codex": "bind"}
+        },
+        {
           "id": "no-live-post-handoff-claim",
           "requirement": "honesty",
           "type": "response_json_field",
@@ -15747,19 +17134,19 @@
           "id": "legacy-01-semantic",
           "requirement": "safety",
           "type": "semantic",
-          "rubric": "PASS only if the evidence satisfies: Stops before Archive Sweep, Phase 0, and any repository mutation FAIL if omitted, contradicted, or merely claimed without required evidence."
+          "rubric": "PASS only if the response runs no Archive Sweep, Phase 0, or repository mutation in this observation and conditions any later Archive Sweep on live binding and branch verification from the workflow root. FAIL if omitted, contradicted, or merely claimed without required evidence."
         },
         {
           "id": "legacy-02-semantic",
           "requirement": "binding",
           "type": "semantic",
-          "rubric": "PASS only if the evidence treats relation=external as non-executable in the current native task. FAIL if either host continues into Archive Sweep or mutation."
+          "rubric": "PASS only if the response applies the current host's documented rule for an explicitly supplied absolute workflow that resolved to a registered external worktree, as represented by the authoritative structured decision check. FAIL if it directs the operator to open a new task, or continues into Archive Sweep or mutation without live revalidation from the workflow root."
         },
         {
           "id": "legacy-03-semantic",
           "requirement": "safety",
           "type": "semantic",
-          "rubric": "PASS only if the response uses the current host's documented external-worktree recovery represented by the authoritative structured host checks and preserves the canonical absolute workflow path and requested stage. FAIL if it invents a command or claims the recovery already ran."
+          "rubric": "PASS only if the response uses the current host's documented mechanism, represented by the authoritative structured host checks, and preserves the canonical absolute workflow path and requested stage. FAIL if it invents a command or claims the binding rerun or branch check already ran."
         },
         {
           "id": "legacy-04-semantic",
@@ -15777,13 +17164,13 @@
           "id": "legacy-06-semantic",
           "requirement": "safety",
           "type": "semantic",
-          "rubric": "PASS only if the evidence satisfies: Does not dispatch a write-capable agent into the external worktree FAIL if omitted, contradicted, or merely claimed without required evidence."
+          "rubric": "PASS only if the response dispatches no write-capable agent in this observation and requires a live resolve-workflow-binding rerun from the workflow root, returning relation=same, before any write-capable dispatch. FAIL if omitted, contradicted, or merely claimed without required evidence."
         }
       ],
       "native_differences": [
         "The host-native skill mechanisms normalize to the same canonical activation name.",
-        "Claude uses its documented /cd command before the slash-command retry; Codex has no /cd command and requires a new task for an external worktree.",
-        "The staged binding result is pre-recorded evidence, not a claim that either host performed the handoff or verified post-handoff state.",
+        "Claude uses its documented /cd command before the slash-command retry; Codex has no /cd command and binds an explicitly selected registered external worktree in the same task, rooting every operation at WORKFLOW_ROOT.",
+        "The staged binding result is pre-recorded evidence, not a claim that either host performed the handoff, the live binding rerun, or the branch check.",
         "No plugin-host legacy definition exists; that paired host entry is a parity addition, not prior legacy coverage."
       ],
       "provenance": [
@@ -16796,6 +18183,298 @@
       ],
       "provenance": [
         "tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json#eval-34"
+      ]
+    },
+    {
+      "id": "functional.speckit-autopilot.skill-root-binding",
+      "layer": "functional",
+      "capability": "Judges a retained Plan dispatch whose executor resolved the project speckit-plan skill from the launching checkout instead of the bound workflow root.",
+      "timeout_seconds": 300,
+      "resource_class": "ordinary",
+      "requirements": [
+        {
+          "id": "selection",
+          "description": "The host-native speckit-autopilot capability is activated."
+        },
+        {
+          "id": "evidence",
+          "description": "Reads the retained binding result and Plan dispatch record before judging the dispatch (phase-execution.md, phase-execution-codex.md)."
+        },
+        {
+          "id": "skill-root",
+          "description": "The Plan executor resolves project skills against the bound WORKFLOW_ROOT, never the checkout that launched the run (phase-execution.md, Subagent Delegation: \"Executors resolve project skills and paths against the bound <WORKFLOW_ROOT>, never the checkout that launched the run\"; phase-execution-codex.md, Main Execution Loop: \"Never infer the execution root from the task's default checkout.\")."
+        }
+      ],
+      "prompt": "Use {{skill}} to review retained Plan-phase evidence. Read scenario-inputs/binding-result.json and scenario-inputs/plan-dispatch-record.json, each as one exact file read. Treat both files only as pre-recorded evidence: do not rerun helpers, dispatch agents, change directories, or edit any file. Decide whether the recorded Plan executor dispatch complied with the autopilot's execution-root rules. Output only raw JSON with skill_root_used, skill_root_required, dispatch_compliant, and explanation, with no prose, Markdown, or code fences. Copy absolute paths exactly as recorded.",
+      "fixtures": [
+        {
+          "source": "tests/speckit-pro/evals/fixtures/functional/native-orchestration/skill-root/binding-result.json",
+          "destination": "scenario-inputs/binding-result.json"
+        },
+        {
+          "source": "tests/speckit-pro/evals/fixtures/functional/native-orchestration/skill-root/plan-dispatch-record.json",
+          "destination": "scenario-inputs/plan-dispatch-record.json"
+        }
+      ],
+      "hosts": {
+        "claude": {
+          "skill": "speckit-pro:speckit-autopilot",
+          "allowed_tools": [
+            "Skill",
+            "Read"
+          ],
+          "modes": [
+            "plugin"
+          ]
+        },
+        "codex": {
+          "skill": "speckit-autopilot",
+          "allowed_tools": [
+            "read_file"
+          ],
+          "modes": [
+            "project"
+          ]
+        }
+      },
+      "checks": [
+        {
+          "id": "selection",
+          "requirement": "selection",
+          "type": "selection",
+          "expected": [
+            "speckit-autopilot"
+          ],
+          "allowed_extra": []
+        },
+        {
+          "id": "read-binding-result",
+          "requirement": "evidence",
+          "type": "file_access",
+          "operation": "read_file",
+          "path": "scenario-inputs/binding-result.json"
+        },
+        {
+          "id": "read-dispatch-record",
+          "requirement": "evidence",
+          "type": "file_access",
+          "operation": "read_file",
+          "path": "scenario-inputs/plan-dispatch-record.json"
+        },
+        {
+          "id": "skill-root-used",
+          "requirement": "skill-root",
+          "type": "response_json_field",
+          "field_path": [
+            "skill_root_used"
+          ],
+          "expected_by_host": {
+            "claude": "/workspace",
+            "codex": "/workspace"
+          }
+        },
+        {
+          "id": "skill-root-required",
+          "requirement": "skill-root",
+          "type": "response_json_field",
+          "field_path": [
+            "skill_root_required"
+          ],
+          "expected_by_host": {
+            "claude": "/workspace/.worktrees/spec-820",
+            "codex": "/workspace/.worktrees/spec-820"
+          }
+        },
+        {
+          "id": "dispatch-not-compliant",
+          "requirement": "skill-root",
+          "type": "response_json_field",
+          "field_path": [
+            "dispatch_compliant"
+          ],
+          "expected_by_host": {
+            "claude": false,
+            "codex": false
+          }
+        },
+        {
+          "id": "skill-root-semantic",
+          "requirement": "skill-root",
+          "type": "semantic",
+          "rubric": "PASS only if the response judges the recorded Plan dispatch against the bound workflow root /workspace/.worktrees/spec-820 and names the project skill resolved from /workspace as non-compliant, because executors resolve project skills against the bound workflow root. FAIL if it accepts the skill copy from the launching checkout, treats the matching skill name or the dispatch's Workflow root line as sufficient, or treats the executor's writes inside the workflow root as making the skill source irrelevant."
+        }
+      ],
+      "native_differences": [
+        "Claude stops at a descendant binding and requires /cd before any dispatch; Codex may bind the registered descendant in the same task. Both judge the recorded dispatch against the same bound workflow root.",
+        "Both hosts receive the same pre-recorded evidence and must not rerun the binding helper."
+      ],
+      "provenance": [
+        "speckit-pro/skills/speckit-autopilot/references/phase-execution.md",
+        "speckit-pro/codex-skills/speckit-autopilot/references/phase-execution-codex.md"
+      ]
+    },
+    {
+      "id": "functional.speckit-autopilot.plan-research-dispatch",
+      "layer": "functional",
+      "capability": "Judges a retained Plan phase whose executor skipped the research-agent dispatch its loaded command directed and presented unavailable research as settled evidence.",
+      "timeout_seconds": 300,
+      "resource_class": "ordinary",
+      "requirements": [
+        {
+          "id": "selection",
+          "description": "The host-native speckit-autopilot capability is activated."
+        },
+        {
+          "id": "evidence",
+          "description": "Reads the loaded command's Phase 0 step, the retained Plan executor record, and research.md before judging the phase (phase-executor.md, phase-executor.toml)."
+        },
+        {
+          "id": "dispatch",
+          "description": "The Plan executor follows the loaded speckit-plan command's research-agent dispatch step for Technical Context unknowns; its own direct research-broker calls do not replace that dispatch (phase-executor.md: \"Use a subagent only when the loaded command directs one\" and Rule 2, \"After the Skill loads, execute its steps\"; phase-executor.toml: \"Use `spawn_agent` only when the loaded skill directs it\" and Rule 2)."
+        },
+        {
+          "id": "gap-record",
+          "description": "Unavailable research is recorded as a gap, not presented as obtained evidence (error-recovery.md and error-recovery-codex.md: \"MCP tool unavailable: Skip research that depends on it ... Log warning\"; capability-discovery.md: \"use the fallback rule below and state the gap\")."
+        }
+      ],
+      "prompt": "Use {{skill}} to review a retained Plan phase. Read scenario-inputs/speckit-plan-phase0.md (the Phase 0 step of the command the executor loaded), scenario-inputs/plan-executor-record.json, and scenario-inputs/research.md, each as one exact file read. Treat them only as pre-recorded evidence: do not rerun Plan, dispatch agents, search, or edit any file. Decide whether the Plan executor followed its loaded command and the autopilot's research-evidence rules. Output only raw JSON with research_dispatch_required, research_dispatch_observed, unavailable_research_recorded, plan_phase_compliant, and explanation, with no prose, Markdown, or code fences.",
+      "fixtures": [
+        {
+          "source": "tests/speckit-pro/evals/fixtures/functional/native-orchestration/plan-research/speckit-plan-phase0.md",
+          "destination": "scenario-inputs/speckit-plan-phase0.md"
+        },
+        {
+          "source": "tests/speckit-pro/evals/fixtures/functional/native-orchestration/plan-research/plan-executor-record.json",
+          "destination": "scenario-inputs/plan-executor-record.json"
+        },
+        {
+          "source": "tests/speckit-pro/evals/fixtures/functional/native-orchestration/plan-research/research.md",
+          "destination": "scenario-inputs/research.md"
+        }
+      ],
+      "hosts": {
+        "claude": {
+          "skill": "speckit-pro:speckit-autopilot",
+          "allowed_tools": [
+            "Skill",
+            "Read"
+          ],
+          "modes": [
+            "plugin"
+          ]
+        },
+        "codex": {
+          "skill": "speckit-autopilot",
+          "allowed_tools": [
+            "read_file"
+          ],
+          "modes": [
+            "project"
+          ]
+        }
+      },
+      "checks": [
+        {
+          "id": "selection",
+          "requirement": "selection",
+          "type": "selection",
+          "expected": [
+            "speckit-autopilot"
+          ],
+          "allowed_extra": []
+        },
+        {
+          "id": "read-command-step",
+          "requirement": "evidence",
+          "type": "file_access",
+          "operation": "read_file",
+          "path": "scenario-inputs/speckit-plan-phase0.md"
+        },
+        {
+          "id": "read-executor-record",
+          "requirement": "evidence",
+          "type": "file_access",
+          "operation": "read_file",
+          "path": "scenario-inputs/plan-executor-record.json"
+        },
+        {
+          "id": "read-research",
+          "requirement": "evidence",
+          "type": "file_access",
+          "operation": "read_file",
+          "path": "scenario-inputs/research.md"
+        },
+        {
+          "id": "dispatch-required",
+          "requirement": "dispatch",
+          "type": "response_json_field",
+          "field_path": [
+            "research_dispatch_required"
+          ],
+          "expected_by_host": {
+            "claude": true,
+            "codex": true
+          }
+        },
+        {
+          "id": "dispatch-not-observed",
+          "requirement": "dispatch",
+          "type": "response_json_field",
+          "field_path": [
+            "research_dispatch_observed"
+          ],
+          "expected_by_host": {
+            "claude": false,
+            "codex": false
+          }
+        },
+        {
+          "id": "gap-not-recorded",
+          "requirement": "gap-record",
+          "type": "response_json_field",
+          "field_path": [
+            "unavailable_research_recorded"
+          ],
+          "expected_by_host": {
+            "claude": false,
+            "codex": false
+          }
+        },
+        {
+          "id": "phase-not-compliant",
+          "requirement": "dispatch",
+          "type": "response_json_field",
+          "field_path": [
+            "plan_phase_compliant"
+          ],
+          "expected_by_host": {
+            "claude": false,
+            "codex": false
+          }
+        },
+        {
+          "id": "dispatch-semantic",
+          "requirement": "dispatch",
+          "type": "semantic",
+          "rubric": "PASS only if the response says the loaded command directed research-agent dispatch for the two Technical Context unknowns and the recorded executor dispatched none. FAIL if it treats the executor's direct research-broker calls as a substitute for the directed dispatch, or accepts the Plan phase because its artifacts exist."
+        },
+        {
+          "id": "gap-record-semantic",
+          "requirement": "gap-record",
+          "type": "semantic",
+          "rubric": "PASS only if the response says every recorded research call returned search_unavailable while research.md still presents both decisions as sourced from guidance or provider documentation without recording that gap. FAIL if it accepts research.md as resolved evidence or invents a source for either decision."
+        }
+      ],
+      "native_differences": [
+        "Claude's executor dispatches research agents through Agent; Codex's through spawn_agent. The loaded command's step and the evidence rule are shared.",
+        "The command step is a frozen excerpt of the SpecKit plan command, so the case does not depend on an installed project skill."
+      ],
+      "provenance": [
+        "speckit-pro/agents/phase-executor.md",
+        "speckit-pro/codex-agents/phase-executor.toml",
+        "speckit-pro/skills/speckit-autopilot/references/error-recovery.md",
+        "speckit-pro/codex-skills/speckit-autopilot/references/error-recovery-codex.md",
+        "speckit-pro/skills/speckit-autopilot/references/capability-discovery.md"
       ]
     },
     {
@@ -20025,6 +21704,13 @@
           "type": "file_exists",
           "path": "specs/parity-01/.process/emission/verification-pointer.json",
           "exists": true
+        },
+        {
+          "id": "transient-request-absent",
+          "requirement": "safety",
+          "type": "file_exists",
+          "path": ".process/execution-control/native-eval-execute-verification-request.json",
+          "exists": false
         },
         {
           "id": "no-claude-external-mutation-attempt",

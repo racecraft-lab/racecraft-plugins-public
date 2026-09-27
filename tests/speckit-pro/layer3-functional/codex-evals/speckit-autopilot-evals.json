@@ -227,20 +227,20 @@
     },
     {
       "id": 18,
-      "prompt": "The analyze-executor flagged: '[domain] Finding 3 [HIGH]: cookie SameSite policy is not specified in plan.md.' Which consensus analyst(s) does the Codex autopilot spawn for this finding? Why?",
-      "expected_output": "Spawns only domain-researcher via spawn_agent because [domain] indicates resolution depends on external standards (RFC 6265bis, browser behavior). codebase-analyst and spec-context-analyst are NOT spawned in Round 1.",
+      "prompt": "The analyze-executor flagged: '[domain] Finding 3 [HIGH]: cookie SameSite policy is not specified in plan.md.' Which consensus analyst(s) does the Codex autopilot spawn for this finding, and why? If two analysts agree and one dissents, does autopilot apply the majority answer or stop for human review?",
+      "expected_output": "Spawns all three analysts (codebase-analyst, spec-context-analyst, domain-researcher) via spawn_agent because cookie is a security keyword: parse-consensus-categories reads the whole item line and widens the narrow [domain] tag, returning security_route keyword. The consensus-synthesizer still runs after all three return. Because the route is keyword, not an explicit [security] tag, the bar depends on the analysts: if any returns security_relevant: true, only 3/3 applies and a 2/3 majority goes to human review; if every analyst returns security_relevant: false, the ordinary 2/3 majority applies.",
       "expectations": [
-        "States that ONLY domain-researcher is spawned in Round 1",
-        "Justifies the single-analyst dispatch by referencing the [domain] tag's meaning (external standards / RFCs / library docs)",
-        "Does NOT spawn codebase-analyst or spec-context-analyst in Round 1",
-        "Mentions that the consensus-synthesizer step still runs to apply the artifact edit",
-        "Mentions Round 2 fallback if domain-researcher returns low confidence or escape-hatch keywords"
+        "States that all three analysts are spawned because cookie is a security keyword",
+        "Explains that the security-keyword override widens a narrow category tag",
+        "Does not single-route the item to domain-researcher",
+        "Mentions that consensus-synthesizer still runs after all three analyst results",
+        "States that the [domain] tag makes this a keyword-routed item, not a [security]-tagged one, so a 2/3 majority goes to human review only when at least one analyst returns `security_relevant: true`; when every analyst returns `security_relevant: false`, the ordinary 2/3 majority applies. An answer that demands 3/3 for every security-keyword item, or applies 2/3 without regard to `security_relevant`, contradicts this."
       ]
     },
     {
       "id": 19,
       "prompt": "The clarify-executor flagged: '[security] Q5: How should we hash and rotate API keys in the new admin endpoints?' How does the Codex autopilot route this consensus? Can it ever be single-analyst routed?",
-      "expected_output": "[security] tag forces all 3 analysts (codebase-analyst, spec-context-analyst, domain-researcher) regardless of any other tag. Defense-in-depth: security items are NEVER single-routed. The orchestrator skips Round 1 single-routing and dispatches all 3 via spawn_agent in parallel directly. The synthesizer-emitted [HUMAN REVIEW NEEDED] flag also fires automatically for security items per the override rule.",
+      "expected_output": "[security] tag forces all 3 analysts (codebase-analyst, spec-context-analyst, domain-researcher) regardless of any other tag. Defense-in-depth: security items are NEVER single-routed. The orchestrator skips Round 1 single-routing and dispatches all 3 via spawn_agent in parallel directly. The security override then requires 3/3 agreement: a unanimous 3/3 answer applies and the run continues, while a 2/3 majority or all-disagree makes the synthesizer flag [HUMAN REVIEW NEEDED].",
       "expectations": [
         "States that ALL 3 analysts (codebase-analyst, spec-context-analyst, domain-researcher) are spawned",
         "Explicitly states that [security] is NEVER single-routed — defense-in-depth",
@@ -579,15 +579,15 @@
     },
     {
       "id": 106,
-      "prompt": "Codex resolves an absolute workflow to a registered sibling worktree /external/spec, so resolve-workflow-binding returns binding_status=resolved and relation=external. May it run Archive Sweep or use absolute paths to mutate that sibling?",
-      "expected_output": "No. Stops before Archive Sweep and all mutation because external worktrees are outside the original task workspace. It tells the operator to open a new Codex task rooted at /external/spec, then rerun the exact absolute workflow command with the original stage flags. It never promises arbitrary-path Handoff or treats absolute paths, workdir, or a child agent as permission to escape the task workspace.",
+      "prompt": "The user explicitly supplies the absolute workflow /external/spec/docs/ai/specs/.process/SPEC-106-workflow.md --stage plan to a Codex task rooted in another worktree. resolve-workflow-binding resolves it to the registered sibling worktree /external/spec with binding_status=resolved and relation=external. May autopilot continue in this task, and from which root?",
+      "expected_output": "Yes, in the same Codex task. Because the user explicitly supplied the absolute path and the helper resolved it to a registered worktree of the same repository, it binds WORKFLOW_ROOT and WORKFLOW_FILE to /external/spec and keeps the original TASK_ROOT only as discovery context. Before Archive Sweep it verifies the live branch from WORKFLOW_ROOT and stops on main, a detached HEAD, or a protected branch. Every shell, helper, file, Git, and state operation then runs from WORKFLOW_ROOT, and it re-runs resolve-workflow-binding from WORKFLOW_ROOT, requiring relation=same, on resume and before any write-capable dispatch. The binding grants no filesystem access: a real sandbox denial goes through the normal permission mechanism and stops with the denied path and operation. An implicit, relative, inferred, or ambiguous external target still stops before Archive Sweep.",
       "expectations": [
-        "Stops before Archive Sweep, Phase 0, and any repository mutation",
-        "Treats relation=external as non-executable in the original Codex task",
-        "Tells the operator to open a new Codex task rooted at /external/spec and preserves the exact absolute workflow command plus original stage flags",
-        "Does not promise that Codex Handoff can select an arbitrary external path",
+        "Verifies the live branch from WORKFLOW_ROOT before Archive Sweep and stops on main, a detached HEAD, or a protected branch",
+        "Treats the explicitly supplied absolute path that resolved to relation=external in a registered same-repository worktree as executable in the same Codex task, binding WORKFLOW_ROOT to /external/spec and keeping TASK_ROOT as discovery context",
+        "Runs every shell, helper, file, Git, and state operation from WORKFLOW_ROOT with the exact absolute workflow file and original stage flags, and re-runs resolve-workflow-binding from WORKFLOW_ROOT, requiring relation=same, on resume and before any write-capable dispatch",
+        "Does not treat the binding as a filesystem grant: a real sandbox denial goes through the normal permission mechanism and stops naming the denied path and operation",
         "Does not copy, reconstruct, or search revisions for the workflow",
-        "Does not dispatch a write-capable agent into the external worktree"
+        "Still stops before Archive Sweep when the external target is implicit, relative, inferred from repository content, or ambiguous"
       ]
     },
     {

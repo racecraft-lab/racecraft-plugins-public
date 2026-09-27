@@ -9,6 +9,11 @@ Workflow:
    identify ambiguities that need clarification, recommend answers
    with evidence, and report unresolved items with category tags
    following the consensus protocol. Do not edit files."
+   End that prompt with these three lines:
+
+       Protocol: speckit-pro/skills/speckit-autopilot/references/consensus-protocol.md
+       Reference dir: speckit-pro/skills/speckit-autopilot/references/
+       Workflow root: .
 
 2. WAIT for `clarify-executor` to return.
 
@@ -19,7 +24,15 @@ Workflow:
 
 4. WAIT for analysts to return.
 
-5. Dispatch `consensus-synthesizer` with the analyst outputs.
+5. Dispatch `consensus-synthesizer` with the analyst outputs, in the
+   consensus protocol's Stage 2 input format, with this `Protocol:`
+   line:
+
+       **Protocol:** speckit-pro/skills/speckit-autopilot/references/consensus-protocol.md
+
+These paths are repository-relative because this fixture runs from the
+repository root; in a real run they are built from the loaded plugin
+root and the bound workflow root.
 
 This exercises the redelegation chain: orchestrator → clarify-executor →
 back to orchestrator for answering/applying → analysts → back to

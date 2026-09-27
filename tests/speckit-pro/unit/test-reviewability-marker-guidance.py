@@ -487,8 +487,9 @@ class ReviewabilityMarkerGuidanceTests(unittest.TestCase):
                 "freshness",
             ],
         )
+        self.assertNotIn("required", strict_checkpoint["allOf"][1]["then"])
         self.assertEqual(
-            strict_checkpoint["allOf"][1]["then"]["required"],
+            strict_checkpoint["allOf"][1]["then"]["allOf"][0]["then"]["required"],
             ["evidence_path", "commit_sha"],
         )
         self.assertEqual(
@@ -573,10 +574,10 @@ class ReviewabilityMarkerGuidanceTests(unittest.TestCase):
         self.assertFalse(manifest_schema["additionalProperties"])
         self.assertEqual(manifest_schema["properties"]["schema_version"]["const"], "changed-file-manifest.v1")
         self.assertEqual(manifest_schema["properties"]["comparison_ref"]["const"], "HEAD")
-        self.assertEqual(
-            manifest_schema["$defs"]["file"]["properties"]["marker_ids"]["maxItems"],
-            1,
-        )
+        marker_ids = manifest_schema["$defs"]["file"]["properties"]["marker_ids"]
+        self.assertEqual(marker_ids["minItems"], 1)
+        self.assertTrue(marker_ids["uniqueItems"])
+        self.assertNotIn("maxItems", marker_ids)
         rename_rule = manifest_schema["$defs"]["file"]["allOf"][0]
         self.assertEqual(rename_rule["if"]["properties"]["operation"]["const"], "RENAMED")
         self.assertEqual(rename_rule["then"]["required"], ["source_path"])

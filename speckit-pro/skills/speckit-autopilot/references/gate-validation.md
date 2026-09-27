@@ -32,6 +32,12 @@ remaining work; a failed requirement or security gate never becomes a pass.
    `runner helper reviewability-gate setup <workflow-or-roadmap>`
    must be `pass`, `warn`, or a recorded `exception`; `block` stops before
    Specify and requires spec decomposition.
+   When the target is the technical roadmap (scaffold), pass `spec_id`. The
+   gate then reads only that `### <SPEC-ID>:` section: its budget numbers,
+   its `Primary surface:` values, and a line-anchored
+   `Reviewability-Exception: refactor|infra|upgrade` pragma, which turns a
+   size `block` into `exception`. A missing section is a gate error; a
+   missing budget number is a `block` that no pragma excuses.
 ```
 
 **Auto-Fix:** Not applicable — if the codebase doesn't pass typecheck/test/build, the user must fix it before starting a new spec workflow. These are foundational health checks.
@@ -193,6 +199,11 @@ recorded and must not rewrite their provenance.
 3. Total must be 0
 ```
 
+G4 counts only `[Gap]` markers, by design. Unticked checklist items are
+reviewer-owned, so they do not fail G4. They are deferred to PR review, and
+Phase 7 setup records that decision as the Implement Checklist Gate (see
+phase-execution.md, or phase-execution-codex.md on Codex).
+
 **Auto-Fix:** This is the **Checklist Gap Remediation Loop**.
 Runs after each domain subagent returns (not batched — see
 SKILL.md Rule 6).
@@ -330,6 +341,9 @@ evidence and the state mirror are required at the planning boundary.
 
 **Check:** All requirement-linked defects and safety findings resolved at every
 severity. Keep optional style/naming suggestions distinct from blocking defects.
+The runner's G6 counts open CRITICAL/HIGH rows (empty Resolution) in the
+workflow's Analysis Results table, plus bracketed markers in the planning files,
+and fails closed when the workflow or that table is missing.
 
 ```
 1. Run /speckit-analyze and capture output

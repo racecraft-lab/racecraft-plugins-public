@@ -7,6 +7,7 @@ import ast
 import contextlib
 import importlib.util
 import io
+import json
 import os
 import re
 import subprocess
@@ -201,7 +202,7 @@ class Layer6RunnerTests(unittest.TestCase):
             ):
                 try:
                     fixture_runner.capture_live(fixture, "1.25")
-                except Exception as exc:  # pragma: no cover - exercised by assertions below
+                except Exception as exc:  # pragma: no cover - exercised by assertions below  # noqa: BLE001
                     scrub_failure = exc
             checks.append(("scrub failure raises runtime error", lambda: self.assertIsInstance(scrub_failure, RuntimeError)))
             checks.append(("scrub failure reports scrub stderr", lambda: self.assertEqual(str(scrub_failure), "scrub failed")))
@@ -223,6 +224,27 @@ class Layer6RunnerTests(unittest.TestCase):
                 malformed_exit = module.main([fixture.name])
             checks.append(("return-format runner rejects top-level false response_assertions", lambda: self.assertEqual(malformed_exit, 2)))
             checks.append(("return-format runner reports response_assertions array requirement", lambda: self.assertIn("response_assertions must be an array", stderr.getvalue())))
+
+            term_exits: dict[str, int] = {}
+            for name, expected in {
+                "forbidden-response-present": {"response_assertions": [{"subagent_type": "speckit-pro:codebase-analyst", "must_not_contain_any": ["src/auth.ts"]}]},
+                "forbidden-response-absent": {"response_assertions": [{"subagent_type": "speckit-pro:codebase-analyst", "must_not_contain_any": ["HUMAN REVIEW NEEDED"]}]},
+                "term-present": {"must_include_terms": ["Analyze the auth module"]},
+                "term-absent": {"must_include_terms": ["Protocol:"]},
+            }.items():
+                case = root / name
+                case.mkdir()
+                (case / "expected.json").write_text(json.dumps(expected), encoding="utf-8")
+                (case / "parser-fixture.jsonl").write_text(
+                    (LAYER6 / "test-fixtures" / "single-dispatch.jsonl").read_text(encoding="utf-8"),
+                    encoding="utf-8",
+                )
+                with contextlib.redirect_stdout(io.StringIO()):
+                    term_exits[name] = module.main([name])
+            checks.append(("return-format runner fails a forbidden response substring", lambda: self.assertEqual(term_exits["forbidden-response-present"], 1)))
+            checks.append(("return-format runner passes when the forbidden substring is absent", lambda: self.assertEqual(term_exits["forbidden-response-absent"], 0)))
+            checks.append(("return-format runner passes a transcript term that is present", lambda: self.assertEqual(term_exits["term-present"], 0)))
+            checks.append(("return-format runner fails a transcript term that is absent", lambda: self.assertEqual(term_exits["term-absent"], 1)))
 
         tree = ast.parse((LAYER6 / "lib" / "fixture_runner.py").read_text(encoding="utf-8"))
         subprocess_calls = [node for node in ast.walk(tree) if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and node.func.attr == "run"]

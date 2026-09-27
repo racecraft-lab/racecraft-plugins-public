@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import subprocess
@@ -16,8 +17,10 @@ from unittest.mock import patch
 sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "speckit-pro"))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "lib"))
 from test_result import run_counted
-from speckit_pro_runner.execution_control import durable_json, execution_control
-from speckit_pro_runner.verification_records import digest, execute_verification, project_command, run_snapshot_command, validate_execution_record
+from speckit_pro_runner.execution_control import durable_json, execution_control, ignore_owned_directory, is_runner_byproduct
+from speckit_pro_runner.helpers.read_only import json_schema_failures, validate_task_execution
+from speckit_pro_runner.task_execution import fingerprints
+from speckit_pro_runner.verification_records import digest, execute_verification, project_command, run_snapshot_command, tree_bytes, validate_execution_record
 
 
 class _ExecutionControlFixture:
@@ -58,6 +61,57 @@ def _assert_relocation_event_reuse_rejected(test, path, common):
             test.assertEqual(path.read_bytes(), before)
     path.write_bytes(before)
 
+
+class GreenfieldInvariantBindingTests(_ExecutionControlFixture, unittest.TestCase):
+    def test_greenfield_run_binds_first_spec_once_without_resetting_repair_budget(self):
+        spec = self.root / "feature/spec.md"
+        spec.unlink()
+        started = self.invoke("start")
+        self.assertEqual(started["ledger"]["approved_invariants"], [])
+        self.invoke("reserve", dispatch_id="tasks-prefix", kind="corrective",
+                    failure_invariant="not-yet-in-spec")
+        self.invoke("complete", dispatch_id="tasks-prefix", outcome="completed")
+        before = self.invoke("status", mode="read_only")["ledger"]
+        spec.write_text("- FR-001: preserve data\n- FR-002: no secrets\n")
+
+        bound = self.invoke("bind-invariants", spec_file="feature/spec.md")["ledger"]
+        for key in ("run_id", "started_at", "slice_started_at", "checkpoint_at",
+                    "corrective_cycles", "reservations", "dispatches"):
+            self.assertEqual(bound[key], before[key], key)
+        self.assertEqual(bound["approved_invariants"], ["FR-001", "FR-002"])
+        self.assertEqual(next(iter(bound["reservations"].values()))["family"], "unresolved")
+        second = self.invoke("reserve", dispatch_id="analyze-repair", kind="corrective",
+                             failure_invariant="FR-002")
+        self.assertEqual(second["disposition"], "continue")
+        self.assertEqual(second["ledger"]["corrective_cycles"], 2)
+        self.assertEqual(self.invoke("reserve", dispatch_id="third-repair", kind="corrective",
+                                     failure_invariant="FR-001")["disposition"], "checkpoint_required")
+
+    def test_late_binding_rejects_missing_empty_and_repeated_specs_without_mutation(self):
+        spec = self.root / "feature/spec.md"
+        spec.unlink()
+        started = self.invoke("start")
+        path = self.root / started["ledger_path"]
+        before = path.read_bytes()
+        with self.assertRaises(ValueError):
+            self.invoke("bind-invariants")
+        self.assertEqual(path.read_bytes(), before)
+        spec.write_text("# No approved requirements yet\n")
+        with self.assertRaises(ValueError):
+            self.invoke("bind-invariants", spec_file="feature/spec.md")
+        self.assertEqual(path.read_bytes(), before)
+        spec.write_text("- FR-001: preserve data\n")
+        self.invoke("bind-invariants", spec_file="feature/spec.md")
+        bound = path.read_bytes()
+        spec.write_text("- FR-001: preserve data\n- FR-002: added later\n")
+        with self.assertRaises(ValueError):
+            self.invoke("bind-invariants", spec_file="feature/spec.md")
+        self.assertEqual(path.read_bytes(), bound)
+        malformed = json.loads(bound)
+        malformed["invariant_binding"] = None
+        path.write_text(json.dumps(malformed))
+        with self.assertRaises(ValueError):
+            self.invoke("status", mode="read_only")
 
 class ExecutionControlTests(_ExecutionControlFixture, unittest.TestCase):
     def test_start_is_idempotent_and_phase_changes_do_not_reset_clock(self):
@@ -213,6 +267,501 @@ class ExecutionControlTests(_ExecutionControlFixture, unittest.TestCase):
         self.assertEqual(json.loads(path.read_text())["corrective_cycles"], 0)
 
 
+class CorrectiveContinuationTests(_ExecutionControlFixture, unittest.TestCase):
+    def test_consensus_continuation_rejects_unbound_or_replayed_approval(self):
+        self.invoke("start")
+        owner = self.invoke("reserve", dispatch_id="analyze", kind="corrective", failure_invariant="FR-001")
+        reservation = owner["reservation_id"]
+        self.invoke("complete", dispatch_id="analyze", outcome="completed")
+        self.invoke("reserve", dispatch_id="other-family", kind="corrective", failure_invariant="FR-002")
+        approval = {"native_event_id": "operator-consensus-message", "run_id": self.run_id,
+                    "action": "corrective_continuation_approved", "completed_dispatch_id": "analyze",
+                    "continuation_dispatch_id": "metadata", "reservation_id": reservation,
+                    "purpose": "task_metadata_reconciliation"}
+        path = next((self.root / "feature/.process/execution-control").glob("*.json"))
+        before = path.read_bytes()
+        bad_events = (None, {**approval, "run_id": "wrong-run"},
+                      {**approval, "action": "corrective_retry_approved"},
+                      {**approval, "completed_dispatch_id": "other-family"},
+                      {**approval, "continuation_dispatch_id": "different"},
+                      {**approval, "reservation_id": "different"},
+                      {**approval, "purpose": "unbounded_repair"})
+        for event in bad_events:
+            with self.subTest(event=event), self.assertRaises(ValueError):
+                self.invoke("authorize-corrective-continuation", dispatch_id="metadata",
+                            completed_dispatch_id="analyze", reservation_id=reservation,
+                            native_observation=event)
+            self.assertEqual(path.read_bytes(), before)
+        accepted = self.invoke("authorize-corrective-continuation", dispatch_id="metadata",
+                               completed_dispatch_id="analyze", reservation_id=reservation,
+                               native_observation=approval)
+        self.assertEqual(accepted["ledger"]["corrective_cycles"], 2)
+        with self.assertRaises(ValueError):
+            self.invoke("pause", native_observation={"native_event_id": "operator-consensus-message",
+                                                     "run_id": self.run_id, "kind": "human_uat",
+                                                     "action": "wait_started"})
+        with self.assertRaises(ValueError):
+            self.invoke("authorize-corrective-continuation", dispatch_id="metadata-two",
+                        completed_dispatch_id="analyze", reservation_id=reservation,
+                        native_observation={**approval, "native_event_id": "second-message",
+                                            "continuation_dispatch_id": "metadata-two"})
+        recorded = path.read_bytes()
+        tampered = json.loads(recorded)
+        tampered["dispatches"]["metadata"]["continuation_purpose"] = "unbounded_repair"
+        path.write_text(json.dumps(tampered))
+        with self.assertRaises(ValueError):
+            self.invoke("status", mode="read_only")
+        path.write_bytes(recorded)
+
+    def test_approved_consensus_metadata_continuation_after_completed_retry(self):
+        started = self.invoke("start")
+        owner = self.invoke("reserve", dispatch_id="analyze", kind="corrective", failure_invariant="FR-001")
+        reservation = owner["reservation_id"]
+        self.invoke("reconcile", dispatch_id="analyze")
+        self.invoke("complete", dispatch_id="analyze", outcome="failed", native_observation={
+            "native_event_id": "host-auth-error", "run_id": self.run_id,
+            "dispatch_id": "analyze", "action": "dispatch_result", "outcome": "failed"})
+        self.invoke("reserve", dispatch_id="other-family", kind="corrective", failure_invariant="FR-002")
+        self.invoke("authorize-corrective-retry", dispatch_id="analyze-retry", failed_dispatch_id="analyze",
+                    reservation_id=reservation, native_observation={
+            "native_event_id": "operator-retry-message", "run_id": self.run_id,
+            "action": "corrective_retry_approved", "failed_dispatch_id": "analyze",
+            "failed_native_event_id": "host-auth-error", "retry_dispatch_id": "analyze-retry",
+            "reservation_id": reservation, "failure_kind": "infrastructure"})
+        self.invoke("complete", dispatch_id="analyze-retry", outcome="completed")
+        feature = self.root / "feature"
+        (feature / ".process").mkdir(exist_ok=True)
+        (feature / "plan.md").write_text("plan\n")
+        tasks = "## Phase 1\n- [ ] T001 Reconcile metadata after consensus\n"
+        (feature / "tasks.md").write_text(tasks)
+        sidecar = feature / ".process/task-execution.json"
+        metadata = {"schema_version": "task-execution.v1",
+                    "fingerprints": fingerprints((feature / "spec.md").read_text(), "plan\n", tasks),
+                    "tasks": {"T001": {"capability_group": "metadata", "depends_on": [],
+                                       "owns": ["feature/.process/task-execution.json"],
+                                       "tdd_unit": "metadata"}}}
+        sidecar.write_text(json.dumps(metadata))
+        request = {"tasks_file": "feature/tasks.md", "task_execution_required": True}
+        initial_validation = validate_task_execution(request, self.root.resolve())
+        self.assertEqual(initial_validation["exit_code"], 0, initial_validation)
+        (feature / "spec.md").write_text("- FR-001: preserve data\n- FR-002: no secrets\nconsensus clarification\n")
+        self.assertEqual(validate_task_execution(request, self.root.resolve())["exit_code"], 2)
+        self.assertEqual(self.invoke("reserve", dispatch_id="metadata-ordinary", kind="corrective",
+                                     reservation_id=reservation)["reasons"], ["corrective_cycle_already_closed"])
+
+        approval = {"native_event_id": "operator-consensus-message", "run_id": self.run_id,
+                    "action": "corrective_continuation_approved", "completed_dispatch_id": "analyze-retry",
+                    "continuation_dispatch_id": "metadata", "reservation_id": reservation,
+                    "purpose": "task_metadata_reconciliation"}
+        before = self.invoke("status", mode="read_only")["ledger"]
+        preview = self.invoke("authorize-corrective-continuation", mode="dry_run", dispatch_id="metadata",
+                              completed_dispatch_id="analyze-retry", reservation_id=reservation,
+                              native_observation=approval)
+        self.assertEqual(preview["ledger"]["corrective_cycles"], 2)
+        self.assertEqual(self.invoke("status", mode="read_only")["ledger"], before)
+        continued = self.invoke("authorize-corrective-continuation", dispatch_id="metadata",
+                                completed_dispatch_id="analyze-retry", reservation_id=reservation,
+                                native_observation=approval)
+        self.assertEqual(continued["disposition"], "continue")
+        self.assertEqual(continued["ledger"]["run_id"], started["ledger"]["run_id"])
+        self.assertEqual(continued["ledger"]["corrective_cycles"], 2)
+        self.assertEqual(continued["ledger"]["dispatches"]["analyze"]["outcome"], "failed")
+        self.assertEqual(continued["ledger"]["dispatches"]["analyze-retry"]["outcome"], "completed")
+        self.assertEqual(continued["ledger"]["dispatches"]["metadata"]["continuation_of"], "analyze-retry")
+        self.assertEqual(continued["ledger"]["dispatches"]["metadata"]["operator_continuation_event_id"],
+                         "operator-consensus-message")
+        schema = json.loads((Path(__file__).resolve().parents[3] /
+                             "speckit-pro/speckit_pro_runner/contracts/execution-control.schema.json").read_text())
+        self.assertEqual(json_schema_failures(continued["ledger"], schema, schema, "ledger"), [])
+        metadata["fingerprints"] = fingerprints((feature / "spec.md").read_text(), "plan\n", tasks)
+        sidecar.write_text(json.dumps(metadata))
+        self.assertEqual(validate_task_execution(request, self.root.resolve())["exit_code"], 0)
+        self.invoke("complete", dispatch_id="metadata", outcome="completed")
+        self.assertEqual(self.invoke("status", mode="read_only")["disposition"], "continue")
+        with self.assertRaises(ValueError):
+            self.invoke("authorize-corrective-continuation", dispatch_id="metadata-again",
+                        completed_dispatch_id="analyze-retry", reservation_id=reservation,
+                        native_observation={**approval, "native_event_id": "operator-second-message",
+                                            "continuation_dispatch_id": "metadata-again"})
+
+class CorrectiveRecoveryTests(_ExecutionControlFixture, unittest.TestCase):
+    def test_operator_approved_infrastructure_retry_preserves_failed_attempt_and_budget(self):
+        started = self.invoke("start")
+        first = self.invoke("reserve", dispatch_id="owner", kind="corrective", failure_invariant="FR-001")
+        reservation = first["reservation_id"]
+        self.invoke("reconcile", dispatch_id="owner")
+        self.invoke("complete", dispatch_id="owner", outcome="failed", native_observation={
+            "native_event_id": "host-auth-error", "run_id": self.run_id,
+            "dispatch_id": "owner", "action": "dispatch_result", "outcome": "failed"})
+        self.invoke("reserve", dispatch_id="other-family", kind="corrective", failure_invariant="FR-002")
+        self.assertEqual(self.invoke("reserve", dispatch_id="ordinary-retry", kind="corrective",
+                                     failure_invariant="FR-001")["reasons"], ["failure_family_budget_exhausted"])
+        approval = {"native_event_id": "operator-message", "run_id": self.run_id,
+                    "action": "corrective_retry_approved", "failed_dispatch_id": "owner",
+                    "failed_native_event_id": "host-auth-error", "retry_dispatch_id": "owner-retry",
+                    "reservation_id": reservation, "failure_kind": "infrastructure"}
+        preview = self.invoke("authorize-corrective-retry", mode="dry_run", dispatch_id="owner-retry",
+                              reservation_id=reservation, failed_dispatch_id="owner", native_observation=approval)
+        self.assertEqual(preview["ledger"]["corrective_cycles"], 2)
+        self.assertNotIn("owner-retry", self.invoke("status", mode="read_only")["ledger"]["dispatches"])
+        retry = self.invoke("authorize-corrective-retry", dispatch_id="owner-retry",
+                            reservation_id=reservation, failed_dispatch_id="owner", native_observation=approval)
+        self.assertEqual(retry["disposition"], "continue")
+        self.assertEqual(retry["ledger"]["run_id"], started["ledger"]["run_id"])
+        self.assertEqual(retry["ledger"]["corrective_cycles"], 2)
+        self.assertEqual(len(retry["ledger"]["reservations"]), 2)
+        self.assertEqual(retry["ledger"]["dispatches"]["owner"]["outcome"], "failed")
+        self.assertEqual(retry["ledger"]["dispatches"]["owner-retry"]["outcome"], "reserved")
+        self.assertEqual(retry["ledger"]["dispatches"]["owner-retry"]["recovery_of"], "owner")
+        self.assertEqual(retry["ledger"]["dispatches"]["owner-retry"]["operator_recovery_event_id"], "operator-message")
+        schema = json.loads((Path(__file__).resolve().parents[3] /
+                             "speckit-pro/speckit_pro_runner/contracts/execution-control.schema.json").read_text())
+        self.assertEqual(json_schema_failures(retry["ledger"], schema, schema, "ledger"), [])
+        self.invoke("complete", dispatch_id="owner-retry", outcome="completed")
+        self.assertEqual(self.invoke("status", mode="read_only")["disposition"], "continue")
+        with self.assertRaises(ValueError):
+            self.invoke("authorize-corrective-retry", dispatch_id="second-retry",
+                        reservation_id=reservation, failed_dispatch_id="owner",
+                        native_observation={**approval, "native_event_id": "second-message",
+                                            "retry_dispatch_id": "second-retry"})
+        with self.assertRaises(ValueError):
+            self.invoke("pause", native_observation={"native_event_id": "operator-message", "run_id": self.run_id,
+                                                     "kind": "human_uat", "action": "wait_started"})
+
+    def test_infrastructure_retry_rejects_unbound_or_replayed_approval(self):
+        self.invoke("start")
+        first = self.invoke("reserve", dispatch_id="owner", kind="corrective", failure_invariant="FR-001")
+        reservation = first["reservation_id"]
+        self.invoke("reconcile", dispatch_id="owner")
+        self.invoke("complete", dispatch_id="owner", outcome="failed", native_observation={
+            "native_event_id": "host-error", "run_id": self.run_id,
+            "dispatch_id": "owner", "action": "dispatch_result", "outcome": "failed"})
+        self.invoke("reserve", dispatch_id="other-family", kind="corrective", failure_invariant="FR-002")
+        approval = {"native_event_id": "operator-message", "run_id": self.run_id,
+                    "action": "corrective_retry_approved", "failed_dispatch_id": "owner",
+                    "failed_native_event_id": "host-error", "retry_dispatch_id": "owner-retry",
+                    "reservation_id": reservation, "failure_kind": "infrastructure"}
+        path = self.root / "feature/.process/execution-control"
+        ledger = next(path.glob("*.json"))
+        before = ledger.read_bytes()
+        bad_events = (None, {**approval, "run_id": "different-run"},
+                      {**approval, "failed_native_event_id": "different-host-event"},
+                      {**approval, "failure_kind": "assertion_failure"},
+                      {**approval, "native_event_id": "host-error"},
+                      {**approval, "retry_dispatch_id": "different-retry"})
+        for event in bad_events:
+            with self.subTest(event=event):
+                with self.assertRaises(ValueError):
+                    self.invoke("authorize-corrective-retry", dispatch_id="owner-retry",
+                                reservation_id=reservation, failed_dispatch_id="owner", native_observation=event)
+                self.assertEqual(ledger.read_bytes(), before)
+        self.invoke("complete", dispatch_id="other-family", outcome="failed")
+        other_reservation = self.invoke("status", mode="read_only")["ledger"]["dispatches"]["other-family"]["reservation_id"]
+        with self.assertRaises(ValueError):
+            self.invoke("authorize-corrective-retry", dispatch_id="other-retry", reservation_id=other_reservation,
+                        failed_dispatch_id="other-family", native_observation={**approval,
+                            "native_event_id": "another-message", "failed_dispatch_id": "other-family",
+                            "failed_native_event_id": "missing-host-event", "retry_dispatch_id": "other-retry",
+                            "reservation_id": other_reservation})
+
+
+class CorrectiveExceptionTests(_ExecutionControlFixture, unittest.TestCase):
+    SCOPE = "a" * 64
+
+    def greenfield_run(self, consume_unresolved=True):
+        spec = self.root / "feature/spec.md"
+        spec.unlink()
+        self.invoke("start")
+        if consume_unresolved:
+            self.invoke("reserve", dispatch_id="fix-a", kind="corrective", failure_invariant="FR-001")
+            self.invoke("complete", dispatch_id="fix-a", outcome="failed")
+        spec.write_text("- FR-001: preserve data\n- FR-002: no secrets\n")
+        bound = self.invoke("bind-invariants", spec_file="feature/spec.md")["ledger"]
+        return bound["invariant_binding"]["spec_sha256"]
+
+    def approval(self, spec_digest, **changes):
+        event = {"native_event_id": "operator-exception", "run_id": self.run_id,
+                 "action": "corrective_exception_approved", "failure_invariant": "FR-001",
+                 "dispatch_id": "fix-c", "failure_kind": "application",
+                 "refusal_reason": "corrective_run_budget_exhausted",
+                 "scope_sha256": self.SCOPE, "spec_sha256": spec_digest}
+        return {**event, **changes}
+
+    def authorize(self, event, mode="apply", **inputs):
+        request = {"dispatch_id": "fix-c", "failure_invariant": "FR-001", "scope_sha256": self.SCOPE,
+                   "native_observation": event, **inputs}
+        return self.invoke("authorize-corrective-exception", mode=mode, **request)
+
+    def test_exhausted_run_budget_recovers_only_the_approved_correction(self):
+        digest_value = self.greenfield_run()
+        self.invoke("reserve", dispatch_id="fix-b", kind="corrective", failure_invariant="FR-002")
+        self.invoke("complete", dispatch_id="fix-b", outcome="failed")
+        refused = self.invoke("reserve", dispatch_id="fix-c", kind="corrective", failure_invariant="FR-001")
+        self.assertEqual(refused["reasons"], ["corrective_run_budget_exhausted"])
+        before = self.invoke("status", mode="read_only")["ledger"]
+        preview = self.authorize(self.approval(digest_value), mode="dry_run")
+        self.assertEqual(preview["disposition"], "continue")
+        self.assertNotIn("corrective_exception", self.invoke("status", mode="read_only")["ledger"])
+
+        granted = self.authorize(self.approval(digest_value))
+        ledger = granted["ledger"]
+        self.assertEqual(granted["disposition"], "continue")
+        for key in ("run_id", "started_at", "corrective_cycles", "reservations", "approved_invariants",
+                    "invariant_binding"):
+            self.assertEqual(ledger[key], before[key], key)
+        for dispatch_id in ("fix-a", "fix-b"):
+            self.assertEqual(ledger["dispatches"][dispatch_id], before["dispatches"][dispatch_id])
+        exception = ledger["corrective_exception"]
+        self.assertEqual({key: exception[key] for key in ("dispatch_id", "failure_invariant", "refusal_reason",
+                                                          "scope_sha256", "spec_sha256", "operator_exception_event_id")},
+                         {"dispatch_id": "fix-c", "failure_invariant": "FR-001",
+                          "refusal_reason": "corrective_run_budget_exhausted", "scope_sha256": self.SCOPE,
+                          "spec_sha256": digest_value, "operator_exception_event_id": "operator-exception"})
+        self.assertEqual(ledger["dispatches"]["fix-c"]["reservation_id"], exception["reservation_id"])
+        self.assertEqual(ledger["dispatches"]["fix-c"]["kind"], "corrective")
+        self.assertNotIn(exception["reservation_id"], ledger["reservations"])
+        self.assertEqual(granted["reservation_id"], exception["reservation_id"])
+        schema = json.loads((Path(__file__).resolve().parents[3] /
+                             "speckit-pro/speckit_pro_runner/contracts/execution-control.schema.json").read_text())
+        self.assertEqual(json_schema_failures(ledger, schema, schema, "ledger"), [])
+
+        self.invoke("complete", dispatch_id="fix-c", outcome="failed")
+        self.assertEqual(self.invoke("status", mode="read_only")["disposition"], "continue")
+        path = self.root / granted["ledger_path"]
+        after = path.read_bytes()
+        self.assertEqual(self.invoke("reserve", dispatch_id="fix-d", kind="corrective", failure_invariant="FR-001",
+                                     mode="dry_run")["reasons"], ["corrective_run_budget_exhausted"])
+        refusals = (
+            lambda: self.authorize(self.approval(digest_value, native_event_id="second-exception", dispatch_id="fix-d"),
+                                   dispatch_id="fix-d"),
+            lambda: self.invoke("reserve", dispatch_id="nested", kind="corrective",
+                                reservation_id=exception["reservation_id"]),
+            lambda: self.invoke("authorize-corrective-retry", dispatch_id="fix-c-retry", failed_dispatch_id="fix-c",
+                                reservation_id=exception["reservation_id"], native_observation={
+                                    "native_event_id": "retry-message", "run_id": self.run_id,
+                                    "action": "corrective_retry_approved", "failed_dispatch_id": "fix-c",
+                                    "failed_native_event_id": "none", "retry_dispatch_id": "fix-c-retry",
+                                    "reservation_id": exception["reservation_id"], "failure_kind": "infrastructure"}),
+            lambda: self.invoke("pause", native_observation={"native_event_id": "operator-exception",
+                                                             "run_id": self.run_id, "kind": "human_uat",
+                                                             "action": "wait_started"}),
+        )
+        for index, refusal in enumerate(refusals):
+            with self.subTest(refusal=index):
+                with self.assertRaises(ValueError):
+                    refusal()
+                self.assertEqual(path.read_bytes(), after)
+
+        tampered = json.loads(after)
+        tampered["workflow_identity"]["relocation_event_ids"].append("operator-exception")
+        path.write_text(json.dumps(tampered), encoding="utf-8")
+        with self.assertRaises(ValueError):
+            self.invoke("status", mode="read_only")
+        path.write_bytes(after)
+
+    def test_repeat_of_reserved_family_is_recoverable_without_consuming_a_cycle(self):
+        digest_value = self.greenfield_run(consume_unresolved=False)
+        self.invoke("reserve", dispatch_id="fix-b", kind="corrective", failure_invariant="FR-001")
+        path = self.root / self.invoke("status", mode="read_only")["ledger_path"]
+        before = path.read_bytes()
+        in_flight = self.approval(digest_value, refusal_reason="failure_family_budget_exhausted")
+        with self.assertRaises(ValueError):
+            self.authorize(in_flight)
+        self.assertEqual(path.read_bytes(), before)
+        self.invoke("complete", dispatch_id="fix-b", outcome="failed")
+        self.assertEqual(self.invoke("reserve", dispatch_id="fix-c", kind="corrective", failure_invariant="FR-001",
+                                     mode="dry_run")["reasons"], ["failure_family_budget_exhausted"])
+        granted = self.authorize(in_flight)
+        self.assertEqual(granted["disposition"], "continue")
+        self.assertEqual(granted["ledger"]["corrective_cycles"], 1)
+        self.invoke("complete", dispatch_id="fix-c", outcome="completed")
+        self.assertEqual(self.invoke("reserve", dispatch_id="fix-d", kind="corrective",
+                                     failure_invariant="FR-002")["disposition"], "continue")
+        self.assertEqual(self.invoke("reserve", dispatch_id="fix-e", kind="corrective", failure_invariant="NFR-001",
+                                     mode="dry_run")["reasons"], ["corrective_run_budget_exhausted"])
+        with self.assertRaises(ValueError):
+            self.invoke("authorize-corrective-continuation", dispatch_id="fix-c-metadata",
+                        completed_dispatch_id="fix-c", reservation_id=granted["reservation_id"],
+                        native_observation={"native_event_id": "continuation-message", "run_id": self.run_id,
+                                            "action": "corrective_continuation_approved",
+                                            "completed_dispatch_id": "fix-c",
+                                            "continuation_dispatch_id": "fix-c-metadata",
+                                            "reservation_id": granted["reservation_id"],
+                                            "purpose": "task_metadata_reconciliation"})
+
+    def test_unbound_mismatched_or_ordinary_requests_are_refused_without_mutation(self):
+        digest_value = self.greenfield_run()
+        self.invoke("reserve", dispatch_id="fix-b", kind="corrective", failure_invariant="FR-002")
+        self.invoke("complete", dispatch_id="fix-b", outcome="failed")
+        path = self.root / self.invoke("status", mode="read_only")["ledger_path"]
+        before = path.read_bytes()
+        approval = self.approval(digest_value)
+        cases = (
+            ({"event": None}, {}),
+            ({"event": {**approval, "extra": "field"}}, {}),
+            ({"event": self.approval(digest_value, run_id="other-run")}, {}),
+            ({"event": self.approval(digest_value, action="corrective_retry_approved")}, {}),
+            ({"event": self.approval(digest_value, failure_kind="infrastructure")}, {}),
+            ({"event": self.approval(digest_value, failure_invariant="FR-002")}, {}),
+            ({"event": self.approval(digest_value, dispatch_id="other-dispatch")}, {}),
+            ({"event": self.approval(digest_value, refusal_reason="failure_family_budget_exhausted")}, {}),
+            ({"event": self.approval(digest_value, scope_sha256="b" * 64)}, {}),
+            ({"event": self.approval(digest_value, spec_sha256="c" * 64)}, {}),
+            ({"event": self.approval(digest_value, failure_invariant="unresolved",
+                                     refusal_reason="failure_family_budget_exhausted")},
+             {"failure_invariant": "unresolved"}),
+            ({"event": self.approval(digest_value, failure_invariant="FR-999")}, {"failure_invariant": "FR-999"}),
+            ({"event": self.approval(digest_value, dispatch_id="fix-b")}, {"dispatch_id": "fix-b"}),
+            ({"event": self.approval(digest_value, scope_sha256="not-a-digest")}, {"scope_sha256": "not-a-digest"}),
+        )
+        for index, (event, inputs) in enumerate(cases):
+            with self.subTest(case=index):
+                with self.assertRaises(ValueError):
+                    self.authorize(event["event"], **inputs)
+                self.assertEqual(path.read_bytes(), before)
+        granted = self.authorize(approval)["ledger"]
+        for change in ({"spec_sha256": "c" * 64}, {"failure_invariant": "unresolved"}, {"dispatch_id": "fix-b"}):
+            with self.subTest(tamper=change):
+                path.write_text(json.dumps({**granted, "corrective_exception": {**granted["corrective_exception"],
+                                                                                **change}}))
+                with self.assertRaises(ValueError):
+                    self.invoke("status", mode="read_only")
+
+    def test_exception_needs_a_refusing_ordinary_reserve_and_a_bound_spec(self):
+        digest_value = self.greenfield_run()
+        path = self.root / self.invoke("status", mode="read_only")["ledger_path"]
+        before = path.read_bytes()
+        for reason in ("corrective_run_budget_exhausted", "failure_family_budget_exhausted"):
+            with self.subTest(reason=reason):
+                with self.assertRaises(ValueError):
+                    self.authorize(self.approval(digest_value, failure_invariant="FR-002", refusal_reason=reason),
+                                   failure_invariant="FR-002")
+                self.assertEqual(path.read_bytes(), before)
+        other = tempfile.TemporaryDirectory()
+        self.addCleanup(other.cleanup)
+        self.root, self.run_id = Path(other.name), None
+        (self.root / "feature").mkdir()
+        (self.root / "feature/workflow.md").write_text("# Workflow\n")
+        (self.root / "feature/spec.md").write_text("- FR-001: preserve data\n- FR-002: no secrets\n")
+        self.invoke("start")
+        for dispatch_id, invariant in (("fix-a", "FR-001"), ("fix-b", "FR-002")):
+            self.invoke("reserve", dispatch_id=dispatch_id, kind="corrective", failure_invariant=invariant)
+            self.invoke("complete", dispatch_id=dispatch_id, outcome="failed")
+        with self.assertRaises(ValueError):
+            self.authorize(self.approval(digest_value))
+
+
+class ReplanEpochTests(_ExecutionControlFixture, unittest.TestCase):
+    SCOPE = "a" * 64
+
+    def rescope(self):
+        spec = self.root / "feature/spec.md"
+        spec.write_text("- FR-001: preserve data\n- FR-002: no secrets\n- FR-003: explain refusals\n")
+        return hashlib.sha256(spec.read_bytes()).hexdigest()
+
+    def epoch_event(self, spec_digest, **changes):
+        event = {"native_event_id": "operator-replan", "run_id": self.run_id,
+                 "action": "replan_epoch_approved", "spec_sha256": spec_digest}
+        return {**event, **changes}
+
+    def begin(self, event, mode="apply"):
+        return self.invoke("begin-replan-epoch", mode=mode, spec_file="feature/spec.md", native_observation=event)
+
+    def greenfield(self):
+        spec = self.root / "feature/spec.md"
+        text = spec.read_text()
+        spec.unlink()
+        self.invoke("start")
+        spec.write_text(text)
+        self.invoke("bind-invariants", spec_file="feature/spec.md")
+        for dispatch_id, invariant in (("fix-a", "FR-001"), ("fix-b", "FR-002")):
+            self.invoke("reserve", dispatch_id=dispatch_id, kind="corrective", failure_invariant=invariant)
+            self.invoke("complete", dispatch_id=dispatch_id, outcome="failed")
+        spec_digest = self.invoke("status", mode="read_only")["ledger"]["invariant_binding"]["spec_sha256"]
+        event = {"native_event_id": "operator-exception", "run_id": self.run_id,
+                 "action": "corrective_exception_approved", "failure_invariant": "FR-001", "dispatch_id": "fix-c",
+                 "failure_kind": "application", "refusal_reason": "failure_family_budget_exhausted",
+                 "scope_sha256": self.SCOPE, "spec_sha256": spec_digest}
+        self.invoke("authorize-corrective-exception", dispatch_id="fix-c", failure_invariant="FR-001",
+                    scope_sha256=self.SCOPE, native_observation=event)
+        self.invoke("complete", dispatch_id="fix-c", outcome="completed")
+
+    def test_approved_replan_opens_a_fresh_allowance_and_keeps_history(self):
+        self.greenfield()
+        before = self.invoke("status", mode="read_only")["ledger"]
+        self.assertEqual(self.invoke("reserve", dispatch_id="fix-d", kind="corrective", failure_invariant="FR-002",
+                                     mode="dry_run")["reasons"], ["failure_family_budget_exhausted"])
+        new_digest = self.rescope()
+        preview = self.begin(self.epoch_event(new_digest), mode="dry_run")
+        self.assertEqual(preview["disposition"], "continue")
+        self.assertNotIn("corrective_epochs", self.invoke("status", mode="read_only")["ledger"])
+
+        ledger = self.begin(self.epoch_event(new_digest))["ledger"]
+        self.assertEqual(ledger["run_id"], before["run_id"])
+        self.assertEqual(ledger["started_at"], before["started_at"])
+        self.assertEqual((ledger["corrective_cycles"], ledger["reservations"], ledger["dispatches"]), (0, {}, {}))
+        self.assertNotIn("corrective_exception", ledger)
+        self.assertEqual(ledger["approved_invariants"], ["FR-001", "FR-002", "FR-003"])
+        self.assertEqual(ledger["invariant_binding"]["spec_sha256"], new_digest)
+        [epoch] = ledger["corrective_epochs"]
+        for key in ("corrective_cycles", "reservations", "dispatches", "approved_invariants",
+                    "invariant_binding", "corrective_exception"):
+            self.assertEqual(epoch[key], before[key], key)
+        self.assertEqual(epoch["epoch_event_id"], "operator-replan")
+        schema = json.loads((Path(__file__).resolve().parents[3] /
+                             "speckit-pro/speckit_pro_runner/contracts/execution-control.schema.json").read_text())
+        self.assertEqual(json_schema_failures(ledger, schema, schema, "ledger"), [])
+
+        granted = self.invoke("reserve", dispatch_id="fix-d", kind="corrective", failure_invariant="FR-003")
+        self.assertEqual(granted["disposition"], "continue")
+        self.assertIn(granted["reservation_id"], granted["ledger"]["reservations"])
+        self.assertEqual(self.invoke("reserve", dispatch_id="fix-a", kind="corrective", failure_invariant="FR-001",
+                                     mode="dry_run")["reasons"], ["dispatch_already_reserved_no_relaunch"])
+        self.assertEqual(self.invoke("status", mode="read_only")["disposition"], "continue")
+
+    def test_replan_refuses_replay_mismatch_and_unsettled_work_without_mutation(self):
+        self.greenfield()
+        new_digest = self.rescope()
+        path = self.root / self.invoke("status", mode="read_only")["ledger_path"]
+        before = path.read_bytes()
+        refusals = (
+            self.epoch_event(new_digest, run_id="another-run"),
+            self.epoch_event(new_digest, action="corrective_exception_approved"),
+            self.epoch_event("b" * 64),
+            self.epoch_event(new_digest, native_event_id="operator-exception"),
+            {k: v for k, v in self.epoch_event(new_digest).items() if k != "spec_sha256"},
+        )
+        for index, event in enumerate(refusals):
+            with self.subTest(refusal=index):
+                with self.assertRaises(ValueError):
+                    self.begin(event)
+                self.assertEqual(path.read_bytes(), before)
+
+        self.begin(self.epoch_event(new_digest))
+        rotated = path.read_bytes()
+        with self.assertRaises(ValueError):
+            self.begin(self.epoch_event(new_digest))
+        self.assertEqual(path.read_bytes(), rotated)
+
+        self.invoke("reserve", dispatch_id="fix-d", kind="corrective", failure_invariant="FR-003")
+        running = path.read_bytes()
+        with self.assertRaises(ValueError):
+            self.begin(self.epoch_event(new_digest, native_event_id="operator-replan-2"))
+        self.assertEqual(path.read_bytes(), running)
+
+        tampered = json.loads(running)
+        tampered["corrective_epochs"][0]["corrective_cycles"] = 1
+        path.write_text(json.dumps(tampered), encoding="utf-8")
+        with self.assertRaises(ValueError):
+            self.invoke("status", mode="read_only")
+        tampered = json.loads(running)
+        tampered["dispatches"]["fix-a"] = tampered["corrective_epochs"][0]["dispatches"]["fix-a"]
+        path.write_text(json.dumps(tampered), encoding="utf-8")
+        with self.assertRaises(ValueError):
+            self.invoke("status", mode="read_only")
+        path.write_bytes(running)
+
+
 class WorkflowIdentityTests(_ExecutionControlFixture, unittest.TestCase):
     def test_different_workflows_cannot_adopt_an_existing_ledger(self):
         first = self.invoke("start")
@@ -273,6 +822,32 @@ class WorkflowIdentityTests(_ExecutionControlFixture, unittest.TestCase):
         with self.assertRaises(ValueError):
             self.invoke("start")
 
+    def test_process_directory_workflow_ledger_is_not_doubled_and_legacy_path_is_accepted(self):
+        workflow = "docs/ai/specs/.process/SPEC-workflow.md"
+        (self.root / "docs/ai/specs/.process").mkdir(parents=True)
+        (self.root / workflow).write_text("# Workflow\n")
+        (self.root / "docs/ai/specs/.process/spec.md").write_text("- FR-001: preserve data\n")
+        started = execution_control(self.root, {"workflow_file": workflow, "action": "start"}, "apply")
+        key = Path(started["ledger_path"]).name
+        self.assertEqual(started["ledger_path"], f"docs/ai/specs/.process/execution-control/{key}")
+        self.assertTrue((self.root / started["ledger_path"]).is_file())
+        snapshot = tree_bytes(self.root, workflow)
+        self.assertFalse([path for path in snapshot if "execution-control" in path])
+
+        legacy = f"docs/ai/specs/.process/.process/execution-control/{key}"
+        (self.root / legacy).parent.mkdir(parents=True)
+        (self.root / started["ledger_path"]).rename(self.root / legacy)
+        common = {"workflow_file": workflow, "ledger_path": legacy, "expected_run_id": started["ledger"]["run_id"]}
+        status = execution_control(self.root, {**common, "action": "status"}, "read_only")
+        self.assertEqual((status["ledger_path"], status["ledger"]["run_id"]), (legacy, started["ledger"]["run_id"]))
+        reserved = execution_control(self.root, {**common, "action": "reserve", "dispatch_id": "impl-1",
+                                                 "kind": "implementation"}, "apply")
+        self.assertEqual(reserved["disposition"], "continue")
+        self.assertTrue((self.root / legacy).is_file())
+        self.assertFalse((self.root / started["ledger_path"]).exists())
+        snapshot = tree_bytes(self.root, workflow)
+        self.assertFalse([path for path in snapshot if "execution-control" in path])
+
 
 class VerificationTests(unittest.TestCase):
     def setUp(self):
@@ -301,6 +876,29 @@ class VerificationTests(unittest.TestCase):
 
     def validate(self, result, observation=None):
         return validate_execution_record(self.root, {**self.inputs, "record_path": result["record_path"], "native_observation": observation})
+
+    def test_directory_named_gitignore_fails_with_a_clear_error(self):
+        owned = self.root / "feature/.process/execution-control"
+        (owned / ".gitignore").mkdir(parents=True)
+        with self.assertRaisesRegex(ValueError, r"\.gitignore is not a regular file"):
+            ignore_owned_directory(owned)
+        self.assertTrue((owned / ".gitignore").is_dir())
+
+    def test_directory_wide_add_never_stages_ledger_or_verification_evidence(self):
+        environment = {**os.environ, "GIT_CONFIG_GLOBAL": os.devnull, "GIT_CONFIG_NOSYSTEM": "1"}
+        subprocess.run(["git", "init", "-q", str(self.root)], check=True, env=environment)
+        result, _ = self.produce()
+        ledger = self.root / "feature/.process/execution-control"
+        self.assertTrue(any(ledger.glob("*.json")) and (self.root / result["record_path"]).is_file())
+        subprocess.run(["git", "-C", str(self.root), "add", "-A"], check=True, env=environment)
+        staged = subprocess.run(["git", "-C", str(self.root), "diff", "--cached", "--name-only", "-z"], check=True,
+                                capture_output=True, text=True, env=environment).stdout.split("\0")
+        staged = [name for name in staged if name]
+        self.assertIn("fixture.txt", staged)
+        self.assertEqual([name for name in staged if is_runner_byproduct(name)], [])
+        self.assertEqual([name for name in staged if "execution-control" in name or "verification" in name], [])
+        for directory in (ledger, (self.root / result["record_path"]).parent):
+            self.assertTrue(is_runner_byproduct((directory / ".gitignore").relative_to(self.root).as_posix()))
 
     def test_true_reuse_requires_independent_native_observation(self):
         result, observed = self.produce()
@@ -523,6 +1121,34 @@ class VerificationTests(unittest.TestCase):
             run_snapshot_command(["python3", "check.py"], self.root, {"PATH": str(interpreter.parent)}, 1, expected_executable=str(interpreter))
             self.assertEqual(popen.call_args.args[0], [str(interpreter), "check.py"])
 
+    def test_process_directory_workflow_evidence_is_not_doubled_and_legacy_record_is_read(self):
+        workflow = "docs/ai/specs/.process/workflow.md"
+        # An in-flight run already holds the doubled evidence directory.
+        (self.root / "docs/ai/specs/.process/.process/verification").mkdir(parents=True)
+        (self.root / workflow).write_text((self.root / "feature/workflow.md").read_text())
+        inputs = {"workflow_file": workflow, "command_id": "UNIT_TEST"}
+        run_id = execution_control(self.root, {"workflow_file": workflow, "action": "start"}, "apply")["ledger"]["run_id"]
+        execution_control(self.root, {"workflow_file": workflow, "action": "reserve", "dispatch_id": "verify-1",
+                                      "kind": "verification", "expected_run_id": run_id}, "apply")
+        result = execute_verification(self.root, {**inputs, "dispatch_id": "verify-1", "expected_run_id": run_id}, "apply")
+        name = Path(result["record_path"]).name
+        self.assertEqual(result["record_path"], f"docs/ai/specs/.process/verification/{name}")
+        self.assertTrue((self.root / result["record_path"]).is_file())
+        self.assertFalse([path for path in tree_bytes(self.root, workflow) if "verification" in path])
+        current = validate_execution_record(self.root, {**inputs, "record_path": result["record_path"]})
+        self.assertFalse([reason for reason in current["reasons"] if reason.startswith("unverifiable_record")])
+
+        legacy = f"docs/ai/specs/.process/.process/verification/{name}"
+        (self.root / result["record_path"]).rename(self.root / legacy)
+        self.assertFalse([path for path in tree_bytes(self.root, workflow) if "verification" in path])
+        self.assertTrue(is_runner_byproduct(legacy) and is_runner_byproduct(result["record_path"]))
+        self.assertEqual(validate_execution_record(self.root, {**inputs, "record_path": legacy}), current)
+        stray = f"docs/ai/specs/verification/{name}"
+        (self.root / stray).parent.mkdir(parents=True)
+        (self.root / legacy).rename(self.root / stray)
+        self.assertIn("unverifiable_record: record_path is not this workflow's verification evidence",
+                      validate_execution_record(self.root, {**inputs, "record_path": stray})["reasons"])
+
 
 class RunnerDispatchTests(unittest.TestCase):
     """Exercise actual request-envelope entrypoints in a temporary consumer repo."""
@@ -559,6 +1185,52 @@ class RunnerDispatchTests(unittest.TestCase):
         self.assertEqual(code, 1, validated)
         self.assertFalse(validated["data"]["stdout_json"]["reusable"])
 
+    def test_corrective_exception_is_a_real_runner_route(self):
+        self.call_runner("execution-control", "apply", action="start")
+        self.call_runner("execution-control", "apply", action="reserve", dispatch_id="fix-a", kind="corrective",
+                         failure_invariant="FR-001")
+        self.call_runner("execution-control", "apply", action="complete", dispatch_id="fix-a", outcome="failed")
+        (self.root / "feature/spec.md").write_text("- FR-001: preserve data\n- FR-002: no secrets\n")
+        code, bound = self.call_runner("execution-control", "apply", action="bind-invariants",
+                                       spec_file="feature/spec.md")
+        self.assertEqual(code, 0, bound)
+        self.call_runner("execution-control", "apply", action="reserve", dispatch_id="fix-b", kind="corrective",
+                         failure_invariant="FR-002")
+        self.call_runner("execution-control", "apply", action="complete", dispatch_id="fix-b", outcome="failed")
+        event = {"native_event_id": "operator-exception", "run_id": self.run_id,
+                 "action": "corrective_exception_approved", "failure_invariant": "FR-001", "dispatch_id": "fix-c",
+                 "failure_kind": "application", "refusal_reason": "corrective_run_budget_exhausted",
+                 "scope_sha256": "a" * 64,
+                 "spec_sha256": bound["data"]["ledger"]["invariant_binding"]["spec_sha256"]}
+        code, granted = self.call_runner("execution-control", "apply", action="authorize-corrective-exception",
+                                         dispatch_id="fix-c", failure_invariant="FR-001", scope_sha256="a" * 64,
+                                         native_observation=event)
+        self.assertEqual(code, 0, granted)
+        self.assertEqual(granted["data"]["disposition"], "continue")
+        self.assertEqual(granted["data"]["ledger"]["corrective_exception"]["dispatch_id"], "fix-c")
+
+    def test_replan_epoch_is_a_real_runner_route(self):
+        self.call_runner("execution-control", "apply", action="start")
+        for dispatch_id, invariant in (("fix-a", "FR-001"), ("fix-b", "FR-002")):
+            self.call_runner("execution-control", "apply", action="reserve", dispatch_id=dispatch_id,
+                             kind="corrective", failure_invariant=invariant)
+            self.call_runner("execution-control", "apply", action="complete", dispatch_id=dispatch_id,
+                             outcome="failed")
+        spec = self.root / "feature/spec.md"
+        spec.write_text("- FR-001: preserve data\n- FR-002: no secrets\n- FR-003: explain refusals\n")
+        event = {"native_event_id": "operator-replan", "run_id": self.run_id,
+                 "action": "replan_epoch_approved", "spec_sha256": hashlib.sha256(spec.read_bytes()).hexdigest()}
+        code, preview = self.call_runner("execution-control", "dry_run", action="begin-replan-epoch",
+                                         spec_file="feature/spec.md", native_observation=event)
+        self.assertEqual(code, 0, preview)
+        code, rotated = self.call_runner("execution-control", "apply", action="begin-replan-epoch",
+                                         spec_file="feature/spec.md", native_observation=event)
+        self.assertEqual(code, 0, rotated)
+        self.assertEqual(rotated["data"]["corrective_epoch"], 1)
+        code, reserved = self.call_runner("execution-control", "apply", action="reserve", dispatch_id="fix-c",
+                                          kind="corrective", failure_invariant="FR-003")
+        self.assertEqual(code, 0, reserved)
+
     def test_task_metadata_helper_is_registered_and_read_only(self):
         (self.root / "feature/tasks.md").write_text("# Tasks\n## Phase 1: Setup\n- [ ] T001 Create fixture in `fixture.txt`\n")
         (self.root / "feature/spec.md").write_text("# Spec\n")
@@ -578,6 +1250,9 @@ class DockerVerificationTests(VerificationTests):
         (self.root / "feature/workflow.md").write_text('## PROJECT_COMMANDS\n```json\n{"UNIT_TEST":"python3 check.py"}\n```\n')
         self.inputs["docker"] = {"executable": "/usr/local/bin/docker", "endpoint": "unix:///tmp/docker.sock",
                                  "base_image": "python@sha256:" + "a" * 64, "output_contract": "streams_only"}
+
+    def test_docker_directory_wide_add_never_stages_evidence(self):
+        self.test_directory_wide_add_never_stages_ledger_or_verification_evidence()
 
     def test_docker_dry_run_does_not_resolve_host_tools_or_contact_daemon(self):
         with patch("speckit_pro_runner.verification_records.project_program", side_effect=AssertionError("host tool used")):
@@ -650,6 +1325,8 @@ class DockerVerificationTests(VerificationTests):
 
 if __name__ == "__main__":
     suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case)
-                               for case in (ExecutionControlTests, WorkflowIdentityTests, VerificationTests, RunnerDispatchTests))
+                               for case in (GreenfieldInvariantBindingTests, ExecutionControlTests, CorrectiveRecoveryTests,
+                                            CorrectiveContinuationTests, CorrectiveExceptionTests, ReplanEpochTests, WorkflowIdentityTests,
+                                            VerificationTests, RunnerDispatchTests))
     suite.addTests(DockerVerificationTests(name) for name in DockerVerificationTests.__dict__ if name.startswith("test_docker_"))
     raise SystemExit(run_counted(suite, label="test-execution-control"))

@@ -18,6 +18,13 @@ RUNS, then batched dispatch for [P] parallel runs):
     isolation: "worktree"
     run_in_background: true
     description: "SPEC-FIXTURE-D2 T00X [P] <brief>"
+    prompt: the task, ending with these two lines:
+        Reference dir: speckit-pro/skills/speckit-autopilot/references/
+        Workflow root: .
+
+These paths are repository-relative because this fixture runs from the
+repository root; in a real run they are built from the loaded plugin
+root and the bound workflow root.
 
 Do NOT dispatch them serially (that's the pre-WS-D2 regression this
 fixture catches). Do NOT spawn synthesizers or any other agent type.

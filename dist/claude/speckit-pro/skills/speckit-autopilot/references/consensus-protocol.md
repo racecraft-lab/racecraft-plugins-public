@@ -16,6 +16,7 @@ Consensus dispatch runs as batched ordinary subagents; see
 - [The 3 Perspective Agents](#the-3-perspective-agents) — codebase-analyst / spec-context-analyst / domain-researcher
 - [Consensus Rules](#consensus-rules) — N=1, N=2, N=3 agreement rules + escape-hatch + STOP conditions
 - [Security Keywords](#security-keywords) — always-all-3 trigger words
+- [Human Review Needed](#human-review-needed) — ask the operator in place when interactive, otherwise STOP
 - [Phase-Specific Consensus Flows](#phase-specific-consensus-flows) — Clarify, Checklist, Analyze patterns + per-phase prompt templates ("Specification Context" / "Question" / "Your Task" sub-sections appear inside each flow)
 - [Pre-Implement Confidence Emit (end of Phase 6 Analyze)](#pre-implement-confidence-emit-end-of-phase-6-analyze) — synthesizer emits `📊 Confidence: X.XX` + 5-criterion breakdown for the optional Confidence Gate at G6.5
 - [Determining Agreement](#determining-agreement) — how the synthesizer scores responses
@@ -74,7 +75,7 @@ what that helper implements; it is not a procedure to run by hand.
 | `[codebase]` | Resolution depends on existing patterns/conventions in this repo's code | `speckit-pro:codebase-analyst` only |
 | `[spec]` | Resolution depends on project decisions in spec/plan/constitution/roadmap | `speckit-pro:spec-context-analyst` only |
 | `[domain]` | Resolution depends on external standards, RFCs, library docs, or community best practice | `speckit-pro:domain-researcher` only |
-| `[security]` | Item contains a security keyword (see [Security Keywords](#security-keywords)) | All 3 (defense-in-depth, never single-routed) |
+| `[security]` | Item's substance is about security (credentials, access control, secrets, personal data). A [Security Keyword](#security-keywords) alone needs no tag: the helper widens it | All 3 (defense-in-depth, never single-routed) |
 | `[ambiguous]` | Executor uncertain which perspective applies | All 3 (safe default) |
 | *(missing/unparseable prefix)* | Treated as `[ambiguous]` | All 3 (safe default) |
 
@@ -153,7 +154,7 @@ The helpers are what executes.
 
 | Helper | Purpose |
 |--------|---------|
-| `parse-consensus-categories` | Reads one unresolved-item line and returns `tags`, the `analysts` to spawn, and the dispatch `reason`. Implements every routing rule in the table above: security override, ambiguous safe default, unknown-tag safe default, multi-tag union, untagged → all 3. It reads the whole line, not just the bracket, so a [Security Keyword](#security-keywords) anywhere in the item text widens to all 3 even when the executor tagged the item narrowly. |
+| `parse-consensus-categories` | Reads one unresolved-item line and returns `tags`, the `analysts` to spawn, the dispatch `reason`, and `security_route` (`tag` for an explicit `[security]` tag, `keyword` for a keyword alone, `null` otherwise). Implements every routing rule in the table above: security override, ambiguous safe default, unknown-tag safe default, multi-tag union, untagged → all 3. It reads the whole line, not just the bracket, so a [Security Keyword](#security-keywords) anywhere in the item text widens to all 3 even when the executor tagged the item narrowly. |
 | `aggregate-crl` | Reads the Consensus Resolution Log table out of a workflow file and returns `total_items`, `round1`, `round2`, `escape_hatch`, `escape_rate_percent`, the `threshold_percent` it was given (default 10), and `exceeds_threshold`. |
 
 **Call `parse-consensus-categories` for every unresolved item and
@@ -214,6 +215,8 @@ Stage 1 — All routed analysts, ONE assistant message:
             description: "SPEC-XXX consensus R1 [I<x>]: <item>",
             prompt: <consensus prompt for item Ix from a's perspective>)
   Total dispatches in one message: Σ |Sx|
+  Each analyst prompt ends with the `Reference dir:` line, built from the
+  `plugin_root` that `validate-agent-install` returned.
   ↓
   Await ALL spawned analysts to complete.
 
@@ -224,8 +227,10 @@ Stage 2 — All synthesizers, ONE assistant message:
           description: "SPEC-XXX consensus synthesis (R1) [I<x>]",
           prompt: """
             ## Consensus Resolution
+            **Protocol:** <plugin_root>/skills/speckit-autopilot/references/consensus-protocol.md
             **Unresolved Item:** <item Ix text>
             **Routed Categories:** [<categories from prefix>]
+            **Security Route:** <security_route from parse-consensus-categories: tag | keyword | none; write JSON null as none>
             **Round:** 1
             **<Analyst> Response:** <response> | NOT SPAWNED (not routed)
             ... (one row per analyst, NOT SPAWNED if not in Sx)
@@ -241,6 +246,10 @@ Stage 2 — All synthesizers, ONE assistant message:
   Omitting `agent_type` and accepting the default role is a failed dispatch.
   The parent never performs this synthesis itself.
 
+  `Protocol:` is the absolute path of this file in the loaded plugin, built
+  from the `plugin_root` that `validate-agent-install` returned. A result
+  whose reported `Protocol:` path differs from the one sent is malformed.
+
 Stage 3 — Apply Artifact Edits SERIALLY (orchestrator's own Edit calls):
   ROUND_2_QUEUE = []
   For each synthesizer result, in item order:
@@ -249,13 +258,14 @@ Stage 3 — Apply Artifact Edits SERIALLY (orchestrator's own Edit calls):
       Write a CRL row: Round=1, Routed Categories=Sx, Outcome=<outcome>, Analysts Used=Sx
     IF Flags includes [ESCAPE_TO_ROUND_2] OR low confidence:
       Push (Ix, Sx) onto ROUND_2_QUEUE
-    IF Flags includes [HUMAN REVIEW NEEDED]:
-      Write CRL row with Outcome=human-review, STOP autopilot after this batch
+    IF Flags includes [HUMAN REVIEW NEEDED]: resolve per §Human Review Needed
+      after this batch: ask the operator in place and record the answer, or
+      write CRL row with Outcome=[HUMAN REVIEW] and STOP autopilot
 
 If ROUND_2_QUEUE non-empty:
   Stage 4 — All Round-2 analysts (the remaining (3 − |Sx|) per queued item) in ONE message
   Stage 5 — All Round-2 synthesizers in ONE message
-  Stage 6 — Apply Round-2 edits serially (same as Stage 3); HUMAN REVIEW STOPs.
+  Stage 6 — Apply Round-2 edits serially (same as Stage 3), including §Human Review Needed.
 ```
 
 ### What stays serial — and why
@@ -307,8 +317,10 @@ with parent-authored synthesis.
 |----------|--------|
 | **2/3 agree** | Use the majority answer. Log the dissenting perspective for context. |
 | **3/3 agree** | Use the answer with high confidence. |
-| **All 3 disagree** | Flag as `[HUMAN REVIEW NEEDED]` with all 3 perspectives. STOP autopilot. |
-| **Security item** (`[security]` tag or keyword) | Apply only on 3/3 agreement. A 2/3 majority or all-disagree flags `[HUMAN REVIEW NEEDED]`. |
+| **All 3 disagree** | Flag as `[HUMAN REVIEW NEEDED]` with all 3 perspectives. Ask in place or STOP autopilot, per [Human Review Needed](#human-review-needed). |
+| **Security item** (`[security]` tag, or keyword with any analyst returning `security_relevant: true` or omitting the field) | Apply only on 3/3 agreement. A 2/3 majority or all-disagree flags `[HUMAN REVIEW NEEDED]`. |
+| **Keyword-only item** (every routed analyst returns `security_relevant: false`) | Use the ordinary rules above: a 2/3 majority applies. |
+| **Non-security route** (`Security Route: none`) | Use the item's own rule: a `security_relevant: true` answer does not raise the bar, so two disagreeing Round 1 analysts still escape to Round 2 and a 2/3 majority applies at N = 3. |
 
 ### Conservative Mode
 
@@ -323,10 +335,12 @@ Same as moderate, but:
 - 2/3 agreement auto-answers (same as moderate)
 - Even all-disagree attempts to synthesize best answer and proceed
 - Only a security item without 3/3 agreement stops for human review
+  (a keyword-only item that every analyst marks `security_relevant: false`
+  is not a security item)
 
 ## Security Keywords
 
-These keywords in the question, gap, or finding text route the item to all three analysts and raise its bar to **unanimous agreement**, in every consensus mode:
+These keywords in the question, gap, or finding text route the item to all three analysts. The item's bar rises to **unanimous agreement**, in every consensus mode, unless every routed analyst returns `security_relevant: false`:
 
 ```
 auth, token, secret, encryption, PII, credential, permission, password,
@@ -340,9 +354,46 @@ and `authored` do not trigger the rule.
 
 When a security keyword is detected:
 1. Still spawn all 3 agents to gather perspectives. `parse-consensus-categories` already returns all 3 for these keywords, so dispatching exactly what it returns satisfies this step
-2. When all 3 agree, apply the answer like any other item and continue. A keyword alone never stops autopilot
-3. When they do not all agree, present all 3 answers to the human and let the human decide
-4. Resume autopilot after the human decision
+2. Pass the helper's `security_route` to the synthesizer as its `Security Route` line
+3. When every routed analyst returns `security_relevant: false`, the keyword was used in another sense (for example `tokens` counting LLM usage), so apply the ordinary agreement rule for the item: a 2/3 majority applies at N = 3
+4. An explicit `[security]` tag, or, on a keyword route, any analyst returning `security_relevant: true`, keeps unanimity: when all 3 agree, apply the answer like any other item and continue. A keyword alone never stops autopilot
+5. When a unanimity item's analysts do not all agree, present all 3 answers to the human and let the human decide, per [Human Review Needed](#human-review-needed)
+6. Resume autopilot after the human decision
+
+## Human Review Needed
+
+A synthesizer result flagged `[HUMAN REVIEW NEEDED]` is a decision only a human
+may make. The parent orchestrator, never an executor, analyst, or synthesizer,
+handles it after the batch's other edits are applied. How it reaches the human
+depends on whether one is present:
+
+- **Interactive run: ask in place.** Ask only when an interactive user is
+  present and the host's native question tool is available in the
+  orchestrator's own loop: `AskUserQuestion` on Claude Code (the recorded
+  `execution_mode` is `interactive`), or `request_user_input` on Codex. Ask one
+  question per flagged item. Name the item and its routed categories, then
+  offer each distinct analyst position as an option, with the synthesizer's
+  recommendation first when it named one (for example the 2/3 majority on a
+  security item), and a final `Stop the run` option. Give each option the
+  analyst that holds it and one line of that analyst's evidence.
+- **Apply the answer.** Apply the chosen position as the item's artifact edit,
+  exactly as an accepted consensus answer would be applied, and label its
+  source `human answer` (see
+  [workflow-file-protocol.md](./workflow-file-protocol.md)). Write the
+  Consensus Resolution Log row with Outcome `[HUMAN REVIEW]` and a Resolution
+  cell of `human answer: <chosen position>`, then continue the run. A Clarify
+  item also records the answer in Clarify Results under the same label.
+- **`Stop the run`, or no usable answer: stop.** Write the Consensus
+  Resolution Log row with Outcome `[HUMAN REVIEW]` and stop exactly as an
+  unattended run does.
+- **Unattended run: stop exactly as before.** With no user or no native
+  question tool (`claude -p`, `codex exec`, CI, or a background agent), write
+  the Consensus Resolution Log row with Outcome `[HUMAN REVIEW]`, STOP
+  autopilot, and present all perspectives in the stop report. Never ask through
+  free text or `grill-me`, and never wait on a question no one can answer.
+
+The pull-request feedback sweep keeps its own human-review stop; this section
+covers Clarify, Checklist, and Analyze consensus.
 
 ## Phase-Specific Consensus Flows
 
@@ -388,7 +439,7 @@ clarify-executor prepares read-only Clarify Question Set
         │   ├── N=1 high-confidence | N=2 both-agree | N=3 2/3 or 3/3 agree
         │   │   → Edit spec.md with the consensus answer, remove marker
         │   ├── [ESCAPE_TO_ROUND_2] → enqueue for Round 2 batch
-        │   └── All disagree (after Round 2) → [HUMAN REVIEW NEEDED] + STOP
+        │   └── All disagree (after Round 2) → [HUMAN REVIEW NEEDED] → ask in place or STOP
 ```
 
 The diagram above is per-item educational. The actual dispatch is
@@ -421,6 +472,8 @@ alternative.
 
 Follow your agent instructions for output format
 (Answer, Evidence/References/Citations, Confidence).
+
+Reference dir: <plugin_root>/skills/speckit-autopilot/references/
 ```
 
 ### Checklist Gap Consensus
@@ -449,7 +502,7 @@ checklist-executor runs /speckit-checklist domain
         │   ├── N=1 high-confidence | N=2 both-agree | N=3 2/3 or 3/3 agree
         │   │   → Apply edit to spec.md or plan.md, log to workflow
         │   ├── [ESCAPE_TO_ROUND_2] → enqueue for Round 2 batch
-        │   └── All disagree (after Round 2) → [HUMAN REVIEW NEEDED] + STOP
+        │   └── All disagree (after Round 2) → [HUMAN REVIEW NEEDED] → ask in place or STOP
 ```
 
 The diagram above is per-gap educational. Actual dispatch is
@@ -480,6 +533,8 @@ Propose how to close this gap. Specifically:
 3. Where in the artifact should the edit go? (section name)
 
 Follow your agent instructions for output format.
+
+Reference dir: <plugin_root>/skills/speckit-autopilot/references/
 ```
 
 ### Analyze Finding Consensus
@@ -508,7 +563,7 @@ analyze-executor runs /speckit-analyze
         │   ├── N=1 high-confidence | N=2 both-agree | N=3 2/3 or 3/3 agree
         │   │   → Apply fix to tasks.md / spec.md / plan.md, log to workflow
         │   ├── [ESCAPE_TO_ROUND_2] → enqueue for Round 2 batch
-        │   └── All disagree (after Round 2) → [HUMAN REVIEW NEEDED] + STOP
+        │   └── All disagree (after Round 2) → [HUMAN REVIEW NEEDED] → ask in place or STOP
 ```
 
 The diagram above is per-finding educational. Actual dispatch is
@@ -540,6 +595,8 @@ Propose how to fix this finding. Specifically:
 3. Does this fix introduce any new concerns?
 
 Follow your agent instructions for output format.
+
+Reference dir: <plugin_root>/skills/speckit-autopilot/references/
 ```
 
 ### Pre-Implement Confidence Emit (end of Phase 6 Analyze)
@@ -692,4 +749,4 @@ sweep rows or to phase rows without either being excluded from the rate.
 - `both-agree` — Round 1, two-analyst, agreement
 - `3/3`, `2/3` — Round 2, classic agreement counts
 - `escape-hatch` — Round 1 escaped to Round 2 (count this in the 10% trigger metric)
-- `[HUMAN REVIEW]` — Round 2 all-disagree, or a security flag (Round 1, all 3), autopilot stopped
+- `[HUMAN REVIEW]` — Round 2 all-disagree, or a security flag (Round 1, all 3); autopilot stopped, or, in an interactive run, the operator answered in place and the Resolution cell reads `human answer: <chosen position>`

@@ -1,5 +1,86 @@
 # Changelog
 
+## [2.38.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.37.1...speckit-pro-v2.38.0) (2026-09-27)
+
+
+### Features
+
+* **speckit-pro:** emit a paste-ready egress authorization from the Codex preflight ([#760](https://github.com/racecraft-lab/racecraft-plugins-public/issues/760)) ([35d6030](https://github.com/racecraft-lab/racecraft-plugins-public/commit/35d60300382d75b96c21967cf538a3b067cd5d9f))
+
+
+### Bug Fixes
+
+* **speckit-pro:** archive merged specs one feature at a time ([#758](https://github.com/racecraft-lab/racecraft-plugins-public/issues/758)) ([80c8f68](https://github.com/racecraft-lab/racecraft-plugins-public/commit/80c8f68dca8b53ca1eaefc12002b944c55a04ff3))
+* **speckit-pro:** inventory data egress in the Codex autonomy preflight ([#750](https://github.com/racecraft-lab/racecraft-plugins-public/issues/750)) ([4fa3a98](https://github.com/racecraft-lab/racecraft-plugins-public/commit/4fa3a98c4adf165de13923a75d83937b641312ca))
+* **speckit-pro:** keep autopilot running past one blocked action ([#757](https://github.com/racecraft-lab/racecraft-plugins-public/issues/757)) ([67706d9](https://github.com/racecraft-lab/racecraft-plugins-public/commit/67706d96542762cd681b501b55a35f8f7a047df3)), closes [#752](https://github.com/racecraft-lab/racecraft-plugins-public/issues/752)
+* **speckit-pro:** keep runner byproducts out of commits ([#759](https://github.com/racecraft-lab/racecraft-plugins-public/issues/759)) ([a3527f9](https://github.com/racecraft-lab/racecraft-plugins-public/commit/a3527f9ad63d23764b0e1b45f0cff15f0848e32c))
+* **speckit-pro:** re-attest the autonomy boundary at resume start ([#749](https://github.com/racecraft-lab/racecraft-plugins-public/issues/749)) ([6aa1be6](https://github.com/racecraft-lab/racecraft-plugins-public/commit/6aa1be6780652951ba5e29f98f7cafc3cc746e3b))
+* **speckit-pro:** record the implement checklist gate as deferred to review ([#761](https://github.com/racecraft-lab/racecraft-plugins-public/issues/761)) ([0cea36a](https://github.com/racecraft-lab/racecraft-plugins-public/commit/0cea36ad5aadae5f395439c33a17a5943b5bd9d7))
+
+## [2.37.1](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.37.0...speckit-pro-v2.37.1) (2026-09-27)
+
+
+### Bug Fixes
+
+* **speckit-pro:** add the setup checks to the Codex upgrade skill and document PyYAML ([#746](https://github.com/racecraft-lab/racecraft-plugins-public/issues/746)) ([c953426](https://github.com/racecraft-lab/racecraft-plugins-public/commit/c953426f141942e6359818211ced158beb37d4a0))
+* **speckit-pro:** catch SpecKit skills calling options their scripts reject ([#744](https://github.com/racecraft-lab/racecraft-plugins-public/issues/744)) ([b6bf23f](https://github.com/racecraft-lab/racecraft-plugins-public/commit/b6bf23f96cc556be9bb977390030f8a2bfdb8980))
+* **speckit-pro:** fail closed on JSON Schema keywords the runner validator ignores ([#736](https://github.com/racecraft-lab/racecraft-plugins-public/issues/736)) ([bf4f503](https://github.com/racecraft-lab/racecraft-plugins-public/commit/bf4f5039e11c53d800d9769849ec1337985f64f9))
+* **speckit-pro:** let planned PR markers wait for their first checkpoint ([#742](https://github.com/racecraft-lab/racecraft-plugins-public/issues/742)) ([c07587e](https://github.com/racecraft-lab/racecraft-plugins-public/commit/c07587e9f1db925c372a08f4ac9c596596c92c7c))
+* **speckit-pro:** negotiate the MCP protocol version in the stdio brokers ([#737](https://github.com/racecraft-lab/racecraft-plugins-public/issues/737)) ([b6b36b7](https://github.com/racecraft-lab/racecraft-plugins-public/commit/b6b36b7f77bb4a80a5b4d356991b97e68d26c9f4))
+* **speckit-pro:** open a fresh correction allowance on an approved re-plan ([#743](https://github.com/racecraft-lab/racecraft-plugins-public/issues/743)) ([1f3846c](https://github.com/racecraft-lab/racecraft-plugins-public/commit/1f3846c7f9cb689d555b4c39a75a860b27cfaacb))
+
+## [2.37.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.36.3...speckit-pro-v2.37.0) (2026-09-26)
+
+
+### Features
+
+* **speckit-pro:** ask the operator in place when consensus needs human review ([#727](https://github.com/racecraft-lab/racecraft-plugins-public/issues/727)) ([9652a50](https://github.com/racecraft-lab/racecraft-plugins-public/commit/9652a502477de73bd57155f4506458234186386c))
+
+
+### Bug Fixes
+
+* **speckit-pro:** bind an explicit workflow path given through a symlink ([#708](https://github.com/racecraft-lab/racecraft-plugins-public/issues/708)) ([25be262](https://github.com/racecraft-lab/racecraft-plugins-public/commit/25be262aaf47623d8041f967503e20a52b94ab08)), closes [#702](https://github.com/racecraft-lab/racecraft-plugins-public/issues/702)
+* **speckit-pro:** keep two-analyst disagreements out of human review ([#726](https://github.com/racecraft-lab/racecraft-plugins-public/issues/726)) ([2c07798](https://github.com/racecraft-lab/racecraft-plugins-public/commit/2c07798d48c6e36fb6371d641e0e5deb783c771f))
+* **speckit-pro:** pass the active reference paths to agents ([#709](https://github.com/racecraft-lab/racecraft-plugins-public/issues/709)) ([89e6af4](https://github.com/racecraft-lab/racecraft-plugins-public/commit/89e6af4b2124f83cd1b5ae7d10b9ba6d5471f1d6)), closes [#703](https://github.com/racecraft-lab/racecraft-plugins-public/issues/703)
+* **speckit-pro:** reconcile Plan artifacts after a rescope ([#728](https://github.com/racecraft-lab/racecraft-plugins-public/issues/728)) ([657320f](https://github.com/racecraft-lab/racecraft-plugins-public/commit/657320f69ccc7cd0fabe0aa57bc69eef266851fc))
+* **speckit-pro:** stop doubling .process for verification evidence ([#707](https://github.com/racecraft-lab/racecraft-plugins-public/issues/707)) ([a3aea5f](https://github.com/racecraft-lab/racecraft-plugins-public/commit/a3aea5f5f1650c9290dd214ea469633a61edefbd)), closes [#704](https://github.com/racecraft-lab/racecraft-plugins-public/issues/704)
+* **speckit-pro:** verify the private autonomy record in the boundary guard ([#725](https://github.com/racecraft-lab/racecraft-plugins-public/issues/725)) ([57201e8](https://github.com/racecraft-lab/racecraft-plugins-public/commit/57201e8c280b7066fe432cc1bc7140f59f7e5690))
+
+## [2.36.3](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.36.2...speckit-pro-v2.36.3) (2026-09-26)
+
+
+### Bug Fixes
+
+* **speckit-pro:** accept any Draft PR gap-note separator and keep title case ([#695](https://github.com/racecraft-lab/racecraft-plugins-public/issues/695)) ([42c1362](https://github.com/racecraft-lab/racecraft-plugins-public/commit/42c136204970b4825a5f12bb93cba290e42557c2))
+* **speckit-pro:** allow audited retry after host failure ([#678](https://github.com/racecraft-lab/racecraft-plugins-public/issues/678)) ([09a2342](https://github.com/racecraft-lab/racecraft-plugins-public/commit/09a23420d189854e8444efb1ead8bd220217a87e))
+* **speckit-pro:** allow ordered markers to modify shared paths ([#676](https://github.com/racecraft-lab/racecraft-plugins-public/issues/676)) ([25791e5](https://github.com/racecraft-lab/racecraft-plugins-public/commit/25791e5ff887419eda2af4ae421e7f56837b76f7))
+* **speckit-pro:** bind greenfield execution invariants after Specify ([#674](https://github.com/racecraft-lab/racecraft-plugins-public/issues/674)) ([29510b1](https://github.com/racecraft-lab/racecraft-plugins-public/commit/29510b1de664983892e1ace8325520beca0dbdc1))
+* **speckit-pro:** block planning completion on open Analyze findings ([#693](https://github.com/racecraft-lab/racecraft-plugins-public/issues/693)) ([ca3effa](https://github.com/racecraft-lab/racecraft-plugins-public/commit/ca3effa028acf3e4e3c11b5ca6d3cd0f99f240b4)), closes [#688](https://github.com/racecraft-lab/racecraft-plugins-public/issues/688)
+* **speckit-pro:** correct the workflow and roadmap templates ([#699](https://github.com/racecraft-lab/racecraft-plugins-public/issues/699)) ([17bb8fe](https://github.com/racecraft-lab/racecraft-plugins-public/commit/17bb8fef777ce97322ece5330f4a21480f8e7ed2)), closes [#663](https://github.com/racecraft-lab/racecraft-plugins-public/issues/663) [#638](https://github.com/racecraft-lab/racecraft-plugins-public/issues/638)
+* **speckit-pro:** finish the broker observation and worktree selection follow-ups ([#700](https://github.com/racecraft-lab/racecraft-plugins-public/issues/700)) ([07a1009](https://github.com/racecraft-lab/racecraft-plugins-public/commit/07a1009497114aac3152acf5bf838dc6b2fc1a3f))
+* **speckit-pro:** give three agents room to report before maxTurns ([#698](https://github.com/racecraft-lab/racecraft-plugins-public/issues/698)) ([da6b162](https://github.com/racecraft-lab/racecraft-plugins-public/commit/da6b1623781a40545927f1920c8be3d74078d19a))
+* **speckit-pro:** keep autonomy boundary proof private with a public receipt ([#691](https://github.com/racecraft-lab/racecraft-plugins-public/issues/691)) ([0e0df06](https://github.com/racecraft-lab/racecraft-plugins-public/commit/0e0df06680ddbce1957c71f92eaaf1c46e5af7d9)), closes [#683](https://github.com/racecraft-lab/racecraft-plugins-public/issues/683)
+* **speckit-pro:** keep runner byproducts out of the clean-worktree check ([#689](https://github.com/racecraft-lab/racecraft-plugins-public/issues/689)) ([5bd8d35](https://github.com/racecraft-lab/racecraft-plugins-public/commit/5bd8d35f170ca516bc52d3aa94c1d2bd786e7b85))
+* **speckit-pro:** let keyword-only security routes use normal agreement ([#696](https://github.com/racecraft-lab/racecraft-plugins-public/issues/696)) ([43cc843](https://github.com/racecraft-lab/racecraft-plugins-public/commit/43cc8431b70af24f2283eb7cc97ac47e794f9845))
+* **speckit-pro:** make G6 read the workflow Analysis Results table ([#692](https://github.com/racecraft-lab/racecraft-plugins-public/issues/692)) ([e8a93d7](https://github.com/racecraft-lab/racecraft-plugins-public/commit/e8a93d72df97fc7f6e7718ac9f04ea4ead09677e)), closes [#682](https://github.com/racecraft-lab/racecraft-plugins-public/issues/682)
+* **speckit-pro:** pass the active consensus protocol path to executors ([#697](https://github.com/racecraft-lab/racecraft-plugins-public/issues/697)) ([3ca3980](https://github.com/racecraft-lab/racecraft-plugins-public/commit/3ca39807f2b0ae9d38920680270230ba7a3609b2))
+* **speckit-pro:** record operator-approved corrective exceptions ([#690](https://github.com/racecraft-lab/racecraft-plugins-public/issues/690)) ([e6d5ea8](https://github.com/racecraft-lab/racecraft-plugins-public/commit/e6d5ea84b8df641312e7be585faf9d168ec022f1))
+* **speckit-pro:** recover consensus metadata after Analyze ([#680](https://github.com/racecraft-lab/racecraft-plugins-public/issues/680)) ([85d5e18](https://github.com/racecraft-lab/racecraft-plugins-public/commit/85d5e18abf383d7489fe2ef7e9dcb69b5683ae0c))
+* **speckit-pro:** scope reviewability-gate setup mode to one roadmap entry ([#694](https://github.com/racecraft-lab/racecraft-plugins-public/issues/694)) ([0826cb5](https://github.com/racecraft-lab/racecraft-plugins-public/commit/0826cb5a361a2961214bc063a431132aca3d08a1))
+
+## [2.36.2](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.36.1...speckit-pro-v2.36.2) (2026-09-25)
+
+
+### Bug Fixes
+
+* **speckit-pro:** classify confidence verdicts in runner responses ([#660](https://github.com/racecraft-lab/racecraft-plugins-public/issues/660)) ([fd93220](https://github.com/racecraft-lab/racecraft-plugins-public/commit/fd9322045d9db5dd0718bf397cc86b680fe4169c))
+* **speckit-pro:** honor explicit Codex workflow worktree selection ([#657](https://github.com/racecraft-lab/racecraft-plugins-public/issues/657)) ([0fa9c4b](https://github.com/racecraft-lab/racecraft-plugins-public/commit/0fa9c4bc97574f68a15350f23bebc3f97c035c6a))
+* **speckit-pro:** ignore persistent Claude agent memory in consumer worktrees ([#659](https://github.com/racecraft-lab/racecraft-plugins-public/issues/659)) ([d5b64ea](https://github.com/racecraft-lab/racecraft-plugins-public/commit/d5b64eac0122c416c3173ab07f1035b6a6a53573))
+* **speckit-pro:** make draft packet instructions executable ([#669](https://github.com/racecraft-lab/racecraft-plugins-public/issues/669)) ([c85cb4c](https://github.com/racecraft-lab/racecraft-plugins-public/commit/c85cb4c8a96f9876bc0eb78b17cace26787919d9))
+* **speckit-pro:** parse adjacent task code spans independently ([#658](https://github.com/racecraft-lab/racecraft-plugins-public/issues/658)) ([0a093a3](https://github.com/racecraft-lab/racecraft-plugins-public/commit/0a093a325f53cec6d4c85ff25f6c1d93be49d0d8))
+* **speckit-pro:** pass the workflow file to atomicity evaluation ([#668](https://github.com/racecraft-lab/racecraft-plugins-public/issues/668)) ([648d964](https://github.com/racecraft-lab/racecraft-plugins-public/commit/648d9643d76066dece071a652448910228ca6bd7))
+* **speckit-pro:** record broker preview observation time ([#670](https://github.com/racecraft-lab/racecraft-plugins-public/issues/670)) ([ebcf930](https://github.com/racecraft-lab/racecraft-plugins-public/commit/ebcf930ac6e3b4d03ad1119abafe246fdc14ff1a))
+
 ## [2.36.1](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.36.0...speckit-pro-v2.36.1) (2026-09-25)
 
 

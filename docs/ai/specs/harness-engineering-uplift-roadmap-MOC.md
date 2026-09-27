@@ -3,7 +3,7 @@ up: "[SpecKit Pro Harness Engineering Uplift Roadmap](harness-engineering-uplift
 related:
   - "[SpecKit Pro Harness Engineering Uplift PRD](../../prd-harness-engineering-uplift.md)"
   - "[Typed-Judgment Opportunity Catalog](harness-engineering-uplift-jev-catalog.md)"
-status: "Active; HRNS-001 complete/archived; HRNS-002 to HRNS-014 retired; HRNS-015 and HRNS-017 to HRNS-023 ready"
+status: "Active; HRNS-001 complete/archived; HRNS-002 to HRNS-014 retired; HRNS-015, HRNS-017 to HRNS-023, HRNS-039, and HRNS-040 ready"
 rank:
 spec_id: "harness-engineering-uplift"
 structureVersion: 1
@@ -31,6 +31,8 @@ another.
 - HRNS-021 Condition-Bound Guidance and Lesson Promotion
 - HRNS-022 Eval Ladder and Model Refresh
 - HRNS-023 Harness Drift Scanner
+- HRNS-039 Runner-Computed Consensus Tally
+- HRNS-040 State and Gate Test Depth
 
 ### Execution, Safety, and Context Economy
 
@@ -54,6 +56,7 @@ wire.
 - HRNS-025 Run Journal and PR Trace Summary
 - HRNS-030 Obligation and Subgoal Registry
 - HRNS-027 Dual-Host Jev Adapter
+- HRNS-041 Ledger Formal Model and Trace Check
 
 ### Goal Verification
 

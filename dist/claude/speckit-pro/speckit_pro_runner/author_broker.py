@@ -16,6 +16,8 @@ from pathlib import Path, PurePosixPath
 from typing import Any
 import sys
 
+from .mcp_protocol import negotiate_protocol_version
+from .artifact_review import OBSERVATION_CLOCK_SKEW
 from .helpers.mutation import validate_target_path, write_file_atomic
 from .helpers.read_only import repo_relative, resolve_input_path
 
@@ -322,11 +324,24 @@ def submit_preview_verdict(*, capability: str, verdict: str) -> dict[str, Any]:
     return {"verdict": verdict, "artifact_sha256": digest}
 
 
+def _implausible_observation_time(observed_at: Any, created_at: Any) -> bool:
+    """A stored observation must fall between session creation and now."""
+    try:
+        moment = datetime.fromisoformat(observed_at)
+        created = float(created_at)
+    except (TypeError, ValueError):
+        return True
+    if moment.tzinfo is None:
+        return True
+    return moment.timestamp() < created or moment > datetime.now(timezone.utc) + OBSERVATION_CLOCK_SKEW
+
+
 def close_session(*, capability: str) -> dict[str, Any]:
     state = _resolve_capability(capability)
     session_path = _safe_session_path(_state_root(), state["session_id"])
     observation = state.get("preview_submission") if state["kind"] == "preview" else None
     artifact_changed = False
+    implausible_time = False
     if observation is not None:
         root = Path(state["repo_root"])
         artifact = root / state["artifact_path"]
@@ -337,6 +352,7 @@ def close_session(*, capability: str) -> dict[str, Any]:
                 artifact_changed = _hash_file(artifact) != observation["artifact_sha256"] or observation["artifact_sha256"] != state["expected_sha256"]
             except OSError:
                 artifact_changed = True
+            implausible_time = _implausible_observation_time(observation["observed_at"], state.get("created_at"))
     try:
         (session_path / "state.json").unlink()
         if state["kind"] == "preview":
@@ -346,6 +362,8 @@ def close_session(*, capability: str) -> dict[str, Any]:
         raise BrokerViolation("author broker session could not close safely") from exc
     if artifact_changed:
         raise BrokerViolation("preview artifact changed after verdict submission")
+    if implausible_time:
+        raise BrokerViolation("preview observation time is implausible")
     result = {"session_id": state["session_id"], "status": "closed"}
     if observation is not None:
         result["observation"] = observation
@@ -396,7 +414,7 @@ TOOLS = (
     },
     {
         "name": "close_session",
-        "description": "Close one author-broker session and remove its private state. Intended for the trusted parent after the bounded agent call completes.",
+        "description": "Close one author-broker session and remove its private state. Intended for the trusted parent after the bounded agent call completes. Returns the session id and status; after a preview verdict it also returns `observation` with the verdict, artifact_sha256, and the broker-stamped observed_at time.",
         "inputSchema": _tool_schema({"capability": {"type": "string", "minLength": 1}}, ["capability"]),
     },
 )
@@ -449,8 +467,7 @@ def handle_message(message: Any) -> dict[str, Any] | None:
     if method == "notifications/initialized":
         return None
     if method == "initialize":
-        requested = message.get("params", {}).get("protocolVersion", "2024-11-05")
-        return _response(request_id, {"protocolVersion": requested, "capabilities": {"tools": {"listChanged": False}}, "serverInfo": SERVER_INFO})
+        return _response(request_id, {"protocolVersion": negotiate_protocol_version(message.get("params")), "capabilities": {"tools": {"listChanged": False}}, "serverInfo": SERVER_INFO})
     if method == "ping":
         return _response(request_id, {})
     if method == "tools/list":
@@ -461,7 +478,7 @@ def handle_message(message: Any) -> dict[str, Any] | None:
             return _error(request_id, -32602, "invalid tool parameters")
         try:
             result = call_tool(params.get("name"), params.get("arguments", {}))
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001 - boundary: any failure becomes an explicit error
             code = _error_code(exc)
             return _response(request_id, {"isError": True, "content": [{"type": "text", "text": f"broker_error:{code}"}], "structuredContent": {"error_code": code}})
         text = result if isinstance(result, str) else json.dumps(result, sort_keys=True, separators=(",", ":"))

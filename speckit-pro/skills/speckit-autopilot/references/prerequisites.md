@@ -62,27 +62,45 @@ to archive previously merged specs.
    field, the `--spec` override, or the active `specs/**` path in the workflow.
 2. Detect archive extension state from `.specify/extensions.yml`,
    `.specify/extensions/.registry`, and `.specify/extensions/archive/extension.yml`.
-3. If the archive extension is installed, determine the sweep mode from the
-   current branch:
-
-   **Feature / spec worktree branch** (normal autopilot case — run with actual
-   cleanup):
+3. If the archive extension is installed, list the sweep candidates with the
+   read-only runner helper `list-archive-candidates`:
    ```text
-   /speckit-archive-run --sweep --current-target <current-spec-dir>
+   printf '%s\n' '{"schema_version":"1.0","request_id":"autopilot-list-archive-candidates","helper_id":"list-archive-candidates","operation":"list-archive-candidates","mode":"read_only","inputs":{"current_target":"<current-spec-dir>"}}' | <resolved_python> -m speckit_pro_runner
    ```
+   The helper lists `specs/*/spec.md`, excludes the current target, and asks
+   `gh` for each remaining spec's merged pull request. `archive_order` lists
+   the specs with merged-PR evidence in ascending order. Specs in `not_merged`
+   or `unknown` stay active; never archive a spec that is not in
+   `archive_order`.
+4. Determine the archive mode from the current branch:
+
+   **Feature / spec worktree branch** (normal autopilot case): run the archive
+   command once per `archive_order` entry, in that order, and let each run
+   finish before the next starts:
+   ```text
+   /speckit-archive-run specs/<merged-spec-dir>
+   ```
+   Pass only the feature directory. The stock archive extension
+   (`stn1slv/spec-kit-archive`) archives one feature per run and rejects
+   `--sweep`, `--current-target`, and `--dry-run`; the vendored
+   `racecraft-lab/spec-kit-archive` fork accepts the same single-feature form.
+   If a run fails, STOP before Phase 0 with that spec and the command's error.
 
    **`main`, a release branch, or any protected integration branch** (dry-run
-   only — do not delete spec folders on the integration branch):
-   ```text
-   /speckit-archive-run --sweep --current-target <current-spec-dir> --dry-run
-   ```
+   only): do not run the archive command, because every archive run writes
+   project memory. Record the helper's `archive_order` as the specs a feature
+   branch run would archive.
 
-4. Archive Sweep may archive/clean up only previously merged specs. It MUST
-   exclude the current target spec until a later run sees that spec as merged.
-5. Record sweep output in the workflow notes: eligible previous specs, excluded
-   current spec, archive extension installed state, cleanup mode, and
-   `safeToApplyCleanup`.
-6. Add an `Archive Sweep: previously merged specs archived` task before Phase 0
+5. Archive Sweep may archive only previously merged specs. It MUST exclude the
+   current target spec until a later run sees that spec as merged; the helper
+   reports it as `excluded_current_spec` and never lists it.
+6. Record sweep output in the workflow notes: eligible previous specs
+   (`archive_order`), excluded current spec, specs left active with their
+   `not_merged` or `unknown` reason, archive extension installed state,
+   cleanup mode (`apply` on a feature branch, `dry_run` otherwise), and
+   `safeToApplyCleanup=false` (the sweep never passes `--apply-cleanup`, so it
+   never removes spec folders).
+7. Add an `Archive Sweep: previously merged specs archived` task before Phase 0
    in the visible task list.
 
 If the archive extension is missing, record `archive_extension_installed=false`,
@@ -150,6 +168,22 @@ The helper resolves the loaded plugin root that owns
 `skills/speckit-autopilot/` and checks all bundled `agents/*.md` files,
 including `uat-runbook-author.md`. If `plugin_root` is supplied in `inputs`,
 it must equal that loaded root.
+
+Keep the returned `plugin_root`. Every consensus-synthesizer,
+clarify-executor, checklist-executor, and analyze-executor prompt carries a `Protocol:` line
+set to `<plugin_root>/skills/speckit-autopilot/references/consensus-protocol.md`,
+so those agents read the active protocol and never a cached copy from another
+version. Check the `**Protocol:**` path each one reports against that line,
+and never copy that expanded path into the workflow file.
+
+Every clarify-, checklist-, analyze-, and implement-executor prompt, every
+consensus analyst prompt, and every artifact-author, formal-model-author, and
+uat-runbook-author prompt also carries a
+`Reference dir: <plugin_root>/skills/speckit-autopilot/references/` line. Those agents read
+`capability-discovery.md` and `grounding.md` only from that directory and never
+search the plugin cache for another copy. The artifact-author prompt also
+carries a `Gallery dir: <plugin_root>/artifact-gallery/` line, and the agent reads the
+manifest and templates only from that directory.
 
 If the check fails, STOP. Claude Code loads plugin agents directly from the
 plugin cache, so autopilot cannot safely self-heal a missing Claude agent file.

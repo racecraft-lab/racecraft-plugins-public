@@ -3,6 +3,7 @@
 from pathlib import Path
 import importlib.util
 import json
+import re
 import sys
 import tempfile
 import tomllib
@@ -84,6 +85,9 @@ class ExecutionContractTests(unittest.TestCase):
         template = (PLUGIN / "skills/speckit-coach/templates/workflow-template.md").read_text()
         tasks = template.split("## Phase 5: Tasks", 1)[1].split("### Tasks Results", 1)[0]
         self.assertNotIn("1-2 hours each", tasks)
+        # A run has no wall-clock limit, so task sizing must not cite a two-hour budget.
+        self.assertNotIn("two-hour", " ".join(tasks.split()))
+        self.assertIn("Small, complete behavioral units", tasks)
         for key in ("task-execution.v1", "task-execution.json", "capability_group",
                     "depends_on", "owns", "tdd_unit", "fingerprints"):
             self.assertIn(key, tasks)
@@ -126,6 +130,28 @@ class ExecutionContractTests(unittest.TestCase):
             self.assertNotIn("make one fresh retry", text)
             self.assertNotIn("Re-spawn with the", text)
             self.assertIn("read-only reconciliation", text)
+
+    def test_plan_rescope_reconciles_every_plan_artifact_before_g3_on_both_hosts(self):
+        # A rescope once left research.md, quickstart.md, and the requirements
+        # checklist on the old slice count while plan.md moved on, and no gate caught it.
+        rule = (
+            "After a rescope changes plan.md's scope, slices, or delivery order, the parent "
+            "reconciles every Plan artifact before G3: `research.md`, `quickstart.md`, "
+            "`data-model.md`, `contracts/`, and every file under `checklists/`. Record what "
+            "changed in each artifact in the workflow file's Plan Results."
+        )
+        claude = " ".join((SHARED / "references/phase-execution.md").read_text().split())
+        plan = claude.split("### Phase 3: Plan", 1)[1].split("**Gate:** G3", 1)[0]
+        self.assertIn(rule, plan)
+        codex = " ".join((CODEX / "references/phase-execution-codex.md").read_text().split())
+        loop = codex.split("7. Validate gate directly in the main session:", 1)[1].split(
+            "8. If gate fails:", 1)[0]
+        self.assertIn(rule, loop)
+        for executor in (PLUGIN / "agents/phase-executor.md",
+                         PLUGIN / "codex-agents/phase-executor.toml"):
+            with self.subTest(executor=executor.name):
+                text = " ".join(executor.read_text().split())
+                self.assertIn("Plan reports artifact status and any rescope of plan.md", text)
 
     def test_native_dispatch_keeps_direct_route_and_owned_cleanup(self):
         phase = (SHARED / "references/phase-execution.md").read_text()
@@ -288,11 +314,88 @@ class NativeRequestContractTests(unittest.TestCase):
             self.assertIn(required, verification)
 
 
+def _flat(path: Path) -> str:
+    return " ".join(path.read_text().split())
+
+
+class ImplementChecklistGateTests(unittest.TestCase):
+    """Autopilot records the implement checklist gate instead of silently skipping it.
+
+    Spec Kit's checklist items are reviewer-owned, and stock `/speckit-implement`
+    stops on unticked items. Autopilot defers those items to PR review, keeps
+    `[Gap]` markers blocking through G4, and writes the decision down.
+    """
+
+    PHASE_EXECUTION = (
+        SHARED / "references/phase-execution.md",
+        CODEX / "references/phase-execution-codex.md",
+    )
+
+    def test_both_hosts_record_the_gate_before_the_first_dispatch(self):
+        for path in self.PHASE_EXECUTION:
+            with self.subTest(host=path.name):
+                text = _flat(path)
+                self.assertIn("Record the Implement Checklist Gate", text)
+                gate = re.split("Open the implementation-notes record",
+                                text.split("Record the Implement Checklist Gate", 1)[1],
+                                maxsplit=1, flags=re.I)[0]
+                for phrase in (
+                    "before the first Phase 7 dispatch",
+                    "`deferred-to-review`",
+                    "reviewer-owned",
+                    "Autopilot never ticks a reviewer-owned item",
+                    "`[Gap]` markers are not deferred: they stay blocking through G4",
+                    "`### Implement Checklist Gate`",
+                    "`## Phase 7: Implement`",
+                    "`unknown`",
+                    "never asks the operator",
+                ):
+                    self.assertIn(phrase, gate)
+
+    def test_g4_names_the_deferral(self):
+        g4 = _flat(SHARED / "references/gate-validation.md").split(
+            "### G4 — After Checklist", 1)[1].split("**Auto-Fix:**", 1)[0]
+        self.assertIn("counts only `[Gap]` markers", g4)
+        self.assertIn("deferred to PR review", g4)
+        self.assertIn("Implement Checklist Gate", g4)
+
+    def test_workflow_protocol_lists_the_record_on_both_hosts(self):
+        for path in (SHARED / "references/workflow-file-protocol.md",
+                     CODEX / "references/workflow-file-protocol-codex.md"):
+            with self.subTest(host=path.name):
+                row = next(line for line in path.read_text().splitlines()
+                           if line.startswith("| **Implement** |"))
+                self.assertIn("Implement Checklist Gate", row)
+
+    def test_pr_body_tells_the_reviewer_the_boxes_are_theirs(self):
+        for path in (SHARED / "references/post-implementation.md",
+                     CODEX / "references/post-implementation-codex.md"):
+            with self.subTest(host=path.name):
+                text = _flat(path)
+                self.assertIn("`how_to_review`", text)
+                self.assertIn("left unticked for the reviewer", text)
+
+    def test_executors_neither_stop_on_nor_tick_checklist_items(self):
+        claude = (PLUGIN / "agents/implement-executor.md").read_text()
+        codex = tomllib.loads((PLUGIN / "codex-agents/implement-executor.toml").read_text())
+        for text in (claude, codex["developer_instructions"]):
+            rules = " ".join(text.split("</hard_constraints>", 1)[0].split())
+            self.assertIn("Do not stop on unticked domain checklist items", rules)
+            self.assertIn("Never edit a checklist marker", rules)
+
+    def test_dispatch_prompts_carry_the_rule_to_project_agents(self):
+        for path in self.PHASE_EXECUTION:
+            with self.subTest(host=path.name):
+                self.assertIn("do not stop on unticked ones, and never edit a checklist marker",
+                              _flat(path))
+
+
 if __name__ == "__main__":
     raise SystemExit(run_counted(
         unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case)
                            for case in (LiveCanaryRegressionTests, ExecutionContractTests,
                                         ExecutionMirrorTests,
-                                        NativeRequestContractTests)),
+                                        NativeRequestContractTests,
+                                        ImplementChecklistGateTests)),
         label="test-autopilot-execution-contract",
     ))

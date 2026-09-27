@@ -85,7 +85,7 @@ def _run_one(execute: Callable[[Job], Outcome], job: Job) -> tuple[Outcome, floa
     started = time.monotonic()
     try:
         outcome = execute(job)
-    except BaseException as exc:  # A provider callback must never trigger an implicit retry.
+    except BaseException as exc:  # A provider callback must never trigger an implicit retry.  # noqa: BLE001
         return _invalid(job, "callback_exception", exception_type=type(exc).__name__, message=str(exc)), time.monotonic() - started
     if not isinstance(outcome, Outcome):
         return _invalid(job, "callback_returned_non_outcome"), time.monotonic() - started

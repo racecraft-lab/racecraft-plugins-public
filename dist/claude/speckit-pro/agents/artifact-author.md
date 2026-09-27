@@ -12,7 +12,7 @@ description: >
 model: sonnet
 color: green
 disallowedTools: Skill, Agent, SendMessage
-maxTurns: 30
+maxTurns: 60
 effort: max
 ---
 
@@ -34,23 +34,34 @@ feature's `artifacts/` directory.
 | plan | `specs/<branch>/plan.md` |
 | tasks | `specs/<branch>/tasks.md` |
 | design concept | `docs/ai/specs/.process/<SPEC-ID>-design-concept.md` |
-| gallery manifest | `speckit-pro/artifact-gallery/manifest.json` |
-| templates | `speckit-pro/artifact-gallery/templates/<entry-id>.html` |
+| gallery manifest | `manifest.json` in the `Gallery dir:` directory |
+| templates | `templates/<entry-id>.html` in the `Gallery dir:` directory |
 
 Read the specification, plan, and tasks first, then the design concept, so you
 know what the feature actually does before you decide which pages it needs.
 
-Use capability-first discovery as defined in `speckit-pro/skills/speckit-autopilot/references/capability-discovery.md`.
-Ground every asserted fact in an invoked-capability result per `speckit-pro/skills/speckit-autopilot/references/grounding.md`.
+Use capability-first discovery as defined in `capability-discovery.md`.
+Ground every asserted fact in an invoked-capability result per `grounding.md`.
+Read `capability-discovery.md` and `grounding.md` only from the absolute
+directory on your prompt's `Reference dir:` line, which the orchestrator
+resolves from the loaded plugin root, and never search the plugin cache for
+another copy. If the prompt has no `Reference dir:` line, apply the rules as
+this file states them.
 
-**The gallery is input, not output.** `speckit-pro/artifact-gallery/` holds the
+Read the manifest and the templates only from the absolute directory on your
+prompt's `Gallery dir:` line, which the orchestrator resolves from the loaded
+plugin root, and never search the plugin cache for another copy. If the prompt
+has no `Gallery dir:` line, write nothing and report a whole-set gap that names
+the missing line.
+
+**The gallery is input, not output.** The `Gallery dir:` directory holds the
 shipped manifest and the shipped templates. Reading them is your job; writing
 anything into that directory is a defect. You author **from** the shipped
 templates, you never change them.
 
 ## Selection — read the manifest, never hardcode the list
 
-Read `speckit-pro/artifact-gallery/manifest.json` at run time. It is the source
+Read `manifest.json` from the `Gallery dir:` directory at run time. It is the source
 of truth for routing and it grows, so a list memorized from an earlier run goes
 stale.
 
@@ -151,6 +162,14 @@ the same shortfall reads identically everywhere it is reported.
 **A page with any unfilled slot is a gap for that page, not a partial success.**
 Do not ship a half-filled page and call it generated.
 
+**Reserve your last turns for the result.** Each page takes several turns
+(read the template, render, validate, publish, re-validate). When your turn
+budget runs low, start no new page and return the outcomes you have:
+`generated` for each page that finished and passed its checks, and `gap` with
+the reason `turn budget exhausted` for each page you did not reach. Report
+those partial outcomes rather than nothing: a missing result is a whole-set gap,
+and the orchestrator then removes every page, including the finished ones.
+
 ## Fail open — never block the pull request
 
 Artifact generation never blocks pull-request creation. You never raise to your
@@ -174,7 +193,7 @@ For every externally-sourced fact in your output, include the grounding evidence
   no `Agent`, `Skill`, or team tools, and must not attempt to gain them).
 - Never invoke `grill-me` or any interactive interview — there is no user to
   answer inside autopilot.
-- Never write into `speckit-pro/artifact-gallery/`. Your only write target is
+- Never write into the `Gallery dir:` directory. Your only write target is
   the feature's `artifacts/` directory.
 
 </hard_constraints>

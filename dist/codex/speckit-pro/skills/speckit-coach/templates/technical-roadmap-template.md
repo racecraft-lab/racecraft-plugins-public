@@ -83,10 +83,10 @@ Each accepted spec delivers its own observable outcome.
 
 | Spec | Name | Status | Workflow File | Next Phase |
 |------|------|--------|---------------|------------|
-| SPEC-001 | {{SPEC_001_NAME}} | ⏳ Pending | [SPEC-001-workflow.md](SPEC-001-workflow.md) | Specify |
-| SPEC-002 | {{SPEC_002_NAME}} | ⏳ Pending | [SPEC-002-workflow.md](SPEC-002-workflow.md) | <!-- Actual dependency or Specify --> |
-| SPEC-003 | {{SPEC_003_NAME}} | ⏳ Pending | [SPEC-003-workflow.md](SPEC-003-workflow.md) | <!-- Actual dependency or Specify --> |
-| SPEC-004 | {{SPEC_004_NAME}} | ⏳ Pending | [SPEC-004-workflow.md](SPEC-004-workflow.md) | <!-- Actual dependency or Specify --> |
+| SPEC-001 | {{SPEC_001_NAME}} | ⏳ Pending | [SPEC-001-workflow.md](.process/SPEC-001-workflow.md) | Specify |
+| SPEC-002 | {{SPEC_002_NAME}} | ⏳ Pending | [SPEC-002-workflow.md](.process/SPEC-002-workflow.md) | <!-- Actual dependency or Specify --> |
+| SPEC-003 | {{SPEC_003_NAME}} | ⏳ Pending | [SPEC-003-workflow.md](.process/SPEC-003-workflow.md) | <!-- Actual dependency or Specify --> |
+| SPEC-004 | {{SPEC_004_NAME}} | ⏳ Pending | [SPEC-004-workflow.md](.process/SPEC-004-workflow.md) | <!-- Actual dependency or Specify --> |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⚠️ Blocked
 

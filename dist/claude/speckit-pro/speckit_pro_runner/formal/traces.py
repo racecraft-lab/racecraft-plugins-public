@@ -227,7 +227,7 @@ def witness_matches(output: Path, rows: list[dict[str, Any]], projection: dict[s
         states = witness.get("states", [])
         if len(states) != len(rows):
             continue
-        for position, (actual, observed) in enumerate(zip(states, rows)):
+        for position, (actual, observed) in enumerate(zip(states, rows, strict=True)):
             if actual.get(index) != {"#bigint": str(position)}:
                 break
             if any(itf.literal(actual.get(name)) != itf.literal(observed[field]) for name, field in projection.items()):

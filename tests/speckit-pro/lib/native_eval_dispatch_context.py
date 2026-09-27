@@ -116,7 +116,7 @@ def _json_equal(left: object, right: object) -> bool:
     if type(left) is list:
         return len(left) == len(right) and all(  # type: ignore[arg-type]
             _json_equal(left_item, right_item)
-            for left_item, right_item in zip(left, right)  # type: ignore[arg-type]
+            for left_item, right_item in zip(left, right, strict=True)  # type: ignore[arg-type]
         )
     return left == right
 

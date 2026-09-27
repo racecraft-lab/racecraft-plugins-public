@@ -1,0 +1,36 @@
+{
+  "schema_version": "autonomy-boundary.v1",
+  "status": "ready",
+  "planning_fingerprints": {
+    "plan_md": "$fingerprint:specs/demo/plan.md",
+    "tasks_md": "$fingerprint:specs/demo/tasks.md"
+  },
+  "execution_boundary": {
+    "execution_environment": "local",
+    "sandbox_mode": "workspace-write",
+    "approval_reviewer": "auto_review",
+    "writable_roots": [
+      "$root:checkout",
+      "$root:shared"
+    ],
+    "summary": "Writes stay inside the checkout and the shared directory.",
+    "sha256": "$execution_sha256"
+  },
+  "actions": [
+    {
+      "action_id": "edit-shared-config",
+      "category": "outside_writable_roots",
+      "command_or_tool": "apply_patch",
+      "target": "$root:shared-config/settings.json",
+      "effect": "persistent edit of a machine-local file",
+      "execution_boundary_sha256": "$execution_sha256",
+      "scope_sha256": "$scope_sha256",
+      "disposition": "ready",
+      "authorization": {
+        "status": "explicit_user",
+        "evidence": "user approved this exact edit in the active conversation",
+        "scope_sha256": "$scope_sha256"
+      }
+    }
+  ]
+}

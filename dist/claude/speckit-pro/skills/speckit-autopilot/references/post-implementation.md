@@ -309,6 +309,7 @@ Agent(
 
     Spec: specs/<number>-<name>/spec.md
     Plan: specs/<number>-<name>/plan.md
+    Reference dir: <plugin_root>/skills/speckit-autopilot/references/
   """
 )
 ```
@@ -422,7 +423,9 @@ opens one slice PR.
    contract is only `output_path`, `title`, and `sections`; it writes one
    Markdown body and no packet metadata. Do not pass it packet JSON, raw gate
    output, full test logs, internal evidence records, or any other undeclared
-   field.
+   field. Include one plain-English `how_to_review` line saying the domain
+   checklist boxes under `specs/<feature>/checklists/` are left unticked for the
+   reviewer, as the Implement Checklist Gate recorded.
 6b. Require the emitted packet's repo-relative `body_file` to be present and
    readable. If body prose needs refinement, edit only the declared editable
    regions described below, then rerun validation before PR creation.
@@ -763,6 +766,8 @@ Agent(
     - PROJECT_COMMANDS: <PROJECT_COMMANDS as JSON>
     - Diff range: origin/main...HEAD
     - Feature dir: <feature-dir>
+
+    Reference dir: <plugin_root>/skills/speckit-autopilot/references/
 
     Apply all three mandatory rewrites — plain-prose Env Setup, concrete
     do-this-see-that per-story steps, and a real (or removed) FR Coverage

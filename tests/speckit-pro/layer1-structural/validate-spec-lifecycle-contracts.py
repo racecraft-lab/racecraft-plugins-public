@@ -73,6 +73,15 @@ class ValidateScripts(unittest.TestCase):
             with self.subTest(msg=f"technical-roadmap-template.md: no concrete '{klass}' exception pragma"):
                 self.assertNotIn(f'Reviewability-Exception: {klass}', content)
 
+    def test_003_technical_roadmap_template_workflow_links_point_under_process(self) -> None:
+        # Scaffold writes each workflow to .process/ beside the roadmap, so a bare link breaks.
+        content = ROADMAP_TEMPLATE.read_text(encoding='utf-8')
+        targets = re.findall(r'\[SPEC-\d+-workflow\.md\]\(([^)]*)\)', content)
+        self.assertEqual(4, len(targets), 'expected one workflow link per template spec row')
+        for target in targets:
+            with self.subTest(msg=f'technical-roadmap-template.md: workflow link {target} points under .process/'):
+                self.assertRegex(target, r'^\.process/SPEC-\d+-workflow\.md$')
+
     def test_004_spec_templates_generated_exception_safety(self) -> None:
         for spec_template in SPEC_TEMPLATES:
             template_name = _rel_repo(spec_template)
@@ -758,7 +767,7 @@ def run_moc_orphan(argv: list[str]) -> int:
     if argv:
         try:
             violations = scan_moc_orphans(Path(argv[0]))
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001 - boundary: any failure becomes an explicit error
             print(f"ERROR: validate-spec-lifecycle-contracts.py --moc-orphan: internal failure ({exc.__class__.__name__}: {exc})", file=sys.stderr)
             return 2
         return 1 if violations > 0 else 0
@@ -768,13 +777,13 @@ def run_moc_stale(argv: list[str]) -> int:
     if argv:
         try:
             violations = scan_stale_moc_links(Path(argv[0]), emit=True)
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001 - boundary: any failure becomes an explicit error
             print(f"ERROR: validate-spec-lifecycle-contracts.py --moc-stale: internal failure ({exc})", file=sys.stderr)
             return 2
         return 1 if violations else 0
     try:
         return run_counted(unittest.defaultTestLoader.loadTestsFromTestCase(ValidateMocStaleIndex), label="validate-spec-lifecycle-contracts", allow_live_specs=True)
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - boundary: any failure becomes an explicit error
         print(f"ERROR: validate-spec-lifecycle-contracts.py --moc-stale: internal failure ({exc})", file=sys.stderr)
         return 2
 

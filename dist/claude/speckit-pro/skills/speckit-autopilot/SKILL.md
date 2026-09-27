@@ -173,8 +173,8 @@ not issue a second invocation to obtain a file, exit code, stdout, or stderr.
 **Do not invoke `grill-me` from any autopilot phase or agent — ever.**
 
 `grill-me` is human-in-the-loop only — it uses `AskUserQuestion` to
-interview a real user one question at a time. Inside autopilot there
-is no user available; calling it would block indefinitely or produce
+interview a real user one question at a time. Autopilot may run
+unattended, with no user available; calling it would block indefinitely or produce
 low-value automated output that defeats its purpose.
 
 Autopilot's Clarify phase uses `/speckit-clarify` with the multi-agent
@@ -325,9 +325,11 @@ Run the pre-flight sequence before any phase work. STOP on failure.
 1. **Use runner helper operation IDs**. Invoke read-only helper behavior through
    `resolved_python -m speckit_pro_runner` with one JSON request on stdin; do not rely on
    plugin-local script files.
-2. **Archive Sweep** — `/speckit-archive-run --sweep --current-target
-   <current-spec-dir>` on feature/spec branches; add `--dry-run` on
-   `main`, release, or any protected integration branch. Skip if the
+2. **Archive Sweep** — run helper `list-archive-candidates` with the current
+   spec directory, then on feature/spec branches run
+   `/speckit-archive-run specs/<merged-spec-dir>` once per `archive_order`
+   entry, in order. On `main`, release, or any protected integration branch,
+   record the helper report as a dry run and archive nothing. Skip if the
    archive extension is absent. Excludes the current target spec. Distinguish
    an absent extension from a broken installation: if the extension is present
    but `/speckit-archive-run` is missing or unregistered, STOP pre-flight with
@@ -391,6 +393,9 @@ Run the pre-flight sequence before any phase work. STOP on failure.
    has to act on; `plan` after a strict-mode gate stop reads
    `the first non-terminal planning phase is Confidence Gate, which is
    ⚠️ Blocked` rather than an unexplained stage token.
+   Open CRITICAL/HIGH rows in the workflow's Analysis Results table also keep
+   planning incomplete, even when every row reads Complete; the basis then names
+   the open-finding count.
    If Step 0.6d reclaimed the slot, append
    `reclaimed the state slot from <prior workflow file> (prior status:
    <prior_run_note>)` to the same report. A `prior_run_note` of
@@ -599,8 +604,8 @@ for phase in PHASES starting from first_pending:
     5. Run after_<phase> hooks
     6. Validate the gate (G1-G7): run runner helper
        `helper_id=validate-gate operation=validate-gate mode=read_only`
-       with `gate=G<N>` and `feature_dir=<feature-dir>`, then branch on
-       the JSON `pass` field
+       with `gate=G<N>`, `feature_dir=<feature-dir>`, and
+       `workflow_file=<workflow-file>`, then branch on the JSON `pass` field
        On FAIL: reserve a corrective cycle through execution-control;
        honor its shared family/spec budget and checkpoint disposition
     7. Update workflow file; auto-commit if configured
@@ -733,7 +738,13 @@ Phantom Check, and Integration Suite in progress before dispatching the three
 workers. Later serial items advance one at a time. Completion requires every
 Post item to be completed or explicitly skipped **and** the created PR URL to
 be known; otherwise continue the loop or report an honest incomplete
-checkpoint, never a completion summary.
+checkpoint, never a completion summary. When every runnable item has finished
+and deferred items remain under §Blocked Actions Mid-Run: Fall Back or Defer,
+Never Stop in
+[`phase-execution.md`](./references/phase-execution.md#blocked-actions-mid-run-fall-back-or-defer-never-stop),
+report that checkpoint with one consolidated `AskUserQuestion` request, print
+the same question as plain text in the final message, and list every fallback
+taken and every deferred item.
 
 ## Workflow File Update Protocol
 
@@ -752,8 +763,15 @@ directions; do not infer a broader precedence rule.
   <next-pending-phase>` — the workflow file persists all state.
 - **Repair budget exhausted:** checkpoint with the exact gate output
   and remaining work; no phase or nested worker has an independent retry budget.
-- **Consensus all-disagree** (Round 2): flag `[HUMAN REVIEW NEEDED]`,
-  STOP, and present all 3 perspectives to the user.
+  One operator-approved application correction past it uses
+  `authorize-corrective-exception`. After an operator-ordered re-plan,
+  `begin-replan-epoch` opens a fresh allowance with the operator's approval;
+  never reset or bypass the ledger otherwise.
+- **Consensus all-disagree** (Round 2): flag `[HUMAN REVIEW NEEDED]`.
+  In an interactive session, ask the operator in place with
+  `AskUserQuestion`, apply the answer, and continue; in an unattended run,
+  STOP and present all 3 perspectives. See
+  [consensus-protocol.md §Human Review Needed](./references/consensus-protocol.md#human-review-needed).
 - **Research/context capability unavailable:** use the next acceptable
   evidence path, record any confidence impact, and escalate only when no
   acceptable evidence path remains or a true gate fails.

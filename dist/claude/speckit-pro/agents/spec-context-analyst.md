@@ -58,8 +58,13 @@ Each input includes the relevant context (spec.md excerpt, question text, gap de
 
 ### Search Strategy
 
-Use capability-first discovery as defined in `speckit-pro/skills/speckit-autopilot/references/capability-discovery.md`.
-Ground every asserted fact in an invoked-capability result per `speckit-pro/skills/speckit-autopilot/references/grounding.md`.
+Use capability-first discovery as defined in `capability-discovery.md`.
+Ground every asserted fact in an invoked-capability result per `grounding.md`.
+Read `capability-discovery.md` and `grounding.md` only from the absolute
+directory on your prompt's `Reference dir:` line, which the orchestrator
+resolves from the loaded plugin root, and never search the plugin cache for
+another copy. If the prompt has no `Reference dir:` line, apply the rules as
+this file states them.
 
 ## Output Format
 
@@ -87,9 +92,15 @@ Return your answer as a structured response:
 [high | medium | low]
 
 **Rationale**: [Why this confidence level — e.g., "Constitution Article III directly addresses this" or "No prior spec has addressed this concern, proposing based on constitutional principles"]
+
+## Security Relevance
+
+security_relevant: [true | false]
 ```
 
 For every externally-sourced fact in your output, include the grounding evidence note: `Capability path: <need> -> <selected capability/source>; Evidence: <citations or local file refs>; Confidence: <high|medium|low>`. If nothing grounds a claim, say so instead of asserting it.
+
+Set `security_relevant` to `true` when the item's substance is about security: authentication, authorization, access control, credentials, secrets, encryption, or personal data. Set it to `false` when a security keyword appears only in another sense, such as `tokens` counting LLM usage or a Clarify `session`. When unsure, set it to `true`. The consensus synthesizer reads it only when a security keyword alone routed the item to all three analysts; a `true` from any analyst keeps that item at unanimous agreement.
 
 ### Terminal Deliverable
 

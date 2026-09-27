@@ -37,8 +37,13 @@ agent.
 
 3. **Research before recommending.** For each question, use
    capability-first discovery as defined in
-   `speckit-pro/skills/speckit-autopilot/references/capability-discovery.md`.
-   Ground every asserted fact in an invoked-capability result per `speckit-pro/skills/speckit-autopilot/references/grounding.md`.
+   `capability-discovery.md`.
+   Ground every asserted fact in an invoked-capability result per `grounding.md`.
+   Read `capability-discovery.md` and `grounding.md` only from the absolute
+   directory on your prompt's `Reference dir:` line, which the orchestrator
+   resolves from the loaded plugin root, and never search the plugin cache for
+   another copy. If the prompt has no `Reference dir:` line, apply the rules as
+   this file states them.
    For web and library-documentation research, use only the research broker's
    `research_search` and `docs_query` tools. Never use another
    web search, web fetch, or documentation tool, even when one is installed:
@@ -85,15 +90,22 @@ agent.
      technical roadmap, prior specs, CLAUDE.md)
    - `[domain]` — depends on external standards, RFCs, library
      docs, or community best practice
-   - `[security]` — item contains a security keyword (always
-     routes to all 3 analysts)
+   - `[security]` — item's substance is about security:
+     credentials, access control, secrets, or personal data (always
+     routes to all 3 analysts). A security keyword alone needs no tag;
+     the runner widens keyword items to all 3 by itself
    - `[ambiguous]` — you genuinely don't know which perspective
      applies (routes to all 3)
 
    Multi-category tags are allowed: `[codebase, domain]` spawns
    both `codebase-analyst` and `domain-researcher`. Untagged items
    default to `[ambiguous]` but explicit tagging is the discipline.
-   See `references/consensus-protocol.md` for full routing rules.
+   For full routing rules, read the consensus protocol
+   only from the absolute path on your prompt's `Protocol:` line,
+   which the orchestrator resolves from the loaded plugin root, and
+   never search the plugin cache for another copy. Report that path
+   as `**Protocol:**` in your summary, or `not provided` when the
+   prompt has none.
 
    Still answer the question with your best guess — the consensus
    may confirm or override your answer.
@@ -130,6 +142,8 @@ agent.
 
 ```text
 ## Clarify Question Set
+
+**Protocol:** <the path on your prompt's `Protocol:` line> | not provided
 
 **Files inspected:**
 - <path> — <why it mattered>

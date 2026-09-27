@@ -8,6 +8,14 @@ For SPEC-FIXTURE-CHECKLIST, dispatch checklist-executor for the
 "testability" domain. Use the Agent tool with subagent_type
 "speckit-pro:checklist-executor" and a prompt that says: "Run
 /speckit.checklist testability for SPEC-FIXTURE-CHECKLIST and
-remediate any [Gap] markers found."
+remediate any [Gap] markers found." followed by these three lines:
+
+    Protocol: speckit-pro/skills/speckit-autopilot/references/consensus-protocol.md
+    Reference dir: speckit-pro/skills/speckit-autopilot/references/
+    Workflow root: .
+
+These paths are repository-relative because this fixture runs from the
+repository root; in a real run they are built from the loaded plugin
+root and the bound workflow root.
 
 Stop after the subagent returns. Do not run any other phase.

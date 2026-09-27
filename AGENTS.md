@@ -36,6 +36,8 @@ own failure patterns.
 ### 4. Verify success explicitly
 
 - Decide the relevant check before coding.
+- Fix a bug red first: add the test that fails on the bug, see it fail, then
+  make it pass.
 - Prefer the smallest useful check while iterating, then run the broader gate
   when the changed surface warrants it.
 - Before creating a PR or marking it ready, validate the exact final title with
@@ -82,7 +84,7 @@ Run from the repository root (Python 3.11+, Node >= 22.12 for docs).
 | Docs, reference mode: reference inputs changed | `pnpm --dir docs-site reference:check`, then `pnpm --dir docs-site validate:quality` | `validate-docs` (no) |
 | Docs, full mode: `docs-site/`, the artifact gallery, or a docs contract file changed (`scripts/classify-docs-validation.py`) | `pnpm --dir docs-site exec playwright install --with-deps chromium` once, then `pnpm --dir docs-site validate` | `validate-docs` (no) |
 | Container preflight: Linux containers rerun the suite when runner, test, or workflow paths change | CI only; its extra requests (`LINUX_REQUESTS` in `tests/speckit-pro/run-container-preflight.py`) also run locally | `container-preflight-linux-amd64`, `-arm64` (yes) |
-| Python lint: ruff F rules (scope in `ruff.toml`); mypy over the `mypy.ini` allowlist (add a module once it passes) | In a virtual environment, `python3 scripts/run-python-lint.py install ruff`, then `run ruff`; the same for `mypy` | `python-lint` (no; built to be required), `mypy-ratchet` (no) |
+| Python lint: ruff F, B, and BLE rules (`ruff.toml`); mypy over the `mypy.ini` allowlist (add a module once it passes) | In a virtual environment, `python3 scripts/run-python-lint.py install ruff`, then `run ruff`; the same for `mypy` | `python-lint` (no; built to be required), `mypy-ratchet` (no) |
 | Workflow lint | `actionlint` at the version pinned in `pr-checks.yml`, from the repository root. The CI installer (`scripts/install-actionlint.py`) fetches a Linux amd64 binary only | `validate-workflows` (no; it also checks release-PR ancestry, CI only) |
 
 ## Worktree Preflight
@@ -145,12 +147,23 @@ pnpm --dir docs-site reference:generate
   spec prose a test needs under that test's own `fixtures/` tree. Asserting a
   `specs/...` path as a string is fine; opening one is not, and
   `tests/speckit-pro/lib/test_result.py` enforces the difference at run time.
-- Keep repository-owned tooling on Python 3.11+ standard library unless an
-  existing local toolchain already owns the surface. Go is the plugin-owned
-  toolchain for `typesafe-jev/` only; the scripts and tests that build, check,
-  and release it stay Python.
+- Keep shipped plugin code (`speckit-pro/`, `typesafe-jev/plugin/`, `dist/`)
+  and the default local suite (`tests/speckit-pro/run-all.py`) on Python 3.11+
+  standard library. Dev and test
+  tooling may use a third-party package only when it is pinned in one
+  repository-owned source, installed by a repository Python script into an
+  isolated virtual environment, never imported by shipped code, and needed
+  only by a check in its own layer or CI job that fails, never skips, when the
+  package is missing (constitution II; `scripts/run-python-lint.py` is the
+  pattern). Go is the plugin-owned toolchain for `typesafe-jev/` only; the
+  scripts and tests that build, check, and release it stay Python.
 - Do not add active repository Bash or `jq` dependencies outside existing
   workflow dispatch glue and fixed vendored boundaries.
+- Gates and validators fail closed: missing, unreadable, or unparseable
+  evidence yields a failure or an explicit unknown, never a pass.
+- Keep one source per contract: when code and a doc state the same request
+  shape, threshold, or path, execute the doc's example in a test or derive one
+  from the other.
 - If plugin source or payload-affecting files change, account for the generated
   artifact contract before calling the work done.
 
@@ -169,8 +182,11 @@ draft skips every other PR Checks job, and `validate-plugins` passes anyway.
 
 - Generated outputs are committed with their source; `--check`, both suites, and
   required checks pass, as do docs checks and actionlint when their inputs
-  changed. Only `feat` and `fix` PRs fill the `release-note` fence, required
-  unless labeled `release-note/skip`; any unlabeled fence is published.
+  changed.
+- When Python changed, ruff and mypy pass locally too; `mypy-ratchet` is not a
+  required check, so CI will not stop a regression.
+- Only `feat` and `fix` PRs fill the `release-note` fence, required unless
+  labeled `release-note/skip`; any unlabeled fence is published.
 
 ## Code Review Rules
 
@@ -180,8 +196,9 @@ the two in step when either changes.
 
 - Treat as blocking: manifest or version drift; plugin source changed without
   accounting for the generated artifact contract; malformed loader frontmatter;
-  repository tooling leaving the Python 3.11+ standard library (Go belongs to
-  `typesafe-jev/` only) or adding an active Bash or `jq` dependency outside the
+  shipped code or the default suite leaving the Python 3.11+ standard library,
+  or a dev-only package that breaks constitution II's conditions (Go belongs to
+  `typesafe-jev/` only), or adding an active Bash or `jq` dependency outside the
   allowed boundaries; a workflow that
   exposes secrets or elevated permissions to untrusted PR content; a script or
   test filename coupled to a temporary spec ID, or test code that reads a
@@ -190,7 +207,8 @@ the two in step when either changes.
 - Style, naming, prose, and refactoring notes are minor; add none on re-review.
 - Do not review generated reference pages, generated payloads, vendored upstream
   content, lockfiles, or archived specs, or report what CI enforces: only the
-  ruff F rules in `python-lint`. Cite `file:line` for any claim about behavior.
+  ruff rules in `ruff.toml` (F, B, BLE) that `python-lint` runs. Cite
+  `file:line` for any claim about behavior.
 
 ## Agent File Hygiene
 

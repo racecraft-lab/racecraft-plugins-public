@@ -141,6 +141,9 @@ background subagents as the fallback path. The 3-track structure
   `pr-packet-output` helper creates or refreshes packet JSON and packet-owned
   body content; `validate-pr-packet-write` persists validation only after
   rerunning current read-only validation.
+- Pass every auto-applied fallback and every deferred item to
+  `pr-packet-output` as `known_gaps`, so the PR body lists them under
+  `## Known Gaps`.
 - Missing optional extensions are logged and skipped. Do not fail the entire
   autopilot because an optional extension command is unavailable.
 - Never mark the workflow complete until every planned Post item is completed or
@@ -150,7 +153,12 @@ background subagents as the fallback path. The 3-track structure
   the canonical Post list. A completion response is forbidden while any `Post:` item is pending,
   in_progress, or missing. `execution_control.disposition=checkpoint_required`
   permits a checkpoint explicitly saying the run is not complete, retaining
-  all pending work, consumed budget and unknown effects. Otherwise continue
+  all pending work, consumed budget and unknown effects. When every runnable
+  item has finished and deferred items remain, report the same kind of honest
+  checkpoint: one consolidated operator request, the same question as plain
+  text in the final message, and every fallback taken and every deferred item
+  listed, as the phase-execution reference's blocked-action rule states. Run
+  every Post item that does not depend on deferred work first. Otherwise continue
   with the first incomplete item. `Post: Retrospective` remains the final Post item and
   must be completed or explicitly skipped before completion can be reported.
 - **Agent-thread sweep before completion:** as part of the same pre-final audit,
@@ -207,7 +215,9 @@ packet-owned body before `gh pr create`. The packet path remains
 title, target branches, changed-file scope, verification evidence, UAT text,
 non-goals, and known gaps must come from current workflow or marker-plan
 evidence. Run `pr-packet-output` in `dry_run` first, then `apply`. Do not choose
-an arbitrary older packet.
+an arbitrary older packet. Include one plain-English `how_to_review` line saying
+the domain checklist boxes under `specs/<feature>/checklists/` are left unticked
+for the reviewer, as the Implement Checklist Gate recorded.
 
 `generate-pr-body` is a body-only `golden_only` operation. Its complete input
 contract is `output_path`, `title`, and `sections`, and it writes one Markdown

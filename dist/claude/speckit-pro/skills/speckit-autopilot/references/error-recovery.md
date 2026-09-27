@@ -31,11 +31,23 @@ when its disposition permits. Resume and agent replacement never reset budget.
   completion order. The resolver reserves one slot for recovery. An invalid
   concurrency override forces wave size 1 and emits a warning.
 - **Gate needs repair:** Use the shared one-cycle-per-family/two-cycle-per-spec
-  reservation limits. On exhaustion, checkpoint and show the gate output.
-- **Consensus agents all disagree:** Flag `[HUMAN REVIEW NEEDED]`
-  and STOP. Present all 3 perspectives to the user.
+  reservation limits. On exhaustion, checkpoint and show the gate output. After
+  an operator-ordered re-plan, `begin-replan-epoch` opens a fresh allowance with
+  the operator's approval ([Bounded Execution](./execution-efficiency.md)).
+- **Consensus agents all disagree:** Flag `[HUMAN REVIEW NEEDED]`.
+  In an interactive session, ask the operator in place with
+  `AskUserQuestion` (the analysts' positions as options, the synthesizer's
+  recommendation first, and a `Stop the run` option), apply the answer with
+  the `human answer` label, and continue. In an unattended run, STOP and
+  present all 3 perspectives. See
+  [consensus-protocol.md §Human Review Needed](./consensus-protocol.md#human-review-needed).
 - **MCP tool unavailable:** Skip research that depends on it.
   Use Read/Grep fallback for codebase analysis. Log warning.
+- **Action blocked mid-run:** An approval-reviewer veto, a missing approval,
+  or an unavailable tool inside Phase 7 or Post is not a stop. Take the task's
+  own fallback, or defer that task and keep executing independent work, then
+  ask once at the end. See
+  [Blocked Actions Mid-Run: Fall Back or Defer, Never Stop](./phase-execution.md#blocked-actions-mid-run-fall-back-or-defer-never-stop).
 
 ## Context Window Management
 

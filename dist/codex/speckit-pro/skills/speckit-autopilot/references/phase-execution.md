@@ -39,6 +39,11 @@ The parent receives the summary as a tool result, which keeps
 the parent's agent loop alive. The parent then validates the
 gate and spawns the next subagent.
 
+Executors resolve project skills and paths against the bound
+`<WORKFLOW_ROOT>`, never the checkout that launched the run; name
+that root in every executor prompt with a `Workflow root:` line, as
+the template below shows.
+
 ### Subagent Prompt Template
 
 Use `speckit-pro:phase-executor` for Specify, Plan, and Tasks; Clarify,
@@ -54,6 +59,7 @@ Agent(
   prompt: """
     Run the /speckit-<phase> command.
     Use: Skill("speckit-<phase>", args: "<workflow prompt>")
+    Workflow root: <WORKFLOW_ROOT>
 
     <branch prefix if ON_FEATURE_BRANCH>
 
@@ -305,7 +311,12 @@ For each clarify session in the workflow file:
           run_in_background: false,
           prompt: """
             Prepare a Clarify Question Set for: <session prompt>
+            Protocol: <plugin_root>/skills/speckit-autopilot/references/consensus-protocol.md
+            Reference dir: <plugin_root>/skills/speckit-autopilot/references/
           """)
+     The `Protocol:` and `Reference dir:` lines are built from the
+     `plugin_root` that `validate-agent-install` returned
+     (prerequisites.md Step 0.0b).
   3. Parent answers returned questions and edits spec/workflow/state
   4. Re-scan spec.md for `[NEEDS CLARIFICATION]` markers and record the
      remaining count in the session result
@@ -320,6 +331,7 @@ For each clarify session in the workflow file:
         Stage 3: apply each synthesizer's Artifact Edit SERIALLY
                  to spec.md (preserves write contention safety).
         Round 2 escape-hatch: also batched across all queued items.
+        [HUMAN REVIEW NEEDED]: consensus-protocol.md#human-review-needed
      c. TaskUpdate: "<session> Consensus" → completed
   7. After accepted consensus edits, re-scan spec.md and update the recorded
      remaining-marker count
@@ -335,7 +347,10 @@ edit artifacts. It returns questions and recommendations to the parent.
 **Layer 2 (consensus):** For items the executor flagged
 (low confidence, conflicting sources, security keywords),
 the main session spawns 3 consensus agents to get distinct
-perspectives and applies consensus rules.
+perspectives and applies consensus rules. An item that ends in
+`[HUMAN REVIEW NEEDED]` goes to the operator through `AskUserQuestion` when
+the session is interactive; an unattended run stops, as in every phase that
+runs consensus.
 
 **Why after each session:** Session 2 may depend on
 Session 1's resolved questions. Both layers complete
@@ -362,6 +377,12 @@ in [formal checkpoints](./formal-methods.md#plan-authoring-checkpoint). Keep Pla
 and G3 incomplete until the selected checks pass; refresh discovery after authoring.
 The phase executor itself still runs only its supplied command. Formal failure
 stops independently of generic skip-and-log or confidence settings.
+
+**Rescope reconciliation:** After a rescope changes plan.md's scope, slices, or
+delivery order, the parent reconciles every Plan artifact before G3:
+`research.md`, `quickstart.md`, `data-model.md`, `contracts/`, and every file
+under `checklists/`. Record what changed in each artifact in the workflow
+file's Plan Results.
 
 **Plan-phase reviewability budget:**
 After `plan.md` exists, run the standalone plan-phase estimator to project
@@ -444,7 +465,11 @@ For each checklist domain in the workflow file:
   1. TaskUpdate: domain task → in_progress
   2. Agent(subagent_type: "speckit-pro:checklist-executor",
           run_in_background: false,
-          prompt: "Run /speckit-checklist with: <domain prompt>")
+          prompt: "Run /speckit-checklist with: <domain prompt>\nProtocol: <plugin_root>/skills/speckit-autopilot/references/consensus-protocol.md\nReference dir: <plugin_root>/skills/speckit-autopilot/references/")
+     The `Protocol:` line is the active consensus protocol and
+     `Reference dir:` is the directory that holds it, both
+     built from the `plugin_root` that `validate-agent-install`
+     returned (prerequisites.md Step 0.0b).
      The checklist-executor runs the checklist, researches
      gaps, applies fixes, and re-runs to verify (Layer 1)
   3. Parse executor's "Unresolved for consensus" section
@@ -457,6 +482,7 @@ For each checklist domain in the workflow file:
         Stage 3: apply each synthesizer's Artifact Edit SERIALLY
                  to spec.md or plan.md.
         Round 2 escape-hatch: also batched across all queued gaps.
+        [HUMAN REVIEW NEEDED]: consensus-protocol.md#human-review-needed
      c. Re-run domain checklist to verify gaps closed
      d. TaskUpdate: "<domain> Consensus" → completed
   5. TaskUpdate: domain task → completed
@@ -590,6 +616,21 @@ marker_split placeholder, packet validation placeholder, and PR mappings
 placeholder in the workflow file. `tasks.md` remains the task source, not
 authoritative marker state.
 
+Before implementation starts, write the plan as `pr-marker-plan.v1` and give
+each marker `implementation_checkpoint` `{"status": "pending"}` with no commit
+or evidence fields. A v2 plan also needs a changed-file manifest that the
+phase-coverage guard checks against the pull request's actual diff, which does
+not exist until code is written, so move to `pr-marker-plan.v2` at the first
+implementation checkpoint. Under v2, a pending checkpoint needs `commit_sha`
+and `evidence_path` together, and needs them only once a phase result is
+recorded for its marker; the guard does not check v1 checkpoints.
+
+When ordered markers each modify an existing shared file, declare `MODIFIED`
+for that path in each marker and list those marker IDs in review order in the
+changed-file manifest. Each completed marker checkpoint must change that file;
+an undeclared marker checkpoint must leave it unchanged. New, deleted, renamed,
+and process files retain a single marker owner.
+
 On resume, validate the source fingerprint before reusing checkpoints or
 emission evidence. A changed fingerprint, malformed/stale marker state, missing
 marker membership, changed order, or changed fold target clears affected
@@ -615,7 +656,8 @@ Items it can't resolve are flagged in its
 1. TaskUpdate: "Analyze" → in_progress
 2. Agent(subagent_type: "speckit-pro:analyze-executor",
         run_in_background: false,
-        prompt: "Run /speckit-analyze with: <prompt>")
+        prompt: "Run /speckit-analyze with: <prompt>\nProtocol: <plugin_root>/skills/speckit-autopilot/references/consensus-protocol.md\nReference dir: <plugin_root>/skills/speckit-autopilot/references/")
+   The `Protocol:` and `Reference dir:` lines are built as in Phase 4.
    The executor handles research + remediation (Layer 1)
 3. Parse executor's "Unresolved for consensus" section
 4. If unresolved findings exist:
@@ -627,6 +669,7 @@ Items it can't resolve are flagged in its
       Stage 3: apply each synthesizer's Artifact Edit SERIALLY to
                tasks.md, spec.md, or plan.md.
       Round 2 escape-hatch: also batched across all queued findings.
+      [HUMAN REVIEW NEEDED]: consensus-protocol.md#human-review-needed
    c. Re-run analyze to verify findings resolved
    d. TaskUpdate: "Analyze - Consensus" → completed
 5. TaskUpdate: "Analyze" → completed
@@ -696,9 +739,9 @@ to proceed, surface a remediation hint, or stop.
               re-pass; "completeness" lowest → re-verify artifact
               presence).
             - After remediation completes, dispatch the
-              consensus-synthesizer agent (single fan-out) to
-              re-emit the pre-Implement Confidence block to the
-              workflow file.
+              consensus-synthesizer agent (single fan-out), with the
+              `Protocol:` line, to re-emit the pre-Implement
+              Confidence block to the workflow file.
             - Re-run confidence-gate.
             - Increment iteration_count.
        c. If iteration_count == 3 OR exit 0 reached: stop iterating.
@@ -861,8 +904,9 @@ Agent(
     - Plan: specs/<feature>/plan.md
     - Tasks: specs/<feature>/tasks.md
     - Design concept: docs/ai/specs/.process/<SPEC-ID>-design-concept.md
-    - Gallery manifest: speckit-pro/artifact-gallery/manifest.json
-    - Templates: speckit-pro/artifact-gallery/templates/<entry-id>.html
+
+    Reference dir: <plugin_root>/skills/speckit-autopilot/references/
+    Gallery dir: <plugin_root>/artifact-gallery/
 
     Select, fill, and report per your agent instructions. Return one outcome
     per selected page.
@@ -871,13 +915,13 @@ Agent(
 ```
 
 **Selection lives inside the agent and is driven by the manifest.** The
-orchestrator names no page list of its own. The agent reads
-`speckit-pro/artifact-gallery/manifest.json`, keeps the entries whose `stage` is
+orchestrator names no page list of its own. The agent reads `manifest.json`
+from the `Gallery dir:` directory, built from `plugin_root`, and keeps the entries whose `stage` is
 `draft-pr`, and applies each surviving entry's `trigger`: `{"always": true}`
 selects on every run, and `{"any_of": [...]}` selects only when the feature
 carries at least one signal the entry names.
 
-**The gallery is input, never output.** `speckit-pro/artifact-gallery/` holds
+**The gallery is input, never output.** `<plugin_root>/artifact-gallery/` holds
 the shipped manifest and the shipped templates, and writing anything into that
 directory is a defect. Finished pages are written to
 `specs/<feature>/artifacts/`, one per selected entry, keeping the manifest
@@ -932,7 +976,7 @@ For each page written to `specs/<feature>/artifacts/`, two positive tests:
 
 | Test | The page fails when |
 | --- | --- |
-| it is not its own template | the file is byte-identical to `speckit-pro/artifact-gallery/templates/<entry-id>.html` |
+| it is not its own template | the file is byte-identical to `<plugin_root>/artifact-gallery/templates/<entry-id>.html` |
 | it is not still sample content | the body carries a sample-banner element: `class="sample-notice"`, `class="notice"`, or `class="note"` |
 
 **The banner test covers only the templates that carry a banner.** Seven of the
@@ -1051,7 +1095,7 @@ title a human would have to repair.
 The description begins with the matching H1 title, followed by exactly two H2 sections, Artifacts and Resume, and no other content:
 
 ```text
-# feat(speckit-pro): Open an example draft
+# feat(speckit-pro): open an example draft
 
 ## Artifacts
 
@@ -1100,7 +1144,7 @@ draft packet. `inputs.mode_name` is not accepted.
     "title_description": "open an example draft",
     "changed_files": [],
     "verification_evidence": [],
-    "body": "# feat(speckit-pro): Open an example draft\n\n## Artifacts\n\n| Artifact | Purpose | Open |\n| --- | --- | --- |\n| Implementation Plan | Describe the implementation phases | `open specs/example-feature/artifacts/implementation-plan.html` |\n\n## Resume\n\nStage: plan. Stopped at the plan-stage boundary for review.\nResume with: `/speckit-pro:speckit-autopilot <workflow-file> --stage implement`\n"
+    "body": "# feat(speckit-pro): open an example draft\n\n## Artifacts\n\n| Artifact | Purpose | Open |\n| --- | --- | --- |\n| Implementation Plan | Describe the implementation phases | `open specs/example-feature/artifacts/implementation-plan.html` |\n\n## Resume\n\nStage: plan. Stopped at the plan-stage boundary for review.\nResume with: `/speckit-pro:speckit-autopilot <workflow-file> --stage implement`\n"
   }
 }
 ```
@@ -2396,6 +2440,42 @@ repository because GitHub writes require a body file. Remove the private
 session and temporary reply file on success or failure. The run report names
 only that private cleanup completed, never its absolute path or contents.
 
+#### Phase 7 Setup: Record the Implement Checklist Gate
+
+Stock `/speckit-implement` stops when a domain checklist has unticked items.
+Spec Kit's checklist template makes those items reviewer-owned: a reviewer
+ticks a box, and implement must not change the markers. Autopilot does not run
+that stop. It records the gate decision instead, once, before the first Phase 7
+dispatch:
+
+- **The decision is `deferred-to-review`.** Unticked reviewer-owned items in
+  `specs/<feature>/checklists/*.md` pass to PR review as they are. Autopilot
+  never ticks a reviewer-owned item, and neither does any executor it
+  dispatches.
+- **`[Gap]` markers are not deferred: they stay blocking through G4.** Take
+  the `[Gap]` count from the recorded G4 verdict. Do not recount it here.
+- **Write the record** in the workflow file under `## Phase 7: Implement`, as a
+  `### Implement Checklist Gate` subsection placed before
+  `### Implementation Progress`. Create the subsection when it is absent. On a
+  resume, leave an existing record as found.
+
+```text
+### Implement Checklist Gate
+
+| Field | Value |
+|-------|-------|
+| Decision | deferred-to-review |
+| Reviewer-owned items | <unticked> of <total> unticked across <n> checklist files |
+| [Gap] markers | <count from the G4 verdict> (blocking through G4) |
+```
+
+- **Fail closed on missing evidence.** When `checklists/` is absent or a file
+  cannot be read, write `unknown` and the reason in the Reviewer-owned items
+  cell. Never write a zero you did not count.
+
+This gate is not a stop condition and never asks the operator. The PR body
+tells the reviewer the boxes are theirs (post-implementation.md step 6).
+
 #### Phase 7 Setup: Open the Implementation-Notes Record
 
 Run this before Step 1, so the record exists before the first task is
@@ -2553,6 +2633,7 @@ Agent(
     <if implementation/project-agent route>
     <tdd_protocol><TDD_PROTOCOL contents></tdd_protocol>
     </if>
+    Reference dir: <plugin_root>/skills/speckit-autopilot/references/
     PROJECT_COMMANDS: <discovered commands, including focused tests>
     PRESET_CONVENTIONS: <when configured>
     COMPLETED_TASKS: <relevant verified prior task results>
@@ -2562,6 +2643,8 @@ Agent(
     <exact assigned descriptions and per-task execution metadata>
     Execute sequentially within declared ownership. Return a separate
     ## Task Result: <TASK_ID> for every ID, including unfinished work.
+    Checklist items are reviewer-owned and deferred to PR review: do not
+    stop on unticked ones, and never edit a checklist marker.
   """
 )
 ```
@@ -2599,7 +2682,58 @@ stop, whatever the accompanying prose says.
 **The two legitimate reasons to yield mid-phase** are a dispatch still running,
 which will wake the run, and a genuine stop condition this reference names, which
 is reported through the run report. Nothing else qualifies. Waiting on a worker
-is not a stop; neither is a compaction (SKILL.md §Scope).
+is not a stop; neither is a compaction (SKILL.md §Scope). A blocked action is not
+a stop condition either; the next section says what to do instead.
+
+#### Blocked Actions Mid-Run: Fall Back or Defer, Never Stop
+
+Once Phase 7 is running, human input is for exceptional cases only; the
+operator's launch of the run is the one normal human touchpoint. A blocked
+action is any planned command, tool call, or side effect that cannot run as
+planned: an approval-reviewer veto (a permission-classifier or reviewer
+denial), a missing approval, or an unavailable tool or route.
+
+1. **Take the task's own fallback.** When the fallback that the task,
+   `tasks.md`, or the spec itself defines covers this case (for example, "if the
+   refresh cannot run, keep the file unchanged and state the mismatch in the PR
+   body"), apply it without asking. Record it as an auto-applied fallback: quote
+   the defining text, name the blocked action and why it was blocked, and write
+   it in the task's implementation-notes entry and the workflow file's Phase 7
+   result. Then continue. Only a fallback the task or spec defines qualifies. An
+   alternative the autopilot invents is a workaround and is not allowed.
+2. **With no defined fallback, defer that task.** Leave its checkbox unchecked,
+   record it as deferred with the blocked action and the reason, and mark
+   deferred every task and Post item that depends on it. Then keep executing
+   every independent task, gate, and Post check. A deferral reserves no
+   execution-control budget, is not a failure family, and is never retried by
+   another route. Never ask the operator from inside the task, and never set a
+   workflow row or progress item to blocked while runnable work remains.
+3. **Ask once, at the end.** Only after every runnable item has finished, and
+   only if deferred items remain, make one consolidated operator request with
+   `AskUserQuestion`. It names each deferred item, the blocked action, why the
+   requirement needs it, the smallest operator action that unblocks it, and the
+   resume command. Always print the same question as plain text in the final
+   message too, so a question that does not render still reaches the operator.
+   In an unattended run, or when `AskUserQuestion` is unavailable, the plain-text
+   copy is the request. Only then may the rows holding deferred work move to
+   `⚠ Blocked`.
+4. **Report what happened.** The final report and the PR body list every
+   fallback taken and every deferred item. Pass them to `pr-packet-output` as
+   `known_gaps`, so they appear under the body's `## Known Gaps` heading. A run
+   with deferred items reports an honest incomplete checkpoint, never
+   completion.
+
+G7 and Post run on the implemented snapshot. A requirement whose only task is
+deferred is listed as deferred in the G7 evidence and in `known_gaps`; it
+neither fails G7 nor counts as covered by it.
+
+The run must never bypass a veto: never change approval, sandbox, or reviewer
+configuration, never rerun the vetoed action under a different command or tool,
+and never treat an earlier answer as authorization for the vetoed action. The
+correctness stops in this reference are unchanged and still stop the run:
+unknown side effects, an execution-control `checkpoint_required` disposition
+(including an exhausted repair budget), a ledger or clock error, invalid or
+stale state, and a failed gate whose repair is out of scope.
 
 #### Append Contract: One Entry Per Dispatched Attempt
 
@@ -2735,6 +2869,13 @@ one research task.
 
 **Commit:**
 `git add -A && git commit -m "feat(SPEC-XXX): implement phase"`
+
+Runner byproducts are never committed. The runner writes a `.gitignore`
+holding `*` into each directory it owns (`.process/execution-control/` and
+`.process/verification/`), so `git add -A` cannot stage the ledger or the
+verification evidence. If `git ls-files` shows such a path already tracked
+(from an older plugin version), run `git rm -r --cached -- <path>` before this
+commit.
 
 **After G7 passes:** Validate/reuse Integration/E2E proof,
 then execute PR Creation Protocol (see below).

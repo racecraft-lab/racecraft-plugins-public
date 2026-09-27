@@ -29,7 +29,7 @@ TEST_LIB = Path(__file__).resolve().parent / "lib"
 if str(TEST_LIB) not in sys.path:
     sys.path.insert(0, str(TEST_LIB))
 
-from test_result import child_check_status  # noqa: E402
+from test_result import child_check_status, failure_report  # noqa: E402
 
 SUITE_MANIFEST = "tests/speckit-pro/suite-manifest.json"
 LAYER_WORKERS_VARIABLE = "SPECKIT_LAYER_WORKERS"
@@ -133,10 +133,11 @@ def run_script(test_path: Path, repo_root: Path) -> tuple[str, bool, str]:
         check=False,
     )
     ok, detail = child_check_status(completed.returncode, completed.stdout, test_path.stem)
-    if not ok and completed.stderr.strip():
-        # Surface the child's own failure report; the summary line alone hides which unit failed.
-        tail = "\n".join(completed.stderr.rstrip().splitlines()[-40:])
-        detail = f"{detail}\n{tail}"
+    output = completed.stdout + completed.stderr
+    if not ok and output.strip():
+        # Name every failing unit with a bounded traceback; the summary line alone hides which one failed.
+        # Pass both streams, as run-all.py does, so a crash that writes only to stdout still shows its tail.
+        detail = f"{detail}\n{failure_report(output, test_path.stem)}"
     return (rel(test_path, repo_root), ok, detail)
 
 
@@ -151,7 +152,7 @@ def run_script_suite(label: str, tests: list[Path], repo_root: Path) -> int:
         # manifest order.
         pooled = [test_path for test_path in tests if rel(test_path, repo_root) not in SERIAL_SCRIPTS]
         with ThreadPoolExecutor(max_workers=workers) as pool:
-            results = dict(zip(pooled, pool.map(run_script, pooled, [repo_root] * len(pooled))))
+            results = dict(zip(pooled, pool.map(run_script, pooled, [repo_root] * len(pooled)), strict=True))
         for test_path in tests:
             if test_path not in results:
                 results[test_path] = run_script(test_path, repo_root)
@@ -191,7 +192,7 @@ def main(argv: list[str]) -> int:
 if __name__ == "__main__":
     try:
         exit_code = main(sys.argv[1:])
-    except Exception:
+    except Exception:  # noqa: BLE001 - boundary: any failure becomes an explicit error
         traceback.print_exc()
         exit_code = 4
     raise SystemExit(exit_code)

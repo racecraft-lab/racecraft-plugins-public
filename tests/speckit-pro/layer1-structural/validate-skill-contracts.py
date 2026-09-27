@@ -250,6 +250,8 @@ class ValidateSkills(unittest.TestCase):
                     self.assertIn('The failure report identifies the existing local branch, canonical worktree, workflow file, and local commit', normalized)
                     self.assertIn('retry the push from that same existing worktree', normalized)
                     self.assertIn('Do not recreate the branch or worktree, regenerate the workflow, or replace the existing commit', normalized)
+                with self.subTest(msg='speckit-scaffold-spec: reviewability setup gate is scoped to the SPEC-ID'):
+                    self.assertIn('Run runner helper reviewability-gate in setup mode for <technical-roadmap-path> with spec_id <SPEC-ID>.', normalized)
                 with self.subTest(msg='speckit-scaffold-spec: resolver ordering gates mutation and interview'):
                     self.assertIn('the first resolver result comes before `git worktree add`, artifact writes, or roadmap mutation', normalized)
                     self.assertIn('A second resolver check then runs after creation or reuse and immediately before bootstrap or Grill Me', normalized)
@@ -332,6 +334,8 @@ class ValidateCodexSkills(unittest.TestCase):
                 dispatch_section = content.split('**Dispatch, then await.**', 1)[-1].split('**The bound.', 1)[0]
                 with self.subTest(msg='speckit-scaffold-spec: blind-spot custom agent uses an isolated fork'):
                     self.assertTrue('`agent_type: "codebase-analyst"`' in dispatch_section and '`fork_turns: "none"`' in dispatch_section and ('`fork_turns: "all"`' in dispatch_section) and ('self-contained' in dispatch_section), 'expected blind-spot dispatch to select codebase-analyst with an explicit isolated fork')
+                with self.subTest(msg='speckit-scaffold-spec: Codex reviewability setup gate is scoped to the SPEC-ID'):
+                    self.assertIn('Run runner helper reviewability-gate in setup mode for <technical-roadmap-path> with spec_id <SPEC-ID>.', ' '.join(content.split()))
                 with self.subTest(msg='speckit-scaffold-spec: placement is task-root-bound before mutation'):
                     self.assertTrue('resolve-scaffold-worktree-placement' in content and 'Before `git worktree add` or any artifact or roadmap write' in content and ('`TASK_ROOT/.worktrees/<branch-name>`' in content) and ('Never derive worktree placement from' in content) and ('`git rev-parse --git-common-dir`' in content) and ('the primary checkout, or the first' in content) and ('`placement_status=resolved`' in content) and ('`relation=same` or `relation=descendant`' in content), 'expected scaffold to resolve task-root placement before any mutation')
                 with self.subTest(msg='speckit-scaffold-spec: placement is revalidated before bootstrap'):
@@ -448,6 +452,49 @@ class ValidateCodexSkills(unittest.TestCase):
         with self.subTest(msg='speckit-autopilot: explicit external workflow binds to its registered worktree'):
             prerequisites = _read(skill_dir / 'references' / 'prerequisites-codex.md')
             self.assertTrue('explicitly supplied the absolute workflow path' in prerequisites and 'relation=external' in prerequisites and 'registered worktree' in prerequisites and 'real sandbox denial' in prerequisites and ('Open a new Codex task rooted at <workflow_root>' not in prerequisites), 'expected explicit registered-worktree binding with permission failures reported at the actual operation')
+        with self.subTest(msg='speckit-autopilot: eval 106 expects an explicit external workflow to bind and continue'):
+            evals = json.loads(_read(REPO_ROOT / 'tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json'))
+            eval_106 = json.dumps(next(item for item in evals['evals'] if item['id'] == 106))
+            self.assertNotIn('open a new Codex task rooted', eval_106, 'expected eval 106 to follow the explicit-selection binding rule')
+            self.assertIn('WORKFLOW_ROOT', eval_106, 'expected eval 106 to bind execution to the returned workflow root')
+        with self.subTest(msg='speckit-autopilot: the cookie keyword eval widens to all three with a conditional bar'):
+            for legacy_path, eval_id in (
+                ('tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json', 18),
+                ('tests/speckit-pro/layer3-functional/evals/speckit-autopilot-evals.json', 14),
+            ):
+                legacy = json.loads(_read(REPO_ROOT / legacy_path))
+                cookie_eval = json.dumps(next(item for item in legacy['evals'] if item['id'] == eval_id))
+                self.assertNotIn('ONLY domain-researcher', cookie_eval, f'expected eval {eval_id} to widen a keyword item to all three analysts')
+                self.assertIn('security_relevant', cookie_eval, f'expected eval {eval_id} to tie the unanimity bar to security_relevant')
+        with self.subTest(msg='speckit-autopilot: the security-tag eval requires 3/3 instead of always flagging review'):
+            stale = 'fires automatically for security items'
+            corrected = 'a unanimous 3/3 answer applies and the run continues'
+            for legacy_path, eval_id in (
+                ('tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json', 19),
+                ('tests/speckit-pro/layer3-functional/evals/speckit-autopilot-evals.json', 15),
+            ):
+                legacy = json.loads(_read(REPO_ROOT / legacy_path))
+                tag_eval = next(item for item in legacy['evals'] if item['id'] == eval_id)
+                self.assertNotIn(stale, tag_eval['expected_output'], f'expected eval {eval_id} to drop the always-review claim')
+                self.assertIn(corrected, tag_eval['expected_output'], f'expected eval {eval_id} to apply a unanimous security answer')
+            catalog = json.loads(_read(REPO_ROOT / 'tests/speckit-pro/evals/catalog.json'))
+            case_19 = next(case for case in catalog['cases'] if case['id'] == 'functional.speckit-autopilot.case-19')
+            self.assertNotIn(stale, case_19['capability'], 'expected catalog case-19 to drop the always-review claim')
+            self.assertIn(corrected, case_19['capability'], 'expected catalog case-19 to apply a unanimous security answer')
+        with self.subTest(msg='speckit-coach: eval 4 lets an interactive run answer human review in place'):
+            stale = 'surfaced for human review and stops advancement'
+            corrected = 'asked in place in an interactive run'
+            for legacy_path in (
+                'tests/speckit-pro/layer3-functional/codex-evals/speckit-coach-evals.json',
+                'tests/speckit-pro/layer3-functional/evals/speckit-coach-evals.json',
+            ):
+                legacy = json.loads(_read(REPO_ROOT / legacy_path))
+                coach_eval = json.dumps(next(item for item in legacy['evals'] if item['id'] == 4))
+                self.assertNotIn(stale, coach_eval, f'expected {legacy_path} eval 4 to allow an in-place answer')
+                self.assertIn(corrected, coach_eval, f'expected {legacy_path} eval 4 to name the in-place answer')
+            catalog = json.dumps(next(case for case in json.loads(_read(REPO_ROOT / 'tests/speckit-pro/evals/catalog.json'))['cases'] if case['id'] == 'functional.speckit-coach.case-4'))
+            self.assertNotIn(stale, catalog, 'expected catalog coach case-4 to allow an in-place answer')
+            self.assertIn(corrected, catalog, 'expected catalog coach case-4 to name the in-place answer')
         with self.subTest(msg='speckit-autopilot: documents the optional Luna helper'):
             self.assertIn('autopilot-fast-helper', body)
         with self.subTest(msg='speckit-autopilot: keeps the Luna helper advisory and parent-only'):
@@ -576,6 +623,14 @@ class ValidateCapabilityResolution(unittest.TestCase):
             text = agent_file.read_text(encoding='utf-8', errors='replace')
             if validate_capability_resolution_DIRECTIVE_MARKER not in text:
                 continue
+            if runtime == 'claude':
+                # A repo-relative path does not exist in the consumer repository; Claude
+                # agents read both files from the directory the orchestrator passes.
+                with self.subTest(msg=f"claude: in-scope agent '{agent_name}' names no repo-relative contract path"):
+                    self.assertFalse(validate_capability_resolution_PATH_TOKEN_RE.findall(text) or validate_capability_resolution_GROUNDING_TOKEN_RE.findall(text), f'repo-relative contract path in {validate_capability_resolution__rel(agent_file)}')
+                with self.subTest(msg=f"claude: in-scope agent '{agent_name}' reads the contracts from its `Reference dir:` line"):
+                    self.assertIn("prompt's `Reference dir:` line", ' '.join(text.split()), f'no Reference dir directive in {validate_capability_resolution__rel(agent_file)}')
+                continue
             directive_tokens = sorted(set(validate_capability_resolution_PATH_TOKEN_RE.findall(text)))
             for token in directive_tokens:
                 if token not in found_tokens:
@@ -677,7 +732,7 @@ class ValidatePrdWorkflowContract(unittest.TestCase):
             protocol_contract = f'{label}: Workflow requires protocol read/follow before authoring'
             with self.subTest(msg=protocol_contract):
                 self.assertIn(f'Read and follow the [shared PRD authoring protocol]({protocol_link}) before authoring.', normalized_workflow, protocol_contract)
-            for (resource, expected_target), link in zip(PRD_WORKFLOW_TARGETS, links):
+            for (resource, expected_target), link in zip(PRD_WORKFLOW_TARGETS, links, strict=True):
                 route_contract = f'{label}: Workflow links {resource} at its host root'
                 with self.subTest(msg=route_contract):
                     self.assertIn(f'[{resource}]({link})', normalized_workflow, route_contract)

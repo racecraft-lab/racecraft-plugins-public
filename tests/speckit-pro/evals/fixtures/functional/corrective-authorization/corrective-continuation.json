@@ -1,0 +1,206 @@
+{
+  "schema": "corrective-authorization-replay/v1",
+  "description": "One operator-approved Tasks metadata continuation after a completed corrective dispatch; unbound, replayed, and second approvals are refused.",
+  "steps": [
+    {
+      "id": "spec",
+      "place_spec": "spec.md"
+    },
+    {
+      "id": "start",
+      "action": "start",
+      "expect": {
+        "exit_code": 0,
+        "status": "ok",
+        "disposition": "continue"
+      }
+    },
+    {
+      "id": "reserve-analyze",
+      "action": "reserve",
+      "inputs": {
+        "dispatch_id": "analyze",
+        "kind": "corrective",
+        "failure_invariant": "FR-001"
+      },
+      "expect": {
+        "exit_code": 0,
+        "status": "ok",
+        "disposition": "continue"
+      }
+    },
+    {
+      "id": "analyze-completed",
+      "action": "complete",
+      "inputs": {
+        "dispatch_id": "analyze",
+        "outcome": "completed"
+      },
+      "expect": {
+        "exit_code": 0,
+        "status": "ok",
+        "disposition": "continue"
+      }
+    },
+    {
+      "id": "reserve-other-family",
+      "action": "reserve",
+      "inputs": {
+        "dispatch_id": "other-family",
+        "kind": "corrective",
+        "failure_invariant": "FR-002"
+      },
+      "expect": {
+        "exit_code": 0,
+        "status": "ok",
+        "disposition": "continue"
+      }
+    },
+    {
+      "id": "missing-event",
+      "action": "authorize-corrective-continuation",
+      "inputs": {
+        "dispatch_id": "metadata",
+        "completed_dispatch_id": "analyze",
+        "reservation_id": "$reservation:analyze"
+      },
+      "refused": "requires one bounded operator native event"
+    },
+    {
+      "id": "other-run",
+      "action": "authorize-corrective-continuation",
+      "inputs": {
+        "dispatch_id": "metadata",
+        "completed_dispatch_id": "analyze",
+        "reservation_id": "$reservation:analyze",
+        "native_observation": {
+          "native_event_id": "operator-consensus-message",
+          "run_id": "other-run",
+          "action": "corrective_continuation_approved",
+          "completed_dispatch_id": "analyze",
+          "continuation_dispatch_id": "metadata",
+          "reservation_id": "$reservation:analyze",
+          "purpose": "task_metadata_reconciliation"
+        }
+      },
+      "refused": "does not match this run"
+    },
+    {
+      "id": "retry-approval",
+      "action": "authorize-corrective-continuation",
+      "inputs": {
+        "dispatch_id": "metadata",
+        "completed_dispatch_id": "analyze",
+        "reservation_id": "$reservation:analyze",
+        "native_observation": {
+          "native_event_id": "operator-consensus-message",
+          "run_id": "$run_id",
+          "action": "corrective_retry_approved",
+          "completed_dispatch_id": "analyze",
+          "continuation_dispatch_id": "metadata",
+          "reservation_id": "$reservation:analyze",
+          "purpose": "task_metadata_reconciliation"
+        }
+      },
+      "refused": "does not match this run"
+    },
+    {
+      "id": "unrelated-source",
+      "action": "authorize-corrective-continuation",
+      "inputs": {
+        "dispatch_id": "metadata",
+        "completed_dispatch_id": "analyze",
+        "reservation_id": "$reservation:analyze",
+        "native_observation": {
+          "native_event_id": "operator-consensus-message",
+          "run_id": "$run_id",
+          "action": "corrective_continuation_approved",
+          "completed_dispatch_id": "other-family",
+          "continuation_dispatch_id": "metadata",
+          "reservation_id": "$reservation:analyze",
+          "purpose": "task_metadata_reconciliation"
+        }
+      },
+      "refused": "does not match this run"
+    },
+    {
+      "id": "general-repair",
+      "action": "authorize-corrective-continuation",
+      "inputs": {
+        "dispatch_id": "metadata",
+        "completed_dispatch_id": "analyze",
+        "reservation_id": "$reservation:analyze",
+        "native_observation": {
+          "native_event_id": "operator-consensus-message",
+          "run_id": "$run_id",
+          "action": "corrective_continuation_approved",
+          "completed_dispatch_id": "analyze",
+          "continuation_dispatch_id": "metadata",
+          "reservation_id": "$reservation:analyze",
+          "purpose": "unbounded_repair"
+        }
+      },
+      "refused": "does not match this run"
+    },
+    {
+      "id": "approved-continuation",
+      "action": "authorize-corrective-continuation",
+      "inputs": {
+        "dispatch_id": "metadata",
+        "completed_dispatch_id": "analyze",
+        "reservation_id": "$reservation:analyze",
+        "native_observation": {
+          "native_event_id": "operator-consensus-message",
+          "run_id": "$run_id",
+          "action": "corrective_continuation_approved",
+          "completed_dispatch_id": "analyze",
+          "continuation_dispatch_id": "metadata",
+          "reservation_id": "$reservation:analyze",
+          "purpose": "task_metadata_reconciliation"
+        }
+      },
+      "expect": {
+        "exit_code": 0,
+        "status": "ok",
+        "disposition": "continue",
+        "ledger": {
+          "corrective_cycles": 2,
+          "dispatches.metadata.continuation_of": "analyze",
+          "dispatches.metadata.operator_continuation_event_id": "operator-consensus-message"
+        }
+      }
+    },
+    {
+      "id": "second-continuation",
+      "action": "authorize-corrective-continuation",
+      "inputs": {
+        "dispatch_id": "metadata-two",
+        "completed_dispatch_id": "analyze",
+        "reservation_id": "$reservation:analyze",
+        "native_observation": {
+          "native_event_id": "second-message",
+          "run_id": "$run_id",
+          "action": "corrective_continuation_approved",
+          "completed_dispatch_id": "analyze",
+          "continuation_dispatch_id": "metadata-two",
+          "reservation_id": "$reservation:analyze",
+          "purpose": "task_metadata_reconciliation"
+        }
+      },
+      "refused": "not eligible for one metadata continuation"
+    },
+    {
+      "id": "replayed-approval",
+      "action": "pause",
+      "inputs": {
+        "native_observation": {
+          "native_event_id": "operator-consensus-message",
+          "run_id": "$run_id",
+          "kind": "human_uat",
+          "action": "wait_started"
+        }
+      },
+      "refused": "already consumed"
+    }
+  ]
+}

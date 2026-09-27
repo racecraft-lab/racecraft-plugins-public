@@ -182,7 +182,7 @@ def supervise_child(
             stderr = exc.stderr if isinstance(exc.stderr, bytes) else stderr
         except KeyboardInterrupt:
             failure = TerminationRequested(signal.SIGINT)
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001 - boundary: any failure becomes an explicit error
             failure = exc
     finally:
         try:

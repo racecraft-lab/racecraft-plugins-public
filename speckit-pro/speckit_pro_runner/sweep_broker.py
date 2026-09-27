@@ -8,6 +8,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from .mcp_protocol import negotiate_protocol_version
 from .sweep_isolation import (
     ARTIFACT_ALLOWLIST,
     BROKER_TOOL_NAMES,
@@ -270,11 +271,10 @@ def handle_message(message: Any) -> dict[str, Any] | None:
     if method == "notifications/initialized":
         return None
     if method == "initialize":
-        requested = message.get("params", {}).get("protocolVersion", "2024-11-05")
         return _response(
             request_id,
             {
-                "protocolVersion": requested,
+                "protocolVersion": negotiate_protocol_version(message.get("params")),
                 "capabilities": {"tools": {"listChanged": False}},
                 "serverInfo": SERVER_INFO,
             },

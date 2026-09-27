@@ -320,7 +320,7 @@ def main(argv: list[str]) -> int:
             if reason:
                 print(json.dumps({"decision": "block", "reason": reason}))
         return 0
-    except Exception as exc:  # fail open, see module docstring
+    except Exception as exc:  # fail open, see module docstring  # noqa: BLE001
         print(f"workflow guard hook: no decision ({exc.__class__.__name__}: {exc})", file=sys.stderr)
         return 0
 

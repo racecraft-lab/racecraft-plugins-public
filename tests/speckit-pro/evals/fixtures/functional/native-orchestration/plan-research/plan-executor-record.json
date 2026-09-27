@@ -1,0 +1,38 @@
+{
+  "phase": "Plan",
+  "executor": "phase-executor",
+  "loaded_command": "speckit-plan",
+  "technical_context_unknowns": [
+    "NEEDS CLARIFICATION: refresh-token retention window",
+    "NEEDS CLARIFICATION: upstream rate-limit backoff policy"
+  ],
+  "tool_calls": [
+    {
+      "tool": "research_search",
+      "query": "refresh token retention window guidance",
+      "result": "search_unavailable"
+    },
+    {
+      "tool": "research_search",
+      "query": "refresh token retention window guidance",
+      "result": "search_unavailable"
+    },
+    {
+      "tool": "docs_query",
+      "query": "upstream rate limit backoff policy",
+      "result": "search_unavailable"
+    },
+    {
+      "tool": "research_search",
+      "query": "upstream rate limit backoff policy",
+      "result": "search_unavailable"
+    }
+  ],
+  "subagent_dispatches": [],
+  "artifacts_written": [
+    "research.md",
+    "plan.md",
+    "data-model.md",
+    "quickstart.md"
+  ]
+}

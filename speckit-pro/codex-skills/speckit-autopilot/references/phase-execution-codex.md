@@ -246,8 +246,8 @@ spawn_agent("artifact-author", prompt="""
   - Plan: specs/<feature>/plan.md
   - Tasks: specs/<feature>/tasks.md
   - Design concept: docs/ai/specs/.process/<SPEC-ID>-design-concept.md
-  - Gallery manifest: speckit-pro/artifact-gallery/manifest.json
-  - Templates: speckit-pro/artifact-gallery/templates/<entry-id>.html
+
+  Gallery dir: <plugin-root>/artifact-gallery/
 
   Select, fill, and report per your agent instructions. Return one outcome
   per selected page.
@@ -269,13 +269,14 @@ or confirmed no-progress condition may use the recovery lifecycle in the parent
 skill; absent that evidence, a poll timeout is non-terminal.
 
 **The orchestrator supplies no page list — the agent selects from the
-manifest.** It reads `speckit-pro/artifact-gallery/manifest.json`, discards
+manifest.** It reads `manifest.json` from its `Gallery dir:` line, where
+`<plugin-root>` is the root the runner reported as `plugin_root`, discards
 every entry whose `stage` is not `draft-pr`, and evaluates the `trigger` on each
 entry that survives. `{"always": true}` selects unconditionally.
 `{"any_of": [...]}` selects only when the feature carries one or more of the
 signals that entry lists.
 
-**Nothing is ever written into `speckit-pro/artifact-gallery/`.** The manifest
+**Nothing is ever written into `<plugin-root>/artifact-gallery/`.** The manifest
 and the templates are shipped inputs, and a write into that directory is a
 defect. The filled pages go to `specs/<feature>/artifacts/`, one file per
 selected entry, named for that entry's manifest `id`.
@@ -334,7 +335,7 @@ Two positive tests per page under `specs/<feature>/artifacts/`:
 
 | Test | The page fails when |
 | --- | --- |
-| it is not its own template | the bytes match `speckit-pro/artifact-gallery/templates/<entry-id>.html` exactly |
+| it is not its own template | the bytes match `<plugin-root>/artifact-gallery/templates/<entry-id>.html` exactly |
 | it is not still sample content | the body carries a sample-banner element: `class="sample-notice"`, `class="notice"`, or `class="note"` |
 
 **The banner test reaches only templates that carry a banner.** Seven shipped
@@ -456,7 +457,7 @@ title a human would have to repair.
 The description begins with the matching H1 title, followed by exactly two H2 sections, Artifacts and Resume, and no other content:
 
 ```text
-# feat(speckit-pro): Open an example draft
+# feat(speckit-pro): open an example draft
 
 ## Artifacts
 
@@ -505,7 +506,7 @@ first; change only that field to `apply` after the dry-run succeeds.
     "title_description": "open an example draft",
     "changed_files": [],
     "verification_evidence": [],
-    "body": "# feat(speckit-pro): Open an example draft\n\n## Artifacts\n\n| Artifact | Purpose | Open |\n| --- | --- | --- |\n| Implementation Plan | Describe the implementation phases | `open specs/example-feature/artifacts/implementation-plan.html` |\n\n## Resume\n\nStage: plan. Stopped at the plan-stage boundary for review.\nResume with: `$speckit-autopilot <workflow-file> --stage implement`\n"
+    "body": "# feat(speckit-pro): open an example draft\n\n## Artifacts\n\n| Artifact | Purpose | Open |\n| --- | --- | --- |\n| Implementation Plan | Describe the implementation phases | `open specs/example-feature/artifacts/implementation-plan.html` |\n\n## Resume\n\nStage: plan. Stopped at the plan-stage boundary for review.\nResume with: `$speckit-autopilot <workflow-file> --stage implement`\n"
   }
 }
 ```
@@ -792,7 +793,11 @@ Every step in this loop executes against the pre-flight `WORKFLOW_ROOT`, even
 when the Codex task was invoked from its parent checkout. Set that root as the
 `workdir` for every shell call; invoke helpers from it; resolve every direct
 read, write, state, and Git path against it; and include the exact root plus the
-same directive in every executor and consensus prompt. Validate agent-returned
+same directive in every executor and consensus prompt. Every
+`consensus-synthesizer`, `clarify-executor`, `checklist-executor`, and `analyze-executor` prompt
+also carries a `Protocol:` line with `<plugin-root>/skills/speckit-autopilot/references/consensus-protocol.md`,
+where `<plugin-root>` is the root the runner reported as `plugin_root`, so
+those agents read the active protocol and never a cached copy. Validate agent-returned
 paths against `WORKFLOW_ROOT` before applying them. Never infer the execution
 root from the task's default checkout.
 
@@ -825,7 +830,11 @@ for phase in PHASES starting from first_pending:
        calling close_agent only when exposed and never exceeding the derived
        subagent_slots limit (dispatch in waves when items × analysts exceeds
        the cap) → apply consensus rules → edit
-       artifacts → mark the corresponding Consensus item complete in both stores
+       artifacts → mark the corresponding Consensus item complete in both stores.
+       An item that ends in [HUMAN REVIEW NEEDED] follows
+       consensus-protocol.md#human-review-needed: ask the operator in place
+       with `request_user_input` when it is present in an interactive task;
+       an unattended run stops.
     6. Check .specify/extensions.yml for after_<phase> hooks
        → run accepted hooks (non-destructive), skip duplicates
     7. Validate gate directly in the main session:
@@ -838,6 +847,11 @@ for phase in PHASES starting from first_pending:
        from the shared formal-methods.md contract. Keep Plan/G3 incomplete until
        the selected checks pass; refresh formal-doctor after authoring. Do not
        append this work to phase-executor's single-command prompt.
+       After a rescope changes plan.md's scope, slices, or delivery order, the
+       parent reconciles every Plan artifact before G3: `research.md`,
+       `quickstart.md`, `data-model.md`, `contracts/`, and every file under
+       `checklists/`. Record what changed in each artifact in the workflow
+       file's Plan Results.
        Run 'runner helper validate-gate' for gate G<N>
        against <feature_dir> from the orchestrator using the
        resolved scripts path for this skill.
@@ -862,6 +876,11 @@ for phase in PHASES starting from first_pending:
        ownership and exclude ignored raw formal-runs output.
        For phase 7 (implement): run: git add -A && git commit
        (implementation changes include src/, tests/, etc.)
+       Runner byproducts are never committed: the runner writes a
+       .gitignore holding * into .process/execution-control/ and
+       .process/verification/, so git add -A cannot stage them. If
+       git ls-files shows such a path already tracked (from an older
+       plugin version), run git rm -r --cached -- <path> before this commit.
    11. Advance to next phase (next iteration of loop) and write the new
        in_progress item to both update_plan and autopilot-state.json.
        Never mark the run complete while a later phase family still has
@@ -1069,7 +1088,15 @@ planned action in any of these categories:
   installation;
 - interactive authentication, credential provisioning, or an account change;
 - an externally visible side effect such as a provider request, deployment,
-  message, publication, or remote mutation.
+  message, publication, or remote mutation;
+- data egress: sending repository-derived content (source, skills, prompts,
+  specs, or private project data) to a model service or other third party,
+  including a live model evaluation or `--run` eval, a cloud or delegation
+  worker, and a push or PR to a remote. Record it as `external_side_effect`
+  whose `target` names the exact destination (model service, remote
+  repository, or worker) and whose `effect` names the data class sent. Scan
+  `tasks.md` and the Post list for such tasks; a task that runs a live provider
+  is data egress even when it has no visible side effect.
 
 For each action, record its category, exact command or tool when known, target,
 durability or data effect, required execution boundary, existing authorization
@@ -1097,10 +1124,32 @@ that requires it. The word "autonomous" alone is also not authorization for a
 persistent system mutation, account change, or external effect that the active
 conversation has not already authorized.
 
-Persist one `autonomy_boundary` object in `autopilot-state.json` and a matching
-Phase 6.5 result in the workflow file. Its canonical versioned shape is
+Keep the complete record private and publish only its receipt. The complete
+`autonomy-boundary.v1` record holds writable roots, targets, free-text
+evidence, and any native event identity. Those values are machine-local, so
+the record never goes in a tracked or untracked repository file; the privacy
+scan reads both. Write it with owner-only permissions (directory `0700`, file
+`0600`) to `<git-common-dir>/speckit-pro/autonomy-boundary/<run-id>.json`.
+`<git-common-dir>` is `git rev-parse --git-common-dir` resolved against the
+worktree, and `<run-id>` is the execution-control ledger's `run_id`. That
+directory is outside every worktree's file listing, is shared by all worktrees
+of the clone, and survives worktree removal and reboots, so a resume can reopen
+it.
+
+Persist the `autonomy-boundary-receipt.v1` projection of that record as the one
+`autonomy_boundary` object in `autopilot-state.json`, with a matching Phase 6.5
+result in the workflow file that cites only receipt values. Both shapes are in
 [autonomy-boundary.schema.json](../../../skills/speckit-autopilot/contracts/autonomy-boundary.schema.json), and
-the reference state shows the complete field set. Each planning fingerprint
+the reference state shows both. The receipt copies `status`,
+`planning_fingerprints`, and the `execution_environment`, `sandbox_mode`,
+`approval_reviewer`, and `sha256` of `execution_boundary`. For each action it
+copies `action_id`, `category`, `execution_boundary_sha256`, `scope_sha256`,
+`disposition`, and the authorization `status` and `scope_sha256`. It adds
+`private_record_sha256`, the canonical JSON digest (defined below) of the
+complete private record. It never carries `writable_roots`, `summary`,
+`command_or_tool`, `target`, `effect`, `evidence`, or `revocation_evidence`;
+the schema rejects a receipt that does. A complete v1 record already in state
+still validates, but new runs write the receipt. Each planning fingerprint
 records the normalized repository-relative path, byte length, and lowercase
 `sha256:` digest for `plan.md` or `tasks.md`.
 
@@ -1113,8 +1162,37 @@ extra whitespace, preserves Unicode, and rejects non-finite numbers. Prefix the
 lowercase hexadecimal SHA-256 with `sha256:`. The authorization
 `scope_sha256` must equal its action's scope digest.
 
+The full guard replays the receipt without the private roots. It recomputes
+the execution-boundary digest from the live `--current-*` values and compares
+it with the receipt's `execution_boundary.sha256`, then checks each action's
+`execution_boundary_sha256`, its authorization `scope_sha256`, and the
+dispositions. It also opens the private record at the location above, taking
+`<run-id>` from the state's `execution_control.run_id` mirror, and fails closed
+when that mirror is absent, the record is missing, unreadable, or not valid
+JSON, or its canonical digest differs from `private_record_sha256`. Keep that
+mirror current, since the guard cannot locate the record without it. Recompute
+an action's `scope_sha256` from the verified private record. Never drop
+`--require-autonomy-boundary` or a `--current-*` value to get a passing check;
+the receipt passes the full guard.
+
+An in-flight state may hold the earlier `autonomy_boundary_private_receipt`
+object (`status`, `sha256`, `public_details`, `validation`, `contract_gap`)
+instead of a receipt. It has no execution-boundary digest to replay, so
+`--require-autonomy-boundary` rejects it with a migration error. To migrate,
+open the private record it names and confirm its bytes still hash to the
+recorded `sha256`. Move the record to the run-keyed location above, replace the
+legacy object with the receipt projected from it, and rerun the full guard. If
+the private record is missing, changed, or stale against the current boundary,
+rerun this preflight instead. A resume does this at its start, in the Step 0.8c
+re-attestation in [prerequisites-codex.md](./prerequisites-codex.md), before the
+Step 1.1 coverage guard runs.
+
 Only `authorization.status=explicit_user` can make an inventoried boundary
-action `ready`. Exact explicit user authorization persists across turns,
+action `ready`. For data egress, explicit_user evidence is an operator answer
+in this thread to the consolidated request that names the exact destination and
+data class; the automatic reviewer judges only from the transcript, so a general
+instruction to proceed or "you have approval" is not egress authorization.
+Exact explicit user authorization persists across turns,
 compaction, and resume while the recorded action scope and execution-boundary
 digest still match and no later user instruction revokes or narrows it. When a
 later instruction does so, record `authorization.status=revoked`, add non-secret
@@ -1126,11 +1204,54 @@ Never persist credentials, tokens, cookies, or session material.
 When any action is `operator_action_required`, set the object status to that
 exact value and make the Phase 6.5 row non-terminal and blocked. Present one
 consolidated request that names every exact target, lasting or external effect,
+every data-egress destination and data class,
 why the requirement needs it, the smallest required operator action, and the
 resume command. Commit the blocked record through the current stage's bounded
 bookkeeping path; for a plan-stage run, use the normal stage-boundary commit.
 Then **STOP before Phase 7**. A denial routes back to planning for a
 contract-preserving alternative; it never triggers a workaround.
+
+When that request includes data egress, it also carries two artifacts for the
+operator to review. Codex's automatic reviewer trusts user and developer
+messages, `AGENTS.md`, and question replies, but treats skill and plugin text
+as untrusted. It approves egress only when the transcript names the payload
+and the destination. Render both artifacts with the registered read-only
+`render-egress-authorization` runner helper. Pass the repository name, its
+default branch, and every data-egress action as `action_id`, `target` (the
+exact destination), `effect` (the data class), and an optional `purpose` (the
+task id or reason). Show its output unchanged; do not write the text by hand.
+
+- A paste-ready authorization message: one short block the operator sends as
+  a user message in this thread. It lists each action as "Send <data class>
+  from <repository> to <destination> for <purpose>". The operator's reply that
+  carries it is the explicit_user evidence described above.
+- A proposed `auto_review.extra_policy` fragment for the operator's own
+  `~/.codex/config.toml`. Codex appends `extra_policy` to the default reviewer
+  policy; `auto_review.policy` replaces the default reviewer policy, so propose
+  `extra_policy` and never `auto_review.policy`. It needs Codex 0.158 or later;
+  earlier versions ignore the key. The fragment scopes itself to checkouts whose
+  `git remote get-url --push origin` is this repository's GitHub URL, and it
+  pre-authorizes only the payload and destination of each listed action. Its
+  human stops are "Outcome rule: deny" lines that win over those grants: edits
+  to autonomy-boundary files, their schema, or their recorded digests, or to
+  `AGENTS.md` or `.codex/`; any other destination or data class; a push to the
+  default branch, a force push, a `--mirror` push, or a remote ref deletion; and
+  a remote change. The operator installs it once.
+
+The reviewer does not see every command. A command reaches the reviewer only
+when it escalates, for example a network request or a write outside the
+sandbox; a command that matches no rule runs in the sandbox without review. So
+the fragment cannot stop an in-sandbox edit to a schema or digest in the
+checkout; CI and the boundary validator catch those.
+
+The plugin never writes the authorization message or the fragment into
+`~/.codex`, into the repository's `.codex/` directory, or into `AGENTS.md`:
+the reviewer trusts `AGENTS.md`, and any pull-request branch could rewrite it. Record that the authorization was
+presented without a schema change: set each egress action's private
+`authorization.evidence` to cite the helper's `authorization_message_sha256`
+while it waits (`authorization.status=missing`), then cite that digest again
+with the operator's reply when recording `explicit_user`. The digest stays in
+the private record; the receipt and the Phase 6.5 row never carry it.
 
 When every action is `ready` or `rerouted`, set status to `ready` and continue
 with the confidence steps below. A `plan` run takes its boundary commit and
@@ -1144,7 +1265,11 @@ missing, malformed, or stale record. A new or changed action reruns this
 preflight. If a worker discovers a predictable boundary that the record
 omitted, do not let the worker attempt it or ask from inside the task: record
 that the late discovery is an autopilot defect, return control to the parent,
-update the preflight, and resolve it there.
+and update the preflight there. The pre-Phase-7 stop above does not apply
+mid-run: when the refreshed disposition is `operator_action_required`, the
+parent defers only that task under
+[Blocked Actions Mid-Run: Fall Back or Defer, Never Stop](#blocked-actions-mid-run-fall-back-or-defer-never-stop)
+and keeps executing independent work.
 
 ```text
 1. Read mode from `CONFIDENCE_GATE_MODE` (set at Step 0.6b in
@@ -1222,7 +1347,9 @@ reconcile retained complete/unfinished results rather than renumbering batches.
 Dispatch one `spawn_agent` per implementation or research batch; verification
 routes stay orchestrator-direct with no agent. Supply TDD only to implementation
 and project agents, up to four adjacent assigned tasks sequentially, with shared
-context/reservation once. Never exceed derived
+context/reservation once. Tell every implementation and project agent that
+checklist items are reviewer-owned and deferred to PR review: do not stop on
+unticked ones, and never edit a checklist marker. Never exceed derived
 `subagent_slots`. Consume every real per-task result, update both state stores,
 and call `task-results` `action=record` with every frozen task's full result
 block plus independently captured parent `native_observations` before marking
@@ -1283,6 +1410,15 @@ checkpoints, warnings, final marker_split placeholder, packet validation
 placeholder, and PR mappings placeholder in the workflow evidence. `tasks.md`
 stays the task source; it is not authoritative marker state. Use repo-relative
 evidence paths.
+
+Before implementation starts, write the plan as `pr-marker-plan.v1` and give
+each marker `implementation_checkpoint` `{"status": "pending"}` with no commit
+or evidence fields. A v2 plan also needs a changed-file manifest that the
+phase-coverage guard checks against the pull request's actual diff, which does
+not exist until code is written, so move to `pr-marker-plan.v2` at the first
+implementation checkpoint. Under v2, a pending checkpoint needs `commit_sha`
+and `evidence_path` together, and needs them only once a phase result is
+recorded for its marker; the guard does not check v1 checkpoints.
 
 On resume, validate the marker-plan fingerprint against the current spec,
 plan-declared file/test scope, tasks, reviewability evidence, and hazard route.
@@ -2238,6 +2374,40 @@ owner-only temporary file outside the repository because GitHub writes require
 a body file. Remove private state on success or failure and report only that
 cleanup completed, never its absolute path or contents.
 
+**Record the Implement Checklist Gate before the first Phase 7 dispatch.**
+Stock `$speckit-implement` stops when a domain checklist has unticked items.
+Spec Kit's checklist template makes those items reviewer-owned: a reviewer
+ticks a box, and implement must not change the markers. The parent session does
+not run that stop. It records the gate decision instead, once:
+
+- **The decision is `deferred-to-review`.** Unticked reviewer-owned items in
+  `<FEATURE_DIR>/checklists/*.md` pass to PR review as they are. Autopilot
+  never ticks a reviewer-owned item, and neither does any executor it spawns.
+- **`[Gap]` markers are not deferred: they stay blocking through G4.** Take
+  the `[Gap]` count from the recorded G4 verdict. Do not recount it here.
+- **Write the record** in the workflow file under `## Phase 7: Implement`, as a
+  `### Implement Checklist Gate` subsection placed before
+  `### Implementation Progress`. Create the subsection when it is absent. On a
+  resume, leave an existing record as found.
+
+```text
+### Implement Checklist Gate
+
+| Field | Value |
+|-------|-------|
+| Decision | deferred-to-review |
+| Reviewer-owned items | <unticked> of <total> unticked across <n> checklist files |
+| [Gap] markers | <count from the G4 verdict> (blocking through G4) |
+```
+
+- **Fail closed on missing evidence.** When `checklists/` is absent or a file
+  cannot be read, write `unknown` and the reason in the Reviewer-owned items
+  cell. Never write a zero you did not count.
+
+This gate is not a stop condition and never asks the operator. The PR body
+tells the reviewer the boxes are theirs (see the PR packet `how_to_review`
+rule in post-implementation-codex.md).
+
 **Open the implementation-notes record before the first task is dispatched.**
 This is parent-session work, not delegated work, and it runs ahead of the first
 `spawn_agent` call rather than lazily on the first append: a phase interrupted
@@ -2355,6 +2525,59 @@ verification evidence path, fingerprint status, checkpoint commit SHA
 warnings, and any blocked/fixed tasks. The marker checkpoint SHA is the source
 commit for later live marker PR branches. Do not infer a new marker order from
 changed files or reviewability warnings.
+
+### Blocked Actions Mid-Run: Fall Back or Defer, Never Stop
+
+Once Phase 7 is running, human input is for exceptional cases only. The Phase
+6.5 preflight is the one normal human touchpoint; a single blocked action after
+it is not a reason to stop the run. A blocked action is any planned command,
+tool call, or side effect that cannot run as planned: an approval-reviewer veto
+(including one on an action the preflight recorded as `ready`), a missing
+approval, an unavailable tool or route, or a late-discovered boundary action
+whose refreshed preflight disposition is `operator_action_required`.
+
+1. **Take the task's own fallback.** When the fallback that the task,
+   `tasks.md`, or the spec itself defines covers this case (for example, "if the
+   refresh cannot run, keep the file unchanged and state the mismatch in the PR
+   body"), apply it without asking. Record it as an auto-applied fallback: quote
+   the defining text, name the blocked action and why it was blocked, and write
+   it in the task's implementation-notes entry and the workflow file's Phase 7
+   result. Then continue. Only a fallback the task or spec defines qualifies. An
+   alternative the autopilot invents is a workaround and is not allowed.
+2. **With no defined fallback, defer that task.** Leave its checkbox unchecked,
+   record it as deferred with the blocked action and the reason, and mark
+   deferred every task and Post item that depends on it. Then keep executing
+   every independent task, gate, and Post check. A deferral reserves no
+   execution-control budget, is not a failure family, and is never retried by
+   another route. Never ask the operator from inside the task, and never set a
+   workflow row, plan item, or the thread goal to blocked while runnable work
+   remains.
+3. **Ask once, at the end.** Only after every runnable item has finished, and
+   only if deferred items remain, make one consolidated operator request with
+   `request_user_input`. It names each deferred item, the blocked action, why
+   the requirement needs it, the smallest operator action that unblocks it, and
+   the resume command. Always print the same question as plain text in the
+   final message too, even when `request_user_input` returns, because the
+   question UI can fail to render in a thread. In an unattended run, or when
+   `request_user_input` is absent, the plain-text copy is the request. Only then
+   may the rows holding deferred work move to `⚠ Blocked`.
+4. **Report what happened.** The final report and the PR body list every
+   fallback taken and every deferred item. Pass them to `pr-packet-output` as
+   `known_gaps`, so they appear under the body's `## Known Gaps` heading. A run
+   with deferred items reports an honest incomplete checkpoint, never
+   completion.
+
+G7 and Post run on the implemented snapshot. A requirement whose only task is
+deferred is listed as deferred in the G7 evidence and in `known_gaps`; it
+neither fails G7 nor counts as covered by it.
+
+The run must never bypass a veto: never change approval, sandbox, or reviewer
+configuration, never rerun the vetoed action under a different command or tool, and never
+treat an earlier answer as authorization for the vetoed action. The
+correctness stops above are unchanged and still stop the run: unknown side
+effects, an execution-control `checkpoint_required` disposition (including an
+exhausted repair budget), a ledger or clock error, invalid or stale state, and
+a failed gate whose repair is out of scope.
 
 ## PR Packet and Body Boundary
 

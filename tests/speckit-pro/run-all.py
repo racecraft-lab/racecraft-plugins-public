@@ -37,7 +37,7 @@ TEST_LIB = Path(__file__).resolve().parent / "lib"
 if str(TEST_LIB) not in sys.path:
     sys.path.insert(0, str(TEST_LIB))
 
-from test_result import classify_counted_child  # noqa: E402
+from test_result import classify_counted_child, failure_report  # noqa: E402
 
 SUITE_MANIFEST = "tests/speckit-pro/suite-manifest.json"
 RULE = "────────────────────────────────────────"
@@ -211,6 +211,10 @@ def run_execute_layer(layer: dict, config: Config, root: Path) -> tuple[int, int
             print(f"  PASS {label} ({passed}/{passed + failed})")
         else:
             print(f"  FAIL {label} ({passed}/{passed + failed}, {failed} failed)")
+        if disposition != "counted" or failed:
+            # Name each failing unit and the tail of its traceback, so a one-off failure is diagnosable.
+            for line in failure_report(output, label).splitlines():
+                print(f"      {line}")
     return layer_pass, layer_fail
 
 
