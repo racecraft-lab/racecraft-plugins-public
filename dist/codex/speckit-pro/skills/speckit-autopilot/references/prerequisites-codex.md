@@ -139,12 +139,19 @@ to archive previously merged specs.
    command contract once per `archive_order` entry, in that order, and let
    each run finish before the next starts:
    ```text
-   archive command: specs/<merged-spec-dir>
+   archive command: specs/<merged-spec-dir> --spec-only --plan-only --changelog-only
    ```
-   Pass only the feature directory as `$ARGUMENTS`. The stock archive
-   extension (`stn1slv/spec-kit-archive`) archives one feature per run and
-   rejects `--sweep`, `--current-target`, and `--dry-run`; the vendored
-   `racecraft-lab/spec-kit-archive` fork accepts the same single-feature form.
+   Pass the feature directory first, then exactly these three scope
+   modifiers, as `$ARGUMENTS`. The stock archive extension
+   (`stn1slv/spec-kit-archive`) archives one feature per run, treats several
+   scope modifiers as a union, and rejects `--sweep`, `--current-target`, and
+   `--dry-run`; the vendored `racecraft-lab/spec-kit-archive` fork accepts the
+   same single-feature form and the same modifiers. The union updates
+   `.specify/memory/spec.md`, `plan.md`, and `changelog.md` and leaves out the
+   agent context files (stock step 5.3, fork step 6.3). SpecKit Pro overrides
+   that step: an archive run never writes per-spec history to `AGENTS.md`,
+   `CLAUDE.md`, or `GEMINI.md`, even if an installed contract does not honor
+   the union.
    If a run fails, record `status=blocked` with that spec and the command's
    error under `archive_sweep`, then STOP before Phase 0.
 
@@ -313,15 +320,16 @@ nonzero exit here is a branch, not a stop: do not stop because the probe
 exited nonzero. When the list is empty, continue. When it holds `current execution boundary
 does not match the persisted execution boundary`, or any other stale-record
 error above, rerun the complete Phase 6.5 preflight against the live boundary
-now. Present one consolidated operator request, in the `operator_action_required`
-shape, that names the changed boundary and every action whose authorization it
-invalidates. When a data-egress action is among them, include the
-paste-ready authorization message and `auto_review.extra_policy` fragment that
-request carries. Record the operator's answer as `authorization.status=explicit_user`,
-then write the refreshed private record, its receipt, and the matching Phase 6.5
-row before Step 1.1 runs. Present the refresh as this up-front re-attestation,
-never as a guard-failure repair. A denial or no answer stops the run before the
-guard. A mismatch still blocks: keep `--require-autonomy-boundary` and every
+now, applying its standing policy coverage. A covered inventory asks no
+question, including a planning-to-implementation stage change such as an
+explicit `--stage implement` run of a plan whose earlier record covered only
+planning: record the coverage and proceed. An uncovered action is deferred to
+the one end-of-run request, never an up-front question; when it is data egress,
+that request carries the paste-ready authorization message and
+`auto_review.extra_policy` fragment. Write the refreshed private record, its
+receipt, and the matching Phase 6.5 row before Step 1.1 runs. Present the
+refresh as this up-front re-attestation, never as a guard-failure repair. A
+mismatch still blocks: keep `--require-autonomy-boundary` and every
 live `--current-*` value on the Step 1.1 command, and take those values from the
 current thread, never from the workflow or state.
 
