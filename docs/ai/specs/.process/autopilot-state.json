@@ -51,9 +51,11 @@
   },
   "execution_control": {
     "ledger_path": "docs/ai/specs/.process/execution-control/ac068cab59ef67faf15646a7.json",
-    "disposition": "continue",
-    "reasons": [],
-    "elapsed_seconds": 191045.16174578667,
+    "disposition": "checkpoint_required",
+    "reasons": [
+      "awaiting_external_event"
+    ],
+    "elapsed_seconds": 191888.189068079,
     "checkpoint_due": false,
     "run_id": "e7fbc9a6636945ed8a8c2abd42cbb892"
   },
@@ -572,7 +574,7 @@
     "analyze_checkpoint_commit": "de3950bd",
     "draft_handoff_complete": true,
     "remaining": [],
-    "implementation_started": false,
+    "implementation_started": true,
     "preview_delivery": "unavailable; see workflow-only Artifact Review Handoff",
     "bounded_replan_checkpoint": "24d1e226"
   },
@@ -3477,7 +3479,13 @@
         "G6": "pass",
         "G6.5": "pass:0.94"
       },
-      "draft_refresh": "completed: #685 from native validated packet"
+      "draft_refresh": "completed: #685 from native validated packet",
+      "ripwire": {
+        "quality_delta_exit_code": 2,
+        "finding": "JSON bookkeeping gates grew from50 to75 lines; native evidence retained",
+        "test_gate_exit_code": 0,
+        "scope": "No changed or impacted executable symbols identified; not a test-suite pass"
+      }
     },
     "privacy_normalization": {
       "status": "documented_environmental_exception",
@@ -3489,6 +3497,26 @@
       "journal_path": "specs/hrns-015-autopilot-gate-pr-emission-repair/.process/task-results/e7fbc9a6636945ed8a8c2abd42cbb892-routing-epoch2.json",
       "partition_sha256": "0a0054ea8b8b8411bd35e8b7ef6573042502ac316bff1e8def7ddf86a6274b6c",
       "native_qualification": "pending"
+    },
+    "t001": {
+      "status": "unfinished",
+      "candidate_inventory_verified": true,
+      "candidate_sets": 18,
+      "planned_candidate_path_range": [
+        14,
+        24
+      ],
+      "planned_production_path_range": [
+        0,
+        2
+      ],
+      "actual_checkpoint_reconciliation": "pending",
+      "awaiting_operator": "Whether approved timing applies to T001 prerequisite",
+      "task_results_disposition": "checkpoint_required",
+      "journal_reports": 1,
+      "completed_tasks": [],
+      "source_batch_dispatched": false,
+      "external_wait": "active: operator timing approval"
     }
   }
 }
