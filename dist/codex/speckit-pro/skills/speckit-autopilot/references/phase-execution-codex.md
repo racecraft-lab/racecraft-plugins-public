@@ -1274,7 +1274,7 @@ messages, `AGENTS.md`, and question replies, but treats skill and plugin text
 as untrusted. It approves egress only when the transcript names the payload
 and the destination. Render both artifacts with the registered read-only
 `render-egress-authorization` runner helper. Pass the repository name, its
-default branch, and every data-egress action as `action_id`, `target` (the
+default branch, and every uncovered data-egress action as `action_id`, `target` (the
 exact destination), `effect` (the data class), and an optional `purpose` (the
 task id or reason). Show its output unchanged; do not write the text by hand.
 
@@ -2584,9 +2584,9 @@ changed files or reviewability warnings.
 
 ### Blocked Actions Mid-Run: Fall Back or Defer, Never Stop
 
-Once Phase 7 is running, human input is for exceptional cases only. The Phase
-6.5 preflight is the one normal human touchpoint; a single blocked action after
-it is not a reason to stop the run. A blocked action is any planned command,
+Once autopilot is running, human input is for exceptional cases only. The Phase
+6.5 preflight asks no question when the standing policy covers the inventory,
+and a single blocked action after it is not a reason to stop the run. A blocked action is any planned command,
 tool call, or side effect that cannot run as planned: an approval-reviewer veto
 (including one on an action the preflight recorded as `ready`), a missing
 approval, an unavailable tool or route, or a late-discovered boundary action

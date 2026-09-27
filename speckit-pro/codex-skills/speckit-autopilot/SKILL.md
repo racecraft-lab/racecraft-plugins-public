@@ -652,7 +652,7 @@ egress, it shows the operator a paste-ready authorization message and a
 proposed `auto_review.extra_policy` fragment, both rendered by the same helper;
 the plugin never writes either one.
 
-That preflight is the one normal human touchpoint. Once Phase 7 runs, one
+Once autopilot is running, human input is for exceptional cases only. Once Phase 7 runs, one
 blocked action never stops the run: take the task's own fallback, or defer that
 task and keep executing independent work, then ask once at the end. Follow
 §Blocked Actions Mid-Run: Fall Back or Defer, Never Stop in

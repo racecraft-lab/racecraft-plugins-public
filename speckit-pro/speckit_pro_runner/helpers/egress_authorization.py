@@ -81,7 +81,8 @@ def _standing_classes(repository: str, default_branch: str) -> list[dict[str, st
         },
         {
             "class_id": "feature-branch-push",
-            "target": f"https://github.com/{repository}, any branch other than {default_branch}",
+            "target": f"the in-scope checkout's origin remote ({repository} on GitHub), "
+            + f"any branch other than {default_branch}",
             "effect": "committed repository content, pushed with a plain fast-forward push",
         },
         {
