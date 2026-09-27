@@ -36,6 +36,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Mapping
 
+from .mcp_protocol import negotiate_protocol_version
 from . import research_preflight as preflight
 
 SERVER_INFO = {"name": "speckit-pro-research-broker", "version": "1.0.0"}
@@ -1055,9 +1056,7 @@ def handle_message(message: Any, instance: ResearchBroker | None = None) -> dict
     if method == "notifications/initialized":
         return None
     if method == "initialize":
-        params = message.get("params")
-        requested = params.get("protocolVersion", "2024-11-05") if isinstance(params, dict) else "2024-11-05"
-        return _response(request_id, {"protocolVersion": requested, "capabilities": {"tools": {"listChanged": False}}, "serverInfo": SERVER_INFO})
+        return _response(request_id, {"protocolVersion": negotiate_protocol_version(message.get("params")), "capabilities": {"tools": {"listChanged": False}}, "serverInfo": SERVER_INFO})
     if method == "ping":
         return _response(request_id, {})
     if method == "tools/list":

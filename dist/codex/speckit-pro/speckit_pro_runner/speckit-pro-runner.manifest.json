@@ -71,7 +71,7 @@
         "value": "speckit_pro_runner/author_broker.py",
         "display": "speckit_pro_runner/author_broker.py"
       },
-      "sha256": "444c45f2d37891d1a888262f61ac367cf2012ee33cda2913000ddfe350b79073"
+      "sha256": "27cf0ed2b3b44d176a1711464888fc3573c3e21c39a6aefac81d9110a48c09c5"
     },
     {
       "path": {
@@ -332,6 +332,14 @@
     {
       "path": {
         "kind": "plugin_relative",
+        "value": "speckit_pro_runner/mcp_protocol.py",
+        "display": "speckit_pro_runner/mcp_protocol.py"
+      },
+      "sha256": "a903d18cb20cca9210873bf43e17a498f397629177fc6df1f59226155ab134cd"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
         "value": "speckit_pro_runner/path_utils.py",
         "display": "speckit_pro_runner/path_utils.py"
       },
@@ -359,7 +367,7 @@
         "value": "speckit_pro_runner/research_broker.py",
         "display": "speckit_pro_runner/research_broker.py"
       },
-      "sha256": "398153931792a09288478a7117bbd95ee49460c69da1176211fa23a35bb68f72"
+      "sha256": "000304ab92ab370ac53ae7d21c88925338c140313b0976d71877d34851ff1818"
     },
     {
       "path": {
@@ -383,7 +391,7 @@
         "value": "speckit_pro_runner/sweep_broker.py",
         "display": "speckit_pro_runner/sweep_broker.py"
       },
-      "sha256": "8bfbca8dc4d134ede92947b4ad6d4da966b3d09221f6738f68bb0877c48d0834"
+      "sha256": "a3cc2d7696dd461cbe7a9a59182568041e7657e8265728923537f8bcbcd07c36"
     },
     {
       "path": {
