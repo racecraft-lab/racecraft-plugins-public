@@ -3,7 +3,7 @@
   "spec_id": "HRNS-015",
   "feature_dir": "specs/hrns-015-autopilot-gate-pr-emission-repair",
   "branch": "hrns-015-autopilot-gate-pr-emission-repair",
-  "status": "plan_complete",
+  "status": "completed_pr_open",
   "stage": "plan",
   "active_step": null,
   "stage_resolution": {
