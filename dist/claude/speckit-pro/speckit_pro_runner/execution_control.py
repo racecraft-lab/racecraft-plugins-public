@@ -38,6 +38,10 @@ DEFER_REASONS = {"failure_family_budget_exhausted": "failure_family",
                  "increment_review_allowance_exhausted": "increment",
                  "failure_class_allowance_exhausted": "failure_class"}
 DEFERRAL_KEYS = {"dispatch_id", "reason", "unit_kind", "unit", "deferred_at"}
+# Verification evidence the runner itself records; never a helper-request action.
+RECORD_FAILING_CHECKS = "record-failing-checks"
+FAILING_CHECK_KEYS = {"command_id", "command_sha256", "format", "failing", "passing", "checks_run", "output_sha256",
+                      "recorded_at"}
 RUNNER_BYPRODUCT_DIRECTORIES = frozenset({(".process", "execution-control"), (".process", "verification"),
                                           (".process", "task-results")})
 
@@ -207,6 +211,8 @@ def _validate_corrective_state(value: dict[str, Any]) -> None:
     for dispatch_id, item in value["dispatches"].items():
         if not isinstance(item, dict) or item.get("kind") not in KINDS or item.get("outcome") not in OUTCOMES | {"reserved", "running"}:
             raise ValueError("invalid dispatch record")
+        if "failing_checks" in item:
+            _validate_failing_checks(item["failing_checks"], item)
         if type(item.get("reconciliations")) is not int or not 0 <= item["reconciliations"] <= 1:
             raise ValueError("invalid reconciliation counter")
         reservation = item.get("reservation_id")
@@ -217,6 +223,7 @@ def _validate_corrective_state(value: dict[str, Any]) -> None:
         elif (item["kind"] == "corrective" and reservation not in value["reservations"]
                 and (exception_reservation is None or reservation != exception_reservation)):
             raise ValueError("corrective dispatch has no reservation")
+    _validate_progress(value)
     validate_recovery_records(value)
     validate_continuation_records(value)
 
@@ -421,6 +428,50 @@ def _defer(ledger: dict[str, Any], dispatch_id: str, reason: str, unit: str, now
     return {"reasons": [entry["reason"]], "deferred": dict(entry)}
 
 
+def _validate_failing_checks(record: Any, item: dict[str, Any]) -> None:
+    """One runner-recorded fingerprint: closed shape, sorted unique identifiers, recorded while running."""
+    from .failing_checks import FORMATS, MAX_IDENTIFIER_LENGTH, MAX_IDENTIFIERS
+
+    if (not isinstance(record, dict) or set(record) != FAILING_CHECK_KEYS or item.get("kind") != "verification"
+            or record["format"] not in {*FORMATS, "passed", "unparsed"}):
+        raise ValueError("invalid failing-check evidence")
+    require_text(record["command_id"], "failing-check command_id")
+    for key in ("failing", "passing"):
+        values = record[key]
+        if values is not None and (not isinstance(values, list) or len(values) > MAX_IDENTIFIERS
+                                   or values != sorted(set(values))
+                                   or not all(isinstance(value, str) and 0 < len(value) <= MAX_IDENTIFIER_LENGTH
+                                              for value in values)):
+            raise ValueError("failing-check identifiers must be a sorted unique bounded list")
+    if (record["failing"] is None) != (record["format"] == "unparsed") or (
+            record["failing"] is None and record["passing"] is not None):
+        raise ValueError("invalid failing-check evidence")
+    if not all(isinstance(record[key], str) and re.fullmatch(r"[0-9a-f]{64}", record[key])
+               for key in ("command_sha256", "output_sha256")):
+        raise ValueError("invalid failing-check digest")
+    checks_run = record["checks_run"]
+    if (checks_run is not None and (type(checks_run) is not int or checks_run < 0)) or (
+            record["failing"] is None and checks_run is not None):
+        raise ValueError("invalid failing-check count")
+    recorded_at, reserved_at = record["recorded_at"], item.get("reserved_at")
+    if (type(recorded_at) not in (int, float) or type(reserved_at) not in (int, float)
+            or not reserved_at <= recorded_at < float("inf")):
+        raise ValueError("invalid failing-check clock")
+
+
+def _record_failing_checks(ledger: dict[str, Any], inputs: dict[str, Any], evidence: dict[str, Any],
+                           now: float) -> dict[str, Any]:
+    dispatch_id = require_text(inputs.get("dispatch_id"), "dispatch_id")
+    item = ledger["dispatches"].get(dispatch_id)
+    if (not isinstance(item, dict) or item.get("kind") != "verification" or item["outcome"] != "running"
+            or "failing_checks" in item):
+        raise ValueError("failing checks are recorded once, on a running verification dispatch")
+    record = {**evidence, "recorded_at": now}
+    _validate_failing_checks(record, item)
+    item["failing_checks"] = record
+    return {"dispatch_id": dispatch_id}
+
+
 def validate_recovery_records(ledger: dict[str, Any]) -> None:
     sources: set[str] = set()
     events: set[str] = set()
@@ -580,6 +631,163 @@ def _corrective_refusal(ledger: dict[str, Any], family: str) -> str | None:
     return None
 
 
+def _spec_digest(spec: Path) -> str | None:
+    try:
+        return hashlib.sha256(spec.read_bytes()).hexdigest() if spec.is_file() else None
+    except OSError:
+        return None
+
+
+def _latest_evidence(ledger: dict[str, Any], since: float, until: float, command_id: str | None) -> str | None:
+    """The verification dispatch whose runner-recorded fingerprint is newest inside the window."""
+    found = [(item["failing_checks"]["recorded_at"], dispatch_id) for dispatch_id, item in ledger["dispatches"].items()
+             if "failing_checks" in item and since <= item["failing_checks"]["recorded_at"] <= until
+             and command_id in {None, item["failing_checks"]["command_id"]}]
+    return max(found)[1] if found else None
+
+
+def _was_latest(ledger: dict[str, Any], candidate: Any, since: float, until: float, command_id: str | None) -> bool:
+    """True when `_latest_evidence` could have chosen the candidate when the window closed.
+
+    Evidence stamped at the same instant as the window's end may have been recorded
+    after the choice, so only strictly earlier evidence can outrank the candidate.
+    """
+    item = ledger["dispatches"].get(candidate) if isinstance(candidate, str) else None
+    if not isinstance(item, dict) or "failing_checks" not in item:
+        return False
+    stamp = item["failing_checks"]["recorded_at"]
+    if not since <= stamp <= until or command_id not in {None, item["failing_checks"]["command_id"]}:
+        return False
+    return not any(stamp < other["failing_checks"]["recorded_at"] < until
+                   for other in ledger["dispatches"].values()
+                   if "failing_checks" in other and command_id in {None, other["failing_checks"]["command_id"]})
+
+
+def _correction_baseline(ledger: dict[str, Any], now: float) -> str | None:
+    """The newest recorded failure a family's first correction starts from, when it names its failing checks."""
+    latest = _latest_evidence(ledger, ledger["started_at"], now, None)
+    return latest if latest is not None and ledger["dispatches"][latest]["failing_checks"]["failing"] else None
+
+
+def _progress_chain(ledger: dict[str, Any], reservation: str, until: str | None = None) -> list[str]:
+    """The family's corrections in order: the reservation owner, then each progress admission."""
+    chain = [ledger["reservations"][reservation]["dispatch_id"]]
+    while chain[-1] != until:
+        following = [key for key, item in ledger["dispatches"].items() if item.get("progress_of") == chain[-1]]
+        if len(following) > 1:
+            raise ValueError("progress history forks")
+        if not following:
+            break
+        chain.append(following[0])
+    return chain
+
+
+def _progress(ledger: dict[str, Any], reservation: str, previous_id: str, spec_sha256: str | None,
+              reserved_at: float, recorded_after: str | None = None) -> tuple[str | None, str, str | None]:
+    """Whether the family's latest correction measurably converged: (change, reason, after-state dispatch).
+
+    Every input is runner-recorded: the fingerprints on verification dispatches,
+    the correction outcomes and clocks, and the spec digest the chain started from.
+    Validation passes the after-state the ledger recorded to check it instead of choosing one.
+    """
+    dispatches = ledger["dispatches"]
+    chain = _progress_chain(ledger, reservation, previous_id)
+    previous = dispatches[previous_id]
+    members = [item for item in dispatches.values()
+               if item.get("reservation_id") == reservation and item["reserved_at"] <= previous["reserved_at"]]
+    if chain[-1] != previous_id or any(item["outcome"] != "completed" for item in members):
+        return None, "previous_correction_unsettled", None
+    if "baseline" not in previous:
+        return None, "no_baseline", None
+    if spec_sha256 is None or spec_sha256 != previous["spec_sha256"]:
+        return None, "spec_changed", None
+    before = dispatches[previous["baseline"]]["failing_checks"]
+    after_id = _latest_evidence(ledger, previous["completed_at"], reserved_at, before["command_id"])
+    if recorded_after is not None:
+        valid = _was_latest(ledger, recorded_after, previous["completed_at"], reserved_at, before["command_id"])
+        after_id = recorded_after if valid else None
+    if after_id is None:
+        return None, "no_new_evidence", None
+    after = dispatches[after_id]["failing_checks"]
+    if after["failing"] is None:
+        return None, "evidence_unparsed", after_id
+    if after["command_sha256"] != before["command_sha256"]:
+        return None, "command_changed", after_id
+    if before["checks_run"] is None or after["checks_run"] is None or after["checks_run"] < before["checks_run"]:
+        return None, "fewer_checks_ran", after_id
+    prior, current = set(before["failing"]), set(after["failing"])
+    if not current:
+        return None, "no_failing_checks", after_id
+    if current < prior:
+        change = "shrank"
+    elif not current & prior and after["passing"] is not None and prior <= set(after["passing"]):
+        change = "moved"
+    else:
+        return None, "no_progress", after_id
+    if any(set(dispatches[dispatches[key]["baseline"]]["failing_checks"]["failing"]) == current
+           for key in chain if "baseline" in dispatches[key]):
+        return None, "returned_to_earlier_state", after_id
+    return change, "", after_id
+
+
+def _admit_progress(ledger: dict[str, Any], dispatch_id: str, family: str, spec: Path,
+                    now: float) -> tuple[dict[str, Any] | None, dict[str, Any]]:
+    """Admit a correction past the family cap when the previous one converged, with no operator event."""
+    if family not in ledger["approved_invariants"]:
+        return None, {"admitted": False, "reason": "unresolved_family"}
+    reservation = next(key for key, item in ledger["reservations"].items() if item["family"] == family)
+    tail = _progress_chain(ledger, reservation)[-1]
+    spec_sha256 = _spec_digest(spec)
+    change, reason, after_id = _progress(ledger, reservation, tail, spec_sha256, now)
+    if change is None or after_id is None:
+        return None, {"admitted": False, "reason": reason}
+    if any(item.get("reservation_id") == reservation and item.get("baseline") == after_id
+           for item in ledger["dispatches"].values()):
+        return None, {"admitted": False, "reason": "no_new_evidence"}
+    ledger["dispatches"][dispatch_id] = {"kind": "corrective", "outcome": "reserved", "reserved_at": now,
+                                         "reservation_id": reservation, "reconciliations": 0, "progress_of": tail,
+                                         "baseline": after_id, "spec_sha256": spec_sha256}
+    return ({"reservation_id": reservation, "dispatch_id": dispatch_id},
+            {"admitted": True, "change": change, "previous_dispatch_id": tail, "baseline": after_id})
+
+
+def _validate_progress(ledger: dict[str, Any]) -> None:
+    """Recompute every recorded baseline and progress admission from the ledger's own evidence."""
+    dispatches = ledger["dispatches"]
+    owners = {item["dispatch_id"]: key for key, item in ledger["reservations"].items()}
+    successors = [item["progress_of"] for item in dispatches.values() if "progress_of" in item]
+    if len(successors) != len(set(successors)):
+        raise ValueError("progress history forks")
+    recorded = {key: item for key, item in dispatches.items()
+                if {"baseline", "spec_sha256", "progress_of"} & item.keys()}
+    baselines: set[tuple[Any, Any]] = set()
+    for item in recorded.values():
+        reservation, baseline = item.get("reservation_id"), item.get("baseline")
+        evidence = dispatches.get(baseline, {}).get("failing_checks") if isinstance(baseline, str) else None
+        if ({"baseline", "spec_sha256"} - item.keys() or item["kind"] != "corrective"
+                or reservation not in ledger["reservations"] or (reservation, baseline) in baselines
+                or not isinstance(evidence, dict) or not evidence["failing"]
+                or not isinstance(item["spec_sha256"], str) or not re.fullmatch(r"[0-9a-f]{64}", item["spec_sha256"])):
+            raise ValueError("invalid correction progress record")
+        baselines.add((reservation, baseline))
+    for dispatch_id, item in recorded.items():
+        reservation = item["reservation_id"]
+        if "progress_of" not in item:
+            if (owners.get(dispatch_id) != reservation
+                    or not _was_latest(ledger, item["baseline"], ledger["started_at"], item["reserved_at"], None)):
+                raise ValueError("correction baseline disagrees with the recorded verification evidence")
+            continue
+        previous = dispatches.get(item["progress_of"])
+        if (not isinstance(previous, dict) or previous.get("reservation_id") != reservation
+                or type(previous.get("completed_at")) not in (int, float)
+                or previous["completed_at"] > item["reserved_at"]):
+            raise ValueError("invalid correction progress record")
+        change, _, after_id = _progress(ledger, reservation, item["progress_of"], item["spec_sha256"], item["reserved_at"],
+                                        item["baseline"])
+        if change is None or after_id != item["baseline"]:
+            raise ValueError("correction progress disagrees with the recorded verification evidence")
+
+
 def _review_remediation(inputs: dict[str, Any]) -> dict[str, Any] | None:
     """The optional `review_remediation` request: one increment and the paths the fix touches."""
     request = inputs.get("review_remediation")
@@ -689,11 +897,22 @@ def reserve(ledger: dict[str, Any], inputs: dict[str, Any], now: float, root: Pa
             invariant = inputs.get("failure_invariant")
             family = str(invariant) if invariant in ledger["approved_invariants"] else "unresolved"
             refusal = _corrective_refusal(ledger, family)
+            if refusal == "failure_family_budget_exhausted":
+                admitted, progress = _admit_progress(ledger, dispatch_id, family, spec, now)
+                if admitted is not None:
+                    return {**admitted, "progress": progress, **note}
+                return {**_defer(ledger, dispatch_id, refusal, family, now), "progress": progress, **note}
             if refusal is not None:
                 return {**_defer(ledger, dispatch_id, refusal, family, now), **note}
             reservation = uuid.uuid4().hex
             ledger["reservations"][reservation] = {"family": family, "dispatch_id": dispatch_id, "reserved_at": now}
             ledger["corrective_cycles"] += 1
+            baseline, spec_sha256 = _correction_baseline(ledger, now), _spec_digest(spec)
+            if family in ledger["approved_invariants"] and baseline is not None and spec_sha256 is not None:
+                ledger["dispatches"][dispatch_id] = {"kind": kind, "outcome": "reserved", "reserved_at": now,
+                                                     "reservation_id": reservation, "reconciliations": 0,
+                                                     "baseline": baseline, "spec_sha256": spec_sha256}
+                return {"reservation_id": reservation, "dispatch_id": dispatch_id, **note}
     elif reservation is not None:
         raise ValueError("only corrective dispatches use corrective reservations")
     ledger["dispatches"][dispatch_id] = {"kind": kind, "outcome": "reserved", "reserved_at": now,
@@ -1009,8 +1228,13 @@ def _bind_invariants_if_requested(root: Path, inputs: dict[str, Any], spec: Path
     }
 
 
-def execution_control(root: Path, inputs: dict[str, Any], mode: str) -> dict[str, Any]:
-    """Runner adapter returns a disposition without changing autopilot top-state."""
+def execution_control(root: Path, inputs: dict[str, Any], mode: str,
+                      evidence: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Runner adapter returns a disposition without changing autopilot top-state.
+
+    `evidence` is set only by `record_failing_checks`, the verification executors'
+    internal path; a helper request cannot reach the evidence action.
+    """
     workflow_name = require_text(inputs.get("workflow_file"), "workflow_file")
     workflow = confined_path(root, workflow_name)
     if not workflow.is_file():
@@ -1022,7 +1246,10 @@ def execution_control(root: Path, inputs: dict[str, Any], mode: str) -> dict[str
         raise ValueError("spec_file must be an existing contained file")
     action = inputs.get("action", "status")
     if action not in {"start", "status", "bind-invariants", "reserve", "authorize-corrective-retry", "authorize-corrective-continuation", "authorize-corrective-exception", "reserve-class-correction", "begin-replan-epoch", "begin-stage-epoch", "begin-verification", "complete", "reconcile", "checkpoint", "pause", "resume", "relocate-workflow"}:
-        raise ValueError("unsupported action; pauses/resets require verified native authorization")
+        if evidence is None or action != RECORD_FAILING_CHECKS:
+            raise ValueError("unsupported action; pauses/resets require verified native authorization")
+    elif evidence is not None:
+        raise ValueError("failing-check evidence is recorded only by the verification executors")
     if mode not in {"read_only", "dry_run", "apply"} or (mode == "read_only" and action != "status"):
         raise ValueError("ledger mutations require dry_run or apply")
     expected_run_id = inputs.get("expected_run_id")
@@ -1063,7 +1290,9 @@ def execution_control(root: Path, inputs: dict[str, Any], mode: str) -> dict[str
         if "clock_moved_backwards" in reasons and action not in {"status", "start"}:
             raise ValueError("clock moved backwards; preserve the ledger and reconcile time before continuing")
         _bind_invariants_if_requested(root, inputs, spec, ledger, now, reasons)
-        if action == "reserve" and not reasons:
+        if action == RECORD_FAILING_CHECKS and evidence is not None:
+            extra = _record_failing_checks(ledger, inputs, evidence, now)
+        elif action == "reserve" and not reasons:
             extra = reserve(ledger, inputs, now, root, spec)
         elif action == "authorize-corrective-retry" and not reasons:
             extra = authorize_corrective_retry(ledger, inputs, now)
@@ -1100,6 +1329,16 @@ def execution_control(root: Path, inputs: dict[str, Any], mode: str) -> dict[str
         with exclusive_ledger(path):
             return update()
     return update()
+
+
+def record_failing_checks(root: Path, inputs: dict[str, Any], evidence: dict[str, Any]) -> dict[str, Any]:
+    """Write the runner's own failing-check fingerprint onto its running verification dispatch.
+
+    Only the verification executors call this, with a fingerprint they derived from
+    output they executed. The action is not reachable through a helper request.
+    """
+    request = {key: inputs.get(key) for key in ("workflow_file", "expected_run_id", "ledger_path", "dispatch_id")}
+    return execution_control(root, {**request, "action": RECORD_FAILING_CHECKS}, "apply", evidence=evidence)
 
 
 def run_execution_helper(entry: Any, request: Any) -> dict[str, Any]:

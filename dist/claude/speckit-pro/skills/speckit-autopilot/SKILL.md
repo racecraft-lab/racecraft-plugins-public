@@ -771,9 +771,18 @@ directions; do not infer a broader precedence rule.
 
 - **Resume:** `/speckit-pro:speckit-autopilot workflow.md --from-phase
   <next-pending-phase>` — the workflow file persists all state.
-- **Repair budget exhausted: defer and continue.** An exhausted allowance
-  returns `disposition=defer`: the ledger refuses that dispatch and records
-  the blocked unit in its `deferred` list. Record the deferred item with the
+- **A gate or test fails: keep remediating while each round converges.**
+  Diagnose the failure with the consensus agents, dispatch the fix through the
+  executor, and rerun verification. While each correction shrinks the
+  runner-recorded failing set, or moves it with every earlier failure passing,
+  the ledger admits the next correction in that family with no operator event
+  and no count limit (see
+  [`execution-efficiency.md`](./references/execution-efficiency.md)).
+- **Non-convergence: defer and continue.** When a correction makes no
+  measurable progress (the same, a larger, an earlier, or an unparsed failing
+  set) or a spec change breaks the chain, the fixed allowances apply, and an
+  exhausted one returns `disposition=defer`: the ledger refuses that dispatch
+  and records the blocked unit in its `deferred` list. Record the deferred item with the
   exact gate output, keep executing every independent task, increment, and
   gate, and list it in the one end-of-run consolidated request. It is never a
   mid-run question and never a stop; no phase or nested worker has an

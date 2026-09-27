@@ -17,7 +17,9 @@ from unittest.mock import patch
 sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "speckit-pro"))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "lib"))
 from test_result import run_counted
-from speckit_pro_runner.execution_control import durable_json, execution_control, ignore_owned_directory, is_runner_byproduct
+from speckit_pro_runner.execution_control import (durable_json, execution_control, ignore_owned_directory, is_runner_byproduct,
+                                                  record_failing_checks)
+from speckit_pro_runner.failing_checks import fingerprint as failing_check_fingerprint
 from speckit_pro_runner.helpers.read_only import json_schema_failures, validate_task_execution
 from speckit_pro_runner.task_execution import fingerprints
 from speckit_pro_runner.verification_records import digest, execute_verification, project_command, run_snapshot_command, tree_bytes, validate_execution_record
@@ -1486,6 +1488,323 @@ class DeferOnExhaustedAllowanceGuidanceTests(unittest.TestCase):
                     self.assertIn(phrase, section)
 
 
+def unittest_output(*failing, ran=6):
+    """Default (non-verbose) unittest output naming each failing test."""
+    blocks = [f"FAIL: {name} (tests.test_sample.SampleTests.{name})\n" + "-" * 70 + "\nAssertionError\n"
+              for name in failing]
+    return ("=" * 70 + "\n").join(["", *blocks]) + "-" * 70 + f"\nRan {ran} tests in 0.010s\n\nFAILED (failures={len(failing)})\n"
+
+
+def bun_output(failing, passing):
+    """bun test output, which names every passing and failing test."""
+    lines = [f"(pass) sample > {name} [0.10ms]" for name in passing]
+    lines += [f"(fail) sample > {name} [0.20ms]" for name in failing]
+    lines += ["", f" {len(passing)} pass", f" {len(failing)} fail",
+              f"Ran {len(passing) + len(failing)} tests across 1 files. [5.00ms]"]
+    return "tests/sample.test.ts:\n" + "\n".join(lines) + "\n"
+
+
+class FailingCheckFingerprintTests(unittest.TestCase):
+    """The runner derives a failing-check set from the output it executed, from a closed set of formats."""
+
+    def fingerprint(self, stdout="", stderr="", exit_code=1, completed=True):
+        return failing_check_fingerprint("UNIT_TEST", ["python3", "-m", "unittest"], exit_code, completed,
+                                         stdout.encode(), stderr.encode())
+
+    def test_each_supported_format_yields_a_sorted_failing_set(self):
+        unittest_text = unittest_output("test_b", "test_a")
+        pytest_text = ("============ short test summary info ============\n"
+                       + "FAILED tests/test_x.py::test_b - assert 1 == 2\n"
+                       + "ERROR tests/test_y.py::test_c\n"
+                       + "======== 2 failed, 3 passed in 0.12s ========\n")
+        jest_text = ("  ● math › adds\n\n    expect(received)\n\n  ● math › subtracts\n\n"
+                     + "Tests:       2 failed, 4 passed, 6 total\n")
+        cases = {
+            "unittest": (unittest_text, "", ["test_a (tests.test_sample.SampleTests.test_a)",
+                                             "test_b (tests.test_sample.SampleTests.test_b)"], None, 6),
+            "pytest": ("", pytest_text, ["tests/test_x.py::test_b", "tests/test_y.py::test_c"], None, 5),
+            "bun": (bun_output(["b"], ["a"]), "", ["sample > b"], ["sample > a"], 2),
+            "jest": ("", jest_text, ["math › adds", "math › subtracts"], None, 6),
+        }
+        for name, (stdout, stderr, failing, passing, checks_run) in cases.items():
+            with self.subTest(format=name):
+                result = self.fingerprint(stdout, stderr)
+                self.assertEqual((result["format"], result["failing"], result["passing"], result["checks_run"]),
+                                 (name, failing, passing, checks_run))
+                self.assertEqual(result["command_id"], "UNIT_TEST")
+                self.assertEqual(result["command_sha256"], digest(["python3", "-m", "unittest"]))
+                self.assertRegex(result["output_sha256"], r"^[0-9a-f]{64}$")
+        verbose = "test_a (tests.T.test_a) ... ok\ntest_b (tests.T.test_b) ... FAIL\n" + unittest_output("test_b")
+        self.assertEqual(self.fingerprint(stderr=verbose)["passing"], ["test_a (tests.T.test_a)"])
+
+    def test_unparseable_ambiguous_or_unfinished_output_records_no_failing_set(self):
+        cases = {"no known format": self.fingerprint("Segmentation fault\n", exit_code=139),
+                 "nonzero exit without a named failure": self.fingerprint("Ran 3 tests in 0.1s\n\nOK\n"),
+                 "two formats at once": self.fingerprint(unittest_output("test_a") + bun_output(["b"], [])),
+                 "timed out": self.fingerprint(unittest_output("test_a"), exit_code=None, completed=False)}
+        for name, result in cases.items():
+            with self.subTest(case=name):
+                self.assertIsNone(result["failing"])
+                self.assertEqual(result["format"], "unparsed")
+                self.assertRegex(result["output_sha256"], r"^[0-9a-f]{64}$")
+        passed = self.fingerprint("Ran 3 tests in 0.1s\n\nOK\n", exit_code=0)
+        self.assertEqual(passed["failing"], [])
+
+
+class CorrectionProgressTests(_ExecutionControlFixture, unittest.TestCase):
+    """A correction that measurably converged admits the next one with no operator event (issue 796)."""
+
+    def setUp(self):
+        super().setUp()
+        self.invoke("start")
+        self.verifications = 0
+
+    def verify(self, stdout, exit_code=1, completed=True, command_id="UNIT_TEST", argv=("python3", "-m", "unittest")):
+        """Run one verification dispatch whose output the runner fingerprints into the ledger."""
+        self.verifications += 1
+        dispatch_id = f"verify-{self.verifications}"
+        self.now += 10
+        self.invoke("reserve", dispatch_id=dispatch_id, kind="verification")
+        self.invoke("begin-verification", dispatch_id=dispatch_id)
+        evidence = failing_check_fingerprint(command_id, list(argv), exit_code, completed, stdout.encode(), b"")
+        with patch("speckit_pro_runner.execution_control.time.time", return_value=self.now):
+            record_failing_checks(self.root, {"workflow_file": "feature/workflow.md", "expected_run_id": self.run_id,
+                                              "dispatch_id": dispatch_id}, evidence)
+        self.invoke("complete", dispatch_id=dispatch_id, outcome="failed" if exit_code else "completed")
+        return dispatch_id
+
+    def correct(self, dispatch_id, invariant="FR-001", outcome="completed"):
+        self.now += 10
+        result = self.invoke("reserve", dispatch_id=dispatch_id, kind="corrective", failure_invariant=invariant)
+        if result["disposition"] == "continue" and outcome is not None:
+            self.now += 10
+            self.invoke("complete", dispatch_id=dispatch_id, outcome=outcome)
+        return result
+
+    def assert_schema_valid(self, ledger):
+        schema = json.loads(SCHEMA_PATH.read_text())
+        self.assertEqual(json_schema_failures(ledger, schema, schema, "ledger"), [])
+
+    def assert_deferred_for(self, result, reason):
+        self.assertEqual(result["disposition"], "defer")
+        self.assertEqual(result["reasons"], ["failure_family_budget_exhausted"])
+        self.assertEqual(result["progress"], {"admitted": False, "reason": reason})
+        self.assertNotIn(result["deferred"]["dispatch_id"], result["ledger"]["dispatches"])
+
+    def test_three_successive_shrinking_corrections_are_admitted_with_no_operator_event(self):
+        first_state = self.verify(unittest_output("test_a", "test_b", "test_c", "test_d"))
+        owner = self.correct("fix-1")
+        self.assertEqual(owner["disposition"], "continue")
+        self.assertEqual(owner["ledger"]["dispatches"]["fix-1"]["baseline"], first_state)
+        previous = "fix-1"
+        for number, failing in enumerate((("test_a", "test_b", "test_c"), ("test_a", "test_b"), ("test_a",)), 2):
+            state = self.verify(unittest_output(*failing))
+            admitted = self.correct(f"fix-{number}")
+            with self.subTest(correction=number):
+                self.assertEqual(admitted["disposition"], "continue", admitted["reasons"])
+                self.assertEqual(admitted["reservation_id"], owner["reservation_id"])
+                self.assertEqual(admitted["progress"], {"admitted": True, "change": "shrank",
+                                                        "previous_dispatch_id": previous, "baseline": state})
+                record = admitted["ledger"]["dispatches"][f"fix-{number}"]
+                self.assertEqual((record["progress_of"], record["baseline"]), (previous, state))
+                self.assertEqual(admitted["ledger"]["corrective_cycles"], 1)
+                self.assertNotIn("corrective_exception", admitted["ledger"])
+                self.assertNotIn("deferred", admitted["ledger"])
+            previous = f"fix-{number}"
+        on_disk = json.loads((self.root / admitted["ledger_path"]).read_text())
+        self.assert_schema_valid(on_disk)
+        self.assertEqual(self.invoke("status", mode="read_only")["disposition"], "continue")
+        other = self.correct("fix-other", invariant="FR-002")
+        self.assertEqual(other["disposition"], "continue")
+
+    def test_a_correction_that_leaves_the_failing_set_unchanged_or_larger_defers(self):
+        self.verify(unittest_output("test_a", "test_b"))
+        self.correct("fix-1")
+        self.verify(unittest_output("test_a", "test_b"))
+        self.assert_deferred_for(self.correct("fix-2"), "no_progress")
+        self.verify(unittest_output("test_a", "test_b", "test_c"))
+        self.assert_deferred_for(self.correct("fix-3"), "no_progress")
+        self.verify(unittest_output("test_c"))
+        self.assert_deferred_for(self.correct("fix-4"), "no_progress")
+
+    def test_a_return_to_an_earlier_failing_state_defers(self):
+        self.verify(bun_output(["a"], ["b", "c"]))
+        self.correct("fix-1")
+        self.verify(bun_output(["b"], ["a", "c"]))
+        moved = self.correct("fix-2")
+        self.assertEqual(moved["disposition"], "continue", moved["reasons"])
+        self.assertEqual(moved["progress"]["change"], "moved")
+        self.verify(bun_output(["a"], ["b", "c"]))
+        self.assert_deferred_for(self.correct("fix-3"), "returned_to_earlier_state")
+
+    def test_a_scope_changing_correction_is_refused_even_when_it_made_progress(self):
+        self.verify(unittest_output("test_a", "test_b"))
+        self.correct("fix-1")
+        spec = self.root / "feature/spec.md"
+        spec.write_text(spec.read_text() + "- FR-003: accept any output\n")
+        self.verify(unittest_output("test_a"))
+        self.assert_deferred_for(self.correct("fix-2"), "spec_changed")
+        self.verify(unittest_output("test_x", "test_y"))
+        self.correct("fix-u1", invariant="words that name no requirement")
+        self.verify(unittest_output("test_x"))
+        self.assert_deferred_for(self.correct("fix-u2", invariant="other words"), "unresolved_family")
+
+    def test_a_narrowed_command_or_a_removed_check_is_not_progress(self):
+        self.verify(unittest_output("test_a", "test_b"))
+        self.correct("fix-1")
+        self.verify(unittest_output("test_a"), argv=("python3", "-m", "unittest", "tests.test_sample.SampleTests.test_a"))
+        self.assert_deferred_for(self.correct("fix-2"), "command_changed")
+        self.verify(unittest_output("test_x", "test_y"))
+        self.correct("fix-3", invariant="FR-002")
+        self.verify(unittest_output("test_x", ran=5))
+        self.assert_deferred_for(self.correct("fix-4", invariant="FR-002"), "fewer_checks_ran")
+
+    def test_a_failed_correction_or_a_missing_after_state_never_counts_as_progress(self):
+        self.verify(unittest_output("test_a", "test_b"))
+        self.correct("fix-1", outcome="failed")
+        self.verify(unittest_output("test_a"))
+        self.assert_deferred_for(self.correct("fix-2"), "previous_correction_unsettled")
+        self.verify(unittest_output("test_x", "test_y"))
+        self.correct("fix-3", invariant="FR-002")
+        self.assert_deferred_for(self.correct("fix-4", invariant="FR-002"), "no_new_evidence")
+
+    def test_disjoint_failures_need_every_prior_failure_named_as_passing(self):
+        self.verify(unittest_output("test_a"))
+        self.correct("fix-1")
+        self.verify(unittest_output("test_b"))
+        self.assert_deferred_for(self.correct("fix-2"), "no_progress")
+
+    def test_unparseable_output_falls_back_to_the_caps(self):
+        self.correct("fix-0", invariant="FR-002")
+        self.verify(unittest_output("test_a", "test_b"))
+        self.correct("fix-1")
+        self.verify("Segmentation fault\n", exit_code=139)
+        self.assert_deferred_for(self.correct("fix-2"), "evidence_unparsed")
+        self.verify(unittest_output("test_a"), exit_code=None, completed=False)
+        self.assert_deferred_for(self.correct("fix-3"), "evidence_unparsed")
+        fresh = self.correct("fix-4", invariant="FR-009-not-approved")
+        self.assertEqual((fresh["disposition"], fresh["reasons"]), ("defer", ["corrective_run_budget_exhausted"]))
+        self.assertNotIn("progress", fresh)
+
+    def test_tampered_progress_history_fails_validation(self):
+        self.verify(unittest_output("test_a", "test_b", "test_c"))
+        self.correct("fix-1")
+        self.verify(unittest_output("test_a", "test_b"))
+        self.correct("fix-2")
+        self.verify(unittest_output("test_a"))
+        admitted = self.correct("fix-3")
+        self.assertEqual(admitted["disposition"], "continue", admitted["reasons"])
+        path = self.root / admitted["ledger_path"]
+        valid = path.read_bytes()
+
+        def dispatches(ledger):
+            return ledger["dispatches"]
+
+        tampers = {
+            "after state no longer shrank": lambda ledger: dispatches(ledger)["verify-2"]["failing_checks"].update(
+                failing=["test_a (tests.test_sample.SampleTests.test_a)", "test_z (tests.test_sample.SampleTests.test_z)",
+                         "test_zz (tests.test_sample.SampleTests.test_zz)", "test_zzz (tests.test_sample.SampleTests.test_zzz)"]),
+            "baseline repointed": lambda ledger: dispatches(ledger)["fix-3"].update(baseline="verify-2"),
+            "baseline shared": lambda ledger: dispatches(ledger)["fix-2"].update(baseline="verify-3"),
+            "chain forked": lambda ledger: dispatches(ledger)["fix-3"].update(progress_of="fix-1"),
+            "unknown previous": lambda ledger: dispatches(ledger)["fix-3"].update(progress_of="fix-9"),
+            "previous failed": lambda ledger: dispatches(ledger)["fix-2"].update(outcome="failed"),
+            "evidence removed": lambda ledger: dispatches(ledger)["verify-3"].pop("failing_checks"),
+            "evidence unparsed": lambda ledger: dispatches(ledger)["verify-3"]["failing_checks"].update(
+                failing=None, format="unparsed"),
+            "evidence on a correction": lambda ledger: dispatches(ledger)["fix-1"].update(
+                failing_checks=dict(dispatches(ledger)["verify-1"]["failing_checks"])),
+            "unsorted failing set": lambda ledger: dispatches(ledger)["verify-1"]["failing_checks"]["failing"].reverse(),
+            "evidence recorded before its dispatch": lambda ledger: dispatches(ledger)["verify-3"]["failing_checks"].update(
+                recorded_at=0),
+            "other command": lambda ledger: dispatches(ledger)["verify-3"]["failing_checks"].update(command_id="LINT"),
+            "other argv": lambda ledger: dispatches(ledger)["verify-3"]["failing_checks"].update(command_sha256="1" * 64),
+            "fewer checks ran": lambda ledger: dispatches(ledger)["verify-3"]["failing_checks"].update(checks_run=1),
+            "spec digest changed mid-chain": lambda ledger: dispatches(ledger)["fix-3"].update(spec_sha256="0" * 64),
+            "progress without a reservation": lambda ledger: dispatches(ledger)["fix-3"].update(reservation_id=None),
+            "baseline on a nested correction": lambda ledger: dispatches(ledger)["fix-3"].pop("progress_of"),
+            "baseline names no dispatch": lambda ledger: dispatches(ledger)["fix-1"].update(baseline="verify-9"),
+            "owner baseline removed": lambda ledger: [dispatches(ledger)["fix-1"].pop(key) for key in ("baseline", "spec_sha256")],
+            "first evidence removed": lambda ledger: dispatches(ledger)["verify-1"].pop("failing_checks"),
+        }
+        for name, tamper in tampers.items():
+            for order in ("recorded", "reversed"):
+                with self.subTest(tamper=name, order=order):
+                    ledger = json.loads(valid)
+                    tamper(ledger)
+                    if order == "reversed":
+                        ledger["dispatches"] = dict(reversed(list(ledger["dispatches"].items())))
+                    path.write_text(json.dumps(ledger), encoding="utf-8")
+                    with self.assertRaises(ValueError):
+                        self.invoke("status", mode="read_only")
+        ledger = json.loads(valid)
+        ledger["dispatches"] = dict(reversed(list(ledger["dispatches"].items())))
+        path.write_text(json.dumps(ledger), encoding="utf-8")
+        self.assertEqual(self.invoke("status", mode="read_only")["disposition"], "continue")
+        path.write_bytes(valid)
+
+    def test_evidence_can_only_come_from_the_runner(self):
+        verification = self.verify(unittest_output("test_a"))
+        with self.assertRaisesRegex(ValueError, "unsupported action"):
+            self.invoke("record-failing-checks", dispatch_id=verification,
+                        failing_checks={"command_id": "UNIT_TEST", "failing": []})
+        with self.assertRaises(ValueError):
+            record_failing_checks(self.root, {"workflow_file": "feature/workflow.md", "expected_run_id": self.run_id,
+                                              "dispatch_id": verification},
+                                  failing_check_fingerprint("UNIT_TEST", ["python3"], 0, True, b"", b""))
+        self.invoke("reserve", dispatch_id="worker", kind="implementation")
+        with self.assertRaises(ValueError):
+            record_failing_checks(self.root, {"workflow_file": "feature/workflow.md", "expected_run_id": self.run_id,
+                                              "dispatch_id": "worker"},
+                                  failing_check_fingerprint("UNIT_TEST", ["python3"], 0, True, b"", b""))
+
+    def test_a_stage_epoch_archives_the_progress_history(self):
+        self.verify(unittest_output("test_a", "test_b"))
+        self.correct("fix-1")
+        self.verify(unittest_output("test_a"))
+        self.assertEqual(self.correct("fix-2")["disposition"], "continue")
+        (self.root / "feature/workflow.md").write_text(stage_workflow())
+        opened = self.invoke("begin-stage-epoch", autopilot_args=["--stage", "implement"])
+        self.assertTrue(opened["stage_epoch_opened"])
+        archived = opened["ledger"]["corrective_epochs"][0]["dispatches"]
+        self.assertEqual(archived["fix-2"]["progress_of"], "fix-1")
+        self.assert_schema_valid(opened["ledger"])
+
+
+class CorrectionProgressGuidanceTests(unittest.TestCase):
+    """Both hosts remediate while rounds converge; a deferral is the non-convergence fallback."""
+
+    PLUGIN = Path(__file__).resolve().parents[3] / "speckit-pro"
+
+    def flat(self, relative):
+        return " ".join((self.PLUGIN / relative).read_text().split())
+
+    def test_shared_ledger_reference_documents_the_progress_path(self):
+        text = self.flat("skills/speckit-autopilot/references/execution-efficiency.md")
+        self.assertIn("keep remediating while each round converges", text.lower())
+        for phrase in ("`progress_of`", "`failing_checks`",
+                       "strict subset", "no operator event", "`returned_to_earlier_state`", "`evidence_unparsed`",
+                       "`spec_changed`", "non-convergence fallback", "unittest, pytest, bun, and jest"):
+            self.assertIn(phrase, text)
+
+    def test_both_hosts_remediate_while_converging_and_defer_only_on_non_convergence(self):
+        pairs = (("skills/speckit-autopilot/SKILL.md", "## Error Recovery", "## References"),
+                 ("codex-skills/speckit-autopilot/SKILL.md", "### 3.4 Pre-final completion audit", None),
+                 ("skills/speckit-autopilot/references/error-recovery.md", "## Common Issues", "## Context Window"),
+                 ("codex-skills/speckit-autopilot/references/error-recovery-codex.md", "## Common Issues", None),
+                 ("skills/speckit-autopilot/references/phase-execution.md",
+                  "#### Blocked Actions Mid-Run", "#### Append Contract"),
+                 ("codex-skills/speckit-autopilot/references/phase-execution-codex.md",
+                  "### Blocked Actions Mid-Run", "## PR Packet and Body Boundary"))
+        for relative, start, end in pairs:
+            with self.subTest(host=relative):
+                section = self.flat(relative).split(start, 1)[1]
+                section = section.split(end, 1)[0] if end else section
+                self.assertIn("keep remediating while each round converges", section.lower())
+                self.assertIn("non-convergence", section.lower())
+                self.assertIn("`disposition=defer`", section)
+
+
 class WorkflowIdentityTests(_ExecutionControlFixture, unittest.TestCase):
     def test_different_workflows_cannot_adopt_an_existing_ledger(self):
         first = self.invoke("start")
@@ -1628,6 +1947,15 @@ class VerificationTests(unittest.TestCase):
         result, observed = self.produce()
         self.assertFalse(self.validate(result, observed)["reusable"])
         self.assertFalse(self.validate(result)["reusable"])
+
+    def test_a_failing_run_records_its_failing_checks_on_the_ledger(self):
+        (self.root / "check.py").write_text("import sys\nsys.stderr.write(" + repr(unittest_output("test_a"))
+                                            + ")\nsys.exit(1)\n")
+        result, _ = self.produce()
+        ledger_file = next((self.root / "feature/.process/execution-control").glob("*.json"))
+        item = json.loads(ledger_file.read_text())["dispatches"][result["record"]["dispatch_id"]]
+        self.assertEqual(item["failing_checks"]["command_id"], "UNIT_TEST")
+        self.assertEqual(item["failing_checks"]["failing"], ["test_a (tests.test_sample.SampleTests.test_a)"])
 
     def test_produced_record_fields_match_published_schema(self):
         result, _ = self.produce()
@@ -2132,6 +2460,8 @@ if __name__ == "__main__":
                                             CorrectiveContinuationTests, CorrectiveExceptionTests, CorrectiveFailureClassTests,
                                             ReplanEpochTests, StageEpochTests, IncrementReviewAllowanceTests,
                                             DeferOnExhaustedAllowanceTests, DeferOnExhaustedAllowanceGuidanceTests,
+                                            FailingCheckFingerprintTests, CorrectionProgressTests,
+                                            CorrectionProgressGuidanceTests,
                                             WorkflowIdentityTests, VerificationTests, RunnerDispatchTests))
     suite.addTests(DockerVerificationTests(name) for name in DockerVerificationTests.__dict__ if name.startswith("test_docker_"))
     raise SystemExit(run_counted(suite, label="test-execution-control"))

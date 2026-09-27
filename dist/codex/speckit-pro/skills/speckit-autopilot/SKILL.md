@@ -710,8 +710,15 @@ Exception: `execution_control.disposition=checkpoint_required` permits an
 honest checkpoint response stating the run is **not complete**, remaining Post
 work, consumed budget, unknown effects, and the operator decision required.
 Keep pending rows and current status; never mark them completed to stop.
-`execution_control.disposition=defer` is not a stop: it defers one blocked
-unit whose allowance is spent, and the run keeps executing independent work.
+A failing gate or test is remediated, not deferred: keep remediating while
+each round converges, dispatching each diagnosed fix through the executor and
+rerunning verification. The ledger admits every correction whose predecessor
+shrank the runner-recorded failing set, or moved it with every earlier failure
+passing, with no operator event. `execution_control.disposition=defer`
+(`disposition=defer` in the ledger response) is the non-convergence fallback
+and not a stop: it defers one blocked unit whose
+correction made no measurable progress and whose allowance is spent, and the
+run keeps executing independent work.
 The same honest checkpoint applies when every runnable item has finished and
 deferred items remain under §Blocked Actions Mid-Run: Fall Back or Defer, Never
 Stop. Make the one consolidated `request_user_input` request, print the same

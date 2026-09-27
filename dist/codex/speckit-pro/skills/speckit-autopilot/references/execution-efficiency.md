@@ -247,12 +247,60 @@ hardening. Pass the parent's
 independent allowance. A rejected candidate or failed repair does not create
 a new family. Pure read-only diagnosis may continue.
 
+**Keep remediating while each round converges.** The ceilings above are the
+non-convergence fallback, not a count that stops a converging repair. When an
+ordinary corrective `reserve` would refuse a family that already holds a
+reservation (`failure_family_budget_exhausted`), the helper first asks whether
+that family's previous correction measurably converged, judged only from
+evidence the runner recorded itself. Every `execute-verification` run parses
+the output it executed, from a closed set of formats (unittest, pytest, bun,
+and jest), into `failing_checks` on its verification dispatch: `command_id`,
+`command_sha256` (the digest of the argv it ran), `format`, the sorted
+`failing` test identifiers, the `passing` identifiers when the format names
+them, `checks_run` (the run's own summary count), an `output_sha256` digest,
+and `recorded_at`. No
+helper action accepts this field, so a caller cannot supply it. Output in no
+supported format, output matching two formats, a nonzero exit naming no
+failure, or a command that did not finish records `failing: null`.
+
+A family's first correction stores the newest recorded failure as its
+`baseline`, with the spec digest. The next correction in that family is
+admitted with no operator event, no new reservation, and no change to
+`corrective_cycles` when all of these hold: the previous correction and every
+earlier one in its reservation completed; the spec digest is unchanged; and
+the newest `failing_checks` for the same `command_id`, recorded after the
+previous correction completed, ran the same argv and at least as many checks,
+and is either a strict subset of that correction's baseline set or disjoint
+from it with every baseline failure named as passing.
+It must also differ from every failing set the family already had. The
+admitted dispatch records `progress_of` (the previous correction) and its own
+`baseline`, so the chain of baselines is the family's history. The response
+carries `progress` with `admitted=true`, `change` (`shrank` or `moved`),
+`previous_dispatch_id`, and `baseline`. Dispatch it through the executor with
+the consensus agents' diagnosis, rerun verification, and reserve the next
+correction the same way.
+
+Anything else is non-convergence, and the reserve falls through to the
+ceilings and the deferral below, with `progress.reason` naming why:
+`no_progress` (the same set, a larger one, or a disjoint set without named
+passes), `returned_to_earlier_state`, `evidence_unparsed`, `no_new_evidence`
+(no verification ran after the previous correction, or that run already
+anchors this family), `command_changed` (a narrowed or edited command),
+`fewer_checks_ran` (a deleted or skipped check), `no_failing_checks`, `previous_correction_unsettled` (a
+failed, unknown, or unfinished correction), `no_baseline`, `spec_changed`, or
+`unresolved_family`. The progress path never admits a requirement or scope
+change: a changed spec ends the chain. It never covers boundary files, pushes,
+or remote changes, which stay hard human stops whatever the progress. The
+ledger recomputes every baseline and admission on each call, so a tampered
+history is an integrity failure that stops the run.
+
 Check `status` before advancing and while waiting. A run has no wall-clock
 limit: elapsed time never stops it. `checkpoint_due` calls for a
 completed-work checkpoint (commit and push progress) every 45 minutes, and the
 run then continues. `elapsed_seconds` reports time for the record and excludes
 only separately evidenced human-UAT/external-approval waits.
-If `disposition=defer`, the helper refused that one dispatch because its
+If `disposition=defer`, the helper refused that one dispatch: it is the
+non-convergence fallback, never the default outcome of a budget. Its
 allowance is spent: an exhausted failure family or run budget, a spent
 reservation (`corrective_cycle_failed_no_nested_retry` or
 `corrective_cycle_already_closed`), `increment_review_allowance_exhausted`, or

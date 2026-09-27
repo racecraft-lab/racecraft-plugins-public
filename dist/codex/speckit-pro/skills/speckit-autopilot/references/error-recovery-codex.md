@@ -46,7 +46,13 @@ $speckit-autopilot workflow.md --from-phase <next-pending-phase>
   owned effects. Unknown effects require a checkpoint, not a replacement agent
   or direct shell retry. Retain verified partial task results; reserve only
   unfinished work after reconciliation proves it is safe.
-- **Gate needs repair:** Reserve against the same durable failure-family/spec
+- **Gate needs repair:** Diagnose through the consensus agents, fix through
+  the executor, rerun verification, and keep remediating while each round
+  converges: the ledger admits the next correction in a family with no
+  operator event when the previous one shrank the runner-recorded failing set,
+  or moved it with every earlier failure passing. On non-convergence (no
+  measurable progress, a return to an earlier failing set, unparsed output, or
+  a spec change), reserve against the same durable failure-family/spec
   budget used by every nested worker. An exhausted allowance returns
   `disposition=defer`: record the deferral with the exact output, keep
   executing every independent task, increment, and gate, and list it in the

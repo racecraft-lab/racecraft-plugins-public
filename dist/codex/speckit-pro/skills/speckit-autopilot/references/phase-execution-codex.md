@@ -2700,7 +2700,16 @@ effects, an execution-control `checkpoint_required` disposition, a ledger or
 clock error, invalid or stale state, and a failed gate whose repair is out of
 scope.
 
-An exhausted correction allowance is not a stop. The ledger returns
+A failed gate or test is not a blocked action: diagnose it through the
+consensus agents, fix it through the executor, rerun verification, and keep
+remediating while each round converges. The ledger admits the next correction
+in a family with no operator event while the previous one shrank the
+runner-recorded failing set, or moved it with every earlier failure passing.
+
+An exhausted correction allowance is not a stop. It is the non-convergence
+fallback: a correction that made no measurable progress, returned to an
+earlier failing set, left unparsed output, or followed a spec change meets the
+fixed allowances, and then the ledger returns
 `disposition=defer`, refuses that dispatch, and records the blocked failure
 family, increment, or failure class in its `deferred` list. Defer that work
 under rule 2, name the task or gate it blocks, and keep executing every

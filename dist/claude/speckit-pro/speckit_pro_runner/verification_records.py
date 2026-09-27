@@ -30,8 +30,9 @@ from pathlib import Path
 from typing import Any
 
 from .agent_materialization import canonical_bytes
-from .execution_control import (confined_path, default_ledger_directory, durable_json, execution_control, require_text,
-                                workflow_process_directory)
+from .execution_control import (confined_path, default_ledger_directory, durable_json, execution_control, record_failing_checks,
+                                require_text, workflow_process_directory)
+from .failing_checks import fingerprint as failing_check_fingerprint
 
 SCHEMA = "verification-record/v1"
 COMMAND_IDS = {"BUILD", "TYPECHECK", "LINT", "UNIT_TEST", "INTEGRATION_TEST", "FULL_VERIFY",
@@ -353,6 +354,8 @@ def execute_verification(root: Path, inputs: dict[str, Any], mode: str) -> dict[
               "completed": completed, "elapsed_seconds": time.monotonic() - started,
               "isolation_mode": "copy_only"}
     durable_json(record_path, record)
+    record_failing_checks(root, {**inputs, "workflow_file": workflow_name},
+                          failing_check_fingerprint(command_id, argv, exit_code, completed, stdout, stderr))
     return {"record_path": record_name, "record": record, "observation_material": observation_material(record),
             "writes_state": True, "reusable": False, "requires_independent_native_event": True,
             "authorization_granted": False, "rerun_required": True,
