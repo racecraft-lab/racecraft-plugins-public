@@ -274,7 +274,7 @@ receipt with the full guard (`--require-autonomy-boundary` plus every
 `execution_control.run_id` and fails when it is missing, unreadable, or its
 canonical digest differs from `private_record_sha256`. A missing
 record or private file, a digest mismatch, a changed writable-root or approval
-boundary, or a planned action absent from the record makes it stale. Re-enter the complete Phase 6.5
+boundary, or a planned action absent from the record (including a data-egress task such as a live model evaluation) makes it stale. Re-enter the complete Phase 6.5
 preflight and persist a current result before dispatching any implementation
 worker. Exact explicit user authorization persists across turns, compaction,
 and resume when the recorded action category, command or tool, target, lasting

@@ -1083,7 +1083,15 @@ planned action in any of these categories:
   installation;
 - interactive authentication, credential provisioning, or an account change;
 - an externally visible side effect such as a provider request, deployment,
-  message, publication, or remote mutation.
+  message, publication, or remote mutation;
+- data egress: sending repository-derived content (source, skills, prompts,
+  specs, or private project data) to a model service or other third party,
+  including a live model evaluation or `--run` eval, a cloud or delegation
+  worker, and a push or PR to a remote. Record it as `external_side_effect`
+  whose `target` names the exact destination (model service, remote
+  repository, or worker) and whose `effect` names the data class sent. Scan
+  `tasks.md` and the Post list for such tasks; a task that runs a live provider
+  is data egress even when it has no visible side effect.
 
 For each action, record its category, exact command or tool when known, target,
 durability or data effect, required execution boundary, existing authorization
@@ -1175,7 +1183,11 @@ re-attestation in [prerequisites-codex.md](./prerequisites-codex.md), before the
 Step 1.1 coverage guard runs.
 
 Only `authorization.status=explicit_user` can make an inventoried boundary
-action `ready`. Exact explicit user authorization persists across turns,
+action `ready`. For data egress, explicit_user evidence is an operator answer
+in this thread to the consolidated request that names the exact destination and
+data class; the automatic reviewer judges only from the transcript, so a general
+instruction to proceed or "you have approval" is not egress authorization.
+Exact explicit user authorization persists across turns,
 compaction, and resume while the recorded action scope and execution-boundary
 digest still match and no later user instruction revokes or narrows it. When a
 later instruction does so, record `authorization.status=revoked`, add non-secret
@@ -1187,6 +1199,7 @@ Never persist credentials, tokens, cookies, or session material.
 When any action is `operator_action_required`, set the object status to that
 exact value and make the Phase 6.5 row non-terminal and blocked. Present one
 consolidated request that names every exact target, lasting or external effect,
+every data-egress destination and data class,
 why the requirement needs it, the smallest required operator action, and the
 resume command. Commit the blocked record through the current stage's bounded
 bookkeeping path; for a plan-stage run, use the normal stage-boundary commit.

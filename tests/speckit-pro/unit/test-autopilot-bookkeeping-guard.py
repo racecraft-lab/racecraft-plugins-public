@@ -512,6 +512,28 @@ class AutonomyBoundarySourceContractTests(unittest.TestCase):
         self.assertIn("before the Step 1.1 coverage guard", skill)
         self.assertIn("Step 0.8c", phase_execution)
 
+    def test_preflight_inventories_data_egress_to_model_services(self) -> None:
+        """A live model evaluation sends repository content off-machine (issue 748)."""
+        skill = " ".join(CODEX_AUTOPILOT_SKILL.read_text(encoding="utf-8").split())
+        phase = " ".join(
+            (CODEX_AUTOPILOT_SKILL.parent / "references" / "phase-execution-codex.md")
+            .read_text(encoding="utf-8")
+            .split()
+        )
+        start = phase.index("### Autonomy Boundary Preflight")
+        end = phase.index("For each action, record its category", start)
+        inventory = phase[start:end]
+        for phrase in (
+            "data egress",
+            "live model evaluation",
+            "a push or PR to a remote",
+            "exact destination",
+        ):
+            self.assertIn(phrase, inventory)
+        self.assertIn("every data-egress destination and data class", phase)
+        self.assertIn("is not egress authorization", phase)
+        self.assertIn("data egress to a model service", skill)
+
     def test_canonical_schema_excludes_automatic_and_prior_execution_authorization(self) -> None:
         schema = json.loads(
             validator.AUTONOMY_BOUNDARY_SCHEMA_PATH.read_text(
