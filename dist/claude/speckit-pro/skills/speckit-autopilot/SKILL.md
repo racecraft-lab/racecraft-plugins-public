@@ -325,9 +325,11 @@ Run the pre-flight sequence before any phase work. STOP on failure.
 1. **Use runner helper operation IDs**. Invoke read-only helper behavior through
    `resolved_python -m speckit_pro_runner` with one JSON request on stdin; do not rely on
    plugin-local script files.
-2. **Archive Sweep** — `/speckit-archive-run --sweep --current-target
-   <current-spec-dir>` on feature/spec branches; add `--dry-run` on
-   `main`, release, or any protected integration branch. Skip if the
+2. **Archive Sweep** — run helper `list-archive-candidates` with the current
+   spec directory, then on feature/spec branches run
+   `/speckit-archive-run specs/<merged-spec-dir>` once per `archive_order`
+   entry, in order. On `main`, release, or any protected integration branch,
+   record the helper report as a dry run and archive nothing. Skip if the
    archive extension is absent. Excludes the current target spec. Distinguish
    an absent extension from a broken installation: if the extension is present
    but `/speckit-archive-run` is missing or unregistered, STOP pre-flight with

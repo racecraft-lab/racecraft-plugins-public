@@ -126,31 +126,47 @@ to archive previously merged specs.
    manual `specs/` inventory, mark the Archive Sweep plan item completed, or
    advance Phase 0.
 
-5. After the command and prerequisite pass, determine the sweep mode from the
-   current branch:
+5. After the command and prerequisite pass, invoke the read-only runner helper
+   `list-archive-candidates` with the current target as
+   `inputs.current_target`. The helper lists `specs/*/spec.md`, excludes the
+   current target, and asks `gh` for each remaining spec's merged pull
+   request. `archive_order` lists the specs with merged-PR evidence in
+   ascending order. Specs in `not_merged` or `unknown` stay active; never
+   archive a spec that is not in `archive_order`. Then determine the archive
+   mode from the current branch:
 
-   **Feature / spec worktree branch** (normal autopilot case — run with actual
-   cleanup):
+   **Feature / spec worktree branch** (normal autopilot case): follow the
+   command contract once per `archive_order` entry, in that order, and let
+   each run finish before the next starts:
    ```text
-   archive command: --sweep --current-target <current-spec-dir>
+   archive command: specs/<merged-spec-dir>
    ```
+   Pass only the feature directory as `$ARGUMENTS`. The stock archive
+   extension (`stn1slv/spec-kit-archive`) archives one feature per run and
+   rejects `--sweep`, `--current-target`, and `--dry-run`; the vendored
+   `racecraft-lab/spec-kit-archive` fork accepts the same single-feature form.
+   If a run fails, record `status=blocked` with that spec and the command's
+   error under `archive_sweep`, then STOP before Phase 0.
 
    **`main`, a release branch, or any protected integration branch** (dry-run
-   only — do not delete spec folders on the integration branch):
-   ```text
-   archive command: --sweep --current-target <current-spec-dir> --dry-run
-   ```
+   only): do not follow the command contract, because every archive run
+   writes project memory. Record the helper's `archive_order` as the specs a
+   feature branch run would archive.
 
-6. Archive Sweep may archive/clean up only previously merged specs. It MUST
-   exclude the current target spec until a later run sees that spec as merged.
+6. Archive Sweep may archive only previously merged specs. It MUST exclude the
+   current target spec until a later run sees that spec as merged; the helper
+   reports it as `excluded_current_spec` and never lists it.
 7. Persist sweep output into `autopilot-state.json` under `archive_sweep`,
    including `status`, `execution_path=extension_contract`,
    `invocation_available`, `prerequisite_available`, `prerequisite_mode`,
-   eligible previous specs, excluded current spec, archive extension installed
-   state, cleanup mode, and `safeToApplyCleanup`.
-8. When the executed sweep finds no prior candidates, record
-   `status=no_candidates`, empty eligible previous specs, the excluded current
-   spec, and `safeToApplyCleanup=false`. This is a successful no-op and may
+   eligible previous specs (`archive_order`), excluded current spec, specs
+   left active with their `not_merged` or `unknown` reason, archive extension
+   installed state, cleanup mode (`apply` on a feature branch, `dry_run`
+   otherwise), and `safeToApplyCleanup=false` (a single-feature archive run
+   never removes spec folders).
+8. When the helper's `archive_order` is empty, record `status=no_candidates`,
+   empty eligible previous specs, the excluded current spec, and
+   `safeToApplyCleanup=false`. This is a successful no-op and may
    complete the Archive Sweep plan item. It is not a fallback for a broken or
    unexecuted command path.
 9. Add/update the canonical `Archive Sweep: previously merged specs

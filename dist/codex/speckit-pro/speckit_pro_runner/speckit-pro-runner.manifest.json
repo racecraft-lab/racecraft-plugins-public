@@ -276,6 +276,14 @@
     {
       "path": {
         "kind": "plugin_relative",
+        "value": "speckit_pro_runner/helpers/archive_sweep.py",
+        "display": "speckit_pro_runner/helpers/archive_sweep.py"
+      },
+      "sha256": "2eea667d84bfc1a312bc8a39d3927e2c3ff402af0d9b80f25d38c7b54499e7df"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
         "value": "speckit_pro_runner/helpers/install.py",
         "display": "speckit_pro_runner/helpers/install.py"
       },
@@ -319,7 +327,7 @@
         "value": "speckit_pro_runner/helpers/registry.py",
         "display": "speckit_pro_runner/helpers/registry.py"
       },
-      "sha256": "6cbbd81b83fd5f7f87ff5da1cc7b92284fa4239081b41c9c62f3cde0fe724c81"
+      "sha256": "08a79d2325530049088ccbf187f392b72378d016bc6a717380dd8e308b06eda4"
     },
     {
       "path": {

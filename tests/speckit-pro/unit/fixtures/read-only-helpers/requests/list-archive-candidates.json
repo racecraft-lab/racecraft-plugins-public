@@ -1,0 +1,10 @@
+{
+  "schema_version": "1.0",
+  "request_id": "fixture-list-archive-candidates",
+  "helper_id": "list-archive-candidates",
+  "operation": "list-archive-candidates",
+  "mode": "read_only",
+  "inputs": {
+    "current_target": "specs/001-current-feature"
+  }
+}
