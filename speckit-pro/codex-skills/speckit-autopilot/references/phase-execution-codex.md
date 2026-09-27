@@ -859,7 +859,9 @@ for phase in PHASES starting from first_pending:
     8. If gate fails:
        a. If G3 reports unresolved requirement wording, run the Plan ambiguity
           provenance repair below using the shared corrective reservation
-       b. Otherwise reserve the gate's localized repair in the same ledger
+       b. Otherwise reserve the gate's localized repair in the same ledger;
+          a repair that edits only planning documents uses `gate_remediation`
+          (see below)
        c. If still failing and gate-failure == "stop": STOP. A selected formal
           failure always stops and names the Plan resume point.
        d. If gate-failure == "skip-and-log" and the failure is not a selected
@@ -886,6 +888,24 @@ for phase in PHASES starting from first_pending:
        Never mark the run complete while a later phase family still has
        pending items.
 ```
+
+**Documentation-only remediation at a planning gate.** When a gate's
+remediation, most often Analyze (G6), edits only planning documents of the
+feature (`spec.md`, `plan.md`, `research.md`, `tasks.md`, `data-model.md`,
+`quickstart.md`, `.process/task-execution.json`, or a `checklists/<name>.md`),
+reserve it with `kind=corrective`, its `failure_invariant`, the explicit
+`spec_file`, and `gate_remediation`: the gate and every repository-relative
+path the fix will touch. The ledger admits it under that gate's own allowance
+of two rounds, so a run-wide budget spent at an earlier gate never stalls it,
+and it needs no operator approval. A remediation that touches code, tests,
+formal models, `contracts/`, or any path outside those documents goes through
+the run-wide budget with the reason in `gate_ineligible`. The helper judges
+paths only, so a threshold or scope change written inside a planning document
+is the orchestrator's call: omit `gate_remediation` and reserve it run-wide.
+When the
+reserve returns `gate_remediation_allowance_exhausted`, record the open findings
+for the end-of-run request and continue. It is never a mid-run question and
+never a stop.
 
 After all 7 phases complete, proceed to the post-implementation parallel
 group (see [post-implementation-codex.md](./post-implementation-codex.md)).
@@ -2698,7 +2718,8 @@ treat an earlier answer as authorization for the vetoed action. The
 correctness stops above are unchanged and still stop the run: unknown side
 effects, an execution-control `checkpoint_required` disposition (including an
 exhausted repair budget, except `increment_review_allowance_exhausted`, which
-defers its increment), a ledger or clock error, invalid or stale state, and
+defers its increment, and `gate_remediation_allowance_exhausted`, which defers
+its findings to the end-of-run request), a ledger or clock error, invalid or stale state, and
 a failed gate whose repair is out of scope.
 
 ### Repeated Gate Failures: Diagnose One Class, Approve It Once

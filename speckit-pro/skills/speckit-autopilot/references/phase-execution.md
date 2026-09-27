@@ -717,6 +717,24 @@ Items it can't resolve are flagged in its
 If 0 unresolved items from executor, skip consensus and
 advance immediately.
 
+**Documentation-only remediation at a planning gate.** When a gate's
+remediation, most often Analyze (G6), edits only planning documents of the
+feature (`spec.md`, `plan.md`, `research.md`, `tasks.md`, `data-model.md`,
+`quickstart.md`, `.process/task-execution.json`, or a `checklists/<name>.md`),
+reserve it with `kind=corrective`, its `failure_invariant`, the explicit
+`spec_file`, and `gate_remediation`: the gate and every repository-relative
+path the fix will touch. The ledger admits it under that gate's own allowance
+of two rounds, so a run-wide budget spent at an earlier gate never stalls it,
+and it needs no operator approval. A remediation that touches code, tests,
+formal models, `contracts/`, or any path outside those documents goes through
+the run-wide budget with the reason in `gate_ineligible`. The helper judges
+paths only, so a threshold or scope change written inside a planning document
+is the orchestrator's call: omit `gate_remediation` and reserve it run-wide.
+When the
+reserve returns `gate_remediation_allowance_exhausted`, record the open findings
+for the end-of-run request and continue. It is never a mid-run question and
+never a stop.
+
 **Gate:** G6 — verify 0 CRITICAL findings
 
 **Commit:**
@@ -2789,7 +2807,8 @@ and never treat an earlier answer as authorization for the vetoed action. The
 correctness stops in this reference are unchanged and still stop the run:
 unknown side effects, an execution-control `checkpoint_required` disposition
 (including an exhausted repair budget, except `increment_review_allowance_exhausted`,
-which defers its increment), a ledger or clock error, invalid or
+which defers its increment, and `gate_remediation_allowance_exhausted`, which
+defers its findings to the end-of-run request), a ledger or clock error, invalid or
 stale state, and a failed gate whose repair is out of scope.
 
 #### Repeated Gate Failures: Diagnose One Class, Approve It Once
