@@ -1,0 +1,384 @@
+{
+  "entries": [
+    {
+      "upstream_path": "skills/engineering/ask-matt/SKILL.md",
+      "bucket": "engineering",
+      "disposition": "ABSORB",
+      "destination": "speckit-pro/skills/speckit-coach/references/context-hygiene.md",
+      "owner_spec": "EDA-009",
+      "status": "planned",
+      "not_ported": "The upstream issue-tracker router is not ported; only phase-boundary guidance is absorbed into context hygiene.",
+      "transitive_sources": []
+    },
+    {
+      "upstream_path": "skills/engineering/code-review/SKILL.md",
+      "bucket": "engineering",
+      "disposition": "ABSORB",
+      "destination": "speckit-pro/skills/speckit-autopilot/references/post-implementation.md",
+      "owner_spec": "EDA-008",
+      "status": "planned",
+      "not_ported": null,
+      "transitive_sources": []
+    },
+    {
+      "upstream_path": "skills/engineering/codebase-design/SKILL.md",
+      "bucket": "engineering",
+      "disposition": "ABSORB",
+      "destination": "speckit-pro/skills/speckit-coach/references/deep-modules.md",
+      "owner_spec": "EDA-005",
+      "status": "planned",
+      "not_ported": null,
+      "transitive_sources": []
+    },
+    {
+      "upstream_path": "skills/engineering/diagnosing-bugs/SKILL.md",
+      "bucket": "engineering",
+      "disposition": "NEW",
+      "destination": "speckit-pro/skills/speckit-diagnose",
+      "owner_spec": "EDA-007",
+      "status": "planned",
+      "not_ported": null,
+      "transitive_sources": []
+    },
+    {
+      "upstream_path": "skills/engineering/domain-modeling/SKILL.md",
+      "bucket": "engineering",
+      "disposition": "ABSORB",
+      "destination": "speckit-pro/skills/ubiquitous-language/SKILL.md",
+      "owner_spec": "EDA-003",
+      "status": "planned",
+      "not_ported": null,
+      "transitive_sources": []
+    },
+    {
+      "upstream_path": "skills/engineering/grill-with-docs/SKILL.md",
+      "bucket": "engineering",
+      "disposition": "ABSORB",
+      "destination": "speckit-pro/skills/grill-me/references/interview-protocol.md",
+      "owner_spec": "EDA-003",
+      "status": "planned",
+      "not_ported": null,
+      "transitive_sources": []
+    },
+    {
+      "upstream_path": "skills/engineering/implement/SKILL.md",
+      "bucket": "engineering",
+      "disposition": "IGNORE",
+      "destination": null,
+      "owner_spec": "EDA-001",
+      "ignore_reason": "SpecKit specify, tasks, and autopilot already own implementation; the upstream issue-tracker workflow is outside adoption scope.",
+      "not_ported": null,
+      "transitive_sources": []
+    },
+    {
+      "upstream_path": "skills/engineering/improve-codebase-architecture/SKILL.md",
+      "bucket": "engineering",
+      "disposition": "NEW",
+      "destination": "speckit-pro/skills/speckit-architecture-review",
+      "owner_spec": "EDA-010",
+      "status": "planned",
+      "not_ported": null,
+      "transitive_sources": []
+    },
+    {
+      "upstream_path": "skills/engineering/prototype/SKILL.md",
+      "bucket": "engineering",
+      "disposition": "NEW",
+      "destination": "speckit-pro/skills/speckit-prototype",
+      "owner_spec": "EDA-004",
+      "status": "planned",
+      "not_ported": null,
+      "transitive_sources": []
+    },
+    {
+      "upstream_path": "skills/engineering/research/SKILL.md",
+      "bucket": "engineering",
+      "disposition": "ABSORB",
+      "destination": "speckit-pro/skills/speckit-autopilot/references/grounding.md",
+      "owner_spec": "EDA-009",
+      "status": "planned",
+      "not_ported": null,
+      "transitive_sources": []
+    },
+    {
+      "upstream_path": "skills/engineering/resolving-merge-conflicts/SKILL.md",
+      "bucket": "engineering",
+      "disposition": "ABSORB",
+      "destination": "speckit-pro/skills/speckit-autopilot/references/merge-conflicts.md",
+      "owner_spec": "EDA-008",
+      "status": "planned",
+      "not_ported": null,
+      "transitive_sources": []
+    },
+    {
+      "upstream_path": "skills/engineering/setup-matt-pocock-skills/SKILL.md",
+      "bucket": "engineering",
+      "disposition": "IGNORE",
+      "destination": null,
+      "owner_spec": "EDA-001",
+      "ignore_reason": "SpecKit already owns specification and task setup; the upstream issue-tracker setup workflow is outside adoption scope.",
+      "not_ported": null,
+      "transitive_sources": []
+    },
+    {
+      "upstream_path": "skills/engineering/tdd/SKILL.md",
+      "bucket": "engineering",
+      "disposition": "ABSORB",
+      "destination": "speckit-pro/skills/speckit-autopilot/references/tdd-protocol.md",
+      "owner_spec": "EDA-006",
+      "status": "planned",
+      "not_ported": null,
+      "transitive_sources": []
+    },
+    {
+      "upstream_path": "skills/engineering/to-spec/SKILL.md",
+      "bucket": "engineering",
+      "disposition": "ABSORB",
+      "destination": "speckit-pro/skills/speckit-autopilot/references/phase-execution.md",
+      "owner_spec": "EDA-005",
+      "status": "planned",
+      "not_ported": null,
+      "transitive_sources": []
+    },
+    {
+      "upstream_path": "skills/engineering/to-tickets/SKILL.md",
+      "bucket": "engineering",
+      "disposition": "ABSORB",
+      "destination": "speckit-pro/skills/speckit-coach/references/slicing-heuristics.md",
+      "owner_spec": "EDA-005",
+      "status": "planned",
+      "not_ported": null,
+      "transitive_sources": []
+    },
+    {
+      "upstream_path": "skills/engineering/triage/SKILL.md",
+      "bucket": "engineering",
+      "disposition": "ABSORB",
+      "destination": "speckit-pro/skills/speckit-prd/references/prd-authoring-protocol.md",
+      "owner_spec": "EDA-005",
+      "status": "planned",
+      "not_ported": "The issue-tracker label workflow is not ported; only rejected-concept records matched by concept are absorbed into PRD authoring.",
+      "transitive_sources": []
+    },
+    {
+      "upstream_path": "skills/engineering/wayfinder/SKILL.md",
+      "bucket": "engineering",
+      "disposition": "ABSORB",
+      "destination": "speckit-pro/skills/speckit-prd/references/prd-authoring-protocol.md",
+      "owner_spec": "EDA-005",
+      "status": "planned",
+      "not_ported": "The issue-tracker map workflow is not ported; only the fog-versus-spike decision test is absorbed into PRD authoring.",
+      "transitive_sources": []
+    },
+    {
+      "upstream_path": "skills/engineering/wizard/SKILL.md",
+      "bucket": "engineering",
+      "disposition": "IGNORE",
+      "destination": null,
+      "owner_spec": "EDA-001",
+      "ignore_reason": "The required shell workflow generation conflicts with the repository-owned Python tooling principle; no delivery destination is planned.",
+      "not_ported": null,
+      "transitive_sources": []
+    },
+    {
+      "upstream_path": "skills/in-progress/claude-handoff/SKILL.md",
+      "bucket": "in-progress",
+      "disposition": "IGNORE",
+      "destination": null,
+      "owner_spec": "EDA-001",
+      "ignore_reason": "The Claude-only handoff is excluded because adoption requires cross-host behavior on Claude and Codex.",
+      "not_ported": null,
+      "transitive_sources": []
+    },
+    {
+      "upstream_path": "skills/in-progress/implement-spec/SKILL.md",
+      "bucket": "in-progress",
+      "disposition": "IGNORE",
+      "destination": null,
+      "owner_spec": "EDA-001",
+      "ignore_reason": "SpecKit specify, tasks, and autopilot already own spec implementation; the upstream issue-tracker workflow is outside adoption scope.",
+      "not_ported": null,
+      "transitive_sources": []
+    },
+    {
+      "upstream_path": "skills/in-progress/loop-me/SKILL.md",
+      "bucket": "in-progress",
+      "disposition": "IGNORE",
+      "destination": null,
+      "owner_spec": "EDA-001",
+      "ignore_reason": "The loop-me skill is classified as niche and falls outside the approved engineering-discipline adoption scope.",
+      "not_ported": null,
+      "transitive_sources": []
+    },
+    {
+      "upstream_path": "skills/in-progress/pr/SKILL.md",
+      "bucket": "in-progress",
+      "disposition": "ABSORB",
+      "destination": "speckit-pro/skills/speckit-autopilot/references/post-implementation.md",
+      "owner_spec": "EDA-008",
+      "status": "planned",
+      "not_ported": null,
+      "transitive_sources": []
+    },
+    {
+      "upstream_path": "skills/in-progress/retro/SKILL.md",
+      "bucket": "in-progress",
+      "disposition": "ABSORB",
+      "destination": "speckit-pro/skills/speckit-autopilot/references/post-implementation.md",
+      "owner_spec": "EDA-008",
+      "status": "planned",
+      "not_ported": null,
+      "transitive_sources": []
+    },
+    {
+      "upstream_path": "skills/in-progress/setup-ts-deep-modules/SKILL.md",
+      "bucket": "in-progress",
+      "disposition": "ABSORB",
+      "destination": "speckit-pro/skills/speckit-coach/references/quality-gates-guide.md",
+      "owner_spec": "EDA-009",
+      "status": "planned",
+      "not_ported": null,
+      "transitive_sources": []
+    },
+    {
+      "upstream_path": "skills/in-progress/writing-beats/SKILL.md",
+      "bucket": "in-progress",
+      "disposition": "IGNORE",
+      "destination": null,
+      "owner_spec": "EDA-001",
+      "ignore_reason": "The writing-beats skill is classified as niche and falls outside the approved engineering-discipline adoption scope.",
+      "not_ported": null,
+      "transitive_sources": []
+    },
+    {
+      "upstream_path": "skills/in-progress/writing-fragments/SKILL.md",
+      "bucket": "in-progress",
+      "disposition": "IGNORE",
+      "destination": null,
+      "owner_spec": "EDA-001",
+      "ignore_reason": "The writing-fragments skill is classified as niche and falls outside the approved engineering-discipline adoption scope.",
+      "not_ported": null,
+      "transitive_sources": []
+    },
+    {
+      "upstream_path": "skills/in-progress/writing-shape/SKILL.md",
+      "bucket": "in-progress",
+      "disposition": "IGNORE",
+      "destination": null,
+      "owner_spec": "EDA-001",
+      "ignore_reason": "The writing-shape skill is classified as niche and falls outside the approved engineering-discipline adoption scope.",
+      "not_ported": null,
+      "transitive_sources": []
+    },
+    {
+      "upstream_path": "skills/misc/git-guardrails-claude-code/SKILL.md",
+      "bucket": "misc",
+      "disposition": "IGNORE",
+      "destination": null,
+      "owner_spec": "EDA-001",
+      "ignore_reason": "The required shell guardrails conflict with the repository-owned Python tooling principle; no delivery destination is planned.",
+      "not_ported": null,
+      "transitive_sources": []
+    },
+    {
+      "upstream_path": "skills/misc/migrate-to-shoehorn/SKILL.md",
+      "bucket": "misc",
+      "disposition": "IGNORE",
+      "destination": null,
+      "owner_spec": "EDA-001",
+      "ignore_reason": "The migrate-to-shoehorn skill is classified as niche and falls outside the approved engineering-discipline adoption scope.",
+      "not_ported": null,
+      "transitive_sources": []
+    },
+    {
+      "upstream_path": "skills/misc/scaffold-exercises/SKILL.md",
+      "bucket": "misc",
+      "disposition": "IGNORE",
+      "destination": null,
+      "owner_spec": "EDA-001",
+      "ignore_reason": "The scaffold-exercises skill is classified as niche and falls outside the approved engineering-discipline adoption scope.",
+      "not_ported": null,
+      "transitive_sources": []
+    },
+    {
+      "upstream_path": "skills/misc/setup-pre-commit/SKILL.md",
+      "bucket": "misc",
+      "disposition": "ABSORB",
+      "destination": "speckit-pro/skills/speckit-coach/references/quality-gates-guide.md",
+      "owner_spec": "EDA-009",
+      "status": "planned",
+      "not_ported": null,
+      "transitive_sources": []
+    },
+    {
+      "upstream_path": "skills/productivity/grill-me/SKILL.md",
+      "bucket": "productivity",
+      "disposition": "ABSORB",
+      "destination": "speckit-pro/skills/grill-me/references/interview-protocol.md",
+      "owner_spec": "EDA-002",
+      "status": "planned",
+      "not_ported": null,
+      "transitive_sources": []
+    },
+    {
+      "upstream_path": "skills/productivity/grilling/SKILL.md",
+      "bucket": "productivity",
+      "disposition": "ABSORB",
+      "destination": "speckit-pro/skills/grill-me/references/interview-protocol.md",
+      "owner_spec": "EDA-002",
+      "status": "planned",
+      "not_ported": null,
+      "transitive_sources": []
+    },
+    {
+      "upstream_path": "skills/productivity/handoff/SKILL.md",
+      "bucket": "productivity",
+      "disposition": "ABSORB",
+      "destination": "speckit-pro/skills/speckit-coach/references/context-hygiene.md",
+      "owner_spec": "EDA-009",
+      "status": "planned",
+      "not_ported": null,
+      "transitive_sources": []
+    },
+    {
+      "upstream_path": "skills/productivity/teach/SKILL.md",
+      "bucket": "productivity",
+      "disposition": "IGNORE",
+      "destination": null,
+      "owner_spec": "EDA-001",
+      "ignore_reason": "The teach skill is classified as niche and falls outside the approved engineering-discipline adoption scope.",
+      "not_ported": null,
+      "transitive_sources": []
+    },
+    {
+      "upstream_path": "skills/productivity/to-questionnaire/SKILL.md",
+      "bucket": "productivity",
+      "disposition": "ABSORB",
+      "destination": "speckit-pro/skills/grill-me/references/output-formats.md",
+      "owner_spec": "EDA-002",
+      "status": "planned",
+      "not_ported": null,
+      "transitive_sources": []
+    },
+    {
+      "upstream_path": "skills/productivity/wait-what/SKILL.md",
+      "bucket": "productivity",
+      "disposition": "IGNORE",
+      "destination": null,
+      "owner_spec": "EDA-001",
+      "ignore_reason": "The wait-what skill is classified as niche and falls outside the approved engineering-discipline adoption scope.",
+      "not_ported": null,
+      "transitive_sources": []
+    },
+    {
+      "upstream_path": "skills/productivity/writing-for-agents/SKILL.md",
+      "bucket": "productivity",
+      "disposition": "ABSORB",
+      "destination": "speckit-pro/skills/speckit-coach/references/constitution-guide.md",
+      "owner_spec": "EDA-009",
+      "status": "planned",
+      "not_ported": null,
+      "transitive_sources": []
+    }
+  ]
+}

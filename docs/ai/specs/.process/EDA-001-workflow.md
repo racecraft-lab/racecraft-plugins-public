@@ -974,7 +974,7 @@ The active conversation supplies explicit bounded authorization for the plan-sta
     },
     "tasks_md": {
       "path": "specs/eda-001-attribution-foundation/tasks.md",
-      "sha256": "sha256:9db3248beadf2295b57084e4e997743c08fb94842a88f5f48deec3da083720cd",
+      "sha256": "sha256:87980c6f2409670437d3a1087eb0c1f295b448180fc05512fdc00b32c727f66e",
       "size_bytes": 27695
     }
   },
@@ -1129,7 +1129,7 @@ The active conversation supplies explicit bounded authorization for the plan-sta
       }
     }
   ],
-  "private_record_sha256": "sha256:17d2dfb1568b02ffe917e0d6ff0c895174067b9b470f1a89af2f4302b335c97a"
+  "private_record_sha256": "sha256:3d6dde51913ecd017b7984200830f43a324c7c2d5f1f335a8e3acd8426173376"
 }
 ```
 
@@ -1263,3 +1263,21 @@ The original worker was absent from the live agent tree. Its one ledger-authoriz
 ### Completed-work checkpoint
 
 T001–T003 remain complete and independently reviewed; T004 is recovered only through expected RED and remains unchecked. Resume privacy check exec:e8a4de passed 13/13. The installed runner bound the existing empty invariant registry to the current approved feature spec without resetting consumed budget or remapping previous unresolved reservations. Raw runtime state, task journal, and console traces stay local; this checkpoint publishes authored fixtures and safe workflow receipts.
+
+### B004 implementation result
+
+T004 complete: independently authored 38-row zero-landed fixture (24 planned deliveries, 14 explanatory IGNORE rows, three scoped omission notes, empty transitive arrays). Seven frozen contract checks failed for the absent fixture at RED (exec:9181a2), then passed GREEN (exec:84601c) and unchanged refactor (exec:66f418). Original task result and raw evidence retained privately; no delivery destinations created.
+
+T004 independent capability review: PASS, no requirement-linked defects. Verified canonical schema, exact inventory and roadmap destinations, meaningful exclusions, scoped omission notes, and empty transitive arrays. No test rerun or writes by reviewer.
+
+### B005 implementation result
+
+T005–T006 complete: authored Matt notice and direct README acknowledgment; 11 test methods cover 35 checks, including isolated license byte/newline, identity, and link defects. Actual RED exec:2a0123 had 32 assertion failures including absent notice/acknowledgment; GREEN exec:c2f206 and unchanged refactor exec:da5366 each passed 35/35. No production ledger or derivative destinations were created by this batch. Independent capability review is pending.
+
+B005 independent review: P2 FR-001 defect: a License section hidden in an outer four-backtick Markdown fence is accepted. Original passing TDD evidence remains intact; capability closure is pending localized correction. Grounding: contracts/notices.md:23–25 and https://spec.commonmark.org/0.31.2/#fenced-code-blocks. No later implementation batch dispatched.
+
+### B005 corrective review checkpoint
+
+The original enclosing-fence bypass is resolved by native RED/GREEN/refactor proofs (exec:e776c7, exec:f2be28, exec:f8a6c4; final 46/46). Narrow closure review found a P2 regression at the fence opener: backticks in the info string falsely hide a valid License section. Parent read-only reproduction exec:4c509c confirmed it. B005 capability closure remains failed; T007 onward and all Post work remain pending. Original task reports and corrective evidence are retained separately.
+
+Automatic approval review rejected an ordinary additional FR-001 correction reservation because the existing run has consumed both corrective cycles. No rejected action executed and no regression fix was applied. A concrete one-file proposal adds the info-string guard and one isolated positive check, with scope SHA256 8b969e40196d4ea76f0243fe28ba19ba961d23ff1e3df7f5e1c862a3c4e329c0; explicit approval is required before live source changes. Grounding: CommonMark fenced-code rules and contracts/notices.md:23–25.

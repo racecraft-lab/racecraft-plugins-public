@@ -22,8 +22,8 @@
     "FR-019"
   ],
   "authorization_granted": false,
-  "checkpoint_at": 1790435958.814301,
-  "corrective_cycles": 1,
+  "checkpoint_at": 1790470912.147659,
+  "corrective_cycles": 2,
   "dispatches": {
     "autonomy-local-state-codebase-2": {
       "completed_at": 1790398690.257039,
@@ -427,6 +427,46 @@
       "reserved_at": 1790438335.570732,
       "resolution_event_id": "exec:9181a2"
     },
+    "implement-B004-T004-green-resume-1": {
+      "completed_at": 1790471550.688046,
+      "kind": "implementation",
+      "outcome": "completed",
+      "reconciliations": 0,
+      "reservation_id": null,
+      "reserved_at": 1790470917.120699
+    },
+    "implement-B005-FR001-closure-review-1": {
+      "completed_at": 1790473147.65606,
+      "kind": "verification",
+      "outcome": "failed",
+      "reconciliations": 0,
+      "reservation_id": null,
+      "reserved_at": 1790473018.81065
+    },
+    "implement-B005-FR001-fence-correction-1": {
+      "completed_at": 1790473098.563446,
+      "kind": "corrective",
+      "outcome": "completed",
+      "reconciliations": 0,
+      "reservation_id": "cc19e5a0ae7b4fe39cd1b9d1c13e7d96",
+      "reserved_at": 1790472599.29021
+    },
+    "implement-B005-T005-T006-1": {
+      "completed_at": 1790472490.144623,
+      "kind": "implementation",
+      "outcome": "completed",
+      "reconciliations": 0,
+      "reservation_id": null,
+      "reserved_at": 1790471736.3272479
+    },
+    "implement-B005-independent-review-1": {
+      "completed_at": 1790472552.2751958,
+      "kind": "verification",
+      "outcome": "failed",
+      "reconciliations": 0,
+      "reservation_id": null,
+      "reserved_at": 1790472398.959852
+    },
     "implement-T001-scope-verification-1": {
       "completed_at": 1790437291.731969,
       "kind": "verification",
@@ -434,6 +474,14 @@
       "reconciliations": 0,
       "reservation_id": null,
       "reserved_at": 1790437124.3478668
+    },
+    "implement-T004-independent-review-1": {
+      "completed_at": 1790471730.234784,
+      "kind": "verification",
+      "outcome": "completed",
+      "reconciliations": 0,
+      "reservation_id": null,
+      "reserved_at": 1790471567.816818
     },
     "implement-base-sync-1": {
       "completed_at": 1790435471.599987,
@@ -452,8 +500,9 @@
       "reserved_at": 1790436018.901879
     },
     "implement-completed-fixtures-checkpoint-1": {
+      "completed_at": 1790470906.624058,
       "kind": "infrastructure",
-      "outcome": "reserved",
+      "outcome": "completed",
       "reconciliations": 0,
       "reservation_id": null,
       "reserved_at": 1790470816.1156511
@@ -481,6 +530,21 @@
       "reconciliations": 0,
       "reservation_id": null,
       "reserved_at": 1790470762.677886
+    },
+    "implement-review-budget-checkpoint-privacy-1": {
+      "completed_at": 1790473338.7698739,
+      "kind": "verification",
+      "outcome": "completed",
+      "reconciliations": 0,
+      "reservation_id": null,
+      "reserved_at": 1790473314.679871
+    },
+    "implement-review-budget-checkpoint-push-1": {
+      "kind": "infrastructure",
+      "outcome": "reserved",
+      "reconciliations": 0,
+      "reservation_id": null,
+      "reserved_at": 1790473346.123837
     },
     "implement-scope-readiness-review-1": {
       "completed_at": 1790437799.7561548,
@@ -665,12 +729,17 @@
     "spec_file": "specs/eda-001-attribution-foundation/spec.md",
     "spec_sha256": "52481b25ec692937c47adb4f8db9b0a6d73385ba431ea0ee70160258a738d0d7"
   },
-  "last_observed_at": 1790470816.1156511,
+  "last_observed_at": 1790473346.123837,
   "reservations": {
     "a02de8a1ea1d4f02bd03770cacecd0dd": {
       "dispatch_id": "g0-privacy-scan-path-collision-repair-1",
       "family": "unresolved",
       "reserved_at": 1790381606.027633
+    },
+    "cc19e5a0ae7b4fe39cd1b9d1c13e7d96": {
+      "dispatch_id": "implement-B005-FR001-fence-correction-1",
+      "family": "FR-001",
+      "reserved_at": 1790472599.29021
     }
   },
   "run_id": "47805d8f53dd4babaf524ca9b62869ae",
