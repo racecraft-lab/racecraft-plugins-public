@@ -5,7 +5,7 @@
   "branch": "hrns-015-autopilot-gate-pr-emission-repair",
   "status": "in_progress",
   "stage": "implement",
-  "active_step": "Phase 7: Implement - Setup (T001)",
+  "active_step": "Phase 7: Implement - User Story 1 \u2014 final release note (P1, A1a then A1b) (T003, T004, T005)",
   "stage_resolution": {
     "basis": "explicit --stage implement",
     "confidence_gate_status": "\u2705 Complete",
@@ -51,11 +51,9 @@
   },
   "execution_control": {
     "ledger_path": "docs/ai/specs/.process/execution-control/ac068cab59ef67faf15646a7.json",
-    "disposition": "checkpoint_required",
-    "reasons": [
-      "awaiting_external_event"
-    ],
-    "elapsed_seconds": 191888.189068079,
+    "disposition": "continue",
+    "reasons": [],
+    "elapsed_seconds": 192273.4690079689,
     "checkpoint_due": false,
     "run_id": "e7fbc9a6636945ed8a8c2abd42cbb892"
   },
@@ -154,15 +152,15 @@
     },
     {
       "step": "Phase 7: Implement - Setup (T001)",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 7: Implement - Foundational reviewability checkpoint (T002)",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 7: Implement - User Story 1 \u2014 final release note (P1, A1a then A1b) (T003, T004, T005)",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 7: Implement - User Story 2 \u2014 packet-only untracked files (P1, Increment A2) (T006, T007)",
@@ -589,7 +587,7 @@
       "tasks_md": {
         "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/tasks.md",
         "size_bytes": 30479,
-        "sha256": "sha256:c5373d4f33f0ec316c2421d3e690888fc5844fb1989fd5f5db9b4a8d4d1f7d46"
+        "sha256": "sha256:5fc3858daa9496854c492cded7a5966bda8002f9288c75794cc034d3d8a08684"
       }
     },
     "schema_version": "autonomy-boundary-receipt.v1",
@@ -711,7 +709,7 @@
         }
       }
     ],
-    "private_record_sha256": "sha256:18a8beac92995f4b37a1cc199e72318e518d8c6d83903009d47c9cb0e2e40285"
+    "private_record_sha256": "sha256:7cf729c34de1560ac831656e5294d2eb69c8842cf1569e4f8c9a5edd0922b679"
   },
   "plan_resume_result": {
     "version": "2.37.1",
@@ -959,7 +957,7 @@
     "source_fingerprint": {
       "feature_spec_sha": "sha256:18c93677aaaee5f73aa8399b2cea052cc58ed2724fe6e74d93be96a47eae7e58",
       "plan_declared_scope_sha": "sha256:8381e50f0c0daf7491b6fb6f6e431adea30a89277d0b3073fd476194e6a8d759",
-      "tasks_sha": "sha256:c5373d4f33f0ec316c2421d3e690888fc5844fb1989fd5f5db9b4a8d4d1f7d46",
+      "tasks_sha": "sha256:5fc3858daa9496854c492cded7a5966bda8002f9288c75794cc034d3d8a08684",
       "reviewability_sha": "sha256:4efa6739751bbef3183ebc677bde97f4971dfc61554ecf27a147af5d65aabefc",
       "hazard_route_sha": "sha256:f4259204cb8f92f1978ddf3b70195aba948d317567082f50f585fb0f4e0ef9c4"
     },
@@ -3316,7 +3314,7 @@
   "current_source_fingerprint": {
     "feature_spec_sha": "sha256:18c93677aaaee5f73aa8399b2cea052cc58ed2724fe6e74d93be96a47eae7e58",
     "plan_declared_scope_sha": "sha256:8381e50f0c0daf7491b6fb6f6e431adea30a89277d0b3073fd476194e6a8d759",
-    "tasks_sha": "sha256:c5373d4f33f0ec316c2421d3e690888fc5844fb1989fd5f5db9b4a8d4d1f7d46",
+    "tasks_sha": "sha256:5fc3858daa9496854c492cded7a5966bda8002f9288c75794cc034d3d8a08684",
     "reviewability_sha": "sha256:4efa6739751bbef3183ebc677bde97f4971dfc61554ecf27a147af5d65aabefc",
     "hazard_route_sha": "sha256:f4259204cb8f92f1978ddf3b70195aba948d317567082f50f585fb0f4e0ef9c4"
   },
@@ -3416,7 +3414,10 @@
       "public_bookkeeping_projection": "normalized runner result and hashed delegation identity; original failed result preserved",
       "dynamic_workspace_scan": "unresolved; common autopilot text reported as local workspace term"
     },
-    "completed_tasks": [],
+    "completed_tasks": [
+      "T001",
+      "T002"
+    ],
     "routing_checkpoint": {
       "status": "awaiting_operator_replan_approval",
       "failure_invariant": "FR-026",
@@ -3499,7 +3500,7 @@
       "native_qualification": "pending"
     },
     "t001": {
-      "status": "unfinished",
+      "status": "complete",
       "candidate_inventory_verified": true,
       "candidate_sets": 18,
       "planned_candidate_path_range": [
@@ -3511,12 +3512,34 @@
         2
       ],
       "actual_checkpoint_reconciliation": "pending",
-      "awaiting_operator": "Whether approved timing applies to T001 prerequisite",
-      "task_results_disposition": "checkpoint_required",
-      "journal_reports": 1,
-      "completed_tasks": [],
+      "awaiting_operator": null,
+      "task_results_disposition": "continue",
+      "journal_reports": 2,
+      "completed_tasks": [
+        "T001"
+      ],
       "source_batch_dispatched": false,
-      "external_wait": "active: operator timing approval"
+      "external_wait": "ended: operator timing approval received",
+      "operator_timing_approved": true
+    },
+    "t002": {
+      "status": "complete",
+      "candidate_budgets": "pass:18sets",
+      "marker_plan": "current v1; all pending",
+      "actual_emission_qualification": "pending"
+    },
+    "active_batch": {
+      "batch_id": "B003",
+      "tasks": [
+        "T003",
+        "T004"
+      ],
+      "dispatch_id": "hrns015-b003-a1a-2380",
+      "stage": "tests-first",
+      "completed_tasks": [
+        "T001",
+        "T002"
+      ]
     }
   }
 }

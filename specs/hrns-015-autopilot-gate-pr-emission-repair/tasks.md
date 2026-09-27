@@ -37,13 +37,13 @@ One story per increment. US1, US10 and US13 use uniquely named sequential story 
 
 **Goal**: Reconcile exact candidate ownership before implementation. **Independent check**: eighteen distinct candidate tables account for repeated authored, generated, fixture and process paths; actual diff/LOC remain explicit.
 
-- [ ] T001 Verify every authored, fixture, shared, generated, trust, index, and process/evidence candidate path in `specs/hrns-015-autopilot-gate-pr-emission-repair/.process/slice-inventory.md`; reconcile the eighteen approved sets, production classification and distinct refactors against the first actual implementation checkpoint (FR-026).
+- [x] T001 Verify every authored, fixture, shared, generated, trust, index, and process/evidence candidate path in `specs/hrns-015-autopilot-gate-pr-emission-repair/.process/slice-inventory.md`; reconcile the eighteen approved sets, production classification and distinct refactors against the first actual implementation checkpoint (FR-026).
 
 ## Phase 2: Foundational reviewability checkpoint
 
 **Goal**: Preserve the approved architecture and strict per-PR limits. **Independent check**: every candidate set is within caps; current marker validation and actual implementation qualifications are explicit pending evidence. This phase blocks all behavior units.
 
-- [ ] T002 Verify the eighteen one-story candidate sets in `specs/hrns-015-autopilot-gate-pr-emission-repair/.process/slice-inventory.md` against four production and twenty-four total paths per PR; preserve Q11/five-group provenance and shipped #676 reuse support. Validate current planned marker/fingerprint evidence under the current planning schema, preserving every checkpoint as pending without commit or evidence fields; block emission until actual per-increment diff, LOC and checkpoint gates pass (FR-026).
+- [x] T002 Verify the eighteen one-story candidate sets in `specs/hrns-015-autopilot-gate-pr-emission-repair/.process/slice-inventory.md` against four production and twenty-four total paths per PR; preserve Q11/five-group provenance and shipped #676 reuse support. Validate current planned marker/fingerprint evidence under the current planning schema, preserving every checkpoint as pending without commit or evidence fields; block emission until actual per-increment diff, LOC and checkpoint gates pass (FR-026).
 
 ## Phase 3: User Story 1 — final release note (P1, A1a then A1b)
 

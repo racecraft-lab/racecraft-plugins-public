@@ -809,7 +809,7 @@ This dedicated final Analyze synthesis completes the planning analysis. The oper
 
 ### Autonomy Boundary Preflight
 
-Status: ready. The user approved the exact implementation scope: bounded source/test/docs edits and verification, commits and normal feature/stack pushes, eighteen increment PRs and review replies, public-documentation research, offline local HAL delegation, the existing private record refresh, T011 root agent guidance and inventory-generated runner trust outputs. The current execution boundary and planning fingerprints are preserved. No ledger reset, private-repository export, cloud delegation, deployment, credential change, main push or force push is authorized. Private record digest: `sha256:18a8beac92995f4b37a1cc199e72318e518d8c6d83903009d47c9cb0e2e40285`.
+Status: ready. The user approved the exact implementation scope: bounded source/test/docs edits and verification, commits and normal feature/stack pushes, eighteen increment PRs and review replies, public-documentation research, offline local HAL delegation, the existing private record refresh, T011 root agent guidance and inventory-generated runner trust outputs. The current execution boundary and planning fingerprints are preserved. No ledger reset, private-repository export, cloud delegation, deployment, credential change, main push or force push is authorized. Private record digest: `sha256:7cf729c34de1560ac831656e5294d2eb69c8842cf1569e4f8c9a5edd0922b679`.
 
 **When to run:** After Phase 6 commits and before Phase 7 begins. Analyze checkpoint: `de3950bd`.
 
@@ -1050,7 +1050,7 @@ Ripwire quality-delta returned exit 2 for canonical process-state verbosity. Its
 | --- | --- |
 | Feature spec | `sha256:18c93677aaaee5f73aa8399b2cea052cc58ed2724fe6e74d93be96a47eae7e58` |
 | Plan declared scope | `sha256:8381e50f0c0daf7491b6fb6f6e431adea30a89277d0b3073fd476194e6a8d759` |
-| Tasks | `sha256:c5373d4f33f0ec316c2421d3e690888fc5844fb1989fd5f5db9b4a8d4d1f7d46` |
+| Tasks | `sha256:5fc3858daa9496854c492cded7a5966bda8002f9288c75794cc034d3d8a08684` |
 | Reviewability | `sha256:4efa6739751bbef3183ebc677bde97f4971dfc61554ecf27a147af5d65aabefc` |
 | Hazard route | `sha256:f4259204cb8f92f1978ddf3b70195aba948d317567082f50f585fb0f4e0ef9c4` |
 
@@ -1184,3 +1184,11 @@ T001 current candidate checks pass for all18 markers:14â€“24 planned paths and0â
 The original journal is unchanged. The successor retains one native unfinished T001 report and returns checkpoint_required/unfinished_task_results; no completion or checkpoint proof was supplied. The bounded attempt is settled as failed in the ledger with no extra corrective cycle consumed. The mandatory implementation-notes header and separate T001 entry are present. T001 remains unchecked, implementation0/31, all13 Post rows pending, and no source batch has been dispatched.
 
 The native external-approval wait is active for the pending timing question; the run, epoch2 allowance and one spent ordinary correction remain unchanged. Resume requires the actual operator reply event matched to this wait. Ripwire test-gate returned0 with zero changed/impacted executable symbols (not suite proof). Its range quality-delta returned2 for expanded JSON bookkeeping gate evidence; required evidence/history was retained.
+
+### T001 approved timing resolution
+
+The operator approved completing candidate-inventory verification now. T001 is complete from its retained candidate checks; the successor journal preserves the earlier unfinished report and appends the native completion. Actual per-increment diff, LOC and checkpoint reconciliation remain mandatory before PR emission. Every implementation checkpoint remains exactly pending. Implementation is1/31; T002 is in progress.
+
+### T002 native candidate verification
+
+The installed phase/autonomy guard passes53 rows with all error arrays empty. Eighteen candidate sets remain within four production and24 total paths; Q11/five-group provenance and shipped #676 support are preserved. Marker fingerprints are current and every v1 implementation checkpoint remains exactly pending. Native journal evidence completes T002; implementation is2/31. Actual diff, LOC and checkpoint qualification remains mandatory before emission. The first source batch is T003/T004.
