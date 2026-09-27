@@ -1671,6 +1671,12 @@ def check_prerequisites(inputs: dict[str, Any], repo_root: Path) -> dict[str, An
         all_pass = False
     else:
         checks.append(check("setup_contract", True, "SpecKit skills match their .specify scripts", ""))
+    resolution_error = template_resolution_error(repo_root)
+    if resolution_error:
+        checks.append(check("template_resolution", False, resolution_error, ""))
+        all_pass = False
+    else:
+        checks.append(check("template_resolution", True, "SpecKit can resolve preset templates", ""))
 
     if workflow:
         workflow_path = resolve_input_path(workflow, repo_root)
@@ -1731,6 +1737,50 @@ def setup_contract_mismatches(repo_root: Path) -> list[str]:
                     if not re.search(rf"(?:^|[\s|]){re.escape(option)}(?:\||\))", script, re.MULTILINE):
                         mismatches.append(f"{label}: {name} {option}")
     return sorted(set(mismatches))
+
+
+PYTHON_MAJOR_3_PROBE = "import sys; raise SystemExit(sys.version_info.major != 3)"
+
+
+def _path_python_succeeds(name: str, code: str) -> bool:
+    """Run `name -c code` exactly as SpecKit's shell scripts do: by bare name on PATH."""
+    try:
+        if name == "python3":
+            completed = subprocess.run(["python3", "-c", code], shell=False, capture_output=True, text=True, timeout=30)
+        else:
+            completed = subprocess.run(["python", "-c", code], shell=False, capture_output=True, text=True, timeout=30)
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+    return completed.returncode == 0
+
+
+def template_resolution_error(repo_root: Path) -> str | None:
+    """Why SpecKit cannot resolve templates here, or None.
+
+    With any preset manifest installed (SpecKit Pro installs one), SpecKit's
+    template resolver parses it with PyYAML from the interpreter that
+    `common.sh` `_python3_command` picks: `python3` on PATH, else `python`,
+    whichever reports major version 3. Upstream tracks this as
+    github/spec-kit#4443: a uv or pipx install keeps PyYAML in its own tool
+    environment, which that bare `python3` does not see. Only POSIX is
+    checked: there `subprocess` finds a bare name through the same PATH search
+    as the shell, while Windows resolves it through `CreateProcess`.
+    """
+    if sys.platform == "win32":
+        return None
+    if not any(trusted_file_exists(manifest, repo_root)
+               for manifest in (repo_root / ".specify/presets").glob("*/preset.yml")):
+        return None
+    for name in ("python3", "python"):
+        if shutil.which(name) and _path_python_succeeds(name, PYTHON_MAJOR_3_PROBE):
+            break
+    else:
+        return "SpecKit preset templates need Python 3 with PyYAML on PATH, and no Python 3 is on PATH"
+    if _path_python_succeeds(name, "import yaml"):
+        return None
+    interpreter = shutil.which(name)
+    return (f"SpecKit resolves preset templates with {interpreter}, which cannot import PyYAML. "
+            f"Install it there ({interpreter} -m pip install pyyaml) or put a Python 3 that has it first on PATH")
 
 
 def check(name: str, passed: bool, message: str, detail: str) -> dict[str, Any]:

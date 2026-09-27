@@ -137,7 +137,11 @@ request on stdin:
 
 Parse `data.stdout.text` as JSON. Its `setup_contract` check must pass (the missing workflow file fails
 a separate check; ignore that one here). A failing `setup_contract`
-names each skill that still calls an option its script rejects.
+names each skill that still calls an option its script rejects. Its
+`template_resolution` check must pass too: SpecKit parses preset
+manifests with PyYAML from the first `python3` on `PATH`, and a
+`uv tool` or `pipx` install keeps PyYAML in its own environment. If it
+fails, show its message; installing packages is the operator's call.
 
 #### 5b. If blocked: parse the block message, back up, force, restore
 
