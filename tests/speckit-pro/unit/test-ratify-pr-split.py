@@ -113,6 +113,17 @@ class RatifyPrSplitTests(unittest.TestCase):
         data = _run(inputs)["data"]
         self.assertEqual(_codes(data), ["group_merged"])
 
+    def test_item_repeated_across_increments_routes_to_operator(self) -> None:
+        inputs = _fixture("preserving-split")
+        increments = inputs["increments"]  # type: ignore[index]
+        repeated = increments[0]["scope"][0]  # type: ignore[index]
+        same_group = [i for i in increments[1:] if i["group_id"] == increments[0]["group_id"]]  # type: ignore[index]
+        target = same_group[0] if same_group else increments[1]  # type: ignore[index]
+        target["scope"] = [*target["scope"], repeated]
+        data = _run(inputs)["data"]
+        self.assertEqual(data["decision"], "operator_required")
+        self.assertIn("scope_duplicated", _codes(data))
+
     def test_added_scope_routes_to_operator(self) -> None:
         inputs = _fixture("preserving-split")
         increments = inputs["increments"]  # type: ignore[index]
@@ -203,6 +214,7 @@ class SplitRatificationSourceContractTests(unittest.TestCase):
                     "scope_dropped",
                     "group_reordered",
                     "group_merged",
+                    "scope_duplicated",
                     "reviewability_exception_needed",
                 ):
                     self.assertIn(f"`{code}`", text)
