@@ -2,9 +2,9 @@
 
 **Input**: Current spec, approved Plan/research/model/contracts/quickstart, ratified design concept and exact workflow Tasks prompt. The owner approved the eighteen-part direction and exact FR-024 byte-for-byte fixture requirement. Fourteen stories, 26 active FRs (29 historical IDs), 37 acceptance scenarios and eleven success criteria remain covered.
 
-**Execution contract**: Small complete behavioral units; no wall-clock run limit. Preserve shared execution-control counters (two ordinary corrective cycles and the recorded FR-024 exception already consumed) and checkpoint completed work every 45 minutes. Every new behavior begins with a failing fixture, records RED, makes the minimum fix and records GREEN. Already-shipped #694/#698/#676 behavior is compatibility baseline; do not manufacture a RED claim for it. No implementation checkbox is complete.
+**Execution contract**: Small complete behavioral units; no wall-clock run limit. Preserve the existing execution-control run, archived consumed correction history and current owner-approved re-plan epoch; only the approved `begin-replan-epoch` action establishes a fresh correction allowance. The parent records the ordinary G6 timing correction in that allowance. Checkpoint completed work every 45 minutes. Every new behavior begins with a failing fixture, records RED, makes the minimum fix and records GREEN. Already-shipped #694/#698/#676 behavior is compatibility baseline; do not manufacture a RED claim for it. No implementation checkbox is complete.
 
-**Reviewability**: ≤4 production and ≤24 total changed paths per PR, both hosts and generated outputs included. The exact candidate ledger is [slice-inventory.md](.process/slice-inventory.md); candidate sizes are 14–24 paths, 0–2 production, except C2b2 is sixteen after six shipped link-only exclusions from its conservative twenty-two estimate. No actual implementation diff, LOC qualification, marker emission or G6 pass is claimed. Historical Q11 four and subsequent five groups are provenance; eighteen is current owner authority. Supplied #676 supports sequential path reuse. Current scope/fingerprint/checkpoint/hazard validation remains pending. Preserve spec.md:276’s requirement that marker persistence follows actual qualified diffs; Analyze must reconcile that timing without fabricating future evidence.
+**Reviewability**: ≤4 production and ≤24 total changed paths per PR, both hosts and generated outputs included. The exact candidate ledger is [slice-inventory.md](.process/slice-inventory.md); candidate sizes are 14–24 paths, 0–2 production, except C2b2 is sixteen after six shipped link-only exclusions from its conservative twenty-two estimate. No actual implementation diff, LOC qualification, marker emission or G6 pass is claimed. Historical Q11 four and subsequent five groups are provenance; eighteen is current owner authority. Supplied #676 supports sequential path reuse. Planning G6 validates requirement coverage, task consistency, candidate budgets and a current planned marker record. After Tasks, the parent authors `pr-marker-plan.v1` with every `implementation_checkpoint` exactly `{"status": "pending"}` and no commit or evidence fields. Actual per-PR diffs, reviewable LOC and passing checkpoint evidence remain mandatory before PR emission; the planned record supplies no implementation proof.
 
 **Test and source rules**: Tests live only under tests/speckit-pro/, with historical prose frozen under their own fixtures; never open an active specs/<feature>/ file at test runtime. Source tooling stays Python3.11+ standard library. Both host variants ship in the same increment. No manual generated edits, force-add/ignore changes or new dependency installation.
 
@@ -14,24 +14,24 @@ One story per increment. US1, US10 and US13 use uniquely named sequential story 
 
 | Increment | Marker ID | One story | Tasks | Production | Total | Qualification |
 | --- | --- | --- | --- | ---: | ---: | --- |
-| A1a | `us1-part1` | US1 | T003–T004 | 3 | 24 | Candidate only; actual diff/LOC unmeasured |
-| A1b | `us1-part2` | US1 | T005 | 3 | 24 | Candidate only; actual diff/LOC unmeasured |
-| A2 | `us2` | US2 | T006–T007 | 2 | 24 | Candidate only; actual diff/LOC unmeasured |
-| A3 | `us3` | US3 | T008–T009 | 3 | 24 | Candidate only; actual diff/LOC unmeasured |
-| B1a | `us4` | US4 | T010 | 3 | 22 | Candidate only; actual diff/LOC unmeasured |
-| B1b | `us5` | US5 | T011 | 3 | 23 | Candidate only; actual diff/LOC unmeasured |
-| B2b | `us6` | US6 | T012–T013 | 3 | 23 | Candidate only; actual diff/LOC unmeasured |
-| B3a | `us7` | US7 | T014 | 2 | 18 | Candidate only; actual diff/LOC unmeasured |
+| A1a | `us1-part1` | US1 | T003–T004 | 2 | 24 | Candidate only; actual diff/LOC unmeasured |
+| A1b | `us1-part2` | US1 | T005 | 2 | 24 | Candidate only; actual diff/LOC unmeasured |
+| A2 | `us2` | US2 | T006–T007 | 1 | 24 | Candidate only; actual diff/LOC unmeasured |
+| A3 | `us3` | US3 | T008–T009 | 2 | 24 | Candidate only; actual diff/LOC unmeasured |
+| B1a | `us4` | US4 | T010 | 1 | 22 | Candidate only; actual diff/LOC unmeasured |
+| B1b | `us5` | US5 | T011 | 2 | 23 | Candidate only; actual diff/LOC unmeasured |
+| B2b | `us6` | US6 | T012–T013 | 1 | 23 | Candidate only; actual diff/LOC unmeasured |
+| B3a | `us7` | US7 | T014 | 1 | 18 | Candidate only; actual diff/LOC unmeasured |
 | B3b | `us8` | US8 | T015–T016 | 2 | 22 | Candidate only; actual diff/LOC unmeasured |
-| C1a1 | `us9` | US9 | T017 | 3 | 24 | Candidate only; actual diff/LOC unmeasured |
-| C1a2 | `us10-part1` | US10 | T018 | 3 | 21 | Candidate only; actual diff/LOC unmeasured |
-| C1b1 | `us10-part2` | US10 | T019 | 3 | 21 | Candidate only; actual diff/LOC unmeasured |
-| C1b2 | `us10-part3` | US10 | T020–T021 | 3 | 21 | Candidate only; actual diff/LOC unmeasured |
-| C2a1 | `us11` | US11 | T022–T023 | 3 | 14 | Candidate only; actual diff/LOC unmeasured |
-| C2a2 | `us12` | US12 | T024 | 2 | 14 | Candidate only; actual diff/LOC unmeasured |
-| C2a3 | `us13-part1` | US13 | T025 | 2 | 14 | Candidate only; actual diff/LOC unmeasured |
-| C2b1 | `us13-part2` | US13 | T026–T027 | 2 | 21 | Candidate only; actual diff/LOC unmeasured |
-| C2b2 | `us14` | US14 | T028–T030 | 3 | 16 | Candidate only; actual diff/LOC unmeasured |
+| C1a1 | `us9` | US9 | T017 | 1 | 24 | Candidate only; actual diff/LOC unmeasured |
+| C1a2 | `us10-part1` | US10 | T018 | 1 | 21 | Candidate only; actual diff/LOC unmeasured |
+| C1b1 | `us10-part2` | US10 | T019 | 2 | 21 | Candidate only; actual diff/LOC unmeasured |
+| C1b2 | `us10-part3` | US10 | T020–T021 | 2 | 21 | Candidate only; actual diff/LOC unmeasured |
+| C2a1 | `us11` | US11 | T022–T023 | 0 | 14 | Candidate only; actual diff/LOC unmeasured |
+| C2a2 | `us12` | US12 | T024 | 0 | 14 | Candidate only; actual diff/LOC unmeasured |
+| C2a3 | `us13-part1` | US13 | T025 | 0 | 14 | Candidate only; actual diff/LOC unmeasured |
+| C2b1 | `us13-part2` | US13 | T026–T027 | 0 | 21 | Candidate only; actual diff/LOC unmeasured |
+| C2b2 | `us14` | US14 | T028–T030 | 0 | 16 | Candidate only; actual diff/LOC unmeasured |
 
 ## Phase 1: Setup
 
@@ -43,7 +43,7 @@ One story per increment. US1, US10 and US13 use uniquely named sequential story 
 
 **Goal**: Preserve the approved architecture and strict per-PR limits. **Independent check**: every candidate set is within caps; current marker validation and actual implementation qualifications are explicit pending evidence. This phase blocks all behavior units.
 
-- [ ] T002 Recheck the eighteen one-story candidate sets in `specs/hrns-015-autopilot-gate-pr-emission-repair/.process/slice-inventory.md` against four production and twenty-four total paths per PR; preserve Q11/five-group provenance and shipped #676 reuse support. Record current marker/fingerprint evidence without manufacturing actual diffs or changing the upstream persistence timing; block emission until actual per-increment gates pass (FR-026).
+- [ ] T002 Recheck the eighteen one-story candidate sets in `specs/hrns-015-autopilot-gate-pr-emission-repair/.process/slice-inventory.md` against four production and twenty-four total paths per PR; preserve Q11/five-group provenance and shipped #676 reuse support. Validate current planned marker/fingerprint evidence under the current planning schema, preserving every checkpoint as pending without commit or evidence fields; block emission until actual per-increment diff, LOC and checkpoint gates pass (FR-026).
 
 ## Phase 3: User Story 1 — final release note (P1, A1a then A1b)
 
@@ -110,8 +110,8 @@ One story per increment. US1, US10 and US13 use uniquely named sequential story 
 **Goal**: Full completion has a verified Post state and no active executor team. **Independent test**: both persisted records reject missing/duplicate/pending/in-progress/mismatch/unjustified skips; only validated extension absence permits identical skip, and each team-capable executor proves cleanup (FR-018–019, FR-026).
 
 - [ ] T018 [US10] Add RED persisted workflow/state completion cases in the `tests/speckit-pro/unit/test-autopilot-phase-coverage.py` for missing/duplicate/pending/in-progress/mismatch/skips/legacy resume; require exactly thirteen matching canonical rows (workflow Complete/state completed); only identical reason-coded skips for optional extensions absent from supported registries and directories qualify; preserve unique exact-name legacy progress, initialize missing/renamed rows pending, staged returns never claim full Post completion; then repair the guard and both host completion call sites and post references. Prove GREEN, refresh C1a2 outputs, run targeted/quick suites, and record C1a2 budget/marker checkpoint before T019 (FR-018, FR-026).
-- [ ] T019 [US10] Add failing RED structural/result cases in `tests/speckit-pro/layer1-structural/test-team-teardown.py` for Claude and Codex `phase-executor` and `analyze-executor`; require child result or supported stop, graceful shutdown, no-active-child, and completed-cleanup evidence in those four exact agent definitions plus shared agent-team reference. Register the structural test, prove GREEN, refresh C1b1 outputs, run targeted/quick suites, and record C1b1 budget/marker checkpoint (FR-019, FR-026).
-- [ ] T020 [US10] Add failing RED structural/result cases in `tests/speckit-pro/layer1-structural/test-team-teardown.py` for Claude and Codex `checklist-executor` and `implement-executor`; apply the same teardown result contract to those four exact definitions and shared agent-team reference. Update the structural test, prove GREEN without claiming runtime child-lifetime/cleanup qualification (HRNS-017); review the formal lifecycle Post subset read-only and re-inventory before any new lifecycle edit (FR-019, FR-026).
+- [ ] T019 [US10] Add failing RED structural/result cases in `tests/speckit-pro/layer1-structural/test-phase-analyze-teardown.py` for Claude and Codex `phase-executor` and `analyze-executor`; require child result or supported stop, graceful shutdown, no-active-child, and completed-cleanup evidence in those four exact agent definitions plus shared agent-team reference. Register the structural test, prove GREEN, refresh C1b1 outputs, run targeted/quick suites, and record C1b1 budget/marker checkpoint (FR-019, FR-026).
+- [ ] T020 [US10] Add failing RED structural/result cases in `tests/speckit-pro/layer1-structural/test-checklist-implement-teardown.py` for Claude and Codex `checklist-executor` and `implement-executor`; apply the same teardown result contract to those four exact definitions and shared agent-team reference. Register this distinct structural test, prove GREEN without claiming runtime child-lifetime/cleanup qualification (HRNS-017); review the formal lifecycle Post subset read-only and re-inventory before any new lifecycle edit (FR-019, FR-026).
 - [ ] T021 [US10] Refresh C1b2 outputs from `speckit-pro/codex-agents/checklist-executor.toml`, its paired host definition and the exact C1b2 inventory, run its structural cases and quick suite, and record all eight definitions’ GREEN evidence plus C1b2 actual paths/LOC, host parity, and marker checkpoint; stop before PR emission on any new path or failed gate (FR-019, FR-026).
 
 ## Phase 13: User Story 11 — complete review feedback after push (P1, Increment C2a1)

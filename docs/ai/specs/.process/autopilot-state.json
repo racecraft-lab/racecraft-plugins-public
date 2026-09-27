@@ -5,7 +5,7 @@
   "branch": "hrns-015-autopilot-gate-pr-emission-repair",
   "status": "in_progress",
   "stage": "plan",
-  "active_step": "Phase 5: Tasks",
+  "active_step": "Phase 6: Analyze",
   "stage_resolution": {
     "artifact_review": {
       "feature_dir": "specs/hrns-015-autopilot-gate-pr-emission-repair",
@@ -96,8 +96,8 @@
     "ledger_path": "docs/ai/specs/.process/execution-control/ac068cab59ef67faf15646a7.json",
     "disposition": "continue",
     "reasons": [],
-    "elapsed_seconds": 177035.3513200283,
-    "checkpoint_due": false,
+    "elapsed_seconds": 178633.27089309692,
+    "checkpoint_due": true,
     "run_id": "e7fbc9a6636945ed8a8c2abd42cbb892"
   },
   "plan": [
@@ -175,11 +175,11 @@
     },
     {
       "step": "Phase 5: Tasks",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 6: Analyze",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 6: Analyze - Consensus",
@@ -310,7 +310,7 @@
       "status": "skipped: outside --stage plan"
     }
   ],
-  "updated_at": "2026-09-27T15:33:40.272263+00:00",
+  "updated_at": "2026-09-27T16:01:25.800960+00:00",
   "prerequisites": {
     "status": "completed",
     "all_pass": true,
@@ -398,8 +398,7 @@
       "markers": 0,
       "pass": true,
       "reason": "31 tasks found",
-      "task_count": 31,
-      "task_execution_valid": true
+      "task_count": 31
     },
     "G6": {
       "pass": false,
@@ -482,9 +481,9 @@
   "plan_reviewability": {
     "declared_files": {
       "modified": 40,
-      "new": 15,
+      "new": 16,
       "production": 5,
-      "total_entries": 55
+      "total_entries": 56
     },
     "greenfield": false,
     "projected": 200,
@@ -527,21 +526,15 @@
     }
   },
   "tasks": {
-    "status": "generated_pending_marker_boundary",
-    "tasks_file": "specs/hrns-015-autopilot-gate-pr-emission-repair/tasks.md",
-    "execution_file": "specs/hrns-015-autopilot-gate-pr-emission-repair/.process/task-execution.json",
+    "status": "completed",
     "task_count": 31,
     "phase_groups": 17,
     "story_count": 14,
     "active_fr_count": 26,
     "acceptance_scenario_count": 37,
-    "success_criteria_count": 11,
     "all_fr_ids_covered": true,
-    "reviewability_budget": "18 owner-approved increments; candidate sets fit caps; actual diff/LOC qualification remains pending",
-    "fingerprint_status": "Current native validation: outer and helper exit 0; detailed stdout truncated",
-    "closed_units": 21,
-    "maximum_unit_tasks": 3,
-    "capability_groups": 20
+    "fingerprint_status": "Native validate-task-execution passed current sources",
+    "reviewability_budget": "18 increments, 14\u201324 candidate paths, 0\u20132 production; actual diff/LOC required before emission"
   },
   "atomicity_route": {
     "hints": [],
@@ -557,8 +550,8 @@
     "reason": "Classifier returned one-navigable-PR; plan-layers-feature-dir not invoked"
   },
   "analyze": {
-    "status": "pending",
-    "reason": "Current 31-task plan has not entered Analyze; post-G5 marker timing decision pending"
+    "status": "in_progress",
+    "reason": "Current planning snapshot and valid planned markers ready for Analyze"
   },
   "confidence_gate": {
     "status": "pending",
@@ -588,13 +581,13 @@
     "planning_fingerprints": {
       "plan_md": {
         "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/plan.md",
-        "size_bytes": 27919,
-        "sha256": "sha256:af2312dba78f60288437242c9bb0bd5f54315f9df9afe68038082b30e93eb7ff"
+        "size_bytes": 28182,
+        "sha256": "sha256:8381e50f0c0daf7491b6fb6f6e431adea30a89277d0b3073fd476194e6a8d759"
       },
       "tasks_md": {
         "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/tasks.md",
-        "size_bytes": 30033,
-        "sha256": "sha256:804b18458b97467749a404282a01fdabf74c14653119b20c92136f89d0b31e11"
+        "size_bytes": 30481,
+        "sha256": "sha256:46302f5321c2df17acb65799305a2fd8de82b051f1e9b0bd630f45b3767febe3"
       }
     },
     "execution_boundary": {
@@ -649,7 +642,7 @@
         }
       }
     ],
-    "private_record_sha256": "sha256:3d956b4fea3566d51059e21a5abb26ceba4c9b07c1c84d242a72ba307cd9774b"
+    "private_record_sha256": "sha256:aee0f387809bf3cf96445f8d27e5ec5a9e8b29368839b019345e41e8dac9ec4f"
   },
   "plan_resume_result": {
     "version": "2.37.0",
@@ -667,9 +660,9 @@
   "plan_reviewability_budget": {
     "declared_files": {
       "modified": 40,
-      "new": 15,
+      "new": 16,
       "production": 5,
-      "total_entries": 55
+      "total_entries": 56
     },
     "greenfield": false,
     "projected": 200,
@@ -884,5 +877,2424 @@
       "recommended_action": "continue_with_warning",
       "threshold": 0.9
     }
+  },
+  "marker_authoring_attempt": {
+    "status": "validated",
+    "reason": "18 v1 markers; pending-only checkpoints; schema and phase-coverage guard pass"
+  },
+  "pr_marker_plan": {
+    "schema_version": "pr-marker-plan.v1",
+    "kind": "pr_marker_plan",
+    "feature_id": "HRNS-015",
+    "status": "planned",
+    "source_fingerprint": {
+      "feature_spec_sha": "sha256:18c93677aaaee5f73aa8399b2cea052cc58ed2724fe6e74d93be96a47eae7e58",
+      "plan_declared_scope_sha": "sha256:8381e50f0c0daf7491b6fb6f6e431adea30a89277d0b3073fd476194e6a8d759",
+      "tasks_sha": "sha256:46302f5321c2df17acb65799305a2fd8de82b051f1e9b0bd630f45b3767febe3",
+      "reviewability_sha": "sha256:1224c5c39c26e6ef9e3e1fc19093fb1e9fcbd43685ebb47c773d758efabf065d",
+      "hazard_route_sha": "sha256:f4259204cb8f92f1978ddf3b70195aba948d317567082f50f585fb0f4e0ef9c4"
+    },
+    "markers": [
+      {
+        "id": "us1-part1",
+        "review_order": 1,
+        "kind": "user_story_part",
+        "parent_marker_id": "us1",
+        "source_boundary": {
+          "section": "US1 optional note render/schema",
+          "story_id": 1,
+          "start_task_id": "T001",
+          "end_task_id": "T004"
+        },
+        "title_description": "US1 optional note render/schema",
+        "task_ids": [
+          "T001",
+          "T002",
+          "T003",
+          "T004"
+        ],
+        "folded_polish_task_ids": [],
+        "folded_polish_target_reason": "",
+        "declared_files": [
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/speckit_pro_runner/helpers/pr_emission.py"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/claude/speckit-pro/speckit_pro_runner/helpers/pr_emission.py"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/codex/speckit-pro/speckit_pro_runner/helpers/pr_emission.py"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/skills/speckit-autopilot/contracts/pr-packet.schema.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/claude/speckit-pro/skills/speckit-autopilot/contracts/pr-packet.schema.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/codex/speckit-pro/skills/speckit-autopilot/contracts/pr-packet.schema.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/skills/speckit-autopilot/SKILL.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/claude/speckit-pro/skills/speckit-autopilot/SKILL.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/codex-skills/speckit-autopilot/SKILL.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/codex/speckit-pro/skills/speckit-autopilot/SKILL.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.sha256"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/claude/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/claude/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.sha256"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/codex/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/codex/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.sha256"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "docs-site/src/content/docs/reference/skills.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "docs/ai/specs/.process/HRNS-015-workflow.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "docs/ai/specs/.process/autopilot-state.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/tasks.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/.process/task-execution.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/.process/slice-inventory.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/SPEC-MOC.md"
+          }
+        ],
+        "declared_tests": [
+          "tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py"
+        ],
+        "reviewability": {
+          "status": "pass",
+          "mode": "planned_candidates",
+          "scope": "A1a",
+          "production_files": 2,
+          "total_files": 24,
+          "qualification": "Candidate budgets only; actual per-PR diffs, LOC and checkpoint evidence required before emission."
+        },
+        "hazards": [],
+        "subdivision": {
+          "status": "safe_split",
+          "details": {
+            "increment": "A1a",
+            "basis": "Owner-approved eighteen-increment sequence"
+          }
+        },
+        "implementation_checkpoint": {
+          "status": "pending"
+        },
+        "emission_mapping": {
+          "status": "pending"
+        },
+        "warnings": []
+      },
+      {
+        "id": "us1-part2",
+        "review_order": 2,
+        "kind": "user_story_part",
+        "parent_marker_id": "us1",
+        "source_boundary": {
+          "section": "US1 protected note validation",
+          "story_id": 1,
+          "start_task_id": "T005",
+          "end_task_id": "T005"
+        },
+        "title_description": "US1 protected note validation",
+        "task_ids": [
+          "T005"
+        ],
+        "folded_polish_task_ids": [],
+        "folded_polish_target_reason": "",
+        "declared_files": [
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/speckit_pro_runner/helpers/pr_emission.py"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/claude/speckit-pro/speckit_pro_runner/helpers/pr_emission.py"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/codex/speckit-pro/speckit_pro_runner/helpers/pr_emission.py"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/speckit_pro_runner/helpers/read_only.py"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/claude/speckit-pro/speckit_pro_runner/helpers/read_only.py"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/codex/speckit-pro/speckit_pro_runner/helpers/read_only.py"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/skills/speckit-autopilot/SKILL.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/claude/speckit-pro/skills/speckit-autopilot/SKILL.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/codex-skills/speckit-autopilot/SKILL.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/codex/speckit-pro/skills/speckit-autopilot/SKILL.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.sha256"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/claude/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/claude/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.sha256"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/codex/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/codex/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.sha256"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "docs-site/src/content/docs/reference/skills.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "tests/speckit-pro/unit/test-speckit-pro-read-only-helpers.py"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "docs/ai/specs/.process/HRNS-015-workflow.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "docs/ai/specs/.process/autopilot-state.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/tasks.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/.process/task-execution.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/.process/slice-inventory.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/SPEC-MOC.md"
+          }
+        ],
+        "declared_tests": [
+          "tests/speckit-pro/unit/test-speckit-pro-read-only-helpers.py"
+        ],
+        "reviewability": {
+          "status": "pass",
+          "mode": "planned_candidates",
+          "scope": "A1b",
+          "production_files": 2,
+          "total_files": 24,
+          "qualification": "Candidate budgets only; actual per-PR diffs, LOC and checkpoint evidence required before emission."
+        },
+        "hazards": [],
+        "subdivision": {
+          "status": "safe_split",
+          "details": {
+            "increment": "A1b",
+            "basis": "Owner-approved eighteen-increment sequence"
+          }
+        },
+        "implementation_checkpoint": {
+          "status": "pending"
+        },
+        "emission_mapping": {
+          "status": "pending"
+        },
+        "warnings": []
+      },
+      {
+        "id": "us2",
+        "review_order": 3,
+        "kind": "user_story",
+        "parent_marker_id": null,
+        "source_boundary": {
+          "section": "US2 packet-only guard and approved scope prose",
+          "story_id": 2,
+          "start_task_id": "T006",
+          "end_task_id": "T007"
+        },
+        "title_description": "US2 packet-only guard and approved scope prose",
+        "task_ids": [
+          "T006",
+          "T007"
+        ],
+        "folded_polish_task_ids": [],
+        "folded_polish_target_reason": "",
+        "declared_files": [
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/speckit_pro_runner/helpers/mutation.py"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/claude/speckit-pro/speckit_pro_runner/helpers/mutation.py"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/codex/speckit-pro/speckit_pro_runner/helpers/mutation.py"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/skills/speckit-autopilot/references/post-implementation.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/claude/speckit-pro/skills/speckit-autopilot/references/post-implementation.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/codex/speckit-pro/skills/speckit-autopilot/references/post-implementation.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/codex-skills/speckit-autopilot/references/post-implementation-codex.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/codex/speckit-pro/skills/speckit-autopilot/references/post-implementation-codex.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py"
+          },
+          {
+            "operation": "NEW",
+            "path": "tests/speckit-pro/unit/fixtures/pr-packet-repair/packet-only-untracked.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.sha256"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/claude/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/claude/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.sha256"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/codex/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/codex/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.sha256"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "docs/prd-harness-engineering-uplift.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "docs/ai/specs/harness-engineering-uplift-technical-roadmap.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "docs/ai/specs/.process/HRNS-015-workflow.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "docs/ai/specs/.process/autopilot-state.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/tasks.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/.process/task-execution.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/.process/slice-inventory.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/SPEC-MOC.md"
+          }
+        ],
+        "declared_tests": [
+          "tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py",
+          "tests/speckit-pro/unit/fixtures/pr-packet-repair/packet-only-untracked.json"
+        ],
+        "reviewability": {
+          "status": "pass",
+          "mode": "planned_candidates",
+          "scope": "A2",
+          "production_files": 1,
+          "total_files": 24,
+          "qualification": "Candidate budgets only; actual per-PR diffs, LOC and checkpoint evidence required before emission."
+        },
+        "hazards": [],
+        "subdivision": {
+          "status": "none",
+          "details": {
+            "increment": "A2",
+            "basis": "Owner-approved eighteen-increment sequence"
+          }
+        },
+        "implementation_checkpoint": {
+          "status": "pending"
+        },
+        "emission_mapping": {
+          "status": "pending"
+        },
+        "warnings": []
+      },
+      {
+        "id": "us3",
+        "review_order": 4,
+        "kind": "user_story",
+        "parent_marker_id": null,
+        "source_boundary": {
+          "section": "US3 current verdict",
+          "story_id": 3,
+          "start_task_id": "T008",
+          "end_task_id": "T009"
+        },
+        "title_description": "US3 current verdict",
+        "task_ids": [
+          "T008",
+          "T009"
+        ],
+        "folded_polish_task_ids": [],
+        "folded_polish_target_reason": "",
+        "declared_files": [
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/speckit_pro_runner/helpers/pr_emission.py"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/claude/speckit-pro/speckit_pro_runner/helpers/pr_emission.py"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/codex/speckit-pro/speckit_pro_runner/helpers/pr_emission.py"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/speckit_pro_runner/helpers/read_only.py"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/claude/speckit-pro/speckit_pro_runner/helpers/read_only.py"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/codex/speckit-pro/speckit_pro_runner/helpers/read_only.py"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/skills/speckit-autopilot/SKILL.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/claude/speckit-pro/skills/speckit-autopilot/SKILL.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/codex-skills/speckit-autopilot/SKILL.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/codex/speckit-pro/skills/speckit-autopilot/SKILL.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.sha256"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/claude/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/claude/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.sha256"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/codex/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/codex/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.sha256"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "docs-site/src/content/docs/reference/skills.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "docs/ai/specs/.process/HRNS-015-workflow.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "docs/ai/specs/.process/autopilot-state.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/tasks.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/.process/task-execution.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/.process/slice-inventory.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/SPEC-MOC.md"
+          }
+        ],
+        "declared_tests": [
+          "tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py"
+        ],
+        "reviewability": {
+          "status": "pass",
+          "mode": "planned_candidates",
+          "scope": "A3",
+          "production_files": 2,
+          "total_files": 24,
+          "qualification": "Candidate budgets only; actual per-PR diffs, LOC and checkpoint evidence required before emission."
+        },
+        "hazards": [],
+        "subdivision": {
+          "status": "none",
+          "details": {
+            "increment": "A3",
+            "basis": "Owner-approved eighteen-increment sequence"
+          }
+        },
+        "implementation_checkpoint": {
+          "status": "pending"
+        },
+        "emission_mapping": {
+          "status": "pending"
+        },
+        "warnings": []
+      },
+      {
+        "id": "us4",
+        "review_order": 5,
+        "kind": "user_story",
+        "parent_marker_id": null,
+        "source_boundary": {
+          "section": "US4 visible marker counts",
+          "story_id": 4,
+          "start_task_id": "T010",
+          "end_task_id": "T010"
+        },
+        "title_description": "US4 visible marker counts",
+        "task_ids": [
+          "T010"
+        ],
+        "folded_polish_task_ids": [],
+        "folded_polish_target_reason": "",
+        "declared_files": [
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/speckit_pro_runner/helpers/read_only.py"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/claude/speckit-pro/speckit_pro_runner/helpers/read_only.py"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/codex/speckit-pro/speckit_pro_runner/helpers/read_only.py"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/skills/speckit-autopilot/references/gate-validation.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/claude/speckit-pro/skills/speckit-autopilot/references/gate-validation.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/codex/speckit-pro/skills/speckit-autopilot/references/gate-validation.md"
+          },
+          {
+            "operation": "NEW",
+            "path": "tests/speckit-pro/unit/test-marker-visibility.py"
+          },
+          {
+            "operation": "NEW",
+            "path": "tests/speckit-pro/unit/fixtures/marker-visibility/cases.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "tests/speckit-pro/suite-manifest.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.sha256"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/claude/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/claude/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.sha256"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/codex/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/codex/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.sha256"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "docs-site/src/content/docs/reference/tests.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "docs/ai/specs/.process/HRNS-015-workflow.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "docs/ai/specs/.process/autopilot-state.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/tasks.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/.process/task-execution.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/.process/slice-inventory.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/SPEC-MOC.md"
+          }
+        ],
+        "declared_tests": [
+          "tests/speckit-pro/unit/test-marker-visibility.py",
+          "tests/speckit-pro/unit/fixtures/marker-visibility/cases.json",
+          "tests/speckit-pro/suite-manifest.json"
+        ],
+        "reviewability": {
+          "status": "pass",
+          "mode": "planned_candidates",
+          "scope": "B1a",
+          "production_files": 1,
+          "total_files": 22,
+          "qualification": "Candidate budgets only; actual per-PR diffs, LOC and checkpoint evidence required before emission."
+        },
+        "hazards": [],
+        "subdivision": {
+          "status": "none",
+          "details": {
+            "increment": "B1a",
+            "basis": "Owner-approved eighteen-increment sequence"
+          }
+        },
+        "implementation_checkpoint": {
+          "status": "pending"
+        },
+        "emission_mapping": {
+          "status": "pending"
+        },
+        "warnings": []
+      },
+      {
+        "id": "us5",
+        "review_order": 6,
+        "kind": "user_story",
+        "parent_marker_id": null,
+        "source_boundary": {
+          "section": "US5 tracked spec index",
+          "story_id": 5,
+          "start_task_id": "T011",
+          "end_task_id": "T011"
+        },
+        "title_description": "US5 tracked spec index",
+        "task_ids": [
+          "T011"
+        ],
+        "folded_polish_task_ids": [],
+        "folded_polish_target_reason": "",
+        "declared_files": [
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/speckit_pro_runner/helpers/read_only.py"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/claude/speckit-pro/speckit_pro_runner/helpers/read_only.py"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/codex/speckit-pro/speckit_pro_runner/helpers/read_only.py"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "scripts/refresh-release-artifacts.py"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "specs/formal-001-selective-formal-methods/SPEC-MOC.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "AGENTS.md"
+          },
+          {
+            "operation": "NEW",
+            "path": "tests/speckit-pro/unit/test-spec-index-freshness.py"
+          },
+          {
+            "operation": "NEW",
+            "path": "tests/speckit-pro/unit/fixtures/spec-index-freshness/historical-stale-index.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "tests/speckit-pro/suite-manifest.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.sha256"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/claude/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/claude/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.sha256"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/codex/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/codex/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.sha256"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "docs-site/src/content/docs/reference/tests.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "docs-site/src/content/docs/reference/scripts.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "docs/ai/specs/.process/HRNS-015-workflow.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "docs/ai/specs/.process/autopilot-state.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/tasks.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/.process/task-execution.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/.process/slice-inventory.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/SPEC-MOC.md"
+          }
+        ],
+        "declared_tests": [
+          "tests/speckit-pro/unit/test-spec-index-freshness.py",
+          "tests/speckit-pro/unit/fixtures/spec-index-freshness/historical-stale-index.md",
+          "tests/speckit-pro/suite-manifest.json"
+        ],
+        "reviewability": {
+          "status": "pass",
+          "mode": "planned_candidates",
+          "scope": "B1b",
+          "production_files": 2,
+          "total_files": 23,
+          "qualification": "Candidate budgets only; actual per-PR diffs, LOC and checkpoint evidence required before emission."
+        },
+        "hazards": [],
+        "subdivision": {
+          "status": "none",
+          "details": {
+            "increment": "B1b",
+            "basis": "Owner-approved eighteen-increment sequence"
+          }
+        },
+        "implementation_checkpoint": {
+          "status": "pending"
+        },
+        "emission_mapping": {
+          "status": "pending"
+        },
+        "warnings": []
+      },
+      {
+        "id": "us6",
+        "review_order": 7,
+        "kind": "user_story",
+        "parent_marker_id": null,
+        "source_boundary": {
+          "section": "US6 complete slice and greenfield budgets",
+          "story_id": 6,
+          "start_task_id": "T012",
+          "end_task_id": "T013"
+        },
+        "title_description": "US6 complete slice and greenfield budgets",
+        "task_ids": [
+          "T012",
+          "T013"
+        ],
+        "folded_polish_task_ids": [],
+        "folded_polish_target_reason": "",
+        "declared_files": [
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/speckit_pro_runner/helpers/read_only.py"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/claude/speckit-pro/speckit_pro_runner/helpers/read_only.py"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/codex/speckit-pro/speckit_pro_runner/helpers/read_only.py"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/skills/speckit-autopilot/references/gate-validation.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/claude/speckit-pro/skills/speckit-autopilot/references/gate-validation.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/codex/speckit-pro/skills/speckit-autopilot/references/gate-validation.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/skills/speckit-coach/templates/technical-roadmap-template.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/claude/speckit-pro/skills/speckit-coach/templates/technical-roadmap-template.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/codex/speckit-pro/skills/speckit-coach/templates/technical-roadmap-template.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.sha256"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/claude/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/claude/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.sha256"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/codex/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/codex/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.sha256"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "tests/speckit-pro/unit/test-speckit-pro-read-only-helpers.py"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "docs-site/src/content/docs/reference/skills.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "docs/ai/specs/.process/HRNS-015-workflow.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "docs/ai/specs/.process/autopilot-state.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/tasks.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/.process/task-execution.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/.process/slice-inventory.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/SPEC-MOC.md"
+          }
+        ],
+        "declared_tests": [
+          "tests/speckit-pro/unit/test-speckit-pro-read-only-helpers.py"
+        ],
+        "reviewability": {
+          "status": "pass",
+          "mode": "planned_candidates",
+          "scope": "B2b",
+          "production_files": 1,
+          "total_files": 23,
+          "qualification": "Candidate budgets only; actual per-PR diffs, LOC and checkpoint evidence required before emission."
+        },
+        "hazards": [],
+        "subdivision": {
+          "status": "none",
+          "details": {
+            "increment": "B2b",
+            "basis": "Owner-approved eighteen-increment sequence"
+          }
+        },
+        "implementation_checkpoint": {
+          "status": "pending"
+        },
+        "emission_mapping": {
+          "status": "pending"
+        },
+        "warnings": []
+      },
+      {
+        "id": "us7",
+        "review_order": 8,
+        "kind": "user_story",
+        "parent_marker_id": null,
+        "source_boundary": {
+          "section": "US7 required-refactor estimate",
+          "story_id": 7,
+          "start_task_id": "T014",
+          "end_task_id": "T014"
+        },
+        "title_description": "US7 required-refactor estimate",
+        "task_ids": [
+          "T014"
+        ],
+        "folded_polish_task_ids": [],
+        "folded_polish_target_reason": "",
+        "declared_files": [
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/speckit_pro_runner/helpers/read_only.py"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/claude/speckit-pro/speckit_pro_runner/helpers/read_only.py"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/codex/speckit-pro/speckit_pro_runner/helpers/read_only.py"
+          },
+          {
+            "operation": "NEW",
+            "path": "tests/speckit-pro/unit/test-size-estimate-refactors.py"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "tests/speckit-pro/suite-manifest.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.sha256"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/claude/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/claude/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.sha256"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/codex/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/codex/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.sha256"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "docs-site/src/content/docs/reference/tests.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "docs/ai/specs/.process/HRNS-015-workflow.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "docs/ai/specs/.process/autopilot-state.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/tasks.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/.process/task-execution.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/.process/slice-inventory.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/SPEC-MOC.md"
+          }
+        ],
+        "declared_tests": [
+          "tests/speckit-pro/unit/test-size-estimate-refactors.py",
+          "tests/speckit-pro/suite-manifest.json"
+        ],
+        "reviewability": {
+          "status": "pass",
+          "mode": "planned_candidates",
+          "scope": "B3a",
+          "production_files": 1,
+          "total_files": 18,
+          "qualification": "Candidate budgets only; actual per-PR diffs, LOC and checkpoint evidence required before emission."
+        },
+        "hazards": [],
+        "subdivision": {
+          "status": "none",
+          "details": {
+            "increment": "B3a",
+            "basis": "Owner-approved eighteen-increment sequence"
+          }
+        },
+        "implementation_checkpoint": {
+          "status": "pending"
+        },
+        "emission_mapping": {
+          "status": "pending"
+        },
+        "warnings": []
+      },
+      {
+        "id": "us8",
+        "review_order": 9,
+        "kind": "user_story",
+        "parent_marker_id": null,
+        "source_boundary": {
+          "section": "US8 declared quality commands",
+          "story_id": 8,
+          "start_task_id": "T015",
+          "end_task_id": "T016"
+        },
+        "title_description": "US8 declared quality commands",
+        "task_ids": [
+          "T015",
+          "T016"
+        ],
+        "folded_polish_task_ids": [],
+        "folded_polish_target_reason": "",
+        "declared_files": [
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/speckit_pro_runner/helpers/read_only.py"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/claude/speckit-pro/speckit_pro_runner/helpers/read_only.py"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/codex/speckit-pro/speckit_pro_runner/helpers/read_only.py"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/skills/speckit-autopilot/references/gate-validation.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/claude/speckit-pro/skills/speckit-autopilot/references/gate-validation.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/codex/speckit-pro/skills/speckit-autopilot/references/gate-validation.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": ".specify/quality-gates.json"
+          },
+          {
+            "operation": "NEW",
+            "path": "tests/speckit-pro/unit/test-declared-quality-commands.py"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "tests/speckit-pro/suite-manifest.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.sha256"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/claude/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/claude/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.sha256"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/codex/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/codex/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.sha256"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "docs-site/src/content/docs/reference/tests.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "docs/ai/specs/.process/HRNS-015-workflow.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "docs/ai/specs/.process/autopilot-state.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/tasks.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/.process/task-execution.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/.process/slice-inventory.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/SPEC-MOC.md"
+          }
+        ],
+        "declared_tests": [
+          "tests/speckit-pro/unit/test-declared-quality-commands.py",
+          "tests/speckit-pro/suite-manifest.json"
+        ],
+        "reviewability": {
+          "status": "pass",
+          "mode": "planned_candidates",
+          "scope": "B3b",
+          "production_files": 2,
+          "total_files": 22,
+          "qualification": "Candidate budgets only; actual per-PR diffs, LOC and checkpoint evidence required before emission."
+        },
+        "hazards": [],
+        "subdivision": {
+          "status": "none",
+          "details": {
+            "increment": "B3b",
+            "basis": "Owner-approved eighteen-increment sequence"
+          }
+        },
+        "implementation_checkpoint": {
+          "status": "pending"
+        },
+        "emission_mapping": {
+          "status": "pending"
+        },
+        "warnings": []
+      },
+      {
+        "id": "us9",
+        "review_order": 10,
+        "kind": "user_story",
+        "parent_marker_id": null,
+        "source_boundary": {
+          "section": "US9 canonical Post list",
+          "story_id": 9,
+          "start_task_id": "T017",
+          "end_task_id": "T017"
+        },
+        "title_description": "US9 canonical Post list",
+        "task_ids": [
+          "T017"
+        ],
+        "folded_polish_task_ids": [],
+        "folded_polish_target_reason": "",
+        "declared_files": [
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/claude/speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/codex/speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/skills/speckit-autopilot/SKILL.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/claude/speckit-pro/skills/speckit-autopilot/SKILL.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/codex-skills/speckit-autopilot/SKILL.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/codex/speckit-pro/skills/speckit-autopilot/SKILL.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/skills/speckit-autopilot/references/task-list-canonical.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/claude/speckit-pro/skills/speckit-autopilot/references/task-list-canonical.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/codex/speckit-pro/skills/speckit-autopilot/references/task-list-canonical.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/codex-skills/speckit-autopilot/references/task-list-canonical-codex.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/codex/speckit-pro/skills/speckit-autopilot/references/task-list-canonical-codex.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/skills/speckit-coach/templates/workflow-template.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/claude/speckit-pro/skills/speckit-coach/templates/workflow-template.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/codex/speckit-pro/skills/speckit-coach/templates/workflow-template.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "docs-site/src/content/docs/reference/skills.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "docs-site/src/content/docs/reference/scripts.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "tests/speckit-pro/unit/test-autopilot-phase-coverage.py"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "docs/ai/specs/.process/HRNS-015-workflow.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "docs/ai/specs/.process/autopilot-state.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/tasks.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/.process/task-execution.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/.process/slice-inventory.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/SPEC-MOC.md"
+          }
+        ],
+        "declared_tests": [
+          "tests/speckit-pro/unit/test-autopilot-phase-coverage.py"
+        ],
+        "reviewability": {
+          "status": "pass",
+          "mode": "planned_candidates",
+          "scope": "C1a1",
+          "production_files": 1,
+          "total_files": 24,
+          "qualification": "Candidate budgets only; actual per-PR diffs, LOC and checkpoint evidence required before emission."
+        },
+        "hazards": [],
+        "subdivision": {
+          "status": "none",
+          "details": {
+            "increment": "C1a1",
+            "basis": "Owner-approved eighteen-increment sequence"
+          }
+        },
+        "implementation_checkpoint": {
+          "status": "pending"
+        },
+        "emission_mapping": {
+          "status": "pending"
+        },
+        "warnings": []
+      },
+      {
+        "id": "us10-part1",
+        "review_order": 11,
+        "kind": "user_story_part",
+        "parent_marker_id": "us10",
+        "source_boundary": {
+          "section": "US10 persisted completion boundary",
+          "story_id": 10,
+          "start_task_id": "T018",
+          "end_task_id": "T018"
+        },
+        "title_description": "US10 persisted completion boundary",
+        "task_ids": [
+          "T018"
+        ],
+        "folded_polish_task_ids": [],
+        "folded_polish_target_reason": "",
+        "declared_files": [
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/claude/speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/codex/speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/skills/speckit-autopilot/SKILL.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/claude/speckit-pro/skills/speckit-autopilot/SKILL.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/codex-skills/speckit-autopilot/SKILL.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/codex/speckit-pro/skills/speckit-autopilot/SKILL.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/skills/speckit-autopilot/references/post-implementation.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/claude/speckit-pro/skills/speckit-autopilot/references/post-implementation.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/codex/speckit-pro/skills/speckit-autopilot/references/post-implementation.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/codex-skills/speckit-autopilot/references/post-implementation-codex.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/codex/speckit-pro/skills/speckit-autopilot/references/post-implementation-codex.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "docs-site/src/content/docs/reference/skills.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "docs-site/src/content/docs/reference/scripts.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "tests/speckit-pro/unit/test-autopilot-phase-coverage.py"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "docs/ai/specs/.process/HRNS-015-workflow.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "docs/ai/specs/.process/autopilot-state.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/tasks.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/.process/task-execution.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/.process/slice-inventory.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/SPEC-MOC.md"
+          }
+        ],
+        "declared_tests": [
+          "tests/speckit-pro/unit/test-autopilot-phase-coverage.py"
+        ],
+        "reviewability": {
+          "status": "pass",
+          "mode": "planned_candidates",
+          "scope": "C1a2",
+          "production_files": 1,
+          "total_files": 21,
+          "qualification": "Candidate budgets only; actual per-PR diffs, LOC and checkpoint evidence required before emission."
+        },
+        "hazards": [],
+        "subdivision": {
+          "status": "safe_split",
+          "details": {
+            "increment": "C1a2",
+            "basis": "Owner-approved eighteen-increment sequence"
+          }
+        },
+        "implementation_checkpoint": {
+          "status": "pending"
+        },
+        "emission_mapping": {
+          "status": "pending"
+        },
+        "warnings": []
+      },
+      {
+        "id": "us10-part2",
+        "review_order": 12,
+        "kind": "user_story_part",
+        "parent_marker_id": "us10",
+        "source_boundary": {
+          "section": "US10 phase/analyze team teardown",
+          "story_id": 10,
+          "start_task_id": "T019",
+          "end_task_id": "T019"
+        },
+        "title_description": "US10 phase/analyze team teardown",
+        "task_ids": [
+          "T019"
+        ],
+        "folded_polish_task_ids": [],
+        "folded_polish_target_reason": "",
+        "declared_files": [
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/agents/phase-executor.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/claude/speckit-pro/agents/phase-executor.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/codex-agents/phase-executor.toml"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/codex/speckit-pro/codex-agents/phase-executor.toml"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/agents/analyze-executor.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/claude/speckit-pro/agents/analyze-executor.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/codex-agents/analyze-executor.toml"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/codex/speckit-pro/codex-agents/analyze-executor.toml"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/skills/speckit-autopilot/references/agent-teams-integration.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/claude/speckit-pro/skills/speckit-autopilot/references/agent-teams-integration.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/codex/speckit-pro/skills/speckit-autopilot/references/agent-teams-integration.md"
+          },
+          {
+            "operation": "NEW",
+            "path": "tests/speckit-pro/layer1-structural/test-phase-analyze-teardown.py"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "tests/speckit-pro/suite-manifest.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "docs-site/src/content/docs/reference/agents.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "docs-site/src/content/docs/reference/tests.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "docs/ai/specs/.process/HRNS-015-workflow.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "docs/ai/specs/.process/autopilot-state.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/tasks.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/.process/task-execution.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/.process/slice-inventory.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/SPEC-MOC.md"
+          }
+        ],
+        "declared_tests": [
+          "tests/speckit-pro/layer1-structural/test-phase-analyze-teardown.py",
+          "tests/speckit-pro/suite-manifest.json"
+        ],
+        "reviewability": {
+          "status": "pass",
+          "mode": "planned_candidates",
+          "scope": "C1b1",
+          "production_files": 2,
+          "total_files": 21,
+          "qualification": "Candidate budgets only; actual per-PR diffs, LOC and checkpoint evidence required before emission."
+        },
+        "hazards": [],
+        "subdivision": {
+          "status": "safe_split",
+          "details": {
+            "increment": "C1b1",
+            "basis": "Owner-approved eighteen-increment sequence"
+          }
+        },
+        "implementation_checkpoint": {
+          "status": "pending"
+        },
+        "emission_mapping": {
+          "status": "pending"
+        },
+        "warnings": []
+      },
+      {
+        "id": "us10-part3",
+        "review_order": 13,
+        "kind": "user_story_part",
+        "parent_marker_id": "us10",
+        "source_boundary": {
+          "section": "US10 checklist/implement team teardown",
+          "story_id": 10,
+          "start_task_id": "T020",
+          "end_task_id": "T021"
+        },
+        "title_description": "US10 checklist/implement team teardown",
+        "task_ids": [
+          "T020",
+          "T021"
+        ],
+        "folded_polish_task_ids": [],
+        "folded_polish_target_reason": "",
+        "declared_files": [
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/agents/checklist-executor.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/claude/speckit-pro/agents/checklist-executor.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/codex-agents/checklist-executor.toml"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/codex/speckit-pro/codex-agents/checklist-executor.toml"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/agents/implement-executor.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/claude/speckit-pro/agents/implement-executor.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/codex-agents/implement-executor.toml"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/codex/speckit-pro/codex-agents/implement-executor.toml"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/skills/speckit-autopilot/references/agent-teams-integration.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/claude/speckit-pro/skills/speckit-autopilot/references/agent-teams-integration.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/codex/speckit-pro/skills/speckit-autopilot/references/agent-teams-integration.md"
+          },
+          {
+            "operation": "NEW",
+            "path": "tests/speckit-pro/layer1-structural/test-checklist-implement-teardown.py"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "tests/speckit-pro/suite-manifest.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "docs-site/src/content/docs/reference/agents.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "docs-site/src/content/docs/reference/tests.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "docs/ai/specs/.process/HRNS-015-workflow.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "docs/ai/specs/.process/autopilot-state.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/tasks.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/.process/task-execution.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/.process/slice-inventory.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/SPEC-MOC.md"
+          }
+        ],
+        "declared_tests": [
+          "tests/speckit-pro/layer1-structural/test-checklist-implement-teardown.py",
+          "tests/speckit-pro/suite-manifest.json"
+        ],
+        "reviewability": {
+          "status": "pass",
+          "mode": "planned_candidates",
+          "scope": "C1b2",
+          "production_files": 2,
+          "total_files": 21,
+          "qualification": "Candidate budgets only; actual per-PR diffs, LOC and checkpoint evidence required before emission."
+        },
+        "hazards": [],
+        "subdivision": {
+          "status": "safe_split",
+          "details": {
+            "increment": "C1b2",
+            "basis": "Owner-approved eighteen-increment sequence"
+          }
+        },
+        "implementation_checkpoint": {
+          "status": "pending"
+        },
+        "emission_mapping": {
+          "status": "pending"
+        },
+        "warnings": []
+      },
+      {
+        "id": "us11",
+        "review_order": 14,
+        "kind": "user_story",
+        "parent_marker_id": null,
+        "source_boundary": {
+          "section": "US11 complete review feedback after verified push",
+          "story_id": 11,
+          "start_task_id": "T022",
+          "end_task_id": "T023"
+        },
+        "title_description": "US11 complete review feedback after verified push",
+        "task_ids": [
+          "T022",
+          "T023"
+        ],
+        "folded_polish_task_ids": [],
+        "folded_polish_target_reason": "",
+        "declared_files": [
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/skills/speckit-resolve-pr/SKILL.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/claude/speckit-pro/skills/speckit-resolve-pr/SKILL.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/codex-skills/speckit-resolve-pr/SKILL.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/codex/speckit-pro/skills/speckit-resolve-pr/SKILL.md"
+          },
+          {
+            "operation": "NEW",
+            "path": "tests/speckit-pro/unit/test-resolve-pr-protocol.py"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "tests/speckit-pro/suite-manifest.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "docs-site/src/content/docs/reference/skills.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "docs-site/src/content/docs/reference/tests.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "docs/ai/specs/.process/HRNS-015-workflow.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "docs/ai/specs/.process/autopilot-state.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/tasks.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/.process/task-execution.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/.process/slice-inventory.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/SPEC-MOC.md"
+          }
+        ],
+        "declared_tests": [
+          "tests/speckit-pro/unit/test-resolve-pr-protocol.py",
+          "tests/speckit-pro/suite-manifest.json"
+        ],
+        "reviewability": {
+          "status": "pass",
+          "mode": "planned_candidates",
+          "scope": "C2a1",
+          "production_files": 0,
+          "total_files": 14,
+          "qualification": "Candidate budgets only; actual per-PR diffs, LOC and checkpoint evidence required before emission."
+        },
+        "hazards": [],
+        "subdivision": {
+          "status": "none",
+          "details": {
+            "increment": "C2a1",
+            "basis": "Owner-approved eighteen-increment sequence"
+          }
+        },
+        "implementation_checkpoint": {
+          "status": "pending"
+        },
+        "emission_mapping": {
+          "status": "pending"
+        },
+        "warnings": []
+      },
+      {
+        "id": "us12",
+        "review_order": 15,
+        "kind": "user_story",
+        "parent_marker_id": null,
+        "source_boundary": {
+          "section": "US12 await blind-spot result",
+          "story_id": 12,
+          "start_task_id": "T024",
+          "end_task_id": "T024"
+        },
+        "title_description": "US12 await blind-spot result",
+        "task_ids": [
+          "T024"
+        ],
+        "folded_polish_task_ids": [],
+        "folded_polish_target_reason": "",
+        "declared_files": [
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/skills/speckit-scaffold-spec/SKILL.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/claude/speckit-pro/skills/speckit-scaffold-spec/SKILL.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/codex-skills/speckit-scaffold-spec/SKILL.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/codex/speckit-pro/skills/speckit-scaffold-spec/SKILL.md"
+          },
+          {
+            "operation": "NEW",
+            "path": "tests/speckit-pro/unit/test-scaffold-blindspot.py"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "tests/speckit-pro/suite-manifest.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "docs-site/src/content/docs/reference/skills.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "docs-site/src/content/docs/reference/tests.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "docs/ai/specs/.process/HRNS-015-workflow.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "docs/ai/specs/.process/autopilot-state.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/tasks.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/.process/task-execution.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/.process/slice-inventory.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/SPEC-MOC.md"
+          }
+        ],
+        "declared_tests": [
+          "tests/speckit-pro/unit/test-scaffold-blindspot.py",
+          "tests/speckit-pro/suite-manifest.json"
+        ],
+        "reviewability": {
+          "status": "pass",
+          "mode": "planned_candidates",
+          "scope": "C2a2",
+          "production_files": 0,
+          "total_files": 14,
+          "qualification": "Candidate budgets only; actual per-PR diffs, LOC and checkpoint evidence required before emission."
+        },
+        "hazards": [],
+        "subdivision": {
+          "status": "none",
+          "details": {
+            "increment": "C2a2",
+            "basis": "Owner-approved eighteen-increment sequence"
+          }
+        },
+        "implementation_checkpoint": {
+          "status": "pending"
+        },
+        "emission_mapping": {
+          "status": "pending"
+        },
+        "warnings": []
+      },
+      {
+        "id": "us13-part1",
+        "review_order": 16,
+        "kind": "user_story_part",
+        "parent_marker_id": "us13",
+        "source_boundary": {
+          "section": "US13 status request envelopes",
+          "story_id": 13,
+          "start_task_id": "T025",
+          "end_task_id": "T025"
+        },
+        "title_description": "US13 status request envelopes",
+        "task_ids": [
+          "T025"
+        ],
+        "folded_polish_task_ids": [],
+        "folded_polish_target_reason": "",
+        "declared_files": [
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/skills/speckit-status/SKILL.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/claude/speckit-pro/skills/speckit-status/SKILL.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/codex-skills/speckit-status/SKILL.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/codex/speckit-pro/skills/speckit-status/SKILL.md"
+          },
+          {
+            "operation": "NEW",
+            "path": "tests/speckit-pro/unit/test-status-envelope-contract.py"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "tests/speckit-pro/suite-manifest.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "docs-site/src/content/docs/reference/skills.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "docs-site/src/content/docs/reference/tests.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "docs/ai/specs/.process/HRNS-015-workflow.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "docs/ai/specs/.process/autopilot-state.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/tasks.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/.process/task-execution.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/.process/slice-inventory.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/SPEC-MOC.md"
+          }
+        ],
+        "declared_tests": [
+          "tests/speckit-pro/unit/test-status-envelope-contract.py",
+          "tests/speckit-pro/suite-manifest.json"
+        ],
+        "reviewability": {
+          "status": "pass",
+          "mode": "planned_candidates",
+          "scope": "C2a3",
+          "production_files": 0,
+          "total_files": 14,
+          "qualification": "Candidate budgets only; actual per-PR diffs, LOC and checkpoint evidence required before emission."
+        },
+        "hazards": [],
+        "subdivision": {
+          "status": "safe_split",
+          "details": {
+            "increment": "C2a3",
+            "basis": "Owner-approved eighteen-increment sequence"
+          }
+        },
+        "implementation_checkpoint": {
+          "status": "pending"
+        },
+        "emission_mapping": {
+          "status": "pending"
+        },
+        "warnings": []
+      },
+      {
+        "id": "us13-part2",
+        "review_order": 17,
+        "kind": "user_story_part",
+        "parent_marker_id": "us13",
+        "source_boundary": {
+          "section": "US13 scaffold/phase request envelopes",
+          "story_id": 13,
+          "start_task_id": "T026",
+          "end_task_id": "T027"
+        },
+        "title_description": "US13 scaffold/phase request envelopes",
+        "task_ids": [
+          "T026",
+          "T027"
+        ],
+        "folded_polish_task_ids": [],
+        "folded_polish_target_reason": "",
+        "declared_files": [
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/skills/speckit-scaffold-spec/SKILL.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/claude/speckit-pro/skills/speckit-scaffold-spec/SKILL.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/codex-skills/speckit-scaffold-spec/SKILL.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/codex/speckit-pro/skills/speckit-scaffold-spec/SKILL.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/skills/speckit-autopilot/references/phase-execution.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/claude/speckit-pro/skills/speckit-autopilot/references/phase-execution.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/codex/speckit-pro/skills/speckit-autopilot/references/phase-execution.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/codex-skills/speckit-autopilot/references/phase-execution-codex.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/codex/speckit-pro/skills/speckit-autopilot/references/phase-execution-codex.md"
+          },
+          {
+            "operation": "NEW",
+            "path": "tests/speckit-pro/unit/test-scaffold-envelope-contract.py"
+          },
+          {
+            "operation": "NEW",
+            "path": "tests/speckit-pro/unit/test-phase-envelope-contract.py"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "tests/speckit-pro/suite-manifest.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "docs-site/src/content/docs/reference/skills.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "docs-site/src/content/docs/reference/tests.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "docs-site/src/content/docs/reference/source-vs-dist.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "docs/ai/specs/.process/HRNS-015-workflow.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "docs/ai/specs/.process/autopilot-state.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/tasks.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/.process/task-execution.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/.process/slice-inventory.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/SPEC-MOC.md"
+          }
+        ],
+        "declared_tests": [
+          "tests/speckit-pro/unit/test-scaffold-envelope-contract.py",
+          "tests/speckit-pro/unit/test-phase-envelope-contract.py",
+          "tests/speckit-pro/suite-manifest.json"
+        ],
+        "reviewability": {
+          "status": "pass",
+          "mode": "planned_candidates",
+          "scope": "C2b1",
+          "production_files": 0,
+          "total_files": 21,
+          "qualification": "Candidate budgets only; actual per-PR diffs, LOC and checkpoint evidence required before emission."
+        },
+        "hazards": [],
+        "subdivision": {
+          "status": "safe_split",
+          "details": {
+            "increment": "C2b1",
+            "basis": "Owner-approved eighteen-increment sequence"
+          }
+        },
+        "implementation_checkpoint": {
+          "status": "pending"
+        },
+        "emission_mapping": {
+          "status": "pending"
+        },
+        "warnings": []
+      },
+      {
+        "id": "us14",
+        "review_order": 18,
+        "kind": "user_story",
+        "parent_marker_id": null,
+        "source_boundary": {
+          "section": "US14 existing legacy workflow links",
+          "story_id": 14,
+          "start_task_id": "T028",
+          "end_task_id": "T030"
+        },
+        "title_description": "US14 existing legacy workflow links",
+        "task_ids": [
+          "T028",
+          "T029",
+          "T030"
+        ],
+        "folded_polish_task_ids": [
+          "T031"
+        ],
+        "folded_polish_target_reason": "Final cross-feature verification follows the last story increment.",
+        "declared_files": [
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/skills/speckit-scaffold-spec/SKILL.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/claude/speckit-pro/skills/speckit-scaffold-spec/SKILL.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/codex-skills/speckit-scaffold-spec/SKILL.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/codex/speckit-pro/skills/speckit-scaffold-spec/SKILL.md"
+          },
+          {
+            "operation": "NEW",
+            "path": "tests/speckit-pro/unit/test-roadmap-workflow-links.py"
+          },
+          {
+            "operation": "NEW",
+            "path": "tests/speckit-pro/unit/fixtures/roadmap-workflow-links/cases.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "tests/speckit-pro/suite-manifest.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "docs-site/src/content/docs/reference/skills.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "docs-site/src/content/docs/reference/tests.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "docs-site/src/content/docs/reference/source-vs-dist.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "docs/ai/specs/.process/HRNS-015-workflow.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "docs/ai/specs/.process/autopilot-state.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/tasks.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/.process/task-execution.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/.process/slice-inventory.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/SPEC-MOC.md"
+          }
+        ],
+        "declared_tests": [
+          "tests/speckit-pro/unit/test-roadmap-workflow-links.py",
+          "tests/speckit-pro/unit/fixtures/roadmap-workflow-links/cases.json",
+          "tests/speckit-pro/suite-manifest.json"
+        ],
+        "reviewability": {
+          "status": "pass",
+          "mode": "planned_candidates",
+          "scope": "C2b2",
+          "production_files": 0,
+          "total_files": 16,
+          "qualification": "Candidate budgets only; actual per-PR diffs, LOC and checkpoint evidence required before emission."
+        },
+        "hazards": [],
+        "subdivision": {
+          "status": "none",
+          "details": {
+            "increment": "C2b2",
+            "basis": "Owner-approved eighteen-increment sequence"
+          }
+        },
+        "implementation_checkpoint": {
+          "status": "pending"
+        },
+        "emission_mapping": {
+          "status": "pending"
+        },
+        "warnings": []
+      }
+    ],
+    "warnings": [
+      {
+        "code": "implementation_evidence_pending",
+        "severity": "info",
+        "message": "Planning candidate budgets are qualified; actual per-PR diffs, LOC and implementation checkpoints remain mandatory before PR emission.",
+        "source": "operator-approved G6 timing",
+        "details": {}
+      }
+    ]
+  },
+  "current_source_fingerprint": {
+    "feature_spec_sha": "sha256:18c93677aaaee5f73aa8399b2cea052cc58ed2724fe6e74d93be96a47eae7e58",
+    "plan_declared_scope_sha": "sha256:8381e50f0c0daf7491b6fb6f6e431adea30a89277d0b3073fd476194e6a8d759",
+    "tasks_sha": "sha256:46302f5321c2df17acb65799305a2fd8de82b051f1e9b0bd630f45b3767febe3",
+    "reviewability_sha": "sha256:1224c5c39c26e6ef9e3e1fc19093fb1e9fcbd43685ebb47c773d758efabf065d",
+    "hazard_route_sha": "sha256:f4259204cb8f92f1978ddf3b70195aba948d317567082f50f585fb0f4e0ef9c4"
+  },
+  "marker_plan_sources": {
+    "spec": "specs/hrns-015-autopilot-gate-pr-emission-repair/spec.md",
+    "plan_scope": "specs/hrns-015-autopilot-gate-pr-emission-repair/plan.md",
+    "tasks": "specs/hrns-015-autopilot-gate-pr-emission-repair/tasks.md",
+    "reviewability": {
+      "setup": {
+        "status": "warn",
+        "pass": true,
+        "reviewable_loc": 245,
+        "production_files": 3,
+        "total_files": 12,
+        "primary_surface_count": 4,
+        "blockers": []
+      },
+      "plan": {
+        "declared_files": {
+          "modified": 40,
+          "new": 16,
+          "production": 5,
+          "total_entries": 56
+        },
+        "greenfield": false,
+        "projected": 200,
+        "status": "pass",
+        "thresholds": {
+          "base_block": 800,
+          "base_warn": 400,
+          "block": 800,
+          "greenfield_multiplier": 1.5,
+          "warn": 400
+        },
+        "tool": "estimate-reviewable-loc"
+      },
+      "inventory_sha256": "sha256:78afa1055925cba02f7bd12a262719986b459549a9a83226071898353ecd22a1"
+    },
+    "hazard_route": {
+      "hints": [],
+      "releasable": true,
+      "route": "one-navigable-PR",
+      "signals": [
+        "change-shape:modify-heavy"
+      ],
+      "warnings": []
+    },
+    "hash_contract": "Raw file bytes; canonical sorted compact UTF-8 JSON for reviewability and hazard route."
   }
 }

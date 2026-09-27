@@ -1,6 +1,6 @@
 # HRNS-015 approved delivery candidate path inventory
 
-This is the conservative **per-PR candidate ledger** for the owner-approved eighteen-increment delivery direction. It preserves fourteen stories and 26 active functional requirements (29 historical IDs; FR-011–FR-013 are removed by the supplied #694 rescope). Q11’s four-slice estimate and the later five-group C1a/C1b split are historical provenance. Actual changed paths, reviewable LOC, marker fingerprints, and RED/GREEN results remain unmeasured. This is not an emitted or validated marker plan.
+This is the conservative **per-PR candidate ledger** for the owner-approved eighteen-increment delivery direction. It preserves fourteen stories and 26 active functional requirements (29 historical IDs; FR-011–FR-013 are removed by the supplied #694 rescope). Q11’s four-slice estimate and the later five-group C1a/C1b split are historical provenance. Actual changed paths, reviewable LOC and RED/GREEN results remain unmeasured. These candidate tables supply the parent’s planned marker record; they are not emission or implementation evidence.
 
 ## Counting contract and recurring paths
 
@@ -8,7 +8,9 @@ This is the conservative **per-PR candidate ledger** for the owner-approved eigh
 - A path is counted once per PR, including repeated helper, trust, manifest, and host paths in later PRs. Limits are ≤4 production paths and ≤24 total changed paths. Dist and reference rows are candidates requiring exact refresh/diff measurement. Packet files ignored by this repository are local process outputs, not committed PR diff candidates.
 - A1a emits a prefilled note as protected content; A1b adds the fourth editable marker pair and its fingerprint/structure rules in both `pr_emission.py` and `read_only.py`. Existing registered test modules are reused where needed to keep the vertical behavior slices inside the cap: A1a/A1b use the packet mutation/read-only tests, B2b use the read-only helper tests, and C1a1/C1a2 use the phase-coverage tests. New acceptance cases are inline in those modules; tests still begin RED. Adding a fixture/module or changing a generated page beyond this ledger requires re-inventory and reallocation.
 - Each increment has its own passing RED → fix → GREEN checkpoint, host parity check, generated refresh, exact changed-path and reviewable-LOC measurement, and title/release-note gate before PR emission. Production paths count source Python, schema, active config, and Codex agent TOMLs; Claude agent Markdown is host guidance. The refactor-inclusive estimate is still `not_estimated`; no implementation diff has been measured.
-- Supplied #676 establishes sequential repeated-path marker support as baseline. Current scope, fingerprints, checkpoint/hazard validation and exact base/head qualification are still required; no marker plan or G6 pass is claimed. Preserve the supplied `atomicity-route=one-navigable-PR` advisory without treating it as approval. Upstream spec.md:276 permits marker persistence only once actual diffs qualify; that timing remains a provenance limitation for Analyze, not an invented pre-implementation diff.
+- Supplied #676 establishes sequential repeated-path marker support as baseline. Planning G6 requires coverage, task consistency, candidate budgets and a current planned marker record; the parent persists `pr-marker-plan.v1` after Tasks, with every `implementation_checkpoint` exactly `{"status": "pending"}` and no commit or evidence fields. Preserve the supplied `atomicity-route=one-navigable-PR` advisory without treating it as approval. Actual per-PR base/head paths, reviewable LOC and passing checkpoint evidence remain mandatory before PR emission. No planning gate pass or future diff is claimed here.
+
+C1b1 and C1b2 create distinct structural test files for phase/analyze and checklist/implement executor twins respectively. Each NEW path belongs to one increment only; both retain all four host-definition checks, the shared modified guidance, and their 21-total/2-production candidate budgets.
 
 ## Exact candidate counts
 
@@ -396,7 +398,7 @@ Tasks: T019. Requirements: FR-019, FR-026. **21 candidate paths; 2 production.**
 | host/support | modify | `speckit-pro/skills/speckit-autopilot/references/agent-teams-integration.md` | task |
 | generated | regenerate | `dist/claude/speckit-pro/skills/speckit-autopilot/references/agent-teams-integration.md` | source payload |
 | generated | regenerate | `dist/codex/speckit-pro/skills/speckit-autopilot/references/agent-teams-integration.md` | source payload |
-| test/manifest | add | `tests/speckit-pro/layer1-structural/test-team-teardown.py` | task |
+| test/manifest | add | `tests/speckit-pro/layer1-structural/test-phase-analyze-teardown.py` | task |
 | test/manifest | modify | `tests/speckit-pro/suite-manifest.json` | task |
 | generated reference | regenerate | `docs-site/src/content/docs/reference/agents.md` | agent frontmatter might change |
 | generated reference | regenerate | `docs-site/src/content/docs/reference/tests.md` | changed source or new test inventory candidate |
@@ -424,7 +426,7 @@ Tasks: T020–T021. Requirements: FR-019, FR-026. **21 candidate paths; 2 produc
 | host/support | modify | `speckit-pro/skills/speckit-autopilot/references/agent-teams-integration.md` | task |
 | generated | regenerate | `dist/claude/speckit-pro/skills/speckit-autopilot/references/agent-teams-integration.md` | source payload |
 | generated | regenerate | `dist/codex/speckit-pro/skills/speckit-autopilot/references/agent-teams-integration.md` | source payload |
-| test/manifest | add | `tests/speckit-pro/layer1-structural/test-team-teardown.py` | task |
+| test/manifest | add | `tests/speckit-pro/layer1-structural/test-checklist-implement-teardown.py` | task |
 | test/manifest | modify | `tests/speckit-pro/suite-manifest.json` | task |
 | generated reference | regenerate | `docs-site/src/content/docs/reference/agents.md` | agent frontmatter might change |
 | generated reference | regenerate | `docs-site/src/content/docs/reference/tests.md` | changed source or new test inventory candidate |
@@ -553,4 +555,4 @@ Tasks: T028–T030. Requirements: FR-025, FR-026. **16 candidate paths; 0 produc
 
 The tables are complete named candidates under the present task design, not measured final diffs. Regenerate `dist`, runner trust outputs, spec indexes, and reference pages at each owning checkpoint; compare against the exact marker base/head. If an output changes outside this ledger, a fixture needs another child, a refactor adds a path, production exceeds four, total reaches 25, or LOC crosses a block line, stop and reallocate before that PR. T031 records full cross-feature verification. No implementation checkbox is complete.
 
-Sequential repeated-path support is supplied as shipped in #676; do not remove honest repeated declarations. Actual changed paths, LOC, current marker validation, and G6 remain unqualified. No future implementation diff is fabricated to satisfy a planning gate.
+Sequential repeated-path support is supplied as shipped in #676; do not remove honest repeated declarations. Actual changed paths, LOC and implementation checkpoint evidence remain unqualified. The parent validates the current planned marker record and planning G6 after Tasks; no future implementation diff is fabricated to satisfy that gate.

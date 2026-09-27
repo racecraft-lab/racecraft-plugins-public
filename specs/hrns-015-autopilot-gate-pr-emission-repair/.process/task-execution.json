@@ -1,9 +1,9 @@
 {
   "schema_version": "task-execution.v1",
   "fingerprints": {
-    "plan_sha256": "87ffe7682f171aab23411927cfbfc1179f2f67fcf951980208fa2cd87237fe0c",
-    "spec_sha256": "81e55e33ed62e484d84dc47b14b4575100f2a535de216db34990b0f14631074e",
-    "tasks_sha256": "804b18458b97467749a404282a01fdabf74c14653119b20c92136f89d0b31e11"
+    "plan_sha256": "8381e50f0c0daf7491b6fb6f6e431adea30a89277d0b3073fd476194e6a8d759",
+    "spec_sha256": "18c93677aaaee5f73aa8399b2cea052cc58ed2724fe6e74d93be96a47eae7e58",
+    "tasks_sha256": "46302f5321c2df17acb65799305a2fd8de82b051f1e9b0bd630f45b3767febe3"
   },
   "tasks": {
     "T001": {
@@ -551,7 +551,7 @@
         "speckit-pro/skills/speckit-autopilot/references/agent-teams-integration.md",
         "dist/claude/speckit-pro/skills/speckit-autopilot/references/agent-teams-integration.md",
         "dist/codex/speckit-pro/skills/speckit-autopilot/references/agent-teams-integration.md",
-        "tests/speckit-pro/layer1-structural/test-team-teardown.py",
+        "tests/speckit-pro/layer1-structural/test-phase-analyze-teardown.py",
         "tests/speckit-pro/suite-manifest.json",
         "docs-site/src/content/docs/reference/agents.md",
         "docs-site/src/content/docs/reference/tests.md",
@@ -581,7 +581,7 @@
         "speckit-pro/skills/speckit-autopilot/references/agent-teams-integration.md",
         "dist/claude/speckit-pro/skills/speckit-autopilot/references/agent-teams-integration.md",
         "dist/codex/speckit-pro/skills/speckit-autopilot/references/agent-teams-integration.md",
-        "tests/speckit-pro/layer1-structural/test-team-teardown.py",
+        "tests/speckit-pro/layer1-structural/test-checklist-implement-teardown.py",
         "tests/speckit-pro/suite-manifest.json",
         "docs-site/src/content/docs/reference/agents.md",
         "docs-site/src/content/docs/reference/tests.md",
@@ -611,7 +611,7 @@
         "speckit-pro/skills/speckit-autopilot/references/agent-teams-integration.md",
         "dist/claude/speckit-pro/skills/speckit-autopilot/references/agent-teams-integration.md",
         "dist/codex/speckit-pro/skills/speckit-autopilot/references/agent-teams-integration.md",
-        "tests/speckit-pro/layer1-structural/test-team-teardown.py",
+        "tests/speckit-pro/layer1-structural/test-checklist-implement-teardown.py",
         "tests/speckit-pro/suite-manifest.json",
         "docs-site/src/content/docs/reference/agents.md",
         "docs-site/src/content/docs/reference/tests.md",

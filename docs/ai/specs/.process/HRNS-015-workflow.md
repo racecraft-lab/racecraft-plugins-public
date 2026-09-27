@@ -32,12 +32,12 @@ captured during scoping.
 
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
-| Specify | `/speckit-specify` | ✅ Complete | 14 user stories, 29 current functional requirements, 40 acceptance scenarios after Clarify; G1 passed |
+| Specify | `/speckit-specify` | ✅ Complete | Current scoped baseline: 14 stories, 26 active FRs, 37 scenarios; historical removals preserved |
 | Clarify | `/speckit-clarify` | ✅ Complete | Four sessions complete; ten consensus decisions recorded; G2 passed with zero markers |
 | Plan | `/speckit-plan` | ✅ Complete | 2.37.1 re-plan: six artifacts reconciled, 18 increments preserved, G3 pass, advisory projected LOC 200 |
 | Checklist | `/speckit-checklist` | ✅ Complete | API 24, error handling 21, state management 22; zero gaps; G4 passed |
-| Tasks | `/speckit-tasks` | 🔄 In Progress | Reconcile current timing and source-bound execution metadata |
-| Analyze | `/speckit-analyze` | ⏳ Pending | Pending current task plan and post-G5 marker boundary; older H3–H7 analysis is historical |
+| Tasks | `/speckit-tasks` | ✅ Complete | 31 unchecked tasks, 17 groups, current metadata, G5 pass; 18 pending-only v1 markers validated |
+| Analyze | `/speckit-analyze` | 🔄 In Progress | Reviewing current 18-increment snapshot; prior Analysis Results are historical |
 | Confidence Gate | G6.5 | ⏳ Pending | Pending current Analyze; advisory mode retained, older composite not reused |
 | Implement | `/speckit-implement` | ⏳ Pending | Outside --stage plan; qualification and owner ratification remain pending |
 | Post | Post-Implementation | ⏳ Pending | Outside --stage plan; canonical 13-item closeout remains for implementation |
@@ -1103,3 +1103,51 @@ Plan, research, data model, quickstart and both contracts now reflect the approv
 ### Checklist completion — 2.37.1
 
 State-management revalidation preserved all 22 unchecked criteria and found zero gaps. All three domain results were consumed; none required consensus. Parent G4 passed with zero markers. Only dated review evidence was appended to the three checklists. Tasks now reconciles the approved planning/emission boundary and regenerates its source fingerprints.
+
+
+## PR Marker Plan Evidence
+
+- Schema version: pr-marker-plan.v1
+- Plan status: planned
+- Fingerprint status: Current
+- Reviewability: planned candidate budgets pass; actual diffs and LOC are unmeasured.
+- Warnings: implementation evidence pending.
+- Final marker_split: pending
+- Packet validation: pending implementation emission
+- PR mappings: pending implementation emission
+- T001 and T002 are prerequisites assigned to the first story marker; T031 folds into the final marker. No extra delivery increment is introduced.
+
+| Source | SHA-256 |
+| --- | --- |
+| Feature spec | `sha256:18c93677aaaee5f73aa8399b2cea052cc58ed2724fe6e74d93be96a47eae7e58` |
+| Plan declared scope | `sha256:8381e50f0c0daf7491b6fb6f6e431adea30a89277d0b3073fd476194e6a8d759` |
+| Tasks | `sha256:46302f5321c2df17acb65799305a2fd8de82b051f1e9b0bd630f45b3767febe3` |
+| Reviewability | `sha256:1224c5c39c26e6ef9e3e1fc19093fb1e9fcbd43685ebb47c773d758efabf065d` |
+| Hazard route | `sha256:f4259204cb8f92f1978ddf3b70195aba948d317567082f50f585fb0f4e0ef9c4` |
+
+| Review order | Marker | Increment | Tasks | Implementation checkpoint |
+| --- | --- | --- | --- | --- |
+| 1 | `us1-part1` | A1a | T001, T002, T003, T004 | pending |
+| 2 | `us1-part2` | A1b | T005 | pending |
+| 3 | `us2` | A2 | T006, T007 | pending |
+| 4 | `us3` | A3 | T008, T009 | pending |
+| 5 | `us4` | B1a | T010 | pending |
+| 6 | `us5` | B1b | T011 | pending |
+| 7 | `us6` | B2b | T012, T013 | pending |
+| 8 | `us7` | B3a | T014 | pending |
+| 9 | `us8` | B3b | T015, T016 | pending |
+| 10 | `us9` | C1a1 | T017 | pending |
+| 11 | `us10-part1` | C1a2 | T018 | pending |
+| 12 | `us10-part2` | C1b1 | T019 | pending |
+| 13 | `us10-part3` | C1b2 | T020, T021 | pending |
+| 14 | `us11` | C2a1 | T022, T023 | pending |
+| 15 | `us12` | C2a2 | T024 | pending |
+| 16 | `us13-part1` | C2a3 | T025 | pending |
+| 17 | `us13-part2` | C2b1 | T026, T027 | pending |
+| 18 | `us14` | C2b2 | T028, T029, T030, T031 | pending |
+
+### Tasks and marker checkpoint — 2.37.1 re-plan
+
+The interrupted Tasks dispatch had no writes or final result; its host-confirmed interruption was recorded and the authorized resume completed. Native metadata validation and G5 passed for 31 unchecked tasks. The final advisory estimator returned pass/projected 200, with 40 modified and 16 new declarations. All eighteen candidate sets remain within limits.
+
+Marker authoring exposed a duplicate NEW teardown-test allocation. An ordinary FR-019 correction in the approved epoch assigned distinct phase/analyze and checklist/implement test files, preserving 21 paths and two production files in each increment. The regenerated pr-marker-plan.v1 validates with eighteen checkpoints containing only `{"status":"pending"}`. Actual per-PR diffs, LOC and checkpoint evidence remain required before implementation PR emission. Both ordinary corrections in the new epoch are recorded; prior history remains archived in the same ledger.

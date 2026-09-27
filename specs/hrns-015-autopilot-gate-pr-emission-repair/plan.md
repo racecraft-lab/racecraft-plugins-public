@@ -48,7 +48,7 @@ The counts below are unique unions of the existing path inventory's candidate ro
 | A — packet and body | 4 | 39 | Not estimated for current remaining scope | Total over cap by 15 |
 | B — gates/index/commands | 3 | 36 | Not estimated for current remaining scope | Total over cap by 12 |
 | C1a — Post/completion | 1 | 29 | Not estimated for current remaining scope | Total over cap by 5 |
-| C1b — executor teardown | 4 | 29 | Not estimated for current remaining scope | Total over cap by 5 |
+| C1b — executor teardown | 4 | 30 | Not estimated for current remaining scope | Total over cap by 6 |
 | C2 — feedback/scaffold/envelopes/legacy links | 0 | 34 | Not estimated for current remaining scope | Total over cap by 10 |
 
 C2's stored union is 40; removing the six already-shipped link-only README/template source/payload candidates yields 34. The roadmap template remains a B dependency for slice-budget syntax. The inventory itself is stale and must be reconciled to the approved eighteen-part direction during Tasks. The six recurring candidates are the bound workflow, state, tasks, task sidecar, inventory and generated feature SPEC-MOC; their actual changes must be proven in each diff rather than assumed from membership.
@@ -123,7 +123,7 @@ Before each PR emission, existing marker/emission validation requires actual bas
 
 - Four Claude executor Markdown definitions and four Codex TOML twins — paired child-result or supported-stop, graceful shutdown, no-active-child/cleanup evidence and unresolved-result reporting obligations.
 - Shared agent-team guidance — align with actual host operations. Unsupported teardown confirmation remains unresolved; absence of a close operation must not be replaced by a fabricated cleanup receipt.
-- Structural coverage — cover all eight definitions. Runtime lifecycle conclusions require actual host evidence; HRNS-017 retains the separate child-lifetime question.
+- Structural coverage — distinct NEW Layer 1 tests cover the phase/analyze twins in C1b1 and checklist/implement twins in C1b2, retaining all eight definitions across the two increments. Each test file has one owning increment. Runtime lifecycle conclusions require actual host evidence; HRNS-017 retains the separate child-lifetime question.
 
 ### Slice C2 — feedback, scaffold, envelopes and legacy links
 
@@ -174,7 +174,8 @@ These authored candidate operations are the estimator input for the remaining be
 - MODIFIED speckit-pro/speckit_pro_runner/helpers/mutation.py
 - MODIFIED speckit-pro/speckit_pro_runner/helpers/pr_emission.py
 - MODIFIED speckit-pro/speckit_pro_runner/helpers/read_only.py
-- NEW tests/speckit-pro/layer1-structural/test-team-teardown.py
+- NEW tests/speckit-pro/layer1-structural/test-phase-analyze-teardown.py
+- NEW tests/speckit-pro/layer1-structural/test-checklist-implement-teardown.py
 - MODIFIED tests/speckit-pro/suite-manifest.json
 - NEW tests/speckit-pro/unit/fixtures/marker-visibility/cases.json
 - NEW tests/speckit-pro/unit/fixtures/pr-packet-repair/packet-only-untracked.json
