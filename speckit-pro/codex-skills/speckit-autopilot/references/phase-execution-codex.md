@@ -876,6 +876,11 @@ for phase in PHASES starting from first_pending:
        ownership and exclude ignored raw formal-runs output.
        For phase 7 (implement): run: git add -A && git commit
        (implementation changes include src/, tests/, etc.)
+       Runner byproducts are never committed: the runner writes a
+       .gitignore holding * into .process/execution-control/ and
+       .process/verification/, so git add -A cannot stage them. If
+       git ls-files shows such a path already tracked (from an older
+       plugin version), run git rm -r --cached -- <path> before this commit.
    11. Advance to next phase (next iteration of loop) and write the new
        in_progress item to both update_plan and autopilot-state.json.
        Never mark the run complete while a later phase family still has

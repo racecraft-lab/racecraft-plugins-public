@@ -17,7 +17,7 @@ from unittest.mock import patch
 sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "speckit-pro"))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "lib"))
 from test_result import run_counted
-from speckit_pro_runner.execution_control import durable_json, execution_control, is_runner_byproduct
+from speckit_pro_runner.execution_control import durable_json, execution_control, ignore_owned_directory, is_runner_byproduct
 from speckit_pro_runner.helpers.read_only import json_schema_failures, validate_task_execution
 from speckit_pro_runner.task_execution import fingerprints
 from speckit_pro_runner.verification_records import digest, execute_verification, project_command, run_snapshot_command, tree_bytes, validate_execution_record
@@ -877,6 +877,29 @@ class VerificationTests(unittest.TestCase):
     def validate(self, result, observation=None):
         return validate_execution_record(self.root, {**self.inputs, "record_path": result["record_path"], "native_observation": observation})
 
+    def test_directory_named_gitignore_fails_with_a_clear_error(self):
+        owned = self.root / "feature/.process/execution-control"
+        (owned / ".gitignore").mkdir(parents=True)
+        with self.assertRaisesRegex(ValueError, r"\.gitignore is not a regular file"):
+            ignore_owned_directory(owned)
+        self.assertTrue((owned / ".gitignore").is_dir())
+
+    def test_directory_wide_add_never_stages_ledger_or_verification_evidence(self):
+        environment = {**os.environ, "GIT_CONFIG_GLOBAL": os.devnull, "GIT_CONFIG_NOSYSTEM": "1"}
+        subprocess.run(["git", "init", "-q", str(self.root)], check=True, env=environment)
+        result, _ = self.produce()
+        ledger = self.root / "feature/.process/execution-control"
+        self.assertTrue(any(ledger.glob("*.json")) and (self.root / result["record_path"]).is_file())
+        subprocess.run(["git", "-C", str(self.root), "add", "-A"], check=True, env=environment)
+        staged = subprocess.run(["git", "-C", str(self.root), "diff", "--cached", "--name-only", "-z"], check=True,
+                                capture_output=True, text=True, env=environment).stdout.split("\0")
+        staged = [name for name in staged if name]
+        self.assertIn("fixture.txt", staged)
+        self.assertEqual([name for name in staged if is_runner_byproduct(name)], [])
+        self.assertEqual([name for name in staged if "execution-control" in name or "verification" in name], [])
+        for directory in (ledger, (self.root / result["record_path"]).parent):
+            self.assertTrue(is_runner_byproduct((directory / ".gitignore").relative_to(self.root).as_posix()))
+
     def test_true_reuse_requires_independent_native_observation(self):
         result, observed = self.produce()
         self.assertFalse(self.validate(result, observed)["reusable"])
@@ -1227,6 +1250,9 @@ class DockerVerificationTests(VerificationTests):
         (self.root / "feature/workflow.md").write_text('## PROJECT_COMMANDS\n```json\n{"UNIT_TEST":"python3 check.py"}\n```\n')
         self.inputs["docker"] = {"executable": "/usr/local/bin/docker", "endpoint": "unix:///tmp/docker.sock",
                                  "base_image": "python@sha256:" + "a" * 64, "output_contract": "streams_only"}
+
+    def test_docker_directory_wide_add_never_stages_evidence(self):
+        self.test_directory_wide_add_never_stages_ledger_or_verification_evidence()
 
     def test_docker_dry_run_does_not_resolve_host_tools_or_contact_daemon(self):
         with patch("speckit_pro_runner.verification_records.project_program", side_effect=AssertionError("host tool used")):
