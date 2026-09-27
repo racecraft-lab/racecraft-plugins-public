@@ -1,10 +1,10 @@
 # Implementation Plan: Autopilot, Gate, and PR-Emission Repair
 
-**Branch**: `hrns-015-autopilot-gate-pr-emission-repair` | **Date**: 2026-09-26 | **Spec**: [spec.md](spec.md)
+**Branch**: `hrns-015-autopilot-gate-pr-emission-repair` | **Date**: 2026-09-27 | **Spec**: [spec.md](spec.md)
 
 **Input**: The exact Phase 3 Plan Prompt in [HRNS-015-workflow.md](../../docs/ai/specs/.process/HRNS-015-workflow.md), the current spec, the design concept Q&A, the historical owner decision splitting C1 into C1a/C1b, and the subsequent explicit approval of eighteen delivery increments and the FR-024 sentence.
 
-**Design status**: Plan artifacts regenerated together. The eighteen-part delivery direction and exact FR-024 sentence are owner-approved; downstream evidence and gates remain outstanding; this document is not an implementation or G3/G6 qualification.
+**Design status**: Plan artifacts reconciled together to the approved eighteen increments and installed 2.37.1 baseline. Planning G6 checks requirement coverage, task consistency, candidate budgets and a current planned marker record. The parent records the gate results; this document does not claim implementation or a gate pass.
 
 ## Summary
 
@@ -23,7 +23,7 @@ The owner has explicitly approved the **eighteen-part delivery direction**, pres
 | Current eighteen increments | Explicitly owner-approved direction omitting B2a and unnecessary new-template/README link repair; all active requirements and strict budgets preserved. |
 | FR-024 contract sentence | Explicitly owner-approved: Each documented inline request envelope must match a passing fixture byte for byte. |
 
-Installed runtime 2.37.0 is the execution baseline. Historical claims that every own-run hazard persists, the marker validator still rejects sequential reuse, or the plugin must remain pre-fix are obsolete. No independent complete audit of every remaining behavior was obtained; the research broker and local delegation limitations are recorded in [research.md](research.md). A historical observation is not evidence that a released fix still fails.
+Installed runtime 2.37.1 is the owner-confirmed execution baseline, with `main` merged at `48264ea0d`. Current owner instructions establish #740 and #733 as resolved own-run blockers and authorize a fresh correction allowance through `execution-control` action `begin-replan-epoch`, preserving the existing run and ledger history. Historical claims that every own-run hazard persists, the marker validator still rejects sequential reuse, or the plugin must remain pre-fix are obsolete. Current native setup passed; the documentation broker remains rate-limited as recorded in [research.md](research.md). This reconciliation is not independent runtime qualification of all feature behavior.
 
 ## Technical Context
 
@@ -76,13 +76,21 @@ C2's stored union is 40; removing the six already-shipped link-only README/templ
 | C2 | C2a2 / US12 blind-spot wait | 0 | 14 |
 | C2 | C2a3 / US13 status envelopes | 0 | 14 |
 | C2 | C2b1 / US13 scaffold/phase envelopes | 0 | 21 |
-| C2 | C2b2 / US14 existing legacy links | 0 | 22, before removal of shipped link-only candidates |
+| C2 | C2b2 / US14 existing legacy links | 0 | 22, conservative candidate set |
 
-Each count comes from the existing [candidate inventory](.process/slice-inventory.md); none is an actual scope/LOC qualification. A1a is a passing protected-note checkpoint and A1b completes editable validation; the final FR-002 contract is not claimed at the first checkpoint. Repeated story parts use unique marker IDs and current sequential-reuse rules, with actual base/head diffs and required evidence at each marker. An approved allocation that fits candidate path estimates can still fail actual LOC, surface, checkpoint, fingerprint or hazard validation.
+Each count comes from the existing [candidate inventory](.process/slice-inventory.md); none is an actual scope/LOC qualification. A1a plans the protected-note checkpoint and A1b completes editable validation; the final FR-002 contract is not claimed at the first checkpoint. Repeated story parts use unique marker IDs and current sequential-reuse rules. Planning records candidate paths and pending checkpoints; actual base/head diffs and required checkpoint evidence are collected before each PR emission. An approved allocation that fits candidate path estimates can still fail actual LOC, surface, checkpoint, fingerprint or hazard validation.
 
 ### Estimate reconciliation
 
 Q11's historical whole-feature 1,362 LOC and A 282 + B 410 + C1 335 + C2 415 = 1,442 LOC came from different scopes/signals; the 80-LOC difference is not a measured refactor weight. Later C1a 520 / C1b 460 projections and the old 1,932-LOC output are also historical. The old 77 file-touch input double-counted repeated slice paths and cannot be a current unique inventory. Do not present any of these as a current per-PR LOC pass. The parent runs the current Plan advisory estimator after G3; Tasks then reconciles the inventory and records fresh route/layer decisions. The refactor-inclusive estimate stays explicitly unqualified until the input and implementation contract are validated.
+
+## Planning and PR-Emission Evidence
+
+The approved G6 timing is: **planning validates requirement coverage, task consistency, candidate budgets, and a current planned marker record; actual per-PR diffs, LOC, and checkpoint evidence stay mandatory before PR emission.** All eighteen approved increments and their strict budgets remain in scope.
+
+The pre-implementation record is `pr-marker-plan.v1`. The parent persists and validates its current requirement/task mappings, ordered story-part identities and candidate file/budget records after Tasks. Every `implementation_checkpoint` is exactly `{"status": "pending"}`, with no commit or evidence fields. A pending checkpoint is a planned boundary and supplies no implementation completion proof.
+
+Before each PR emission, existing marker/emission validation requires actual base/head changed paths, reviewable LOC, production/total counts and passing checkpoint evidence. Repeated production paths are measured separately in each actual diff; candidate membership cannot supply that proof. Missing required planning evidence blocks planning; missing required implementation/emission evidence blocks emission.
 
 ## Module and Interface Deltas
 
@@ -193,17 +201,17 @@ These authored candidate operations are the estimator input for the remaining be
 | Principle | Before Phase 0 research | After Phase 1 design |
 | --- | --- | --- |
 | I Plugin structure | Use existing runner/host/agent locations. | No new plugin or source layout. |
-| II Runtime safety | Python 3.11+ stdlib; vendored setup is not release proof. | Structured request/JSON/path handling; no active Bash/jq dependency added. |
+| II Runtime safety | Shipped code and default suite remain Python 3.11+ stdlib; vendored setup is not release proof. | Structured request/JSON/path handling; no active Bash/jq dependency added. Pinned dev-only lint environments follow constitution 2.1.0. |
 | III Versioning | Release-please owns versions. | No manual version/manifest change planned. |
 | IV Coverage | Red-first registered fixtures and full checks required. | Guide identifies existing entrypoints and later fixture work; no tests claimed run. |
 | V Commits/PRs | Existing exact-title/release-note gates. | Validated packet is body source; no skip-label workaround. |
 | VI Simplicity | Extend existing mechanisms only. | No new runtime framework or speculative abstraction. |
 | VII Generated artifacts | Refresh from source, include fan-out. | Generated files counted per eventual diff, never hand-edited. |
 | VIII Host parity | Each behavior reaches both hosts in one PR. | Paired skill/agent scopes retained. |
-| IX Fail closed | Missing evidence is failure/unknown. | Scope/LOC/marker qualification and delivery authority remain unqualified. |
+| IX Fail closed | Missing evidence required at the current boundary is failure/unknown. | Delivery authority is approved. Planning checks coverage, task consistency, candidate budgets and the current planned marker record; actual diff/LOC/checkpoint proof is required before emission. |
 | X Privacy | Private execution records outside working tree. | Portable receipts only; no local identities in published artifacts. |
 
-**Reviewability exception**: None approved. The historical five-group candidate unions exceeded the strict path cap and motivated the now-approved eighteen-part split. The delivery decision is resolved; the approval preserves the caps. Actual per-increment scope/LOC/marker qualification remains pending. The separately approved FR-024 sentence does not waive any reviewability requirement.
+**Reviewability exception**: None approved. The historical five-group candidate unions exceeded the strict path cap and motivated the now-approved eighteen-part split. The delivery decision is resolved; the approval preserves the caps. All eighteen candidate sets fit the strict path caps; planning also requires the current planned marker record. Actual per-increment scope/LOC/checkpoint qualification remains pending until implementation and is mandatory before emission. The separately approved FR-024 sentence does not waive any reviewability requirement.
 
 ## Project Structure
 
@@ -238,7 +246,7 @@ tests/speckit-pro/{unit,layer1-structural,layer5-tool-scoping}/
 4. **C1b**: Test the required return contract across all executor twins; a missing child result or supported stop/teardown confirmation prohibits clean completion. Consume actual child summaries and actual native command exits; host thread retention is not automatically evidence of active work or cleanup completion.
 5. **C2**: Exercise >one thread/comment page, missing cursor/page failure, verify/push/head-query/mismatch failures, serial reply/resolve confirmation, late analyst results and all explicit no-findings reasons, complete five-site envelopes and existing verified/broken roadmap targets. Already-shipped link cases remain green compatibility coverage.
 
-With delivery approval recorded, Tasks creates exact boundaries/ownership, recomputes the path inventory and task sidecar, and records fresh atomicity route and conditional layer plan. An advisory one-navigable-PR classification cannot override an approved PR split; do not reuse an old route as new proof. Each eventual increment needs targeted red/green, applicable suites/lint/docs/generated checks and actual base/head scope/LOC before valid marker evidence or emission. Required gate failures remain blocking; G6.5 advisory confidence is not a waiver of G6. No implementation begins in this `--stage plan` pass.
+With delivery approval recorded, Tasks creates exact boundaries/ownership, reconciles the path inventory and task sidecar, and records fresh atomicity route and conditional layer plan. The parent then persists the current `pr-marker-plan.v1` with pending-only checkpoints. An advisory one-navigable-PR classification cannot override an approved PR split; do not reuse an old route as new proof. Planning G6 checks coverage, task consistency, candidate budgets and that current planned record. Each eventual increment needs targeted red/green, applicable suites/lint/docs/generated checks and actual base/head scope/LOC plus checkpoint evidence before emission. Required gate failures remain blocking; G6.5 advisory confidence is not a waiver of G6. No implementation begins in this `--stage plan` pass.
 
 ## PR Review Packet Source
 
@@ -246,4 +254,4 @@ For each approved increment, the validated packet supplies changed behavior/caus
 
 ## Complexity Tracking
 
-No constitution violation or budget exception is approved. The owner delivery decision is resolved. Official documentation, independent source/fixture behavior verification and actual scope/LOC/marker evidence remain explicit limitations; the independent artifact audit corroborated the recorded arithmetic. Preserve run identity and consumed repair reservations; no restart resets their counters.
+No constitution violation or budget exception is approved. The owner delivery decision is resolved. Constitution 2.1.0 was checked before research and after design; no new violation is introduced. Official documentation and independent source/fixture behavior qualification remain explicit limits; the prior independent artifact audit corroborated the unchanged candidate arithmetic. Actual scope/LOC/checkpoint evidence remains pending until implementation and mandatory before emission. Preserve run identity and consumed repair history; only the owner-approved `begin-replan-epoch` creates the fresh correction allowance, with no other ledger reset.

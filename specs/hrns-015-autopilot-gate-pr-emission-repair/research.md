@@ -1,10 +1,18 @@
 # Research: HRNS-015 Planning Decisions
 
-**Updated**: 2026-09-26. This Plan research pass used the bound project-local skill, native setup once, and three read-only research roles; the domain role received a bounded documentation follow-up. Actual results were consumed. Decisions below distinguish supplied owner authority, local artifact evidence, design choices and unqualified runtime behavior.
+**Updated**: 2026-09-27. This reconciliation used the exact Phase 3 Plan Prompt, the bound project-local skill, native setup, constitution 2.1.0 and the six existing Plan artifacts. Current owner amendments preserve eighteen increments and define G6 planning/emission timing. Earlier research decisions and numeric audit evidence below are retained where inputs are unchanged; no new independent source/runtime audit is claimed.
 
-## Evidence and Capability Status
+## Current Re-Plan Evidence
 
-- Native setup returned the existing feature/Plan paths and branch with exit0; it retained the existing Plan instead of overwriting it from the template. The reviewability preset Plan/spec/tasks templates and constitution 2.0.0 were loaded directly.
+- Native `.specify/scripts/bash/setup-plan.sh --json` returned the existing spec, Plan, feature directory and branch with exit 0, retaining the existing Plan. The existing `specify-cli` environment is Python 3.13.13 with PyYAML 6.0.3; no installation occurred. This vendored setup is planning evidence, not release-readiness proof.
+- The owner confirms installed SpecKit Pro 2.37.1 and merged-main checkpoint `48264ea0d`, resolving own-run blockers #740 and #733. The authorized fresh allowance uses `begin-replan-epoch`, preserving the existing run and history; the parent owns that record.
+- The current spec establishes planning G6 coverage, task consistency, candidate budgets and a current planned marker record. All eighteen increments and active requirements remain unchanged.
+- Three current `docs_query` calls for Python subprocess/path handling, JSON Schema optional closed properties and GitHub GraphQL pagination/head/thread fields each returned `fetch_failed` / `rate_limited`, `screening_mode=jev`, zero chunks and zero dropped results. No new official-documentation claim is established. Existing design choices and fixture obligations remain explicit.
+- The parent owns Tasks, marker persistence, Analyze, confidence, gates and workflow/state/ledger records. No implementation fixture run is claimed in this Plan reconciliation.
+
+## Historical Evidence and Capability Status
+
+- Prior native setup retained the existing Plan with exit 0 and loaded the then-current constitution 2.0.0. That evidence is historical; the current pass loaded constitution 2.1.0 and the reviewability preset Plan template.
 - Local mandatory context: current spec, design concept Q&A/Open Questions, six existing Plan artifacts and four checklists. A narrow inventory parser counted candidate unions; these are not actual base/head diffs.
 - Domain research: four broker research_search calls returned search_unavailable, followed by three docs_query calls (Python, JSON Schema, GitHub) returning fetch_failed/rate_limited. Every result reported screening_mode=jev, no chunks, no dropped results and no source URLs. No official-source factual claim was obtained.
 - Initial independent research was unavailable: the cloud read was denied for private-context transmission and the selected local read failed before files were read. After the parent corrected routing and cloud authorization, an independent artifact audit completed on the default cloud route, made no edits and reported cleanup complete. Its consumed result corroborated 26 active/29 historical FRs, 14 stories, 37 scenarios, 11 success criteria, eighteen-increment candidate arithmetic and the five union counts below. It lacked source/test fixtures and did not verify shipped behavior.
@@ -76,7 +84,7 @@ Quality commands are an optional validated map of the four existing quality slot
 
 Team-capable executor clean return requires actual child results or supported stops and genuine teardown/no-active-child/cleanup confirmation. Missing capability/evidence stays unresolved in the result; HRNS-017 owns separate lifetime observations.
 
-**Rationale**: Q1/Q7 and FR-018/019 choose these outcomes. Historical list counts are not assertions about current 2.37.0; the requested 13-row invariant must be tested. Ordinary status-evidence validation and an advisory confidence score are separate contracts.
+**Rationale**: Q1/Q7 and FR-018/019 choose these outcomes. Historical list counts are not assertions about the current 2.37.1 runtime; the requested 13-row invariant must be tested. Ordinary status-evidence validation and an advisory confidence score are separate contracts.
 
 **Alternatives considered**: Broad untracked exemptions, inferred progress by row position, or assumed host cleanup fabricate evidence. No host-policy ignore or force-add workaround is designed.
 
@@ -106,6 +114,14 @@ For existing roadmaps, resolve a legacy target relative to its containing docume
 
 **Alternatives considered**: All 58 bare sites expand into HRNS-019; unconditional legacy rewrite breaks working links; unconditional preservation keeps broken links.
 
+## R11 — Planning Markers and Emission Timing
+
+**Decision**: Apply the approved G6 sentence: planning validates requirement coverage, task consistency, candidate budgets, and a current planned marker record; actual per-PR diffs, LOC, and checkpoint evidence stay mandatory before PR emission. Use `pr-marker-plan.v1` before implementation, with every `implementation_checkpoint` exactly `{"status": "pending"}` and no commit or evidence fields. The parent persists and validates that record after Tasks.
+
+**Rationale**: Requirement and candidate records exist during planning; actual diffs and passing implementation checkpoints are collected when implementation occurs. The approval preserves all emission evidence and eighteen scope boundaries.
+
+**Alternatives considered**: Requiring completed implementation evidence at planning G6 repeats the approved timing defect; dropping emission checks or synthesizing commits/evidence violates fail-closed evidence rules.
+
 ## Research Completion Limits
 
-Plan choices delegated by the clarified requirements are recorded; Open Questions3/8 are explicitly answered. Owner delivery approval and the exact FR-024 sentence are recorded. The independent artifact audit corroborated numeric consistency; official API/schema/runtime facts and independent source/fixture behavior verification remain unavailable. Source rescope assertions come from the exact workflow/spec inputs, with no claim of fresh behavior qualification. Tasks/Analyze must reconcile remaining inventory/state/checklists and run current gates. Nothing here claims implementation, G3/G6, actual LOC or valid marker emission.
+Delegated Plan choices and Open Questions 3 and 8 are resolved. Eighteen-increment approval, the exact FR-024 sentence and approved G6 timing are recorded. The prior independent artifact audit corroborated the unchanged numeric consistency; current broker attempts leave official API/schema/runtime facts unavailable. These design choices are contracts to validate with fixtures, not undocumented runtime assertions. Current owner instructions establish the 2.37.1 own-run baseline. Parent-owned Tasks/Analyze and gates validate the current artifacts and planned marker record. Actual LOC/diff/checkpoint evidence remains an implementation/emission obligation; none is claimed here.

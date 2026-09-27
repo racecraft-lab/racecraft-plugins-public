@@ -5,7 +5,7 @@
   "branch": "hrns-015-autopilot-gate-pr-emission-repair",
   "status": "in_progress",
   "stage": "plan",
-  "active_step": "Phase 5: Tasks",
+  "active_step": "Phase 4: Checklist - api-contracts",
   "stage_resolution": {
     "artifact_review": {
       "feature_dir": "specs/hrns-015-autopilot-gate-pr-emission-repair",
@@ -47,16 +47,20 @@
       "verified": 0
     },
     "basis": "explicit --stage plan",
-    "confidence_gate_status": "⏳ Pending",
+    "confidence_gate_status": "\u23f3 Pending",
     "corroboration": {
       "merged": null,
-      "observed": null,
-      "reason": "The single scoped gh pr list observation failed with a connection error.",
+      "observed": {
+        "number": 685,
+        "state": "OPEN",
+        "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/685"
+      },
+      "reason": null,
       "recorded": {
         "number": 685,
         "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/685"
       },
-      "status": "skipped"
+      "status": "match"
     },
     "from_phase": "plan",
     "planning_complete": false,
@@ -85,14 +89,15 @@
         "spec": "brand-001-racecraft-identity-system",
         "reason": "Navigation-only directory; no spec/plan or merged provenance found"
       }
-    ]
+    ],
+    "resume_verified": true
   },
   "execution_control": {
     "ledger_path": "docs/ai/specs/.process/execution-control/ac068cab59ef67faf15646a7.json",
     "disposition": "continue",
     "reasons": [],
-    "elapsed_seconds": 129743.89590406418,
-    "checkpoint_due": false,
+    "elapsed_seconds": 175811.36413908005,
+    "checkpoint_due": true,
     "run_id": "e7fbc9a6636945ed8a8c2abd42cbb892"
   },
   "plan": [
@@ -146,31 +151,31 @@
     },
     {
       "step": "Phase 4: Checklist - api-contracts",
-      "status": "completed"
+      "status": "in_progress"
     },
     {
       "step": "Phase 4: Checklist - api-contracts Consensus",
-      "status": "completed"
+      "status": "pending"
     },
     {
       "step": "Phase 4: Checklist - error-handling",
-      "status": "completed"
+      "status": "pending"
     },
     {
       "step": "Phase 4: Checklist - error-handling Consensus",
-      "status": "skipped: no unresolved findings"
+      "status": "pending"
     },
     {
       "step": "Phase 4: Checklist - state-management",
-      "status": "completed"
+      "status": "pending"
     },
     {
       "step": "Phase 4: Checklist - state-management Consensus",
-      "status": "skipped: no unresolved findings"
+      "status": "pending"
     },
     {
       "step": "Phase 5: Tasks",
-      "status": "in_progress"
+      "status": "pending"
     },
     {
       "step": "Phase 6: Analyze",
@@ -193,59 +198,59 @@
       "status": "skipped: outside --stage plan"
     },
     {
-      "step": "Phase 7: Implement - User Story 1 — final release note (P1, A1a then A1b) (T003, T004, T005)",
+      "step": "Phase 7: Implement - User Story 1 \u2014 final release note (P1, A1a then A1b) (T003, T004, T005)",
       "status": "skipped: outside --stage plan"
     },
     {
-      "step": "Phase 7: Implement - User Story 2 — packet-only untracked files (P1, Increment A2) (T006, T007)",
+      "step": "Phase 7: Implement - User Story 2 \u2014 packet-only untracked files (P1, Increment A2) (T006, T007)",
       "status": "skipped: outside --stage plan"
     },
     {
-      "step": "Phase 7: Implement - User Story 3 — current confidence verdict (P1, Increment A3) (T008, T009)",
+      "step": "Phase 7: Implement - User Story 3 \u2014 current confidence verdict (P1, Increment A3) (T008, T009)",
       "status": "skipped: outside --stage plan"
     },
     {
-      "step": "Phase 7: Implement - User Story 4 — visible marker counts (P1, Increment B1a) (T010)",
+      "step": "Phase 7: Implement - User Story 4 \u2014 visible marker counts (P1, Increment B1a) (T010)",
       "status": "skipped: outside --stage plan"
     },
     {
-      "step": "Phase 7: Implement - User Story 5 — tracked spec index (P1, Increment B1b) (T011)",
+      "step": "Phase 7: Implement - User Story 5 \u2014 tracked spec index (P1, Increment B1b) (T011)",
       "status": "skipped: outside --stage plan"
     },
     {
-      "step": "Phase 7: Implement - User Story 6 — slice budgets and greenfield allowance (P1, B2b) (T012, T013)",
+      "step": "Phase 7: Implement - User Story 6 \u2014 slice budgets and greenfield allowance (P1, B2b) (T012, T013)",
       "status": "skipped: outside --stage plan"
     },
     {
-      "step": "Phase 7: Implement - User Story 7 — refactor-aware estimate (P2, Increment B3a) (T014)",
+      "step": "Phase 7: Implement - User Story 7 \u2014 refactor-aware estimate (P2, Increment B3a) (T014)",
       "status": "skipped: outside --stage plan"
     },
     {
-      "step": "Phase 7: Implement - User Story 8 — declared quality commands (P1, Increment B3b) (T015, T016)",
+      "step": "Phase 7: Implement - User Story 8 \u2014 declared quality commands (P1, Increment B3b) (T015, T016)",
       "status": "skipped: outside --stage plan"
     },
     {
-      "step": "Phase 7: Implement - User Story 9 — 13 canonical Post rows (P1, Increment C1a1) (T017)",
+      "step": "Phase 7: Implement - User Story 9 \u2014 13 canonical Post rows (P1, Increment C1a1) (T017)",
       "status": "skipped: outside --stage plan"
     },
     {
-      "step": "Phase 7: Implement - User Story 10 — complete Post and teams (P1, C1a2 then C1b1/C1b2) (T018, T019, T020, T021)",
+      "step": "Phase 7: Implement - User Story 10 \u2014 complete Post and teams (P1, C1a2 then C1b1/C1b2) (T018, T019, T020, T021)",
       "status": "skipped: outside --stage plan"
     },
     {
-      "step": "Phase 7: Implement - User Story 11 — complete review feedback after push (P1, Increment C2a1) (T022, T023)",
+      "step": "Phase 7: Implement - User Story 11 \u2014 complete review feedback after push (P1, Increment C2a1) (T022, T023)",
       "status": "skipped: outside --stage plan"
     },
     {
-      "step": "Phase 7: Implement - User Story 12 — wait for blind-spot result (P1, Increment C2a2) (T024)",
+      "step": "Phase 7: Implement - User Story 12 \u2014 wait for blind-spot result (P1, Increment C2a2) (T024)",
       "status": "skipped: outside --stage plan"
     },
     {
-      "step": "Phase 7: Implement - User Story 13 — complete named helper requests (P2, C2a3 then C2b1) (T025, T026, T027)",
+      "step": "Phase 7: Implement - User Story 13 \u2014 complete named helper requests (P2, C2a3 then C2b1) (T025, T026, T027)",
       "status": "skipped: outside --stage plan"
     },
     {
-      "step": "Phase 7: Implement - User Story 14 — real workflow links (P2, Increment C2b2) (T028, T029, T030)",
+      "step": "Phase 7: Implement - User Story 14 \u2014 real workflow links (P2, Increment C2b2) (T028, T029, T030)",
       "status": "skipped: outside --stage plan"
     },
     {
@@ -305,10 +310,10 @@
       "status": "skipped: outside --stage plan"
     }
   ],
-  "updated_at": "2026-09-27T02:24:55.025182+00:00",
+  "updated_at": "2026-09-27T15:13:43.018560+00:00",
   "prerequisites": {
-    "status": "completed_with_documented_exception",
-    "all_pass": false,
+    "status": "completed",
+    "all_pass": true,
     "branch": "hrns-015-autopilot-gate-pr-emission-repair",
     "is_worktree": true,
     "worktree_binding": "resolve-workflow-binding returned resolved/same from HRNS-015 execution root",
@@ -375,9 +380,10 @@
       "reason": "four Clarify sessions complete and decisions documented"
     },
     "G3": {
-      "pass": true,
+      "details": [],
+      "gate": "G3",
       "markers": 0,
-      "formal_selection": "none",
+      "pass": true,
       "reason": "plan.md exists with 0 unresolved markers"
     },
     "G4": {
@@ -474,16 +480,23 @@
     }
   },
   "plan_reviewability": {
-    "status": "not_estimated",
-    "projected": null,
-    "declared_production_files": 0,
-    "reason": "partial Slice A file operations; complete inventory required in Tasks",
-    "size_stress_check": {
-      "estimated_loc": 1932,
-      "suggested_slices": 5,
-      "files_input": "77 provisional slice touches, not distinct files",
-      "required_refactor_included": false
-    }
+    "declared_files": {
+      "modified": 40,
+      "new": 15,
+      "production": 5,
+      "total_entries": 55
+    },
+    "greenfield": false,
+    "projected": 200,
+    "status": "pass",
+    "thresholds": {
+      "base_block": 800,
+      "base_warn": 400,
+      "block": 800,
+      "greenfield_multiplier": 1.5,
+      "warn": 400
+    },
+    "tool": "estimate-reviewable-loc"
   },
   "checklist": {
     "status": "completed",
@@ -575,8 +588,8 @@
     "planning_fingerprints": {
       "plan_md": {
         "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/plan.md",
-        "size_bytes": 25511,
-        "sha256": "sha256:87ffe7682f171aab23411927cfbfc1179f2f67fcf951980208fa2cd87237fe0c"
+        "size_bytes": 27919,
+        "sha256": "sha256:af2312dba78f60288437242c9bb0bd5f54315f9df9afe68038082b30e93eb7ff"
       },
       "tasks_md": {
         "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/tasks.md",
@@ -588,55 +601,55 @@
       "execution_environment": "local",
       "sandbox_mode": "workspace-write",
       "approval_reviewer": "auto_review",
-      "sha256": "sha256:bdfd35cd13a06a85d4191cc2daf958a71ee401e808006c2eefe0103f40a66740"
+      "sha256": "sha256:ee564925cb2d6d82f50ac8fa5c810111fdad1e6a33089402b77c55927c5207b8"
     },
     "actions": [
       {
         "action_id": "planning-worktree-writes",
         "category": "outside_writable_roots",
-        "execution_boundary_sha256": "sha256:bdfd35cd13a06a85d4191cc2daf958a71ee401e808006c2eefe0103f40a66740",
-        "scope_sha256": "sha256:ccb11ab2cfef6c4393f01e1331026709ccc943137b1052491d065d8ddbc2f4c4",
+        "execution_boundary_sha256": "sha256:ee564925cb2d6d82f50ac8fa5c810111fdad1e6a33089402b77c55927c5207b8",
+        "scope_sha256": "sha256:6f075ac2f49d5fe7723b9f6cb87045967903c4ea85a12f11989358e903a31cee",
         "disposition": "ready",
         "authorization": {
           "status": "explicit_user",
-          "scope_sha256": "sha256:ccb11ab2cfef6c4393f01e1331026709ccc943137b1052491d065d8ddbc2f4c4"
+          "scope_sha256": "sha256:6f075ac2f49d5fe7723b9f6cb87045967903c4ea85a12f11989358e903a31cee"
         }
       },
       {
         "action_id": "planning-git-metadata",
         "category": "outside_writable_roots",
-        "execution_boundary_sha256": "sha256:bdfd35cd13a06a85d4191cc2daf958a71ee401e808006c2eefe0103f40a66740",
-        "scope_sha256": "sha256:e641861a7be3c496057c42330c8190ead043a09c634cd98b5b19735d7cd570ee",
+        "execution_boundary_sha256": "sha256:ee564925cb2d6d82f50ac8fa5c810111fdad1e6a33089402b77c55927c5207b8",
+        "scope_sha256": "sha256:e107f1bf19dd57edc2a8acc8f4463523b0d5e1f5e4c71183955dab4ec51098ec",
         "disposition": "ready",
         "authorization": {
           "status": "explicit_user",
-          "scope_sha256": "sha256:e641861a7be3c496057c42330c8190ead043a09c634cd98b5b19735d7cd570ee"
+          "scope_sha256": "sha256:e107f1bf19dd57edc2a8acc8f4463523b0d5e1f5e4c71183955dab4ec51098ec"
         }
       },
       {
         "action_id": "planning-research",
         "category": "external_side_effect",
-        "execution_boundary_sha256": "sha256:bdfd35cd13a06a85d4191cc2daf958a71ee401e808006c2eefe0103f40a66740",
-        "scope_sha256": "sha256:f7a84b66d17fb7dcd78a4fae9b2382a1886610c2444c2768ffcd9e825de5532d",
+        "execution_boundary_sha256": "sha256:ee564925cb2d6d82f50ac8fa5c810111fdad1e6a33089402b77c55927c5207b8",
+        "scope_sha256": "sha256:b82f53a9110d2b8f1800ca15241212127fe048f32365594ce2c9330643db6063",
         "disposition": "ready",
         "authorization": {
           "status": "explicit_user",
-          "scope_sha256": "sha256:f7a84b66d17fb7dcd78a4fae9b2382a1886610c2444c2768ffcd9e825de5532d"
+          "scope_sha256": "sha256:b82f53a9110d2b8f1800ca15241212127fe048f32365594ce2c9330643db6063"
         }
       },
       {
         "action_id": "planning-draft-publication",
         "category": "external_side_effect",
-        "execution_boundary_sha256": "sha256:bdfd35cd13a06a85d4191cc2daf958a71ee401e808006c2eefe0103f40a66740",
-        "scope_sha256": "sha256:a15e2a55a577bf26b0acd167c44be9a8c7feae383907825894aa8b680a6f0b63",
+        "execution_boundary_sha256": "sha256:ee564925cb2d6d82f50ac8fa5c810111fdad1e6a33089402b77c55927c5207b8",
+        "scope_sha256": "sha256:3e72979f8ee3cb3fa8cb8388fe4920043faacb58933a2d0103c6d63740f72283",
         "disposition": "ready",
         "authorization": {
           "status": "explicit_user",
-          "scope_sha256": "sha256:a15e2a55a577bf26b0acd167c44be9a8c7feae383907825894aa8b680a6f0b63"
+          "scope_sha256": "sha256:3e72979f8ee3cb3fa8cb8388fe4920043faacb58933a2d0103c6d63740f72283"
         }
       }
     ],
-    "private_record_sha256": "sha256:c68af0f163f97c85c9148c575217f0bbd1f2919aaa899836a25a4dc3d79a42fd"
+    "private_record_sha256": "sha256:3d956b4fea3566d51059e21a5abb26ceba4c9b07c1c84d242a72ba307cd9774b"
   },
   "plan_resume_result": {
     "version": "2.37.0",

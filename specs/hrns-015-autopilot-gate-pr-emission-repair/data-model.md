@@ -1,12 +1,20 @@
 # Data Model: HRNS-015
 
-**Updated**: 2026-09-26. The eighteen-part delivery direction is owner-approved, grouped under A → B → C1a → C1b → C2; actual per-increment qualification remains pending. The feature stores existing Markdown, JSON, Git-index membership and GitHub PR state; these entities define desired validation contracts, not implemented behavior or a new database.
+**Updated**: 2026-09-27. The eighteen-part delivery direction is owner-approved, grouped under A → B → C1a → C1b → C2; actual per-increment qualification remains pending. The feature stores existing Markdown, JSON, Git-index membership and GitHub PR state; these entities define desired validation contracts, not implemented behavior or a new database.
 
 ## Planning authority and baseline
 
 A delivery decision has an existing source instruction/reference, approved order, proposed alternative and ratification status in the planning record. Original Q11's four slices and the explicit C1 split into five are historical provenance; the subsequent owner approval establishes eighteen delivery increments. Candidate path counts and actual per-PR diff/LOC evidence are different records; the latter cannot be inferred from the former. No new runtime store is required for this distinction.
 
 Named-entry/pragma/missing-budget selection (FR-011–FR-013), new-template workflow links and sequential marker reuse are shipped rescope inputs, preserved as compatibility baseline. Remaining RoadmapEntry changes are slice aggregation and LOC-only greenfield limits; remaining WorkflowLink changes are verified existing legacy preservation/repair. Independent artifact arithmetic was corroborated; source/fixture behavior qualification remains unavailable as recorded in research.md.
+
+## Planned PR Markers and Evidence Timing
+
+**PlannedMarkerRecord**: The current pre-implementation record uses `pr-marker-plan.v1` and preserves all eighteen approved increments, order and requirement/task/candidate mappings under the existing marker contract. Every `implementation_checkpoint` contains only `{"status": "pending"}`, with no commit or evidence fields. The parent persists it after Tasks. This design adds no runtime schema or store.
+
+**EmissionEvidence**: Actual per-PR base/head diff, changed production/total paths, reviewable LOC and passing checkpoint verification collected during implementation. Repeated paths are measured in each actual diff. Existing marker/emission validation requires this evidence before PR emission; candidate counts never substitute for it.
+
+**Boundary invariant**: Planning G6 validates requirement coverage, task consistency, candidate budgets and the current planned marker record. Pending checkpoints are planning state and supply no implementation proof. Missing required evidence fails at the boundary that requires it.
 
 ## Roadmap entry and slice budget
 

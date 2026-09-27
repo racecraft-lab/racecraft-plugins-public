@@ -34,9 +34,9 @@ captured during scoping.
 |-------|---------|--------|-------|
 | Specify | `/speckit-specify` | ✅ Complete | 14 user stories, 29 current functional requirements, 40 acceptance scenarios after Clarify; G1 passed |
 | Clarify | `/speckit-clarify` | ✅ Complete | Four sessions complete; ten consensus decisions recorded; G2 passed with zero markers |
-| Plan | `/speckit-plan` | ✅ Complete | G3 passed; six Plan artifacts reconciled to the approved eighteen-part direction; advisory estimator pass, projected 200 |
-| Checklist | `/speckit-checklist` | ✅ Complete | Three domains, 67 unchecked review items, zero remaining gaps; G4 passed |
-| Tasks | `/speckit-tasks` | 🔄 In Progress | 31 tasks in 17 groups; native sidecar validation and G5 passed; marker timing decision pending |
+| Plan | `/speckit-plan` | ✅ Complete | 2.37.1 re-plan: six artifacts reconciled, 18 increments preserved, G3 pass, advisory projected LOC 200 |
+| Checklist | `/speckit-checklist` | ⏳ Pending | Revalidate after current re-plan |
+| Tasks | `/speckit-tasks` | ⏳ Pending | Reconcile after current re-plan |
 | Analyze | `/speckit-analyze` | ⏳ Pending | Pending current task plan and post-G5 marker boundary; older H3–H7 analysis is historical |
 | Confidence Gate | G6.5 | ⏳ Pending | Pending current Analyze; advisory mode retained, older composite not reused |
 | Implement | `/speckit-implement` | ⏳ Pending | Outside --stage plan; qualification and owner ratification remain pending |
@@ -604,7 +604,7 @@ Focus on Autopilot, Gate, and PR-Emission Repair requirements:
 
 Current approved-plan rerun: all three named executors completed requirements review; 67 reviewer-owned checkboxes remain unchecked. The prior pass recorded eleven repaired gaps; the current API pass verified the approved FR-024 correction. Error-handling and state-management found no new gaps.
 
-| Checklist | Items | Gaps | Spec References |
+| Checklist | `/speckit-checklist` | ⏳ Pending | Revalidate after current re-plan |
 |-----------|-------|------|-----------------|
 | api-contracts | 24 | FR-024 correction verified; 0 remaining | Current contract and specification references in each item |
 | error-handling | 21 | 0 new; 0 remaining | Current failure-boundary requirements in each item |
@@ -1045,8 +1045,8 @@ The named checklist executor completed the bound command protocol using supporte
 
 | Phase | Item | Categories | Round | Outcome | Analysts Used |
 | --- | --- | --- | --- | --- | --- |
-| Checklist | CHK022 byte identity | spec, codebase | 1 | Escape to Round 2; no edit | spec-context-analyst, codebase-analyst |
-| Checklist | CHK022 byte identity | spec, codebase, domain | 2 | 2/3 high-confidence clarification; application awaits corrective exception | spec-context-analyst, codebase-analyst, domain-researcher |
+| Checklist | `/speckit-checklist` | ⏳ Pending | Revalidate after current re-plan |
+| Checklist | `/speckit-checklist` | ⏳ Pending | Revalidate after current re-plan |
 
 Execution-control refused FR-024 correction with corrective_run_budget_exhausted; both prior cycles remain consumed. Current state is an incomplete checkpoint with explicit correction approval requested. The eighteen-part delivery direction also awaits the owner. Checklist, Tasks, Analyze, confidence and draft-artifact refresh remain incomplete. All dispatched agents and native commands have terminal results consumed; no unknown effects or implementation dispatch.
 
@@ -1081,3 +1081,13 @@ A separate cloud contract audit was rejected by automatic approval review before
 ### Approved-plan checkpoint after Tasks
 
 Checklist checkpoint `8ce521dc` and Tasks checkpoint `b671bf03` are pushed. G4, G5, task sidecar validation and the 52-row coverage guard passed. The current task plan has not run Analyze or confidence; older verdicts are historical and are not reused. No executor or native command remains in flight. The operator timing decision above is pending before marker persistence, Analyze, confidence and final artifact regeneration/draft refresh. No implementation work started.
+
+### Approved re-plan — 2.37.1
+
+The operator ordered a re-plan from Plan and approved a fresh correction allowance. The guarded begin-replan-epoch action archived the spent allowance and retained the existing run identity. The approved G6 timing correction is reserved as an ordinary FR-026 correction. Planning validates requirement coverage, task consistency, candidate budgets, and a current planned marker record. Actual per-PR diffs, LOC, and checkpoint evidence remain mandatory before PR emission. Pre-implementation markers use pr-marker-plan.v1 with pending-only checkpoints. Prior completion and qualification statements above are historical.
+
+Current binding is resolved/same at the selected feature worktree; all check-prerequisites checks pass, including setup_contract and template_resolution. All 13 installed agents match 2.37.1. Formal selection remains none. Archive command contract inspection retained the two other specs without merged provenance and excluded HRNS-015; no cleanup is eligible. Research screening is jev; search_environment_only_credential remains a warning. Archive delegation was rejected before dispatch for private-source export risk; the contract inspection was completed locally.
+
+### Plan revalidation — 2.37.1
+
+Plan, research, data model, quickstart and both contracts now reflect the approved planning/emission boundary and pending-only v1 marker design. All 18 increments, 14 stories and 26 active requirements remain. G3 passed with zero unresolved markers; advisory estimate passed at 200 projected LOC across 55 declared entries. Three broker documentation queries returned no usable chunks; prior evidence is retained with its limits. Checklists need no preemptive prose edits; each domain is revalidated next. Optional Git hooks are covered by the phase checkpoint; the traceability hook is covered by the subsequent G5/Analyze checks.

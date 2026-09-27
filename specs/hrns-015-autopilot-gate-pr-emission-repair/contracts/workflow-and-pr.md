@@ -1,6 +1,14 @@
 # Workflow, Packet, and Review Contract Deltas
 
-**Updated**: 2026-09-26. The eighteen-part delivery direction is owner-approved, grouped under A → B → C1a → C1b → C2; actual per-increment qualification remains pending. These are desired contracts, not claims that the installed runtime currently lacks or satisfies them. External GitHub/schema documentation was unavailable; exact runtime shapes require fixture validation.
+**Updated**: 2026-09-27. The eighteen-part delivery direction is owner-approved, grouped under A → B → C1a → C1b → C2; actual per-increment qualification remains pending. These are desired contracts, not claims that the installed runtime currently lacks or satisfies them. External GitHub/schema documentation was unavailable; exact runtime shapes require fixture validation.
+
+## Plan-Stage G6 and Marker Record
+
+Planning validates requirement coverage, task consistency, candidate budgets, and a current planned marker record. All eighteen approved increments, their order and active requirement mappings remain in scope. Candidate sets must fit at most four production and twenty-four total paths per increment.
+
+The pre-implementation record is `pr-marker-plan.v1`. Every `implementation_checkpoint` is exactly `{"status": "pending"}`, with no commit or evidence fields. The parent persists and validates the current record after Tasks. This is planning state, not completed checkpoint proof.
+
+Actual per-PR base/head diffs, reviewable LOC, changed-path budgets and passing checkpoint evidence remain mandatory before PR emission under existing marker/emission validation. Repeated candidate membership alone cannot establish a repeated changed path. Missing actual evidence blocks emission without requiring that evidence before implementation.
 
 ## Final PR packet
 

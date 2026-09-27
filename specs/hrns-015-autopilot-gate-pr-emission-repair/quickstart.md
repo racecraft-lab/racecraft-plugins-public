@@ -1,6 +1,6 @@
 # Quickstart Validation Guide: HRNS-015
 
-**Updated**: 2026-09-26. The eighteen-part delivery direction is owner-approved in the order recorded in plan.md, grouped under A → B → C1a → C1b → C2. Historical four/five-PR directions remain provenance. This guide defines validation after fixtures/repairs exist, not a report that this Plan pass ran implementation tests.
+**Updated**: 2026-09-27. The eighteen-part delivery direction is owner-approved in the order recorded in plan.md, grouped under A → B → C1a → C1b → C2. Historical four/five-PR directions remain provenance. This guide defines validation after fixtures/repairs exist, not a report that this Plan pass ran implementation tests.
 
 ## Prerequisites and Setup
 
@@ -9,6 +9,13 @@
 3. In a fresh worktree, prepare locked docs dependencies before docs commands: `pnpm --dir docs-site install --frozen-lockfile`.
 4. For Python checks, use the repository's configured lint environment and `scripts/run-python-lint.py`; do not run detected raw `mypy .` across the tree or replace it with an invented gate.
 5. Reconcile tasks/inventory to the approved eighteen-part direction and current marker contracts, then freeze each remaining acceptance case. Capture actual failing exit/result before its repair and passing exit/result after. Already-shipped #694/#698/#676 behaviors are baseline compatibility cases and should remain green.
+
+## Plan-Stage Validation
+
+1. Reconcile Plan and Tasks against all fourteen stories, twenty-six active requirements and eighteen approved increments; preserve the order and both-host ownership. Include generated and recurring process/evidence candidates.
+2. Confirm every candidate set has at most four production and twenty-four total files. Candidate counts are not actual diff/LOC measurements.
+3. Have the parent persist and validate the current `pr-marker-plan.v1` after Tasks. Every `implementation_checkpoint` must contain only `{"status": "pending"}`, with no commit or evidence fields. Confirm current spec/plan/tasks inputs, requirement coverage and task consistency.
+4. Planning G6 evaluates these planning records. Actual per-PR diff/LOC/checkpoint proof is collected after implementation and remains mandatory before emission. Analyze, confidence and artifact refresh remain parent-owned completion steps.
 
 ## Existing Runnable Test Entry Points
 
@@ -89,4 +96,4 @@ pnpm --dir docs-site reference:check
 pnpm --dir docs-site validate:quality
 ~~~
 
-Docs full validation and workflow lint apply when their actual inputs change, using root AGENTS.md. Before PR creation, run the exact final title and release-note policy gates from that contract; use the official gh-stack skill and packet-owned body. Record actual base/head changed paths, reviewable LOC, production paths, every generated/trust/reference/process path and current marker proof. Exceeding4 production or reaching25 total paths blocks; so do stale/malformed/unusable evidence and non-size safety failures. Candidate tables and draft-skipped CI are not substitutes. Preserve private ledger identity and consumed budgets through any permitted recovery.
+Docs full validation and workflow lint apply when their actual inputs change, using root AGENTS.md. Before PR creation, run the exact final title and release-note policy gates from that contract; use the official gh-stack skill and packet-owned body. Before each PR emission, record actual base/head changed paths, reviewable LOC, production paths, every generated/trust/reference/process path and passing checkpoint proof required by existing marker validation. The earlier pending-only planning record supplies no completion evidence. Exceeding4 production or reaching25 total paths blocks; so do stale/malformed/unusable evidence and non-size safety failures. Candidate tables and draft-skipped CI are not substitutes. Preserve private ledger identity and consumed history through recovery; only the current owner-approved `begin-replan-epoch` action establishes the fresh correction allowance, with no other reset.
