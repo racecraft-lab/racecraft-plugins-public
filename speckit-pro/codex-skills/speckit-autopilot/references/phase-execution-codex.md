@@ -2579,6 +2579,47 @@ effects, an execution-control `checkpoint_required` disposition (including an
 exhausted repair budget), a ledger or clock error, invalid or stale state, and
 a failed gate whose repair is out of scope.
 
+### Plugin Update Mid-Run: Record, Re-resolve, Continue
+
+The restart and reinstall rules in the autopilot SKILL.md (the missing-agent
+guard, the agent mapping, and Step 0.10) apply only at setup or run start,
+before any phase work. Once phase work has begun, a plugin update or agent
+refresh is never a stop. The run continues on the executor agents it already
+has.
+
+1. **Cache drift: re-resolve and retry.** When the `<plugin-root>` the run
+   started from changed or vanished (a plugin update replaced the cached
+   version directory), runner and bookkeeping calls can fail. Then re-resolve
+   `<plugin-root>` against the live install the same way the run resolved it at
+   start, and take the runner's reported `plugin_root` as the new root. Re-read
+   the Installed Runtime Contract in the autopilot SKILL.md once against that
+   root, build every later `Protocol:`, `Reference dir:`, and `Gallery dir:`
+   line from it, and retry each failed bookkeeping call once.
+2. **Agent refresh: record, do not restart.** Do not rerun Step 0.10 as a stop
+   when an agent file is refreshed or found stale against the new bundle. Codex
+   re-reads a registered agent file at the next `spawn_agent`, so an in-place
+   refresh is already live. Codex fixes its list of custom agents when the
+   session starts, so only an agent the run needs that was added, renamed, or
+   removed after that point needs a restart. Defer just the dispatches that
+   need such an agent under
+   [Blocked Actions Mid-Run: Fall Back or Defer, Never Stop](#blocked-actions-mid-run-fall-back-or-defer-never-stop),
+   and keep executing everything else.
+3. **Record the drift.** In both cases, record the drift in the current phase's
+   result in the workflow file and in the final report: the plugin version the
+   run started on, the version now installed, the agent files refreshed, and
+   the calls retried. Then continue.
+4. **Any restart goes to the end.** A restart that is still needed is not a
+   deferred task. Add it as one line to the single end-of-run consolidated
+   request, or, when no such request is made, print it as plain text in the
+   final message. Keep it out of `known_gaps` and the PR body, because it is an
+   operator-environment note, not a gap in the feature. Never ask for it
+   mid-run, and never set a workflow row, plan item, or the thread goal to
+   blocked for it.
+
+Drift itself is never a stop, but the correctness stops above still apply. If a
+retried bookkeeping call fails again, or the ledger or state is invalid after
+the retry, stop on that error, not on the drift.
+
 ## PR Packet and Body Boundary
 
 Before creating or updating a PR after G7, the parent session applies this

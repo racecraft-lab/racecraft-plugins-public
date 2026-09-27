@@ -2735,6 +2735,41 @@ unknown side effects, an execution-control `checkpoint_required` disposition
 (including an exhausted repair budget), a ledger or clock error, invalid or
 stale state, and a failed gate whose repair is out of scope.
 
+#### Plugin Update Mid-Run: Record, Re-resolve, Continue
+
+The Step 0.0b agent-package check and its "update or reinstall, then run
+`/reload-plugins`" rule apply only at setup or run start, before any phase
+work. Once phase work has begun, a plugin update is never a stop. The run
+continues on the agents it already has.
+
+1. **Cache drift: re-resolve and retry.** When the plugin root the run started
+   from changed or vanished (a plugin update replaced the cached version
+   directory), runner and bookkeeping calls can fail. Then re-resolve the
+   plugin root against the live install and rerun `validate-agent-install`,
+   taking its returned `plugin_root` as the new root. Re-read the Installed
+   Runtime Contract in the autopilot SKILL.md once against that root, build
+   every later `Protocol:`, `Reference dir:`, and `Gallery dir:` line from it,
+   and retry each failed bookkeeping call once.
+2. **Agent unavailable: defer that dispatch.** If a dispatch fails because its
+   agent file is missing after the update, defer only that dispatch under
+   [Blocked Actions Mid-Run: Fall Back or Defer, Never Stop](#blocked-actions-mid-run-fall-back-or-defer-never-stop)
+   and keep executing everything else.
+3. **Record the drift.** In both cases, record the drift in the current phase's
+   result in the workflow file and in the final report: the plugin version the
+   run started on, the version now installed, and the calls retried. Then
+   continue.
+4. **Any reload goes to the end.** A `/reload-plugins` or restart that is still
+   needed is not a deferred task. Add it as one line to the single end-of-run
+   consolidated request, or, when no such request is made, print it as plain
+   text in the final message. Keep it out of `known_gaps` and the PR body,
+   because it is an operator-environment note, not a gap in the feature. Never
+   ask for it mid-run, and never set a workflow row or progress item to blocked
+   for it.
+
+Drift itself is never a stop, but the correctness stops above still apply. If a
+retried bookkeeping call fails again, or the ledger or state is invalid after
+the retry, stop on that error, not on the drift.
+
 #### Append Contract: One Entry Per Dispatched Attempt
 
 Every attempt Step 3 dispatched gets one entry in the record the Phase 7 setup
