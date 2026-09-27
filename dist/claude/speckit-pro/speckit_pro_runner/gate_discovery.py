@@ -4,8 +4,7 @@ The table maps a repository signal to the tool and command for one
 PROJECT_COMMANDS slot (COMPLEXITY, MUTATION, DEPENDENCY_RULES, and the
 opt-in DEPENDENCY_AUDIT). The JSON
 schema in ``contracts/gate-discovery-table.schema.json`` documents the shape;
-this module enforces the same rules with the standard library only, because
-nothing in the plugin validates JSON schema locally.
+this module enforces the same rules with the standard library only.
 
 Usage::
 
