@@ -2781,6 +2781,13 @@ one research task.
 **Commit:**
 `git add -A && git commit -m "feat(SPEC-XXX): implement phase"`
 
+Runner byproducts are never committed. The runner writes a `.gitignore`
+holding `*` into each directory it owns (`.process/execution-control/` and
+`.process/verification/`), so `git add -A` cannot stage the ledger or the
+verification evidence. If `git ls-files` shows such a path already tracked
+(from an older plugin version), run `git rm -r --cached -- <path>` before this
+commit.
+
 **After G7 passes:** Validate/reuse Integration/E2E proof,
 then execute PR Creation Protocol (see below).
 
