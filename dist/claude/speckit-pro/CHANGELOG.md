@@ -1,5 +1,22 @@
 # Changelog
 
+## [2.38.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.37.1...speckit-pro-v2.38.0) (2026-09-27)
+
+
+### Features
+
+* **speckit-pro:** emit a paste-ready egress authorization from the Codex preflight ([#760](https://github.com/racecraft-lab/racecraft-plugins-public/issues/760)) ([35d6030](https://github.com/racecraft-lab/racecraft-plugins-public/commit/35d60300382d75b96c21967cf538a3b067cd5d9f))
+
+
+### Bug Fixes
+
+* **speckit-pro:** archive merged specs one feature at a time ([#758](https://github.com/racecraft-lab/racecraft-plugins-public/issues/758)) ([80c8f68](https://github.com/racecraft-lab/racecraft-plugins-public/commit/80c8f68dca8b53ca1eaefc12002b944c55a04ff3))
+* **speckit-pro:** inventory data egress in the Codex autonomy preflight ([#750](https://github.com/racecraft-lab/racecraft-plugins-public/issues/750)) ([4fa3a98](https://github.com/racecraft-lab/racecraft-plugins-public/commit/4fa3a98c4adf165de13923a75d83937b641312ca))
+* **speckit-pro:** keep autopilot running past one blocked action ([#757](https://github.com/racecraft-lab/racecraft-plugins-public/issues/757)) ([67706d9](https://github.com/racecraft-lab/racecraft-plugins-public/commit/67706d96542762cd681b501b55a35f8f7a047df3)), closes [#752](https://github.com/racecraft-lab/racecraft-plugins-public/issues/752)
+* **speckit-pro:** keep runner byproducts out of commits ([#759](https://github.com/racecraft-lab/racecraft-plugins-public/issues/759)) ([a3527f9](https://github.com/racecraft-lab/racecraft-plugins-public/commit/a3527f9ad63d23764b0e1b45f0cff15f0848e32c))
+* **speckit-pro:** re-attest the autonomy boundary at resume start ([#749](https://github.com/racecraft-lab/racecraft-plugins-public/issues/749)) ([6aa1be6](https://github.com/racecraft-lab/racecraft-plugins-public/commit/6aa1be6780652951ba5e29f98f7cafc3cc746e3b))
+* **speckit-pro:** record the implement checklist gate as deferred to review ([#761](https://github.com/racecraft-lab/racecraft-plugins-public/issues/761)) ([0cea36a](https://github.com/racecraft-lab/racecraft-plugins-public/commit/0cea36ad5aadae5f395439c33a17a5943b5bd9d7))
+
 ## [2.37.1](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.37.0...speckit-pro-v2.37.1) (2026-09-27)
 
 
