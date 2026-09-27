@@ -1052,14 +1052,16 @@ class AnchoredAgentDir:
             # POSIX has no delete-by-descriptor. Hold the verified inode open, unlink its
             # name inside the private directory, then require the held inode to have lost
             # its last link. A swapped name leaves the held inode linked: fail closed.
-            held_fd: int | None = None
+            try:
+                held_fd = os.open(
+                    private_entry_name,
+                    os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_CLOEXEC", 0),
+                    dir_fd=private_dir_fd,
+                )
+            except OSError:
+                return remember(classified_quarantine_result("private_quarantine_identity_mismatch"))
             try:
                 try:
-                    held_fd = os.open(
-                        private_entry_name,
-                        os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_CLOEXEC", 0),
-                        dir_fd=private_dir_fd,
-                    )
                     held_metadata = os.fstat(held_fd)
                     private_state = codex_agent_previous_state_at(private_dir_fd, private_entry_name)
                 except OSError:
@@ -1087,8 +1089,7 @@ class AnchoredAgentDir:
                     return remember(result)
                 return remember(CodexAgentCleanupResult())
             finally:
-                if held_fd is not None:
-                    codex_agent_close_descriptor_nonmasking(held_fd)
+                codex_agent_close_descriptor_nonmasking(held_fd)
         finally:
             if private_dir_fd is not None:
                 try:
