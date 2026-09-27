@@ -162,8 +162,8 @@ to archive previously merged specs.
    eligible previous specs (`archive_order`), excluded current spec, specs
    left active with their `not_merged` or `unknown` reason, archive extension
    installed state, cleanup mode (`apply` on a feature branch, `dry_run`
-   otherwise), and `safeToApplyCleanup=false` (a single-feature archive run
-   never removes spec folders).
+   otherwise), and `safeToApplyCleanup=false` (the sweep never passes
+   `--apply-cleanup`, so it never removes spec folders).
 8. When the helper's `archive_order` is empty, record `status=no_candidates`,
    empty eligible previous specs, the excluded current spec, and
    `safeToApplyCleanup=false`. This is a successful no-op and may
