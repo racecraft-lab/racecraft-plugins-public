@@ -39,7 +39,7 @@ captured during scoping.
 | Tasks | `/speckit-tasks` | ✅ Complete | 27 tasks; 19/19 FRs; valid required execution metadata; G5 pass |
 | Analyze | `/speckit-analyze` | ✅ Complete | One LOW resolved; 0 remaining required findings; G6 pass; dedicated named final synthesis complete |
 | Confidence Gate | G6.5 | ✅ Complete | Native advisory pass 0.97; exact live autonomy validation and final privacy/CI checks pass |
-| Implement | `/speckit-implement` | 🔄 In Progress | Preflight and required baseline; no implementation task dispatched yet |
+| Implement | `/speckit-implement` | 🔄 In Progress | T001–T003 complete with native proofs and independent reviews; T004 checker prepared, fixture absent; interrupted worker recovery in progress |
 | Post | Post-Implementation | ⏳ Pending | Canonical 11-item closeout |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⏭️ Skipped | ⚠️ Blocked
@@ -964,7 +964,7 @@ The active conversation supplies explicit bounded authorization for the plan-sta
 
 ```json
 {
-  "schema_version": "autonomy-boundary.v1",
+  "schema_version": "autonomy-boundary-receipt.v1",
   "status": "ready",
   "planning_fingerprints": {
     "plan_md": {
@@ -974,99 +974,162 @@ The active conversation supplies explicit bounded authorization for the plan-sta
     },
     "tasks_md": {
       "path": "specs/eda-001-attribution-foundation/tasks.md",
-      "sha256": "sha256:e2a555ce5b51b7a50e41bab7ca9b6c1930ffa94b4d95b5189e96183d60d7b390",
-      "size_bytes": 27674
+      "sha256": "sha256:9db3248beadf2295b57084e4e997743c08fb94842a88f5f48deec3da083720cd",
+      "size_bytes": 27695
     }
   },
-  "execution_boundary_sha256": "sha256:4804d6285f6caeaac5e2e81c2576f0f6aefdd2a83cfb6be41bfc93fd11d0fe0d",
-  "action_scopes": [
+  "execution_boundary": {
+    "execution_environment": "local",
+    "sandbox_mode": "workspace-write",
+    "approval_reviewer": "auto_review",
+    "sha256": "sha256:495687efeaf0ea3797bd4c0eb4e7792336991f8797944280baf7951f0877395a"
+  },
+  "actions": [
     {
       "action_id": "eda-planning-writes",
       "category": "outside_writable_roots",
+      "execution_boundary_sha256": "sha256:495687efeaf0ea3797bd4c0eb4e7792336991f8797944280baf7951f0877395a",
+      "scope_sha256": "sha256:a9ff1732183843be48742ad0c568a4c1a65f560e65cb64dc7521dd7bf5ca9bdb",
       "disposition": "ready",
-      "scope_sha256": "sha256:3ae538498077f379fe93d8d9a26bd4be56796b52ba61d3c01c1dee554bfec35d",
-      "authorization_status": "explicit_user"
+      "authorization": {
+        "status": "explicit_user",
+        "scope_sha256": "sha256:a9ff1732183843be48742ad0c568a4c1a65f560e65cb64dc7521dd7bf5ca9bdb"
+      }
     },
     {
       "action_id": "eda-git-checkpoints",
       "category": "outside_writable_roots",
+      "execution_boundary_sha256": "sha256:495687efeaf0ea3797bd4c0eb4e7792336991f8797944280baf7951f0877395a",
+      "scope_sha256": "sha256:0a29645f725d1c59ee028ebba92bfebda81b7a56fbcf2ead6906dcc37ebf4076",
       "disposition": "ready",
-      "scope_sha256": "sha256:c408e3b159eb3de7c0db7ebd038c497c28d6e7c4334a3ff26e8fe3e8e8e2b122",
-      "authorization_status": "explicit_user"
+      "authorization": {
+        "status": "explicit_user",
+        "scope_sha256": "sha256:0a29645f725d1c59ee028ebba92bfebda81b7a56fbcf2ead6906dcc37ebf4076"
+      }
     },
     {
       "action_id": "eda-remote-checkpoints",
       "category": "external_side_effect",
+      "execution_boundary_sha256": "sha256:495687efeaf0ea3797bd4c0eb4e7792336991f8797944280baf7951f0877395a",
+      "scope_sha256": "sha256:50402cd7d87b655fd79f8f8014e36baa1896f386fd75197646a4390eaaefc61e",
       "disposition": "ready",
-      "scope_sha256": "sha256:87fcccd213846acbb6c893025f40b508f726fc7e092d8edfc42c1d8e0991db8e",
-      "authorization_status": "explicit_user"
+      "authorization": {
+        "status": "explicit_user",
+        "scope_sha256": "sha256:50402cd7d87b655fd79f8f8014e36baa1896f386fd75197646a4390eaaefc61e"
+      }
     },
     {
       "action_id": "eda-draft-publication",
       "category": "external_side_effect",
+      "execution_boundary_sha256": "sha256:495687efeaf0ea3797bd4c0eb4e7792336991f8797944280baf7951f0877395a",
+      "scope_sha256": "sha256:17f83fd4fbdd843e9943af1b21fb05c303363ebd07bfd027de04c44b09448c5b",
       "disposition": "ready",
-      "scope_sha256": "sha256:0e56523f486f1082ded18491200fc5aded6d7dcf5544f82e3b6b17bf5fd9f6e0",
-      "authorization_status": "explicit_user"
+      "authorization": {
+        "status": "explicit_user",
+        "scope_sha256": "sha256:17f83fd4fbdd843e9943af1b21fb05c303363ebd07bfd027de04c44b09448c5b"
+      }
     },
     {
       "action_id": "eda-planning-agent-inference",
       "category": "external_side_effect",
+      "execution_boundary_sha256": "sha256:495687efeaf0ea3797bd4c0eb4e7792336991f8797944280baf7951f0877395a",
+      "scope_sha256": "sha256:2679cedadd18aee4800e777d9e83c49a09e3beb01ca7c9735994da4f51d716cf",
       "disposition": "ready",
-      "scope_sha256": "sha256:d2fa9682fd7a57d7e82232f24b27ec30db4d1100d1d48f63b281b69a88a57864",
-      "authorization_status": "explicit_user"
+      "authorization": {
+        "status": "explicit_user",
+        "scope_sha256": "sha256:2679cedadd18aee4800e777d9e83c49a09e3beb01ca7c9735994da4f51d716cf"
+      }
     },
     {
       "action_id": "eda-isolated-preview",
       "category": "external_side_effect",
+      "execution_boundary_sha256": "sha256:495687efeaf0ea3797bd4c0eb4e7792336991f8797944280baf7951f0877395a",
+      "scope_sha256": "sha256:1bfb6e15a49e17b92cd30ed9b867c566bab53cc71b4eeb74dc0b7e18d5695001",
       "disposition": "ready",
-      "scope_sha256": "sha256:b4baaff612945a1a49c992b3f6b127a9ac27c5a804d208ac2486ea53ae51ba2f",
-      "authorization_status": "explicit_user"
+      "authorization": {
+        "status": "explicit_user",
+        "scope_sha256": "sha256:1bfb6e15a49e17b92cd30ed9b867c566bab53cc71b4eeb74dc0b7e18d5695001"
+      }
     },
     {
       "action_id": "eda-runtime-state-publication-privacy",
       "category": "outside_writable_roots",
+      "execution_boundary_sha256": "sha256:495687efeaf0ea3797bd4c0eb4e7792336991f8797944280baf7951f0877395a",
+      "scope_sha256": "sha256:b9a69339cb4c460de1e2f5db819e83193faca49583d1dcdfe367bc32072c32e2",
       "disposition": "ready",
-      "scope_sha256": "sha256:c41817e4333e6af3dac23da9815315ce5c7cb6963aefa75025fb7628782c4c49",
-      "authorization_status": "explicit_user"
+      "authorization": {
+        "status": "explicit_user",
+        "scope_sha256": "sha256:b9a69339cb4c460de1e2f5db819e83193faca49583d1dcdfe367bc32072c32e2"
+      }
     },
     {
       "action_id": "eda-implementation-writes",
       "category": "outside_writable_roots",
+      "execution_boundary_sha256": "sha256:495687efeaf0ea3797bd4c0eb4e7792336991f8797944280baf7951f0877395a",
+      "scope_sha256": "sha256:1cb28cc8a8a930747197af8cf92cf478ffc73357389d637aa8be6b9a95c48581",
       "disposition": "ready",
-      "scope_sha256": "sha256:f0b2af33ec6b901fba5529d9279a30e2b10fd2ef55fa5b838f2f98c45b5aad15",
-      "authorization_status": "explicit_user"
+      "authorization": {
+        "status": "explicit_user",
+        "scope_sha256": "sha256:1cb28cc8a8a930747197af8cf92cf478ffc73357389d637aa8be6b9a95c48581"
+      }
     },
     {
       "action_id": "eda-implementation-git",
       "category": "outside_writable_roots",
+      "execution_boundary_sha256": "sha256:495687efeaf0ea3797bd4c0eb4e7792336991f8797944280baf7951f0877395a",
+      "scope_sha256": "sha256:248cd81b15d1281bd29d9705a4cc01fc0282241b21e0dc7149414503ec1db06a",
       "disposition": "ready",
-      "scope_sha256": "sha256:2e7b0ed6b8bfa217e87781eb3e74dbba8d23bd4cd9ae94fb08592abb651db9ff",
-      "authorization_status": "explicit_user"
+      "authorization": {
+        "status": "explicit_user",
+        "scope_sha256": "sha256:248cd81b15d1281bd29d9705a4cc01fc0282241b21e0dc7149414503ec1db06a"
+      }
     },
     {
       "action_id": "eda-implementation-publication",
       "category": "external_side_effect",
+      "execution_boundary_sha256": "sha256:495687efeaf0ea3797bd4c0eb4e7792336991f8797944280baf7951f0877395a",
+      "scope_sha256": "sha256:d69808d6419108c587d5b93493e99c9de92b75836c16d06bc7dd13a932e0bf7c",
       "disposition": "ready",
-      "scope_sha256": "sha256:03279d2b34a2cc9c5305c4875b3123aab6def2497603d59999683b064d0710ae",
-      "authorization_status": "explicit_user"
+      "authorization": {
+        "status": "explicit_user",
+        "scope_sha256": "sha256:d69808d6419108c587d5b93493e99c9de92b75836c16d06bc7dd13a932e0bf7c"
+      }
     },
     {
       "action_id": "eda-implementation-workers",
       "category": "external_side_effect",
+      "execution_boundary_sha256": "sha256:495687efeaf0ea3797bd4c0eb4e7792336991f8797944280baf7951f0877395a",
+      "scope_sha256": "sha256:a329d2cdaa338e1a85a6b3630a87a27e885931544a3c85b029fe6d5ab11c769c",
       "disposition": "ready",
-      "scope_sha256": "sha256:792eee6df6d408febd93ac47bf5be7f460ffdbaf2fe11f36f8fab2ead60aa96a",
-      "authorization_status": "explicit_user"
+      "authorization": {
+        "status": "explicit_user",
+        "scope_sha256": "sha256:a329d2cdaa338e1a85a6b3630a87a27e885931544a3c85b029fe6d5ab11c769c"
+      }
     },
     {
       "action_id": "eda-feedback-sweep",
       "category": "external_side_effect",
+      "execution_boundary_sha256": "sha256:495687efeaf0ea3797bd4c0eb4e7792336991f8797944280baf7951f0877395a",
+      "scope_sha256": "sha256:3dd6a335b28f3b7ec79782e53ad33e32143312a3cbf0d63755f7e007b1a10012",
       "disposition": "ready",
-      "scope_sha256": "sha256:b5e4352409e6a35d6a97824eb0503d1848c533d33d1704c5448ba5637667afd0",
-      "authorization_status": "explicit_user"
+      "authorization": {
+        "status": "explicit_user",
+        "scope_sha256": "sha256:3dd6a335b28f3b7ec79782e53ad33e32143312a3cbf0d63755f7e007b1a10012"
+      }
+    },
+    {
+      "action_id": "eda-private-autonomy-record",
+      "category": "outside_writable_roots",
+      "execution_boundary_sha256": "sha256:495687efeaf0ea3797bd4c0eb4e7792336991f8797944280baf7951f0877395a",
+      "scope_sha256": "sha256:07862cb426f82e2dfe951dd6a88b88f35cc8ad44f0cc56443a85f3734c6af636",
+      "disposition": "ready",
+      "authorization": {
+        "status": "explicit_user",
+        "scope_sha256": "sha256:07862cb426f82e2dfe951dd6a88b88f35cc8ad44f0cc56443a85f3734c6af636"
+      }
     }
   ],
-  "authoritative_record": "docs/ai/specs/.process/autopilot-state.json#autonomy_boundary",
-  "stage_scope": "Implementation renewed by explicit --stage implement; original plan actions retained unchanged; no merge or release."
+  "private_record_sha256": "sha256:17d2dfb1568b02ffe917e0d6ff0c895174067b9b470f1a89af2f4302b335c97a"
 }
 ```
 
@@ -1168,3 +1231,35 @@ Named three-perspective synthesis accepted the exact repair unanimously with hig
 ### Implementation-stage feedback sweep
 
 The isolated Codex capture observed zero review/conversation comments and zero exclusions. No amendment, log row or reply was produced. Planning artifacts are current as of 6e1c07a7; no regeneration or description refresh was required. The trusted close operation removed private sweep state. Explicit implementation proceeds after the required baseline and task-routing reconciliation.
+
+### T001 scope verification
+
+## Task Result: T001
+
+**Status:** complete
+**Evidence:** Native scope verification exec:9b7168; baseline exec:1d8815 passed 8949/8949. Two ratified slices and 11 authored files preserved; prepared toolchains and scoped instructions present. Actual diff budgets remain unqualified until T019/T027.
+**Deviations/Edge cases/Surprises:** Initial parent receipt attempt exec:be0dce exited 1 because the stored field is native_event_id; no feature assertion failed. The corrected receipt preserves this attempt. Artifact previews remain unavailable.
+
+### T002 frozen primary-source evidence
+
+38 pinned skill paths verified; exact MIT fixture SHA-256 0e7ac423bf2c6e223b7c5b156f8cf72da49d748e56a1641402c31f22ad07dbb5. Actual focused proofs: RED exec:912739 exit 1, GREEN exec:2569e7 exit 0, refactor exec:835e01 exit 0. Full original result retained in the frozen task journal.
+
+### T003 synthetic credit evidence
+
+50 frozen cases: 12 positive, 38 targeted negative, including eight isolated frontmatter-placement variants. Fixture SHA-256 0545c71550591ae9c110aedcbbbeee67dd85c395b73a4cc2c17948cc8b8ed1d5. Actual proofs: RED exec:7d2b89 exit 1; GREEN exec:caa351 and refactor exec:81aed7 exit 0, eight methods each. Full original worker results remain unmodified in the locally private native runtime journal; safe task outcomes and hashes are published here. This fixture proof does not qualify the future attribution validator.
+
+### Foundation capability reviews
+
+Independent read-only review passed scope-readiness, frozen-source-evidence and synthetic-credit-evidence with no findings. These qualify completed T001–T003, not the future production attribution validator.
+
+### Installed-runtime resume
+
+SpecKit2.37.0 agent availability check exec:0641a6 returned no_op; no installation or restart was required. Recovered the same execution-control run and consumed budget. Full autonomy records now remain owner-only in the clone private Git metadata; matching portable receipts bind the live permissions and current planning bytes. T004 is not complete: its original worker is absent, prepared checker bytes match, and the ledger fixture is absent.
+
+### T004 interruption reconciliation
+
+The original worker was absent from the live agent tree. Its one ledger-authorized read-only inspection verified unchanged checker and prerequisite fixture bytes, an absent ledger fixture, and actual native RED exec:9181a2: seven missing-fixture assertion failures, exit 1. The ledger accepted that real expected-RED event and returned continue, preserving all consumed budget. T004 remains unfinished; only its remaining fixture authoring and GREEN/refactor work may resume.
+
+### Completed-work checkpoint
+
+T001–T003 remain complete and independently reviewed; T004 is recovered only through expected RED and remains unchecked. Resume privacy check exec:e8a4de passed 13/13. The installed runner bound the existing empty invariant registry to the current approved feature spec without resetting consumed budget or remapping previous unresolved reservations. Raw runtime state, task journal, and console traces stay local; this checkpoint publishes authored fixtures and safe workflow receipts.

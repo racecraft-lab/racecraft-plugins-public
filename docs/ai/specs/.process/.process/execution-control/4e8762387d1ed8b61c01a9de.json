@@ -1,6 +1,26 @@
 {
   "active_wait": null,
-  "approved_invariants": [],
+  "approved_invariants": [
+    "FR-001",
+    "FR-002",
+    "FR-003",
+    "FR-004",
+    "FR-005",
+    "FR-006",
+    "FR-007",
+    "FR-008",
+    "FR-009",
+    "FR-010",
+    "FR-011",
+    "FR-012",
+    "FR-013",
+    "FR-014",
+    "FR-015",
+    "FR-016",
+    "FR-017",
+    "FR-018",
+    "FR-019"
+  ],
   "authorization_granted": false,
   "checkpoint_at": 1790435958.814301,
   "corrective_cycles": 1,
@@ -382,6 +402,39 @@
       "reservation_id": null,
       "reserved_at": 1790395469.9946811
     },
+    "implement-B002-T002-1": {
+      "completed_at": 1790437989.600972,
+      "kind": "implementation",
+      "outcome": "completed",
+      "reconciliations": 0,
+      "reservation_id": null,
+      "reserved_at": 1790437320.928478
+    },
+    "implement-B003-T003-1": {
+      "completed_at": 1790438296.299781,
+      "kind": "implementation",
+      "outcome": "completed",
+      "reconciliations": 0,
+      "reservation_id": null,
+      "reserved_at": 1790437324.594954
+    },
+    "implement-B004-T004-1": {
+      "completed_at": 1790470678.114196,
+      "kind": "implementation",
+      "outcome": "expected_tdd_red",
+      "reconciliations": 1,
+      "reservation_id": null,
+      "reserved_at": 1790438335.570732,
+      "resolution_event_id": "exec:9181a2"
+    },
+    "implement-T001-scope-verification-1": {
+      "completed_at": 1790437291.731969,
+      "kind": "verification",
+      "outcome": "completed",
+      "reconciliations": 0,
+      "reservation_id": null,
+      "reserved_at": 1790437124.3478668
+    },
     "implement-base-sync-1": {
       "completed_at": 1790435471.599987,
       "kind": "infrastructure",
@@ -390,6 +443,21 @@
       "reservation_id": null,
       "reserved_at": 1790435148.805451
     },
+    "implement-baseline-quick-suite-1": {
+      "completed_at": 1790436612.708054,
+      "kind": "verification",
+      "outcome": "completed",
+      "reconciliations": 0,
+      "reservation_id": null,
+      "reserved_at": 1790436018.901879
+    },
+    "implement-completed-fixtures-checkpoint-1": {
+      "kind": "infrastructure",
+      "outcome": "reserved",
+      "reconciliations": 0,
+      "reservation_id": null,
+      "reserved_at": 1790470816.1156511
+    },
     "implement-feedback-sweep-capture-1": {
       "completed_at": 1790435955.718743,
       "kind": "infrastructure",
@@ -397,6 +465,38 @@
       "reconciliations": 0,
       "reservation_id": null,
       "reserved_at": 1790435475.631576
+    },
+    "implement-frozen-evidence-review-1": {
+      "completed_at": 1790438332.762718,
+      "kind": "verification",
+      "outcome": "completed",
+      "reconciliations": 0,
+      "reservation_id": null,
+      "reserved_at": 1790438065.7091389
+    },
+    "implement-resume-checkpoint-privacy-1": {
+      "completed_at": 1790470811.801814,
+      "kind": "verification",
+      "outcome": "completed",
+      "reconciliations": 0,
+      "reservation_id": null,
+      "reserved_at": 1790470762.677886
+    },
+    "implement-scope-readiness-review-1": {
+      "completed_at": 1790437799.7561548,
+      "kind": "verification",
+      "outcome": "completed",
+      "reconciliations": 0,
+      "reservation_id": null,
+      "reserved_at": 1790437567.106876
+    },
+    "implement-task-producer-routing-1": {
+      "completed_at": 1790437041.6802392,
+      "kind": "infrastructure",
+      "outcome": "completed",
+      "reconciliations": 0,
+      "reservation_id": null,
+      "reserved_at": 1790436617.311834
     },
     "phase1-specify-1": {
       "completed_at": 1790383658.66255,
@@ -560,7 +660,12 @@
     }
   },
   "excluded_intervals": [],
-  "last_observed_at": 1790435958.814301,
+  "invariant_binding": {
+    "bound_at": 1790470759.761605,
+    "spec_file": "specs/eda-001-attribution-foundation/spec.md",
+    "spec_sha256": "52481b25ec692937c47adb4f8db9b0a6d73385ba431ea0ee70160258a738d0d7"
+  },
+  "last_observed_at": 1790470816.1156511,
   "reservations": {
     "a02de8a1ea1d4f02bd03770cacecd0dd": {
       "dispatch_id": "g0-privacy-scan-path-collision-repair-1",
