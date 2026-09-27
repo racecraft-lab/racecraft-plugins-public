@@ -154,11 +154,17 @@ def validate_ledger(value: Any) -> None:
     for key in ("started_at", "slice_started_at", "last_observed_at", "checkpoint_at"):
         if type(value.get(key)) not in (int, float) or not 0 <= value[key] < float("inf"):
             raise ValueError(f"invalid ledger clock: {key}")
-    if type(value.get("corrective_cycles")) is not int or not 0 <= value["corrective_cycles"] <= 2:
-        raise ValueError("invalid corrective counter")
     if value.get("authorization_granted") is not False:
         raise ValueError("budget gates cannot grant authorization")
     validate_intervals(value)
+    _validate_corrective_state(value)
+    _validate_corrective_epochs(value)
+
+
+def _validate_corrective_state(value: dict[str, Any]) -> None:
+    """One allowance's counters, reservations, dispatches, and operator records."""
+    if type(value.get("corrective_cycles")) is not int or not 0 <= value["corrective_cycles"] <= 2:
+        raise ValueError("invalid corrective counter")
     if not isinstance(value.get("approved_invariants"), list) or not all(isinstance(v, str) for v in value["approved_invariants"]):
         raise ValueError("invalid invariant registry")
     _validate_invariant_binding(value)
@@ -181,6 +187,60 @@ def validate_ledger(value: Any) -> None:
             raise ValueError("corrective dispatch has no reservation")
     validate_recovery_records(value)
     validate_continuation_records(value)
+
+
+EPOCH_STATE_KEYS = ("corrective_cycles", "reservations", "dispatches", "approved_invariants")
+EPOCH_OPTIONAL_KEYS = ("invariant_binding", "corrective_exception")
+
+
+def _epoch_view(ledger: dict[str, Any], epoch: dict[str, Any]) -> dict[str, Any]:
+    """The ledger as it stood when an archived allowance was current."""
+    view = {key: value for key, value in ledger.items()
+            if key not in {"corrective_epochs", *EPOCH_STATE_KEYS, *EPOCH_OPTIONAL_KEYS}}
+    view.update({key: epoch[key] for key in (*EPOCH_STATE_KEYS, *EPOCH_OPTIONAL_KEYS) if key in epoch})
+    return view
+
+
+def _validate_corrective_epochs(ledger: dict[str, Any]) -> None:
+    """Archived allowances stay valid, settled, and disjoint from the current one."""
+    if "corrective_epochs" not in ledger:
+        return
+    epochs = ledger["corrective_epochs"]
+    if not isinstance(epochs, list) or not epochs:
+        raise ValueError("invalid corrective epoch history")
+    required = {*EPOCH_STATE_KEYS, "epoch_event_id", "closed_at"}
+    dispatch_ids = set(ledger["dispatches"])
+    event_ids = _consumed_native_event_ids({key: value for key, value in ledger.items() if key != "corrective_epochs"})
+    previous_close = ledger["started_at"]
+    for epoch in epochs:
+        if not isinstance(epoch, dict) or not required <= set(epoch) <= required | set(EPOCH_OPTIONAL_KEYS):
+            raise ValueError("invalid corrective epoch record")
+        closed_at = epoch["closed_at"]
+        if type(closed_at) not in (int, float) or not previous_close <= closed_at < float("inf"):
+            raise ValueError("invalid corrective epoch clock")
+        previous_close = closed_at
+        view = _epoch_view(ledger, epoch)
+        _validate_corrective_state(view)
+        if any(item["outcome"] not in OUTCOMES - {"unknown"} for item in view["dispatches"].values()):
+            raise ValueError("corrective epoch closed with unsettled dispatches")
+        if dispatch_ids & set(view["dispatches"]):
+            raise ValueError("dispatch id reused across corrective epochs")
+        dispatch_ids.update(view["dispatches"])
+        epoch_event = require_text(epoch["epoch_event_id"], "epoch_event_id")
+        owned = _consumed_native_event_ids(view) - set(ledger["workflow_identity"]["relocation_event_ids"])
+        owned -= {event for interval in ledger["excluded_intervals"] for event in (interval["start_event"], interval["end_event"])}
+        if ledger.get("active_wait"):
+            owned.discard(ledger["active_wait"]["start_event"])
+        if epoch_event in owned or (owned | {epoch_event}) & event_ids:
+            raise ValueError("native event reused across corrective epochs")
+        event_ids.update(owned | {epoch_event})
+
+
+def _used_dispatch_ids(ledger: dict[str, Any]) -> set[str]:
+    used = set(ledger["dispatches"])
+    for epoch in ledger.get("corrective_epochs", []):
+        used.update(epoch["dispatches"])
+    return used
 
 
 def _validate_corrective_exception(ledger: dict[str, Any]) -> str | None:
@@ -346,6 +406,9 @@ def _consumed_native_event_ids(ledger: dict[str, Any]) -> set[str]:
                     if "operator_continuation_event_id" in item)
     if "corrective_exception" in ledger:
         consumed.add(ledger["corrective_exception"]["operator_exception_event_id"])
+    for epoch in ledger.get("corrective_epochs", []):
+        consumed.add(epoch["epoch_event_id"])
+        consumed.update(_consumed_native_event_ids(_epoch_view(ledger, epoch)))
     return consumed
 
 
@@ -375,7 +438,7 @@ def reserve(ledger: dict[str, Any], inputs: dict[str, Any], now: float) -> dict[
     kind = inputs.get("kind")
     if kind not in KINDS:
         raise ValueError("unknown execution kind")
-    if dispatch_id in ledger["dispatches"]:
+    if dispatch_id in _used_dispatch_ids(ledger):
         return {"reasons": ["dispatch_already_reserved_no_relaunch"]}
     reservation = inputs.get("reservation_id")
     if kind == "corrective":
@@ -418,7 +481,7 @@ def authorize_corrective_retry(ledger: dict[str, Any], inputs: dict[str, Any], n
                 reservation, "infrastructure")
     if binding != expected:
         raise ValueError("operator recovery event does not match this run")
-    if (dispatch_id in ledger["dispatches"] or ledger["corrective_cycles"] != 2 or
+    if (dispatch_id in _used_dispatch_ids(ledger) or ledger["corrective_cycles"] != 2 or
             not isinstance(failed, dict) or failed.get("kind") != "corrective" or
             failed.get("outcome") != "failed" or failed.get("reservation_id") != reservation or
             failed.get("resolution_event_id") != event.get("failed_native_event_id") or
@@ -451,7 +514,7 @@ def authorize_corrective_continuation(ledger: dict[str, Any], inputs: dict[str, 
     owner = ledger["dispatches"].get(owner_id)
     recovered = isinstance(source, dict) and source.get("recovery_of") == owner_id and isinstance(owner, dict) and owner.get("outcome") == "failed"
     members = {key for key, item in ledger["dispatches"].items() if item.get("reservation_id") == reservation}
-    if (dispatch_id in ledger["dispatches"] or ledger["corrective_cycles"] != 2 or
+    if (dispatch_id in _used_dispatch_ids(ledger) or ledger["corrective_cycles"] != 2 or
             not isinstance(source, dict) or source.get("kind") != "corrective" or
             source.get("outcome") != "completed" or source.get("reservation_id") != reservation or
             (source_id != owner_id and not recovered) or
@@ -483,7 +546,7 @@ def authorize_corrective_exception(ledger: dict[str, Any], inputs: dict[str, Any
     if binding != expected:
         raise ValueError("operator exception event does not match this run, scope, spec, and refusal")
     family = next((key for key, item in ledger["reservations"].items() if item["family"] == invariant), None)
-    if ("corrective_exception" in ledger or dispatch_id in ledger["dispatches"] or spec_digest is None or
+    if ("corrective_exception" in ledger or dispatch_id in _used_dispatch_ids(ledger) or spec_digest is None or
             refusal is None or invariant not in ledger["approved_invariants"] or
             not isinstance(scope, str) or not re.fullmatch(r"[0-9a-f]{64}", scope) or
             any(item.get("reservation_id") == family and item["outcome"] not in {"completed", "failed"}
@@ -590,6 +653,37 @@ def _relocate_workflow(ledger: dict[str, Any], inputs: dict[str, Any], workflow_
     identity["relocation_event_ids"].append(event_id)
 
 
+def _spec_invariants(spec_bytes: bytes) -> list[str]:
+    invariants = sorted(set(re.findall(r"\b(?:FR|NFR|INV)-[A-Za-z0-9]+\b", spec_bytes.decode("utf-8"))))
+    if not invariants:
+        raise ValueError("spec_file contains no requirement or invariant IDs")
+    return invariants
+
+
+def begin_replan_epoch(root: Path, ledger: dict[str, Any], inputs: dict[str, Any], spec: Path,
+                       now: float) -> dict[str, Any]:
+    """Archive the spent allowance and open a fresh one for an operator-approved re-plan."""
+    if inputs.get("spec_file") is None:
+        raise ValueError("begin-replan-epoch requires an explicit spec_file")
+    keys = {"native_event_id", "run_id", "action", "spec_sha256"}
+    event, event_id = _operator_event(ledger, inputs, keys, "re-plan epoch")
+    spec_bytes = spec.read_bytes()
+    spec_digest = hashlib.sha256(spec_bytes).hexdigest()
+    if (event.get("run_id"), event.get("action"), event.get("spec_sha256")) != (
+            ledger["run_id"], "replan_epoch_approved", spec_digest):
+        raise ValueError("operator re-plan event does not match this run and the current spec")
+    if ledger.get("active_wait") or any(item["outcome"] not in OUTCOMES - {"unknown"}
+                                        for item in ledger["dispatches"].values()):
+        raise ValueError("settle every dispatch and wait before opening a new corrective epoch")
+    epoch = {key: ledger.pop(key) for key in (*EPOCH_STATE_KEYS, *EPOCH_OPTIONAL_KEYS) if key in ledger}
+    epoch.update(epoch_event_id=event_id, closed_at=now)
+    ledger.setdefault("corrective_epochs", []).append(epoch)
+    ledger.update(corrective_cycles=0, reservations={}, dispatches={}, approved_invariants=_spec_invariants(spec_bytes),
+                  invariant_binding={"spec_file": spec.relative_to(root.resolve()).as_posix(),
+                                     "spec_sha256": spec_digest, "bound_at": now})
+    return {"corrective_epoch": len(ledger["corrective_epochs"])}
+
+
 def _bind_invariants_if_requested(root: Path, inputs: dict[str, Any], spec: Path,
                                   ledger: dict[str, Any], now: float, reasons: list[str]) -> None:
     if inputs.get("action") != "bind-invariants":
@@ -601,11 +695,7 @@ def _bind_invariants_if_requested(root: Path, inputs: dict[str, Any], spec: Path
     if ledger["approved_invariants"] or "invariant_binding" in ledger:
         raise ValueError("invariant registry is already frozen for this run")
     spec_bytes = spec.read_bytes()
-    invariants = sorted(set(re.findall(r"\b(?:FR|NFR|INV)-[A-Za-z0-9]+\b",
-                                       spec_bytes.decode("utf-8"))))
-    if not invariants:
-        raise ValueError("spec_file contains no requirement or invariant IDs")
-    ledger["approved_invariants"] = invariants
+    ledger["approved_invariants"] = _spec_invariants(spec_bytes)
     ledger["invariant_binding"] = {
         "spec_file": spec.relative_to(root.resolve()).as_posix(),
         "spec_sha256": hashlib.sha256(spec_bytes).hexdigest(), "bound_at": now,
@@ -624,7 +714,7 @@ def execution_control(root: Path, inputs: dict[str, Any], mode: str) -> dict[str
     if spec_name is not None and not spec.is_file():
         raise ValueError("spec_file must be an existing contained file")
     action = inputs.get("action", "status")
-    if action not in {"start", "status", "bind-invariants", "reserve", "authorize-corrective-retry", "authorize-corrective-continuation", "authorize-corrective-exception", "begin-verification", "complete", "reconcile", "checkpoint", "pause", "resume", "relocate-workflow"}:
+    if action not in {"start", "status", "bind-invariants", "reserve", "authorize-corrective-retry", "authorize-corrective-continuation", "authorize-corrective-exception", "begin-replan-epoch", "begin-verification", "complete", "reconcile", "checkpoint", "pause", "resume", "relocate-workflow"}:
         raise ValueError("unsupported action; pauses/resets require verified native authorization")
     if mode not in {"read_only", "dry_run", "apply"} or (mode == "read_only" and action != "status"):
         raise ValueError("ledger mutations require dry_run or apply")
@@ -674,6 +764,8 @@ def execution_control(root: Path, inputs: dict[str, Any], mode: str) -> dict[str
             extra = authorize_corrective_continuation(ledger, inputs, now)
         elif action == "authorize-corrective-exception" and not reasons:
             extra = authorize_corrective_exception(ledger, inputs, now)
+        elif action == "begin-replan-epoch" and not reasons:
+            extra = begin_replan_epoch(root, ledger, inputs, spec, now)
         elif action == "begin-verification" and not reasons:
             extra = begin_verification(ledger, inputs)
         elif action in {"complete", "reconcile"}:

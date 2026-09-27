@@ -49,7 +49,9 @@ $speckit-autopilot workflow.md --from-phase <next-pending-phase>
 - **Gate needs repair:** Reserve against the same durable failure-family/spec
   budget used by every nested worker; checkpoint with exact output on exhaustion.
   One operator-approved application correction past it uses
-  `authorize-corrective-exception`; never reset or bypass the ledger.
+  `authorize-corrective-exception`. After an operator-ordered re-plan,
+  `begin-replan-epoch` opens a fresh allowance with the operator's approval;
+  never reset or bypass the ledger otherwise.
 - **Consensus agents all disagree:** Flag `[HUMAN REVIEW NEEDED]`.
   In an interactive task, ask the operator in place with
   `request_user_input` (the analysts' positions as options, the synthesizer's
