@@ -26,6 +26,7 @@ IDENTIFIER = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
 FINDING_ORDER = (
     "group_added",
     "group_merged",
+    "scope_duplicated",
     "scope_added",
     "group_dropped",
     "scope_dropped",
@@ -124,6 +125,14 @@ def _findings(
 
     # An item moved into another group is reported once, as group_merged.
     carried = {item for increment in increments for item in increment["scope"]}
+    # A split is a partition: every approved item lands in exactly one increment.
+    holders: dict[str, list[str]] = {}
+    for increment in increments:
+        for item in increment["scope"]:
+            holders.setdefault(item, []).append(increment["increment_id"])
+    for item, names in holders.items():
+        if len(names) > 1:
+            note("scope_duplicated", f"{item} appears in {', '.join(names)}")
     for increment in increments:
         name, group_id = increment["increment_id"], increment["group_id"]
         if group_id not in order:
