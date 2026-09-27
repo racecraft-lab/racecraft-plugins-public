@@ -478,7 +478,7 @@ def handle_message(message: Any) -> dict[str, Any] | None:
             return _error(request_id, -32602, "invalid tool parameters")
         try:
             result = call_tool(params.get("name"), params.get("arguments", {}))
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001 - boundary: any failure becomes an explicit error
             code = _error_code(exc)
             return _response(request_id, {"isError": True, "content": [{"type": "text", "text": f"broker_error:{code}"}], "structuredContent": {"error_code": code}})
         text = result if isinstance(result, str) else json.dumps(result, sort_keys=True, separators=(",", ":"))

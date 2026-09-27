@@ -442,7 +442,7 @@ class FeedbackSweepBehaviorTest(unittest.TestCase):
             "duplicate registry line",
         )
         recognized = {}
-        for line, template_id, kind in EXPECTED_REGISTRY:
+        for line, _template_id, _kind in EXPECTED_REGISTRY:
             body = "Artifact: test\nFeature: test\n\n" + line
             if line.startswith("Artifact: "):
                 body += "\n" + SERIALIZATION_NEXT
@@ -749,7 +749,7 @@ class FeedbackSweepBehaviorTest(unittest.TestCase):
             "AKIA example",
             "https://<user>:<password>@host/db",
         )
-        for (rule, secret), ordinary in zip(secrets, prose):
+        for (rule, secret), ordinary in zip(secrets, prose, strict=True):
             with self.subTest(rule=rule):
                 _, hit = redact("amendment", [secret])
                 self.assertEqual(

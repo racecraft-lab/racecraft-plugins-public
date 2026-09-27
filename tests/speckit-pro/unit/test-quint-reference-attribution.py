@@ -106,7 +106,7 @@ class QuintReferenceAttributionTests(unittest.TestCase):
             with self.subTest(fact=fact):
                 self.assertIn(fact, notice)
         self.assertIn("Apache-2.0", notice)
-        for name, upstream in UPSTREAM_PATHS.items():
+        for _name, upstream in UPSTREAM_PATHS.items():
             with self.subTest(upstream_path=upstream):
                 self.assertIn(upstream, notice)
 

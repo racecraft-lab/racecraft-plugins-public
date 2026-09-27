@@ -94,7 +94,7 @@ def filesystem_identities(path: Path) -> set[tuple[int, int]]:
         except FileNotFoundError:
             if current == path:
                 continue  # Future paths are still compared by normalized name.
-            raise TaskExecutionError(f"owned tree changed during inspection: {path}")
+            raise TaskExecutionError(f"owned tree changed during inspection: {path}") from None
         except OSError as exc:
             raise TaskExecutionError(f"cannot inspect owned path: {current}") from exc
         visited += 1

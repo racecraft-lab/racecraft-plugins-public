@@ -27,7 +27,7 @@ def main(argv: list[str] | None = None) -> int:
         return emit_response(error)
     try:
         body = handle_request(request)
-    except Exception as exc:  # pragma: no cover - defensive contract boundary
+    except Exception as exc:  # pragma: no cover - defensive contract boundary  # noqa: BLE001
         body = response(
             "internal_failure",
             request_id=request.request_id if request else None,

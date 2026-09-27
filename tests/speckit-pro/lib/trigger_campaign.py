@@ -459,7 +459,7 @@ def _ledger_snapshot(connection: sqlite3.Connection, budget: int) -> dict:
     rows = connection.execute("SELECT arm, case_id, trial, status, reserved_at, completed_at FROM launches ORDER BY arm, case_id, trial").fetchall()
     return {"schema_version": "trigger-campaign-ledger/v1", "launch_budget": budget,
         "reserved_launches": len(rows), "unknown_launches": sum(row[3] == "unknown" for row in rows),
-        "launches": [dict(zip(("arm", "case_id", "trial_number", "status", "reserved_at", "completed_at"), row)) for row in rows]}
+        "launches": [dict(zip(("arm", "case_id", "trial_number", "status", "reserved_at", "completed_at"), row, strict=True)) for row in rows]}
 
 
 def _read_ledger_connection(connection: sqlite3.Connection) -> tuple[dict, dict]:

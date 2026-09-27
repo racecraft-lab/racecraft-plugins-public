@@ -184,7 +184,7 @@ def _strict_equal(left: object, right: object) -> bool:
     if isinstance(left, dict):
         return left.keys() == right.keys() and all(_strict_equal(left[key], right[key]) for key in left)
     if isinstance(left, list):
-        return len(left) == len(right) and all(_strict_equal(a, b) for a, b in zip(left, right))
+        return len(left) == len(right) and all(_strict_equal(a, b) for a, b in zip(left, right, strict=True))
     return left == right
 
 

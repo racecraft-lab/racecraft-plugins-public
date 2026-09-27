@@ -190,7 +190,7 @@ def verdict(
     if mutation["pairs"] and mutation["median_diff"] < -mutation_tolerance:
         return "loses"
     if mutation_floor is not None:
-        for (case_id, mode), row in per_case.items():
+        for (_case_id, mode), row in per_case.items():
             if mode == comparison["candidate"] and row["mutation_score"] is not None and row["mutation_score"] < mutation_floor:
                 return "loses"
     speed = [name for name in ("wall_seconds", "review_findings", "gate_iterations")]

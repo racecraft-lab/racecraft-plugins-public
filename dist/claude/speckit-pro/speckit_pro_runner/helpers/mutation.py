@@ -87,11 +87,11 @@ def mutation_lock_dir() -> Path:
     except FileExistsError:
         mode = root.lstat().st_mode
         if stat.S_ISLNK(mode) or not stat.S_ISDIR(mode):
-            raise OSError("unsafe mutation lock directory")
+            raise OSError("unsafe mutation lock directory") from None
         owner = getattr(os, "getuid", lambda: None)()
         root_stat = os.stat(root, follow_symlinks=False)
         if owner is not None and root_stat.st_uid != owner:
-            raise OSError("mutation lock directory owner mismatch")
+            raise OSError("mutation lock directory owner mismatch") from None
         if stat.S_IMODE(root_stat.st_mode) & 0o077:
             os.chmod(root, 0o700)
     return root
@@ -298,7 +298,7 @@ def run_spec_index_write(entry: Any, request: Any) -> dict[str, Any]:
         )
     expected_output_signature = spec_index_render_output_signature(current_rendered, target_root)
 
-    for record, operation in zip(changed, operations):
+    for record, operation in zip(changed, operations, strict=True):
         rel = repo_relative(record.path, target_root)
         try:
             mutation["live_mutation"] = True
@@ -1659,13 +1659,13 @@ def write_bytes_atomic(
                 raise close_error
             cleanup_errors = atomic_write_cleanup_errors(failure)
             cleanup_errors.append(f"parent_fd:{type(close_error).__name__}")
-            setattr(failure, "cleanup_errors", cleanup_errors)
+            failure.cleanup_errors = cleanup_errors
         if failure is not None and not replaced and tmp_cleanup_errors:
-            setattr(failure, "cleanup_errors", [*atomic_write_cleanup_errors(failure), *tmp_cleanup_errors])
+            failure.cleanup_errors = [*atomic_write_cleanup_errors(failure), *tmp_cleanup_errors]
         if trust_root is not None and failure is not None and not replaced and created_dirs:
             cleanup_errors = remove_created_parent_dirs(created_dirs, trust_root)
             if cleanup_errors:
-                setattr(failure, "cleanup_errors", [*atomic_write_cleanup_errors(failure), *cleanup_errors])
+                failure.cleanup_errors = [*atomic_write_cleanup_errors(failure), *cleanup_errors]
     return {
         "digest": hashlib.sha256(content).hexdigest(),
         "mode": applied_mode,
@@ -1721,7 +1721,7 @@ def open_safe_parent_fd(target: Path, trust_root: Path, *, create: bool) -> tupl
             if created_dirs:
                 cleanup_errors = remove_created_parent_dirs(created_dirs, trust_root)
                 if cleanup_errors:
-                    setattr(exc, "cleanup_errors", [*atomic_write_cleanup_errors(exc), *cleanup_errors])
+                    exc.cleanup_errors = [*atomic_write_cleanup_errors(exc), *cleanup_errors]
         raise
     return parent_fd, target_name, created_dirs
 

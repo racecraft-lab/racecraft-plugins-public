@@ -53,8 +53,9 @@ config files can be polished indefinitely.
 
 ## Do not report
 
-- Anything CI already enforces. That is only the pyflakes (F) rules that the
-  `python-lint` job runs with ruff over repository Python. CI does not check
+- Anything CI already enforces. That is only the ruff rules selected in
+  `ruff.toml` (pyflakes F, bugbear B, blind except BLE) that the
+  `python-lint` job runs over repository Python. CI does not check
   formatting or spelling, and the non-required `mypy-ratchet` job type-checks
   only the modules listed in `mypy.ini`, so a real type error elsewhere is
   still a finding.

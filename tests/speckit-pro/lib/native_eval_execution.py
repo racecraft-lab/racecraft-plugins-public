@@ -675,8 +675,8 @@ def _capture_options(prepared: object, trigger_stage: object | None = None) -> d
     tool_aliases = getattr(prepared, "tool_aliases", options.get("tool_aliases"))
     namespace = getattr(prepared, "namespace", options.get("namespace", "speckit-pro"))
     if trigger_stage is not None:
-        skill_markers = getattr(trigger_stage, "skill_markers")
-        staged_namespace = getattr(trigger_stage, "namespace")
+        skill_markers = trigger_stage.skill_markers
+        staged_namespace = trigger_stage.namespace
         if staged_namespace is not None:
             namespace = staged_namespace
     return {"skill_markers": skill_markers, "tool_aliases": tool_aliases, "namespace": namespace}
@@ -694,7 +694,7 @@ def _process_error(raw: object) -> str | None:
         return "native process transport failed"
     if process.get("artifact_error"):
         return "native process artifact capture failed"
-    if not isinstance(getattr(raw, "raw_trace", None), str) or not getattr(raw, "raw_trace"):
+    if not isinstance(getattr(raw, "raw_trace", None), str) or not raw.raw_trace:
         return "native process omitted its raw trace"
     return None
 
@@ -1148,7 +1148,7 @@ def _rebind_codex_root_tool_ids(
                      for entry in entries]
             if any(not isinstance(kind, str) or not kind for kind in kinds):
                 raise ValueError("Codex native file change kind is malformed")
-            native.append(("file_change", identity, tuple(sorted(zip(paths, kinds)))))
+            native.append(("file_change", identity, tuple(sorted(zip(paths, kinds, strict=True)))))
 
     existing_ids = {call.get("id") for call in calls if call not in projected}
     if None in existing_ids or len(existing_ids) != len(calls) - len(projected):
@@ -1159,7 +1159,7 @@ def _rebind_codex_root_tool_ids(
                        if native_name == name]
         if len(projected_kind) != len(native_kind):
             raise ValueError(f"Codex projected and native {name} counts disagree")
-        for call, (identity, native_signature) in zip(projected_kind, native_kind):
+        for call, (identity, native_signature) in zip(projected_kind, native_kind, strict=True):
             inputs = call.get("input")
             if not isinstance(inputs, Mapping):
                 raise ValueError(f"Codex projected {name} input is malformed")
@@ -1172,7 +1172,7 @@ def _rebind_codex_root_tool_ids(
                     raise ValueError("Codex projected file change is malformed")
                 kinds = [entry.get("kind") if isinstance(entry, Mapping) else None
                          for entry in changes]
-                projected_signature = tuple(sorted(zip(paths, kinds)))
+                projected_signature = tuple(sorted(zip(paths, kinds, strict=True)))
             if projected_signature != native_signature:
                 raise ValueError(f"Codex projected {name} disagrees with native event")
             if identity in existing_ids:
@@ -2234,7 +2234,7 @@ def _strict_equal(left: object, right: object) -> bool:
         )
     if isinstance(left, list):
         return len(left) == len(right) and all(
-            _strict_equal(a, b) for a, b in zip(left, right)
+            _strict_equal(a, b) for a, b in zip(left, right, strict=True)
         )
     return left == right
 
@@ -3728,7 +3728,7 @@ class _Execution:
         if len(self.by_id) != len(cases) or any(row.get("case_id") not in self.by_id for row in rows):
             raise ValueError("planned rows do not match selected cases")
         self.limits = {host: getattr(config, f"{host}_concurrency") for host in _HOSTS}
-        self.nested_limits = {host: getattr(config, "nested_concurrency") for host in _HOSTS}
+        self.nested_limits = {host: config.nested_concurrency for host in _HOSTS}
         self.judge_model = getattr(config, "judge_model", None)
         if not isinstance(self.judge_model, str) or not self.judge_model.strip():
             raise ValueError("judge model must be nonempty")
@@ -4376,7 +4376,7 @@ class _Execution:
         try:
             raw = self._measure("native_execution_seconds", self.execute, context["prepared"],
                                 context["case"]["timeout_seconds"])
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001 - boundary: any failure becomes an explicit error
             return self._captured_invalid(job, context, f"native execution failed: {exc}",
                                           {"launch_prepared": launch_receipt},
                                           _exception_classification(exc))
@@ -4400,7 +4400,7 @@ class _Execution:
             job.payload["grader"] = context["grader"]
             existing = self._reuse(job, context)
             return existing if existing is not None else self._launch(job, context)
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001 - boundary: any failure becomes an explicit error
             status = "incomplete" if context.get("attempt") is not None else "invalid"
             value = {"row": dict(job.payload["row"]), "status": status, "reason": str(exc),
                      "subject_launched": context.get("subject_launched") is True}
@@ -4476,7 +4476,7 @@ class _Execution:
             value = {"row": payload["row"], "status": verdict["status"], "reason": "semantic_grade",
                      "attempt": str(payload["attempt"]), "judge_called": True, **payload["flags"]}
             return self._outcome(job, value)
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001 - boundary: any failure becomes an explicit error
             return self._judge_failure(job, payload, grade_dir, request_path, response_path, exc,
                                        judge_called=judge_called)
 
@@ -4611,7 +4611,7 @@ class _Execution:
                      "reason": "semantic_pair_grade", "judge_called": True, **payload["flags"]}
             self._record_pair(payload["identity"], value)
             return Outcome(job.id, str(verdict["status"]), details={"result": value})
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001 - boundary: any failure becomes an explicit error
             return self._pair_judge_failure(job, grade_dir, request_path, response_path, exc,
                                             judge_called=judge_called)
 

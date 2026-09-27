@@ -1246,7 +1246,7 @@ class WindowsAnchoredAgentDir(AnchoredAgentDir):
                 raise OSError("destination changed before anchored operation")
         except OSError as exc:
             close_error = codex_agent_windows_close_handle(handle)
-            raise codex_agent_note_close_error(exc, close_error)
+            raise codex_agent_note_close_error(exc, close_error)  # noqa: B904 - re-raises exc itself
         return cls(destination, handle_identity, handle)
 
     def close(self, close_errors: list[OSError] | None = None) -> None:
@@ -2194,7 +2194,7 @@ def run_codex_agent_install(entry: Any, request: Any) -> dict[str, Any]:
                 if not codex_agent_target_is_safe(target, destination, destination_identity):
                     raise OSError(f"unsafe destination entry: {name}")
                 previous[name] = codex_agent_previous_state(target)
-            for index, (name, target, content) in enumerate(planned):
+            for _index, (name, target, content) in enumerate(planned):
                 failed_name = name
                 failed_operation = next(
                     (
@@ -2614,7 +2614,7 @@ def codex_route_aware_admitted_probe_pairs(route_manifest: dict[str, Any]) -> se
     if not isinstance(bounded_probes, dict):
         return set()
     pairs: set[tuple[str, str]] = set()
-    for key, raw in bounded_probes.items():
+    for _key, raw in bounded_probes.items():
         if not isinstance(raw, dict):
             continue
         probe_id = raw.get("probe_id")
