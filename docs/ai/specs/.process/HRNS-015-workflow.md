@@ -1032,3 +1032,16 @@ Ripwire quality-delta returned exit 2 for canonical process-state verbosity. Its
 ### Planning Resume — installed 2.37.0
 
 Explicit resume from Plan after agent restart. Prior Plan-to-confidence results are historical and are being revalidated. Archive contract sweep retained both other active directories because merged provenance was not established; current target excluded. Research broker screening mode: jev; warning: search_environment_only_credential. No implementation dispatched. Private autonomy proof is retained outside repository files; current public receipt schema is autonomy-boundary-receipt.v1.
+
+### API Checklist Resume — 2.37.0
+
+The named checklist executor completed the bound command protocol using supported setup and the skill-authorized canonical template fallback. It appended CHK017–CHK024, preserving custom reviewer ownership. One gap remains: CHK022/FR-024 literal fixture identity. Round 1 spec/codebase analysts disagreed; the named synthesizer escaped to Round 2. The domain analyst joined; final named synthesis accepted the exact addition “Each documented inline request envelope must match a passing fixture byte for byte.” by 2/3 majority at high confidence, with codebase dissent preserved. No contract repair is applied.
+
+| Phase | Item | Categories | Round | Outcome | Analysts Used |
+| --- | --- | --- | --- | --- | --- |
+| Checklist | CHK022 byte identity | spec, codebase | 1 | Escape to Round 2; no edit | spec-context-analyst, codebase-analyst |
+| Checklist | CHK022 byte identity | spec, codebase, domain | 2 | 2/3 high-confidence clarification; application awaits corrective exception | spec-context-analyst, codebase-analyst, domain-researcher |
+
+Execution-control refused FR-024 correction with corrective_run_budget_exhausted; both prior cycles remain consumed. Current state is an incomplete checkpoint with explicit correction approval requested. The eighteen-part delivery direction also awaits the owner. Checklist, Tasks, Analyze, confidence and draft-artifact refresh remain incomplete. All dispatched agents and native commands have terminal results consumed; no unknown effects or implementation dispatch.
+
+Setup mismatch: installed checklist skill passes unsupported --template; standalone template resolver reports missing PyYAML. Supported --json setup passed; canonical fallback permitted continuation. Tracked in [issue #733](https://github.com/racecraft-lab/racecraft-plugins-public/issues/733); upstream versus upgrade integration ownership remains unconfirmed.

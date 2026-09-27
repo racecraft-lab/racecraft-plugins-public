@@ -5,7 +5,7 @@
   "branch": "hrns-015-autopilot-gate-pr-emission-repair",
   "status": "in_progress",
   "stage": "plan",
-  "active_step": "Phase 4: Checklist - api-contracts",
+  "active_step": "Phase 4: Checklist - api-contracts Consensus",
   "stage_resolution": {
     "source": "argv",
     "basis": "explicit --stage plan",
@@ -51,9 +51,11 @@
   },
   "execution_control": {
     "ledger_path": "docs/ai/specs/.process/execution-control/ac068cab59ef67faf15646a7.json",
-    "disposition": "continue",
-    "reasons": [],
-    "elapsed_seconds": 124517.59845089912,
+    "disposition": "checkpoint_required",
+    "reasons": [
+      "corrective_run_budget_exhausted"
+    ],
+    "elapsed_seconds": 125639.94520497322,
     "checkpoint_due": false,
     "run_id": "e7fbc9a6636945ed8a8c2abd42cbb892"
   },
@@ -108,11 +110,11 @@
     },
     {
       "step": "Phase 4: Checklist - api-contracts",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 4: Checklist - api-contracts Consensus",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 4: Checklist - error-handling",
@@ -738,5 +740,31 @@
       "warn": 400
     },
     "tool": "estimate-reviewable-loc"
+  },
+  "pending_corrective_exception": {
+    "status": "awaiting_explicit_approval",
+    "refusal_reason": "corrective_run_budget_exhausted",
+    "scope": {
+      "failure_invariant": "FR-024",
+      "contract_file": "specs/hrns-015-autopilot-gate-pr-emission-repair/contracts/runner-and-roadmap.md",
+      "section": "Host request examples",
+      "add": "Each documented inline request envelope must match a passing fixture byte for byte.",
+      "checklist_file": "specs/hrns-015-autopilot-gate-pr-emission-repair/checklists/api-contracts.md",
+      "checklist_item": "CHK022",
+      "allowed_followup": "Remove only CHK022 gap marker after verification; retain unchecked reviewer ownership; record consensus and gate evidence."
+    },
+    "scope_sha256": "ec76ae0f40b62385cc84388b09fccf980fcabb4b69d903494425ce235122884c",
+    "proposed_dispatch_id": "hrns015-api-chk022-exception-2370"
+  },
+  "api_checklist_resume": {
+    "items": 24,
+    "gaps_found": 1,
+    "gaps_remaining": 1,
+    "consensus_rounds": 2,
+    "agreement": "2/3 majority",
+    "confidence": "high",
+    "repair_applied": false,
+    "setup_fallback": "Supported --json prerequisite invocation and skill-authorized canonical template structure",
+    "integration_issue": "https://github.com/racecraft-lab/racecraft-plugins-public/issues/733"
   }
 }

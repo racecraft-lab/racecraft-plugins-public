@@ -42,3 +42,16 @@
 **Second checklist pass**: Re-evaluated the same API-contracts prompt after the spec and contract repairs. No new requirements-quality item was needed; CHK003, CHK008, and CHK012 remain unchecked for reviewer evaluation, with their resolved gap markers removed.
 
 - Plan rescope reconciliation: removed FR-011–FR-013 remain compatibility baseline only. The requested thirteen-row Post behavior and HRNS-017 host-lifetime limits remain unchanged. Existing checkbox ownership is preserved; domain reevaluation is pending.
+
+## API-contracts resume — requirements-quality pass (2026-09-26)
+
+- [ ] CHK017 Is the optional final-only `release_note` schema entry consistent with the closed packet schema, conditional fourth editable field, and absent-property compatibility? [Consistency, Spec §FR-001–FR-003; Contracts §Final PR packet]
+- [ ] CHK018 Are blank, non-string, fence-breaking, and absent note inputs distinguished, with the exact protected heading/marker boundary and sole nonempty fence defined? [Edge Case, Spec §FR-001–FR-003; Contracts §Final PR packet]
+- [ ] CHK019 Are supplied-body creation and refresh required to obtain the current protected Phase 6.5 Verdict, with missing/invalid verdict and draft policy distinguished? [Coverage, Spec §FR-006; Contracts §Final PR packet]
+- [ ] CHK020 Are `status: exception`, `exception_class`, rejected-candidate reasons, and ordinary-budget fallback described consistently with the retained #694 compatibility baseline? [Completeness, Spec §Reviewability Notes; Contracts §Reviewability setup]
+- [ ] CHK021 Are split row-sum fields, ordered `slice_results`, individual warnings/blockers, missing/extra/duplicate rows, and non-split response compatibility specified together? [Measurability, Spec §FR-014, §FR-028–FR-029; Contracts §Reviewability setup]
+- [ ] CHK022 Is the workflow prompt's byte-for-byte passing-fixture requirement defined for each of the five named helper examples, beyond selecting the registry's field, operation, and mode names? [Gap] [Traceability, Spec §FR-024; Contracts §Host request examples]
+- [ ] CHK023 Are the refactor signal's accepted types, additional-file counting, 40-LOC weight, invalid/absent zero behavior, and spike precedence explicitly documented without double counting? [Clarity, Spec §FR-015; Contracts §Size estimate and commands]
+- [ ] CHK024 Are declared-command provenance, per-slot override scope, unchanged thresholds/basis, invalid-config failure, and omitted-input detection compatibility specified without changing the string-valued command map? [Compatibility, Spec §FR-016; Contracts §Size estimate and commands]
+
+**Pass notes**: This pass appends requirements-quality criteria and preserves CHK001–CHK016 and every existing checkbox. The existing H1/meta, reviewer ownership, category headings, and Notes provide the skill's permitted canonical fallback structure after template resolution was unavailable. No checkbox reports implementation completion.
