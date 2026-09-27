@@ -87,6 +87,7 @@ class RenderEgressAuthorizationTests(unittest.TestCase):
         self.assertEqual(response["status"], "ok", response)
         data = response["data"]
         self.assertFalse(data["writes_state"])
+        self.assertEqual(data["operation"], HELPER_ID)
         message = data["authorization_message"]
         self.assertIn("example-org/example-repo", message)
         self.assertIn(

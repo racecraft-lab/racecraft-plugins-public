@@ -173,6 +173,7 @@ def run_egress_authorization_helper(entry: Any, request: Any) -> dict[str, Any]:
         request_id=request.request_id,
         data={
             "helper_id": entry.helper_id,
+            "operation": entry.operation,
             "writes_state": False,
             "action_ids": [action["action_id"] for action in actions],
             "authorization_message": message,
