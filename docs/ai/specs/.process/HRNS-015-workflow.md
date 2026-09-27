@@ -960,7 +960,7 @@ Ripwire quality-delta returned exit 2 for canonical process-state verbosity. Its
   "input_hashes": {
     "specs/hrns-015-autopilot-gate-pr-emission-repair/spec.md": "18c93677aaaee5f73aa8399b2cea052cc58ed2724fe6e74d93be96a47eae7e58",
     "specs/hrns-015-autopilot-gate-pr-emission-repair/plan.md": "8381e50f0c0daf7491b6fb6f6e431adea30a89277d0b3073fd476194e6a8d759",
-    "specs/hrns-015-autopilot-gate-pr-emission-repair/tasks.md": "46302f5321c2df17acb65799305a2fd8de82b051f1e9b0bd630f45b3767febe3",
+    "specs/hrns-015-autopilot-gate-pr-emission-repair/tasks.md": "c5373d4f33f0ec316c2421d3e690888fc5844fb1989fd5f5db9b4a8d4d1f7d46",
     "docs/ai/specs/.process/HRNS-015-design-concept.md": "2179b6c3fb8ab3b5bfe0a326ccf1af68b3b0ce7160286745a01713d4264ccba2"
   },
   "manifest_sha256": "c90a240c9ae6d007e6aa1586612891de78337d2c0f7892ec121fb4fe316d25a0",
@@ -977,12 +977,12 @@ Ripwire quality-delta returned exit 2 for canonical process-state verbosity. Its
       "id": "implementation-plan",
       "generation": "generated",
       "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/artifacts/implementation-plan.html",
-      "sha256": "eb159ce32229e60be7a56b02d07b795784c933a525d053af8328c5b0317533d0",
+      "sha256": "43cc71f3246b74cca5b30ddc321562329f96fe462e50df85a2a97dc6dc16993d",
       "expected_title": "Implementation Plan \u2014 HRNS-015 Autopilot, Gate, and PR-Emission Repair",
       "expected_content": "Eighteen approved review increments repair packet emission, gates, completion and scaffold flows on Claude Code and Codex.",
       "preview": {
         "status": "unavailable",
-        "blocker": "preview-isolation-session observe_codex returned missing_prerequisite: preview_boundary_unavailable; no isolated observation was produced.",
+        "blocker": "Current 2.38.0 preview-isolation-session observe_codex returned missing_prerequisite: preview_boundary_unavailable; no isolated observation was produced.",
         "observation": null
       }
     },
@@ -995,7 +995,7 @@ Ripwire quality-delta returned exit 2 for canonical process-state verbosity. Its
       "expected_content": "All implementation checkpoints remain pending.",
       "preview": {
         "status": "unavailable",
-        "blocker": "preview-isolation-session observe_codex returned missing_prerequisite: preview_boundary_unavailable; no isolated observation was produced.",
+        "blocker": "Current 2.38.0 preview-isolation-session observe_codex returned missing_prerequisite: preview_boundary_unavailable; no isolated observation was produced.",
         "observation": null
       }
     },
@@ -1008,7 +1008,7 @@ Ripwire quality-delta returned exit 2 for canonical process-state verbosity. Its
       "expected_content": "How should a supplied release note reach a final PR without separating its body from the validated packet?",
       "preview": {
         "status": "unavailable",
-        "blocker": "preview-isolation-session observe_codex returned missing_prerequisite: preview_boundary_unavailable; no isolated observation was produced.",
+        "blocker": "Current 2.38.0 preview-isolation-session observe_codex returned missing_prerequisite: preview_boundary_unavailable; no isolated observation was produced.",
         "observation": null
       }
     },
@@ -1021,7 +1021,7 @@ Ripwire quality-delta returned exit 2 for canonical process-state verbosity. Its
       "expected_content": "Fourteen stories cover 26 active requirements in eighteen ordered increments.",
       "preview": {
         "status": "unavailable",
-        "blocker": "preview-isolation-session observe_codex returned missing_prerequisite: preview_boundary_unavailable; no isolated observation was produced.",
+        "blocker": "Current 2.38.0 preview-isolation-session observe_codex returned missing_prerequisite: preview_boundary_unavailable; no isolated observation was produced.",
         "observation": null
       }
     },
