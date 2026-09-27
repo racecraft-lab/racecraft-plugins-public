@@ -1218,7 +1218,11 @@ missing, malformed, or stale record. A new or changed action reruns this
 preflight. If a worker discovers a predictable boundary that the record
 omitted, do not let the worker attempt it or ask from inside the task: record
 that the late discovery is an autopilot defect, return control to the parent,
-update the preflight, and resolve it there.
+and update the preflight there. The pre-Phase-7 stop above does not apply
+mid-run: when the refreshed disposition is `operator_action_required`, the
+parent defers only that task under
+[Blocked Actions Mid-Run: Fall Back or Defer, Never Stop](#blocked-actions-mid-run-fall-back-or-defer-never-stop)
+and keeps executing independent work.
 
 ```text
 1. Read mode from `CONFIDENCE_GATE_MODE` (set at Step 0.6b in
@@ -2438,6 +2442,59 @@ verification evidence path, fingerprint status, checkpoint commit SHA
 warnings, and any blocked/fixed tasks. The marker checkpoint SHA is the source
 commit for later live marker PR branches. Do not infer a new marker order from
 changed files or reviewability warnings.
+
+### Blocked Actions Mid-Run: Fall Back or Defer, Never Stop
+
+Once Phase 7 is running, human input is for exceptional cases only. The Phase
+6.5 preflight is the one normal human touchpoint; a single blocked action after
+it is not a reason to stop the run. A blocked action is any planned command,
+tool call, or side effect that cannot run as planned: an approval-reviewer veto
+(including one on an action the preflight recorded as `ready`), a missing
+approval, an unavailable tool or route, or a late-discovered boundary action
+whose refreshed preflight disposition is `operator_action_required`.
+
+1. **Take the task's own fallback.** When the fallback that the task,
+   `tasks.md`, or the spec itself defines covers this case (for example, "if the
+   refresh cannot run, keep the file unchanged and state the mismatch in the PR
+   body"), apply it without asking. Record it as an auto-applied fallback: quote
+   the defining text, name the blocked action and why it was blocked, and write
+   it in the task's implementation-notes entry and the workflow file's Phase 7
+   result. Then continue. Only a fallback the task or spec defines qualifies. An
+   alternative the autopilot invents is a workaround and is not allowed.
+2. **With no defined fallback, defer that task.** Leave its checkbox unchecked,
+   record it as deferred with the blocked action and the reason, and mark
+   deferred every task and Post item that depends on it. Then keep executing
+   every independent task, gate, and Post check. A deferral reserves no
+   execution-control budget, is not a failure family, and is never retried by
+   another route. Never ask the operator from inside the task, and never set a
+   workflow row, plan item, or the thread goal to blocked while runnable work
+   remains.
+3. **Ask once, at the end.** Only after every runnable item has finished, and
+   only if deferred items remain, make one consolidated operator request with
+   `request_user_input`. It names each deferred item, the blocked action, why
+   the requirement needs it, the smallest operator action that unblocks it, and
+   the resume command. Always print the same question as plain text in the
+   final message too, even when `request_user_input` returns, because the
+   question UI can fail to render in a thread. In an unattended run, or when
+   `request_user_input` is absent, the plain-text copy is the request. Only then
+   may the rows holding deferred work move to `⚠ Blocked`.
+4. **Report what happened.** The final report and the PR body list every
+   fallback taken and every deferred item. Pass them to `pr-packet-output` as
+   `known_gaps`, so they appear under the body's `## Known Gaps` heading. A run
+   with deferred items reports an honest incomplete checkpoint, never
+   completion.
+
+G7 and Post run on the implemented snapshot. A requirement whose only task is
+deferred is listed as deferred in the G7 evidence and in `known_gaps`; it
+neither fails G7 nor counts as covered by it.
+
+The run must never bypass a veto: never change approval, sandbox, or reviewer
+configuration, never rerun the vetoed action under a different command or tool, and never
+treat an earlier answer as authorization for the vetoed action. The
+correctness stops above are unchanged and still stop the run: unknown side
+effects, an execution-control `checkpoint_required` disposition (including an
+exhausted repair budget), a ledger or clock error, invalid or stale state, and
+a failed gate whose repair is out of scope.
 
 ## PR Packet and Body Boundary
 

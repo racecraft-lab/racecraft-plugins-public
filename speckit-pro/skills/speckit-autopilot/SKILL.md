@@ -751,7 +751,13 @@ Phantom Check, and Integration Suite in progress before dispatching the three
 workers. Later serial items advance one at a time. Completion requires every
 Post item to be completed or explicitly skipped **and** the created PR URL to
 be known; otherwise continue the loop or report an honest incomplete
-checkpoint, never a completion summary.
+checkpoint, never a completion summary. When every runnable item has finished
+and deferred items remain under §Blocked Actions Mid-Run: Fall Back or Defer,
+Never Stop in
+[`phase-execution.md`](./references/phase-execution.md#blocked-actions-mid-run-fall-back-or-defer-never-stop),
+report that checkpoint with one consolidated `AskUserQuestion` request, print
+the same question as plain text in the final message, and list every fallback
+taken and every deferred item.
 
 ## Workflow File Update Protocol
 
