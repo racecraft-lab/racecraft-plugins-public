@@ -1661,6 +1661,22 @@ def check_prerequisites(inputs: dict[str, Any], repo_root: Path) -> dict[str, An
         all_pass = False
     else:
         checks.append(check("commands", True, "All SpecKit commands installed", ""))
+    setup_mismatches = setup_contract_mismatches(repo_root)
+    if setup_mismatches:
+        checks.append(check(
+            "setup_contract", False,
+            "SpecKit skills call script options their .specify scripts reject. Refresh shared infrastructure: "
+            "specify integration upgrade <key> --force --script sh, then restore local edits",
+            "; ".join(setup_mismatches)))
+        all_pass = False
+    else:
+        checks.append(check("setup_contract", True, "SpecKit skills match their .specify scripts", ""))
+    resolution_error = template_resolution_error(repo_root)
+    if resolution_error:
+        checks.append(check("template_resolution", False, resolution_error, ""))
+        all_pass = False
+    else:
+        checks.append(check("template_resolution", True, "SpecKit can resolve preset templates", ""))
 
     if workflow:
         workflow_path = resolve_input_path(workflow, repo_root)
@@ -1691,6 +1707,80 @@ def check_prerequisites(inputs: dict[str, Any], repo_root: Path) -> dict[str, An
         )
     )
     return make_result(json_text({"all_pass": all_pass, "branch": branch, "is_worktree": is_worktree, "on_feature_branch": on_feature, "checks": checks}), exit_code=0 if all_pass else 1)
+
+
+SETUP_SCRIPT_CALL_RE = re.compile(r"`\.specify/scripts/bash/([A-Za-z0-9_.-]+\.sh)((?:\s+[^`\s]+)*)`")
+
+
+def setup_contract_mismatches(repo_root: Path) -> list[str]:
+    """Options project SpecKit skills pass to `.specify` scripts that the scripts reject.
+
+    A SpecKit upgrade can refresh the skills while leaving an older shared script
+    in place; the skill then fails at setup, long after prerequisites passed.
+    """
+    mismatches: list[str] = []
+    scripts: dict[str, str | None] = {}
+    for skills_dir in (".claude/skills", ".agents/skills", ".codex/skills"):
+        for skill in sorted((repo_root / skills_dir).glob("speckit-*/SKILL.md")):
+            text = trusted_text(skill, repo_root)
+            if text is None:
+                continue
+            label = skill.relative_to(repo_root).as_posix()
+            for name, arguments in SETUP_SCRIPT_CALL_RE.findall(text):
+                if name not in scripts:
+                    scripts[name] = trusted_text(repo_root / ".specify/scripts/bash" / name, repo_root)
+                script = scripts[name]
+                if script is None:
+                    mismatches.append(f"{label}: {name} is missing")
+                    continue
+                for option in (token for token in arguments.split() if token.startswith("--")):
+                    if not re.search(rf"(?:^|[\s|]){re.escape(option)}(?:\||\))", script, re.MULTILINE):
+                        mismatches.append(f"{label}: {name} {option}")
+    return sorted(set(mismatches))
+
+
+PYTHON_MAJOR_3_PROBE = "import sys; raise SystemExit(sys.version_info.major != 3)"
+
+
+def _path_python_succeeds(name: str, code: str) -> bool:
+    """Run `name -c code` exactly as SpecKit's shell scripts do: by bare name on PATH."""
+    try:
+        if name == "python3":
+            completed = subprocess.run(["python3", "-c", code], shell=False, capture_output=True, text=True, timeout=30)
+        else:
+            completed = subprocess.run(["python", "-c", code], shell=False, capture_output=True, text=True, timeout=30)
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+    return completed.returncode == 0
+
+
+def template_resolution_error(repo_root: Path) -> str | None:
+    """Why SpecKit cannot resolve templates here, or None.
+
+    With any preset manifest installed (SpecKit Pro installs one), SpecKit's
+    template resolver parses it with PyYAML from the interpreter that
+    `common.sh` `_python3_command` picks: `python3` on PATH, else `python`,
+    whichever reports major version 3. Upstream tracks this as
+    github/spec-kit#4443: a uv or pipx install keeps PyYAML in its own tool
+    environment, which that bare `python3` does not see. Only POSIX is
+    checked: there `subprocess` finds a bare name through the same PATH search
+    as the shell, while Windows resolves it through `CreateProcess`.
+    """
+    if sys.platform == "win32":
+        return None
+    if not any(trusted_file_exists(manifest, repo_root)
+               for manifest in (repo_root / ".specify/presets").glob("*/preset.yml")):
+        return None
+    for name in ("python3", "python"):
+        if shutil.which(name) and _path_python_succeeds(name, PYTHON_MAJOR_3_PROBE):
+            break
+    else:
+        return "SpecKit preset templates need Python 3 with PyYAML on PATH, and no Python 3 is on PATH"
+    if _path_python_succeeds(name, "import yaml"):
+        return None
+    interpreter = shutil.which(name)
+    return (f"SpecKit resolves preset templates with {interpreter}, which cannot import PyYAML. "
+            f"Install it there ({interpreter} -m pip install pyyaml) or put a Python 3 that has it first on PATH")
 
 
 def check(name: str, passed: bool, message: str, detail: str) -> dict[str, Any]:
