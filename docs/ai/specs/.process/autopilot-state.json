@@ -5,7 +5,7 @@
   "branch": "hrns-015-autopilot-gate-pr-emission-repair",
   "status": "in_progress",
   "stage": "implement",
-  "active_step": "Phase 6.5: Confidence Gate",
+  "active_step": "Plan stage: Draft artifact refresh and handoff",
   "stage_resolution": {
     "basis": "explicit --stage implement",
     "confidence_gate_status": "\u2705 Complete",
@@ -53,8 +53,8 @@
     "ledger_path": "docs/ai/specs/.process/execution-control/ac068cab59ef67faf15646a7.json",
     "disposition": "continue",
     "reasons": [],
-    "elapsed_seconds": 190564.71161293983,
-    "checkpoint_due": true,
+    "elapsed_seconds": 190650.99134278297,
+    "checkpoint_due": false,
     "run_id": "e7fbc9a6636945ed8a8c2abd42cbb892"
   },
   "plan": [
@@ -144,11 +144,11 @@
     },
     {
       "step": "Phase 6.5: Confidence Gate",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Plan stage: Draft artifact refresh and handoff",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 7: Implement - Setup (T001)",
@@ -373,16 +373,16 @@
       "reason": "0 CRITICAL/HIGH findings"
     },
     "G6.5": {
-      "composite": 0.95,
+      "composite": 0.94,
       "composite_source": "computed",
       "criteria": {
         "approach_clarity": 0.95,
-        "completeness": 0.95,
+        "completeness": 0.94,
         "requirements_alignment": 0.96,
-        "risk_assessment": 0.93,
+        "risk_assessment": 0.91,
         "task_understanding": 0.96
       },
-      "criteria_mean": 0.95,
+      "criteria_mean": 0.94,
       "deductions": {
         "amount": 0.0,
         "critical": 0,
@@ -555,9 +555,9 @@
   "confidence_gate": {
     "status": "pass",
     "mode": "advisory",
-    "composite": 0.95,
+    "composite": 0.94,
     "threshold": 0.9,
-    "deductions": 0
+    "deductions": 0.0
   },
   "structural_checks": {
     "quality_delta_exit": 2,
@@ -3472,6 +3472,11 @@
         "gallery": "4 passed, native exit0",
         "owned_server_cleanup": "completed",
         "aggregate_command_rerun": false
+      },
+      "gates": {
+        "G5": "pass",
+        "G6": "pass",
+        "G6.5": "pass:0.94"
       }
     },
     "privacy_normalization": {
