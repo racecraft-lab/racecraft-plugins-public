@@ -1098,6 +1098,13 @@ planned action in any of these categories:
   `tasks.md` and the Post list for such tasks; a task that runs a live provider
   is data egress even when it has no visible side effect.
 
+When the plan delegates work to the delegation gateway (for example the
+hardener), inventory that delegation as one data egress action. Its `target`
+is the gateway's default `route=auto` destination: the gateway's cloud route
+for repositories on the operator's consent list, with the local worker as the
+fallback. The rendered authorization then covers it. Never plan an explicit
+local route to avoid that authorization; only the operator chooses it.
+
 For each action, record its category, exact command or tool when known, target,
 durability or data effect, required execution boundary, existing authorization
 evidence, and one disposition:
