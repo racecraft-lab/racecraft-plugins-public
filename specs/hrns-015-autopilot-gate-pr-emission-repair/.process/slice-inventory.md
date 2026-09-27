@@ -51,7 +51,7 @@ C2b2 excludes these six shipped link-only candidates, leaving sixteen exact cand
 - `speckit-pro/README.md`
 - `speckit-pro/skills/speckit-coach/templates/technical-roadmap-template.md`
 
-Candidate group unions are A: 39 total/4 production; B: 36/3; C1a: 29/1; C1b: 29/4; C2: 34/0 after these exclusions. Only the eighteen per-PR sets are within the strict caps; the group unions do not qualify as individual PRs.
+Candidate group unions are A: 39 total/4 production; B: 36/3; C1a: 29/1; C1b: 30/4; C2: 34/0 after these exclusions. Only the eighteen per-PR sets are within the strict caps; the group unions do not qualify as individual PRs.
 
 ## Exact path operations
 
@@ -72,11 +72,11 @@ Tasks: T003–T004. Requirements: FR-001, FR-003, FR-026. **24 candidate paths; 
 | host/support | modify | `speckit-pro/codex-skills/speckit-autopilot/SKILL.md` | task |
 | generated | regenerate | `dist/codex/speckit-pro/skills/speckit-autopilot/SKILL.md` | Codex overlay |
 | generated trust | regenerate | `speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json` | runner source edited |
-| generated trust | regenerate | `speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.sha256` | runner source edited |
+| generated trust | regenerate | `speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256` | runner source edited |
 | generated trust | regenerate | `dist/claude/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json` | runner source edited |
-| generated trust | regenerate | `dist/claude/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.sha256` | runner source edited |
+| generated trust | regenerate | `dist/claude/speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256` | runner source edited |
 | generated trust | regenerate | `dist/codex/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json` | runner source edited |
-| generated trust | regenerate | `dist/codex/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.sha256` | runner source edited |
+| generated trust | regenerate | `dist/codex/speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256` | runner source edited |
 | generated reference | regenerate | `docs-site/src/content/docs/reference/skills.md` | changed source or new test inventory candidate |
 | test/manifest | modify | `tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py` | existing registered packet test; inline cases |
 | process/evidence | modify | `docs/ai/specs/.process/HRNS-015-workflow.md` | per-marker workflow checkpoint |
@@ -103,11 +103,11 @@ Tasks: T005. Requirements: FR-002, FR-026. **24 candidate paths; 2 production.**
 | host/support | modify | `speckit-pro/codex-skills/speckit-autopilot/SKILL.md` | task |
 | generated | regenerate | `dist/codex/speckit-pro/skills/speckit-autopilot/SKILL.md` | Codex overlay |
 | generated trust | regenerate | `speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json` | runner source edited |
-| generated trust | regenerate | `speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.sha256` | runner source edited |
+| generated trust | regenerate | `speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256` | runner source edited |
 | generated trust | regenerate | `dist/claude/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json` | runner source edited |
-| generated trust | regenerate | `dist/claude/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.sha256` | runner source edited |
+| generated trust | regenerate | `dist/claude/speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256` | runner source edited |
 | generated trust | regenerate | `dist/codex/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json` | runner source edited |
-| generated trust | regenerate | `dist/codex/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.sha256` | runner source edited |
+| generated trust | regenerate | `dist/codex/speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256` | runner source edited |
 | generated reference | regenerate | `docs-site/src/content/docs/reference/skills.md` | changed source or new test inventory candidate |
 | test/manifest | modify | `tests/speckit-pro/unit/test-speckit-pro-read-only-helpers.py` | existing registered helper test; inline cases |
 | process/evidence | modify | `docs/ai/specs/.process/HRNS-015-workflow.md` | per-marker workflow checkpoint |
@@ -134,11 +134,11 @@ Tasks: T006–T007. Requirements: FR-004, FR-005, FR-027, FR-026. **24 candidate
 | test/manifest | modify | `tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py` | task |
 | test/manifest | add | `tests/speckit-pro/unit/fixtures/pr-packet-repair/packet-only-untracked.json` | task |
 | generated trust | regenerate | `speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json` | runner source edited |
-| generated trust | regenerate | `speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.sha256` | runner source edited |
+| generated trust | regenerate | `speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256` | runner source edited |
 | generated trust | regenerate | `dist/claude/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json` | runner source edited |
-| generated trust | regenerate | `dist/claude/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.sha256` | runner source edited |
+| generated trust | regenerate | `dist/claude/speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256` | runner source edited |
 | generated trust | regenerate | `dist/codex/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json` | runner source edited |
-| generated trust | regenerate | `dist/codex/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.sha256` | runner source edited |
+| generated trust | regenerate | `dist/codex/speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256` | runner source edited |
 | host/support | modify | `docs/prd-harness-engineering-uplift.md` | task |
 | host/support | modify | `docs/ai/specs/harness-engineering-uplift-technical-roadmap.md` | task |
 | process/evidence | modify | `docs/ai/specs/.process/HRNS-015-workflow.md` | per-marker workflow checkpoint |
@@ -166,11 +166,11 @@ Tasks: T008–T009. Requirements: FR-006, FR-026. **24 candidate paths; 2 produc
 | generated | regenerate | `dist/codex/speckit-pro/skills/speckit-autopilot/SKILL.md` | Codex overlay |
 | test/manifest | modify | `tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py` | task |
 | generated trust | regenerate | `speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json` | runner source edited |
-| generated trust | regenerate | `speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.sha256` | runner source edited |
+| generated trust | regenerate | `speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256` | runner source edited |
 | generated trust | regenerate | `dist/claude/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json` | runner source edited |
-| generated trust | regenerate | `dist/claude/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.sha256` | runner source edited |
+| generated trust | regenerate | `dist/claude/speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256` | runner source edited |
 | generated trust | regenerate | `dist/codex/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json` | runner source edited |
-| generated trust | regenerate | `dist/codex/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.sha256` | runner source edited |
+| generated trust | regenerate | `dist/codex/speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256` | runner source edited |
 | generated reference | regenerate | `docs-site/src/content/docs/reference/skills.md` | changed source or new test inventory candidate |
 | process/evidence | modify | `docs/ai/specs/.process/HRNS-015-workflow.md` | per-marker workflow checkpoint |
 | process/evidence | modify | `docs/ai/specs/.process/autopilot-state.json` | per-marker persisted state |
@@ -195,11 +195,11 @@ Tasks: T010. Requirements: FR-007, FR-008, FR-026. **22 candidate paths; 1 produ
 | test/manifest | add | `tests/speckit-pro/unit/fixtures/marker-visibility/cases.json` | task |
 | test/manifest | modify | `tests/speckit-pro/suite-manifest.json` | task |
 | generated trust | regenerate | `speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json` | runner source edited |
-| generated trust | regenerate | `speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.sha256` | runner source edited |
+| generated trust | regenerate | `speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256` | runner source edited |
 | generated trust | regenerate | `dist/claude/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json` | runner source edited |
-| generated trust | regenerate | `dist/claude/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.sha256` | runner source edited |
+| generated trust | regenerate | `dist/claude/speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256` | runner source edited |
 | generated trust | regenerate | `dist/codex/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json` | runner source edited |
-| generated trust | regenerate | `dist/codex/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.sha256` | runner source edited |
+| generated trust | regenerate | `dist/codex/speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256` | runner source edited |
 | generated reference | regenerate | `docs-site/src/content/docs/reference/tests.md` | changed source or new test inventory candidate |
 | process/evidence | modify | `docs/ai/specs/.process/HRNS-015-workflow.md` | per-marker workflow checkpoint |
 | process/evidence | modify | `docs/ai/specs/.process/autopilot-state.json` | per-marker persisted state |
@@ -224,11 +224,11 @@ Tasks: T011. Requirements: FR-009, FR-010, FR-026. **23 candidate paths; 2 produ
 | test/manifest | add | `tests/speckit-pro/unit/fixtures/spec-index-freshness/historical-stale-index.md` | task |
 | test/manifest | modify | `tests/speckit-pro/suite-manifest.json` | task |
 | generated trust | regenerate | `speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json` | runner source edited |
-| generated trust | regenerate | `speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.sha256` | runner source edited |
+| generated trust | regenerate | `speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256` | runner source edited |
 | generated trust | regenerate | `dist/claude/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json` | runner source edited |
-| generated trust | regenerate | `dist/claude/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.sha256` | runner source edited |
+| generated trust | regenerate | `dist/claude/speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256` | runner source edited |
 | generated trust | regenerate | `dist/codex/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json` | runner source edited |
-| generated trust | regenerate | `dist/codex/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.sha256` | runner source edited |
+| generated trust | regenerate | `dist/codex/speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256` | runner source edited |
 | generated reference | regenerate | `docs-site/src/content/docs/reference/tests.md` | changed source or new test inventory candidate |
 | generated reference | regenerate | `docs-site/src/content/docs/reference/scripts.md` | changed skill/script inventory candidate |
 | process/evidence | modify | `docs/ai/specs/.process/HRNS-015-workflow.md` | per-marker workflow checkpoint |
@@ -254,11 +254,11 @@ Tasks: T012–T013. Requirements: FR-014, FR-028, FR-029, FR-026. **23 candidate
 | generated | regenerate | `dist/claude/speckit-pro/skills/speckit-coach/templates/technical-roadmap-template.md` | source payload |
 | generated | regenerate | `dist/codex/speckit-pro/skills/speckit-coach/templates/technical-roadmap-template.md` | source payload |
 | generated trust | regenerate | `speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json` | runner source edited |
-| generated trust | regenerate | `speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.sha256` | runner source edited |
+| generated trust | regenerate | `speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256` | runner source edited |
 | generated trust | regenerate | `dist/claude/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json` | runner source edited |
-| generated trust | regenerate | `dist/claude/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.sha256` | runner source edited |
+| generated trust | regenerate | `dist/claude/speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256` | runner source edited |
 | generated trust | regenerate | `dist/codex/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json` | runner source edited |
-| generated trust | regenerate | `dist/codex/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.sha256` | runner source edited |
+| generated trust | regenerate | `dist/codex/speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256` | runner source edited |
 | test/manifest | modify | `tests/speckit-pro/unit/test-speckit-pro-read-only-helpers.py` | existing registered helper test; inline cases |
 | generated reference | regenerate | `docs-site/src/content/docs/reference/skills.md` | changed source or new test inventory candidate |
 | process/evidence | modify | `docs/ai/specs/.process/HRNS-015-workflow.md` | per-marker workflow checkpoint |
@@ -280,11 +280,11 @@ Tasks: T014. Requirements: FR-015, FR-026. **18 candidate paths; 1 production.**
 | test/manifest | add | `tests/speckit-pro/unit/test-size-estimate-refactors.py` | task |
 | test/manifest | modify | `tests/speckit-pro/suite-manifest.json` | task |
 | generated trust | regenerate | `speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json` | runner source edited |
-| generated trust | regenerate | `speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.sha256` | runner source edited |
+| generated trust | regenerate | `speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256` | runner source edited |
 | generated trust | regenerate | `dist/claude/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json` | runner source edited |
-| generated trust | regenerate | `dist/claude/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.sha256` | runner source edited |
+| generated trust | regenerate | `dist/claude/speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256` | runner source edited |
 | generated trust | regenerate | `dist/codex/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json` | runner source edited |
-| generated trust | regenerate | `dist/codex/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.sha256` | runner source edited |
+| generated trust | regenerate | `dist/codex/speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256` | runner source edited |
 | generated reference | regenerate | `docs-site/src/content/docs/reference/tests.md` | changed source or new test inventory candidate |
 | process/evidence | modify | `docs/ai/specs/.process/HRNS-015-workflow.md` | per-marker workflow checkpoint |
 | process/evidence | modify | `docs/ai/specs/.process/autopilot-state.json` | per-marker persisted state |
@@ -309,11 +309,11 @@ Tasks: T015–T016. Requirements: FR-016, FR-026. **22 candidate paths; 2 produc
 | test/manifest | add | `tests/speckit-pro/unit/test-declared-quality-commands.py` | task |
 | test/manifest | modify | `tests/speckit-pro/suite-manifest.json` | task |
 | generated trust | regenerate | `speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json` | runner source edited |
-| generated trust | regenerate | `speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.sha256` | runner source edited |
+| generated trust | regenerate | `speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256` | runner source edited |
 | generated trust | regenerate | `dist/claude/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json` | runner source edited |
-| generated trust | regenerate | `dist/claude/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.sha256` | runner source edited |
+| generated trust | regenerate | `dist/claude/speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256` | runner source edited |
 | generated trust | regenerate | `dist/codex/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json` | runner source edited |
-| generated trust | regenerate | `dist/codex/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.sha256` | runner source edited |
+| generated trust | regenerate | `dist/codex/speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256` | runner source edited |
 | generated reference | regenerate | `docs-site/src/content/docs/reference/tests.md` | changed source or new test inventory candidate |
 | process/evidence | modify | `docs/ai/specs/.process/HRNS-015-workflow.md` | per-marker workflow checkpoint |
 | process/evidence | modify | `docs/ai/specs/.process/autopilot-state.json` | per-marker persisted state |

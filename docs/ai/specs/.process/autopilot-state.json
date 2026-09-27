@@ -5,7 +5,7 @@
   "branch": "hrns-015-autopilot-gate-pr-emission-repair",
   "status": "in_progress",
   "stage": "plan",
-  "active_step": "Phase 6: Analyze",
+  "active_step": "Phase 6.5: Confidence Gate",
   "stage_resolution": {
     "artifact_review": {
       "feature_dir": "specs/hrns-015-autopilot-gate-pr-emission-repair",
@@ -96,7 +96,7 @@
     "ledger_path": "docs/ai/specs/.process/execution-control/ac068cab59ef67faf15646a7.json",
     "disposition": "continue",
     "reasons": [],
-    "elapsed_seconds": 179260.61967372894,
+    "elapsed_seconds": 179896.459761858,
     "checkpoint_due": false,
     "run_id": "e7fbc9a6636945ed8a8c2abd42cbb892"
   },
@@ -179,15 +179,15 @@
     },
     {
       "step": "Phase 6: Analyze",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 6: Analyze - Consensus",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 6.5: Confidence Gate",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 7: Implement - Setup (T001)",
@@ -310,7 +310,7 @@
       "status": "skipped: outside --stage plan"
     }
   ],
-  "updated_at": "2026-09-27T16:10:54.971441+00:00",
+  "updated_at": "2026-09-27T16:22:05.992231+00:00",
   "prerequisites": {
     "status": "completed",
     "all_pass": true,
@@ -401,9 +401,15 @@
       "task_count": 31
     },
     "G6": {
-      "pass": false,
-      "status": "not_run_current_plan",
-      "reason": "Analyze pending marker-boundary decision"
+      "analysis_findings": {
+        "critical": 0,
+        "high": 0
+      },
+      "details": [],
+      "gate": "G6",
+      "markers": 0,
+      "pass": true,
+      "reason": "0 CRITICAL/HIGH findings"
     },
     "G6.5": {
       "status": "not_run_current_plan",
@@ -415,8 +421,8 @@
     "spec_file": "specs/hrns-015-autopilot-gate-pr-emission-repair/spec.md",
     "requirements_checklist": "specs/hrns-015-autopilot-gate-pr-emission-repair/checklists/requirements.md",
     "user_stories": 14,
-    "acceptance_scenarios": 35,
-    "functional_requirements": 27,
+    "acceptance_scenarios": 37,
+    "functional_requirements": 26,
     "success_criteria": 11,
     "checklist_passed": 16,
     "checklist_failed": 0
@@ -473,9 +479,9 @@
       "url": "https://github.com/racecraft-lab/racecraft-plugins-public/issues/638"
     },
     "740": {
-      "status": "open",
+      "status": "resolved_in_supplied_2.37.1_baseline",
       "url": "https://github.com/racecraft-lab/racecraft-plugins-public/issues/740",
-      "verified": "planned v2 checkpoint requires unproduced commit_sha and evidence_path"
+      "verified": "Current pending-only pr-marker-plan.v1 passes schema and phase coverage guard."
     }
   },
   "plan_reviewability": {
@@ -550,24 +556,19 @@
     "reason": "Classifier returned one-navigable-PR; plan-layers-feature-dir not invoked"
   },
   "analyze": {
-    "status": "findings_pending_correction",
+    "status": "completed",
     "findings": {
       "critical": 0,
-      "high": 1,
-      "medium": 1,
+      "high": 0,
+      "medium": 0,
       "low": 0
     },
-    "unresolved": [
+    "resolved": [
       "H8",
       "M3"
     ],
-    "coverage": {
-      "active_fr": 26,
-      "tasks": 31,
-      "stories": 14,
-      "scenarios": 37,
-      "success_criteria": 11
-    }
+    "unresolved": [],
+    "confidence_emit": "dedicated named consensus-synthesizer; 0.95; all five criteria persisted once for this pass"
   },
   "confidence_gate": {
     "status": "pending",
@@ -582,11 +583,8 @@
   },
   "plan_stage_completion": {
     "planning_complete": false,
-    "checkpoint_commit": "b671bf03",
     "remaining": [
-      "post-G5 marker boundary",
-      "Analyze and consensus",
-      "confidence gate",
+      "autonomy and confidence gate",
       "artifact regeneration and draft handoff"
     ],
     "implementation_started": false
@@ -661,8 +659,8 @@
     "private_record_sha256": "sha256:aee0f387809bf3cf96445f8d27e5ec5a9e8b29368839b019345e41e8dac9ec4f"
   },
   "plan_resume_result": {
-    "version": "2.37.0",
-    "status": "artifacts_written",
+    "version": "2.37.1",
+    "status": "analyze_complete",
     "artifact_count": 6,
     "active_requirements": 26,
     "historical_requirement_ids": 29,
@@ -670,8 +668,8 @@
     "acceptance_scenarios": 37,
     "owner_ratification": "approved_18_part_direction",
     "proposed_increments": 18,
-    "g3": "pass_after_owner_approval",
-    "research_limitation": "Search unavailable; documentation rate limited; independent local delegation unavailable before file reads."
+    "g3": "pass",
+    "research_limitation": "Current documentation fetches were rate limited; existing source and fixture evidence retained."
   },
   "plan_reviewability_budget": {
     "declared_files": {
@@ -907,7 +905,7 @@
       "feature_spec_sha": "sha256:18c93677aaaee5f73aa8399b2cea052cc58ed2724fe6e74d93be96a47eae7e58",
       "plan_declared_scope_sha": "sha256:8381e50f0c0daf7491b6fb6f6e431adea30a89277d0b3073fd476194e6a8d759",
       "tasks_sha": "sha256:46302f5321c2df17acb65799305a2fd8de82b051f1e9b0bd630f45b3767febe3",
-      "reviewability_sha": "sha256:1224c5c39c26e6ef9e3e1fc19093fb1e9fcbd43685ebb47c773d758efabf065d",
+      "reviewability_sha": "sha256:4efa6739751bbef3183ebc677bde97f4971dfc61554ecf27a147af5d65aabefc",
       "hazard_route_sha": "sha256:f4259204cb8f92f1978ddf3b70195aba948d317567082f50f585fb0f4e0ef9c4"
     },
     "markers": [
@@ -978,7 +976,7 @@
           },
           {
             "operation": "MODIFIED",
-            "path": "speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.sha256"
+            "path": "speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256"
           },
           {
             "operation": "MODIFIED",
@@ -986,7 +984,7 @@
           },
           {
             "operation": "MODIFIED",
-            "path": "dist/claude/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.sha256"
+            "path": "dist/claude/speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256"
           },
           {
             "operation": "MODIFIED",
@@ -994,7 +992,7 @@
           },
           {
             "operation": "MODIFIED",
-            "path": "dist/codex/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.sha256"
+            "path": "dist/codex/speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256"
           },
           {
             "operation": "MODIFIED",
@@ -1120,7 +1118,7 @@
           },
           {
             "operation": "MODIFIED",
-            "path": "speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.sha256"
+            "path": "speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256"
           },
           {
             "operation": "MODIFIED",
@@ -1128,7 +1126,7 @@
           },
           {
             "operation": "MODIFIED",
-            "path": "dist/claude/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.sha256"
+            "path": "dist/claude/speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256"
           },
           {
             "operation": "MODIFIED",
@@ -1136,7 +1134,7 @@
           },
           {
             "operation": "MODIFIED",
-            "path": "dist/codex/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.sha256"
+            "path": "dist/codex/speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256"
           },
           {
             "operation": "MODIFIED",
@@ -1263,7 +1261,7 @@
           },
           {
             "operation": "MODIFIED",
-            "path": "speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.sha256"
+            "path": "speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256"
           },
           {
             "operation": "MODIFIED",
@@ -1271,7 +1269,7 @@
           },
           {
             "operation": "MODIFIED",
-            "path": "dist/claude/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.sha256"
+            "path": "dist/claude/speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256"
           },
           {
             "operation": "MODIFIED",
@@ -1279,7 +1277,7 @@
           },
           {
             "operation": "MODIFIED",
-            "path": "dist/codex/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.sha256"
+            "path": "dist/codex/speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256"
           },
           {
             "operation": "MODIFIED",
@@ -1411,7 +1409,7 @@
           },
           {
             "operation": "MODIFIED",
-            "path": "speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.sha256"
+            "path": "speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256"
           },
           {
             "operation": "MODIFIED",
@@ -1419,7 +1417,7 @@
           },
           {
             "operation": "MODIFIED",
-            "path": "dist/claude/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.sha256"
+            "path": "dist/claude/speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256"
           },
           {
             "operation": "MODIFIED",
@@ -1427,7 +1425,7 @@
           },
           {
             "operation": "MODIFIED",
-            "path": "dist/codex/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.sha256"
+            "path": "dist/codex/speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256"
           },
           {
             "operation": "MODIFIED",
@@ -1545,7 +1543,7 @@
           },
           {
             "operation": "MODIFIED",
-            "path": "speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.sha256"
+            "path": "speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256"
           },
           {
             "operation": "MODIFIED",
@@ -1553,7 +1551,7 @@
           },
           {
             "operation": "MODIFIED",
-            "path": "dist/claude/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.sha256"
+            "path": "dist/claude/speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256"
           },
           {
             "operation": "MODIFIED",
@@ -1561,7 +1559,7 @@
           },
           {
             "operation": "MODIFIED",
-            "path": "dist/codex/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.sha256"
+            "path": "dist/codex/speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256"
           },
           {
             "operation": "MODIFIED",
@@ -1681,7 +1679,7 @@
           },
           {
             "operation": "MODIFIED",
-            "path": "speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.sha256"
+            "path": "speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256"
           },
           {
             "operation": "MODIFIED",
@@ -1689,7 +1687,7 @@
           },
           {
             "operation": "MODIFIED",
-            "path": "dist/claude/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.sha256"
+            "path": "dist/claude/speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256"
           },
           {
             "operation": "MODIFIED",
@@ -1697,7 +1695,7 @@
           },
           {
             "operation": "MODIFIED",
-            "path": "dist/codex/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.sha256"
+            "path": "dist/codex/speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256"
           },
           {
             "operation": "MODIFIED",
@@ -1822,7 +1820,7 @@
           },
           {
             "operation": "MODIFIED",
-            "path": "speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.sha256"
+            "path": "speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256"
           },
           {
             "operation": "MODIFIED",
@@ -1830,7 +1828,7 @@
           },
           {
             "operation": "MODIFIED",
-            "path": "dist/claude/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.sha256"
+            "path": "dist/claude/speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256"
           },
           {
             "operation": "MODIFIED",
@@ -1838,7 +1836,7 @@
           },
           {
             "operation": "MODIFIED",
-            "path": "dist/codex/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.sha256"
+            "path": "dist/codex/speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256"
           },
           {
             "operation": "MODIFIED",
@@ -1944,7 +1942,7 @@
           },
           {
             "operation": "MODIFIED",
-            "path": "speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.sha256"
+            "path": "speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256"
           },
           {
             "operation": "MODIFIED",
@@ -1952,7 +1950,7 @@
           },
           {
             "operation": "MODIFIED",
-            "path": "dist/claude/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.sha256"
+            "path": "dist/claude/speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256"
           },
           {
             "operation": "MODIFIED",
@@ -1960,7 +1958,7 @@
           },
           {
             "operation": "MODIFIED",
-            "path": "dist/codex/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.sha256"
+            "path": "dist/codex/speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256"
           },
           {
             "operation": "MODIFIED",
@@ -2080,7 +2078,7 @@
           },
           {
             "operation": "MODIFIED",
-            "path": "speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.sha256"
+            "path": "speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256"
           },
           {
             "operation": "MODIFIED",
@@ -2088,7 +2086,7 @@
           },
           {
             "operation": "MODIFIED",
-            "path": "dist/claude/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.sha256"
+            "path": "dist/claude/speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256"
           },
           {
             "operation": "MODIFIED",
@@ -2096,7 +2094,7 @@
           },
           {
             "operation": "MODIFIED",
-            "path": "dist/codex/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.sha256"
+            "path": "dist/codex/speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256"
           },
           {
             "operation": "MODIFIED",
@@ -3264,7 +3262,7 @@
     "feature_spec_sha": "sha256:18c93677aaaee5f73aa8399b2cea052cc58ed2724fe6e74d93be96a47eae7e58",
     "plan_declared_scope_sha": "sha256:8381e50f0c0daf7491b6fb6f6e431adea30a89277d0b3073fd476194e6a8d759",
     "tasks_sha": "sha256:46302f5321c2df17acb65799305a2fd8de82b051f1e9b0bd630f45b3767febe3",
-    "reviewability_sha": "sha256:1224c5c39c26e6ef9e3e1fc19093fb1e9fcbd43685ebb47c773d758efabf065d",
+    "reviewability_sha": "sha256:4efa6739751bbef3183ebc677bde97f4971dfc61554ecf27a147af5d65aabefc",
     "hazard_route_sha": "sha256:f4259204cb8f92f1978ddf3b70195aba948d317567082f50f585fb0f4e0ef9c4"
   },
   "marker_plan_sources": {
@@ -3300,7 +3298,7 @@
         },
         "tool": "estimate-reviewable-loc"
       },
-      "inventory_sha256": "sha256:78afa1055925cba02f7bd12a262719986b459549a9a83226071898353ecd22a1"
+      "inventory_sha256": "sha256:36e165fde9ede16ba76c0e440d23cf339512c7c24e3fb8d5491fb1a65dd47954"
     },
     "hazard_route": {
       "hints": [],
@@ -3314,13 +3312,13 @@
     "hash_contract": "Raw file bytes; canonical sorted compact UTF-8 JSON for reviewability and hazard route."
   },
   "pending_planning_correction": {
-    "status": "approval_required",
-    "refusal_reason": "failure_family_budget_exhausted",
-    "failure_invariant": "FR-026",
+    "status": "applied_validated",
     "findings": [
       "H8",
       "M3"
     ],
+    "failure_invariant": "FR-026",
+    "scope_sha256": "7157f49ae21dc48d5477d4684ad27ff719937faf8a4d1b61054f102cdacfad91",
     "dispatch_id": "hrns015-analyze-path-exception-2371"
   }
 }

@@ -37,9 +37,9 @@ captured during scoping.
 | Plan | `/speckit-plan` | ✅ Complete | 2.37.1 re-plan: six artifacts reconciled, 18 increments preserved, G3 pass, advisory projected LOC 200 |
 | Checklist | `/speckit-checklist` | ✅ Complete | API 24, error handling 21, state management 22; zero gaps; G4 passed |
 | Tasks | `/speckit-tasks` | ✅ Complete | 31 unchecked tasks, 17 groups, current metadata, G5 pass; 18 pending-only v1 markers validated |
-| Analyze | `/speckit-analyze` | 🔄 In Progress | Current review complete; H8 checksum paths and M3 derived union require a guarded correction |
-| Confidence Gate | G6.5 | ⏳ Pending | Pending current Analyze; advisory mode retained, older composite not reused |
-| Implement | `/speckit-implement` | ⏳ Pending | Outside --stage plan; qualification and owner ratification remain pending |
+| Analyze | `/speckit-analyze` | ✅ Complete | All current findings resolved; 26 active FRs covered; G6 passed; final confidence synthesis 0.95 |
+| Confidence Gate | G6.5 | 🔄 In Progress | Analyze checkpoint complete; current autonomy preflight and advisory gate next |
+| Implement | `/speckit-implement` | ⏳ Pending | Outside --stage plan; actual per-PR diffs, LOC and checkpoints remain mandatory before emission |
 | Post | Post-Implementation | ⏳ Pending | Outside --stage plan; canonical 13-item closeout remains for implementation |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⏭️ Skipped | ⚠️ Blocked
@@ -1122,7 +1122,7 @@ State-management revalidation preserved all 22 unchecked criteria and found zero
 | Feature spec | `sha256:18c93677aaaee5f73aa8399b2cea052cc58ed2724fe6e74d93be96a47eae7e58` |
 | Plan declared scope | `sha256:8381e50f0c0daf7491b6fb6f6e431adea30a89277d0b3073fd476194e6a8d759` |
 | Tasks | `sha256:46302f5321c2df17acb65799305a2fd8de82b051f1e9b0bd630f45b3767febe3` |
-| Reviewability | `sha256:1224c5c39c26e6ef9e3e1fc19093fb1e9fcbd43685ebb47c773d758efabf065d` |
+| Reviewability | `sha256:4efa6739751bbef3183ebc677bde97f4971dfc61554ecf27a147af5d65aabefc` |
 | Hazard route | `sha256:f4259204cb8f92f1978ddf3b70195aba948d317567082f50f585fb0f4e0ef9c4` |
 
 | Review order | Marker | Increment | Tasks | Implementation checkpoint |
@@ -1146,13 +1146,12 @@ State-management revalidation preserved all 22 unchecked criteria and found zero
 | 17 | `us13-part2` | C2b1 | T026, T027 | pending |
 | 18 | `us14` | C2b2 | T028, T029, T030, T031 | pending |
 
-### Tasks and marker checkpoint — 2.37.1 re-plan
 
-The interrupted Tasks dispatch had no writes or final result; its host-confirmed interruption was recorded and the authorized resume completed. Native metadata validation and G5 passed for 31 unchecked tasks. The final advisory estimator returned pass/projected 200, with 40 modified and 16 new declarations. All eighteen candidate sets remain within limits.
+## Current Analyze Evidence — 2.37.1
 
-Marker authoring exposed a duplicate NEW teardown-test allocation. An ordinary FR-019 correction in the approved epoch assigned distinct phase/analyze and checklist/implement test files, preserving 21 paths and two production files in each increment. The regenerated pr-marker-plan.v1 validates with eighteen checkpoints containing only `{"status":"pending"}`. Actual per-PR diffs, LOC and checkpoint evidence remain required before implementation PR emission. Both ordinary corrections in the new epoch are recorded; prior history remains archived in the same ledger.
+The current review supersedes the historical nineteen-increment analysis. All 26 active FRs, 31 unchecked tasks, fourteen stories, 37 scenarios and eleven success criteria remain represented. Candidate sets contain 14–24 total and 0–2 production paths. Roadmap Done When items and five formerly uncovered scope bullets map to requirements and tasks. Constitution rules, paired-host delivery and formal selection none remain explicit.
 
-### Analysis Results — 2.37.1 current re-plan
+### Analysis Results
 
 | ID | Severity | Issue | Resolution |
 | --- | --- | --- | --- |
@@ -1161,9 +1160,28 @@ Marker authoring exposed a duplicate NEW teardown-test allocation. An ordinary F
 | H3 | HIGH | A allocation and approval outstanding. | Approval recorded; all four A sets contain 24 candidate paths. Actual emission evidence remains mandatory later. |
 | H4 | HIGH | B allocation and approval outstanding. | Five remaining B sets contain 22/23/23/18/22 paths; shipped B2a retired. |
 | H5 | HIGH | C2 allocation and approval outstanding. | Five C2 sets contain 14/14/14/21/16 paths; six shipped C2b2 exclusions documented. |
-| H6 | HIGH | Story identities and marker record outstanding. | Eighteen ordered markers cover fourteen stories and all 31 tasks; checkpoints exactly pending. H8 separately tracks incorrect declared checksum paths. |
-| H7 | HIGH | Recurring evidence and qualifications outstanding. | Six recurring evidence paths included; current hashes match. Approved timing requires actual diff/LOC/checkpoint proof at emission. H8 tracks current path-consistency defect. |
-| H8 | HIGH | Nine A/B increments name nonexistent speckit-pro-runner.manifest.sha256 instead of speckit-pro-runner.sha256 in inventory, task ownership and marker declarations. |  |
-| M3 | MEDIUM | C1b candidate group union says 29 although distinct teardown tests produce 30; individual increments remain 21/2. |  |
+| H6 | HIGH | Story identities and marker record outstanding. | Eighteen ordered markers cover fourteen stories and all 31 tasks including folded T031. Every checkpoint is exactly pending; checksum declarations corrected and guard passes. |
+| H7 | HIGH | Recurring evidence and qualifications outstanding. | Six recurring evidence paths included, current hashes match, checksum declarations corrected. Approved timing requires actual diff/LOC/checkpoint evidence before implementation PR emission. |
+| H8 | HIGH | Nine A/B increments name nonexistent speckit-pro-runner.manifest.sha256 instead of speckit-pro-runner.sha256 in inventory, task ownership and marker declarations. | Corrected all 96 derived checksum references to generator-owned speckit-pro-runner.sha256 paths under the explicit guarded exception. Native metadata and regenerated marker guard pass; counts unchanged. |
+| M3 | MEDIUM | C1b candidate group union says 29 although distinct teardown tests produce 30; individual increments remain 21/2. | Corrected C1b union to 30 total / 4 production, matching Plan and distinct rows; each increment remains 21 total / 2 production. |
 
-Current Analyze confirms full active FR/task coverage, paired-host delivery, candidate caps and matching pending-marker fingerprints. H8 is established by refresh-release-artifacts.py:36,306 and gates/payloads.py:543,545. The ordinary FR-026 corrective reserve returned failure_family_budget_exhausted; no correction was applied. The proposed repair changes only checksum path names in three derived records and C1b's group-union count from 29 to 30, followed by metadata/marker validation. Both individual C1b increments remain 21 total and two production paths.
+### Consensus Resolution Log
+
+| Item | Route | Agreement | Confidence | Resolution |
+| --- | --- | --- | --- | --- |
+| H8 | codebase analyst | Accept exact checksum substitution | High | Applied under explicit guarded exception; generator and payload verifier agree. Native task metadata and planned-marker validation pass. |
+| M3 | codebase analyst | Accept independently counted union | High | Applied 30/4 union, preserving both 21/2 increments. |
+
+The ordinary FR-026 reserve was refused with failure_family_budget_exhausted. The user explicitly approved the exact H8/M3 correction; authorize-corrective-exception retained the same run and two ordinary cycles. No implementation evidence was fabricated. Current schema and phase-coverage checks pass with all eighteen checkpoints pending-only.
+
+### Pre-Implement Confidence — current 2.37.1 Analyze
+
+Named consensus-synthesizer final result: H8 and M3 resolved, no dissent or flags; all current coverage preserved. Actual implementation qualification remains pending.
+
+📊 Confidence: 0.95
+
+- Task understanding: 0.96
+- Approach clarity: 0.95
+- Requirements alignment: 0.96
+- Risk assessment: 0.93
+- Completeness: 0.95
