@@ -5,7 +5,8 @@ from __future__ import annotations
 from typing import Any
 
 SUPPORTED_PROTOCOL_VERSIONS: tuple[str, ...] = ("2025-11-25", "2025-06-18", "2025-03-26", "2024-11-05")
-LATEST_PROTOCOL_VERSION = SUPPORTED_PROTOCOL_VERSIONS[0]
+# Versions are ISO dates, so the latest sorts last regardless of list order.
+LATEST_PROTOCOL_VERSION = max(SUPPORTED_PROTOCOL_VERSIONS)
 
 
 def negotiate_protocol_version(params: Any) -> str:

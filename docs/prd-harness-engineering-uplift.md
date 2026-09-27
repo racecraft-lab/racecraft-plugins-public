@@ -1,7 +1,7 @@
 # PRD: SpecKit Pro Harness Engineering Uplift
 
-**Status**: Active. HRNS-001 is complete and archived. HRNS-015 and the
-HRNS-017 to HRNS-023 foundation specs are ready.
+**Status**: Active. HRNS-001 is complete and archived. HRNS-015, the
+HRNS-017 to HRNS-023 foundation specs, HRNS-039, and HRNS-040 are ready.
 **Spec ID prefix**: `HRNS-###`
 **Source**: Maintainer direction to harden SpecKit Pro as an installed harness,
 a 2026-09-26 framework comparison (LangGraph, DSPy, Pydantic, durable-execution

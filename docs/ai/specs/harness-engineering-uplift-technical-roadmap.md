@@ -41,8 +41,10 @@ surviving criteria moved into the specs below.
 | 7 | HRNS-036, HRNS-038 | Stop advice and trajectory calibration | Parallel after HRNS-035 |
 
 **Execution Order:** Tier 1 in any order, HRNS-015 first when capacity is
-short -> Tier 2 as each predecessor lands -> HRNS-025 + HRNS-030 -> HRNS-027 + HRNS-041 ->
+short -> Tier 2 as each predecessor lands -> HRNS-025 + HRNS-030 -> HRNS-027 ->
 HRNS-031 + HRNS-032 + HRNS-033 + HRNS-034 -> HRNS-035 -> HRNS-036 + HRNS-038.
+HRNS-041 runs in parallel with that chain as soon as HRNS-025 and HRNS-040
+land.
 
 **Dependency Constraints:**
 

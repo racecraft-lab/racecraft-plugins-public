@@ -311,7 +311,7 @@
         "value": "speckit_pro_runner/helpers/read_only.py",
         "display": "speckit_pro_runner/helpers/read_only.py"
       },
-      "sha256": "ee0dd7db7be2338afb3218bfb97e228baaf459b3aa321f7e55bd31ab71d1946d"
+      "sha256": "989e3d7f1cc8f2efe693f15e2eea59aab148ea958e9e3772f68a3e5d1b674b48"
     },
     {
       "path": {
@@ -335,7 +335,7 @@
         "value": "speckit_pro_runner/mcp_protocol.py",
         "display": "speckit_pro_runner/mcp_protocol.py"
       },
-      "sha256": "a903d18cb20cca9210873bf43e17a498f397629177fc6df1f59226155ab134cd"
+      "sha256": "d3023a753d1956f35b6e7a6a90b8bf3e10d8c01a82ea19d9a15a17bccb3a662f"
     },
     {
       "path": {

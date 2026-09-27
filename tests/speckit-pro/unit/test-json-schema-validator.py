@@ -110,6 +110,21 @@ class UnknownKeywordsFailClosed(unittest.TestCase):
         self.assertEqual(["packet.schema.definition"], [failure["rule"] for failure in found])
         self.assertIn("unevaluatedItems", found[0]["message"])
 
+    def test_an_unknown_keyword_inside_a_probed_subschema_still_fails(self) -> None:
+        bad = {"type": "string", "unevaluatedItems": False}
+        probes = {
+            "anyOf": {"anyOf": [bad, {"type": "integer"}]},
+            "oneOf": {"oneOf": [bad, {"type": "integer"}]},
+            "not": {"not": bad},
+            "if": {"if": bad, "then": {"type": "string"}},
+            "contains": {"type": "array", "contains": bad},
+            "propertyNames": {"type": "object", "propertyNames": bad},
+        }
+        values = {"contains": ["x"], "propertyNames": {"x": 1}}
+        for keyword, schema in probes.items():
+            with self.subTest(keyword=keyword):
+                self.assertIn("definition", rules(values.get(keyword, "x"), schema))
+
     def test_annotation_keywords_assert_nothing(self) -> None:
         schema = {
             "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -144,8 +159,8 @@ class ShippedSchemas(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    loader = unittest.defaultTestLoader
     suite = unittest.TestSuite(
-        loader.loadTestsFromTestCase(case) for case in (KeywordAssertions, UnknownKeywordsFailClosed, ShippedSchemas)
+        unittest.defaultTestLoader.loadTestsFromTestCase(case)
+        for case in (KeywordAssertions, UnknownKeywordsFailClosed, ShippedSchemas)
     )
     raise SystemExit(run_counted(suite, label="test-json-schema-validator"))
