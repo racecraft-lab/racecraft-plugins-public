@@ -16,24 +16,26 @@ roadmap as its input.
 **Typed-judgment catalog:** [harness-engineering-uplift-jev-catalog.md](harness-engineering-uplift-jev-catalog.md)
 **Spec ID prefix:** `HRNS-###`
 **Status:** Active. HRNS-001 is complete and archived. HRNS-002 to HRNS-014
-are retired. HRNS-015 and HRNS-017 to HRNS-023 are ready. On 2026-09-24 this
-roadmap absorbed the Continuous Goal Verification roadmap, whose `VRFY-###`
-identifiers are retired unscaffolded.
+are retired. HRNS-015, HRNS-017 to HRNS-023, HRNS-039, and HRNS-040 are ready.
+On 2026-09-24 this roadmap absorbed the Continuous Goal Verification roadmap,
+whose `VRFY-###` identifiers are retired unscaffolded. On 2026-09-26 a
+framework comparison added HRNS-039 to HRNS-041 and grew HRNS-018, HRNS-019,
+HRNS-022, HRNS-025, and HRNS-026.
 
 ---
 
 ## Roadmap Overview
 
-The active catalog holds **24 specifications** across **7 dependency tiers**.
+The active catalog holds **27 specifications** across **7 dependency tiers**.
 HRNS-001 is complete, and HRNS-002 to HRNS-014 are retired with their
 surviving criteria moved into the specs below.
 
 | Tier | Specs | Purpose | Parallelization |
 |---|---|---|---|
-| 1 | HRNS-015, HRNS-017, HRNS-018, HRNS-019, HRNS-020, HRNS-021, HRNS-022, HRNS-023 | Repair, host facts, typed state, registry contract, token baseline, guidance, eval ladder, drift scanner | Fully parallel; no dependencies |
+| 1 | HRNS-015, HRNS-017, HRNS-018, HRNS-019, HRNS-020, HRNS-021, HRNS-022, HRNS-023, HRNS-039, HRNS-040 | Repair, host facts, typed state, registry contract, token baseline, guidance, eval ladder, drift scanner, consensus tally, test depth | Fully parallel; no dependencies |
 | 2 | HRNS-016, HRNS-024, HRNS-026, HRNS-028, HRNS-029, HRNS-037 | Per-story autopilot, decision contract, permission policy, context economy, progress page | Parallel, each after its one Tier 1 predecessor |
 | 3 | HRNS-025, HRNS-030 | Run journal and obligation registry | Parallel after HRNS-024 |
-| 4 | HRNS-027 | Dual-host Jev adapter, the only slice that touches the wire | Sequential |
+| 4 | HRNS-027, HRNS-041 | Dual-host Jev adapter, the only slice that touches the wire; ledger formal model | Parallel; HRNS-041 after HRNS-025 and HRNS-040 |
 | 5 | HRNS-031, HRNS-032, HRNS-033, HRNS-034 | Three shadow pilots and the phase-boundary verifier | Parallel after HRNS-027 |
 | 6 | HRNS-035 | Change-triggered scheduler | Sequential after HRNS-034 |
 | 7 | HRNS-036, HRNS-038 | Stop advice and trajectory calibration | Parallel after HRNS-035 |
@@ -41,6 +43,8 @@ surviving criteria moved into the specs below.
 **Execution Order:** Tier 1 in any order, HRNS-015 first when capacity is
 short -> Tier 2 as each predecessor lands -> HRNS-025 + HRNS-030 -> HRNS-027 ->
 HRNS-031 + HRNS-032 + HRNS-033 + HRNS-034 -> HRNS-035 -> HRNS-036 + HRNS-038.
+HRNS-041 runs in parallel with that chain as soon as HRNS-025 and HRNS-040
+land.
 
 **Dependency Constraints:**
 
@@ -67,6 +71,12 @@ HRNS-031 + HRNS-032 + HRNS-033 + HRNS-034 -> HRNS-035 -> HRNS-036 + HRNS-038.
 - HRNS-035 requires HRNS-034; HRNS-036 requires HRNS-035; HRNS-038 requires
   HRNS-025, the three pilots, and HRNS-035 because replay compares phase-end
   with change-triggered checking on stored journals.
+- HRNS-041 requires HRNS-025 and HRNS-040 because the model describes the
+  ledger after the journal changes, and its trace check runs in the
+  dev-dependency layer.
+- HRNS-039 and HRNS-040 have no dependencies. HRNS-019's reference-validator
+  check and HRNS-022's dev-only tools run in HRNS-040's dev-dependency layer;
+  whichever spec lands first creates that layer under constitution II.
 - A spec with an optional Jev shadow check ships its deterministic core on the
   dependencies above. The Jev check is a later slice that waits for HRNS-027.
 
@@ -126,6 +136,9 @@ HRNS-019 Registry ──► HRNS-026 Permission + egress ─┐                 
 HRNS-020 Token baseline ─┬─► HRNS-028 Shared retrieval packet
                          └─► HRNS-029 Visibility ladder + handoff
 HRNS-021 Guidance, HRNS-022 Eval ladder, HRNS-023 Drift scanner: independent
+HRNS-039 Consensus tally: independent
+HRNS-040 Test depth ─┬─► HRNS-041 Ledger formal model
+HRNS-025 Run journal ┘
 ```
 
 ---
@@ -172,6 +185,9 @@ HRNS-021 Guidance, HRNS-022 Eval ladder, HRNS-023 Drift scanner: independent
 | HRNS-036 | Premature-Stop and Redundant-Continuation Advice | ⏳ Pending | - | HRNS-035 |
 | HRNS-037 | Live Run Progress Page | ⏳ Pending | - | HRNS-018 |
 | HRNS-038 | Trajectory Calibration and Gated Live Evaluation | ⏳ Pending | - | HRNS-025, HRNS-031 to HRNS-033, HRNS-035 |
+| HRNS-039 | Runner-Computed Consensus Tally | ⏳ Ready | - | Specify |
+| HRNS-040 | State and Gate Test Depth | ⏳ Ready | - | Specify |
+| HRNS-041 | Ledger Formal Model and Trace Check | ⏳ Pending | - | HRNS-025, HRNS-040 |
 
 **Status Legend:** ⏳ Pending | ⏳ Ready | 🔄 In Progress | ✅ Complete | ⚠️ Blocked | Retired (identifier reserved, never reused)
 
@@ -421,9 +437,9 @@ Budget result: within budget
 report can never disagree with what actually ran.
 
 **Reviewability Budget:** Primary surface: scheduler/runtime |
-Projected reviewable LOC: 190 (estimate-spec-size: 3 stories, 7 FRs, 5 files, modify) |
-Production files: 5 |
-Total files: 12 |
+Projected reviewable LOC: 237 (estimate-spec-size: 4 stories, 9 FRs, 6 files, modify) |
+Production files: 6 |
+Total files: 14 |
 Budget result: within budget
 
 **Scope:**
@@ -441,6 +457,13 @@ Budget result: within budget
 - Resume gives the user's latest instruction precedence and reports a
   conflicting live run under a documented policy.
 - Resume reloads only the recorded chunks the next step needs, by stable id.
+- The runner owns phase sequencing: a read-only next-step helper reads the
+  record and the execution ledger and returns the next phase and its allowed
+  transitions. Autopilot executes what it returns and records the outcome;
+  the model stops reconciling the workflow file, the state mirror, and the
+  ledger by hand.
+- Reading resumable state never writes; only a recorded transition changes
+  the record.
 
 **Out of Scope:**
 
@@ -469,6 +492,8 @@ the stage-resolution tests (PRD OQ-8).
 - A fixture archived spec with a stale table fails the consistency check.
 - Status on a fixture repository reports from the record on both hosts.
 - A resume fixture proves latest-instruction precedence and partial reload.
+- Next-step fixtures cover every phase transition, and the autopilot
+  sequencing prose reduces to calling it.
 
 ---
 
@@ -480,9 +505,9 @@ the stage-resolution tests (PRD OQ-8).
 what it risks, and how to call it, disclosed in tiers.
 
 **Reviewability Budget:** Primary surface: harness/adapter |
-Projected reviewable LOC: 142 (estimate-spec-size: 2 stories, 5 FRs, 4 files, modify) |
-Production files: 4 |
-Total files: 10 |
+Projected reviewable LOC: 197 (estimate-spec-size: 3 stories, 8 FRs, 5 files, modify) |
+Production files: 5 |
+Total files: 13 |
 Budget result: within budget
 
 **Scope:**
@@ -499,6 +524,13 @@ Budget result: within budget
   on request.
 - Resolve a stated intent to a helper and a validated envelope; a wrong
   argument is a validation error with remediation.
+- Make each shipped schema the single source for its contract: a CI
+  differential test runs every documented example and generated invalid
+  variants through the runner's validator and a pinned jsonschema, which must
+  agree; a schema without fixtures fails. Generating the request examples from
+  the schemas removes the prose drift behind #650, #651, and #654.
+- A 2020-12 meta-schema check on every shipped schema, and the runner
+  integrity hash extended to cover them.
 
 **Out of Scope:**
 
@@ -506,9 +538,16 @@ Budget result: within budget
   time. A pinned jsonschema may check the runner's validator in CI under
   constitution II.
 
+**Key Decisions:**
+
+**Schema Authoring (open):** whether schemas are hand-written or generated by
+a pinned dev-only model library such as Pydantic is decided at scaffold; the
+committed schema stays the source either way.
+
 **Module and Interface Deltas:**
 
 - `speckit-pro/speckit_pro_runner/helpers/registry.py` — changed: purpose, owner, schema links, risk flags.
+- `speckit-pro/speckit_pro_runner/runtime.py` — changed: integrity hash covers contract schemas.
 - `docs-site/scripts/generate-reference-pages.mjs` — changed: helper pages generated from the registry.
 
 **Key Files:**
@@ -522,6 +561,8 @@ Budget result: within budget
 - Generated pages and examples match the registry, and a drift check guards
   them.
 - The fixture manifest covers every dispatchable mutation helper.
+- The differential and meta-schema checks pass on all shipped schemas, and a
+  planted disagreement fails.
 
 ---
 
@@ -619,9 +660,9 @@ Budget result: within budget
 make every model or effort change follow one evidence-backed procedure.
 
 **Reviewability Budget:** Primary surface: harness/adapter |
-Projected reviewable LOC: 150 (estimate-spec-size: 3 stories, 7 FRs, 3 files, modify) |
+Projected reviewable LOC: 165 (estimate-spec-size: 3 stories, 9 FRs, 3 files, modify) |
 Production files: 3 |
-Total files: 10 |
+Total files: 12 |
 Budget result: within budget
 
 **Scope:**
@@ -640,6 +681,12 @@ Budget result: within budget
   permission mode.
 - Long inspection and eval jobs record cost and scope caps with a continuation
   plan.
+- Dev-only tuning: `claude plugin eval` and skill-creator's train/test
+  description loop first, then standalone GEPA (zero required dependencies,
+  a host-CLI wrapper as its reflection model) with a held-out split, scoring
+  on both hosts, no regression in any other skill, and human review of each
+  committed diff.
+- An Inspect AI and inspect_swe spike with a recorded keep-or-drop decision.
 
 **Out of Scope:**
 
@@ -658,6 +705,8 @@ Budget result: within budget
 - The ladder and procedure are written and linked from `AGENTS.md`.
 - Judge calibration results are committed with the labeled cases.
 - A dry-run model refresh produces the committed evidence shape.
+- One description change lands through the tuning loop with its held-out
+  evidence, and the Inspect AI decision is recorded.
 
 ---
 
@@ -764,9 +813,9 @@ semantic decision in one additive, replayable journal, and summarize it in
 the PR.
 
 **Reviewability Budget:** Primary surface: harness/adapter |
-Projected reviewable LOC: 177 (estimate-spec-size: 3 stories, 8 FRs, 4 files, modify) |
-Production files: 4 |
-Total files: 12 |
+Projected reviewable LOC: 227 (estimate-spec-size: 3 stories, 12 FRs, 5 files, modify) |
+Production files: 5 |
+Total files: 14 |
 Budget result: within budget
 
 **Scope:**
@@ -786,6 +835,16 @@ Budget result: within budget
 - A compact, secret-screened trace summary and the confidence-gate verdict in
   the PR body.
 - The journal stays local.
+- Compare stdlib `sqlite3` with JSON lines against the duplicate, torn-append,
+  and partial-read rules, and record the choice. The ledger lock is released
+  when its owner dies; a live owner's lock is never taken over.
+- Intent-then-outcome records around runner file mutations, each declaring
+  whether it must reach disk before the next step.
+- Format versions with upcasting, so a run started under an older plugin
+  release replays after a cache update.
+- Replay fails when current gate logic would decide differently from the
+  record; one journal writer per spec; a host `TRACEPARENT` recorded when
+  present, never required.
 
 **Out of Scope:**
 
@@ -806,6 +865,8 @@ Budget result: within budget
 - Replay and simulation fixtures run with zero side-effecting calls.
 - A generated PR body carries the trace summary and verdict, and a planted
   secret is screened out.
+- A killed process leaves no lock that blocks the next run, an old-format
+  ledger replays, and a changed gate decision fails replay.
 
 ---
 
@@ -817,13 +878,15 @@ Budget result: within budget
 that inspects what a command will do and protects harness-control files.
 
 **Reviewability Budget:** Primary surface: harness/adapter |
-Projected reviewable LOC: 197 (estimate-spec-size: 3 stories, 8 FRs, 5 files, modify) |
-Production files: 5 |
-Total files: 14 |
+Projected reviewable LOC: 225 (estimate-spec-size: 3 stories, 9 FRs, 6 files, modify) |
+Production files: 6 |
+Total files: 15 |
 Budget result: within budget
 
 **Scope:**
 
+- One verdict shape (allow, deny, or ask, with a reason) from runner gates and
+  hook policies to both hosts' hooks.
 - A command policy for autonomous runs: deny credential stores and
   environment secrets; deny network egress from scripts unless the task scope
   allows it; ask before writes outside the worktree; allow a declared
@@ -1328,11 +1391,146 @@ Budget result: within budget
 
 ---
 
+### HRNS-039: Runner-Computed Consensus Tally
+
+**Priority:** P1 | **Depends On:** none | **Enables:** fewer consensus routing defects
+
+**Goal:** Move vote counting and routing out of the synthesizer prompt into
+runner code, so consensus follows its rules exactly on both hosts.
+
+**Reviewability Budget:** Primary surface: harness/adapter |
+Projected reviewable LOC: 170 (estimate-spec-size: 3 stories, 7 FRs, 4 files, modify) |
+Production files: 4 |
+Total files: 14 |
+Budget result: within budget
+
+**Scope:**
+
+- Analysts return schema-typed positions (position key, security relevance,
+  escape hatch, evidence) through the schema-constrained output the
+  feedback-sweep launcher already uses on both hosts.
+- The runner computes agreement (2-of-3 and the N<3 rules), applies the
+  security override, and routes human review.
+- The model step only judges whether two positions match and writes the
+  artifact edit; a missing or malformed position is an explicit unknown.
+- Red-first fixtures for every routing rule, including #661, #718, and #726.
+
+**Out of Scope:**
+
+- Changing the consensus rules themselves; this moves where they run.
+- Adopting DSPy or another LLM framework; the host CLIs stay the model path.
+
+**Module and Interface Deltas:**
+
+- Consensus tally in `speckit-pro/speckit_pro_runner/` — new: agreement, security override, human-review routing.
+- Analyst position schema in `speckit-pro/speckit_pro_runner/contracts/` — new.
+- `speckit-pro/agents/consensus-synthesizer.md`, analyst agents, and the Codex TOML mirrors — changed: typed positions; no vote counting.
+- `speckit-pro/skills/speckit-autopilot/references/consensus-protocol.md` — changed: describes the split.
+
+**Key Files:**
+
+- `speckit-pro/speckit_pro_runner/sweep_launcher.py` — the existing schema-constrained, two-host model path.
+- `speckit-pro/speckit_pro_runner/sweep_isolation.py` — typed result records the tally can follow.
+
+**Done When:**
+
+- Every consensus routing fixture passes on both hosts, and no prompt counts
+  votes.
+
+---
+
+### HRNS-040: State and Gate Test Depth
+
+**Priority:** P2 | **Depends On:** none | **Enables:** HRNS-041
+
+**Goal:** Find ledger, state, path, gate, and broker defects with generated
+and adversarial tests instead of waiting for live runs to hit them.
+
+**Reviewability Budget:** Primary surface: harness/adapter |
+Projected reviewable LOC: 300 (estimate-spec-size: 3 stories, 7 FRs, 3 files, new; greenfield allowance applies) |
+Production files: 3 |
+Total files: 15 |
+Budget result: within budget
+
+**Scope:**
+
+- A pinned dev-dependency source, a repository installer, and a named suite
+  layer and CI job, under constitution II; a missing package fails the layer.
+- Stateful property tests (Hypothesis) over the execution-control ledger and
+  workflow-state resolution: start, reserve, authorize, repeated event ids,
+  clock regression, resume; path shapes with symlinks, worktrees, and a
+  doubled `.process`. Deterministic in CI.
+- A mutation-testing pilot over `gates/` with in-process tests; each survivor
+  gets a test or a recorded equivalence reason.
+- Per-module mypy strict for the ledger, workflow-state, and path modules.
+- The MCP Python SDK as a CI conformance client for the three stdio brokers.
+- A check that flags a runner mutation before an operator gate unless it is
+  declared idempotent.
+
+**Out of Scope:**
+
+- Adding any package to shipped code.
+- Making the new CI job a required check; that is a ruleset decision.
+
+**Module and Interface Deltas:**
+
+- Dev-dependency installer in `scripts/` and a pinned requirements source — new.
+- `tests/speckit-pro/suite-manifest.json` — changed: the dev-dependency layer.
+- `.github/workflows/pr-checks.yml` — changed: the dev-dependency job.
+
+**Done When:**
+
+- The layer runs in CI and fails when a pinned package is missing.
+- Stateful tests cover the ledger actions and path shapes above, and every
+  survivor of the mutation pilot is triaged.
+
+---
+
+### HRNS-041: Ledger Formal Model and Trace Check
+
+**Priority:** P3 | **Depends On:** HRNS-025, HRNS-040 | **Enables:** formal regression coverage of the ledger
+
+**Goal:** Check the execution-control ledger against a formal model, using
+the trace checker the runner already ships.
+
+**Reviewability Budget:** Primary surface: harness/adapter |
+Projected reviewable LOC: 205 (estimate-spec-size: 2 stories, 5 FRs, 2 files, new; greenfield allowance applies) |
+Production files: 2 |
+Total files: 10 |
+Budget result: within budget
+
+**Scope:**
+
+- A TLA+ or Quint model of reservations, corrective-cycle budgets, native
+  event-id replay protection, and resume, with stated invariants.
+- Ledger tests emit ITF traces that `formal/traces.py` checks against the
+  model in CI.
+
+**Out of Scope:**
+
+- Modeling the whole workflow; only the ledger.
+
+**Module and Interface Deltas:**
+
+- Ledger model and trace fixtures under `tests/speckit-pro/` — new.
+
+**Key Files:**
+
+- `speckit-pro/speckit_pro_runner/formal/traces.py` — the existing ITF trace checker.
+- `speckit-pro/speckit_pro_runner/execution_control.py` — the ledger being modeled.
+
+**Done When:**
+
+- The invariants hold at documented bounds, and a planted divergence between
+  the traces and the model fails.
+
+---
+
 ## Environment & Deployment Context
 
 | Resource | Detail |
 |---|---|
-| Runtime substrate | Python 3.11+ standard-library runner for installed-plugin helper behavior. |
+| Runtime substrate | Python 3.11+ standard-library runner for installed-plugin helper behavior; pinned dev-only packages for checks, under constitution II. |
 | Test suite | `python3 tests/speckit-pro/run-all.py` for the quick layers; the CI suite request in `AGENTS.md` for the full set; native eval runners (#578) for behavioral layers. |
 | Typed judgments | The `typesafe-jev` plugin in this repository ships `evaluate` for both hosts and owns the shared decision contract fixtures. |
 | Model inventory | `speckit-pro/speckit_pro_runner/agent_inventory.json` is the only per-agent model and effort table. |

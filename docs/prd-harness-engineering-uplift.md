@@ -1,16 +1,19 @@
 # PRD: SpecKit Pro Harness Engineering Uplift
 
-**Status**: Active. HRNS-001 is complete and archived. HRNS-015 and the
-HRNS-017 to HRNS-023 foundation specs are ready.
+**Status**: Active. HRNS-001 is complete and archived. HRNS-015, the
+HRNS-017 to HRNS-023 foundation specs, HRNS-039, and HRNS-040 are ready.
 **Spec ID prefix**: `HRNS-###`
 **Source**: Maintainer direction to harden SpecKit Pro as an installed harness,
+a 2026-09-26 framework comparison (LangGraph, DSPy, Pydantic, durable-execution
+engines, and test tooling, reviewed adversarially) that added HRNS-039 to
+HRNS-041 and grew HRNS-018, HRNS-019, HRNS-022, HRNS-025, and HRNS-026,
 merged on 2026-09-24 with the Continuous Goal Verification PRD (2026-09-19,
 its `VRFY-###` identifiers retired unscaffolded), a completion audit of every
 HRNS acceptance criterion against `main`, the typed-judgment opportunity
 catalog, and an external working note on Jev engineering for coding agents
 (September 2026).
 **Created**: 2026-07-03
-**Last updated**: 2026-09-24
+**Last updated**: 2026-09-26
 **Target window**: Repair and foundations first; semantic verification is
 promoted beyond shadow only after the HRNS-038 calibration report exists.
 
@@ -282,6 +285,13 @@ review.
 - **AC-18.6**: Resume reloads only the recorded chunks the next step needs,
   addressed by stable identifiers, rather than re-reading whole artifacts.
 - **AC-18.7**: Both hosts read and write the same record shape.
+- **AC-18.8**: The runner owns phase sequencing. A read-only next-step helper
+  reads the typed record and the execution ledger and returns the next phase
+  and its allowed transitions; autopilot executes what it returns and records
+  the outcome, so the model never reconciles the workflow file, the state
+  mirror, and the ledger by hand.
+- **AC-18.9**: Reading resumable state never writes; only a separately
+  recorded transition changes the record.
 
 ### 3.19 Helper Registry Contract and Tiered Disclosure *(-> HRNS-019)*
 
@@ -297,6 +307,13 @@ review.
 - **AC-19.5**: An agent can resolve a stated intent to a helper and receive a
   validated envelope; a wrong argument becomes a validation error with
   remediation, never a silent failure.
+- **AC-19.6**: Each shipped `*.schema.json` is the single source for its
+  contract. The runner's standard-library validator and a pinned CI reference
+  validator (jsonschema, under constitution II) agree on every documented
+  example and on generated invalid variants; a schema without fixtures fails
+  the check.
+- **AC-19.7**: Every shipped schema passes a 2020-12 meta-schema check, and the
+  runner integrity hash covers the schema files.
 
 ### 3.20 Autopilot Token Baseline *(-> HRNS-020)*
 
@@ -353,6 +370,14 @@ review.
   allowed tools, and permission mode.
 - **AC-22.7**: Long inspection and eval jobs record cost, time, and scope caps
   with a continuation plan when the work exceeds the run.
+- **AC-22.8**: Dev-only description and prompt tuning supplements the native
+  runners: `claude plugin eval` and skill-creator's train/test description
+  loop first, then standalone GEPA with a held-out split, scoring on both
+  hosts, no regression in any other skill's trigger rate, and human review of
+  every committed diff.
+- **AC-22.9**: An Inspect AI and inspect_swe spike records whether it can
+  drive both hosts as one eval harness, its cost, credential, and container
+  needs, and a keep-or-drop decision.
 
 ### 3.23 Harness Drift Scanner *(-> HRNS-023)*
 
@@ -424,6 +449,18 @@ review.
   confidence-gate verdict.
 - **AC-25.8**: The journal stays local; nothing is sent to an external
   telemetry service.
+- **AC-25.9**: The storage decision compares stdlib `sqlite3` with JSON lines
+  against AC-25.3 and records the choice. The ledger lock is released when its
+  owning process dies, while a live owner's lock is still never taken over.
+- **AC-25.10**: A runner file mutation records its intent before and its
+  outcome after, so a crashed run can tell whether the side effect happened;
+  each record declares whether it must reach disk before the next step.
+- **AC-25.11**: Journal and ledger records carry a format version, and older
+  versions are upcast on read, so a run started under an older plugin release
+  still replays after a plugin cache update.
+- **AC-25.12**: Replay fails when current gate logic would reach a different
+  decision from the recorded one. Each spec has one journal writer at a time.
+  A host `TRACEPARENT` is recorded when present and never required.
 
 ### 3.26 Autonomous-Run Permission and Egress Policy *(-> HRNS-026)*
 
@@ -452,6 +489,8 @@ review.
 - **AC-26.8**: Optional shadow advice for ambiguous commands (JEV-074) and a
   sensitivity label for content (JEV-075) run only when HRNS-027 is enabled;
   advice can only escalate to "ask", and a label can only restrict.
+- **AC-26.9**: Runner gates and hook policies return one verdict shape (allow,
+  deny, or ask, with a reason) to both hosts' hooks.
 
 ### 3.27 Dual-Host Jev Adapter *(-> HRNS-027)*
 
@@ -661,18 +700,68 @@ review.
   decision citing this report; the report never substitutes for deterministic
   release gates.
 
+### 3.39 Runner-Computed Consensus Tally *(-> HRNS-039)*
+
+- **AC-39.1**: Each consensus analyst returns a schema-typed position
+  (position key, security relevance, escape hatch, evidence) through
+  schema-constrained output on both hosts, reusing the path the feedback-sweep
+  launcher already uses (`claude -p --json-schema`,
+  `codex exec --output-schema`).
+- **AC-39.2**: Runner code computes agreement (2-of-3 and the N<3 rules),
+  applies the security override, and routes human review; no prompt counts
+  votes.
+- **AC-39.3**: The model step only judges whether two positions are
+  equivalent and writes the resulting artifact edit. A missing or malformed
+  position is an explicit unknown, never a vote.
+- **AC-39.4**: A red-first fixture covers every routing rule in the consensus
+  protocol, including the security-route and misrouting defects (#661, #718,
+  #726), and passes on both hosts.
+- **AC-39.5**: The consensus protocol and the synthesizer agent files on both
+  hosts describe the split, and the parity fixtures pass.
+
+### 3.40 State and Gate Test Depth *(-> HRNS-040)*
+
+- **AC-40.1**: One pinned dev-dependency source, a repository installer, and a
+  named suite layer and CI job run dependency-backed checks under constitution
+  II; a missing package fails the layer.
+- **AC-40.2**: Stateful property tests drive the execution-control ledger and
+  workflow-state resolution through generated action sequences (start,
+  reserve, authorize, repeated event ids, clock regression, resume) and path
+  shapes (symlinks, worktrees, a doubled `.process`), deterministically in CI.
+- **AC-40.3**: A mutation-testing pilot over `gates/` runs with in-process
+  tests; each surviving mutant gets a test or a recorded equivalence reason.
+- **AC-40.4**: The ledger, workflow-state, and path modules pass per-module
+  mypy strict and join the allowlist.
+- **AC-40.5**: The MCP Python SDK drives each stdio broker in CI as a
+  conformance client: initialize, version negotiation, tool listing, and tool
+  errors.
+- **AC-40.6**: A check flags a runner mutation that runs before an operator
+  gate unless the mutation is declared idempotent.
+
+### 3.41 Ledger Formal Model and Trace Check *(-> HRNS-041)*
+
+- **AC-41.1**: A TLA+ or Quint model of the execution-control ledger covers
+  reservations, corrective-cycle budgets, native event-id replay protection,
+  and resume, and states its invariants.
+- **AC-41.2**: Ledger tests emit ITF traces that `formal/traces.py` checks
+  against the model in CI; a planted divergence fails.
+- **AC-41.3**: The invariants hold under the model checker at documented
+  bounds.
+
 ## 4. Migration Path
 
 - **Tier 1 (start now, in parallel):** HRNS-015 repair; HRNS-017 host spike;
   HRNS-018 typed state; HRNS-019 registry contract; HRNS-020 token baseline;
   HRNS-021 condition-bound guidance; HRNS-022 eval ladder and model refresh;
-  HRNS-023 drift scanner.
+  HRNS-023 drift scanner; HRNS-039 runner-computed consensus tally; HRNS-040
+  state and gate test depth.
 - **Tier 2:** HRNS-016 per-story autopilot after HRNS-015; HRNS-024 decision
   contract after HRNS-017; HRNS-026 permission and egress policy after
   HRNS-019; HRNS-028 and HRNS-029 context economy after HRNS-020; HRNS-037
   progress page after HRNS-018.
 - **Tier 3:** HRNS-025 run journal; HRNS-030 obligation and subgoal registry.
-- **Tier 4:** HRNS-027 dual-host adapter, the only slice that touches the wire.
+- **Tier 4:** HRNS-027 dual-host adapter, the only slice that touches the wire;
+  HRNS-041 ledger formal model after HRNS-025 and HRNS-040.
 - **Tier 5:** HRNS-031, HRNS-032, and HRNS-033 shadow pilots; HRNS-034
   phase-boundary verifier.
 - **Tier 6:** HRNS-035 change-triggered scheduler.
@@ -729,11 +818,23 @@ the dependencies above. Its Jev check is a later slice that waits for HRNS-027.
 | Stop Advice (§3.36) | autopilot pre-terminal summary reference | changed | Advisory block with obligation ids |
 | Progress Page (§3.37) | progress-page renderer | new | Read-only page from the typed record |
 | Calibration (§3.38) | `tests/speckit-pro/trajectories/` | new | Frozen corpus, holdout, replay report |
+| Typed State (§3.18) | next-step helper in `speckit-pro/speckit_pro_runner/helpers/` | new | Next phase and allowed transitions from the record and ledger |
+| Registry (§3.19) | `speckit-pro/speckit_pro_runner/helpers/read_only.py` schema validator | changed | Agrees with the reference validator on every shipped schema |
+| Registry (§3.19) | `speckit-pro/speckit_pro_runner/runtime.py` | changed | Integrity hash covers contract schemas |
+| Eval Ladder (§3.22) | dev-only eval and tuning tools | new | `claude plugin eval`, description loop, standalone GEPA, Inspect AI spike |
+| Run Journal (§3.25) | `speckit-pro/speckit_pro_runner/execution_control.py` | changed | Lock recovery, format versions, intent and outcome records |
+| Permission Policy (§3.26) | runner gates and hook policies | changed | One allow, deny, or ask verdict shape |
+| Consensus Tally (§3.39) | `speckit-pro/speckit_pro_runner/` consensus tally | new | Agreement, security override, human-review routing in code |
+| Consensus Tally (§3.39) | consensus protocol, analyst and synthesizer agents on both hosts | changed | Typed positions; the synthesizer no longer counts votes |
+| Test Depth (§3.40) | dev-dependency installer, suite layer, CI job | new | Constitution II pattern |
+| Test Depth (§3.40) | `tests/speckit-pro/` stateful, mutation, and broker conformance tests | new | Ledger, state, path, gate, and broker coverage |
+| Formal Model (§3.41) | ledger model and trace fixtures | new | Checked by `formal/traces.py` |
 
 ## 6. Constraints
 
 - Follow `.specify/memory/constitution.md`: Python 3.11+ standard library for
-  repository tooling, no active Bash or `jq`, unit coverage before merge,
+  shipped code and the default suite, pinned dev-only packages only under
+  Principle II, no active Bash or `jq`, unit coverage before merge,
   source under `speckit-pro/` with regenerated payloads, release-please owns
   versions.
 - Both hosts, the whole way: every contract, rubric, and policy ships for
@@ -815,6 +916,9 @@ the dependencies above. Its Jev check is a later slice that waits for HRNS-027.
 | Premature-Stop and Redundant-Continuation Advice | AC-36.* | HRNS-036 | HRNS-035 | P1 |
 | Live Run Progress Page | AC-37.* | HRNS-037 | HRNS-018 | P2 |
 | Trajectory Calibration and Gated Live Evaluation | AC-38.* | HRNS-038 | HRNS-025, HRNS-031, HRNS-032, HRNS-033, HRNS-035 | P1 |
+| Runner-Computed Consensus Tally | AC-39.* | HRNS-039 | - | P1 |
+| State and Gate Test Depth | AC-40.* | HRNS-040 | - | P2 |
+| Ledger Formal Model and Trace Check | AC-41.* | HRNS-041 | HRNS-025, HRNS-040 | P3 |
 
 **Retired Continuous Goal Verification crosswalk**
 
@@ -835,7 +939,7 @@ the dependencies above. Its Jev check is a later slice that waits for HRNS-027.
 
 ## 9. Success Criteria
 
-1. Every acceptance criterion in AC-15.* through AC-38.* passes, each spec
+1. Every acceptance criterion in AC-15.* through AC-41.* passes, each spec
    within its reviewability budget or with a typed exception.
 2. No observed autopilot, gate, or PR-emission defect remains without a
    failing-first fixture.
@@ -851,6 +955,9 @@ the dependencies above. Its Jev check is a later slice that waits for HRNS-027.
    is cited by any decision to promote a check beyond shadow.
 8. The question in §1 is answerable from a run's terminal advisory by
    obligation id.
+9. Consensus votes and phase transitions are computed by runner code, and the
+   runner's schema validator agrees with the reference validator on every
+   shipped schema.
 
 ## 10. References
 
