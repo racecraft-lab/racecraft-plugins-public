@@ -194,10 +194,20 @@ def append_report(root: Path, journal: dict[str, Any], inputs: dict[str, Any]) -
     completed = {t["task_id"]: t for r in prior for t in r["results"] if t["status"] == "complete"}
     if any(t != completed[t["task_id"]] for t in report["results"] if t["task_id"] in completed):
         raise ValueError("previously complete task results must be carried forward unchanged")
-    carried_ids = {ref for t in completed.values() for ref in t["evidence_event_ids"]}
+    # A task may re-cite, unchanged, an event it referenced in an earlier report of this batch.
+    owners: dict[str, set[str]] = {}
+    for t in (t for r in prior for t in r["results"]):
+        for ref in t["evidence_event_ids"]:
+            owners.setdefault(ref, set()).add(t["task_id"])
+    citers: dict[str, set[str]] = {}
+    for t in report["results"]:
+        for ref in t["evidence_event_ids"]:
+            citers.setdefault(ref, set()).add(t["task_id"])
     previous_events = {e["event_id"]: e for r in journal["reports"] for e in r["native_observations"]}
     for event in report["native_observations"]:
-        if event["event_id"] in previous_events and (event["event_id"] not in carried_ids or previous_events[event["event_id"]] != event):
+        event_id = event["event_id"]
+        if event_id in previous_events and (not citers[event_id] <= owners.get(event_id, set())
+                                            or previous_events[event_id] != event):
             raise ValueError("only unchanged completed task observations may be carried forward")
     journal["reports"].append(report)
     return True
