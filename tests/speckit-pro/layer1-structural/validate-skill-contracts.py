@@ -211,12 +211,27 @@ class ValidateSkills(unittest.TestCase):
                     hardener = skill_dir / 'references' / 'hardener-delegation.md'
                     self.assertTrue(hardener.is_file(), f'file not found: {hardener}')
                     hardener_text = hardener.read_text(encoding='utf-8')
-                    for needle in ('once per spec', 'qwen_health', 'qwen_candidate', 'qwen_apply', 'webPolicy: "disabled"', 'Allowed writes: tests only', 'Fallback path (primary model)'):
+                    for needle in ('once per spec', 'delegate_health', 'delegate_task', 'delegate_status', 'delegate_candidate', 'delegate_apply', 'route: "auto"', 'webPolicy: "disabled"', 'Allowed writes: tests only', 'Fallback path (primary model)'):
                         self.assertIn(needle, hardener_text, f'expected hardener-delegation.md to state {needle!r}')
                     phase_exec = (skill_dir / 'references' / 'phase-execution.md').read_text(encoding='utf-8')
                     codex_post = (PLUGIN_ROOT / 'codex-skills' / 'speckit-autopilot' / 'references' / 'post-implementation-codex.md').read_text(encoding='utf-8')
                     self.assertIn('hardener-delegation.md', phase_exec, 'expected Phase 7 Step 4 to point at the hardener reference')
                     self.assertIn('hardener-delegation.md', codex_post, 'expected the Codex integration-suite row to point at the hardener reference')
+                with self.subTest(msg='speckit-autopilot: delegation guidance uses the gateway delegate_* tools and never hard-codes the local route'):
+                    retired = re.compile(r'qwen_[a-z]+|local qwen|route=local|route: "local"', re.IGNORECASE)
+                    shipped = [p for root in ('skills', 'codex-skills', 'agents', 'codex-agents') for p in sorted((PLUGIN_ROOT / root).rglob('*')) if p.suffix in ('.md', '.toml') and p.is_file()]
+                    self.assertTrue(shipped, 'expected shipped skill and agent text to scan')
+                    offenders = [f'{p.relative_to(PLUGIN_ROOT)}:{n}: {m.group(0)}' for p in shipped for n, line in enumerate(p.read_text(encoding='utf-8').splitlines(), 1) for m in retired.finditer(line)]
+                    self.assertEqual([], offenders, 'retired qwen_* tool names or a hard-coded local delegation route in shipped text')
+                with self.subTest(msg='speckit-autopilot: Codex autonomy preflight inventories delegation at the gateway route=auto destination'):
+                    codex_phase = (PLUGIN_ROOT / 'codex-skills' / 'speckit-autopilot' / 'references' / 'phase-execution-codex.md').read_text(encoding='utf-8')
+                    start = codex_phase.find('### Autonomy Boundary Preflight')
+                    self.assertNotEqual(-1, start, 'expected the Autonomy Boundary Preflight section')
+                    end = codex_phase.find('\n### ', start + 1)
+                    preflight = codex_phase[start:end if end != -1 else len(codex_phase)]
+                    delegation = [para for para in preflight.split('\n\n') if 'delegation gateway' in para]
+                    self.assertTrue(delegation, 'expected a preflight paragraph about the delegation gateway')
+                    self.assertTrue(any('route=auto' in para and 'data egress' in para for para in delegation), 'expected planned delegation to be inventoried as one data-egress action naming route=auto')
             if skill in ('grill-me', 'speckit-prd'):
                 with self.subTest(msg=f'{skill}: reads the ubiquitous-language terms document when present'):
                     codex_content = (PLUGIN_ROOT / 'codex-skills' / skill / 'SKILL.md').read_text(encoding='utf-8')

@@ -99,6 +99,19 @@ ORDERED_STATE_CHECKPOINTS = (
 TASK_LINE_RE = re.compile(r"^- \[[ xX]\] (T[0-9]+)\b")
 UTC_TIMESTAMP_RE = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$")
 WINDOWS_ABSOLUTE_PATH_RE = re.compile(r"^[A-Za-z]:")
+# The tracked state file stores decision fields only. These three patterns match
+# the repository privacy scan's (tests/speckit-pro/lib/privacy_patterns.py), and a
+# test holds them equal, so the state guard rejects what the scan would reject.
+STATE_HOME_PATH_PATTERN = re.compile(
+    r"(?:/(?:Users|home)/|[A-Za-z]:[\\/]+Users[\\/]+)[A-Za-z0-9_.\-]+",
+    re.IGNORECASE,
+)
+STATE_HYPHENATED_HOME_PATH_PATTERN = re.compile(r"-Users-[A-Za-z0-9_.\-]+", re.IGNORECASE)
+STATE_UUID_PATTERN = re.compile(
+    r"[A-Fa-f0-9]{8}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{12}",
+    re.IGNORECASE,
+)
+STATE_PRIVATE_KEYS = frozenset({"argv"})
 MAX_REPO_FILE_BYTES = 32 * 1024 * 1024
 HAS_DESCRIPTOR_RELATIVE_IO = (
     os.name != "nt"
@@ -264,6 +277,7 @@ RULE_PROBLEM_KEYS = {
         "autonomy_boundary_errors",
         "stage_mirror_errors",
         "workflow_authority_errors",
+        "state_privacy_errors",
         "formal_checkpoint_errors",
         "artifact_review_errors",
         "in_progress_errors",
@@ -347,6 +361,15 @@ PROBLEM_KEY_INTENT: dict[str, dict[str, str]] = {
             "A state naming a workflow other than the one supplied means the run is "
             "proceeding against a different specification. This is the one key "
             "workflow-authority check, and the failure it exists to stop."
+        ),
+    },
+    "state_privacy_errors": {
+        "verdict": "gated",
+        "reason": (
+            "The state file is committed, so it may hold decision fields and "
+            "digests only. A raw runner envelope, its argv, an absolute home path, "
+            "or an external task or session UUID would publish machine-local "
+            "identity with the next checkpoint commit."
         ),
     },
     # --- gated: armed by ``--rule coverage``. Kept out of the status-evidence
@@ -4428,6 +4451,53 @@ def validate_state_status(state: dict[str, Any]) -> dict[str, list[str]]:
     return {"state_status_errors": errors}
 
 
+def _state_private_value_reason(value: str) -> str | None:
+    if STATE_HOME_PATH_PATTERN.search(value) or STATE_HYPHENATED_HOME_PATH_PATTERN.search(value):
+        return "an absolute home path"
+    if STATE_UUID_PATTERN.search(value):
+        return "a raw UUID"
+    return None
+
+
+def state_privacy_errors(state: object) -> dict[str, list[str]]:
+    """Reject private values in the committed autopilot state file.
+
+    The state stores decision fields such as ``stage``, ``source``, ``basis``,
+    and ``planning_complete``. It never stores a raw runner envelope, an
+    ``argv`` key, an absolute home path, or an external task or session UUID.
+    Errors name the JSON location and never echo the value. A non-object root
+    fails rather than passing on nothing.
+    """
+    if not isinstance(state, dict):
+        return {"state_privacy_errors": ["autopilot_state must be a JSON object"]}
+    errors: list[str] = []
+    pending: list[tuple[str, object]] = [("autopilot_state", state)]
+    while pending:
+        location, value = pending.pop()
+        if isinstance(value, dict):
+            for key, child in value.items():
+                child_location = f"{location}.{key}"
+                if key in STATE_PRIVATE_KEYS:
+                    errors.append(
+                        f"{child_location} stores a raw runner argv; keep only decision fields"
+                    )
+                    continue
+                reason = _state_private_value_reason(key)
+                if reason is not None:
+                    errors.append(f"{location} has a key holding {reason}")
+                    continue
+                pending.append((child_location, child))
+        elif isinstance(value, list):
+            pending.extend((f"{location}[{index}]", item) for index, item in enumerate(value))
+        elif isinstance(value, str):
+            reason = _state_private_value_reason(value)
+            if reason is not None:
+                errors.append(
+                    f"{location} holds {reason}; store a digest or redacted reference instead"
+                )
+    return {"state_privacy_errors": sorted(errors)}
+
+
 def _canonical_json_sha256(value: object) -> str | None:
     try:
         encoded = json.dumps(
@@ -4956,6 +5026,7 @@ def build_report(
     )
     state_result = validate_state(plan_steps)
     status_result = validate_state_status(state_data)
+    privacy_result = state_privacy_errors(state_data)
     autonomy_result = validate_autonomy_boundary(
         state_data, _repository_root(workflow),
         current_execution_boundary=authority.current_execution_boundary,
@@ -4981,6 +5052,7 @@ def build_report(
         **workflow_result,
         **workflow_status_result,
         **status_result,
+        **privacy_result,
         **autonomy_result,
         **stage_result,
         **formal_result,

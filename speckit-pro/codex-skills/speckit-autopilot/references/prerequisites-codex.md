@@ -139,12 +139,19 @@ to archive previously merged specs.
    command contract once per `archive_order` entry, in that order, and let
    each run finish before the next starts:
    ```text
-   archive command: specs/<merged-spec-dir>
+   archive command: specs/<merged-spec-dir> --spec-only --plan-only --changelog-only
    ```
-   Pass only the feature directory as `$ARGUMENTS`. The stock archive
-   extension (`stn1slv/spec-kit-archive`) archives one feature per run and
-   rejects `--sweep`, `--current-target`, and `--dry-run`; the vendored
-   `racecraft-lab/spec-kit-archive` fork accepts the same single-feature form.
+   Pass the feature directory first, then exactly these three scope
+   modifiers, as `$ARGUMENTS`. The stock archive extension
+   (`stn1slv/spec-kit-archive`) archives one feature per run, treats several
+   scope modifiers as a union, and rejects `--sweep`, `--current-target`, and
+   `--dry-run`; the vendored `racecraft-lab/spec-kit-archive` fork accepts the
+   same single-feature form and the same modifiers. The union updates
+   `.specify/memory/spec.md`, `plan.md`, and `changelog.md` and leaves out the
+   agent context files (stock step 5.3, fork step 6.3). SpecKit Pro overrides
+   that step: an archive run never writes per-spec history to `AGENTS.md`,
+   `CLAUDE.md`, or `GEMINI.md`, even if an installed contract does not honor
+   the union.
    If a run fails, record `status=blocked` with that spec and the command's
    error under `archive_sweep`, then STOP before Phase 0.
 
@@ -313,15 +320,16 @@ nonzero exit here is a branch, not a stop: do not stop because the probe
 exited nonzero. When the list is empty, continue. When it holds `current execution boundary
 does not match the persisted execution boundary`, or any other stale-record
 error above, rerun the complete Phase 6.5 preflight against the live boundary
-now. Present one consolidated operator request, in the `operator_action_required`
-shape, that names the changed boundary and every action whose authorization it
-invalidates. When a data-egress action is among them, include the
-paste-ready authorization message and `auto_review.extra_policy` fragment that
-request carries. Record the operator's answer as `authorization.status=explicit_user`,
-then write the refreshed private record, its receipt, and the matching Phase 6.5
-row before Step 1.1 runs. Present the refresh as this up-front re-attestation,
-never as a guard-failure repair. A denial or no answer stops the run before the
-guard. A mismatch still blocks: keep `--require-autonomy-boundary` and every
+now, applying its standing policy coverage. A covered inventory asks no
+question, including a planning-to-implementation stage change such as an
+explicit `--stage implement` run of a plan whose earlier record covered only
+planning: record the coverage and proceed. An uncovered action is deferred to
+the one end-of-run request, never an up-front question; when it is data egress,
+that request carries the paste-ready authorization message and
+`auto_review.extra_policy` fragment. Write the refreshed private record, its
+receipt, and the matching Phase 6.5 row before Step 1.1 runs. Present the
+refresh as this up-front re-attestation, never as a guard-failure repair. A
+mismatch still blocks: keep `--require-autonomy-boundary` and every
 live `--current-*` value on the Step 1.1 command, and take those values from the
 current thread, never from the workflow or state.
 
@@ -361,12 +369,26 @@ the rendered files with either selected runtime path:
 1. `.codex/agents/<agent>.toml`
 2. `~/.codex/agents/<agent>.toml`
 
-Continue only when the helper returns `ok` with mutation status `no_op`. If it
-reports planned files, fails validation, or cannot inspect the selected path,
-STOP with its diagnostics. Tell the user to run `$install`, approve the expected
-local write, restart Codex, and then retry autopilot. This pre-flight is
-read-only: never apply or autoheal agent files from inside autopilot because the
-current Codex process cannot load refreshed custom-agent definitions safely.
+This check runs at setup or run start, before any phase work. Continue only
+when the helper returns `ok` with mutation status `no_op`. If it reports planned
+files, fails validation, or cannot inspect the selected path, STOP with its
+diagnostics. Tell the user to run `$install`, approve the expected local write,
+restart Codex, and then retry autopilot. This pre-flight is read-only: never
+apply or autoheal agent files from inside autopilot.
+
+The restart is needed because Codex builds its list of custom agents (names,
+descriptions, and file paths) once, when the session starts, so an agent file
+added after that is unknown to the session. The contents of a file already on
+that list are read again at each spawn, so an in-place refresh of a registered
+agent takes effect at the next `spawn_agent` with no restart. Source: openai/codex
+`rust-v0.158.0-alpha.15.3`, `codex-rs/core/src/config/mod.rs` lines 3792-3793
+(`load_agent_roles` at session config load) and
+`codex-rs/core/src/agent/role.rs` lines 51-67 and 143 (`apply_role_to_config`
+re-reads the role file on each spawn).
+
+Once phase work has begun, never rerun this check as a stop. A stale or
+refreshed agent file found mid-run follows §Plugin Update Mid-Run: Record,
+Re-resolve, Continue in [phase-execution-codex.md](./phase-execution-codex.md).
 
 ### 0.10b Implementation Agent Detection
 
