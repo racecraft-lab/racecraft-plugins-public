@@ -778,6 +778,8 @@ Focus on:
 
 ### Final Analyze checkpoint — planning review handoff
 
+> Superseded by "Current Analyze Evidence — 2.37.1" below. Its 19-increment count and `owner_ratification=pending` are historical; the eighteen-increment order is ratified.
+
 The planning proposal contains 19 ordered, one-story increments and 33 tasks covering all 29 requirements and 14 stories. Each candidate inventory lists 14–24 paths, including six recurring tracked workflow/process/evidence candidates. This corrects the original grouped path-cap, mixed-story, and omitted-path planning defects. The proposal changes the previously ratified five-PR count; owner_ratification remains pending.
 
 The owner's instruction to finish the plan stage authorizes completion of the draft planning review handoff. It does not ratify 19 implementation PRs or supply measured delivery evidence. H3–H7 retain outstanding qualification conditions: actual base/head diffs, reviewable LOC, generated outputs, current marker fingerprints, and installed repeated-path validator support. T002 remains open and blocks behavior tasks. The current spec expressly withholds G6 pending that qualification; this projection does not override it. G6 and G6.5 must record their actual deterministic outcomes.
@@ -1077,6 +1079,8 @@ Ripwire quality-delta returned exit 2 for canonical process-state verbosity. Its
 
 
 ## Current Analyze Evidence — 2.37.1
+
+Owner ratification, 2026-09-27: the owner confirmed the eighteen-increment order A1a → A1b → A2 → A3 → B1a → B1b → B2b → B3a → B3b → C1a1 → C1a2 → C1b1 → C1b2 → C2a1 → C2a2 → C2a3 → C2b1 → C2b2 as the delivery count, with owner_ratification=ratified. Unverified artifact previews stay unavailable; implementation proceeds with an explicit `--stage implement`. T002 remains the first implementation gate: actual per-increment diffs, LOC and checkpoint evidence still block each PR emission.
 
 The current review supersedes the historical nineteen-increment analysis. All 26 active FRs, 31 unchecked tasks, fourteen stories, 37 scenarios and eleven success criteria remain represented. Candidate sets contain 14–24 total and 0–2 production paths. Roadmap Done When items and five formerly uncovered scope bullets map to requirements and tasks. Constitution rules, paired-host delivery and formal selection none remain explicit.
 
