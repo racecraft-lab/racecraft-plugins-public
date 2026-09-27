@@ -305,6 +305,8 @@ def gate_task_loops(tasks_text: str, depends_on: dict[str, list[str]] | None) ->
     phases = {task_id: task_phase for task_id, _, task_phase, _ in tasks}
     dependents: dict[str, set[str]] = {}
     for task_id, deps in (depends_on or {}).items():
+        if task_id not in phases:
+            continue  # a stale sidecar entry with no row in tasks.md is not a dependent
         for dep in deps:
             dependents.setdefault(dep, set()).add(task_id)
     loops: list[dict[str, Any]] = []
