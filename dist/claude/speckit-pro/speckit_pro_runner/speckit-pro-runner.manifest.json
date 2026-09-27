@@ -287,7 +287,7 @@
         "value": "speckit_pro_runner/helpers/egress_authorization.py",
         "display": "speckit_pro_runner/helpers/egress_authorization.py"
       },
-      "sha256": "847e486f4a28ee19dfddc7e81b2fcf0b403a65362c9834c74e0a01dd2eca689a"
+      "sha256": "ab38fbc1a648ef3e78489ba552151b5549e601fb6bdbe731da8afb60e7065380"
     },
     {
       "path": {
@@ -295,7 +295,7 @@
         "value": "speckit_pro_runner/helpers/install.py",
         "display": "speckit_pro_runner/helpers/install.py"
       },
-      "sha256": "2fa7abe250e823447927ba1fb560731a13cce7fb51adbd8be6ff1f96aa2cade2"
+      "sha256": "cc0e96463ba29e2cb053d12fee29deac7fe01871109cd2eee03dfd8922495152"
     },
     {
       "path": {
@@ -312,6 +312,14 @@
         "display": "speckit_pro_runner/helpers/pr_emission.py"
       },
       "sha256": "14f3b67788725898eb703c02c228b54c5a209b00233893e1fb20526f25ae3444"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
+        "value": "speckit_pro_runner/helpers/pr_split_ratification.py",
+        "display": "speckit_pro_runner/helpers/pr_split_ratification.py"
+      },
+      "sha256": "61655ceaa1934d9a8ffa9f340985fddb1835654fdca1a6b4540e3103c6d237f2"
     },
     {
       "path": {
@@ -335,7 +343,7 @@
         "value": "speckit_pro_runner/helpers/registry.py",
         "display": "speckit_pro_runner/helpers/registry.py"
       },
-      "sha256": "19720c8859bc5e8984a2230f3722713d7dbc94d292e3c53ef838ddfc398a2598"
+      "sha256": "f9fa42e33ba6a1a866cc07facf371a6e0de7660b0b08a4b0eff2f77d0500c88e"
     },
     {
       "path": {
