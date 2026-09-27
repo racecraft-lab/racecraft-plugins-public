@@ -534,6 +534,50 @@ class AutonomyBoundarySourceContractTests(unittest.TestCase):
         self.assertIn("is not egress authorization", phase)
         self.assertIn("data egress to a model service", skill)
 
+    def test_consolidated_request_emits_egress_authorization_and_extra_policy(self) -> None:
+        """The reviewer trusts user messages, not plugin text (issue 755).
+
+        The one operator action carries a paste-ready authorization naming each
+        payload and destination, plus an `auto_review.extra_policy` fragment the
+        operator installs. The plugin never writes the reviewer's trusted files.
+        """
+        skill = " ".join(CODEX_AUTOPILOT_SKILL.read_text(encoding="utf-8").split())
+        phase = " ".join(
+            (CODEX_AUTOPILOT_SKILL.parent / "references" / "phase-execution-codex.md")
+            .read_text(encoding="utf-8")
+            .split()
+        )
+        prerequisites = " ".join(
+            (CODEX_AUTOPILOT_SKILL.parent / "references" / "prerequisites-codex.md")
+            .read_text(encoding="utf-8")
+            .split()
+        )
+        start = phase.index("### Autonomy Boundary Preflight")
+        end = phase.index("1. Read mode from `CONFIDENCE_GATE_MODE`", start)
+        preflight = phase[start:end]
+
+        for phrase in (
+            "`render-egress-authorization`",
+            "paste-ready authorization message",
+            "Send <data class> from <repository> to <destination> for <purpose>",
+            "`auto_review.extra_policy`",
+            "never `auto_review.policy`",
+            "replaces the default reviewer policy",
+            "autonomy-boundary files, their schema, or their recorded digests",
+            "a push to the default branch",
+            "a force push",
+            "`--mirror`",
+            "a remote change",
+            "never writes the authorization message or the fragment into `~/.codex`",
+            "into the repository's `.codex/` directory, or into `AGENTS.md`",
+            "`authorization_message_sha256`",
+            "`authorization.evidence`",
+        ):
+            self.assertIn(phrase, preflight)
+        self.assertIn("paste-ready authorization message", skill)
+        self.assertIn("`auto_review.extra_policy`", skill)
+        self.assertIn("paste-ready authorization message", prerequisites)
+
     def test_canonical_schema_excludes_automatic_and_prior_execution_authorization(self) -> None:
         schema = json.loads(
             validator.AUTONOMY_BOUNDARY_SCHEMA_PATH.read_text(

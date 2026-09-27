@@ -97,6 +97,7 @@ EXPECTED_HELPERS = [
     "parse-consensus-categories",
     "aggregate-crl",
     "research-broker-preflight",
+    "render-egress-authorization",
 ]
 
 JSON_STDOUT_PARITY_HELPERS = {"atomicity-route"}
@@ -153,6 +154,10 @@ HELPER_CASES: dict[str, dict[str, object]] = {
     "validate-pr-packet-read-only": {"packet_path": "tests/speckit-pro/unit/fixtures/read-only-helpers/missing-pr-packet.json"},
     "estimate-spec-size": {"user_stories": 2, "files": 3, "frs": 4},
     "research-broker-preflight": {},
+    "render-egress-authorization": json.loads(
+        (REPO_ROOT / "tests/speckit-pro/unit/fixtures/read-only-helpers/requests/render-egress-authorization.json")
+        .read_text(encoding="utf-8")
+    )["inputs"],
     "sweep-pr-feedback": {
         "workflow_file": "docs/ai/specs/.process/FEATURE-002-workflow.md",
         "self_login": "speckit-pro-bot",
@@ -4138,6 +4143,13 @@ class ReadOnlyHelperTests(unittest.TestCase):
                     self.assertEqual(data["jev"]["state"], "binary_missing")
                     self.assertEqual(data["screening_mode"], "sanitizer-only")
                     self.assertFalse(data["writes_state"])
+                    self.assertEqual(stderr_records, [])
+                    continue
+                if helper_id == "render-egress-authorization":
+                    self.assert_response(response, "ok", 0)
+                    self.assertFalse(data["writes_state"])
+                    self.assertEqual(data["action_ids"], ["live-skill-eval", "push-feature-branch"])
+                    self.assertIn("[auto_review]\nextra_policy = ", data["extra_policy_fragment"])
                     self.assertEqual(stderr_records, [])
                     continue
                 self.assertEqual(data["shell"], False)

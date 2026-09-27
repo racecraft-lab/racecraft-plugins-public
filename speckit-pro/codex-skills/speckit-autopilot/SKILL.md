@@ -638,7 +638,10 @@ to a model service or other third party (including live model evaluations);
 proves each
 is runnable or already authorized; and records the result durably. A blocked
 result stops before Phase 7 with one consolidated operator action instead of
-surprising the operator from inside an implementation task.
+surprising the operator from inside an implementation task. When that action
+covers data egress, it shows the operator a paste-ready authorization message
+and a proposed `auto_review.extra_policy` fragment, both rendered by runner
+helper `render-egress-authorization`; the plugin never writes either one.
 
 The marker planning step must preserve correctness stops for malformed or stale state,
 failed verification, invalid packets, unsafe output, unusable gate evidence,

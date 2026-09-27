@@ -299,7 +299,9 @@ does not match the persisted execution boundary`, or any other stale-record
 error above, rerun the complete Phase 6.5 preflight against the live boundary
 now. Present one consolidated operator request, in the `operator_action_required`
 shape, that names the changed boundary and every action whose authorization it
-invalidates. Record the operator's answer as `authorization.status=explicit_user`,
+invalidates. When a data-egress action is among them, include the
+paste-ready authorization message and `auto_review.extra_policy` fragment that
+request carries. Record the operator's answer as `authorization.status=explicit_user`,
 then write the refreshed private record, its receipt, and the matching Phase 6.5
 row before Step 1.1 runs. Present the refresh as this up-front re-attestation,
 never as a guard-failure repair. A denial or no answer stops the run before the

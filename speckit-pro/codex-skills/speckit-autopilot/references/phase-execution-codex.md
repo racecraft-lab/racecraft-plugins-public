@@ -1206,6 +1206,39 @@ bookkeeping path; for a plan-stage run, use the normal stage-boundary commit.
 Then **STOP before Phase 7**. A denial routes back to planning for a
 contract-preserving alternative; it never triggers a workaround.
 
+When that request includes data egress, it also carries two artifacts for the
+operator to review. Codex's automatic reviewer trusts user and developer
+messages, `AGENTS.md`, and question replies, but treats skill and plugin text
+as untrusted. It approves egress only when the transcript names the payload
+and the destination. Render both artifacts with the registered read-only
+`render-egress-authorization` runner helper. Pass the repository name, its
+default branch, and every data-egress action as `action_id`, `target` (the
+exact destination), `effect` (the data class), and an optional `purpose` (the
+task id or reason). Show its output unchanged; do not write the text by hand.
+
+- A paste-ready authorization message: one short block the operator sends as
+  a user message in this thread. It lists each action as "Send <data class>
+  from <repository> to <destination> for <purpose>". The operator's reply that
+  carries it is the explicit_user evidence described above.
+- A proposed `auto_review.extra_policy` fragment for the operator's own
+  `~/.codex/config.toml`. Codex appends `extra_policy` to the default reviewer
+  policy; `auto_review.policy` replaces the default reviewer policy, so propose
+  `extra_policy` and never `auto_review.policy`. The fragment covers only this
+  repository and the destinations this run needs. It states that it never
+  approves edits to autonomy-boundary files, their schema, or their recorded
+  digests, edits to `AGENTS.md` or `.codex/`, a push to the default branch, a
+  force push, a `--mirror` push, or a remote change. The operator installs it
+  once.
+
+The plugin never writes the authorization message or the fragment into
+`~/.codex`, into the repository's `.codex/` directory, or into `AGENTS.md`:
+the reviewer trusts `AGENTS.md`, and any pull-request branch could rewrite it. Record that the authorization was
+presented without a schema change: set each egress action's private
+`authorization.evidence` to cite the helper's `authorization_message_sha256`
+while it waits (`authorization.status=missing`), then cite that digest again
+with the operator's reply when recording `explicit_user`. The digest stays in
+the private record; the receipt and the Phase 6.5 row never carry it.
+
 When every action is `ready` or `rerouted`, set status to `ready` and continue
 with the confidence steps below. A `plan` run takes its boundary commit and
 stops at the plan terminal step even when the record is `ready`; it never
