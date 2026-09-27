@@ -142,6 +142,8 @@
         { "path": "tests/speckit-pro/unit/test-mcp-protocol-negotiation.py", "label": "test-mcp-protocol-negotiation" },
         { "path": "tests/speckit-pro/unit/test-quint-reference-attribution.py", "label": "test-quint-reference-attribution" },
         { "path": "tests/speckit-pro/unit/test-stack-manager-plan.py", "label": "test-stack-manager-plan" },
+        { "path": "tests/speckit-pro/unit/test-archive-sweep-candidates.py", "label": "test-archive-sweep-candidates" },
+        { "path": "tests/speckit-pro/unit/test-archive-invocation-contract.py", "label": "test-archive-invocation-contract" },
         { "path": "tests/speckit-pro/unit/test-workflow-guard-hook.py", "label": "test-workflow-guard-hook" },
         { "path": "tests/speckit-pro/unit/test-ubiquitous-language-lint.py", "label": "test-ubiquitous-language-lint" },
         { "path": "tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py", "label": "test-speckit-pro-mutation-helpers" },
@@ -167,7 +169,8 @@
         { "path": "tests/speckit-pro/unit/test-feedback-sweep-isolation.py", "label": "test-feedback-sweep-isolation" },
         { "path": "tests/speckit-pro/unit/test-artifact-freshness.py", "label": "test-artifact-freshness" },
         { "path": "tests/speckit-pro/unit/test-research-broker-preflight.py", "label": "test-research-broker-preflight" },
-        { "path": "tests/speckit-pro/unit/test-research-broker.py", "label": "test-research-broker" }
+        { "path": "tests/speckit-pro/unit/test-research-broker.py", "label": "test-research-broker" },
+        { "path": "tests/speckit-pro/unit/test-render-egress-authorization.py", "label": "test-render-egress-authorization" }
       ]
     },
     {

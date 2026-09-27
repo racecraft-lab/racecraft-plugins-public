@@ -59,9 +59,18 @@ def confined_path(root: Path, value: str) -> Path:
     return path
 
 
+def ignore_owned_directory(directory: Path) -> None:
+    """Keep a runner-owned directory out of every commit, `git add -A` included."""
+    directory.mkdir(parents=True, exist_ok=True)
+    marker = directory / ".gitignore"
+    if marker.is_symlink() or not marker.is_file() or marker.read_bytes() != b"*\n":
+        marker.unlink(missing_ok=True)
+        marker.write_bytes(b"*\n")
+
+
 def durable_json(path: Path, value: dict[str, Any]) -> None:
     """Publish a complete record, with data and containing directory flushed."""
-    path.parent.mkdir(parents=True, exist_ok=True)
+    ignore_owned_directory(path.parent)
     descriptor, temporary = tempfile.mkstemp(prefix=".execution-", dir=path.parent)
     try:
         with os.fdopen(descriptor, "w", encoding="utf-8") as stream:
