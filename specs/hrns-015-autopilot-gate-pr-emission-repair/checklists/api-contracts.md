@@ -55,3 +55,19 @@
 - [ ] CHK024 Are declared-command provenance, per-slot override scope, unchanged thresholds/basis, invalid-config failure, and omitted-input detection compatibility specified without changing the string-valued command map? [Compatibility, Spec §FR-016; Contracts §Size estimate and commands]
 
 **Pass notes**: This pass appends requirements-quality criteria and preserves CHK001–CHK016 and every existing checkbox. The existing H1/meta, reviewer ownership, category headings, and Notes provide the skill's permitted canonical fallback structure after template resolution was unavailable. No checkbox reports implementation completion.
+
+## API-contracts revalidation — requirements-quality pass (2026-09-27)
+
+Re-ran the same API-contracts prompt against the revised spec and Plan with installed speckit-pro 2.37.1. Native Python setup resolved the checklist template and feature context. The existing 24 questions cover the requested contracts; no new item is needed. CHK001–CHK024 and their reviewer-owned checkbox states remain unchanged.
+
+| Existing items | Current requirement evidence |
+| --- | --- |
+| CHK001–CHK005, CHK017–CHK019 | Spec FR-001–FR-006 and PR Emission clarifications; `contracts/workflow-and-pr.md` Final PR packet: optional note, invalid explicit input, protected heading/markers, conditional fourth field, draft exclusion, current Verdict refresh, and canonical packet guard. |
+| CHK006–CHK010, CHK020–CHK021 | Spec FR-014/FR-028/FR-029 and Reviewability Gate clarifications; `contracts/runner-and-roadmap.md` Reviewability setup: retained required `spec_id`, selected-section diagnostics, typed exceptions, ordered per-slice results, row-sum aggregates, and LOC-only greenfield allowance. |
+| CHK011–CHK013, CHK015, CHK023–CHK024 | Spec FR-015/FR-016 and `contracts/runner-and-roadmap.md` Size estimate and commands: additional refactor files, weight/precedence, invalid or omitted-input baseline, declared-command provenance, per-slot overrides, invalid-config failure, and preserved thresholds/basis. |
+| CHK014, CHK022 | Plan Slice C2 and `contracts/runner-and-roadmap.md` Host request examples retain the approved requirement that each documented inline request envelope match a passing fixture byte for byte at the five named sites on both hosts. |
+| CHK016 | Spec FR-025 and `contracts/runner-and-roadmap.md` Roadmap link contract preserve verified legacy targets and repair broken targets relative to the containing roadmap. |
+
+This is a planning requirements-quality review. Plan's Plan-Stage G6 and Marker Record section and `contracts/workflow-and-pr.md` require pending-only `pr-marker-plan.v1` checkpoints before implementation and actual per-PR diffs, LOC, changed-path budgets, and passing checkpoint evidence before PR emission. No implementation evidence is required to close this checklist revalidation.
+
+The initial installed-runner `count-markers` call in gaps mode returned zero in spec, Plan, and checklists. No contract correction or new research was required by the revised artifacts.

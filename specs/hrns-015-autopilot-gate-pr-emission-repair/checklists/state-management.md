@@ -55,3 +55,13 @@
 - [ ] CHK022 Are historical formal-001 index examples specified as test-owned fixtures so the acceptance baseline does not depend on reading an active feature directory at test runtime? [Dependency, Spec §FR-010; Plan §Execution Design by Slice, B]
 
 The current state-management review applies to the approved eighteen delivery increments, fourteen stories, and twenty-six active requirements. The earlier pending reevaluation note records the preapproval checkpoint. All reviewer-owned checkboxes remain unchecked; requirements review does not establish implementation completion.
+
+## Current Plan Revalidation — 2026-09-27
+
+The `/speckit-checklist state-management` rerun revalidated the existing CHK001–CHK022 criteria against the current spec and Plan. No additional criteria or requirements gaps were identified. All reviewer-owned checkbox states are preserved.
+
+- CHK001–CHK003, CHK007–CHK010, CHK013–CHK014, CHK018–CHK020: Spec US9/US10, FR-017/FR-018 and Workflow Behavior, Plan Slice C1a and Execution Design C1a, and contracts/workflow-and-pr.md Post completion retain the sole ordered 13-name source, separate resume points, exact-name legacy progress, pending new/renamed rows, named failure diagnostics, matching completion statuses, and the verified absent-extension exception. Stage-scoped returns remain distinct from full completion.
+- CHK004–CHK005, CHK011–CHK012, CHK015, CHK022: Spec US5, FR-009/FR-010 and Reviewability Gate and Spec Index, plus Plan Slice B and Execution Design B retain source-index membership, staged-addition eligibility, untracked exclusion inside tracked directories, refresh and isolated-check parity, stale-path diagnostics, generated formal-001 output, and test-owned historical fixtures.
+- CHK006, CHK016–CHK017, CHK021: Spec US10/FR-019 and Workflow Behavior, plus Plan Slice C1b and Execution Design C1b retain child-result or supported-stop evidence, graceful shutdown, no-active-child and cleanup confirmation, unresolved structured results, and the separate HRNS-017 lifetime question. Retained native host threads establish neither active work nor cleanup completion.
+
+Planning G6 checks requirement coverage, task consistency, candidate budgets and the current planned marker record; every pre-implementation checkpoint remains pending. Actual diffs, reviewable LOC and checkpoint evidence remain mandatory before PR emission (Spec Reviewability Budget; Plan Planning G6 and Actual PR Emission, Execution Design by Slice). These planning boundaries do not change the state-management criteria or establish implementation completion. Tasks regeneration is owned by the scheduled Tasks phase.

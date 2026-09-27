@@ -35,8 +35,8 @@ captured during scoping.
 | Specify | `/speckit-specify` | ✅ Complete | 14 user stories, 29 current functional requirements, 40 acceptance scenarios after Clarify; G1 passed |
 | Clarify | `/speckit-clarify` | ✅ Complete | Four sessions complete; ten consensus decisions recorded; G2 passed with zero markers |
 | Plan | `/speckit-plan` | ✅ Complete | 2.37.1 re-plan: six artifacts reconciled, 18 increments preserved, G3 pass, advisory projected LOC 200 |
-| Checklist | `/speckit-checklist` | ⏳ Pending | Revalidate after current re-plan |
-| Tasks | `/speckit-tasks` | ⏳ Pending | Reconcile after current re-plan |
+| Checklist | `/speckit-checklist` | ✅ Complete | API 24, error handling 21, state management 22; zero gaps; G4 passed |
+| Tasks | `/speckit-tasks` | 🔄 In Progress | Reconcile current timing and source-bound execution metadata |
 | Analyze | `/speckit-analyze` | ⏳ Pending | Pending current task plan and post-G5 marker boundary; older H3–H7 analysis is historical |
 | Confidence Gate | G6.5 | ⏳ Pending | Pending current Analyze; advisory mode retained, older composite not reused |
 | Implement | `/speckit-implement` | ⏳ Pending | Outside --stage plan; qualification and owner ratification remain pending |
@@ -1091,3 +1091,15 @@ Current binding is resolved/same at the selected feature worktree; all check-pre
 ### Plan revalidation — 2.37.1
 
 Plan, research, data model, quickstart and both contracts now reflect the approved planning/emission boundary and pending-only v1 marker design. All 18 increments, 14 stories and 26 active requirements remain. G3 passed with zero unresolved markers; advisory estimate passed at 200 projected LOC across 55 declared entries. Three broker documentation queries returned no usable chunks; prior evidence is retained with its limits. Checklists need no preemptive prose edits; each domain is revalidated next. Optional Git hooks are covered by the phase checkpoint; the traceability hook is covered by the subsequent G5/Analyze checks.
+
+### API checklist revalidation — 2.37.1
+
+24 reviewer-owned unchecked items, zero gaps, zero unresolved findings. The approved FR-024/CHK022 requirement remains satisfied. Native binding, setup, pre/post marker counts and whitespace checks passed. Consensus is skipped because no unresolved item remains. Ripwire's advisory test-gate reports an untested documentation link; no implementation-test pass is claimed.
+
+### Error-handling revalidation — 2.37.1
+
+21 reviewer-owned unchecked criteria remain byte-identical; zero gaps and unresolved items. Native binding, prerequisites, setup, final marker counts and scoped whitespace checks passed. Existing failure/retry contracts remain intact. Stale Tasks timing prose is assigned to the scheduled Tasks producer; it is not an unresolved requirements question. Consensus is skipped.
+
+### Checklist completion — 2.37.1
+
+State-management revalidation preserved all 22 unchecked criteria and found zero gaps. All three domain results were consumed; none required consensus. Parent G4 passed with zero markers. Only dated review evidence was appended to the three checklists. Tasks now reconciles the approved planning/emission boundary and regenerates its source fingerprints.

@@ -58,3 +58,18 @@
 **Approved Plan checklist pass — 2026-09-26**: Re-evaluated the requested error-handling domain against the approved eighteen-part Plan and current requirement scope. CHK001–CHK018 remain preserved and unchecked. CHK019–CHK021 extend requirements-quality coverage; no missing requirement was identified. The #694 setup failure cases remain compatibility requirements rather than new repair scope.
 
 **Verification re-run — 2026-09-26**: Re-ran `/speckit-checklist error-handling` using the supported prerequisite command and canonical template fallback. Re-evaluated all 21 criteria against the current spec, Plan and contract sections; no further criterion or requirement repair was needed. All reviewer checkboxes remain unchecked.
+
+
+## Error-handling revalidation — requirements-quality pass (2026-09-27)
+
+Re-evaluated `/speckit-checklist error-handling` against the approved G6 timing and current spec, Plan, and contracts. All 21 existing criteria remain valid; no new criterion or requirement repair is needed. CHK001–CHK021 and their reviewer-owned checkbox states are preserved.
+
+- CHK001–CHK003 retain the exact current packet's three canonical untracked-path exemption and the final-body validation blockers. See Spec FR-001–FR-006 and [workflow-and-pr.md](../contracts/workflow-and-pr.md), Final PR packet.
+- CHK004–CHK009 retain distinct missing-section/budget diagnostics, rejected malformed or mis-cased pragmas, complete slice rows, ordinary non-LOC thresholds, and invalid-command blocking. The #694 setup contract stays compatibility baseline. See Spec FR-014, FR-016, FR-028–FR-029; Plan Slice B; [runner-and-roadmap.md](../contracts/runner-and-roadmap.md), Reviewability setup.
+- CHK010–CHK013 and CHK019 retain the non-vacuous canonical Post boundary, unresolved teardown reporting, and the three distinct recorded blind-spot continuation reasons. See Spec FR-018–FR-019, FR-022–FR-023; [workflow-and-pr.md](../contracts/workflow-and-pr.md), Post completion and Scaffold blind-spot result.
+- CHK014–CHK018 and CHK020 retain complete pagination, pending threads and retained local commits after failures, fresh full verification/push/head matching on retry, and verified legacy-link handling. See Spec FR-020–FR-021, FR-025; Plan Slice C2; [workflow-and-pr.md](../contracts/workflow-and-pr.md), Resolve-pr feedback protocol.
+- CHK021 is evaluated at the relevant evidence boundary: planning requires coverage, task consistency, candidate budgets, and a current `pr-marker-plan.v1` whose checkpoints contain only `{"status": "pending"}`. Actual per-PR base/head diffs, LOC, changed-path counts, and passing checkpoint evidence remain mandatory before emission. Missing required planning evidence blocks planning; missing required implementation/emission evidence blocks emission. Neither candidate membership nor a pending checkpoint supplies implementation proof. See Spec Reviewability Budget; Plan Planning and PR-Emission Evidence and Constitution Check IX; [workflow-and-pr.md](../contracts/workflow-and-pr.md), Plan-Stage G6 and Marker Record.
+
+Capability path: unchanged requirements and approved timing -> repo-local spec, Plan, contracts, and constitution IX; Evidence: sections cited above; Confidence: high. This pass uses unchanged local evidence and makes no new external-documentation or implementation-qualification claim.
+
+**Verification re-run — 2026-09-27**: Re-ran the same error-handling review with successful native prerequisite/template setup, then the installed runner gaps helper. Result: spec 0, Plan 0, checklists 0, total 0. All 21 criteria remain unchanged and unchecked; no unresolved error-handling requirement was identified.
