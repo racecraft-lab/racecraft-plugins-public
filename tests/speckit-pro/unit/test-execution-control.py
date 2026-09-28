@@ -2422,7 +2422,7 @@ class SelfIgnoringByproductDirectoryTests(_ExecutionControlFixture, unittest.Tes
         self.environment = {**os.environ, "GIT_CONFIG_GLOBAL": os.devnull, "GIT_CONFIG_NOSYSTEM": "1"}
         self.git("init", "-q")
         self.git("add", "-A")
-        self.git("-c", "user.name=fixture", "-c", "user.email=fixture@example.com", "commit", "-q", "-m", "base")
+        self.git("-c", "user.name=fixture", "-c", "user.email=git@github.com", "commit", "-q", "-m", "base")
 
     def git(self, *args, check=True):
         return subprocess.run(["git", "-C", str(self.root), *args], check=check, capture_output=True, text=True,
@@ -2455,7 +2455,7 @@ class SelfIgnoringByproductDirectoryTests(_ExecutionControlFixture, unittest.Tes
         self.assertEqual(self.git("check-ignore", "-q", "feature/.process/checkpoints/M1.json", check=False).returncode, 1)
         self.git("add", "--force", "--", "feature/.process/verification/M1.json")
         self.git("add", "--", "feature/.process/checkpoints/M1.json")
-        self.git("-c", "user.name=fixture", "-c", "user.email=fixture@example.com", "commit", "-q", "-m", "marker")
+        self.git("-c", "user.name=fixture", "-c", "user.email=git@github.com", "commit", "-q", "-m", "marker")
         record.write_text('{"status": "complete"}\n')
         self.assertEqual(self.git("status", "--porcelain").stdout, " M feature/.process/verification/M1.json\n")
         self.assertEqual(self.git("check-ignore", "-q", "feature/.process/verification/M1.json", check=False).returncode, 1)
