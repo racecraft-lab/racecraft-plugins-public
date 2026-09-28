@@ -30,8 +30,8 @@ from pathlib import Path
 from typing import Any
 
 from .agent_materialization import canonical_bytes
-from .execution_control import (confined_path, default_ledger_directory, durable_json, execution_control, record_failing_checks,
-                                require_text, workflow_process_directory)
+from .execution_control import (confined_path, default_ledger_directory, durable_json, evidence_directory, execution_control,
+                                record_failing_checks, require_text)
 from .failing_checks import fingerprint as failing_check_fingerprint
 
 SCHEMA = "verification-record/v1"
@@ -123,10 +123,6 @@ def project_command(workflow: Path, command_id: str) -> list[str]:
     argv = workflow_argv(workflow, command_id)
     project_program(argv[0])
     return argv
-
-
-def evidence_directory(workflow_name: str) -> str:
-    return workflow_process_directory(workflow_name).joinpath("verification").as_posix()
 
 
 def evidence_directories(workflow_name: str) -> set[str]:

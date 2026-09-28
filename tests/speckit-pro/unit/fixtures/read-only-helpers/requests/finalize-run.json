@@ -11,12 +11,26 @@
       {
         "gate": "G7",
         "status": "passed",
-        "command": "python3 tests/speckit-pro/run-all.py"
+        "command": "python3 tests/speckit-pro/run-all.py",
+        "head_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
       },
       {
         "gate": "Post: Integration Suite",
         "status": "passed",
-        "command": "python3 tests/integration/run.py"
+        "command": "python3 tests/integration/run.py",
+        "head_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      {
+        "gate": "G7",
+        "status": "passed",
+        "command": "python3 tests/speckit-pro/run-all.py",
+        "head_sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      },
+      {
+        "gate": "Post: Integration Suite",
+        "status": "passed",
+        "command": "python3 tests/integration/run.py",
+        "head_sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
       }
     ],
     "pending_items": [],
@@ -32,12 +46,14 @@
       {
         "number": 101,
         "url": "https://github.com/example-org/example-repo/pull/101",
-        "draft": true
+        "draft": true,
+        "head_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
       },
       {
         "number": 102,
         "url": "https://github.com/example-org/example-repo/pull/102",
-        "draft": true
+        "draft": true,
+        "head_sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
       }
     ],
     "resume_command": "/speckit-pro:speckit-autopilot docs/ai/specs/.process/FEATURE-001-workflow.md --from-phase implement"

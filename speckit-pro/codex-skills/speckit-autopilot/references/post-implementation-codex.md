@@ -158,7 +158,7 @@ background subagents as the fallback path. The 3-track structure
   item has finished and deferred items remain, the read-only `finalize-run`
   helper decides the end, as the phase-execution reference's blocked-action
   rule states. Human UAT is the only gate a run may defer: with every non-UAT
-  gate passed, the stack goes ready for review, the top PR body opens with
+  gate passed at every PR head, the stack goes ready for review, the top PR body opens with
   `deferred_items` in its Deferred / not verified section, and the goal is
   marked complete. Anything else left is one human stop. Either way, one
   consolidated operator request and the same question as plain text in the
@@ -359,12 +359,15 @@ gh pr create --base <base> --head <head> --body-file <body-file> --title <packet
 Apply this exact fail-closed sequence independently to every planned slice; do
 not open any slice PR until all preceding steps for that slice pass:
 
-1. Run or record the slice's required scoped verification. Carry the
-   pre-emission full regression evidence by repo-relative path instead of
-   rerunning the full suite for every slice. On a failed required scoped command,
+1. Run every required non-UAT gate (the full suite, the checks CI requires,
+   and any per-commit identity or evidence check the repository defines) at
+   the slice's own head, bottom-up, and run or record the slice's required
+   scoped verification; never carry another head's evidence to a slice. On a
+   failed required command,
    stop before `gh pr create`; record the command, exit status, evidence path,
    stderr/stdout tail, and keep `next_slice_id` on the blocked slice.
 2. Emit or refresh that slice's feature-local packet with `pr-packet-output`.
+   Its verification cites only the evidence produced at that slice's own head.
    Reject generic foundation/story/slice titles, hardcoded plugin scopes for
    spec PRs, packet-mechanics prose, and raw evidence dumps before any slice PR
    is opened.
@@ -419,6 +422,12 @@ slice's declared scope, record command results and recovery evidence, and run a
 fresh DEFAULT_VERIFY before final merge evidence is considered current. If a
 prior `gh-stack` mutation crossed its mutation boundary, resume with
 same-manager recovery evidence or block; do not mix managers.
+
+**Lower-layer fixes:** a fix made on a lower slice must propagate it upward by
+merge: merge each fixed branch into the slice above it, bottom-up, never by
+rebase or force-push. Then re-verify every affected head: rerun every non-UAT
+gate at each head the merge changed and refresh that PR's body evidence, so
+`finalize-run` receives a current result for every gate at every head.
 
 ## UAT Runbook Generation
 

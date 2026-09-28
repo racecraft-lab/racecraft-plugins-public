@@ -9,6 +9,16 @@ complete, and one plain-text request names what is left. A failed gate, a
 ledger deferral, or an unresolved deferred task at the end is one human stop
 that names the gate and its exact command, never ready for review. The
 `finalize-run` helper derives that decision and fails closed.
+
+Every gate result is tied to the PR head it ran at (issue 814). A multi-PR
+stack finalizes only when every PR head has passed every non-UAT gate; a head
+with no result for a gate is a human stop that names the head and the gate.
+
+A harness or tooling error that blocks a gate is retried within a fixed budget
+(issue 815). If it persists, the gate reports status `harness_error` with its
+attempt count and the `.process/verification/` path holding each attempt's raw
+error and trace. It never counts as passed, and the one human stop reports it
+as a harness error, never as a failure of the code under test.
 """
 
 from __future__ import annotations
@@ -48,8 +58,23 @@ VETO = {
     "reason": "The approval reviewer denied the live evaluation twice despite the recorded chat authorization.",
     "finish": "python3 tests/live/run-eval.py --task T042",
 }
+HEADS = {101: "a" * 40, 102: "b" * 40, 103: "c" * 40}
+GREEN = (
+    {"gate": "G7", "status": "passed", "command": "python3 tests/run-all.py"},
+    {"gate": "Post: Integration Suite", "status": "passed", "command": "python3 tests/integration.py"},
+)
 LIVE_EVAL = {"gate": "Post: Live Evaluation", "status": "failed",
-             "command": "python3 tests/live/run-eval.py --task T042"}
+             "command": "python3 tests/live/run-eval.py --task T042", "head_sha": HEADS[103]}
+
+
+HARNESS_EVIDENCE = "clean/.process/verification/harness/g7-cccccccc"
+HARNESS_ERROR = {"gate": "G7", "status": "harness_error", "command": "python3 tests/run-all.py",
+                 "head_sha": HEADS[103], "attempts": 3, "evidence": HARNESS_EVIDENCE}
+
+
+def per_head(*gates: dict[str, object], heads: tuple[str, ...] = tuple(HEADS.values())) -> list[dict[str, object]]:
+    """Each gate result repeated at every listed PR head."""
+    return [{**gate, "head_sha": head} for head in heads for gate in gates]
 
 
 def finalize(root: Path, inputs: dict[str, object]) -> dict[str, object]:
@@ -95,17 +120,17 @@ class _LedgerFixture:
         inputs: dict[str, object] = {
             "ledger_path": run["ledger_path"],
             "expected_run_id": run["run_id"],
-            "gates": [
-                {"gate": "G7", "status": "passed", "command": "python3 tests/run-all.py"},
-                {"gate": "Post: Integration Suite", "status": "passed", "command": "python3 tests/integration.py"},
-            ],
+            "gates": per_head(*GREEN),
             "pending_items": [],
             "unresolved_deferrals": [],
             "human_uat": [dict(UAT)],
             "pull_requests": [
-                {"number": 101, "url": "https://github.com/example-org/example-repo/pull/101", "draft": True},
-                {"number": 102, "url": "https://github.com/example-org/example-repo/pull/102", "draft": False},
-                {"number": 103, "url": "https://github.com/example-org/example-repo/pull/103", "draft": True},
+                {"number": 101, "url": "https://github.com/example-org/example-repo/pull/101", "draft": True,
+                 "head_sha": HEADS[101]},
+                {"number": 102, "url": "https://github.com/example-org/example-repo/pull/102", "draft": False,
+                 "head_sha": HEADS[102]},
+                {"number": 103, "url": "https://github.com/example-org/example-repo/pull/103", "draft": True,
+                 "head_sha": HEADS[103]},
             ],
             "resume_command": RESUME,
         }
@@ -134,7 +159,8 @@ class FinalizeRunTests(_LedgerFixture, unittest.TestCase):
         self.assertIsNone(result["human_stop"])
 
     def test_a_failed_gate_is_one_human_stop_naming_the_gate_and_command(self) -> None:
-        gates = [{"gate": "G7", "status": "passed", "command": "python3 tests/run-all.py"}, dict(LIVE_EVAL)]
+        gates = per_head(GREEN[0]) + per_head({**LIVE_EVAL, "status": "passed"}, heads=(HEADS[101], HEADS[102]))
+        gates.append(dict(LIVE_EVAL))
         result = finalize(self.root, self.inputs(gates=gates))
         self.assertEqual(result["outcome"], "human_stop")
         self.assertEqual(result["goal_status"], "blocked")
@@ -142,10 +168,13 @@ class FinalizeRunTests(_LedgerFixture, unittest.TestCase):
         self.assertFalse(result["finalized"])
         self.assertEqual(result["ready_commands"], [])
         stop = result["human_stop"]
-        self.assertEqual(stop["gates"], [{"gate": LIVE_EVAL["gate"], "command": LIVE_EVAL["command"]}])
+        self.assertEqual(stop["gates"], [{"gate": LIVE_EVAL["gate"], "command": LIVE_EVAL["command"],
+                                          "pull_request": 103, "head_sha": HEADS[103]}])
+        self.assertEqual(stop["missing"], [])
         request = result["end_of_run_request"]
         self.assertIn(LIVE_EVAL["gate"], request)
         self.assertIn(LIVE_EVAL["command"], request)
+        self.assertIn(HEADS[103], request)
         self.assertNotIn("ready for review.", request)
 
     def test_an_unresolved_ledger_deferral_is_a_human_stop_not_finalize_ready(self) -> None:
@@ -164,13 +193,13 @@ class FinalizeRunTests(_LedgerFixture, unittest.TestCase):
         self.assertIn(VETO["finish"], result["end_of_run_request"])
 
     def test_only_human_uat_reaches_the_deferred_section(self) -> None:
-        result = finalize(self.root, self.inputs(self.deferring, gates=[dict(LIVE_EVAL)],
+        result = finalize(self.root, self.inputs(self.deferring, gates=per_head(LIVE_EVAL),
                                                  unresolved_deferrals=[dict(VETO)]))
         self.assertEqual(result["deferred_items"], [UAT])
 
     def test_remaining_runnable_work_continues_the_run(self) -> None:
         result = finalize(self.root, self.inputs(self.deferring, pending_items=["Post: Retrospective"],
-                                                 gates=[dict(LIVE_EVAL)]))
+                                                 gates=per_head(LIVE_EVAL)))
         self.assertEqual(result["outcome"], "continue")
         self.assertEqual(result["goal_status"], "not_complete")
         self.assertFalse(result["mark_ready"])
@@ -193,8 +222,7 @@ class FinalizeRunTests(_LedgerFixture, unittest.TestCase):
 
     def test_digest_and_request_ignore_input_order(self) -> None:
         """#807 review: the same blocker listed in another order is not a changed blocker."""
-        gates = [{"gate": "G7", "status": "failed", "command": "python3 tests/run-all.py"},
-                 {"gate": "Post: Integration Suite", "status": "failed", "command": "python3 tests/integration.py"}]
+        gates = per_head(*({**gate, "status": "failed"} for gate in GREEN))
         uat = [dict(UAT), {**UAT, "item": "Second walkthrough"}]
         forward = finalize(self.root, self.inputs(gates=gates, human_uat=uat))
         backward = finalize(self.root, self.inputs(gates=gates[::-1], human_uat=uat[::-1]))
@@ -205,14 +233,143 @@ class FinalizeRunTests(_LedgerFixture, unittest.TestCase):
         self.assertEqual(ready["deferred_digest"], again["deferred_digest"])
         self.assertEqual(ready["end_of_run_request"], again["end_of_run_request"])
 
+    def test_every_pr_head_passing_every_gate_is_what_finalizes_a_stack(self) -> None:
+        result = finalize(self.root, self.inputs())
+        self.assertTrue(result["mark_ready"])
+        self.assertEqual([pr["head_sha"] for pr in result["pull_requests"]], list(HEADS.values()))
+        for pr in result["pull_requests"]:
+            with self.subTest(pull_request=pr["number"]):
+                # Each PR body cites only the evidence produced at its own head.
+                self.assertEqual(pr["gates"], [{**gate, "head_sha": pr["head_sha"]} for gate in GREEN])
+
+    def test_a_stack_verified_only_at_its_tip_is_a_human_stop_naming_each_unverified_head(self) -> None:
+        result = finalize(self.root, self.inputs(gates=per_head(*GREEN, heads=(HEADS[103],))))
+        self.assertEqual(result["outcome"], "human_stop")
+        self.assertFalse(result["mark_ready"])
+        self.assertEqual(result["ready_commands"], [])
+        missing = result["human_stop"]["missing"]
+        self.assertEqual(sorted((entry["pull_request"], entry["gate"]) for entry in missing),
+                         [(101, "G7"), (101, "Post: Integration Suite"), (102, "G7"), (102, "Post: Integration Suite")])
+        for entry in missing:
+            self.assertEqual(entry["head_sha"], HEADS[entry["pull_request"]])
+        request = result["end_of_run_request"]
+        for head in (HEADS[101], HEADS[102]):
+            self.assertIn(head, request)
+        self.assertNotIn(HEADS[103], request)
+        self.assertIn("Post: Integration Suite", request)
+
+    def test_a_gate_missing_at_one_lower_head_blocks_the_whole_stack(self) -> None:
+        gates = [gate for gate in per_head(*GREEN)
+                 if not (gate["head_sha"] == HEADS[102] and gate["gate"] == "Post: Integration Suite")]
+        result = finalize(self.root, self.inputs(gates=gates))
+        self.assertEqual(result["outcome"], "human_stop")
+        self.assertEqual(result["human_stop"]["missing"],
+                         [{"pull_request": 102, "head_sha": HEADS[102], "gate": "Post: Integration Suite",
+                           "command": GREEN[1]["command"]}])
+
+    def test_a_failed_gate_at_a_lower_head_is_a_human_stop_even_when_the_tip_passed(self) -> None:
+        gates = per_head(*GREEN, heads=(HEADS[102], HEADS[103]))
+        gates += [dict(GREEN[0], head_sha=HEADS[101]), dict(GREEN[1], status="failed", head_sha=HEADS[101])]
+        result = finalize(self.root, self.inputs(gates=gates))
+        self.assertEqual(result["outcome"], "human_stop")
+        self.assertEqual(result["human_stop"]["gates"],
+                         [{"gate": GREEN[1]["gate"], "command": GREEN[1]["command"], "pull_request": 101,
+                           "head_sha": HEADS[101]}])
+
+    def test_a_single_pull_request_run_finalizes_at_its_one_head(self) -> None:
+        prs = [{"number": 7, "url": "https://github.com/example-org/example-repo/pull/7", "draft": True,
+                "head_sha": "d" * 40}]
+        result = finalize(self.root, self.inputs(pull_requests=prs, gates=per_head(*GREEN, heads=("d" * 40,))))
+        self.assertEqual(result["outcome"], "complete_with_deferred")
+        self.assertEqual(result["ready_commands"], ["gh pr ready 7"])
+
+    def harness_gates(self, **overrides: object) -> list[dict[str, object]]:
+        """Green at every head except G7 at the tip, which hit a persistent harness error."""
+        evidence = self.root / HARNESS_EVIDENCE
+        evidence.mkdir(parents=True, exist_ok=True)
+        for attempt in (1, 2, 3):
+            (evidence / f"attempt-{attempt}.log").write_text("harness exited 70 before the suite ran\n")
+        gates = [gate for gate in per_head(*GREEN) if not (gate["head_sha"] == HEADS[103] and gate["gate"] == "G7")]
+        return gates + [{**HARNESS_ERROR, **overrides}]
+
+    def test_a_persistent_harness_error_is_a_human_stop_citing_its_evidence(self) -> None:
+        result = finalize(self.root, self.inputs(gates=self.harness_gates()))
+        self.assertEqual(result["outcome"], "human_stop")
+        self.assertFalse(result["mark_ready"])
+        self.assertEqual(result["ready_commands"], [])
+        stop = result["human_stop"]
+        self.assertEqual(stop["harness_errors"], [{"gate": "G7", "command": HARNESS_ERROR["command"],
+                                                   "pull_request": 103, "head_sha": HEADS[103], "attempts": 3,
+                                                   "evidence": HARNESS_EVIDENCE}])
+        # Reported as a harness error, not as a failed gate or a missing result.
+        self.assertEqual(stop["gates"], [])
+        self.assertEqual(stop["missing"], [])
+        request = result["end_of_run_request"]
+        self.assertIn("harness error", request)
+        self.assertIn("not a failure of the code under test", request)
+        self.assertIn(HARNESS_EVIDENCE, request)
+        self.assertIn("3 attempts", request)
+        self.assertNotIn("G7 failed", request)
+
+    def test_a_harness_error_never_counts_as_passed(self) -> None:
+        result = finalize(self.root, self.inputs(gates=self.harness_gates(), human_uat=[]))
+        self.assertFalse(result["finalized"])
+        self.assertEqual(result["goal_status"], "blocked")
+        tip = result["pull_requests"][-1]
+        self.assertIn("harness_error", [gate["status"] for gate in tip["gates"]])
+
+    def test_the_retry_budget_in_the_guidance_is_the_helper_constant(self) -> None:
+        from speckit_pro_runner.helpers.run_finalization import HARNESS_RETRY_BUDGET
+
+        words = {2: "two", 3: "three", 4: "four", 5: "five"}
+        for reference in ("skills/speckit-autopilot/references/phase-execution.md",
+                          "codex-skills/speckit-autopilot/references/phase-execution-codex.md"):
+            with self.subTest(reference=reference):
+                text = " ".join((PLUGIN_ROOT / reference).read_text(encoding="utf-8").split())
+                for phrase in (f"up to {words[HARNESS_RETRY_BUDGET]} attempts",
+                               f"`attempts` reaches {HARNESS_RETRY_BUDGET}"):
+                    self.assertTrue(phrase in text, f"{reference} must state: {phrase}")
+
+    def test_harness_errors_fail_closed(self) -> None:
+        cases: dict[str, dict[str, object]] = {
+            "retry budget not spent": {"attempts": 2},
+            "attempts is not an integer": {"attempts": "3"},
+            "attempts is a boolean": {"attempts": True},
+            "evidence outside the verification directory": {"evidence": "clean/.process/task-results/g7"},
+            "evidence not under a .process directory": {"evidence": "clean/verification/g7"},
+            "evidence missing": {"evidence": "clean/.process/verification/harness/absent"},
+            "evidence traversal": {"evidence": "../.process/verification/harness"},
+            "evidence absolute": {"evidence": "/.process/verification/harness"},
+        }
+        for name, override in cases.items():
+            with self.subTest(case=name):
+                with self.assertRaises(ValueError):
+                    finalize(self.root, self.inputs(gates=self.harness_gates(**override)))
+        without_evidence = self.harness_gates()
+        del without_evidence[-1]["evidence"]
+        with self.assertRaises(ValueError):
+            finalize(self.root, self.inputs(gates=without_evidence))
+        passed_with_attempts = per_head(*GREEN)
+        passed_with_attempts[0] = {**passed_with_attempts[0], "attempts": 3, "evidence": HARNESS_EVIDENCE}
+        with self.assertRaises(ValueError):
+            finalize(self.root, self.inputs(gates=passed_with_attempts))
+
     def test_inputs_fail_closed(self) -> None:
+        pr = {"number": 1, "url": "https://x/pull/1", "draft": True, "head_sha": "d" * 40}
         cases: dict[str, dict[str, object]] = {
             "no gates": {"gates": []},
             "unknown gate status": {"gates": [{"gate": "G7", "status": "green", "command": "x"}]},
             "deferred gate status": {"gates": [{"gate": "G7", "status": "deferred", "command": "x"}]},
-            "gate without command": {"gates": [{"gate": "G7", "status": "failed"}]},
+            "gate without command": {"gates": [{"gate": "G7", "status": "failed", "head_sha": HEADS[101]}]},
+            "gate without head": {"gates": [dict(GREEN[0])]},
+            "gate at a head outside the stack": {"gates": per_head(*GREEN) + per_head(GREEN[0], heads=("e" * 40,))},
+            "gate reported twice at one head": {"gates": per_head(*GREEN) + per_head(GREEN[0])},
+            "short head": {"gates": per_head(*GREEN, heads=("abc1234",)),
+                           "pull_requests": [dict(pr, head_sha="abc1234")]},
+            "pull request without head": {"pull_requests": [{"number": 1, "url": "https://x/pull/1", "draft": True}]},
+            "two pull requests sharing a head": {"pull_requests": [pr, dict(pr, number=2, url="https://x/pull/2")]},
             "no pull requests": {"pull_requests": []},
-            "draft is not a boolean": {"pull_requests": [{"number": 1, "url": "https://x/pull/1", "draft": "yes"}]},
+            "draft is not a boolean": {"pull_requests": [dict(pr, draft="yes")]},
             "run id mismatch": {"expected_run_id": "another-run"},
             "missing ledger": {"ledger_path": "clean/.process/execution-control/missing.json"},
             "ledger outside its directory": {"ledger_path": "clean/workflow.md"},

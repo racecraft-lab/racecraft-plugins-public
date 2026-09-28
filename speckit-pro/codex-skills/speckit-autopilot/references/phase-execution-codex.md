@@ -880,7 +880,12 @@ for phase in PHASES starting from first_pending:
        Runner byproducts are never committed: the runner writes a
        .gitignore holding * into .process/execution-control/,
        .process/verification/, and .process/task-results/, so
-       git add -A cannot stage them. If
+       git add -A cannot stage them. Every execution-control apply,
+       starting with the run's start, writes that .gitignore into both
+       the ledger directory and the verification directory, so the
+       verification directory is self-ignoring before any verification
+       record exists. Put your own verification logs there: they stay
+       out of commits and out of the repository privacy scan. If
        git ls-files shows such a path already tracked (from an older
        plugin version), run git rm -r --cached -- <path> before this commit.
        One exception: a marker's verification record,
@@ -1208,6 +1213,17 @@ list. Pass the inventory's actions as `inventory_actions` with their
 now, so its authorization is asked for at run start (data egress as a chat
 reply, above), and rerun the helper until it reports `covered=true`.
 
+**A declared pre-PR command is inventoried too.** Pass `repo_root`. The helper
+reads the root `AGENTS.md` and `CLAUDE.md` and reports in `declared_commands`
+each command they name in a code span or fenced code line that sends data
+off the machine, such as a dependency audit (`npm audit`, `pnpm audit`,
+`pip-audit`). Each one becomes a required gate need of category
+`external_side_effect` whose `target` is the exact command. For each such
+entry in `missing`, add a data egress action whose `effect` is the
+dependency metadata sent to the registry and copy its `target` verbatim, so
+the run-start chat authorization covers it and the pre-PR audit never needs
+a per-increment approval.
+
 **A boundary-file edit named in the ratified plan is deferred too.** Such an
 edit, for example to the root `AGENTS.md`, never blocks the start of the run,
 and the standing policy never covers it. The reason is reviewer trust: the
@@ -1260,7 +1276,14 @@ complete private record. It never carries `writable_roots`, `summary`,
 the schema rejects a receipt that does. A complete v1 record already in state
 still validates, but new runs write the receipt. Each planning fingerprint
 records the normalized repository-relative path, byte length, and lowercase
-`sha256:` digest for `plan.md` or `tasks.md`.
+`sha256:` digest for `plan.md` or `tasks.md`. Take the `tasks.md` digest over its
+task definitions: the text with every task checkbox cleared to `- [ ]`, the same
+definition the task fingerprints use. Marking a task complete then never stales
+the boundary, while any other change to `tasks.md`, and any change at all to
+`plan.md`, does. The guard also accepts a `tasks.md` digest over the raw bytes,
+so a receipt recorded before any task was checked stays current. One recorded
+with boxes already checked stays current until the next checkbox change, and
+the Step 0.8c resume preflight then records it again.
 
 Compute `execution_boundary.sha256` over canonical UTF-8 JSON containing only
 `execution_environment`, `sandbox_mode`, `approval_reviewer`, and sorted
@@ -1491,16 +1514,28 @@ finds defects in code that increment just wrote, reserve the fix with
 `review_remediation`: the increment's `tdd_unit` and every repository-relative
 path the fix will touch.
 When the task-execution sidecar is current and every path sits inside that
-TDD unit's own `owns` and no other unit's, the ledger admits the fix under
-that increment's own allowance of two review rounds. It never draws on the
+TDD unit's own `owns` and in no other unit that is still open, the ledger
+admits the fix under that increment's own allowance of two review rounds. A
+unit is closed when all its tasks are checked in the committed `tasks.md` and
+still checked in the worktree, so a file shared with finished, committed
+increments does not refuse the fix. It never draws on the
 run-wide corrective budget, so a spent run-wide budget does not stop the next
 increment's review loop. A fix that touches a path outside the increment's
-ownership, reopens another increment's accepted work, or lacks current
+ownership, overlaps an increment that is still open, or lacks current
 ownership evidence goes through the run-wide budget unchanged. When the
 reserve returns `disposition=defer` with `increment_review_allowance_exhausted`, defer that increment
-under [Blocked Actions Mid-Run: Fall Back or Defer, Never Stop](#blocked-actions-mid-run-fall-back-or-defer-never-stop): record its
-open findings, keep its dependents deferred, and continue with independent
-increments. It is never a mid-run question and never a stop.
+under [Blocked Actions Mid-Run: Fall Back or Defer, Never Stop](#blocked-actions-mid-run-fall-back-or-defer-never-stop).
+A review-fix deferral is not a blocked task: the increment's tasks stay
+checked and committed, and its dependents stay runnable. Record its open
+findings as a tracked follow-up in the increment's implementation-notes entry
+and the workflow file's Phase 7 result (the ledger's `deferred` entry already
+names it), then continue with the next increment, even in a strictly serial
+plan. A later increment whose review round touches the same path may fix it;
+anything still open goes to the `finalize-run` end-of-run request. The
+follow-up is never a new task line in `tasks.md`: a changed task list stales
+the task-execution sidecar, and every later review fix would fall back to the
+run-wide budget with `ownership_evidence_stale`. It is never a mid-run
+question and never a stop.
 
 Before `tasks.md` exists, the plan contains:
 
@@ -1610,7 +1645,9 @@ phase-coverage guard checks against the pull request's actual diff, which does
 not exist until code is written, so move to `pr-marker-plan.v2` at the first
 implementation checkpoint. Under v2, a pending checkpoint needs `commit_sha`
 and `evidence_path` together, and needs them only once a phase result is
-recorded for its marker; the guard does not check v1 checkpoints.
+recorded for its marker; the guard does not check v1 checkpoints. Until
+then, the marker's PR Marker Plan Evidence row reads `Pending` in its
+Checkpoint cell and the workflow carries no checkpoint claim for it.
 
 On resume, validate the marker-plan fingerprint against the current spec,
 plan-declared file/test scope, tasks, reviewability evidence, and hazard route.
@@ -2648,6 +2685,12 @@ appended after everything already in the file:
 `<TASK_ID>` is the task's ID exactly as the task list writes it, and one blank
 line separates the entry from the content before it.
 
+The record is committed and published, so write every loaded-plugin path in
+reported text in its plugin-relative form, for example
+`skills/speckit-autopilot/references/consensus-protocol.md`, and never as an
+absolute or home path. The same rule holds for the workflow file, the state
+file, and pull request bodies.
+
 **One entry per task, even when several tasks share one dispatch.** Batching
 related tasks into a single worker is a sensible dispatch choice and does not
 change the record: each task named in the task list gets its own entry under its
@@ -2718,7 +2761,13 @@ Phase 7 evidence in marker order. Run each marker's tasks according to
 inside a marker. After each marker completes, record marker ID, ordered task IDs,
 verification evidence path, fingerprint status, checkpoint commit SHA
 (`implementation_checkpoint.head_sha` or `implementation_checkpoint.commit_sha`),
-warnings, and any blocked/fixed tasks. The marker checkpoint SHA is the source
+warnings, and any blocked/fixed tasks. Cite an external task, session, thread,
+or event id, such as a delegated audit's task id, only as `sha256:<digest>` (the
+hex SHA-256 of the raw value) or omit it. The rule covers every committed
+record: the marker checkpoint, the verification report, the workflow file,
+implementation notes, and each PR body. The status-evidence guard fails on a raw
+id in marker checkpoint or verification evidence as
+`marker_evidence_privacy_errors`. The marker checkpoint SHA is the source
 commit for later live marker PR branches. Do not infer a new marker order from
 changed files or reviewability warnings.
 
@@ -2752,21 +2801,36 @@ whose refreshed preflight disposition is `operator_action_required`.
    workflow row, plan item, or the thread goal to blocked while runnable work
    remains. Mid-run a deferral only keeps the run working on other units;
    at the end of the run an unresolved deferral is the human stop in rule 3.
+   So a serial plan never stops mid-run on a deferral: when no runnable
+   work remains, even before the plan's last task, go straight to rule 3
+   and run `finalize-run`; the only stop is its end-of-run human stop.
 3. **Finalize, or stop once.** Human UAT is the only gate a run may defer.
    Every other gate (the integration suite, live evaluations, quality and test
-   gates) must run and pass before the stack goes ready for review. Only after
+   gates) must run and pass before the stack goes ready for review, and each
+   runs at each PR head, bottom-up: the full suite, the checks CI requires, and
+   any per-commit identity or evidence check the repository defines run at every
+   PR head, never only at the stack tip. Only after
    every runnable item has finished, run the read-only `finalize-run` runner
    helper. Pass the execution-control `ledger_path` and `expected_run_id`; every
-   final non-UAT gate result as `gate`, `status` (`passed` or `failed`), and its
-   exact `command`; the runnable work still open as `pending_items`; every rule
+   final non-UAT gate result as `gate`, `status` (`passed`, `failed`, or
+   `harness_error`), its
+   exact `command`, and the `head_sha` of the PR head it ran at, one result per
+   gate per head; the runnable work still open as `pending_items`; every rule
    2 deferral still unresolved as `unresolved_deferrals`, each with `unit`,
    `reason` (for a veto, the reviewer's own text), and `finish` (the exact
    command or authorization that finishes it); the human UAT steps no agent can
    perform as `human_uat`, each with `item`, `reason`, and `finish`; the stack's
-   `pull_requests`, bottom first; and the `resume_command`.
+   `pull_requests`, bottom first, each with `number`, `url`, `draft`, and its
+   `head_sha`; and the `resume_command`. A gate reported at any head must pass
+   at every head: a PR head with no result for a gate is listed in
+   `human_stop.missing` with the head and the gate, and a result whose
+   `head_sha` is not a listed PR head is refused.
    - `outcome=continue`: runnable work remains, so keep executing it.
    - `outcome=complete_with_deferred` or `outcome=complete`: every non-UAT gate
-     passed and nothing but human UAT is left, so the run finalizes:
+     passed at every PR head and nothing but human UAT is left, so the run
+     finalizes. Each PR body cites only the gate results listed under its own
+     entry in the helper's `pull_requests`; evidence from another head is never
+     reused:
      - Refresh the top PR's packet with `pr-packet-output`, passing
        `deferred_items` (the human UAT) unchanged, so its body opens with the
        `Deferred / not verified` section, then update that PR's body from the
@@ -2779,8 +2843,10 @@ whose refreshed preflight disposition is `operator_action_required`.
        final message too, even when `request_user_input` returns, because the question UI can fail to render in a
        thread. In an unattended run, or when `request_user_input` is absent, the
        plain-text copy is the request.
-   - `outcome=human_stop`: a gate failed, the ledger's `deferred` list is not
-     empty, or a deferred task is unresolved. This is one human stop, never
+   - `outcome=human_stop`: a gate failed or hit a persistent harness error at
+     some PR head, a PR head has no
+     result for a gate, the ledger's `deferred` list is not empty, or a
+     deferred task is unresolved. This is one human stop, never
      ready for review, and the stack stays in draft. Before calling the helper,
      retry with backoff any gate that failed on a genuine external failure, such
      as a service outage or a reviewer veto despite a recorded chat
@@ -2790,6 +2856,18 @@ whose refreshed preflight disposition is `operator_action_required`.
      with what finishes it, and print it as plain text in the final message
      too. Set the thread goal blocked on that one
      request.
+   - **Harness errors.** A harness or tooling error that blocks a gate (the
+     harness crashed, timed out, or replaced the inner error with a bare exit
+     code before the code under test produced a result) is retried the same
+     way, up to three attempts. Before the harness can delete them, keep each
+     attempt's raw error output and trace under
+     `<feature>/.process/verification/harness/<gate-slug>-<head>/attempt-<n>.log`,
+     which the runner keeps out of commits. Report it as a harness error, never
+     as a failure of the code under test. If it persists until `attempts`
+     reaches 3, pass that gate's result with `status=harness_error`, its
+     `attempts`, and that directory as `evidence`. It never counts as passed,
+     and the one human stop cites the evidence. An attempt that ran the code
+     under test and failed is a gate failure, not a harness error.
    Record `deferred_digest` in the workflow file's Phase 7 result. After the
    run finalizes or stops, a later turn acts only on a new operator message and
    never re-checks an unchanged blocker.

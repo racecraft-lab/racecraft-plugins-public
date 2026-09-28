@@ -28,6 +28,7 @@ TERMINAL_RESULT_ROLES = (
     "domain-researcher",
 )
 PROTOCOL_READERS = ("consensus-synthesizer", "analyze-executor", "checklist-executor", "clarify-executor")
+PLUGIN_RELATIVE_PROTOCOL_REPORT = "**Protocol:** skills/speckit-autopilot/references/consensus-protocol.md | not provided"
 REFERENCE_READERS = (
     "analyze-executor",
     "artifact-author",
@@ -111,16 +112,43 @@ class AgentTerminalContractTests(unittest.TestCase):
                 self.assertNotIn("../skills/speckit-autopilot/references/", body)
                 self.assertIn("`Protocol:` line", flat)
                 self.assertIn("never search the plugin cache", flat)
-                self.assertIn("**Protocol:** <", body)
-        self.assertIn(
-            "**Protocol:** <the path copied from the prompt's `Protocol:` line>",
-            codex_policy("consensus-synthesizer")["developer_instructions"],
-        )
-        for name in ("analyze-executor", "checklist-executor", "clarify-executor"):
+        for name in PROTOCOL_READERS:
             instructions = " ".join(codex_policy(name)["developer_instructions"].split())
             with self.subTest(codex=name):
                 self.assertIn("`Protocol:` line", instructions)
-                self.assertIn("**Protocol:** <", codex_policy(name)["developer_instructions"])
+                self.assertIn("never search the plugin cache", instructions)
+
+    def test_protocol_reports_carry_only_the_plugin_relative_path(self) -> None:
+        # The orchestrator copies these reports into committed records such as
+        # the implementation notes. An echoed absolute plugin path publishes a
+        # home directory and fails the privacy scan, so every reported
+        # **Protocol:** value is the fixed plugin-relative path, never a
+        # placeholder standing for the absolute one.
+        sources = {f"claude:{name}": claude_body(name) for name in PROTOCOL_READERS}
+        sources.update(
+            {f"codex:{name}": codex_policy(name)["developer_instructions"] for name in PROTOCOL_READERS}
+        )
+        for label, text in sources.items():
+            report_lines = [
+                line
+                for line in text.splitlines()
+                if line.startswith("**Protocol:**") and "not provided" in line
+            ]
+            with self.subTest(agent=label):
+                self.assertEqual(len(report_lines), 1, report_lines)
+                self.assertEqual(report_lines[0], PLUGIN_RELATIVE_PROTOCOL_REPORT)
+                self.assertIn("plugin-relative", " ".join(text.split()))
+                self.assertNotIn("Report that path as", " ".join(text.split()))
+        protocol = " ".join(
+            (REPO_ROOT / "speckit-pro/skills/speckit-autopilot/references/consensus-protocol.md")
+            .read_text(encoding="utf-8")
+            .split()
+        )
+        self.assertIn(
+            "whose reported `**Protocol:**` value is not the plugin-relative "
+            "`skills/speckit-autopilot/references/consensus-protocol.md` is malformed",
+            protocol,
+        )
 
     def test_turn_budgets_leave_room_for_the_report(self) -> None:
         # Each of these ran out of turns mid-task in a plan-stage run and

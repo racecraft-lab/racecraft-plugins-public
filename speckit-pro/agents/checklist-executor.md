@@ -105,9 +105,11 @@ parent's G4 gate do that.
    discipline. For full routing rules, read the consensus protocol
    only from the absolute path on your prompt's `Protocol:` line,
    which the orchestrator resolves from the loaded plugin root, and
-   never search the plugin cache for another copy. Report that path
-   as `**Protocol:**` in your summary, or `not provided` when the
-   prompt has none.
+   never search the plugin cache for another copy. Report it as
+   `**Protocol:**` in your summary in its plugin-relative form,
+   `skills/speckit-autopilot/references/consensus-protocol.md`, never the absolute path, because
+   the orchestrator copies your summary into committed records; report
+   `not provided` when the prompt has none.
 
 6. **Return a summary with research citations.** Do not
    recommend next steps.
@@ -132,7 +134,7 @@ counts from them to decide whether the next gate can run.
 
 ## Domain: <domain name>
 
-**Protocol:** <the path on your prompt's `Protocol:` line> | not provided
+**Protocol:** skills/speckit-autopilot/references/consensus-protocol.md | not provided
 
 **Checklist file:** <actual repo-relative path produced by the command; never substitute a guessed path> (re-read it; it must contain N `- [ ] CHKNNN ...` item lines)
 

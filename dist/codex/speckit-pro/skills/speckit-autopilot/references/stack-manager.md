@@ -65,6 +65,11 @@ topology. Preserve packet metadata, and draft status until finalization marks
 the stack ready for review. A zero command exit without
 the expected remote topology is incomplete.
 
+Verify each layer at its own head, bottom-up: every non-UAT gate runs at every
+PR head before `finalize-run`, and each PR body cites only its own head's
+evidence. A lower-layer fix propagates upward by merge, never by rebase or
+force-push; then re-verify every affected head.
+
 After any attempted or partial mutation, resume through the selected manager.
 Detection returns a blocking recovery record, preserving prior PR identities and
 observed topology. Use the installed skill and read-only remote evidence to

@@ -179,8 +179,11 @@ Keep the returned `plugin_root`. Every consensus-synthesizer,
 clarify-executor, checklist-executor, and analyze-executor prompt carries a `Protocol:` line
 set to `<plugin_root>/skills/speckit-autopilot/references/consensus-protocol.md`,
 so those agents read the active protocol and never a cached copy from another
-version. Check the `**Protocol:**` path each one reports against that line,
-and never copy that expanded path into the workflow file.
+version. Each one reports `**Protocol:**` in the plugin-relative form
+`skills/speckit-autopilot/references/consensus-protocol.md`; check that value
+against the sent line with `<plugin_root>/` removed. Never copy the expanded
+path into the workflow file, state, implementation notes, or a pull request
+body.
 
 Every clarify-, checklist-, analyze-, and implement-executor prompt, every
 consensus analyst prompt, and every artifact-author, formal-model-author, and

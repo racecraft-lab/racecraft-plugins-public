@@ -247,8 +247,12 @@ Stage 2 — All synthesizers, ONE assistant message:
   The parent never performs this synthesis itself.
 
   `Protocol:` is the absolute path of this file in the loaded plugin, built
-  from the `plugin_root` that `validate-agent-install` returned. A result
-  whose reported `Protocol:` path differs from the one sent is malformed.
+  from the `plugin_root` that `validate-agent-install` returned. The
+  synthesizer reads that path but reports only its plugin-relative form,
+  because its result reaches committed records. A result
+  whose reported `**Protocol:**` value is not the plugin-relative
+  `skills/speckit-autopilot/references/consensus-protocol.md` is malformed,
+  and so is any absolute or home path in that field.
 
 Stage 3 — Apply Artifact Edits SERIALLY (orchestrator's own Edit calls):
   ROUND_2_QUEUE = []

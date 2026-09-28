@@ -722,6 +722,82 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
             commented_claim["workflow_checkpoint_errors"],
         )
 
+    def multi_marker_state(self) -> dict[str, object]:
+        """One complete marker followed by two markers awaiting their first checkpoint."""
+        state = self.projected_state(
+            plan_status="completed",
+            phase_status="completed",
+            checkpoint=self.complete_checkpoint(),
+        )
+        first = state["pr_marker_plan"]["markers"][0]
+        for order in (2, 3):
+            marker = json.loads(json.dumps(first))
+            task_id = f"T00{order}"
+            marker.update(
+                {
+                    "id": f"us{order}",
+                    "review_order": order,
+                    "source_boundary": {
+                        "section": f"User Story {order}",
+                        "story_id": order,
+                        "start_task_id": task_id,
+                        "end_task_id": task_id,
+                    },
+                    "task_ids": [task_id],
+                    "reviewability": {"status": "pass", "mode": "implementation", "scope": f"us{order}"},
+                    "implementation_checkpoint": {"status": "pending"},
+                }
+            )
+            state["pr_marker_plan"]["markers"].append(marker)
+        return state
+
+    @staticmethod
+    def multi_marker_workflow(*, us1_cell: str, pending_cell: str = "Pending") -> str:
+        return workflow_text() + (
+            f"\n- Implementation checkpoint [us1]: `{'a' * 40}`\n\n"
+            "## PR Marker Plan Evidence\n\n"
+            "- Plan status: `checkpointing`\n\n"
+            "| Review order | Marker | Tasks | Reviewability | Checkpoint | Warning |\n"
+            "|---|---|---|---|---|---|\n"
+            f"| 1 | `us1` | T001 | Pass | {us1_cell} | None |\n"
+            f"| 2 | `us2` | T002 | Pass | {pending_cell} | None |\n"
+            f"| 3 | `us3` | T003 | Pass | {pending_cell} | None |\n"
+        )
+
+    def test_pending_markers_await_their_first_checkpoint(self) -> None:
+        state = self.multi_marker_state()
+        workflow = self.multi_marker_workflow(us1_cell=f"Complete at `{'a' * 40}`")
+        _, report = self.run_validator(workflow, state)
+        self.assertEqual(report["workflow_checkpoint_errors"], [])
+
+    def test_complete_marker_still_binds_its_checkpoint(self) -> None:
+        state = self.multi_marker_state()
+        for cell in ("Pending", "Complete"):
+            with self.subTest(cell=cell):
+                _, report = self.run_validator(
+                    self.multi_marker_workflow(us1_cell=cell), state,
+                )
+                self.assertEqual(
+                    report["workflow_checkpoint_errors"],
+                    [f"workflow PR Marker Plan Evidence marker 'us1' checkpoint does not bind {'a' * 40}"],
+                )
+
+    def test_awaiting_marker_row_must_read_pending(self) -> None:
+        state = self.multi_marker_state()
+        workflow = self.multi_marker_workflow(
+            us1_cell=f"Complete at `{'a' * 40}`",
+            pending_cell=f"Complete at `{'b' * 40}`",
+        )
+        _, report = self.run_validator(workflow, state)
+        self.assertEqual(
+            report["workflow_checkpoint_errors"],
+            [
+                f"workflow PR Marker Plan Evidence marker {marker_id!r} checkpoint must read "
+                "Pending until its pr_marker_plan checkpoint records commit_sha"
+                for marker_id in ("us2", "us3")
+            ],
+        )
+
     def test_pending_phase_claim_requires_checkpoint_authority(self) -> None:
         state = self.projected_state(
             plan_status="pending",
@@ -3763,6 +3839,39 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
                 root, self.autonomy_state("autonomy_boundary", record), [str(root)],
             )
         self.assertEqual(report["autonomy_boundary_errors"], [], report)
+
+    def test_task_checkbox_flip_keeps_planning_fingerprint_current(self) -> None:
+        plan = b"# Plan\n- [ ] T001 is prose here, not a task\n"
+        tasks = b"# Tasks\n\n- [ ] T001 Write the test\n- [ ] T002 Make it pass\n"
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            (root / ".git").mkdir()
+            feature = root / "specs" / "demo"
+            feature.mkdir(parents=True)
+            boundary = {"planning_fingerprints": {}}
+            for label, name, content in (("plan_md", "plan.md", plan), ("tasks_md", "tasks.md", tasks)):
+                (feature / name).write_bytes(content)
+                boundary["planning_fingerprints"][label] = {
+                    "path": f"specs/demo/{name}",
+                    "sha256": VALIDATOR_MODULE._sha256_bytes(content),
+                    "size_bytes": len(content),
+                }
+
+            def errors() -> list[str]:
+                return VALIDATOR_MODULE._autonomy_planning_errors(boundary, root)
+
+            (feature / "tasks.md").write_bytes(tasks.replace(b"- [ ] T001", b"- [x] T001"))
+            self.assertEqual(errors(), [])
+            (feature / "tasks.md").write_bytes(tasks.replace(b"[ ]", b"[X]"))
+            self.assertEqual(errors(), [])
+
+            # A same-length text edit proves the digest, not size_bytes, catches it.
+            (feature / "tasks.md").write_bytes(tasks.replace(b"Write the test", b"Write the tost"))
+            self.assertEqual(errors(), ["autonomy boundary tasks_md sha256 is stale"])
+
+            (feature / "tasks.md").write_bytes(tasks)
+            (feature / "plan.md").write_bytes(plan.replace(b"[ ]", b"[x]"))
+            self.assertEqual(errors(), ["autonomy boundary plan_md sha256 is stale"])
 
     def test_legacy_private_receipt_requires_migration_under_full_guard(self) -> None:
         legacy = {
