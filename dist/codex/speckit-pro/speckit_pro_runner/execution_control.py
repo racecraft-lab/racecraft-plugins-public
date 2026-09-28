@@ -1057,7 +1057,7 @@ def _verb_swap(before: str, after: str) -> str | None:
     """
     from .helpers.read_only import PHASE7_LEADING_VERB, PHASE7_VERIFY_KEYWORDS
 
-    old, new = METADATA_TASK_LINE.match(before), METADATA_TASK_LINE.match(after)
+    old, new = (METADATA_TASK_LINE.match(re.sub(r"^(\s*-\s+\[)[ xX]\]", r"\1 ]", line)) for line in (before, after))
     if old is None or new is None or old.group(1) != new.group(1):
         return None
     old_verb, new_verb = PHASE7_LEADING_VERB.match(old.group(3)), PHASE7_LEADING_VERB.match(new.group(3))
@@ -1067,6 +1067,34 @@ def _verb_swap(before: str, after: str) -> str | None:
             or not {old_verb.group(1).lower(), new_verb.group(1).lower()} <= set(PHASE7_VERIFY_KEYWORDS)):
         return None
     return old.group(2)
+
+
+def _sidecar_unchanged(root: Path, feature: PurePosixPath, current: dict[str, bytes]) -> bool:
+    """True when the task-execution sidecar keeps every task entry of its committed baseline.
+
+    Dependencies and ownership live in the sidecar, so its `tasks` must be
+    unchanged. Its fingerprints may be the committed ones or the refresh for the
+    corrected sources. A legacy feature has no sidecar at either end.
+    """
+    from .task_execution import fingerprints
+
+    relative = (feature / ".process/task-execution.json").as_posix()
+    committed = _head_bytes(root, relative)
+    try:
+        path = confined_path(root, relative)
+        present = path.exists() or path.is_symlink()
+        if committed is None or not present:
+            return committed is None and not present
+        if not path.is_file():
+            return False
+        baseline, worktree = json.loads(committed), json.loads(path.read_bytes())
+    except (OSError, UnicodeError, ValueError):
+        return False
+    if (not isinstance(baseline, dict) or not isinstance(worktree, dict) or set(baseline) != set(worktree)
+            or any(baseline[key] != worktree[key] for key in baseline if key != "fingerprints")):
+        return False
+    texts = [current[name].decode("utf-8") for name in ("spec.md", "plan.md", "tasks.md")]
+    return worktree.get("fingerprints") in (baseline.get("fingerprints"), fingerprints(*texts))
 
 
 def _metadata_ineligibility(root: Path, spec: Path, ledger: dict[str, Any]) -> tuple[str | None, dict[str, Any]]:
@@ -1112,6 +1140,8 @@ def _metadata_ineligibility(root: Path, spec: Path, ledger: dict[str, Any]) -> t
         if task_id is None:
             return "not_metadata_only", {}
         task_ids.append(task_id)
+    if not _sidecar_unchanged(root, feature, current):
+        return "not_metadata_only", {}
     corrected = {task for entry in ledger.get("metadata_corrections", []) for task in entry["task_ids"]}
     for epoch in ledger.get("corrective_epochs", []):
         corrected.update(task for entry in epoch.get("metadata_corrections", []) for task in entry["task_ids"])
