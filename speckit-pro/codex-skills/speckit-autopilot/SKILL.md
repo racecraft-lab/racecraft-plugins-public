@@ -476,8 +476,10 @@ See [prerequisites-codex.md](./references/prerequisites-codex.md) for the full p
   revokes or narrows it; an older run outcome alone grants nothing. When a
   persisted `autonomy_boundary` receipt exists, at any stage, probe it against
   the live boundary before the Step 1.1 coverage guard; a new thread's writable
-  roots make it stale, so re-attest it with one operator request up front, as
-  [prerequisites-codex.md](./references/prerequisites-codex.md) describes.
+  roots make it stale, so rerun the preflight up front, as
+  [prerequisites-codex.md](./references/prerequisites-codex.md) describes. A
+  covered inventory asks no question, including a planning-to-implementation
+  stage change.
 - **Step 0.9: Constitution Validation** — principle checks against current codebase
 - **Step 0.10: Codex Agent Availability Check** — Run the promoted
   `install-codex-agents` helper in `dry_run` mode against the selected project or
@@ -638,14 +640,19 @@ predictable writes beyond current writable roots, privileged commands,
 interactive authentication, externally visible side effects, and data egress
 to a model service or other third party (including live model evaluations);
 proves each
-is runnable or already authorized; and records the result durably. A blocked
-result stops before Phase 7 with one consolidated operator action instead of
-surprising the operator from inside an implementation task. When that action
-covers data egress, it shows the operator a paste-ready authorization message
-and a proposed `auto_review.extra_policy` fragment, both rendered by runner
-helper `render-egress-authorization`; the plugin never writes either one.
+is runnable or already authorized; and records the result durably. The
+operator's invocation and the ratified plan authorize the ordinary actions in
+the repository's standing policy, which the operator installs once at setup
+(runner helper `render-egress-authorization` with `scope=standing`). When every
+action is covered, the preflight asks no question. A missing standing policy is
+reported once as a setup gap, and the run still proceeds. An uncovered action,
+including a boundary-file edit the plan names, is deferred to the one
+end-of-run request, never an up-front question. When that request covers data
+egress, it shows the operator a paste-ready authorization message and a
+proposed `auto_review.extra_policy` fragment, both rendered by the same helper;
+the plugin never writes either one.
 
-That preflight is the one normal human touchpoint. Once Phase 7 runs, one
+Once autopilot is running, human input is for exceptional cases only. Once Phase 7 runs, one
 blocked action never stops the run: take the task's own fallback, or defer that
 task and keep executing independent work, then ask once at the end. Follow
 §Blocked Actions Mid-Run: Fall Back or Defer, Never Stop in

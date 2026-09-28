@@ -88,9 +88,8 @@ Phase 6.5 runs the Autonomy Boundary Preflight and then G6.5 *after Phase 6
 commits and before Phase 7 begins*, so on a `--stage plan` run it is the last
 work the stage does. The run takes the stage-boundary commit below and then
 **STOPs** — it does not advance to Phase 7, in any mode. In advisory mode the
-confidence gate passes or warns and the stage still ends here; a blocked
-autonomy preflight or strict confidence stop is still committed so the verdict
-reaches version history.
+confidence gate passes or warns and the stage still ends here; a strict
+confidence stop is still committed so the verdict reaches version history.
 
 On a strict-mode stop, write the `Confidence Gate` row to a **non-terminal**
 blocked status — never to a terminal one. The row must advance off its pending
@@ -1102,15 +1101,68 @@ For each action, record its category, exact command or tool when known, target,
 durability or data effect, required execution boundary, existing authorization
 evidence, and one disposition:
 
-- `ready`: the conversation supplies exact bounded authorization and the
-  platform exposes an execution route that requires no further operator
-  interaction;
+- `ready`: the conversation supplies exact bounded authorization, or the action
+  falls inside a standing policy class (below), and the platform exposes an
+  execution route that requires no further operator interaction;
 - `rerouted`: a contract-preserving reroute keeps the action inside an
   available boundary. Update the affected planning artifacts and rerun their
   downstream gates before recording this disposition; never weaken a
   requirement or substitute synthetic evidence;
 - `operator_action_required`: no proven non-interactive route exists, or the
-  action needs authorization the conversation does not contain.
+  action needs authorization the conversation does not contain. This defers
+  the task that needs it; it is never an up-front question (below).
+
+**Standing policy coverage.** The operator installs a standing policy once, at
+setup: runner helper `render-egress-authorization` with `scope=standing`, the
+repository, and its default branch renders an `auto_review.extra_policy`
+fragment scoped to the repository, not to a run. Its `policy_classes` are the
+ordinary actions of any ratified plan: `checkout-work`, `feature-branch-push`
+(never the default branch), `pull-request-activity`, `public-docs-research`,
+and `local-offline-audit` (a worker on this machine). It keeps the same human
+stops as the per-run fragment and never proposes `auto_review.policy`. At this
+preflight, run the helper again with `scope=standing`, passing the user-level
+Codex config's current `auto_review.extra_policy` string as
+`installed_extra_policy`; read that config, never write it.
+
+For each action whose payload and destination fall inside one class, record
+`disposition=ready` and `authorization.status=explicit_user`. The explicit user
+authorization is the operator's autopilot invocation in this thread and the
+ratified plan together, and it covers only the standing policy's classes. A
+ratified plan is one whose planning phases through Analyze are complete and
+whose `plan.md` and `tasks.md` match the recorded planning fingerprints. The
+private `evidence` cites the invocation, the class id, `standing_policy_sha256`,
+and the helper's `installed` result. When every action is covered, the
+preflight asks no question: it records the coverage and proceeds. That includes
+a planning-to-implementation stage change, such as an explicit
+`--stage implement` run of a plan whose earlier record covered only planning.
+
+**A missing standing policy is a setup gap.** When `installed` is false, it is
+reported once as a setup gap: name it in the Phase 6.5 result and the final
+report, with the helper's `extra_policy_fragment` as the install text. The run
+still proceeds on the invocation and the ratified plan. If the reviewer then
+vetoes a covered action, that is a blocked action: defer it under
+[Blocked Actions Mid-Run: Fall Back or Defer, Never Stop](#blocked-actions-mid-run-fall-back-or-defer-never-stop).
+
+**Uncovered actions are deferred.** An action outside every standing class,
+such as a new destination or data class, a privileged command, or an
+interactive login, is `operator_action_required` unless the conversation
+already carries exact authorization for it. It is never an up-front question.
+An `implement` or `full` run defers the task that needs it, and every task and
+Post item that depends on it, and keeps executing independent work; the one
+end-of-run request names it. A `plan` run lists it in its final report as work
+the implement run will defer.
+
+**A boundary-file edit named in the ratified plan is deferred too.** Such an
+edit, for example to the root `AGENTS.md`, never blocks the start of the run,
+and the standing policy never covers it. The reason is reviewer trust: the
+reviewer trusts `AGENTS.md`, and it never sees an in-sandbox edit. An edit made
+mid-run would rewrite the reviewer's trusted instructions for the rest of the
+run with no human reading it. Covering it as an exact ratified change would
+need the ratified diff pinned by digest in the boundary record, which the
+record does not carry. So never dispatch that task: the sandbox does not stop
+an in-checkout edit, so the parent must. Record it as deferred with its
+dependents, and let the end-of-run request show the exact file and change for
+the operator to approve.
 
 Codex's documented model is load-bearing here: ordinary `workspace-write`
 automation can edit the workspace, while writes beyond it require approval.
@@ -1122,7 +1174,8 @@ documentation. Auto-review availability by itself cannot classify an action as
 `ready`; the record still needs exact authorization evidence for any action
 that requires it. The word "autonomous" alone is also not authorization for a
 persistent system mutation, account change, or external effect that the active
-conversation has not already authorized.
+conversation has not already authorized; only the invocation and ratified plan
+together authorize, and only the standing policy's classes.
 
 Keep the complete record private and publish only its receipt. The complete
 `autonomy-boundary.v1` record holds writable roots, targets, free-text
@@ -1188,7 +1241,8 @@ re-attestation in [prerequisites-codex.md](./prerequisites-codex.md), before the
 Step 1.1 coverage guard runs.
 
 Only `authorization.status=explicit_user` can make an inventoried boundary
-action `ready`. For data egress, explicit_user evidence is an operator answer
+action `ready`. For data egress outside the standing policy's classes,
+explicit_user evidence is an operator answer
 in this thread to the consolidated request that names the exact destination and
 data class; the automatic reviewer judges only from the transcript, so a general
 instruction to proceed or "you have approval" is not egress authorization.
@@ -1202,22 +1256,25 @@ crossed boundary are intentionally absent from the authorization vocabulary.
 Never persist credentials, tokens, cookies, or session material.
 
 When any action is `operator_action_required`, set the object status to that
-exact value and make the Phase 6.5 row non-terminal and blocked. Present one
-consolidated request that names every exact target, lasting or external effect,
-every data-egress destination and data class,
-why the requirement needs it, the smallest required operator action, and the
-resume command. Commit the blocked record through the current stage's bounded
-bookkeeping path; for a plan-stage run, use the normal stage-boundary commit.
-Then **STOP before Phase 7**. A denial routes back to planning for a
-contract-preserving alternative; it never triggers a workaround.
+exact value; the Phase 7 guard accepts it. A deferred action never makes the
+Phase 6.5 row blocked, and the run never stops up front for it. The one
+end-of-run request under
+[Blocked Actions Mid-Run: Fall Back or Defer, Never Stop](#blocked-actions-mid-run-fall-back-or-defer-never-stop)
+names every deferred action: every exact target, lasting or external effect,
+every data-egress destination and data class, why the requirement needs it,
+the smallest required operator action, and the resume command. Commit the
+record through the current stage's bounded bookkeeping path; for a plan-stage
+run, use the normal stage-boundary commit. A denial routes the deferred task
+back to planning for a contract-preserving alternative; it never triggers a
+workaround.
 
-When that request includes data egress, it also carries two artifacts for the
+When that request includes uncovered data egress, it also carries two artifacts for the
 operator to review. Codex's automatic reviewer trusts user and developer
 messages, `AGENTS.md`, and question replies, but treats skill and plugin text
 as untrusted. It approves egress only when the transcript names the payload
 and the destination. Render both artifacts with the registered read-only
 `render-egress-authorization` runner helper. Pass the repository name, its
-default branch, and every data-egress action as `action_id`, `target` (the
+default branch, and every uncovered data-egress action as `action_id`, `target` (the
 exact destination), `effect` (the data class), and an optional `purpose` (the
 task id or reason). Show its output unchanged; do not write the text by hand.
 
@@ -1253,8 +1310,8 @@ while it waits (`authorization.status=missing`), then cite that digest again
 with the operator's reply when recording `explicit_user`. The digest stays in
 the private record; the receipt and the Phase 6.5 row never carry it.
 
-When every action is `ready` or `rerouted`, set status to `ready` and continue
-with the confidence steps below. A `plan` run takes its boundary commit and
+When every action is `ready` or `rerouted`, set status to `ready`. Either way,
+continue with the confidence steps below. A `plan` run takes its boundary commit and
 stops at the plan terminal step even when the record is `ready`; it never
 dispatches Phase 7. An `implement` or `full` run validates the record before its
 first Phase 7 dispatch. Before every later Phase 7 task dispatch, revalidate the
@@ -1265,9 +1322,8 @@ missing, malformed, or stale record. A new or changed action reruns this
 preflight. If a worker discovers a predictable boundary that the record
 omitted, do not let the worker attempt it or ask from inside the task: record
 that the late discovery is an autopilot defect, return control to the parent,
-and update the preflight there. The pre-Phase-7 stop above does not apply
-mid-run: when the refreshed disposition is `operator_action_required`, the
-parent defers only that task under
+and update the preflight there. When the refreshed disposition is
+`operator_action_required`, the parent defers only that task under
 [Blocked Actions Mid-Run: Fall Back or Defer, Never Stop](#blocked-actions-mid-run-fall-back-or-defer-never-stop)
 and keeps executing independent work.
 
@@ -2562,9 +2618,9 @@ changed files or reviewability warnings.
 
 ### Blocked Actions Mid-Run: Fall Back or Defer, Never Stop
 
-Once Phase 7 is running, human input is for exceptional cases only. The Phase
-6.5 preflight is the one normal human touchpoint; a single blocked action after
-it is not a reason to stop the run. A blocked action is any planned command,
+Once autopilot is running, human input is for exceptional cases only. The Phase
+6.5 preflight asks no question when the standing policy covers the inventory,
+and a single blocked action after it is not a reason to stop the run. A blocked action is any planned command,
 tool call, or side effect that cannot run as planned: an approval-reviewer veto
 (including one on an action the preflight recorded as `ready`), a missing
 approval, an unavailable tool or route, or a late-discovered boundary action
