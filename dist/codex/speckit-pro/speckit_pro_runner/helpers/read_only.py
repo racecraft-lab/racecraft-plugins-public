@@ -2718,6 +2718,31 @@ def workflow_table_rows(lines: list[str], heading: str) -> list[list[str]]:
     return []
 
 
+def workflow_phase65_verdict(text: str) -> str | None:
+    """Return the single recorded Phase 6.5 Verdict, never an overview status."""
+    lines = HTML_COMMENT_RE.sub("", text).splitlines()
+    headings = [index for index, line in enumerate(lines)
+                if line.strip() == "## Phase 6.5: Confidence Gate"]
+    if len(headings) != 1:
+        return None
+    start = headings[0] + 1
+    end = next((index for index in range(start, len(lines))
+                if re.match(r"^## (?!#)", lines[index])), len(lines))
+    section = lines[start:end]
+    fenced = _fenced_markdown_lines(section)
+    values: list[str] = []
+    for index, line in enumerate(section):
+        stripped = line.strip()
+        if index in fenced or not (stripped.startswith("|") and stripped.endswith("|")):
+            continue
+        cells = [cell.strip() for cell in stripped[1:-1].split("|")]
+        if len(cells) == 2 and cells[0] == "Verdict":
+            values.append(cells[1])
+    if len(values) != 1 or values[0] not in {"proceed", "remediate", "stop"}:
+        return None
+    return values[0]
+
+
 def workflow_stage_signals(text: str) -> dict[str, Any]:
     """Read the durable `Stage` entry and the planning-complete predicate.
 

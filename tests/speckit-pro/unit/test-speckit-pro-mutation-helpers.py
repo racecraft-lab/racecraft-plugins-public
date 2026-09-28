@@ -382,6 +382,8 @@ def helper_request(
     mode: str = "dry_run",
     inputs: dict[str, object] | None = None,
 ) -> dict[str, object]:
+    if helper_id == "pr-packet-output" and inputs is not None and inputs.get("mode") != "draft":
+        inputs = {"workflow_file": "workflow.md", **inputs}
     return {
         "schema_version": "1.0",
         "request_id": f"test-{helper_id}-{mode}",
@@ -689,6 +691,11 @@ class MutationHelperTests(unittest.TestCase):
         (marker / ".gitkeep").write_text("runner marker\n", encoding="utf-8")
         self.run_git(root, "add", ".gitkeep")
         self.run_git(root, "add", "speckit-pro/speckit_pro_runner/.gitkeep")
+        (root / "workflow.md").write_text(
+            "## Phase 6.5: Confidence Gate\n\n| Field | Value |\n| --- | --- |\n| Verdict | proceed |\n",
+            encoding="utf-8",
+        )
+        self.run_git(root, "add", "workflow.md")
         self.run_git(root, "commit", "--quiet", "-m", "init")
         return tmp, root
 
@@ -8911,6 +8918,76 @@ This line must not be copied.
             self.assertEqual(mutation["mutation_status"], "blocked")
             self.assertEqual(mutation["applied_operations"], [])
             self.assertFalse(mutation["live_mutation"])
+
+    def test_final_packet_uses_current_phase65_verdict_on_emission_and_refresh(self) -> None:
+        tmp, git_root = self.temp_clean_git_repo()
+        with tmp:
+            workflow = git_root / "workflow.md"
+
+            def record(verdict: str | None) -> None:
+                row = f"| Verdict | {verdict} |\n" if verdict is not None else ""
+                workflow.write_text(
+                    "## Workflow Overview\n\n| Phase | Owner | Status |\n| --- | --- | --- |\n"
+                    "| Confidence Gate | agent | ✅ Complete |\n\n"
+                    "## Phase 6.5: Confidence Gate\n\n| Field | Value |\n| --- | --- |\n"
+                    f"| Composite confidence | 0.99 |\n{row}",
+                    encoding="utf-8",
+                )
+                self.run_git(git_root, "add", "workflow.md")
+                self.run_git(git_root, "commit", "--quiet", "-m", "record confidence")
+
+            record("proceed")
+            inputs = {
+                "packet_path": "specs/packet-999-packet/.process/pr-packets/packet-999.json",
+                "source_feature_dir": "specs/packet-999-packet",
+                "workflow_file": "workflow.md",
+                "target": {"base_branch": "main", "head_branch": "agent/packet-999-packet"},
+                "title_type": "feat",
+                "title_scope": "packet-999",
+                "title_description": "Generate reviewer packet",
+                "changed_files": ["specs/packet-999-packet/spec.md"],
+                "verification": ["tests passed"],
+            }
+            completed, response, stderr_records = run_runner(
+                helper_request("pr-packet-output", mode="apply", inputs=inputs), cwd=git_root,
+            )
+            self.assertEqual(completed.returncode, 0, stderr_records)
+            self.assert_response(response, "ok", 0)
+            body_path = git_root / "specs/packet-999-packet/.process/pr-packets/packet-999/body.md"
+            first_body = body_path.read_text(encoding="utf-8")
+            self.assertIn("## Verification\n\nPhase 6.5 Verdict: proceed\n", first_body)
+
+            record("stop")
+            completed, response, stderr_records = run_runner(
+                helper_request("pr-packet-output", mode="apply", inputs={**inputs, "body": first_body}),
+                cwd=git_root,
+            )
+            self.assertEqual(completed.returncode, 0, stderr_records)
+            self.assert_response(response, "ok", 0)
+            refreshed = body_path.read_text(encoding="utf-8")
+            self.assertIn("## Verification\n\nPhase 6.5 Verdict: stop\n", refreshed)
+            self.assertNotIn("Phase 6.5 Verdict: proceed", refreshed)
+            packet = json.loads((git_root / inputs["packet_path"]).read_text(encoding="utf-8"))
+            self.assertEqual(packet["protected_body_fingerprint"]["value"],
+                             pr_emission.protected_body_sha256(refreshed))
+
+            completed, response, stderr_records = run_runner(
+                helper_request("pr-packet-output", mode="dry_run",
+                               inputs={**inputs, "workflow_file": None}), cwd=git_root,
+            )
+            self.assertEqual(completed.returncode, 2)
+            self.assert_response(response, "input_error", 2)
+            self.assertEqual(stderr_records[0]["details"]["field"], "workflow_file")
+
+            for verdict in (None, "PASS — proceed", "continue_with_warning"):
+                with self.subTest(verdict=verdict):
+                    record(verdict)
+                    completed, response, stderr_records = run_runner(
+                        helper_request("pr-packet-output", mode="dry_run", inputs=inputs), cwd=git_root,
+                    )
+                    self.assertEqual(completed.returncode, 2)
+                    self.assert_response(response, "input_error", 2)
+                    self.assertEqual(stderr_records[0]["details"]["field"], "workflow_file")
 
     def test_pr_packet_output_apply_emits_valid_packet_and_body_then_persists_validation(self) -> None:
         tmp, git_root = self.temp_clean_git_repo()

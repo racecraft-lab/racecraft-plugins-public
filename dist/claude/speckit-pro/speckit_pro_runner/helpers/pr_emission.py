@@ -25,6 +25,7 @@ from .read_only import (
     repo_relative,
     resolve_input_path,
     trusted_text,
+    workflow_phase65_verdict,
     validate_pr_packet_read_only,
 )
 
@@ -578,6 +579,22 @@ def normalize_packet_input(request: Any) -> dict[str, Any]:
         "uat_source": str(inputs.get("uat_source") or "packet-input"),
     }
 
+    verdict: str | None = None
+    if mode != "draft":
+        workflow_raw = inputs.get("workflow_file")
+        if not isinstance(workflow_raw, str) or not workflow_raw.strip():
+            return invalid_packet_input("workflow_file is required for final packets", field="workflow_file")
+        repo_root = find_repo_root(Path.cwd())
+        if repo_root is None:
+            return invalid_packet_input("repository root is unavailable", field="workflow_file")
+        workflow_path = resolve_input_path(workflow_raw, repo_root)
+        if not path_stays_in_trust_boundary(workflow_path, repo_root):
+            return invalid_packet_input("workflow_file escapes the repository", field="workflow_file")
+        workflow_text = trusted_text(workflow_path, repo_root)
+        verdict = workflow_phase65_verdict(workflow_text) if workflow_text is not None else None
+        if verdict is None:
+            return invalid_packet_input("workflow_file must record one valid Phase 6.5 Verdict", field="workflow_file")
+
     body = inputs.get("body")
     if isinstance(body, str) and body.strip():
         rendered_body = ensure_final_newline(body)
@@ -594,6 +611,10 @@ def normalize_packet_input(request: Any) -> dict[str, Any]:
             known_gaps=markdown_list(inputs.get("known_gaps"), ["No known gaps for this PR."]),
             deferred_items=deferred_items,
         )
+    if verdict is not None:
+        rendered_body = with_current_phase65_verdict(rendered_body, verdict)
+        if rendered_body is None:
+            return invalid_packet_input("body must contain one Verification section", field="body")
     if deferred_items and first_section_heading(rendered_body) != DEFERRED_HEADING:
         return invalid_packet_input(
             f"a body for a run with deferred items must open with the ## {DEFERRED_HEADING} section",
@@ -1074,6 +1095,23 @@ def build_packet_body(
         "",
     ]
     return "\n".join(parts)
+
+
+def with_current_phase65_verdict(body: str, verdict: str) -> str | None:
+    """Replace a stale Verification verdict before fingerprinting final bodies."""
+    lines = body.splitlines()
+    starts = [index for index, line in enumerate(lines) if line == "## Verification"]
+    if len(starts) != 1:
+        return None
+    start = starts[0]
+    end = next((index for index in range(start + 1, len(lines))
+                if lines[index].startswith("## ")), len(lines))
+    kept = [line for line in lines[start + 1:end]
+            if not re.fullmatch(r"[ \t]*(?:[-*][ \t]+)?Phase 6\.5 Verdict:.*", line)]
+    while kept and not kept[0].strip():
+        kept.pop(0)
+    lines[start + 1:end] = ["", f"Phase 6.5 Verdict: {verdict}", "", *kept]
+    return ensure_final_newline("\n".join(lines))
 
 
 def normalize_deferred_items(raw: Any, mode: str) -> list[dict[str, str]] | dict[str, Any]:

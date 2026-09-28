@@ -766,6 +766,14 @@ inside that fence; the heading, markers, and fence stay protected. An absent
 note preserves the existing three-field final body. Draft packets keep zero
 editable fields and omit release-note content.
 
+For every final `pr-packet-output` dry-run and apply call, pass the actual
+bound workflow as `inputs.workflow_file`. The helper reads its single
+Phase 6.5 `Verdict` (`proceed`, `remediate`, or `stop`) and writes the
+current value in a protected line under `## Verification`, including
+when refreshing a supplied body. A missing or invalid recorded verdict
+blocks final emission; the Workflow Overview status and confidence
+score do not supply a verdict. Draft packet calls need no verdict.
+
 ### 3.4 Pre-final completion audit
 
 Before any final user-facing response, re-read `autopilot-state.json` and the
