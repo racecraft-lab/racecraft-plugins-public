@@ -862,11 +862,9 @@ for phase in PHASES starting from first_pending:
        b. Otherwise reserve the gate's localized repair in the same ledger;
           a repair that edits only planning documents uses `gate_remediation`
           (see below)
-       c. If still failing and gate-failure == "stop": STOP. A selected formal
-          failure always stops and names the Plan resume point.
-       d. If gate-failure == "skip-and-log" and the failure is not a selected
-          formal failure: log the failed verdict unchanged and continue without
-          rewriting requirement provenance
+       c. If still failing, defer per the Failure Escalation Protocol. A
+          selected formal failure defers and names the Plan resume point. Log
+          the failed verdict unchanged and never rewrite requirement provenance
     9. Update workflow file with results and print the current checklist summary
    10. If auto-commit == "per-phase":
        For phases 1–6: run: git add specs/ <workflow-file-path> <workflow-dir>/autopilot-state.json && git commit
