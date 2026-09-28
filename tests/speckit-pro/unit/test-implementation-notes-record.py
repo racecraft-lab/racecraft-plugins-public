@@ -123,7 +123,7 @@ def _phase_execution_checks(target: str, platform: str) -> tuple[tuple[str, str,
         (f"{platform} names the record header", target, "contains", RECORD_HEADER),
         (f"{platform} names the entry heading", target, "contains", ENTRY_HEADING),
         (f"{platform} names the entry field", target, "contains", ENTRY_FIELD),
-        # Item 1b — reported text reaches a committed record with any
+        # Item 1b: reported text reaches a committed record with any
         # loaded-plugin path reduced to its plugin-relative form, never an
         # absolute or home path.
         (f"{platform} keeps loaded-plugin paths plugin-relative in the record", target, "regex",

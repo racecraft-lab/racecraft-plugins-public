@@ -2648,6 +2648,12 @@ appended after everything already in the file:
 `<TASK_ID>` is the task's ID exactly as the task list writes it, and one blank
 line separates the entry from the content before it.
 
+The record is committed and published, so write every loaded-plugin path in
+reported text in its plugin-relative form, for example
+`skills/speckit-autopilot/references/consensus-protocol.md`, and never as an
+absolute or home path. The same rule holds for the workflow file, the state
+file, and pull request bodies.
+
 **One entry per task, even when several tasks share one dispatch.** Batching
 related tasks into a single worker is a sensible dispatch choice and does not
 change the record: each task named in the task list gets its own entry under its
