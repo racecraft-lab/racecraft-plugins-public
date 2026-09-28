@@ -271,7 +271,7 @@
       "status": "pending"
     }
   ],
-  "updated_at": "2026-09-28T19:37:49Z",
+  "updated_at": "2026-09-28T19:40:17Z",
   "prerequisites": {
     "status": "completed",
     "all_pass": true,
@@ -1448,9 +1448,9 @@
         "implementation_checkpoint": {
           "status": "complete",
           "evidence_path": "specs/hrns-015-autopilot-gate-pr-emission-repair/.process/checkpoints/us2.json",
-          "checkpoint_evidence_sha": "sha256:0425e2d16fc1b2d854052dd9b07cc473aee1f84839c1832b8fee869d3a938e45",
+          "checkpoint_evidence_sha": "sha256:78eb5d3bb93fc544fc7533f36380d5642dbcaa01cfdc9f2b8ddce51315aac13c",
           "verification_evidence_path": "specs/hrns-015-autopilot-gate-pr-emission-repair/.process/verification/us2.json",
-          "verification_evidence_sha": "sha256:fdc824fedb4ca815c9feef492f292ea44252d12131bd8150b65736a9cb4bed14",
+          "verification_evidence_sha": "sha256:44b9a2dbaa3b116f777f8ac031fd684c76a9dfe074ce175b75bcb1a020911ff8",
           "commit_sha": "ed24ecd831d0b9f98e300fdc772f29839bd09d9a",
           "head_sha": "ed24ecd831d0b9f98e300fdc772f29839bd09d9a",
           "completed_at": "2026-09-28T19:35:10Z",
@@ -1474,7 +1474,7 @@
             "final quick suite 10,110/10,110 and CI suite 6/6 dispatches passed",
             "independent A2 review found no critical/high defect; documentation findings corrected"
           ],
-          "checkpoint_evidence_commit_sha": "e10132e3bf4d89ef7cfdbe068e3bdcedadc62f28"
+          "checkpoint_evidence_commit_sha": "eee881459c93ef21d2cfe7ea51027bc167f69cb2"
         },
         "emission_mapping": {
           "status": "pending"
@@ -3647,7 +3647,7 @@
         "T007"
       ],
       "source_commit_sha": "ed24ecd831d0b9f98e300fdc772f29839bd09d9a",
-      "checkpoint_evidence_commit_sha": "e10132e3bf4d89ef7cfdbe068e3bdcedadc62f28",
+      "checkpoint_evidence_commit_sha": "eee881459c93ef21d2cfe7ea51027bc167f69cb2",
       "journal_request_id": "hrns015-a2-record-apply-2381",
       "quick_suite": "10110/10110 passed",
       "ci_suite": "6/6 dispatches passed",
@@ -3884,7 +3884,7 @@
       "independent_review": "no critical/high; documentation findings corrected",
       "all_runnable_gates": "pass",
       "pr_emission": "pending_exact_diff_and_loc",
-      "evidence_commit_sha": "e10132e3bf4d89ef7cfdbe068e3bdcedadc62f28"
+      "evidence_commit_sha": "eee881459c93ef21d2cfe7ea51027bc167f69cb2"
     }
   }
 }
