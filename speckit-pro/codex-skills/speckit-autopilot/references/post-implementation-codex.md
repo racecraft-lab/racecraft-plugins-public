@@ -155,11 +155,15 @@ background subagents as the fallback path. The 3-track structure
   permits a checkpoint explicitly saying the run is not complete, retaining
   all pending work, consumed budget and unknown effects. `disposition=defer`
   is not a stop: it defers one unit whose allowance is spent. When every runnable
-  item has finished and deferred items remain, report the same kind of honest
-  checkpoint: one consolidated operator request, the same question as plain
-  text in the final message, and every fallback taken and every deferred item
-  listed, as the phase-execution reference's blocked-action rule states. Run
-  every Post item that does not depend on deferred work first. Otherwise continue
+  item has finished and deferred items remain, the read-only `finalize-run`
+  helper decides the end, as the phase-execution reference's blocked-action
+  rule states. Human UAT is the only gate a run may defer: with every non-UAT
+  gate passed, the stack goes ready for review, the top PR body opens with
+  `deferred_items` in its Deferred / not verified section, and the goal is
+  marked complete. Anything else left is one human stop. Either way, one
+  consolidated operator request and the same question as plain text in the
+  final message list every fallback taken and every deferred item. Run every
+  Post item that does not depend on deferred work first. Otherwise continue
   with the first incomplete item. `Post: Retrospective` remains the final Post item and
   must be completed or explicitly skipped before completion can be reported.
 - **Agent-thread sweep before completion:** as part of the same pre-final audit,

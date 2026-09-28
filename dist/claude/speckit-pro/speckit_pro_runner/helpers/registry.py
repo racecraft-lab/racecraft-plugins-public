@@ -13,6 +13,8 @@ from .archive_sweep import run_archive_sweep_helper
 # The two CODEX_ names are re-exported: tests read them through the registry.
 from .install import CODEX_OPTIONAL_HELPER_NAME, CODEX_REQUIRED_AGENT_NAMES, run_install_helper  # noqa: F401
 from .egress_authorization import run_egress_authorization_helper
+from .gate_preflight_coverage import run_gate_preflight_coverage_helper
+from .run_finalization import run_run_finalization_helper
 from .mutation import empty_mutation, run_mutation_helper, run_spec_index_write, run_sweep_apply_result
 from .pr_emission import run_pr_emission_helper
 from .pr_split_ratification import run_pr_split_ratification_helper
@@ -248,6 +250,22 @@ HELPERS: dict[str, HelperEntry] = {
         "python_authoritative",
         "python_only",
         authoritative_request("render-egress-authorization"),
+    ),
+    "check-gate-preflight-coverage": HelperEntry(
+        "check-gate-preflight-coverage",
+        "check-gate-preflight-coverage",
+        None,
+        "python_authoritative",
+        "python_only",
+        authoritative_request("check-gate-preflight-coverage"),
+    ),
+    "finalize-run": HelperEntry(
+        "finalize-run",
+        "finalize-run",
+        None,
+        "python_authoritative",
+        "python_only",
+        authoritative_request("finalize-run"),
     ),
     "ratify-pr-split": HelperEntry(
         "ratify-pr-split",
@@ -704,6 +722,10 @@ def dispatch_helper(request: Any) -> dict[str, Any]:
         return run_research_broker_preflight_helper(entry, request)
     if entry.helper_id == "render-egress-authorization":
         return run_egress_authorization_helper(entry, request)
+    if entry.helper_id == "check-gate-preflight-coverage":
+        return run_gate_preflight_coverage_helper(entry, request)
+    if entry.helper_id == "finalize-run":
+        return run_run_finalization_helper(entry, request)
     if entry.helper_id == "ratify-pr-split":
         return run_pr_split_ratification_helper(entry, request)
     if entry.helper_id == "list-archive-candidates":

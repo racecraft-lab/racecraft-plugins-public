@@ -57,7 +57,8 @@ $speckit-autopilot workflow.md --from-phase <next-pending-phase>
   `disposition=defer`: record the deferral with the exact output, keep
   executing every independent task, increment, and gate, and list it in the
   one end-of-run consolidated request. It is never a mid-run question and
-  never sets the thread goal blocked. `authorize-corrective-exception` (one
+  never sets the thread goal blocked mid-run; at the end of the run an
+  unresolved deferral is the one human stop. `authorize-corrective-exception` (one
   operator-approved application correction) and `begin-replan-epoch` are
   end-of-run tools that act on the operator's answer to that request. An
   explicit `--stage implement` opens the implement stage's own allowance

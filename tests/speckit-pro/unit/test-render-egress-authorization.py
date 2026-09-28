@@ -122,6 +122,21 @@ class RenderEgressAuthorizationTests(unittest.TestCase):
         self.assertTrue(data["authorization_message_sha256"].startswith("sha256:"))
         self.assertEqual(len(data["authorization_message_sha256"]), len("sha256:") + 64)
 
+    def test_delivery_says_send_it_as_a_chat_message_not_a_goal_edit(self) -> None:
+        data = _run(_inputs())["data"]
+        delivery = data["delivery"]
+        self.assertIn("normal chat message", delivery)
+        self.assertIn("not as an edit to the thread goal", delivery)
+        self.assertIn("reads goal text as user-provided data", delivery)
+        # The pasted text itself carries no delivery note.
+        self.assertNotIn("goal", data["authorization_message"])
+
+    def test_fragment_says_a_policy_change_reaches_only_new_threads(self) -> None:
+        for inputs in (_inputs(), _standing_inputs()):
+            fragment = _run(inputs)["data"]["extra_policy_fragment"]
+            header = fragment.split("[auto_review]")[0]
+            self.assertIn("reaches only threads started after the change", header)
+
     def test_fragment_is_extra_policy_scoped_to_the_repository(self) -> None:
         data = _run(_inputs())["data"]
         fragment = data["extra_policy_fragment"]

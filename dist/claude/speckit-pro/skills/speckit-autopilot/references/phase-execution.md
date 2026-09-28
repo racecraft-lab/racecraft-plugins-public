@@ -2798,35 +2798,73 @@ denial), a missing approval, or an unavailable tool or route.
    it in the task's implementation-notes entry and the workflow file's Phase 7
    result. Then continue. Only a fallback the task or spec defines qualifies. An
    alternative the autopilot invents is a workaround and is not allowed.
+   A fallback applies only to non-gate work: it never lets a gate pass, be
+   skipped, or be deferred, and a gate the blocked action feeds still has to
+   run and pass.
 2. **With no defined fallback, defer that task.** Leave its checkbox unchecked,
    record it as deferred with the blocked action and the reason, and mark
    deferred every task and Post item that depends on it. Then keep executing
    every independent task, gate, and Post check. A deferral reserves no
    execution-control budget, is not a failure family, and is never retried by
    another route. Never ask the operator from inside the task, and never set a
-   workflow row or progress item to blocked while runnable work remains.
-3. **Ask once, at the end.** Only after every runnable item has finished, and
-   only if deferred items remain, make one consolidated operator request with
-   `AskUserQuestion`. It names each deferred item, the blocked action, why the
-   requirement needs it, the smallest operator action that unblocks it, and the
-   resume command. Always print the same question as plain text in the final
-   message too, so a question that does not render still reaches the operator.
-   In an unattended run, or when `AskUserQuestion` is unavailable, the plain-text
-   copy is the request. Only then may the rows holding deferred work move to
-   `⚠ Blocked`.
+   workflow row or progress item to blocked while runnable work remains. Mid-run a deferral only keeps the run
+   working on other units; at the end of the run an unresolved deferral is the
+   human stop in rule 3.
+3. **Finalize, or stop once.** Human UAT is the only gate a run may defer.
+   Every other gate (the integration suite, live evaluations, quality and test
+   gates) must run and pass before the stack goes ready for review. Only after
+   every runnable item has finished, run the read-only `finalize-run` runner
+   helper. Pass the execution-control `ledger_path` and `expected_run_id`; every
+   final non-UAT gate result as `gate`, `status` (`passed` or `failed`), and its
+   exact `command`; the runnable work still open as `pending_items`; every rule
+   2 deferral still unresolved as `unresolved_deferrals`, each with `unit`,
+   `reason` (for a veto, the reviewer's own text), and `finish` (the exact
+   command or authorization that finishes it); the human UAT steps no agent can
+   perform as `human_uat`, each with `item`, `reason`, and `finish`; the stack's
+   `pull_requests`, bottom first; and the `resume_command`.
+   - `outcome=continue`: runnable work remains, so keep executing it.
+   - `outcome=complete_with_deferred` or `outcome=complete`: every non-UAT gate
+     passed and nothing but human UAT is left, so the run finalizes:
+     - Refresh the top PR's packet with `pr-packet-output`, passing
+       `deferred_items` (the human UAT) unchanged, so its body opens with the
+       `Deferred / not verified` section, then update that PR's body from the
+       refreshed body file.
+     - Run each of `ready_commands` to mark the whole stack ready for review.
+       The run never merges.
+     - Make one consolidated operator request with `AskUserQuestion` whose text is
+       `end_of_run_request`, and print the same request as plain text in the
+       final message too, so a question that does not render still reaches the operator. In an
+       unattended run, or when `AskUserQuestion` is unavailable, the plain-text
+       copy is the request.
+   - `outcome=human_stop`: a gate failed, the ledger's `deferred` list is not
+     empty, or a deferred task is unresolved. This is one human stop, never
+     ready for review, and the stack stays in draft. Before calling the helper,
+     retry with backoff any gate that failed on a genuine external failure, such
+     as a service outage or a reviewer veto despite a recorded chat
+     authorization: up to three attempts, waiting longer before each. Then make
+     the one consolidated operator request with `end_of_run_request`, which
+     names each failed gate with its exact command and each unresolved unit
+     with what finishes it, and print it as plain text in the final message
+     too.
+   Record `deferred_digest` in the workflow file's Phase 7 result. After the
+   run finalizes or stops, a later turn acts only on a new operator message and
+   never re-checks an unchanged blocker.
 4. **Report what happened.** The final report and the PR body list every
-   fallback taken and every deferred item. Pass them to `pr-packet-output` as
-   `known_gaps`, so they appear under the body's `## Known Gaps` heading. A run
-   with deferred items reports an honest incomplete checkpoint, never
-   completion.
+   fallback taken and every deferred item. Pass the fallbacks and the human UAT
+   to `pr-packet-output` as `known_gaps` too, so they also appear under the
+   body's `## Known Gaps` heading. A finalized run is complete: it names the
+   human UAT that is not verified instead of waiting on the operator.
 
 G7 and Post run on the implemented snapshot. A requirement whose only task is
 deferred is listed as deferred in the G7 evidence and in `known_gaps`; it
-neither fails G7 nor counts as covered by it.
+neither fails G7 nor counts as covered by it, and the unresolved task
+still makes the end of the run the human stop.
 
 The run must never bypass a veto: never change approval, sandbox, or reviewer
 configuration, never rerun the vetoed action under a different command or tool,
-and never treat an earlier answer as authorization for the vetoed action. The
+and never treat an earlier answer as authorization for the vetoed action. A reviewer veto despite a recorded chat
+authorization is a genuine external failure: retry with backoff, then the one
+human stop. The
 correctness stops in this reference are unchanged and still stop the run:
 unknown side effects, an execution-control `checkpoint_required` disposition,
 a ledger or clock error, invalid or stale state, and a failed gate whose
@@ -2845,8 +2883,9 @@ fixed allowances, and then the ledger returns
 `disposition=defer`, refuses that dispatch, and records the blocked failure
 family, increment, gate, or failure class in its `deferred` list. Defer that work
 under rule 2, name the task or gate it blocks, and keep executing every
-independent task, increment, gate, and Post check. Rule 3's end-of-run
-request lists every ledger deferral; there the operator can approve
+independent task, increment, gate, and Post check. Mid-run that only moves the run on to other units. At the end of the run an
+unresolved ledger deferral, a gate's included, makes `finalize-run` return
+`outcome=human_stop`: rule 3's one request lists every ledger deferral; there the operator can approve
 `authorize-corrective-exception` or `begin-replan-epoch` once for everything
 deferred. It is never a mid-run question.
 

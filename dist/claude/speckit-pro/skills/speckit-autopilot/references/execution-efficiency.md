@@ -342,7 +342,9 @@ deferred item with the task or gate it blocks and the exact gate output, then
 keep executing every independent task, increment, gate, and Post check. A
 deferral is never a stop and never a mid-run question. At the end, list every
 entry of the current `deferred` list in the one end-of-run consolidated
-request. `authorize-corrective-exception` and `begin-replan-epoch` are
+request. An entry still unresolved at the end makes `finalize-run` return
+`outcome=human_stop`: the run never finalizes ready for review over it, a
+gate's included. `authorize-corrective-exception` and `begin-replan-epoch` are
 end-of-run tools that act on the operator's answer to that request. A new
 allowance archives the list into `corrective_epochs` with the rest of the
 spent allowance. The ledger validates every entry on each call: an entry whose
