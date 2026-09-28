@@ -1549,6 +1549,9 @@ class FailingCheckFingerprintTests(unittest.TestCase):
                 self.assertRegex(result["output_sha256"], r"^[0-9a-f]{64}$")
         passed = self.fingerprint("Ran 3 tests in 0.1s\n\nOK\n", exit_code=0)
         self.assertEqual(passed["failing"], [])
+        unknown_pass = self.fingerprint("all good\n", exit_code=0)
+        self.assertEqual((unknown_pass["format"], unknown_pass["failing"], unknown_pass["checks_run"]),
+                         ("passed", [], None))
 
 
 class CorrectionProgressTests(_ExecutionControlFixture, unittest.TestCase):
