@@ -665,10 +665,12 @@ the repository's standing policy, which the operator installs once at setup
 action is covered, the preflight asks no question. A missing standing policy is
 reported once as a setup gap, and the run still proceeds. An uncovered action,
 including a boundary-file edit the plan names, is deferred to the one
-end-of-run request, never an up-front question. When that request covers data
-egress, it shows the operator a paste-ready authorization message and a
-proposed `auto_review.extra_policy` fragment, both rendered by the same helper;
-the plugin never writes either one.
+end-of-run request, never an up-front question that stops the run. For
+uncovered data egress, the preflight shows a paste-ready authorization message
+at run start and asks the operator to send it as a normal chat message, never
+as a goal edit, without waiting for it; the end-of-run request repeats it with
+a proposed `auto_review.extra_policy` fragment, both rendered by the same
+helper. The plugin never writes either one.
 
 Once autopilot is running, human input is for exceptional cases only. Once Phase 7 runs, one
 blocked action never stops the run: take the task's own fallback, or defer that

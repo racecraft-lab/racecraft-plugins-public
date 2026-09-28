@@ -1180,11 +1180,20 @@ vetoes a covered action, that is a blocked action: defer it under
 **Uncovered actions are deferred.** An action outside every standing class,
 such as a new destination or data class, a privileged command, or an
 interactive login, is `operator_action_required` unless the conversation
-already carries exact authorization for it. It is never an up-front question.
-An `implement` or `full` run defers the task that needs it, and every task and
-Post item that depends on it, and keeps executing independent work; the one
-end-of-run request names it. A `plan` run lists it in its final report as work
-the implement run will defer.
+already carries exact authorization for it. It is never an up-front question
+that stops the run. An `implement` or `full` run defers the task that needs it,
+and every task and Post item that depends on it, and keeps executing
+independent work; the one end-of-run request names it. A `plan` run lists it in
+its final report as work the implement run will defer.
+
+**Uncovered data egress: the preflight asks for it as a chat reply at run
+start.** Render the paste-ready authorization message described below at the
+preflight, show it with the helper's `delivery` line, and ask the operator to
+send it back as a normal chat message in this thread, never as a goal edit. The
+approval reviewer reads goal text as user-provided data and records an
+authorization written there as unknown. The run never waits for the reply: the
+action stays `operator_action_required` and its task stays deferred until the
+reply lands, and the end-of-run request repeats the message if it never does.
 
 **A boundary-file edit named in the ratified plan is deferred too.** Such an
 edit, for example to the root `AGENTS.md`, never blocks the start of the run,
@@ -1313,7 +1322,8 @@ exact destination), `effect` (the data class), and an optional `purpose` (the
 task id or reason). Show its output unchanged; do not write the text by hand.
 
 - A paste-ready authorization message: one short block the operator sends as
-  a user message in this thread. It lists each action as "Send <data class>
+  a normal chat message in this thread, never as a goal edit; show the
+  helper's `delivery` line with it. It lists each action as "Send <data class>
   from <repository> to <destination> for <purpose>". The operator's reply that
   carries it is the explicit_user evidence described above.
 - A proposed `auto_review.extra_policy` fragment for the operator's own
@@ -1327,7 +1337,10 @@ task id or reason). Show its output unchanged; do not write the text by hand.
   to autonomy-boundary files, their schema, or their recorded digests, or to
   `AGENTS.md` or `.codex/`; any other destination or data class; a push to the
   default branch, a force push, a `--mirror` push, or a remote ref deletion; and
-  a remote change. The operator installs it once.
+  a remote change. The operator installs it once. A reviewer session persists
+  for its thread, even after an app restart, so a new or changed
+  `auto_review.extra_policy` reaches only threads started after the change.
+  After installing it, start the autopilot in a new thread.
 
 The reviewer does not see every command. A command reaches the reviewer only
 when it escalates, for example a network request or a write outside the

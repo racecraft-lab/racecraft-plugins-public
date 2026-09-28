@@ -974,6 +974,25 @@ class StandingPolicyPreflightSourceContractTests(unittest.TestCase):
         self.assertNotIn("A blocked result stops before Phase 7", self.skill)
         self.assertIn("never an up-front question", self.resume)
 
+    def test_uncovered_egress_authorization_is_asked_as_a_chat_reply_at_run_start(self) -> None:
+        for phrase in (
+            "asks for it as a chat reply at run start",
+            "normal chat message in this thread, never as a goal edit",
+            "the helper's `delivery` line",
+            "never waits for the reply",
+            "reads goal text as user-provided data",
+        ):
+            self.assertIn(phrase, self.preflight)
+        self.assertIn("never as a goal edit", self.skill)
+
+    def test_reviewer_policy_change_reaches_only_new_threads(self) -> None:
+        phrase = "reaches only threads started after the change"
+        self.assertIn(phrase, self.preflight)
+        self.assertIn("even after an app restart", self.preflight)
+        for setup in ("speckit-install", "speckit-upgrade"):
+            with self.subTest(setup=setup):
+                self.assertIn(phrase, _flat(CODEX_AUTOPILOT_SKILL.parents[1] / setup / "SKILL.md"))
+
     def test_ratified_boundary_file_edit_is_deferred_not_a_start_blocker(self) -> None:
         for phrase in (
             "boundary-file edit named in the ratified plan",
