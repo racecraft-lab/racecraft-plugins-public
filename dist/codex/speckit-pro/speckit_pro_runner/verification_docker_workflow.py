@@ -13,7 +13,9 @@ import time
 from typing import Any
 import uuid
 
-from .execution_control import confined_path, durable_json, execution_control, ignore_owned_directory, require_text
+from .execution_control import (confined_path, durable_json, execution_control, ignore_owned_directory, record_failing_checks,
+                                require_text)
+from .failing_checks import fingerprint as failing_check_fingerprint
 from .verification_docker import validate_base_image, validate_location
 from .verification_docker_entrypoint import ENVIRONMENT, QUALIFIED_ENVIRONMENT, validate_argv
 from .verification_docker_image import execute_image, inspect_image
@@ -193,6 +195,9 @@ def execute_docker_verification(root: Path, inputs: dict[str, Any], mode: str) -
     record_name = f"{evidence_directory(workflow_name)}/{execution_id}.json"
     record_path = confined_path(root, record_name)
     durable_json(record_path, record)
+    record_failing_checks(root, {**inputs, "workflow_file": workflow_name},
+                          failing_check_fingerprint(command_id, argv, result["exit_code"], result["completed"],
+                                                    result["stdout"], result["stderr"]))
     observation = docker_observation_material(sha(record_path.read_bytes()), record) if qualified else dict(record)
     return {"record_path": record_name, "record": record, "observation_material": observation,
             "evidence_path": f"{directory_name}/docker-evidence.json", "writes_state": True, "reusable": False,

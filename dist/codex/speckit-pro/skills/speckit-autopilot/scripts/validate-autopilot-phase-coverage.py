@@ -99,6 +99,19 @@ ORDERED_STATE_CHECKPOINTS = (
 TASK_LINE_RE = re.compile(r"^- \[[ xX]\] (T[0-9]+)\b")
 UTC_TIMESTAMP_RE = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$")
 WINDOWS_ABSOLUTE_PATH_RE = re.compile(r"^[A-Za-z]:")
+# The tracked state file stores decision fields only. These three patterns match
+# the repository privacy scan's (tests/speckit-pro/lib/privacy_patterns.py), and a
+# test holds them equal, so the state guard rejects what the scan would reject.
+STATE_HOME_PATH_PATTERN = re.compile(
+    r"(?:/(?:Users|home)/|[A-Za-z]:[\\/]+Users[\\/]+)[A-Za-z0-9_.\-]+",
+    re.IGNORECASE,
+)
+STATE_HYPHENATED_HOME_PATH_PATTERN = re.compile(r"-Users-[A-Za-z0-9_.\-]+", re.IGNORECASE)
+STATE_UUID_PATTERN = re.compile(
+    r"[A-Fa-f0-9]{8}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{12}",
+    re.IGNORECASE,
+)
+STATE_PRIVATE_KEYS = frozenset({"argv"})
 MAX_REPO_FILE_BYTES = 32 * 1024 * 1024
 HAS_DESCRIPTOR_RELATIVE_IO = (
     os.name != "nt"
@@ -107,6 +120,8 @@ HAS_DESCRIPTOR_RELATIVE_IO = (
     and os.stat in os.supports_dir_fd
     and os.stat in os.supports_follow_symlinks
 )
+# The plugin root is fixed by this script's own location, never by request input.
+INSTALLED_PLUGIN_ROOT = Path(__file__).resolve().parents[3]
 SUPPORTED_MARKER_PLAN_VERSIONS = frozenset({"pr-marker-plan.v1", "pr-marker-plan.v2"})
 MARKER_PLAN_SCHEMA_PATH = Path(__file__).resolve().parents[1] / "contracts" / "pr-marker-plan.schema.json"
 CHANGED_FILE_MANIFEST_SCHEMA_PATH = (
@@ -114,6 +129,9 @@ CHANGED_FILE_MANIFEST_SCHEMA_PATH = (
 )
 VERIFICATION_REPORT_SCHEMA_PATH = (
     Path(__file__).resolve().parents[1] / "contracts" / "verification-report.schema.json"
+)
+MARKER_CHECKPOINT_SCHEMA_PATH = (
+    Path(__file__).resolve().parents[1] / "contracts" / "marker-checkpoint.schema.json"
 )
 MARKER_PLAN_STATUSES = frozenset({
     "planned", "checkpointing", "emission_ready", "emitting", "emitted",
@@ -264,6 +282,7 @@ RULE_PROBLEM_KEYS = {
         "autonomy_boundary_errors",
         "stage_mirror_errors",
         "workflow_authority_errors",
+        "state_privacy_errors",
         "formal_checkpoint_errors",
         "artifact_review_errors",
         "in_progress_errors",
@@ -347,6 +366,15 @@ PROBLEM_KEY_INTENT: dict[str, dict[str, str]] = {
             "A state naming a workflow other than the one supplied means the run is "
             "proceeding against a different specification. This is the one key "
             "workflow-authority check, and the failure it exists to stop."
+        ),
+    },
+    "state_privacy_errors": {
+        "verdict": "gated",
+        "reason": (
+            "The state file is committed, so it may hold decision fields and "
+            "digests only. A raw runner envelope, its argv, an absolute home path, "
+            "or an external task or session UUID would publish machine-local "
+            "identity with the next checkpoint commit."
         ),
     },
     # --- gated: armed by ``--rule coverage``. Kept out of the status-evidence
@@ -1552,18 +1580,32 @@ def _canonical_schema(
     )
     if exact_head:
         try:
-            schema_ref = schema_path.resolve().relative_to(repo_root.resolve()).as_posix()
+            schema_ref: str | None = (
+                schema_path.resolve().relative_to(repo_root.resolve()).as_posix()
+            )
         except ValueError:
-            return None, [f"canonical {label} schema is outside the authorized repository"]
-        schema_bytes = _git_file_at_commit(repo_root, expected_head_commit, schema_ref)
-        if schema_bytes is None:
-            return None, [f"canonical {label} schema is absent from the authorized PR head"]
-        try:
-            worktree_schema_bytes = schema_path.read_bytes()
-        except OSError:
-            worktree_schema_bytes = None
-        if worktree_schema_bytes != schema_bytes:
-            errors.append(f"canonical {label} schema differs from the authorized PR head")
+            schema_ref = None
+        if schema_ref is not None:
+            schema_bytes = _git_file_at_commit(repo_root, expected_head_commit, schema_ref)
+            if schema_bytes is None:
+                return None, [f"canonical {label} schema is absent from the authorized PR head"]
+            try:
+                worktree_schema_bytes = schema_path.read_bytes()
+            except OSError:
+                worktree_schema_bytes = None
+            if worktree_schema_bytes != schema_bytes:
+                errors.append(f"canonical {label} schema differs from the authorized PR head")
+        else:
+            # An installed plugin runs from outside the repository, so its
+            # contracts are trusted from the plugin root itself.
+            try:
+                schema_path.resolve(strict=True).relative_to(INSTALLED_PLUGIN_ROOT)
+            except (OSError, ValueError):
+                return None, [f"canonical {label} schema is outside the installed plugin root"]
+            try:
+                schema_bytes = schema_path.read_bytes()
+            except OSError:
+                schema_bytes = None
     else:
         try:
             schema_bytes = schema_path.read_bytes()
@@ -2557,9 +2599,19 @@ def validate_projection_integrity(
             )
             worktree_schema_bytes = _read_repo_bytes(repo_root, checkpoint_schema_ref)
             if committed_schema_bytes is None:
-                checkpoint_evidence_errors.append(
-                    "checkpoint evidence schema is absent from the authorized PR head"
+                # No feature-local schema: validate against the plugin's own contract.
+                checkpoint_evidence_schema, checkpoint_schema_errors = _canonical_schema(
+                    MARKER_CHECKPOINT_SCHEMA_PATH,
+                    "marker-checkpoint",
+                    repo_root=repo_root,
+                    expected_head_commit=expected_head_commit,
                 )
+                checkpoint_evidence_errors.extend(checkpoint_schema_errors)
+                if worktree_schema_bytes is not None:
+                    checkpoint_file_errors.append(
+                        "feature-local checkpoint evidence schema exists in the worktree but not "
+                        "at the authorized PR head; commit it or remove it to use the plugin schema"
+                    )
             else:
                 if worktree_schema_bytes != committed_schema_bytes:
                     checkpoint_file_errors.append(
@@ -4428,6 +4480,59 @@ def validate_state_status(state: dict[str, Any]) -> dict[str, list[str]]:
     return {"state_status_errors": errors}
 
 
+def _state_private_value_reason(value: str) -> str | None:
+    if STATE_HOME_PATH_PATTERN.search(value) or STATE_HYPHENATED_HOME_PATH_PATTERN.search(value):
+        return "an absolute home path"
+    if STATE_UUID_PATTERN.search(value):
+        return "a raw UUID"
+    return None
+
+
+def state_privacy_errors(state: object) -> dict[str, list[str]]:
+    """Reject private values in the committed autopilot state file.
+
+    The state stores decision fields such as ``stage``, ``source``, ``basis``,
+    and ``planning_complete``. It never stores a raw runner envelope, an
+    ``argv`` key, an absolute home path, or an external task or session UUID.
+    Errors name the JSON location and the in-place remedy (#800), and never
+    echo the value. A non-object root fails rather than passing on nothing.
+    """
+    if not isinstance(state, dict):
+        return {"state_privacy_errors": ["autopilot_state must be a JSON object"]}
+    errors: list[str] = []
+    pending: list[tuple[str, object]] = [("autopilot_state", state)]
+    while pending:
+        location, value = pending.pop()
+        if isinstance(value, dict):
+            for key, child in value.items():
+                child_location = f"{location}.{key}"
+                if key in STATE_PRIVATE_KEYS:
+                    errors.append(
+                        f"{child_location} stores a raw runner argv; remove this key, keep only "
+                        + "decision fields, and rerun this guard"
+                    )
+                    continue
+                reason = _state_private_value_reason(key)
+                if reason is not None:
+                    key_digest = "sha256:" + hashlib.sha256(key.encode("utf-8")).hexdigest()
+                    errors.append(
+                        f"{location} has a key holding {reason} (key {key_digest}); replace that key "
+                        + f"with {key_digest}, and rerun this guard"
+                    )
+                    continue
+                pending.append((child_location, child))
+        elif isinstance(value, list):
+            pending.extend((f"{location}[{index}]", item) for index, item in enumerate(value))
+        elif isinstance(value, str):
+            reason = _state_private_value_reason(value)
+            if reason is not None:
+                errors.append(
+                    f"{location} holds {reason}; replace the value with sha256: plus the hex "
+                    + "SHA-256 of the value, and rerun this guard"
+                )
+    return {"state_privacy_errors": sorted(errors)}
+
+
 def _canonical_json_sha256(value: object) -> str | None:
     try:
         encoded = json.dumps(
@@ -4956,6 +5061,7 @@ def build_report(
     )
     state_result = validate_state(plan_steps)
     status_result = validate_state_status(state_data)
+    privacy_result = state_privacy_errors(state_data)
     autonomy_result = validate_autonomy_boundary(
         state_data, _repository_root(workflow),
         current_execution_boundary=authority.current_execution_boundary,
@@ -4981,6 +5087,7 @@ def build_report(
         **workflow_result,
         **workflow_status_result,
         **status_result,
+        **privacy_result,
         **autonomy_result,
         **stage_result,
         **formal_result,

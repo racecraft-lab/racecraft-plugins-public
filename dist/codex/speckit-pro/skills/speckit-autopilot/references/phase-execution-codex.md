@@ -88,9 +88,8 @@ Phase 6.5 runs the Autonomy Boundary Preflight and then G6.5 *after Phase 6
 commits and before Phase 7 begins*, so on a `--stage plan` run it is the last
 work the stage does. The run takes the stage-boundary commit below and then
 **STOPs** — it does not advance to Phase 7, in any mode. In advisory mode the
-confidence gate passes or warns and the stage still ends here; a blocked
-autonomy preflight or strict confidence stop is still committed so the verdict
-reaches version history.
+confidence gate passes or warns and the stage still ends here; a strict
+confidence stop is still committed so the verdict reaches version history.
 
 On a strict-mode stop, write the `Confidence Gate` row to a **non-terminal**
 blocked status — never to a terminal one. The row must advance off its pending
@@ -860,7 +859,9 @@ for phase in PHASES starting from first_pending:
     8. If gate fails:
        a. If G3 reports unresolved requirement wording, run the Plan ambiguity
           provenance repair below using the shared corrective reservation
-       b. Otherwise reserve the gate's localized repair in the same ledger
+       b. Otherwise reserve the gate's localized repair in the same ledger;
+          a repair that edits only planning documents uses `gate_remediation`
+          (see below)
        c. If still failing and gate-failure == "stop": STOP. A selected formal
           failure always stops and names the Plan resume point.
        d. If gate-failure == "skip-and-log" and the failure is not a selected
@@ -877,15 +878,40 @@ for phase in PHASES starting from first_pending:
        For phase 7 (implement): run: git add -A && git commit
        (implementation changes include src/, tests/, etc.)
        Runner byproducts are never committed: the runner writes a
-       .gitignore holding * into .process/execution-control/ and
-       .process/verification/, so git add -A cannot stage them. If
+       .gitignore holding * into .process/execution-control/,
+       .process/verification/, and .process/task-results/, so
+       git add -A cannot stage them. If
        git ls-files shows such a path already tracked (from an older
        plugin version), run git rm -r --cached -- <path> before this commit.
+       One exception: a marker's verification record,
+       <feature>/.process/verification/<marker-id>.json, is committed
+       evidence the phase-coverage guard reads from the pull request head.
+       When the workflow file sits in the feature's .process/ directory,
+       the runner's ignore rule covers it, so stage the record by path with
+       git add --force -- <path>, and never untrack it.
    11. Advance to next phase (next iteration of loop) and write the new
        in_progress item to both update_plan and autopilot-state.json.
        Never mark the run complete while a later phase family still has
        pending items.
 ```
+
+**Documentation-only remediation at a planning gate.** When a gate's
+remediation, most often Analyze (G6), edits only planning documents of the
+feature (`spec.md`, `plan.md`, `research.md`, `tasks.md`, `data-model.md`,
+`quickstart.md`, `.process/task-execution.json`, or a `checklists/<name>.md`),
+reserve it with `kind=corrective`, its `failure_invariant`, the explicit
+`spec_file`, and `gate_remediation`: the gate and every repository-relative
+path the fix will touch. The ledger admits it under that gate's own allowance
+of two rounds, so a run-wide budget spent at an earlier gate never stalls it,
+and it needs no operator approval. A remediation that touches code, tests,
+formal models, `contracts/`, or any path outside those documents goes through
+the run-wide budget with the reason in `gate_ineligible`. The helper judges
+paths only, so a threshold or scope change written inside a planning document
+is the orchestrator's call: omit `gate_remediation` and reserve it run-wide.
+When the
+reserve returns `gate_remediation_allowance_exhausted`, record the open findings
+for the end-of-run request and continue. It is never a mid-run question and
+never a stop.
 
 After all 7 phases complete, proceed to the post-implementation parallel
 group (see [post-implementation-codex.md](./post-implementation-codex.md)).
@@ -1098,19 +1124,101 @@ planned action in any of these categories:
   `tasks.md` and the Post list for such tasks; a task that runs a live provider
   is data egress even when it has no visible side effect.
 
+When the plan delegates work to the delegation gateway (for example the
+hardener), inventory that delegation as one data egress action. Its `target`
+is the gateway's default `route=auto` destination: the gateway's cloud route
+for repositories on the operator's consent list, with the local worker as the
+fallback. The rendered authorization then covers it. Never plan an explicit
+local route to avoid that authorization; only the operator chooses it.
+
 For each action, record its category, exact command or tool when known, target,
 durability or data effect, required execution boundary, existing authorization
 evidence, and one disposition:
 
-- `ready`: the conversation supplies exact bounded authorization and the
-  platform exposes an execution route that requires no further operator
-  interaction;
+- `ready`: the conversation supplies exact bounded authorization, or the action
+  falls inside a standing policy class (below), and the platform exposes an
+  execution route that requires no further operator interaction;
 - `rerouted`: a contract-preserving reroute keeps the action inside an
   available boundary. Update the affected planning artifacts and rerun their
   downstream gates before recording this disposition; never weaken a
   requirement or substitute synthetic evidence;
 - `operator_action_required`: no proven non-interactive route exists, or the
-  action needs authorization the conversation does not contain.
+  action needs authorization the conversation does not contain. This defers
+  the task that needs it; it is never an up-front question (below).
+
+**Standing policy coverage.** The operator installs a standing policy once, at
+setup: runner helper `render-egress-authorization` with `scope=standing`, the
+repository, and its default branch renders an `auto_review.extra_policy`
+fragment scoped to the repository, not to a run. Its `policy_classes` are the
+ordinary actions of any ratified plan: `checkout-work`, `feature-branch-push`
+(never the default branch), `pull-request-activity`, `public-docs-research`,
+and `local-offline-audit` (a worker on this machine). It keeps the same human
+stops as the per-run fragment and never proposes `auto_review.policy`. At this
+preflight, run the helper again with `scope=standing`, passing the user-level
+Codex config's current `auto_review.extra_policy` string as
+`installed_extra_policy`; read that config, never write it.
+
+For each action whose payload and destination fall inside one class, record
+`disposition=ready` and `authorization.status=explicit_user`. The explicit user
+authorization is the operator's autopilot invocation in this thread and the
+ratified plan together, and it covers only the standing policy's classes. A
+ratified plan is one whose planning phases through Analyze are complete and
+whose `plan.md` and `tasks.md` match the recorded planning fingerprints. The
+private `evidence` cites the invocation, the class id, `standing_policy_sha256`,
+and the helper's `installed` result. When every action is covered, the
+preflight asks no question: it records the coverage and proceeds. That includes
+a planning-to-implementation stage change, such as an explicit
+`--stage implement` run of a plan whose earlier record covered only planning.
+
+**A missing standing policy is a setup gap.** When `installed` is false, it is
+reported once as a setup gap: name it in the Phase 6.5 result and the final
+report, with the helper's `extra_policy_fragment` as the install text. The run
+still proceeds on the invocation and the ratified plan. If the reviewer then
+vetoes a covered action, that is a blocked action: defer it under
+[Blocked Actions Mid-Run: Fall Back or Defer, Never Stop](#blocked-actions-mid-run-fall-back-or-defer-never-stop).
+
+**Uncovered actions are deferred.** An action outside every standing class,
+such as a new destination or data class, a privileged command, or an
+interactive login, is `operator_action_required` unless the conversation
+already carries exact authorization for it. It is never an up-front question
+that stops the run. An `implement` or `full` run defers the task that needs it,
+and every task and Post item that depends on it, and keeps executing
+independent work; the one end-of-run request names it. A `plan` run lists it in
+its final report as work the implement run will defer.
+
+**Uncovered data egress: the preflight asks for it as a chat reply at run
+start.** Render the paste-ready authorization message described below at the
+preflight, show it with the helper's `delivery` line, and ask the operator to
+send it back as a normal chat message in this thread, never as a goal edit. The
+approval reviewer reads goal text as user-provided data and records an
+authorization written there as unknown. The run never waits for the reply: the
+action stays `operator_action_required` and its task stays deferred until the
+reply lands, and the end-of-run request repeats the message if it never does.
+
+**Every gate's escalation is inventoried at run start.** A gate that fails for
+want of an authorization is a preflight defect, not a deferral. Before
+recording the status, run the read-only `check-gate-preflight-coverage` runner
+helper. Pass every gate the run will execute (the G-gates, the integration
+suite, live evaluations, and the Post quality and test gates) as `gate`, its
+exact `command`, and its `needs`: each escalation it requires, as the
+`category` and exact `target` its inventory action would carry, or an empty
+list. Pass the inventory's actions as `inventory_actions` with their
+`action_id`, `category`, and `target`. A need no action covers returns
+`covered=false` with the gap in `missing`: add that action to the inventory
+now, so its authorization is asked for at run start (data egress as a chat
+reply, above), and rerun the helper until it reports `covered=true`.
+
+**A boundary-file edit named in the ratified plan is deferred too.** Such an
+edit, for example to the root `AGENTS.md`, never blocks the start of the run,
+and the standing policy never covers it. The reason is reviewer trust: the
+reviewer trusts `AGENTS.md`, and it never sees an in-sandbox edit. An edit made
+mid-run would rewrite the reviewer's trusted instructions for the rest of the
+run with no human reading it. Covering it as an exact ratified change would
+need the ratified diff pinned by digest in the boundary record, which the
+record does not carry. So never dispatch that task: the sandbox does not stop
+an in-checkout edit, so the parent must. Record it as deferred with its
+dependents, and let the end-of-run request show the exact file and change for
+the operator to approve.
 
 Codex's documented model is load-bearing here: ordinary `workspace-write`
 automation can edit the workspace, while writes beyond it require approval.
@@ -1122,7 +1230,8 @@ documentation. Auto-review availability by itself cannot classify an action as
 `ready`; the record still needs exact authorization evidence for any action
 that requires it. The word "autonomous" alone is also not authorization for a
 persistent system mutation, account change, or external effect that the active
-conversation has not already authorized.
+conversation has not already authorized; only the invocation and ratified plan
+together authorize, and only the standing policy's classes.
 
 Keep the complete record private and publish only its receipt. The complete
 `autonomy-boundary.v1` record holds writable roots, targets, free-text
@@ -1188,7 +1297,8 @@ re-attestation in [prerequisites-codex.md](./prerequisites-codex.md), before the
 Step 1.1 coverage guard runs.
 
 Only `authorization.status=explicit_user` can make an inventoried boundary
-action `ready`. For data egress, explicit_user evidence is an operator answer
+action `ready`. For data egress outside the standing policy's classes,
+explicit_user evidence is an operator answer
 in this thread to the consolidated request that names the exact destination and
 data class; the automatic reviewer judges only from the transcript, so a general
 instruction to proceed or "you have approval" is not egress authorization.
@@ -1202,27 +1312,31 @@ crossed boundary are intentionally absent from the authorization vocabulary.
 Never persist credentials, tokens, cookies, or session material.
 
 When any action is `operator_action_required`, set the object status to that
-exact value and make the Phase 6.5 row non-terminal and blocked. Present one
-consolidated request that names every exact target, lasting or external effect,
-every data-egress destination and data class,
-why the requirement needs it, the smallest required operator action, and the
-resume command. Commit the blocked record through the current stage's bounded
-bookkeeping path; for a plan-stage run, use the normal stage-boundary commit.
-Then **STOP before Phase 7**. A denial routes back to planning for a
-contract-preserving alternative; it never triggers a workaround.
+exact value; the Phase 7 guard accepts it. A deferred action never makes the
+Phase 6.5 row blocked, and the run never stops up front for it. The one
+end-of-run request under
+[Blocked Actions Mid-Run: Fall Back or Defer, Never Stop](#blocked-actions-mid-run-fall-back-or-defer-never-stop)
+names every deferred action: every exact target, lasting or external effect,
+every data-egress destination and data class, why the requirement needs it,
+the smallest required operator action, and the resume command. Commit the
+record through the current stage's bounded bookkeeping path; for a plan-stage
+run, use the normal stage-boundary commit. A denial routes the deferred task
+back to planning for a contract-preserving alternative; it never triggers a
+workaround.
 
-When that request includes data egress, it also carries two artifacts for the
+When that request includes uncovered data egress, it also carries two artifacts for the
 operator to review. Codex's automatic reviewer trusts user and developer
 messages, `AGENTS.md`, and question replies, but treats skill and plugin text
 as untrusted. It approves egress only when the transcript names the payload
 and the destination. Render both artifacts with the registered read-only
 `render-egress-authorization` runner helper. Pass the repository name, its
-default branch, and every data-egress action as `action_id`, `target` (the
+default branch, and every uncovered data-egress action as `action_id`, `target` (the
 exact destination), `effect` (the data class), and an optional `purpose` (the
 task id or reason). Show its output unchanged; do not write the text by hand.
 
 - A paste-ready authorization message: one short block the operator sends as
-  a user message in this thread. It lists each action as "Send <data class>
+  a normal chat message in this thread, never as a goal edit; show the
+  helper's `delivery` line with it. It lists each action as "Send <data class>
   from <repository> to <destination> for <purpose>". The operator's reply that
   carries it is the explicit_user evidence described above.
 - A proposed `auto_review.extra_policy` fragment for the operator's own
@@ -1236,7 +1350,10 @@ task id or reason). Show its output unchanged; do not write the text by hand.
   to autonomy-boundary files, their schema, or their recorded digests, or to
   `AGENTS.md` or `.codex/`; any other destination or data class; a push to the
   default branch, a force push, a `--mirror` push, or a remote ref deletion; and
-  a remote change. The operator installs it once.
+  a remote change. The operator installs it once. A reviewer session persists
+  for its thread, even after an app restart, so a new or changed
+  `auto_review.extra_policy` reaches only threads started after the change.
+  After installing it, start the autopilot in a new thread.
 
 The reviewer does not see every command. A command reaches the reviewer only
 when it escalates, for example a network request or a write outside the
@@ -1253,8 +1370,8 @@ while it waits (`authorization.status=missing`), then cite that digest again
 with the operator's reply when recording `explicit_user`. The digest stays in
 the private record; the receipt and the Phase 6.5 row never carry it.
 
-When every action is `ready` or `rerouted`, set status to `ready` and continue
-with the confidence steps below. A `plan` run takes its boundary commit and
+When every action is `ready` or `rerouted`, set status to `ready`. Either way,
+continue with the confidence steps below. A `plan` run takes its boundary commit and
 stops at the plan terminal step even when the record is `ready`; it never
 dispatches Phase 7. An `implement` or `full` run validates the record before its
 first Phase 7 dispatch. Before every later Phase 7 task dispatch, revalidate the
@@ -1265,9 +1382,8 @@ missing, malformed, or stale record. A new or changed action reruns this
 preflight. If a worker discovers a predictable boundary that the record
 omitted, do not let the worker attempt it or ask from inside the task: record
 that the late discovery is an autopilot defect, return control to the parent,
-and update the preflight there. The pre-Phase-7 stop above does not apply
-mid-run: when the refreshed disposition is `operator_action_required`, the
-parent defers only that task under
+and update the preflight there. When the refreshed disposition is
+`operator_action_required`, the parent defers only that task under
 [Blocked Actions Mid-Run: Fall Back or Defer, Never Stop](#blocked-actions-mid-run-fall-back-or-defer-never-stop)
 and keeps executing independent work.
 
@@ -1345,7 +1461,8 @@ it as `expected_partition_sha256` on every later start, inspect, or record;
 never reconstruct it from the journal's current plan. On resume, use `action=inspect` and
 reconcile retained complete/unfinished results rather than renumbering batches.
 Dispatch one `spawn_agent` per implementation or research batch; verification
-routes stay orchestrator-direct with no agent. Supply TDD only to implementation
+routes stay orchestrator-direct with no agent. A task routes to verification
+by its leading verb: `verify`, `run`, `check`, `build`, `lint`, `confirm`, `recheck`. Supply TDD only to implementation
 and project agents, up to four adjacent assigned tasks sequentially, with shared
 context/reservation once. Tell every implementation and project agent that
 checklist items are reviewer-owned and deferred to PR review: do not stop on
@@ -1368,6 +1485,23 @@ Retain the actual orchestrator-issued execution observation independently;
 G7 and Post each revalidate current inputs through `validate-execution-record`.
 Neither the producer result nor G7's earlier decision authorizes Post reuse.
 
+**Review fixes inside one increment.** When an increment's required review
+finds defects in code that increment just wrote, reserve the fix with
+`kind=corrective`, its `failure_invariant`, the feature's `spec_file`, and
+`review_remediation`: the increment's `tdd_unit` and every repository-relative
+path the fix will touch.
+When the task-execution sidecar is current and every path sits inside that
+TDD unit's own `owns` and no other unit's, the ledger admits the fix under
+that increment's own allowance of two review rounds. It never draws on the
+run-wide corrective budget, so a spent run-wide budget does not stop the next
+increment's review loop. A fix that touches a path outside the increment's
+ownership, reopens another increment's accepted work, or lacks current
+ownership evidence goes through the run-wide budget unchanged. When the
+reserve returns `disposition=defer` with `increment_review_allowance_exhausted`, defer that increment
+under [Blocked Actions Mid-Run: Fall Back or Defer, Never Stop](#blocked-actions-mid-run-fall-back-or-defer-never-stop): record its
+open findings, keep its dependents deferred, and continue with independent
+increments. It is never a mid-run question and never a stop.
+
 Before `tasks.md` exists, the plan contains:
 
 ```text
@@ -1379,6 +1513,11 @@ from `tasks.md`. Each implement item must include the task IDs, dependencies,
 TDD protocol, `PROJECT_COMMANDS`, and `COMPLETED_TASKS` context accumulated from
 earlier work.
 
+G5 also fails a gate task that waits on evidence its own dependents produce,
+and lists it under `gate_task_loops` (see [G5](gate-validation.md#g5--after-tasks)).
+Split each listed task: a candidate check now, with the reconciliation against
+actual evidence attached to the emission step. Then rerun G5.
+
 After G5 passes, the placeholder is invalid. Before Analyze or Implement can
 run, audit `update_plan` and `autopilot-state.json`, then apply the
 tasks-phase reviewability boundary. Runner helper `reviewability-gate`
@@ -1387,7 +1526,7 @@ do not invoke it as an active helper. Record the deferred-mode diagnostics
 (helper ID, requested mode, deferral reason) in the workflow file, then
 evaluate the fallback evidence chain: the setup-mode gate result recorded at
 scaffold, the plan-phase `estimate-reviewable-loc` verdict, and any
-operator-ratified split decision in the workflow file. If that committed
+ratified split decision (autopilot or operator) in the workflow file. If that committed
 evidence shows `pass`, `warn`, or an honored typed exception, continue. If it
 shows a valid current size-only `status=block`, continue into marker
 planning and later marker emission; it is not a manual re-slicing stop.
@@ -1402,6 +1541,59 @@ fingerprints, or any non-size safety finding.
 
 If any check fails, repair both state stores and print the corrected checklist
 summary before continuing.
+
+**Budget-driven split ratification:**
+When the per-PR path budget makes the planner split an approved PR order into
+smaller increments, do not park the split for a human. Run runner helper
+`helper_id=ratify-pr-split operation=ratify-pr-split mode=read_only` with
+these inputs:
+
+- `approved_groups`: the approved PR groups in approved order, each with
+  `group_id` and `scope` (its requirement, story, and task IDs);
+- `increments`: the proposed increments in delivery order, each with
+  `increment_id`, the `group_id` it splits, `scope`, `production_paths`, and
+  `total_paths`;
+- `active_scope`: every active requirement, story, and task ID;
+- `path_budget`: the repository's per-PR `production_paths` and `total_paths`
+  caps.
+
+Each marker's evidence records, `<feature>/.process/checkpoints/<marker-id>.json`
+and `<feature>/.process/verification/<marker-id>.json`, are runner-owned and
+never count toward `production_paths` or `total_paths`, so recording them never
+needs a re-plan or an operator approval. `estimate-reviewable-loc` leaves them
+out of its counts too and reports them as `declared_files.marker_evidence`. Still
+list both files in that marker's `declared_files` and in the changed-file
+manifest, which must match the pull request's diff.
+
+The implementation-notes record, `<feature>/.process/implementation-notes.md`,
+is accounted for the same way. It is committed, publishable evidence, so stage
+it with each marker checkpoint commit and list it in each marker's
+`declared_files` and in the changed-file manifest as a path several markers
+share, like the workflow and state files. It never counts toward
+`production_paths` or `total_paths`: `estimate-reviewable-loc` leaves it out and
+reports it as `declared_files.implementation_notes`. Because an entry is
+appended after every task, the record can lag its checkpoint commit, so the
+mutation helpers' clean-worktree check ignores it; every other untracked or
+modified path still refuses apply with `dirty_worktree`.
+
+The helper ratifies only a split that divides approved groups without merging
+or dropping any, keeps the approved order and each group's scope, keeps every
+active requirement, story, and task, and keeps each increment within the
+budget. On `decision=autopilot_ratified`, write `data.record` verbatim to the
+current workflow section (`owner_ratification=ratified`,
+`ratified_by=autopilot`, and the reason) and continue without a question.
+Ask the operator only when the helper returns `decision=operator_required`;
+its findings name the cause: `scope_added`, `scope_dropped`, `group_added`,
+`group_dropped`, `group_reordered`, `group_merged`, `scope_duplicated`, or
+`reviewability_exception_needed`. Record `data.record`
+(`owner_ratification=pending` with the blockers), then ask. An `input_error`,
+a missing budget, or unreadable evidence also goes to the operator; never
+ratify it yourself.
+
+Keep only one live `owner_ratification` value in the workflow file. When a
+later section records a ratification, change each earlier
+`owner_ratification=` line to `owner_ratification=superseded` and add
+`superseded_by=<later section heading>` beside it.
 
 When reviewability evidence is marker-planning input, persist top-level
 `pr_marker_plan` in `autopilot-state.json` and mirror the same schema version,
@@ -2420,6 +2612,10 @@ feature's autopilot exhaust. Its first line is the header, written exactly once:
 # Implementation Notes: <SPEC_ID>
 ```
 
+The record is committed with each marker checkpoint and never counts toward the
+per-PR path budget; see the evidence-record rule beside the `ratify-pr-split`
+inputs.
+
 - **Create if absent**: create the `.process/` directory too when that directory
   is also absent, then create the file with the header as its only content. An
   absent directory is a thing to create, never a failure to report.
@@ -2528,9 +2724,9 @@ changed files or reviewability warnings.
 
 ### Blocked Actions Mid-Run: Fall Back or Defer, Never Stop
 
-Once Phase 7 is running, human input is for exceptional cases only. The Phase
-6.5 preflight is the one normal human touchpoint; a single blocked action after
-it is not a reason to stop the run. A blocked action is any planned command,
+Once autopilot is running, human input is for exceptional cases only. The Phase
+6.5 preflight asks no question when the standing policy covers the inventory,
+and a single blocked action after it is not a reason to stop the run. A blocked action is any planned command,
 tool call, or side effect that cannot run as planned: an approval-reviewer veto
 (including one on an action the preflight recorded as `ready`), a missing
 approval, an unavailable tool or route, or a late-discovered boundary action
@@ -2544,6 +2740,9 @@ whose refreshed preflight disposition is `operator_action_required`.
    it in the task's implementation-notes entry and the workflow file's Phase 7
    result. Then continue. Only a fallback the task or spec defines qualifies. An
    alternative the autopilot invents is a workaround and is not allowed.
+   A fallback applies only to non-gate work: it never lets a gate pass, be
+   skipped, or be deferred, and a gate the blocked action feeds still has to
+   run and pass.
 2. **With no defined fallback, defer that task.** Leave its checkbox unchecked,
    record it as deferred with the blocked action and the reason, and mark
    deferred every task and Post item that depends on it. Then keep executing
@@ -2551,33 +2750,178 @@ whose refreshed preflight disposition is `operator_action_required`.
    execution-control budget, is not a failure family, and is never retried by
    another route. Never ask the operator from inside the task, and never set a
    workflow row, plan item, or the thread goal to blocked while runnable work
-   remains.
-3. **Ask once, at the end.** Only after every runnable item has finished, and
-   only if deferred items remain, make one consolidated operator request with
-   `request_user_input`. It names each deferred item, the blocked action, why
-   the requirement needs it, the smallest operator action that unblocks it, and
-   the resume command. Always print the same question as plain text in the
-   final message too, even when `request_user_input` returns, because the
-   question UI can fail to render in a thread. In an unattended run, or when
-   `request_user_input` is absent, the plain-text copy is the request. Only then
-   may the rows holding deferred work move to `⚠ Blocked`.
+   remains. Mid-run a deferral only keeps the run working on other units;
+   at the end of the run an unresolved deferral is the human stop in rule 3.
+3. **Finalize, or stop once.** Human UAT is the only gate a run may defer.
+   Every other gate (the integration suite, live evaluations, quality and test
+   gates) must run and pass before the stack goes ready for review. Only after
+   every runnable item has finished, run the read-only `finalize-run` runner
+   helper. Pass the execution-control `ledger_path` and `expected_run_id`; every
+   final non-UAT gate result as `gate`, `status` (`passed` or `failed`), and its
+   exact `command`; the runnable work still open as `pending_items`; every rule
+   2 deferral still unresolved as `unresolved_deferrals`, each with `unit`,
+   `reason` (for a veto, the reviewer's own text), and `finish` (the exact
+   command or authorization that finishes it); the human UAT steps no agent can
+   perform as `human_uat`, each with `item`, `reason`, and `finish`; the stack's
+   `pull_requests`, bottom first; and the `resume_command`.
+   - `outcome=continue`: runnable work remains, so keep executing it.
+   - `outcome=complete_with_deferred` or `outcome=complete`: every non-UAT gate
+     passed and nothing but human UAT is left, so the run finalizes:
+     - Refresh the top PR's packet with `pr-packet-output`, passing
+       `deferred_items` (the human UAT) unchanged, so its body opens with the
+       `Deferred / not verified` section, then update that PR's body from the
+       refreshed body file.
+     - Run each of `ready_commands` to mark the whole stack ready for review.
+       The run never merges.
+     - The run marks the thread goal complete.
+     - Make one consolidated operator request with `request_user_input` whose text is
+       `end_of_run_request`, and print the same request as plain text in the
+       final message too, even when `request_user_input` returns, because the question UI can fail to render in a
+       thread. In an unattended run, or when `request_user_input` is absent, the
+       plain-text copy is the request.
+   - `outcome=human_stop`: a gate failed, the ledger's `deferred` list is not
+     empty, or a deferred task is unresolved. This is one human stop, never
+     ready for review, and the stack stays in draft. Before calling the helper,
+     retry with backoff any gate that failed on a genuine external failure, such
+     as a service outage or a reviewer veto despite a recorded chat
+     authorization: up to three attempts, waiting longer before each. Then make
+     the one consolidated operator request with `end_of_run_request`, which
+     names each failed gate with its exact command and each unresolved unit
+     with what finishes it, and print it as plain text in the final message
+     too. Set the thread goal blocked on that one
+     request.
+   Record `deferred_digest` in the workflow file's Phase 7 result. After the
+   run finalizes or stops, a later turn acts only on a new operator message and
+   never re-checks an unchanged blocker.
 4. **Report what happened.** The final report and the PR body list every
-   fallback taken and every deferred item. Pass them to `pr-packet-output` as
-   `known_gaps`, so they appear under the body's `## Known Gaps` heading. A run
-   with deferred items reports an honest incomplete checkpoint, never
-   completion.
+   fallback taken and every deferred item. Pass the fallbacks and the human UAT
+   to `pr-packet-output` as `known_gaps` too, so they also appear under the
+   body's `## Known Gaps` heading. A finalized run is complete: it names the
+   human UAT that is not verified instead of waiting on the operator.
 
 G7 and Post run on the implemented snapshot. A requirement whose only task is
 deferred is listed as deferred in the G7 evidence and in `known_gaps`; it
-neither fails G7 nor counts as covered by it.
+neither fails G7 nor counts as covered by it, and the unresolved task
+still makes the end of the run the human stop.
 
 The run must never bypass a veto: never change approval, sandbox, or reviewer
 configuration, never rerun the vetoed action under a different command or tool, and never
-treat an earlier answer as authorization for the vetoed action. The
+treat an earlier answer as authorization for the vetoed action. A reviewer veto despite a recorded chat
+authorization is a genuine external failure: retry with backoff, then the one
+human stop. The
 correctness stops above are unchanged and still stop the run: unknown side
-effects, an execution-control `checkpoint_required` disposition (including an
-exhausted repair budget), a ledger or clock error, invalid or stale state, and
-a failed gate whose repair is out of scope.
+effects, an execution-control `checkpoint_required` disposition, a ledger or
+clock error, invalid or stale state, and a failed gate whose repair is out of
+scope.
+
+A failed gate or test is not a blocked action: diagnose it through the
+consensus agents, fix it through the executor, rerun verification, and keep
+remediating while each round converges. The ledger admits the next correction
+in a family with no operator event while the previous one shrank the
+runner-recorded failing set, or moved it with every earlier failure passing.
+
+An exhausted correction allowance is not a stop. It is the non-convergence
+fallback: a correction that made no measurable progress, returned to an
+earlier failing set, left unparsed output, or followed a spec change meets the
+fixed allowances, and then the ledger returns
+`disposition=defer`, refuses that dispatch, and records the blocked failure
+family, increment, gate, or failure class in its `deferred` list. Defer that work
+under rule 2, name the task or gate it blocks, and keep executing every
+independent task, increment, gate, and Post check; never set the thread goal
+blocked for it mid-run. Mid-run that only moves the run on to other units. At the end of the run an
+unresolved ledger deferral, a gate's included, makes `finalize-run` return
+`outcome=human_stop`: rule 3's one request lists every ledger deferral;
+there the operator can approve `authorize-corrective-exception` or
+`begin-replan-epoch` once for everything deferred. It is never a mid-run
+question.
+
+### Repeated Gate Failures: Diagnose One Class, Approve It Once
+
+When consecutive runs of a gate fail with the same failure signature in the
+same test file, even when the failing tests differ, the cause is one failure
+class. The usual case is a timeout that several slow tests in one file sit
+close to. Diagnose it as one failure class, name it in the gate evidence, and
+propose one class-level fix (for example, a file-level timeout default),
+never per-test diffs for whichever tests failed this time.
+
+1. **Normalize the signature.** Strip test names, durations, and counts from
+   the failure message so two runs of the same class compare equal.
+2. **Check the environment first.** When timeouts move between different
+   tests across reruns with the same signature, treat that as an environment
+   signal first. Check host load and temp-directory size, then rerun the gate
+   once, before proposing any timeout change. Propose the class-level fix only
+   if the rerun still fails with the same signature.
+3. **Ask at most once, at the end.** When the repair budget is exhausted, the
+   reserve returns `disposition=defer`: record the class as deferred and keep
+   executing independent work. In the one end-of-run consolidated operator
+   request, ask for `authorize-corrective-exception` with a `failure_class`
+   scope: the repo-relative test file, the normalized signature, and the
+   change kind (`test_timeout`). It is never a mid-run question. The approval
+   never covers production code, another file, or another signature.
+4. **Use the approval for follow-ups.** If a later run fails again inside that
+   exact class after the approved fix completed, reserve the next correction
+   with `reserve-class-correction` and apply it without a new question. The
+   helper allows two follow-ups per approval.
+5. **Defer anything outside it.** A correction outside the approved class, a
+   class whose follow-ups are spent (`failure_class_allowance_exhausted`), or
+   a second approval request is never
+   asked in place. Defer it to the one consolidated operator request at the
+   end of the run and keep executing independent work.
+
+### Ambiguous Task Wording: Apply the Recorded Decision, Else Defer
+
+When a task's wording is ambiguous, for example whether an approved timing
+decision covers a gate task, look in the workflow file for a recorded owner
+decision that covers it: a Clarify answer, a consensus resolution, an Analyze
+remediation, the Phase 6.5 preflight record, or an operator decision the
+workflow records. If one covers it, apply that decision, record the
+interpretation with a reference to that decision in the task's
+implementation-notes entry and the workflow file's Phase 7 result, and then
+continue. If no recorded decision covers it, defer the item under
+[Blocked Actions Mid-Run: Fall Back or Defer, Never Stop](#blocked-actions-mid-run-fall-back-or-defer-never-stop)
+and name it in the end-of-run request. Never ask the operator mid-run to
+interpret task wording, even through `request_user_input`.
+
+### Plugin Update Mid-Run: Record, Re-resolve, Continue
+
+The restart and reinstall rules in the autopilot SKILL.md (the missing-agent
+guard, the agent mapping, and Step 0.10) apply only at setup or run start,
+before any phase work. Once phase work has begun, a plugin update or agent
+refresh is never a stop. The run continues on the executor agents it already
+has.
+
+1. **Cache drift: re-resolve and retry.** When the `<plugin-root>` the run
+   started from changed or vanished (a plugin update replaced the cached
+   version directory), runner and bookkeeping calls can fail. Then re-resolve
+   `<plugin-root>` against the live install the same way the run resolved it at
+   start, and take the runner's reported `plugin_root` as the new root. Re-read
+   the Installed Runtime Contract in the autopilot SKILL.md once against that
+   root, build every later `Protocol:`, `Reference dir:`, and `Gallery dir:`
+   line from it, and retry each failed bookkeeping call once.
+2. **Agent refresh: record, do not restart.** Do not rerun Step 0.10 as a stop
+   when an agent file is refreshed or found stale against the new bundle. Codex
+   re-reads a registered agent file at the next `spawn_agent`, so an in-place
+   refresh is already live. Codex fixes its list of custom agents when the
+   session starts, so only an agent the run needs that was added, renamed, or
+   removed after that point needs a restart. Defer just the dispatches that
+   need such an agent under
+   [Blocked Actions Mid-Run: Fall Back or Defer, Never Stop](#blocked-actions-mid-run-fall-back-or-defer-never-stop),
+   and keep executing everything else.
+3. **Record the drift.** In both cases, record the drift in the current phase's
+   result in the workflow file and in the final report: the plugin version the
+   run started on, the version now installed, the agent files refreshed, and
+   the calls retried. Then continue.
+4. **Any restart goes to the end.** A restart that is still needed is not a
+   deferred task. Add it as one line to the single end-of-run consolidated
+   request, or, when no such request is made, print it as plain text in the
+   final message. Keep it out of `known_gaps` and the PR body, because it is an
+   operator-environment note, not a gap in the feature. Never ask for it
+   mid-run, and never set a workflow row, plan item, or the thread goal to
+   blocked for it.
+
+Drift itself is never a stop, but the correctness stops above still apply. If a
+retried bookkeeping call fails again, or the ledger or state is invalid after
+the retry, stop on that error, not on the drift.
 
 ## PR Packet and Body Boundary
 

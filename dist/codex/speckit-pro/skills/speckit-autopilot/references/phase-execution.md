@@ -518,6 +518,11 @@ Spawn a subagent.
 **Gate:** G5 — cross-reference every FR in spec.md with
 tasks.md
 
+G5 also fails a gate task that waits on evidence its own dependents produce,
+and lists it under `gate_task_loops` (see [G5](gate-validation.md#g5--after-tasks)).
+Split each listed task: a candidate check now, with the reconciliation against
+actual evidence attached to the emission step. Then rerun G5.
+
 **Post-G5 reviewability capture (guarded):**
 After G5 passes, run the task reviewability gate without letting
 the script's compatibility exit code abort the run:
@@ -540,6 +545,59 @@ verification, invalid packet, unsafe output, unusable gate evidence, invalid
 JSON, unreadable artifacts, missing reviewability status/mode, stale
 fingerprints, or any non-size safety finding. These stops fire before Analyze or
 Implement.
+
+**Budget-driven split ratification:**
+When the per-PR path budget makes the planner split an approved PR order into
+smaller increments, do not park the split for a human. Run runner helper
+`helper_id=ratify-pr-split operation=ratify-pr-split mode=read_only` with
+these inputs:
+
+- `approved_groups`: the approved PR groups in approved order, each with
+  `group_id` and `scope` (its requirement, story, and task IDs);
+- `increments`: the proposed increments in delivery order, each with
+  `increment_id`, the `group_id` it splits, `scope`, `production_paths`, and
+  `total_paths`;
+- `active_scope`: every active requirement, story, and task ID;
+- `path_budget`: the repository's per-PR `production_paths` and `total_paths`
+  caps.
+
+Each marker's evidence records, `<feature>/.process/checkpoints/<marker-id>.json`
+and `<feature>/.process/verification/<marker-id>.json`, are runner-owned and
+never count toward `production_paths` or `total_paths`, so recording them never
+needs a re-plan or an operator approval. `estimate-reviewable-loc` leaves them
+out of its counts too and reports them as `declared_files.marker_evidence`. Still
+list both files in that marker's `declared_files` and in the changed-file
+manifest, which must match the pull request's diff.
+
+The implementation-notes record, `<feature>/.process/implementation-notes.md`,
+is accounted for the same way. It is committed, publishable evidence, so stage
+it with each marker checkpoint commit and list it in each marker's
+`declared_files` and in the changed-file manifest as a path several markers
+share, like the workflow and state files. It never counts toward
+`production_paths` or `total_paths`: `estimate-reviewable-loc` leaves it out and
+reports it as `declared_files.implementation_notes`. Because an entry is
+appended after every task, the record can lag its checkpoint commit, so the
+mutation helpers' clean-worktree check ignores it; every other untracked or
+modified path still refuses apply with `dirty_worktree`.
+
+The helper ratifies only a split that divides approved groups without merging
+or dropping any, keeps the approved order and each group's scope, keeps every
+active requirement, story, and task, and keeps each increment within the
+budget. On `decision=autopilot_ratified`, write `data.record` verbatim to the
+current workflow section (`owner_ratification=ratified`,
+`ratified_by=autopilot`, and the reason) and continue without a question.
+Ask the operator only when the helper returns `decision=operator_required`;
+its findings name the cause: `scope_added`, `scope_dropped`, `group_added`,
+`group_dropped`, `group_reordered`, `group_merged`, `scope_duplicated`, or
+`reviewability_exception_needed`. Record `data.record`
+(`owner_ratification=pending` with the blockers), then ask. An `input_error`,
+a missing budget, or unreadable evidence also goes to the operator; never
+ratify it yourself.
+
+Keep only one live `owner_ratification` value in the workflow file. When a
+later section records a ratification, change each earlier
+`owner_ratification=` line to `owner_ratification=superseded` and add
+`superseded_by=<later section heading>` beside it.
 
 **Optional: Tasks to GitHub Issues:**
 If the project uses GitHub Issues for tracking and the GitHub
@@ -677,6 +735,24 @@ Items it can't resolve are flagged in its
 
 If 0 unresolved items from executor, skip consensus and
 advance immediately.
+
+**Documentation-only remediation at a planning gate.** When a gate's
+remediation, most often Analyze (G6), edits only planning documents of the
+feature (`spec.md`, `plan.md`, `research.md`, `tasks.md`, `data-model.md`,
+`quickstart.md`, `.process/task-execution.json`, or a `checklists/<name>.md`),
+reserve it with `kind=corrective`, its `failure_invariant`, the explicit
+`spec_file`, and `gate_remediation`: the gate and every repository-relative
+path the fix will touch. The ledger admits it under that gate's own allowance
+of two rounds, so a run-wide budget spent at an earlier gate never stalls it,
+and it needs no operator approval. A remediation that touches code, tests,
+formal models, `contracts/`, or any path outside those documents goes through
+the run-wide budget with the reason in `gate_ineligible`. The helper judges
+paths only, so a threshold or scope change written inside a planning document
+is the orchestrator's call: omit `gate_remediation` and reserve it run-wide.
+When the
+reserve returns `gate_remediation_allowance_exhausted`, record the open findings
+for the end-of-run request and continue. It is never a mid-run question and
+never a stop.
 
 **Gate:** G6 — verify 0 CRITICAL findings
 
@@ -2493,6 +2569,10 @@ written exactly once:
 # Implementation Notes: <SPEC_ID>
 ```
 
+The record is committed with each marker checkpoint and never counts toward the
+per-PR path budget; see the evidence-record rule beside the `ratify-pr-split`
+inputs.
+
 - **Create if absent**: when the record is not there, create its `.process/`
   directory too if that directory is also absent, then create the file with the
   header as its only content. An absent directory is a thing to create, never a
@@ -2622,6 +2702,23 @@ suggestions separately; they do not require another repair/review cycle.
 Research a vendor claim using relevant official documentation only when needed;
 reuse still-current evidence and do not repeat generic web/code/history passes.
 
+**Review fixes inside one increment.** When an increment's required review
+finds defects in code that increment just wrote, reserve the fix with
+`kind=corrective`, its `failure_invariant`, the feature's `spec_file`, and
+`review_remediation`: the increment's `tdd_unit` and every repository-relative
+path the fix will touch.
+When the task-execution sidecar is current and every path sits inside that
+TDD unit's own `owns` and no other unit's, the ledger admits the fix under
+that increment's own allowance of two review rounds. It never draws on the
+run-wide corrective budget, so a spent run-wide budget does not stop the next
+increment's review loop. A fix that touches a path outside the increment's
+ownership, reopens another increment's accepted work, or lacks current
+ownership evidence goes through the run-wide budget unchanged. When the
+reserve returns `disposition=defer` with `increment_review_allowance_exhausted`, defer that increment
+under [Blocked Actions Mid-Run: Fall Back or Defer, Never Stop](#blocked-actions-mid-run-fall-back-or-defer-never-stop): record its
+open findings, keep its dependents deferred, and continue with independent
+increments. It is never a mid-run question and never a stop.
+
 ##### Step 3c: Agent Prompt Template
 
 ```text
@@ -2701,39 +2798,177 @@ denial), a missing approval, or an unavailable tool or route.
    it in the task's implementation-notes entry and the workflow file's Phase 7
    result. Then continue. Only a fallback the task or spec defines qualifies. An
    alternative the autopilot invents is a workaround and is not allowed.
+   A fallback applies only to non-gate work: it never lets a gate pass, be
+   skipped, or be deferred, and a gate the blocked action feeds still has to
+   run and pass.
 2. **With no defined fallback, defer that task.** Leave its checkbox unchecked,
    record it as deferred with the blocked action and the reason, and mark
    deferred every task and Post item that depends on it. Then keep executing
    every independent task, gate, and Post check. A deferral reserves no
    execution-control budget, is not a failure family, and is never retried by
    another route. Never ask the operator from inside the task, and never set a
-   workflow row or progress item to blocked while runnable work remains.
-3. **Ask once, at the end.** Only after every runnable item has finished, and
-   only if deferred items remain, make one consolidated operator request with
-   `AskUserQuestion`. It names each deferred item, the blocked action, why the
-   requirement needs it, the smallest operator action that unblocks it, and the
-   resume command. Always print the same question as plain text in the final
-   message too, so a question that does not render still reaches the operator.
-   In an unattended run, or when `AskUserQuestion` is unavailable, the plain-text
-   copy is the request. Only then may the rows holding deferred work move to
-   `⚠ Blocked`.
+   workflow row or progress item to blocked while runnable work remains. Mid-run a deferral only keeps the run
+   working on other units; at the end of the run an unresolved deferral is the
+   human stop in rule 3.
+3. **Finalize, or stop once.** Human UAT is the only gate a run may defer.
+   Every other gate (the integration suite, live evaluations, quality and test
+   gates) must run and pass before the stack goes ready for review. Only after
+   every runnable item has finished, run the read-only `finalize-run` runner
+   helper. Pass the execution-control `ledger_path` and `expected_run_id`; every
+   final non-UAT gate result as `gate`, `status` (`passed` or `failed`), and its
+   exact `command`; the runnable work still open as `pending_items`; every rule
+   2 deferral still unresolved as `unresolved_deferrals`, each with `unit`,
+   `reason` (for a veto, the reviewer's own text), and `finish` (the exact
+   command or authorization that finishes it); the human UAT steps no agent can
+   perform as `human_uat`, each with `item`, `reason`, and `finish`; the stack's
+   `pull_requests`, bottom first; and the `resume_command`.
+   - `outcome=continue`: runnable work remains, so keep executing it.
+   - `outcome=complete_with_deferred` or `outcome=complete`: every non-UAT gate
+     passed and nothing but human UAT is left, so the run finalizes:
+     - Refresh the top PR's packet with `pr-packet-output`, passing
+       `deferred_items` (the human UAT) unchanged, so its body opens with the
+       `Deferred / not verified` section, then update that PR's body from the
+       refreshed body file.
+     - Run each of `ready_commands` to mark the whole stack ready for review.
+       The run never merges.
+     - Make one consolidated operator request with `AskUserQuestion` whose text is
+       `end_of_run_request`, and print the same request as plain text in the
+       final message too, so a question that does not render still reaches the operator. In an
+       unattended run, or when `AskUserQuestion` is unavailable, the plain-text
+       copy is the request.
+   - `outcome=human_stop`: a gate failed, the ledger's `deferred` list is not
+     empty, or a deferred task is unresolved. This is one human stop, never
+     ready for review, and the stack stays in draft. Before calling the helper,
+     retry with backoff any gate that failed on a genuine external failure, such
+     as a service outage or a reviewer veto despite a recorded chat
+     authorization: up to three attempts, waiting longer before each. Then make
+     the one consolidated operator request with `end_of_run_request`, which
+     names each failed gate with its exact command and each unresolved unit
+     with what finishes it, and print it as plain text in the final message
+     too.
+   Record `deferred_digest` in the workflow file's Phase 7 result. After the
+   run finalizes or stops, a later turn acts only on a new operator message and
+   never re-checks an unchanged blocker.
 4. **Report what happened.** The final report and the PR body list every
-   fallback taken and every deferred item. Pass them to `pr-packet-output` as
-   `known_gaps`, so they appear under the body's `## Known Gaps` heading. A run
-   with deferred items reports an honest incomplete checkpoint, never
-   completion.
+   fallback taken and every deferred item. Pass the fallbacks and the human UAT
+   to `pr-packet-output` as `known_gaps` too, so they also appear under the
+   body's `## Known Gaps` heading. A finalized run is complete: it names the
+   human UAT that is not verified instead of waiting on the operator.
 
 G7 and Post run on the implemented snapshot. A requirement whose only task is
 deferred is listed as deferred in the G7 evidence and in `known_gaps`; it
-neither fails G7 nor counts as covered by it.
+neither fails G7 nor counts as covered by it, and the unresolved task
+still makes the end of the run the human stop.
 
 The run must never bypass a veto: never change approval, sandbox, or reviewer
 configuration, never rerun the vetoed action under a different command or tool,
-and never treat an earlier answer as authorization for the vetoed action. The
+and never treat an earlier answer as authorization for the vetoed action. A reviewer veto despite a recorded chat
+authorization is a genuine external failure: retry with backoff, then the one
+human stop. The
 correctness stops in this reference are unchanged and still stop the run:
-unknown side effects, an execution-control `checkpoint_required` disposition
-(including an exhausted repair budget), a ledger or clock error, invalid or
-stale state, and a failed gate whose repair is out of scope.
+unknown side effects, an execution-control `checkpoint_required` disposition,
+a ledger or clock error, invalid or stale state, and a failed gate whose
+repair is out of scope.
+
+A failed gate or test is not a blocked action: diagnose it through the
+consensus agents, fix it through the executor, rerun verification, and keep
+remediating while each round converges. The ledger admits the next correction
+in a family with no operator event while the previous one shrank the
+runner-recorded failing set, or moved it with every earlier failure passing.
+
+An exhausted correction allowance is not a stop. It is the non-convergence
+fallback: a correction that made no measurable progress, returned to an
+earlier failing set, left unparsed output, or followed a spec change meets the
+fixed allowances, and then the ledger returns
+`disposition=defer`, refuses that dispatch, and records the blocked failure
+family, increment, gate, or failure class in its `deferred` list. Defer that work
+under rule 2, name the task or gate it blocks, and keep executing every
+independent task, increment, gate, and Post check. Mid-run that only moves the run on to other units. At the end of the run an
+unresolved ledger deferral, a gate's included, makes `finalize-run` return
+`outcome=human_stop`: rule 3's one request lists every ledger deferral; there the operator can approve
+`authorize-corrective-exception` or `begin-replan-epoch` once for everything
+deferred. It is never a mid-run question.
+
+#### Repeated Gate Failures: Diagnose One Class, Approve It Once
+
+When consecutive runs of a gate fail with the same failure signature in the
+same test file, even when the failing tests differ, the cause is one failure
+class. The usual case is a timeout that several slow tests in one file sit
+close to. Diagnose it as one failure class, name it in the gate evidence, and
+propose one class-level fix (for example, a file-level timeout default),
+never per-test diffs for whichever tests failed this time.
+
+1. **Normalize the signature.** Strip test names, durations, and counts from
+   the failure message so two runs of the same class compare equal.
+2. **Check the environment first.** When timeouts move between different
+   tests across reruns with the same signature, treat that as an environment
+   signal first. Check host load and temp-directory size, then rerun the gate
+   once, before proposing any timeout change. Propose the class-level fix only
+   if the rerun still fails with the same signature.
+3. **Ask at most once, at the end.** When the repair budget is exhausted, the
+   reserve returns `disposition=defer`: record the class as deferred and keep
+   executing independent work. In the one end-of-run consolidated operator
+   request, ask for `authorize-corrective-exception` with a `failure_class`
+   scope: the repo-relative test file, the normalized signature, and the
+   change kind (`test_timeout`). It is never a mid-run question. The approval
+   never covers production code, another file, or another signature.
+4. **Use the approval for follow-ups.** If a later run fails again inside that
+   exact class after the approved fix completed, reserve the next correction
+   with `reserve-class-correction` and apply it without a new question. The
+   helper allows two follow-ups per approval.
+5. **Defer anything outside it.** A correction outside the approved class, a
+   class whose follow-ups are spent (`failure_class_allowance_exhausted`), or
+   a second approval request is never
+   asked in place. Defer it to the one consolidated operator request at the
+   end of the run and keep executing independent work.
+
+#### Ambiguous Task Wording: Apply the Recorded Decision, Else Defer
+
+When a task's wording is ambiguous, for example whether an approved timing
+decision covers a gate task, look in the workflow file for a recorded owner
+decision that covers it: a Clarify answer, a consensus resolution, an Analyze
+remediation, or an operator decision the workflow records. If one covers it,
+apply that decision, record the interpretation with a reference to that
+decision in the task's implementation-notes entry and the workflow file's
+Phase 7 result, and then continue. If no recorded decision covers it, defer the
+item under [Blocked Actions Mid-Run: Fall Back or Defer, Never Stop](#blocked-actions-mid-run-fall-back-or-defer-never-stop)
+and name it in the end-of-run request. Never ask the operator mid-run to
+interpret task wording.
+
+#### Plugin Update Mid-Run: Record, Re-resolve, Continue
+
+The Step 0.0b agent-package check and its "update or reinstall, then run
+`/reload-plugins`" rule apply only at setup or run start, before any phase
+work. Once phase work has begun, a plugin update is never a stop. The run
+continues on the agents it already has.
+
+1. **Cache drift: re-resolve and retry.** When the plugin root the run started
+   from changed or vanished (a plugin update replaced the cached version
+   directory), runner and bookkeeping calls can fail. Then re-resolve the
+   plugin root against the live install and rerun `validate-agent-install`,
+   taking its returned `plugin_root` as the new root. Re-read the Installed
+   Runtime Contract in the autopilot SKILL.md once against that root, build
+   every later `Protocol:`, `Reference dir:`, and `Gallery dir:` line from it,
+   and retry each failed bookkeeping call once.
+2. **Agent unavailable: defer that dispatch.** If a dispatch fails because its
+   agent file is missing after the update, defer only that dispatch under
+   [Blocked Actions Mid-Run: Fall Back or Defer, Never Stop](#blocked-actions-mid-run-fall-back-or-defer-never-stop)
+   and keep executing everything else.
+3. **Record the drift.** In both cases, record the drift in the current phase's
+   result in the workflow file and in the final report: the plugin version the
+   run started on, the version now installed, and the calls retried. Then
+   continue.
+4. **Any reload goes to the end.** A `/reload-plugins` or restart that is still
+   needed is not a deferred task. Add it as one line to the single end-of-run
+   consolidated request, or, when no such request is made, print it as plain
+   text in the final message. Keep it out of `known_gaps` and the PR body,
+   because it is an operator-environment note, not a gap in the feature. Never
+   ask for it mid-run, and never set a workflow row or progress item to blocked
+   for it.
+
+Drift itself is never a stop, but the correctness stops above still apply. If a
+retried bookkeeping call fails again, or the ledger or state is invalid after
+the retry, stop on that error, not on the drift.
 
 #### Append Contract: One Entry Per Dispatched Attempt
 
@@ -2823,7 +3058,8 @@ Then Command(DEPENDENCY_AUDIT) only when populated, which requires
 When MUTATION is populated, run the hardener once per spec between the
 MUTATION run and its block decision, per
 [Hardener Delegation](./hardener-delegation.md): delegate a tests-only
-loop to local Qwen when `qwen_health` is good, else run it on the primary
+loop to the delegation gateway on `route: "auto"` when `delegate_health` is
+good, else run it on the primary
 model; stop at the floor or the shared corrective ceiling; record the outcome on the
 Quality Gates table's `Hardener` line. Only after the hardener records its
 ending does a still-failing MUTATION block. MUTATION fails on its exit
@@ -2837,7 +3073,7 @@ status: `cr-rate --fail-over` for cosmic-ray, and the chained
 | Contract/unit/integration tests | `speckit-pro:implement-executor` | Yes |
 | Implementation needing project patterns | PROJECT_IMPLEMENTATION_AGENT | Yes |
 | Research / API investigation | `speckit-pro:domain-researcher` | No |
-| Verification-only, by leading verb (`verify`, `run`, `check`, `build`, `lint`) | orchestrator-direct (command tool) | No |
+| Verification-only, by leading verb (`verify`, `run`, `check`, `build`, `lint`, `confirm`, `recheck`) | orchestrator-direct (command tool) | No |
 
 Every agent receiving implementation work gets the TDD protocol
 injected. Agent selection is about DOMAIN EXPERTISE — the
@@ -2871,11 +3107,19 @@ one research task.
 `git add -A && git commit -m "feat(SPEC-XXX): implement phase"`
 
 Runner byproducts are never committed. The runner writes a `.gitignore`
-holding `*` into each directory it owns (`.process/execution-control/` and
-`.process/verification/`), so `git add -A` cannot stage the ledger or the
-verification evidence. If `git ls-files` shows such a path already tracked
+holding `*` into each directory it owns (`.process/execution-control/`,
+`.process/verification/`, and `.process/task-results/`), so `git add -A`
+cannot stage the ledger, the verification evidence, or the task-results
+journals. If `git ls-files` shows such a path already tracked
 (from an older plugin version), run `git rm -r --cached -- <path>` before this
 commit.
+
+One exception: a marker's verification record,
+`<feature>/.process/verification/<marker-id>.json`, is committed evidence that
+the phase-coverage guard reads from the pull request head. When the workflow
+file sits in the feature's `.process/` directory, the runner's ignore rule
+covers that directory, so stage the record by path with
+`git add --force -- <path>`, and never untrack it.
 
 **After G7 passes:** Validate/reuse Integration/E2E proof,
 then execute PR Creation Protocol (see below).

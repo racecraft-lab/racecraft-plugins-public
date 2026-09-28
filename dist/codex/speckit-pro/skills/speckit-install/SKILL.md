@@ -230,6 +230,33 @@ Report `data.screening_mode` and each `data.warnings[].message` and
   only allowlisted variables to MCP servers, so the broker may not see it.
   Prefer the key files.
 
+#### Autopilot review policy check
+
+Codex's automatic approval reviewer needs a standing policy so that a ratified
+autopilot plan's ordinary actions run without a per-run question: feature-branch
+pushes, the plan's pull requests and review replies, public documentation
+research, and offline audits on a worker on this machine. Read the
+`auto_review.extra_policy` string from the user-level `~/.codex/config.toml`,
+if one exists; read that file, never write it. Run runner helper
+`render-egress-authorization` in `read_only` mode with `scope=standing`, the
+repository's GitHub `owner/name`, its default branch, and that string as
+`installed_extra_policy`.
+
+- When `data.installed` is true, report the standing policy as installed.
+- Otherwise print `data.extra_policy_fragment` unchanged as the install text,
+  and tell the operator to review it and install it once. It needs Codex 0.158
+  or later. TOML allows one `[auto_review]` table, so merge it into an existing
+  `extra_policy` string. It is an `extra_policy` fragment, never
+  `auto_review.policy`, which replaces the default reviewer policy.
+- Tell the operator that a reviewer session persists for its thread, even
+  after an app restart: a new or changed policy reaches only threads started
+  after the change, so start the autopilot in a new thread after installing it.
+- This skill never writes the fragment into `~/.codex`, the repository's
+  `.codex/`, or `AGENTS.md`: the reviewer trusts `AGENTS.md`, and a branch
+  could rewrite it.
+- A missing policy is a warning, not a failure. The autopilot still runs and
+  reports it once as a setup gap.
+
 ### 7. Report
 
 Return a concise install summary:

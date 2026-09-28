@@ -59,6 +59,25 @@ def _inputs(**overrides: object) -> dict[str, object]:
     return inputs
 
 
+STANDING_CLASSES = (
+    "checkout-work",
+    "feature-branch-push",
+    "pull-request-activity",
+    "public-docs-research",
+    "local-offline-audit",
+)
+
+
+def _standing_inputs(**overrides: object) -> dict[str, object]:
+    inputs: dict[str, object] = {
+        "scope": "standing",
+        "repository": "example-org/example-repo",
+        "default_branch": "main",
+    }
+    inputs.update(overrides)
+    return inputs
+
+
 def _run(inputs: object) -> dict[str, object]:
     request = {
         "schema_version": "1.0",
@@ -102,6 +121,21 @@ class RenderEgressAuthorizationTests(unittest.TestCase):
         )
         self.assertTrue(data["authorization_message_sha256"].startswith("sha256:"))
         self.assertEqual(len(data["authorization_message_sha256"]), len("sha256:") + 64)
+
+    def test_delivery_says_send_it_as_a_chat_message_not_a_goal_edit(self) -> None:
+        data = _run(_inputs())["data"]
+        delivery = data["delivery"]
+        self.assertIn("normal chat message", delivery)
+        self.assertIn("not as an edit to the thread goal", delivery)
+        self.assertIn("reads goal text as user-provided data", delivery)
+        # The pasted text itself carries no delivery note.
+        self.assertNotIn("goal", data["authorization_message"])
+
+    def test_fragment_says_a_policy_change_reaches_only_new_threads(self) -> None:
+        for inputs in (_inputs(), _standing_inputs()):
+            fragment = _run(inputs)["data"]["extra_policy_fragment"]
+            header = fragment.split("[auto_review]")[0]
+            self.assertIn("reaches only threads started after the change", header)
 
     def test_fragment_is_extra_policy_scoped_to_the_repository(self) -> None:
         data = _run(_inputs())["data"]
@@ -214,6 +248,79 @@ class RenderEgressAuthorizationTests(unittest.TestCase):
                 self.assertEqual(response["status"], "input_error", response)
                 codes = [item["code"] for item in response["diagnostics"]]
                 self.assertEqual(codes, ["invalid_input"], response)
+
+    def test_standing_policy_covers_ordinary_classes_without_actions(self) -> None:
+        """A repository-scoped policy installed once at setup (issue 764)."""
+        response = _run(_standing_inputs())
+        self.assertEqual(response["status"], "ok", response)
+        data = response["data"]
+        self.assertFalse(data["writes_state"])
+        self.assertEqual(data["scope"], "standing")
+        self.assertNotIn("authorization_message", data)
+        self.assertEqual(
+            [item["class_id"] for item in data["policy_classes"]],
+            list(STANDING_CLASSES),
+        )
+        fragment = data["extra_policy_fragment"]
+        parsed = tomllib.loads(fragment)
+        self.assertEqual(sorted(parsed), ["auto_review"])
+        self.assertEqual(sorted(parsed["auto_review"]), ["extra_policy"])
+        policy = parsed["auto_review"]["extra_policy"]
+        for class_id in STANDING_CLASSES:
+            self.assertIn(f"- {class_id}: Payload: ", policy)
+        for phrase in (
+            "https://github.com/example-org/example-repo",
+            "git remote get-url --push origin",
+            "any branch other than main",
+            "never includes secrets",
+            "public documentation",
+            "loopback",
+        ):
+            self.assertIn(phrase, policy)
+        self.assertTrue(data["standing_policy_sha256"].startswith("sha256:"))
+
+    def test_standing_policy_keeps_every_human_stop(self) -> None:
+        run_policy = tomllib.loads(_run(_inputs())["data"]["extra_policy_fragment"])
+        standing_policy = tomllib.loads(_run(_standing_inputs())["data"]["extra_policy_fragment"])
+
+        def stops(parsed: dict) -> list[str]:
+            policy = parsed["auto_review"]["extra_policy"]
+            return [line for line in policy.splitlines() if line.startswith("- Outcome rule: ")]
+
+        self.assertEqual(stops(standing_policy), stops(run_policy))
+        self.assertEqual(len(stops(standing_policy)), 5)
+
+    def test_standing_fragment_says_merge_and_never_proposes_policy(self) -> None:
+        fragment = _run(_standing_inputs())["data"]["extra_policy_fragment"]
+        header = fragment.split("[auto_review]")[0]
+        self.assertIn("never auto_review.policy", header)
+        self.assertIn("merge", header)
+        self.assertIn("one auto_review table", header)
+        self.assertNotIn("\npolicy =", fragment)
+
+    def test_standing_policy_reports_whether_it_is_installed(self) -> None:
+        data = _run(_standing_inputs())["data"]
+        self.assertIs(data["installed"], False)
+        policy = tomllib.loads(data["extra_policy_fragment"])["auto_review"]["extra_policy"]
+        merged = "## Other operator rules\n- keep this\n\n" + policy
+        self.assertIs(_run(_standing_inputs(installed_extra_policy=merged))["data"]["installed"], True)
+        other = policy.replace("example-org/example-repo", "example-org/other-repo")
+        self.assertIs(_run(_standing_inputs(installed_extra_policy=other))["data"]["installed"], False)
+
+    def test_scope_rules_fail_closed(self) -> None:
+        cases = {
+            "standing with actions": _standing_inputs(actions=[dict(ACTIONS[0])]),
+            "unknown scope": _inputs(scope="session"),
+            "installed policy in run scope": _inputs(installed_extra_policy="x"),
+            "installed policy not a string": _standing_inputs(installed_extra_policy=3),
+            "standing missing default branch": {
+                k: v for k, v in _standing_inputs().items() if k != "default_branch"
+            },
+        }
+        for label, inputs in cases.items():
+            with self.subTest(case=label):
+                response = _run(inputs)
+                self.assertEqual(response["status"], "input_error", response)
 
     def test_fixture_request_renders(self) -> None:
         request = json.loads(FIXTURE_REQUEST.read_text(encoding="utf-8"))

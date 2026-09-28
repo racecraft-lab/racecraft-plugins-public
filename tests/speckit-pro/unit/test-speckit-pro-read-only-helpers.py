@@ -98,6 +98,9 @@ EXPECTED_HELPERS = [
     "aggregate-crl",
     "research-broker-preflight",
     "render-egress-authorization",
+    "check-gate-preflight-coverage",
+    "finalize-run",
+    "ratify-pr-split",
     "list-archive-candidates",
 ]
 
@@ -157,6 +160,18 @@ HELPER_CASES: dict[str, dict[str, object]] = {
     "research-broker-preflight": {},
     "render-egress-authorization": json.loads(
         (REPO_ROOT / "tests/speckit-pro/unit/fixtures/read-only-helpers/requests/render-egress-authorization.json")
+        .read_text(encoding="utf-8")
+    )["inputs"],
+    "check-gate-preflight-coverage": json.loads(
+        (REPO_ROOT / "tests/speckit-pro/unit/fixtures/read-only-helpers/requests/check-gate-preflight-coverage.json")
+        .read_text(encoding="utf-8")
+    )["inputs"],
+    "finalize-run": json.loads(
+        (REPO_ROOT / "tests/speckit-pro/unit/fixtures/read-only-helpers/requests/finalize-run.json")
+        .read_text(encoding="utf-8")
+    )["inputs"],
+    "ratify-pr-split": json.loads(
+        (REPO_ROOT / "tests/speckit-pro/unit/fixtures/read-only-helpers/requests/ratify-pr-split.json")
         .read_text(encoding="utf-8")
     )["inputs"],
     "list-archive-candidates": {"current_target": "specs/001-current-feature"},
@@ -3473,6 +3488,176 @@ class ReadOnlyHelperTests(unittest.TestCase):
             code, payload = self._helper_json("validate_gate", {"gate": "G4", "feature_dir": "specs/001-demo"}, project_path)
             self.assertEqual((0, True), (code, payload["pass"]))
 
+    def _g5(self, project_path: Path, tasks: str, depends_on: dict[str, list[str]] | None) -> tuple[int, dict[str, object]]:
+        feature = project_path / "specs" / "001-demo"
+        feature.mkdir(parents=True, exist_ok=True)
+        (feature / "tasks.md").write_text(tasks, encoding="utf-8")
+        if depends_on is not None:
+            (feature / ".process").mkdir(exist_ok=True)
+            sidecar = {
+                "schema_version": "task-execution.v1",
+                "fingerprints": {},
+                "tasks": {
+                    task_id: {"capability_group": "demo", "depends_on": deps, "owns": ["src"], "tdd_unit": task_id.lower()}
+                    for task_id, deps in depends_on.items()
+                },
+            }
+            (feature / ".process" / "task-execution.json").write_text(json.dumps(sidecar), encoding="utf-8")
+        return self._helper_json("validate_gate", {"gate": "G5", "feature_dir": "specs/001-demo"}, project_path)
+
+    G5_LOOP_TASKS = (
+        "## Phase 1: Setup\n\n"
+        + "- [ ] T001 Inventory the candidate PR markers and reconcile them against the first actual implementation checkpoint\n"
+        + "- [ ] T002 Confirm the marker plan recorded by T001\n\n"
+        + "## Phase 3: User Story 1\n\n"
+        + "- [ ] T003 [US1] Implement the parser in src/parser.py\n"
+    )
+    G5_LOOP_DEPENDS = {"T001": [], "T002": ["T001"], "T003": ["T002"]}
+
+    def test_validate_gate_g5_rejects_a_gate_task_that_waits_on_its_dependents(self) -> None:
+        """#773: a setup gate that needs implementation evidence can never complete."""
+        if self.helper_filter and self.helper_filter != "validate-gate":
+            self.skipTest("G5 gate-task loop case uses validate-gate")
+        with helper_project() as project_path:
+            code, payload = self._g5(project_path, self.G5_LOOP_TASKS, self.G5_LOOP_DEPENDS)
+        self.assertEqual((1, False), (code, payload["pass"]))
+        self.assertEqual(3, payload["task_count"])
+        loops = payload["gate_task_loops"]
+        self.assertEqual(["T001"], [loop["task"] for loop in loops])
+        self.assertEqual(["T002", "T003"], loops[0]["dependents"])
+        self.assertEqual("first actual implementation checkpoint", loops[0]["evidence"])
+        detail = " ".join(payload["details"])
+        self.assertIn("T001", detail)
+        self.assertIn("Split it", detail)
+        self.assertIn("candidate check", detail)
+        self.assertIn("emission step", detail)
+
+    def test_validate_gate_g5_passes_the_split_gate_form(self) -> None:
+        if self.helper_filter and self.helper_filter != "validate-gate":
+            self.skipTest("G5 gate-task loop case uses validate-gate")
+        tasks = (
+            "## Phase 1: Setup\n\n"
+            + "- [ ] T001 Inventory the candidate PR markers as a candidate check\n"
+            + "- [ ] T002 Confirm the candidate marker plan recorded by T001\n\n"
+            + "## Phase 3: User Story 1\n\n"
+            + "- [ ] T003 [US1] Implement the parser in src/parser.py\n\n"
+            + "## Phase 4: Polish & Cross-Cutting Concerns\n\n"
+            + "- [ ] T004 Before PR emission, reconcile the markers against the actual per-PR diff, actual LOC and checkpoint evidence\n"
+            + "- [ ] T005 Emit the PR body from the reconciled markers of T004\n"
+        )
+        depends = {"T001": [], "T002": ["T001"], "T003": ["T002"], "T004": ["T003"], "T005": ["T004"]}
+        with helper_project() as project_path:
+            code, payload = self._g5(project_path, tasks, depends)
+        self.assertEqual((0, True), (code, payload["pass"]), payload)
+        self.assertNotIn("gate_task_loops", payload)
+
+    def test_validate_gate_g5_passes_a_gate_that_only_names_the_later_emission_step(self) -> None:
+        if self.helper_filter and self.helper_filter != "validate-gate":
+            self.skipTest("G5 gate-task loop case uses validate-gate")
+        tasks = self.G5_LOOP_TASKS.replace(
+            "reconcile them against the first actual implementation checkpoint",
+            "check them now; reconciliation against the actual diff happens later in T004 before PR emission",
+        )
+        with helper_project() as project_path:
+            code, payload = self._g5(project_path, tasks, self.G5_LOOP_DEPENDS)
+        self.assertEqual((0, True), (code, payload["pass"]), payload)
+
+    def test_validate_gate_g5_passes_a_stop_before_pr_emission_guard_clause(self) -> None:
+        """#802: a stop condition timed before PR emission is not evidence the task's dependents produce."""
+        if self.helper_filter and self.helper_filter != "validate-gate":
+            self.skipTest("G5 gate-task loop case uses validate-gate")
+        tasks = (
+            "## Phase 3: User Story 1\n\n"
+            + "- [ ] T001 [US1] Implement the parser in src/parser.py\n"
+            + "- [ ] T002 [US1] Run the structural cases and record the slice paths and marker checkpoint; "
+            + "stop before PR emission on any new path or failed gate\n\n"
+            + "## Phase 4: User Story 2\n\n"
+            + "- [ ] T003 [US2] Implement the writer in src/writer.py\n"
+        )
+        with helper_project() as project_path:
+            code, payload = self._g5(project_path, tasks, {"T001": [], "T002": ["T001"], "T003": ["T002"]})
+        self.assertEqual((0, True), (code, payload["pass"]), payload)
+        self.assertNotIn("gate_task_loops", payload)
+
+    def test_validate_gate_g5_uses_sidecar_dependents_outside_the_setup_phase(self) -> None:
+        if self.helper_filter and self.helper_filter != "validate-gate":
+            self.skipTest("G5 gate-task loop case uses validate-gate")
+        tasks = (
+            "## Phase 3: User Story 1\n\n"
+            + "- [ ] T001 [US1] Record the actual LOC before starting the parser\n"
+            + "- [ ] T002 [US1] Implement the parser in src/parser.py\n"
+        )
+        with helper_project() as project_path:
+            code, payload = self._g5(project_path, tasks, {"T001": [], "T002": ["T001"]})
+            self.assertEqual((1, False), (code, payload["pass"]))
+            self.assertEqual(["T002"], payload["gate_task_loops"][0]["dependents"])
+            code, payload = self._g5(project_path, tasks, {"T001": [], "T002": []})
+            self.assertEqual((0, True), (code, payload["pass"]), payload)
+        with helper_project() as project_path:
+            # Without a sidecar only the setup/foundation phase rule applies.
+            code, payload = self._g5(project_path, tasks, None)
+        self.assertEqual((0, True), (code, payload["pass"]), payload)
+
+    def test_validate_gate_g5_ignores_completed_tasks_and_fails_closed_on_a_bad_sidecar(self) -> None:
+        if self.helper_filter and self.helper_filter != "validate-gate":
+            self.skipTest("G5 gate-task loop case uses validate-gate")
+        with helper_project() as project_path:
+            done = self.G5_LOOP_TASKS.replace("- [ ] T001", "- [x] T001")
+            code, payload = self._g5(project_path, done, self.G5_LOOP_DEPENDS)
+            self.assertEqual((0, True), (code, payload["pass"]), payload)
+            sidecar = project_path / "specs" / "001-demo" / ".process" / "task-execution.json"
+            sidecar.write_text("{not json", encoding="utf-8")
+            code, payload = self._g5(project_path, self.G5_LOOP_TASKS.replace("first actual implementation", "first"), None)
+        self.assertEqual((1, False), (code, payload["pass"]))
+        self.assertIn("validate-task-execution", payload["reason"])
+
+    G5_COVERAGE_TASKS = (
+        "## Phase 3: User Story 1\n\n"
+        + "- [ ] T001 [US1] Implement the parser in src/parser.py\n"
+        + "- [ ] T002 [US1] Implement the writer in src/writer.py\n\n"
+        + "## Requirement Coverage\n\n"
+        + "| Requirement | Tasks |\n"
+        + "|---|---|\n"
+        + "| FR-005 parse input | T001 (US1) |\n"
+        + "| FR-006 write output |  () |\n"
+        + "| FR-007 keep order |   |\n"
+        + "| FR-008 report errors | T001, T002 |\n"
+    )
+
+    def test_validate_gate_g5_fails_empty_requirement_coverage_rows(self) -> None:
+        """#794: a coverage row with an empty or placeholder task cell fails G5 and names the row."""
+        if self.helper_filter and self.helper_filter != "validate-gate":
+            self.skipTest("G5 coverage-row case uses validate-gate")
+        with helper_project() as project_path:
+            code, payload = self._g5(project_path, self.G5_COVERAGE_TASKS, None)
+        self.assertEqual((1, False), (code, payload["pass"]), payload)
+        self.assertEqual(["FR-006", "FR-007"], [row["requirement"] for row in payload["empty_coverage_rows"]])
+        self.assertIn("2 requirement coverage row(s)", payload["reason"])
+        detail = " ".join(payload["details"])
+        self.assertIn("FR-006", detail)
+        self.assertIn("FR-007", detail)
+        self.assertIn("task IDs", detail)
+
+    def test_validate_gate_g5_passes_filled_or_absent_coverage_tables(self) -> None:
+        if self.helper_filter and self.helper_filter != "validate-gate":
+            self.skipTest("G5 coverage-row case uses validate-gate")
+        filled = self.G5_COVERAGE_TASKS.replace("|  () |", "| T002 (US1) |").replace("|   |", "| T001-T002 |")
+        other_table = self.G5_COVERAGE_TASKS.replace("| Requirement | Tasks |", "| Requirement | Notes |")
+        absent = self.G5_COVERAGE_TASKS.split("## Requirement Coverage")[0]
+        for name, tasks in (("filled", filled), ("no task column", other_table), ("no table", absent)):
+            with self.subTest(case=name), helper_project() as project_path:
+                code, payload = self._g5(project_path, tasks, None)
+                self.assertEqual((0, True), (code, payload["pass"]), payload)
+                self.assertNotIn("empty_coverage_rows", payload)
+
+    def test_tasks_prompt_tells_the_producer_to_fill_every_coverage_row(self) -> None:
+        template = Path(__file__).resolve().parents[3] / "speckit-pro/skills/speckit-coach/templates/workflow-template.md"
+        text = template.read_text(encoding="utf-8")
+        prompt = " ".join(text[text.index("### Tasks Prompt"):text.index("### Tasks Results")].split())
+        self.assertIn("requirement coverage table", prompt)
+        self.assertIn("every row", prompt)
+        self.assertIn("G5 fails", prompt)
+
     @contextmanager
     def _g6_project(self) -> Iterator[Path]:
         """A clean planning tree: no bracketed severity marker in spec, plan, or tasks."""
@@ -3593,6 +3778,54 @@ class ReadOnlyHelperTests(unittest.TestCase):
                     payload = estimate(project_path, *entries)
                     self.assertEqual("pass", payload["status"])
                     self.assertEqual(expected, payload["declared_files"]["production"])
+
+    def test_estimate_reviewable_loc_does_not_count_marker_evidence_toward_the_path_budget(self) -> None:
+        if self.helper_filter and self.helper_filter != "estimate-reviewable-loc":
+            self.skipTest("marker evidence case uses estimate-reviewable-loc")
+        cap = 24
+        entries = [f"src/module_{index:02d}.py" for index in range(4)]
+        entries += [f"docs/page_{index:02d}.md" for index in range(cap - len(entries) - 1)]
+        entries.append("specs/001-demo/.process/reviewability/us1.json")
+        evidence = [
+            "specs/001-demo/.process/checkpoints/us1.json",
+            "specs/001-demo/.process/verification/us1.json",
+        ]
+        body = "\n".join(f"- NEW {entry}" for entry in entries + evidence)
+        with helper_project() as project_path:
+            (project_path / "plan.md").write_text(
+                f"# Plan\n\n## Declared File Operations\n\n{body}\n", encoding="utf-8"
+            )
+            code, payload = self._helper_json(
+                "estimate_reviewable_loc", {"plan_file": "plan.md"}, project_path
+            )
+        self.assertEqual(0, code)
+        declared = payload["declared_files"]
+        self.assertEqual(cap, declared["total_entries"])
+        self.assertEqual(cap, declared["new"])
+        self.assertEqual(4, declared["production"])
+        self.assertEqual(len(evidence), declared["marker_evidence"])
+
+    def test_estimate_reviewable_loc_does_not_count_the_implementation_notes_record(self) -> None:
+        """#801: the notes record is committed run evidence, like a marker's records, not budgeted work."""
+        if self.helper_filter and self.helper_filter != "estimate-reviewable-loc":
+            self.skipTest("implementation notes case uses estimate-reviewable-loc")
+        cap = 24
+        entries = [f"src/module_{index:02d}.py" for index in range(4)]
+        entries += [f"docs/page_{index:02d}.md" for index in range(cap - len(entries))]
+        notes = "specs/001-demo/.process/implementation-notes.md"
+        body = "\n".join(f"- NEW {entry}" for entry in [*entries, notes])
+        with helper_project() as project_path:
+            (project_path / "plan.md").write_text(
+                f"# Plan\n\n## Declared File Operations\n\n{body}\n", encoding="utf-8"
+            )
+            code, payload = self._helper_json(
+                "estimate_reviewable_loc", {"plan_file": "plan.md"}, project_path
+            )
+        self.assertEqual(0, code)
+        declared = payload["declared_files"]
+        self.assertEqual(cap, declared["total_entries"])
+        self.assertEqual(1, declared["implementation_notes"])
+        self.assertEqual(0, declared["marker_evidence"])
 
     def test_detect_commands_finds_repository_test_runner(self) -> None:
         """A runner script under tests/ is real, verifiable evidence of a test command.
@@ -4152,6 +4385,27 @@ class ReadOnlyHelperTests(unittest.TestCase):
                     self.assertFalse(data["writes_state"])
                     self.assertEqual(data["action_ids"], ["live-skill-eval", "push-feature-branch"])
                     self.assertIn("[auto_review]\nextra_policy = ", data["extra_policy_fragment"])
+                    self.assertEqual(stderr_records, [])
+                    continue
+                if helper_id == "check-gate-preflight-coverage":
+                    self.assert_response(response, "ok", 0)
+                    self.assertFalse(data["writes_state"])
+                    self.assertTrue(data["covered"])
+                    self.assertEqual(stderr_records, [])
+                    continue
+                if helper_id == "finalize-run":
+                    self.assert_response(response, "ok", 0)
+                    self.assertFalse(data["writes_state"])
+                    # The fixture ledger holds a deferral, so the run ends in one human stop.
+                    self.assertEqual(data["outcome"], "human_stop")
+                    self.assertEqual(data["ready_commands"], [])
+                    self.assertEqual(stderr_records, [])
+                    continue
+                if helper_id == "ratify-pr-split":
+                    self.assert_response(response, "ok", 0)
+                    self.assertFalse(data["writes_state"])
+                    self.assertEqual(data["decision"], "autopilot_ratified")
+                    self.assertEqual(data["ratified_by"], "autopilot")
                     self.assertEqual(stderr_records, [])
                     continue
                 if helper_id == "list-archive-candidates":

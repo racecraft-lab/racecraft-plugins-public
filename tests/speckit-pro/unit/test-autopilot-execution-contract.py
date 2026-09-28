@@ -203,6 +203,13 @@ class ExecutionMirrorTests(unittest.TestCase):
         self.assertEqual([], self.validator.validate_state_status({
             "status": "in_progress", "execution_control": mirror,
         })["state_status_errors"])
+        deferred = dict(mirror, disposition="defer", reasons=["failure_family_budget_exhausted"])
+        self.assertEqual([], self.validator.validate_state_status({
+            "status": "in_progress", "execution_control": deferred,
+        })["state_status_errors"])
+        self.assertTrue(self.validator.validate_state_status({
+            "status": "in_progress", "execution_control": dict(mirror, disposition="stop_for_approval"),
+        })["state_status_errors"])
         checkpoint = dict(mirror, disposition="checkpoint_required", reasons=["slice_deadline"])
         self.assertEqual([], self.validator.validate_state_status({
             "status": "awaiting_review", "execution_control": checkpoint,

@@ -30,10 +30,26 @@ when its disposition permits. Resume and agent replacement never reset budget.
   `SUBAGENT_WAVE_SIZE`, preserving task order in the final result regardless of
   completion order. The resolver reserves one slot for recovery. An invalid
   concurrency override forces wave size 1 and emits a warning.
-- **Gate needs repair:** Use the shared one-cycle-per-family/two-cycle-per-spec
-  reservation limits. On exhaustion, checkpoint and show the gate output. After
-  an operator-ordered re-plan, `begin-replan-epoch` opens a fresh allowance with
-  the operator's approval ([Bounded Execution](./execution-efficiency.md)).
+- **Gate needs repair:** Diagnose through the consensus agents, fix through
+  the executor, rerun verification, and keep remediating while each round
+  converges: the ledger admits the next correction in a family with no
+  operator event when the previous one shrank the runner-recorded failing set,
+  or moved it with every earlier failure passing. On non-convergence (no
+  measurable progress, a return to an earlier failing set, unparsed output, or
+  a spec change) the shared one-cycle-per-family/two-cycle-per-spec
+  reservation limits apply. An exhausted allowance returns `disposition=defer`:
+  record the deferral with the gate output, keep executing every independent
+  task, increment, and gate, and list it in the one end-of-run consolidated
+  request. It is never a mid-run question. `authorize-corrective-exception`
+  and `begin-replan-epoch` are end-of-run tools that act on the operator's
+  answer to that request. An explicit `--stage implement` opens the implement
+  stage's own allowance through `begin-stage-epoch`
+  ([Bounded Execution](./execution-efficiency.md)). A task-verb fix that only
+  reroutes a task to verification reserves with `metadata_only: true`; the
+  runner proves it against the committed baseline and spends no cycle.
+  Repeated failures with one signature in one test file are one class: one
+  approval covers its follow-ups through `reserve-class-correction`. See
+  [Repeated Gate Failures: Diagnose One Class, Approve It Once](./phase-execution.md#repeated-gate-failures-diagnose-one-class-approve-it-once).
 - **Consensus agents all disagree:** Flag `[HUMAN REVIEW NEEDED]`.
   In an interactive session, ask the operator in place with
   `AskUserQuestion` (the analysts' positions as options, the synthesizer's
@@ -48,6 +64,11 @@ when its disposition permits. Resume and agent replacement never reset budget.
   own fallback, or defer that task and keep executing independent work, then
   ask once at the end. See
   [Blocked Actions Mid-Run: Fall Back or Defer, Never Stop](./phase-execution.md#blocked-actions-mid-run-fall-back-or-defer-never-stop).
+- **Plugin updated mid-run:** A plugin cache that changed or vanished, or an
+  agent refreshed after phase work began, is not a stop. Re-resolve the plugin
+  root, retry the failed bookkeeping calls once, record the drift, and
+  continue; any restart goes into the end-of-run request. See
+  [Plugin Update Mid-Run: Record, Re-resolve, Continue](./phase-execution.md#plugin-update-mid-run-record-re-resolve-continue).
 
 ## Context Window Management
 

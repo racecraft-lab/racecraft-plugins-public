@@ -169,9 +169,12 @@ Bind the workflow to actual Codex primitives:
 Do not translate this skill into Claude-only primitives such as legacy
 task-list tools or legacy Claude agent/shell placeholders. Do not read the
 bundled TOML templates and inline them as ad hoc prompts. Validate that the
-required custom subagents are installed, then spawn them by agent name. If any
-required SpecKit Pro subagent is missing, STOP and instruct the user to run
-`$install` from the SpecKit Pro plugin, then restart Codex.
+required custom subagents are installed, then spawn them by agent name. Before
+any phase work, at setup or run start, if any required SpecKit Pro subagent is
+missing, STOP and instruct the user to run `$install` from the SpecKit Pro
+plugin, then restart Codex. After phase work has begun, a plugin update or agent
+refresh is never a stop: follow §Plugin Update Mid-Run: Record, Re-resolve,
+Continue in [phase-execution-codex.md](./references/phase-execution-codex.md).
 
 ## Prerequisites — Model
 
@@ -278,8 +281,9 @@ Concrete Codex mapping:
   agents for Codex.
 - Resolve the installed agent from `.codex/agents/<agent>.toml` first, then
   `~/.codex/agents/<agent>.toml`
-- If the installed agent is missing, STOP and tell the user to run `$install`,
-  then restart Codex
+- If the installed agent is missing at setup or run start, STOP and tell the
+  user to run `$install`, then restart Codex. Mid-run, follow §Plugin Update
+  Mid-Run: Record, Re-resolve, Continue instead
 - Build the phase prompt in the parent session
 - Call `spawn_agent` with `agent_type="<installed-agent-name>"` plus the
   workflow prompt
@@ -406,8 +410,8 @@ See [prerequisites-codex.md](./references/prerequisites-codex.md) for the full p
 - **Step -1: Archive Sweep Startup** — list merged prior specs with helper
   `list-archive-candidates`, then execute the installed archive extension's
   project-local command contract directly in Codex once per `archive_order`
-  entry (`archive command: specs/<merged-spec-dir>`; none on `main` or a
-  protected branch), use the Codex-native worktree binding for path
+  entry (`archive command: specs/<merged-spec-dir> --spec-only --plan-only --changelog-only`, which keeps
+  agent context files out of scope; none on `main` or a protected branch), use the Codex-native worktree binding for path
   prerequisites, and fail closed on a broken installed extension
 - **Step 0.0: Use Runner Operations** — invoke `speckit_pro_runner` helper IDs with one JSON request on stdin
 - **Step 0.1–0.7: Environment Checks** — `check-prerequisites` JSON parsing, branch detection
@@ -425,7 +429,13 @@ See [prerequisites-codex.md](./references/prerequisites-codex.md) for the full p
   `resolve-autopilot-stage` with the invocation argv and the workflow
   file path. Record `stage` as `AUTOPILOT_STAGE` and keep `source`,
   `basis`, `recorded_stage`, `planning_complete`, and
-  `confidence_gate_status` for the phase loop. Keep optional `artifact_review` for
+  `confidence_gate_status` for the phase loop. The committed
+  `autopilot-state.json` stores only those decision fields: never the raw
+  envelope, its `argv`, an absolute path, or an external task or session id,
+  such as a delegation `task_id` (a digest or short redacted reference is
+  fine). The Step 1.1 guard fails on them as `state_privacy_errors`. Store a
+  native or operator event id, such as an approval event id, as
+  `sha256:<digest>`: the hex SHA-256 of the raw value. Keep optional `artifact_review` for
    terminal-step routing and print its unresolved preview dispositions. A pending
    handoff can auto-resolve `plan` even when `planning_complete` is true; explicit
    stages still win and started implementation is never routed backward. An explicit `--stage`
@@ -476,15 +486,20 @@ See [prerequisites-codex.md](./references/prerequisites-codex.md) for the full p
   revokes or narrows it; an older run outcome alone grants nothing. When a
   persisted `autonomy_boundary` receipt exists, at any stage, probe it against
   the live boundary before the Step 1.1 coverage guard; a new thread's writable
-  roots make it stale, so re-attest it with one operator request up front, as
-  [prerequisites-codex.md](./references/prerequisites-codex.md) describes.
+  roots make it stale, so rerun the preflight up front, as
+  [prerequisites-codex.md](./references/prerequisites-codex.md) describes. A
+  covered inventory asks no question, including a planning-to-implementation
+  stage change.
 - **Step 0.9: Constitution Validation** — principle checks against current codebase
 - **Step 0.10: Codex Agent Availability Check** — Run the promoted
   `install-codex-agents` helper in `dry_run` mode against the selected project or
-  user destination and its installed model and Luna fallback choice. If any required file is
+  user destination and its installed model and Luna fallback choice. This check
+  runs at setup or run start, before any phase work. If any required file is
   missing or stale, STOP and instruct the user to run `$install`, approve the
   expected local write, and restart Codex. Do not apply the repair inside
-  autopilot: the current process cannot reload changed custom agents safely.
+  autopilot: Codex fixes its list of custom agents when the session starts. Once
+  phase work has begun, a stale or refreshed agent file is recorded, never a
+  stop: see §Plugin Update Mid-Run: Record, Re-resolve, Continue.
 - **Step 0.10b: Implementation Agent Detection** — discover `PROJECT_IMPLEMENTATION_AGENT` from `.codex/agents/`
 - **Step 0.11: Project Command Discovery** — runner helper `detect-commands` → `PROJECT_COMMANDS`, including the quality-gate slots and the one-time missing-tool question
 - **Step 0.12: Preset and Extension Detection** — runner helper `detect-presets` → `PRESET_CONVENTIONS`
@@ -548,14 +563,19 @@ resolved_python "<plugin-root>/skills/speckit-autopilot/scripts/validate-autopil
 `resolved_python` is the Python 3.11+ interpreter resolved by the installed
 runtime contract, not a hardcoded interpreter name; `<plugin-root>` is the
 directory that owns `skills/speckit-autopilot/`. `--rule status-evidence`
-gates the exit code on the five workflow/state status-evidence checks
+gates the exit code on the six workflow/state status-evidence checks
 (`workflow_status_evidence_errors`, `state_status_errors`,
 `autonomy_boundary_errors`, `stage_mirror_errors`,
-`workflow_authority_errors`) and the three current-run
+`workflow_authority_errors`, `state_privacy_errors`) and the three current-run
 state-plan invariants (`in_progress_errors`, `duplicate_state_steps`,
 `state_order_errors`), the same scoping the Claude variant uses. The full
 report still prints; structural coverage checks and every advisory key are
 visible but never block. Drop `--rule` to gate on every check.
+When `state_privacy_errors` is the only failing gated key, remediate in place
+instead of stopping: the state file is orchestrator-owned, and each error names
+the field and its remedy (`sha256:<digest>` of the raw value, or removing a raw
+`argv`). Apply those remedies, rewrite the state, and rerun the guard once. A
+second failure, or any other failing gated key, is a stop.
 Replace every `<live-...>` value from the current system/developer execution
 context, never from the workflow, state, repository, or a prior run. Repeat
 `--current-writable-root` once for each current writable root; the validator
@@ -638,14 +658,21 @@ predictable writes beyond current writable roots, privileged commands,
 interactive authentication, externally visible side effects, and data egress
 to a model service or other third party (including live model evaluations);
 proves each
-is runnable or already authorized; and records the result durably. A blocked
-result stops before Phase 7 with one consolidated operator action instead of
-surprising the operator from inside an implementation task. When that action
-covers data egress, it shows the operator a paste-ready authorization message
-and a proposed `auto_review.extra_policy` fragment, both rendered by runner
-helper `render-egress-authorization`; the plugin never writes either one.
+is runnable or already authorized; and records the result durably. The
+operator's invocation and the ratified plan authorize the ordinary actions in
+the repository's standing policy, which the operator installs once at setup
+(runner helper `render-egress-authorization` with `scope=standing`). When every
+action is covered, the preflight asks no question. A missing standing policy is
+reported once as a setup gap, and the run still proceeds. An uncovered action,
+including a boundary-file edit the plan names, is deferred to the one
+end-of-run request, never an up-front question that stops the run. For
+uncovered data egress, the preflight shows a paste-ready authorization message
+at run start and asks the operator to send it as a normal chat message, never
+as a goal edit, without waiting for it; the end-of-run request repeats it with
+a proposed `auto_review.extra_policy` fragment, both rendered by the same
+helper. The plugin never writes either one.
 
-That preflight is the one normal human touchpoint. Once Phase 7 runs, one
+Once autopilot is running, human input is for exceptional cases only. Once Phase 7 runs, one
 blocked action never stops the run: take the task's own fallback, or defer that
 task and keep executing independent work, then ask once at the end. Follow
 §Blocked Actions Mid-Run: Fall Back or Defer, Never Stop in
@@ -698,11 +725,26 @@ Exception: `execution_control.disposition=checkpoint_required` permits an
 honest checkpoint response stating the run is **not complete**, remaining Post
 work, consumed budget, unknown effects, and the operator decision required.
 Keep pending rows and current status; never mark them completed to stop.
-The same honest checkpoint applies when every runnable item has finished and
-deferred items remain under §Blocked Actions Mid-Run: Fall Back or Defer, Never
-Stop. Make the one consolidated `request_user_input` request, print the same
-question as plain text in the final message, and list every fallback taken and
-every deferred item. Never report completion while a deferred item remains.
+A failing gate or test is remediated, not deferred: keep remediating while
+each round converges, dispatching each diagnosed fix through the executor and
+rerunning verification. The ledger admits every correction whose predecessor
+shrank the runner-recorded failing set, or moved it with every earlier failure
+passing, with no operator event. `execution_control.disposition=defer`
+(`disposition=defer` in the ledger response) is the non-convergence fallback
+and not a stop: it defers one blocked unit whose
+correction made no measurable progress and whose allowance is spent, and the
+run keeps executing independent work.
+When every runnable item has finished, the read-only `finalize-run` runner
+helper decides the end under §Blocked Actions Mid-Run: Fall Back or Defer, Never
+Stop. Human UAT is the only gate a run may defer. With every non-UAT gate passed
+and only human UAT left, the run finalizes: mark the stack ready for review
+(never merge), open the top PR body with its `Deferred / not verified` section,
+and mark the thread goal complete. When deferred items remain beyond human UAT
+(a failed gate, a ledger `deferred` entry, or an unresolved task), the run makes
+one human stop instead and the stack stays in draft. Either way, make the one
+consolidated `request_user_input` request and print the same question as plain
+text in the final message, listing every fallback taken and every deferred item,
+including each entry of the ledger's `deferred` list.
 If the audit finds incomplete Post work, set the first
 incomplete item to `in_progress` in both state stores and continue the
 autopilot loop instead of summarizing. `Post: Retrospective` is the final
@@ -769,7 +811,7 @@ PR URL.
   permissionMode, hooks, mcpServers restrictions for plugin agents;
   research/context capability coverage and fallback behavior
 - [Hardener Delegation](../../skills/speckit-autopilot/references/hardener-delegation.md) —
-  once-per-spec tests-only mutation hardening loop with Qwen delegation,
+  once-per-spec tests-only mutation hardening loop with gateway delegation,
   candidate inspection, primary-model fallback, stop rule, and record
 - [Token Discipline](../../skills/speckit-autopilot/references/token-discipline.md) —
   Opt-in compressed vocabulary for inter-agent transcripts

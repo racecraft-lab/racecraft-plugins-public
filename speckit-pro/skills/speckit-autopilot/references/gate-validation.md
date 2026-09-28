@@ -3,15 +3,16 @@
 Programmatic gate checks performed after each SDD phase. Before every repair,
 use [Bounded Execution and Verification](./execution-efficiency.md): one corrective
 cycle per stable failure family and two across the spec, including nested work.
-No gate has an independent retry allowance. Time/budget exhaustion checkpoints
-remaining work; a failed requirement or security gate never becomes a pass.
+No gate has an independent retry allowance. An exhausted repair budget defers
+that gate's repair to the end-of-run request; a failed requirement or security
+gate never becomes a pass.
 
 ## Contents
 
 - [Gate Definitions](#gate-definitions) — G0 (prerequisites) through G7 (post-implement), with Check + Auto-Fix + Failure Escalation per gate
 - [Gate Summary Table](#gate-summary-table) — at-a-glance phase → gate → script mapping
 - [Additional Verification (Extension Commands)](#additional-verification-extension-commands) — `/speckit.verify`, `/speckit.verify-tasks`
-- [Failure Escalation Protocol](#failure-escalation-protocol) — when to STOP vs. retry vs. skip-and-log
+- [Failure Escalation Protocol](#failure-escalation-protocol) — defer an exhausted repair and ask once at the end
 
 ## Gate Definitions
 
@@ -269,7 +270,12 @@ For enabled formal selection, require the current `planning` checkpoint and
 pass `workflow_file` to `validate-gate`. Tasks must include the selected model's
 implementation obligations and any requested trace work; follow [the shared contract](formal-methods.md).
 
-**Check:** Every functional requirement has at least one task.
+**Check:** Every functional requirement has at least one task. When tasks.md
+has a requirement coverage table (a Markdown table with a `Task`, `Tasks`, or
+`Task IDs` column), `validate-gate` G5 also fails every row that opens with a
+requirement ID but whose task cell names no task ID, such as a blank cell or
+`()`. The failure lists those rows in `empty_coverage_rows`; fill each from the
+task list.
 
 ```
 1. Extract all FR-XXX markers from spec.md
@@ -282,12 +288,27 @@ implementation obligations and any requested trace work; follow [the shared cont
    the deferred-mode diagnostics (helper ID, requested mode, deferral
    reason), then gather the fallback evidence chain: the setup-mode gate
    result recorded at scaffold, the plan-phase `estimate-reviewable-loc`
-   verdict, and any operator-ratified split decision in the workflow file.
+   verdict, and any ratified split decision (autopilot or operator) in the workflow file.
 6. Apply the post-G5 reviewability proceed/stop matrix below to that
    committed evidence. A valid current size-only `status=block` continues
    into marker planning and later marker emission; it is not a manual
    re-slicing stop.
 ```
+
+**Gate-task loop check:** `validate-gate` G5 also fails when an open task
+gates later source work and its text requires post-implementation evidence. A
+task gates source work when it sits in a setup or foundation phase, or when a
+task outside the polish or emission phase depends on it, directly or through
+the sidecar's `depends_on`. The evidence phrases are a closed list: "first
+implementation checkpoint" (with or without "actual"), "actual diff", "actual
+per-PR diff", and "actual LOC". Such a task can never
+complete, because only its dependents produce that evidence. The failing
+payload lists each one under `gate_task_loops`. Fix it by splitting the task: a
+candidate check now, and the reconciliation attached to the emission step. A
+clause that hands the evidence to a later step passes: it says "later",
+"defer", "attached to", "handled by", "emission step", or "emission task".
+Wording that only times a step or a stop, such as "stop before PR emission",
+names no evidence and passes. An unreadable sidecar fails the gate closed.
 
 **Auto-Fix:** For each unmapped FR:
 - Generate a task that covers the requirement
@@ -570,13 +591,24 @@ unexcepted block or gate error stops PR preparation and records the
 | Gate | After | Check | Auto-Fix Strategy | Repair allowance |
 |------|-------|-------|-------------------|--------------|
 | G1 | Specify | NEEDS CLARIFICATION markers | N/A (routing) | N/A |
-| G2 | Clarify | 0 markers remain | Re-run clarify | Shared |
-| G3 | Plan | Artifacts exist, gates pass | Re-run plan | Shared |
-| G4 | Checklist | 0 [Gap] markers | Research + consensus remediation | Shared |
-| G5 | Tasks | FR coverage and valid required execution metadata | Generate missing tasks | Shared |
-| G6 | Analyze | 0 required defects (all severities) | Research + consensus remediation | Shared |
+| G2 | Clarify | 0 markers remain | Re-run clarify | Gate's own 2 rounds for planning documents; else Shared |
+| G3 | Plan | Artifacts exist, gates pass | Re-run plan | Gate's own 2 rounds for planning documents; else Shared |
+| G4 | Checklist | 0 [Gap] markers | Research + consensus remediation | Gate's own 2 rounds for planning documents; else Shared |
+| G5 | Tasks | FR coverage, valid required execution metadata, and no gate task waiting on its own dependents | Generate missing tasks; split looping gate tasks | Gate's own 2 rounds for planning documents; else Shared |
+| G6 | Analyze | 0 required defects (all severities) | Research + consensus remediation | Gate's own 2 rounds for planning documents; else Shared |
 | G6.5 | (between Analyze and Implement) | Pre-Implement confidence ≥ 0.90 (advisory default; strict opt-in via `.claude/speckit-pro.local.md`) | Re-route consensus on lowest-scoring criterion, re-emit confidence | Shared |
-| G7 | Implement | Build+type+lint+test pass, integration tests exist, 0 placeholders, TDD evidence | Fix errors, replace placeholders, create real tests | Shared |
+| G7 | Implement | Build+type+lint+test pass, integration tests exist, 0 placeholders, TDD evidence | Fix errors, replace placeholders, create real tests | Gate's own 2 rounds for planning documents; else Shared |
+
+A gate's own allowance admits only a remediation whose every path is a planning
+document of the bound feature: `spec.md`, `plan.md`, `research.md`, `tasks.md`,
+`data-model.md`, `quickstart.md`, `.process/task-execution.json`, or a
+`checklists/<name>.md`. Reserve it with `gate_remediation` as
+[execution-efficiency.md](execution-efficiency.md) describes. It never touches
+the shared budget and needs no operator question. A remediation that touches
+code, tests, formal models, `contracts/`, or any other path uses the shared
+budget. The helper judges paths only, so a threshold or scope change written
+inside a planning document is the orchestrator's call: reserve it on the shared
+budget without `gate_remediation`.
 
 ## Additional Verification (Extension Commands)
 
@@ -598,16 +630,28 @@ skip the check and log a recommendation to install it.
 
 ## Failure Escalation Protocol
 
-When the shared corrective reservation is exhausted:
+A gate whose own allowance is exhausted returns `disposition=defer` with
+`gate_remediation_allowance_exhausted`: it does not stop here. Record its open
+findings for the end-of-run request and continue. The protocol below applies
+to the shared budget.
 
-1. **STOP** execution — do not proceed to the next phase
-2. **Present context** to human:
+When the shared corrective reservation is exhausted, the ledger returns
+`disposition=defer` and records the blocked unit in its `deferred` list:
+
+1. **Defer the repair.** Record the deferred gate with its failure. Never
+   pass the gate, and never start work that depends on it.
+2. **Continue independent work.** Keep executing every task, increment, gate,
+   and Post check that does not depend on the deferred gate. It is never a
+   mid-run question.
+3. **Ask once, at the end.** Put the gate into the one end-of-run consolidated
+   request with its context:
    - Which gate failed
    - What the specific failure is
    - What auto-fix attempts were made
    - Research findings from codebase exploration and web search (for G4/G6)
-3. **Wait for guidance** — the human can:
-   - Provide a fix and resume: "Fix X, then continue"
-   - Skip the gate: "Proceed anyway" (logged as a deliberate override)
-   - Abort: "Stop the autopilot"
-4. **Resume** from the failed phase after human intervention
+
+   The operator can approve one correction (`authorize-corrective-exception`)
+   or a re-plan (`begin-replan-epoch`), provide a fix and resume, skip the
+   gate ("Proceed anyway", logged as a deliberate override), or stop the
+   autopilot.
+4. **Resume** from the failed phase after the operator answers.

@@ -16,6 +16,8 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO_ROOT / "speckit-pro"))
 sys.path.insert(0, str(REPO_ROOT / "tests/speckit-pro/lib"))
 from test_result import run_counted
+from speckit_pro_runner.execution_control import is_runner_byproduct
+from speckit_pro_runner.helpers.mutation import dirty_worktree_diagnostic
 from speckit_pro_runner.task_execution import fingerprints
 from speckit_pro_runner.task_results import MAX_LINEAGE_DEPTH, non_tdd_reason, partition_sha256, task_results
 
@@ -313,6 +315,71 @@ class BatchedTaskResultsTests(unittest.TestCase):
         self.assertEqual(len(result["journal"]["reports"]), 2)
         self.assertEqual(result["helper_exit_code"], 0)
 
+    def record_unfinished_red(self):
+        complete = self.first_report()
+        partial = copy.deepcopy(complete)
+        partial["results"][0]["status"] = "unfinished"
+        partial["results"][0]["evidence_event_ids"] = ["T001-red"]
+        partial["native_observations"] = partial["native_observations"][:1] + partial["native_observations"][3:]
+        self.assertEqual(self.call("record", **partial)["helper_exit_code"], 1)
+        return complete
+
+    def test_completing_report_cites_its_own_earlier_red_evidence(self):
+        complete = self.record_unfinished_red()
+        result = self.call("record", **complete)
+        self.assertEqual(result["helper_exit_code"], 0)
+        self.assertEqual(len(result["journal"]["reports"]), 2)
+        self.assertEqual(self.call("inspect", mode="read_only")["helper_exit_code"], 0)
+
+    def test_changed_earlier_red_event_is_refused(self):
+        complete = self.record_unfinished_red()
+        complete["native_observations"][0]["snapshot_sha256"] = hashlib.sha256(b"changed").hexdigest()
+        before = self.path.read_bytes()
+        with self.assertRaisesRegex(ValueError, "only unchanged completed task observations"):
+            self.call("record", **complete)
+        self.assertEqual(before, self.path.read_bytes())
+
+    def test_earlier_red_event_cited_by_another_task_is_refused(self):
+        complete = self.record_unfinished_red()
+        complete["results"][1]["evidence_event_ids"] = ["T001-red", "T002-green", "T002-refactor"]
+        complete["native_observations"] = [e for e in complete["native_observations"] if e["event_id"] != "T002-red"]
+        with self.assertRaisesRegex(ValueError, "missing or mismatched native event reference"):
+            self.call("record", **complete)
+
+    def test_task_cannot_recite_an_event_another_task_recorded(self):
+        self.body = self.body.replace("Add capability behavior 1\n", "Research the interface\n").replace(
+            "Add capability behavior 2\n", "Research the schema\n")
+        (self.feature / "tasks.md").write_text(self.body)
+        self.meta["fingerprints"] = fingerprints("spec\n", "plan\n", self.body)
+        self.meta["tasks"]["T002"]["tdd_unit"] = "behavior-1"
+        self.metadata_path.write_text(json.dumps(self.meta))
+        batch = self.call()["journal"]["batches"][0]
+        self.assertEqual(batch["tasks"], ["T001", "T002"])
+        self.assertIn("tdd_not_applicable_reason", batch)
+        complete = self.native_task_report(batch)
+        partial = copy.deepcopy(complete)
+        partial["results"][1]["status"] = "unfinished"
+        partial["results"][1]["evidence_event_ids"] = []
+        partial["native_observations"] = partial["native_observations"][:1]
+        self.assertEqual(self.call("record", **partial)["helper_exit_code"], 1)
+        complete["results"][1]["status"] = "unfinished"
+        complete["results"][1]["evidence_event_ids"] = ["T001-result"]
+        complete["native_observations"] = complete["native_observations"][:1]
+        before = self.path.read_bytes()
+        with self.assertRaisesRegex(ValueError, "only unchanged completed task observations"):
+            self.call("record", **complete)
+        self.assertEqual(before, self.path.read_bytes())
+
+    def test_red_event_recorded_under_another_batch_is_refused(self):
+        batches = self.call()["journal"]["batches"]
+        self.call("record", **self.report(batches[0]))
+        second = self.report(batches[1])
+        first_red = self.report(batches[0])["native_observations"][0]
+        second["results"][0]["evidence_event_ids"][0] = first_red["event_id"]
+        second["native_observations"][0] = first_red
+        with self.assertRaisesRegex(ValueError, "missing or mismatched native event reference"):
+            self.call("record", **second)
+
     def test_successor_rejects_missing_or_modified_retained_history(self):
         self.call()
         prior_bytes = self.path.read_bytes()
@@ -456,6 +523,26 @@ class BatchedTaskResultsTests(unittest.TestCase):
         self.metadata_path.write_text(self.metadata_path.read_text() + "\n")
         code, result = self.runner("inspect", mode="read_only")
         self.assertEqual(code, 2, result)
+
+    def test_journal_never_dirties_the_worktree_or_joins_a_directory_wide_add(self):
+        environment = {**os.environ, "GIT_CONFIG_GLOBAL": os.devnull, "GIT_CONFIG_NOSYSTEM": "1"}
+
+        def git(*args):
+            return subprocess.run(["git", "-C", str(self.root), *args], check=True,
+                                  capture_output=True, text=True, env=environment).stdout
+
+        git("init", "-q")
+        git("add", "-A")
+        git("-c", "user.name=fixture", "-c", "user.email=native-eval@example.invalid", "commit", "-q", "-m", "fixture")
+        self.assertIsNone(dirty_worktree_diagnostic({}, self.root))
+        self.call()
+        self.assertTrue(self.path.is_file())
+        self.assertTrue(is_runner_byproduct(self.inputs["journal_file"]))
+        self.assertIsNone(dirty_worktree_diagnostic({}, self.root))
+        git("add", "-A")
+        self.assertEqual([name for name in git("diff", "--cached", "--name-only", "-z").split("\0") if name], [])
+        (self.root / "unrelated.txt").write_text("unrelated\n")
+        self.assertEqual(dirty_worktree_diagnostic({}, self.root)["code"], "dirty_worktree")
 
 
 if __name__ == "__main__":

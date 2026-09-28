@@ -15,12 +15,14 @@ Python 3.11+ standard library only.
 
 from __future__ import annotations
 
+import hashlib
 import importlib.util
 import json
 import subprocess
 import sys
 import tempfile
 import unittest
+import uuid
 from unittest import mock
 from pathlib import Path
 
@@ -30,6 +32,7 @@ LIB_DIR = TEST_DIR.parent / "lib"
 if str(LIB_DIR) not in sys.path:
     sys.path.insert(0, str(LIB_DIR))
 
+import privacy_patterns  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
 SKILL_SCRIPTS = REPO_ROOT / "speckit-pro" / "skills" / "speckit-autopilot" / "scripts"
@@ -48,6 +51,7 @@ BLOCKING_STATUS_EVIDENCE_KEYS = (
     "autonomy_boundary_errors",
     "stage_mirror_errors",
     "workflow_authority_errors",
+    "state_privacy_errors",
 )
 
 PLAN_STEPS = (
@@ -480,8 +484,9 @@ class AutonomyBoundarySourceContractTests(unittest.TestCase):
     def test_resume_re_attests_a_stale_boundary_before_the_coverage_guard(self) -> None:
         """A new thread's writable roots make the persisted boundary stale (issue 747).
 
-        The resume must re-attest it up front with one operator request, before
-        the Step 1.1 guard, for every stage, including a plan-stage resume.
+        The resume must re-attest it up front, before the Step 1.1 guard, for
+        every stage, including a plan-stage resume. Since issue 764 a covered
+        inventory asks no question and an uncovered action is deferred.
         """
         skill = " ".join(CODEX_AUTOPILOT_SKILL.read_text(encoding="utf-8").split())
         prerequisites = (
@@ -504,8 +509,8 @@ class AutonomyBoundarySourceContractTests(unittest.TestCase):
             section,
         )
         self.assertIn("a branch, not a stop", section)
-        self.assertIn("one consolidated operator request", section)
-        self.assertIn("`authorization.status=explicit_user`", section)
+        self.assertIn("standing policy coverage", section)
+        self.assertIn("the one end-of-run request", section)
         self.assertIn("never as a guard-failure repair", section)
         self.assertIn("A mismatch still blocks", section)
         self.assertIn("at any stage", skill)
@@ -685,6 +690,367 @@ class BlockedActionDeferralSourceContractTests(unittest.TestCase):
         self.assertIn(BLOCKED_ACTION_HEADING, audit)
         self.assertIn("Action blocked mid-run", recovery)
         self.assertIn(BLOCKED_ACTION_HEADING, recovery)
+
+
+class RunFinalizationSourceContractTests(unittest.TestCase):
+    """Only human UAT may be deferred; anything else left is one human stop (issue 804)."""
+
+    STALE = (
+        "honest incomplete checkpoint, never completion",
+        "Never report completion while a deferred item remains",
+        "may the rows holding deferred work move to `⚠ Blocked`",
+        "reported as deferred, never green",
+        "`attributed_units`",
+    )
+
+    def assert_finalization_rules(self, section: str) -> None:
+        for phrase in (
+            "`finalize-run`",
+            "Human UAT is the only gate a run may defer",
+            "`human_uat`",
+            "ready for review",
+            "never merges",
+            "`Deferred / not verified`",
+            "`deferred_items`",
+            "`ready_commands`",
+            "`end_of_run_request`",
+            "`outcome=human_stop`",
+            "one human stop",
+            "exact command",
+            "retry with backoff",
+            "reviewer veto despite a recorded chat authorization",
+            "never lets a gate pass, be skipped, or be deferred",
+            "at the end of the run an unresolved deferral is the human stop",
+            "`deferred_digest`",
+            "never re-checks an unchanged blocker",
+        ):
+            self.assertIn(phrase, section)
+        for phrase in self.STALE:
+            self.assertNotIn(phrase, section)
+
+    def test_codex_finalizes_a_deferred_run_and_completes_the_goal(self) -> None:
+        references = CODEX_AUTOPILOT_SKILL.parent / "references"
+        phase = _flat(references / "phase-execution-codex.md")
+        section = _section(phase, f"### {BLOCKED_ACTION_HEADING}", "### Repeated Gate Failures")
+        self.assert_finalization_rules(section)
+        self.assertIn("marks the thread goal complete", section)
+        self.assertIn("never set the thread goal blocked for it mid-run", phase)
+        recovery = _flat(references / "error-recovery-codex.md")
+        self.assertIn("never sets the thread goal blocked mid-run", recovery)
+        self.assertNotIn("never sets the thread goal blocked.", recovery)
+        hardener = _flat(CLAUDE_AUTOPILOT_SKILL.parent / "references" / "hardener-delegation.md")
+        self.assertIn("It is a gate, so it never stays deferred", hardener)
+        efficiency = _flat(CLAUDE_AUTOPILOT_SKILL.parent / "references" / "execution-efficiency.md")
+        self.assertIn("the run never finalizes ready for review over it, a gate's included", efficiency)
+        preflight = _section(phase, "### Autonomy Boundary Preflight", "1. Read mode from `CONFIDENCE_GATE_MODE`")
+        for phrase in ("`check-gate-preflight-coverage`", "preflight defect", "at run start"):
+            self.assertIn(phrase, preflight)
+        skill = _flat(CODEX_AUTOPILOT_SKILL)
+        audit = _section(skill, "### 3.4 Pre-final completion audit", "## Workflow File Update Protocol")
+        self.assertIn("`finalize-run`", audit)
+        for phrase in self.STALE:
+            self.assertNotIn(phrase, skill)
+        post = _flat(references / "post-implementation-codex.md")
+        self.assertIn("`finalize-run`", post)
+        self.assertIn("`deferred_items`", post)
+        for phrase in self.STALE:
+            self.assertNotIn(phrase, post)
+
+    def test_claude_mirrors_the_finalization(self) -> None:
+        references = CLAUDE_AUTOPILOT_SKILL.parent / "references"
+        phase = _flat(references / "phase-execution.md")
+        section = _section(phase, f"#### {BLOCKED_ACTION_HEADING}", "#### Repeated Gate Failures")
+        self.assert_finalization_rules(section)
+        skill = _flat(CLAUDE_AUTOPILOT_SKILL)
+        audit = _section(skill, "### 3.4 Pre-final completion audit", "## Workflow File Update Protocol")
+        self.assertIn("`finalize-run`", audit)
+        for phrase in self.STALE:
+            self.assertNotIn(phrase, skill)
+
+    def test_stack_manager_keeps_draft_status_only_until_finalization(self) -> None:
+        stack = _flat(CLAUDE_AUTOPILOT_SKILL.parent / "references" / "stack-manager.md")
+        self.assertIn("Preserve packet metadata, and draft status until finalization", stack)
+
+
+FAILURE_CLASS_HEADING = "Repeated Gate Failures: Diagnose One Class, Approve It Once"
+
+
+class FailureClassApprovalSourceContractTests(unittest.TestCase):
+    """Repeated same-signature gate failures are one class with one approval (issue 785)."""
+
+    def assert_class_rules(self, section: str) -> None:
+        for phrase in (
+            "same failure signature in the same test file",
+            "even when the failing tests differ",
+            "one failure class",
+            "environment signal first",
+            "host load and temp-directory size",
+            "rerun the gate once, before proposing any timeout change",
+            "one class-level fix",
+            "never per-test diffs",
+            "`failure_class`",
+            "`authorize-corrective-exception`",
+            "`reserve-class-correction`",
+            "without a new question",
+            "at most once",
+            "production",
+            "consolidated operator request",
+        ):
+            self.assertIn(phrase, section)
+
+    def test_codex_phase_execution_states_the_class_rule(self) -> None:
+        phase = _flat(CODEX_AUTOPILOT_SKILL.parent / "references" / "phase-execution-codex.md")
+        section = _section(phase, f"### {FAILURE_CLASS_HEADING}", "## PR Packet and Body Boundary")
+        self.assert_class_rules(section)
+        recovery = _flat(CODEX_AUTOPILOT_SKILL.parent / "references" / "error-recovery-codex.md")
+        self.assertIn(FAILURE_CLASS_HEADING, recovery)
+        self.assertIn("`reserve-class-correction`", recovery)
+
+    def test_claude_phase_execution_states_the_class_rule(self) -> None:
+        references = CLAUDE_AUTOPILOT_SKILL.parent / "references"
+        phase = _flat(references / "phase-execution.md")
+        section = _section(phase, f"#### {FAILURE_CLASS_HEADING}", "#### Append Contract")
+        self.assert_class_rules(section)
+        recovery = _flat(references / "error-recovery.md")
+        self.assertIn(FAILURE_CLASS_HEADING, recovery)
+        self.assertIn("`reserve-class-correction`", recovery)
+        skill = _flat(CLAUDE_AUTOPILOT_SKILL)
+        self.assertIn("`reserve-class-correction`", _section(skill, "## Error Recovery", "## References"))
+
+    def test_ledger_reference_documents_the_class_request_shape(self) -> None:
+        efficiency = _flat(CLAUDE_AUTOPILOT_SKILL.parent / "references" / "execution-efficiency.md")
+        section = _section(efficiency, "- `reserve-class-correction`:", "- `begin-replan-epoch`:")
+        for phrase in ("`test_file`", "`failure_signature`", "`change_kind`", "`test_timeout`",
+                       "`follow_up_dispatch_ids`", "completed", "two follow-ups"):
+            self.assertIn(phrase, section)
+
+AMBIGUOUS_WORDING_HEADING = "Ambiguous Task Wording: Apply the Recorded Decision, Else Defer"
+
+
+class AmbiguousTaskWordingSourceContractTests(unittest.TestCase):
+    """A recorded owner decision settles ambiguous task wording mid-run (issue 773)."""
+
+    def assert_recorded_decision_rule(self, section: str) -> None:
+        for phrase in (
+            "wording is ambiguous",
+            "recorded owner decision",
+            "apply that decision",
+            "record the interpretation with a reference to that decision",
+            "then continue",
+            "no recorded decision covers it",
+            "defer the item",
+            "end-of-run request",
+            "Never ask the operator mid-run",
+            BLOCKED_ACTION_HEADING,
+        ):
+            self.assertIn(phrase, section)
+
+    def test_claude_phase_seven_applies_a_recorded_decision_to_ambiguous_wording(self) -> None:
+        phase = _flat(CLAUDE_AUTOPILOT_SKILL.parent / "references" / "phase-execution.md")
+        section = _section(phase, f"#### {AMBIGUOUS_WORDING_HEADING}", "#### Append Contract")
+        self.assertLess(phase.index(f"#### {BLOCKED_ACTION_HEADING}"), phase.index(section))
+        self.assert_recorded_decision_rule(section)
+
+    def test_codex_phase_seven_applies_a_recorded_decision_to_ambiguous_wording(self) -> None:
+        phase = _flat(CODEX_AUTOPILOT_SKILL.parent / "references" / "phase-execution-codex.md")
+        section = _section(phase, f"### {AMBIGUOUS_WORDING_HEADING}", "## PR Packet and Body Boundary")
+        self.assertLess(phase.index(f"### {BLOCKED_ACTION_HEADING}"), phase.index(section))
+        self.assert_recorded_decision_rule(section)
+
+
+class GateTaskEvidenceLoopGuidanceTests(unittest.TestCase):
+    """Tasks guidance splits a gate task instead of making it wait on its dependents (issue 773)."""
+
+    def test_tasks_prompt_and_g5_guidance_split_gate_tasks(self) -> None:
+        template = _flat(REPO_ROOT / "speckit-pro" / "skills" / "speckit-coach" / "templates" / "workflow-template.md")
+        prompt = _section(template, "### Tasks Prompt", "### Tasks Results")
+        gates = _flat(CLAUDE_AUTOPILOT_SKILL.parent / "references" / "gate-validation.md")
+        g5 = _section(gates, "### G5 — After Tasks", "#### Post-G5 Reviewability Capture Matrix")
+        claude = _section(
+            _flat(CLAUDE_AUTOPILOT_SKILL.parent / "references" / "phase-execution.md"),
+            "### Phase 5: Tasks", "### Phase 6: Analyze",
+        )
+        codex = _flat(CODEX_AUTOPILOT_SKILL.parent / "references" / "phase-execution-codex.md")
+        for text in (prompt, g5, claude, codex):
+            self.assertIn("candidate check", text)
+            self.assertIn("emission step", text)
+        for text in (g5, claude, codex):
+            self.assertIn("gate_task_loops", text)
+
+
+PLUGIN_DRIFT_HEADING = "Plugin Update Mid-Run: Record, Re-resolve, Continue"
+
+
+class MidRunPluginDriftSourceContractTests(unittest.TestCase):
+    """A plugin update during a run is recorded, never a restart stop (issue 767)."""
+
+    def assert_drift_rules(self, section: str) -> None:
+        for phrase in (
+            "at setup or run start",
+            "changed or vanished",
+            "re-resolve",
+            "`plugin_root`",
+            "Installed Runtime Contract",
+            "retry each failed bookkeeping call once",
+            "record the drift",
+            "never a stop",
+            "single end-of-run consolidated request",
+            "not a deferred task",
+            "correctness stops",
+        ):
+            self.assertIn(phrase, section)
+
+    def test_codex_phase_seven_records_drift_and_continues(self) -> None:
+        references = CODEX_AUTOPILOT_SKILL.parent / "references"
+        phase = _flat(references / "phase-execution-codex.md")
+        section = _section(
+            phase, f"### {PLUGIN_DRIFT_HEADING}", "## PR Packet and Body Boundary"
+        )
+        self.assertLess(phase.index(f"### {BLOCKED_ACTION_HEADING}"), phase.index(section))
+        self.assert_drift_rules(section)
+        # Codex 0.158 re-reads a registered role file at spawn time, but the
+        # role list is fixed when the session starts.
+        self.assertIn("next `spawn_agent`", section)
+        self.assertIn("when the session starts", section)
+
+    def test_codex_restart_rule_is_scoped_to_setup_or_run_start(self) -> None:
+        skill = _flat(CODEX_AUTOPILOT_SKILL)
+        prerequisites = _flat(CODEX_AUTOPILOT_SKILL.parent / "references" / "prerequisites-codex.md")
+        recovery = _flat(CODEX_AUTOPILOT_SKILL.parent / "references" / "error-recovery-codex.md")
+        for text in (skill, prerequisites):
+            self.assertNotIn("cannot reload changed custom agents safely", text)
+            self.assertNotIn("cannot load refreshed custom-agent definitions safely", text)
+        guard = _section(skill, "Do not translate this skill into Claude-only", "## Prerequisites — Model")
+        mapping = _section(skill, "Concrete Codex mapping:", "Spawn each agent with")
+        availability = _section(skill, "**Step 0.10: Codex Agent Availability Check**", "**Step 0.10b")
+        preflight = _section(prerequisites, "### 0.10 Codex Agent Availability Check", "### 0.10b")
+        for text in (guard, mapping, availability, preflight):
+            self.assertIn("at setup or run start", text)
+            self.assertIn(PLUGIN_DRIFT_HEADING, text)
+        self.assertIn("next `spawn_agent`", preflight)
+        self.assertIn("Plugin updated mid-run", recovery)
+        self.assertIn(PLUGIN_DRIFT_HEADING, recovery)
+
+    def test_claude_phase_seven_mirrors_the_drift_rule(self) -> None:
+        references = CLAUDE_AUTOPILOT_SKILL.parent / "references"
+        phase = _flat(references / "phase-execution.md")
+        section = _section(phase, f"#### {PLUGIN_DRIFT_HEADING}", "#### Append Contract")
+        self.assertLess(phase.index(f"#### {BLOCKED_ACTION_HEADING}"), phase.index(section))
+        self.assert_drift_rules(section)
+        self.assertIn("`validate-agent-install`", section)
+        self.assertIn("`/reload-plugins`", section)
+        prerequisites = _flat(references / "prerequisites.md")
+        install_check = _section(prerequisites, "If the check fails, STOP.", "## Step 0.0c")
+        self.assertIn("at setup or run start", install_check)
+        self.assertIn(PLUGIN_DRIFT_HEADING, install_check)
+        recovery = _flat(references / "error-recovery.md")
+        self.assertIn("Plugin updated mid-run", recovery)
+        self.assertIn(PLUGIN_DRIFT_HEADING, recovery)
+
+
+class StandingPolicyPreflightSourceContractTests(unittest.TestCase):
+    """A ratified plan's ordinary work needs no up-front question (issue 764)."""
+
+    def setUp(self) -> None:
+        references = CODEX_AUTOPILOT_SKILL.parent / "references"
+        phase = _flat(references / "phase-execution-codex.md")
+        self.preflight = _section(
+            phase, "### Autonomy Boundary Preflight", "1. Read mode from `CONFIDENCE_GATE_MODE`"
+        )
+        self.resume = _section(
+            _flat(references / "prerequisites-codex.md"),
+            "### 0.8c Resumed Autonomy Boundary Preflight",
+            "### 0.9",
+        )
+        self.skill = _flat(CODEX_AUTOPILOT_SKILL)
+
+    def test_covered_inventory_asks_no_question_including_a_stage_change(self) -> None:
+        for phrase in (
+            "`render-egress-authorization`",
+            "`scope=standing`",
+            "standing policy",
+            "the operator's autopilot invocation in this thread and the ratified plan",
+            "only the standing policy's classes",
+            "asks no question",
+            "planning-to-implementation stage change",
+        ):
+            self.assertIn(phrase, self.preflight)
+        for phrase in ("asks no question", "planning-to-implementation stage change"):
+            self.assertIn(phrase, self.resume)
+        self.assertNotIn("A denial or no answer stops the run", self.resume)
+        self.assertIn("standing policy", self.skill)
+        self.assertIn("asks no question", self.skill)
+        self.assertNotIn("re-attest it with one operator request up front", self.skill)
+
+    def test_uncovered_destination_is_deferred_to_the_end_of_run_request(self) -> None:
+        for phrase in (
+            "a new destination or data class",
+            "never an up-front question",
+            "the one end-of-run request",
+            BLOCKED_ACTION_HEADING,
+        ):
+            self.assertIn(phrase, self.preflight)
+        self.assertNotIn("STOP before Phase 7", self.preflight)
+        self.assertNotIn("A blocked result stops before Phase 7", self.skill)
+        self.assertIn("never an up-front question", self.resume)
+
+    def test_uncovered_egress_authorization_is_asked_as_a_chat_reply_at_run_start(self) -> None:
+        for phrase in (
+            "asks for it as a chat reply at run start",
+            "normal chat message in this thread, never as a goal edit",
+            "the helper's `delivery` line",
+            "never waits for the reply",
+            "reads goal text as user-provided data",
+        ):
+            self.assertIn(phrase, self.preflight)
+        self.assertIn("never as a goal edit", self.skill)
+
+    def test_reviewer_policy_change_reaches_only_new_threads(self) -> None:
+        phrase = "reaches only threads started after the change"
+        self.assertIn(phrase, self.preflight)
+        self.assertIn("even after an app restart", self.preflight)
+        for setup in ("speckit-install", "speckit-upgrade"):
+            with self.subTest(setup=setup):
+                self.assertIn(phrase, _flat(CODEX_AUTOPILOT_SKILL.parents[1] / setup / "SKILL.md"))
+
+    def test_ratified_boundary_file_edit_is_deferred_not_a_start_blocker(self) -> None:
+        for phrase in (
+            "boundary-file edit named in the ratified plan",
+            "never blocks the start of the run",
+            "the reviewer trusts `AGENTS.md`",
+            "never dispatch that task",
+        ):
+            self.assertIn(phrase, self.preflight)
+
+    def test_missing_standing_policy_is_a_setup_gap_and_the_run_proceeds(self) -> None:
+        for phrase in ("setup gap", "reported once", "The run still proceeds"):
+            self.assertIn(phrase, self.preflight)
+        for setup in ("speckit-install", "speckit-upgrade"):
+            with self.subTest(setup=setup):
+                text = _flat(CODEX_AUTOPILOT_SKILL.parents[1] / setup / "SKILL.md")
+                self.assertIn("`render-egress-authorization`", text)
+                self.assertIn("`scope=standing`", text)
+                self.assertIn("never `auto_review.policy`", text)
+                self.assertIn("never writes", text)
+
+    def test_claude_autopilot_has_no_autonomy_preflight_to_mirror(self) -> None:
+        references = CLAUDE_AUTOPILOT_SKILL.parent / "references"
+        texts = [_flat(CLAUDE_AUTOPILOT_SKILL)] + [_flat(path) for path in sorted(references.glob("*.md"))]
+        for text in texts:
+            self.assertNotIn("Autonomy Boundary Preflight", text)
+            self.assertNotIn("auto_review", text)
+
+    def test_deferred_action_record_passes_the_phase_seven_guard(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            state = _autonomy_boundary_state(root)
+            boundary = state["autonomy_boundary"]
+            action = boundary["actions"][0]
+            action["disposition"] = "operator_action_required"
+            action["authorization"]["status"] = "missing"
+            boundary["status"] = "operator_action_required"
+            state["plan"][1]["status"] = "in_progress"
+            self.assertEqual(_autonomy_errors(state, root), [])
 
 
 class AutonomyBoundaryAuthorizationTests(unittest.TestCase):
@@ -1305,6 +1671,156 @@ class TrackedPairCorpusTests(StatusEvidenceReportAssertions, unittest.TestCase):
                 self.assertTrue(entry["reason"])
 
 
+
+def _synthetic_home_path(*parts: str) -> str:
+    """A home-style path built at run time, so this file never commits one."""
+    return "/".join(("", "home", "synthoperator", *parts))
+
+
+def _redacted_stage_resolution() -> dict:
+    return {
+        "stage": "implement",
+        "source": "argv",
+        "basis": "explicit --stage implement",
+        "recorded_stage": "plan",
+        "planning_complete": True,
+        "confidence_gate_status": "Complete",
+    }
+
+
+class StatePrivacyTests(StatusEvidenceReportAssertions, unittest.TestCase):
+    """Issue 770: the tracked state file holds decision fields, never private values."""
+
+    def _report_for(self, extra: dict) -> tuple[int, dict]:
+        with tempfile.TemporaryDirectory() as raw:
+            supplied, state = clean_workflow_state_fixture(Path(raw))
+            planted = json.loads(state.read_text(encoding="utf-8"))
+            planted.update(extra)
+            state.write_text(json.dumps(planted), encoding="utf-8")
+            return run_status_evidence_report(supplied, state)
+
+    def test_private_values_fail_the_status_evidence_gate(self) -> None:
+        interpreter = _synthetic_home_path(".venv", "bin", "python3")
+        windows_home = "C:" + "\\" + "Users" + "\\" + "synthoperator" + "\\" + "repo"
+        task_uuid = str(uuid.uuid4())
+        cases = (
+            (
+                "raw runner envelope with argv",
+                {"stage_resolution": {**_redacted_stage_resolution(), "argv": ["--stage", "implement"]}},
+                "argv",
+                "autopilot_state.stage_resolution.argv",
+            ),
+            (
+                "absolute home path value",
+                {"stage_resolution": {**_redacted_stage_resolution(), "interpreter": interpreter}},
+                interpreter,
+                "autopilot_state.stage_resolution.interpreter",
+            ),
+            (
+                "windows home path inside a list",
+                {"notes": ["ok", windows_home]},
+                windows_home,
+                "autopilot_state.notes[1]",
+            ),
+            (
+                "raw delegation task id",
+                {"delegation": {"task_id": task_uuid}},
+                task_uuid,
+                "autopilot_state.delegation.task_id",
+            ),
+            (
+                "home path used as a key",
+                {"evidence": {interpreter: "seen"}},
+                interpreter,
+                "autopilot_state.evidence",
+            ),
+        )
+        for label, extra, private_value, location in cases:
+            with self.subTest(case=label):
+                code, report = self._report_for(extra)
+                self.assertEqual(code, 1, report)
+                self.assertCompleteReport(report)
+                self.assertOnlySelectedProblemKeyPopulated(report, "state_privacy_errors")
+                joined = "\n".join(report["state_privacy_errors"])
+                self.assertIn(location, joined)
+                if private_value != "argv":
+                    self.assertNotIn(private_value, joined)
+
+    def test_private_key_error_names_the_key_by_its_digest(self) -> None:
+        """#800 review: a private key is identified by its digest, never echoed, one error per key."""
+        first, second = str(uuid.uuid4()), str(uuid.uuid4())
+        code, report = self._report_for({"evidence": {first: "a", second: "b", "ok": "c"}})
+        self.assertEqual(code, 1, report)
+        errors = report["state_privacy_errors"]
+        self.assertEqual(len(errors), 2, errors)
+        for key in (first, second):
+            digest = "sha256:" + hashlib.sha256(key.encode("utf-8")).hexdigest()
+            self.assertEqual(sum(digest in error for error in errors), 1, errors)
+            self.assertFalse(any(key in error for error in errors), errors)
+
+    def test_redacted_decision_fields_pass(self) -> None:
+        code, report = self._report_for({
+            "stage": "implement",
+            "stage_resolution": _redacted_stage_resolution(),
+            "delegation": {"task_ref": "sha256:" + "0" * 64, "run_ref": uuid.uuid4().hex},
+        })
+        self.assertEqual(code, 0, report)
+        self.assertEqual(report["state_privacy_errors"], [])
+
+    def test_native_event_id_error_names_the_digest_remedy(self) -> None:
+        """#800: the error names the field and the exact in-place remedy; the digest form passes."""
+        event_id = "msg_" + str(uuid.uuid4())
+        field = {"implementation_startup": {"active_batch": {"operator_approval_event_id": event_id}}}
+        code, report = self._report_for(field)
+        self.assertEqual(code, 1, report)
+        self.assertOnlySelectedProblemKeyPopulated(report, "state_privacy_errors")
+        [error] = report["state_privacy_errors"]
+        self.assertIn("autopilot_state.implementation_startup.active_batch.operator_approval_event_id", error)
+        self.assertIn("sha256:", error)
+        self.assertIn("rerun this guard", error)
+        self.assertNotIn(event_id, error)
+        digest = "sha256:" + hashlib.sha256(event_id.encode("utf-8")).hexdigest()
+        field["implementation_startup"]["active_batch"]["operator_approval_event_id"] = digest
+        code, report = self._report_for(field)
+        self.assertEqual(code, 0, report)
+        self.assertEqual(report["state_privacy_errors"], [])
+
+    def test_both_hosts_digest_event_ids_and_remediate_privacy_errors_once(self) -> None:
+        """#800: store native event ids as digests; a privacy-only failure is fixed in place, once."""
+        for skill_path in (CLAUDE_AUTOPILOT_SKILL, CODEX_AUTOPILOT_SKILL):
+            with self.subTest(skill=skill_path.parent.parent.name):
+                skill = _flat(skill_path)
+                self.assertIn("native or operator event id", skill)
+                self.assertIn("`sha256:<digest>`", skill)
+                self.assertIn("When `state_privacy_errors` is the only failing gated key", skill)
+                self.assertIn("rerun the guard once", skill)
+                self.assertIn("A second failure, or any other failing gated key, is a stop", skill)
+
+    def test_both_hosts_account_for_the_implementation_notes_record(self) -> None:
+        """#801: the notes record is committed, exempt from the path budget, and never dirties apply."""
+        for name in ("skills/speckit-autopilot/references/phase-execution.md",
+                     "codex-skills/speckit-autopilot/references/phase-execution-codex.md"):
+            with self.subTest(file=name):
+                text = _flat(REPO_ROOT / "speckit-pro" / name)
+                self.assertIn("stage it with each marker checkpoint commit", text)
+                self.assertIn("`declared_files.implementation_notes`", text)
+                self.assertIn("clean-worktree check ignores it", text)
+
+    def test_validator_patterns_match_the_repository_privacy_scan(self) -> None:
+        self.assertEqual(
+            validator.STATE_HOME_PATH_PATTERN.pattern,
+            privacy_patterns.HOME_PATH_PATTERN.pattern,
+        )
+        self.assertEqual(
+            validator.STATE_HYPHENATED_HOME_PATH_PATTERN.pattern,
+            privacy_patterns.HYPHENATED_HOME_PATH_PATTERN.pattern,
+        )
+        self.assertEqual(
+            validator.STATE_UUID_PATTERN.pattern,
+            privacy_patterns.UUID_PATTERN.pattern,
+        )
+
+
 class StatusEvidenceNegativeTests(StatusEvidenceReportAssertions, unittest.TestCase):
     """FEATURE-017 isolated state-invariant controls for the status-evidence gate."""
 
@@ -1739,6 +2255,11 @@ def build_suite() -> unittest.TestSuite:
         StateStatusSchemaTests,
         AutonomyBoundarySourceContractTests,
         BlockedActionDeferralSourceContractTests,
+        FailureClassApprovalSourceContractTests,
+        AmbiguousTaskWordingSourceContractTests,
+        GateTaskEvidenceLoopGuidanceTests,
+        MidRunPluginDriftSourceContractTests,
+        StandingPolicyPreflightSourceContractTests,
         AutonomyBoundaryAuthorizationTests,
         AutonomyBoundaryFreshnessTests,
         AutonomyBoundaryMalformedExecutionTests,
@@ -1753,9 +2274,11 @@ def build_suite() -> unittest.TestSuite:
         AuthorityMatchedPairClassificationTests,
         TrackedPairCorpusTests,
         StatusEvidenceNegativeTests,
+        StatePrivacyTests,
         WorkflowAuthorityTests,
         RepositoryRootResolutionTests,
         ProblemKeyClassificationTests,
+        RunFinalizationSourceContractTests,
     ):
         suite.addTests(loader.loadTestsFromTestCase(case))
     return suite

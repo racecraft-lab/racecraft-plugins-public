@@ -1,5 +1,47 @@
 # Changelog
 
+## [2.38.1](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.38.0...speckit-pro-v2.38.1) (2026-09-28)
+
+
+### Bug Fixes
+
+* **speckit-pro:** admit a proven metadata-only task correction without spending a correction cycle ([#808](https://github.com/racecraft-lab/racecraft-plugins-public/issues/808)) ([c02e1ae](https://github.com/racecraft-lab/racecraft-plugins-public/commit/c02e1aed6bc9f9c4239502594c5f0a169628ffe8))
+* **speckit-pro:** catch gate tasks that wait on their own dependents and apply recorded decisions ([#783](https://github.com/racecraft-lab/racecraft-plugins-public/issues/783)) ([a5576f3](https://github.com/racecraft-lab/racecraft-plugins-public/commit/a5576f35568f820a16131a2d71bd884dc2298db0))
+* **speckit-pro:** defer on an exhausted correction allowance and keep remediating while fixes converge ([#799](https://github.com/racecraft-lab/racecraft-plugins-public/issues/799)) ([91516ef](https://github.com/racecraft-lab/racecraft-plugins-public/commit/91516ef3cdf90632ab35feef298c93ea7c7d3ffc))
+* **speckit-pro:** delegate on the gateway's default route instead of forcing the local worker ([#777](https://github.com/racecraft-lab/racecraft-plugins-public/issues/777)) ([9d018cc](https://github.com/racecraft-lab/racecraft-plugins-public/commit/9d018ccadaf9e305b49bf348a3c5d63242d8dd7a))
+* **speckit-pro:** diagnose repeated gate failures as one class and let one approval cover that class ([#789](https://github.com/racecraft-lab/racecraft-plugins-public/issues/789)) ([7145ffa](https://github.com/racecraft-lab/racecraft-plugins-public/commit/7145ffa0841b668ef2504d9cd26a5e45f40a6a2c))
+* **speckit-pro:** finish autopilot runs ready for review and collect Codex authorization as a chat reply ([#807](https://github.com/racecraft-lab/racecraft-plugins-public/issues/807)) ([1183bcb](https://github.com/racecraft-lab/racecraft-plugins-public/commit/1183bcb02323f2520e7059f25a95c5598eddf526))
+* **speckit-pro:** give each increment its own review-fix allowance instead of one run-wide budget ([#788](https://github.com/racecraft-lab/racecraft-plugins-public/issues/788)) ([e608807](https://github.com/racecraft-lab/racecraft-plugins-public/commit/e60880748807ca421931b3f06ab62d5775cd5f16))
+* **speckit-pro:** give each planning gate its own remediation allowance and fail G5 on empty coverage rows ([#798](https://github.com/racecraft-lab/racecraft-plugins-public/issues/798)) ([f3f5da4](https://github.com/racecraft-lab/racecraft-plugins-public/commit/f3f5da4106cbdbf6f782c39775cda21cb0514c65))
+* **speckit-pro:** keep a mid-run plugin update from stopping autopilot for a restart ([#779](https://github.com/racecraft-lab/racecraft-plugins-public/issues/779)) ([e423bfe](https://github.com/racecraft-lab/racecraft-plugins-public/commit/e423bfecd26aa784390a3ccabab384d69f9b790c))
+* **speckit-pro:** keep archive runs out of agent context files and name the spec index helpers ([#778](https://github.com/racecraft-lab/racecraft-plugins-public/issues/778)) ([b709f46](https://github.com/racecraft-lab/racecraft-plugins-public/commit/b709f46a59d5e26dcd40e1559d0eef8e2153c531))
+* **speckit-pro:** keep private values out of autopilot state and worktree names out of the privacy scan ([#780](https://github.com/racecraft-lab/racecraft-plugins-public/issues/780)) ([fa17edf](https://github.com/racecraft-lab/racecraft-plugins-public/commit/fa17edf10366c4b95bafbde4a50bf8235352983b))
+* **speckit-pro:** keep task-results journals out of the clean-worktree check ([#782](https://github.com/racecraft-lab/racecraft-plugins-public/issues/782)) ([1cad1fd](https://github.com/racecraft-lab/racecraft-plugins-public/commit/1cad1fddb9b459353e9f5273ca7c74b64fa9cffd))
+* **speckit-pro:** let a completing TDD report cite its own earlier RED evidence ([#792](https://github.com/racecraft-lab/racecraft-plugins-public/issues/792)) ([8879b68](https://github.com/racecraft-lab/racecraft-plugins-public/commit/8879b683330e160e3018cac6ac72cda639b0b7b6))
+* **speckit-pro:** let autopilot ratify a budget-driven PR split without a human ([#775](https://github.com/racecraft-lab/racecraft-plugins-public/issues/775)) ([e4c0115](https://github.com/racecraft-lab/racecraft-plugins-public/commit/e4c0115aab27b93cb5a02e1db3dba6b415d3f87c))
+* **speckit-pro:** open a fresh allowance per stage and route confirm and recheck tasks to verification ([#781](https://github.com/racecraft-lab/racecraft-plugins-public/issues/781)) ([d887c05](https://github.com/racecraft-lab/racecraft-plugins-public/commit/d887c057b9ed6883effe7ec2e93195484dd55be9))
+* **speckit-pro:** recover agent installer cleanup on macOS ([#774](https://github.com/racecraft-lab/racecraft-plugins-public/issues/774)) ([0810dbc](https://github.com/racecraft-lab/racecraft-plugins-public/commit/0810dbc5282d8f2a15813b66f606f0ce5b7ddd7a))
+* **speckit-pro:** repair state privacy errors in place, account for implementation notes, and fix a G5 false positive ([#803](https://github.com/racecraft-lab/racecraft-plugins-public/issues/803)) ([67171ac](https://github.com/racecraft-lab/racecraft-plugins-public/commit/67171ac99d439ba6b3eb1c508ee3a3f1186ea949))
+* **speckit-pro:** ship the marker checkpoint schema with the plugin and count evidence files without a re-plan ([#797](https://github.com/racecraft-lab/racecraft-plugins-public/issues/797)) ([21b3805](https://github.com/racecraft-lab/racecraft-plugins-public/commit/21b38054b1434c35fb41d3e6ca578809b074506d))
+* **speckit-pro:** stop asking for implementation scope when the plan is ratified ([#776](https://github.com/racecraft-lab/racecraft-plugins-public/issues/776)) ([e2f09c1](https://github.com/racecraft-lab/racecraft-plugins-public/commit/e2f09c1d38cc2fe537cd12d7a5df9433e7d3997a))
+
+## [2.38.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.37.1...speckit-pro-v2.38.0) (2026-09-27)
+
+
+### Features
+
+* **speckit-pro:** emit a paste-ready egress authorization from the Codex preflight ([#760](https://github.com/racecraft-lab/racecraft-plugins-public/issues/760)) ([35d6030](https://github.com/racecraft-lab/racecraft-plugins-public/commit/35d60300382d75b96c21967cf538a3b067cd5d9f))
+
+
+### Bug Fixes
+
+* **speckit-pro:** archive merged specs one feature at a time ([#758](https://github.com/racecraft-lab/racecraft-plugins-public/issues/758)) ([80c8f68](https://github.com/racecraft-lab/racecraft-plugins-public/commit/80c8f68dca8b53ca1eaefc12002b944c55a04ff3))
+* **speckit-pro:** inventory data egress in the Codex autonomy preflight ([#750](https://github.com/racecraft-lab/racecraft-plugins-public/issues/750)) ([4fa3a98](https://github.com/racecraft-lab/racecraft-plugins-public/commit/4fa3a98c4adf165de13923a75d83937b641312ca))
+* **speckit-pro:** keep autopilot running past one blocked action ([#757](https://github.com/racecraft-lab/racecraft-plugins-public/issues/757)) ([67706d9](https://github.com/racecraft-lab/racecraft-plugins-public/commit/67706d96542762cd681b501b55a35f8f7a047df3)), closes [#752](https://github.com/racecraft-lab/racecraft-plugins-public/issues/752)
+* **speckit-pro:** keep runner byproducts out of commits ([#759](https://github.com/racecraft-lab/racecraft-plugins-public/issues/759)) ([a3527f9](https://github.com/racecraft-lab/racecraft-plugins-public/commit/a3527f9ad63d23764b0e1b45f0cff15f0848e32c))
+* **speckit-pro:** re-attest the autonomy boundary at resume start ([#749](https://github.com/racecraft-lab/racecraft-plugins-public/issues/749)) ([6aa1be6](https://github.com/racecraft-lab/racecraft-plugins-public/commit/6aa1be6780652951ba5e29f98f7cafc3cc746e3b))
+* **speckit-pro:** record the implement checklist gate as deferred to review ([#761](https://github.com/racecraft-lab/racecraft-plugins-public/issues/761)) ([0cea36a](https://github.com/racecraft-lab/racecraft-plugins-public/commit/0cea36ad5aadae5f395439c33a17a5943b5bd9d7))
+
 ## [2.37.1](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.37.0...speckit-pro-v2.37.1) (2026-09-27)
 
 

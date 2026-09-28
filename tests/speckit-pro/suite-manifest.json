@@ -170,7 +170,10 @@
         { "path": "tests/speckit-pro/unit/test-artifact-freshness.py", "label": "test-artifact-freshness" },
         { "path": "tests/speckit-pro/unit/test-research-broker-preflight.py", "label": "test-research-broker-preflight" },
         { "path": "tests/speckit-pro/unit/test-research-broker.py", "label": "test-research-broker" },
-        { "path": "tests/speckit-pro/unit/test-render-egress-authorization.py", "label": "test-render-egress-authorization" }
+        { "path": "tests/speckit-pro/unit/test-render-egress-authorization.py", "label": "test-render-egress-authorization" },
+        { "path": "tests/speckit-pro/unit/test-finalize-run.py", "label": "test-finalize-run" },
+        { "path": "tests/speckit-pro/unit/test-gate-preflight-coverage.py", "label": "test-gate-preflight-coverage" },
+        { "path": "tests/speckit-pro/unit/test-ratify-pr-split.py", "label": "test-ratify-pr-split" }
       ]
     },
     {

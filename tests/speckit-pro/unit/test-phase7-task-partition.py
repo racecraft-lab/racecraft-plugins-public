@@ -31,7 +31,11 @@ if str(SHARED_LIB) not in sys.path:
 
 from test_result import run_counted  # noqa: E402
 
-from speckit_pro_runner.helpers.read_only import partition_phase7_tasks  # noqa: E402
+from speckit_pro_runner.helpers.read_only import (  # noqa: E402
+    PHASE7_VERIFY_KEYWORDS,
+    partition_phase7_tasks,
+    validate_task_execution,
+)
 
 IMPLEMENT_EXECUTOR = "speckit-pro:implement-executor"
 DOMAIN_RESEARCHER = "speckit-pro:domain-researcher"
@@ -131,6 +135,34 @@ class RoutingTests(unittest.TestCase):
         ):
             with self.subTest(msg=title):
                 self.assertEqual(route_of(f"- [ ] T001 {title}"), ORCHESTRATOR_DIRECT)
+
+    def test_check_only_synonyms_route_to_the_orchestrator(self) -> None:
+        """``Confirm`` and ``Recheck`` open check-only tasks, so they are verification heads.
+
+        A Tasks run worded two inventory checks this way; the scheduler routed
+        them to the executor and demanded implementation TDD evidence for work
+        that changes no code.
+        """
+        for title in (
+            "Confirm the working branch is not main",
+            "Recheck the declared contracts against the schemas",
+            "**Confirm** the generated payload digests",
+        ):
+            with self.subTest(msg=title):
+                self.assertEqual(route_of(f"- [ ] T001 {title}"), ORCHESTRATOR_DIRECT)
+
+    def test_a_leading_validate_is_implementation_work(self) -> None:
+        """``validate`` is not a verification head: at the head it reads both ways.
+
+        "Validate the email input in the signup form" is implementation work,
+        so the word stays with the executor. A check-only task opens with one of
+        the listed verification verbs instead.
+        """
+        self.assertNotIn("validate", PHASE7_VERIFY_KEYWORDS)
+        self.assertEqual(
+            route_of("- [ ] T001 Validate the email input in the signup form"),
+            IMPLEMENT_EXECUTOR,
+        )
 
     def test_a_verify_keyword_away_from_the_head_does_not_route_the_task(self) -> None:
         """Branch (d) is the verification-only branch, so it reads the head.
@@ -516,10 +548,62 @@ class ContractTests(unittest.TestCase):
         self.assertEqual(payload["runs"][0]["tasks"], ["T001", "T002"])
 
 
+class VerificationVerbSourceTests(unittest.TestCase):
+    """The Tasks guidance and both hosts' routing prose name the scheduler's one verb list."""
+
+    SURFACES = (
+        "speckit-pro/skills/speckit-coach/templates/workflow-template.md",
+        "speckit-pro/skills/speckit-autopilot/references/phase-execution.md",
+        "speckit-pro/codex-skills/speckit-autopilot/references/phase-execution-codex.md",
+    )
+
+    def test_every_surface_names_exactly_the_scheduler_verbs(self) -> None:
+        rendered = ", ".join(f"`{verb}`" for verb in PHASE7_VERIFY_KEYWORDS)
+        for relative in self.SURFACES:
+            with self.subTest(surface=relative):
+                text = " ".join((REPO_ROOT / relative).read_text(encoding="utf-8").split())
+                self.assertTrue(rendered in text, f"{relative} must name {rendered}")
+
+    def test_the_tasks_prompt_carries_the_verb_rule(self) -> None:
+        text = (REPO_ROOT / self.SURFACES[0]).read_text(encoding="utf-8")
+        prompt = text[text.index("### Tasks Prompt"):text.index("### Tasks Results")]
+        self.assertIn("check-only task", prompt)
+        self.assertIn("`Implement`, `Add`, or `Create`", prompt)
+
+    def test_task_metadata_validation_routes_a_confirm_task_to_verification(self) -> None:
+        """G5's `validate-task-execution` plans a ``Confirm`` task as orchestrator-direct."""
+        with tempfile.TemporaryDirectory() as raw_root:
+            root = Path(raw_root).resolve()
+            feature = root / "feature"
+            feature.mkdir()
+            (feature / "spec.md").write_text("# Spec\n- FR-001: keep data\n", encoding="utf-8")
+            (feature / "plan.md").write_text("# Plan\n", encoding="utf-8")
+            (feature / "tasks.md").write_text(
+                "# Tasks\n## Phase 1: Setup\n- [ ] T001 Confirm the fixture in `fixture.txt` is present\n",
+                encoding="utf-8",
+            )
+            (root / "fixture.txt").write_text("fixture\n", encoding="utf-8")
+            request = {"tasks_file": "feature/tasks.md"}
+            prints = json.loads(validate_task_execution({**request, "action": "fingerprints"}, root)["stdout"])
+            (feature / ".process").mkdir()
+            (feature / ".process" / "task-execution.json").write_text(json.dumps({
+                "schema_version": "task-execution.v1",
+                "fingerprints": prints["fingerprints"],
+                "tasks": {"T001": {"capability_group": "setup", "depends_on": [],
+                                   "owns": ["fixture.txt"], "tdd_unit": "fixture-check"}},
+            }), encoding="utf-8")
+            result = validate_task_execution(request, root)
+        payload = json.loads(result["stdout"])
+        self.assertEqual(result["exit_code"], 0, payload)
+        self.assertTrue(payload["valid"])
+        self.assertEqual([batch["agent"] for batch in payload["batches"]], [ORCHESTRATOR_DIRECT])
+
+
 def build_suite() -> unittest.TestSuite:
     loader = unittest.defaultTestLoader
     suite = unittest.TestSuite()
-    for case in (RoutingTests, GroupingTests, WaveTests, RejectionTests, ContractTests):
+    for case in (RoutingTests, GroupingTests, WaveTests, RejectionTests, ContractTests,
+                 VerificationVerbSourceTests):
         suite.addTests(loader.loadTestsFromTestCase(case))
     return suite
 

@@ -42,7 +42,7 @@ in order; do not collapse or defer.
 | 11 | Verify Implementation | verify ext | `$speckit-verify` |
 | 12 | Verify Tasks Phantom Check | verify-tasks ext | `$speckit-verify-tasks` |
 | 13 | Code Review | (none) — built-in | spawn a subagent to independently review the diff `origin/main...HEAD`; report findings by severity |
-| 14 | Integration Suite | (none) | `PROJECT_COMMANDS.FULL_VERIFY` or detected full test command, then every populated quality-gate slot (`COMPLEXITY`, `MUTATION`, `DEPENDENCY_RULES`) with `{paths}` (space-separated) and `{paths_csv}` (comma-separated) = changed source files in `origin/main...HEAD` (when that list is empty, skip `COMPLEXITY` and `MUTATION` and record `n/a: no source files changed`); when `MUTATION` is populated, run the hardener once per spec between its run and its block decision per [Hardener Delegation](hardener-delegation.md) (Qwen delegation when `qwen_health` is good, else the primary model; tests-only writes; stop at floor or cap; record the `Hardener` line); a populated slot that still fails blocks; record each result in the Quality Gates table |
+| 14 | Integration Suite | (none) | `PROJECT_COMMANDS.FULL_VERIFY` or detected full test command, then every populated quality-gate slot (`COMPLEXITY`, `MUTATION`, `DEPENDENCY_RULES`) with `{paths}` (space-separated) and `{paths_csv}` (comma-separated) = changed source files in `origin/main...HEAD` (when that list is empty, skip `COMPLEXITY` and `MUTATION` and record `n/a: no source files changed`); when `MUTATION` is populated, run the hardener once per spec between its run and its block decision per [Hardener Delegation](hardener-delegation.md) (delegation gateway on `route: "auto"` when `delegate_health` is good, else the primary model; tests-only writes; stop at floor or cap; record the `Hardener` line); a populated slot that still fails blocks; record each result in the Quality Gates table |
 | 15 | Final Reviewability Backstop | (none) | deferred helper; use current committed evidence or stop before PR side effects |
 | 16 | PR Packet/Body Generation | final backstop proceeded | emit or refresh current `specs/<feature>/.process/pr-packets/<packet-id>.json` with `pr-packet-output` `dry_run` then `apply`; stop if emission or validation fails |
 | 17 | PR Creation | current packet validation passed | single-PR path only when no split route and no current `pr_marker_plan`; `multi-pr-emission` for split-PR routes or marker-ready plans |
@@ -153,12 +153,17 @@ background subagents as the fallback path. The 3-track structure
   the canonical Post list. A completion response is forbidden while any `Post:` item is pending,
   in_progress, or missing. `execution_control.disposition=checkpoint_required`
   permits a checkpoint explicitly saying the run is not complete, retaining
-  all pending work, consumed budget and unknown effects. When every runnable
-  item has finished and deferred items remain, report the same kind of honest
-  checkpoint: one consolidated operator request, the same question as plain
-  text in the final message, and every fallback taken and every deferred item
-  listed, as the phase-execution reference's blocked-action rule states. Run
-  every Post item that does not depend on deferred work first. Otherwise continue
+  all pending work, consumed budget and unknown effects. `disposition=defer`
+  is not a stop: it defers one unit whose allowance is spent. When every runnable
+  item has finished and deferred items remain, the read-only `finalize-run`
+  helper decides the end, as the phase-execution reference's blocked-action
+  rule states. Human UAT is the only gate a run may defer: with every non-UAT
+  gate passed, the stack goes ready for review, the top PR body opens with
+  `deferred_items` in its Deferred / not verified section, and the goal is
+  marked complete. Anything else left is one human stop. Either way, one
+  consolidated operator request and the same question as plain text in the
+  final message list every fallback taken and every deferred item. Run every
+  Post item that does not depend on deferred work first. Otherwise continue
   with the first incomplete item. `Post: Retrospective` remains the final Post item and
   must be completed or explicitly skipped before completion can be reported.
 - **Agent-thread sweep before completion:** as part of the same pre-final audit,
