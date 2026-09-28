@@ -58,6 +58,27 @@ ownership from the caller's current workflow.
   dispatch supplies `failure_invariant`: a stable approved requirement or
   invariant ID. Unknown mappings share `unresolved`; changed wording, task IDs,
   agents, and commits are not new families.
+  A review fix for the increment under review also supplies
+  `review_remediation`: `{"tdd_unit": <the increment's TDD unit>, "paths":
+  [<every repo-relative path the fix touches>]}`, plus an explicit `spec_file`
+  naming the feature spec, since the workflow file usually lives outside the
+  feature directory. The helper reads ownership only from the
+  `.process/task-execution.json` beside that spec, and only when its
+  fingerprints match the current spec, plan, and tasks. When every path sits
+  inside that unit's `owns` and overlaps no other unit's, it reserves the fix
+  under the increment's own allowance: two rounds per TDD unit, recorded in
+  `increment_allowances` and returned as `review_allowance=increment`. That
+  allowance never draws on the run-wide `corrective_cycles` budget. Otherwise
+  the request takes the ordinary run-wide path unchanged, and the result
+  carries `review_allowance=run_wide` and the reason in `increment_ineligible`
+  (`ownership_evidence_unavailable`, `ownership_evidence_stale`,
+  `increment_not_in_ownership_evidence`, `no_remediation_paths`,
+  `path_outside_increment_ownership`, or `path_reopens_another_increment`).
+  Missing ownership evidence never grants a free allowance. A third round for
+  the same unit returns `increment_review_allowance_exhausted`: defer that
+  increment to the end-of-run request and continue with independent
+  increments. Increment allowances archive with the rest of the allowance in
+  `corrective_epochs`.
 - `complete`: record the same `dispatch_id` and actual
   `outcome=completed|failed|unknown|expected_tdd_red`. Expected assertion RED is
   implementation work, not corrective work. Infrastructure failures remain

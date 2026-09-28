@@ -24,6 +24,9 @@ SCHEMA = "execution-control/v1"
 KINDS = {"implementation", "corrective", "verification", "infrastructure"}
 OUTCOMES = {"completed", "failed", "unknown", "expected_tdd_red"}
 CORRECTIVE_REFUSALS = {"failure_family_budget_exhausted", "corrective_run_budget_exhausted"}
+# Review fixes inside one increment's own owned paths get this many rounds per
+# increment, outside the run-wide corrective budget.
+INCREMENT_REVIEW_ROUNDS = 2
 RUNNER_BYPRODUCT_DIRECTORIES = frozenset({(".process", "execution-control"), (".process", "verification"),
                                           (".process", "task-results")})
 
@@ -185,16 +188,21 @@ def _validate_corrective_state(value: dict[str, Any]) -> None:
     if len(value["reservations"]) != value["corrective_cycles"]:
         raise ValueError("reservation counter disagrees with ledger")
     exception_reservation = _validate_corrective_exception(value)
+    allowances = _validate_increment_allowances(value)
     families = [item.get("family") for item in value["reservations"].values() if isinstance(item, dict)]
     if len(families) != len(value["reservations"]) or len(set(families)) != len(families):
         raise ValueError("duplicate or malformed corrective family")
-    for item in value["dispatches"].values():
+    for dispatch_id, item in value["dispatches"].items():
         if not isinstance(item, dict) or item.get("kind") not in KINDS or item.get("outcome") not in OUTCOMES | {"reserved", "running"}:
             raise ValueError("invalid dispatch record")
         if type(item.get("reconciliations")) is not int or not 0 <= item["reconciliations"] <= 1:
             raise ValueError("invalid reconciliation counter")
         reservation = item.get("reservation_id")
-        if (item["kind"] == "corrective" and reservation not in value["reservations"]
+        if "increment" in item:
+            if (item["kind"] != "corrective" or reservation is not None
+                    or dispatch_id not in allowances.get(item["increment"], {}).get("dispatch_ids", [])):
+                raise ValueError("increment review dispatch is not recorded in its increment allowance")
+        elif (item["kind"] == "corrective" and reservation not in value["reservations"]
                 and (exception_reservation is None or reservation != exception_reservation)):
             raise ValueError("corrective dispatch has no reservation")
     validate_recovery_records(value)
@@ -202,7 +210,7 @@ def _validate_corrective_state(value: dict[str, Any]) -> None:
 
 
 EPOCH_STATE_KEYS = ("corrective_cycles", "reservations", "dispatches", "approved_invariants")
-EPOCH_OPTIONAL_KEYS = ("invariant_binding", "corrective_exception")
+EPOCH_OPTIONAL_KEYS = ("invariant_binding", "corrective_exception", "increment_allowances")
 # An operator's explicit stage start closes the prior stage's allowance under a
 # runner-derived event ID, so each stage opens at most one allowance per run.
 STAGE_EPOCH_STAGES = ("implement",)
@@ -293,6 +301,27 @@ def _validate_corrective_exception(ledger: dict[str, Any]) -> str | None:
     if members != [dispatch_id] or ledger["dispatches"][dispatch_id].get("kind") != "corrective":
         raise ValueError("corrective exception must own exactly one corrective dispatch")
     return reservation
+
+
+def _validate_increment_allowances(ledger: dict[str, Any]) -> dict[str, Any]:
+    """Each increment's review rounds match its own recorded, unreserved corrective dispatches."""
+    if "increment_allowances" not in ledger:
+        return {}
+    allowances = ledger["increment_allowances"]
+    if not isinstance(allowances, dict) or not allowances:
+        raise ValueError("invalid increment review allowances")
+    for unit, record in allowances.items():
+        require_text(unit, "increment tdd_unit")
+        if (not isinstance(record, dict) or set(record) != {"rounds", "dispatch_ids"}
+                or type(record["rounds"]) is not int or not 1 <= record["rounds"] <= INCREMENT_REVIEW_ROUNDS
+                or not isinstance(record["dispatch_ids"], list) or len(record["dispatch_ids"]) != record["rounds"]
+                or len(set(record["dispatch_ids"])) != record["rounds"]):
+            raise ValueError("increment review rounds disagree with the ledger")
+        for dispatch_id in record["dispatch_ids"]:
+            item = ledger["dispatches"].get(dispatch_id)
+            if not isinstance(item, dict) or item.get("increment") != unit:
+                raise ValueError("increment review allowance lists a dispatch it does not own")
+    return allowances
 
 
 def validate_recovery_records(ledger: dict[str, Any]) -> None:
@@ -454,14 +483,99 @@ def _corrective_refusal(ledger: dict[str, Any], family: str) -> str | None:
     return None
 
 
-def reserve(ledger: dict[str, Any], inputs: dict[str, Any], now: float) -> dict[str, Any]:
+def _review_remediation(inputs: dict[str, Any]) -> dict[str, Any] | None:
+    """The optional `review_remediation` request: one increment and the paths the fix touches."""
+    request = inputs.get("review_remediation")
+    if request is None:
+        return None
+    if (not isinstance(request, dict) or set(request) != {"tdd_unit", "paths"}
+            or not isinstance(request["paths"], list) or not all(isinstance(path, str) for path in request["paths"])):
+        raise ValueError("review_remediation requires exactly tdd_unit and a paths array of strings")
+    require_text(request["tdd_unit"], "review_remediation tdd_unit")
+    if inputs.get("kind") != "corrective" or inputs.get("reservation_id") is not None:
+        raise ValueError("review_remediation applies only to a new corrective dispatch")
+    if inputs.get("spec_file") is None:
+        raise ValueError("review_remediation requires an explicit spec_file naming the feature spec")
+    return request
+
+
+def _increment_ineligibility(root: Path, spec: Path, request: dict[str, Any]) -> str | None:
+    """Why a review fix does not qualify for its increment's allowance, or None when it does.
+
+    Ownership comes only from the task-execution sidecar beside the explicit
+    feature spec's tasks, bound to the current spec, plan, and tasks by their fingerprints.
+    Missing, stale, or malformed evidence never qualifies.
+    """
+    from .task_execution import TaskExecutionError, fingerprints, owned_path, overlaps, path_key
+
+    try:
+        feature = spec.parent.relative_to(root.resolve()).as_posix()
+        sources = [confined_path(root, f"{feature}/{name}").read_text(encoding="utf-8")
+                   for name in ("spec.md", "plan.md", "tasks.md")]
+        metadata = json.loads(confined_path(root, f"{feature}/.process/task-execution.json").read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, ValueError):
+        return "ownership_evidence_unavailable"
+    if (not isinstance(metadata, dict) or metadata.get("schema_version") != "task-execution.v1"
+            or metadata.get("fingerprints") != fingerprints(*sources)):
+        return "ownership_evidence_stale"
+    tasks = metadata.get("tasks")
+    units: dict[str, list[str]] = {}
+    try:
+        if not isinstance(tasks, dict) or not tasks:
+            raise TaskExecutionError("no task ownership")
+        for entry in tasks.values():
+            if (not isinstance(entry, dict) or not isinstance(entry.get("tdd_unit"), str)
+                    or not isinstance(entry.get("owns"), list) or not entry["owns"]):
+                raise TaskExecutionError("malformed task ownership")
+            units.setdefault(entry["tdd_unit"], []).extend(owned_path(path, root) for path in entry["owns"])
+    except TaskExecutionError:
+        return "ownership_evidence_unavailable"
+    owns = units.get(request["tdd_unit"])
+    if owns is None:
+        return "increment_not_in_ownership_evidence"
+    if not request["paths"]:
+        return "no_remediation_paths"
+    try:
+        paths = [owned_path(path, root) for path in request["paths"]]
+    except TaskExecutionError:
+        return "path_outside_increment_ownership"
+    if not all(any(path_key(path) == path_key(own) or path_key(path).startswith(path_key(own) + "/") for own in owns)
+               for path in paths):
+        return "path_outside_increment_ownership"
+    if any(overlaps(path, own) for unit, other in units.items() if unit != request["tdd_unit"]
+           for own in other for path in paths):
+        return "path_reopens_another_increment"
+    return None
+
+
+def _reserve_increment_review(ledger: dict[str, Any], dispatch_id: str, unit: str, now: float) -> dict[str, Any]:
+    """Spend one of the increment's own review rounds; never touches the run-wide counter."""
+    allowances = ledger.get("increment_allowances", {})
+    record = allowances.get(unit, {"rounds": 0, "dispatch_ids": []})
+    if record["rounds"] >= INCREMENT_REVIEW_ROUNDS:
+        return {"reasons": ["increment_review_allowance_exhausted"], "review_allowance": "increment"}
+    ledger["increment_allowances"] = {**allowances, unit: {"rounds": record["rounds"] + 1,
+                                                           "dispatch_ids": [*record["dispatch_ids"], dispatch_id]}}
+    ledger["dispatches"][dispatch_id] = {"kind": "corrective", "outcome": "reserved", "reserved_at": now,
+                                         "reservation_id": None, "reconciliations": 0, "increment": unit}
+    return {"reservation_id": None, "dispatch_id": dispatch_id, "review_allowance": "increment"}
+
+
+def reserve(ledger: dict[str, Any], inputs: dict[str, Any], now: float, root: Path, spec: Path) -> dict[str, Any]:
     dispatch_id = require_text(inputs.get("dispatch_id"), "dispatch_id")
     kind = inputs.get("kind")
     if kind not in KINDS:
         raise ValueError("unknown execution kind")
+    review = _review_remediation(inputs)
     if dispatch_id in _used_dispatch_ids(ledger):
         return {"reasons": ["dispatch_already_reserved_no_relaunch"]}
     reservation = inputs.get("reservation_id")
+    note: dict[str, Any] = {}
+    if review is not None:
+        ineligible = _increment_ineligibility(root, spec, review)
+        if ineligible is None:
+            return _reserve_increment_review(ledger, dispatch_id, review["tdd_unit"], now)
+        note = {"review_allowance": "run_wide", "increment_ineligible": ineligible}
     if kind == "corrective":
         if reservation is not None:
             if reservation not in ledger["reservations"]:
@@ -477,7 +591,7 @@ def reserve(ledger: dict[str, Any], inputs: dict[str, Any], now: float) -> dict[
             family = str(invariant) if invariant in ledger["approved_invariants"] else "unresolved"
             refusal = _corrective_refusal(ledger, family)
             if refusal is not None:
-                return {"reasons": [refusal]}
+                return {"reasons": [refusal], **note}
             reservation = uuid.uuid4().hex
             ledger["reservations"][reservation] = {"family": family, "dispatch_id": dispatch_id, "reserved_at": now}
             ledger["corrective_cycles"] += 1
@@ -485,7 +599,7 @@ def reserve(ledger: dict[str, Any], inputs: dict[str, Any], now: float) -> dict[
         raise ValueError("only corrective dispatches use corrective reservations")
     ledger["dispatches"][dispatch_id] = {"kind": kind, "outcome": "reserved", "reserved_at": now,
                                         "reservation_id": reservation, "reconciliations": 0}
-    return {"reservation_id": reservation, "dispatch_id": dispatch_id}
+    return {"reservation_id": reservation, "dispatch_id": dispatch_id, **note}
 
 
 def authorize_corrective_retry(ledger: dict[str, Any], inputs: dict[str, Any], now: float) -> dict[str, Any]:
@@ -821,7 +935,7 @@ def execution_control(root: Path, inputs: dict[str, Any], mode: str) -> dict[str
             raise ValueError("clock moved backwards; preserve the ledger and reconcile time before continuing")
         _bind_invariants_if_requested(root, inputs, spec, ledger, now, reasons)
         if action == "reserve" and not reasons:
-            extra = reserve(ledger, inputs, now)
+            extra = reserve(ledger, inputs, now, root, spec)
         elif action == "authorize-corrective-retry" and not reasons:
             extra = authorize_corrective_retry(ledger, inputs, now)
         elif action == "authorize-corrective-continuation" and not reasons:
