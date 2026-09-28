@@ -1196,6 +1196,30 @@ class IncrementReviewAllowanceTests(_ExecutionControlFixture, unittest.TestCase)
         self.assertEqual(self.review_fix("alpha-refused", "alpha", ["src/common.py"])["increment_ineligible"],
                          "path_reopens_another_increment")
 
+    def test_a_shared_file_is_judged_only_against_increments_still_open(self):
+        self.write_sidecar()
+        tasks = self.root / "feature/tasks.md"
+        completed = self.TASKS.replace("- [ ] T003", "- [X] T003")
+        tasks.write_text(completed)
+        commit_fixture(self.root)
+        self.spend_run_wide_budget()
+        admitted = self.review_fix("alpha-shared", "alpha", ["src/common.py"])
+        self.assertEqual((admitted["disposition"], admitted["review_allowance"]), ("continue", "increment"))
+        self.assertNotIn("increment_ineligible", admitted)
+        cases = {"open in the worktree": (completed, self.TASKS),
+                 "checked but not committed": (self.TASKS, completed),
+                 "open everywhere": (self.TASKS, self.TASKS),
+                 "committed task definitions differ": (completed.replace("gamma", "delta"), completed)}
+        for name, (committed, worktree) in cases.items():
+            with self.subTest(case=name):
+                tasks.write_text(committed)
+                commit_fixture(self.root)
+                tasks.write_text(worktree)
+                refused = self.review_fix("alpha-" + name.replace(" ", "-"), "alpha", ["src/common.py"],
+                                          mode="dry_run")
+                self.assertEqual(refused["increment_ineligible"], "path_reopens_another_increment")
+                self.assertEqual(refused["review_allowance"], "run_wide")
+
     def test_missing_stale_or_unknown_ownership_evidence_never_grants_a_free_allowance(self):
         self.spend_run_wide_budget()
         cases = (("no_sidecar", None, "alpha", ["src/alpha/core.py"]),
@@ -1224,6 +1248,32 @@ class IncrementReviewAllowanceTests(_ExecutionControlFixture, unittest.TestCase)
         with self.assertRaises(ValueError):
             self.invoke("reserve", dispatch_id="not-corrective", kind="implementation", spec_file="feature/spec.md",
                         review_remediation={"tdd_unit": "alpha", "paths": ["src/alpha/core.py"]})
+
+    def test_a_serial_plan_keeps_running_after_a_review_fix_deferral(self):
+        from speckit_pro_runner.helpers.run_finalization import finalize_run
+
+        self.write_sidecar()
+        self.spend_run_wide_budget()
+        for number in (1, 2):
+            self.review_fix(f"alpha-review-{number}", "alpha", ["src/alpha/core.py"])
+            self.invoke("complete", dispatch_id=f"alpha-review-{number}", outcome="completed")
+        deferred = self.review_fix("alpha-review-3", "alpha", ["src/alpha/core.py"])
+        self.assertEqual(deferred["disposition"], "defer")
+        # beta depends on alpha in a strictly serial plan; its implementation still runs.
+        dependent = self.invoke("reserve", dispatch_id="beta-implement", kind="implementation")
+        self.assertEqual(dependent["disposition"], "continue")
+        self.assertEqual(self.invoke("status", mode="read_only")["disposition"], "continue")
+        common = {"ledger_path": dependent["ledger_path"], "expected_run_id": self.run_id,
+                  "gates": [{"gate": "G7", "status": "passed", "command": "python3 -m unittest",
+                             "head_sha": "a" * 40}],
+                  "pull_requests": [{"number": 1, "url": "https://github.com/example/repo/pull/1", "draft": True,
+                                     "head_sha": "a" * 40}],
+                  "resume_command": "/speckit-pro:speckit-autopilot feature/workflow.md --stage implement"}
+        running = finalize_run(self.root, {**common, "pending_items": ["T002 Build the beta increment"]})
+        self.assertEqual((running["outcome"], running["human_stop"]), ("continue", None))
+        ended = finalize_run(self.root, {**common, "pending_items": []})
+        self.assertEqual(ended["outcome"], "human_stop")
+        self.assertIn("Increment alpha", ended["end_of_run_request"])
 
     def test_forged_or_overspent_increment_records_fail_closed(self):
         self.write_sidecar()
@@ -1484,6 +1534,28 @@ class DeferOnExhaustedAllowanceGuidanceTests(unittest.TestCase):
                               "checkpoint with exact output on exhaustion", "including an exhausted repair budget",
                               "When the repair budget is exhausted and the fix needs operator approval"):
                     self.assertNotIn(stale, section)
+
+    def test_a_serial_plan_never_stops_mid_run_on_a_deferral(self):
+        shared = self.flat("skills/speckit-autopilot/references/execution-efficiency.md")
+        self.assertIn("a serial plan never stops mid-run on a deferral", shared)
+        self.assertIn("tracked follow-up", shared)
+        for relative, start, end in (
+                ("skills/speckit-autopilot/references/phase-execution.md",
+                 "#### Blocked Actions Mid-Run", "#### Repeated Gate Failures"),
+                ("codex-skills/speckit-autopilot/references/phase-execution-codex.md",
+                 "### Blocked Actions Mid-Run", "### Repeated Gate Failures")):
+            with self.subTest(host=relative):
+                text = self.flat(relative)
+                section = text.split(start, 1)[1].split(end, 1)[0]
+                for phrase in ("a serial plan never stops mid-run on a deferral", "`finalize-run`",
+                               "the only stop is its end-of-run human stop"):
+                    self.assertIn(phrase, section)
+                review = text.split("**Review fixes inside one increment.**", 1)[1].split("\n\n", 1)[0]
+                review = " ".join(review.split())
+                for phrase in ("tracked follow-up", "its dependents stay runnable", "never a new task line",
+                               "`ownership_evidence_stale`", "defer that increment", "never a mid-run question"):
+                    self.assertIn(phrase, review)
+                self.assertNotIn("keep its dependents deferred", review)
 
     def test_codex_audit_and_both_hosts_keep_the_true_stops(self):
         audit = self.flat("codex-skills/speckit-autopilot/SKILL.md").split("### 3.4 Pre-final completion audit", 1)[1]

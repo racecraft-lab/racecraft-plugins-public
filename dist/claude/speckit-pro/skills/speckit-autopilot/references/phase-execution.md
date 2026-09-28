@@ -1422,6 +1422,14 @@ warnings.
 (SKILL.md §Architectural Constraint); executors are terminal workers,
 so routing happens here.
 
+**A declared pre-PR command runs as a pre-PR gate.** A command the root
+`AGENTS.md` or `CLAUDE.md` names for every PR, such as a dependency audit,
+runs before each PR like any other gate. On Codex the Phase 6.5 preflight
+collects its egress authorization at run start through
+`check-gate-preflight-coverage`. Claude Code has no approval reviewer, so it
+needs no run-start inventory: the command runs under the session's
+permission settings, and a denial is a blocked action (below).
+
 #### Phase 7 Setup: The Pull-Request Feedback Sweep
 
 Run the sweep **first**, ahead of the implementation-notes record. Reviewer feedback left on the draft pull
@@ -2708,16 +2716,28 @@ finds defects in code that increment just wrote, reserve the fix with
 `review_remediation`: the increment's `tdd_unit` and every repository-relative
 path the fix will touch.
 When the task-execution sidecar is current and every path sits inside that
-TDD unit's own `owns` and no other unit's, the ledger admits the fix under
-that increment's own allowance of two review rounds. It never draws on the
+TDD unit's own `owns` and in no other unit that is still open, the ledger
+admits the fix under that increment's own allowance of two review rounds. A
+unit is closed when all its tasks are checked in the committed `tasks.md` and
+still checked in the worktree, so a file shared with finished, committed
+increments does not refuse the fix. It never draws on the
 run-wide corrective budget, so a spent run-wide budget does not stop the next
 increment's review loop. A fix that touches a path outside the increment's
-ownership, reopens another increment's accepted work, or lacks current
+ownership, overlaps an increment that is still open, or lacks current
 ownership evidence goes through the run-wide budget unchanged. When the
 reserve returns `disposition=defer` with `increment_review_allowance_exhausted`, defer that increment
-under [Blocked Actions Mid-Run: Fall Back or Defer, Never Stop](#blocked-actions-mid-run-fall-back-or-defer-never-stop): record its
-open findings, keep its dependents deferred, and continue with independent
-increments. It is never a mid-run question and never a stop.
+under [Blocked Actions Mid-Run: Fall Back or Defer, Never Stop](#blocked-actions-mid-run-fall-back-or-defer-never-stop).
+A review-fix deferral is not a blocked task: the increment's tasks stay
+checked and committed, and its dependents stay runnable. Record its open
+findings as a tracked follow-up in the increment's implementation-notes entry
+and the workflow file's Phase 7 result (the ledger's `deferred` entry already
+names it), then continue with the next increment, even in a strictly serial
+plan. A later increment whose review round touches the same path may fix it;
+anything still open goes to the `finalize-run` end-of-run request. The
+follow-up is never a new task line in `tasks.md`: a changed task list stales
+the task-execution sidecar, and every later review fix would fall back to the
+run-wide budget with `ownership_evidence_stale`. It is never a mid-run
+question and never a stop.
 
 ##### Step 3c: Agent Prompt Template
 
@@ -2809,7 +2829,10 @@ denial), a missing approval, or an unavailable tool or route.
    another route. Never ask the operator from inside the task, and never set a
    workflow row or progress item to blocked while runnable work remains. Mid-run a deferral only keeps the run
    working on other units; at the end of the run an unresolved deferral is the
-   human stop in rule 3.
+   human stop in rule 3. So a serial plan never stops mid-run on a deferral:
+   when no runnable work remains, even before the plan's last task, go
+   straight to rule 3 and run `finalize-run`; the only stop is its end-of-run
+   human stop.
 3. **Finalize, or stop once.** Human UAT is the only gate a run may defer.
    Every other gate (the integration suite, live evaluations, quality and test
    gates) must run and pass before the stack goes ready for review, and each
