@@ -1264,8 +1264,10 @@ class IncrementReviewAllowanceTests(_ExecutionControlFixture, unittest.TestCase)
         self.assertEqual(dependent["disposition"], "continue")
         self.assertEqual(self.invoke("status", mode="read_only")["disposition"], "continue")
         common = {"ledger_path": dependent["ledger_path"], "expected_run_id": self.run_id,
-                  "gates": [{"gate": "G7", "status": "passed", "command": "python3 -m unittest"}],
-                  "pull_requests": [{"number": 1, "url": "https://github.com/example/repo/pull/1", "draft": True}],
+                  "gates": [{"gate": "G7", "status": "passed", "command": "python3 -m unittest",
+                             "head_sha": "a" * 40}],
+                  "pull_requests": [{"number": 1, "url": "https://github.com/example/repo/pull/1", "draft": True,
+                                     "head_sha": "a" * 40}],
                   "resume_command": "/speckit-pro:speckit-autopilot feature/workflow.md --stage implement"}
         running = finalize_run(self.root, {**common, "pending_items": ["T002 Build the beta increment"]})
         self.assertEqual((running["outcome"], running["human_stop"]), ("continue", None))
