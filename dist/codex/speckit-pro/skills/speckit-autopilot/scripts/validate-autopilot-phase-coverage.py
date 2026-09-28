@@ -120,6 +120,8 @@ HAS_DESCRIPTOR_RELATIVE_IO = (
     and os.stat in os.supports_dir_fd
     and os.stat in os.supports_follow_symlinks
 )
+# The plugin root is fixed by this script's own location, never by request input.
+INSTALLED_PLUGIN_ROOT = Path(__file__).resolve().parents[3]
 SUPPORTED_MARKER_PLAN_VERSIONS = frozenset({"pr-marker-plan.v1", "pr-marker-plan.v2"})
 MARKER_PLAN_SCHEMA_PATH = Path(__file__).resolve().parents[1] / "contracts" / "pr-marker-plan.schema.json"
 CHANGED_FILE_MANIFEST_SCHEMA_PATH = (
@@ -127,6 +129,9 @@ CHANGED_FILE_MANIFEST_SCHEMA_PATH = (
 )
 VERIFICATION_REPORT_SCHEMA_PATH = (
     Path(__file__).resolve().parents[1] / "contracts" / "verification-report.schema.json"
+)
+MARKER_CHECKPOINT_SCHEMA_PATH = (
+    Path(__file__).resolve().parents[1] / "contracts" / "marker-checkpoint.schema.json"
 )
 MARKER_PLAN_STATUSES = frozenset({
     "planned", "checkpointing", "emission_ready", "emitting", "emitted",
@@ -1575,18 +1580,32 @@ def _canonical_schema(
     )
     if exact_head:
         try:
-            schema_ref = schema_path.resolve().relative_to(repo_root.resolve()).as_posix()
+            schema_ref: str | None = (
+                schema_path.resolve().relative_to(repo_root.resolve()).as_posix()
+            )
         except ValueError:
-            return None, [f"canonical {label} schema is outside the authorized repository"]
-        schema_bytes = _git_file_at_commit(repo_root, expected_head_commit, schema_ref)
-        if schema_bytes is None:
-            return None, [f"canonical {label} schema is absent from the authorized PR head"]
-        try:
-            worktree_schema_bytes = schema_path.read_bytes()
-        except OSError:
-            worktree_schema_bytes = None
-        if worktree_schema_bytes != schema_bytes:
-            errors.append(f"canonical {label} schema differs from the authorized PR head")
+            schema_ref = None
+        if schema_ref is not None:
+            schema_bytes = _git_file_at_commit(repo_root, expected_head_commit, schema_ref)
+            if schema_bytes is None:
+                return None, [f"canonical {label} schema is absent from the authorized PR head"]
+            try:
+                worktree_schema_bytes = schema_path.read_bytes()
+            except OSError:
+                worktree_schema_bytes = None
+            if worktree_schema_bytes != schema_bytes:
+                errors.append(f"canonical {label} schema differs from the authorized PR head")
+        else:
+            # An installed plugin runs from outside the repository, so its
+            # contracts are trusted from the plugin root itself.
+            try:
+                schema_path.resolve(strict=True).relative_to(INSTALLED_PLUGIN_ROOT)
+            except (OSError, ValueError):
+                return None, [f"canonical {label} schema is outside the installed plugin root"]
+            try:
+                schema_bytes = schema_path.read_bytes()
+            except OSError:
+                schema_bytes = None
     else:
         try:
             schema_bytes = schema_path.read_bytes()
@@ -2580,9 +2599,19 @@ def validate_projection_integrity(
             )
             worktree_schema_bytes = _read_repo_bytes(repo_root, checkpoint_schema_ref)
             if committed_schema_bytes is None:
-                checkpoint_evidence_errors.append(
-                    "checkpoint evidence schema is absent from the authorized PR head"
+                # No feature-local schema: validate against the plugin's own contract.
+                checkpoint_evidence_schema, checkpoint_schema_errors = _canonical_schema(
+                    MARKER_CHECKPOINT_SCHEMA_PATH,
+                    "marker-checkpoint",
+                    repo_root=repo_root,
+                    expected_head_commit=expected_head_commit,
                 )
+                checkpoint_evidence_errors.extend(checkpoint_schema_errors)
+                if worktree_schema_bytes is not None:
+                    checkpoint_file_errors.append(
+                        "feature-local checkpoint evidence schema exists in the worktree but not "
+                        "at the authorized PR head; commit it or remove it to use the plugin schema"
+                    )
             else:
                 if worktree_schema_bytes != committed_schema_bytes:
                     checkpoint_file_errors.append(
