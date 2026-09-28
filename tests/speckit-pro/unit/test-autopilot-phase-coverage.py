@@ -606,6 +606,16 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
         _, report = self.run_validator(workflow, state)
         self.assertEqual(report["workflow_checkpoint_errors"], [])
 
+        false_pending_workflow = workflow.replace(
+            "| 2 | `us2` | T002 | Pending | Pending | None |",
+            f"| 2 | `us2` | T002 | Pending | Complete at `{'b' * 40}` | None |",
+        )
+        _, false_pending = self.run_validator(false_pending_workflow, state)
+        self.assertIn(
+            "workflow PR Marker Plan Evidence marker 'us2' pending checkpoint must be marked pending",
+            false_pending["workflow_checkpoint_errors"],
+        )
+
         wrong_workflow = workflow.replace(completed_sha, "b" * 40)
         _, wrong_report = self.run_validator(wrong_workflow, state)
         self.assertIn(

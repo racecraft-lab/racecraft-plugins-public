@@ -792,11 +792,15 @@ def validate_workflow_checkpoint_bindings(
 
     visible_text = _visible_markdown(text)
     expected: dict[str, str | None] = {}
+    checkpoint_statuses: dict[str, str | None] = {}
     expected_superseded: dict[str, str] = {}
     for marker in markers:
         if not isinstance(marker, dict) or not isinstance(marker.get("id"), str):
             continue
         checkpoint = marker.get("implementation_checkpoint")
+        checkpoint_statuses[marker["id"]] = (
+            checkpoint.get("status") if isinstance(checkpoint, dict) else None
+        )
         commit_sha = checkpoint.get("commit_sha") if isinstance(checkpoint, dict) else None
         expected[marker["id"]] = (
             commit_sha
@@ -900,7 +904,12 @@ def validate_workflow_checkpoint_bindings(
             marker_row_counts[marker_id] += 1
             checkpoint_shas = set(re.findall(r"\b[0-9a-f]{40}\b", cells[4]))
             expected_sha = expected[marker_id]
-            if expected_sha is not None and expected_sha not in checkpoint_shas:
+            if expected_sha is None and checkpoint_statuses[marker_id] == "pending":
+                if cells[4].strip("` ").casefold() != "pending":
+                    errors.append(
+                        f"workflow PR Marker Plan Evidence marker {marker_id!r} pending checkpoint must be marked pending"
+                    )
+            elif expected_sha is None or expected_sha not in checkpoint_shas:
                 expected_binding = (
                     expected_sha
                     if expected_sha is not None

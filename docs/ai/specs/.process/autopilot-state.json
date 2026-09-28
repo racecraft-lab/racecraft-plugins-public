@@ -271,7 +271,7 @@
       "status": "pending"
     }
   ],
-  "updated_at": "2026-09-28T15:10:30Z",
+  "updated_at": "2026-09-28T15:49:06Z",
   "prerequisites": {
     "status": "completed",
     "all_pass": true,
@@ -1131,7 +1131,8 @@
             "merged quick suite and CI suite passed",
             "full docs validation passed",
             "independent merged review clean"
-          ]
+          ],
+          "checkpoint_evidence_commit_sha": "f3d35bdf00ebb58606795b3169111dc53d172228"
         },
         "emission_mapping": {
           "status": "pending"
@@ -3724,7 +3725,19 @@
       "verification_evidence_path": "specs/hrns-015-autopilot-gate-pr-emission-repair/.process/verification/us1-part1.json",
       "independent_review": "clean at merged HEAD",
       "all_runnable_gates": "pass",
-      "pr_emission": "pending_exact_diff_and_loc"
+      "pr_emission": "pending_exact_diff_and_loc",
+      "evidence_commit_sha": "f3d35bdf00ebb58606795b3169111dc53d172228"
+    },
+    "known_upstream_guard_issue": {
+      "issue": "#812",
+      "reported_by_operator": true,
+      "installed_plugin_version": "2.38.1",
+      "installed_plugin_unchanged": true,
+      "affected_errors": [
+        "v1 pending-marker checkpoint binding",
+        "checkbox-only tasks_md autonomy fingerprint staleness"
+      ],
+      "disposition": "continue remaining implementation units; these two installed-cache errors alone are known upstream defects, while all other gates remain mandatory"
     }
   }
 }
