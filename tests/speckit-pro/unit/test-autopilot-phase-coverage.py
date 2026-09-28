@@ -582,6 +582,37 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
                 self.assertEqual(len(report["missing_workflow_tokens"]), 3)
                 self.assertEqual(len(report["missing_workflow_post_items"]), len(POST_STEPS))
 
+    def test_v1_workflow_allows_pending_marker_after_first_checkpoint(self) -> None:
+        completed_sha = "a" * 40
+        state = self.projected_state(
+            plan_status="in_progress",
+            phase_status="in_progress",
+            checkpoint=self.complete_checkpoint(commit_sha=completed_sha),
+        )
+        state["pr_marker_plan"]["schema_version"] = "pr-marker-plan.v1"
+        pending = dict(state["pr_marker_plan"]["markers"][0])
+        pending["id"] = "us2"
+        pending["review_order"] = 2
+        pending["task_ids"] = ["T002"]
+        pending["implementation_checkpoint"] = {"status": "pending"}
+        state["pr_marker_plan"]["markers"].append(pending)
+        workflow = workflow_text() + (
+            "\n## PR Marker Plan Evidence\n\n"
+            "| Review order | Marker | Tasks | Reviewability | Checkpoint | Warning |\n"
+            "|---|---|---|---|---|---|\n"
+            f"| 1 | `us1` | T001 | Pass | Complete at `{completed_sha}` | None |\n"
+            "| 2 | `us2` | T002 | Pending | Pending | None |\n"
+        )
+        _, report = self.run_validator(workflow, state)
+        self.assertEqual(report["workflow_checkpoint_errors"], [])
+
+        wrong_workflow = workflow.replace(completed_sha, "b" * 40)
+        _, wrong_report = self.run_validator(wrong_workflow, state)
+        self.assertIn(
+            f"workflow PR Marker Plan Evidence marker 'us1' checkpoint does not bind {completed_sha}",
+            wrong_report["workflow_checkpoint_errors"],
+        )
+
     def test_workflow_checkpoint_claims_bind_marker_plan_commits(self) -> None:
         expected_commit = "a" * 40
         wrong_commit = "b" * 40

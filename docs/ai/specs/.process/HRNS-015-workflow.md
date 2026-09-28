@@ -39,7 +39,7 @@ captured during scoping.
 | Tasks | `/speckit-tasks` | ✅ Complete | 31 unchecked tasks, 17 groups, current metadata, G5 pass; 18 pending-only v1 markers validated |
 | Analyze | `/speckit-analyze` | ✅ Complete | All current findings resolved; 26 active FRs covered; G6 passed; final confidence synthesis 0.95 |
 | Confidence Gate | G6.5 | ✅ Complete | Current autonomy ready; bounded re-plan advisory PASS, computed 0.94 ≥ 0.90, no deductions |
-| Implement | `/speckit-implement` | 🔄 In Progress | T001–T004 journal-complete; A1a source checkpoint and actual diff/LOC/marker evidence pending |
+| Implement | `/speckit-implement` | 🔄 In Progress | T001–T004 and A1a marker checkpoint complete; A1b/T005 next; exact PR emission diff/LOC pending |
 | Post | Post-Implementation | ⏳ Pending | Outside --stage plan; canonical 13-item closeout remains for implementation |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⏭️ Skipped | ⚠️ Blocked
@@ -1039,7 +1039,7 @@ Ripwire quality-delta returned exit 2 for canonical process-state verbosity. Its
 ## PR Marker Plan Evidence
 
 - Schema version: pr-marker-plan.v1
-- Plan status: planned
+- Plan status: checkpointing
 - Fingerprint status: Current
 - Reviewability: planned candidate budgets pass; actual diffs and LOC are unmeasured.
 - Warnings: implementation evidence pending.
@@ -1052,13 +1052,13 @@ Ripwire quality-delta returned exit 2 for canonical process-state verbosity. Its
 | --- | --- |
 | Feature spec | `sha256:18c93677aaaee5f73aa8399b2cea052cc58ed2724fe6e74d93be96a47eae7e58` |
 | Plan declared scope | `sha256:8381e50f0c0daf7491b6fb6f6e431adea30a89277d0b3073fd476194e6a8d759` |
-| Tasks | `sha256:5fc3858daa9496854c492cded7a5966bda8002f9288c75794cc034d3d8a08684` |
+| Tasks | `sha256:bda6a096cae3c7a7d250c055d0618db70233f774f7d9a697b833e5dec6976737` |
 | Reviewability | `sha256:4efa6739751bbef3183ebc677bde97f4971dfc61554ecf27a147af5d65aabefc` |
 | Hazard route | `sha256:f4259204cb8f92f1978ddf3b70195aba948d317567082f50f585fb0f4e0ef9c4` |
 
 | Review order | Marker | Increment | Tasks | Implementation checkpoint |
 | --- | --- | --- | --- | --- |
-| 1 | `us1-part1` | A1a | T001, T002, T003, T004 | pending |
+| 1 | `us1-part1` | A1a | T001, T002, T003, T004 | complete at `5a89c0b706d905760157e1b6d2f7579039c1ee26`; evidence `specs/hrns-015-autopilot-gate-pr-emission-repair/.process/checkpoints/us1-part1.json` |
 | 2 | `us1-part2` | A1b | T005 | pending |
 | 3 | `us2` | A2 | T006, T007 | pending |
 | 4 | `us3` | A3 | T008, T009 | pending |
@@ -1216,3 +1216,5 @@ Native task-results accepted the existing routing-epoch2 T003/T004 completion re
 ### A1a origin/main integration
 
 The A1a source checkpoint was committed as `6639c94cb3ab2c8683217a6e4174555eac59cd57` after the quick suite passed 9,459/9,459, artifact consistency, docs quality, Ruff and mypy passed, and independent source review found no actionable defects. The requested non-rebase merge of origin/main brought SpecKit Pro 2.38.1 and its own public-worktree privacy fix. The release manifest version was aligned with the merged plugin source, and release payloads plus docs reference pages were regenerated. Merged-tree A1a gates and the marker checkpoint remain pending before T005.
+
+A1a marker checkpoint, 2026-09-28T15:10:30Z: the existing routing-epoch2 journal records T001–T004 complete, including the original T003 RED and later GREEN/refactor observations. The A1a source delta (`82095a3e..6639c94c`) touched 21 paths, of which 20 count against the 24-path limit; 2 are production paths and authored non-process changes total 357 lines. The post-merge source commit `5a89c0b706d905760157e1b6d2f7579039c1ee26` passed the 10,106/10,106 quick suite, six CI suite layers, full docs validation (88 smoke and 4 gallery tests), artifact consistency, Ruff, mypy, host parity and independent critical/high review. The first marker evidence is committed under `specs/hrns-015-autopilot-gate-pr-emission-repair/.process/checkpoints/us1-part1.json` and `specs/hrns-015-autopilot-gate-pr-emission-repair/.process/verification/us1-part1.json`. The final emitted PR base/head diff and reviewable LOC remain mandatory before PR emission.

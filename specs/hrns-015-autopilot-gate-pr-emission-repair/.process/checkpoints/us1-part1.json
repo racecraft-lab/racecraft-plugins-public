@@ -1,0 +1,62 @@
+{
+  "schema_version": "marker-checkpoint.v1",
+  "feature_id": "HRNS-015",
+  "marker_id": "us1-part1",
+  "status": "complete",
+  "task_ids": [
+    "T001",
+    "T002",
+    "T003",
+    "T004"
+  ],
+  "implementation_checkpoint_sha": "5a89c0b706d905760157e1b6d2f7579039c1ee26",
+  "last_reviewed_head_sha": "5a89c0b706d905760157e1b6d2f7579039c1ee26",
+  "tasks_sha": "sha256:bda6a096cae3c7a7d250c055d0618db70233f774f7d9a697b833e5dec6976737",
+  "verification_evidence_sha": "sha256:61c5625d99e49d55d1b2407a45213dd1cb0e691f6c3ddf01c768f7022f6c31a7",
+  "required_verification_gate_ids": [
+    "focused_tests",
+    "quick_suite",
+    "ci_suite",
+    "artifact_consistency",
+    "docs_validation",
+    "python_lint",
+    "independent_critical_high_review",
+    "host_parity"
+  ],
+  "verification": {
+    "focused_tests": {
+      "status": "pass",
+      "evidence": "Merged mutation helpers 206/206; T003 RED 203 tests with 40 assertion failures, T003/T004 GREEN and refactor 203/203 in existing routing-epoch2 journal."
+    },
+    "quick_suite": {
+      "status": "pass",
+      "evidence": "Merged quick suite 10106/10106 and toolchain preflight, native exit 0."
+    },
+    "ci_suite": {
+      "status": "pass",
+      "evidence": "Merged default CI suite layers 1, 4, 5, 6 and 7: 6/6 dispatches, native exit 0."
+    },
+    "artifact_consistency": {
+      "status": "pass",
+      "evidence": "Post-merge refresh-release-artifacts.py --check, native exit 0."
+    },
+    "docs_validation": {
+      "status": "pass",
+      "evidence": "Post-merge pnpm --dir docs-site validate: 88 smoke and 4 gallery tests pass, native exit 0."
+    },
+    "python_lint": {
+      "status": "pass",
+      "evidence": "Post-merge Ruff and mypy across 54 source files, native exit 0."
+    },
+    "independent_critical_high_review": {
+      "status": "pass",
+      "evidence": "Independent merged A1a review clean for critical/high findings at 5a89c0b706d905760157e1b6d2f7579039c1ee26."
+    },
+    "host_parity": {
+      "status": "pass",
+      "evidence": "Generated Claude/Codex runtime, schema, skills and runner trust outputs refreshed; default CI suite layer 7 parity passed 12/12."
+    }
+  },
+  "source_fingerprint_status": "current",
+  "completed_at": "2026-09-28T15:10:30Z"
+}

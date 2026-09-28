@@ -900,7 +900,7 @@ def validate_workflow_checkpoint_bindings(
             marker_row_counts[marker_id] += 1
             checkpoint_shas = set(re.findall(r"\b[0-9a-f]{40}\b", cells[4]))
             expected_sha = expected[marker_id]
-            if expected_sha is None or expected_sha not in checkpoint_shas:
+            if expected_sha is not None and expected_sha not in checkpoint_shas:
                 expected_binding = (
                     expected_sha
                     if expected_sha is not None
