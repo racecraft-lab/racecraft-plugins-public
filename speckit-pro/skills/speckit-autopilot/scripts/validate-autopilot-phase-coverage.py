@@ -779,6 +779,20 @@ def _visible_markdown(text: str) -> str:
     return "\n".join(visible_lines)
 
 
+def _marker_phase_claims(phase_results: object, marker_id: str) -> list[tuple[str, str]]:
+    """Phase-result fields for one marker that claim work beyond the plan projection."""
+    phases = phase_results if isinstance(phase_results, dict) else {}
+    return [
+        (phase_name, phase_field)
+        for phase_name, phase_result in phases.items()
+        if isinstance(phase_name, str)
+        and isinstance(phase_result, dict)
+        and phase_result.get("marker_id") == marker_id
+        for phase_field in phase_result
+        if phase_field not in PHASE_RESULT_PROJECTION_FIELDS
+    ]
+
+
 def validate_workflow_checkpoint_bindings(
     text: str, state: dict[str, Any],
 ) -> dict[str, list[str]]:
@@ -793,6 +807,10 @@ def validate_workflow_checkpoint_bindings(
     visible_text = _visible_markdown(text)
     expected: dict[str, str | None] = {}
     expected_superseded: dict[str, str] = {}
+    # A marker awaits its first checkpoint while its checkpoint is pending, records
+    # no commit, and no phase result claims work for it. Its workflow row reads
+    # Pending and it has no current checkpoint claim yet.
+    awaiting: set[str] = set()
     for marker in markers:
         if not isinstance(marker, dict) or not isinstance(marker.get("id"), str):
             continue
@@ -803,6 +821,13 @@ def validate_workflow_checkpoint_bindings(
             if isinstance(commit_sha, str) and re.fullmatch(r"[0-9a-f]{40}", commit_sha)
             else None
         )
+        if (
+            isinstance(checkpoint, dict)
+            and checkpoint.get("status") == "pending"
+            and expected[marker["id"]] is None
+            and not _marker_phase_claims(state.get("phase_results"), marker["id"])
+        ):
+            awaiting.add(marker["id"])
         superseded_sha = (
             checkpoint.get("superseded_commit_sha")
             if isinstance(checkpoint, dict)
@@ -829,6 +854,8 @@ def validate_workflow_checkpoint_bindings(
         errors.append("workflow checkpoint claims must name their marker")
     if strict_contract:
         for marker_id in expected:
+            if marker_id in awaiting:
+                continue
             claim_count = sum(
                 claimed_marker_id == marker_id
                 for claimed_marker_id, _claimed_sha in checkpoint_claims
@@ -898,6 +925,13 @@ def validate_workflow_checkpoint_bindings(
             if marker_id not in expected:
                 continue
             marker_row_counts[marker_id] += 1
+            if marker_id in awaiting:
+                if cells[4] != "Pending":
+                    errors.append(
+                        f"workflow PR Marker Plan Evidence marker {marker_id!r} checkpoint must read "
+                        "Pending until its pr_marker_plan checkpoint records commit_sha"
+                    )
+                continue
             checkpoint_shas = set(re.findall(r"\b[0-9a-f]{40}\b", cells[4]))
             expected_sha = expected[marker_id]
             if expected_sha is None or expected_sha not in checkpoint_shas:
@@ -2812,12 +2846,7 @@ def validate_projection_integrity(
             checkpoint = raw_marker.get("implementation_checkpoint")
             if isinstance(checkpoint, dict):
                 checkpoint_status = checkpoint.get("status")
-                pending_phase_claims = [
-                    (phase_name, phase_field)
-                    for phase_name, phase_result in phases_by_marker.get(marker_id, [])
-                    for phase_field in phase_result
-                    if phase_field not in PHASE_RESULT_PROJECTION_FIELDS
-                ]
+                pending_phase_claims = _marker_phase_claims(phase_results, marker_id)
                 if strict_contract and checkpoint_status == "pending" and pending_phase_claims:
                     if not _is_normalized_repo_path(checkpoint.get("evidence_path")):
                         checkpoint_evidence_errors.append(
@@ -4618,9 +4647,32 @@ def _autonomy_file_errors(
         return errors, parent
     if record.get("size_bytes") != len(content):
         errors.append(f"autonomy boundary {label} size_bytes is stale")
-    if record.get("sha256") != _sha256_bytes(content):
+    if record.get("sha256") not in _autonomy_file_digests(label, content):
         errors.append(f"autonomy boundary {label} sha256 is stale")
     return errors, parent
+
+
+def _autonomy_file_digests(label: str, content: bytes) -> set[str]:
+    """Digests that keep a planning fingerprint current.
+
+    plan.md binds its raw bytes. tasks.md also accepts the digest of its task
+    definitions, the checkbox-insensitive text task fingerprints use, so marking a
+    task complete never stales the boundary. When the runner is not importable or
+    the file is not UTF-8, only the raw digest counts, so the check fails closed.
+    """
+    digests = {_sha256_bytes(content)}
+    if label != "tasks_md":
+        return digests
+    plugin_root = str(Path(__file__).resolve().parents[3])
+    if plugin_root not in sys.path:
+        sys.path.insert(0, plugin_root)
+    try:
+        from speckit_pro_runner.task_execution import task_definitions  # noqa: PLC0415
+
+        digests.add(_sha256_bytes(task_definitions(content.decode("utf-8")).encode("utf-8")))
+    except (ImportError, UnicodeDecodeError):
+        pass
+    return digests
 
 
 def _autonomy_planning_errors(

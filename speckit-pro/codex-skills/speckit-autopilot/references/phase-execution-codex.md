@@ -1260,7 +1260,14 @@ complete private record. It never carries `writable_roots`, `summary`,
 the schema rejects a receipt that does. A complete v1 record already in state
 still validates, but new runs write the receipt. Each planning fingerprint
 records the normalized repository-relative path, byte length, and lowercase
-`sha256:` digest for `plan.md` or `tasks.md`.
+`sha256:` digest for `plan.md` or `tasks.md`. Take the `tasks.md` digest over its
+task definitions: the text with every task checkbox cleared to `- [ ]`, the same
+definition the task fingerprints use. Marking a task complete then never stales
+the boundary, while any other change to `tasks.md`, and any change at all to
+`plan.md`, does. The guard also accepts a `tasks.md` digest over the raw bytes,
+so a receipt recorded before any task was checked stays current. One recorded
+with boxes already checked stays current until the next checkbox change, and
+the Step 0.8c resume preflight then records it again.
 
 Compute `execution_boundary.sha256` over canonical UTF-8 JSON containing only
 `execution_environment`, `sandbox_mode`, `approval_reviewer`, and sorted
@@ -1610,7 +1617,9 @@ phase-coverage guard checks against the pull request's actual diff, which does
 not exist until code is written, so move to `pr-marker-plan.v2` at the first
 implementation checkpoint. Under v2, a pending checkpoint needs `commit_sha`
 and `evidence_path` together, and needs them only once a phase result is
-recorded for its marker; the guard does not check v1 checkpoints.
+recorded for its marker; the guard does not check v1 checkpoints. Until
+then, the marker's PR Marker Plan Evidence row reads `Pending` in its
+Checkpoint cell and the workflow carries no checkpoint claim for it.
 
 On resume, validate the marker-plan fingerprint against the current spec,
 plan-declared file/test scope, tasks, reviewability evidence, and hazard route.
