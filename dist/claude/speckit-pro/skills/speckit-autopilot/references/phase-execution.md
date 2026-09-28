@@ -2907,7 +2907,7 @@ status: `cr-rate --fail-over` for cosmic-ray, and the chained
 | Contract/unit/integration tests | `speckit-pro:implement-executor` | Yes |
 | Implementation needing project patterns | PROJECT_IMPLEMENTATION_AGENT | Yes |
 | Research / API investigation | `speckit-pro:domain-researcher` | No |
-| Verification-only, by leading verb (`verify`, `run`, `check`, `build`, `lint`) | orchestrator-direct (command tool) | No |
+| Verification-only, by leading verb (`verify`, `run`, `check`, `build`, `lint`, `confirm`, `recheck`) | orchestrator-direct (command tool) | No |
 
 Every agent receiving implementation work gets the TDD protocol
 injected. Agent selection is about DOMAIN EXPERTISE — the

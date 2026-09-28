@@ -394,6 +394,11 @@ When checklist identifies `[Gap]` items:
 - Organize by user story, not by technical layer
 - Keep related test and implementation checkboxes in one closed TDD unit;
   each unit must fit an adjacent batch of at most four tasks
+- Open a check-only task (one that changes no code) with a verification verb:
+  `verify`, `run`, `check`, `build`, `lint`, `confirm`, `recheck`. The scheduler
+  routes only these to verification; any other leading verb routes the task
+  as implementation or research work. Open implementation work with
+  `Implement`, `Add`, or `Create`
 
 ## Execution Metadata
 Produce `specs/{{BRANCH_NAME}}/.process/task-execution.json` alongside tasks.md.
