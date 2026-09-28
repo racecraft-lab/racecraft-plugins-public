@@ -8916,25 +8916,6 @@ def count_pattern(files: list[Path], pattern: str, repo_root: Path | None = None
     return total
 
 
-def list_pattern(path: Path, pattern: str, repo_root: Path | None = None, limit: int = 20) -> list[str]:
-    regex = re.compile(pattern)
-    details: list[str] = []
-    for index, line in enumerate(trusted_lines(path, repo_root), start=1):
-        if regex.search(line):
-            details.append(f"{index}:{line}")
-            if len(details) >= limit:
-                break
-    return details
-
-
-def count_pattern_dir(directory: Path, pattern: str, repo_root: Path | None = None) -> int:
-    if repo_root is not None and not path_stays_in_trust_boundary(directory, repo_root):
-        return 0
-    if not directory.is_dir():
-        return 0
-    return count_pattern([path for path in directory.rglob("*") if path.is_file()], pattern, repo_root)
-
-
 def count_tasks(path: Path, repo_root: Path | None = None) -> int:
     return sum(1 for line in trusted_lines(path, repo_root) if re.match(r"^\s*-\s+\[[ xX]\]\s+T[0-9]", line))
 

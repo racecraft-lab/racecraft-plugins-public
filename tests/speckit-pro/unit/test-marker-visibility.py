@@ -60,4 +60,9 @@ class MarkerVisibilityTests(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    unittest.main()
+    suite = unittest.defaultTestLoader.loadTestsFromTestCase(MarkerVisibilityTests)
+    result = unittest.TextTestRunner(verbosity=1).run(suite)
+    total = result.testsRun
+    passed = total - len(result.failures) - len(result.errors)
+    print(f"test-marker-visibility: {passed}/{total} passed")
+    raise SystemExit(0 if result.wasSuccessful() else 1)
