@@ -332,9 +332,11 @@ def _validate_corrective_exception(ledger: dict[str, Any]) -> str | None:
             or reservation in ledger["reservations"]):
         raise ValueError("invalid corrective exception binding")
     follow_ups = _validate_failure_class(record["failure_class"]) if "failure_class" in record else []
-    members = [key for key, item in ledger["dispatches"].items()
-               if isinstance(item, dict) and item.get("reservation_id") == reservation]
-    if (members != [dispatch_id, *follow_ups]
+    # The ledger is saved with sorted keys, so the recorded list, not dict order, is the sequence.
+    members = [dispatch_id, *follow_ups]
+    owned = {key for key, item in ledger["dispatches"].items()
+             if isinstance(item, dict) and item.get("reservation_id") == reservation}
+    if (len(set(members)) != len(members) or owned != set(members)
             or any(ledger["dispatches"][member].get("kind") != "corrective" for member in members)):
         raise ValueError("corrective exception must own its approved corrective dispatches")
     if any(ledger["dispatches"][member].get("outcome") != "completed" for member in members[:-1]):
