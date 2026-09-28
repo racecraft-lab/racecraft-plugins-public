@@ -716,6 +716,18 @@ class CorrectiveFailureClassTests(_ExecutionControlFixture, unittest.TestCase):
             self.follow_up("fix-f")
         self.assertEqual(path.read_bytes(), capped)
 
+    def test_class_follow_ups_validate_in_recorded_order_not_key_order(self):
+        """#789 review: the ledger is saved with sorted keys, so ownership must not depend on key order."""
+        digest_value = self.exhausted_run()
+        self.approve_class(digest_value)
+        self.invoke("complete", dispatch_id="fix-c", outcome="completed")
+        self.assertEqual(self.follow_up("fix-z")["disposition"], "continue")
+        self.invoke("complete", dispatch_id="fix-z", outcome="completed")
+        self.assertEqual(self.follow_up("fix-b2")["disposition"], "continue")
+        done = self.invoke("complete", dispatch_id="fix-b2", outcome="completed")
+        self.assertEqual(done["ledger"]["corrective_exception"]["failure_class"]["follow_up_dispatch_ids"],
+                         ["fix-z", "fix-b2"])
+
     def test_follow_ups_outside_the_scope_or_after_an_unsettled_fix_are_refused(self):
         digest_value = self.exhausted_run()
         self.approve_class(digest_value)
