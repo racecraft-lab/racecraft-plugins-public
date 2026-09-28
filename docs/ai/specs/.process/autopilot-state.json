@@ -3745,14 +3745,8 @@
         "v1 pending-marker checkpoint binding",
         "checkbox-only tasks_md autonomy fingerprint staleness"
       ],
-      "disposition": "continue remaining implementation units; these two installed-cache errors alone are known upstream defects, while all other gates remain mandatory",
-      "latest_observation": {
-        "plugin_version": "2.38.2",
-        "gate": "status-evidence",
-        "error": "autonomy boundary tasks_md sha256 is stale",
-        "trigger": "T010 checkbox-only tasks.md completion",
-        "disposition": "continue per operator instruction; no ledger reset or plugin reinstall"
-      }
+      "disposition": "Historical 2.38.1 guard issue; fixed upstream in 2.38.2. The current receipt mismatch is recorded separately.",
+      "status": "historical_fixed_in_2.38.2"
     },
     "a1a_batch_record": {
       "batch_id": "B003",
@@ -3977,6 +3971,19 @@
       "all_runnable_gates": "pass",
       "pr_emission": "pending_exact_diff_and_loc",
       "evidence_commit_sha": "f79ec881cb7e9c7baf9221841cf6488c70170398"
+    },
+    "b1a_receipt_mismatch": {
+      "status": "awaiting_operator_decision",
+      "installed_plugin_version": "2.38.2",
+      "guard": "status-evidence",
+      "receipt_tasks_md_sha256": "sha256:0ee0a1d6d6f19083e416379580a655bbaa66c367f2b5c437f7af5b37cc9820de",
+      "receipt_tasks_md_size_bytes": 30479,
+      "current_raw_tasks_md_sha256": "sha256:30f2db24b48e0b2a743b0795d1d3b1e81f3f6b7d16cc0e51081aae8b33180a6a",
+      "current_task_definitions_sha256": "sha256:c5373d4f33f0ec316c2421d3e690888fc5844fb1989fd5f5db9b4a8d4d1f7d46",
+      "receipt_written_at_commit": "06a9cfcc6cbb3486cdb6546968f53cbfa7cd14d3",
+      "checked_tasks_at_receipt_write": 9,
+      "installed_package_import": "ok",
+      "receipt_edited": false
     }
   }
 }
