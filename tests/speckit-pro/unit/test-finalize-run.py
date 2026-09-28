@@ -191,6 +191,20 @@ class FinalizeRunTests(_LedgerFixture, unittest.TestCase):
         changed = finalize(self.root, self.inputs(self.deferring, unresolved_deferrals=[dict(VETO)]))
         self.assertNotEqual(first["deferred_digest"], changed["deferred_digest"])
 
+    def test_digest_and_request_ignore_input_order(self) -> None:
+        """#807 review: the same blocker listed in another order is not a changed blocker."""
+        gates = [{"gate": "G7", "status": "failed", "command": "python3 tests/run-all.py"},
+                 {"gate": "Post: Integration Suite", "status": "failed", "command": "python3 tests/integration.py"}]
+        uat = [dict(UAT), {**UAT, "item": "Second walkthrough"}]
+        forward = finalize(self.root, self.inputs(gates=gates, human_uat=uat))
+        backward = finalize(self.root, self.inputs(gates=gates[::-1], human_uat=uat[::-1]))
+        self.assertEqual(forward["deferred_digest"], backward["deferred_digest"])
+        self.assertEqual(forward["end_of_run_request"], backward["end_of_run_request"])
+        ready = finalize(self.root, self.inputs(human_uat=uat))
+        again = finalize(self.root, self.inputs(human_uat=uat[::-1]))
+        self.assertEqual(ready["deferred_digest"], again["deferred_digest"])
+        self.assertEqual(ready["end_of_run_request"], again["end_of_run_request"])
+
     def test_inputs_fail_closed(self) -> None:
         cases: dict[str, dict[str, object]] = {
             "no gates": {"gates": []},
