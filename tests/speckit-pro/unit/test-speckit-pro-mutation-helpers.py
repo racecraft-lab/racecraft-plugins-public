@@ -702,6 +702,56 @@ class MutationHelperTests(unittest.TestCase):
             check=True,
         )
 
+    def assert_packet_only_untracked_guard(
+        self, git_root: Path, inputs: dict[str, object], validation_path: Path,
+    ) -> None:
+        """Only the current packet may be untracked at either packet write gate."""
+        packet_only = json.loads(
+            (FIXTURE_DIR.parent / "pr-packet-repair" / "packet-only-untracked.json").read_text(encoding="utf-8")
+        )
+        self.assertEqual(packet_only["packet_path"], inputs["packet_path"])
+        self.assertEqual(set(packet_only["current_packet_untracked"]),
+                         {inputs["packet_path"], inputs["body_file"], inputs["validation_result_path"]})
+        for name, paths in (
+            ("unrelated", [packet_only["unrelated_untracked"]]),
+            ("second_packet", packet_only["second_packet_untracked"]),
+            ("tracked_edit", [packet_only["tracked_edit"]]),
+        ):
+            with self.subTest(extra=name):
+                for relative in paths:
+                    path = git_root / relative
+                    path.parent.mkdir(parents=True, exist_ok=True)
+                    path.write_text("changed\n", encoding="utf-8")
+                try:
+                    completed, response, stderr_records = run_runner(
+                        helper_request("validate-pr-packet-write", mode="apply",
+                                       inputs={"packet_path": inputs["packet_path"]}),
+                        cwd=git_root,
+                    )
+                    self.assertEqual(completed.returncode, 1)
+                    self.assert_response(response, "expected_failure", 1)
+                    self.assertEqual([diag["code"] for diag in stderr_records], ["dirty_worktree"])
+                    self.assertFalse(validation_path.exists())
+                finally:
+                    for relative in paths:
+                        path = git_root / relative
+                        if relative == packet_only["tracked_edit"]:
+                            path.write_text("fixture\n", encoding="utf-8")
+                        else:
+                            path.unlink()
+
+        completed, response, stderr_records = run_runner(
+            helper_request("validate-pr-packet-write", mode="apply",
+                           inputs={"packet_path": inputs["packet_path"],
+                                   "test_overrides": {"git_status_error": True}}),
+            cwd=git_root,
+        )
+        self.assertEqual(completed.returncode, 1)
+        self.assert_response(response, "expected_failure", 1)
+        self.assertEqual([diag["code"] for diag in stderr_records], ["git_status_unavailable"])
+        self.assertFalse(validation_path.exists())
+
+
     def write_route_policy_manifest(self, root: Path, manifest: dict[str, object], name: str = "route-policy.json") -> Path:
         path = root / ".codex" / name
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -8914,6 +8964,14 @@ This line must not be copied.
             self.assertEqual(packet["target"], inputs["target"])
 
             completed, response, stderr_records = run_runner(
+                helper_request("pr-packet-output", mode="apply", inputs=inputs),
+                cwd=git_root,
+            )
+            self.assertEqual(completed.returncode, 0)
+            self.assert_response(response, "ok", 0)
+            self.assertEqual(stderr_records, [])
+
+            completed, response, stderr_records = run_runner(
                 helper_request(
                     "validate-pr-packet-read-only",
                     mode="read_only",
@@ -8924,6 +8982,7 @@ This line must not be copied.
             self.assertEqual(completed.returncode, 0)
             self.assert_response(response, "ok", 0)
             self.assertEqual(stderr_records, [])
+
             validation_result = response["data"]["stdout_json"]
             self.assertEqual(validation_result["status"], "passed")
             self.assertFalse(validation_result["pr_blocked"])
@@ -8944,21 +9003,7 @@ This line must not be copied.
             self.assert_response(response, "ok", 0)
             self.assertEqual(stderr_records, [])
 
-            completed, response, stderr_records = run_runner(
-                helper_request(
-                    "validate-pr-packet-write",
-                    mode="apply",
-                    inputs={"packet_path": inputs["packet_path"]},
-                ),
-                cwd=git_root,
-            )
-            self.assertEqual(completed.returncode, 1)
-            self.assert_response(response, "expected_failure", 1)
-            self.assertEqual([diag["code"] for diag in stderr_records], ["dirty_worktree"])
-            self.assertFalse(validation_path.exists())
-
-            self.run_git(git_root, "add", inputs["body_file"], inputs["packet_path"])
-            self.run_git(git_root, "commit", "--quiet", "-m", "packet artifacts")
+            self.assert_packet_only_untracked_guard(git_root, inputs, validation_path)
 
             completed, response, stderr_records = run_runner(
                 helper_request(
@@ -8978,6 +9023,26 @@ This line must not be copied.
             self.assertEqual(persisted["packet_id"], "packet-999")
             self.assertEqual(persisted["status"], "passed")
             self.assertEqual(set(persisted["source_fingerprints"]), {"body", "packet"})
+
+            completed, response, stderr_records = run_runner(
+                helper_request("validate-pr-packet-write", mode="apply",
+                               inputs={"packet_path": inputs["packet_path"]}),
+                cwd=git_root,
+            )
+            self.assertEqual(completed.returncode, 0)
+            self.assert_response(response, "ok", 0)
+            self.assertEqual(stderr_records, [])
+
+            self.run_git(git_root, "add", inputs["packet_path"], inputs["body_file"],
+                         inputs["validation_result_path"])
+            self.run_git(git_root, "commit", "--quiet", "-m", "tracked packet fixture")
+            packet_path.write_text(packet_path.read_text(encoding="utf-8") + "\n", encoding="utf-8")
+            from speckit_pro_runner.helpers import mutation as mutation_helper
+            tracked_packet = mutation_helper.dirty_worktree_diagnostic(
+                {"packet_path": inputs["packet_path"]}, git_root, "validate-pr-packet-write",
+            )
+            self.assertIsNotNone(tracked_packet)
+            self.assertEqual(tracked_packet["code"], "dirty_worktree")
 
     def test_pr_packet_output_release_note_renders_one_protected_final_fence(self) -> None:
         inputs = json.loads((FIXTURE_DIR / "requests" / "pr-packet-output.json").read_text(encoding="utf-8"))["inputs"]

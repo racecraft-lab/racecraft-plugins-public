@@ -224,29 +224,38 @@ review.
   passes a host repository's release-note gate, proven by a fixture carrying
   the required fence, or a documented and exercised host-body hook.
 - **AC-16.2**: A fixture proves the post-implementation sequence refuses to
-  report completion while any entry is unexecuted, on both hosts, and the
-  entry count is stated once and read everywhere.
+  report completion while any of the 13 canonical Post rows is unexecuted, on
+  both hosts. `POST_STEPS` is the sole ordered source; workflow and state each
+  contain every row exactly once with matching terminal status. An optional
+  extension row may be skipped only when that extension is not installed.
 - **AC-16.3**: The packet write-validation contract states which outcome is
-  success when packets are untracked in the host repository, with a fixture.
+  success when only the current packet's canonical metadata, body, and validation
+  files are untracked, with a fixture. Tracked packet edits, another packet,
+  unrelated changes, and unreadable Git status still block.
 - **AC-16.4**: Executors that can form agent teams carry a teardown
   obligation, and a structural check proves it.
-- **AC-16.5**: The gap counter matches `[Gap` rather than `[Gap]`, with a
-  fixture for the `[Gap, <ref>]` form.
+- **AC-16.5**: The gap counter counts each real bracket tag containing the
+  case-sensitive, comma-separated `Gap` token, including `[Gap, <ref>]`.
+  Gap and clarification counts and details ignore inline, fenced, and indented
+  Markdown code while preserving visible prose.
 - **AC-16.6**: The spec-index walk excludes untracked files as well as ignored
   ones, and a check runs the index against the real repository tree and fails
   on drift.
 - **AC-16.7**: `speckit-resolve-pr` fetches every review-thread and comment
   page before claiming feedback is handled, and replies and resolves only after
   final verification and a confirmed pushed SHA.
-- **AC-16.8**: The scaffold blind-spot pass reports an expired wait as a
-  finding rather than silently skipping, a detected quality-gate command honors
-  the host repository's documented test command, and spec-size estimation
-  counts required refactors.
+- **AC-16.8**: The scaffold waits for a dispatched blind-spot summary without a
+  fixed deadline. It may continue without findings only after a dispatch error,
+  empty return, or explicit operator abandonment, and records that reason. A
+  detected quality-gate command honors the host repository's documented test
+  command, and spec-size estimation counts required refactors.
 - **AC-16.9**: Reviewability-gate setup mode checks every roadmap entry and
   honors a typed `Reviewability-Exception` pragma (#637), and the roadmap
   template links workflow files where scaffold writes them (#638).
-- **AC-16.10**: Every runner helper a skill tells the agent to call is shown
-  with a complete request envelope in that skill's prose.
+- **AC-16.10**: Both hosts show complete, tested request envelopes for status
+  `generate-spec-index-check` and `o5-topology`, scaffold reviewability and
+  worktree placement, and phase index writing. HRNS-019 owns the remaining
+  58 bare helper call sites.
 
 ### 3.17 Host Capability Spike *(-> HRNS-017)*
 
@@ -306,7 +315,8 @@ review.
   request, and documentation on request, so no skill loads the whole registry.
 - **AC-19.5**: An agent can resolve a stated intent to a helper and receive a
   validated envelope; a wrong argument becomes a validation error with
-  remediation, never a silent failure.
+  remediation, never a silent failure. This includes the 58 bare helper call
+  sites and self-describing malformed-request errors deferred from HRNS-015.
 - **AC-19.6**: Each shipped `*.schema.json` is the single source for its
   contract. The runner's standard-library validator and a pinned CI reference
   validator (jsonschema, under constitution II) agree on every documented

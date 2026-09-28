@@ -216,10 +216,13 @@ failing-first fixture, so the documented happy path stops producing a failing
 pull request or a silently wrong artifact.
 
 **Reviewability Budget:** Primary surface: harness/adapter |
-Projected reviewable LOC: 292 (estimate-spec-size: 3 story groups, 10 FRs, 9 files, modify) |
-Production files: 9 |
-Total files: 20 |
-Budget result: over the 8-file block line as one PR; ships as three slices of at most four production files each
+Projected reviewable LOC: 292 (historical whole-feature estimate; actual per-PR LOC is checked before emission) |
+Production files: 2 (maximum in a planned increment) |
+Total files: 24 (maximum in a planned increment) |
+Budget result: eighteen ratified candidate increments meet the 4-production/24-total path limits; actual diffs and LOC remain mandatory before each PR
+
+Approved delivery order: A1a → A1b → A2 → A3 → B1a → B1b → B2b → B3a → B3b →
+C1a1 → C1a2 → C1b1 → C1b2 → C2a1 → C2a2 → C2a3 → C2b1 → C2b2.
 
 Two of the original eight defects are already repaired: the correct-but-halted
 turn (#531, "Never Yield With Nothing In Flight") and the spec-index walk over
@@ -230,18 +233,19 @@ running this workflow on other repositories.
 
 **Scope:**
 
-- **Slice A, PR emission.**
+- **Group A, PR emission.**
   - The generated packet body cannot satisfy a host repository's release-note
     gate: `build_packet_body` emits eight fixed headings and no fence, while
     this repository requires one non-empty ` ```release-note ` fence on `feat`
     and `fix` bodies. Add a consumer-facing release-note field, or document and
     exercise the existing `inputs.body` override as the host-body hook.
-  - `validate-pr-packet-write` apply mode refuses on a dirty worktree, and a
-    freshly emitted packet is untracked in any repository that never commits
-    packets. State which outcome is success for that case.
+  - `validate-pr-packet-write` and `pr-packet-output` admit only the current
+    packet's three canonical untracked metadata, body, and validation paths.
+    Tracked packet edits, another packet, unrelated changes, and unreadable Git
+    status still block without force-add or ignore-rule changes.
   - Carry the confidence-gate verdict into the generated body only if HRNS-025
     has not landed; otherwise leave it to HRNS-025.
-- **Slice B, gates and counters.**
+- **Group B, gates and counters.**
   - The gap counter matches `[Gap]` literally, so `[Gap, <ref>]` markers (the
     checklist skill's own example form) under-report.
   - The spec-index walk still selects untracked, non-ignored files, and no CI
@@ -251,7 +255,7 @@ running this workflow on other repositories.
     ignores `Reviewability-Exception` (#637).
   - `estimate-spec-size` has no signal for required refactors, so a roadmap
     budget goes stale after the interview.
-- **Slice C, workflow behavior.**
+- **Group C, workflow behavior.**
   - The Post list is not self-verifying, and its size is stated three ways (11
     on Claude, 13 on Codex, "12" in prose). State it once and add a
     deterministic check that refuses completion while any entry is pending.
@@ -265,19 +269,22 @@ running this workflow on other repositories.
     host repository's documented test command rather than a raw default.
   - The roadmap template links workflow files where scaffold never writes them
     (#638).
-  - Skills that tell the agent to call a runner helper must show the complete
-    request envelope; `speckit-status` names `generate-spec-index-check`
-    without one, which cost three failed calls in a live run.
+  - Both hosts provide complete request envelopes for five named helper calls:
+    status `generate-spec-index-check` and `o5-topology`, scaffold reviewability
+    and worktree placement, and phase index writing. HRNS-019 owns the remaining
+    58 bare helper call sites and malformed-request diagnostics.
 
 **Out of Scope:**
 
-- Redesigning the PR-packet schema or the post-implementation sequence.
+- Redesigning the PR-packet schema beyond the optional release-note field or
+  the post-implementation sequence beyond its canonical 13-row Post list.
 - Changing any host repository's release-note policy; the gate is correct.
 - Removing autopilot's wall-clock budgets, which #642 already did.
 
 **Module and Interface Deltas:**
 
-- `speckit-pro/speckit_pro_runner/helpers/pr_emission.py` — changed: release-note field or body hook; untracked-packet outcome.
+- `speckit-pro/speckit_pro_runner/helpers/pr_emission.py` — changed: optional release-note field and protected body rendering.
+- `speckit-pro/speckit_pro_runner/helpers/mutation.py` — changed: current-packet-only untracked allowance for packet writes.
 - `speckit-pro/speckit_pro_runner/helpers/read_only.py` — changed: `[Gap` matching; untracked-file exclusion; refactor signal for spec-size estimation.
 - `speckit-pro/skills/speckit-autopilot/` and the Codex mirror — changed: self-verifying Post list; team teardown.
 - `speckit-pro/skills/speckit-resolve-pr/SKILL.md` — changed: full pagination; verify, push, then reply and resolve.
@@ -523,6 +530,8 @@ Budget result: within budget
   on request.
 - Resolve a stated intent to a helper and a validated envelope; a wrong
   argument is a validation error with remediation.
+- Complete the 58 bare helper call-site envelopes and self-describing
+  malformed-request errors deferred from HRNS-015.
 - Make each shipped schema the single source for its contract: a CI
   differential test runs every documented example and generated invalid
   variants through the runner's validator and a pinned jsonschema, which must

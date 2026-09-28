@@ -193,7 +193,7 @@ final-reviewability boundary: use current committed reviewability evidence; if n
 emit or refresh specs/<feature>/.process/pr-packets/<packet-id>.json with pr-packet-output dry_run then apply
 run validate-pr-packet-read-only for that packet and consume response data.stdout_json in memory/state
 require data.stdout_json.status=passed, data.stdout_json.pr_blocked=false, and response data.writes_state=false
-checkpoint packet/body artifacts so validate-pr-packet-write runs from a clean worktree
+allow only the current packet's canonical untracked metadata/body/validation paths; block other changes and unreadable Git status
 run validate-pr-packet-write; apply mode reruns read-only validation before persisting validation_result_path
 run validate-pr-workflow-contract with the packet title and current repository diff
 create only with packet-owned --base, --head, --title, and --body-file values
@@ -257,8 +257,10 @@ current response's `data.stdout_json` in memory and durable workflow state.
 Continue only when it reports `status=passed` and `pr_blocked=false`, while the
 outer response reports `data.writes_state=false`. If any required packet is
 absent or invalid, stop before PR creation with the validator diagnostics.
-Commit or otherwise checkpoint the packet/body artifacts so the worktree is
-clean, then run `validate-pr-packet-write`; apply mode reruns read-only
+The current packet's canonical untracked metadata, body, and validation paths
+need no commit before `validate-pr-packet-write`; tracked packet edits, another
+packet, unrelated files, and unreadable Git status still block. Do not force-add
+packet files or change ignore rules. Apply mode reruns read-only
 validation before persisting the packet's `validation_result_path`. Prior
 validation artifacts never authorize PR creation. Exit 1 or 2 blocks before PR
 creation with the returned diagnostics.
@@ -370,8 +372,10 @@ not open any slice PR until all preceding steps for that slice pass:
    `data.stdout_json` in memory/state, and require `data.writes_state=false`.
    Missing, stale, malformed, or invalid packet evidence blocks on this slice
    with the validator diagnostics.
-4. Checkpoint the packet/body artifacts so the worktree is clean, then run
-   `validate-pr-packet-write`; its apply mode must rerun current read-only
+4. Allow only the current packet's canonical untracked metadata, body, and
+   validation paths without a commit, force-add, or ignore-rule change. Tracked
+   packet edits, another packet, unrelated files, and unreadable Git status
+   still block. Run `validate-pr-packet-write`; its apply mode reruns current read-only
    validation before persisting `validation_result_path`.
 5. Run `validate-pr-workflow-contract` against the packet title and current
    changed-file evidence. Any title, scope, or split-contract failure blocks
@@ -439,7 +443,7 @@ lint exits 0 by design; an unmapped identifier is a suggestion, never a gate.
 Before `dry_run`, checkpoint the just-recorded terms-lint note and UAT-pending
 state by staging only the current workflow and autopilot-state files and committing
 them when that scoped index is non-empty. Do not stage unrelated changes. The
-mutation helper intentionally rejects a dirty worktree, so this checkpoint is
+mutation helper's packet-only exemption does not apply to UAT generation, so this checkpoint is
 part of the mandatory generation attempt rather than an optional cleanup.
 
 The helper deterministically overwrites the output from current source inputs;

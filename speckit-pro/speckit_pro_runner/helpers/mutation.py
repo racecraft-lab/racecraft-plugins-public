@@ -988,7 +988,7 @@ def run_mutation_helper(
         mutation_lock.release()
         return response(status, **kwargs)
 
-    dirty_diag = dirty_worktree_diagnostic(request.inputs, repo_root)
+    dirty_diag = dirty_worktree_diagnostic(request.inputs, repo_root, entry.helper_id)
     if dirty_diag is not None:
         mutation["mutation_status"] = "blocked"
         mutation["dirty_worktree"] = dirty_diag["code"] == "dirty_worktree"
@@ -1400,13 +1400,24 @@ def command_plan_apply_diagnostic(operations: list[dict[str, Any]], helper_id: s
     )
 
 
-def dirty_worktree_diagnostic(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any] | None:
+def dirty_worktree_diagnostic(
+    inputs: dict[str, Any], repo_root: Path, helper_id: str = "",
+) -> dict[str, Any] | None:
     overrides = inputs.get("test_overrides")
     if isinstance(overrides, dict) and overrides.get("dirty_worktree") is True:
         return dirty_worktree_block(repo_root, "test_override")
     if isinstance(overrides, dict) and overrides.get("git_status_error") is True:
         return git_status_unavailable(repo_root, "test_override")
-    status = git_worktree_status(repo_root)
+    allowed_untracked: set[str] = set()
+    if helper_id in {"pr-packet-output", "validate-pr-packet-write"}:
+        from .pr_emission import canonical_packet_paths, packet_path_parts
+
+        packet_parts = packet_path_parts(inputs.get("packet_path"))
+        if packet_parts is not None:
+            allowed_untracked = set(canonical_packet_paths(
+                packet_parts["source_feature_dir"], packet_parts["packet_id"],
+            ).values())
+    status = git_worktree_status(repo_root, allowed_untracked=allowed_untracked)
     if isinstance(status, dict):
         return status
     if status:
@@ -1435,9 +1446,12 @@ def git_status_unavailable(repo_root: Path, source: str) -> dict[str, Any]:
     )
 
 
-def git_worktree_status(repo_root: Path) -> bool | dict[str, Any]:
+def git_worktree_status(
+    repo_root: Path, *, allowed_untracked: set[str] | None = None,
+) -> bool | dict[str, Any]:
     import subprocess
 
+    allowed = allowed_untracked or set()
     try:
         completed = subprocess.run(
             ["git", "-C", str(repo_root), "status", "--porcelain=v1", "-z", "--untracked-files=all"],
@@ -1470,7 +1484,11 @@ def git_worktree_status(repo_root: Path) -> bool | dict[str, Any]:
                 return git_status_unavailable(repo_root, "git_status")
             paths.append(entries[index])
             index += 1
-        if not all(is_runner_byproduct(path) or is_implementation_notes(path) for path in paths):
+        if not all(
+            is_runner_byproduct(path) or is_implementation_notes(path)
+            or (entry[:2] == "??" and path in allowed)
+            for path in paths
+        ):
             return True
     return False
 

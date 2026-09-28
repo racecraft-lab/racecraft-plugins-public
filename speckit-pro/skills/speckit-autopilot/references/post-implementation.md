@@ -458,8 +458,11 @@ opens one slice PR.
    workflow state. Continue only when `data.stdout_json.status=passed`,
    `data.stdout_json.pr_blocked=false`, and response `data.writes_state=false`.
    If any required packet is absent or invalid, stop before PR creation with
-   the validator diagnostics. Commit or otherwise checkpoint the packet/body
-   artifacts so the worktree is clean, then run `validate-pr-packet-write`;
+   the validator diagnostics. The current packet's canonical untracked metadata,
+   body, and validation paths do not require a commit before
+   `validate-pr-packet-write`; tracked packet edits, another packet, unrelated
+   files, and unreadable Git status still block. Do not force-add packet files
+   or change ignore rules. Run `validate-pr-packet-write`;
    apply mode reruns read-only validation before persisting the packet's
    `validation_result_path`. Prior validation artifacts never authorize PR
    creation. Exit 1 or 2 blocks before PR creation with the returned
@@ -736,7 +739,7 @@ rename, never a gate.
 Before `dry_run`, checkpoint the just-recorded terms-lint note and UAT-pending
 state by staging only the current workflow and autopilot-state files and committing
 them when that scoped index is non-empty. Do not stage unrelated changes. The
-mutation helper intentionally rejects a dirty worktree, so this checkpoint is
+mutation helper's packet-only exemption does not apply to UAT generation, so this checkpoint is
 part of the mandatory generation attempt rather than an optional cleanup.
 
 The helper deterministically overwrites the output from current source inputs;

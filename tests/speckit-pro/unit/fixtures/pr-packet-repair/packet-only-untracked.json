@@ -1,0 +1,14 @@
+{
+  "packet_path": "specs/packet-999-packet/.process/pr-packets/packet-999.json",
+  "current_packet_untracked": [
+    "specs/packet-999-packet/.process/pr-packets/packet-999.json",
+    "specs/packet-999-packet/.process/pr-packets/packet-999/body.md",
+    "specs/packet-999-packet/.process/pr-packets/packet-999/validation.json"
+  ],
+  "second_packet_untracked": [
+    "specs/packet-999-packet/.process/pr-packets/packet-1000.json",
+    "specs/packet-999-packet/.process/pr-packets/packet-1000/body.md"
+  ],
+  "unrelated_untracked": "unrelated.txt",
+  "tracked_edit": ".gitkeep"
+}
