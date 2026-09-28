@@ -2241,7 +2241,11 @@ def _mask_markdown_code_spans(rendered_lines: list[str]) -> list[str]:
             end += 1
         width = end - cursor
         closing = end
-        while closing < len(document):
+        # Blank rendered lines separate paragraphs and stand in for code blocks.
+        block_end = document.find("\n\n", end)
+        if block_end < 0:
+            block_end = len(document)
+        while closing < block_end:
             if document[closing] != "`":
                 closing += 1
                 continue

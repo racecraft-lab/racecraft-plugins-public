@@ -157,6 +157,9 @@ class MarkerVisibilityTests(unittest.TestCase):
             ("> - item\n>   > nested quote\n>     [Gap] visible list prose\n", 1, 3),
             ("- parent\n  - child\n    > ```text\n    > [Gap] code\n"
              "    > ```\n", 0, None),
+            ("`unclosed paragraph\n\n[Gap] visible\n`later code`\n", 1, 3),
+            ("`unclosed paragraph\n```text\n[Gap] code\n```\n"
+             "[Gap] visible\n`later code`\n", 1, 5),
         )
         for markdown, expected_count, expected_line in cases:
             with self.subTest(markdown=markdown), tempfile.TemporaryDirectory() as temp:
