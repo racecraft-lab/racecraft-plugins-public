@@ -4738,7 +4738,8 @@ def _autonomy_file_digests(label: str, content: bytes) -> set[str]:
 
         digests.add(_sha256_bytes(task_definitions(content.decode("utf-8")).encode("utf-8")))
     except (ImportError, UnicodeDecodeError):
-        pass
+        # Fail closed: without the runner or valid UTF-8, only the raw digest counts.
+        return digests
     return digests
 
 
