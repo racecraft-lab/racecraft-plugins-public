@@ -269,7 +269,12 @@ For enabled formal selection, require the current `planning` checkpoint and
 pass `workflow_file` to `validate-gate`. Tasks must include the selected model's
 implementation obligations and any requested trace work; follow [the shared contract](formal-methods.md).
 
-**Check:** Every functional requirement has at least one task.
+**Check:** Every functional requirement has at least one task. When tasks.md
+has a requirement coverage table (a Markdown table with a `Task`, `Tasks`, or
+`Task IDs` column), `validate-gate` G5 also fails every row that opens with a
+requirement ID but whose task cell names no task ID, such as a blank cell or
+`()`. The failure lists those rows in `empty_coverage_rows`; fill each from the
+task list.
 
 ```
 1. Extract all FR-XXX markers from spec.md
@@ -584,13 +589,24 @@ unexcepted block or gate error stops PR preparation and records the
 | Gate | After | Check | Auto-Fix Strategy | Repair allowance |
 |------|-------|-------|-------------------|--------------|
 | G1 | Specify | NEEDS CLARIFICATION markers | N/A (routing) | N/A |
-| G2 | Clarify | 0 markers remain | Re-run clarify | Shared |
-| G3 | Plan | Artifacts exist, gates pass | Re-run plan | Shared |
-| G4 | Checklist | 0 [Gap] markers | Research + consensus remediation | Shared |
-| G5 | Tasks | FR coverage, valid required execution metadata, and no gate task waiting on its own dependents | Generate missing tasks; split looping gate tasks | Shared |
-| G6 | Analyze | 0 required defects (all severities) | Research + consensus remediation | Shared |
+| G2 | Clarify | 0 markers remain | Re-run clarify | Gate's own 2 rounds for planning documents; else Shared |
+| G3 | Plan | Artifacts exist, gates pass | Re-run plan | Gate's own 2 rounds for planning documents; else Shared |
+| G4 | Checklist | 0 [Gap] markers | Research + consensus remediation | Gate's own 2 rounds for planning documents; else Shared |
+| G5 | Tasks | FR coverage, valid required execution metadata, and no gate task waiting on its own dependents | Generate missing tasks; split looping gate tasks | Gate's own 2 rounds for planning documents; else Shared |
+| G6 | Analyze | 0 required defects (all severities) | Research + consensus remediation | Gate's own 2 rounds for planning documents; else Shared |
 | G6.5 | (between Analyze and Implement) | Pre-Implement confidence ≥ 0.90 (advisory default; strict opt-in via `.claude/speckit-pro.local.md`) | Re-route consensus on lowest-scoring criterion, re-emit confidence | Shared |
-| G7 | Implement | Build+type+lint+test pass, integration tests exist, 0 placeholders, TDD evidence | Fix errors, replace placeholders, create real tests | Shared |
+| G7 | Implement | Build+type+lint+test pass, integration tests exist, 0 placeholders, TDD evidence | Fix errors, replace placeholders, create real tests | Gate's own 2 rounds for planning documents; else Shared |
+
+A gate's own allowance admits only a remediation whose every path is a planning
+document of the bound feature: `spec.md`, `plan.md`, `research.md`, `tasks.md`,
+`data-model.md`, `quickstart.md`, `.process/task-execution.json`, or a
+`checklists/<name>.md`. Reserve it with `gate_remediation` as
+[execution-efficiency.md](execution-efficiency.md) describes. It never touches
+the shared budget and needs no operator question. A remediation that touches
+code, tests, formal models, `contracts/`, or any other path uses the shared
+budget. The helper judges paths only, so a threshold or scope change written
+inside a planning document is the orchestrator's call: reserve it on the shared
+budget without `gate_remediation`.
 
 ## Additional Verification (Extension Commands)
 
@@ -611,6 +627,10 @@ not replacements for gates. If the extension is not installed,
 skip the check and log a recommendation to install it.
 
 ## Failure Escalation Protocol
+
+A gate whose own allowance is exhausted (`gate_remediation_allowance_exhausted`)
+does not stop here: record its open findings for the end-of-run request and
+continue. The protocol below applies to the shared budget.
 
 When the shared corrective reservation is exhausted:
 

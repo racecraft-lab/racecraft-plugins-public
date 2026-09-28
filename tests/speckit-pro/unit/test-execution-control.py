@@ -1281,6 +1281,183 @@ class IncrementReviewAllowanceTests(_ExecutionControlFixture, unittest.TestCase)
                 self.assertIn("except `increment_review_allowance_exhausted`", text)
 
 
+class GateRemediationAllowanceTests(_ExecutionControlFixture, unittest.TestCase):
+    """A planning gate's documentation-only remediation draws on that gate's own bound."""
+
+    PLANNING = ["feature/spec.md", "feature/plan.md", "feature/research.md", "feature/tasks.md"]
+
+    def spend_run_wide_budget(self):
+        IncrementReviewAllowanceTests.spend_run_wide_budget(self)
+
+    def gate_fix(self, dispatch_id, gate, paths, mode="apply", **inputs):
+        request = {"spec_file": "feature/spec.md", "failure_invariant": "FR-001", **inputs}
+        return self.invoke("reserve", mode=mode, dispatch_id=dispatch_id, kind="corrective",
+                           gate_remediation={"gate": gate, "paths": paths}, **request)
+
+    def test_documentation_only_g6_remediation_is_admitted_after_run_wide_exhaustion_up_to_the_bound(self):
+        self.spend_run_wide_budget()
+        first = self.gate_fix("g6-fix-1", "G6", self.PLANNING)
+        self.assertEqual((first["disposition"], first["remediation_allowance"]), ("continue", "gate"))
+        self.assertIsNone(first["reservation_id"])
+        self.assertEqual(first["ledger"]["corrective_cycles"], 2)
+        self.assertNotIn("corrective_exception", first["ledger"])
+        self.assertEqual(first["ledger"]["gate_allowances"]["G6"], {"rounds": 1, "dispatch_ids": ["g6-fix-1"]})
+        self.assertEqual(first["ledger"]["dispatches"]["g6-fix-1"]["gate"], "G6")
+        self.invoke("complete", dispatch_id="g6-fix-1", outcome="completed")
+        second = self.gate_fix("g6-fix-2", "G6", ["feature/data-model.md", "feature/quickstart.md",
+                                                  "feature/checklists/security.md",
+                                                  "feature/.process/task-execution.json"])
+        self.assertEqual((second["disposition"], second["remediation_allowance"]), ("continue", "gate"))
+        self.invoke("complete", dispatch_id="g6-fix-2", outcome="failed")
+        path = self.root / second["ledger_path"]
+        before = path.read_bytes()
+        spent = self.gate_fix("g6-fix-3", "G6", ["feature/spec.md"])
+        self.assertEqual(spent["reasons"], ["gate_remediation_allowance_exhausted"])
+        self.assertEqual(spent["disposition"], "checkpoint_required")
+        self.assertNotIn("g6-fix-3", spent["ledger"]["dispatches"])
+        self.assertEqual(json.loads(path.read_bytes())["gate_allowances"], json.loads(before)["gate_allowances"])
+        self.assertEqual(json.loads(path.read_bytes())["corrective_cycles"], 2)
+        self.assertEqual(self.gate_fix("g6-fix-1", "G4", ["feature/spec.md"])["reasons"],
+                         ["dispatch_already_reserved_no_relaunch"])
+        other_gate = self.gate_fix("g4-fix-1", "G4", ["feature/spec.md"])
+        self.assertEqual((other_gate["disposition"], other_gate["remediation_allowance"]), ("continue", "gate"))
+        self.assertEqual(other_gate["ledger"]["gate_allowances"]["G4"]["rounds"], 1)
+        schema = json.loads((Path(__file__).resolve().parents[3] /
+                             "speckit-pro/speckit_pro_runner/contracts/execution-control.schema.json").read_text())
+        self.assertEqual(json_schema_failures(other_gate["ledger"], schema, schema, "ledger"), [])
+
+    def test_code_test_formal_or_outside_paths_are_refused_on_the_gate_allowance(self):
+        (self.root / "src").mkdir()
+        (self.root / "src/app.py").write_text("value = 1\n")
+        (self.root / "feature/research.md").symlink_to(self.root / "src/app.py")
+        self.invoke("start")
+        code = self.gate_fix("g6-code", "G6", ["feature/spec.md", "src/app.py"])
+        self.assertEqual((code["disposition"], code["remediation_allowance"]), ("continue", "run_wide"))
+        self.assertEqual(code["gate_ineligible"], "path_outside_planning_documents")
+        self.assertEqual(code["ledger"]["corrective_cycles"], 1)
+        self.assertNotIn("gate_allowances", code["ledger"])
+        self.invoke("complete", dispatch_id="g6-code", outcome="completed")
+        self.invoke("reserve", dispatch_id="fix-b", kind="corrective", failure_invariant="FR-002")
+        self.invoke("complete", dispatch_id="fix-b", outcome="completed")
+        cases = {"code": ["src/app.py"], "test": ["tests/test_app.py"], "formal model": ["feature/formal/model.tla"],
+                 "contract": ["feature/contracts/api.json"], "other feature": ["other/spec.md"],
+                 "nested checklist": ["feature/checklists/deep/security.md"], "unlisted note": ["feature/notes.md"],
+                 "traversal": ["feature/../feature/spec.md"], "absolute": ["/feature/spec.md"],
+                 "git metadata": ["feature/.git/spec.md"], "symlinked document": ["feature/research.md"],
+                 "workflow sidecar": ["feature/.process/autopilot-state.json"]}
+        for name, paths in cases.items():
+            with self.subTest(case=name):
+                refused = self.gate_fix("g6-refused", "G6", paths)
+                self.assertEqual(refused["reasons"], ["failure_family_budget_exhausted"])
+                self.assertEqual(refused["remediation_allowance"], "run_wide")
+                self.assertEqual(refused["gate_ineligible"], "path_outside_planning_documents")
+                self.assertNotIn("g6-refused", refused["ledger"]["dispatches"])
+                self.assertNotIn("gate_allowances", refused["ledger"])
+        empty = self.gate_fix("g6-empty", "G6", [])
+        self.assertEqual((empty["remediation_allowance"], empty["gate_ineligible"]), ("run_wide", "no_remediation_paths"))
+
+    def test_missing_or_mismatched_feature_binding_never_grants_a_free_allowance(self):
+        self.spend_run_wide_budget()
+        with self.assertRaisesRegex(ValueError, "explicit spec_file"):
+            self.invoke("reserve", dispatch_id="g6-unbound", kind="corrective", failure_invariant="FR-001",
+                        gate_remediation={"gate": "G6", "paths": ["feature/spec.md"]})
+        path = self.root / self.invoke("status", mode="read_only")["ledger_path"]
+        ledger = json.loads(path.read_text())
+        ledger["invariant_binding"] = {"spec_file": "other/spec.md", "spec_sha256": "0" * 64, "bound_at": self.now}
+        path.write_text(json.dumps(ledger))
+        mismatched = self.gate_fix("g6-mismatch", "G6", ["feature/spec.md"])
+        self.assertEqual(mismatched["reasons"], ["failure_family_budget_exhausted"])
+        self.assertEqual((mismatched["remediation_allowance"], mismatched["gate_ineligible"]),
+                         ("run_wide", "feature_binding_mismatch"))
+        self.assertNotIn("gate_allowances", mismatched["ledger"])
+        for malformed in ({"gate": "G6"}, {"gate": "G6", "paths": "feature/spec.md"}, {"gate": "G1", "paths": []},
+                          {"gate": "G6.5", "paths": ["feature/spec.md"]}, {"gate": "G6", "paths": [1]}, ["G6"]):
+            with self.subTest(malformed=malformed), self.assertRaises(ValueError):
+                self.invoke("reserve", dispatch_id="malformed", kind="corrective", spec_file="feature/spec.md",
+                            gate_remediation=malformed)
+        with self.assertRaises(ValueError):
+            self.invoke("reserve", dispatch_id="not-corrective", kind="implementation", spec_file="feature/spec.md",
+                        gate_remediation={"gate": "G6", "paths": ["feature/spec.md"]})
+        with self.assertRaises(ValueError):
+            self.invoke("reserve", dispatch_id="both", kind="corrective", spec_file="feature/spec.md",
+                        gate_remediation={"gate": "G6", "paths": ["feature/spec.md"]},
+                        review_remediation={"tdd_unit": "alpha", "paths": ["src/alpha/core.py"]})
+
+    def test_forged_or_overspent_gate_records_fail_closed(self):
+        self.spend_run_wide_budget()
+        admitted = self.gate_fix("g6-fix-1", "G6", ["feature/spec.md"])
+        path = self.root / admitted["ledger_path"]
+        valid = path.read_bytes()
+        forged_dispatch = {"kind": "corrective", "outcome": "reserved", "reserved_at": self.now,
+                           "reservation_id": None, "reconciliations": 0, "gate": "G6"}
+        tampers = {
+            "unlisted gate dispatch": lambda ledger: ledger["dispatches"].update(forged=forged_dispatch),
+            "rounds over the bound": lambda ledger: (
+                ledger["dispatches"].update({"g2": forged_dispatch, "g3": forged_dispatch}),
+                ledger["gate_allowances"]["G6"].update(rounds=3, dispatch_ids=["g6-fix-1", "g2", "g3"])),
+            "counter disagrees": lambda ledger: ledger["gate_allowances"]["G6"].update(rounds=2),
+            "allowance record dropped": lambda ledger: ledger.pop("gate_allowances"),
+            "unreserved corrective": lambda ledger: ledger["dispatches"]["g6-fix-1"].pop("gate"),
+            "gate on a reservation": lambda ledger: ledger["dispatches"]["g6-fix-1"].update(
+                reservation_id=next(iter(ledger["reservations"]))),
+            "unknown gate": lambda ledger: (ledger["gate_allowances"].update({"G1": ledger["gate_allowances"].pop("G6")}),
+                                            ledger["dispatches"]["g6-fix-1"].update(gate="G1")),
+            "gate and increment on one dispatch": lambda ledger: (
+                ledger["dispatches"]["g6-fix-1"].update(increment="alpha"),
+                ledger.update(increment_allowances={"alpha": {"rounds": 1, "dispatch_ids": ["g6-fix-1"]}})),
+        }
+        for name, tamper in tampers.items():
+            with self.subTest(tamper=name):
+                ledger = json.loads(valid)
+                tamper(ledger)
+                path.write_text(json.dumps(ledger), encoding="utf-8")
+                with self.assertRaises(ValueError):
+                    self.invoke("status", mode="read_only")
+        path.write_bytes(valid)
+        self.assertEqual(self.invoke("status", mode="read_only")["disposition"], "continue")
+
+    def test_stage_epoch_archives_gate_allowances(self):
+        self.spend_run_wide_budget()
+        for number in (1, 2):
+            self.gate_fix(f"g6-fix-{number}", "G6", ["feature/tasks.md"])
+            self.invoke("complete", dispatch_id=f"g6-fix-{number}", outcome="completed")
+        (self.root / "feature/workflow.md").write_text(stage_workflow())
+        opened = self.invoke("begin-stage-epoch", autopilot_args=["--stage", "implement"])
+        self.assertEqual(opened["ledger"]["corrective_epochs"][0]["gate_allowances"]["G6"]["rounds"], 2)
+        self.assertNotIn("gate_allowances", opened["ledger"])
+        self.assertEqual(self.gate_fix("g6-fix-1", "G7", ["feature/tasks.md"])["reasons"],
+                         ["dispatch_already_reserved_no_relaunch"])
+        fresh = self.gate_fix("g7-fix-1", "G7", ["feature/tasks.md"])
+        self.assertEqual((fresh["disposition"], fresh["ledger"]["gate_allowances"]["G7"]["rounds"]), ("continue", 1))
+        schema = json.loads((Path(__file__).resolve().parents[3] /
+                             "speckit-pro/speckit_pro_runner/contracts/execution-control.schema.json").read_text())
+        self.assertEqual(json_schema_failures(fresh["ledger"], schema, schema, "ledger"), [])
+
+    def test_both_hosts_document_the_gate_remediation_allowance(self):
+        plugin = Path(__file__).resolve().parents[3] / "speckit-pro"
+        references = plugin / "skills/speckit-autopilot/references"
+        shared = " ".join((references / "execution-efficiency.md").read_text().split())
+        for phrase in ("`gate_remediation`", "`gate_allowances`", "`gate_remediation_allowance_exhausted`",
+                       "`remediation_allowance=gate`", "`remediation_allowance=run_wide`", "`gate_ineligible`",
+                       "`path_outside_planning_documents`", "`feature_binding_mismatch`"):
+            self.assertIn(phrase, shared)
+        gates = (references / "gate-validation.md").read_text()
+        rows = {line.split("|")[1].strip(): line.split("|")[5].strip() for line in gates.splitlines()
+                if line.startswith("| G")}
+        for gate in ("G2", "G3", "G4", "G5", "G6", "G7"):
+            with self.subTest(gate=gate):
+                self.assertIn("own", rows[gate])
+        self.assertIn("`gate_remediation_allowance_exhausted`", " ".join(gates.split()))
+        for host in ("skills/speckit-autopilot/references/phase-execution.md",
+                     "codex-skills/speckit-autopilot/references/phase-execution-codex.md"):
+            with self.subTest(host=host):
+                text = " ".join((plugin / host).read_text().split())
+                self.assertIn("`gate_remediation`", text)
+                self.assertIn("planning documents", text)
+                self.assertIn("`gate_remediation_allowance_exhausted`", text)
+                self.assertIn("never a mid-run question", text)
+
+
 class WorkflowIdentityTests(_ExecutionControlFixture, unittest.TestCase):
     def test_different_workflows_cannot_adopt_an_existing_ledger(self):
         first = self.invoke("start")
@@ -1798,6 +1975,20 @@ class RunnerDispatchTests(unittest.TestCase):
         self.assertEqual(code, 0, admitted)
         self.assertEqual(admitted["data"]["review_allowance"], "increment")
 
+    def test_gate_remediation_allowance_is_a_real_runner_route(self):
+        (self.root / "feature/spec.md").write_text("- FR-001: preserve data\n- FR-002: no secrets\n")
+        self.call_runner("execution-control", "apply", action="start")
+        for dispatch_id, invariant in (("fix-a", "FR-001"), ("fix-b", "FR-002")):
+            self.call_runner("execution-control", "apply", action="reserve", dispatch_id=dispatch_id,
+                             kind="corrective", failure_invariant=invariant)
+            self.call_runner("execution-control", "apply", action="complete", dispatch_id=dispatch_id,
+                             outcome="completed")
+        code, admitted = self.call_runner("execution-control", "apply", action="reserve", dispatch_id="g6-fix",
+                                          kind="corrective", failure_invariant="FR-001", spec_file="feature/spec.md",
+                                          gate_remediation={"gate": "G6", "paths": ["feature/tasks.md"]})
+        self.assertEqual(code, 0, admitted)
+        self.assertEqual(admitted["data"]["remediation_allowance"], "gate")
+
     def test_stage_epoch_is_a_real_runner_route(self):
         self.call_runner("execution-control", "apply", action="start")
         for dispatch_id, invariant in (("fix-a", "FR-001"), ("fix-b", "FR-002")):
@@ -1914,6 +2105,7 @@ if __name__ == "__main__":
                                for case in (GreenfieldInvariantBindingTests, ExecutionControlTests, CorrectiveRecoveryTests,
                                             CorrectiveContinuationTests, CorrectiveExceptionTests, CorrectiveFailureClassTests,
                                             ReplanEpochTests, StageEpochTests, IncrementReviewAllowanceTests,
+                                            GateRemediationAllowanceTests,
                                             WorkflowIdentityTests, VerificationTests, RunnerDispatchTests))
     suite.addTests(DockerVerificationTests(name) for name in DockerVerificationTests.__dict__ if name.startswith("test_docker_"))
     raise SystemExit(run_counted(suite, label="test-execution-control"))
