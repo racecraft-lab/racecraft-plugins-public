@@ -758,10 +758,13 @@ checkpoint, never a completion summary. When every runnable item has finished
 and deferred items remain under §Blocked Actions Mid-Run: Fall Back or Defer,
 Never Stop in
 [`phase-execution.md`](./references/phase-execution.md#blocked-actions-mid-run-fall-back-or-defer-never-stop),
-report that checkpoint with one consolidated `AskUserQuestion` request, print
-the same question as plain text in the final message, and list every fallback
-taken and every deferred item, including each entry of the ledger's `deferred`
-list.
+the run finalizes instead of waiting; the read-only `finalize-run` runner
+helper decides it from the ledger's `deferred` list and the final gate results.
+Mark the stack ready for review (never merge), open the top PR body with its
+`Deferred / not verified` section, make one consolidated `AskUserQuestion`
+request, and print the same question as plain text in the final message,
+listing every fallback taken and every deferred item, including each entry of
+the ledger's `deferred` list.
 
 ## Workflow File Update Protocol
 

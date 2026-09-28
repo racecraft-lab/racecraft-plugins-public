@@ -302,6 +302,9 @@ repository's GitHub `owner/name`, its default branch, and that string as
   or later. TOML allows one `[auto_review]` table, so merge it into an existing
   `extra_policy` string. It is an `extra_policy` fragment, never
   `auto_review.policy`, which replaces the default reviewer policy.
+- Tell the operator that a reviewer session persists for its thread, even
+  after an app restart: a new or changed policy reaches only threads started
+  after the change, so start the autopilot in a new thread after installing it.
 - This skill never writes the fragment into `~/.codex`, the repository's
   `.codex/`, or `AGENTS.md`: the reviewer trusts `AGENTS.md`, and a branch
   could rewrite it.

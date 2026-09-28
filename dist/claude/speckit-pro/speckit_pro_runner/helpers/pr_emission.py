@@ -31,6 +31,9 @@ from .read_only import (
 
 PACKET_SLUG = r"[a-z0-9][a-z0-9._-]*"
 SOURCE_FEATURE_PATTERN = re.compile(rf"^specs/(?P<feature>{PACKET_SLUG})$")
+# A run that finished with deferred items opens its top PR body with this section.
+DEFERRED_HEADING = "Deferred / not verified"
+DEFERRED_ITEM_FIELDS = ("item", "reason", "finish")
 PACKET_PATH_PATTERN = re.compile(
     rf"^(?P<source_feature_dir>specs/{PACKET_SLUG})/\.process/pr-packets/(?P<packet_id>{PACKET_SLUG})\.json$"
 )
@@ -538,6 +541,10 @@ def normalize_packet_input(request: Any) -> dict[str, Any]:
     elif mode not in {"single", "split", "draft"}:
         return invalid_packet_input("mode must be single, split, or draft when provided", field="mode")
 
+    deferred_items = normalize_deferred_items(inputs.get("deferred_items"), mode)
+    if isinstance(deferred_items, dict):
+        return deferred_items
+
     scope_evidence = normalize_scope_evidence(inputs, mode)
     if isinstance(scope_evidence, dict) and "diagnostic" in scope_evidence:
         return scope_evidence
@@ -578,6 +585,12 @@ def normalize_packet_input(request: Any) -> dict[str, Any]:
             verification=markdown_list(inputs.get("verification"), [item["summary"] for item in verification_evidence]),
             scope=markdown_list(inputs.get("scope"), scope_evidence["changed_files"]),
             known_gaps=markdown_list(inputs.get("known_gaps"), ["No known gaps for this PR."]),
+            deferred_items=deferred_items,
+        )
+    if deferred_items and first_section_heading(rendered_body) != DEFERRED_HEADING:
+        return invalid_packet_input(
+            f"a body for a run with deferred items must open with the ## {DEFERRED_HEADING} section",
+            field="body",
         )
 
     body_failures = packet_body_structure_failures(
@@ -939,10 +952,19 @@ def build_packet_body(
     verification: str,
     scope: str,
     known_gaps: str,
+    deferred_items: list[dict[str, str]] | None = None,
 ) -> str:
-    parts = [
-        f"# {title}",
-        "",
+    parts = [f"# {title}", ""]
+    if deferred_items:
+        parts.extend([
+            f"## {DEFERRED_HEADING}",
+            "",
+            "The run finished with these items deferred. They are not verified.",
+            "",
+            *(f"- **{item['item']}**: {item['reason']} To finish it: {item['finish']}" for item in deferred_items),
+            "",
+        ])
+    parts += [
         "## Summary",
         "",
         "<!-- speckit-pro-editable:summary:start -->",
@@ -987,6 +1009,31 @@ def build_packet_body(
         "",
     ]
     return "\n".join(parts)
+
+
+def normalize_deferred_items(raw: Any, mode: str) -> list[dict[str, str]] | dict[str, Any]:
+    """The run's deferred items, each with its reason and what finishes it; empty when absent."""
+    if raw is None:
+        return []
+    if not isinstance(raw, list) or not all(
+        isinstance(item, dict) and set(item) == set(DEFERRED_ITEM_FIELDS)
+        and all(isinstance(item[key], str) and item[key].strip() and "\n" not in item[key] for key in item)
+        for item in raw
+    ):
+        return invalid_packet_input(
+            "deferred_items must list objects with one-line item, reason, and finish text",
+            field="deferred_items",
+        )
+    if raw and mode == "draft":
+        return invalid_packet_input("a draft body carries no deferred items", field="deferred_items")
+    return [{key: item[key].strip() for key in DEFERRED_ITEM_FIELDS} for item in raw]
+
+
+def first_section_heading(body: str) -> str | None:
+    for line in body.splitlines():
+        if line.startswith("## "):
+            return line[3:].strip()
+    return None
 
 
 def editable_fields(mode: str) -> list[dict[str, str]]:

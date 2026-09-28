@@ -2805,20 +2805,40 @@ denial), a missing approval, or an unavailable tool or route.
    execution-control budget, is not a failure family, and is never retried by
    another route. Never ask the operator from inside the task, and never set a
    workflow row or progress item to blocked while runnable work remains.
-3. **Ask once, at the end.** Only after every runnable item has finished, and
-   only if deferred items remain, make one consolidated operator request with
-   `AskUserQuestion`. It names each deferred item, the blocked action, why the
-   requirement needs it, the smallest operator action that unblocks it, and the
-   resume command. Always print the same question as plain text in the final
-   message too, so a question that does not render still reaches the operator.
-   In an unattended run, or when `AskUserQuestion` is unavailable, the plain-text
-   copy is the request. Only then may the rows holding deferred work move to
-   `⚠ Blocked`.
+3. **Finalize, then ask once.** Only after every runnable item has finished,
+   run the read-only `finalize-run` runner helper. Pass the execution-control
+   `ledger_path` and `expected_run_id`; every final gate result as `gate` and
+   `status`, with the deferred units a failure is attributed to as
+   `attributed_units`; the runnable work still open as `pending_items`; every
+   rule 2 deferral as `unit`, `reason` (for a veto, the reviewer's own text),
+   and `finish` (the exact command or authorization that finishes it); the
+   stack's `pull_requests`, bottom first; and the `resume_command`. A gate that
+   failed only on deferred units is reported as deferred, never green, and does
+   not block. A failure the helper cannot attribute to a deferred unit still
+   blocks. When `outcome` is `complete_with_deferred` or `complete`, the run
+   finalizes:
+   - Refresh the top PR's packet with `pr-packet-output`, passing
+     `deferred_items` unchanged, so its body opens with the
+     `Deferred / not verified` section, then update that PR's body from the
+     refreshed body file.
+   - Run each of `ready_commands` to mark the whole stack ready for review.
+     The run never merges.
+   - Make one consolidated operator request with `AskUserQuestion` whose text
+     is `end_of_run_request`, and print the same request as plain text in the
+     final message too, so a question that does not render still reaches the
+     operator. In an unattended run, or when `AskUserQuestion` is unavailable,
+     the plain-text copy is the request.
+   Rows holding deferred work stay unchecked and read deferred, not blocked.
+   Record `deferred_digest` in the workflow file's Phase 7 result. After
+   finalizing, a later turn acts only on a new operator message and never
+   re-checks an unchanged blocker. `outcome=continue` means runnable work
+   remains, so keep executing it. `outcome=blocked` is a genuine failure:
+   report an honest checkpoint under the correctness stops below.
 4. **Report what happened.** The final report and the PR body list every
    fallback taken and every deferred item. Pass them to `pr-packet-output` as
-   `known_gaps`, so they appear under the body's `## Known Gaps` heading. A run
-   with deferred items reports an honest incomplete checkpoint, never
-   completion.
+   `known_gaps` too, so they also appear under the body's `## Known Gaps`
+   heading. A finalized run with deferred items is complete: it names what is
+   not verified instead of waiting on the operator.
 
 G7 and Post run on the implemented snapshot. A requirement whose only task is
 deferred is listed as deferred in the G7 evidence and in `known_gaps`; it

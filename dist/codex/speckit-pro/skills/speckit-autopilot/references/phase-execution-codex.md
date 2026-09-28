@@ -1180,11 +1180,20 @@ vetoes a covered action, that is a blocked action: defer it under
 **Uncovered actions are deferred.** An action outside every standing class,
 such as a new destination or data class, a privileged command, or an
 interactive login, is `operator_action_required` unless the conversation
-already carries exact authorization for it. It is never an up-front question.
-An `implement` or `full` run defers the task that needs it, and every task and
-Post item that depends on it, and keeps executing independent work; the one
-end-of-run request names it. A `plan` run lists it in its final report as work
-the implement run will defer.
+already carries exact authorization for it. It is never an up-front question
+that stops the run. An `implement` or `full` run defers the task that needs it,
+and every task and Post item that depends on it, and keeps executing
+independent work; the one end-of-run request names it. A `plan` run lists it in
+its final report as work the implement run will defer.
+
+**Uncovered data egress: the preflight asks for it as a chat reply at run
+start.** Render the paste-ready authorization message described below at the
+preflight, show it with the helper's `delivery` line, and ask the operator to
+send it back as a normal chat message in this thread, never as a goal edit. The
+approval reviewer reads goal text as user-provided data and records an
+authorization written there as unknown. The run never waits for the reply: the
+action stays `operator_action_required` and its task stays deferred until the
+reply lands, and the end-of-run request repeats the message if it never does.
 
 **A boundary-file edit named in the ratified plan is deferred too.** Such an
 edit, for example to the root `AGENTS.md`, never blocks the start of the run,
@@ -1313,7 +1322,8 @@ exact destination), `effect` (the data class), and an optional `purpose` (the
 task id or reason). Show its output unchanged; do not write the text by hand.
 
 - A paste-ready authorization message: one short block the operator sends as
-  a user message in this thread. It lists each action as "Send <data class>
+  a normal chat message in this thread, never as a goal edit; show the
+  helper's `delivery` line with it. It lists each action as "Send <data class>
   from <repository> to <destination> for <purpose>". The operator's reply that
   carries it is the explicit_user evidence described above.
 - A proposed `auto_review.extra_policy` fragment for the operator's own
@@ -1327,7 +1337,10 @@ task id or reason). Show its output unchanged; do not write the text by hand.
   to autonomy-boundary files, their schema, or their recorded digests, or to
   `AGENTS.md` or `.codex/`; any other destination or data class; a push to the
   default branch, a force push, a `--mirror` push, or a remote ref deletion; and
-  a remote change. The operator installs it once.
+  a remote change. The operator installs it once. A reviewer session persists
+  for its thread, even after an app restart, so a new or changed
+  `auto_review.extra_policy` reaches only threads started after the change.
+  After installing it, start the autopilot in a new thread.
 
 The reviewer does not see every command. A command reaches the reviewer only
 when it escalates, for example a network request or a write outside the
@@ -2722,20 +2735,41 @@ whose refreshed preflight disposition is `operator_action_required`.
    another route. Never ask the operator from inside the task, and never set a
    workflow row, plan item, or the thread goal to blocked while runnable work
    remains.
-3. **Ask once, at the end.** Only after every runnable item has finished, and
-   only if deferred items remain, make one consolidated operator request with
-   `request_user_input`. It names each deferred item, the blocked action, why
-   the requirement needs it, the smallest operator action that unblocks it, and
-   the resume command. Always print the same question as plain text in the
-   final message too, even when `request_user_input` returns, because the
-   question UI can fail to render in a thread. In an unattended run, or when
-   `request_user_input` is absent, the plain-text copy is the request. Only then
-   may the rows holding deferred work move to `⚠ Blocked`.
+3. **Finalize, then ask once.** Only after every runnable item has finished,
+   run the read-only `finalize-run` runner helper. Pass the execution-control
+   `ledger_path` and `expected_run_id`; every final gate result as `gate` and
+   `status`, with the deferred units a failure is attributed to as
+   `attributed_units`; the runnable work still open as `pending_items`; every
+   rule 2 deferral as `unit`, `reason` (for a veto, the reviewer's own text),
+   and `finish` (the exact command or authorization that finishes it); the
+   stack's `pull_requests`, bottom first; and the `resume_command`. A gate that
+   failed only on deferred units is reported as deferred, never green, and does
+   not block. A failure the helper cannot attribute to a deferred unit still
+   blocks. When `outcome` is `complete_with_deferred` or `complete`, the run
+   finalizes:
+   - Refresh the top PR's packet with `pr-packet-output`, passing
+     `deferred_items` unchanged, so its body opens with the
+     `Deferred / not verified` section, then update that PR's body from the
+     refreshed body file.
+   - Run each of `ready_commands` to mark the whole stack ready for review.
+     The run never merges.
+   - The run marks the thread goal complete, never blocked.
+   - Make one consolidated operator request with `request_user_input` whose
+     text is `end_of_run_request`, and print the same request as plain text in
+     the final message too, even when `request_user_input` returns, because the
+     question UI can fail to render in a thread. In an unattended run, or when
+     `request_user_input` is absent, the plain-text copy is the request.
+   Rows holding deferred work stay unchecked and read deferred, not blocked.
+   Record `deferred_digest` in the workflow file's Phase 7 result. After
+   finalizing, a later turn acts only on a new operator message and never
+   re-checks an unchanged blocker. `outcome=continue` means runnable work
+   remains, so keep executing it. `outcome=blocked` is a genuine failure:
+   report an honest checkpoint under the correctness stops below.
 4. **Report what happened.** The final report and the PR body list every
    fallback taken and every deferred item. Pass them to `pr-packet-output` as
-   `known_gaps`, so they appear under the body's `## Known Gaps` heading. A run
-   with deferred items reports an honest incomplete checkpoint, never
-   completion.
+   `known_gaps` too, so they also appear under the body's `## Known Gaps`
+   heading. A finalized run with deferred items is complete: it names what is
+   not verified instead of waiting on the operator.
 
 G7 and Post run on the implemented snapshot. A requirement whose only task is
 deferred is listed as deferred in the G7 evidence and in `known_gaps`; it
