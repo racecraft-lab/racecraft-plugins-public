@@ -1685,6 +1685,16 @@ class StatePrivacyTests(StatusEvidenceReportAssertions, unittest.TestCase):
                 self.assertIn("rerun the guard once", skill)
                 self.assertIn("A second failure, or any other failing gated key, is a stop", skill)
 
+    def test_both_hosts_account_for_the_implementation_notes_record(self) -> None:
+        """#801: the notes record is committed, exempt from the path budget, and never dirties apply."""
+        for name in ("skills/speckit-autopilot/references/phase-execution.md",
+                     "codex-skills/speckit-autopilot/references/phase-execution-codex.md"):
+            with self.subTest(file=name):
+                text = _flat(REPO_ROOT / "speckit-pro" / name)
+                self.assertIn("stage it with each marker checkpoint commit", text)
+                self.assertIn("`declared_files.implementation_notes`", text)
+                self.assertIn("clean-worktree check ignores it", text)
+
     def test_validator_patterns_match_the_repository_privacy_scan(self) -> None:
         self.assertEqual(
             validator.STATE_HOME_PATH_PATTERN.pattern,

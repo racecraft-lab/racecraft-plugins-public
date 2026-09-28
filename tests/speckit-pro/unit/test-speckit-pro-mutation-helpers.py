@@ -7808,6 +7808,47 @@ This line must not be copied.
                     else:
                         self.assertEqual([diag["code"] for diag in stderr_records], ["dirty_worktree"])
 
+    def test_apply_tolerates_only_the_implementation_notes_record(self) -> None:
+        """#801: the notes record lags its checkpoint commit; it never fails the clean check."""
+        notes = "specs/001-demo/.process/implementation-notes.md"
+        cases = (
+            ("untracked notes", (), (notes,), True),
+            ("modified tracked notes", (notes,), (notes,), True),
+            ("notes plus another file", (), (notes, "untracked.txt"), False),
+            ("notes outside .process", (), ("specs/001-demo/implementation-notes.md",), False),
+            ("other file in .process", (), ("specs/001-demo/.process/other-notes.md",), False),
+        )
+        for label, tracked, written, clean in cases:
+            with self.subTest(case=label):
+                tmp, git_root = self.temp_clean_git_repo()
+                with tmp:
+                    for relative in tracked:
+                        path = git_root / relative
+                        path.parent.mkdir(parents=True, exist_ok=True)
+                        path.write_text("# Implementation Notes: DEMO-001\n", encoding="utf-8")
+                        self.run_git(git_root, "add", relative)
+                    if tracked:
+                        self.run_git(git_root, "commit", "--quiet", "-m", "notes")
+                    for relative in written:
+                        path = git_root / relative
+                        path.parent.mkdir(parents=True, exist_ok=True)
+                        with path.open("a", encoding="utf-8") as handle:
+                            handle.write("- T001: entry\n")
+                    completed, response, stderr_records = run_runner(
+                        helper_request(
+                            "mutation-foundation",
+                            mode="apply",
+                            inputs={"operations": [{"operation_id": "notes", "kind": "write_file",
+                                                    "target": "generated/notes-output.md", "content": "ok\n"}]},
+                        ),
+                        cwd=git_root,
+                    )
+                    self.assertEqual(response["data"]["mutation"]["dirty_worktree"], not clean, response)
+                    if clean:
+                        self.assertEqual(completed.returncode, 0, response)
+                    else:
+                        self.assertEqual([diag["code"] for diag in stderr_records], ["dirty_worktree"])
+
     def test_apply_refuses_worktree_rename_of_a_real_file_into_a_byproduct_directory(self) -> None:
         tmp, git_root = self.temp_clean_git_repo()
         with tmp:

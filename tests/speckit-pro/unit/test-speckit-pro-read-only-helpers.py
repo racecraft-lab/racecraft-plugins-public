@@ -3795,6 +3795,28 @@ class ReadOnlyHelperTests(unittest.TestCase):
         self.assertEqual(4, declared["production"])
         self.assertEqual(len(evidence), declared["marker_evidence"])
 
+    def test_estimate_reviewable_loc_does_not_count_the_implementation_notes_record(self) -> None:
+        """#801: the notes record is committed run evidence, like a marker's records, not budgeted work."""
+        if self.helper_filter and self.helper_filter != "estimate-reviewable-loc":
+            self.skipTest("implementation notes case uses estimate-reviewable-loc")
+        cap = 24
+        entries = [f"src/module_{index:02d}.py" for index in range(4)]
+        entries += [f"docs/page_{index:02d}.md" for index in range(cap - len(entries))]
+        notes = "specs/001-demo/.process/implementation-notes.md"
+        body = "\n".join(f"- NEW {entry}" for entry in [*entries, notes])
+        with helper_project() as project_path:
+            (project_path / "plan.md").write_text(
+                f"# Plan\n\n## Declared File Operations\n\n{body}\n", encoding="utf-8"
+            )
+            code, payload = self._helper_json(
+                "estimate_reviewable_loc", {"plan_file": "plan.md"}, project_path
+            )
+        self.assertEqual(0, code)
+        declared = payload["declared_files"]
+        self.assertEqual(cap, declared["total_entries"])
+        self.assertEqual(1, declared["implementation_notes"])
+        self.assertEqual(0, declared["marker_evidence"])
+
     def test_detect_commands_finds_repository_test_runner(self) -> None:
         """A runner script under tests/ is real, verifiable evidence of a test command.
 
