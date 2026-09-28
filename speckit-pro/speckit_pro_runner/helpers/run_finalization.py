@@ -7,8 +7,10 @@ goes ready for review (never merged), the top PR body opens with a
 complete, and one plain-text request names what is left.
 
 Anything else left at the end is one human stop, never ready for review: a
-failed gate (named with its exact command), an entry in the execution-control
-ledger's `deferred` list, or a deferred task nobody resolved. A `defer`
+failed gate (named with its exact command), an unresolved entry in the
+execution-control ledger's `deferred` list, or a deferred task nobody resolved.
+A ledger entry is resolved only when the ledger itself shows a later completed
+dispatch for the same unit; it stays in the ledger for audit but leaves the stop. A `defer`
 disposition keeps the run working on other units mid-run; it never survives to
 a finalized run. This read-only helper fails closed on missing or malformed
 evidence and never writes a file.
@@ -74,7 +76,8 @@ def _ledger_deferrals(root: Path, inputs: dict[str, Any]) -> list[dict[str, Any]
     validate_ledger(ledger)
     if ledger["run_id"] != _text(inputs.get("expected_run_id"), "expected_run_id"):
         raise ValueError("expected_run_id does not match the ledger")
-    return list(ledger.get("deferred", []))
+    # A resolved entry stays in the ledger for audit; validate_ledger proved its resolution.
+    return [entry for entry in ledger.get("deferred", []) if "resolved_by" not in entry]
 
 
 def _records(value: Any, name: str, fields: tuple[str, ...]) -> list[dict[str, str]]:

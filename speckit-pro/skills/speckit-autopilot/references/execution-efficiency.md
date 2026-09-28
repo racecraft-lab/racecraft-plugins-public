@@ -373,16 +373,27 @@ entry as `deferred`: `dispatch_id`, `reason`, `unit_kind` (`failure_family`,
 `reserve` for the same `dispatch_id` returns that entry again. Record the
 deferred item with the task or gate it blocks and the exact gate output, then
 keep executing every independent task, increment, gate, and Post check. A
-deferral is never a stop and never a mid-run question. At the end, list every
-entry of the current `deferred` list in the one end-of-run consolidated
-request. An entry still unresolved at the end makes `finalize-run` return
+deferral is never a stop and never a mid-run question. When a later
+corrective dispatch for the same unit completes, the ledger marks the entry
+resolved itself: it adds `resolved_by` (that dispatch ID) and `resolved_at`
+(its completion time) and keeps the entry for audit. A dispatch resolves an
+entry only when the ledger ties it to the entry's unit: the reservation or
+`corrective_exception` of that failure family (or failure class), the
+increment's own review allowance, or the gate's allowance. It
+must be reserved at or after `deferred_at` and have `outcome=completed`. No
+request can name a resolution, and a failed or unknown result resolves
+nothing. At the end, list every unresolved entry of the current `deferred`
+list in the one end-of-run consolidated request; `finalize-run` omits resolved
+entries. An entry still unresolved at the end makes `finalize-run` return
 `outcome=human_stop`: the run never finalizes ready for review over it, a
 gate's included. `authorize-corrective-exception` and `begin-replan-epoch` are
 end-of-run tools that act on the operator's answer to that request. A new
 allowance archives the list into `corrective_epochs` with the rest of the
 spent allowance. The ledger validates every entry on each call: an entry whose
 allowance the ledger does not show as spent, a duplicate, or an out-of-order
-clock is an integrity failure that stops the run.
+clock is an integrity failure that stops the run, and so is a resolution the
+ledger's own records do not prove. A ledger written before resolutions existed
+has no resolution fields and still validates; its entries stay unresolved.
 
 If `disposition=checkpoint_required`, stop new work and record remaining work,
 owned in-flight dispatches, unknown effects, consumed reservations, elapsed
