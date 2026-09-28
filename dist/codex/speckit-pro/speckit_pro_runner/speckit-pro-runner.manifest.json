@@ -295,7 +295,15 @@
         "value": "speckit_pro_runner/helpers/egress_authorization.py",
         "display": "speckit_pro_runner/helpers/egress_authorization.py"
       },
-      "sha256": "ab38fbc1a648ef3e78489ba552151b5549e601fb6bdbe731da8afb60e7065380"
+      "sha256": "8c238163cdb25da425b3b09be122663255657a70042adbab8bacf80a4cb5c444"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
+        "value": "speckit_pro_runner/helpers/gate_preflight_coverage.py",
+        "display": "speckit_pro_runner/helpers/gate_preflight_coverage.py"
+      },
+      "sha256": "291fb27b86e27d5ffd5bc953193810fd816e816c5ae47e450312048e384a1384"
     },
     {
       "path": {
@@ -319,7 +327,7 @@
         "value": "speckit_pro_runner/helpers/pr_emission.py",
         "display": "speckit_pro_runner/helpers/pr_emission.py"
       },
-      "sha256": "14f3b67788725898eb703c02c228b54c5a209b00233893e1fb20526f25ae3444"
+      "sha256": "8c24a34ed18af7f482d30d5bd86325cd9a32a7fcef0f3c6d87ac10fde941b892"
     },
     {
       "path": {
@@ -351,7 +359,15 @@
         "value": "speckit_pro_runner/helpers/registry.py",
         "display": "speckit_pro_runner/helpers/registry.py"
       },
-      "sha256": "f9fa42e33ba6a1a866cc07facf371a6e0de7660b0b08a4b0eff2f77d0500c88e"
+      "sha256": "3cfdf40c812c38abd03acb4e587d9da9ba90653b302f3a0c439759078e767b9a"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
+        "value": "speckit_pro_runner/helpers/run_finalization.py",
+        "display": "speckit_pro_runner/helpers/run_finalization.py"
+      },
+      "sha256": "b69b4b8a9c545d2f6e5e28b72ca16aa5cb9442ebc1cefa54cce9277c701e35a5"
     },
     {
       "path": {
