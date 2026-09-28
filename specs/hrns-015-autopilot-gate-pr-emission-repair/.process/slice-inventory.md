@@ -21,7 +21,7 @@ The current marker contract uses `kind=user_story`, `id=usN` for an unsplit stor
 | A1a | `us1-part1` | US1 | T003–T004 | 2 | 24 | Candidate only; actual diff/LOC unmeasured |
 | A1b | `us1-part2` | US1 | T005 | 2 | 24 | Candidate only; actual diff/LOC unmeasured |
 | A2 | `us2` | US2 | T006–T007 | 1 | 24 | Candidate only; actual diff/LOC unmeasured |
-| A3 | `us3` | US3 | T008–T009 | 2 | 24 | Candidate only; actual diff/LOC unmeasured |
+| A3 | `us3` | US3 | T008–T009 | 2 | 24 | Source delta: 18 paths; 22 with four tracked process paths; 204 authored non-process changed lines; final PR base/head diff and LOC pending |
 | B1a | `us4` | US4 | T010 | 1 | 22 | Candidate only; actual diff/LOC unmeasured |
 | B1b | `us5` | US5 | T011 | 2 | 23 | Candidate only; actual diff/LOC unmeasured |
 | B2b | `us6` | US6 | T012–T013 | 1 | 23 | Candidate only; actual diff/LOC unmeasured |
@@ -178,6 +178,8 @@ Tasks: T008–T009. Requirements: FR-006, FR-026. **24 candidate paths; 2 produc
 | process/evidence | modify | `specs/hrns-015-autopilot-gate-pr-emission-repair/.process/task-execution.json` | tasks source fingerprint |
 | process/evidence | modify | `specs/hrns-015-autopilot-gate-pr-emission-repair/.process/slice-inventory.md` | RED/GREEN and measured budget evidence |
 | generated index | regenerate | `specs/hrns-015-autopilot-gate-pr-emission-repair/SPEC-MOC.md` | PR/index refresh candidate |
+
+A3 source checkpoint `c60a3398b1e07412ec3cbb4468f3ca8a16a4687d` (`e68785cd3..c60a3398`) changes 18 tracked paths, including 2 production paths. The four tracked process updates (workflow, state, tasks, inventory) bring the marker to 22 budget-counted paths; checkpoint and verification evidence are outside the path budget. Authored non-process changes total 204 lines. `test-finalize-run.py` is a necessary fixture adaptation outside the candidate list; the unused reference and index candidates were not changed. Observed RED exposed six stale-label variants, followed by GREEN and refactor; the 10,111/10,111 quick suite, 6/6 CI dispatches, generated-artifact check, docs reference/quality, pinned Python lint, privacy scan and independent critical/high review passed. Final emitted PR base/head diff and reviewable LOC remain mandatory.
 
 ### B1a — US4 visible marker counts
 

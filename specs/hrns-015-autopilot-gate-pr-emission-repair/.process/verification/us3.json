@@ -1,0 +1,52 @@
+{
+  "schema_version": "verification-report.v1",
+  "feature_id": "HRNS-015",
+  "marker_id": "us3",
+  "status": "pass",
+  "generated_at": "2026-09-28T21:17:52Z",
+  "verified_commit_sha": "c60a3398b1e07412ec3cbb4468f3ca8a16a4687d",
+  "required_gate_ids": [
+    "focused_tests",
+    "quick_suite",
+    "ci_suite",
+    "artifact_consistency",
+    "docs_validation",
+    "python_lint",
+    "independent_critical_high_review",
+    "host_parity"
+  ],
+  "results": {
+    "focused_tests": {
+      "status": "pass",
+      "evidence": "A3 verdict cases passed after observed RED (six failing stale-label variants), GREEN, and refactor; registered mutation helper suite and finalize-run packet tests passed."
+    },
+    "quick_suite": {
+      "status": "pass",
+      "evidence": "Committed A3 source quick suite 10,111/10,111 with toolchain preflight and native exit 0; privacy scan 14/14."
+    },
+    "ci_suite": {
+      "status": "pass",
+      "evidence": "Committed A3 source CI-equivalent default suite: toolchain plus layers 1, 4, 5, 6, and 7; 6/6 dispatches, native exit 0."
+    },
+    "artifact_consistency": {
+      "status": "pass",
+      "evidence": "After source commit c60a3398, refresh-release-artifacts.py --check reported generated artifacts match the source tree."
+    },
+    "docs_validation": {
+      "status": "pass",
+      "evidence": "Reference-mode docs validation passed: pnpm reference:check and validate:quality."
+    },
+    "python_lint": {
+      "status": "pass",
+      "evidence": "Pinned repository wrapper Ruff passed; isolated pinned mypy passed across 54 source files."
+    },
+    "independent_critical_high_review": {
+      "status": "pass",
+      "evidence": "Independent A3 audit found stale-label bypass; it was fixed red-first in the source checkpoint. Re-tested variants, quick suite, and CI suite passed; no unresolved critical/high finding."
+    },
+    "host_parity": {
+      "status": "pass",
+      "evidence": "Paired Claude/Codex autopilot references and generated payloads align; CI layer 7 passed."
+    }
+  }
+}

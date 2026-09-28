@@ -1,0 +1,60 @@
+{
+  "schema_version": "marker-checkpoint.v1",
+  "feature_id": "HRNS-015",
+  "marker_id": "us3",
+  "status": "complete",
+  "task_ids": [
+    "T008",
+    "T009"
+  ],
+  "implementation_checkpoint_sha": "c60a3398b1e07412ec3cbb4468f3ca8a16a4687d",
+  "last_reviewed_head_sha": "c60a3398b1e07412ec3cbb4468f3ca8a16a4687d",
+  "tasks_sha": "sha256:0ee0a1d6d6f19083e416379580a655bbaa66c367f2b5c437f7af5b37cc9820de",
+  "verification_evidence_sha": "sha256:c7208b2e3f081bcff1fa02a7d23da66403d8545c5278c1d21c7d6a0c4ec258f1",
+  "required_verification_gate_ids": [
+    "focused_tests",
+    "quick_suite",
+    "ci_suite",
+    "artifact_consistency",
+    "docs_validation",
+    "python_lint",
+    "independent_critical_high_review",
+    "host_parity"
+  ],
+  "verification": {
+    "focused_tests": {
+      "status": "pass",
+      "evidence": "A3 verdict cases passed after observed RED (six failing stale-label variants), GREEN, and refactor; registered mutation helper suite and finalize-run packet tests passed."
+    },
+    "quick_suite": {
+      "status": "pass",
+      "evidence": "Committed A3 source quick suite 10,111/10,111 with toolchain preflight and native exit 0; privacy scan 14/14."
+    },
+    "ci_suite": {
+      "status": "pass",
+      "evidence": "Committed A3 source CI-equivalent default suite: toolchain plus layers 1, 4, 5, 6, and 7; 6/6 dispatches, native exit 0."
+    },
+    "artifact_consistency": {
+      "status": "pass",
+      "evidence": "After source commit c60a3398, refresh-release-artifacts.py --check reported generated artifacts match the source tree."
+    },
+    "docs_validation": {
+      "status": "pass",
+      "evidence": "Reference-mode docs validation passed: pnpm reference:check and validate:quality."
+    },
+    "python_lint": {
+      "status": "pass",
+      "evidence": "Pinned repository wrapper Ruff passed; isolated pinned mypy passed across 54 source files."
+    },
+    "independent_critical_high_review": {
+      "status": "pass",
+      "evidence": "Independent A3 audit found stale-label bypass; it was fixed red-first in the source checkpoint. Re-tested variants, quick suite, and CI suite passed; no unresolved critical/high finding."
+    },
+    "host_parity": {
+      "status": "pass",
+      "evidence": "Paired Claude/Codex autopilot references and generated payloads align; CI layer 7 passed."
+    }
+  },
+  "source_fingerprint_status": "current",
+  "completed_at": "2026-09-28T21:17:52Z"
+}
