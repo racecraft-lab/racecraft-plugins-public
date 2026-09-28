@@ -164,6 +164,23 @@ class MarkerVisibilityTests(unittest.TestCase):
             )["stdout"])
             self.assertEqual((0, []), (gaps["total"], gaps["details"]))
 
+    def test_nested_quote_fence_keeps_parent_list_continuation(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp).resolve()
+            feature = root / "specs" / "001-demo"
+            (feature / "checklists").mkdir(parents=True)
+            (feature / "spec.md").write_text("Spec is ready.\n")
+            (feature / "plan.md").write_text("Plan is ready.\n")
+            (feature / "checklists" / "review.md").write_text(
+                "- item\n  > ```text\n  > [Gap] code\n  > ```\n"
+                "    [Gap] continuation\n"
+            )
+            gaps = json.loads(read_only.count_markers(
+                {"feature_dir": "specs/001-demo", "type": "gaps"}, root
+            )["stdout"])
+            self.assertEqual(1, gaps["total"], gaps["details"])
+            self.assertIn(":5:", gaps["details"][0])
+
     def test_g4_missing_required_artifact_fails_closed(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp).resolve()

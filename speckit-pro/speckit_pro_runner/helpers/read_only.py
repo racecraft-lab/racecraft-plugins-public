@@ -2160,10 +2160,21 @@ def _marker_fence_start(content: str, marker: re.Match[str] | None) -> tuple[str
     return opening["fence"][0], len(opening["fence"])
 
 
+def _marker_list_scope(current_depth: int, previous_depth: int, raw_indent: int,
+                       list_indents: list[int], outer_indents: list[int]) -> tuple[list[int], list[int]]:
+    """Keep a containing list when entering and leaving its blockquote."""
+    if previous_depth == 0 and current_depth > 0 and list_indents and raw_indent >= list_indents[-1]:
+        return [], list_indents.copy()
+    if current_depth == 0 and outer_indents:
+        return (outer_indents if raw_indent >= outer_indents[-1] else []), []
+    return [], outer_indents
+
+
 def _marker_prose_lines(raw_lines: list[str]) -> list[str]:
     """Strip Markdown containers and block code before counting markers."""
     rendered_lines: list[str] = []
     list_indents: list[int] = []
+    outer_list_indents: list[int] = []
     quote_depth = 0
     fence_char = ""
     fence_width = 0
@@ -2172,6 +2183,7 @@ def _marker_prose_lines(raw_lines: list[str]) -> list[str]:
 
     for raw in raw_lines:
         line = raw.expandtabs(4)
+        raw_indent = len(line) - len(line.lstrip(" "))
         if fence_char:
             contained, closing = _marker_fence_line(
                 line, fence_quote_depth, list_indents[-1] if list_indents else 0,
@@ -2190,7 +2202,9 @@ def _marker_prose_lines(raw_lines: list[str]) -> list[str]:
             current_quote_depth += 1
             line = line[quote.end():]
         if current_quote_depth != quote_depth:
-            list_indents.clear()
+            list_indents, outer_list_indents = _marker_list_scope(
+                current_quote_depth, quote_depth, raw_indent, list_indents, outer_list_indents,
+            )
             paragraph_open = False
             quote_depth = current_quote_depth
         if not line.strip():
