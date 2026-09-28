@@ -11,6 +11,8 @@ import hashlib
 import json
 import os
 import re
+import shutil
+import subprocess
 import tempfile
 import time
 import uuid
@@ -50,6 +52,12 @@ DEFERRAL_KEYS = {"dispatch_id", "reason", "unit_kind", "unit", "deferred_at"}
 RECORD_FAILING_CHECKS = "record-failing-checks"
 FAILING_CHECK_KEYS = {"command_id", "command_sha256", "format", "failing", "passing", "checks_run", "output_sha256",
                       "recorded_at"}
+# A metadata-only correction rewords task definitions without changing scope. The
+# runner proves it against the committed baseline itself and admits it once per
+# task per run without spending a corrective cycle.
+METADATA_CORRECTION_KEYS = {"dispatch_id", "task_ids", "tasks_file", "baseline_sha256", "corrected_sha256",
+                            "admitted_at"}
+METADATA_TASK_LINE = re.compile(r"^(\s*-\s+\[[ xX]\]\s+(T[0-9]{3,})\s+(?:\[P\]\s*|\[US[1-9][0-9]*\]\s*)*)(.*)$")
 RUNNER_BYPRODUCT_DIRECTORIES = frozenset({(".process", "execution-control"), (".process", "verification"),
                                           (".process", "task-results")})
 
@@ -224,6 +232,7 @@ def _validate_corrective_state(value: dict[str, Any]) -> None:
         raise ValueError("reservation counter disagrees with ledger")
     exception_reservation = _validate_corrective_exception(value)
     allowances = _validate_increment_allowances(value)
+    metadata_corrections = _validate_metadata_corrections(value)
     _validate_deferrals(value)
     gate_allowances = _validate_gate_allowances(value)
     families = [item.get("family") for item in value["reservations"].values() if isinstance(item, dict)]
@@ -237,9 +246,13 @@ def _validate_corrective_state(value: dict[str, Any]) -> None:
         if type(item.get("reconciliations")) is not int or not 0 <= item["reconciliations"] <= 1:
             raise ValueError("invalid reconciliation counter")
         reservation = item.get("reservation_id")
-        if "increment" in item and "gate" in item:
+        if sum(key in item for key in ("increment", "gate", "metadata_correction")) > 1:
             raise ValueError("a corrective dispatch draws on one allowance, not an increment and a gate")
-        if "increment" in item:
+        if "metadata_correction" in item:
+            if (item["kind"] != "corrective" or reservation is not None
+                    or metadata_corrections.get(dispatch_id) != item["metadata_correction"]):
+                raise ValueError("metadata correction dispatch is not recorded in the metadata corrections")
+        elif "increment" in item:
             if (item["kind"] != "corrective" or reservation is not None
                     or dispatch_id not in allowances.get(item["increment"], {}).get("dispatch_ids", [])):
                 raise ValueError("increment review dispatch is not recorded in its increment allowance")
@@ -257,7 +270,7 @@ def _validate_corrective_state(value: dict[str, Any]) -> None:
 
 EPOCH_STATE_KEYS = ("corrective_cycles", "reservations", "dispatches", "approved_invariants")
 EPOCH_OPTIONAL_KEYS = ("invariant_binding", "corrective_exception", "increment_allowances", "gate_allowances",
-                       "deferred")
+                       "deferred", "metadata_corrections")
 # An operator's explicit stage start closes the prior stage's allowance under a
 # runner-derived event ID, so each stage opens at most one allowance per run.
 STAGE_EPOCH_STAGES = ("implement",)
@@ -282,6 +295,7 @@ def _validate_corrective_epochs(ledger: dict[str, Any]) -> None:
     required = {*EPOCH_STATE_KEYS, "epoch_event_id", "closed_at"}
     allowed = required | set(EPOCH_OPTIONAL_KEYS) | {"stage_transition"}
     dispatch_ids = set(ledger["dispatches"])
+    corrected_tasks = {task for entry in ledger.get("metadata_corrections", []) for task in entry["task_ids"]}
     event_ids = _consumed_native_event_ids({key: value for key, value in ledger.items() if key != "corrective_epochs"})
     previous_close = ledger["started_at"]
     for epoch in epochs:
@@ -302,6 +316,10 @@ def _validate_corrective_epochs(ledger: dict[str, Any]) -> None:
         if dispatch_ids & set(view["dispatches"]):
             raise ValueError("dispatch id reused across corrective epochs")
         dispatch_ids.update(view["dispatches"])
+        epoch_tasks = {task for entry in view.get("metadata_corrections", []) for task in entry["task_ids"]}
+        if corrected_tasks & epoch_tasks:
+            raise ValueError("a task was corrected twice as metadata-only in one run")
+        corrected_tasks.update(epoch_tasks)
         epoch_event = require_text(epoch["epoch_event_id"], "epoch_event_id")
         owned = _consumed_native_event_ids(view) - set(ledger["workflow_identity"]["relocation_event_ids"])
         owned -= {event for interval in ledger["excluded_intervals"] for event in (interval["start_event"], interval["end_event"])}
@@ -426,6 +444,39 @@ def _validate_gate_allowances(ledger: dict[str, Any]) -> dict[str, Any]:
             if not isinstance(item, dict) or item.get("gate") != gate:
                 raise ValueError("gate remediation allowance lists a dispatch it does not own")
     return allowances
+
+
+def _validate_metadata_corrections(ledger: dict[str, Any]) -> dict[str, list[str]]:
+    """Each metadata-only admission names its own unreserved dispatch and tasks corrected once."""
+    if "metadata_corrections" not in ledger:
+        return {}
+    entries = ledger["metadata_corrections"]
+    if not isinstance(entries, list) or not entries:
+        raise ValueError("invalid metadata corrections")
+    owned: dict[str, list[str]] = {}
+    tasks: set[str] = set()
+    for entry in entries:
+        if (not isinstance(entry, dict) or set(entry) != METADATA_CORRECTION_KEYS
+                or not isinstance(entry["task_ids"], list) or not entry["task_ids"]
+                or not all(isinstance(task, str) and re.fullmatch(r"T[0-9]{3,}", task) for task in entry["task_ids"])
+                or len(set(entry["task_ids"])) != len(entry["task_ids"])
+                or not all(isinstance(entry[key], str) and re.fullmatch(r"[0-9a-f]{64}", entry[key])
+                           for key in ("baseline_sha256", "corrected_sha256"))
+                or type(entry["admitted_at"]) not in (int, float)
+                or not ledger["started_at"] <= entry["admitted_at"] < float("inf")):
+            raise ValueError("invalid metadata correction record")
+        dispatch_id = require_text(entry["dispatch_id"], "metadata correction dispatch_id")
+        require_text(entry["tasks_file"], "metadata correction tasks_file")
+        if dispatch_id in owned:
+            raise ValueError("duplicate metadata correction dispatch")
+        if tasks & set(entry["task_ids"]):
+            raise ValueError("a task was corrected twice as metadata-only in one run")
+        tasks.update(entry["task_ids"])
+        item = ledger["dispatches"].get(dispatch_id)
+        if not isinstance(item, dict) or item.get("metadata_correction") != entry["task_ids"]:
+            raise ValueError("metadata correction lists a dispatch it does not own")
+        owned[dispatch_id] = entry["task_ids"]
+    return owned
 
 
 def _allowance_spent(ledger: dict[str, Any], reason: str, unit: str) -> bool:
@@ -967,6 +1018,121 @@ def _gate_ineligibility(root: Path, spec: Path, ledger: dict[str, Any], paths: l
     return None
 
 
+def _metadata_correction(inputs: dict[str, Any]) -> bool:
+    """The optional `metadata_only` request: the parent claims a task-verb correction for the runner to prove."""
+    if "metadata_only" not in inputs:
+        return False
+    if inputs["metadata_only"] is not True:
+        raise ValueError("metadata_only must be true when present")
+    if inputs.get("review_remediation") is not None or inputs.get("gate_remediation") is not None:
+        raise ValueError("a metadata_only correction names no review_remediation or gate_remediation")
+    if inputs.get("kind") != "corrective" or inputs.get("reservation_id") is not None:
+        raise ValueError("metadata_only applies only to a new corrective dispatch")
+    if inputs.get("spec_file") is None:
+        raise ValueError("metadata_only requires an explicit spec_file naming the feature spec")
+    return True
+
+
+def _head_bytes(root: Path, relative: str) -> bytes | None:
+    """The committed HEAD bytes of a repository-relative path, or None when git cannot show them."""
+    git = shutil.which("git")
+    if git is None:
+        return None
+    environment = {"PATH": os.environ.get("PATH", ""), "GIT_CONFIG_NOSYSTEM": "1", "GIT_CONFIG_GLOBAL": os.devnull,
+                   "GIT_OPTIONAL_LOCKS": "0", "GIT_TERMINAL_PROMPT": "0", "LC_ALL": "C"}
+    try:
+        completed = subprocess.run([git, "show", f"HEAD:./{relative}"], cwd=root.resolve(), env=environment,
+                                   capture_output=True, check=False, timeout=30, shell=False)
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    return completed.stdout if completed.returncode == 0 else None
+
+
+def _verb_swap(before: str, after: str) -> str | None:
+    """The task ID when two task lines differ only by a verification verb at the head, else None.
+
+    Checkbox state is not a task definition, matching `fingerprints`. Everything
+    else (ID, markers, emphasis, and every byte after the verb) must be identical,
+    and both verbs must be verification verbs, so the task keeps its routing.
+    """
+    from .helpers.read_only import PHASE7_LEADING_VERB, PHASE7_VERIFY_KEYWORDS
+
+    old, new = METADATA_TASK_LINE.match(before), METADATA_TASK_LINE.match(after)
+    if old is None or new is None or old.group(1) != new.group(1):
+        return None
+    old_verb, new_verb = PHASE7_LEADING_VERB.match(old.group(3)), PHASE7_LEADING_VERB.match(new.group(3))
+    if (old_verb is None or new_verb is None or old.group(3)[:old_verb.start(1)] != new.group(3)[:new_verb.start(1)]
+            or old.group(3)[old_verb.end(1):] != new.group(3)[new_verb.end(1):]
+            or old_verb.group(1) == new_verb.group(1)
+            or not {old_verb.group(1).lower(), new_verb.group(1).lower()} <= set(PHASE7_VERIFY_KEYWORDS)):
+        return None
+    return old.group(2)
+
+
+def _metadata_ineligibility(root: Path, spec: Path, ledger: dict[str, Any]) -> tuple[str | None, dict[str, Any]]:
+    """Why a claimed metadata-only correction does not qualify, or None with its admission record.
+
+    The baseline is the committed HEAD of the explicit spec's feature directory,
+    read by the runner itself. spec.md and plan.md must match it byte for byte,
+    and tasks.md may differ only by verification-verb swaps on task lines.
+    Missing, unreadable, or symlinked evidence never qualifies.
+    """
+    from .task_execution import fingerprints
+
+    feature = PurePosixPath(spec.parent.relative_to(root.resolve()).as_posix())
+    binding = ledger.get("invariant_binding")
+    if binding is not None and PurePosixPath(binding["spec_file"]).parent != feature:
+        return "feature_binding_mismatch", {}
+    current: dict[str, bytes] = {}
+    baseline: dict[str, bytes] = {}
+    for name in ("spec.md", "plan.md", "tasks.md"):
+        relative = (feature / name).as_posix()
+        committed = _head_bytes(root, relative)
+        try:
+            path = confined_path(root, relative)
+            if committed is None or not path.is_file():
+                return "baseline_unavailable", {}
+            current[name], baseline[name] = path.read_bytes(), committed
+            current[name].decode("utf-8"), committed.decode("utf-8")
+        except (OSError, UnicodeError, ValueError):
+            return "baseline_unavailable", {}
+    if any(current[name] != baseline[name] for name in ("spec.md", "plan.md")):
+        return "planning_source_changed", {}
+    before, after = baseline["tasks.md"].decode("utf-8"), current["tasks.md"].decode("utf-8")
+    if (fingerprints("", "", before)["tasks_sha256"] == fingerprints("", "", after)["tasks_sha256"]):
+        return "no_task_correction", {}
+    old_lines, new_lines = before.splitlines(keepends=True), after.splitlines(keepends=True)
+    if len(old_lines) != len(new_lines):
+        return "not_metadata_only", {}
+    task_ids: list[str] = []
+    for old, new in zip(old_lines, new_lines, strict=True):
+        if fingerprints("", "", old)["tasks_sha256"] == fingerprints("", "", new)["tasks_sha256"]:
+            continue
+        task_id = _verb_swap(old, new)
+        if task_id is None:
+            return "not_metadata_only", {}
+        task_ids.append(task_id)
+    corrected = {task for entry in ledger.get("metadata_corrections", []) for task in entry["task_ids"]}
+    for epoch in ledger.get("corrective_epochs", []):
+        corrected.update(task for entry in epoch.get("metadata_corrections", []) for task in entry["task_ids"])
+    if corrected & set(task_ids) or len(set(task_ids)) != len(task_ids):
+        return "task_already_corrected", {}
+    return None, {"task_ids": task_ids, "tasks_file": (feature / "tasks.md").as_posix(),
+                  "baseline_sha256": hashlib.sha256(baseline["tasks.md"]).hexdigest(),
+                  "corrected_sha256": hashlib.sha256(current["tasks.md"]).hexdigest()}
+
+
+def _admit_metadata_correction(ledger: dict[str, Any], dispatch_id: str, record: dict[str, Any],
+                               now: float) -> dict[str, Any]:
+    """Record a proven metadata-only correction; never touches the run-wide counter."""
+    ledger.setdefault("metadata_corrections", []).append({"dispatch_id": dispatch_id, **record, "admitted_at": now})
+    ledger["dispatches"][dispatch_id] = {"kind": "corrective", "outcome": "reserved", "reserved_at": now,
+                                         "reservation_id": None, "reconciliations": 0,
+                                         "metadata_correction": list(record["task_ids"])}
+    return {"reservation_id": None, "dispatch_id": dispatch_id, "correction_allowance": "metadata_only",
+            "task_ids": list(record["task_ids"])}
+
+
 def _reserve_gate_remediation(ledger: dict[str, Any], dispatch_id: str, gate: str, now: float) -> dict[str, Any]:
     """Spend one of the gate's own remediation rounds; never touches the run-wide counter."""
     allowances = ledger.get("gate_allowances", {})
@@ -1000,12 +1166,18 @@ def reserve(ledger: dict[str, Any], inputs: dict[str, Any], now: float, root: Pa
     kind = inputs.get("kind")
     if kind not in KINDS:
         raise ValueError("unknown execution kind")
+    metadata_only = _metadata_correction(inputs)
     review = _review_remediation(inputs)
     gate_request = _gate_remediation(inputs)
     if dispatch_id in _used_dispatch_ids(ledger):
         return {"reasons": ["dispatch_already_reserved_no_relaunch"]}
     reservation = inputs.get("reservation_id")
     note: dict[str, Any] = {}
+    if metadata_only:
+        ineligible, record = _metadata_ineligibility(root, spec, ledger)
+        if ineligible is None:
+            return _admit_metadata_correction(ledger, dispatch_id, record, now)
+        note = {"correction_allowance": "run_wide", "metadata_ineligible": ineligible}
     if review is not None:
         ineligible = _increment_ineligibility(root, spec, review)
         if ineligible is None:

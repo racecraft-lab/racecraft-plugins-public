@@ -61,7 +61,10 @@ $speckit-autopilot workflow.md --from-phase <next-pending-phase>
   operator-approved application correction) and `begin-replan-epoch` are
   end-of-run tools that act on the operator's answer to that request. An
   explicit `--stage implement` opens the implement stage's own allowance
-  through `begin-stage-epoch`. Never reset or bypass the ledger otherwise;
+  through `begin-stage-epoch`. A task-verb fix that only reroutes a task to
+  verification reserves with `metadata_only: true`; the runner proves it
+  against the committed baseline and spends no cycle. Never reset or bypass
+  the ledger otherwise;
   `checkpoint_required` and ledger integrity errors still stop. Repeated
   failures with one signature in one test file are one class: one approval
   covers its follow-ups through `reserve-class-correction`. See
