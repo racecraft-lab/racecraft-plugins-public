@@ -10,22 +10,22 @@
     "gates": [
       {
         "gate": "G7",
-        "status": "passed"
+        "status": "passed",
+        "command": "python3 tests/speckit-pro/run-all.py"
       },
       {
         "gate": "Post: Integration Suite",
-        "status": "failed",
-        "attributed_units": [
-          "FR-001"
-        ]
+        "status": "passed",
+        "command": "python3 tests/integration/run.py"
       }
     ],
     "pending_items": [],
-    "blocked_action_deferrals": [
+    "unresolved_deferrals": [],
+    "human_uat": [
       {
-        "unit": "T042",
-        "reason": "The approval reviewer denied the live evaluation because it sends skill prompts to a model service.",
-        "finish": "Send the paste-ready egress authorization as a chat message, then run the T042 live evaluation."
+        "item": "UAT story 2: the export opens in a spreadsheet app",
+        "reason": "It needs a person to open the exported file.",
+        "finish": "Follow steps 4 to 6 of the UAT runbook and record the result on the pull request."
       }
     ],
     "pull_requests": [

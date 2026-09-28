@@ -98,6 +98,7 @@ EXPECTED_HELPERS = [
     "aggregate-crl",
     "research-broker-preflight",
     "render-egress-authorization",
+    "check-gate-preflight-coverage",
     "finalize-run",
     "ratify-pr-split",
     "list-archive-candidates",
@@ -159,6 +160,10 @@ HELPER_CASES: dict[str, dict[str, object]] = {
     "research-broker-preflight": {},
     "render-egress-authorization": json.loads(
         (REPO_ROOT / "tests/speckit-pro/unit/fixtures/read-only-helpers/requests/render-egress-authorization.json")
+        .read_text(encoding="utf-8")
+    )["inputs"],
+    "check-gate-preflight-coverage": json.loads(
+        (REPO_ROOT / "tests/speckit-pro/unit/fixtures/read-only-helpers/requests/check-gate-preflight-coverage.json")
         .read_text(encoding="utf-8")
     )["inputs"],
     "finalize-run": json.loads(
@@ -4382,11 +4387,18 @@ class ReadOnlyHelperTests(unittest.TestCase):
                     self.assertIn("[auto_review]\nextra_policy = ", data["extra_policy_fragment"])
                     self.assertEqual(stderr_records, [])
                     continue
+                if helper_id == "check-gate-preflight-coverage":
+                    self.assert_response(response, "ok", 0)
+                    self.assertFalse(data["writes_state"])
+                    self.assertTrue(data["covered"])
+                    self.assertEqual(stderr_records, [])
+                    continue
                 if helper_id == "finalize-run":
                     self.assert_response(response, "ok", 0)
                     self.assertFalse(data["writes_state"])
-                    self.assertEqual(data["outcome"], "complete_with_deferred")
-                    self.assertEqual(data["ready_commands"], ["gh pr ready 101", "gh pr ready 102"])
+                    # The fixture ledger holds a deferral, so the run ends in one human stop.
+                    self.assertEqual(data["outcome"], "human_stop")
+                    self.assertEqual(data["ready_commands"], [])
                     self.assertEqual(stderr_records, [])
                     continue
                 if helper_id == "ratify-pr-split":

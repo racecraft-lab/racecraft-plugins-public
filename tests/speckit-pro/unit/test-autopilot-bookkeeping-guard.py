@@ -693,25 +693,34 @@ class BlockedActionDeferralSourceContractTests(unittest.TestCase):
 
 
 class RunFinalizationSourceContractTests(unittest.TestCase):
-    """A run left with only deferred items finishes ready for review (issue 804)."""
+    """Only human UAT may be deferred; anything else left is one human stop (issue 804)."""
 
     STALE = (
         "honest incomplete checkpoint, never completion",
         "Never report completion while a deferred item remains",
         "may the rows holding deferred work move to `⚠ Blocked`",
+        "reported as deferred, never green",
+        "`attributed_units`",
     )
 
     def assert_finalization_rules(self, section: str) -> None:
         for phrase in (
             "`finalize-run`",
+            "Human UAT is the only gate a run may defer",
+            "`human_uat`",
             "ready for review",
             "never merges",
             "`Deferred / not verified`",
             "`deferred_items`",
             "`ready_commands`",
             "`end_of_run_request`",
-            "reported as deferred, never green",
-            "still blocks",
+            "`outcome=human_stop`",
+            "one human stop",
+            "exact command",
+            "retry with backoff",
+            "reviewer veto despite a recorded chat authorization",
+            "never lets a gate pass, be skipped, or be deferred",
+            "at the end of the run an unresolved deferral is the human stop",
             "`deferred_digest`",
             "never re-checks an unchanged blocker",
         ):
@@ -724,7 +733,10 @@ class RunFinalizationSourceContractTests(unittest.TestCase):
         phase = _flat(references / "phase-execution-codex.md")
         section = _section(phase, f"### {BLOCKED_ACTION_HEADING}", "### Repeated Gate Failures")
         self.assert_finalization_rules(section)
-        self.assertIn("marks the thread goal complete, never blocked", section)
+        self.assertIn("marks the thread goal complete", section)
+        preflight = _section(phase, "### Autonomy Boundary Preflight", "1. Read mode from `CONFIDENCE_GATE_MODE`")
+        for phrase in ("`check-gate-preflight-coverage`", "preflight defect", "at run start"):
+            self.assertIn(phrase, preflight)
         skill = _flat(CODEX_AUTOPILOT_SKILL)
         audit = _section(skill, "### 3.4 Pre-final completion audit", "## Workflow File Update Protocol")
         self.assertIn("`finalize-run`", audit)

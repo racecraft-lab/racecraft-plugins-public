@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 """How an autopilot run ends once no runnable work remains (issue 804).
 
-A run that finished every runnable task and Post check, and holds only deferred
-or fallback items, is done: its pull-request stack goes ready for review (never
-merged), the top PR body opens with a "Deferred / not verified" section, the
-goal is marked complete, and one plain-text request names what is left. The
-`finalize-run` helper derives that decision from the execution-control
-ledger's `deferred` list and the final gate results, and fails closed.
+Human UAT is the only gate a run may defer. A run whose non-UAT gates all
+passed and that holds no unresolved deferral is done: its pull-request stack
+goes ready for review (never merged), the top PR body opens with a
+"Deferred / not verified" section listing the human UAT, the goal is marked
+complete, and one plain-text request names what is left. A failed gate, a
+ledger deferral, or an unresolved deferred task at the end is one human stop
+that names the gate and its exact command, never ready for review. The
+`finalize-run` helper derives that decision and fails closed.
 """
 
 from __future__ import annotations
@@ -36,11 +38,18 @@ FIXTURE_REQUEST = (
     REPO_ROOT / "tests/speckit-pro/unit/fixtures/read-only-helpers/requests" / f"{HELPER_ID}.json"
 )
 RESUME = "/speckit-pro:speckit-autopilot docs/ai/specs/.process/FEATURE-001-workflow.md --from-phase implement"
+UAT = {
+    "item": "UAT story 2: the export opens in a spreadsheet app",
+    "reason": "It needs a person to open the exported file.",
+    "finish": "Follow steps 4 to 6 of the UAT runbook and record the result on the pull request.",
+}
 VETO = {
     "unit": "T042",
-    "reason": "The approval reviewer denied the live evaluation twice: it sends skill prompts to a model service.",
-    "finish": "Send the paste-ready egress authorization as a chat message, then run the T042 live evaluation.",
+    "reason": "The approval reviewer denied the live evaluation twice despite the recorded chat authorization.",
+    "finish": "python3 tests/live/run-eval.py --task T042",
 }
+LIVE_EVAL = {"gate": "Post: Live Evaluation", "status": "failed",
+             "command": "python3 tests/live/run-eval.py --task T042"}
 
 
 def finalize(root: Path, inputs: dict[str, object]) -> dict[str, object]:
@@ -50,42 +59,49 @@ def finalize(root: Path, inputs: dict[str, object]) -> dict[str, object]:
 
 
 class _LedgerFixture:
-    """A temporary repository whose ledger holds one runner-recorded deferral."""
+    """A temporary repository with a clean ledger and one holding a deferral."""
 
     def setUp(self) -> None:
         temp = tempfile.TemporaryDirectory()
         self.addCleanup(temp.cleanup)
         self.root = Path(temp.name)
-        (self.root / "feature").mkdir()
-        (self.root / "feature/workflow.md").write_text("# Workflow\n")
-        (self.root / "feature/spec.md").write_text("- FR-001: preserve data\n")
-        self.run_id: str | None = None
-        self.invoke("start")
-        self.invoke("reserve", dispatch_id="fix-a", kind="corrective", failure_invariant="FR-001")
-        self.invoke("complete", dispatch_id="fix-a", outcome="completed")
-        deferred = self.invoke("reserve", dispatch_id="fix-a-again", kind="corrective", failure_invariant="FR-001")
+        self.clean = self.start("clean")
+        self.deferring = self.start("feature")
+        self.invoke(self.deferring, "reserve", dispatch_id="fix-a", kind="corrective", failure_invariant="FR-001")
+        self.invoke(self.deferring, "complete", dispatch_id="fix-a", outcome="completed")
+        deferred = self.invoke(self.deferring, "reserve", dispatch_id="fix-a-again", kind="corrective",
+                               failure_invariant="FR-001")
         assert deferred["disposition"] == "defer", deferred
-        self.ledger_path = deferred["ledger_path"]
 
-    def invoke(self, action: str, **inputs: object) -> dict[str, object]:
-        binding = {"expected_run_id": self.run_id} if self.run_id else {}
+    def start(self, name: str) -> dict[str, object]:
+        (self.root / name).mkdir()
+        (self.root / name / "workflow.md").write_text("# Workflow\n")
+        (self.root / name / "spec.md").write_text("- FR-001: preserve data\n")
+        run: dict[str, object] = {"workflow": f"{name}/workflow.md"}
+        self.invoke(run, "start")
+        return run
+
+    def invoke(self, run: dict[str, object], action: str, **inputs: object) -> dict[str, object]:
+        binding = {"expected_run_id": run["run_id"]} if "run_id" in run else {}
         with patch("speckit_pro_runner.execution_control.time.time", return_value=1000.0):
             result = execution_control(
-                self.root, {"workflow_file": "feature/workflow.md", "action": action, **binding, **inputs}, "apply"
+                self.root, {"workflow_file": run["workflow"], "action": action, **binding, **inputs}, "apply"
             )
-        self.run_id = result["ledger"]["run_id"]
+        run.update(run_id=result["ledger"]["run_id"], ledger_path=result["ledger_path"])
         return result
 
-    def inputs(self, **overrides: object) -> dict[str, object]:
+    def inputs(self, run: dict[str, object] | None = None, **overrides: object) -> dict[str, object]:
+        run = run or self.clean
         inputs: dict[str, object] = {
-            "ledger_path": self.ledger_path,
-            "expected_run_id": self.run_id,
+            "ledger_path": run["ledger_path"],
+            "expected_run_id": run["run_id"],
             "gates": [
-                {"gate": "G7", "status": "passed"},
-                {"gate": "Post: Integration Suite", "status": "failed", "attributed_units": ["FR-001"]},
+                {"gate": "G7", "status": "passed", "command": "python3 tests/run-all.py"},
+                {"gate": "Post: Integration Suite", "status": "passed", "command": "python3 tests/integration.py"},
             ],
             "pending_items": [],
-            "blocked_action_deferrals": [dict(VETO)],
+            "unresolved_deferrals": [],
+            "human_uat": [dict(UAT)],
             "pull_requests": [
                 {"number": 101, "url": "https://github.com/example-org/example-repo/pull/101", "draft": True},
                 {"number": 102, "url": "https://github.com/example-org/example-repo/pull/102", "draft": False},
@@ -97,8 +113,8 @@ class _LedgerFixture:
         return inputs
 
 
-class FinalizeWithDeferredItemsTests(_LedgerFixture, unittest.TestCase):
-    def test_only_deferred_items_left_finalizes_ready_for_review_and_completes_the_goal(self) -> None:
+class FinalizeRunTests(_LedgerFixture, unittest.TestCase):
+    def test_green_gates_with_only_human_uat_left_finalize_ready_for_review(self) -> None:
         result = finalize(self.root, self.inputs())
         self.assertEqual(result["outcome"], "complete_with_deferred")
         self.assertEqual(result["goal_status"], "complete")
@@ -108,62 +124,60 @@ class FinalizeWithDeferredItemsTests(_LedgerFixture, unittest.TestCase):
         self.assertEqual(result["ready_commands"], ["gh pr ready 101", "gh pr ready 103"])
         self.assertFalse(any("merge" in command for command in result["ready_commands"]))
         self.assertEqual(result["top_pull_request"], "https://github.com/example-org/example-repo/pull/103")
-        items = result["deferred_items"]
-        self.assertEqual([item["item"] for item in items], ["Failure family FR-001", "T042"])
-        for item in items:
-            self.assertEqual(sorted(item), ["finish", "item", "reason"])
-            self.assertTrue(item["reason"] and item["finish"])
-        self.assertIn("authorize-corrective-exception", items[0]["finish"])
-        self.assertIn(RESUME, items[0]["finish"])
-        self.assertEqual(items[1]["reason"], VETO["reason"])
-        self.assertEqual(items[1]["finish"], VETO["finish"])
+        self.assertEqual(result["deferred_items"], [UAT])
         request = result["end_of_run_request"]
         self.assertIn("ready for review", request)
-        for item in items:
-            self.assertIn(item["item"], request)
-            self.assertIn(item["reason"], request)
-            self.assertIn(item["finish"], request)
+        for value in UAT.values():
+            self.assertIn(value, request)
         self.assertIn(RESUME, request)
         self.assertTrue(result["deferred_digest"].startswith("sha256:"))
+        self.assertIsNone(result["human_stop"])
 
-    def test_gate_failing_only_on_a_deferred_unit_is_reported_deferred_not_green(self) -> None:
-        gates = finalize(self.root, self.inputs())["gates"]
-        self.assertEqual([gate["result"] for gate in gates], ["passed", "deferred"])
+    def test_a_failed_gate_is_one_human_stop_naming_the_gate_and_command(self) -> None:
+        gates = [{"gate": "G7", "status": "passed", "command": "python3 tests/run-all.py"}, dict(LIVE_EVAL)]
+        result = finalize(self.root, self.inputs(gates=gates))
+        self.assertEqual(result["outcome"], "human_stop")
+        self.assertEqual(result["goal_status"], "blocked")
+        self.assertFalse(result["mark_ready"])
+        self.assertFalse(result["finalized"])
+        self.assertEqual(result["ready_commands"], [])
+        stop = result["human_stop"]
+        self.assertEqual(stop["gates"], [{"gate": LIVE_EVAL["gate"], "command": LIVE_EVAL["command"]}])
+        request = result["end_of_run_request"]
+        self.assertIn(LIVE_EVAL["gate"], request)
+        self.assertIn(LIVE_EVAL["command"], request)
+        self.assertNotIn("ready for review.", request)
 
-    def test_unrelated_gate_failure_still_blocks(self) -> None:
-        for failing in (
-            {"gate": "Post: Integration Suite", "status": "failed"},
-            {"gate": "Post: Integration Suite", "status": "failed", "attributed_units": []},
-            {"gate": "Post: Integration Suite", "status": "failed", "attributed_units": ["FR-001", "FR-009"]},
-        ):
-            with self.subTest(gate=failing):
-                result = finalize(self.root, self.inputs(gates=[{"gate": "G7", "status": "passed"}, failing]))
-                self.assertEqual(result["outcome"], "blocked")
-                self.assertEqual(result["goal_status"], "not_complete")
-                self.assertFalse(result["mark_ready"])
-                self.assertEqual(result["ready_commands"], [])
-                self.assertEqual(result["gates"][1]["result"], "failed")
+    def test_an_unresolved_ledger_deferral_is_a_human_stop_not_finalize_ready(self) -> None:
+        result = finalize(self.root, self.inputs(self.deferring))
+        self.assertEqual(result["outcome"], "human_stop")
+        self.assertFalse(result["mark_ready"])
+        units = result["human_stop"]["units"]
+        self.assertEqual([unit["unit"] for unit in units], ["Failure family FR-001"])
+        self.assertIn("authorize-corrective-exception", units[0]["finish"])
+        self.assertIn("Failure family FR-001", result["end_of_run_request"])
+
+    def test_an_unresolved_deferred_task_is_a_human_stop(self) -> None:
+        result = finalize(self.root, self.inputs(unresolved_deferrals=[dict(VETO)]))
+        self.assertEqual(result["outcome"], "human_stop")
+        self.assertEqual(result["human_stop"]["units"], [VETO])
+        self.assertIn(VETO["finish"], result["end_of_run_request"])
+
+    def test_only_human_uat_reaches_the_deferred_section(self) -> None:
+        result = finalize(self.root, self.inputs(self.deferring, gates=[dict(LIVE_EVAL)],
+                                                 unresolved_deferrals=[dict(VETO)]))
+        self.assertEqual(result["deferred_items"], [UAT])
 
     def test_remaining_runnable_work_continues_the_run(self) -> None:
-        result = finalize(self.root, self.inputs(pending_items=["Post: Retrospective"]))
+        result = finalize(self.root, self.inputs(self.deferring, pending_items=["Post: Retrospective"],
+                                                 gates=[dict(LIVE_EVAL)]))
         self.assertEqual(result["outcome"], "continue")
         self.assertEqual(result["goal_status"], "not_complete")
         self.assertFalse(result["mark_ready"])
-        self.assertFalse(result["finalized"])
+        self.assertIsNone(result["human_stop"])
 
-    def test_nothing_deferred_and_all_green_completes_without_a_request(self) -> None:
-        (self.root / "fresh").mkdir()
-        (self.root / "fresh/workflow.md").write_text("# Workflow\n")
-        (self.root / "fresh/spec.md").write_text("- FR-001: preserve data\n")
-        with patch("speckit_pro_runner.execution_control.time.time", return_value=1000.0):
-            fresh = execution_control(self.root, {"workflow_file": "fresh/workflow.md", "action": "start"}, "apply")
-        inputs = self.inputs(
-            ledger_path=fresh["ledger_path"],
-            expected_run_id=fresh["ledger"]["run_id"],
-            gates=[{"gate": "G7", "status": "passed"}],
-            blocked_action_deferrals=[],
-        )
-        result = finalize(self.root, inputs)
+    def test_nothing_left_completes_without_a_request(self) -> None:
+        result = finalize(self.root, self.inputs(human_uat=[]))
         self.assertEqual(result["outcome"], "complete")
         self.assertEqual(result["goal_status"], "complete")
         self.assertTrue(result["mark_ready"])
@@ -171,25 +185,28 @@ class FinalizeWithDeferredItemsTests(_LedgerFixture, unittest.TestCase):
         self.assertEqual(result["end_of_run_request"], "")
 
     def test_digest_is_stable_for_an_unchanged_blocker(self) -> None:
-        first = finalize(self.root, self.inputs())
-        second = finalize(self.root, self.inputs())
+        first = finalize(self.root, self.inputs(self.deferring))
+        second = finalize(self.root, self.inputs(self.deferring))
         self.assertEqual(first["deferred_digest"], second["deferred_digest"])
-        changed = finalize(self.root, self.inputs(blocked_action_deferrals=[dict(VETO, unit="T043")]))
+        changed = finalize(self.root, self.inputs(self.deferring, unresolved_deferrals=[dict(VETO)]))
         self.assertNotEqual(first["deferred_digest"], changed["deferred_digest"])
 
     def test_inputs_fail_closed(self) -> None:
         cases: dict[str, dict[str, object]] = {
             "no gates": {"gates": []},
-            "unknown gate status": {"gates": [{"gate": "G7", "status": "green"}]},
-            "attribution on a passed gate": {"gates": [{"gate": "G7", "status": "passed", "attributed_units": ["FR-001"]}]},
+            "unknown gate status": {"gates": [{"gate": "G7", "status": "green", "command": "x"}]},
+            "deferred gate status": {"gates": [{"gate": "G7", "status": "deferred", "command": "x"}]},
+            "gate without command": {"gates": [{"gate": "G7", "status": "failed"}]},
             "no pull requests": {"pull_requests": []},
             "draft is not a boolean": {"pull_requests": [{"number": 1, "url": "https://x/pull/1", "draft": "yes"}]},
             "run id mismatch": {"expected_run_id": "another-run"},
-            "missing ledger": {"ledger_path": "feature/.process/execution-control/missing.json"},
-            "ledger outside its directory": {"ledger_path": "feature/workflow.md"},
+            "missing ledger": {"ledger_path": "clean/.process/execution-control/missing.json"},
+            "ledger outside its directory": {"ledger_path": "clean/workflow.md"},
             "traversal": {"ledger_path": "../execution-control/x.json"},
-            "deferral without finish": {"blocked_action_deferrals": [{"unit": "T042", "reason": "veto"}]},
+            "deferral without finish": {"unresolved_deferrals": [{"unit": "T042", "reason": "veto"}]},
+            "uat without finish": {"human_uat": [{"item": "UAT", "reason": "person"}]},
             "unknown input": {"approve": True},
+            "old input name": {"blocked_action_deferrals": []},
             "no resume command": {"resume_command": ""},
         }
         for name, override in cases.items():
@@ -218,8 +235,8 @@ class FinalizeRunRegistryTests(unittest.TestCase):
         self.assertEqual(response["status"], "ok", response)
         data = response["data"]
         self.assertEqual(data["helper_id"], HELPER_ID)
-        self.assertEqual(data["outcome"], "complete_with_deferred")
-        self.assertEqual(data["goal_status"], "complete")
+        self.assertEqual(data["outcome"], "human_stop")
+        self.assertEqual(data["goal_status"], "blocked")
         self.assertFalse(data["writes_state"])
 
     def test_bad_request_is_an_input_error(self) -> None:
@@ -240,7 +257,7 @@ def _packet_inputs(**overrides: object) -> dict[str, object]:
         "verification": ["unit suite passed"],
         "summary": "Adds a reviewer packet.",
         "how_to_uat": "No manual UAT is required for this fixture.",
-        "known_gaps": ["T042 is deferred."],
+        "known_gaps": ["Human UAT story 2 is not verified."],
         "non_goals": ["No live pull-request mutation."],
     }
     inputs.update(overrides)
@@ -249,8 +266,9 @@ def _packet_inputs(**overrides: object) -> dict[str, object]:
 
 class DeferredSectionInPrBodyTests(unittest.TestCase):
     ITEMS = [
-        {"item": "Failure family FR-001", "reason": "Its correction allowance is spent.", "finish": "Approve one exception."},
-        {"item": "T042", "reason": VETO["reason"], "finish": VETO["finish"]},
+        {"item": "UAT story 1: the report page loads", "reason": "It needs a person at a browser.",
+         "finish": "Follow steps 1 to 3 of the UAT runbook."},
+        {"item": UAT["item"], "reason": UAT["reason"], "finish": UAT["finish"]},
     ]
 
     def render(self, **overrides: object) -> dict[str, object]:

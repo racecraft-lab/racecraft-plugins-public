@@ -1,15 +1,17 @@
 """Decide how an autopilot run ends once no runnable work remains.
 
-A run that finished every runnable task and Post check, and holds only deferred
-or fallback items, is done: its pull-request stack goes ready for review (never
-merged), the top PR body opens with a "Deferred / not verified" section, the
-goal is marked complete, and one plain-text request names what is left.
+Human UAT is the only gate a run may defer. A run whose non-UAT gates all
+passed and that holds no unresolved deferral is done: its pull-request stack
+goes ready for review (never merged), the top PR body opens with a
+"Deferred / not verified" section listing the human UAT, the goal is marked
+complete, and one plain-text request names what is left.
 
-This read-only helper derives that decision from the execution-control
-ledger's `deferred` list, the blocked-action deferrals the parent recorded, and
-the final gate results. A gate that failed only on deferred units is reported
-as deferred, never green; any other failure blocks. It fails closed on
-missing or malformed evidence and never writes a file.
+Anything else left at the end is one human stop, never ready for review: a
+failed gate (named with its exact command), an entry in the execution-control
+ledger's `deferred` list, or a deferred task nobody resolved. A `defer`
+disposition keeps the run working on other units mid-run; it never survives to
+a finalized run. This read-only helper fails closed on missing or malformed
+evidence and never writes a file.
 """
 
 from __future__ import annotations
@@ -23,9 +25,10 @@ from ..envelope import diagnostic, response
 from ..execution_control import confined_path, require_text, validate_ledger
 
 ALLOWED_INPUTS = frozenset({"repo_root", "ledger_path", "expected_run_id", "gates", "pending_items",
-                            "blocked_action_deferrals", "pull_requests", "resume_command"})
+                            "unresolved_deferrals", "human_uat", "pull_requests", "resume_command"})
 GATE_STATUSES = ("passed", "failed")
 DEFERRAL_FIELDS = ("unit", "reason", "finish")
+UAT_FIELDS = ("item", "reason", "finish")
 UNIT_LABELS = {"failure_family": "Failure family", "failure_class": "Failure class",
                "increment": "Increment", "gate": "Gate"}
 REASON_TEXT = {
@@ -58,35 +61,28 @@ def _ledger_deferrals(root: Path, inputs: dict[str, Any]) -> list[dict[str, Any]
     return list(ledger.get("deferred", []))
 
 
-def _blocked_action_deferrals(value: Any) -> list[dict[str, str]]:
+def _records(value: Any, name: str, fields: tuple[str, ...]) -> list[dict[str, str]]:
     if not isinstance(value, list):
-        raise ValueError("blocked_action_deferrals must be a list")
-    items: list[dict[str, str]] = []
+        raise ValueError(f"{name} must be a list")
+    records: list[dict[str, str]] = []
     for index, raw in enumerate(value):
-        if not isinstance(raw, dict) or set(raw) != set(DEFERRAL_FIELDS):
-            raise ValueError(f"blocked_action_deferrals[{index}] must have exactly unit, reason, and finish")
-        items.append({field: _text(raw[field], f"blocked_action_deferrals[{index}].{field}")
-                      for field in DEFERRAL_FIELDS})
-    return items
+        if not isinstance(raw, dict) or set(raw) != set(fields):
+            raise ValueError(f"{name}[{index}] must have exactly {', '.join(fields)}")
+        records.append({field: _text(raw[field], f"{name}[{index}].{field}") for field in fields})
+    return records
 
 
-def _gates(value: Any) -> list[dict[str, Any]]:
+def _gates(value: Any) -> list[dict[str, str]]:
     if not isinstance(value, list) or not value:
-        raise ValueError("gates must list every final gate result; a run never finalizes on no evidence")
-    gates: list[dict[str, Any]] = []
+        raise ValueError("gates must list every final non-UAT gate result; a run never finalizes on no evidence")
+    gates: list[dict[str, str]] = []
     for index, raw in enumerate(value):
-        if not isinstance(raw, dict) or not set(raw) <= {"gate", "status", "attributed_units"}:
-            raise ValueError(f"gates[{index}] must have gate, status, and optional attributed_units")
-        status = raw.get("status")
-        if status not in GATE_STATUSES:
-            raise ValueError(f"gates[{index}].status must be passed or failed")
-        units = raw.get("attributed_units", [])
-        if not isinstance(units, list):
-            raise ValueError(f"gates[{index}].attributed_units must be a list")
-        if status == "passed" and units:
-            raise ValueError(f"gates[{index}] passed, so it attributes no failure")
-        gates.append({"gate": _text(raw.get("gate"), f"gates[{index}].gate"), "status": status,
-                      "attributed_units": [_text(unit, f"gates[{index}].attributed_units") for unit in units]})
+        if not isinstance(raw, dict) or set(raw) != {"gate", "status", "command"}:
+            raise ValueError(f"gates[{index}] must have exactly gate, status, and command")
+        if raw["status"] not in GATE_STATUSES:
+            raise ValueError(f"gates[{index}].status must be passed or failed; only human UAT may be deferred")
+        gates.append({"gate": _text(raw["gate"], f"gates[{index}].gate"), "status": raw["status"],
+                      "command": _text(raw["command"], f"gates[{index}].command")})
     return gates
 
 
@@ -106,7 +102,7 @@ def _pull_requests(value: Any) -> list[dict[str, Any]]:
 def _ledger_item(entry: dict[str, Any], resume_command: str) -> dict[str, str]:
     unit = str(entry["unit"])
     return {
-        "item": f"{UNIT_LABELS.get(entry['unit_kind'], entry['unit_kind'])} {unit}",
+        "unit": f"{UNIT_LABELS.get(entry['unit_kind'], entry['unit_kind'])} {unit}",
         "reason": f"{REASON_TEXT.get(entry['reason'], 'Its correction allowance is spent.')} ({entry['reason']})",
         "finish": f"Reply approving one `authorize-corrective-exception` for {unit}, or a re-plan with "
                   f"`begin-replan-epoch`, then resume with: {resume_command}",
@@ -114,13 +110,26 @@ def _ledger_item(entry: dict[str, Any], resume_command: str) -> dict[str, str]:
 
 
 def render_request(items: list[dict[str, str]], resume_command: str) -> str:
-    """The one consolidated end-of-run request, as plain text."""
-    lines = ["The run is finished: every runnable task and Post check is done, and the pull request stack is "
-             "ready for review. Nothing was merged. These items are deferred and not verified:", ""]
+    """The end-of-run request of a finalized run, as plain text."""
+    lines = ["The run is finished: every runnable task and gate is done, and the pull request stack is ready "
+             "for review. Nothing was merged. This human UAT is deferred and not verified:", ""]
     for number, item in enumerate(items, start=1):
         lines.extend([f"{number}. {item['item']}: {item['reason']}", f"   To finish it: {item['finish']}"])
-    lines.extend(["", "Reply in this thread with the approval or answer for any item. "
-                  f"The run then resumes with: {resume_command}"])
+    lines.extend(["", f"Reply in this thread with any finding. The run resumes with: {resume_command}"])
+    return "\n".join(lines) + "\n"
+
+
+def render_stop(stop: dict[str, list[dict[str, str]]], resume_command: str) -> str:
+    """The run's one human stop, as plain text."""
+    lines = ["The run stopped, and its pull request stack stays in draft. Nothing was merged.", ""]
+    number = 0
+    for gate in stop["gates"]:
+        number += 1
+        lines.extend([f"{number}. Gate {gate['gate']} failed after its retries.", f"   Command: {gate['command']}"])
+    for unit in stop["units"]:
+        number += 1
+        lines.extend([f"{number}. {unit['unit']} is unresolved: {unit['reason']}", f"   To finish it: {unit['finish']}"])
+    lines.extend(["", f"Reply in this thread with the fix or authorization. The run resumes with: {resume_command}"])
     return "\n".join(lines) + "\n"
 
 
@@ -133,7 +142,8 @@ def finalize_run(root: Path, inputs: dict[str, Any]) -> dict[str, Any]:
         raise ValueError(f"unknown inputs: {', '.join(unknown)}")
     resume_command = _text(inputs.get("resume_command"), "resume_command")
     ledger_deferrals = _ledger_deferrals(root, inputs)
-    blocked = _blocked_action_deferrals(inputs.get("blocked_action_deferrals", []))
+    unresolved = _records(inputs.get("unresolved_deferrals", []), "unresolved_deferrals", DEFERRAL_FIELDS)
+    human_uat = _records(inputs.get("human_uat", []), "human_uat", UAT_FIELDS)
     gates = _gates(inputs.get("gates"))
     prs = _pull_requests(inputs.get("pull_requests"))
     pending = inputs.get("pending_items")
@@ -141,34 +151,31 @@ def finalize_run(root: Path, inputs: dict[str, Any]) -> dict[str, Any]:
         raise ValueError("pending_items must list the runnable work still open, or be empty")
     pending_items = [_text(item, "pending_items") for item in pending]
 
-    deferred_units = {str(entry["unit"]) for entry in ledger_deferrals} | {item["unit"] for item in blocked}
-    for gate in gates:
-        units = gate["attributed_units"]
-        gate["result"] = ("passed" if gate["status"] == "passed"
-                          else "deferred" if units and set(units) <= deferred_units else "failed")
-    items = [_ledger_item(entry, resume_command) for entry in ledger_deferrals]
-    items.extend({"item": item["unit"], "reason": item["reason"], "finish": item["finish"]} for item in blocked)
-
+    stop = {"gates": [{"gate": gate["gate"], "command": gate["command"]} for gate in gates if gate["status"] == "failed"],
+            "units": [_ledger_item(entry, resume_command) for entry in ledger_deferrals] + unresolved}
     if pending_items:
         outcome = "continue"
-    elif any(gate["result"] == "failed" for gate in gates):
-        outcome = "blocked"
+    elif stop["gates"] or stop["units"]:
+        outcome = "human_stop"
     else:
-        outcome = "complete_with_deferred" if items else "complete"
+        outcome = "complete_with_deferred" if human_uat else "complete"
     finalized = outcome in {"complete", "complete_with_deferred"}
-    digest = "sha256:" + hashlib.sha256(json.dumps(items, sort_keys=True).encode("utf-8")).hexdigest()
+    request = (render_request(human_uat, resume_command) if finalized and human_uat
+               else render_stop(stop, resume_command) if outcome == "human_stop" else "")
+    digest = "sha256:" + hashlib.sha256(json.dumps([stop, human_uat], sort_keys=True).encode("utf-8")).hexdigest()
     return {
         "outcome": outcome,
-        "goal_status": "complete" if finalized else "not_complete",
+        "goal_status": "complete" if finalized else "blocked" if outcome == "human_stop" else "not_complete",
         "finalized": finalized,
         "mark_ready": finalized,
         "ready_commands": [f"gh pr ready {pr['number']}" for pr in prs if pr["draft"]] if finalized else [],
         "top_pull_request": prs[-1]["url"],
         "gates": gates,
         "pending_items": pending_items,
-        "deferred_items": items,
+        "human_stop": stop if outcome == "human_stop" else None,
+        "deferred_items": human_uat,
         "deferred_digest": digest,
-        "end_of_run_request": render_request(items, resume_command) if finalized and items else "",
+        "end_of_run_request": request,
         "writes_state": False,
     }
 
@@ -191,8 +198,9 @@ def run_run_finalization_helper(entry: Any, request: Any) -> dict[str, Any]:
                 diagnostic(
                     "invalid_input",
                     str(error),
-                    remediation_summary="Pass the run's execution-control ledger, every final gate result, "
-                    + "the open runnable work, every blocked-action deferral, and the pull-request stack.",
+                    remediation_summary="Pass the run's execution-control ledger, every final non-UAT gate result "
+                    + "with its command, the open runnable work, every unresolved deferral, the human UAT, "
+                    + "and the pull-request stack.",
                     remediation_actions=["Correct the named input.", "Rerun finalize-run."],
                 )
             ],
