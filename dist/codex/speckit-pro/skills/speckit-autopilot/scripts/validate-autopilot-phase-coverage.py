@@ -2609,7 +2609,8 @@ def validate_projection_integrity(
                 checkpoint_evidence_errors.extend(checkpoint_schema_errors)
                 if worktree_schema_bytes is not None:
                     checkpoint_file_errors.append(
-                        "checkpoint evidence schema differs from the authorized PR head"
+                        "feature-local checkpoint evidence schema exists in the worktree but not "
+                        "at the authorized PR head; commit it or remove it to use the plugin schema"
                     )
             else:
                 if worktree_schema_bytes != committed_schema_bytes:
