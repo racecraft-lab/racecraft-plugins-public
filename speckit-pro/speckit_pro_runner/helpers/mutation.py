@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from ..envelope import diagnostic, response
-from ..execution_control import is_runner_byproduct
+from ..execution_control import is_implementation_notes, is_runner_byproduct
 from .read_only import (
     RenderedSpecIndexMap,
     SpecIndexRenderError,
@@ -1450,7 +1450,8 @@ def git_worktree_status(repo_root: Path) -> bool | dict[str, Any]:
         return git_status_unavailable(repo_root, "git_status")
     if completed.returncode != 0:
         return git_status_unavailable(repo_root, "git_status")
-    # The runner's own ledger and verification evidence never make the worktree dirty.
+    # The runner's own ledger and verification evidence never make the worktree dirty,
+    # nor does the implementation-notes record appended after every task (#801).
     try:
         entries = completed.stdout.decode("utf-8", "strict").split("\0")
     except UnicodeDecodeError:
@@ -1469,7 +1470,7 @@ def git_worktree_status(repo_root: Path) -> bool | dict[str, Any]:
                 return git_status_unavailable(repo_root, "git_status")
             paths.append(entries[index])
             index += 1
-        if not all(is_runner_byproduct(path) for path in paths):
+        if not all(is_runner_byproduct(path) or is_implementation_notes(path) for path in paths):
             return True
     return False
 

@@ -19,6 +19,7 @@ from typing import Any, Callable, cast
 
 from ..agent_inventory import CLAUDE_REQUIRED_AGENT_NAMES
 from ..envelope import diagnostic, response
+from ..execution_control import is_implementation_notes
 from ..formal.selection import unique_object
 from ..gate_discovery import DEFAULT_BASE_BRANCH, SLOTS as GATE_SLOTS, resolve_slots as resolve_gate_slots
 from .. import quality_gates
@@ -2522,7 +2523,8 @@ def estimate_reviewable_loc(inputs: dict[str, Any], repo_root: Path) -> dict[str
             "tool": "estimate-reviewable-loc",
             "status": "not_estimated",
             "projected": None,
-            "declared_files": {"production": 0, "new": 0, "modified": 0, "total_entries": 0, "marker_evidence": 0},
+            "declared_files": {"production": 0, "new": 0, "modified": 0, "total_entries": 0, "marker_evidence": 0,
+                               "implementation_notes": 0},
             "greenfield": False,
             "thresholds": {"warn": 400, "block": 800, "greenfield_multiplier": 1.5, "base_warn": 400, "base_block": 800},
         }
@@ -2532,7 +2534,8 @@ def estimate_reviewable_loc(inputs: dict[str, Any], repo_root: Path) -> dict[str
         if path not in dedup or status == "MODIFIED":
             dedup[path] = status
     marker_evidence = [path for path in dedup if is_marker_evidence(path)]
-    for path in marker_evidence:
+    notes = [path for path in dedup if is_implementation_notes(path)]
+    for path in marker_evidence + notes:
         del dedup[path]
     new = sum(1 for status in dedup.values() if status == "NEW")
     modified = sum(1 for status in dedup.values() if status == "MODIFIED")
@@ -2546,7 +2549,7 @@ def estimate_reviewable_loc(inputs: dict[str, Any], repo_root: Path) -> dict[str
         "status": "over_budget" if projected > block else "pass",
         "projected": projected,
         "declared_files": {"production": production, "new": new, "modified": modified, "total_entries": len(dedup),
-                           "marker_evidence": len(marker_evidence)},
+                           "marker_evidence": len(marker_evidence), "implementation_notes": len(notes)},
         "greenfield": greenfield,
         "thresholds": {"warn": warn, "block": block, "greenfield_multiplier": 1.5, "base_warn": 400, "base_block": 800},
     }

@@ -273,12 +273,13 @@ def can_share_wave(batch: dict[str, Any], pending: list[dict[str, Any]], wave_si
 # G5 gate-task loop check (issue 773). A task that gates later source work
 # cannot wait on evidence only that source work produces. The phrase list and
 # the deferral cues are closed so the check stays deterministic and quiet: a
-# clause that names the evidence but hands it to a later step passes.
+# clause that names the evidence but hands it to a later step passes. Every
+# phrase names evidence; "before PR emission" only times a step or a stop, so
+# it is not on the list (#802).
 POST_IMPLEMENTATION_EVIDENCE = (
     re.compile(r"\bfirst (?:actual )?implementation checkpoint\b", re.I),
     re.compile(r"\bactual (?:per-pr )?diff\b", re.I),
     re.compile(r"\bactual loc\b", re.I),
-    re.compile(r"\bbefore pr emission\b", re.I),
 )
 LATER_STEP_CUES = re.compile(r"\blater\b|\bdefer|\battached to\b|\bhandled by\b|\bemission (?:step|task)\b", re.I)
 FOUNDATION_PHASE = re.compile(r"setup|foundation", re.I)

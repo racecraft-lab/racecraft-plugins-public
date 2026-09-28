@@ -15,6 +15,7 @@ Python 3.11+ standard library only.
 
 from __future__ import annotations
 
+import hashlib
 import importlib.util
 import json
 import subprocess
@@ -1646,6 +1647,18 @@ class StatePrivacyTests(StatusEvidenceReportAssertions, unittest.TestCase):
                 if private_value != "argv":
                     self.assertNotIn(private_value, joined)
 
+    def test_private_key_error_names_the_key_by_its_digest(self) -> None:
+        """#800 review: a private key is identified by its digest, never echoed, one error per key."""
+        first, second = str(uuid.uuid4()), str(uuid.uuid4())
+        code, report = self._report_for({"evidence": {first: "a", second: "b", "ok": "c"}})
+        self.assertEqual(code, 1, report)
+        errors = report["state_privacy_errors"]
+        self.assertEqual(len(errors), 2, errors)
+        for key in (first, second):
+            digest = "sha256:" + hashlib.sha256(key.encode("utf-8")).hexdigest()
+            self.assertEqual(sum(digest in error for error in errors), 1, errors)
+            self.assertFalse(any(key in error for error in errors), errors)
+
     def test_redacted_decision_fields_pass(self) -> None:
         code, report = self._report_for({
             "stage": "implement",
@@ -1654,6 +1667,45 @@ class StatePrivacyTests(StatusEvidenceReportAssertions, unittest.TestCase):
         })
         self.assertEqual(code, 0, report)
         self.assertEqual(report["state_privacy_errors"], [])
+
+    def test_native_event_id_error_names_the_digest_remedy(self) -> None:
+        """#800: the error names the field and the exact in-place remedy; the digest form passes."""
+        event_id = "msg_" + str(uuid.uuid4())
+        field = {"implementation_startup": {"active_batch": {"operator_approval_event_id": event_id}}}
+        code, report = self._report_for(field)
+        self.assertEqual(code, 1, report)
+        self.assertOnlySelectedProblemKeyPopulated(report, "state_privacy_errors")
+        [error] = report["state_privacy_errors"]
+        self.assertIn("autopilot_state.implementation_startup.active_batch.operator_approval_event_id", error)
+        self.assertIn("sha256:", error)
+        self.assertIn("rerun this guard", error)
+        self.assertNotIn(event_id, error)
+        digest = "sha256:" + hashlib.sha256(event_id.encode("utf-8")).hexdigest()
+        field["implementation_startup"]["active_batch"]["operator_approval_event_id"] = digest
+        code, report = self._report_for(field)
+        self.assertEqual(code, 0, report)
+        self.assertEqual(report["state_privacy_errors"], [])
+
+    def test_both_hosts_digest_event_ids_and_remediate_privacy_errors_once(self) -> None:
+        """#800: store native event ids as digests; a privacy-only failure is fixed in place, once."""
+        for skill_path in (CLAUDE_AUTOPILOT_SKILL, CODEX_AUTOPILOT_SKILL):
+            with self.subTest(skill=skill_path.parent.parent.name):
+                skill = _flat(skill_path)
+                self.assertIn("native or operator event id", skill)
+                self.assertIn("`sha256:<digest>`", skill)
+                self.assertIn("When `state_privacy_errors` is the only failing gated key", skill)
+                self.assertIn("rerun the guard once", skill)
+                self.assertIn("A second failure, or any other failing gated key, is a stop", skill)
+
+    def test_both_hosts_account_for_the_implementation_notes_record(self) -> None:
+        """#801: the notes record is committed, exempt from the path budget, and never dirties apply."""
+        for name in ("skills/speckit-autopilot/references/phase-execution.md",
+                     "codex-skills/speckit-autopilot/references/phase-execution-codex.md"):
+            with self.subTest(file=name):
+                text = _flat(REPO_ROOT / "speckit-pro" / name)
+                self.assertIn("stage it with each marker checkpoint commit", text)
+                self.assertIn("`declared_files.implementation_notes`", text)
+                self.assertIn("clean-worktree check ignores it", text)
 
     def test_validator_patterns_match_the_repository_privacy_scan(self) -> None:
         self.assertEqual(

@@ -1539,6 +1539,17 @@ out of its counts too and reports them as `declared_files.marker_evidence`. Stil
 list both files in that marker's `declared_files` and in the changed-file
 manifest, which must match the pull request's diff.
 
+The implementation-notes record, `<feature>/.process/implementation-notes.md`,
+is accounted for the same way. It is committed, publishable evidence, so stage
+it with each marker checkpoint commit and list it in each marker's
+`declared_files` and in the changed-file manifest as a path several markers
+share, like the workflow and state files. It never counts toward
+`production_paths` or `total_paths`: `estimate-reviewable-loc` leaves it out and
+reports it as `declared_files.implementation_notes`. Because an entry is
+appended after every task, the record can lag its checkpoint commit, so the
+mutation helpers' clean-worktree check ignores it; every other untracked or
+modified path still refuses apply with `dirty_worktree`.
+
 The helper ratifies only a split that divides approved groups without merging
 or dropping any, keeps the approved order and each group's scope, keeps every
 active requirement, story, and task, and keeps each increment within the
@@ -2574,6 +2585,10 @@ feature's autopilot exhaust. Its first line is the header, written exactly once:
 ```text
 # Implementation Notes: <SPEC_ID>
 ```
+
+The record is committed with each marker checkpoint and never counts toward the
+per-PR path budget; see the evidence-record rule beside the `ratify-pr-split`
+inputs.
 
 - **Create if absent**: create the `.process/` directory too when that directory
   is also absent, then create the file with the header as its only content. An

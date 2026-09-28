@@ -301,13 +301,14 @@ task gates source work when it sits in a setup or foundation phase, or when a
 task outside the polish or emission phase depends on it, directly or through
 the sidecar's `depends_on`. The evidence phrases are a closed list: "first
 implementation checkpoint" (with or without "actual"), "actual diff", "actual
-per-PR diff", "actual LOC", and "before PR emission". Such a task can never
+per-PR diff", and "actual LOC". Such a task can never
 complete, because only its dependents produce that evidence. The failing
 payload lists each one under `gate_task_loops`. Fix it by splitting the task: a
 candidate check now, and the reconciliation attached to the emission step. A
 clause that hands the evidence to a later step passes: it says "later",
-"defer", "attached to", "handled by", "emission step", or "emission task". An
-unreadable sidecar fails the gate closed.
+"defer", "attached to", "handled by", "emission step", or "emission task".
+Wording that only times a step or a stop, such as "stop before PR emission",
+names no evidence and passes. An unreadable sidecar fails the gate closed.
 
 **Auto-Fix:** For each unmapped FR:
 - Generate a task that covers the requirement
