@@ -2152,6 +2152,14 @@ def _marker_fence_line(raw: str, quote_depth: int, content_indent: int,
     return True, closing
 
 
+def _marker_fence_start(content: str, marker: re.Match[str] | None) -> tuple[str, int] | None:
+    candidate = content[marker.end():] if marker else content
+    opening = re.fullmatch(r" {0,3}(?P<fence>`{3,}|~{3,})(?P<info>[^\r\n]*)", candidate)
+    if opening is None or (opening["fence"][0] == "`" and "`" in opening["info"]):
+        return None
+    return opening["fence"][0], len(opening["fence"])
+
+
 def _marker_prose_lines(raw_lines: list[str]) -> list[str]:
     """Strip Markdown containers and block code before counting markers."""
     rendered_lines: list[str] = []
@@ -2200,11 +2208,9 @@ def _marker_prose_lines(raw_lines: list[str]) -> list[str]:
         if marker:
             list_indents.append(content_indent + marker.end())
             paragraph_open = False
-        fence_candidate = content[marker.end():] if marker else content
-        opening = re.fullmatch(r" {0,3}(?P<fence>`{3,}|~{3,})(?P<info>[^\r\n]*)", fence_candidate)
-        if opening and not (opening["fence"][0] == "`" and "`" in opening["info"]):
-            fence_char = opening["fence"][0]
-            fence_width = len(opening["fence"])
+        opening = _marker_fence_start(content, marker)
+        if opening:
+            fence_char, fence_width = opening
             fence_quote_depth = current_quote_depth
             rendered_lines.append("")
             paragraph_open = False
