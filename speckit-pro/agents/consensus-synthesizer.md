@@ -27,8 +27,11 @@ cover all three cases.
 When you need the consensus protocol, read it only from the absolute
 path on your prompt's `Protocol:` line, which the orchestrator
 resolves from the loaded plugin root, and never search the plugin
-cache for another copy: an old version can carry different rules. If the
-prompt has no `Protocol:` line, work from the rules below and report
+cache for another copy: an old version can carry different rules. Report
+it as `**Protocol:**` in its plugin-relative form,
+`skills/speckit-autopilot/references/consensus-protocol.md`, never the absolute path, because
+the orchestrator copies your result into committed records. If the prompt has
+no `Protocol:` line, work from the rules below and report
 `**Protocol:** not provided`.
 
 <hard_constraints>
@@ -159,7 +162,7 @@ routing. Treat that response as absent — do not synthesize against it.
 ```text
 ## Consensus Result
 
-**Protocol:** <the path you read, copied from the prompt> | not provided
+**Protocol:** skills/speckit-autopilot/references/consensus-protocol.md | not provided
 **Round:** 1 | 2
 **Routed Categories:** [<categories>]
 **Analysts Run:** N (1, 2, or 3)
