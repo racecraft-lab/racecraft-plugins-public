@@ -16,6 +16,8 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO_ROOT / "speckit-pro"))
 sys.path.insert(0, str(REPO_ROOT / "tests/speckit-pro/lib"))
 from test_result import run_counted
+from speckit_pro_runner.execution_control import is_runner_byproduct
+from speckit_pro_runner.helpers.mutation import dirty_worktree_diagnostic
 from speckit_pro_runner.task_execution import fingerprints
 from speckit_pro_runner.task_results import MAX_LINEAGE_DEPTH, non_tdd_reason, partition_sha256, task_results
 
@@ -456,6 +458,26 @@ class BatchedTaskResultsTests(unittest.TestCase):
         self.metadata_path.write_text(self.metadata_path.read_text() + "\n")
         code, result = self.runner("inspect", mode="read_only")
         self.assertEqual(code, 2, result)
+
+    def test_journal_never_dirties_the_worktree_or_joins_a_directory_wide_add(self):
+        environment = {**os.environ, "GIT_CONFIG_GLOBAL": os.devnull, "GIT_CONFIG_NOSYSTEM": "1"}
+
+        def git(*args):
+            return subprocess.run(["git", "-C", str(self.root), *args], check=True,
+                                  capture_output=True, text=True, env=environment).stdout
+
+        git("init", "-q")
+        git("add", "-A")
+        git("-c", "user.name=fixture", "-c", "user.email=native-eval@example.invalid", "commit", "-q", "-m", "fixture")
+        self.assertIsNone(dirty_worktree_diagnostic({}, self.root))
+        self.call()
+        self.assertTrue(self.path.is_file())
+        self.assertTrue(is_runner_byproduct(self.inputs["journal_file"]))
+        self.assertIsNone(dirty_worktree_diagnostic({}, self.root))
+        git("add", "-A")
+        self.assertEqual([name for name in git("diff", "--cached", "--name-only", "-z").split("\0") if name], [])
+        (self.root / "unrelated.txt").write_text("unrelated\n")
+        self.assertEqual(dirty_worktree_diagnostic({}, self.root)["code"], "dirty_worktree")
 
 
 if __name__ == "__main__":

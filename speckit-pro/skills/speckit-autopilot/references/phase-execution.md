@@ -2941,9 +2941,10 @@ one research task.
 `git add -A && git commit -m "feat(SPEC-XXX): implement phase"`
 
 Runner byproducts are never committed. The runner writes a `.gitignore`
-holding `*` into each directory it owns (`.process/execution-control/` and
-`.process/verification/`), so `git add -A` cannot stage the ledger or the
-verification evidence. If `git ls-files` shows such a path already tracked
+holding `*` into each directory it owns (`.process/execution-control/`,
+`.process/verification/`, and `.process/task-results/`), so `git add -A`
+cannot stage the ledger, the verification evidence, or the task-results
+journals. If `git ls-files` shows such a path already tracked
 (from an older plugin version), run `git rm -r --cached -- <path>` before this
 commit.
 

@@ -1420,7 +1420,8 @@ def dirty_worktree_block(repo_root: Path, source: str) -> dict[str, Any]:
         "mutation helper refused apply mode because the worktree is dirty",
         details={"repo_root": repo_relative(repo_root, repo_root), "source": source},
         remediation_summary="Start mutation apply from a clean worktree or use dry_run.",
-        remediation_actions=["Commit or stash unrelated changes.", "Retry apply mode or use dry_run."],
+        remediation_actions=["Commit unrelated changes; runner-owned `.process` byproducts never count as dirty.",
+                            "Retry apply mode or use dry_run."],
     )
 
 
