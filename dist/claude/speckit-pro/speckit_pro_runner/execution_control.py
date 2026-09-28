@@ -972,10 +972,39 @@ def _increment_ineligibility(root: Path, spec: Path, request: dict[str, Any]) ->
     if not all(any(path_key(path) == path_key(own) or path_key(path).startswith(path_key(own) + "/") for own in owns)
                for path in paths):
         return "path_outside_increment_ownership"
-    if any(overlaps(path, own) for unit, other in units.items() if unit != request["tdd_unit"]
+    closed = _closed_units(root, feature, tasks, metadata["fingerprints"], sources[2])
+    if any(overlaps(path, own) for unit, other in units.items() if unit != request["tdd_unit"] and unit not in closed
            for own in other for path in paths):
         return "path_reopens_another_increment"
     return None
+
+
+def _checked_tasks(text: str) -> set[str]:
+    """Task IDs whose checkbox is checked in a tasks.md text."""
+    return {match.group(2) for line in text.splitlines()
+            if (match := METADATA_TASK_LINE.match(line)) and re.match(r"\s*-\s+\[[xX]\]", line)}
+
+
+def _closed_units(root: Path, feature: str, tasks: dict[str, Any], bound: dict[str, str], worktree: str) -> set[str]:
+    """TDD units whose every task is checked in both the committed HEAD tasks.md and the worktree.
+
+    The committed file must carry the same task definitions the sidecar binds.
+    Without git, a HEAD copy, or matching definitions, no unit is closed.
+    """
+    from .task_execution import fingerprints
+
+    committed = _head_bytes(root, f"{feature}/tasks.md")
+    try:
+        head = committed.decode("utf-8") if committed is not None else None
+    except UnicodeError:
+        head = None
+    if head is None or fingerprints("", "", head)["tasks_sha256"] != bound.get("tasks_sha256"):
+        return set()
+    checked = _checked_tasks(head) & _checked_tasks(worktree)
+    members: dict[str, set[str]] = {}
+    for task_id, entry in tasks.items():
+        members.setdefault(entry["tdd_unit"], set()).add(task_id)
+    return {unit for unit, task_ids in members.items() if task_ids <= checked}
 
 
 def _gate_remediation(inputs: dict[str, Any]) -> dict[str, Any] | None:

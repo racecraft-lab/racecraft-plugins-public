@@ -87,7 +87,7 @@
         "value": "speckit_pro_runner/execution_control.py",
         "display": "speckit_pro_runner/execution_control.py"
       },
-      "sha256": "3fb69eb09317a67ac4813d250c75c466663c0109abf645025fd33698ae8e2321"
+      "sha256": "38effd2eb655f727a80c24b745b7ff928c3fc86c8f0635307ddaced2e81ea8f3"
     },
     {
       "path": {
@@ -303,7 +303,7 @@
         "value": "speckit_pro_runner/helpers/gate_preflight_coverage.py",
         "display": "speckit_pro_runner/helpers/gate_preflight_coverage.py"
       },
-      "sha256": "291fb27b86e27d5ffd5bc953193810fd816e816c5ae47e450312048e384a1384"
+      "sha256": "88e36dc44bba9885aa850ca01b5a76a6a73f31d483fe558128b8d46bbdaa2d3a"
     },
     {
       "path": {
@@ -367,7 +367,7 @@
         "value": "speckit_pro_runner/helpers/run_finalization.py",
         "display": "speckit_pro_runner/helpers/run_finalization.py"
       },
-      "sha256": "7da530e61c831bded5b961cb94f5f65c40f511646231e9db21be042c11f877cb"
+      "sha256": "d4410eaec7b9cab564c6c093162a8b53ca39f925eb36fd423dc37443d7ee3c67"
     },
     {
       "path": {
