@@ -264,6 +264,7 @@ def _packet_inputs(**overrides: object) -> dict[str, object]:
     inputs: dict[str, object] = {
         "packet_path": "specs/packet-999-packet/.process/pr-packets/packet-999.json",
         "source_feature_dir": "specs/packet-999-packet",
+        "workflow_file": "workflow.md",
         "target": {"base_branch": "main", "head_branch": "agent/packet-999-packet"},
         "title_type": "feat",
         "title_scope": "packet-999",
@@ -289,7 +290,15 @@ class DeferredSectionInPrBodyTests(unittest.TestCase):
     def render(self, **overrides: object) -> dict[str, object]:
         from speckit_pro_runner.helpers.pr_emission import normalize_packet_input
 
-        return normalize_packet_input(SimpleNamespace(inputs=_packet_inputs(**overrides)))
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp).resolve()
+            (root / "workflow.md").write_text(
+                "## Phase 6.5: Confidence Gate\n\n| Field | Value |\n"
+                "| --- | --- |\n| Verdict | proceed |\n",
+                encoding="utf-8",
+            )
+            with patch("speckit_pro_runner.helpers.pr_emission.find_repo_root", return_value=root):
+                return normalize_packet_input(SimpleNamespace(inputs=_packet_inputs(**overrides)))
 
     def test_body_opens_with_the_deferred_section_and_still_validates(self) -> None:
         from speckit_pro_runner.helpers.read_only import validate_pr_packet_read_only
@@ -297,6 +306,7 @@ class DeferredSectionInPrBodyTests(unittest.TestCase):
         rendered = self.render(deferred_items=self.ITEMS)
         self.assertNotIn("diagnostic", rendered, rendered)
         body = str(rendered["body"])
+        self.assertIn("## Verification\n\nPhase 6.5 Verdict: proceed\n", body)
         headings = [line for line in body.splitlines() if line.startswith("#")]
         self.assertEqual(headings[:3], ["# feat(packet-999): Generate reviewer packet",
                                         "## Deferred / not verified", "## Summary"])
