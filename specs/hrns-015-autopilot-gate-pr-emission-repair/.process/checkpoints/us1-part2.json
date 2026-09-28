@@ -1,0 +1,59 @@
+{
+  "schema_version": "marker-checkpoint.v1",
+  "feature_id": "HRNS-015",
+  "marker_id": "us1-part2",
+  "status": "complete",
+  "task_ids": [
+    "T005"
+  ],
+  "implementation_checkpoint_sha": "33ce117a0ba41769a21e2aab7dcca3bb880440b0",
+  "last_reviewed_head_sha": "33ce117a0ba41769a21e2aab7dcca3bb880440b0",
+  "tasks_sha": "sha256:544621db7b0982fce7c65dfbc59f55f2ddbeab02c64b79c7017d12a23ac5b7a8",
+  "verification_evidence_sha": "sha256:0770ed4ce1d332f54c3257b8eb362dac78c922593549d647791f49238b78c331",
+  "required_verification_gate_ids": [
+    "focused_tests",
+    "quick_suite",
+    "ci_suite",
+    "artifact_consistency",
+    "docs_validation",
+    "python_lint",
+    "independent_critical_high_review",
+    "host_parity"
+  ],
+  "verification": {
+    "focused_tests": {
+      "status": "pass",
+      "evidence": "Final registered read-only helper suite 151/151; baseline RED protected-hash assertion failed, final GREEN/refactor passed the same focused command, and the fenced-heading review correction was red-first."
+    },
+    "quick_suite": {
+      "status": "pass",
+      "evidence": "Post-correction quick suite 10,110/10,110 with toolchain preflight, native exit 0; privacy scan 14/14."
+    },
+    "ci_suite": {
+      "status": "pass",
+      "evidence": "Post-correction default CI suite toolchain plus layers 1, 4, 5, 6 and 7: 6/6 dispatches, native exit 0."
+    },
+    "artifact_consistency": {
+      "status": "pass",
+      "evidence": "After source commit, refresh-release-artifacts.py --check reported generated artifacts match source, native exit 0."
+    },
+    "docs_validation": {
+      "status": "pass",
+      "evidence": "Reference-mode docs validation: pnpm reference:check and validate:quality passed; changed paths include no rendered docs or docs contract inputs."
+    },
+    "python_lint": {
+      "status": "pass",
+      "evidence": "Pinned repository wrapper Ruff passed; pinned mypy passed across 54 source files, native exit 0."
+    },
+    "independent_critical_high_review": {
+      "status": "pass",
+      "evidence": "Independent T005 contract audit found one fenced-heading issue; it was fixed red-first. Focused independent re-review of the final correction found no remaining critical/high defect."
+    },
+    "host_parity": {
+      "status": "pass",
+      "evidence": "Claude/Codex skill, schema, runtime and trust outputs refreshed together; default CI suite layer 7 passed."
+    }
+  },
+  "source_fingerprint_status": "current",
+  "completed_at": "2026-09-28T18:19:34Z"
+}
