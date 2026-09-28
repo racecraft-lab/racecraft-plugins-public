@@ -1549,10 +1549,12 @@ event, even while the increment's tasks are still open, when every path is a
 test file the increment owns and one of its own implementation dispatches
 changed earlier in this run. It allows one test fix per increment and never
 draws on the run-wide corrective budget. Run nothing else while the fix is
-open: completing it `completed` succeeds only when the runner sees no change
-outside the declared test files. Any other fix, including one that touches
+open: completing it `completed` succeeds only when the runner sees a change
+and none outside the declared test files. Any other fix, including one that touches
 product code, a test file another increment edited, or a second test fix for
-the same increment, takes the run-wide path unchanged.
+the same increment, takes the run-wide path unchanged. When the run-wide
+corrective budget is spent and the fix qualifies, reserve it as a test fix;
+never ask the operator for a re-plan or a corrective exception for it.
 
 Before `tasks.md` exists, the plan contains:
 

@@ -119,10 +119,12 @@ ownership from the caller's current workflow.
   `worktree_state_unavailable`. The runner also snapshots the worktree when it
   admits the fix. A `complete` with `outcome=completed` succeeds only when
   every path the runner sees changed since then is one of the declared test
-  files; otherwise it records nothing and returns `test_fix_scope_unproven`
+  files and at least one path changed; otherwise it records nothing and returns `test_fix_scope_unproven`
   (`disposition=checkpoint_required`), and the dispatch can only be completed
   `failed`. Run no other dispatch while a test fix is open: its edits would
-  count against the fix.
+  count against the fix. When the run-wide budget is spent and the fix
+  qualifies, reserve it as a test fix; never ask the operator for a re-plan or a
+  corrective exception for it.
   A planning gate's own remediation (G2 through G7, most often G6 Analyze)
   instead supplies `gate_remediation`: `{"gate": "G6", "paths": [<every
   repo-relative path the fix touches>]}`, plus the same explicit `spec_file`.

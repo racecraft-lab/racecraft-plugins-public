@@ -1658,7 +1658,7 @@ def record_result(ledger: dict[str, Any], inputs: dict[str, Any], now: float, ro
     changed = (_changed_since(root, item["worktree_before"])
                if "worktree_before" in item and outcome != "unknown" else None)
     if ("test_fix" in item and outcome == "completed"
-            and (changed is None or not set(changed) <= set(item["test_fix_paths"]))):
+            and (not changed or not set(changed) <= set(item["test_fix_paths"]))):
         return {"reasons": ["test_fix_scope_unproven"]}
     if item["outcome"] == "unknown":
         event = inputs.get("native_observation")
