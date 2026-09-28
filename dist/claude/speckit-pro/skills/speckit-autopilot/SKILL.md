@@ -106,8 +106,7 @@ into expensive rework.
 **Before executing any step**, verify:
 
 1. **Model:** run on the operator's strongest available tier. If the
-   session reports a small-tier model, stop and ask the operator to
-   switch models and re-run.
+   session does not report the strongest tier, warn the operator once and route gate and consensus dispatches to the strongest available tier.
 
 **Reasoning effort is inherited, never checked.** Run at whatever the
 operator has set for the session and do not stop, warn, or ask them to
@@ -769,10 +768,11 @@ only gate a run may defer. With every non-UAT gate passed at every PR head and
 only human UAT left, the run finalizes: mark the stack ready for review (never merge) and open
 the top PR body with its `Deferred / not verified` section. A failed gate, a
 ledger `deferred` entry, or an unresolved task is one human stop instead, and
-the stack stays in draft. Either way, make one consolidated `AskUserQuestion`
-request and print the same question as plain text in the final message,
-listing every fallback taken and every deferred item, including each entry of
-the ledger's `deferred` list.
+the stack stays in draft. Print the final report as plain text on `outcome=complete` with nothing deferred, and ask no question.
+Otherwise ask only on `human_stop` or deferred human UAT: make one consolidated
+`AskUserQuestion` request and print the same question as plain text in the
+final message, listing every fallback taken and every deferred item, including
+each entry of the ledger's `deferred` list.
 
 ## Workflow File Update Protocol
 

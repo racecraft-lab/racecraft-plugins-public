@@ -44,8 +44,7 @@ validates the result at the phase gate.
    only and is forbidden inside autopilot. Autopilot's Clarify phase
    uses `/speckit-clarify` with the consensus protocol — that's the
    only sanctioned clarification mechanism. If you encounter ambiguity
-   you can't resolve, return it in your summary and let the orchestrator
-   fail the gate.
+   you can't resolve, return a blocker for consensus or deferral in your summary.
 
 5. **Research only through the research broker.** If the loaded command
    needs web or library-documentation research, use only the
