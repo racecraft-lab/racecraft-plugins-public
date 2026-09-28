@@ -13,6 +13,12 @@ that names the gate and its exact command, never ready for review. The
 Every gate result is tied to the PR head it ran at (issue 814). A multi-PR
 stack finalizes only when every PR head has passed every non-UAT gate; a head
 with no result for a gate is a human stop that names the head and the gate.
+
+A harness or tooling error that blocks a gate is retried within a fixed budget
+(issue 815). If it persists, the gate reports status `harness_error` with its
+attempt count and the `.process/verification/` path holding each attempt's raw
+error and trace. It never counts as passed, and the one human stop reports it
+as a harness error, never as a failure of the code under test.
 """
 
 from __future__ import annotations
@@ -59,6 +65,11 @@ GREEN = (
 )
 LIVE_EVAL = {"gate": "Post: Live Evaluation", "status": "failed",
              "command": "python3 tests/live/run-eval.py --task T042", "head_sha": HEADS[103]}
+
+
+HARNESS_EVIDENCE = "clean/.process/verification/harness/g7-cccccccc"
+HARNESS_ERROR = {"gate": "G7", "status": "harness_error", "command": "python3 tests/run-all.py",
+                 "head_sha": HEADS[103], "attempts": 3, "evidence": HARNESS_EVIDENCE}
 
 
 def per_head(*gates: dict[str, object], heads: tuple[str, ...] = tuple(HEADS.values())) -> list[dict[str, object]]:
@@ -271,6 +282,77 @@ class FinalizeRunTests(_LedgerFixture, unittest.TestCase):
         result = finalize(self.root, self.inputs(pull_requests=prs, gates=per_head(*GREEN, heads=("d" * 40,))))
         self.assertEqual(result["outcome"], "complete_with_deferred")
         self.assertEqual(result["ready_commands"], ["gh pr ready 7"])
+
+    def harness_gates(self, **overrides: object) -> list[dict[str, object]]:
+        """Green at every head except G7 at the tip, which hit a persistent harness error."""
+        evidence = self.root / HARNESS_EVIDENCE
+        evidence.mkdir(parents=True, exist_ok=True)
+        for attempt in (1, 2, 3):
+            (evidence / f"attempt-{attempt}.log").write_text("harness exited 70 before the suite ran\n")
+        gates = [gate for gate in per_head(*GREEN) if not (gate["head_sha"] == HEADS[103] and gate["gate"] == "G7")]
+        return gates + [{**HARNESS_ERROR, **overrides}]
+
+    def test_a_persistent_harness_error_is_a_human_stop_citing_its_evidence(self) -> None:
+        result = finalize(self.root, self.inputs(gates=self.harness_gates()))
+        self.assertEqual(result["outcome"], "human_stop")
+        self.assertFalse(result["mark_ready"])
+        self.assertEqual(result["ready_commands"], [])
+        stop = result["human_stop"]
+        self.assertEqual(stop["harness_errors"], [{"gate": "G7", "command": HARNESS_ERROR["command"],
+                                                   "pull_request": 103, "head_sha": HEADS[103], "attempts": 3,
+                                                   "evidence": HARNESS_EVIDENCE}])
+        # Reported as a harness error, not as a failed gate or a missing result.
+        self.assertEqual(stop["gates"], [])
+        self.assertEqual(stop["missing"], [])
+        request = result["end_of_run_request"]
+        self.assertIn("harness error", request)
+        self.assertIn("not a failure of the code under test", request)
+        self.assertIn(HARNESS_EVIDENCE, request)
+        self.assertIn("3 attempts", request)
+        self.assertNotIn("G7 failed", request)
+
+    def test_a_harness_error_never_counts_as_passed(self) -> None:
+        result = finalize(self.root, self.inputs(gates=self.harness_gates(), human_uat=[]))
+        self.assertFalse(result["finalized"])
+        self.assertEqual(result["goal_status"], "blocked")
+        tip = result["pull_requests"][-1]
+        self.assertIn("harness_error", [gate["status"] for gate in tip["gates"]])
+
+    def test_the_retry_budget_in_the_guidance_is_the_helper_constant(self) -> None:
+        from speckit_pro_runner.helpers.run_finalization import HARNESS_RETRY_BUDGET
+
+        words = {2: "two", 3: "three", 4: "four", 5: "five"}
+        for reference in ("skills/speckit-autopilot/references/phase-execution.md",
+                          "codex-skills/speckit-autopilot/references/phase-execution-codex.md"):
+            with self.subTest(reference=reference):
+                text = " ".join((PLUGIN_ROOT / reference).read_text(encoding="utf-8").split())
+                for phrase in (f"up to {words[HARNESS_RETRY_BUDGET]} attempts",
+                               f"`attempts` reaches {HARNESS_RETRY_BUDGET}"):
+                    self.assertTrue(phrase in text, f"{reference} must state: {phrase}")
+
+    def test_harness_errors_fail_closed(self) -> None:
+        cases: dict[str, dict[str, object]] = {
+            "retry budget not spent": {"attempts": 2},
+            "attempts is not an integer": {"attempts": "3"},
+            "attempts is a boolean": {"attempts": True},
+            "evidence outside the verification directory": {"evidence": "clean/.process/task-results/g7"},
+            "evidence not under a .process directory": {"evidence": "clean/verification/g7"},
+            "evidence missing": {"evidence": "clean/.process/verification/harness/absent"},
+            "evidence traversal": {"evidence": "../.process/verification/harness"},
+            "evidence absolute": {"evidence": "/.process/verification/harness"},
+        }
+        for name, override in cases.items():
+            with self.subTest(case=name):
+                with self.assertRaises(ValueError):
+                    finalize(self.root, self.inputs(gates=self.harness_gates(**override)))
+        without_evidence = self.harness_gates()
+        del without_evidence[-1]["evidence"]
+        with self.assertRaises(ValueError):
+            finalize(self.root, self.inputs(gates=without_evidence))
+        passed_with_attempts = per_head(*GREEN)
+        passed_with_attempts[0] = {**passed_with_attempts[0], "attempts": 3, "evidence": HARNESS_EVIDENCE}
+        with self.assertRaises(ValueError):
+            finalize(self.root, self.inputs(gates=passed_with_attempts))
 
     def test_inputs_fail_closed(self) -> None:
         pr = {"number": 1, "url": "https://x/pull/1", "draft": True, "head_sha": "d" * 40}

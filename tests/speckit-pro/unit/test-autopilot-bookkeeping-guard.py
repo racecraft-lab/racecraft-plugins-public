@@ -708,6 +708,11 @@ class RunFinalizationSourceContractTests(unittest.TestCase):
         "`head_sha`",
         "`human_stop.missing`",
         "cites only the gate results listed under its own entry",
+        "`status=harness_error`",
+        "`attempts`",
+        ".process/verification/harness/",
+        "a harness error, never as a failure of the code under test",
+        "never counts as passed",
     )
     STACK_PER_HEAD = (
         "at the slice's own head",

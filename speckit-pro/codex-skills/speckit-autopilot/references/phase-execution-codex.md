@@ -2766,7 +2766,8 @@ whose refreshed preflight disposition is `operator_action_required`.
    PR head, never only at the stack tip. Only after
    every runnable item has finished, run the read-only `finalize-run` runner
    helper. Pass the execution-control `ledger_path` and `expected_run_id`; every
-   final non-UAT gate result as `gate`, `status` (`passed` or `failed`), its
+   final non-UAT gate result as `gate`, `status` (`passed`, `failed`, or
+   `harness_error`), its
    exact `command`, and the `head_sha` of the PR head it ran at, one result per
    gate per head; the runnable work still open as `pending_items`; every rule
    2 deferral still unresolved as `unresolved_deferrals`, each with `unit`,
@@ -2796,7 +2797,8 @@ whose refreshed preflight disposition is `operator_action_required`.
        final message too, even when `request_user_input` returns, because the question UI can fail to render in a
        thread. In an unattended run, or when `request_user_input` is absent, the
        plain-text copy is the request.
-   - `outcome=human_stop`: a gate failed at some PR head, a PR head has no
+   - `outcome=human_stop`: a gate failed or hit a persistent harness error at
+     some PR head, a PR head has no
      result for a gate, the ledger's `deferred` list is not empty, or a
      deferred task is unresolved. This is one human stop, never
      ready for review, and the stack stays in draft. Before calling the helper,
@@ -2808,6 +2810,18 @@ whose refreshed preflight disposition is `operator_action_required`.
      with what finishes it, and print it as plain text in the final message
      too. Set the thread goal blocked on that one
      request.
+   - **Harness errors.** A harness or tooling error that blocks a gate (the
+     harness crashed, timed out, or replaced the inner error with a bare exit
+     code before the code under test produced a result) is retried the same
+     way, up to three attempts. Before the harness can delete them, keep each
+     attempt's raw error output and trace under
+     `<feature>/.process/verification/harness/<gate-slug>-<head>/attempt-<n>.log`,
+     which the runner keeps out of commits. Report it as a harness error, never
+     as a failure of the code under test. If it persists until `attempts`
+     reaches 3, pass that gate's result with `status=harness_error`, its
+     `attempts`, and that directory as `evidence`. It never counts as passed,
+     and the one human stop cites the evidence. An attempt that ran the code
+     under test and failed is a gate failure, not a harness error.
    Record `deferred_digest` in the workflow file's Phase 7 result. After the
    run finalizes or stops, a later turn acts only on a new operator message and
    never re-checks an unchanged blocker.
