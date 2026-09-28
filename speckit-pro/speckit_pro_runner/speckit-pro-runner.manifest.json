@@ -87,7 +87,7 @@
         "value": "speckit_pro_runner/execution_control.py",
         "display": "speckit_pro_runner/execution_control.py"
       },
-      "sha256": "f32b5e124a788a165cf0c8431ce4cc5108cbb20cbb9b5cc2e8ecea623a4cd8ac"
+      "sha256": "8ccb8036f9c928592875518dac5246fcbc3f0f1258f2e332630694383783d95f"
     },
     {
       "path": {
@@ -303,7 +303,7 @@
         "value": "speckit_pro_runner/helpers/gate_preflight_coverage.py",
         "display": "speckit_pro_runner/helpers/gate_preflight_coverage.py"
       },
-      "sha256": "291fb27b86e27d5ffd5bc953193810fd816e816c5ae47e450312048e384a1384"
+      "sha256": "88e36dc44bba9885aa850ca01b5a76a6a73f31d483fe558128b8d46bbdaa2d3a"
     },
     {
       "path": {
