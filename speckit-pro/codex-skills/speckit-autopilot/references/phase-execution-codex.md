@@ -1208,6 +1208,17 @@ list. Pass the inventory's actions as `inventory_actions` with their
 now, so its authorization is asked for at run start (data egress as a chat
 reply, above), and rerun the helper until it reports `covered=true`.
 
+**A declared pre-PR command is inventoried too.** Pass `repo_root`. The helper
+reads the root `AGENTS.md` and `CLAUDE.md` and reports in `declared_commands`
+each command they name in a code span or fenced code line that sends data
+off the machine, such as a dependency audit (`npm audit`, `pnpm audit`,
+`pip-audit`). Each one becomes a required gate need of category
+`external_side_effect` whose `target` is the exact command. For each such
+entry in `missing`, add a data egress action whose `effect` is the
+dependency metadata sent to the registry and copy its `target` verbatim, so
+the run-start chat authorization covers it and the pre-PR audit never needs
+a per-increment approval.
+
 **A boundary-file edit named in the ratified plan is deferred too.** Such an
 edit, for example to the root `AGENTS.md`, never blocks the start of the run,
 and the standing policy never covers it. The reason is reviewer trust: the

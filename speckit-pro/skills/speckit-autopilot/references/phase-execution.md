@@ -1422,6 +1422,14 @@ warnings.
 (SKILL.md §Architectural Constraint); executors are terminal workers,
 so routing happens here.
 
+**A declared pre-PR command runs as a pre-PR gate.** A command the root
+`AGENTS.md` or `CLAUDE.md` names for every PR, such as a dependency audit,
+runs before each PR like any other gate. On Codex the Phase 6.5 preflight
+collects its egress authorization at run start through
+`check-gate-preflight-coverage`. Claude Code has no approval reviewer, so it
+needs no run-start inventory: the command runs under the session's
+permission settings, and a denial is a blocked action (below).
+
 #### Phase 7 Setup: The Pull-Request Feedback Sweep
 
 Run the sweep **first**, ahead of the implementation-notes record. Reviewer feedback left on the draft pull
