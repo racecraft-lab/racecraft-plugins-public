@@ -67,7 +67,12 @@ def _checks_run(name: str, text: str) -> int | None:
 
 def fingerprint(command_id: str, argv: list[str], exit_code: int | None, completed: bool, stdout: bytes,
                 stderr: bytes) -> dict[str, Any]:
-    """The failing-check set one verification run shows, or `failing: None` when the output is unparsed."""
+    """The failing-check set one verification run shows.
+
+    A failing or incomplete run whose output is not exactly one known format records `failing: None`.
+    A zero exit in no single known format records `format: "passed"` with an empty set and no
+    `checks_run`: nothing failed, and the unknown count can never admit a convergence correction.
+    """
     output = stdout + b"\n" + stderr
     text = output.decode("utf-8", errors="replace").replace("\r\n", "\n")
     record: dict[str, Any] = {"command_id": command_id,
