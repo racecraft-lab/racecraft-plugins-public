@@ -2699,7 +2699,7 @@ run-wide corrective budget, so a spent run-wide budget does not stop the next
 increment's review loop. A fix that touches a path outside the increment's
 ownership, reopens another increment's accepted work, or lacks current
 ownership evidence goes through the run-wide budget unchanged. When the
-reserve returns `increment_review_allowance_exhausted`, defer that increment
+reserve returns `disposition=defer` with `increment_review_allowance_exhausted`, defer that increment
 under [Blocked Actions Mid-Run: Fall Back or Defer, Never Stop](#blocked-actions-mid-run-fall-back-or-defer-never-stop): record its
 open findings, keep its dependents deferred, and continue with independent
 increments. It is never a mid-run question and never a stop.
@@ -2813,11 +2813,27 @@ The run must never bypass a veto: never change approval, sandbox, or reviewer
 configuration, never rerun the vetoed action under a different command or tool,
 and never treat an earlier answer as authorization for the vetoed action. The
 correctness stops in this reference are unchanged and still stop the run:
-unknown side effects, an execution-control `checkpoint_required` disposition
-(including an exhausted repair budget, except `increment_review_allowance_exhausted`,
-which defers its increment, and `gate_remediation_allowance_exhausted`, which
-defers its findings to the end-of-run request), a ledger or clock error, invalid or
-stale state, and a failed gate whose repair is out of scope.
+unknown side effects, an execution-control `checkpoint_required` disposition,
+a ledger or clock error, invalid or stale state, and a failed gate whose
+repair is out of scope.
+
+A failed gate or test is not a blocked action: diagnose it through the
+consensus agents, fix it through the executor, rerun verification, and keep
+remediating while each round converges. The ledger admits the next correction
+in a family with no operator event while the previous one shrank the
+runner-recorded failing set, or moved it with every earlier failure passing.
+
+An exhausted correction allowance is not a stop. It is the non-convergence
+fallback: a correction that made no measurable progress, returned to an
+earlier failing set, left unparsed output, or followed a spec change meets the
+fixed allowances, and then the ledger returns
+`disposition=defer`, refuses that dispatch, and records the blocked failure
+family, increment, gate, or failure class in its `deferred` list. Defer that work
+under rule 2, name the task or gate it blocks, and keep executing every
+independent task, increment, gate, and Post check. Rule 3's end-of-run
+request lists every ledger deferral; there the operator can approve
+`authorize-corrective-exception` or `begin-replan-epoch` once for everything
+deferred. It is never a mid-run question.
 
 #### Repeated Gate Failures: Diagnose One Class, Approve It Once
 
@@ -2835,17 +2851,20 @@ never per-test diffs for whichever tests failed this time.
    signal first. Check host load and temp-directory size, then rerun the gate
    once, before proposing any timeout change. Propose the class-level fix only
    if the rerun still fails with the same signature.
-3. **Ask at most once.** When the repair budget is exhausted and the fix needs
-   operator approval, request `authorize-corrective-exception` with a
-   `failure_class` scope: the repo-relative test file, the normalized
-   signature, and the change kind (`test_timeout`). The approval never covers
-   production code, another file, or another signature.
+3. **Ask at most once, at the end.** When the repair budget is exhausted, the
+   reserve returns `disposition=defer`: record the class as deferred and keep
+   executing independent work. In the one end-of-run consolidated operator
+   request, ask for `authorize-corrective-exception` with a `failure_class`
+   scope: the repo-relative test file, the normalized signature, and the
+   change kind (`test_timeout`). It is never a mid-run question. The approval
+   never covers production code, another file, or another signature.
 4. **Use the approval for follow-ups.** If a later run fails again inside that
    exact class after the approved fix completed, reserve the next correction
    with `reserve-class-correction` and apply it without a new question. The
    helper allows two follow-ups per approval.
 5. **Defer anything outside it.** A correction outside the approved class, a
-   class whose follow-ups are spent, or a second approval request is never
+   class whose follow-ups are spent (`failure_class_allowance_exhausted`), or
+   a second approval request is never
    asked in place. Defer it to the one consolidated operator request at the
    end of the run and keep executing independent work.
 

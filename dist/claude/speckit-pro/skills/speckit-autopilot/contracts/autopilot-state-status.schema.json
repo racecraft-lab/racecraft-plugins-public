@@ -50,7 +50,7 @@
         },
         "disposition": {
           "type": "string",
-          "enum": ["continue", "checkpoint_required"]
+          "enum": ["continue", "defer", "checkpoint_required"]
         },
         "reasons": {
           "type": "array",

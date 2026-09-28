@@ -153,7 +153,8 @@ background subagents as the fallback path. The 3-track structure
   the canonical Post list. A completion response is forbidden while any `Post:` item is pending,
   in_progress, or missing. `execution_control.disposition=checkpoint_required`
   permits a checkpoint explicitly saying the run is not complete, retaining
-  all pending work, consumed budget and unknown effects. When every runnable
+  all pending work, consumed budget and unknown effects. `disposition=defer`
+  is not a stop: it defers one unit whose allowance is spent. When every runnable
   item has finished and deferred items remain, report the same kind of honest
   checkpoint: one consolidated operator request, the same question as plain
   text in the final message, and every fallback taken and every deferred item
