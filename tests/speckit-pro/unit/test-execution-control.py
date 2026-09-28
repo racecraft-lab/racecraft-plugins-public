@@ -2631,6 +2631,14 @@ class IncrementTestFixAllowanceTests(_ExecutionControlFixture, unittest.TestCase
         record = failed["ledger"]["dispatches"]["alpha-test-fix"]
         self.assertEqual((record["outcome"], record["changed_paths"]), ("failed", ["src/alpha/core.py", self.RUNNER_TEST]))
 
+    def test_a_fix_that_changes_nothing_does_not_complete(self):
+        self.implement()
+        self.request_fix("alpha-test-fix", [self.RUNNER_TEST])
+        refused = self.invoke("complete", dispatch_id="alpha-test-fix", outcome="completed")
+        self.assertEqual((refused["disposition"], refused["reasons"]),
+                         ("checkpoint_required", ["test_fix_scope_unproven"]))
+        self.assertEqual(refused["ledger"]["dispatches"]["alpha-test-fix"]["outcome"], "reserved")
+
     def test_forged_test_fix_and_edit_records_fail_closed(self):
         self.implement()
         admitted = self.request_fix("alpha-test-fix", [self.RUNNER_TEST])
@@ -2691,6 +2699,7 @@ class IncrementTestFixAllowanceTests(_ExecutionControlFixture, unittest.TestCase
     def test_a_replan_archives_the_test_fix_allowance(self):
         self.implement()
         self.request_fix("alpha-test-fix", [self.RUNNER_TEST])
+        self.write(self.RUNNER_TEST, "def test_cancellation():\n    assert True\n")
         self.invoke("complete", dispatch_id="alpha-test-fix", outcome="completed")
         (self.root / "feature/workflow.md").write_text(stage_workflow())
         opened = self.invoke("begin-stage-epoch", autopilot_args=["--stage", "implement"])
@@ -2710,7 +2719,8 @@ class IncrementTestFixAllowanceTests(_ExecutionControlFixture, unittest.TestCase
                      "codex-skills/speckit-autopilot/references/phase-execution-codex.md"):
             with self.subTest(host=host):
                 text = " ".join((plugin / host).read_text().split())
-                for phrase in ("`test_fix`", "`tdd_units`", "without `begin-replan-epoch`"):
+                for phrase in ("`test_fix`", "`tdd_units`", "without `begin-replan-epoch`",
+                               "never ask the operator for a re-plan"):
                     self.assertIn(phrase, text)
 
 
