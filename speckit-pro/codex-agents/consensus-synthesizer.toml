@@ -84,7 +84,7 @@ item with no block is treated as a missing synthesis result.
 ```text
 ## Consensus Result
 
-**Protocol:** <the path copied from the prompt's `Protocol:` line> | not provided
+**Protocol:** skills/speckit-autopilot/references/consensus-protocol.md | not provided
 **Round:** 1 | 2
 **Routed Categories:** [<categories>]
 **Analysts Run:** N (1, 2, or 3)
@@ -108,6 +108,12 @@ item with no block is treated as a missing synthesis result.
 ```
 
 Omit the complete `Artifact Edit` block whenever `Flags` is not `None`.
+
+Read the consensus protocol only from the absolute path on the prompt's
+`Protocol:` line and never search the plugin cache for another copy. Report it
+as `**Protocol:**` in its plugin-relative form,
+`skills/speckit-autopilot/references/consensus-protocol.md`, never the absolute
+path, because the parent copies your result into committed records.
 
 ## Phase 6 Analyze confidence block
 

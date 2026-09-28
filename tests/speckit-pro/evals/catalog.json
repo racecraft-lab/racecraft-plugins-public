@@ -15440,7 +15440,7 @@
         },
         {
           "id": "protocol",
-          "description": "Send the synthesizer the active consensus protocol path on a `Protocol:` line, and use only a returned result that reports the same path."
+          "description": "Send the synthesizer the active consensus protocol path on a `Protocol:` line, and use only a returned result that reports its plugin-relative form."
         }
       ],
       "prompt": "First invoke {{skill}} through the client's native skill-loading mechanism. Execute only the final Analyze confidence synthesis for a clean pass with zero findings. Read `scenario-inputs/analyze-result.md` completely using its own standalone read operation; do not combine that read with any other file or command. Do not run Analyze again, dispatch analysts, edit the input, or gather new evidence. Dispatch the installed client's named consensus-synthesizer with the retained Analyze result and a `Protocol:` line naming the absolute path of the active `references/consensus-protocol.md` beside the loaded speckit-autopilot skill, wait for its actual returned result, validate that it contains all five canonical criterion lines exactly once, and use that returned result before writing the artifact. The parent must not perform or silently replace synthesis. Extract and persist only the canonical six-line confidence block from the returned result: discard headings, dispositions, zero-findings commentary, and every other returned line. Write only `scenario-output/analyze-confidence.md`, containing exactly that one confidence block and no other text, then stop.",
@@ -15519,7 +15519,7 @@
           "id": "protocol-line",
           "requirement": "protocol",
           "type": "semantic",
-          "rubric": "PASS only if retained tool evidence shows the consensus-synthesizer dispatch prompt carried a `Protocol:` line whose absolute path ends in `references/consensus-protocol.md` beside the loaded speckit-autopilot skill, and the returned result either reports that same path on its `**Protocol:**` line or reports no Protocol line. FAIL if the dispatch prompt has no `Protocol:` line, names another file or a relative path, or the result reports a different path or `not provided`."
+          "rubric": "PASS only if retained tool evidence shows the consensus-synthesizer dispatch prompt carried a `Protocol:` line whose absolute path ends in `references/consensus-protocol.md` beside the loaded speckit-autopilot skill, and the returned result either reports the plugin-relative `skills/speckit-autopilot/references/consensus-protocol.md` on its `**Protocol:**` line or reports no Protocol line. FAIL if the dispatch prompt has no `Protocol:` line, names another file or a relative path, or the result reports an absolute path, a different path, or `not provided`."
         },
         {
           "id": "confidence-block",

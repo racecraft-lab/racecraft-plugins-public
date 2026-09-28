@@ -88,7 +88,7 @@ class NativeReturnCatalogTests(unittest.TestCase):
         self.assertIn("`Protocol:`", requirement["description"])
         check = next(check for check in self.analyze["checks"] if check["requirement"] == "protocol")
         self.assertEqual(check["type"], "semantic")
-        for needle in ("dispatch prompt", "`Protocol:` line", "consensus-protocol.md", "same path"):
+        for needle in ("dispatch prompt", "`Protocol:` line", "consensus-protocol.md", "plugin-relative"):
             self.assertIn(needle, check["rubric"])
 
     def test_representative_phase_cases_cover_clarify_checklist_and_clean_analyze(self) -> None:
