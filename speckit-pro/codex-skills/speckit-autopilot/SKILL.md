@@ -770,7 +770,7 @@ PR URL.
   permissionMode, hooks, mcpServers restrictions for plugin agents;
   research/context capability coverage and fallback behavior
 - [Hardener Delegation](../../skills/speckit-autopilot/references/hardener-delegation.md) —
-  once-per-spec tests-only mutation hardening loop with Qwen delegation,
+  once-per-spec tests-only mutation hardening loop with gateway delegation,
   candidate inspection, primary-model fallback, stop rule, and record
 - [Token Discipline](../../skills/speckit-autopilot/references/token-discipline.md) —
   Opt-in compressed vocabulary for inter-agent transcripts
