@@ -538,6 +538,13 @@ def normalize_packet_input(request: Any) -> dict[str, Any]:
     elif mode not in {"single", "split", "draft"}:
         return invalid_packet_input("mode must be single, split, or draft when provided", field="mode")
 
+    release_note = inputs.get("release_note")
+    if "release_note" in inputs:
+        if not isinstance(release_note, str) or not release_note.strip():
+            return invalid_packet_input("release_note must be a nonblank Markdown string", field="release_note")
+        if any(re.match(r"^[ \t]*(?:`{3,}|~{3,})", line) for line in release_note.splitlines()):
+            return invalid_packet_input("release_note must be unfenced Markdown", field="release_note")
+
     scope_evidence = normalize_scope_evidence(inputs, mode)
     if isinstance(scope_evidence, dict) and "diagnostic" in scope_evidence:
         return scope_evidence
@@ -580,6 +587,54 @@ def normalize_packet_input(request: Any) -> dict[str, Any]:
             known_gaps=markdown_list(inputs.get("known_gaps"), ["No known gaps for this PR."]),
         )
 
+    if mode != "draft" and release_note is not None:
+        # An enclosing fence owns its literal examples, as in the host parser.
+        body_lines = rendered_body.splitlines()
+        line_index = 0
+        while line_index < len(body_lines):
+            line = body_lines[line_index]
+            quote_depth = 0
+            while quote := re.match(r"^ {0,3}>[ \t]?", line):
+                line = line[quote.end():]
+                quote_depth += 1
+            opening = re.fullmatch(
+                r"(?P<indent> {0,3})(?:(?P<marker>[-+*]|[0-9]{1,9}[.)])(?P<space>[ \t]+))?"
+                r"(?P<fence>`{3,}|~{3,})(?P<info>[^\r\n]*)",
+                line,
+            )
+            if opening is None or (opening["fence"][0] == "`" and "`" in opening["info"]):
+                line_index += 1
+                continue
+            if opening["info"].strip(" \t") == "release-note":
+                return invalid_packet_input("body already contains a release-note fence", field="body")
+            container_indent = (
+                len(opening["indent"]) + len(opening["marker"]) + len(opening["space"])
+                if opening["marker"] else 0
+            )
+            close_index = None
+            for probe in range(line_index + 1, len(body_lines)):
+                line = body_lines[probe]
+                stripped_quotes = 0
+                while stripped_quotes < quote_depth and (quote := re.match(r"^ {0,3}>[ \t]?", line)):
+                    line = line[quote.end():]
+                    stripped_quotes += 1
+                if stripped_quotes != quote_depth and line.strip():
+                    break
+                leading_spaces = len(line) - len(line.lstrip(" "))
+                content = line[container_indent:] if leading_spaces >= container_indent else line
+                if leading_spaces >= container_indent and re.fullmatch(
+                    rf" {{0,3}}{re.escape(opening['fence'][0])}{{{len(opening['fence'])},}}[ \t]*",
+                    content,
+                ):
+                    close_index = probe
+                    break
+                if leading_spaces < container_indent and line.strip():
+                    break
+            if close_index is None:
+                return invalid_packet_input("body contains an unclosed fence that would enclose the supplied release note", field="body")
+            line_index = close_index + 1
+        rendered_body = ensure_final_newline(rendered_body) + f"\n## Release note\n\n```release-note\n{release_note}\n```\n"
+
     body_failures = packet_body_structure_failures(
         {
             "generated_title": generated_title,
@@ -620,6 +675,8 @@ def normalize_packet_input(request: Any) -> dict[str, Any]:
         },
         "validation_result_path": validation_result_path,
     }
+    if mode != "draft" and release_note is not None:
+        packet["release_note"] = release_note
     if packet["mode"] == "split":
         split_slice = inputs.get("split_slice")
         if not isinstance(split_slice, dict):

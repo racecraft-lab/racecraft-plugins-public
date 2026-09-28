@@ -8831,6 +8831,257 @@ This line must not be copied.
             self.assertEqual(persisted["status"], "passed")
             self.assertEqual(set(persisted["source_fingerprints"]), {"body", "packet"})
 
+    def test_pr_packet_output_release_note_renders_one_protected_final_fence(self) -> None:
+        inputs = json.loads((FIXTURE_DIR / "requests" / "pr-packet-output.json").read_text(encoding="utf-8"))["inputs"]
+        note = "Adds **generated release notes** for feature pull requests.\n\n- Preserves `inline code` and Markdown lists."
+        inputs["release_note"] = note
+        tmp, git_root = self.temp_clean_git_repo()
+        with tmp:
+            completed, response, stderr_records = run_runner(
+                helper_request("pr-packet-output", mode="apply", inputs=inputs), cwd=git_root,
+            )
+            self.assertEqual(completed.returncode, 0)
+            self.assert_response(response, "ok", 0)
+            self.assertEqual(stderr_records, [])
+            body_path = git_root / inputs["body_file"]
+            body = body_path.read_text(encoding="utf-8")
+            packet = json.loads((git_root / inputs["packet_path"]).read_text(encoding="utf-8"))
+            self.assertEqual(body.count("## Release note\n"), 1)
+            self.assertTrue(body.endswith(f"## Release note\n\n```release-note\n{note}\n```\n"))
+            self.assertEqual(body.splitlines().count("```release-note"), 1)
+            self.assertEqual(body.splitlines().count("```"), 1)
+            self.assertGreater(body.index("## Release note"), body.index("## Known Gaps"))
+            self.assertEqual(body.count("## UAT Runbook\n"), 1)
+            self.assertLess(body.index("## How To UAT"), body.index("## UAT Runbook"))
+            self.assertLess(body.index("## UAT Runbook"), body.index("## Verification"))
+            self.assertEqual(packet["release_note"], note)
+            self.assertEqual([field["field_id"] for field in packet["editable_fields"]], ["summary", "what_changed", "why_it_matters"])
+            self.assertNotIn("speckit-pro-editable:release_note:", body)
+            validation_request = helper_request(
+                "validate-pr-packet-read-only", mode="read_only", inputs={"packet_path": inputs["packet_path"]},
+            )
+            completed, response, stderr_records = run_runner(validation_request, cwd=git_root)
+            self.assertEqual(completed.returncode, 0)
+            self.assertEqual(response["data"]["stdout_json"]["status"], "passed")
+            body_path.write_text(body.replace(note, "Different protected release note.", 1), encoding="utf-8")
+            completed, response, stderr_records = run_runner(validation_request, cwd=git_root)
+            self.assertEqual(completed.returncode, 1)
+            self.assertEqual(response["data"]["stdout_json"]["status"], "failed")
+
+    def test_pr_packet_output_release_note_rejects_blank_strings(self) -> None:
+        inputs = json.loads((FIXTURE_DIR / "requests" / "pr-packet-output.json").read_text(encoding="utf-8"))["inputs"]
+        for note in ("", " ", "\t\r\n "):
+            with self.subTest(note=note):
+                completed, response, stderr_records = run_runner(
+                    helper_request("pr-packet-output", inputs={**inputs, "release_note": note}),
+                )
+                self.assertEqual(completed.returncode, 2)
+                self.assert_response(response, "input_error", 2)
+                self.assertEqual([diag["code"] for diag in stderr_records], ["invalid_input"])
+                self.assertEqual(stderr_records[0]["details"]["field"], "release_note")
+
+    def test_pr_packet_output_release_note_rejects_non_strings(self) -> None:
+        inputs = json.loads((FIXTURE_DIR / "requests" / "pr-packet-output.json").read_text(encoding="utf-8"))["inputs"]
+        for note in (None, False, 7, 1.5, ["A release note."], {"text": "A release note."}):
+            with self.subTest(note=note):
+                completed, response, stderr_records = run_runner(
+                    helper_request("pr-packet-output", inputs={**inputs, "release_note": note}),
+                )
+                self.assertEqual(completed.returncode, 2)
+                self.assert_response(response, "input_error", 2)
+                self.assertEqual([diag["code"] for diag in stderr_records], ["invalid_input"])
+                self.assertEqual(stderr_records[0]["details"]["field"], "release_note")
+
+    def test_pr_packet_output_release_note_rejects_fenced_or_fence_breaking_strings(self) -> None:
+        inputs = json.loads((FIXTURE_DIR / "requests" / "pr-packet-output.json").read_text(encoding="utf-8"))["inputs"]
+        for note in (
+            "```release-note\nAlready fenced.\n```",
+            "A note.\n```\nInjected outside the renderer fence.",
+            "````markdown\nAnother fenced block.\n````",
+            "~~~markdown\nAnother fenced block.\n~~~",
+            "A note.\n   ```release-note\nIndented fence.\n   ```",
+        ):
+            with self.subTest(note=note):
+                completed, response, stderr_records = run_runner(
+                    helper_request("pr-packet-output", inputs={**inputs, "release_note": note}),
+                )
+                self.assertEqual(completed.returncode, 2)
+                self.assert_response(response, "input_error", 2)
+                self.assertEqual([diag["code"] for diag in stderr_records], ["invalid_input"])
+                self.assertEqual(stderr_records[0]["details"]["field"], "release_note")
+
+    def test_pr_packet_output_release_note_absence_preserves_final_fields(self) -> None:
+        inputs = json.loads((FIXTURE_DIR / "requests" / "pr-packet-output.json").read_text(encoding="utf-8"))["inputs"]
+        tmp, git_root = self.temp_clean_git_repo()
+        with tmp:
+            completed, response, stderr_records = run_runner(
+                helper_request("pr-packet-output", mode="apply", inputs=inputs), cwd=git_root,
+            )
+            self.assertEqual(completed.returncode, 0)
+            self.assert_response(response, "ok", 0)
+            self.assertEqual(stderr_records, [])
+            body = (git_root / inputs["body_file"]).read_text(encoding="utf-8")
+            packet = json.loads((git_root / inputs["packet_path"]).read_text(encoding="utf-8"))
+            self.assertNotIn("## Release note", body)
+            self.assertNotIn("```release-note", body)
+            self.assertNotIn("speckit-pro-editable:release_note:", body)
+            self.assertNotIn("release_note", packet)
+            self.assertEqual([field["field_id"] for field in packet["editable_fields"]], ["summary", "what_changed", "why_it_matters"])
+
+    def test_pr_packet_output_release_note_drafts_keep_zero_editable_fields(self) -> None:
+        inputs = json.loads((FIXTURE_DIR / "requests" / "pr-packet-output.json").read_text(encoding="utf-8"))["inputs"]
+        inputs["title_scope"] = "prsg-998"
+        draft_body = "\n".join([
+            "# feat(prsg-998): Generate packet fixture", "", "## Artifacts", "",
+            "| Artifact | Purpose | Open |", "| --- | --- | --- |",
+            "| Implementation Plan | Review the planned work. | `open specs/prsg-998-fixture/artifacts/implementation-plan.html` |",
+            "| Spec Explainer | Review the feature. | `open specs/prsg-998-fixture/artifacts/spec-explainer.html` |",
+            "", "## Resume", "", "Stage: plan. Resume at the implementation boundary.", "",
+        ])
+        for supplied in (False, True):
+            with self.subTest(release_note_supplied=supplied):
+                draft_inputs = {**inputs, "mode": "draft", "body": draft_body, "verification_evidence": []}
+                if supplied:
+                    draft_inputs["release_note"] = "This note must not appear in a draft."
+                tmp, git_root = self.temp_clean_git_repo()
+                with tmp:
+                    completed, response, stderr_records = run_runner(
+                        helper_request("pr-packet-output", mode="apply", inputs=draft_inputs), cwd=git_root,
+                    )
+                    self.assertEqual(completed.returncode, 0)
+                    self.assert_response(response, "ok", 0)
+                    self.assertEqual(stderr_records, [])
+                    body = (git_root / inputs["body_file"]).read_text(encoding="utf-8")
+                    packet = json.loads((git_root / inputs["packet_path"]).read_text(encoding="utf-8"))
+                    self.assertEqual(body, draft_body)
+                    self.assertEqual(packet["editable_fields"], [])
+                    self.assertEqual(packet["protected_body_fingerprint"]["elided_fields"], [])
+                    self.assertNotIn("## Release note", body)
+                    self.assertNotIn("```release-note", body)
+                    self.assertNotIn("speckit-pro-editable:", body)
+                    self.assertNotIn("release_note", packet)
+
+    def test_pr_packet_output_release_note_regression_rejects_splitlines_fences_without_writes(self) -> None:
+        inputs = json.loads((FIXTURE_DIR / "requests" / "pr-packet-output.json").read_text(encoding="utf-8"))["inputs"]
+        for separator in ("\v", "\f", "\x1c", "\x1d", "\x1e", "\x85", "\u2028", "\u2029"):
+            for fence in ("```", "~~~"):
+                with self.subTest(separator=repr(separator), fence=fence):
+                    tmp, git_root = self.temp_clean_git_repo()
+                    with tmp:
+                        completed, response, stderr_records = run_runner(
+                            helper_request("pr-packet-output", mode="apply", inputs={**inputs, "release_note": f"Before{separator}{fence}{separator}After"}),
+                            cwd=git_root,
+                        )
+                        self.assertEqual(completed.returncode, 2)
+                        self.assert_response(response, "input_error", 2)
+                        self.assertEqual(stderr_records[0]["details"]["field"], "release_note")
+                        self.assertFalse((git_root / inputs["body_file"]).exists())
+                        self.assertFalse((git_root / inputs["packet_path"]).exists())
+
+    def test_pr_packet_output_release_note_regression_schema_rejects_splitlines_fences(self) -> None:
+        from speckit_pro_runner.helpers.read_only import load_pr_packet_schema, pr_packet_schema_failures
+
+        inputs = json.loads((FIXTURE_DIR / "requests" / "pr-packet-output.json").read_text(encoding="utf-8"))["inputs"]
+        tmp, git_root = self.temp_clean_git_repo()
+        with tmp:
+            completed, response, stderr_records = run_runner(
+                helper_request("pr-packet-output", mode="apply", inputs={**inputs, "release_note": "Valid base note."}), cwd=git_root,
+            )
+            self.assertEqual(completed.returncode, 0)
+            packet = json.loads((git_root / inputs["packet_path"]).read_text(encoding="utf-8"))
+            schema, error = load_pr_packet_schema()
+            self.assertIsNone(error)
+            self.assertIsNotNone(schema)
+            self.assertEqual(pr_packet_schema_failures(packet, schema), [])
+            for separator in ("\v", "\f", "\x1c", "\x1d", "\x1e", "\x85", "\u2028", "\u2029"):
+                for fence in ("```", "~~~"):
+                    with self.subTest(separator=repr(separator), fence=fence):
+                        invalid = {**packet, "release_note": f"Before{separator}{fence}{separator}After"}
+                        self.assertTrue(pr_packet_schema_failures(invalid, schema))
+
+    def test_pr_packet_output_release_note_regression_preserves_inline_fences_and_harmless_separators(self) -> None:
+        from speckit_pro_runner.helpers.read_only import load_pr_packet_schema, pr_packet_schema_failures
+
+        inputs = json.loads((FIXTURE_DIR / "requests" / "pr-packet-output.json").read_text(encoding="utf-8"))["inputs"]
+        notes = ["Inline ``` backticks remain valid prose.", "Inline ~~~ tildes remain valid prose."]
+        notes.extend(f"Before{separator}After" for separator in ("\v", "\f", "\x1c", "\x1d", "\x1e", "\x85", "\u2028", "\u2029"))
+        for note in notes:
+            with self.subTest(note=repr(note)):
+                tmp, git_root = self.temp_clean_git_repo()
+                with tmp:
+                    completed, response, stderr_records = run_runner(
+                        helper_request("pr-packet-output", mode="apply", inputs={**inputs, "release_note": note}), cwd=git_root,
+                    )
+                    self.assertEqual(completed.returncode, 0)
+                    self.assert_response(response, "ok", 0)
+                    self.assertEqual(stderr_records, [])
+                    body = (git_root / inputs["body_file"]).read_text(encoding="utf-8")
+                    packet = json.loads((git_root / inputs["packet_path"]).read_text(encoding="utf-8"))
+                    self.assertEqual(body.splitlines().count("```release-note"), 1)
+                    self.assertTrue(body.endswith(f"```release-note\n{note}\n```\n"))
+                    self.assertEqual(packet["release_note"], note)
+                    schema, error = load_pr_packet_schema()
+                    self.assertIsNone(error)
+                    self.assertIsNotNone(schema)
+                    self.assertEqual(pr_packet_schema_failures(packet, schema), [])
+
+    def test_pr_packet_output_release_note_regression_existing_body_rejects_supplied_note_and_preserves_omission(self) -> None:
+        inputs = json.loads((FIXTURE_DIR / "requests" / "pr-packet-output.json").read_text(encoding="utf-8"))["inputs"]
+        inputs["title_scope"] = "prsg-998"
+        tmp, git_root = self.temp_clean_git_repo()
+        with tmp:
+            completed, response, stderr_records = run_runner(
+                helper_request("pr-packet-output", mode="apply", inputs=inputs), cwd=git_root,
+            )
+            self.assertEqual(completed.returncode, 0)
+            base_body = (git_root / inputs["body_file"]).read_text(encoding="utf-8")
+        for existing_note, conflict in (
+            ("\n## Release note\n\nPrior note content.\n", False),
+            ("\n````markdown\n## Release note\n```release-note\nLiteral example.\n```\n````\n", False),
+            ("\n```release-note\nPrior note content.\n```\n", True),
+            ("\n## Release note\n\n```release-note\nPrior note content.\n```\n", True),
+            ("\n```release-note\nUnclosed prior note.\n", True),
+            ("\n````markdown\nUnclosed unrelated code example.\n", True),
+            ("\n~~~python\nUnclosed unrelated code example.\n", True),
+            ("\n```python\nprint('example')\n```\n", False),
+            ("\n~~~ release-note \nPrior note content.\n~~~\n", True),
+            ("\n> ```release-note\n> Prior note content.\n> ```\n", True),
+            ("\n- ```release-note\n  Prior note content.\n  ```\n", True),
+        ):
+            for supplied in (False, True):
+                with self.subTest(existing_note=existing_note, release_note_supplied=supplied):
+                    existing_body = base_body + existing_note
+                    request_inputs = {**inputs, "body": existing_body}
+                    if supplied:
+                        request_inputs["release_note"] = "A second supplied note."
+                    tmp, git_root = self.temp_clean_git_repo()
+                    with tmp:
+                        completed, response, stderr_records = run_runner(
+                            helper_request("pr-packet-output", mode="apply", inputs=request_inputs), cwd=git_root,
+                        )
+                        if supplied and conflict:
+                            self.assertEqual(completed.returncode, 2)
+                            self.assert_response(response, "input_error", 2)
+                            self.assertEqual(stderr_records[0]["details"]["field"], "body")
+                            self.assertFalse((git_root / inputs["body_file"]).exists())
+                            self.assertFalse((git_root / inputs["packet_path"]).exists())
+                        else:
+                            self.assertEqual(completed.returncode, 0)
+                            self.assert_response(response, "ok", 0)
+                            self.assertEqual(stderr_records, [])
+                            body = (git_root / inputs["body_file"]).read_text(encoding="utf-8")
+                            if supplied:
+                                self.assertTrue(body.startswith(existing_body))
+                                self.assertTrue(body.endswith("```release-note\nA second supplied note.\n```\n"))
+                                policy = subprocess.run(
+                                    [sys.executable, str(REPO_ROOT / "scripts" / "compose-release-notes.py"), "--validate-pr"],
+                                    cwd=REPO_ROOT, env={**os.environ, "PR_TITLE": "feat(prsg-998): Generate packet fixture", "PR_BODY": body, "PR_LABELS_JSON": "[]"},
+                                    text=True, capture_output=True, check=False,
+                                )
+                                self.assertEqual(policy.returncode, 0, policy.stdout + policy.stderr)
+                            else:
+                                self.assertEqual(body, existing_body)
+
     def test_pr_packet_output_rejects_mismatched_paths_invalid_mode_and_invalid_body(self) -> None:
         from speckit_pro_runner.helpers.pr_emission import build_packet_body
 

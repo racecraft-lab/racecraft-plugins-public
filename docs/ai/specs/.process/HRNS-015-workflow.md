@@ -39,7 +39,7 @@ captured during scoping.
 | Tasks | `/speckit-tasks` | ✅ Complete | 31 unchecked tasks, 17 groups, current metadata, G5 pass; 18 pending-only v1 markers validated |
 | Analyze | `/speckit-analyze` | ✅ Complete | All current findings resolved; 26 active FRs covered; G6 passed; final confidence synthesis 0.95 |
 | Confidence Gate | G6.5 | ✅ Complete | Current autonomy ready; bounded re-plan advisory PASS, computed 0.94 ≥ 0.90, no deductions |
-| Implement | `/speckit-implement` | ⏳ Pending | Outside --stage plan; actual per-PR diffs, LOC and checkpoints remain mandatory before emission |
+| Implement | `/speckit-implement` | 🔄 In Progress | T001–T004 journal-complete; A1a source checkpoint and actual diff/LOC/marker evidence pending |
 | Post | Post-Implementation | ⏳ Pending | Outside --stage plan; canonical 13-item closeout remains for implementation |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⏭️ Skipped | ⚠️ Blocked
@@ -414,6 +414,8 @@ G2 passed: the runner reported zero clarification markers; the spec has no human
 | 19 | Analyze | H5 C2 path-cap conflict | [codebase, spec] | 1 | both-agree; human review needed | At least 30 paths blocks one C2 PR; provisional boundaries need complete inventory and owner ratification | codebase-analyst, spec-context-analyst |
 | 20 | Analyze | H8 repeated production paths across ordered PRs | [codebase] | 1→2 | 3/3 | Spec clarifies exact base/head diff counting; issue #675 and PR #676 document the installed validator gap; candidate overlap alone does not prove repeated changed paths | codebase-analyst, spec-context-analyst, domain-researcher |
 | 21 | Analyze | Parent workflow/state proposal projection | [spec] | 1→2 | 3/3 | Record 19 increments and 33 tasks as proposed; reconcile Phase 7 rows; retain H3–H7 open and G6 not_run until owner acceptance and qualification | spec-context-analyst, codebase-analyst, domain-researcher |
+| 22 | Finding | Existing release-note fence collision | [security] | 1 | 3/3 | Accepted existing-note and unclosed enclosing-fence rejection; preserve headings, closed examples and no-note bodies; exact guarded exception approved; native implementation qualification pending | codebase-analyst, spec-context-analyst, domain-researcher |
+| 23 | Finding | Host-visible fence line separators | [security] | 1 | 3/3 | Accepted runtime and schema alignment with splitlines boundaries; preserve harmless separators and inline fences; exact guarded exception approved; native implementation qualification pending | codebase-analyst, spec-context-analyst, domain-researcher |
 
 ---
 
@@ -1192,3 +1194,20 @@ The operator approved completing candidate-inventory verification now. T001 is c
 ### T002 native candidate verification
 
 The installed phase/autonomy guard passes53 rows with all error arrays empty. Eighteen candidate sets remain within four production and24 total paths; Q11/five-group provenance and shipped #676 support are preserved. Marker fingerprints are current and every v1 implementation checkpoint remains exactly pending. Native journal evidence completes T002; implementation is2/31. Actual diff, LOC and checkpoint qualification remains mandatory before emission. The first source batch is T003/T004.
+
+
+### Approved FR-001 correction checkpoint
+
+The exact operator-approved three-file correction passed native RED (203 tests, 40 assertion failures), GREEN and distinct refactor (203/203 each), independent A1a review, Ruff, mypy across 50 files, and documentation reference/quality checks. Release and reference generators were refreshed. Native task completion recording remains blocked by unfinished-report RED reuse handling; original journal history is preserved and only T001/T002 remain complete. No increment checkpoint or PR emission is qualified. Ripwire structural quality/impact diagnostics returned nonzero and remain recorded separately from behavioral proofs. Final full-suite and committed artifact checks remain pending.
+
+
+### Checkpoint allocation re-plan approval wait
+
+Native FR-026 reconciliation reserve refused failure_family_budget_exhausted after the two ordinary cycles and the completed FR-001 exception. All dispatches settled before the operator request. The private six-file candidate retains 31 task IDs, 18 increments, planned 15–24 total/0–2 production paths and exactly pending checkpoints; it adds the schema planning baseline, two immutable proof paths per increment and the grounded candidate reallocations. The native patch apply-check passes, but no planning correction was applied. Actual native successor acceptance, full required verification, publication accounting and PR-base authority remain pending. Implementation remains2/31 with all13 Post steps pending.
+
+
+### Implement-stage 2.38.1 resumption and A1a checkpoint
+
+The operator declined the proposed Tasks re-plan. Installed SpecKit Pro 2.38.1 closed the external wait against the original event, then opened implement-stage epoch 3 under the same run ID. The previous allowance and dispatch history remain archived; no successor journal or new planning correction was created. The status-evidence guard passes with all public-state event IDs stored as SHA-256 digests.
+
+Native task-results accepted the existing routing-epoch2 T003/T004 completion report with its original RED, GREEN and refactor observations; T001–T004 are journal-complete. The shipped marker-checkpoint schema resolves from the installed plugin, and marker evidence plus implementation notes remain outside the counted path budget. A1a source behavior and the focused privacy scan pass. The initial quick suite passed 9,456/9,458 checks; two privacy checks found local paths in implementation notes and public worktree-slug false positives. The notes were redacted and the scanner now excludes only a tracked public spec checkout leaf while retaining private-path scanning. The full quick suite rerun passed 9,459/9,459, with toolchain preflight passing. Actual A1a diff/LOC measurement and marker checkpoint remain pending before T005.

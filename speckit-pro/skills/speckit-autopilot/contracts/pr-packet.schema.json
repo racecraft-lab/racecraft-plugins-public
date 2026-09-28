@@ -47,6 +47,14 @@
       "type": "string",
       "pattern": "^(?!.*(^|/)\\.\\.(?:/|$))[A-Za-z0-9._-][A-Za-z0-9._/-]*\\.md$"
     },
+    "release_note": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "\\S",
+      "not": {
+        "pattern": "(?:^|[\\u000a\\u000d\\u000b\\u000c\\u001c\\u001d\\u001e\\u0085\\u2028\\u2029])[ \\t]*(?:`{3,}|~{3,})"
+      }
+    },
     "required_headings": {
       "type": "array",
       "items": {

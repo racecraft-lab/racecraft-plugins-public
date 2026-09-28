@@ -727,6 +727,12 @@ dispatch exactly three workers for the Doctor, Code Review, and Verify tracks.
 The parent MUST NOT perform any track-owned Task 10-14 action itself. It may
 continue only after it has consumed all three terminal worker reports.
 
+For a final packet, supply optional `inputs.release_note` as a nonblank,
+unfenced Markdown string. The renderer appends one protected `## Release note`
+section and creates its sole `release-note` fence; retain the existing three
+editable fields. An absent note preserves the existing final body. Draft
+packets keep zero editable fields and omit release-note content.
+
 ### 3.4 Pre-final completion audit
 
 Before any final user-facing response, re-read `autopilot-state.json` and the

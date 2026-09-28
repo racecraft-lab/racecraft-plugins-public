@@ -190,6 +190,13 @@ def git_config(key: str) -> str:
 def dynamic_local_pattern() -> re.Pattern[str] | None:
     git_email = git_config("user.email")
     email_local = git_email.rsplit("@", maxsplit=1)[0]
+    checkout_path = REPO_ROOT
+    if REPO_ROOT.parent.name == ".worktrees":
+        feature_spec = REPO_ROOT / "specs" / REPO_ROOT.name / "spec.md"
+        tracked_spec = git_output("ls-files", "--error-unmatch", feature_spec.relative_to(REPO_ROOT).as_posix())
+        if feature_spec.is_file() and not feature_spec.is_symlink() and tracked_spec.returncode == 0:
+            # The checkout leaf is a tracked public spec slug; keep scanning its private parents.
+            checkout_path = REPO_ROOT.parent
     values = (
         os.environ.get("HOME", ""),
         os.environ.get("USER", ""),
@@ -198,7 +205,7 @@ def dynamic_local_pattern() -> re.Pattern[str] | None:
         os.environ.get("USERNAME", ""),
         git_config("user.name"),
         email_local,
-        str(REPO_ROOT),
+        str(checkout_path),
     )
     declared_public_terms = {
         term
@@ -268,6 +275,22 @@ def assert_no_hits(test: unittest.TestCase, hits: list[str], label: str) -> None
 
 
 class PublicIdentityTests(unittest.TestCase):
+    def test_public_spec_worktree_slug_is_not_a_private_identity(self) -> None:
+        checkout = Path(
+            "/" + "Users/privateoperator/Projects/racecraft-plugins-public/"
+            ".worktrees/hrns-015-" + "auto" + "pilot-gate-pr-" + "emis" + "sion-repair"
+        )
+        with patch(f"{__name__}.REPO_ROOT", checkout), \
+                patch.dict(os.environ, {}, clear=True), \
+                patch(f"{__name__}.git_config", return_value=""), \
+                patch(f"{__name__}.git_output", return_value=subprocess.CompletedProcess([], 0)), \
+                patch.object(Path, "is_file", return_value=True), \
+                patch.object(Path, "is_symlink", return_value=False):
+            pattern = dynamic_local_pattern()
+        self.assertIsNotNone(pattern)
+        self.assertIsNone(pattern.search("auto" + "pilot " + "emis" + "sion evidence"))
+        self.assertIsNotNone(pattern.search("privateoperator"))
+
     def test_declared_public_identity_is_not_treated_as_dynamic_private_identity(self) -> None:
         def configured(key: str) -> str:
             return {

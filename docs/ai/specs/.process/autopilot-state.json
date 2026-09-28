@@ -53,7 +53,7 @@
     "ledger_path": "docs/ai/specs/.process/execution-control/ac068cab59ef67faf15646a7.json",
     "disposition": "continue",
     "reasons": [],
-    "elapsed_seconds": 192273.4690079689,
+    "elapsed_seconds": 198674.66404032707,
     "checkpoint_due": false,
     "run_id": "e7fbc9a6636945ed8a8c2abd42cbb892"
   },
@@ -3375,7 +3375,7 @@
     "dispatch_id": "hrns015-analyze-path-exception-2371"
   },
   "implementation_startup": {
-    "plugin_version": "2.38.0",
+    "plugin_version": "2.38.1",
     "prerequisites": "pass",
     "agents": "no_op; no restart required",
     "formal_selection": "none; formal-doctor disabled",
@@ -3416,10 +3416,12 @@
     },
     "completed_tasks": [
       "T001",
-      "T002"
+      "T002",
+      "T003",
+      "T004"
     ],
     "routing_checkpoint": {
-      "status": "awaiting_operator_replan_approval",
+      "status": "superseded_by_plugin_2.38.1",
       "failure_invariant": "FR-026",
       "reason": "failure_family_budget_exhausted",
       "current_routes": {
@@ -3436,13 +3438,18 @@
       },
       "scope_sha256": "09d7e137cb15091761fa0d4b3f34dd509a39f5e149a329b3503dfa00e5c7a476",
       "corrective_cycles": 2,
-      "implementation_started": false
+      "implementation_started": true
     },
     "task_journal": {
-      "journal_file": "specs/hrns-015-autopilot-gate-pr-emission-repair/.process/task-results/e7fbc9a6636945ed8a8c2abd42cbb892.json",
-      "producer_request_id": "hrns015-task-results-start-2380",
-      "parent_retained_partition_sha256": "166e4b5382d65f2319d5362f9755330672a2515b8645bc34a595000b00d30090",
-      "completed_tasks": []
+      "journal_file": "specs/hrns-015-autopilot-gate-pr-emission-repair/.process/task-results/e7fbc9a6636945ed8a8c2abd42cbb892-routing-epoch2.json",
+      "producer_request_id": "hrns015-a1a-completed-behavior-record-2381",
+      "parent_retained_partition_sha256": "0a0054ea8b8b8411bd35e8b7ef6573042502ac316bff1e8def7ddf86a6274b6c",
+      "completed_tasks": [
+        "T001",
+        "T002",
+        "T003",
+        "T004"
+      ]
     },
     "routing_replan": {
       "status": "completed",
@@ -3534,12 +3541,138 @@
         "T003",
         "T004"
       ],
-      "dispatch_id": "hrns015-b003-a1a-2380",
-      "stage": "tests-first",
+      "dispatch_id": "hrns015-a1a-fence-exception-2380",
+      "stage": "source_complete_checkpoint_pending",
       "completed_tasks": [
         "T001",
-        "T002"
-      ]
+        "T002",
+        "T003",
+        "T004"
+      ],
+      "prior_attempt": "zero tests; unqualified; retained",
+      "green_result": "199/199 passed, native exit0",
+      "corrective_invariant": "FR-001",
+      "corrective_cycles": 2,
+      "refactor_result": "199/199 passed, native exit0; justified no-op",
+      "review_result": "failed: supplied body duplicate release-note fence; eight splitlines separators bypass fence validation",
+      "source_tasks_completed": true,
+      "review_probe": {
+        "path": "docs/ai/specs/.process/verification/hrns015-a1a-fence-probes.json",
+        "sha256": "3410c92995a7b44af4db08439fa3f78b06d5fc4e8da8f4f6c1daba219e85761e",
+        "cases": 9,
+        "failing_cases": 9
+      },
+      "review_consensus": {
+        "duplicate": "3/3; flags none; existing-note and unclosed enclosing-fence rejection",
+        "separators": "3/3; flags none; aligned splitlines boundary validation"
+      },
+      "corrective_refusal": "corrective_run_budget_exhausted",
+      "review_probe_unclosed_body": {
+        "path": "docs/ai/specs/.process/verification/hrns015-a1a-unclosed-body-probe.json",
+        "sha256": "e0042a39cd15921468f36270521bdd4bf941a58c6dcc92a1e7f4145d10062c54",
+        "cases": 1,
+        "renderer_exit_code": 0,
+        "host_extracted_note": null
+      },
+      "private_candidate": {
+        "scope_sha256": "2681be70efc9fbda1ea2045c5fa39d99c3d6b4a9c04eca9becf42ac849825147",
+        "bytes": 12765,
+        "authored_paths": [
+          "speckit-pro/speckit_pro_runner/helpers/pr_emission.py",
+          "speckit-pro/skills/speckit-autopilot/contracts/pr-packet.schema.json",
+          "tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py"
+        ],
+        "base_hashes_match": true,
+        "private_red": {
+          "methods": 4,
+          "assertion_failures": 40,
+          "errors": 0,
+          "skips": 0,
+          "exit_code": 1
+        },
+        "private_green": {
+          "methods": 4,
+          "assertion_failures": 0,
+          "errors": 0,
+          "skips": 0,
+          "exit_code": 0
+        },
+        "native_qualification": "behavior_verified; journal and emission pending",
+        "application_authorized": true
+      },
+      "corrective_exception_dispatch": "hrns015-a1a-fence-exception-2380",
+      "approval_wait_start_event_id": "sha256:bb23f07ba8b4d2c3793a474aa719eebdfc2007f168f752a532ae9d14ab2a0f9f",
+      "corrective_exception_reservation_id": "5e15bf3932e84ab0b39f2e945c0f5ef1",
+      "operator_approval_event_id": "sha256:64fca8044b671a0178b2c2c56b7e6f1666a6ed821d0a764b53dc4839d4bf2bc6",
+      "approved_correction_result": {
+        "status": "behavior_verified_journal_blocked",
+        "red": {
+          "tests": 203,
+          "assertion_failures": 40,
+          "errors": 0,
+          "exit_code": 1
+        },
+        "green": {
+          "passed": 203,
+          "total": 203,
+          "exit_code": 0
+        },
+        "refactor": {
+          "passed": 203,
+          "total": 203,
+          "exit_code": 0,
+          "inspection": "justified_no_op"
+        },
+        "review": "no A1a defects; original independent result retained",
+        "ruff": "pass",
+        "mypy": "pass:50sourcefiles",
+        "generation": "release and reference outputs refreshed",
+        "docs": "reference check and quality pass",
+        "journal_record": {
+          "exit_code": 2,
+          "reason": "only unchanged completed task observations may be carried forward",
+          "request_id": "hrns015-a1a-fence-completed-behavior-original-record-2380"
+        },
+        "quality_delta": {
+          "exit_code": 2,
+          "scope": "working_tree_vs_HEAD",
+          "gating_findings": 4
+        },
+        "test_gate": {
+          "exit_code": 4,
+          "candidate_tests": 8,
+          "untested_symbols": 4,
+          "suite_result": false
+        },
+        "final_suite": "pending",
+        "artifact_check": "pending: requires commit",
+        "checkpoint": "pending: schema and immutable evidence ownership absent",
+        "journal_record_2381": {
+          "status": "accepted",
+          "request_id": "hrns015-a1a-completed-behavior-record-2381",
+          "journal_file": "specs/hrns-015-autopilot-gate-pr-emission-repair/.process/task-results/e7fbc9a6636945ed8a8c2abd42cbb892-routing-epoch2.json",
+          "preserved_prior_red": true
+        }
+      },
+      "checkpoint_reconciliation": {
+        "status": "declined_not_needed_plugin_2.38.1",
+        "refusal_reason": "failure_family_budget_exhausted",
+        "patch_sha256": "e31d1cd00a5889cfe5a5f2a0de3912ccc76064bdc1eee55a48149f8574f61ec2",
+        "private_proposal_prepared": true,
+        "native_patch_apply_check": "pass; not applied",
+        "requirements_task_ids_increments_preserved": true,
+        "candidate_totals": [
+          15,
+          24
+        ],
+        "candidate_production": [
+          0,
+          2
+        ],
+        "all_checkpoints_pending": true,
+        "publication_and_PR_base_qualification": "pending",
+        "approval_wait_start_event_id": "sha256:175281e5002201dd5362b7fe9f7373c6afeac28a2dd25213c9ac2f9bd3eb95fb"
+      }
     }
   }
 }

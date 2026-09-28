@@ -682,6 +682,12 @@ remediation, retrospective, and final summary. Do not start PR side effects
 with invalid or stale evidence, and never report completion while continuation
 or canonical Post work remains incomplete.
 
+For a final packet, supply optional `inputs.release_note` as a nonblank,
+unfenced Markdown string. The renderer appends one protected `## Release note`
+section and creates its sole `release-note` fence; retain the existing three
+editable fields. An absent note preserves the existing final body. Draft
+packets keep zero editable fields and omit release-note content.
+
 ### 3.4 Pre-final completion audit
 
 Before sending any final user-facing response, re-read
