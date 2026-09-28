@@ -2652,6 +2652,23 @@ class IncrementTestFixAllowanceTests(_ExecutionControlFixture, unittest.TestCase
                          ("checkpoint_required", ["test_fix_scope_unproven"]))
         self.assertEqual(refused["ledger"]["dispatches"]["alpha-test-fix"]["outcome"], "reserved")
 
+    def test_a_completed_test_fix_does_not_resolve_a_deferred_review_fix(self):
+        self.implement()
+        for dispatch_id in ("alpha-review-1", "alpha-review-2"):
+            request = dict(dispatch_id=dispatch_id, kind="corrective", spec_file="feature/spec.md",
+                           failure_invariant="FR-001", review_remediation={"tdd_unit": "alpha", "paths": ["src/alpha"]})
+            self.invoke("reserve", **request)
+            self.invoke("complete", dispatch_id=dispatch_id, outcome="completed")
+        deferred = self.invoke("reserve", dispatch_id="alpha-review-3", kind="corrective", spec_file="feature/spec.md",
+                               failure_invariant="FR-001",
+                               review_remediation={"tdd_unit": "alpha", "paths": ["src/alpha"]})
+        self.assertEqual(deferred["reasons"], ["increment_review_allowance_exhausted"])
+        self.assertEqual(self.request_fix("alpha-test-fix", [self.RUNNER_TEST])["test_fix_allowance"], "increment")
+        self.write(self.RUNNER_TEST, "def test_cancellation():\n    assert True\n")
+        completed = self.invoke("complete", dispatch_id="alpha-test-fix", outcome="completed")
+        entry = completed["ledger"]["deferred"][0]
+        self.assertEqual((entry["unit"], "resolved_by" in entry), ("alpha", False))
+
     def test_forged_test_fix_and_edit_records_fail_closed(self):
         self.implement()
         admitted = self.request_fix("alpha-test-fix", [self.RUNNER_TEST])

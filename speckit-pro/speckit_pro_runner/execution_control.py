@@ -604,9 +604,9 @@ def _dispatch_units(ledger: dict[str, Any], item: dict[str, Any]) -> set[tuple[s
     if item.get("kind") != "corrective":
         return set()
     units: set[tuple[str, str]] = set()
-    for key in ("increment", "test_fix"):
-        if isinstance(item.get(key), str):
-            units.add(("increment", item[key]))
+    # A test fix runs under its own allowance and is not the deferred review fix, so it names no unit.
+    if isinstance(item.get("increment"), str):
+        units.add(("increment", item["increment"]))
     if isinstance(item.get("gate"), str):
         units.add(("gate", item["gate"]))
     reservation = item.get("reservation_id")
