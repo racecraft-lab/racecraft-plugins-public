@@ -1052,7 +1052,7 @@ Ripwire quality-delta returned exit 2 for canonical process-state verbosity. Its
 | --- | --- |
 | Feature spec | `sha256:18c93677aaaee5f73aa8399b2cea052cc58ed2724fe6e74d93be96a47eae7e58` |
 | Plan declared scope | `sha256:8381e50f0c0daf7491b6fb6f6e431adea30a89277d0b3073fd476194e6a8d759` |
-| Tasks | `sha256:544621db7b0982fce7c65dfbc59f55f2ddbeab02c64b79c7017d12a23ac5b7a8` |
+| Tasks | `sha256:91cc48b1ff3352e299b31537323760edf4a84f5909c6600fc7b7cb575d0e03e3` |
 | Reviewability | `sha256:4efa6739751bbef3183ebc677bde97f4971dfc61554ecf27a147af5d65aabefc` |
 | Hazard route | `sha256:f4259204cb8f92f1978ddf3b70195aba948d317567082f50f585fb0f4e0ef9c4` |
 
@@ -1060,7 +1060,7 @@ Ripwire quality-delta returned exit 2 for canonical process-state verbosity. Its
 | --- | --- | --- | --- | --- |
 | 1 | `us1-part1` | A1a | T001, T002, T003, T004 | complete at `5a89c0b706d905760157e1b6d2f7579039c1ee26`; evidence `specs/hrns-015-autopilot-gate-pr-emission-repair/.process/checkpoints/us1-part1.json` |
 | 2 | `us1-part2` | A1b | T005 | complete at `33ce117a0ba41769a21e2aab7dcca3bb880440b0`; evidence `specs/hrns-015-autopilot-gate-pr-emission-repair/.process/checkpoints/us1-part2.json` |
-| 3 | `us2` | A2 | T006, T007 | pending |
+| 3 | `us2` | A2 | T006, T007 | complete at `ed24ecd831d0b9f98e300fdc772f29839bd09d9a`; evidence `specs/hrns-015-autopilot-gate-pr-emission-repair/.process/checkpoints/us2.json` |
 | 4 | `us3` | A3 | T008, T009 | pending |
 | 5 | `us4` | B1a | T010 | pending |
 | 6 | `us5` | B1b | T011 | pending |

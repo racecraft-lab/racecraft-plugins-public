@@ -5,7 +5,7 @@
   "branch": "hrns-015-autopilot-gate-pr-emission-repair",
   "status": "in_progress",
   "stage": "implement",
-  "active_step": "Phase 7: Implement - User Story 2 — packet-only untracked files (P1, Increment A2) (T006, T007)",
+  "active_step": "Phase 7: Implement - User Story 3 — current confidence verdict (P1, Increment A3) (T008, T009)",
   "stage_resolution": {
     "basis": "explicit --stage implement",
     "confidence_gate_status": "✅ Complete",
@@ -164,11 +164,11 @@
     },
     {
       "step": "Phase 7: Implement - User Story 2 — packet-only untracked files (P1, Increment A2) (T006, T007)",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 7: Implement - User Story 3 — current confidence verdict (P1, Increment A3) (T008, T009)",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 7: Implement - User Story 4 — visible marker counts (P1, Increment B1a) (T010)",
@@ -271,7 +271,7 @@
       "status": "pending"
     }
   ],
-  "updated_at": "2026-09-28T18:21:09Z",
+  "updated_at": "2026-09-28T19:37:49Z",
   "prerequisites": {
     "status": "completed",
     "all_pass": true,
@@ -587,7 +587,7 @@
       "tasks_md": {
         "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/tasks.md",
         "size_bytes": 30479,
-        "sha256": "sha256:544621db7b0982fce7c65dfbc59f55f2ddbeab02c64b79c7017d12a23ac5b7a8"
+        "sha256": "sha256:91cc48b1ff3352e299b31537323760edf4a84f5909c6600fc7b7cb575d0e03e3"
       }
     },
     "schema_version": "autonomy-boundary-receipt.v1",
@@ -709,7 +709,7 @@
         }
       }
     ],
-    "private_record_sha256": "sha256:141267b348a139c9a27a786777a4a0864a6eb59a52f21e7c41dd11f87c8c37c3"
+    "private_record_sha256": "sha256:45a80e37c02b053f4a11da59c338c93675ad4a4f69dc901ed23cd2d9e298899d"
   },
   "plan_resume_result": {
     "version": "2.37.1",
@@ -957,7 +957,7 @@
     "source_fingerprint": {
       "feature_spec_sha": "sha256:18c93677aaaee5f73aa8399b2cea052cc58ed2724fe6e74d93be96a47eae7e58",
       "plan_declared_scope_sha": "sha256:8381e50f0c0daf7491b6fb6f6e431adea30a89277d0b3073fd476194e6a8d759",
-      "tasks_sha": "sha256:544621db7b0982fce7c65dfbc59f55f2ddbeab02c64b79c7017d12a23ac5b7a8",
+      "tasks_sha": "sha256:91cc48b1ff3352e299b31537323760edf4a84f5909c6600fc7b7cb575d0e03e3",
       "reviewability_sha": "sha256:4efa6739751bbef3183ebc677bde97f4971dfc61554ecf27a147af5d65aabefc",
       "hazard_route_sha": "sha256:f4259204cb8f92f1978ddf3b70195aba948d317567082f50f585fb0f4e0ef9c4"
     },
@@ -1431,11 +1431,11 @@
         ],
         "reviewability": {
           "status": "pass",
-          "mode": "planned_candidates",
+          "mode": "actual_source_delta",
           "scope": "A2",
           "production_files": 1,
-          "total_files": 24,
-          "qualification": "Candidate budgets only; actual per-PR diffs, LOC and checkpoint evidence required before emission."
+          "total_files": 23,
+          "qualification": "Actual source delta 21 paths and 257 authored non-process changed lines; 2 tracked marker process paths bring marker to 23. Final emitted PR base/head diff and reviewable LOC remain mandatory before emission."
         },
         "hazards": [],
         "subdivision": {
@@ -1446,7 +1446,35 @@
           }
         },
         "implementation_checkpoint": {
-          "status": "pending"
+          "status": "complete",
+          "evidence_path": "specs/hrns-015-autopilot-gate-pr-emission-repair/.process/checkpoints/us2.json",
+          "checkpoint_evidence_sha": "sha256:0425e2d16fc1b2d854052dd9b07cc473aee1f84839c1832b8fee869d3a938e45",
+          "verification_evidence_path": "specs/hrns-015-autopilot-gate-pr-emission-repair/.process/verification/us2.json",
+          "verification_evidence_sha": "sha256:fdc824fedb4ca815c9feef492f292ea44252d12131bd8150b65736a9cb4bed14",
+          "commit_sha": "ed24ecd831d0b9f98e300fdc772f29839bd09d9a",
+          "head_sha": "ed24ecd831d0b9f98e300fdc772f29839bd09d9a",
+          "completed_at": "2026-09-28T19:35:10Z",
+          "completed_task_ids": [
+            "T006",
+            "T007"
+          ],
+          "required_verification_gate_ids": [
+            "focused_tests",
+            "quick_suite",
+            "ci_suite",
+            "artifact_consistency",
+            "docs_validation",
+            "python_lint",
+            "independent_critical_high_review",
+            "host_parity"
+          ],
+          "summary": "A2 source and regression corrections verified; 21 source paths plus 2 tracked marker process paths meet the 24-path cap, 1 production path, 257 authored non-process changed lines. Final emitted PR diff and reviewable LOC remain pending.",
+          "validation": [
+            "T006/T007 RED, GREEN and refactor accepted in the existing routing-epoch2 journal",
+            "final quick suite 10,110/10,110 and CI suite 6/6 dispatches passed",
+            "independent A2 review found no critical/high defect; documentation findings corrected"
+          ],
+          "checkpoint_evidence_commit_sha": "e10132e3bf4d89ef7cfdbe068e3bdcedadc62f28"
         },
         "emission_mapping": {
           "status": "pending"
@@ -3479,7 +3507,9 @@
       "T002",
       "T003",
       "T004",
-      "T005"
+      "T005",
+      "T006",
+      "T007"
     ],
     "routing_checkpoint": {
       "status": "superseded_by_plugin_2.38.1",
@@ -3503,14 +3533,16 @@
     },
     "task_journal": {
       "journal_file": "specs/hrns-015-autopilot-gate-pr-emission-repair/.process/task-results/e7fbc9a6636945ed8a8c2abd42cbb892-routing-epoch2.json",
-      "producer_request_id": "hrns015-t005-a1b-record-2381",
+      "producer_request_id": "hrns015-a2-record-apply-2381",
       "parent_retained_partition_sha256": "0a0054ea8b8b8411bd35e8b7ef6573042502ac316bff1e8def7ddf86a6274b6c",
       "completed_tasks": [
         "T001",
         "T002",
         "T003",
         "T004",
-        "T005"
+        "T005",
+        "T006",
+        "T007"
       ]
     },
     "routing_replan": {
@@ -3598,32 +3630,35 @@
       "actual_emission_qualification": "pending"
     },
     "active_batch": {
-      "batch_id": "B004",
+      "batch_id": "B005",
       "tasks": [
-        "T005"
+        "T006",
+        "T007"
       ],
-      "dispatch_id": "hrns015-a1b-t005-2381",
+      "dispatch_id": "hrns015-a2-t006-t007-2381",
       "stage": "marker_checkpoint_complete",
       "completed_tasks": [
         "T001",
         "T002",
         "T003",
         "T004",
-        "T005"
+        "T005",
+        "T006",
+        "T007"
       ],
-      "source_commit_sha": "33ce117a0ba41769a21e2aab7dcca3bb880440b0",
-      "checkpoint_evidence_commit_sha": "241edeef15a54f6e084872427cd71517e5678311",
-      "journal_request_id": "hrns015-t005-a1b-record-2381",
+      "source_commit_sha": "ed24ecd831d0b9f98e300fdc772f29839bd09d9a",
+      "checkpoint_evidence_commit_sha": "e10132e3bf4d89ef7cfdbe068e3bdcedadc62f28",
+      "journal_request_id": "hrns015-a2-record-apply-2381",
       "quick_suite": "10110/10110 passed",
       "ci_suite": "6/6 dispatches passed",
-      "independent_review": "final correction clean; no critical/high findings",
+      "independent_review": "no critical/high; documentation findings corrected",
       "actual_source_delta": {
-        "base_commit": "331006843936a6918642bfcc9199008d3aae0f92",
-        "source_commit": "33ce117a0ba41769a21e2aab7dcca3bb880440b0",
+        "base_commit": "86e0006bb931fafa21bc9b4825778884f2ed6bb1",
+        "source_commit": "ed24ecd831d0b9f98e300fdc772f29839bd09d9a",
         "source_changed_paths": 21,
-        "marker_budget_counted_paths": 24,
-        "production_paths": 2,
-        "authored_nonprocess_changed_lines": 292,
+        "marker_budget_counted_paths": 23,
+        "production_paths": 1,
+        "authored_nonprocess_changed_lines": 257,
         "qualification": "source delta only; final PR base/head diff and reviewable LOC required before emission"
       }
     },
@@ -3809,6 +3844,47 @@
       "all_runnable_gates": "pass",
       "pr_emission": "pending_exact_diff_and_loc",
       "evidence_commit_sha": "241edeef15a54f6e084872427cd71517e5678311"
+    },
+    "a1b_batch_record": {
+      "batch_id": "B004",
+      "tasks": [
+        "T005"
+      ],
+      "dispatch_id": "hrns015-a1b-t005-2381",
+      "stage": "marker_checkpoint_complete",
+      "completed_tasks": [
+        "T001",
+        "T002",
+        "T003",
+        "T004",
+        "T005"
+      ],
+      "source_commit_sha": "33ce117a0ba41769a21e2aab7dcca3bb880440b0",
+      "checkpoint_evidence_commit_sha": "241edeef15a54f6e084872427cd71517e5678311",
+      "journal_request_id": "hrns015-t005-a1b-record-2381",
+      "quick_suite": "10110/10110 passed",
+      "ci_suite": "6/6 dispatches passed",
+      "independent_review": "final correction clean; no critical/high findings",
+      "actual_source_delta": {
+        "base_commit": "331006843936a6918642bfcc9199008d3aae0f92",
+        "source_commit": "33ce117a0ba41769a21e2aab7dcca3bb880440b0",
+        "source_changed_paths": 21,
+        "marker_budget_counted_paths": 24,
+        "production_paths": 2,
+        "authored_nonprocess_changed_lines": 292,
+        "qualification": "source delta only; final PR base/head diff and reviewable LOC required before emission"
+      }
+    },
+    "a2_checkpoint": {
+      "status": "complete",
+      "marker_id": "us2",
+      "source_commit_sha": "ed24ecd831d0b9f98e300fdc772f29839bd09d9a",
+      "evidence_path": "specs/hrns-015-autopilot-gate-pr-emission-repair/.process/checkpoints/us2.json",
+      "verification_evidence_path": "specs/hrns-015-autopilot-gate-pr-emission-repair/.process/verification/us2.json",
+      "independent_review": "no critical/high; documentation findings corrected",
+      "all_runnable_gates": "pass",
+      "pr_emission": "pending_exact_diff_and_loc",
+      "evidence_commit_sha": "e10132e3bf4d89ef7cfdbe068e3bdcedadc62f28"
     }
   }
 }
