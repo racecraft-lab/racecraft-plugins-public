@@ -701,6 +701,25 @@ class RunFinalizationSourceContractTests(unittest.TestCase):
         "may the rows holding deferred work move to `⚠ Blocked`",
         "reported as deferred, never green",
         "`attributed_units`",
+        "instead of rerunning the full suite for every slice",
+    )
+    PER_HEAD = (
+        "at each PR head, bottom-up",
+        "`head_sha`",
+        "`human_stop.missing`",
+        "cites only the gate results listed under its own entry",
+        "`status=harness_error`",
+        "`attempts`",
+        ".process/verification/harness/",
+        "a harness error, never as a failure of the code under test",
+        "never counts as passed",
+    )
+    STACK_PER_HEAD = (
+        "at the slice's own head",
+        "never carry another head's evidence",
+        "propagate it upward by merge",
+        "re-verify every affected head",
+        "only the evidence produced at that slice's own head",
     )
 
     def assert_finalization_rules(self, section: str) -> None:
@@ -723,6 +742,7 @@ class RunFinalizationSourceContractTests(unittest.TestCase):
             "at the end of the run an unresolved deferral is the human stop",
             "`deferred_digest`",
             "never re-checks an unchanged blocker",
+            *self.PER_HEAD,
         ):
             self.assertIn(phrase, section)
         for phrase in self.STALE:
@@ -753,6 +773,9 @@ class RunFinalizationSourceContractTests(unittest.TestCase):
         post = _flat(references / "post-implementation-codex.md")
         self.assertIn("`finalize-run`", post)
         self.assertIn("`deferred_items`", post)
+        self.assertIn("every PR head", audit)
+        for phrase in self.STACK_PER_HEAD:
+            self.assertIn(phrase, post)
         for phrase in self.STALE:
             self.assertNotIn(phrase, post)
 
@@ -764,12 +787,18 @@ class RunFinalizationSourceContractTests(unittest.TestCase):
         skill = _flat(CLAUDE_AUTOPILOT_SKILL)
         audit = _section(skill, "### 3.4 Pre-final completion audit", "## Workflow File Update Protocol")
         self.assertIn("`finalize-run`", audit)
+        self.assertIn("every PR head", audit)
         for phrase in self.STALE:
             self.assertNotIn(phrase, skill)
+        post = _flat(references / "post-implementation.md")
+        for phrase in self.STACK_PER_HEAD:
+            self.assertIn(phrase, post)
 
     def test_stack_manager_keeps_draft_status_only_until_finalization(self) -> None:
         stack = _flat(CLAUDE_AUTOPILOT_SKILL.parent / "references" / "stack-manager.md")
         self.assertIn("Preserve packet metadata, and draft status until finalization", stack)
+        for phrase in ("at its own head", "bottom-up", "re-verify every affected head"):
+            self.assertIn(phrase, stack)
 
 
 FAILURE_CLASS_HEADING = "Repeated Gate Failures: Diagnose One Class, Approve It Once"
