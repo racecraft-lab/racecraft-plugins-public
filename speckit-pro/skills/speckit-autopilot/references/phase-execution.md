@@ -1416,6 +1416,12 @@ the marker's `review_order`; within one marker, keep the existing task-order and
 marker ID, ordered task IDs, test/verification evidence path, fingerprint
 status, checkpoint commit SHA (`implementation_checkpoint.head_sha` or
 `implementation_checkpoint.commit_sha`), warnings, and any blocked/fixed tasks.
+Cite an external task, session, thread, or event id, such as a delegated audit's
+task id, only as `sha256:<digest>` (the hex SHA-256 of the raw value) or omit
+it. The rule covers every committed record: the marker checkpoint, the
+verification report, the workflow file, implementation notes, and each PR body.
+The status-evidence guard fails on a raw id in marker checkpoint or verification
+evidence as `marker_evidence_privacy_errors`.
 The marker checkpoint SHA is the source commit for later live marker PR
 branches. Do not infer a new marker order from changed files or reviewability
 warnings.
