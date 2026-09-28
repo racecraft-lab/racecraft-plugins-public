@@ -300,6 +300,14 @@
     {
       "path": {
         "kind": "plugin_relative",
+        "value": "speckit_pro_runner/helpers/gate_preflight_coverage.py",
+        "display": "speckit_pro_runner/helpers/gate_preflight_coverage.py"
+      },
+      "sha256": "291fb27b86e27d5ffd5bc953193810fd816e816c5ae47e450312048e384a1384"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
         "value": "speckit_pro_runner/helpers/install.py",
         "display": "speckit_pro_runner/helpers/install.py"
       },
@@ -351,7 +359,7 @@
         "value": "speckit_pro_runner/helpers/registry.py",
         "display": "speckit_pro_runner/helpers/registry.py"
       },
-      "sha256": "6993bc04672ec87469c609b279f40cb61ea795648fd4988b366277a5af47cbd6"
+      "sha256": "3cfdf40c812c38abd03acb4e587d9da9ba90653b302f3a0c439759078e767b9a"
     },
     {
       "path": {
@@ -359,7 +367,7 @@
         "value": "speckit_pro_runner/helpers/run_finalization.py",
         "display": "speckit_pro_runner/helpers/run_finalization.py"
       },
-      "sha256": "8d5e7a4d7c087693420a5040e6e01ab2716252bc3e40a82f79f8bebce45116e2"
+      "sha256": "b69b4b8a9c545d2f6e5e28b72ca16aa5cb9442ebc1cefa54cce9277c701e35a5"
     },
     {
       "path": {
