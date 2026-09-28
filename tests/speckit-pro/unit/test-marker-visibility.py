@@ -149,37 +149,27 @@ class MarkerVisibilityTests(unittest.TestCase):
             )["stdout"])
             self.assertEqual((False, 5), (g4["pass"], g4["markers"]))
 
-    def test_list_item_fence_opening_hides_code_markers(self) -> None:
-        with tempfile.TemporaryDirectory() as temp:
-            root = Path(temp).resolve()
-            feature = root / "specs" / "001-demo"
-            (feature / "checklists").mkdir(parents=True)
-            (feature / "spec.md").write_text("Spec is ready.\n")
-            (feature / "plan.md").write_text("Plan is ready.\n")
-            (feature / "checklists" / "review.md").write_text(
-                "- ```text\n  [Gap] list-item code\n  ```\n"
-            )
-            gaps = json.loads(read_only.count_markers(
-                {"feature_dir": "specs/001-demo", "type": "gaps"}, root
-            )["stdout"])
-            self.assertEqual((0, []), (gaps["total"], gaps["details"]))
-
-    def test_nested_quote_fence_keeps_parent_list_continuation(self) -> None:
-        with tempfile.TemporaryDirectory() as temp:
-            root = Path(temp).resolve()
-            feature = root / "specs" / "001-demo"
-            (feature / "checklists").mkdir(parents=True)
-            (feature / "spec.md").write_text("Spec is ready.\n")
-            (feature / "plan.md").write_text("Plan is ready.\n")
-            (feature / "checklists" / "review.md").write_text(
-                "- item\n  > ```text\n  > [Gap] code\n  > ```\n"
-                "    [Gap] continuation\n"
-            )
-            gaps = json.loads(read_only.count_markers(
-                {"feature_dir": "specs/001-demo", "type": "gaps"}, root
-            )["stdout"])
-            self.assertEqual(1, gaps["total"], gaps["details"])
-            self.assertIn(":5:", gaps["details"][0])
+    def test_list_fences_hide_code_and_keep_visible_continuations(self) -> None:
+        cases = (
+            ("- ```text\n  [Gap] list-item code\n  ```\n", 0, None),
+            ("- item\n  > ```text\n  > [Gap] code\n  > ```\n"
+             "    [Gap] continuation\n", 1, 5),
+        )
+        for markdown, expected_count, expected_line in cases:
+            with self.subTest(markdown=markdown), tempfile.TemporaryDirectory() as temp:
+                root = Path(temp).resolve()
+                feature = root / "specs" / "001-demo"
+                (feature / "checklists").mkdir(parents=True)
+                (feature / "spec.md").write_text("Spec is ready.\n")
+                (feature / "plan.md").write_text("Plan is ready.\n")
+                (feature / "checklists" / "review.md").write_text(markdown)
+                gaps = json.loads(read_only.count_markers(
+                    {"feature_dir": "specs/001-demo", "type": "gaps"}, root
+                )["stdout"])
+                self.assertEqual(expected_count, gaps["total"], gaps["details"])
+                self.assertEqual(expected_count, len(gaps["details"]))
+                if expected_line is not None:
+                    self.assertIn(f":{expected_line}:", gaps["details"][0])
 
     def test_g4_missing_required_artifact_fails_closed(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

@@ -2170,6 +2170,14 @@ def _marker_list_scope(current_depth: int, previous_depth: int, raw_indent: int,
     return [], outer_indents
 
 
+def _marker_quote_prefix(line: str) -> tuple[str, int]:
+    depth = 0
+    while quote := QUOTE_MARKER.match(line):
+        depth += 1
+        line = line[quote.end():]
+    return line, depth
+
+
 def _marker_prose_lines(raw_lines: list[str]) -> list[str]:
     """Strip Markdown containers and block code before counting markers."""
     rendered_lines: list[str] = []
@@ -2197,10 +2205,7 @@ def _marker_prose_lines(raw_lines: list[str]) -> list[str]:
                 continue
             fence_char = ""
             paragraph_open = False
-        current_quote_depth = 0
-        while quote := QUOTE_MARKER.match(line):
-            current_quote_depth += 1
-            line = line[quote.end():]
+        line, current_quote_depth = _marker_quote_prefix(line)
         if current_quote_depth != quote_depth:
             list_indents, outer_list_indents = _marker_list_scope(
                 current_quote_depth, quote_depth, raw_indent, list_indents, outer_list_indents,
