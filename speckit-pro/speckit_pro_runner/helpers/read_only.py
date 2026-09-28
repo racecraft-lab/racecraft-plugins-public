@@ -2135,9 +2135,8 @@ LIST_MARKER = re.compile(r"^ {0,3}(?:[-+*]|[0-9]+[.)])[ \t]+")
 QUOTE_MARKER = re.compile(r"^ {0,3}>[ \t]?")
 
 
-def _visible_marker_lines(path: Path, repo_root: Path) -> list[tuple[int, str]]:
-    """Render marker-bearing Markdown prose without code or container leakage."""
-    raw_lines = trusted_lines(path, repo_root)
+def _marker_prose_lines(raw_lines: list[str]) -> list[str]:
+    """Strip Markdown containers and block code before counting markers."""
     rendered_lines: list[str] = []
     list_indents: list[int] = []
     quote_depth = 0
@@ -2198,6 +2197,11 @@ def _visible_marker_lines(path: Path, repo_root: Path) -> list[tuple[int, str]]:
         rendered_lines.append(content)
         paragraph_open = not bool(re.match(r" {0,3}(?:#{1,6}(?:[ \t]|$)|(?:[-*_][ \t]*){3,}$)", content))
 
+    return rendered_lines
+
+
+def _mask_markdown_code_spans(rendered_lines: list[str]) -> list[str]:
+    """Mask paired code spans, including spans crossing line boundaries."""
     # A CommonMark code span may cross line boundaries. Pair equal-width runs
     # before counting markers, leaving unmatched and escaped backticks as prose.
     document = "\n".join(rendered_lines)
@@ -2238,8 +2242,12 @@ def _visible_marker_lines(path: Path, repo_root: Path) -> list[tuple[int, str]]:
         else:
             cursor = end
 
-    return [(index + 1, line) for index, line in enumerate("".join(masked).split("\n"))
-            if line.strip()]
+    return "".join(masked).split("\n")
+
+
+def _visible_marker_lines(path: Path, repo_root: Path) -> list[tuple[int, str]]:
+    lines = _mask_markdown_code_spans(_marker_prose_lines(trusted_lines(path, repo_root)))
+    return [(index + 1, line) for index, line in enumerate(lines) if line.strip()]
 
 
 def _gap_tag_count(line: str) -> int:
