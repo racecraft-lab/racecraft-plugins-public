@@ -233,15 +233,19 @@ ownership from the caller's current workflow.
   match byte for byte, and `tasks.md` may differ only on task lines whose
   leading verb swaps between two words of `PHASE7_VERIFY_KEYWORDS`, with the
   task ID, `[P]` and story markers, and every other byte unchanged. Checkbox
-  state is ignored, as in the task fingerprints. A proven correction returns
+  state is ignored, as in the task fingerprints. Dependencies and ownership
+  live in `.process/task-execution.json`: its `tasks` must match `HEAD`, and
+  its `fingerprints` may be the committed ones or the refresh for the
+  corrected sources. A feature without that sidecar at `HEAD` and in the
+  worktree passes this check. A proven correction returns
   `correction_allowance=metadata_only` with its `task_ids`, and the ledger
   records it in `metadata_corrections`. Each task gets one such correction
   per run, across stage and re-plan epochs. Anything else returns
   `correction_allowance=run_wide` with `metadata_ineligible` and takes the
   ordinary reservation path: `baseline_unavailable` (no git, no committed
   file, or a symlinked or unreadable one), `planning_source_changed`,
-  `not_metadata_only` (any other word, path, marker, task, line, or phase
-  change), `no_task_correction` (nothing differs from `HEAD`),
+  `not_metadata_only` (any other word, path, marker, task, line, phase, or
+  sidecar change), `no_task_correction` (nothing differs from `HEAD`),
   `task_already_corrected`, or `feature_binding_mismatch`. After admission,
   refresh the task-execution sidecar fingerprints through
   `validate-task-execution` with `action=fingerprints`, rerun the affected

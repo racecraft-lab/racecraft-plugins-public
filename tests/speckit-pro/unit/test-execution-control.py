@@ -2054,7 +2054,7 @@ class MetadataOnlyCorrectionTests(_ExecutionControlFixture, unittest.TestCase):
         commit_fixture(self.root)
         IncrementReviewAllowanceTests.spend_run_wide_budget(self)
         before = self.invoke("status", mode="read_only")["ledger"]
-        tasks = self.CORRECTED.replace("- [ ] T003", "- [x] T003")
+        tasks = self.CORRECTED.replace("- [ ] T003", "- [x] T003").replace("- [ ] T001", "- [x] T001")
         (self.root / "feature/tasks.md").write_text(tasks)
         admitted = self.correct("verb-fix")
         self.assertEqual((admitted["disposition"], admitted["correction_allowance"]), ("continue", "metadata_only"))
@@ -2073,6 +2073,54 @@ class MetadataOnlyCorrectionTests(_ExecutionControlFixture, unittest.TestCase):
         self.assertEqual(json_schema_failures(ledger, self.schema(), self.schema(), "ledger"), [])
         self.invoke("complete", dispatch_id="verb-fix", outcome="completed")
         self.assertEqual(self.invoke("status", mode="read_only")["ledger"]["corrective_cycles"], 2)
+
+    def write_sidecar(self, tasks_text=None, **changes):
+        texts = [(self.root / f"feature/{name}").read_text() for name in ("spec.md", "plan.md")]
+        sidecar = {"schema_version": "task-execution.v1",
+                   "fingerprints": fingerprints(*texts, tasks_text or self.TASKS),
+                   "tasks": {task: {"capability_group": "core", "depends_on": [], "owns": [f"src/{task.lower()}"],
+                                    "tdd_unit": task.lower()} for task in ("T001", "T002", "T003")}}
+        for task, entry in changes.items():
+            sidecar["tasks"][task].update(entry)
+        path = self.root / "feature/.process/task-execution.json"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(sidecar, indent=2) + "\n")
+
+    def test_the_task_execution_sidecar_must_keep_every_task_entry(self):
+        self.write_sidecar()
+        commit_fixture(self.root)
+        IncrementReviewAllowanceTests.spend_run_wide_budget(self)
+        (self.root / "feature/tasks.md").write_text(self.CORRECTED)
+        sidecar = self.root / "feature/.process/task-execution.json"
+        cases = {"ownership change": lambda: self.write_sidecar(T001={"owns": ["src/elsewhere"]}),
+                 "dependency change": lambda: self.write_sidecar(self.CORRECTED, T002={"depends_on": ["T003"]}),
+                 "unbound fingerprints": lambda: self.write_sidecar("- [ ] T009 Something else\n"),
+                 "sidecar removed": sidecar.unlink,
+                 "sidecar unreadable": lambda: sidecar.write_text("{not json")}
+        for number, (name, change) in enumerate(cases.items()):
+            with self.subTest(case=name):
+                change()
+                refused = self.correct(f"sidecar-{number}")
+                self.assertEqual((refused["correction_allowance"], refused["metadata_ineligible"]),
+                                 ("run_wide", "not_metadata_only"))
+                self.assertNotIn("metadata_corrections", refused["ledger"])
+        self.write_sidecar()
+        stale = self.correct("sidecar-not-yet-refreshed", mode="dry_run")
+        self.assertEqual(stale["correction_allowance"], "metadata_only")
+        self.write_sidecar(self.CORRECTED)
+        refreshed = self.correct("sidecar-refreshed")
+        self.assertEqual((refreshed["correction_allowance"], refreshed["ledger"]["corrective_cycles"]),
+                         ("metadata_only", 2))
+
+    def test_a_sidecar_absent_from_the_baseline_is_refused(self):
+        commit_fixture(self.root)
+        self.invoke("start")
+        (self.root / "feature/tasks.md").write_text(self.CORRECTED)
+        self.write_sidecar(self.CORRECTED)
+        refused = self.correct("new-sidecar")
+        self.assertEqual((refused["correction_allowance"], refused["metadata_ineligible"]),
+                         ("run_wide", "not_metadata_only"))
+        self.assertEqual(refused["ledger"]["corrective_cycles"], 1)
 
     def test_an_unspent_budget_stays_unspent(self):
         commit_fixture(self.root)
