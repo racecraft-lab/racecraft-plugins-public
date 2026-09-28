@@ -3,7 +3,7 @@
   "runner_contract_id": "speckit-pro-runner",
   "selected_runtime_name": "python-stdlib-runner",
   "contract_version": "1.0",
-  "plugin_version": "2.38.1",
+  "plugin_version": "2.38.2",
   "runner_version": "0.1.0",
   "python_minimum_version": "3.11",
   "specify_required": true,
@@ -87,7 +87,7 @@
         "value": "speckit_pro_runner/execution_control.py",
         "display": "speckit_pro_runner/execution_control.py"
       },
-      "sha256": "f32b5e124a788a165cf0c8431ce4cc5108cbb20cbb9b5cc2e8ecea623a4cd8ac"
+      "sha256": "38effd2eb655f727a80c24b745b7ff928c3fc86c8f0635307ddaced2e81ea8f3"
     },
     {
       "path": {
@@ -303,7 +303,7 @@
         "value": "speckit_pro_runner/helpers/gate_preflight_coverage.py",
         "display": "speckit_pro_runner/helpers/gate_preflight_coverage.py"
       },
-      "sha256": "291fb27b86e27d5ffd5bc953193810fd816e816c5ae47e450312048e384a1384"
+      "sha256": "88e36dc44bba9885aa850ca01b5a76a6a73f31d483fe558128b8d46bbdaa2d3a"
     },
     {
       "path": {
@@ -367,7 +367,7 @@
         "value": "speckit_pro_runner/helpers/run_finalization.py",
         "display": "speckit_pro_runner/helpers/run_finalization.py"
       },
-      "sha256": "7da530e61c831bded5b961cb94f5f65c40f511646231e9db21be042c11f877cb"
+      "sha256": "d4410eaec7b9cab564c6c093162a8b53ca39f925eb36fd423dc37443d7ee3c67"
     },
     {
       "path": {
@@ -463,7 +463,7 @@
         "value": "speckit_pro_runner/task_execution.py",
         "display": "speckit_pro_runner/task_execution.py"
       },
-      "sha256": "6c183186e1c0fc2faade16452b05f6f6b2ab4a1455ffc7f4b018b826cd08a139"
+      "sha256": "9cfe7f3d5f971cea8e4b7fbab58bbd5cdcc1e8562c450908be0bdbbf548e7fac"
     },
     {
       "path": {
@@ -543,7 +543,7 @@
         "value": "speckit_pro_runner/verification_records.py",
         "display": "speckit_pro_runner/verification_records.py"
       },
-      "sha256": "169fd46eb0a1ff7cd023e182901035627cdd6431e9cbbcb2608033f2fdda5fca"
+      "sha256": "d7a5e12e1d91de58aacc8cb1d138ddf25e20bf5cf47dcd7754f15c4acfe0eb7b"
     }
   ]
 }

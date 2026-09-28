@@ -526,7 +526,8 @@ opens one slice PR.
    5. only then create or refresh the PR using the validated packet's title and
       body file.
    Each slice title and body must describe that marker's own outcome and scope
-   in plain English. Never reuse an aggregate or neighboring slice title/body,
+   in plain English, and its verification cites only the evidence produced at
+   that slice's own head. Never reuse an aggregate or neighboring slice title/body,
    and never create first and repair title, body, membership, or splitting
    afterward. A `multi-pr-emission` candidate command plan is planning evidence,
    not packet validation or authorization for a PR side effect.
@@ -551,7 +552,11 @@ opens one slice PR.
      for that marker; never infer slice contents from changed-file globs
    - PR command shape:
      gh pr create --base <base> --head <head> --body-file <body-file> --title <generated-title>
-9. Each slice must pass or record scoped verification before PR creation and
+9. Every required non-UAT gate (the full suite, the checks CI requires, and
+   any per-commit identity or evidence check the repository defines) runs and
+   passes at the slice's own head, bottom-up; never carry another head's
+   evidence to a slice. Each slice must also pass or record scoped
+   verification before PR creation and
    its existing packet must pass a fresh `validate-pr-packet-read-only` request
    whose `data.stdout_json` is consumed in memory/state. If any required packet
    is absent or invalid, stop before PR creation with the validator diagnostics.
@@ -594,6 +599,12 @@ slice's declared scope, record command results and recovery evidence, and run a
 fresh DEFAULT_VERIFY before final merge evidence is considered current. If a
 prior `gh-stack` mutation crossed its mutation boundary, resume with
 same-manager recovery evidence or block; do not mix managers.
+
+**Lower-layer fixes:** a fix made on a lower slice must propagate it upward by
+merge: merge each fixed branch into the slice above it, bottom-up, never by
+rebase or force-push. Then re-verify every affected head: rerun every non-UAT
+gate at each head the merge changed and refresh that PR's body evidence, so
+`finalize-run` receives a current result for every gate at every head.
 
 ## 3.3 Copilot Review Remediation Loop
 
