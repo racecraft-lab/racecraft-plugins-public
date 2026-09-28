@@ -45,7 +45,7 @@ gate never becomes a pass.
 
 **Failure Escalation:** Immediate STOP. Report which checks failed with output. The user must resolve codebase issues before autopilot can proceed.
 
-Marker visibility for G1–G4 uses the runner `count-markers` and `validate-gate` helpers. Count only real bracket tags in visible Markdown prose: exclude inline code, fenced code, and lines of indented code. A Gap tag has a case-sensitive comma-separated `Gap` token, with surrounding spaces or tabs ignored; count each qualifying tag once, including two tags on one line. Apply the same visibility rule to clarification counts and details. Other finding marker types keep their existing counting rule.
+Marker visibility for G1–G4 uses the runner `count-markers` and `validate-gate` helpers. Count only real bracket tags in visible Markdown prose: exclude inline code, fenced code, and indented code, interpreting indentation relative to list and quote containers. A Gap tag has a case-sensitive comma-separated `Gap` token, with surrounding spaces or tabs ignored; count each qualifying tag once, including two tags on one line. Apply the same visibility rule to clarification counts and details. Other finding marker types keep their existing counting rule.
 
 ### G1 — After Specify
 

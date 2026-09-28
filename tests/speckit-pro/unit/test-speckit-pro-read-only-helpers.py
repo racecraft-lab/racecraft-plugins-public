@@ -3546,7 +3546,7 @@ class ReadOnlyHelperTests(unittest.TestCase):
             self.assertIn("NC:1", payload["reason"])
             code, payload = self._helper_json("count_markers", {**inputs, "type": "clarifications"}, project_path)
             self.assertEqual((0, 3, 2, 1), (code, payload["total"], payload["spec"], payload["plan"]))
-            self.assertEqual(2, len(payload["details"]))
+            self.assertEqual(3, len(payload["details"]))
             code, payload = self._helper_json("count_markers", {**inputs, "type": "all"}, project_path)
             self.assertEqual(3, payload["clarifications"])
             (feature / "spec.md").write_text("The phrase NEEDS CLARIFICATION in prose only.\n", encoding="utf-8")

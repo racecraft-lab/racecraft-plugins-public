@@ -33,7 +33,7 @@ class MarkerVisibilityTests(unittest.TestCase):
             self.assertEqual(gaps["total"], all_markers["gaps"])
             self.assertEqual(gaps["total"], g4["markers"])
             self.assertEqual(case["spec"].count("[HIGH]"), all_markers["high"])
-            self.assertEqual(3, len(gaps["details"]))
+            self.assertEqual(gaps["total"], len(gaps["details"]))
             self.assertTrue(all("`[Gap]`" not in detail for detail in gaps["details"]))
 
     def test_visible_clarifications_match_gates_and_count_modes(self) -> None:
@@ -49,7 +49,7 @@ class MarkerVisibilityTests(unittest.TestCase):
             all_markers = json.loads(read_only.count_markers({**inputs, "type": "all"}, root)["stdout"])
             self.assertEqual(case["expected"], {key: counts[key] for key in case["expected"]})
             self.assertEqual(counts["total"], all_markers["clarifications"])
-            self.assertEqual(3, len(counts["details"]))
+            self.assertEqual(counts["total"], len(counts["details"]))
             self.assertTrue(all("`[NEEDS CLARIFICATION: code]`" not in detail for detail in counts["details"]))
             for gate in ("G1", "G2"):
                 payload = json.loads(read_only.validate_gate({**inputs, "gate": gate}, root)["stdout"])
@@ -57,6 +57,81 @@ class MarkerVisibilityTests(unittest.TestCase):
                 self.assertEqual(3, len(payload["details"]))
             g3 = json.loads(read_only.validate_gate({**inputs, "gate": "G3"}, root)["stdout"])
             self.assertIn("NC:1", g3["reason"])
+
+
+    def test_list_continuations_and_nested_tags_do_not_hide_real_markers(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp).resolve()
+            feature = root / "specs" / "001-demo"
+            (feature / "checklists").mkdir(parents=True)
+            (feature / "spec.md").write_text(
+                "- [ ] Parent\n"
+                "    [NEEDS CLARIFICATION: is [Option] required?]\n"
+                "\n"
+                "      [NEEDS CLARIFICATION: hidden code]\n"
+            )
+            (feature / "plan.md").write_text("Plan is ready.\n")
+            (feature / "checklists" / "review.md").write_text(
+                "- [ ] Parent\n"
+                "    - [ ] Nested item [Gap]\n"
+                "[outer [Gap] prose] is not a tag.\n"
+                "\n"
+                "    [Gap] in code\n"
+            )
+            (feature / "checklists" / "notes.txt").write_text("[Gap] in a non-checklist file\n")
+            inputs = {"feature_dir": "specs/001-demo"}
+            gaps = json.loads(read_only.count_markers({**inputs, "type": "gaps"}, root)["stdout"])
+            self.assertEqual(1, gaps["total"])
+            self.assertEqual(1, len(gaps["details"]))
+            self.assertIn("review.md", gaps["details"][0])
+            g4 = json.loads(read_only.validate_gate({**inputs, "gate": "G4"}, root)["stdout"])
+            self.assertEqual((False, 1), (g4["pass"], g4["markers"]))
+            self.assertEqual(1, len(g4["details"]))
+            clarifications = json.loads(read_only.count_markers({**inputs, "type": "clarifications"}, root)["stdout"])
+            self.assertEqual(1, clarifications["total"])
+            self.assertEqual(1, len(clarifications["details"]))
+            for gate in ("G1", "G2"):
+                payload = json.loads(read_only.validate_gate({**inputs, "gate": gate}, root)["stdout"])
+                self.assertEqual((False, 1), (payload["pass"], payload["markers"]))
+
+
+
+    def test_quoted_and_list_fences_hide_code_but_keep_visible_nested_items(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp).resolve()
+            feature = root / "specs" / "001-demo"
+            (feature / "checklists").mkdir(parents=True)
+            (feature / "spec.md").write_text(
+                "> ```md\n> [NEEDS CLARIFICATION: quoted code]\n> ```\n"
+                "> visible [NEEDS CLARIFICATION: quoted prose]\n"
+            )
+            (feature / "plan.md").write_text("Plan is ready.\n")
+            (feature / "checklists" / "review.md").write_text(
+                "- [ ] Parent\n"
+                "  ```md\n  [Gap] in fenced code\n  ```\n"
+                "    - [ ] Nested [Gap] in prose\n"
+            )
+            inputs = {"feature_dir": "specs/001-demo"}
+            gaps = json.loads(read_only.count_markers({**inputs, "type": "gaps"}, root)["stdout"])
+            clarifications = json.loads(read_only.count_markers({**inputs, "type": "clarifications"}, root)["stdout"])
+            self.assertEqual((1, 1), (gaps["total"], clarifications["total"]))
+            self.assertEqual(1, len(gaps["details"]))
+            self.assertEqual(1, len(clarifications["details"]))
+
+
+    def test_g4_missing_required_artifact_fails_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp).resolve()
+            feature = root / "specs" / "001-demo"
+            feature.mkdir(parents=True)
+            inputs = {"feature_dir": "specs/001-demo", "gate": "G4"}
+            for missing in ("spec.md", "plan.md"):
+                result = read_only.validate_gate(inputs, root)
+                payload = json.loads(result["stdout"])
+                self.assertEqual(1, result["exit_code"])
+                self.assertFalse(payload["pass"])
+                self.assertIn(missing, payload["reason"])
+                (feature / missing).write_text("Present.\n")
 
 
 if __name__ == "__main__":

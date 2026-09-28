@@ -2130,17 +2130,50 @@ def detect_presets(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
 # `[NEEDS CLARIFICATION]` form is still accepted. Prose that names the
 # phrase outside brackets is not a marker.
 NEEDS_CLARIFICATION_MARKER = r"\[NEEDS CLARIFICATION(?::[^\]]*)?\]"
-GAP_TAG = re.compile(r"\[([^\[\]\r\n]*)\]")
-VISIBLE_CLARIFICATION = re.compile(r"\[NEEDS CLARIFICATION(?::[^\[\]]*)?\]")
+VISIBLE_CLARIFICATION = re.compile(NEEDS_CLARIFICATION_MARKER)
+LIST_MARKER = re.compile(r"^ {0,3}(?:[-+*]|[0-9]+[.)])[ \t]+")
+QUOTE_MARKER = re.compile(r"^ {0,3}>[ \t]?")
+
+
+def _marker_content_lines(lines: list[str]) -> list[str]:
+    """Remove list and quote prefixes before classifying Markdown code."""
+    normalized: list[str] = []
+    content_indent = 0
+    for raw in lines:
+        expanded = raw.expandtabs(4)
+        if not expanded.strip():
+            normalized.append("")
+            continue
+        leading = len(expanded) - len(expanded.lstrip(" "))
+        if content_indent and leading >= content_indent:
+            line = expanded[content_indent:]
+            parent_indent = content_indent
+        else:
+            line = expanded
+            parent_indent = 0
+            if leading < content_indent:
+                content_indent = 0
+        while quote := QUOTE_MARKER.match(line):
+            line = line[quote.end():]
+        list_marker = LIST_MARKER.match(line)
+        if list_marker:
+            content_indent = parent_indent + list_marker.end()
+        normalized.append(line)
+    return normalized
 
 
 def _visible_marker_lines(path: Path, repo_root: Path) -> list[tuple[int, str]]:
-    lines = trusted_lines(path, repo_root)
+    lines = _marker_content_lines(trusted_lines(path, repo_root))
     fenced = _fenced_markdown_lines(lines)
     visible: list[tuple[int, str]] = []
+    paragraph_open = False
     for index, line in enumerate(lines):
-        if index in fenced or line.startswith(("    ", "\t")):
+        if index in fenced or not line.strip():
+            paragraph_open = False
             continue
+        if len(line) - len(line.lstrip(" ")) >= 4 and not paragraph_open:
+            continue
+        paragraph_open = True
         # CommonMark code spans pair runs of the same number of backticks.
         # A lone unmatched run remains visible prose.
         rendered: list[str] = []
@@ -2166,27 +2199,40 @@ def _visible_marker_lines(path: Path, repo_root: Path) -> list[tuple[int, str]]:
     return visible
 
 
+def _gap_tag_count(line: str) -> int:
+    count = 0
+    depth = 0
+    opening = 0
+    nested = False
+    for index, char in enumerate(line):
+        if char == "[":
+            if depth == 0:
+                opening = index
+                nested = False
+            else:
+                nested = True
+            depth += 1
+        elif char == "]" and depth:
+            depth -= 1
+            if depth == 0 and not nested:
+                tokens = (token.strip(" \t") for token in line[opening + 1:index].split(","))
+                count += "Gap" in tokens
+    return count
+
+
 def visible_marker_details(paths: list[Path], kind: str, repo_root: Path) -> list[str]:
     details: list[str] = []
     for path in paths:
         for line_number, line in _visible_marker_lines(path, repo_root):
-            if kind == "gaps":
-                matches = sum(
-                    "Gap" in (token.strip(" \t") for token in tag.group(1).split(","))
-                    for tag in GAP_TAG.finditer(line)
-                    if not ((tag.start() and line[tag.start() - 1] == "[")
-                            or (tag.end() < len(line) and line[tag.end()] == "]"))
-                )
-            else:
-                matches = len(VISIBLE_CLARIFICATION.findall(line))
-            details.extend(f"{line_number}:{line}" for _ in range(matches))
+            matches = _gap_tag_count(line) if kind == "gaps" else len(VISIBLE_CLARIFICATION.findall(line))
+            details.extend(f"{repo_relative(path, repo_root)}:{line_number}:{line}" for _ in range(matches))
     return details
 
 
 def _visible_checklist_paths(directory: Path, repo_root: Path) -> list[Path]:
     if not path_stays_in_trust_boundary(directory, repo_root) or not directory.is_dir():
         return []
-    return [path for path in directory.rglob("*") if path.is_file()]
+    return sorted(path for path in directory.glob("*.md") if path.is_file())
 
 
 def count_markers(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
@@ -2224,7 +2270,7 @@ def count_markers(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
                     "spec": spec_gaps,
                     "plan": plan_gaps,
                     "checklists": checklist_gaps,
-                    "details": visible_marker_details([spec], "gaps", repo_root)[:20],
+                    "details": visible_marker_details([spec, plan] + _visible_checklist_paths(checklists, repo_root), "gaps", repo_root),
                 }
             )
         )
@@ -2245,7 +2291,7 @@ def count_markers(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
                 "total": spec_nc + plan_nc,
                 "spec": spec_nc,
                 "plan": plan_nc,
-                "details": visible_marker_details([spec], "clarifications", repo_root)[:20],
+                "details": visible_marker_details([spec, plan], "clarifications", repo_root),
             }
         )
     )
@@ -2272,7 +2318,7 @@ def validate_gate(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
             return make_result(json_text({"gate": gate, "pass": True, "reason": reason, "markers": 0, "details": []}))
         reason = f"{count} [NEEDS CLARIFICATION] markers remain" if gate == "G1" else f"{count} markers remain"
         return make_result(
-            json_text({"gate": gate, "pass": False, "reason": reason, "markers": count, "details": visible_marker_details([spec], "clarifications", repo_root)[:10]}),
+            json_text({"gate": gate, "pass": False, "reason": reason, "markers": count, "details": visible_marker_details([spec], "clarifications", repo_root)}),
             exit_code=1,
         )
     if gate == "G3":
@@ -2284,10 +2330,13 @@ def validate_gate(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
         if count == 0:
             return make_result(json_text({"gate": "G3", "pass": True, "reason": "plan.md exists with 0 unresolved markers", "markers": 0, "details": []}))
         return make_result(
-            json_text({"gate": "G3", "pass": False, "reason": f"{count} unresolved markers (NC:{nc_count}, TODO:{todo_count})", "markers": count, "details": []}),
+            json_text({"gate": "G3", "pass": False, "reason": f"{count} unresolved markers (NC:{nc_count}, TODO:{todo_count})", "markers": count, "details": visible_marker_details([plan], "clarifications", repo_root)}),
             exit_code=1,
         )
     if gate == "G4":
+        for required in (spec, plan):
+            if not trusted_file_exists(required, repo_root):
+                return make_result(json_text({"gate": "G4", "pass": False, "reason": f"{required.name} not found", "markers": 0, "details": []}), exit_code=1)
         spec_gaps = len(visible_marker_details([spec], "gaps", repo_root))
         plan_gaps = len(visible_marker_details([plan], "gaps", repo_root))
         checklist_gaps = len(visible_marker_details(_visible_checklist_paths(feature / "checklists", repo_root), "gaps", repo_root))
@@ -2301,7 +2350,7 @@ def validate_gate(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
                     "pass": False,
                     "reason": f"{gaps} [Gap] markers (spec:{spec_gaps}, plan:{plan_gaps}, checklists:{checklist_gaps})",
                     "markers": gaps,
-                    "details": [],
+                    "details": visible_marker_details([spec, plan] + _visible_checklist_paths(feature / "checklists", repo_root), "gaps", repo_root),
                 }
             ),
             exit_code=1,
