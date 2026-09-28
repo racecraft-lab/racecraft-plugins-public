@@ -52,7 +52,10 @@ $speckit-autopilot workflow.md --from-phase <next-pending-phase>
   `authorize-corrective-exception`. An explicit `--stage implement` opens the
   implement stage's own allowance through `begin-stage-epoch`. After an
   operator-ordered re-plan, `begin-replan-epoch` opens a fresh allowance with
-  the operator's approval; never reset or bypass the ledger otherwise.
+  the operator's approval; never reset or bypass the ledger otherwise. Repeated
+  failures with one signature in one test file are one class: one approval
+  covers its follow-ups through `reserve-class-correction`. See
+  [Repeated Gate Failures: Diagnose One Class, Approve It Once](./phase-execution-codex.md#repeated-gate-failures-diagnose-one-class-approve-it-once).
 - **Consensus agents all disagree:** Flag `[HUMAN REVIEW NEEDED]`.
   In an interactive task, ask the operator in place with
   `request_user_input` (the analysts' positions as options, the synthesizer's

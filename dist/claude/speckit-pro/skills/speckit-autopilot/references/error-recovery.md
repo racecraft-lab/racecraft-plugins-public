@@ -36,6 +36,9 @@ when its disposition permits. Resume and agent replacement never reset budget.
   through `begin-stage-epoch`. After an operator-ordered re-plan,
   `begin-replan-epoch` opens a fresh allowance with the operator's approval
   ([Bounded Execution](./execution-efficiency.md)).
+  Repeated failures with one signature in one test file are one class: one
+  approval covers its follow-ups through `reserve-class-correction`. See
+  [Repeated Gate Failures: Diagnose One Class, Approve It Once](./phase-execution.md#repeated-gate-failures-diagnose-one-class-approve-it-once).
 - **Consensus agents all disagree:** Flag `[HUMAN REVIEW NEEDED]`.
   In an interactive session, ask the operator in place with
   `AskUserQuestion` (the analysts' positions as options, the synthesizer's
