@@ -169,9 +169,12 @@ Bind the workflow to actual Codex primitives:
 Do not translate this skill into Claude-only primitives such as legacy
 task-list tools or legacy Claude agent/shell placeholders. Do not read the
 bundled TOML templates and inline them as ad hoc prompts. Validate that the
-required custom subagents are installed, then spawn them by agent name. If any
-required SpecKit Pro subagent is missing, STOP and instruct the user to run
-`$install` from the SpecKit Pro plugin, then restart Codex.
+required custom subagents are installed, then spawn them by agent name. Before
+any phase work, at setup or run start, if any required SpecKit Pro subagent is
+missing, STOP and instruct the user to run `$install` from the SpecKit Pro
+plugin, then restart Codex. After phase work has begun, a plugin update or agent
+refresh is never a stop: follow §Plugin Update Mid-Run: Record, Re-resolve,
+Continue in [phase-execution-codex.md](./references/phase-execution-codex.md).
 
 ## Prerequisites — Model
 
@@ -278,8 +281,9 @@ Concrete Codex mapping:
   agents for Codex.
 - Resolve the installed agent from `.codex/agents/<agent>.toml` first, then
   `~/.codex/agents/<agent>.toml`
-- If the installed agent is missing, STOP and tell the user to run `$install`,
-  then restart Codex
+- If the installed agent is missing at setup or run start, STOP and tell the
+  user to run `$install`, then restart Codex. Mid-run, follow §Plugin Update
+  Mid-Run: Record, Re-resolve, Continue instead
 - Build the phase prompt in the parent session
 - Call `spawn_agent` with `agent_type="<installed-agent-name>"` plus the
   workflow prompt
@@ -483,10 +487,13 @@ See [prerequisites-codex.md](./references/prerequisites-codex.md) for the full p
 - **Step 0.9: Constitution Validation** — principle checks against current codebase
 - **Step 0.10: Codex Agent Availability Check** — Run the promoted
   `install-codex-agents` helper in `dry_run` mode against the selected project or
-  user destination and its installed model and Luna fallback choice. If any required file is
+  user destination and its installed model and Luna fallback choice. This check
+  runs at setup or run start, before any phase work. If any required file is
   missing or stale, STOP and instruct the user to run `$install`, approve the
   expected local write, and restart Codex. Do not apply the repair inside
-  autopilot: the current process cannot reload changed custom agents safely.
+  autopilot: Codex fixes its list of custom agents when the session starts. Once
+  phase work has begun, a stale or refreshed agent file is recorded, never a
+  stop: see §Plugin Update Mid-Run: Record, Re-resolve, Continue.
 - **Step 0.10b: Implementation Agent Detection** — discover `PROJECT_IMPLEMENTATION_AGENT` from `.codex/agents/`
 - **Step 0.11: Project Command Discovery** — runner helper `detect-commands` → `PROJECT_COMMANDS`, including the quality-gate slots and the one-time missing-tool question
 - **Step 0.12: Preset and Extension Detection** — runner helper `detect-presets` → `PRESET_CONVENTIONS`

@@ -196,6 +196,11 @@ plugin cache, so autopilot cannot safely self-heal a missing Claude agent file.
 Tell the user to update/reinstall `speckit-pro`, run `/reload-plugins`, and
 retry.
 
+This check and its stop apply at setup or run start, before any phase work.
+Once phase work has begun, a plugin update is never a stop: follow
+§Plugin Update Mid-Run: Record, Re-resolve, Continue in
+[phase-execution.md](./phase-execution.md).
+
 ## Step 0.0c: Research Broker Preflight
 
 Record how the research broker will screen web and docs results:

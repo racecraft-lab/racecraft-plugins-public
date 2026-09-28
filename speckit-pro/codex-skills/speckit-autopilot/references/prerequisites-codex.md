@@ -369,12 +369,26 @@ the rendered files with either selected runtime path:
 1. `.codex/agents/<agent>.toml`
 2. `~/.codex/agents/<agent>.toml`
 
-Continue only when the helper returns `ok` with mutation status `no_op`. If it
-reports planned files, fails validation, or cannot inspect the selected path,
-STOP with its diagnostics. Tell the user to run `$install`, approve the expected
-local write, restart Codex, and then retry autopilot. This pre-flight is
-read-only: never apply or autoheal agent files from inside autopilot because the
-current Codex process cannot load refreshed custom-agent definitions safely.
+This check runs at setup or run start, before any phase work. Continue only
+when the helper returns `ok` with mutation status `no_op`. If it reports planned
+files, fails validation, or cannot inspect the selected path, STOP with its
+diagnostics. Tell the user to run `$install`, approve the expected local write,
+restart Codex, and then retry autopilot. This pre-flight is read-only: never
+apply or autoheal agent files from inside autopilot.
+
+The restart is needed because Codex builds its list of custom agents (names,
+descriptions, and file paths) once, when the session starts, so an agent file
+added after that is unknown to the session. The contents of a file already on
+that list are read again at each spawn, so an in-place refresh of a registered
+agent takes effect at the next `spawn_agent` with no restart. Source: openai/codex
+`rust-v0.158.0-alpha.15.3`, `codex-rs/core/src/config/mod.rs` lines 3792-3793
+(`load_agent_roles` at session config load) and
+`codex-rs/core/src/agent/role.rs` lines 51-67 and 143 (`apply_role_to_config`
+re-reads the role file on each spawn).
+
+Once phase work has begun, never rerun this check as a stop. A stale or
+refreshed agent file found mid-run follows §Plugin Update Mid-Run: Record,
+Re-resolve, Continue in [phase-execution-codex.md](./phase-execution-codex.md).
 
 ### 0.10b Implementation Agent Detection
 

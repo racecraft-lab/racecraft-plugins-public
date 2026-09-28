@@ -688,6 +688,76 @@ class BlockedActionDeferralSourceContractTests(unittest.TestCase):
         self.assertIn(BLOCKED_ACTION_HEADING, recovery)
 
 
+PLUGIN_DRIFT_HEADING = "Plugin Update Mid-Run: Record, Re-resolve, Continue"
+
+
+class MidRunPluginDriftSourceContractTests(unittest.TestCase):
+    """A plugin update during a run is recorded, never a restart stop (issue 767)."""
+
+    def assert_drift_rules(self, section: str) -> None:
+        for phrase in (
+            "at setup or run start",
+            "changed or vanished",
+            "re-resolve",
+            "`plugin_root`",
+            "Installed Runtime Contract",
+            "retry each failed bookkeeping call once",
+            "record the drift",
+            "never a stop",
+            "single end-of-run consolidated request",
+            "not a deferred task",
+            "correctness stops",
+        ):
+            self.assertIn(phrase, section)
+
+    def test_codex_phase_seven_records_drift_and_continues(self) -> None:
+        references = CODEX_AUTOPILOT_SKILL.parent / "references"
+        phase = _flat(references / "phase-execution-codex.md")
+        section = _section(
+            phase, f"### {PLUGIN_DRIFT_HEADING}", "## PR Packet and Body Boundary"
+        )
+        self.assertLess(phase.index(f"### {BLOCKED_ACTION_HEADING}"), phase.index(section))
+        self.assert_drift_rules(section)
+        # Codex 0.158 re-reads a registered role file at spawn time, but the
+        # role list is fixed when the session starts.
+        self.assertIn("next `spawn_agent`", section)
+        self.assertIn("when the session starts", section)
+
+    def test_codex_restart_rule_is_scoped_to_setup_or_run_start(self) -> None:
+        skill = _flat(CODEX_AUTOPILOT_SKILL)
+        prerequisites = _flat(CODEX_AUTOPILOT_SKILL.parent / "references" / "prerequisites-codex.md")
+        recovery = _flat(CODEX_AUTOPILOT_SKILL.parent / "references" / "error-recovery-codex.md")
+        for text in (skill, prerequisites):
+            self.assertNotIn("cannot reload changed custom agents safely", text)
+            self.assertNotIn("cannot load refreshed custom-agent definitions safely", text)
+        guard = _section(skill, "Do not translate this skill into Claude-only", "## Prerequisites — Model")
+        mapping = _section(skill, "Concrete Codex mapping:", "Spawn each agent with")
+        availability = _section(skill, "**Step 0.10: Codex Agent Availability Check**", "**Step 0.10b")
+        preflight = _section(prerequisites, "### 0.10 Codex Agent Availability Check", "### 0.10b")
+        for text in (guard, mapping, availability, preflight):
+            self.assertIn("at setup or run start", text)
+            self.assertIn(PLUGIN_DRIFT_HEADING, text)
+        self.assertIn("next `spawn_agent`", preflight)
+        self.assertIn("Plugin updated mid-run", recovery)
+        self.assertIn(PLUGIN_DRIFT_HEADING, recovery)
+
+    def test_claude_phase_seven_mirrors_the_drift_rule(self) -> None:
+        references = CLAUDE_AUTOPILOT_SKILL.parent / "references"
+        phase = _flat(references / "phase-execution.md")
+        section = _section(phase, f"#### {PLUGIN_DRIFT_HEADING}", "#### Append Contract")
+        self.assertLess(phase.index(f"#### {BLOCKED_ACTION_HEADING}"), phase.index(section))
+        self.assert_drift_rules(section)
+        self.assertIn("`validate-agent-install`", section)
+        self.assertIn("`/reload-plugins`", section)
+        prerequisites = _flat(references / "prerequisites.md")
+        install_check = _section(prerequisites, "If the check fails, STOP.", "## Step 0.0c")
+        self.assertIn("at setup or run start", install_check)
+        self.assertIn(PLUGIN_DRIFT_HEADING, install_check)
+        recovery = _flat(references / "error-recovery.md")
+        self.assertIn("Plugin updated mid-run", recovery)
+        self.assertIn(PLUGIN_DRIFT_HEADING, recovery)
+
+
 class StandingPolicyPreflightSourceContractTests(unittest.TestCase):
     """A ratified plan's ordinary work needs no up-front question (issue 764)."""
 
@@ -1826,6 +1896,7 @@ def build_suite() -> unittest.TestSuite:
         StateStatusSchemaTests,
         AutonomyBoundarySourceContractTests,
         BlockedActionDeferralSourceContractTests,
+        MidRunPluginDriftSourceContractTests,
         StandingPolicyPreflightSourceContractTests,
         AutonomyBoundaryAuthorizationTests,
         AutonomyBoundaryFreshnessTests,
