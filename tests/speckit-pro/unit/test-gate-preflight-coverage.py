@@ -104,6 +104,50 @@ class GatePreflightCoverageTests(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     check(inputs)
 
+    def test_a_declared_pre_pr_audit_command_lands_in_the_required_needs(self) -> None:
+        import tempfile
+
+        from speckit_pro_runner.helpers.gate_preflight_coverage import gate_preflight_coverage
+
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / "AGENTS.md").write_text(
+                "# Rules\n\nBefore a PR, run `pnpm audit --prod` and the checks below.\n\n"
+                "```bash\nnpm audit --audit-level=high\npnpm test\n```\n\n"
+                "Dependency audits matter, but prose alone declares no command.\n", encoding="utf-8")
+            (root / "CLAUDE.md").write_text("@./AGENTS.md\n\nAlso run `pnpm audit --prod`.\n", encoding="utf-8")
+            audits = ["npm audit --audit-level=high", "pnpm audit --prod"]
+            result = gate_preflight_coverage({"gates": GATES, "inventory_actions": INVENTORY}, root)
+            self.assertFalse(result["covered"])
+            self.assertEqual(result["declared_commands"],
+                             [{"command": "npm audit --audit-level=high", "source": "AGENTS.md"},
+                              {"command": "pnpm audit --prod", "source": "AGENTS.md"}])
+            self.assertEqual(result["missing"], [
+                {"gate": f"pre-PR: {command}", "command": command, "category": "external_side_effect",
+                 "target": command} for command in audits])
+            covered = [*INVENTORY, *({"action_id": f"audit-{index}", "category": "external_side_effect",
+                                      "target": command} for index, command in enumerate(audits))]
+            result = gate_preflight_coverage({"gates": GATES, "inventory_actions": covered}, root)
+            self.assertTrue(result["covered"])
+            self.assertEqual(result["covering_actions"]["pre-PR: pnpm audit --prod"], ["audit-1"])
+            (root / "AGENTS.md").write_text("Run a dependency audit before a PR.\n", encoding="utf-8")
+            (root / "CLAUDE.md").unlink()
+            quiet = gate_preflight_coverage({"gates": GATES, "inventory_actions": INVENTORY}, root)
+            self.assertEqual((quiet["covered"], quiet["declared_commands"]), (True, []))
+            (root / "AGENTS.md").write_bytes(b"`npm audit`\xff\n")
+            with self.assertRaises(ValueError):
+                gate_preflight_coverage({"gates": GATES, "inventory_actions": INVENTORY}, root)
+
+    def test_both_hosts_collect_declared_pre_pr_commands_at_run_start(self) -> None:
+        codex = " ".join((PLUGIN_ROOT / "codex-skills/speckit-autopilot/references/phase-execution-codex.md")
+                         .read_text(encoding="utf-8").split())
+        for phrase in ("`declared_commands`", "declared pre-PR command", "copy its `target` verbatim"):
+            self.assertIn(phrase, codex)
+        claude = " ".join((PLUGIN_ROOT / "skills/speckit-autopilot/references/phase-execution.md")
+                          .read_text(encoding="utf-8").split())
+        for phrase in ("declared pre-PR command", "`check-gate-preflight-coverage`"):
+            self.assertIn(phrase, claude)
+
     def test_runner_reports_a_gap_as_an_expected_failure(self) -> None:
         request = json.loads(FIXTURE_REQUEST.read_text(encoding="utf-8"))
         response = _runner(request)
