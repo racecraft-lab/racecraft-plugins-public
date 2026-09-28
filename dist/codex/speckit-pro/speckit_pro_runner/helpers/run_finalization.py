@@ -109,10 +109,15 @@ def _ledger_item(entry: dict[str, Any], resume_command: str) -> dict[str, str]:
     }
 
 
+def _canonical(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Records in one order that does not depend on the order the caller listed them."""
+    return sorted(records, key=lambda record: json.dumps(record, sort_keys=True))
+
+
 def render_request(items: list[dict[str, str]], resume_command: str) -> str:
     """The end-of-run request of a finalized run, as plain text."""
     lines = ["The run is finished: every runnable task and gate is done, and the pull request stack is ready "
-             "for review. Nothing was merged. This human UAT is deferred and not verified:", ""]
+             + "for review. Nothing was merged. This human UAT is deferred and not verified:", ""]
     for number, item in enumerate(items, start=1):
         lines.extend([f"{number}. {item['item']}: {item['reason']}", f"   To finish it: {item['finish']}"])
     lines.extend(["", f"Reply in this thread with any finding. The run resumes with: {resume_command}"])
@@ -151,8 +156,11 @@ def finalize_run(root: Path, inputs: dict[str, Any]) -> dict[str, Any]:
         raise ValueError("pending_items must list the runnable work still open, or be empty")
     pending_items = [_text(item, "pending_items") for item in pending]
 
-    stop = {"gates": [{"gate": gate["gate"], "command": gate["command"]} for gate in gates if gate["status"] == "failed"],
-            "units": [_ledger_item(entry, resume_command) for entry in ledger_deferrals] + unresolved}
+    # Canonical order, so the same blocker listed another way has the same digest and request text.
+    stop = {"gates": _canonical([{"gate": gate["gate"], "command": gate["command"]}
+                                 for gate in gates if gate["status"] == "failed"]),
+            "units": _canonical([_ledger_item(entry, resume_command) for entry in ledger_deferrals] + unresolved)}
+    human_uat = _canonical(human_uat)
     if pending_items:
         outcome = "continue"
     elif stop["gates"] or stop["units"]:
