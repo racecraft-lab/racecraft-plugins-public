@@ -811,7 +811,7 @@ This dedicated final Analyze synthesis completes the planning analysis. The oper
 
 ### Autonomy Boundary Preflight
 
-Status: ready. The user approved the exact implementation scope: bounded source/test/docs edits and verification, commits and normal feature/stack pushes, eighteen increment PRs and review replies, public-documentation research, offline local HAL delegation, the existing private record refresh, T011 root agent guidance and inventory-generated runner trust outputs. The current execution boundary and planning fingerprints are preserved. No ledger reset, private-repository export, cloud delegation, deployment, credential change, main push or force push is authorized. Private record digest: `sha256:7cf729c34de1560ac831656e5294d2eb69c8842cf1569e4f8c9a5edd0922b679`.
+Status: ready. The user approved the exact implementation scope: bounded source/test/docs edits and verification, commits and normal feature/stack pushes, eighteen increment PRs and review replies, public-documentation research, offline local HAL delegation, the existing private record refresh, T011 root agent guidance and inventory-generated runner trust outputs. The current execution boundary and planning fingerprints are preserved. No ledger reset, private-repository export, cloud delegation, deployment, credential change, main push or force push is authorized. Private record digest: `sha256:18a8beac92995f4b37a1cc199e72318e518d8c6d83903009d47c9cb0e2e40285`.
 
 **When to run:** After Phase 6 commits and before Phase 7 begins. Analyze checkpoint: `de3950bd`.
 
@@ -1063,19 +1063,19 @@ Ripwire quality-delta returned exit 2 for canonical process-state verbosity. Its
 | 3 | `us2` | A2 | T006, T007 | complete at `ed24ecd831d0b9f98e300fdc772f29839bd09d9a`; evidence `specs/hrns-015-autopilot-gate-pr-emission-repair/.process/checkpoints/us2.json` |
 | 4 | `us3` | A3 | T008, T009 | complete at `c60a3398b1e07412ec3cbb4468f3ca8a16a4687d`; evidence `specs/hrns-015-autopilot-gate-pr-emission-repair/.process/checkpoints/us3.json` |
 | 5 | `us4` | B1a | T010 | complete at `a1aa6bd265aa15d4a7005b5c0f0be77af786cb04`; evidence `specs/hrns-015-autopilot-gate-pr-emission-repair/.process/checkpoints/us4.json` |
-| 6 | `us5` | B1b | T011 | pending |
-| 7 | `us6` | B2b | T012, T013 | pending |
-| 8 | `us7` | B3a | T014 | pending |
-| 9 | `us8` | B3b | T015, T016 | pending |
-| 10 | `us9` | C1a1 | T017 | pending |
-| 11 | `us10-part1` | C1a2 | T018 | pending |
-| 12 | `us10-part2` | C1b1 | T019 | pending |
-| 13 | `us10-part3` | C1b2 | T020, T021 | pending |
-| 14 | `us11` | C2a1 | T022, T023 | pending |
-| 15 | `us12` | C2a2 | T024 | pending |
-| 16 | `us13-part1` | C2a3 | T025 | pending |
-| 17 | `us13-part2` | C2b1 | T026, T027 | pending |
-| 18 | `us14` | C2b2 | T028, T029, T030, T031 | pending |
+| 6 | `us5` | B1b | T011 | Pending |
+| 7 | `us6` | B2b | T012, T013 | Pending |
+| 8 | `us7` | B3a | T014 | Pending |
+| 9 | `us8` | B3b | T015, T016 | Pending |
+| 10 | `us9` | C1a1 | T017 | Pending |
+| 11 | `us10-part1` | C1a2 | T018 | Pending |
+| 12 | `us10-part2` | C1b1 | T019 | Pending |
+| 13 | `us10-part3` | C1b2 | T020, T021 | Pending |
+| 14 | `us11` | C2a1 | T022, T023 | Pending |
+| 15 | `us12` | C2a2 | T024 | Pending |
+| 16 | `us13-part1` | C2a3 | T025 | Pending |
+| 17 | `us13-part2` | C2b1 | T026, T027 | Pending |
+| 18 | `us14` | C2b2 | T028, T029, T030, T031 | Pending |
 
 
 ## Current Analyze Evidence — 2.37.1

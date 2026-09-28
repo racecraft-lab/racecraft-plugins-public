@@ -587,7 +587,7 @@
       "tasks_md": {
         "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/tasks.md",
         "size_bytes": 30479,
-        "sha256": "sha256:0ee0a1d6d6f19083e416379580a655bbaa66c367f2b5c437f7af5b37cc9820de"
+        "sha256": "sha256:c5373d4f33f0ec316c2421d3e690888fc5844fb1989fd5f5db9b4a8d4d1f7d46"
       }
     },
     "schema_version": "autonomy-boundary-receipt.v1",
@@ -709,7 +709,7 @@
         }
       }
     ],
-    "private_record_sha256": "sha256:86642be654a55f31e7be0c0e753e05d7f13a3b241ea0c2d43e37deb1908b2149"
+    "private_record_sha256": "sha256:18a8beac92995f4b37a1cc199e72318e518d8c6d83903009d47c9cb0e2e40285"
   },
   "plan_resume_result": {
     "version": "2.37.1",
@@ -3973,7 +3973,7 @@
       "evidence_commit_sha": "f79ec881cb7e9c7baf9221841cf6488c70170398"
     },
     "b1a_receipt_mismatch": {
-      "status": "awaiting_operator_decision",
+      "status": "resolved_by_task_definitions_receipt",
       "installed_plugin_version": "2.38.2",
       "guard": "status-evidence",
       "receipt_tasks_md_sha256": "sha256:0ee0a1d6d6f19083e416379580a655bbaa66c367f2b5c437f7af5b37cc9820de",
@@ -3983,7 +3983,9 @@
       "receipt_written_at_commit": "06a9cfcc6cbb3486cdb6546968f53cbfa7cd14d3",
       "checked_tasks_at_receipt_write": 9,
       "installed_package_import": "ok",
-      "receipt_edited": false
+      "receipt_edited": true,
+      "resolved_tasks_md_sha256": "sha256:c5373d4f33f0ec316c2421d3e690888fc5844fb1989fd5f5db9b4a8d4d1f7d46",
+      "proof": "task_definitions at receipt commit 06a9cfcc6 equals current; only task checkboxes changed"
     }
   }
 }
