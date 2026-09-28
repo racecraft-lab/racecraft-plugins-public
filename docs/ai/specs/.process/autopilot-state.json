@@ -5,7 +5,7 @@
   "branch": "hrns-015-autopilot-gate-pr-emission-repair",
   "status": "in_progress",
   "stage": "implement",
-  "active_step": "Phase 7: Implement - User Story 1 — final release note (P1, A1a then A1b) (T003, T004, T005)",
+  "active_step": "Phase 7: Implement - User Story 2 — packet-only untracked files (P1, Increment A2) (T006, T007)",
   "stage_resolution": {
     "basis": "explicit --stage implement",
     "confidence_gate_status": "✅ Complete",
@@ -160,11 +160,11 @@
     },
     {
       "step": "Phase 7: Implement - User Story 1 — final release note (P1, A1a then A1b) (T003, T004, T005)",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 7: Implement - User Story 2 — packet-only untracked files (P1, Increment A2) (T006, T007)",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 7: Implement - User Story 3 — current confidence verdict (P1, Increment A3) (T008, T009)",
@@ -271,7 +271,7 @@
       "status": "pending"
     }
   ],
-  "updated_at": "2026-09-28T15:49:06Z",
+  "updated_at": "2026-09-28T18:21:09Z",
   "prerequisites": {
     "status": "completed",
     "all_pass": true,
@@ -957,7 +957,7 @@
     "source_fingerprint": {
       "feature_spec_sha": "sha256:18c93677aaaee5f73aa8399b2cea052cc58ed2724fe6e74d93be96a47eae7e58",
       "plan_declared_scope_sha": "sha256:8381e50f0c0daf7491b6fb6f6e431adea30a89277d0b3073fd476194e6a8d759",
-      "tasks_sha": "sha256:bda6a096cae3c7a7d250c055d0618db70233f774f7d9a697b833e5dec6976737",
+      "tasks_sha": "sha256:544621db7b0982fce7c65dfbc59f55f2ddbeab02c64b79c7017d12a23ac5b7a8",
       "reviewability_sha": "sha256:4efa6739751bbef3183ebc677bde97f4971dfc61554ecf27a147af5d65aabefc",
       "hazard_route_sha": "sha256:f4259204cb8f92f1978ddf3b70195aba948d317567082f50f585fb0f4e0ef9c4"
     },
@@ -1159,7 +1159,11 @@
         "declared_files": [
           {
             "operation": "MODIFIED",
-            "path": "speckit-pro/speckit_pro_runner/helpers/pr_emission.py"
+            "path": "dist/claude/speckit-pro/skills/speckit-autopilot/SKILL.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/claude/speckit-pro/skills/speckit-autopilot/contracts/pr-packet.schema.json"
           },
           {
             "operation": "MODIFIED",
@@ -1167,43 +1171,7 @@
           },
           {
             "operation": "MODIFIED",
-            "path": "dist/codex/speckit-pro/speckit_pro_runner/helpers/pr_emission.py"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "speckit-pro/speckit_pro_runner/helpers/read_only.py"
-          },
-          {
-            "operation": "MODIFIED",
             "path": "dist/claude/speckit-pro/speckit_pro_runner/helpers/read_only.py"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "dist/codex/speckit-pro/speckit_pro_runner/helpers/read_only.py"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "speckit-pro/skills/speckit-autopilot/SKILL.md"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "dist/claude/speckit-pro/skills/speckit-autopilot/SKILL.md"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "speckit-pro/codex-skills/speckit-autopilot/SKILL.md"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "dist/codex/speckit-pro/skills/speckit-autopilot/SKILL.md"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256"
           },
           {
             "operation": "MODIFIED",
@@ -1215,19 +1183,27 @@
           },
           {
             "operation": "MODIFIED",
+            "path": "dist/codex/speckit-pro/skills/speckit-autopilot/SKILL.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/codex/speckit-pro/skills/speckit-autopilot/contracts/pr-packet.schema.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/codex/speckit-pro/speckit_pro_runner/helpers/pr_emission.py"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/codex/speckit-pro/speckit_pro_runner/helpers/read_only.py"
+          },
+          {
+            "operation": "MODIFIED",
             "path": "dist/codex/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json"
           },
           {
             "operation": "MODIFIED",
             "path": "dist/codex/speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "docs-site/src/content/docs/reference/skills.md"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "tests/speckit-pro/unit/test-speckit-pro-read-only-helpers.py"
           },
           {
             "operation": "MODIFIED",
@@ -1239,31 +1215,56 @@
           },
           {
             "operation": "MODIFIED",
+            "path": "speckit-pro/codex-skills/speckit-autopilot/SKILL.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/skills/speckit-autopilot/SKILL.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/skills/speckit-autopilot/contracts/pr-packet.schema.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/speckit_pro_runner/helpers/pr_emission.py"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/speckit_pro_runner/helpers/read_only.py"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256"
+          },
+          {
+            "operation": "MODIFIED",
             "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/tasks.md"
           },
           {
             "operation": "MODIFIED",
-            "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/.process/task-execution.json"
+            "path": "tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py"
           },
           {
             "operation": "MODIFIED",
-            "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/.process/slice-inventory.md"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/SPEC-MOC.md"
+            "path": "tests/speckit-pro/unit/test-speckit-pro-read-only-helpers.py"
           }
         ],
         "declared_tests": [
-          "tests/speckit-pro/unit/test-speckit-pro-read-only-helpers.py"
+          "tests/speckit-pro/unit/test-speckit-pro-read-only-helpers.py",
+          "tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py"
         ],
         "reviewability": {
           "status": "pass",
-          "mode": "planned_candidates",
+          "mode": "actual_source_delta",
           "scope": "A1b",
           "production_files": 2,
           "total_files": 24,
-          "qualification": "Candidate budgets only; actual per-PR diffs, LOC and checkpoint evidence required before emission."
+          "qualification": "Actual source delta 21 paths and 292 authored non-process changed lines; 3 tracked process paths bring marker to 24. Final emitted PR base/head diff and reviewable LOC remain mandatory before emission."
         },
         "hazards": [],
         "subdivision": {
@@ -1274,7 +1275,34 @@
           }
         },
         "implementation_checkpoint": {
-          "status": "pending"
+          "status": "complete",
+          "evidence_path": "specs/hrns-015-autopilot-gate-pr-emission-repair/.process/checkpoints/us1-part2.json",
+          "checkpoint_evidence_sha": "sha256:2e83696e94880a862a8f12ea7f79f1e9d9cf7a89283008785d7e18534d2ee177",
+          "verification_evidence_path": "specs/hrns-015-autopilot-gate-pr-emission-repair/.process/verification/us1-part2.json",
+          "verification_evidence_sha": "sha256:0770ed4ce1d332f54c3257b8eb362dac78c922593549d647791f49238b78c331",
+          "commit_sha": "33ce117a0ba41769a21e2aab7dcca3bb880440b0",
+          "head_sha": "33ce117a0ba41769a21e2aab7dcca3bb880440b0",
+          "completed_at": "2026-09-28T18:19:34Z",
+          "completed_task_ids": [
+            "T005"
+          ],
+          "required_verification_gate_ids": [
+            "focused_tests",
+            "quick_suite",
+            "ci_suite",
+            "artifact_consistency",
+            "docs_validation",
+            "python_lint",
+            "independent_critical_high_review",
+            "host_parity"
+          ],
+          "summary": "A1b source and final correction verified; 21 source paths plus 3 tracked process paths meet 24-path marker cap, 2 production paths, 292 authored non-process changed lines. Final emitted PR diff and reviewable LOC remain pending.",
+          "validation": [
+            "T005 RED, GREEN and refactor accepted in existing routing-epoch2 journal",
+            "final quick suite 10,110/10,110 and CI suite 6/6 dispatches passed",
+            "independent final correction review found no critical/high defect"
+          ],
+          "checkpoint_evidence_commit_sha": "241edeef15a54f6e084872427cd71517e5678311"
         },
         "emission_mapping": {
           "status": "pending"
@@ -3346,7 +3374,7 @@
   "current_source_fingerprint": {
     "feature_spec_sha": "sha256:18c93677aaaee5f73aa8399b2cea052cc58ed2724fe6e74d93be96a47eae7e58",
     "plan_declared_scope_sha": "sha256:8381e50f0c0daf7491b6fb6f6e431adea30a89277d0b3073fd476194e6a8d759",
-    "tasks_sha": "sha256:bda6a096cae3c7a7d250c055d0618db70233f774f7d9a697b833e5dec6976737",
+    "tasks_sha": "sha256:544621db7b0982fce7c65dfbc59f55f2ddbeab02c64b79c7017d12a23ac5b7a8",
     "reviewability_sha": "sha256:4efa6739751bbef3183ebc677bde97f4971dfc61554ecf27a147af5d65aabefc",
     "hazard_route_sha": "sha256:f4259204cb8f92f1978ddf3b70195aba948d317567082f50f585fb0f4e0ef9c4"
   },
@@ -3450,7 +3478,8 @@
       "T001",
       "T002",
       "T003",
-      "T004"
+      "T004",
+      "T005"
     ],
     "routing_checkpoint": {
       "status": "superseded_by_plugin_2.38.1",
@@ -3474,13 +3503,14 @@
     },
     "task_journal": {
       "journal_file": "specs/hrns-015-autopilot-gate-pr-emission-repair/.process/task-results/e7fbc9a6636945ed8a8c2abd42cbb892-routing-epoch2.json",
-      "producer_request_id": "hrns015-a1a-completed-behavior-record-2381",
+      "producer_request_id": "hrns015-t005-a1b-record-2381",
       "parent_retained_partition_sha256": "0a0054ea8b8b8411bd35e8b7ef6573042502ac316bff1e8def7ddf86a6274b6c",
       "completed_tasks": [
         "T001",
         "T002",
         "T003",
-        "T004"
+        "T004",
+        "T005"
       ]
     },
     "routing_replan": {
@@ -3568,6 +3598,58 @@
       "actual_emission_qualification": "pending"
     },
     "active_batch": {
+      "batch_id": "B004",
+      "tasks": [
+        "T005"
+      ],
+      "dispatch_id": "hrns015-a1b-t005-2381",
+      "stage": "marker_checkpoint_complete",
+      "completed_tasks": [
+        "T001",
+        "T002",
+        "T003",
+        "T004",
+        "T005"
+      ],
+      "source_commit_sha": "33ce117a0ba41769a21e2aab7dcca3bb880440b0",
+      "checkpoint_evidence_commit_sha": "241edeef15a54f6e084872427cd71517e5678311",
+      "journal_request_id": "hrns015-t005-a1b-record-2381",
+      "quick_suite": "10110/10110 passed",
+      "ci_suite": "6/6 dispatches passed",
+      "independent_review": "final correction clean; no critical/high findings",
+      "actual_source_delta": {
+        "base_commit": "331006843936a6918642bfcc9199008d3aae0f92",
+        "source_commit": "33ce117a0ba41769a21e2aab7dcca3bb880440b0",
+        "source_changed_paths": 21,
+        "marker_budget_counted_paths": 24,
+        "production_paths": 2,
+        "authored_nonprocess_changed_lines": 292,
+        "qualification": "source delta only; final PR base/head diff and reviewable LOC required before emission"
+      }
+    },
+    "a1a_checkpoint": {
+      "status": "complete",
+      "marker_id": "us1-part1",
+      "source_commit_sha": "5a89c0b706d905760157e1b6d2f7579039c1ee26",
+      "evidence_path": "specs/hrns-015-autopilot-gate-pr-emission-repair/.process/checkpoints/us1-part1.json",
+      "verification_evidence_path": "specs/hrns-015-autopilot-gate-pr-emission-repair/.process/verification/us1-part1.json",
+      "independent_review": "clean at merged HEAD",
+      "all_runnable_gates": "pass",
+      "pr_emission": "pending_exact_diff_and_loc",
+      "evidence_commit_sha": "f3d35bdf00ebb58606795b3169111dc53d172228"
+    },
+    "known_upstream_guard_issue": {
+      "issue": "#812",
+      "reported_by_operator": true,
+      "installed_plugin_version": "2.38.1",
+      "installed_plugin_unchanged": true,
+      "affected_errors": [
+        "v1 pending-marker checkpoint binding",
+        "checkbox-only tasks_md autonomy fingerprint staleness"
+      ],
+      "disposition": "continue remaining implementation units; these two installed-cache errors alone are known upstream defects, while all other gates remain mandatory"
+    },
+    "a1a_batch_record": {
       "batch_id": "B003",
       "tasks": [
         "T003",
@@ -3717,27 +3799,16 @@
         "qualification": "source delta only; final PR base/head diff and reviewable LOC must be checked before emission"
       }
     },
-    "a1a_checkpoint": {
+    "a1b_checkpoint": {
       "status": "complete",
-      "marker_id": "us1-part1",
-      "source_commit_sha": "5a89c0b706d905760157e1b6d2f7579039c1ee26",
-      "evidence_path": "specs/hrns-015-autopilot-gate-pr-emission-repair/.process/checkpoints/us1-part1.json",
-      "verification_evidence_path": "specs/hrns-015-autopilot-gate-pr-emission-repair/.process/verification/us1-part1.json",
-      "independent_review": "clean at merged HEAD",
+      "marker_id": "us1-part2",
+      "source_commit_sha": "33ce117a0ba41769a21e2aab7dcca3bb880440b0",
+      "evidence_path": "specs/hrns-015-autopilot-gate-pr-emission-repair/.process/checkpoints/us1-part2.json",
+      "verification_evidence_path": "specs/hrns-015-autopilot-gate-pr-emission-repair/.process/verification/us1-part2.json",
+      "independent_review": "clean after final correction",
       "all_runnable_gates": "pass",
       "pr_emission": "pending_exact_diff_and_loc",
-      "evidence_commit_sha": "f3d35bdf00ebb58606795b3169111dc53d172228"
-    },
-    "known_upstream_guard_issue": {
-      "issue": "#812",
-      "reported_by_operator": true,
-      "installed_plugin_version": "2.38.1",
-      "installed_plugin_unchanged": true,
-      "affected_errors": [
-        "v1 pending-marker checkpoint binding",
-        "checkbox-only tasks_md autonomy fingerprint staleness"
-      ],
-      "disposition": "continue remaining implementation units; these two installed-cache errors alone are known upstream defects, while all other gates remain mandatory"
+      "evidence_commit_sha": "241edeef15a54f6e084872427cd71517e5678311"
     }
   }
 }

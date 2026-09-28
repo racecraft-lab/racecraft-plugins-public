@@ -1052,14 +1052,14 @@ Ripwire quality-delta returned exit 2 for canonical process-state verbosity. Its
 | --- | --- |
 | Feature spec | `sha256:18c93677aaaee5f73aa8399b2cea052cc58ed2724fe6e74d93be96a47eae7e58` |
 | Plan declared scope | `sha256:8381e50f0c0daf7491b6fb6f6e431adea30a89277d0b3073fd476194e6a8d759` |
-| Tasks | `sha256:bda6a096cae3c7a7d250c055d0618db70233f774f7d9a697b833e5dec6976737` |
+| Tasks | `sha256:544621db7b0982fce7c65dfbc59f55f2ddbeab02c64b79c7017d12a23ac5b7a8` |
 | Reviewability | `sha256:4efa6739751bbef3183ebc677bde97f4971dfc61554ecf27a147af5d65aabefc` |
 | Hazard route | `sha256:f4259204cb8f92f1978ddf3b70195aba948d317567082f50f585fb0f4e0ef9c4` |
 
 | Review order | Marker | Increment | Tasks | Implementation checkpoint |
 | --- | --- | --- | --- | --- |
 | 1 | `us1-part1` | A1a | T001, T002, T003, T004 | complete at `5a89c0b706d905760157e1b6d2f7579039c1ee26`; evidence `specs/hrns-015-autopilot-gate-pr-emission-repair/.process/checkpoints/us1-part1.json` |
-| 2 | `us1-part2` | A1b | T005 | pending |
+| 2 | `us1-part2` | A1b | T005 | complete at `33ce117a0ba41769a21e2aab7dcca3bb880440b0`; evidence `specs/hrns-015-autopilot-gate-pr-emission-repair/.process/checkpoints/us1-part2.json` |
 | 3 | `us2` | A2 | T006, T007 | pending |
 | 4 | `us3` | A3 | T008, T009 | pending |
 | 5 | `us4` | B1a | T010 | pending |
@@ -1220,3 +1220,5 @@ The A1a source checkpoint was committed as `6639c94cb3ab2c8683217a6e4174555eac59
 A1a marker checkpoint, 2026-09-28T15:10:30Z: the existing routing-epoch2 journal records T001–T004 complete, including the original T003 RED and later GREEN/refactor observations. The A1a source delta (`82095a3e..6639c94c`) touched 21 paths, of which 20 count against the 24-path limit; 2 are production paths and authored non-process changes total 357 lines. The post-merge source commit `5a89c0b706d905760157e1b6d2f7579039c1ee26` passed the 10,106/10,106 quick suite, six CI suite layers, full docs validation (88 smoke and 4 gallery tests), artifact consistency, Ruff, mypy, host parity and independent critical/high review. The first marker evidence is committed under `specs/hrns-015-autopilot-gate-pr-emission-repair/.process/checkpoints/us1-part1.json` and `specs/hrns-015-autopilot-gate-pr-emission-repair/.process/verification/us1-part1.json`. The final emitted PR base/head diff and reviewable LOC remain mandatory before PR emission.
 
 Operator instruction, 2026-09-28: do not refresh or reinstall the installed SpecKit Pro plugin. Issue #812 is the operator-reported upstream fix for installed 2.38.1 pending-marker checkpoint binding and checkbox-only `tasks.md` autonomy fingerprint staleness. Record only those installed-cache guard errors as known upstream defects and continue other implementation units; all other gates remain mandatory. The branch-local guard correction has RED→GREEN proof, full phase-coverage tests and independent review; the installed cache remains unchanged.
+
+A1b marker checkpoint, 2026-09-28T18:21:09Z: T005 is complete in the existing routing-epoch2 journal. The source checkpoint `33ce117a0ba41769a21e2aab7dcca3bb880440b0` passed the final 10,110/10,110 quick suite, six CI dispatches, 151/151 focused read-only tests, artifact consistency, reference-mode docs validation, pinned Ruff and mypy, privacy scan and host parity. Independent re-review found no critical/high defect after a red-first fenced-heading correction. The marker evidence is committed at `241edeef15a54f6e084872427cd71517e5678311`. Its source delta touched 21 paths; with the three tracked workflow/state/tasks updates, A1b is 24 paths and 2 production paths, with 292 authored non-process changed lines. The emitted PR base/head diff and reviewable LOC remain mandatory before PR emission. Installed-cache issue #812 remains limited to the two operator-identified false positives.
