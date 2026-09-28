@@ -83,7 +83,10 @@ ownership from the caller's current workflow.
   committed file, every other unit counts as open. A third round for the
   same unit returns `disposition=defer` with
   `increment_review_allowance_exhausted`: defer that increment to the
-  end-of-run request and continue with independent increments. Increment
+  end-of-run request and continue. Its tasks stay checked and its dependents
+  stay runnable; its open findings become a tracked follow-up in the
+  implementation notes and the workflow file, never a new `tasks.md` line, so
+  a serial plan never stops mid-run on a deferral. Increment
   allowances archive with the rest of the allowance in `corrective_epochs`.
   A planning gate's own remediation (G2 through G7, most often G6 Analyze)
   instead supplies `gate_remediation`: `{"gate": "G6", "paths": [<every

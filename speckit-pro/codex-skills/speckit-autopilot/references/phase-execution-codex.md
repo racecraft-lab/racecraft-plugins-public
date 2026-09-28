@@ -1501,9 +1501,18 @@ increment's review loop. A fix that touches a path outside the increment's
 ownership, overlaps an increment that is still open, or lacks current
 ownership evidence goes through the run-wide budget unchanged. When the
 reserve returns `disposition=defer` with `increment_review_allowance_exhausted`, defer that increment
-under [Blocked Actions Mid-Run: Fall Back or Defer, Never Stop](#blocked-actions-mid-run-fall-back-or-defer-never-stop): record its
-open findings, keep its dependents deferred, and continue with independent
-increments. It is never a mid-run question and never a stop.
+under [Blocked Actions Mid-Run: Fall Back or Defer, Never Stop](#blocked-actions-mid-run-fall-back-or-defer-never-stop).
+A review-fix deferral is not a blocked task: the increment's tasks stay
+checked and committed, and its dependents stay runnable. Record its open
+findings as a tracked follow-up in the increment's implementation-notes entry
+and the workflow file's Phase 7 result (the ledger's `deferred` entry already
+names it), then continue with the next increment, even in a strictly serial
+plan. A later increment whose review round touches the same path may fix it;
+anything still open goes to the `finalize-run` end-of-run request. The
+follow-up is never a new task line in `tasks.md`: a changed task list stales
+the task-execution sidecar, and every later review fix would fall back to the
+run-wide budget with `ownership_evidence_stale`. It is never a mid-run
+question and never a stop.
 
 Before `tasks.md` exists, the plan contains:
 
@@ -2761,6 +2770,9 @@ whose refreshed preflight disposition is `operator_action_required`.
    workflow row, plan item, or the thread goal to blocked while runnable work
    remains. Mid-run a deferral only keeps the run working on other units;
    at the end of the run an unresolved deferral is the human stop in rule 3.
+   So a serial plan never stops mid-run on a deferral: when no runnable
+   work remains, even before the plan's last task, go straight to rule 3
+   and run `finalize-run`; the only stop is its end-of-run human stop.
 3. **Finalize, or stop once.** Human UAT is the only gate a run may defer.
    Every other gate (the integration suite, live evaluations, quality and test
    gates) must run and pass before the stack goes ready for review. Only after
