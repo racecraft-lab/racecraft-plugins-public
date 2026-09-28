@@ -2855,7 +2855,10 @@ whose refreshed preflight disposition is `operator_action_required`.
      - Run each of `ready_commands` to mark the whole stack ready for review.
        The run never merges.
      - The run marks the thread goal complete.
-     - Make one consolidated operator request with `request_user_input` whose text is
+     - Print the final report as plain text on `outcome=complete` with nothing
+       deferred, and ask no question; ask only on `human_stop` or deferred human
+       UAT. For `outcome=complete_with_deferred`, make one consolidated operator
+       request with `request_user_input` whose text is
        `end_of_run_request`, and print the same request as plain text in the
        final message too, even when `request_user_input` returns, because the question UI can fail to render in a
        thread. In an unattended run, or when `request_user_input` is absent, the

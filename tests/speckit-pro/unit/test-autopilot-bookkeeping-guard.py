@@ -955,6 +955,54 @@ class GateFailureDeferSourceContractTests(unittest.TestCase):
         self.assertNotIn("configured gate-failure/escalation path", phase)
 
 
+CLEAN_FINISH_QUESTION = "Print the final report as plain text on `outcome=complete`"
+BLOCKER_PHRASE = "return a blocker for consensus or deferral"
+
+
+class CleanFinishAndStopWordingSourceContractTests(unittest.TestCase):
+    """Finish asks only on a human stop; agents return blockers, never stop (issue 836)."""
+
+    def test_clean_complete_run_prints_plain_text_without_a_question(self) -> None:
+        for skill in (CLAUDE_AUTOPILOT_SKILL, CODEX_AUTOPILOT_SKILL):
+            text = _flat(skill)
+            self.assertIn(CLEAN_FINISH_QUESTION, text)
+            self.assertIn("ask only on `human_stop` or deferred human UAT", text)
+            self.assertNotIn("Either way, make one consolidated", text)
+            self.assertNotIn("Either way, make the one consolidated", text)
+        codex_phase = _flat(CODEX_AUTOPILOT_SKILL.parent / "references" / "phase-execution-codex.md")
+        self.assertIn(CLEAN_FINISH_QUESTION, codex_phase)
+        self.assertIn("ask only on `human_stop` or deferred human UAT", codex_phase)
+
+    def test_claude_executors_return_a_blocker_instead_of_escalating(self) -> None:
+        agents = REPO_ROOT / "speckit-pro" / "agents"
+        for name in ("implement-executor", "analyze-executor", "clarify-executor", "checklist-executor", "phase-executor"):
+            text = _flat(agents / f"{name}.md")
+            self.assertIn(BLOCKER_PHRASE, text)
+            for stale in ("orchestrator surface", "orchestrator escalate", "orchestrator fail the gate"):
+                self.assertNotIn(stale, text)
+
+    def test_codex_executors_return_a_blocker_instead_of_deciding(self) -> None:
+        agents = REPO_ROOT / "speckit-pro" / "codex-agents"
+        for name in ("implement-executor", "analyze-executor", "clarify-executor", "checklist-executor", "phase-executor"):
+            text = _flat(agents / f"{name}.toml")
+            self.assertIn(BLOCKER_PHRASE, text)
+            self.assertNotIn("let the orchestrator", text)
+
+    def test_codex_ambiguity_routes_to_clarify_consensus(self) -> None:
+        skill = _flat(CODEX_AUTOPILOT_SKILL)
+        self.assertNotIn("Fail the gate, surface the ambiguity, and stop", skill)
+        self.assertIn("Route the ambiguity to Clarify consensus, and defer it when consensus cannot settle it", skill)
+        toml = _flat(REPO_ROOT / "speckit-pro" / "codex-agents" / "phase-executor.toml")
+        self.assertIn(BLOCKER_PHRASE, toml)
+        self.assertNotIn("surface the condition to the orchestrator", toml)
+
+    def test_model_check_warns_and_routes_to_the_strongest_tier(self) -> None:
+        text = _flat(CLAUDE_AUTOPILOT_SKILL)
+        self.assertNotIn("small-tier", text)
+        self.assertNotIn("stop and ask the operator to switch", text)
+        self.assertIn("warn the operator once and route gate and consensus dispatches to the strongest available tier", text)
+
+
 PLUGIN_DRIFT_HEADING = "Plugin Update Mid-Run: Record, Re-resolve, Continue"
 
 
@@ -2417,6 +2465,7 @@ def build_suite() -> unittest.TestSuite:
         FailureClassApprovalSourceContractTests,
         AmbiguousTaskWordingSourceContractTests,
         GateFailureDeferSourceContractTests,
+        CleanFinishAndStopWordingSourceContractTests,
         GateTaskEvidenceLoopGuidanceTests,
         MidRunPluginDriftSourceContractTests,
         StandingPolicyPreflightSourceContractTests,
