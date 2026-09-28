@@ -2184,6 +2184,7 @@ def _marker_prose_lines(raw_lines: list[str]) -> list[str]:
     containers: list[tuple[str, int]] = []
     fence_char = ""
     fence_width = 0
+    fence_start = 0
     paragraph_open = False
     for raw in raw_lines:
         line, matched = _marker_contained_line(raw.expandtabs(4), containers)
@@ -2208,6 +2209,7 @@ def _marker_prose_lines(raw_lines: list[str]) -> list[str]:
         opening = _marker_fence_start(content)
         if opening:
             fence_char, fence_width = opening
+            fence_start = len(rendered_lines)
             rendered_lines.append("")
             paragraph_open = False
             continue
@@ -2216,6 +2218,9 @@ def _marker_prose_lines(raw_lines: list[str]) -> list[str]:
             continue
         rendered_lines.append(display_prefix + content)
         paragraph_open = not bool(re.match(r" {0,3}(?:#{1,6}(?:[ \t]|$)|(?:[-*_][ \t]*){3,}$)", content))
+    if fence_char:
+        # Without a closing fence, expose its markers for a conservative gate.
+        rendered_lines[fence_start:] = [line.expandtabs(4).replace("`", "") for line in raw_lines[fence_start:]]
     return rendered_lines
 
 
@@ -2241,10 +2246,21 @@ def _mask_markdown_code_spans(rendered_lines: list[str]) -> list[str]:
             end += 1
         width = end - cursor
         closing = end
-        # Blank rendered lines separate paragraphs and stand in for code blocks.
+        # Blank lines, headings, and list starts separate inline parsing blocks.
         block_end = document.find("\n\n", end)
         if block_end < 0:
             block_end = len(document)
+        next_block = re.search(
+            r"\n(?= {0,3}#{1,6}[ \t]| {0,3}(?:[-+*]|[0-9]+[.)])[ \t]+)",
+            document[end:block_end],
+        )
+        if next_block:
+            block_end = end + next_block.start()
+        line_start = document.rfind("\n", 0, cursor) + 1
+        if re.match(r" {0,3}#{1,6}(?:[ \t]|$)", document[line_start:]):
+            line_end = document.find("\n", end)
+            if line_end >= 0:
+                block_end = min(block_end, line_end)
         while closing < block_end:
             if document[closing] != "`":
                 closing += 1

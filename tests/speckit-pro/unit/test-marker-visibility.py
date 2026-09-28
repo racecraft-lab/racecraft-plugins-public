@@ -160,6 +160,8 @@ class MarkerVisibilityTests(unittest.TestCase):
             ("`unclosed paragraph\n\n[Gap] visible\n`later code`\n", 1, 3),
             ("`unclosed paragraph\n```text\n[Gap] code\n```\n"
              "[Gap] visible\n`later code`\n", 1, 5),
+            ("`unclosed\n# Heading\n[Gap] visible\n`later code`\n", 1, 3),
+            ("```text\n[Gap] ambiguous unclosed fence\n", 1, 2),
         )
         for markdown, expected_count, expected_line in cases:
             with self.subTest(markdown=markdown), tempfile.TemporaryDirectory() as temp:
