@@ -61,14 +61,15 @@ def is_runner_byproduct(relative: str) -> bool:
 
 
 def is_implementation_notes(relative: str) -> bool:
-    """True for a feature's `.process/implementation-notes.md` record (#801).
+    """True only for `specs/<feature>/.process/implementation-notes.md` (#801).
 
     The autopilot appends to it after every task, so it lags the checkpoint
     commit that publishes it. Unlike a byproduct it is committed; it is only
     exempt from the clean-worktree check and the per-PR path budget.
     """
     parts = PurePosixPath(relative).parts
-    return len(parts) >= 3 and parts[-2:] == (".process", "implementation-notes.md")
+    return (len(parts) == 4 and parts[0] == "specs"
+            and parts[2:] == (".process", "implementation-notes.md"))
 
 
 def workflow_process_directory(workflow_name: str) -> PurePosixPath:

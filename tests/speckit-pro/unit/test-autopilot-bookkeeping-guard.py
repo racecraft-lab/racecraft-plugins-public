@@ -1647,6 +1647,18 @@ class StatePrivacyTests(StatusEvidenceReportAssertions, unittest.TestCase):
                 if private_value != "argv":
                     self.assertNotIn(private_value, joined)
 
+    def test_private_key_error_names_the_key_by_its_digest(self) -> None:
+        """#800 review: a private key is identified by its digest, never echoed, one error per key."""
+        first, second = str(uuid.uuid4()), str(uuid.uuid4())
+        code, report = self._report_for({"evidence": {first: "a", second: "b", "ok": "c"}})
+        self.assertEqual(code, 1, report)
+        errors = report["state_privacy_errors"]
+        self.assertEqual(len(errors), 2, errors)
+        for key in (first, second):
+            digest = "sha256:" + hashlib.sha256(key.encode("utf-8")).hexdigest()
+            self.assertEqual(sum(digest in error for error in errors), 1, errors)
+            self.assertFalse(any(key in error for error in errors), errors)
+
     def test_redacted_decision_fields_pass(self) -> None:
         code, report = self._report_for({
             "stage": "implement",

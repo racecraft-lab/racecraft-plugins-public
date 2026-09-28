@@ -7817,6 +7817,8 @@ This line must not be copied.
             ("notes plus another file", (), (notes, "untracked.txt"), False),
             ("notes outside .process", (), ("specs/001-demo/implementation-notes.md",), False),
             ("other file in .process", (), ("specs/001-demo/.process/other-notes.md",), False),
+            ("notes outside specs", (), ("docs/.process/implementation-notes.md",), False),
+            ("notes nested below a feature", (), ("specs/001-demo/sub/.process/implementation-notes.md",), False),
         )
         for label, tracked, written, clean in cases:
             with self.subTest(case=label):
