@@ -3552,6 +3552,23 @@ class ReadOnlyHelperTests(unittest.TestCase):
             code, payload = self._g5(project_path, tasks, self.G5_LOOP_DEPENDS)
         self.assertEqual((0, True), (code, payload["pass"]), payload)
 
+    def test_validate_gate_g5_passes_a_stop_before_pr_emission_guard_clause(self) -> None:
+        """#802: a stop condition timed before PR emission is not evidence the task's dependents produce."""
+        if self.helper_filter and self.helper_filter != "validate-gate":
+            self.skipTest("G5 gate-task loop case uses validate-gate")
+        tasks = (
+            "## Phase 3: User Story 1\n\n"
+            + "- [ ] T001 [US1] Implement the parser in src/parser.py\n"
+            + "- [ ] T002 [US1] Run the structural cases and record the slice paths and marker checkpoint; "
+            + "stop before PR emission on any new path or failed gate\n\n"
+            + "## Phase 4: User Story 2\n\n"
+            + "- [ ] T003 [US2] Implement the writer in src/writer.py\n"
+        )
+        with helper_project() as project_path:
+            code, payload = self._g5(project_path, tasks, {"T001": [], "T002": ["T001"], "T003": ["T002"]})
+        self.assertEqual((0, True), (code, payload["pass"]), payload)
+        self.assertNotIn("gate_task_loops", payload)
+
     def test_validate_gate_g5_uses_sidecar_dependents_outside_the_setup_phase(self) -> None:
         if self.helper_filter and self.helper_filter != "validate-gate":
             self.skipTest("G5 gate-task loop case uses validate-gate")

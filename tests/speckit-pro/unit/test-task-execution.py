@@ -339,5 +339,18 @@ class TaskExecutionTests(unittest.TestCase):
         loops = gate_task_loops(tasks.replace("## Phase 9: Polish", "## Phase 4: User Story 2"), {"T020": ["T010"]})
         self.assertEqual([loop["task"] for loop in loops], ["T010"])
 
+    def test_gate_loop_ignores_a_stop_before_pr_emission_guard(self):
+        # #802: "stop before PR emission" times a stop; it names no evidence a dependent produces.
+        tasks = (
+            "## Phase 12: User Story 10\n"
+            "- [ ] T021 [US10] Record the slice paths and marker checkpoint; "
+            "stop before PR emission on any new path or failed gate\n"
+            "## Phase 13: User Story 11\n"
+            "- [ ] T022 [US11] Implement the writer in src/writer.py\n"
+        )
+        self.assertEqual(gate_task_loops(tasks, {"T022": ["T021"]}), [])
+        genuine = tasks.replace("Record the slice paths", "Record the actual LOC")
+        self.assertEqual([loop["task"] for loop in gate_task_loops(genuine, {"T022": ["T021"]})], ["T021"])
+
 if __name__ == "__main__":
     raise SystemExit(run_counted(unittest.defaultTestLoader.loadTestsFromTestCase(TaskExecutionTests), label="test-task-execution"))
