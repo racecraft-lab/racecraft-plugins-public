@@ -21,6 +21,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import uuid
 from unittest import mock
 from pathlib import Path
 
@@ -30,6 +31,7 @@ LIB_DIR = TEST_DIR.parent / "lib"
 if str(LIB_DIR) not in sys.path:
     sys.path.insert(0, str(LIB_DIR))
 
+import privacy_patterns  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
 SKILL_SCRIPTS = REPO_ROOT / "speckit-pro" / "skills" / "speckit-autopilot" / "scripts"
@@ -48,6 +50,7 @@ BLOCKING_STATUS_EVIDENCE_KEYS = (
     "autonomy_boundary_errors",
     "stage_mirror_errors",
     "workflow_authority_errors",
+    "state_privacy_errors",
 )
 
 PLAN_STEPS = (
@@ -1462,6 +1465,105 @@ class TrackedPairCorpusTests(StatusEvidenceReportAssertions, unittest.TestCase):
                 self.assertTrue(entry["reason"])
 
 
+
+def _synthetic_home_path(*parts: str) -> str:
+    """A home-style path built at run time, so this file never commits one."""
+    return "/".join(("", "home", "synthoperator", *parts))
+
+
+def _redacted_stage_resolution() -> dict:
+    return {
+        "stage": "implement",
+        "source": "argv",
+        "basis": "explicit --stage implement",
+        "recorded_stage": "plan",
+        "planning_complete": True,
+        "confidence_gate_status": "Complete",
+    }
+
+
+class StatePrivacyTests(StatusEvidenceReportAssertions, unittest.TestCase):
+    """Issue 770: the tracked state file holds decision fields, never private values."""
+
+    def _report_for(self, extra: dict) -> tuple[int, dict]:
+        with tempfile.TemporaryDirectory() as raw:
+            supplied, state = clean_workflow_state_fixture(Path(raw))
+            planted = json.loads(state.read_text(encoding="utf-8"))
+            planted.update(extra)
+            state.write_text(json.dumps(planted), encoding="utf-8")
+            return run_status_evidence_report(supplied, state)
+
+    def test_private_values_fail_the_status_evidence_gate(self) -> None:
+        interpreter = _synthetic_home_path(".venv", "bin", "python3")
+        windows_home = "C:" + "\\" + "Users" + "\\" + "synthoperator" + "\\" + "repo"
+        task_uuid = str(uuid.uuid4())
+        cases = (
+            (
+                "raw runner envelope with argv",
+                {"stage_resolution": {**_redacted_stage_resolution(), "argv": ["--stage", "implement"]}},
+                "argv",
+                "autopilot_state.stage_resolution.argv",
+            ),
+            (
+                "absolute home path value",
+                {"stage_resolution": {**_redacted_stage_resolution(), "interpreter": interpreter}},
+                interpreter,
+                "autopilot_state.stage_resolution.interpreter",
+            ),
+            (
+                "windows home path inside a list",
+                {"notes": ["ok", windows_home]},
+                windows_home,
+                "autopilot_state.notes[1]",
+            ),
+            (
+                "raw delegation task id",
+                {"delegation": {"task_id": task_uuid}},
+                task_uuid,
+                "autopilot_state.delegation.task_id",
+            ),
+            (
+                "home path used as a key",
+                {"evidence": {interpreter: "seen"}},
+                interpreter,
+                "autopilot_state.evidence",
+            ),
+        )
+        for label, extra, private_value, location in cases:
+            with self.subTest(case=label):
+                code, report = self._report_for(extra)
+                self.assertEqual(code, 1, report)
+                self.assertCompleteReport(report)
+                self.assertOnlySelectedProblemKeyPopulated(report, "state_privacy_errors")
+                joined = "\n".join(report["state_privacy_errors"])
+                self.assertIn(location, joined)
+                if private_value != "argv":
+                    self.assertNotIn(private_value, joined)
+
+    def test_redacted_decision_fields_pass(self) -> None:
+        code, report = self._report_for({
+            "stage": "implement",
+            "stage_resolution": _redacted_stage_resolution(),
+            "delegation": {"task_ref": "sha256:" + "0" * 64, "run_ref": uuid.uuid4().hex},
+        })
+        self.assertEqual(code, 0, report)
+        self.assertEqual(report["state_privacy_errors"], [])
+
+    def test_validator_patterns_match_the_repository_privacy_scan(self) -> None:
+        self.assertEqual(
+            validator.STATE_HOME_PATH_PATTERN.pattern,
+            privacy_patterns.HOME_PATH_PATTERN.pattern,
+        )
+        self.assertEqual(
+            validator.STATE_HYPHENATED_HOME_PATH_PATTERN.pattern,
+            privacy_patterns.HYPHENATED_HOME_PATH_PATTERN.pattern,
+        )
+        self.assertEqual(
+            validator.STATE_UUID_PATTERN.pattern,
+            privacy_patterns.UUID_PATTERN.pattern,
+        )
+
+
 class StatusEvidenceNegativeTests(StatusEvidenceReportAssertions, unittest.TestCase):
     """FEATURE-017 isolated state-invariant controls for the status-evidence gate."""
 
@@ -1912,6 +2014,7 @@ def build_suite() -> unittest.TestSuite:
         AuthorityMatchedPairClassificationTests,
         TrackedPairCorpusTests,
         StatusEvidenceNegativeTests,
+        StatePrivacyTests,
         WorkflowAuthorityTests,
         RepositoryRootResolutionTests,
         ProblemKeyClassificationTests,

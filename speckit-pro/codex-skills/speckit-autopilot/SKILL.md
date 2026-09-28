@@ -429,7 +429,11 @@ See [prerequisites-codex.md](./references/prerequisites-codex.md) for the full p
   `resolve-autopilot-stage` with the invocation argv and the workflow
   file path. Record `stage` as `AUTOPILOT_STAGE` and keep `source`,
   `basis`, `recorded_stage`, `planning_complete`, and
-  `confidence_gate_status` for the phase loop. Keep optional `artifact_review` for
+  `confidence_gate_status` for the phase loop. The committed
+  `autopilot-state.json` stores only those decision fields: never the raw
+  envelope, its `argv`, an absolute path, or an external task or session id,
+  such as a delegation `task_id` (a digest or short redacted reference is
+  fine). The Step 1.1 guard fails on them as `state_privacy_errors`. Keep optional `artifact_review` for
    terminal-step routing and print its unresolved preview dispositions. A pending
    handoff can auto-resolve `plan` even when `planning_complete` is true; explicit
    stages still win and started implementation is never routed backward. An explicit `--stage`
@@ -557,10 +561,10 @@ resolved_python "<plugin-root>/skills/speckit-autopilot/scripts/validate-autopil
 `resolved_python` is the Python 3.11+ interpreter resolved by the installed
 runtime contract, not a hardcoded interpreter name; `<plugin-root>` is the
 directory that owns `skills/speckit-autopilot/`. `--rule status-evidence`
-gates the exit code on the five workflow/state status-evidence checks
+gates the exit code on the six workflow/state status-evidence checks
 (`workflow_status_evidence_errors`, `state_status_errors`,
 `autonomy_boundary_errors`, `stage_mirror_errors`,
-`workflow_authority_errors`) and the three current-run
+`workflow_authority_errors`, `state_privacy_errors`) and the three current-run
 state-plan invariants (`in_progress_errors`, `duplicate_state_steps`,
 `state_order_errors`), the same scoping the Claude variant uses. The full
 report still prints; structural coverage checks and every advisory key are
