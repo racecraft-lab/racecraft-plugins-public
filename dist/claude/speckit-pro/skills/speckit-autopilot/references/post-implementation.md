@@ -517,7 +517,10 @@ opens one slice PR.
    2. derive that slice's packet ID, title, body path, base/head, and file scope
       from its marker/layer-plan record—never from a branch name, changed-file
       guess, aggregate candidate command, or another slice's packet;
-   3. emit or refresh that slice's packet with `pr-packet-output`;
+   3. emit or refresh that slice's packet with `pr-packet-output`; its own
+       canonical untracked metadata, body, and validation paths are allowed
+       without a commit, force-add, or ignore-rule change, while tracked edits,
+       another packet, unrelated files, and unreadable Git status still block;
    4. run fresh `validate-pr-packet-read-only`, consume its current
       `data.stdout_json`, and persist the passing validation evidence; and
    5. only then create or refresh the PR using the validated packet's title and

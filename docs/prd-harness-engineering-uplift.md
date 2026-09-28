@@ -788,7 +788,8 @@ the dependencies above. Its Jev check is a later slice that waits for HRNS-027.
 | Per-story Autopilot (§3.15) | `speckit-pro/skills/speckit-autopilot/references/phase-execution.md` and the Codex mirror | changed | Task-group loop becomes a story loop |
 | Per-story Autopilot (§3.15) | `speckit-pro/skills/speckit-autopilot/references/post-implementation.md` and the Codex mirror | changed | Per-story PR emission |
 | Per-story Autopilot (§3.15) | `speckit-pro/skills/speckit-coach/templates/workflow-template.md` | changed | Per-story checkpoint table |
-| Repair (§3.16) | `speckit-pro/speckit_pro_runner/helpers/pr_emission.py` | changed | Release-note field or body hook; untracked-packet outcome |
+| Repair (§3.16) | `speckit-pro/speckit_pro_runner/helpers/pr_emission.py` | changed | Optional release-note field and protected body rendering |
+| Repair (§3.16) | `speckit-pro/speckit_pro_runner/helpers/mutation.py` | changed | Current-packet-only untracked allowance for packet writes |
 | Repair (§3.16) | `speckit-pro/speckit_pro_runner/helpers/read_only.py` | changed | `[Gap` matching; untracked-file exclusion in the spec-index walk; spec-size refactor count |
 | Repair (§3.16) | `speckit-pro/skills/speckit-autopilot/` and the Codex mirror | changed | Self-verifying Post list; team teardown |
 | Repair (§3.16) | `speckit-pro/skills/speckit-resolve-pr/SKILL.md` | changed | Full pagination; verify, push, then reply and resolve |

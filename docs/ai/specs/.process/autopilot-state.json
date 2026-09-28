@@ -587,7 +587,7 @@
       "tasks_md": {
         "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/tasks.md",
         "size_bytes": 30479,
-        "sha256": "sha256:bda6a096cae3c7a7d250c055d0618db70233f774f7d9a697b833e5dec6976737"
+        "sha256": "sha256:544621db7b0982fce7c65dfbc59f55f2ddbeab02c64b79c7017d12a23ac5b7a8"
       }
     },
     "schema_version": "autonomy-boundary-receipt.v1",
@@ -709,7 +709,7 @@
         }
       }
     ],
-    "private_record_sha256": "sha256:441073427e0c01e9ab5de66cec159656e0b5feff43688381839064ad69e07d54"
+    "private_record_sha256": "sha256:141267b348a139c9a27a786777a4a0864a6eb59a52f21e7c41dd11f87c8c37c3"
   },
   "plan_resume_result": {
     "version": "2.37.1",

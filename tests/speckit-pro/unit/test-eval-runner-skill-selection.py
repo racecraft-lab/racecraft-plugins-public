@@ -465,7 +465,7 @@ def post_implementation_outcome_violations(bodies: dict[str, str]) -> list[str]:
         "clean UAT generation checkpoint": (
             "checkpoint the just-recorded terms-lint note and uat-pending state",
             "staging only the current workflow and autopilot-state files",
-            "the mutation helper intentionally rejects a dirty worktree",
+            "packet-only exemption does not apply to uat generation",
         ),
         "genuine UAT failure fallback": (
             "log `failed-open: generate-uat-skeleton` with the exact diagnostic",

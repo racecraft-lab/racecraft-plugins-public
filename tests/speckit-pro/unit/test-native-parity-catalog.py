@@ -710,8 +710,8 @@ class NativeParityCatalogTests(unittest.TestCase):
             REPO_ROOT / "speckit-pro" / "skills" / "speckit-autopilot" / "SKILL.md"
         ).read_text(encoding="utf-8")
         self.assertIn("current committed evidence", source)
-        self.assertIn("Commit or otherwise checkpoint the packet/body", source)
-        self.assertIn("mutation helper intentionally rejects a dirty worktree", source)
+        self.assertIn("The current packet's canonical untracked metadata", source)
+        self.assertIn("packet-only exemption does not apply to UAT generation", source)
         self.assertIn('git commit -m "docs(SPEC-XXX): add UAT runbook"', source)
         self.assertIn("phase 7:    git add -A && git commit", skill)
 

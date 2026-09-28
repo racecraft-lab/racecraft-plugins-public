@@ -24,7 +24,7 @@ and continue with the first incomplete Post item.
 ## Contents
 
 - [Canonical Post Items (10-19)](#canonical-post-items-10-19) — full numbered table with runtime + command per row
-- [Combined Durable Plan](#combined-durable-plan) — four supporting rows that remain visible beside the numbered gates
+- [Combined Durable Plan](#combined-durable-plan) — three supporting rows that remain visible beside the numbered gates
 - [How Extension Commands Become Available](#how-extension-commands-become-available) — `$speckit-*` installation via `specify extension add`
 - [Parallel Group (Items 10-14)](#parallel-group-items-10-14) — Codex always uses parallel `spawn_agent` (no Agent Teams primitive)
 - [Rules](#rules) — extension dispatch, parent-session ownership, PR body, missing-extension behavior
@@ -73,7 +73,7 @@ Retrospective): Spawn `phase-executor` with instructions to run the
 Code Review (13) is built-in — no extension; it runs as the
 parallel-group Track B subagent (see below), reviewing the diff and
 reporting findings by severity.
-Non-extension items 15, 16, 17, 18 and all four supporting rows: execute directly in the parent
+Non-extension items 15, 16, 17, 18 and all three supporting rows: execute directly in the parent
 session. (Item 14 Integration Suite is also non-extension but runs in
 the parallel group's Track C verify-chain subagent — see below — not the
 parent session.)
