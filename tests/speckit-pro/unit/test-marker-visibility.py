@@ -127,6 +127,8 @@ class MarkerVisibilityTests(unittest.TestCase):
             (feature / "spec.md").write_text("Spec is ready.\n")
             (feature / "plan.md").write_text("Plan is ready.\n")
             (feature / "checklists" / "review.md").write_text(
+                "```text\n> [Gap] literal fenced code\n```\n"
+                "- ```text\n  [Gap] list-item code\n  ```\n"
                 "> ```text\n> [Gap] quoted code\n"
                 "[Gap] after quote\n"
                 "- item\n  ```text\n  [Gap] list code\n"
@@ -146,6 +148,21 @@ class MarkerVisibilityTests(unittest.TestCase):
                 {"feature_dir": "specs/001-demo", "gate": "G4"}, root
             )["stdout"])
             self.assertEqual((False, 5), (g4["pass"], g4["markers"]))
+
+    def test_list_item_fence_opening_hides_code_markers(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp).resolve()
+            feature = root / "specs" / "001-demo"
+            (feature / "checklists").mkdir(parents=True)
+            (feature / "spec.md").write_text("Spec is ready.\n")
+            (feature / "plan.md").write_text("Plan is ready.\n")
+            (feature / "checklists" / "review.md").write_text(
+                "- ```text\n  [Gap] list-item code\n  ```\n"
+            )
+            gaps = json.loads(read_only.count_markers(
+                {"feature_dir": "specs/001-demo", "type": "gaps"}, root
+            )["stdout"])
+            self.assertEqual((0, []), (gaps["total"], gaps["details"]))
 
     def test_g4_missing_required_artifact_fails_closed(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

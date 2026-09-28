@@ -2147,6 +2147,24 @@ def _marker_prose_lines(raw_lines: list[str]) -> list[str]:
 
     for raw in raw_lines:
         line = raw.expandtabs(4)
+        if fence_char:
+            fenced_line = line
+            matched_quotes = 0
+            while matched_quotes < fence_quote_depth and (quote := QUOTE_MARKER.match(fenced_line)):
+                matched_quotes += 1
+                fenced_line = fenced_line[quote.end():]
+            leading = len(fenced_line) - len(fenced_line.lstrip(" "))
+            if matched_quotes == fence_quote_depth and (
+                not fenced_line.strip() or not list_indents or leading >= list_indents[-1]
+            ):
+                content = fenced_line[list_indents[-1]:] if list_indents else fenced_line
+                rendered_lines.append("")
+                if re.fullmatch(rf" {{0,3}}{re.escape(fence_char)}{{{fence_width},}}[ \t]*", content):
+                    fence_char = ""
+                    paragraph_open = False
+                continue
+            fence_char = ""
+            paragraph_open = False
         current_quote_depth = 0
         while quote := QUOTE_MARKER.match(line):
             current_quote_depth += 1
@@ -2161,29 +2179,17 @@ def _marker_prose_lines(raw_lines: list[str]) -> list[str]:
             continue
 
         leading = len(line) - len(line.lstrip(" "))
-        if fence_char and (current_quote_depth != fence_quote_depth or
-                           (list_indents and leading < list_indents[-1])):
-            fence_char = ""
+        while list_indents and leading < list_indents[-1]:
+            list_indents.pop()
             paragraph_open = False
-        if not fence_char:
-            while list_indents and leading < list_indents[-1]:
-                list_indents.pop()
-                paragraph_open = False
         content_indent = list_indents[-1] if list_indents else 0
         content = line[content_indent:]
-
-        if fence_char:
-            rendered_lines.append("")
-            if re.fullmatch(rf" {{0,3}}{re.escape(fence_char)}{{{fence_width},}}[ \t]*", content):
-                fence_char = ""
-                paragraph_open = False
-            continue
-
         marker = LIST_MARKER.match(content)
         if marker:
             list_indents.append(content_indent + marker.end())
             paragraph_open = False
-        opening = re.fullmatch(r" {0,3}(?P<fence>`{3,}|~{3,})(?P<info>[^\r\n]*)", content)
+        fence_candidate = content[marker.end():] if marker else content
+        opening = re.fullmatch(r" {0,3}(?P<fence>`{3,}|~{3,})(?P<info>[^\r\n]*)", fence_candidate)
         if opening and not (opening["fence"][0] == "`" and "`" in opening["info"]):
             fence_char = opening["fence"][0]
             fence_width = len(opening["fence"])
