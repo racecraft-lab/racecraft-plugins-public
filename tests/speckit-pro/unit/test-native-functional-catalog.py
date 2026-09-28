@@ -627,12 +627,19 @@ def _assert_g3_failure(test: unittest.TestCase, case_id: str, result: subprocess
     envelope = json.loads(result.stdout)
     test.assertEqual(envelope["status"], "expected_failure", case_id)
     test.assertFalse(envelope["data"]["writes_state"], case_id)
+    detail = (
+        "scenario-inputs/feature/plan.md:8:- [NEEDS CLARIFICATION] "
+        "Record the exact instant the author sees the first outline rendered in the client."
+        if case_id.endswith("111") else
+        "scenario-inputs/feature/plan.md:5:- [NEEDS CLARIFICATION] "
+        "Measure the exact visible UI-delivery event presented to the author."
+    )
     test.assertEqual(
         envelope["data"]["stdout_json"],
         {
             "gate": "G3", "pass": False,
             "reason": "1 unresolved markers (NC:1, TODO:0)",
-            "markers": 1, "details": [],
+            "markers": 1, "details": [detail],
         },
         case_id,
     )

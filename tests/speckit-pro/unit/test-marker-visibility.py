@@ -119,6 +119,34 @@ class MarkerVisibilityTests(unittest.TestCase):
             self.assertEqual(1, len(clarifications["details"]))
 
 
+    def test_container_boundaries_and_inline_spans_preserve_visible_markers(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp).resolve()
+            feature = root / "specs" / "001-demo"
+            (feature / "checklists").mkdir(parents=True)
+            (feature / "spec.md").write_text("Spec is ready.\n")
+            (feature / "plan.md").write_text("Plan is ready.\n")
+            (feature / "checklists" / "review.md").write_text(
+                "> ```text\n> [Gap] quoted code\n"
+                "[Gap] after quote\n"
+                "- item\n  ```text\n  [Gap] list code\n"
+                "[Gap] after list\n"
+                "> - item\n>\n>     [Gap] quoted continuation\n"
+                "- parent\n  - child\n  [Gap] outer continuation\n"
+                "# Heading\n    [Gap] indented code\n"
+                "`multiline\n[Gap] in code span\n`\n"
+                "\`[Gap] escaped opener`\n"
+            )
+            result = json.loads(read_only.count_markers(
+                {"feature_dir": "specs/001-demo", "type": "gaps"}, root
+            )["stdout"])
+            self.assertEqual(5, result["total"], result["details"])
+            self.assertEqual(result["total"], len(result["details"]))
+            g4 = json.loads(read_only.validate_gate(
+                {"feature_dir": "specs/001-demo", "gate": "G4"}, root
+            )["stdout"])
+            self.assertEqual((False, 5), (g4["pass"], g4["markers"]))
+
     def test_g4_missing_required_artifact_fails_closed(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp).resolve()

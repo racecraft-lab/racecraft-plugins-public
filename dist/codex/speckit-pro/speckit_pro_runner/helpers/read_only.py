@@ -2135,68 +2135,111 @@ LIST_MARKER = re.compile(r"^ {0,3}(?:[-+*]|[0-9]+[.)])[ \t]+")
 QUOTE_MARKER = re.compile(r"^ {0,3}>[ \t]?")
 
 
-def _marker_content_lines(lines: list[str]) -> list[str]:
-    """Remove list and quote prefixes before classifying Markdown code."""
-    normalized: list[str] = []
-    content_indent = 0
-    for raw in lines:
-        expanded = raw.expandtabs(4)
-        if not expanded.strip():
-            normalized.append("")
-            continue
-        leading = len(expanded) - len(expanded.lstrip(" "))
-        if content_indent and leading >= content_indent:
-            line = expanded[content_indent:]
-            parent_indent = content_indent
-        else:
-            line = expanded
-            parent_indent = 0
-            if leading < content_indent:
-                content_indent = 0
-        while quote := QUOTE_MARKER.match(line):
-            line = line[quote.end():]
-        list_marker = LIST_MARKER.match(line)
-        if list_marker:
-            content_indent = parent_indent + list_marker.end()
-        normalized.append(line)
-    return normalized
-
-
 def _visible_marker_lines(path: Path, repo_root: Path) -> list[tuple[int, str]]:
-    lines = _marker_content_lines(trusted_lines(path, repo_root))
-    fenced = _fenced_markdown_lines(lines)
-    visible: list[tuple[int, str]] = []
+    """Render marker-bearing Markdown prose without code or container leakage."""
+    raw_lines = trusted_lines(path, repo_root)
+    rendered_lines: list[str] = []
+    list_indents: list[int] = []
+    quote_depth = 0
+    fence_char = ""
+    fence_width = 0
+    fence_quote_depth = 0
     paragraph_open = False
-    for index, line in enumerate(lines):
-        if index in fenced or not line.strip():
+
+    for raw in raw_lines:
+        line = raw.expandtabs(4)
+        current_quote_depth = 0
+        while quote := QUOTE_MARKER.match(line):
+            current_quote_depth += 1
+            line = line[quote.end():]
+        if current_quote_depth != quote_depth:
+            list_indents.clear()
+            paragraph_open = False
+            quote_depth = current_quote_depth
+        if not line.strip():
+            rendered_lines.append("")
             paragraph_open = False
             continue
-        if len(line) - len(line.lstrip(" ")) >= 4 and not paragraph_open:
+
+        leading = len(line) - len(line.lstrip(" "))
+        if fence_char and (current_quote_depth != fence_quote_depth or
+                           (list_indents and leading < list_indents[-1])):
+            fence_char = ""
+            paragraph_open = False
+        if not fence_char:
+            while list_indents and leading < list_indents[-1]:
+                list_indents.pop()
+                paragraph_open = False
+        content_indent = list_indents[-1] if list_indents else 0
+        content = line[content_indent:]
+
+        if fence_char:
+            rendered_lines.append("")
+            if re.fullmatch(rf" {{0,3}}{re.escape(fence_char)}{{{fence_width},}}[ \t]*", content):
+                fence_char = ""
+                paragraph_open = False
             continue
-        paragraph_open = True
-        # CommonMark code spans pair runs of the same number of backticks.
-        # A lone unmatched run remains visible prose.
-        rendered: list[str] = []
-        cursor = 0
-        while cursor < len(line):
-            if line[cursor] != "`":
-                rendered.append(line[cursor])
-                cursor += 1
+
+        marker = LIST_MARKER.match(content)
+        if marker:
+            list_indents.append(content_indent + marker.end())
+            paragraph_open = False
+        opening = re.fullmatch(r" {0,3}(?P<fence>`{3,}|~{3,})(?P<info>[^\r\n]*)", content)
+        if opening and not (opening["fence"][0] == "`" and "`" in opening["info"]):
+            fence_char = opening["fence"][0]
+            fence_width = len(opening["fence"])
+            fence_quote_depth = current_quote_depth
+            rendered_lines.append("")
+            paragraph_open = False
+            continue
+        if len(content) - len(content.lstrip(" ")) >= 4 and not paragraph_open:
+            rendered_lines.append("")
+            continue
+        rendered_lines.append(content)
+        paragraph_open = not bool(re.match(r" {0,3}(?:#{1,6}(?:[ \t]|$)|(?:[-*_][ \t]*){3,}$)", content))
+
+    # A CommonMark code span may cross line boundaries. Pair equal-width runs
+    # before counting markers, leaving unmatched and escaped backticks as prose.
+    document = "\n".join(rendered_lines)
+    masked = list(document)
+    cursor = 0
+    while cursor < len(document):
+        if document[cursor] != "`":
+            cursor += 1
+            continue
+        preceding = cursor - 1
+        while preceding >= 0 and document[preceding] == "\\":
+            preceding -= 1
+        if (cursor - preceding - 1) % 2:
+            cursor += 1
+            continue
+        end = cursor + 1
+        while end < len(document) and document[end] == "`":
+            end += 1
+        width = end - cursor
+        closing = end
+        while closing < len(document):
+            if document[closing] != "`":
+                closing += 1
                 continue
-            end = cursor + 1
-            while end < len(line) and line[end] == "`":
-                end += 1
-            width = end - cursor
-            closing = next((match for match in re.finditer(r"`+", line[end:])
-                            if len(match.group()) == width), None)
-            if closing is None:
-                rendered.append(line[cursor:end])
-                cursor = end
-            else:
-                rendered.append(" ")
-                cursor = end + closing.end()
-        visible.append((index + 1, "".join(rendered)))
-    return visible
+            before = closing - 1
+            while before >= 0 and document[before] == "\\":
+                before -= 1
+            run_end = closing + 1
+            while run_end < len(document) and document[run_end] == "`":
+                run_end += 1
+            if (closing - before - 1) % 2 == 0 and run_end - closing == width:
+                for position in range(cursor, run_end):
+                    if masked[position] != "\n":
+                        masked[position] = " "
+                cursor = run_end
+                break
+            closing = run_end
+        else:
+            cursor = end
+
+    return [(index + 1, line) for index, line in enumerate("".join(masked).split("\n"))
+            if line.strip()]
 
 
 def _gap_tag_count(line: str) -> int:
