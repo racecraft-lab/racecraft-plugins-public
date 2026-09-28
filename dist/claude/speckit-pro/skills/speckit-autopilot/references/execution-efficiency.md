@@ -224,11 +224,29 @@ ownership from the caller's current workflow.
   `--stage implement` invocation returns `stage_epoch_opened=false` and
   changes nothing. When real corrections spend this stage's own allowance,
   defer the blocked work to the end-of-run request; never ask mid-run.
-  A metadata-only correction (for example a task verb reworded so the task
-  routes to verification) still reserves an ordinary cycle. Admitting it
-  without one needs a runner-observed baseline of the task definitions to
-  prove that no requirement, task ID, dependency, ownership, or budget
-  changed; the runner has no such baseline yet, so that admission is deferred.
+- Metadata-only correction: a task verb reworded so the task routes to
+  verification (for example T001 `Confirm` to `Verify`) spends no cycle and
+  needs no re-plan or operator question. Apply the `tasks.md` edit first,
+  then `reserve` a new corrective dispatch with `metadata_only: true` and the
+  explicit `spec_file`. The runner proves the claim itself against the
+  committed `HEAD` of that feature directory: `spec.md` and `plan.md` must
+  match byte for byte, and `tasks.md` may differ only on task lines whose
+  leading verb swaps between two words of `PHASE7_VERIFY_KEYWORDS`, with the
+  task ID, `[P]` and story markers, and every other byte unchanged. Checkbox
+  state is ignored, as in the task fingerprints. A proven correction returns
+  `correction_allowance=metadata_only` with its `task_ids`, and the ledger
+  records it in `metadata_corrections`. Each task gets one such correction
+  per run, across stage and re-plan epochs. Anything else returns
+  `correction_allowance=run_wide` with `metadata_ineligible` and takes the
+  ordinary reservation path: `baseline_unavailable` (no git, no committed
+  file, or a symlinked or unreadable one), `planning_source_changed`,
+  `not_metadata_only` (any other word, path, marker, task, line, or phase
+  change), `no_task_correction` (nothing differs from `HEAD`),
+  `task_already_corrected`, or `feature_binding_mismatch`. After admission,
+  refresh the task-execution sidecar fingerprints through
+  `validate-task-execution` with `action=fingerprints`, rerun the affected
+  gate, commit the edit, and record the dispatch result. When the ordinary
+  path defers instead, undo the edit and carry it to the end-of-run request.
 - `checkpoint`: persist the 45-minute completed-work marker without resetting
   the repair budget. `pause`/`resume` excludes only human-UAT or
   external-approval waits with independent parent `native_observation` carrying
