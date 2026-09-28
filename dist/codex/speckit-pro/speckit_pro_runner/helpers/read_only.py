@@ -2135,6 +2135,23 @@ LIST_MARKER = re.compile(r"^ {0,3}(?:[-+*]|[0-9]+[.)])[ \t]+")
 QUOTE_MARKER = re.compile(r"^ {0,3}>[ \t]?")
 
 
+def _marker_fence_line(raw: str, quote_depth: int, content_indent: int,
+                       fence_char: str, fence_width: int) -> tuple[bool, bool]:
+    """Return whether a line stays in a fence and whether it closes it."""
+    line = raw
+    for _ in range(quote_depth):
+        quote = QUOTE_MARKER.match(line)
+        if quote is None:
+            return False, False
+        line = line[quote.end():]
+    leading = len(line) - len(line.lstrip(" "))
+    if line.strip() and leading < content_indent:
+        return False, False
+    content = line[content_indent:]
+    closing = bool(re.fullmatch(rf" {{0,3}}{re.escape(fence_char)}{{{fence_width},}}[ \t]*", content))
+    return True, closing
+
+
 def _marker_prose_lines(raw_lines: list[str]) -> list[str]:
     """Strip Markdown containers and block code before counting markers."""
     rendered_lines: list[str] = []
@@ -2148,18 +2165,13 @@ def _marker_prose_lines(raw_lines: list[str]) -> list[str]:
     for raw in raw_lines:
         line = raw.expandtabs(4)
         if fence_char:
-            fenced_line = line
-            matched_quotes = 0
-            while matched_quotes < fence_quote_depth and (quote := QUOTE_MARKER.match(fenced_line)):
-                matched_quotes += 1
-                fenced_line = fenced_line[quote.end():]
-            leading = len(fenced_line) - len(fenced_line.lstrip(" "))
-            if matched_quotes == fence_quote_depth and (
-                not fenced_line.strip() or not list_indents or leading >= list_indents[-1]
-            ):
-                content = fenced_line[list_indents[-1]:] if list_indents else fenced_line
+            contained, closing = _marker_fence_line(
+                line, fence_quote_depth, list_indents[-1] if list_indents else 0,
+                fence_char, fence_width,
+            )
+            if contained:
                 rendered_lines.append("")
-                if re.fullmatch(rf" {{0,3}}{re.escape(fence_char)}{{{fence_width},}}[ \t]*", content):
+                if closing:
                     fence_char = ""
                     paragraph_open = False
                 continue
