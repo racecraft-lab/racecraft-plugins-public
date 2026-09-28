@@ -2135,111 +2135,87 @@ LIST_MARKER = re.compile(r"^ {0,3}(?:[-+*]|[0-9]+[.)])[ \t]+")
 QUOTE_MARKER = re.compile(r"^ {0,3}>[ \t]?")
 
 
-def _marker_fence_line(raw: str, quote_depth: int, content_indent: int,
-                       fence_char: str, fence_width: int) -> tuple[bool, bool]:
-    """Return whether a line stays in a fence and whether it closes it."""
-    line = raw
-    for _ in range(quote_depth):
-        quote = QUOTE_MARKER.match(line)
-        if quote is None:
-            return False, False
-        line = line[quote.end():]
-    leading = len(line) - len(line.lstrip(" "))
-    if line.strip() and leading < content_indent:
-        return False, False
-    content = line[content_indent:]
-    closing = bool(re.fullmatch(rf" {{0,3}}{re.escape(fence_char)}{{{fence_width},}}[ \t]*", content))
-    return True, closing
-
-
-def _marker_fence_start(content: str, marker: re.Match[str] | None) -> tuple[str, int] | None:
-    candidate = content[marker.end():] if marker else content
-    opening = re.fullmatch(r" {0,3}(?P<fence>`{3,}|~{3,})(?P<info>[^\r\n]*)", candidate)
+def _marker_fence_start(content: str) -> tuple[str, int] | None:
+    opening = re.fullmatch(r" {0,3}(?P<fence>`{3,}|~{3,})(?P<info>[^\r\n]*)", content)
     if opening is None or (opening["fence"][0] == "`" and "`" in opening["info"]):
         return None
     return opening["fence"][0], len(opening["fence"])
 
 
-def _marker_list_scope(current_depth: int, previous_depth: int, raw_indent: int,
-                       list_indents: list[int], outer_indents: list[int]) -> tuple[list[int], list[int]]:
-    """Keep a containing list when entering and leaving its blockquote."""
-    if previous_depth == 0 and current_depth > 0 and list_indents and raw_indent >= list_indents[-1]:
-        return [], list_indents.copy()
-    if current_depth == 0 and outer_indents:
-        return (outer_indents if raw_indent >= outer_indents[-1] else []), []
-    return [], outer_indents
+def _marker_contained_line(line: str, containers: list[tuple[str, int]]) -> tuple[str, list[tuple[str, int]]]:
+    """Consume existing quote and list prefixes in their nesting order."""
+    matched: list[tuple[str, int]] = []
+    for kind, indent in containers:
+        if kind == "quote":
+            quote = QUOTE_MARKER.match(line)
+            if quote is None:
+                break
+            line = line[quote.end():]
+        elif line.strip():
+            leading = len(line) - len(line.lstrip(" "))
+            if leading < indent:
+                break
+            line = line[indent:]
+        matched.append((kind, indent))
+    return line, matched
 
 
-def _marker_quote_prefix(line: str) -> tuple[str, int]:
-    depth = 0
-    while quote := QUOTE_MARKER.match(line):
-        depth += 1
-        line = line[quote.end():]
-    return line, depth
+def _marker_new_containers(line: str, containers: list[tuple[str, int]]) -> tuple[str, str]:
+    """Open quote and list blocks, retaining list prefixes for detail text."""
+    display_prefix = ""
+    while True:
+        quote = QUOTE_MARKER.match(line)
+        if quote:
+            containers.append(("quote", 0))
+            line = line[quote.end():]
+            continue
+        marker = LIST_MARKER.match(line)
+        if marker:
+            containers.append(("list", marker.end()))
+            display_prefix += marker.group()
+            line = line[marker.end():]
+            continue
+        return line, display_prefix
 
 
 def _marker_prose_lines(raw_lines: list[str]) -> list[str]:
-    """Strip Markdown containers and block code before counting markers."""
+    """Render prose after Markdown containers, fences, and indented code."""
     rendered_lines: list[str] = []
-    list_indents: list[int] = []
-    outer_list_indents: list[int] = []
-    quote_depth = 0
+    containers: list[tuple[str, int]] = []
     fence_char = ""
     fence_width = 0
-    fence_quote_depth = 0
     paragraph_open = False
-
     for raw in raw_lines:
-        line = raw.expandtabs(4)
-        raw_indent = len(line) - len(line.lstrip(" "))
-        if fence_char:
-            contained, closing = _marker_fence_line(
-                line, fence_quote_depth, list_indents[-1] if list_indents else 0,
-                fence_char, fence_width,
-            )
-            if contained:
-                rendered_lines.append("")
-                if closing:
-                    fence_char = ""
-                    paragraph_open = False
-                continue
+        line, matched = _marker_contained_line(raw.expandtabs(4), containers)
+        if len(matched) != len(containers):
             fence_char = ""
             paragraph_open = False
-        line, current_quote_depth = _marker_quote_prefix(line)
-        if current_quote_depth != quote_depth:
-            list_indents, outer_list_indents = _marker_list_scope(
-                current_quote_depth, quote_depth, raw_indent, list_indents, outer_list_indents,
-            )
-            paragraph_open = False
-            quote_depth = current_quote_depth
+        containers = matched
+        if fence_char:
+            rendered_lines.append("")
+            if re.fullmatch(rf" {{0,3}}{re.escape(fence_char)}{{{fence_width},}}[ \t]*", line):
+                fence_char = ""
+                paragraph_open = False
+            continue
         if not line.strip():
             rendered_lines.append("")
             paragraph_open = False
             continue
-
-        leading = len(line) - len(line.lstrip(" "))
-        while list_indents and leading < list_indents[-1]:
-            list_indents.pop()
+        previous_depth = len(containers)
+        content, display_prefix = _marker_new_containers(line, containers)
+        if len(containers) != previous_depth:
             paragraph_open = False
-        content_indent = list_indents[-1] if list_indents else 0
-        content = line[content_indent:]
-        marker = LIST_MARKER.match(content)
-        if marker:
-            list_indents.append(content_indent + marker.end())
-            paragraph_open = False
-        opening = _marker_fence_start(content, marker)
+        opening = _marker_fence_start(content)
         if opening:
             fence_char, fence_width = opening
-            fence_quote_depth = current_quote_depth
             rendered_lines.append("")
             paragraph_open = False
             continue
         if len(content) - len(content.lstrip(" ")) >= 4 and not paragraph_open:
             rendered_lines.append("")
             continue
-        rendered_lines.append(content)
+        rendered_lines.append(display_prefix + content)
         paragraph_open = not bool(re.match(r" {0,3}(?:#{1,6}(?:[ \t]|$)|(?:[-*_][ \t]*){3,}$)", content))
-
     return rendered_lines
 
 

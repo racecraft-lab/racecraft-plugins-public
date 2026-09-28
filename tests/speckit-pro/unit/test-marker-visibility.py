@@ -149,11 +149,14 @@ class MarkerVisibilityTests(unittest.TestCase):
             )["stdout"])
             self.assertEqual((False, 5), (g4["pass"], g4["markers"]))
 
-    def test_list_fences_hide_code_and_keep_visible_continuations(self) -> None:
+    def test_nested_containers_hide_code_and_keep_visible_markers(self) -> None:
         cases = (
             ("- ```text\n  [Gap] list-item code\n  ```\n", 0, None),
             ("- item\n  > ```text\n  > [Gap] code\n  > ```\n"
              "    [Gap] continuation\n", 1, 5),
+            ("> - item\n>   > nested quote\n>     [Gap] visible list prose\n", 1, 3),
+            ("- parent\n  - child\n    > ```text\n    > [Gap] code\n"
+             "    > ```\n", 0, None),
         )
         for markdown, expected_count, expected_line in cases:
             with self.subTest(markdown=markdown), tempfile.TemporaryDirectory() as temp:
