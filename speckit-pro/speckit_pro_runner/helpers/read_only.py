@@ -2178,9 +2178,10 @@ def _marker_new_containers(line: str, containers: list[tuple[str, int]]) -> tupl
         return line, display_prefix
 
 
-def _marker_prose_lines(raw_lines: list[str]) -> list[str]:
+def _marker_prose_lines(raw_lines: list[str]) -> tuple[list[str], set[int]]:
     """Render prose after Markdown containers, fences, and indented code."""
     rendered_lines: list[str] = []
+    block_starts: set[int] = set()
     containers: list[tuple[str, int]] = []
     fence_char = ""
     fence_width = 0
@@ -2189,6 +2190,7 @@ def _marker_prose_lines(raw_lines: list[str]) -> list[str]:
     for raw in raw_lines:
         line, matched = _marker_contained_line(raw.expandtabs(4), containers)
         if len(matched) != len(containers):
+            block_starts.add(len(rendered_lines))
             fence_char = ""
             paragraph_open = False
         containers = matched
@@ -2205,6 +2207,7 @@ def _marker_prose_lines(raw_lines: list[str]) -> list[str]:
         previous_depth = len(containers)
         content, display_prefix = _marker_new_containers(line, containers)
         if len(containers) != previous_depth:
+            block_starts.add(len(rendered_lines))
             paragraph_open = False
         opening = _marker_fence_start(content)
         if opening:
@@ -2221,14 +2224,20 @@ def _marker_prose_lines(raw_lines: list[str]) -> list[str]:
     if fence_char:
         # Without a closing fence, expose its markers for a conservative gate.
         rendered_lines[fence_start:] = [line.expandtabs(4).replace("`", "") for line in raw_lines[fence_start:]]
-    return rendered_lines
+    return rendered_lines, block_starts
 
 
-def _mask_markdown_code_spans(rendered_lines: list[str]) -> list[str]:
+def _mask_markdown_code_spans(rendered_lines: list[str], block_starts: set[int]) -> list[str]:
     """Mask paired code spans, including spans crossing line boundaries."""
     # A CommonMark code span may cross line boundaries. Pair equal-width runs
     # before counting markers, leaving unmatched and escaped backticks as prose.
     document = "\n".join(rendered_lines)
+    boundary_offsets: list[int] = []
+    offset = 0
+    for index, line in enumerate(rendered_lines):
+        if index in block_starts:
+            boundary_offsets.append(offset)
+        offset += len(line) + 1
     masked = list(document)
     cursor = 0
     while cursor < len(document):
@@ -2250,6 +2259,7 @@ def _mask_markdown_code_spans(rendered_lines: list[str]) -> list[str]:
         block_end = document.find("\n\n", end)
         if block_end < 0:
             block_end = len(document)
+        block_end = min(block_end, next((boundary for boundary in boundary_offsets if boundary > cursor), len(document)))
         next_block = re.search(
             r"\n(?= {0,3}#{1,6}[ \t]| {0,3}(?:[-+*]|[0-9]+[.)])[ \t]+)",
             document[end:block_end],
@@ -2285,7 +2295,8 @@ def _mask_markdown_code_spans(rendered_lines: list[str]) -> list[str]:
 
 
 def _visible_marker_lines(path: Path, repo_root: Path) -> list[tuple[int, str]]:
-    lines = _mask_markdown_code_spans(_marker_prose_lines(trusted_lines(path, repo_root)))
+    prose_lines, block_starts = _marker_prose_lines(trusted_lines(path, repo_root))
+    lines = _mask_markdown_code_spans(prose_lines, block_starts)
     return [(index + 1, line) for index, line in enumerate(lines) if line.strip()]
 
 
