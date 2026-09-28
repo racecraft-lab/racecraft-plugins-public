@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.38.2](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.38.1...speckit-pro-v2.38.2) (2026-09-28)
+
+
+### Bug Fixes
+
+* **speckit-pro:** accept pending markers and keep run byproducts and marker ids private ([#822](https://github.com/racecraft-lab/racecraft-plugins-public/issues/822)) ([357a295](https://github.com/racecraft-lab/racecraft-plugins-public/commit/357a29579f9d104db608308fbf87e949e25eb647))
+* **speckit-pro:** keep review fixes and serial plans moving and collect pre-PR audit commands ([#821](https://github.com/racecraft-lab/racecraft-plugins-public/issues/821)) ([76e1221](https://github.com/racecraft-lab/racecraft-plugins-public/commit/76e1221d3ac5dad58617b225c16cb860c8632926))
+* **speckit-pro:** report the consensus protocol path in its plugin-relative form ([#811](https://github.com/racecraft-lab/racecraft-plugins-public/issues/811)) ([f4379ee](https://github.com/racecraft-lab/racecraft-plugins-public/commit/f4379ee0691ae26a84d8ccda7456c5ffd0fcd7fe))
+* **speckit-pro:** verify every PR head in an implement stack and retry harness errors ([#820](https://github.com/racecraft-lab/racecraft-plugins-public/issues/820)) ([59784f6](https://github.com/racecraft-lab/racecraft-plugins-public/commit/59784f68f9ea6a2e09ade22d5a0507ffb21fa274))
+
 ## [2.38.1](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.38.0...speckit-pro-v2.38.1) (2026-09-28)
 
 
