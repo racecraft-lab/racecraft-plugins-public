@@ -2130,6 +2130,63 @@ def detect_presets(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
 # `[NEEDS CLARIFICATION]` form is still accepted. Prose that names the
 # phrase outside brackets is not a marker.
 NEEDS_CLARIFICATION_MARKER = r"\[NEEDS CLARIFICATION(?::[^\]]*)?\]"
+GAP_TAG = re.compile(r"\[([^\[\]\r\n]*)\]")
+VISIBLE_CLARIFICATION = re.compile(r"\[NEEDS CLARIFICATION(?::[^\[\]]*)?\]")
+
+
+def _visible_marker_lines(path: Path, repo_root: Path) -> list[tuple[int, str]]:
+    lines = trusted_lines(path, repo_root)
+    fenced = _fenced_markdown_lines(lines)
+    visible: list[tuple[int, str]] = []
+    for index, line in enumerate(lines):
+        if index in fenced or line.startswith(("    ", "\t")):
+            continue
+        # CommonMark code spans pair runs of the same number of backticks.
+        # A lone unmatched run remains visible prose.
+        rendered: list[str] = []
+        cursor = 0
+        while cursor < len(line):
+            if line[cursor] != "`":
+                rendered.append(line[cursor])
+                cursor += 1
+                continue
+            end = cursor + 1
+            while end < len(line) and line[end] == "`":
+                end += 1
+            width = end - cursor
+            closing = next((match for match in re.finditer(r"`+", line[end:])
+                            if len(match.group()) == width), None)
+            if closing is None:
+                rendered.append(line[cursor:end])
+                cursor = end
+            else:
+                rendered.append(" ")
+                cursor = end + closing.end()
+        visible.append((index + 1, "".join(rendered)))
+    return visible
+
+
+def visible_marker_details(paths: list[Path], kind: str, repo_root: Path) -> list[str]:
+    details: list[str] = []
+    for path in paths:
+        for line_number, line in _visible_marker_lines(path, repo_root):
+            if kind == "gaps":
+                matches = sum(
+                    "Gap" in (token.strip(" \t") for token in tag.group(1).split(","))
+                    for tag in GAP_TAG.finditer(line)
+                    if not ((tag.start() and line[tag.start() - 1] == "[")
+                            or (tag.end() < len(line) and line[tag.end()] == "]"))
+                )
+            else:
+                matches = len(VISIBLE_CLARIFICATION.findall(line))
+            details.extend(f"{line_number}:{line}" for _ in range(matches))
+    return details
+
+
+def _visible_checklist_paths(directory: Path, repo_root: Path) -> list[Path]:
+    if not path_stays_in_trust_boundary(directory, repo_root) or not directory.is_dir():
+        return []
+    return [path for path in directory.rglob("*") if path.is_file()]
 
 
 def count_markers(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
@@ -2145,8 +2202,8 @@ def count_markers(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
     checklists = feature_dir / "checklists"
     if marker_type == "all":
         obj = {
-            "gaps": count_pattern([spec, plan], r"\[Gap\]", repo_root) + count_pattern_dir(checklists, r"\[Gap\]", repo_root),
-            "clarifications": count_pattern([spec, plan], NEEDS_CLARIFICATION_MARKER, repo_root),
+            "gaps": len(visible_marker_details([spec, plan] + _visible_checklist_paths(checklists, repo_root), "gaps", repo_root)),
+            "clarifications": len(visible_marker_details([spec, plan], "clarifications", repo_root)),
             "critical": count_pattern([spec, plan, tasks], r"\[CRITICAL\]", repo_root),
             "high": count_pattern([spec, plan, tasks], r"\[HIGH\]", repo_root),
             "medium": count_pattern([spec, plan, tasks], r"\[MEDIUM\]", repo_root),
@@ -2156,9 +2213,9 @@ def count_markers(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
     if marker_type not in {"gaps", "findings", "clarifications"}:
         return make_result(json_text({"error": f"Unknown type: {marker_type}. Valid types: gaps, findings, clarifications, all"}), exit_code=2)
     if marker_type == "gaps":
-        spec_gaps = count_pattern([spec], r"\[Gap\]", repo_root)
-        plan_gaps = count_pattern([plan], r"\[Gap\]", repo_root)
-        checklist_gaps = count_pattern_dir(checklists, r"\[Gap\]", repo_root)
+        spec_gaps = len(visible_marker_details([spec], "gaps", repo_root))
+        plan_gaps = len(visible_marker_details([plan], "gaps", repo_root))
+        checklist_gaps = len(visible_marker_details(_visible_checklist_paths(checklists, repo_root), "gaps", repo_root))
         return make_result(
             json_text(
                 {
@@ -2167,7 +2224,7 @@ def count_markers(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
                     "spec": spec_gaps,
                     "plan": plan_gaps,
                     "checklists": checklist_gaps,
-                    "details": list_pattern(spec, r"\[Gap\]", repo_root),
+                    "details": visible_marker_details([spec], "gaps", repo_root)[:20],
                 }
             )
         )
@@ -2179,8 +2236,8 @@ def count_markers(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
             "low": count_pattern([spec, plan, tasks], r"\[LOW\]", repo_root),
         }
         return make_result(json_text({"type": "findings", "total": sum(counts.values()), **counts}))
-    spec_nc = count_pattern([spec], NEEDS_CLARIFICATION_MARKER, repo_root)
-    plan_nc = count_pattern([plan], NEEDS_CLARIFICATION_MARKER, repo_root)
+    spec_nc = len(visible_marker_details([spec], "clarifications", repo_root))
+    plan_nc = len(visible_marker_details([plan], "clarifications", repo_root))
     return make_result(
         json_text(
             {
@@ -2188,7 +2245,7 @@ def count_markers(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
                 "total": spec_nc + plan_nc,
                 "spec": spec_nc,
                 "plan": plan_nc,
-                "details": list_pattern(spec, NEEDS_CLARIFICATION_MARKER, repo_root),
+                "details": visible_marker_details([spec], "clarifications", repo_root)[:20],
             }
         )
     )
@@ -2209,19 +2266,19 @@ def validate_gate(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
     if gate in {"G1", "G2"}:
         if not trusted_file_exists(spec, repo_root):
             return make_result(json_text({"gate": gate, "pass": False, "reason": "spec.md not found", "markers": 0, "details": []}), exit_code=1)
-        count = count_pattern([spec], NEEDS_CLARIFICATION_MARKER, repo_root)
+        count = len(visible_marker_details([spec], "clarifications", repo_root))
         if count == 0:
             reason = "spec.md exists with 0 markers" if gate == "G1" else "0 [NEEDS CLARIFICATION] markers"
             return make_result(json_text({"gate": gate, "pass": True, "reason": reason, "markers": 0, "details": []}))
         reason = f"{count} [NEEDS CLARIFICATION] markers remain" if gate == "G1" else f"{count} markers remain"
         return make_result(
-            json_text({"gate": gate, "pass": False, "reason": reason, "markers": count, "details": list_pattern(spec, NEEDS_CLARIFICATION_MARKER, repo_root, limit=10)}),
+            json_text({"gate": gate, "pass": False, "reason": reason, "markers": count, "details": visible_marker_details([spec], "clarifications", repo_root)[:10]}),
             exit_code=1,
         )
     if gate == "G3":
         if not trusted_file_exists(plan, repo_root):
             return make_result(json_text({"gate": "G3", "pass": False, "reason": "plan.md not found", "markers": 0, "details": []}), exit_code=1)
-        nc_count = count_pattern([plan], NEEDS_CLARIFICATION_MARKER, repo_root)
+        nc_count = len(visible_marker_details([plan], "clarifications", repo_root))
         todo_count = count_pattern([plan], r"TODO|TKTK|\?\?\?", repo_root)
         count = nc_count + todo_count
         if count == 0:
@@ -2231,9 +2288,9 @@ def validate_gate(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
             exit_code=1,
         )
     if gate == "G4":
-        spec_gaps = count_pattern([spec], r"\[Gap\]", repo_root)
-        plan_gaps = count_pattern([plan], r"\[Gap\]", repo_root)
-        checklist_gaps = count_pattern_dir(feature / "checklists", r"\[Gap\]", repo_root)
+        spec_gaps = len(visible_marker_details([spec], "gaps", repo_root))
+        plan_gaps = len(visible_marker_details([plan], "gaps", repo_root))
+        checklist_gaps = len(visible_marker_details(_visible_checklist_paths(feature / "checklists", repo_root), "gaps", repo_root))
         gaps = spec_gaps + plan_gaps + checklist_gaps
         if gaps == 0:
             return make_result(json_text({"gate": "G4", "pass": True, "reason": "0 [Gap] markers", "markers": 0, "details": []}))

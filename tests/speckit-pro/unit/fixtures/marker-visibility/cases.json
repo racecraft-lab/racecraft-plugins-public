@@ -1,0 +1,13 @@
+{
+  "gaps": {
+    "spec": "Visible [Gap, Quality] and [Quality,\tGap\t].\nNested [[Gap]] is not a tag; [gap], [GAP], [Gapper], and [Gap: note] are not exact.\nInline `[Gap]` and visible [Gap].\n```md\n[Gap]\n```\n    [Gap]\n`[HIGH]` remains counted under the existing findings rule.\n",
+    "plan": "Plan [Quality, Gap] is visible.\n~~~\n[Gap]\n~~~\n",
+    "checklist": "- [ ] Two tags: [Gap] [Gap, Risk]\n    [Gap]\n",
+    "expected": {"total": 6, "spec": 3, "plan": 1, "checklists": 2}
+  },
+  "clarifications": {
+    "spec": "Visible [NEEDS CLARIFICATION: owner] and inline `[NEEDS CLARIFICATION: code]`.\nTwo [NEEDS CLARIFICATION] [NEEDS CLARIFICATION: second].\n```md\n[NEEDS CLARIFICATION: fenced]\n```\n    [NEEDS CLARIFICATION: indented]\n",
+    "plan": "Visible [NEEDS CLARIFICATION: plan].\n~~~\n[NEEDS CLARIFICATION: hidden]\n~~~\n",
+    "expected": {"total": 4, "spec": 3, "plan": 1}
+  }
+}

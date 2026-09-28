@@ -45,6 +45,8 @@ gate never becomes a pass.
 
 **Failure Escalation:** Immediate STOP. Report which checks failed with output. The user must resolve codebase issues before autopilot can proceed.
 
+Marker visibility for G1–G4 uses the runner `count-markers` and `validate-gate` helpers. Count only real bracket tags in visible Markdown prose: exclude inline code, fenced code, and lines of indented code. A Gap tag has a case-sensitive comma-separated `Gap` token, with surrounding spaces or tabs ignored; count each qualifying tag once, including two tags on one line. Apply the same visibility rule to clarification counts and details. Other finding marker types keep their existing counting rule.
+
 ### G1 — After Specify
 
 **Check:** Determine if clarification is needed.
@@ -62,7 +64,7 @@ This is a routing decision, not a pass/fail gate. The presence of markers is exp
 **Check:** All ambiguities resolved, no human review flags.
 
 ```
-1. grep -c "NEEDS CLARIFICATION" spec.md → must be 0
+1. Run `count-markers clarifications` or `validate-gate` G2; visible spec markers must be 0
 2. grep -c "HUMAN REVIEW NEEDED" spec.md → must be 0
 3. Clarifications section exists in spec.md with documented decisions
 ```
@@ -195,8 +197,8 @@ recorded and must not rewrite their provenance.
 
 ```
 1. Find all checklist files: specs/<feature>/checklists/*.md
-2. Count [Gap] markers across ALL files: grep -c "\[Gap\]" checklists/*.md,
-   plus spec.md and plan.md (runner `validate-gate` G4 counts all three)
+2. Run `count-markers gaps` or `validate-gate` G4 across all checklist files,
+   spec.md, and plan.md using the visible-tag rule above
 3. Total must be 0
 ```
 
