@@ -2755,6 +2755,20 @@ class ReadOnlyHelperTests(unittest.TestCase):
         self.assertIn("body.editable_markers",
                       {item["rule"] for item in packet_body_structure_failures(undeclared, body)})
 
+        uat_data = {**data, "uat": {"uat_runbook_heading": "## UAT Runbook"}}
+        with_uat = body.replace("## Release note\n", "## UAT Runbook\nSteps.\n## Release note\n")
+        with_uat = with_uat.replace("# Literal heading\n", "# Literal heading\n## UAT Runbook\n")
+        self.assertEqual(packet_body_structure_failures(uat_data, with_uat), [])
+        without_real_uat = with_uat.replace("## UAT Runbook\nSteps.\n", "")
+        self.assertIn("body.uat_runbook_heading",
+                      {item["rule"] for item in packet_body_structure_failures(uat_data, without_real_uat)})
+
+        fenced_preface = "```text\n## Summary\n```\n# Packet title\n## Summary\nSummary.\n"
+        self.assertEqual(packet_body_structure_failures(
+            {"generated_title": {"value": "Packet title"}, "required_headings": ["Summary"]},
+            fenced_preface,
+        ), [])
+
     def test_release_note_policy_ignores_editable_markers_but_requires_note_text(self) -> None:
         policy_path = REPO_ROOT / "scripts" / "release_note_policy.py"
         spec = importlib.util.spec_from_file_location("release_note_policy", policy_path)

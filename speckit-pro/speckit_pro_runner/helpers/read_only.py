@@ -7139,7 +7139,8 @@ def packet_body_structure_failures(data: dict[str, Any], body_text: str) -> list
                 }
             )
         else:
-            summary_positions = [index for index, line in enumerate(lines) if line == "## Summary"]
+            summary_positions = [index for index, line in enumerate(lines)
+                                 if index not in fenced_lines and line == "## Summary"]
             if summary_positions and h1_positions[0][0] > summary_positions[0]:
                 failures.append(
                     {
@@ -7278,7 +7279,8 @@ def packet_body_structure_failures(data: dict[str, Any], body_text: str) -> list
     if isinstance(uat, dict):
         uat_heading = uat.get("uat_runbook_heading")
         if isinstance(uat_heading, str) and uat_heading:
-            matches = [line for line in lines if line == uat_heading]
+            matches = [line for index, line in enumerate(lines)
+                       if index not in fenced_lines and line == uat_heading]
             if len(matches) != 1:
                 failures.append(
                     {
