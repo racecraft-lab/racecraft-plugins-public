@@ -61,6 +61,9 @@ gates, and advance through every phase in the resolved
 `AUTOPILOT_STAGE`. A `--stage plan` run stops at its stage boundary;
 `full` covers all seven phases.
 
+When a run may involve a human, and which reasons count, is set by the shared
+[Autopilot Stop Policy](../../skills/speckit-autopilot/references/stop-policy.md).
+
 ## Architectural Constraint — Main Agent Is The Orchestrator
 
 This skill loads into the **main Codex session agent**, which owns all phase
@@ -803,6 +806,7 @@ PR URL.
   protocol, common issues, context window management
 
 **Shared CC references (still applicable to Codex):**
+- [Stop Policy](../../skills/speckit-autopilot/references/stop-policy.md) — The one contract for when a run may involve a human.
 - [Consensus Protocol](../../skills/speckit-autopilot/references/consensus-protocol.md) —
   Multi-agent resolution rules and flows
 - [Gate Validation](../../skills/speckit-autopilot/references/gate-validation.md) —
