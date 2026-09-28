@@ -1196,6 +1196,30 @@ class IncrementReviewAllowanceTests(_ExecutionControlFixture, unittest.TestCase)
         self.assertEqual(self.review_fix("alpha-refused", "alpha", ["src/common.py"])["increment_ineligible"],
                          "path_reopens_another_increment")
 
+    def test_a_shared_file_is_judged_only_against_increments_still_open(self):
+        self.write_sidecar()
+        tasks = self.root / "feature/tasks.md"
+        completed = self.TASKS.replace("- [ ] T003", "- [X] T003")
+        tasks.write_text(completed)
+        commit_fixture(self.root)
+        self.spend_run_wide_budget()
+        admitted = self.review_fix("alpha-shared", "alpha", ["src/common.py"])
+        self.assertEqual((admitted["disposition"], admitted["review_allowance"]), ("continue", "increment"))
+        self.assertNotIn("increment_ineligible", admitted)
+        cases = {"open in the worktree": (completed, self.TASKS),
+                 "checked but not committed": (self.TASKS, completed),
+                 "open everywhere": (self.TASKS, self.TASKS),
+                 "committed task definitions differ": (completed.replace("gamma", "delta"), completed)}
+        for name, (committed, worktree) in cases.items():
+            with self.subTest(case=name):
+                tasks.write_text(committed)
+                commit_fixture(self.root)
+                tasks.write_text(worktree)
+                refused = self.review_fix("alpha-" + name.replace(" ", "-"), "alpha", ["src/common.py"],
+                                          mode="dry_run")
+                self.assertEqual(refused["increment_ineligible"], "path_reopens_another_increment")
+                self.assertEqual(refused["review_allowance"], "run_wide")
+
     def test_missing_stale_or_unknown_ownership_evidence_never_grants_a_free_allowance(self):
         self.spend_run_wide_budget()
         cases = (("no_sidecar", None, "alpha", ["src/alpha/core.py"]),

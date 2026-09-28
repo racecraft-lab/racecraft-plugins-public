@@ -2708,11 +2708,14 @@ finds defects in code that increment just wrote, reserve the fix with
 `review_remediation`: the increment's `tdd_unit` and every repository-relative
 path the fix will touch.
 When the task-execution sidecar is current and every path sits inside that
-TDD unit's own `owns` and no other unit's, the ledger admits the fix under
-that increment's own allowance of two review rounds. It never draws on the
+TDD unit's own `owns` and in no other unit that is still open, the ledger
+admits the fix under that increment's own allowance of two review rounds. A
+unit is closed when all its tasks are checked in the committed `tasks.md` and
+still checked in the worktree, so a file shared with finished, committed
+increments does not refuse the fix. It never draws on the
 run-wide corrective budget, so a spent run-wide budget does not stop the next
 increment's review loop. A fix that touches a path outside the increment's
-ownership, reopens another increment's accepted work, or lacks current
+ownership, overlaps an increment that is still open, or lacks current
 ownership evidence goes through the run-wide budget unchanged. When the
 reserve returns `disposition=defer` with `increment_review_allowance_exhausted`, defer that increment
 under [Blocked Actions Mid-Run: Fall Back or Defer, Never Stop](#blocked-actions-mid-run-fall-back-or-defer-never-stop): record its
