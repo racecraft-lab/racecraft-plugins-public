@@ -90,6 +90,39 @@ ownership from the caller's current workflow.
   implementation notes and the workflow file, never a new `tasks.md` line, so
   a serial plan never stops mid-run on a deferral. Increment
   allowances archive with the rest of the allowance in `corrective_epochs`.
+  An implementation dispatch also supplies `tdd_units`: the TDD units of the
+  tasks it runs (the frozen batch's `tdd_units`). The runner then snapshots the
+  worktree itself at `reserve` (HEAD plus a digest of every changed path) and,
+  at `complete`, records on the dispatch the sorted `changed_paths` whose
+  content differs from that snapshot. Runner byproducts and the implementation
+  notes are never counted. Without git, no edit is recorded. Parallel
+  dispatches record each other's edits too, so the ownership check below, not
+  the edit record alone, keeps one unit from claiming another unit's file.
+  A test-only fix to test code the increment itself edited earlier in this run
+  (for example removing a mock that broke an existing test) instead supplies
+  `test_fix`: `{"tdd_unit": <the increment's TDD unit>, "paths": [<every
+  repo-relative test file the fix touches>]}`, plus the explicit `spec_file`.
+  It needs no `begin-replan-epoch` and no operator event. The runner admits it
+  only when every path passes the same ownership check as `review_remediation`
+  (the unit's `owns` in a current sidecar, overlapping no other open unit), is
+  a test file under the runner's test-file classifier, and appears in the
+  `changed_paths` of one of that unit's own implementation dispatches in this
+  run. The increment's tasks may still be open, and the file need not be new:
+  an existing test file the increment edited qualifies. The admission is one
+  test fix per increment per corrective epoch, recorded in
+  `test_fix_allowances`, returned as `test_fix_allowance=increment`, and it
+  never draws on the run-wide `corrective_cycles` budget or changes any other
+  ceiling. Anything else takes the ordinary run-wide path unchanged, and the
+  result carries `test_fix_allowance=run_wide` and the reason in
+  `test_fix_ineligible`: `test_fix_allowance_spent`, an ownership reason from
+  the list above, `path_not_test_code`, `path_not_edited_by_increment`, or
+  `worktree_state_unavailable`. The runner also snapshots the worktree when it
+  admits the fix. A `complete` with `outcome=completed` succeeds only when
+  every path the runner sees changed since then is one of the declared test
+  files; otherwise it records nothing and returns `test_fix_scope_unproven`
+  (`disposition=checkpoint_required`), and the dispatch can only be completed
+  `failed`. Run no other dispatch while a test fix is open: its edits would
+  count against the fix.
   A planning gate's own remediation (G2 through G7, most often G6 Analyze)
   instead supplies `gate_remediation`: `{"gate": "G6", "paths": [<every
   repo-relative path the fix touches>]}`, plus the same explicit `spec_file`.
