@@ -42,7 +42,7 @@
     },
     "independent_critical_high_review": {
       "status": "pass",
-      "evidence": "Independent A2 audit 54ad22d5-98e4-46ee-b8b6-5ff9d6472eca found no critical or high product defect; its documentation and parity findings were corrected and focused tests passed."
+      "evidence": "Independent A2 audit found no critical or high product defect; its documentation and parity findings were corrected and focused tests passed."
     },
     "host_parity": {
       "status": "pass",

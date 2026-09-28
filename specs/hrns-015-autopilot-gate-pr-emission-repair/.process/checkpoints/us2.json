@@ -10,7 +10,7 @@
   "implementation_checkpoint_sha": "ed24ecd831d0b9f98e300fdc772f29839bd09d9a",
   "last_reviewed_head_sha": "ed24ecd831d0b9f98e300fdc772f29839bd09d9a",
   "tasks_sha": "sha256:91cc48b1ff3352e299b31537323760edf4a84f5909c6600fc7b7cb575d0e03e3",
-  "verification_evidence_sha": "sha256:fdc824fedb4ca815c9feef492f292ea44252d12131bd8150b65736a9cb4bed14",
+  "verification_evidence_sha": "sha256:44b9a2dbaa3b116f777f8ac031fd684c76a9dfe074ce175b75bcb1a020911ff8",
   "required_verification_gate_ids": [
     "focused_tests",
     "quick_suite",
@@ -48,7 +48,7 @@
     },
     "independent_critical_high_review": {
       "status": "pass",
-      "evidence": "Independent A2 audit 54ad22d5-98e4-46ee-b8b6-5ff9d6472eca found no critical or high product defect; its documentation and parity findings were corrected and focused tests passed."
+      "evidence": "Independent A2 audit found no critical or high product defect; its documentation and parity findings were corrected and focused tests passed."
     },
     "host_parity": {
       "status": "pass",
