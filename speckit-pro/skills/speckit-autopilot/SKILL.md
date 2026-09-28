@@ -818,8 +818,10 @@ directions; do not infer a broader precedence rule.
   later same-class fixes through `reserve-class-correction`) and
   `begin-replan-epoch` are end-of-run tools that act on the operator's answer
   to that request. An explicit `--stage implement` opens the implement stage's
-  own allowance through `begin-stage-epoch`. Never reset or bypass the ledger
-  otherwise; `checkpoint_required` and ledger integrity errors still stop.
+  own allowance through `begin-stage-epoch`. A task-verb fix that only
+  reroutes a task to verification reserves with `metadata_only: true`; the
+  runner proves it against the committed baseline and spends no cycle. Never
+  reset or bypass the ledger otherwise; `checkpoint_required` and ledger integrity errors still stop.
 - **Consensus all-disagree** (Round 2): flag `[HUMAN REVIEW NEEDED]`.
   In an interactive session, ask the operator in place with
   `AskUserQuestion`, apply the answer, and continue; in an unattended run,

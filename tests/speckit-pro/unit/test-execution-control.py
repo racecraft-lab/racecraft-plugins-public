@@ -1091,7 +1091,7 @@ class StageEpochTests(_ExecutionControlFixture, unittest.TestCase):
         plugin = Path(__file__).resolve().parents[3] / "speckit-pro"
         shared = (plugin / "skills/speckit-autopilot/references/execution-efficiency.md").read_text()
         for phrase in ("`begin-stage-epoch`", "`autopilot_args`", "`stage-transition:implement`",
-                       "`stage_epoch_opened=false`", "admission is deferred"):
+                       "`stage_epoch_opened=false`"):
             self.assertIn(phrase, shared)
         self.assertNotIn("stage changes, a reclaimed state mirror", shared)
         for host in ("skills/speckit-autopilot/SKILL.md", "skills/speckit-autopilot/references/error-recovery.md",
@@ -2015,6 +2015,318 @@ class GateRemediationAllowanceTests(_ExecutionControlFixture, unittest.TestCase)
                 self.assertIn("never a mid-run question", text)
 
 
+GIT_ENVIRONMENT = {**os.environ, "GIT_CONFIG_GLOBAL": os.devnull, "GIT_CONFIG_NOSYSTEM": "1"}
+
+
+def commit_fixture(root):
+    """Commit every file under ``root`` so HEAD holds the task-definition baseline."""
+    if not (root / ".git").exists():
+        subprocess.run(["git", "init", "-q", str(root)], check=True, env=GIT_ENVIRONMENT)
+    subprocess.run(["git", "-C", str(root), "add", "-A"], check=True, env=GIT_ENVIRONMENT)
+    subprocess.run(["git", "-C", str(root), "-c", "user.name=fixture", "-c", "user.email=git@github.com",
+                    "-c", "commit.gpgsign=false", "commit", "-q", "--allow-empty", "-m", "baseline"],
+                   check=True, env=GIT_ENVIRONMENT)
+
+
+class MetadataOnlyCorrectionTests(_ExecutionControlFixture, unittest.TestCase):
+    """A task-verb swap inside the verification verbs is recorded without spending a cycle."""
+
+    TASKS = ("## Phase 1: Setup\n\n"
+             "- [ ] T001 Confirm the fixture loads from `src/app.py`\n"
+             "- [ ] T002 [P] [US1] **Recheck** the parser output after T001\n"
+             "- [ ] T003 Add the alpha increment in src/alpha/core.py\n")
+    CORRECTED = TASKS.replace("T001 Confirm", "T001 Verify").replace("**Recheck**", "**Verify**")
+
+    def setUp(self):
+        super().setUp()
+        (self.root / "feature/plan.md").write_text("# Plan\n")
+        (self.root / "feature/tasks.md").write_text(self.TASKS)
+
+    def correct(self, dispatch_id, mode="apply", **inputs):
+        request = {"spec_file": "feature/spec.md", "failure_invariant": "FR-001", "metadata_only": True, **inputs}
+        return self.invoke("reserve", mode=mode, dispatch_id=dispatch_id, kind="corrective", **request)
+
+    def schema(self):
+        return json.loads((Path(__file__).resolve().parents[3] /
+                           "speckit-pro/speckit_pro_runner/contracts/execution-control.schema.json").read_text())
+
+    def test_a_verification_verb_swap_is_admitted_without_spending_a_cycle(self):
+        commit_fixture(self.root)
+        IncrementReviewAllowanceTests.spend_run_wide_budget(self)
+        before = self.invoke("status", mode="read_only")["ledger"]
+        tasks = self.CORRECTED.replace("- [ ] T003", "- [x] T003").replace("- [ ] T001", "- [x] T001")
+        (self.root / "feature/tasks.md").write_text(tasks)
+        admitted = self.correct("verb-fix")
+        self.assertEqual((admitted["disposition"], admitted["correction_allowance"]), ("continue", "metadata_only"))
+        self.assertIsNone(admitted["reservation_id"])
+        self.assertEqual(admitted["task_ids"], ["T001", "T002"])
+        ledger = admitted["ledger"]
+        self.assertEqual(ledger["corrective_cycles"], before["corrective_cycles"])
+        self.assertEqual(ledger["reservations"], before["reservations"])
+        self.assertNotIn("deferred", ledger)
+        self.assertEqual(ledger["dispatches"]["verb-fix"]["metadata_correction"], ["T001", "T002"])
+        record = ledger["metadata_corrections"][0]
+        self.assertEqual({key: record[key] for key in ("dispatch_id", "task_ids", "tasks_file")},
+                         {"dispatch_id": "verb-fix", "task_ids": ["T001", "T002"], "tasks_file": "feature/tasks.md"})
+        self.assertEqual(record["baseline_sha256"], hashlib.sha256(self.TASKS.encode()).hexdigest())
+        self.assertEqual(record["corrected_sha256"], hashlib.sha256(tasks.encode()).hexdigest())
+        self.assertEqual(json_schema_failures(ledger, self.schema(), self.schema(), "ledger"), [])
+        self.invoke("complete", dispatch_id="verb-fix", outcome="completed")
+        self.assertEqual(self.invoke("status", mode="read_only")["ledger"]["corrective_cycles"], 2)
+
+    def write_sidecar(self, tasks_text=None, **changes):
+        texts = [(self.root / f"feature/{name}").read_text() for name in ("spec.md", "plan.md")]
+        sidecar = {"schema_version": "task-execution.v1",
+                   "fingerprints": fingerprints(*texts, tasks_text or self.TASKS),
+                   "tasks": {task: {"capability_group": "core", "depends_on": [], "owns": [f"src/{task.lower()}"],
+                                    "tdd_unit": task.lower()} for task in ("T001", "T002", "T003")}}
+        for task, entry in changes.items():
+            sidecar["tasks"][task].update(entry)
+        path = self.root / "feature/.process/task-execution.json"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(sidecar, indent=2) + "\n")
+
+    def test_the_task_execution_sidecar_must_keep_every_task_entry(self):
+        self.write_sidecar()
+        commit_fixture(self.root)
+        IncrementReviewAllowanceTests.spend_run_wide_budget(self)
+        (self.root / "feature/tasks.md").write_text(self.CORRECTED)
+        sidecar = self.root / "feature/.process/task-execution.json"
+        cases = {"ownership change": lambda: self.write_sidecar(T001={"owns": ["src/elsewhere"]}),
+                 "dependency change": lambda: self.write_sidecar(self.CORRECTED, T002={"depends_on": ["T003"]}),
+                 "unbound fingerprints": lambda: self.write_sidecar("- [ ] T009 Something else\n"),
+                 "sidecar removed": sidecar.unlink,
+                 "sidecar unreadable": lambda: sidecar.write_text("{not json")}
+        for number, (name, change) in enumerate(cases.items()):
+            with self.subTest(case=name):
+                change()
+                refused = self.correct(f"sidecar-{number}")
+                self.assertEqual((refused["correction_allowance"], refused["metadata_ineligible"]),
+                                 ("run_wide", "not_metadata_only"))
+                self.assertNotIn("metadata_corrections", refused["ledger"])
+        self.write_sidecar()
+        stale = self.correct("sidecar-not-yet-refreshed", mode="dry_run")
+        self.assertEqual(stale["correction_allowance"], "metadata_only")
+        self.write_sidecar(self.CORRECTED)
+        refreshed = self.correct("sidecar-refreshed")
+        self.assertEqual((refreshed["correction_allowance"], refreshed["ledger"]["corrective_cycles"]),
+                         ("metadata_only", 2))
+
+    def test_a_sidecar_absent_from_the_baseline_is_refused(self):
+        commit_fixture(self.root)
+        self.invoke("start")
+        (self.root / "feature/tasks.md").write_text(self.CORRECTED)
+        self.write_sidecar(self.CORRECTED)
+        refused = self.correct("new-sidecar")
+        self.assertEqual((refused["correction_allowance"], refused["metadata_ineligible"]),
+                         ("run_wide", "not_metadata_only"))
+        self.assertEqual(refused["ledger"]["corrective_cycles"], 1)
+
+    def test_an_unspent_budget_stays_unspent(self):
+        commit_fixture(self.root)
+        self.invoke("start")
+        (self.root / "feature/tasks.md").write_text(self.CORRECTED)
+        admitted = self.correct("verb-fix")
+        self.assertEqual(admitted["correction_allowance"], "metadata_only")
+        self.assertEqual((admitted["ledger"]["corrective_cycles"], admitted["ledger"]["reservations"]), (0, {}))
+
+    def test_scope_changing_edits_take_the_ordinary_path(self):
+        commit_fixture(self.root)
+        IncrementReviewAllowanceTests.spend_run_wide_budget(self)
+        cases = {
+            "extra word": self.TASKS.replace("T001 Confirm the", "T001 Verify carefully the"),
+            "non-verification verb": self.TASKS.replace("T001 Confirm", "T001 Add"),
+            "verb into verification": self.TASKS.replace("T003 Add", "T003 Verify"),
+            "path change": self.CORRECTED.replace("src/app.py", "src/other.py"),
+            "description change": self.CORRECTED.replace("after T001", "after T003"),
+            "marker change": self.CORRECTED.replace("[P] [US1] ", "[US1] "),
+            "story change": self.CORRECTED.replace("[US1]", "[US2]"),
+            "task id change": self.CORRECTED.replace("T003 Add", "T004 Add"),
+            "added task": self.CORRECTED + "- [ ] T004 Verify the release notes\n",
+            "removed task": self.CORRECTED.replace("- [ ] T003 Add the alpha increment in src/alpha/core.py\n", ""),
+            "reordered tasks": self.CORRECTED.replace(
+                "- [ ] T003 Add the alpha increment in src/alpha/core.py\n", "").replace(
+                "## Phase 1: Setup\n\n", "## Phase 1: Setup\n\n- [ ] T003 Add the alpha increment in src/alpha/core.py\n"),
+            "phase change": self.CORRECTED.replace("Phase 1: Setup", "Phase 2: Foundation"),
+            "no change": self.TASKS,
+        }
+        reasons = {"no change": "no_task_correction"}
+        for number, (name, tasks) in enumerate(cases.items()):
+            with self.subTest(case=name):
+                (self.root / "feature/tasks.md").write_text(tasks)
+                refused = self.correct(f"refused-{number}")
+                self.assertEqual(refused["reasons"], ["failure_family_budget_exhausted"])
+                self.assertEqual(refused["disposition"], "defer")
+                self.assertEqual((refused["correction_allowance"], refused["metadata_ineligible"]),
+                                 ("run_wide", reasons.get(name, "not_metadata_only")))
+                self.assertNotIn(f"refused-{number}", refused["ledger"]["dispatches"])
+                self.assertNotIn("metadata_corrections", refused["ledger"])
+                self.assertEqual(refused["ledger"]["corrective_cycles"], 2)
+        for name in ("spec.md", "plan.md"):
+            with self.subTest(changed=name):
+                (self.root / "feature/tasks.md").write_text(self.CORRECTED)
+                source = self.root / "feature" / name
+                original = source.read_text()
+                source.write_text(original + "- FR-003: a new requirement\n")
+                refused = self.correct(f"source-{name}")
+                self.assertEqual(refused["metadata_ineligible"], "planning_source_changed")
+                self.assertNotIn("metadata_corrections", refused["ledger"])
+                source.write_text(original)
+
+    def test_a_scope_change_under_an_open_budget_spends_an_ordinary_cycle(self):
+        commit_fixture(self.root)
+        self.invoke("start")
+        (self.root / "feature/tasks.md").write_text(self.TASKS.replace("T001 Confirm", "T001 Add"))
+        ordinary = self.correct("scope-fix")
+        self.assertEqual((ordinary["correction_allowance"], ordinary["metadata_ineligible"]),
+                         ("run_wide", "not_metadata_only"))
+        self.assertEqual(ordinary["ledger"]["corrective_cycles"], 1)
+        self.assertIsNotNone(ordinary["reservation_id"])
+        self.assertNotIn("metadata_correction", ordinary["ledger"]["dispatches"]["scope-fix"])
+
+    def test_a_missing_baseline_is_refused(self):
+        IncrementReviewAllowanceTests.spend_run_wide_budget(self)
+        (self.root / "feature/tasks.md").write_text(self.CORRECTED)
+        no_repository = self.correct("no-git-repo")
+        self.assertEqual((no_repository["correction_allowance"], no_repository["metadata_ineligible"]),
+                         ("run_wide", "baseline_unavailable"))
+        (self.root / "feature/tasks.md").write_text(self.TASKS)
+        (self.root / "feature/plan.md").rename(self.root / "plan.md.hold")
+        commit_fixture(self.root)
+        (self.root / "plan.md.hold").rename(self.root / "feature/plan.md")
+        (self.root / "feature/tasks.md").write_text(self.CORRECTED)
+        untracked = self.correct("untracked-plan")
+        self.assertEqual(untracked["metadata_ineligible"], "baseline_unavailable")
+        commit_fixture(self.root)
+        (self.root / "feature/tasks.md").write_text(self.CORRECTED)
+        with patch("speckit_pro_runner.execution_control.shutil.which", return_value=None):
+            no_git = self.correct("no-git")
+        self.assertEqual(no_git["metadata_ineligible"], "baseline_unavailable")
+        (self.root / "feature/tasks.md").unlink()
+        (self.root / "feature/tasks.md").symlink_to(self.root / "feature/plan.md")
+        linked = self.correct("linked-tasks")
+        self.assertEqual(linked["metadata_ineligible"], "baseline_unavailable")
+        for ledger in (no_repository, untracked, no_git, linked):
+            self.assertNotIn("metadata_corrections", ledger["ledger"])
+
+    def test_a_task_is_corrected_once_per_run_even_across_stage_epochs(self):
+        commit_fixture(self.root)
+        IncrementReviewAllowanceTests.spend_run_wide_budget(self)
+        (self.root / "feature/tasks.md").write_text(self.CORRECTED)
+        self.correct("verb-fix")
+        self.invoke("complete", dispatch_id="verb-fix", outcome="completed")
+        commit_fixture(self.root)
+        (self.root / "feature/tasks.md").write_text(self.CORRECTED.replace("T001 Verify", "T001 Check"))
+        again = self.correct("verb-fix-again")
+        self.assertEqual((again["correction_allowance"], again["metadata_ineligible"]),
+                         ("run_wide", "task_already_corrected"))
+        (self.root / "feature/tasks.md").write_text(self.CORRECTED)
+        (self.root / "feature/workflow.md").write_text(stage_workflow())
+        commit_fixture(self.root)
+        opened = self.invoke("begin-stage-epoch", autopilot_args=["--stage", "implement"])
+        self.assertEqual(opened["ledger"]["corrective_epochs"][0]["metadata_corrections"][0]["task_ids"], ["T001", "T002"])
+        (self.root / "feature/tasks.md").write_text(self.CORRECTED.replace("T001 Verify", "T001 Check"))
+        after_epoch = self.correct("verb-fix-after-epoch")
+        self.assertEqual((after_epoch["correction_allowance"], after_epoch["metadata_ineligible"]),
+                         ("run_wide", "task_already_corrected"))
+        self.assertEqual(after_epoch["ledger"]["corrective_cycles"], 1)
+
+    def test_a_malformed_request_is_rejected(self):
+        commit_fixture(self.root)
+        self.invoke("start")
+        with self.assertRaisesRegex(ValueError, "explicit spec_file"):
+            self.invoke("reserve", dispatch_id="unbound", kind="corrective", metadata_only=True)
+        for name, inputs in {"not true": {"metadata_only": "yes"}, "false": {"metadata_only": False},
+                             "with a gate": {"gate_remediation": {"gate": "G6", "paths": ["feature/tasks.md"]}},
+                             "with a review": {"review_remediation": {"tdd_unit": "alpha", "paths": ["src/a.py"]}}}.items():
+            with self.subTest(case=name), self.assertRaises(ValueError):
+                self.correct("malformed", **inputs)
+        with self.assertRaises(ValueError):
+            self.invoke("reserve", dispatch_id="not-corrective", kind="implementation", spec_file="feature/spec.md",
+                        metadata_only=True)
+
+    def test_forged_metadata_records_fail_closed(self):
+        commit_fixture(self.root)
+        IncrementReviewAllowanceTests.spend_run_wide_budget(self)
+        (self.root / "feature/tasks.md").write_text(self.CORRECTED)
+        admitted = self.correct("verb-fix")
+        path = self.root / admitted["ledger_path"]
+        valid = path.read_bytes()
+        forged = {"kind": "corrective", "outcome": "reserved", "reserved_at": self.now, "reservation_id": None,
+                  "reconciliations": 0, "metadata_correction": ["T003"]}
+        entry = json.loads(valid)["metadata_corrections"][0]
+        tampers = {
+            "unlisted metadata dispatch": lambda ledger: ledger["dispatches"].update(forged=forged),
+            "record dropped": lambda ledger: ledger.pop("metadata_corrections"),
+            "empty record list": lambda ledger: ledger.update(metadata_corrections=[]),
+            "marker dropped": lambda ledger: ledger["dispatches"]["verb-fix"].pop("metadata_correction"),
+            "task ids disagree": lambda ledger: ledger["dispatches"]["verb-fix"].update(metadata_correction=["T001"]),
+            "task corrected twice": lambda ledger: (
+                ledger["dispatches"].update(forged={**forged, "metadata_correction": ["T001"]}),
+                ledger["metadata_corrections"].append({**entry, "dispatch_id": "forged", "task_ids": ["T001"]})),
+            "malformed task id": lambda ledger: (
+                ledger["dispatches"]["verb-fix"].update(metadata_correction=["X1"]),
+                ledger["metadata_corrections"][0].update(task_ids=["X1"])),
+            "extra key": lambda ledger: ledger["metadata_corrections"][0].update(cycles_spent=0),
+            "on a reservation": lambda ledger: ledger["dispatches"]["verb-fix"].update(
+                reservation_id=next(iter(ledger["reservations"]))),
+            "with a gate": lambda ledger: (
+                ledger["dispatches"]["verb-fix"].update(gate="G6"),
+                ledger.update(gate_allowances={"G6": {"rounds": 1, "dispatch_ids": ["verb-fix"]}})),
+            "not corrective": lambda ledger: ledger["dispatches"]["verb-fix"].update(kind="implementation"),
+            "bad digest": lambda ledger: ledger["metadata_corrections"][0].update(baseline_sha256="0"),
+            "absolute tasks file": lambda ledger: ledger["metadata_corrections"][0].update(
+                tasks_file="/tmp/feature/tasks.md"),
+            "traversing tasks file": lambda ledger: ledger["metadata_corrections"][0].update(
+                tasks_file="feature/../other/tasks.md"),
+            "not a tasks file": lambda ledger: ledger["metadata_corrections"][0].update(tasks_file="feature/plan.md"),
+        }
+        for name, tamper in tampers.items():
+            with self.subTest(tamper=name):
+                ledger = json.loads(valid)
+                tamper(ledger)
+                path.write_text(json.dumps(ledger), encoding="utf-8")
+                with self.assertRaises(ValueError):
+                    self.invoke("status", mode="read_only")
+        # A bound run's record must name the bound feature's tasks.md.
+        ledger = json.loads(valid)
+        ledger.update(approved_invariants=ledger["approved_invariants"] or ["FR-001"],
+                      invariant_binding={"spec_file": "other/spec.md", "spec_sha256": "0" * 64,
+                                         "bound_at": ledger["started_at"]})
+        path.write_text(json.dumps(ledger), encoding="utf-8")
+        with self.assertRaisesRegex(ValueError, "bound feature's canonical tasks.md"):
+            self.invoke("status", mode="read_only")
+        path.write_bytes(valid)
+        self.invoke("complete", dispatch_id="verb-fix", outcome="completed")
+        (self.root / "feature/workflow.md").write_text(stage_workflow())
+        opened = self.invoke("begin-stage-epoch", autopilot_args=["--stage", "implement"])
+        archived = path.read_bytes()
+        ledger = json.loads(archived)
+        ledger["dispatches"]["forged"] = {**forged, "metadata_correction": ["T001"]}
+        ledger["metadata_corrections"] = [{**entry, "dispatch_id": "forged", "task_ids": ["T001"]}]
+        path.write_text(json.dumps(ledger), encoding="utf-8")
+        with self.assertRaisesRegex(ValueError, "corrected twice"):
+            self.invoke("status", mode="read_only")
+        path.write_bytes(archived)
+        self.assertEqual(opened["disposition"], "continue")
+        self.assertEqual(json_schema_failures(opened["ledger"], self.schema(), self.schema(), "ledger"), [])
+
+    def test_both_hosts_document_the_metadata_only_correction(self):
+        plugin = Path(__file__).resolve().parents[3] / "speckit-pro"
+        shared = " ".join((plugin / "skills/speckit-autopilot/references/execution-efficiency.md").read_text().split())
+        for phrase in ("`metadata_only: true`", "`metadata_corrections`", "`correction_allowance=metadata_only`",
+                       "`correction_allowance=run_wide`", "`metadata_ineligible`", "`PHASE7_VERIFY_KEYWORDS`",
+                       "`baseline_unavailable`", "`planning_source_changed`", "`not_metadata_only`",
+                       "`no_task_correction`", "`task_already_corrected`", "`feature_binding_mismatch`",
+                       "`action=fingerprints`"):
+            self.assertIn(phrase, shared)
+        self.assertNotIn("admission is deferred", shared)
+        for host in ("skills/speckit-autopilot/SKILL.md", "skills/speckit-autopilot/references/error-recovery.md",
+                     "codex-skills/speckit-autopilot/references/error-recovery-codex.md"):
+            with self.subTest(host=host):
+                self.assertIn("`metadata_only: true`", " ".join((plugin / host).read_text().split()))
+
+
 class WorkflowIdentityTests(_ExecutionControlFixture, unittest.TestCase):
     def test_different_workflows_cannot_adopt_an_existing_ledger(self):
         first = self.invoke("start")
@@ -2555,6 +2867,25 @@ class RunnerDispatchTests(unittest.TestCase):
         self.assertEqual(code, 0, admitted)
         self.assertEqual(admitted["data"]["remediation_allowance"], "gate")
 
+    def test_metadata_only_correction_is_a_real_runner_route(self):
+        (self.root / "feature/spec.md").write_text("- FR-001: preserve data\n- FR-002: no secrets\n")
+        (self.root / "feature/plan.md").write_text("# Plan\n")
+        (self.root / "feature/tasks.md").write_text(MetadataOnlyCorrectionTests.TASKS)
+        commit_fixture(self.root)
+        self.call_runner("execution-control", "apply", action="start")
+        for dispatch_id, invariant in (("fix-a", "FR-001"), ("fix-b", "FR-002")):
+            self.call_runner("execution-control", "apply", action="reserve", dispatch_id=dispatch_id,
+                             kind="corrective", failure_invariant=invariant)
+            self.call_runner("execution-control", "apply", action="complete", dispatch_id=dispatch_id,
+                             outcome="completed")
+        (self.root / "feature/tasks.md").write_text(MetadataOnlyCorrectionTests.CORRECTED)
+        code, admitted = self.call_runner("execution-control", "apply", action="reserve", dispatch_id="verb-fix",
+                                          kind="corrective", failure_invariant="FR-001", spec_file="feature/spec.md",
+                                          metadata_only=True)
+        self.assertEqual(code, 0, admitted)
+        self.assertEqual((admitted["data"]["correction_allowance"], admitted["data"]["ledger"]["corrective_cycles"]),
+                         ("metadata_only", 2))
+
     def test_stage_epoch_is_a_real_runner_route(self):
         self.call_runner("execution-control", "apply", action="start")
         for dispatch_id, invariant in (("fix-a", "FR-001"), ("fix-b", "FR-002")):
@@ -2689,6 +3020,7 @@ if __name__ == "__main__":
                                             DeferOnExhaustedAllowanceTests, DeferOnExhaustedAllowanceGuidanceTests,
                                             FailingCheckFingerprintTests, CorrectionProgressTests,
                                             CorrectionProgressGuidanceTests, GateRemediationAllowanceTests,
+                                            MetadataOnlyCorrectionTests,
                                             WorkflowIdentityTests, VerificationTests, RunnerDispatchTests))
     suite.addTests(DockerVerificationTests(name) for name in DockerVerificationTests.__dict__ if name.startswith("test_docker_"))
     raise SystemExit(run_counted(suite, label="test-execution-control"))

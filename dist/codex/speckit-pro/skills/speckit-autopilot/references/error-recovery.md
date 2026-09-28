@@ -44,7 +44,9 @@ when its disposition permits. Resume and agent replacement never reset budget.
   and `begin-replan-epoch` are end-of-run tools that act on the operator's
   answer to that request. An explicit `--stage implement` opens the implement
   stage's own allowance through `begin-stage-epoch`
-  ([Bounded Execution](./execution-efficiency.md)).
+  ([Bounded Execution](./execution-efficiency.md)). A task-verb fix that only
+  reroutes a task to verification reserves with `metadata_only: true`; the
+  runner proves it against the committed baseline and spends no cycle.
   Repeated failures with one signature in one test file are one class: one
   approval covers its follow-ups through `reserve-class-correction`. See
   [Repeated Gate Failures: Diagnose One Class, Approve It Once](./phase-execution.md#repeated-gate-failures-diagnose-one-class-approve-it-once).
