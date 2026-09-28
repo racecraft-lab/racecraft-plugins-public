@@ -15,6 +15,7 @@ from .mutation import (
     run_mutation_helper,
 )
 from .read_only import (
+    _fenced_markdown_lines,
     find_repo_root,
     load_pr_packet_schema,
     normalize_display,
@@ -1100,14 +1101,18 @@ def build_packet_body(
 def with_current_phase65_verdict(body: str, verdict: str) -> str | None:
     """Replace a stale Verification verdict before fingerprinting final bodies."""
     lines = body.splitlines()
-    starts = [index for index, line in enumerate(lines) if line == "## Verification"]
+    fenced = _fenced_markdown_lines(lines)
+    starts = [index for index, line in enumerate(lines)
+              if index not in fenced and line == "## Verification"]
     if len(starts) != 1:
         return None
     start = starts[0]
     end = next((index for index in range(start + 1, len(lines))
-                if lines[index].startswith("## ")), len(lines))
-    kept = [line for line in lines[start + 1:end]
-            if not re.fullmatch(r"[ \t]*(?:[-*][ \t]+)?Phase 6\.5 Verdict:.*", line)]
+                if index not in fenced and lines[index].startswith("## ")), len(lines))
+    verdict_label = re.compile(r"Phase[ \t]+6\.5[ \t]+Verdict\b", re.IGNORECASE)
+    if any(verdict_label.search(line) for line in (*lines[:start + 1], *lines[end:])):
+        return None
+    kept = [line for line in lines[start + 1:end] if not verdict_label.search(line)]
     while kept and not kept[0].strip():
         kept.pop(0)
     lines[start + 1:end] = ["", f"Phase 6.5 Verdict: {verdict}", "", *kept]

@@ -8971,6 +8971,37 @@ This line must not be copied.
             self.assertEqual(packet["protected_body_fingerprint"]["value"],
                              pr_emission.protected_body_sha256(refreshed))
 
+            stale_forms = (
+                "**Phase 6.5 Verdict:** proceed",
+                "| Phase 6.5 Verdict | proceed |",
+                "1. Phase 6.5 Verdict: proceed",
+                "Phase 6.5 verdict: proceed",
+                "```text\n## Example\n```\nPhase 6.5 Verdict: proceed",
+            )
+            for stale in stale_forms:
+                with self.subTest(stale=stale):
+                    stale_body = first_body.replace("Phase 6.5 Verdict: proceed", stale, 1)
+                    completed, response, stderr_records = run_runner(
+                        helper_request("pr-packet-output", mode="apply",
+                                       inputs={**inputs, "body": stale_body}), cwd=git_root,
+                    )
+                    self.assertEqual(completed.returncode, 0, stderr_records)
+                    self.assert_response(response, "ok", 0)
+                    current_body = body_path.read_text(encoding="utf-8")
+                    self.assertEqual(current_body.count("Phase 6.5 Verdict: stop"), 1)
+                    self.assertNotIn("proceed", current_body)
+
+            outside_verification = first_body.replace(
+                "## Known Gaps\n", "## Known Gaps\n\nPhase 6.5 Verdict: proceed\n", 1,
+            )
+            completed, response, stderr_records = run_runner(
+                helper_request("pr-packet-output", mode="dry_run",
+                               inputs={**inputs, "body": outside_verification}), cwd=git_root,
+            )
+            self.assertEqual(completed.returncode, 2)
+            self.assert_response(response, "input_error", 2)
+            self.assertEqual(stderr_records[0]["details"]["field"], "body")
+
             completed, response, stderr_records = run_runner(
                 helper_request("pr-packet-output", mode="dry_run",
                                inputs={**inputs, "workflow_file": None}), cwd=git_root,
