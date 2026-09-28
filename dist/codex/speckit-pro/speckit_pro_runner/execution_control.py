@@ -1638,6 +1638,13 @@ def reserve_class_correction(ledger: dict[str, Any], inputs: dict[str, Any], now
     return {"reservation_id": reservation, "dispatch_id": dispatch_id}
 
 
+def _observed_changes(item: dict[str, Any], outcome: str, root: Path) -> list[str] | None:
+    """The paths the runner saw a tracked dispatch change since its own snapshot, or None when it cannot say."""
+    if "worktree_before" not in item or outcome == "unknown":
+        return None
+    return _changed_since(root, item["worktree_before"])
+
+
 def record_result(ledger: dict[str, Any], inputs: dict[str, Any], now: float, root: Path) -> dict[str, Any]:
     dispatch_id = require_text(inputs.get("dispatch_id"), "dispatch_id")
     if dispatch_id not in ledger["dispatches"]:
@@ -1653,13 +1660,11 @@ def record_result(ledger: dict[str, Any], inputs: dict[str, Any], now: float, ro
     outcome = inputs.get("outcome")
     if outcome not in OUTCOMES or (outcome == "expected_tdd_red" and item["kind"] != "implementation"):
         raise ValueError("invalid outcome for dispatch kind")
-    # The runner records what the dispatch changed from its own snapshot; a test fix
-    # completes only when every change stayed inside its declared test files.
-    changed = (_changed_since(root, item["worktree_before"])
-               if "worktree_before" in item and outcome != "unknown" else None)
-    if ("test_fix" in item and outcome == "completed"
-            and (not changed or not set(changed) <= set(item["test_fix_paths"]))):
-        return {"reasons": ["test_fix_scope_unproven"]}
+    changed = _observed_changes(item, outcome, root)
+    if "test_fix" in item and outcome == "completed" and item["outcome"] in {"reserved", "running"}:
+        # A test fix completes only when the runner saw a change and every change stayed in its declared test files.
+        if not changed or not set(changed) <= set(item["test_fix_paths"]):
+            return {"reasons": ["test_fix_scope_unproven"]}
     if item["outcome"] == "unknown":
         event = inputs.get("native_observation")
         if not isinstance(event, dict) or not isinstance(event.get("native_event_id"), str) or not event["native_event_id"].strip():
