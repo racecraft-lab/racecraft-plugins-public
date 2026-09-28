@@ -2414,6 +2414,61 @@ class WorkflowIdentityTests(_ExecutionControlFixture, unittest.TestCase):
         self.assertFalse([path for path in snapshot if "execution-control" in path])
 
 
+class SelfIgnoringByproductDirectoryTests(_ExecutionControlFixture, unittest.TestCase):
+    """#813: every runner byproduct directory ignores itself from the run's first write."""
+
+    def setUp(self):
+        super().setUp()
+        self.environment = {**os.environ, "GIT_CONFIG_GLOBAL": os.devnull, "GIT_CONFIG_NOSYSTEM": "1"}
+        self.git("init", "-q")
+        self.git("add", "-A")
+        self.git("-c", "user.name=fixture", "-c", "user.email=fixture@example.com", "commit", "-q", "-m", "base")
+
+    def git(self, *args, check=True):
+        return subprocess.run(["git", "-C", str(self.root), *args], check=check, capture_output=True, text=True,
+                              env=self.environment)
+
+    def assert_clean_and_ignored(self, relative):
+        self.assertEqual(self.git("status", "--porcelain", "--untracked-files=all").stdout, "")
+        self.assertEqual(self.git("check-ignore", "-q", relative, check=False).returncode, 0, relative)
+
+    def test_ledger_directory_is_ignored_after_the_first_write(self):
+        started = self.invoke("start")
+        self.assert_clean_and_ignored(started["ledger_path"])
+
+    def test_verification_directory_is_ignored_before_any_verification_record(self):
+        self.invoke("start")
+        home = "/".join(("", "home", "synthoperator", "repo"))
+        log = self.root / "feature/.process/verification/orchestrator.log"
+        log.parent.mkdir(exist_ok=True)
+        log.write_text(f"ran the suite from {home}\n")
+        self.assert_clean_and_ignored(log.relative_to(self.root).as_posix())
+
+    def test_committed_marker_evidence_stays_tracked_and_visible(self):
+        self.invoke("start")
+        process = self.root / "feature/.process"
+        record, checkpoint = process / "verification/M1.json", process / "checkpoints/M1.json"
+        checkpoint.parent.mkdir()
+        record.parent.mkdir(exist_ok=True)
+        record.write_text("{}\n")
+        checkpoint.write_text("{}\n")
+        self.assertEqual(self.git("check-ignore", "-q", "feature/.process/checkpoints/M1.json", check=False).returncode, 1)
+        self.git("add", "--force", "--", "feature/.process/verification/M1.json")
+        self.git("add", "--", "feature/.process/checkpoints/M1.json")
+        self.git("-c", "user.name=fixture", "-c", "user.email=fixture@example.com", "commit", "-q", "-m", "marker")
+        record.write_text('{"status": "complete"}\n')
+        self.assertEqual(self.git("status", "--porcelain").stdout, " M feature/.process/verification/M1.json\n")
+        self.assertEqual(self.git("check-ignore", "-q", "feature/.process/verification/M1.json", check=False).returncode, 1)
+
+    def test_both_hosts_say_the_verification_directory_is_self_ignoring(self):
+        plugin = Path(__file__).resolve().parents[3] / "speckit-pro"
+        for name in ("skills/speckit-autopilot/references/phase-execution.md",
+                     "codex-skills/speckit-autopilot/references/phase-execution-codex.md"):
+            with self.subTest(file=name):
+                text = " ".join((plugin / name).read_text(encoding="utf-8").split())
+                self.assertIn("the verification directory is self-ignoring before any verification record exists", text)
+
+
 class VerificationTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
@@ -3021,6 +3076,7 @@ if __name__ == "__main__":
                                             FailingCheckFingerprintTests, CorrectionProgressTests,
                                             CorrectionProgressGuidanceTests, GateRemediationAllowanceTests,
                                             MetadataOnlyCorrectionTests,
-                                            WorkflowIdentityTests, VerificationTests, RunnerDispatchTests))
+                                            WorkflowIdentityTests, SelfIgnoringByproductDirectoryTests, VerificationTests,
+                                            RunnerDispatchTests))
     suite.addTests(DockerVerificationTests(name) for name in DockerVerificationTests.__dict__ if name.startswith("test_docker_"))
     raise SystemExit(run_counted(suite, label="test-execution-control"))

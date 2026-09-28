@@ -880,7 +880,12 @@ for phase in PHASES starting from first_pending:
        Runner byproducts are never committed: the runner writes a
        .gitignore holding * into .process/execution-control/,
        .process/verification/, and .process/task-results/, so
-       git add -A cannot stage them. If
+       git add -A cannot stage them. Every execution-control apply,
+       starting with the run's start, writes that .gitignore into both
+       the ledger directory and the verification directory, so the
+       verification directory is self-ignoring before any verification
+       record exists. Put your own verification logs there: they stay
+       out of commits and out of the repository privacy scan. If
        git ls-files shows such a path already tracked (from an older
        plugin version), run git rm -r --cached -- <path> before this commit.
        One exception: a marker's verification record,

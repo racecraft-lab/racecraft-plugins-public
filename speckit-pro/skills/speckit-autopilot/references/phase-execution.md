@@ -3118,7 +3118,11 @@ Runner byproducts are never committed. The runner writes a `.gitignore`
 holding `*` into each directory it owns (`.process/execution-control/`,
 `.process/verification/`, and `.process/task-results/`), so `git add -A`
 cannot stage the ledger, the verification evidence, or the task-results
-journals. If `git ls-files` shows such a path already tracked
+journals. Every `execution-control` apply, starting with the run's `start`,
+writes that `.gitignore` into both the ledger directory and the verification
+directory, so the verification directory is self-ignoring before any
+verification record exists. Put your own verification logs there: they stay out
+of commits and out of the repository privacy scan. If `git ls-files` shows such a path already tracked
 (from an older plugin version), run `git rm -r --cached -- <path>` before this
 commit.
 
