@@ -692,6 +692,66 @@ class BlockedActionDeferralSourceContractTests(unittest.TestCase):
         self.assertIn(BLOCKED_ACTION_HEADING, recovery)
 
 
+class RunFinalizationSourceContractTests(unittest.TestCase):
+    """A run left with only deferred items finishes ready for review (issue 804)."""
+
+    STALE = (
+        "honest incomplete checkpoint, never completion",
+        "Never report completion while a deferred item remains",
+        "may the rows holding deferred work move to `⚠ Blocked`",
+    )
+
+    def assert_finalization_rules(self, section: str) -> None:
+        for phrase in (
+            "`finalize-run`",
+            "ready for review",
+            "never merges",
+            "`Deferred / not verified`",
+            "`deferred_items`",
+            "`ready_commands`",
+            "`end_of_run_request`",
+            "reported as deferred, never green",
+            "still blocks",
+            "`deferred_digest`",
+            "never re-checks an unchanged blocker",
+        ):
+            self.assertIn(phrase, section)
+        for phrase in self.STALE:
+            self.assertNotIn(phrase, section)
+
+    def test_codex_finalizes_a_deferred_run_and_completes_the_goal(self) -> None:
+        references = CODEX_AUTOPILOT_SKILL.parent / "references"
+        phase = _flat(references / "phase-execution-codex.md")
+        section = _section(phase, f"### {BLOCKED_ACTION_HEADING}", "### Repeated Gate Failures")
+        self.assert_finalization_rules(section)
+        self.assertIn("marks the thread goal complete, never blocked", section)
+        skill = _flat(CODEX_AUTOPILOT_SKILL)
+        audit = _section(skill, "### 3.4 Pre-final completion audit", "## Workflow File Update Protocol")
+        self.assertIn("`finalize-run`", audit)
+        for phrase in self.STALE:
+            self.assertNotIn(phrase, skill)
+        post = _flat(references / "post-implementation-codex.md")
+        self.assertIn("`finalize-run`", post)
+        self.assertIn("`deferred_items`", post)
+        for phrase in self.STALE:
+            self.assertNotIn(phrase, post)
+
+    def test_claude_mirrors_the_finalization(self) -> None:
+        references = CLAUDE_AUTOPILOT_SKILL.parent / "references"
+        phase = _flat(references / "phase-execution.md")
+        section = _section(phase, f"#### {BLOCKED_ACTION_HEADING}", "#### Repeated Gate Failures")
+        self.assert_finalization_rules(section)
+        skill = _flat(CLAUDE_AUTOPILOT_SKILL)
+        audit = _section(skill, "### 3.4 Pre-final completion audit", "## Workflow File Update Protocol")
+        self.assertIn("`finalize-run`", audit)
+        for phrase in self.STALE:
+            self.assertNotIn(phrase, skill)
+
+    def test_stack_manager_keeps_draft_status_only_until_finalization(self) -> None:
+        stack = _flat(CLAUDE_AUTOPILOT_SKILL.parent / "references" / "stack-manager.md")
+        self.assertIn("Preserve packet metadata, and draft status until finalization", stack)
+
+
 FAILURE_CLASS_HEADING = "Repeated Gate Failures: Diagnose One Class, Approve It Once"
 
 
@@ -2179,6 +2239,7 @@ def build_suite() -> unittest.TestSuite:
         WorkflowAuthorityTests,
         RepositoryRootResolutionTests,
         ProblemKeyClassificationTests,
+        RunFinalizationSourceContractTests,
     ):
         suite.addTests(loader.loadTestsFromTestCase(case))
     return suite

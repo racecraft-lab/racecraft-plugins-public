@@ -1,0 +1,45 @@
+{
+  "schema_version": "1.0",
+  "request_id": "fixture-finalize-run",
+  "helper_id": "finalize-run",
+  "operation": "finalize-run",
+  "mode": "read_only",
+  "inputs": {
+    "ledger_path": "tests/speckit-pro/unit/fixtures/run-finalization/.process/execution-control/ledger.json",
+    "expected_run_id": "fixture-run-finalization",
+    "gates": [
+      {
+        "gate": "G7",
+        "status": "passed"
+      },
+      {
+        "gate": "Post: Integration Suite",
+        "status": "failed",
+        "attributed_units": [
+          "FR-001"
+        ]
+      }
+    ],
+    "pending_items": [],
+    "blocked_action_deferrals": [
+      {
+        "unit": "T042",
+        "reason": "The approval reviewer denied the live evaluation because it sends skill prompts to a model service.",
+        "finish": "Send the paste-ready egress authorization as a chat message, then run the T042 live evaluation."
+      }
+    ],
+    "pull_requests": [
+      {
+        "number": 101,
+        "url": "https://github.com/example-org/example-repo/pull/101",
+        "draft": true
+      },
+      {
+        "number": 102,
+        "url": "https://github.com/example-org/example-repo/pull/102",
+        "draft": true
+      }
+    ],
+    "resume_command": "/speckit-pro:speckit-autopilot docs/ai/specs/.process/FEATURE-001-workflow.md --from-phase implement"
+  }
+}

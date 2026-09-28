@@ -431,6 +431,18 @@
       "rollback": "Remove the registry entry and write the authorization message and extra_policy fragment by hand from the preflight record."
     },
     {
+      "helper_id": "finalize-run",
+      "operation": "finalize-run",
+      "promotion_status": "python_authoritative",
+      "failure_classes": ["invalid_input"],
+      "rejected_stdout_schema": {"status": "input_error", "data": "object"},
+      "deterministic_remediation": {"summary": "Decide how an autopilot run ends once no runnable work remains.", "actions": ["Pass the run's execution-control ledger, every final gate result, the open runnable work, every blocked-action deferral, and the pull-request stack.", "Rerun finalize-run."]},
+      "subprocess_policy": {"shell": false, "bounded_input": true, "timeout_seconds": 30},
+      "path_boundary_policy": {"boundary": "execution_control_ledger", "rejects": ["file_writes", "path_traversal", "unknown_inputs"]},
+      "authoritative_command": "python -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/read-only-helpers/requests/finalize-run.json",
+      "rollback": "Remove the registry entry and decide the run's end from the ledger's deferred list and the gate results by hand."
+    },
+    {
       "helper_id": "ratify-pr-split",
       "operation": "ratify-pr-split",
       "promotion_status": "python_authoritative",

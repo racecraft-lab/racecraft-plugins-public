@@ -61,7 +61,8 @@ Before linking, read the installed skill and persist `mutation_boundary.status:
 attempted` with the command ID, start time, argv, pre-mutation topology and
 validated packet references. Execute the returned command, capture its exit and
 bounded output, then read remote PR and stack membership to record the observed
-topology. Preserve packet metadata and draft status. A zero command exit without
+topology. Preserve packet metadata, and draft status until finalization marks
+the stack ready for review. A zero command exit without
 the expected remote topology is incomplete.
 
 After any attempted or partial mutation, resume through the selected manager.
