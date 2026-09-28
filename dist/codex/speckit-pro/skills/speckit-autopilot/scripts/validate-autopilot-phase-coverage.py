@@ -4514,9 +4514,10 @@ def state_privacy_errors(state: object) -> dict[str, list[str]]:
                     continue
                 reason = _state_private_value_reason(key)
                 if reason is not None:
+                    key_digest = "sha256:" + hashlib.sha256(key.encode("utf-8")).hexdigest()
                     errors.append(
-                        f"{location} has a key holding {reason}; replace the key with sha256: plus the "
-                        + "hex SHA-256 of the key, and rerun this guard"
+                        f"{location} has a key holding {reason} (key {key_digest}); replace that key "
+                        + f"with {key_digest}, and rerun this guard"
                     )
                     continue
                 pending.append((child_location, child))
