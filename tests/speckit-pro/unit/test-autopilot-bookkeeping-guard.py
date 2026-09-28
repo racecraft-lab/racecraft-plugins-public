@@ -692,6 +692,86 @@ class BlockedActionDeferralSourceContractTests(unittest.TestCase):
         self.assertIn(BLOCKED_ACTION_HEADING, recovery)
 
 
+class RunFinalizationSourceContractTests(unittest.TestCase):
+    """Only human UAT may be deferred; anything else left is one human stop (issue 804)."""
+
+    STALE = (
+        "honest incomplete checkpoint, never completion",
+        "Never report completion while a deferred item remains",
+        "may the rows holding deferred work move to `⚠ Blocked`",
+        "reported as deferred, never green",
+        "`attributed_units`",
+    )
+
+    def assert_finalization_rules(self, section: str) -> None:
+        for phrase in (
+            "`finalize-run`",
+            "Human UAT is the only gate a run may defer",
+            "`human_uat`",
+            "ready for review",
+            "never merges",
+            "`Deferred / not verified`",
+            "`deferred_items`",
+            "`ready_commands`",
+            "`end_of_run_request`",
+            "`outcome=human_stop`",
+            "one human stop",
+            "exact command",
+            "retry with backoff",
+            "reviewer veto despite a recorded chat authorization",
+            "never lets a gate pass, be skipped, or be deferred",
+            "at the end of the run an unresolved deferral is the human stop",
+            "`deferred_digest`",
+            "never re-checks an unchanged blocker",
+        ):
+            self.assertIn(phrase, section)
+        for phrase in self.STALE:
+            self.assertNotIn(phrase, section)
+
+    def test_codex_finalizes_a_deferred_run_and_completes_the_goal(self) -> None:
+        references = CODEX_AUTOPILOT_SKILL.parent / "references"
+        phase = _flat(references / "phase-execution-codex.md")
+        section = _section(phase, f"### {BLOCKED_ACTION_HEADING}", "### Repeated Gate Failures")
+        self.assert_finalization_rules(section)
+        self.assertIn("marks the thread goal complete", section)
+        self.assertIn("never set the thread goal blocked for it mid-run", phase)
+        recovery = _flat(references / "error-recovery-codex.md")
+        self.assertIn("never sets the thread goal blocked mid-run", recovery)
+        self.assertNotIn("never sets the thread goal blocked.", recovery)
+        hardener = _flat(CLAUDE_AUTOPILOT_SKILL.parent / "references" / "hardener-delegation.md")
+        self.assertIn("It is a gate, so it never stays deferred", hardener)
+        efficiency = _flat(CLAUDE_AUTOPILOT_SKILL.parent / "references" / "execution-efficiency.md")
+        self.assertIn("the run never finalizes ready for review over it, a gate's included", efficiency)
+        preflight = _section(phase, "### Autonomy Boundary Preflight", "1. Read mode from `CONFIDENCE_GATE_MODE`")
+        for phrase in ("`check-gate-preflight-coverage`", "preflight defect", "at run start"):
+            self.assertIn(phrase, preflight)
+        skill = _flat(CODEX_AUTOPILOT_SKILL)
+        audit = _section(skill, "### 3.4 Pre-final completion audit", "## Workflow File Update Protocol")
+        self.assertIn("`finalize-run`", audit)
+        for phrase in self.STALE:
+            self.assertNotIn(phrase, skill)
+        post = _flat(references / "post-implementation-codex.md")
+        self.assertIn("`finalize-run`", post)
+        self.assertIn("`deferred_items`", post)
+        for phrase in self.STALE:
+            self.assertNotIn(phrase, post)
+
+    def test_claude_mirrors_the_finalization(self) -> None:
+        references = CLAUDE_AUTOPILOT_SKILL.parent / "references"
+        phase = _flat(references / "phase-execution.md")
+        section = _section(phase, f"#### {BLOCKED_ACTION_HEADING}", "#### Repeated Gate Failures")
+        self.assert_finalization_rules(section)
+        skill = _flat(CLAUDE_AUTOPILOT_SKILL)
+        audit = _section(skill, "### 3.4 Pre-final completion audit", "## Workflow File Update Protocol")
+        self.assertIn("`finalize-run`", audit)
+        for phrase in self.STALE:
+            self.assertNotIn(phrase, skill)
+
+    def test_stack_manager_keeps_draft_status_only_until_finalization(self) -> None:
+        stack = _flat(CLAUDE_AUTOPILOT_SKILL.parent / "references" / "stack-manager.md")
+        self.assertIn("Preserve packet metadata, and draft status until finalization", stack)
+
+
 FAILURE_CLASS_HEADING = "Repeated Gate Failures: Diagnose One Class, Approve It Once"
 
 
@@ -913,6 +993,25 @@ class StandingPolicyPreflightSourceContractTests(unittest.TestCase):
         self.assertNotIn("STOP before Phase 7", self.preflight)
         self.assertNotIn("A blocked result stops before Phase 7", self.skill)
         self.assertIn("never an up-front question", self.resume)
+
+    def test_uncovered_egress_authorization_is_asked_as_a_chat_reply_at_run_start(self) -> None:
+        for phrase in (
+            "asks for it as a chat reply at run start",
+            "normal chat message in this thread, never as a goal edit",
+            "the helper's `delivery` line",
+            "never waits for the reply",
+            "reads goal text as user-provided data",
+        ):
+            self.assertIn(phrase, self.preflight)
+        self.assertIn("never as a goal edit", self.skill)
+
+    def test_reviewer_policy_change_reaches_only_new_threads(self) -> None:
+        phrase = "reaches only threads started after the change"
+        self.assertIn(phrase, self.preflight)
+        self.assertIn("even after an app restart", self.preflight)
+        for setup in ("speckit-install", "speckit-upgrade"):
+            with self.subTest(setup=setup):
+                self.assertIn(phrase, _flat(CODEX_AUTOPILOT_SKILL.parents[1] / setup / "SKILL.md"))
 
     def test_ratified_boundary_file_edit_is_deferred_not_a_start_blocker(self) -> None:
         for phrase in (
@@ -2179,6 +2278,7 @@ def build_suite() -> unittest.TestSuite:
         WorkflowAuthorityTests,
         RepositoryRootResolutionTests,
         ProblemKeyClassificationTests,
+        RunFinalizationSourceContractTests,
     ):
         suite.addTests(loader.loadTestsFromTestCase(case))
     return suite

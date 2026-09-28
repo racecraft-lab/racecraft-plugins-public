@@ -51,8 +51,10 @@ before corrective work. One cycle per failure family and two cycles per spec
 are shared with every enclosing gate/repair loop; the hardener has no allowance
 of its own. Nested execution carries the parent's reservation_id.
 Stop when the score reaches the floor or that reservation ends.
-On exhaustion retain the failing MUTATION result and defer it to the end-of-run
-request (`disposition=defer`); never count
+On exhaustion retain the failing MUTATION result and defer it (`disposition=defer`)
+so independent work continues. It is a gate, so it never stays deferred: at the
+end of the run the ledger deferral makes `finalize-run` return the one human
+stop, never a ready-for-review stack. Never count
 fallback, rejection, or a renamed error as a fresh repair family.
 
 ## Delegated path (delegation gateway)

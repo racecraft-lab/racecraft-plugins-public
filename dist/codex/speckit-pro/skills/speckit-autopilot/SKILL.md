@@ -665,10 +665,12 @@ the repository's standing policy, which the operator installs once at setup
 action is covered, the preflight asks no question. A missing standing policy is
 reported once as a setup gap, and the run still proceeds. An uncovered action,
 including a boundary-file edit the plan names, is deferred to the one
-end-of-run request, never an up-front question. When that request covers data
-egress, it shows the operator a paste-ready authorization message and a
-proposed `auto_review.extra_policy` fragment, both rendered by the same helper;
-the plugin never writes either one.
+end-of-run request, never an up-front question that stops the run. For
+uncovered data egress, the preflight shows a paste-ready authorization message
+at run start and asks the operator to send it as a normal chat message, never
+as a goal edit, without waiting for it; the end-of-run request repeats it with
+a proposed `auto_review.extra_policy` fragment, both rendered by the same
+helper. The plugin never writes either one.
 
 Once autopilot is running, human input is for exceptional cases only. Once Phase 7 runs, one
 blocked action never stops the run: take the task's own fallback, or defer that
@@ -726,12 +728,17 @@ passing, with no operator event. `execution_control.disposition=defer`
 and not a stop: it defers one blocked unit whose
 correction made no measurable progress and whose allowance is spent, and the
 run keeps executing independent work.
-The same honest checkpoint applies when every runnable item has finished and
-deferred items remain under §Blocked Actions Mid-Run: Fall Back or Defer, Never
-Stop. Make the one consolidated `request_user_input` request, print the same
-question as plain text in the final message, and list every fallback taken and
-every deferred item, including each entry of the ledger's `deferred` list.
-Never report completion while a deferred item remains.
+When every runnable item has finished, the read-only `finalize-run` runner
+helper decides the end under §Blocked Actions Mid-Run: Fall Back or Defer, Never
+Stop. Human UAT is the only gate a run may defer. With every non-UAT gate passed
+and only human UAT left, the run finalizes: mark the stack ready for review
+(never merge), open the top PR body with its `Deferred / not verified` section,
+and mark the thread goal complete. When deferred items remain beyond human UAT
+(a failed gate, a ledger `deferred` entry, or an unresolved task), the run makes
+one human stop instead and the stack stays in draft. Either way, make the one
+consolidated `request_user_input` request and print the same question as plain
+text in the final message, listing every fallback taken and every deferred item,
+including each entry of the ledger's `deferred` list.
 If the audit finds incomplete Post work, set the first
 incomplete item to `in_progress` in both state stores and continue the
 autopilot loop instead of summarizing. `Post: Retrospective` is the final

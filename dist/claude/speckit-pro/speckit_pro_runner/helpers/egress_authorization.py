@@ -29,6 +29,10 @@ ACTION_FIELDS = frozenset({"action_id", "target", "effect", "purpose"})
 ACTION_ID = re.compile(r"^[a-z0-9][a-z0-9._-]*$")
 CONTROL_CHARACTER = re.compile(r"[\x00-\x1f\x7f]")
 REPOSITORY = re.compile(r"^[A-Za-z0-9][A-Za-z0-9-]*/[A-Za-z0-9._-]+$")
+# Where the operator sends the authorization. The approval reviewer reads the
+# thread goal as user-provided data, so authorization written there never counts.
+DELIVERY = ("Send this authorization as a normal chat message in this thread, not as an edit to the thread goal: "
+            "the approval reviewer reads goal text as user-provided data and ignores authorization in it.")
 
 
 class _InvalidInput(ValueError):
@@ -183,6 +187,8 @@ def _fragment(body: list[str]) -> str:
         "# Use extra_policy, never auto_review.policy, which replaces the default reviewer policy.\n"
         "# Keep it out of any repository: the reviewer trusts AGENTS.md, and a branch can rewrite it.\n"
         "# TOML allows one auto_review table: merge this text into an existing extra_policy string.\n"
+        "# A reviewer session persists for its thread, even after an app restart: a policy change\n"
+        "# reaches only threads started after the change, so start a new thread after installing it.\n"
         "[auto_review]\nextra_policy = \"\"\"\n" + escaped + "\n\"\"\"\n"
     )
 
@@ -308,6 +314,7 @@ def run_egress_authorization_helper(entry: Any, request: Any) -> dict[str, Any]:
             "action_ids": [action["action_id"] for action in actions],
             "authorization_message": message,
             "authorization_message_sha256": digest,
+            "delivery": DELIVERY,
             "extra_policy_fragment": render_extra_policy_fragment(repository, default_branch, actions),
         },
     )

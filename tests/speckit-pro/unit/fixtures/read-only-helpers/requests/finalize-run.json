@@ -1,0 +1,45 @@
+{
+  "schema_version": "1.0",
+  "request_id": "fixture-finalize-run",
+  "helper_id": "finalize-run",
+  "operation": "finalize-run",
+  "mode": "read_only",
+  "inputs": {
+    "ledger_path": "tests/speckit-pro/unit/fixtures/run-finalization/.process/execution-control/ledger.json",
+    "expected_run_id": "fixture-run-finalization",
+    "gates": [
+      {
+        "gate": "G7",
+        "status": "passed",
+        "command": "python3 tests/speckit-pro/run-all.py"
+      },
+      {
+        "gate": "Post: Integration Suite",
+        "status": "passed",
+        "command": "python3 tests/integration/run.py"
+      }
+    ],
+    "pending_items": [],
+    "unresolved_deferrals": [],
+    "human_uat": [
+      {
+        "item": "UAT story 2: the export opens in a spreadsheet app",
+        "reason": "It needs a person to open the exported file.",
+        "finish": "Follow steps 4 to 6 of the UAT runbook and record the result on the pull request."
+      }
+    ],
+    "pull_requests": [
+      {
+        "number": 101,
+        "url": "https://github.com/example-org/example-repo/pull/101",
+        "draft": true
+      },
+      {
+        "number": 102,
+        "url": "https://github.com/example-org/example-repo/pull/102",
+        "draft": true
+      }
+    ],
+    "resume_command": "/speckit-pro:speckit-autopilot docs/ai/specs/.process/FEATURE-001-workflow.md --from-phase implement"
+  }
+}
