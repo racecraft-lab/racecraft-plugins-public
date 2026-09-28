@@ -12,21 +12,37 @@ ledger's `deferred` list, or a deferred task nobody resolved. A `defer`
 disposition keeps the run working on other units mid-run; it never survives to
 a finalized run. This read-only helper fails closed on missing or malformed
 evidence and never writes a file.
+
+Every gate result names the PR head (`head_sha`) it ran at. A stack finalizes
+only when every PR head passed every non-UAT gate reported for any head, so a
+stack verified only at its tip is a human stop naming each head and gate left
+unverified. Evidence from one head never stands in for another.
+
+A harness or tooling error that blocks a gate is retried up to
+HARNESS_RETRY_BUDGET attempts. If it persists, the gate reports status
+`harness_error` with its `attempts` and the `evidence` path under a
+`.process/verification/` directory holding each attempt's raw error and trace.
+A harness error never counts as passed; the one human stop reports it as a
+harness error, never as a failure of the code under test, and cites that path.
 """
 
 from __future__ import annotations
 
 import hashlib
 import json
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any
 
 from ..envelope import diagnostic, response
 from ..execution_control import confined_path, require_text, validate_ledger
+from ..sweep_isolation import HEX_OBJECT_RE
 
 ALLOWED_INPUTS = frozenset({"repo_root", "ledger_path", "expected_run_id", "gates", "pending_items",
                             "unresolved_deferrals", "human_uat", "pull_requests", "resume_command"})
-GATE_STATUSES = ("passed", "failed")
+GATE_STATUSES = ("passed", "failed", "harness_error")
+GATE_FIELDS = {"gate", "status", "command", "head_sha"}
+HARNESS_FIELDS = GATE_FIELDS | {"attempts", "evidence"}
+HARNESS_RETRY_BUDGET = 3
 DEFERRAL_FIELDS = ("unit", "reason", "finish")
 UAT_FIELDS = ("item", "reason", "finish")
 UNIT_LABELS = {"failure_family": "Failure family", "failure_class": "Failure class",
@@ -72,17 +88,54 @@ def _records(value: Any, name: str, fields: tuple[str, ...]) -> list[dict[str, s
     return records
 
 
-def _gates(value: Any) -> list[dict[str, str]]:
+def _head(value: Any, field: str) -> str:
+    if not isinstance(value, str) or HEX_OBJECT_RE.fullmatch(value) is None:
+        raise ValueError(f"{field} must be the full lowercase commit SHA of a PR head")
+    return value
+
+
+def _harness_evidence(root: Path, value: Any, field: str) -> str:
+    """An existing path under a `.process/verification/` directory, which the runner keeps out of commits."""
+    relative = _text(value, field)
+    parts = PurePosixPath(relative).parts
+    if (".process", "verification") not in zip(parts, parts[1:], strict=False):
+        raise ValueError(f"{field} must sit under a .process/verification/ directory")
+    if not confined_path(root, relative).exists():
+        raise ValueError(f"{field} must name the retained raw errors and traces; a harness error needs its evidence")
+    return relative
+
+
+def _gates(root: Path, value: Any, heads: set[str]) -> list[dict[str, Any]]:
     if not isinstance(value, list) or not value:
         raise ValueError("gates must list every final non-UAT gate result; a run never finalizes on no evidence")
-    gates: list[dict[str, str]] = []
+    gates: list[dict[str, Any]] = []
+    seen: set[tuple[str, str]] = set()
     for index, raw in enumerate(value):
-        if not isinstance(raw, dict) or set(raw) != {"gate", "status", "command"}:
-            raise ValueError(f"gates[{index}] must have exactly gate, status, and command")
-        if raw["status"] not in GATE_STATUSES:
-            raise ValueError(f"gates[{index}].status must be passed or failed; only human UAT may be deferred")
-        gates.append({"gate": _text(raw["gate"], f"gates[{index}].gate"), "status": raw["status"],
-                      "command": _text(raw["command"], f"gates[{index}].command")})
+        if not isinstance(raw, dict) or raw.get("status") not in GATE_STATUSES:
+            raise ValueError(f"gates[{index}].status must be passed, failed, or harness_error; "
+                             + "only human UAT may be deferred")
+        if raw["status"] == "harness_error":
+            if set(raw) != HARNESS_FIELDS:
+                raise ValueError(f"gates[{index}] must have exactly gate, status, command, head_sha, attempts, "
+                                 + "and evidence")
+        elif set(raw) != GATE_FIELDS:
+            raise ValueError(f"gates[{index}] must have exactly gate, status, command, and head_sha")
+        gate: dict[str, Any] = {"gate": _text(raw["gate"], f"gates[{index}].gate"), "status": raw["status"],
+                                "command": _text(raw["command"], f"gates[{index}].command"),
+                                "head_sha": _head(raw["head_sha"], f"gates[{index}].head_sha")}
+        if raw["status"] == "harness_error":
+            if type(raw["attempts"]) is not int or raw["attempts"] < HARNESS_RETRY_BUDGET:
+                raise ValueError(f"gates[{index}].attempts must show the harness retry budget of "
+                                 + f"{HARNESS_RETRY_BUDGET} attempts was spent before reporting harness_error")
+            gate.update(attempts=raw["attempts"],
+                        evidence=_harness_evidence(root, raw["evidence"], f"gates[{index}].evidence"))
+        if gate["head_sha"] not in heads:
+            raise ValueError(f"gates[{index}].head_sha is not the head of any listed pull request; "
+                             + "evidence from another head never counts")
+        if (gate["head_sha"], gate["gate"]) in seen:
+            raise ValueError(f"gates[{index}] repeats gate {gate['gate']} at one head; pass its final result once")
+        seen.add((gate["head_sha"], gate["gate"]))
+        gates.append(gate)
     return gates
 
 
@@ -91,12 +144,26 @@ def _pull_requests(value: Any) -> list[dict[str, Any]]:
         raise ValueError("pull_requests must list the run's stack, bottom first")
     prs: list[dict[str, Any]] = []
     for index, raw in enumerate(value):
-        if (not isinstance(raw, dict) or set(raw) != {"number", "url", "draft"}
+        if (not isinstance(raw, dict) or set(raw) != {"number", "url", "draft", "head_sha"}
                 or type(raw["number"]) is not int or raw["number"] < 1 or type(raw["draft"]) is not bool):
-            raise ValueError(f"pull_requests[{index}] must have a positive number, a url, and a boolean draft")
+            raise ValueError(f"pull_requests[{index}] must have a positive number, a url, a boolean draft, "
+                             + "and its head_sha")
         prs.append({"number": raw["number"], "url": _text(raw["url"], f"pull_requests[{index}].url"),
-                    "draft": raw["draft"]})
+                    "draft": raw["draft"], "head_sha": _head(raw["head_sha"], f"pull_requests[{index}].head_sha")})
+    if len({pr["head_sha"] for pr in prs}) != len(prs):
+        raise ValueError("pull_requests must each have their own head_sha")
     return prs
+
+
+def _missing(prs: list[dict[str, Any]], gates: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Each PR head without a result for a gate that any head reported."""
+    commands: dict[str, str] = {}
+    for gate in sorted(gates, key=lambda record: record["command"]):
+        commands.setdefault(gate["gate"], gate["command"])
+    reported = {(gate["head_sha"], gate["gate"]) for gate in gates}
+    return [{"pull_request": pr["number"], "head_sha": pr["head_sha"], "gate": name, "command": command}
+            for pr in prs for name, command in sorted(commands.items())
+            if (pr["head_sha"], name) not in reported]
 
 
 def _ledger_item(entry: dict[str, Any], resume_command: str) -> dict[str, str]:
@@ -124,13 +191,25 @@ def render_request(items: list[dict[str, str]], resume_command: str) -> str:
     return "\n".join(lines) + "\n"
 
 
-def render_stop(stop: dict[str, list[dict[str, str]]], resume_command: str) -> str:
+def render_stop(stop: dict[str, list[dict[str, Any]]], resume_command: str) -> str:
     """The run's one human stop, as plain text."""
     lines = ["The run stopped, and its pull request stack stays in draft. Nothing was merged.", ""]
     number = 0
     for gate in stop["gates"]:
         number += 1
-        lines.extend([f"{number}. Gate {gate['gate']} failed after its retries.", f"   Command: {gate['command']}"])
+        lines.extend([f"{number}. Gate {gate['gate']} failed after its retries at head {gate['head_sha']} "
+                      + f"of PR #{gate['pull_request']}.", f"   Command: {gate['command']}"])
+    for gate in stop["missing"]:
+        number += 1
+        lines.extend([f"{number}. Gate {gate['gate']} has no result at head {gate['head_sha']} of PR "
+                      + f"#{gate['pull_request']}.", f"   Run it at that head: {gate['command']}"])
+    for gate in stop["harness_errors"]:
+        number += 1
+        lines.extend([f"{number}. Gate {gate['gate']} could not run at head {gate['head_sha']} of PR "
+                      + f"#{gate['pull_request']}: a harness error persisted through {gate['attempts']} attempts. "
+                      + "This is a harness error, not a failure of the code under test.",
+                      f"   Command: {gate['command']}",
+                      f"   Raw errors and traces: {gate['evidence']}"])
     for unit in stop["units"]:
         number += 1
         lines.extend([f"{number}. {unit['unit']} is unresolved: {unit['reason']}", f"   To finish it: {unit['finish']}"])
@@ -149,21 +228,28 @@ def finalize_run(root: Path, inputs: dict[str, Any]) -> dict[str, Any]:
     ledger_deferrals = _ledger_deferrals(root, inputs)
     unresolved = _records(inputs.get("unresolved_deferrals", []), "unresolved_deferrals", DEFERRAL_FIELDS)
     human_uat = _records(inputs.get("human_uat", []), "human_uat", UAT_FIELDS)
-    gates = _gates(inputs.get("gates"))
     prs = _pull_requests(inputs.get("pull_requests"))
+    gates = _gates(root, inputs.get("gates"), {pr["head_sha"] for pr in prs})
+    numbers = {pr["head_sha"]: pr["number"] for pr in prs}
     pending = inputs.get("pending_items")
     if not isinstance(pending, list):
         raise ValueError("pending_items must list the runnable work still open, or be empty")
     pending_items = [_text(item, "pending_items") for item in pending]
 
     # Canonical order, so the same blocker listed another way has the same digest and request text.
-    stop = {"gates": _canonical([{"gate": gate["gate"], "command": gate["command"]}
+    stop = {"gates": _canonical([{"gate": gate["gate"], "command": gate["command"],
+                                  "pull_request": numbers[gate["head_sha"]], "head_sha": gate["head_sha"]}
                                  for gate in gates if gate["status"] == "failed"]),
+            "missing": _canonical(_missing(prs, gates)),
+            "harness_errors": _canonical([{"gate": gate["gate"], "command": gate["command"],
+                                           "pull_request": numbers[gate["head_sha"]], "head_sha": gate["head_sha"],
+                                           "attempts": gate["attempts"], "evidence": gate["evidence"]}
+                                          for gate in gates if gate["status"] == "harness_error"]),
             "units": _canonical([_ledger_item(entry, resume_command) for entry in ledger_deferrals] + unresolved)}
     human_uat = _canonical(human_uat)
     if pending_items:
         outcome = "continue"
-    elif stop["gates"] or stop["units"]:
+    elif any(stop.values()):
         outcome = "human_stop"
     else:
         outcome = "complete_with_deferred" if human_uat else "complete"
@@ -179,6 +265,8 @@ def finalize_run(root: Path, inputs: dict[str, Any]) -> dict[str, Any]:
         "ready_commands": [f"gh pr ready {pr['number']}" for pr in prs if pr["draft"]] if finalized else [],
         "top_pull_request": prs[-1]["url"],
         "gates": gates,
+        "pull_requests": [{**pr, "gates": [gate for gate in gates if gate["head_sha"] == pr["head_sha"]]}
+                          for pr in prs],
         "pending_items": pending_items,
         "human_stop": stop if outcome == "human_stop" else None,
         "deferred_items": human_uat,
@@ -207,8 +295,8 @@ def run_run_finalization_helper(entry: Any, request: Any) -> dict[str, Any]:
                     "invalid_input",
                     str(error),
                     remediation_summary="Pass the run's execution-control ledger, every final non-UAT gate result "
-                    + "with its command, the open runnable work, every unresolved deferral, the human UAT, "
-                    + "and the pull-request stack.",
+                    + "with its command and the PR head it ran at, the open runnable work, every unresolved "
+                    + "deferral, the human UAT, and the pull-request stack with each head_sha.",
                     remediation_actions=["Correct the named input.", "Rerun finalize-run."],
                 )
             ],

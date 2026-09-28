@@ -731,7 +731,7 @@ run keeps executing independent work.
 When every runnable item has finished, the read-only `finalize-run` runner
 helper decides the end under §Blocked Actions Mid-Run: Fall Back or Defer, Never
 Stop. Human UAT is the only gate a run may defer. With every non-UAT gate passed
-and only human UAT left, the run finalizes: mark the stack ready for review
+at every PR head and only human UAT left, the run finalizes: mark the stack ready for review
 (never merge), open the top PR body with its `Deferred / not verified` section,
 and mark the thread goal complete. When deferred items remain beyond human UAT
 (a failed gate, a ledger `deferred` entry, or an unresolved task), the run makes
