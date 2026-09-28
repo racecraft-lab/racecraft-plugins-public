@@ -1092,6 +1092,7 @@ class AnchoredAgentDir:
                 try:
                     os.close(held_fd)
                 except OSError:
+                    # The unlink result is already decided; a failed close cannot change it.
                     pass
         finally:
             if private_dir_fd is not None:
