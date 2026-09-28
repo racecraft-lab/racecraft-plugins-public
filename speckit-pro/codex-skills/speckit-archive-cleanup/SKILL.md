@@ -62,6 +62,23 @@ historical evidence; remove them only when the repository explicitly does so.
 
 ## Archive Edits
 
+The archive extension contract is local policy with one override: SpecKit Pro
+replaces its agent-context step (stock `stn1slv/spec-kit-archive` step 5.3,
+vendored fork step 6.3). Never append per-spec history (archive notes, Active
+Technologies bullets, or Recent Changes bullets) to agent context files
+(`AGENTS.md`, `CLAUDE.md`, `GEMINI.md`). The archive report and
+`.specify/memory/` records hold that history, and Codex reads `AGENTS.md`
+under a 32 KiB budget. If you also follow the archive command contract
+alongside the memory entries below, scope it so it cannot reach that step:
+
+```text
+archive command: specs/<merged-spec-dir> --spec-only --plan-only --changelog-only
+```
+
+Several scope modifiers form a union, so this run updates
+`.specify/memory/spec.md`, `plan.md`, and `changelog.md` and leaves the agent
+context files alone.
+
 Add an archive report under `.specify/memory/archive-reports/` named with the
 date and SPEC-ID, for example
 `2026-06-17-spec-007-post-merge-hygiene.md`. Include:
@@ -86,11 +103,11 @@ These entries should explain what shipped, why the active `specs/**` folder can
 be removed, where canonical artifacts live now, and where the detailed archive
 report is stored.
 
-Update roadmap and traceability files that still show the merged spec as
-pending, in progress, or blocking downstream work. Move downstream specs from
-blocked to ready only when the completed spec was the actual blocker. Be
-specific: name the merged PR and the canonical files that now satisfy the
-dependency.
+Update roadmap, traceability, and agent context files only where they still
+show the merged spec as pending, in progress, or blocking downstream work.
+Move downstream specs from blocked to ready only when the completed spec was
+the actual blocker. Be specific: name the merged PR and the canonical files
+that now satisfy the dependency.
 
 If `docs/ai/specs/.process/autopilot-state.json` exists and points at the
 completed spec, rewrite it as completed archive state. Keep it valid JSON. Mark
@@ -105,9 +122,19 @@ Remove only the completed active spec directory under `specs/`. Do not delete
 process files. If the active spec folder is still referenced by live tests or
 scripts, either decouple those references first or stop and report the blocker.
 
-After removal, run the repository's SpecKit index generator in write mode, then
-run its check mode. The generated MOC or index should no longer point at the
-archived spec directory.
+After removal, regenerate the active spec index with SpecKit Pro's runner
+helpers, so the generated MOC or index no longer points at the archived spec
+directory. Send each request as one JSON object on stdin to
+`resolved_python -m speckit_pro_runner`, run from the repository root. Run
+runner helper `generate-spec-index-write` in `apply` mode first:
+```json
+{"schema_version":"1.0","request_id":"archive-cleanup-spec-index-write","helper_id":"generate-spec-index-write","operation":"generate-spec-index-write","mode":"apply","inputs":{"repo_root":"."}}
+```
+Then run runner helper `generate-spec-index-check`. A `validation_failure`
+result means the index is still stale; do not commit until it passes:
+```json
+{"schema_version":"1.0","request_id":"archive-cleanup-spec-index-check","helper_id":"generate-spec-index-check","operation":"generate-spec-index-check","mode":"read_only","inputs":{"repo_root":"."}}
+```
 
 ## Safe Parallelism
 
@@ -136,7 +163,7 @@ Run focused verification before committing:
 
 - `resolved_python -m json.tool docs/ai/specs/.process/autopilot-state.json`
   when that file changed
-- the SpecKit index generator and its `--check` mode
+- `generate-spec-index-write` in `apply` mode, then `generate-spec-index-check`
 - a `find specs -mindepth 1 -maxdepth 4 -print` audit showing only expected
   active specs
 - docs reference generation/checks when reference pages changed
