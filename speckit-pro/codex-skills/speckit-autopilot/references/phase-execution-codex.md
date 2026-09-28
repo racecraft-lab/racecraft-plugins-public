@@ -2828,7 +2828,7 @@ fixed allowances, and then the ledger returns
 family, increment, gate, or failure class in its `deferred` list. Defer that work
 under rule 2, name the task or gate it blocks, and keep executing every
 independent task, increment, gate, and Post check; never set the thread goal
-blocked for it. Mid-run that only moves the run on to other units. At the end of the run an
+blocked for it mid-run. Mid-run that only moves the run on to other units. At the end of the run an
 unresolved ledger deferral, a gate's included, makes `finalize-run` return
 `outcome=human_stop`: rule 3's one request lists every ledger deferral;
 there the operator can approve `authorize-corrective-exception` or

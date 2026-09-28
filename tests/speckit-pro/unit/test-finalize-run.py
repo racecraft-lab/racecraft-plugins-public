@@ -231,6 +231,7 @@ def _runner(request: dict[str, object]) -> dict[str, object]:
 
 class FinalizeRunRegistryTests(unittest.TestCase):
     def test_fixture_request_runs_through_the_runner(self) -> None:
+        # The fixture ledger holds a deferral, so the authoritative request ends in the human stop.
         response = _runner(json.loads(FIXTURE_REQUEST.read_text(encoding="utf-8")))
         self.assertEqual(response["status"], "ok", response)
         data = response["data"]
