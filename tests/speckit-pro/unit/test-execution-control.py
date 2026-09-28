@@ -2275,6 +2275,11 @@ class MetadataOnlyCorrectionTests(_ExecutionControlFixture, unittest.TestCase):
                 ledger.update(gate_allowances={"G6": {"rounds": 1, "dispatch_ids": ["verb-fix"]}})),
             "not corrective": lambda ledger: ledger["dispatches"]["verb-fix"].update(kind="implementation"),
             "bad digest": lambda ledger: ledger["metadata_corrections"][0].update(baseline_sha256="0"),
+            "absolute tasks file": lambda ledger: ledger["metadata_corrections"][0].update(
+                tasks_file="/tmp/feature/tasks.md"),
+            "traversing tasks file": lambda ledger: ledger["metadata_corrections"][0].update(
+                tasks_file="feature/../other/tasks.md"),
+            "not a tasks file": lambda ledger: ledger["metadata_corrections"][0].update(tasks_file="feature/plan.md"),
         }
         for name, tamper in tampers.items():
             with self.subTest(tamper=name):
@@ -2283,6 +2288,14 @@ class MetadataOnlyCorrectionTests(_ExecutionControlFixture, unittest.TestCase):
                 path.write_text(json.dumps(ledger), encoding="utf-8")
                 with self.assertRaises(ValueError):
                     self.invoke("status", mode="read_only")
+        # A bound run's record must name the bound feature's tasks.md.
+        ledger = json.loads(valid)
+        ledger.update(approved_invariants=ledger["approved_invariants"] or ["FR-001"],
+                      invariant_binding={"spec_file": "other/spec.md", "spec_sha256": "0" * 64,
+                                         "bound_at": ledger["started_at"]})
+        path.write_text(json.dumps(ledger), encoding="utf-8")
+        with self.assertRaisesRegex(ValueError, "bound feature's canonical tasks.md"):
+            self.invoke("status", mode="read_only")
         path.write_bytes(valid)
         self.invoke("complete", dispatch_id="verb-fix", outcome="completed")
         (self.root / "feature/workflow.md").write_text(stage_workflow())

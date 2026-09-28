@@ -466,7 +466,12 @@ def _validate_metadata_corrections(ledger: dict[str, Any]) -> dict[str, list[str
                 or not ledger["started_at"] <= entry["admitted_at"] < float("inf")):
             raise ValueError("invalid metadata correction record")
         dispatch_id = require_text(entry["dispatch_id"], "metadata correction dispatch_id")
-        require_text(entry["tasks_file"], "metadata correction tasks_file")
+        tasks_file = PurePosixPath(require_text(entry["tasks_file"], "metadata correction tasks_file"))
+        bound = ledger.get("invariant_binding", {}).get("spec_file")
+        if (tasks_file.is_absolute() or tasks_file.as_posix() != entry["tasks_file"] or tasks_file.name != "tasks.md"
+                or any(part in {"..", ".", ".git"} for part in tasks_file.parts) or is_runner_byproduct(entry["tasks_file"])
+                or (isinstance(bound, str) and tasks_file.parent != PurePosixPath(bound).parent)):
+            raise ValueError("metadata correction tasks_file must be the bound feature's canonical tasks.md")
         if dispatch_id in owned:
             raise ValueError("duplicate metadata correction dispatch")
         if tasks & set(entry["task_ids"]):
