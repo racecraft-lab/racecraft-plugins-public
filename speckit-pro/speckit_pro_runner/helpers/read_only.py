@@ -7065,7 +7065,7 @@ def protected_body_sha256(body_text: str) -> str:
     editable_field = ""
     for raw_line in body_text.splitlines():
         line = raw_line.rstrip(" \t\r")
-        start = re.fullmatch(r"<!-- speckit-pro-editable:(summary|what_changed|why_it_matters):start -->", line)
+        start = re.fullmatch(r"<!-- speckit-pro-editable:(summary|what_changed|why_it_matters|release_note):start -->", line)
         if not editable_field and start:
             editable_field = start.group(1)
             normalized.extend([line, f"<elided:{editable_field}>"])
@@ -7083,12 +7083,50 @@ def protected_body_sha256(body_text: str) -> str:
     return hashlib.sha256(content.encode("utf-8")).hexdigest()
 
 
+def _fenced_markdown_lines(lines: list[str]) -> set[int]:
+    fenced: set[int] = set()
+    fence_char = ""
+    fence_width = 0
+    for index, line in enumerate(lines):
+        if fence_char:
+            fenced.add(index)
+            if re.fullmatch(rf" {{0,3}}{re.escape(fence_char)}{{{fence_width},}}[ \t]*", line):
+                fence_char = ""
+            continue
+        opening = re.fullmatch(r" {0,3}(?P<fence>`{3,}|~{3,})(?P<info>[^\r\n]*)", line)
+        if opening and not (opening["fence"][0] == "`" and "`" in opening["info"]):
+            fence_char = opening["fence"][0]
+            fence_width = len(opening["fence"])
+            fenced.add(index)
+    return fenced
+
+
+def _has_undeclared_editable_marker(lines: list[str], fields: list[Any]) -> bool:
+    declared_ids = {field.get("field_id") for field in fields if isinstance(field, dict)}
+    return any(
+        (marker := re.fullmatch(r"<!-- speckit-pro-editable:([a-z_]+):(start|end) -->", line))
+        and marker.group(1) not in declared_ids
+        for line in lines
+    )
+
+
+def _release_note_span_is_fenced(lines: list[str], fenced: set[int], start: int, end: int) -> bool:
+    return (
+        start > 0 and end + 1 < len(lines)
+        and lines[start - 1] == "```release-note"
+        and lines[end + 1] == "```"
+        and all(index in fenced for index in range(start - 1, end + 2))
+    )
+
+
 def packet_body_structure_failures(data: dict[str, Any], body_text: str) -> list[dict[str, Any]]:
     failures: list[dict[str, Any]] = []
     lines = [line.rstrip(" \t\r") for line in body_text.splitlines()]
+    fenced_lines = _fenced_markdown_lines(lines)
     title = data.get("generated_title")
     expected_title = title.get("value") if isinstance(title, dict) else None
-    h1_positions = [(index, line) for index, line in enumerate(lines) if re.fullmatch(r"#\s+\S.*", line)]
+    h1_positions = [(index, line) for index, line in enumerate(lines)
+                    if index not in fenced_lines and re.fullmatch(r"#\s+\S.*", line)]
     h1_lines = [line for _index, line in h1_positions]
     if isinstance(expected_title, str) and expected_title:
         expected_h1 = f"# {expected_title}"
@@ -7121,7 +7159,8 @@ def packet_body_structure_failures(data: dict[str, Any], body_text: str) -> list
 
     required_headings = data.get("required_headings")
     if isinstance(required_headings, list) and all(isinstance(item, str) and item for item in required_headings):
-        heading_lines = [line[3:].strip() for line in lines if line.startswith("## ")]
+        heading_lines = [line[3:].strip() for index, line in enumerate(lines)
+                         if index not in fenced_lines and line.startswith("## ")]
         positions: list[int] = []
         for heading in required_headings:
             matches = [index for index, found in enumerate(heading_lines) if found == heading]
@@ -7146,8 +7185,15 @@ def packet_body_structure_failures(data: dict[str, Any], body_text: str) -> list
 
     editable_fields = data.get("editable_fields")
     if isinstance(editable_fields, list):
+        if _has_undeclared_editable_marker(lines, editable_fields):
+            failures.append({
+                "rule": "body.editable_markers",
+                "field": "body_file",
+                "message": "Rendered body contains an editable marker not declared by the packet.",
+            })
         spans: list[tuple[int, int, str]] = []
-        heading_indices = [(index, line[3:].strip()) for index, line in enumerate(lines) if line.startswith("## ")]
+        heading_indices = [(index, line[3:].strip()) for index, line in enumerate(lines)
+                           if index not in fenced_lines and line.startswith("## ")]
         for field in editable_fields:
             if not isinstance(field, dict):
                 continue
@@ -7190,6 +7236,15 @@ def packet_body_structure_failures(data: dict[str, Any], body_text: str) -> list
             section_end = next_headings[0] if next_headings else len(lines)
             start_index = starts[0]
             end_index = ends[0]
+            if field_id == "release_note" and not _release_note_span_is_fenced(
+                lines, fenced_lines, start_index, end_index
+            ):
+                failures.append({
+                    "rule": "body.editable_markers",
+                    "field": "body_file",
+                    "message": "Release note editable markers must surround only content inside one release-note fence.",
+                })
+                continue
             if not (section_start < start_index < end_index < section_end):
                 failures.append(
                     {
@@ -7199,7 +7254,8 @@ def packet_body_structure_failures(data: dict[str, Any], body_text: str) -> list
                     }
                 )
                 continue
-            if any(re.match(r"^#{1,6}\s+", line) for line in lines[start_index + 1 : end_index]):
+            if any(index not in fenced_lines and re.match(r"^#{1,6}\s+", lines[index])
+                   for index in range(start_index + 1, end_index)):
                 failures.append(
                     {
                         "rule": "body.editable_markers",

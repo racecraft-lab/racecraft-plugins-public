@@ -8981,7 +8981,9 @@ This line must not be copied.
 
     def test_pr_packet_output_release_note_renders_one_protected_final_fence(self) -> None:
         inputs = json.loads((FIXTURE_DIR / "requests" / "pr-packet-output.json").read_text(encoding="utf-8"))["inputs"]
-        note = "Adds **generated release notes** for feature pull requests.\n\n- Preserves `inline code` and Markdown lists."
+        note = ("Adds **generated release notes** for feature pull requests.\n\n"
+                "- Preserves `inline code` and Markdown lists.\n\n"
+                "## Literal note heading\n# Literal note title")
         inputs["release_note"] = note
         tmp, git_root = self.temp_clean_git_repo()
         with tmp:
@@ -8995,7 +8997,11 @@ This line must not be copied.
             body = body_path.read_text(encoding="utf-8")
             packet = json.loads((git_root / inputs["packet_path"]).read_text(encoding="utf-8"))
             self.assertEqual(body.count("## Release note\n"), 1)
-            self.assertTrue(body.endswith(f"## Release note\n\n```release-note\n{note}\n```\n"))
+            self.assertTrue(body.endswith(
+                "## Release note\n\n```release-note\n"
+                f"<!-- speckit-pro-editable:release_note:start -->\n{note}\n"
+                "<!-- speckit-pro-editable:release_note:end -->\n```\n"
+            ))
             self.assertEqual(body.splitlines().count("```release-note"), 1)
             self.assertEqual(body.splitlines().count("```"), 1)
             self.assertGreater(body.index("## Release note"), body.index("## Known Gaps"))
@@ -9003,18 +9009,29 @@ This line must not be copied.
             self.assertLess(body.index("## How To UAT"), body.index("## UAT Runbook"))
             self.assertLess(body.index("## UAT Runbook"), body.index("## Verification"))
             self.assertEqual(packet["release_note"], note)
-            self.assertEqual([field["field_id"] for field in packet["editable_fields"]], ["summary", "what_changed", "why_it_matters"])
-            self.assertNotIn("speckit-pro-editable:release_note:", body)
+            self.assertEqual([field["field_id"] for field in packet["editable_fields"]],
+                             ["summary", "what_changed", "why_it_matters", "release_note"])
+            self.assertEqual(packet["protected_body_fingerprint"]["elided_fields"],
+                             ["summary", "what_changed", "why_it_matters", "release_note"])
+            from speckit_pro_runner.helpers.read_only import load_pr_packet_schema, pr_packet_schema_failures
+            schema, error = load_pr_packet_schema()
+            self.assertIsNone(error)
+            self.assertIsNotNone(schema)
+            self.assertEqual(pr_packet_schema_failures(packet, schema), [])
+            self.assertTrue(pr_packet_schema_failures({key: value for key, value in packet.items()
+                                                       if key != "release_note"}, schema))
+            self.assertTrue(pr_packet_schema_failures({**packet,
+                                                       "editable_fields": packet["editable_fields"][:3]}, schema))
             validation_request = helper_request(
                 "validate-pr-packet-read-only", mode="read_only", inputs={"packet_path": inputs["packet_path"]},
             )
             completed, response, stderr_records = run_runner(validation_request, cwd=git_root)
             self.assertEqual(completed.returncode, 0)
             self.assertEqual(response["data"]["stdout_json"]["status"], "passed")
-            body_path.write_text(body.replace(note, "Different protected release note.", 1), encoding="utf-8")
+            body_path.write_text(body.replace(note, "Different editable release note.", 1), encoding="utf-8")
             completed, response, stderr_records = run_runner(validation_request, cwd=git_root)
-            self.assertEqual(completed.returncode, 1)
-            self.assertEqual(response["data"]["stdout_json"]["status"], "failed")
+            self.assertEqual(completed.returncode, 0)
+            self.assertEqual(response["data"]["stdout_json"]["status"], "passed")
 
     def test_pr_packet_output_release_note_rejects_blank_strings(self) -> None:
         inputs = json.loads((FIXTURE_DIR / "requests" / "pr-packet-output.json").read_text(encoding="utf-8"))["inputs"]
@@ -9077,6 +9094,8 @@ This line must not be copied.
             self.assertEqual([field["field_id"] for field in packet["editable_fields"]], ["summary", "what_changed", "why_it_matters"])
 
     def test_pr_packet_output_release_note_drafts_keep_zero_editable_fields(self) -> None:
+        from speckit_pro_runner.helpers.read_only import load_pr_packet_schema, pr_packet_schema_failures
+
         inputs = json.loads((FIXTURE_DIR / "requests" / "pr-packet-output.json").read_text(encoding="utf-8"))["inputs"]
         inputs["title_scope"] = "prsg-998"
         draft_body = "\n".join([
@@ -9104,6 +9123,10 @@ This line must not be copied.
                     self.assertEqual(body, draft_body)
                     self.assertEqual(packet["editable_fields"], [])
                     self.assertEqual(packet["protected_body_fingerprint"]["elided_fields"], [])
+                    schema, error = load_pr_packet_schema()
+                    self.assertIsNone(error)
+                    self.assertIsNotNone(schema)
+                    self.assertTrue(pr_packet_schema_failures({**packet, "release_note": "Hidden draft note."}, schema))
                     self.assertNotIn("## Release note", body)
                     self.assertNotIn("```release-note", body)
                     self.assertNotIn("speckit-pro-editable:", body)
@@ -9166,7 +9189,10 @@ This line must not be copied.
                     body = (git_root / inputs["body_file"]).read_text(encoding="utf-8")
                     packet = json.loads((git_root / inputs["packet_path"]).read_text(encoding="utf-8"))
                     self.assertEqual(body.splitlines().count("```release-note"), 1)
-                    self.assertTrue(body.endswith(f"```release-note\n{note}\n```\n"))
+                    self.assertTrue(body.endswith(
+                        "```release-note\n<!-- speckit-pro-editable:release_note:start -->\n"
+                        f"{note}\n<!-- speckit-pro-editable:release_note:end -->\n```\n"
+                    ))
                     self.assertEqual(packet["release_note"], note)
                     schema, error = load_pr_packet_schema()
                     self.assertIsNone(error)
@@ -9220,7 +9246,10 @@ This line must not be copied.
                             body = (git_root / inputs["body_file"]).read_text(encoding="utf-8")
                             if supplied:
                                 self.assertTrue(body.startswith(existing_body))
-                                self.assertTrue(body.endswith("```release-note\nA second supplied note.\n```\n"))
+                                self.assertTrue(body.endswith(
+                                    "```release-note\n<!-- speckit-pro-editable:release_note:start -->\n"
+                                    "A second supplied note.\n<!-- speckit-pro-editable:release_note:end -->\n```\n"
+                                ))
                                 policy = subprocess.run(
                                     [sys.executable, str(REPO_ROOT / "scripts" / "compose-release-notes.py"), "--validate-pr"],
                                     cwd=REPO_ROOT, env={**os.environ, "PR_TITLE": "feat(prsg-998): Generate packet fixture", "PR_BODY": body, "PR_LABELS_JSON": "[]"},

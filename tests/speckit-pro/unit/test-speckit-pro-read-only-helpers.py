@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib.util
 import json
 import os
 import re
@@ -2702,6 +2703,75 @@ class ReadOnlyHelperTests(unittest.TestCase):
         }
         self.assertIn("input.identity.packet_id", rules)
         self.assertEqual(stderr_records, response["diagnostics"])
+
+    def test_release_note_editable_content_preserves_protected_fingerprint(self) -> None:
+        from speckit_pro_runner.helpers.read_only import protected_body_sha256
+
+        body = (
+            "## Release note\n\n```release-note\n"
+            "<!-- speckit-pro-editable:release_note:start -->\n"
+            "A customer-facing change.\n"
+            "<!-- speckit-pro-editable:release_note:end -->\n"
+            "```\n"
+        )
+        baseline = protected_body_sha256(body)
+        self.assertEqual(
+            baseline,
+            protected_body_sha256(body.replace("A customer-facing change.", "Revised note.")),
+        )
+        for protected_change in (
+            body.replace("## Release note", "## Notes"),
+            body.replace("```release-note", "```text"),
+            body.replace("<!-- speckit-pro-editable:release_note:start -->", "<!-- wrong:start -->"),
+            body.replace("<!-- speckit-pro-editable:release_note:end -->", "<!-- wrong:end -->"),
+        ):
+            with self.subTest(protected_change=protected_change):
+                self.assertNotEqual(baseline, protected_body_sha256(protected_change))
+
+    def test_release_note_headings_inside_fence_are_literal_and_markers_stay_inside(self) -> None:
+        from speckit_pro_runner.helpers.read_only import packet_body_structure_failures
+
+        field = {
+            "field_id": "release_note", "heading": "Release note",
+            "start_marker": "<!-- speckit-pro-editable:release_note:start -->",
+            "end_marker": "<!-- speckit-pro-editable:release_note:end -->",
+        }
+        data = {"generated_title": {"value": "Packet title"},
+                "required_headings": ["Summary"], "editable_fields": [field]}
+        body = (
+            "# Packet title\n## Summary\nSummary.\n## Release note\n\n```release-note\n"
+            "<!-- speckit-pro-editable:release_note:start -->\n"
+            "# Literal heading\n## Summary\n"
+            "<!-- speckit-pro-editable:release_note:end -->\n```\n"
+        )
+        self.assertEqual(packet_body_structure_failures(data, body), [])
+        outside = body.replace(
+            "```release-note\n<!-- speckit-pro-editable:release_note:start -->",
+            "<!-- speckit-pro-editable:release_note:start -->\n```release-note",
+        )
+        self.assertIn("body.editable_markers",
+                      {item["rule"] for item in packet_body_structure_failures(data, outside)})
+        undeclared = {**data, "editable_fields": []}
+        self.assertIn("body.editable_markers",
+                      {item["rule"] for item in packet_body_structure_failures(undeclared, body)})
+
+    def test_release_note_policy_ignores_editable_markers_but_requires_note_text(self) -> None:
+        policy_path = REPO_ROOT / "scripts" / "release_note_policy.py"
+        spec = importlib.util.spec_from_file_location("release_note_policy", policy_path)
+        assert spec is not None and spec.loader is not None
+        policy = importlib.util.module_from_spec(spec)
+        with patch.dict(sys.modules, {spec.name: policy}):
+            spec.loader.exec_module(policy)
+        markers = (
+            "<!-- speckit-pro-editable:release_note:start -->\n",
+            "<!-- speckit-pro-editable:release_note:end -->\n",
+        )
+        title = "feat(core): Add release notes"
+        for note, expected_valid in (("A customer-facing change.\n", True), ("", False)):
+            with self.subTest(note=note):
+                body = "```release-note\n" + markers[0] + note + markers[1] + "```\n"
+                valid, _reason = policy.validate_release_note(title, body, set(), draft=False)
+                self.assertEqual(valid, expected_valid)
 
     def test_validate_pr_packet_fingerprint_covers_pre_h1_trailing_and_crossed_markers(self) -> None:
         if self.helper_filter and self.helper_filter != "validate-pr-packet-read-only":

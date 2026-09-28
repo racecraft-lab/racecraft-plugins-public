@@ -604,6 +604,7 @@ def normalize_packet_input(request: Any) -> dict[str, Any]:
         # An enclosing fence owns its literal examples, as in the host parser.
         body_lines = rendered_body.splitlines()
         line_index = 0
+        last_section_heading = ""
         while line_index < len(body_lines):
             line = body_lines[line_index]
             quote_depth = 0
@@ -616,6 +617,8 @@ def normalize_packet_input(request: Any) -> dict[str, Any]:
                 line,
             )
             if opening is None or (opening["fence"][0] == "`" and "`" in opening["info"]):
+                if quote_depth == 0 and body_lines[line_index].startswith("## "):
+                    last_section_heading = body_lines[line_index]
                 line_index += 1
                 continue
             if opening["info"].strip(" \t") == "release-note":
@@ -646,13 +649,18 @@ def normalize_packet_input(request: Any) -> dict[str, Any]:
             if close_index is None:
                 return invalid_packet_input("body contains an unclosed fence that would enclose the supplied release note", field="body")
             line_index = close_index + 1
-        rendered_body = ensure_final_newline(rendered_body) + f"\n## Release note\n\n```release-note\n{release_note}\n```\n"
+        heading = "\n" if last_section_heading == "## Release note" else "\n## Release note\n\n"
+        rendered_body = (
+            ensure_final_newline(rendered_body) + heading + "```release-note\n"
+            + f"<!-- speckit-pro-editable:release_note:start -->\n{release_note}\n"
+            + "<!-- speckit-pro-editable:release_note:end -->\n```\n"
+        )
 
     body_failures = packet_body_structure_failures(
         {
             "generated_title": generated_title,
             "required_headings": required_headings(mode),
-            "editable_fields": editable_fields(mode),
+            "editable_fields": editable_fields(mode, has_release_note=release_note is not None),
             "uat": uat,
         },
         rendered_body,
@@ -679,12 +687,12 @@ def normalize_packet_input(request: Any) -> dict[str, Any]:
         "scope_evidence": scope_evidence,
         "uat": uat,
         "source_markers": source_markers,
-        "editable_fields": editable_fields(mode),
+        "editable_fields": editable_fields(mode, has_release_note=release_note is not None),
         "protected_body_fingerprint": {
             "algorithm": "sha256",
             "value": fingerprint,
             "normalization": "LF line endings; trailing whitespace trimmed; final newline ensured; editable block bodies replaced by <elided:field_id> before sha256.",
-            "elided_fields": [] if mode == "draft" else ["summary", "what_changed", "why_it_matters"],
+            "elided_fields": [field["field_id"] for field in editable_fields(mode, has_release_note=release_note is not None)],
         },
         "validation_result_path": validation_result_path,
     }
@@ -1093,11 +1101,11 @@ def first_section_heading(body: str) -> str | None:
     return None
 
 
-def editable_fields(mode: str) -> list[dict[str, str]]:
+def editable_fields(mode: str, *, has_release_note: bool = False) -> list[dict[str, str]]:
     if mode == "draft":
         # A draft body encloses no editable prose.
         return []
-    return [
+    fields = [
         {
             "field_id": "summary",
             "heading": "Summary",
@@ -1117,6 +1125,14 @@ def editable_fields(mode: str) -> list[dict[str, str]]:
             "end_marker": "<!-- speckit-pro-editable:why_it_matters:end -->",
         },
     ]
+    if has_release_note:
+        fields.append({
+            "field_id": "release_note",
+            "heading": "Release note",
+            "start_marker": "<!-- speckit-pro-editable:release_note:start -->",
+            "end_marker": "<!-- speckit-pro-editable:release_note:end -->",
+        })
+    return fields
 
 
 def markdown_block(raw: Any, fallback: str) -> str:

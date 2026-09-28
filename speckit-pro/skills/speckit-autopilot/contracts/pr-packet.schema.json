@@ -169,6 +169,12 @@
             { "$ref": "#/$defs/editable_field" },
             { "properties": { "field_id": { "const": "why_it_matters" } } }
           ]
+        },
+        {
+          "allOf": [
+            { "$ref": "#/$defs/editable_field" },
+            { "properties": { "field_id": { "const": "release_note" } } }
+          ]
         }
       ]
     },
@@ -247,7 +253,8 @@
               "uat_runbook_heading": { "const": "" }
             }
           }
-        }
+        },
+        "not": { "required": ["release_note"] }
       },
       "else": {
         "properties": {
@@ -281,9 +288,20 @@
           },
           "editable_fields": {
             "minItems": 3,
-            "maxItems": 3
+            "maxItems": 4
           }
         }
+      }
+    },
+    {
+      "if": {
+        "properties": { "mode": { "enum": ["single", "split"] } },
+        "required": ["mode"]
+      },
+      "then": {
+        "if": { "required": ["release_note"] },
+        "then": { "properties": { "editable_fields": { "minItems": 4, "maxItems": 4 } } },
+        "else": { "properties": { "editable_fields": { "maxItems": 3 } } }
       }
     }
   ],
@@ -375,19 +393,19 @@
       "properties": {
         "field_id": {
           "type": "string",
-          "enum": ["summary", "what_changed", "why_it_matters"]
+          "enum": ["summary", "what_changed", "why_it_matters", "release_note"]
         },
         "heading": {
           "type": "string",
-          "enum": ["Summary", "What Changed", "Why It Matters"]
+          "enum": ["Summary", "What Changed", "Why It Matters", "Release note"]
         },
         "start_marker": {
           "type": "string",
-          "pattern": "^<!-- speckit-pro-editable:(summary|what_changed|why_it_matters):start -->$"
+          "pattern": "^<!-- speckit-pro-editable:(summary|what_changed|why_it_matters|release_note):start -->$"
         },
         "end_marker": {
           "type": "string",
-          "pattern": "^<!-- speckit-pro-editable:(summary|what_changed|why_it_matters):end -->$"
+          "pattern": "^<!-- speckit-pro-editable:(summary|what_changed|why_it_matters|release_note):end -->$"
         }
       },
       "allOf": [
@@ -429,6 +447,19 @@
               "end_marker": { "const": "<!-- speckit-pro-editable:why_it_matters:end -->" }
             }
           }
+        },
+        {
+          "if": {
+            "properties": { "field_id": { "const": "release_note" } },
+            "required": ["field_id"]
+          },
+          "then": {
+            "properties": {
+              "heading": { "const": "Release note" },
+              "start_marker": { "const": "<!-- speckit-pro-editable:release_note:start -->" },
+              "end_marker": { "const": "<!-- speckit-pro-editable:release_note:end -->" }
+            }
+          }
         }
       ]
     },
@@ -453,7 +484,7 @@
           "type": "array",
           "items": {
             "type": "string",
-            "enum": ["summary", "what_changed", "why_it_matters"]
+            "enum": ["summary", "what_changed", "why_it_matters", "release_note"]
           }
         }
       }
