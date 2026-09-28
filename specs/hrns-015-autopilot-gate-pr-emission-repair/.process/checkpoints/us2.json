@@ -1,0 +1,60 @@
+{
+  "schema_version": "marker-checkpoint.v1",
+  "feature_id": "HRNS-015",
+  "marker_id": "us2",
+  "status": "complete",
+  "task_ids": [
+    "T006",
+    "T007"
+  ],
+  "implementation_checkpoint_sha": "ed24ecd831d0b9f98e300fdc772f29839bd09d9a",
+  "last_reviewed_head_sha": "ed24ecd831d0b9f98e300fdc772f29839bd09d9a",
+  "tasks_sha": "sha256:91cc48b1ff3352e299b31537323760edf4a84f5909c6600fc7b7cb575d0e03e3",
+  "verification_evidence_sha": "sha256:fdc824fedb4ca815c9feef492f292ea44252d12131bd8150b65736a9cb4bed14",
+  "required_verification_gate_ids": [
+    "focused_tests",
+    "quick_suite",
+    "ci_suite",
+    "artifact_consistency",
+    "docs_validation",
+    "python_lint",
+    "independent_critical_high_review",
+    "host_parity"
+  ],
+  "verification": {
+    "focused_tests": {
+      "status": "pass",
+      "evidence": "A2 focused RED on current-packet untracked write, then GREEN and refactor on the same native command; registered mutation helper suite 206/206, paired post-implementation 39/39, eval wording 28/28, and native parity 29/29 passed."
+    },
+    "quick_suite": {
+      "status": "pass",
+      "evidence": "Committed A2 source quick suite 10,110/10,110 with toolchain preflight and native exit 0; privacy scan 14/14."
+    },
+    "ci_suite": {
+      "status": "pass",
+      "evidence": "Committed A2 source CI-equivalent default suite: toolchain plus layers 1, 4, 5, 6, and 7; 6/6 dispatches, native exit 0."
+    },
+    "artifact_consistency": {
+      "status": "pass",
+      "evidence": "After source commit ed24ecd8, refresh-release-artifacts.py --check reported generated artifacts match the source tree."
+    },
+    "docs_validation": {
+      "status": "pass",
+      "evidence": "Reference-mode docs validation passed: pnpm reference:check and validate:quality."
+    },
+    "python_lint": {
+      "status": "pass",
+      "evidence": "Pinned repository wrapper Ruff passed; pinned mypy passed across 54 source files."
+    },
+    "independent_critical_high_review": {
+      "status": "pass",
+      "evidence": "Independent A2 audit 54ad22d5-98e4-46ee-b8b6-5ff9d6472eca found no critical or high product defect; its documentation and parity findings were corrected and focused tests passed."
+    },
+    "host_parity": {
+      "status": "pass",
+      "evidence": "Paired Claude/Codex post-implementation references and generated payloads align; CI layer 7 passed."
+    }
+  },
+  "source_fingerprint_status": "current",
+  "completed_at": "2026-09-28T19:35:10Z"
+}
