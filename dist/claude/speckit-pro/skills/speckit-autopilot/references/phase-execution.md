@@ -681,7 +681,9 @@ phase-coverage guard checks against the pull request's actual diff, which does
 not exist until code is written, so move to `pr-marker-plan.v2` at the first
 implementation checkpoint. Under v2, a pending checkpoint needs `commit_sha`
 and `evidence_path` together, and needs them only once a phase result is
-recorded for its marker; the guard does not check v1 checkpoints.
+recorded for its marker; the guard does not check v1 checkpoints. Until
+then, the marker's PR Marker Plan Evidence row reads `Pending` in its
+Checkpoint cell and the workflow carries no checkpoint claim for it.
 
 When ordered markers each modify an existing shared file, declare `MODIFIED`
 for that path in each marker and list those marker IDs in review order in the

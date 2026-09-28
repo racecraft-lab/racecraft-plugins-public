@@ -22,9 +22,14 @@ class TaskExecutionError(ValueError):
     """Task metadata cannot safely authorize a dispatch."""
 
 
+def task_definitions(tasks: str) -> str:
+    """Return tasks.md text with every task checkbox cleared to its unchecked form."""
+    return re.sub(r"(?m)^(\s*-\s+\[)[ xX](\]\s+T[0-9]{3,})", r"\1 \2", tasks)
+
+
 def fingerprints(spec: str, plan: str, tasks: str) -> dict[str, str]:
     """Bind all source text, excluding only task-checkbox completion state."""
-    definitions = re.sub(r"(?m)^(\s*-\s+\[)[ xX](\]\s+T[0-9]{3,})", r"\1 \2", tasks)
+    definitions = task_definitions(tasks)
     return {name: hashlib.sha256(text.encode("utf-8")).hexdigest() for name, text in (
         ("spec_sha256", spec), ("plan_sha256", plan), ("tasks_sha256", definitions)
     )}
