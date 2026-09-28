@@ -4494,8 +4494,8 @@ def state_privacy_errors(state: object) -> dict[str, list[str]]:
     The state stores decision fields such as ``stage``, ``source``, ``basis``,
     and ``planning_complete``. It never stores a raw runner envelope, an
     ``argv`` key, an absolute home path, or an external task or session UUID.
-    Errors name the JSON location and never echo the value. A non-object root
-    fails rather than passing on nothing.
+    Errors name the JSON location and the in-place remedy (#800), and never
+    echo the value. A non-object root fails rather than passing on nothing.
     """
     if not isinstance(state, dict):
         return {"state_privacy_errors": ["autopilot_state must be a JSON object"]}
@@ -4508,12 +4508,16 @@ def state_privacy_errors(state: object) -> dict[str, list[str]]:
                 child_location = f"{location}.{key}"
                 if key in STATE_PRIVATE_KEYS:
                     errors.append(
-                        f"{child_location} stores a raw runner argv; keep only decision fields"
+                        f"{child_location} stores a raw runner argv; remove this key, keep only "
+                        + "decision fields, and rerun this guard"
                     )
                     continue
                 reason = _state_private_value_reason(key)
                 if reason is not None:
-                    errors.append(f"{location} has a key holding {reason}")
+                    errors.append(
+                        f"{location} has a key holding {reason}; replace the key with sha256: plus the "
+                        + "hex SHA-256 of the key, and rerun this guard"
+                    )
                     continue
                 pending.append((child_location, child))
         elif isinstance(value, list):
@@ -4522,7 +4526,8 @@ def state_privacy_errors(state: object) -> dict[str, list[str]]:
             reason = _state_private_value_reason(value)
             if reason is not None:
                 errors.append(
-                    f"{location} holds {reason}; store a digest or redacted reference instead"
+                    f"{location} holds {reason}; replace the value with sha256: plus the hex "
+                    + "SHA-256 of the value, and rerun this guard"
                 )
     return {"state_privacy_errors": sorted(errors)}
 

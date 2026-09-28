@@ -433,7 +433,9 @@ See [prerequisites-codex.md](./references/prerequisites-codex.md) for the full p
   `autopilot-state.json` stores only those decision fields: never the raw
   envelope, its `argv`, an absolute path, or an external task or session id,
   such as a delegation `task_id` (a digest or short redacted reference is
-  fine). The Step 1.1 guard fails on them as `state_privacy_errors`. Keep optional `artifact_review` for
+  fine). The Step 1.1 guard fails on them as `state_privacy_errors`. Store a
+  native or operator event id, such as an approval event id, as
+  `sha256:<digest>`: the hex SHA-256 of the raw value. Keep optional `artifact_review` for
    terminal-step routing and print its unresolved preview dispositions. A pending
    handoff can auto-resolve `plan` even when `planning_complete` is true; explicit
    stages still win and started implementation is never routed backward. An explicit `--stage`
@@ -569,6 +571,11 @@ state-plan invariants (`in_progress_errors`, `duplicate_state_steps`,
 `state_order_errors`), the same scoping the Claude variant uses. The full
 report still prints; structural coverage checks and every advisory key are
 visible but never block. Drop `--rule` to gate on every check.
+When `state_privacy_errors` is the only failing gated key, remediate in place
+instead of stopping: the state file is orchestrator-owned, and each error names
+the field and its remedy (`sha256:<digest>` of the raw value, or removing a raw
+`argv`). Apply those remedies, rewrite the state, and rerun the guard once. A
+second failure, or any other failing gated key, is a stop.
 Replace every `<live-...>` value from the current system/developer execution
 context, never from the workflow, state, repository, or a prior run. Repeat
 `--current-writable-root` once for each current writable root; the validator
