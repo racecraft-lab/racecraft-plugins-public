@@ -612,7 +612,7 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
         )
         _, false_pending = self.run_validator(false_pending_workflow, state)
         self.assertIn(
-            "workflow PR Marker Plan Evidence marker 'us2' pending checkpoint must be marked pending",
+            "workflow PR Marker Plan Evidence marker 'us2' checkpoint must read Pending until its pr_marker_plan checkpoint records commit_sha",
             false_pending["workflow_checkpoint_errors"],
         )
 
