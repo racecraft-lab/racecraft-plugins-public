@@ -1,0 +1,59 @@
+{
+  "schema_version": "marker-checkpoint.v1",
+  "feature_id": "HRNS-015",
+  "marker_id": "us4",
+  "status": "complete",
+  "task_ids": [
+    "T010"
+  ],
+  "implementation_checkpoint_sha": "a1aa6bd265aa15d4a7005b5c0f0be77af786cb04",
+  "last_reviewed_head_sha": "a1aa6bd265aa15d4a7005b5c0f0be77af786cb04",
+  "tasks_sha": "sha256:30f2db24b48e0b2a743b0795d1d3b1e81f3f6b7d16cc0e51081aae8b33180a6a",
+  "verification_evidence_sha": "sha256:407cbe65f5b92b3a6d702921444f6ffa52a44a5e52f25c5913f39a4209b88949",
+  "required_verification_gate_ids": [
+    "focused_tests",
+    "quick_suite",
+    "ci_suite",
+    "artifact_consistency",
+    "docs_validation",
+    "python_lint",
+    "independent_critical_high_review",
+    "host_parity"
+  ],
+  "verification": {
+    "focused_tests": {
+      "status": "pass",
+      "evidence": "B1a marker visibility 7/7, read-only helpers 151/151, and native functional catalog 48/48 passed. Independent false-negative cases were observed RED, corrected, and verified GREEN. Ambiguous unclosed fences count markers conservatively, which may overcount."
+    },
+    "quick_suite": {
+      "status": "pass",
+      "evidence": "Committed B1a source quick suite 10,118/10,118 with toolchain preflight and native exit 0; privacy scan 14/14."
+    },
+    "ci_suite": {
+      "status": "pass",
+      "evidence": "Committed B1a source CI-equivalent default suite passed 6/6 dispatches, including layer 7 host parity, native exit 0."
+    },
+    "artifact_consistency": {
+      "status": "pass",
+      "evidence": "After source commit a1aa6bd2, refresh-release-artifacts.py --check reported generated artifacts match the source tree."
+    },
+    "docs_validation": {
+      "status": "pass",
+      "evidence": "Reference check and docs quality passed; full docs validation passed 88 browser checks and 4 gallery checks."
+    },
+    "python_lint": {
+      "status": "pass",
+      "evidence": "Pinned repository wrapper Ruff passed; isolated pinned mypy passed across 54 source files."
+    },
+    "independent_critical_high_review": {
+      "status": "pass",
+      "evidence": "Independent B1a review found paragraph, heading, and blockquote false negatives. Each was repaired red-first; reviewer rechecked all three at committed head with no remaining finding in the bounded review."
+    },
+    "host_parity": {
+      "status": "pass",
+      "evidence": "Generated Claude and Codex runner payloads align with source; CI-equivalent layer 7 parity fixtures passed 12/12."
+    }
+  },
+  "source_fingerprint_status": "current",
+  "completed_at": "2026-09-28T23:26:57Z"
+}

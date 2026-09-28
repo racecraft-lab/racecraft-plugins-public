@@ -22,7 +22,7 @@ The current marker contract uses `kind=user_story`, `id=usN` for an unsplit stor
 | A1b | `us1-part2` | US1 | T005 | 2 | 24 | Candidate only; actual diff/LOC unmeasured |
 | A2 | `us2` | US2 | T006–T007 | 1 | 24 | Candidate only; actual diff/LOC unmeasured |
 | A3 | `us3` | US3 | T008–T009 | 2 | 24 | Source delta: 18 paths; 22 with four tracked process paths; 204 authored non-process changed lines; final PR base/head diff and LOC pending |
-| B1a | `us4` | US4 | T010 | 1 | 22 | Candidate only; actual diff/LOC unmeasured |
+| B1a | `us4` | US4 | T010 | 1 | 22 | Source delta: 18 paths; 22 with four tracked process paths; 497 authored non-process changed lines; final PR base/head diff and LOC pending |
 | B1b | `us5` | US5 | T011 | 2 | 23 | Candidate only; actual diff/LOC unmeasured |
 | B2b | `us6` | US6 | T012–T013 | 1 | 23 | Candidate only; actual diff/LOC unmeasured |
 | B3a | `us7` | US7 | T014 | 1 | 18 | Candidate only; actual diff/LOC unmeasured |
@@ -209,6 +209,8 @@ Tasks: T010. Requirements: FR-007, FR-008, FR-026. **22 candidate paths; 1 produ
 | process/evidence | modify | `specs/hrns-015-autopilot-gate-pr-emission-repair/.process/task-execution.json` | tasks source fingerprint |
 | process/evidence | modify | `specs/hrns-015-autopilot-gate-pr-emission-repair/.process/slice-inventory.md` | RED/GREEN and measured budget evidence |
 | generated index | regenerate | `specs/hrns-015-autopilot-gate-pr-emission-repair/SPEC-MOC.md` | PR/index refresh candidate |
+
+The B1a source checkpoint `a1aa6bd265aa15d4a7005b5c0f0be77af786cb04` changes 18 tracked paths, including one production path. Four tracked process updates (workflow, state, tasks, inventory) bring the marker to the 22-path cap; checkpoint and verification reports are outside that budget. Authored non-process changes total 497 lines, above the 400-line review warning and below the 800-line block. The native functional catalog and read-only helper test expectation updates are necessary fixture adaptations; the unused task-execution and spec-index candidates have no diff. RED/GREEN/refactor marker tests, 10,118/10,118 quick suite, 6/6 CI dispatches, generated-artifact check, full docs validation, pinned Python lint, privacy 14/14, host parity and bounded independent review passed. Unclosed fences count markers conservatively, so an ambiguous construct may overcount; this cannot hide a visible marker. Final emitted PR base/head diff and reviewable LOC remain mandatory.
 
 ### B1b — US5 tracked spec index
 

@@ -71,7 +71,7 @@ One story per increment. US1, US10 and US13 use uniquely named sequential story 
 
 **Goal**: G1–G4 and count-markers agree on visible Gap and clarification markers. **Independent test**: exact comma-token tags, two per line, visible prose, and inline/fenced/indented code have expected counts and details (FR-007–008, FR-026).
 
-- [ ] T010 [US4] First add failing cases in `tests/speckit-pro/unit/test-marker-visibility.py` for exact case-sensitive comma-separated Gap tokens in single-line nonnested tags, trimmed spaces/tabs, one count per tag, compound tags, two tags per line, and visible versus inline/fenced/indented code; record RED, then repair `speckit-pro/speckit_pro_runner/helpers/read_only.py` and shared gate guidance, verify both host payloads, and prove GREEN. Register the new test, refresh B1a outputs, run targeted/quick suites, and record B1a budget/marker checkpoint (FR-007, FR-008, FR-026).
+- [x] T010 [US4] First add failing cases in `tests/speckit-pro/unit/test-marker-visibility.py` for exact case-sensitive comma-separated Gap tokens in single-line nonnested tags, trimmed spaces/tabs, one count per tag, compound tags, two tags per line, and visible versus inline/fenced/indented code; record RED, then repair `speckit-pro/speckit_pro_runner/helpers/read_only.py` and shared gate guidance, verify both host payloads, and prove GREEN. Register the new test, refresh B1a outputs, run targeted/quick suites, and record B1a budget/marker checkpoint (FR-007, FR-008, FR-026).
 
 ## Phase 7: User Story 5 — tracked spec index (P1, Increment B1b)
 
