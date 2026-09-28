@@ -36,6 +36,11 @@ INCREMENT_REVIEW_ROUNDS = 2
 # bound feature. Anything else (code, tests, formal models, contracts) is run-wide.
 GATE_REMEDIATION_ROUNDS = 2
 REMEDIATION_GATES = ("G2", "G3", "G4", "G5", "G6", "G7")
+# A test-only fix confined to test files its own increment edited earlier in the run
+# gets this many rounds per increment, outside the run-wide corrective budget.
+TEST_FIX_ROUNDS = 1
+# A snapshot of the worktree the runner takes itself: HEAD and every path git reports as changed.
+WORKTREE_SNAPSHOT_KEYS = {"head", "dirty"}
 PLANNING_DOCUMENTS = frozenset({"spec.md", "plan.md", "research.md", "tasks.md", "data-model.md", "quickstart.md",
                                 ".process/task-execution.json"})
 # A refusal because an allowance is spent defers the blocked unit to the end-of-run
@@ -236,7 +241,8 @@ def _validate_corrective_state(value: dict[str, Any]) -> None:
     if len(value["reservations"]) != value["corrective_cycles"]:
         raise ValueError("reservation counter disagrees with ledger")
     exception_reservation = _validate_corrective_exception(value)
-    allowances = _validate_increment_allowances(value)
+    allowances = _validate_unit_allowances(value, "increment_allowances", "increment", INCREMENT_REVIEW_ROUNDS)
+    test_fixes = _validate_unit_allowances(value, "test_fix_allowances", "test_fix", TEST_FIX_ROUNDS)
     metadata_corrections = _validate_metadata_corrections(value)
     _validate_deferrals(value)
     gate_allowances = _validate_gate_allowances(value)
@@ -251,9 +257,14 @@ def _validate_corrective_state(value: dict[str, Any]) -> None:
         if type(item.get("reconciliations")) is not int or not 0 <= item["reconciliations"] <= 1:
             raise ValueError("invalid reconciliation counter")
         reservation = item.get("reservation_id")
-        if sum(key in item for key in ("increment", "gate", "metadata_correction")) > 1:
+        if sum(key in item for key in ("increment", "gate", "metadata_correction", "test_fix")) > 1:
             raise ValueError("a corrective dispatch draws on one allowance, not an increment and a gate")
-        if "metadata_correction" in item:
+        _validate_edit_records(item)
+        if "test_fix" in item:
+            if (item["kind"] != "corrective" or reservation is not None
+                    or dispatch_id not in test_fixes.get(item["test_fix"], {}).get("dispatch_ids", [])):
+                raise ValueError("test-fix dispatch is not recorded in its increment's test-fix allowance")
+        elif "metadata_correction" in item:
             if (item["kind"] != "corrective" or reservation is not None
                     or metadata_corrections.get(dispatch_id) != item["metadata_correction"]):
                 raise ValueError("metadata correction dispatch is not recorded in the metadata corrections")
@@ -275,7 +286,7 @@ def _validate_corrective_state(value: dict[str, Any]) -> None:
 
 EPOCH_STATE_KEYS = ("corrective_cycles", "reservations", "dispatches", "approved_invariants")
 EPOCH_OPTIONAL_KEYS = ("invariant_binding", "corrective_exception", "increment_allowances", "gate_allowances",
-                       "deferred", "metadata_corrections")
+                       "deferred", "metadata_corrections", "test_fix_allowances")
 # An operator's explicit stage start closes the prior stage's allowance under a
 # runner-derived event ID, so each stage opens at most one allowance per run.
 STAGE_EPOCH_STAGES = ("implement",)
@@ -410,25 +421,73 @@ def _validate_failure_class(value: Any) -> list[str]:
     return follow_ups
 
 
-def _validate_increment_allowances(ledger: dict[str, Any]) -> dict[str, Any]:
-    """Each increment's review rounds match its own recorded, unreserved corrective dispatches."""
-    if "increment_allowances" not in ledger:
+def _validate_unit_allowances(ledger: dict[str, Any], key: str, marker: str, limit: int) -> dict[str, Any]:
+    """Each increment's rounds under one allowance match its own recorded, unreserved corrective dispatches."""
+    if key not in ledger:
         return {}
-    allowances = ledger["increment_allowances"]
+    allowances = ledger[key]
     if not isinstance(allowances, dict) or not allowances:
-        raise ValueError("invalid increment review allowances")
+        raise ValueError(f"invalid {key}")
     for unit, record in allowances.items():
         require_text(unit, "increment tdd_unit")
         if (not isinstance(record, dict) or set(record) != {"rounds", "dispatch_ids"}
-                or type(record["rounds"]) is not int or not 1 <= record["rounds"] <= INCREMENT_REVIEW_ROUNDS
+                or type(record["rounds"]) is not int or not 1 <= record["rounds"] <= limit
                 or not isinstance(record["dispatch_ids"], list) or len(record["dispatch_ids"]) != record["rounds"]
                 or len(set(record["dispatch_ids"])) != record["rounds"]):
-            raise ValueError("increment review rounds disagree with the ledger")
+            raise ValueError(f"{key} rounds disagree with the ledger")
         for dispatch_id in record["dispatch_ids"]:
             item = ledger["dispatches"].get(dispatch_id)
-            if not isinstance(item, dict) or item.get("increment") != unit:
-                raise ValueError("increment review allowance lists a dispatch it does not own")
+            if not isinstance(item, dict) or item.get(marker) != unit:
+                raise ValueError(f"{key} lists a dispatch it does not own")
     return allowances
+
+
+def _canonical_repo_path(value: Any) -> bool:
+    """True for a canonical repository-relative path with no traversal or git metadata."""
+    if not isinstance(value, str) or not value:
+        return False
+    path = PurePosixPath(value)
+    return (not path.is_absolute() and path.as_posix() == value
+            and not any(part in {"..", ".", ".git"} for part in path.parts))
+
+
+def _sorted_paths(value: Any) -> bool:
+    return (isinstance(value, list) and all(_canonical_repo_path(path) for path in value)
+            and value == sorted(set(value)))
+
+
+def _validate_snapshot(value: Any) -> bool:
+    return (isinstance(value, dict) and set(value) == WORKTREE_SNAPSHOT_KEYS
+            and isinstance(value["head"], str) and re.fullmatch(r"[0-9a-f]{40}|[0-9a-f]{64}", value["head"]) is not None
+            and isinstance(value["dirty"], dict)
+            and all(_canonical_repo_path(path) and (digest is None or (isinstance(digest, str)
+                                                                         and re.fullmatch(r"[0-9a-f]{64}", digest)))
+                    for path, digest in value["dirty"].items()))
+
+
+def _validate_edit_records(item: dict[str, Any]) -> None:
+    """The runner's own edit records: the units an implementation dispatch works on and the paths it changed."""
+    from .helpers.read_only import is_test_path
+
+    if "tdd_units" in item:
+        units = item["tdd_units"]
+        if (item["kind"] != "implementation" or not isinstance(units, list) or not units
+                or not all(isinstance(unit, str) and unit.strip() and len(unit) <= 240 for unit in units)
+                or len(set(units)) != len(units)):
+            raise ValueError("invalid implementation tdd_units")
+    if "test_fix_paths" in item or "test_fix" in item:
+        paths = item.get("test_fix_paths")
+        if ("test_fix" not in item or not isinstance(item["test_fix"], str) or not item["test_fix"].strip()
+                or not _sorted_paths(paths) or not paths
+                or not all(is_test_path(path) and not is_runner_byproduct(path) for path in paths)):
+            raise ValueError("a test fix names its increment and only test files")
+    tracked = "tdd_units" in item or "test_fix" in item
+    if "worktree_before" in item and (not tracked or item["outcome"] not in {"reserved", "running", "unknown"}
+                                      or not _validate_snapshot(item["worktree_before"])):
+        raise ValueError("invalid worktree snapshot record")
+    if "changed_paths" in item and (not tracked or item["outcome"] not in {"completed", "failed", "expected_tdd_red"}
+                                    or not _sorted_paths(item["changed_paths"])):
+        raise ValueError("invalid changed-path record")
 
 
 def _validate_gate_allowances(ledger: dict[str, Any]) -> dict[str, Any]:
@@ -1072,19 +1131,87 @@ def _metadata_correction(inputs: dict[str, Any]) -> bool:
     return True
 
 
-def _head_bytes(root: Path, relative: str) -> bytes | None:
-    """The committed HEAD bytes of a repository-relative path, or None when git cannot show them."""
+def _git(root: Path, args: list[str]) -> bytes | None:
+    """Standard output of one read-only git command in the repository, or None when git cannot answer."""
     git = shutil.which("git")
     if git is None:
         return None
     environment = {"PATH": os.environ.get("PATH", ""), "GIT_CONFIG_NOSYSTEM": "1", "GIT_CONFIG_GLOBAL": os.devnull,
                    "GIT_OPTIONAL_LOCKS": "0", "GIT_TERMINAL_PROMPT": "0", "LC_ALL": "C"}
     try:
-        completed = subprocess.run([git, "show", f"HEAD:./{relative}"], cwd=root.resolve(), env=environment,
+        completed = subprocess.run([git, *args], cwd=root.resolve(), env=environment,
                                    capture_output=True, check=False, timeout=30, shell=False)
     except (OSError, subprocess.TimeoutExpired):
         return None
     return completed.stdout if completed.returncode == 0 else None
+
+
+def _head_bytes(root: Path, relative: str) -> bytes | None:
+    """The committed HEAD bytes of a repository-relative path, or None when git cannot show them."""
+    return _git(root, ["show", f"HEAD:./{relative}"])
+
+
+def _tracked_path(relative: str) -> bool:
+    """A path whose edits the runner attributes: not a runner byproduct or the implementation notes."""
+    return _canonical_repo_path(relative) and not is_runner_byproduct(relative) and not is_implementation_notes(relative)
+
+
+def _file_digest(root: Path, relative: str) -> str | None:
+    """The digest of the worktree bytes at a path (a symlink's target text), or None when nothing is there."""
+    path = root.resolve() / relative
+    try:
+        if path.is_symlink():
+            return hashlib.sha256(os.readlink(path).encode("utf-8")).hexdigest()
+        return hashlib.sha256(path.read_bytes()).hexdigest() if path.is_file() else None
+    except OSError:
+        return None
+
+
+def _git_paths(output: bytes) -> list[str]:
+    return [item.decode("utf-8") for item in output.split(b"\0") if item]
+
+
+def _worktree_snapshot(root: Path) -> dict[str, Any] | None:
+    """HEAD and the digest of every changed path, read by the runner itself; None when git cannot answer."""
+    top, head = _git(root, ["rev-parse", "--show-toplevel"]), _git(root, ["rev-parse", "--verify", "HEAD"])
+    status = _git(root, ["status", "--porcelain=v1", "-z", "--untracked-files=all", "--no-renames"])
+    try:
+        if (top is None or head is None or status is None
+                or Path(top.decode("utf-8").strip()).resolve() != root.resolve()):
+            return None
+        paths = [entry[3:] for entry in _git_paths(status)]
+        commit = head.decode("utf-8").strip()
+    except (OSError, UnicodeError):
+        return None
+    return {"head": commit, "dirty": {path: _file_digest(root, path) for path in sorted(paths) if _tracked_path(path)}}
+
+
+def _changed_since(root: Path, before: dict[str, Any]) -> list[str] | None:
+    """Every path whose content differs from the snapshot, in sorted order; None when git cannot answer.
+
+    A path clean at the snapshot held its content at the snapshot's HEAD, so the
+    runner compares that committed content, or the snapshot's own digest for a
+    path already dirty then, with the worktree now.
+    """
+    after = _worktree_snapshot(root)
+    moved = b"" if after is None or after["head"] == before["head"] else _git(
+        root, ["diff", "--name-only", "--no-renames", "-z", before["head"], after["head"]])
+    if after is None or moved is None:
+        return None
+    try:
+        candidates = set(before["dirty"]) | set(after["dirty"]) | set(_git_paths(moved))
+    except UnicodeError:
+        return None
+    changed = []
+    for path in sorted(candidate for candidate in candidates if _tracked_path(candidate)):
+        if path in before["dirty"]:
+            previous = before["dirty"][path]
+        else:
+            committed = _git(root, ["show", f"{before['head']}:./{path}"])
+            previous = hashlib.sha256(committed).hexdigest() if committed is not None else None
+        if previous != _file_digest(root, path):
+            changed.append(path)
+    return changed
 
 
 def _verb_swap(before: str, after: str) -> str | None:
@@ -1202,6 +1329,83 @@ def _admit_metadata_correction(ledger: dict[str, Any], dispatch_id: str, record:
             "task_ids": list(record["task_ids"])}
 
 
+def _test_fix_request(inputs: dict[str, Any]) -> dict[str, Any] | None:
+    """The optional `test_fix` request: one increment and the test files the fix touches."""
+    request = inputs.get("test_fix")
+    if request is None:
+        return None
+    if (not isinstance(request, dict) or set(request) != {"tdd_unit", "paths"}
+            or not isinstance(request["paths"], list) or not all(isinstance(path, str) for path in request["paths"])):
+        raise ValueError("test_fix requires exactly tdd_unit and a paths array of strings")
+    require_text(request["tdd_unit"], "test_fix tdd_unit")
+    if any(inputs.get(key) is not None for key in ("review_remediation", "gate_remediation", "metadata_only")):
+        raise ValueError("a test_fix names no review_remediation, gate_remediation, or metadata_only")
+    if inputs.get("kind") != "corrective" or inputs.get("reservation_id") is not None:
+        raise ValueError("test_fix applies only to a new corrective dispatch")
+    if inputs.get("spec_file") is None:
+        raise ValueError("test_fix requires an explicit spec_file naming the feature spec")
+    return request
+
+
+def _implementation_units(inputs: dict[str, Any]) -> list[str] | None:
+    """The optional `tdd_units` of an implementation dispatch, whose edits the runner then records."""
+    if "tdd_units" not in inputs:
+        return None
+    units = inputs["tdd_units"]
+    if inputs.get("kind") != "implementation":
+        raise ValueError("tdd_units applies only to an implementation dispatch")
+    if (not isinstance(units, list) or not units or len(set(map(str, units))) != len(units)
+            or not all(isinstance(unit, str) for unit in units)):
+        raise ValueError("tdd_units requires a nonempty array of distinct TDD unit names")
+    return [require_text(unit, "tdd_units item") for unit in units]
+
+
+def _edited_paths(ledger: dict[str, Any], unit: str) -> set[str]:
+    """Paths the runner recorded as changed by the increment's own implementation dispatches in this run."""
+    views = [ledger, *(_epoch_view(ledger, epoch) for epoch in ledger.get("corrective_epochs", []))]
+    return {path for view in views for item in view["dispatches"].values()
+            if item.get("kind") == "implementation" and unit in item.get("tdd_units", [])
+            for path in item.get("changed_paths", [])}
+
+
+def _test_fix_ineligibility(root: Path, spec: Path, ledger: dict[str, Any],
+                            request: dict[str, Any]) -> tuple[str | None, dict[str, Any] | None]:
+    """Why a test fix does not qualify for its increment's test-fix allowance, or None with a worktree snapshot.
+
+    Every path must be a test file inside the increment's own ownership that the
+    runner recorded as changed by one of that increment's implementation dispatches
+    in this run. Missing ownership, edit, or git evidence never qualifies.
+    """
+    from .helpers.read_only import is_test_path
+
+    unit, paths = request["tdd_unit"], request["paths"]
+    if unit in ledger.get("test_fix_allowances", {}):
+        return "test_fix_allowance_spent", None
+    ownership = _increment_ineligibility(root, spec, request)
+    if ownership is not None:
+        return ownership, None
+    if not all(_canonical_repo_path(path) and is_test_path(path) and not is_runner_byproduct(path) for path in paths):
+        return "path_not_test_code", None
+    if not set(paths) <= _edited_paths(ledger, unit):
+        return "path_not_edited_by_increment", None
+    snapshot = _worktree_snapshot(root)
+    if snapshot is None:
+        return "worktree_state_unavailable", None
+    return None, snapshot
+
+
+def _reserve_test_fix(ledger: dict[str, Any], dispatch_id: str, request: dict[str, Any], snapshot: dict[str, Any],
+                      now: float) -> dict[str, Any]:
+    """Spend the increment's one test-fix round; never touches the run-wide counter."""
+    unit = request["tdd_unit"]
+    ledger["test_fix_allowances"] = {**ledger.get("test_fix_allowances", {}),
+                                     unit: {"rounds": 1, "dispatch_ids": [dispatch_id]}}
+    ledger["dispatches"][dispatch_id] = {"kind": "corrective", "outcome": "reserved", "reserved_at": now,
+                                         "reservation_id": None, "reconciliations": 0, "test_fix": unit,
+                                         "test_fix_paths": sorted(set(request["paths"])), "worktree_before": snapshot}
+    return {"reservation_id": None, "dispatch_id": dispatch_id, "test_fix_allowance": "increment"}
+
+
 def _reserve_gate_remediation(ledger: dict[str, Any], dispatch_id: str, gate: str, now: float) -> dict[str, Any]:
     """Spend one of the gate's own remediation rounds; never touches the run-wide counter."""
     allowances = ledger.get("gate_allowances", {})
@@ -1238,6 +1442,8 @@ def reserve(ledger: dict[str, Any], inputs: dict[str, Any], now: float, root: Pa
     metadata_only = _metadata_correction(inputs)
     review = _review_remediation(inputs)
     gate_request = _gate_remediation(inputs)
+    test_fix = _test_fix_request(inputs)
+    units = _implementation_units(inputs)
     if dispatch_id in _used_dispatch_ids(ledger):
         return {"reasons": ["dispatch_already_reserved_no_relaunch"]}
     reservation = inputs.get("reservation_id")
@@ -1257,6 +1463,11 @@ def reserve(ledger: dict[str, Any], inputs: dict[str, Any], now: float, root: Pa
         if ineligible is None:
             return _reserve_gate_remediation(ledger, dispatch_id, gate_request["gate"], now)
         note = {"remediation_allowance": "run_wide", "gate_ineligible": ineligible}
+    if test_fix is not None:
+        ineligible, snapshot = _test_fix_ineligibility(root, spec, ledger, test_fix)
+        if ineligible is None and snapshot is not None:
+            return _reserve_test_fix(ledger, dispatch_id, test_fix, snapshot, now)
+        note = {"test_fix_allowance": "run_wide", "test_fix_ineligible": ineligible}
     if kind == "corrective":
         if reservation is not None:
             if reservation not in ledger["reservations"]:
@@ -1294,6 +1505,11 @@ def reserve(ledger: dict[str, Any], inputs: dict[str, Any], now: float, root: Pa
         raise ValueError("only corrective dispatches use corrective reservations")
     ledger["dispatches"][dispatch_id] = {"kind": kind, "outcome": "reserved", "reserved_at": now,
                                         "reservation_id": reservation, "reconciliations": 0}
+    if units is not None:
+        ledger["dispatches"][dispatch_id]["tdd_units"] = units
+        snapshot = _worktree_snapshot(root)
+        if snapshot is not None:
+            ledger["dispatches"][dispatch_id]["worktree_before"] = snapshot
     return {"reservation_id": reservation, "dispatch_id": dispatch_id, **note}
 
 
@@ -1422,7 +1638,14 @@ def reserve_class_correction(ledger: dict[str, Any], inputs: dict[str, Any], now
     return {"reservation_id": reservation, "dispatch_id": dispatch_id}
 
 
-def record_result(ledger: dict[str, Any], inputs: dict[str, Any], now: float) -> dict[str, Any]:
+def _observed_changes(item: dict[str, Any], outcome: str, root: Path) -> list[str] | None:
+    """The paths the runner saw a tracked dispatch change since its own snapshot, or None when it cannot say."""
+    if "worktree_before" not in item or outcome == "unknown":
+        return None
+    return _changed_since(root, item["worktree_before"])
+
+
+def record_result(ledger: dict[str, Any], inputs: dict[str, Any], now: float, root: Path) -> dict[str, Any]:
     dispatch_id = require_text(inputs.get("dispatch_id"), "dispatch_id")
     if dispatch_id not in ledger["dispatches"]:
         raise ValueError("dispatch was not reserved")
@@ -1437,6 +1660,11 @@ def record_result(ledger: dict[str, Any], inputs: dict[str, Any], now: float) ->
     outcome = inputs.get("outcome")
     if outcome not in OUTCOMES or (outcome == "expected_tdd_red" and item["kind"] != "implementation"):
         raise ValueError("invalid outcome for dispatch kind")
+    changed = _observed_changes(item, outcome, root)
+    if "test_fix" in item and outcome == "completed" and item["outcome"] in {"reserved", "running"}:
+        # A test fix completes only when the runner saw a change and every change stayed in its declared test files.
+        if not changed or not set(changed) <= set(item["test_fix_paths"]):
+            return {"reasons": ["test_fix_scope_unproven"]}
     if item["outcome"] == "unknown":
         event = inputs.get("native_observation")
         if not isinstance(event, dict) or not isinstance(event.get("native_event_id"), str) or not event["native_event_id"].strip():
@@ -1448,6 +1676,10 @@ def record_result(ledger: dict[str, Any], inputs: dict[str, Any], now: float) ->
         item["resolution_event_id"] = event["native_event_id"]
     elif item["outcome"] not in {"reserved", "running"}:
         return {"reasons": ["recorded_outcome_cannot_be_overwritten"]}
+    if outcome != "unknown" and "worktree_before" in item:
+        del item["worktree_before"]
+        if changed is not None:
+            item["changed_paths"] = changed
     item.update(outcome=outcome, completed_at=now)
     return {"reasons": ["unknown_side_effects_require_operator_reconciliation"] if outcome == "unknown" else []}
 
@@ -1686,7 +1918,7 @@ def execution_control(root: Path, inputs: dict[str, Any], mode: str,
         elif action == "begin-verification" and not reasons:
             extra = begin_verification(ledger, inputs)
         elif action in {"complete", "reconcile"}:
-            extra = record_result(ledger, inputs, now)
+            extra = record_result(ledger, inputs, now, root)
             reasons = clock_reasons(ledger, now)
         elif action in {"checkpoint", "pause", "resume"}:
             extra = checkpoint_or_wait(ledger, inputs, now)

@@ -1537,6 +1537,25 @@ the task-execution sidecar, and every later review fix would fall back to the
 run-wide budget with `ownership_evidence_stale`. It is never a mid-run
 question and never a stop.
 
+**Test-only fixes to an increment's own test code.** Reserve every
+implementation dispatch with `tdd_units`, the TDD units of the tasks it runs,
+so the runner records the paths it changed. When an increment's own test code
+breaks a test (for example an optional mock it added to an existing test file)
+and the fix only removes or narrows that test code, reserve the fix with
+`kind=corrective`, its `failure_invariant`, the feature's `spec_file`, and
+`test_fix`: the increment's `tdd_unit` and every test file the fix will touch.
+The runner admits it without `begin-replan-epoch` and without an operator
+event, even while the increment's tasks are still open, when every path is a
+test file the increment owns and one of its own implementation dispatches
+changed earlier in this run. It allows one test fix per increment and never
+draws on the run-wide corrective budget. Run nothing else while the fix is
+open: completing it `completed` succeeds only when the runner sees a change
+and none outside the declared test files. Any other fix, including one that touches
+product code, a test file another increment edited, or a second test fix for
+the same increment, takes the run-wide path unchanged. When the run-wide
+corrective budget is spent and the fix qualifies, reserve it as a test fix;
+never ask the operator for a re-plan or a corrective exception for it.
+
 Before `tasks.md` exists, the plan contains:
 
 ```text
