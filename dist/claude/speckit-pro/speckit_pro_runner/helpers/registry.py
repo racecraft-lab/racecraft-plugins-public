@@ -15,6 +15,7 @@ from .install import CODEX_OPTIONAL_HELPER_NAME, CODEX_REQUIRED_AGENT_NAMES, run
 from .egress_authorization import run_egress_authorization_helper
 from .mutation import empty_mutation, run_mutation_helper, run_spec_index_write, run_sweep_apply_result
 from .pr_emission import run_pr_emission_helper
+from .pr_split_ratification import run_pr_split_ratification_helper
 from .promotion import promotion_record
 from .read_only import registry_report, run_registered_helper
 
@@ -247,6 +248,14 @@ HELPERS: dict[str, HelperEntry] = {
         "python_authoritative",
         "python_only",
         authoritative_request("render-egress-authorization"),
+    ),
+    "ratify-pr-split": HelperEntry(
+        "ratify-pr-split",
+        "ratify-pr-split",
+        None,
+        "python_authoritative",
+        "python_only",
+        authoritative_request("ratify-pr-split"),
     ),
     "resolve-claude-subagent-runtime": HelperEntry(
         "resolve-claude-subagent-runtime",
@@ -695,6 +704,8 @@ def dispatch_helper(request: Any) -> dict[str, Any]:
         return run_research_broker_preflight_helper(entry, request)
     if entry.helper_id == "render-egress-authorization":
         return run_egress_authorization_helper(entry, request)
+    if entry.helper_id == "ratify-pr-split":
+        return run_pr_split_ratification_helper(entry, request)
     if entry.helper_id == "list-archive-candidates":
         return run_archive_sweep_helper(entry, request)
     return run_registered_helper(entry, request)
