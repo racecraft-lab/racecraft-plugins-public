@@ -91,6 +91,11 @@ def default_ledger_directory(workflow_name: str) -> str:
     return workflow_process_directory(workflow_name).joinpath("execution-control").as_posix()
 
 
+def evidence_directory(workflow_name: str) -> str:
+    """The workflow's verification evidence directory, beside its ledger directory."""
+    return workflow_process_directory(workflow_name).joinpath("verification").as_posix()
+
+
 def confined_path(root: Path, value: str) -> Path:
     """Reject traversal and every symlink component, including dangling links."""
     if not isinstance(value, str) or not value or Path(value).is_absolute():
@@ -141,7 +146,7 @@ def durable_json(path: Path, value: dict[str, Any]) -> None:
 @contextmanager
 def exclusive_ledger(path: Path):
     """Concurrent or interrupted writers fail closed; never steal a stale lock."""
-    path.parent.mkdir(parents=True, exist_ok=True)
+    ignore_owned_directory(path.parent)
     lock = path.with_suffix(".lock")
     try:
         lock.mkdir()
@@ -1698,6 +1703,8 @@ def execution_control(root: Path, inputs: dict[str, Any], mode: str,
                 "authorization_granted": False, "writes_state": mode == "apply", **extra}
 
     if mode == "apply":
+        # Mark the evidence directory before the orchestrator can write its own logs there (#813).
+        ignore_owned_directory(confined_path(root, evidence_directory(workflow_name)))
         with exclusive_ledger(path):
             return update()
     return update()

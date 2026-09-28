@@ -52,6 +52,7 @@ BLOCKING_STATUS_EVIDENCE_KEYS = (
     "stage_mirror_errors",
     "workflow_authority_errors",
     "state_privacy_errors",
+    "marker_evidence_privacy_errors",
 )
 
 PLAN_STEPS = (
@@ -1850,6 +1851,88 @@ class StatePrivacyTests(StatusEvidenceReportAssertions, unittest.TestCase):
         )
 
 
+MARKER_CHECKPOINT_REF = "specs/demo/.process/checkpoints/M1.json"
+MARKER_VERIFICATION_REF = "specs/demo/.process/verification/M1.json"
+
+
+class MarkerEvidencePrivacyTests(StatusEvidenceReportAssertions, unittest.TestCase):
+    """#819: committed marker evidence cites external ids as digests, never raw."""
+
+    def _report_for(self, checkpoint: bytes | None, verification: bytes | None) -> tuple[int, dict]:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            supplied, state = clean_workflow_state_fixture(root)
+            planted = json.loads(state.read_text(encoding="utf-8"))
+            planted["feature_dir"] = "specs/demo"
+            planted["pr_marker_plan"] = {"markers": [{"marker_id": "M1", "implementation_checkpoint": {
+                "evidence_path": MARKER_CHECKPOINT_REF, "verification_evidence_path": MARKER_VERIFICATION_REF}}]}
+            state.write_text(json.dumps(planted), encoding="utf-8")
+            for ref, content in ((MARKER_CHECKPOINT_REF, checkpoint), (MARKER_VERIFICATION_REF, verification)):
+                if content is not None:
+                    (root / ref).parent.mkdir(parents=True, exist_ok=True)
+                    (root / ref).write_bytes(content)
+            return run_status_evidence_report(supplied, state)
+
+    def test_raw_task_id_in_checkpoint_evidence_names_the_field_and_digest_remedy(self) -> None:
+        task_id = str(uuid.uuid4())
+        evidence = {"verification": {"G7": {"status": "pass", "evidence": f"delegated audit {task_id} passed"}}}
+        code, report = self._report_for(json.dumps(evidence).encode("utf-8"), b"{}")
+        self.assertEqual(code, 1, report)
+        self.assertCompleteReport(report)
+        self.assertOnlySelectedProblemKeyPopulated(report, "marker_evidence_privacy_errors")
+        [error] = report["marker_evidence_privacy_errors"]
+        self.assertIn(MARKER_CHECKPOINT_REF, error)
+        self.assertIn("verification.G7.evidence", error)
+        self.assertIn("a raw UUID", error)
+        self.assertIn("sha256:", error)
+        self.assertIn("rerun this guard", error)
+        self.assertNotIn(task_id, error)
+
+    def test_raw_event_id_in_verification_evidence_fails(self) -> None:
+        event_id = str(uuid.uuid4())
+        code, report = self._report_for(b"{}", json.dumps({"results": [{"event_id": event_id}]}).encode("utf-8"))
+        self.assertEqual(code, 1, report)
+        self.assertOnlySelectedProblemKeyPopulated(report, "marker_evidence_privacy_errors")
+        [error] = report["marker_evidence_privacy_errors"]
+        self.assertIn(MARKER_VERIFICATION_REF, error)
+        self.assertIn("results[0].event_id", error)
+        self.assertNotIn(event_id, error)
+
+    def test_unparseable_evidence_is_scanned_as_text(self) -> None:
+        home = _synthetic_home_path("repo")
+        code, report = self._report_for(f"not json {home}".encode("utf-8"), None)
+        self.assertEqual(code, 1, report)
+        [error] = report["marker_evidence_privacy_errors"]
+        self.assertIn(MARKER_CHECKPOINT_REF, error)
+        self.assertIn("an absolute home path", error)
+        self.assertNotIn(home, error)
+
+    def test_digest_form_and_pending_marker_without_files_pass(self) -> None:
+        task_id = str(uuid.uuid4())
+        digest = "sha256:" + hashlib.sha256(task_id.encode("utf-8")).hexdigest()
+        evidence = json.dumps({"verification": {"G7": {"status": "pass", "evidence": f"audit {digest}"}}})
+        for label, checkpoint, verification in (("digest", evidence.encode("utf-8"), b"{}"), ("pending", None, None)):
+            with self.subTest(case=label):
+                code, report = self._report_for(checkpoint, verification)
+                self.assertEqual(code, 0, report)
+                self.assertEqual(report["marker_evidence_privacy_errors"], [])
+
+    def test_both_hosts_digest_external_ids_in_every_committed_record(self) -> None:
+        for skill_path in (CLAUDE_AUTOPILOT_SKILL, CODEX_AUTOPILOT_SKILL):
+            with self.subTest(skill=skill_path.parent.parent.name):
+                skill = _flat(skill_path)
+                self.assertIn("external task, session, thread, or event id cited in a committed record", skill)
+                self.assertIn("`marker_evidence_privacy_errors`", skill)
+        for name in ("skills/speckit-autopilot/references/phase-execution.md",
+                     "codex-skills/speckit-autopilot/references/phase-execution-codex.md"):
+            with self.subTest(file=name):
+                text = _flat(REPO_ROOT / "speckit-pro" / name)
+                self.assertIn("external task, session, thread, or event id", text)
+                for record in ("marker checkpoint", "verification report", "workflow file", "implementation notes",
+                               "PR body"):
+                    self.assertIn(record, text)
+
+
 class StatusEvidenceNegativeTests(StatusEvidenceReportAssertions, unittest.TestCase):
     """FEATURE-017 isolated state-invariant controls for the status-evidence gate."""
 
@@ -2304,6 +2387,7 @@ def build_suite() -> unittest.TestSuite:
         TrackedPairCorpusTests,
         StatusEvidenceNegativeTests,
         StatePrivacyTests,
+        MarkerEvidencePrivacyTests,
         WorkflowAuthorityTests,
         RepositoryRootResolutionTests,
         ProblemKeyClassificationTests,

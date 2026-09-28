@@ -22,7 +22,9 @@ or in `execution-control/` when the workflow already sits in a `.process`
 directory. An earlier `.process/.process/execution-control/` ledger stays valid
 when passed as `ledger_path`. Verification evidence follows the same rule in
 `verification/`; a record already under `.process/.process/verification/`
-still validates. Untracked ledger, verification evidence, and task-results
+still validates. Both directories are self-ignoring from the run's `start`: the
+runner writes a `.gitignore` holding `*` into each, so a verification log you
+write there is never committed or scanned. Untracked ledger, verification evidence, and task-results
 journals under `.process/execution-control/`, `.process/verification/`, or
 `.process/task-results/` never make the worktree dirty for mutation helpers; any other change still refuses `apply`.
 An existing ledger belongs to its recorded canonical workflow path. An explicit

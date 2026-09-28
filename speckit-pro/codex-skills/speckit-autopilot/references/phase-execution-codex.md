@@ -880,7 +880,12 @@ for phase in PHASES starting from first_pending:
        Runner byproducts are never committed: the runner writes a
        .gitignore holding * into .process/execution-control/,
        .process/verification/, and .process/task-results/, so
-       git add -A cannot stage them. If
+       git add -A cannot stage them. Every execution-control apply,
+       starting with the run's start, writes that .gitignore into both
+       the ledger directory and the verification directory, so the
+       verification directory is self-ignoring before any verification
+       record exists. Put your own verification logs there: they stay
+       out of commits and out of the repository privacy scan. If
        git ls-files shows such a path already tracked (from an older
        plugin version), run git rm -r --cached -- <path> before this commit.
        One exception: a marker's verification record,
@@ -1271,7 +1276,14 @@ complete private record. It never carries `writable_roots`, `summary`,
 the schema rejects a receipt that does. A complete v1 record already in state
 still validates, but new runs write the receipt. Each planning fingerprint
 records the normalized repository-relative path, byte length, and lowercase
-`sha256:` digest for `plan.md` or `tasks.md`.
+`sha256:` digest for `plan.md` or `tasks.md`. Take the `tasks.md` digest over its
+task definitions: the text with every task checkbox cleared to `- [ ]`, the same
+definition the task fingerprints use. Marking a task complete then never stales
+the boundary, while any other change to `tasks.md`, and any change at all to
+`plan.md`, does. The guard also accepts a `tasks.md` digest over the raw bytes,
+so a receipt recorded before any task was checked stays current. One recorded
+with boxes already checked stays current until the next checkbox change, and
+the Step 0.8c resume preflight then records it again.
 
 Compute `execution_boundary.sha256` over canonical UTF-8 JSON containing only
 `execution_environment`, `sandbox_mode`, `approval_reviewer`, and sorted
@@ -1633,7 +1645,9 @@ phase-coverage guard checks against the pull request's actual diff, which does
 not exist until code is written, so move to `pr-marker-plan.v2` at the first
 implementation checkpoint. Under v2, a pending checkpoint needs `commit_sha`
 and `evidence_path` together, and needs them only once a phase result is
-recorded for its marker; the guard does not check v1 checkpoints.
+recorded for its marker; the guard does not check v1 checkpoints. Until
+then, the marker's PR Marker Plan Evidence row reads `Pending` in its
+Checkpoint cell and the workflow carries no checkpoint claim for it.
 
 On resume, validate the marker-plan fingerprint against the current spec,
 plan-declared file/test scope, tasks, reviewability evidence, and hazard route.
@@ -2747,7 +2761,13 @@ Phase 7 evidence in marker order. Run each marker's tasks according to
 inside a marker. After each marker completes, record marker ID, ordered task IDs,
 verification evidence path, fingerprint status, checkpoint commit SHA
 (`implementation_checkpoint.head_sha` or `implementation_checkpoint.commit_sha`),
-warnings, and any blocked/fixed tasks. The marker checkpoint SHA is the source
+warnings, and any blocked/fixed tasks. Cite an external task, session, thread,
+or event id, such as a delegated audit's task id, only as `sha256:<digest>` (the
+hex SHA-256 of the raw value) or omit it. The rule covers every committed
+record: the marker checkpoint, the verification report, the workflow file,
+implementation notes, and each PR body. The status-evidence guard fails on a raw
+id in marker checkpoint or verification evidence as
+`marker_evidence_privacy_errors`. The marker checkpoint SHA is the source
 commit for later live marker PR branches. Do not infer a new marker order from
 changed files or reviewability warnings.
 

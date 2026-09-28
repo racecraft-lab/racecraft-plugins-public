@@ -283,6 +283,7 @@ RULE_PROBLEM_KEYS = {
         "stage_mirror_errors",
         "workflow_authority_errors",
         "state_privacy_errors",
+        "marker_evidence_privacy_errors",
         "formal_checkpoint_errors",
         "artifact_review_errors",
         "in_progress_errors",
@@ -375,6 +376,15 @@ PROBLEM_KEY_INTENT: dict[str, dict[str, str]] = {
             "digests only. A raw runner envelope, its argv, an absolute home path, "
             "or an external task or session UUID would publish machine-local "
             "identity with the next checkpoint commit."
+        ),
+    },
+    "marker_evidence_privacy_errors": {
+        "verdict": "gated",
+        "reason": (
+            "Marker checkpoint and verification evidence is committed with its "
+            "checkpoint, so an external task, session, thread, or event id cited "
+            "there must be a sha256 digest. A raw id or an absolute home path would "
+            "publish machine-local identity and fail the repository privacy scan."
         ),
     },
     # --- gated: armed by ``--rule coverage``. Kept out of the status-evidence
@@ -779,6 +789,20 @@ def _visible_markdown(text: str) -> str:
     return "\n".join(visible_lines)
 
 
+def _marker_phase_claims(phase_results: object, marker_id: str) -> list[tuple[str, str]]:
+    """Phase-result fields for one marker that claim work beyond the plan projection."""
+    phases = phase_results if isinstance(phase_results, dict) else {}
+    return [
+        (phase_name, phase_field)
+        for phase_name, phase_result in phases.items()
+        if isinstance(phase_name, str)
+        and isinstance(phase_result, dict)
+        and phase_result.get("marker_id") == marker_id
+        for phase_field in phase_result
+        if phase_field not in PHASE_RESULT_PROJECTION_FIELDS
+    ]
+
+
 def validate_workflow_checkpoint_bindings(
     text: str, state: dict[str, Any],
 ) -> dict[str, list[str]]:
@@ -793,6 +817,10 @@ def validate_workflow_checkpoint_bindings(
     visible_text = _visible_markdown(text)
     expected: dict[str, str | None] = {}
     expected_superseded: dict[str, str] = {}
+    # A marker awaits its first checkpoint while its checkpoint is pending, records
+    # no commit, and no phase result claims work for it. Its workflow row reads
+    # Pending and it has no current checkpoint claim yet.
+    awaiting: set[str] = set()
     for marker in markers:
         if not isinstance(marker, dict) or not isinstance(marker.get("id"), str):
             continue
@@ -803,6 +831,13 @@ def validate_workflow_checkpoint_bindings(
             if isinstance(commit_sha, str) and re.fullmatch(r"[0-9a-f]{40}", commit_sha)
             else None
         )
+        if (
+            isinstance(checkpoint, dict)
+            and checkpoint.get("status") == "pending"
+            and expected[marker["id"]] is None
+            and not _marker_phase_claims(state.get("phase_results"), marker["id"])
+        ):
+            awaiting.add(marker["id"])
         superseded_sha = (
             checkpoint.get("superseded_commit_sha")
             if isinstance(checkpoint, dict)
@@ -829,6 +864,8 @@ def validate_workflow_checkpoint_bindings(
         errors.append("workflow checkpoint claims must name their marker")
     if strict_contract:
         for marker_id in expected:
+            if marker_id in awaiting:
+                continue
             claim_count = sum(
                 claimed_marker_id == marker_id
                 for claimed_marker_id, _claimed_sha in checkpoint_claims
@@ -898,6 +935,13 @@ def validate_workflow_checkpoint_bindings(
             if marker_id not in expected:
                 continue
             marker_row_counts[marker_id] += 1
+            if marker_id in awaiting:
+                if cells[4] != "Pending":
+                    errors.append(
+                        f"workflow PR Marker Plan Evidence marker {marker_id!r} checkpoint must read "
+                        "Pending until its pr_marker_plan checkpoint records commit_sha"
+                    )
+                continue
             checkpoint_shas = set(re.findall(r"\b[0-9a-f]{40}\b", cells[4]))
             expected_sha = expected[marker_id]
             if expected_sha is None or expected_sha not in checkpoint_shas:
@@ -2812,12 +2856,7 @@ def validate_projection_integrity(
             checkpoint = raw_marker.get("implementation_checkpoint")
             if isinstance(checkpoint, dict):
                 checkpoint_status = checkpoint.get("status")
-                pending_phase_claims = [
-                    (phase_name, phase_field)
-                    for phase_name, phase_result in phases_by_marker.get(marker_id, [])
-                    for phase_field in phase_result
-                    if phase_field not in PHASE_RESULT_PROJECTION_FIELDS
-                ]
+                pending_phase_claims = _marker_phase_claims(phase_results, marker_id)
                 if strict_contract and checkpoint_status == "pending" and pending_phase_claims:
                     if not _is_normalized_repo_path(checkpoint.get("evidence_path")):
                         checkpoint_evidence_errors.append(
@@ -4488,6 +4527,48 @@ def _state_private_value_reason(value: str) -> str | None:
     return None
 
 
+def _private_value_errors(
+    root_location: str,
+    root: object,
+    *,
+    private_keys: frozenset[str] = frozenset(),
+    remedy: str = "",
+) -> list[str]:
+    """Name every private key or value under ``root`` by its location, never echoing it."""
+    errors: list[str] = []
+    pending: list[tuple[str, object]] = [(root_location, root)]
+    while pending:
+        location, value = pending.pop()
+        if isinstance(value, dict):
+            for key, child in value.items():
+                child_location = f"{location}.{key}"
+                if key in private_keys:
+                    errors.append(
+                        f"{child_location} stores a raw runner argv; remove this key, keep only "
+                        + "decision fields, and rerun this guard"
+                    )
+                    continue
+                reason = _state_private_value_reason(key)
+                if reason is not None:
+                    key_digest = "sha256:" + hashlib.sha256(key.encode("utf-8")).hexdigest()
+                    errors.append(
+                        f"{location} has a key holding {reason} (key {key_digest}); replace that key "
+                        + f"with {key_digest}{remedy}, and rerun this guard"
+                    )
+                    continue
+                pending.append((child_location, child))
+        elif isinstance(value, list):
+            pending.extend((f"{location}[{index}]", item) for index, item in enumerate(value))
+        elif isinstance(value, str):
+            reason = _state_private_value_reason(value)
+            if reason is not None:
+                errors.append(
+                    f"{location} holds {reason}; replace the value with sha256: plus the hex "
+                    + f"SHA-256 of the value{remedy}, and rerun this guard"
+                )
+    return errors
+
+
 def state_privacy_errors(state: object) -> dict[str, list[str]]:
     """Reject private values in the committed autopilot state file.
 
@@ -4499,38 +4580,53 @@ def state_privacy_errors(state: object) -> dict[str, list[str]]:
     """
     if not isinstance(state, dict):
         return {"state_privacy_errors": ["autopilot_state must be a JSON object"]}
+    errors = _private_value_errors("autopilot_state", state, private_keys=STATE_PRIVATE_KEYS)
+    return {"state_privacy_errors": sorted(errors)}
+
+
+def marker_evidence_privacy_errors(state: object, state_path: Path) -> dict[str, list[str]]:
+    """Reject private values in committed marker checkpoint and verification evidence (#819).
+
+    Each marker's ``implementation_checkpoint.evidence_path`` and
+    ``verification_evidence_path`` name committed JSON records. They cite an
+    external task, session, thread, or event id only as ``sha256:<digest>``,
+    and hold no absolute home path. Errors name the file and JSON location
+    with the digest remedy, and never echo the value. A record that is not
+    JSON is scanned as text. A file not yet written, such as a pending
+    marker's, is skipped here; the checkpoint checks own its existence.
+    """
+    marker_plan = state.get("pr_marker_plan") if isinstance(state, dict) else None
+    markers = marker_plan.get("markers") if isinstance(marker_plan, dict) else None
+    repo_root = _repository_root(state_path)
+    if not isinstance(markers, list) or repo_root is None:
+        return {"marker_evidence_privacy_errors": []}
+    refs: list[str] = []
+    for marker in markers:
+        checkpoint = marker.get("implementation_checkpoint") if isinstance(marker, dict) else None
+        if not isinstance(checkpoint, dict):
+            continue
+        for field in ("evidence_path", "verification_evidence_path"):
+            ref = checkpoint.get(field)
+            if isinstance(ref, str) and ref not in refs:
+                refs.append(ref)
+    remedy = " or omit it"
     errors: list[str] = []
-    pending: list[tuple[str, object]] = [("autopilot_state", state)]
-    while pending:
-        location, value = pending.pop()
-        if isinstance(value, dict):
-            for key, child in value.items():
-                child_location = f"{location}.{key}"
-                if key in STATE_PRIVATE_KEYS:
-                    errors.append(
-                        f"{child_location} stores a raw runner argv; remove this key, keep only "
-                        + "decision fields, and rerun this guard"
-                    )
-                    continue
-                reason = _state_private_value_reason(key)
-                if reason is not None:
-                    key_digest = "sha256:" + hashlib.sha256(key.encode("utf-8")).hexdigest()
-                    errors.append(
-                        f"{location} has a key holding {reason} (key {key_digest}); replace that key "
-                        + f"with {key_digest}, and rerun this guard"
-                    )
-                    continue
-                pending.append((child_location, child))
-        elif isinstance(value, list):
-            pending.extend((f"{location}[{index}]", item) for index, item in enumerate(value))
-        elif isinstance(value, str):
-            reason = _state_private_value_reason(value)
+    for ref in refs:
+        content = _read_repo_bytes(repo_root, ref)
+        if content is None:
+            continue
+        try:
+            evidence = json.loads(content.decode("utf-8"))
+        except (UnicodeDecodeError, ValueError, RecursionError):
+            reason = _state_private_value_reason(content.decode("utf-8", errors="replace"))
             if reason is not None:
                 errors.append(
-                    f"{location} holds {reason}; replace the value with sha256: plus the hex "
-                    + "SHA-256 of the value, and rerun this guard"
+                    f"{ref} holds {reason}; write each such value as sha256: plus the hex SHA-256 "
+                    + f"of the value{remedy}, and rerun this guard"
                 )
-    return {"state_privacy_errors": sorted(errors)}
+            continue
+        errors.extend(_private_value_errors(f"{ref} $", evidence, remedy=remedy))
+    return {"marker_evidence_privacy_errors": sorted(errors)}
 
 
 def _canonical_json_sha256(value: object) -> str | None:
@@ -4618,9 +4714,33 @@ def _autonomy_file_errors(
         return errors, parent
     if record.get("size_bytes") != len(content):
         errors.append(f"autonomy boundary {label} size_bytes is stale")
-    if record.get("sha256") != _sha256_bytes(content):
+    if record.get("sha256") not in _autonomy_file_digests(label, content):
         errors.append(f"autonomy boundary {label} sha256 is stale")
     return errors, parent
+
+
+def _autonomy_file_digests(label: str, content: bytes) -> set[str]:
+    """Digests that keep a planning fingerprint current.
+
+    plan.md binds its raw bytes. tasks.md also accepts the digest of its task
+    definitions, the checkbox-insensitive text task fingerprints use, so marking a
+    task complete never stales the boundary. When the runner is not importable or
+    the file is not UTF-8, only the raw digest counts, so the check fails closed.
+    """
+    digests = {_sha256_bytes(content)}
+    if label != "tasks_md":
+        return digests
+    plugin_root = str(Path(__file__).resolve().parents[3])
+    if plugin_root not in sys.path:
+        sys.path.insert(0, plugin_root)
+    try:
+        from speckit_pro_runner.task_execution import task_definitions  # noqa: PLC0415
+
+        digests.add(_sha256_bytes(task_definitions(content.decode("utf-8")).encode("utf-8")))
+    except (ImportError, UnicodeDecodeError):
+        # Fail closed: without the runner or valid UTF-8, only the raw digest counts.
+        return digests
+    return digests
 
 
 def _autonomy_planning_errors(
@@ -5062,6 +5182,7 @@ def build_report(
     state_result = validate_state(plan_steps)
     status_result = validate_state_status(state_data)
     privacy_result = state_privacy_errors(state_data)
+    marker_privacy_result = marker_evidence_privacy_errors(state_data, state)
     autonomy_result = validate_autonomy_boundary(
         state_data, _repository_root(workflow),
         current_execution_boundary=authority.current_execution_boundary,
@@ -5088,6 +5209,7 @@ def build_report(
         **workflow_status_result,
         **status_result,
         **privacy_result,
+        **marker_privacy_result,
         **autonomy_result,
         **stage_result,
         **formal_result,

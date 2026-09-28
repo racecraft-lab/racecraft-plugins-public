@@ -380,7 +380,12 @@ Run the pre-flight sequence before any phase work. STOP on failure.
    envelope, its `argv`, an absolute path, or an external task or session id,
    such as a delegation `task_id` (a digest or short redacted reference is fine). The Step 1.1 guard fails on
    them as `state_privacy_errors`. Store a native or operator event id, such as
-   an approval event id, as `sha256:<digest>`: the hex SHA-256 of the raw value. Keep optional `artifact_review` for
+   an approval event id, as `sha256:<digest>`: the hex SHA-256 of the raw value.
+   The same rule covers every external task, session, thread, or event id cited in a committed record
+   (marker checkpoints, verification reports, the workflow file, implementation notes, and PR bodies):
+   write it as `sha256:<digest>` or omit it. The guard fails on a raw id in marker checkpoint or
+   verification evidence as `marker_evidence_privacy_errors`, naming the file and field; those records
+   are bound by their checkpoint digests, so write the digest before the checkpoint is recorded. Keep optional `artifact_review` for
    terminal-step routing and print its unresolved preview dispositions. A pending
    handoff can auto-resolve `plan` even when `planning_complete` is true; explicit
    stages still win and started implementation is never routed backward. An explicit `--stage`
@@ -573,10 +578,11 @@ one enforcement path instead of two prose descriptions of one:
 Command("<resolved_python> '<plugin-root>/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py' --workflow <workflow-file-path> --state <workflow-directory>/autopilot-state.json --rule status-evidence")
 ```
 
-`--rule status-evidence` gates the **exit code** on the six workflow/state
+`--rule status-evidence` gates the **exit code** on the seven workflow/state
 status-evidence checks (`workflow_status_evidence_errors`,
 `state_status_errors`, `autonomy_boundary_errors`, `stage_mirror_errors`,
-`workflow_authority_errors`, `state_privacy_errors`) and
+`workflow_authority_errors`, `state_privacy_errors`,
+`marker_evidence_privacy_errors`) and
 the three current-run state-plan invariants (`in_progress_errors`,
 `duplicate_state_steps`, `state_order_errors`). The full report is still
 printed; structural coverage checks and every advisory key are visible but

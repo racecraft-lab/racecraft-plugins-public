@@ -681,7 +681,9 @@ phase-coverage guard checks against the pull request's actual diff, which does
 not exist until code is written, so move to `pr-marker-plan.v2` at the first
 implementation checkpoint. Under v2, a pending checkpoint needs `commit_sha`
 and `evidence_path` together, and needs them only once a phase result is
-recorded for its marker; the guard does not check v1 checkpoints.
+recorded for its marker; the guard does not check v1 checkpoints. Until
+then, the marker's PR Marker Plan Evidence row reads `Pending` in its
+Checkpoint cell and the workflow carries no checkpoint claim for it.
 
 When ordered markers each modify an existing shared file, declare `MODIFIED`
 for that path in each marker and list those marker IDs in review order in the
@@ -1414,6 +1416,12 @@ the marker's `review_order`; within one marker, keep the existing task-order and
 marker ID, ordered task IDs, test/verification evidence path, fingerprint
 status, checkpoint commit SHA (`implementation_checkpoint.head_sha` or
 `implementation_checkpoint.commit_sha`), warnings, and any blocked/fixed tasks.
+Cite an external task, session, thread, or event id, such as a delegated audit's
+task id, only as `sha256:<digest>` (the hex SHA-256 of the raw value) or omit
+it. The rule covers every committed record: the marker checkpoint, the
+verification report, the workflow file, implementation notes, and each PR body.
+The status-evidence guard fails on a raw id in marker checkpoint or verification
+evidence as `marker_evidence_privacy_errors`.
 The marker checkpoint SHA is the source commit for later live marker PR
 branches. Do not infer a new marker order from changed files or reviewability
 warnings.
@@ -3165,7 +3173,11 @@ Runner byproducts are never committed. The runner writes a `.gitignore`
 holding `*` into each directory it owns (`.process/execution-control/`,
 `.process/verification/`, and `.process/task-results/`), so `git add -A`
 cannot stage the ledger, the verification evidence, or the task-results
-journals. If `git ls-files` shows such a path already tracked
+journals. Every `execution-control` apply, starting with the run's `start`,
+writes that `.gitignore` into both the ledger directory and the verification
+directory, so the verification directory is self-ignoring before any
+verification record exists. Put your own verification logs there: they stay out
+of commits and out of the repository privacy scan. If `git ls-files` shows such a path already tracked
 (from an older plugin version), run `git rm -r --cached -- <path>` before this
 commit.
 
