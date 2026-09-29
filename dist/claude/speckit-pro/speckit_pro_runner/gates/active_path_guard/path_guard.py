@@ -83,10 +83,6 @@ def path_guard_script_file(path: str) -> tuple[str, str] | None:
     return None
 
 
-def never_bare_line_context(path: str, line: str) -> bool:
-    return False
-
-
 PATH_GUARD_POLICY = GuardPolicy(
     schema_version="1.0",
     contract_id=None,
@@ -107,7 +103,7 @@ PATH_GUARD_POLICY = GuardPolicy(
     default_remediation="No runner-gate change required for documentation-only text.",
     script_file=path_guard_script_file,
     line_context_window=False,
-    bare_line_context=never_bare_line_context,
+    bare_line_context=lambda path, line: False,
     blocked_code="active_path_guard_blocked",
     blocked_message="active-path guard found shell-specific dependencies in active repo-local gates",
     blocked_summary="Remove the active shell dependency or reclassify the retained path as inactive parity evidence.",
