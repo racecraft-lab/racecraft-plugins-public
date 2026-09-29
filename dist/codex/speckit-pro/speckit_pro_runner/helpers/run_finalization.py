@@ -379,6 +379,31 @@ def _units(ledger: dict[str, Any], resume_command: str) -> tuple[list[dict[str, 
     return decisions, pending
 
 
+def _checked_inputs(inputs: Any) -> str:
+    """The request's resume command, after its shape is proved: an object with no unknown input."""
+    if not isinstance(inputs, dict):
+        raise ValueError("inputs must be an object")
+    unknown = sorted(set(inputs) - ALLOWED_INPUTS)
+    if unknown:
+        raise ValueError(f"unknown inputs: {', '.join(unknown)}")
+    return _text(inputs.get("resume_command"), "resume_command")
+
+
+def _pending_items(value: Any) -> list[str]:
+    if not isinstance(value, list):
+        raise ValueError("pending_items must list the runnable work still open, or be empty")
+    return [_text(item, "pending_items") for item in value]
+
+
+def _outcome(pending_items: list[str], stop: dict[str, list[dict[str, Any]]], has_handoff: bool) -> str:
+    """`continue` while work is pending, `human_stop` for a red gate, else a finalized run."""
+    if pending_items:
+        return "continue"
+    if any(stop.values()):
+        return "human_stop"
+    return "complete_with_deferred" if has_handoff else "complete"
+
+
 def _gate_findings(ledger: dict[str, Any], gates: list[dict[str, Any]], numbers: dict[str, int],
                    counted: dict[str, int]) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[str], list[str]]:
     """Red-gate stops, harness stops, pending work, and the counts to record, from each gate's runner-proved state."""
@@ -428,12 +453,7 @@ def finalize_run(root: Path, inputs: dict[str, Any], record: bool = False) -> di
 
     With `record`, each head and gate this cycle left pending is counted in the ledger once.
     """
-    if not isinstance(inputs, dict):
-        raise ValueError("inputs must be an object")
-    unknown = sorted(set(inputs) - ALLOWED_INPUTS)
-    if unknown:
-        raise ValueError(f"unknown inputs: {', '.join(unknown)}")
-    resume_command = _text(inputs.get("resume_command"), "resume_command")
+    resume_command = _checked_inputs(inputs)
     ledger = _ledger(root, inputs)
     decisions, unit_pending = _units(ledger, resume_command)
     unresolved = _records(inputs.get("unresolved_deferrals", []), "unresolved_deferrals", DEFERRAL_FIELDS)
@@ -443,10 +463,7 @@ def finalize_run(root: Path, inputs: dict[str, Any], record: bool = False) -> di
     prs = _pull_requests(inputs.get("pull_requests"))
     gates = _gates(root, ledger, inputs.get("gates"), {pr["head_sha"] for pr in prs})
     numbers = {pr["head_sha"]: pr["number"] for pr in prs}
-    pending = inputs.get("pending_items")
-    if not isinstance(pending, list):
-        raise ValueError("pending_items must list the runnable work still open, or be empty")
-    pending_items = [_text(item, "pending_items") for item in pending] + unit_pending
+    pending_items = _pending_items(inputs.get("pending_items")) + unit_pending
     counted = ledger.get("finalize_observations", {})
     failed, harness, gate_pending, observed = _gate_findings(ledger, gates, numbers, counted)
     missing, missing_pending, missing_observed = _missing_findings(prs, gates, counted)
@@ -459,12 +476,7 @@ def finalize_run(root: Path, inputs: dict[str, Any], record: bool = False) -> di
     # Canonical order, so the same blocker listed another way has the same digest and request text.
     stop = {"gates": _canonical(failed), "missing": _canonical(missing), "harness_errors": _canonical(harness)}
     human_uat, decisions = _canonical(human_uat), _canonical(decisions)
-    if pending_items:
-        outcome = "continue"
-    elif any(stop.values()):
-        outcome = "human_stop"
-    else:
-        outcome = "complete_with_deferred" if human_uat or decisions else "complete"
+    outcome = _outcome(pending_items, stop, bool(human_uat or decisions))
     finalized = outcome in {"complete", "complete_with_deferred"}
     request = (render_request(human_uat, decisions, resume_command) if finalized and (human_uat or decisions)
                else render_stop(stop, resume_command) if outcome == "human_stop" else "")
