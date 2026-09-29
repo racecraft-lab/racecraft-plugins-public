@@ -25,6 +25,7 @@ for _root in (SHARED_LIB, PLUGIN_ROOT):
         sys.path.insert(0, str(_root))
 
 from speckit_pro_runner import architecture_graph  # noqa: E402
+from speckit_pro_runner.json_schema import json_schema_failures  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
 SCHEMA_PATH = PLUGIN_ROOT / "speckit_pro_runner" / "contracts" / "architecture-graph.schema.json"
@@ -110,8 +111,75 @@ class ArchitectureGraphTests(unittest.TestCase):
             self.assertIn("one-hop", bad.stderr)
 
 
+def _pr_graph_with(edit) -> dict:
+    data = graph()
+    edit(data)
+    return data
+
+
+# Graphs the schema states a rule for. The validator and the schema must both reject each one.
+SCHEMA_STATED_NEGATIVES = {
+    "wrong schema_version": lambda g: g.update(schema_version="2.0"),
+    "unknown top-level key": lambda g: g.update(extra=1),
+    "bad language": lambda g: g.update(language="rust"),
+    "bad scope kind": lambda g: g["scope"].update(kind="branch"),
+    "pr scope without base": lambda g: g["scope"].pop("base"),
+    "pr scope without touched": lambda g: g["scope"].pop("touched"),
+    "pr scope with empty touched": lambda g: g["scope"].update(touched=[]),
+    "repository scope with base": lambda g: g.update(scope={"kind": "repository", "base": "origin/main"}),
+    "repository scope with touched": lambda g: g.update(scope={"kind": "repository", "touched": ["a.py"]}),
+    "node missing path": lambda g: g["nodes"][1].pop("path"),
+    "node unknown field": lambda g: g["nodes"][1].update(color="red"),
+    "bad delta kind": lambda g: g["nodes"][0]["delta"].update(kind="renamed"),
+    "rule on a valid edge": lambda g: g["edges"][0].update(rule="x"),
+    "invalid edge without a rule": lambda g: g["edges"][0].update(valid=False),
+}
+
+# Rules only the validator can state: they compare values across the document or trim blanks.
+VALIDATOR_ONLY_NEGATIVES = {
+    "duplicate node id": lambda g: g["nodes"].append(copy.deepcopy(g["nodes"][1])),
+    "touched flag on an untouched node": lambda g: g["nodes"][1].update(touched=True),
+    "edge to unknown node": lambda g: g["edges"].append({"from": "src/queue/api.py", "to": "ghost.py"}),
+    "touched id that is not a node": lambda g: g["scope"]["touched"].append("missing.py"),
+    "invalid edge with a blank rule": lambda g: g["edges"][0].update(valid=False, rule=" "),
+}
+
+
+class ArchitectureGraphSchemaParityTests(unittest.TestCase):
+    """The schema and the validator agree on every rule the schema can state."""
+
+    @staticmethod
+    def schema_rejects(data: object) -> bool:
+        schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
+        return bool(json_schema_failures(data, schema, schema, "graph"))
+
+    def test_both_accept_the_pr_and_repository_graphs(self) -> None:
+        repository = _pr_graph_with(lambda g: g.update(scope={"kind": "repository"}))
+        for label, data in (("pr", graph()), ("repository", repository)):
+            with self.subTest(graph=label):
+                self.assertEqual([], architecture_graph.validate_graph(data))
+                self.assertFalse(self.schema_rejects(data))
+
+    def assert_agreement(self, violations: dict, *, schema_rejects: bool) -> None:
+        for label, edit in violations.items():
+            with self.subTest(violation=label):
+                data = _pr_graph_with(edit)
+                self.assertTrue(architecture_graph.validate_graph(data), "validator")
+                self.assertEqual(self.schema_rejects(data), schema_rejects, "schema")
+
+    def test_both_reject_every_schema_stated_violation(self) -> None:
+        self.assert_agreement(SCHEMA_STATED_NEGATIVES, schema_rejects=True)
+
+    def test_validator_only_rules_are_not_claimed_by_the_schema(self) -> None:
+        self.assert_agreement(VALIDATOR_ONLY_NEGATIVES, schema_rejects=False)
+
+
 def main() -> int:
-    return run_counted(unittest.defaultTestLoader.loadTestsFromTestCase(ArchitectureGraphTests), label="test-architecture-graph")
+    suite = unittest.TestSuite(
+        unittest.defaultTestLoader.loadTestsFromTestCase(case)
+        for case in (ArchitectureGraphTests, ArchitectureGraphSchemaParityTests)
+    )
+    return run_counted(suite, label="test-architecture-graph")
 
 
 if __name__ == "__main__":
