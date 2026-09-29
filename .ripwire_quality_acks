@@ -148,6 +148,7 @@ ack dead-code:new-symbol 86709fb3190d2d7d 0 cid=912004c3a17b7937 Nested function
 ack dead-code:new-symbol 86a8f8c760e59421 0 cid=babee3a5bc210a13 unittest discovers test_ methods by name, and the nested helpers are passed by value in a case table or as a mock side effect, so dead-code is a false positive
 ack dead-code:new-symbol 8711e3b9e4a5c7a5 0 cid=5247dffdda57636f unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 8a7183fa3e6f96d0 0 cid=c656efc29a732c86 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
+ack dead-code:new-symbol 8bac2aecc10008c2 0 cid=4144d685066a403b unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 8c14bf1b82aae69b 0 cid=2d295d3ca29dfb1c unittest discovers test_ methods by name, and the nested helpers are passed by value in a case table or as a mock side effect, so dead-code is a false positive
 ack dead-code:new-symbol 8c7caa5817bdd64e 0 cid=1cf7f7a925b13ed6 unittest discovers these test methods through loadTestsFromTestCase in main(); no direct caller is expected
 ack dead-code:new-symbol 8da55ff2734e4f83 0 cid=456f3c86fe83cc9b unittest discovers these test methods through loadTestsFromTestCase in main(); no direct caller is expected
