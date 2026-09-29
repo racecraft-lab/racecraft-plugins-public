@@ -51,6 +51,18 @@ def run_runner(request: object) -> tuple[subprocess.CompletedProcess[str], dict[
     return completed, response, stderr_records
 
 
+def load_refresh_script():
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location(
+        "refresh_release_artifacts_roster", REPO_ROOT / "scripts" / "refresh-release-artifacts.py"
+    )
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
 def review_base_candidates() -> list[str]:
     candidates = ["origin/main...HEAD"]
     parents = subprocess.run(
@@ -319,7 +331,7 @@ class RunnerFoundationTests(unittest.TestCase):
         expected = {}
         runner_sources = sorted(
             [path for path in RUNNER_DIR.rglob("*.py") if "__pycache__" not in path.parts]
-            + [RUNNER_DIR / "agent_inventory.json"]
+            + [path for path in RUNNER_DIR.rglob("*.json") if path.name != "speckit-pro-runner.manifest.json"]
         )
         for path in runner_sources:
             digest = hashlib.sha256(path.read_bytes()).hexdigest()
@@ -367,6 +379,53 @@ class RunnerFoundationTests(unittest.TestCase):
         self.assertEqual(report["verification_status"], "verified")
         runner_paths = {record["path"]["value"] for record in report["runner_files"]}
         self.assertIn("speckit_pro_runner/agent_inventory.json", runner_paths)
+
+    def test_metadata_report_flags_runtime_loaded_json_changes(self) -> None:
+        import shutil
+
+        from speckit_pro_runner import runtime
+
+        refresh = load_refresh_script()
+
+        runtime_loaded = (
+            "gate_discovery_table.json",
+            "install_inventory.json",
+            "contracts/task-results.schema.json",
+        )
+        for name in runtime_loaded:
+            with self.subTest(file=name), tempfile.TemporaryDirectory() as tmp:
+                plugin_root = Path(tmp) / "speckit-pro"
+                package_dir = plugin_root / "speckit_pro_runner"
+                shutil.copytree(RUNNER_DIR, package_dir, ignore=shutil.ignore_patterns("__pycache__"))
+                refresh.refresh_runner_trust_metadata(Path(tmp))
+                target = package_dir / name
+                target.write_text(target.read_text(encoding="utf-8") + "\n", encoding="utf-8")
+
+                report = runtime.metadata_report(plugin_root, package_dir, check_metadata=True)
+
+                self.assertEqual(report["verification_status"], "mismatch")
+
+    def test_refresh_script_uses_the_runtime_roster(self) -> None:
+        import shutil
+
+        from speckit_pro_runner import runtime
+
+        refresh = load_refresh_script()
+        with tempfile.TemporaryDirectory() as tmp:
+            repo_root = Path(tmp)
+            package_dir = repo_root / "speckit-pro" / "speckit_pro_runner"
+            shutil.copytree(RUNNER_DIR, package_dir, ignore=shutil.ignore_patterns("__pycache__"))
+            (package_dir / "install_inventory.json").write_text("{}\n", encoding="utf-8")
+
+            refresh.refresh_runner_trust_metadata(repo_root)
+            report = runtime.metadata_report(repo_root / "speckit-pro", package_dir, check_metadata=True)
+
+        self.assertEqual(report["verification_status"], "verified")
+        runner_paths = {record["path"]["value"] for record in report["runner_files"]}
+        self.assertIn("speckit_pro_runner/install_inventory.json", runner_paths)
+        self.assertIn("speckit_pro_runner/gate_discovery_table.json", runner_paths)
+        self.assertIn("speckit_pro_runner/contracts/task-results.schema.json", runner_paths)
+        self.assertNotIn(f"speckit_pro_runner/{runtime.MANIFEST_NAME}", runner_paths)
 
     def test_metadata_readiness_failures(self) -> None:
         expected = {
