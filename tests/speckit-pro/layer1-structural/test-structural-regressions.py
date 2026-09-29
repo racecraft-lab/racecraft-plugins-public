@@ -75,13 +75,13 @@ class StructuralRegressionTests(unittest.TestCase):
             with self.assertRaisesRegex(AssertionError, "unable to read.*missing.json"):
                 payloads.load_json_file(path)
 
-    def test_agent_instruction_validator_accepts_agents_and_gemini_only_shape(self) -> None:
+    def test_agent_instruction_validator_accepts_wrapper_only_shape(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             write_valid_agent_instruction_tree(root)
             self.assertEqual([], agents.collect_agent_instruction_errors(root))
 
-    def test_agent_instruction_validator_rejects_claude_md_beside_agents_md(self) -> None:
+    def test_agent_instruction_validator_rejects_claude_drift(self) -> None:
         for directory in agents.AGENT_INSTRUCTION_DIRS:
             with self.subTest(directory=directory.as_posix()), tempfile.TemporaryDirectory() as temporary:
                 root = Path(temporary)
