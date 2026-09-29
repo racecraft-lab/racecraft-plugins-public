@@ -17,6 +17,12 @@ from unittest import mock
 
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
+PLUGIN_ROOT = REPO_ROOT / "speckit-pro"
+if str(PLUGIN_ROOT) not in sys.path:
+    sys.path.insert(0, str(PLUGIN_ROOT))
+
+from speckit_pro_runner.helpers.read_only import json_schema_failures  # noqa: E402
+
 VALIDATOR = REPO_ROOT / "speckit-pro" / "skills" / "speckit-autopilot" / "scripts" / "validate-autopilot-phase-coverage.py"
 CANONICAL_SCHEMA_PATHS = tuple(
     VALIDATOR.parents[1] / "contracts" / name
@@ -3860,6 +3866,29 @@ class AutopilotPhaseCoverageTests(_ValidatorRunner, unittest.TestCase):
         self.assertIn("migrate", required[0])
 
 
+class AutopilotPhaseCoverageReportSchemaTests(_ValidatorRunner, unittest.TestCase):
+    def test_real_reports_validate_against_the_report_schema(self) -> None:
+        schema = json.loads(REPORT_SCHEMA.read_text(encoding="utf-8"))
+        failing_state = state_json()
+        failing_state["plan"] = failing_state["plan"][:-1]
+        scenarios = {
+            "pass": (workflow_text(), state_json(), "pass"),
+            "fail": (workflow_text(), failing_state, "fail"),
+        }
+        for name, (workflow, state, status) in scenarios.items():
+            with self.subTest(scenario=name):
+                _, report = self.run_validator(workflow, state)
+                self.assertEqual(report["status"], status)
+                self.assertEqual(json_schema_failures(report, schema, schema, ""), [])
+
+    def test_report_schema_names_every_emitted_problem_key(self) -> None:
+        schema = json.loads(REPORT_SCHEMA.read_text(encoding="utf-8"))
+        _, report = self.run_validator(workflow_text(), state_json())
+        self.assertEqual(set(report) - set(schema["properties"]), set())
+        pass_fail_required = set(schema["allOf"][0]["then"]["required"])
+        self.assertEqual(set(report), pass_fail_required | {"status", "repair"})
+
+
 class AutopilotPhaseCoverageRepairTests(_ValidatorRunner, unittest.TestCase):
     """A failing coverage report names the orchestrator repair route and the failing keys."""
 
@@ -3877,7 +3906,11 @@ class AutopilotPhaseCoverageRepairTests(_ValidatorRunner, unittest.TestCase):
 
 if __name__ == "__main__":
     suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case)
-                               for case in (AutopilotPhaseCoverageTests, AutopilotPhaseCoverageRepairTests))
+                               for case in (
+                                   AutopilotPhaseCoverageTests,
+                                   AutopilotPhaseCoverageReportSchemaTests,
+                                   AutopilotPhaseCoverageRepairTests,
+                               ))
     result = unittest.TextTestRunner(verbosity=1).run(suite)
     total = result.testsRun
     failed = len(result.failures) + len(result.errors)
