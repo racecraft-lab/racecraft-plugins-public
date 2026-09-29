@@ -24,13 +24,13 @@ These are all **dispatch graph** failures. Layer 6 exists to catch them.
 | Class | Goal | Runner |
 |-------|------|--------|
 | **1 — Dispatch fixtures** | Verify the orchestrator routes specific inputs to the right subagent(s) | `run-dispatch-fixtures.py` |
-| **2 — Return-format fixtures** | Verify cross-agent parsing — one agent's output is parseable by its consumer | `run-return-format-fixtures.py` |
+| **2 — Return-format fixtures** | Verify cross-agent parsing — one agent's output is parseable by its consumer. Replay checks dispatch shape and asserts response format only on a retained real response; `--live` always asserts it | `run-return-format-fixtures.py` |
 | **3 — End-to-end fixtures** | Verify the dispatch graph for a real autopilot run has the expected shape | `run-e2e-fixtures.py` |
-| **4 — Grounding fixtures** | Verify capability citations correspond to completed tool calls | `run-grounding-fixtures.py` |
+| **4 — Grounding fixtures** | Verify capability citations correspond to completed tool calls. Replay only: the runner rejects `--live`, and `run-all-fixtures.py --live` replays this class | `run-grounding-fixtures.py` |
 
 ## Coverage matrix
 
-L7 covers every named subagent and every routing branch in
+Layer 6 covers every named subagent and every routing branch in
 `/speckit-pro:speckit-autopilot`. The fixtures are organized by what they
 exercise:
 
@@ -65,6 +65,16 @@ exercise:
 |---|---|
 | 17 | Phase-executor returns error → orchestrator does not retry blindly, does not escalate to grill-me, and defers an unresolved blocker instead of stopping |
 
+### Parallel dispatch and stack management (Class 1, fixtures 18–22)
+
+| Fixture | Scenario | Expected dispatch |
+|---|---|---|
+| 18 | Post-implementation 3-track group with `AGENT_TEAMS_AVAILABLE=false` | 3 background subagents in ONE message, then a parent-owned serial tail |
+| 19 | Phase 7 wave from `partition-phase7-tasks`, disjoint declared ownership | 3 `implement-executor` background dispatches in ONE message, no `isolation` field |
+| 20 | Batched consensus, 3 `[ambiguous]` items | 9 analyst background dispatches in ONE message |
+| 21 | `speckit-resolve-pr` §4c, 3 file partitions | 3 `general-purpose` background dispatches in ONE message |
+| 22 | Stack-manager replay, `detect-stack-manager-plan` evidence | `analyze-executor` and `implement-executor`, no live `gh`, no `grill-me` |
+
 ### Cross-agent parsing (Class 2, fixtures 01–08)
 
 | Fixture | Cross-agent flow |
@@ -85,6 +95,20 @@ exercise:
 | 01 | G1–G3 (Specify → Clarify → Plan) |
 | 02 | G1–G7 (Specify → Clarify → Plan → Checklist → Tasks → Analyze → Implement) |
 
+### Grounding (Class 4, fixtures 01–10)
+
+| Fixture | Scenario |
+|---|---|
+| 01, 04 | grounded answers: the cited tool completed |
+| 02 | fabricated citation: no matching tool call, ungrounded |
+| 03 | abstained: no capability used, no claim made |
+| 05 | errored tool: cannot ground a claim |
+| 06 | malformed note (no `Confidence:`): ungrounded |
+| 07 | several semicolon-separated citations: grounded |
+| 08 | repository-file source: grounded |
+| 09 | fallback disclosure: grounded |
+| 10 | local source next to a fabricated tool citation: ungrounded |
+
 ### Subagents reached
 
 Every named subagent appears in at least one fixture:
@@ -92,11 +116,11 @@ Every named subagent appears in at least one fixture:
 - ✅ `phase-executor` — fixture 12; E2E 01, 02
 - ✅ `clarify-executor` — fixture 03 (redelegation); E2E 01, 02
 - ✅ `checklist-executor` — fixture 15; Class 2 fixture 03
-- ✅ `analyze-executor` — fixture 14; E2E 02
-- ✅ `implement-executor` — fixture 13; E2E 02
-- ✅ `codebase-analyst` — fixtures 01, 02, 03, 06, 07, 08, 10
-- ✅ `domain-researcher` — fixtures 02, 03, 04, 06, 07, 09, 10, 11
-- ✅ `spec-context-analyst` — fixtures 05, 06, 07, 08, 09, 10, 11
+- ✅ `analyze-executor` — fixtures 14, 22; E2E 02
+- ✅ `implement-executor` — fixtures 13, 19, 22; E2E 02
+- ✅ `codebase-analyst` — fixtures 01, 02, 03, 06, 07, 08, 10, 20
+- ✅ `domain-researcher` — fixtures 02, 03, 04, 06, 07, 09, 10, 11, 20
+- ✅ `spec-context-analyst` — fixtures 05, 06, 07, 08, 09, 10, 11, 20
 - ✅ `consensus-synthesizer` — Class 2 fixtures 01, 02, 04, 05
 
 ### What is asserted negative on every fixture
@@ -130,6 +154,18 @@ LLM transcripts. Running `--live` writes an ignored transient
 `transcript.jsonl`, scrubs it immediately, and asserts against that live
 capture. Set `L6_UPDATE_PARSER_FIXTURE=true` with `--live` only when you
 intend to refresh the committed reduced replay fixture.
+
+A fixture with no `parser-fixture.jsonl` fails replay, and a failed live
+capture (for example, no `claude` CLI) fails the fixture instead of asserting
+an older `transcript.jsonl`.
+
+Class 2 response assertions (`response_assertions` in `expected.json`) read
+the subagent's real response text. The reducer keeps that text, redacted and
+capped, so a refreshed fixture fails replay when the response drifts from
+`expected.json`. A fixture that retains no response text skips those
+assertions in replay (each skip is printed) and is checked by `--live`, where
+an empty response fails. The committed Class 2 fixtures retain no response
+text yet, so today their response format is verified only by `--live`.
 
 ## Quick start
 
@@ -211,7 +247,7 @@ reasons. Structural assertions ("for `[codebase]` tag, codebase-analyst
 is in the dispatch set") survive that variance.
 
 If you find yourself wanting an exact match, ask whether L3 functional
-evals would catch it instead. L7 is for the dispatch graph; L3 is for
+evals would catch it instead. Layer 6 is for the dispatch graph; L3 is for
 agent behavior.
 
 ## Transcript PII scrubbing
@@ -221,7 +257,7 @@ machine-specific metadata: local home/tmp paths, session UUIDs,
 request IDs, git branch names, token/cost telemetry, and full
 plugin/tool inventories. Stream deltas also contain fragmented paths,
 timestamps, model signatures, and other run-level telemetry. None of
-that is needed for the L7 parser, and committing it leaks
+that is needed for the Layer 6 parser, and committing it leaks
 developer-machine information.
 
 No full captured transcript should be committed. The committed replay
@@ -262,15 +298,25 @@ To manually regenerate a reduced replay fixture:
 ```bash
 python3 tests/speckit-pro/layer6-integration/reduce-transcript-fixture.py \
   path/to/transcript.jsonl \
-  path/to/expected.json \
   > path/to/parser-fixture.jsonl
 ```
 
 The reducer keeps dispatch prompts and the orchestrator's own text, because
 `must_include_terms` checks read them in replay. It redacts both with the
 privacy scan's patterns (`tests/speckit-pro/lib/privacy_patterns.py`), and
-drops skill arguments and subagent text. Tool results become synthesized
-responses built from `expected.json`.
+drops skill arguments and subagent text. Each subagent response is kept as
+its real text, redacted and capped at 8000 characters; it is never rebuilt
+from `expected.json`.
+
+### Grounding notes (Class 4)
+
+The grounding check parses the evidence note from `capability-discovery.md`:
+`Capability path: <need> -> <source>; Evidence: <citations>; Confidence:
+<high|medium|low>`. `Evidence` may hold several semicolon-separated citations.
+A tool source counts as grounded only when that tool completed without error. A
+repository-file source and a fallback disclosure have no tool call to match, so
+they are their own grounded classes. Fixtures 07 to 09 cover each class, and
+fixture 10 shows a local source does not launder a fabricated tool citation.
 
 ## Live-mode side effects (read this before running `--live`)
 
@@ -310,6 +356,7 @@ Defaults:
 | 1 | $1.00 | `DISPATCH_FIXTURE_BUDGET_USD` |
 | 2 | $1.00 | `RETURN_FORMAT_FIXTURE_BUDGET_USD` |
 | 3 | $10.00 | `E2E_FIXTURE_BUDGET_USD` |
+| 4 | none | replay only, no live capture |
 
 ## How this fits with the other layers
 
@@ -320,9 +367,9 @@ Defaults:
 | L3 | Functional evals (does each skill produce the right output?) | Slow (AI) |
 | L4 | Python unit and contract tests (incl. `transcript_helpers.py`) | Fast |
 | L5 | Agent tool-scoping | Fast |
-| **L7** | **Multi-agent dispatch graph** | **Fast (replay) / Slow (live)** |
+| **L6** | **Multi-agent dispatch graph** | **Fast (replay) / Slow (live)** |
 
-L7 replay is deterministic and runs through the integration suite. L7 live is
+Layer 6 replay is deterministic and runs through the integration suite. Layer 6 live is
 developer-local and runs only when explicitly requested via
 `python3 tests/speckit-pro/run-all.py --integration --live`.
 
@@ -334,15 +381,16 @@ Codex now has explicit orchestration primitives (`spawn_agent`,
 that there is no Codex subagent graph is no longer valid.
 
 Until a Codex transcript fixture format exists, Codex coverage lives in the
-structural layer:
+structural layer (`tests/speckit-pro/layer1-structural/`):
 
-1. `validate-codex-skills.sh` asserts the Codex autopilot skill names the
-   real Codex tools and excludes obsolete tool names.
-2. `validate-codex-skills.sh` asserts every shared skill-name collision
+1. `validate-skill-contracts.py` asserts the Codex autopilot skill names the
+   real Codex tools (`spawn_agent`, `wait_agent`) and its required references.
+2. `validate-skill-contracts.py` asserts every shared skill-name collision
    (`speckit-autopilot`, `speckit-coach`, `grill-me`) has a guard that
    redirects Codex back to `codex-skills/`.
-3. `validate-codex-agents.sh` asserts the installed Codex subagent templates
-   do not include nested `spawn_agent` orchestration.
+3. `validate-agent-contracts.py` asserts the installed Codex subagent
+   templates (`codex-agents/*.toml`) match the roster and declare a supported
+   model, reasoning effort and sandbox mode.
 
 Add a Codex Layer 6 mirror when Codex exposes a stable replayable transcript
 schema for `spawn_agent`/`wait_agent` runs.
