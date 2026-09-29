@@ -181,7 +181,9 @@ class SnapshotIsolationTests(unittest.TestCase):
             snapshot.search("")
 
 
-class SessionAndReceiptTests(unittest.TestCase):
+class SweepSessionCase(unittest.TestCase):
+    """One committed feature and one live sweep session for a single amended comment."""
+
     def setUp(self) -> None:
         self.fixture = GitFixture()
         self.fixture.write("specs/001-safe/spec.md", "# Scope\nold text\n")
@@ -233,6 +235,8 @@ class SessionAndReceiptTests(unittest.TestCase):
         record.update(overrides)
         return record
 
+
+class SessionAndReceiptTests(SweepSessionCase):
     def test_public_session_metadata_never_contains_reviewer_text(self) -> None:
         encoded = json.dumps(self.metadata, sort_keys=True)
         self.assertNotIn(self.comment_canary, encoded)
@@ -552,141 +556,6 @@ class SessionAndReceiptTests(unittest.TestCase):
             )
         self.assertRegex(receipt, r"^sweep-result:v1:[0-9a-f]{64}$")
 
-    def accept_consensus_prior(self, *, escape: bool = False) -> None:
-        receipt = self.session.submit_result("classifier", self.classifier())
-        self.session.accept_receipt(receipt, expected_stage="classifier")
-        for perspective in sweep_isolation.PERSPECTIVES:
-            self.accept_perspective(perspective, f"{perspective} reached a bounded conclusion.", escape=escape and perspective == "domain")
-
-    def accept_perspective(self, perspective: str, finding: str, *, escape: bool = False) -> None:
-        record = {
-            "comment_id": "RC_kwDO123",
-            "perspective": perspective,
-            "finding": finding,
-            "evidence": ["specs/001-safe/plan.md:2"],
-            "escape_hatch": escape,
-        }
-        receipt = self.session.submit_result("perspective", record, perspective=perspective)
-        self.session.accept_receipt(receipt, expected_stage="perspective")
-
-    def accept_first_round_review(self, basis: str) -> dict[str, object]:
-        receipt = self.session.submit_result(
-            "synthesis",
-            self.synthesis(outcome="human_review", agreement=None, basis=basis, edit=None),
-        )
-        return sweep_isolation.apply_synthesis_receipt(
-            self.fixture.root, "specs/001-safe", self.session, receipt, mode="apply"
-        )
-
-    def tiebreak(self, **overrides: object) -> dict[str, object]:
-        return self.synthesis(agreement="tiebreak", **overrides)
-
-    def test_round3_tiebreak_resolves_an_all_disagree_synthesis_through_a_fresh_call(self) -> None:
-        self.accept_consensus_prior()
-        first = self.accept_first_round_review("all_disagree")
-        self.assertEqual("human_review", first["status"])
-        self.assertNotIn("round", first)
-
-        self.session.issue_capability("RC_kwDO123", stage="synthesis")
-        inputs = self.session.consensus_inputs("RC_kwDO123", stage="synthesis")
-        self.assertIs(True, inputs["tiebreak"])
-        self.assertEqual("all_disagree", inputs["prior_basis"])
-        self.assertEqual(3, len(inputs["perspectives"]))
-
-        receipt = self.session.submit_result("synthesis", self.tiebreak())
-        result = sweep_isolation.apply_synthesis_receipt(
-            self.fixture.root, "specs/001-safe", self.session, receipt, mode="apply"
-        )
-        self.assertEqual("applied", result["status"])
-        self.assertEqual(3, result["round"])
-        self.assertEqual("# Plan\nnew text\n", (self.fixture.root / "specs/001-safe/plan.md").read_text())
-        self.assertNotIn("new text", json.dumps(result, sort_keys=True))
-
-    def test_round3_tiebreak_resolves_an_unresolved_escape_without_weakening_round_one(self) -> None:
-        self.accept_consensus_prior(escape=True)
-        with self.assertRaises(sweep_isolation.SchemaViolation):
-            self.session.submit_result("synthesis", self.synthesis())
-        self.accept_first_round_review("escape_unresolved")
-
-        inputs = self.session.consensus_inputs("RC_kwDO123", stage="synthesis")
-        self.assertEqual("escape_unresolved", inputs["prior_basis"])
-        receipt = self.session.submit_result("synthesis", self.tiebreak())
-        result = sweep_isolation.apply_synthesis_receipt(
-            self.fixture.root, "specs/001-safe", self.session, receipt, mode="dry_run"
-        )
-        self.assertEqual("planned", result["status"])
-        self.assertEqual(3, result["round"])
-
-    def test_round3_scope_deferral_is_a_status_not_a_stop_and_writes_nothing(self) -> None:
-        self.accept_consensus_prior()
-        self.accept_first_round_review("all_disagree")
-        before = (self.fixture.root / "specs/001-safe/plan.md").read_bytes()
-        receipt = self.session.submit_result(
-            "synthesis",
-            self.synthesis(outcome="human_review", agreement=None, basis="scope_unsettled", edit=None),
-        )
-        result = sweep_isolation.apply_synthesis_receipt(
-            self.fixture.root, "specs/001-safe", self.session, receipt, mode="apply"
-        )
-        self.assertEqual(
-            {"status": "scope_deferred", "comment_id": "RC_kwDO123", "head": self.head, "round": 3},
-            result,
-        )
-        self.assertEqual(before, (self.fixture.root / "specs/001-safe/plan.md").read_bytes())
-
-    def test_tiebreak_values_are_refused_outside_a_round_three_call(self) -> None:
-        self.accept_consensus_prior()
-        with self.assertRaises(sweep_isolation.SchemaViolation):
-            self.session.submit_result("synthesis", self.tiebreak())
-        with self.assertRaises(sweep_isolation.SchemaViolation):
-            self.session.submit_result(
-                "synthesis",
-                self.synthesis(outcome="human_review", agreement=None, basis="scope_unsettled", edit=None),
-            )
-
-    def test_round3_call_must_use_tiebreak_values_and_runs_once(self) -> None:
-        self.accept_consensus_prior()
-        self.accept_first_round_review("all_disagree")
-        with self.assertRaises(sweep_isolation.SchemaViolation):
-            self.session.submit_result("synthesis", self.synthesis())
-        with self.assertRaises(sweep_isolation.SchemaViolation):
-            self.session.submit_result(
-                "synthesis",
-                self.synthesis(outcome="human_review", agreement=None, basis="all_disagree", edit=None),
-            )
-        receipt = self.session.submit_result("synthesis", self.tiebreak())
-        sweep_isolation.apply_synthesis_receipt(
-            self.fixture.root, "specs/001-safe", self.session, receipt, mode="dry_run"
-        )
-        with self.assertRaises(sweep_isolation.ReceiptViolation):
-            self.session.issue_capability("RC_kwDO123", stage="synthesis")
-
-    def test_a_resolved_synthesis_cannot_be_reopened_by_a_second_synthesis_call(self) -> None:
-        self.accept_consensus_prior()
-        receipt = self.session.submit_result("synthesis", self.synthesis())
-        sweep_isolation.apply_synthesis_receipt(
-            self.fixture.root, "specs/001-safe", self.session, receipt, mode="dry_run"
-        )
-        with self.assertRaises(sweep_isolation.ReceiptViolation):
-            self.session.issue_capability("RC_kwDO123", stage="synthesis")
-
-    def test_a_fresh_perspective_replaces_a_failed_one_and_reaches_synthesis(self) -> None:
-        self.accept_consensus_prior()
-        self.accept_perspective("domain", "A fresh analyst replaced the failed domain call.")
-        inputs = self.session.consensus_inputs("RC_kwDO123", stage="synthesis")
-        self.assertNotIn("tiebreak", inputs)
-        self.assertEqual(
-            "A fresh analyst replaced the failed domain call.",
-            inputs["perspectives"][2]["finding"],
-        )
-        self.session.issue_capability("RC_kwDO123", stage="synthesis")
-
-    def test_broker_manifest_names_the_round_three_values(self) -> None:
-        manifest = json.dumps(sweep_broker.TOOLS, sort_keys=True)
-        for value in ('"tiebreak"', '"scope_unsettled"'):
-            with self.subTest(value=value):
-                self.assertIn(value, manifest)
-
     def test_perspective_and_synthesis_schemas_are_exact(self) -> None:
         perspective = {
             "comment_id": "RC_kwDO123",
@@ -826,6 +695,143 @@ class SessionAndReceiptTests(unittest.TestCase):
             sweep_isolation.apply_synthesis_receipt(
                 self.fixture.root, "specs/missing", self.session, receipt, mode="apply"
             )
+
+
+class Round3TiebreakTests(SweepSessionCase):
+    def accept_consensus_prior(self, *, escape: bool = False) -> None:
+        receipt = self.session.submit_result("classifier", self.classifier())
+        self.session.accept_receipt(receipt, expected_stage="classifier")
+        for perspective in sweep_isolation.PERSPECTIVES:
+            self.accept_perspective(perspective, f"{perspective} reached a bounded conclusion.", escape=escape and perspective == "domain")
+
+    def accept_perspective(self, perspective: str, finding: str, *, escape: bool = False) -> None:
+        record = {
+            "comment_id": "RC_kwDO123",
+            "perspective": perspective,
+            "finding": finding,
+            "evidence": ["specs/001-safe/plan.md:2"],
+            "escape_hatch": escape,
+        }
+        receipt = self.session.submit_result("perspective", record, perspective=perspective)
+        self.session.accept_receipt(receipt, expected_stage="perspective")
+
+    def accept_first_round_review(self, basis: str) -> dict[str, object]:
+        receipt = self.session.submit_result(
+            "synthesis",
+            self.synthesis(outcome="human_review", agreement=None, basis=basis, edit=None),
+        )
+        return sweep_isolation.apply_synthesis_receipt(
+            self.fixture.root, "specs/001-safe", self.session, receipt, mode="apply"
+        )
+
+    def tiebreak(self, **overrides: object) -> dict[str, object]:
+        return self.synthesis(agreement="tiebreak", **overrides)
+
+    def test_round3_tiebreak_resolves_an_all_disagree_synthesis_through_a_fresh_call(self) -> None:
+        self.accept_consensus_prior()
+        first = self.accept_first_round_review("all_disagree")
+        self.assertEqual("human_review", first["status"])
+        self.assertNotIn("round", first)
+
+        self.session.issue_capability("RC_kwDO123", stage="synthesis")
+        inputs = self.session.consensus_inputs("RC_kwDO123", stage="synthesis")
+        self.assertIs(True, inputs["tiebreak"])
+        self.assertEqual("all_disagree", inputs["prior_basis"])
+        self.assertEqual(3, len(inputs["perspectives"]))
+
+        receipt = self.session.submit_result("synthesis", self.tiebreak())
+        result = sweep_isolation.apply_synthesis_receipt(
+            self.fixture.root, "specs/001-safe", self.session, receipt, mode="apply"
+        )
+        self.assertEqual("applied", result["status"])
+        self.assertEqual(3, result["round"])
+        self.assertEqual("# Plan\nnew text\n", (self.fixture.root / "specs/001-safe/plan.md").read_text())
+        self.assertNotIn("new text", json.dumps(result, sort_keys=True))
+
+    def test_round3_tiebreak_resolves_an_unresolved_escape_without_weakening_round_one(self) -> None:
+        self.accept_consensus_prior(escape=True)
+        with self.assertRaises(sweep_isolation.SchemaViolation):
+            self.session.submit_result("synthesis", self.synthesis())
+        self.accept_first_round_review("escape_unresolved")
+
+        inputs = self.session.consensus_inputs("RC_kwDO123", stage="synthesis")
+        self.assertEqual("escape_unresolved", inputs["prior_basis"])
+        receipt = self.session.submit_result("synthesis", self.tiebreak())
+        result = sweep_isolation.apply_synthesis_receipt(
+            self.fixture.root, "specs/001-safe", self.session, receipt, mode="dry_run"
+        )
+        self.assertEqual("planned", result["status"])
+        self.assertEqual(3, result["round"])
+
+    def test_round3_scope_deferral_is_a_status_not_a_stop_and_writes_nothing(self) -> None:
+        self.accept_consensus_prior()
+        self.accept_first_round_review("all_disagree")
+        before = (self.fixture.root / "specs/001-safe/plan.md").read_bytes()
+        receipt = self.session.submit_result(
+            "synthesis",
+            self.synthesis(outcome="human_review", agreement=None, basis="scope_unsettled", edit=None),
+        )
+        result = sweep_isolation.apply_synthesis_receipt(
+            self.fixture.root, "specs/001-safe", self.session, receipt, mode="apply"
+        )
+        self.assertEqual(
+            {"status": "scope_deferred", "comment_id": "RC_kwDO123", "head": self.head, "round": 3},
+            result,
+        )
+        self.assertEqual(before, (self.fixture.root / "specs/001-safe/plan.md").read_bytes())
+
+    def test_tiebreak_values_are_refused_outside_a_round_three_call(self) -> None:
+        self.accept_consensus_prior()
+        with self.assertRaises(sweep_isolation.SchemaViolation):
+            self.session.submit_result("synthesis", self.tiebreak())
+        with self.assertRaises(sweep_isolation.SchemaViolation):
+            self.session.submit_result(
+                "synthesis",
+                self.synthesis(outcome="human_review", agreement=None, basis="scope_unsettled", edit=None),
+            )
+
+    def test_round3_call_must_use_tiebreak_values_and_runs_once(self) -> None:
+        self.accept_consensus_prior()
+        self.accept_first_round_review("all_disagree")
+        with self.assertRaises(sweep_isolation.SchemaViolation):
+            self.session.submit_result("synthesis", self.synthesis())
+        with self.assertRaises(sweep_isolation.SchemaViolation):
+            self.session.submit_result(
+                "synthesis",
+                self.synthesis(outcome="human_review", agreement=None, basis="all_disagree", edit=None),
+            )
+        receipt = self.session.submit_result("synthesis", self.tiebreak())
+        sweep_isolation.apply_synthesis_receipt(
+            self.fixture.root, "specs/001-safe", self.session, receipt, mode="dry_run"
+        )
+        with self.assertRaises(sweep_isolation.ReceiptViolation):
+            self.session.issue_capability("RC_kwDO123", stage="synthesis")
+
+    def test_a_resolved_synthesis_cannot_be_reopened_by_a_second_synthesis_call(self) -> None:
+        self.accept_consensus_prior()
+        receipt = self.session.submit_result("synthesis", self.synthesis())
+        sweep_isolation.apply_synthesis_receipt(
+            self.fixture.root, "specs/001-safe", self.session, receipt, mode="dry_run"
+        )
+        with self.assertRaises(sweep_isolation.ReceiptViolation):
+            self.session.issue_capability("RC_kwDO123", stage="synthesis")
+
+    def test_a_fresh_perspective_replaces_a_failed_one_and_reaches_synthesis(self) -> None:
+        self.accept_consensus_prior()
+        self.accept_perspective("domain", "A fresh analyst replaced the failed domain call.")
+        inputs = self.session.consensus_inputs("RC_kwDO123", stage="synthesis")
+        self.assertNotIn("tiebreak", inputs)
+        self.assertEqual(
+            "A fresh analyst replaced the failed domain call.",
+            inputs["perspectives"][2]["finding"],
+        )
+        self.session.issue_capability("RC_kwDO123", stage="synthesis")
+
+    def test_broker_manifest_names_the_round_three_values(self) -> None:
+        manifest = json.dumps(sweep_broker.TOOLS, sort_keys=True)
+        for value in ('"tiebreak"', '"scope_unsettled"'):
+            with self.subTest(value=value):
+                self.assertIn(value, manifest)
 
 
 class SurfaceConfinementTests(unittest.TestCase):

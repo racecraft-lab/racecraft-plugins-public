@@ -1084,21 +1084,34 @@ class SweepSession:
                 return comment
         raise SchemaViolation("comment id is not part of this sweep session")
 
-    def _accepted_amended_classifier(
-        self, state: dict[str, Any], comment_id: str
-    ) -> dict[str, Any]:
-        digest = state["accepted"]["classifier"].get(comment_id)
-        result = state["results"].get(digest) if isinstance(digest, str) else None
-        payload = result.get("payload") if isinstance(result, dict) else None
-        if not isinstance(payload, dict) or payload.get("class") != "amended":
-            raise ReceiptViolation("an accepted amended classifier result is required")
-        return payload
-
-    def _accepted_synthesis(self, state: dict[str, Any], comment_id: str) -> dict[str, Any] | None:
-        digest = state["accepted"]["synthesis"].get(comment_id)
+    def _accepted_payload(
+        self, state: dict[str, Any], stage: str, comment_id: str
+    ) -> dict[str, Any] | None:
+        digest = state["accepted"][stage].get(comment_id)
         result = state["results"].get(digest) if isinstance(digest, str) else None
         payload = result.get("payload") if isinstance(result, dict) else None
         return payload if isinstance(payload, dict) else None
+
+    def _accepted_amended_classifier(
+        self, state: dict[str, Any], comment_id: str
+    ) -> dict[str, Any]:
+        payload = self._accepted_payload(state, "classifier", comment_id)
+        if payload is None or payload.get("class") != "amended":
+            raise ReceiptViolation("an accepted amended classifier result is required")
+        return payload
+
+    def _require_consensus_prerequisites(
+        self, state: dict[str, Any], comment_id: str, stage: str
+    ) -> None:
+        self._accepted_amended_classifier(state, comment_id)
+        if stage != "synthesis":
+            return
+        accepted = state["accepted"]["perspective"].get(comment_id, {})
+        if not isinstance(accepted, dict) or set(accepted) != set(PERSPECTIVES):
+            raise ReceiptViolation("three accepted perspectives are required")
+        prior = self._accepted_payload(state, "synthesis", comment_id)
+        if prior is not None and (prior["outcome"] != "human_review" or is_tiebreak_result(prior)):
+            raise ReceiptViolation("the round 3 tiebreak follows one unresolved synthesis only")
 
     def issue_capability(
         self,
@@ -1119,16 +1132,7 @@ class SweepSession:
             self._assert_live_head(state)
             self._comment(state, comment_id)
             if stage in {"perspective", "synthesis"}:
-                self._accepted_amended_classifier(state, comment_id)
-            if stage == "synthesis":
-                accepted = state["accepted"]["perspective"].get(comment_id, {})
-                if not isinstance(accepted, dict) or set(accepted) != set(PERSPECTIVES):
-                    raise ReceiptViolation("three accepted perspectives are required")
-                prior = self._accepted_synthesis(state, comment_id)
-                if prior is not None and (
-                    prior["outcome"] != "human_review" or is_tiebreak_result(prior)
-                ):
-                    raise ReceiptViolation("the round 3 tiebreak follows one unresolved synthesis only")
+                self._require_consensus_prerequisites(state, comment_id, stage)
             binding = {
                 "session_id": self.session_id,
                 "head": state["head"],
@@ -1243,7 +1247,7 @@ class SweepSession:
                     edit = normalized.get("edit")
                     if isinstance(edit, dict) and edit.get("file") != classifier.get("target"):
                         raise SchemaViolation("synthesis target differs from the accepted classifier target")
-                prior = self._accepted_synthesis(state, comment_id)
+                prior = self._accepted_payload(state, "synthesis", comment_id)
                 tiebreak = prior is not None and prior["outcome"] == "human_review"
                 if is_tiebreak_result(normalized) != tiebreak:
                     raise SchemaViolation("tiebreak values belong to the round 3 call only")
@@ -1372,7 +1376,7 @@ class SweepSession:
                     "target": classifier["target"],
                     "perspectives": [state["results"][found[name]]["payload"] for name in PERSPECTIVES],
                 }
-                prior = self._accepted_synthesis(state, comment_id)
+                prior = self._accepted_payload(state, "synthesis", comment_id)
                 if prior is not None and prior["outcome"] == "human_review":
                     inputs["tiebreak"] = True
                     inputs["prior_basis"] = prior["basis"]

@@ -229,6 +229,76 @@ class ConsensusSynthesizerRegressionTests(unittest.TestCase):
             dispatch_block(scaffold, 'Agent(subagent_type: "speckit-pro:codebase-analyst"'),
         )
 
+    def test_escape_phrases_and_security_override_are_complete(self) -> None:
+        text = instructions()
+        assert_contains(self, text, (
+            "insufficient context",
+            "not in this codebase",
+            "no precedent in this repo",
+            "outside my scope",
+            "cannot answer from this perspective",
+            "this is a [different category] question",
+            "security item arrives with fewer than three responses",
+        ))
+
+    def test_result_contract_preserves_evidence_dissent_and_exact_edits(self) -> None:
+        text = instructions()
+        assert_contains(self, text, (
+            "**Supporting Analysts:**",
+            "**Dissent:**",
+            "**Artifact Edit:**",
+            "- **File:**",
+            "- **Section:**",
+            "- **Action:**",
+            "- **Content:**",
+            "**Flags:**",
+        ))
+        self.assertIn("Omit the complete `Artifact Edit` block whenever `Flags` is `[ESCAPE_TO_ROUND_2]` or `[ROUND_3_TIEBREAK]`.", text)
+
+    def test_missing_failed_or_malformed_synthesis_cannot_apply_or_complete(self) -> None:
+        required = (
+            "MUST NOT synthesize directly or silently",
+            "missing, failed, or malformed synthesizer result",
+            "authorizes no edit and cannot mark consensus complete",
+        )
+        for path in AUTOPILOT_SKILLS:
+            text = path.read_text(encoding="utf-8")
+            flat = " ".join(text.split())
+            with self.subTest(path=path.name):
+                assert_contains(self, flat, required)
+        protocol = PROTOCOL.read_text(encoding="utf-8")
+        protocol_flat = " ".join(protocol.split())
+        assert_contains(self, protocol_flat, (
+            "applies no edit",
+            "writes no completed Consensus Resolution Log row",
+            "does not mark the item complete",
+            "retry the same named synthesizer once with the same analyst responses",
+            "A second invalid result is",
+            "must never replace it with parent-authored synthesis",
+        ))
+
+    def test_analyze_confidence_is_one_five_criterion_block_even_with_zero_findings(self) -> None:
+        text = instructions()
+        self.assertIn("including a\nclean pass with zero findings", text)
+        self.assertIn("append exactly one block", text)
+        self.assertIn("never emit it more than once in an Analyze pass", text)
+        for label in (
+            "Task understanding",
+            "Approach clarity",
+            "Requirements alignment",
+            "Risk assessment",
+            "Completeness",
+        ):
+            with self.subTest(label=label):
+                self.assertEqual(text.count(f"- {label}: 0.XX"), 1)
+
+        protocol = PROTOCOL.read_text(encoding="utf-8")
+        self.assertIn("even when there were zero findings", protocol)
+        self.assertIn("persists that block exactly once for the current Analyze pass", protocol)
+        self.assertIn("cannot be reconstructed by the parent", protocol)
+
+
+class Round3TiebreakGuidanceTests(unittest.TestCase):
     def test_round3_tiebreak_replaces_every_consensus_human_stop_in_the_protocol(self) -> None:
         # Consensus that cannot agree resolves through a Round 3 agent tiebreak
         # in an interactive and an unattended run alike. Nothing asks or stops.
@@ -364,78 +434,11 @@ class ConsensusSynthesizerRegressionTests(unittest.TestCase):
             with self.subTest(prompt=label):
                 assert_contains(self, text, ("`tiebreak: true`", "agreement `tiebreak`", "basis `scope_unsettled`"))
 
-    def test_escape_phrases_and_security_override_are_complete(self) -> None:
-        text = instructions()
-        assert_contains(self, text, (
-            "insufficient context",
-            "not in this codebase",
-            "no precedent in this repo",
-            "outside my scope",
-            "cannot answer from this perspective",
-            "this is a [different category] question",
-            "security item arrives with fewer than three responses",
-        ))
-
-    def test_result_contract_preserves_evidence_dissent_and_exact_edits(self) -> None:
-        text = instructions()
-        assert_contains(self, text, (
-            "**Supporting Analysts:**",
-            "**Dissent:**",
-            "**Artifact Edit:**",
-            "- **File:**",
-            "- **Section:**",
-            "- **Action:**",
-            "- **Content:**",
-            "**Flags:**",
-        ))
-        self.assertIn("Omit the complete `Artifact Edit` block whenever `Flags` is `[ESCAPE_TO_ROUND_2]` or `[ROUND_3_TIEBREAK]`.", text)
-
-    def test_missing_failed_or_malformed_synthesis_cannot_apply_or_complete(self) -> None:
-        required = (
-            "MUST NOT synthesize directly or silently",
-            "missing, failed, or malformed synthesizer result",
-            "authorizes no edit and cannot mark consensus complete",
-        )
-        for path in AUTOPILOT_SKILLS:
-            text = path.read_text(encoding="utf-8")
-            flat = " ".join(text.split())
-            with self.subTest(path=path.name):
-                assert_contains(self, flat, required)
-        protocol = PROTOCOL.read_text(encoding="utf-8")
-        protocol_flat = " ".join(protocol.split())
-        assert_contains(self, protocol_flat, (
-            "applies no edit",
-            "writes no completed Consensus Resolution Log row",
-            "does not mark the item complete",
-            "retry the same named synthesizer once with the same analyst responses",
-            "A second invalid result is",
-            "must never replace it with parent-authored synthesis",
-        ))
-
-    def test_analyze_confidence_is_one_five_criterion_block_even_with_zero_findings(self) -> None:
-        text = instructions()
-        self.assertIn("including a\nclean pass with zero findings", text)
-        self.assertIn("append exactly one block", text)
-        self.assertIn("never emit it more than once in an Analyze pass", text)
-        for label in (
-            "Task understanding",
-            "Approach clarity",
-            "Requirements alignment",
-            "Risk assessment",
-            "Completeness",
-        ):
-            with self.subTest(label=label):
-                self.assertEqual(text.count(f"- {label}: 0.XX"), 1)
-
-        protocol = PROTOCOL.read_text(encoding="utf-8")
-        self.assertIn("even when there were zero findings", protocol)
-        self.assertIn("persists that block exactly once for the current Analyze pass", protocol)
-        self.assertIn("cannot be reconstructed by the parent", protocol)
-
 
 def main() -> int:
-    suite = unittest.defaultTestLoader.loadTestsFromTestCase(
-        ConsensusSynthesizerRegressionTests,
+    suite = unittest.TestSuite(
+        unittest.defaultTestLoader.loadTestsFromTestCase(case)
+        for case in (ConsensusSynthesizerRegressionTests, Round3TiebreakGuidanceTests)
     )
     return run_counted(suite, label="test-consensus-synthesizer-regressions")
 
