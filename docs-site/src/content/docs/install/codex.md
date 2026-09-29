@@ -168,6 +168,17 @@ files into the selected Codex agent directory. The default destination is
 `~/.codex/agents/`; `.codex/agents/` is the project-scoped destination when you
 explicitly choose a repo-local registration.
 
+SpecKit Pro requires the `typesafe-jev` plugin, and Codex has no plugin
+dependency mechanism, so add it yourself before the checklist below:
+
+```text
+codex plugin add typesafe-jev@racecraft-plugins-public
+```
+
+Restart Codex afterward. The [TypeSafe Jev install guide](/racecraft-plugins-public/install/typesafe-jev/)
+covers the binary and the optional API key. The install skill checks for the
+plugin and stops with this command when it is missing.
+
 Use this checklist:
 
 1. Invoke `@SpecKit Pro -> install` from the SpecKit Pro plugin card, or invoke
@@ -180,18 +191,12 @@ Use this checklist:
    the selected destination.
 5. Restart Codex after the installer reports success.
 
-Expected installed TOML files:
-
-- `autopilot-fast-helper.toml`
-- `phase-executor.toml`
-- `clarify-executor.toml`
-- `checklist-executor.toml`
-- `analyze-executor.toml`
-- `implement-executor.toml`
-- `codebase-analyst.toml`
-- `spec-context-analyst.toml`
-- `domain-researcher.toml`
-- `uat-runbook-author.toml`
+Expected installed TOML files: one for every Codex custom agent that the
+runner's agent inventory lists as `required` or `optional`. That is every
+`.toml` file in `speckit-pro/codex-agents/`. The
+[agents reference](/racecraft-plugins-public/reference/agents/) is generated
+from that inventory and lists each role, so it stays current when the roster
+grows. The installer report names each copied file.
 
 ## Verify The Install
 
