@@ -330,27 +330,6 @@ class Layer7RunnerTests(unittest.TestCase):
                 self.assertFalse(valid)
                 self.assertEqual(counts.failed, 1)
 
-    def test_input_only_compare_sources_require_invariants(self) -> None:
-        runner = import_runner()
-        with tempfile.TemporaryDirectory() as temporary:
-            fixture = make_fixture(
-                Path(temporary),
-                "copied-input-canary",
-                [{"field": "workflow", "source": "workflow.md", "tolerance_key": "workflow"}],
-                {"workflow": {"tolerance": "exact"}},
-            )
-            expected = runner.load_json(fixture / "expected-equivalence.json")
-            tolerance = runner.load_json(fixture / "tolerance.json")
-            with self.subTest(msg="workflow.md-only compare without invariants is rejected"):
-                with self.assertRaisesRegex(ValueError, "copied workflow.md"):
-                    runner.validate_fixture_contracts(fixture, expected, tolerance)
-            with self.subTest(msg="a run-produced compare source is accepted"):
-                produced = copy.deepcopy(expected)
-                produced["compare"].append(
-                    {"field": "artifact", "source": "artifact.md", "tolerance_key": "workflow"}
-                )
-                runner.validate_fixture_contracts(fixture, produced, tolerance)
-
     def test_layer7_runner_contract(self) -> None:
         runner = import_runner()
         source = RUNNER.read_text(encoding="utf-8")
@@ -743,6 +722,58 @@ class Layer7RunnerTests(unittest.TestCase):
             )
 
 
+class Layer7ContractTests(unittest.TestCase):
+    def test_input_only_compare_sources_require_invariants(self) -> None:
+        runner = import_runner()
+        with tempfile.TemporaryDirectory() as temporary:
+            fixture = make_fixture(
+                Path(temporary),
+                "copied-input-canary",
+                [{"field": "workflow", "source": "workflow.md", "tolerance_key": "workflow"}],
+                {"workflow": {"tolerance": "exact"}},
+            )
+            expected = runner.load_json(fixture / "expected-equivalence.json")
+            tolerance = runner.load_json(fixture / "tolerance.json")
+            with self.subTest(msg="workflow.md-only compare without invariants is rejected"):
+                with self.assertRaisesRegex(ValueError, "copied workflow.md"):
+                    runner.validate_fixture_contracts(fixture, expected, tolerance)
+            with self.subTest(msg="a run-produced compare source is accepted"):
+                produced = copy.deepcopy(expected)
+                produced["compare"].append(
+                    {"field": "artifact", "source": "artifact.md", "tolerance_key": "workflow"}
+                )
+                runner.validate_fixture_contracts(fixture, produced, tolerance)
+
+
+class Layer7LiveGuardTests(unittest.TestCase):
+    def test_unchanged_input_workflow_fails_live(self) -> None:
+        runner = import_runner()
+        fixture = LAYER7 / "04-stack-manager-guidance"
+
+        def do_nothing(argv: list[str], **_kwargs: object) -> subprocess.CompletedProcess[str]:
+            return subprocess.CompletedProcess(argv, 0)
+
+        def touch_workflow(argv: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+            with (Path(str(kwargs["cwd"])) / "workflow.md").open("a", encoding="utf-8") as handle:
+                handle.write("\n")
+            return subprocess.CompletedProcess(argv, 0)
+
+        for label, fake, failed in (("do-nothing run", do_nothing, 2), ("run that updates workflow.md", touch_workflow, 0)):
+            with self.subTest(msg=label), tempfile.TemporaryDirectory() as temporary:
+                counts = runner.Counts()
+                with (
+                    patch.dict(os.environ, {"L7_OUT": temporary}),
+                    patch.object(runner, "resolve_executable", return_value="claude"),
+                    patch.object(runner.subprocess, "run", side_effect=fake),
+                    contextlib.redirect_stdout(io.StringIO()),
+                ):
+                    runner.run_fixture_live(fixture, runner.Config(mode="live"), counts)
+                self.assertEqual(counts.failed, failed)
+
+
 if __name__ == "__main__":
-    suite = unittest.defaultTestLoader.loadTestsFromTestCase(Layer7RunnerTests)
+    loader = unittest.defaultTestLoader
+    suite = unittest.TestSuite(
+        loader.loadTestsFromTestCase(case) for case in (Layer7RunnerTests, Layer7ContractTests, Layer7LiveGuardTests)
+    )
     raise SystemExit(run_counted(suite, label="test-parity-runner"))
