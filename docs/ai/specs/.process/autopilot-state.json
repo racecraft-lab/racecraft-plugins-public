@@ -271,7 +271,7 @@
       "status": "pending"
     }
   ],
-  "updated_at": "2026-09-29T01:20:47Z",
+  "updated_at": "2026-09-29T02:05:11Z",
   "prerequisites": {
     "status": "completed",
     "all_pass": true,
@@ -2114,7 +2114,34 @@
           }
         },
         "implementation_checkpoint": {
-          "status": "pending"
+          "status": "complete",
+          "evidence_path": "specs/hrns-015-autopilot-gate-pr-emission-repair/.process/checkpoints/us6.json",
+          "checkpoint_evidence_sha": "sha256:4ccc0ac85b0c011ebb7f2a1f03452fa0a0ef45c828df2c85638812cca120da40",
+          "verification_evidence_path": "specs/hrns-015-autopilot-gate-pr-emission-repair/.process/verification/us6.json",
+          "verification_evidence_sha": "sha256:7c55000fc20d9d61a6491b8a9850534747d1611e6dc473697d8f04fe22bc8573",
+          "commit_sha": "ac06e2d512c48b2c3b9bb31aa0cac480c187f84d",
+          "head_sha": "ac06e2d512c48b2c3b9bb31aa0cac480c187f84d",
+          "completed_at": "2026-09-29T02:05:11Z",
+          "completed_task_ids": [
+            "T012",
+            "T013"
+          ],
+          "required_verification_gate_ids": [
+            "focused_tests",
+            "quick_suite",
+            "ci_suite",
+            "artifact_consistency",
+            "docs_validation",
+            "python_lint",
+            "independent_critical_high_review",
+            "host_parity"
+          ],
+          "summary": "B2b complete slice budgets verified; 16 source paths plus 4 tracked process paths and the HRNS-015 index remain below the 23-path cap, one production path, 266 authored non-process changed lines. Final emitted PR diff and LOC remain pending.",
+          "validation": [
+            "T012-T013 RED, GREEN and refactor accepted in the existing routing-epoch2 journal",
+            "final quick suite 10,266/10,266 and CI suite 6/6 dispatches passed",
+            "independent B2b fail-open findings corrected red-first and re-reviewed clean"
+          ]
         },
         "emission_mapping": {
           "status": "pending"

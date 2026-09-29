@@ -24,7 +24,7 @@ The current marker contract uses `kind=user_story`, `id=usN` for an unsplit stor
 | A3 | `us3` | US3 | T008–T009 | 2 | 24 | Source delta: 18 paths; 22 with four tracked process paths; 204 authored non-process changed lines; final PR base/head diff and LOC pending |
 | B1a | `us4` | US4 | T010 | 1 | 22 | Source delta: 18 paths; 22 with four tracked process paths; 497 authored non-process changed lines; final PR base/head diff and LOC pending |
 | B1b | `us5` | US5 | T011 | 2 | 23 | Source delta: 19 paths; 23 with four tracked process paths; 481 authored non-process changed lines; final PR base/head diff and LOC pending |
-| B2b | `us6` | US6 | T012–T013 | 1 | 23 | Candidate only; actual diff/LOC unmeasured |
+| B2b | `us6` | US6 | T012–T013 | 1 | 23 | Source delta: 16 paths; 21 with four tracked process paths and index; 266 authored non-process changed lines; final PR base/head diff and LOC pending |
 | B3a | `us7` | US7 | T014 | 1 | 18 | Candidate only; actual diff/LOC unmeasured |
 | B3b | `us8` | US8 | T015–T016 | 2 | 22 | Candidate only; actual diff/LOC unmeasured |
 | C1a1 | `us9` | US9 | T017 | 1 | 24 | Candidate only; actual diff/LOC unmeasured |
@@ -273,6 +273,8 @@ Tasks: T012–T013. Requirements: FR-014, FR-028, FR-029, FR-026. **23 candidate
 | process/evidence | modify | `specs/hrns-015-autopilot-gate-pr-emission-repair/.process/task-execution.json` | tasks source fingerprint |
 | process/evidence | modify | `specs/hrns-015-autopilot-gate-pr-emission-repair/.process/slice-inventory.md` | RED/GREEN and measured budget evidence |
 | generated index | regenerate | `specs/hrns-015-autopilot-gate-pr-emission-repair/SPEC-MOC.md` | PR/index refresh candidate |
+
+The B2b source checkpoint `ac06e2d512c48b2c3b9bb31aa0cac480c187f84d` changes 16 tracked paths, including one production path. Four tracked process updates (workflow, state, tasks, inventory) and the HRNS-015 index bring the marker to 21 budget-counted paths, below its 23-path cap; checkpoint and verification reports are outside that budget. Authored non-process changes total 266 lines. The unused task-execution sidecar and docs reference candidate have no diff. RED/GREEN/refactor helper cases, quick suite 10,266/10,266, CI suite 6/6, generated-artifact check, full docs validation, pinned Python lint, privacy 14/14, host parity and independent review passed. Independent review's two fail-open cases were repaired red-first and rechecked clean. Final emitted PR base/head diff and reviewable LOC remain mandatory.
 
 ### B3a — US7 required-refactor estimate
 

@@ -1,0 +1,52 @@
+{
+  "schema_version": "verification-report.v1",
+  "feature_id": "HRNS-015",
+  "marker_id": "us6",
+  "status": "pass",
+  "generated_at": "2026-09-29T02:05:11Z",
+  "verified_commit_sha": "ac06e2d512c48b2c3b9bb31aa0cac480c187f84d",
+  "required_gate_ids": [
+    "focused_tests",
+    "quick_suite",
+    "ci_suite",
+    "artifact_consistency",
+    "docs_validation",
+    "python_lint",
+    "independent_critical_high_review",
+    "host_parity"
+  ],
+  "results": {
+    "focused_tests": {
+      "status": "pass",
+      "evidence": "B2b read-only helper file passed 156/156. RED reproduced the new slice and greenfield cases and two later independent-review fail-open cases; GREEN and refactor passed. #694 multi/pragma/nobudget baseline remained green."
+    },
+    "quick_suite": {
+      "status": "pass",
+      "evidence": "Corrected B2b source quick suite passed 10,266/10,266 with toolchain preflight and native exit 0; privacy scan 14/14."
+    },
+    "ci_suite": {
+      "status": "pass",
+      "evidence": "Corrected B2b source CI-equivalent default suite passed 6/6 dispatches, including layer 7 host parity, native exit 0."
+    },
+    "artifact_consistency": {
+      "status": "pass",
+      "evidence": "After source commit ac06e2d5, refresh-release-artifacts.py --check reported generated artifacts match the source tree."
+    },
+    "docs_validation": {
+      "status": "pass",
+      "evidence": "Full docs validation passed reference, Astro, links, quality, 88 browser checks, and 4 gallery checks; reference:check remained current after correction."
+    },
+    "python_lint": {
+      "status": "pass",
+      "evidence": "Pinned repository wrapper Ruff and isolated pinned mypy passed across 54 source files."
+    },
+    "independent_critical_high_review": {
+      "status": "pass",
+      "evidence": "Independent B2b review found an undeclared slice table and a missing parent total-field fail-open. Both were repaired red-first and re-reviewed with status block, pass false and exit 1; no remaining finding."
+    },
+    "host_parity": {
+      "status": "pass",
+      "evidence": "Shared source guidance and runner matched generated Claude and Codex payloads byte-for-byte; CI-equivalent layer 7 parity passed."
+    }
+  }
+}
