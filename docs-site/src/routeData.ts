@@ -10,6 +10,7 @@ import {
   pluginPages,
   type SchemaItem,
 } from './lib/schema';
+import { routeKey } from './lib/route-key';
 
 /**
  * Starlight route-data middleware (DOC-014, D2).
@@ -55,16 +56,6 @@ function siteBase(): string {
 
 const SITE_BASE = siteBase();
 
-/**
- * Map a route id to its OG card key — identical to `og/[...slug].ts`'s mapping so
- * the `og:image` URL references the card that endpoint actually generates. Root
- * (`index` or empty) → `index`; otherwise the id minus any trailing `/index`.
- */
-function ogCardKey(id: string): string {
-  if (id === 'index' || id === '' || id === '/') return 'index';
-  return (id.endsWith('/index') ? id.slice(0, -'/index'.length) : id).normalize();
-}
-
 /** Build the per-route `@graph`: site-wide entities + SoftwareApplication on plugin pages. */
 function buildRouteGraph(slug: string) {
   const items: SchemaItem[] = [
@@ -103,7 +94,7 @@ export const onRequest = defineRouteMiddleware((context) => {
   // URL derives from SITE_BASE, so it finalizes at the DOC-012 launch flip.
   // Starlight 0.40 already emits `twitter:card = summary_large_image`, so we add
   // ONLY the image tags it lacks (no default image) — never a duplicate card tag.
-  const ogImage = `${SITE_BASE}/og/${ogCardKey(slug)}.png`;
+  const ogImage = `${SITE_BASE}/og/${routeKey(slug)}.png`;
   starlightRoute.head.push(
     { tag: 'meta', attrs: { property: 'og:image', content: ogImage } },
     { tag: 'meta', attrs: { name: 'twitter:image', content: ogImage } },

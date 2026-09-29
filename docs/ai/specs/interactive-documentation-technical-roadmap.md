@@ -22,7 +22,7 @@ The feature is decomposed into 21 specifications across 8 dependency tiers (Tier
 
 **Execution Order:** DOC-001 -> DOC-002 -> DOC-003/DOC-004 -> DOC-005/DOC-006 -> DOC-007/DOC-008/DOC-009 -> DOC-010 -> **[Phase 7]** DOC-011 (deploy + noindex) -> (DOC-013, DOC-014, DOC-015) -> (DOC-016, DOC-017) -> DOC-018 -> **[Phase 8]** DOC-019 -> DOC-020 ; DOC-021 -> **[Launch gate — DEAD LAST]** DOC-012 (flip to root, attach plugins.racecraft.co, remove noindex)
 
-**Public-exposure policy:** GitHub Pages is publicly reachable the moment DOC-011 deploys, so DOC-011 ships the site with a search-engine `noindex` + `robots` disallow and keeps it on the obscure `racecraft-lab.github.io/racecraft-plugins-public/` staging URL throughout build-out — reachable for team preview, but not indexed or discoverable. **DOC-012 is intentionally DEAD LAST**: attaching the custom domain and removing `noindex` is the single go-live action that makes the site overtly public, gated behind every content, branding, SEO, and accessibility spec.
+**Public-exposure policy:** GitHub Pages is publicly reachable the moment DOC-011 deploys, so DOC-011 ships the site with a search-engine `noindex` meta tag (DOC-014 later replaced the `robots.txt` disallow with an allow-all endpoint) and keeps it on the obscure `racecraft-lab.github.io/racecraft-plugins-public/` staging URL throughout build-out — reachable for team preview, but not indexed or discoverable. **DOC-012 is intentionally DEAD LAST**: attaching the custom domain and removing the `noindex` meta tag is the single go-live action that makes the site overtly public, gated behind every content, branding, SEO, and accessibility spec.
 
 ## Reviewability Contract
 
@@ -407,7 +407,7 @@ Budget result: within budget
 
 **Priority:** P1 | **Depends On:** DOC-010 (site builds + validates) | **Enables:** staged (noindex) preview of every later spec; DOC-012 go-live
 
-**Status:** Completed and archived after PR #243. Canonical implementation now lives in `.github/workflows/deploy-docs.yml`, the staging noindex/robots guard under `docs-site/`, and the CI/CD verification runbook at `docs/ai/specs/cicd-release-pipeline-verification.md`. The first post-merge Deploy Docs run failed because repository Pages was not yet enabled/configured for GitHub Actions; that is the documented manual operator prerequisite before expecting publication. The guard is removed only by DOC-012 at go-live.
+**Status:** Completed and archived after PR #243. Canonical implementation now lives in `.github/workflows/deploy-docs.yml`, the staging noindex guard under `docs-site/`, and the CI/CD verification runbook at `docs/ai/specs/cicd-release-pipeline-verification.md`. The first post-merge Deploy Docs run failed because repository Pages was not yet enabled/configured for GitHub Actions; that is the documented manual operator prerequisite before expecting publication. The guard is removed only by DOC-012 at go-live.
 
 **Goal:** Continuously build and deploy `docs-site/` to GitHub Pages so the documentation is reachable at a live URL.
 
@@ -422,7 +422,7 @@ Budget result: archived as one review-remediation slice after PR #243
 - Add `.github/workflows/deploy-docs.yml` using `actions/configure-pages`, `actions/upload-pages-artifact`, and `actions/deploy-pages`, with `permissions: pages: write, id-token: write` and a `github-pages` environment.
 - Trigger on push to `main` (path-filtered to `docs-site/**` and generated-reference sources) plus `workflow_dispatch`; build under Node >=22.12 with pnpm; gate deploy on `pnpm --dir docs-site validate`.
 - Enable Pages with source = GitHub Actions (or `enablement: true`) and document the one-time repo setting.
-- Ship a build-out `noindex` guard: a `robots.txt` disallow plus `<meta name="robots" content="noindex, nofollow">` (via Starlight `head`) so the staging site is not indexed or discoverable; DOC-012 removes it at launch.
+- Ship a build-out `noindex` guard: `<meta name="robots" content="noindex, nofollow">` (via Starlight `head`) so the staging site is not indexed or discoverable; DOC-012 removes it at launch. (DOC-011 originally paired it with a `robots.txt` disallow; DOC-014 replaced that with an allow-all `robots.txt.ts` endpoint, so the meta tag is now the only guard.)
 - Add a deploy runbook note to `docs/ai/specs/cicd-release-pipeline-verification.md` and a CLAUDE.md CI/CD note.
 
 **Out of Scope:**
@@ -452,7 +452,7 @@ Budget result: within budget (docs/config heavy, low production LOC)
 - Set `site: 'https://plugins.racecraft.co'` and remove/blank `base` in `astro.config.mjs`.
 - Migrate every hardcoded `/racecraft-plugins-public/...` link in content, the reference generator, and the quality-validator fixtures — prefer a single base-aware helper over scattered literals.
 - Add `docs-site/public/CNAME` = `plugins.racecraft.co`; document the Epik CNAME record (`plugins` -> `racecraft-lab.github.io`) and enabling Enforce HTTPS.
-- Remove the DOC-011 `noindex`/`robots`-disallow guard and switch `robots.txt` to allow indexing — this is the go-live moment that makes the site publicly discoverable.
+- Remove the DOC-011 `noindex` meta guard — this is the go-live moment that makes the site publicly discoverable. The `robots.txt` endpoint already allows crawling (DOC-014), so it needs no change.
 - Re-run `pnpm --dir docs-site validate` to prove zero broken internal links after migration.
 
 **Out of Scope:**
