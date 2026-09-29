@@ -8,6 +8,8 @@ from pathlib import PurePosixPath
 import re
 from typing import Any, Mapping
 
+import native_eval_strict_json as strict_json
+
 
 CHECK_FIELDS = frozenset({
     "request_path", "helper_id", "operation", "mode", "expected_status",
@@ -101,77 +103,15 @@ def request_paths(case: Mapping[str, object]) -> tuple[str, ...]:
     return tuple(result)
 
 
-def _unique_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
-    value: dict[str, Any] = {}
-    for key, item in pairs:
-        if key in value:
-            raise RunnerResultError(f"duplicate JSON key: {key}")
-        value[key] = item
-    return value
-
-
 def _loads(value: str | bytes, label: str) -> Any:
-    try:
-        return json.loads(
-            value, object_pairs_hook=_unique_object,
-            parse_constant=lambda token: (_ for _ in ()).throw(
-                RunnerResultError(f"invalid JSON constant: {token}")),
-        )
-    except (UnicodeError, json.JSONDecodeError, RunnerResultError, RecursionError) as exc:
-        raise RunnerResultError(f"{label} is malformed JSON") from exc
-
-
-def _strict_equal(left: object, right: object) -> bool:
-    if type(left) is not type(right):
-        return False
-    if isinstance(left, dict):
-        return left.keys() == right.keys() and all(
-            _strict_equal(left[key], right[key]) for key in left
-        )
-    if isinstance(left, list):
-        return len(left) == len(right) and all(
-            _strict_equal(a, b) for a, b in zip(left, right, strict=True)
-        )
-    return left == right
-
-
-def _canonical_bytes(value: object) -> bytes:
-    return json.dumps(
-        value, sort_keys=True, separators=(",", ":"),
-        ensure_ascii=False, allow_nan=False,
-    ).encode("utf-8")
-
-
-def _output_text(output: object) -> str:
-    if isinstance(output, str):
-        return output
-    _need(isinstance(output, list) and all(
-        isinstance(item, Mapping) and item.get("type") == "text"
-        and isinstance(item.get("text"), str) for item in output
-    ), "native runner output is malformed")
-    return "".join(str(item["text"]) for item in output)
+    return strict_json.loads(value, error=RunnerResultError, label=f"{label} is malformed JSON")
 
 
 def _json_stream(output: object, label: str) -> list[object]:
-    text = _output_text(output)
-    decoder = json.JSONDecoder(
-        object_pairs_hook=_unique_object,
-        parse_constant=lambda token: (_ for _ in ()).throw(
-            RunnerResultError(f"invalid JSON constant: {token}")),
+    text = strict_json.output_text(
+        output, error=RunnerResultError, message="native runner output is malformed",
     )
-    values: list[object] = []
-    position = 0
-    try:
-        while position < len(text):
-            while position < len(text) and text[position].isspace():
-                position += 1
-            if position == len(text):
-                break
-            value, position = decoder.raw_decode(text, position)
-            values.append(value)
-    except (json.JSONDecodeError, RunnerResultError, RecursionError) as exc:
-        raise RunnerResultError(f"{label} is truncated or malformed") from exc
-    return values
+    return strict_json.stream(text, error=RunnerResultError, label=f"{label} is truncated or malformed")
 
 
 def _request(request_bytes: bytes, check: Mapping[str, object]) -> dict[str, Any]:
@@ -245,14 +185,14 @@ def parse_runner_response(output: object, request: Mapping[str, object]) -> dict
           and data.get("writes_state") is False,
           "native runner result data is malformed")
     expected_stdin = {key: value for key, value in request.items() if key != "request_id"}
-    _need(_strict_equal(data.get("stdin_request"), expected_stdin),
+    _need(strict_json.strict_equal(data.get("stdin_request"), expected_stdin),
           "native runner response did not consume the staged request")
     stdout = _capture(data["stdout"], "stdout")
     _capture(data["stderr"], "stderr")
     stdout_json = _loads(stdout["text"], "native runner stdout")
-    _need(_strict_equal(stdout_json, data.get("stdout_json")),
+    _need(strict_json.strict_equal(stdout_json, data.get("stdout_json")),
           "native runner stdout_json contradicts captured stdout")
-    encoded = _canonical_bytes(response)
+    encoded = strict_json.canonical_bytes(response)
     return {
         "response": response,
         "response_sha256": hashlib.sha256(encoded).hexdigest(),
@@ -295,7 +235,7 @@ def bind_result(
         request_raw_text = request_bytes.decode("utf-8", errors="strict")
     except UnicodeError as exc:
         raise RunnerResultError("controller-staged runner request is not UTF-8") from exc
-    canonical_request = _canonical_bytes(request)
+    canonical_request = strict_json.canonical_bytes(request)
     request_sha = hashlib.sha256(request_bytes).hexdigest()
     return {
         "check_id": check.get("id"),
@@ -320,13 +260,10 @@ def bind_result(
 
 
 def attach_receipt(observation: dict[str, Any], rows: list[Mapping[str, object]]) -> None:
-    metadata = observation.get("native_metadata")
-    _need(isinstance(metadata, dict) and "controller_runner_results" not in metadata,
-          "native runner observation metadata is malformed")
-    metadata["controller_runner_results"] = {
-        "schema": RECEIPT_SCHEMA, "authority": RECEIPT_AUTHORITY,
-        "checks": [dict(row) for row in rows],
-    }
+    strict_json.attach_receipt(
+        observation, rows, key="controller_runner_results", schema=RECEIPT_SCHEMA,
+        authority=RECEIPT_AUTHORITY, error=RunnerResultError,
+    )
 
 
 def _lookup(value: object, path: object, label: str) -> object:
@@ -347,9 +284,9 @@ def _receipt_request(
           and hashlib.sha256(request_raw).hexdigest() == actual["request_sha256"],
           "controller runner raw request evidence changed")
     request = _request(request_raw, check)
-    _need(_strict_equal(request, actual["request"]),
+    _need(strict_json.strict_equal(request, actual["request"]),
           "controller runner request projection changed")
-    request_canonical = _canonical_bytes(request)
+    request_canonical = strict_json.canonical_bytes(request)
     _need(len(request_canonical) == actual["request_canonical_bytes"]
           and hashlib.sha256(request_canonical).hexdigest()
           == actual["request_canonical_sha256"],
@@ -406,7 +343,7 @@ def _receipt_row(check: Mapping[str, object], observation: Mapping[str, object])
           and isinstance(actual.get("status"), str)
           and type(actual.get("exit_code")) is int,
           "controller runner result evidence is malformed")
-    encoded = _canonical_bytes(actual["response"])
+    encoded = strict_json.canonical_bytes(actual["response"])
     _need(len(encoded) == actual["response_bytes"]
           and hashlib.sha256(encoded).hexdigest() == actual["response_sha256"],
           "controller runner response evidence changed")
@@ -414,7 +351,7 @@ def _receipt_row(check: Mapping[str, object], observation: Mapping[str, object])
     parsed = parse_runner_response(encoded.decode("utf-8"), request)
     _need(parsed["status"] == actual["status"]
           and parsed["exit_code"] == actual["exit_code"]
-          and _strict_equal(parsed["stdout_json"], actual["stdout_json"]),
+          and strict_json.strict_equal(parsed["stdout_json"], actual["stdout_json"]),
           "controller runner result projection changed")
     native_exit = call["native_exit_code"]
     _need((native_exit is None or native_exit == actual["exit_code"])
@@ -440,13 +377,13 @@ def grade_result(
         ("exit_code", check["expected_exit_code"]),
         ("request_path", check["request_path"]),
     ):
-        if not _strict_equal(actual[field], expected):
+        if not strict_json.strict_equal(actual[field], expected):
             mismatches.append(field)
     try:
         stdout_value = _lookup(
             actual["stdout_json"], check["stdout_field_path"], "runner stdout field",
         )
-        if not _strict_equal(stdout_value, check["expected_stdout_value"]):
+        if not strict_json.strict_equal(stdout_value, check["expected_stdout_value"]):
             mismatches.append("stdout outcome")
     except RunnerResultError:
         mismatches.append("stdout outcome")
@@ -463,7 +400,7 @@ def grade_result(
                 expected_report, check["response_value_path"],
                 "controller runner response",
             )
-        if not _strict_equal(reported, expected_report):
+        if not strict_json.strict_equal(reported, expected_report):
             mismatches.append("reported response binding")
     except RunnerResultError:
         mismatches.append("reported response binding")

@@ -15,6 +15,8 @@ import sys
 import tempfile
 from typing import Any, Mapping
 
+import native_eval_strict_json as strict_json
+
 
 SCHEMA_VERSION = "native-eval-fixtures/v1"
 GIT_SCHEMA_VERSION = "native-eval-fixtures/v2"
@@ -42,17 +44,12 @@ def _relative_path(value: object, label: str) -> PurePosixPath:
     return path
 
 
-def _unique_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
-    _require(len(pairs) == len({key for key, _value in pairs}), "fixture plan contains a duplicate JSON key")
-    return dict(pairs)
-
-
 def load_plan(path: str | Path) -> dict[str, Any]:
     """Read a strict fixture plan without accepting duplicate object keys."""
     plan_path = Path(path)
     try:
-        value = json.loads(plan_path.read_text(encoding="utf-8"), object_pairs_hook=_unique_object)
-    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        value = strict_json.loads(plan_path.read_bytes(), error=ValueError)
+    except (OSError, ValueError) as exc:
         raise ValueError(f"fixture plan could not be read: {exc}") from exc
     _require(isinstance(value, dict), "fixture plan must be an object")
     source_root = value.get("source_root")

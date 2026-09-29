@@ -12,7 +12,7 @@ import json
 from pathlib import PurePosixPath
 from typing import Any, Mapping
 
-from native_eval_catalog import _unique_object
+import native_eval_strict_json as strict_json
 from native_eval_grading import grade_observation
 
 
@@ -343,13 +343,7 @@ def validate_judge_response(case: dict[str, Any], request: dict[str, object], ra
     references = _request_references(request, checks)
     if not isinstance(raw_json, str):
         raise ValueError("judge response must be JSON text")
-    try:
-        response = json.loads(
-            raw_json, object_pairs_hook=_unique_object,
-            parse_constant=lambda token: (_ for _ in ()).throw(ValueError(f"invalid constant {token}")),
-        )
-    except (ValueError, json.JSONDecodeError) as exc:
-        raise ValueError(f"judge response is not strict JSON: {exc}") from exc
+    response = strict_json.loads(raw_json, error=ValueError, label="judge response is not strict JSON")
     expected = {check["id"] for check in checks}
     if not isinstance(response, dict) or set(response) != expected:
         raise ValueError("judge response ids must exactly match semantic checks")

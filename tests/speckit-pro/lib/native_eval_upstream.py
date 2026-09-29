@@ -15,6 +15,7 @@ from datetime import datetime
 from pathlib import Path, PurePosixPath
 from typing import Any
 
+import native_eval_strict_json as strict_json
 import native_eval_toolchain
 
 
@@ -555,23 +556,7 @@ def _validated_timestamp(value: object, label: str) -> None:
 
 
 def _load_json_bytes(payload: bytes, label: str) -> dict[str, Any]:
-    def unique(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
-        result: dict[str, Any] = {}
-        for key, value in pairs:
-            if key in result:
-                raise UpstreamStageError(f"{label} contains a duplicate JSON key")
-            result[key] = value
-        return result
-
-    def reject_constant(value: str) -> None:
-        raise UpstreamStageError(f"{label} contains a nonstandard JSON constant: {value}")
-
-    try:
-        value = json.loads(
-            payload.decode("utf-8"), object_pairs_hook=unique, parse_constant=reject_constant,
-        )
-    except (UnicodeError, json.JSONDecodeError) as error:
-        raise UpstreamStageError(f"{label} is unreadable") from error
+    value = strict_json.loads(payload, error=UpstreamStageError, label=f"{label} is unreadable")
     if not isinstance(value, dict):
         raise UpstreamStageError(f"{label} must be a JSON object")
     return value

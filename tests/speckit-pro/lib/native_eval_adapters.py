@@ -31,6 +31,7 @@ import native_eval_git_observation
 import native_eval_pairing
 import native_eval_runner_result
 import native_eval_runtime
+import native_eval_strict_json as strict_json
 import native_eval_toolchain
 import native_eval_trigger
 import native_eval_upstream
@@ -478,9 +479,8 @@ def _codex_native_skill_reference(payload_root: Path, skill_name: str) -> str:
     manifest = payload_root / ".codex-plugin" / "plugin.json"
     try:
         metadata = manifest.lstat()
-        payload = manifest.read_bytes().decode("utf-8", errors="strict")
-        parsed = json.loads(payload, object_pairs_hook=_unique_object)
-    except (OSError, UnicodeError, json.JSONDecodeError, ValueError) as exc:
+        parsed = strict_json.loads(manifest.read_bytes(), error=ValueError)
+    except (OSError, ValueError) as exc:
         raise NativeAdapterError("staged Codex plugin manifest is unavailable") from exc
     _require(stat.S_ISREG(metadata.st_mode) and not stat.S_ISLNK(metadata.st_mode),
              "staged Codex plugin manifest must be a regular file")
@@ -2576,6 +2576,9 @@ def _prepare_claude(
         staged_setup = case_dir / "native_eval_fixture_setup.py"
         shutil.copyfile(Path(fixture_setup.__file__).resolve(), staged_setup)
         staged_setup.chmod(0o500)
+        staged_json = case_dir / "native_eval_strict_json.py"
+        shutil.copyfile(Path(strict_json.__file__).resolve(), staged_json)
+        staged_json.chmod(0o500)
         launcher = "#!/bin/sh\nexec " + shlex.quote(str(Path(sys.executable).resolve()))
         if prepared_upstream is not None:
             staged_upstream = case_dir / "native_eval_upstream.py"
@@ -3372,18 +3375,13 @@ def _decode_stream(payload: bytes, label: str) -> str:
         return payload.decode("utf-8", errors="surrogateescape")
 
 
-def _unique_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
-    _require(len(pairs) == len({key for key, _value in pairs}), "native framework result has duplicate keys")
-    return dict(pairs)
-
-
 def _read_claude_result(prepared: PreparedTrial) -> dict[str, Any]:
     result_path = prepared.result_path
     if result_path is None or not result_path.is_file() or result_path.is_symlink():
         raise NativeAdapterError("Claude framework result is unavailable")
     try:
-        result = json.loads(result_path.read_text(encoding="utf-8"), object_pairs_hook=_unique_object)
-    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        result = strict_json.loads(result_path.read_bytes(), error=ValueError)
+    except (OSError, ValueError) as exc:
         raise NativeAdapterError("Claude framework result is malformed") from exc
     _require(isinstance(result, dict) and result.get("schemaVersion") == 1,
              "Claude framework result has an unsupported schemaVersion")
@@ -3988,8 +3986,8 @@ def _read_claude_fixture_receipt(
              "Claude fixture receipt is unsafe")
     try:
         payload = path.read_bytes()
-        receipt = json.loads(payload.decode("utf-8", errors="strict"), object_pairs_hook=_unique_object)
-    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        receipt = strict_json.loads(payload, error=ValueError)
+    except (OSError, ValueError) as exc:
         raise NativeAdapterError("Claude fixture receipt is malformed") from exc
     _require(isinstance(receipt, dict) and receipt == settings["expected_result"],
              "Claude fixture receipt does not match expected Git materialization")
