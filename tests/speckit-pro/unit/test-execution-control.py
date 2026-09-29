@@ -1833,28 +1833,20 @@ class EscalationAllowanceTests(_ExecutionControlFixture, unittest.TestCase):
         self.assertEqual(escalation_tier3_used(opened["ledger"]), 1)
         self.assert_schema_valid(opened["ledger"])
 
-    def test_finalize_observations_are_counted_by_the_runner_and_validated(self):
-        from speckit_pro_runner.execution_control import (FINALIZE_OBSERVATION_CAP, finalize_observation_key,
-                                                          record_finalize_observations, validate_ledger)
+    def test_forged_finalize_observations_fail_closed(self):
+        from speckit_pro_runner.execution_control import FINALIZE_OBSERVATION_CAP, finalize_observation_key, validate_ledger
 
-        path = self.root / self.deferred["ledger_path"]
         key = finalize_observation_key("missing_gate", "a" * 40, "G7")
-        for _ in range(FINALIZE_OBSERVATION_CAP + 2):
-            record_finalize_observations(self.root, self.deferred["ledger_path"], self.run_id, [key, key])
-        ledger = json.loads(path.read_text())
-        self.assertEqual(ledger["finalize_observations"], {key: FINALIZE_OBSERVATION_CAP})
-        self.assert_schema_valid(ledger)
-        with self.assertRaises(ValueError):
-            record_finalize_observations(self.root, self.deferred["ledger_path"], "another-run", [key])
-        valid = path.read_bytes()
+        valid = self.deferred["ledger"]
+        validate_ledger({**valid, "finalize_observations": {key: FINALIZE_OBSERVATION_CAP}})
+        self.assert_schema_valid({**valid, "finalize_observations": {key: FINALIZE_OBSERVATION_CAP}})
         for name, forged in {"bad kind": {f"stop:{'a' * 40}:G7": 1}, "short head": {"missing_gate:abc:G7": 1},
                              "no gate": {f"missing_gate:{'a' * 40}:": 1}, "over the cap": {key: FINALIZE_OBSERVATION_CAP + 1},
                              "zero": {key: 0}, "boolean count": {key: True}, "empty": {}}.items():
-            with self.subTest(forged=name):
-                tampered = json.loads(valid)
-                tampered["finalize_observations"] = forged
-                with self.assertRaises(ValueError):
-                    validate_ledger(tampered)
+            with self.subTest(forged=name), self.assertRaises(ValueError):
+                validate_ledger({**valid, "finalize_observations": forged})
+        with self.assertRaises(ValueError):
+            self.invoke("record-finalize-cycle", finalize_inputs={"ledger_path": "elsewhere.json"})
 
 
 class FailingCheckFingerprintTests(unittest.TestCase):

@@ -89,9 +89,17 @@ def per_head(*gates: dict[str, object], heads: tuple[str, ...] = tuple(HEADS.val
 
 
 def finalize(root: Path, inputs: dict[str, object], record: bool = False) -> dict[str, object]:
+    """The read-only decision; with `record`, the runner then counts the cycle through execution-control."""
     from speckit_pro_runner.helpers.run_finalization import finalize_run
 
-    return finalize_run(root, inputs, record=record)
+    result = finalize_run(root, inputs)
+    if record:
+        ledger = json.loads((root / str(inputs["ledger_path"])).read_text(encoding="utf-8"))
+        with patch("speckit_pro_runner.execution_control.time.time", return_value=ledger["last_observed_at"]):
+            execution_control(root, {"workflow_file": ledger["workflow_identity"]["current_workflow_file"],
+                                     "action": "record-finalize-cycle", "expected_run_id": inputs["expected_run_id"],
+                                     "ledger_path": inputs["ledger_path"], "finalize_inputs": inputs}, "apply")
+    return result
 
 
 class _EvidenceFixture:
@@ -814,7 +822,8 @@ class MissingGateAcrossCyclesTests(_LedgerFixture, unittest.TestCase):
     def test_a_missing_head_gate_continues_and_then_stops_when_it_stays_missing(self) -> None:
         first = finalize(self.root, self.inputs(gates=self.TIP_ONLY), record=True)
         self.assertEqual((first["outcome"], first["human_stop"], first["mark_ready"]), ("continue", None, False))
-        self.assertTrue(first["writes_state"])
+        self.assertFalse(first["writes_state"])
+        self.assertEqual(len(first["observed"]), 4)
         self.assertEqual(len(first["pending_items"]), 4)
         self.assertIn(f"Run gate G7 at head {HEADS[101]} of PR #101: python3 tests/run-all.py", first["pending_items"])
         self.assertEqual(len(self.ledger_counts()), 4)
@@ -842,6 +851,22 @@ class MissingGateAcrossCyclesTests(_LedgerFixture, unittest.TestCase):
         result = finalize(self.root, self.inputs(gates=per_head(*GREEN, heads=(HEADS[102], HEADS[103]))))
         self.assertEqual((result["outcome"], result["human_stop"]), ("continue", None))
         self.assertTrue(all(f"head {HEADS[101]}" in item for item in result["pending_items"]))
+
+    def test_the_count_stops_at_its_cap_and_a_request_for_another_ledger_is_refused(self) -> None:
+        from speckit_pro_runner.execution_control import FINALIZE_OBSERVATION_CAP
+
+        inputs = self.inputs(gates=self.harness_gates())  # stays pending, so each cycle counts it again
+        for _ in range(FINALIZE_OBSERVATION_CAP + 2):
+            finalize(self.root, inputs, record=True)
+        self.assertEqual(set(self.ledger_counts().values()), {FINALIZE_OBSERVATION_CAP})
+        for name, change in {"another run": {"expected_run_id": "another-run"},
+                             "another ledger": {"ledger_path": self.deferring["ledger_path"]}}.items():
+            with self.subTest(request=name), self.assertRaises(ValueError):
+                with patch("speckit_pro_runner.execution_control.time.time", return_value=5000.0):
+                    execution_control(self.root, {"workflow_file": "clean/workflow.md", "action": "record-finalize-cycle",
+                                                  "expected_run_id": self.clean["run_id"],
+                                                  "ledger_path": self.clean["ledger_path"],
+                                                  "finalize_inputs": {**inputs, **change}}, "apply")
 
     def test_a_forged_observation_count_fails_closed(self) -> None:
         finalize(self.root, self.inputs(gates=self.TIP_ONLY), record=True)
@@ -893,6 +918,47 @@ class FinalizeRunRegistryTests(unittest.TestCase):
         self.assertEqual([decision["class"] for decision in data["decisions"]], ["exhausted"])
         self.assertIn("Decisions for you", data["end_of_run_request"])
         self.assertFalse(data["writes_state"])
+
+    def test_the_cycle_count_is_reachable_through_the_runner_and_only_ever_moves_toward_a_stop(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            source = REPO_ROOT / "tests/speckit-pro/unit/fixtures/run-finalization/.process/execution-control/ledger.json"
+            (root / ".process/execution-control").mkdir(parents=True)
+            (root / ".specify").mkdir()
+            (root / ".specify/project.json").write_text("{}", encoding="utf-8")
+            (root / "feature").mkdir()
+            (root / "feature/workflow.md").write_text("# Workflow\n", encoding="utf-8")
+            (root / ".process/execution-control/ledger.json").write_text(source.read_text(encoding="utf-8"), encoding="utf-8")
+            request = json.loads(FIXTURE_REQUEST.read_text(encoding="utf-8"))
+            request["inputs"]["ledger_path"] = ".process/execution-control/ledger.json"
+            tip = request["inputs"]["pull_requests"][-1]["head_sha"]
+            request["inputs"]["gates"] = [gate for gate in request["inputs"]["gates"]
+                                          if not (gate["head_sha"] == tip and gate["gate"] != "G7")]
+            request["inputs"]["pull_requests"][0]["draft"] = True
+
+            def call(payload: dict[str, object]) -> dict[str, object]:
+                completed = subprocess.run([sys.executable, "-m", "speckit_pro_runner"], input=json.dumps(payload),
+                                           text=True, capture_output=True, cwd=root, check=False, timeout=60,
+                                           env={"PYTHONPATH": str(PLUGIN_ROOT), "PATH": os.defpath})
+                return json.loads(completed.stdout.splitlines()[-1])
+
+            first = call(request)
+            self.assertEqual((first["status"], first["data"]["outcome"]), ("ok", "continue"), first)
+            self.assertEqual(len(first["data"]["observed"]), 1)
+            self.assertEqual(call({**request, "mode": "apply"})["status"], "input_error")
+            recorded = call({"schema_version": "1.0", "request_id": "record-cycle", "helper_id": "execution-control",
+                             "operation": "execution-control", "mode": "apply",
+                             "inputs": {"workflow_file": "feature/workflow.md", "action": "record-finalize-cycle",
+                                        "expected_run_id": request["inputs"]["expected_run_id"],
+                                        "ledger_path": ".process/execution-control/ledger.json",
+                                        "finalize_inputs": request["inputs"]}})
+            self.assertEqual(recorded["status"], "ok", recorded)
+            self.assertEqual(recorded["data"]["finalize_observed"], first["data"]["observed"])
+            self.assertEqual(recorded["data"]["ledger"]["finalize_observations"],
+                             {first["data"]["observed"][0]: 1})
+            second = call(request)
+            self.assertEqual((second["data"]["outcome"], second["data"]["mark_ready"]), ("human_stop", False))
+            self.assertEqual(len(second["data"]["human_stop"]["missing"]), 1)
 
     def test_bad_request_is_an_input_error(self) -> None:
         request = json.loads(FIXTURE_REQUEST.read_text(encoding="utf-8"))
