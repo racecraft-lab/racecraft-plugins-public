@@ -1,25 +1,31 @@
-You are speckit-autopilot in Phase 7 for SPEC-FIXTURE-D2. The tasks.md
-file has a Phase 7 group containing 3 consecutive `[P]`-tagged tasks,
-all classified as test-only (routes to implement-executor):
+You are speckit-autopilot in Phase 7 for SPEC-FIXTURE-D2. The feature's
+tasks.md and its task-execution sidecar declare 3 test-only tasks. Each
+declares its own file, so the ownership sets are disjoint:
 
   T001 [P] Contract test: POST /users endpoint
+           owns: tests/contract/users-post.test.ts
   T002 [P] Contract test: GET /users/{id} endpoint
+           owns: tests/contract/users-get.test.ts
   T003 [P] Contract test: DELETE /users/{id} endpoint
+           owns: tests/contract/users-delete.test.ts
 
-Per `references/phase-execution.md` §Phase 7 Step 3 (partition into
-RUNS, then batched dispatch for [P] parallel runs):
+Per `references/phase-execution.md` §Phase 7 Steps 3a-3c, the
+`partition-phase7-tasks` runner helper already returned one wave of 3
+dependency-ready batches. Each batch holds one task and routes to
+implement-executor:
 
-- Partition: all 3 tasks form a single parallel RUN (consecutive [P],
-  same agent type → implement-executor)
+  B001: T001    B002: T002    B003: T003
+
 - AGENT_TEAMS_AVAILABLE is false for this fixture (no env var probe
-  happens in parser-replay) — take Path B (background subagents)
+  happens in parser-replay), so dispatch ordinary background subagents
 - Phase 7 workers share the current feature checkout: set no
   `isolation` field on any dispatch
-- Dispatch ALL 3 tasks in ONE assistant message via:
+- Dispatch ALL 3 batches of the wave in ONE assistant message, using
+  the Step 3c template for each:
     subagent_type: speckit-pro:implement-executor
     run_in_background: true
-    description: "SPEC-FIXTURE-D2 T00X [P] <brief>"
-    prompt: the task, ending with these two lines:
+    description: "SPEC-FIXTURE-D2 B00X T00X"
+    prompt: the batch, ending with these two lines:
         Reference dir: speckit-pro/skills/speckit-autopilot/references/
         Workflow root: .
 
@@ -27,6 +33,6 @@ These paths are repository-relative because this fixture runs from the
 repository root; in a real run they are built from the loaded plugin
 root and the bound workflow root.
 
-Do NOT dispatch them serially (that's the pre-WS-D2 regression this
-fixture catches). Do NOT spawn synthesizers or any other agent type.
+Do NOT dispatch the batches serially (a regression this fixture
+catches). Do NOT spawn synthesizers or any other agent type.
 Do NOT invoke grill-me. Stop after all 3 background subagents return.
