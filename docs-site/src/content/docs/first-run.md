@@ -100,8 +100,8 @@ file, spec folder, and `SPEC-MOC.md` for one roadmap item.
 
 - `docs/ai/specs/.process/EXAMPLE-001-design-concept.md`
 - `docs/ai/specs/.process/EXAMPLE-001-workflow.md`
-- `specs/doc-005-first-successful-workflow-tutorial-and-lifecycle-explainer/SPEC-MOC.md`
-- `specs/doc-005-first-successful-workflow-tutorial-and-lifecycle-explainer/spec.md`
+- `specs/example-001-first-feature/SPEC-MOC.md`
+- `specs/example-001-first-feature/spec.md`
 
 **Next action:** Start autopilot with the generated workflow file.
 
