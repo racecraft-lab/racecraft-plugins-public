@@ -126,9 +126,8 @@ def install_specs_read_guard(repo_root: Path | None = None) -> None:
     catches.
 
     **Opt out where sweeping the live tree is the job.** These suites do:
-    ``validate-moc-orphan``, ``validate-moc-stale-index``,
-    ``validate-agent-instructions``, ``test-privacy-scan`` and
-    ``test-artifact-gallery``. Each walks whatever
+    ``test-privacy-scan``, ``validate-agent-contracts`` and ``validate-moc-lint``.
+    Each walks whatever
     specs happen to exist rather than depending on one by name, which makes it
     archive-safe by construction: an absent feature folder contributes nothing.
     They pass ``allow_live_specs=True`` to ``run_counted``.
