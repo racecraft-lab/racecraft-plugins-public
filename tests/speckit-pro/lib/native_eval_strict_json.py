@@ -24,10 +24,10 @@ _DECODE_FAILURES = (
 
 
 def _unique_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
-    result = dict(pairs)
-    if len(result) != len(pairs):
+    keys = [key for key, _value in pairs]
+    if len(set(keys)) != len(keys):
         raise _StrictJSONDefect("duplicate JSON key")
-    return result
+    return dict(pairs)
 
 
 def _reject_constant(token: str) -> Any:
