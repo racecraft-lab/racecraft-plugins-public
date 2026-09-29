@@ -48,8 +48,8 @@ false`, or `enabled_tools`/`disabled_tools`).
 
 The runner-owned policy defines each bundled agent's model and reasoning effort.
 An explicit route manifest materializes its selected model-and-effort tuple.
-Ten bundled agents default to `gpt-6-sol`. The three consensus analysts
-(`codebase-analyst`, `spec-context-analyst`, `domain-researcher`) run on
+Bundled agents default to `gpt-6-sol` unless named here. The three consensus
+analysts (`codebase-analyst`, `spec-context-analyst`, `domain-researcher`) run on
 `gpt-6-luna` at max effort. The optional `autopilot-fast-helper` runs on
 `gpt-6-luna` at low effort for tiny advisory text-only prep, never for SDD
 reasoning.
@@ -59,8 +59,8 @@ the `gpt-6-sol` agents: `gpt-6-sol` (default), `gpt-6-luna`, or the opt-in
 `gpt-6-astra`. GPT-5 models are not accepted. In Enterprise and Edu
 workspaces, an administrator must enable GPT-6 Sol and GPT-6 Luna before
 members can use them. When `gpt-6-luna` is not available, set
-`luna_fallback: true` (or `SPECKIT_CODEX_LUNA_FALLBACK=true`): the four Luna
-agents then install on `gpt-6-sol` and keep their reasoning effort. Prefer the
+`luna_fallback: true` (or `SPECKIT_CODEX_LUNA_FALLBACK=true`): the Luna
+agents (the analysts and the fast helper) then install on `gpt-6-sol` and keep their reasoning effort. Prefer the
 environment variables for a lasting choice, so the autopilot and scaffold
 pre-flight checks render the same files. The installer rewrites only
 destination copies.

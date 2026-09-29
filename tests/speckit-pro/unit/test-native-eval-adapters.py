@@ -23,14 +23,17 @@ from unittest import mock
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 TEST_ROOT = REPO_ROOT / "tests" / "speckit-pro"
-SHIPPED_CODEX_AGENTS = sorted((REPO_ROOT / "speckit-pro" / "codex-agents").glob("*.toml"))
 sys.path.insert(0, str(TEST_ROOT / "lib"))
 
+import agent_roster  # noqa: E402
 import native_eval_adapters as adapters  # noqa: E402
 import native_eval_fixture_setup as fixture_setup  # noqa: E402
 from native_eval_judge import build_judge_request  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
+
+# The Codex custom agents the inventory ships, an independent source from codex-agents/.
+CODEX_CUSTOM_AGENTS = agent_roster.codex_sandbox_policy()
 
 UNIX_DESCRIPTOR_CAPTURE = (
     os.name == "posix" and hasattr(os, "O_DIRECTORY") and hasattr(os, "O_NOFOLLOW")
@@ -2562,7 +2565,7 @@ class AdapterPreparationTests(unittest.TestCase):
                 self.temp / "real-runtime", "gpt-5.6-sol",
             )
         runtime = prepared.runtime_identity["settings"]["codex_runtime"]
-        self.assertEqual(len(runtime["proof"]["materializations"]), len(SHIPPED_CODEX_AGENTS))
+        self.assertEqual(len(runtime["proof"]["materializations"]), len(CODEX_CUSTOM_AGENTS))
         self.assertTrue((prepared.cwd / ".agents/.codex-plugin/plugin.json").is_file())
         self.assertTrue((prepared.cwd / ".agents/speckit_pro_runner/__main__.py").is_file())
         self.assertEqual(
@@ -2621,7 +2624,7 @@ class AdapterPreparationTests(unittest.TestCase):
         self.assertEqual(len({item.runtime_identity["digest"] for item in prepared}), 1)
         for item in prepared:
             installed = list((item.cwd / ".codex/agents").glob("*.toml"))
-            self.assertEqual(len(installed), len(SHIPPED_CODEX_AGENTS))
+            self.assertEqual(len(installed), len(CODEX_CUSTOM_AGENTS))
             self.assertTrue((item.cwd / ".codex/agents/autopilot-fast-helper.toml").is_file())
 
     def test_codex_runtime_fails_closed_when_missing_and_rejects_control_mutation(self) -> None:

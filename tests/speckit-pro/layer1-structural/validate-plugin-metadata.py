@@ -65,7 +65,27 @@ class ValidatePlugin(unittest.TestCase):
             self.assertTrue(isinstance(data, dict) and 'author' in data, "JSON field 'author' does not exist")
 CODEX_JSON = PLUGIN_ROOT / '.codex-plugin' / 'plugin.json'
 CLAUDE_JSON = PLUGIN_ROOT / '.claude-plugin' / 'plugin.json'
-REQUIRED_SKILLS = tuple(discover_skill_names(PLUGIN_ROOT / 'codex-skills'))
+# Codex skills with no Claude twin: the installer for the bundled Codex custom subagents.
+CODEX_ONLY_SKILLS = frozenset({'install'})
+
+
+def required_codex_skills(plugin_root: Path) -> tuple[str, ...]:
+    """Every Claude skill directory, which needs a Codex counterpart, plus the Codex-only skills.
+
+    Read from ``skills/``, never from ``codex-skills/``, so a dropped Codex skill is a gap.
+    """
+    claude = {path.name for path in (plugin_root / 'skills').iterdir() if path.is_dir()}
+    return tuple(sorted(claude | CODEX_ONLY_SKILLS))
+
+
+def codex_skill_gaps(plugin_root: Path) -> list[str]:
+    """Required Codex skills that hold no SKILL.md, and Codex skills nothing requires."""
+    required = set(required_codex_skills(plugin_root))
+    present = set(discover_skill_names(plugin_root / 'codex-skills'))
+    return [f'codex-skills/{name}/SKILL.md is missing' for name in sorted(required - present)] + [f'codex-skills/{name}/ is not a required skill' for name in sorted(present - required)]
+
+
+REQUIRED_SKILLS = required_codex_skills(PLUGIN_ROOT)
 validate_codex_plugin_SEMVER_RE = re.compile('^[0-9]+\\.[0-9]+\\.[0-9]+$')
 
 class ValidateCodexPlugin(unittest.TestCase):
@@ -114,6 +134,8 @@ class ValidateCodexPlugin(unittest.TestCase):
             self.assertTrue('scaffold a spec worktree' in default_prompts and 'set up a spec worktree' not in default_prompts, 'expected Codex default prompt to say scaffold a spec worktree')
         with self.subTest(msg='codex-skills/ directory exists'):
             self.assertTrue((PLUGIN_ROOT / 'codex-skills').is_dir(), f"codex-skills/ directory not found at {PLUGIN_ROOT / 'codex-skills'}")
+        with self.subTest(msg='codex-skills/ holds exactly the skills skills/ ships plus the Codex-only skills'):
+            self.assertEqual([], codex_skill_gaps(PLUGIN_ROOT))
         for skill in REQUIRED_SKILLS:
             with self.subTest(msg=f'codex-skills/{skill}/ directory exists'):
                 self.assertTrue((PLUGIN_ROOT / 'codex-skills' / skill).is_dir(), f'codex-skills/{skill}/ directory not found')
