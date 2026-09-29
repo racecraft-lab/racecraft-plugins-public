@@ -22,6 +22,7 @@ for entry in (PLUGIN_ROOT, REPO_ROOT / "tests" / "speckit-pro" / "lib"):
     if str(entry) not in sys.path:
         sys.path.insert(0, str(entry))
 
+from git_fixture import git  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
 HELPER_ID = "check-gate-preflight-coverage"
@@ -44,13 +45,13 @@ def check(inputs: dict[str, object]) -> dict[str, object]:
     return gate_preflight_coverage(inputs)
 
 
-def _runner(request: dict[str, object]) -> dict[str, object]:
+def _runner(request: dict[str, object], cwd: Path = REPO_ROOT) -> dict[str, object]:
     completed = subprocess.run(
         [sys.executable, "-m", "speckit_pro_runner"],
         input=json.dumps(request),
         text=True,
         capture_output=True,
-        cwd=REPO_ROOT,
+        cwd=cwd,
         env={"PYTHONPATH": str(PLUGIN_ROOT), "PATH": os.defpath},
         check=False,
         timeout=60,
@@ -159,6 +160,95 @@ class GatePreflightCoverageTests(unittest.TestCase):
         self.assertFalse(response["data"]["covered"])
         request["inputs"]["gates"] = []
         self.assertEqual(_runner(request)["status"], "input_error")
+
+
+class RunStartCoverageTests(unittest.TestCase):
+    """Run-start derivation: standing-policy classes and write surfaces outside the writable roots."""
+
+    def test_declared_audits_derive_standing_policy_classes(self) -> None:
+        """A missing external_side_effect need becomes a class the standing policy can cover."""
+        import tempfile
+
+        from speckit_pro_runner.helpers.gate_preflight_coverage import gate_preflight_coverage
+
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / "AGENTS.md").write_text("Run `pnpm audit --prod` and `pip-audit` before a PR.\n",
+                                            encoding="utf-8")
+            result = gate_preflight_coverage({"gates": GATES, "inventory_actions": []}, root)
+            classes = result["policy_classes"]
+            self.assertEqual([item["class_id"] for item in classes],
+                             ["gate-post-live-evaluation", "gate-pre-pr-pip-audit", "gate-pre-pr-pnpm-audit-prod"])
+            audit = classes[2]
+            self.assertEqual(audit["gate"], "pre-PR: pnpm audit --prod")
+            self.assertIn("`pnpm audit --prod`", audit["target"])
+            self.assertIn("dependency", audit["effect"])
+            self.assertEqual(audit["probe"], "pnpm audit --prod")
+            self.assertNotIn("probe", classes[0])
+            covered = gate_preflight_coverage({"gates": GATES, "inventory_actions": INVENTORY}, root)
+            self.assertEqual([item["class_id"] for item in covered["policy_classes"]],
+                             ["gate-pre-pr-pip-audit", "gate-pre-pr-pnpm-audit-prod"])
+        self.assertEqual(check({"gates": GATES, "inventory_actions": INVENTORY})["policy_classes"], [])
+
+
+class WritableRootCoverageTests(unittest.TestCase):
+    """Write surfaces outside the writable roots are needs the run-start preflight reports."""
+
+    def test_a_private_record_and_workflow_root_outside_the_writable_roots_are_needs(self) -> None:
+        """A linked worktree's git common dir and an external workflow root sit outside its writable roots."""
+        import tempfile
+
+        from speckit_pro_runner.helpers.gate_preflight_coverage import gate_preflight_coverage
+
+        with tempfile.TemporaryDirectory() as temp:
+            main, linked, external = (Path(temp).resolve() / name for name in ("main", "linked", "external"))
+            main.mkdir()
+            git(main, "init", "-q", "-b", "main")
+            git(main, "commit", "-q", "--allow-empty", "-m", "init")
+            git(main, "worktree", "add", "-q", "-b", "feature", str(linked))
+            base = {"gates": GATES, "inventory_actions": INVENTORY}
+            record = str(main / ".git" / "speckit-pro" / "autonomy-boundary")
+
+            inside = gate_preflight_coverage({**base, "writable_roots": [str(main)]}, main)
+            self.assertTrue(inside["covered"], inside)
+            self.assertEqual(inside["private_record_dir"], record)
+
+            result = gate_preflight_coverage(
+                {**base, "writable_roots": [str(linked)], "write_paths": [str(external)]}, linked)
+            self.assertFalse(result["covered"])
+            self.assertEqual([(item["gate"], item["category"], item["target"]) for item in result["missing"]],
+                             [("run-start: private autonomy record", "outside_writable_roots", record),
+                              ("run-start: workflow root", "outside_writable_roots", str(external))])
+            self.assertEqual(result["policy_classes"], [])
+            actions = [{"action_id": "record", "category": "outside_writable_roots", "target": record},
+                       {"action_id": "root", "category": "outside_writable_roots", "target": str(external)}]
+            covered = gate_preflight_coverage(
+                {**base, "inventory_actions": [*INVENTORY, *actions], "writable_roots": [str(linked)],
+                 "write_paths": [str(external)]}, linked)
+            self.assertTrue(covered["covered"], covered)
+            with self.assertRaises(ValueError):
+                gate_preflight_coverage({**base, "writable_roots": [str(linked)]}, Path(temp))
+            with self.assertRaises(ValueError):
+                gate_preflight_coverage({**base, "write_paths": [str(external)]}, linked)
+            with self.assertRaises(ValueError):
+                gate_preflight_coverage({**base, "writable_roots": ["relative"]}, linked)
+
+    def test_runner_reports_an_external_workflow_root_and_derived_classes(self) -> None:
+        import tempfile
+
+        request = json.loads(FIXTURE_REQUEST.read_text(encoding="utf-8"))
+        with tempfile.TemporaryDirectory() as temp:
+            repo = Path(temp).resolve()
+            git(repo, "init", "-q", "-b", "main")
+            (repo / ".specify").mkdir()
+            request["inputs"].update(writable_roots=[str(repo)], write_paths=["/external-workflow-root"],
+                                     inventory_actions=[])
+            response = _runner(request, cwd=repo)
+        self.assertEqual(response["status"], "expected_failure", response)
+        data = response["data"]
+        self.assertIn("/external-workflow-root", [item["target"] for item in data["missing"]])
+        self.assertEqual([item["class_id"] for item in data["policy_classes"]], ["gate-post-live-evaluation"])
+        self.assertTrue(data["private_record_dir"].endswith("speckit-pro/autonomy-boundary"))
 
 
 if __name__ == "__main__":

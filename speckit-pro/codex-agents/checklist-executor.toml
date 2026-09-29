@@ -104,8 +104,8 @@ parent's G4 gate do that.
 7. **Never invoke `$grill-me`.** That skill is human-in-the-loop
    only and is forbidden inside autopilot. If a gap implies
    pre-workflow scoping that consensus cannot resolve, flag it
-   under "Unresolved for consensus" and let the orchestrator
-   decide.
+   under "Unresolved for consensus" and return a blocker for
+   consensus or deferral.
 
 </hard_constraints>
 

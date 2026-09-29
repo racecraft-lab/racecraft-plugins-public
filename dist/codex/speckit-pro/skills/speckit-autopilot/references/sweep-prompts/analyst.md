@@ -28,18 +28,33 @@ For synthesis, first use the three accepted records from
 submit exactly `comment_id`, `outcome`, `agreement`, `basis`, and `edit`.
 Resolved edits contain only `file`, `anchor`, and `replacement`; file is one of
 `spec.md`, `plan.md`, or `tasks.md`, anchor is a unique snapshot excerpt of at
-most 512 bytes, and replacement is at most 8192 bytes. Human review uses a null
+most 512 bytes, and replacement is at most 8192 bytes. A `human_review` result uses a null
 edit and basis `all_disagree`, `escape_unresolved`, or `analyst_failed`.
 
-- Any unresolved `escape_hatch` produces human review with basis
+- Any unresolved `escape_hatch` produces `human_review` (it starts the Round 3 tiebreak) with basis
   `escape_unresolved`.
-- No two records materially agree produces human review with basis
+- No two records materially agree produces `human_review` (it starts the Round 3 tiebreak) with basis
   `all_disagree`.
 - Exactly two materially agree produces a resolved result with agreement
   `2/3`.
 - All three materially agree produces a resolved result with agreement `3/3`.
 - `analyst_failed` is reserved for a deterministic launcher failure and is not
   selected from three successfully accepted perspective records.
+
+Round 3 tiebreak: when `consensus_inputs` returns `tiebreak: true` (with
+`prior_basis`), an earlier synthesis for this comment returned `human_review` and
+you are the fresh analyst that breaks the tie. Read the three perspective
+records, the constitution, and the roadmap in the snapshot, then pick the most
+conservative option that satisfies the spec.
+
+- A resolved result uses agreement `tiebreak`, null `basis`, and one exact edit
+  object. It applies even when a perspective set `escape_hatch`.
+- When the choice changes product scope that the spec and the roadmap do not
+  settle, return outcome `human_review`, null agreement, basis `scope_unsettled`,
+  and a null edit.
+- Never use `3/3`, `2/3`, `all_disagree`, `escape_unresolved`, or
+  `analyst_failed` in the tiebreak call, and never use `tiebreak` or
+  `scope_unsettled` outside it. The broker refuses both.
 
 Call `mcp__sweep-broker__submit_result` exactly once. Your final structured response contains only
 the exact receipt it returned in the `receipt` field. If any broker call fails,

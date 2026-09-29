@@ -1,0 +1,17 @@
+{
+  "schema": "corrective-authorization-replay/v1",
+  "description": "An agent issues one infrastructure retry with no operator event, from the runner's own record of the failed dispatch's native resolution; a second agent retry goes to the operator.",
+  "steps": [
+    {"id": "spec", "place_spec": "spec.md"},
+    {"id": "start", "action": "start", "expect": {"exit_code": 0, "status": "ok", "disposition": "continue"}},
+    {"id": "reserve-owner", "action": "reserve", "inputs": {"dispatch_id": "owner", "kind": "corrective", "failure_invariant": "FR-001"}, "expect": {"exit_code": 0, "status": "ok", "disposition": "continue"}},
+    {"id": "reconcile-owner", "action": "reconcile", "inputs": {"dispatch_id": "owner"}, "expect": {"exit_code": 0, "status": "ok", "disposition": "continue"}},
+    {"id": "owner-host-failure", "action": "complete", "inputs": {"dispatch_id": "owner", "outcome": "failed", "native_observation": {"native_event_id": "host-auth-error", "run_id": "$run_id", "dispatch_id": "owner", "action": "dispatch_result", "outcome": "failed"}}, "expect": {"exit_code": 0, "status": "ok", "disposition": "continue"}},
+    {"id": "reserve-other-family", "action": "reserve", "inputs": {"dispatch_id": "other-family", "kind": "corrective", "failure_invariant": "FR-002"}, "expect": {"exit_code": 0, "status": "ok", "disposition": "continue"}},
+    {"id": "agent-retry-with-operator-event-refused", "action": "authorize-corrective-retry", "inputs": {"dispatch_id": "owner-retry", "failed_dispatch_id": "owner", "reservation_id": "$reservation:owner", "agent_authorized": true, "failure_kind": "infrastructure", "native_observation": {"native_event_id": "x"}}, "refused": "agent-authorized corrective retry is agent_authorized true with no operator event"},
+    {"id": "agent-retry-for-an-application-failure-refused", "action": "authorize-corrective-retry", "inputs": {"dispatch_id": "owner-retry", "failed_dispatch_id": "owner", "reservation_id": "$reservation:owner", "agent_authorized": true, "failure_kind": "application"}, "refused": "covers only an infrastructure failure"},
+    {"id": "agent-retry", "action": "authorize-corrective-retry", "inputs": {"dispatch_id": "owner-retry", "failed_dispatch_id": "owner", "reservation_id": "$reservation:owner", "agent_authorized": true, "failure_kind": "infrastructure"}, "expect": {"exit_code": 0, "status": "ok", "disposition": "continue", "ledger": {"dispatches.owner-retry.operator_recovery_event_id": "agent-recovery:owner-retry", "dispatches.owner-retry.failure_event_id": "host-auth-error"}}},
+    {"id": "retry-completed", "action": "complete", "inputs": {"dispatch_id": "owner-retry", "outcome": "completed"}, "expect": {"exit_code": 0, "status": "ok", "disposition": "continue"}},
+    {"id": "second-agent-retry-refused", "action": "authorize-corrective-retry", "inputs": {"dispatch_id": "second-retry", "failed_dispatch_id": "owner", "reservation_id": "$reservation:owner", "agent_authorized": true, "failure_kind": "infrastructure"}, "refused": "agent-authorized corrective retry approvals are spent"}
+  ]
+}

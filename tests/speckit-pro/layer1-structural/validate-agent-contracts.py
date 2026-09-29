@@ -28,7 +28,6 @@ from speckit_pro_runner.agent_inventory import (
 )
 
 EXPECTED_AGENT_DIRS = (Path('.'), Path('speckit-pro'), Path('tests/speckit-pro'), Path('docs-site'))
-CLAUDE_WRAPPER = '@./AGENTS.md\n'
 GEMINI_WRAPPER = '@./AGENTS.md\n'
 COPILOT_POINTER = '# Copilot Instructions\n\nFollow the repository agent contract in `AGENTS.md`. Do not maintain separate\nCopilot-specific project rules here.\n'
 AGENT_CONTEXT_BUDGET_BYTES = 32768
@@ -77,24 +76,18 @@ def collect_errors(repo_root: Path) -> list[str]:
         errors.append(f'AGENTS.md files must be exactly [{expected}], got [{actual}]')
     for directory in sorted(expected_dirs):
         agents = directory / 'AGENTS.md'
-        claude = directory / 'CLAUDE.md'
         gemini = directory / 'GEMINI.md'
         if not (repo_root / agents).is_file():
             continue
-        if not (repo_root / claude).is_file():
-            errors.append(f'missing Claude wrapper: {_display(claude)}')
-        elif _read(repo_root, claude) != CLAUDE_WRAPPER:
-            errors.append(f'{_display(claude)} must contain only {CLAUDE_WRAPPER.strip()!r}')
         if not (repo_root / gemini).is_file():
             errors.append(f'missing Gemini wrapper: {_display(gemini)}')
         elif _read(repo_root, gemini) != GEMINI_WRAPPER:
             errors.append(f'{_display(gemini)} must contain only {GEMINI_WRAPPER.strip()!r}')
-    for filename in ('CLAUDE.md', 'GEMINI.md'):
-        expected_files = {directory / filename for directory in expected_dirs}
-        actual_files = set(files[filename])
-        extras = sorted(actual_files - expected_files)
-        if extras:
-            errors.append(f"unexpected {filename} files: {', '.join((_display(path) for path in extras))}")
+    extras = sorted(set(files['GEMINI.md']) - {directory / 'GEMINI.md' for directory in expected_dirs})
+    if extras:
+        errors.append(f"unexpected GEMINI.md files: {', '.join((_display(path) for path in extras))}")
+    for path in files['CLAUDE.md']:
+        errors.append(f'{_display(path)} must not exist: Claude Code reads AGENTS.md directly')
     total_bytes = 0
     for path in files['AGENTS.md']:
         text = _read(repo_root, path)
@@ -216,7 +209,7 @@ CODEX_AGENT_PROFILES = {
 }
 validate_codex_agents_AGENTS = (*CODEX_REQUIRED_AGENT_NAMES, *CODEX_OPTIONAL_AGENT_NAMES)
 CONSENSUS_ANALYST_ROLES = frozenset({'codebase-analyst', 'spec-context-analyst', 'domain-researcher'})
-NATIVE_COMMAND_LIFECYCLE_EXEMPT_ROLES = frozenset({'autopilot-fast-helper', 'consensus-synthesizer'})
+NATIVE_COMMAND_LIFECYCLE_EXEMPT_ROLES = frozenset({'autopilot-fast-helper', 'consensus-synthesizer', 'consensus-tiebreaker'})
 CC_ONLY_FIELDS = ('tools', 'disallowedTools', 'permissionMode', 'color', 'maxTurns', 'background', 'effort')
 validate_codex_agents_MODEL_RE = re.compile('^(gpt-6-sol|gpt-6-luna|gpt-6-astra)$')
 EFFORT_RE = re.compile('^(minimal|low|medium|high|xhigh|max)$')

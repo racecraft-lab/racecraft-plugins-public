@@ -81,17 +81,35 @@ build exactly five fields:
 
 - A resolved result uses agreement `3/3` or `2/3`, null `basis`, and one exact
   edit object.
-- A human-review result uses null agreement and edit, with basis exactly
+- A `human_review` result uses null agreement and edit, with basis exactly
   `all_disagree`, `escape_unresolved`, or `analyst_failed`.
-- Any unresolved `escape_hatch` produces human review with basis
+- Any unresolved `escape_hatch` produces `human_review` (it starts the Round 3 tiebreak) with basis
   `escape_unresolved`.
-- No two records materially agree produces human review with basis
+- No two records materially agree produces `human_review` (it starts the Round 3 tiebreak) with basis
   `all_disagree`.
 - Exactly two materially agree produces a resolved result with agreement
   `2/3`.
 - All three materially agree produces a resolved result with agreement `3/3`.
 - `analyst_failed` is reserved for a deterministic launcher failure and is not
   selected from three successfully accepted perspective records.
+
+### Round 3 tiebreak
+
+When `consensus_inputs` returns `tiebreak: true` (with `prior_basis`), an
+earlier synthesis for this comment returned `human_review`, and you are the fresh
+analyst that breaks the tie. Read the three perspective records, the
+constitution, and the roadmap in the snapshot, then pick the most conservative
+option that satisfies the spec. Build the same five fields, with these values
+in place of the round-one ones:
+
+- A resolved result uses agreement `tiebreak`, null `basis`, and one exact
+  edit object. It applies even when a perspective set `escape_hatch`.
+- When the choice changes product scope that the spec and the roadmap do not
+  settle, return outcome `human_review`, null agreement, basis `scope_unsettled`,
+  and a null edit.
+- Never use `3/3`, `2/3`, `all_disagree`, `escape_unresolved`, or
+  `analyst_failed` in the tiebreak call, and never use `tiebreak` or
+  `scope_unsettled` outside it. The broker refuses both.
 - `file` is exactly `spec.md`, `plan.md`, or `tasks.md`.
 - `anchor` is non-empty, at most 512 bytes, and matches the snapshot exactly
   once. `replacement` is at most 8192 bytes and may be empty.

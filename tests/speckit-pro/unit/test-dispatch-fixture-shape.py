@@ -141,9 +141,8 @@ class ReducerDispatchShapeTests(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    loader = unittest.defaultTestLoader
     suite = unittest.TestSuite(
-        loader.loadTestsFromTestCase(case)
+        unittest.defaultTestLoader.loadTestsFromTestCase(case)
         for case in (TranscriptDispatchShapeTests, DispatchFixtureShapeTests, ReducerDispatchShapeTests)
     )
     raise SystemExit(run_counted(suite, label="test-dispatch-fixture-shape"))

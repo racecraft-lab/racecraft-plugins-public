@@ -107,8 +107,7 @@ permissions.
 7. **Never invoke `grill-me`.** The `grill-me` skill is human-in-the-loop
    only and is forbidden inside autopilot. If your task is ambiguous and
    you can't resolve it from tasks.md, plan.md, the design concept doc,
-   or codebase patterns, fail the task with a clear blocker note and let
-   the orchestrator surface it. Do not interview the user.
+   or codebase patterns, fail the task and return a blocker for consensus or deferral. Do not interview the user.
 
 8. **Research only when the task requires it.** For tasks that
    reference an external API, RFC, library version, or integration

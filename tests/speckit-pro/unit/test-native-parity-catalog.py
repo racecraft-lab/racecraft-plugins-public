@@ -21,6 +21,7 @@ FIXTURE_ROOT = TEST_ROOT / "evals" / "fixtures" / "parity"
 AUDIT_PATH = TEST_ROOT / "evals" / "audit" / "integration-parity-audit.md"
 sys.path.insert(0, str(TEST_ROOT / "lib"))
 
+from finalize_fixture import run_finalize_fixture  # noqa: E402
 from native_eval_catalog import load_catalog  # noqa: E402
 from native_eval_adapters import _git_controller_exclude, _write_git_controller_exclude  # noqa: E402
 from native_eval_fixture_setup import (  # noqa: E402
@@ -41,6 +42,13 @@ FIXTURE_ID = "01-post-implementation-outcome"
 REPORT_PATH = "artifacts/post-implementation-report.md"
 SCAFFOLD_CASE_ID = "parity.02-scaffold-relocation-guidance"
 SCAFFOLD_REPORT_PATH = "artifacts/parity-02-scaffold-guidance.md"
+FINISH_CASE_ID = "parity.03-stop-policy-finish"
+FINISH_REPORT_PATH = "artifacts/parity-03-stop-policy-finish.md"
+FINISH_REPORT = (
+    "## Outcome\n\n| Field | Value |\n|---|---|\n| outcome | complete_with_deferred |\n"
+    "| stack_ready | true |\n| keeps_draft | false |\n| decision_count | 0 |\n| question_asked | false |\n\n"
+    "## Ready Commands\n\n| Command |\n|---|\n| gh pr ready 101 |\n| gh pr ready 102 |\n| gh pr ready 103 |\n"
+)
 FUNCTIONAL_CATALOG_PATH = CATALOG_PATH
 HELD_CASES = {
     "parity.03-reviewability-backstop": "parity-03-reviewability-backstop",
@@ -100,7 +108,32 @@ def materialization_plan(case: dict) -> dict:
     }
 
 
-class NativeParityCatalogTests(unittest.TestCase):
+def _finish_observations(check: dict) -> tuple[dict, dict]:
+    """The observation a check passes on and one it rejects, for the stop-policy finish case."""
+    runner = {"name": "Bash", "input": {"command": "/venv/bin/python -m speckit_pro_runner < scenario-inputs/finalize-request.json"},
+              "output": "ran", "success": True}
+    report = observation(artifacts={FINISH_REPORT_PATH: FINISH_REPORT})
+    if check["type"] == "selection":
+        return observation(), observation(activation="wrong-skill")
+    if check["type"] == "tool_used" and check["min"] == 1:
+        call = runner if check["name"] == "Bash" else {**runner, "name": "command_execution"}
+        return observation(calls=[call]), observation(calls=[])
+    if check["type"] == "tool_used":
+        forbidden = {"question": "Proceed?"} if check["name"] in {"AskUserQuestion", "request_user_input"} else {"command": "gh pr merge 101"}
+        return observation(calls=[runner]), observation(calls=[{"name": check["name"], "input": forbidden,
+                                                                 "output": "blocked", "success": False}])
+    if check["id"] == "report-no-merge":
+        return report, observation(artifacts={FINISH_REPORT_PATH: FINISH_REPORT + "gh pr merge 101\n"})
+    if check["type"] == "file_exists":
+        return report, observation()
+    heading = {"report-outcome-table": "## Outcome", "report-ready-table": "## Ready Commands"}.get(check["id"])
+    removed = FINISH_REPORT.replace(heading, "## Other") if heading else FINISH_REPORT.replace("gh pr ready 103", "")
+    return report, observation(artifacts={FINISH_REPORT_PATH: removed})
+
+
+class _ParityCatalogFixture:
+    """Shared fixture for the tests below."""
+
     @classmethod
     def setUpClass(cls) -> None:
         cls.catalog = load_catalog(CATALOG_PATH, REPO_ROOT)
@@ -113,8 +146,10 @@ class NativeParityCatalogTests(unittest.TestCase):
         cls.functional_cases = {case["id"]: case for case in functional["cases"]}
         cls.scaffold = cls.functional_cases[SCAFFOLD_CASE_ID]
 
+
+class NativeParityCatalogTests(_ParityCatalogFixture, unittest.TestCase):
     def test_nonvacuous_review_candidates_are_authored_and_pair_compile(self) -> None:
-        self.assertEqual(set(self.cases), {REVIEW_CASE_ID, SCAFFOLD_CASE_ID})
+        self.assertEqual(set(self.cases), {REVIEW_CASE_ID, SCAFFOLD_CASE_ID, FINISH_CASE_ID})
         self.assertEqual(
             sum(
                 case["id"] in {REVIEW_CASE_ID, SCAFFOLD_CASE_ID}
@@ -970,6 +1005,32 @@ class NativeParityCatalogTests(unittest.TestCase):
         self.assertIn("interactive claude teams are outside", authored.lower())
 
 
+class NativeParityFinishTests(_ParityCatalogFixture, unittest.TestCase):
+    """The stop-policy finish case pairs one finish and rejects a draft hold, a merge, or a question."""
+
+    def test_finish_case_pairs_the_same_finish_and_rejects_a_draft_hold_a_merge_or_a_question(self) -> None:
+        case = self.cases[FINISH_CASE_ID]
+        plan = compile_pair_plan(case, REPO_ROOT)
+        self.assertEqual([check["id"] for check in plan["checks"]], ["stop-policy-finish-parity"])
+        self.assertEqual(plan["declared_artifact_paths"], [FINISH_REPORT_PATH])
+        for check in case["checks"]:
+            if check["type"] in {"semantic", "native_git_final_state"}:
+                continue
+            good, bad = _finish_observations(check)
+            with self.subTest(check=check["id"]):
+                self.assertEqual(grade_observation(one_check_case(case, check), good)["status"], "pass", check["id"])
+                self.assertIn(grade_observation(one_check_case(case, check), bad)["status"], {"fail", "invalid"}, check["id"])
+
+    def test_finish_fixture_is_the_real_runner_result_and_pairs_the_reported_values(self) -> None:
+        _, result = run_finalize_fixture(REPO_ROOT / "tests/speckit-pro/evals/fixtures/parity/03-stop-policy-finish")
+        self.assertEqual((result["outcome"], result["mark_ready"], result["decisions"], result["human_stop"]),
+                         ("complete_with_deferred", True, [], None))
+        self.assertEqual(result["ready_commands"], ["gh pr ready 101", "gh pr ready 102", "gh pr ready 103"])
+        for command in result["ready_commands"]:
+            self.assertIn(command, FINISH_REPORT)
+        self.assertNotIn("merge", " ".join(result["ready_commands"]))
+
+
 if not SPECIFY_INSTALLED:
     # The counted suite treats a skip as a failed unit, so remove this
     # installed-tool test on runners without Specify rather than reporting a
@@ -978,5 +1039,6 @@ if not SPECIFY_INSTALLED:
 
 
 if __name__ == "__main__":
-    suite = unittest.defaultTestLoader.loadTestsFromTestCase(NativeParityCatalogTests)
+    suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case)
+                               for case in (NativeParityCatalogTests, NativeParityFinishTests))
     raise SystemExit(run_counted(suite, label="test-native-parity-catalog"))
