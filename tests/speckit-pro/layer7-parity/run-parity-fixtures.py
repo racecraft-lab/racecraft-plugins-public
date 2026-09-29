@@ -24,8 +24,8 @@ from typing import Any
 SCRIPT_DIR = Path(__file__).resolve().parent
 LIB_DIR = SCRIPT_DIR / "lib"
 ENV_SCHEMA = "speckit.layer7.env.v1"
-EXPECTED_SCHEMA = "speckit.layer7.expected-equivalence.v1"
-TOLERANCE_SCHEMA = "speckit.layer7.tolerance.v1"
+EXPECTED_SCHEMA = "speckit.layer7.legacy.expected-equivalence.v1"
+TOLERANCE_SCHEMA = "speckit.layer7.legacy.tolerance.v1"
 ALLOWED_TOLERANCES = frozenset({"byte-identical", "exact", "tolerance-1", "semantic-equivalent"})
 DEFAULT_BUDGET_USD = "20"
 INPUT_WORKFLOW = "workflow.md"
@@ -48,6 +48,7 @@ class Config:
     fixture_filter: str = ""
     budget_usd: str = os.environ.get("L7_FIXTURE_BUDGET_USD", DEFAULT_BUDGET_USD)
     claude_bin: str = os.environ.get("CLAUDE_BIN", "claude")
+    accept_skips: bool = False
 
 
 class Counts:
@@ -89,7 +90,10 @@ def print_usage() -> None:
                 "Usage:",
                 "  python3 tests/speckit-pro/layer7-parity/run-parity-fixtures.py [--dry-run|--live]",
                 "                                                               [--fixture <name>]",
-                "                                                               [--budget-usd <N>]",
+                "                                                               [--budget-usd <N>] [--accept-skips]",
+                "",
+                "  --accept-skips  let a live run exit zero when a comparison was skipped",
+                "                  (missing claude, or a semantic-equivalent field left unjudged)",
                 "",
                 "Environment:",
                 "  L7_FIXTURE_BUDGET_USD  Per-fixture-pair budget cap (default: 20)",
@@ -110,6 +114,9 @@ def parse_args(argv: list[str]) -> tuple[Config | None, int]:
             index += 1
         elif arg == "--live":
             config.mode = "live"
+            index += 1
+        elif arg == "--accept-skips":
+            config.accept_skips = True
             index += 1
         elif arg == "--fixture":
             if index + 1 >= len(argv):
@@ -216,6 +223,8 @@ def validate_compare_selection(index: int, entry: dict[str, Any], tolerance_entr
     extractor = entry.get("extractor")
     if (section is None) != (extractor is None):
         raise ValueError(f"compare[{index}] must provide section_selector and extractor together")
+    if tolerance_entry.get("tolerance") == "tolerance-1" and extractor != "table_row_count":
+        raise ValueError(f"compare[{index}] tolerance-1 requires table_row_count")
     if section is not None and (not isinstance(section, str) or not section.startswith("## ")):
         raise ValueError(f"compare[{index}].section_selector must name an H2 section")
     if extractor is not None and not (
@@ -470,7 +479,7 @@ def run_path(fixture_dir: Path, env_contract: Path, out_dir: Path, config: Confi
         "-p",
         "--max-budget-usd",
         config.budget_usd,
-        "/speckit-pro:autopilot workflow.md",
+        "/speckit-pro:speckit-autopilot workflow.md",
     ]
     child_env = env_from_contract(env_contract)
     selected_dir = str(Path(claude_executable).parent)
@@ -568,27 +577,21 @@ def emit_judge_result(
     tolerance_type: str,
     result: Any,
     report_path: Path,
-    file_a: Path | None = None,
-    file_b: Path | None = None,
-    extractor_name: str = "",
-    value_a: str = "",
-    value_b: str = "",
+    extractor_name: str,
+    value_a: str,
+    value_b: str,
 ) -> str:
     status = getattr(result, "status", "fail")
     reason = getattr(result, "reason", "comparison failed")
     if status == "pass":
-        if tolerance_type == "byte-identical":
-            counts.pass_(f"{fixture_id}:{field_name} (byte-identical)")
-        elif tolerance_type == "tolerance-1":
+        if tolerance_type == "tolerance-1":
             detail = result_detail(result)
             diff = detail.get("difference", 0)
             left = detail.get("value_a", value_a)
             right = detail.get("value_b", value_b)
             counts.pass_(f"{fixture_id}:{field_name} (tolerance-1, |{left} - {right}|={diff})")
-        elif extractor_name:
-            counts.pass_(f"{fixture_id}:{field_name} ({tolerance_type}, extractor={extractor_name})")
         else:
-            counts.pass_(f"{fixture_id}:{field_name} ({tolerance_type}, whole-file)")
+            counts.pass_(f"{fixture_id}:{field_name} ({tolerance_type}, extractor={extractor_name})")
         return "pass"
 
     if status == "skip":
@@ -596,16 +599,8 @@ def emit_judge_result(
         append_semantic_skip(report_path, field_name, value_a, value_b, reason)
         return "skip"
 
-    if tolerance_type == "byte-identical" and file_a is not None and file_b is not None:
-        counts.fail(f"{fixture_id}:{field_name}", "byte-identical tolerance failed - see diff in report")
-        append_file_diff(report_path, file_a, file_b)
-    elif extractor_name:
-        counts.fail(f"{fixture_id}:{field_name}", reason)
-        append_value_diff(report_path, field_name, extractor_name, value_a, value_b)
-    else:
-        counts.fail(f"{fixture_id}:{field_name}", reason)
-        if file_a is not None and file_b is not None:
-            append_file_diff(report_path, file_a, file_b)
+    counts.fail(f"{fixture_id}:{field_name}", reason)
+    append_value_diff(report_path, field_name, extractor_name, value_a, value_b)
     return "fail"
 
 
@@ -695,25 +690,11 @@ def compare_field(
         )
         return "fail"
 
-    if tolerance_type in {"exact", "tolerance-1"}:
-        return compare_whole_file_bytes(fixture_id, field_name, tolerance_type, file_a, file_b, report_path, counts)
-
-    try:
-        result = judge.judge_files(file_a, file_b, tolerance_type, field=field_name)
-    except ValueError as exc:
-        counts.fail(f"{fixture_id}:{field_name}", str(exc))
+    if tolerance_type == "tolerance-1":
+        counts.fail(f"{fixture_id}:{field_name}", "tolerance-1 requires table_row_count")
         return "fail"
 
-    return emit_judge_result(
-        counts,
-        fixture_id,
-        field_name,
-        tolerance_type,
-        result,
-        report_path,
-        file_a=file_a,
-        file_b=file_b,
-    )
+    return compare_whole_file_bytes(fixture_id, field_name, tolerance_type, file_a, file_b, report_path, counts)
 
 
 def run_fixture_live(fixture_dir: Path, config: Config, counts: Counts) -> None:
@@ -792,7 +773,12 @@ def main(argv: list[str] | None = None) -> int:
     print(SUMMARY_RULE)
     print(f"Layer 7 (parity): {counts.passed} passed, {counts.failed} failed, {counts.skipped} skipped")
     print(f"run-parity-fixtures: {counts.passed}/{counts.passed + counts.failed} passed")
-    return 1 if counts.failed else 0
+    if counts.failed:
+        return 1
+    if config.mode == "live" and counts.skipped and not config.accept_skips:
+        print(f"{counts.skipped} live comparison(s) skipped; rerun with --accept-skips to allow", file=sys.stderr)
+        return 1
+    return 0
 
 
 if __name__ == "__main__":
