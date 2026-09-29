@@ -75,6 +75,7 @@ def reduce_transcript(events: list[JsonObject], expected: JsonObject) -> list[Js
     reduced: list[JsonObject] = []
     id_map: dict[str, str] = {}
     agent_for: dict[str, Any] = {}
+    message_ids: dict[str, str] = {}
     sequence = 0
 
     for event in events:
@@ -96,18 +97,16 @@ def reduce_transcript(events: list[JsonObject], expected: JsonObject) -> list[Js
                 if block.get("name") == "Agent":
                     subagent_type = jq_coalesce_empty(inputs.get("subagent_type", ""))
                     agent_for[new_id] = subagent_type
-                    output_blocks.append(
-                        {
-                            "type": "tool_use",
-                            "id": new_id,
-                            "name": "Agent",
-                            "input": {
-                                "subagent_type": subagent_type,
-                                "description": jq_coalesce_empty(inputs.get("description", "")),
-                                "prompt": redact_private_text(str(jq_coalesce_empty(inputs.get("prompt", "")))),
-                            },
-                        }
-                    )
+                    reduced_input = {
+                        "subagent_type": subagent_type,
+                        "description": jq_coalesce_empty(inputs.get("description", "")),
+                        "prompt": redact_private_text(str(jq_coalesce_empty(inputs.get("prompt", "")))),
+                    }
+                    # Keep the dispatch-shape fields the Layer 6 dispatch assertions read.
+                    for shape_key in ("run_in_background", "isolation"):
+                        if shape_key in inputs:
+                            reduced_input[shape_key] = inputs[shape_key]
+                    output_blocks.append({"type": "tool_use", "id": new_id, "name": "Agent", "input": reduced_input})
                 else:
                     output_blocks.append(
                         {
@@ -118,13 +117,13 @@ def reduce_transcript(events: list[JsonObject], expected: JsonObject) -> list[Js
                         }
                     )
             if output_blocks:
-                reduced.append(
-                    {
-                        "type": "assistant",
-                        "isSidechain": is_sidechain,
-                        "message": {"role": "assistant", "content": output_blocks},
-                    }
-                )
+                message: JsonObject = {"role": "assistant", "content": output_blocks}
+                source_message = event.get("message") if isinstance(event.get("message"), dict) else {}
+                source_id = source_message.get("id")
+                if isinstance(source_id, str):
+                    # Stream events of one assistant message share an id; keep that link, not the raw id.
+                    message["id"] = message_ids.setdefault(source_id, f"msg-{len(message_ids) + 1:03d}")
+                reduced.append({"type": "assistant", "isSidechain": is_sidechain, "message": message})
             continue
 
         if event.get("type") == "user":

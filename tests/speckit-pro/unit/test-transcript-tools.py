@@ -302,6 +302,26 @@ class TranscriptToolTests(unittest.TestCase):
             with self.subTest(private_value=name):
                 self.assertNotIn(value, reduced.stdout)
 
+    def test_reduce_keeps_dispatch_shape_and_message_grouping(self) -> None:
+        source = LAYER6 / "test-fixtures" / "parallel-split-message-dispatch.jsonl"
+        sys.path.insert(0, str(LAYER6 / "lib"))
+        try:
+            import transcript_helpers as helpers
+        finally:
+            sys.path.remove(str(LAYER6 / "lib"))
+        with tempfile.TemporaryDirectory() as temporary:
+            expected = Path(temporary) / "expected.json"
+            expected.write_text("{}", encoding="utf-8")
+            reduced = run_script(REDUCE, str(source), str(expected))
+            self.assertEqual(reduced.returncode, 0, reduced.stderr)
+            reduced_path = Path(temporary) / "reduced.jsonl"
+            reduced_path.write_text(reduced.stdout, encoding="utf-8")
+            dispatches = helpers.extract_orchestrator_dispatches(reduced_path)
+        self.assertEqual([item["message_index"] for item in dispatches], [0, 0, 0])
+        self.assertEqual({item["run_in_background"] for item in dispatches}, {True})
+        self.assertEqual({item["isolation"] for item in dispatches}, {"worktree"})
+        self.assertNotIn("msg_A", reduced.stdout)
+
     def test_reduced_replay_fixtures_keep_their_must_include_terms(self) -> None:
         checked = 0
         for family in ("dispatch-fixtures", "return-format-fixtures"):

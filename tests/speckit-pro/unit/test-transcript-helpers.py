@@ -202,6 +202,32 @@ class TranscriptHelperTests(unittest.TestCase):
             with self.subTest(msg=name):
                 check()
 
+    def test_dispatch_shape_is_recorded(self) -> None:
+        serial = helpers.extract_orchestrator_dispatches(self.fixture("serial-dispatch.jsonl"))
+        foreground = helpers.extract_orchestrator_dispatches(self.fixture("foreground-dispatch.jsonl"))
+        split = helpers.extract_orchestrator_dispatches(self.fixture("parallel-split-message-dispatch.jsonl"))
+        self.assertEqual([item["message_index"] for item in serial], [0, 1, 2])
+        self.assertEqual([item["message_index"] for item in foreground], [0, 0, 0])
+        # Stream events that share a message id are one assistant message.
+        self.assertEqual([item["message_index"] for item in split], [0, 0, 0])
+        self.assertEqual([item["run_in_background"] for item in serial], [True, True, True])
+        self.assertEqual([item["run_in_background"] for item in foreground], [None, None, None])
+        self.assertEqual({item["isolation"] for item in serial}, {"worktree"})
+        self.assertEqual({item["isolation"] for item in foreground}, {None})
+        self.assertEqual(helpers.largest_same_message_dispatch_group(self.fixture("serial-dispatch.jsonl")), 1)
+        self.assertEqual(helpers.largest_same_message_dispatch_group(self.fixture("foreground-dispatch.jsonl")), 3)
+        self.assertEqual(helpers.largest_same_message_dispatch_group(self.fixture("parallel-split-message-dispatch.jsonl")), 3)
+        self.assertEqual(
+            helpers.largest_same_message_dispatch_group(
+                self.fixture("serial-dispatch.jsonl"), "speckit-pro:domain-researcher"
+            ),
+            0,
+        )
+        self.assertFalse(helpers.assert_all_dispatches_background(self.fixture("foreground-dispatch.jsonl")))
+        self.assertTrue(helpers.assert_all_dispatches_background(self.fixture("serial-dispatch.jsonl")))
+        self.assertFalse(helpers.assert_all_dispatches_isolated(self.fixture("foreground-dispatch.jsonl"), "worktree"))
+        self.assertTrue(helpers.assert_all_dispatches_isolated(self.fixture("serial-dispatch.jsonl"), "worktree"))
+
 
 if __name__ == "__main__":
     suite = unittest.defaultTestLoader.loadTestsFromTestCase(TranscriptHelperTests)

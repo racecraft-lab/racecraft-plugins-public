@@ -48,9 +48,18 @@ def _in_scope(event: JsonObject, scope: str) -> bool:
 
 def extract_orchestrator_dispatches(transcript: str | Path) -> list[JsonObject]:
     dispatches: list[JsonObject] = []
+    message_index = -1
+    previous_message_id: object = None
     for event in load_events(transcript):
         if event.get("type") != "assistant" or not _in_scope(event, "orchestrator"):
             continue
+        # Stream-JSON may split one assistant message across events that share
+        # a message id, so those events belong to one message index.
+        message = event.get("message") if isinstance(event.get("message"), dict) else {}
+        message_id = message.get("id") if isinstance(message.get("id"), str) else None
+        if message_id is None or message_id != previous_message_id:
+            message_index += 1
+        previous_message_id = message_id
         for block in _blocks(event):
             if block.get("type") != "tool_use" or block.get("name") != "Agent":
                 continue
@@ -61,9 +70,31 @@ def extract_orchestrator_dispatches(transcript: str | Path) -> list[JsonObject]:
                     "description": inputs.get("description", ""),
                     "prompt": inputs.get("prompt", ""),
                     "id": block.get("id"),
+                    "message_index": message_index,
+                    "run_in_background": inputs.get("run_in_background"),
+                    "isolation": inputs.get("isolation"),
                 }
             )
     return dispatches
+
+
+def largest_same_message_dispatch_group(transcript: str | Path, subagent_type: str | None = None) -> int:
+    """Return the most dispatches (of one type, when given) inside a single assistant message."""
+    counts: dict[int, int] = {}
+    for item in extract_orchestrator_dispatches(transcript):
+        if subagent_type is None or item.get("subagent_type") == subagent_type:
+            counts[item["message_index"]] = counts.get(item["message_index"], 0) + 1
+    return max(counts.values(), default=0)
+
+
+def assert_all_dispatches_background(transcript: str | Path) -> bool:
+    dispatches = extract_orchestrator_dispatches(transcript)
+    return bool(dispatches) and all(item.get("run_in_background") is True for item in dispatches)
+
+
+def assert_all_dispatches_isolated(transcript: str | Path, isolation: str) -> bool:
+    dispatches = extract_orchestrator_dispatches(transcript)
+    return bool(dispatches) and all(item.get("isolation") == isolation for item in dispatches)
 
 
 def extract_dispatch_order(transcript: str | Path) -> list[str]:

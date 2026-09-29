@@ -254,6 +254,52 @@ class Layer6RunnerTests(unittest.TestCase):
             with self.subTest(msg=name):
                 check()
 
+    def test_dispatch_fixtures_reject_serial_and_foreground_dispatch(self) -> None:
+        fixtures = LAYER6 / "dispatch-fixtures"
+        bad_transcripts = {
+            "serial": LAYER6 / "test-fixtures" / "serial-dispatch.jsonl",
+            "foreground": LAYER6 / "test-fixtures" / "foreground-dispatch.jsonl",
+        }
+        for fixture_name in (
+            "19-implement-parallel-p-tasks",
+            "20-consensus-multi-item-batch",
+            "21-resolve-pr-parallel-files",
+        ):
+            fixture = fixtures / fixture_name
+            expected = json.loads((fixture / "expected.json").read_text(encoding="utf-8"))
+            with self.subTest(fixture=fixture_name, case="committed replay passes"):
+                reporter = fixture_runner.Reporter()
+                with contextlib.redirect_stderr(io.StringIO()):
+                    fixture_runner.assert_dispatch_fixture(fixture, "replay", reporter, check_terms=True)
+                self.assertEqual(reporter.passed, reporter.total)
+            with self.subTest(fixture=fixture_name, case="declares dispatch-shape assertions"):
+                self.assertTrue(expected.get("same_message_dispatch_groups"))
+                self.assertIs(expected.get("must_run_in_background"), True)
+            for label, source in bad_transcripts.items():
+                with self.subTest(fixture=fixture_name, case=label), tempfile.TemporaryDirectory() as temporary:
+                    case = Path(temporary) / fixture_name
+                    case.mkdir()
+                    # Retarget the broken transcript at this fixture's own agent types.
+                    events = [json.loads(line) for line in source.read_text(encoding="utf-8").splitlines()]
+                    for event in events:
+                        for block in (event.get("message") or {}).get("content", []):
+                            if block.get("name") == "Agent":
+                                block["input"]["subagent_type"] = expected["must_dispatch_to"][0]
+                    (case / "parser-fixture.jsonl").write_text(
+                        "\n".join(json.dumps(event) for event in events) + "\n", encoding="utf-8"
+                    )
+                    (case / "expected.json").write_text(json.dumps(expected), encoding="utf-8")
+                    reporter = fixture_runner.Reporter()
+                    with contextlib.redirect_stderr(io.StringIO()):
+                        fixture_runner.assert_dispatch_fixture(case, "replay", reporter, check_terms=True)
+                    self.assertLess(reporter.passed, reporter.total)
+
+    def test_fixture_21_caps_dispatches_at_the_per_file_partition(self) -> None:
+        expected = json.loads(
+            (LAYER6 / "dispatch-fixtures" / "21-resolve-pr-parallel-files" / "expected.json").read_text(encoding="utf-8")
+        )
+        self.assertEqual(expected["max_dispatch_count"], 3)
+
 
 if __name__ == "__main__":
     suite = unittest.defaultTestLoader.loadTestsFromTestCase(Layer6RunnerTests)

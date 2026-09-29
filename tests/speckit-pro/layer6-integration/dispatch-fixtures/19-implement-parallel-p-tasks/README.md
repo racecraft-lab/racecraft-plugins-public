@@ -14,17 +14,20 @@ in ONE assistant message, each with `isolation: "worktree"` and
 
 ## Asserts
 
-- ≥3 background dispatches happen
+- ≥3 background dispatches happen (`must_run_in_background`)
+- All 3 sit in ONE assistant message (`same_message_dispatch_groups`)
+- Every dispatch sets `isolation: "worktree"` (`required_isolation`)
 - Dispatches go to `speckit-pro:implement-executor`
 - No forbidden spawns (subagents don't nest)
 - `grill-me` is NEVER invoked
 
 ## What this fixture catches
 
-- Regression to per-task serial dispatch — only 0-1 dispatches in the
-  parser-fixture's first assistant message
-- Missing `isolation: "worktree"` — flagged by description content
-  in the parser fixture
+- Regression to per-task serial dispatch: the same 3 tasks spread across
+  several assistant messages fail `same_message_dispatch_groups`
+- Foreground calls: a dispatch without `run_in_background: true` fails
+  `must_run_in_background`
+- Missing `isolation: "worktree"`: fails `required_isolation`
 - Wrong agent routing (e.g., orchestrator-direct instead of
   implement-executor) — caught by `must_dispatch_to`
 
