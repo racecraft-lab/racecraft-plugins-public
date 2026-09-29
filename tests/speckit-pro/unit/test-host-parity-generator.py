@@ -211,7 +211,8 @@ class PairingManifestTests(unittest.TestCase):
     def test_shared_roles_are_paired_with_both_sources(self) -> None:
         manifest = pairing_manifest(AGENT_INVENTORY)
         paired = manifest.paired
-        self.assertEqual(len(paired), 12)
+        shared = {role["name"] for role in AGENT_INVENTORY["roles"] if role["category"] == "shared"}
+        self.assertEqual(set(paired), shared)
         self.assertEqual(
             paired["domain-researcher"].claude_source, "agents/domain-researcher.md"
         )
