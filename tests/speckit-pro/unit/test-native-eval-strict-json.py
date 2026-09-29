@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 import sys
 import tempfile
+import types
 import unittest
 
 TEST_ROOT = Path(__file__).resolve().parents[1]
@@ -72,59 +73,49 @@ class ReceiptTests(unittest.TestCase):
                 strict_json.attach_receipt(candidate, [], binding)
 
 
-def prepared_trial(attempt: Path, result_path: Path | None = None) -> adapters.PreparedTrial:
-    return adapters.PreparedTrial(
-        command=[], cwd=attempt, environment={}, host="claude", mode="plugin",
-        attempt_dir=attempt, trace_path=None, result_path=result_path,
-        artifact_root=None, runtime_identity={},
-    )
-
-
 class NonFiniteConstantTests(unittest.TestCase):
     """NaN and Infinity are the only defect in each payload below."""
 
-    def assert_constants_rejected(self, name: str, template: str, read, error, pattern: str) -> None:
-        for index, constant in enumerate(CONSTANTS):
-            with self.subTest(constant=constant):
-                root = Path(self.enterContext(tempfile.TemporaryDirectory())) / f"{name}-{index}"
-                (root / ".codex-plugin").mkdir(parents=True)
-                payload = root / "payload.json"
-                payload.write_text(template.replace("CONSTANT", constant), encoding="utf-8")
-                os.chmod(payload, 0o600)
-                with self.assertRaisesRegex(error, pattern):
-                    read(root, payload)
+    def test_every_native_path_rejects_the_constants(self) -> None:
+        receipt_settings = {"receipt_relative_path": "payload.json", "expected_result": {}}
 
-    def test_codex_plugin_manifest_rejects_constants(self) -> None:
-        def read(root: Path, payload: Path) -> None:
+        def manifest(root: Path, payload: Path) -> None:
             payload.rename(root / ".codex-plugin" / "plugin.json")
             adapters._codex_native_skill_reference(root, "native-skill")
 
-        self.assert_constants_rejected(
-            "manifest", '{"name":"speckit-pro","extra":CONSTANT}', read,
-            adapters.NativeAdapterError, "manifest is unavailable")
-
-    def test_claude_framework_result_rejects_constants(self) -> None:
-        self.assert_constants_rejected(
-            "result", '{"schemaVersion":1,"extra":CONSTANT}',
-            lambda root, payload: adapters._read_claude_result(prepared_trial(root, payload)),
-            adapters.NativeAdapterError, "result is malformed")
-
-    def test_claude_fixture_receipt_rejects_constants(self) -> None:
-        settings = {"receipt_relative_path": "payload.json", "expected_result": {}}
-        self.assert_constants_rejected(
-            "receipt", '{"extra":CONSTANT}',
-            lambda root, payload: adapters._read_claude_fixture_receipt(prepared_trial(root), settings),
-            adapters.NativeAdapterError, "receipt is malformed")
-
-    def test_store_receipt_rejects_constants(self) -> None:
-        self.assert_constants_rejected(
-            "store", '{"payload":{"n":CONSTANT},"sha256":"' + "0" * 64 + '"}',
-            lambda root, payload: store._read(payload), store.StoreError, "invalid JSON constant")
-
-    def test_fixture_plan_rejects_constants(self) -> None:
-        self.assert_constants_rejected(
-            "plan", '{"extra":CONSTANT}', lambda root, payload: fixture_setup.load_plan(payload),
-            ValueError, "fixture plan could not be read")
+        # name: (payload template, read the payload, expected error class, expected message)
+        paths = {
+            "codex manifest": (
+                '{"name":"speckit-pro","extra":CONSTANT}', manifest,
+                adapters.NativeAdapterError, "manifest is unavailable"),
+            "claude framework result": (
+                '{"schemaVersion":1,"extra":CONSTANT}',
+                lambda root, payload: adapters._read_claude_result(
+                    types.SimpleNamespace(result_path=payload)),
+                adapters.NativeAdapterError, "result is malformed"),
+            "claude fixture receipt": (
+                '{"extra":CONSTANT}',
+                lambda root, payload: adapters._read_claude_fixture_receipt(
+                    types.SimpleNamespace(cwd=root), receipt_settings),
+                adapters.NativeAdapterError, "receipt is malformed"),
+            "store receipt": (
+                '{"payload":{"n":CONSTANT},"sha256":"' + "0" * 64 + '"}',
+                lambda root, payload: store._read(payload),
+                store.StoreError, "invalid JSON constant"),
+            "fixture plan": (
+                '{"extra":CONSTANT}', lambda root, payload: fixture_setup.load_plan(payload),
+                ValueError, "fixture plan could not be read"),
+        }
+        for name, (template, read, error, pattern) in paths.items():
+            for constant in CONSTANTS:
+                with self.subTest(path=name, constant=constant):
+                    root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+                    (root / ".codex-plugin").mkdir()
+                    payload = root / "payload.json"
+                    payload.write_text(template.replace("CONSTANT", constant), encoding="utf-8")
+                    os.chmod(payload, 0o600)
+                    with self.assertRaisesRegex(error, pattern):
+                        read(root, payload)
 
 
 if __name__ == "__main__":
