@@ -188,7 +188,7 @@ invocations on the left or the Codex skill invocations on the right.
 | Create PRD and roadmap | `/speckit-pro:speckit-prd "saved searches"` | `$speckit-prd "saved searches"` |
 | Check project status | `/speckit-pro:speckit-status` | `$speckit-status` |
 | Prepare one SPEC | `/speckit-pro:speckit-scaffold-spec SPEC-001` | `$speckit-scaffold-spec SPEC-001` |
-| Run autopilot | `/speckit-pro:speckit-autopilot docs/ai/specs/SPEC-001-workflow.md` | `$speckit-autopilot docs/ai/specs/SPEC-001-workflow.md` |
+| Run autopilot | `/speckit-pro:speckit-autopilot docs/ai/specs/.process/SPEC-001-workflow.md` | `$speckit-autopilot docs/ai/specs/.process/SPEC-001-workflow.md` |
 
 Before autopilot, define your project's constitution with the command installed
 by Spec Kit for your runtime. The official Spec Kit workflow treats the
@@ -226,6 +226,9 @@ The core idea is simple:
 | `speckit-autopilot` | A workflow file is ready to execute through the SDD phases. |
 | `speckit-status` | You need project status, archive-sweep state, or the next recommended SPEC. |
 | `speckit-resolve-pr` | A PR has review comments that should be addressed and pushed. |
+| `speckit-install` | The official SpecKit CLI is missing, or a repository needs Claude Code, Codex, or both initialized for Spec Kit. |
+| `speckit-upgrade` | An existing SpecKit installation needs a safe upgrade or migration that keeps your constitution and local template edits. |
+| `speckit-archive-cleanup` | A SPEC's implementation PR has merged and its spec needs archiving and its workflow residue cleaned. |
 | `install` | Codex needs the bundled custom-agent TOML templates copied into its agent registry. |
 
 <details>
@@ -241,6 +244,9 @@ The core idea is simple:
 | Autopilot execution | `/speckit-pro:speckit-autopilot` | `$speckit-autopilot` |
 | Project status | `/speckit-pro:speckit-status` | `$speckit-status` |
 | PR review resolution | `/speckit-pro:speckit-resolve-pr` | `$speckit-resolve-pr` |
+| SpecKit CLI install | `/speckit-pro:speckit-install` | `$speckit-install` |
+| SpecKit upgrade | `/speckit-pro:speckit-upgrade` | `$speckit-upgrade` |
+| Post-merge archive cleanup | `/speckit-pro:speckit-archive-cleanup` | `$speckit-archive-cleanup` |
 | Codex custom-agent install | Not applicable | `@SpecKit Pro -> install` or `$install` |
 
 Some Codex environments also expose plugin skills through the `@SpecKit Pro`
@@ -318,11 +324,10 @@ SpecKit Pro has one authoring source and two generated install payloads.
 When changing the plugin:
 
 1. Edit the source tree under `speckit-pro/`.
-2. Rebuild generated payloads through the Python runner gate:
+2. Rebuild generated payloads from the repository root:
 
    ```text
-   cd speckit-pro
-   resolved_python -m speckit_pro_runner < ../tests/speckit-pro/unit/fixtures/installed-plugin-release/requests/payload-completeness-apply.json
+   resolved_python scripts/refresh-release-artifacts.py
    ```
 
    Here `resolved_python` is the Python 3.11+ interpreter resolved by the
@@ -330,11 +335,15 @@ When changing the plugin:
 
 3. Run structural validation while iterating:
 
-   Use the repository structural validation suite documented in the contributor guide.
+   ```text
+   resolved_python tests/speckit-pro/run-all.py --layer 1
+   ```
 
 4. Run the default suite before opening a PR:
 
-   Use the repository default validation suite documented in the contributor guide.
+   ```text
+   resolved_python tests/speckit-pro/run-all.py
+   ```
 
 Do not hand-edit generated `dist/**` payloads as the source of truth. They are
 committed so marketplace installs can fetch self-contained platform payloads,
