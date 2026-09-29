@@ -1,0 +1,478 @@
+{
+  "docs-site/playwright.gallery.config.mjs": {
+    "verdict": "clean",
+    "checks_run": [
+      "read docs-site/playwright.gallery.config.mjs",
+      "ripwire . --grep=playwright"
+    ]
+  },
+  "docs-site/tests/artifact-gallery.spec.mjs": {
+    "verdict": [
+      "artifact-gallery-001"
+    ],
+    "checks_run": [
+      "read docs-site/tests/artifact-gallery.spec.mjs",
+      "ripwire . --grep=artifact-gallery"
+    ]
+  },
+  "docs/ai/specs/html-artifacts-roadmap-MOC.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "read docs/ai/specs/html-artifacts-roadmap-MOC.md",
+      "ripwire . --grep=html-artifacts-roadmap-MOC"
+    ]
+  },
+  "docs/ai/specs/html-artifacts-technical-roadmap.md": {
+    "verdict": [
+      "artifact-gallery-010"
+    ],
+    "checks_run": [
+      "read docs/ai/specs/html-artifacts-technical-roadmap.md",
+      "ripwire . --grep=html-artifacts-technical-roadmap"
+    ]
+  },
+  "docs/prd-html-artifacts.md": {
+    "verdict": [
+      "artifact-gallery-011"
+    ],
+    "checks_run": [
+      "read docs/prd-html-artifacts.md",
+      "ripwire . --grep=prd-html-artifacts"
+    ]
+  },
+  "scripts/docs-artifact.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "read scripts/docs-artifact.py",
+      "ripwire . --grep=docs-artifact"
+    ]
+  },
+  "scripts/refresh-release-artifacts.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "read scripts/refresh-release-artifacts.py",
+      "ripwire . --grep=refresh-release-artifacts"
+    ]
+  },
+  "speckit-pro/agents/artifact-author.md": {
+    "verdict": [
+      "artifact-gallery-005"
+    ],
+    "checks_run": [
+      "read speckit-pro/agents/artifact-author.md",
+      "ripwire . --grep=artifact-author"
+    ]
+  },
+  "speckit-pro/agents/artifact-preview-observer.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "read speckit-pro/agents/artifact-preview-observer.md",
+      "ripwire . --grep=artifact-preview-observer"
+    ]
+  },
+  "speckit-pro/agents/uat-runbook-author.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "read speckit-pro/agents/uat-runbook-author.md",
+      "ripwire . --grep=uat-runbook-author"
+    ]
+  },
+  "speckit-pro/artifact-gallery/SPA-CONTRACT.md": {
+    "verdict": [
+      "artifact-gallery-001",
+      "artifact-gallery-005"
+    ],
+    "checks_run": [
+      "read speckit-pro/artifact-gallery/SPA-CONTRACT.md",
+      "ripwire . --grep=SPA-CONTRACT"
+    ]
+  },
+  "speckit-pro/artifact-gallery/UPSTREAM-NOTICE.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "read speckit-pro/artifact-gallery/UPSTREAM-NOTICE.md",
+      "ripwire . --grep=UPSTREAM-NOTICE"
+    ]
+  },
+  "speckit-pro/artifact-gallery/brand-kit.css": {
+    "verdict": "clean",
+    "checks_run": [
+      "read speckit-pro/artifact-gallery/brand-kit.css",
+      "ripwire . --grep=brand-kit"
+    ]
+  },
+  "speckit-pro/artifact-gallery/brand-voice.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "read speckit-pro/artifact-gallery/brand-voice.md",
+      "ripwire . --grep=brand-voice"
+    ]
+  },
+  "speckit-pro/artifact-gallery/manifest.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "read speckit-pro/artifact-gallery/manifest.json",
+      "ripwire . --grep=manifest",
+      "ripwire . --grep=architecture-viewer"
+    ]
+  },
+  "speckit-pro/artifact-gallery/templates/animation-prototype.html": {
+    "verdict": "clean",
+    "checks_run": [
+      "read speckit-pro/artifact-gallery/templates/animation-prototype.html",
+      "ripwire . --grep=animation-prototype"
+    ]
+  },
+  "speckit-pro/artifact-gallery/templates/annotated-diff.html": {
+    "verdict": "clean",
+    "checks_run": [
+      "read speckit-pro/artifact-gallery/templates/annotated-diff.html",
+      "ripwire . --grep=annotated-diff"
+    ]
+  },
+  "speckit-pro/artifact-gallery/templates/code-approaches.html": {
+    "verdict": "clean",
+    "checks_run": [
+      "read speckit-pro/artifact-gallery/templates/code-approaches.html",
+      "ripwire . --grep=code-approaches"
+    ]
+  },
+  "speckit-pro/artifact-gallery/templates/component-variants.html": {
+    "verdict": "clean",
+    "checks_run": [
+      "read speckit-pro/artifact-gallery/templates/component-variants.html",
+      "ripwire . --grep=component-variants"
+    ]
+  },
+  "speckit-pro/artifact-gallery/templates/concept-explainer.html": {
+    "verdict": "clean",
+    "checks_run": [
+      "read speckit-pro/artifact-gallery/templates/concept-explainer.html",
+      "ripwire . --grep=concept-explainer"
+    ]
+  },
+  "speckit-pro/artifact-gallery/templates/design-system.html": {
+    "verdict": "clean",
+    "checks_run": [
+      "read speckit-pro/artifact-gallery/templates/design-system.html",
+      "ripwire . --grep=design-system"
+    ]
+  },
+  "speckit-pro/artifact-gallery/templates/feature-flags.html": {
+    "verdict": "clean",
+    "checks_run": [
+      "read speckit-pro/artifact-gallery/templates/feature-flags.html",
+      "ripwire . --grep=feature-flags"
+    ]
+  },
+  "speckit-pro/artifact-gallery/templates/flowchart.html": {
+    "verdict": "clean",
+    "checks_run": [
+      "read speckit-pro/artifact-gallery/templates/flowchart.html",
+      "ripwire . --grep=flowchart"
+    ]
+  },
+  "speckit-pro/artifact-gallery/templates/implementation-plan.html": {
+    "verdict": "clean",
+    "checks_run": [
+      "read speckit-pro/artifact-gallery/templates/implementation-plan.html",
+      "ripwire . --grep=implementation-plan"
+    ]
+  },
+  "speckit-pro/artifact-gallery/templates/incident-report.html": {
+    "verdict": "clean",
+    "checks_run": [
+      "read speckit-pro/artifact-gallery/templates/incident-report.html",
+      "ripwire . --grep=incident-report"
+    ]
+  },
+  "speckit-pro/artifact-gallery/templates/interaction-prototype.html": {
+    "verdict": "clean",
+    "checks_run": [
+      "read speckit-pro/artifact-gallery/templates/interaction-prototype.html",
+      "ripwire . --grep=interaction-prototype"
+    ]
+  },
+  "speckit-pro/artifact-gallery/templates/module-map.html": {
+    "verdict": "clean",
+    "checks_run": [
+      "read speckit-pro/artifact-gallery/templates/module-map.html",
+      "ripwire . --grep=module-map"
+    ]
+  },
+  "speckit-pro/artifact-gallery/templates/pr-writeup.html": {
+    "verdict": "clean",
+    "checks_run": [
+      "read speckit-pro/artifact-gallery/templates/pr-writeup.html",
+      "ripwire . --grep=pr-writeup"
+    ]
+  },
+  "speckit-pro/artifact-gallery/templates/prompt-tuner.html": {
+    "verdict": "clean",
+    "checks_run": [
+      "read speckit-pro/artifact-gallery/templates/prompt-tuner.html",
+      "ripwire . --grep=prompt-tuner"
+    ]
+  },
+  "speckit-pro/artifact-gallery/templates/slide-deck.html": {
+    "verdict": "clean",
+    "checks_run": [
+      "read speckit-pro/artifact-gallery/templates/slide-deck.html",
+      "ripwire . --grep=slide-deck"
+    ]
+  },
+  "speckit-pro/artifact-gallery/templates/spec-explainer.html": {
+    "verdict": "clean",
+    "checks_run": [
+      "read speckit-pro/artifact-gallery/templates/spec-explainer.html",
+      "ripwire . --grep=spec-explainer"
+    ]
+  },
+  "speckit-pro/artifact-gallery/templates/status-report.html": {
+    "verdict": "clean",
+    "checks_run": [
+      "read speckit-pro/artifact-gallery/templates/status-report.html",
+      "ripwire . --grep=status-report"
+    ]
+  },
+  "speckit-pro/artifact-gallery/templates/svg-illustrations.html": {
+    "verdict": "clean",
+    "checks_run": [
+      "read speckit-pro/artifact-gallery/templates/svg-illustrations.html",
+      "ripwire . --grep=svg-illustrations"
+    ]
+  },
+  "speckit-pro/artifact-gallery/templates/triage-board.html": {
+    "verdict": "clean",
+    "checks_run": [
+      "read speckit-pro/artifact-gallery/templates/triage-board.html",
+      "ripwire . --grep=triage-board"
+    ]
+  },
+  "speckit-pro/artifact-gallery/templates/visual-designs.html": {
+    "verdict": "clean",
+    "checks_run": [
+      "read speckit-pro/artifact-gallery/templates/visual-designs.html",
+      "ripwire . --grep=visual-designs"
+    ]
+  },
+  "speckit-pro/artifact-gallery/theme-toggle.html": {
+    "verdict": "clean",
+    "checks_run": [
+      "read speckit-pro/artifact-gallery/theme-toggle.html",
+      "ripwire . --grep=theme-toggle"
+    ]
+  },
+  "speckit-pro/codex-agents/artifact-author.toml": {
+    "verdict": [
+      "artifact-gallery-005"
+    ],
+    "checks_run": [
+      "read speckit-pro/codex-agents/artifact-author.toml",
+      "ripwire . --grep=artifact-author"
+    ]
+  },
+  "speckit-pro/codex-agents/uat-runbook-author.toml": {
+    "verdict": "clean",
+    "checks_run": [
+      "read speckit-pro/codex-agents/uat-runbook-author.toml",
+      "ripwire . --grep=uat-runbook-author"
+    ]
+  },
+  "speckit-pro/skills/speckit-autopilot/references/artifact-review.md": {
+    "verdict": [
+      "artifact-gallery-004"
+    ],
+    "checks_run": [
+      "read speckit-pro/skills/speckit-autopilot/references/artifact-review.md",
+      "ripwire . --grep=artifact-review"
+    ]
+  },
+  "speckit-pro/skills/speckit-autopilot/templates/uat-runbook-template.md": {
+    "verdict": [
+      "artifact-gallery-009"
+    ],
+    "checks_run": [
+      "read speckit-pro/skills/speckit-autopilot/templates/uat-runbook-template.md",
+      "ripwire . --grep=uat-runbook-template"
+    ]
+  },
+  "speckit-pro/speckit_pro_runner/artifact_review.py": {
+    "verdict": [
+      "artifact-gallery-006"
+    ],
+    "checks_run": [
+      "read speckit-pro/speckit_pro_runner/artifact_review.py",
+      "ripwire . --grep=artifact_review",
+      "ripwire . --callers=review_handoff",
+      "ripwire . --uses=OBSERVATION_CLOCK_SKEW"
+    ]
+  },
+  "speckit-pro/speckit_pro_runner/author_broker.py": {
+    "verdict": [
+      "artifact-gallery-002",
+      "artifact-gallery-008"
+    ],
+    "checks_run": [
+      "read speckit-pro/speckit_pro_runner/author_broker.py",
+      "ripwire . --grep=author_broker",
+      "ripwire . --uses=BROKER_ERROR_CODES",
+      "ripwire . --callers=_error_code"
+    ]
+  },
+  "speckit-pro/speckit_pro_runner/contracts/preview-verdict-output.schema.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "read speckit-pro/speckit_pro_runner/contracts/preview-verdict-output.schema.json",
+      "ripwire . --grep=preview-verdict-output"
+    ]
+  },
+  "speckit-pro/speckit_pro_runner/preview_launcher.py": {
+    "verdict": [
+      "artifact-gallery-003",
+      "artifact-gallery-007"
+    ],
+    "checks_run": [
+      "read speckit-pro/speckit_pro_runner/preview_launcher.py",
+      "ripwire . --grep=preview_launcher",
+      "ripwire . --uses=_toml_string_map"
+    ]
+  },
+  "tests/speckit-pro/layer3-functional/fixtures/autopilot/SPEC-009/phase-artifacts/README.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "read tests/speckit-pro/layer3-functional/fixtures/autopilot/SPEC-009/phase-artifacts/README.md",
+      "ripwire . --grep=README"
+    ]
+  },
+  "tests/speckit-pro/layer3-functional/fixtures/autopilot/SPEC-009/phase-artifacts/analysis.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "read tests/speckit-pro/layer3-functional/fixtures/autopilot/SPEC-009/phase-artifacts/analysis.md",
+      "ripwire . --grep=analysis"
+    ]
+  },
+  "tests/speckit-pro/layer3-functional/fixtures/autopilot/SPEC-009/phase-artifacts/checklist.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "read tests/speckit-pro/layer3-functional/fixtures/autopilot/SPEC-009/phase-artifacts/checklist.md",
+      "ripwire . --grep=checklist"
+    ]
+  },
+  "tests/speckit-pro/layer3-functional/fixtures/autopilot/SPEC-009/phase-artifacts/plan.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "read tests/speckit-pro/layer3-functional/fixtures/autopilot/SPEC-009/phase-artifacts/plan.md",
+      "ripwire . --grep=plan"
+    ]
+  },
+  "tests/speckit-pro/layer3-functional/fixtures/autopilot/SPEC-009/phase-artifacts/spec.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "read tests/speckit-pro/layer3-functional/fixtures/autopilot/SPEC-009/phase-artifacts/spec.md",
+      "ripwire . --grep=spec"
+    ]
+  },
+  "tests/speckit-pro/layer3-functional/fixtures/autopilot/SPEC-009/phase-artifacts/tasks.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "read tests/speckit-pro/layer3-functional/fixtures/autopilot/SPEC-009/phase-artifacts/tasks.md",
+      "ripwire . --grep=tasks"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/performance-fixtures/draft-pr-emission/source/contracts/artifact-author-agent.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "read tests/speckit-pro/layer6-integration/performance-fixtures/draft-pr-emission/source/contracts/artifact-author-agent.md",
+      "ripwire . --grep=artifact-author-agent"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/artifact-freshness/expected-envelopes.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "read tests/speckit-pro/unit/fixtures/artifact-freshness/expected-envelopes.json",
+      "ripwire . --grep=expected-envelopes"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/artifact-freshness/freshness-cases.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "read tests/speckit-pro/unit/fixtures/artifact-freshness/freshness-cases.json",
+      "ripwire . --grep=freshness-cases"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/artifact-gallery/catalog.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "read tests/speckit-pro/unit/fixtures/artifact-gallery/catalog.json",
+      "ripwire . --grep=catalog"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/mutation-helpers/uat-runbook-source/spec.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "read tests/speckit-pro/unit/fixtures/mutation-helpers/uat-runbook-source/spec.md",
+      "ripwire . --grep=spec"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/mutation-helpers/uat-runbook-source/workflow.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "read tests/speckit-pro/unit/fixtures/mutation-helpers/uat-runbook-source/workflow.md",
+      "ripwire . --grep=workflow"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/read-only-helpers/requests/check-artifact-freshness.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "read tests/speckit-pro/unit/fixtures/read-only-helpers/requests/check-artifact-freshness.json",
+      "ripwire . --grep=check-artifact-freshness"
+    ]
+  },
+  "tests/speckit-pro/unit/test-artifact-fill-regions.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "read tests/speckit-pro/unit/test-artifact-fill-regions.py",
+      "ripwire . --grep=test-artifact-fill-regions"
+    ]
+  },
+  "tests/speckit-pro/unit/test-artifact-freshness.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "read tests/speckit-pro/unit/test-artifact-freshness.py",
+      "ripwire . --grep=test-artifact-freshness"
+    ]
+  },
+  "tests/speckit-pro/unit/test-artifact-gallery.py": {
+    "verdict": [
+      "artifact-gallery-001"
+    ],
+    "checks_run": [
+      "read tests/speckit-pro/unit/test-artifact-gallery.py",
+      "ripwire . --grep=test-artifact-gallery"
+    ]
+  },
+  "tests/speckit-pro/unit/test-artifact-review.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "read tests/speckit-pro/unit/test-artifact-review.py",
+      "ripwire . --grep=test-artifact-review"
+    ]
+  },
+  "tests/speckit-pro/unit/test-author-broker.py": {
+    "verdict": [
+      "artifact-gallery-002"
+    ],
+    "checks_run": [
+      "read tests/speckit-pro/unit/test-author-broker.py",
+      "ripwire . --grep=test-author-broker"
+    ]
+  },
+  "tests/speckit-pro/unit/test-docs-artifact.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "read tests/speckit-pro/unit/test-docs-artifact.py",
+      "ripwire . --grep=test-docs-artifact"
+    ]
+  }
+}

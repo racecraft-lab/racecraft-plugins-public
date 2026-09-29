@@ -1,0 +1,162 @@
+[
+  {
+    "id": "artifact-gallery-001",
+    "lane": "artifact-gallery",
+    "severity": "major",
+    "kind": "coherence",
+    "files": [
+      "speckit-pro/artifact-gallery/SPA-CONTRACT.md:3-4",
+      "tests/speckit-pro/unit/test-artifact-gallery.py:142-150",
+      "docs-site/package.json:18"
+    ],
+    "ripwire_command": "ripwire . --grep=srcdoc",
+    "summary": "SPA-CONTRACT says repository tests validate its contracts, but the required static test (162 lines after #530) checks only CSP head position, canonical blocks and attribution. Nothing asserts the banned elements and attributes (base, iframe, object, embed, on*, srcdoc, ping, scheme-relative URLs, non-image/font data: URIs), the slot inventory comment, or button type. The browser suite that covers exports, scrollers and network is in validate-docs, which is not a required check.",
+    "proposed_fix": "Add a static test that scans every shipped template for the contract's banned constructs and checks that the slot inventory matches the FILL marker pairs. Either make the gallery browser suite required or reword the contract to say which suite enforces which rule.",
+    "in_flight_status": null
+  },
+  {
+    "id": "artifact-gallery-002",
+    "lane": "artifact-gallery",
+    "severity": "minor",
+    "kind": "coherence",
+    "files": [
+      "speckit-pro/speckit_pro_runner/author_broker.py:33-40",
+      "speckit-pro/speckit_pro_runner/author_broker.py:439-452"
+    ],
+    "ripwire_command": "ripwire . --uses=BROKER_ERROR_CODES",
+    "summary": "_error_code checks the substring 'session' before 'preview artifact', so 'preview artifact changed after session creation' reports receipt_violation instead of preview_mismatch. No message contains 'kind', so unsupported_kind is unreachable. The BROKER_ERROR_CODES tuple has no reader, and no test asserts an error code.",
+    "proposed_fix": "Check the preview_mismatch phrases first, drop unsupported_kind or raise it explicitly, delete or use BROKER_ERROR_CODES, and add a test per code.",
+    "in_flight_status": null
+  },
+  {
+    "id": "artifact-gallery-003",
+    "lane": "artifact-gallery",
+    "severity": "minor",
+    "kind": "coherence",
+    "files": [
+      "speckit-pro/speckit_pro_runner/preview_launcher.py:3",
+      "speckit-pro/codex-skills/speckit-autopilot/references/phase-execution-codex.md:148"
+    ],
+    "ripwire_command": "ripwire . --grep=observe_codex",
+    "summary": "The launcher docstring and the Codex phase-execution text say step 7 dispatches artifact-preview-observer. In the same document step 7 is the bookkeeping commit and step 8 is the observer dispatch.",
+    "proposed_fix": "Change both references to step 8.",
+    "in_flight_status": null
+  },
+  {
+    "id": "artifact-gallery-004",
+    "lane": "artifact-gallery",
+    "severity": "minor",
+    "kind": "coherence",
+    "files": [
+      "speckit-pro/skills/speckit-autopilot/references/artifact-review.md:3",
+      "speckit-pro/skills/speckit-autopilot/references/artifact-review.md:82-84",
+      "speckit-pro/codex-skills/speckit-autopilot/references/preview-prompts/observer.md:7-11"
+    ],
+    "ripwire_command": "ripwire . --grep=artifact-preview-observer",
+    "summary": "artifact-review.md is the shared Claude/Codex contract but says the observer has only the Artifact tool and the broker verdict tool. The Codex observer has no Artifact tool, only the broker verdict tool, and its normal verdict is unavailable.",
+    "proposed_fix": "Split step 3 by host: Claude observer with Artifact plus the broker tool; Codex isolated launcher with the broker tool only.",
+    "in_flight_status": null
+  },
+  {
+    "id": "artifact-gallery-005",
+    "lane": "artifact-gallery",
+    "severity": "minor",
+    "kind": "coherence",
+    "files": [
+      "speckit-pro/agents/artifact-author.md:47-58",
+      "speckit-pro/codex-agents/artifact-author.toml:41-52",
+      "speckit-pro/artifact-gallery/SPA-CONTRACT.md:66-67",
+      "docs/ai/specs/html-artifacts-technical-roadmap.md:1603-1605"
+    ],
+    "ripwire_command": "ripwire . --grep=architecture-viewer",
+    "summary": "Both author prompts select every draft-pr entry whose trigger fires and never mention manifest status. The planned architecture-viewer row (draft-pr, brownfield_change) has no template, so every brownfield run is guaranteed a gap. The roadmap calls this designed, but neither prompt nor contract says to expect or skip it.",
+    "proposed_fix": "State in both author prompts and in the contract how planned entries are handled: skip them silently, or record them as an expected gap.",
+    "in_flight_status": null
+  },
+  {
+    "id": "artifact-gallery-006",
+    "lane": "artifact-gallery",
+    "severity": "minor",
+    "kind": "cohesion",
+    "files": [
+      "speckit-pro/speckit_pro_runner/artifact_review.py:13"
+    ],
+    "ripwire_command": "ripwire . --uses=unique_object",
+    "summary": "artifact_review imports its parsing helpers (next_fence, require_fields, require_text, unique_object) from the formal package. Four other non-formal modules import the same module, so a shared utility lives in a feature package.",
+    "proposed_fix": "Move the helpers to a neutral runner module and import from there.",
+    "in_flight_status": null
+  },
+  {
+    "id": "artifact-gallery-007",
+    "lane": "artifact-gallery",
+    "severity": "minor",
+    "kind": "cohesion",
+    "files": [
+      "speckit-pro/speckit_pro_runner/preview_launcher.py:21-30",
+      "speckit-pro/speckit_pro_runner/preview_launcher.py:57-79",
+      "speckit-pro/speckit_pro_runner/preview_launcher.py:95-165"
+    ],
+    "ripwire_command": "ripwire . --uses=_toml_string_map",
+    "summary": "The preview launcher imports six underscore-private helpers from sweep_launcher and near-duplicates its prompt-resource resolver and Codex command builder (clone groups 83 and 84 in the evidence pack).",
+    "proposed_fix": "Extract the shared Codex isolation helpers into one module with public names and parameterize the resolver and command builder.",
+    "in_flight_status": null
+  },
+  {
+    "id": "artifact-gallery-008",
+    "lane": "artifact-gallery",
+    "severity": "minor",
+    "kind": "cohesion",
+    "files": [
+      "speckit-pro/speckit_pro_runner/author_broker.py:66-100",
+      "speckit-pro/speckit_pro_runner/author_broker.py:14-22",
+      "speckit-pro/speckit_pro_runner/author_broker.py:194-259"
+    ],
+    "ripwire_command": "ripwire . --impact=create_preview_session",
+    "summary": "author_broker duplicates the private-root and atomic state-write logic in sweep_isolation (clone groups 22 and 32). It also joins two unrelated jobs, formal-file write sessions and preview verdict sessions, behind one capability store, and it imports two helpers modules, which forms a dependency cycle that read_only.py breaks only with a lazy import.",
+    "proposed_fix": "Share the private-state helpers with sweep_isolation and consider splitting the formal and preview session kinds.",
+    "in_flight_status": null
+  },
+  {
+    "id": "artifact-gallery-009",
+    "lane": "artifact-gallery",
+    "severity": "minor",
+    "kind": "coherence",
+    "files": [
+      "speckit-pro/skills/speckit-autopilot/templates/uat-runbook-template.md:3-6"
+    ],
+    "ripwire_command": "ripwire . --grep=uat-runbook-template",
+    "summary": "The template comment says it emits eight section headers and that a '## UAT Runbook' embed depends on the order. The file has one H1 and six H2 sections, and no UAT Runbook heading.",
+    "proposed_fix": "Correct the count and drop the embed claim, or name where the embed lives.",
+    "in_flight_status": null
+  },
+  {
+    "id": "artifact-gallery-010",
+    "lane": "artifact-gallery",
+    "severity": "minor",
+    "kind": "cohesion",
+    "files": [
+      "docs/ai/specs/html-artifacts-technical-roadmap.md:35-37",
+      "docs/ai/specs/html-artifacts-technical-roadmap.md:1248-1289",
+      "docs/ai/specs/html-artifacts-technical-roadmap.md:26-31"
+    ],
+    "ripwire_command": "ripwire . --grep=Specification Sections",
+    "summary": "ART-018 to ART-021 sit after the Decomposition Principles and Environment sections, so they fall outside the Specification Sections H2. The overview says 13 of 21 specs are in tiers and the table of contents lists four of the ten H2 sections. ART-013 still says it requires everything.",
+    "proposed_fix": "Move ART-018 to ART-021 into Specification Sections and refresh the overview, tier table and table of contents.",
+    "in_flight_status": null
+  },
+  {
+    "id": "artifact-gallery-011",
+    "lane": "artifact-gallery",
+    "severity": "minor",
+    "kind": "coherence",
+    "files": [
+      "docs/prd-html-artifacts.md:3-6",
+      "docs/prd-html-artifacts.md:279",
+      "docs/ai/specs/html-artifacts-technical-roadmap.md:125-145"
+    ],
+    "ripwire_command": "ripwire . --grep=not yet implemented",
+    "summary": "The PRD header says 'Active, not yet implemented' with last updated 2026-07-28. The body mentions ART-021 added 2026-09-25, and the roadmap records 15 of 21 specs complete or archived.",
+    "proposed_fix": "Update the PRD status and last-updated date, or mark the PRD as historical.",
+    "in_flight_status": null
+  }
+]
