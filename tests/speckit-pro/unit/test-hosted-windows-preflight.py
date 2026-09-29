@@ -23,7 +23,6 @@ if str(LIB_DIR) not in sys.path:
 from test_result import run_counted  # noqa: E402
 
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "lib"))
 from script_loader import load_script  # noqa: E402
 
 

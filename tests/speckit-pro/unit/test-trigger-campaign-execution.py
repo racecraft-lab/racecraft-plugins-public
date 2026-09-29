@@ -29,7 +29,6 @@ import trigger_comparison as comparison
 from test_result import run_counted
 
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "lib"))
 from script_loader import load_script  # noqa: E402
 
 

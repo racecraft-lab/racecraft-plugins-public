@@ -39,7 +39,6 @@ TAG = "speckit-pro-v2.19.0"
 PREVIOUS_TAG = "speckit-pro-v2.18.0"
 
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "lib"))
 from script_loader import load_script  # noqa: E402
 
 
