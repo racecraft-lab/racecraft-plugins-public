@@ -287,6 +287,16 @@ def check_dispatch_order(reporter: Reporter, fixture_id: str, transcript: Path, 
         reporter.check(f"{fixture_id}: {before} precedes {after}", condition, "order constraint violated")
 
 
+DISPATCH_CHECKS: tuple[Check, ...] = (
+    check_dispatch_targets,
+    check_dispatch_shape,
+    check_dispatch_counts,
+    check_same_message_groups,
+    check_dispatch_flags,
+    check_dispatch_order,
+)
+
+
 def apply_checks(fixture: Path, mode: str, reporter: Reporter, checks: list[Check]) -> None:
     loaded = load_fixture(fixture, mode, reporter)
     if loaded is None:
@@ -303,15 +313,7 @@ def assert_dispatch_fixture(
     *,
     check_terms: bool,
 ) -> None:
-    checks = [
-        check_dispatch_targets,
-        check_dispatch_shape,
-        check_dispatch_counts,
-        check_same_message_groups,
-        check_dispatch_flags,
-        check_dispatch_order,
-    ]
-    apply_checks(fixture, mode, reporter, [*checks, check_transcript_terms] if check_terms else checks)
+    apply_checks(fixture, mode, reporter, [*DISPATCH_CHECKS, check_transcript_terms] if check_terms else list(DISPATCH_CHECKS))
 
 
 def print_fixture_heading(fixture: Path) -> None:
