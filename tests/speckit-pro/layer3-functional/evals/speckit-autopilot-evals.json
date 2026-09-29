@@ -66,7 +66,7 @@
       "prompt": "I'm running the autopilot and gate G4 (checklist complete) just failed — it found 3 [Gap] markers remaining in spec.md and 1 in plan.md. What does the autopilot do next? Does it stop, retry, or move on?",
       "expected_output": "Explains the gate failure remediation loop: the autopilot re-runs the checklist phase to fix gaps, then re-validates G4, with a maximum retry count.",
       "expectations": [
-        "Explains that autopilot does NOT stop on gate failure — it retries",
+        "Explains that autopilot does NOT stop on gate failure — it retries, and a gate still failing after its repair loop defers per the Failure Escalation Protocol while the run continues",
         "States that it re-runs the checklist-executor to remediate [Gap] markers",
         "Mentions re-validating G4 after remediation",
         "References a maximum retry count or iteration limit",
@@ -128,14 +128,14 @@
     },
     {
       "id": 11,
-      "prompt": "The run setup materializes fixtures/autopilot/SPEC-009/ into the disposable project and creates its declared registered worktree before execution. Run autopilot on docs/ai/specs/SPEC-009-workflow.md. The Clarify phase has hit ambiguity that the consensus protocol can't resolve — both consensus rounds returned [HUMAN REVIEW NEEDED]. Should you escalate by invoking the grill-me skill to interview me one question at a time?",
-      "expected_output": "Refuses to invoke grill-me. Explains that grill-me is human-in-the-loop only and is forbidden inside autopilot. The correct response to unresolvable ambiguity is to use the Clarify Question Set plus consensus flow, then fail the gate or surface the issue to the user if consensus cannot resolve it. It does not call Skill('grill-me') under any circumstance.",
+      "prompt": "The run setup materializes fixtures/autopilot/SPEC-009/ into the disposable project and creates its declared registered worktree before execution. Run autopilot on docs/ai/specs/SPEC-009-workflow.md. The Clarify phase has hit ambiguity that the consensus protocol can't resolve — both consensus rounds returned [ROUND_3_TIEBREAK]. Should you escalate by invoking the grill-me skill to interview me one question at a time?",
+      "expected_output": "Refuses to invoke grill-me. Explains that grill-me is human-in-the-loop only and is forbidden inside autopilot. The correct response to unresolvable ambiguity is to use the Clarify Question Set plus consensus flow, then run the Round 3 agent tiebreak, and defer only an unsettled product-scope choice to the end-of-run request, if consensus cannot resolve it. It does not call Skill('grill-me') under any circumstance.",
       "expectations": [
         "Explicitly states that grill-me is human-in-the-loop only and forbidden inside autopilot",
         "Mentions that the clarify-executor returns questions to the parent orchestrator for answering and artifact edits",
         "Mentions that consensus handles questions the parent cannot resolve confidently",
         "Does NOT call Skill('grill-me') or any grill-me-related tool, even when asked directly",
-        "Either fails the gate gracefully and surfaces to the user, or continues only after the parent has resolved/applied clarifications",
+        "Either resolves the item through the Round 3 agent tiebreak without stopping or asking, or continues only after the parent has resolved/applied clarifications",
         "References that grill-me lives at the pre-workflow stage (via /speckit-pro:scaffold-spec or /speckit-pro:grill-me), not the autopilot stage"
       ]
     },
@@ -164,25 +164,25 @@
     },
     {
       "id": 14,
-      "prompt": "The analyze-executor flagged: '[domain] Finding 3 [HIGH]: cookie SameSite policy is not specified in plan.md.' Which consensus analyst(s) does the autopilot spawn for this finding, and why? If two analysts agree and one dissents, does autopilot apply the majority answer or stop for human review?",
-      "expected_output": "Spawns all three analysts (codebase-analyst, spec-context-analyst, domain-researcher) because cookie is a security keyword: parse-consensus-categories reads the whole item line and widens the narrow [domain] tag, returning security_route keyword. consensus-synthesizer still runs after all three return. Because the route is keyword, not an explicit [security] tag, the bar depends on the analysts: if any returns security_relevant: true, only 3/3 applies and a 2/3 majority goes to human review; if every analyst returns security_relevant: false, the ordinary 2/3 majority applies.",
+      "prompt": "The analyze-executor flagged: '[domain] Finding 3 [HIGH]: cookie SameSite policy is not specified in plan.md.' Which consensus analyst(s) does the autopilot spawn for this finding, and why? If two analysts agree and one dissents, does autopilot apply the majority answer or run the Round 3 tiebreak?",
+      "expected_output": "Spawns all three analysts (codebase-analyst, spec-context-analyst, domain-researcher) because cookie is a security keyword: parse-consensus-categories reads the whole item line and widens the narrow [domain] tag, returning security_route keyword. consensus-synthesizer still runs after all three return. Because the route is keyword, not an explicit [security] tag, the bar depends on the analysts: if any returns security_relevant: true, only 3/3 applies and a 2/3 majority starts the Round 3 tiebreak; if every analyst returns security_relevant: false, the ordinary 2/3 majority applies.",
       "expectations": [
         "States that all three analysts are spawned because cookie is a security keyword",
         "Explains that the security-keyword override widens a narrow category tag",
         "Does not single-route the item to domain-researcher",
         "Mentions that consensus-synthesizer still runs after all three analyst results",
-        "States that the [domain] tag makes this a keyword-routed item, not a [security]-tagged one, so a 2/3 majority goes to human review only when at least one analyst returns `security_relevant: true`; when every analyst returns `security_relevant: false`, the ordinary 2/3 majority applies. An answer that demands 3/3 for every security-keyword item, or applies 2/3 without regard to `security_relevant`, contradicts this."
+        "States that the [domain] tag makes this a keyword-routed item, not a [security]-tagged one, so a 2/3 majority starts the Round 3 tiebreak only when at least one analyst returns `security_relevant: true`; when every analyst returns `security_relevant: false`, the ordinary 2/3 majority applies. An answer that demands 3/3 for every security-keyword item, or applies 2/3 without regard to `security_relevant`, contradicts this."
       ]
     },
     {
       "id": 15,
       "prompt": "The clarify-executor flagged: '[security] Q5: How should we hash and rotate API keys in the new admin endpoints?' How does the autopilot route this consensus? Can it ever be single-analyst routed?",
-      "expected_output": "[security] tag forces all 3 analysts (codebase-analyst, spec-context-analyst, domain-researcher) regardless of any other tag. Defense-in-depth: security items are NEVER single-routed. The orchestrator skips Round 1 single-routing and dispatches all 3 in parallel directly. The security override then requires 3/3 agreement: a unanimous 3/3 answer applies and the run continues, while a 2/3 majority or all-disagree makes the synthesizer flag [HUMAN REVIEW NEEDED].",
+      "expected_output": "[security] tag forces all 3 analysts (codebase-analyst, spec-context-analyst, domain-researcher) regardless of any other tag. Defense-in-depth: security items are NEVER single-routed. The orchestrator skips Round 1 single-routing and dispatches all 3 in parallel directly. The security override then requires 3/3 agreement: a unanimous 3/3 answer applies and the run continues, while a 2/3 majority or all-disagree makes the synthesizer flag [ROUND_3_TIEBREAK], which starts the Round 3 agent tiebreak instead of a stop or a question.",
       "expectations": [
         "States that ALL 3 analysts (codebase-analyst, spec-context-analyst, domain-researcher) are spawned",
         "Explicitly states that [security] is NEVER single-routed — defense-in-depth",
         "References the security keyword override in consensus-synthesizer rules",
-        "Mentions that the synthesizer flags [HUMAN REVIEW NEEDED] for a security item unless all three analysts agree",
+        "Mentions that the synthesizer flags [ROUND_3_TIEBREAK] for a security item unless all three analysts agree, and that Round 3 resolves it without asking a human or stopping the run",
         "Does NOT route this item to a single analyst"
       ]
     },
@@ -447,13 +447,13 @@
     {
       "id": 110,
       "prompt": "Claude Code receives four eligible review comments: one requests an allowed plan.md edit, one objection is already settled by the artifacts, one requests a README change outside the three planning artifacts, and one asks for no action. Explain each disposition and the consensus behavior for the amended comment, including disagreement and escape handling.",
-      "expected_output": "Classifies the comments exactly once as amended, answered, deferred, and no action respectively; the out-of-scope README request is recorded and not acted on without implying future work. Only amended enters consensus. The isolated launcher obtains all three perspectives (codebase, spec-context, and domain) before synthesis. Exactly two materially agreeing records resolve at 2/3, all three at 3/3, any unresolved escape_hatch becomes human review with escape_unresolved, and no agreeing pair becomes human review with all_disagree. The parent receives only closed projections and an opaque receipt, never reviewer or model prose.",
+      "expected_output": "Classifies the comments exactly once as amended, answered, deferred, and no action respectively; the out-of-scope README request is recorded and not acted on without implying future work. Only amended enters consensus. The isolated launcher obtains all three perspectives (codebase, spec-context, and domain) before synthesis. Exactly two materially agreeing records resolve at 2/3, all three at 3/3, any unresolved escape_hatch returns human_review with escape_unresolved, and no agreeing pair returns human_review with all_disagree. Either takes one Round 3 tiebreak call by a fresh sweep-analyst, which resolves at agreement tiebreak or defers an unsettled product-scope choice as scope_unsettled, and the run never stops for it. The parent receives only closed projections and an opaque receipt, never reviewer or model prose.",
       "expectations": [
         "Uses all four exact dispositions: amended, answered, deferred, and no action",
         "Makes amended dominant when any objection requires an allowed artifact edit and records an out-of-scope target as deferred without promising future action",
         "Routes only amended through all three perspectives before synthesis",
         "Maps exactly two agreeing perspectives to 2/3 and all three agreeing perspectives to 3/3",
-        "Maps an unresolved escape to escape_unresolved and no agreeing pair to all_disagree human review",
+        "Maps an unresolved escape to escape_unresolved and no agreeing pair to all_disagree, each resolved by a Round 3 tiebreak call from a fresh sweep-analyst without stopping the run",
         "Keeps reviewer and model prose private while the parent receives only closed projections or a receipt"
       ]
     },
@@ -474,7 +474,7 @@
     {
       "id": 112,
       "prompt": "During Plan, G3 fails on a marker for timing the actual UI-delivery event visible to the author. Here the original human answer explicitly requires that exact visible delivery event, while the current CLI-output architecture has no verified delivery callback or equivalent observation. How must the autopilot repair, record, and escalate this case?",
-      "expected_output": "The parent classifies the requirement as explicit-human from the direct answer and preserves both the wording and unresolved marker. It records the evidence in the Plan Ambiguity Repair Log, gives the same Plan executor up to two evidence-bearing repair attempts to find an implementable architecture, and reruns G3 after each. It cannot weaken the requirement or substitute acknowledgement timing without evidence of equivalence. If no implementation is found, G3 remains failed and the default stop path escalates the exact architectural choice with the attempts and remaining reason; skip-and-log, if explicitly configured, leaves the failed verdict, marker, and provenance unchanged.",
+      "expected_output": "The parent classifies the requirement as explicit-human from the direct answer and preserves both the wording and unresolved marker. It records the evidence in the Plan Ambiguity Repair Log, gives the same Plan executor up to two evidence-bearing repair attempts to find an implementable architecture, and reruns G3 after each. It cannot weaken the requirement or substitute acknowledgement timing without evidence of equivalence. If no implementation is found, G3 remains failed and the run defers the exact architectural choice per the Failure Escalation Protocol with the attempts and remaining reason, keeps running independent units, and leaves the failed verdict, marker, and provenance unchanged.",
       "expectations": [
         "Classifies the exact visible UI-delivery requirement as explicit-human using the direct human answer",
         "Preserves the requirement and unresolved marker rather than weakening either to make G3 pass",
@@ -482,7 +482,7 @@
         "Gives the same Plan executor the original prompt and evidence-bearing Plan Repair Context for at most two repairs",
         "Reruns G3 after every repair attempt",
         "Rejects acknowledgement timing or another proxy unless evidence establishes equivalence to actual UI delivery",
-        "After unsuccessful repair, escalates with G3 still failed; any explicit skip-and-log override keeps the verdict, marker, and provenance unchanged"
+        "After unsuccessful repair, defers the exact choice with G3 still failed, keeps the verdict, marker, and provenance unchanged, and continues the run without a stop or skip-and-log option"
       ]
     },
     {

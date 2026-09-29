@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import sys
 import tempfile
 import unittest
@@ -12,6 +13,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO_ROOT / "speckit-pro"))
 sys.path.insert(0, str(REPO_ROOT / "tests/speckit-pro/lib"))
+from task_feature_fixture import build_task_feature
 from test_result import run_counted
 from speckit_pro_runner.helpers.read_only import partition_phase7_tasks, validate_task_execution
 from speckit_pro_runner.task_execution import fingerprints, gate_task_loops
@@ -19,24 +21,9 @@ from speckit_pro_runner.task_execution import fingerprints, gate_task_loops
 
 class TaskExecutionTests(unittest.TestCase):
     def setUp(self):
-        self.temp = tempfile.TemporaryDirectory()
-        self.addCleanup(self.temp.cleanup)
-        self.root = Path(self.temp.name).resolve()
-        self.feature = self.root / "feature"
-        (self.feature / ".process").mkdir(parents=True)
-        (self.feature / "spec.md").write_text("spec\n")
-        (self.feature / "plan.md").write_text("plan\n")
-        self.body = "## Phase 1\n" + "".join(
-            f"- [ ] T{i:03d} [P] Add capability behavior {i}\n" for i in range(1, 13)
-        )
-        self.meta = {
-            "schema_version": "task-execution.v1",
-            "fingerprints": fingerprints("spec\n", "plan\n", self.body),
-            "tasks": {f"T{i:03d}": {
-                "capability_group": "feature", "depends_on": [],
-                "owns": [f"src/unit{i}.py"], "tdd_unit": f"behavior-{i}"
-            } for i in range(1, 13)},
-        }
+        self.root = Path(tempfile.mkdtemp()).resolve()
+        self.addCleanup(shutil.rmtree, self.root)
+        self.feature, self.body, self.meta = build_task_feature(self.root)
 
     def run_partition(self, **inputs):
         (self.feature / "tasks.md").write_text(self.body)

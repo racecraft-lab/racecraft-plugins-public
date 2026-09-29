@@ -174,8 +174,8 @@ fails when the network does. bun 1.3 exits 1 on a finding at or above
 
 ## Record a permanent skip
 
-When the operator answers "skip this repo" to autopilot's missing-tool
-question, the durable record is a `skips` entry in this file, not the
+When the operator wants a tool skipped for the whole repository, instead of
+autopilot's default of the install hint then `skip (spec)`, the durable record is a `skips` entry in this file, not the
 workflow table. Add the slot with a one-line reason and today's date, validate,
 and confirm before writing. Remove the entry when the tool arrives; autopilot
 re-populates the slot on the next run.

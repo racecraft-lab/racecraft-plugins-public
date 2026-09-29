@@ -43,8 +43,8 @@ in order; do not collapse or defer.
 | 12 | Verify Tasks Phantom Check | verify-tasks ext | `$speckit-verify-tasks` |
 | 13 | Code Review | (none) — built-in | spawn a subagent to independently review the diff `origin/main...HEAD`; report findings by severity |
 | 14 | Integration Suite | (none) | `PROJECT_COMMANDS.FULL_VERIFY` or detected full test command, then every populated quality-gate slot (`COMPLEXITY`, `MUTATION`, `DEPENDENCY_RULES`) with `{paths}` (space-separated) and `{paths_csv}` (comma-separated) = changed source files in `origin/main...HEAD` (when that list is empty, skip `COMPLEXITY` and `MUTATION` and record `n/a: no source files changed`); when `MUTATION` is populated, run the hardener once per spec between its run and its block decision per [Hardener Delegation](../../skills/speckit-autopilot/references/hardener-delegation.md) (delegation gateway on `route: "auto"` when `delegate_health` is good, else the primary model; tests-only writes; stop at floor or cap; record the `Hardener` line); a populated slot that still fails blocks; record each result in the Quality Gates table |
-| 15 | Final Reviewability Backstop | (none) | deferred helper; use current committed evidence or stop before PR side effects |
-| 16 | PR Packet/Body Generation | final backstop proceeded | emit or refresh current `specs/<feature>/.process/pr-packets/<packet-id>.json` with `pr-packet-output` `dry_run` then `apply`; stop if emission or validation fails |
+| 15 | Final Reviewability Backstop | (none) | deferred helper; use current committed evidence, or hold PR side effects and regenerate the committed reviewability evidence |
+| 16 | PR Packet/Body Generation | final backstop proceeded | emit or refresh current `specs/<feature>/.process/pr-packets/<packet-id>.json` with `pr-packet-output` `dry_run` then `apply`; on failure, regenerate the packet from the diagnostics and revalidate |
 | 17 | PR Creation | current packet validation passed | single-PR path only when no split route and no current `pr_marker_plan`; `multi-pr-emission` for split-PR routes or marker-ready plans |
 | 18 | Review Remediation | (none) | parent session loop — inspect PR feedback, dispatch fixes as needed |
 | 19 | Retrospective | retrospective ext | `$speckit-retrospective-analyze` (FINAL STEP) |
@@ -157,12 +157,13 @@ background subagents as the fallback path. The 3-track structure
   is not a stop: it defers one unit whose allowance is spent. When every runnable
   item has finished and deferred items remain, the read-only `finalize-run`
   helper decides the end, as the phase-execution reference's blocked-action
-  rule states. Human UAT is the only gate a run may defer: with every non-UAT
-  gate passed at every PR head, the stack goes ready for review, the top PR body opens with
-  `deferred_items` in its Deferred / not verified section, and the goal is
-  marked complete. Anything else left is one human stop. Either way, one
-  consolidated operator request and the same question as plain text in the
-  final message list every fallback taken and every deferred item. Run every
+  rule states. Human UAT is the only gate a run may defer: with every required
+  gate green at every PR head, the stack goes ready for review, the top PR body opens with
+  `deferred_items` and each of `decisions` in its Deferred / not verified section, and the goal is
+  marked complete. Only a required gate that is not green after its escalation
+  tiers is one human stop. The end-of-run request is plain text in the final
+  message, never a question tool call, and lists every fallback taken and every
+  deferred item. Run every
   Post item that does not depend on deferred work first. Otherwise continue
   with the first incomplete item. `Post: Retrospective` remains the final Post item and
   must be completed or explicitly skipped before completion can be reported.
@@ -189,7 +190,7 @@ Before creating or updating PRs after G7, the parent session applies this
 fail-closed sequence:
 
 ```text
-final-reviewability boundary: use current committed reviewability evidence; if none is current, stop before PR side effects
+final-reviewability boundary: use current committed reviewability evidence; if none is current, hold PR side effects and regenerate the committed reviewability evidence
 emit or refresh specs/<feature>/.process/pr-packets/<packet-id>.json with pr-packet-output dry_run then apply
 run validate-pr-packet-read-only for that packet and consume response data.stdout_json in memory/state
 require data.stdout_json.status=passed, data.stdout_json.pr_blocked=false, and response data.writes_state=false
@@ -199,8 +200,9 @@ run validate-pr-workflow-contract with the packet title and current repository d
 create only with packet-owned --base, --head, --title, and --body-file values
 ```
 
-`final-reviewability-backstop` is deferred, so the mandatory stop-before-PR
-boundary uses current committed reviewability evidence. Continue only for
+`final-reviewability-backstop` is deferred, so the mandatory pre-PR
+boundary uses current committed reviewability evidence; when none is current, regenerate it,
+run the repair loop within its allowance, then defer per the Failure Escalation Protocol. Continue only for
 `pass`, `warn`, honored typed-exception outcomes, or final `marker_split` when a
 valid current `pr_marker_plan` is present. If a current `pr_marker_plan` exists,
 marker-based PR emission remains the downstream path; do not fall back to a
@@ -256,8 +258,9 @@ JSON request using `helper_id=validate-pr-packet-read-only`, the same operation,
 current response's `data.stdout_json` in memory and durable workflow state.
 Continue only when it reports `status=passed` and `pr_blocked=false`, while the
 outer response reports `data.writes_state=false`. If any required packet is
-absent or invalid, stop before PR creation with the validator diagnostics.
-Commit or otherwise checkpoint the packet/body artifacts so the worktree is
+absent or invalid, regenerate it with `pr-packet-output` from the validator diagnostics,
+then revalidate; run the repair loop within its allowance, then defer per the Failure Escalation Protocol.
+No PR is created until validation passes. Commit or otherwise checkpoint the packet/body artifacts so the worktree is
 clean, then run `validate-pr-packet-write`; apply mode reruns read-only
 validation before persisting the packet's `validation_result_path`. Prior
 validation artifacts never authorize PR creation. Exit 1 or 2 blocks before PR
@@ -272,7 +275,7 @@ for example `docs(spec-704): ...`; `docs(SPEC-704): ...`,
 `docs(DOC-704): ...`, and `feat(speckit-pro): ...` are invalid for that
 spec-backed implementation. Any split-contract failure means the
 single-PR path is forbidden. Continue only through the split workflow below,
-or stop blocked with the validator output.
+or route the validator output to the packet regenerator and revalidate; run the repair loop within its allowance, then defer per the Failure Escalation Protocol.
 
 The packet-owned title and body must describe the actual change in strict,
 unpatronizing, ELI5-style plain English. Do not dump commands, file paths, packet
@@ -321,7 +324,7 @@ Codex parent-session responsibilities:
    `specs/<feature>/.process/pr-packets/<packet-id>.json` with
    `pr-packet-output`, validated against current marker evidence, and paired
    with persisted current validation evidence before `gh pr create` or
-   equivalent PR side effects. Stop only if emission or validation fails.
+   equivalent PR side effects. If emission or validation fails, route the diagnostics to the packet regenerator and rerun; run the repair loop within its allowance, then defer per the Failure Escalation Protocol.
    For marker emission, `--feature-branch` is the emitted branch prefix. If
    that prefix would collide with an existing parent branch ref, pass a
    non-conflicting prefix through `--feature-branch` and the authoritative
@@ -331,8 +334,9 @@ Codex parent-session responsibilities:
    prefix.
    Live marker emission requires each marker checkpoint to record
    `implementation_checkpoint.head_sha` or
-   `implementation_checkpoint.commit_sha`; without those commit SHAs, stop
-   before branch or PR mutation and repair the marker checkpoints.
+   `implementation_checkpoint.commit_sha`; without those commit SHAs, hold
+   branch and PR mutation and record the marker checkpoint commit SHAs through the orchestrator, then rerun;
+   run the repair loop within its allowance, then defer per the Failure Escalation Protocol.
 5. Run `detect-stack-manager-plan` in `dry_run` mode per
    [Optional stack manager](../../../skills/speckit-autopilot/references/stack-manager.md).
    Qualify CLI **and** skill, repository and owned topology before selecting
@@ -340,7 +344,9 @@ Codex parent-session responsibilities:
    PR URLs only after packet checks. Resume partial mutation through its recorded
    manager; never mix managers or recreate PRs.
    After a partial `gh-stack` mutation, block with recovery evidence instead of
-   mixing managers.
+   mixing managers, unless read-only proof matches every recorded PR: then rerun detection
+   with `previous_decision` and `reverify_recovery=true` and retry the existing-PR link
+   through the same manager. Defer per the Failure Escalation Protocol when it does not match.
 6. Record each slice outcome in `update_plan`, `autopilot-state.json`, and the
    workflow evidence before advancing the next Post item.
 
@@ -362,8 +368,10 @@ not open any slice PR until all preceding steps for that slice pass:
    the slice's own head, bottom-up, and run or record the slice's required
    scoped verification; never carry another head's evidence to a slice. On a
    failed required command,
-   stop before `gh pr create`; record the command, exit status, evidence path,
-   stderr/stdout tail, and keep `next_slice_id` on the blocked slice.
+   hold `gh pr create`; record the command, exit status, evidence path,
+   stderr/stdout tail, and keep `next_slice_id` on the blocked slice. Then route the failing command to the implement-executor,
+   rerun it, and run the repair loop within its allowance, then defer per the Failure Escalation Protocol
+   while independent slices keep moving.
 2. Emit or refresh that slice's feature-local packet with `pr-packet-output`.
    Its verification cites only the evidence produced at that slice's own head.
    Reject generic foundation/story/slice titles, hardcoded plugin scopes for
@@ -495,8 +503,8 @@ actual registered UAT-validation path exists, log
 `skipped: UAT validation unavailable` and continue fail-open. If a registered
 validation path exists, run that registered validator against the existing
 runbook. If and only if that just-run validator reports the existing runbook
-invalid, STOP before PR-body generation or PR creation and report its
-diagnostics. Missing output after a recorded generation failure is never sent
+invalid, hold PR-body generation and PR creation, route the validator diagnostics to the uat-runbook-author to rewrite the runbook,
+and revalidate; run the repair loop within its allowance, then defer per the Failure Escalation Protocol. Missing output after a recorded generation failure is never sent
 to validation and never blocks.
 
 If generation or authoring changed the runbook, auto-commit that change:

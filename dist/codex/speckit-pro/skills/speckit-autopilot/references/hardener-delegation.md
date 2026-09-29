@@ -52,9 +52,10 @@ are shared with every enclosing gate/repair loop; the hardener has no allowance
 of its own. Nested execution carries the parent's reservation_id.
 Stop when the score reaches the floor or that reservation ends.
 On exhaustion retain the failing MUTATION result and defer it (`disposition=defer`)
-so independent work continues. It is a gate, so it never stays deferred: at the
-end of the run the ledger deferral makes `finalize-run` return the one human
-stop, never a ready-for-review stack. Never count
+so independent work continues. It is a gate, so it never stays deferred: pass its
+failing MUTATION result to `finalize-run` as a failed gate, which climbs the
+escalation tiers and then keeps the stack in draft as a red gate, never a
+ready-for-review stack. Never count
 fallback, rejection, or a renamed error as a fresh repair family.
 
 ## Delegated path (delegation gateway)
