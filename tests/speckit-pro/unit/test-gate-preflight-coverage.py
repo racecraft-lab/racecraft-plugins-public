@@ -167,7 +167,7 @@ GIT_ENV = {"PATH": os.environ["PATH"], "GIT_CONFIG_GLOBAL": os.devnull, "GIT_CON
 
 
 def _git(cwd: Path, *args: str) -> None:
-    subprocess.run(["git", *args], cwd=cwd, env=GIT_ENV, check=True, capture_output=True, timeout=60)
+    subprocess.check_output(["git", "-C", str(cwd), *args], env=GIT_ENV, stderr=subprocess.STDOUT, timeout=60)
 
 
 class RunStartCoverageTests(unittest.TestCase):
