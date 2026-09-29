@@ -17,7 +17,10 @@ limit. Both limits fall back to prose.
 
 The same files did reach the child. `developer_instructions` (the nonce) and
 `model_reasoning_effort = "medium"` (the parent ran at `low`) both applied, so
-the agent file loaded and only the two limit keys were dropped.
+the agent file loaded and only the two limit keys were dropped. The parent passed
+`-c model_reasoning_effort="low"` on the command line, and the file's
+`medium` still won; the file's `sandbox_mode` did not. So the file overrides
+a command-line effort but not the parent's sandbox.
 
 ## Conditions
 
@@ -40,8 +43,9 @@ the agent file loaded and only the two limit keys were dropped.
 ## Cases
 
 Each case wrote one agent file under `<probe-project>/.codex/agents/` and ran
-one parent that spawned it with `fork_turns = "none"` (the baseline spawned
-with `fork_turns = "all"`). Evidence comes from the child's own rollout:
+one parent that spawned it with `fork_turns = "none"`. The baseline ran on an
+earlier script revision: its child was a fork of the parent's context (its
+rollout carries `forked_from_id`), and its agent file set effort `low`. Evidence comes from the child's own rollout:
 `session_meta.thread_source = "subagent"`, its `agent_role`, and its
 `turn_context`.
 
