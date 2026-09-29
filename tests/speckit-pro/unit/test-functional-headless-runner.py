@@ -439,10 +439,11 @@ class FunctionalHeadlessRunnerTests(unittest.TestCase):
         self.assertTrue(any(item.startswith("shell_environment_policy.set=") for item in command))
         self.assertIn("--ignore-user-config", command)
         self.assertNotIn("--ignore-rules", command)
-        self.assertEqual(command.count("--disable"), 7)
+        self.assertEqual(command.count("--disable"), 8)
         self.assertEqual(
             [command[index + 1] for index, item in enumerate(command) if item == "--disable"],
-            ["plugins", "apps", "browser_use", "computer_use", "hooks", "skill_mcp_dependency_install", "memories"],
+            ["plugins", "apps", "browser_use", "computer_use", "hooks", "skill_mcp_dependency_install",
+             "memories", "unbounded_connection_retries"],
         )
         self.assertIn("skills.bundled.enabled=false", command)
         self.assertIn("mcp_servers={}", command)
@@ -1357,8 +1358,79 @@ class FunctionalHeadlessRunnerTests(unittest.TestCase):
         )
 
 
+class SharedCodexIsolationTests(unittest.TestCase):
+    """Layer 3 launches Codex with the isolation arguments Layer 2 qualified."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.runner = import_runner()
+        engine_path = TESTS_ROOT / "layer2-trigger" / "run_codex_evals.py"
+        spec = importlib.util.spec_from_file_location("layer2_codex_engine_for_layer3", engine_path)
+        assert spec is not None and spec.loader is not None
+        cls.engine = importlib.util.module_from_spec(spec)
+        sys.modules[spec.name] = cls.engine
+        spec.loader.exec_module(cls.engine)
+
+    def test_skill_and_server_overrides_match_layer2(self) -> None:
+        skills = (Path("/x/a/SKILL.md"), Path("/x/b/SKILL.md"))
+        names = ("alpha", 'quoted"name')
+        self.assertEqual(
+            [item for item in self.runner.skill_isolation_args(skills, names) if item not in ("-c", "--config")],
+            [item for item in self.engine.skill_isolation_args(skills, names) if item not in ("-c", "--config")],
+        )
+
+    def test_layer3_disables_every_feature_layer2_disables(self) -> None:
+        args = self.runner.skill_isolation_args((), ())
+        disabled = [args[index + 1] for index, item in enumerate(args) if item == "--disable"]
+        self.assertEqual(sorted(disabled), sorted(self.engine.DISABLED_FEATURES))
+
+    def test_layer3_does_not_reach_into_private_layer2_names(self) -> None:
+        source = RUNNER_PATH.read_text(encoding="utf-8")
+        self.assertNotIn("codex_trigger_evals._", source)
+
+
+class HeadlessCaseCatalogContractTests(unittest.TestCase):
+    """Case metadata the runner never reads must not ship as if it were enforced."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.runner = import_runner()
+        cls.path = TESTS_ROOT / "layer3-functional" / "headless_cases.json"
+        cls.data = json.loads(cls.path.read_text(encoding="utf-8"))
+
+    def load_with(self, mutate) -> None:
+        data = json.loads(json.dumps(self.data))
+        mutate(data["cases"][0], next(case for case in data["cases"] if case["host"] == "claude"))
+        with tempfile.TemporaryDirectory() as temporary:
+            target = Path(temporary) / self.path.relative_to(REPO_ROOT)
+            target.parent.mkdir(parents=True)
+            target.write_text(json.dumps(data), encoding="utf-8")
+            self.runner.load_case_catalog(Path(temporary))
+
+    def test_shipped_claude_cases_carry_no_unenforced_required_tools(self) -> None:
+        offenders = [case["skill"] for case in self.data["cases"]
+                     if case["host"] == "claude" and "required_tools" in case]
+        self.assertEqual(offenders, [])
+
+    def test_launch_policy_is_only_ever_hold(self) -> None:
+        values = {case["launch_policy"] for case in self.data["cases"] if "launch_policy" in case}
+        self.assertLessEqual(values, {"hold"})
+
+    def test_loader_rejects_required_tools_on_a_claude_case(self) -> None:
+        with self.assertRaisesRegex(self.runner.EvidenceError, "required_tools"):
+            self.load_with(lambda _first, claude: claude.update(required_tools=["Skill"]))
+
+    def test_loader_rejects_an_unread_launch_policy_value(self) -> None:
+        with self.assertRaisesRegex(self.runner.EvidenceError, "launch_policy"):
+            self.load_with(lambda first, _claude: first.update(launch_policy="read_only"))
+
+
 def main() -> int:
-    suite = unittest.defaultTestLoader.loadTestsFromTestCase(FunctionalHeadlessRunnerTests)
+    suite = unittest.TestSuite([
+        unittest.defaultTestLoader.loadTestsFromTestCase(FunctionalHeadlessRunnerTests),
+        unittest.defaultTestLoader.loadTestsFromTestCase(SharedCodexIsolationTests),
+        unittest.defaultTestLoader.loadTestsFromTestCase(HeadlessCaseCatalogContractTests),
+    ])
     return run_counted(suite, label="test-functional-headless-runner")
 
 

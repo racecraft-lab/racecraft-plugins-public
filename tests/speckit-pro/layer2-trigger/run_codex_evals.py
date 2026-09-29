@@ -33,7 +33,6 @@ import re
 import shlex
 import shutil
 import signal
-import stat
 import subprocess
 import sys
 import tempfile
@@ -45,6 +44,7 @@ TESTS_ROOT = pathlib.Path(__file__).resolve().parents[1]      # <repo>/tests/spe
 SHARED_LIB = TESTS_ROOT / "lib"
 if str(SHARED_LIB) not in sys.path:
     sys.path.insert(0, str(SHARED_LIB))
+import codex_isolation  # noqa: E402
 import trigger_process as processes  # noqa: E402
 import trigger_evidence as evidence_records  # noqa: E402
 import trigger_comparison as experiment_evidence  # noqa: E402
@@ -59,10 +59,7 @@ QUALIFIED_THRESHOLD = 0.5
 MODEL_PROVIDER_ID = "layer2_openai_no_retry"
 MODEL_PROVIDER_NAME = "OpenAI Layer 2 no-retry"
 MODEL_PROVIDER_BASE_URL = "https://chatgpt.com/backend-api/codex"
-DISABLED_FEATURES = (
-    "plugins", "apps", "browser_use", "computer_use", "hooks",
-    "skill_mcp_dependency_install", "memories", "unbounded_connection_retries",
-)
+DISABLED_FEATURES = codex_isolation.DISABLED_FEATURES
 MARKER_PATTERN = re.compile(r"CODEX_SKILL_SELECTED:[A-Za-z0-9_-]+")
 SKILL_CATALOG_WARNINGS = (
     "Skill descriptions were shortened to fit the skills context budget.",
@@ -307,44 +304,7 @@ def skill_source_roots() -> tuple[pathlib.Path, ...]:
     return home / ".agents" / "skills", codex_home / "skills", pathlib.Path("/etc/codex/skills")
 
 
-def _canonical_skill_files(root: pathlib.Path) -> set[pathlib.Path]:
-    """Enumerate one root, following symlinked directories without allowing cycles."""
-    try:
-        root_status = root.stat()
-    except FileNotFoundError:
-        return set()
-    except OSError as exc:
-        raise OSError(f"could not inspect Codex skill root {root}: {exc}") from exc
-    if not stat.S_ISDIR(root_status.st_mode):
-        raise ValueError(f"Codex skill root is not a directory: {root}")
-
-    pending = [root.resolve(strict=True)]
-    visited: set[tuple[int, int]] = set()
-    skills: set[pathlib.Path] = set()
-    while pending:
-        directory = pending.pop()
-        try:
-            canonical_directory = directory.resolve(strict=True)
-            directory_status = canonical_directory.stat()
-            identity = (directory_status.st_dev, directory_status.st_ino)
-            if identity in visited:
-                continue
-            visited.add(identity)
-            with os.scandir(canonical_directory) as entries:
-                children = list(entries)
-        except OSError as exc:
-            raise OSError(f"could not inspect Codex skill root {directory}: {exc}") from exc
-        for entry in children:
-            try:
-                if entry.name == "SKILL.md":
-                    if not entry.is_file(follow_symlinks=True):
-                        raise ValueError(f"Codex skill path is not a file: {entry.path}")
-                    skills.add(pathlib.Path(entry.path).resolve(strict=True))
-                elif entry.is_dir(follow_symlinks=True):
-                    pending.append(pathlib.Path(entry.path))
-            except OSError as exc:
-                raise OSError(f"could not inspect Codex skill path {entry.path}: {exc}") from exc
-    return skills
+_canonical_skill_files = codex_isolation.canonical_skill_files
 
 
 def enumerate_non_target_skills(target_skill: pathlib.Path) -> tuple[pathlib.Path, ...]:
@@ -559,77 +519,21 @@ def _attest_catalog_skill_root_alias(
 
 def fixture_permission_args(workspace: pathlib.Path) -> list[str]:
     """Use the reviewed native fixture-only policy, without legacy sandbox flags."""
-    resolved_workspace = workspace.resolve()
-    return [
-        "-c", 'default_permissions="trigger-fixture"',
-        "-c", 'permissions.trigger-fixture.filesystem={":root"="deny",":minimal"="read",'
-        + json.dumps(str(resolved_workspace)) + '="read",'
-        + json.dumps(str(resolved_workspace / ".codex-trigger-runtime")) + '="write"}',
-        "-c", "permissions.trigger-fixture.network.enabled=false",
-        "-c", 'approval_policy="never"',
-        "-c", "allow_login_shell=false",
-    ]
+    return codex_isolation.fixture_permission_args(
+        "trigger-fixture", workspace, writable=(workspace.resolve() / ".codex-trigger-runtime",),
+    )
 
 
 def enumerate_mcp_servers(workspace: pathlib.Path, timeout: int) -> tuple[str, ...]:
     """Read configured names locally; never initialize servers or retain their config."""
-    command = [codex_executable(), "mcp", "list", "--json"]
-    for feature in DISABLED_FEATURES:
-        command.extend(["--disable", feature])
-    command.extend(["-c", 'web_search="disabled"', *fixture_permission_args(workspace)])
-    try:
-        completed = subprocess.run(
-            command, cwd=workspace, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE, timeout=timeout, env=codex_environment(),
-            executable=shutil.which("codex", path=str(pathlib.Path(command[0]).parent)),
-            shell=False, check=False,
-        )
-        if completed.returncode != 0:
-            raise ValueError("Codex MCP inventory command failed")
-        inventory = json.loads(completed.stdout)
-        if not isinstance(inventory, list):
-            raise ValueError("Codex MCP inventory is not a list")
-        names = [item.get("name") if isinstance(item, dict) else None for item in inventory]
-        if any(not isinstance(name, str) or not name.strip() for name in names):
-            raise ValueError("Codex MCP inventory omitted a server name")
-        if len(set(names)) != len(names):
-            raise ValueError("Codex MCP inventory contains duplicate server names")
-        return tuple(sorted(names))
-    except (OSError, subprocess.TimeoutExpired, UnicodeError, json.JSONDecodeError) as exc:
-        # Config values, endpoints and credential-bearing diagnostics are not evidence.
-        raise ValueError("Codex MCP inventory could not be read locally") from exc
+    command = codex_isolation.mcp_list_command(codex_executable(), fixture_permission_args(workspace))
+    return codex_isolation.read_mcp_server_names(
+        command, cwd=workspace, env=codex_environment(), timeout=timeout,
+        executable=shutil.which("codex", path=str(pathlib.Path(command[0]).parent)),
+    )
 
 
-def skill_isolation_args(
-    disabled_skills: tuple[pathlib.Path, ...],
-    disabled_mcp_servers: tuple[str, ...] = (),
-    *,
-    ignore_user_config: bool = True,
-) -> list[str]:
-    """Build process-local session overrides without mutating saved configuration."""
-    entries = ",".join(
-        f"{{path={json.dumps(str(path))},enabled=false}}"
-        for path in disabled_skills
-    )
-    args = [
-        "--disable", "plugins",
-        "-c", "skills.bundled.enabled=false",
-        "-c", f"skills.config=[{entries}]",
-    ]
-    for feature in DISABLED_FEATURES[1:]:
-        args.extend(["--disable", feature])
-    # Even disabled entries need a transport when exec ignores user config.
-    # A TOML table preserves exact names; the CLI does not unquote dotted -c keys.
-    # No original endpoints or credentials are copied into these disabled entries.
-    # Diagnostics load user config: do not mix a local transport into an existing
-    # HTTP transport. They prove disabled entries, not exec's effective registry.
-    disabled_entry = (
-        f'{{enabled=false,command={json.dumps(sys.executable)},args=["-c","raise SystemExit(1)"]}}'
-        if ignore_user_config else "{enabled=false}"
-    )
-    servers = ",".join(f"{json.dumps(name)}={disabled_entry}" for name in disabled_mcp_servers)
-    args.extend(["-c", f"mcp_servers={{{servers}}}", "-c", 'web_search="disabled"'])
-    return args
+skill_isolation_args = codex_isolation.skill_isolation_args
 
 
 def _prompt_strings(value: object) -> list[str]:

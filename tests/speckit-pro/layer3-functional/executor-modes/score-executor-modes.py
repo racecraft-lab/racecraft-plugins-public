@@ -17,8 +17,11 @@ One result document per run, JSON, any file name under ``--results``::
       "gate_iterations": 1         # non-negative integer; seed is one too
     }
 
-Exit 0 with a report on any decision, including ``inconclusive``. Exit 1 on
-malformed catalog or result input. Standard library only.
+Exit 0 with a report on any decision (``beats``, ``loses`` or ``inconclusive``).
+Exit 1 on malformed catalog or result input, including a result that is not a
+JSON object and a repeated (case, mode, seed). A (case, mode) with fewer
+distinct seeds than the catalog's ``repeats`` is listed under ``shortfalls`` and
+printed, never scored silently. Standard library only.
 """
 
 from __future__ import annotations
@@ -72,11 +75,17 @@ def is_boundary_task(files: list[str], deltas: list[str]) -> bool:
 
 def load_catalog(path: Path) -> dict[str, Any]:
     data = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(data, dict):
+        raise InputError("catalog must be a JSON object")
     if data.get("schema_version") != "1.0" or not isinstance(data.get("cases"), list) or not data["cases"]:
         raise InputError("catalog must have schema_version 1.0 and a non-empty cases array")
     modes = data.get("modes")
     if not isinstance(modes, dict) or set(modes) != set(MODES):
         raise InputError(f"catalog modes must be an object keyed by exactly {', '.join(MODES)}")
+    if not _is_count(data.get("repeats")) or data["repeats"] < 1:
+        raise InputError("catalog repeats must be a positive integer")
+    if not all(isinstance(case, dict) for case in data["cases"]):
+        raise InputError("every catalog case must be an object")
     ids = [case.get("id") for case in data["cases"]]
     if len(set(ids)) != len(ids) or not all(isinstance(i, str) and i for i in ids):
         raise InputError("case ids must be unique non-empty strings")
@@ -88,31 +97,45 @@ def load_catalog(path: Path) -> dict[str, Any]:
     return data
 
 
+def _check_metric(name: str, metric: str, value: Any) -> None:
+    if metric == "mutation_score" and value is None:
+        return
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise InputError(f"{name}: {metric} must be a number")
+    if metric == "mutation_score" and not 0 <= value <= 100:
+        raise InputError(f"{name}: mutation_score must be between 0 and 100")
+    if metric == "wall_seconds" and value < 0:
+        raise InputError(f"{name}: wall_seconds must be non-negative")
+    if metric in ("review_findings", "gate_iterations") and not _is_count(value):
+        raise InputError(f"{name}: {metric} must be a non-negative integer")
+
+
+def _check_result(name: str, doc: Any, case_ids: set[str]) -> None:
+    if not isinstance(doc, dict):
+        raise InputError(f"{name}: result must be a JSON object")
+    missing = [f for f in REQUIRED_RESULT_FIELDS if f not in doc]
+    if missing:
+        raise InputError(f"{name}: missing {', '.join(missing)}")
+    if doc["mode"] not in MODES:
+        raise InputError(f"{name}: unknown mode {doc['mode']!r}")
+    if doc["case_id"] not in case_ids:
+        raise InputError(f"{name}: unknown case {doc['case_id']!r}")
+    if not _is_count(doc["seed"]):
+        raise InputError(f"{name}: seed must be a non-negative integer")
+    for metric in METRICS:
+        _check_metric(name, metric, doc[metric])
+
+
 def load_results(directory: Path, case_ids: set[str]) -> list[dict[str, Any]]:
     results = []
+    runs: set[tuple[str, str, int]] = set()
     for path in sorted(directory.glob("*.json")):
         doc = json.loads(path.read_text(encoding="utf-8"))
-        missing = [f for f in REQUIRED_RESULT_FIELDS if f not in doc]
-        if missing:
-            raise InputError(f"{path.name}: missing {', '.join(missing)}")
-        if doc["mode"] not in MODES:
-            raise InputError(f"{path.name}: unknown mode {doc['mode']!r}")
-        if doc["case_id"] not in case_ids:
-            raise InputError(f"{path.name}: unknown case {doc['case_id']!r}")
-        if not _is_count(doc["seed"]):
-            raise InputError(f"{path.name}: seed must be a non-negative integer")
-        for metric in METRICS:
-            value = doc[metric]
-            if metric == "mutation_score" and value is None:
-                continue
-            if isinstance(value, bool) or not isinstance(value, (int, float)):
-                raise InputError(f"{path.name}: {metric} must be a number")
-            if metric == "mutation_score" and not 0 <= value <= 100:
-                raise InputError(f"{path.name}: mutation_score must be between 0 and 100")
-            if metric == "wall_seconds" and value < 0:
-                raise InputError(f"{path.name}: wall_seconds must be non-negative")
-            if metric in ("review_findings", "gate_iterations") and not _is_count(value):
-                raise InputError(f"{path.name}: {metric} must be a non-negative integer")
+        _check_result(path.name, doc, case_ids)
+        run = (doc["case_id"], doc["mode"], doc["seed"])
+        if run in runs:
+            raise InputError(f"{path.name}: duplicate run for case {run[0]!r}, mode {run[1]!r}, seed {run[2]}")
+        runs.add(run)
         results.append(doc)
     return results
 
@@ -134,6 +157,20 @@ def medians(results: list[dict[str, Any]]) -> dict[tuple[str, str], dict[str, fl
             row[metric] = statistics.median(values) if values else None
         out[key] = row
     return out
+
+
+def seed_shortfalls(catalog: dict[str, Any], results: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Each (case, mode) that ran fewer distinct seeds than the catalog's ``repeats``."""
+    seeds: dict[tuple[str, str], set[int]] = {}
+    for doc in results:
+        seeds.setdefault((doc["case_id"], doc["mode"]), set()).add(doc["seed"])
+    expected = catalog["repeats"]
+    return [
+        {"case_id": case["id"], "mode": mode, "expected": expected, "found": len(seeds.get((case["id"], mode), ()))}
+        for case in catalog["cases"]
+        for mode in MODES
+        if len(seeds.get((case["id"], mode), ())) < expected
+    ]
 
 
 def sign_test_p(wins: int, losses: int) -> float | None:
@@ -216,6 +253,7 @@ def score(catalog: dict[str, Any], results: list[dict[str, Any]], *, alpha: floa
         "mutation_floor": mutation_floor,
         "classification": classification,
         "runs": len(results),
+        "shortfalls": seed_shortfalls(catalog, results),
         "comparisons": {},
         "verdicts": {},
     }
@@ -255,6 +293,8 @@ def main(argv: list[str] | None = None) -> int:
         args.report.write_text(text + "\n", encoding="utf-8")
     for candidate, result in report["verdicts"].items():
         print(f"{candidate} vs strict: {result}")
+    for gap in report["shortfalls"]:
+        print(f"shortfall: {gap['case_id']} {gap['mode']} has {gap['found']} of {gap['expected']} seeds")
     return 0
 
 

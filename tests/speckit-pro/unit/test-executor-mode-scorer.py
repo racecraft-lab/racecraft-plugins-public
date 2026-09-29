@@ -113,8 +113,88 @@ class ExecutorModeScorerTests(unittest.TestCase):
                 self.assertIn("bad.json: missing", proc.stderr)
 
 
+class ScorerInputContractTests(unittest.TestCase):
+    """The scorer promises exit 1 for malformed input and never scores a short run set silently."""
+
+    GOOD = {"case_id": "queue-public-api", "mode": "strict", "seed": 1, "mutation_score": 74.0,
+            "wall_seconds": 10.0, "review_findings": 2, "gate_iterations": 1}
+
+    def setUp(self) -> None:
+        self.scorer = load_scorer()
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.directory = Path(self.tmp.name)
+
+    def write_results(self, *documents) -> None:
+        for index, document in enumerate(documents):
+            (self.directory / f"r{index}.json").write_text(json.dumps(document))
+
+    def run_cli(self):
+        env = {"PYTHONDONTWRITEBYTECODE": "1", "PATH": "/usr/bin:/bin"}
+        return subprocess.run([sys.executable, str(SCORER), "--results", str(self.directory)],
+                              capture_output=True, text=True, env=env, check=False)
+
+    def test_non_object_result_documents_are_input_errors(self) -> None:
+        for label, value in {"list": [], "number": 3, "null": None, "string": "x"}.items():
+            with self.subTest(document=label):
+                self.write_results(value)
+                with self.assertRaises(self.scorer.InputError):
+                    self.scorer.load_results(self.directory, {"queue-public-api"})
+                proc = self.run_cli()
+                self.assertEqual(1, proc.returncode, proc.stderr)
+                self.assertNotIn("Traceback", proc.stderr)
+                self.assertIn("r0.json", proc.stderr)
+
+    def test_duplicate_case_mode_seed_is_an_input_error(self) -> None:
+        self.write_results(self.GOOD, {**self.GOOD, "wall_seconds": 99.0})
+        with self.assertRaisesRegex(self.scorer.InputError, "duplicate"):
+            self.scorer.load_results(self.directory, {"queue-public-api"})
+        self.assertEqual(1, self.run_cli().returncode)
+
+    def test_non_object_catalogs_and_cases_are_input_errors(self) -> None:
+        catalog = json.loads(CATALOG.read_text())
+        for label, value in {"list catalog": [], "string case": {**catalog, "cases": ["x"]}}.items():
+            with self.subTest(catalog=label):
+                bad = self.directory / "catalog.json"
+                bad.write_text(json.dumps(value))
+                with self.assertRaises(self.scorer.InputError):
+                    self.scorer.load_catalog(bad)
+
+    def test_catalog_repeats_must_be_a_positive_integer(self) -> None:
+        catalog = json.loads(CATALOG.read_text())
+        for label, value in {"missing": None, "zero": 0, "float": 3.0, "bool": True}.items():
+            with self.subTest(repeats=label):
+                bad = self.directory / "catalog.json"
+                broken = {key: item for key, item in catalog.items() if key != "repeats"}
+                if value is not None:
+                    broken["repeats"] = value
+                bad.write_text(json.dumps(broken))
+                with self.assertRaisesRegex(self.scorer.InputError, "repeats"):
+                    self.scorer.load_catalog(bad)
+
+    def test_short_run_sets_are_reported_not_scored_silently(self) -> None:
+        catalog = self.scorer.load_catalog(CATALOG)
+        results = self.scorer.load_results(FIXTURES / "results", {c["id"] for c in catalog["cases"]})
+        complete = self.scorer.score(catalog, results, alpha=0.05, mutation_tolerance=2.0, mutation_floor=None)
+        self.assertEqual([], complete["shortfalls"])
+        short = [r for r in results if not (r["case_id"] == "queue-public-api" and r["mode"] == "boundary" and r["seed"] == 3)]
+        report = self.scorer.score(catalog, short, alpha=0.05, mutation_tolerance=2.0, mutation_floor=None)
+        self.assertEqual([{"case_id": "queue-public-api", "mode": "boundary", "expected": 3, "found": 2}],
+                         report["shortfalls"])
+
+    def test_cli_prints_each_shortfall(self) -> None:
+        for seed in (1, 2):
+            (self.directory / f"s{seed}.json").write_text(json.dumps({**self.GOOD, "seed": seed}))
+        proc = self.run_cli()
+        self.assertEqual(0, proc.returncode, proc.stderr)
+        self.assertIn("shortfall: queue-public-api strict has 2 of 3 seeds", proc.stdout)
+
+
 def build_suite() -> unittest.TestSuite:
-    return unittest.defaultTestLoader.loadTestsFromTestCase(ExecutorModeScorerTests)
+    return unittest.TestSuite([
+        unittest.defaultTestLoader.loadTestsFromTestCase(ExecutorModeScorerTests),
+        unittest.defaultTestLoader.loadTestsFromTestCase(ScorerInputContractTests),
+    ])
 
 
 def main() -> int:

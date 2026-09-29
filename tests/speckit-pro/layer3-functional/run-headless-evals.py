@@ -27,7 +27,11 @@ if str(LAYER_ROOT) not in sys.path:
 LAYER2_ROOT = LAYER_ROOT.parent / "layer2-trigger"
 if str(LAYER2_ROOT) not in sys.path:
     sys.path.insert(0, str(LAYER2_ROOT))
+SHARED_LIB = LAYER_ROOT.parent / "lib"
+if str(SHARED_LIB) not in sys.path:
+    sys.path.insert(0, str(SHARED_LIB))
 
+import codex_isolation
 from preview_helpers import read_eval_data
 import run_codex_evals as codex_trigger_evals
 
@@ -40,10 +44,6 @@ PROVIDER_API_ENV_NAMES = {
     "CODEX_API_KEY",
     "OPENAI_API_KEY",
 }
-CODEX_DISABLED_FEATURES = (
-    "plugins", "apps", "browser_use", "computer_use", "hooks",
-    "skill_mcp_dependency_install", "memories",
-)
 
 
 class EvidenceError(RuntimeError):
@@ -163,7 +163,16 @@ def load_case_catalog(root: Path) -> dict[str, Any]:
         if not isinstance(item, dict) or set(item).intersection({"expectations", "expected_output"}):
             raise EvidenceError("headless case catalog must not contain grading rubrics")
         expected_selection(item)
+        require_enforced_metadata(item)
     return data
+
+
+def require_enforced_metadata(case: Mapping[str, Any]) -> None:
+    """Refuse case fields no launch or evidence check reads, so they cannot pose as enforced."""
+    if case.get("launch_policy", "hold") != "hold":
+        raise EvidenceError("headless case launch_policy may only be 'hold'; no other value is read")
+    if case.get("host") == "claude" and "required_tools" in case:
+        raise EvidenceError("headless Claude cases must not carry required_tools; only Codex traces enforce it")
 
 
 def find_case(catalog: Mapping[str, Any], host: str, skill: str, eval_id: int) -> dict[str, Any]:
@@ -339,74 +348,30 @@ def enumerate_non_target_skills(stage: Stage) -> tuple[Path, ...]:
     try:
         target = stage.target_skill.resolve(strict=True)
         discovered = set(codex_trigger_evals.enumerate_non_target_skills(target))
-        discovered.update(codex_trigger_evals._canonical_skill_files(stage.workspace / ".agents" / "skills"))
+        discovered.update(codex_isolation.canonical_skill_files(stage.workspace / ".agents" / "skills"))
     except (OSError, ValueError) as error:
         raise EvidenceError(f"could not inspect Codex skill roots: {error}") from error
     discovered.discard(target)
     return tuple(sorted(discovered, key=str))
 
 
-def skill_isolation_args(
-    disabled_skills: tuple[Path, ...], disabled_mcp_servers: tuple[str, ...] = (),
-) -> list[str]:
-    """Build process-local Codex isolation overrides without saved-config mutation."""
-    entries = ",".join(
-        f"{{path={json.dumps(str(path))},enabled=false}}"
-        for path in disabled_skills
-    )
-    args = [
-        value for feature in CODEX_DISABLED_FEATURES for value in ("--disable", feature)
-    ]
-    args.extend([
-        "--config", "skills.bundled.enabled=false",
-        "--config", f"skills.config=[{entries}]",
-    ])
-    # Preserve exact names in a TOML map without copying endpoints or credentials.
-    # Exec ignores user config, so even disabled entries need an inert transport.
-    disabled = f'{{enabled=false,command={json.dumps(sys.executable)},args=["-c","raise SystemExit(1)"]}}'
-    servers = ",".join(f"{json.dumps(name)}={disabled}" for name in disabled_mcp_servers)
-    args.extend(["--config", f"mcp_servers={{{servers}}}", "--config", 'web_search="disabled"'])
-    return args
+skill_isolation_args = codex_isolation.skill_isolation_args
 
 
 def codex_permission_args(workspace: Path) -> list[str]:
-    return [
-        "--config", 'default_permissions="functional-fixture"',
-        "--config", 'permissions.functional-fixture.filesystem={":root"="deny",":minimal"="read",'
-        + json.dumps(str(workspace.resolve())) + '="read"}',
-        "--config", "permissions.functional-fixture.network.enabled=false",
-        "--config", 'approval_policy="never"',
-        "--config", "allow_login_shell=false",
-    ]
+    return codex_isolation.fixture_permission_args("functional-fixture", workspace)
 
 
 def enumerate_codex_mcp_servers(cli: Path, workspace: Path, env: Mapping[str, str]) -> tuple[str, ...]:
     """Read local configured names only; this inventory does not initialize servers."""
-    command = [str(cli.resolve()), "mcp", "list", "--json", *codex_permission_args(workspace)]
-    for feature in CODEX_DISABLED_FEATURES:
-        command.extend(["--disable", feature])
-    command.extend(["--config", 'web_search="disabled"'])
+    command = codex_isolation.mcp_list_command(str(cli.resolve()), codex_permission_args(workspace))
     try:
-        completed = subprocess.run(
-            command, cwd=workspace, env=dict(env), stdin=subprocess.DEVNULL,
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=30,
+        return codex_isolation.read_mcp_server_names(
+            command, cwd=workspace, env=env, timeout=30,
             executable=shutil.which("codex", path=str(Path(command[0]).parent)),
-            shell=False, check=False,
         )
-        if completed.returncode != 0:
-            raise EvidenceError("Codex MCP inventory command failed")
-        inventory = json.loads(completed.stdout)
-        if not isinstance(inventory, list):
-            raise EvidenceError("Codex MCP inventory is not a list")
-        names = [item.get("name") if isinstance(item, dict) else None for item in inventory]
-        if any(not isinstance(name, str) or not name.strip() for name in names):
-            raise EvidenceError("Codex MCP inventory omitted a server name")
-        if len(set(names)) != len(names):
-            raise EvidenceError("Codex MCP inventory contains duplicate server names")
-        return tuple(sorted(names))
-    except (OSError, subprocess.TimeoutExpired, UnicodeError, json.JSONDecodeError) as error:
-        # Do not persist endpoints, config values or credential-bearing diagnostics.
-        raise EvidenceError("Codex MCP inventory could not be read locally") from error
+    except ValueError as error:
+        raise EvidenceError(str(error)) from error
 
 
 def claude_skill_policy(case: Mapping[str, Any], stage: Stage) -> dict[str, Any]:
@@ -1118,18 +1083,26 @@ def parser() -> argparse.ArgumentParser:
     return result
 
 
-def main(argv: list[str]) -> int:
-    args = parser().parse_args(argv)
-    root = repo_root()
-    evidence_root = args.evidence_dir.resolve()
-    if evidence_root.is_relative_to(root.resolve()):
-        print("ERROR: evidence directory must be outside the source worktree", file=sys.stderr)
-        return 2
-    if evidence_root.exists():
-        print(f"ERROR: evidence directory already exists: {evidence_root}", file=sys.stderr)
-        return 2
-    evidence_root.mkdir(parents=True)
-    manifest: dict[str, Any] = {
+@dataclass
+class CaseRun:
+    """State one case run carries from staging through evidence capture."""
+
+    args: argparse.Namespace
+    root: Path
+    case: dict[str, Any] | None = None
+    actor_input: dict[str, Any] | None = None
+    case_evidence: Path | None = None
+    stage_root: Path | None = None
+    stage: Stage | None = None
+    claude_policy: dict[str, Any] | None = None
+    disabled_skills: tuple[Path, ...] | None = None
+    disabled_mcp_servers: tuple[str, ...] = ()
+    env: dict[str, str] | None = None
+    before: dict[str, str] | None = None
+
+
+def new_manifest(args: argparse.Namespace) -> dict[str, Any]:
+    return {
         "schema_version": 1,
         "status": "setup_error",
         "source_commit": args.source_commit,
@@ -1142,181 +1115,188 @@ def main(argv: list[str]) -> int:
         "created_at": utc_now(),
         "semantic_grade": "not_performed",
     }
-    stage_root: Path | None = None
+
+
+def write_json_evidence(path: Path, value: Any) -> str:
+    path.write_text(json.dumps(value, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return sha256_file(path)
+
+
+def stage_codex_isolation(run: CaseRun, manifest: dict[str, Any]) -> None:
+    """Inventory host skills and connected servers Codex must not reach."""
+    run.disabled_skills = enumerate_non_target_skills(run.stage)
+    run.disabled_mcp_servers = enumerate_codex_mcp_servers(run.args.cli, run.stage.workspace, run.env)
+    manifest["codex_isolation"] = {
+        "disabled_mcp_servers": list(run.disabled_mcp_servers),
+        "inventory_evidence": "local configured names only; not the executing process tool registry",
+        "disabled_features": list(codex_isolation.DISABLED_FEATURES),
+        "environment_names": sorted(run.env),
+        "permission_profile": "functional-fixture",
+    }
+
+
+def prepare_run(run: CaseRun, evidence_root: Path, manifest: dict[str, Any]) -> None:
+    """Stage the case and record every identity the evidence must bind."""
+    args, root = run.args, run.root
+    require_source_identity(root, args.source_commit, args.source_tree, require_clean=True)
+    if not args.cli.is_absolute() or not args.cli.is_file() or not os.access(args.cli, os.X_OK):
+        raise EvidenceError("CLI must be an existing executable absolute path")
+    manifest["cli_version"] = probe_cli_version(args.host, args.cli)
+    run.case = find_case(load_case_catalog(root), args.host, args.skill, args.eval_id)
+    run.actor_input = build_actor_input(root, run.case)
+    opaque_id = new_opaque_id()
+    run.case_evidence = evidence_root / "cases" / opaque_id
+    run.case_evidence.parent.mkdir()
+    run.case_evidence.mkdir()
+    fixture_provenance_sha256 = retain_fixture_provenance(root, run.case, run.case_evidence)
+    write_json_evidence(run.case_evidence / "actor-input.json", run.actor_input)
+    run.stage_root = Path(tempfile.mkdtemp(prefix=f"speckit-l3-{opaque_id}-"))
+    run.stage = stage_case(root, run.case, run.stage_root)
+    if args.host == "claude":
+        run.claude_policy = claude_skill_policy(run.case, run.stage)
+        manifest["claude_skill_policy"] = run.claude_policy
+    run.env = build_process_env(os.environ, run.stage.runtime_root, host=args.host)
+    if args.host == "codex":
+        stage_codex_isolation(run, manifest)
+    run.before = snapshot_tree(run.stage.workspace)
+    before_sha256 = write_json_evidence(run.case_evidence / "workspace-before.json", run.before)
+    manifest.update(
+        {
+            "opaque_case_id": opaque_id,
+            "case_identity": {"skill": args.skill, "eval_id": args.eval_id},
+            "eval_file": str(run.case["eval_file"]),
+            "eval_file_sha256": sha256_file(eval_path(root, run.case)),
+            "case_catalog_sha256": sha256_file(root / CATALOG_PATH.relative_to(repo_root())),
+            "plugin_tree_sha256": run.stage.plugin_digest,
+            "fixture_tree_sha256": run.stage.fixture_digest,
+            "fixture_provenance_sha256": fixture_provenance_sha256,
+            "skill_sha256": run.stage.skill_digest,
+            "workspace_before_sha256": before_sha256,
+        }
+    )
+    if run.case.get("hold_terminal") is True:
+        manifest["hold_terminal"] = True
+
+
+def require_launch_inputs_unchanged(run: CaseRun) -> None:
+    """Refuse to launch when a staged input changed after command assembly."""
+    if run.args.host == "codex":
+        if enumerate_non_target_skills(run.stage) != run.disabled_skills:
+            raise EvidenceError("Codex skill roots changed after command assembly")
+        if enumerate_codex_mcp_servers(run.args.cli, run.stage.workspace, run.env) != run.disabled_mcp_servers:
+            raise EvidenceError("Codex MCP inventory changed after command assembly")
+    elif (
+        tree_digest(run.stage.plugin_root) != run.stage.plugin_digest
+        or claude_skill_policy(run.case, run.stage) != run.claude_policy
+    ):
+        raise EvidenceError("Claude staged plugin or Skill policy changed after command assembly")
+
+
+def grade_process_result(run: CaseRun, process_result: dict[str, Any], manifest: dict[str, Any]) -> str:
+    """Parse provider events into the manifest and return the resulting status."""
+    status = str(process_result["status"])
+    if run.args.host == "codex" and status != "completed_ungraded":
+        try:
+            require_codex_event_isolation(parse_jsonl(str(process_result.get("stdout", ""))))
+        except EvidenceError as error:
+            manifest["event_error"] = str(error)
+            return "event_parse_error"
+    if status != "completed_ungraded":
+        return status
+    try:
+        parsed = parse_events(run.args.host, str(process_result["stdout"]))
+    except EvidenceError as error:
+        manifest["event_error"] = str(error)
+        return "event_parse_error"
+    try:
+        manifest["selection_observed"] = require_provider_evidence(run.case, parsed, run.claude_policy)
+    except EvidenceError as error:
+        status = "provider_evidence_error"
+        manifest["event_error"] = str(error)
+    manifest["provider_evidence"] = parsed
+    manifest["resolved_model"] = parsed["resolved_model"]
+    write_json_evidence(run.case_evidence / "tool-trace.json", parsed["tool_trace"])
+    return status
+
+
+def execute_case(run: CaseRun, command: list[str], manifest: dict[str, Any]) -> int:
+    """Launch the provider process and record its process, grading and workspace evidence."""
+    try:
+        require_execution_platform(os.name)
+    except HeldLaunch as error:
+        manifest.update({"status": "held", "hold_reason": str(error)})
+        return 4
+    require_launch_inputs_unchanged(run)
+    process_result = capture_process(
+        run.args.host, command, render_actor_prompt(run.actor_input), run.case_evidence,
+        run.stage.workspace, run.env, run.args.timeout,
+    )
+    manifest["process"] = {
+        key: value for key, value in process_result.items() if key not in {"stdout", "stderr"}
+    }
+    status = grade_process_result(run, process_result, manifest)
+    after = snapshot_tree(run.stage.workspace)
+    manifest["workspace_after_sha256"] = write_json_evidence(run.case_evidence / "workspace-after.json", after)
+    if run.before != after and status == "completed_ungraded":
+        status = "workspace_changed"
+    manifest["status"] = status
+    return 0 if status == "completed_ungraded" else 1
+
+
+def launch_case(run: CaseRun, manifest: dict[str, Any]) -> int:
+    """Assemble the provider command, then preflight it or execute it."""
+    args = run.args
+    try:
+        command = build_command(
+            run.case, run.stage, args.cli, args.model, args.reasoning,
+            run.disabled_skills, run.disabled_mcp_servers,
+        )
+    except HeldLaunch as error:
+        manifest.update({"status": "held", "hold_reason": str(error)})
+        return 4
+    manifest["command"] = command
+    if args.host == "claude":
+        manifest["claude_startup_environment"] = {
+            name: run.env.get(name)
+            for name in ("DISABLE_AUTOUPDATER", "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC", "FORCE_AUTOUPDATE_PLUGINS")
+        }
+    if not args.execute:
+        manifest["status"] = "preflight_only"
+        return 0
+    return execute_case(run, command, manifest)
+
+
+def main(argv: list[str]) -> int:
+    args = parser().parse_args(argv)
+    root = repo_root()
+    evidence_root = args.evidence_dir.resolve()
+    if evidence_root.is_relative_to(root.resolve()):
+        print("ERROR: evidence directory must be outside the source worktree", file=sys.stderr)
+        return 2
+    if evidence_root.exists():
+        print(f"ERROR: evidence directory already exists: {evidence_root}", file=sys.stderr)
+        return 2
+    evidence_root.mkdir(parents=True)
+    manifest = new_manifest(args)
+    run = CaseRun(args=args, root=root)
     cleanup_error: str | None = None
     exit_code = 1
     try:
-        require_source_identity(root, args.source_commit, args.source_tree, require_clean=True)
-        if not args.cli.is_absolute() or not args.cli.is_file() or not os.access(args.cli, os.X_OK):
-            raise EvidenceError("CLI must be an existing executable absolute path")
-        manifest["cli_version"] = probe_cli_version(args.host, args.cli)
-        catalog = load_case_catalog(root)
-        case = find_case(catalog, args.host, args.skill, args.eval_id)
-        actor_input = build_actor_input(root, case)
-        opaque_id = new_opaque_id()
-        case_evidence = evidence_root / "cases" / opaque_id
-        case_evidence.parent.mkdir()
-        case_evidence.mkdir()
-        fixture_provenance_sha256 = retain_fixture_provenance(root, case, case_evidence)
-        (case_evidence / "actor-input.json").write_text(
-            json.dumps(actor_input, indent=2, sort_keys=True) + "\n",
-            encoding="utf-8",
-        )
-        stage_root = Path(tempfile.mkdtemp(prefix=f"speckit-l3-{opaque_id}-"))
-        stage = stage_case(root, case, stage_root)
-        claude_policy = claude_skill_policy(case, stage) if args.host == "claude" else None
-        if claude_policy is not None:
-            manifest["claude_skill_policy"] = claude_policy
-        disabled_skills = (
-            enumerate_non_target_skills(stage)
-            if args.host == "codex"
-            else None
-        )
-        env = build_process_env(os.environ, stage.runtime_root, host=args.host)
-        disabled_mcp_servers = (
-            enumerate_codex_mcp_servers(args.cli, stage.workspace, env)
-            if args.host == "codex" else ()
-        )
-        if args.host == "codex":
-            manifest["codex_isolation"] = {
-                "disabled_mcp_servers": list(disabled_mcp_servers),
-                "inventory_evidence": "local configured names only; not the executing process tool registry",
-                "disabled_features": list(CODEX_DISABLED_FEATURES),
-                "environment_names": sorted(env),
-                "permission_profile": "functional-fixture",
-            }
-        before = snapshot_tree(stage.workspace)
-        before_path = case_evidence / "workspace-before.json"
-        before_path.write_text(json.dumps(before, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-        manifest.update(
-            {
-                "opaque_case_id": opaque_id,
-                "case_identity": {"skill": args.skill, "eval_id": args.eval_id},
-                "eval_file": str(case["eval_file"]),
-                "eval_file_sha256": sha256_file(eval_path(root, case)),
-                "case_catalog_sha256": sha256_file(root / CATALOG_PATH.relative_to(repo_root())),
-                "plugin_tree_sha256": stage.plugin_digest,
-                "fixture_tree_sha256": stage.fixture_digest,
-                "fixture_provenance_sha256": fixture_provenance_sha256,
-                "skill_sha256": stage.skill_digest,
-                "workspace_before_sha256": sha256_file(before_path),
-            }
-        )
-        if case.get("hold_terminal") is True:
-            manifest["hold_terminal"] = True
-        try:
-            command = build_command(
-                case,
-                stage,
-                args.cli,
-                args.model,
-                args.reasoning,
-                disabled_skills,
-                disabled_mcp_servers,
-            )
-        except HeldLaunch as error:
-            manifest.update({"status": "held", "hold_reason": str(error)})
-            exit_code = 4
-        else:
-            manifest["command"] = command
-            if args.host == "claude":
-                manifest["claude_startup_environment"] = {
-                    name: env.get(name)
-                    for name in (
-                        "DISABLE_AUTOUPDATER",
-                        "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC",
-                        "FORCE_AUTOUPDATE_PLUGINS",
-                    )
-                }
-            if not args.execute:
-                manifest["status"] = "preflight_only"
-                exit_code = 0
-            else:
-                try:
-                    require_execution_platform(os.name)
-                except HeldLaunch as error:
-                    manifest.update({"status": "held", "hold_reason": str(error)})
-                    exit_code = 4
-                    process_result = None
-                else:
-                    if args.host == "codex" and enumerate_non_target_skills(stage) != disabled_skills:
-                        raise EvidenceError("Codex skill roots changed after command assembly")
-                    if args.host == "codex" and enumerate_codex_mcp_servers(args.cli, stage.workspace, env) != disabled_mcp_servers:
-                        raise EvidenceError("Codex MCP inventory changed after command assembly")
-                    if args.host == "claude" and (
-                        tree_digest(stage.plugin_root) != stage.plugin_digest
-                        or claude_skill_policy(case, stage) != claude_policy
-                    ):
-                        raise EvidenceError("Claude staged plugin or Skill policy changed after command assembly")
-                    process_result = capture_process(
-                        args.host,
-                        command,
-                        render_actor_prompt(actor_input),
-                        case_evidence,
-                        stage.workspace,
-                        env,
-                        args.timeout,
-                    )
-                if process_result is not None:
-                    manifest["process"] = {
-                        key: value
-                        for key, value in process_result.items()
-                        if key not in {"stdout", "stderr"}
-                    }
-                    status = str(process_result["status"])
-                    if args.host == "codex" and status != "completed_ungraded":
-                        try:
-                            require_codex_event_isolation(parse_jsonl(str(process_result.get("stdout", ""))))
-                        except EvidenceError as error:
-                            status = "event_parse_error"
-                            manifest["event_error"] = str(error)
-                    if status == "completed_ungraded":
-                        try:
-                            parsed = parse_events(args.host, str(process_result["stdout"]))
-                        except EvidenceError as error:
-                            status = "event_parse_error"
-                            manifest["event_error"] = str(error)
-                        else:
-                            try:
-                                selection_observed = require_provider_evidence(case, parsed, claude_policy)
-                            except EvidenceError as error:
-                                status = "provider_evidence_error"
-                                manifest["event_error"] = str(error)
-                            else:
-                                manifest["selection_observed"] = selection_observed
-                            manifest["provider_evidence"] = parsed
-                            manifest["resolved_model"] = parsed["resolved_model"]
-                            (case_evidence / "tool-trace.json").write_text(
-                                json.dumps(parsed["tool_trace"], indent=2, sort_keys=True) + "\n",
-                                encoding="utf-8",
-                            )
-                    after = snapshot_tree(stage.workspace)
-                    after_path = case_evidence / "workspace-after.json"
-                    after_path.write_text(
-                        json.dumps(after, indent=2, sort_keys=True) + "\n",
-                        encoding="utf-8",
-                    )
-                    manifest["workspace_after_sha256"] = sha256_file(after_path)
-                    if before != after and status == "completed_ungraded":
-                        status = "workspace_changed"
-                    manifest["status"] = status
-                    exit_code = 0 if status == "completed_ungraded" else 1
+        prepare_run(run, evidence_root, manifest)
+        exit_code = launch_case(run, manifest)
     except (EvidenceError, OSError, ValueError, json.JSONDecodeError) as error:
         manifest.update({"status": "setup_error", "error": str(error)})
         exit_code = 1
     finally:
-        if stage_root is not None:
+        if run.stage_root is not None:
             try:
-                shutil.rmtree(stage_root)
+                shutil.rmtree(run.stage_root)
             except OSError as error:
                 cleanup_error = str(error)
         manifest["cleanup_error"] = cleanup_error
         manifest["status"] = final_status(str(manifest["status"]), cleanup_error)
         manifest["finished_at"] = utc_now()
-        (evidence_root / "manifest.json").write_text(
-            json.dumps(manifest, indent=2, sort_keys=True) + "\n",
-            encoding="utf-8",
-        )
+        write_json_evidence(evidence_root / "manifest.json", manifest)
         write_checksum_index(evidence_root)
     print(json.dumps({"status": manifest["status"], "evidence_dir": str(evidence_root)}))
     return 1 if cleanup_error else exit_code
