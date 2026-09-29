@@ -76,6 +76,110 @@
     {
       "path": {
         "kind": "plugin_relative",
+        "value": "speckit_pro_runner/contracts/architecture-graph.schema.json",
+        "display": "speckit_pro_runner/contracts/architecture-graph.schema.json"
+      },
+      "sha256": "4e992897b6e38be91c445c99076d78a14a20251980c5e30bf2cc8bffb103e846"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
+        "value": "speckit_pro_runner/contracts/docker-verification-record-v2.schema.json",
+        "display": "speckit_pro_runner/contracts/docker-verification-record-v2.schema.json"
+      },
+      "sha256": "4bb9d7a02a7e0138a65dd101ee5b268bb86bb6078738547951a84ff173d5a794"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
+        "value": "speckit_pro_runner/contracts/docker-verification-record.schema.json",
+        "display": "speckit_pro_runner/contracts/docker-verification-record.schema.json"
+      },
+      "sha256": "9506e3787fb659c01169aa2a57a72a57a4c90ad547a44b42cc9f3a960015ea5b"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
+        "value": "speckit_pro_runner/contracts/execution-control.schema.json",
+        "display": "speckit_pro_runner/contracts/execution-control.schema.json"
+      },
+      "sha256": "956735b138d26ae78dc447b3171e8064cd195d3529980d7072224f1765cdc5d8"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
+        "value": "speckit_pro_runner/contracts/formal-methods.schema.json",
+        "display": "speckit_pro_runner/contracts/formal-methods.schema.json"
+      },
+      "sha256": "4cda46ee06b33ab4bcea6bf93f7414ab70b77fabca6ef7528d8582cc840136dd"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
+        "value": "speckit_pro_runner/contracts/formal-selection.schema.json",
+        "display": "speckit_pro_runner/contracts/formal-selection.schema.json"
+      },
+      "sha256": "c86801237baf4176a8b59d27d253fbd9e5de80ce58297547382f227c6b6f967e"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
+        "value": "speckit_pro_runner/contracts/gate-discovery-table.schema.json",
+        "display": "speckit_pro_runner/contracts/gate-discovery-table.schema.json"
+      },
+      "sha256": "5e9c35ffe9cd72661d9a4fe7999edbc227465bd468e7e75d090117110e003cd2"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
+        "value": "speckit_pro_runner/contracts/preview-verdict-output.schema.json",
+        "display": "speckit_pro_runner/contracts/preview-verdict-output.schema.json"
+      },
+      "sha256": "956a300f1310b16a8feec3e8052edcd59b676c9b06c1a2ae7ea16b3f5a74afaf"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
+        "value": "speckit_pro_runner/contracts/quality-gates.schema.json",
+        "display": "speckit_pro_runner/contracts/quality-gates.schema.json"
+      },
+      "sha256": "f38c3181eadca22c6e4d9fee1d588cd7a47372312547e1bf104f29498ff04663"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
+        "value": "speckit_pro_runner/contracts/sweep-receipt-output.schema.json",
+        "display": "speckit_pro_runner/contracts/sweep-receipt-output.schema.json"
+      },
+      "sha256": "42390a1f2ae6bc947a37bd69daa8176c3a0a8e2eaace84bdd204f4ee14e42775"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
+        "value": "speckit_pro_runner/contracts/task-execution.schema.json",
+        "display": "speckit_pro_runner/contracts/task-execution.schema.json"
+      },
+      "sha256": "9818110b700aab712dbbe290e55f44f3d99677e3d93630e7ce63c2243bbe1461"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
+        "value": "speckit_pro_runner/contracts/task-results.schema.json",
+        "display": "speckit_pro_runner/contracts/task-results.schema.json"
+      },
+      "sha256": "8d313195ca9b6ad6c7a5547ac609005883f9cfd55e1d5cdcccfc372dd59790ca"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
+        "value": "speckit_pro_runner/contracts/verification-record.schema.json",
+        "display": "speckit_pro_runner/contracts/verification-record.schema.json"
+      },
+      "sha256": "f9775c8c345589016a13fe25734159e5be9e3c780a354d0187dc505405d66e52"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
         "value": "speckit_pro_runner/envelope.py",
         "display": "speckit_pro_runner/envelope.py"
       },
@@ -220,6 +324,14 @@
     {
       "path": {
         "kind": "plugin_relative",
+        "value": "speckit_pro_runner/gate_discovery_table.json",
+        "display": "speckit_pro_runner/gate_discovery_table.json"
+      },
+      "sha256": "81fa61934b9c225c99a5e049e4c24d7e511ddfd7b33fbf49bbc8693660146272"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
         "value": "speckit_pro_runner/gates/__init__.py",
         "display": "speckit_pro_runner/gates/__init__.py"
       },
@@ -303,7 +415,7 @@
         "value": "speckit_pro_runner/gates/payloads.py",
         "display": "speckit_pro_runner/gates/payloads.py"
       },
-      "sha256": "70d2a3097473742b6979af80a66af4685e4596302158cc4e0045c5c597a60ca3"
+      "sha256": "408a0c08b07b1ee59372adc702b35b014831cca326a031777dc284ec6f503f72"
     },
     {
       "path": {
@@ -319,7 +431,7 @@
         "value": "speckit_pro_runner/gates/release.py",
         "display": "speckit_pro_runner/gates/release.py"
       },
-      "sha256": "078eff203254a54c9e0403f3907a24bde3b7dcb6d42801ce74a275ea0f765d2e"
+      "sha256": "e4213f704f4dcb5950b283bb560224cc7120b43d8d7a61eba55797f8365b1eae"
     },
     {
       "path": {
@@ -367,7 +479,7 @@
         "value": "speckit_pro_runner/helpers/install.py",
         "display": "speckit_pro_runner/helpers/install.py"
       },
-      "sha256": "b08c4514f5b3ba26f4662305a847a286a29a2491623e9c833b751d934e1d4c30"
+      "sha256": "4eca3fc906f2ee3259ee61317e240cc5277566547212c8f5d48cd08044f0a1d6"
     },
     {
       "path": {
@@ -444,6 +556,14 @@
     {
       "path": {
         "kind": "plugin_relative",
+        "value": "speckit_pro_runner/install_inventory.json",
+        "display": "speckit_pro_runner/install_inventory.json"
+      },
+      "sha256": "5ed69f789698eb7bd75d1a60b8d7883cd545f62f052dc64954ab1706c0b36eee"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
         "value": "speckit_pro_runner/json_schema.py",
         "display": "speckit_pro_runner/json_schema.py"
       },
@@ -503,7 +623,7 @@
         "value": "speckit_pro_runner/runtime.py",
         "display": "speckit_pro_runner/runtime.py"
       },
-      "sha256": "e83eea26e8fe04c6c427a4a1085b4434cdf5305efabea8d8f4e513891577f63f"
+      "sha256": "8e19a45af364bc80bba691be88169b2770fa853845f09ac76232d17e02328bd4"
     },
     {
       "path": {
