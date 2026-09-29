@@ -366,10 +366,7 @@ def enumerate_codex_mcp_servers(cli: Path, workspace: Path, env: Mapping[str, st
     """Read local configured names only; this inventory does not initialize servers."""
     command = codex_isolation.mcp_list_command(str(cli.resolve()), codex_permission_args(workspace))
     try:
-        return codex_isolation.read_mcp_server_names(
-            command, cwd=workspace, env=env, timeout=30,
-            executable=shutil.which("codex", path=str(Path(command[0]).parent)),
-        )
+        return codex_isolation.read_mcp_server_names(command, cwd=workspace, env=env, timeout=30)
     except ValueError as error:
         raise EvidenceError(str(error)) from error
 
@@ -1118,8 +1115,10 @@ def new_manifest(args: argparse.Namespace) -> dict[str, Any]:
 
 
 def write_json_evidence(path: Path, value: Any) -> str:
-    path.write_text(json.dumps(value, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    return sha256_file(path)
+    """Write one evidence document and return the digest of exactly those bytes."""
+    payload = (json.dumps(value, indent=2, sort_keys=True) + "\n").encode("utf-8")
+    path.write_bytes(payload)
+    return sha256_bytes(payload)
 
 
 def stage_codex_isolation(run: CaseRun, manifest: dict[str, Any]) -> None:

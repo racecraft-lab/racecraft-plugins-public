@@ -442,8 +442,7 @@ class FunctionalHeadlessRunnerTests(unittest.TestCase):
         self.assertEqual(command.count("--disable"), 8)
         self.assertEqual(
             [command[index + 1] for index, item in enumerate(command) if item == "--disable"],
-            ["plugins", "apps", "browser_use", "computer_use", "hooks", "skill_mcp_dependency_install",
-             "memories", "unbounded_connection_retries"],
+            ["plugins", "apps", "browser_use", "computer_use", "hooks", "skill_mcp_dependency_install", "memories", "unbounded_connection_retries"],
         )
         self.assertIn("skills.bundled.enabled=false", command)
         self.assertIn("mcp_servers={}", command)
@@ -1416,13 +1415,14 @@ class HeadlessCaseCatalogContractTests(unittest.TestCase):
         values = {case["launch_policy"] for case in self.data["cases"] if "launch_policy" in case}
         self.assertLessEqual(values, {"hold"})
 
-    def test_loader_rejects_required_tools_on_a_claude_case(self) -> None:
-        with self.assertRaisesRegex(self.runner.EvidenceError, "required_tools"):
-            self.load_with(lambda _first, claude: claude.update(required_tools=["Skill"]))
-
-    def test_loader_rejects_an_unread_launch_policy_value(self) -> None:
-        with self.assertRaisesRegex(self.runner.EvidenceError, "launch_policy"):
-            self.load_with(lambda first, _claude: first.update(launch_policy="read_only"))
+    def test_loader_rejects_metadata_nothing_reads(self) -> None:
+        cases = {
+            "required_tools": lambda _first, claude: claude.update(required_tools=["Skill"]),
+            "launch_policy": lambda first, _claude: first.update(launch_policy="read_only"),
+        }
+        for field, mutate in cases.items():
+            with self.subTest(field=field), self.assertRaisesRegex(self.runner.EvidenceError, field):
+                self.load_with(mutate)
 
 
 def main() -> int:

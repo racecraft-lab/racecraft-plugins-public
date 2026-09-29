@@ -73,8 +73,7 @@ def is_boundary_task(files: list[str], deltas: list[str]) -> bool:
     return any(f == t or f.startswith(t.rstrip("/") + "/") for f in files for t in targets)
 
 
-def load_catalog(path: Path) -> dict[str, Any]:
-    data = json.loads(path.read_text(encoding="utf-8"))
+def _check_catalog_shape(data: Any) -> None:
     if not isinstance(data, dict):
         raise InputError("catalog must be a JSON object")
     if data.get("schema_version") != "1.0" or not isinstance(data.get("cases"), list) or not data["cases"]:
@@ -84,16 +83,25 @@ def load_catalog(path: Path) -> dict[str, Any]:
         raise InputError(f"catalog modes must be an object keyed by exactly {', '.join(MODES)}")
     if not _is_count(data.get("repeats")) or data["repeats"] < 1:
         raise InputError("catalog repeats must be a positive integer")
-    if not all(isinstance(case, dict) for case in data["cases"]):
+
+
+def _check_case_fields(cases: list[Any]) -> None:
+    if not all(isinstance(case, dict) for case in cases):
         raise InputError("every catalog case must be an object")
-    ids = [case.get("id") for case in data["cases"]]
+    ids = [case.get("id") for case in cases]
     if len(set(ids)) != len(ids) or not all(isinstance(i, str) and i for i in ids):
         raise InputError("case ids must be unique non-empty strings")
-    for case in data["cases"]:
+    for case in cases:
         for field in ("language", "task", "files", "deltas"):
             if field not in case:
                 raise InputError(f"case {case['id']}: missing {field}")
         delta_paths(case["deltas"])
+
+
+def load_catalog(path: Path) -> dict[str, Any]:
+    data = json.loads(path.read_text(encoding="utf-8"))
+    _check_catalog_shape(data)
+    _check_case_fields(data["cases"])
     return data
 
 

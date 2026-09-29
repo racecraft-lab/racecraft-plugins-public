@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import os
 import pathlib
+import shutil
 import stat
 import subprocess
 import sys
@@ -19,6 +20,38 @@ DISABLED_FEATURES = (
     "plugins", "apps", "browser_use", "computer_use", "hooks",
     "skill_mcp_dependency_install", "memories", "unbounded_connection_retries",
 )
+
+
+def _list_new_directory(
+    directory: pathlib.Path, visited: set[tuple[int, int]],
+) -> list[os.DirEntry[str]]:
+    """List a directory once by device and inode identity, so symlink cycles end."""
+    try:
+        canonical_directory = directory.resolve(strict=True)
+        directory_status = canonical_directory.stat()
+        identity = (directory_status.st_dev, directory_status.st_ino)
+        if identity in visited:
+            return []
+        visited.add(identity)
+        with os.scandir(canonical_directory) as entries:
+            return list(entries)
+    except OSError as exc:
+        raise OSError(f"could not inspect Codex skill root {directory}: {exc}") from exc
+
+
+def _sort_entry(
+    entry: os.DirEntry[str], skills: set[pathlib.Path], pending: list[pathlib.Path],
+) -> None:
+    """File a SKILL.md as a skill and any other directory for a later pass."""
+    try:
+        if entry.name == "SKILL.md":
+            if not entry.is_file(follow_symlinks=True):
+                raise ValueError(f"Codex skill path is not a file: {entry.path}")
+            skills.add(pathlib.Path(entry.path).resolve(strict=True))
+        elif entry.is_dir(follow_symlinks=True):
+            pending.append(pathlib.Path(entry.path))
+    except OSError as exc:
+        raise OSError(f"could not inspect Codex skill path {entry.path}: {exc}") from exc
 
 
 def canonical_skill_files(root: pathlib.Path) -> set[pathlib.Path]:
@@ -31,33 +64,12 @@ def canonical_skill_files(root: pathlib.Path) -> set[pathlib.Path]:
         raise OSError(f"could not inspect Codex skill root {root}: {exc}") from exc
     if not stat.S_ISDIR(root_status.st_mode):
         raise ValueError(f"Codex skill root is not a directory: {root}")
-
     pending = [root.resolve(strict=True)]
     visited: set[tuple[int, int]] = set()
     skills: set[pathlib.Path] = set()
     while pending:
-        directory = pending.pop()
-        try:
-            canonical_directory = directory.resolve(strict=True)
-            directory_status = canonical_directory.stat()
-            identity = (directory_status.st_dev, directory_status.st_ino)
-            if identity in visited:
-                continue
-            visited.add(identity)
-            with os.scandir(canonical_directory) as entries:
-                children = list(entries)
-        except OSError as exc:
-            raise OSError(f"could not inspect Codex skill root {directory}: {exc}") from exc
-        for entry in children:
-            try:
-                if entry.name == "SKILL.md":
-                    if not entry.is_file(follow_symlinks=True):
-                        raise ValueError(f"Codex skill path is not a file: {entry.path}")
-                    skills.add(pathlib.Path(entry.path).resolve(strict=True))
-                elif entry.is_dir(follow_symlinks=True):
-                    pending.append(pathlib.Path(entry.path))
-            except OSError as exc:
-                raise OSError(f"could not inspect Codex skill path {entry.path}: {exc}") from exc
+        for entry in _list_new_directory(pending.pop(), visited):
+            _sort_entry(entry, skills, pending)
     return skills
 
 
@@ -95,14 +107,14 @@ def read_mcp_server_names(
     cwd: pathlib.Path,
     env: Mapping[str, str],
     timeout: int,
-    executable: str | None,
 ) -> tuple[str, ...]:
     """Read configured names locally; never initialize servers or retain their config."""
     try:
         completed = subprocess.run(
             list(command), cwd=cwd, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
             stderr=subprocess.PIPE, timeout=timeout, env=dict(env),
-            executable=executable, shell=False, check=False,
+            executable=shutil.which("codex", path=str(pathlib.Path(command[0]).parent)),
+            shell=False, check=False,
         )
         if completed.returncode != 0:
             raise ValueError("Codex MCP inventory command failed")

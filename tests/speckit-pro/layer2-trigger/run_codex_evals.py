@@ -529,7 +529,6 @@ def enumerate_mcp_servers(workspace: pathlib.Path, timeout: int) -> tuple[str, .
     command = codex_isolation.mcp_list_command(codex_executable(), fixture_permission_args(workspace))
     return codex_isolation.read_mcp_server_names(
         command, cwd=workspace, env=codex_environment(), timeout=timeout,
-        executable=shutil.which("codex", path=str(pathlib.Path(command[0]).parent)),
     )
 
 
