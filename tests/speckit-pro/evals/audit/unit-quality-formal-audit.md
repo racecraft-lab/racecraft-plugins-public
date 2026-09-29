@@ -2,12 +2,16 @@
 
 Status: **audit complete; opt-in native execution not run in this audit**
 
+This record is a dated snapshot. Its hash and count statements describe the
+tree when it was written; several of the eleven scripts have changed since, so
+nothing here claims current-state agreement.
+
 The companion `unit-quality-formal-audit.json` records all **96/96** frozen,
 loaded Layer 4 families from the eleven assigned files. Every member has a
 substantive disposition, assertion/callee summary, evidence boundary, and
 empty-vector or tautology review. It separately records all **19** inventory
 support-only conditional methods with body-specific **keep** dispositions and
-a distinct not-run execution fact. All current source hashes match the frozen
+a distinct not-run execution fact. At review time, the source hashes matched the frozen
 inventory.
 
 ## What passed

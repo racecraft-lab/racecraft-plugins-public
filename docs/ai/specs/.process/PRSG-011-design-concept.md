@@ -6,7 +6,7 @@ mode: "setup"
 spec_id: "PRSG-011"
 source_input:
   type: "file"
-  ref: "docs/ai/specs/pr-size-governance-technical-roadmap.md (### PRSG-011); docs/prd-pr-size-governance.md (section 3.11); docs/ai/specs/PRSG-001-design-concept.md Open Questions"
+  ref: "docs/ai/specs/pr-size-governance-technical-roadmap.md (### PRSG-011); docs/prd-pr-size-governance.md (section 3.11); docs/ai/specs/.process/PRSG-001-design-concept.md Open Questions"
 question_count: 11
 stop_reason: "natural"
 ---

@@ -1,0 +1,256 @@
+#!/usr/bin/env python3
+"""Unit tests for the host-parity generator core: host blocks, derived Codex
+enforcement, and the pairing manifest."""
+
+from __future__ import annotations
+
+import copy
+import sys
+import unittest
+from pathlib import Path
+
+
+REPO_ROOT = Path(__file__).resolve().parents[3]
+PLUGIN_ROOT = REPO_ROOT / "speckit-pro"
+LIB_DIR = REPO_ROOT / "tests" / "speckit-pro" / "lib"
+for import_root in (PLUGIN_ROOT, LIB_DIR):
+    if str(import_root) not in sys.path:
+        sys.path.insert(0, str(import_root))
+
+from speckit_pro_runner.agent_inventory import AGENT_INVENTORY  # noqa: E402
+from speckit_pro_runner.host_parity import (  # noqa: E402
+    HostParityError,
+    derive_codex_enforcement,
+    derive_codex_hook_policy,
+    emit_host,
+    pairing_manifest,
+    split_frontmatter,
+)
+from test_result import run_counted  # noqa: E402
+
+
+SHARED = "Shared line.\n"
+CODEX_BLOCK = "<!-- host:codex -->\nCodex only.\n<!-- /host -->\n"
+CLAUDE_BLOCK = "<!-- host:claude -->\nClaude only.\n<!-- /host -->\n"
+
+
+def agent(frontmatter: str, body: str = "# Body\n") -> str:
+    return f"---\n{frontmatter}---\n{body}"
+
+
+class HostBlockTests(unittest.TestCase):
+    def assert_rejected(self, text: str, reason: str, host: str = "codex") -> None:
+        with self.assertRaisesRegex(HostParityError, reason):
+            emit_host(text, host)
+
+    def test_balanced_blocks_keep_the_target_host_and_strip_the_other(self) -> None:
+        text = SHARED + CODEX_BLOCK + CLAUDE_BLOCK + "Tail.\n"
+        self.assertEqual(emit_host(text, "codex"), "Shared line.\nCodex only.\nTail.\n")
+        self.assertEqual(emit_host(text, "claude"), "Shared line.\nClaude only.\nTail.\n")
+
+    def test_text_without_markers_is_unchanged_for_both_hosts(self) -> None:
+        text = "One.\n\nTwo.\n"
+        self.assertEqual(emit_host(text, "codex"), text)
+        self.assertEqual(emit_host(text, "claude"), text)
+
+    def test_nested_block_fails_closed(self) -> None:
+        self.assert_rejected(
+            "<!-- host:codex -->\n<!-- host:claude -->\nx\n<!-- /host -->\n<!-- /host -->\n",
+            "nested",
+        )
+
+    def test_unknown_host_fails_closed(self) -> None:
+        self.assert_rejected("<!-- host:gemini -->\nx\n<!-- /host -->\n", "unknown host")
+
+    def test_unknown_target_host_fails_closed(self) -> None:
+        self.assert_rejected(SHARED, "unknown host", host="gemini")
+
+    def test_unterminated_block_fails_closed(self) -> None:
+        self.assert_rejected("<!-- host:codex -->\nx\n", "unterminated", host="claude")
+
+    def test_close_without_open_fails_closed(self) -> None:
+        self.assert_rejected("x\n<!-- /host -->\n", "without an open")
+
+    def test_open_marker_with_trailing_text_fails_closed(self) -> None:
+        self.assert_rejected("<!-- host:codex --> trailing\nx\n<!-- /host -->\n", "own line")
+
+    def test_close_marker_after_text_fails_closed(self) -> None:
+        self.assert_rejected("<!-- host:codex -->\nx <!-- /host -->\n", "own line")
+
+    def test_open_marker_after_text_fails_closed(self) -> None:
+        self.assert_rejected("lead <!-- host:claude -->\nx\n<!-- /host -->\n", "own line")
+
+    def test_markers_inside_fenced_code_still_count(self) -> None:
+        text = "```\n<!-- host:codex -->\nx\n<!-- /host -->\n```\n"
+        self.assertEqual(emit_host(text, "claude"), "```\n```\n")
+
+    def test_error_names_the_line_number(self) -> None:
+        self.assert_rejected("ok\n<!-- /host -->\n", "line 2")
+
+
+class FrontmatterTests(unittest.TestCase):
+    def test_folded_description_does_not_leak_into_other_keys(self) -> None:
+        fields, body = split_frontmatter(
+            agent("name: a\ndescription: >\n  tools: not a key\n  more\ntools: Read, Grep\n")
+        )
+        self.assertEqual(fields["tools"], "Read, Grep")
+        self.assertEqual(fields["name"], "a")
+        self.assertEqual(body, "# Body\n")
+
+    def test_missing_closing_fence_fails_closed(self) -> None:
+        with self.assertRaisesRegex(HostParityError, "frontmatter"):
+            split_frontmatter("---\nname: a\n# Body\n")
+
+    def test_missing_opening_fence_fails_closed(self) -> None:
+        with self.assertRaisesRegex(HostParityError, "frontmatter"):
+            split_frontmatter("name: a\n---\n")
+
+
+RESEARCH_TOOLS = (
+    "mcp__plugin_speckit-pro_research-broker__research_search, "
+    "mcp__plugin_speckit-pro_research-broker__docs_query"
+)
+
+
+class SandboxDerivationTests(unittest.TestCase):
+    CASES = (
+        ({"tools": "Read, Grep, " + RESEARCH_TOOLS}, "read-only"),
+        ({"tools": "Read, Write"}, "workspace-write"),
+        ({"tools": "Read, Edit"}, "workspace-write"),
+        ({"tools": "Read, MultiEdit"}, "workspace-write"),
+        ({"disallowedTools": "Write, Edit, MultiEdit, NotebookEdit, Skill"}, "read-only"),
+        ({"disallowedTools": "Write, Skill"}, "workspace-write"),
+        ({}, "workspace-write"),
+    )
+
+    def test_sandbox_mode_follows_the_mutation_tools_left_to_the_role(self) -> None:
+        derived = [derive_codex_enforcement(fields).sandbox_mode for fields, _ in self.CASES]
+        self.assertEqual(derived, [expected for _, expected in self.CASES])
+
+    def test_advisory_config_keys_carry_only_sandbox_mode(self) -> None:
+        derived = derive_codex_enforcement({"tools": "Read, " + RESEARCH_TOOLS})
+        self.assertEqual(derived.advisory_config_keys(), {"sandbox_mode": "read-only"})
+
+    def test_shipped_read_only_roles_derive_read_only(self) -> None:
+        for name in ("clarify-executor", "codebase-analyst", "domain-researcher"):
+            with self.subTest(role=name):
+                fields, _ = split_frontmatter(
+                    (PLUGIN_ROOT / "agents" / f"{name}.md").read_text(encoding="utf-8")
+                )
+                self.assertEqual(derive_codex_enforcement(fields).sandbox_mode, "read-only")
+
+
+class BrokerAllowlistTests(unittest.TestCase):
+    def test_broker_tools_group_per_server(self) -> None:
+        derived = derive_codex_enforcement(
+            {
+                "tools": "Read, mcp__plugin_speckit-pro_author-broker__write_formal_file, "
+                "mcp__plugin_speckit-pro_research-broker__docs_query, "
+                "mcp__plugin_speckit-pro_author-broker__close_session"
+            }
+        )
+        self.assertEqual(
+            derived.enabled_tools,
+            {
+                "author-broker": ("close_session", "write_formal_file"),
+                "research-broker": ("docs_query",),
+            },
+        )
+
+    def test_roles_without_an_allowlist_have_no_broker_limit(self) -> None:
+        self.assertIsNone(derive_codex_enforcement({"disallowedTools": "Write"}).enabled_tools)
+        self.assertEqual(derive_codex_enforcement({"tools": "Read, Write"}).enabled_tools, {})
+
+    def test_unmappable_allowlists_fail_closed(self) -> None:
+        for fields, reason in (
+            ({"tools": "Read, mcp__tavily__search"}, "mcp__tavily__search"),
+            ({"tools": " , "}, "empty"),
+        ):
+            with self.subTest(fields=fields), self.assertRaisesRegex(HostParityError, reason):
+                derive_codex_enforcement(fields)
+
+
+READ_ONLY = {"disallowedTools": "Write, Edit, MultiEdit"}
+DOCS_ONLY = {"tools": "Read, mcp__plugin_speckit-pro_research-broker__docs_query"}
+OPEN_ROLE = {"disallowedTools": "Skill"}
+
+
+class HookPolicyTests(unittest.TestCase):
+    # (role fields, calling agent_type, tool name, denied?)
+    DECISIONS = (
+        (READ_ONLY, "probe-role", "apply_patch", True),
+        (READ_ONLY, None, "apply_patch", False),
+        (READ_ONLY, "other-role", "apply_patch", False),
+        (READ_ONLY, "probe-role", "Bash", False),
+        (DOCS_ONLY, "probe-role", "mcp__research_broker__docs_query", False),
+        (DOCS_ONLY, "probe-role", "mcp__research_broker__research_search", True),
+        (DOCS_ONLY, "probe-role", "mcp__codex_apps__tavily_tavily_research", True),
+        (DOCS_ONLY, None, "mcp__research_broker__research_search", False),
+        (OPEN_ROLE, "probe-role", "mcp__research_broker__research_search", False),
+        (OPEN_ROLE, "probe-role", "apply_patch", False),
+    )
+
+    def test_policy_denies_only_the_role_and_tools_it_limits(self) -> None:
+        decisions = [
+            derive_codex_hook_policy("probe-role", derive_codex_enforcement(fields)).denies(
+                agent_type, tool
+            )
+            for fields, agent_type, tool, _ in self.DECISIONS
+        ]
+        self.assertEqual(decisions, [denied for *_, denied in self.DECISIONS])
+
+    def test_allowlist_names_use_the_codex_tool_spelling(self) -> None:
+        allowed = derive_codex_hook_policy("r", derive_codex_enforcement(DOCS_ONLY)).allowed_mcp_tools
+        self.assertEqual(allowed, ("mcp__research_broker__docs_query",))
+        self.assertIsNone(
+            derive_codex_hook_policy("r", derive_codex_enforcement(OPEN_ROLE)).allowed_mcp_tools
+        )
+
+
+class PairingManifestTests(unittest.TestCase):
+    def test_shared_roles_are_paired_with_both_sources(self) -> None:
+        manifest = pairing_manifest(AGENT_INVENTORY)
+        paired = manifest.paired
+        shared = {role["name"] for role in AGENT_INVENTORY["roles"] if role["category"] == "shared"}
+        self.assertEqual(set(paired), shared)
+        self.assertEqual(
+            paired["domain-researcher"].claude_source, "agents/domain-researcher.md"
+        )
+        self.assertEqual(
+            paired["domain-researcher"].codex_source, "codex-agents/domain-researcher.toml"
+        )
+
+    def test_single_host_roles_stay_on_their_own_host(self) -> None:
+        manifest = pairing_manifest(AGENT_INVENTORY)
+        self.assertEqual(manifest.codex_only, ("autopilot-fast-helper",))
+        self.assertEqual(
+            manifest.claude_only,
+            ("artifact-preview-observer", "sweep-analyst", "sweep-classifier"),
+        )
+        self.assertTrue(set(manifest.paired).isdisjoint(manifest.claude_only + manifest.codex_only))
+
+    def test_unrecognized_role_shape_fails_closed(self) -> None:
+        inventory = copy.deepcopy(AGENT_INVENTORY)
+        inventory["roles"][0]["codex"]["implementation"] = "none"
+        with self.assertRaisesRegex(HostParityError, "phase-executor"):
+            pairing_manifest(inventory)
+
+
+def main() -> int:
+    loader = unittest.defaultTestLoader
+    suite = unittest.TestSuite(
+        loader.loadTestsFromTestCase(case)
+        for case in (
+            HostBlockTests,
+            FrontmatterTests,
+            SandboxDerivationTests,
+            BrokerAllowlistTests,
+            HookPolicyTests,
+            PairingManifestTests,
+        )
+    )
+    return run_counted(suite, label="test-host-parity-generator")
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

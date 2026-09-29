@@ -104,7 +104,7 @@ the gate to clear the block). Not a core-principle violation.
   (mention, do not delete).
 - `data-model.md`, `contracts/`, and `quickstart.md` were correctly N/A (no data
   model, no API, no user-facing runtime).
-- Authoritative design rationale lived at `docs/ai/specs/PRSG-001-design-concept.md`
+- Authoritative design rationale lived at `docs/ai/specs/.process/PRSG-001-design-concept.md`
   (four-agent grounding pass + Q&A log); `research.md` was a thin pointer to it.
 
 ---

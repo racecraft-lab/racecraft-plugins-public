@@ -225,7 +225,7 @@ The racecraft-plugins-public marketplace repo has no automated release process. 
 - speckit-pro/tests/run-all.sh: existing test suite (369 tests passing)
 
 ## Prior Art
-- SPEC-001 workflow file: docs/ai/specs/SPEC-001-workflow.md (completed workflow for reference)
+- SPEC-001 workflow file: docs/ai/specs/.process/SPEC-001-workflow.md (completed workflow for reference)
 - SPEC-002 workflow file: docs/ai/specs/SPEC-002-workflow.md (parallel spec for PR checks)
 - Design spec: docs/ai/specs/cicd-release-pipeline-plan.md (master plan with SPEC-003 scope)
 - release-please-action docs: https://github.com/googleapis/release-please-action
@@ -481,7 +481,7 @@ racecraft-plugins-public/
 ├── .release-please-manifest.json      # From SPEC-001 (updated by release-please)
 └── docs/ai/specs/
     ├── cicd-release-pipeline-plan.md  # Master plan
-    ├── SPEC-001-workflow.md           # Completed
+    ├── .process/SPEC-001-workflow.md  # Completed
     ├── SPEC-002-workflow.md           # Parallel spec (PR checks)
     └── SPEC-003-workflow.md           # This file
 ```
