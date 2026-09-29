@@ -327,19 +327,22 @@ When changing the plugin:
 2. Rebuild generated payloads from the repository root:
 
    ```text
-   python3 scripts/refresh-release-artifacts.py
+   resolved_python scripts/refresh-release-artifacts.py
    ```
+
+   Here `resolved_python` is the Python 3.11+ interpreter resolved by the
+   installed runtime contract, not a hardcoded interpreter name.
 
 3. Run structural validation while iterating:
 
    ```text
-   python3 tests/speckit-pro/run-all.py --layer 1
+   resolved_python tests/speckit-pro/run-all.py --layer 1
    ```
 
 4. Run the default suite before opening a PR:
 
    ```text
-   python3 tests/speckit-pro/run-all.py
+   resolved_python tests/speckit-pro/run-all.py
    ```
 
 Do not hand-edit generated `dist/**` payloads as the source of truth. They are
