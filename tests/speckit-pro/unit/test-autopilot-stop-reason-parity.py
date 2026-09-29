@@ -41,7 +41,7 @@ def _eval_files() -> list[Path]:
     """
     tests = REPO_ROOT / "tests" / "speckit-pro"
     roots = [tests / "layer3-functional" / "evals", tests / "layer3-functional" / "codex-evals",
-             tests / "evals" / "catalog.json",
+             tests / "evals" / "catalog.json", tests / "layer2-trigger",
              tests / "layer6-integration", tests / "layer7-parity"]
     files: list[Path] = []
     for root in roots:
@@ -74,6 +74,8 @@ class StopReasonParityTests(unittest.TestCase):
         self.assertIn("catalog.json", {path.name for path in files})
         hosts = {p.parent.name for p in files if p.name == "speckit-autopilot-evals.json"}
         self.assertEqual(hosts, {"evals", "codex-evals"}, "scan both hosts' evals")
+        tests = REPO_ROOT / "tests" / "speckit-pro"
+        self.assertTrue(any(tests / "layer2-trigger" in path.parents for path in files))
 
     def test_runner_set_is_closed_and_classified(self) -> None:
         known = _runner_set()

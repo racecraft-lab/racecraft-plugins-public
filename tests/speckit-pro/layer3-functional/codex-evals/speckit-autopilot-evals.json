@@ -71,7 +71,7 @@
       "prompt": "I'm running the autopilot and gate G4 (checklist complete) just failed — it found 3 [Gap] markers remaining in spec.md and 1 in plan.md. What does the autopilot do next? Does it stop, retry, or move on?",
       "expected_output": "Explains the gate failure remediation loop: the autopilot re-runs the checklist phase to fix gaps, then re-validates G4, with a maximum retry count.",
       "expectations": [
-        "Explains that autopilot does NOT stop on gate failure — it retries",
+        "Explains that autopilot does NOT stop on gate failure — it retries, and a gate still failing after its repair loop defers per the Failure Escalation Protocol while the run continues",
         "States that it re-runs the checklist-executor to remediate [Gap] markers",
         "Mentions re-validating G4 after remediation",
         "References a maximum retry count or iteration limit",
@@ -189,13 +189,13 @@
     {
       "id": 15,
       "prompt": "The Clarify phase has hit ambiguity that the consensus protocol can't resolve. Should I invoke $grill-me from the clarify-executor subagent so the user can answer interactively?",
-      "expected_output": "Refuses. Explains that $grill-me is human-in-the-loop only and is forbidden inside autopilot. The correct response is to use the Clarify Question Set plus consensus flow, let the parent orchestrator answer/apply clarifications, and fail the gate or surface the issue if consensus cannot resolve it.",
+      "expected_output": "Refuses. Explains that $grill-me is human-in-the-loop only and is forbidden inside autopilot. The correct response is to use the Clarify Question Set plus consensus flow, let the parent orchestrator answer/apply clarifications, and defer the ambiguity if consensus cannot resolve it.",
       "expectations": [
         "States that $grill-me must never be invoked from any autopilot phase or subagent",
         "Mentions that grill-me is human-in-the-loop only",
         "Names the Clarify Question Set as the clarify-executor handoff back to the parent",
         "States that the parent orchestrator answers returned questions and applies accepted edits",
-        "Suggests flagging unresolved questions under 'Unresolved for consensus' or failing the gate, not escalating to grill-me",
+        "Suggests flagging unresolved questions under 'Unresolved for consensus' or deferring them, not escalating to grill-me",
         "Does NOT call Skill('grill-me') or any grill-me-related tool in the response"
       ]
     },
@@ -209,7 +209,7 @@
         "The parent orchestrator answers returned questions and applies accepted edits",
         "Phase subagents (phase-executor, clarify-executor, checklist-executor, analyze-executor, implement-executor) never call grill-me",
         "Consensus analysts (codebase-analyst, spec-context-analyst, domain-researcher) never call grill-me",
-        "Gate failures result in stopping or surfacing the issue, never an escalation to grill-me"
+        "Gate failures are deferred per the Failure Escalation Protocol, never an escalation to grill-me"
       ]
     },
     {
@@ -659,7 +659,7 @@
     {
       "id": 112,
       "prompt": "During Codex Plan, G3 fails on a marker for timing the actual UI-delivery event visible to the author. Here the original human answer explicitly requires that exact visible delivery event, while the current CLI-output architecture has no verified delivery callback or equivalent observation. How must the Codex autopilot repair, record, and escalate this case?",
-      "expected_output": "The parent classifies the requirement as explicit-human from the direct answer and preserves both the wording and unresolved marker. It records the evidence in the Plan Ambiguity Repair Log, gives the same phase-executor up to two evidence-bearing repair attempts to find an implementable architecture, and reruns G3 after each. It cannot weaken the requirement or substitute acknowledgement timing without evidence of equivalence. If no implementation is found, G3 remains failed and the default stop path escalates the exact architectural choice with the attempts and remaining reason; skip-and-log, if explicitly configured, leaves the failed verdict, marker, and provenance unchanged.",
+      "expected_output": "The parent classifies the requirement as explicit-human from the direct answer and preserves both the wording and unresolved marker. It records the evidence in the Plan Ambiguity Repair Log, gives the same phase-executor up to two evidence-bearing repair attempts to find an implementable architecture, and reruns G3 after each. It cannot weaken the requirement or substitute acknowledgement timing without evidence of equivalence. If no implementation is found, G3 remains failed and the run defers the exact architectural choice per the Failure Escalation Protocol with the attempts and remaining reason, keeps running independent units, and leaves the failed verdict, marker, and provenance unchanged.",
       "expectations": [
         "Classifies the exact visible UI-delivery requirement as explicit-human using the direct human answer",
         "Preserves the requirement and unresolved marker rather than weakening either to make G3 pass",
@@ -667,7 +667,7 @@
         "Gives the same phase-executor the original prompt and evidence-bearing Plan Repair Context for at most two repairs",
         "Reruns G3 after every repair attempt",
         "Rejects acknowledgement timing or another proxy unless evidence establishes equivalence to actual UI delivery",
-        "After unsuccessful repair, escalates with G3 still failed; any explicit skip-and-log override keeps the verdict, marker, and provenance unchanged"
+        "After unsuccessful repair, defers the exact choice with G3 still failed, keeps the verdict, marker, and provenance unchanged, and continues the run without a stop or skip-and-log option"
       ]
     },
     {

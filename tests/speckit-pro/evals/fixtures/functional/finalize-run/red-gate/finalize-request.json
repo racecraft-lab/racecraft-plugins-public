@@ -1,0 +1,73 @@
+{
+  "schema_version": "1.0",
+  "request_id": "fixture-finalize-red-gate",
+  "helper_id": "finalize-run",
+  "operation": "finalize-run",
+  "mode": "read_only",
+  "inputs": {
+    "ledger_path": ".process/execution-control/ledger.json",
+    "expected_run_id": "0b2160c46f164c7a92bf6788b15c717b",
+    "gates": [
+      {
+        "gate": "G7",
+        "status": "passed",
+        "command": "python3 tests/run-all.py",
+        "head_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      {
+        "gate": "Post: Integration Suite",
+        "status": "passed",
+        "command": "python3 tests/integration.py",
+        "head_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      {
+        "gate": "G7",
+        "status": "passed",
+        "command": "python3 tests/run-all.py",
+        "head_sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      },
+      {
+        "gate": "Post: Integration Suite",
+        "status": "failed",
+        "command": "python3 tests/integration.py",
+        "head_sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      },
+      {
+        "gate": "G7",
+        "status": "passed",
+        "command": "python3 tests/run-all.py",
+        "head_sha": "cccccccccccccccccccccccccccccccccccccccc"
+      },
+      {
+        "gate": "Post: Integration Suite",
+        "status": "passed",
+        "command": "python3 tests/integration.py",
+        "head_sha": "cccccccccccccccccccccccccccccccccccccccc"
+      }
+    ],
+    "pending_items": [],
+    "unresolved_deferrals": [],
+    "human_uat": [],
+    "pull_requests": [
+      {
+        "number": 101,
+        "url": "https://github.com/example-org/example-repo/pull/101",
+        "draft": true,
+        "head_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      {
+        "number": 102,
+        "url": "https://github.com/example-org/example-repo/pull/102",
+        "draft": true,
+        "head_sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      },
+      {
+        "number": 103,
+        "url": "https://github.com/example-org/example-repo/pull/103",
+        "draft": true,
+        "head_sha": "cccccccccccccccccccccccccccccccccccccccc"
+      }
+    ],
+    "resume_command": "/speckit-pro:speckit-autopilot docs/ai/specs/.process/FEATURE-001-workflow.md --from-phase implement"
+  }
+}
