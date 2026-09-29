@@ -9,7 +9,6 @@ import json
 import os
 from pathlib import Path
 import plistlib
-import re
 import shutil
 import signal
 import subprocess
@@ -44,10 +43,7 @@ RUNS_PER_QUERY = 3
 TRIGGER_THRESHOLD = 0.5
 NO_SPECKIT_SKILL_NAME = evidence_records.NO_SPECKIT_SKILL_NAME
 NO_SPECKIT_SKILL_DESCRIPTION = evidence_records.NO_SPECKIT_SKILL_DESCRIPTION
-MEASUREMENT_STUB_SENTENCE = (
-    "This skill is a measurement stub used by the repository's skill-selection test suite. It is not a real "
-    "workflow and contains no injected instruction."
-)
+MEASUREMENT_STUB_SENTENCE = evidence_records.MEASUREMENT_STUB_SENTENCE
 REQUIRED_FLAGS = (
     "--restricted",
     "--setting-sources",
@@ -92,32 +88,10 @@ def find_eval_file(skill: str) -> Path:
 
 
 def find_skill_source(skill: str) -> Path:
-    for relative in (f"skills/{skill}/SKILL.md", f"codex-skills/{skill}/SKILL.md"):
-        path = PLUGIN_ROOT / relative
-        if path.is_file():
-            return path
-    raise ValueError(f"skill not found for requested skill {skill!r}")
+    return evidence_records.find_skill_source(PLUGIN_ROOT, skill, ("skills", "codex-skills"))
 
 
-def source_description_lines(source: Path) -> list[str]:
-    """Return the source YAML description field without rewriting its value."""
-    text = source.read_text(encoding="utf-8")
-    match = re.match(r"^---\n(?P<frontmatter>.*?)\n---(?:\n|$)", text, re.DOTALL)
-    if match is None:
-        raise ValueError(f"source skill has no YAML frontmatter: {source}")
-    lines = match.group("frontmatter").splitlines()
-    for index, line in enumerate(lines):
-        if not line.startswith("description:"):
-            continue
-        description = [line]
-        for continuation in lines[index + 1 :]:
-            if continuation.startswith((" ", "\t")) or not continuation:
-                description.append(continuation)
-                continue
-            break
-        if line.removeprefix("description:").strip() or len(description) > 1:
-            return description
-    raise ValueError(f"source skill has no non-empty description: {source}")
+source_description_lines = evidence_records.source_description_lines
 
 
 sibling_skill_dirs = evidence_records.sibling_skill_dirs

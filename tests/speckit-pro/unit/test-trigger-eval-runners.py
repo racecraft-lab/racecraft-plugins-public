@@ -3814,6 +3814,10 @@ class SharedRunnerCodeTests(unittest.TestCase):
                 self.assertIs(getattr(claude, name), getattr(engine, name))
                 self.assertIs(getattr(claude, name), getattr(evidence_records, name))
         self.assertIs(claude.retain_trial_evidence, evidence_records.retain_trial_evidence)
+        self.assertIs(claude.source_description_lines, evidence_records.source_description_lines)
+        self.assertIs(engine.selection_stub, evidence_records.selection_stub)
+        self.assertEqual(claude.MEASUREMENT_STUB_SENTENCE, evidence_records.MEASUREMENT_STUB_SENTENCE)
+        self.assertEqual(engine.MEASUREMENT_STUB_SENTENCE, evidence_records.MEASUREMENT_STUB_SENTENCE)
         self.assertEqual(
             (claude.CLEANUP_TIMEOUT, claude.DESCENDANT_EXIT_GRACE),
             (trigger_process.CLEANUP_TIMEOUT, trigger_process.DESCENDANT_EXIT_GRACE),

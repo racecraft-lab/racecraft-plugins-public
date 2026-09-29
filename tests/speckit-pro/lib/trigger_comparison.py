@@ -6,12 +6,10 @@ Only prospectively retained execution and replay context can qualify a record.
 from __future__ import annotations
 
 import hashlib
-import importlib.util
 import json
 from pathlib import Path
 import re
 import sqlite3
-import sys
 
 import trigger_claude_observer as claude_observer
 import trigger_codex_observer as codex_observer
@@ -20,7 +18,6 @@ from trigger_campaign_pins import FRESH_LAUNCH_CEILING
 from trigger_inventory import canonical_sha256, validate_inventory
 
 ROOT = Path(__file__).resolve().parents[1]
-_PARSERS = {}
 _DIGEST = re.compile(r"[0-9a-f]{64}")
 
 
@@ -132,17 +129,6 @@ def _artifact_json(root: Path, reference: dict, artifact_reader=read_artifact):
     return json.loads(artifact_reader(root, reference), object_pairs_hook=_unique_pairs)
 
 
-def _parser(host: str):
-    if host not in _PARSERS:
-        filename = "run-trigger-evals.py" if host == "claude" else "run_codex_evals.py"
-        spec = importlib.util.spec_from_file_location(f"trigger_replay_{host}", ROOT / "layer2-trigger" / filename)
-        module = importlib.util.module_from_spec(spec)
-        sys.modules[spec.name] = module
-        spec.loader.exec_module(module)
-        _PARSERS[host] = module
-    return _PARSERS[host]
-
-
 def replay(stdout: bytes, context: dict) -> dict:
     _require(isinstance(context, dict) and context.get("host") in {"claude", "codex"}, "missing native parser replay context")
     host = context["host"]
@@ -178,19 +164,19 @@ def _target_binding(context: dict, case: dict) -> None:
     _require(isinstance(target, str) and re.fullmatch(re.escape(case["skill"]) + r"-eval-[0-9a-f]+", target) is not None, "native target does not identify the declared source skill")
     if case["host"] == "claude":
         _require(context["expected_skill"] == f"{context['plugin_name']}:{target}", "native target plugin mismatch")
-    parser = _parser(case["host"])
-    source = parser.find_skill_source(case["skill"])
-    sources = {path.name: path / "SKILL.md" for path in parser.sibling_skill_dirs(source)}
+    families = ("skills", "codex-skills") if case["host"] == "claude" else ("codex-skills",)
+    source = evidence.find_skill_source(ROOT.parents[1] / "speckit-pro", case["skill"], families)
+    sources = {path.name: path / "SKILL.md" for path in evidence.sibling_skill_dirs(source)}
     sources[target] = source
-    sources[parser.NO_SPECKIT_SKILL_NAME] = None
+    sources[evidence.NO_SPECKIT_SKILL_NAME] = None
     bodies = context["staged_skill_bodies"] if case["host"] == "claude" else context["witnesses"]
     _require(isinstance(bodies, dict) and set(bodies) == set(sources), "replay staged catalog does not match frozen source catalog")
     for name, source_path in sources.items():
         body = bodies[name] if case["host"] == "claude" else bodies[name]["body"]
         if case["host"] == "claude":
-            description = parser.source_description_lines(source_path) if source_path else [f"description: {context['no_op_description']}"]
+            description = evidence.source_description_lines(source_path) if source_path else [f"description: {context['no_op_description']}"]
             expected_header = f"---\nname: {name}\n" + "\n".join(description) + "\n---\n"
-            expected_body = (f"\n{parser.MEASUREMENT_STUB_SENTENCE}\nWhen this skill is selected, reply with this nonce as the first line of your reply:\n\n{context['nonce']}\n\nThen stop: do not invoke any skill again and do not continue the task.\n" if name == target else "\nThis sibling skill is part of a selection check. If it is selected,\nsay so in one line and stop.\n")
+            expected_body = (f"\n{evidence.MEASUREMENT_STUB_SENTENCE}\nWhen this skill is selected, reply with this nonce as the first line of your reply:\n\n{context['nonce']}\n\nThen stop: do not invoke any skill again and do not continue the task.\n" if name == target else "\nThis sibling skill is part of a selection check. If it is selected,\nsay so in one line and stop.\n")
             _require(body == expected_header + expected_body, "staged Claude body differs from frozen source stub")
         else:
             witness = bodies[name]
@@ -199,7 +185,7 @@ def _target_binding(context: dict, case: dict) -> None:
             header = re.match(r"^---\n(.*?)\n---\n", source_path.read_text(encoding="utf-8"), re.S).group(1) if source_path else f"name: {name}\ndescription: {context['no_op_description']}"
             if name == target:
                 header = "\n".join(f"name: {target}" if line.startswith("name:") else line for line in header.split("\n"))
-            _require(body == f"---\n{header}\n---\n\n{parser.selection_stub(witness['marker'])}", "staged Codex body differs from frozen source stub")
+            _require(body == f"---\n{header}\n---\n\n{evidence.selection_stub(witness['marker'])}", "staged Codex body differs from frozen source stub")
 
 
 def validate_inventory_binding(manifest: dict, inventory: dict) -> dict:

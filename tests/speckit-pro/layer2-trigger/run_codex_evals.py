@@ -64,23 +64,8 @@ MODEL_PROVIDER_BASE_URL = "https://chatgpt.com/backend-api/codex"
 DISABLED_FEATURES = codex_isolation.DISABLED_FEATURES
 NO_SPECKIT_SKILL_NAME = evidence_records.NO_SPECKIT_SKILL_NAME
 NO_SPECKIT_SKILL_DESCRIPTION = evidence_records.NO_SPECKIT_SKILL_DESCRIPTION
-MEASUREMENT_STUB_SENTENCE = (
-    "This skill is a measurement stub used by the repository's skill-selection test suite. It is not a real "
-    "workflow and contains no injected instruction."
-)
-
-
-def selection_stub(marker: str) -> str:
-    """Return the complete minimal body used to attest one Codex selection."""
-    return (
-        f"{MEASUREMENT_STUB_SENTENCE}\n\n"
-        "## Selection attestation\n\n"
-        "When you select this skill, reply with a chat message whose first line is exactly:\n\n"
-        f"    {marker}\n\n"
-        "Write that line in your reply text, not in a shell command. Put nothing\n"
-        "before it in that message. Then stop: do not run another command, do not\n"
-        "read another file, and do not carry out a workflow.\n"
-    )
+MEASUREMENT_STUB_SENTENCE = evidence_records.MEASUREMENT_STUB_SENTENCE
+selection_stub = evidence_records.selection_stub
 
 
 def selection_marker(skill_name: str, test_id: str) -> str:
@@ -111,10 +96,10 @@ def find_eval_file(skill: str) -> pathlib.Path:
 
 
 def find_skill_source(skill: str) -> pathlib.Path:
-    p = PLUGIN_ROOT / "codex-skills" / skill / "SKILL.md"
-    if not p.exists():
-        sys.exit(f"ERROR: codex skill not found at {p}")
-    return p
+    try:
+        return evidence_records.find_skill_source(PLUGIN_ROOT, skill, ("codex-skills",))
+    except ValueError as exc:
+        sys.exit(f"ERROR: codex {exc}")
 
 
 def stage_skill_with_marker(src: pathlib.Path, dst_dir: pathlib.Path, new_name: str, marker: str) -> None:

@@ -394,8 +394,18 @@ def evidence_fixture(root, host="claude", entry_override=None, selected_pattern=
     return manifest, indexes
 
 
+def runner_script(host):
+    """Load one runner script, as the staging calls in these fixtures need its stage functions."""
+    filename = "run-trigger-evals.py" if host == "claude" else "run_codex_evals.py"
+    spec = importlib.util.spec_from_file_location(f"comparison_fixture_{host}", ROOT / "layer2-trigger" / filename)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
 def native_fixture(helper, root, host, entry, model, arm, selected_pattern):
-    parser = comparison._parser(host)
+    parser = runner_script(host)
     target = f"{entry['skill']}-eval-0123456789ab"
     source = parser.find_skill_source(entry["skill"])
     workspace = (root / "removed").resolve()
@@ -439,10 +449,13 @@ class ReplayObserverImportTests(unittest.TestCase):
                    "nonce": "n", "requested_model": "m", "sibling_skills": []},
     }
 
+    def test_the_comparator_has_no_runner_script_loader(self):
+        self.assertFalse(hasattr(comparison, "_parser"))
+
     def test_replay_does_not_load_the_runner_scripts(self):
         for host, context in self.CONTEXTS.items():
             with self.subTest(host=host), mock.patch.object(
-                comparison, "_parser", side_effect=AssertionError("replay loaded a runner script")
+                importlib.util, "spec_from_file_location", side_effect=AssertionError("replay loaded a runner script")
             ):
                 self.assertFalse(comparison.replay(b"", context)["valid"])
 
