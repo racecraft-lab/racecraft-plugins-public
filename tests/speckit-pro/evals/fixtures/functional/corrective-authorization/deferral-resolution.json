@@ -162,14 +162,63 @@
       }
     },
     {
+      "id": "stage-passing-gate",
+      "place_check": "go-test.txt",
+      "exit_code": 0
+    },
+    {
+      "id": "commit-baseline",
+      "git": "baseline"
+    },
+    {
+      "id": "reserve-verify",
+      "action": "reserve",
+      "inputs": {
+        "dispatch_id": "verify-1",
+        "kind": "verification"
+      },
+      "expect": {
+        "exit_code": 0,
+        "status": "ok",
+        "disposition": "continue"
+      }
+    },
+    {
+      "id": "run-verify",
+      "action": "execute-verification",
+      "helper": "execute-verification",
+      "inputs": {
+        "command_id": "UNIT_TEST",
+        "dispatch_id": "verify-1"
+      },
+      "expect": {
+        "exit_code": 0,
+        "status": "ok"
+      }
+    },
+    {
+      "id": "complete-verify",
+      "action": "complete",
+      "inputs": {
+        "dispatch_id": "verify-1",
+        "outcome": "completed"
+      },
+      "expect": {
+        "exit_code": 0,
+        "status": "ok",
+        "disposition": "continue"
+      }
+    },
+    {
       "id": "finalize-omits-resolved",
       "finalize": {
         "gates": [
           {
             "gate": "G7",
             "status": "passed",
-            "command": "python3 tests/run-all.py",
-            "head_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+            "command": "$check_command",
+            "head_sha": "$head_sha",
+            "dispatch_id": "verify-1"
           }
         ],
         "pending_items": [],
@@ -180,7 +229,7 @@
             "number": 7,
             "url": "https://github.com/example-org/example-repo/pull/7",
             "draft": true,
-            "head_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+            "head_sha": "$head_sha"
           }
         ],
         "resume_command": "/speckit-pro:speckit-autopilot feature/workflow.md --from-phase implement"
