@@ -30,7 +30,7 @@ These are all **dispatch graph** failures. Layer 6 exists to catch them.
 
 ## Coverage matrix
 
-L7 covers every named subagent and every routing branch in
+Layer 6 covers every named subagent and every routing branch in
 `/speckit-pro:speckit-autopilot`. The fixtures are organized by what they
 exercise:
 
@@ -65,6 +65,16 @@ exercise:
 |---|---|
 | 17 | Phase-executor returns error → orchestrator does not retry blindly, does not escalate to grill-me, and defers an unresolved blocker instead of stopping |
 
+### Parallel dispatch and stack management (Class 1, fixtures 18–22)
+
+| Fixture | Scenario | Expected dispatch |
+|---|---|---|
+| 18 | Post-implementation 3-track group with `AGENT_TEAMS_AVAILABLE=false` | 3 background subagents in ONE message, then a parent-owned serial tail |
+| 19 | Phase 7 wave from `partition-phase7-tasks`, disjoint declared ownership | 3 `implement-executor` background dispatches in ONE message, no `isolation` field |
+| 20 | Batched consensus, 3 `[ambiguous]` items | 9 analyst background dispatches in ONE message |
+| 21 | `speckit-resolve-pr` §4c, 3 file partitions | 3 `general-purpose` background dispatches in ONE message |
+| 22 | Stack-manager replay, `detect-stack-manager-plan` evidence | `analyze-executor` and `implement-executor`, no live `gh`, no `grill-me` |
+
 ### Cross-agent parsing (Class 2, fixtures 01–08)
 
 | Fixture | Cross-agent flow |
@@ -85,6 +95,20 @@ exercise:
 | 01 | G1–G3 (Specify → Clarify → Plan) |
 | 02 | G1–G7 (Specify → Clarify → Plan → Checklist → Tasks → Analyze → Implement) |
 
+### Grounding (Class 4, fixtures 01–10)
+
+| Fixture | Scenario |
+|---|---|
+| 01, 04 | grounded answers: the cited tool completed |
+| 02 | fabricated citation: no matching tool call, ungrounded |
+| 03 | abstained: no capability used, no claim made |
+| 05 | errored tool: cannot ground a claim |
+| 06 | malformed note (no `Confidence:`): ungrounded |
+| 07 | several semicolon-separated citations: grounded |
+| 08 | repository-file source: grounded |
+| 09 | fallback disclosure: grounded |
+| 10 | local source next to a fabricated tool citation: ungrounded |
+
 ### Subagents reached
 
 Every named subagent appears in at least one fixture:
@@ -92,11 +116,11 @@ Every named subagent appears in at least one fixture:
 - ✅ `phase-executor` — fixture 12; E2E 01, 02
 - ✅ `clarify-executor` — fixture 03 (redelegation); E2E 01, 02
 - ✅ `checklist-executor` — fixture 15; Class 2 fixture 03
-- ✅ `analyze-executor` — fixture 14; E2E 02
-- ✅ `implement-executor` — fixture 13; E2E 02
-- ✅ `codebase-analyst` — fixtures 01, 02, 03, 06, 07, 08, 10
-- ✅ `domain-researcher` — fixtures 02, 03, 04, 06, 07, 09, 10, 11
-- ✅ `spec-context-analyst` — fixtures 05, 06, 07, 08, 09, 10, 11
+- ✅ `analyze-executor` — fixtures 14, 22; E2E 02
+- ✅ `implement-executor` — fixtures 13, 19, 22; E2E 02
+- ✅ `codebase-analyst` — fixtures 01, 02, 03, 06, 07, 08, 10, 20
+- ✅ `domain-researcher` — fixtures 02, 03, 04, 06, 07, 09, 10, 11, 20
+- ✅ `spec-context-analyst` — fixtures 05, 06, 07, 08, 09, 10, 11, 20
 - ✅ `consensus-synthesizer` — Class 2 fixtures 01, 02, 04, 05
 
 ### What is asserted negative on every fixture
@@ -223,7 +247,7 @@ reasons. Structural assertions ("for `[codebase]` tag, codebase-analyst
 is in the dispatch set") survive that variance.
 
 If you find yourself wanting an exact match, ask whether L3 functional
-evals would catch it instead. L7 is for the dispatch graph; L3 is for
+evals would catch it instead. Layer 6 is for the dispatch graph; L3 is for
 agent behavior.
 
 ## Transcript PII scrubbing
@@ -233,7 +257,7 @@ machine-specific metadata: local home/tmp paths, session UUIDs,
 request IDs, git branch names, token/cost telemetry, and full
 plugin/tool inventories. Stream deltas also contain fragmented paths,
 timestamps, model signatures, and other run-level telemetry. None of
-that is needed for the L7 parser, and committing it leaks
+that is needed for the Layer 6 parser, and committing it leaks
 developer-machine information.
 
 No full captured transcript should be committed. The committed replay
@@ -332,6 +356,7 @@ Defaults:
 | 1 | $1.00 | `DISPATCH_FIXTURE_BUDGET_USD` |
 | 2 | $1.00 | `RETURN_FORMAT_FIXTURE_BUDGET_USD` |
 | 3 | $10.00 | `E2E_FIXTURE_BUDGET_USD` |
+| 4 | none | replay only, no live capture |
 
 ## How this fits with the other layers
 
@@ -342,9 +367,9 @@ Defaults:
 | L3 | Functional evals (does each skill produce the right output?) | Slow (AI) |
 | L4 | Python unit and contract tests (incl. `transcript_helpers.py`) | Fast |
 | L5 | Agent tool-scoping | Fast |
-| **L7** | **Multi-agent dispatch graph** | **Fast (replay) / Slow (live)** |
+| **L6** | **Multi-agent dispatch graph** | **Fast (replay) / Slow (live)** |
 
-L7 replay is deterministic and runs through the integration suite. L7 live is
+Layer 6 replay is deterministic and runs through the integration suite. Layer 6 live is
 developer-local and runs only when explicitly requested via
 `python3 tests/speckit-pro/run-all.py --integration --live`.
 
@@ -356,15 +381,16 @@ Codex now has explicit orchestration primitives (`spawn_agent`,
 that there is no Codex subagent graph is no longer valid.
 
 Until a Codex transcript fixture format exists, Codex coverage lives in the
-structural layer:
+structural layer (`tests/speckit-pro/layer1-structural/`):
 
-1. `validate-codex-skills.sh` asserts the Codex autopilot skill names the
-   real Codex tools and excludes obsolete tool names.
-2. `validate-codex-skills.sh` asserts every shared skill-name collision
+1. `validate-skill-contracts.py` asserts the Codex autopilot skill names the
+   real Codex tools (`spawn_agent`, `wait_agent`) and its required references.
+2. `validate-skill-contracts.py` asserts every shared skill-name collision
    (`speckit-autopilot`, `speckit-coach`, `grill-me`) has a guard that
    redirects Codex back to `codex-skills/`.
-3. `validate-codex-agents.sh` asserts the installed Codex subagent templates
-   do not include nested `spawn_agent` orchestration.
+3. `validate-agent-contracts.py` asserts the installed Codex subagent
+   templates (`codex-agents/*.toml`) match the roster and declare a supported
+   model, reasoning effort and sandbox mode.
 
 Add a Codex Layer 6 mirror when Codex exposes a stable replayable transcript
 schema for `spawn_agent`/`wait_agent` runs.
