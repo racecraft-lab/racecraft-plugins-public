@@ -1,0 +1,9 @@
+{
+  "fixture_id": "07-multi-citation-grounded",
+  "purpose": "A grounded answer whose Evidence segment lists two semicolon-separated citations. The contract allows several citations per note, so the note is well formed and the verdict is grounded, not malformed.",
+  "expect_grounding_verdict": "grounded",
+  "must_invoke_tools": [
+    "mcp__context7__get-library-docs"
+  ],
+  "expect_citation_count": 1
+}

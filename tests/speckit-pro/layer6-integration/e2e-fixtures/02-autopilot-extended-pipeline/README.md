@@ -33,7 +33,7 @@ subagent is asked for a brief, non-binding summary; the prompt
 explicitly instructs **"Do NOT write artifacts to disk."** Real LLM
 behavior may still produce side effects (e.g., implement-executor
 sometimes writes a TDD test file even when asked not to — see the
-"Live-mode side effects" section in the parent L7 README). The
+"Live-mode side effects" section in the parent Layer 6 README). The
 `--max-budget-usd` cost guard caps total spend regardless.
 
 ## Required setup
