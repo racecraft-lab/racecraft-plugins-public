@@ -3249,7 +3249,7 @@ class VerificationTests(unittest.TestCase):
                       validate_execution_record(self.root, {**inputs, "record_path": stray})["reasons"])
 
 
-class RunnerDispatchTests(unittest.TestCase):
+class RunnerRouteCase(unittest.TestCase):
     """Exercise actual request-envelope entrypoints in a temporary consumer repo."""
 
     def setUp(self):
@@ -3269,6 +3269,8 @@ class RunnerDispatchTests(unittest.TestCase):
             self.run_id = result["data"]["ledger"]["run_id"]
         return process.returncode, result
 
+
+class RunnerDispatchTests(RunnerRouteCase):
     def test_ledger_and_verification_helpers_are_real_runner_routes(self):
         code, started = self.call_runner("execution-control", "apply", action="start")
         self.assertEqual(code, 0, started)
@@ -3283,51 +3285,6 @@ class RunnerDispatchTests(unittest.TestCase):
                                           record_path=data["record_path"], native_observation={**data["observation_material"], "native_event_id": "fixture-native-event"})
         self.assertEqual(code, 1, validated)
         self.assertFalse(validated["data"]["stdout_json"]["reusable"])
-
-    def test_go_test_output_admits_a_converging_correction_through_the_real_runner_routes(self):
-        """End to end: `go test -v` output the runner executed lets a shrinking failing set continue a family."""
-        self.assert_shrinking_failures_continue(
-            "go", "go-test-v.txt", "go-test-v-shrunk.txt", ["TestGroup", "TestGroup/inner_bad"])
-
-    def test_cargo_test_output_admits_a_converging_correction_through_the_real_runner_routes(self):
-        """End to end: `cargo test` output the runner executed lets a shrinking failing set continue a family."""
-        self.assert_shrinking_failures_continue(
-            "cargo", "cargo-test.txt", "cargo-test-shrunk.txt", ["tests::nested_path_bad"])
-
-    def assert_shrinking_failures_continue(self, format_name, first_fixture, shrunk_fixture, shrunk_failing):
-        (self.root / "feature/spec.md").write_text("- FR-001: preserve data\n")
-        self.call_runner("execution-control", "apply", action="start")
-
-        def verify(dispatch_id, fixture):
-            (self.root / "check.py").write_text("import sys\nsys.stdout.write(" + repr(runner_output(fixture))
-                                                + ")\nsys.exit(1)\n")
-            self.call_runner("execution-control", "apply", action="reserve", dispatch_id=dispatch_id,
-                             kind="verification")
-            code, executed = self.call_runner("execute-verification", "apply", command_id="UNIT_TEST",
-                                              dispatch_id=dispatch_id)
-            self.assertEqual(code, 0, executed)
-            self.call_runner("execution-control", "apply", action="complete", dispatch_id=dispatch_id,
-                             outcome="failed")
-
-        def correct(dispatch_id):
-            code, result = self.call_runner("execution-control", "apply", action="reserve", dispatch_id=dispatch_id,
-                                            kind="corrective", failure_invariant="FR-001")
-            self.assertEqual(code, 0, result)
-            if result["data"]["disposition"] == "continue":
-                self.call_runner("execution-control", "apply", action="complete", dispatch_id=dispatch_id,
-                                 outcome="completed")
-            return result["data"]
-
-        verify("verify-1", first_fixture)
-        self.assertEqual(correct("fix-1")["disposition"], "continue")
-        verify("verify-2", shrunk_fixture)
-        second = correct("fix-2")
-        self.assertEqual(second["disposition"], "continue", second)
-        self.assertEqual((second["progress"]["admitted"], second["progress"]["change"]), (True, "shrank"))
-        ledger = second["ledger"]
-        self.assertEqual(ledger["corrective_cycles"], 1)
-        self.assertEqual(ledger["dispatches"]["verify-1"]["failing_checks"]["format"], format_name)
-        self.assertEqual(ledger["dispatches"]["verify-2"]["failing_checks"]["failing"], shrunk_failing)
 
     def test_corrective_exception_is_a_real_runner_route(self):
         self.call_runner("execution-control", "apply", action="start")
@@ -3498,6 +3455,55 @@ class RunnerDispatchTests(unittest.TestCase):
         self.assertEqual(code, 2, result)
 
 
+class RunnerFormatConvergenceTests(RunnerRouteCase):
+    """A shrinking failing set in a runner-executed test format continues a corrective family."""
+
+    def test_go_test_output_admits_a_converging_correction_through_the_real_runner_routes(self):
+        """End to end: `go test -v` output the runner executed lets a shrinking failing set continue a family."""
+        self.assert_shrinking_failures_continue(
+            "go", "go-test-v.txt", "go-test-v-shrunk.txt", ["TestGroup", "TestGroup/inner_bad"])
+
+    def test_cargo_test_output_admits_a_converging_correction_through_the_real_runner_routes(self):
+        """End to end: `cargo test` output the runner executed lets a shrinking failing set continue a family."""
+        self.assert_shrinking_failures_continue(
+            "cargo", "cargo-test.txt", "cargo-test-shrunk.txt", ["tests::nested_path_bad"])
+
+    def assert_shrinking_failures_continue(self, format_name, first_fixture, shrunk_fixture, shrunk_failing):
+        (self.root / "feature/spec.md").write_text("- FR-001: preserve data\n")
+        self.call_runner("execution-control", "apply", action="start")
+
+        def verify(dispatch_id, fixture):
+            (self.root / "check.py").write_text("import sys\nsys.stdout.write(" + repr(runner_output(fixture))
+                                                + ")\nsys.exit(1)\n")
+            self.call_runner("execution-control", "apply", action="reserve", dispatch_id=dispatch_id,
+                             kind="verification")
+            code, executed = self.call_runner("execute-verification", "apply", command_id="UNIT_TEST",
+                                              dispatch_id=dispatch_id)
+            self.assertEqual(code, 0, executed)
+            self.call_runner("execution-control", "apply", action="complete", dispatch_id=dispatch_id,
+                             outcome="failed")
+
+        def correct(dispatch_id):
+            code, result = self.call_runner("execution-control", "apply", action="reserve", dispatch_id=dispatch_id,
+                                            kind="corrective", failure_invariant="FR-001")
+            self.assertEqual(code, 0, result)
+            if result["data"]["disposition"] == "continue":
+                self.call_runner("execution-control", "apply", action="complete", dispatch_id=dispatch_id,
+                                 outcome="completed")
+            return result["data"]
+
+        verify("verify-1", first_fixture)
+        self.assertEqual(correct("fix-1")["disposition"], "continue")
+        verify("verify-2", shrunk_fixture)
+        second = correct("fix-2")
+        self.assertEqual(second["disposition"], "continue", second)
+        self.assertEqual((second["progress"]["admitted"], second["progress"]["change"]), (True, "shrank"))
+        ledger = second["ledger"]
+        self.assertEqual(ledger["corrective_cycles"], 1)
+        self.assertEqual(ledger["dispatches"]["verify-1"]["failing_checks"]["format"], format_name)
+        self.assertEqual(ledger["dispatches"]["verify-2"]["failing_checks"]["failing"], shrunk_failing)
+
+
 class DockerVerificationTests(VerificationTests):
     """Only these Docker-specific methods run; host methods have their own class."""
 
@@ -3593,6 +3599,6 @@ if __name__ == "__main__":
                                             CorrectionProgressGuidanceTests, GateRemediationAllowanceTests,
                                             MetadataOnlyCorrectionTests, IncrementTestFixAllowanceTests,
                                             WorkflowIdentityTests, SelfIgnoringByproductDirectoryTests, VerificationTests,
-                                            RunnerDispatchTests))
+                                            RunnerDispatchTests, RunnerFormatConvergenceTests))
     suite.addTests(DockerVerificationTests(name) for name in DockerVerificationTests.__dict__ if name.startswith("test_docker_"))
     raise SystemExit(run_counted(suite, label="test-execution-control"))
