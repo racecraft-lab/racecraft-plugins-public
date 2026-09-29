@@ -52,6 +52,8 @@ if str(SHARED_LIB) not in sys.path:
     sys.path.insert(0, str(SHARED_LIB))
 
 from test_result import run_counted  # noqa: E402
+import trigger_evidence as evidence_records  # noqa: E402
+import trigger_process  # noqa: E402
 
 
 def import_script(path: Path, name: str) -> ModuleType:
@@ -3765,6 +3767,67 @@ class MeasurementRecordTests(unittest.TestCase):
                     self.assertEqual(record.get("pending_runner_pins", {}).get(host), pinned)
 
 
+class CodexEvalCorpusResolutionTests(unittest.TestCase):
+    """A Codex run reads only a Codex eval set; a Claude-only set must not stand in."""
+
+    def stage_claude_only_repo(self, root: Path) -> None:
+        corpus = root / "tests" / "speckit-pro" / "layer2-trigger" / "evals" / "demo-trigger.json"
+        corpus.parent.mkdir(parents=True)
+        corpus.write_text("[]", encoding="utf-8")
+        (root / "tests" / "speckit-pro" / "layer2-trigger" / "codex-evals").mkdir()
+        (root / "speckit-pro" / "codex-skills" / "demo").mkdir(parents=True)
+
+    def test_engine_fails_loudly_when_only_a_claude_eval_set_exists(self) -> None:
+        engine = import_script(CODEX_ENGINE, "layer2_codex_engine_corpus")
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            self.stage_claude_only_repo(root)
+            with mock.patch.object(engine, "TESTS_ROOT", root / "tests" / "speckit-pro"):
+                with self.assertRaises(SystemExit) as failure:
+                    engine.find_eval_file("demo")
+        self.assertIn("no Codex eval file", str(failure.exception))
+
+    def test_wrapper_refuses_to_resolve_a_claude_only_eval_set(self) -> None:
+        wrapper = import_script(CODEX_RUNNER, "layer2_codex_wrapper_corpus")
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            self.stage_claude_only_repo(root)
+            output = io.StringIO()
+            with (
+                mock.patch.object(wrapper, "PLUGIN_ROOT", root / "speckit-pro"),
+                contextlib.redirect_stdout(output), contextlib.redirect_stderr(output),
+            ):
+                exit_code = wrapper.main(["demo"])
+        self.assertEqual(exit_code, 1)
+        self.assertNotIn("Eval file:", output.getvalue())
+
+
+class SharedRunnerCodeTests(unittest.TestCase):
+    """Both runners reuse the library's corpus, sibling, evidence and process helpers."""
+
+    def test_runners_reuse_the_library_helpers(self) -> None:
+        claude = import_script(CLAUDE_RUNNER, "layer2_shared_claude")
+        engine = import_script(CODEX_ENGINE, "layer2_shared_engine")
+        for name in ("load_eval_corpus", "sibling_skill_dirs"):
+            with self.subTest(helper=name):
+                self.assertIs(getattr(claude, name), getattr(engine, name))
+                self.assertIs(getattr(claude, name), getattr(evidence_records, name))
+        self.assertIs(claude.retain_trial_evidence, evidence_records.retain_trial_evidence)
+        self.assertEqual(
+            (claude.CLEANUP_TIMEOUT, claude.DESCENDANT_EXIT_GRACE),
+            (trigger_process.CLEANUP_TIMEOUT, trigger_process.DESCENDANT_EXIT_GRACE),
+        )
+
+    def test_codex_evidence_keys_map_the_shared_stream_record(self) -> None:
+        engine = import_script(CODEX_ENGINE, "layer2_shared_engine_keys")
+        with tempfile.TemporaryDirectory() as temporary:
+            kept = engine.retain_run_evidence(Path(temporary), 1, 2, b"out", b"err")
+            shared = evidence_records.retain_trial_evidence(Path(temporary), 3, 4, b"out", b"err")
+        self.assertEqual(kept["jsonl_sha256"], shared["stdout_sha256"])
+        self.assertEqual(kept["stderr_sha256"], shared["stderr_sha256"])
+        self.assertTrue(kept["jsonl_path"].endswith("case-001-trial-02.jsonl"))
+
+
 class CodexRelativeSkillBodyReadTests(unittest.TestCase):
     def test_relative_skill_body_read_requires_the_matched_skill_path(self) -> None:
         engine = import_script(CODEX_ENGINE, "layer2_codex_relative_skill_body_read")
@@ -3835,6 +3898,8 @@ def main() -> int:
         unittest.defaultTestLoader.loadTestsFromTestCase(Layer2TriggerRunnerTests),
         unittest.defaultTestLoader.loadTestsFromTestCase(CodexRelativeSkillBodyReadTests),
         unittest.defaultTestLoader.loadTestsFromTestCase(MeasurementRecordTests),
+        unittest.defaultTestLoader.loadTestsFromTestCase(CodexEvalCorpusResolutionTests),
+        unittest.defaultTestLoader.loadTestsFromTestCase(SharedRunnerCodeTests),
     ])
     return run_counted(suite, label="test-trigger-eval-runners")
 

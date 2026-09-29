@@ -70,8 +70,8 @@ REQUIRED_FLAGS = (
     "--no-session-persistence",
 )
 ACTIVE_CHILD: subprocess.Popen[bytes] | None = None
-CLEANUP_TIMEOUT = 5
-DESCENDANT_EXIT_GRACE = 0.2
+CLEANUP_TIMEOUT = processes.CLEANUP_TIMEOUT
+DESCENDANT_EXIT_GRACE = processes.DESCENDANT_EXIT_GRACE
 
 
 ClaudeQueryError = processes.QueryError
@@ -84,32 +84,8 @@ def eprint(message: str = "") -> None:
     print(message, file=sys.stderr)
 
 
-def load_eval_corpus(path: Path) -> tuple[list[dict[str, object]] | None, str]:
-    """Validate the selected corpus before staging or launching Claude."""
-    try:
-        value = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
-        return None, f"could not read eval file: {exc}"
-    if not isinstance(value, list):
-        return None, "eval file must contain a JSON list"
-    if not value:
-        return None, "eval file must contain at least one case"
-    seen_queries: set[str] = set()
-    for index, entry in enumerate(value, start=1):
-        if not isinstance(entry, dict):
-            return None, f"eval case {index} must be an object"
-        query = entry.get("query")
-        should_trigger = entry.get("should_trigger")
-        if not isinstance(query, str) or not query.strip() or not isinstance(should_trigger, bool):
-            return None, f"eval case {index} requires a non-empty query and boolean should_trigger"
-        if query in seen_queries:
-            return None, f"eval case {index} duplicates query {query!r}"
-        seen_queries.add(query)
-    return value, "valid eval corpus"
-
-
-def available_evals(eval_dir: Path) -> list[str]:
-    return [path.name.removesuffix("-trigger.json") for path in sorted(eval_dir.glob("*-trigger.json"))]
+load_eval_corpus = evidence_records.load_eval_corpus
+available_evals = evidence_records.available_evals
 
 
 def find_eval_file(skill: str) -> Path:
@@ -149,29 +125,7 @@ def source_description_lines(source: Path) -> list[str]:
     raise ValueError(f"source skill has no non-empty description: {source}")
 
 
-SKILL_ROOT_NAMES = frozenset({"skills", "codex-skills"})
-
-
-def sibling_skill_dirs(source: Path) -> list[Path]:
-    """List sibling skill directories beside ``source``'s skill directory.
-
-    Only a plugin skills root (``skills`` or ``codex-skills``) is walked; a
-    source staged elsewhere has no siblings. Entries that cannot be inspected
-    are skipped, because shared temp roots hold directories owned by others.
-    """
-    root = source.parent.parent
-    if root.name not in SKILL_ROOT_NAMES:
-        return []
-    siblings: list[Path] = []
-    for sibling in sorted(root.iterdir(), key=lambda path: path.name):
-        if sibling == source.parent:
-            continue
-        try:
-            if sibling.is_dir() and (sibling / "SKILL.md").is_file():
-                siblings.append(sibling)
-        except OSError:
-            continue
-    return siblings
+sibling_skill_dirs = evidence_records.sibling_skill_dirs
 
 
 def _stage_first_selection_guard(plugin_root: Path) -> None:
@@ -664,26 +618,7 @@ def inspect_claude_stream(
     }
 
 
-def retain_trial_evidence(
-    evidence_dir: Path,
-    case_number: int,
-    trial_number: int,
-    stdout: bytes,
-    stderr: bytes,
-) -> dict[str, str]:
-    stem = f"case-{case_number:03d}-trial-{trial_number:02d}"
-    stdout_path = evidence_dir / f"{stem}.jsonl"
-    stderr_path = evidence_dir / f"{stem}.stderr.log"
-    with stdout_path.open("xb") as stream:
-        stream.write(stdout)
-    with stderr_path.open("xb") as stream:
-        stream.write(stderr)
-    return {
-        "stdout_path": str(stdout_path.resolve()),
-        "stdout_sha256": hashlib.sha256(stdout).hexdigest(),
-        "stderr_path": str(stderr_path.resolve()),
-        "stderr_sha256": hashlib.sha256(stderr).hexdigest(),
-    }
+retain_trial_evidence = evidence_records.retain_trial_evidence
 
 
 def terminate_child(child: subprocess.Popen[bytes] | None, signum: int = signal.SIGTERM) -> bool:

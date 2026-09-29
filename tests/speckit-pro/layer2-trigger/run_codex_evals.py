@@ -100,28 +100,7 @@ def selection_marker(skill_name: str, test_id: str) -> str:
     return marker
 
 
-def load_eval_corpus(path: pathlib.Path) -> tuple[list[dict[str, object]] | None, str]:
-    """Load a complete trigger corpus before any provider subprocess can run."""
-    try:
-        value = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
-        return None, f"could not read eval file: {exc}"
-    if not isinstance(value, list):
-        return None, "eval file must contain a JSON list"
-    if not value:
-        return None, "eval file must contain at least one case"
-    seen_queries: set[str] = set()
-    for index, entry in enumerate(value, start=1):
-        if not isinstance(entry, dict):
-            return None, f"eval case {index} must be an object"
-        query = entry.get("query")
-        should_trigger = entry.get("should_trigger")
-        if not isinstance(query, str) or not query.strip() or not isinstance(should_trigger, bool):
-            return None, f"eval case {index} requires a non-empty query and boolean should_trigger"
-        if query in seen_queries:
-            return None, f"eval case {index} duplicates query {query!r}"
-        seen_queries.add(query)
-    return value, "valid eval corpus"
+load_eval_corpus = evidence_records.load_eval_corpus
 
 
 def stage_workspace_fixture(workspace: pathlib.Path) -> None:
@@ -132,13 +111,12 @@ def stage_workspace_fixture(workspace: pathlib.Path) -> None:
 
 
 def find_eval_file(skill: str) -> pathlib.Path:
-    codex_specific = TESTS_ROOT / "layer2-trigger/codex-evals" / f"{skill}-trigger.json"
-    shared = TESTS_ROOT / "layer2-trigger/evals" / f"{skill}-trigger.json"
-    if codex_specific.exists():
-        return codex_specific
-    if shared.exists():
-        return shared
-    sys.exit(f"ERROR: no eval file for skill '{skill}' (tried {codex_specific}, {shared})")
+    """A Codex run reads only its own eval set: the Claude set names host-specific skills."""
+    path = TESTS_ROOT / "layer2-trigger/codex-evals" / f"{skill}-trigger.json"
+    if not path.is_file():
+        available = ", ".join(evidence_records.available_evals(path.parent)) or "none"
+        sys.exit(f"ERROR: no Codex eval file for skill '{skill}' at {path}; available: {available}")
+    return path
 
 
 def find_skill_source(skill: str) -> pathlib.Path:
@@ -181,30 +159,7 @@ def stage_repository_skill(
     return destination
 
 
-SKILL_ROOT_NAMES = frozenset({"codex-skills", "skills"})
-
-
-def sibling_skill_dirs(src: pathlib.Path) -> list[pathlib.Path]:
-    """List sibling skill directories beside ``src``'s skill directory.
-
-    Only a plugin skills root (``codex-skills`` or ``skills``) is walked; a
-    source staged elsewhere, such as a temporary file in a test, has no
-    siblings. Entries that cannot be inspected are skipped rather than raised,
-    because shared temp roots hold directories owned by other users.
-    """
-    root = src.parent.parent
-    if root.name not in SKILL_ROOT_NAMES:
-        return []
-    siblings: list[pathlib.Path] = []
-    for sibling in sorted(root.iterdir(), key=lambda path: path.name):
-        if sibling == src.parent:
-            continue
-        try:
-            if sibling.is_dir() and (sibling / "SKILL.md").is_file():
-                siblings.append(sibling)
-        except OSError:
-            continue
-    return siblings
+sibling_skill_dirs = evidence_records.sibling_skill_dirs
 
 
 def stage_sibling_skills(
@@ -1308,18 +1263,12 @@ def retain_run_evidence(
     error_output: bytes,
 ) -> dict[str, str]:
     """Persist the exact provider streams and return immutable path/digest evidence."""
-    stem = f"case-{case_number:03d}-trial-{run_number:02d}"
-    jsonl_path = evidence_dir / f"{stem}.jsonl"
-    stderr_path = evidence_dir / f"{stem}.stderr.log"
-    with jsonl_path.open("xb") as stream:
-        stream.write(output)
-    with stderr_path.open("xb") as stream:
-        stream.write(error_output)
+    kept = evidence_records.retain_trial_evidence(evidence_dir, case_number, run_number, output, error_output)
     return {
-        "jsonl_path": str(jsonl_path.resolve()),
-        "jsonl_sha256": hashlib.sha256(output).hexdigest(),
-        "stderr_path": str(stderr_path.resolve()),
-        "stderr_sha256": hashlib.sha256(error_output).hexdigest(),
+        "jsonl_path": kept["stdout_path"],
+        "jsonl_sha256": kept["stdout_sha256"],
+        "stderr_path": kept["stderr_path"],
+        "stderr_sha256": kept["stderr_sha256"],
     }
 
 

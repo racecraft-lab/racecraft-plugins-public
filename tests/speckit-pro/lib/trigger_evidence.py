@@ -34,6 +34,78 @@ def select_case(host: str, skill: str, corpus: list[dict], requested: str | None
     return selected
 
 
+SKILL_ROOT_NAMES = frozenset({"skills", "codex-skills"})
+
+
+def load_eval_corpus(path: Path) -> tuple[list[dict[str, object]] | None, str]:
+    """Validate a trigger corpus before any provider subprocess can run."""
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        return None, f"could not read eval file: {exc}"
+    if not isinstance(value, list):
+        return None, "eval file must contain a JSON list"
+    if not value:
+        return None, "eval file must contain at least one case"
+    seen_queries: set[str] = set()
+    for index, entry in enumerate(value, start=1):
+        if not isinstance(entry, dict):
+            return None, f"eval case {index} must be an object"
+        query = entry.get("query")
+        should_trigger = entry.get("should_trigger")
+        if not isinstance(query, str) or not query.strip() or not isinstance(should_trigger, bool):
+            return None, f"eval case {index} requires a non-empty query and boolean should_trigger"
+        if query in seen_queries:
+            return None, f"eval case {index} duplicates query {query!r}"
+        seen_queries.add(query)
+    return value, "valid eval corpus"
+
+
+def available_evals(eval_dir: Path) -> list[str]:
+    return [path.name.removesuffix("-trigger.json") for path in sorted(eval_dir.glob("*-trigger.json"))]
+
+
+def sibling_skill_dirs(source: Path) -> list[Path]:
+    """List sibling skill directories beside ``source``'s skill directory.
+
+    Only a plugin skills root (``skills`` or ``codex-skills``) is walked; a
+    source staged elsewhere has no siblings. Entries that cannot be inspected
+    are skipped, because shared temp roots hold directories owned by others.
+    """
+    root = source.parent.parent
+    if root.name not in SKILL_ROOT_NAMES:
+        return []
+    siblings: list[Path] = []
+    for sibling in sorted(root.iterdir(), key=lambda path: path.name):
+        if sibling == source.parent:
+            continue
+        try:
+            if sibling.is_dir() and (sibling / "SKILL.md").is_file():
+                siblings.append(sibling)
+        except OSError:
+            continue
+    return siblings
+
+
+def retain_trial_evidence(
+    evidence_dir: Path, case_number: int, trial_number: int, stdout: bytes, stderr: bytes,
+) -> dict[str, str]:
+    """Persist the exact provider streams, exclusively, and return their path and digest."""
+    stem = f"case-{case_number:03d}-trial-{trial_number:02d}"
+    stdout_path = evidence_dir / f"{stem}.jsonl"
+    stderr_path = evidence_dir / f"{stem}.stderr.log"
+    with stdout_path.open("xb") as stream:
+        stream.write(stdout)
+    with stderr_path.open("xb") as stream:
+        stream.write(stderr)
+    return {
+        "stdout_path": str(stdout_path.resolve()),
+        "stdout_sha256": hashlib.sha256(stdout).hexdigest(),
+        "stderr_path": str(stderr_path.resolve()),
+        "stderr_sha256": hashlib.sha256(stderr).hexdigest(),
+    }
+
+
 def description_override(path: str | None, default: str) -> str:
     """Only the controlled single-line no-op description may vary between arms."""
     if path is None:
