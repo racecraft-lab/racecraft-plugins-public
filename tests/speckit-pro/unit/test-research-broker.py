@@ -276,19 +276,14 @@ class OutboundTests(unittest.TestCase):
             self.assertIn("spec_text_detected", rb.outbound_findings(leaked, grams))
             self.assertEqual(rb.outbound_findings("ledger reconciliation retry pattern", grams), [])
 
-    def test_plugin_root_is_not_a_project(self) -> None:
+    def test_only_the_running_plugin_root_is_not_a_project(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             (root / ".codex-plugin").mkdir()
+            env = {"CLAUDE_PROJECT_DIR": str(root)}
+            self.assertEqual(rb.project_root(env), root)  # a marketplace root is a project
             with unittest.mock.patch.object(rb, "PLUGIN_ROOT", root.resolve()):
-                self.assertIsNone(rb.project_root({"CLAUDE_PROJECT_DIR": str(root)}))
-
-    def test_marketplace_root_that_is_not_the_running_plugin_is_a_project(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
-            (root / ".claude-plugin").mkdir()
-            (root / ".codex-plugin").mkdir()
-            self.assertEqual(rb.project_root({"CLAUDE_PROJECT_DIR": str(root)}), root)
+                self.assertIsNone(rb.project_root(env))
 
 
 class RoutingTests(unittest.TestCase):
