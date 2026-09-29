@@ -193,8 +193,8 @@ and rejects every reported retry or error event.
 The record counts nine provider invocations. One Claude canary on 2026-09-11
 validated the Claude selection path under Claude Code 2.1.269, the build the
 record still names. The runner has since moved to 2.1.270 (#582), and no live
-run has requalified that build; the record carries that build as
-`pending_runner_cli_version`, and a unit test fails when a runner pin, model,
+run has requalified that build; the record carries that build under
+`pending_runner_pins`, and a unit test fails when a runner pin, model,
 trial count, or threshold differs from the record without that marker. The Codex
 model change did not recheck Claude.
 On 2026-09-24, one Codex 0.153.3 transport probe served `gpt-6-sol` but emitted
