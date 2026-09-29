@@ -7,16 +7,6 @@ Use this route to orient users, support responders, and reviewers to the terms
 that recur across install, troubleshooting, generated reference, and release
 workflow guidance.
 
-## Route Shell
-
-- **Audience:** All users
-- **Purpose:** Define marketplace, payload, source tree, skill, agent, hook, cache, constitution, lifecycle, generated reference, and source-update terms.
-- **Shell owner DOC:** DOC-002
-- **Full-content owner DOC:** DOC-010
-- **Success criterion:** Support answers can link to exact definitions.
-- **Useful now:** Link to the stable term anchors below when answering install,
-  recovery, reference, or release workflow questions.
-
 ## Marketplace
 
 A marketplace is the platform-facing catalog that tells Claude Code or Codex
