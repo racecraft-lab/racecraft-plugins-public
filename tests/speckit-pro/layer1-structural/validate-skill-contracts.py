@@ -685,14 +685,15 @@ validate_skill_capability_pointers_DIRECTIVE_MARKER = 'capability-discovery.md'
 validate_skill_capability_pointers_GROUNDING_MARKER = 'grounding.md'
 PLUGIN_ROOT_VAR = '${CLAUDE_PLUGIN_ROOT}/'
 PLUGIN_ROOT_PREFIX = 'speckit-pro/'
-validate_skill_capability_pointers_PATH_TOKEN_RE = re.compile('(?:speckit-pro/|\\$\\{CLAUDE_PLUGIN_ROOT\\}/)[A-Za-z0-9._/-]*capability-discovery\\.md')
-validate_skill_capability_pointers_GROUNDING_TOKEN_RE = re.compile('(?:speckit-pro/|\\$\\{CLAUDE_PLUGIN_ROOT\\}/)[A-Za-z0-9._/-]*grounding\\.md')
+validate_skill_capability_pointers_PATH_TOKEN_RE = re.compile('(?:\\$\\{CLAUDE_PLUGIN_ROOT\\}/|(?:\\.\\./)+)[A-Za-z0-9._/-]*capability-discovery\\.md')
+validate_skill_capability_pointers_GROUNDING_TOKEN_RE = re.compile('(?:\\$\\{CLAUDE_PLUGIN_ROOT\\}/|(?:\\.\\./)+)[A-Za-z0-9._/-]*grounding\\.md')
+validate_skill_capability_pointers_PAYLOAD_LINK_RES = (re.compile('(?:\\.\\./)*(?:[A-Za-z0-9._-]+/)+capability-discovery\\.md'), re.compile('(?:\\.\\./)*(?:[A-Za-z0-9._-]+/)+grounding\\.md'))
 
 def _payload_relative(token: str) -> str:
     """Normalize either pointer form to a path under a built payload tree."""
     if token.startswith(PLUGIN_ROOT_VAR):
         return PLUGIN_ROOT_PREFIX + token[len(PLUGIN_ROOT_VAR):]
-    return token
+    return PLUGIN_ROOT_PREFIX + token.replace('../', '')
 EXCLUSIONS = frozenset({'speckit-install', 'install', 'speckit-upgrade', 'speckit-status', 'speckit-archive-cleanup'})
 HOST_SKILL = 'speckit-autopilot'
 
@@ -825,6 +826,40 @@ class ValidateSkillCapabilityPointers(unittest.TestCase):
                 self.assertTrue((validate_skill_capability_pointers_DIST_CLAUDE / token).is_file(), f'skill reference correct in source but absent in built Claude tree (dist/claude/{token})')
             with self.subTest(msg=f'resolves under dist/codex: {token}'):
                 self.assertTrue((validate_skill_capability_pointers_DIST_CODEX / token).is_file(), f'skill reference correct in source but absent in built Codex tree (dist/codex/{token})')
+
+
+def _codex_skill_files() -> list[Path]:
+    return [p / 'SKILL.md' for p in _skill_dirs(validate_skill_capability_pointers_CODEX_SKILLS_DIR)]
+
+
+class ValidateCodexPayloadPointers(unittest.TestCase):
+    """The built Codex payload must link the shared contracts from each SKILL.md."""
+
+    def test_codex_skills_use_no_repo_root_paths(self) -> None:
+        skill_files = _codex_skill_files()
+        self.assertTrue(skill_files, 'no Codex skills found - refusing to pass vacuously')
+        for skill_file in skill_files:
+            with self.subTest(msg=f'{skill_file.parent.name} has no repo-root skills path'):
+                text = skill_file.read_text(encoding='utf-8', errors='replace')
+                self.assertNotIn(PLUGIN_ROOT_PREFIX + 'skills/', text, f'{_display_path(skill_file)} names a repo-root path the payload build never rewrites; use ../../skills/...')
+
+    def test_built_links_resolve_from_the_payload_skill_file(self) -> None:
+        checked = 0
+        for source_file in _codex_skill_files():
+            source = source_file.read_text(encoding='utf-8', errors='replace')
+            payload_file = validate_skill_capability_pointers_DIST_CODEX / PLUGIN_ROOT_PREFIX / 'skills' / source_file.parent.name / 'SKILL.md'
+            payload = payload_file.read_text(encoding='utf-8', errors='replace') if payload_file.is_file() else ''
+            for marker, pattern in zip((validate_skill_capability_pointers_DIRECTIVE_MARKER, validate_skill_capability_pointers_GROUNDING_MARKER), validate_skill_capability_pointers_PAYLOAD_LINK_RES, strict=True):
+                if marker not in source:
+                    continue
+                tokens = _unique_matches(pattern, payload)
+                with self.subTest(msg=f'{source_file.parent.name}: built SKILL.md links {marker}'):
+                    self.assertTrue(tokens, f'no {marker} link in built {_display_path(payload_file)}')
+                for token in tokens:
+                    checked += 1
+                    with self.subTest(msg=f'{source_file.parent.name}: {token} resolves from the built SKILL.md'):
+                        self.assertTrue((payload_file.parent / token).is_file(), f'{token} does not resolve from {_display_path(payload_file)}')
+        self.assertTrue(checked, 'no built Codex links checked - refusing to pass vacuously')
 CC_PLUGIN = PLUGIN_ROOT / '.claude-plugin' / 'plugin.json'
 CODEX_PLUGIN = PLUGIN_ROOT / '.codex-plugin' / 'plugin.json'
 CC_MARKETPLACE = REPO_ROOT / '.claude-plugin' / 'marketplace.json'
@@ -835,7 +870,7 @@ validate_codex_parity_SKILLS_DIR = PLUGIN_ROOT / 'skills'
 validate_codex_parity_CODEX_SKILLS_DIR = PLUGIN_ROOT / 'codex-skills'
 CC_ONLY_AGENTS = frozenset({'artifact-preview-observer', 'sweep-classifier', 'sweep-analyst'})
 CODEX_ONLY_AGENTS = frozenset({'autopilot-fast-helper'})
-REF_RE = re.compile('\\.\\./\\.\\./skills/[^)]+\\.md')
+REF_RE = re.compile('\\.\\./\\.\\./skills/[^)\\s`]+\\.md')
 
 def _json_field(path: Path, key: str) -> str:
     """Mirror ``jq -r '.<key>'``: the value's string form, or ``null`` on
