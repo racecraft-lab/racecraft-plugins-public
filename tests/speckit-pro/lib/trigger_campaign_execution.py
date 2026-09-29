@@ -21,6 +21,7 @@ import time
 
 import trigger_comparison as comparison
 import trigger_carry_forward as carry
+from trigger_campaign_pins import MAXIMUM_TOTAL_CHARGED_ATTEMPTS
 from trigger_campaign import CampaignLedger, QualifiedConcurrency, read_ledger, read_ledger_bytes, validate_approval, worker_limit
 from trigger_evidence import write_json_once
 
@@ -1162,6 +1163,6 @@ def run_campaign(request: CampaignRequest) -> dict:
                        "fresh_launch_ceiling": request.launch_budget,
                        "maximum_total_charged_attempts": (
                            plan.maximum_total_charged_attempts
-                           if isinstance(plan, carry.MultiGenerationPlan) else 1305),
+                           if isinstance(plan, carry.MultiGenerationPlan) else MAXIMUM_TOTAL_CHARGED_ATTEMPTS),
                        "carry_forward": True, "non_contiguous": True, "timing_eligible": False})
     return result

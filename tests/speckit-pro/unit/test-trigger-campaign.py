@@ -14,6 +14,7 @@ import unittest
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "lib"))
 import trigger_campaign as campaign
+import trigger_campaign_pins as pins
 import trigger_comparison as comparison
 from test_result import run_counted
 from trigger_inventory import load_inventory, plan_inventory
@@ -580,11 +581,36 @@ class CampaignDraftBindingTests(unittest.TestCase):
                 self.assertEqual(json.loads(path.read_bytes())["identities"]["fixture"], current)
 
 
+class CampaignPinsTests(unittest.TestCase):
+    """Reviewed campaign pins live in one data module and every count derives from it."""
+
+    def test_derived_counts_match_the_reviewed_arithmetic(self):
+        self.assertEqual(
+            (pins.LOGICAL_FULL_TRIALS, pins.CARRIED_TRIALS, pins.FRESH_LAUNCH_CEILING,
+             pins.FRESH_PAIRS, pins.MAXIMUM_TOTAL_CHARGED_ATTEMPTS),
+            (1302, 411, 891, 297, 1305),
+        )
+        self.assertEqual(pins.EXPECTED_ACCOUNTING["maximum_total_charged_attempts"], 1305)
+
+    def test_pinned_digests_and_ids_are_defined_nowhere_else(self):
+        owned = [*pins.EXPECTED_RAW_SHA256.values(), *pins.EXPECTED_TERMINAL_TRIAL_SHA256,
+                 pins.OLD_OBSERVER_SHA256, pins.PARTIAL_EXPERIMENT_SHA256, pins.PARTIAL_CASE_ID,
+                 *pins.BEHAVIOR_FAILURES]
+        modules = [*(ROOT / "lib").glob("*.py"), *(ROOT / "layer2-trigger").glob("*.py")]
+        offenders = sorted(
+            f"{path.name}: {value[:12]}"
+            for path in modules if path.name != "trigger_campaign_pins.py"
+            for value in owned if value in path.read_text(encoding="utf-8")
+        )
+        self.assertEqual(offenders, [])
+
+
 if __name__ == "__main__":
     suite = unittest.TestSuite([
         unittest.defaultTestLoader.loadTestsFromTestCase(CampaignTests),
         unittest.defaultTestLoader.loadTestsFromTestCase(MultiGenerationApprovalTests),
         unittest.defaultTestLoader.loadTestsFromTestCase(CarryForwardTests),
         unittest.defaultTestLoader.loadTestsFromTestCase(CampaignDraftBindingTests),
+        unittest.defaultTestLoader.loadTestsFromTestCase(CampaignPinsTests),
     ])
     raise SystemExit(run_counted(suite, label="test-trigger-campaign"))

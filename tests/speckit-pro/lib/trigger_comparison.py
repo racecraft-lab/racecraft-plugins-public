@@ -14,6 +14,7 @@ import sqlite3
 import sys
 
 import trigger_evidence as evidence
+from trigger_campaign_pins import FRESH_LAUNCH_CEILING
 from trigger_inventory import canonical_sha256, validate_inventory
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -391,7 +392,7 @@ def _read_source_aware_arm(manifest: dict, root: Path, index: dict,
     import trigger_carry_forward as carry
     from trigger_campaign import read_ledger, validate_approval
     approval = read_json(root / "approval.json")
-    validate_approval(approval, json_digest(manifest), 891, carry_forward=index.get("carry_forward"))
+    validate_approval(approval, json_digest(manifest), FRESH_LAUNCH_CEILING, carry_forward=index.get("carry_forward"))
     plan = carry.validate_carry_forward(index.get("carry_forward"), manifest, json_digest(manifest),
                                         approval=approval)
     carried, fresh = carry.source_aware_union(index, manifest, "baseline")
@@ -421,12 +422,12 @@ def _read_source_aware_arm(manifest: dict, root: Path, index: dict,
     _require(authorization == {
                 "manifest_sha256": json_digest(manifest),
                 "approval_sha256": json_digest(approval),
-                "launch_budget": 891,
+                "launch_budget": FRESH_LAUNCH_CEILING,
                 "carry_forward_sha256": plan.component_sha256,
              }
              and read_json(snapshot_path) == ledger
-             and ledger["launch_budget"] == 891
-             and ledger["reserved_launches"] == 891
+             and ledger["launch_budget"] == FRESH_LAUNCH_CEILING
+             and ledger["reserved_launches"] == FRESH_LAUNCH_CEILING
              and ledger["unknown_launches"] == 0,
              "fresh ledger authorization or completed snapshot changed")
     carry.validate_fresh_ledger(plan, ledger["launches"], complete=True)
