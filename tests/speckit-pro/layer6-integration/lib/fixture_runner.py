@@ -153,6 +153,40 @@ def transcript_for(fixture: Path, mode: str) -> Path:
     return fixture / ("transcript.jsonl" if mode == "live" else "parser-fixture.jsonl")
 
 
+def assert_dispatch_shape(
+    fixture_id: str, transcript: Path, expected: dict[str, Any], reporter: Reporter, helpers: Any
+) -> None:
+    groups = expected.get("same_message_dispatch_groups", [])
+    if isinstance(groups, list):
+        for group in groups:
+            if not isinstance(group, dict):
+                continue
+            size = int(group.get("size", 0))
+            target = group.get("subagent_type")
+            label = f" {target}" if target else ""
+            largest = helpers.largest_same_message_dispatch_group(transcript, target)
+            reporter.check(
+                f"{fixture_id}: >= {size}{label} dispatches in one assistant message (got {largest})",
+                largest >= size,
+                f"expected >= {size} in one message, largest single-message group was {largest}",
+            )
+
+    if expected.get("must_run_in_background") is True:
+        reporter.check(
+            f"{fixture_id}: every dispatch runs in the background",
+            helpers.assert_all_dispatches_background(transcript),
+            "found a dispatch without run_in_background: true",
+        )
+
+    if "required_isolation" in expected:
+        isolation = str(expected["required_isolation"])
+        reporter.check(
+            f"{fixture_id}: every dispatch uses isolation {isolation}",
+            helpers.assert_all_dispatches_isolated(transcript, isolation),
+            f"found a dispatch without isolation {isolation!r}",
+        )
+
+
 def assert_dispatch_fixture(
     fixture: Path,
     mode: str,
@@ -243,35 +277,7 @@ def assert_dispatch_fixture(
             f"expected <= {maximum}, got {total}",
         )
 
-    groups = expected.get("same_message_dispatch_groups", [])
-    if isinstance(groups, list):
-        for group in groups:
-            if not isinstance(group, dict):
-                continue
-            size = int(group.get("size", 0))
-            target = group.get("subagent_type")
-            label = f" {target}" if target else ""
-            largest = helpers.largest_same_message_dispatch_group(transcript, target)
-            reporter.check(
-                f"{fixture_id}: >= {size}{label} dispatches in one assistant message (got {largest})",
-                largest >= size,
-                f"expected >= {size} in one message, largest single-message group was {largest}",
-            )
-
-    if expected.get("must_run_in_background") is True:
-        reporter.check(
-            f"{fixture_id}: every dispatch runs in the background",
-            helpers.assert_all_dispatches_background(transcript),
-            "found a dispatch without run_in_background: true",
-        )
-
-    if "required_isolation" in expected:
-        isolation = str(expected["required_isolation"])
-        reporter.check(
-            f"{fixture_id}: every dispatch uses isolation {isolation}",
-            helpers.assert_all_dispatches_isolated(transcript, isolation),
-            f"found a dispatch without isolation {isolation!r}",
-        )
+    assert_dispatch_shape(fixture_id, transcript, expected, reporter, helpers)
 
     order = helpers.extract_dispatch_order(transcript)
     constraints = expected.get("dispatch_order_constraints", [])

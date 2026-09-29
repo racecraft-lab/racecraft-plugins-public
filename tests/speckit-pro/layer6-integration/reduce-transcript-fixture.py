@@ -71,6 +71,31 @@ def reduced_response(expected: JsonObject, subagent_type: Any) -> str:
     return f"{prefix}: {' '.join(keywords)}" if keywords else prefix
 
 
+def reduced_agent_input(inputs: JsonObject) -> JsonObject:
+    reduced_input: JsonObject = {
+        "subagent_type": jq_coalesce_empty(inputs.get("subagent_type", "")),
+        "description": jq_coalesce_empty(inputs.get("description", "")),
+        "prompt": redact_private_text(str(jq_coalesce_empty(inputs.get("prompt", "")))),
+    }
+    # Keep the dispatch-shape fields the Layer 6 dispatch assertions read.
+    for shape_key in ("run_in_background", "isolation"):
+        if shape_key in inputs:
+            reduced_input[shape_key] = inputs[shape_key]
+    return reduced_input
+
+
+def reduced_assistant_message(
+    event: JsonObject, output_blocks: list[JsonObject], message_ids: dict[str, str]
+) -> JsonObject:
+    message: JsonObject = {"role": "assistant", "content": output_blocks}
+    source_message = event.get("message") if isinstance(event.get("message"), dict) else {}
+    source_id = source_message.get("id")
+    if isinstance(source_id, str):
+        # Stream events of one assistant message share an id; keep that link, not the raw id.
+        message["id"] = message_ids.setdefault(source_id, f"msg-{len(message_ids) + 1:03d}")
+    return message
+
+
 def reduce_transcript(events: list[JsonObject], expected: JsonObject) -> list[JsonObject]:
     reduced: list[JsonObject] = []
     id_map: dict[str, str] = {}
@@ -97,16 +122,9 @@ def reduce_transcript(events: list[JsonObject], expected: JsonObject) -> list[Js
                 if block.get("name") == "Agent":
                     subagent_type = jq_coalesce_empty(inputs.get("subagent_type", ""))
                     agent_for[new_id] = subagent_type
-                    reduced_input = {
-                        "subagent_type": subagent_type,
-                        "description": jq_coalesce_empty(inputs.get("description", "")),
-                        "prompt": redact_private_text(str(jq_coalesce_empty(inputs.get("prompt", "")))),
-                    }
-                    # Keep the dispatch-shape fields the Layer 6 dispatch assertions read.
-                    for shape_key in ("run_in_background", "isolation"):
-                        if shape_key in inputs:
-                            reduced_input[shape_key] = inputs[shape_key]
-                    output_blocks.append({"type": "tool_use", "id": new_id, "name": "Agent", "input": reduced_input})
+                    output_blocks.append(
+                        {"type": "tool_use", "id": new_id, "name": "Agent", "input": reduced_agent_input(inputs)}
+                    )
                 else:
                     output_blocks.append(
                         {
@@ -117,12 +135,7 @@ def reduce_transcript(events: list[JsonObject], expected: JsonObject) -> list[Js
                         }
                     )
             if output_blocks:
-                message: JsonObject = {"role": "assistant", "content": output_blocks}
-                source_message = event.get("message") if isinstance(event.get("message"), dict) else {}
-                source_id = source_message.get("id")
-                if isinstance(source_id, str):
-                    # Stream events of one assistant message share an id; keep that link, not the raw id.
-                    message["id"] = message_ids.setdefault(source_id, f"msg-{len(message_ids) + 1:03d}")
+                message = reduced_assistant_message(event, output_blocks, message_ids)
                 reduced.append({"type": "assistant", "isSidechain": is_sidechain, "message": message})
             continue
 

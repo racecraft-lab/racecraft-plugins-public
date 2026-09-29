@@ -254,45 +254,40 @@ class Layer6RunnerTests(unittest.TestCase):
             with self.subTest(msg=name):
                 check()
 
+    def replay_reporter(self, fixture: Path) -> "fixture_runner.Reporter":
+        reporter = fixture_runner.Reporter()
+        with contextlib.redirect_stderr(io.StringIO()):
+            fixture_runner.assert_dispatch_fixture(fixture, "replay", reporter, check_terms=True)
+        return reporter
+
+    def broken_case(self, root: Path, name: str, source: Path, expected: dict[str, object]) -> Path:
+        """Write a fixture dir that replays a broken transcript against a real fixture's expectations."""
+        case = root / name
+        case.mkdir()
+        events = [json.loads(line) for line in source.read_text(encoding="utf-8").splitlines()]
+        blocks = [block for event in events for block in (event.get("message") or {}).get("content", [])]
+        for block in blocks:
+            if block.get("name") == "Agent":
+                block["input"]["subagent_type"] = expected["must_dispatch_to"][0]
+        (case / "parser-fixture.jsonl").write_text("\n".join(json.dumps(event) for event in events) + "\n", encoding="utf-8")
+        (case / "expected.json").write_text(json.dumps(expected), encoding="utf-8")
+        return case
+
     def test_dispatch_fixtures_reject_serial_and_foreground_dispatch(self) -> None:
-        fixtures = LAYER6 / "dispatch-fixtures"
-        bad_transcripts = {
-            "serial": LAYER6 / "test-fixtures" / "serial-dispatch.jsonl",
-            "foreground": LAYER6 / "test-fixtures" / "foreground-dispatch.jsonl",
-        }
-        for fixture_name in (
-            "19-implement-parallel-p-tasks",
-            "20-consensus-multi-item-batch",
-            "21-resolve-pr-parallel-files",
-        ):
-            fixture = fixtures / fixture_name
-            expected = json.loads((fixture / "expected.json").read_text(encoding="utf-8"))
-            with self.subTest(fixture=fixture_name, case="committed replay passes"):
-                reporter = fixture_runner.Reporter()
-                with contextlib.redirect_stderr(io.StringIO()):
-                    fixture_runner.assert_dispatch_fixture(fixture, "replay", reporter, check_terms=True)
-                self.assertEqual(reporter.passed, reporter.total)
-            with self.subTest(fixture=fixture_name, case="declares dispatch-shape assertions"):
-                self.assertTrue(expected.get("same_message_dispatch_groups"))
-                self.assertIs(expected.get("must_run_in_background"), True)
-            for label, source in bad_transcripts.items():
-                with self.subTest(fixture=fixture_name, case=label), tempfile.TemporaryDirectory() as temporary:
-                    case = Path(temporary) / fixture_name
-                    case.mkdir()
-                    # Retarget the broken transcript at this fixture's own agent types.
-                    events = [json.loads(line) for line in source.read_text(encoding="utf-8").splitlines()]
-                    for event in events:
-                        for block in (event.get("message") or {}).get("content", []):
-                            if block.get("name") == "Agent":
-                                block["input"]["subagent_type"] = expected["must_dispatch_to"][0]
-                    (case / "parser-fixture.jsonl").write_text(
-                        "\n".join(json.dumps(event) for event in events) + "\n", encoding="utf-8"
-                    )
-                    (case / "expected.json").write_text(json.dumps(expected), encoding="utf-8")
-                    reporter = fixture_runner.Reporter()
-                    with contextlib.redirect_stderr(io.StringIO()):
-                        fixture_runner.assert_dispatch_fixture(case, "replay", reporter, check_terms=True)
-                    self.assertLess(reporter.passed, reporter.total)
+        names = ("19-implement-parallel-p-tasks", "20-consensus-multi-item-batch", "21-resolve-pr-parallel-files")
+        broken = ("serial-dispatch.jsonl", "foreground-dispatch.jsonl")
+        with tempfile.TemporaryDirectory() as temporary:
+            for name in names:
+                fixture = LAYER6 / "dispatch-fixtures" / name
+                expected = json.loads((fixture / "expected.json").read_text(encoding="utf-8"))
+                self.assertTrue(expected.get("same_message_dispatch_groups"), name)
+                self.assertIs(expected.get("must_run_in_background"), True, name)
+                passing = self.replay_reporter(fixture)
+                self.assertEqual(passing.passed, passing.total, name)
+                for transcript in broken:
+                    case = self.broken_case(Path(temporary), f"{name}-{transcript}", LAYER6 / "test-fixtures" / transcript, expected)
+                    failing = self.replay_reporter(case)
+                    self.assertLess(failing.passed, failing.total, f"{name} accepted {transcript}")
 
     def test_fixture_21_caps_dispatches_at_the_per_file_partition(self) -> None:
         expected = json.loads(
