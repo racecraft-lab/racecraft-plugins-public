@@ -228,10 +228,58 @@
     {
       "path": {
         "kind": "plugin_relative",
-        "value": "speckit_pro_runner/gates/active_path_guard.py",
-        "display": "speckit_pro_runner/gates/active_path_guard.py"
+        "value": "speckit_pro_runner/gates/active_path_guard/__init__.py",
+        "display": "speckit_pro_runner/gates/active_path_guard/__init__.py"
       },
-      "sha256": "f7cc2f6552e0bddb861ac82ebd63ef350700c3559fe2132fa99c597bf353f2d6"
+      "sha256": "159833c90e9623cdef8b101f1e6532a5067ba2e070c7be9bb146e9d9785c5c21"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
+        "value": "speckit_pro_runner/gates/active_path_guard/common.py",
+        "display": "speckit_pro_runner/gates/active_path_guard/common.py"
+      },
+      "sha256": "4bb333eef2b44ba4d5405091a66dddeb393927272307ff5241b8eaa009a7a968"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
+        "value": "speckit_pro_runner/gates/active_path_guard/path_guard.py",
+        "display": "speckit_pro_runner/gates/active_path_guard/path_guard.py"
+      },
+      "sha256": "b55bb9d221b7216053c0c9c31cc33d0b7ae27f95cb2229279f6617d829f7918c"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
+        "value": "speckit_pro_runner/gates/active_path_guard/python_ast.py",
+        "display": "speckit_pro_runner/gates/active_path_guard/python_ast.py"
+      },
+      "sha256": "83f4e3b8de75160a46a613648d98ed108a239d891b47e73534129bf327c47319"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
+        "value": "speckit_pro_runner/gates/active_path_guard/repo_bash.py",
+        "display": "speckit_pro_runner/gates/active_path_guard/repo_bash.py"
+      },
+      "sha256": "e834f7d83dcac1fd0f5b1a7d4da502cbe2b2fdc2c0b21b342ab477850d5f6618"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
+        "value": "speckit_pro_runner/gates/active_path_guard/runtime_guard.py",
+        "display": "speckit_pro_runner/gates/active_path_guard/runtime_guard.py"
+      },
+      "sha256": "fae89e69f944566fc5d0356b633d2ee68506c457f6093abcfe53b0e182a5ea35"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
+        "value": "speckit_pro_runner/gates/active_path_guard/zero_bash.py",
+        "display": "speckit_pro_runner/gates/active_path_guard/zero_bash.py"
+      },
+      "sha256": "7b9288093615e9e55ba1d9341827e297ad6bc0722eb1864d47bbdb05edf4dc4a"
     },
     {
       "path": {

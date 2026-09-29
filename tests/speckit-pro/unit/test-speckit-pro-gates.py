@@ -2933,6 +2933,15 @@ class GateFoundationTests(unittest.TestCase):
         self.assertEqual([item["code"] for item in stderr_records], ["release_check_failed"])
         self.assertTrue(response["data"]["release_check"]["blocking"])
 
+    def test_active_path_guard_self_exemption_lists_exactly_its_modules(self) -> None:
+        from speckit_pro_runner.gates.active_path_guard import runtime_guard
+
+        package_dir = REPO_ROOT / "speckit-pro/speckit_pro_runner/gates/active_path_guard"
+        self.assertEqual(
+            {f"speckit_pro_runner/gates/active_path_guard/{path.name}" for path in package_dir.glob("*.py")},
+            set(runtime_guard.GUARD_SOURCE_PATHS),
+        )
+
     def test_active_path_guard_blocks_active_findings_and_exit_1(self) -> None:
         completed, response, stderr_records = run_runner(
             gate_request(
