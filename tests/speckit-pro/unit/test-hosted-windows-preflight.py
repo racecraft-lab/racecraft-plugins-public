@@ -23,6 +23,7 @@ PLUGIN_ROOT = REPO_ROOT / "speckit-pro"
 for _import_root in (LIB_DIR, PLUGIN_ROOT):
     if str(_import_root) not in sys.path:
         sys.path.insert(0, str(_import_root))
+import native_eval_runner_result  # noqa: E402
 from speckit_pro_runner import envelope  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
@@ -992,6 +993,7 @@ class PreflightContractTests(unittest.TestCase):
 
     def test_response_contract_matches_the_runner_envelope(self) -> None:
         self.assertEqual(envelope.STATUS_EXIT_CODES, helper.RESPONSE_STATUS_EXIT_CODES)
+        self.assertEqual(envelope.STATUS_EXIT_CODES, native_eval_runner_result._STATUS_EXIT)
         sent_fields = set(envelope.response("ok"))
         self.assertEqual(sent_fields, helper.RESPONSE_REQUIRED_FIELDS)
 
