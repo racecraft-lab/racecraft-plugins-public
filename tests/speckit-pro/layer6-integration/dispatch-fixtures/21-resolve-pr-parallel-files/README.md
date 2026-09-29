@@ -5,14 +5,18 @@ files, the orchestrator partitions by file path and dispatches all
 partitions in ONE assistant message via background subagents.
 
 The fixture covers the documented per-file partition when no comment carries a
-cross-file hint.
+cross-file hint. The contract is `skills/speckit-resolve-pr/SKILL.md` §4c.
+It dispatches only when there are 2 or more partitions and the fixes are
+large enough to repay each worker's setup cost, and the prompt states that
+both conditions hold.
 
 ## Scenario
 
 A PR with 6 unresolved review threads spread across 3 different files
 (2 threads per file), no cross-file hints in any comment. Expected:
 3 background subagent dispatches (one per file partition) all in ONE
-assistant message.
+assistant message. Each thread needs a multi-line fix, so the dispatch is
+worth its setup cost.
 
 ## Asserts
 
