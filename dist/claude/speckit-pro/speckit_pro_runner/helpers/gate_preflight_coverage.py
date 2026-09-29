@@ -146,6 +146,35 @@ def derived_policy_classes(missing: list[dict[str, str]], declared: list[dict[st
     return classes
 
 
+def _gate_needs(gates: list[Any]) -> list[tuple[str, str, str, str]]:
+    required: list[tuple[str, str, str, str]] = []
+    for index, raw in enumerate(gates):
+        if not isinstance(raw, dict) or set(raw) != {"gate", "command", "needs"} or not isinstance(raw["needs"], list):
+            raise ValueError(f"gates[{index}] must have exactly gate, command, and a needs list")
+        gate = _text(raw["gate"], f"gates[{index}].gate")
+        command = _text(raw["command"], f"gates[{index}].command")
+        required.extend((gate, command, *_need(need, f"gates[{index}].needs[{need_index}]"))
+                        for need_index, need in enumerate(raw["needs"]))
+    return required
+
+
+def _write_surface_needs(inputs: dict[str, Any], root: Path | None) -> tuple[list[tuple[str, str, str, str]], Path | None]:
+    """Needs for the private record and each write path that lie outside `writable_roots`."""
+    if "writable_roots" not in inputs:
+        if "write_paths" in inputs:
+            raise ValueError("write_paths needs writable_roots")
+        return [], None
+    if root is None:
+        raise ValueError("writable_roots needs a repository root")
+    writable = _paths(inputs["writable_roots"], "writable_roots")
+    private_dir = private_record_dir(root)
+    surfaces = [(RECORD_GATE, "write the private autonomy record", private_dir)]
+    surfaces += [(ROOT_GATE, "write the workflow files", path)
+                 for path in _paths(inputs.get("write_paths", []), "write_paths")]
+    return [(gate, command, "outside_writable_roots", str(path)) for gate, command, path in surfaces
+            if not any(path.is_relative_to(base) for base in writable)], private_dir
+
+
 def gate_preflight_coverage(inputs: Any, root: Path | None = None) -> dict[str, Any]:
     """Which gate needs the inventory covers; raises ValueError on malformed evidence.
 
@@ -166,33 +195,14 @@ def gate_preflight_coverage(inputs: Any, root: Path | None = None) -> dict[str, 
     for index, raw in enumerate(actions):
         key = _need(raw, f"inventory_actions[{index}]")
         inventory.setdefault(key, []).append(_text(raw.get("action_id"), f"inventory_actions[{index}].action_id"))
-    required: list[tuple[str, str, str, str]] = []
-    for index, raw in enumerate(gates):
-        if not isinstance(raw, dict) or set(raw) != {"gate", "command", "needs"} or not isinstance(raw["needs"], list):
-            raise ValueError(f"gates[{index}] must have exactly gate, command, and a needs list")
-        gate = _text(raw["gate"], f"gates[{index}].gate")
-        command = _text(raw["command"], f"gates[{index}].command")
-        required.extend((gate, command, *_need(need, f"gates[{index}].needs[{need_index}]"))
-                        for need_index, need in enumerate(raw["needs"]))
+    required = _gate_needs(gates)
     declared = declared_commands(root) if root is not None else []
     for item in declared:
         need = ("external_side_effect", item["command"])
         if not any((category, target) == need for _, _, category, target in required):
             required.append((f"pre-PR: {item['command']}", item["command"], *need))
-    private_dir: Path | None = None
-    if "writable_roots" in inputs:
-        if root is None:
-            raise ValueError("writable_roots needs a repository root")
-        writable = _paths(inputs["writable_roots"], "writable_roots")
-        private_dir = private_record_dir(root)
-        surfaces = [(RECORD_GATE, "write the private autonomy record", private_dir)]
-        surfaces += [(ROOT_GATE, "write the workflow files", path)
-                     for path in _paths(inputs.get("write_paths", []), "write_paths")]
-        for gate, command, path in surfaces:
-            if not any(path.is_relative_to(base) for base in writable):
-                required.append((gate, command, "outside_writable_roots", str(path)))
-    elif "write_paths" in inputs:
-        raise ValueError("write_paths needs writable_roots")
+    write_needs, private_dir = _write_surface_needs(inputs, root)
+    required.extend(write_needs)
     missing: list[dict[str, str]] = []
     covering: dict[str, list[str]] = {}
     for gate, command, category, target in required:
