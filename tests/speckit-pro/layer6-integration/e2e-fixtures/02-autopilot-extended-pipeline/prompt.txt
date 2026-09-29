@@ -8,7 +8,7 @@ For this fixture run, manually dispatch each phase agent in the
 standard SpecKit order from the autopilot phase mapping. Each agent
 should produce a brief summary suitable as input for the next phase.
 Do NOT write artifacts to disk. Do NOT invoke grill-me. Do NOT run
-`/speckit-pro:autopilot` end-to-end (it does extensive preflight that
+`/speckit-pro:speckit-autopilot` end-to-end (it does extensive preflight that
 is out of scope for this dispatch-graph test).
 
 End every dispatch prompt with this line:

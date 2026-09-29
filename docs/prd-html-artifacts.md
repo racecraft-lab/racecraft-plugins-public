@@ -1,9 +1,9 @@
 # PRD: HTML Artifacts & Staged Review Workflow
 
-**Status**: Active — not yet implemented
+**Status**: Active — partly implemented; the technical roadmap's Progress Tracking table is the source for per-spec status
 **Source**: Anthropic field guide ("A Field Guide to Claude Fable: Finding Your Unknowns"), "The Unreasonable Effectiveness of HTML" (claude.com/blog), the HTML-effectiveness template gallery (thariqs.github.io/html-effectiveness, github.com/anthropics/html-effectiveness), and the 2026-07-28 speckit-prd interview
 **Created**: 2026-07-28
-**Last updated**: 2026-07-28
+**Last updated**: 2026-09-29
 **Target window**: Next speckit-pro minor-release train; no external deadline
 
 ---
