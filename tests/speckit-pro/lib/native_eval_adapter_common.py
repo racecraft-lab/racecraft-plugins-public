@@ -434,7 +434,7 @@ def _write_git_controller_exclude(workspace: Path, payload: bytes) -> None:
     try:
         info_directory.mkdir(mode=0o700)
     except FileExistsError:
-        pass
+        pass  # An existing info/ is fine; the lstat check below rejects a symlink or non-directory.
     except OSError as exc:
         raise NativeAdapterError("git fixture info directory could not be created") from exc
     try:

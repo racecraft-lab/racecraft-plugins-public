@@ -712,7 +712,7 @@ def _temporary_isolation_probes(attempts: Path, staging: Path):
             try:
                 path.unlink() if kind == "file" else path.rmdir()
             except FileNotFoundError:
-                pass
+                pass  # Already gone is the cleanup goal; any other OSError is collected below.
             except OSError as exc:
                 cleanup_errors.append(exc)
         if cleanup_errors and sys.exc_info()[0] is None:
