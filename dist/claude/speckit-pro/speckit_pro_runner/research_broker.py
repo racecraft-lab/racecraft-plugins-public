@@ -222,8 +222,15 @@ def outbound_findings(text: str, spec_ngrams: set[tuple[str, ...]]) -> list[str]
     return findings
 
 
+PLUGIN_ROOT = Path(__file__).resolve().parents[1]
+
+
 def project_root(env: Mapping[str, str]) -> Path | None:
-    """The consumer project root, or None when the broker runs inside the plugin."""
+    """The consumer project root, or None when the broker runs inside the plugin.
+
+    A directory that only holds plugin manifests (a marketplace repository) is a
+    project. Only the running plugin's own root is not.
+    """
     explicit = env.get("CLAUDE_PROJECT_DIR") or ""
     candidates = [Path(explicit)] if explicit else []
     try:
@@ -234,7 +241,7 @@ def project_root(env: Mapping[str, str]) -> Path | None:
         candidates.extend([cwd, *cwd.parents])
     for candidate in candidates:
         if (candidate / ".git").exists() or explicit:
-            if (candidate / ".codex-plugin").exists() or (candidate / ".claude-plugin").exists():
+            if candidate.resolve() == PLUGIN_ROOT:
                 return None
             return candidate if candidate.is_dir() else None
     return None
