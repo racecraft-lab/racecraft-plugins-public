@@ -1,6 +1,8 @@
 # ripwire quality acks v1 — written by --quality-ack; a finding stays suppressed until it worsens past its acked magnitude
 # format: ack <kind> <16-hex-key> <ackNow> [cid=<16-hex-content-id>] [by=<scope that acked it>] <reason to end of line> — one per line, kept SORTED by (kind,key) on every write (merge-friendly)
-ack dead-code:new-symbol acc0e9460050dd4d 0 cid=c7fa8c1d4450b253 unittest discovers test_ methods by name; the cargo case shares the go case's helper so the class grows by one thin test
+ack dead-code:new-symbol 60ac071ce572d8dd 0 cid=122082dbc9e86105 unittest calls setUp and discovers test_ methods by name, so they have no static callers
+ack dead-code:new-symbol 6930ca47cfaaef94 0 cid=bbcd28d660bae4e5 unittest calls setUp and discovers test_ methods by name, so they have no static callers
+ack dead-code:new-symbol d16209215400a0e3 0 cid=c7fa8c1d4450b253 unittest discovers test_ methods by name; the cargo case shares the go case's helper so the class grows by one thin test
 ack short-horizon-churn 04067b98a5f85c1c 6 cid=158a6643d13aecfd Reviewed qualification-hardening churn after structural refactor: all non-temporal quality gates were removed, live native confirmations pass for both clients, focused regressions pass, and any further growth must reappear.
 ack short-horizon-churn 12013c3fb55b764d 4 cid=f3c6afd7e8c2e936 Reviewed qualification-hardening churn after structural refactor: all non-temporal quality gates were removed, live native confirmations pass for both clients, focused regressions pass, and any further growth must reappear.
 ack short-horizon-churn 27e16d2cbd0943f7 6 cid=10ace2784c23fa0e Reviewed qualification-hardening churn after structural refactor: all non-temporal quality gates were removed, live native confirmations pass for both clients, focused regressions pass, and any further growth must reappear.
