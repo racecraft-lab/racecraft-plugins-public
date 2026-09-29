@@ -111,6 +111,7 @@
         { "path": "tests/speckit-pro/unit/test-speckit-pro-gates.py", "label": "test-speckit-pro-gates" },
         { "path": "tests/speckit-pro/unit/test-transcript-helpers.py", "label": "test-transcript-helpers" },
         { "path": "tests/speckit-pro/unit/test-transcript-tools.py", "label": "test-transcript-tools" },
+        { "path": "tests/speckit-pro/unit/test-dispatch-fixture-shape.py", "label": "test-dispatch-fixture-shape" },
         { "path": "tests/speckit-pro/unit/test-integration-runners.py", "label": "test-integration-runners" },
         { "path": "tests/speckit-pro/unit/test-parity-runner.py", "label": "test-parity-runner" },
         { "path": "tests/speckit-pro/unit/test-privacy-scan.py", "label": "test-privacy-scan" },

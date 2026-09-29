@@ -1,0 +1,6 @@
+{"type":"system","subtype":"init"}
+{"type":"assistant","isSidechain":false,"message":{"type":"message","role":"assistant","content":[{"type":"tool_use","id":"toolu_P1","name":"Agent","input":{"description":"Task 1","prompt":"Do task 1","subagent_type":"speckit-pro:implement-executor","run_in_background":true,"isolation":"worktree"}}],"id":"msg_A"}}
+{"type":"assistant","isSidechain":false,"message":{"type":"message","role":"assistant","content":[{"type":"tool_use","id":"toolu_P2","name":"Agent","input":{"description":"Task 2","prompt":"Do task 2","subagent_type":"speckit-pro:implement-executor","run_in_background":true,"isolation":"worktree"}}],"id":"msg_A"}}
+{"type":"assistant","isSidechain":false,"message":{"type":"message","role":"assistant","content":[{"type":"tool_use","id":"toolu_P3","name":"Agent","input":{"description":"Task 3","prompt":"Do task 3","subagent_type":"speckit-pro:implement-executor","run_in_background":true,"isolation":"worktree"}}],"id":"msg_A"}}
+{"type":"user","isSidechain":false,"message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_P1","content":"done"},{"type":"tool_result","tool_use_id":"toolu_P2","content":"done"},{"type":"tool_result","tool_use_id":"toolu_P3","content":"done"}]}}
+{"type":"result","subtype":"success"}
