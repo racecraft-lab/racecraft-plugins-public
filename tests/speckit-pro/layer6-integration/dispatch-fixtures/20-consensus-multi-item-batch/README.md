@@ -21,14 +21,15 @@ dispatches (3 items × 3 analysts) all in ONE assistant message.
   `domain-researcher`
 - No forbidden spawns (subagents don't nest)
 - `grill-me` is NEVER invoked (autopilot HITL boundary)
-- All 9 dispatches occur in the same assistant message (parser checks
-  this implicitly via the single `tool_use` block list)
+- All 9 dispatches occur in the same assistant message
+  (`same_message_dispatch_groups`)
+- Every dispatch sets `run_in_background: true` (`must_run_in_background`)
 
 ## When this fixture would fail
 
-- If a future change reverts to per-item serial dispatch, the fixture would
-  still see 9 dispatches —
-  but they'd be in 3 separate assistant messages, not 1. The
-  parser-fixture's transcript shape captures this.
+- If a future change reverts to per-item serial dispatch, the fixture still
+  sees 9 dispatches, but they land in 3 separate assistant messages, so
+  `same_message_dispatch_groups` fails.
+- If the analysts run in the foreground, `must_run_in_background` fails.
 - If routing breaks and only 1 analyst per item is spawned (3 total)
   instead of 3 per `[ambiguous]` item, the dispatch count check fails.

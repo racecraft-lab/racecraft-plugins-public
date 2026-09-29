@@ -46,24 +46,71 @@ def _in_scope(event: JsonObject, scope: str) -> bool:
     return scope == "all" or (scope == "sidechain" and sidechain) or (scope == "orchestrator" and not sidechain)
 
 
+def _message_id(event: JsonObject) -> str | None:
+    message = event.get("message")
+    if isinstance(message, dict) and isinstance(message.get("id"), str):
+        return str(message["id"])
+    return None
+
+
+def _dispatch_record(block: JsonObject, message_index: int) -> JsonObject:
+    inputs = block.get("input") if isinstance(block.get("input"), dict) else {}
+    return {
+        "subagent_type": inputs.get("subagent_type"),
+        "description": inputs.get("description", ""),
+        "prompt": inputs.get("prompt", ""),
+        "id": block.get("id"),
+        "message_index": message_index,
+        "run_in_background": inputs.get("run_in_background"),
+        "isolation": inputs.get("isolation"),
+    }
+
+
 def extract_orchestrator_dispatches(transcript: str | Path) -> list[JsonObject]:
     dispatches: list[JsonObject] = []
+    message_index = -1
+    previous_message_id: str | None = None
     for event in load_events(transcript):
         if event.get("type") != "assistant" or not _in_scope(event, "orchestrator"):
             continue
-        for block in _blocks(event):
-            if block.get("type") != "tool_use" or block.get("name") != "Agent":
-                continue
-            inputs = block.get("input") if isinstance(block.get("input"), dict) else {}
-            dispatches.append(
-                {
-                    "subagent_type": inputs.get("subagent_type"),
-                    "description": inputs.get("description", ""),
-                    "prompt": inputs.get("prompt", ""),
-                    "id": block.get("id"),
-                }
-            )
+        # Stream-JSON may split one assistant message across events that share
+        # a message id, so those events belong to one message index.
+        message_id = _message_id(event)
+        if message_id is None or message_id != previous_message_id:
+            message_index += 1
+        previous_message_id = message_id
+        dispatches.extend(
+            _dispatch_record(block, message_index)
+            for block in _blocks(event)
+            if block.get("type") == "tool_use" and block.get("name") == "Agent"
+        )
     return dispatches
+
+
+def largest_same_message_dispatch_group(transcript: str | Path, subagent_type: str | None = None) -> int:
+    """Return the most dispatches (of one type, when given) inside a single assistant message."""
+    counts: dict[int, int] = {}
+    for item in extract_orchestrator_dispatches(transcript):
+        if subagent_type is None or item.get("subagent_type") == subagent_type:
+            counts[item["message_index"]] = counts.get(item["message_index"], 0) + 1
+    return max(counts.values(), default=0)
+
+
+def _every_dispatch_has(transcript: str | Path, field: str, value: object, *, equal: bool = True) -> bool:
+    dispatches = extract_orchestrator_dispatches(transcript)
+    return bool(dispatches) and all((item.get(field) == value) is equal for item in dispatches)
+
+
+def assert_all_dispatches_background(transcript: str | Path) -> bool:
+    return _every_dispatch_has(transcript, "run_in_background", True)
+
+
+def assert_no_dispatch_isolation(transcript: str | Path, isolation: str) -> bool:
+    return _every_dispatch_has(transcript, "isolation", isolation, equal=False)
+
+
+def assert_all_dispatches_isolated(transcript: str | Path, isolation: str) -> bool:
+    return _every_dispatch_has(transcript, "isolation", isolation)
 
 
 def extract_dispatch_order(transcript: str | Path) -> list[str]:
