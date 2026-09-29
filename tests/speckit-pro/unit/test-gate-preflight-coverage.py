@@ -44,13 +44,13 @@ def check(inputs: dict[str, object]) -> dict[str, object]:
     return gate_preflight_coverage(inputs)
 
 
-def _runner(request: dict[str, object]) -> dict[str, object]:
+def _runner(request: dict[str, object], cwd: Path = REPO_ROOT) -> dict[str, object]:
     completed = subprocess.run(
         [sys.executable, "-m", "speckit_pro_runner"],
         input=json.dumps(request),
         text=True,
         capture_output=True,
-        cwd=REPO_ROOT,
+        cwd=cwd,
         env={"PYTHONPATH": str(PLUGIN_ROOT), "PATH": os.defpath},
         check=False,
         timeout=60,
@@ -238,10 +238,16 @@ class RunStartCoverageTests(unittest.TestCase):
                 gate_preflight_coverage({**base, "writable_roots": ["relative"]}, linked)
 
     def test_runner_reports_an_external_workflow_root_and_derived_classes(self) -> None:
+        import tempfile
+
         request = json.loads(FIXTURE_REQUEST.read_text(encoding="utf-8"))
-        request["inputs"].update(repo_root=str(REPO_ROOT), writable_roots=[str(REPO_ROOT)],
-                                 write_paths=["/external-workflow-root"], inventory_actions=[])
-        response = _runner(request)
+        with tempfile.TemporaryDirectory() as temp:
+            repo = Path(temp).resolve()
+            _git(repo, "init", "-q", "-b", "main")
+            (repo / ".specify").mkdir()
+            request["inputs"].update(writable_roots=[str(repo)], write_paths=["/external-workflow-root"],
+                                     inventory_actions=[])
+            response = _runner(request, cwd=repo)
         self.assertEqual(response["status"], "expected_failure", response)
         data = response["data"]
         self.assertIn("/external-workflow-root", [item["target"] for item in data["missing"]])
