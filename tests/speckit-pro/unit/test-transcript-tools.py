@@ -306,6 +306,26 @@ class TranscriptToolTests(unittest.TestCase):
         self.assertGreater(checked, 0, "no replay fixture declares must_include_terms")
 
 
+class ScrubberPrivacyTests(unittest.TestCase):
+    def test_scrub_uses_the_shared_privacy_patterns(self) -> None:
+        # Built at run time so this source never holds a value the privacy scan rejects.
+        private_values = {
+            "claude temp path": "/private/" + "tmp/claude-" + "501/scratch",
+            "macos temp folder": "/private/" + "var/folders/ab/cd/T",
+            "email": "someone" + "@" + "example.invalid",
+            "uuid": str(uuid.uuid4()),
+            "hyphenated home": "-" + "Users-operator-work",
+        }
+        text = "Paths " + " ".join(private_values.values())
+        scrubbed = run_script(SCRUB, input_text=json.dumps({"type": "assistant", "note": text}) + "\n")
+        self.assertEqual(scrubbed.returncode, 0, scrubbed.stderr)
+        for name, value in private_values.items():
+            with self.subTest(private_value=name):
+                self.assertNotIn(value, scrubbed.stdout)
+        self.assertIn("<TMP>", scrubbed.stdout)
+        self.assertIn("<EMAIL>", scrubbed.stdout)
+
+
 class ReducedResponseTests(unittest.TestCase):
     def test_reduce_keeps_redacted_capped_subagent_responses(self) -> None:
         home_path = "/" + "Users/" + "operator/work"
@@ -348,5 +368,6 @@ class ReducedResponseTests(unittest.TestCase):
 
 if __name__ == "__main__":
     suite = unittest.defaultTestLoader.loadTestsFromTestCase(TranscriptToolTests)
-    suite.addTests(unittest.defaultTestLoader.loadTestsFromTestCase(ReducedResponseTests))
+    for case in (ReducedResponseTests, ScrubberPrivacyTests):
+        suite.addTests(unittest.defaultTestLoader.loadTestsFromTestCase(case))
     raise SystemExit(run_counted(suite, label="test-transcript-tools"))

@@ -9,7 +9,9 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
+
+from . import transcript_helpers as helpers
 
 LAYER6_ROOT = Path(__file__).resolve().parent.parent
 SCRUBBER = LAYER6_ROOT / "scrub-transcript.py"
@@ -153,9 +155,70 @@ def transcript_for(fixture: Path, mode: str) -> Path:
     return fixture / ("transcript.jsonl" if mode == "live" else "parser-fixture.jsonl")
 
 
-def assert_dispatch_shape(
-    fixture_id: str, transcript: Path, expected: dict[str, Any], reporter: Reporter, helpers: Any
-) -> None:
+def capture_or_fail(fixture: Path, budget_usd: str, reporter: Reporter, *, announce_saved: bool = False) -> bool:
+    """Capture a live transcript; a failed capture is a failed check, never a stale replay."""
+    captured = capture_live(fixture, budget_usd, announce_saved=announce_saved)
+    if not captured:
+        reporter.check(f"{fixture.name}: live transcript captured", False, "capture did not run; no fresh transcript")
+    return captured
+
+
+def load_fixture(fixture: Path, mode: str, reporter: Reporter) -> tuple[Path, dict[str, Any]] | None:
+    """Return the transcript and expected.json of a fixture, or record why it cannot be checked."""
+    expected_path = fixture / "expected.json"
+    transcript = transcript_for(fixture, mode)
+    if not reporter.check(f"{fixture.name}: expected.json present", expected_path.is_file(), f"missing {expected_path}"):
+        return None
+    if not reporter.check(f"{fixture.name}: {transcript.name} present", transcript.is_file(), f"missing {transcript}"):
+        return None
+    return transcript, load_expected(expected_path)
+
+
+Check = Callable[[Reporter, str, Path, dict[str, Any]], None]
+
+# expected.json key -> (check label, predicate over the transcript and one value, failure detail)
+VALUE_CHECKS: dict[str, tuple[str, Callable[[Path, str], bool], str]] = {
+    "must_dispatch_to": ("dispatched to {}", helpers.assert_dispatched_to, "expected dispatch to {}, none found"),
+    "must_not_dispatch_to": ("never dispatched to {}", helpers.assert_not_dispatched_to, "{} was dispatched but should not have been"),
+    "must_not_invoke_skill": ("skill never invoked: {} (any scope)", helpers.assert_skill_not_invoked, "skill matching {!r} was invoked"),
+    "must_include_terms": ("transcript includes term: {}", helpers.assert_transcript_contains_term, "expected transcript to include {!r}"),
+    "must_not_include_terms": ("transcript excludes term: {}", helpers.assert_transcript_not_contains_term, "transcript included forbidden term {!r}"),
+}
+
+
+def expectation_check(*keys: str) -> Check:
+    """Build a check that records one result per value of each listed expected.json key."""
+
+    def run(reporter: Reporter, fixture_id: str, transcript: Path, expected: dict[str, Any]) -> None:
+        for key in keys:
+            label, holds, detail = VALUE_CHECKS[key]
+            for value in string_list(expected.get(key)):
+                reporter.check(f"{fixture_id}: {label.format(value)}", holds(transcript, value), detail.format(value))
+
+    return run
+
+
+check_dispatch_targets = expectation_check("must_dispatch_to", "must_not_dispatch_to", "must_not_invoke_skill")
+check_transcript_terms = expectation_check("must_include_terms", "must_not_include_terms")
+
+
+def check_dispatch_shape(reporter: Reporter, fixture_id: str, transcript: Path, expected: dict[str, Any]) -> None:
+    if expected.get("must_not_have_forbidden_spawns") is True:
+        reporter.check(
+            f"{fixture_id}: no subagent spawned an Agent()",
+            helpers.assert_no_forbidden_spawns(transcript),
+            "found subagent that spawned another Agent",
+        )
+    if "must_dispatch_to_at_least_one_of" in expected:
+        allowed = string_list(expected["must_dispatch_to_at_least_one_of"])
+        reporter.check(
+            f"{fixture_id}: dispatched to at least one of allowed set",
+            any(helpers.assert_dispatched_to(transcript, target) for target in allowed),
+            "expected dispatch to at least one allowed target",
+        )
+
+
+def check_dispatch_counts(reporter: Reporter, fixture_id: str, transcript: Path, expected: dict[str, Any]) -> None:
     total = len(helpers.extract_orchestrator_dispatches(transcript))
     if "min_dispatch_count" in expected:
         minimum = int(expected["min_dispatch_count"])
@@ -172,28 +235,30 @@ def assert_dispatch_shape(
             f"expected <= {maximum}, got {total}",
         )
 
-    groups = expected.get("same_message_dispatch_groups", [])
-    if isinstance(groups, list):
-        for group in groups:
-            if not isinstance(group, dict):
-                continue
-            size = int(group.get("size", 0))
-            target = group.get("subagent_type")
-            label = f" {target}" if target else ""
-            largest = helpers.largest_same_message_dispatch_group(transcript, target)
-            reporter.check(
-                f"{fixture_id}: >= {size}{label} dispatches in one assistant message (got {largest})",
-                largest >= size,
-                f"expected >= {size} in one message, largest single-message group was {largest}",
-            )
 
+def check_same_message_groups(reporter: Reporter, fixture_id: str, transcript: Path, expected: dict[str, Any]) -> None:
+    groups = expected.get("same_message_dispatch_groups", [])
+    for group in groups if isinstance(groups, list) else []:
+        if not isinstance(group, dict):
+            continue
+        size = int(group.get("size", 0))
+        target = group.get("subagent_type")
+        label = f" {target}" if target else ""
+        largest = helpers.largest_same_message_dispatch_group(transcript, target)
+        reporter.check(
+            f"{fixture_id}: >= {size}{label} dispatches in one assistant message (got {largest})",
+            largest >= size,
+            f"expected >= {size} in one message, largest single-message group was {largest}",
+        )
+
+
+def check_dispatch_flags(reporter: Reporter, fixture_id: str, transcript: Path, expected: dict[str, Any]) -> None:
     if expected.get("must_run_in_background") is True:
         reporter.check(
             f"{fixture_id}: every dispatch runs in the background",
             helpers.assert_all_dispatches_background(transcript),
             "found a dispatch without run_in_background: true",
         )
-
     if "required_isolation" in expected:
         isolation = str(expected["required_isolation"])
         reporter.check(
@@ -201,7 +266,6 @@ def assert_dispatch_shape(
             helpers.assert_all_dispatches_isolated(transcript, isolation),
             f"found a dispatch without isolation {isolation!r}",
         )
-
     if "forbidden_isolation" in expected:
         isolation = str(expected["forbidden_isolation"])
         reporter.check(
@@ -211,6 +275,27 @@ def assert_dispatch_shape(
         )
 
 
+def check_dispatch_order(reporter: Reporter, fixture_id: str, transcript: Path, expected: dict[str, Any]) -> None:
+    order = helpers.extract_dispatch_order(transcript)
+    constraints = expected.get("dispatch_order_constraints", [])
+    for constraint in constraints if isinstance(constraints, list) else []:
+        if not isinstance(constraint, dict):
+            continue
+        before = str(constraint.get("before", ""))
+        after = str(constraint.get("after", ""))
+        condition = before in order and after in order and order.index(before) < order.index(after)
+        reporter.check(f"{fixture_id}: {before} precedes {after}", condition, "order constraint violated")
+
+
+def apply_checks(fixture: Path, mode: str, reporter: Reporter, checks: list[Check]) -> None:
+    loaded = load_fixture(fixture, mode, reporter)
+    if loaded is None:
+        return
+    transcript, expected = loaded
+    for check in checks:
+        check(reporter, fixture.name, transcript, expected)
+
+
 def assert_dispatch_fixture(
     fixture: Path,
     mode: str,
@@ -218,85 +303,9 @@ def assert_dispatch_fixture(
     *,
     check_terms: bool,
 ) -> None:
-    from . import transcript_helpers as helpers
-
-    expected_path = fixture / "expected.json"
-    transcript = transcript_for(fixture, mode)
-    if not expected_path.is_file():
-        reporter.check(f"{fixture.name}: expected.json present", False, f"missing {expected_path}")
-        return
-    if not transcript.is_file():
-        if mode == "replay":
-            print(f"  SKIP {fixture.name}: no parser-fixture.jsonl committed (run --live with L6_UPDATE_PARSER_FIXTURE=true to refresh)")
-        else:
-            reporter.check(f"{fixture.name}: transient transcript.jsonl produced by --live", False, "no transcript captured")
-        return
-
-    expected = load_expected(expected_path)
-    fixture_id = fixture.name
-    for target in string_list(expected.get("must_dispatch_to")):
-        reporter.check(
-            f"{fixture_id}: dispatched to {target}",
-            helpers.assert_dispatched_to(transcript, target),
-            f"expected dispatch to {target}, none found",
-        )
-
-    allowed = string_list(expected.get("must_dispatch_to_at_least_one_of"))
-    if "must_dispatch_to_at_least_one_of" in expected:
-        reporter.check(
-            f"{fixture_id}: dispatched to at least one of allowed set",
-            any(helpers.assert_dispatched_to(transcript, target) for target in allowed),
-            "expected dispatch to at least one allowed target",
-        )
-
-    for target in string_list(expected.get("must_not_dispatch_to")):
-        reporter.check(
-            f"{fixture_id}: never dispatched to {target}",
-            helpers.assert_not_dispatched_to(transcript, target),
-            f"{target} was dispatched but should not have been",
-        )
-
-    if expected.get("must_not_have_forbidden_spawns") is True:
-        reporter.check(
-            f"{fixture_id}: no subagent spawned an Agent()",
-            helpers.assert_no_forbidden_spawns(transcript),
-            "found subagent that spawned another Agent",
-        )
-
-    for pattern in string_list(expected.get("must_not_invoke_skill")):
-        reporter.check(
-            f"{fixture_id}: skill never invoked: {pattern} (any scope)",
-            helpers.assert_skill_not_invoked(transcript, pattern),
-            f"skill matching {pattern!r} was invoked",
-        )
-
-    if check_terms:
-        for term in string_list(expected.get("must_include_terms")):
-            reporter.check(
-                f"{fixture_id}: transcript includes term: {term}",
-                helpers.assert_transcript_contains_term(transcript, term),
-                f"expected transcript to include {term!r}",
-            )
-
-        for term in string_list(expected.get("must_not_include_terms")):
-            reporter.check(
-                f"{fixture_id}: transcript excludes term: {term}",
-                helpers.assert_transcript_not_contains_term(transcript, term),
-                f"transcript included forbidden term {term!r}",
-            )
-
-    assert_dispatch_shape(fixture_id, transcript, expected, reporter, helpers)
-
-    order = helpers.extract_dispatch_order(transcript)
-    constraints = expected.get("dispatch_order_constraints", [])
-    if isinstance(constraints, list):
-        for constraint in constraints:
-            if not isinstance(constraint, dict):
-                continue
-            before = str(constraint.get("before", ""))
-            after = str(constraint.get("after", ""))
-            condition = before in order and after in order and order.index(before) < order.index(after)
-            reporter.check(f"{fixture_id}: {before} precedes {after}", condition, "order constraint violated")
+    checks = [check_dispatch_targets, check_dispatch_shape, check_dispatch_counts, check_same_message_groups]
+    checks += [check_dispatch_flags, check_dispatch_order]
+    apply_checks(fixture, mode, reporter, [*checks, check_transcript_terms] if check_terms else checks)
 
 
 def print_fixture_heading(fixture: Path) -> None:

@@ -26,7 +26,7 @@ These are all **dispatch graph** failures. Layer 6 exists to catch them.
 | **1 — Dispatch fixtures** | Verify the orchestrator routes specific inputs to the right subagent(s) | `run-dispatch-fixtures.py` |
 | **2 — Return-format fixtures** | Verify cross-agent parsing — one agent's output is parseable by its consumer. Replay checks dispatch shape and asserts response format only on a retained real response; `--live` always asserts it | `run-return-format-fixtures.py` |
 | **3 — End-to-end fixtures** | Verify the dispatch graph for a real autopilot run has the expected shape | `run-e2e-fixtures.py` |
-| **4 — Grounding fixtures** | Verify capability citations correspond to completed tool calls | `run-grounding-fixtures.py` |
+| **4 — Grounding fixtures** | Verify capability citations correspond to completed tool calls. Replay only: the runner rejects `--live`, and `run-all-fixtures.py --live` replays this class | `run-grounding-fixtures.py` |
 
 ## Coverage matrix
 
@@ -130,6 +130,10 @@ LLM transcripts. Running `--live` writes an ignored transient
 `transcript.jsonl`, scrubs it immediately, and asserts against that live
 capture. Set `L6_UPDATE_PARSER_FIXTURE=true` with `--live` only when you
 intend to refresh the committed reduced replay fixture.
+
+A fixture with no `parser-fixture.jsonl` fails replay, and a failed live
+capture (for example, no `claude` CLI) fails the fixture instead of asserting
+an older `transcript.jsonl`.
 
 Class 2 response assertions (`response_assertions` in `expected.json`) read
 the subagent's real response text. The reducer keeps that text, redacted and
@@ -279,6 +283,16 @@ privacy scan's patterns (`tests/speckit-pro/lib/privacy_patterns.py`), and
 drops skill arguments and subagent text. Each subagent response is kept as
 its real text, redacted and capped at 8000 characters; it is never rebuilt
 from `expected.json`.
+
+### Grounding notes (Class 4)
+
+The grounding check parses the evidence note from `capability-discovery.md`:
+`Capability path: <need> -> <source>; Evidence: <citations>; Confidence:
+<high|medium|low>`. `Evidence` may hold several semicolon-separated citations.
+A tool source counts as grounded only when that tool completed without error. A
+repository-file source and a fallback disclosure have no tool call to match, so
+they are their own grounded classes. Fixtures 07 to 09 cover each class, and
+fixture 10 shows a local source does not launder a fabricated tool citation.
 
 ## Live-mode side effects (read this before running `--live`)
 

@@ -3,7 +3,9 @@
 
 from __future__ import annotations
 
+import json
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -17,7 +19,12 @@ for value in (TRANSCRIPT_LIB, SHARED_LIB):
     if str(value) not in sys.path:
         sys.path.insert(0, str(value))
 
+LAYER6 = TESTS_ROOT / "layer6-integration"
+if str(LAYER6) not in sys.path:
+    sys.path.insert(0, str(LAYER6))
+
 import transcript_helpers as helpers  # noqa: E402
+from lib import grounding_helpers as grounding  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
 
@@ -203,6 +210,36 @@ class TranscriptHelperTests(unittest.TestCase):
                 check()
 
 
+GROUNDING_NOTES = (
+    ("docs", "Capability path: docs -> repo-local fallback; Evidence: https://a.example/x; https://b.example/y; Confidence: low (why).", "grounded"),
+    ("layout", "Capability path: layout -> tests/speckit-pro/README.md; Evidence: tests/speckit-pro/README.md:3; Confidence: high (read).", "grounded"),
+    ("fallback", "Capability path: docs -> native fallback; Evidence: none usable; Confidence: medium (reason).", "grounded"),
+    ("no confidence", "Capability path: docs -> repo-local fallback; Evidence: none.", "ungrounded"),
+    ("unknown confidence", "Capability path: docs -> repo-local fallback; Evidence: none; Confidence: certain.", "ungrounded"),
+    ("no evidence", "Capability path: docs -> repo-local fallback; Confidence: low.", "ungrounded"),
+    ("tool never called", "Capability path: docs -> mcp__x__y; Evidence: e; Confidence: high.", "ungrounded"),
+)
+
+
+class GroundingHelperTests(unittest.TestCase):
+    def verdict(self, text: str) -> str:
+        event = {"type": "assistant", "message": {"role": "assistant", "content": [{"type": "text", "text": text}]}}
+        with tempfile.TemporaryDirectory() as temporary:
+            transcript = Path(temporary) / "transcript.jsonl"
+            transcript.write_text(json.dumps(event) + "\n", encoding="utf-8")
+            return grounding.grounding_verdict(transcript)
+
+    def test_verdict_follows_the_documented_note_segments(self) -> None:
+        verdicts = [self.verdict(note) for _label, note, _wanted in GROUNDING_NOTES]
+        self.assertEqual(verdicts, [wanted for _label, _note, wanted in GROUNDING_NOTES])
+
+    def test_source_kind_separates_tool_local_and_fallback_sources(self) -> None:
+        sources = ["mcp__x__y", "ToolSearch", "README.md", "tests/speckit-pro/README.md", "repo-local fallback", "Native Fallback"]
+        kinds = [grounding.source_kind(source) for source in sources]
+        self.assertEqual(kinds, ["tool", "tool", "local", "local", "fallback", "fallback"])
+
+
 if __name__ == "__main__":
     suite = unittest.defaultTestLoader.loadTestsFromTestCase(TranscriptHelperTests)
+    suite.addTests(unittest.defaultTestLoader.loadTestsFromTestCase(GroundingHelperTests))
     raise SystemExit(run_counted(suite, label="test-transcript-helpers"))
