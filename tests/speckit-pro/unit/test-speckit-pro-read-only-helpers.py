@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import functools
 import hashlib
 import json
 import os
@@ -250,8 +251,7 @@ def runner_env() -> dict[str, str]:
     return runner_invocation.runner_env(defaults=RUNNER_ENV_DEFAULTS)
 
 
-def run_runner(request: object, extra_env: dict[str, str] | None = None, *, cwd: Path = REPO_ROOT):
-    return runner_invocation.run_runner(request, cwd=cwd, extra_env=extra_env, env_defaults=RUNNER_ENV_DEFAULTS)
+run_runner = functools.partial(runner_invocation.run_runner, env_defaults=RUNNER_ENV_DEFAULTS)
 
 
 def helper_request(helper_id: str, inputs: dict[str, object] | None = None) -> dict[str, object]:
@@ -4336,7 +4336,7 @@ class ReadOnlyHelperTests(_ReadOnlyHelperRunner, unittest.TestCase):
                     with tempfile.TemporaryDirectory(prefix="research-preflight-home-") as home:
                         completed, response, stderr_records = run_runner(
                             helper_request(helper_id, HELPER_CASES[helper_id]),
-                            {
+                            extra_env={
                                 "HOME": home,
                                 "EVALUATE_BIN": "",
                                 "JEV_API_KEY_FILE": "",
@@ -4393,7 +4393,7 @@ class ReadOnlyHelperTests(_ReadOnlyHelperRunner, unittest.TestCase):
                             (root / "specs" / name / "spec.md").write_text("# spec\n", encoding="utf-8")
                         completed, response, stderr_records = run_runner(
                             helper_request(helper_id, HELPER_CASES[helper_id]),
-                            {"PATH": str(root / "empty-path")},
+                            extra_env={"PATH": str(root / "empty-path")},
                             cwd=root,
                         )
                     data = response["data"]
