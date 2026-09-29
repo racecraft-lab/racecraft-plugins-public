@@ -1,0 +1,51 @@
+# Layering rules for `ripwire . --arch=.ripwire_arch_rules`.
+# They describe the INTENDED structure. Current violations live in
+# .ripwire_arch_baseline; only new ones fail. Update the baseline in its own
+# reviewed commit (`--baseline-update`), never to hide a new edge.
+# Layers match by substring of the root-relative path; the first match wins,
+# so narrower layers come before the broader ones that contain them.
+
+# Runner composition root: the only place that wires gates and helpers together.
+layer entry = speckit_pro_runner/runtime.py speckit_pro_runner/__main__.py
+# Runner subpackages.
+layer formal = speckit_pro_runner/formal/
+layer gates = speckit_pro_runner/gates/
+layer helpers = speckit_pro_runner/helpers/
+# Runner core modules: envelope, path_utils, execution_control, brokers, and so on.
+layer core = speckit_pro_runner/
+# Other shipped code and repo-level code.
+layer plugin_scripts = speckit-pro/scripts/
+layer repo_scripts = scripts/
+layer tests = tests/
+
+# Shipped code never imports tests or repo-level scripts (constitution II).
+# Limit: ripwire resolves package-relative and same-directory imports only. A
+# sys.path style import across these directories is invisible to it, so these
+# rules catch relative or dotted edges, not every possible coupling.
+deny core -> tests
+deny formal -> tests
+deny gates -> tests
+deny helpers -> tests
+deny entry -> tests
+deny plugin_scripts -> tests
+deny core -> repo_scripts
+deny formal -> repo_scripts
+deny gates -> repo_scripts
+deny helpers -> repo_scripts
+deny entry -> repo_scripts
+deny plugin_scripts -> repo_scripts
+# Repo scripts never import tests.
+deny repo_scripts -> tests
+
+# Handlers and gates sit above core, and only the entry module composes them.
+deny core -> helpers
+deny core -> gates
+# The formal package is self-contained: no reach into handlers or gates.
+deny formal -> helpers
+deny formal -> gates
+# Helpers and gates do not depend on each other's registries upward.
+deny helpers -> gates
+deny helpers -> entry
+deny gates -> entry
+deny core -> entry
+deny formal -> entry
