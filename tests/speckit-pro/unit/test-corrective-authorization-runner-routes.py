@@ -141,20 +141,8 @@ class CorrectiveAuthorizationReplayTests(unittest.TestCase):
         self.ledger = ledger
         self.ledger_path = self.root / data["ledger_path"]
 
-    def test_fixture_scenarios_replay_against_the_shipped_runner(self) -> None:
-        for name in SCENARIOS:
-            scenario = json.loads((FIXTURE_ROOT / name).read_text(encoding="utf-8"))
-            self.assertEqual(scenario["schema"], "corrective-authorization-replay/v1")
-            self.reset_repository()
-            for step in scenario["steps"]:
-                with self.subTest(scenario=name, step=step["id"]):
-                    if "place_spec" in step:
-                        self.place_spec(step["place_spec"])
-                    else:
-                        self.check_step(step)
-
-    def test_test_runner_output_lets_a_converging_correction_continue_its_family(self) -> None:
-        for name in CONVERGENCE_SCENARIOS:
+    def replay(self, names: tuple[str, ...]) -> None:
+        for name in names:
             scenario = json.loads((FIXTURE_ROOT / name).read_text(encoding="utf-8"))
             self.assertEqual(scenario["schema"], "corrective-authorization-replay/v1")
             self.reset_repository()
@@ -166,6 +154,12 @@ class CorrectiveAuthorizationReplayTests(unittest.TestCase):
                         self.place_check(step["place_check"])
                     else:
                         self.check_step(step)
+
+    def test_fixture_scenarios_replay_against_the_shipped_runner(self) -> None:
+        self.replay(SCENARIOS)
+
+    def test_test_runner_output_lets_a_converging_correction_continue_its_family(self) -> None:
+        self.replay(CONVERGENCE_SCENARIOS)
 
     def test_each_scenario_refuses_a_replayed_or_second_approval(self) -> None:
         for name in SCENARIOS:
