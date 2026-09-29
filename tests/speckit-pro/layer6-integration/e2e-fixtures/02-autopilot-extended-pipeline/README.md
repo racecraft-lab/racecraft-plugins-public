@@ -18,7 +18,7 @@ That order maps to:
 
 The fixture uses **manual dispatch** (the prompt explicitly tells the
 orchestrator which agent to dispatch for each phase) rather than
-invoking `/speckit-pro:autopilot` end-to-end. This avoids the autopilot
+invoking `/speckit-pro:speckit-autopilot` end-to-end. This avoids the autopilot
 skill's Step 0 preflight, which expects a workflow file and writes
 real artifacts. The dispatch-graph properties under test are
 identical either way.

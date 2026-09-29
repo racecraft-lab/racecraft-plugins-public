@@ -27,17 +27,23 @@ Runtime hook configuration surfaces and source boundaries.
 
 ### Claude Code Hooks
 
-- **Purpose:** Documents Claude Code lifecycle hooks that enforce feedback-sweep isolation.
+- **Purpose:** Documents the Claude Code lifecycle hooks the plugin declares.
 - **Classification:** `source`
-- **Platform concept:** Feedback-sweep lifecycle enforcement
-- **Claude Code:** SessionStart, PreToolUse, and SubagentStop hooks in speckit-pro/hooks/hooks.json
+- **Platform concept:** Plugin lifecycle hook inventory
+- **Claude Code:** SessionStart, PreToolUse, SubagentStop, Stop hooks in speckit-pro/hooks/hooks.json
 - **Codex:** Codex hook inventory is documented separately.
 - **Runtime difference:** Claude Code uses the plugin hook configuration under hooks/hooks.json.
 
 #### Source Facts
 
-- Claude Code hook events: SessionStart, PreToolUse, SubagentStop, Stop. Source refs: `speckit-pro/hooks/hooks.json`.
-- Four command handlers attest the sweep boundary, authorize Agent and broker dispatch, and validate sweep-subagent stops. Source refs: `speckit-pro/hooks/hooks.json`.
+- Hook events: SessionStart, PreToolUse, SubagentStop, Stop. Source refs: `speckit-pro/hooks/hooks.json`.
+- 6 command handlers are declared. Source refs: `speckit-pro/hooks/hooks.json`.
+- SessionStart (matcher `startup|resume|clear|compact`) runs `sweep-isolation-hook.py attest`. Source refs: `speckit-pro/hooks/hooks.json`.
+- PreToolUse (matcher `Agent`) runs `sweep-isolation-hook.py pre-dispatch`. Source refs: `speckit-pro/hooks/hooks.json`.
+- PreToolUse (matcher `mcp__plugin_speckit-pro_sweep-broker__.*`) runs `sweep-isolation-hook.py authorize-broker`. Source refs: `speckit-pro/hooks/hooks.json`.
+- PreToolUse (matcher `Bash`) runs `workflow-guard-hook.py lockfile`. Source refs: `speckit-pro/hooks/hooks.json`.
+- SubagentStop (matcher `sweep-classifier|sweep-analyst`) runs `sweep-isolation-hook.py validate-stop`. Source refs: `speckit-pro/hooks/hooks.json`.
+- Stop runs `workflow-guard-hook.py unpushed`. Source refs: `speckit-pro/hooks/hooks.json`.
 
 #### Sources
 
@@ -45,22 +51,25 @@ Runtime hook configuration surfaces and source boundaries.
 
 #### Inferred Notes
 
-- This reference treats hook files as configuration inventory only; DOC-007 does not change hook behavior.
+- This reference treats hook files as configuration inventory only; it does not describe hook behavior.
   - Based on: `speckit-pro/hooks/hooks.json`
 
 ### Codex Hooks
 
-- **Purpose:** Documents the current Codex plugin hook inventory.
+- **Purpose:** Documents the Codex plugin hooks the plugin declares.
 - **Classification:** `source`
-- **Platform concept:** Codex plugin hook inventory
+- **Platform concept:** Plugin lifecycle hook inventory
 - **Claude Code:** Claude Code lifecycle hooks are documented separately.
-- **Codex:** UserPromptSubmit hook in speckit-pro/codex-hooks.json
+- **Codex:** UserPromptSubmit, PreToolUse, Stop hooks in speckit-pro/codex-hooks.json
 - **Runtime difference:** Codex uses the root codex-hooks.json plugin configuration.
 
 #### Source Facts
 
-- Codex hook events: UserPromptSubmit, PreToolUse, Stop. Source refs: `speckit-pro/codex-hooks.json`.
-- The declared Codex UserPromptSubmit matcher group contains no hook handlers and executes no command. Source refs: `speckit-pro/codex-hooks.json`.
+- Hook events: UserPromptSubmit, PreToolUse, Stop. Source refs: `speckit-pro/codex-hooks.json`.
+- 2 command handlers are declared. Source refs: `speckit-pro/codex-hooks.json`.
+- UserPromptSubmit declares no command handlers and executes no command. Source refs: `speckit-pro/codex-hooks.json`.
+- PreToolUse (matcher `Bash`) runs `workflow-guard-hook.py lockfile`. Source refs: `speckit-pro/codex-hooks.json`.
+- Stop runs `workflow-guard-hook.py unpushed`. Source refs: `speckit-pro/codex-hooks.json`.
 
 #### Sources
 
