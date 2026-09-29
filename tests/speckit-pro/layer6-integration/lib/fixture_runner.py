@@ -186,6 +186,14 @@ def assert_dispatch_shape(
             f"found a dispatch without isolation {isolation!r}",
         )
 
+    if "forbidden_isolation" in expected:
+        isolation = str(expected["forbidden_isolation"])
+        reporter.check(
+            f"{fixture_id}: no dispatch uses isolation {isolation}",
+            helpers.assert_no_dispatch_isolation(transcript, isolation),
+            f"found a dispatch with isolation {isolation!r}",
+        )
+
 
 def assert_dispatch_fixture(
     fixture: Path,

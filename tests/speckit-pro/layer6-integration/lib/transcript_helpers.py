@@ -96,13 +96,17 @@ def largest_same_message_dispatch_group(transcript: str | Path, subagent_type: s
     return max(counts.values(), default=0)
 
 
-def _every_dispatch_has(transcript: str | Path, field: str, value: object) -> bool:
+def _every_dispatch_has(transcript: str | Path, field: str, value: object, *, equal: bool = True) -> bool:
     dispatches = extract_orchestrator_dispatches(transcript)
-    return bool(dispatches) and all(item.get(field) == value for item in dispatches)
+    return bool(dispatches) and all((item.get(field) == value) is equal for item in dispatches)
 
 
 def assert_all_dispatches_background(transcript: str | Path) -> bool:
     return _every_dispatch_has(transcript, "run_in_background", True)
+
+
+def assert_no_dispatch_isolation(transcript: str | Path, isolation: str) -> bool:
+    return _every_dispatch_has(transcript, "isolation", isolation, equal=False)
 
 
 def assert_all_dispatches_isolated(transcript: str | Path, isolation: str) -> bool:

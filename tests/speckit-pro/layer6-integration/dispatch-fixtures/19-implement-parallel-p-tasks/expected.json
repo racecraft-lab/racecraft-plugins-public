@@ -23,5 +23,5 @@
     }
   ],
   "must_run_in_background": true,
-  "required_isolation": "worktree"
+  "forbidden_isolation": "worktree"
 }

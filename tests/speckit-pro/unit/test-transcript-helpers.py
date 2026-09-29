@@ -227,6 +227,9 @@ class TranscriptHelperTests(unittest.TestCase):
         self.assertTrue(helpers.assert_all_dispatches_background(self.fixture("serial-dispatch.jsonl")))
         self.assertFalse(helpers.assert_all_dispatches_isolated(self.fixture("foreground-dispatch.jsonl"), "worktree"))
         self.assertTrue(helpers.assert_all_dispatches_isolated(self.fixture("serial-dispatch.jsonl"), "worktree"))
+        worktree = self.fixture("worktree-isolated-dispatch.jsonl")
+        self.assertFalse(helpers.assert_no_dispatch_isolation(worktree, "worktree"))
+        self.assertTrue(helpers.assert_no_dispatch_isolation(self.fixture("foreground-dispatch.jsonl"), "worktree"))
 
 
 if __name__ == "__main__":

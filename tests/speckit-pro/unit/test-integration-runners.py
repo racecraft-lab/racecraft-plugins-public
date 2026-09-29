@@ -289,6 +289,19 @@ class Layer6RunnerTests(unittest.TestCase):
                     failing = self.replay_reporter(case)
                     self.assertLess(failing.passed, failing.total, f"{name} accepted {transcript}")
 
+    def test_fixture_19_rejects_worktree_isolated_phase_7_workers(self) -> None:
+        fixture = LAYER6 / "dispatch-fixtures" / "19-implement-parallel-p-tasks"
+        expected = json.loads((fixture / "expected.json").read_text(encoding="utf-8"))
+        self.assertEqual(expected.get("forbidden_isolation"), "worktree")
+        self.assertNotIn("required_isolation", expected)
+        source = LAYER6 / "test-fixtures" / "worktree-isolated-dispatch.jsonl"
+        with tempfile.TemporaryDirectory() as temporary:
+            case = self.broken_case(Path(temporary), "19-worktree-isolated", source, expected)
+            failing = self.replay_reporter(case)
+        self.assertLess(failing.passed, failing.total)
+        clean = self.replay_reporter(fixture)
+        self.assertEqual(clean.passed, clean.total)
+
     def test_fixture_21_caps_dispatches_at_the_per_file_partition(self) -> None:
         expected = json.loads(
             (LAYER6 / "dispatch-fixtures" / "21-resolve-pr-parallel-files" / "expected.json").read_text(encoding="utf-8")

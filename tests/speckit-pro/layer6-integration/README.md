@@ -177,6 +177,7 @@ python3 tests/speckit-pro/layer6-integration/run-all-fixtures.py --live
   "same_message_dispatch_groups": [{ "subagent_type": "...", "size": 3 }],
   "must_run_in_background": true,   // every dispatch sets run_in_background: true
   "required_isolation": "worktree", // every dispatch sets this isolation value
+  "forbidden_isolation": "worktree", // no dispatch sets this isolation value
   "dispatch_order_constraints": [
     { "before": "...", "after": "...", "reason": "..." }
   ],
