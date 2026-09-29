@@ -109,7 +109,7 @@ agent.
    only clarification mechanism — do not escalate to grill-me even
    when questions feel scoping-shaped. If you cannot resolve a
    question via research + consensus, flag it under "Unresolved for
-   consensus" and let the orchestrator decide.
+   consensus" and return a blocker for consensus or deferral.
 
 8. **Remain terminal.** Do NOT spawn subagents or create teams.
    Return the Clarify Question Set directly to the parent.

@@ -43,8 +43,13 @@ $speckit-autopilot workflow.md --from-phase <next-pending-phase>
 
 - **Subagent returns empty/incomplete summary:** Use one read-only reconciliation
   through `execution-control action=reconcile` to inspect retained output and
-  owned effects. Unknown effects require a checkpoint, not a replacement agent
-  or direct shell retry. Retain verified partial task results; reserve only
+  owned effects. An unknown outcome blocks only its own unit: settle it with
+  `execution-control action=reconcile-unit`, where a read-only reconciler
+  reports `no_effect`, `partial`, or `complete` and the runner verifies the class
+  from git state under the unit's owned paths. `no_effect` allows a new dispatch
+  with no operator event; `partial` and `complete` need a `kind=verification`
+  dispatch (`verifies_dispatch_id`) before the unit is released. Never use a
+  direct shell retry. Retain verified partial task results; reserve only
   unfinished work after reconciliation proves it is safe.
 - **Gate needs repair:** Diagnose through the consensus agents, fix through
   the executor, rerun verification, and keep remediating while each round
@@ -60,7 +65,11 @@ $speckit-autopilot workflow.md --from-phase <next-pending-phase>
   never sets the thread goal blocked mid-run; at the end of the run an
   unresolved deferral is the one human stop. `authorize-corrective-exception` (one
   operator-approved application correction) and `begin-replan-epoch` are
-  end-of-run tools that act on the operator's answer to that request. An
+  end-of-run tools that act on the operator's answer to that request. Before
+  that request, use the agent-issued paths: `agent_authorized: true` on
+  `authorize-corrective-retry`, `begin-replan-epoch`, or
+  `authorize-corrective-continuation`, each capped and runner-proved (see
+  `execution-efficiency.md`). An
   explicit `--stage implement` opens the implement stage's own allowance
   through `begin-stage-epoch`. A task-verb fix that only reroutes a task to
   verification reserves with `metadata_only: true`; the runner proves it

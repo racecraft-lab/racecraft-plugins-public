@@ -3781,7 +3781,7 @@
             "Verifies the live branch from WORKFLOW_ROOT before Archive Sweep and stops on main, a detached HEAD, or a protected branch",
             "Treats the explicitly supplied absolute path that resolved to relation=external in a registered same-repository worktree as executable in the same Codex task, binding WORKFLOW_ROOT to /external/spec and keeping TASK_ROOT as discovery context",
             "Runs every shell, helper, file, Git, and state operation from WORKFLOW_ROOT with the exact absolute workflow file and original stage flags, and re-runs resolve-workflow-binding from WORKFLOW_ROOT, requiring relation=same, on resume and before any write-capable dispatch",
-            "Does not treat the binding as a filesystem grant: a real sandbox denial goes through the normal permission mechanism and stops naming the denied path and operation",
+            "Does not treat the binding as a filesystem grant: it probes the external root for write access before any phase work, and a real sandbox denial goes into the single run-start request naming the denied path and operation",
             "Does not copy, reconstruct, or search revisions for the workflow",
             "Still stops before Archive Sweep when the external target is implicit, relative, inferred from repository content, or ambiguous"
           ],
@@ -4359,7 +4359,7 @@
             "Verifies the live branch from WORKFLOW_ROOT before Archive Sweep and stops on main, a detached HEAD, or a protected branch",
             "Treats the explicitly supplied absolute path that resolved to relation=external in a registered same-repository worktree as executable in the same Codex task, binding WORKFLOW_ROOT to /external/spec and keeping TASK_ROOT as discovery context",
             "Runs every shell, helper, file, Git, and state operation from WORKFLOW_ROOT with the exact absolute workflow file and original stage flags, and re-runs resolve-workflow-binding from WORKFLOW_ROOT, requiring relation=same, on resume and before any write-capable dispatch",
-            "Does not treat the binding as a filesystem grant: a real sandbox denial goes through the normal permission mechanism and stops naming the denied path and operation",
+            "Does not treat the binding as a filesystem grant: it probes the external root for write access before any phase work, and a real sandbox denial goes into the single run-start request naming the denied path and operation",
             "Does not copy, reconstruct, or search revisions for the workflow",
             "Still stops before Archive Sweep when the external target is implicit, relative, inferred from repository content, or ambiguous"
           ],

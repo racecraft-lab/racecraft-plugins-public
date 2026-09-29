@@ -63,7 +63,7 @@ exercise:
 
 | Fixture | Scenario |
 |---|---|
-| 17 | Phase-executor returns error → orchestrator does not retry blindly, does not escalate to grill-me |
+| 17 | Phase-executor returns error → orchestrator does not retry blindly, does not escalate to grill-me, and defers an unresolved blocker instead of stopping |
 
 ### Cross-agent parsing (Class 2, fixtures 01–08)
 

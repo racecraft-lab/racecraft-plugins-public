@@ -1,6 +1,6 @@
 # Prerequisites Reference — Codex
 
-The Codex autopilot's pre-flight sequence. Run these before Step 1 (Parse Workflow State) and before any phase work. If any check fails, STOP with the error message from the script's JSON output.
+The Codex autopilot's pre-flight sequence. Run these before Step 1 (Parse Workflow State) and before any phase work. If any check fails, report the error message from the script's JSON output and route the failure to its owner for repair: the orchestrator repairs a fixable environment check, and the implement-executor repairs a failing project check. Run the repair loop within its allowance, then defer per the Failure Escalation Protocol.
 
 This is the Codex-specific mirror of `../../skills/speckit-autopilot/references/prerequisites.md`. Same checks, Codex-specific primitives (`update_plan`, `autopilot-state.json`, `spawn_agent`, `.codex/agents/`).
 
@@ -13,6 +13,7 @@ authoring to remain pending until Plan. Existing-file/tool setup gaps block;
 checking never installs a runtime implicitly.
 
 - [Workflow Worktree Binding](#workflow-worktree-binding) — bind one safe execution worktree before any phase work
+- [Step -2: Run-Start Authorization](#step--2-run-start-authorization) — settle egress, probes, and private writes once, before any phase work
 - [Step -1: Archive Sweep Startup](#step--1-archive-sweep-startup) — archive previously merged specs before workflow execution
 - [Step 0.0: Resolve Script Paths](#step-00-resolve-script-paths) — locate the plugin's `SKILL_SCRIPTS` directory
 - [Step 0.0b: Research Broker Preflight](#00b-research-broker-preflight) — confirm typesafe-jev is installed and record the research screening mode
@@ -50,10 +51,10 @@ checkout.
    those external cases. Preserve the original `TASK_ROOT` as discovery context.
 4. An explicitly selected `relation=external` binds execution to the returned
    `WORKFLOW_ROOT`; it does not move the Codex task or grant filesystem access.
-   Check each required operation from that root. If a real sandbox denial occurs,
-   use the normal permission mechanism for that operation and STOP with the
-   denied path and operation if access remains unavailable. Do not claim a
-   binding failure merely because `WORKFLOW_ROOT` is outside `TASK_ROOT`.
+   Step -2 probes that root for write access before any phase work, so
+   a real sandbox denial is settled in its one run-start request and never first
+   appears mid-run. Do not claim a binding failure merely because `WORKFLOW_ROOT` is
+   outside `TASK_ROOT`.
 5. From `WORKFLOW_ROOT`, verify the live branch before Archive Sweep. STOP on
    `main`, a detached HEAD, or any protected integration/release branch; never
    reinterpret `TASK_ROOT` as a safer mutation target.
@@ -84,6 +85,61 @@ checkout.
 bound. Never copy, move, check out, rebase, or reconstruct the workflow to make
 the invocation checkout pass. Never execute a workflow from one worktree while
 phase commands, agents, gates, state, or commits target another.
+
+## Step -2: Run-Start Authorization
+
+Settle every permission, egress, and private write the run-start inventory can
+know, once, before any phase work. Run it right after the binding guard, before
+Archive Sweep and Step 0, on every start and every resume: a new thread or
+worktree root changes the sandbox. Once it completes, no permission or egress
+prompt can stop the run midway. Tool installs are settled the same way by the
+one-time Step 0.11 question. The contract is in
+[Run-start grants](../../../skills/speckit-autopilot/references/stop-policy.md#run-start-grants).
+
+1. **Derive the classes.** Run read-only `detect-commands` for the project
+   commands. Run read-only `check-gate-preflight-coverage` with `repo_root` set to
+   `WORKFLOW_ROOT`, every gate the run-start record can know as `gates` (the
+   G-gates and each populated `PROJECT_COMMANDS` slot, each with its exact
+   `command` and `needs`), an empty `inventory_actions`, `writable_roots` set to the
+   thread's current writable roots, and `write_paths` set to `[WORKFLOW_ROOT]`
+   when the binding relation is `external`. Its `policy_classes` are the gate
+   egress needs, including each declared pre-PR audit. Its `missing` also names
+   the private autonomy-record directory and an external workflow root when
+   either lies outside the writable roots. Phase 6.5 adds only what the ratified
+   plan newly names, such as a live evaluation.
+2. **Check the standing policy.** Run `render-egress-authorization` with
+   `scope=standing`, the repository, its default branch, the user-level Codex
+   config's `auto_review.extra_policy` as `installed_extra_policy` (read it,
+   never write it), and step 1's `policy_classes` verbatim as `derived_classes`.
+   `installed=false` means the policy was never installed or a new gate need
+   changed its text. Either way the install text is the helper's
+   `extra_policy_fragment`.
+3. **Probe every class before Phase 1.** Run each `policy_classes` entry's `probe`
+   from the standing result. A base class's probe sends no repository content. A
+   derived class's probe is its gate command run once, and the reviewer's outcome
+   on that run is the answer. Also probe each write surface: create and remove an empty file directly under an
+   external `WORKFLOW_ROOT`, and create
+   `<git-common-dir>/speckit-pro/autonomy-boundary/` with mode `0700`, then create and
+   remove an empty file in it. That directory is where the private autonomy record
+   lives, and in a linked worktree it sits outside the worktree root. A probe the
+   sandbox or the approval reviewer denies or prompts on marks that class or path
+   `uncovered`. A denied probe is never retried through another tool, path, or
+   wrapper: bypassing a veto is `stop_reason:veto_bypass`, and that authority stays
+   with the human.
+4. **Ask once.** When `installed` is false, a probe is `uncovered`, or `missing` is
+   not empty, print one plain-text run-start request before Phase 1, never as a goal
+   edit. It carries the standing install text once; the paste-ready authorization
+   message from `render-egress-authorization` (run scope), listing each uncovered
+   class as an action, with the helper's `delivery` line; and each path the operator
+   must add to the writable roots. The run starts when the operator's reply lands in
+   this thread. That reply is `explicit_user` evidence for the classes it names, and
+   this is the only wait: nothing it covers is asked again. An item the reply leaves
+   uncovered is `operator_action_required`: defer its task and dependents, and list
+   it in the one end-of-run request. When every probe passes and `installed` is
+   true, ask nothing and print a one-line Step -2 result.
+5. **Carry it forward.** Keep the class ids, probe outcomes, `standing_policy_sha256`,
+   and the reply for Phase 6.5. It cites them as each action's `authorization.evidence`
+   and inventories the private-record write as an `outside_writable_roots` action.
 
 ## Step -1: Archive Sweep Startup
 
@@ -121,10 +177,10 @@ to archive previously merged specs.
    fails, or the Codex-native worktree binding cannot provide the required
    paths, treat the installed extension as broken. Record `status=blocked`,
    `invocation_available=false` or `prerequisite_available=false` as
-   applicable, and `safeToApplyCleanup=false` under `archive_sweep`. Then STOP
-   before Phase 0 with the exact failed path or operation. Do not substitute a
-   manual `specs/` inventory, mark the Archive Sweep plan item completed, or
-   advance Phase 0.
+   applicable, and `safeToApplyCleanup=false` under `archive_sweep`. Then
+   defer the Archive Sweep with the exact failed path or operation and continue to Phase 0,
+   listing the repair guidance under "Decisions for you". Do not substitute a
+   manual `specs/` inventory or mark the Archive Sweep plan item completed.
 
 5. After the command and prerequisite pass, invoke the read-only runner helper
    `list-archive-candidates` with the current target as
@@ -153,7 +209,8 @@ to archive previously merged specs.
    ignored the union: treat that run as failed, and do not commit the agent
    context change.
    If a run fails, record `status=blocked` with that spec and the command's
-   error under `archive_sweep`, then STOP before Phase 0.
+   error under `archive_sweep`. Retry the failed archive run once, then
+   defer the Archive Sweep the same way and continue to Phase 0.
 
    **`main`, a release branch, or any protected integration branch** (dry-run
    only): do not follow the command contract, because every archive run
@@ -188,7 +245,7 @@ install or vendor `racecraft-lab/spec-kit-archive` for archive-aware cleanup.
 ## Step 0: Prerequisites
 
 Run the prerequisite scripts to verify the environment. If any
-check fails, STOP with the error message from the JSON output.
+check fails, report the error message from the JSON output and route the failure to its owner for repair: the orchestrator repairs a fixable environment check, and the implement-executor repairs a failing project check. Run the repair loop within its allowance, then defer per the Failure Escalation Protocol.
 
 ### 0.0 Resolve Script Paths
 
@@ -250,7 +307,9 @@ Run the prerequisites check script:
 ```
 
 Parse the JSON result:
-- `all_pass`: if `false`, report each failed check's `message` and STOP
+- `all_pass`: if `false`, route each failed check's `message` to its owner: the orchestrator repairs a fixable check
+  (a missing workflow directory, a stale binding), and the implement-executor repairs a failing project check; rerun the helper,
+  then defer per the Failure Escalation Protocol when repair fails
 - `branch`: current git branch name
 - `on_feature_branch`: if `true`, Specify must skip branch creation
 - `is_worktree`: if `true`, already in an isolated worktree
@@ -262,7 +321,7 @@ workflow file's `Branch` field. Warn if they don't match.
 
 Read the project-level settings file if it exists (`.claude/speckit-pro.local.md` for Claude Code, or the equivalent Codex project config). Parse YAML
 frontmatter for: `consensus-mode` (default: `moderate`),
-`gate-failure` (default: `stop`), `auto-commit` (default:
+`gate-failure` (default: `defer`), `auto-commit` (default:
 `per-phase`), `security-keywords` (default: standard list).
 If the file doesn't exist, use all defaults.
 
@@ -320,7 +379,8 @@ nonzero exit here is a branch, not a stop: do not stop because the probe
 exited nonzero. When the list is empty, continue. When it holds `current execution boundary
 does not match the persisted execution boundary`, or any other stale-record
 error above, rerun the complete Phase 6.5 preflight against the live boundary
-now, applying its standing policy coverage. A covered inventory asks no
+now, applying its standing policy coverage (rerun the standing check with Step
+-2's `derived_classes`). A covered inventory asks no
 question, including a planning-to-implementation stage change such as an
 explicit `--stage implement` run of a plan whose earlier record covered only
 planning: record the coverage and proceed. An uncovered action is deferred to
@@ -349,8 +409,10 @@ Read the workflow file's Prerequisites table. If already
    as `deferred`, `DEPENDENCY_RULES` as a real blocking run,
    `DEPENDENCY_AUDIT` as a real blocking run only when opted in
 4. Update the workflow file's table with results and baselines
-5. If any check or populated blocking gate fails, STOP — do not proceed
-   to Phase 1
+5. If any check or populated blocking gate fails, route the failing check to the implement-executor, which repairs it
+   (a red baseline included). Rerun the check, and
+   run the repair loop within its allowance, then defer per the Failure Escalation Protocol with `stop_reason:all_tiers_failed`.
+   Phase 1 starts once the check passes, or once the failure is deferred with its evidence.
 
 ### 0.10 Codex Agent Availability Check
 
@@ -542,40 +604,29 @@ warning to note and move past. The final table shows the
 `COMPLEXITY` baseline next to the diff result so the delta is
 visible.
 
-**Missing tool, one question per tool per repository.** For each
+**Missing tool: default to the recorded install hint, then `skip (spec)`.** For each
 populated slot with `tool_present: false`,
 look for a recorded answer for that tool: first `skips` in `.specify/quality-gates.json`,
 then the workflow file's Quality Gates table, then (only while no
 `quality-gates.json` exists yet) a `skip (repo)` row for the same
-tool in any other `docs/ai/specs/.process/*-workflow.md`. If none
-exists, ask once
-with `request_user_input` (free-text fallback when the picker is
-absent, same rule as grill-me):
+tool in any other `docs/ai/specs/.process/*-workflow.md`. A recorded
+answer wins. If none exists, the run never asks: tool installs are
+granted once in the run-start authorization
+(`../../../skills/speckit-autopilot/references/stop-policy.md`), so default to the recorded install hint,
+then `skip (spec)`. Record the outcome in the Quality Gates table before continuing:
 
-```text
-<tool> is not installed, but this repository configures the
-<slot> gate (signal: <signal>). Install it, skip it for this
-spec, or skip it for this repository?
-  1. Install (<install>)   2. Skip this spec   3. Skip this repo
-```
-
-Record the answer in the Quality Gates table before continuing:
-
-- `install`: carry out the install hint. Run its commands, and add
+- `install` (the default): carry out the install hint. Run its commands, and add
   any tool it names as a project dev dependency with the project's
   own package manager. Then re-run `detect-commands` and require
-  `tool_present: true`. If it is still false, STOP.
-- `skip (spec)`: the slot is `"N/A"` for this workflow only.
-- `skip (repo)`: the durable record is a `skips` entry in
-  `.specify/quality-gates.json`, written by the operator through
-  the coach flow, never by an agent. Record `skip (repo)` in the
-  table, point the operator at the coach flow, and continue with
-  the slot as `"N/A"`.
-
-When no interactive runtime is available, record `unanswered`
-for the tool, then STOP naming the tool and the three options;
-a resume after the operator edits the table proceeds from the
-recorded answer.
+  `tool_present: true`. If it is still false, or the install fails,
+  record `skip (spec)` with the failing command and its output, and continue.
+- `skip (spec)`: the slot is `"N/A"` for this workflow only. List it
+  under "Decisions for you" with the tool, the slot, and the install
+  hint that failed.
+- `skip (repo)`: only ever a recorded operator answer. The durable
+  record is a `skips` entry in `.specify/quality-gates.json`, written by
+  the operator through the coach flow, never by an agent. When a row
+  already records `skip (repo)`, continue with the slot as `"N/A"`.
 
 ### Workflow guards
 

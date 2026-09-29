@@ -50,6 +50,9 @@ phase in the **resolved stage's** range (`AUTOPILOT_STAGE`, set at Step
 0.6c). A `--stage plan` run finishes its work after the confidence gate.
 A `full` run completes all 7 phases.
 
+When a run may involve a human, and which reasons count, is set by the shared
+[Autopilot Stop Policy](./references/stop-policy.md).
+
 **Neither is a status summary a stopping point.** Reporting progress to the
 operator is not a step in the workflow: when a phase still has work, the next
 dispatch goes in the same turn as the report. Ending a turn with no dispatch
@@ -89,8 +92,9 @@ availability list and does not replace runtime capability discovery.
 
 Skill `allowed-tools` pre-approves the listed core primitives; it is not
 capability discovery. Runner calls still follow the session's permissions, so
-an unattended run must prepare them before launch. See the plugin agent caveat
-in Step 0 and
+the Step -2 run-start permission probe checks them once, before any phase work,
+and stops with the exact allow rule if a call prompts or is denied. See the
+plugin agent caveat in Step 0 and
 [`references/plugin-limitations.md`](./references/plugin-limitations.md).
 
 ## Prerequisites — Model
@@ -106,8 +110,7 @@ into expensive rework.
 **Before executing any step**, verify:
 
 1. **Model:** run on the operator's strongest available tier. If the
-   session reports a small-tier model, stop and ask the operator to
-   switch models and re-run.
+   session does not report the strongest tier, warn the operator once and route gate and consensus dispatches to the strongest available tier.
 
 **Reasoning effort is inherited, never checked.** Run at whatever the
 operator has set for the session and do not stop, warn, or ask them to
@@ -311,6 +314,11 @@ path/to/workflow-file.md [--from-phase specify|clarify|plan|checklist|tasks|anal
 Step 0.6c resolves the stage from the workflow file's own status table.
 Argument order is presentation only — every argument is read by name.
 
+Before anything else, run the Step -2 run-start permission probe in
+[`references/prerequisites.md`](./references/prerequisites.md#step--2-run-start-permission-probe):
+one no-op runner request and one `git status`. If either prompts or is denied,
+print the exact allow rule and stop once, before any phase work.
+
 Before Step -1, use the read-only `resolve-workflow-binding` runner helper to
 verify that Claude Code's live checkout already owns the workflow. Continue
 only for `binding_status=resolved` with `relation=same`. If scaffold was run
@@ -320,7 +328,7 @@ the workflow's worktree from the parent checkout.
 
 ## Step -1 + Step 0: Pre-flight (Archive Sweep + Prerequisites)
 
-Run the pre-flight sequence before any phase work. STOP on failure.
+Run the pre-flight sequence before any phase work. A failure goes to the owning agent for repair; only an exhausted repair defers.
 
 1. **Use runner helper operation IDs**. Invoke read-only helper behavior through
    `resolved_python -m speckit_pro_runner` with one JSON request on stdin; do not rely on
@@ -333,9 +341,11 @@ Run the pre-flight sequence before any phase work. STOP on failure.
    record the helper report as a dry run and archive nothing. Skip if the
    archive extension is absent. Excludes the current target spec. Distinguish
    an absent extension from a broken installation: if the extension is present
-   but `/speckit-archive-run` is missing or unregistered, STOP pre-flight with
-   that discovery evidence and repair/install guidance. Never silently treat a
-   missing archive command as an absent extension.
+   but `/speckit-archive-run` is missing or unregistered, defer the Archive
+   Sweep with that discovery evidence and continue to Phase 0, listing the
+   repair/install guidance under "Decisions for you". A failed archive run is
+   retried once, then deferred the same way. Never silently treat a missing
+   archive command as an absent extension.
 3. **Run prereq helper operations** and parse the JSON output of each:
    ```text
    helper_id=check-prerequisites operation=check-prerequisites mode=read_only
@@ -350,7 +360,9 @@ Run the pre-flight sequence before any phase work. STOP on failure.
 4. **Constitution validation** — for each principle in
    `.specify/memory/constitution.md`, run the appropriate
    PROJECT_COMMANDS check (typecheck/test/build/lint); update the
-   workflow's Prerequisites table. STOP on any failure.
+   workflow's Prerequisites table. On a failure, route each failing check to the implement-executor,
+   which repairs it (a red baseline included); run the repair loop within its allowance, then defer per the Failure Escalation Protocol
+   with `stop_reason:all_tiers_failed` only when repair fails.
 5. **Implementation agent detection** — Glob `.claude/agents/*.md`,
    match descriptions against implementation keywords; set
    `PROJECT_IMPLEMENTATION_AGENT` (fallback: `speckit-pro:phase-executor`). Also
@@ -570,7 +582,7 @@ marked `skipped: <ext-name> not installed`.
 entries (every Phase, every Consensus, every `Post:`) and ADD any
 missing before advancing.
 
-**Then run the deterministic coverage guard and STOP on a nonzero exit.**
+**Then run the deterministic coverage guard and repair on a nonzero exit.**
 This is the same guard the Codex variant runs, so both distributions share
 one enforcement path instead of two prose descriptions of one:
 
@@ -588,11 +600,13 @@ the three current-run state-plan invariants (`in_progress_errors`,
 printed; structural coverage checks and every advisory key are visible but
 never block. Drop `--rule` to gate on every check.
 
-When `state_privacy_errors` is the only failing gated key, remediate in place
-instead of stopping: the state file is orchestrator-owned, and each error names
-the field and its remedy (`sha256:<digest>` of the raw value, or removing a raw
-`argv`). Apply those remedies, rewrite the state, and rerun the guard once. A
-second failure, or any other failing gated key, is a stop.
+On a nonzero exit, route the report's `repair` record to the orchestrator: it
+names the owner and the `failing_keys`, and the orchestrator owns both files.
+Repair the workflow status table and the state file, then rerun the guard. For
+`state_privacy_errors`, each error names the field and its remedy
+(`sha256:<digest>` of the raw value, or removing a raw `argv`). For any other
+failing gated key, correct the file the key names. Run the repair loop within its allowance, then defer per the Failure Escalation Protocol;
+advance to Phase 1 only on exit 0.
 
 `<resolved_python>` is the Python 3.11+ interpreter resolved by the
 Installed Runtime Contract; `<plugin-root>` is the directory that owns
@@ -685,11 +699,13 @@ for phase in PHASES starting from first_pending:
           persist it under `layer_plan` in `autopilot-state.json`, write a
           concise workflow "## Layer Plan" summary, carry warnings into the
           implementation context, then continue.
-        - exit 1: STOP before implementation and print exactly:
-          `STOP: Layer planner returned invalid_plan (exit 1) for <feature-dir>; implementation has not started. Fix tasks.md using the planner diagnostics below, then rerun autopilot from the Layer Plan step.`
-          Then show planner diagnostics from stdout/stderr.
-        - exit 2: STOP before implementation with a distinct
-          `input_error` message and include planner diagnostics.
+        - exit 1 (`invalid_plan`): hold implementation and route the planner's `repair` record to the phase-executor, which fixes
+          `tasks.md` from the planner diagnostics in stdout/stderr. Then rerun `plan-layers-feature-dir`;
+          run the repair loop within its allowance, then defer per the Failure Escalation Protocol.
+        - exit 2 (`input_error`): hold implementation and route by `repair.owner`. A missing `tasks.md`
+          (`tasks_file_missing`) reruns the Tasks phase through the phase-executor; a bad feature
+          directory or permission is corrected by the orchestrator. Rerun the planner, and defer the
+          same way when repair fails. Analyze and Implement do not begin before the planner exits 0.
         This wires NO PR emission or branch creation; the multi-PR emission
         phase owns those effects.
     8e. Persist marker planning state when reviewability evidence requires it:
@@ -765,14 +781,19 @@ and deferred items remain under §Blocked Actions Mid-Run: Fall Back or Defer,
 Never Stop in
 [`phase-execution.md`](./references/phase-execution.md#blocked-actions-mid-run-fall-back-or-defer-never-stop),
 the read-only `finalize-run` runner helper decides the end. Human UAT is the
-only gate a run may defer. With every non-UAT gate passed at every PR head and
-only human UAT left, the run finalizes: mark the stack ready for review (never merge) and open
-the top PR body with its `Deferred / not verified` section. A failed gate, a
-ledger `deferred` entry, or an unresolved task is one human stop instead, and
-the stack stays in draft. Either way, make one consolidated `AskUserQuestion`
-request and print the same question as plain text in the final message,
-listing every fallback taken and every deferred item, including each entry of
-the ledger's `deferred` list.
+only gate a run may defer, and every required gate must be green at every PR
+head as the runner's own verification record shows it. With every required gate
+green, the run finalizes: mark the stack ready for review (never merge) and open
+the top PR body with its `Deferred / not verified` section. Human UAT, a ledger
+`deferred` unit that failed every escalation tier, and an unresolved task never
+keep the stack in draft: they reach the owner as items in the end-of-run
+request, the units and tasks under "Decisions for you". A failed unit climbs two
+escalation tiers first (a fresh agent guided by a consensus diagnosis, then the
+strongest model at max effort), and only a required gate still red, missing, or
+blocked by a harness error after that is one human stop, and the stack stays in draft. The run never pauses to ask.
+Print the final report as plain text on `outcome=complete` with nothing deferred, and ask no question.
+Otherwise print `end_of_run_request` as plain text in the final message. It is the handoff, listing every fallback taken and every
+deferred item, including each entry of the ledger's `deferred` list.
 
 ## Workflow File Update Protocol
 
@@ -832,6 +853,7 @@ in [`references/error-recovery.md`](./references/error-recovery.md).
 
 ## References
 
+- [Stop Policy](./references/stop-policy.md) — The one contract for when a run may involve a human; stop reasons and their classes
 - [Prerequisites](./references/prerequisites.md) — Archive Sweep + Step 0.x environment, settings, constitution, agent detection, command/preset discovery
 - [Phase Execution](./references/phase-execution.md) — Per-phase prompt construction, dispatch templates, branch-aware/Clarify/Multi-prompt prefixes
 - [Consensus Protocol](./references/consensus-protocol.md) — Category-routed dispatch, Round 1/2, per-phase flows, Logging schema

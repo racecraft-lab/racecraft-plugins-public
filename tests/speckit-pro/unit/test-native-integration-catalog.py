@@ -5,9 +5,13 @@ from __future__ import annotations
 
 import copy
 import json
+import os
 from pathlib import Path
 import re
+import shutil
+import subprocess
 import sys
+import tempfile
 import unittest
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -229,7 +233,104 @@ class NativeReturnCatalogTests(unittest.TestCase):
                 with self.subTest(case=case["id"], field=field, wrong=wrong):
                     self.assertEqual(grade_observation(focused, bad)["status"], "fail")
 
+    def test_finalize_red_gate_case_grades_the_real_end_of_run_request(self) -> None:
+        case = self.cases["integration.finalize-red-gate-draft"]
+        self.assertEqual(case["layer"], "integration")
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            for fixture in case["fixtures"]:
+                target = root / fixture["destination"]
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(ROOT / fixture["source"], target)
+            request = json.loads((root / "scenario-inputs/finalize-request.json").read_text(encoding="utf-8"))
+            result = subprocess.run(
+                [sys.executable, "-m", "speckit_pro_runner"], input=json.dumps(request), text=True,
+                capture_output=True, cwd=root, check=False,
+                env={**os.environ, "PYTHONPATH": str(ROOT / "speckit-pro")},
+            )
+        data = json.loads(result.stdout)["data"]
+        self.assertEqual((data["outcome"], data["mark_ready"], data["ready_commands"]), ("human_stop", False, []))
+        artifact = "scenario-output/end-of-run-request.md"
+        checks = [check for check in case["checks"] if check["type"] in {"text", "file_exists"}]
+        focused = focused_case(case, checks)
+        for label, text, expected in (("runner request", data["end_of_run_request"], "pass"),
+                                      ("hand-written request", "The run finished.", "fail")):
+            observed = {"completed": True, "error": None, "final_text": "", "activations": [],
+                        "tool_calls": [], "usage": {}, "artifacts": {artifact: text}}
+            with self.subTest(request=label):
+                self.assertEqual(grade_observation(focused, observed)["status"], expected)
+
+
+class FinalizeStackReadyCatalogTests(unittest.TestCase):
+    """The stack finishes ready for review with no merge and no question (issue 829)."""
+
+    SUMMARY = "scenario-output/finish-summary.json"
+    RUNNER = {"name": "Bash", "input": {"command": "/venv/bin/python -m speckit_pro_runner < scenario-inputs/finalize-request.json"},
+              "output": "ran", "success": True}
+
+    def setUp(self) -> None:
+        catalog = load_catalog(TEST_ROOT / "evals" / "catalog.json", ROOT)
+        self.case = next(case for case in catalog["cases"] if case["id"] == "integration.finalize-stack-ready")
+
+    def observation(self, summary: dict | None = None, calls: list[dict] | None = None) -> dict:
+        artifacts = {} if summary is None else {self.SUMMARY: json.dumps(summary)}
+        return {"completed": True, "error": None, "final_text": "", "activations": ["speckit-autopilot"],
+                "tool_calls": calls if calls is not None else [{**self.RUNNER}], "usage": {},
+                "artifacts": artifacts}
+
+    def correct(self) -> dict:
+        return {"outcome": "complete_with_deferred", "mark_ready": True, "keeps_draft": False,
+                "question_asked": False,
+                "ready_commands": ["gh pr ready 101", "gh pr ready 102", "gh pr ready 103"]}
+
+    def test_the_fixture_is_the_real_runner_result(self) -> None:
+        sys.path.insert(0, str(ROOT / "speckit-pro"))
+        import tempfile
+
+        from speckit_pro_runner.helpers.run_finalization import finalize_run
+
+        directory = ROOT / "tests/speckit-pro/evals/fixtures/integration-finalize/finalize-stack-ready"
+        request = json.loads((directory / "finalize-request.json").read_text(encoding="utf-8"))
+        with tempfile.TemporaryDirectory() as temp:
+            (Path(temp) / ".process/execution-control").mkdir(parents=True)
+            (Path(temp) / ".process/execution-control/ledger.json").write_text(
+                (directory / "ledger.json").read_text(encoding="utf-8"), encoding="utf-8")
+            result = finalize_run(Path(temp), request["inputs"])
+        correct = self.correct()
+        self.assertEqual((result["outcome"], result["mark_ready"], result["ready_commands"]),
+                         (correct["outcome"], correct["mark_ready"], correct["ready_commands"]))
+        self.assertIsNone(result["human_stop"])
+        self.assertEqual(len(result["ready_commands"]), len(request["inputs"]["pull_requests"]))
+
+    def test_the_correct_finish_passes_and_each_wrong_finish_fails(self) -> None:
+        checks = [check for check in self.case["checks"] if check["type"] != "semantic"]
+        focused = focused_case(self.case, checks)
+        codex_only = {"runner-invoked-codex", "no-codex-gh", "no-codex-question"}
+        focused["checks"] = [check for check in focused["checks"] if check["id"] not in codex_only]
+        focused["requirements"] = [row for row in self.case["requirements"]
+                                   if any(check["requirement"] == row["id"] for check in focused["checks"])]
+        self.assertEqual(grade_observation(focused, self.observation(self.correct()))["status"], "pass")
+        wrong = {
+            "the stack held in draft for human UAT": {**self.correct(), "mark_ready": False, "keeps_draft": True},
+            "an outcome the runner did not return": {**self.correct(), "outcome": "human_stop"},
+            "a PR left out of the ready commands": {**self.correct(), "ready_commands": ["gh pr ready 101"]},
+            "a question asked": {**self.correct(), "question_asked": True},
+            "a merge command recorded": {**self.correct(), "ready_commands": ["gh pr merge 101"]},
+        }
+        for name, summary in wrong.items():
+            with self.subTest(wrong=name):
+                self.assertEqual(grade_observation(focused, self.observation(summary))["status"], "fail")
+        for name, call in {"a merge": {"name": "Bash", "input": {"command": "gh pr merge 101"}},
+                           "a ready command run by the case": {"name": "Bash", "input": {"command": "gh pr ready 101"}},
+                           "a question tool call": {"name": "AskUserQuestion", "input": {"question": "Ready?"}}}.items():
+            with self.subTest(forbidden=name):
+                calls = [{**self.RUNNER}, {**call, "output": "denied", "success": False}]
+                self.assertEqual(grade_observation(focused, self.observation(self.correct(), calls))["status"], "fail")
+        self.assertEqual(grade_observation(focused, self.observation(self.correct(), []))["status"], "fail")
+        self.assertEqual(grade_observation(focused, self.observation(None))["status"], "fail")
+
 
 if __name__ == "__main__":
-    raise SystemExit(run_counted(unittest.defaultTestLoader.loadTestsFromTestCase(NativeReturnCatalogTests),
-                                 label="test-native-integration-catalog"))
+    suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case)
+                               for case in (NativeReturnCatalogTests, FinalizeStackReadyCatalogTests))
+    raise SystemExit(run_counted(suite, label="test-native-integration-catalog"))

@@ -254,8 +254,8 @@ repository's GitHub `owner/name`, its default branch, and that string as
 - This skill never writes the fragment into `~/.codex`, the repository's
   `.codex/`, or `AGENTS.md`: the reviewer trusts `AGENTS.md`, and a branch
   could rewrite it.
-- A missing policy is a warning, not a failure. The autopilot still runs and
-  reports it once as a setup gap.
+- A missing policy is a warning, not a failure. The autopilot asks for it once,
+  at run start, before Phase 1, and the run starts on the operator's reply.
 
 ### 7. Report
 

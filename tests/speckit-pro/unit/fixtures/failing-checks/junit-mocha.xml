@@ -1,0 +1,19 @@
+<testsuite name="Mocha Tests" tests="3" failures="0" errors="2" skipped="0" timestamp="Mon, 28 Sep 2026 23:59:01 GMT" time="0.003">
+<testcase classname="math" name="adds" time="0"/>
+<testcase classname="math" name="subtracts" time="0"><failure>0 == 5
+      + expected - actual
+      -0
+      +5
+      
+AssertionError [ERR_ASSERTION]: 0 == 5
+    at Context.&#x3C;anonymous&#x3E; (file:///project/mocha.spec.js:1:1)
+    at process.processImmediate (node:internal/timers:504:21)</failure></testcase>
+<testcase classname="math nested" name="upper" time="0"><failure>&#x27;a&#x27; == &#x27;b&#x27;
+      + expected - actual
+      -a
+      +b
+      
+AssertionError [ERR_ASSERTION]: &#x27;a&#x27; == &#x27;b&#x27;
+    at Context.&#x3C;anonymous&#x3E; (file:///project/mocha.spec.js:1:1)
+    at process.processImmediate (node:internal/timers:504:21)</failure></testcase>
+</testsuite>

@@ -4313,6 +4313,33 @@ class ReadOnlyHelperTests(unittest.TestCase):
             {"duplicate_task_id", "duplicate_increment_id", "malformed_task"},
         )
 
+    def test_plan_layers_invalid_plan_routes_tasks_md_repair_to_the_phase_executor(self) -> None:
+        if self.helper_filter and self.helper_filter != "plan-layers-feature-dir":
+            self.skipTest("plan-layers repair route case")
+        _, _, planner = self.run_plan_layers(f"{PLAN_LAYERS_FIXTURE_DIR}/dependency-cycle")
+        self.assertEqual(planner["status"], "invalid_plan")
+        repair = planner["repair"]
+        self.assertEqual(repair["owner"], "phase-executor")
+        self.assertEqual(repair["target"], f"{PLAN_LAYERS_FIXTURE_DIR}/dependency-cycle/tasks.md")
+        self.assertEqual(repair["retry"], "plan-layers-feature-dir")
+        self.assertNotIn("repair", self.run_plan_layers(f"{PLAN_LAYERS_FIXTURE_DIR}/valid-real")[2])
+
+    def test_plan_layers_input_error_routes_by_what_is_missing(self) -> None:
+        if self.helper_filter and self.helper_filter != "plan-layers-feature-dir":
+            self.skipTest("plan-layers input-error repair route case")
+        cases = (
+            (PLAN_LAYERS_FIXTURE_DIR, "tasks_file_missing", "phase-executor"),
+            (f"{PLAN_LAYERS_FIXTURE_DIR}/no-such-feature", "feature_dir_not_found", "orchestrator"),
+        )
+        for feature_dir, code, owner in cases:
+            with self.subTest(code=code):
+                completed, response, planner = self.run_plan_layers(feature_dir)
+                self.assertEqual(completed.returncode, 2)
+                self.assertEqual(planner["status"], "input_error")
+                self.assertEqual(planner["errors"][0]["code"], code)
+                self.assertEqual(planner["repair"]["owner"], owner)
+                self.assertEqual(planner["repair"]["retry"], "plan-layers-feature-dir")
+
     def test_plan_layers_repository_bash_confinement_preserves_increment_contract(self) -> None:
         if self.helper_filter and self.helper_filter != "plan-layers-feature-dir":
             self.skipTest("plan-layers repository Bash confinement case")
@@ -4396,9 +4423,11 @@ class ReadOnlyHelperTests(unittest.TestCase):
                 if helper_id == "finalize-run":
                     self.assert_response(response, "ok", 0)
                     self.assertFalse(data["writes_state"])
-                    # The fixture ledger holds a deferral, so the run ends in one human stop.
-                    self.assertEqual(data["outcome"], "human_stop")
-                    self.assertEqual(data["ready_commands"], [])
+                    # The fixture ledger holds a deferral whose escalation tiers all failed: the run finalizes
+                    # ready for review and lists that unit under "Decisions for you".
+                    self.assertEqual(data["outcome"], "complete_with_deferred")
+                    self.assertEqual(data["ready_commands"], ["gh pr ready 101", "gh pr ready 102"])
+                    self.assertEqual([decision["class"] for decision in data["decisions"]], ["exhausted"])
                     self.assertEqual(stderr_records, [])
                     continue
                 if helper_id == "ratify-pr-split":

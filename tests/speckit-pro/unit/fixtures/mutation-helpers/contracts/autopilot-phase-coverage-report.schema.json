@@ -11,6 +11,15 @@
     "workflow_file": { "type": "string" },
     "state_file": { "type": "string" },
     "plan_step_count": { "type": "integer", "minimum": 0 },
+    "repair": {
+      "type": ["object", "null"],
+      "required": ["owner", "failing_keys", "retry"],
+      "properties": {
+        "owner": { "const": "orchestrator" },
+        "failing_keys": { "type": "array", "items": { "type": "string" } },
+        "retry": { "type": "string" }
+      }
+    },
     "missing_workflow_sections": {
       "type": "array",
       "items": { "type": "string" }

@@ -307,6 +307,57 @@ class RenderEgressAuthorizationTests(unittest.TestCase):
         other = policy.replace("example-org/example-repo", "example-org/other-repo")
         self.assertIs(_run(_standing_inputs(installed_extra_policy=other))["data"]["installed"], False)
 
+    def test_every_base_class_names_a_probe_the_run_can_make_before_phase_one(self) -> None:
+        classes = _run(_standing_inputs())["data"]["policy_classes"]
+        probes = {item["class_id"]: item["probe"] for item in classes}
+        self.assertEqual(set(probes), set(STANDING_CLASSES))
+        self.assertEqual(probes["checkout-work"], "git status --porcelain")
+        self.assertEqual(probes["feature-branch-push"], "git ls-remote --heads origin")
+        self.assertIn("example-org/example-repo", probes["pull-request-activity"])
+        self.assertIn("research-broker-preflight", probes["public-docs-research"])
+        self.assertIn("delegate_health", probes["local-offline-audit"])
+        base = _run(_standing_inputs())["data"]["standing_policy_sha256"]
+        self.assertEqual(base, _run(_standing_inputs())["data"]["standing_policy_sha256"])
+
+    def test_derived_gate_classes_join_the_standing_policy_and_its_digest(self) -> None:
+        derived = [{"class_id": "gate-pre-pr-pnpm-audit", "gate": "pre-PR: pnpm audit",
+                    "target": "the registry or advisory service that `pnpm audit` contacts",
+                    "effect": "dependency names and versions sent for a dependency audit",
+                    "probe": "pnpm audit"}]
+        plain = _run(_standing_inputs())["data"]
+        data = _run(_standing_inputs(derived_classes=derived))["data"]
+        self.assertEqual([item["class_id"] for item in data["policy_classes"]],
+                         [*STANDING_CLASSES, "gate-pre-pr-pnpm-audit"])
+        self.assertEqual(data["policy_classes"][-1]["probe"], "pnpm audit")
+        policy = tomllib.loads(data["extra_policy_fragment"])["auto_review"]["extra_policy"]
+        self.assertIn("- gate-pre-pr-pnpm-audit: Payload: dependency names and versions", policy)
+        self.assertIn("`pnpm audit` contacts", policy)
+        self.assertNotEqual(data["standing_policy_sha256"], plain["standing_policy_sha256"])
+        self.assertEqual(len([line for line in policy.splitlines() if line.startswith("- Outcome rule: ")]), 5)
+        old_policy = tomllib.loads(plain["extra_policy_fragment"])["auto_review"]["extra_policy"]
+        self.assertIs(_run(_standing_inputs(derived_classes=derived, installed_extra_policy=old_policy))
+                      ["data"]["installed"], False)
+        self.assertIs(_run(_standing_inputs(derived_classes=derived, installed_extra_policy=policy))
+                      ["data"]["installed"], True)
+        self.assertIs(_run(_standing_inputs(installed_extra_policy=policy))["data"]["installed"], False)
+
+    def test_derived_classes_fail_closed(self) -> None:
+        good = {"class_id": "gate-x", "gate": "g", "target": "t", "effect": "e"}
+        cases = {
+            "not a list": {"derived_classes": "gate-x"},
+            "repeats a base class": {"derived_classes": [{**good, "class_id": "checkout-work"}]},
+            "repeated id": {"derived_classes": [good, dict(good)]},
+            "bad id": {"derived_classes": [{**good, "class_id": "Gate X"}]},
+            "multi-line effect": {"derived_classes": [{**good, "effect": "a\nb"}]},
+            "unknown field": {"derived_classes": [{**good, "extra": "x"}]},
+            "missing target": {"derived_classes": [{k: v for k, v in good.items() if k != "target"}]},
+            "run scope": {"scope": "run", "derived_classes": [good], "actions": [dict(ACTIONS[0])]},
+        }
+        for label, overrides in cases.items():
+            with self.subTest(case=label):
+                inputs = _inputs(**overrides) if overrides.get("scope") == "run" else _standing_inputs(**overrides)
+                self.assertEqual(_run(inputs)["status"], "input_error", label)
+
     def test_scope_rules_fail_closed(self) -> None:
         cases = {
             "standing with actions": _standing_inputs(actions=[dict(ACTIONS[0])]),

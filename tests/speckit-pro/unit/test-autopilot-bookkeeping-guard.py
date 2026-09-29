@@ -353,6 +353,7 @@ class StatusEvidenceReportAssertions:
         "workflow_file",
         "state_file",
         "plan_step_count",
+        "repair",
         *validator.PROBLEM_KEY_INTENT,
     })
 
@@ -610,6 +611,11 @@ def _section(text: str, heading: str, next_heading: str) -> str:
     return text[start : text.index(next_heading, start + len(heading))]
 
 
+def _assert_phrases(case: unittest.TestCase, text: str, phrases: tuple[str, ...]) -> None:
+    for phrase in phrases:
+        case.assertIn(phrase, text)
+
+
 BLOCKED_ACTION_HEADING = "Blocked Actions Mid-Run: Fall Back or Defer, Never Stop"
 
 
@@ -648,7 +654,7 @@ class BlockedActionDeferralSourceContractTests(unittest.TestCase):
         )
         self.assertLess(phase.index("## Phase 7: Implement"), phase.index(section))
         self.assert_deferral_rules(section, "`request_user_input`")
-        self.assertIn("even when `request_user_input` returns", section)
+        self.assertIn("make no `request_user_input` call for it", section)
         # The late-discovery rule no longer routes a mid-run boundary into the
         # pre-Phase-7 stop.
         late = _section(phase, "If a worker discovers a predictable boundary", "```text")
@@ -740,7 +746,10 @@ class RunFinalizationSourceContractTests(unittest.TestCase):
             "retry with backoff",
             "reviewer veto despite a recorded chat authorization",
             "never lets a gate pass, be skipped, or be deferred",
-            "at the end of the run an unresolved deferral is the human stop",
+            "at the end of the run an unresolved deferral climbs the escalation tiers",
+            "\"Decisions for you\"",
+            "The run never pauses to ask",
+            "the only stop is a required gate that is still not green",
             "`deferred_digest`",
             "never re-checks an unchanged blocker",
             *self.PER_HEAD,
@@ -762,7 +771,7 @@ class RunFinalizationSourceContractTests(unittest.TestCase):
         hardener = _flat(CLAUDE_AUTOPILOT_SKILL.parent / "references" / "hardener-delegation.md")
         self.assertIn("It is a gate, so it never stays deferred", hardener)
         efficiency = _flat(CLAUDE_AUTOPILOT_SKILL.parent / "references" / "execution-efficiency.md")
-        self.assertIn("the run never finalizes ready for review over it, a gate's included", efficiency)
+        self.assertIn("only a required gate that is not green makes `finalize-run` return", efficiency)
         preflight = _section(phase, "### Autonomy Boundary Preflight", "1. Read mode from `CONFIDENCE_GATE_MODE`")
         for phrase in ("`check-gate-preflight-coverage`", "preflight defect", "at run start"):
             self.assertIn(phrase, preflight)
@@ -908,6 +917,101 @@ class GateTaskEvidenceLoopGuidanceTests(unittest.TestCase):
             self.assertIn("gate_task_loops", text)
 
 
+GATE_DEFER_PHRASE = "run the repair loop within its allowance, then defer per the Failure Escalation Protocol"
+
+
+class GateFailureDeferSourceContractTests(unittest.TestCase):
+    """A gate failure repairs, then defers; it never stops for a human (issue 828)."""
+
+    def gate_validation(self) -> str:
+        return _flat(CLAUDE_AUTOPILOT_SKILL.parent / "references" / "gate-validation.md")
+
+    def test_every_gate_failure_line_defers_instead_of_stopping(self) -> None:
+        text = self.gate_validation()
+        bounds = (("G0", "### G1"), ("G2", "### G3"), ("G3", "### G4"), ("G4", "### G5"),
+                  ("G5", "#### Post-G5"), ("G6", "### G7"), ("G7", "## Gate Summary Table"))
+        for gate_id, next_heading in bounds:
+            self.assertIn(GATE_DEFER_PHRASE, _section(text, f"### {gate_id} ", next_heading), gate_id)
+        for stale in ("Immediate STOP", "STOP. Present", "→ STOP", "The default `stop` path", "present to human"):
+            self.assertNotIn(stale, text)
+
+    def test_skip_and_log_is_not_a_gate_failure_option(self) -> None:
+        text = self.gate_validation()
+        g3 = _section(text, "### G3 ", "### G4 ")
+        self.assertNotIn("skip-and-log", g3)
+        self.assertNotIn("configured `gate-failure` behavior", g3)
+
+    def test_gate_failure_default_is_defer_on_both_hosts(self) -> None:
+        claude = _flat(CLAUDE_AUTOPILOT_SKILL.parent / "references" / "prerequisites.md")
+        codex = _flat(CODEX_AUTOPILOT_SKILL.parent / "references" / "prerequisites-codex.md")
+        readme = _flat(REPO_ROOT / "speckit-pro" / "README.md")
+        for text in (claude, codex):
+            self.assertIn("`gate-failure` (default: `defer`)", text)
+            self.assertNotIn("`gate-failure` (default: `stop`)", text)
+        self.assertIn("gate-failure: defer", readme)
+        self.assertNotIn("gate-failure: stop", readme)
+
+    def test_codex_phase_seven_defers_a_persistent_gate_failure(self) -> None:
+        phase = _flat(CODEX_AUTOPILOT_SKILL.parent / "references" / "phase-execution-codex.md")
+        self.assertNotIn('gate-failure == "stop"', phase)
+        self.assertNotIn('gate-failure == "skip-and-log"', phase)
+        self.assertIn("If still failing, defer per the Failure Escalation Protocol", phase)
+        self.assertIn("A selected formal failure defers and names the Plan resume point", phase)
+
+    def test_claude_phase_execution_defers_instead_of_following_a_stop_path(self) -> None:
+        phase = _flat(CLAUDE_AUTOPILOT_SKILL.parent / "references" / "phase-execution.md")
+        self.assertIn("follows the Failure Escalation Protocol and defers", phase)
+        self.assertNotIn("configured gate-failure/escalation path", phase)
+
+
+CLEAN_FINISH_QUESTION = "Print the final report as plain text on `outcome=complete`"
+BLOCKER_PHRASE = "return a blocker for consensus or deferral"
+
+
+class CleanFinishAndStopWordingSourceContractTests(unittest.TestCase):
+    """Finish asks only on a human stop; agents return blockers, never stop (issue 836)."""
+
+    def test_clean_complete_run_prints_plain_text_without_a_question(self) -> None:
+        for skill in (CLAUDE_AUTOPILOT_SKILL, CODEX_AUTOPILOT_SKILL):
+            text = _flat(skill)
+            self.assertIn(CLEAN_FINISH_QUESTION, text)
+            self.assertIn("The run never pauses to ask.", text)
+            self.assertNotIn("Either way, make one consolidated", text)
+            self.assertNotIn("Either way, make the one consolidated", text)
+        codex_phase = _flat(CODEX_AUTOPILOT_SKILL.parent / "references" / "phase-execution-codex.md")
+        self.assertIn(CLEAN_FINISH_QUESTION, codex_phase)
+        self.assertIn("The run never pauses to ask", codex_phase)
+
+    def test_claude_executors_return_a_blocker_instead_of_escalating(self) -> None:
+        agents = REPO_ROOT / "speckit-pro" / "agents"
+        for name in ("implement-executor", "analyze-executor", "clarify-executor", "checklist-executor", "phase-executor"):
+            text = _flat(agents / f"{name}.md")
+            self.assertIn(BLOCKER_PHRASE, text)
+            for stale in ("orchestrator surface", "orchestrator escalate", "orchestrator fail the gate"):
+                self.assertNotIn(stale, text)
+
+    def test_codex_executors_return_a_blocker_instead_of_deciding(self) -> None:
+        agents = REPO_ROOT / "speckit-pro" / "codex-agents"
+        for name in ("implement-executor", "analyze-executor", "clarify-executor", "checklist-executor", "phase-executor"):
+            text = _flat(agents / f"{name}.toml")
+            self.assertIn(BLOCKER_PHRASE, text)
+            self.assertNotIn("let the orchestrator", text)
+
+    def test_codex_ambiguity_routes_to_clarify_consensus(self) -> None:
+        skill = _flat(CODEX_AUTOPILOT_SKILL)
+        self.assertNotIn("Fail the gate, surface the ambiguity, and stop", skill)
+        self.assertIn("Route the ambiguity to Clarify consensus, and defer it when consensus cannot settle it", skill)
+        toml = _flat(REPO_ROOT / "speckit-pro" / "codex-agents" / "phase-executor.toml")
+        self.assertIn(BLOCKER_PHRASE, toml)
+        self.assertNotIn("surface the condition to the orchestrator", toml)
+
+    def test_model_check_warns_and_routes_to_the_strongest_tier(self) -> None:
+        text = _flat(CLAUDE_AUTOPILOT_SKILL)
+        self.assertNotIn("small-tier", text)
+        self.assertNotIn("stop and ask the operator to switch", text)
+        self.assertIn("warn the operator once and route gate and consensus dispatches to the strongest available tier", text)
+
+
 PLUGIN_DRIFT_HEADING = "Plugin Update Mid-Run: Record, Re-resolve, Continue"
 
 
@@ -1024,13 +1128,14 @@ class StandingPolicyPreflightSourceContractTests(unittest.TestCase):
         self.assertNotIn("A blocked result stops before Phase 7", self.skill)
         self.assertIn("never an up-front question", self.resume)
 
-    def test_uncovered_egress_authorization_is_asked_as_a_chat_reply_at_run_start(self) -> None:
+    def test_uncovered_plan_derived_egress_is_asked_as_a_chat_reply(self) -> None:
         for phrase in (
-            "asks for it as a chat reply at run start",
+            "Uncovered plan-derived data egress: the preflight asks for it as a chat reply",
             "normal chat message in this thread, never as a goal edit",
             "the helper's `delivery` line",
             "never waits for the reply",
             "reads goal text as user-provided data",
+            "Step -2 already asked for every class the run-start inventory could know",
         ):
             self.assertIn(phrase, self.preflight)
         self.assertIn("never as a goal edit", self.skill)
@@ -1052,9 +1157,18 @@ class StandingPolicyPreflightSourceContractTests(unittest.TestCase):
         ):
             self.assertIn(phrase, self.preflight)
 
-    def test_missing_standing_policy_is_a_setup_gap_and_the_run_proceeds(self) -> None:
-        for phrase in ("setup gap", "reported once", "The run still proceeds"):
+    def test_missing_standing_policy_is_the_single_up_front_ask_not_a_setup_gap(self) -> None:
+        for phrase in (
+            "A missing standing policy is asked once, at run start",
+            "Step -2",
+            "does not ask again",
+            "record the covered actions `operator_action_required`",
+            "`stop_reason:veto_bypass`",
+        ):
             self.assertIn(phrase, self.preflight)
+        for text in (self.preflight, self.skill):
+            self.assertNotIn("setup gap", text)
+            self.assertNotIn("The run still proceeds", text)
         for setup in ("speckit-install", "speckit-upgrade"):
             with self.subTest(setup=setup):
                 text = _flat(CODEX_AUTOPILOT_SKILL.parents[1] / setup / "SKILL.md")
@@ -1062,6 +1176,150 @@ class StandingPolicyPreflightSourceContractTests(unittest.TestCase):
                 self.assertIn("`scope=standing`", text)
                 self.assertIn("never `auto_review.policy`", text)
                 self.assertIn("never writes", text)
+
+
+class CodexRunStartAuthorizationSourceContractTests(unittest.TestCase):
+    """Codex settles permissions and egress once, before Phase 1 (issue 833)."""
+
+    def setUp(self) -> None:
+        references = CODEX_AUTOPILOT_SKILL.parent / "references"
+        prerequisites = _flat(references / "prerequisites-codex.md")
+        self.step = _section(prerequisites, "## Step -2: Run-Start Authorization", "## Step -1: Archive Sweep Startup")
+        self.binding = _section(prerequisites, "## Workflow Worktree Binding", "## Step -2: Run-Start Authorization")
+        self.phase = _flat(references / "phase-execution-codex.md")
+        self.skill = _flat(CODEX_AUTOPILOT_SKILL)
+        self.policy = _flat(CLAUDE_AUTOPILOT_SKILL.parent / "references" / "stop-policy.md")
+
+    def test_step_runs_before_archive_sweep_and_on_every_resume(self) -> None:
+        _assert_phrases(self, self.step, (
+            "right after the binding guard, before Archive Sweep and Step 0",
+            "on every start and every resume",
+            "no permission or egress prompt can stop the run midway",
+            "before Phase 1",
+        ))
+        self.assertLess(self.skill.index("**Step -2: Run-Start Authorization**"),
+                        self.skill.index("**Step -1: Archive Sweep Startup**"))
+
+    def test_policy_classes_derive_from_the_gate_coverage_output(self) -> None:
+        _assert_phrases(self, self.step, (
+            "`check-gate-preflight-coverage`",
+            "`policy_classes`",
+            "`derived_classes`",
+            "verbatim",
+            "each declared pre-PR audit",
+            "`writable_roots`",
+            "`write_paths`",
+            "`scope=standing`",
+            "`installed_extra_policy`",
+        ))
+
+    def test_each_class_and_write_surface_is_probed_before_phase_one(self) -> None:
+        _assert_phrases(self, self.step, (
+            "Probe every class before Phase 1",
+            "each `policy_classes` entry's `probe`",
+            "external `WORKFLOW_ROOT`",
+            "<git-common-dir>/speckit-pro/autonomy-boundary/",
+            "mode `0700`",
+            "in a linked worktree it sits outside the worktree root",
+            "`uncovered`",
+            "never retried through another tool, path, or wrapper",
+            "`stop_reason:veto_bypass`",
+        ))
+
+    def test_a_missing_policy_or_denied_probe_is_one_plain_text_request(self) -> None:
+        _assert_phrases(self, self.step, (
+            "Ask once",
+            "one plain-text run-start request before Phase 1, never as a goal edit",
+            "the standing install text once",
+            "the paste-ready authorization message",
+            "each path the operator must add to the writable roots",
+            "this is the only wait",
+            "`explicit_user`",
+            "`operator_action_required`",
+            "ask nothing",
+        ))
+
+    def test_binding_guard_defers_the_external_root_denial_to_the_probe(self) -> None:
+        self.assertIn("Step -2 probes that root for write access before any phase work", self.binding)
+        self.assertNotIn("STOP with the denied path and operation if access remains unavailable", self.binding)
+
+    def test_phase_six_five_rechecks_the_standing_policy_with_the_derived_classes(self) -> None:
+        self.assertIn("Step -2's `policy_classes` verbatim as `derived_classes`", self.phase)
+        self.assertIn("a correctly installed policy reads as missing", self.phase)
+        self.assertIn("rerun the standing check with Step -2's `derived_classes`",
+                      _flat(CODEX_AUTOPILOT_SKILL.parent / "references" / "prerequisites-codex.md"))
+        self.assertIn("A base class's probe sends no repository content", self.step)
+        self.assertIn("A derived class's probe is its gate command run once", self.step)
+
+    def test_phase_six_five_cites_the_run_start_result_and_inventories_the_private_write(self) -> None:
+        _assert_phrases(self, self.phase, (
+            "Anything Step -2 could have known is not discovered here",
+            "is an autopilot defect",
+            "probes the write at run start",
+            "`outside_writable_roots` action",
+        ))
+
+    def test_shared_reference_states_the_run_start_grant_for_both_hosts(self) -> None:
+        _assert_phrases(self, self.policy, (
+            "## Run-start grants",
+            "Codex:",
+            "Claude Code:",
+            "A missing standing policy is the single up-front ask",
+            "Any run-start probe that prompts or is denied is settled in that one ask",
+            "Nothing that inventory could have known is discovered mid-run",
+            "`stop_reason:veto_bypass`",
+        ))
+        self.assertIn("stop-policy.md#run-start-grants", self.skill)
+
+
+class ClaudeRunStartPermissionProbeSourceContractTests(unittest.TestCase):
+    """Claude settles runner and Git permissions once, before any phase work (issue 833)."""
+
+    def setUp(self) -> None:
+        references = CLAUDE_AUTOPILOT_SKILL.parent / "references"
+        prerequisites = _flat(references / "prerequisites.md")
+        self.step = _section(prerequisites, "## Step -2: Run-Start Permission Probe", "## Workflow Worktree Binding")
+        self.skill = _flat(CLAUDE_AUTOPILOT_SKILL)
+        self.limitations = _flat(references / "plugin-limitations.md")
+        self.phase = _flat(references / "phase-execution.md")
+
+    def test_one_no_op_runner_request_and_one_git_status_run_first(self) -> None:
+        _assert_phrases(self, self.step, (
+            "before the binding guard, Step -1, Step 0, and any phase work",
+            "on every start and every resume",
+            "one no-op runner request: helper `helper-registry-dispatch` with empty `inputs`",
+            "`<resolved_python> -m speckit_pro_runner`",
+            "one `git status --porcelain` in the live checkout",
+        ))
+
+    def test_a_prompt_or_denial_prints_the_exact_allow_rule_and_stops_once(self) -> None:
+        _assert_phrases(self, self.step, (
+            "either prompts or is denied",
+            "print the allow rules for the probe that failed, once",
+            "stop before any phase work",
+            "do not run Archive Sweep, edit a file, or dispatch an agent",
+            "<resolved_python> -m speckit_pro_runner:*",
+            "printf:*",
+            "git status:*",
+            "Print each rule in Claude Code's `Tool(pattern)` form",
+            "written exactly as the request invoked it",
+            "bypassPermissions",
+        ))
+        # The zero-shell guard rejects the shell tool's name in shipped guidance.
+        self.assertNotIn("Ba" + "sh", self.step)
+        self.assertIn("print nothing and continue", self.step)
+
+    def test_the_skill_and_references_point_at_the_probe(self) -> None:
+        self.assertIn("run the Step -2 run-start permission probe", self.skill)
+        self.assertIn("one no-op runner request and one `git status`", self.skill)
+        self.assertIn("prerequisites.md#step--2-run-start-permission-probe", self.skill)
+        self.assertIn("so the run checks them once at start", self.limitations)
+        self.assertIn("prints the exact allow rule and stops once", self.limitations)
+        self.assertIn("Step -2 run-start permission probe", self.phase)
+        self.assertIn("declared pre-PR command", self.phase)
+        self.assertNotIn("an unattended run must prepare them before launch", self.skill)
+        self.assertNotIn("needs no run-start inventory", self.phase)
+
 
     def test_claude_autopilot_has_no_autonomy_preflight_to_mirror(self) -> None:
         references = CLAUDE_AUTOPILOT_SKILL.parent / "references"
@@ -1815,16 +2073,16 @@ class StatePrivacyTests(StatusEvidenceReportAssertions, unittest.TestCase):
         self.assertEqual(code, 0, report)
         self.assertEqual(report["state_privacy_errors"], [])
 
-    def test_both_hosts_digest_event_ids_and_remediate_privacy_errors_once(self) -> None:
-        """#800: store native event ids as digests; a privacy-only failure is fixed in place, once."""
+    def test_both_hosts_digest_event_ids_and_repair_every_gated_guard_failure(self) -> None:
+        """#800, #835: store native event ids as digests; a privacy failure is fixed in place, and any gated failure is repaired."""
         for skill_path in (CLAUDE_AUTOPILOT_SKILL, CODEX_AUTOPILOT_SKILL):
             with self.subTest(skill=skill_path.parent.parent.name):
                 skill = _flat(skill_path)
                 self.assertIn("native or operator event id", skill)
                 self.assertIn("`sha256:<digest>`", skill)
-                self.assertIn("When `state_privacy_errors` is the only failing gated key", skill)
-                self.assertIn("rerun the guard once", skill)
-                self.assertIn("A second failure, or any other failing gated key, is a stop", skill)
+                self.assertIn("For `state_privacy_errors`, each error names the field and its remedy", skill)
+                self.assertIn("then rerun the guard", skill)
+                self.assertNotIn("any other failing gated key, is a stop", skill)
 
     def test_both_hosts_account_for_the_implementation_notes_record(self) -> None:
         """#801: the notes record is committed, exempt from the path budget, and never dirties apply."""
@@ -2246,7 +2504,7 @@ class ProblemKeyClassificationTests(unittest.TestCase):
     VERDICTS = frozenset({"gated", "advisory-deliberate", "advisory-accidental"})
 
     #: Report fields that describe the run rather than name a finding.
-    METADATA_KEYS = frozenset({"status", "workflow_file", "state_file", "plan_step_count"})
+    METADATA_KEYS = frozenset({"status", "workflow_file", "state_file", "plan_step_count", "repair"})
 
     @classmethod
     def setUpClass(cls) -> None:
@@ -2369,9 +2627,13 @@ def build_suite() -> unittest.TestSuite:
         BlockedActionDeferralSourceContractTests,
         FailureClassApprovalSourceContractTests,
         AmbiguousTaskWordingSourceContractTests,
+        GateFailureDeferSourceContractTests,
+        CleanFinishAndStopWordingSourceContractTests,
         GateTaskEvidenceLoopGuidanceTests,
         MidRunPluginDriftSourceContractTests,
         StandingPolicyPreflightSourceContractTests,
+        CodexRunStartAuthorizationSourceContractTests,
+        ClaudeRunStartPermissionProbeSourceContractTests,
         AutonomyBoundaryAuthorizationTests,
         AutonomyBoundaryFreshnessTests,
         AutonomyBoundaryMalformedExecutionTests,

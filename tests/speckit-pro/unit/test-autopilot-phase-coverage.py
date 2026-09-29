@@ -3564,6 +3564,17 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
                     report["marker_plan_status_errors"],
                 )
 
+    def test_a_failing_report_names_the_orchestrator_repair_route_and_the_failing_keys(self) -> None:
+        exit_code, report = self.run_validator(workflow_text(), state_json(include_post=False))
+        self.assertEqual(exit_code, 1)
+        repair = report["repair"]
+        self.assertEqual(repair["owner"], "orchestrator")
+        self.assertEqual(repair["retry"], "validate-autopilot-phase-coverage")
+        self.assertEqual(repair["failing_keys"], ["missing_state_post_items"])
+        exit_code, report = self.run_validator(workflow_text(), state_json())
+        self.assertEqual(exit_code, 0)
+        self.assertIsNone(report["repair"])
+
     def test_missing_confidence_gate_in_workflow_fails(self) -> None:
         exit_code, report = self.run_validator(workflow_text(include_confidence=False), state_json())
         self.assertEqual(exit_code, 1)

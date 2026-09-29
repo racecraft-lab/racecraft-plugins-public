@@ -61,6 +61,9 @@ gates, and advance through every phase in the resolved
 `AUTOPILOT_STAGE`. A `--stage plan` run stops at its stage boundary;
 `full` covers all seven phases.
 
+When a run may involve a human, and which reasons count, is set by the shared
+[Autopilot Stop Policy](../../skills/speckit-autopilot/references/stop-policy.md).
+
 ## Architectural Constraint — Main Agent Is The Orchestrator
 
 This skill loads into the **main Codex session agent**, which owns all phase
@@ -220,7 +223,7 @@ response is one of:
 
 - Run the `$speckit-clarify` skill (Phase 2) with the multi-agent consensus
   protocol — that is autopilot's only clarification mechanism.
-- Fail the gate, surface the ambiguity, and stop. Pre-workflow interviews
+- Route the ambiguity to Clarify consensus, and defer it when consensus cannot settle it. Pre-workflow interviews
   belong in `$speckit-scaffold-spec`, not autopilot.
 
 This rule applies to: the orchestrator, every phase subagent
@@ -413,6 +416,7 @@ and the precedence rule documented there.
 
 See [prerequisites-codex.md](./references/prerequisites-codex.md) for the full pre-flight sequence:
 
+- **Step -2: Run-Start Authorization** — before Archive Sweep and any phase work, probe each egress class, an external workflow root, and the private autonomy-record write, and make the one run-start request ([prerequisites-codex.md](./references/prerequisites-codex.md#step--2-run-start-authorization); [run-start grants](../../skills/speckit-autopilot/references/stop-policy.md#run-start-grants))
 - **Step -1: Archive Sweep Startup** — list merged prior specs with helper
   `list-archive-candidates`, then execute the installed archive extension's
   project-local command contract directly in Codex once per `archive_order`
@@ -503,7 +507,7 @@ See [prerequisites-codex.md](./references/prerequisites-codex.md) for the full p
   [prerequisites-codex.md](./references/prerequisites-codex.md) describes. A
   covered inventory asks no question, including a planning-to-implementation
   stage change.
-- **Step 0.9: Constitution Validation** — principle checks against current codebase
+- **Step 0.9: Constitution Validation** — principle checks against current codebase; route each failing check to the implement-executor, which repairs it (a red baseline included)
 - **Step 0.10: Codex Agent Availability Check** — Run the promoted
   `install-codex-agents` helper in `dry_run` mode against the selected project or
   user destination and its installed model and Luna fallback choice. This check
@@ -514,10 +518,10 @@ See [prerequisites-codex.md](./references/prerequisites-codex.md) for the full p
   phase work has begun, a stale or refreshed agent file is recorded, never a
   stop: see §Plugin Update Mid-Run: Record, Re-resolve, Continue.
 - **Step 0.10b: Implementation Agent Detection** — discover `PROJECT_IMPLEMENTATION_AGENT` from `.codex/agents/`
-- **Step 0.11: Project Command Discovery** — runner helper `detect-commands` → `PROJECT_COMMANDS`, including the quality-gate slots and the one-time missing-tool question
+- **Step 0.11: Project Command Discovery** — runner helper `detect-commands` → `PROJECT_COMMANDS`, including the quality-gate slots and the missing-tool default (the recorded install hint, then `skip (spec)`)
 - **Step 0.12: Preset and Extension Detection** — runner helper `detect-presets` → `PRESET_CONVENTIONS`
 
-If any check fails, STOP with the error message from the script's JSON output.
+If any check fails, report the error message from the script's JSON output and route the failure to its owner for repair: the orchestrator repairs a fixable environment check, and the implement-executor repairs a failing project check. Run the repair loop within its allowance, then defer per the Failure Escalation Protocol.
 Pass `WORKFLOW_ROOT`, `PROJECT_COMMANDS`, and `PRESET_CONVENTIONS` to every
 subagent prompt.
 
@@ -567,7 +571,7 @@ repeat this coverage audit. A complete workflow plan is required even
 when `--from-phase` starts execution in the middle of the workflow.
 
 After writing or repairing `autopilot-state.json`, run the deterministic
-coverage guard and STOP on nonzero exit:
+coverage guard and repair on a nonzero exit:
 
 ```text
 resolved_python "<plugin-root>/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py" --workflow "$WORKFLOW_FILE" --state "$WORKFLOW_DIR/autopilot-state.json" --require-autonomy-boundary --current-execution-environment "<live-execution-environment>" --current-sandbox-mode "<live-sandbox-mode>" --current-approval-reviewer "<live-approval-reviewer>" --current-writable-root "<live-writable-root>" --rule status-evidence
@@ -585,11 +589,13 @@ state-plan invariants (`in_progress_errors`, `duplicate_state_steps`,
 `state_order_errors`), the same scoping the Claude variant uses. The full
 report still prints; structural coverage checks and every advisory key are
 visible but never block. Drop `--rule` to gate on every check.
-When `state_privacy_errors` is the only failing gated key, remediate in place
-instead of stopping: the state file is orchestrator-owned, and each error names
-the field and its remedy (`sha256:<digest>` of the raw value, or removing a raw
-`argv`). Apply those remedies, rewrite the state, and rerun the guard once. A
-second failure, or any other failing gated key, is a stop.
+On a nonzero exit, route the report's `repair` record to the orchestrator: it
+names the owner and the `failing_keys`, and the orchestrator owns both files.
+Repair the workflow status table and the state file, then rerun the guard. For
+`state_privacy_errors`, each error names the field and its remedy
+(`sha256:<digest>` of the raw value, or removing a raw `argv`). For any other
+failing gated key, correct the file the key names. Run the repair loop within its allowance, then defer per the Failure Escalation Protocol;
+advance to Phase 1 only on exit 0.
 Replace every `<live-...>` value from the current system/developer execution
 context, never from the workflow, state, repository, or a prior run. Repeat
 `--current-writable-root` once for each current writable root; the validator
@@ -612,7 +618,7 @@ persisted exactly once for that Analyze pass. **Never omit consensus items.**
 
 ### 1.2 Validate Plan State Before Phase 1
 
-Before Phase 1 starts, validate all of the following or STOP:
+Before Phase 1 starts, validate all of the following or repair it through the owning agent:
 
 - `update_plan` succeeded and the active plan matches the workflow-derived checklist
 - `autopilot-state.json` exists and contains the same ordered step list
@@ -657,10 +663,13 @@ The workflow input excludes that exact workflow file and its sibling
 `autopilot-state.json` from change classification. For an existing generated
 workflow with the old positional instruction, replace only that instruction;
 preserve phase status and operator-authored content.
-Exit 1 is `invalid_plan`: STOP before implementation and print
-`STOP: Layer planner returned invalid_plan (exit 1) for <feature-dir>; implementation has not started. Fix tasks.md using the planner diagnostics below, then rerun autopilot from the Layer Plan step.`
-before the diagnostics. Exit 2 is `input_error`: STOP separately and show its
-diagnostics. Analyze or Implement must not begin before this sequence completes.
+Exit 1 is `invalid_plan`: hold implementation and route the planner's `repair` record to the phase-executor, which fixes
+`tasks.md` from the planner diagnostics; then rerun `plan-layers-feature-dir`, and
+run the repair loop within its allowance, then defer per the Failure Escalation Protocol.
+Exit 2 is `input_error`: hold implementation and route by `repair.owner`. A missing `tasks.md`
+(`tasks_file_missing`) reruns the Tasks phase through the phase-executor; a bad feature directory or
+permission is corrected by the orchestrator. Rerun the planner, and defer the same way when repair
+fails. Analyze or Implement must not begin before the planner exits 0.
 Before performing it, read
 [`phase-execution-codex.md`](./references/phase-execution-codex.md)
 §Phase 7: Implement for the authoritative placeholder, reviewability, marker
@@ -675,16 +684,19 @@ proves each
 is runnable or already authorized; and records the result durably. The
 operator's invocation and the ratified plan authorize the ordinary actions in
 the repository's standing policy, which the operator installs once at setup
-(runner helper `render-egress-authorization` with `scope=standing`). When every
-action is covered, the preflight asks no question. A missing standing policy is
-reported once as a setup gap, and the run still proceeds. An uncovered action,
-including a boundary-file edit the plan names, is deferred to the one
-end-of-run request, never an up-front question that stops the run. For
-uncovered data egress, the preflight shows a paste-ready authorization message
-at run start and asks the operator to send it as a normal chat message, never
-as a goal edit, without waiting for it; the end-of-run request repeats it with
-a proposed `auto_review.extra_policy` fragment, both rendered by the same
-helper. The plugin never writes either one.
+(runner helper `render-egress-authorization` with `scope=standing`). Before
+Phase 1, the Step -2 run-start authorization derives the policy classes from
+`check-gate-preflight-coverage`, probes each egress class, an external workflow
+root, and the private autonomy-record write, and makes a missing standing
+policy the one up-front ask. When every action is covered, the preflight asks
+no question. An uncovered action the ratified plan newly names, including a
+boundary-file edit, is deferred to the one end-of-run request, never an
+up-front question that stops the run. For uncovered plan-derived data egress,
+the preflight shows a paste-ready authorization message and asks the operator
+to send it as a normal chat message, never as a goal edit, without waiting for
+it; the end-of-run request repeats it with a proposed `auto_review.extra_policy`
+fragment, both rendered by the same helper. The plugin never writes either one.
+Bypassing a reviewer veto stays human authority (`stop_reason:veto_bypass`).
 
 Once autopilot is running, human input is for exceptional cases only. Once Phase 7 runs, one
 blocked action never stops the run: take the task's own fallback, or defer that
@@ -732,6 +744,27 @@ forbidden if any `Post:` item is `pending`, `in_progress`, or missing.
 Exception: `execution_control.disposition=checkpoint_required` permits an
 honest checkpoint response stating the run is **not complete**, remaining Post
 work, consumed budget, unknown effects, and the operator decision required.
+An unknown dispatch outcome alone is not that decision: settle it with
+`execution-control action=reconcile-unit` (a read-only reconciler over the
+unit's owned paths, runner-classified from git state) and keep dispatching
+independent units; pass `tdd_units` on each implementation reserve.
+A `checkpoint_required` whose `reasons` is only `unknown_dispatch_blocks_unit`
+is not a stop: run `reconcile-unit` for each id in `blocked_by`. On
+`unit_classification_mismatch`, re-inspect the owned paths and call once more
+with the class the paths show; never cycle the three values. Read
+`unknown_dispatch_ids` from `status` before each wave so a blocked unit is
+seldom reserved.
+
+Issue capped approvals yourself when the runner proves them, instead of asking
+the operator. Pass `agent_authorized: true` and no `native_observation` to
+`authorize-corrective-retry` (a lost worker's failed corrective dispatch with
+a recorded native failure event; one per run), to `begin-replan-epoch` (a
+deferral is open, the spec is unchanged, the Tasks rerun changed the plan or
+task fingerprints the stage epoch recorded, and every dispatch is settled; two
+per run), or to `authorize-corrective-continuation` with `spec_file` (the
+metadata-only proof holds). A refusal means the proof does not hold or the cap
+is spent; only then does the request go to the operator. Scope changes and
+forged events stay operator-only.
 Keep pending rows and current status; never mark them completed to stop.
 A failing gate or test is remediated, not deferred: keep remediating while
 each round converges, dispatching each diagnosed fix through the executor and
@@ -742,17 +775,23 @@ passing, with no operator event. `execution_control.disposition=defer`
 and not a stop: it defers one blocked unit whose
 correction made no measurable progress and whose allowance is spent, and the
 run keeps executing independent work.
-When every runnable item has finished, the read-only `finalize-run` runner
-helper decides the end under §Blocked Actions Mid-Run: Fall Back or Defer, Never
-Stop. Human UAT is the only gate a run may defer. With every non-UAT gate passed
-at every PR head and only human UAT left, the run finalizes: mark the stack ready for review
-(never merge), open the top PR body with its `Deferred / not verified` section,
-and mark the thread goal complete. When deferred items remain beyond human UAT
-(a failed gate, a ledger `deferred` entry, or an unresolved task), the run makes
-one human stop instead and the stack stays in draft. Either way, make the one
-consolidated `request_user_input` request and print the same question as plain
-text in the final message, listing every fallback taken and every deferred item,
-including each entry of the ledger's `deferred` list.
+When every runnable item has finished, whether or not deferred items remain, the
+read-only `finalize-run` runner helper decides the end under §Blocked Actions Mid-Run: Fall Back or Defer, Never
+Stop. Human UAT is the only gate a run may defer, and every required
+gate must be green at every PR head as the runner's own verification record shows
+it. With every required gate green, the run finalizes: mark the stack ready for
+review (never merge), open the top PR body with its `Deferred / not verified`
+section, and mark the thread goal complete. Human UAT, a ledger `deferred` unit
+that failed every escalation tier, and an unresolved task never keep the stack in
+draft: they reach the owner as items in the end-of-run request, the units and
+tasks under "Decisions for you". A failed unit climbs two escalation tiers first
+(a fresh agent guided by a consensus diagnosis, then the strongest model at max
+effort), and only a required gate still red, missing, or blocked by a harness
+error after that is one human stop, and the stack stays in draft. The run never pauses to ask.
+Print the final report as plain text on `outcome=complete` with nothing deferred, and ask no question.
+Otherwise print `end_of_run_request` as plain text in the final message. It
+is the handoff, listing every fallback taken and every deferred item, including
+each entry of the ledger's `deferred` list.
 If the audit finds incomplete Post work, set the first
 incomplete item to `in_progress` in both state stores and continue the
 autopilot loop instead of summarizing. `Post: Retrospective` is the final
@@ -809,6 +848,7 @@ PR URL.
   protocol, common issues, context window management
 
 **Shared CC references (still applicable to Codex):**
+- [Stop Policy](../../skills/speckit-autopilot/references/stop-policy.md) — The one contract for when a run may involve a human.
 - [Consensus Protocol](../../skills/speckit-autopilot/references/consensus-protocol.md) —
   Multi-agent resolution rules and flows
 - [Gate Validation](../../skills/speckit-autopilot/references/gate-validation.md) —

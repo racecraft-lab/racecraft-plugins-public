@@ -1,0 +1,156 @@
+{
+  "schema_version": "1.0",
+  "request_id": "fixture-ratify-pr-split-reslice",
+  "helper_id": "ratify-pr-split",
+  "operation": "ratify-pr-split",
+  "mode": "read_only",
+  "inputs": {
+    "approved_groups": [
+      {
+        "group_id": "A",
+        "scope": [
+          "FR-001",
+          "US1",
+          "T001",
+          "T002"
+        ]
+      },
+      {
+        "group_id": "B",
+        "scope": [
+          "FR-002",
+          "T003",
+          "T004"
+        ]
+      },
+      {
+        "group_id": "C1a",
+        "scope": [
+          "FR-003",
+          "US2",
+          "T005"
+        ]
+      },
+      {
+        "group_id": "C1b",
+        "scope": [
+          "FR-004",
+          "T006",
+          "T007"
+        ]
+      },
+      {
+        "group_id": "C2",
+        "scope": [
+          "FR-005",
+          "US3",
+          "T008"
+        ]
+      }
+    ],
+    "increments": [
+      {
+        "increment_id": "A-1",
+        "group_id": "A",
+        "scope": [
+          "FR-001",
+          "US1",
+          "T001"
+        ],
+        "production_paths": 3,
+        "total_paths": 30
+      },
+      {
+        "increment_id": "A-2",
+        "group_id": "A",
+        "scope": [
+          "T002"
+        ],
+        "production_paths": 2,
+        "total_paths": 9
+      },
+      {
+        "increment_id": "B-1",
+        "group_id": "B",
+        "scope": [
+          "FR-002",
+          "T003"
+        ],
+        "production_paths": 4,
+        "total_paths": 20
+      },
+      {
+        "increment_id": "B-2",
+        "group_id": "B",
+        "scope": [
+          "T004"
+        ],
+        "production_paths": 1,
+        "total_paths": 6
+      },
+      {
+        "increment_id": "C1a-1",
+        "group_id": "C1a",
+        "scope": [
+          "FR-003",
+          "US2",
+          "T005"
+        ],
+        "production_paths": 4,
+        "total_paths": 24
+      },
+      {
+        "increment_id": "C1b-1",
+        "group_id": "C1b",
+        "scope": [
+          "FR-004",
+          "T006"
+        ],
+        "production_paths": 2,
+        "total_paths": 8
+      },
+      {
+        "increment_id": "C1b-2",
+        "group_id": "C1b",
+        "scope": [
+          "T007"
+        ],
+        "production_paths": 2,
+        "total_paths": 7
+      },
+      {
+        "increment_id": "C2-1",
+        "group_id": "C2",
+        "scope": [
+          "FR-005",
+          "US3",
+          "T008"
+        ],
+        "production_paths": 3,
+        "total_paths": 15
+      }
+    ],
+    "active_scope": [
+      "FR-001",
+      "US1",
+      "T001",
+      "T002",
+      "FR-002",
+      "T003",
+      "T004",
+      "FR-003",
+      "US2",
+      "T005",
+      "FR-004",
+      "T006",
+      "T007",
+      "FR-005",
+      "US3",
+      "T008"
+    ],
+    "path_budget": {
+      "production_paths": 4,
+      "total_paths": 24
+    }
+  }
+}
