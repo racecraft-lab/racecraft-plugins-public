@@ -271,7 +271,7 @@
       "status": "pending"
     }
   ],
-  "updated_at": "2026-09-29T01:16:56Z",
+  "updated_at": "2026-09-29T01:20:47Z",
   "prerequisites": {
     "status": "completed",
     "all_pass": true,
@@ -1974,7 +1974,8 @@
             "T011 RED, GREEN and refactor accepted in the existing routing-epoch2 journal",
             "final quick suite 10,261/10,261 and CI suite 6/6 dispatches passed",
             "independent B1b review found no requirement-linked defect"
-          ]
+          ],
+          "checkpoint_evidence_commit_sha": "4b4058a919b37089713a52d8763f39e8d5883978"
         },
         "emission_mapping": {
           "status": "pending"
