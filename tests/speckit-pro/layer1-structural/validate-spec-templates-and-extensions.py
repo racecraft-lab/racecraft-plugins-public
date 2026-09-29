@@ -99,48 +99,40 @@ def claude_skill_path(command: str) -> Path:
 
 class ValidateSpecifyExtensions(unittest.TestCase):
 
-    def test_extension_integrity(self) -> None:
+    def registered_extensions(self) -> dict | None:
+        """The registry's extension records, or None (after failing a subtest) when unusable."""
         with self.subTest(msg='Spec Kit extension registry exists'):
             self.assertTrue(REGISTRY_PATH.is_file(), f'file not found: {REGISTRY_PATH}')
         with self.subTest(msg='Spec Kit extension hook configuration exists'):
             self.assertTrue(HOOKS_PATH.is_file(), f'file not found: {HOOKS_PATH}')
         if not REGISTRY_PATH.is_file() or not HOOKS_PATH.is_file():
-            return
+            return None
         registry = load_registry()
         extensions = registry.get('extensions') if isinstance(registry, dict) else None
         with self.subTest(msg='Spec Kit extension registry has schema 1.0 and extension records'):
             self.assertEqual(registry.get('schema_version'), '1.0')
             self.assertIsInstance(extensions, dict)
-        if not isinstance(extensions, dict):
-            return
-        registered_commands: set[str] = set()
-        for extension_id, record in sorted(extensions.items()):
-            if not isinstance(record, dict) or record.get('enabled') is not True:
-                continue
-            extension_dir = EXTENSIONS_ROOT / extension_id
-            with self.subTest(msg=f'enabled extension payload exists: {extension_id}'):
-                self.assertTrue((extension_dir / 'extension.yml').is_file())
-            if not (extension_dir / 'extension.yml').is_file():
-                continue
-            for path in declared_files(extension_dir):
-                with self.subTest(msg=f'declared extension file exists: {path.relative_to(REPO_ROOT)}'):
-                    self.assertTrue(path.is_file(), f'declared extension file not found: {path}')
-            commands = record.get('registered_commands')
-            if not isinstance(commands, dict):
-                continue
-            claude_commands = commands.get('claude', [])
-            if not isinstance(claude_commands, list):
-                continue
-            for command in claude_commands:
-                if not isinstance(command, str):
-                    continue
-                registered_commands.add(command)
-                with self.subTest(msg=f'registered Claude extension command resolves: {command}'):
-                    self.assertTrue(claude_skill_path(command).is_file(), f'generated Claude skill not found for {command}: {claude_skill_path(command)}')
-        hook_commands = {match.group(1) for line in HOOKS_PATH.read_text(encoding='utf-8').splitlines() if (match := HOOK_COMMAND.match(line)) is not None}
-        for command in sorted(hook_commands):
-            with self.subTest(msg=f'configured extension hook resolves: {command}'):
-                self.assertIn(command, registered_commands)
+        return extensions if isinstance(extensions, dict) else None
+
+    def check_extension_payload(self, extension_id: str, record: dict) -> set[str]:
+        """Check one enabled extension's files and Claude commands; return its commands."""
+        extension_dir = EXTENSIONS_ROOT / extension_id
+        with self.subTest(msg=f'enabled extension payload exists: {extension_id}'):
+            self.assertTrue((extension_dir / 'extension.yml').is_file())
+        if not (extension_dir / 'extension.yml').is_file():
+            return set()
+        for path in declared_files(extension_dir):
+            with self.subTest(msg=f'declared extension file exists: {path.relative_to(REPO_ROOT)}'):
+                self.assertTrue(path.is_file(), f'declared extension file not found: {path}')
+        commands = record.get('registered_commands')
+        claude_commands = commands.get('claude', []) if isinstance(commands, dict) else []
+        registered = {command for command in claude_commands if isinstance(command, str)} if isinstance(claude_commands, list) else set()
+        for command in sorted(registered):
+            with self.subTest(msg=f'registered Claude extension command resolves: {command}'):
+                self.assertTrue(claude_skill_path(command).is_file(), f'generated Claude skill not found for {command}: {claude_skill_path(command)}')
+        return registered
+
+    def check_verify_extension(self, extensions: dict) -> None:
         verify = extensions.get('verify')
         with self.subTest(msg='Verify extension is pinned to repaired v1.0.3 payload'):
             self.assertIsInstance(verify, dict)
@@ -148,6 +140,21 @@ class ValidateSpecifyExtensions(unittest.TestCase):
         verify_loader = EXTENSIONS_ROOT / 'verify' / 'scripts' / 'bash' / 'load-config.sh'
         with self.subTest(msg='Verify Bash loader retains its declared executable mode'):
             self.assertTrue(verify_loader.stat().st_mode & (stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH), f'declared executable is not executable: {verify_loader}')
+
+    def test_extension_integrity(self) -> None:
+        extensions = self.registered_extensions()
+        if extensions is None:
+            return
+        registered_commands: set[str] = set()
+        for extension_id, record in sorted(extensions.items()):
+            if isinstance(record, dict) and record.get('enabled') is True:
+                registered_commands |= self.check_extension_payload(extension_id, record)
+        hook_commands = {match.group(1) for line in HOOKS_PATH.read_text(encoding='utf-8').splitlines() if (match := HOOK_COMMAND.match(line)) is not None}
+        for command in sorted(hook_commands):
+            with self.subTest(msg=f'configured extension hook resolves: {command}'):
+                self.assertIn(command, registered_commands)
+        self.check_verify_extension(extensions)
+
 # Contracts transferred from validate-process-gitattributes.py.
 GITATTRIBUTES = REPO_ROOT / '.gitattributes'
 

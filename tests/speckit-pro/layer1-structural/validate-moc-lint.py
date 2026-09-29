@@ -48,6 +48,11 @@ def _read_text(path: Path) -> str | None:
         return None
 
 
+def _write(path: Path, text: str) -> Path:
+    path.write_text(text, encoding="utf-8")
+    return path
+
+
 def moc_is_gated(marker: Path) -> bool:
     text = _read_text(marker)
     return text is not None and _spec_index_is_gated(text)
@@ -177,67 +182,62 @@ def scan_stale_moc_links(root: Path, *, emit: bool = False) -> list[str]:
 
 
 class ValidateMocOrphan(unittest.TestCase):
+    UP_CASES = (
+        ('valid relative up: passes', 'orphan-valid', True),
+        ('missing up: is a violation', 'orphan-missing-up', False),
+        ('empty up: is a violation', 'orphan-empty-up', False),
+        ('wikilink up: is a violation (ill-formed for orphan)', 'orphan-wikilink-up', False),
+        ('absolute-URL up: is a violation (not a relative target)', 'orphan-absolute-url-up', False),
+        ('root-absolute up: is a violation (not a relative target)', 'orphan-root-absolute-up', False),
+        ('protocol-relative up: is a violation (not a relative target)', 'orphan-protocol-relative-up', False),
+        ('anchor-only up: is a violation (not a relative target)', 'orphan-anchor-only-up', False),
+        ('root-absolute up: with a LEADING SPACE is still a violation (trimmed)', 'orphan-leading-space-up', False),
+        ('schemed up: (mailto:/tel:) is a violation (not a relative target)', 'orphan-scheme-up', False),
+    )
+    GATE_CASES = (
+        ('no structureVersion -> SKIP (not gated)', 'gate-no-version', False),
+        ('structureVersion 0 (< 1) -> SKIP', 'gate-version-zero', False),
+        ('quoted "1" -> SKIP (non-bare-integer)', 'gate-version-quoted', False),
+        ('decimal 1.0 -> SKIP (non-bare-integer)', 'gate-version-decimal', False),
+        ('non-numeric text -> SKIP (non-bare-integer)', 'gate-version-text', False),
+        ('no --- fence -> SKIP (unparseable frontmatter)', 'gate-no-fence', False),
+        ('bare integer 1 WITH inline # comment -> GATED (guards inline-comment false-skip)', 'gate-version-commented', True),
+    )
+    SPEC_ID_CASES = (
+        ('spec_id namespace-matches dir (prsg,002) -> PASS', 'prsg-002-something', True),
+        ('spec_id namespace-matches dir (spec,006a) -> PASS', '006a-uat-skeleton', True),
+        ('spec_id (spec,002) vs dir (prsg,002) collision -> VIOLATION', 'prsg-002-collision', False),
+        ('spec_id 013a1 vs dir 013a near-miss -> VIOLATION', '013a', False),
+        ('absent spec_id in gated marker -> VIOLATION', 'specid-absent', False),
+        ('empty spec_id in gated marker -> VIOLATION', 'specid-empty', False),
+    )
 
     def test_moc_orphan_lint(self) -> None:
-        with self.subTest(msg='valid relative up: passes'):
-            self.assertTrue(moc_up_well_formed(FIXTURES / 'orphan' / 'orphan-valid' / 'SPEC-MOC.md'))
-        with self.subTest(msg='missing up: is a violation'):
-            self.assertFalse(moc_up_well_formed(FIXTURES / 'orphan' / 'orphan-missing-up' / 'SPEC-MOC.md'))
-        with self.subTest(msg='empty up: is a violation'):
-            self.assertFalse(moc_up_well_formed(FIXTURES / 'orphan' / 'orphan-empty-up' / 'SPEC-MOC.md'))
-        with self.subTest(msg='wikilink up: is a violation (ill-formed for orphan)'):
-            self.assertFalse(moc_up_well_formed(FIXTURES / 'orphan' / 'orphan-wikilink-up' / 'SPEC-MOC.md'))
-        with self.subTest(msg='absolute-URL up: is a violation (not a relative target)'):
-            self.assertFalse(moc_up_well_formed(FIXTURES / 'orphan' / 'orphan-absolute-url-up' / 'SPEC-MOC.md'))
-        with self.subTest(msg='root-absolute up: is a violation (not a relative target)'):
-            self.assertFalse(moc_up_well_formed(FIXTURES / 'orphan' / 'orphan-root-absolute-up' / 'SPEC-MOC.md'))
-        with self.subTest(msg='protocol-relative up: is a violation (not a relative target)'):
-            self.assertFalse(moc_up_well_formed(FIXTURES / 'orphan' / 'orphan-protocol-relative-up' / 'SPEC-MOC.md'))
-        with self.subTest(msg='anchor-only up: is a violation (not a relative target)'):
-            self.assertFalse(moc_up_well_formed(FIXTURES / 'orphan' / 'orphan-anchor-only-up' / 'SPEC-MOC.md'))
-        with self.subTest(msg='root-absolute up: with a LEADING SPACE is still a violation (trimmed)'):
-            self.assertFalse(moc_up_well_formed(FIXTURES / 'orphan' / 'orphan-leading-space-up' / 'SPEC-MOC.md'))
-        with self.subTest(msg='schemed up: (mailto:/tel:) is a violation (not a relative target)'):
-            self.assertFalse(moc_up_well_formed(FIXTURES / 'orphan' / 'orphan-scheme-up' / 'SPEC-MOC.md'))
-        with self.subTest(msg='non-MOC docs in a gated spec are not required to carry up: (scan clean)'):
-            self.assertEqual(0, scan_moc_orphans(FIXTURES / 'scan-clean', stdout=io.StringIO()))
-        with self.subTest(msg='no structureVersion -> SKIP (not gated)'):
-            self.assertFalse(moc_is_gated(FIXTURES / 'gate' / 'gate-no-version' / 'SPEC-MOC.md'))
-        with self.subTest(msg='structureVersion 0 (< 1) -> SKIP'):
-            self.assertFalse(moc_is_gated(FIXTURES / 'gate' / 'gate-version-zero' / 'SPEC-MOC.md'))
-        with self.subTest(msg='quoted "1" -> SKIP (non-bare-integer)'):
-            self.assertFalse(moc_is_gated(FIXTURES / 'gate' / 'gate-version-quoted' / 'SPEC-MOC.md'))
-        with self.subTest(msg='decimal 1.0 -> SKIP (non-bare-integer)'):
-            self.assertFalse(moc_is_gated(FIXTURES / 'gate' / 'gate-version-decimal' / 'SPEC-MOC.md'))
-        with self.subTest(msg='non-numeric text -> SKIP (non-bare-integer)'):
-            self.assertFalse(moc_is_gated(FIXTURES / 'gate' / 'gate-version-text' / 'SPEC-MOC.md'))
-        with self.subTest(msg='no --- fence -> SKIP (unparseable frontmatter)'):
-            self.assertFalse(moc_is_gated(FIXTURES / 'gate' / 'gate-no-fence' / 'SPEC-MOC.md'))
-        with self.subTest(msg='no SPEC-MOC.md in dir -> SKIP (scan clean, no marker globbed)'):
-            self.assertEqual(0, scan_moc_orphans(FIXTURES / 'gate', stdout=io.StringIO()))
-        with self.subTest(msg='bare integer 1 WITH inline # comment -> GATED (guards inline-comment false-skip)'):
-            self.assertTrue(moc_is_gated(FIXTURES / 'gate' / 'gate-version-commented' / 'SPEC-MOC.md'))
-        with self.subTest(msg='spec_id namespace-matches dir (prsg,002) -> PASS'):
-            self.assertTrue(moc_specid_matches_dir(FIXTURES / 'specid' / 'prsg-002-something' / 'SPEC-MOC.md', 'prsg-002-something'))
-        with self.subTest(msg='spec_id namespace-matches dir (spec,006a) -> PASS'):
-            self.assertTrue(moc_specid_matches_dir(FIXTURES / 'specid' / '006a-uat-skeleton' / 'SPEC-MOC.md', '006a-uat-skeleton'))
-        with self.subTest(msg='spec_id (spec,002) vs dir (prsg,002) collision -> VIOLATION'):
-            self.assertFalse(moc_specid_matches_dir(FIXTURES / 'specid' / 'prsg-002-collision' / 'SPEC-MOC.md', 'prsg-002-collision'))
-        with self.subTest(msg='spec_id 013a1 vs dir 013a near-miss -> VIOLATION'):
-            self.assertFalse(moc_specid_matches_dir(FIXTURES / 'specid' / '013a' / 'SPEC-MOC.md', '013a'))
-        with self.subTest(msg='absent spec_id in gated marker -> VIOLATION'):
-            self.assertFalse(moc_specid_matches_dir(FIXTURES / 'specid' / 'specid-absent' / 'SPEC-MOC.md', 'specid-absent'))
-        with self.subTest(msg='empty spec_id in gated marker -> VIOLATION'):
-            self.assertFalse(moc_specid_matches_dir(FIXTURES / 'specid' / 'specid-empty' / 'SPEC-MOC.md', 'specid-empty'))
+        for message, case, expected in self.UP_CASES:
+            with self.subTest(msg=message):
+                self.assertEqual(expected, moc_up_well_formed(FIXTURES / 'orphan' / case / 'SPEC-MOC.md'))
+        for message, case, expected in self.GATE_CASES:
+            with self.subTest(msg=message):
+                self.assertEqual(expected, moc_is_gated(FIXTURES / 'gate' / case / 'SPEC-MOC.md'))
+        for message, case, expected in self.SPEC_ID_CASES:
+            with self.subTest(msg=message):
+                self.assertEqual(expected, moc_specid_matches_dir(FIXTURES / 'specid' / case / 'SPEC-MOC.md', case))
+
+    def test_moc_orphan_scans(self) -> None:
+        clean_scans = (
+            ('non-MOC docs in a gated spec are not required to carry up: (scan clean)', FIXTURES / 'scan-clean'),
+            ('no SPEC-MOC.md in dir -> SKIP (scan clean, no marker globbed)', FIXTURES / 'gate'),
+            ('real-tree scan of docs/ai/specs/ is clean (legacy skipped)', REPO_ROOT / 'docs' / 'ai' / 'specs'),
+            ('real-tree scan of specs/ is clean (active markers pass, legacy skipped)', REPO_ROOT / 'specs'),
+        )
+        for message, root in clean_scans:
+            with self.subTest(msg=message):
+                self.assertEqual(0, scan_moc_orphans(root, stdout=io.StringIO()))
         dogfood_marker = FIXTURES / 'specid' / 'prsg-002-something' / 'SPEC-MOC.md'
         with self.subTest(msg='Dogfood PRSG marker is version-gated (observable, not inferred from exit 0)'):
             self.assertTrue(moc_is_gated(dogfood_marker), 'fixture SPEC-MOC.md is NOT gated')
         with self.subTest(msg='Dogfood PRSG marker spec_id namespace-matches its directory'):
             self.assertTrue(moc_specid_matches_dir(dogfood_marker, 'prsg-002-something'))
-        with self.subTest(msg='real-tree scan of docs/ai/specs/ is clean (legacy skipped)'):
-            self.assertEqual(0, scan_moc_orphans(REPO_ROOT / 'docs' / 'ai' / 'specs', stdout=io.StringIO()))
-        with self.subTest(msg='real-tree scan of specs/ is clean (active markers pass, legacy skipped)'):
-            self.assertEqual(0, scan_moc_orphans(REPO_ROOT / 'specs', stdout=io.StringIO()))
 
 
 class ValidateMocStaleIndex(unittest.TestCase):
@@ -288,14 +288,14 @@ class ValidateMocLintRunnerAgreement(unittest.TestCase):
 
     GATE_TOKENS = ("1", '"1"', "1.0", "²", "١", "1 # note", "01", "0", "")
 
-    def marker(self, frontmatter: str, directory: str = "prsg-001-foo") -> Path:
+    def setUp(self) -> None:
         temporary = tempfile.TemporaryDirectory(prefix="moc-lint-agreement-")
         self.addCleanup(temporary.cleanup)
-        spec_dir = Path(temporary.name) / directory
-        spec_dir.mkdir()
-        marker = spec_dir / "SPEC-MOC.md"
-        marker.write_text(f"---\n{frontmatter}---\n\nbody\n", encoding="utf-8")
-        return marker
+        self.root = Path(temporary.name)
+
+    def marker(self, frontmatter: str, directory: str = "prsg-001-foo") -> Path:
+        (self.root / directory).mkdir(exist_ok=True)
+        return _write(self.root / directory / "SPEC-MOC.md", f"---\n{frontmatter}---\n\nbody\n")
 
     def test_gate_matches_the_runner_for_every_token(self) -> None:
         for token in self.GATE_TOKENS:
@@ -306,16 +306,14 @@ class ValidateMocLintRunnerAgreement(unittest.TestCase):
     def test_both_scans_skip_a_marker_the_runner_does_not_gate(self) -> None:
         for token in ("²", "١"):
             with self.subTest(token=token):
-                marker = self.marker(f'up: "[home](missing.md)"\nspec_id: "OTHER-9"\nstructureVersion: {token}\n')
-                root = marker.parent.parent
-                self.assertEqual(0, scan_moc_orphans(root, stdout=io.StringIO()))
-                self.assertEqual([], scan_stale_moc_links(root))
+                self.marker(f'up: "[home](missing.md)"\nspec_id: "OTHER-9"\nstructureVersion: {token}\n')
+                self.assertEqual(0, scan_moc_orphans(self.root, stdout=io.StringIO()))
+                self.assertEqual([], scan_stale_moc_links(self.root))
 
     def test_a_gated_marker_is_still_linted_by_both_scans(self) -> None:
-        marker = self.marker('up: "[home](missing.md)"\nspec_id: "OTHER-9"\nstructureVersion: 1\n')
-        root = marker.parent.parent
-        self.assertEqual(1, scan_moc_orphans(root, stdout=io.StringIO()), "the mismatched spec_id is the one orphan violation")
-        self.assertEqual(1, len(scan_stale_moc_links(root)))
+        self.marker('up: "[home](missing.md)"\nspec_id: "OTHER-9"\nstructureVersion: 1\n')
+        self.assertEqual(1, scan_moc_orphans(self.root, stdout=io.StringIO()), "the mismatched spec_id is the one orphan violation")
+        self.assertEqual(1, len(scan_stale_moc_links(self.root)))
 
     def test_spec_id_quotes_follow_the_runner(self) -> None:
         for raw in ('"PRSG-001', "PRSG-001'", '"PRSG-001"', "'PRSG-001'", "PRSG-001"):
