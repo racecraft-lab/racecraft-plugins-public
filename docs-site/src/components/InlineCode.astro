@@ -1,0 +1,9 @@
+---
+interface Props {
+  text: string;
+}
+
+// Backticked spans render as inline code; everything else stays plain text.
+const segments = Astro.props.text.split('`').map((text, index) => ({ text, code: index % 2 === 1 }));
+---
+{segments.map((segment) => (segment.code ? <code>{segment.text}</code> : segment.text))}

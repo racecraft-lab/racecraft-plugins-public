@@ -19,7 +19,7 @@ Start by choosing the install context before running commands:
   environment is governed by organization policy, managed settings, or approved
   marketplace sources.
 
-Codex installation is the separate DOC-004-owned path. Use the
+Codex installation has its own guide. Use the
 [Codex install guide](/racecraft-plugins-public/install/codex/) for Codex
 commands.
 
@@ -44,7 +44,7 @@ When source changes, update the marketplace source or generated payload, then
 refresh the marketplace or reinstall the plugin. Do not edit installed runtime
 state to try to patch a stale install.
 
-For generated reference detail, use the focused DOC-007 pages:
+For generated reference detail, use the focused reference pages:
 [manifests](/racecraft-plugins-public/reference/manifests/),
 [skills](/racecraft-plugins-public/reference/skills/),
 [agents](/racecraft-plugins-public/reference/agents/),
@@ -198,7 +198,7 @@ Expected namespaced plugin skill surfaces:
 ## Verify The Install
 
 After plugin install and reload, use observational verification only. Do not
-edit installed runtime state as part of DOC-003 verification.
+edit installed runtime state as part of verification.
 
 1. Review the `/plugin` installed plugin detail view for loaded components.
 2. Confirm `speckit-pro` is installed from `racecraft-plugins-public`.
@@ -216,7 +216,7 @@ refresh `speckit-pro`, and reload plugins after a plugin update when marketplace
 metadata, generated payload files, hook configuration, agents, skills, MCP, or
 LSP behavior has changed.
 
-The full command-snippet review belongs to the later DOC-003 validation tasks.
+Review each command snippet before you run it.
 Use the generated [skills](/racecraft-plugins-public/reference/skills/) and
 [manifests](/racecraft-plugins-public/reference/manifests/) reference pages
 when you need source-cited command or manifest detail.
@@ -274,10 +274,10 @@ and LSP policy still apply during plugin installation and reload.
   not automatic. It remains subject to the connected service and Claude Code
   approval flow.
 
-DOC-008 owns hook trust analysis, managed policy, external authentication,
+The security and troubleshooting pages own hook trust analysis, managed policy, external authentication,
 permission troubleshooting, update, remove, rollback, and stale-cache forensics.
 The full security, trust, hook policy, and install lifecycle belong in
-[DOC-008 security and trust](/racecraft-plugins-public/security-and-trust/) and
+[Security & Trust](/racecraft-plugins-public/security-and-trust/) and
 [Troubleshooting](/racecraft-plugins-public/troubleshooting/). Returning users
 who need procedural recovery should use
 [Update & Rollback](/racecraft-plugins-public/update-and-rollback/).
@@ -297,7 +297,7 @@ This page is grounded in:
 - Local repository evidence in `speckit-pro/skills/`,
   `speckit-pro/agents/`, and `speckit-pro/hooks/hooks.json`
 
-DOC-003 stays bounded to Claude Code first-install guidance. DOC-007 owns
-deeper reference content, and DOC-008 owns troubleshooting, update, remove,
-rollback, managed-policy, stale-cache forensics, and full trust or security
-lifecycle depth.
+This page stays bounded to Claude Code first-install guidance. The reference
+pages hold deeper reference content. The troubleshooting, update, and security
+pages cover troubleshooting, update, remove, rollback, managed-policy,
+stale-cache forensics, and full trust or security lifecycle depth.

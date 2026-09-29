@@ -211,7 +211,6 @@ class HookMatcherExemptionTests(unittest.TestCase):
         shell = "B" + "ash"  # the shell tool's name, kept out of this file's own scan surface
         cases = {
             "hooks.json matcher line is exempt": ("speckit-pro/hooks/hooks.json", f'        "matcher": "{shell}",', True),
-            "codex-hooks.json matcher line is exempt": ("speckit-pro/codex-hooks.json", f'  "matcher": "{shell}"', True),
             "a command field in hooks.json is not exempt": ("speckit-pro/hooks/hooks.json", f'        "command": "{shell} -c true",', False),
             "a matcher-shaped line in a script is not exempt": ("speckit-pro/scripts/x.py", f'"matcher": "{shell}"', False),
             "a matcher-shaped line in prose is not exempt": ("speckit-pro/skills/a/SKILL.md", f'"matcher": "{shell}"', False),
@@ -228,9 +227,42 @@ class HookMatcherExemptionTests(unittest.TestCase):
             self.assertEqual([3], lines, findings)
 
 
+class RealHookManifestTests(unittest.TestCase):
+    """The shipped hook manifests, not synthetic lines, carry the shell-tool matcher."""
+
+    MANIFESTS = ("speckit-pro/hooks/hooks.json", "speckit-pro/codex-hooks.json")
+
+    def test_lockfile_hook_is_scoped_to_the_shell_tool_in_both_manifests(self) -> None:
+        shell = "B" + "ash"  # the shell tool's name, kept out of this file's own scan surface
+        for manifest in self.MANIFESTS:
+            data = json.loads((REPO_ROOT / manifest).read_text(encoding="utf-8"))
+            groups = [
+                group
+                for group in data["hooks"]["PreToolUse"]
+                if any("workflow-guard-hook.py lockfile" in hook["command"] for hook in group["hooks"])
+            ]
+            with self.subTest(msg=f"{manifest} declares one lockfile group"):
+                self.assertEqual(1, len(groups))
+            with self.subTest(msg=f"{manifest} lockfile group matches only the shell tool"):
+                self.assertEqual(shell, groups[0].get("matcher"))
+
+    def test_every_real_matcher_line_is_exempt_from_the_shell_scan(self) -> None:
+        for manifest in self.MANIFESTS:
+            lines = [
+                line
+                for line in (REPO_ROOT / manifest).read_text(encoding="utf-8").splitlines()
+                if '"matcher"' in line
+            ]
+            with self.subTest(msg=f"{manifest} has matcher lines"):
+                self.assertTrue(lines)
+            for line in lines:
+                with self.subTest(msg=f"{manifest}: {line.strip()}"):
+                    self.assertTrue(active_path_guard.is_hook_matcher_line(manifest, line))
+
+
 def build_suite() -> unittest.TestSuite:
     suite = unittest.TestSuite()
-    for case in (WorkflowGuardHookTests, HookMatcherExemptionTests):
+    for case in (WorkflowGuardHookTests, HookMatcherExemptionTests, RealHookManifestTests):
         suite.addTests(unittest.defaultTestLoader.loadTestsFromTestCase(case))
     return suite
 

@@ -1,5 +1,10 @@
 # Tool-Agnostic Capability Discovery Spike
 
+> Dated record. The file and line citations below describe the tree when the spike
+> was written. Some cited files (such as `check-prerequisites.sh` and the layer 5
+> tool-scoping shell script) have since been removed or replaced, and some line
+> ranges no longer exist. Do not treat the citations as current paths.
+
 ## Summary
 
 TACD-001 is a report-only spike for deciding how SpecKit Pro should move from named optional MCP preferences to installed-capability discovery. The evidence supports this split:
