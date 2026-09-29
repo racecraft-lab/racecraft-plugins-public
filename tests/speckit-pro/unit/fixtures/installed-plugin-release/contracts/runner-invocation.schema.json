@@ -45,12 +45,7 @@
     "operation": {
       "enum": [
         "preflight",
-        "scaffold",
-        "status",
-        "autopilot-dry-run",
-        "doctor",
-        "update",
-        "autoheal"
+        "runtime-info"
       ]
     },
     "interpreter_resolution": {

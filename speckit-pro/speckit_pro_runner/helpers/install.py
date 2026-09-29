@@ -5037,11 +5037,7 @@ def runner_invocation_case(repo_root: Path, inputs: dict[str, Any]) -> dict[str,
 def runner_invocation_record(case: dict[str, Any], request_id: str | None, repo_root: Path) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     product = normalize_enum(case.get("product"), {"claude", "codex"}, "claude")
     platform_name = normalize_enum(case.get("platform"), {"windows", "macos", "linux"}, host_platform())
-    operation = normalize_enum(
-        case.get("operation"),
-        {"preflight", "scaffold", "status", "autopilot-dry-run", "doctor", "update", "autoheal"},
-        "preflight",
-    )
+    operation = "runtime-info"
     surface_path = str(case.get("surface_path") or "speckit-pro/skills/speckit-status/SKILL.md")
     cache_root = str(case.get("cache_root") or ".")
     request_id_value = request_id or f"installed-runtime-{product}-{platform_name}-{operation}"
@@ -5052,7 +5048,7 @@ def runner_invocation_record(case: dict[str, Any], request_id: str | None, repo_
         "schema_version": "1.0",
         "request_id": f"{request_id_value}:runtime-info",
         "helper_id": "runner",
-        "operation": "runtime-info",
+        "operation": operation,
         "mode": "read_only",
         "inputs": {
             "source": "installed-plugin-runtime",

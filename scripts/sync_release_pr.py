@@ -21,6 +21,18 @@ class SyncError(RuntimeError):
 RELEASE_MANIFEST = ".release-please-manifest.json"
 
 
+def docs_package_manager(repo_root: Path) -> str:
+    """Return the pnpm pin that docs-site/package.json declares."""
+    package_json = repo_root / "docs-site" / "package.json"
+    try:
+        value = json.loads(package_json.read_text(encoding="utf-8")).get("packageManager")
+    except (OSError, json.JSONDecodeError) as exc:
+        raise SyncError(f"cannot read the pnpm pin from {package_json.name}: {exc}") from exc
+    if not isinstance(value, str) or not value.startswith("pnpm@"):
+        raise SyncError("docs-site/package.json must declare packageManager as pnpm@<version>")
+    return value
+
+
 def _manifest_versions(text: str, side: str) -> dict[str, str]:
     try:
         value = json.loads(text)
@@ -241,7 +253,7 @@ def sync_release_branch(
     merge_release_base(repo_root, base_sha, runner)
 
     runner.run(["corepack", "enable"], repo_root)
-    runner.run(["corepack", "prepare", "pnpm@10.25.0", "--activate"], repo_root)
+    runner.run(["corepack", "prepare", docs_package_manager(repo_root), "--activate"], repo_root)
     runner.run([sys.executable, "scripts/refresh-release-artifacts.py"], repo_root)
     runner.run(["pnpm", "--dir", "docs-site", "reference:generate"], repo_root)
 

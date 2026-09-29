@@ -45,17 +45,8 @@ if str(PLUGIN_ROOT) not in sys.path:
 if str(TEST_LIB_ROOT) not in sys.path:
     sys.path.insert(0, str(TEST_LIB_ROOT))
 
+from speckit_pro_runner.envelope import STATUS_EXIT_CODES  # noqa: E402
 from structural_helpers import iter_subschemas  # noqa: E402
-
-
-STATUS_EXIT_CODES = {
-    "ok": 0,
-    "expected_failure": 1,
-    "input_error": 2,
-    "missing_prerequisite": 3,
-    "subprocess_failure": 4,
-    "internal_failure": 5,
-}
 
 
 def runner_env() -> dict[str, str]:
@@ -691,7 +682,7 @@ class GateFoundationTests(unittest.TestCase):
         for case in cases["cases"]:
             with self.subTest(case_id=case["case_id"]):
                 self.assertIn(case["product"], {"claude", "codex"})
-                self.assertIn(case["operation"], {"preflight", "scaffold", "status", "autopilot-dry-run"})
+                self.assertNotIn("operation", case, "the record reports the runner operation it sends")
                 self.assertTrue(case["cache_root"])
                 if "candidate_results" not in case:
                     continue
