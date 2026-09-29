@@ -510,6 +510,26 @@ class NativeTlcTests(FormalCheckerTests):
         self.assertEqual("timeout", self.request("apply")["data"]["verdict"])
 
 
+def policy_breaks(tree: ast.AST, name: str) -> list[str]:
+    found = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.FunctionDef) and node.name in POLICY_FUNCTIONS:
+            found.append(f"{name}: def {node.name}")
+        if isinstance(node, ast.Constant) and isinstance(node.value, str) and (node.value in POLICY_STRINGS or node.value.startswith(("Phase ", "Post:"))):
+            found.append(f"{name}: {node.value!r}")
+    return found
+
+
+def lazy_imports(tree: ast.AST, name: str) -> list[str]:
+    scopes = [node for node in ast.walk(tree) if isinstance(node, ast.FunctionDef)]
+    return [f"{name}:{n.lineno}" for scope in scopes for n in ast.walk(scope) if isinstance(n, ast.ImportFrom)]
+
+
+def shared_parsing_imports(tree: ast.AST, name: str) -> list[str]:
+    return [f"{name}:{n.lineno}" for n in ast.walk(tree)
+            if isinstance(n, ast.ImportFrom) and "formal" in (n.module or "").split(".") and SHARED_PARSING & {a.name for a in n.names}]
+
+
 def boundary_violations(runner: Path) -> dict[str, list[str]]:
     """Package-boundary breaks in the runner tree at `runner`, keyed by rule."""
     found: dict[str, list[str]] = {"autopilot_policy": [], "shared_parsing": [], "lazy_import": []}
@@ -517,18 +537,10 @@ def boundary_violations(runner: Path) -> dict[str, list[str]]:
         tree = ast.parse(path.read_text(encoding="utf-8"))
         name = path.relative_to(runner).as_posix()
         if path.parent.name == "formal":
-            for node in ast.walk(tree):
-                if isinstance(node, ast.FunctionDef) and node.name in POLICY_FUNCTIONS:
-                    found["autopilot_policy"].append(f"{name}: def {node.name}")
-                if isinstance(node, ast.Constant) and isinstance(node.value, str) and (node.value in POLICY_STRINGS or node.value.startswith(("Phase ", "Post:"))):
-                    found["autopilot_policy"].append(f"{name}: {node.value!r}")
-            for outer in ast.walk(tree):
-                if isinstance(outer, ast.FunctionDef):
-                    found["lazy_import"] += [f"{name}:{n.lineno}" for n in ast.walk(outer) if isinstance(n, ast.ImportFrom)]
+            found["autopilot_policy"] += policy_breaks(tree, name)
+            found["lazy_import"] += lazy_imports(tree, name)
         else:
-            for node in ast.walk(tree):
-                if isinstance(node, ast.ImportFrom) and "formal" in (node.module or "").split(".") and SHARED_PARSING & {a.name for a in node.names}:
-                    found["shared_parsing"].append(f"{name}:{node.lineno}")
+            found["shared_parsing"] += shared_parsing_imports(tree, name)
     return found
 
 

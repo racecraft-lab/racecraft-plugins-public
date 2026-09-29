@@ -17,7 +17,7 @@ from .pins import CHECKER_SHA256
 from .primitives import RUNS_PATH, FormalError, confined, digest
 from .process import checker_command, run_process, runtime_environment
 from .quint import command as quint_command, compile_model
-from .traces import execute as execute_traces
+from .traces import execute
 
 ADAPTERS = {"apalache": apalache, "tlc": tlc}
 
@@ -121,7 +121,7 @@ def execute_model(root: Path, model_id: str, item: dict[str, Any]) -> dict[str, 
     result = {"model": model_id, "verdict": "pass" if passed else results[-1]["verdict"], "mode": model["mode"], "bounds": model["bounds"], "assumptions": model["assumptions"], "obligations": results,
               **({"compilation": compilation} if compilation else {})}
     if passed and item.get("trace_required"):
-        result["traces"] = execute_traces(root, model_id, item, model, snapshot, run, deadline)
+        result["traces"] = execute(root, model_id, item, model, snapshot, run, deadline)
         failures = [r["verdict"] for r in result["traces"] if r["verdict"] != "pass"]
         result["verdict"] = failures[0] if failures else "pass"
     return result

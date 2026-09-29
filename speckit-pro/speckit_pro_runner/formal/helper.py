@@ -16,7 +16,7 @@ from .lifecycle import latest_planning_checkpoint, mirror_checkpoint, recorded_n
 from .primitives import CATALOG_PATH, FormalError, confined
 from .quint import inspect as inspect_quint
 from .selection import selection_from_workflow
-from .traces import complete_receipts, preview as trace_preview
+from .traces import complete_receipts, preview
 
 
 def relative_input(root: Path, value: str) -> str:
@@ -113,7 +113,7 @@ def check(root: Path, workflow: str, inputs: dict[str, Any], mode: str, context:
     plans = {key: preview_model(root, item) for key, item in context["models"].items()}
     trace_checks = {}
     if checkpoint in ("final", "post"):
-        trace_checks = trace_preview(root, context["selection"], context["models"])
+        trace_checks = preview(root, context["selection"], context["models"])
     record = {"schema_version": "1.0", "workflow_file": workflow, "spec_file": spec, "plan_file": plan, "checkpoint": checkpoint, "fingerprint": before, "selection": context["selection"], "checkers": context["identities"], "verdict": "preview", "commands": plans, "results": [], "recorded_at": recorded_now(),
               "evidence": record_path(root, workflow, checkpoint).relative_to(root).as_posix()}
     if trace_checks:
