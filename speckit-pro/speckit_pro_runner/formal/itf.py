@@ -6,7 +6,7 @@ import json
 import re
 from typing import Any
 
-from .catalog import FormalError, operator
+from .primitives import FormalError, operator
 
 
 def literal(value: Any, depth: int = 0) -> str:
