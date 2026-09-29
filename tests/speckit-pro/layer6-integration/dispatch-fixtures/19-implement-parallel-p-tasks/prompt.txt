@@ -13,9 +13,10 @@ RUNS, then batched dispatch for [P] parallel runs):
   same agent type → implement-executor)
 - AGENT_TEAMS_AVAILABLE is false for this fixture (no env var probe
   happens in parser-replay) — take Path B (background subagents)
+- Phase 7 workers share the current feature checkout: set no
+  `isolation` field on any dispatch
 - Dispatch ALL 3 tasks in ONE assistant message via:
     subagent_type: speckit-pro:implement-executor
-    isolation: "worktree"
     run_in_background: true
     description: "SPEC-FIXTURE-D2 T00X [P] <brief>"
     prompt: the task, ending with these two lines:
