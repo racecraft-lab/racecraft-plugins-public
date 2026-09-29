@@ -648,7 +648,7 @@ class BlockedActionDeferralSourceContractTests(unittest.TestCase):
         )
         self.assertLess(phase.index("## Phase 7: Implement"), phase.index(section))
         self.assert_deferral_rules(section, "`request_user_input`")
-        self.assertIn("even when `request_user_input` returns", section)
+        self.assertIn("make no `request_user_input` call for it", section)
         # The late-discovery rule no longer routes a mid-run boundary into the
         # pre-Phase-7 stop.
         late = _section(phase, "If a worker discovers a predictable boundary", "```text")
@@ -740,7 +740,10 @@ class RunFinalizationSourceContractTests(unittest.TestCase):
             "retry with backoff",
             "reviewer veto despite a recorded chat authorization",
             "never lets a gate pass, be skipped, or be deferred",
-            "at the end of the run an unresolved deferral is the human stop",
+            "at the end of the run an unresolved deferral climbs the escalation tiers",
+            "\"Decisions for you\"",
+            "The run never pauses to ask",
+            "the only stop is a required gate that is still not green",
             "`deferred_digest`",
             "never re-checks an unchanged blocker",
             *self.PER_HEAD,
@@ -762,7 +765,7 @@ class RunFinalizationSourceContractTests(unittest.TestCase):
         hardener = _flat(CLAUDE_AUTOPILOT_SKILL.parent / "references" / "hardener-delegation.md")
         self.assertIn("It is a gate, so it never stays deferred", hardener)
         efficiency = _flat(CLAUDE_AUTOPILOT_SKILL.parent / "references" / "execution-efficiency.md")
-        self.assertIn("the run never finalizes ready for review over it, a gate's included", efficiency)
+        self.assertIn("only a required gate that is not green makes `finalize-run` return", efficiency)
         preflight = _section(phase, "### Autonomy Boundary Preflight", "1. Read mode from `CONFIDENCE_GATE_MODE`")
         for phrase in ("`check-gate-preflight-coverage`", "preflight defect", "at run start"):
             self.assertIn(phrase, preflight)
@@ -966,12 +969,12 @@ class CleanFinishAndStopWordingSourceContractTests(unittest.TestCase):
         for skill in (CLAUDE_AUTOPILOT_SKILL, CODEX_AUTOPILOT_SKILL):
             text = _flat(skill)
             self.assertIn(CLEAN_FINISH_QUESTION, text)
-            self.assertIn("ask only on `human_stop` or deferred human UAT", text)
+            self.assertIn("The run never pauses to ask.", text)
             self.assertNotIn("Either way, make one consolidated", text)
             self.assertNotIn("Either way, make the one consolidated", text)
         codex_phase = _flat(CODEX_AUTOPILOT_SKILL.parent / "references" / "phase-execution-codex.md")
         self.assertIn(CLEAN_FINISH_QUESTION, codex_phase)
-        self.assertIn("ask only on `human_stop` or deferred human UAT", codex_phase)
+        self.assertIn("The run never pauses to ask", codex_phase)
 
     def test_claude_executors_return_a_blocker_instead_of_escalating(self) -> None:
         agents = REPO_ROOT / "speckit-pro" / "agents"

@@ -1,12 +1,12 @@
 {
   "schema_version": "1.0",
-  "request_id": "fixture-finalize-red-gate",
+  "request_id": "eval-parity-finish",
   "helper_id": "finalize-run",
   "operation": "finalize-run",
   "mode": "read_only",
   "inputs": {
     "ledger_path": ".process/execution-control/ledger.json",
-    "expected_run_id": "0b2160c46f164c7a92bf6788b15c717b",
+    "expected_run_id": "eval-finalize-run",
     "gates": [
       {
         "gate": "G7",
@@ -31,7 +31,7 @@
       },
       {
         "gate": "Post: Integration Suite",
-        "status": "failed",
+        "status": "passed",
         "command": "python3 tests/integration.py",
         "head_sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
         "dispatch_id": "verify-4"
@@ -53,7 +53,13 @@
     ],
     "pending_items": [],
     "unresolved_deferrals": [],
-    "human_uat": [],
+    "human_uat": [
+      {
+        "item": "UAT story 2: the export opens in a spreadsheet app",
+        "reason": "It needs a person to open the exported file.",
+        "finish": "Follow steps 4 to 6 of the UAT runbook and record the result on the pull request."
+      }
+    ],
     "pull_requests": [
       {
         "number": 101,
@@ -74,6 +80,6 @@
         "head_sha": "cccccccccccccccccccccccccccccccccccccccc"
       }
     ],
-    "resume_command": "/speckit-pro:speckit-autopilot docs/ai/specs/.process/FEATURE-001-workflow.md --from-phase implement"
+    "resume_command": "/speckit-pro:speckit-autopilot feature/workflow.md --stage implement"
   }
 }

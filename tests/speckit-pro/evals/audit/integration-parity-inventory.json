@@ -28,11 +28,11 @@
   "parity_catalog_slice": {
     "catalog": "tests/speckit-pro/evals/catalog.json",
     "current_adoption": {
-      "authored_case_ids": ["parity.01-post-implementation-outcome", "parity.02-scaffold-relocation-guidance"],
-      "provider_free_contract_validated_count": 2,
+      "authored_case_ids": ["parity.01-post-implementation-outcome", "parity.02-scaffold-relocation-guidance", "parity.03-stop-policy-finish"],
+      "provider_free_contract_validated_count": 3,
       "native_qualified_count": 0,
       "pending_legacy_definitions": ["parity-03-reviewability-backstop", "parity-04-stack-manager-guidance"],
-      "limitations": "Parity 01 awaits native qualification. Parity 02 additionally requires both reused functional pairs before composite completion. The proposal counts, artifacts, and gap text below preserve the earlier four-candidate checkpoint and are not current adoption or qualification evidence."
+      "limitations": "Parity 01 awaits native qualification. Parity 02 additionally requires both reused functional pairs before composite completion. Parity 03 (stop-policy finish) is a native-only case with no legacy source and awaits native qualification. The proposal counts, artifacts, and gap text below preserve the earlier four-candidate checkpoint and are not current adoption or qualification evidence."
     },
     "candidate_count": 4,
     "provider_free_contract_validated_count": 4,

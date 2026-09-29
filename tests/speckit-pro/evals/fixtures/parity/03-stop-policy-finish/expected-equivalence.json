@@ -1,0 +1,30 @@
+{
+  "schema": "speckit.layer7.expected-equivalence.v1",
+  "fixture_id": "03-stop-policy-finish",
+  "description": "Compares independently correct Claude and Codex finish reports for the same finalize-run request.",
+  "compare": [
+    {
+      "field": "outcome.field",
+      "source": "artifacts/parity-03-stop-policy-finish.md",
+      "section_selector": "## Outcome",
+      "extractor": "table_column:Field",
+      "tolerance_key": "outcome.field"
+    },
+    {
+      "field": "outcome.value",
+      "source": "artifacts/parity-03-stop-policy-finish.md",
+      "section_selector": "## Outcome",
+      "extractor": "table_column:Value",
+      "tolerance_key": "outcome.value"
+    },
+    {
+      "field": "ready.command",
+      "source": "artifacts/parity-03-stop-policy-finish.md",
+      "section_selector": "## Ready Commands",
+      "extractor": "table_column:Command",
+      "tolerance_key": "ready.command"
+    }
+  ],
+  "fail_fast": false,
+  "report_format": "field-level-diff"
+}

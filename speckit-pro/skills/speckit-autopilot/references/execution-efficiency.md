@@ -423,11 +423,14 @@ increment's own review allowance, or the gate's allowance. It
 must be reserved at or after `deferred_at` and have `outcome=completed`. No
 request can name a resolution, and a failed or unknown result resolves
 nothing. At the end, list every unresolved entry of the current `deferred`
-list in the one end-of-run consolidated request; `finalize-run` omits resolved
-entries. An entry still unresolved at the end makes `finalize-run` return
-`outcome=human_stop`: the run never finalizes ready for review over it, a
-gate's included. `authorize-corrective-exception` and `begin-replan-epoch` are
-end-of-run tools that act on the operator's answer to that request. A new
+list in the one end-of-run request; `finalize-run` omits resolved
+entries. An entry still unresolved at the end first climbs the escalation
+tiers (tier 2, then tier 3, recorded per unit in `escalation_allowances` and
+capped at 3 tier-3 retries per run). A unit that failed every tier is listed
+under "Decisions for you" in the request of a stack that is still ready for
+review; only a required gate that is not green makes `finalize-run` return
+`outcome=human_stop`. `authorize-corrective-exception` and `begin-replan-epoch`
+are end-of-run tools that act on the operator's answer to that request. A new
 allowance archives the list into `corrective_epochs` with the rest of the
 spent allowance. The ledger validates every entry on each call: an entry whose
 allowance the ledger does not show as spent, a duplicate, or an out-of-order

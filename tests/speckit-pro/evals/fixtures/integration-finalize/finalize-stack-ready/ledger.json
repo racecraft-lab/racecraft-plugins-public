@@ -8,7 +8,7 @@
   "corrective_cycles": 0,
   "dispatches": {
     "verify-1": {
-      "completed_at": 1010.0,
+      "completed_at": 1000.0,
       "failing_checks": {
         "checks_run": null,
         "command_id": "UNIT_TEST",
@@ -18,17 +18,17 @@
         "head_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
         "output_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
         "passing": null,
-        "recorded_at": 1010.0,
+        "recorded_at": 1000.0,
         "worktree_clean": true
       },
       "kind": "verification",
       "outcome": "completed",
       "reconciliations": 0,
       "reservation_id": null,
-      "reserved_at": 1010.0
+      "reserved_at": 1000.0
     },
     "verify-2": {
-      "completed_at": 1020.0,
+      "completed_at": 1000.0,
       "failing_checks": {
         "checks_run": null,
         "command_id": "UNIT_TEST",
@@ -38,17 +38,17 @@
         "head_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
         "output_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
         "passing": null,
-        "recorded_at": 1020.0,
+        "recorded_at": 1000.0,
         "worktree_clean": true
       },
       "kind": "verification",
       "outcome": "completed",
       "reconciliations": 0,
       "reservation_id": null,
-      "reserved_at": 1020.0
+      "reserved_at": 1000.0
     },
     "verify-3": {
-      "completed_at": 1030.0,
+      "completed_at": 1000.0,
       "failing_checks": {
         "checks_run": null,
         "command_id": "UNIT_TEST",
@@ -58,17 +58,17 @@
         "head_sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
         "output_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
         "passing": null,
-        "recorded_at": 1030.0,
+        "recorded_at": 1000.0,
         "worktree_clean": true
       },
       "kind": "verification",
       "outcome": "completed",
       "reconciliations": 0,
       "reservation_id": null,
-      "reserved_at": 1030.0
+      "reserved_at": 1000.0
     },
     "verify-4": {
-      "completed_at": 1040.0,
+      "completed_at": 1000.0,
       "failing_checks": {
         "checks_run": null,
         "command_id": "UNIT_TEST",
@@ -78,17 +78,17 @@
         "head_sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
         "output_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
         "passing": null,
-        "recorded_at": 1040.0,
+        "recorded_at": 1000.0,
         "worktree_clean": true
       },
       "kind": "verification",
       "outcome": "completed",
       "reconciliations": 0,
       "reservation_id": null,
-      "reserved_at": 1040.0
+      "reserved_at": 1000.0
     },
     "verify-5": {
-      "completed_at": 1050.0,
+      "completed_at": 1000.0,
       "failing_checks": {
         "checks_run": null,
         "command_id": "UNIT_TEST",
@@ -98,17 +98,17 @@
         "head_sha": "cccccccccccccccccccccccccccccccccccccccc",
         "output_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
         "passing": null,
-        "recorded_at": 1050.0,
+        "recorded_at": 1000.0,
         "worktree_clean": true
       },
       "kind": "verification",
       "outcome": "completed",
       "reconciliations": 0,
       "reservation_id": null,
-      "reserved_at": 1050.0
+      "reserved_at": 1000.0
     },
     "verify-6": {
-      "completed_at": 1060.0,
+      "completed_at": 1000.0,
       "failing_checks": {
         "checks_run": null,
         "command_id": "UNIT_TEST",
@@ -118,20 +118,20 @@
         "head_sha": "cccccccccccccccccccccccccccccccccccccccc",
         "output_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
         "passing": null,
-        "recorded_at": 1060.0,
+        "recorded_at": 1000.0,
         "worktree_clean": true
       },
       "kind": "verification",
       "outcome": "completed",
       "reconciliations": 0,
       "reservation_id": null,
-      "reserved_at": 1060.0
+      "reserved_at": 1000.0
     }
   },
   "excluded_intervals": [],
-  "last_observed_at": 1060.0,
+  "last_observed_at": 1100.0,
   "reservations": {},
-  "run_id": "07fa11421b1c4a34bdb58cf7cb55ecb1",
+  "run_id": "eval-finalize-run",
   "schema_version": "execution-control/v1",
   "slice_started_at": 1000.0,
   "started_at": 1000.0,
