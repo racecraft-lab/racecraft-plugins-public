@@ -6826,7 +6826,7 @@
         },
         {
           "id": "legacy-01",
-          "description": "Explains that autopilot does NOT stop on gate failure — it retries"
+          "description": "Explains that autopilot does NOT stop on gate failure — it retries, and a gate still failing after its repair loop defers per the Failure Escalation Protocol while the run continues"
         },
         {
           "id": "legacy-02",
@@ -6877,7 +6877,7 @@
           "id": "legacy-01-semantic",
           "requirement": "legacy-01",
           "type": "semantic",
-          "rubric": "PASS only if the evidence satisfies: Explains that autopilot does NOT stop on gate failure — it retries FAIL if omitted, contradicted, or merely claimed without required evidence."
+          "rubric": "PASS only if the evidence satisfies: Explains that autopilot does NOT stop on gate failure — it retries, and a gate still failing after its repair loop defers per the Failure Escalation Protocol while the run continues FAIL if omitted, contradicted, or merely claimed without required evidence."
         },
         {
           "id": "legacy-02-semantic",
@@ -8111,7 +8111,7 @@
     {
       "id": "functional.speckit-autopilot.case-15",
       "layer": "functional",
-      "capability": "Refuses to invoke grill-me. Explains that grill-me is human-in-the-loop only and is forbidden inside autopilot. The correct response to unresolvable ambiguity is to use the Clarify Question Set plus consensus flow, then fail the gate or surface the issue to the user if consensus cannot resolve it. It does not call the native grill-me capability under any circumstance.",
+      "capability": "Refuses to invoke grill-me. Explains that grill-me is human-in-the-loop only and is forbidden inside autopilot. The correct response to unresolvable ambiguity is to use the Clarify Question Set plus consensus flow, then defer the ambiguity to the end-of-run request if consensus cannot resolve it. It does not call the native grill-me capability under any circumstance.",
       "timeout_seconds": 300,
       "resource_class": "ordinary",
       "requirements": [
@@ -8137,7 +8137,7 @@
         },
         {
           "id": "legacy-05",
-          "description": "Either fails the gate gracefully and surfaces to the user, or continues only after the parent has resolved/applied clarifications"
+          "description": "Either defers the unresolved ambiguity per the Failure Escalation Protocol without stopping the run, or continues only after the parent has resolved/applied clarifications"
         },
         {
           "id": "legacy-06",
@@ -8161,7 +8161,7 @@
         },
         {
           "id": "legacy-11",
-          "description": "Suggests flagging unresolved questions under 'Unresolved for consensus' or failing the gate, not escalating to grill-me"
+          "description": "Suggests flagging unresolved questions under 'Unresolved for consensus' or deferring them, not escalating to grill-me"
         },
         {
           "id": "legacy-12",
@@ -8224,7 +8224,7 @@
           "id": "legacy-05-semantic",
           "requirement": "legacy-05",
           "type": "semantic",
-          "rubric": "PASS only if the evidence satisfies: Either fails the gate gracefully and surfaces to the user, or continues only after the parent has resolved/applied clarifications FAIL if omitted, contradicted, or merely claimed without required evidence."
+          "rubric": "PASS only if the evidence satisfies: Either defers the unresolved ambiguity per the Failure Escalation Protocol without stopping the run, or continues only after the parent has resolved/applied clarifications FAIL if omitted, contradicted, or merely claimed without required evidence."
         },
         {
           "id": "legacy-06-semantic",
@@ -8260,7 +8260,7 @@
           "id": "legacy-11-semantic",
           "requirement": "legacy-11",
           "type": "semantic",
-          "rubric": "PASS only if the evidence satisfies: Suggests flagging unresolved questions under 'Unresolved for consensus' or failing the gate, not escalating to grill-me FAIL if omitted, contradicted, or merely claimed without required evidence."
+          "rubric": "PASS only if the evidence satisfies: Suggests flagging unresolved questions under 'Unresolved for consensus' or deferring them, not escalating to grill-me FAIL if omitted, contradicted, or merely claimed without required evidence."
         },
         {
           "id": "legacy-12-semantic",
@@ -16354,7 +16354,7 @@
     {
       "id": "functional.speckit-autopilot.case-112",
       "layer": "functional",
-      "capability": "Preserves an explicit human UI-delivery requirement through the bounded Plan repair cycle, retains the unresolved marker and failed G3 result, logs provenance, and escalates the exact architectural gap.",
+      "capability": "Preserves an explicit human UI-delivery requirement through the bounded Plan repair cycle, retains the unresolved marker and failed G3 result, logs provenance, and defers the exact architectural gap.",
       "timeout_seconds": 600,
       "resource_class": "nested",
       "required_tools": [
@@ -16391,7 +16391,7 @@
         },
         {
           "id": "legacy-07",
-          "description": "After unsuccessful repair, escalates with G3 still failed; any explicit skip-and-log override keeps the verdict, marker, and provenance unchanged"
+          "description": "After unsuccessful repair, defers the exact choice with G3 still failed, keeps the verdict, marker, and provenance unchanged, and continues the run without a stop or skip-and-log option"
         }
       ],
       "prompt": "Use {{skill}} for this bounded local Plan scenario. G3 currently fails on the unresolved visible UI-delivery wording in scenario-inputs/feature/plan.md. The original Plan prompt, completed Clarify evidence, current architecture evidence, and docs/ai/specs/.process/SPEC-112-workflow.md are staged alongside it. Read that workflow file, scenario-inputs/g3-request.json, and scenario-inputs/context-request.json with separate exact native file reads before the first runner invocation. The supplied architecture evidence already proves that no supported observation mechanism exists, so perform exactly one bounded Plan repair; a second repair would repeat unchanged evidence. Record that repair under a literal #### Plan Ambiguity Repair Log heading inside the workflow file's Plan Results section. The parent must run the authoritative G3 command before the Plan-executor dispatch and once after its return; the executor must not run G3. Invoke the staged authoritative Python runner for the initial G3 check as the exact default-shell command {{resolved_python}} -m speckit_pro_runner < scenario-inputs/g3-request.json. Immediately preserve that complete actual response envelope as the sole element of scenario-output/g3-attempts.json, then invoke {{resolved_python}} -m speckit_pro_runner < scenario-inputs/context-request.json as its own exact command. Pass the complete successful helper response envelope unchanged as the native phase-executor child message; the executor uses only its hash-bound data.stdout_json.executor_message. Do not summarize, excerpt, reconstruct, extract, or splice it. Each runner tool call must contain only its required exact command: do not inspect the executable first and do not add ls, echo, a semicolon, a shell variable, chaining, or output redirection. After the executor returns, rerun the exact G3 command. At scenario-output/g3-attempts.json, leave exactly one top-level JSON object whose only key is attempts and whose attempts array preserves both complete actual G3 response envelopes in order. Work only in the staged scenario, do not ask the user, and stop at the contract's terminal result.",
@@ -16639,7 +16639,7 @@
           "id": "bounded-escalation",
           "requirement": "legacy-07",
           "type": "semantic",
-          "rubric": "PASS only if, after the evidence-bearing repair cycle ends without a solution, the run escalates the exact missing UI-delivery observation/callback choice with G3 failed, the marker and explicit-human provenance intact, and every actual attempt logged. If skip-and-log is mentioned, it must be identified as unconfigured and must not be claimed as taken. FAIL for a broader question, a completion claim, an assumed fixed two-attempt count unsupported by evidence, or altered failed evidence."
+          "rubric": "PASS only if, after the evidence-bearing repair cycle ends without a solution, the run defers the exact missing UI-delivery observation/callback choice to the end-of-run request with G3 failed, the marker and explicit-human provenance intact, and every actual attempt logged. FAIL if the run stops, asks mid-run, or offers skip-and-log. FAIL for a broader question, a completion claim, an assumed fixed two-attempt count unsupported by evidence, or altered failed evidence."
         }
       ],
       "native_differences": [
