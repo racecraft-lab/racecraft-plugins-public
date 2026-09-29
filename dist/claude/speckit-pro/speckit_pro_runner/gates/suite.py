@@ -238,6 +238,15 @@ def run_default_suite(entry: Any, request: Any, repo_root: Path) -> dict[str, An
     return run_command_set(entry, request, repo_root, command_ids)
 
 
+def input_error_response(entry: Any, request: Any, diag: dict[str, Any]) -> dict[str, Any]:
+    return response(
+        "input_error",
+        request_id=request.request_id,
+        data=base_data(entry, request.operation, "input_error"),
+        diagnostics=[diag],
+    )
+
+
 def run_layer(entry: Any, request: Any, repo_root: Path) -> dict[str, Any]:
     selector = request.inputs.get("layer")
     layer = resolve_layer_selector(selector) if isinstance(selector, str) else None
@@ -245,14 +254,17 @@ def run_layer(entry: Any, request: Any, repo_root: Path) -> dict[str, Any]:
         supported_selectors = sorted(ALLOWED_LAYERS | {
             key for key, layer_id in LAYER_IDS_BY_KEY.items() if layer_id in ALLOWED_LAYERS
         })
-        diag = diagnostic(
-            "invalid_layer",
-            "run-layer requires one supported deterministic layer",
-            details={"layer": selector, "supported_layers": supported_selectors},
-            remediation_summary="Send a supported run-layer request.",
-            remediation_actions=["Set inputs.layer to a supported numeric ID or semantic key.", "Retry the suite-gate request."],
+        return input_error_response(
+            entry,
+            request,
+            diagnostic(
+                "invalid_layer",
+                "run-layer requires one supported deterministic layer",
+                details={"layer": selector, "supported_layers": supported_selectors},
+                remediation_summary="Send a supported run-layer request.",
+                remediation_actions=["Set inputs.layer to a supported numeric ID or semantic key.", "Retry the suite-gate request."],
+            ),
         )
-        return response("input_error", request_id=request.request_id, data=base_data(entry, request.operation, "input_error"), diagnostics=[diag])
     return run_command_set(entry, request, repo_root, [suite_item_to_command_id(layer)])
 
 
@@ -275,14 +287,18 @@ def run_semantic_layer(entry: Any, request: Any, repo_root: Path, layer_key: str
 def run_toolchain_preflight(entry: Any, request: Any, repo_root: Path) -> dict[str, Any]:
     mode = request.inputs.get("mode", "tests")
     if not isinstance(mode, str) or mode not in TOOLCHAIN_MODES:
-        diag = diagnostic(
-            "invalid_toolchain_mode",
-            "run-toolchain-preflight requires a supported toolchain mode",
-            details={"mode": mode, "supported_modes": list(TOOLCHAIN_MODE_NAMES)},
-            remediation_summary="Send a supported toolchain preflight mode.",
-            remediation_actions=[f"Set inputs.mode to {', '.join(TOOLCHAIN_MODE_NAMES[:-1])}, or {TOOLCHAIN_MODE_NAMES[-1]}.", "Retry the request."],
+        modes = ", ".join(TOOLCHAIN_MODE_NAMES[:-1]) + f", or {TOOLCHAIN_MODE_NAMES[-1]}"
+        return input_error_response(
+            entry,
+            request,
+            diagnostic(
+                "invalid_toolchain_mode",
+                "run-toolchain-preflight requires a supported toolchain mode",
+                details={"mode": mode, "supported_modes": list(TOOLCHAIN_MODE_NAMES)},
+                remediation_summary="Send a supported toolchain preflight mode.",
+                remediation_actions=[f"Set inputs.mode to {modes}.", "Retry the request."],
+            ),
         )
-        return response("input_error", request_id=request.request_id, data=base_data(entry, request.operation, "input_error"), diagnostics=[diag])
     return run_command_set(entry, request, repo_root, ["toolchain"])
 
 
