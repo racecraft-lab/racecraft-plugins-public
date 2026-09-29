@@ -512,13 +512,13 @@ class FinalizeRunTests(_LedgerFixture, unittest.TestCase):
                     finalize(self.root, self.inputs(**override))
 
 
-def _runner(request: dict[str, object]) -> dict[str, object]:
+def _runner(request: dict[str, object], cwd: Path = REPO_ROOT) -> dict[str, object]:
     completed = subprocess.run(
         [sys.executable, "-m", "speckit_pro_runner"],
         input=json.dumps(request),
         text=True,
         capture_output=True,
-        cwd=REPO_ROOT,
+        cwd=cwd,
         env={"PYTHONPATH": str(PLUGIN_ROOT), "PATH": os.defpath},
         check=False,
         timeout=60,
@@ -937,10 +937,7 @@ class FinalizeRunRegistryTests(unittest.TestCase):
             request["inputs"]["pull_requests"][0]["draft"] = True
 
             def call(payload: dict[str, object]) -> dict[str, object]:
-                completed = subprocess.run([sys.executable, "-m", "speckit_pro_runner"], input=json.dumps(payload),
-                                           text=True, capture_output=True, cwd=root, check=False, timeout=60,
-                                           env={"PYTHONPATH": str(PLUGIN_ROOT), "PATH": os.defpath})
-                return json.loads(completed.stdout.splitlines()[-1])
+                return _runner(payload, root)
 
             first = call(request)
             self.assertEqual((first["status"], first["data"]["outcome"]), ("ok", "continue"), first)
