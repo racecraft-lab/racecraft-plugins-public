@@ -95,9 +95,21 @@ def scan_with_policy(policy: GuardPolicy, sources: list[SourceFile]) -> list[Raw
     return findings
 
 
+@dataclass(frozen=True)
+class ScanText:
+    path: str
+    content: str
+    lines: list[str]
+    workflow_contexts: list[tuple[int, int, str]]
+
+    @classmethod
+    def of(cls, path: str, content: str) -> ScanText:
+        contexts = workflow_run_contexts(content) if path.startswith(".github/workflows/") else []
+        return cls(path, content, content.splitlines(), contexts)
+
+
 def source_hits(policy: GuardPolicy, path: str, content: str) -> Iterator[Hit]:
-    lines = content.splitlines()
-    workflow_contexts = workflow_run_contexts(content) if path.startswith(".github/workflows/") else []
+    text = ScanText.of(path, content)
     script = policy.script_file(path)
     if script is not None:
         yield Hit(1, "script_file", script[0], script[1], content)
@@ -106,27 +118,34 @@ def source_hits(policy: GuardPolicy, path: str, content: str) -> Iterator[Hit]:
     for category, pattern, reason in FORBIDDEN_CONTENT_PATTERNS:
         for match in pattern.finditer(content):
             number = line_number_for_offset(content, match.start())
-            context = workflow_context_for_line(workflow_contexts, number) or line_context(lines, number)
+            context = workflow_context_for_line(text.workflow_contexts, number) or line_context(text.lines, number)
             yield Hit(number, category, match.group(0), reason, content if path == CONTAINER_PREFLIGHT_WORKFLOW else context)
-    yield from line_hits(policy, path, content, workflow_contexts)
+    yield from line_hits(policy, text)
 
 
-def line_hits(policy: GuardPolicy, path: str, content: str, workflow_contexts: list[Any]) -> Iterator[Hit]:
-    lines = content.splitlines()
-    for number, line in enumerate(lines, start=1):
-        stripped = line.strip()
-        if not stripped or (stripped.startswith("#") and not path.endswith(".md")) or is_hook_matcher_line(path, line):
+def line_hits(policy: GuardPolicy, text: ScanText) -> Iterator[Hit]:
+    for number, line in enumerate(text.lines, start=1):
+        if skipped_line(text.path, line):
             continue
         for category, pattern, reason in FORBIDDEN_PATTERNS:
             match = pattern.search(line)
-            if match is None:
-                continue
-            context = workflow_context_for_line(workflow_contexts, number) or (line_context(lines, number) if policy.line_context_window else line)
-            if path == CONTAINER_PREFLIGHT_WORKFLOW:
-                context = content
-            if policy.bare_line_context(path, line):
-                context = line
-            yield Hit(number, category, match.group(0), reason, context)
+            if match is not None:
+                yield Hit(number, category, match.group(0), reason, line_hit_context(policy, text, number))
+
+
+def skipped_line(path: str, line: str) -> bool:
+    stripped = line.strip()
+    return not stripped or (stripped.startswith("#") and not path.endswith(".md")) or is_hook_matcher_line(path, line)
+
+
+def line_hit_context(policy: GuardPolicy, text: ScanText, number: int) -> str:
+    line = text.lines[number - 1]
+    if policy.bare_line_context(text.path, line):
+        return line
+    if text.path == CONTAINER_PREFLIGHT_WORKFLOW:
+        return text.content
+    fallback = line_context(text.lines, number) if policy.line_context_window else line
+    return workflow_context_for_line(text.workflow_contexts, number) or fallback
 
 
 def policy_guard_response(policy: GuardPolicy, entry: Any, request: Any, findings: list[RawFinding]) -> dict[str, Any]:
