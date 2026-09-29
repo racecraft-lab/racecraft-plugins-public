@@ -24,12 +24,6 @@ from runner_invocation import assert_runner_response, run_runner  # noqa: E402
 FIXTURE_FILE = Path(__file__).resolve().parent / "fixtures" / "speckit-pro-runner" / "contract-fixtures.json"
 
 
-def encode_request(request: object) -> str:
-    if isinstance(request, str):
-        return request
-    return json.dumps(request)
-
-
 def review_base_candidates() -> list[str]:
     candidates = ["origin/main...HEAD"]
     parents = subprocess.run(
