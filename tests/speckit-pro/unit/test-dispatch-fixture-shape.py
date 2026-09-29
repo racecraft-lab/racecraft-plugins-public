@@ -121,10 +121,8 @@ class ReducerDispatchShapeTests(unittest.TestCase):
     def test_reduce_keeps_dispatch_shape_and_message_grouping(self) -> None:
         source = LAYER6 / "test-fixtures" / "parallel-split-message-dispatch.jsonl"
         with tempfile.TemporaryDirectory() as temporary:
-            expected = Path(temporary) / "expected.json"
-            expected.write_text("{}", encoding="utf-8")
             reduced = subprocess.run(
-                [sys.executable, str(REDUCE), str(source), str(expected)],
+                [sys.executable, str(REDUCE), str(source)],
                 text=True,
                 capture_output=True,
                 shell=False,

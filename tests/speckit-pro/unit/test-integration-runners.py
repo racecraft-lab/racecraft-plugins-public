@@ -255,6 +255,49 @@ class Layer6RunnerTests(unittest.TestCase):
                 check()
 
 
+class ReturnFormatReplayTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.module = load_script_module(LAYER6 / "run-return-format-fixtures.py", "run_return_format_replay_test")
+        self.source = (LAYER6 / "test-fixtures" / "single-dispatch.jsonl").read_text(encoding="utf-8")
+
+    def replay_exit(self, expected: dict[str, object]) -> int:
+        with tempfile.TemporaryDirectory() as temporary:
+            case = Path(temporary) / "case"
+            case.mkdir()
+            (case / "expected.json").write_text(json.dumps(expected), encoding="utf-8")
+            (case / "parser-fixture.jsonl").write_text(self.source, encoding="utf-8")
+            self.module.FIXTURES = Path(temporary)
+            with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+                return self.module.main([case.name])
+
+    def test_replay_fails_a_response_missing_what_expected_json_requires(self) -> None:
+        for field, value in (("must_contain_any", ["ROUND_3_TIEBREAK"]), ("must_contain_section_keywords", ["Agreement"])):
+            with self.subTest(field=field):
+                assertion = {"subagent_type": "speckit-pro:codebase-analyst", field: value}
+                self.assertEqual(self.replay_exit({"response_assertions": [assertion]}), 1)
+
+    def check_empty_response(self, mode: str) -> fixture_runner.Reporter:
+        dispatch_line = next(line for line in self.source.splitlines() if '"tool_use"' in line)
+        dispatch_id = json.loads(dispatch_line)["message"]["content"][0]["id"]
+        empty_result = {"type": "user", "message": {"role": "user", "content": [{"type": "tool_result", "tool_use_id": dispatch_id, "content": ""}]}}
+        assertion = {"subagent_type": "speckit-pro:codebase-analyst", "must_contain_any": ["Finding"]}
+        reporter = fixture_runner.Reporter()
+        with tempfile.TemporaryDirectory() as temporary:
+            transcript = Path(temporary) / "empty-response.jsonl"
+            transcript.write_text(dispatch_line + "\n" + json.dumps(empty_result) + "\n", encoding="utf-8")
+            with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+                self.module.check_response_assertion(reporter, "empty", transcript, assertion, mode)
+        return reporter
+
+    def test_replay_skips_a_fixture_that_retains_no_response_text(self) -> None:
+        self.assertEqual(self.check_empty_response("replay").total, 0)
+
+    def test_live_capture_with_no_response_text_fails(self) -> None:
+        reporter = self.check_empty_response("live")
+        self.assertEqual((reporter.total, reporter.passed), (1, 0))
+
+
 if __name__ == "__main__":
     suite = unittest.defaultTestLoader.loadTestsFromTestCase(Layer6RunnerTests)
+    suite.addTests(unittest.defaultTestLoader.loadTestsFromTestCase(ReturnFormatReplayTests))
     raise SystemExit(run_counted(suite, label="test-integration-runners"))
