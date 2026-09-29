@@ -60,7 +60,7 @@ def standing_approval(manifest, *, grant=None, quota=None, latest="approved"):
     quota = quota or "just run until the quota is run out"
 
     def observation(message_id, timestamp, ordinal, content):
-        return CONVERSATION.observation("user", message_id, timestamp, ordinal, content)
+        return CONVERSATION.observation("user", message_id, (timestamp, ordinal), content)
 
     digest = campaign.json_digest(manifest)
     grant_observation = observation("user-grant-123", "2026-09-12T23:05:29.095Z", 6605, grant)

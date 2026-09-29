@@ -162,6 +162,16 @@ def _write_sibling_skill(plugin_root: Path, name: str, description_lines: list[s
     (sibling_dir / "SKILL.md").write_text("\n".join(body), encoding="utf-8")
 
 
+def _sibling_descriptions(siblings: dict[str, Path | str] | None) -> dict[str, list[str]]:
+    """Description lines per staged sibling; a ``str`` source is a literal description."""
+    descriptions = {NO_SPECKIT_SKILL_NAME: [f"description: {NO_SPECKIT_SKILL_DESCRIPTION}"]}
+    for name, source in (siblings or {}).items():
+        if name == NO_SPECKIT_SKILL_NAME and not isinstance(source, str):
+            raise ValueError(f"reserved sibling skill name: {NO_SPECKIT_SKILL_NAME}")
+        descriptions[name] = [f"description: {source}"] if isinstance(source, str) else source_description_lines(source)
+    return descriptions
+
+
 def stage_measurement_plugin(
     source: Path,
     plugin_root: Path,
@@ -178,15 +188,7 @@ def stage_measurement_plugin(
     no-op skill may appear only with a ``str`` value, which replaces its default
     description; that is how a controlled experiment varies it without a global.
     """
-    staged_siblings = {NO_SPECKIT_SKILL_NAME: [f"description: {NO_SPECKIT_SKILL_DESCRIPTION}"]}
-    for sibling_name, sibling_source in (siblings or {}).items():
-        if sibling_name == NO_SPECKIT_SKILL_NAME and not isinstance(sibling_source, str):
-            raise ValueError(f"reserved sibling skill name: {NO_SPECKIT_SKILL_NAME}")
-        staged_siblings[sibling_name] = (
-            [f"description: {sibling_source}"] if isinstance(sibling_source, str)
-            else source_description_lines(sibling_source)
-        )
-    for sibling_name, description_lines in sorted(staged_siblings.items()):
+    for sibling_name, description_lines in sorted(_sibling_descriptions(siblings).items()):
         if sibling_name == skill_name:
             raise ValueError("sibling skill name collides with the measured skill")
         _write_sibling_skill(plugin_root, sibling_name, description_lines)

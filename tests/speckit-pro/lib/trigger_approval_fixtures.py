@@ -15,7 +15,8 @@ class RetainedConversation:
     ordinals: tuple[int, int]
     line_prefix: str = "retained"
 
-    def observation(self, role: str, message_id: str, timestamp: str, ordinal: int, content: str) -> dict:
+    def observation(self, role: str, message_id: str, position: tuple[str, int], content: str) -> dict:
+        timestamp, ordinal = position
         return {
             "role": role, "message_id": message_id, "session_id": self.session,
             "timestamp": timestamp, "source_ordinal": ordinal, "content": content,
@@ -33,9 +34,9 @@ class RetainedConversation:
             "launch_budget": budget, "recorder_observation": {
                 "observer": "trusted-orchestrator", "session_id": self.session,
                 "adjacent_user_visible_message_ids": [self.request_id, self.response_id],
-                "request": self.observation("assistant", self.request_id, "2026-09-14T16:00:00.000Z",
-                                            request_ordinal, request),
-                "response": self.observation("user", self.response_id, "2026-09-14T16:00:01.000Z",
-                                             response_ordinal, response),
+                "request": self.observation("assistant", self.request_id,
+                                            ("2026-09-14T16:00:00.000Z", request_ordinal), request),
+                "response": self.observation("user", self.response_id,
+                                             ("2026-09-14T16:00:01.000Z", response_ordinal), response),
             },
         }
