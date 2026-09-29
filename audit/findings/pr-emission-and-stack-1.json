@@ -1,0 +1,172 @@
+[
+  {
+    "id": "pr-emission-and-stack-1-001",
+    "lane": "pr-emission-and-stack-1",
+    "severity": "major",
+    "kind": "coherence",
+    "files": [
+      "speckit-pro/speckit_pro_runner/helpers/run_finalization.py:47",
+      "speckit-pro/speckit_pro_runner/helpers/run_finalization.py:62-63",
+      "speckit-pro/speckit_pro_runner/helpers/run_finalization.py:80-88",
+      "speckit-pro/speckit_pro_runner/helpers/pr_emission.py:35-36",
+      "speckit-pro/speckit_pro_runner/helpers/pr_emission.py:1014-1029"
+    ],
+    "ripwire_command": "ripwire . --uses=DEFERRED_ITEM_FIELDS",
+    "summary": "finalize-run accepts human_uat fields that contain newlines (it only strips and caps length at 240), then hands them unchanged to pr-packet-output as deferred_items. normalize_deferred_items rejects any newline, so a run that finalizes as complete_with_deferred can fail at the top-PR body refresh. The same item/reason/finish shape is declared twice (UAT_FIELDS and DEFERRED_ITEM_FIELDS). Confirmed by calling _records with a two-line item, which returned it intact.",
+    "proposed_fix": "Keep one definition of the deferred-item shape and its one-line rule in a shared module, and have finalize-run reject multi-line item, reason and finish before it reports a finalized outcome.",
+    "in_flight_status": "still-open"
+  },
+  {
+    "id": "pr-emission-and-stack-1-002",
+    "lane": "pr-emission-and-stack-1",
+    "severity": "major",
+    "kind": "coherence",
+    "files": [
+      "speckit-pro/speckit_pro_runner/helpers/stack_manager.py:17",
+      "speckit-pro/speckit_pro_runner/helpers/stack_manager.py:118-129",
+      "speckit-pro/skills/speckit-autopilot/references/stack-manager.md:8-10",
+      "speckit-pro/skills/speckit-autopilot/references/stack-manager.md:39-44",
+      "AGENTS.md:178-182"
+    ],
+    "ripwire_command": "ripwire . --uses=SKILL_SHA256",
+    "summary": "qualify_tools accepts only a gh-stack SKILL.md whose bytes hash to one pinned digest and that sits under three trusted install roots. stack-manager.md documents neither the pin nor the roots, and AGENTS.md tells operators to install the current upstream skill. A newer upstream copy therefore fails qualification and every run silently falls back to explicit-gh. On the audit host the newest copy under the user-level agents skills root (the path the code comment calls Codex's primary root) hashes differently from the pin, while the older Claude and Codex user-level copies match it. Tests overwrite the pin, so nothing checks its provenance.",
+    "proposed_fix": "Document the pin, the trusted roots and the refresh procedure in stack-manager.md, and add a check that ties the pinned digest to a committed reference copy or a stated upstream tag so a stale pin is caught.",
+    "in_flight_status": "still-open"
+  },
+  {
+    "id": "pr-emission-and-stack-1-003",
+    "lane": "pr-emission-and-stack-1",
+    "severity": "major",
+    "kind": "coherence",
+    "files": [
+      "tests/speckit-pro/layer6-integration/dispatch-fixtures/22-stack-manager-replay/prompt.txt:1",
+      "tests/speckit-pro/layer6-integration/dispatch-fixtures/22-stack-manager-replay/parser-fixture.jsonl:2",
+      "tests/speckit-pro/layer6-integration/dispatch-fixtures/22-stack-manager-replay/expected.json:2",
+      "tests/speckit-pro/layer6-integration/dispatch-fixtures/22-stack-manager-replay/expected.json:17-23"
+    ],
+    "ripwire_command": "ripwire . --grep=SPEC-914-workflow",
+    "summary": "The live prompt names docs/ai/specs/.process/SPEC-914-workflow.md, which does not exist, and uses the Codex `$speckit-autopilot` form while the layer runs Claude (`claude -p`). Other dispatch fixtures embed a self-contained scenario. The replay text says to implement a shared detect-stack-manager.sh, but the shipped detector is the Python helper detect-stack-manager-plan and AGENTS.md forbids new Bash. must_include_terms includes stack_manager_decision, a name no shipped file uses (the helper returns data.decision and the schema is stack-manager-decision). In replay mode the terms are checked against text the fixture itself contains, so they prove nothing.",
+    "proposed_fix": "Rewrite the prompt as a self-contained scenario that names the current helper and schema terms (detect-stack-manager-plan, stack-manager-decision.v1, mutation_boundary), drop the .sh reference, and set must_include_terms to names the shipped contract uses.",
+    "in_flight_status": null
+  },
+  {
+    "id": "pr-emission-and-stack-1-004",
+    "lane": "pr-emission-and-stack-1",
+    "severity": "major",
+    "kind": "coherence",
+    "files": [
+      "speckit-pro/skills/speckit-autopilot/contracts/pr-packet.schema.json:303-306",
+      "speckit-pro/speckit_pro_runner/helpers/pr_emission.py:833-842",
+      "speckit-pro/speckit_pro_runner/gates/release.py:109",
+      "tests/speckit-pro/layer6-integration/performance-fixtures/draft-pr-emission/source/contracts/draft-packet-mode.md:1-309"
+    ],
+    "ripwire_command": "ripwire . --grep=lowercase-scope",
+    "summary": "The packet schema accepts an uppercase ticket-style title scope ([A-Z]+-[A-Z0-9-]+), and pr-packet-output builds titles from any title_scope string. The live PR-title gate and the release gate accept only [a-z0-9-]+. A packet can pass packet validation and still fail validate-pr-title. The draft-packet contract records this split and leaves it in place. The lowercase rule then lives only in skill prose (post-implementation.md) and the archive-cleanup skill.",
+    "proposed_fix": "Make the schema value and scope patterns, and normalize_generated_title, enforce the same lowercase-scope rule as the gate, ideally from one shared pattern.",
+    "in_flight_status": "still-open"
+  },
+  {
+    "id": "pr-emission-and-stack-1-005",
+    "lane": "pr-emission-and-stack-1",
+    "severity": "minor",
+    "kind": "coherence",
+    "files": [
+      "speckit-pro/speckit_pro_runner/helpers/pr_emission.py:59-77",
+      "speckit-pro/speckit_pro_runner/helpers/registry.py:788-800"
+    ],
+    "ripwire_command": "ripwire . --callers=run_pr_emission_helper",
+    "summary": "The registry routes 11 helper ids to run_pr_emission_helper, but the dispatcher implements only 7. final-reviewability-backstop, validate-pr-workflow-contract-write, relocate-process-artifacts and plan-layers-marker-plan fall through to an input_error. They are unreachable today only because their promotion status is deferred, so promoting one breaks at dispatch. The id list lives in two places.",
+    "proposed_fix": "Derive the routed id set from one table, or have the dispatcher raise a registry-level error for an id the registry routes but the module does not implement.",
+    "in_flight_status": "still-open"
+  },
+  {
+    "id": "pr-emission-and-stack-1-006",
+    "lane": "pr-emission-and-stack-1",
+    "severity": "minor",
+    "kind": "cohesion",
+    "files": [
+      "speckit-pro/speckit_pro_runner/helpers/pr_emission.py:59-77",
+      "speckit-pro/speckit_pro_runner/helpers/pr_emission.py:80-160",
+      "speckit-pro/speckit_pro_runner/helpers/pr_emission.py:423-476",
+      "speckit-pro/speckit_pro_runner/helpers/pr_emission.py:479-654"
+    ],
+    "ripwire_command": "ripwire . --callers=run_pr_emission_helper",
+    "summary": "pr_emission.py (1149 lines) holds five jobs: the dispatcher for the read-only stack-manager helper, UAT-skeleton rendering, the TBD PR-body scaffold, command-plan capture for the deferred emission helpers, and PR-packet normalization and validation. The deps scan also places it in a 20-file import cycle with run_finalization.",
+    "proposed_fix": "Split UAT skeleton rendering and packet normalization into their own helper modules, and register detect-stack-manager-plan directly instead of through the PR-emission dispatcher.",
+    "in_flight_status": "still-open"
+  },
+  {
+    "id": "pr-emission-and-stack-1-007",
+    "lane": "pr-emission-and-stack-1",
+    "severity": "minor",
+    "kind": "cohesion",
+    "files": [
+      "speckit-pro/speckit_pro_runner/helpers/pr_emission.py:566-604",
+      "speckit-pro/speckit_pro_runner/helpers/pr_emission.py:944-1011",
+      "tests/speckit-pro/layer6-integration/performance-fixtures/draft-pr-emission/source/contracts/draft-packet-mode.md:258"
+    ],
+    "ripwire_command": "ripwire . --callers=build_packet_body",
+    "summary": "build_packet_body is a single and split layout builder. It hardcodes '## UAT Runbook' and repeats how_to_uat under both How To UAT and UAT Runbook instead of using uat.uat_runbook_heading. When a draft packet omits body it is still called, emits the wrong headings and fails with a generic body-structure error. The draft contract says this fallback is never reached in draft mode.",
+    "proposed_fix": "Reject a draft packet without inputs.body with a specific message before any builder runs, and drive the UAT heading from the uat record.",
+    "in_flight_status": "still-open"
+  },
+  {
+    "id": "pr-emission-and-stack-1-008",
+    "lane": "pr-emission-and-stack-1",
+    "severity": "minor",
+    "kind": "cohesion",
+    "files": [
+      "speckit-pro/speckit_pro_runner/helpers/stack_manager.py:14",
+      "speckit-pro/speckit_pro_runner/helpers/stack_manager.py:27-38",
+      "speckit-pro/speckit_pro_runner/helpers/archive_sweep.py:27",
+      "speckit-pro/speckit_pro_runner/helpers/archive_sweep.py:31-54"
+    ],
+    "ripwire_command": "ripwire . --callers=probe",
+    "summary": "stack_manager.probe and archive_sweep.probe are near-duplicate subprocess wrappers (clone similarity 0.81) with different timeouts and different exception handling. The two BRANCH patterns also differ slightly. The stack_manager ValueError for an unknown CLI is raised inside its own try block and is not caught there.",
+    "proposed_fix": "Extract one bounded gh/git probe with a per-caller allowlist and share the branch pattern.",
+    "in_flight_status": "still-open"
+  },
+  {
+    "id": "pr-emission-and-stack-1-009",
+    "lane": "pr-emission-and-stack-1",
+    "severity": "minor",
+    "kind": "cohesion",
+    "files": [
+      "speckit-pro/speckit_pro_runner/helpers/pr_emission.py:574-604"
+    ],
+    "ripwire_command": "ripwire . --grep=_fenced_markdown_lines",
+    "summary": "Open PR 685 adds a hand-written CommonMark fence scanner of about 50 lines inline in normalize_packet_input, next to the existing _fenced_markdown_lines in read_only.py. The host parser and the packet normalizer now hold two fence-aware scanners.",
+    "proposed_fix": "Move the release-note fence handling into read_only.py beside _fenced_markdown_lines and call one scanner.",
+    "in_flight_status": "introduced-by-branch"
+  },
+  {
+    "id": "pr-emission-and-stack-1-010",
+    "lane": "pr-emission-and-stack-1",
+    "severity": "minor",
+    "kind": "coherence",
+    "files": [
+      "speckit-pro/speckit_pro_runner/helpers/stack_manager.py:206-242",
+      "speckit-pro/skills/speckit-autopilot/references/stack-manager.md:73-80"
+    ],
+    "ripwire_command": "ripwire . --callers=detect",
+    "summary": "The reverified_retry path in the stack ending at PR 852 rebuilds the decision with select_manager, so mutation_boundary is reset to planned and the attempted boundary and recovery record are dropped. The updated stack-manager.md still says never to erase the attempted boundary. Only the caller re-persisting an attempted boundary keeps it, and the helper does not say so.",
+    "proposed_fix": "Carry the prior attempted mutation_boundary and recovery evidence into the re-verified decision, or state in stack-manager.md that the parent must re-persist the boundary before the retry.",
+    "in_flight_status": "introduced-by-branch"
+  },
+  {
+    "id": "pr-emission-and-stack-1-011",
+    "lane": "pr-emission-and-stack-1",
+    "severity": "minor",
+    "kind": "coherence",
+    "files": [
+      "speckit-pro/speckit_pro_runner/helpers/stack_manager.py:122-129",
+      "speckit-pro/speckit_pro_runner/helpers/stack_manager.py:222",
+      "speckit-pro/skills/speckit-autopilot/contracts/stack-manager-decision.schema.json:24-27",
+      "speckit-pro/skills/speckit-autopilot/contracts/stack-manager-decision.schema.json:341-350"
+    ],
+    "ripwire_command": "ripwire . --grep=private_preview_unavailable",
+    "summary": "support_status records 'missing' when a skill exists but sits outside the trusted roots or fails the digest, and 'ambiguous' when the operator chose explicit-gh without any inspection. stack-manager.md says never to relabel unavailable evidence. The schema also allows values no code emits: support_status private_preview_unavailable, phase restack, and operation sync and restack.",
+    "proposed_fix": "Add distinct statuses for untrusted and mismatched skills and for an operator preference, and trim schema enum values the runner never emits, or mark them as reserved.",
+    "in_flight_status": "still-open"
+  }
+]

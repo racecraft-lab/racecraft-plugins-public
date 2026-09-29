@@ -1,0 +1,517 @@
+{
+  "speckit-pro/codex-skills/speckit-archive-cleanup/SKILL.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=speckit-archive-cleanup"
+    ]
+  },
+  "speckit-pro/codex-skills/speckit-archive-cleanup/agents/openai.yaml": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=speckit-archive-cleanup"
+    ]
+  },
+  "speckit-pro/skills/speckit-archive-cleanup/SKILL.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=speckit-archive-cleanup"
+    ]
+  },
+  "speckit-pro/skills/speckit-autopilot/contracts/autonomy-boundary.schema.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=autonomy-boundary.schema.json"
+    ]
+  },
+  "speckit-pro/skills/speckit-autopilot/contracts/pr-packet.schema.json": {
+    "verdict": [
+      "pr-emission-and-stack-1-004"
+    ],
+    "checks_run": [
+      "ripwire . --grep=pr-packet.schema.json"
+    ]
+  },
+  "speckit-pro/skills/speckit-autopilot/contracts/stack-manager-decision.schema.json": {
+    "verdict": [
+      "pr-emission-and-stack-1-011"
+    ],
+    "checks_run": [
+      "ripwire . --grep=stack-manager-decision.schema.json"
+    ]
+  },
+  "speckit-pro/skills/speckit-autopilot/references/stack-manager.md": {
+    "verdict": [
+      "pr-emission-and-stack-1-002",
+      "pr-emission-and-stack-1-010"
+    ],
+    "checks_run": [
+      "ripwire . --grep=detect-stack-manager-plan"
+    ]
+  },
+  "speckit-pro/speckit_pro_runner/helpers/egress_authorization.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --callers=run_egress_authorization_helper"
+    ]
+  },
+  "speckit-pro/speckit_pro_runner/helpers/pr_emission.py": {
+    "verdict": [
+      "pr-emission-and-stack-1-001",
+      "pr-emission-and-stack-1-004",
+      "pr-emission-and-stack-1-005",
+      "pr-emission-and-stack-1-006",
+      "pr-emission-and-stack-1-007",
+      "pr-emission-and-stack-1-009"
+    ],
+    "checks_run": [
+      "ripwire . --callers=run_pr_emission_helper",
+      "ripwire . --uses=DEFERRED_HEADING",
+      "ripwire . --callers=normalize_deferred_items",
+      "ripwire . --uses=DEFERRED_ITEM_FIELDS",
+      "ripwire . --callers=build_packet_body",
+      "ripwire . --grep=_fenced_markdown_lines",
+      "ripwire . --grep=lowercase-scope"
+    ]
+  },
+  "speckit-pro/speckit_pro_runner/helpers/pr_split_ratification.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --callers=run_pr_split_ratification_helper"
+    ]
+  },
+  "speckit-pro/speckit_pro_runner/helpers/promotion.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --callers=promotion_record"
+    ]
+  },
+  "speckit-pro/speckit_pro_runner/helpers/run_finalization.py": {
+    "verdict": [
+      "pr-emission-and-stack-1-001"
+    ],
+    "checks_run": [
+      "ripwire . --callers=finalize_run",
+      "ripwire . --uses=UAT_FIELDS",
+      "ripwire . --uses=DEFERRED_ITEM_FIELDS"
+    ]
+  },
+  "speckit-pro/speckit_pro_runner/helpers/stack_manager.py": {
+    "verdict": [
+      "pr-emission-and-stack-1-002",
+      "pr-emission-and-stack-1-008",
+      "pr-emission-and-stack-1-010",
+      "pr-emission-and-stack-1-011"
+    ],
+    "checks_run": [
+      "ripwire . --callers=detect",
+      "ripwire . --uses=SKILL_SHA256",
+      "ripwire . --callers=probe",
+      "ripwire . --grep=private_preview_unavailable"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/functional/autonomy-boundary-replay/plan.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=autonomy-boundary-replay"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/functional/autonomy-boundary-replay/private-record.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=autonomy-boundary-replay"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/functional/autonomy-boundary-replay/replays.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=autonomy-boundary-replay"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/functional/autonomy-boundary-replay/state.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=autonomy-boundary-replay"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/functional/autonomy-boundary-replay/tasks.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=autonomy-boundary-replay"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/functional/autonomy-boundary-replay/workflow.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=autonomy-boundary-replay"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/functional/corrective-authorization/bind-invariants.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=corrective-authorization"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/functional/corrective-authorization/corrective-continuation.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=corrective-authorization"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/functional/corrective-authorization/corrective-exception.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=corrective-authorization"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/functional/corrective-authorization/corrective-retry.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=corrective-authorization"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/functional/corrective-authorization/spec-amended.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=corrective-authorization"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/functional/corrective-authorization/spec.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=corrective-authorization"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/functional/corrective-authorization/workflow.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=corrective-authorization"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/functional/scaffold-reviewability/block/current-technical-roadmap.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=scaffold-reviewability"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/functional/scaffold-reviewability/block/reviewability-request.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=scaffold-reviewability"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/functional/scaffold-reviewability/exception/current-technical-roadmap.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=scaffold-reviewability"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/functional/scaffold-reviewability/exception/reviewability-request.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=scaffold-reviewability"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/functional/scaffold-reviewability/project.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=scaffold-reviewability"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/scenario-contracts/archive/broken/autopilot-state.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=scenario-contracts/archive"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/scenario-contracts/archive/broken/current-spec.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=scenario-contracts/archive"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/scenario-contracts/archive/broken/extension.yml": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=scenario-contracts/archive"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/scenario-contracts/archive/broken/extensions.yml": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=scenario-contracts/archive"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/scenario-contracts/archive/broken/registry.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=scenario-contracts/archive"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/scenario-contracts/archive/broken/workflow.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=scenario-contracts/archive"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/scenario-contracts/archive/no-candidates/archive.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=scenario-contracts/archive"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/scenario-contracts/archive/no-candidates/autopilot-state.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=scenario-contracts/archive"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/scenario-contracts/archive/no-candidates/claude-command.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=scenario-contracts/archive"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/scenario-contracts/archive/no-candidates/current-spec.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=scenario-contracts/archive"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/scenario-contracts/archive/no-candidates/extension.yml": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=scenario-contracts/archive"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/scenario-contracts/archive/no-candidates/extensions.yml": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=scenario-contracts/archive"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/scenario-contracts/archive/no-candidates/registry.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=scenario-contracts/archive"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/scenario-contracts/archive/no-candidates/workflow.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=scenario-contracts/archive"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/scenario-contracts/plan-layers/atomicity-route.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=atomicity-route.json"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/search-observation/workspace/.search-fixtures/archive/legacy-technical-roadmap.txt": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=legacy-technical-roadmap"
+    ]
+  },
+  "tests/speckit-pro/layer1-structural/fixtures/spec-index/atomicity/specs/a-prsg-913-good/SPEC-MOC.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=spec-index/atomicity"
+    ]
+  },
+  "tests/speckit-pro/layer1-structural/fixtures/spec-index/atomicity/specs/a-prsg-913-good/spec.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=spec-index/atomicity"
+    ]
+  },
+  "tests/speckit-pro/layer1-structural/fixtures/spec-index/atomicity/specs/b-prsg-914-legacy/SPEC-MOC.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=spec-index/atomicity"
+    ]
+  },
+  "tests/speckit-pro/layer1-structural/fixtures/spec-index/atomicity/specs/c-prsg-915-poison/SPEC-MOC.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=spec-index/atomicity"
+    ]
+  },
+  "tests/speckit-pro/layer1-structural/test-structural-regressions.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --callers=load_module"
+    ]
+  },
+  "tests/speckit-pro/layer2-trigger/codex-evals/speckit-archive-cleanup-trigger.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=speckit-archive-cleanup-trigger"
+    ]
+  },
+  "tests/speckit-pro/layer2-trigger/evals/speckit-archive-cleanup-trigger.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=speckit-archive-cleanup-trigger"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/dispatch-fixtures/07-clarify-ambiguous-fanout/README.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=07-clarify-ambiguous-fanout"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/dispatch-fixtures/07-clarify-ambiguous-fanout/expected.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=07-clarify-ambiguous-fanout"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/dispatch-fixtures/07-clarify-ambiguous-fanout/parser-fixture.jsonl": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=07-clarify-ambiguous-fanout"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/dispatch-fixtures/07-clarify-ambiguous-fanout/prompt.txt": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=07-clarify-ambiguous-fanout"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/dispatch-fixtures/22-stack-manager-replay/README.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=22-stack-manager-replay"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/dispatch-fixtures/22-stack-manager-replay/expected.json": {
+    "verdict": [
+      "pr-emission-and-stack-1-003"
+    ],
+    "checks_run": [
+      "ripwire . --grep=22-stack-manager-replay"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/dispatch-fixtures/22-stack-manager-replay/parser-fixture.jsonl": {
+    "verdict": [
+      "pr-emission-and-stack-1-003"
+    ],
+    "checks_run": [
+      "ripwire . --grep=22-stack-manager-replay"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/dispatch-fixtures/22-stack-manager-replay/prompt.txt": {
+    "verdict": [
+      "pr-emission-and-stack-1-003"
+    ],
+    "checks_run": [
+      "ripwire . --grep=22-stack-manager-replay"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/performance-fixtures/draft-pr-emission/kickoff.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=draft-pr-emission"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/performance-fixtures/draft-pr-emission/prepared-tasks.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=draft-pr-emission"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/performance-fixtures/draft-pr-emission/source/contracts/draft-packet-mode.md": {
+    "verdict": [
+      "pr-emission-and-stack-1-004",
+      "pr-emission-and-stack-1-007"
+    ],
+    "checks_run": [
+      "ripwire . --grep=draft-pr-emission"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/performance-fixtures/draft-pr-emission/source/contracts/draft-pr-row.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=draft-pr-emission"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/performance-fixtures/draft-pr-emission/source/contracts/stage-corroboration.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=draft-pr-emission"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/performance-fixtures/draft-pr-emission/source/data-model.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=draft-pr-emission"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/performance-fixtures/draft-pr-emission/source/design-concept.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=draft-pr-emission"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/performance-fixtures/draft-pr-emission/source/plan.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=draft-pr-emission"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/performance-fixtures/draft-pr-emission/source/quickstart.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=draft-pr-emission"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/performance-fixtures/draft-pr-emission/source/research.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=draft-pr-emission"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/performance-fixtures/draft-pr-emission/source/spec.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=draft-pr-emission"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/performance-fixtures/draft-pr-emission/source/tasks.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=draft-pr-emission"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/performance-fixtures/draft-pr-emission/source/workflow.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=draft-pr-emission"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/performance-fixtures/implementation-notes/kickoff.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=performance-fixtures/implementation-notes"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/performance-fixtures/implementation-notes/prepared-tasks.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=performance-fixtures/implementation-notes"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/performance-fixtures/implementation-notes/source/contracts/implementation-notes-record.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=performance-fixtures/implementation-notes"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/performance-fixtures/implementation-notes/source/contracts/task-result-reporting-field.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=performance-fixtures/implementation-notes"
+    ]
+  }
+}
