@@ -30,10 +30,8 @@ runner counted in the ledger.
 
 from __future__ import annotations
 
-import hashlib
 import json
 import os
-import shlex
 import subprocess
 import sys
 import tempfile
@@ -50,8 +48,8 @@ for entry in (PLUGIN_ROOT, REPO_ROOT / "tests" / "speckit-pro" / "lib"):
 
 from test_result import run_counted  # noqa: E402
 
-from speckit_pro_runner.agent_materialization import canonical_bytes  # noqa: E402
 from speckit_pro_runner.execution_control import execution_control, record_failing_checks  # noqa: E402
+from speckit_pro_runner.helpers.run_finalization import gate_command_digest as command_digest  # noqa: E402
 
 HELPER_ID = "finalize-run"
 FIXTURE_REQUEST = (
@@ -85,12 +83,6 @@ HARNESS_ERROR = {"gate": "G7", "status": "harness_error", "command": "python3 te
 DROP = object()  # marks an evidence key the seeded verification record leaves out
 
 
-def command_digest(command: str) -> str:
-    lexer = shlex.shlex(command, posix=True, punctuation_chars=True)
-    lexer.whitespace_split = True
-    return hashlib.sha256(canonical_bytes(list(lexer))).hexdigest()
-
-
 def per_head(*gates: dict[str, object], heads: tuple[str, ...] = tuple(HEADS.values())) -> list[dict[str, object]]:
     """Each gate result repeated at every listed PR head."""
     return [{**gate, "head_sha": head} for head in heads for gate in gates]
@@ -102,30 +94,8 @@ def finalize(root: Path, inputs: dict[str, object], record: bool = False) -> dic
     return finalize_run(root, inputs, record=record)
 
 
-class _LedgerFixture:
-    """A temporary repository with a clean ledger and one holding a deferral."""
-
-    def setUp(self) -> None:
-        temp = tempfile.TemporaryDirectory()
-        self.addCleanup(temp.cleanup)
-        self.root = Path(temp.name)
-        self.clock = 1000.0
-        self.clean = self.start("clean")
-        self.deferring = self.start("feature")
-        self.invoke(self.deferring, "reserve", dispatch_id="fix-a", kind="corrective", failure_invariant="FR-001")
-        self.invoke(self.deferring, "complete", dispatch_id="fix-a", outcome="completed")
-        self.clock += 10  # the deferral comes after the completed fix, as it does in a real run
-        deferred = self.invoke(self.deferring, "reserve", dispatch_id="fix-a-again", kind="corrective",
-                               failure_invariant="FR-001")
-        assert deferred["disposition"] == "defer", deferred
-
-    def start(self, name: str) -> dict[str, object]:
-        (self.root / name).mkdir()
-        (self.root / name / "workflow.md").write_text("# Workflow\n")
-        (self.root / name / "spec.md").write_text("- FR-001: preserve data\n")
-        run: dict[str, object] = {"workflow": f"{name}/workflow.md"}
-        self.invoke(run, "start")
-        return run
+class _EvidenceFixture:
+    """Runner-fingerprinted verifications, escalation retries, and harness evidence for a ledger fixture."""
 
     def verification(self, run: dict[str, object], gate: dict[str, object], **changes: object) -> str:
         """One verification dispatch the runner fingerprinted for this gate, returned as its dispatch id."""
@@ -198,6 +168,33 @@ class _LedgerFixture:
                 self.verification(run, gate)  # the gate is red again after the tier-2 retry
                 self.fail_escalation(run, "gate_failure", digest, tiers=(3,))
         return inputs
+
+
+
+class _LedgerFixture(_EvidenceFixture):
+    """A temporary repository with a clean ledger and one holding a deferral."""
+
+    def setUp(self) -> None:
+        temp = tempfile.TemporaryDirectory()
+        self.addCleanup(temp.cleanup)
+        self.root = Path(temp.name)
+        self.clock = 1000.0
+        self.clean = self.start("clean")
+        self.deferring = self.start("feature")
+        self.invoke(self.deferring, "reserve", dispatch_id="fix-a", kind="corrective", failure_invariant="FR-001")
+        self.invoke(self.deferring, "complete", dispatch_id="fix-a", outcome="completed")
+        self.clock += 10  # the deferral comes after the completed fix, as it does in a real run
+        deferred = self.invoke(self.deferring, "reserve", dispatch_id="fix-a-again", kind="corrective",
+                               failure_invariant="FR-001")
+        assert deferred["disposition"] == "defer", deferred
+
+    def start(self, name: str) -> dict[str, object]:
+        (self.root / name).mkdir()
+        (self.root / name / "workflow.md").write_text("# Workflow\n")
+        (self.root / name / "spec.md").write_text("- FR-001: preserve data\n")
+        run: dict[str, object] = {"workflow": f"{name}/workflow.md"}
+        self.invoke(run, "start")
+        return run
 
     def invoke(self, run: dict[str, object], action: str, **inputs: object) -> dict[str, object]:
         binding = {"expected_run_id": run["run_id"]} if "run_id" in run else {}

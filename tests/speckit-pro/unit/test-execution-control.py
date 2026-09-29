@@ -44,6 +44,24 @@ class _ExecutionControlFixture:
             self.run_id = result["ledger"]["run_id"]
         return result
 
+    def assert_schema_valid(self, ledger):
+        schema = json.loads(SCHEMA_PATH.read_text())
+        self.assertEqual(json_schema_failures(ledger, schema, schema, "ledger"), [])
+
+    def verify(self, stdout, exit_code=1, completed=True, command_id="UNIT_TEST", argv=("python3", "-m", "unittest")):
+        """Run one verification dispatch whose output the runner fingerprints into the ledger."""
+        self.verifications = getattr(self, "verifications", 0) + 1
+        dispatch_id = f"verify-{self.verifications}"
+        self.now += 10
+        self.invoke("reserve", dispatch_id=dispatch_id, kind="verification")
+        self.invoke("begin-verification", dispatch_id=dispatch_id)
+        evidence = failing_check_fingerprint(command_id, list(argv), exit_code, completed, stdout.encode(), b"")
+        with patch("speckit_pro_runner.execution_control.time.time", return_value=self.now):
+            record_failing_checks(self.root, {"workflow_file": "feature/workflow.md", "expected_run_id": self.run_id,
+                                              "dispatch_id": dispatch_id}, evidence)
+        self.invoke("complete", dispatch_id=dispatch_id, outcome="failed" if exit_code else "completed")
+        return dispatch_id
+
 
 def _assert_relocation_event_reuse_rejected(test, path, common):
     event_id, run_id = "workflow-move-1", test.run_id
@@ -1373,10 +1391,6 @@ class DeferOnExhaustedAllowanceTests(_ExecutionControlFixture, unittest.TestCase
         return {"dispatch_id": dispatch_id, "reason": reason, "unit_kind": unit_kind, "unit": unit,
                 "deferred_at": self.now}
 
-    def assert_schema_valid(self, ledger):
-        schema = json.loads(SCHEMA_PATH.read_text())
-        self.assertEqual(json_schema_failures(ledger, schema, schema, "ledger"), [])
-
     def test_exhausted_family_and_run_budgets_defer_the_named_family_and_keep_refusing(self):
         self.invoke("start")
         self.invoke("reserve", dispatch_id="fix-a", kind="corrective", failure_invariant="FR-001")
@@ -1631,7 +1645,6 @@ class EscalationAllowanceTests(_ExecutionControlFixture, unittest.TestCase):
         self.deferred = self.invoke("reserve", dispatch_id="fix-a-again", kind="corrective", failure_invariant="FR-001")
         self.assertEqual(self.deferred["disposition"], "defer")
         self.family = {"unit_kind": "failure_family", "unit": "FR-001"}
-        self.verifications = 0
 
     def escalate(self, dispatch_id, tier, unit=None, **inputs):
         self.now += 10
@@ -1644,21 +1657,8 @@ class EscalationAllowanceTests(_ExecutionControlFixture, unittest.TestCase):
 
     def verify_red(self, argv):
         """A failing verification of one command, fingerprinted by the runner; returns the command digest."""
-        self.verifications += 1
-        dispatch_id = f"verify-{self.verifications}"
-        self.now += 10
-        self.invoke("reserve", dispatch_id=dispatch_id, kind="verification")
-        self.invoke("begin-verification", dispatch_id=dispatch_id)
-        evidence = failing_check_fingerprint("UNIT_TEST", list(argv), 1, True, unittest_output("test_a").encode(), b"")
-        with patch("speckit_pro_runner.execution_control.time.time", return_value=self.now):
-            record_failing_checks(self.root, {"workflow_file": "feature/workflow.md",
-                                              "expected_run_id": self.run_id, "dispatch_id": dispatch_id}, evidence)
-        self.settle(dispatch_id)
-        return evidence["command_sha256"]
-
-    def assert_schema_valid(self, ledger):
-        schema = json.loads(SCHEMA_PATH.read_text())
-        self.assertEqual(json_schema_failures(ledger, schema, schema, "ledger"), [])
+        self.verify(unittest_output("test_a"), argv=argv)
+        return digest(list(argv))
 
     def test_a_deferred_unit_gets_tier_two_outside_the_corrective_budget_and_records_its_tier(self):
         admitted = self.escalate("tier-2", 2)
@@ -1915,20 +1915,6 @@ class CorrectionProgressTests(_ExecutionControlFixture, unittest.TestCase):
         self.invoke("start")
         self.verifications = 0
 
-    def verify(self, stdout, exit_code=1, completed=True, command_id="UNIT_TEST", argv=("python3", "-m", "unittest")):
-        """Run one verification dispatch whose output the runner fingerprints into the ledger."""
-        self.verifications += 1
-        dispatch_id = f"verify-{self.verifications}"
-        self.now += 10
-        self.invoke("reserve", dispatch_id=dispatch_id, kind="verification")
-        self.invoke("begin-verification", dispatch_id=dispatch_id)
-        evidence = failing_check_fingerprint(command_id, list(argv), exit_code, completed, stdout.encode(), b"")
-        with patch("speckit_pro_runner.execution_control.time.time", return_value=self.now):
-            record_failing_checks(self.root, {"workflow_file": "feature/workflow.md", "expected_run_id": self.run_id,
-                                              "dispatch_id": dispatch_id}, evidence)
-        self.invoke("complete", dispatch_id=dispatch_id, outcome="failed" if exit_code else "completed")
-        return dispatch_id
-
     def correct(self, dispatch_id, invariant="FR-001", outcome="completed", **inputs):
         self.now += 10
         result = self.invoke("reserve", dispatch_id=dispatch_id, kind="corrective", failure_invariant=invariant, **inputs)
@@ -1936,10 +1922,6 @@ class CorrectionProgressTests(_ExecutionControlFixture, unittest.TestCase):
             self.now += 10
             self.invoke("complete", dispatch_id=dispatch_id, outcome=outcome)
         return result
-
-    def assert_schema_valid(self, ledger):
-        schema = json.loads(SCHEMA_PATH.read_text())
-        self.assertEqual(json_schema_failures(ledger, schema, schema, "ledger"), [])
 
     def assert_deferred_for(self, result, reason):
         self.assertEqual(result["disposition"], "defer")
