@@ -1,4 +1,0 @@
-# SPEC-701 workflow
-
-The workflow is ready for the plan stage.
-
