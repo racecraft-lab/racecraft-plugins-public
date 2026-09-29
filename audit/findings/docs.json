@@ -1,0 +1,254 @@
+[
+  {
+    "id": "docs-001",
+    "lane": "docs",
+    "severity": "major",
+    "kind": "coherence",
+    "files": [
+      "README.md:95-105",
+      "speckit-pro/speckit_pro_runner/agent_inventory.json:40",
+      "speckit-pro/speckit_pro_runner/agent_inventory.json:68",
+      "speckit-pro/speckit_pro_runner/agent_inventory.json:75",
+      "speckit-pro/speckit_pro_runner/helpers/install.py:40"
+    ],
+    "ripwire_command": "ripwire . --uses=REQUIRED_CODEX_AGENT_NAMES",
+    "summary": "README.md tells users to verify ten installer-copied Codex TOML files. The installer requires every file in codex-agents/ (13 roles: 12 required plus the optional fast helper), so artifact-author, consensus-synthesizer and formal-model-author are missing from the list. A user who checks only the listed ten would miss three installed agents. The same ten-file list is repeated in docs-site/src/content/docs/install/codex.md (other lane).",
+    "proposed_fix": "Derive the expected-file list from agent_inventory.json (or point to the generated agents reference) instead of a hand-copied list, and update the count and names in README.md and the Codex install page.",
+    "in_flight_status": null
+  },
+  {
+    "id": "docs-002",
+    "lane": "docs",
+    "severity": "major",
+    "kind": "coherence",
+    "files": [
+      "docs-site/scripts/generate-reference-pages.mjs:378",
+      "docs-site/scripts/generate-reference-pages.mjs:384",
+      "docs-site/scripts/generate-reference-pages.mjs:399",
+      "docs-site/scripts/generate-reference-pages.mjs:404",
+      "speckit-pro/codex-hooks.json:8-27",
+      "speckit-pro/hooks/hooks.json:1"
+    ],
+    "ripwire_command": "ripwire . --grep=UserPromptSubmit",
+    "summary": "The hooks page generator hard-codes prose that no longer matches the hook files. It says Claude hooks are SessionStart, PreToolUse and SubagentStop with four handlers (hooks.json also has Stop and six handlers, two of them workflow-guard). It says Codex has a UserPromptSubmit hook that executes no command, but codex-hooks.json now ships live PreToolUse (lockfile) and Stop (unpushed) command handlers. The generated page therefore states events from data and contradicting prose side by side, and speckit-pro/README.md describes the two live Codex guards correctly.",
+    "proposed_fix": "Compute the handler counts and per-event descriptions from the parsed hook JSON, and rewrite the Codex record to describe the PreToolUse and Stop guards. Regenerate the reference pages.",
+    "in_flight_status": null
+  },
+  {
+    "id": "docs-003",
+    "lane": "docs",
+    "severity": "major",
+    "kind": "coherence",
+    "files": [
+      "docs-site/scripts/generate-reference-pages.mjs:494",
+      "speckit-pro/scripts/workflow-guard-hook.py:1",
+      "speckit-pro/scripts/sweep-isolation-hook.py:1"
+    ],
+    "ripwire_command": "ripwire . --grep=workflow-guard-hook",
+    "summary": "buildScriptsPage lists speckit-pro/scripts with the filter /\\.(sh|json|mjs|js)$/, which excludes .py. The directory holds six Python scripts (workflow-guard-hook, sweep-isolation-hook, agent-memory-ignore, crap-score, mutation-score, ubiquitous-language-lint) and one JSON file, so the generated Plugin Scripts group inventories only curated-set.json. reference:check passes because it compares output to the same buggy generator.",
+    "proposed_fix": "Include py in the speckit-pro/scripts filter (the root and autopilot groups already do) and regenerate reference/scripts.md.",
+    "in_flight_status": null
+  },
+  {
+    "id": "docs-004",
+    "lane": "docs",
+    "severity": "minor",
+    "kind": "coherence",
+    "files": [
+      "README.md:159-176",
+      "speckit-pro/README.md:317-338",
+      "AGENTS.md:117-125"
+    ],
+    "ripwire_command": "ripwire . --grep=payload-completeness-apply",
+    "summary": "Two contributor procedures state how to rebuild generated payloads. Both READMEs give the payload-completeness-apply runner request, while AGENTS.md names python3 scripts/refresh-release-artifacts.py (payloads, marketplace version sync, runner trust metadata) as the regeneration step. Their validation steps 3 and 4 are placeholders that name no command (\"Use the repository default validation suite documented in the contributor guide\").",
+    "proposed_fix": "Pick one regeneration command as the source of truth, link the others to it, and replace the placeholder steps with the actual run-all.py commands or a link to the contribute-and-release page.",
+    "in_flight_status": "still-open"
+  },
+  {
+    "id": "docs-005",
+    "lane": "docs",
+    "severity": "minor",
+    "kind": "coherence",
+    "files": [
+      "docs-site/src/content/docs/first-run.md:132-138",
+      "docs-site/src/content/docs/first-run.md:30",
+      "speckit-pro/skills/speckit-install/SKILL.md:39",
+      "docs-site/AGENTS.md:5"
+    ],
+    "ripwire_command": "ripwire . --grep=DOC-005-workflow",
+    "summary": "The public first-run tutorial ends with 'For DOC-005-style docs work' and tells users to cd docs-site then run pnpm validate, contradicting the repo rule (docs-site/AGENTS.md, REVIEW.md) to run pnpm --dir docs-site from the root. The step is docs-site maintainer work, not a first-run check for a user's own project. It also uses DOC-005 example ids throughout and checks the Spec Kit version with 'specify version' while the install skill and troubleshooting page use 'specify --version'.",
+    "proposed_fix": "Replace step 5 with a validation checkpoint that applies to the user's repository, use the same version command everywhere, and use neutral example ids.",
+    "in_flight_status": null
+  },
+  {
+    "id": "docs-006",
+    "lane": "docs",
+    "severity": "minor",
+    "kind": "coherence",
+    "files": [
+      "docs-site/src/content/docs/spec-kit-lifecycle.mdx:28",
+      "docs-site/src/content/docs/spec-kit-lifecycle.mdx:57",
+      "docs-site/src/components/LifecycleFlow.astro:96-100",
+      "speckit-pro/skills/speckit-autopilot/references/gate-validation.md:599-600"
+    ],
+    "ripwire_command": "ripwire . --grep=lifecycleSteps",
+    "summary": "The lifecycle explainer is written for the DOC-005 docs feature ('Changed docs files, static component', 'docs validation output', 'Docs changes'). It also stops at Implement: the confidence gate (G6.5) appears only as a next action and the pull-request phase is absent, while G7 is described more loosely than the runner's build/type/lint/test and TDD-evidence check. The same phase table is hand-copied in LifecycleFlow.astro and the MDX tables, with small wording differences (G5 'route/marker planning' versus 'route planning').",
+    "proposed_fix": "Generalize the Implement and G7 wording, add G6.5 and the PR phase, and feed both the component and the tables from one data source.",
+    "in_flight_status": null
+  },
+  {
+    "id": "docs-007",
+    "lane": "docs",
+    "severity": "minor",
+    "kind": "cohesion",
+    "files": [
+      "docs-site/src/pages/og/[...slug].ts:33",
+      "docs-site/src/routeData.ts:63",
+      "docs-site/src/pages/[...slug].md.ts:41"
+    ],
+    "ripwire_command": "ripwire . --callers=ogCardKey",
+    "summary": "The route-id to key mapping exists as three copies (ogCardKey twice, slugToMdParam once, identical logic). The og:image URL in routeData.ts must match the card key generated in og/[...slug].ts, and comments in both files say they must stay identical, so the contract has no single source.",
+    "proposed_fix": "Extract one helper into src/lib and import it from the three modules.",
+    "in_flight_status": null
+  },
+  {
+    "id": "docs-008",
+    "lane": "docs",
+    "severity": "minor",
+    "kind": "coherence",
+    "files": [
+      "docs/ai/specs/interactive-documentation-technical-roadmap.md:25",
+      "docs/ai/specs/interactive-documentation-technical-roadmap.md:425",
+      "docs/ai/specs/interactive-documentation-technical-roadmap.md:455",
+      "docs/ai/specs/interactive-documentation-technical-roadmap.md:75",
+      "docs-site/src/pages/robots.txt.ts:73-98"
+    ],
+    "ripwire_command": "ripwire . --grep=noindex",
+    "summary": "The roadmap describes the staging guard as a robots.txt disallow plus noindex meta, and lists switching robots.txt to allow indexing as a DOC-012 launch step. DOC-014 (row at line 75, robots.txt.ts) already ships an allow-all robots.txt and only the noindex meta remains. The roadmap contradicts itself and the shipped endpoint.",
+    "proposed_fix": "Update lines 25, 425 and 455 to say robots.txt already allows crawling and DOC-012 only removes the noindex meta.",
+    "in_flight_status": null
+  },
+  {
+    "id": "docs-009",
+    "lane": "docs",
+    "severity": "minor",
+    "kind": "coherence",
+    "files": [
+      "docs-site/astro.config.mjs:30-33",
+      "docs-site/astro.config.mjs:182-229",
+      "docs-site/src/styles/brand.css:29-33",
+      "docs-site/public/site.webmanifest:5-9"
+    ],
+    "ripwire_command": "ripwire . --grep=racecraft-plugins-public/",
+    "summary": "astro.config.mjs says the DOC-012 launch flip is a one-place change (update SITE/BASE), but the same file hard-codes the /racecraft-plugins-public/ base in six head link hrefs, and brand.css and site.webmanifest repeat it. The comment overstates the single source.",
+    "proposed_fix": "Derive the head hrefs from BASE and correct the comment, or list the remaining hard-coded files as part of the DOC-012 checklist.",
+    "in_flight_status": null
+  },
+  {
+    "id": "docs-010",
+    "lane": "docs",
+    "severity": "minor",
+    "kind": "coherence",
+    "files": [
+      "docs-site/src/pages/og/[...slug].ts:60-66",
+      "docs-site/src/styles/brand.css:1-10"
+    ],
+    "ripwire_command": "ripwire . --grep=indigo",
+    "summary": "The OG card comment says the indigo accent edge (99,102,241) matches the docs site's brand palette. brand.css defines a blue accent and brand red #dc143c and has no indigo.",
+    "proposed_fix": "Use the brand accent tokens in the card options or fix the comment.",
+    "in_flight_status": null
+  },
+  {
+    "id": "docs-011",
+    "lane": "docs",
+    "severity": "minor",
+    "kind": "coherence",
+    "files": [
+      "docs-site/src/content/docs/reference.md:8-14",
+      "docs-site/src/content/docs/choose-your-path.mdx:13-18",
+      "docs-site/src/content/docs/glossary.md:10-17",
+      "README.md:65",
+      "README.md:140-144"
+    ],
+    "ripwire_command": "ripwire . --grep=\"Shell owner DOC\"",
+    "summary": "Public pages still carry planning scaffolding ('Route Shell', 'Shell owner DOC', 'Full-content owner DOC', 'reference shell') for features that shipped and were archived (DOC-007, DOC-008, DOC-010). The root README links these pages as 'DOC-007 reference shell' and 'DOC-003-owned path'. Users see internal spec ids and descriptions of completed pages as shells.",
+    "proposed_fix": "Remove the Route Shell blocks and spec-id link labels from user-facing pages, keeping ownership in the roadmap.",
+    "in_flight_status": null
+  },
+  {
+    "id": "docs-012",
+    "lane": "docs",
+    "severity": "minor",
+    "kind": "coherence",
+    "files": [
+      "speckit-pro/README.md:191",
+      "speckit-pro/skills/speckit-scaffold-spec/SKILL.md:43-45"
+    ],
+    "ripwire_command": "ripwire . --grep=SPEC-001-workflow",
+    "summary": "The README's autopilot example uses docs/ai/specs/SPEC-001-workflow.md, but scaffold writes workflow files under docs/ai/specs/.process/. The docs-site first-run page already uses the .process path.",
+    "proposed_fix": "Change the example to docs/ai/specs/.process/SPEC-001-workflow.md.",
+    "in_flight_status": "still-open"
+  },
+  {
+    "id": "docs-013",
+    "lane": "docs",
+    "severity": "minor",
+    "kind": "coherence",
+    "files": [
+      "speckit-pro/README.md:217-227",
+      "speckit-pro/skills/speckit-install/SKILL.md:1",
+      "speckit-pro/skills/speckit-upgrade/SKILL.md:1",
+      "speckit-pro/skills/speckit-archive-cleanup/SKILL.md:1"
+    ],
+    "ripwire_command": "ripwire . --for=\"shipped skills list in README skill map\"",
+    "summary": "The Skill Map and skill-forms tables list eight skills plus install. speckit-install, speckit-upgrade and speckit-archive-cleanup ship in both skills/ and codex-skills/ but appear nowhere in the README.",
+    "proposed_fix": "Add the three skills to the Skill Map and the Claude Code and Codex forms table.",
+    "in_flight_status": "still-open"
+  },
+  {
+    "id": "docs-014",
+    "lane": "docs",
+    "severity": "minor",
+    "kind": "cohesion",
+    "files": [
+      "docs/ai/specs/SPEC-001-workflow.md:1",
+      "docs/ai/specs/SPEC-004-workflow.md:1",
+      "docs/ai/specs/SPEC-006a-workflow.md:1",
+      "docs/ai/specs/PRSG-001-workflow.md:1",
+      "docs/ai/specs/PRSG-001-design-concept.md:1",
+      "docs/ai/specs/SPEC-006a-design-concept.md:1"
+    ],
+    "ripwire_command": "ripwire . --grep=structureVersion",
+    "summary": "Six completed workflow and design-concept records sit at the docs/ai/specs root in the pre-.process layout, mixed with live roadmaps, MOCs and decision docs. They reference deleted .sh scripts (doc-drift evidence) and are candidates for the Tier-2 .process relocation the scaffold skill describes.",
+    "proposed_fix": "Relocate them under docs/ai/specs/.process/ (or archive them) so the root holds only live planning documents.",
+    "in_flight_status": null
+  },
+  {
+    "id": "docs-015",
+    "lane": "docs",
+    "severity": "minor",
+    "kind": "cohesion",
+    "files": [
+      "docs-site/scripts/validate-docs-quality.mjs:41",
+      "docs-site/scripts/validate-docs-quality.mjs:551-557"
+    ],
+    "ripwire_command": "ripwire . --uses=DOCUMENTED_SAFETY_BOUNDARIES",
+    "summary": "validateSafetyBoundaries asserts that constants defined a few hundred lines earlier are non-empty, so it can never fail, and DOCUMENTED_SAFETY_BOUNDARIES is used nowhere else (no other reader, no check of the docs against it). The check reports a pass while verifying nothing.",
+    "proposed_fix": "Drop the check and the constant, or validate the documented boundaries against SafeInstallAids and the safe-aids validator forbidden patterns.",
+    "in_flight_status": null
+  },
+  {
+    "id": "docs-016",
+    "lane": "docs",
+    "severity": "minor",
+    "kind": "coherence",
+    "files": [
+      "docs-site/scripts/generate-reference-pages.mjs:452",
+      "speckit-pro/.codex-plugin/plugin.json:1"
+    ],
+    "ripwire_command": "ripwire . --grep=codex.manifest.json",
+    "summary": "The manifests page reads a hard-coded list that includes .specify/integrations/claude.manifest.json and speckit.manifest.json but omits codex.manifest.json, which exists. The page claims to separate Claude Code and Codex manifests.",
+    "proposed_fix": "Enumerate .specify/integrations/*.manifest.json instead of listing two of the three.",
+    "in_flight_status": null
+  }
+]

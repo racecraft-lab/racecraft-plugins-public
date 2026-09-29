@@ -1,0 +1,544 @@
+{
+  "AGENTS.md": {
+    "verdict": [
+      "docs-004"
+    ],
+    "checks_run": [
+      "ripwire . --grep=payload-completeness-apply",
+      "ripwire . --for=\"docs lane coherence review\"",
+      "ripwire . --grep=\"active_path_guard\""
+    ]
+  },
+  "CLAUDE.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"docs lane coherence review\"",
+      "ripwire . --grep=\"active_path_guard\""
+    ]
+  },
+  "GEMINI.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"docs lane coherence review\"",
+      "ripwire . --grep=\"active_path_guard\""
+    ]
+  },
+  "README.md": {
+    "verdict": [
+      "docs-001",
+      "docs-004",
+      "docs-011"
+    ],
+    "checks_run": [
+      "ripwire . --uses=REQUIRED_CODEX_AGENT_NAMES",
+      "ripwire . --grep=payload-completeness-apply",
+      "ripwire . --grep=\"Shell owner DOC\""
+    ]
+  },
+  "REVIEW.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"docs lane coherence review\"",
+      "ripwire . --grep=\"active_path_guard\""
+    ]
+  },
+  "docs-site/.gitignore": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"docs lane coherence review\""
+    ]
+  },
+  "docs-site/AGENTS.md": {
+    "verdict": [
+      "docs-005"
+    ],
+    "checks_run": [
+      "ripwire . --grep=DOC-005-workflow",
+      "ripwire . --for=\"docs lane coherence review\"",
+      "ripwire . --grep=\"active_path_guard\""
+    ]
+  },
+  "docs-site/CLAUDE.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"docs lane coherence review\"",
+      "ripwire . --grep=\"active_path_guard\""
+    ]
+  },
+  "docs-site/GEMINI.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"docs lane coherence review\"",
+      "ripwire . --grep=\"active_path_guard\""
+    ]
+  },
+  "docs-site/astro.config.mjs": {
+    "verdict": [
+      "docs-009"
+    ],
+    "checks_run": [
+      "ripwire . --grep=racecraft-plugins-public/"
+    ]
+  },
+  "docs-site/package.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"docs lane coherence review\""
+    ]
+  },
+  "docs-site/playwright.config.mjs": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"docs lane coherence review\""
+    ]
+  },
+  "docs-site/public/favicon.svg": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"docs lane coherence review\""
+    ]
+  },
+  "docs-site/public/site.webmanifest": {
+    "verdict": [
+      "docs-009"
+    ],
+    "checks_run": [
+      "ripwire . --grep=racecraft-plugins-public/"
+    ]
+  },
+  "docs-site/scripts/generate-reference-pages.mjs": {
+    "verdict": [
+      "docs-002",
+      "docs-003",
+      "docs-016"
+    ],
+    "checks_run": [
+      "ripwire . --grep=UserPromptSubmit",
+      "ripwire . --grep=workflow-guard-hook",
+      "ripwire . --grep=codex.manifest.json"
+    ]
+  },
+  "docs-site/scripts/validate-docs-quality.mjs": {
+    "verdict": [
+      "docs-015"
+    ],
+    "checks_run": [
+      "ripwire . --uses=DOCUMENTED_SAFETY_BOUNDARIES"
+    ]
+  },
+  "docs-site/src/assets/logo-light.svg": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"docs lane coherence review\""
+    ]
+  },
+  "docs-site/src/assets/logo.svg": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"docs lane coherence review\""
+    ]
+  },
+  "docs-site/src/assets/mark-light.svg": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"docs lane coherence review\""
+    ]
+  },
+  "docs-site/src/assets/mark.svg": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"docs lane coherence review\""
+    ]
+  },
+  "docs-site/src/components/LifecycleFlow.astro": {
+    "verdict": [
+      "docs-006"
+    ],
+    "checks_run": [
+      "ripwire . --grep=lifecycleSteps"
+    ]
+  },
+  "docs-site/src/components/SafeInstallAids.astro": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"docs lane coherence review\""
+    ]
+  },
+  "docs-site/src/content.config.ts": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"docs lane coherence review\""
+    ]
+  },
+  "docs-site/src/content/docs/choose-your-path.mdx": {
+    "verdict": [
+      "docs-011"
+    ],
+    "checks_run": [
+      "ripwire . --grep=\"Shell owner DOC\""
+    ]
+  },
+  "docs-site/src/content/docs/first-run.md": {
+    "verdict": [
+      "docs-005"
+    ],
+    "checks_run": [
+      "ripwire . --grep=DOC-005-workflow"
+    ]
+  },
+  "docs-site/src/content/docs/glossary.md": {
+    "verdict": [
+      "docs-011"
+    ],
+    "checks_run": [
+      "ripwire . --grep=\"Shell owner DOC\""
+    ]
+  },
+  "docs-site/src/content/docs/index.mdx": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"docs lane coherence review\""
+    ]
+  },
+  "docs-site/src/content/docs/reference.md": {
+    "verdict": [
+      "docs-011"
+    ],
+    "checks_run": [
+      "ripwire . --grep=\"Shell owner DOC\""
+    ]
+  },
+  "docs-site/src/content/docs/security-and-trust.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"docs lane coherence review\""
+    ]
+  },
+  "docs-site/src/content/docs/spec-kit-lifecycle.mdx": {
+    "verdict": [
+      "docs-006"
+    ],
+    "checks_run": [
+      "ripwire . --grep=lifecycleSteps"
+    ]
+  },
+  "docs-site/src/content/docs/troubleshooting.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"docs lane coherence review\""
+    ]
+  },
+  "docs-site/src/content/docs/update-and-rollback.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"docs lane coherence review\""
+    ]
+  },
+  "docs-site/src/lib/schema.ts": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"docs lane coherence review\""
+    ]
+  },
+  "docs-site/src/pages/[...slug].md.ts": {
+    "verdict": [
+      "docs-007"
+    ],
+    "checks_run": [
+      "ripwire . --callers=ogCardKey"
+    ]
+  },
+  "docs-site/src/pages/og/[...slug].ts": {
+    "verdict": [
+      "docs-007",
+      "docs-010"
+    ],
+    "checks_run": [
+      "ripwire . --callers=ogCardKey",
+      "ripwire . --grep=indigo"
+    ]
+  },
+  "docs-site/src/pages/robots.txt.ts": {
+    "verdict": [
+      "docs-008"
+    ],
+    "checks_run": [
+      "ripwire . --grep=noindex"
+    ]
+  },
+  "docs-site/src/routeData.ts": {
+    "verdict": [
+      "docs-007"
+    ],
+    "checks_run": [
+      "ripwire . --callers=ogCardKey"
+    ]
+  },
+  "docs-site/src/styles/brand.css": {
+    "verdict": [
+      "docs-009",
+      "docs-010"
+    ],
+    "checks_run": [
+      "ripwire . --grep=racecraft-plugins-public/",
+      "ripwire . --grep=indigo"
+    ]
+  },
+  "docs-site/tests/docs-smoke.spec.mjs": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"docs lane coherence review\""
+    ]
+  },
+  "docs-site/tests/seo-llms-txt.spec.mjs": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"docs lane coherence review\""
+    ]
+  },
+  "docs-site/tests/seo-og.spec.mjs": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"docs lane coherence review\""
+    ]
+  },
+  "docs-site/tests/seo-robots-txt.spec.mjs": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"docs lane coherence review\""
+    ]
+  },
+  "docs-site/tests/seo-schema-org.spec.mjs": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"docs lane coherence review\""
+    ]
+  },
+  "docs-site/tests/seo-sitemap.spec.mjs": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"docs lane coherence review\""
+    ]
+  },
+  "docs-site/tsconfig.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"docs lane coherence review\""
+    ]
+  },
+  "docs/ai/specs/PRSG-001-design-concept.md": {
+    "verdict": [
+      "docs-014"
+    ],
+    "checks_run": [
+      "ripwire . --grep=structureVersion"
+    ]
+  },
+  "docs/ai/specs/PRSG-001-workflow.md": {
+    "verdict": [
+      "docs-014"
+    ],
+    "checks_run": [
+      "ripwire . --grep=structureVersion"
+    ]
+  },
+  "docs/ai/specs/SPEC-001-workflow.md": {
+    "verdict": [
+      "docs-014"
+    ],
+    "checks_run": [
+      "ripwire . --grep=structureVersion"
+    ]
+  },
+  "docs/ai/specs/SPEC-002-workflow.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"docs lane coherence review\""
+    ]
+  },
+  "docs/ai/specs/SPEC-003-workflow.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"docs lane coherence review\""
+    ]
+  },
+  "docs/ai/specs/SPEC-004-workflow.md": {
+    "verdict": [
+      "docs-014"
+    ],
+    "checks_run": [
+      "ripwire . --grep=structureVersion"
+    ]
+  },
+  "docs/ai/specs/SPEC-006a-design-concept.md": {
+    "verdict": [
+      "docs-014"
+    ],
+    "checks_run": [
+      "ripwire . --grep=structureVersion"
+    ]
+  },
+  "docs/ai/specs/SPEC-006a-workflow.md": {
+    "verdict": [
+      "docs-014"
+    ],
+    "checks_run": [
+      "ripwire . --grep=structureVersion"
+    ]
+  },
+  "docs/ai/specs/architecture-viewer-contract.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"docs lane coherence review\""
+    ]
+  },
+  "docs/ai/specs/cross-platform-plugin-runtime-roadmap-MOC.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"docs lane coherence review\""
+    ]
+  },
+  "docs/ai/specs/cross-platform-plugin-runtime-technical-roadmap.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"docs lane coherence review\""
+    ]
+  },
+  "docs/ai/specs/doc-014-ai-discoverability-success-metric.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"docs lane coherence review\""
+    ]
+  },
+  "docs/ai/specs/harness-engineering-uplift-gap-taxonomy.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"docs lane coherence review\""
+    ]
+  },
+  "docs/ai/specs/harness-engineering-uplift-jev-catalog.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"docs lane coherence review\""
+    ]
+  },
+  "docs/ai/specs/harness-engineering-uplift-roadmap-MOC.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"docs lane coherence review\""
+    ]
+  },
+  "docs/ai/specs/harness-engineering-uplift-technical-roadmap.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"docs lane coherence review\""
+    ]
+  },
+  "docs/ai/specs/interactive-documentation-roadmap-MOC.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"docs lane coherence review\""
+    ]
+  },
+  "docs/ai/specs/interactive-documentation-technical-roadmap.md": {
+    "verdict": [
+      "docs-008"
+    ],
+    "checks_run": [
+      "ripwire . --grep=noindex"
+    ]
+  },
+  "docs/ai/specs/pr-size-governance-technical-roadmap.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"docs lane coherence review\""
+    ]
+  },
+  "docs/ai/specs/racecraft-identity-system-roadmap-MOC.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"docs lane coherence review\""
+    ]
+  },
+  "docs/ai/specs/racecraft-identity-system-technical-roadmap.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"docs lane coherence review\""
+    ]
+  },
+  "docs/ai/specs/reviewer-experience-technical-roadmap.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"docs lane coherence review\""
+    ]
+  },
+  "docs/ai/specs/tool-agnostic-capability-discovery-design-concept.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"docs lane coherence review\""
+    ]
+  },
+  "docs/ai/specs/tool-agnostic-capability-discovery-roadmap-MOC.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"docs lane coherence review\""
+    ]
+  },
+  "docs/ai/specs/tool-agnostic-capability-discovery-technical-roadmap.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"docs lane coherence review\""
+    ]
+  },
+  "docs/roadmap-interactive-documentation.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"docs lane coherence review\""
+    ]
+  },
+  "docs/traceability-interactive-documentation.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"docs lane coherence review\""
+    ]
+  },
+  "speckit-pro/AGENTS.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"docs lane coherence review\"",
+      "ripwire . --grep=\"active_path_guard\""
+    ]
+  },
+  "speckit-pro/CLAUDE.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"docs lane coherence review\"",
+      "ripwire . --grep=\"active_path_guard\""
+    ]
+  },
+  "speckit-pro/GEMINI.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"docs lane coherence review\"",
+      "ripwire . --grep=\"active_path_guard\""
+    ]
+  },
+  "speckit-pro/README.md": {
+    "verdict": [
+      "docs-004",
+      "docs-012",
+      "docs-013"
+    ],
+    "checks_run": [
+      "ripwire . --grep=payload-completeness-apply",
+      "ripwire . --grep=SPEC-001-workflow",
+      "ripwire . --for=\"shipped skills list in README skill map\""
+    ]
+  },
+  "specs/brand-001-racecraft-identity-system/SPEC-MOC.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"docs lane coherence review\""
+    ]
+  }
+}
