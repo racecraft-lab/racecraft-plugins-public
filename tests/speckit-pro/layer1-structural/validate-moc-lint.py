@@ -289,9 +289,8 @@ class ValidateMocLintRunnerAgreement(unittest.TestCase):
     GATE_TOKENS = ("1", '"1"', "1.0", "²", "١", "1 # note", "01", "0", "")
 
     def setUp(self) -> None:
-        temporary = tempfile.TemporaryDirectory(prefix="moc-lint-agreement-")
-        self.addCleanup(temporary.cleanup)
-        self.root = Path(temporary.name)
+        self.root = Path(tempfile.mkdtemp(prefix="moc-lint-agreement-"))
+        self.addCleanup(shutil.rmtree, self.root)
 
     def marker(self, frontmatter: str, directory: str = "prsg-001-foo") -> Path:
         (self.root / directory).mkdir(exist_ok=True)
