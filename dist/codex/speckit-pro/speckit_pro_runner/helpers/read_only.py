@@ -2606,10 +2606,13 @@ REVIEWABILITY_LABELS = {
 }
 
 
-def reviewability_budget_findings(loc: int, prod: int, total: int, surface_count: int) -> tuple[list[str], list[str]]:
+def reviewability_budget_findings(
+    loc: int, prod: int, total: int, surface_count: int,
+    thresholds: dict[str, dict[str, int]] = REVIEWABILITY_THRESHOLDS,
+) -> tuple[list[str], list[str]]:
     values = {"reviewable_loc": loc, "production_files": prod, "total_files": total, "primary_surfaces": surface_count}
     findings: dict[str, list[str]] = {"warn": [], "block": []}
-    for level, limits in REVIEWABILITY_THRESHOLDS.items():
+    for level, limits in thresholds.items():
         for key, limit in limits.items():
             if values[key] > limit:
                 findings[level].append(f"{REVIEWABILITY_LABELS[key]} {values[key]} exceeds {level} threshold {limit}")
@@ -2660,11 +2663,118 @@ def reviewability_gate(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any
 
 
 REVIEWABILITY_BUDGET_FIELDS = (
-    ("reviewable_loc", "Projected reviewable LOC", r"(?:projected reviewable loc|reviewable loc)[^0-9]{0,40}([0-9]+)"),
-    ("production_files", "Production files", r"(?:projected production files|production files)[^0-9]{0,40}([0-9]+)"),
-    ("total_files", "Total files", r"(?:projected total files|total files)[^0-9]{0,40}([0-9]+)"),
+    ("reviewable_loc", "Projected reviewable LOC", r"(?:projected reviewable loc|reviewable loc)[ \t]*:[^0-9\n]{0,40}([0-9]+)"),
+    ("production_files", "Production files", r"(?:projected production files|production files)[ \t]*:[^0-9\n]{0,40}([0-9]+)"),
+    ("total_files", "Total files", r"(?:projected total files|total files)[ \t]*:[^0-9\n]{0,40}([0-9]+)"),
 )
 REVIEWABILITY_EXCEPTION_PRAGMA = re.compile(r"^Reviewability-Exception: (refactor|infra|upgrade)$", re.M)
+
+
+def reviewability_slice_rows(section: str, spec_id: str) -> tuple[list[dict[str, int | str]], list[str]] | None:
+    """Read the complete ordered budget table for a declared split."""
+    declarations = re.findall(r"^Slices:[ \t]*(.*)$", section, flags=re.M)
+    if not declarations:
+        return None
+    errors: list[str] = []
+    if len(declarations) != 1:
+        errors.append(f"{spec_id}: exactly one Slices declaration is required")
+    ids = [value.strip() for value in declarations[0].split(",")]
+    if not ids or any(not value or "<" in value or ">" in value for value in ids):
+        errors.append(f"{spec_id}: Slices must contain nonempty concrete IDs")
+    if len(ids) != len(set(ids)):
+        errors.append(f"{spec_id}: Slices contains a duplicate ID")
+    headings = re.findall(r"^Slice Budgets:[ \t]*$", section, flags=re.M)
+    if len(headings) != 1:
+        errors.append(f"{spec_id}: exactly one Slice Budgets table is required")
+        return [], errors
+    table = section.split("Slice Budgets:", 1)[1].lstrip("\r\n").splitlines()
+    header = [cell.strip() for cell in table[0].strip().strip("|").split("|")] if table else []
+    expected_header = ["Slice", "Estimated LOC", "Production files", "Total files"]
+    if header != expected_header or len(table) < 2 or not re.fullmatch(r"\|?\s*:?-+:?\s*\|\s*:?-+:?\s*\|\s*:?-+:?\s*\|\s*:?-+:?\s*\|?", table[1]):
+        errors.append(f"{spec_id}: Slice Budgets requires the four named columns and separator")
+        return [], errors
+    rows: dict[str, dict[str, int | str]] = {}
+    for line in table[2:]:
+        if not line.strip():
+            break
+        if not line.lstrip().startswith("|"):
+            errors.append(f"{spec_id}: malformed Slice Budgets row: {line.strip()}")
+            break
+        cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
+        slice_id = cells[0] if cells else "<missing>"
+        if len(cells) != 4 or any(not re.fullmatch(r"[0-9]+", cell) for cell in cells[1:]):
+            errors.append(f"{spec_id}: {slice_id} has a malformed or nonnegative-integer Slice Budgets row")
+            continue
+        if slice_id in rows:
+            errors.append(f"{spec_id}: duplicate Slice Budgets row for {slice_id}")
+            continue
+        if slice_id not in ids:
+            errors.append(f"{spec_id}: extra Slice Budgets row for {slice_id}")
+            continue
+        rows[slice_id] = dict(zip(("slice_id", "reviewable_loc", "production_files", "total_files"),
+                                  (slice_id, *(int(cell) for cell in cells[1:])), strict=True))
+    for slice_id in ids:
+        if slice_id not in rows:
+            errors.append(f"{spec_id}: missing Slice Budgets row for {slice_id}")
+    return [rows[slice_id] for slice_id in ids if slice_id in rows], errors
+
+
+def reviewability_slice_evaluation(
+    rows: list[dict[str, int | str]], spec_id: str, surface_count: int,
+    thresholds: dict[str, dict[str, int]],
+) -> tuple[list[dict[str, Any]], list[str], dict[str, int]]:
+    """Evaluate complete rows independently and keep their aggregate for reporting."""
+    counts = ("reviewable_loc", "production_files", "total_files")
+    totals = {key: sum(int(row[key]) for row in rows) for key in counts}
+    results: list[dict[str, Any]] = []
+    errors: list[str] = []
+    for row in rows:
+        warnings, blockers = reviewability_budget_findings(
+            *(int(row[key]) for key in counts), surface_count, thresholds,
+        )
+        for key in counts:
+            if int(row[key]) == thresholds["block"][key]:
+                blockers.append(f"{REVIEWABILITY_LABELS[key]} {row[key]} reaches block threshold {thresholds['block'][key]}")
+        status = "block" if blockers else "warn" if warnings else "pass"
+        results.append({**row, "status": status, "pass": status != "block",
+                        "warnings": warnings, "blockers": blockers})
+        errors.extend(f"{spec_id}: {row['slice_id']}: {blocker}" for blocker in blockers)
+    return results, errors, totals
+
+
+def reviewability_spec_budget(
+    section: str, spec_id: str, numbers: dict[str, int | None], surface_count: int,
+) -> dict[str, Any]:
+    """Prepare selected-entry budget evidence, including any complete split."""
+    greenfield = re.search(r"^Greenfield: yes$", section, flags=re.M) is not None
+    thresholds = {level: limits.copy() for level, limits in REVIEWABILITY_THRESHOLDS.items()}
+    if greenfield:
+        for level in ("warn", "block"):
+            thresholds[level]["reviewable_loc"] = int(thresholds[level]["reviewable_loc"] * 1.5)
+    slice_data = reviewability_slice_rows(section, spec_id)
+    results: list[dict[str, Any]] = []
+    errors: list[str] = []
+    totals: dict[str, int] | None = None
+    if slice_data is None and re.search(r"^Slice Budgets:[ \t]*$", section, flags=re.M):
+        errors.append(f"{spec_id}: Slice Budgets table requires a Slices declaration")
+    if slice_data is not None:
+        rows, errors = slice_data
+        if not errors:
+            results, errors, totals = reviewability_slice_evaluation(rows, spec_id, surface_count, thresholds)
+    values = {key: totals[key] if totals is not None else (numbers[key] or 0)
+              for key, _, _ in REVIEWABILITY_BUDGET_FIELDS}
+    warnings, blockers = reviewability_budget_findings(
+        values["reviewable_loc"], values["production_files"], values["total_files"], surface_count, thresholds,
+    )
+    if totals is not None:
+        # The sums are evidence; each slice, rather than the sum, has a budget.
+        warnings = [warning for warning in warnings if "primary surfaces" in warning]
+        warnings.extend(f"{spec_id}: {row['slice_id']}: {warning}"
+                        for row in results for warning in row["warnings"])
+        blockers = []
+    return {"greenfield": greenfield, "thresholds": thresholds, "is_split": slice_data is not None,
+            "slice_results": results, "slice_errors": errors, "totals": totals,
+            "warnings": warnings, "blockers": blockers}
 
 
 def reviewability_setup_spec_gate(text: str, spec_id: str, target_display: str) -> dict[str, Any]:
@@ -2690,11 +2800,14 @@ def reviewability_setup_spec_gate(text: str, spec_id: str, target_display: str) 
         line.strip() for line in section.splitlines()
         if line.lstrip().startswith("Reviewability-Exception:") and not REVIEWABILITY_EXCEPTION_PRAGMA.fullmatch(line)
     ]
-    loc, prod, total = (numbers[key] or 0 for key, _, _ in REVIEWABILITY_BUDGET_FIELDS)
-    warnings, blockers = reviewability_budget_findings(loc, prod, total, len(surface_values))
+    budget = reviewability_spec_budget(section, spec_id, numbers, len(surface_values))
+    warnings, blockers = budget["warnings"], budget["blockers"]
     # A missing budget is never exceptable; only size blockers are.
-    exception_class = accepted[0] if accepted and blockers and not missing else None
-    if missing:
+    exception_class = (
+        accepted[0] if accepted and blockers and not missing
+        and not budget["is_split"] and not budget["slice_errors"] else None
+    )
+    if missing or budget["slice_errors"]:
         status = "block"
     elif exception_class:
         status = "exception"
@@ -2706,16 +2819,19 @@ def reviewability_setup_spec_gate(text: str, spec_id: str, target_display: str) 
         "status": status,
         "pass": status in {"pass", "warn", "exception"},
         **numbers,
+        **(budget["totals"] or {}),
         "primary_surface_count": len(surface_values),
         "primary_surfaces": surface_values,
-        "greenfield": False,
-        "thresholds": REVIEWABILITY_THRESHOLDS,
+        "greenfield": budget["greenfield"],
+        "thresholds": budget["thresholds"],
         "exception_honored": exception_class is not None,
         "exception_class": exception_class,
         "exceptions": {"accepted": accepted, "rejected": rejected},
         "warnings": warnings,
-        "blockers": missing + blockers,
+        "blockers": missing + blockers + budget["slice_errors"],
     }
+    if budget["is_split"]:
+        obj["slice_results"] = budget["slice_results"]
     return make_result(json_text(obj), exit_code=1 if status == "block" else 0)
 
 

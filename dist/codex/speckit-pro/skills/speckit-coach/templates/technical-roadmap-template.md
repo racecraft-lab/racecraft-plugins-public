@@ -50,6 +50,23 @@ tests, and config do not contribute to the reviewable-LOC count.
   files, unless this roadmap records a typed exception pragma (below).
 - A slice that adds only net-new files (no existing files modified) gets a 1.5x
   greenfield allowance on the production-LOC thresholds (warn 600, block 1200).
+  Declare this with `Greenfield: yes` on its own line in the entry. File and
+  primary-surface thresholds stay at their ordinary values.
+- For a split entry, add `Slices:` with ordered, case-sensitive IDs and a
+  `Slice Budgets:` table with exactly one complete nonnegative-integer row per
+  ID. Omit both from entries that are not split. The gate evaluates each row
+  strictly below its block limits and reports the row sums for the whole spec.
+  Replace these placeholders with actual estimates when splitting:
+
+  <!--
+  Slices: <slice-id-1>, <slice-id-2>
+
+  Slice Budgets:
+  | Slice | Estimated LOC | Production files | Total files |
+  | --- | ---: | ---: | ---: |
+  | <slice-id-1> | <nonnegative integer> | <nonnegative integer> | <nonnegative integer> |
+  | <slice-id-2> | <nonnegative integer> | <nonnegative integer> | <nonnegative integer> |
+  -->
 - Primary surfaces are schema/migration, API, UI, scheduler/runtime,
   harness/adapter, seed/config, and docs/process.
 - A block-sized slice may be allowed only by a typed, auditable exception

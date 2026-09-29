@@ -39,6 +39,15 @@ gate never becomes a pass.
    `Reviewability-Exception: refactor|infra|upgrade` pragma, which turns a
    size `block` into `exception`. A missing section is a gate error; a
    missing budget number is a `block` that no pragma excuses.
+   For an all-new-file entry, put `Greenfield: yes` on its own line. This
+   raises only the reviewable-LOC warn/block limits to 600/1200; file and
+   primary-surface limits stay unchanged. A split entry declares ordered,
+   case-sensitive IDs on `Slices: A, B` and a `Slice Budgets:` Markdown table
+   with `Slice | Estimated LOC | Production files | Total files` columns.
+   Each ID needs one complete row of nonnegative integers. The helper reports
+   row-sum totals and ordered `slice_results`; missing, extra, duplicate,
+   malformed, or at-block rows block setup. Omit the split declaration and
+   table entirely for an unsplit entry.
 ```
 
 **Auto-Fix:** Not applicable — if the codebase doesn't pass typecheck/test/build, the user must fix it before starting a new spec workflow. These are foundational health checks.

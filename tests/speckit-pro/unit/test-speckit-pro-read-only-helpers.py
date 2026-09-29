@@ -241,6 +241,16 @@ def roadmap_budget_entry(spec_id: str, name: str, surface: str, loc: int, prod: 
     )
 
 
+def roadmap_slice_budget_entry(rows: str, ids: str = "A, B", *, greenfield: bool = False) -> str:
+    entry = roadmap_budget_entry("SPEC-001", "Split feature", "API", 1000, 10, 30)
+    declaration = "Greenfield: yes\n" if greenfield else ""
+    return (
+        entry + declaration + f"Slices: {ids}\n\nSlice Budgets:\n"
+        "| Slice | Estimated LOC | Production files | Total files |\n"
+        "| --- | ---: | ---: | ---: |\n" + rows
+    )
+
+
 def runner_env() -> dict[str, str]:
     env = os.environ.copy()
     existing = env.get("PYTHONPATH")
@@ -3445,6 +3455,96 @@ class ReadOnlyHelperTests(unittest.TestCase):
         payload, exit_code = self.setup_gate_for_spec(roadmap, "SPEC-009")
         self.assertEqual(exit_code, 2)
         self.assertIn("SPEC-009", payload["error"])
+
+    def test_reviewability_setup_gate_aggregates_complete_ordered_slices(self) -> None:
+        if self.helper_filter and self.helper_filter != "reviewability-gate":
+            self.skipTest("slice budget case uses reviewability-gate")
+        rows = "| B | 480 | 3 | 11 |\n| A | 520 | 4 | 12 |\n"
+        payload, exit_code = self.setup_gate_for_spec(roadmap_slice_budget_entry(rows), "SPEC-001")
+        self.assertEqual(exit_code, 0)
+        self.assertTrue(payload["pass"])
+        self.assertEqual((payload["reviewable_loc"], payload["production_files"], payload["total_files"]), (1000, 7, 23))
+        self.assertEqual([row["slice_id"] for row in payload["slice_results"]], ["A", "B"])
+        self.assertEqual(
+            [(row["reviewable_loc"], row["production_files"], row["total_files"]) for row in payload["slice_results"]],
+            [(520, 4, 12), (480, 3, 11)],
+        )
+        self.assertTrue(all(row["pass"] and row["status"] == "warn" for row in payload["slice_results"]))
+        self.assertTrue(all(isinstance(row["warnings"], list) and row["blockers"] == [] for row in payload["slice_results"]))
+
+    def test_reviewability_setup_gate_blocks_incomplete_or_invalid_slice_rows(self) -> None:
+        if self.helper_filter and self.helper_filter != "reviewability-gate":
+            self.skipTest("slice budget case uses reviewability-gate")
+        valid = "| A | 300 | 2 | 5 |\n| B | 300 | 2 | 5 |\n"
+        cases = {
+            "missing": ("| A | 300 | 2 | 5 |\n", "B"),
+            "extra": (valid + "| C | 1 | 1 | 1 |\n", "C"),
+            "duplicate": (valid + "| B | 1 | 1 | 1 |\n", "B"),
+            "case-sensitive": ("| a | 300 | 2 | 5 |\n| B | 300 | 2 | 5 |\n", "a"),
+            "negative": ("| A | -1 | 2 | 5 |\n| B | 300 | 2 | 5 |\n", "A"),
+            "decimal": ("| A | 1.5 | 2 | 5 |\n| B | 300 | 2 | 5 |\n", "A"),
+            "placeholder": ("| A | <!-- LOC --> | 2 | 5 |\n| B | 300 | 2 | 5 |\n", "A"),
+            "missing-cell": ("| A | 300 | 2 |\n| B | 300 | 2 | 5 |\n", "A"),
+            "at-loc-block": ("| A | 800 | 2 | 5 |\n| B | 300 | 2 | 5 |\n", "A"),
+            "at-production-block": ("| A | 300 | 8 | 5 |\n| B | 300 | 2 | 5 |\n", "A"),
+            "at-total-block": ("| A | 300 | 2 | 25 |\n| B | 300 | 2 | 5 |\n", "A"),
+        }
+        for case, (rows, offending_id) in cases.items():
+            with self.subTest(case=case):
+                payload, exit_code = self.setup_gate_for_spec(roadmap_slice_budget_entry(rows), "SPEC-001")
+                self.assertEqual((payload["status"], payload["pass"], exit_code), ("block", False, 1))
+                expected = {
+                    "extra": "extra Slice Budgets row for C",
+                    "case-sensitive": "extra Slice Budgets row for a",
+                }.get(case, offending_id)
+                self.assertTrue(any(expected in blocker for blocker in payload["blockers"]))
+
+    def test_reviewability_setup_gate_blocks_slice_table_without_declaration(self) -> None:
+        if self.helper_filter and self.helper_filter != "reviewability-gate":
+            self.skipTest("slice budget case uses reviewability-gate")
+        entry = roadmap_budget_entry("SPEC-001", "Undeclared split", "API", 100, 1, 2)
+        entry += (
+            "Slice Budgets:\n"
+            "| Slice | Estimated LOC | Production files | Total files |\n"
+            "| --- | ---: | ---: | ---: |\n"
+            "| UNDECLARED | 801 | 1 | 2 |\n"
+        )
+        payload, exit_code = self.setup_gate_for_spec(entry, "SPEC-001")
+        self.assertEqual((payload["status"], payload["pass"], exit_code), ("block", False, 1))
+        self.assertTrue(any("Slices" in blocker for blocker in payload["blockers"]))
+
+    def test_reviewability_setup_gate_requires_parent_total_files_for_split(self) -> None:
+        if self.helper_filter and self.helper_filter != "reviewability-gate":
+            self.skipTest("slice budget case uses reviewability-gate")
+        entry = roadmap_slice_budget_entry("| A | 100 | 1 | 2 |\n| B | 100 | 1 | 2 |\n")
+        entry = entry.replace("Total files: 30 |\n", "")
+        payload, exit_code = self.setup_gate_for_spec(entry, "SPEC-001")
+        self.assertEqual((payload["status"], payload["pass"], exit_code), ("block", False, 1))
+        self.assertTrue(any("Total files is missing" in blocker for blocker in payload["blockers"]))
+
+    def test_reviewability_setup_gate_greenfield_changes_loc_limits_only(self) -> None:
+        if self.helper_filter and self.helper_filter != "reviewability-gate":
+            self.skipTest("greenfield budget case uses reviewability-gate")
+        entry = roadmap_budget_entry("SPEC-001", "New files", "API, UI", 900, 7, 16) + "Greenfield: yes\n"
+        payload, exit_code = self.setup_gate_for_spec(entry, "SPEC-001")
+        self.assertEqual(exit_code, 0)
+        self.assertTrue(payload["greenfield"])
+        self.assertEqual(payload["thresholds"]["block"], {
+            "reviewable_loc": 1200, "production_files": 8, "total_files": 25,
+        })
+        self.assertTrue(any("production files" in warning for warning in payload["warnings"]))
+        self.assertTrue(any("total files" in warning for warning in payload["warnings"]))
+        self.assertTrue(any("primary surfaces" in warning for warning in payload["warnings"]))
+        self.assertFalse(any("reviewable LOC" in blocker for blocker in payload["blockers"]))
+        self.assertNotIn("slice_results", payload)
+
+        rows = "| A | 1199 | 2 | 5 |\n| B | 1 | 2 | 5 |\n"
+        payload, exit_code = self.setup_gate_for_spec(roadmap_slice_budget_entry(rows, greenfield=True), "SPEC-001")
+        self.assertEqual(exit_code, 0)
+        self.assertTrue(payload["pass"])
+        rows = "| A | 1200 | 2 | 5 |\n| B | 1 | 2 | 5 |\n"
+        payload, exit_code = self.setup_gate_for_spec(roadmap_slice_budget_entry(rows, greenfield=True), "SPEC-001")
+        self.assertEqual((payload["status"], payload["pass"], exit_code), ("block", False, 1))
 
     def test_check_prerequisites_does_not_invent_a_cli_version(self) -> None:
         if self.helper_filter and self.helper_filter != "check-prerequisites":
