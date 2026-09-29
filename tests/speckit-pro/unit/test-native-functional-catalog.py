@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import copy
+from collections.abc import Callable
 import importlib.util
 import json
 import os
@@ -856,6 +857,67 @@ def _run_coverage_guard(workflow: Path, state: Path) -> dict:
     return _stdout_json(result, "validate-autopilot-phase-coverage.py")
 
 
+def _derive_stop_policy_answers(scenario: str, read: Callable[[str], str]) -> dict:
+    """Derive the graded fields of the stop-policy orchestration cases from their fixtures."""
+    if scenario == "gate-failure-defers":
+        attempts = json.loads(read("scenario-inputs/gate-attempts.json"))
+        ready = re.findall(r"^- (T\d+) .*\(independent of G4\)", read("scenario-inputs/workflow.md"), re.M)
+        assert sorted(ready) == sorted(attempts["independent_units"]), "workflow and attempts disagree"
+        spent = attempts["repair_attempts"] >= attempts["repair_allowance"]
+        return {
+            "repair_allowance_spent": spent,
+            "next_action": "defer" if spent else "repair",
+            "run_continues": bool(ready),
+            "independent_units": sorted(ready),
+            # The Failure Escalation Protocol never asks mid-run: "It is never a mid-run question."
+            "question_offered": False,
+        }
+    if scenario == "test-only-fix-no-replan":
+        steps = {step["id"]: step for step in json.loads(read("scenario-inputs/test-fix.json"))["steps"]}
+        return {
+            "first_test_fix_allowance": steps["test-only-fix-admitted"]["expect"]["data"]["test_fix_allowance"],
+            "replan_required": any(step.get("action") == "begin-replan-epoch" for step in steps.values()),
+            "operator_event_required": any("native_observation" in step.get("inputs", {}) for step in steps.values()),
+            "second_test_fix_allowance": steps["second-test-fix-refused"]["expect"]["data"]["test_fix_allowance"],
+            "second_test_fix_ineligible": steps["second-test-fix-refused"]["expect"]["data"]["test_fix_ineligible"],
+            "product_code_fix_ineligible": steps["product-code-refused"]["expect"]["data"]["test_fix_ineligible"],
+        }
+    if scenario == "resolved-deferral-leaves-request":
+        steps = {step["id"]: step for step in json.loads(read("scenario-inputs/deferral-resolution.json"))["steps"]}
+        deferred = steps["family-budget-defers"]["expect"]["ledger"]
+        resolved = steps["fix-c-completed"]["expect"]["ledger"]
+        finalize = steps["finalize-omits-resolved"]["expect"]
+        return {
+            "deferral_unit": deferred["deferred.0.unit"],
+            "resolved_by": resolved["deferred.0.resolved_by"],
+            "entry_kept_in_ledger": resolved["deferred.0.unit"] == deferred["deferred.0.unit"],
+            "finalize_outcome": finalize["result"]["outcome"],
+            "stack_ready": finalize["result"]["mark_ready"],
+            "resolved_unit_in_request": deferred["deferred.0.unit"] not in finalize["request_omits"],
+            "second_exception_refused": "refused" in steps["second-exception"],
+        }
+    if scenario == "blocked-action-defers":
+        record = json.loads(read("scenario-inputs/blocked-record.json"))
+        open_tasks = {
+            match.group(1): set(re.findall(r"depends on (T\d+)", match.group(0)))
+            for match in re.finditer(r"^- \[ \] (T\d+) .*$", read("scenario-inputs/tasks.md"), re.M)
+        }
+        deferred = {record["blocked_action"]["task"]}
+        while True:
+            more = {task for task, needs in open_tasks.items() if needs & deferred} - deferred
+            if not more:
+                break
+            deferred |= more
+        return {
+            "deferred_tasks": sorted(deferred),
+            "continuing_tasks": sorted(set(open_tasks) - deferred),
+            "fallback_applied": record["defined_fallback"] is not None,
+            # Rule 2 of Blocked Actions Mid-Run: "Never ask the operator from inside the task".
+            "mid_run_question": False,
+        }
+    raise AssertionError(f"unknown orchestration scenario {scenario}")
+
+
 def _derive_orchestration_answers(case: dict) -> dict:
     """Derive every graded response field from the staged evidence alone."""
     sources = {row["destination"]: REPO_ROOT / row["source"] for row in case["fixtures"]}
@@ -946,104 +1008,44 @@ def _derive_orchestration_answers(case: dict) -> dict:
             "g3_may_run": not stale,
             "reconcile_before_g3": bool(stale),
         }
-    if scenario == "gate-failure-defers":
-        attempts = json.loads(read("scenario-inputs/gate-attempts.json"))
-        ready = re.findall(r"^- (T\d+) .*\(independent of G4\)", read("scenario-inputs/workflow.md"), re.M)
-        assert sorted(ready) == sorted(attempts["independent_units"]), "workflow and attempts disagree"
-        spent = attempts["repair_attempts"] >= attempts["repair_allowance"]
-        return {
-            "repair_allowance_spent": spent,
-            "next_action": "defer" if spent else "repair",
-            "run_continues": bool(ready),
-            "independent_units": sorted(ready),
-            # The Failure Escalation Protocol never asks mid-run: "It is never a mid-run question."
-            "question_offered": False,
-        }
-    if scenario == "test-only-fix-no-replan":
-        steps = {step["id"]: step for step in json.loads(read("scenario-inputs/test-fix.json"))["steps"]}
-        return {
-            "first_test_fix_allowance": steps["test-only-fix-admitted"]["expect"]["data"]["test_fix_allowance"],
-            "replan_required": any(step.get("action") == "begin-replan-epoch" for step in steps.values()),
-            "operator_event_required": any("native_observation" in step.get("inputs", {}) for step in steps.values()),
-            "second_test_fix_allowance": steps["second-test-fix-refused"]["expect"]["data"]["test_fix_allowance"],
-            "second_test_fix_ineligible": steps["second-test-fix-refused"]["expect"]["data"]["test_fix_ineligible"],
-            "product_code_fix_ineligible": steps["product-code-refused"]["expect"]["data"]["test_fix_ineligible"],
-        }
-    if scenario == "resolved-deferral-leaves-request":
-        steps = {step["id"]: step for step in json.loads(read("scenario-inputs/deferral-resolution.json"))["steps"]}
-        deferred = steps["family-budget-defers"]["expect"]["ledger"]
-        resolved = steps["fix-c-completed"]["expect"]["ledger"]
-        finalize = steps["finalize-omits-resolved"]["expect"]
-        return {
-            "deferral_unit": deferred["deferred.0.unit"],
-            "resolved_by": resolved["deferred.0.resolved_by"],
-            "entry_kept_in_ledger": resolved["deferred.0.unit"] == deferred["deferred.0.unit"],
-            "finalize_outcome": finalize["result"]["outcome"],
-            "stack_ready": finalize["result"]["mark_ready"],
-            "resolved_unit_in_request": deferred["deferred.0.unit"] not in finalize["request_omits"],
-            "second_exception_refused": "refused" in steps["second-exception"],
-        }
-    if scenario == "blocked-action-defers":
-        record = json.loads(read("scenario-inputs/blocked-record.json"))
-        open_tasks = {
-            match.group(1): set(re.findall(r"depends on (T\d+)", match.group(0)))
-            for match in re.finditer(r"^- \[ \] (T\d+) .*$", read("scenario-inputs/tasks.md"), re.M)
-        }
-        deferred = {record["blocked_action"]["task"]}
-        while True:
-            more = {task for task, needs in open_tasks.items() if needs & deferred} - deferred
-            if not more:
-                break
-            deferred |= more
-        return {
-            "deferred_tasks": sorted(deferred),
-            "continuing_tasks": sorted(set(open_tasks) - deferred),
-            "fallback_applied": record["defined_fallback"] is not None,
-            # Rule 2 of Blocked Actions Mid-Run: "Never ask the operator from inside the task".
-            "mid_run_question": False,
-        }
-    raise AssertionError(f"unknown orchestration scenario {case['id']}")
+    return _derive_stop_policy_answers(scenario, read)
+
+
+def _run_staged_request(case: dict, request_path: str, adjust: Callable[[dict], None] | None = None) -> tuple[int, dict]:
+    """Run one staged runner request in a workspace built from the case fixtures."""
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        for fixture in case["fixtures"]:
+            target = root / fixture["destination"]
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(REPO_ROOT / fixture["source"], target)
+        request = json.loads((root / request_path).read_text(encoding="utf-8"))
+        if adjust is not None:
+            adjust(request)
+        result = subprocess.run(
+            [sys.executable, "-m", "speckit_pro_runner"], input=json.dumps(request),
+            text=True, capture_output=True, cwd=root, check=False,
+            env={**os.environ, "PYTHONPATH": str(REPO_ROOT / "speckit-pro")},
+        )
+        return result.returncode, _stdout_json(result, "speckit_pro_runner")
 
 
 def _run_reviewability_request(case: dict, *, spec_scoped: bool = True) -> tuple[int, dict]:
     """Run the staged gate request in a workspace built from the case fixtures."""
-    with tempfile.TemporaryDirectory() as tmp:
-        root = Path(tmp)
-        for fixture in case["fixtures"]:
-            target = root / fixture["destination"]
-            target.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copyfile(REPO_ROOT / fixture["source"], target)
-        request_path = next(
-            check["request_path"] for check in case["checks"] if check["type"] == "native_runner_result"
-        )
-        request = json.loads((root / request_path).read_text(encoding="utf-8"))
-        if not spec_scoped:
-            request["inputs"].pop("spec_id")
-        result = subprocess.run(
-            [sys.executable, "-m", "speckit_pro_runner"], input=json.dumps(request),
-            text=True, capture_output=True, cwd=root, check=False,
-            env={**os.environ, "PYTHONPATH": str(REPO_ROOT / "speckit-pro")},
-        )
-        return result.returncode, _stdout_json(result, "speckit_pro_runner")["data"]["stdout_json"]
+    request_path = next(
+        check["request_path"] for check in case["checks"] if check["type"] == "native_runner_result"
+    )
+    code, envelope = _run_staged_request(
+        case, request_path, None if spec_scoped else lambda request: request["inputs"].pop("spec_id"),
+    )
+    return code, envelope["data"]["stdout_json"]
 
 
 def _run_runner_case(case: dict) -> dict:
     """Run the case's staged request through the shipped runner and return its data."""
-    with tempfile.TemporaryDirectory() as tmp:
-        root = Path(tmp)
-        for fixture in case["fixtures"]:
-            target = root / fixture["destination"]
-            target.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copyfile(REPO_ROOT / fixture["source"], target)
-        request = json.loads((root / RUNNER_CASES[case["id"]]["request"]).read_text(encoding="utf-8"))
-        result = subprocess.run(
-            [sys.executable, "-m", "speckit_pro_runner"], input=json.dumps(request),
-            text=True, capture_output=True, cwd=root, check=False,
-            env={**os.environ, "PYTHONPATH": str(REPO_ROOT / "speckit-pro")},
-        )
-        envelope = _stdout_json(result, "speckit_pro_runner")
-        assert (result.returncode, envelope["status"]) == (0, "ok"), envelope
-        return envelope["data"]
+    code, envelope = _run_staged_request(case, RUNNER_CASES[case["id"]]["request"])
+    assert (code, envelope["status"]) == (0, "ok"), envelope
+    return envelope["data"]
 
 
 def _derive_runner_answers(case_id: str, data: dict) -> dict:
