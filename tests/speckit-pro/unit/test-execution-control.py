@@ -2486,6 +2486,244 @@ class WorkflowIdentityTests(_ExecutionControlFixture, unittest.TestCase):
         self.assertFalse([path for path in snapshot if "execution-control" in path])
 
 
+class IncrementTestFixAllowanceTests(_ExecutionControlFixture, unittest.TestCase):
+    """A test-only fix to test code an increment itself edited in this run needs no re-plan (issue 826)."""
+
+    TASKS = ("## Phase 3: Stories\n- [ ] T001 Build the alpha increment\n"
+             + "- [ ] T002 Build the beta increment\n")
+    OWNERSHIP = {"T001": ("alpha", ["src/alpha", "tests/test_runner.py", "tests/test_alpha_extra.py"]),
+                 "T002": ("beta", ["src/beta", "tests/test_beta.py"])}
+    RUNNER_TEST = "tests/test_runner.py"
+
+    def setUp(self):
+        super().setUp()
+        feature = self.root / "feature"
+        (feature / ".process").mkdir()
+        (feature / "plan.md").write_text("plan\n")
+        (feature / "tasks.md").write_text(self.TASKS)
+        tasks = {task_id: {"capability_group": "stories", "depends_on": [], "owns": owns, "tdd_unit": unit}
+                 for task_id, (unit, owns) in self.OWNERSHIP.items()}
+        metadata = {"schema_version": "task-execution.v1",
+                    "fingerprints": fingerprints((feature / "spec.md").read_text(), "plan\n", self.TASKS),
+                    "tasks": tasks}
+        (feature / ".process/task-execution.json").write_text(json.dumps(metadata))
+        for relative, text in ((self.RUNNER_TEST, "def test_cancellation():\n    assert True\n"),
+                               ("tests/test_beta.py", "def test_beta():\n    assert True\n"),
+                               ("tests/test_alpha_extra.py", "def test_extra():\n    assert True\n")):
+            (self.root / relative).parent.mkdir(parents=True, exist_ok=True)
+            (self.root / relative).write_text(text)
+        commit_fixture(self.root)
+        self.invoke("start")
+        for dispatch_id, invariant in (("fix-a", "FR-001"), ("fix-b", "FR-002")):
+            self.invoke("reserve", dispatch_id=dispatch_id, kind="corrective", failure_invariant=invariant)
+            self.invoke("complete", dispatch_id=dispatch_id, outcome="completed")
+
+    def write(self, relative, text):
+        (self.root / relative).parent.mkdir(parents=True, exist_ok=True)
+        (self.root / relative).write_text(text)
+
+    def implement(self):
+        """alpha stops at RED: its optional mock in an existing test file breaks the cancellation test."""
+        reserved = self.invoke("reserve", dispatch_id="alpha-implement", kind="implementation", tdd_units=["alpha"])
+        self.assertEqual(reserved["disposition"], "continue")
+        self.write("src/alpha/core.py", "def cancel():\n    return None\n")
+        self.write(self.RUNNER_TEST, "import mock\n\ndef test_cancellation():\n    assert False\n")
+        done = self.invoke("complete", dispatch_id="alpha-implement", outcome="failed")
+        self.assertEqual(done["ledger"]["dispatches"]["alpha-implement"]["changed_paths"],
+                         ["src/alpha/core.py", self.RUNNER_TEST])
+        self.invoke("reserve", dispatch_id="beta-implement", kind="implementation", tdd_units=["beta"])
+        self.write("tests/test_beta.py", "def test_beta():\n    assert 1\n")
+        self.invoke("complete", dispatch_id="beta-implement", outcome="completed")
+
+    def request_fix(self, dispatch_id, paths, unit="alpha", mode="apply"):
+        return self.invoke("reserve", mode=mode, dispatch_id=dispatch_id, kind="corrective",
+                           spec_file="feature/spec.md", failure_invariant="FR-001",
+                           test_fix={"tdd_unit": unit, "paths": paths})
+
+    def test_a_test_only_fix_to_the_increments_own_test_edit_runs_without_a_replan(self):
+        self.implement()
+        admitted = self.request_fix("alpha-test-fix", [self.RUNNER_TEST])
+        self.assertEqual((admitted["disposition"], admitted["test_fix_allowance"]), ("continue", "increment"))
+        self.assertIsNone(admitted["reservation_id"])
+        ledger = admitted["ledger"]
+        self.assertEqual(ledger["corrective_cycles"], 2)
+        self.assertNotIn("corrective_epochs", ledger)
+        self.assertEqual(ledger["test_fix_allowances"], {"alpha": {"rounds": 1, "dispatch_ids": ["alpha-test-fix"]}})
+        self.assertEqual(ledger["dispatches"]["alpha-test-fix"]["test_fix"], "alpha")
+        self.write(self.RUNNER_TEST, "def test_cancellation():\n    assert True\n")
+        completed = self.invoke("complete", dispatch_id="alpha-test-fix", outcome="completed")
+        self.assertEqual(completed["disposition"], "continue")
+        record = completed["ledger"]["dispatches"]["alpha-test-fix"]
+        self.assertEqual((record["outcome"], record["changed_paths"]), ("completed", [self.RUNNER_TEST]))
+        self.assertNotIn("worktree_before", record)
+        schema = json.loads(SCHEMA_PATH.read_text())
+        self.assertEqual(json_schema_failures(completed["ledger"], schema, schema, "ledger"), [])
+        ordinary = self.invoke("reserve", mode="dry_run", dispatch_id="ordinary", kind="corrective",
+                               failure_invariant="FR-001")
+        self.assertEqual(ordinary["reasons"], ["failure_family_budget_exhausted"])
+
+    def test_a_fix_that_touches_product_code_is_refused(self):
+        self.implement()
+        refused = self.request_fix("alpha-product", [self.RUNNER_TEST, "src/alpha/core.py"])
+        self.assertEqual((refused["test_fix_allowance"], refused["test_fix_ineligible"]),
+                         ("run_wide", "path_not_test_code"))
+        self.assertEqual((refused["disposition"], refused["reasons"]), ("defer", ["failure_family_budget_exhausted"]))
+        self.assertNotIn("test_fix_allowances", refused["ledger"])
+        self.assertNotIn("alpha-product", refused["ledger"]["dispatches"])
+
+    def test_a_test_file_the_increment_did_not_edit_in_this_run_is_refused(self):
+        self.implement()
+        cases = {"another increment's test file": ("tests/test_beta.py", "path_outside_increment_ownership"),
+                 "an owned test file nobody edited": ("tests/test_alpha_extra.py", "path_not_edited_by_increment"),
+                 "an owned directory": ("src/alpha", "path_not_test_code")}
+        for name, (path, reason) in cases.items():
+            with self.subTest(case=name):
+                refused = self.request_fix("alpha-" + name.replace(" ", "-").replace("'", ""), [path])
+                self.assertEqual((refused["test_fix_allowance"], refused["test_fix_ineligible"]), ("run_wide", reason))
+                self.assertEqual(refused["disposition"], "defer")
+        beta_edit = self.request_fix("beta-claims-alpha", ["tests/test_beta.py"], unit="alpha")
+        self.assertEqual(beta_edit["test_fix_ineligible"], "path_outside_increment_ownership")
+        unrecorded = self.request_fix("gamma-fix", [self.RUNNER_TEST], unit="gamma")
+        self.assertEqual(unrecorded["test_fix_ineligible"], "increment_not_in_ownership_evidence")
+
+    def test_edits_are_attributed_only_to_recorded_implementation_dispatches(self):
+        self.invoke("reserve", dispatch_id="untagged-implement", kind="implementation")
+        self.write(self.RUNNER_TEST, "import mock\n")
+        self.invoke("complete", dispatch_id="untagged-implement", outcome="failed")
+        refused = self.request_fix("alpha-untagged", [self.RUNNER_TEST])
+        self.assertEqual(refused["test_fix_ineligible"], "path_not_edited_by_increment")
+        with patch("speckit_pro_runner.execution_control.shutil.which", return_value=None):
+            self.invoke("reserve", dispatch_id="no-git-implement", kind="implementation", tdd_units=["alpha"])
+            self.write(self.RUNNER_TEST, "import other_mock\n")
+            done = self.invoke("complete", dispatch_id="no-git-implement", outcome="failed")
+        self.assertNotIn("changed_paths", done["ledger"]["dispatches"]["no-git-implement"])
+        self.assertEqual(self.request_fix("alpha-no-git", [self.RUNNER_TEST])["test_fix_ineligible"],
+                         "path_not_edited_by_increment")
+        with self.assertRaises(ValueError):
+            self.invoke("reserve", dispatch_id="tagged-corrective", kind="corrective", failure_invariant="FR-001",
+                        tdd_units=["alpha"])
+        for malformed in ([], ["alpha", "alpha"], [""], "alpha"):
+            with self.subTest(tdd_units=malformed), self.assertRaises(ValueError):
+                self.invoke("reserve", dispatch_id="malformed-implement", kind="implementation", tdd_units=malformed)
+
+    def test_a_second_test_fix_for_the_same_increment_is_refused(self):
+        self.implement()
+        self.request_fix("alpha-test-fix", [self.RUNNER_TEST])
+        self.write(self.RUNNER_TEST, "def test_cancellation():\n    assert True\n")
+        self.invoke("complete", dispatch_id="alpha-test-fix", outcome="completed")
+        second = self.request_fix("alpha-test-fix-2", [self.RUNNER_TEST])
+        self.assertEqual((second["test_fix_allowance"], second["test_fix_ineligible"]),
+                         ("run_wide", "test_fix_allowance_spent"))
+        self.assertEqual(second["disposition"], "defer")
+        self.assertEqual(second["ledger"]["test_fix_allowances"]["alpha"]["rounds"], 1)
+        self.assertNotIn("alpha-test-fix-2", second["ledger"]["dispatches"])
+
+    def test_a_fix_whose_actual_changes_leave_its_declared_test_paths_does_not_complete(self):
+        self.implement()
+        self.request_fix("alpha-test-fix", [self.RUNNER_TEST])
+        self.write(self.RUNNER_TEST, "def test_cancellation():\n    assert True\n")
+        self.write("src/alpha/core.py", "def cancel():\n    return 1\n")
+        refused = self.invoke("complete", dispatch_id="alpha-test-fix", outcome="completed")
+        self.assertEqual((refused["disposition"], refused["reasons"]),
+                         ("checkpoint_required", ["test_fix_scope_unproven"]))
+        self.assertEqual(refused["ledger"]["dispatches"]["alpha-test-fix"]["outcome"], "reserved")
+        failed = self.invoke("complete", dispatch_id="alpha-test-fix", outcome="failed")
+        record = failed["ledger"]["dispatches"]["alpha-test-fix"]
+        self.assertEqual((record["outcome"], record["changed_paths"]), ("failed", ["src/alpha/core.py", self.RUNNER_TEST]))
+
+    def test_a_fix_that_changes_nothing_does_not_complete(self):
+        self.implement()
+        self.request_fix("alpha-test-fix", [self.RUNNER_TEST])
+        refused = self.invoke("complete", dispatch_id="alpha-test-fix", outcome="completed")
+        self.assertEqual((refused["disposition"], refused["reasons"]),
+                         ("checkpoint_required", ["test_fix_scope_unproven"]))
+        self.assertEqual(refused["ledger"]["dispatches"]["alpha-test-fix"]["outcome"], "reserved")
+
+    def test_forged_test_fix_and_edit_records_fail_closed(self):
+        self.implement()
+        admitted = self.request_fix("alpha-test-fix", [self.RUNNER_TEST])
+        path = self.root / admitted["ledger_path"]
+        valid = path.read_bytes()
+        forged = {"kind": "corrective", "outcome": "reserved", "reserved_at": self.now, "reservation_id": None,
+                  "reconciliations": 0, "test_fix": "alpha", "test_fix_paths": [self.RUNNER_TEST]}
+        tampers = {
+            "unlisted test-fix dispatch": lambda ledger: ledger["dispatches"].update(forged=forged),
+            "rounds over the bound": lambda ledger: (
+                ledger["dispatches"].update(forged=forged),
+                ledger["test_fix_allowances"]["alpha"].update(rounds=2, dispatch_ids=["alpha-test-fix", "forged"])),
+            "allowance record dropped": lambda ledger: ledger.pop("test_fix_allowances"),
+            "product path declared": lambda ledger: ledger["dispatches"]["alpha-test-fix"].update(
+                test_fix_paths=["src/alpha/core.py"]),
+            "test fix on a reservation": lambda ledger: ledger["dispatches"]["alpha-test-fix"].update(
+                reservation_id=next(iter(ledger["reservations"]))),
+            "test fix and increment review at once": lambda ledger: ledger["dispatches"]["alpha-test-fix"].update(
+                increment="alpha"),
+            "edits on an untagged dispatch": lambda ledger: ledger["dispatches"]["fix-a"].update(
+                changed_paths=[self.RUNNER_TEST]),
+            "units on a corrective dispatch": lambda ledger: ledger["dispatches"]["fix-a"].update(tdd_units=["alpha"]),
+            "unsorted edits": lambda ledger: ledger["dispatches"]["alpha-implement"].update(
+                changed_paths=[self.RUNNER_TEST, "src/alpha/core.py"]),
+            "escaping edit": lambda ledger: ledger["dispatches"]["alpha-implement"].update(
+                changed_paths=["../outside.py"]),
+            "snapshot after settlement": lambda ledger: ledger["dispatches"]["alpha-implement"].update(
+                worktree_before={"head": "0" * 40, "dirty": {}}),
+        }
+        for name, tamper in tampers.items():
+            with self.subTest(tamper=name):
+                ledger = json.loads(valid)
+                tamper(ledger)
+                path.write_text(json.dumps(ledger), encoding="utf-8")
+                with self.assertRaises(ValueError):
+                    self.invoke("status", mode="read_only")
+        path.write_bytes(valid)
+        self.assertEqual(self.invoke("status", mode="read_only")["disposition"], "continue")
+
+    def test_malformed_test_fix_requests_are_rejected(self):
+        for malformed in ({"tdd_unit": "alpha"}, {"tdd_unit": "alpha", "paths": "tests/x.py"},
+                          {"tdd_unit": "", "paths": ["tests/x.py"]}, ["alpha"]):
+            with self.subTest(malformed=malformed), self.assertRaises(ValueError):
+                self.invoke("reserve", dispatch_id="malformed", kind="corrective", spec_file="feature/spec.md",
+                            test_fix=malformed)
+        request = {"tdd_unit": "alpha", "paths": [self.RUNNER_TEST]}
+        for extra in ({"review_remediation": request}, {"gate_remediation": {"gate": "G6", "paths": []}},
+                      {"metadata_only": True}):
+            with self.subTest(extra=list(extra)), self.assertRaises(ValueError):
+                self.invoke("reserve", dispatch_id="mixed", kind="corrective", spec_file="feature/spec.md",
+                            test_fix=request, **extra)
+        with self.assertRaisesRegex(ValueError, "explicit spec_file"):
+            self.invoke("reserve", dispatch_id="no-spec", kind="corrective", test_fix=request)
+        with self.assertRaises(ValueError):
+            self.invoke("reserve", dispatch_id="not-corrective", kind="implementation", spec_file="feature/spec.md",
+                        test_fix=request)
+
+    def test_a_replan_archives_the_test_fix_allowance(self):
+        self.implement()
+        self.request_fix("alpha-test-fix", [self.RUNNER_TEST])
+        self.write(self.RUNNER_TEST, "def test_cancellation():\n    assert True\n")
+        self.invoke("complete", dispatch_id="alpha-test-fix", outcome="completed")
+        (self.root / "feature/workflow.md").write_text(stage_workflow())
+        opened = self.invoke("begin-stage-epoch", autopilot_args=["--stage", "implement"])
+        self.assertEqual(opened["ledger"]["corrective_epochs"][0]["test_fix_allowances"]["alpha"]["rounds"], 1)
+        self.assertNotIn("test_fix_allowances", opened["ledger"])
+        schema = json.loads(SCHEMA_PATH.read_text())
+        self.assertEqual(json_schema_failures(opened["ledger"], schema, schema, "ledger"), [])
+
+    def test_both_hosts_document_the_test_fix_allowance(self):
+        plugin = Path(__file__).resolve().parents[3] / "speckit-pro"
+        shared = " ".join((plugin / "skills/speckit-autopilot/references/execution-efficiency.md").read_text().split())
+        for phrase in ("`test_fix`", "`tdd_units`", "`changed_paths`", "`test_fix_allowance=increment`",
+                       "`test_fix_allowance=run_wide`", "`test_fix_ineligible`", "`test_fix_scope_unproven`",
+                       "`path_not_edited_by_increment`", "one test fix per increment"):
+            self.assertIn(phrase, shared)
+        for host in ("skills/speckit-autopilot/references/phase-execution.md",
+                     "codex-skills/speckit-autopilot/references/phase-execution-codex.md"):
+            with self.subTest(host=host):
+                text = " ".join((plugin / host).read_text().split())
+                for phrase in ("`test_fix`", "`tdd_units`", "without `begin-replan-epoch`",
+                               "never ask the operator for a re-plan"):
+                    self.assertIn(phrase, text)
+
+
 class SelfIgnoringByproductDirectoryTests(_ExecutionControlFixture, unittest.TestCase):
     """#813: every runner byproduct directory ignores itself from the run's first write."""
 
@@ -3147,7 +3385,7 @@ if __name__ == "__main__":
                                             DeferOnExhaustedAllowanceTests, DeferOnExhaustedAllowanceGuidanceTests,
                                             FailingCheckFingerprintTests, CorrectionProgressTests,
                                             CorrectionProgressGuidanceTests, GateRemediationAllowanceTests,
-                                            MetadataOnlyCorrectionTests,
+                                            MetadataOnlyCorrectionTests, IncrementTestFixAllowanceTests,
                                             WorkflowIdentityTests, SelfIgnoringByproductDirectoryTests, VerificationTests,
                                             RunnerDispatchTests))
     suite.addTests(DockerVerificationTests(name) for name in DockerVerificationTests.__dict__ if name.startswith("test_docker_"))
