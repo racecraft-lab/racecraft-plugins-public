@@ -430,9 +430,27 @@ def native_fixture(helper, root, host, entry, model, arm, selected_pattern):
     return context, streams, preflight, catalog
 
 
+class ReplayObserverImportTests(unittest.TestCase):
+    """Replay parses recorded streams through the observers, never by loading a runner script."""
+
+    CONTEXTS = {
+        "codex": {"host": "codex", "target_skill": "x-eval-1", "witnesses": {}, "requested_model": "m"},
+        "claude": {"host": "claude", "plugin_name": "p", "plugin_root": "/nonexistent", "expected_skill": "p:x",
+                   "nonce": "n", "requested_model": "m", "sibling_skills": []},
+    }
+
+    def test_replay_does_not_load_the_runner_scripts(self):
+        for host, context in self.CONTEXTS.items():
+            with self.subTest(host=host), mock.patch.object(
+                comparison, "_parser", side_effect=AssertionError("replay loaded a runner script")
+            ):
+                self.assertFalse(comparison.replay(b"", context)["valid"])
+
+
 if __name__ == "__main__":
     suite = unittest.TestSuite([
         unittest.defaultTestLoader.loadTestsFromTestCase(MultiGenerationComparisonTests),
         unittest.defaultTestLoader.loadTestsFromTestCase(ComparisonTests),
+        unittest.defaultTestLoader.loadTestsFromTestCase(ReplayObserverImportTests),
     ])
     raise SystemExit(run_counted(suite, label="test-trigger-comparison"))

@@ -52,6 +52,7 @@ if str(SHARED_LIB) not in sys.path:
     sys.path.insert(0, str(SHARED_LIB))
 
 from test_result import run_counted  # noqa: E402
+import trigger_claude_observer as claude_observer  # noqa: E402
 import trigger_evidence as evidence_records  # noqa: E402
 import trigger_process  # noqa: E402
 
@@ -987,7 +988,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 use = events[1]["message"]["content"][0]
                 use["id"] = identifier
                 self.assertEqual(
-                    claude.skill_results_error(events, [(1, use)], 0, len(events) - 1),
+                    claude_observer.skill_results_error(events, [(1, use)], 0, len(events) - 1),
                     "malformed Skill tool use identity",
                 )
                 parsed = claude.inspect_claude_stream(

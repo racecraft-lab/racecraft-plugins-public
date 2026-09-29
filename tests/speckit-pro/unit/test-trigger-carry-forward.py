@@ -883,6 +883,7 @@ closure = Path({str(closure)!r})
 sources = g['_reviewed_closure_sources'](closure, {expected!r})
 finder = g['_ClosedBytesFinder'](closure, sources, {expected!r})
 finder.sanitize_paths()
+sys.modules.pop('shlex', None)  # the comparator's observers import shlex; the shadow must face a fresh import
 sys.meta_path.insert(0, finder)
 try:
     module = finder.load('parser', 'lib/parser.py')

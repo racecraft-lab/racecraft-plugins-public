@@ -13,6 +13,8 @@ import re
 import sqlite3
 import sys
 
+import trigger_claude_observer as claude_observer
+import trigger_codex_observer as codex_observer
 import trigger_evidence as evidence
 from trigger_campaign_pins import FRESH_LAUNCH_CEILING
 from trigger_inventory import canonical_sha256, validate_inventory
@@ -144,10 +146,9 @@ def _parser(host: str):
 def replay(stdout: bytes, context: dict) -> dict:
     _require(isinstance(context, dict) and context.get("host") in {"claude", "codex"}, "missing native parser replay context")
     host = context["host"]
-    parser = _parser(host)
     if host == "claude":
-        return parser.inspect_claude_stream(stdout, context["plugin_name"], Path(context["plugin_root"]), context["expected_skill"], context["nonce"], context["requested_model"], frozenset(context["sibling_skills"]))
-    return parser.inspect_codex_jsonl(stdout, context["target_skill"], context["witnesses"], requested_model=context["requested_model"])
+        return claude_observer.inspect_claude_stream(stdout, context["plugin_name"], Path(context["plugin_root"]), context["expected_skill"], context["nonce"], context["requested_model"], frozenset(context["sibling_skills"]))
+    return codex_observer.inspect_codex_jsonl(stdout, context["target_skill"], context["witnesses"], requested_model=context["requested_model"])
 
 
 def compare_hits(positive: bool, baseline: int, candidate: int) -> dict:
