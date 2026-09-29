@@ -19,8 +19,11 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 HELPER_PATH = REPO_ROOT / "tests" / "speckit-pro" / "run-hosted-windows-preflight.py"
 DISPATCH_HELPER_PATH = REPO_ROOT / "tests" / "speckit-pro" / "run-container-preflight.py"
 LIB_DIR = REPO_ROOT / "tests" / "speckit-pro" / "lib"
-if str(LIB_DIR) not in sys.path:
-    sys.path.insert(0, str(LIB_DIR))
+PLUGIN_ROOT = REPO_ROOT / "speckit-pro"
+for _import_root in (LIB_DIR, PLUGIN_ROOT):
+    if str(_import_root) not in sys.path:
+        sys.path.insert(0, str(_import_root))
+from speckit_pro_runner import envelope  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
 
@@ -47,14 +50,6 @@ def runner_envelope(
     include_metadata: bool = False,
     verification_status: str = "verified",
 ) -> dict[str, object]:
-    exit_codes = {
-        "ok": 0,
-        "expected_failure": 1,
-        "input_error": 2,
-        "missing_prerequisite": 3,
-        "subprocess_failure": 4,
-        "internal_failure": 5,
-    }
     data: dict[str, object] = {}
     if include_metadata:
         data = {
@@ -62,14 +57,7 @@ def runner_envelope(
                 "metadata": {"verification_status": verification_status},
             }
         }
-    return {
-        "schema_version": "1.0",
-        "status": status,
-        "exit_code": exit_codes[status],
-        "legacy_exit_code": None,
-        "diagnostics": [],
-        "data": data,
-    }
+    return envelope.response(status, data=data)
 
 
 class HostedPreflightScenario:
@@ -119,6 +107,21 @@ class HostedPreflightScenario:
 
 
 class HostedWindowsPreflightTests(unittest.TestCase):
+    def test_preflight_scripts_share_one_architecture_vocabulary(self) -> None:
+        for machine in ("AMD64", "x64", "x86_64", "ARM64", "aarch64", "riscv64", ""):
+            with self.subTest(machine=machine):
+                self.assertEqual(helper._architecture_family(machine), dispatch_helper._architecture_family(machine))
+        self.assertEqual("x64", dispatch_helper._architecture_family("x86_64"))
+        self.assertEqual("x64", dispatch_helper.WINDOWS_ROLE_ARCHITECTURES["windows-x64"])
+        self.assertEqual("x64", dispatch_helper.LINUX_ROLE_ARCHITECTURES["linux-amd64"])
+        for role, family in helper.ROLE_ARCHITECTURE_FAMILIES.items():
+            self.assertEqual(family, dispatch_helper.WINDOWS_ROLE_ARCHITECTURES[role])
+
+    def test_response_contract_matches_the_runner_envelope(self) -> None:
+        self.assertEqual(envelope.STATUS_EXIT_CODES, helper.RESPONSE_STATUS_EXIT_CODES)
+        sent_fields = set(envelope.response("ok"))
+        self.assertEqual(sent_fields, helper.RESPONSE_REQUIRED_FIELDS)
+
     def run_scenario(
         self,
         scenario: HostedPreflightScenario,

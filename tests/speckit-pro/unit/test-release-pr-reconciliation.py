@@ -385,6 +385,36 @@ class ReleasePrDispatchTests(unittest.TestCase):
         for _argv, kwargs in calls:
             self.assertEqual({"check": True, "shell": False}, kwargs)
 
+    def test_fallback_title_names_the_release_component(self) -> None:
+        for component in ("speckit-pro", "typesafe-jev"):
+            branch = f"release-please--branches--main--components--{component}"
+            expected = f"chore(release): release {component}"
+            with self.subTest(component=component):
+                (release_pr,) = dispatch.parse_release_prs(json.dumps([{"headBranchName": branch, "number": 7}]))
+                self.assertEqual(expected, release_pr["title"])
+                normalized = resolver.normalize_release_pr({"headBranchName": branch, "number": 7}, "main", strict=True)
+                self.assertEqual(expected, normalized["title"])
+
+    def test_dispatch_rejects_a_missing_title_it_cannot_derive_a_component_for(self) -> None:
+        with self.assertRaises(dispatch.DispatchError):
+            dispatch.parse_release_prs(json.dumps([{"headBranchName": "release/main", "number": 7}]))
+
+    def test_dispatch_passes_base_ref_through(self) -> None:
+        calls: list[list[str]] = []
+
+        def fake_run(argv, **_kwargs):
+            calls.append(list(argv))
+            return subprocess.CompletedProcess(argv, 0)
+
+        branch = "release-please--branches--stable--components--typesafe-jev"
+        environment = {
+            "BASE_REF": "stable",
+            "RELEASE_PRS": json.dumps([{"headBranchName": branch, "number": 9, "title": "release"}]),
+        }
+        self.assertEqual(0, dispatch.main(environment, run=fake_run))
+        self.assertIn("base_ref=stable", calls[0])
+        self.assertNotIn("base_ref=main", calls[0])
+
     def test_dispatch_rejects_malformed_empty_and_incomplete_metadata(self) -> None:
         invalid_values = (
             "{not-json",

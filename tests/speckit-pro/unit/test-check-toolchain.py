@@ -6,7 +6,9 @@ from __future__ import annotations
 import contextlib
 import importlib.util
 import io
+import json
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -189,6 +191,22 @@ class CheckToolchainTests(unittest.TestCase):
             for name, check in checks:
                 with self.subTest(msg=name):
                     check()
+
+    def test_pnpm_pin_has_one_source(self) -> None:
+        declared = json.loads((REPO_ROOT / "docs-site" / "package.json").read_text(encoding="utf-8"))["packageManager"]
+        self.assertRegex(declared, r"^pnpm@\d+\.\d+\.\d+$")
+        for script in (CHECKER, REPO_ROOT / "scripts" / "sync_release_pr.py"):
+            with self.subTest(script=script.name):
+                self.assertNotRegex(script.read_text(encoding="utf-8"), r"pnpm@\d", "read the pin from docs-site/package.json")
+        restated = [
+            *sorted((REPO_ROOT / ".github" / "workflows").glob("*.yml")),
+            REPO_ROOT / "docs-site" / "src" / "content" / "docs" / "contribute-and-release.md",
+            REPO_ROOT / "docs-site" / "src" / "content" / "docs" / "troubleshooting.md",
+        ]
+        for path in restated:
+            for pin in re.findall(r"pnpm@\d+\.\d+\.\d+", path.read_text(encoding="utf-8")):
+                with self.subTest(path=path.name, pin=pin):
+                    self.assertEqual(declared, pin)
 
 
 def main() -> int:

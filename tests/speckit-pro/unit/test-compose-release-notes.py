@@ -62,6 +62,16 @@ def load_composer():  # type: ignore[no-untyped-def]
 
 
 COMPOSER = load_composer()
+AUDIT_SCRIPT = REPO_ROOT / "scripts" / "audit-release-notes.py"
+
+
+def load_audit():  # type: ignore[no-untyped-def]
+    spec = importlib.util.spec_from_file_location("audit_release_notes_shared", AUDIT_SCRIPT)
+    if spec is None or spec.loader is None:
+        raise AssertionError(f"unable to load audit script: {AUDIT_SCRIPT}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
 def compare_payload(*subjects: str, total_commits: int | None = None) -> dict:
@@ -94,7 +104,7 @@ def release_snapshot(
     normalized_pulls = {
         str(number): {
             "body": metadata.get("body") or "",
-            "labels": sorted(COMPOSER._label_names(metadata)),
+            "labels": sorted(COMPOSER.label_names(metadata)),
         }
         for number, metadata in pulls.items()
     }
@@ -179,6 +189,34 @@ def run_validation(*, title: str, body: str = "", labels: tuple[str, ...] = (), 
 
 class ComposeReleaseNotesTests(unittest.TestCase):
     @inventory_check
+
+    @inventory_check
+    def test_snapshot_contract_has_one_source(self) -> None:
+        policy = COMPOSER._release_note_policy
+        audit = load_audit()
+        self.assertEqual(1, policy.SNAPSHOT_SCHEMA_VERSION)
+        self.assertEqual(
+            {"compare", "compare_headers", "previous_tag", "pulls", "release_body", "repository", "schema_version", "tag"},
+            set(policy.SNAPSHOT_KEYS),
+        )
+        for module in (COMPOSER, audit):
+            self.assertIs(policy.FAILURE_OUTCOME, module.FAILURE_OUTCOME)
+        self.assertIs(policy.SNAPSHOT_SCHEMA_VERSION, COMPOSER.SNAPSHOT_SCHEMA_VERSION)
+        self.assertIs(policy.SNAPSHOT_KEYS, audit.SNAPSHOT_KEYS)
+        self.assertIs(policy.SNAPSHOT_SCHEMA_VERSION, audit.SNAPSHOT_SCHEMA_VERSION)
+
+    @inventory_check
+    def test_composer_helpers_are_public_and_environment_parsing_is_the_composers(self) -> None:
+        policy = COMPOSER._release_note_policy
+        self.assertIn("label_names", policy.__all__)
+        self.assertIs(policy.label_names, COMPOSER.label_names)
+        self.assertFalse(hasattr(policy, "_label_names"))
+        self.assertFalse(hasattr(policy, "_validation_inputs_from_environment"))
+        self.assertFalse(hasattr(COMPOSER, "_label_names"))
+        self.assertNotIn("PR_TITLE", (REPO_ROOT / "scripts" / "release_note_policy.py").read_text(encoding="utf-8"))
+        with mock.patch.dict(os.environ, {"PR_TITLE": "fix(x): y", "PR_LABELS_JSON": '["a"]', "PR_DRAFT": "true"}):
+            self.assertEqual(("fix(x): y", os.environ.get("PR_BODY", ""), {"a"}, True), COMPOSER.validation_inputs_from_environment())
+
     def test_previous_tag_and_compare_discovery(self) -> None:
         self.assertEqual(
             COMPOSER.parse_previous_tag(RAW_BODY, "speckit-pro-v2.19.0"),
