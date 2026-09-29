@@ -1,6 +1,8 @@
 import type { APIRoute, GetStaticPaths } from 'astro';
 import { getCollection } from 'astro:content';
 
+import { routeKey } from '../lib/route-key';
+
 /**
  * Per-page agent-readable Markdown variant (DOC-014, C4 / FR-007, FR-008 · US3).
  *
@@ -32,22 +34,10 @@ import { getCollection } from 'astro:content';
  */
 export const prerender = true;
 
-/**
- * Convert a docs collection entry id to its route param, mirroring Starlight's
- * own `slugToParam` (strip a leading/standalone `index`, drop a trailing
- * `/index`, and normalize). The root entry (`index`) has no page param, so it is
- * mapped to the literal `index` here to give it an `index.md` URL.
- */
-function slugToMdParam(id: string): string {
-  if (id === 'index' || id === '' || id === '/') return 'index';
-  const stripped = id.endsWith('/index') ? id.slice(0, -'/index'.length) : id;
-  return stripped.normalize();
-}
-
 export const getStaticPaths: GetStaticPaths = async () => {
   const docs = await getCollection('docs');
   return docs.map((entry) => ({
-    params: { slug: slugToMdParam(entry.id) },
+    params: { slug: routeKey(entry.id) },
     props: { body: entry.body ?? '' },
   }));
 };
