@@ -333,48 +333,40 @@ class Layer7RunnerTests(unittest.TestCase):
                 self.assertFalse(valid)
                 self.assertEqual(counts.failed, 1)
 
-    def test_input_only_compare_sources_require_invariants(self) -> None:
-        runner = import_runner()
-        with tempfile.TemporaryDirectory() as temporary:
-            fixture, expected, tolerance = make_contract_fixture(
-                runner,
-                Path(temporary),
-                "copied-input-canary",
-                [{"field": "workflow", "source": "workflow.md", "tolerance_key": "workflow"}],
-                {"workflow": {"tolerance": "exact"}},
-            )
-            with self.subTest(msg="workflow.md-only compare without invariants is rejected"):
-                with self.assertRaisesRegex(ValueError, "copied workflow.md"):
-                    runner.validate_fixture_contracts(fixture, expected, tolerance)
-            with self.subTest(msg="a run-produced compare source is accepted"):
-                produced = copy.deepcopy(expected)
-                produced["compare"].append(
-                    {"field": "artifact", "source": "artifact.md", "tolerance_key": "workflow"}
-                )
-                runner.validate_fixture_contracts(fixture, produced, tolerance)
-
-    def test_legacy_schema_ids_are_distinct_and_whole_file_tolerance_one_is_rejected(self) -> None:
+    def test_contract_rejections(self) -> None:
         runner = import_runner()
         import native_eval_pairing
 
         self.assertNotEqual(runner.EXPECTED_SCHEMA, native_eval_pairing.EXPECTED_SCHEMA_VERSION)
         self.assertNotEqual(runner.TOLERANCE_SCHEMA, native_eval_pairing.TOLERANCE_SCHEMA_VERSION)
+        artifact = {"field": "artifact", "source": "artifact.md", "tolerance_key": "t"}
+        workflow = {"field": "workflow", "source": "workflow.md", "tolerance_key": "t"}
+
+        def native_schema(expected: dict[str, Any]) -> None:
+            expected["schema"] = native_eval_pairing.EXPECTED_SCHEMA_VERSION
+
+        def add_artifact(expected: dict[str, Any]) -> None:
+            expected["compare"].append(artifact)
+
+        cases = (
+            ("workflow.md-only compare without invariants", [workflow], "exact", None, "copied workflow.md"),
+            ("a run-produced compare source", [workflow], "exact", add_artifact, None),
+            ("whole-file tolerance-1", [artifact], "tolerance-1", None, "tolerance-1 requires table_row_count"),
+            ("native pairing schema id", [artifact], "exact", native_schema, "schema must be"),
+        )
         with tempfile.TemporaryDirectory() as temporary:
-            fixture, expected, tolerance = make_contract_fixture(
-                runner,
-                Path(temporary),
-                "schema-canary",
-                [{"field": "artifact", "source": "artifact.md", "tolerance_key": "artifact"}],
-                {"artifact": {"tolerance": "tolerance-1"}},
-            )
-            with self.subTest(msg="whole-file tolerance-1 is rejected"):
-                with self.assertRaisesRegex(ValueError, "tolerance-1 requires table_row_count"):
-                    runner.validate_fixture_contracts(fixture, expected, tolerance)
-            with self.subTest(msg="native pairing schema ids are rejected"):
-                native = copy.deepcopy(expected)
-                native["schema"] = native_eval_pairing.EXPECTED_SCHEMA_VERSION
-                with self.assertRaisesRegex(ValueError, "schema must be"):
-                    runner.validate_fixture_contracts(fixture, native, tolerance)
+            for index, (label, compare, tolerance_type, mutate, pattern) in enumerate(cases):
+                with self.subTest(msg=label):
+                    fixture, expected, tolerance = make_contract_fixture(
+                        runner, Path(temporary), f"canary-{index}", compare, {"t": {"tolerance": tolerance_type}}
+                    )
+                    if mutate is not None:
+                        mutate(expected)
+                    if pattern is None:
+                        runner.validate_fixture_contracts(fixture, expected, tolerance)
+                    else:
+                        with self.assertRaisesRegex(ValueError, pattern):
+                            runner.validate_fixture_contracts(fixture, expected, tolerance)
 
     def test_live_skip_fails_unless_accepted(self) -> None:
         runner = import_runner()
