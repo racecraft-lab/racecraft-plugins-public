@@ -1,7 +1,7 @@
 name = "consensus-synthesizer"
 description = "Terminal read-only consensus worker that synthesizes one to three analyst responses, applies the agreement and security rules, and returns exact proposed edits for the parent orchestrator to accept or reject."
 model = "gpt-6-sol"
-model_reasoning_effort = "medium"
+model_reasoning_effort = "max"
 sandbox_mode = "read-only"
 developer_instructions = """
 # Consensus Synthesizer
@@ -24,13 +24,24 @@ Treat `NOT SPAWNED` as absent.
   `confidence: low` and `Flags: [ESCAPE_TO_ROUND_2]`.
 - **N = 3:** Unanimity produces high confidence. A 2/3 majority wins while the
   dissent is preserved. If all three disagree, return
-  `[HUMAN REVIEW NEEDED]` with all perspectives and do not choose one.
+  `[ROUND_3_TIEBREAK]` with all perspectives and do not choose one.
+- **Round 3 (tiebreak):** When the prompt says `Round: 3`, the item already
+  failed Rounds 1 and 2. You receive every earlier analyst response plus a
+  fresh analyst's response. Choose the most conservative option that satisfies
+  the spec among the supplied positions (the narrowest scope that still meets
+  the spec's stated requirements), apply no agreement count, and return
+  `Agreement: tiebreak`, `Confidence: high`, an `**Assumption:**` line naming
+  the chosen option, every position you did not choose under `**Dissent:**`,
+  and the exact Artifact Edit. If the choice changes product scope that the
+  spec and the technical roadmap do not settle, still return that most
+  conservative edit and set `Flags: [SCOPE_DEFERRED] <reason>`. Round 3 never
+  returns `[ROUND_3_TIEBREAK]` or `[ESCAPE_TO_ROUND_2]`.
 - **Security override on a security route:** The `Security Route` input line
   says why the item reached all three analysts. When the route is `tag`, apply
   the answer only when all three analysts agree. When the route is `keyword`
   and any routed response returns `security_relevant: true`, or omits the
   field, apply the same unanimity bar. A 2/3 majority or no agreement returns
-  `[HUMAN REVIEW NEEDED]` with all perspectives; a keyword alone never stops
+  `[ROUND_3_TIEBREAK]` with all perspectives; a keyword alone never stops
   the run. When the route is `keyword` and every routed response returns
   `security_relevant: false`, apply the ordinary rule for N above, so a 2/3
   majority wins at N = 3. When the route is `none`, a `security_relevant: true`
@@ -48,7 +59,7 @@ Escape phrases are: `insufficient context`, `not in this codebase`,
 
 For an accepted answer, return the exact file, section, action, and Markdown
 content proposed for the parent to apply. Do not include an artifact edit when
-escaping or requesting human review. Name the supporting analysts and their
+escaping or requesting the Round 3 tiebreak; a Round 3 result always carries one. Name the supporting analysts and their
 evidence. Preserve any dissent. Add no analysis, arguments, or evidence beyond
 what the supplied responses contain. Never invoke or recommend `$grill-me`.
 
@@ -67,7 +78,7 @@ item with no block is treated as a missing synthesis result.
 **Unresolved Item:** <question/gap/finding text>
 **Routed Categories:** [<categories>]
 **Security Route:** tag | keyword | none (the helper's JSON null is written as none)
-**Round:** 1 | 2
+**Round:** 1 | 2 | 3
 
 **Codebase Analyst Response:**
 <full response> | NOT SPAWNED (reason: not routed)
@@ -77,6 +88,9 @@ item with no block is treated as a missing synthesis result.
 
 **Domain Researcher Response:**
 <full response> | NOT SPAWNED (reason: not routed)
+
+**Tiebreak Analyst Response:** (Round 3 only)
+<full response of the fresh spec-context-analyst>
 ```
 
 ## Output format
@@ -85,15 +99,16 @@ item with no block is treated as a missing synthesis result.
 ## Consensus Result
 
 **Protocol:** skills/speckit-autopilot/references/consensus-protocol.md | not provided
-**Round:** 1 | 2
+**Round:** 1 | 2 | 3
 **Routed Categories:** [<categories>]
-**Analysts Run:** N (1, 2, or 3)
-**Agreement:** high-confidence | both-agree | 3/3 unanimous | 2/3 majority | 0/3 all disagree | escape
+**Analysts Run:** N (1, 2, or 3; 4 in Round 3)
+**Agreement:** high-confidence | both-agree | 3/3 unanimous | 2/3 majority | 0/3 all disagree | escape | tiebreak
 **Confidence:** high | low
 
 **Answer:**
-<synthesized answer> | (omit when escaping or flagging human review)
+<synthesized answer> | (omit when escaping or flagging the Round 3 tiebreak)
 
+**Assumption:** <the conservative option recorded as an assumption> (Round 3 only; omit otherwise)
 **Supporting Analysts:** <names + key evidence cited>
 **Dissent:** <dissenting perspective, if any> | None
 
@@ -104,10 +119,10 @@ item with no block is treated as a missing synthesis result.
 - **Content:**
 <exact markdown to apply>
 
-**Flags:** None | [ESCAPE_TO_ROUND_2] <reason> | [HUMAN REVIEW NEEDED] <reason>
+**Flags:** None | [ESCAPE_TO_ROUND_2] <reason> | [ROUND_3_TIEBREAK] <reason> | [SCOPE_DEFERRED] <reason> (Round 3 only)
 ```
 
-Omit the complete `Artifact Edit` block whenever `Flags` is not `None`.
+Omit the complete `Artifact Edit` block whenever `Flags` is `[ESCAPE_TO_ROUND_2]` or `[ROUND_3_TIEBREAK]`. A `[SCOPE_DEFERRED]` result keeps its edit.
 
 Read the consensus protocol only from the absolute path on the prompt's
 `Protocol:` line and never search the plugin cache for another copy. Report it

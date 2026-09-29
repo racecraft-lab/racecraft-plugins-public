@@ -68,8 +68,8 @@
       "name": "consensus-synthesizer",
       "category": "shared",
       "exception_reason": null,
-      "claude_code": {"implementation": "plugin_agent", "source": "agents/consensus-synthesizer.md", "install_status": "required", "order": 9, "model": "sonnet", "effort": "high", "sandbox": "tool-policy-read-only", "memory": "none"},
-      "codex": {"implementation": "custom_agent", "source": "codex-agents/consensus-synthesizer.toml", "install_status": "required", "order": 11, "model": "gpt-6-sol", "effort": "medium", "sandbox": "read-only", "memory": "none"}
+      "claude_code": {"implementation": "plugin_agent", "source": "agents/consensus-synthesizer.md", "install_status": "required", "order": 9, "model": "sonnet", "effort": "max", "sandbox": "tool-policy-read-only", "memory": "none"},
+      "codex": {"implementation": "custom_agent", "source": "codex-agents/consensus-synthesizer.toml", "install_status": "required", "order": 11, "model": "gpt-6-sol", "effort": "max", "sandbox": "read-only", "memory": "none"}
     },
     {
       "name": "artifact-author",

@@ -828,11 +828,14 @@ directions; do not infer a broader precedence rule.
   reroutes a task to verification reserves with `metadata_only: true`; the
   runner proves it against the committed baseline and spends no cycle. Never
   reset or bypass the ledger otherwise; `checkpoint_required` and ledger integrity errors still stop.
-- **Consensus all-disagree** (Round 2): flag `[HUMAN REVIEW NEEDED]`.
-  In an interactive session, ask the operator in place with
-  `AskUserQuestion`, apply the answer, and continue; in an unattended run,
-  STOP and present all 3 perspectives. See
-  [consensus-protocol.md §Human Review Needed](./references/consensus-protocol.md#human-review-needed).
+- **Consensus cannot agree** (Round 2 all-disagree, a security item without
+  3/3, an analyst that fails its retry, or conservative mode): run the Round 3
+  agent tiebreak, a fresh analyst plus a max-effort `consensus-synthesizer`,
+  record the most conservative option that satisfies the spec as an assumption
+  with the dissent logged, and continue. Only a choice that changes product
+  scope the spec and roadmap do not settle is deferred to the one end-of-run
+  request; nothing stops the run and nothing asks mid-run. See
+  [consensus-protocol.md §Round 3 Tiebreak](./references/consensus-protocol.md#round-3-tiebreak).
 - **Research/context capability unavailable:** use the next acceptable
   evidence path, record any confidence impact, and escalate only when no
   acceptable evidence path remains or a true gate fails.

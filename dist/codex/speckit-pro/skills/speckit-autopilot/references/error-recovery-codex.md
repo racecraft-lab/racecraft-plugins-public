@@ -70,13 +70,15 @@ $speckit-autopilot workflow.md --from-phase <next-pending-phase>
   failures with one signature in one test file are one class: one approval
   covers its follow-ups through `reserve-class-correction`. See
   [Repeated Gate Failures: Diagnose One Class, Approve It Once](./phase-execution-codex.md#repeated-gate-failures-diagnose-one-class-approve-it-once).
-- **Consensus agents all disagree:** Flag `[HUMAN REVIEW NEEDED]`.
-  In an interactive task, ask the operator in place with
-  `request_user_input` (the analysts' positions as options, the synthesizer's
-  recommendation first, and a `Stop the run` option), apply the answer with
-  the `human answer` label, and continue. In an unattended run, or when
-  `request_user_input` is absent, STOP and present all 3 perspectives. See
-  [consensus-protocol.md §Human Review Needed](consensus-protocol.md#human-review-needed).
+- **Consensus agents cannot agree:** The synthesizer flags
+  `[ROUND_3_TIEBREAK]`, which starts the Round 3 tiebreak: a fresh analyst
+  and a max-effort `consensus-synthesizer` return the most conservative option
+  that satisfies the spec. Apply it as an assumption with the dissent logged,
+  in an interactive and an unattended run alike, and continue. An analyst that
+  fails its retry is replaced by a fresh analyst. A choice that changes
+  product scope the spec and roadmap do not settle is deferred to the
+  end-of-run request, never a mid-run stop. See
+  [consensus-protocol.md §Round 3 Tiebreak](consensus-protocol.md#round-3-tiebreak).
 - **MCP tool unavailable:** Skip research that depends on it. Use
   file search and read fallbacks for codebase analysis. Log warning.
 - **Action blocked mid-run:** An approval-reviewer veto, a missing approval,

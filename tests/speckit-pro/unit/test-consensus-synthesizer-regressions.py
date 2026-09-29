@@ -91,10 +91,10 @@ class ConsensusSynthesizerRegressionTests(unittest.TestCase):
             "Unanimity produces high confidence",
             "A 2/3 majority wins while the dissent is preserved",
             "If all three disagree",
-            "[HUMAN REVIEW NEEDED]",
+            "[ROUND_3_TIEBREAK]",
             "Security override on a security route",
             "apply the answer only when all three analysts agree",
-            "A 2/3 majority or no agreement returns `[HUMAN REVIEW NEEDED]`",
+            "A 2/3 majority or no agreement returns `[ROUND_3_TIEBREAK]`",
             "a keyword alone never stops the run",
         ))
 
@@ -126,7 +126,7 @@ class ConsensusSynthesizerRegressionTests(unittest.TestCase):
 
     def test_security_relevant_raises_the_bar_only_on_a_security_route(self) -> None:
         # A `true` from one analyst on a two-analyst non-security route must
-        # not skip the Round 2 escape and send the item to human review. Only
+        # not skip the Round 2 escape and send the item to the Round 3 tiebreak. Only
         # a `tag` or `keyword` route can raise the bar to unanimity.
         none_route = (
             "When the route is `none`, a `security_relevant: true` answer does "
@@ -229,46 +229,140 @@ class ConsensusSynthesizerRegressionTests(unittest.TestCase):
             dispatch_block(scaffold, 'Agent(subagent_type: "speckit-pro:codebase-analyst"'),
         )
 
-    def test_human_review_asks_in_place_only_in_an_interactive_run(self) -> None:
-        # An operator who is present can answer a [HUMAN REVIEW NEEDED] item
-        # through the host's native question tool; an unattended run still
-        # stops. Each host names only its own tool.
-        protocol = " ".join(PROTOCOL.read_text(encoding="utf-8").split())
+    def test_round3_tiebreak_replaces_every_consensus_human_stop_in_the_protocol(self) -> None:
+        # Consensus that cannot agree resolves through a Round 3 agent tiebreak
+        # in an interactive and an unattended run alike. Nothing asks or stops.
+        raw = PROTOCOL.read_text(encoding="utf-8")
+        protocol = " ".join(raw.split())
         assert_contains(self, protocol, (
-            "## Human Review Needed",
-            "`AskUserQuestion` on Claude Code",
-            "`request_user_input` on Codex",
-            "the synthesizer's recommendation first",
-            "`Stop the run`",
-            "label its source `human answer`",
-            "`claude -p`, `codex exec`, CI, or a background agent",
-            "stop exactly as before",
-            "Never ask through free text or `grill-me`",
-            "IF Flags includes [HUMAN REVIEW NEEDED]: resolve per §Human Review Needed",
+            "## Round 3 Tiebreak",
+            "a Round 2 all-disagree",
+            "a security item without 3/3 agreement",
+            "an analyst that fails its retry",
+            "conservative mode",
+            "one fresh `spec-context-analyst`",
+            "a `consensus-synthesizer` at max effort",
+            "all prior analyst answers, the constitution, and the technical roadmap",
+            "the most conservative option that satisfies the spec",
+            "recorded as an assumption",
+            "the dissent is logged",
+            "`known_gaps`",
+            "is replaced by a fresh analyst, never by a human",
+            "`[SCOPE_DEFERRED]`",
+            "`unresolved_deferrals`",
+            "never a mid-run stop",
+            "An interactive run and an unattended run behave the same",
+            "Outcome `[ROUND 3]`",
+            "IF Flags includes [ROUND_3_TIEBREAK]: run the Round 3 tiebreak",
         ))
-        anchor = "consensus-protocol.md#human-review-needed"
+        for stale in (
+            "AskUserQuestion",
+            "request_user_input",
+            "ask in place or STOP",
+            "STOP autopilot",
+            "Outcome=[HUMAN REVIEW]",
+            "Outcome `[HUMAN REVIEW]`",
+            "let the human decide",
+            "Any disagreement stops",
+            "stops for human review",
+            "surface to user",
+            "#human-review-needed",
+        ):
+            with self.subTest(stale=stale):
+                self.assertNotIn(stale, protocol)
+
+    def test_round3_tiebreak_reads_the_same_on_both_hosts(self) -> None:
+        anchor = "consensus-protocol.md#round-3-tiebreak"
         claude_files = (
             AUTOPILOT_SKILLS[0],
             REFERENCES / "error-recovery.md",
             REFERENCES / "phase-execution.md",
+            REFERENCES / "gate-validation.md",
         )
         codex_refs = CODEX_AUTOPILOT.parent / "references"
         codex_files = (
+            CODEX_AUTOPILOT,
             codex_refs / "error-recovery-codex.md",
             CODEX_PHASE_EXECUTION,
         )
-        for path in claude_files:
-            flat = " ".join(path.read_text(encoding="utf-8").split())
-            with self.subTest(host="claude", path=path.name):
-                assert_contains(self, flat, (anchor, "`AskUserQuestion`", "unattended run"))
-                self.assertNotIn("request_user_input", flat)
-        for path in codex_files:
-            flat = " ".join(path.read_text(encoding="utf-8").split())
-            with self.subTest(host="codex", path=path.name):
-                assert_contains(self, flat, (anchor, "`request_user_input`", "unattended run"))
-                self.assertNotIn("AskUserQuestion", flat)
+        for host, paths in (("claude", claude_files), ("codex", codex_files)):
+            for path in paths:
+                flat = " ".join(path.read_text(encoding="utf-8").split())
+                with self.subTest(host=host, path=path.name):
+                    self.assertNotIn("human-review-needed", flat)
+                    self.assertNotIn("[ROUND_3_TIEBREAK]` goes to the operator", flat)
+                    self.assertNotIn("ask the operator in place", flat)
+                    self.assertNotIn("STOP and present all 3 perspectives", flat)
+                    self.assertNotIn("STOP. Present remaining ambiguities to human", flat)
+                    if path.name != "gate-validation.md":
+                        assert_contains(self, flat, ("Round 3",))
+                    if path.name not in {"SKILL.md", "gate-validation.md"}:
+                        assert_contains(self, flat, (anchor,))
         phase = phase_execution_text()
-        self.assertEqual(phase.count(anchor), 3, "Clarify, Checklist, and Analyze each route human review")
+        self.assertGreaterEqual(phase.count(anchor), 3, "Clarify, Checklist, and Analyze each route to Round 3")
+        codex_phase = " ".join(CODEX_PHASE_EXECUTION.read_text(encoding="utf-8").split())
+        self.assertGreaterEqual(codex_phase.count(anchor), 1, "Codex consensus step routes to Round 3")
+        gate = " ".join((REFERENCES / "gate-validation.md").read_text(encoding="utf-8").split())
+        assert_contains(self, gate, ("Round 3 tiebreak", "end-of-run request"))
+        # Each host names only its own question tool, and only outside consensus.
+        for path in claude_files[1:2] + (REFERENCES / "consensus-protocol.md",):
+            self.assertNotIn("request_user_input", path.read_text(encoding="utf-8"))
+        for path in codex_files[1:2]:
+            self.assertNotIn("AskUserQuestion", path.read_text(encoding="utf-8"))
+            self.assertNotIn("request_user_input", path.read_text(encoding="utf-8"))
+
+    def test_synthesizer_agents_run_round_three_at_max_effort_and_never_flag_review(self) -> None:
+        claude = CLAUDE_SYNTHESIZER.read_text(encoding="utf-8")
+        codex = SYNTHESIZER.read_text(encoding="utf-8")
+        self.assertIn("effort: max", claude)
+        self.assertIn('model_reasoning_effort = "max"', codex)
+        for label, text in (("claude", claude), ("codex", instructions())):
+            flat = " ".join(text.split())
+            with self.subTest(host=label):
+                assert_contains(self, flat, (
+                    "Round 3",
+                    "the most conservative option that satisfies the spec",
+                    "Agreement: tiebreak",
+                    "**Assumption:**",
+                    "[SCOPE_DEFERRED]",
+                    "Round 3 never returns `[ROUND_3_TIEBREAK]` or `[ESCAPE_TO_ROUND_2]`",
+                    "**Round:** 1 | 2 | 3",
+                ))
+        self.assertNotIn("the orchestrator surfaces that to the user", claude)
+
+    def test_round3_tiebreak_covers_the_pr_feedback_sweep_inside_its_isolation(self) -> None:
+        sites = (
+            ("claude", REFERENCES / "phase-execution.md"),
+            ("codex", CODEX_PHASE_EXECUTION),
+        )
+        for host, path in sites:
+            flat = " ".join(path.read_text(encoding="utf-8").split())
+            with self.subTest(host=host):
+                assert_contains(self, flat, (
+                    "**When consensus does not answer, the item takes a Round 3 tiebreak.**",
+                    "one more `stage=synthesis` call by a fresh `sweep-analyst`",
+                    "`agreement` of `tiebreak`",
+                    "`scope_unsettled`",
+                    "`scope_deferred`",
+                    "never `consensus-synthesizer`",
+                    "The orchestrator is still not a conduit",
+                    "Nothing stops the run",
+                ))
+                for stale in (
+                    "the item goes to human review",
+                    "It stops the run whether or not anything was amended",
+                    "stops that run too",
+                ):
+                    self.assertNotIn(stale, flat)
+        codex_prompt = " ".join(
+            (CODEX_AUTOPILOT.parent / "references" / "sweep-prompts" / "analyst.md").read_text(encoding="utf-8").split()
+        )
+        claude_prompt = " ".join(
+            (REPO_ROOT / "speckit-pro" / "agents" / "sweep-analyst.md").read_text(encoding="utf-8").split()
+        )
+        for label, text in (("claude", claude_prompt), ("codex", codex_prompt)):
+            with self.subTest(prompt=label):
+                assert_contains(self, text, ("`tiebreak: true`", "agreement `tiebreak`", "basis `scope_unsettled`"))
 
     def test_escape_phrases_and_security_override_are_complete(self) -> None:
         text = instructions()
@@ -294,7 +388,7 @@ class ConsensusSynthesizerRegressionTests(unittest.TestCase):
             "- **Content:**",
             "**Flags:**",
         ))
-        self.assertIn("Omit the complete `Artifact Edit` block whenever `Flags` is not `None`.", text)
+        self.assertIn("Omit the complete `Artifact Edit` block whenever `Flags` is `[ESCAPE_TO_ROUND_2]` or `[ROUND_3_TIEBREAK]`.", text)
 
     def test_missing_failed_or_malformed_synthesis_cannot_apply_or_complete(self) -> None:
         required = (

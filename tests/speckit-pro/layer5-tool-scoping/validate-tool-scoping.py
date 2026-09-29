@@ -333,8 +333,8 @@ class ValidateToolScoping(unittest.TestCase):
         with self.subTest(msg="consensus-synthesizer model is sonnet"):
             self.assertEqual("sonnet", _yaml_field(AGENTS_DIR / "consensus-synthesizer.md", "model"))
 
-        with self.subTest(msg="consensus-synthesizer effort is high (bounded rule-applier runs at the documented default)"):
-            self.assertEqual("high", _yaml_field(AGENTS_DIR / "consensus-synthesizer.md", "effort"))
+        with self.subTest(msg="consensus-synthesizer effort is max (the Round 3 tiebreak is a judgment call and no dispatch can override effort)"):
+            self.assertEqual("max", _yaml_field(AGENTS_DIR / "consensus-synthesizer.md", "effort"))
 
     def test_codex_agent_sandbox_mode_scoping(self) -> None:
         with self.subTest(msg="codex agent directory exists (fail closed)"):

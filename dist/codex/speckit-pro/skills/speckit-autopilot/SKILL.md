@@ -339,10 +339,16 @@ Codex dispatch form `spawn_agent` with
 `agent_type="consensus-synthesizer"`.
 A default or general-purpose worker is not the named synthesizer; its result is
 invalid. Follow the mandatory
-Round 2, stop, re-evaluation, and Phase 6 confidence-emit contracts in
+Round 2, Round 3 tiebreak, re-evaluation, and Phase 6 confidence-emit contracts in
 [`consensus-protocol.md`](references/consensus-protocol.md)
-§Category-Routed Dispatch, §Batched Dispatch, §Phase-Specific Consensus Flows,
-and §Logging.
+§Category-Routed Dispatch, §Batched Dispatch, §Round 3 Tiebreak,
+§Phase-Specific Consensus Flows, and §Logging. Consensus that cannot agree (a
+Round 2 all-disagree, a security item without 3/3, an analyst that fails its
+retry, or conservative mode) runs the Round 3 agent tiebreak, a fresh analyst
+plus a max-effort `consensus-synthesizer`, and records the most conservative
+option that satisfies the spec as an assumption with the dissent logged. It
+never asks and never stops the run; only a product-scope choice the spec and
+roadmap do not settle waits for the one end-of-run request.
 
 ### 6a. Plan ambiguity uses provenance, not consensus
 

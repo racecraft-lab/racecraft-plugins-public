@@ -8111,7 +8111,7 @@
     {
       "id": "functional.speckit-autopilot.case-15",
       "layer": "functional",
-      "capability": "Refuses to invoke grill-me. Explains that grill-me is human-in-the-loop only and is forbidden inside autopilot. The correct response to unresolvable ambiguity is to use the Clarify Question Set plus consensus flow, then fail the gate or surface the issue to the user if consensus cannot resolve it. It does not call the native grill-me capability under any circumstance.",
+      "capability": "Refuses to invoke grill-me. Explains that grill-me is human-in-the-loop only and is forbidden inside autopilot. The correct response to unresolvable ambiguity is to use the Clarify Question Set plus consensus flow, then run the Round 3 agent tiebreak, and defer only an unsettled product-scope choice to the end-of-run request, if consensus cannot resolve it. It does not call the native grill-me capability under any circumstance.",
       "timeout_seconds": 300,
       "resource_class": "ordinary",
       "requirements": [
@@ -8137,7 +8137,7 @@
         },
         {
           "id": "legacy-05",
-          "description": "Either fails the gate gracefully and surfaces to the user, or continues only after the parent has resolved/applied clarifications"
+          "description": "Either resolves the item through the Round 3 agent tiebreak without stopping or asking, or continues only after the parent has resolved/applied clarifications"
         },
         {
           "id": "legacy-06",
@@ -8224,7 +8224,7 @@
           "id": "legacy-05-semantic",
           "requirement": "legacy-05",
           "type": "semantic",
-          "rubric": "PASS only if the evidence satisfies: Either fails the gate gracefully and surfaces to the user, or continues only after the parent has resolved/applied clarifications FAIL if omitted, contradicted, or merely claimed without required evidence."
+          "rubric": "PASS only if the evidence satisfies: Either resolves the item through the Round 3 agent tiebreak without stopping or asking, or continues only after the parent has resolved/applied clarifications FAIL if omitted, contradicted, or merely claimed without required evidence."
         },
         {
           "id": "legacy-06-semantic",
@@ -8419,10 +8419,10 @@
         },
         {
           "id": "legacy-05",
-          "description": "States that the [domain] tag makes this a keyword-routed item, not a [security]-tagged one, so a 2/3 majority goes to human review only when at least one analyst returns `security_relevant: true`; when every analyst returns `security_relevant: false`, the ordinary 2/3 majority applies. An answer that demands 3/3 for every security-keyword item, or applies 2/3 without regard to `security_relevant`, contradicts this."
+          "description": "States that the [domain] tag makes this a keyword-routed item, not a [security]-tagged one, so a 2/3 majority starts the Round 3 tiebreak only when at least one analyst returns `security_relevant: true`; when every analyst returns `security_relevant: false`, the ordinary 2/3 majority applies. An answer that demands 3/3 for every security-keyword item, or applies 2/3 without regard to `security_relevant`, contradicts this."
         }
       ],
-      "prompt": "Use {{skill}} to address this bounded request. The analyze-executor flagged: '[domain] Finding 3 [HIGH]: cookie SameSite policy is not specified in plan.md.' Which consensus analyst(s) does the native client autopilot spawn, how does the security-keyword override interact with the [domain] tag, does consensus-synthesizer still run, and when two analysts agree and one dissents, does autopilot apply the majority answer or stop for human review?",
+      "prompt": "Use {{skill}} to address this bounded request. The analyze-executor flagged: '[domain] Finding 3 [HIGH]: cookie SameSite policy is not specified in plan.md.' Which consensus analyst(s) does the native client autopilot spawn, how does the security-keyword override interact with the [domain] tag, does consensus-synthesizer still run, and when two analysts agree and one dissents, does autopilot apply the majority answer or run the Round 3 tiebreak?",
       "fixtures": [],
       "hosts": {
         "claude": {
@@ -8484,7 +8484,7 @@
           "id": "legacy-05-semantic",
           "requirement": "legacy-05",
           "type": "semantic",
-          "rubric": "PASS only if the evidence satisfies: States that the [domain] tag makes this a keyword-routed item, not a [security]-tagged one, so a 2/3 majority goes to human review only when at least one analyst returns `security_relevant: true`; when every analyst returns `security_relevant: false`, the ordinary 2/3 majority applies. An answer that demands 3/3 for every security-keyword item, or applies 2/3 without regard to `security_relevant`, contradicts this. FAIL if omitted, contradicted, or merely claimed without required evidence."
+          "rubric": "PASS only if the evidence satisfies: States that the [domain] tag makes this a keyword-routed item, not a [security]-tagged one, so a 2/3 majority starts the Round 3 tiebreak only when at least one analyst returns `security_relevant: true`; when every analyst returns `security_relevant: false`, the ordinary 2/3 majority applies. An answer that demands 3/3 for every security-keyword item, or applies 2/3 without regard to `security_relevant`, contradicts this. FAIL if omitted, contradicted, or merely claimed without required evidence."
         }
       ],
       "native_differences": [
@@ -8498,7 +8498,7 @@
     {
       "id": "functional.speckit-autopilot.case-19",
       "layer": "functional",
-      "capability": "[security] tag forces all 3 analysts (codebase-analyst, spec-context-analyst, domain-researcher) regardless of any other tag. Defense-in-depth: security items are NEVER single-routed. The orchestrator skips Round 1 single-routing and dispatches all 3 in parallel directly. The security override then requires 3/3 agreement: a unanimous 3/3 answer applies and the run continues, while a 2/3 majority or all-disagree makes the synthesizer flag [HUMAN REVIEW NEEDED].",
+      "capability": "[security] tag forces all 3 analysts (codebase-analyst, spec-context-analyst, domain-researcher) regardless of any other tag. Defense-in-depth: security items are NEVER single-routed. The orchestrator skips Round 1 single-routing and dispatches all 3 in parallel directly. The security override then requires 3/3 agreement: a unanimous 3/3 answer applies and the run continues, while a 2/3 majority or all-disagree makes the synthesizer flag [ROUND_3_TIEBREAK], which starts the Round 3 agent tiebreak instead of a stop or a question.",
       "timeout_seconds": 300,
       "resource_class": "ordinary",
       "requirements": [
@@ -8520,7 +8520,7 @@
         },
         {
           "id": "legacy-04",
-          "description": "Mentions that the synthesizer flags [HUMAN REVIEW NEEDED] for a security item unless all three analysts agree"
+          "description": "Mentions that the synthesizer flags [ROUND_3_TIEBREAK] for a security item unless all three analysts agree, and that Round 3 resolves it without asking a human or stopping the run"
         },
         {
           "id": "legacy-05",
@@ -8583,7 +8583,7 @@
           "id": "legacy-04-semantic",
           "requirement": "legacy-04",
           "type": "semantic",
-          "rubric": "PASS only if the evidence satisfies: Mentions that the synthesizer flags [HUMAN REVIEW NEEDED] for a security item unless all three analysts agree FAIL if omitted, contradicted, or merely claimed without required evidence."
+          "rubric": "PASS only if the evidence satisfies: Mentions that the synthesizer flags [ROUND_3_TIEBREAK] for a security item unless all three analysts agree, and that Round 3 resolves it without asking a human or stopping the run FAIL if omitted, contradicted, or merely claimed without required evidence."
         },
         {
           "id": "legacy-05-semantic",
@@ -10093,7 +10093,7 @@
     {
       "id": "functional.speckit-autopilot.case-110",
       "layer": "functional",
-      "capability": "Classifies the comments exactly once as amended, answered, deferred, and no action respectively; the out-of-scope README request is recorded and not acted on without implying future work. Only amended enters consensus. The isolated launcher obtains all three perspectives (codebase, spec-context, and domain) before synthesis. Exactly two materially agreeing records resolve at 2/3, all three at 3/3, any unresolved escape_hatch becomes human review with escape_unresolved, and no agreeing pair becomes human review with all_disagree. The parent receives only closed projections and an opaque receipt, never reviewer or model prose.",
+      "capability": "Classifies the comments exactly once as amended, answered, deferred, and no action respectively; the out-of-scope README request is recorded and not acted on without implying future work. Only amended enters consensus. The isolated launcher obtains all three perspectives (codebase, spec-context, and domain) before synthesis. Exactly two materially agreeing records resolve at 2/3, all three at 3/3, any unresolved escape_hatch returns human_review with escape_unresolved, and no agreeing pair returns human_review with all_disagree. Either takes one Round 3 tiebreak call by a fresh sweep-analyst, which resolves at agreement tiebreak or defers an unsettled product-scope choice as scope_unsettled, and the run never stops for it. The parent receives only closed projections and an opaque receipt, never reviewer or model prose.",
       "timeout_seconds": 300,
       "resource_class": "ordinary",
       "requirements": [
@@ -10119,7 +10119,7 @@
         },
         {
           "id": "legacy-05",
-          "description": "Maps an unresolved escape to escape_unresolved and no agreeing pair to all_disagree human review"
+          "description": "Maps an unresolved escape to escape_unresolved and no agreeing pair to all_disagree, each resolved by a Round 3 tiebreak call from a fresh sweep-analyst without stopping the run"
         },
         {
           "id": "legacy-06",
@@ -10182,7 +10182,7 @@
           "id": "legacy-05-semantic",
           "requirement": "legacy-05",
           "type": "semantic",
-          "rubric": "PASS only if the evidence satisfies: Maps an unresolved escape to escape_unresolved and no agreeing pair to all_disagree human review FAIL if omitted, contradicted, or merely claimed without required evidence."
+          "rubric": "PASS only if the evidence satisfies: Maps an unresolved escape to escape_unresolved and no agreeing pair to all_disagree, each resolved by a Round 3 tiebreak call from a fresh sweep-analyst without stopping the run FAIL if omitted, contradicted, or merely claimed without required evidence."
         },
         {
           "id": "legacy-06-semantic",
@@ -10418,7 +10418,7 @@
         },
         {
           "id": "legacy-04",
-          "description": "Explains that unresolved Round 2 disagreement is surfaced for human review: asked in place in an interactive run, and stopping advancement in an unattended run"
+          "description": "Explains that unresolved Round 2 disagreement is resolved by a Round 3 agent tiebreak, in an interactive and an unattended run alike, without asking a human or stopping the run"
         }
       ],
       "prompt": "Use {{skill}} to address this bounded request. How does the consensus protocol work in the autopilot workflow? I heard there are always 3 agents that vote, but I want the current contract.",
@@ -10473,7 +10473,7 @@
           "id": "legacy-04-semantic",
           "requirement": "legacy-04",
           "type": "semantic",
-          "rubric": "PASS only if the evidence satisfies: Explains that unresolved Round 2 disagreement is surfaced for human review: asked in place in an interactive run, and stopping advancement in an unattended run FAIL if omitted, contradicted, or merely claimed without required evidence."
+          "rubric": "PASS only if the evidence satisfies: Explains that unresolved Round 2 disagreement is resolved by a Round 3 agent tiebreak, in an interactive and an unattended run alike, without asking a human or stopping the run FAIL if omitted, contradicted, or merely claimed without required evidence."
         }
       ],
       "native_differences": [
@@ -14906,7 +14906,7 @@
           "description": "Attribute each recommendation to its exact retained analyst source without fabricated evidence."
         }
       ],
-      "prompt": "First invoke {{skill}} through the client's native skill-loading mechanism. Execute only one bounded Clarify consensus-synthesis observation. Read `scenario-inputs/analysts/codebase-analyst.md` and `scenario-inputs/analysts/domain-researcher.md` completely, using a separate native tool call for each analyst file; parallel calls are allowed. They are retained analyst returns for one Clarify Round-1 item, `[codebase, domain] Q2: Which hashing algorithm should new login records use, bcrypt or argon2id?`, which parse-consensus-categories routed to `[codebase, domain]` with `security_route: null`; do not dispatch replacement analysts and do not research beyond these inputs. Dispatch the installed client's named consensus-synthesizer with the protocol's synthesis input, including the `**Unresolved Item:**` line, `**Routed Categories:** [codebase, domain]`, `**Security Route:** none`, `**Round:** 1`, both analyst responses in full, and `NOT SPAWNED (not routed)` for the spec context analyst. Wait for its actual returned result, and use that result before writing the artifact. The parent must not perform or silently replace synthesis. Then write only `scenario-output/consensus-result.json` as strict JSON with exactly these keys: `decision` (string or null), `retained_options` (distinct recommendation tokens in input order), `agreement` (one of `single-analyst`, `both-agree`, `two-analyst-disagreement`, `3/3-unanimous`, `2/3-majority`, `0/3-all-disagree`), `confidence` (`high` or `low`), `next_action` (`apply`, `escape_to_round_2`, or `human_review`), and `evidence` (input-order objects with exactly `analyst`, `source`, and `recommendation`). When the result escapes, the exact `next_action` token is `escape_to_round_2`; never substitute `escalate_to_round_2` or prose. Use the same concise option token in `retained_options`, in `decision` when non-null, and in each `evidence.recommendation`; do not put explanatory sentences in these token fields. Each evidence object must name the canonical analyst, its exact staged source path, and only the recommendation supported by that source. Do not copy an expected answer from elsewhere, do not edit the inputs, and stop after the artifact is written.",
+      "prompt": "First invoke {{skill}} through the client's native skill-loading mechanism. Execute only one bounded Clarify consensus-synthesis observation. Read `scenario-inputs/analysts/codebase-analyst.md` and `scenario-inputs/analysts/domain-researcher.md` completely, using a separate native tool call for each analyst file; parallel calls are allowed. They are retained analyst returns for one Clarify Round-1 item, `[codebase, domain] Q2: Which hashing algorithm should new login records use, bcrypt or argon2id?`, which parse-consensus-categories routed to `[codebase, domain]` with `security_route: null`; do not dispatch replacement analysts and do not research beyond these inputs. Dispatch the installed client's named consensus-synthesizer with the protocol's synthesis input, including the `**Unresolved Item:**` line, `**Routed Categories:** [codebase, domain]`, `**Security Route:** none`, `**Round:** 1`, both analyst responses in full, and `NOT SPAWNED (not routed)` for the spec context analyst. Wait for its actual returned result, and use that result before writing the artifact. The parent must not perform or silently replace synthesis. Then write only `scenario-output/consensus-result.json` as strict JSON with exactly these keys: `decision` (string or null), `retained_options` (distinct recommendation tokens in input order), `agreement` (one of `single-analyst`, `both-agree`, `two-analyst-disagreement`, `3/3-unanimous`, `2/3-majority`, `0/3-all-disagree`), `confidence` (`high` or `low`), `next_action` (`apply`, `escape_to_round_2`, or `round_3_tiebreak`), and `evidence` (input-order objects with exactly `analyst`, `source`, and `recommendation`). When the result escapes, the exact `next_action` token is `escape_to_round_2`; never substitute `escalate_to_round_2` or prose. Use the same concise option token in `retained_options`, in `decision` when non-null, and in each `evidence.recommendation`; do not put explanatory sentences in these token fields. Each evidence object must name the canonical analyst, its exact staged source path, and only the recommendation supported by that source. Do not copy an expected answer from elsewhere, do not edit the inputs, and stop after the artifact is written.",
       "fixtures": [
         {
           "source": "tests/speckit-pro/evals/fixtures/integration-return-contracts/return-01-synthesizer-disagreement/codebase-analyst.md",
@@ -15146,7 +15146,7 @@
           "description": "Attribute every agreeing recommendation to its exact retained analyst source without fabricated evidence."
         }
       ],
-      "prompt": "First invoke {{skill}} through the client's native skill-loading mechanism. Execute only one bounded Checklist gap consensus-synthesis observation. Read `scenario-inputs/analysts/codebase-analyst.md`, `scenario-inputs/analysts/domain-researcher.md`, and `scenario-inputs/analysts/spec-context-analyst.md` completely, using a separate native tool call for each analyst file; parallel calls are allowed. They are retained analyst returns for one Checklist Round-1 gap routed to `[codebase, domain, spec]`; do not dispatch replacement analysts and do not research beyond these inputs. Dispatch the installed client's named consensus-synthesizer, wait for its actual returned result, and use that result before writing the artifact. The parent must not perform or silently replace synthesis. Then write only `scenario-output/consensus-result.json` as strict JSON with exactly these keys: `decision` (string or null), `retained_options` (distinct recommendation tokens in input order), `agreement` (one of `single-analyst`, `both-agree`, `two-analyst-disagreement`, `3/3-unanimous`, `2/3-majority`, `0/3-all-disagree`), `confidence` (`high` or `low`), `next_action` (`apply`, `escape_to_round_2`, or `human_review`), and `evidence` (input-order objects with exactly `analyst`, `source`, and `recommendation`). Use the same concise option token in `retained_options`, in `decision` when non-null, and in each `evidence.recommendation`; do not put explanatory sentences in these token fields. Each evidence object must name the canonical analyst, its exact staged source path, and only the recommendation supported by that source. Do not copy an expected answer from elsewhere, do not edit the inputs, and stop after the artifact is written.",
+      "prompt": "First invoke {{skill}} through the client's native skill-loading mechanism. Execute only one bounded Checklist gap consensus-synthesis observation. Read `scenario-inputs/analysts/codebase-analyst.md`, `scenario-inputs/analysts/domain-researcher.md`, and `scenario-inputs/analysts/spec-context-analyst.md` completely, using a separate native tool call for each analyst file; parallel calls are allowed. They are retained analyst returns for one Checklist Round-1 gap routed to `[codebase, domain, spec]`; do not dispatch replacement analysts and do not research beyond these inputs. Dispatch the installed client's named consensus-synthesizer, wait for its actual returned result, and use that result before writing the artifact. The parent must not perform or silently replace synthesis. Then write only `scenario-output/consensus-result.json` as strict JSON with exactly these keys: `decision` (string or null), `retained_options` (distinct recommendation tokens in input order), `agreement` (one of `single-analyst`, `both-agree`, `two-analyst-disagreement`, `3/3-unanimous`, `2/3-majority`, `0/3-all-disagree`), `confidence` (`high` or `low`), `next_action` (`apply`, `escape_to_round_2`, or `round_3_tiebreak`), and `evidence` (input-order objects with exactly `analyst`, `source`, and `recommendation`). Use the same concise option token in `retained_options`, in `decision` when non-null, and in each `evidence.recommendation`; do not put explanatory sentences in these token fields. Each evidence object must name the canonical analyst, its exact staged source path, and only the recommendation supported by that source. Do not copy an expected answer from elsewhere, do not edit the inputs, and stop after the artifact is written.",
       "fixtures": [
         {
           "source": "tests/speckit-pro/evals/fixtures/integration-return-contracts/return-02-synthesizer-majority/codebase-analyst.md",
@@ -15540,7 +15540,7 @@
     {
       "id": "integration.return-04-keyword-only-majority",
       "layer": "integration",
-      "capability": "Resolve a Clarify item that a security keyword alone widened to all three analysts, where every analyst returns `security_relevant: false`, by applying the ordinary 2/3 majority rather than stopping for human review.",
+      "capability": "Resolve a Clarify item that a security keyword alone widened to all three analysts, where every analyst returns `security_relevant: false`, by applying the ordinary 2/3 majority rather than starting the Round 3 tiebreak.",
       "timeout_seconds": 300,
       "resource_class": "nested",
       "requirements": [
@@ -15573,7 +15573,7 @@
           "description": "Attribute each recommendation to its exact retained analyst source without fabricated evidence."
         }
       ],
-      "prompt": "First invoke {{skill}} through the client's native skill-loading mechanism. Execute only one bounded Clarify consensus-synthesis observation. Read `scenario-inputs/analysts/codebase-analyst.md`, `scenario-inputs/analysts/domain-researcher.md`, and `scenario-inputs/analysts/spec-context-analyst.md` completely, using a separate native tool call for each analyst file; parallel calls are allowed. They are retained analyst returns for one Clarify Round-1 item, `[domain] I1: Should the usage report count tokens per LLM request or per billing period?`, which parse-consensus-categories widened from `[domain]` to all three analysts because `tokens` is a security keyword, returning `security_route: keyword`; do not dispatch replacement analysts and do not research beyond these inputs. Dispatch the installed client's named consensus-synthesizer with the protocol's synthesis input, including the `**Unresolved Item:**` line, `**Routed Categories:** [domain]`, `**Security Route:** keyword`, `**Round:** 1`, and all three analyst responses in full. Wait for its actual returned result, and use that result before writing the artifact. The parent must not perform or silently replace synthesis. Then write only `scenario-output/consensus-result.json` as strict JSON with exactly these keys: `decision` (string or null), `retained_options` (distinct recommendation tokens in input order), `agreement` (one of `single-analyst`, `both-agree`, `two-analyst-disagreement`, `3/3-unanimous`, `2/3-majority`, `0/3-all-disagree`), `confidence` (`high` or `low`), `next_action` (`apply`, `escape_to_round_2`, or `human_review`), and `evidence` (input-order objects with exactly `analyst`, `source`, and `recommendation`). Use the same concise option token in `retained_options`, in `decision` when non-null, and in each `evidence.recommendation`; do not put explanatory sentences in these token fields. Each evidence object must name the canonical analyst, its exact staged source path, and only the recommendation supported by that source. Do not copy an expected answer from elsewhere, do not edit the inputs, and stop after the artifact is written.",
+      "prompt": "First invoke {{skill}} through the client's native skill-loading mechanism. Execute only one bounded Clarify consensus-synthesis observation. Read `scenario-inputs/analysts/codebase-analyst.md`, `scenario-inputs/analysts/domain-researcher.md`, and `scenario-inputs/analysts/spec-context-analyst.md` completely, using a separate native tool call for each analyst file; parallel calls are allowed. They are retained analyst returns for one Clarify Round-1 item, `[domain] I1: Should the usage report count tokens per LLM request or per billing period?`, which parse-consensus-categories widened from `[domain]` to all three analysts because `tokens` is a security keyword, returning `security_route: keyword`; do not dispatch replacement analysts and do not research beyond these inputs. Dispatch the installed client's named consensus-synthesizer with the protocol's synthesis input, including the `**Unresolved Item:**` line, `**Routed Categories:** [domain]`, `**Security Route:** keyword`, `**Round:** 1`, and all three analyst responses in full. Wait for its actual returned result, and use that result before writing the artifact. The parent must not perform or silently replace synthesis. Then write only `scenario-output/consensus-result.json` as strict JSON with exactly these keys: `decision` (string or null), `retained_options` (distinct recommendation tokens in input order), `agreement` (one of `single-analyst`, `both-agree`, `two-analyst-disagreement`, `3/3-unanimous`, `2/3-majority`, `0/3-all-disagree`), `confidence` (`high` or `low`), `next_action` (`apply`, `escape_to_round_2`, or `round_3_tiebreak`), and `evidence` (input-order objects with exactly `analyst`, `source`, and `recommendation`). Use the same concise option token in `retained_options`, in `decision` when non-null, and in each `evidence.recommendation`; do not put explanatory sentences in these token fields. Each evidence object must name the canonical analyst, its exact staged source path, and only the recommendation supported by that source. Do not copy an expected answer from elsewhere, do not edit the inputs, and stop after the artifact is written.",
       "fixtures": [
         {
           "source": "tests/speckit-pro/evals/fixtures/integration-return-contracts/return-04-keyword-only-majority/codebase-analyst.md",
@@ -15795,7 +15795,7 @@
     {
       "id": "integration.return-05-keyword-security-relevant",
       "layer": "integration",
-      "capability": "Resolve the same keyword-routed Clarify item when one analyst returns `security_relevant: true`, by keeping the unanimity bar and stopping a 2/3 majority for human review.",
+      "capability": "Resolve the same keyword-routed Clarify item when one analyst returns `security_relevant: true`, by keeping the unanimity bar and sending a 2/3 majority to the Round 3 tiebreak.",
       "timeout_seconds": 300,
       "resource_class": "nested",
       "requirements": [
@@ -15813,7 +15813,7 @@
         },
         {
           "id": "decision",
-          "description": "Do not apply a decision: one analyst returned `security_relevant: true`, so the item needs 3/3 agreement and a 2/3 majority goes to human review."
+          "description": "Do not apply a decision: one analyst returned `security_relevant: true`, so the item needs 3/3 agreement and a 2/3 majority starts the Round 3 tiebreak."
         },
         {
           "id": "options",
@@ -15828,7 +15828,7 @@
           "description": "Attribute each recommendation to its exact retained analyst source without fabricated evidence."
         }
       ],
-      "prompt": "First invoke {{skill}} through the client's native skill-loading mechanism. Execute only one bounded Clarify consensus-synthesis observation. Read `scenario-inputs/analysts/codebase-analyst.md`, `scenario-inputs/analysts/domain-researcher.md`, and `scenario-inputs/analysts/spec-context-analyst.md` completely, using a separate native tool call for each analyst file; parallel calls are allowed. They are retained analyst returns for one Clarify Round-1 item, `[domain] I1: Should the usage report count tokens per LLM request or per billing period?`, which parse-consensus-categories widened from `[domain]` to all three analysts because `tokens` is a security keyword, returning `security_route: keyword`; do not dispatch replacement analysts and do not research beyond these inputs. Dispatch the installed client's named consensus-synthesizer with the protocol's synthesis input, including the `**Unresolved Item:**` line, `**Routed Categories:** [domain]`, `**Security Route:** keyword`, `**Round:** 1`, and all three analyst responses in full. Wait for its actual returned result, and use that result before writing the artifact. The parent must not perform or silently replace synthesis. Then write only `scenario-output/consensus-result.json` as strict JSON with exactly these keys: `decision` (string or null), `retained_options` (distinct recommendation tokens in input order), `agreement` (one of `single-analyst`, `both-agree`, `two-analyst-disagreement`, `3/3-unanimous`, `2/3-majority`, `0/3-all-disagree`), `confidence` (`high` or `low`), `next_action` (`apply`, `escape_to_round_2`, or `human_review`), and `evidence` (input-order objects with exactly `analyst`, `source`, and `recommendation`). Use the same concise option token in `retained_options`, in `decision` when non-null, and in each `evidence.recommendation`; do not put explanatory sentences in these token fields. Each evidence object must name the canonical analyst, its exact staged source path, and only the recommendation supported by that source. Do not copy an expected answer from elsewhere, do not edit the inputs, and stop after the artifact is written.",
+      "prompt": "First invoke {{skill}} through the client's native skill-loading mechanism. Execute only one bounded Clarify consensus-synthesis observation. Read `scenario-inputs/analysts/codebase-analyst.md`, `scenario-inputs/analysts/domain-researcher.md`, and `scenario-inputs/analysts/spec-context-analyst.md` completely, using a separate native tool call for each analyst file; parallel calls are allowed. They are retained analyst returns for one Clarify Round-1 item, `[domain] I1: Should the usage report count tokens per LLM request or per billing period?`, which parse-consensus-categories widened from `[domain]` to all three analysts because `tokens` is a security keyword, returning `security_route: keyword`; do not dispatch replacement analysts and do not research beyond these inputs. Dispatch the installed client's named consensus-synthesizer with the protocol's synthesis input, including the `**Unresolved Item:**` line, `**Routed Categories:** [domain]`, `**Security Route:** keyword`, `**Round:** 1`, and all three analyst responses in full. Wait for its actual returned result, and use that result before writing the artifact. The parent must not perform or silently replace synthesis. Then write only `scenario-output/consensus-result.json` as strict JSON with exactly these keys: `decision` (string or null), `retained_options` (distinct recommendation tokens in input order), `agreement` (one of `single-analyst`, `both-agree`, `two-analyst-disagreement`, `3/3-unanimous`, `2/3-majority`, `0/3-all-disagree`), `confidence` (`high` or `low`), `next_action` (`apply`, `escape_to_round_2`, or `round_3_tiebreak`), and `evidence` (input-order objects with exactly `analyst`, `source`, and `recommendation`). Use the same concise option token in `retained_options`, in `decision` when non-null, and in each `evidence.recommendation`; do not put explanatory sentences in these token fields. Each evidence object must name the canonical analyst, its exact staged source path, and only the recommendation supported by that source. Do not copy an expected answer from elsewhere, do not edit the inputs, and stop after the artifact is written.",
       "fixtures": [
         {
           "source": "tests/speckit-pro/evals/fixtures/integration-return-contracts/return-05-keyword-security-relevant/codebase-analyst.md",
@@ -15939,14 +15939,14 @@
           "expected": null
         },
         {
-          "id": "human-review-action",
+          "id": "round-3-tiebreak-action",
           "requirement": "decision",
           "type": "json_field",
           "path": "scenario-output/consensus-result.json",
           "field_path": [
             "next_action"
           ],
-          "expected": "human_review"
+          "expected": "round_3_tiebreak"
         },
         {
           "id": "retained-options",
@@ -16044,6 +16044,252 @@
       ],
       "provenance": [
         "tests/speckit-pro/layer6-integration/return-format-fixtures/05-synthesizer-keyword-security-relevant",
+        "speckit-pro/skills/speckit-autopilot/references/consensus-protocol.md"
+      ]
+    },
+    {
+      "id": "integration.consensus-round3-tiebreak",
+      "layer": "integration",
+      "capability": "Resolve a keyword-routed Clarify item that Round 2 could not settle (one analyst returned `security_relevant: true` with only a 2/3 majority) through the Round 3 tiebreak: a max-effort synthesizer applies the most conservative option that satisfies the spec as an assumption, logs the dissent, and neither asks a human nor stops.",
+      "timeout_seconds": 300,
+      "resource_class": "nested",
+      "requirements": [
+        {
+          "id": "selection",
+          "description": "Activate speckit-autopilot through the native client mechanism."
+        },
+        {
+          "id": "inputs",
+          "description": "Read all four retained analyst Markdown inputs in full, including the fresh tiebreak analyst's return."
+        },
+        {
+          "id": "mechanism",
+          "description": "Use the installed product's actual native synthesis mechanism with `Round: 3` and retain its actual result before materializing the observation artifact."
+        },
+        {
+          "id": "decision",
+          "description": "Apply the most conservative option that satisfies the spec as an assumption: the result is not `human_review`, not a stop, and not a question."
+        },
+        {
+          "id": "dissent",
+          "description": "Log the position that was not chosen as dissent, without inventing a third option."
+        },
+        {
+          "id": "agreement",
+          "description": "Record the Round 3 result using the `tiebreak` agreement value and no product-scope deferral."
+        }
+      ],
+      "prompt": "First invoke {{skill}} through the client's native skill-loading mechanism. Execute only one bounded Clarify Round 3 tiebreak observation. Read `scenario-inputs/analysts/codebase-analyst.md`, `scenario-inputs/analysts/domain-researcher.md`, `scenario-inputs/analysts/spec-context-analyst.md`, and `scenario-inputs/analysts/tiebreak-analyst.md` completely, using a separate native tool call for each file; parallel calls are allowed. They are retained returns for one Clarify item, `[domain] I1: Should the usage report count tokens per LLM request or per billing period?`, routed to all three analysts with `security_route: keyword`; one analyst returned `security_relevant: true` and only two of three agreed, so the synthesizer flagged the Round 3 tiebreak, and `tiebreak-analyst.md` is the fresh spec-context-analyst's return for it. Do not dispatch replacement analysts and do not research beyond these inputs. Dispatch the installed client's named consensus-synthesizer with the protocol's synthesis input, including the `**Unresolved Item:**` line, `**Routed Categories:** [domain]`, `**Security Route:** keyword`, `**Round:** 3`, the three analyst responses, and the `**Tiebreak Analyst Response:**` in full. Wait for its actual returned result, and use that result before writing the artifact. The parent must not perform or silently replace synthesis, must not ask the user, and must not stop. Then write only `scenario-output/consensus-result.json` as strict JSON with exactly these keys: `decision` (string or null), `retained_options` (distinct recommendation tokens in input order), `dissent` (recommendation tokens the synthesizer did not choose), `agreement` (one of `single-analyst`, `both-agree`, `two-analyst-disagreement`, `3/3-unanimous`, `2/3-majority`, `0/3-all-disagree`, `tiebreak`), `confidence` (`high` or `low`), `next_action` (`apply`, `escape_to_round_2`, or `round_3_tiebreak`), and `scope_deferred` (boolean). Use the same concise option token in `retained_options`, in `dissent`, and in `decision` when non-null; do not put explanatory sentences in these token fields. Do not copy an expected answer from elsewhere, do not edit the inputs, and stop after the artifact is written.",
+      "fixtures": [
+        {
+          "source": "tests/speckit-pro/evals/fixtures/integration-return-contracts/return-05-keyword-security-relevant/codebase-analyst.md",
+          "destination": "scenario-inputs/analysts/codebase-analyst.md"
+        },
+        {
+          "source": "tests/speckit-pro/evals/fixtures/integration-return-contracts/return-05-keyword-security-relevant/domain-researcher.md",
+          "destination": "scenario-inputs/analysts/domain-researcher.md"
+        },
+        {
+          "source": "tests/speckit-pro/evals/fixtures/integration-return-contracts/return-05-keyword-security-relevant/spec-context-analyst.md",
+          "destination": "scenario-inputs/analysts/spec-context-analyst.md"
+        },
+        {
+          "source": "tests/speckit-pro/evals/fixtures/integration-return-contracts/round3-tiebreak/tiebreak-analyst.md",
+          "destination": "scenario-inputs/analysts/tiebreak-analyst.md"
+        }
+      ],
+      "hosts": {
+        "claude": {
+          "skill": "speckit-pro:speckit-autopilot",
+          "allowed_tools": [
+            "Skill",
+            "Read",
+            "Write",
+            "Agent"
+          ],
+          "modes": [
+            "plugin"
+          ]
+        },
+        "codex": {
+          "skill": "speckit-autopilot",
+          "allowed_tools": [
+            "command_execution",
+            "file_change",
+            "spawn_agent"
+          ],
+          "modes": [
+            "project"
+          ]
+        }
+      },
+      "checks": [
+        {
+          "id": "selection",
+          "requirement": "selection",
+          "type": "selection",
+          "expected": [
+            "speckit-autopilot"
+          ],
+          "allowed_extra": []
+        },
+        {
+          "id": "native-mechanism",
+          "requirement": "mechanism",
+          "type": "native_synthesis_mechanism",
+          "artifact_path": "scenario-output/consensus-result.json",
+          "per_host": {
+            "claude": {
+              "mode": "dedicated_subagent",
+              "role": "speckit-pro:consensus-synthesizer"
+            },
+            "codex": {
+              "mode": "dedicated_subagent",
+              "role": "consensus-synthesizer"
+            }
+          }
+        },
+        {
+          "id": "read-codebase",
+          "requirement": "inputs",
+          "type": "file_access",
+          "operation": "read_file",
+          "path": "scenario-inputs/analysts/codebase-analyst.md"
+        },
+        {
+          "id": "read-domain",
+          "requirement": "inputs",
+          "type": "file_access",
+          "operation": "read_file",
+          "path": "scenario-inputs/analysts/domain-researcher.md"
+        },
+        {
+          "id": "read-spec-context",
+          "requirement": "inputs",
+          "type": "file_access",
+          "operation": "read_file",
+          "path": "scenario-inputs/analysts/spec-context-analyst.md"
+        },
+        {
+          "id": "read-tiebreak",
+          "requirement": "inputs",
+          "type": "file_access",
+          "operation": "read_file",
+          "path": "scenario-inputs/analysts/tiebreak-analyst.md"
+        },
+        {
+          "id": "result-exists",
+          "requirement": "decision",
+          "type": "file_exists",
+          "path": "scenario-output/consensus-result.json",
+          "exists": true
+        },
+        {
+          "id": "mechanism-evidence",
+          "requirement": "mechanism",
+          "type": "semantic",
+          "rubric": "PASS only if retained tool evidence and the captured artifact demonstrate the installed native synthesis mechanism rather than a final-response claim. When a subagent call is present, there must be exactly one successful call identifying consensus-synthesizer, its actual nonempty returned result must support the artifact, and the parent artifact write must follow that return. When no subagent call is present, the exact declared analyst reads and artifact write must occur in the parent and no child synthesis role may be claimed. FAIL for a wrong or invented role, an empty or missing child return, multiple synthesis calls, write-before-return, or an artifact unsupported by observed work."
+        },
+        {
+          "id": "decision",
+          "requirement": "decision",
+          "type": "json_field",
+          "path": "scenario-output/consensus-result.json",
+          "field_path": [
+            "decision"
+          ],
+          "expected": "per-request"
+        },
+        {
+          "id": "round-3-tiebreak-applies",
+          "requirement": "decision",
+          "type": "json_field",
+          "path": "scenario-output/consensus-result.json",
+          "field_path": [
+            "next_action"
+          ],
+          "expected": "apply"
+        },
+        {
+          "id": "retained-options",
+          "requirement": "dissent",
+          "type": "json_field",
+          "path": "scenario-output/consensus-result.json",
+          "field_path": [
+            "retained_options"
+          ],
+          "expected": [
+            "per-request",
+            "per-billing-period"
+          ]
+        },
+        {
+          "id": "dissent",
+          "requirement": "dissent",
+          "type": "json_field",
+          "path": "scenario-output/consensus-result.json",
+          "field_path": [
+            "dissent"
+          ],
+          "expected": [
+            "per-billing-period"
+          ]
+        },
+        {
+          "id": "agreement",
+          "requirement": "agreement",
+          "type": "json_field",
+          "path": "scenario-output/consensus-result.json",
+          "field_path": [
+            "agreement"
+          ],
+          "expected": "tiebreak"
+        },
+        {
+          "id": "no-scope-deferral",
+          "requirement": "agreement",
+          "type": "json_field",
+          "path": "scenario-output/consensus-result.json",
+          "field_path": [
+            "scope_deferred"
+          ],
+          "expected": false
+        },
+        {
+          "id": "unchanged-codebase-analyst",
+          "requirement": "inputs",
+          "type": "text",
+          "source": "scenario-inputs/analysts/codebase-analyst.md",
+          "pattern": "\\A\\#\\#\\ Answer\\\n\\\nCount\\ tokens\\ `per\\-request`\\.\\\n\\\n\\#\\#\\ Evidence\\\n\\\n\\-\\ \\*\\*File\\*\\*:\\ `src/usage/recorder\\.ts`\\ \\(line\\ 22\\)\\\n\\ \\ \\*\\*Pattern\\*\\*:\\ The\\ retained\\ fixture\\ records\\ one\\ usage\\ row\\ per\\ LLM\\ request,\\\n\\ \\ with\\ its\\ prompt\\ and\\ completion\\ token\\ counts\\.\\\n\\\n\\#\\#\\ Confidence\\\n\\\nhigh\\\n\\\n\\*\\*Rationale\\*\\*:\\ The\\ existing\\ recorder\\ already\\ stores\\ counts\\ at\\ this\\ grain\\.\\\n\\\n\\#\\#\\ Security\\ Relevance\\\n\\\nsecurity_relevant:\\ false\\\n\\Z"
+        },
+        {
+          "id": "unchanged-domain-researcher",
+          "requirement": "inputs",
+          "type": "text",
+          "source": "scenario-inputs/analysts/domain-researcher.md",
+          "pattern": "\\A\\#\\#\\ Answer\\\n\\\nCount\\ tokens\\ `per\\-billing\\-period`\\.\\\n\\\n\\#\\#\\ Citations\\\n\\\n\\-\\ \\*\\*Source\\*\\*:\\ LLM\\ provider\\ billing\\ documentation\\ \\(retained\\ fixture\\ evidence\\)\\\n\\ \\ \\*\\*Title\\*\\*:\\ Usage\\ and\\ billing\\\n\\ \\ \\*\\*Excerpt\\*\\*:\\ The\\ retained\\ analyst\\ response\\ notes\\ that\\ providers\\ invoice\\\n\\ \\ token\\ usage\\ in\\ aggregate\\ for\\ each\\ billing\\ period\\.\\\n\\\n\\#\\#\\ Confidence\\\n\\\nmedium\\\n\\\n\\*\\*Rationale\\*\\*:\\ This\\ matches\\ how\\ providers\\ bill\\.\\ Per\\-request\\ token\\ records\\ tie\\\nusage\\ to\\ individual\\ users,\\ which\\ makes\\ them\\ personal\\ data,\\ so\\ aggregate\\ counts\\\nexpose\\ less\\.\\\n\\\n\\#\\#\\ Security\\ Relevance\\\n\\\nsecurity_relevant:\\ true\\\n\\Z"
+        },
+        {
+          "id": "unchanged-spec-context-analyst",
+          "requirement": "inputs",
+          "type": "text",
+          "source": "scenario-inputs/analysts/spec-context-analyst.md",
+          "pattern": "\\A\\#\\#\\ Answer\\\n\\\nCount\\ tokens\\ `per\\-request`\\.\\\n\\\n\\#\\#\\ References\\\n\\\n\\-\\ \\*\\*Artifact\\*\\*:\\ Technical\\ roadmap\\\n\\ \\ \\*\\*Section\\*\\*:\\ Usage\\ reporting\\\n\\ \\ \\*\\*Relevance\\*\\*:\\ The\\ retained\\ fixture\\ records\\ a\\ roadmap\\ decision\\ to\\ report\\\n\\ \\ LLM\\ token\\ usage\\ for\\ each\\ request\\.\\\n\\\n\\#\\#\\ Confidence\\\n\\\nhigh\\\n\\\n\\*\\*Rationale\\*\\*:\\ The\\ roadmap\\ decision\\ addresses\\ the\\ report's\\ grain\\ directly\\.\\\n\\\n\\#\\#\\ Security\\ Relevance\\\n\\\nsecurity_relevant:\\ false\\\n\\Z"
+        },
+        {
+          "id": "unchanged-tiebreak-analyst",
+          "requirement": "inputs",
+          "type": "text",
+          "source": "scenario-inputs/analysts/tiebreak-analyst.md",
+          "pattern": "\\A\\#\\#\\ Answer\\\n\\\nCount\\ tokens\\ \\`per\\-request\\`\\.\\\n\\\n\\#\\#\\ References\\\n\\\n\\-\\ \\*\\*Artifact\\*\\*\\:\\ Technical\\ roadmap\\\n\\ \\ \\*\\*Section\\*\\*\\:\\ Usage\\ reporting\\\n\\ \\ \\*\\*Relevance\\*\\*\\:\\ The\\ roadmap\\ requires\\ the\\ usage\\ report\\ to\\ count\\ LLM\\ tokens\\ for\\\n\\ \\ each\\ request\\.\\ Aggregating\\ per\\ billing\\ period\\ would\\ drop\\ that\\ stated\\\n\\ \\ requirement\\,\\ so\\ \\`per\\-request\\`\\ is\\ the\\ most\\ conservative\\ option\\ that\\ satisfies\\\n\\ \\ the\\ spec\\.\\ The\\ privacy\\ concern\\ is\\ met\\ by\\ keeping\\ user\\ identifiers\\ out\\ of\\ the\\\n\\ \\ usage\\ rows\\,\\ which\\ changes\\ no\\ scope\\.\\\n\\\n\\#\\#\\ Confidence\\\n\\\nhigh\\\n\\\n\\*\\*Rationale\\*\\*\\:\\ The\\ roadmap\\ decision\\ addresses\\ the\\ report\\'s\\ grain\\ directly\\,\\ and\\\nthe\\ alternative\\ fails\\ it\\.\\\n\\\n\\#\\#\\ Security\\ Relevance\\\n\\\nsecurity_relevant\\:\\ true\\\n\\Z"
+        }
+      ],
+      "native_differences": [
+        "Claude dispatches the namespaced speckit-pro:consensus-synthesizer role through its native Agent transport.",
+        "Codex dispatches the consensus-synthesizer custom agent through its native collaboration transport; both clients require an actual nonempty returned result before the parent writes the artifact."
+      ],
+      "provenance": [
+        "tests/speckit-pro/layer6-integration/return-format-fixtures/06-synthesizer-round3-all-disagree",
         "speckit-pro/skills/speckit-autopilot/references/consensus-protocol.md"
       ]
     },

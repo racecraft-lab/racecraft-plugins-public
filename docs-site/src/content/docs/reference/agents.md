@@ -239,7 +239,7 @@ Claude Code and Codex agent responsibilities derived from the authoritative ship
 
 #### Source Facts
 
-- consensus-synthesizer is classified as `shared`. Claude Code: plugin agent (required). Codex: custom agent (required). Codex uses `gpt-6-sol` with `medium` effort. Source refs: `speckit-pro/speckit_pro_runner/agent_inventory.json`, `speckit-pro/agents/consensus-synthesizer.md`, `speckit-pro/codex-agents/consensus-synthesizer.toml`.
+- consensus-synthesizer is classified as `shared`. Claude Code: plugin agent (required). Codex: custom agent (required). Codex uses `gpt-6-sol` with `max` effort. Source refs: `speckit-pro/speckit_pro_runner/agent_inventory.json`, `speckit-pro/agents/consensus-synthesizer.md`, `speckit-pro/codex-agents/consensus-synthesizer.toml`.
 
 #### Sources
 

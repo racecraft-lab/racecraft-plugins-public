@@ -52,6 +52,10 @@ HEX_OBJECT_RE = re.compile(r"^[0-9a-f]{40}(?:[0-9a-f]{24})?$")
 ARTIFACT_ALLOWLIST = ("spec.md", "plan.md", "tasks.md")
 CLASS_VALUES = ("amended", "answered", "deferred", "no action")
 PERSPECTIVES = ("codebase", "spec-context", "domain")
+# Round 3 tiebreak: one more synthesis call by a fresh analyst, only after a first
+# synthesis returned human_review. Its own values keep it apart from round one.
+TIEBREAK_AGREEMENT = "tiebreak"
+TIEBREAK_SCOPE_BASIS = "scope_unsettled"
 BROKER_TOOL_NAMES = (
     "snapshot_list",
     "snapshot_read",
@@ -1090,6 +1094,12 @@ class SweepSession:
             raise ReceiptViolation("an accepted amended classifier result is required")
         return payload
 
+    def _accepted_synthesis(self, state: dict[str, Any], comment_id: str) -> dict[str, Any] | None:
+        digest = state["accepted"]["synthesis"].get(comment_id)
+        result = state["results"].get(digest) if isinstance(digest, str) else None
+        payload = result.get("payload") if isinstance(result, dict) else None
+        return payload if isinstance(payload, dict) else None
+
     def issue_capability(
         self,
         comment_id: str,
@@ -1114,6 +1124,11 @@ class SweepSession:
                 accepted = state["accepted"]["perspective"].get(comment_id, {})
                 if not isinstance(accepted, dict) or set(accepted) != set(PERSPECTIVES):
                     raise ReceiptViolation("three accepted perspectives are required")
+                prior = self._accepted_synthesis(state, comment_id)
+                if prior is not None and (
+                    prior["outcome"] != "human_review" or is_tiebreak_result(prior)
+                ):
+                    raise ReceiptViolation("the round 3 tiebreak follows one unresolved synthesis only")
             binding = {
                 "session_id": self.session_id,
                 "head": state["head"],
@@ -1228,10 +1243,14 @@ class SweepSession:
                     edit = normalized.get("edit")
                     if isinstance(edit, dict) and edit.get("file") != classifier.get("target"):
                         raise SchemaViolation("synthesis target differs from the accepted classifier target")
+                prior = self._accepted_synthesis(state, comment_id)
+                tiebreak = prior is not None and prior["outcome"] == "human_review"
+                if is_tiebreak_result(normalized) != tiebreak:
+                    raise SchemaViolation("tiebreak values belong to the round 3 call only")
                 accepted_perspectives = state["accepted"]["perspective"].get(comment_id, {})
-                if isinstance(accepted_perspectives, dict) and set(accepted_perspectives) == set(
-                    PERSPECTIVES
-                ):
+                if not tiebreak and isinstance(accepted_perspectives, dict) and set(
+                    accepted_perspectives
+                ) == set(PERSPECTIVES):
                     perspective_records = [
                         state["results"][accepted_perspectives[name]]["payload"]
                         for name in PERSPECTIVES
@@ -1348,11 +1367,16 @@ class SweepSession:
                 found = accepted["perspective"].get(comment_id, {})
                 if set(found) != set(PERSPECTIVES):
                     raise ReceiptViolation("three accepted perspectives are required")
-                return {
+                inputs = {
                     "comment_id": comment_id,
                     "target": classifier["target"],
                     "perspectives": [state["results"][found[name]]["payload"] for name in PERSPECTIVES],
                 }
+                prior = self._accepted_synthesis(state, comment_id)
+                if prior is not None and prior["outcome"] == "human_review":
+                    inputs["tiebreak"] = True
+                    inputs["prior_basis"] = prior["basis"]
+                return inputs
             raise ReceiptViolation("consensus stage is unknown")
 
 
@@ -1376,6 +1400,11 @@ def _safe_evidence_path(value: str, snapshot: GitSnapshot) -> None:
         snapshot.entry(match.group(1))
     except IsolationViolation as exc:
         raise SchemaViolation("evidence citation is outside the snapshot") from exc
+
+
+def is_tiebreak_result(payload: dict[str, Any]) -> bool:
+    """True for a synthesis record that carries a round 3 tiebreak value."""
+    return payload.get("agreement") == TIEBREAK_AGREEMENT or payload.get("basis") == TIEBREAK_SCOPE_BASIS
 
 
 def validate_result(
@@ -1433,12 +1462,13 @@ def validate_result(
         if record["outcome"] == "human_review":
             if (
                 record["agreement"] is not None
-                or record["basis"] not in {"all_disagree", "escape_unresolved", "analyst_failed"}
+                or record["basis"]
+                not in {"all_disagree", "escape_unresolved", "analyst_failed", TIEBREAK_SCOPE_BASIS}
                 or record["edit"] is not None
             ):
                 raise SchemaViolation("human-review synthesis fields are inconsistent")
             return record
-        if record["agreement"] not in {"3/3", "2/3"} or record["basis"] is not None:
+        if record["agreement"] not in {"3/3", "2/3", TIEBREAK_AGREEMENT} or record["basis"] is not None:
             raise SchemaViolation("resolved synthesis fields are inconsistent")
         edit = _require_exact_keys(record["edit"], {"file", "anchor", "replacement"}, "edit")
         if edit["file"] not in ARTIFACT_ALLOWLIST:
@@ -1522,6 +1552,13 @@ def apply_synthesis_receipt(
     if result["head"] != session_head:
         raise MutationViolation("receipt head does not match the sweep session")
     if payload["outcome"] == "human_review":
+        if payload["basis"] == TIEBREAK_SCOPE_BASIS:
+            return {
+                "status": "scope_deferred",
+                "comment_id": payload["comment_id"],
+                "head": result["head"],
+                "round": 3,
+            }
         return {
             "status": "human_review",
             "comment_id": payload["comment_id"],
@@ -1572,7 +1609,7 @@ def apply_synthesis_receipt(
         except OSError as exc:
             raise MutationViolation("atomic artifact write failed") from exc
         status = "applied_redacted" if redaction_count else "applied"
-    return {
+    projection = {
         "status": status,
         "comment_id": payload["comment_id"],
         "path": relative,
@@ -1581,3 +1618,6 @@ def apply_synthesis_receipt(
         "after_sha256": after_digest,
         "redaction_count": redaction_count,
     }
+    if payload["agreement"] == TIEBREAK_AGREEMENT:
+        projection["round"] = 3
+    return projection

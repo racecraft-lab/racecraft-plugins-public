@@ -1,0 +1,76 @@
+You are running speckit-autopilot's consensus synthesis stage.
+
+Rounds 1 and 2 could not agree on one item. The parent has dispatched one fresh
+`spec-context-analyst` for the Round 3 tiebreak and now dispatches the
+max-effort `consensus-synthesizer` with `Round: 3`. Dispatch
+`consensus-synthesizer` with exactly this input and have it produce its
+standard Consensus Result. It must not ask a question or flag human review.
+
+---
+## Consensus Resolution
+
+**Protocol:** speckit-pro/skills/speckit-autopilot/references/consensus-protocol.md
+**Unresolved Item:** [security] I3: Should session cookies be `SameSite=Lax` or `SameSite=Strict`?
+**Routed Categories:** [security]
+**Security Route:** tag
+**Round:** 3
+
+**Codebase Analyst Response:**
+## Answer
+
+Use `SameSite=Strict`.
+
+## Evidence
+
+- existing auth middleware sets Strict
+
+## Confidence
+
+medium
+
+## Security Relevance
+
+security_relevant: true
+**Spec Context Analyst Response:**
+## Answer
+
+Use `SameSite=Strict`.
+
+## Evidence
+
+- constitution requires the strictest cookie policy
+
+## Confidence
+
+medium
+
+## Security Relevance
+
+security_relevant: true
+**Domain Researcher Response:**
+## Answer
+
+Use `SameSite=Lax` for OAuth redirects.
+
+## Evidence
+
+- provider redirect guidance
+
+## Confidence
+
+medium
+
+## Security Relevance
+
+security_relevant: true
+
+**Tiebreak Analyst Response:**
+## Answer
+
+Use `SameSite=Strict`: it is the most conservative option that satisfies the spec, and the OAuth redirect concern is not in scope.
+---
+
+The `**Protocol:**` line is the repository-relative path of the active
+consensus protocol in this checkout. Dispatch `consensus-synthesizer`
+with the input above, unchanged. Stop after the synthesizer returns.
+Do not write to disk.
