@@ -3,7 +3,7 @@
   "tools": {
     "apalache": {
       "version": "0.62.2",
-      "jar": ".specify/tools/apalache-0.62.2/lib/apalache.jar",
+      "jar": ".specify/tools/formal/apalache-0.62.2/apalache.jar",
       "sha256": "079b6c2320252469dcf79afec6886b8255d3dd1b34a9484433c88986752efaa8",
       "java": "java",
       "heap_mb": 4096

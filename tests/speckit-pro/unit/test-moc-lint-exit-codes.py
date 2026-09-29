@@ -18,7 +18,7 @@ LIFECYCLE = (
     / "tests"
     / "speckit-pro"
     / "layer1-structural"
-    / "validate-spec-lifecycle-contracts.py"
+    / "validate-moc-lint.py"
 )
 ORPHAN_MODE = "--moc-orphan"
 STALE_MODE = "--moc-stale"

@@ -4,6 +4,9 @@
 > [roadmap](../specs/pr-size-governance-technical-roadmap.md) and
 > [PRD](../../prd-pr-size-governance.md).
 > Built from three multi-agent research runs on 2026-06-03. Plugin: `speckit-pro`.
+> Dated record: script and path citations describe the tree at that date. For
+> example, `scripts/generate-spec-index.sh` has since been replaced by a runner
+> helper.
 
 ## The problem
 
