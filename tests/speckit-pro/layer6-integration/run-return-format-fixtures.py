@@ -91,7 +91,7 @@ def assert_fixture(fixture: Path, mode: str, reporter: Reporter) -> None:
         return
     transcript, expected = loaded
     check_dispatch_shape(reporter, fixture.name, transcript, expected)
-    check_transcript_terms(reporter, fixture.name, transcript, expected, forbidden=False)
+    check_transcript_terms(reporter, fixture.name, transcript, expected)
     for assertion in response_assertions(expected, fixture.name):
         check_response_assertion(reporter, fixture.name, transcript, assertion, mode)
 

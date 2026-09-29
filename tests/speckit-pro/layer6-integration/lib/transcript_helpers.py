@@ -28,12 +28,8 @@ def load_events(transcript: str | Path) -> list[JsonObject]:
 
 def event_blocks(event: JsonObject) -> list[JsonObject]:
     message = event.get("message")
-    if not isinstance(message, dict):
-        return []
-    content = message.get("content", [])
-    if not isinstance(content, list):
-        return []
-    return [item for item in content if isinstance(item, dict)]
+    content = message.get("content") if isinstance(message, dict) else None
+    return [item for item in content if isinstance(item, dict)] if isinstance(content, list) else []
 
 
 def _in_scope(event: JsonObject, scope: str) -> bool:

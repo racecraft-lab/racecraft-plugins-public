@@ -10,6 +10,7 @@ from lib import grounding_helpers as grounding
 from lib import transcript_helpers as helpers
 from lib.fixture_runner import (
     Reporter,
+    check_forbidden_terms,
     check_transcript_terms,
     collect_fixtures,
     load_fixture,
@@ -64,7 +65,8 @@ def assert_fixture(fixture: Path, reporter: Reporter) -> None:
             f"{tool!r} was invoked but should not have been",
         )
 
-    check_transcript_terms(reporter, fixture_id, transcript, expected, forbidden=True)
+    check_transcript_terms(reporter, fixture_id, transcript, expected)
+    check_forbidden_terms(reporter, fixture_id, transcript, expected)
 
 
 def main(argv: list[str]) -> int:

@@ -9,7 +9,7 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from . import transcript_helpers as helpers
 
@@ -174,44 +174,53 @@ def load_fixture(fixture: Path, mode: str, reporter: Reporter) -> tuple[Path, di
     return transcript, load_expected(expected_path)
 
 
+def check_each(reporter: Reporter, values: list[str], label: str, holds: Callable[[str], bool], detail: str) -> None:
+    """Record one check per value; ``label`` and ``detail`` take the value as ``{}``."""
+    for value in values:
+        reporter.check(label.format(value), holds(value), detail.format(value))
+
+
 def check_dispatch_shape(reporter: Reporter, fixture_id: str, transcript: Path, expected: dict[str, Any]) -> None:
-    for target in string_list(expected.get("must_dispatch_to")):
-        reporter.check(
-            f"{fixture_id}: dispatched to {target}",
-            helpers.assert_dispatched_to(transcript, target),
-            f"expected dispatch to {target}, none found",
-        )
+    check_each(
+        reporter,
+        string_list(expected.get("must_dispatch_to")),
+        f"{fixture_id}: dispatched to {{}}",
+        lambda target: helpers.assert_dispatched_to(transcript, target),
+        "expected dispatch to {}, none found",
+    )
     if expected.get("must_not_have_forbidden_spawns") is True:
         reporter.check(
             f"{fixture_id}: no subagent spawned an Agent()",
             helpers.assert_no_forbidden_spawns(transcript),
             "found subagent that spawned another Agent",
         )
-    for pattern in string_list(expected.get("must_not_invoke_skill")):
-        reporter.check(
-            f"{fixture_id}: skill never invoked: {pattern} (any scope)",
-            helpers.assert_skill_not_invoked(transcript, pattern),
-            f"skill matching {pattern!r} was invoked",
-        )
+    check_each(
+        reporter,
+        string_list(expected.get("must_not_invoke_skill")),
+        f"{fixture_id}: skill never invoked: {{}} (any scope)",
+        lambda pattern: helpers.assert_skill_not_invoked(transcript, pattern),
+        "skill matching {!r} was invoked",
+    )
 
 
-def check_transcript_terms(
-    reporter: Reporter, fixture_id: str, transcript: Path, expected: dict[str, Any], *, forbidden: bool
-) -> None:
-    for term in string_list(expected.get("must_include_terms")):
-        reporter.check(
-            f"{fixture_id}: transcript includes term: {term}",
-            helpers.assert_transcript_contains_term(transcript, term),
-            f"expected transcript to include {term!r}",
-        )
-    if not forbidden:
-        return
-    for term in string_list(expected.get("must_not_include_terms")):
-        reporter.check(
-            f"{fixture_id}: transcript excludes term: {term}",
-            helpers.assert_transcript_not_contains_term(transcript, term),
-            f"transcript included forbidden term {term!r}",
-        )
+def check_transcript_terms(reporter: Reporter, fixture_id: str, transcript: Path, expected: dict[str, Any]) -> None:
+    check_each(
+        reporter,
+        string_list(expected.get("must_include_terms")),
+        f"{fixture_id}: transcript includes term: {{}}",
+        lambda term: helpers.assert_transcript_contains_term(transcript, term),
+        "expected transcript to include {!r}",
+    )
+
+
+def check_forbidden_terms(reporter: Reporter, fixture_id: str, transcript: Path, expected: dict[str, Any]) -> None:
+    check_each(
+        reporter,
+        string_list(expected.get("must_not_include_terms")),
+        f"{fixture_id}: transcript excludes term: {{}}",
+        lambda term: helpers.assert_transcript_not_contains_term(transcript, term),
+        "transcript included forbidden term {!r}",
+    )
 
 
 def check_dispatch_targets(reporter: Reporter, fixture_id: str, transcript: Path, expected: dict[str, Any]) -> None:
@@ -222,12 +231,13 @@ def check_dispatch_targets(reporter: Reporter, fixture_id: str, transcript: Path
             any(helpers.assert_dispatched_to(transcript, target) for target in allowed),
             "expected dispatch to at least one allowed target",
         )
-    for target in string_list(expected.get("must_not_dispatch_to")):
-        reporter.check(
-            f"{fixture_id}: never dispatched to {target}",
-            helpers.assert_not_dispatched_to(transcript, target),
-            f"{target} was dispatched but should not have been",
-        )
+    check_each(
+        reporter,
+        string_list(expected.get("must_not_dispatch_to")),
+        f"{fixture_id}: never dispatched to {{}}",
+        lambda target: helpers.assert_not_dispatched_to(transcript, target),
+        "{} was dispatched but should not have been",
+    )
 
 
 def check_dispatch_counts(reporter: Reporter, fixture_id: str, transcript: Path, expected: dict[str, Any]) -> None:
@@ -275,7 +285,8 @@ def assert_dispatch_fixture(
     check_dispatch_shape(reporter, fixture_id, transcript, expected)
     check_dispatch_targets(reporter, fixture_id, transcript, expected)
     if check_terms:
-        check_transcript_terms(reporter, fixture_id, transcript, expected, forbidden=True)
+        check_transcript_terms(reporter, fixture_id, transcript, expected)
+        check_forbidden_terms(reporter, fixture_id, transcript, expected)
     check_dispatch_counts(reporter, fixture_id, transcript, expected)
     check_dispatch_order(reporter, fixture_id, transcript, expected)
 
