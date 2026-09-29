@@ -1265,17 +1265,12 @@ def launch_case(run: CaseRun, manifest: dict[str, Any]) -> int:
     return execute_case(run, command, manifest)
 
 
-def main(argv: list[str]) -> int:
-    args = parser().parse_args(argv)
-    root = repo_root()
-    evidence_root = args.evidence_dir.resolve()
-    if evidence_root.is_relative_to(root.resolve()):
-        print("ERROR: evidence directory must be outside the source worktree", file=sys.stderr)
-        return 2
-    if evidence_root.exists():
-        print(f"ERROR: evidence directory already exists: {evidence_root}", file=sys.stderr)
-        return 2
-    evidence_root.mkdir(parents=True)
+def run_case(args: argparse.Namespace, root: Path, evidence_root: Path) -> tuple[dict[str, Any], int]:
+    """Run the one selected case and return its manifest and exit code.
+
+    The manifest and checksum index are written whatever happens, so a setup
+    failure still leaves reviewable evidence.
+    """
     manifest = new_manifest(args)
     run = CaseRun(args=args, root=root)
     cleanup_error: str | None = None
@@ -1297,8 +1292,23 @@ def main(argv: list[str]) -> int:
         manifest["finished_at"] = utc_now()
         write_json_evidence(evidence_root / "manifest.json", manifest)
         write_checksum_index(evidence_root)
+    return manifest, 1 if cleanup_error else exit_code
+
+
+def main(argv: list[str]) -> int:
+    args = parser().parse_args(argv)
+    root = repo_root()
+    evidence_root = args.evidence_dir.resolve()
+    if evidence_root.is_relative_to(root.resolve()):
+        print("ERROR: evidence directory must be outside the source worktree", file=sys.stderr)
+        return 2
+    if evidence_root.exists():
+        print(f"ERROR: evidence directory already exists: {evidence_root}", file=sys.stderr)
+        return 2
+    evidence_root.mkdir(parents=True)
+    manifest, exit_code = run_case(args, root, evidence_root)
     print(json.dumps({"status": manifest["status"], "evidence_dir": str(evidence_root)}))
-    return 1 if cleanup_error else exit_code
+    return exit_code
 
 
 if __name__ == "__main__":
