@@ -27,10 +27,12 @@ const DOCS_SITE_DIR = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(DOCS_SITE_DIR, '..');
 const CONTENT_DIR_REL = 'docs-site/src/content/docs';
 const CONTENT_DIR_ABS = path.join(REPO_ROOT, CONTENT_DIR_REL);
-// Single source for the production origin: defineConfig() below consumes SITE/BASE,
-// and the sitemap serialize helpers derive SITE_BASE from them. The DOC-012 launch
-// flip is therefore a one-place change (update SITE/BASE) with the helpers kept in
-// sync — there is no second hardcoded domain to drift out of step (FR-012).
+// Single source for the production origin in this file: defineConfig() below
+// consumes SITE/BASE, the head hrefs derive from BASE, and the sitemap serialize
+// helpers derive SITE_BASE from them. The DOC-012 launch flip still touches files
+// that cannot import BASE: src/styles/brand.css (font URLs), public/site.webmanifest
+// (icon URLs), and the hard-coded base-path links in content pages. Treat those as
+// part of the DOC-012 checklist.
 const SITE = 'https://racecraft-lab.github.io';
 const BASE = '/racecraft-plugins-public';
 const SITE_BASE = `${SITE}${BASE}`;
@@ -179,7 +181,7 @@ export default defineConfig({
           tag: 'link',
           attrs: {
             rel: 'preload',
-            href: '/racecraft-plugins-public/fonts/space-grotesk-700.woff2',
+            href: `${BASE}/fonts/space-grotesk-700.woff2`,
             as: 'font',
             type: 'font/woff2',
             crossorigin: 'anonymous',
@@ -189,7 +191,7 @@ export default defineConfig({
           tag: 'link',
           attrs: {
             rel: 'preload',
-            href: '/racecraft-plugins-public/fonts/geist-400.woff2',
+            href: `${BASE}/fonts/geist-400.woff2`,
             as: 'font',
             type: 'font/woff2',
             crossorigin: 'anonymous',
@@ -202,7 +204,7 @@ export default defineConfig({
             rel: 'icon',
             type: 'image/png',
             sizes: '32x32',
-            href: '/racecraft-plugins-public/favicon-32x32.png',
+            href: `${BASE}/favicon-32x32.png`,
           },
         },
         {
@@ -211,7 +213,7 @@ export default defineConfig({
             rel: 'icon',
             type: 'image/png',
             sizes: '16x16',
-            href: '/racecraft-plugins-public/favicon-16x16.png',
+            href: `${BASE}/favicon-16x16.png`,
           },
         },
         {
@@ -219,14 +221,14 @@ export default defineConfig({
           attrs: {
             rel: 'apple-touch-icon',
             sizes: '180x180',
-            href: '/racecraft-plugins-public/apple-touch-icon.png',
+            href: `${BASE}/apple-touch-icon.png`,
           },
         },
         {
           tag: 'link',
           attrs: {
             rel: 'manifest',
-            href: '/racecraft-plugins-public/site.webmanifest',
+            href: `${BASE}/site.webmanifest`,
           },
         },
         {

@@ -1,34 +1,34 @@
-# SPEC-FIXTURE-003 — User password storage
+# SPEC-FIXTURE-003 — Export file format
 
-> L7 redelegation-chain test fixture spec. Intentionally surfaces a
-> security-domain ambiguity so the Clarify phase generates an
+> Layer 6 redelegation-chain test fixture spec. Intentionally surfaces a
+> codebase-and-domain ambiguity so the Clarify phase generates an
 > unresolved consensus item, exercising the orchestrator → clarify →
-> analysts → synthesizer chain.
+> analysts → synthesizer chain. The wording avoids every consensus
+> security keyword, so `[codebase, domain]` routing stays two analysts
+> and the ordinary agreement bar applies.
 
 ## Feature
 
-Add a password-storage layer to a hypothetical web application. Users
-sign up with an email + password; the password must be hashed before
-persistence.
+Add a report-export step to a hypothetical web application. Users request
+a report and receive it as a downloadable file.
 
 ## Requirements
 
-- Hashing must be one-way (no plaintext recovery).
-- Verification on login compares the input password against the stored
-  hash.
-- The chosen algorithm must be configurable behind a single function
+- The exported file must be readable by common command-line tools.
+- Exporting a large report must not load it into memory at once.
+- The chosen format must be configurable behind a single function
   boundary so future migrations are not invasive.
 
 ## Open question (intentional, for the fixture)
 
-The spec does not specify whether to use **bcrypt** (the existing
-pattern in the codebase) or **argon2id** (the current OWASP-preferred
-default for new applications). This is the exact ambiguity that the
+The spec does not specify whether to use **JSON Lines** (the existing
+pattern in the codebase) or **Parquet** (the current widely preferred
+default for large columnar exports). This is the exact ambiguity that the
 Clarify phase should surface and tag with `[codebase, domain]` so the
 consensus protocol fans out to both analysts.
 
 ## Non-goals
 
-- Multi-factor authentication
-- Password-strength policy
-- Account-recovery flows
+- Scheduled exports
+- Report layout and styling
+- Delivery by email

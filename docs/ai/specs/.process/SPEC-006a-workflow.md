@@ -11,7 +11,7 @@
 This workflow file was enriched from a Grill Me interview run during `/speckit-pro:speckit-scaffold-spec`. The full Q&A log, Goals, Non-goals, and Open Questions live at:
 
 ```text
-docs/ai/specs/SPEC-006a-design-concept.md
+docs/ai/specs/.process/SPEC-006a-design-concept.md
 ```
 
 Re-read it before each phase if you need to disambiguate a prompt. The Specify and Clarify Prompts below were populated from that interview, so the design concept doc is the source of truth for any decision captured during scoping.
@@ -75,7 +75,7 @@ Re-read it before each phase if you need to disambiguate a prompt. The Specify a
 | **Dependencies** | None |
 | **Enables** | SPEC-006b (UAT author agents) |
 | **Priority** | P1 |
-| **Design Concept** | `docs/ai/specs/SPEC-006a-design-concept.md` |
+| **Design Concept** | `docs/ai/specs/.process/SPEC-006a-design-concept.md` |
 | **Roadmap** | `docs/ai/specs/reviewer-experience-technical-roadmap.md` |
 | **Reviewability Budget** | ~670 LOC, 4 production files, 9 total files (within block thresholds) |
 
@@ -411,7 +411,7 @@ Focus on SPEC-006a requirements:
 /speckit-analyze
 
 Focus on:
-1. Cross-artifact consistency between spec.md, plan.md, tasks.md, AND `docs/ai/specs/SPEC-006a-design-concept.md`. The design concept is the source of truth for the 4 grill-me decisions (PR URL placeholder, PROJECT_COMMANDS env var, Self-Review echo source, Layer 4 fixture vendoring). Flag any downstream artifact that contradicts a design concept decision.
+1. Cross-artifact consistency between spec.md, plan.md, tasks.md, AND `docs/ai/specs/.process/SPEC-006a-design-concept.md`. The design concept is the source of truth for the 4 grill-me decisions (PR URL placeholder, PROJECT_COMMANDS env var, Self-Review echo source, Layer 4 fixture vendoring). Flag any downstream artifact that contradicts a design concept decision.
 2. Coverage gaps — every FR-001 through FR-015 must map to at least one task; every SC-001 through SC-005 must map to a verification command in the implementation phase.
 3. Reviewability budget alignment — sum the estimated LOC for all production tasks; flag if the total exceeds the 800-LOC block threshold (with no exception ratified for this spec).
 4. Layer 1 parity — confirm no task adds files under `speckit-pro/agents/` or `speckit-pro/codex-agents/`. If any task does, that's a CRITICAL finding for this spec (defer to SPEC-006b).
@@ -551,8 +551,9 @@ racecraft-plugins-public/
 │       └── fixtures/uat-runbook-generation/full-spec.md        ← NEW (vendored)
 └── docs/ai/specs/
     ├── reviewer-experience-technical-roadmap.md  ← Read-only reference
-    ├── SPEC-006a-design-concept.md               ← Source of truth for grill-me decisions
-    └── SPEC-006a-workflow.md                     ← This file
+    └── .process/
+        ├── SPEC-006a-design-concept.md           ← Source of truth for grill-me decisions
+        └── SPEC-006a-workflow.md                 ← This file
 ```
 
 ---
