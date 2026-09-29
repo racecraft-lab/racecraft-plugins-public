@@ -33,6 +33,6 @@ helpers/pr_emission.py (1,149 lines) holds five jobs and sits in a 20-file impor
 ## Related
 
 - Overlaps files changed by open PR #685.
-- Depends on: pr-packet-validation (issue number added after filing)
+- Depends on #873
 
 Found by the 2026-09 coherence audit.

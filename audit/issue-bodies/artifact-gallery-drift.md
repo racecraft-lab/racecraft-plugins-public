@@ -36,6 +36,6 @@ SPA-CONTRACT.md says repository tests enforce its bans, but the required static 
 
 - Overlaps files changed by the open stop-policy stack: #837, #838, #844, #847, #848, #849, #850, #851. Land after that stack merges.
 - Overlaps files changed by the in-progress fix for #832.
-- Depends on: single-source-host-parity (issue number added after filing)
+- Depends on #882
 
 Found by the 2026-09 coherence audit.

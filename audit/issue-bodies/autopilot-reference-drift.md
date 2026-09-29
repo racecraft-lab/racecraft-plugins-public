@@ -33,6 +33,6 @@ A few autopilot references carry stale pointers: an index line describing planne
 - Overlaps files changed by the open stop-policy stack: #843, #844, #847, #849, #850, #851. Land after that stack merges.
 - Overlaps files changed by open PR #685.
 - Overlaps files changed by the in-progress fix for #832.
-- Depends on: single-source-host-parity (issue number added after filing)
+- Depends on #882
 
 Found by the 2026-09 coherence audit.

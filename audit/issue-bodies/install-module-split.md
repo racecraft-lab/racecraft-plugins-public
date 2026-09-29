@@ -34,6 +34,6 @@ helpers/install.py is a 5,700-line module whose docstring says 'install inventor
 
 ## Related
 
-- Depends on: runner-primitive-dups (issue number added after filing)
+- Depends on #878
 
 Found by the 2026-09 coherence audit.

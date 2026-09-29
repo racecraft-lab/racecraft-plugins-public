@@ -35,7 +35,7 @@
         "tests/speckit-pro/layer7-parity/03-reviewability-backstop-parent-child-routing/workflow.md",
         "tests/speckit-pro/layer7-parity/run-parity-fixtures.py"
       ],
-      "issue": null
+      "issue": 854
     },
     {
       "key": "unregistered-unit-tests",
@@ -69,7 +69,7 @@
         "tests/speckit-pro/unit/test-consensus-synthesizer-regressions.py",
         "tests/speckit-pro/unit/test-native-eval-fixture-setup.py"
       ],
-      "issue": null
+      "issue": 856
     },
     {
       "key": "dispatch-parser-blind",
@@ -98,7 +98,7 @@
         "tests/speckit-pro/layer6-integration/lib/fixture_runner.py",
         "tests/speckit-pro/layer6-integration/lib/transcript_helpers.py"
       ],
-      "issue": null
+      "issue": 855
     },
     {
       "key": "class2-replay-tautology",
@@ -128,7 +128,7 @@
         "tests/speckit-pro/layer6-integration/return-format-fixtures/05-synthesizer-keyword-security-relevant/parser-fixture.jsonl",
         "tests/speckit-pro/layer6-integration/run-return-format-fixtures.py"
       ],
-      "issue": null
+      "issue": 857
     },
     {
       "key": "readme-install-drift",
@@ -160,7 +160,7 @@
         "docs-site/src/content/docs/install/codex.md",
         "speckit-pro/README.md"
       ],
-      "issue": null
+      "issue": 876
     },
     {
       "key": "docs-site-generator",
@@ -196,7 +196,7 @@
         "speckit-pro/scripts/sweep-isolation-hook.py",
         "speckit-pro/scripts/workflow-guard-hook.py"
       ],
-      "issue": null
+      "issue": 859
     },
     {
       "key": "docs-site-pages-config",
@@ -244,7 +244,7 @@
         "docs-site/src/routeData.ts",
         "docs-site/src/styles/brand.css"
       ],
-      "issue": null
+      "issue": 886
     },
     {
       "key": "stale-planning-records",
@@ -308,7 +308,7 @@
         "tests/speckit-pro/evals/native-runner-progress.md",
         "tests/speckit-pro/lib/native_eval_catalog.py"
       ],
-      "issue": null
+      "issue": 860
     },
     {
       "key": "consensus-mode-unimplemented",
@@ -360,7 +360,7 @@
         "speckit-pro/speckit_pro_runner/helpers/read_only.py",
         "tests/speckit-pro/layer3-functional/evals/speckit-autopilot-evals.json"
       ],
-      "issue": null
+      "issue": 883
     },
     {
       "key": "stack-helper-scope",
@@ -403,7 +403,7 @@
         "tests/speckit-pro/layer7-parity/04-stack-manager-guidance/expected-equivalence.json",
         "tests/speckit-pro/layer7-parity/04-stack-manager-guidance/workflow.md"
       ],
-      "issue": null
+      "issue": 884
     },
     {
       "key": "parity-runner-drift",
@@ -455,7 +455,7 @@
         "tests/speckit-pro/layer7-parity/run-parity-fixtures.py",
         "tests/speckit-pro/lib/native_eval_pairing.py"
       ],
-      "issue": null
+      "issue": 858
     },
     {
       "key": "layer6-fixtures-retired",
@@ -511,7 +511,7 @@
         "tests/speckit-pro/layer6-integration/e2e-fixtures/02-autopilot-extended-pipeline/README.md",
         "tests/speckit-pro/layer6-integration/e2e-fixtures/02-autopilot-extended-pipeline/sample-spec.md"
       ],
-      "issue": null
+      "issue": 871
     },
     {
       "key": "layer6-lib-fail-open",
@@ -558,7 +558,7 @@
         "tests/speckit-pro/unit/test-integration-runners.py",
         "tests/speckit-pro/unit/test-transcript-helpers.py"
       ],
-      "issue": null
+      "issue": 872
     },
     {
       "key": "layer3-runners",
@@ -592,7 +592,7 @@
         "tests/speckit-pro/layer3-functional/headless_cases.json",
         "tests/speckit-pro/layer3-functional/run-headless-evals.py"
       ],
-      "issue": null
+      "issue": 861
     },
     {
       "key": "orphan-fixtures",
@@ -664,7 +664,7 @@
         "tests/speckit-pro/unit/test-estimate-spec-size.py",
         "tests/speckit-pro/unit/test-ratify-pr-split.py"
       ],
-      "issue": null
+      "issue": 890
     },
     {
       "key": "trigger-inputs-drift",
@@ -699,7 +699,7 @@
         "tests/speckit-pro/layer2-trigger/measurement-capabilities.json",
         "tests/speckit-pro/layer2-trigger/run-trigger-evals.py"
       ],
-      "issue": null
+      "issue": 862
     },
     {
       "key": "trigger-lib-cohesion",
@@ -749,7 +749,7 @@
         "tests/speckit-pro/unit/test-trigger-campaign.py",
         "tests/speckit-pro/unit/test-trigger-eval-coverage.py"
       ],
-      "issue": null
+      "issue": 863
     },
     {
       "key": "native-eval-lib-cohesion",
@@ -789,7 +789,7 @@
         "tests/speckit-pro/run-native-evals.py",
         "tests/speckit-pro/unit/test-native-eval-skill-reads.py"
       ],
-      "issue": null
+      "issue": 864
     },
     {
       "key": "rosters-hand-kept",
@@ -841,7 +841,7 @@
         "tests/speckit-pro/unit/test-native-functional-catalog.py",
         "tests/speckit-pro/unit/test-native-trigger-catalog.py"
       ],
-      "issue": null
+      "issue": 869
     },
     {
       "key": "test-infra-residue",
@@ -914,7 +914,7 @@
         "tests/speckit-pro/unit/test-speckit-pro-runner.py",
         "tests/speckit-pro/unit/test-typesafe-jev-release-build.py"
       ],
-      "issue": null
+      "issue": 891
     },
     {
       "key": "spec-lifecycle-validator",
@@ -953,7 +953,7 @@
         "tests/speckit-pro/lib/test_result.py",
         "tests/speckit-pro/unit/test-generate-spec-index.py"
       ],
-      "issue": null
+      "issue": 865
     },
     {
       "key": "read-only-helpers-split",
@@ -994,7 +994,7 @@
         "speckit-pro/speckit_pro_runner/sweep_isolation.py",
         "speckit-pro/speckit_pro_runner/task_results.py"
       ],
-      "issue": null
+      "issue": 877
     },
     {
       "key": "coverage-report-schema",
@@ -1024,7 +1024,7 @@
         "tests/speckit-pro/unit/fixtures/mutation-helpers/contracts/autopilot-phase-coverage-report.schema.json",
         "tests/speckit-pro/unit/test-autopilot-phase-coverage.py"
       ],
-      "issue": null
+      "issue": 874
     },
     {
       "key": "coverage-validator-split",
@@ -1063,7 +1063,7 @@
         "speckit-pro/speckit_pro_runner/gate_discovery.py",
         "tests/speckit-pro/unit/test-autonomy-boundary-receipt-replay.py"
       ],
-      "issue": null
+      "issue": 875
     },
     {
       "key": "runner-primitive-dups",
@@ -1105,7 +1105,7 @@
         "speckit-pro/speckit_pro_runner/task_results.py",
         "speckit-pro/speckit_pro_runner/verification_records.py"
       ],
-      "issue": null
+      "issue": 878
     },
     {
       "key": "install-module-split",
@@ -1140,7 +1140,7 @@
         "speckit-pro/speckit_pro_runner/helpers/registry.py",
         "speckit-pro/speckit_pro_runner/install_inventory.json"
       ],
-      "issue": null
+      "issue": 879
     },
     {
       "key": "execution-control-allowances",
@@ -1169,7 +1169,7 @@
       "edit_files": [
         "speckit-pro/speckit_pro_runner/execution_control.py"
       ],
-      "issue": null
+      "issue": 880
     },
     {
       "key": "sweep-broker-cohesion",
@@ -1219,7 +1219,7 @@
         "speckit-pro/speckit_pro_runner/sweep_isolation.py",
         "speckit-pro/speckit_pro_runner/sweep_launcher.py"
       ],
-      "issue": null
+      "issue": 895
     },
     {
       "key": "artifact-gallery-drift",
@@ -1274,7 +1274,7 @@
         "speckit-pro/speckit_pro_runner/preview_launcher.py",
         "tests/speckit-pro/unit/test-artifact-gallery.py"
       ],
-      "issue": null
+      "issue": 885
     },
     {
       "key": "formal-package-cohesion",
@@ -1316,7 +1316,7 @@
         "speckit-pro/speckit_pro_runner/formal/lifecycle.py",
         "speckit-pro/speckit_pro_runner/formal/quint.py"
       ],
-      "issue": null
+      "issue": 889
     },
     {
       "key": "docker-verification",
@@ -1352,7 +1352,7 @@
         "speckit-pro/speckit_pro_runner/verification_docker_runtime.py",
         "speckit-pro/speckit_pro_runner/verification_records.py"
       ],
-      "issue": null
+      "issue": 894
     },
     {
       "key": "research-broker-privacy",
@@ -1376,7 +1376,7 @@
         "docs/ai/specs/research-broker-contract.md",
         "speckit-pro/speckit_pro_runner/research_broker.py"
       ],
-      "issue": null
+      "issue": 867
     },
     {
       "key": "quality-gate-drift",
@@ -1414,7 +1414,7 @@
         "speckit-pro/speckit_pro_runner/gate_discovery_table.json",
         "speckit-pro/speckit_pro_runner/helpers/gate_preflight_coverage.py"
       ],
-      "issue": null
+      "issue": 893
     },
     {
       "key": "codex-lockfile-hook-matcher",
@@ -1442,7 +1442,7 @@
         "speckit-pro/scripts/workflow-guard-hook.py",
         "tests/speckit-pro/unit/test-workflow-guard-hook.py"
       ],
-      "issue": null
+      "issue": 887
     },
     {
       "key": "trust-and-payload-gates",
@@ -1478,7 +1478,7 @@
         "speckit-pro/speckit_pro_runner/runtime.py",
         "tests/speckit-pro/unit/fixtures/installed-plugin-release/contracts/runner-invocation.schema.json"
       ],
-      "issue": null
+      "issue": 866
     },
     {
       "key": "active-path-guard-split",
@@ -1502,7 +1502,7 @@
         "gates/active_path_guard.py",
         "speckit-pro/speckit_pro_runner/gates/active_path_guard.py"
       ],
-      "issue": null
+      "issue": 868
     },
     {
       "key": "pr-packet-validation",
@@ -1540,7 +1540,7 @@
         "tests/speckit-pro/layer6-integration/performance-fixtures/draft-pr-emission/source/contracts/draft-packet-mode.md",
         "tests/speckit-pro/unit/fixtures/pr-packet-title-patterns.json"
       ],
-      "issue": null
+      "issue": 873
     },
     {
       "key": "stack-manager-qualification",
@@ -1570,7 +1570,7 @@
         "speckit-pro/skills/speckit-autopilot/references/stack-manager.md",
         "speckit-pro/speckit_pro_runner/helpers/stack_manager.py"
       ],
-      "issue": null
+      "issue": 881
     },
     {
       "key": "pr-emission-cohesion",
@@ -1602,7 +1602,7 @@
         "speckit-pro/speckit_pro_runner/helpers/registry.py",
         "tests/speckit-pro/layer6-integration/performance-fixtures/draft-pr-emission/source/contracts/draft-packet-mode.md"
       ],
-      "issue": null
+      "issue": 892
     },
     {
       "key": "autopilot-reference-drift",
@@ -1645,7 +1645,7 @@
         "speckit-pro/skills/speckit-autopilot/references/token-discipline.md",
         "tests/speckit-pro/layer3-functional/fixtures/autopilot/SPEC-009/docs/ai/specs/SPEC-009-workflow.md"
       ],
-      "issue": null
+      "issue": 896
     },
     {
       "key": "lifecycle-skill-drift",
@@ -1697,7 +1697,7 @@
         "tests/speckit-pro/layer3-functional/evals/speckit-prd-evals.json",
         "tests/speckit-pro/layer3-functional/evals/speckit-upgrade-evals.json"
       ],
-      "issue": null
+      "issue": 897
     },
     {
       "key": "release-script-dups",
@@ -1748,7 +1748,7 @@
         "tests/speckit-pro/run-hosted-windows-preflight.py",
         "tests/speckit-pro/unit/test-speckit-pro-gates.py"
       ],
-      "issue": null
+      "issue": 888
     },
     {
       "key": "codex-skill-dead-links",
@@ -1786,7 +1786,7 @@
         "speckit-pro/speckit_pro_runner/gates/payloads.py",
         "tests/speckit-pro/layer1-structural/validate-skill-contracts.py"
       ],
-      "issue": null
+      "issue": 870
     },
     {
       "key": "single-source-host-parity",
@@ -1885,7 +1885,7 @@
         "tests/speckit-pro/unit/test-autopilot-bookkeeping-guard.py",
         "tests/speckit-pro/unit/test-consensus-synthesizer-regressions.py"
       ],
-      "issue": null
+      "issue": 882
     }
   ],
   "not_filed": [],

@@ -43,6 +43,6 @@ The Layer 6 grounding regex rejects notes the contract allows (multiple citation
 
 - Overlaps files changed by the open stop-policy stack: #851. Land after that stack merges.
 - Overlaps files changed by the in-progress fix for #832.
-- Depends on: class2-replay-tautology (issue number added after filing)
+- Depends on #857
 
 Found by the 2026-09 coherence audit.

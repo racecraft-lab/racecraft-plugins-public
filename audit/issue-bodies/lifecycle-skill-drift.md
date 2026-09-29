@@ -38,6 +38,6 @@ Lifecycle skill references, evals and templates disagree with the shipped skills
 
 - Overlaps files changed by the open stop-policy stack: #850. Land after that stack merges.
 - Overlaps files changed by open PR #685.
-- Depends on: single-source-host-parity (issue number added after filing)
+- Depends on #882
 
 Found by the 2026-09 coherence audit.

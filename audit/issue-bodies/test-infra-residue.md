@@ -53,6 +53,6 @@ Several test modules hand-list their test classes or methods, so a new test neve
 - Overlaps files changed by the open stop-policy stack: #837, #838, #843, #844, #845, #846, #847, #848, #849, #850, #851, #852. Land after that stack merges.
 - Overlaps files changed by open PR #685.
 - Overlaps files changed by the in-progress fix for #832.
-- Depends on: unregistered-unit-tests (issue number added after filing)
+- Depends on #856
 
 Found by the 2026-09 coherence audit.

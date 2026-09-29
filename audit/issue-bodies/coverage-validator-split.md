@@ -37,6 +37,6 @@ validate-autopilot-phase-coverage.py is a 5,334-line script with one 1,860-line 
 
 - Overlaps files changed by the open stop-policy stack: #850, #852. Land after that stack merges.
 - Overlaps files changed by open PR #685.
-- Depends on: coverage-report-schema (issue number added after filing)
+- Depends on #874
 
 Found by the 2026-09 coherence audit.

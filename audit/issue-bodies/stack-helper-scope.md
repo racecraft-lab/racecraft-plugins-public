@@ -30,6 +30,6 @@ Parity fixture 04 and Codex autopilot eval 7 both say detect-stack-manager-plan 
 
 - Overlaps files changed by the open stop-policy stack: #845, #849, #850, #851. Land after that stack merges.
 - Overlaps files changed by the in-progress fix for #832.
-- Depends on: parity-vacuous-fixtures (issue number added after filing)
+- Depends on #854
 
 Found by the 2026-09 coherence audit.

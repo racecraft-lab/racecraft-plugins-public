@@ -37,6 +37,6 @@ One historical trigger campaign is hard-coded into durable library code: digest 
 
 ## Related
 
-- Depends on: trigger-inputs-drift (issue number added after filing)
+- Depends on #862
 
 Found by the 2026-09 coherence audit.

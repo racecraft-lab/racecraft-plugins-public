@@ -50,6 +50,6 @@ The Layer 7 runner invokes /speckit-pro:autopilot, a skill that does not exist, 
 
 ## Related
 
-- Depends on: parity-vacuous-fixtures (issue number added after filing)
+- Depends on #854
 
 Found by the 2026-09 coherence audit.

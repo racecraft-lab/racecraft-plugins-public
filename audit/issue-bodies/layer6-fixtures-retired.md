@@ -45,6 +45,6 @@ Several Layer 6 dispatch fixtures encode behavior the autopilot contract has ret
 
 - Overlaps files changed by the open stop-policy stack: #845, #851. Land after that stack merges.
 - Overlaps files changed by the in-progress fix for #832.
-- Depends on: dispatch-parser-blind (issue number added after filing)
+- Depends on #855
 
 Found by the 2026-09 coherence audit.
