@@ -10,7 +10,7 @@ from pathlib import Path
 from lib.fixture_runner import (
     Reporter,
     assert_dispatch_fixture,
-    capture_live,
+    capture_or_fail,
     collect_fixtures,
     parse_runner_args,
     print_fixture_heading,
@@ -41,8 +41,8 @@ def main(argv: list[str]) -> int:
         budget = os.environ.get("E2E_FIXTURE_BUDGET_USD", "10.00")
         for fixture in fixtures:
             print_fixture_heading(fixture)
-            if mode == "live":
-                capture_live(fixture, budget, announce_saved=True)
+            if mode == "live" and not capture_or_fail(fixture, budget, reporter, announce_saved=True):
+                continue
             assert_fixture(fixture, mode, reporter)
         return reporter.finish(LABEL)
     except (OSError, ValueError, RuntimeError) as exc:
