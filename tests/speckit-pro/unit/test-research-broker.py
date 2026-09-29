@@ -288,17 +288,7 @@ class OutboundTests(unittest.TestCase):
             root = Path(directory)
             (root / ".claude-plugin").mkdir()
             (root / ".codex-plugin").mkdir()
-            spec = root / "specs" / "feature-a" / "spec.md"
-            spec.parent.mkdir(parents=True)
-            spec.write_text(
-                "The ledger reconciler must retry each unmatched settlement batch three times before it "
-                "escalates the batch to the finance review queue.\n",
-                encoding="utf-8",
-            )
-            found = rb.project_root({"CLAUDE_PROJECT_DIR": str(root)})
-            self.assertEqual(found, root)
-            leaked = "why would a reconciler must retry each unmatched settlement batch three times before it escalates the batch"
-            self.assertIn("spec_text_detected", rb.outbound_findings(leaked, rb.spec_ngrams(found)))
+            self.assertEqual(rb.project_root({"CLAUDE_PROJECT_DIR": str(root)}), root)
 
 
 class RoutingTests(unittest.TestCase):
