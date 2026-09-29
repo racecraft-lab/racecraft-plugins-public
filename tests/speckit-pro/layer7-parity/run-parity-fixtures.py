@@ -259,17 +259,21 @@ def validate_compare_entries(expected: dict[str, Any], fields: dict[str, dict[st
     return compare_sources
 
 
+def validate_invariant_value(key: object, value: object) -> None:
+    if not isinstance(key, str) or not key:
+        raise ValueError("required_invariants keys must be non-empty strings")
+    if isinstance(value, list):
+        if not value or not all(isinstance(item, str) and item for item in value):
+            raise ValueError(f"required_invariants.{key} must be a non-empty string list")
+    elif not isinstance(value, (str, bool)) or isinstance(value, str) and not value:
+        raise ValueError(f"required_invariants.{key} must be a non-empty string, boolean, or string list")
+
+
 def validate_invariant_values(invariants: object) -> None:
     if not isinstance(invariants, dict) or not invariants:
         raise ValueError("required_invariants must be a non-empty object")
     for key, value in invariants.items():
-        if not isinstance(key, str) or not key:
-            raise ValueError("required_invariants keys must be non-empty strings")
-        if isinstance(value, list):
-            if not value or not all(isinstance(item, str) and item for item in value):
-                raise ValueError(f"required_invariants.{key} must be a non-empty string list")
-        elif not isinstance(value, (str, bool)) or isinstance(value, str) and not value:
-            raise ValueError(f"required_invariants.{key} must be a non-empty string, boolean, or string list")
+        validate_invariant_value(key, value)
 
 
 def validate_invariant_source(invariant_source: object, compare_sources: set[str]) -> None:
