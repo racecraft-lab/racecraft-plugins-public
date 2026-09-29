@@ -52,6 +52,7 @@
   "goal_status": "complete",
   "human_stop": null,
   "mark_ready": true,
+  "observed": [],
   "outcome": "complete_with_deferred",
   "pending_items": [],
   "pull_requests": [
