@@ -153,50 +153,43 @@ def _stage_first_selection_guard(plugin_root: Path) -> None:
     )
 
 
+def _write_sibling_skill(plugin_root: Path, name: str, description_lines: list[str]) -> None:
+    sibling_dir = plugin_root / "skills" / name
+    sibling_dir.mkdir(parents=True)
+    body = ["---", f"name: {name}", "\n".join(description_lines), "---", "",
+            "This sibling skill is part of a selection check. If it is selected,",
+            "say so in one line and stop.", ""]
+    (sibling_dir / "SKILL.md").write_text("\n".join(body), encoding="utf-8")
+
+
 def stage_measurement_plugin(
     source: Path,
     plugin_root: Path,
     plugin_name: str,
     skill_name: str,
     nonce: str,
-    siblings: dict[str, Path] | None = None,
-    *,
-    no_op_description: str | None = None,
+    siblings: dict[str, Path | str] | None = None,
 ) -> tuple[Path, str]:
     """Stage only the exact source description plus a minimal measurement body.
 
     ``siblings`` maps each sibling skill name to its source SKILL.md. Siblings are
     staged with their exact descriptions and a minimal body carrying no nonce, so a
-    should-not-trigger query has its real destination in the catalog.
+    should-not-trigger query has its real destination in the catalog. The reserved
+    no-op skill may appear only with a ``str`` value, which replaces its default
+    description; that is how a controlled experiment varies it without a global.
     """
-    staged_siblings = {
-        sibling_name: source_description_lines(sibling_source)
-        for sibling_name, sibling_source in (siblings or {}).items()
-    }
-    if NO_SPECKIT_SKILL_NAME in staged_siblings:
-        raise ValueError(f"reserved sibling skill name: {NO_SPECKIT_SKILL_NAME}")
-    description = NO_SPECKIT_SKILL_DESCRIPTION if no_op_description is None else no_op_description
-    staged_siblings[NO_SPECKIT_SKILL_NAME] = [f"description: {description}"]
+    staged_siblings = {NO_SPECKIT_SKILL_NAME: [f"description: {NO_SPECKIT_SKILL_DESCRIPTION}"]}
+    for sibling_name, sibling_source in (siblings or {}).items():
+        if sibling_name == NO_SPECKIT_SKILL_NAME and not isinstance(sibling_source, str):
+            raise ValueError(f"reserved sibling skill name: {NO_SPECKIT_SKILL_NAME}")
+        staged_siblings[sibling_name] = (
+            [f"description: {sibling_source}"] if isinstance(sibling_source, str)
+            else source_description_lines(sibling_source)
+        )
     for sibling_name, description_lines in sorted(staged_siblings.items()):
         if sibling_name == skill_name:
             raise ValueError("sibling skill name collides with the measured skill")
-        sibling_dir = plugin_root / "skills" / sibling_name
-        sibling_dir.mkdir(parents=True)
-        (sibling_dir / "SKILL.md").write_text(
-            "\n".join(
-                [
-                    "---",
-                    f"name: {sibling_name}",
-                    "\n".join(description_lines),
-                    "---",
-                    "",
-                    "This sibling skill is part of a selection check. If it is selected,",
-                    "say so in one line and stop.",
-                    "",
-                ]
-            ),
-            encoding="utf-8",
-        )
+        _write_sibling_skill(plugin_root, sibling_name, description_lines)
     skill_dir = plugin_root / "skills" / skill_name
     skill_dir.mkdir(parents=True)
     description = "\n".join(source_description_lines(source))
@@ -538,8 +531,7 @@ def main(argv: list[str]) -> int:
             plugin_name,
             skill_name,
             nonce,
-            sibling_sources,
-            no_op_description=no_op_description,
+            {**sibling_sources, NO_SPECKIT_SKILL_NAME: no_op_description},
         )
         sibling_skills = tuple(
             f"{plugin_name}:{name}"

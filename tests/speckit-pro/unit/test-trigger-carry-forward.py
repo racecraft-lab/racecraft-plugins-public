@@ -882,8 +882,7 @@ g['sysconfig'].get_path = lambda _name: {str(safe_stdlib)!r}
 closure = Path({str(closure)!r})
 sources = g['_reviewed_closure_sources'](closure, {expected!r})
 finder = g['_ClosedBytesFinder'](closure, sources, {expected!r})
-finder.sanitize_paths()
-sys.modules.pop('shlex', None)  # the comparator's observers import shlex; the shadow must face a fresh import
+finder.sanitize_paths(); sys.modules.pop('shlex', None)  # a preloaded shlex would hide the shadow
 sys.meta_path.insert(0, finder)
 try:
     module = finder.load('parser', 'lib/parser.py')

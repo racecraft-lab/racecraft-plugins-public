@@ -28,10 +28,12 @@ def approval(digest="a" * 64, budget=6):
                 "content": f"Approve trigger campaign {digest} with launch budget {budget}."}}
 
 
+CONVERSATION = approvals.RetainedConversation(
+    "retained-session-123", "assistant-message-123", "user-message-456", (100, 101))
+
+
 def contextual_approval(digest="a" * 64, budget=6, response="approved"):
-    return approvals.contextual_approval(
-        digest, budget, response, session="retained-session-123", request_id="assistant-message-123",
-        response_id="user-message-456", ordinals=(100, 101))
+    return CONVERSATION.contextual_approval(digest, budget, response)
 
 
 def full_manifest(output):
@@ -53,12 +55,12 @@ def full_manifest(output):
 
 
 def standing_approval(manifest, *, grant=None, quota=None, latest="approved"):
-    session = "retained-session-123"
+    session = CONVERSATION.session
     grant = grant or "Listen I APPROVE EVERYTHING that blocks or could block this goal from being achieved."
     quota = quota or "just run until the quota is run out"
 
     def observation(message_id, timestamp, ordinal, content):
-        return approvals.observation("user", message_id, session, timestamp, ordinal, content)
+        return CONVERSATION.observation("user", message_id, timestamp, ordinal, content)
 
     digest = campaign.json_digest(manifest)
     grant_observation = observation("user-grant-123", "2026-09-12T23:05:29.095Z", 6605, grant)

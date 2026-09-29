@@ -3834,42 +3834,40 @@ class NoOpDescriptionSourceTests(unittest.TestCase):
 
     OVERRIDE = "Use when nothing else applies; reply that no skill applies and stop."
 
-    def write_source(self, root: Path, family: str) -> Path:
-        source = root / family / "demo" / "SKILL.md"
-        source.parent.mkdir(parents=True)
-        source.write_text("---\nname: demo\ndescription: Demo.\n---\n\nBody.\n", encoding="utf-8")
-        return source
-
-    def test_both_runners_alias_the_library_constant(self) -> None:
-        claude = import_script(CLAUDE_RUNNER, "layer2_noop_claude")
-        engine = import_script(CODEX_ENGINE, "layer2_noop_engine")
-        for module in (claude, engine):
-            with self.subTest(module=module.__name__):
+    def test_runners_alias_the_library_constant_and_define_no_copy(self) -> None:
+        for path in (CLAUDE_RUNNER, CODEX_ENGINE):
+            with self.subTest(runner=path.name):
+                module = import_script(path, f"layer2_noop_{path.stem.replace('-', '_')}")
                 self.assertIs(module.NO_SPECKIT_SKILL_DESCRIPTION, evidence_records.NO_SPECKIT_SKILL_DESCRIPTION)
                 self.assertEqual(module.NO_SPECKIT_SKILL_NAME, evidence_records.NO_SPECKIT_SKILL_NAME)
+                defined = [node for node in ast.parse(path.read_text()).body
+                           if isinstance(node, ast.Assign) and isinstance(node.value, ast.Constant)
+                           and any(getattr(target, "id", "") == "NO_SPECKIT_SKILL_DESCRIPTION"
+                                   for target in node.targets)]
+                self.assertEqual(defined, [])
 
-    def test_claude_staging_uses_the_override_without_touching_the_default(self) -> None:
+    def test_an_override_reaches_staging_without_touching_the_default(self) -> None:
         claude = import_script(CLAUDE_RUNNER, "layer2_noop_claude_stage")
-        default = claude.NO_SPECKIT_SKILL_DESCRIPTION
-        with tempfile.TemporaryDirectory() as temporary:
-            root = Path(temporary)
-            source = self.write_source(root, "skills")
-            claude.stage_measurement_plugin(source, root / "plugin", "catalog", "demo-eval", "nonce",
-                                            no_op_description=self.OVERRIDE)
-            staged = (root / "plugin" / "skills" / claude.NO_SPECKIT_SKILL_NAME / "SKILL.md").read_text()
-        self.assertIn(f"description: {self.OVERRIDE}", staged)
-        self.assertEqual(claude.NO_SPECKIT_SKILL_DESCRIPTION, default)
-
-    def test_codex_staging_uses_the_override_without_touching_the_default(self) -> None:
         engine = import_script(CODEX_ENGINE, "layer2_noop_engine_stage")
-        default = engine.NO_SPECKIT_SKILL_DESCRIPTION
+        default = evidence_records.NO_SPECKIT_SKILL_DESCRIPTION
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
-            source = self.write_source(root, "codex-skills")
-            siblings, _markers = engine.stage_sibling_skills(source, root / "workspace", "0123456789ab",
+            claude_source = root / "skills" / "demo" / "SKILL.md"
+            codex_source = root / "codex-skills" / "demo" / "SKILL.md"
+            for source in (claude_source, codex_source):
+                source.parent.mkdir(parents=True)
+                source.write_text("---\nname: demo\ndescription: Demo.\n---\n\nBody.\n", encoding="utf-8")
+            claude.stage_measurement_plugin(claude_source, root / "plugin", "catalog", "demo-eval", "nonce",
+                                            {claude.NO_SPECKIT_SKILL_NAME: self.OVERRIDE})
+            staged = (root / "plugin" / "skills" / claude.NO_SPECKIT_SKILL_NAME / "SKILL.md").read_text()
+            siblings, _markers = engine.stage_sibling_skills(codex_source, root / "workspace", "0123456789ab",
                                                              no_op_description=self.OVERRIDE)
+            with self.assertRaisesRegex(ValueError, "reserved sibling skill name"):
+                claude.stage_measurement_plugin(claude_source, root / "other", "catalog", "demo-eval", "nonce",
+                                                {claude.NO_SPECKIT_SKILL_NAME: claude_source})
+        self.assertIn(f"description: {self.OVERRIDE}", staged)
         self.assertEqual(siblings[engine.NO_SPECKIT_SKILL_NAME], self.OVERRIDE)
-        self.assertEqual(engine.NO_SPECKIT_SKILL_DESCRIPTION, default)
+        self.assertEqual((claude.NO_SPECKIT_SKILL_DESCRIPTION, engine.NO_SPECKIT_SKILL_DESCRIPTION), (default, default))
 
 
 class CodexRelativeSkillBodyReadTests(unittest.TestCase):

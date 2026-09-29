@@ -63,10 +63,12 @@ def standing_request_fixture(root):
     return replace(request, approval=approval, launch_budget=1302, workers=1)
 
 
+CONVERSATION = approvals.RetainedConversation(
+    "execution-session-123", "assistant-request-123", "user-response-456", (200, 201), "source")
+
+
 def contextual_approval(digest, budget=6, response="approved"):
-    return approvals.contextual_approval(
-        digest, budget, response, session="execution-session-123", request_id="assistant-request-123",
-        response_id="user-response-456", ordinals=(200, 201), line_prefix="source")
+    return CONVERSATION.contextual_approval(digest, budget, response)
 
 
 def saved_carry_fixture(root):
