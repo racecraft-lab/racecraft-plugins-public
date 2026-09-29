@@ -24,10 +24,11 @@ from typing import Any
 SCRIPT_DIR = Path(__file__).resolve().parent
 LIB_DIR = SCRIPT_DIR / "lib"
 ENV_SCHEMA = "speckit.layer7.env.v1"
-EXPECTED_SCHEMA = "speckit.layer7.expected-equivalence.v1"
-TOLERANCE_SCHEMA = "speckit.layer7.tolerance.v1"
+EXPECTED_SCHEMA = "speckit.layer7.legacy.expected-equivalence.v1"
+TOLERANCE_SCHEMA = "speckit.layer7.legacy.tolerance.v1"
 ALLOWED_TOLERANCES = frozenset({"byte-identical", "exact", "tolerance-1", "semantic-equivalent"})
 DEFAULT_BUDGET_USD = "20"
+INPUT_WORKFLOW = "workflow.md"
 CLAUDE_EXECUTABLE_NAMES = frozenset({"claude", "claude.exe", "claude.cmd", "claude.bat"})
 RULE = "────────────────────────────────────────"
 SUMMARY_RULE = "════════════════════════════════════════"
@@ -47,6 +48,7 @@ class Config:
     fixture_filter: str = ""
     budget_usd: str = os.environ.get("L7_FIXTURE_BUDGET_USD", DEFAULT_BUDGET_USD)
     claude_bin: str = os.environ.get("CLAUDE_BIN", "claude")
+    accept_skips: bool = False
 
 
 class Counts:
@@ -88,7 +90,10 @@ def print_usage() -> None:
                 "Usage:",
                 "  python3 tests/speckit-pro/layer7-parity/run-parity-fixtures.py [--dry-run|--live]",
                 "                                                               [--fixture <name>]",
-                "                                                               [--budget-usd <N>]",
+                "                                                               [--budget-usd <N>] [--accept-skips]",
+                "",
+                "  --accept-skips  let a live run exit zero when a comparison was skipped",
+                "                  (missing claude, or a semantic-equivalent field left unjudged)",
                 "",
                 "Environment:",
                 "  L7_FIXTURE_BUDGET_USD  Per-fixture-pair budget cap (default: 20)",
@@ -109,6 +114,9 @@ def parse_args(argv: list[str]) -> tuple[Config | None, int]:
             index += 1
         elif arg == "--live":
             config.mode = "live"
+            index += 1
+        elif arg == "--accept-skips":
+            config.accept_skips = True
             index += 1
         elif arg == "--fixture":
             if index + 1 >= len(argv):
@@ -177,15 +185,26 @@ def validate_relative_source(value: object, label: str) -> str:
     return value
 
 
-def validate_fixture_contracts(fixture_dir: Path, expected: dict[str, Any], tolerance: dict[str, Any]) -> None:
-    fixture_id = fixture_dir.name
-    if expected.get("schema") != EXPECTED_SCHEMA:
-        raise ValueError(f"expected-equivalence.json schema must be {EXPECTED_SCHEMA}")
-    if tolerance.get("schema") != TOLERANCE_SCHEMA:
-        raise ValueError(f"tolerance.json schema must be {TOLERANCE_SCHEMA}")
+def reject_input_only_compare(compare_sources: set[str], invariants: object) -> None:
+    if invariants is None and compare_sources == {INPUT_WORKFLOW}:
+        raise ValueError(
+            f"every compare source is the copied {INPUT_WORKFLOW}, which the runner writes unchanged to both "
+            "outputs; compare a run-produced artifact or declare required_invariants"
+        )
+
+
+def validate_contract_identity(fixture_id: str, expected: dict[str, Any], tolerance: dict[str, Any]) -> None:
+    for label, contract, schema in (
+        ("expected-equivalence.json", expected, EXPECTED_SCHEMA),
+        ("tolerance.json", tolerance, TOLERANCE_SCHEMA),
+    ):
+        if contract.get("schema") != schema:
+            raise ValueError(f"{label} schema must be {schema}")
     if expected.get("fixture_id") != fixture_id or tolerance.get("fixture_id") != fixture_id:
         raise ValueError("fixture_id must match the fixture directory in both contracts")
 
+
+def validate_tolerance_fields(tolerance: dict[str, Any]) -> dict[str, dict[str, Any]]:
     fields = tolerance.get("fields")
     if not isinstance(fields, dict) or not fields:
         raise ValueError("tolerance.json fields must be a non-empty object")
@@ -196,7 +215,25 @@ def validate_fixture_contracts(fixture_dir: Path, expected: dict[str, Any], tole
             raise ValueError(f"tolerance key '{key}' has an unsupported tolerance")
         if not isinstance(entry.get("rationale"), str) or not entry["rationale"].strip():
             raise ValueError(f"tolerance key '{key}' must provide a rationale")
+    return fields
 
+
+def validate_compare_selection(index: int, entry: dict[str, Any], tolerance_entry: dict[str, Any]) -> None:
+    section = entry.get("section_selector")
+    extractor = entry.get("extractor")
+    if (section is None) != (extractor is None):
+        raise ValueError(f"compare[{index}] must provide section_selector and extractor together")
+    if tolerance_entry.get("tolerance") == "tolerance-1" and extractor != "table_row_count":
+        raise ValueError(f"compare[{index}] tolerance-1 requires table_row_count")
+    if section is not None and (not isinstance(section, str) or not section.startswith("## ")):
+        raise ValueError(f"compare[{index}].section_selector must name an H2 section")
+    if extractor is not None and not (
+        extractor == "table_row_count" or isinstance(extractor, str) and extractor.startswith("table_column:")
+    ):
+        raise ValueError(f"compare[{index}].extractor is unsupported")
+
+
+def validate_compare_entries(expected: dict[str, Any], fields: dict[str, dict[str, Any]]) -> set[str]:
     compare = expected.get("compare")
     if not isinstance(compare, list) or not compare:
         raise ValueError("expected-equivalence.json compare must be a non-empty array")
@@ -215,36 +252,31 @@ def validate_fixture_contracts(fixture_dir: Path, expected: dict[str, Any], tole
         compare_fields.add(field)
         tolerance_keys.add(tolerance_key)
         compare_sources.add(validate_relative_source(entry.get("source"), f"compare[{index}].source"))
-        section = entry.get("section_selector")
-        extractor = entry.get("extractor")
-        if (section is None) != (extractor is None):
-            raise ValueError(f"compare[{index}] must provide section_selector and extractor together")
-        if section is not None and (not isinstance(section, str) or not section.startswith("## ")):
-            raise ValueError(f"compare[{index}].section_selector must name an H2 section")
-        if extractor is not None and not (
-            extractor == "table_row_count" or isinstance(extractor, str) and extractor.startswith("table_column:")
-        ):
-            raise ValueError(f"compare[{index}].extractor is unsupported")
+        validate_compare_selection(index, entry, fields[tolerance_key])
     if tolerance_keys != set(fields):
         missing = sorted(set(fields) - tolerance_keys)
         raise ValueError(f"tolerance.json contains unreferenced fields: {missing}")
+    return compare_sources
 
-    invariants = expected.get("required_invariants")
-    invariant_source = expected.get("required_invariants_source")
-    if invariants is None:
-        if invariant_source is not None:
-            raise ValueError("required_invariants_source requires required_invariants")
-        return
+
+def validate_invariant_value(key: object, value: object) -> None:
+    if not isinstance(key, str) or not key:
+        raise ValueError("required_invariants keys must be non-empty strings")
+    if isinstance(value, list):
+        if not value or not all(isinstance(item, str) and item for item in value):
+            raise ValueError(f"required_invariants.{key} must be a non-empty string list")
+    elif not isinstance(value, (str, bool)) or isinstance(value, str) and not value:
+        raise ValueError(f"required_invariants.{key} must be a non-empty string, boolean, or string list")
+
+
+def validate_invariant_values(invariants: object) -> None:
     if not isinstance(invariants, dict) or not invariants:
         raise ValueError("required_invariants must be a non-empty object")
     for key, value in invariants.items():
-        if not isinstance(key, str) or not key:
-            raise ValueError("required_invariants keys must be non-empty strings")
-        if isinstance(value, list):
-            if not value or not all(isinstance(item, str) and item for item in value):
-                raise ValueError(f"required_invariants.{key} must be a non-empty string list")
-        elif not isinstance(value, (str, bool)) or isinstance(value, str) and not value:
-            raise ValueError(f"required_invariants.{key} must be a non-empty string, boolean, or string list")
+        validate_invariant_value(key, value)
+
+
+def validate_invariant_source(invariant_source: object, compare_sources: set[str]) -> None:
     if not isinstance(invariant_source, dict):
         raise ValueError("required_invariants_source must be an object")
     if set(invariant_source) != {"source", "section_selector", "key_column", "value_column"}:
@@ -258,6 +290,38 @@ def validate_fixture_contracts(fixture_dir: Path, expected: dict[str, Any], tole
             raise ValueError(f"required_invariants_source.{key} must be a non-empty string")
     if not invariant_source["section_selector"].startswith("## "):
         raise ValueError("required_invariants_source.section_selector must name an H2 section")
+
+
+def validate_fixture_contracts(fixture_dir: Path, expected: dict[str, Any], tolerance: dict[str, Any]) -> None:
+    validate_contract_identity(fixture_dir.name, expected, tolerance)
+    fields = validate_tolerance_fields(tolerance)
+    compare_sources = validate_compare_entries(expected, fields)
+    invariants = expected.get("required_invariants")
+    invariant_source = expected.get("required_invariants_source")
+    reject_input_only_compare(compare_sources, invariants)
+    if invariants is None:
+        if invariant_source is not None:
+            raise ValueError("required_invariants_source requires required_invariants")
+        return
+    validate_invariant_values(invariants)
+    validate_invariant_source(invariant_source, compare_sources)
+
+
+def enforce_changed_input(fixture_dir: Path, output_root: Path, expected: dict[str, Any], counts: Counts, label: str) -> bool:
+    """Fail a live run whose output still holds the fixture's original workflow.md bytes."""
+    sources = {entry.get("source") for entry in expected.get("compare", []) if isinstance(entry, dict)}
+    invariant_source = expected.get("required_invariants_source")
+    if isinstance(invariant_source, dict):
+        sources.add(invariant_source.get("source"))
+    if INPUT_WORKFLOW not in sources:
+        return True
+    if (output_root / INPUT_WORKFLOW).read_bytes() != (fixture_dir / INPUT_WORKFLOW).read_bytes():
+        return True
+    counts.fail(
+        f"{label}: {INPUT_WORKFLOW} unchanged",
+        f"the run left {INPUT_WORKFLOW} identical to the fixture input, so its comparisons read nothing the run produced",
+    )
+    return False
 
 
 def invariant_value(value: object) -> str:
@@ -415,7 +479,7 @@ def run_path(fixture_dir: Path, env_contract: Path, out_dir: Path, config: Confi
         "-p",
         "--max-budget-usd",
         config.budget_usd,
-        "/speckit-pro:autopilot workflow.md",
+        "/speckit-pro:speckit-autopilot workflow.md",
     ]
     child_env = env_from_contract(env_contract)
     selected_dir = str(Path(claude_executable).parent)
@@ -513,27 +577,21 @@ def emit_judge_result(
     tolerance_type: str,
     result: Any,
     report_path: Path,
-    file_a: Path | None = None,
-    file_b: Path | None = None,
-    extractor_name: str = "",
-    value_a: str = "",
-    value_b: str = "",
+    extractor_name: str,
+    value_a: str,
+    value_b: str,
 ) -> str:
     status = getattr(result, "status", "fail")
     reason = getattr(result, "reason", "comparison failed")
     if status == "pass":
-        if tolerance_type == "byte-identical":
-            counts.pass_(f"{fixture_id}:{field_name} (byte-identical)")
-        elif tolerance_type == "tolerance-1":
+        if tolerance_type == "tolerance-1":
             detail = result_detail(result)
             diff = detail.get("difference", 0)
             left = detail.get("value_a", value_a)
             right = detail.get("value_b", value_b)
             counts.pass_(f"{fixture_id}:{field_name} (tolerance-1, |{left} - {right}|={diff})")
-        elif extractor_name:
-            counts.pass_(f"{fixture_id}:{field_name} ({tolerance_type}, extractor={extractor_name})")
         else:
-            counts.pass_(f"{fixture_id}:{field_name} ({tolerance_type}, whole-file)")
+            counts.pass_(f"{fixture_id}:{field_name} ({tolerance_type}, extractor={extractor_name})")
         return "pass"
 
     if status == "skip":
@@ -541,16 +599,8 @@ def emit_judge_result(
         append_semantic_skip(report_path, field_name, value_a, value_b, reason)
         return "skip"
 
-    if tolerance_type == "byte-identical" and file_a is not None and file_b is not None:
-        counts.fail(f"{fixture_id}:{field_name}", "byte-identical tolerance failed - see diff in report")
-        append_file_diff(report_path, file_a, file_b)
-    elif extractor_name:
-        counts.fail(f"{fixture_id}:{field_name}", reason)
-        append_value_diff(report_path, field_name, extractor_name, value_a, value_b)
-    else:
-        counts.fail(f"{fixture_id}:{field_name}", reason)
-        if file_a is not None and file_b is not None:
-            append_file_diff(report_path, file_a, file_b)
+    counts.fail(f"{fixture_id}:{field_name}", reason)
+    append_value_diff(report_path, field_name, extractor_name, value_a, value_b)
     return "fail"
 
 
@@ -640,25 +690,11 @@ def compare_field(
         )
         return "fail"
 
-    if tolerance_type in {"exact", "tolerance-1"}:
-        return compare_whole_file_bytes(fixture_id, field_name, tolerance_type, file_a, file_b, report_path, counts)
-
-    try:
-        result = judge.judge_files(file_a, file_b, tolerance_type, field=field_name)
-    except ValueError as exc:
-        counts.fail(f"{fixture_id}:{field_name}", str(exc))
+    if tolerance_type == "tolerance-1":
+        counts.fail(f"{fixture_id}:{field_name}", "tolerance-1 requires table_row_count")
         return "fail"
 
-    return emit_judge_result(
-        counts,
-        fixture_id,
-        field_name,
-        tolerance_type,
-        result,
-        report_path,
-        file_a=file_a,
-        file_b=file_b,
-    )
+    return compare_whole_file_bytes(fixture_id, field_name, tolerance_type, file_a, file_b, report_path, counts)
 
 
 def run_fixture_live(fixture_dir: Path, config: Config, counts: Counts) -> None:
@@ -692,8 +728,10 @@ def run_fixture_live(fixture_dir: Path, config: Config, counts: Counts) -> None:
 
     expected = load_json(fixture_dir / "expected-equivalence.json")
     tolerance = load_json(fixture_dir / "tolerance.json")
-    invariants_ok = enforce_required_invariants(path_a, expected, counts, f"{fixture_id}:Path A")
-    invariants_ok &= enforce_required_invariants(path_b, expected, counts, f"{fixture_id}:Path B")
+    invariants_ok = True
+    for label, path in (("Path A", path_a), ("Path B", path_b)):
+        invariants_ok &= enforce_changed_input(fixture_dir, path, expected, counts, f"{fixture_id}:{label}")
+        invariants_ok &= enforce_required_invariants(path, expected, counts, f"{fixture_id}:{label}")
     if not invariants_ok:
         return
     fail_fast = bool(expected.get("fail_fast", False))
@@ -735,7 +773,12 @@ def main(argv: list[str] | None = None) -> int:
     print(SUMMARY_RULE)
     print(f"Layer 7 (parity): {counts.passed} passed, {counts.failed} failed, {counts.skipped} skipped")
     print(f"run-parity-fixtures: {counts.passed}/{counts.passed + counts.failed} passed")
-    return 1 if counts.failed else 0
+    if counts.failed:
+        return 1
+    if config.mode == "live" and counts.skipped and not config.accept_skips:
+        print(f"{counts.skipped} live comparison(s) skipped; rerun with --accept-skips to allow", file=sys.stderr)
+        return 1
+    return 0
 
 
 if __name__ == "__main__":

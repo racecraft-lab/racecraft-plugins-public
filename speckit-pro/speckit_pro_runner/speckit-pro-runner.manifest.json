@@ -436,6 +436,14 @@
     {
       "path": {
         "kind": "plugin_relative",
+        "value": "speckit_pro_runner/host_parity.py",
+        "display": "speckit_pro_runner/host_parity.py"
+      },
+      "sha256": "81454233d4c06f1fff031a721e4206a319ccc0b2cadf995f2462d47f9effed83"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
         "value": "speckit_pro_runner/mcp_protocol.py",
         "display": "speckit_pro_runner/mcp_protocol.py"
       },
@@ -471,7 +479,7 @@
         "value": "speckit_pro_runner/research_broker.py",
         "display": "speckit_pro_runner/research_broker.py"
       },
-      "sha256": "000304ab92ab370ac53ae7d21c88925338c140313b0976d71877d34851ff1818"
+      "sha256": "078e67c3513be09d3fe7d5330719fea3c7d22888ddf76aac082a8f15b303ead8"
     },
     {
       "path": {
