@@ -1,0 +1,442 @@
+<!-- ripwire doc-drift schema=ripwire.doc-drift/v1: markdown anchors that no longer hold: <doc p=> of <a k= l= c= why= ref= want= got= tgt=>; unchecked/dated rows disclose the rest. at=: commit+dirty+shallow. docs=N: markdown docs scanned for anchors; docs minus clean = the doc rows. clean=N: docs with no failed anchor (drift and dated 0); not proof every anchor was checked. checked=N: anchors verified against the index; checked + unchecked = anchors. prose=N: value anchors dropped as prose (name not in code); subtracted from anchors=, never checked. corpus=N: files the anchors were checked against (index + config/build exts); 0 = no anchor shape, no scan. drift=/dated=: anchors that no longer hold / anchors skipped as dated (unverifiable by date). unchecked=N: anchors not proved (the unchecked rows give each reason); checked + unchecked = anchors. a kind=/rec=: dated-record, an author-dated failed anchor in dated= / its evidence: line|block|title|stamp. a sym=: the symbol the doc names on that file:line; line-moved = that symbol no longer spans the line. w resolves-to=: the indexed symbol spanning that line; not proof it is the one the doc meant. unchecked r=/note=: why n= anchors were not proved, and what was still checked for them. dated r=/note=: the dating mark that moved n= failed anchors into dated= instead of drift=. -->
+<doc-drift schema="ripwire.doc-drift/v1" docs="828" clean="776" anchors="5533" checked="1827" unchecked="3706" drift="145" dated="32" prose="4" corpus="1825" at="87fb3a2f6+dirty">
+<doc p="docs/ai/research/tool-agnostic-capability-discovery-spike.md" anchors="51" checked="18" drift="16" dated="0">
+<a k="file-line" l="25" c="211" why="range-straddles" ref="docs/ai/specs/tool-agnostic-capability-discovery-design-concept.md:20-27" got="(file scope)" tgt="docs/ai/specs/tool-agnostic-capability-discovery-design-concept.md:27"/>
+<a k="file-line" l="25" c="287" why="range-straddles" ref="docs/ai/specs/tool-agnostic-capability-discovery-design-concept.md:129-140" got="(file scope)" tgt="docs/ai/specs/tool-agnostic-capability-discovery-design-concept.md:140"/>
+<a k="file-line" l="25" c="369" why="range-straddles" ref="docs/ai/specs/tool-agnostic-capability-discovery-design-concept.md:219-224" got="(file scope)" tgt="docs/ai/specs/tool-agnostic-capability-discovery-design-concept.md:224"/>
+<a k="file-line" l="68" c="37" why="range-straddles" ref="speckit-pro/agents/domain-researcher.md:11-18" got="Domain Researcher — Consensus Agent" tgt="speckit-pro/agents/domain-researcher.md:18"/>
+<a k="file-line" l="75" c="32" why="past-eof" ref="speckit-pro/codex-skills/speckit-autopilot/agents/openai.yaml:9-16" got="7 lines" tgt="speckit-pro/codex-skills/speckit-autopilot/agents/openai.yaml"/>
+<a k="file-line" l="77" c="27" why="missing-file" ref="tests/speckit-pro/layer5-tool-scoping/validate-tool-scoping.sh:240-250"/>
+<a k="file-line" l="80" c="90" why="range-straddles" ref="docs/ai/specs/tool-agnostic-capability-discovery-design-concept.md:20-27" got="(file scope)" tgt="docs/ai/specs/tool-agnostic-capability-discovery-design-concept.md:27"/>
+<a k="file-line" l="90" c="224" why="range-straddles" ref="speckit-pro/.claude-plugin/plugin.json:1-20" got="dependencies" tgt="speckit-pro/.claude-plugin/plugin.json:20"/>
+<a k="file-line" l="93" c="235" why="past-eof" ref="speckit-pro/codex-skills/speckit-autopilot/agents/openai.yaml:9-16" got="7 lines" tgt="speckit-pro/codex-skills/speckit-autopilot/agents/openai.yaml"/>
+<a k="file-line" l="94" c="187" why="range-straddles" ref="speckit-pro/.codex-plugin/plugin.json:22-43" got="defaultPrompt" tgt="speckit-pro/.codex-plugin/plugin.json:43"/>
+<a k="file-line" l="119" c="256" why="range-straddles" ref="docs/ai/specs/tool-agnostic-capability-discovery-design-concept.md:219-224" got="(file scope)" tgt="docs/ai/specs/tool-agnostic-capability-discovery-design-concept.md:224"/>
+<a k="file-line" l="120" c="296" why="range-straddles" ref="speckit-pro/.codex-plugin/plugin.json:22-43" got="defaultPrompt" tgt="speckit-pro/.codex-plugin/plugin.json:43"/>
+<a k="file-line" l="120" c="347" why="past-eof" ref="speckit-pro/codex-skills/speckit-autopilot/agents/openai.yaml:9-16" got="7 lines" tgt="speckit-pro/codex-skills/speckit-autopilot/agents/openai.yaml"/>
+<a k="file-line" l="137" c="120" why="past-eof" ref="speckit-pro/codex-skills/speckit-autopilot/agents/openai.yaml:9-16" got="7 lines" tgt="speckit-pro/codex-skills/speckit-autopilot/agents/openai.yaml"/>
+<a k="file-line" l="141" c="118" why="range-straddles" ref="docs/ai/specs/tool-agnostic-capability-discovery-design-concept.md:20-27" got="(file scope)" tgt="docs/ai/specs/tool-agnostic-capability-discovery-design-concept.md:27"/>
+<a k="file-line" l="194" c="37" why="missing-file" ref="tests/speckit-pro/layer5-tool-scoping/validate-tool-scoping.sh:240-250"/>
+</doc>
+<doc p="docs/ai/specs/.process/ART-006-design-concept.md" anchors="38" checked="15" drift="12" dated="1">
+<a k="file-line" l="53" c="4" why="missing-file" ref="docs/ai/specs/.process/CAR-005-workflow.md:38-41"/>
+<a k="file-line" l="170" c="19" why="missing-file" ref="validate-codex-skills.py:58"/>
+<a k="file-line" l="196" c="44" why="past-eof" ref="SKILL.md:413" got="259 lines" tgt=".agents/skills/speckit-analyze/SKILL.md"/>
+<a k="file-line" l="278" c="14" why="missing-file" ref="validate-codex-skills.py:168-171"/>
+<a k="file-line" l="284" c="46" why="missing-file" ref="validate-codex-skills.py:235-242"/>
+<a k="file-line" l="310" c="2" why="range-straddles" ref="tests/speckit-pro/unit/test-unit-layout.py:122-141" got="test_support_paths_are_purpose_named" tgt="tests/speckit-pro/unit/test-unit-layout.py:141"/>
+<a k="file-line" l="319" c="29" why="past-eof" ref="codex-skills/speckit-autopilot/SKILL.md:986-992" got="825 lines" tgt="speckit-pro/codex-skills/speckit-autopilot/SKILL.md"/>
+<a k="file-line" l="336" c="5" why="past-eof" ref="SKILL.md:300" sym="PROJECT_COMMANDS" got="259 lines" tgt=".agents/skills/speckit-analyze/SKILL.md"/>
+<a k="file-line" l="338" c="36" why="past-eof" ref="SKILL.md:336" got="259 lines" tgt=".agents/skills/speckit-analyze/SKILL.md"/>
+<a k="file-line" l="371" c="26" why="missing-file" ref="validate-codex-skills.py:235-242"/>
+<a k="file-line" l="388" c="4" why="range-straddles" kind="dated-record" rec="block" ref="tests/speckit-pro/unit/test-unit-layout.py:122-141" got="test_support_paths_are_purpose_named" tgt="tests/speckit-pro/unit/test-unit-layout.py:141"/>
+<a k="file-line" l="412" c="46" why="range-straddles" ref="tests/speckit-pro/unit/test-unit-layout.py:273-294" got="(file scope)" tgt="tests/speckit-pro/unit/test-unit-layout.py:294"/>
+<a k="file-line" l="416" c="49" why="missing-file" ref="validate-codex-parity.py:134"/>
+</doc>
+<doc p="docs/ai/specs/.process/DOC-001-workflow.md" anchors="11" checked="10" drift="9" dated="0">
+<a k="symbol" l="185" c="65" why="undefined" ref="route_path"/>
+<a k="symbol" l="185" c="79" why="undefined" ref="route_label"/>
+<a k="symbol" l="185" c="94" why="undefined" ref="diataxis_mode"/>
+<a k="symbol" l="185" c="120" why="undefined" ref="secondary_modes"/>
+<a k="symbol" l="185" c="139" why="undefined" ref="target_audience"/>
+<a k="symbol" l="185" c="158" why="undefined" ref="route_purpose"/>
+<a k="symbol" l="185" c="194" why="undefined" ref="success_criterion"/>
+<a k="symbol" l="185" c="215" why="undefined" ref="shell_owner_doc"/>
+<a k="symbol" l="185" c="238" why="undefined" ref="full_content_owner_doc"/>
+</doc>
+<doc p="docs/ai/specs/.process/XPLAT-008-workflow.md" anchors="21" checked="15" drift="8" dated="0">
+<a k="symbol" l="658" c="281" why="undefined" ref="uat_rows"/>
+<a k="symbol" l="658" c="293" why="undefined" ref="repair_actions"/>
+<a k="symbol" l="658" c="311" why="undefined" ref="public_claim_results"/>
+<a k="symbol" l="658" c="395" why="undefined" ref="evidence_refs"/>
+<a k="symbol" l="659" c="18" why="undefined" ref="PayloadCompletenessResult"/>
+<a k="symbol" l="659" c="70" why="undefined" ref="expected_items"/>
+<a k="symbol" l="661" c="132" why="undefined" ref="ReleaseReadinessGateRecord"/>
+<a k="symbol" l="661" c="444" why="undefined" ref="runner_invocation_ids"/>
+</doc>
+<doc p="docs/ai/specs/.process/ART-003-workflow.md" anchors="45" checked="15" drift="7" dated="0">
+<a k="file-line" l="1004" c="8" why="past-eof" ref="test-artifact-fill-regions.py:711" got="132 lines" tgt="tests/speckit-pro/unit/test-artifact-fill-regions.py"/>
+<a k="file-line" l="1053" c="3" why="range-straddles" ref="speckit_pro_runner/helpers/read_only.py:906-914" got="(file scope)" tgt="speckit-pro/speckit_pro_runner/helpers/read_only.py:914"/>
+<a k="file-line" l="1432" c="51" why="past-eof" ref="research.md:78-82" got="13 lines" tgt="tests/speckit-pro/evals/fixtures/functional/native-orchestration/plan-research/research.md"/>
+<a k="file-line" l="1442" c="19" why="past-eof" ref="tasks.md:105" got="31 lines" tgt="specs/formal-001-selective-formal-methods/tasks.md"/>
+<a k="file-line" l="1442" c="38" why="past-eof" ref="quickstart.md:195" got="5 lines" tgt="tests/speckit-pro/evals/fixtures/functional/native-orchestration/rescope-reconciliation/quickstart.md"/>
+<a k="file-line" l="1444" c="37" why="past-eof" ref="quickstart.md:197-198" got="5 lines" tgt="tests/speckit-pro/evals/fixtures/functional/native-orchestration/rescope-reconciliation/quickstart.md"/>
+<a k="file-line" l="1458" c="3" why="past-eof" ref="test-artifact-gallery.py:3021-3039" got="162 lines" tgt="tests/speckit-pro/unit/test-artifact-gallery.py"/>
+</doc>
+<doc p="docs/ai/specs/.process/ART-008-workflow.md" anchors="81" checked="34" drift="7" dated="0">
+<a k="file-line" l="1080" c="354" why="missing-file" ref="contracts/sweep-classifier-output.md:13-15"/>
+<a k="file-line" l="1081" c="254" why="missing-file" ref="contracts/sweep-classifier-output.md:218"/>
+<a k="file-line" l="1085" c="289" why="missing-file" ref="tests/speckit-pro/layer1-structural/validate-capability-pointer.py:92-98"/>
+<a k="file-line" l="1106" c="4" why="range-straddles" ref="validate-tool-scoping.py:29-48" got="READ_ONLY_ROLES" tgt="tests/speckit-pro/layer5-tool-scoping/validate-tool-scoping.py:48"/>
+<a k="file-line" l="1111" c="39" why="missing-file" ref="run-efficiency-benchmarks.py:247"/>
+<a k="file-line" l="1115" c="59" why="missing-file" ref="validate-codex-agents.py:42"/>
+<a k="symbol" l="1630" c="78" why="undefined" ref="PROMPT_LEAD"/>
+</doc>
+<doc p="docs/ai/specs/.process/ART-005-design-concept.md" anchors="22" checked="6" drift="6" dated="0">
+<a k="file-line" l="234" c="31" why="past-eof" ref="SPA-CONTRACT.md:372-382" got="178 lines" tgt="speckit-pro/artifact-gallery/SPA-CONTRACT.md"/>
+<a k="file-line" l="237" c="5" why="range-straddles" ref=".specify/memory/archive-reports/2026-08-14-art-003-post-merge-hygiene.md:110-124" got="(file scope)" tgt=".specify/memory/archive-reports/2026-08-14-art-003-post-merge-hygiene.md:124"/>
+<a k="file-line" l="289" c="5" why="range-straddles" ref=".specify/memory/archive-reports/2026-08-14-art-003-post-merge-hygiene.md:209-221" got="(file scope)" tgt=".specify/memory/archive-reports/2026-08-14-art-003-post-merge-hygiene.md:221"/>
+<a k="file-line" l="315" c="20" why="past-eof" ref="SPA-CONTRACT.md:372-380" got="178 lines" tgt="speckit-pro/artifact-gallery/SPA-CONTRACT.md"/>
+<a k="file-line" l="343" c="28" why="past-eof" ref="SPA-CONTRACT.md:372-375" got="178 lines" tgt="speckit-pro/artifact-gallery/SPA-CONTRACT.md"/>
+<a k="file-line" l="345" c="30" why="past-eof" ref="SPA-CONTRACT.md:378-382" got="178 lines" tgt="speckit-pro/artifact-gallery/SPA-CONTRACT.md"/>
+</doc>
+<doc p="docs/ai/specs/.process/ART-014-workflow.md" anchors="138" checked="84" drift="6" dated="0">
+<a k="symbol" l="1096" c="52" why="undefined" ref="ELOOP"/>
+<a k="file-line" l="1832" c="3" why="range-straddles" ref="validate-autopilot-phase-coverage.py:257-481" got="PROBLEM_KEY_INTENT" tgt="speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py:481"/>
+<a k="file-line" l="1847" c="3" why="range-straddles" ref="validate-autopilot-phase-coverage.py:1529-1583" got="_marker_tasks_sha_text" tgt="speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py:1583"/>
+<a k="file-line" l="1853" c="20" why="past-eof" ref="SKILL.md:494-504" got="259 lines" tgt=".agents/skills/speckit-analyze/SKILL.md"/>
+<a k="file-line" l="1854" c="3" why="past-eof" ref="SKILL.md:828" got="259 lines" tgt=".agents/skills/speckit-analyze/SKILL.md"/>
+<a k="file-line" l="1854" c="19" why="past-eof" ref="codex-skills/.../SKILL.md:1053-1055" got="259 lines" tgt=".agents/skills/speckit-analyze/SKILL.md"/>
+</doc>
+<doc p="docs/ai/specs/.process/PRSG-012-workflow.md" anchors="8" checked="8" drift="6" dated="0">
+<a k="file-line" l="532" c="368" why="missing-file" ref="tests/speckit-pro/unit/test-generate-pr-body.sh:385"/>
+<a k="file-line" l="532" c="423" why="missing-file" ref="tests/speckit-pro/unit/test-validate-pr-packet.sh:390"/>
+<a k="file-line" l="532" c="480" why="missing-file" ref="tests/speckit-pro/unit/test-validate-pr-packet.sh:530"/>
+<a k="file-line" l="532" c="537" why="missing-file" ref="tests/speckit-pro/unit/test-multi-pr-emission.sh:346"/>
+<a k="file-line" l="532" c="593" why="missing-file" ref="tests/speckit-pro/unit/test-multi-pr-emission.sh:1141"/>
+<a k="file-line" l="532" c="654" why="missing-file" ref="tests/speckit-pro/unit/test-multi-pr-emission.sh:1445"/>
+</doc>
+<doc p="docs/ai/specs/PRSG-001-design-concept.md" anchors="20" checked="12" drift="6" dated="0">
+<a k="file-line" l="83" c="27" why="missing-file" ref="reviewability-gate.sh:48"/>
+<a k="file-line" l="112" c="23" why="missing-file" ref="ensure-reviewability-preset.sh:13"/>
+<a k="file-line" l="136" c="3" why="missing-file" ref="generate-pr-body.sh:179"/>
+<a k="file-line" l="137" c="3" why="missing-file" ref="skeleton.sh:331"/>
+<a k="file-line" l="244" c="58" why="missing-file" ref="generate-pr-body.sh:179"/>
+<a k="file-line" l="254" c="51" why="missing-file" ref="reviewability-gate.sh:48" sym="is_excluded_generated"/>
+</doc>
+<doc p="docs/ai/specs/.process/ART-012-workflow.md" anchors="47" checked="20" drift="5" dated="0">
+<a k="file-line" l="389" c="530" why="past-eof" ref="agent-teams-integration.md:325-328" got="250 lines" tgt="speckit-pro/skills/speckit-autopilot/references/agent-teams-integration.md"/>
+<a k="file-line" l="389" c="984" why="missing-file" ref="CAR-005-workflow.md:1348"/>
+<a k="file-line" l="776" c="3" why="past-eof" ref="SKILL.md:389-392" got="259 lines" tgt=".agents/skills/speckit-analyze/SKILL.md"/>
+<a k="symbol" l="1441" c="21" why="undefined" ref="_fixture_bytes"/>
+<a k="symbol" l="1441" c="42" why="undefined" ref="GOVERNED_ROLE_ORDER"/>
+</doc>
+<doc p="docs/ai/specs/reviewer-experience-technical-roadmap.md" anchors="21" checked="15" drift="5" dated="0">
+<a k="symbol" l="211" c="72" why="undefined" ref="assert_eq"/>
+<a k="symbol" l="211" c="104" why="undefined" ref="assert_file_exists"/>
+<a k="symbol" l="211" c="126" why="undefined" ref="assert_exit_code"/>
+<a k="symbol" l="211" c="146" why="undefined" ref="test_summary"/>
+<a k="symbol" l="241" c="166" why="undefined" ref="agents.max_depth"/>
+</doc>
+<doc p="docs/ai/specs/.process/G56R-006-workflow.md" anchors="12" checked="5" drift="4" dated="0">
+<a k="const" l="285" c="105" why="const-value" ref="total_entries=55" want="55" got="0" tgt="tests/speckit-pro/lib/native_eval_claude_activation.py:519"/>
+<a k="symbol" l="460" c="88" why="undefined" ref="no_helper_allowed"/>
+<a k="file-line" l="554" c="71" why="past-eof" ref="tasks.md:228-254" got="31 lines" tgt="specs/formal-001-selective-formal-methods/tasks.md"/>
+<a k="file-line" l="555" c="31" why="past-eof" ref="tasks.md:196-226" got="31 lines" tgt="specs/formal-001-selective-formal-methods/tasks.md"/>
+</doc>
+<doc p="docs/ai/specs/.process/PRSG-009-workflow.md" anchors="18" checked="5" drift="4" dated="0">
+<a k="file-line" l="764" c="139" why="missing-file" ref="tests/speckit-pro/unit/test-multi-pr-emission.sh:84"/>
+<a k="file-line" l="764" c="492" why="missing-file" ref="tests/speckit-pro/unit/test-generate-pr-body.sh:154"/>
+<a k="file-line" l="764" c="579" why="missing-file" ref="tests/speckit-pro/unit/test-generate-spec-index.sh:303"/>
+<a k="file-line" l="764" c="713" why="missing-file" ref="tests/speckit-pro/unit/test-restack.sh:209"/>
+</doc>
+<doc p=".agents/skills/speckit-specify/SKILL.md" anchors="23" checked="11" drift="3" dated="0">
+<a k="symbol" l="86" c="49" why="undefined" ref="feature_numbering"/>
+<a k="symbol" l="91" c="46" why="undefined" ref="feature_numbering"/>
+<a k="symbol" l="91" c="177" why="undefined" ref="feature_numbering"/>
+</doc>
+<doc p="docs/ai/specs/.process/ART-001-workflow.md" anchors="63" checked="23" drift="3" dated="0">
+<a k="file-line" l="401" c="4" why="missing-file" ref="tests/speckit-pro/unit/test-analysis-decision-ladder.py:65"/>
+<a k="file-line" l="820" c="37" why="missing-file" ref="tests/speckit-pro/layer1-structural/validate-curated-set.py:38"/>
+<a k="file-line" l="1422" c="29" why="line-moved" ref="speckit_pro_runner/helpers/pr_emission.py:427" sym="required_headings" got="plan_commands" tgt="speckit-pro/speckit_pro_runner/helpers/pr_emission.py:697"/>
+</doc>
+<doc p="docs/ai/specs/html-artifacts-technical-roadmap.md" anchors="46" checked="23" drift="3" dated="0">
+<a k="file-line" l="1027" c="60" why="past-eof" ref="SKILL.md:398" got="259 lines" tgt=".agents/skills/speckit-analyze/SKILL.md"/>
+<a k="file-line" l="1092" c="3" why="range-straddles" ref="speckit-pro/speckit_pro_runner/helpers/read_only.py:1063-1090" got="scaffold_placement_payload" tgt="speckit-pro/speckit_pro_runner/helpers/read_only.py:1090"/>
+<a k="file-line" l="1324" c="69" why="line-moved" ref="read_only.py:8306" sym="count_done_tasks" got="trusted_file_exists" tgt="speckit-pro/speckit_pro_runner/helpers/read_only.py:8806"/>
+</doc>
+<doc p="tests/speckit-pro/evals/audit/integration-parity-audit.md" anchors="24" checked="7" drift="3" dated="0">
+<a k="file-line" l="133" c="449" why="range-straddles" ref="speckit-status/SKILL.md:194-209" got="Specific Spec Procedure" tgt="speckit-pro/codex-skills/speckit-status/SKILL.md:209"/>
+<a k="file-line" l="134" c="338" why="range-straddles" ref="helpers/stack_manager.py:110-189" sym="dry_run" got="qualify_topology" tgt="speckit-pro/speckit_pro_runner/helpers/stack_manager.py:189"/>
+<a k="symbol" l="449" c="2" why="undefined" ref="_claude_synthesis_mechanism"/>
+</doc>
+<doc p="docs/ai/specs/.process/ART-011-design-concept.md" anchors="12" checked="4" drift="2" dated="0">
+<a k="file-line" l="123" c="4" why="past-eof" ref="speckit-pro/codex-skills/grill-me/SKILL.md:129" got="86 lines" tgt="speckit-pro/codex-skills/grill-me/SKILL.md"/>
+<a k="file-line" l="306" c="5" why="past-eof" ref="speckit-pro/codex-skills/grill-me/SKILL.md:283-286" got="86 lines" tgt="speckit-pro/codex-skills/grill-me/SKILL.md"/>
+</doc>
+<doc p="docs/ai/specs/.process/DOC-014-workflow.md" anchors="29" checked="7" drift="2" dated="0">
+<a k="file-line" l="218" c="2049" why="missing-file" ref="astrojs/starlight/index.ts:107-109"/>
+<a k="file-line" l="546" c="180" why="missing-file" ref="index.ts:107-109"/>
+</doc>
+<doc p="docs/ai/specs/.process/PRSG-007-design-concept.md" anchors="4" checked="4" drift="2" dated="0">
+<a k="symbol" l="37" c="92" why="undefined" ref="surface_for_path"/>
+<a k="symbol" l="224" c="17" why="undefined" ref="surface_for_path"/>
+</doc>
+<doc p="docs/ai/specs/.process/PRSG-008-workflow.md" anchors="11" checked="3" drift="2" dated="0">
+<a k="file-line" l="572" c="5" why="missing-file" ref="tests/speckit-pro/unit/test-plan-layers.sh:851"/>
+<a k="file-line" l="578" c="14" why="past-eof" ref="specs/prsg-008-layer-planner/tasks.md:234" got="31 lines" tgt="specs/formal-001-selective-formal-methods/tasks.md"/>
+</doc>
+<doc p="docs/ai/specs/.process/PRSG-011-workflow.md" anchors="8" checked="7" drift="2" dated="0">
+<a k="file-line" l="547" c="74" why="missing-file" ref="tests/speckit-pro/unit/test-migrate-structure.sh:312"/>
+<a k="file-line" l="547" c="290" why="missing-file" ref="tests/speckit-pro/unit/test-relocate-process-artifacts.sh:162"/>
+</doc>
+<doc p="speckit-pro/codex-skills/speckit-autopilot/references/prerequisites-codex.md" anchors="110" checked="49" drift="2" dated="0">
+<a k="symbol" l="111" c="44" why="undefined" ref="MEMORY_DIR"/>
+<a k="symbol" l="111" c="62" why="undefined" ref="TEMPLATES_DIR"/>
+</doc>
+<doc p="tests/speckit-pro/evals/audit/unit-execution-contract-audit.md" anchors="5" checked="3" drift="2" dated="0">
+<a k="file-line" l="27" c="153" why="range-straddles" ref="tests/speckit-pro/unit/test-autopilot-execution-contract.py:25-81" got="test_both_hosts_load_one_durable_contract" tgt="tests/speckit-pro/unit/test-autopilot-execution-contract.py:81"/>
+<a k="file-line" l="28" c="112" why="line-moved" ref="tests/speckit-pro/unit/test-execution-control.py:619-623" sym="DockerVerificationTests" got="test_unbound_mismatched_or_ordinary_requests_are_refused_without_mutation" tgt="tests/speckit-pro/unit/test-execution-control.py:3058"/>
+</doc>
+<doc p="docs/ai/specs/.process/ART-002-workflow.md" anchors="51" checked="26" drift="1" dated="0">
+<a k="file-line" l="1397" c="17" why="missing-file" ref="contracts/slot-inventory-contract.md:27"/>
+</doc>
+<doc p="docs/ai/specs/.process/ART-003-design-concept.md" anchors="24" checked="1" drift="1" dated="0">
+<a k="file-line" l="398" c="41" why="past-eof" ref="SPA-CONTRACT.md:372" got="178 lines" tgt="speckit-pro/artifact-gallery/SPA-CONTRACT.md"/>
+</doc>
+<doc p="docs/ai/specs/.process/ART-004-manual-uat.md" anchors="11" checked="8" drift="1" dated="0">
+<a k="const" l="193" c="55" why="const-value" ref="scrollLeft=29" want="29" got="0" tgt="docs-site/tests/artifact-gallery.spec.mjs:96"/>
+</doc>
+<doc p="docs/ai/specs/.process/ART-005-workflow.md" anchors="12" checked="7" drift="1" dated="0">
+<a k="file-line" l="992" c="5" why="past-eof" ref="tests/speckit-pro/unit/test-artifact-gallery.py:7334" got="162 lines" tgt="tests/speckit-pro/unit/test-artifact-gallery.py"/>
+</doc>
+<doc p="docs/ai/specs/.process/ART-006-workflow.md" anchors="21" checked="6" drift="1" dated="0">
+<a k="file-line" l="788" c="64" why="line-moved" ref="read_only.py:3939-3940" sym="is_production_file" got="sweep_redact" tgt="speckit-pro/speckit_pro_runner/helpers/read_only.py:8858"/>
+</doc>
+<doc p="docs/ai/specs/.process/ART-008-slice-2-workflow.md" anchors="71" checked="28" drift="1" dated="0">
+<a k="symbol" l="750" c="35" why="undefined" ref="NO_BASH_ANCESTOR"/>
+</doc>
+<doc p="docs/ai/specs/.process/PRSG-004-design-concept.md" anchors="12" checked="6" drift="1" dated="0">
+<a k="symbol" l="239" c="7" why="undefined" ref="moc_is_gated"/>
+</doc>
+<doc p="docs/ai/specs/.process/TACD-003-workflow.md" anchors="12" checked="6" drift="1" dated="0">
+<a k="const" l="376" c="17" why="const-value" ref="total_entries=8" want="8" got="0" tgt="tests/speckit-pro/lib/native_eval_claude_activation.py:519"/>
+</doc>
+<doc p="docs/ai/specs/.process/XPLAT-007-workflow.md" anchors="3" checked="2" drift="1" dated="0">
+<a k="const" l="400" c="138" why="const-value" ref="total_entries=24" want="24" got="0" tgt="tests/speckit-pro/lib/native_eval_claude_activation.py:519"/>
+</doc>
+<doc p="docs/ai/specs/SPEC-006a-workflow.md" anchors="11" checked="5" drift="1" dated="0">
+<a k="symbol" l="434" c="249" why="undefined" ref="append_missing_section"/>
+</doc>
+<doc p="docs/prd-racecraft-identity-system.md" anchors="10" checked="3" drift="1" dated="0">
+<a k="symbol" l="119" c="62" why="undefined" ref="composerIcon"/>
+</doc>
+<doc p="speckit-pro/codex-skills/speckit-autopilot/references/task-list-canonical-codex.md" anchors="20" checked="7" drift="1" dated="0">
+<a k="file-line" l="108" c="53" why="past-eof" ref="SKILL.md:662" got="259 lines" tgt=".agents/skills/speckit-analyze/SKILL.md"/>
+</doc>
+<doc p="speckit-pro/codex-skills/speckit-status/SKILL.md" anchors="12" checked="4" drift="1" dated="0">
+<a k="symbol" l="130" c="34" why="undefined" ref="source_ref"/>
+</doc>
+<doc p="speckit-pro/skills/speckit-autopilot/references/phase-execution.md" anchors="183" checked="60" drift="1" dated="0">
+<a k="symbol" l="88" c="6" why="undefined" ref="IS_WORKTREE"/>
+</doc>
+<doc p="speckit-pro/skills/speckit-autopilot/references/post-implementation.md" anchors="17" checked="5" drift="1" dated="0">
+<a k="file-line" l="115" c="2" why="missing-file" ref="src/foo.ts:42"/>
+</doc>
+<doc p="tests/speckit-pro/evals/audit/unit-final-remainder-audit.md" anchors="7" checked="6" drift="1" dated="0">
+<a k="symbol" l="18" c="5" why="undefined" ref="NativeEvalEntrypointTests.test_execute_is_a_clear_integration_guard"/>
+</doc>
+<doc p="tests/speckit-pro/layer1-structural/fixtures/spec-index/roadmap-moc/specs/legacy-thing/SPEC-MOC.md" anchors="2" checked="2" drift="1" dated="0">
+<a k="symbol" l="11" c="46" why="undefined" ref="moc_is_gated"/>
+</doc>
+<doc p="tests/speckit-pro/layer6-integration/performance-fixtures/draft-pr-emission/source/contracts/draft-packet-mode.md" anchors="53" checked="37" drift="1" dated="0">
+<a k="file-line" l="85" c="2" why="range-straddles" ref="speckit-pro/speckit_pro_runner/helpers/read_only.py:2669-2671" got="(file scope)" tgt="speckit-pro/speckit_pro_runner/helpers/read_only.py:2671"/>
+</doc>
+<doc p=".specify/memory/archive-reports/2026-08-25-art-008-post-merge-hygiene.md" anchors="17" checked="10" drift="0" dated="1">
+<a k="symbol" l="220" c="260" why="undefined" kind="dated-record" rec="title" ref="corpus_path"/>
+</doc>
+<doc p="docs/ai/specs/.process/ART-004-workflow.md" anchors="24" checked="15" drift="0" dated="7">
+<a k="file-line" l="886" c="5" why="past-eof" kind="dated-record" rec="block" ref="test-artifact-gallery.py:7447" got="162 lines" tgt="tests/speckit-pro/unit/test-artifact-gallery.py"/>
+<a k="file-line" l="887" c="20" why="past-eof" kind="dated-record" rec="block" ref="test-artifact-gallery.py:7479" got="162 lines" tgt="tests/speckit-pro/unit/test-artifact-gallery.py"/>
+<a k="file-line" l="889" c="35" why="past-eof" kind="dated-record" rec="block" ref="test-artifact-gallery.py:7555" got="162 lines" tgt="tests/speckit-pro/unit/test-artifact-gallery.py"/>
+<a k="file-line" l="890" c="46" why="past-eof" kind="dated-record" rec="block" ref="test-artifact-gallery.py:8348" got="162 lines" tgt="tests/speckit-pro/unit/test-artifact-gallery.py"/>
+<a k="file-line" l="892" c="31" why="past-eof" kind="dated-record" rec="block" ref="test-artifact-fill-regions.py:931" got="132 lines" tgt="tests/speckit-pro/unit/test-artifact-fill-regions.py"/>
+<a k="file-line" l="893" c="35" why="past-eof" kind="dated-record" rec="block" ref="test-artifact-gallery.py:8314" got="162 lines" tgt="tests/speckit-pro/unit/test-artifact-gallery.py"/>
+<a k="file-line" l="895" c="5" why="past-eof" kind="dated-record" rec="block" ref="test-artifact-gallery.py:8799" got="162 lines" tgt="tests/speckit-pro/unit/test-artifact-gallery.py"/>
+</doc>
+<doc p="docs/ai/specs/.process/ART-007-workflow.md" anchors="72" checked="38" drift="0" dated="1">
+<a k="file-line" l="947" c="26" why="range-straddles" kind="dated-record" rec="block" ref="read_only.py:2669-2671" got="(file scope)" tgt="speckit-pro/speckit_pro_runner/helpers/read_only.py:2671"/>
+</doc>
+<doc p="docs/ai/specs/.process/PRSG-006-design-concept.md" anchors="11" checked="7" drift="0" dated="1">
+<a k="file-line" l="147" c="3" why="missing-file" kind="dated-record" rec="stamp" ref="reviewability-gate.sh:19-24"/>
+</doc>
+<doc p="docs/ai/specs/gate-tooling-decision.md" anchors="20" checked="10" drift="0" dated="1">
+<a k="file-line" l="173" c="54" why="missing-file" kind="dated-record" rec="stamp" ref="src/app.ts:5-7"/>
+</doc>
+<doc p="tests/speckit-pro/evals/audit/functional-audit.md" anchors="22" checked="8" drift="0" dated="1">
+<a k="file-line" l="241" c="269" why="missing-file" kind="dated-record" rec="stamp" ref="src/billing.py:6" sym="reindex_all"/>
+</doc>
+<doc p="tests/speckit-pro/layer6-integration/performance-fixtures/draft-pr-emission/source/plan.md" anchors="5" checked="3" drift="0" dated="1">
+<a k="file-line" l="132" c="11" why="range-straddles" kind="dated-record" rec="stamp" ref="tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py:424-441" got="routing_required_agents" tgt="tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py:441"/>
+</doc>
+<doc p="tests/speckit-pro/layer6-integration/performance-fixtures/draft-pr-emission/source/research.md" anchors="84" checked="44" drift="0" dated="17">
+<a k="file-line" l="25" c="4" why="range-straddles" kind="dated-record" rec="stamp" ref="speckit-pro/skills/speckit-autopilot/contracts/pr-packet.schema.json:33-36" got="target" tgt="speckit-pro/skills/speckit-autopilot/contracts/pr-packet.schema.json:36"/>
+<a k="file-line" l="85" c="30" why="line-moved" kind="dated-record" rec="stamp" ref="pr-packet.schema.json:66-72" sym="verification_evidence" got="scope_evidence" tgt="speckit-pro/skills/speckit-autopilot/contracts/pr-packet.schema.json:57"/>
+<a k="file-line" l="151" c="5" why="past-eof" kind="dated-record" rec="stamp" ref="speckit-pro/speckit_pro_runner/gates/release.py:1242-1245" got="747 lines" tgt="speckit-pro/speckit_pro_runner/gates/release.py"/>
+<a k="file-line" l="180" c="30" why="line-moved" kind="dated-record" rec="stamp" ref="pr_emission.py:586-626" sym="normalize_scope_evidence" got="normalize_packet_input" tgt="speckit-pro/speckit_pro_runner/helpers/pr_emission.py:857"/>
+<a k="file-line" l="182" c="45" why="line-moved" kind="dated-record" rec="stamp" ref="pr_emission.py:628-651" sym="normalize_evidence_list" got="normalize_packet_input" tgt="speckit-pro/speckit_pro_runner/helpers/pr_emission.py:902"/>
+<a k="file-line" l="232" c="50" why="line-moved" kind="dated-record" rec="stamp" ref="read_only.py:1196-1209" sym="workflow_table_rows" got="resolve_scaffold_worktree_placement" tgt="speckit-pro/speckit_pro_runner/helpers/read_only.py:2705"/>
+<a k="file-line" l="275" c="3" why="range-straddles" kind="dated-record" rec="stamp" ref="speckit-pro/speckit_pro_runner/envelope.py:78-91" got="(file scope)" tgt="speckit-pro/speckit_pro_runner/envelope.py:91"/>
+<a k="file-line" l="343" c="6" why="range-straddles" kind="dated-record" rec="stamp" ref="tests/speckit-pro/unit/test-speckit-pro-read-only-helpers.py:901-926" got="test_resolve_workflow_binding_covers_registered_worktree_relations" tgt="tests/speckit-pro/unit/test-speckit-pro-read-only-helpers.py:926"/>
+<a k="file-line" l="360" c="17" why="range-straddles" kind="dated-record" rec="stamp" ref="speckit-pro/speckit_pro_runner/helpers/install.py:31-44" got="CODEX_LUNA_FALLBACK_MODEL" tgt="speckit-pro/speckit_pro_runner/helpers/install.py:44"/>
+<a k="file-line" l="362" c="29" why="range-straddles" kind="dated-record" rec="stamp" ref="install.py:284-307" sym="load_codex_agent_bundle" got="(file scope)" tgt="speckit-pro/speckit_pro_runner/helpers/install.py:307"/>
+<a k="file-line" l="372" c="3" why="missing-file" kind="dated-record" rec="stamp" ref="tests/speckit-pro/layer1-structural/validate-payload-conformance.py:221"/>
+<a k="file-line" l="383" c="2" why="range-straddles" kind="dated-record" rec="stamp" ref="speckit-pro/agents/uat-runbook-author.md:1-18" got="(file scope)" tgt="speckit-pro/agents/uat-runbook-author.md:18"/>
+<a k="file-line" l="399" c="6" why="range-straddles" kind="dated-record" rec="stamp" ref="speckit-pro/codex-agents/uat-runbook-author.toml:1-6" got="developer_instructions" tgt="speckit-pro/codex-agents/uat-runbook-author.toml:6"/>
+<a k="file-line" l="414" c="27" why="missing-file" kind="dated-record" rec="stamp" ref="validate-codex-agents.py:42"/>
+<a k="symbol" l="425" c="2" why="undefined" kind="dated-record" rec="stamp" ref="role_id"/>
+<a k="file-line" l="427" c="22" why="missing-file" kind="dated-record" rec="stamp" ref="tests/speckit-pro/unit/test-role-corpus-governance.py:57-75"/>
+<a k="symbol" l="430" c="23" why="undefined" kind="dated-record" rec="stamp" ref="corpus_digest"/>
+</doc>
+<doc p="tests/speckit-pro/layer6-integration/performance-fixtures/implementation-notes/source/research.md" anchors="11" checked="1" drift="0" dated="1">
+<a k="file-line" l="102" c="2" why="past-eof" kind="dated-record" rec="stamp" ref="agent-teams-integration.md:325-328" got="250 lines" tgt="speckit-pro/skills/speckit-autopilot/references/agent-teams-integration.md"/>
+</doc>
+<weak-file-line p=".specify/memory/archive-reports/2026-08-09-art-006-post-merge-hygiene.md" n="1">
+<w l="112" c="5" ref="validate-autopilot-phase-coverage.py:1298" resolves-to="_read_repo_file_by_descriptor"/>
+</weak-file-line>
+<weak-file-line p=".specify/memory/archive-reports/2026-08-12-art-012-post-merge-hygiene.md" n="1">
+<w l="155" c="4" ref="docs/ai/specs/html-artifacts-roadmap-MOC.md:79" resolves-to="Hardening Follow-ups"/>
+</weak-file-line>
+<weak-file-line p=".specify/memory/archive-reports/2026-08-13-art-011-post-merge-hygiene.md" n="1">
+<w l="91" c="4" ref="layer2-trigger/run-trigger-evals.py:225" resolves-to="stage_measurement_plugin"/>
+</weak-file-line>
+<weak-file-line p=".specify/memory/archive-reports/2026-08-14-art-003-gap-triage-amendment.md" n="1">
+<w l="120" c="3" ref="speckit-pro/speckit_pro_runner/helpers/read_only.py:4143" resolves-to="sweep_redact_outbound"/>
+</weak-file-line>
+<weak-file-line p=".specify/memory/archive-reports/2026-08-18-art-007-post-merge-hygiene.md" n="2">
+<w l="40" c="4" ref=".github/workflows/container-preflight.yml:271" resolves-to="windows-x64-smoke"/>
+<w l="228" c="4" ref="tests/speckit-pro/unit/test-speckit-pro-read-only-helpers.py:35" resolves-to="AUTOPILOT_STAGE_WORKFLOW_FILE"/>
+</weak-file-line>
+<weak-file-line p=".specify/memory/changelog.md" n="1">
+<w l="2640" c="32" ref="read_only.py:4143" resolves-to="sweep_redact_outbound"/>
+</weak-file-line>
+<weak-file-line p="docs/ai/research/tool-agnostic-capability-discovery-spike.md" n="9">
+<w l="70" c="35" ref="speckit-pro/codex-agents/codebase-analyst.toml:35-52" resolves-to="developer_instructions"/>
+<w l="71" c="36" ref="speckit-pro/codex-agents/domain-researcher.toml:33-49" resolves-to="developer_instructions"/>
+<w l="72" c="31" ref="speckit-pro/codex-agents/implement-executor.toml:69-99" resolves-to="developer_instructions"/>
+<w l="76" c="32" ref="tests/speckit-pro/layer3-functional/evals/speckit-autopilot-evals.json:107-116" resolves-to="evals"/>
+<w l="76" c="114" ref="tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json:112-120" resolves-to="evals"/>
+<w l="79" c="30" ref="dist/codex/speckit-pro/codex-agents/codebase-analyst.toml:35-52" resolves-to="developer_instructions"/>
+<w l="95" c="197" ref="speckit-pro/codex-agents/codebase-analyst.toml:40-52" resolves-to="developer_instructions"/>
+<w l="136" c="183" ref="speckit-pro/codex-agents/domain-researcher.toml:33-49" resolves-to="developer_instructions"/>
+<w l="139" c="130" ref="tests/speckit-pro/layer3-functional/evals/speckit-autopilot-evals.json:107-116" resolves-to="evals"/>
+</weak-file-line>
+<weak-file-line p="docs/ai/specs/.process/ART-001-workflow.md" n="1">
+<w l="1426" c="31" ref="scripts/release_note_policy.py:508" resolves-to="validate_release_note"/>
+</weak-file-line>
+<weak-file-line p="docs/ai/specs/.process/ART-002-workflow.md" n="3">
+<w l="1398" c="36" ref="spec.md:468" resolves-to="Summary"/>
+<w l="1486" c="3" ref="speckit_pro_runner/helpers/read_only.py:967" resolves-to="resolve_workflow_binding"/>
+<w l="1585" c="33" ref="speckit-pro/speckit_pro_runner/gates/payloads.py:303" resolves-to="build_installed_plugin_payloads"/>
+</weak-file-line>
+<weak-file-line p="docs/ai/specs/.process/ART-003-design-concept.md" n="3">
+<w l="78" c="3" ref="speckit_pro_runner/helpers/read_only.py:967" resolves-to="resolve_workflow_binding"/>
+<w l="167" c="34" ref="tests/speckit-pro/unit/test-artifact-fill-regions.py:81" resolves-to="test_every_shipped_template_has_ordered_distinct_nonempty_regions"/>
+<w l="267" c="4" ref="tests/speckit-pro/unit/test-artifact-fill-regions.py:85" resolves-to="test_fill_replacement_keeps_markers_and_everything_outside_the_slot"/>
+</weak-file-line>
+<weak-file-line p="docs/ai/specs/.process/ART-003-workflow.md" n="5">
+<w l="60" c="2" ref="tests/speckit-pro/unit/test-artifact-fill-regions.py:85" resolves-to="test_fill_replacement_keeps_markers_and_everything_outside_the_slot"/>
+<w l="93" c="3" ref="speckit_pro_runner/helpers/read_only.py:967" resolves-to="resolve_workflow_binding"/>
+<w l="227" c="2" ref="speckit_pro_runner/helpers/read_only.py:1016-1051" resolves-to="resolve_workflow_binding"/>
+<w l="261" c="3" ref="speckit_pro_runner/helpers/read_only.py:967" resolves-to="resolve_workflow_binding"/>
+<w l="540" c="27" ref="speckit_pro_runner/helpers/read_only.py:885" resolves-to="registered_worktree_entries"/>
+</weak-file-line>
+<weak-file-line p="docs/ai/specs/.process/ART-004-workflow.md" n="3">
+<w l="886" c="41" ref="ART-004-manual-uat.md:47" resolves-to="Slice 1 `file://` UAT Evidence"/>
+<w l="888" c="5" ref="ART-004-manual-uat.md:108" resolves-to="Slice 2 `file://` UAT Evidence"/>
+<w l="897" c="5" ref="ART-004-manual-uat.md:168" resolves-to="Slice 3 `file://` UAT Evidence"/>
+</weak-file-line>
+<weak-file-line p="docs/ai/specs/.process/ART-005-design-concept.md" n="2">
+<w l="156" c="5" ref="speckit-pro/artifact-gallery/manifest.json:214-244" resolves-to="templates"/>
+<w l="182" c="14" ref="manifest.json:170-244" resolves-to="templates"/>
+</weak-file-line>
+<weak-file-line p="docs/ai/specs/.process/ART-005-uat-results.md" n="5">
+<w l="342" c="4" ref="speckit-pro/artifact-gallery/manifest.json:170-178" resolves-to="templates"/>
+<w l="345" c="4" ref="speckit-pro/artifact-gallery/manifest.json:181-189" resolves-to="templates"/>
+<w l="348" c="4" ref="speckit-pro/artifact-gallery/manifest.json:192-200" resolves-to="templates"/>
+<w l="351" c="4" ref="speckit-pro/artifact-gallery/manifest.json:203-211" resolves-to="templates"/>
+<w l="353" c="4" ref="speckit-pro/artifact-gallery/manifest.json:214-222" resolves-to="templates"/>
+</weak-file-line>
+<weak-file-line p="docs/ai/specs/.process/ART-006-design-concept.md" n="2">
+<w l="120" c="15" ref="validate-autopilot-phase-coverage.py:455-460" resolves-to="PROBLEM_KEY_INTENT"/>
+<w l="331" c="4" ref="speckit_pro_runner/helpers/read_only.py:980-981" resolves-to="resolve_workflow_binding"/>
+</weak-file-line>
+<weak-file-line p="docs/ai/specs/.process/ART-006-workflow.md" n="2">
+<w l="505" c="25" ref="plan.md:415" resolves-to="Merged active-spec archive hygiene sweep"/>
+<w l="933" c="19" ref="speckit-pro/speckit_pro_runner/helpers/read_only.py:961" resolves-to="resolve_workflow_binding"/>
+</weak-file-line>
+<weak-file-line p="docs/ai/specs/.process/ART-007-workflow.md" n="1">
+<w l="919" c="3" ref="speckit-pro/speckit_pro_runner/helpers/read_only.py:2369-2378" resolves-to="g5_gate_task_loops"/>
+</weak-file-line>
+<weak-file-line p="docs/ai/specs/.process/ART-011-workflow.md" n="1">
+<w l="395" c="3" ref="speckit_pro_runner/helpers/read_only.py:885" resolves-to="registered_worktree_entries"/>
+</weak-file-line>
+<weak-file-line p="docs/ai/specs/.process/ART-014-retrospective.md" n="1">
+<w l="54" c="2" ref="tests/speckit-pro/suite-manifest.json:130" resolves-to="layers"/>
+</weak-file-line>
+<weak-file-line p="docs/ai/specs/.process/ART-014-workflow.md" n="2">
+<w l="1792" c="2" ref="speckit_pro_runner/helpers/registry.py:373" resolves-to="HELPERS"/>
+<w l="1861" c="33" ref="validate-autopilot-phase-coverage.py:905" resolves-to="validate_workflow_checkpoint_bindings"/>
+</weak-file-line>
+<weak-file-line p="docs/ai/specs/.process/ART-017-workflow.md" n="1">
+<w l="736" c="5" ref="test-autopilot-bookkeeping-guard.py:687" resolves-to="test_claude_entrypoint_and_recovery_mirror_the_deferred_end"/>
+</weak-file-line>
+<weak-file-line p="docs/ai/specs/.process/G56R-006-workflow.md" n="1">
+<w l="554" c="141" ref="test-speckit-pro-mutation-helpers.py:1267" resolves-to="test_mutation_registry_lists_promoted_contracts_without_cutover"/>
+</weak-file-line>
+<weak-file-line p="docs/ai/specs/PRSG-001-design-concept.md" n="1">
+<w l="197" c="3" ref="extensions.yml:83-89" resolves-to="before_specify"/>
+</weak-file-line>
+<weak-file-line p="docs/ai/specs/html-artifacts-technical-roadmap.md" n="5">
+<w l="1021" c="6" ref="speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py:1298" resolves-to="_read_repo_file_by_descriptor"/>
+<w l="1311" c="2" ref="read_only.py:935" resolves-to="resolve_workflow_binding"/>
+<w l="1321" c="118" ref="read_only.py:1959" resolves-to="detect_commands"/>
+<w l="1323" c="185" ref="read_only.py:8350-8357" resolves-to="validate_agent_install"/>
+<w l="1605" c="21" ref="tests/speckit-pro/unit/test-architecture-graph.py:95-100" resolves-to="test_architecture_graph_contract"/>
+</weak-file-line>
+<weak-file-line p="tests/speckit-pro/evals/audit/unit-execution-contract-audit.md" n="2">
+<w l="26" c="169" ref="tests/speckit-pro/unit/test-verification-docker.py:362" resolves-to="DockerRuntimeTests"/>
+<w l="26" c="308" ref="tests/speckit-pro/unit/test-verification-git.py:27" resolves-to="GitSnapshotTests"/>
+</weak-file-line>
+<weak-file-line p="tests/speckit-pro/evals/audit/unit-release-tooling-audit.md" n="3">
+<w l="100" c="4" ref="integration-parity-inventory.json:131" resolves-to="obsolete_expectations"/>
+<w l="102" c="4" ref="test-native-eval-execution.py:64-67" resolves-to="case"/>
+<w l="104" c="4" ref="integration-parity-inventory.json:131" resolves-to="obsolete_expectations"/>
+</weak-file-line>
+<weak-file-line p="tests/speckit-pro/evals/audit/unit-remaining-support-audit.md" n="9">
+<w l="29" c="257" ref="tests/speckit-pro/unit/test-speckit-pro-runner.py:292" resolves-to="test_manifest_and_checksum_cover_runner_sources"/>
+<w l="29" c="404" ref="tests/speckit-pro/unit/test-speckit-pro-gates.py:430" resolves-to="test_public_result_schema_validation_enforces_owned_assertion_keywords"/>
+<w l="29" c="460" ref="tests/speckit-pro/unit/test-speckit-pro-gates.py:1966" resolves-to="test_plugin_bash_confinement_zero_bash_guard_blocks_physical_uppercase_script_files"/>
+<w l="29" c="517" ref="tests/speckit-pro/unit/test-speckit-pro-gates.py:2009" resolves-to="test_plugin_bash_confinement_zero_bash_guard_blocks_physical_uppercase_script_files"/>
+<w l="29" c="574" ref="tests/speckit-pro/unit/test-speckit-pro-gates.py:2080" resolves-to="test_installed_release_payload_completeness_blocks_seeded_negative_cases"/>
+<w l="29" c="635" ref="tests/speckit-pro/unit/test-speckit-pro-gates.py:2136" resolves-to="test_installed_release_payload_completeness_apply_builds_runner_payloads_without_shell"/>
+<w l="35" c="361" ref="tests/speckit-pro/unit/test-speckit-pro-read-only-helpers.py:2795" resolves-to="packet_failure_rules"/>
+<w l="35" c="481" ref="tests/speckit-pro/unit/test-speckit-pro-gates.py:1544" resolves-to="test_installed_release_active_runtime_guard_fixtures_block_only_active_runtime_findings"/>
+<w l="39" c="92" ref="tests/speckit-pro/unit/test-speckit-pro-read-only-helpers.py:3110" resolves-to="test_validate_pr_workflow_contract_unreadable_changed_files_is_input_error"/>
+</weak-file-line>
+<weak-file-line p="tests/speckit-pro/layer6-integration/performance-fixtures/draft-pr-emission/source/contracts/draft-packet-mode.md" n="1">
+<w l="46" c="2" ref="speckit-pro/speckit_pro_runner/helpers/read_only.py:2369-2378" resolves-to="g5_gate_task_loops"/>
+</weak-file-line>
+<weak-file-line p="tests/speckit-pro/layer6-integration/performance-fixtures/draft-pr-emission/source/research.md" n="14">
+<w l="27" c="4" ref="speckit-pro/skills/speckit-autopilot/contracts/pr-packet.schema.json:442-445" resolves-to="protected_body_fingerprint"/>
+<w l="31" c="39" ref="pr-packet.schema.json:215-230" resolves-to="allOf"/>
+<w l="44" c="2" ref="speckit-pro/speckit_pro_runner/helpers/read_only.py:2374-2378" resolves-to="g5_gate_task_loops"/>
+<w l="68" c="3" ref="speckit-pro/speckit_pro_runner/helpers/read_only.py:2872-2875" resolves-to="observation_pull_requests"/>
+<w l="105" c="3" ref="speckit-pro/speckit_pro_runner/helpers/pr_emission.py:325-330" resolves-to="generate_pr_body"/>
+<w l="106" c="13" ref="read_only.py:2537" resolves-to="estimate_reviewable_loc"/>
+<w l="131" c="5" ref="pr_emission.py:223-227" resolves-to="render_uat_runbook"/>
+<w l="148" c="5" ref="pr-packet.schema.json:254" resolves-to="allOf"/>
+<w l="222" c="3" ref="speckit-pro/speckit_pro_runner/helpers/read_only.py:1258-1263" resolves-to="resolve_scaffold_worktree_placement"/>
+<w l="234" c="3" ref="read_only.py:1192" resolves-to="resolve_scaffold_worktree_placement"/>
+<w l="235" c="3" ref="read_only.py:1193" resolves-to="resolve_scaffold_worktree_placement"/>
+<w l="255" c="19" ref="read_only.py:1314-1323" resolves-to="resolve_scaffold_worktree_placement"/>
+<w l="453" c="57" ref="manifest.json:3-9" resolves-to="signals"/>
+<w l="500" c="3" ref="speckit-pro/speckit_pro_runner/helpers/read_only.py:4185-4186" resolves-to="sweep_fence_marks"/>
+</weak-file-line>
+<weak-file-line p="tests/speckit-pro/layer6-integration/performance-fixtures/implementation-notes/source/plan.md" n="1">
+<w l="249" c="37" ref="speckit-pro/agents/implement-executor.md:164" resolves-to="Summary Format"/>
+</weak-file-line>
+<weak-file-line p="tests/speckit-pro/layer6-integration/performance-fixtures/implementation-notes/source/research.md" n="1">
+<w l="36" c="22" ref="implement-executor.md:164" resolves-to="Summary Format"/>
+</weak-file-line>
+<unchecked r="weak-file-line" n="261" note="no symbol named on the anchor&apos;s line: file existence and the EOF bound were checked, symbol identity was not"/>
+<unchecked r="named-elsewhere" n="7" note="the symbol named beside this anchor is not defined in the anchored file, so the doc is pointing at a call site or a neighbouring fact rather than that definition: existence and the EOF bound were checked, symbol identity was not"/>
+<unchecked r="not-a-definition" n="2505" note="the name occurs in the code as an identifier token but is not an indexed definition (library API, macro, build variable, or a declaration kind the grammar does not tag): presence checked, definition not"/>
+<unchecked r="foreign-scope" n="127" note="the mention is qualified by a scope this repo does not define, so it names another project&apos;s API rather than this code"/>
+<unchecked r="uncorroborated" n="648" note="no name this repo DOES define appears on the mention&apos;s own line, so it reads as an illustrative or external identifier rather than a claim about this code"/>
+<unchecked r="ambiguous-value" n="1" note="the corpus binds more than one distinct literal to this name, so the doc&apos;s number has no single value to disagree with"/>
+<unchecked r="no-def-site" n="157" note="the name occurs in the code but never in a declaration-shaped integer literal (computed, expression-valued, or declared in a form this verb does not read)"/>
+<dated r="block" n="9" note="the nearest markdown heading at or above the anchor carries an ISO date, so the whole section is an observation made on that day"/>
+<dated r="title" n="1" note="the doc&apos;s filename or its H1 title carries an ISO date: the document IS the artifact of that day, and its anchors are what was true then"/>
+<dated r="stamp" n="22" note="the doc&apos;s front matter carries a LABELLED self-date (Date: / Written / Generated / Recorded …), which dates the document rather than something it discusses"/>
+</doc-drift>

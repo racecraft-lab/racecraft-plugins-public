@@ -1,0 +1,64 @@
+<!-- ripwire markdown: no run of 4-or-more backticks in this output — safe to embed inside a wider fence -->
+
+# ripwire architecture report
+
+1761 files · 31965 symbols · 24530 edges · 1635 modules (22273 call-graph isolated)
+
+Root: `.`
+
+Call-graph isolate provenance: 3201 declaration, 0 header, 783 source, 18289 document; 0 connected Louvain singletons
+
+## Modules (call-graph clusters; showing 12 of 1635)
+- **tests/speckit-pro/unit::resolve@test-artifact-review.py:104:4629 [set,resolve,assert]** — 538 symbols
+- **speckit-pro/speckit_pro_runner/helpers::append@speckit-pro/speckit_pro_runner/verification_docker_runtime.py:46:1753 [run,validate,normalize]** — 291 symbols
+- **typesafe-jev/cmd/evaluate::Error@call.go:44:1319 [run,resolve,read]** — 153 symbols
+- **tests/speckit-pro/unit::run_evaluations@tests/speckit-pro/lib/native_eval_execution.py:4766:242654 [run,dispatch,merge]** — 133 symbols
+- **tests/speckit-pro/unit::read_text@speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py:591:23888 [set,load,read]** — 128 symbols
+- **tests/speckit-pro/lib::decode@speckit-pro/speckit_pro_runner/verification_docker_qualification.py:123:6583 [verify,write,require]** — 124 symbols
+- **tests/speckit-pro/unit::run_counted@tests/speckit-pro/lib/test_result.py:273:11780 [insert,run]** — 76 symbols
+- **tests/speckit-pro/unit::raw@test-native-eval-codex-rollouts.py:442:19162 [parse,attach]** — 75 symbols
+- **tests/speckit-pro/unit::temp_clean_git_repo@test-speckit-pro-mutation-helpers.py:679:26561 [assert,run,write]** — 69 symbols
+- **tests/speckit-pro/unit::replace@speckit-pro/speckit_pro_runner/gates/payloads.py:420:20010 [replace,resolve,normalize]** — 56 symbols
+- **tests/speckit-pro/lib::json_digest@trigger_comparison.py:24:602 [validate,read,make]** — 56 symbols
+- **speckit-pro/speckit_pro_runner/formal::SelectionError@selection.py:16:370 [validate,require,reject]** — 55 symbols
+
+## God files (most depended-on; showing 10 of 92)
+- `speckit-pro/speckit_pro_runner/envelope.py` — 21 dependents
+- `speckit-pro/speckit_pro_runner/helpers/read_only.py` — 16 dependents
+- `speckit-pro/speckit_pro_runner/formal/selection.py` — 11 dependents
+- `speckit-pro/speckit_pro_runner/execution_control.py` — 10 dependents
+- `tests/speckit-pro/lib/native_eval_catalog.py` — 9 dependents
+- `speckit-pro/speckit_pro_runner/formal/catalog.py` — 8 dependents
+- `speckit-pro/speckit_pro_runner/helpers/mutation.py` — 8 dependents
+- `.specify/scripts/bash/common.sh` — 7 dependents
+- `speckit-pro/speckit_pro_runner/__init__.py` — 7 dependents
+- `speckit-pro/speckit_pro_runner/task_execution.py` — 7 dependents
+
+## Dependency cycles (showing 5 of 5)
+- `speckit-pro/speckit_pro_runner/formal/quint.py` ↔ `speckit-pro/speckit_pro_runner/formal/engine.py` ↔ `speckit-pro/speckit_pro_runner/formal/evidence.py` ↔ `speckit-pro/speckit_pro_runner/formal/native_config.py` ↔ `speckit-pro/speckit_pro_runner/formal/traces.py` ↔ `speckit-pro/speckit_pro_runner/formal/catalog.py`
+- `speckit-pro/speckit_pro_runner/formal/lifecycle.py` ↔ `speckit-pro/speckit_pro_runner/formal/helper.py`
+- `speckit-pro/speckit_pro_runner/verification_docker_runtime.py` ↔ `speckit-pro/speckit_pro_runner/verification_docker_readback.py`
+- `speckit-pro/speckit_pro_runner/helpers/run_finalization.py` ↔ `speckit-pro/speckit_pro_runner/helpers/gate_preflight_coverage.py` ↔ `speckit-pro/speckit_pro_runner/helpers/archive_sweep.py` ↔ `speckit-pro/speckit_pro_runner/helpers/registry.py` ↔ `speckit-pro/speckit_pro_runner/task_results.py` ↔ `speckit-pro/speckit_pro_runner/helpers/pr_emission.py` ↔ `speckit-pro/speckit_pro_runner/verification_docker_qualification.py` ↔ `speckit-pro/speckit_pro_runner/verification_git.py` ↔ `speckit-pro/speckit_pro_runner/verification_docker_workflow.py` ↔ `speckit-pro/speckit_pro_runner/verification_records.py` ↔ `speckit-pro/speckit_pro_runner/sweep_isolation.py` ↔ `speckit-pro/speckit_pro_runner/sweep_launcher.py` ↔ `speckit-pro/speckit_pro_runner/preview_launcher.py` ↔ `speckit-pro/speckit_pro_runner/author_broker.py` ↔ `speckit-pro/speckit_pro_runner/helpers/read_only.py` ↔ `speckit-pro/speckit_pro_runner/execution_control.py` ↔ `speckit-pro/speckit_pro_runner/helpers/mutation.py` ↔ `speckit-pro/speckit_pro_runner/helpers/install.py` ↔ `speckit-pro/speckit_pro_runner/gates/registry.py` ↔ `speckit-pro/speckit_pro_runner/runtime.py`
+- `tests/speckit-pro/lib/trigger_comparison.py` ↔ `tests/speckit-pro/lib/trigger_campaign.py`
+
+## Top symbols (PageRank; showing 10 of 31965)
+- `read_text` (speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py:591)
+- `ValidationError` (speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py:585)
+- `decode` (speckit-pro/speckit_pro_runner/verification_docker_qualification.py:123)
+- `encode` (speckit-pro/speckit_pro_runner/verification_docker_workflow.py:65)
+- `update` (speckit-pro/speckit_pro_runner/execution_control.py:1643)
+- `_trusted` (tests/speckit-pro/layer2-trigger/generate-carry-forward-replay.py:108)
+- `extend` (tests/speckit-pro/layer2-trigger/generate-carry-forward-replay.py:125)
+- `group` (speckit-pro/speckit_pro_runner/gates/registry.py:23)
+- `append` (speckit-pro/speckit_pro_runner/verification_docker_runtime.py:46)
+- `replace` (speckit-pro/speckit_pro_runner/gates/payloads.py:420)
+
+## Cross-module bridges (showing 8 of 4721)
+- tests/speckit-pro/unit::temp_clean_git_repo@test-speckit-pro-mutation-helpers.py:679:26561 [assert,run,write] ↔ tests/speckit-pro/unit::routing_capability_snapshot@test-speckit-pro-mutation-helpers.py:464:17478 [assert,route,write] (92 edges)
+- speckit-pro/speckit_pro_runner/helpers::append@speckit-pro/speckit_pro_runner/verification_docker_runtime.py:46:1753 [run,validate,normalize] ↔ speckit-pro/speckit_pro_runner/helpers::resolve@speckit-pro/speckit_pro_runner/gates/active_path_guard.py:1524:62407 [resolve,load,normalize] (83 edges)
+- tests/speckit-pro/lib::json_digest@trigger_comparison.py:24:602 [validate,read,make] ↔ tests/speckit-pro/lib::_require@trigger_comparison.py:42:1024 [validate,read,assert] (63 edges)
+- tests/speckit-pro/unit::resolve@test-artifact-review.py:104:4629 [set,resolve,assert] ↔ speckit-pro/speckit_pro_runner/helpers::extend@tests/speckit-pro/layer2-trigger/generate-carry-forward-replay.py:125:4873 [close,merge,move] (56 edges)
+- tests/speckit-pro/unit::resolve@test-artifact-review.py:104:4629 [set,resolve,assert] ↔ tests/speckit-pro/unit::Outcome@tests/speckit-pro/lib/native_eval_pool.py:35:930 [assert] (54 edges)
+- tests/speckit-pro/unit::resolve@test-artifact-review.py:104:4629 [set,resolve,assert] ↔ tests/speckit-pro/unit::routing_capability_snapshot@test-speckit-pro-mutation-helpers.py:464:17478 [assert,route,write] (53 edges)
+- tests/speckit-pro/unit::resolve@test-artifact-review.py:104:4629 [set,resolve,assert] ↔ tests/speckit-pro/lib::decode@speckit-pro/speckit_pro_runner/verification_docker_qualification.py:123:6583 [verify,write,require] (46 edges)
+- tests/speckit-pro/unit::read_text@speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py:591:23888 [set,load,read] ↔ tests/speckit-pro/unit::resolve@test-artifact-review.py:104:4629 [set,resolve,assert] (45 edges)

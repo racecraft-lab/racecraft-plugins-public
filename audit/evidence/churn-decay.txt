@@ -1,0 +1,1859 @@
+<!-- ripwire map schema=ripwire.map/v1: ranked symbol map: <f p= layer=> groups <s t= n= sc= k= amb=> rows (k= rank), <c n=> resolved callees; the header comment is data. est_tokens=: price as emitted (an upper bound under compact). at=: commit+dirty+shallow. root=: p= relative to it. pr_iters=N: PageRank iterations. rank_by=: the ranker behind k=. window=: the git span mined. declined=K: K calls left unbound (several defs, none chosen). external=K: K calls taken as outside the tree, no edge. <recent n= of=>: the n= newest-touched of of= touched files; <rc age_d=> days since its last commit, w= decayed weight. merge_bombs_skipped=N: N commits touching more than 100 INDEXED files skipped, uncounted; a file only they touched is absent; the window's count, so the global block only. overloads=N: N same-name defs merged in this row; shown= counts each. prov=scip|binding|import|split|final-segment: how that <c> edge bound (absent: one unique name); split = one arm of an amb= pick; final-segment = a qualified type matched by last name only. files=/symbols=: files and symbols indexed; edges= distinct call edges; shown= symbols printed, a merged row counting each def; ambiguous= calls split over several defs, corpus-wide; unresolved= calls with in-tree evidence and no edge (defs all language-filtered, or import/pointer binding refused); order= rows by rank (important-first, important-last; (auto:fill) = flipped past a size threshold) or by path (stable). skipped_oversize=K: K files over a size ceiling, not indexed. unindexed=ext:N: N text files of that extension no grammar reads (6 extensions at most). unindexed_exts=E: E such extensions in all, the list cut. sc=: enclosing scope; the full id is p::sc::n (p= of the row or its <f>) and selectors take it. amb=K: K calls split over several defs. -->
+<!-- t=modscope=a-file's-MODULE-SCOPE(n=<file-scope>):the-statements-outside-every-named-definition,where-a-top-level-call-and-an-anonymous-callback-body's-calls-live;a-CALLER-never-a-callee(nothing-in-the-source-can-name-it)-with-no-body-to-expand;a-file-with-no-such-call-has-no-such-row -->
+<!-- files=1761 symbols=31965 edges=24530 shown=500 est_tokens=24562 ambiguous=1251 unresolved=1717 external=4041 declined=2870 skipped_oversize=12 unindexed="txt:54,jsonl:41,args:10,err:8,raw:8,qnt:6" unindexed_exts=20 order=important-last(auto:fill) -->
+<r schema="ripwire.map/v1" at="87fb3a2f6+dirty" root="." rank_by="churn-decay" window="all-history half-life=90d" est_tokens="24562" pr_iters="41">
+<recent n="40" of="1331" merge_bombs_skipped="5">
+<rc p="speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json" age_d="0" w="166"/>
+<rc p="docs-site/src/content/docs/reference/tests.md" age_d="0" w="97.4"/>
+<rc p="speckit-pro/skills/speckit-autopilot/SKILL.md" age_d="0" w="70.4"/>
+<rc p="speckit-pro/skills/speckit-autopilot/references/phase-execution.md" age_d="0" w="70.1"/>
+<rc p="speckit-pro/codex-skills/speckit-autopilot/references/phase-execution-codex.md" age_d="0" w="63.4"/>
+<rc p="tests/speckit-pro/suite-manifest.json" age_d="0" w="63.3"/>
+<rc p="speckit-pro/codex-skills/speckit-autopilot/SKILL.md" age_d="0" w="63"/>
+<rc p=".release-please-manifest.json" age_d="0" w="54.6"/>
+<rc p="speckit-pro/.codex-plugin/plugin.json" age_d="0" w="50.9"/>
+<rc p="speckit-pro/CHANGELOG.md" age_d="0" w="49.9"/>
+<rc p=".agents/plugins/marketplace.json" age_d="0" w="42.8"/>
+<rc p="speckit-pro/speckit_pro_runner/helpers/read_only.py" age_d="0" w="41.9"/>
+<rc p="docs-site/src/content/docs/reference/manifests.md" age_d="0" w="38.4"/>
+<rc p="tests/speckit-pro/unit/test-speckit-pro-read-only-helpers.py" age_d="0" w="36.7"/>
+<rc p="AGENTS.md" age_d="0" w="35.1"/>
+<rc p="tests/speckit-pro/layer1-structural/validate-skill-contracts.py" age_d="0" w="30.5"/>
+<rc p="speckit-pro/codex-skills/speckit-autopilot/references/prerequisites-codex.md" age_d="0" w="28.7"/>
+<rc p="speckit-pro/codex-skills/speckit-autopilot/references/post-implementation-codex.md" age_d="0" w="26.1"/>
+<rc p="speckit-pro/skills/speckit-autopilot/references/gate-validation.md" age_d="0" w="25.9"/>
+<rc p="speckit-pro/skills/speckit-autopilot/references/post-implementation.md" age_d="0" w="25.4"/>
+<rc p="speckit-pro/speckit_pro_runner/helpers/registry.py" age_d="0" w="23.8"/>
+<rc p="speckit-pro/skills/speckit-autopilot/references/prerequisites.md" age_d="0" w="22.6"/>
+<rc p="tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py" age_d="0" w="21.1"/>
+<rc p="speckit-pro/skills/speckit-coach/templates/workflow-template.md" age_d="0" w="20.7"/>
+<rc p="speckit-pro/speckit_pro_runner/execution_control.py" age_d="0" w="19.8"/>
+<rc p="speckit-pro/skills/speckit-autopilot/references/execution-efficiency.md" age_d="0" w="18.8"/>
+<rc p="speckit-pro/skills/speckit-autopilot/references/consensus-protocol.md" age_d="0" w="18.3"/>
+<rc p="tests/speckit-pro/unit/test-execution-control.py" age_d="0" w="17.7"/>
+<rc p="tests/speckit-pro/unit/test-autopilot-bookkeeping-guard.py" age_d="0" w="16.7"/>
+<rc p="speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py" age_d="0" w="16.2"/>
+<rc p="speckit-pro/speckit_pro_runner/helpers/install.py" age_d="0" w="16"/>
+<rc p="speckit-pro/agents/checklist-executor.md" age_d="0" w="14.6"/>
+<rc p="tests/speckit-pro/unit/fixtures/read-only-helpers/fixture-manifest.json" age_d="0" w="14"/>
+<rc p="speckit-pro/agents/analyze-executor.md" age_d="0" w="13.4"/>
+<rc p="speckit-pro/codex-skills/speckit-autopilot/references/error-recovery-codex.md" age_d="0" w="12.6"/>
+<rc p="speckit-pro/codex-agents/checklist-executor.toml" age_d="0" w="12.5"/>
+<rc p="speckit-pro/agents/clarify-executor.md" age_d="0" w="12.5"/>
+<rc p="speckit-pro/codex-skills/speckit-upgrade/SKILL.md" age_d="0" w="12.4"/>
+<rc p="speckit-pro/codex-agents/analyze-executor.toml" age_d="0" w="11.7"/>
+<rc p="speckit-pro/agents/consensus-synthesizer.md" age_d="0" w="11.6"/>
+</recent>
+<f p="speckit-pro/skills/speckit-autopilot/SKILL.md">
+<s t="sec" n="Error Recovery" sc="SpecKit Autopilot — Autonomous Execution Engine" k="0.0002">
+<c n="consensus-protocol"/>
+<c n="error-recovery"/>
+<c n="execution-efficiency"/>
+</s>
+<s t="sec" n="Workflow File Update Protocol" sc="SpecKit Autopilot — Autonomous Execution Engine" k="0.0002">
+<c n="workflow-file-protocol"/>
+</s>
+<s t="sec" n="3.4 Pre-final completion audit" sc="Step 3: Post-Implementation" k="0.0002">
+<c n="phase-execution"/>
+</s>
+<s t="sec" n="Step 3: Post-Implementation" sc="SpecKit Autopilot — Autonomous Execution Engine" k="0.0002">
+<c n="post-implementation"/>
+</s>
+<s t="sec" n="Phase Dispatch" sc="Step 2: Main Execution Loop" k="0.0002">
+<c n="phase-execution"/>
+</s>
+<s t="sec" n="Step 2: Main Execution Loop" sc="SpecKit Autopilot — Autonomous Execution Engine" k="0.0002">
+<c n="phase-execution"/>
+<c n="post-implementation"/>
+<c n="task-list-canonical"/>
+</s>
+<s t="sec" n="1.1 Create Progress Task List" sc="Step 1: Parse Workflow State" k="0.0002">
+<c n="task-list-canonical"/>
+</s>
+<s t="sec" n="Step 1: Parse Workflow State" sc="SpecKit Autopilot — Autonomous Execution Engine" k="0.0002">
+<c n="phase-execution"/>
+</s>
+<s t="sec" n="Step -1 + Step 0: Pre-flight (Archive Sweep + Prerequisites)" sc="SpecKit Autopilot — Autonomous Execution Engine" k="0.0002">
+<c n="capability-discovery"/>
+<c n="gate-validation"/>
+<c n="grounding"/>
+<c n="phase-execution"/>
+<c n="prerequisites"/>
+</s>
+<s t="sec" n="6a. Plan ambiguity uses provenance, not consensus" sc="Execution Rules" k="0.0002">
+<c n="gate-validation"/>
+</s>
+<s t="sec" n="6. Two-layer resolution with category-routed consensus" sc="Execution Rules" k="0.0002">
+<c n="consensus-protocol"/>
+</s>
+<s t="sec" n="5. Clarify — executor returns questions to parent" sc="Execution Rules" k="0.0002">
+</s>
+<s t="sec" n="4. Multi-prompt phases" sc="Execution Rules" k="0.0002">
+<c n="phase-execution"/>
+</s>
+<s t="sec" n="3. Task list first" sc="Execution Rules" k="0.0002">
+</s>
+<s t="sec" n="2. Use phase-specific executor agents" sc="Execution Rules" k="0.0002">
+<c n="phase-execution"/>
+</s>
+<s t="sec" n="1. Subagent per phase" sc="Execution Rules" k="0.0002">
+</s>
+<s t="sec" n="0. Forbidden skill invocations" sc="Execution Rules" k="0.0002">
+</s>
+<s t="sec" n="Claude native worker lifecycle" sc="Execution Rules" k="0.0002">
+</s>
+<s t="sec" n="Execution Rules" sc="SpecKit Autopilot — Autonomous Execution Engine" k="0.0002">
+<c n="execution-efficiency"/>
+</s>
+<s t="sec" n="Prerequisites — Model" sc="SpecKit Autopilot — Autonomous Execution Engine" k="0.0002">
+</s>
+<s t="sec" n="Architectural Constraint — Main Agent Is The Orchestrator" sc="SpecKit Autopilot — Autonomous Execution Engine" k="0.0002">
+<c n="agent-teams-integration"/>
+<c n="plugin-limitations"/>
+</s>
+<s t="sec" n="Explicit Invocation Boundary" sc="SpecKit Autopilot — Autonomous Execution Engine" k="0.0002">
+</s>
+<s t="sec" n="SpecKit Autopilot — Autonomous Execution Engine" k="0.0002">
+</s>
+</f>
+<f p="typesafe-jev/cmd/evaluate/auth.go">
+<s t="method" n="String" k="0.0002">
+</s>
+</f>
+<f p="speckit-pro/speckit_pro_runner/author_broker.py">
+<s t="cls" n="BrokerViolation" sc="BrokerViolation" k="0.0002">
+</s>
+</f>
+<f p="speckit-pro/speckit_pro_runner/sweep_launcher.py">
+<s t="cls" n="LauncherViolation" sc="LauncherViolation" k="0.0003">
+</s>
+</f>
+<f p="tests/speckit-pro/unit/test-artifact-gallery.py" layer="test">
+<s t="fn" n="read" k="0.0003">
+<c n="read_text"/>
+</s>
+</f>
+<f p="tests/speckit-pro/unit/test-release-pr-reconciliation.py" layer="test">
+<s t="fn" n="make_repo" sc="RefreshReleaseArtifactsCheckTests" k="0.0003">
+</s>
+</f>
+<f p="speckit-pro/codex-skills/speckit-autopilot/references/prerequisites-codex.md">
+<s t="sec" n="prerequisites-codex" k="0.0003">
+</s>
+</f>
+<f p="speckit-pro/speckit_pro_runner/formal/catalog.py">
+<s t="cls" n="FormalError" sc="FormalError" k="0.0003">
+</s>
+</f>
+<f p="typesafe-jev/cmd/evaluate/plugin_test.go">
+<s t="fn" n="repoRoot" k="0.0003">
+</s>
+</f>
+<f p="tests/speckit-pro/layer5-tool-scoping/validate-tool-scoping.py" layer="test">
+<s t="fn" n="_read" k="0.0003">
+<c n="read_text"/>
+</s>
+</f>
+<f p="docs/ai/specs/.process/autopilot-state.json" layer="ai">
+<s t="sec" n="identity_fields_note" k="0.0003">
+</s>
+<s t="sec" n="relocated_evidence" k="0.0003">
+</s>
+<s t="sec" n="recovery_boundaries" k="0.0003">
+</s>
+<s t="sec" n="removed_directories" k="0.0003">
+</s>
+<s t="sec" n="archived_at" k="0.0003">
+</s>
+<s t="sec" n="layer_plan" k="0.0003">
+</s>
+<s t="sec" n="marker_plan_required" k="0.0003">
+</s>
+<s t="sec" n="correctness_or_safety_block" k="0.0003">
+</s>
+<s t="sec" n="fallback_evidence" k="0.0003">
+</s>
+<s t="sec" n="deferral_reason" k="0.0003">
+</s>
+<s t="sec" n="requested_mode" k="0.0003">
+</s>
+<s t="sec" n="tasks_reviewability" k="0.0003">
+</s>
+<s t="sec" n="artifact_generation" k="0.0003">
+</s>
+<s t="sec" n="post_review_remediation" k="0.0003">
+</s>
+<s t="sec" n="post_code_review" k="0.0003">
+</s>
+<s t="sec" n="post_doctor" k="0.0003">
+</s>
+<s t="sec" n="implementation_polish" k="0.0003">
+</s>
+<s t="sec" n="implementation_user_story_4" k="0.0003">
+</s>
+<s t="sec" n="implementation_user_story_3" k="0.0003">
+</s>
+<s t="sec" n="implementation_user_story_2" k="0.0003">
+</s>
+<s t="sec" n="implementation_user_story_1" k="0.0003">
+</s>
+<s t="sec" n="implementation_foundation" k="0.0003">
+</s>
+<s t="sec" n="implementation_setup" k="0.0003">
+</s>
+<s t="sec" n="implementation_feedback_sweep" k="0.0003">
+</s>
+<s t="sec" n="confidence_gate" k="0.0003">
+</s>
+<s t="sec" n="checklist_reliability" k="0.0003">
+</s>
+<s t="sec" n="checklist_data_integrity" k="0.0003">
+</s>
+<s t="sec" n="checklist_state_management" k="0.0003">
+</s>
+<s t="sec" n="checklist_error_handling" k="0.0003">
+</s>
+<s t="sec" n="after_plan_speckit_utils_validate" k="0.0003">
+</s>
+<s t="sec" n="clarify_session_3" k="0.0003">
+</s>
+<s t="sec" n="clarify_session_2" k="0.0003">
+</s>
+<s t="sec" n="clarify_session_1" k="0.0003">
+</s>
+<s t="sec" n="after_specify_doctor" k="0.0003">
+</s>
+<s t="sec" n="phase_results" k="0.0003">
+</s>
+<s t="sec" n="tier_2_relocation" k="0.0003">
+</s>
+<s t="sec" n="g56r_006_scaffold_estimate" k="0.0003">
+</s>
+<s t="sec" n="primary_surface_count" k="0.0003">
+</s>
+<s t="sec" n="reviewability_setup" k="0.0003">
+</s>
+<s t="sec" n="blocked_by" k="0.0003">
+</s>
+<s t="sec" n="cleanup_applied" k="0.0003">
+</s>
+<s t="sec" n="safe_to_apply_cleanup" k="0.0003">
+</s>
+<s t="sec" n="excluded_current_spec" k="0.0003">
+</s>
+<s t="sec" n="eligible_previous_specs" k="0.0003">
+</s>
+<s t="sec" n="cleanup_mode" k="0.0003">
+</s>
+<s t="sec" n="archive_extension_installed" k="0.0003">
+</s>
+<s t="sec" n="prerequisite_mode" k="0.0003">
+</s>
+<s t="sec" n="prerequisite_available" k="0.0003">
+</s>
+<s t="sec" n="invocation_available" k="0.0003">
+</s>
+<s t="sec" n="execution_path" k="0.0003">
+</s>
+<s t="sec" n="archive_sweep" k="0.0003">
+</s>
+<s t="sec" n="source_extraction" k="0.0003">
+</s>
+<s t="sec" n="web_domain_research" k="0.0003">
+</s>
+<s t="sec" n="library_documentation" k="0.0003">
+</s>
+<s t="sec" n="spec_context" k="0.0003">
+</s>
+<s t="sec" n="codebase_context" k="0.0003">
+</s>
+<s t="sec" n="capability_coverage" k="0.0003">
+</s>
+<s t="sec" n="speckit_utils" k="0.0003">
+</s>
+<s t="sec" n="verify_tasks" k="0.0003">
+</s>
+<s t="sec" n="tasks_template" k="0.0003">
+</s>
+<s t="sec" n="plan_template" k="0.0003">
+</s>
+<s t="sec" n="spec_template" k="0.0003">
+</s>
+<s t="sec" n="preset_conventions" k="0.0003">
+</s>
+<s t="sec" n="FULL_VERIFY" k="0.0003">
+</s>
+<s t="sec" n="SINGLE_FILE_INTEGRATION" k="0.0003">
+</s>
+<s t="sec" n="SINGLE_FILE_TEST" k="0.0003">
+</s>
+<s t="sec" n="INTEGRATION_TEST" k="0.0003">
+</s>
+<s t="sec" n="UNIT_TEST" k="0.0003">
+</s>
+<s t="sec" n="LINT_FIX" k="0.0003">
+</s>
+<s t="sec" n="project_commands" k="0.0003">
+</s>
+<s t="sec" n="full_suite" k="0.0003">
+</s>
+<s t="sec" n="project_implementation_agent" k="0.0003">
+</s>
+<s t="sec" n="codex_agents" k="0.0003">
+</s>
+<s t="sec" n="worktree_binding" k="0.0003">
+</s>
+<s t="sec" n="runner_on_feature_branch_heuristic" k="0.0003">
+</s>
+<s t="sec" n="workflow_branch_match" k="0.0003">
+</s>
+<s t="sec" n="is_worktree" k="0.0003">
+</s>
+<s t="sec" n="runner_speckit_detail" k="0.0003">
+</s>
+<s t="sec" n="speckit_cli" k="0.0003">
+</s>
+<s t="sec" n="all_pass" k="0.0003">
+</s>
+<s t="sec" n="confidence_gate_mode" k="0.0003">
+</s>
+<s t="sec" n="auto_commit" k="0.0003">
+</s>
+<s t="sec" n="gate_failure" k="0.0003">
+</s>
+<s t="sec" n="consensus_mode" k="0.0003">
+</s>
+<s t="sec" n="from_phase" k="0.0003">
+</s>
+<s t="sec" n="confidence_gate_status" k="0.0003">
+</s>
+<s t="sec" n="planning_complete" k="0.0003">
+</s>
+<s t="sec" n="recorded_stage" k="0.0003">
+</s>
+<s t="sec" n="stage_resolution" k="0.0003">
+</s>
+<s t="sec" n="active_step" k="0.0003">
+</s>
+</f>
+<f p="tests/speckit-pro/unit/test-speckit-pro-gates.py" layer="test">
+<s t="fn" n="run_runner" k="0.0002">
+<c n="update"/>
+<c n="runner_env"/>
+</s>
+<s t="fn" n="runner_env" k="0.0003">
+</s>
+<s t="fn" n="gate_request" k="0.0003">
+</s>
+<s t="fn" n="assert_response" sc="GateFoundationTests" k="0.0003">
+</s>
+</f>
+<f p="tests/speckit-pro/unit/test-phase7-task-partition.py" layer="test">
+<s t="fn" n="partition" amb="1" k="0.0003">
+<c n="update"/>
+<c n="partition_phase7_tasks"/>
+<c n="resolve" prov="split"/>
+<c n="resolve" prov="split"/>
+<c n="resolve" prov="split"/>
+<c n="resolve" prov="split"/>
+</s>
+</f>
+<f p="tests/speckit-pro/layer2-trigger/run-trigger-evals.py" layer="test">
+<s t="fn" n="inspect_claude_stream" k="0.0003">
+<c n="decode"/>
+<c n="append"/>
+<c n="stream_content"/>
+<c n="skill_results_error"/>
+<c n="first_selection_guard_evidence"/>
+<c n="claude_model_evidence"/>
+<c n="_claude_nonce_error"/>
+<c n="partition"/>
+</s>
+<s t="fn" n="stream_content" k="0.0003">
+</s>
+</f>
+<f p="scripts/build-typesafe-jev-release.py">
+<s t="cls" n="ReleaseBuildError" sc="ReleaseBuildError" k="0.0003">
+</s>
+</f>
+<f p="speckit-pro/skills/speckit-autopilot/references/prerequisites.md">
+<s t="sec" n="prerequisites" k="0.0003">
+</s>
+</f>
+<f p="tests/speckit-pro/layer1-structural/validate-skill-contracts.py" layer="test">
+<s t="fn" n="_read" k="0.0003">
+<c n="read_text"/>
+</s>
+<s t="fn" n="validate_skill_capability_pointers__rel" k="0.0003">
+</s>
+<s t="fn" n="_mirrors" k="0.0003">
+<c n="read_text"/>
+</s>
+</f>
+<f p="speckit-pro/skills/speckit-autopilot/references/task-list-canonical.md">
+<s t="sec" n="task-list-canonical" k="0.0003">
+</s>
+</f>
+<f p="speckit-pro/scripts/mutation-score.py">
+<s t="cls" n="ReportError" sc="ReportError" k="0.0003">
+</s>
+<s t="fn" n="count" k="0.0003">
+<c n="ReportError"/>
+</s>
+</f>
+<f p="tests/speckit-pro/unit/test-feedback-sweep-parse.py" layer="test">
+<s t="fn" n="invoke" amb="1" k="0.0003">
+<c n="sweep_pr_feedback"/>
+<c n="resolve" prov="split"/>
+<c n="resolve" prov="split"/>
+<c n="resolve" prov="split"/>
+<c n="resolve" prov="split"/>
+</s>
+</f>
+<f p="docs-site/src/content/docs/reference/tests.md">
+<s t="sec" n="tests/speckit-pro/unit" sc="Records" k="0.0003">
+</s>
+<s t="sec" n="tests/speckit-pro/test-run-all.py" sc="Records" k="0.0003">
+</s>
+<s t="sec" n="tests/speckit-pro/run-native-evals.py" sc="Records" k="0.0003">
+</s>
+<s t="sec" n="tests/speckit-pro/run-layer-scripts.py" sc="Records" k="0.0003">
+</s>
+<s t="sec" n="tests/speckit-pro/run-hosted-windows-preflight.py" sc="Records" k="0.0003">
+</s>
+<s t="sec" n="tests/speckit-pro/run-container-preflight.py" sc="Records" k="0.0003">
+</s>
+<s t="sec" n="tests/speckit-pro/run-all.py" sc="Records" k="0.0003">
+</s>
+<s t="sec" n="tests/speckit-pro/lib" sc="Records" k="0.0003">
+</s>
+<s t="sec" n="tests/speckit-pro/layer7-parity" sc="Records" k="0.0003">
+</s>
+<s t="sec" n="tests/speckit-pro/layer6-integration" sc="Records" k="0.0003">
+</s>
+<s t="sec" n="tests/speckit-pro/layer5-tool-scoping" sc="Records" k="0.0003">
+</s>
+<s t="sec" n="tests/speckit-pro/layer3-functional" sc="Records" k="0.0003">
+</s>
+<s t="sec" n="tests/speckit-pro/layer2-trigger" sc="Records" k="0.0003">
+</s>
+<s t="sec" n="tests/speckit-pro/layer1-structural" sc="Records" k="0.0003">
+</s>
+<s t="sec" n="tests/speckit-pro/GEMINI.md" sc="Records" k="0.0003">
+</s>
+<s t="sec" n="tests/speckit-pro/evals" sc="Records" k="0.0003">
+</s>
+<s t="sec" n="tests/speckit-pro/CLAUDE.md" sc="Records" k="0.0003">
+</s>
+<s t="sec" n="tests/speckit-pro/check-toolchain.py" sc="Records" k="0.0003">
+</s>
+<s t="sec" n="tests/speckit-pro/AGENTS.md" sc="Records" k="0.0003">
+</s>
+</f>
+<f p="tests/speckit-pro/unit/test-autopilot-stage-resolution.py" layer="test">
+<s t="fn" n="overview_table" k="0.0003">
+<c n="extend"/>
+</s>
+<s t="fn" n="workflow_document" k="0.0003">
+<c n="overview_table"/>
+</s>
+<s t="fn" n="resolve_envelope" k="0.0003">
+<c n="resolve_stage"/>
+</s>
+<s t="fn" n="resolve_stage" amb="1" k="0.0003">
+<c n="resolve_autopilot_stage"/>
+<c n="resolve" prov="split"/>
+<c n="resolve" prov="split"/>
+<c n="resolve" prov="split"/>
+<c n="resolve" prov="split"/>
+</s>
+</f>
+<f p="speckit-pro/speckit_pro_runner/agent_materialization.py">
+<s t="fn" n="canonical_bytes" k="0.0003">
+<c n="encode"/>
+</s>
+<s t="fn" n="materialize_agent_policy" k="0.0004">
+<c n="AgentMaterialization"/>
+<c n="AgentMaterializationError"/>
+<c n="canonical_bytes"/>
+<c n="digest"/>
+<c n="_safe_source_relative_path"/>
+<c n="_decode_utf8"/>
+<c n="_parse_toml"/>
+<c n="_need_string"/>
+<c n="_parent_controls_from_policy"/>
+<c n="_validated_mapping"/>
+<c n="_selected_route_from_policy"/>
+<c n="_render_selected_route"/>
+<c n="_non_route_fields"/>
+<c n="_require_unchanged_non_route_fields"/>
+<c n="_materializer_source_bytes"/>
+<c n="encode"/>
+</s>
+</f>
+<f p="tests/speckit-pro/unit/test-task-execution.py" layer="test">
+<s t="fn" n="run_partition" sc="TaskExecutionTests" k="0.0004">
+<c n="partition_phase7_tasks"/>
+</s>
+</f>
+<f p="speckit-pro/codex-skills/speckit-autopilot/references/task-list-canonical-codex.md">
+<s t="sec" n="task-list-canonical-codex" k="0.0004">
+</s>
+</f>
+<f p="speckit-pro/codex-skills/speckit-autopilot/references/post-implementation-codex.md">
+<s t="sec" n="post-implementation-codex" k="0.0005">
+<c n="execution-efficiency"/>
+<c n="formal-methods"/>
+</s>
+</f>
+<f p="speckit-pro/skills/speckit-autopilot/references/artifact-review.md">
+<s t="sec" n="artifact-review" k="0.0005">
+</s>
+</f>
+<f p="docs/ai/specs/html-artifacts-roadmap-MOC.md" layer="ai">
+<s t="sec" n="html-artifacts-roadmap-MOC" k="0.0005">
+</s>
+</f>
+<f p="tests/speckit-pro/unit/test-autopilot-phase-coverage.py" layer="test">
+<s t="fn" n="projected_state" sc="AutopilotPhaseCoverageTests" k="0.0003">
+<c n="state_json"/>
+</s>
+<s t="fn" n="state_json" k="0.0004">
+<c n="extend"/>
+</s>
+<s t="fn" n="run_validator" sc="AutopilotPhaseCoverageTests" k="0.0004">
+<c n="run_validator_paths"/>
+</s>
+<s t="fn" n="run_validator_paths" sc="AutopilotPhaseCoverageTests" k="0.0004">
+<c n="read_text"/>
+<c n="extend"/>
+</s>
+<s t="fn" n="workflow_text" k="0.0005">
+</s>
+</f>
+<f p="speckit-pro/speckit_pro_runner/verification_records.py">
+<s t="fn" n="sha" k="0.0002">
+</s>
+<s t="fn" n="open_snapshot_process" k="0.0003">
+<c n="project_program"/>
+</s>
+<s t="fn" n="run_snapshot_command" k="0.0003">
+<c n="open_snapshot_process"/>
+</s>
+<s t="fn" n="project_program" k="0.0003">
+</s>
+<s t="fn" n="execute_verification" k="0.0005">
+<c n="evidence_directory"/>
+<c n="confined_path"/>
+<c n="durable_json"/>
+<c n="require_text"/>
+<c n="execution_control"/>
+<c n="record_failing_checks"/>
+<c n="execute_docker_verification"/>
+<c n="sha"/>
+<c n="project_command"/>
+<c n="tree_bytes"/>
+<c n="tree_digest"/>
+<c n="environment_binding"/>
+<c n="toolchain_binding"/>
+<c n="materialize"/>
+<c n="observation_material"/>
+<c n="run_snapshot_command"/>
+</s>
+</f>
+<f p="speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json">
+<s t="sec" n="runner_files" k="0.0006">
+</s>
+<s t="sec" n="checksum_algorithm" k="0.0006">
+</s>
+<s t="sec" n="specify_required" k="0.0006">
+</s>
+<s t="sec" n="python_minimum_version" k="0.0006">
+</s>
+<s t="sec" n="runner_version" k="0.0006">
+</s>
+<s t="sec" n="plugin_version" k="0.0006">
+</s>
+<s t="sec" n="contract_version" k="0.0006">
+</s>
+<s t="sec" n="selected_runtime_name" k="0.0006">
+</s>
+<s t="sec" n="runner_contract_id" k="0.0006">
+</s>
+<s t="sec" n="runner_name" k="0.0006">
+</s>
+</f>
+<f p="speckit-pro/speckit_pro_runner/formal/selection.py">
+<s t="cls" n="SelectionError" sc="SelectionError" k="0.0006">
+</s>
+</f>
+<f p="docs/ai/specs/html-artifacts-technical-roadmap.md" layer="ai">
+<s t="sec" n="html-artifacts-technical-roadmap" k="0.0006">
+<c n="html-artifacts-roadmap-MOC"/>
+<c n="prd-html-artifacts"/>
+</s>
+</f>
+<f p="speckit-pro/skills/speckit-autopilot/references/workflow-file-protocol.md">
+<s t="sec" n="workflow-file-protocol" k="0.0007">
+</s>
+</f>
+<f p="tests/speckit-pro/unit/test-formal-checkers.py" layer="test">
+<s t="fn" n="save_catalog" sc="FormalCheckerTests" k="0.0003">
+</s>
+<s t="fn" n="request" sc="FormalCheckerTests" k="0.0007">
+<c n="dispatch_helper"/>
+</s>
+</f>
+<f p="tests/speckit-pro/lib/trigger_comparison.py" layer="test">
+<s t="fn" n="_require" k="0.0008">
+</s>
+</f>
+<f p="speckit-pro/skills/speckit-autopilot/references/post-implementation.md">
+<s t="sec" n="post-implementation" k="0.0008">
+<c n="execution-efficiency"/>
+<c n="formal-methods"/>
+</s>
+</f>
+<f p="speckit-pro/speckit_pro_runner/helpers/registry.py">
+<s t="fn" n="dispatch_helper" k="0.0008">
+<c n="diagnostic"/>
+<c n="response"/>
+<c n="run_formal_helper"/>
+<c n="run_archive_sweep_helper"/>
+<c n="run_egress_authorization_helper"/>
+<c n="run_gate_preflight_coverage_helper"/>
+<c n="run_pr_split_ratification_helper"/>
+<c n="registry_report"/>
+<c n="run_registered_helper"/>
+<c n="dispatch_mutation_helper"/>
+<c n="run_run_finalization_helper"/>
+<c n="run_research_broker_preflight_helper"/>
+</s>
+</f>
+<f p="speckit-pro/skills/speckit-autopilot/references/gate-validation.md">
+<s t="sec" n="gate-validation" k="0.0009">
+<c n="execution-efficiency"/>
+</s>
+</f>
+<f p="tests/speckit-pro/unit/test-feedback-sweep-isolation.py" layer="test">
+<s t="fn" n="close" sc="GitFixture" k="0.0009">
+<c n="cleanup"/>
+</s>
+</f>
+<f p="speckit-pro/skills/speckit-autopilot/references/grounding.md">
+<s t="sec" n="grounding" k="0.0009">
+<c n="capability-discovery"/>
+</s>
+</f>
+<f p="tests/speckit-pro/unit/test-functional-headless-runner.py" layer="test">
+<s t="fn" n="actor_environment" amb="1" k="0.0003">
+<c n="resolve" prov="split"/>
+<c n="resolve" prov="split"/>
+<c n="resolve" prov="split"/>
+<c n="resolve" prov="split"/>
+</s>
+<s t="fn" n="claude_evidence" sc="FunctionalHeadlessRunnerTests" k="0.0003">
+<c n="stage_case"/>
+<c n="claude_skill_policy"/>
+<c n="case"/>
+</s>
+<s t="fn" n="case" sc="FunctionalHeadlessRunnerTests" k="0.0010">
+<c n="find_case"/>
+</s>
+</f>
+<f p="speckit-pro/skills/speckit-autopilot/references/capability-discovery.md">
+<s t="sec" n="capability-discovery" k="0.0010">
+<c n="grounding"/>
+</s>
+</f>
+<f p="tests/speckit-pro/lib/test_result.py" layer="test">
+<s t="fn" n="failure_header" k="0.0002">
+</s>
+<s t="cls" n="CountingTestResult" sc="CountingTestResult" k="0.0002">
+</s>
+<s t="fn" n="write" sc="_StreamWrapper" k="0.0004">
+</s>
+<s t="fn" n="run_counted" amb="1" k="0.0010">
+<c n="run" prov="split"/>
+<c n="id"/>
+<c n="failure_header"/>
+<c n="install_specs_read_guard"/>
+<c n="CountingTestResult"/>
+<c n="write"/>
+<c n="run" prov="split"/>
+</s>
+</f>
+<f p="speckit-pro/speckit_pro_runner/sweep_isolation.py">
+<s t="fn" n="read" sc="GitSnapshot" k="0.0003">
+<c n="IsolationViolation"/>
+<c n="entry"/>
+<c n="decode"/>
+<c n="encode"/>
+</s>
+<s t="cls" n="IsolationViolation" sc="IsolationViolation" k="0.0006">
+</s>
+<s t="fn" n="search" sc="GitSnapshot" k="0.0010">
+<c n="values"/>
+<c n="IsolationViolation"/>
+<c n="_normalize_snapshot_path"/>
+<c n="decode"/>
+<c n="append"/>
+<c n="encode"/>
+</s>
+</f>
+<f p="speckit-pro/skills/speckit-autopilot/references/consensus-protocol.md">
+<s t="sec" n="Human Review Needed" sc="Consensus Protocol Reference" k="0.0003">
+<c n="workflow-file-protocol"/>
+</s>
+<s t="sec" n="consensus-protocol" k="0.0011">
+<c n="agent-teams-integration"/>
+</s>
+</f>
+<f p="speckit-pro/skills/speckit-autopilot/references/formal-methods.md">
+<s t="sec" n="formal-methods" k="0.0012">
+</s>
+</f>
+<f p="tests/speckit-pro/lib/trigger_carry_forward.py" layer="test">
+<s t="var" n="index" sc="HistoricalEvidenceSource" k="0.0012">
+</s>
+</f>
+<f p="speckit-pro/skills/speckit-autopilot/references/agent-teams-integration.md">
+<s t="sec" n="agent-teams-integration" k="0.0013">
+</s>
+</f>
+<f p="tests/speckit-pro/unit/test-trigger-eval-runners.py" layer="test">
+<s t="cls" n="FakePopen" sc="FakePopen" k="0.0008">
+</s>
+<s t="fn" n="cleanup" sc="Layer2TriggerRunnerTests" k="0.0008">
+<c n="extend"/>
+</s>
+<s t="fn" n="import_script" k="0.0014">
+<c n="exec_module"/>
+</s>
+</f>
+<f p="speckit-pro/codex-skills/speckit-autopilot/references/phase-execution-codex.md">
+<s t="sec" n="Resume Protocol" sc="Stage-Bounded Execution" k="0.0004">
+</s>
+<s t="sec" n="Blocked Actions Mid-Run: Fall Back or Defer, Never Stop" sc="Phase 7: Implement" k="0.0008">
+</s>
+<s t="sec" n="phase-execution-codex" k="0.0015">
+</s>
+</f>
+<f p="speckit-pro/skills/speckit-autopilot/references/phase-execution.md">
+<s t="sec" n="Phase 7 Setup: Open the Implementation-Notes Record" sc="Phase 7: Implement (Task-Level Dispatch)" k="0.0002">
+</s>
+<s t="sec" n="Phase 7 Setup: Record the Implement Checklist Gate" sc="Phase 7: Implement (Task-Level Dispatch)" k="0.0002">
+</s>
+<s t="sec" n="Phase 7 Setup: Private State Never Enters the Repository" sc="Phase 7: Implement (Task-Level Dispatch)" k="0.0002">
+</s>
+<s t="sec" n="Phase 7 Setup: Stop or Proceed" sc="Phase 7: Implement (Task-Level Dispatch)" k="0.0002">
+</s>
+<s t="sec" n="Phase 7 Setup: Two Statuses That Cannot Classify Here" sc="Phase 7: Implement (Task-Level Dispatch)" k="0.0002">
+</s>
+<s t="sec" n="Phase 7 Setup: The Refresh Takes Its Own Observation" sc="Phase 7: Implement (Task-Level Dispatch)" k="0.0002">
+</s>
+<s t="sec" n="Phase 7 Setup: The Push Is Inside the Regeneration Step" sc="Phase 7: Implement (Task-Level Dispatch)" k="0.0002">
+</s>
+<s t="sec" n="Phase 7 Setup: What the Join Repairs, and What It Does Not" sc="Phase 7: Implement (Task-Level Dispatch)" k="0.0002">
+</s>
+<s t="sec" n="Phase 7 Setup: A Whole-Set Gap Still Refreshes" sc="Phase 7: Implement (Task-Level Dispatch)" k="0.0002">
+</s>
+<s t="sec" n="Phase 7 Setup: The Artifacts Directory Is Left Unmoved" sc="Phase 7: Implement (Task-Level Dispatch)" k="0.0002">
+</s>
+<s t="sec" n="Phase 7 Setup: Three Commit Shapes, Kept Apart" sc="Phase 7: Implement (Task-Level Dispatch)" k="0.0002">
+</s>
+<s t="sec" n="Phase 7 Setup: The Superseded File Behind a Per-Page Gap" sc="Phase 7: Implement (Task-Level Dispatch)" k="0.0002">
+</s>
+<s t="sec" n="Phase 7 Setup: Freshness Runs Only After an Amendment-Free Sweep" sc="Phase 7: Implement (Task-Level Dispatch)" k="0.0002">
+</s>
+<s t="sec" n="Phase 7 Setup: The Regeneration Sequence" sc="Phase 7: Implement (Task-Level Dispatch)" k="0.0002">
+</s>
+<s t="sec" n="Phase 7 Setup: Reply Reconciliation" sc="Phase 7: Implement (Task-Level Dispatch)" k="0.0002">
+</s>
+<s t="sec" n="Phase 7 Setup: Where a Reply Is Written, and When" sc="Phase 7: Implement (Task-Level Dispatch)" k="0.0002">
+</s>
+<s t="sec" n="Phase 7 Setup: The Reply Templates" sc="Phase 7: Implement (Task-Level Dispatch)" k="0.0002">
+</s>
+<s t="sec" n="Phase 7 Setup: Deterministic Outbound Text" sc="Phase 7: Implement (Task-Level Dispatch)" k="0.0002">
+</s>
+<s t="sec" n="Phase 7 Setup: Amending, Committing, and Pushing" sc="Phase 7: Implement (Task-Level Dispatch)" k="0.0002">
+</s>
+<s t="sec" n="Phase 7 Setup: Consensus for an Amended Comment" sc="Phase 7: Implement (Task-Level Dispatch)" k="0.0002">
+</s>
+<s t="sec" n="Phase 7 Setup: The Corroboration Gate" sc="Phase 7: Implement (Task-Level Dispatch)" k="0.0002">
+</s>
+<s t="sec" n="Phase 7 Setup: The Run Report Every Path Builds" sc="Phase 7: Implement (Task-Level Dispatch)" k="0.0002">
+</s>
+<s t="sec" n="Phase 7 Setup: Security Isolation Boundary" sc="Phase 7: Implement (Task-Level Dispatch)" k="0.0002">
+</s>
+<s t="sec" n="Phase 7 Setup: The Pull-Request Feedback Sweep" sc="Phase 7: Implement (Task-Level Dispatch)" k="0.0002">
+</s>
+<s t="sec" n="Phase 7: Implement (Task-Level Dispatch)" sc="Phase-by-Phase Execution" k="0.0002">
+</s>
+<s t="sec" n="When reviewability later splits the work" sc="Phase 6.5: Pre-Implement Confidence Gate" k="0.0002">
+</s>
+<s t="sec" n="What each corroboration status means at the terminal step" sc="Phase 6.5: Pre-Implement Confidence Gate" k="0.0002">
+</s>
+<s t="sec" n="The `Draft PR` row" sc="Phase 6.5: Pre-Implement Confidence Gate" k="0.0002">
+<c n="workflow-file-protocol"/>
+</s>
+<s t="sec" n="The plan-stage stop report" sc="Phase 6.5: Pre-Implement Confidence Gate" k="0.0002">
+</s>
+<s t="sec" n="Fail-open: three sinks, and the runs that reach them" sc="Phase 6.5: Pre-Implement Confidence Gate" k="0.0002">
+</s>
+<s t="sec" n="The draft description: one H1 and two H2 sections" sc="Phase 6.5: Pre-Implement Confidence Gate" k="0.0002">
+</s>
+<s t="sec" n="Create or refresh: the two-way existence test" sc="Phase 6.5: Pre-Implement Confidence Gate" k="0.0002">
+</s>
+<s t="sec" n="Strict-mode block: the return happens before generation" sc="Phase 6.5: Pre-Implement Confidence Gate" k="0.0002">
+</s>
+<s t="sec" n="The written pages are verified on disk, not taken on report" sc="Phase 6.5: Pre-Implement Confidence Gate" k="0.0002">
+</s>
+<s t="sec" n="Artifact generation: the `artifact-author` dispatch" sc="Phase 6.5: Pre-Implement Confidence Gate" k="0.0002">
+</s>
+<s t="sec" n="Draft-PR emission: the terminal-step sequence (plan stage only)" sc="Phase 6.5: Pre-Implement Confidence Gate" k="0.0002">
+<c n="artifact-review"/>
+</s>
+<s t="sec" n="Stage-boundary commit (plan stage only)" sc="Phase 6.5: Pre-Implement Confidence Gate" k="0.0002">
+</s>
+<s t="sec" n="Plan stage: G6.5 is the terminal step" sc="Phase 6.5: Pre-Implement Confidence Gate" k="0.0002">
+</s>
+<s t="sec" n="Phase 6.5: Pre-Implement Confidence Gate" sc="Phase-by-Phase Execution" k="0.0002">
+<c n="consensus-protocol"/>
+</s>
+<s t="sec" n="Phase 4: Checklist" sc="Phase-by-Phase Execution" k="0.0002">
+</s>
+<s t="sec" n="Phase 2: Clarify (Conditional)" sc="Phase-by-Phase Execution" k="0.0002">
+</s>
+<s t="sec" n="Static Tier-2 Relocation Suggestion" sc="Phase-by-Phase Execution" k="0.0002">
+</s>
+<s t="sec" n="Phase 0: Prerequisites (Constitution Validation)" sc="Phase-by-Phase Execution" k="0.0002">
+</s>
+<s t="sec" n="Progress Task List" sc="Phase-by-Phase Execution" k="0.0002">
+</s>
+<s t="sec" n="Implementation Stage: Read The Recorded Verdict, Do Not Re-Run The Gate" sc="Stage-Bounded Phase Selection" k="0.0002">
+</s>
+<s t="sec" n="Subagent Prompt Template" sc="Subagent Delegation" k="0.0002">
+</s>
+<s t="sec" n="Phase Execution Reference" k="0.0002">
+</s>
+<s t="sec" n="Workflow File Update Protocol" sc="Phase Execution Reference" k="0.0002">
+</s>
+<s t="sec" n="Copilot Review Remediation Loop" sc="Phase Execution Reference" k="0.0002">
+<c n="post-implementation"/>
+</s>
+<s t="sec" n="PR Creation Protocol" sc="Phase Execution Reference" k="0.0002">
+<c n="post-implementation"/>
+</s>
+<s t="sec" n="Extension Hook Events" sc="Phase Execution Reference" k="0.0002">
+</s>
+<s t="sec" n="Full Integration / E2E Suite Verification" sc="Phase Execution Reference" k="0.0002">
+</s>
+<s t="sec" n="Phase-by-Phase Execution" sc="Phase Execution Reference" k="0.0002">
+</s>
+<s t="sec" n="Stage-Bounded Phase Selection" sc="Phase Execution Reference" k="0.0002">
+</s>
+<s t="sec" n="Branch/Worktree Detection" sc="Phase Execution Reference" k="0.0002">
+<c n="prerequisites"/>
+</s>
+<s t="sec" n="Subagent Delegation" sc="Phase Execution Reference" k="0.0002">
+</s>
+<s t="sec" n="SpecKit Infrastructure" sc="Phase Execution Reference" k="0.0002">
+</s>
+<s t="sec" n="Blocked Actions Mid-Run: Fall Back or Defer, Never Stop" sc="Phase 7: Implement (Task-Level Dispatch)" k="0.0009">
+</s>
+<s t="sec" n="phase-execution" k="0.0016">
+</s>
+</f>
+<f p="speckit-pro/speckit_pro_runner/helpers/install.py">
+<s t="fn" n="route_policy_digest" k="0.0002">
+<c n="route_policy_canonical_bytes"/>
+</s>
+<s t="cls" n="CodexAgentNoClobberConflict" sc="CodexAgentNoClobberConflict" k="0.0003">
+</s>
+<s t="fn" n="route_policy_canonical_bytes" k="0.0003">
+<c n="encode"/>
+</s>
+<s t="fn" n="preserved_concurrent_file" sc="AnchoredAgentDir" k="0.0003">
+</s>
+<s t="fn" n="write_codex_agent_atomic" amb="12" k="0.0003">
+<c n="CodexAgentCleanupResult"/>
+<c n="CodexAgentNoClobberConflict"/>
+<c n="record_cleanup_result"/>
+<c n="evidence_path"/>
+<c n="ensure_current"/>
+<c n="target_is_safe" prov="split"/>
+<c n="previous_state" prov="split"/>
+<c n="state_matches"/>
+<c n="create_temp_file" prov="split"/>
+<c n="rename_no_replace" prov="split"/>
+<c n="preserved_concurrent_file"/>
+<c n="classify_entry_by_expected"/>
+<c n="close_handle_cleanup_errors_for_rename"/>
+<c n="merge_cleanup_result"/>
+<c n="previous_state_exists_for_packaging"/>
+<c n="cleanup_entry_for_packaging"/>
+<c n="restore_failure_for_packaging"/>
+<c n="cleanup_owned_entry" prov="split"/>
+<c n="preserve_uncertain_entry"/>
+<c n="move_target_to_backup" prov="split"/>
+<c n="restore_backup_no_clobber"/>
+<c n="preserve_state_as_backup" prov="split"/>
+<c n="target_is_safe" prov="split"/>
+<c n="previous_state" prov="split"/>
+<c n="create_temp_file" prov="split"/>
+<c n="rename_no_replace" prov="split"/>
+<c n="apply_child_mode_verified"/>
+<c n="cleanup_owned_entry" prov="split"/>
+<c n="move_target_to_backup" prov="split"/>
+<c n="preserve_state_as_backup" prov="split"/>
+<c n="codex_agent_borrow_anchored_directory"/>
+<c n="codex_agent_destination_identity"/>
+<c n="append"/>
+<c n="insert"/>
+<c n="extend"/>
+</s>
+<s t="fn" n="previous_state" sc="AnchoredAgentDir" k="0.0003">
+<c n="CodexAgentFileState"/>
+<c n="_validate_name"/>
+<c n="codex_agent_close_descriptor_nonmasking"/>
+<c n="read"/>
+<c n="append"/>
+</s>
+<s t="fn" n="invalid_route_policy_manifest" k="0.0003">
+<c n="diagnostic"/>
+<c n="update"/>
+</s>
+<s t="fn" n="codex_agent_native_rename_no_replace" k="0.0003">
+<c n="codex_agent_native_rename_no_replace_between"/>
+</s>
+<s t="fn" n="program_name" k="0.0004">
+<c n="replace"/>
+</s>
+<s t="fn" n="codex_agent_native_rename_no_replace_between" k="0.0004">
+</s>
+<s t="fn" n="_validate_name" sc="AnchoredAgentDir" k="0.0004">
+</s>
+<s t="cls" n="CodexAgentFileState" sc="CodexAgentFileState" k="0.0004">
+</s>
+<s t="fn" n="codex_agent_close_descriptor_nonmasking" k="0.0004">
+</s>
+<s t="fn" n="codex_agent_previous_state" amb="1" k="0.0004">
+<c n="CodexAgentFileState"/>
+<c n="previous_state" prov="split"/>
+<c n="previous_state" prov="split"/>
+<c n="codex_agent_current_anchored_directory"/>
+<c n="codex_agent_close_descriptor_nonmasking"/>
+<c n="read"/>
+<c n="fileno"/>
+</s>
+<s t="fn" n="codex_agent_windows_last_error" k="0.0005">
+</s>
+<s t="fn" n="codex_agent_windows_set_signature" k="0.0005">
+</s>
+<s t="fn" n="codex_agent_windows_os_error" k="0.0005">
+<c n="codex_agent_windows_last_error"/>
+</s>
+<s t="fn" n="codex_agent_windows_kernel32" k="0.0005">
+</s>
+<s t="fn" n="evidence_path" sc="AnchoredAgentDir" k="0.0006">
+<c n="is_current"/>
+<c n="_validate_name"/>
+</s>
+<s t="fn" n="is_current" sc="AnchoredAgentDir" k="0.0007">
+<c n="codex_agent_destination_identity"/>
+</s>
+<s t="fn" n="codex_agent_windows_close_handle" k="0.0008">
+<c n="codex_agent_windows_kernel32"/>
+<c n="codex_agent_windows_os_error"/>
+<c n="codex_agent_windows_set_signature"/>
+</s>
+<s t="fn" n="close" sc="WindowsAnchoredAgentDir" k="0.0009">
+<c n="codex_agent_windows_close_handle"/>
+<c n="append"/>
+</s>
+<s t="fn" n="close" sc="AnchoredAgentDir" k="0.0009">
+<c n="append"/>
+</s>
+<s t="fn" n="codex_agent_destination_identity" k="0.0017">
+</s>
+</f>
+<f p="tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py" layer="test">
+<s t="fn" n="write_route_policy_manifest" sc="MutationHelperTests" k="0.0002">
+</s>
+<s t="fn" n="route_aware_inputs" sc="MutationHelperTests" k="0.0003">
+<c n="routing_capability_snapshot"/>
+</s>
+<s t="fn" n="finalize_route_policy_manifest" k="0.0003">
+<c n="route_policy_digest"/>
+</s>
+<s t="fn" n="route_policy_digest" k="0.0005">
+<c n="canonical_json_bytes"/>
+</s>
+<s t="fn" n="canonical_json_bytes" k="0.0005">
+<c n="encode"/>
+</s>
+<s t="fn" n="valid_route_policy_manifest" k="0.0005">
+<c n="routing_fixture_document"/>
+<c n="routing_required_agents"/>
+<c n="routing_optional_helper"/>
+<c n="codex_agent_source_roster_document"/>
+<c n="codex_agent_non_route_contract_digest"/>
+<c n="route_policy_route"/>
+<c n="finalize_route_policy_manifest"/>
+</s>
+<s t="fn" n="routing_capability_snapshot" k="0.0006">
+<c n="routing_fixture_document"/>
+</s>
+<s t="fn" n="routing_required_agents" k="0.0006">
+<c n="routing_fixture_document"/>
+</s>
+<s t="fn" n="runner_env" k="0.0006">
+</s>
+<s t="fn" n="routing_optional_helper" k="0.0007">
+<c n="routing_fixture_document"/>
+</s>
+<s t="fn" n="set_last_error" sc="FakeWindowsKernel32" k="0.0007">
+</s>
+<s t="fn" n="helper_request" k="0.0008">
+</s>
+<s t="fn" n="run_runner" k="0.0008">
+<c n="update"/>
+<c n="runner_env"/>
+</s>
+<s t="fn" n="temp_clean_git_repo" sc="MutationHelperTests" k="0.0012">
+<c n="run_git"/>
+</s>
+<s t="cls" n="FakeWindowsKernel32" sc="FakeWindowsKernel32" k="0.0012">
+</s>
+<s t="fn" n="run_git" sc="MutationHelperTests" k="0.0012">
+</s>
+<s t="fn" n="assert_response" sc="MutationHelperTests" k="0.0012">
+</s>
+<s t="fn" n="routing_fixture_document" k="0.0017">
+<c n="read_text"/>
+</s>
+</f>
+<f p="speckit-pro/speckit_pro_runner/gates/active_path_guard.py">
+<s t="fn" n="repo_bash_add_guidance" k="0.0003">
+<c n="RepoBashGuidanceResolution"/>
+<c n="repo_bash_scalar_guidance"/>
+<c n="repo_bash_dynamic_guidance"/>
+</s>
+<s t="fn" n="add" k="0.0003">
+<c n="RepoBashShellBindingEvent"/>
+<c n="dominates"/>
+</s>
+<s t="fn" n="repo_bash_command_segment_contains_forbidden" k="0.0003">
+<c n="repo_bash_argv_contains_forbidden"/>
+<c n="executable_basename"/>
+</s>
+<s t="fn" n="repo_bash_command_text_contains_forbidden" k="0.0003">
+<c n="repo_bash_command_segment_contains_forbidden"/>
+</s>
+<s t="cls" n="RawFinding" sc="RawFinding" k="0.0003">
+</s>
+<s t="fn" n="repo_bash_bounded_argv" k="0.0003">
+</s>
+<s t="fn" n="repo_bash_argv_contains_forbidden" k="0.0003">
+<c n="repo_bash_env_argv_contains_forbidden"/>
+<c n="repo_bash_command_text_contains_forbidden"/>
+<c n="shell_command_payload_flag"/>
+<c n="executable_basename"/>
+</s>
+<s t="fn" n="static_string_literal" k="0.0003">
+</s>
+<s t="fn" n="env_split_string_argvs" k="0.0004">
+<c n="env_delegated_argvs"/>
+</s>
+<s t="fn" n="env_delegated_argvs" k="0.0005">
+<c n="env_split_string_argvs"/>
+<c n="extend"/>
+</s>
+<s t="cls" n="RepoBashGuidanceString" sc="RepoBashGuidanceString" k="0.0005">
+</s>
+<s t="cls" n="RepoBashStaticResolution" sc="RepoBashStaticResolution" k="0.0006">
+</s>
+<s t="fn" n="executable_basename" k="0.0006">
+<c n="normalize_path"/>
+</s>
+<s t="fn" n="repo_bash_dynamic_guidance" k="0.0006">
+<c n="repo_bash_scalar_guidance"/>
+</s>
+<s t="cls" n="RepoBashGuidanceResolution" sc="RepoBashGuidanceResolution" k="0.0008">
+</s>
+<s t="fn" n="repo_bash_scalar_guidance" k="0.0010">
+<c n="RepoBashGuidanceString"/>
+<c n="RepoBashGuidanceResolution"/>
+</s>
+<s t="fn" n="normalize_path" k="0.0012">
+<c n="replace"/>
+</s>
+<s t="fn" n="repo_bash_guidance_resolution" k="0.0018">
+<c n="RepoBashGuidanceResolution"/>
+<c n="repo_bash_apply_guidance_event"/>
+<c n="repo_bash_format_guidance"/>
+<c n="repo_bash_percent_guidance"/>
+<c n="repo_bash_scalar_guidance"/>
+<c n="repo_bash_dynamic_guidance"/>
+<c n="repo_bash_add_guidance"/>
+<c n="extend"/>
+</s>
+<s t="fn" n="repo_bash_static_resolution" k="0.0018">
+<c n="RepoBashStaticResolution"/>
+<c n="repo_bash_name_resolution"/>
+<c n="repo_bash_add_resolutions"/>
+<c n="repo_bash_bounded_argv"/>
+<c n="repo_bash_merge_alternative_resolutions"/>
+<c n="repo_bash_command_source_call"/>
+<c n="repo_bash_trusted_which_call"/>
+<c n="static_string_literal"/>
+<c n="executable_basename"/>
+<c n="extend"/>
+</s>
+<s t="var" n="values" sc="RepoBashGuidanceResolution" k="0.0019">
+</s>
+<s t="fn" n="resolve" overloads="2" k="0.0020">
+<c n="repo_bash_guidance_resolution"/>
+</s>
+</f>
+<f p="tests/speckit-pro/layer3-functional/run-headless-evals.py" layer="test">
+<s t="fn" n="parse_events" k="0.0003">
+<c n="count"/>
+<c n="update"/>
+<c n="extend"/>
+<c n="EvidenceError"/>
+<c n="parse_jsonl"/>
+<c n="require_codex_event_isolation"/>
+<c n="codex_agent_message_count"/>
+<c n="claude_agent_message_count"/>
+<c n="index"/>
+</s>
+<s t="fn" n="sha256_bytes" k="0.0003">
+</s>
+<s t="fn" n="present" k="0.0003">
+</s>
+<s t="fn" n="cleanup_process_group" k="0.0004">
+<c n="present"/>
+</s>
+<s t="fn" n="find_case" k="0.0009">
+<c n="EvidenceError"/>
+</s>
+<s t="cls" n="EvidenceError" sc="EvidenceError" k="0.0020">
+</s>
+</f>
+<f p="speckit-pro/skills/speckit-autopilot/references/execution-efficiency.md">
+<s t="sec" n="execution-efficiency" k="0.0022">
+</s>
+</f>
+<f p="speckit-pro/speckit_pro_runner/envelope.py">
+<s t="fn" n="response" k="0.0004">
+</s>
+<s t="fn" n="remediation" k="0.0019">
+</s>
+<s t="fn" n="diagnostic" k="0.0023">
+<c n="remediation"/>
+</s>
+</f>
+<f p="tests/speckit-pro/unit/test-speckit-pro-read-only-helpers.py" layer="test">
+<s t="fn" n="_feature_state" sc="ReadOnlyHelperTests" k="0.0002">
+<c n="check_prerequisites"/>
+</s>
+<s t="fn" n="build_scaffold_placement_worktrees" sc="ReadOnlyHelperTests" k="0.0003">
+</s>
+<s t="fn" n="run_plan_layers" sc="ReadOnlyHelperTests" k="0.0003">
+<c n="helper_request"/>
+<c n="run_runner"/>
+</s>
+<s t="fn" n="placement_result" sc="ReadOnlyHelperTests" k="0.0003">
+<c n="resolve_scaffold_worktree_placement"/>
+</s>
+<s t="fn" n="draft_packet_variant" sc="ReadOnlyHelperTests" k="0.0003">
+<c n="draft_packet_fixture"/>
+</s>
+<s t="fn" n="setup_gate_for_spec" sc="ReadOnlyHelperTests" k="0.0003">
+<c n="reviewability_gate"/>
+<c n="helper_project"/>
+</s>
+<s t="fn" n="_helper_json" sc="ReadOnlyHelperTests" k="0.0004">
+</s>
+<s t="fn" n="build_binding_worktrees" sc="ReadOnlyHelperTests" k="0.0005">
+</s>
+<s t="fn" n="draft_packet_fixture" sc="ReadOnlyHelperTests" k="0.0005">
+<c n="read_text"/>
+</s>
+<s t="fn" n="packet_failure_rules" sc="ReadOnlyHelperTests" k="0.0005">
+<c n="helper_request"/>
+<c n="run_packet_runner"/>
+<c n="assert_response"/>
+</s>
+<s t="fn" n="write_confidence_workflow" sc="ReadOnlyHelperTests" k="0.0006">
+</s>
+<s t="fn" n="binding_result" sc="ReadOnlyHelperTests" k="0.0006">
+<c n="resolve_workflow_binding"/>
+</s>
+<s t="fn" n="run_packet_runner" sc="ReadOnlyHelperTests" k="0.0007">
+<c n="run_runner"/>
+</s>
+<s t="fn" n="assert_helper_matches_bash_reference" sc="ReadOnlyHelperTests" k="0.0007">
+<c n="helper_request"/>
+<c n="run_runner"/>
+</s>
+<s t="fn" n="confidence_emit" sc="ReadOnlyHelperTests" k="0.0009">
+<c n="extend"/>
+<c n="analysis_table"/>
+</s>
+<s t="fn" n="analysis_table" sc="ReadOnlyHelperTests" k="0.0009">
+<c n="extend"/>
+</s>
+<s t="fn" n="run_confidence_gate" sc="ReadOnlyHelperTests" amb="1" k="0.0010">
+<c n="update"/>
+<c n="confidence_gate"/>
+<c n="resolve" prov="split"/>
+<c n="resolve" prov="split"/>
+<c n="resolve" prov="split"/>
+<c n="resolve" prov="split"/>
+<c n="write_confidence_workflow"/>
+</s>
+<s t="fn" n="runner_env" k="0.0014">
+</s>
+<s t="fn" n="assert_response" sc="ReadOnlyHelperTests" k="0.0014">
+</s>
+<s t="fn" n="run_runner" k="0.0018">
+<c n="update"/>
+<c n="runner_env"/>
+</s>
+<s t="fn" n="helper_request" k="0.0018">
+</s>
+<s t="fn" n="helper_project" amb="1" k="0.0024">
+<c n="resolve" prov="split"/>
+<c n="resolve" prov="split"/>
+<c n="resolve" prov="split"/>
+<c n="resolve" prov="split"/>
+</s>
+</f>
+<f p="speckit-pro/speckit_pro_runner/helpers/read_only.py">
+<s t="fn" n="phase7_keyword_matches" k="0.0002">
+</s>
+<s t="fn" n="workflow_binding_payload" k="0.0002">
+</s>
+<s t="fn" n="workflow_stage_signals" k="0.0002">
+<c n="checkpoint_signal"/>
+<c n="workflow_table_rows"/>
+<c n="workflow_recorded_stage"/>
+<c n="open_analysis_findings"/>
+</s>
+<s t="fn" n="sweep_result" k="0.0002">
+<c n="make_result"/>
+<c n="json_text"/>
+<c n="sweep_error"/>
+<c n="encode"/>
+</s>
+<s t="fn" n="confidence_verdict_status" k="0.0002">
+<c n="values"/>
+</s>
+<s t="fn" n="phase7_singleton" k="0.0003">
+</s>
+<s t="fn" n="schema_child_field" k="0.0003">
+</s>
+<s t="fn" n="phase7_error" k="0.0003">
+<c n="make_result"/>
+<c n="json_text"/>
+</s>
+<s t="fn" n="count_pattern" k="0.0003">
+<c n="trusted_lines"/>
+<c n="search"/>
+</s>
+<s t="cls" n="SweepExportLead" sc="SweepExportLead" k="0.0003">
+</s>
+<s t="fn" n="workflow_recorded_stage" k="0.0003">
+<c n="workflow_table_rows"/>
+</s>
+<s t="fn" n="file_fingerprint" k="0.0003">
+<c n="repo_relative"/>
+<c n="trusted_file_exists"/>
+<c n="trusted_bytes"/>
+</s>
+<s t="fn" n="confidence_gate" k="0.0003">
+<c n="values"/>
+<c n="make_result"/>
+<c n="json_text"/>
+<c n="open_analysis_findings"/>
+<c n="resolve_input_path"/>
+<c n="request_path_display"/>
+<c n="trusted_file_exists"/>
+<c n="trusted_text"/>
+</s>
+<s t="fn" n="find_specify" k="0.0003">
+</s>
+<s t="fn" n="parse_stage_args" k="0.0003">
+<c n="stage_args_error"/>
+<c n="append"/>
+</s>
+<s t="fn" n="plan_layers_diagnostic" k="0.0003">
+<c n="plan_layers_source"/>
+</s>
+<s t="fn" n="sweep_export_anchors" k="0.0003">
+<c n="group"/>
+<c n="search"/>
+<c n="append"/>
+</s>
+<s t="cls" n="RegisteredWorktreeRecord" sc="RegisteredWorktreeRecord" k="0.0003">
+</s>
+<s t="fn" n="validate_pr_workflow_contract" k="0.0003">
+<c n="group"/>
+<c n="make_result"/>
+<c n="json_text"/>
+<c n="spec_scope_from_changed_path"/>
+<c n="resolve_input_path"/>
+<c n="trusted_dir_exists"/>
+<c n="trusted_text"/>
+<c n="git_diff_changed_paths"/>
+<c n="append"/>
+</s>
+<s t="fn" n="invalid_args" k="0.0003">
+<c n="diagnostic"/>
+</s>
+<s t="fn" n="explicit_or_derived_args" k="0.0003">
+<c n="required_args"/>
+<c n="invalid_args"/>
+<c n="request_path_display"/>
+<c n="extend"/>
+</s>
+<s t="fn" n="analysis_results_rows" k="0.0003">
+<c n="sweep_table_cells"/>
+<c n="sweep_is_table_rule"/>
+<c n="append"/>
+</s>
+<s t="fn" n="detect_commands" k="0.0003">
+<c n="update"/>
+<c n="make_result"/>
+<c n="json_text"/>
+<c n="node_script_command"/>
+<c n="node_package_script_names"/>
+<c n="discover_test_runner"/>
+<c n="local_node_bin_present"/>
+<c n="python_quality_commands"/>
+<c n="resolve_base_branch"/>
+<c n="resolve_input_path"/>
+<c n="trusted_file_exists"/>
+<c n="trusted_text"/>
+<c n="substitutions"/>
+<c n="detect_plugin_root"/>
+</s>
+<s t="fn" n="path_diagnostic" k="0.0003">
+<c n="diagnostic"/>
+</s>
+<s t="fn" n="schema_failure" k="0.0003">
+</s>
+<s t="fn" n="normalize_display" k="0.0003">
+<c n="replace"/>
+<c n="append"/>
+</s>
+<s t="fn" n="freshness_error" k="0.0003">
+<c n="make_result"/>
+</s>
+<s t="fn" n="workflow_draft_pr_row" k="0.0004">
+<c n="group"/>
+<c n="workflow_table_rows"/>
+</s>
+<s t="fn" n="check_prerequisites" k="0.0004">
+<c n="make_result"/>
+<c n="json_text"/>
+<c n="active_feature_directory"/>
+<c n="setup_contract_mismatches"/>
+<c n="template_resolution_error"/>
+<c n="check"/>
+<c n="resolve_input_path"/>
+<c n="trusted_file_exists"/>
+<c n="trusted_dir_exists"/>
+<c n="git_branch"/>
+<c n="git_is_worktree"/>
+<c n="find_specify"/>
+<c n="normalize_path_input"/>
+<c n="append"/>
+</s>
+<s t="fn" n="resolve_claude_subagent_runtime" k="0.0004">
+<c n="make_result"/>
+<c n="json_text"/>
+<c n="_claude_client_version"/>
+<c n="_positive_runtime_limit"/>
+<c n="append"/>
+</s>
+<s t="fn" n="registered_worktree_records" amb="1" k="0.0004">
+<c n="resolve" prov="split"/>
+<c n="resolve" prov="split"/>
+<c n="RegisteredWorktreeRecord"/>
+<c n="add"/>
+<c n="append"/>
+</s>
+<s t="fn" n="stage_args_error" k="0.0004">
+</s>
+<s t="fn" n="git_branch" amb="1" k="0.0004">
+<c n="resolve" prov="split"/>
+<c n="resolve" prov="split"/>
+<c n="path_stays_in_trust_boundary"/>
+<c n="trusted_text"/>
+<c n="allowed_git_dir"/>
+</s>
+<s t="fn" n="trusted_open_directory" amb="4" k="0.0004">
+<c n="resolve" prov="split"/>
+<c n="resolve" prov="split"/>
+<c n="close" prov="split"/>
+<c n="close" prov="split"/>
+<c n="descriptor_read_supported"/>
+</s>
+<s t="fn" n="resolve_scaffold_worktree_placement" amb="3" k="0.0004">
+<c n="resolve" prov="split"/>
+<c n="resolve" prov="split"/>
+<c n="make_result"/>
+<c n="json_text"/>
+<c n="registered_worktree_records"/>
+<c n="scaffold_placement_payload"/>
+<c n="worktree_relation"/>
+<c n="looks_like_windows_absolute_path"/>
+<c n="normalize_path_input"/>
+</s>
+<s t="fn" n="sweep_is_table_rule" k="0.0004">
+</s>
+<s t="fn" n="sweep_table_cells" k="0.0004">
+</s>
+<s t="fn" n="plan_layers_source" k="0.0004">
+</s>
+<s t="fn" n="validate_agent_install" amb="2" k="0.0005">
+<c n="resolve" prov="split"/>
+<c n="resolve" prov="split"/>
+<c n="make_result"/>
+<c n="json_text"/>
+<c n="resolve_input_path"/>
+<c n="detect_plugin_root"/>
+<c n="append"/>
+</s>
+<s t="fn" n="trusted_dir_exists" amb="1" k="0.0005">
+<c n="close" prov="split"/>
+<c n="close" prov="split"/>
+<c n="path_stays_in_trust_boundary"/>
+<c n="trusted_open_directory"/>
+<c n="descriptor_read_supported"/>
+</s>
+<s t="fn" n="sweep_error" k="0.0005">
+<c n="make_result"/>
+</s>
+<s t="fn" n="is_lexically_relative_to" k="0.0005">
+</s>
+<s t="fn" n="partition_phase7_tasks" k="0.0006">
+<c n="make_result"/>
+<c n="json_text"/>
+<c n="phase7_route"/>
+<c n="phase7_flush"/>
+<c n="phase7_singleton"/>
+<c n="phase7_error"/>
+<c n="phase7_metadata_partition"/>
+<c n="parse_task_line"/>
+<c n="resolve_input_path"/>
+<c n="request_path_display"/>
+<c n="trusted_file_exists"/>
+<c n="trusted_lines"/>
+<c n="append"/>
+</s>
+<s t="fn" n="resolve_workflow_binding" amb="5" k="0.0006">
+<c n="resolve" prov="split"/>
+<c n="resolve" prov="split"/>
+<c n="make_result"/>
+<c n="json_text"/>
+<c n="registered_worktree_entries"/>
+<c n="workflow_binding_payload"/>
+<c n="is_relative_to"/>
+<c n="is_lexically_relative_to"/>
+<c n="registered_lexical_owner"/>
+<c n="normalize_path_input"/>
+<c n="append"/>
+</s>
+<s t="fn" n="request_path_display" k="0.0006">
+<c n="resolve_input_path"/>
+<c n="repo_relative"/>
+<c n="normalize_path_input"/>
+</s>
+<s t="cls" n="SpecIndexRenderError" sc="SpecIndexRenderError" k="0.0007">
+</s>
+<s t="fn" n="resolve_autopilot_stage" k="0.0007">
+<c n="review_handoff"/>
+<c n="apply_resume_guard"/>
+<c n="make_result"/>
+<c n="json_text"/>
+<c n="parse_stage_args"/>
+<c n="workflow_stage_signals"/>
+<c n="workflow_draft_pr_row"/>
+<c n="corroborate_draft_pr"/>
+<c n="auto_detect_basis"/>
+<c n="artifact_review_resume"/>
+<c n="resolve_input_path"/>
+<c n="request_path_display"/>
+<c n="trusted_text"/>
+</s>
+<s t="fn" n="workflow_table_rows" k="0.0007">
+<c n="append"/>
+</s>
+<s t="fn" n="trusted_file_exists" amb="1" k="0.0007">
+<c n="close" prov="split"/>
+<c n="close" prov="split"/>
+<c n="trusted_open_regular_file"/>
+</s>
+<s t="fn" n="json_schema_failures" k="0.0007">
+<c n="add"/>
+<c n="json_schema_probe"/>
+<c n="resolve_local_schema_reference"/>
+<c n="json_schema_type_matches"/>
+<c n="json_values_equal"/>
+<c n="json_value_identity"/>
+<c n="schema_child_field"/>
+<c n="schema_failure"/>
+<c n="append"/>
+<c n="extend"/>
+</s>
+<s t="fn" n="add" k="0.0008">
+</s>
+<s t="fn" n="path_stays_in_trust_boundary" amb="2" k="0.0008">
+<c n="resolve" prov="split"/>
+<c n="resolve" prov="split"/>
+<c n="is_relative_to"/>
+</s>
+<s t="fn" n="trusted_lines" k="0.0009">
+<c n="trusted_text"/>
+</s>
+<s t="fn" n="repo_relative" amb="3" k="0.0009">
+<c n="resolve" prov="split"/>
+<c n="resolve" prov="split"/>
+<c n="index"/>
+</s>
+<s t="fn" n="descriptor_read_supported" k="0.0010">
+</s>
+<s t="fn" n="resolve_input_path" k="0.0010">
+<c n="normalize_path_input"/>
+</s>
+<s t="fn" n="is_relative_to" amb="2" k="0.0011">
+<c n="resolve" prov="split"/>
+<c n="resolve" prov="split"/>
+</s>
+<s t="fn" n="trusted_open_regular_file" amb="5" k="0.0014">
+<c n="resolve" prov="split"/>
+<c n="resolve" prov="split"/>
+<c n="close" prov="split"/>
+<c n="close" prov="split"/>
+<c n="descriptor_read_supported"/>
+</s>
+<s t="fn" n="normalize_path_input" k="0.0015">
+<c n="replace"/>
+</s>
+<s t="fn" n="trusted_bytes_descriptor" amb="1" k="0.0016">
+<c n="close" prov="split"/>
+<c n="close" prov="split"/>
+<c n="trusted_open_regular_file"/>
+<c n="read"/>
+<c n="append"/>
+</s>
+<s t="fn" n="trusted_bytes" k="0.0017">
+<c n="trusted_bytes_descriptor"/>
+</s>
+<s t="fn" n="json_text" k="0.0018">
+</s>
+<s t="fn" n="trusted_text" k="0.0019">
+<c n="trusted_bytes"/>
+<c n="decode"/>
+</s>
+<s t="fn" n="make_result" k="0.0028">
+</s>
+</f>
+<f p="tests/speckit-pro/unit/test-corrective-authorization-runner-routes.py" layer="test">
+<s t="fn" n="resolve" sc="CorrectiveAuthorizationReplayTests" k="0.0030">
+</s>
+</f>
+<f p="tests/speckit-pro/unit/test-autopilot-bookkeeping-guard.py" layer="test">
+<s t="fn" n="clean_workflow_state_fixture" k="0.0004">
+<c n="_clean_state_plan"/>
+<c n="_clean_workflow"/>
+</s>
+<s t="fn" n="_flat" k="0.0006">
+<c n="read_text"/>
+</s>
+<s t="fn" n="workflow" k="0.0006">
+<c n="extend"/>
+</s>
+<s t="fn" n="resolve" sc="RepositoryRootResolutionTests" overloads="2" k="0.0031">
+</s>
+</f>
+<f p="tests/speckit-pro/unit/test-artifact-review.py" layer="test">
+<s t="fn" n="workflow" sc="ArtifactReviewTests" k="0.0024">
+</s>
+<s t="fn" n="resolve" sc="ArtifactReviewTests" k="0.0031">
+<c n="resolve_autopilot_stage"/>
+<c n="workflow"/>
+</s>
+</f>
+<f p="tests/speckit-pro/unit/test-execution-control.py" layer="test">
+<s t="fn" n="unittest_output" k="0.0003">
+</s>
+<s t="fn" n="spend_run_wide_budget" sc="IncrementReviewAllowanceTests" k="0.0003">
+<c n="invoke"/>
+</s>
+<s t="fn" n="flat" sc="DeferOnExhaustedAllowanceGuidanceTests" k="0.0003">
+<c n="read_text"/>
+</s>
+<s t="fn" n="validate" sc="VerificationTests" k="0.0003">
+</s>
+<s t="fn" n="call_runner" sc="RunnerDispatchTests" amb="1" k="0.0006">
+<c n="resolve" prov="split"/>
+<c n="resolve" prov="split"/>
+<c n="resolve" prov="split"/>
+<c n="resolve" prov="split"/>
+</s>
+<s t="fn" n="produce" sc="VerificationTests" k="0.0007">
+<c n="execution_control"/>
+<c n="execute_verification"/>
+</s>
+<s t="fn" n="invoke" sc="_ExecutionControlFixture" k="0.0036">
+<c n="execution_control"/>
+</s>
+</f>
+<f p="speckit-pro/speckit_pro_runner/verification_docker_workflow.py">
+<s t="fn" n="encode" k="0.0045">
+<c n="decode"/>
+</s>
+</f>
+<f p="speckit-pro/speckit_pro_runner/gates/payloads.py">
+<s t="fn" n="replace" k="0.0049">
+<c n="group"/>
+</s>
+</f>
+<f p="speckit-pro/speckit_pro_runner/verification_docker_qualification.py">
+<s t="fn" n="decode" k="0.0055">
+</s>
+</f>
+<f p="speckit-pro/speckit_pro_runner/verification_docker_runtime.py">
+<s t="fn" n="append" sc="CapturedOutput" k="0.0066">
+<c n="update"/>
+<c n="extend"/>
+</s>
+</f>
+<f p="speckit-pro/speckit_pro_runner/gates/registry.py">
+<s t="var" n="group" sc="GateOperation" k="0.0068">
+</s>
+</f>
+<f p="tests/speckit-pro/layer2-trigger/generate-carry-forward-replay.py" layer="test">
+<s t="fn" n="append" sc="_TrustedPathList" k="0.0004">
+<c n="_trusted"/>
+</s>
+<s t="cls" n="_TrustedPathList" sc="_TrustedPathList" k="0.0006">
+</s>
+<s t="fn" n="_trusted_directory_identity" k="0.0006">
+<c n="_require"/>
+</s>
+<s t="fn" n="insert" sc="_TrustedPathList" k="0.0009">
+<c n="_trusted"/>
+</s>
+<s t="fn" n="_sanitize_import_paths" k="0.0016">
+<c n="_TrustedPathList"/>
+<c n="_trusted_directory_identity"/>
+<c n="_require"/>
+</s>
+<s t="fn" n="sanitize_paths" sc="_ClosedBytesFinder" k="0.0019">
+<c n="_sanitize_import_paths"/>
+</s>
+<s t="fn" n="exec_module" sc="_VerifiedBytesLoader" k="0.0022">
+<c n="sanitize_paths"/>
+</s>
+<s t="fn" n="extend" sc="_TrustedPathList" k="0.0075">
+<c n="_trusted"/>
+</s>
+<s t="fn" n="_trusted" sc="_TrustedPathList" k="0.0075">
+</s>
+</f>
+<f p="speckit-pro/speckit_pro_runner/execution_control.py">
+<s t="fn" n="validate_intervals" k="0.0002">
+<c n="require_text"/>
+</s>
+<s t="fn" n="exclusive_ledger" k="0.0004">
+<c n="ignore_owned_directory"/>
+</s>
+<s t="fn" n="default_ledger_directory" k="0.0004">
+<c n="workflow_process_directory"/>
+</s>
+<s t="fn" n="reserve" k="0.0004">
+<c n="require_text"/>
+<c n="_used_dispatch_ids"/>
+<c n="_defer"/>
+<c n="_corrective_refusal"/>
+<c n="_spec_digest"/>
+<c n="_chain_spec_file"/>
+<c n="_correction_baseline"/>
+<c n="_admit_progress"/>
+<c n="_review_remediation"/>
+<c n="_increment_ineligibility"/>
+<c n="_gate_remediation"/>
+<c n="_gate_ineligibility"/>
+<c n="_metadata_correction"/>
+<c n="_metadata_ineligibility"/>
+<c n="_admit_metadata_correction"/>
+<c n="_reserve_gate_remediation"/>
+<c n="_reserve_increment_review"/>
+<c n="values"/>
+</s>
+<s t="fn" n="begin_stage_epoch" k="0.0005">
+<c n="_consumed_native_event_ids"/>
+<c n="update"/>
+<c n="values"/>
+<c n="parse_stage_args"/>
+<c n="workflow_stage_signals"/>
+<c n="trusted_text"/>
+<c n="append"/>
+</s>
+<s t="fn" n="begin_replan_epoch" amb="1" k="0.0005">
+<c n="_operator_event"/>
+<c n="_spec_invariants"/>
+<c n="update"/>
+<c n="values"/>
+<c n="resolve" prov="split"/>
+<c n="resolve" prov="split"/>
+<c n="append"/>
+</s>
+<s t="fn" n="checkpoint_or_wait" k="0.0005">
+<c n="require_text"/>
+<c n="_consumed_native_event_ids"/>
+<c n="append"/>
+</s>
+<s t="fn" n="begin_verification" k="0.0005">
+<c n="require_text"/>
+</s>
+<s t="fn" n="record_result" k="0.0005">
+<c n="require_text"/>
+<c n="_consumed_native_event_ids"/>
+<c n="update"/>
+</s>
+<s t="fn" n="reserve_class_correction" k="0.0005">
+<c n="require_text"/>
+<c n="_used_dispatch_ids"/>
+<c n="_class_scope"/>
+<c n="_defer"/>
+<c n="values"/>
+<c n="append"/>
+</s>
+<s t="fn" n="authorize_corrective_exception" k="0.0005">
+<c n="require_text"/>
+<c n="_used_dispatch_ids"/>
+<c n="_class_scope"/>
+<c n="_operator_event"/>
+<c n="_corrective_refusal"/>
+<c n="values"/>
+</s>
+<s t="fn" n="authorize_corrective_continuation" k="0.0005">
+<c n="require_text"/>
+<c n="_used_dispatch_ids"/>
+<c n="_operator_event"/>
+</s>
+<s t="fn" n="authorize_corrective_retry" k="0.0005">
+<c n="require_text"/>
+<c n="_used_dispatch_ids"/>
+<c n="_operator_event"/>
+</s>
+<s t="fn" n="initial_ledger" k="0.0005">
+<c n="read_text"/>
+</s>
+<s t="fn" n="validate_ledger" k="0.0005">
+<c n="require_text"/>
+<c n="_validate_workflow_identity"/>
+<c n="_validate_corrective_state"/>
+<c n="_validate_corrective_epochs"/>
+<c n="validate_intervals"/>
+</s>
+<s t="fn" n="durable_json" amb="1" k="0.0005">
+<c n="ignore_owned_directory"/>
+<c n="flush"/>
+<c n="close" prov="split"/>
+<c n="close" prov="split"/>
+<c n="fileno"/>
+</s>
+<s t="fn" n="evidence_directory" k="0.0005">
+<c n="workflow_process_directory"/>
+</s>
+<s t="fn" n="elapsed" k="0.0006">
+<c n="append"/>
+</s>
+<s t="fn" n="clock_reasons" k="0.0008">
+<c n="values"/>
+<c n="append"/>
+</s>
+<s t="fn" n="workflow_process_directory" k="0.0009">
+</s>
+<s t="fn" n="confined_path" amb="1" k="0.0009">
+<c n="resolve" prov="split"/>
+<c n="resolve" prov="split"/>
+</s>
+<s t="fn" n="ignore_owned_directory" k="0.0011">
+</s>
+<s t="fn" n="require_text" k="0.0038">
+</s>
+<s t="fn" n="execution_control" amb="1" k="0.0038">
+<c n="default_ledger_directory"/>
+<c n="evidence_directory"/>
+<c n="confined_path"/>
+<c n="ignore_owned_directory"/>
+<c n="exclusive_ledger"/>
+<c n="require_text"/>
+<c n="update"/>
+<c n="resolve" prov="split"/>
+<c n="resolve" prov="split"/>
+<c n="encode"/>
+</s>
+<s t="fn" n="update" k="0.0080">
+<c n="read_text"/>
+<c n="durable_json"/>
+<c n="initial_ledger"/>
+<c n="validate_ledger"/>
+<c n="_record_failing_checks"/>
+<c n="elapsed"/>
+<c n="clock_reasons"/>
+<c n="reserve"/>
+<c n="authorize_corrective_retry"/>
+<c n="authorize_corrective_continuation"/>
+<c n="authorize_corrective_exception"/>
+<c n="reserve_class_correction"/>
+<c n="record_result"/>
+<c n="begin_verification"/>
+<c n="checkpoint_or_wait"/>
+<c n="_relocate_workflow"/>
+<c n="begin_replan_epoch"/>
+<c n="begin_stage_epoch"/>
+<c n="_bind_invariants_if_requested"/>
+<c n="extend"/>
+</s>
+</f>
+<f p="speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py">
+<s t="fn" n="validate_state_status" k="0.0002">
+<c n="_json_schema_errors"/>
+<c n="_canonical_schema"/>
+<c n="extend"/>
+</s>
+<s t="fn" n="_git_env" k="0.0003">
+</s>
+<s t="fn" n="validate_autonomy_boundary" k="0.0003">
+<c n="_json_schema_errors"/>
+<c n="_canonical_schema"/>
+<c n="_autonomy_boundary_required"/>
+<c n="_autonomy_planning_errors"/>
+<c n="_autonomy_execution_errors"/>
+<c n="_autonomy_current_execution_errors"/>
+<c n="_autonomy_private_record_errors"/>
+<c n="_autonomy_actions_errors"/>
+<c n="extend"/>
+</s>
+<s t="fn" n="_canonical_json_sha256" k="0.0003">
+<c n="_sha256_bytes"/>
+<c n="encode"/>
+</s>
+<s t="cls" n="ValidationError" sc="ValidationError" k="0.0112">
+</s>
+<s t="fn" n="read_text" k="0.0130">
+<c n="ValidationError"/>
+</s>
+</f>
+</r>

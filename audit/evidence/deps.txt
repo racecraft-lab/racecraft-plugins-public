@@ -1,0 +1,676 @@
+<!-- ripwire deps schema=ripwire.deps/v1: file-to-file include/import view, heaviest cone first: <f p= afferent= includes= instab= transitive=>, <health>, <godfiles>, <cycles>. window: shown= total= capped= has_more= next_offset= offset= limit= (capped=1 cut; next_offset= pastes as offset=). root=: p= relative to it. files=N: files with at least one include/import directive; this listing's denominator (health files= = corpus). violations=N: edges into a file more unstable by over 0.05 (Martin I); only the worst 12 are listed. from=: the including file of a stable-deps violation; it depends on the more unstable to=. gap=: instab of to= minus instab of from=, project includes only; worst first. health dep_files=N: dependency-capable files (dep_langs=), the ccd/acd/nccd denominator. health dep_langs=: the languages dep_files= counts; compare its numbers across builds only when equal. ccd=/acd=/nccd=: Lakos: sum of per-file transitive cones (self incl) / per file / over a balanced tree's. health shape=: the nccd= verdict: horizontal below 1, vertical 1 to 2, tangled above 2 (a heuristic). cycle size=/cost=: files in that include cycle / size squared, the cycle's share of ccd=. cycle cut=/cutrefs=: SUGGESTED edge to break it (fewest directives) / that edge's directive count; nothing cut. -->
+<deps schema="ripwire.deps/v1" files="365" shown="40" capped="1" total="365" has_more="1" next_offset="40" offset="0" limit="0" root=".">
+<health files="1761" dep_files="381" ccd="1907" acd="5.0" nccd="0.66" shape="horizontal" dep_langs="cpp,py,ts,go,rs,swift,objc,js,sh,java,rb,cs,c,php,lua,ex,kt"/>
+<godfiles total="92" shown="12" capped="1">
+<f p="speckit-pro/speckit_pro_runner/envelope.py" afferent="21"/>
+<f p="speckit-pro/speckit_pro_runner/helpers/read_only.py" afferent="16"/>
+<f p="speckit-pro/speckit_pro_runner/formal/selection.py" afferent="11"/>
+<f p="speckit-pro/speckit_pro_runner/execution_control.py" afferent="10"/>
+<f p="tests/speckit-pro/lib/native_eval_catalog.py" afferent="9"/>
+<f p="speckit-pro/speckit_pro_runner/formal/catalog.py" afferent="8"/>
+<f p="speckit-pro/speckit_pro_runner/helpers/mutation.py" afferent="8"/>
+<f p=".specify/scripts/bash/common.sh" afferent="7"/>
+<f p="speckit-pro/speckit_pro_runner/__init__.py" afferent="7"/>
+<f p="speckit-pro/speckit_pro_runner/task_execution.py" afferent="7"/>
+<f p="speckit-pro/speckit_pro_runner/path_utils.py" afferent="6"/>
+<f p="speckit-pro/speckit_pro_runner/formal/traces.py" afferent="5"/>
+</godfiles>
+<stabledeps violations="26">
+<v from="tests/speckit-pro/lib/trigger_campaign.py" to="tests/speckit-pro/lib/trigger_comparison.py" gap="0.58"/>
+<v from="speckit-pro/speckit_pro_runner/execution_control.py" to="speckit-pro/speckit_pro_runner/task_results.py" gap="0.34"/>
+<v from="speckit-pro/speckit_pro_runner/verification_records.py" to="speckit-pro/speckit_pro_runner/verification_docker_workflow.py" gap="0.33"/>
+<v from="speckit-pro/speckit_pro_runner/formal/catalog.py" to="speckit-pro/speckit_pro_runner/formal/traces.py" gap="0.31"/>
+<v from="speckit-pro/speckit_pro_runner/helpers/read_only.py" to="speckit-pro/speckit_pro_runner/author_broker.py" gap="0.26"/>
+<v from="speckit-pro/speckit_pro_runner/helpers/mutation.py" to="speckit-pro/speckit_pro_runner/execution_control.py" gap="0.23"/>
+<v from="speckit-pro/speckit_pro_runner/runtime.py" to="speckit-pro/speckit_pro_runner/helpers/registry.py" gap="0.22"/>
+<v from="speckit-pro/speckit_pro_runner/formal/evidence.py" to="speckit-pro/speckit_pro_runner/formal/traces.py" gap="0.21"/>
+<v from="speckit-pro/speckit_pro_runner/helpers/mutation.py" to="speckit-pro/speckit_pro_runner/helpers/read_only.py" gap="0.21"/>
+<v from="speckit-pro/speckit_pro_runner/verification_records.py" to="speckit-pro/speckit_pro_runner/verification_docker_qualification.py" gap="0.20"/>
+<v from="speckit-pro/speckit_pro_runner/helpers/read_only.py" to="speckit-pro/speckit_pro_runner/runtime.py" gap="0.17"/>
+<v from="speckit-pro/speckit_pro_runner/sweep_isolation.py" to="speckit-pro/speckit_pro_runner/helpers/read_only.py" gap="0.17"/>
+</stabledeps>
+<cycles>
+<cycle size="6" cost="36" cut="speckit-pro/speckit_pro_runner/formal/catalog.py -&gt; speckit-pro/speckit_pro_runner/formal/native_config.py" cutrefs="1">
+<f p="speckit-pro/speckit_pro_runner/formal/quint.py"/>
+<f p="speckit-pro/speckit_pro_runner/formal/engine.py"/>
+<f p="speckit-pro/speckit_pro_runner/formal/evidence.py"/>
+<f p="speckit-pro/speckit_pro_runner/formal/native_config.py"/>
+<f p="speckit-pro/speckit_pro_runner/formal/traces.py"/>
+<f p="speckit-pro/speckit_pro_runner/formal/catalog.py"/>
+</cycle>
+<cycle size="2" cost="4" cut="speckit-pro/speckit_pro_runner/formal/helper.py -&gt; speckit-pro/speckit_pro_runner/formal/lifecycle.py" cutrefs="1">
+<f p="speckit-pro/speckit_pro_runner/formal/lifecycle.py"/>
+<f p="speckit-pro/speckit_pro_runner/formal/helper.py"/>
+</cycle>
+<cycle size="2" cost="4" cut="speckit-pro/speckit_pro_runner/verification_docker_readback.py -&gt; speckit-pro/speckit_pro_runner/verification_docker_runtime.py" cutrefs="1">
+<f p="speckit-pro/speckit_pro_runner/verification_docker_runtime.py"/>
+<f p="speckit-pro/speckit_pro_runner/verification_docker_readback.py"/>
+</cycle>
+<cycle size="20" cost="400" cut="speckit-pro/speckit_pro_runner/author_broker.py -&gt; speckit-pro/speckit_pro_runner/helpers/mutation.py" cutrefs="1">
+<f p="speckit-pro/speckit_pro_runner/helpers/run_finalization.py"/>
+<f p="speckit-pro/speckit_pro_runner/helpers/gate_preflight_coverage.py"/>
+<f p="speckit-pro/speckit_pro_runner/helpers/archive_sweep.py"/>
+<f p="speckit-pro/speckit_pro_runner/helpers/registry.py"/>
+<f p="speckit-pro/speckit_pro_runner/task_results.py"/>
+<f p="speckit-pro/speckit_pro_runner/helpers/pr_emission.py"/>
+<f p="speckit-pro/speckit_pro_runner/verification_docker_qualification.py"/>
+<f p="speckit-pro/speckit_pro_runner/verification_git.py"/>
+<f p="speckit-pro/speckit_pro_runner/verification_docker_workflow.py"/>
+<f p="speckit-pro/speckit_pro_runner/verification_records.py"/>
+<f p="speckit-pro/speckit_pro_runner/sweep_isolation.py"/>
+<f p="speckit-pro/speckit_pro_runner/sweep_launcher.py"/>
+</cycle>
+<cycle size="2" cost="4" cut="tests/speckit-pro/lib/trigger_campaign.py -&gt; tests/speckit-pro/lib/trigger_comparison.py" cutrefs="1">
+<f p="tests/speckit-pro/lib/trigger_comparison.py"/>
+<f p="tests/speckit-pro/lib/trigger_campaign.py"/>
+</cycle>
+</cycles>
+<f p="speckit-pro/speckit_pro_runner/__main__.py" includes="4" afferent="0" instab="1.00" transitive="59">
+<inc t="sys"/>
+<inc t="."/>
+<inc t=".envelope"/>
+<inc t=".runtime"/>
+</f>
+<f p="speckit-pro/speckit_pro_runner/sweep_broker.py" includes="7" afferent="0" instab="1.00" transitive="59">
+<inc t="json"/>
+<inc t="os"/>
+<inc t="sys"/>
+<inc t="pathlib"/>
+<inc t="typing"/>
+<inc t=".mcp_protocol"/>
+<inc t=".sweep_isolation"/>
+</f>
+<f p="speckit-pro/speckit_pro_runner/author_broker.py" includes="17" afferent="1" instab="0.80" transitive="58">
+<inc t="hashlib"/>
+<inc t="hmac"/>
+<inc t="json"/>
+<inc t="os"/>
+<inc t="re"/>
+<inc t="secrets"/>
+<inc t="stat"/>
+<inc t="tempfile"/>
+<inc t="time"/>
+<inc t="datetime"/>
+<inc t="pathlib"/>
+<inc t="typing"/>
+<inc t="sys"/>
+<inc t=".mcp_protocol"/>
+<inc t=".artifact_review"/>
+<inc t=".helpers.mutation"/>
+<inc t=".helpers.read_only"/>
+</f>
+<f p="speckit-pro/speckit_pro_runner/execution_control.py" includes="26" afferent="10" instab="0.57" transitive="58">
+<inc t="copy"/>
+<inc t="hashlib"/>
+<inc t="json"/>
+<inc t="os"/>
+<inc t="re"/>
+<inc t="shutil"/>
+<inc t="subprocess"/>
+<inc t="tempfile"/>
+<inc t="time"/>
+<inc t="uuid"/>
+<inc t="contextlib"/>
+<inc t="pathlib"/>
+<inc t="typing"/>
+<inc t=".formal.selection"/>
+<inc t=".helpers.read_only"/>
+<inc t=".failing_checks"/>
+<inc t=".task_execution"/>
+<inc t=".task_execution"/>
+<inc t=".helpers.read_only"/>
+<inc t=".task_execution"/>
+<inc t=".task_execution"/>
+<inc t=".helpers.read_only"/>
+<inc t=".envelope"/>
+<inc t=".helpers.read_only"/>
+<inc t=".verification_records"/>
+<inc t=".task_results"/>
+</f>
+<f p="speckit-pro/speckit_pro_runner/gates/registry.py" includes="8" afferent="1" instab="0.86" transitive="58">
+<inc t="dataclasses"/>
+<inc t="typing"/>
+<inc t="..envelope"/>
+<inc t=".payloads"/>
+<inc t=".release"/>
+<inc t=".suite"/>
+<inc t=".active_path_guard"/>
+<inc t="..helpers.install"/>
+</f>
+<f p="speckit-pro/speckit_pro_runner/helpers/archive_sweep.py" includes="9" afferent="1" instab="0.67" transitive="58">
+<inc t="json"/>
+<inc t="os"/>
+<inc t="pathlib"/>
+<inc t="re"/>
+<inc t="stat"/>
+<inc t="subprocess"/>
+<inc t="typing"/>
+<inc t="..envelope"/>
+<inc t=".read_only"/>
+</f>
+<f p="speckit-pro/speckit_pro_runner/helpers/gate_preflight_coverage.py" includes="5" afferent="1" instab="0.67" transitive="58">
+<inc t="re"/>
+<inc t="pathlib"/>
+<inc t="typing"/>
+<inc t="..envelope"/>
+<inc t=".read_only"/>
+</f>
+<f p="speckit-pro/speckit_pro_runner/helpers/install.py" includes="22" afferent="2" instab="0.75" transitive="58">
+<inc t="copy"/>
+<inc t="ctypes"/>
+<inc t="errno"/>
+<inc t="hashlib"/>
+<inc t="json"/>
+<inc t="os"/>
+<inc t="platform as platform_module"/>
+<inc t="re"/>
+<inc t="secrets"/>
+<inc t="stat"/>
+<inc t="subprocess"/>
+<inc t="sys"/>
+<inc t="tomllib"/>
+<inc t="dataclasses"/>
+<inc t="pathlib"/>
+<inc t="typing"/>
+<inc t="..agent_materialization"/>
+<inc t="..agent_inventory"/>
+<inc t="..envelope"/>
+<inc t="..path_utils"/>
+<inc t=".mutation"/>
+<inc t=".read_only"/>
+</f>
+<f p="speckit-pro/speckit_pro_runner/helpers/mutation.py" includes="14" afferent="8" instab="0.33" transitive="58">
+<inc t="os"/>
+<inc t="stat"/>
+<inc t="uuid"/>
+<inc t="hashlib"/>
+<inc t="tempfile"/>
+<inc t="pathlib"/>
+<inc t="typing"/>
+<inc t="..envelope"/>
+<inc t="..execution_control"/>
+<inc t=".read_only"/>
+<inc t="fcntl"/>
+<inc t="fcntl"/>
+<inc t="..sweep_isolation"/>
+<inc t="subprocess"/>
+</f>
+<f p="speckit-pro/speckit_pro_runner/helpers/pr_emission.py" includes="9" afferent="2" instab="0.67" transitive="58">
+<inc t="hashlib"/>
+<inc t="json"/>
+<inc t="re"/>
+<inc t="pathlib"/>
+<inc t="typing"/>
+<inc t="..envelope"/>
+<inc t=".mutation"/>
+<inc t=".read_only"/>
+<inc t=".stack_manager"/>
+</f>
+<f p="speckit-pro/speckit_pro_runner/helpers/read_only.py" includes="33" afferent="16" instab="0.54" transitive="58">
+<inc t="ast"/>
+<inc t="hashlib"/>
+<inc t="json"/>
+<inc t="math"/>
+<inc t="os"/>
+<inc t="re"/>
+<inc t="shutil"/>
+<inc t="stat"/>
+<inc t="subprocess"/>
+<inc t="sys"/>
+<inc t="time"/>
+<inc t="dataclasses"/>
+<inc t="pathlib"/>
+<inc t="typing"/>
+<inc t="..agent_inventory"/>
+<inc t="..envelope"/>
+<inc t="..execution_control"/>
+<inc t="..formal.selection"/>
+<inc t="..gate_discovery"/>
+<inc t=".."/>
+<inc t="..runtime"/>
+<inc t="..formal.helper"/>
+<inc t="..task_execution"/>
+<inc t="..formal.evidence"/>
+<inc t="..formal.helper"/>
+<inc t="..artifact_review"/>
+<inc t="..author_broker"/>
+<inc t="..preview_launcher"/>
+<inc t="..sweep_isolation"/>
+<inc t="..sweep_launcher"/>
+<inc t="..task_execution"/>
+<inc t="..verification_records"/>
+<inc t=".pr_emission"/>
+</f>
+<f p="speckit-pro/speckit_pro_runner/helpers/registry.py" includes="16" afferent="1" instab="0.93" transitive="58">
+<inc t="dataclasses"/>
+<inc t="typing"/>
+<inc t="..envelope"/>
+<inc t="..execution_control"/>
+<inc t="..formal.helper"/>
+<inc t="..research_preflight"/>
+<inc t=".archive_sweep"/>
+<inc t=".install"/>
+<inc t=".egress_authorization"/>
+<inc t=".gate_preflight_coverage"/>
+<inc t=".run_finalization"/>
+<inc t=".mutation"/>
+<inc t=".pr_emission"/>
+<inc t=".pr_split_ratification"/>
+<inc t=".promotion"/>
+<inc t=".read_only"/>
+</f>
+<f p="speckit-pro/speckit_pro_runner/helpers/run_finalization.py" includes="8" afferent="1" instab="0.80" transitive="58">
+<inc t="hashlib"/>
+<inc t="json"/>
+<inc t="pathlib"/>
+<inc t="typing"/>
+<inc t="..envelope"/>
+<inc t="..execution_control"/>
+<inc t="..sweep_isolation"/>
+<inc t=".read_only"/>
+</f>
+<f p="speckit-pro/speckit_pro_runner/preview_launcher.py" includes="11" afferent="1" instab="0.67" transitive="58">
+<inc t="json"/>
+<inc t="os"/>
+<inc t="shutil"/>
+<inc t="stat"/>
+<inc t="subprocess"/>
+<inc t="sys"/>
+<inc t="tempfile"/>
+<inc t="pathlib"/>
+<inc t="typing"/>
+<inc t="."/>
+<inc t=".sweep_launcher"/>
+</f>
+<f p="speckit-pro/speckit_pro_runner/runtime.py" includes="12" afferent="2" instab="0.71" transitive="58">
+<inc t="json"/>
+<inc t="platform"/>
+<inc t="re"/>
+<inc t="shutil"/>
+<inc t="sys"/>
+<inc t="pathlib"/>
+<inc t="typing"/>
+<inc t="."/>
+<inc t=".envelope"/>
+<inc t=".path_utils"/>
+<inc t=".gates.registry"/>
+<inc t=".helpers.registry"/>
+</f>
+<f p="speckit-pro/speckit_pro_runner/sweep_isolation.py" includes="20" afferent="5" instab="0.38" transitive="58">
+<inc t="hashlib"/>
+<inc t="hmac"/>
+<inc t="json"/>
+<inc t="os"/>
+<inc t="re"/>
+<inc t="secrets"/>
+<inc t="shutil"/>
+<inc t="stat"/>
+<inc t="subprocess"/>
+<inc t="tempfile"/>
+<inc t="time"/>
+<inc t="contextlib"/>
+<inc t="dataclasses"/>
+<inc t="pathlib"/>
+<inc t="typing"/>
+<inc t=".helpers.read_only"/>
+<inc t="fcntl"/>
+<inc t="fcntl"/>
+<inc t=".helpers.read_only"/>
+<inc t=".helpers.mutation"/>
+</f>
+<f p="speckit-pro/speckit_pro_runner/sweep_launcher.py" includes="13" afferent="2" instab="0.33" transitive="58">
+<inc t="hashlib"/>
+<inc t="json"/>
+<inc t="os"/>
+<inc t="re"/>
+<inc t="shutil"/>
+<inc t="stat"/>
+<inc t="subprocess"/>
+<inc t="sys"/>
+<inc t="tempfile"/>
+<inc t="time"/>
+<inc t="pathlib"/>
+<inc t="typing"/>
+<inc t=".sweep_isolation"/>
+</f>
+<f p="speckit-pro/speckit_pro_runner/task_results.py" includes="16" afferent="1" instab="0.91" transitive="58">
+<inc t="hashlib"/>
+<inc t="json"/>
+<inc t="re"/>
+<inc t="contextlib"/>
+<inc t="pathlib"/>
+<inc t="typing"/>
+<inc t=".agent_materialization"/>
+<inc t=".formal.selection"/>
+<inc t=".task_execution"/>
+<inc t=".helpers.read_only"/>
+<inc t=".execution_control"/>
+<inc t=".helpers.mutation"/>
+<inc t=".helpers.read_only"/>
+<inc t=".helpers.mutation"/>
+<inc t=".execution_control"/>
+<inc t=".helpers.mutation"/>
+</f>
+<f p="speckit-pro/speckit_pro_runner/verification_docker_qualification.py" includes="14" afferent="3" instab="0.70" transitive="58">
+<inc t="base64"/>
+<inc t="json"/>
+<inc t="math"/>
+<inc t="pathlib"/>
+<inc t="re"/>
+<inc t="tempfile"/>
+<inc t="typing"/>
+<inc t=".execution_control"/>
+<inc t=".verification_records"/>
+<inc t=".verification_docker_workflow"/>
+<inc t=".verification_docker_entrypoint"/>
+<inc t=".verification_docker"/>
+<inc t=".verification_docker_image"/>
+<inc t=".verification_docker_runtime"/>
+</f>
+<f p="speckit-pro/speckit_pro_runner/verification_docker_workflow.py" includes="16" afferent="2" instab="0.83" transitive="58">
+<inc t="base64"/>
+<inc t="json"/>
+<inc t="pathlib"/>
+<inc t="time"/>
+<inc t="typing"/>
+<inc t="uuid"/>
+<inc t=".execution_control"/>
+<inc t=".failing_checks"/>
+<inc t=".verification_docker"/>
+<inc t=".verification_docker_entrypoint"/>
+<inc t=".verification_docker_image"/>
+<inc t=".verification_docker_runtime"/>
+<inc t=".verification_git"/>
+<inc t=".verification_docker_qualification"/>
+<inc t=".verification_records"/>
+<inc t=".verification_docker_qualification"/>
+</f>
+<f p="speckit-pro/speckit_pro_runner/verification_git.py" includes="9" afferent="1" instab="0.67" transitive="58">
+<inc t="configparser"/>
+<inc t="os"/>
+<inc t="pathlib"/>
+<inc t="re"/>
+<inc t="stat"/>
+<inc t="typing"/>
+<inc t="urllib.parse"/>
+<inc t=".execution_control"/>
+<inc t=".verification_records"/>
+</f>
+<f p="speckit-pro/speckit_pro_runner/verification_records.py" includes="20" afferent="5" instab="0.50" transitive="58">
+<inc t="hashlib"/>
+<inc t="json"/>
+<inc t="os"/>
+<inc t="re"/>
+<inc t="shlex"/>
+<inc t="shutil"/>
+<inc t="signal"/>
+<inc t="stat"/>
+<inc t="subprocess"/>
+<inc t="sys"/>
+<inc t="tempfile"/>
+<inc t="time"/>
+<inc t="uuid"/>
+<inc t="pathlib"/>
+<inc t="typing"/>
+<inc t=".agent_materialization"/>
+<inc t=".execution_control"/>
+<inc t=".failing_checks"/>
+<inc t=".verification_docker_workflow"/>
+<inc t=".verification_docker_qualification"/>
+</f>
+<f p="tests/speckit-pro/lib/native_eval_execution.py" includes="30" afferent="0" instab="1.00" transitive="24">
+<inc t="hashlib"/>
+<inc t="json"/>
+<inc t="os"/>
+<inc t="dataclasses"/>
+<inc t="datetime"/>
+<inc t="pathlib"/>
+<inc t="re"/>
+<inc t="shlex"/>
+<inc t="shutil"/>
+<inc t="stat"/>
+<inc t="threading"/>
+<inc t="time"/>
+<inc t="typing"/>
+<inc t="uuid"/>
+<inc t="native_eval_adapters"/>
+<inc t="native_eval_capture"/>
+<inc t="native_eval_catalog"/>
+<inc t="native_eval_git_grading"/>
+<inc t="native_eval_claude_activation"/>
+<inc t="native_eval_codex_rollouts"/>
+<inc t="native_eval_dispatch_context"/>
+<inc t="native_eval_grading"/>
+<inc t="native_eval_fixture_reads"/>
+<inc t="native_eval_judge"/>
+<inc t="native_eval_pairing"/>
+<inc t="native_eval_pool"/>
+<inc t="native_eval_runner_result"/>
+<inc t="native_eval_store"/>
+<inc t="native_eval_trigger"/>
+<inc t="native_eval_verification"/>
+</f>
+<f p="speckit-pro/speckit_pro_runner/formal/helper.py" includes="13" afferent="4" instab="0.69" transitive="13">
+<inc t="subprocess"/>
+<inc t="zipfile"/>
+<inc t="pathlib"/>
+<inc t="typing"/>
+<inc t="..envelope"/>
+<inc t=".catalog"/>
+<inc t=".engine"/>
+<inc t=".evidence"/>
+<inc t=".lifecycle"/>
+<inc t=".selection"/>
+<inc t=".quint"/>
+<inc t=".traces"/>
+<inc t=".traces"/>
+</f>
+<f p="speckit-pro/speckit_pro_runner/formal/lifecycle.py" includes="7" afferent="1" instab="0.80" transitive="13">
+<inc t="datetime"/>
+<inc t="pathlib"/>
+<inc t="typing"/>
+<inc t=".catalog"/>
+<inc t=".evidence"/>
+<inc t=".selection"/>
+<inc t=".helper"/>
+</f>
+<f p="tests/speckit-pro/lib/native_eval_adapters.py" includes="28" afferent="1" instab="0.90" transitive="12">
+<inc t="ast"/>
+<inc t="base64"/>
+<inc t="contextlib"/>
+<inc t="dataclasses"/>
+<inc t="hashlib"/>
+<inc t="importlib.util"/>
+<inc t="json"/>
+<inc t="os"/>
+<inc t="pathlib"/>
+<inc t="re"/>
+<inc t="shlex"/>
+<inc t="shutil"/>
+<inc t="stat"/>
+<inc t="subprocess"/>
+<inc t="sys"/>
+<inc t="tempfile"/>
+<inc t="typing"/>
+<inc t="uuid"/>
+<inc t="native_eval_fixture_setup as fixture_setup"/>
+<inc t="native_eval_git_observation"/>
+<inc t="native_eval_pairing"/>
+<inc t="native_eval_runner_result"/>
+<inc t="native_eval_runtime"/>
+<inc t="native_eval_toolchain"/>
+<inc t="native_eval_trigger"/>
+<inc t="native_eval_upstream"/>
+<inc t="native_eval_verification"/>
+<inc t="trigger_process"/>
+</f>
+<f p="tests/speckit-pro/lib/native_eval_judge.py" includes="7" afferent="1" instab="0.67" transitive="11">
+<inc t="copy"/>
+<inc t="hashlib"/>
+<inc t="json"/>
+<inc t="pathlib"/>
+<inc t="typing"/>
+<inc t="native_eval_catalog"/>
+<inc t="native_eval_grading"/>
+</f>
+<f p="speckit-pro/speckit_pro_runner/formal/itf.py" includes="4" afferent="0" instab="1.00" transitive="10">
+<inc t="json"/>
+<inc t="re"/>
+<inc t="typing"/>
+<inc t=".catalog"/>
+</f>
+<f p="tests/speckit-pro/lib/native_eval_claude_activation.py" includes="9" afferent="1" instab="0.50" transitive="10">
+<inc t="hashlib"/>
+<inc t="json"/>
+<inc t="math"/>
+<inc t="os"/>
+<inc t="pathlib"/>
+<inc t="re"/>
+<inc t="stat"/>
+<inc t="typing"/>
+<inc t="native_eval_capture"/>
+</f>
+<f p="tests/speckit-pro/lib/native_eval_grading.py" includes="13" afferent="2" instab="0.75" transitive="10">
+<inc t="hashlib"/>
+<inc t="fnmatch"/>
+<inc t="json"/>
+<inc t="pathlib"/>
+<inc t="re"/>
+<inc t="shlex"/>
+<inc t="typing"/>
+<inc t="native_eval_catalog"/>
+<inc t="native_eval_capture"/>
+<inc t="native_eval_catalog"/>
+<inc t="native_eval_git_grading"/>
+<inc t="native_eval_runner_result"/>
+<inc t="native_eval_verification"/>
+</f>
+<f p="speckit-pro/speckit_pro_runner/formal/catalog.py" includes="9" afferent="8" instab="0.33" transitive="9">
+<inc t="hashlib"/>
+<inc t="json"/>
+<inc t="re"/>
+<inc t="pathlib"/>
+<inc t="typing"/>
+<inc t=".selection"/>
+<inc t=".traces"/>
+<inc t=".native_config"/>
+<inc t=".quint"/>
+</f>
+<f p="speckit-pro/speckit_pro_runner/formal/engine.py" includes="15" afferent="4" instab="0.60" transitive="9">
+<inc t="math"/>
+<inc t="re"/>
+<inc t="shutil"/>
+<inc t="subprocess"/>
+<inc t="time"/>
+<inc t="uuid"/>
+<inc t="zipfile"/>
+<inc t="pathlib"/>
+<inc t="typing"/>
+<inc t="."/>
+<inc t=".catalog"/>
+<inc t=".process"/>
+<inc t=".quint"/>
+<inc t=".quint"/>
+<inc t=".traces"/>
+</f>
+<f p="speckit-pro/speckit_pro_runner/formal/evidence.py" includes="10" afferent="4" instab="0.43" transitive="9">
+<inc t="hashlib"/>
+<inc t="json"/>
+<inc t="os"/>
+<inc t="re"/>
+<inc t="tempfile"/>
+<inc t="pathlib"/>
+<inc t="typing"/>
+<inc t=".catalog"/>
+<inc t=".selection"/>
+<inc t=".traces"/>
+</f>
+<f p="speckit-pro/speckit_pro_runner/formal/native_config.py" includes="3" afferent="2" instab="0.33" transitive="9">
+<inc t="re"/>
+<inc t="typing"/>
+<inc t=".catalog"/>
+</f>
+<f p="speckit-pro/speckit_pro_runner/formal/quint.py" includes="10" afferent="4" instab="0.43" transitive="9">
+<inc t="hashlib"/>
+<inc t="json"/>
+<inc t="pathlib"/>
+<inc t="re"/>
+<inc t="shutil"/>
+<inc t="subprocess"/>
+<inc t="typing"/>
+<inc t=".catalog"/>
+<inc t=".process"/>
+<inc t=".selection"/>
+</f>
+<f p="speckit-pro/speckit_pro_runner/formal/traces.py" includes="17" afferent="5" instab="0.64" transitive="9">
+<inc t="hashlib"/>
+<inc t="json"/>
+<inc t="math"/>
+<inc t="pathlib"/>
+<inc t="re"/>
+<inc t="time"/>
+<inc t="uuid"/>
+<inc t="typing"/>
+<inc t="."/>
+<inc t=".catalog"/>
+<inc t=".native_config"/>
+<inc t=".process"/>
+<inc t=".selection"/>
+<inc t=".evidence"/>
+<inc t=".engine"/>
+<inc t=".engine"/>
+<inc t=".engine"/>
+</f>
+<f p="tests/speckit-pro/lib/native_eval_capture.py" includes="9" afferent="3" instab="0.40" transitive="9">
+<inc t="hashlib"/>
+<inc t="fnmatch"/>
+<inc t="json"/>
+<inc t="pathlib"/>
+<inc t="re"/>
+<inc t="shlex"/>
+<inc t="typing"/>
+<inc t="native_eval_catalog"/>
+<inc t="native_eval_fixture_reads"/>
+</f>
+<f p="tests/speckit-pro/lib/native_eval_codex_rollouts.py" includes="10" afferent="1" instab="0.67" transitive="9">
+<inc t="hashlib"/>
+<inc t="json"/>
+<inc t="os"/>
+<inc t="datetime"/>
+<inc t="pathlib"/>
+<inc t="re"/>
+<inc t="stat"/>
+<inc t="typing"/>
+<inc t="native_eval_catalog"/>
+<inc t="trigger_evidence"/>
+</f>
+<f p="tests/speckit-pro/lib/native_eval_store.py" includes="19" afferent="1" instab="0.67" transitive="9">
+<inc t="copy"/>
+<inc t="contextlib"/>
+<inc t="hashlib"/>
+<inc t="json"/>
+<inc t="math"/>
+<inc t="os"/>
+<inc t="pathlib"/>
+<inc t="re"/>
+<inc t="stat"/>
+<inc t="sys"/>
+<inc t="threading"/>
+<inc t="time"/>
+<inc t="uuid"/>
+<inc t="native_eval_catalog"/>
+<inc t="trigger_evidence"/>
+<inc t="msvcrt"/>
+<inc t="fcntl"/>
+<inc t="msvcrt"/>
+<inc t="fcntl"/>
+</f>
+<f p="tests/speckit-pro/lib/native_eval_dispatch_context.py" includes="6" afferent="1" instab="0.50" transitive="8">
+<inc t="hashlib"/>
+<inc t="json"/>
+<inc t="math"/>
+<inc t="re"/>
+<inc t="typing"/>
+<inc t="native_eval_catalog"/>
+</f>
+</deps>

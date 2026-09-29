@@ -1,0 +1,703 @@
+<ctx-partitions schema="ripwire.pack-task/v1" partitions="8" requested="8" core_symbols="6" surface="102" modules="51" split="0" budget_per_agent_tokens="6000" core_budget_tokens="2040" partition_budget_tokens="3960" total_bytes="54611" overlap_mean="0.017" overlap_max="0.087" shared_symbols="21" union_symbols="216" core_overlap="0.314">
+<!-- ripwire pack-task schema=ripwire.pack-task/v1: N minimally overlapping agent bundles carved along call-graph communities plus one shared core; each <bundle> wraps a <ctx>; bundle role=core|partition i= symbols= modules= bytes= tokens=: one agent's ctx, symbols= ids assigned, bytes= its size; tokens= = est_tokens= = bytes/2.36 (flat, the densest rate; the inner ctx est_tokens= is language-weighted). Inner ctx task= root= budget_tokens= dropped_positive=: the task, p= base, the slice's token target, ranked candidates its budget cut. of_top=: rows ranked (far) / bodies (callers); s rel=caller|callee shared=: 1-hop edge, bodies reached (absent at 1). window: shown= total= capped= (capped=1 cut). run_unknown=1: no runner derivable (a guess would be worse). est_tokens=: price as emitted (an upper bound under compact). <d r=N>: rank N in this ranking, rows in r= order. <d cx= ccx=>: cyclomatic/cognitive complexity. <d in=N>: N callers in the index (absent: not measured). route=: the ranker: name-exact(X) = the task names symbol X (anchors: its evidence), subtoken+body = conceptual BM25 (:broad = 1-2 plain words, plain rg may also win; :declined(...) = a name hit refused as a common name). sc=: enclosing scope; the full id is p::sc::n (p= of the row or its <f>) and selectors take it. next=: the one pasteable follow-up. partitions=/requested=: partitions carved / asked for. modules=/split=: call-graph groups found / cuts forced to split one. core_symbols=/surface=: ids in the shared core / core plus the assignable remainder. budget_per_agent_tokens=: one agent's budget, core_budget_tokens= plus partition_budget_tokens=. total_bytes=N: bytes of all bundles together. overlap_mean=/overlap_max=: pairwise Jaccard over the ids partitions name, before trimming. shared_symbols=/union_symbols=: ids two or more partitions name / ids any partition names. core_overlap=: share of the core surface a partition reaches anyway. layer=: built-in arch layer (game|infra|render|math|audio|ai|test) from a dir name in p=; absent if none. <file-scope> (t=modscope): a file's MODULE SCOPE — where a top-level call and an anonymous callback body's calls live; a CALLER, never a callee, with no body to expand. -->
+<bundle role="core" symbols="6" bytes="2714" tokens="1150" est_tokens="1150">
+<ctx task="coherence and cohesion audit of the speckit-pro plugin: skills, runner, agents, tests, docs" route="subtoken+body" root="." dropped_positive="1" est_tokens="953" budget_tokens="2040">
+<!-- slice budget=4332 bytes (2040-token target, ceiling 4814) | ranking: capped | bodies: kept 1 of 6 (capped) | callers: kept 1 of 29 | notes: none | tests: kept 2 of 5 | far: none -->
+<sigs shown="5" total="6" capped="1">
+<d l="20" n="SCANS" p="audit/build_evidence.py" cx="0" ccx="0" in="0" r="1" next="--expand=audit/build_evidence.py:SCANS">SCANS =</d>
+<d l="45" n="LANES" p="audit/scope.py" cx="0" ccx="0" in="0" r="2">LANES = [ (&quot;coach-and-formal&quot;, &quot;Coach skill and formal methods&quot;, &quot;speckit-coach skill, guides, templates and Codex overlay</d>
+<d l="57" n="classify_changed_files" p="scripts/classify-docs-validation.py" cx="14" ccx="14" in="9" r="3">def classify_changed_files(changed_files: Iterable[str]) -&gt; DocsClassification:</d>
+<d l="588" n="buildSourceVsDistPage" p="docs-site/scripts/generate-reference-pages.mjs" cx="5" ccx="5" in="1" r="4">async function buildSourceVsDistPage()</d>
+<d l="648" n="payload_file_kind" p="speckit-pro/speckit_pro_runner/gates/payloads.py" cx="16" ccx="18" in="1" r="5">def payload_file_kind(path: str) -&gt; str:</d>
+</sigs>
+<bodies shown="1" total="6" capped="1">
+<b t="var" l="20" p="audit/build_evidence.py" n="SCANS">
+<![CDATA[SCANS = {
+    "doc-drift": ["--doc-drift", "--detail=1"],
+    "clones": ["--clones", "--limit=2000"],
+    "churn-decay": ["--rank-by=churn-decay", "--top-k=500"],
+    "arch": ["--arch=.ripwire_arch_rules"],
+    "deps": ["--deps"],
+    "report": ["--report"],
+    "partition": ["--pack-task=coherence and cohesion audit of the speckit-pro plugin: skills, runner, agents, tests, docs", "--partition=8"],
+    "plan-lanes": ["--plan-lanes=8", "--task=coherence and cohesion audit of the speckit-pro plugin"],
+}]]>
+</b>
+<!-- body omitted (over budget): LANES -->
+<!-- body omitted (over budget): classify_changed_files -->
+<!-- body omitted (over budget): buildSourceVsDistPage -->
+<!-- body omitted (over budget): payload_file_kind -->
+<!-- body omitted (over budget): build_installed_plugin_payloads -->
+</bodies>
+<callers of_top="6" shown="1" total="29" capped="1">
+<s t="fn" n="citation" p="docs-site/scripts/generate-reference-pages.mjs:118" rel="callee">async function citation(repoPath, label = repoPath)</s>
+</callers>
+<tests shown="2" total="5" capped="1">
+<test p="tests/speckit-pro/unit/test-installed-release-gates.py" run="python3 tests/speckit-pro/unit/test-installed-release-gates.py"/>
+<test p="tests/speckit-pro/unit/test-pr-checks-helpers.py" run="python3 tests/speckit-pro/unit/test-pr-checks-helpers.py"/>
+</tests>
+</ctx>
+</bundle>
+<bundle role="partition" i="0" symbols="12" modules="4" bytes="6982" tokens="2958" est_tokens="2958">
+<ctx task="coherence and cohesion audit of the speckit-pro plugin: skills, runner, agents, tests, docs" route="subtoken+body" root="." est_tokens="2358" budget_tokens="3960">
+<!-- slice budget=8411 bytes (3960-token target, ceiling 9345) | ranking: full | bodies: kept 1 of 6 (capped) | callers: kept 11 of 27 | notes: omitted (budget) | tests: none | far: 3 of 3 -->
+<sigs>
+<d l="547" n="buildTestsPage" p="docs-site/scripts/generate-reference-pages.mjs" cx="8" ccx="10" in="1" r="1" next="--expand=docs-site/scripts/generate-reference-pages.mjs:buildTestsPage">async function buildTestsPage()</d>
+<d l="491" n="buildScriptsPage" p="docs-site/scripts/generate-reference-pages.mjs" cx="3" ccx="3" in="1" r="2">async function buildScriptsPage()</d>
+<d l="223" n="buildSkillsPage" p="docs-site/scripts/generate-reference-pages.mjs" cx="18" ccx="28" in="1" r="3">async function buildSkillsPage()</d>
+<d l="278" n="buildAgentsPage" p="docs-site/scripts/generate-reference-pages.mjs" cx="21" ccx="22" in="1" r="4">async function buildAgentsPage()</d>
+<d l="451" n="buildManifestsPage" p="docs-site/scripts/generate-reference-pages.mjs" cx="9" ccx="16" in="1" r="5">async function buildManifestsPage()</d>
+<d l="79" n="refresh_release_artifacts" p="scripts/refresh-release-artifacts.py" cx="3" ccx="4" in="1" r="6">def refresh_release_artifacts(repo_root: Path) -&gt; int:</d>
+<d l="215" n="skillPrerequisites" p="docs-site/scripts/generate-reference-pages.mjs" cx="6" ccx="5" in="1" r="7">function skillPrerequisites(name)</d>
+<d l="283" n="refresh_runner_trust_metadata" p="scripts/refresh-release-artifacts.py" cx="1" ccx="0" in="1" r="8">def refresh_runner_trust_metadata(repo_root: Path) -&gt; list[str]:</d>
+<d l="803" n="buildInventory" p="docs-site/scripts/generate-reference-pages.mjs" cx="1" ccx="0" in="1" r="9">async function buildInventory()</d>
+<far of_top="12" shown="3" total="3" capped="0">
+<s t="fn" n="buildHooksPage" p="docs-site/scripts/generate-reference-pages.mjs:368"/>
+<s t="fn" n="setup_contract_mismatches" p="speckit-pro/speckit_pro_runner/helpers/read_only.py:1718"/>
+<s t="fn" n="sourceVsDistRuntimeDifference" p="docs-site/scripts/generate-reference-pages.mjs:628"/>
+</far>
+</sigs>
+<bodies shown="1" total="6" capped="1">
+<b t="fn" l="547" p="docs-site/scripts/generate-reference-pages.mjs" n="buildTestsPage">
+<![CDATA[async function buildTestsPage() {
+  const testFiles = await listFiles('tests/speckit-pro', (rel) => /\.(sh|py|md)$/.test(rel));
+  const records = [];
+  const byLayer = new Map();
+  for (const repoPath of testFiles) {
+    const layer = repoPath.split('/')[2] || 'root';
+    if (!byLayer.has(layer)) byLayer.set(layer, []);
+    byLayer.get(layer).push(repoPath);
+  }
+  // Deterministic, platform-independent ordering. localeCompare is ICU/locale-
+  // dependent and produces a different file order on macOS vs CI Linux, which
+  // made the generated tests page fail reference:check after regenerating
+  // locally. A code-point comparison sorts identically on every platform.
+  const byCodePoint = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
+  for (const [layer, files] of Array.from(byLayer.entries()).sort(([a], [b]) => byCodePoint(a, b))) {
+    const orderedFiles = [...files].sort(byCodePoint);
+    const sources = [];
+    for (const repoPath of orderedFiles) sources.push(await citation(repoPath));
+    records.push({
+      id: layer.replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-|-$/g, '').toLowerCase(),
+      heading: `tests/speckit-pro/${layer}`,
+      purpose: `Validation files in ${layer}.`,
+      platformMapping: {
+        concept: 'SpecKit Pro validation layer',
+        claudeCode: orderedFiles.join(', '),
+        codex: orderedFiles.join(', '),
+        runtimeDifference: 'Layer 1 includes separate Claude Code and Codex structural checks where the repository has runtime-specific plugin surfaces.',
+      },
+      sourceFacts: orderedFiles.map((repoPath) => sourceFact(`${repoPath} is checked in under the SpecKit Pro test suite.`, [repoPath])),
+      sources,
+      inferredNotes: [
+        inferredNote('These files are validation evidence only; DOC-007 does not change test semantics unless a docs-site validation need explicitly requires it.', orderedFiles),
+      ],
+      classification: 'test-only',
+    });
+  }
+  return page('tests', 'Tests Reference', 'SpecKit Pro validation layers and test-only files.', records, [
+    await citation('tests/speckit-pro/run-all.py'),
+    await citation('tests/speckit-pro/layer1-structural/validate-plugin-metadata.py'),
+  ]);
+}]]>
+<calls total="6">
+<c n="listFiles" l="87">async function listFiles(repoPath, predicate = () =&gt; true)</c>
+<c n="citation" l="118">async function citation(repoPath, label = repoPath)</c>
+<c n="sourceFact" l="125">function sourceFact(text, sourceRefs)</c>
+<c n="inferredNote" l="128">function inferredNote(text, basedOn)</c>
+<c n="byCodePoint" l="560">const byCodePoint = (a, b) =&gt; (a &lt; b ? -1 : a &gt; b ? 1 : 0)</c>
+<c n="page" l="646">function page(slug, title, description, records, sources)</c>
+</calls>
+</b>
+<!-- body omitted (over budget): buildScriptsPage -->
+<!-- body omitted (over budget): buildSkillsPage -->
+<!-- body omitted (over budget): buildAgentsPage -->
+<!-- body omitted (over budget): buildManifestsPage -->
+<!-- body omitted (over budget): refresh_release_artifacts -->
+</bodies>
+<callers of_top="6" shown="11" total="27" capped="1">
+<s t="fn" n="citation" p="docs-site/scripts/generate-reference-pages.mjs:118" rel="callee" shared="5">async function citation(repoPath, label = repoPath)</s>
+<s t="fn" n="sourceFact" p="docs-site/scripts/generate-reference-pages.mjs:125" rel="callee" shared="5">function sourceFact(text, sourceRefs)</s>
+<s t="fn" n="inferredNote" p="docs-site/scripts/generate-reference-pages.mjs:128" rel="callee" shared="5">function inferredNote(text, basedOn)</s>
+<s t="fn" n="page" p="docs-site/scripts/generate-reference-pages.mjs:646" rel="callee" shared="5">function page(slug, title, description, records, sources)</s>
+<s t="fn" n="buildInventory" p="docs-site/scripts/generate-reference-pages.mjs:803" rel="caller" shared="5">async function buildInventory()</s>
+<s t="fn" n="listFiles" p="docs-site/scripts/generate-reference-pages.mjs:87" rel="callee" shared="4">async function listFiles(repoPath, predicate = () =&gt; true)</s>
+<s t="fn" n="readJson" p="docs-site/scripts/generate-reference-pages.mjs:79" rel="callee" shared="2">async function readJson(repoPath)</s>
+<s t="fn" n="firstSentence" p="docs-site/scripts/generate-reference-pages.mjs:131" rel="callee" shared="2">function firstSentence(text, fallback)</s>
+<s t="fn" n="titleFromSlug" p="docs-site/scripts/generate-reference-pages.mjs:138" rel="callee" shared="2">function titleFromSlug(slug)</s>
+<s t="cls" n="GeneratorError" p="docs-site/scripts/generate-reference-pages.mjs:28" rel="callee">class GeneratorError extends Error</s>
+<s t="fn" n="parseSkill" p="docs-site/scripts/generate-reference-pages.mjs:172" rel="callee">async function parseSkill(repoPath)</s>
+</callers>
+</ctx>
+</bundle>
+<bundle role="partition" i="1" symbols="12" modules="5" bytes="6639" tokens="2813" est_tokens="2813">
+<ctx task="coherence and cohesion audit of the speckit-pro plugin: skills, runner, agents, tests, docs" route="subtoken+body" root="." est_tokens="2387" budget_tokens="3960">
+<!-- slice budget=8411 bytes (3960-token target, ceiling 9345) | ranking: full | bodies: kept 4 of 6 (capped) | callers: 5 of 5 | notes: 1 of 1 | tests: kept 4 of 5 | far: 6 of 6 -->
+<sigs>
+<d l="148" n="SCAN_ROOTS" p="speckit-pro/speckit_pro_runner/gates/active_path_guard.py" cx="0" ccx="0" in="0" r="1" next="--expand=speckit-pro/speckit_pro_runner/gates/active_path_guard.py:SCAN_ROOTS">SCAN_ROOTS = ( &quot;tests/speckit-pro&quot;, &quot;scripts&quot;, &quot;speckit-pro/skills&quot;, &quot;speckit-pro/codex-skills&quot;, &quot;speckit-pro/scripts&quot;, &quot;.github/workflows&quot;, &quot;.specify/memory&quot;, &quot;.specify/scripts/bash&quot;, &quot;dist/claude&quot;, &quot;dist/codex&quot;, &quot;CLAUDE.md&quot;, &quot;docs-site/sr…</d>
+<d l="4527" n="active_role" p="speckit-pro/speckit_pro_runner/gates/active_path_guard.py" cx="10" ccx="9" in="1" r="2">def active_role(path: str) -&gt; str:</d>
+<d l="3326" n="zero_bash_text_scan_path" p="speckit-pro/speckit_pro_runner/gates/active_path_guard.py" cx="8" ccx="7" in="1" r="3">def zero_bash_text_scan_path(path: str) -&gt; bool:</d>
+<d l="23" n="PLUGIN_BASH_CONFINEMENT_ALLOWLIST" p="speckit-pro/speckit_pro_runner/gates/active_path_guard.py" cx="0" ccx="0" in="0" r="4">PLUGIN_BASH_CONFINEMENT_ALLOWLIST = &quot;tests/speckit-pro/unit/fixtures/plugin-bash-confinement/allowlist.json&quot;</d>
+<d l="22" n="PLUGIN_BASH_CONFINEMENT_DEFAULT_CASE_FILE" p="speckit-pro/speckit_pro_runner/gates/active_path_guard.py" cx="0" ccx="0" in="0" r="5">PLUGIN_BASH_CONFINEMENT_DEFAULT_CASE_FILE = &quot;tests/speckit-pro/unit/fixtures/plugin-bash-confinement/zero-bash-guard-cases.json&quot;</d>
+<d l="59" n="REPO_BASH_ACTIVE_INSTRUCTION_PREFIXES" p="speckit-pro/speckit_pro_runner/gates/active_path_guard.py" cx="0" ccx="0" in="0" r="6">REPO_BASH_ACTIVE_INSTRUCTION_PREFIXES = ( &quot;.claude/agents/&quot;, &quot;.claude/skills/&quot;, &quot;docs-site/src/content/docs/&quot;, &quot;docs-site/src/data/&quot;, )</d>
+<far of_top="12" shown="6" total="6" capped="0">
+<s t="var" n="DEFAULT_CASE_FILE" p="speckit-pro/speckit_pro_runner/gates/active_path_guard.py:20"/>
+<s t="var" n="INSTALLED_RUNTIME_DEFAULT_CASE_FILE" p="speckit-pro/speckit_pro_runner/gates/active_path_guard.py:21"/>
+<s t="fn" n="main" p="speckit-pro/speckit_pro_runner/__main__.py:12"/>
+<s t="var" n="PLUGIN_BASH_CONFINEMENT_REQUIRED_SCAN_ROOTS" p="speckit-pro/speckit_pro_runner/gates/active_path_guard.py:119"/>
+<s t="fn" n="verify_claude_boundary" p="speckit-pro/speckit_pro_runner/sweep_launcher.py:700"/>
+<s t="fn" n="verify_codex_boundary" p="speckit-pro/speckit_pro_runner/sweep_launcher.py:485"/>
+</far>
+</sigs>
+<bodies shown="4" total="6" capped="1">
+<b t="var" l="148" p="speckit-pro/speckit_pro_runner/gates/active_path_guard.py" n="SCAN_ROOTS">
+<![CDATA[SCAN_ROOTS = (
+    "tests/speckit-pro",
+    "scripts",
+    "speckit-pro/skills",
+    "speckit-pro/codex-skills",
+    "speckit-pro/scripts",
+    ".github/workflows",
+    ".specify/memory",
+    ".specify/scripts/bash",
+    "dist/claude",
+    "dist/codex",
+    "CLAUDE.md",
+    "docs-site/src/content/docs/contribute-and-release.md",
+)]]>
+</b>
+<b t="fn" l="4527" p="speckit-pro/speckit_pro_runner/gates/active_path_guard.py" n="active_role">
+<![CDATA[def active_role(path: str) -> str:
+    if path.startswith(".github/workflows/"):
+        return "active_ci_workflow"
+    if path.startswith("tests/speckit-pro/"):
+        return "repo_local_test_gate"
+    if path.startswith("scripts/"):
+        return "repo_local_release_helper"
+    if "/scripts/" in path and path.startswith("speckit-pro/"):
+        return "installed_plugin_helper"
+    if path.startswith("docs-site/") or path.startswith("docs/"):
+        return "documentation"
+    if path.startswith(".specify/"):
+        return "specify_provenance"
+    if path.startswith("dist/"):
+        return "generated_payload"
+    return "repository_text"]]>
+</b>
+<b t="var" l="23" p="speckit-pro/speckit_pro_runner/gates/active_path_guard.py" n="PLUGIN_BASH_CONFINEMENT_ALLOWLIST">
+<![CDATA[PLUGIN_BASH_CONFINEMENT_ALLOWLIST = "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/allowlist.json"]]>
+</b>
+<b t="var" l="22" p="speckit-pro/speckit_pro_runner/gates/active_path_guard.py" n="PLUGIN_BASH_CONFINEMENT_DEFAULT_CASE_FILE">
+<![CDATA[PLUGIN_BASH_CONFINEMENT_DEFAULT_CASE_FILE = "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/zero-bash-guard-cases.json"]]>
+</b>
+<!-- body omitted (over budget): zero_bash_text_scan_path -->
+<!-- body omitted (over budget): REPO_BASH_ACTIVE_INSTRUCTION_PREFIXES -->
+</bodies>
+<callers of_top="6" shown="5" total="5" capped="0">
+<s t="fn" n="zero_bash_source_findings" p="speckit-pro/speckit_pro_runner/gates/active_path_guard.py:3099" rel="caller">def zero_bash_source_findings(sources: list[SourceFile], allowlist: list[dict[str, Any]]) -&gt; lis…</s>
+<s t="fn" n="zero_bash_historical_path" p="speckit-pro/speckit_pro_runner/gates/active_path_guard.py:3944" rel="callee">def zero_bash_historical_path(path: str) -&gt; bool:</s>
+<s t="fn" n="classify_raw_finding" p="speckit-pro/speckit_pro_runner/gates/active_path_guard.py:4380" rel="caller">def classify_raw_finding( path: str, line: int | None, category: str, pattern: str, reason: str,…</s>
+<s t="fn" n="normalize_path" p="speckit-pro/speckit_pro_runner/gates/active_path_guard.py:5540" rel="callee">def normalize_path(raw: str) -&gt; str:</s>
+<s t="fn" n="zero_bash_extensionless_scan_path" p="speckit-pro/speckit_pro_runner/gates/active_path_guard.py:5565" rel="callee">def zero_bash_extensionless_scan_path(path: str) -&gt; bool:</s>
+</callers>
+<notes shown="1" total="1" capped="0">
+<target id="speckit-pro/speckit_pro_runner/gates/active_path_guard.py">
+<note d="2026-09-28">
+<![CDATA[files this guard lists must not instruct bash, sh or jq, so write python3 steps instead, and shipped plugin code stays on the Python 3.11 standard library.]]>
+</note>
+</target>
+</notes>
+<tests shown="4" total="5" capped="1">
+<test p="tests/speckit-pro/unit/test-installed-release-gates.py" run="python3 tests/speckit-pro/unit/test-installed-release-gates.py"/>
+<test p="tests/speckit-pro/unit/test-repo-bash-confinement.py" run="python3 tests/speckit-pro/unit/test-repo-bash-confinement.py"/>
+<test p="tests/speckit-pro/unit/test-semantic-contract-identifiers.py" run="python3 tests/speckit-pro/unit/test-semantic-contract-identifiers.py"/>
+<test p="tests/speckit-pro/unit/test-speckit-pro-gates.py" run="python3 tests/speckit-pro/unit/test-speckit-pro-gates.py"/>
+</tests>
+</ctx>
+</bundle>
+<bundle role="partition" i="2" symbols="12" modules="5" bytes="6502" tokens="2755" est_tokens="2755">
+<ctx task="coherence and cohesion audit of the speckit-pro plugin: skills, runner, agents, tests, docs" route="subtoken+body" root="." est_tokens="2328" budget_tokens="3960">
+<!-- slice budget=8411 bytes (3960-token target, ceiling 9345) | ranking: full | bodies: kept 1 of 6 (capped) | callers: kept 6 of 30 | notes: none | tests: kept 6 of 7 | far: 4 of 4 -->
+<sigs>
+<d l="4722" n="_autonomy_file_digests" p="speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py" cx="4" ccx="3" in="1" r="1" next="--expand=speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py:_autonomy_file_digests">def _autonomy_file_digests(label: str, content: bytes) -&gt; set[str]:</d>
+<d l="12" n="find_repo_root" p="speckit-pro/speckit_pro_runner/path_utils.py" cx="5" ccx="5" in="4" r="2">def find_repo_root(start: Path) -&gt; Path | None:</d>
+<d l="33" n="SuiteManifestError" sc="SuiteManifestError" p="speckit-pro/speckit_pro_runner/gates/suite.py" cx="0" ccx="0" in="2" r="3">class SuiteManifestError(Exception):</d>
+<d l="485" n="installed_plugin_payload_result" p="speckit-pro/speckit_pro_runner/gates/payloads.py" cx="7" ccx="3" in="2" r="4">def installed_plugin_payload_result( repo_root: Path, surface: str, expected_root: Path, actual_root: Path, mutation: dict[str, Any], ) -&gt; dict[str, Any]:</d>
+<d l="883" n="install_root_from_case" p="speckit-pro/speckit_pro_runner/gates/payloads.py" cx="4" ccx="3" in="1" r="5">def install_root_from_case(case: dict[str, Any], repo_root: Path) -&gt; Path | dict[str, Any]:</d>
+<d l="264" n="installed_plugin_build_target" p="speckit-pro/speckit_pro_runner/gates/payloads.py" cx="8" ccx="8" in="1" r="6">def installed_plugin_build_target(request: Any, repo_root: Path) -&gt; Path | None | dict[str, Any]:</d>
+<d l="632" n="resolve_repo_root" p="speckit-pro/speckit_pro_runner/gates/suite.py" cx="9" ccx="8" in="1" r="7">def resolve_repo_root(inputs: dict[str, Any]) -&gt; Path | dict[str, Any]:</d>
+<d l="533" n="plugin_version_for_surface" p="speckit-pro/speckit_pro_runner/gates/payloads.py" cx="4" ccx="3" in="1" r="8">def plugin_version_for_surface(repo_root: Path, surface: str) -&gt; str:</d>
+<far of_top="12" shown="4" total="4" capped="0">
+<s t="fn" n="claude_command" p="speckit-pro/speckit_pro_runner/sweep_launcher.py:181"/>
+<s t="fn" n="allowed_git_dir" p="speckit-pro/speckit_pro_runner/helpers/read_only.py:8694"/>
+<s t="var" n="RUNNER_NAME" p="speckit-pro/speckit_pro_runner/__init__.py:3"/>
+<s t="var" n="RUNNER_CONTRACT_ID" p="speckit-pro/speckit_pro_runner/__init__.py:4"/>
+</far>
+</sigs>
+<bodies shown="1" total="6" capped="1">
+<b t="fn" l="4722" p="speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py" n="_autonomy_file_digests">
+<![CDATA[def _autonomy_file_digests(label: str, content: bytes) -> set[str]:
+    """Digests that keep a planning fingerprint current.
+
+    plan.md binds its raw bytes. tasks.md also accepts the digest of its task
+    definitions, the checkbox-insensitive text task fingerprints use, so marking a
+    task complete never stales the boundary. When the runner is not importable or
+    the file is not UTF-8, only the raw digest counts, so the check fails closed.
+    """
+    digests = {_sha256_bytes(content)}
+    if label != "tasks_md":
+        return digests
+    plugin_root = str(Path(__file__).resolve().parents[3])
+    if plugin_root not in sys.path:
+        sys.path.insert(0, plugin_root)
+    try:
+        from speckit_pro_runner.task_execution import task_definitions  # noqa: PLC0415
+
+        digests.add(_sha256_bytes(task_definitions(content.decode("utf-8")).encode("utf-8")))
+    except (ImportError, UnicodeDecodeError):
+        # Fail closed: without the runner or valid UTF-8, only the raw digest counts.
+        return digests
+    return digests]]>
+<calls total="5">
+<c n="_sha256_bytes" l="1344">def _sha256_bytes(value: bytes) -&gt; str:</c>
+<c n="task_definitions" l="25">def task_definitions(tasks: str) -&gt; str:</c>
+<c n="decode" l="123">def decode(value: Any, depth: int = 0) -&gt; Any:</c>
+<c n="encode" l="65">def encode(item: Any) -&gt; dict[str, str]:</c>
+<c n="insert" l="117">def insert(self, index, value) -&gt; None:</c>
+</calls>
+</b>
+<!-- body omitted (over budget): find_repo_root -->
+<!-- body omitted (over budget): SuiteManifestError -->
+<!-- body omitted (over budget): installed_plugin_payload_result -->
+<!-- body omitted (over budget): install_root_from_case -->
+<!-- body omitted (over budget): installed_plugin_build_target -->
+</bodies>
+<callers of_top="6" shown="6" total="30" capped="1">
+<s t="fn" n="resolve" p="speckit-pro/speckit_pro_runner/gates/active_path_guard.py:1524" rel="callee" shared="3">def resolve(node: ast.AST) -&gt; RepoBashGuidanceResolution:</s>
+<s t="fn" n="resolve" p="speckit-pro/speckit_pro_runner/gates/active_path_guard.py:2652" rel="callee" shared="3">def resolve(node: ast.AST) -&gt; RepoBashStaticResolution:</s>
+<s t="fn" n="repo_relative" p="speckit-pro/speckit_pro_runner/gates/payloads.py:958" rel="callee" shared="3">def repo_relative(path: Path, repo_root: Path) -&gt; str:</s>
+<s t="fn" n="is_relative_to" p="speckit-pro/speckit_pro_runner/path_utils.py:20" rel="callee" shared="3">def is_relative_to(path: Path, root: Path) -&gt; bool:</s>
+<s t="fn" n="diagnostic" p="speckit-pro/speckit_pro_runner/envelope.py:43" rel="callee" shared="2">def diagnostic( code: str, message: str, *, severity: str = &quot;error&quot;, details: dict[str, Any] | N…</s>
+<s t="fn" n="resolve_path" p="speckit-pro/speckit_pro_runner/gates/payloads.py:940" rel="callee" shared="2">def resolve_path(raw: str, repo_root: Path) -&gt; Path:</s>
+</callers>
+<tests shown="6" total="7" capped="1">
+<test p="tests/speckit-pro/unit/test-autopilot-bookkeeping-guard.py" run="python3 tests/speckit-pro/unit/test-autopilot-bookkeeping-guard.py"/>
+<test p="tests/speckit-pro/unit/test-autopilot-phase-coverage.py" run="python3 tests/speckit-pro/unit/test-autopilot-phase-coverage.py"/>
+<test p="tests/speckit-pro/unit/test-installed-release-gates.py" run="python3 tests/speckit-pro/unit/test-installed-release-gates.py"/>
+<test p="tests/speckit-pro/unit/test-repo-bash-confinement.py" run="python3 tests/speckit-pro/unit/test-repo-bash-confinement.py"/>
+<test p="tests/speckit-pro/unit/test-semantic-contract-identifiers.py" run="python3 tests/speckit-pro/unit/test-semantic-contract-identifiers.py"/>
+<test p="tests/speckit-pro/unit/test-speckit-pro-gates.py" run="python3 tests/speckit-pro/unit/test-speckit-pro-gates.py"/>
+</tests>
+</ctx>
+</bundle>
+<bundle role="partition" i="3" symbols="12" modules="7" bytes="6596" tokens="2795" est_tokens="2795">
+<ctx task="coherence and cohesion audit of the speckit-pro plugin: skills, runner, agents, tests, docs" route="subtoken+body" root="." est_tokens="2297" budget_tokens="3960">
+<!-- slice budget=8411 bytes (3960-token target, ceiling 9345) | ranking: full | bodies: kept 1 of 6 (capped) | callers: kept 5 of 22 | notes: omitted (budget) | tests: kept 3 of 7 | far: 6 of 6 -->
+<sigs>
+<d l="4426" n="classify_path" p="speckit-pro/speckit_pro_runner/gates/active_path_guard.py" cx="24" ccx="22" in="1" r="1" next="--expand=speckit-pro/speckit_pro_runner/gates/active_path_guard.py:classify_path">def classify_path(path: str, category: str, pattern: str, content: str, source_kind: str) -&gt; str:</d>
+<d l="321" n="live_version_sync_check" p="speckit-pro/speckit_pro_runner/gates/release.py" cx="5" ccx="3" in="1" r="2">def live_version_sync_check(repo_root: Path) -&gt; dict[str, Any]:</d>
+<d l="4454" n="classify_installed_runtime_path" p="speckit-pro/speckit_pro_runner/gates/active_path_guard.py" cx="54" ccx="63" in="3" r="3">def classify_installed_runtime_path(path: str, category: str, pattern: str, content: str, source_kind: str) -&gt; str:</d>
+<d l="13" n="ALLOWED_PREFIXES" p="docs-site/scripts/generate-reference-pages.mjs" cx="0" ccx="0" in="0" r="4">const ALLOWED_PREFIXES = [&apos;.claude-plugin/&apos;, &apos;.agents/plugins/&apos;, &apos;.specify/integrations/&apos;, &apos;speckit-pro/&apos;, &apos;dist/claude/&apos;, &apos;dist/codex/&apos;, &apos;scripts/&apos;, &apos;tests/speckit-pro/&apos;]</d>
+<d l="5072" n="is_docs_or_workflow_tooling" p="speckit-pro/speckit_pro_runner/gates/active_path_guard.py" cx="3" ccx="2" in="2" r="5">def is_docs_or_workflow_tooling(content: str) -&gt; bool:</d>
+<d l="4987" n="is_direct_python_gate_dispatch" p="speckit-pro/speckit_pro_runner/gates/active_path_guard.py" cx="2" ccx="1" in="4" r="6">def is_direct_python_gate_dispatch(content: str) -&gt; bool:</d>
+<far of_top="12" shown="6" total="6" capped="0">
+<s t="fn" n="main" p="scripts/build-plugin-payloads.py:10"/>
+<s t="var" n="INSTALLED_PLUGIN_FIXTURE_BOUNDARY" p="speckit-pro/speckit_pro_runner/gates/payloads.py:23"/>
+<s t="fn" n="output_schema_path" p="speckit-pro/speckit_pro_runner/preview_launcher.py:78"/>
+<s t="var" n="FIXTURE_BOUNDARY" p="speckit-pro/speckit_pro_runner/gates/payloads.py:19"/>
+<s t="var" n="PAGE_SLUGS" p="docs-site/scripts/generate-reference-pages.mjs:10"/>
+<s t="fn" n="_standing_classes" p="speckit-pro/speckit_pro_runner/helpers/egress_authorization.py:78"/>
+</far>
+</sigs>
+<bodies shown="1" total="6" capped="1">
+<b t="fn" l="4426" p="speckit-pro/speckit_pro_runner/gates/active_path_guard.py" n="classify_path">
+<![CDATA[def classify_path(path: str, category: str, pattern: str, content: str, source_kind: str) -> str:
+    if path.startswith(".specify/memory/"):
+        return "archive_provenance"
+    if path.startswith(".specify/scripts/bash/"):
+        return "consumer_spec_kit_helper"
+    if path.startswith("dist/"):
+        return "generated_payload_mirror"
+    if path.startswith("docs-site/") or path.startswith("docs/") or path in {"CLAUDE.md", "README.md"} or path.startswith("specs/"):
+        return "docs_out_of_scope"
+    if "/fixtures/" in path or path.endswith("bash-reference-manifest.json") or "layer7-parity/" in path:
+        return "temporary_parity_evidence"
+    if path.startswith("speckit-pro/codex-skills/") or path.startswith("speckit-pro/skills/") or path.startswith("speckit-pro/scripts/"):
+        return "installed_runtime_cutover_surface"
+    if path.startswith(".github/workflows/"):
+        if path == ".github/workflows/deploy-docs.yml":
+            return "docs_out_of_scope"
+        if repository_bash_container_preflight_dispatch_glue(path, content):
+            return "ci_dispatch_glue"
+        if category == "bash" and pattern.startswith("run:") and is_direct_python_gate_dispatch(content):
+            return "ci_dispatch_glue"
+        if is_docs_or_workflow_tooling(content):
+            return "docs_out_of_scope"
+        return "blocking_active_gate"
+    if source_kind == "repo" and (path.startswith("tests/speckit-pro/") or path.startswith("scripts/")):
+        return "temporary_parity_evidence"
+    return "blocking_active_gate"]]>
+<calls total="3">
+<c n="is_docs_or_workflow_tooling" l="5072">def is_docs_or_workflow_tooling(content: str) -&gt; bool:</c>
+<c n="is_direct_python_gate_dispatch" l="4987">def is_direct_python_gate_dispatch(content: str) -&gt; bool:</c>
+<c n="repository_bash_container_preflight_dispatch_glue" l="4610">def repository_bash_container_preflight_dispatch_glue(path: str, content: str) -&gt; bool:</c>
+</calls>
+</b>
+<!-- body omitted (over budget): live_version_sync_check -->
+<!-- body omitted (over budget): classify_installed_runtime_path -->
+<!-- body omitted (over budget): ALLOWED_PREFIXES -->
+<!-- body omitted (over budget): is_docs_or_workflow_tooling -->
+<!-- body omitted (over budget): is_direct_python_gate_dispatch -->
+</bodies>
+<callers of_top="6" shown="5" total="22" capped="1">
+<s t="fn" n="repository_bash_container_preflight_dispatch_glue" p="speckit-pro/speckit_pro_runner/gates/active_path_guard.py:4610" rel="callee" shared="2">def repository_bash_container_preflight_dispatch_glue(path: str, content: str) -&gt; bool:</s>
+<s t="fn" n="scan_sources" p="speckit-pro/speckit_pro_runner/gates/active_path_guard.py:4254" rel="caller">def scan_sources(sources: list[SourceFile], repo_root: Path) -&gt; list[RawFinding]:</s>
+<s t="fn" n="scan_installed_runtime_sources" p="speckit-pro/speckit_pro_runner/gates/active_path_guard.py:4302" rel="caller">def scan_installed_runtime_sources(sources: list[SourceFile], repo_root: Path) -&gt; list[RawFindin…</s>
+<s t="fn" n="classify_raw_finding" p="speckit-pro/speckit_pro_runner/gates/active_path_guard.py:4380" rel="caller">def classify_raw_finding( path: str, line: int | None, category: str, pattern: str, reason: str,…</s>
+<s t="fn" n="classify_installed_runtime_raw_finding" p="speckit-pro/speckit_pro_runner/gates/active_path_guard.py:4403" rel="caller">def classify_installed_runtime_raw_finding( path: str, line: int | None, category: str, pattern:…</s>
+</callers>
+<tests shown="3" total="7" capped="1">
+<test p="tests/speckit-pro/unit/test-autopilot-permission-mode-guidance.py" run="python3 tests/speckit-pro/unit/test-autopilot-permission-mode-guidance.py"/>
+<test p="tests/speckit-pro/unit/test-installed-release-gates.py" run="python3 tests/speckit-pro/unit/test-installed-release-gates.py"/>
+<test p="tests/speckit-pro/unit/test-repo-bash-confinement.py" run="python3 tests/speckit-pro/unit/test-repo-bash-confinement.py"/>
+</tests>
+</ctx>
+</bundle>
+<bundle role="partition" i="4" symbols="12" modules="7" bytes="5279" tokens="2237" est_tokens="2237">
+<ctx task="coherence and cohesion audit of the speckit-pro plugin: skills, runner, agents, tests, docs" route="subtoken+body" root="." est_tokens="1970" budget_tokens="3960">
+<!-- slice budget=8411 bytes (3960-token target, ceiling 9345) | ranking: full | bodies: kept 1 of 6 (capped) | callers: kept 7 of 38 | notes: omitted (budget) | tests: kept 4 of 6 | far: 6 of 6 -->
+<sigs>
+<d l="3932" n="zero_bash_active_role" p="speckit-pro/speckit_pro_runner/gates/active_path_guard.py" cx="8" ccx="7" in="2" r="1" next="--expand=speckit-pro/speckit_pro_runner/gates/active_path_guard.py:zero_bash_active_role">def zero_bash_active_role(path: str) -&gt; str:</d>
+<d l="180" n="live_installed_release_gate_evidence" p="speckit-pro/speckit_pro_runner/gates/release.py" cx="25" ccx="25" in="1" r="2">def live_installed_release_gate_evidence(repo_root: Path) -&gt; dict[str, Any]:</d>
+<d l="109" n="SUPPORT_ANCHOR_INVENTORY" p="docs-site/scripts/validate-docs-quality.mjs" cx="0" ccx="0" in="0" r="3">const SUPPORT_ANCHOR_INVENTORY = Object.freeze([</d>
+<d l="77" n="preflight" p="speckit-pro/speckit_pro_runner/runtime.py" cx="6" ccx="5" in="2" r="4">def preflight(request_id: str | None, _inputs: dict[str, Any]) -&gt; dict[str, Any]:</d>
+<d l="5037" n="runner_invocation_record" p="speckit-pro/speckit_pro_runner/helpers/install.py" cx="10" ccx="11" in="2" r="5">def runner_invocation_record(case: dict[str, Any], request_id: str | None, repo_root: Path) -&gt; tuple[dict[str, Any], list[dict[str, Any]]]:</d>
+<d l="1941" n="detect_commands" p="speckit-pro/speckit_pro_runner/helpers/read_only.py" cx="29" ccx="52" in="1" r="6">def detect_commands(inputs: dict[str, Any], repo_root: Path) -&gt; dict[str, Any]:</d>
+<far of_top="12" shown="6" total="6" capped="0">
+<s t="fn" n="formal_checkpoint_errors" p="speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py:5119"/>
+<s t="fn" n="main" p="speckit-pro/skills/speckit-coach/scripts/run-formal-ci.py:15"/>
+<s t="fn" n="find_repo_root" p="speckit-pro/speckit_pro_runner/helpers/read_only.py:244"/>
+<s t="fn" n="install_quint" p="speckit-pro/skills/speckit-coach/scripts/setup-formal-tools.py:94"/>
+<s t="fn" n="invalid_packet_input" p="speckit-pro/speckit_pro_runner/helpers/pr_emission.py:1123"/>
+<s t="var" n="DOCUMENTED_ROUTE_TITLES" p="docs-site/scripts/validate-docs-quality.mjs:8"/>
+</far>
+</sigs>
+<bodies shown="1" total="6" capped="1">
+<b t="fn" l="3932" p="speckit-pro/speckit_pro_runner/gates/active_path_guard.py" n="zero_bash_active_role">
+<![CDATA[def zero_bash_active_role(path: str) -> str:
+    if path.startswith("dist/"):
+        return "generated_payload"
+    if path.startswith("speckit-pro/skills/") or path.startswith("speckit-pro/codex-skills/"):
+        return "installed_skill"
+    if path.startswith("speckit-pro/agents/") or path.startswith("speckit-pro/codex-agents/"):
+        return "installed_agent"
+    if path.startswith("speckit-pro/hooks/") or path == "speckit-pro/codex-hooks.json":
+        return "installed_hook"
+    return "plugin_source"]]>
+</b>
+<!-- body omitted (over budget): live_installed_release_gate_evidence -->
+<!-- body omitted (over budget): SUPPORT_ANCHOR_INVENTORY -->
+<!-- body omitted (over budget): preflight -->
+<!-- body omitted (over budget): runner_invocation_record -->
+<!-- body omitted (over budget): detect_commands -->
+</bodies>
+<callers of_top="6" shown="7" total="38" capped="1">
+<s t="fn" n="diagnostic" p="speckit-pro/speckit_pro_runner/envelope.py:43" rel="callee">def diagnostic( code: str, message: str, *, severity: str = &quot;error&quot;, details: dict[str, Any] | N…</s>
+<s t="fn" n="is_diagnostic" p="speckit-pro/speckit_pro_runner/envelope.py:69" rel="callee">def is_diagnostic(value: Any) -&gt; bool:</s>
+<s t="fn" n="response" p="speckit-pro/speckit_pro_runner/envelope.py:73" rel="callee">def response( status: str, *, request_id: str | None = None, data: dict[str, Any] | None = None,…</s>
+<s t="fn" n="update" p="speckit-pro/speckit_pro_runner/execution_control.py:1643" rel="callee">def update() -&gt; dict[str, Any]:</s>
+<s t="fn" n="run_active_runtime_guard" p="speckit-pro/speckit_pro_runner/gates/active_path_guard.py:463" rel="callee">def run_active_runtime_guard(entry: Any, request: Any, repo_root: Path) -&gt; dict[str, Any]:</s>
+<s t="fn" n="run_zero_bash_guard" p="speckit-pro/speckit_pro_runner/gates/active_path_guard.py:550" rel="callee">def run_zero_bash_guard(entry: Any, request: Any, repo_root: Path) -&gt; dict[str, Any]:</s>
+<s t="fn" n="run_repo_bash_confinement" p="speckit-pro/speckit_pro_runner/gates/active_path_guard.py:615" rel="callee">def run_repo_bash_confinement(entry: Any, request: Any, repo_root: Path) -&gt; dict[str, Any]:</s>
+</callers>
+<tests shown="4" total="6" capped="1">
+<test p="tests/speckit-pro/unit/test-installed-release-gates.py" run="python3 tests/speckit-pro/unit/test-installed-release-gates.py"/>
+<test p="tests/speckit-pro/unit/test-repo-bash-confinement.py" run="python3 tests/speckit-pro/unit/test-repo-bash-confinement.py"/>
+<test p="tests/speckit-pro/unit/test-semantic-contract-identifiers.py" run="python3 tests/speckit-pro/unit/test-semantic-contract-identifiers.py"/>
+<test p="tests/speckit-pro/unit/test-speckit-pro-gates.py" run="python3 tests/speckit-pro/unit/test-speckit-pro-gates.py"/>
+</tests>
+</ctx>
+</bundle>
+<bundle role="partition" i="5" symbols="12" modules="7" bytes="6546" tokens="2774" est_tokens="2774">
+<ctx task="coherence and cohesion audit of the speckit-pro plugin: skills, runner, agents, tests, docs" route="subtoken+body" root="." est_tokens="2278" budget_tokens="3960">
+<!-- slice budget=8411 bytes (3960-token target, ceiling 9345) | ranking: full | bodies: kept 1 of 6 (capped) | callers: kept 5 of 9 | notes: omitted (budget) | tests: kept 3 of 7 | far: 5 of 5 -->
+<sigs>
+<d l="4886" n="installed_runtime_baseline_source_checkout_helper_reference" p="speckit-pro/speckit_pro_runner/gates/active_path_guard.py" cx="3" ccx="2" in="2" r="1" next="--expand=speckit-pro/speckit_pro_runner/gates/active_path_guard.py:installed_runtime_baseline_source_checkout_helper_reference">def installed_runtime_baseline_source_checkout_helper_reference(path: str, content: str) -&gt; bool:</d>
+<d l="113" n="validateManifests" p="docs-site/scripts/validate-safe-install-aids.mjs" cx="1" ccx="0" in="1" r="2">function validateManifests()</d>
+<d l="1" n="speckit-pro-coherence-audit-design-concept" p="docs/ai/specs/speckit-pro-coherence-audit-design-concept.md" layer="ai" cx="0" ccx="0" in="0" r="3">--- topic: &quot;Deep coherence and cohesion audit of speckit-pro&quot; slug: &quot;speckit-pro-coherence-audit&quot; date: &quot;2026-09-29&quot; mode: &quot;standalone&quot; source_input: type: &quot;topic&quot; ref: &quot;speckit-pro coherence and cohesion audit after a month of heavy change…</d>
+<d l="13" n="Design Concept: Deep coherence and cohesion audit of speckit-pro" p="docs/ai/specs/speckit-pro-coherence-audit-design-concept.md" layer="ai" cx="0" ccx="0" in="0" r="4"># Design Concept: Deep coherence and cohesion audit of speckit-pro</d>
+<d l="5464" n="validate_runner_runtime_response" p="speckit-pro/speckit_pro_runner/helpers/install.py" cx="12" ccx="16" in="1" r="5">def validate_runner_runtime_response(parsed: dict[str, Any], cwd: Path, cache_root: str) -&gt; dict[str, Any] | None:</d>
+<d l="20" n="Goals" sc="Design Concept: Deep coherence and cohesion audit of speckit-pro" p="docs/ai/specs/speckit-pro-coherence-audit-design-concept.md" layer="ai" cx="0" ccx="0" in="0" r="6">## Goals</d>
+<d l="55" n="marketplacePlugin" p="docs-site/scripts/validate-safe-install-aids.mjs" cx="1" ccx="0" in="1" r="7">function marketplacePlugin(manifest, relativePath)</d>
+<far of_top="12" shown="5" total="5" capped="0">
+<s t="fn" n="artifact_review_errors" p="speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py:5144"/>
+<s t="fn" n="codex_command" p="speckit-pro/speckit_pro_runner/sweep_launcher.py:231"/>
+<s t="sec" n="Design Tree (Q&amp;A log)" p="docs/ai/specs/speckit-pro-coherence-audit-design-concept.md:89"/>
+<s t="fn" n="validateData" p="docs-site/scripts/validate-safe-install-aids.mjs:134"/>
+<s t="fn" n="codex_preview_command" p="speckit-pro/speckit_pro_runner/preview_launcher.py:95"/>
+</far>
+</sigs>
+<bodies shown="1" total="6" capped="1">
+<b t="fn" l="4886" p="speckit-pro/speckit_pro_runner/gates/active_path_guard.py" n="installed_runtime_baseline_source_checkout_helper_reference">
+<![CDATA[def installed_runtime_baseline_source_checkout_helper_reference(path: str, content: str) -> bool:
+    lowered_path = path.lower()
+    if any(part in lowered_path for part in ("/references/", "/templates/", "/contracts/", "/scripts/")):
+        return True
+    if installed_runtime_generated_payload_helper_context(content):
+        return True
+    lowered = content.lower()
+    markers = (
+        "allowed-tools:",
+        "tools:",
+        "bash(",
+        "grep(",
+        "glob(",
+        "operator",
+        "official speckit cli",
+        "spec kit cli",
+        "skipped when",
+        "not on `path`",
+        "not on path",
+        "forbidden_patterns",
+        "bash dependency",
+        "shell=true subprocess execution",
+        "manual classification request",
+        "workflow shell dispatches a python gate",
+        "is_direct_python_gate_dispatch",
+        "blocking_active_gate",
+        "re.match(",
+        "argv-list subprocesses",
+        "argv array",
+        "existing bash gates authoritative",
+        "existing bash workflow",
+        "zero-bash-guard",
+        "zero_bash_guard",
+        "zero_bash_status",
+        "zero_bash_blocking_count",
+        "repo-bash-confinement",
+        "repo_bash_confinement",
+        "plugin-bash-confinement",
+        "required_absent",
+        "claude_plugin_root",
+        "<skill_scripts>",
+        "source-checkout",
+        "source checkout",
+        "speckit-pro/skills/",
+        "speckit-pro/codex-skills/",
+        "tests/speckit-pro/",
+        ".specify/",
+        "docs/ai/specs/",
+        "docs-site/",
+        "deterministic bash scripts",
+        " is missing",
+    )
+    return any(marker in lowered for marker in markers)]]>
+<calls total="1">
+<c n="installed_runtime_generated_payload_helper_context" l="4762">def installed_runtime_generated_payload_helper_context(content: str) -&gt; bool:</c>
+</calls>
+</b>
+<!-- body omitted (over budget): validateManifests -->
+<!-- body omitted (over budget): speckit-pro-coherence-audit-design-concept -->
+<!-- body omitted (over budget): Design Concept: Deep coherence and cohesion audit of speckit-pro -->
+<!-- body omitted (over budget): validate_runner_runtime_response -->
+<!-- body omitted (over budget): Goals -->
+</bodies>
+<callers of_top="6" shown="5" total="9" capped="1">
+<s t="modscope" n="&lt;file-scope&gt;" p="docs-site/scripts/validate-safe-install-aids.mjs:1" rel="caller"/>
+<s t="fn" n="assert" p="docs-site/scripts/validate-safe-install-aids.mjs:24" rel="callee">function assert(condition, message)</s>
+<s t="fn" n="readJson" p="docs-site/scripts/validate-safe-install-aids.mjs:45" rel="callee">function readJson(relativePath)</s>
+<s t="fn" n="marketplacePlugin" p="docs-site/scripts/validate-safe-install-aids.mjs:55" rel="callee">function marketplacePlugin(manifest, relativePath)</s>
+<s t="fn" n="classify_installed_runtime_path" p="speckit-pro/speckit_pro_runner/gates/active_path_guard.py:4454" rel="caller">def classify_installed_runtime_path(path: str, category: str, pattern: str, content: str, source…</s>
+</callers>
+<tests shown="3" total="7" capped="1">
+<test p="tests/speckit-pro/unit/test-autopilot-permission-mode-guidance.py" run="python3 tests/speckit-pro/unit/test-autopilot-permission-mode-guidance.py"/>
+<test p="tests/speckit-pro/unit/test-installed-release-gates.py" run="python3 tests/speckit-pro/unit/test-installed-release-gates.py"/>
+<test p="tests/speckit-pro/unit/test-repo-bash-confinement.py" run="python3 tests/speckit-pro/unit/test-repo-bash-confinement.py"/>
+</tests>
+</ctx>
+</bundle>
+<bundle role="partition" i="6" symbols="12" modules="8" bytes="7126" tokens="3019" est_tokens="3019">
+<ctx task="coherence and cohesion audit of the speckit-pro plugin: skills, runner, agents, tests, docs" route="subtoken+body" root="." est_tokens="2485" budget_tokens="3960">
+<!-- slice budget=8411 bytes (3960-token target, ceiling 9345) | ranking: full | bodies: kept 1 of 6 (capped) | callers: 4 of 4 | notes: kept 1 of 2 | tests: kept 3 of 7 | far: 6 of 6 -->
+<sigs>
+<d l="4667" n="installed_runtime_source_checkout_helper_reference" p="speckit-pro/speckit_pro_runner/gates/active_path_guard.py" cx="4" ccx="3" in="1" r="1" next="--expand=speckit-pro/speckit_pro_runner/gates/active_path_guard.py:installed_runtime_source_checkout_helper_reference">def installed_runtime_source_checkout_helper_reference(path: str, content: str) -&gt; bool:</d>
+<d l="4858" n="installed_runtime_installed_runtime_surface" p="speckit-pro/speckit_pro_runner/gates/active_path_guard.py" cx="4" ccx="3" in="1" r="2">def installed_runtime_installed_runtime_surface(path: str) -&gt; bool:</d>
+<d l="21" n="INCLUDE" p="audit/scope.py" cx="0" ccx="0" in="0" r="3">INCLUDE = [ r&quot;^speckit-pro/&quot;, r&quot;^tests/speckit-pro/&quot;, r&quot;^scripts/&quot;, r&quot;^docs-site/&quot;, r&quot;^specs/&quot;, r&quot;^docs/ai/specs/[^/]+$&quot;, # active roadmaps, design concepts, workflows (not .process/) r&quot;^docs/ai/research/&quot;, r&quot;^docs/[^/]+\.md$&quot;, # PRDs, road…</d>
+<d l="45" n="CHECK_WORKTREE_PATHS" p="scripts/refresh-release-artifacts.py" cx="0" ccx="0" in="0" r="4">CHECK_WORKTREE_PATHS = ( &quot;dist&quot;, &quot;.claude-plugin/marketplace.json&quot;, &quot;.agents/plugins/marketplace.json&quot;, &quot;docs-site/src/content/docs/reference&quot;, RUNNER_MANIFEST_FILE, RUNNER_CHECKSUM_FILE, )</d>
+<d l="46" n="isGeneratedReferencePath" p="docs-site/scripts/generate-reference-pages.mjs" cx="1" ccx="0" in="1" r="5">function isGeneratedReferencePath(repoPath)</d>
+<d l="29" n="USAGE" p="scripts/refresh-local-plugin.py" cx="0" ccx="0" in="0" r="6">USAGE = &quot;&quot;&quot;Usage: scripts/refresh-local-plugin.py [options] Rebuild generated plugin payloads and refresh the local Claude Code and Codex installed-plugin caches for maintainer dogfooding. Default: Rebuild dist payloads, validate the Claude…</d>
+<far of_top="12" shown="6" total="6" capped="0">
+<s t="var" n="EXCLUDE" p="audit/scope.py:32"/>
+<s t="fn" n="payload_trust_metadata_mismatches" p="speckit-pro/speckit_pro_runner/gates/payloads.py:540"/>
+<s t="var" n="RUNNER_CHECKSUM_FILE" p="scripts/refresh-release-artifacts.py:36"/>
+<s t="var" n="RUNNER_MANIFEST_FILE" p="scripts/refresh-release-artifacts.py:35"/>
+<s t="fn" n="repo_bash_runtime_diagnostic_scan_path" p="speckit-pro/speckit_pro_runner/gates/active_path_guard.py:968"/>
+<s t="var" n="PLUGIN_NAME" p="scripts/refresh-local-plugin.py:17"/>
+</far>
+</sigs>
+<bodies shown="1" total="6" capped="1">
+<b t="fn" l="4667" p="speckit-pro/speckit_pro_runner/gates/active_path_guard.py" n="installed_runtime_source_checkout_helper_reference">
+<![CDATA[def installed_runtime_source_checkout_helper_reference(path: str, content: str) -> bool:
+    lowered_path = path.lower()
+    lowered = content.lower()
+    if lowered_path.endswith("speckit_pro_runner/gates/active_path_guard.py"):
+        return True
+    if installed_runtime_payload_script_detector_reference(path, content):
+        return True
+    if any(part in lowered_path for part in ("/references/", "/templates/", "/contracts/", "/scripts/")):
+        return True
+    markers = (
+        "installed_runtime_likely_active_runtime_requirement",
+        "installed_runtime_generated_payload_helper_context",
+        "allowed-tools:",
+        "tools:",
+        "bash(",
+        "grep(",
+        "glob(",
+        "```bash",
+        "command -v",
+        "uv tool install",
+        "operator",
+        "official speckit cli",
+        "spec kit cli",
+        "skipped when",
+        "not on `path`",
+        "not on path",
+        "forbidden_patterns",
+        "bash dependency",
+        "shell=true subprocess execution",
+        "manual classification request",
+        "workflow shell dispatches a python gate",
+        "is_direct_python_gate_dispatch",
+        "blocking_active_gate",
+        "re.match(",
+        "argv-list subprocesses",
+        "argv array",
+        "existing bash gates authoritative",
+        "existing bash workflow",
+        "zero-bash-guard",
+        "zero_bash_guard",
+        "zero_bash_status",
+        "zero_bash_blocking_count",
+        "repo-bash-confinement",
+        "repo_bash_confinement",
+        "plugin-bash-confinement",
+        "required_absent",
+        "claude_plugin_root",
+        "<skill_scripts>",
+        "source-checkout",
+        "source checkout",
+        "speckit-pro/skills/",
+        "speckit-pro/codex-skills/",
+        "tests/speckit-pro/",
+        ".specify/",
+        "docs/ai/specs/",
+        "docs-site/",
+        ".sh",
+        "deterministic bash scripts",
+<!-- truncated -->]]>
+<calls total="1">
+<c n="installed_runtime_payload_script_detector_reference" l="4730">def installed_runtime_payload_script_detector_reference(path: str, content: str) -&gt; bool:</c>
+</calls>
+</b>
+<!-- body omitted (over budget): installed_runtime_installed_runtime_surface -->
+<!-- body omitted (over budget): INCLUDE -->
+<!-- body omitted (over budget): CHECK_WORKTREE_PATHS -->
+<!-- body omitted (over budget): isGeneratedReferencePath -->
+<!-- body omitted (over budget): USAGE -->
+</bodies>
+<callers of_top="6" shown="4" total="4" capped="0">
+<s t="fn" n="isAllowedSourcePath" p="docs-site/scripts/generate-reference-pages.mjs:49" rel="caller">function isAllowedSourcePath(repoPath)</s>
+<s t="fn" n="classify_installed_runtime_path" p="speckit-pro/speckit_pro_runner/gates/active_path_guard.py:4454" rel="caller">def classify_installed_runtime_path(path: str, category: str, pattern: str, content: str, source…</s>
+<s t="fn" n="installed_runtime_payload_script_detector_reference" p="speckit-pro/speckit_pro_runner/gates/active_path_guard.py:4730" rel="callee">def installed_runtime_payload_script_detector_reference(path: str, content: str) -&gt; bool:</s>
+<s t="fn" n="installed_runtime_installed_runtime_requirement_without_source_context" p="speckit-pro/speckit_pro_runner/gates/active_path_guard.py:4832" rel="caller">def installed_runtime_installed_runtime_requirement_without_source_context(path: str, content: s…</s>
+</callers>
+<notes shown="1" total="2" capped="1">
+<target id="speckit-pro/speckit_pro_runner/gates/active_path_guard.py">
+<note d="2026-09-28">
+<![CDATA[files this guard lists must not instruct bash, sh or jq, so write python3 steps instead, and shipped plugin code stays on the Python 3.11 standard library.]]>
+</note>
+</target>
+</notes>
+<tests shown="3" total="7" capped="1">
+<test p="tests/speckit-pro/unit/test-autopilot-permission-mode-guidance.py" run="python3 tests/speckit-pro/unit/test-autopilot-permission-mode-guidance.py"/>
+<test p="tests/speckit-pro/unit/test-installed-release-gates.py" run="python3 tests/speckit-pro/unit/test-installed-release-gates.py"/>
+<test p="tests/speckit-pro/unit/test-repo-bash-confinement.py" run="python3 tests/speckit-pro/unit/test-repo-bash-confinement.py"/>
+</tests>
+</ctx>
+</bundle>
+<bundle role="partition" i="7" symbols="12" modules="8" bytes="6227" tokens="2639" est_tokens="2639">
+<ctx task="coherence and cohesion audit of the speckit-pro plugin: skills, runner, agents, tests, docs" route="subtoken+body" root="." est_tokens="2235" budget_tokens="3960">
+<!-- slice budget=8411 bytes (3960-token target, ceiling 9345) | ranking: full | bodies: kept 2 of 6 (capped) | callers: kept 6 of 16 | notes: omitted (budget) | tests: kept 4 of 6 | far: 6 of 6 -->
+<sigs>
+<d l="627" n="infer_payload_source_path" p="speckit-pro/speckit_pro_runner/gates/payloads.py" cx="10" ccx="11" in="1" r="1" next="--expand=speckit-pro/speckit_pro_runner/gates/payloads.py:infer_payload_source_path">def infer_payload_source_path(rel: str, source_root: Path, surface: str) -&gt; str:</d>
+<d l="4545" n="installed_runtime_active_role" p="speckit-pro/speckit_pro_runner/gates/active_path_guard.py" cx="13" ccx="12" in="3" r="2">def installed_runtime_active_role(path: str) -&gt; str:</d>
+<d l="5309" n="execute_runner_runtime_info" p="speckit-pro/speckit_pro_runner/helpers/install.py" cx="10" ccx="11" in="2" r="3">def execute_runner_runtime_info( argv: list[str], runner_request: dict[str, Any], repo_root: Path, cache_root: str, *, selected_candidate: str | None = None, ) -&gt; tuple[dict[str, Any] | None, dict[str, Any] | None]:</d>
+<d l="229" n="path_report" p="speckit-pro/speckit_pro_runner/runtime.py" cx="2" ccx="1" in="1" r="4">def path_report(plugin_root: Path | None, package_dir: Path) -&gt; dict[str, dict[str, str]]:</d>
+<d l="669" n="payload_transform" p="speckit-pro/speckit_pro_runner/gates/payloads.py" cx="7" ccx="6" in="1" r="5">def payload_transform(path: str, source_path: str) -&gt; str:</d>
+<d l="5061" n="_stage_reader" p="speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py" cx="3" ccx="2" in="1" r="6">def _stage_reader():</d>
+<far of_top="12" shown="6" total="6" capped="0">
+<s t="fn" n="metadata_report" p="speckit-pro/speckit_pro_runner/runtime.py:240"/>
+<s t="fn" n="research_broker_preflight" p="speckit-pro/speckit_pro_runner/research_preflight.py:346"/>
+<s t="sec" n="Consensus Resolution Log" p="docs/ai/specs/.process/ART-001-workflow.md:366"/>
+<s t="sec" n="Findings the Plan phase produced by verifying rather than assuming" p="docs/ai/specs/.process/ART-001-workflow.md:579"/>
+<s t="fn" n="main" p="scripts/run-runner-requests.py:75"/>
+<s t="fn" n="installed_runtime_remediation_for" p="speckit-pro/speckit_pro_runner/gates/active_path_guard.py:4969"/>
+</far>
+</sigs>
+<bodies shown="2" total="6" capped="1">
+<b t="fn" l="627" p="speckit-pro/speckit_pro_runner/gates/payloads.py" n="infer_payload_source_path">
+<![CDATA[def infer_payload_source_path(rel: str, source_root: Path, surface: str) -> str:
+    if rel == ".claude-plugin/plugin.json":
+        return "speckit-pro/.claude-plugin/plugin.json"
+    if rel == ".codex-plugin/plugin.json":
+        return "speckit-pro/.codex-plugin/plugin.json"
+    if rel == "codex-hooks.json":
+        return "speckit-pro/codex-hooks.json"
+    if rel.startswith("codex-agents/"):
+        return f"speckit-pro/{rel}"
+    if rel.startswith("skills/"):
+        candidate = source_root / rel
+        codex_candidate = source_root / "codex-skills" / rel.removeprefix("skills/")
+        if surface == "codex" and codex_candidate.exists():
+            return f"speckit-pro/codex-skills/{rel.removeprefix('skills/')}"
+        if candidate.exists():
+            return f"speckit-pro/{rel}"
+    if rel == "LICENSE":
+        return "LICENSE"
+    return f"speckit-pro/{rel}"]]>
+</b>
+<b t="fn" l="669" p="speckit-pro/speckit_pro_runner/gates/payloads.py" n="payload_transform">
+<![CDATA[def payload_transform(path: str, source_path: str) -> str:
+    if path == ".codex-plugin/plugin.json":
+        return "manifest_rewrite"
+    if "/SKILL.md" in path and "codex-skills" in source_path:
+        return "codex_overlay"
+    if "/SKILL.md" in path:
+        return "claude_guard_strip"
+    if source_path != f"speckit-pro/{path}" and path.startswith("skills/"):
+        return "path_normalization"
+    return "none"]]>
+</b>
+<!-- body omitted (over budget): installed_runtime_active_role -->
+<!-- body omitted (over budget): execute_runner_runtime_info -->
+<!-- body omitted (over budget): path_report -->
+<!-- body omitted (over budget): _stage_reader -->
+</bodies>
+<callers of_top="6" shown="6" total="16" capped="1">
+<s t="fn" n="scan_payload_files" p="speckit-pro/speckit_pro_runner/gates/payloads.py:606" rel="caller" shared="2">def scan_payload_files(root: Path, *, source_root: Path, surface: str) -&gt; list[dict[str, Any]]:</s>
+<s t="fn" n="stage_mirror_errors" p="speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py:5083" rel="caller">def stage_mirror_errors(workflow_text: str, state: dict[str, Any]) -&gt; dict[str, list[str]]:</s>
+<s t="fn" n="diagnostic" p="speckit-pro/speckit_pro_runner/envelope.py:43" rel="callee">def diagnostic( code: str, message: str, *, severity: str = &quot;error&quot;, details: dict[str, Any] | N…</s>
+<s t="fn" n="classify_installed_runtime_raw_finding" p="speckit-pro/speckit_pro_runner/gates/active_path_guard.py:4403" rel="caller">def classify_installed_runtime_raw_finding( path: str, line: int | None, category: str, pattern:…</s>
+<s t="fn" n="changed_repo_sources" p="speckit-pro/speckit_pro_runner/gates/active_path_guard.py:5100" rel="caller">def changed_repo_sources(repo_root: Path, case: dict[str, Any]) -&gt; list[SourceFile] | RawFinding…</s>
+<s t="fn" n="missing_installed_runtime_scan_root_findings" p="speckit-pro/speckit_pro_runner/gates/active_path_guard.py:5176" rel="caller">def missing_installed_runtime_scan_root_findings(repo_root: Path, case: dict[str, Any]) -&gt; list[…</s>
+</callers>
+<tests shown="4" total="6" capped="1">
+<test p="tests/speckit-pro/unit/test-installed-release-gates.py" run="python3 tests/speckit-pro/unit/test-installed-release-gates.py"/>
+<test p="tests/speckit-pro/unit/test-repo-bash-confinement.py" run="python3 tests/speckit-pro/unit/test-repo-bash-confinement.py"/>
+<test p="tests/speckit-pro/unit/test-semantic-contract-identifiers.py" run="python3 tests/speckit-pro/unit/test-semantic-contract-identifiers.py"/>
+<test p="tests/speckit-pro/unit/test-speckit-pro-gates.py" run="python3 tests/speckit-pro/unit/test-speckit-pro-gates.py"/>
+</tests>
+</ctx>
+</bundle>
+</ctx-partitions>
