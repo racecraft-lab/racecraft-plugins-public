@@ -330,6 +330,27 @@ class Layer7RunnerTests(unittest.TestCase):
                 self.assertFalse(valid)
                 self.assertEqual(counts.failed, 1)
 
+    def test_input_only_compare_sources_require_invariants(self) -> None:
+        runner = import_runner()
+        with tempfile.TemporaryDirectory() as temporary:
+            fixture = make_fixture(
+                Path(temporary),
+                "copied-input-canary",
+                [{"field": "workflow", "source": "workflow.md", "tolerance_key": "workflow"}],
+                {"workflow": {"tolerance": "exact"}},
+            )
+            expected = runner.load_json(fixture / "expected-equivalence.json")
+            tolerance = runner.load_json(fixture / "tolerance.json")
+            with self.subTest(msg="workflow.md-only compare without invariants is rejected"):
+                with self.assertRaisesRegex(ValueError, "copied workflow.md"):
+                    runner.validate_fixture_contracts(fixture, expected, tolerance)
+            with self.subTest(msg="a run-produced compare source is accepted"):
+                produced = copy.deepcopy(expected)
+                produced["compare"].append(
+                    {"field": "artifact", "source": "artifact.md", "tolerance_key": "workflow"}
+                )
+                runner.validate_fixture_contracts(fixture, produced, tolerance)
+
     def test_layer7_runner_contract(self) -> None:
         runner = import_runner()
         source = RUNNER.read_text(encoding="utf-8")

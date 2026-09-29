@@ -28,6 +28,7 @@ EXPECTED_SCHEMA = "speckit.layer7.expected-equivalence.v1"
 TOLERANCE_SCHEMA = "speckit.layer7.tolerance.v1"
 ALLOWED_TOLERANCES = frozenset({"byte-identical", "exact", "tolerance-1", "semantic-equivalent"})
 DEFAULT_BUDGET_USD = "20"
+INPUT_WORKFLOW = "workflow.md"
 CLAUDE_EXECUTABLE_NAMES = frozenset({"claude", "claude.exe", "claude.cmd", "claude.bat"})
 RULE = "────────────────────────────────────────"
 SUMMARY_RULE = "════════════════════════════════════════"
@@ -231,6 +232,11 @@ def validate_fixture_contracts(fixture_dir: Path, expected: dict[str, Any], tole
 
     invariants = expected.get("required_invariants")
     invariant_source = expected.get("required_invariants_source")
+    if invariants is None and compare_sources == {INPUT_WORKFLOW}:
+        raise ValueError(
+            f"every compare source is the copied {INPUT_WORKFLOW}, which the runner writes unchanged to both "
+            "outputs; compare a run-produced artifact or declare required_invariants"
+        )
     if invariants is None:
         if invariant_source is not None:
             raise ValueError("required_invariants_source requires required_invariants")

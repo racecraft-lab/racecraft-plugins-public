@@ -21519,7 +21519,6 @@
         "The report is evaluation evidence only. Both clients must derive the same guidance from their installed scaffold skill and the same neutral staged topology; neither executes the broader scaffold workflow."
       ],
       "provenance": [
-        "tests/speckit-pro/layer7-parity/02-repository-migration-guidance",
         "tests/speckit-pro/layer3-functional/evals/speckit-scaffold-spec-evals.json#eval-id=1",
         "tests/speckit-pro/layer3-functional/codex-evals/speckit-scaffold-spec-evals.json#eval-id=8",
         "tests/speckit-pro/evals/audit/integration-parity-inventory.json#legacy_id=parity-02-repository-migration-guidance"
