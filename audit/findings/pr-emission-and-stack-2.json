@@ -1,0 +1,142 @@
+[
+  {
+    "id": "pr-emission-and-stack-2-001",
+    "lane": "pr-emission-and-stack-2",
+    "severity": "major",
+    "kind": "coherence",
+    "files": [
+      "tests/speckit-pro/layer7-parity/04-stack-manager-guidance/workflow.md:7",
+      "tests/speckit-pro/layer7-parity/04-stack-manager-guidance/workflow.md:14",
+      "tests/speckit-pro/layer7-parity/04-stack-manager-guidance/expected-equivalence.json:51",
+      "speckit-pro/skills/speckit-autopilot/references/post-implementation.md:528",
+      "speckit-pro/codex-skills/speckit-autopilot/references/post-implementation-codex.md:336"
+    ],
+    "ripwire_command": "ripwire . --grep=detect-stack-manager-plan",
+    "summary": "Parity fixture 04 states that detect-stack-manager-plan is registered out_of_scope and must not be invoked, and dry-run pins active_stack_manager_helper_call=false as a required invariant. Both hosts' Post guidance runs the helper in dry_run (step 7b), stack-manager.md documents its request, and the registry lists it as a mutation helper.",
+    "proposed_fix": "Rewrite the fixture's helper claim and invariant to match the shipped contract, or retire fixture 04 as the audit doc already holds it, so CI stops enforcing a false contract.",
+    "in_flight_status": null
+  },
+  {
+    "id": "pr-emission-and-stack-2-002",
+    "lane": "pr-emission-and-stack-2",
+    "severity": "minor",
+    "kind": "coherence",
+    "files": [
+      "tests/speckit-pro/layer7-parity/04-stack-manager-guidance/env-teams.json:5",
+      "tests/speckit-pro/layer7-parity/04-stack-manager-guidance/env-fallback.json:5",
+      "speckit-pro/skills/speckit-autopilot/references/agent-teams-integration.md:78"
+    ],
+    "ripwire_command": "ripwire . --grep=SPECKIT_PRSG_014_STACK_MANAGER",
+    "summary": "Fixture 04's env files set SPECKIT_AGENT_TEAMS and SPECKIT_PRSG_014_STACK_MANAGER, which no shipped code or guidance reads. Fixtures 01 to 03 and agent-teams-integration.md use CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS, so fixture 04's teams and fallback paths do not differ in live mode.",
+    "proposed_fix": "Use CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS like the sibling fixtures, or drop fixture 04 with finding 001.",
+    "in_flight_status": null
+  },
+  {
+    "id": "pr-emission-and-stack-2-003",
+    "lane": "pr-emission-and-stack-2",
+    "severity": "minor",
+    "kind": "cohesion",
+    "files": [
+      "tests/speckit-pro/unit/fixtures/pr-packet/split-partial-failure-state.json:18",
+      "tests/speckit-pro/unit/fixtures/pr-packet/split-partial-failure-state.json:21"
+    ],
+    "ripwire_command": "ripwire . --grep=split-partial-failure-state",
+    "summary": "No test reads this fixture (the pr-packet directory is copied wholesale but this file is never opened). It names multi-pr-emission.sh and test-multi-pr-emission.sh, neither of which exists any longer.",
+    "proposed_fix": "Delete the fixture, or wire a test to it and rewrite its slice records to the current runner helper.",
+    "in_flight_status": null
+  },
+  {
+    "id": "pr-emission-and-stack-2-004",
+    "lane": "pr-emission-and-stack-2",
+    "severity": "minor",
+    "kind": "coherence",
+    "files": [
+      "tests/speckit-pro/unit/test-estimate-spec-size.py:34",
+      "tests/speckit-pro/unit/test-estimate-spec-size.py:50",
+      "tests/speckit-pro/unit/test-estimate-spec-size.py:118",
+      "tests/speckit-pro/unit/fixtures/estimate-spec-size/multi-slice.args:1"
+    ],
+    "ripwire_command": "ripwire . --grep=parse_args_to_inputs",
+    "summary": "Golden fixtures are stored as argv lines for a deleted Bash script and translated to runner inputs by FLAG_TO_INPUT, so the tests never use the request shape the skills send. CURRENT_INVENTORY repeats 33 subtest labels that the test matches in order.",
+    "proposed_fix": "Store the fixtures as runner inputs (like fixtures/read-only-helpers/requests/estimate-spec-size.json), drop the translator, and derive subtest labels from the fixture names.",
+    "in_flight_status": null
+  },
+  {
+    "id": "pr-emission-and-stack-2-005",
+    "lane": "pr-emission-and-stack-2",
+    "severity": "minor",
+    "kind": "coherence",
+    "files": [
+      "tests/speckit-pro/unit/test-consensus-synthesizer-regressions.py:80",
+      "tests/speckit-pro/unit/test-consensus-synthesizer-regressions.py:273",
+      "tests/speckit-pro/unit/test-consensus-synthesizer-regressions.py:285",
+      "tests/speckit-pro/unit/test-consensus-synthesizer-regressions.py:321",
+      "speckit-pro/agents/consensus-synthesizer.md:178"
+    ],
+    "ripwire_command": "ripwire . --grep=instructions",
+    "summary": "The agreement-branch, escape-phrase, result-contract and Analyze-confidence tests read only the Codex TOML (instructions()). The Claude agent is unchecked for them. The two already differ: Codex omits Artifact Edit whenever Flags is not None, Claude only for ESCAPE_TO_ROUND_2 or HUMAN REVIEW, and only Codex forbids a second confidence block.",
+    "proposed_fix": "Run each of these checks over both agent files, and align the Artifact Edit omission rule and the one-block rule in the Claude agent.",
+    "in_flight_status": "still-open"
+  },
+  {
+    "id": "pr-emission-and-stack-2-006",
+    "lane": "pr-emission-and-stack-2",
+    "severity": "minor",
+    "kind": "cohesion",
+    "files": [
+      "tests/speckit-pro/unit/test-finalize-run.py:439",
+      "tests/speckit-pro/unit/test-finalize-run.py:1"
+    ],
+    "ripwire_command": "ripwire . --grep=DeferredSectionInPrBodyTests",
+    "summary": "test-finalize-run.py also holds DeferredSectionInPrBodyTests, which exercises pr_emission.normalize_packet_input and packet validation. That is PR-body emission, not run finalization, so a body regression is hidden in this file.",
+    "proposed_fix": "Move DeferredSectionInPrBodyTests into a PR-emission test module and keep this file to finalize-run.",
+    "in_flight_status": "still-open"
+  },
+  {
+    "id": "pr-emission-and-stack-2-007",
+    "lane": "pr-emission-and-stack-2",
+    "severity": "minor",
+    "kind": "coherence",
+    "files": [
+      "tests/speckit-pro/unit/fixtures/read-only-helpers/requests/ratify-pr-split.json:1",
+      "tests/speckit-pro/unit/fixtures/pr-split-ratification/preserving-split.json:1",
+      "tests/speckit-pro/unit/test-ratify-pr-split.py:192"
+    ],
+    "ripwire_command": "ripwire . --grep=ratify-pr-split",
+    "summary": "The request fixture's inputs are byte-identical to pr-split-ratification/preserving-split.json, so the ratification request shape has two sources.",
+    "proposed_fix": "Load the request fixture's inputs in test-ratify-pr-split.py and derive the failing variants from it, then delete preserving-split.json.",
+    "in_flight_status": "still-open"
+  },
+  {
+    "id": "pr-emission-and-stack-2-008",
+    "lane": "pr-emission-and-stack-2",
+    "severity": "minor",
+    "kind": "coherence",
+    "files": [
+      "tests/speckit-pro/unit/fixtures/pr-packet-title-patterns.json:2",
+      "tests/speckit-pro/unit/fixtures/pr-packet-title-patterns.json:3",
+      "speckit-pro/skills/speckit-autopilot/contracts/pr-packet.schema.json:305",
+      "speckit-pro/speckit_pro_runner/gates/release.py:109"
+    ],
+    "ripwire_command": "ripwire . --grep=pr-packet-title-patterns",
+    "summary": "The packet schema pattern, its pinned fixture copy and the release gate regex disagree: the schema and fixture accept uppercase ticket scopes such as feat(FEATURE-001), which validate-pr-title rejects (confirmed by running the gate). phase-execution.md only tells the agent to prefer lowercase.",
+    "proposed_fix": "Narrow the schema scope pattern to the gate's lowercase form, or have the gate accept the schema's scopes. Derive the fixture from one source.",
+    "in_flight_status": null
+  },
+  {
+    "id": "pr-emission-and-stack-2-009",
+    "lane": "pr-emission-and-stack-2",
+    "severity": "minor",
+    "kind": "cohesion",
+    "files": [
+      "tests/speckit-pro/unit/test-autonomy-boundary-receipt-replay.py:36",
+      "tests/speckit-pro/unit/test-autonomy-boundary-receipt-replay.py:48",
+      "tests/speckit-pro/unit/test-autonomy-boundary-receipt-replay.py:50",
+      "tests/speckit-pro/unit/test-autonomy-boundary-receipt-replay.py:141"
+    ],
+    "ripwire_command": "ripwire . --grep=_canonical_json_sha256",
+    "summary": "The test imports another test file (test-autopilot-phase-coverage.py) as a library and calls the validator's private _canonical_json_sha256 and _sha256_bytes. Its 'private_record_matches' oracle then uses the same function the validator uses, so the docstring's 'recomputes independently' is not true.",
+    "proposed_fix": "Move the shared builders to tests/speckit-pro/lib, and compute the digest in the test with hashlib over the documented canonical form.",
+    "in_flight_status": null
+  }
+]

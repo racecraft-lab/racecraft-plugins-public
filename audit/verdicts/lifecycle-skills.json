@@ -1,0 +1,517 @@
+{
+  "docs-site/scripts/validate-safe-install-aids.mjs": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=docs-site/scripts/validate-safe-install-aids.mjs"
+    ]
+  },
+  "docs-site/src/content/docs/install/claude-code.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=docs-site/src/content/docs/install/claude-code.md"
+    ]
+  },
+  "docs-site/src/content/docs/install/codex.md": {
+    "verdict": [
+      "lifecycle-skills-001"
+    ],
+    "checks_run": [
+      "ripwire . --grep=docs-site/src/content/docs/install/codex.md"
+    ]
+  },
+  "docs-site/src/data/safe-install-aids.ts": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=docs-site/src/data/safe-install-aids.ts"
+    ]
+  },
+  "docs/prd-cross-platform-plugin-runtime.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=docs/prd-cross-platform-plugin-runtime.md"
+    ]
+  },
+  "docs/prd-harness-engineering-uplift.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=docs/prd-harness-engineering-uplift.md"
+    ]
+  },
+  "docs/prd-interactive-documentation.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=docs/prd-interactive-documentation.md"
+    ]
+  },
+  "docs/prd-pr-size-governance.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=docs/prd-pr-size-governance.md"
+    ]
+  },
+  "docs/prd-racecraft-identity-system.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=docs/prd-racecraft-identity-system.md"
+    ]
+  },
+  "docs/prd-tool-agnostic-capability-discovery.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=docs/prd-tool-agnostic-capability-discovery.md"
+    ]
+  },
+  "speckit-pro/codex-skills/grill-me/SKILL.md": {
+    "verdict": [
+      "lifecycle-skills-009"
+    ],
+    "checks_run": [
+      "ripwire . --grep=speckit-pro/codex-skills/grill-me/SKILL.md"
+    ]
+  },
+  "speckit-pro/codex-skills/grill-me/agents/openai.yaml": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=speckit-pro/codex-skills/grill-me/agents/openai.yaml"
+    ]
+  },
+  "speckit-pro/codex-skills/install/SKILL.md": {
+    "verdict": [
+      "lifecycle-skills-001"
+    ],
+    "checks_run": [
+      "ripwire . --grep=speckit-pro/codex-skills/install/SKILL.md"
+    ]
+  },
+  "speckit-pro/codex-skills/install/agents/openai.yaml": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=speckit-pro/codex-skills/install/agents/openai.yaml"
+    ]
+  },
+  "speckit-pro/codex-skills/speckit-install/SKILL.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=speckit-pro/codex-skills/speckit-install/SKILL.md"
+    ]
+  },
+  "speckit-pro/codex-skills/speckit-install/agents/openai.yaml": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=speckit-pro/codex-skills/speckit-install/agents/openai.yaml"
+    ]
+  },
+  "speckit-pro/codex-skills/speckit-prd/SKILL.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=speckit-pro/codex-skills/speckit-prd/SKILL.md"
+    ]
+  },
+  "speckit-pro/codex-skills/speckit-prd/agents/openai.yaml": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=speckit-pro/codex-skills/speckit-prd/agents/openai.yaml"
+    ]
+  },
+  "speckit-pro/codex-skills/speckit-resolve-pr/SKILL.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=speckit-pro/codex-skills/speckit-resolve-pr/SKILL.md"
+    ]
+  },
+  "speckit-pro/codex-skills/speckit-resolve-pr/agents/openai.yaml": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=speckit-pro/codex-skills/speckit-resolve-pr/agents/openai.yaml"
+    ]
+  },
+  "speckit-pro/codex-skills/speckit-scaffold-spec/SKILL.md": {
+    "verdict": [
+      "lifecycle-skills-010"
+    ],
+    "checks_run": [
+      "ripwire . --grep=speckit-pro/codex-skills/speckit-scaffold-spec/SKILL.md"
+    ]
+  },
+  "speckit-pro/codex-skills/speckit-scaffold-spec/agents/openai.yaml": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=speckit-pro/codex-skills/speckit-scaffold-spec/agents/openai.yaml"
+    ]
+  },
+  "speckit-pro/codex-skills/speckit-status/SKILL.md": {
+    "verdict": [
+      "lifecycle-skills-002"
+    ],
+    "checks_run": [
+      "ripwire . --grep=speckit-pro/codex-skills/speckit-status/SKILL.md"
+    ]
+  },
+  "speckit-pro/codex-skills/speckit-status/agents/openai.yaml": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=speckit-pro/codex-skills/speckit-status/agents/openai.yaml"
+    ]
+  },
+  "speckit-pro/codex-skills/speckit-upgrade/SKILL.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=speckit-pro/codex-skills/speckit-upgrade/SKILL.md"
+    ]
+  },
+  "speckit-pro/codex-skills/speckit-upgrade/agents/openai.yaml": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=speckit-pro/codex-skills/speckit-upgrade/agents/openai.yaml"
+    ]
+  },
+  "speckit-pro/codex-skills/ubiquitous-language/SKILL.md": {
+    "verdict": [
+      "lifecycle-skills-012"
+    ],
+    "checks_run": [
+      "ripwire . --grep=speckit-pro/codex-skills/ubiquitous-language/SKILL.md"
+    ]
+  },
+  "speckit-pro/codex-skills/ubiquitous-language/agents/openai.yaml": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=speckit-pro/codex-skills/ubiquitous-language/agents/openai.yaml"
+    ]
+  },
+  "speckit-pro/scripts/ubiquitous-language-lint.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=speckit-pro/scripts/ubiquitous-language-lint.py"
+    ]
+  },
+  "speckit-pro/skills/grill-me/SKILL.md": {
+    "verdict": [
+      "lifecycle-skills-009"
+    ],
+    "checks_run": [
+      "ripwire . --grep=speckit-pro/skills/grill-me/SKILL.md"
+    ]
+  },
+  "speckit-pro/skills/grill-me/references/interview-protocol.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=speckit-pro/skills/grill-me/references/interview-protocol.md"
+    ]
+  },
+  "speckit-pro/skills/grill-me/references/output-formats.md": {
+    "verdict": [
+      "lifecycle-skills-008"
+    ],
+    "checks_run": [
+      "ripwire . --grep=speckit-pro/skills/grill-me/references/output-formats.md"
+    ]
+  },
+  "speckit-pro/skills/speckit-install/SKILL.md": {
+    "verdict": [
+      "lifecycle-skills-012"
+    ],
+    "checks_run": [
+      "ripwire . --grep=speckit-pro/skills/speckit-install/SKILL.md"
+    ]
+  },
+  "speckit-pro/skills/speckit-prd/SKILL.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=speckit-pro/skills/speckit-prd/SKILL.md"
+    ]
+  },
+  "speckit-pro/skills/speckit-prd/references/prd-authoring-protocol.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=speckit-pro/skills/speckit-prd/references/prd-authoring-protocol.md"
+    ]
+  },
+  "speckit-pro/skills/speckit-resolve-pr/SKILL.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=speckit-pro/skills/speckit-resolve-pr/SKILL.md"
+    ]
+  },
+  "speckit-pro/skills/speckit-scaffold-spec/SKILL.md": {
+    "verdict": [
+      "lifecycle-skills-008",
+      "lifecycle-skills-010"
+    ],
+    "checks_run": [
+      "ripwire . --grep=speckit-pro/skills/speckit-scaffold-spec/SKILL.md"
+    ]
+  },
+  "speckit-pro/skills/speckit-status/SKILL.md": {
+    "verdict": [
+      "lifecycle-skills-002",
+      "lifecycle-skills-008",
+      "lifecycle-skills-013"
+    ],
+    "checks_run": [
+      "ripwire . --grep=speckit-pro/skills/speckit-status/SKILL.md"
+    ]
+  },
+  "speckit-pro/skills/speckit-upgrade/SKILL.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=speckit-pro/skills/speckit-upgrade/SKILL.md"
+    ]
+  },
+  "speckit-pro/skills/ubiquitous-language/SKILL.md": {
+    "verdict": [
+      "lifecycle-skills-012"
+    ],
+    "checks_run": [
+      "ripwire . --grep=speckit-pro/skills/ubiquitous-language/SKILL.md"
+    ]
+  },
+  "speckit-pro/speckit_pro_runner/helpers/install.py": {
+    "verdict": [
+      "lifecycle-skills-003",
+      "lifecycle-skills-004",
+      "lifecycle-skills-005",
+      "lifecycle-skills-006",
+      "lifecycle-skills-007"
+    ],
+    "checks_run": [
+      "ripwire . --grep=speckit-pro/speckit_pro_runner/helpers/install.py"
+    ]
+  },
+  "speckit-pro/speckit_pro_runner/install_inventory.json": {
+    "verdict": [
+      "lifecycle-skills-007"
+    ],
+    "checks_run": [
+      "ripwire . --grep=speckit-pro/speckit_pro_runner/install_inventory.json"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/scaffold-contracts/bootstrap/roadmap.txt": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=tests/speckit-pro/evals/fixtures/scaffold-contracts/bootstrap/roadmap.txt"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/scaffold-contracts/bootstrap/workflow-template.txt": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=tests/speckit-pro/evals/fixtures/scaffold-contracts/bootstrap/workflow-template.txt"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/scaffold-contracts/handoff/workflow.txt": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=tests/speckit-pro/evals/fixtures/scaffold-contracts/handoff/workflow.txt"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/scaffold-contracts/in-progress/feature.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=tests/speckit-pro/evals/fixtures/scaffold-contracts/in-progress/feature.json"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/scaffold-contracts/in-progress/roadmap.txt": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=tests/speckit-pro/evals/fixtures/scaffold-contracts/in-progress/roadmap.txt"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/scaffold-contracts/missing/roadmap.txt": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=tests/speckit-pro/evals/fixtures/scaffold-contracts/missing/roadmap.txt"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/scaffold-contracts/placeholders/roadmap.txt": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=tests/speckit-pro/evals/fixtures/scaffold-contracts/placeholders/roadmap.txt"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/scaffold-contracts/placeholders/workflow-template.txt": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=tests/speckit-pro/evals/fixtures/scaffold-contracts/placeholders/workflow-template.txt"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/scaffold-contracts/placement/roadmap.txt": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=tests/speckit-pro/evals/fixtures/scaffold-contracts/placement/roadmap.txt"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/scaffold-contracts/push-rejected/roadmap.txt": {
+    "verdict": [
+      "lifecycle-skills-011"
+    ],
+    "checks_run": [
+      "ripwire . --grep=tests/speckit-pro/evals/fixtures/scaffold-contracts/push-rejected/roadmap.txt"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/scaffold-contracts/relocation/active-feature.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=tests/speckit-pro/evals/fixtures/scaffold-contracts/relocation/active-feature.json"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/scaffold-contracts/relocation/current-moc.txt": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=tests/speckit-pro/evals/fixtures/scaffold-contracts/relocation/current-moc.txt"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/scaffold-contracts/relocation/date-legacy.txt": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=tests/speckit-pro/evals/fixtures/scaffold-contracts/relocation/date-legacy.txt"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/scaffold-contracts/relocation/spec-911-legacy-retrospective.txt": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=tests/speckit-pro/evals/fixtures/scaffold-contracts/relocation/spec-911-legacy-retrospective.txt"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/scaffold-contracts/relocation/spec-911-legacy-verification.txt": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=tests/speckit-pro/evals/fixtures/scaffold-contracts/relocation/spec-911-legacy-verification.txt"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/scaffold-contracts/relocation/spec-912-active.txt": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=tests/speckit-pro/evals/fixtures/scaffold-contracts/relocation/spec-912-active.txt"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/scaffold-contracts/relocation/spec-914-empty.txt": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=tests/speckit-pro/evals/fixtures/scaffold-contracts/relocation/spec-914-empty.txt"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/scaffold-contracts/relocation/team-123-legacy.txt": {
+    "verdict": [
+      "lifecycle-skills-011"
+    ],
+    "checks_run": [
+      "ripwire . --grep=tests/speckit-pro/evals/fixtures/scaffold-contracts/relocation/team-123-legacy.txt"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/scaffold-contracts/reuse/roadmap.txt": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=tests/speckit-pro/evals/fixtures/scaffold-contracts/reuse/roadmap.txt"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/status-contracts/empty-project/.keep": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=tests/speckit-pro/evals/fixtures/status-contracts/empty-project/.keep"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/status-contracts/overall-dashboard/attached-worktree/docs/ai/specs/SPEC-021-workflow.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=tests/speckit-pro/evals/fixtures/status-contracts/overall-dashboard/attached-worktree/docs/ai/specs/SPEC-021-workflow.md"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/status-contracts/overall-dashboard/docs/ai/current-technical-roadmap.md": {
+    "verdict": [
+      "lifecycle-skills-011"
+    ],
+    "checks_run": [
+      "ripwire . --grep=tests/speckit-pro/evals/fixtures/status-contracts/overall-dashboard/docs/ai/current-technical-roadmap.md"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/status-contracts/workflow-without-roadmap/docs/ai/specs/SPEC-013-workflow.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=tests/speckit-pro/evals/fixtures/status-contracts/workflow-without-roadmap/docs/ai/specs/SPEC-013-workflow.md"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/mutation-helpers/requests/install-codex-agents.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=tests/speckit-pro/unit/fixtures/mutation-helpers/requests/install-codex-agents.json"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/read-only-helpers/read-only-helper-feature/checklists/error-handling.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=tests/speckit-pro/unit/fixtures/read-only-helpers/read-only-helper-feature/checklists/error-handling.md"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/read-only-helpers/read-only-helper-feature/checklists/reliability.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=tests/speckit-pro/unit/fixtures/read-only-helpers/read-only-helper-feature/checklists/reliability.md"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/read-only-helpers/read-only-helper-feature/checklists/requirements.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=tests/speckit-pro/unit/fixtures/read-only-helpers/read-only-helper-feature/checklists/requirements.md"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/read-only-helpers/read-only-helper-feature/checklists/security.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=tests/speckit-pro/unit/fixtures/read-only-helpers/read-only-helper-feature/checklists/security.md"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/read-only-helpers/read-only-helper-feature/plan.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=tests/speckit-pro/unit/fixtures/read-only-helpers/read-only-helper-feature/plan.md"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/read-only-helpers/read-only-helper-feature/spec.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=tests/speckit-pro/unit/fixtures/read-only-helpers/read-only-helper-feature/spec.md"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/read-only-helpers/read-only-helper-feature/tasks.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=tests/speckit-pro/unit/fixtures/read-only-helpers/read-only-helper-feature/tasks.md"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/read-only-helpers/requests/resolve-scaffold-worktree-placement.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=tests/speckit-pro/unit/fixtures/read-only-helpers/requests/resolve-scaffold-worktree-placement.json"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/read-only-helpers/requests/validate-agent-install.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=tests/speckit-pro/unit/fixtures/read-only-helpers/requests/validate-agent-install.json"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/ubiquitous-language/sample.diff": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=tests/speckit-pro/unit/fixtures/ubiquitous-language/sample.diff"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/ubiquitous-language/terms.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=tests/speckit-pro/unit/fixtures/ubiquitous-language/terms.md"
+    ]
+  },
+  "tests/speckit-pro/unit/test-speckit-setup-contract.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=tests/speckit-pro/unit/test-speckit-setup-contract.py"
+    ]
+  },
+  "tests/speckit-pro/unit/test-ubiquitous-language-lint.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=tests/speckit-pro/unit/test-ubiquitous-language-lint.py"
+    ]
+  }
+}

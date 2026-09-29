@@ -1,0 +1,194 @@
+[
+  {
+    "id": "lifecycle-skills-001",
+    "lane": "lifecycle-skills",
+    "severity": "major",
+    "kind": "coherence",
+    "files": [
+      "docs-site/src/content/docs/install/codex.md:183-194",
+      "speckit-pro/codex-skills/install/SKILL.md:51",
+      "speckit-pro/codex-agents/artifact-author.toml:1"
+    ],
+    "ripwire_command": "ripwire . --grep=autopilot-fast-helper.toml",
+    "summary": "The Codex install page lists 10 expected TOML files. The bundled set is 13: artifact-author, formal-model-author and consensus-synthesizer are missing from the list. The page also never says speckit-pro needs the typesafe-jev plugin, which the install and upgrade skills require and tell Codex users to add by hand.",
+    "proposed_fix": "Derive the expected file list from the runner agent inventory (or link the generated agents reference) and add the typesafe-jev prerequisite step to the Codex install page. PR 851 grows the roster further, so a hand-kept list will drift again.",
+    "in_flight_status": null
+  },
+  {
+    "id": "lifecycle-skills-002",
+    "lane": "lifecycle-skills",
+    "severity": "major",
+    "kind": "coherence",
+    "files": [
+      "speckit-pro/skills/speckit-status/SKILL.md:3",
+      "speckit-pro/skills/speckit-status/SKILL.md:44-64",
+      "speckit-pro/codex-skills/speckit-status/SKILL.md:49-70"
+    ],
+    "ripwire_command": "ripwire . --grep=worktree list",
+    "summary": "The Claude status skill advertises finding active worktrees and the spec each belongs to, but its data-source step only globs the current tree and never inspects git worktrees. The Codex overlay does run git worktree list and reads attached worktrees. Conversely the Claude skill adds a Design Concept (DC) column and design-concept discovery that the Codex overlay lacks. The two hosts therefore produce different dashboards for the same repository.",
+    "proposed_fix": "Bring both variants to one data-source contract: add worktree discovery to the Claude skill (or drop the claim from its description) and add design-concept discovery and the DC column to the Codex overlay, or record the difference as intentional.",
+    "in_flight_status": null
+  },
+  {
+    "id": "lifecycle-skills-003",
+    "lane": "lifecycle-skills",
+    "severity": "major",
+    "kind": "cohesion",
+    "files": [
+      "speckit-pro/speckit_pro_runner/helpers/install.py:1",
+      "speckit-pro/speckit_pro_runner/helpers/install.py:114-234",
+      "speckit-pro/speckit_pro_runner/helpers/install.py:2586-2728",
+      "speckit-pro/speckit_pro_runner/helpers/install.py:5114-5309"
+    ],
+    "ripwire_command": "ripwire . --grep=^def codex_agent",
+    "summary": "The module docstring says 'Install inventory doctor and repair helpers', but the 5.7k-line file also holds Windows ctypes file handling, anchored-directory no-clobber installs, route-policy manifest validation, Codex capability probing, Python interpreter resolution and the runner-invocation gate. One file carries five unrelated jobs, so a change to any of them ripples through a single module.",
+    "proposed_fix": "Split into modules by job (codex agent install and filesystem safety, route policy, capability probe, interpreter resolution, doctor inventory) and fix the docstring.",
+    "in_flight_status": null
+  },
+  {
+    "id": "lifecycle-skills-004",
+    "lane": "lifecycle-skills",
+    "severity": "minor",
+    "kind": "cohesion",
+    "files": [
+      "speckit-pro/speckit_pro_runner/helpers/install.py:627-660",
+      "speckit-pro/speckit_pro_runner/helpers/install.py:4877-4910"
+    ],
+    "ripwire_command": "ripwire . --callers=codex_agent_previous_state_at",
+    "summary": "AnchoredAgentDir.previous_state and codex_agent_previous_state_at are near-identical (about 0.98 similarity): same stat, open, inode check and read loop, differing only in where the directory fd comes from.",
+    "proposed_fix": "Have the method call the module function with self.directory_fd.",
+    "in_flight_status": null
+  },
+  {
+    "id": "lifecycle-skills-005",
+    "lane": "lifecycle-skills",
+    "severity": "minor",
+    "kind": "cohesion",
+    "files": [
+      "speckit-pro/speckit_pro_runner/helpers/install.py:5546-5555",
+      "speckit-pro/speckit_pro_runner/runtime.py:183-192",
+      "speckit-pro/speckit_pro_runner/research_preflight.py:189"
+    ],
+    "ripwire_command": "ripwire . --grep=def parse_version",
+    "summary": "install.parse_version and runtime.parse_version_tuple are the same function with two names. research_preflight has a third parse_version with a different signature.",
+    "proposed_fix": "Keep one version parser in a shared module (path_utils or runtime) and import it.",
+    "in_flight_status": null
+  },
+  {
+    "id": "lifecycle-skills-006",
+    "lane": "lifecycle-skills",
+    "severity": "minor",
+    "kind": "coherence",
+    "files": [
+      "speckit-pro/speckit_pro_runner/helpers/install.py:5608-5645",
+      "speckit-pro/speckit_pro_runner/gates/payloads.py:901-920"
+    ],
+    "ripwire_command": "ripwire . --callers=load_install_inventory",
+    "summary": "Two loaders read the same install_inventory.json with different validation. install.inventory_from_inputs rejects non-object records, traversal paths and non-string content. payloads.load_install_inventory silently skips non-object records, coerces fields with str(), and never checks paths. One file, two contracts.",
+    "proposed_fix": "Have payloads.py call the install.py loader (or move one validated loader to a shared module).",
+    "in_flight_status": null
+  },
+  {
+    "id": "lifecycle-skills-007",
+    "lane": "lifecycle-skills",
+    "severity": "minor",
+    "kind": "cohesion",
+    "files": [
+      "speckit-pro/speckit_pro_runner/install_inventory.json:3",
+      "speckit-pro/speckit_pro_runner/helpers/registry.py:480-499",
+      "speckit-pro/speckit_pro_runner/helpers/install.py:1977-2050"
+    ],
+    "ripwire_command": "ripwire . --callers=doctor_report",
+    "summary": "doctor-preflight and doctor-repair are golden_only fixture operations. install_root must sit inside the repo fixture tree, and the default inventory lists three fake files (agents/speckit-autopilot.md and others that do not exist) labelled fixture-safe-source-checkout. No skill, agent or docs page invokes either helper. Fixture-only code and data ship in the runner package.",
+    "proposed_fix": "Move the inventory to the test fixtures and retire or mark the two helpers until a real install cutover uses them.",
+    "in_flight_status": null
+  },
+  {
+    "id": "lifecycle-skills-008",
+    "lane": "lifecycle-skills",
+    "severity": "minor",
+    "kind": "coherence",
+    "files": [
+      "speckit-pro/skills/grill-me/references/output-formats.md:7-11",
+      "speckit-pro/skills/speckit-scaffold-spec/SKILL.md:123",
+      "speckit-pro/skills/speckit-status/SKILL.md:53"
+    ],
+    "ripwire_command": "ripwire . --grep=design-concept.md",
+    "summary": "output-formats.md says a setup Design Concept conventionally ends docs/ai/specs/<SPEC-ID>-design-concept.md. Scaffold writes to docs/ai/specs/.process/SPEC-<ID>-design-concept.md, and the status skill's explicit path glob also omits .process/. The reference states the wrong convention.",
+    "proposed_fix": "Change the setup path in output-formats.md to the .process/ location and update the status glob.",
+    "in_flight_status": null
+  },
+  {
+    "id": "lifecycle-skills-009",
+    "lane": "lifecycle-skills",
+    "severity": "minor",
+    "kind": "coherence",
+    "files": [
+      "speckit-pro/skills/grill-me/SKILL.md:3",
+      "speckit-pro/codex-skills/grill-me/SKILL.md:3"
+    ],
+    "ripwire_command": "ripwire . --grep=a setup request alone is not an interview delegation",
+    "summary": "The Codex grill-me description says SPEC setup and worktree creation belong to scaffold-spec and a setup request alone is not an interview delegation. The Claude description lacks that boundary, so Claude may select grill-me for scaffold requests.",
+    "proposed_fix": "Add the same boundary sentence to the Claude description.",
+    "in_flight_status": null
+  },
+  {
+    "id": "lifecycle-skills-010",
+    "lane": "lifecycle-skills",
+    "severity": "minor",
+    "kind": "coherence",
+    "files": [
+      "speckit-pro/skills/speckit-scaffold-spec/SKILL.md:186-187",
+      "speckit-pro/codex-skills/speckit-scaffold-spec/SKILL.md:216-218"
+    ],
+    "ripwire_command": "ripwire . --grep=If the spec is already complete",
+    "summary": "The Claude scaffold skill only warns when the roadmap status is In Progress or Complete. The Codex overlay stops on a complete spec and reuses the existing worktree for an in-progress one. Same roadmap state, different behavior per host.",
+    "proposed_fix": "Align both variants on stop-on-complete and reuse-on-in-progress.",
+    "in_flight_status": null
+  },
+  {
+    "id": "lifecycle-skills-011",
+    "lane": "lifecycle-skills",
+    "severity": "minor",
+    "kind": "cohesion",
+    "files": [
+      "tests/speckit-pro/evals/fixtures/scaffold-contracts/push-rejected/roadmap.txt:1",
+      "tests/speckit-pro/evals/fixtures/status-contracts/overall-dashboard/docs/ai/current-technical-roadmap.md:1",
+      "tests/speckit-pro/evals/fixtures/scaffold-contracts/relocation/team-123-legacy.txt:1"
+    ],
+    "ripwire_command": "ripwire . --grep=scenario-contracts",
+    "summary": "Only scaffold-contracts/missing/roadmap.txt and bootstrap/roadmap.txt are referenced (catalog.json and test-native-functional-catalog.py). The other 19 files, including all of status-contracts, are orphaned. Parallel live trees (scenario-contracts, functional/speckit-status, status-dashboard) hold the same scenarios, and strings such as 'Push failure recovery' appear nowhere else.",
+    "proposed_fix": "Delete the unreferenced files, or wire them into catalog cases and add a check that every fixture file is referenced.",
+    "in_flight_status": null
+  },
+  {
+    "id": "lifecycle-skills-012",
+    "lane": "lifecycle-skills",
+    "severity": "minor",
+    "kind": "coherence",
+    "files": [
+      "speckit-pro/skills/ubiquitous-language/SKILL.md:61",
+      "speckit-pro/codex-skills/ubiquitous-language/SKILL.md:56",
+      "speckit-pro/skills/speckit-install/SKILL.md:105"
+    ],
+    "ripwire_command": "ripwire . --grep=ubiquitous-language-lint.py",
+    "summary": "The Claude skill runs the lint directly by shebang (${CLAUDE_PLUGIN_ROOT}/scripts/ubiquitous-language-lint.py). The Codex overlay uses resolved_python, and speckit-install runs its sibling script agent-memory-ignore.py through resolved_python. Direct execution depends on the exec bit and on python3 being on PATH, which the installed runtime contract avoids.",
+    "proposed_fix": "Invoke the lint through resolved_python in the Claude variant, as the other scripts do.",
+    "in_flight_status": null
+  },
+  {
+    "id": "lifecycle-skills-013",
+    "lane": "lifecycle-skills",
+    "severity": "minor",
+    "kind": "coherence",
+    "files": [
+      "speckit-pro/skills/speckit-status/SKILL.md:6",
+      "speckit-pro/skills/speckit-status/SKILL.md:15-17",
+      "speckit-pro/skills/speckit-status/SKILL.md:176"
+    ],
+    "ripwire_command": "ripwire . --grep=allowed-tools: Read Glob Grep",
+    "summary": "The Claude status skill declares allowed-tools Read Glob Grep, yet its body tells the agent to run the runner through resolved_python and helpers generate-spec-index-check and o5-topology, which needs shell execution. The frontmatter and the body disagree on tool scope.",
+    "proposed_fix": "Add the execution tool to allowed-tools, or state that the helper call is not pre-approved.",
+    "in_flight_status": null
+  }
+]

@@ -1,0 +1,504 @@
+{
+  "tests/speckit-pro/layer6-integration/performance-fixtures/implementation-notes/source/data-model.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=data-model"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/performance-fixtures/implementation-notes/source/design-concept.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=design-concept"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/performance-fixtures/implementation-notes/source/plan.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=plan"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/performance-fixtures/implementation-notes/source/quickstart.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=quickstart"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/performance-fixtures/implementation-notes/source/research.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=research"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/performance-fixtures/implementation-notes/source/spec.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=spec"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/performance-fixtures/implementation-notes/source/tasks.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=tasks"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/performance-fixtures/implementation-notes/source/workflow.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=workflow"
+    ]
+  },
+  "tests/speckit-pro/layer7-parity/03-reviewability-backstop-parent-child-routing/README.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=README"
+    ]
+  },
+  "tests/speckit-pro/layer7-parity/03-reviewability-backstop-parent-child-routing/env-fallback.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=env-fallback"
+    ]
+  },
+  "tests/speckit-pro/layer7-parity/03-reviewability-backstop-parent-child-routing/env-teams.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=env-teams"
+    ]
+  },
+  "tests/speckit-pro/layer7-parity/03-reviewability-backstop-parent-child-routing/expected-equivalence.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=expected-equivalence"
+    ]
+  },
+  "tests/speckit-pro/layer7-parity/03-reviewability-backstop-parent-child-routing/tolerance.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=tolerance"
+    ]
+  },
+  "tests/speckit-pro/layer7-parity/03-reviewability-backstop-parent-child-routing/workflow.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=workflow"
+    ]
+  },
+  "tests/speckit-pro/layer7-parity/04-stack-manager-guidance/README.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=README"
+    ]
+  },
+  "tests/speckit-pro/layer7-parity/04-stack-manager-guidance/env-fallback.json": {
+    "verdict": [
+      "pr-emission-and-stack-2-002"
+    ],
+    "checks_run": [
+      "ripwire . --grep=SPECKIT_PRSG_014_STACK_MANAGER"
+    ]
+  },
+  "tests/speckit-pro/layer7-parity/04-stack-manager-guidance/env-teams.json": {
+    "verdict": [
+      "pr-emission-and-stack-2-002"
+    ],
+    "checks_run": [
+      "ripwire . --grep=SPECKIT_PRSG_014_STACK_MANAGER"
+    ]
+  },
+  "tests/speckit-pro/layer7-parity/04-stack-manager-guidance/expected-equivalence.json": {
+    "verdict": [
+      "pr-emission-and-stack-2-001"
+    ],
+    "checks_run": [
+      "ripwire . --grep=detect-stack-manager-plan"
+    ]
+  },
+  "tests/speckit-pro/layer7-parity/04-stack-manager-guidance/tolerance.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=tolerance"
+    ]
+  },
+  "tests/speckit-pro/layer7-parity/04-stack-manager-guidance/workflow.md": {
+    "verdict": [
+      "pr-emission-and-stack-2-001"
+    ],
+    "checks_run": [
+      "ripwire . --grep=detect-stack-manager-plan"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/estimate-spec-size/all-absent.args": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=all-absent"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/estimate-spec-size/all-absent.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=all-absent"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/estimate-spec-size/at-ceiling.args": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=at-ceiling"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/estimate-spec-size/at-ceiling.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=at-ceiling"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/estimate-spec-size/bad-input.args": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=bad-input"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/estimate-spec-size/bad-input.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=bad-input"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/estimate-spec-size/mixed-valid-bad.args": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=mixed-valid-bad"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/estimate-spec-size/mixed-valid-bad.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=mixed-valid-bad"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/estimate-spec-size/modify-discount.args": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=modify-discount"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/estimate-spec-size/modify-discount.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=modify-discount"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/estimate-spec-size/multi-slice.args": {
+    "verdict": [
+      "pr-emission-and-stack-2-004"
+    ],
+    "checks_run": [
+      "ripwire . --grep=parse_args_to_inputs"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/estimate-spec-size/multi-slice.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=multi-slice"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/estimate-spec-size/over-ceiling.args": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=over-ceiling"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/estimate-spec-size/over-ceiling.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=over-ceiling"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/estimate-spec-size/spike-precedence.args": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=spike-precedence"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/estimate-spec-size/spike-precedence.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=spike-precedence"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/estimate-spec-size/spike.args": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=spike"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/estimate-spec-size/spike.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=spike"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/estimate-spec-size/typical-under.args": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=typical-under"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/estimate-spec-size/typical-under.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=typical-under"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/mutation-helpers/requests/detect-stack-manager-plan.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=detect-stack-manager-plan"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/mutation-helpers/requests/pr-packet-output.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=pr-packet-output"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/mutation-helpers/requests/validate-pr-packet-write.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=validate-pr-packet-write"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/pr-packet-title-patterns.json": {
+    "verdict": [
+      "pr-emission-and-stack-2-008"
+    ],
+    "checks_run": [
+      "ripwire . --grep=pr-packet-title-patterns"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/pr-packet/bodies/invalid-protected-edit.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=invalid-protected-edit"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/pr-packet/bodies/valid-draft.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=valid-draft"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/pr-packet/bodies/valid-single-edited.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=valid-single-edited"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/pr-packet/bodies/valid-single.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=valid-single"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/pr-packet/bodies/valid-split.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=valid-split"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/pr-packet/invalid-protected-edit.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=invalid-protected-edit"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/pr-packet/split-partial-failure-state.json": {
+    "verdict": [
+      "pr-emission-and-stack-2-003"
+    ],
+    "checks_run": [
+      "ripwire . --grep=split-partial-failure-state"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/pr-packet/valid-draft.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=valid-draft"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/pr-packet/valid-single.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=valid-single"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/pr-packet/valid-split.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=valid-split"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/pr-split-ratification/dropped-requirement.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=dropped-requirement"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/pr-split-ratification/preserving-split.json": {
+    "verdict": [
+      "pr-emission-and-stack-2-007"
+    ],
+    "checks_run": [
+      "ripwire . --grep=ratify-pr-split"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/pr-split-ratification/reordered-groups.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=reordered-groups"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/read-only-helpers/requests/atomicity-route.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=atomicity-route"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/read-only-helpers/requests/estimate-spec-size.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=estimate-spec-size"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/read-only-helpers/requests/finalize-run.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=finalize-run"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/read-only-helpers/requests/list-archive-candidates.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=list-archive-candidates"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/read-only-helpers/requests/partition-phase7-tasks.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=partition-phase7-tasks"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/read-only-helpers/requests/ratify-pr-split.json": {
+    "verdict": [
+      "pr-emission-and-stack-2-007"
+    ],
+    "checks_run": [
+      "ripwire . --grep=ratify-pr-split"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/read-only-helpers/requests/render-egress-authorization.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=render-egress-authorization"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/read-only-helpers/requests/reviewability-gate.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=reviewability-gate"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/read-only-helpers/requests/validate-pr-packet-read-only.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=validate-pr-packet-read-only"
+    ]
+  },
+  "tests/speckit-pro/unit/test-archive-invocation-contract.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=test-archive-invocation-contract"
+    ]
+  },
+  "tests/speckit-pro/unit/test-atomicity-additive-routing.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=test-atomicity-additive-routing"
+    ]
+  },
+  "tests/speckit-pro/unit/test-autonomy-boundary-receipt-replay.py": {
+    "verdict": [
+      "pr-emission-and-stack-2-009"
+    ],
+    "checks_run": [
+      "ripwire . --grep=_canonical_json_sha256"
+    ]
+  },
+  "tests/speckit-pro/unit/test-consensus-synthesizer-regressions.py": {
+    "verdict": [
+      "pr-emission-and-stack-2-005"
+    ],
+    "checks_run": [
+      "ripwire . --grep=instructions"
+    ]
+  },
+  "tests/speckit-pro/unit/test-corrective-authorization-runner-routes.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=test-corrective-authorization-runner-routes"
+    ]
+  },
+  "tests/speckit-pro/unit/test-estimate-spec-size.py": {
+    "verdict": [
+      "pr-emission-and-stack-2-004"
+    ],
+    "checks_run": [
+      "ripwire . --grep=parse_args_to_inputs"
+    ]
+  },
+  "tests/speckit-pro/unit/test-finalize-run.py": {
+    "verdict": [
+      "pr-emission-and-stack-2-006"
+    ],
+    "checks_run": [
+      "ripwire . --grep=DeferredSectionInPrBodyTests"
+    ]
+  },
+  "tests/speckit-pro/unit/test-implementation-notes-record.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=test-implementation-notes-record"
+    ]
+  },
+  "tests/speckit-pro/unit/test-phase7-task-partition.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=test-phase7-task-partition"
+    ]
+  },
+  "tests/speckit-pro/unit/test-ratify-pr-split.py": {
+    "verdict": [
+      "pr-emission-and-stack-2-007"
+    ],
+    "checks_run": [
+      "ripwire . --grep=ratify-pr-split"
+    ]
+  },
+  "tests/speckit-pro/unit/test-render-egress-authorization.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=test-render-egress-authorization"
+    ]
+  },
+  "tests/speckit-pro/unit/test-reviewability-marker-guidance.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=test-reviewability-marker-guidance"
+    ]
+  },
+  "tests/speckit-pro/unit/test-stack-manager-plan.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=test-stack-manager-plan"
+    ]
+  }
+}
