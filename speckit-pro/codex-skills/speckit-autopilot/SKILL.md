@@ -514,7 +514,7 @@ See [prerequisites-codex.md](./references/prerequisites-codex.md) for the full p
 - **Step 0.11: Project Command Discovery** — runner helper `detect-commands` → `PROJECT_COMMANDS`, including the quality-gate slots and the missing-tool default (the recorded install hint, then `skip (spec)`)
 - **Step 0.12: Preset and Extension Detection** — runner helper `detect-presets` → `PRESET_CONVENTIONS`
 
-If any check fails, STOP with the error message from the script's JSON output.
+If any check fails, report the error message from the script's JSON output and route the failure to its owner for repair: the orchestrator repairs a fixable environment check, and the implement-executor repairs a failing project check. Run the repair loop within its allowance, then defer per the Failure Escalation Protocol.
 Pass `WORKFLOW_ROOT`, `PROJECT_COMMANDS`, and `PRESET_CONVENTIONS` to every
 subagent prompt.
 

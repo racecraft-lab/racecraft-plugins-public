@@ -1,6 +1,6 @@
 # Prerequisites Reference — Codex
 
-The Codex autopilot's pre-flight sequence. Run these before Step 1 (Parse Workflow State) and before any phase work. If any check fails, STOP with the error message from the script's JSON output.
+The Codex autopilot's pre-flight sequence. Run these before Step 1 (Parse Workflow State) and before any phase work. If any check fails, report the error message from the script's JSON output and route the failure to its owner for repair: the orchestrator repairs a fixable environment check, and the implement-executor repairs a failing project check. Run the repair loop within its allowance, then defer per the Failure Escalation Protocol.
 
 This is the Codex-specific mirror of `../../skills/speckit-autopilot/references/prerequisites.md`. Same checks, Codex-specific primitives (`update_plan`, `autopilot-state.json`, `spawn_agent`, `.codex/agents/`).
 
@@ -189,7 +189,7 @@ install or vendor `racecraft-lab/spec-kit-archive` for archive-aware cleanup.
 ## Step 0: Prerequisites
 
 Run the prerequisite scripts to verify the environment. If any
-check fails, STOP with the error message from the JSON output.
+check fails, report the error message from the JSON output and route the failure to its owner for repair: the orchestrator repairs a fixable environment check, and the implement-executor repairs a failing project check. Run the repair loop within its allowance, then defer per the Failure Escalation Protocol.
 
 ### 0.0 Resolve Script Paths
 

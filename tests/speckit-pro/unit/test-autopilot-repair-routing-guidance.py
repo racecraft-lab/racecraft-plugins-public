@@ -37,13 +37,9 @@ EFFICIENCY = CLAUDE / "references" / "execution-efficiency.md"
 STACK_MANAGER = CLAUDE / "references" / "stack-manager.md"
 
 
-def flat(path: Path) -> str:
-    return " ".join(path.read_text(encoding="utf-8").split())
-
-
 class Pinned(unittest.TestCase):
     def assert_pinned(self, path: Path, present: tuple[str, ...], absent: tuple[str, ...] = ()) -> None:
-        text = flat(path)
+        text = " ".join(path.read_text(encoding="utf-8").split())
         for phrase in present:
             self.assertIn(phrase, text, f"{path.name}: missing {phrase!r}")
         for phrase in absent:
@@ -172,6 +168,14 @@ class RedBaselineRepairTests(Pinned):
                     path,
                     ("route the failing check to the implement-executor", REPAIR_THEN_DEFER),
                     ("If any check or populated blocking gate fails, STOP", "report each failed check's `message` and STOP"),
+                )
+        for path in (CLAUDE_PREREQ, CODEX_PREREQ, CODEX_SKILL):
+            with self.subTest(step_zero=path.name):
+                self.assert_pinned(
+                    path,
+                    ("route the failure to its owner",),
+                    ("check fails, STOP with the error message from the script's JSON output",
+                     "check fails, STOP with the error message from the JSON output"),
                 )
         self.assert_pinned(
             CLAUDE_PHASE,

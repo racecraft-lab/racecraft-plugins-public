@@ -22977,6 +22977,24 @@
           "include_failed": true
         },
         {
+          "id": "no-claude-question",
+          "requirement": "no-operator",
+          "type": "tool_used",
+          "name": "AskUserQuestion",
+          "min": 0,
+          "max": 0,
+          "include_failed": true
+        },
+        {
+          "id": "no-codex-question",
+          "requirement": "no-operator",
+          "type": "tool_used",
+          "name": "request_user_input",
+          "min": 0,
+          "max": 0,
+          "include_failed": true
+        },
+        {
           "id": "reslice-semantic",
           "requirement": "reslice",
           "type": "semantic",
