@@ -112,7 +112,6 @@ AMENDED_LEGACY_DESCRIPTION_IDS = {
     "functional.speckit-autopilot.case-3",
     "functional.speckit-autopilot.case-4",
     "functional.speckit-autopilot.case-5",
-    "functional.speckit-autopilot.case-6",
     "functional.speckit-autopilot.case-8",
     "functional.speckit-autopilot.case-10",
     "functional.speckit-autopilot.case-12",
@@ -230,6 +229,46 @@ ORCHESTRATION_REQUIRING_TEXT = {
          RESCOPE_RECONCILIATION_RULE),
     ),
 }
+GATE_VALIDATION = "speckit-pro/skills/speckit-autopilot/references/gate-validation.md"
+PHASE_EXECUTION = "speckit-pro/skills/speckit-autopilot/references/phase-execution.md"
+PHASE_EXECUTION_CODEX = "speckit-pro/codex-skills/speckit-autopilot/references/phase-execution-codex.md"
+EXECUTION_EFFICIENCY = "speckit-pro/skills/speckit-autopilot/references/execution-efficiency.md"
+AUTOPILOT_SKILL = "speckit-pro/skills/speckit-autopilot/SKILL.md"
+AUTOPILOT_SKILL_CODEX = "speckit-pro/codex-skills/speckit-autopilot/SKILL.md"
+# Stop-policy cases: staged from the recorded fixtures below, graded on derived answers.
+CORRECTIVE_FIXTURE_ROOT = "tests/speckit-pro/evals/fixtures/functional/corrective-authorization/"
+ORCHESTRATION_REQUIRING_TEXT.update({
+    "functional.speckit-autopilot.gate-failure-defers": (
+        (GATE_VALIDATION,
+         "run the repair loop within its allowance, then defer per the Failure Escalation Protocol"),
+        (GATE_VALIDATION,
+         "Keep executing every task, increment, gate, and Post check that does not depend on the "
+         "deferred gate. It is never a mid-run question."),
+    ),
+    "functional.speckit-autopilot.test-only-fix-no-replan": (
+        (PHASE_EXECUTION,
+         "The runner admits it without `begin-replan-epoch` and without an operator event"),
+        (PHASE_EXECUTION,
+         "It allows one test fix per increment and never draws on the run-wide corrective budget."),
+        (PHASE_EXECUTION_CODEX,
+         "The runner admits it without `begin-replan-epoch` and without an operator event"),
+        (PHASE_EXECUTION_CODEX,
+         "It allows one test fix per increment and never draws on the run-wide corrective budget."),
+    ),
+    "functional.speckit-autopilot.resolved-deferral-leaves-request": (
+        (EXECUTION_EFFICIENCY, "it adds `resolved_by` (that dispatch ID) and `resolved_at`"),
+        (EXECUTION_EFFICIENCY, "keeps the entry for audit"),
+        (EXECUTION_EFFICIENCY, "list every unresolved entry of the current `deferred`"),
+    ),
+    "functional.speckit-autopilot.blocked-action-defers": (
+        (PHASE_EXECUTION, "With no defined fallback, defer that task."),
+        (PHASE_EXECUTION, "mark deferred every task and Post item that depends on it"),
+        (PHASE_EXECUTION, "Never ask the operator from inside the task"),
+        (PHASE_EXECUTION_CODEX, "With no defined fallback, defer that task."),
+        (PHASE_EXECUTION_CODEX, "mark deferred every task and Post item that depends on it"),
+        (PHASE_EXECUTION_CODEX, "Never ask the operator from inside the task"),
+    ),
+})
 ORCHESTRATION_IDS = set(ORCHESTRATION_REQUIRING_TEXT)
 # Native-only scaffold cases for the spec-scoped reviewability setup gate. The
 # staged roadmap puts the over-budget target first and a small entry last, so a
@@ -271,7 +310,50 @@ SCAFFOLD_REVIEWABILITY_FAILURE_ANSWERS = {
     },
 }
 SCAFFOLD_REVIEWABILITY_IDS = set(SCAFFOLD_REVIEWABILITY_EXPECTED)
-NATIVE_ONLY_IDS = ORCHESTRATION_IDS | SCAFFOLD_REVIEWABILITY_IDS
+# Runner-backed stop-policy cases: the model runs one staged runner request and the
+# graded answers derive from that request's real result, run here in a staged workspace.
+RUNNER_FIXTURE_ROOT = "tests/speckit-pro/evals/fixtures/functional/"
+FINALIZE_DESTINATIONS = {
+    "scenario-inputs/finalize-request.json", ".process/execution-control/ledger.json",
+    ".specify/project.json",
+}
+FINALIZE_PLAIN_TEXT = "Print the final report as plain text on `outcome=complete` with nothing deferred, and ask no question."
+RUNNER_CASES = {
+    "functional.speckit-autopilot.clean-finish-no-question": {
+        "request": "scenario-inputs/finalize-request.json", "destinations": FINALIZE_DESTINATIONS,
+        "citations": ((AUTOPILOT_SKILL, FINALIZE_PLAIN_TEXT), (AUTOPILOT_SKILL_CODEX, FINALIZE_PLAIN_TEXT),
+                      (AUTOPILOT_SKILL, "mark the stack ready for review (never merge)")),
+        "failure": {"deferred_digest": "sha256:" + "0" * 64, "outcome": "human_stop", "mark_ready": False,
+                    "ready_commands": [], "operator_question_required": True},
+        "phrase": "asks the operator to confirm or choose",
+    },
+    "functional.speckit-autopilot.red-required-gate-stays-draft": {
+        "request": "scenario-inputs/finalize-request.json", "destinations": FINALIZE_DESTINATIONS,
+        "citations": ((AUTOPILOT_SKILL, "the stack stays in draft"), (AUTOPILOT_SKILL_CODEX, "the stack stays in draft")),
+        "failure": {"deferred_digest": "sha256:" + "0" * 64, "outcome": "complete", "mark_ready": True,
+                    "stack_state": "ready",
+                    "ready_commands": ["gh pr ready 101", "gh pr ready 102", "gh pr ready 103"],
+                    "failing_gate": "G7", "failing_pull_request": 103, "failing_head_sha": "c" * 40},
+        "phrase": "marks any PR ready",
+    },
+    "functional.speckit-autopilot.codex-run-start-grant": {
+        "request": "scenario-inputs/render-egress-request.json",
+        "destinations": {"scenario-inputs/render-egress-request.json"},
+        "citations": ((PHASE_EXECUTION_CODEX, "Show its output unchanged; do not write the text by hand."),
+                      (PHASE_EXECUTION_CODEX,
+                       "Uncovered data egress: the preflight asks for it as a chat reply at run start.")),
+        "failure": {"action_ids": ["live-skill-eval"], "delivery_channel": "goal_edit",
+                    "authorization_message_sha256": "sha256:" + "0" * 64},
+        "phrase": "delivers the grant as a goal edit",
+    },
+}
+RUNNER_IDS = set(RUNNER_CASES)
+# A forbidden-command check trips on this command instead of the default negative sample.
+STOP_POLICY_NEGATIVE_COMMANDS = {
+    check_id: "gh pr merge 101"
+    for check_id in ("no-merge-claude", "no-merge-codex", "no-merge-or-ready-claude", "no-merge-or-ready-codex")
+}
+NATIVE_ONLY_IDS = ORCHESTRATION_IDS | SCAFFOLD_REVIEWABILITY_IDS | RUNNER_IDS
 # The graded failure each semantic rubric must name, so a rubric cannot pass the
 # recorded failure and the correct behaviour alike.
 ORCHESTRATION_FAILURE_PHRASES = {
@@ -280,6 +362,10 @@ ORCHESTRATION_FAILURE_PHRASES = {
     "functional.speckit-autopilot.clarify-answer-provenance": "consensus answer as a human answer",
     "functional.speckit-autopilot.progress-projection-mid-run": "summary rows as an acceptable projection",
     "functional.speckit-autopilot.rescope-reconciliation": "accepts the rescoped plan.md alone",
+    "functional.speckit-autopilot.gate-failure-defers": "offers skip-and-log or a stop as an option",
+    "functional.speckit-autopilot.test-only-fix-no-replan": "requires begin-replan-epoch or an operator approval",
+    "functional.speckit-autopilot.resolved-deferral-leaves-request": "lists the resolved deferral in the request",
+    "functional.speckit-autopilot.blocked-action-defers": "retries the blocked action by another route",
 }
 LOCAL_COMMAND_LEGACY_SOURCES = {
     "functional.speckit-autopilot.case-2": (
@@ -709,6 +795,36 @@ ORCHESTRATION_FAILURE_ANSWERS = {
         "g3_may_run": True,
         "reconcile_before_g3": False,
     },
+    "functional.speckit-autopilot.gate-failure-defers": {
+        "repair_allowance_spent": False,
+        "next_action": "stop",
+        "run_continues": False,
+        "independent_units": [],
+        "question_offered": True,
+    },
+    "functional.speckit-autopilot.test-only-fix-no-replan": {
+        "first_test_fix_allowance": "run_wide",
+        "replan_required": True,
+        "operator_event_required": True,
+        "second_test_fix_allowance": "increment",
+        "second_test_fix_ineligible": "none",
+        "product_code_fix_ineligible": "none",
+    },
+    "functional.speckit-autopilot.resolved-deferral-leaves-request": {
+        "deferral_unit": "FR-002",
+        "resolved_by": None,
+        "entry_kept_in_ledger": False,
+        "finalize_outcome": "human_stop",
+        "stack_ready": False,
+        "resolved_unit_in_request": True,
+        "second_exception_refused": False,
+    },
+    "functional.speckit-autopilot.blocked-action-defers": {
+        "deferred_tasks": ["T007"],
+        "continuing_tasks": [],
+        "fallback_applied": True,
+        "mid_run_question": True,
+    },
 }
 
 
@@ -830,6 +946,62 @@ def _derive_orchestration_answers(case: dict) -> dict:
             "g3_may_run": not stale,
             "reconcile_before_g3": bool(stale),
         }
+    if scenario == "gate-failure-defers":
+        attempts = json.loads(read("scenario-inputs/gate-attempts.json"))
+        ready = re.findall(r"^- (T\d+) .*\(independent of G4\)", read("scenario-inputs/workflow.md"), re.M)
+        assert sorted(ready) == sorted(attempts["independent_units"]), "workflow and attempts disagree"
+        spent = attempts["repair_attempts"] >= attempts["repair_allowance"]
+        return {
+            "repair_allowance_spent": spent,
+            "next_action": "defer" if spent else "repair",
+            "run_continues": bool(ready),
+            "independent_units": sorted(ready),
+            # The Failure Escalation Protocol never asks mid-run: "It is never a mid-run question."
+            "question_offered": False,
+        }
+    if scenario == "test-only-fix-no-replan":
+        steps = {step["id"]: step for step in json.loads(read("scenario-inputs/test-fix.json"))["steps"]}
+        return {
+            "first_test_fix_allowance": steps["test-only-fix-admitted"]["expect"]["data"]["test_fix_allowance"],
+            "replan_required": any(step.get("action") == "begin-replan-epoch" for step in steps.values()),
+            "operator_event_required": any("native_observation" in step.get("inputs", {}) for step in steps.values()),
+            "second_test_fix_allowance": steps["second-test-fix-refused"]["expect"]["data"]["test_fix_allowance"],
+            "second_test_fix_ineligible": steps["second-test-fix-refused"]["expect"]["data"]["test_fix_ineligible"],
+            "product_code_fix_ineligible": steps["product-code-refused"]["expect"]["data"]["test_fix_ineligible"],
+        }
+    if scenario == "resolved-deferral-leaves-request":
+        steps = {step["id"]: step for step in json.loads(read("scenario-inputs/deferral-resolution.json"))["steps"]}
+        deferred = steps["family-budget-defers"]["expect"]["ledger"]
+        resolved = steps["fix-c-completed"]["expect"]["ledger"]
+        finalize = steps["finalize-omits-resolved"]["expect"]
+        return {
+            "deferral_unit": deferred["deferred.0.unit"],
+            "resolved_by": resolved["deferred.0.resolved_by"],
+            "entry_kept_in_ledger": resolved["deferred.0.unit"] == deferred["deferred.0.unit"],
+            "finalize_outcome": finalize["result"]["outcome"],
+            "stack_ready": finalize["result"]["mark_ready"],
+            "resolved_unit_in_request": deferred["deferred.0.unit"] not in finalize["request_omits"],
+            "second_exception_refused": "refused" in steps["second-exception"],
+        }
+    if scenario == "blocked-action-defers":
+        record = json.loads(read("scenario-inputs/blocked-record.json"))
+        open_tasks = {
+            match.group(1): set(re.findall(r"depends on (T\d+)", match.group(0)))
+            for match in re.finditer(r"^- \[ \] (T\d+) .*$", read("scenario-inputs/tasks.md"), re.M)
+        }
+        deferred = {record["blocked_action"]["task"]}
+        while True:
+            more = {task for task, needs in open_tasks.items() if needs & deferred} - deferred
+            if not more:
+                break
+            deferred |= more
+        return {
+            "deferred_tasks": sorted(deferred),
+            "continuing_tasks": sorted(set(open_tasks) - deferred),
+            "fallback_applied": record["defined_fallback"] is not None,
+            # Rule 2 of Blocked Actions Mid-Run: "Never ask the operator from inside the task".
+            "mid_run_question": False,
+        }
     raise AssertionError(f"unknown orchestration scenario {case['id']}")
 
 
@@ -855,6 +1027,51 @@ def _run_reviewability_request(case: dict, *, spec_scoped: bool = True) -> tuple
         return result.returncode, _stdout_json(result, "speckit_pro_runner")["data"]["stdout_json"]
 
 
+def _run_runner_case(case: dict) -> dict:
+    """Run the case's staged request through the shipped runner and return its data."""
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        for fixture in case["fixtures"]:
+            target = root / fixture["destination"]
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(REPO_ROOT / fixture["source"], target)
+        request = json.loads((root / RUNNER_CASES[case["id"]]["request"]).read_text(encoding="utf-8"))
+        result = subprocess.run(
+            [sys.executable, "-m", "speckit_pro_runner"], input=json.dumps(request),
+            text=True, capture_output=True, cwd=root, check=False,
+            env={**os.environ, "PYTHONPATH": str(REPO_ROOT / "speckit-pro")},
+        )
+        envelope = _stdout_json(result, "speckit_pro_runner")
+        assert (result.returncode, envelope["status"]) == (0, "ok"), envelope
+        return envelope["data"]
+
+
+def _derive_runner_answers(case_id: str, data: dict) -> dict:
+    """Map the runner result onto the fields the case grades."""
+    scenario = case_id.rsplit(".", 1)[-1]
+    if scenario == "clean-finish-no-question":
+        return {
+            "deferred_digest": data["deferred_digest"], "outcome": data["outcome"],
+            "mark_ready": data["mark_ready"], "ready_commands": data["ready_commands"],
+            "operator_question_required": data["end_of_run_request"] != "",
+        }
+    if scenario == "red-required-gate-stays-draft":
+        gate = data["human_stop"]["gates"][0]
+        return {
+            "deferred_digest": data["deferred_digest"], "outcome": data["outcome"],
+            "mark_ready": data["mark_ready"], "stack_state": "ready" if data["mark_ready"] else "draft",
+            "ready_commands": data["ready_commands"], "failing_gate": gate["gate"],
+            "failing_pull_request": gate["pull_request"], "failing_head_sha": gate["head_sha"],
+        }
+    if scenario == "codex-run-start-grant":
+        return {
+            "action_ids": data["action_ids"],
+            "delivery_channel": "chat_message" if "normal chat message" in data["delivery"] else "goal_edit",
+            "authorization_message_sha256": data["authorization_message_sha256"],
+        }
+    raise AssertionError(f"unknown runner scenario {case_id}")
+
+
 class NativeFunctionalCatalogTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
@@ -876,8 +1093,8 @@ class NativeFunctionalCatalogTests(unittest.TestCase):
             - REDIRECT_IDS - WORKTREE_MIGRATION_IDS - TASK_LIST_CONTRACT_IDS
         )
         self.assertEqual(len(response_only_ids), 59)
-        self.assertEqual(len(self.all_cases), 216)
-        self.assertEqual(len(self.catalog["cases"]), 100)
+        self.assertEqual(len(self.all_cases), 224)
+        self.assertEqual(len(self.catalog["cases"]), 107)
         self.assertEqual(
             set(self.cases),
             selected_ids | GROUNDED_IDS | NATIVE_RESPONSE_IDS | DASHBOARD_IDS | NATIVE_ONLY_IDS,
@@ -1207,13 +1424,21 @@ class NativeFunctionalCatalogTests(unittest.TestCase):
                 continue
             if case["id"] in NATIVE_ONLY_IDS:
                 self.assertTrue(case["fixtures"], case["id"])
-                root = (
-                    ORCHESTRATION_FIXTURE_ROOT if case["id"] in ORCHESTRATION_IDS
-                    else SCAFFOLD_REVIEWABILITY_FIXTURE_ROOT
-                )
+                if case["id"] in ORCHESTRATION_IDS:
+                    root = (ORCHESTRATION_FIXTURE_ROOT, CORRECTIVE_FIXTURE_ROOT)
+                elif case["id"] in RUNNER_IDS:
+                    root = RUNNER_FIXTURE_ROOT
+                else:
+                    root = SCAFFOLD_REVIEWABILITY_FIXTURE_ROOT
                 for fixture in case["fixtures"]:
                     self.assertTrue(fixture["source"].startswith(root), fixture)
                     self.assertTrue((REPO_ROOT / fixture["source"]).is_file(), fixture)
+                if case["id"] in RUNNER_IDS:
+                    self.assertEqual(
+                        {fixture["destination"] for fixture in case["fixtures"]},
+                        RUNNER_CASES[case["id"]]["destinations"],
+                    )
+                    continue
                 reads = {
                     check["path"] for check in case["checks"]
                     if check["type"] == "file_access" and check["operation"] == "read_file"
@@ -2000,7 +2225,8 @@ class NativeFunctionalCatalogTests(unittest.TestCase):
                     if check.get("max") == 0:
                         calls = [{
                             "name": check["name"],
-                            "input": {"command": "relocate-process-artifacts.sh dry_run apply"},
+                            "input": {"command": STOP_POLICY_NEGATIVE_COMMANDS.get(
+                                check["id"], "relocate-process-artifacts.sh dry_run apply")},
                             "output": "unexpected invocation",
                             "success": True,
                         }]
@@ -2326,6 +2552,88 @@ class NativeFunctionalCatalogTests(unittest.TestCase):
                     grade_observation(case, unread, semantic_verdicts(case, True), host=host)["status"],
                     "fail", (case_id, host),
                 )
+
+    def test_runner_backed_stop_policy_cases_cite_current_requiring_text(self) -> None:
+        for case_id, spec in RUNNER_CASES.items():
+            case = self.cases[case_id]
+            paths = list(dict.fromkeys(path for path, _ in spec["citations"]))
+            self.assertEqual(case["provenance"], paths, case_id)
+            for path, snippet in spec["citations"]:
+                source = _normalized((REPO_ROOT / path).read_text(encoding="utf-8"))
+                self.assertIn(_normalized(snippet), source, (case_id, path))
+            names = {Path(path).name for path in paths}
+            for requirement in case["requirements"]:
+                if requirement["id"] != "selection":
+                    self.assertTrue(
+                        any(name in requirement["description"] for name in names),
+                        (case_id, requirement["id"]),
+                    )
+
+    def test_runner_backed_answers_derive_from_the_real_runner_result(self) -> None:
+        for case_id, spec in RUNNER_CASES.items():
+            case = self.cases[case_id]
+            fields = {
+                check["field_path"][0]: check for check in case["checks"]
+                if check["type"] == "response_json_field"
+            }
+            derived = _derive_runner_answers(case_id, _run_runner_case(case))
+            self.assertEqual(set(derived), set(fields), case_id)
+            self.assertEqual(set(spec["failure"]), set(fields), case_id)
+            for field, check in fields.items():
+                self.assertEqual(check["expected_by_host"], {"claude": derived[field], "codex": derived[field]},
+                                 (case_id, field))
+                self.assertNotEqual(spec["failure"][field], derived[field], (case_id, field))
+            # The same request always yields the same digest, so a fabricated one is detectable.
+            self.assertEqual(_derive_runner_answers(case_id, _run_runner_case(case)), derived, case_id)
+
+    def test_runner_backed_grading_separates_the_failure_from_correct_behaviour(self) -> None:
+        forbidden_calls = {
+            "claude": {"name": "Bash", "input": {"command": "gh pr merge 101"}, "output": "", "success": True},
+            "codex": {"name": "command_execution", "input": {"command": "gh pr merge 101"}, "output": "",
+                      "success": True},
+        }
+        question_calls = {
+            "claude": {"name": "AskUserQuestion", "input": {"question": "Proceed?"}, "output": "", "success": True},
+            "codex": {"name": "request_user_input", "input": {"question": "Proceed?"}, "output": "", "success": True},
+        }
+        for case_id, spec in RUNNER_CASES.items():
+            case = self.cases[case_id]
+            semantic = [check for check in case["checks"] if check["type"] == "semantic"]
+            self.assertTrue(semantic, case_id)
+            for check in semantic:
+                self.assertTrue(check["rubric"].startswith("PASS only if "), (case_id, check["id"]))
+                self.assertIn(" FAIL if ", check["rubric"], (case_id, check["id"]))
+            self.assertTrue(any(spec["phrase"] in check["rubric"] for check in semantic), case_id)
+            body = {check["field_path"][0]: check["expected_by_host"]["claude"]
+                    for check in case["checks"] if check["type"] == "response_json_field"}
+            body["explanation"] = "mock response, not native evidence"
+            activation = "speckit-autopilot"
+            for host in ("claude", "codex"):
+                correct = observation(activation=activation, final_text=json.dumps(body))
+                self.assertEqual(
+                    grade_observation(case, correct, semantic_verdicts(case, True), host=host)["status"],
+                    "pass", (case_id, host),
+                )
+                self.assertEqual(grade_observation(case, correct, host=host)["status"], "needs_judge")
+                self.assertEqual(
+                    grade_observation(case, correct, semantic_verdicts(case, False), host=host)["status"],
+                    "fail", (case_id, host),
+                )
+                for field, failure in spec["failure"].items():
+                    wrong = observation(activation=activation, final_text=json.dumps({**body, field: failure}))
+                    self.assertEqual(
+                        grade_observation(case, wrong, semantic_verdicts(case, True), host=host)["status"],
+                        "fail", (case_id, host, field),
+                    )
+                forbidden = {check["name"] for check in case["checks"] if check["type"] == "tool_used"}
+                for label, call in (("merge", forbidden_calls[host]), ("question", question_calls[host])):
+                    if call["name"] not in forbidden:
+                        continue
+                    tripped = observation(activation=activation, final_text=json.dumps(body), tool_calls=[call])
+                    self.assertEqual(
+                        grade_observation(case, tripped, semantic_verdicts(case, True), host=host)["status"],
+                        "fail", (case_id, host, label),
+                    )
 
     def test_scaffold_reviewability_cases_cite_current_requiring_text(self) -> None:
         paths = list(dict.fromkeys(path for path, _ in SCAFFOLD_REVIEWABILITY_REQUIRING_TEXT))

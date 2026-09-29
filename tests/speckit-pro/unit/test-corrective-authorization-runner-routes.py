@@ -37,13 +37,16 @@ SCENARIOS = (
     "corrective-retry.json",
     "corrective-continuation.json",
     "corrective-exception.json",
+    "deferral-resolution.json",
+    "test-fix.json",
 )
+APPROVAL_SCENARIOS = tuple(name for name in SCENARIOS if name != "test-fix.json")
 REFUSED = {"exit_code": 2, "status": "input_error"}
 
 
 def _field(value: object, dotted: str) -> object:
     for part in dotted.split("."):
-        value = value[part]
+        value = value[int(part)] if isinstance(value, list) else value[part]
     return value
 
 
@@ -79,14 +82,7 @@ class CorrectiveAuthorizationReplayTests(unittest.TestCase):
             return self.ledger["dispatches"][value.split(":", 1)[1]]["reservation_id"]
         raise AssertionError(f"unknown fixture token {value}")
 
-    def send(self, step: dict) -> tuple[int, dict]:
-        binding = {"expected_run_id": self.ledger["run_id"]} if self.ledger else {}
-        request = {
-            "schema_version": "1.0", "helper_id": "execution-control",
-            "operation": "execution-control", "mode": step.get("mode", "apply"),
-            "inputs": {"workflow_file": WORKFLOW, "action": step["action"], **binding,
-                       **self.resolve(step.get("inputs", {}))},
-        }
+    def run_runner(self, request: dict) -> tuple[int, dict]:
         environment = {**os.environ, "PYTHONPATH": str(REPO_ROOT / "speckit-pro"),
                        "PYTHONDONTWRITEBYTECODE": "1"}
         completed = subprocess.run(
@@ -96,12 +92,59 @@ class CorrectiveAuthorizationReplayTests(unittest.TestCase):
         )
         return completed.returncode, json.loads(completed.stdout)
 
+    def send(self, step: dict) -> tuple[int, dict]:
+        binding = {"expected_run_id": self.ledger["run_id"]} if self.ledger else {}
+        request = {
+            "schema_version": "1.0", "helper_id": "execution-control",
+            "operation": "execution-control", "mode": step.get("mode", "apply"),
+            "inputs": {"workflow_file": WORKFLOW, "action": step["action"], **binding,
+                       **self.resolve(step.get("inputs", {}))},
+        }
+        return self.run_runner(request)
+
+    def finalize(self, step: dict) -> None:
+        """Send the run's end-of-run request through the read-only `finalize-run` helper."""
+        inputs = {"ledger_path": self.ledger_path.relative_to(self.root).as_posix(),
+                  "expected_run_id": self.ledger["run_id"], **step["finalize"]}
+        code, envelope = self.run_runner({
+            "schema_version": "1.0", "helper_id": "finalize-run", "operation": "finalize-run",
+            "mode": "read_only", "inputs": inputs,
+        })
+        self.assertEqual((code, envelope["status"]), (0, "ok"), envelope)
+        result = envelope["data"]
+        for key, expected in step["expect"].get("result", {}).items():
+            self.assertEqual(result[key], expected, key)
+        for text in step["expect"].get("request_omits", []):
+            self.assertNotIn(text, result["end_of_run_request"])
+
     def place_spec(self, name: str) -> None:
         target = self.root / SPEC
         if name == "absent":
             target.unlink(missing_ok=True)
         else:
             shutil.copyfile(FIXTURE_ROOT / name, target)
+
+    def stage(self, files: dict[str, str]) -> None:
+        """Copy frozen fixture files into the consumer repository."""
+        for destination, source in files.items():
+            target = self.root / destination
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(FIXTURE_ROOT / source, target)
+
+    def git_baseline(self) -> None:
+        """Commit the staged files so HEAD holds the task-definition baseline."""
+        environment = {**os.environ, "GIT_CONFIG_GLOBAL": os.devnull, "GIT_CONFIG_NOSYSTEM": "1"}
+        if not (self.root / ".git").exists():
+            subprocess.run(["git", "init", "-q", str(self.root)], check=True, env=environment)
+        subprocess.run(["git", "-C", str(self.root), "add", "-A"], check=True, env=environment)
+        subprocess.run(["git", "-C", str(self.root), "-c", "user.name=fixture", "-c", "user.email=git@github.com",
+                        "-c", "commit.gpgsign=false", "commit", "-q", "--allow-empty", "-m", "baseline"],
+                       check=True, env=environment)
+
+    def write(self, files: dict[str, str]) -> None:
+        for destination, text in files.items():
+            (self.root / destination).parent.mkdir(parents=True, exist_ok=True)
+            (self.root / destination).write_text(text, encoding="utf-8")
 
     def check_step(self, step: dict) -> None:
         before_ledger = self.ledger
@@ -121,6 +164,8 @@ class CorrectiveAuthorizationReplayTests(unittest.TestCase):
         for key in ("disposition", "reasons"):
             if key in expect:
                 self.assertEqual(data[key], expect[key], envelope)
+        for key, expected in expect.get("data", {}).items():
+            self.assertEqual(data[key], expected, key)
         ledger = data["ledger"]
         for dotted, expected in expect.get("ledger", {}).items():
             self.assertEqual(_field(ledger, dotted), expected, dotted)
@@ -138,11 +183,20 @@ class CorrectiveAuthorizationReplayTests(unittest.TestCase):
                 with self.subTest(scenario=name, step=step["id"]):
                     if "place_spec" in step:
                         self.place_spec(step["place_spec"])
+                    elif "stage" in step:
+                        self.stage(step["stage"])
+                    elif "write" in step:
+                        self.write(step["write"])
+                    elif "finalize" in step:
+                        self.finalize(step)
+                    elif "git" in step:
+                        self.assertEqual(step["git"], "baseline")
+                        self.git_baseline()
                     else:
                         self.check_step(step)
 
     def test_each_scenario_refuses_a_replayed_or_second_approval(self) -> None:
-        for name in SCENARIOS:
+        for name in APPROVAL_SCENARIOS:
             steps = json.loads((FIXTURE_ROOT / name).read_text(encoding="utf-8"))["steps"]
             refused = [step["id"] for step in steps if "refused" in step]
             accepted = [step["id"] for step in steps if step.get("action", "").startswith(
