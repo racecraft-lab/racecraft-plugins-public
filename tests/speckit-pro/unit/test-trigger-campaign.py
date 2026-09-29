@@ -14,7 +14,9 @@ import unittest
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "lib"))
 import trigger_campaign as campaign
+import trigger_approval_fixtures as approvals
 import trigger_campaign_pins as pins
+import trigger_carry_forward as carry
 import trigger_comparison as comparison
 from test_result import run_counted
 from trigger_inventory import load_inventory, plan_inventory
@@ -27,23 +29,9 @@ def approval(digest="a" * 64, budget=6):
 
 
 def contextual_approval(digest="a" * 64, budget=6, response="approved"):
-    session = "retained-session-123"
-    request_id = "assistant-message-123"
-    response_id = "user-message-456"
-    request = f"Approve trigger campaign {digest} with launch budget {budget}."
-
-    def observation(role, message_id, timestamp, ordinal, content):
-        return {"role": role, "message_id": message_id, "session_id": session,
-                "timestamp": timestamp, "source_ordinal": ordinal, "content": content,
-                "content_sha256": hashlib.sha256(content.encode()).hexdigest(),
-                "source_line_sha256": hashlib.sha256(f"retained:{message_id}:{content}".encode()).hexdigest()}
-
-    return {"schema_version": "trigger-campaign-approval/v2", "manifest_sha256": digest,
-            "launch_budget": budget, "recorder_observation": {
-                "observer": "trusted-orchestrator", "session_id": session,
-                "adjacent_user_visible_message_ids": [request_id, response_id],
-                "request": observation("assistant", request_id, "2026-09-14T16:00:00.000Z", 100, request),
-                "response": observation("user", response_id, "2026-09-14T16:00:01.000Z", 101, response)}}
+    return approvals.contextual_approval(
+        digest, budget, response, session="retained-session-123", request_id="assistant-message-123",
+        response_id="user-message-456", ordinals=(100, 101))
 
 
 def full_manifest(output):
@@ -70,10 +58,7 @@ def standing_approval(manifest, *, grant=None, quota=None, latest="approved"):
     quota = quota or "just run until the quota is run out"
 
     def observation(message_id, timestamp, ordinal, content):
-        return {"role": "user", "message_id": message_id, "session_id": session,
-                "timestamp": timestamp, "source_ordinal": ordinal, "content": content,
-                "content_sha256": hashlib.sha256(content.encode()).hexdigest(),
-                "source_line_sha256": hashlib.sha256(f"retained:{message_id}:{content}".encode()).hexdigest()}
+        return approvals.observation("user", message_id, session, timestamp, ordinal, content)
 
     digest = campaign.json_digest(manifest)
     grant_observation = observation("user-grant-123", "2026-09-12T23:05:29.095Z", 6605, grant)
@@ -591,6 +576,12 @@ class CampaignPinsTests(unittest.TestCase):
             (1302, 411, 891, 297, 1305),
         )
         self.assertEqual(pins.EXPECTED_ACCOUNTING["maximum_total_charged_attempts"], 1305)
+
+    def test_file_identity_extends_the_shipped_validator_identity_with_the_owner(self):
+        status = Path(__file__).stat()
+        identity = carry._file_identity(status)
+        self.assertEqual(identity[:-1], carry._SHIPPED_FILE_IDENTITY(status))
+        self.assertEqual(identity[-1], status.st_uid)
 
     def test_pinned_digests_and_ids_are_defined_nowhere_else(self):
         owned = [*pins.EXPECTED_RAW_SHA256.values(), *pins.EXPECTED_TERMINAL_TRIAL_SHA256,

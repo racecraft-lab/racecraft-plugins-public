@@ -23,6 +23,7 @@ from dataclasses import dataclass, replace
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "lib"))
+import trigger_approval_fixtures as approvals
 import trigger_campaign_execution as execution
 import trigger_campaign as accounting
 from trigger_campaign import CampaignLedger
@@ -63,23 +64,9 @@ def standing_request_fixture(root):
 
 
 def contextual_approval(digest, budget=6, response="approved"):
-    session = "execution-session-123"
-    request_id = "assistant-request-123"
-    response_id = "user-response-456"
-    request = f"Approve trigger campaign {digest} with launch budget {budget}."
-
-    def observation(role, message_id, timestamp, ordinal, content):
-        return {"role": role, "message_id": message_id, "session_id": session,
-                "timestamp": timestamp, "source_ordinal": ordinal, "content": content,
-                "content_sha256": hashlib.sha256(content.encode()).hexdigest(),
-                "source_line_sha256": hashlib.sha256(f"source:{message_id}:{content}".encode()).hexdigest()}
-
-    return {"schema_version": "trigger-campaign-approval/v2", "manifest_sha256": digest,
-            "launch_budget": budget, "recorder_observation": {
-                "observer": "trusted-orchestrator", "session_id": session,
-                "adjacent_user_visible_message_ids": [request_id, response_id],
-                "request": observation("assistant", request_id, "2026-09-14T16:00:00.000Z", 200, request),
-                "response": observation("user", response_id, "2026-09-14T16:00:01.000Z", 201, response)}}
+    return approvals.contextual_approval(
+        digest, budget, response, session="execution-session-123", request_id="assistant-request-123",
+        response_id="user-response-456", ordinals=(200, 201), line_prefix="source")
 
 
 def saved_carry_fixture(root):

@@ -10,6 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 import hashlib
+import importlib.util
 import json
 import os
 from pathlib import Path, PurePosixPath
@@ -17,6 +18,7 @@ import re
 import sqlite3
 import stat
 import subprocess
+import sys
 from types import SimpleNamespace
 from typing import Callable
 
@@ -157,10 +159,23 @@ def _normalized_reference(value: object, label: str) -> tuple[PurePosixPath, str
     return relative, digest
 
 
+def _load_shipped_file_identity():
+    """The shipped validator's stat identity, loaded once so the two never diverge."""
+    script = (Path(__file__).resolve().parents[3]
+              / "speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py")
+    spec = importlib.util.spec_from_file_location("shipped_phase_coverage", script)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module._stable_file_identity
+
+
+_SHIPPED_FILE_IDENTITY = _load_shipped_file_identity()
+
+
 def _file_identity(value: os.stat_result) -> tuple[int, ...]:
-    return (value.st_dev, value.st_ino, value.st_size, value.st_mtime_ns,
-            value.st_ctime_ns, stat.S_IFMT(value.st_mode), stat.S_IMODE(value.st_mode),
-            value.st_nlink, value.st_uid)
+    """The shipped stat identity plus the owner, which external evidence must also keep."""
+    return (*_SHIPPED_FILE_IDENTITY(value), value.st_uid)
 
 
 def _directory_identity(value: os.stat_result) -> tuple[int, ...]:
