@@ -45,17 +45,8 @@ if str(PLUGIN_ROOT) not in sys.path:
 if str(TEST_LIB_ROOT) not in sys.path:
     sys.path.insert(0, str(TEST_LIB_ROOT))
 
+from speckit_pro_runner.envelope import STATUS_EXIT_CODES  # noqa: E402
 from structural_helpers import iter_subschemas  # noqa: E402
-
-
-STATUS_EXIT_CODES = {
-    "ok": 0,
-    "expected_failure": 1,
-    "input_error": 2,
-    "missing_prerequisite": 3,
-    "subprocess_failure": 4,
-    "internal_failure": 5,
-}
 
 
 def runner_env() -> dict[str, str]:
