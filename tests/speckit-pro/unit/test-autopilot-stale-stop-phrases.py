@@ -89,9 +89,10 @@ class StaleStopPhraseTests(unittest.TestCase):
         self.assertEqual(len(stale_hits("layer6-integration/README.md", STRICT_ONLY)), 1)
 
     def test_the_always_stale_phrases_are_detected_anywhere(self) -> None:
+        relative = next(iter(STRICT_CASES))
         for phrase in ALWAYS_STALE:
-            with self.subTest(phrase=phrase):
-                self.assertEqual(len(stale_hits(next(iter(STRICT_CASES)), f"x {phrase} y")), 1)
+            hits = stale_hits(relative, f"x {phrase} y")
+            self.assertEqual(len(hits), 1, hits)
 
 
 def build_suite() -> unittest.TestSuite:

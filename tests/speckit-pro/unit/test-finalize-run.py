@@ -102,8 +102,8 @@ def finalize(root: Path, inputs: dict[str, object], record: bool = False) -> dic
     return result
 
 
-class _EvidenceFixture:
-    """Runner-fingerprinted verifications, escalation retries, and harness evidence for a ledger fixture."""
+class _VerificationEvidence:
+    """Runner-fingerprinted verification dispatches that back each gate result."""
 
     def verification(self, run: dict[str, object], gate: dict[str, object], **changes: object) -> str:
         """One verification dispatch the runner fingerprinted for this gate, returned as its dispatch id."""
@@ -127,6 +127,21 @@ class _EvidenceFixture:
         self.invoke(run, "complete", dispatch_id=dispatch_id, outcome="completed" if passed else "failed")
         return dispatch_id
 
+    def bind_gates(self, run: dict[str, object], gates: list[dict[str, object]]) -> list[dict[str, object]]:
+        """Back each passed or failed gate result with a runner-fingerprinted verification dispatch."""
+        bound = []
+        for gate in gates:
+            if (gate.get("status") in ("passed", "failed") and "dispatch_id" not in gate
+                    and isinstance(gate.get("command"), str) and str(gate["command"]).strip()
+                    and isinstance(gate.get("head_sha"), str) and len(str(gate["head_sha"])) == 40):
+                gate = {**gate, "dispatch_id": self.verification(run, gate)}
+            bound.append(gate)
+        return bound
+
+
+class _HarnessEvidence:
+    """Gate results with a persistent harness error, before and after the extra attempt."""
+
     def harness_gates(self, **overrides: object) -> list[dict[str, object]]:
         """Green at every head except G7 at the tip, which hit a persistent harness error."""
         evidence = self.root / HARNESS_EVIDENCE
@@ -140,25 +155,19 @@ class _EvidenceFixture:
         """The harness error after the extra attempt in a changed environment."""
         return self.harness_gates(attempts=4, environment_change="fresh_worktree")
 
-    def bind_gates(self, run: dict[str, object], gates: list[dict[str, object]]) -> list[dict[str, object]]:
-        """Back each passed or failed gate result with a runner-fingerprinted verification dispatch."""
-        bound = []
-        for gate in gates:
-            if (gate.get("status") in ("passed", "failed") and "dispatch_id" not in gate
-                    and isinstance(gate.get("command"), str) and str(gate["command"]).strip()
-                    and isinstance(gate.get("head_sha"), str) and len(str(gate["head_sha"])) == 40):
-                gate = {**gate, "dispatch_id": self.verification(run, gate)}
-            bound.append(gate)
-        return bound
 
-    def fail_escalation(self, run: dict[str, object], unit_kind: str, unit: str,
-                        tiers: tuple[int, ...] = (2, 3), outcome: str | None = "failed") -> None:
-        """Run each listed tier's retry for one unit; the last settles as `outcome`, or stays open when None."""
+class _EscalationEvidence(_VerificationEvidence):
+    """Escalation retries for deferred units and failed gates."""
+
+    def fail_escalation(self, run: dict[str, object], unit: tuple[str, str], tiers: tuple[int, ...] = (2, 3),
+                        outcome: str | None = "failed") -> None:
+        """Run each listed tier's retry for one (unit kind, unit); the last settles as `outcome`, or stays open when None."""
+        unit_kind, unit_name = unit
         for tier in tiers:
             self.clock += 10
-            name = f"escalate-{unit_kind}-{unit[:12]}-tier-{tier}"
+            name = f"escalate-{unit_kind}-{unit_name[:12]}-tier-{tier}"
             self.invoke(run, "reserve", dispatch_id=name, kind="corrective",
-                        escalation={"unit_kind": unit_kind, "unit": unit, "tier": tier})
+                        escalation={"unit_kind": unit_kind, "unit": unit_name, "tier": tier})
             if outcome is not None or tier != tiers[-1]:
                 self.clock += 10
                 self.invoke(run, "complete", dispatch_id=name, outcome=outcome or "failed")
@@ -168,18 +177,17 @@ class _EvidenceFixture:
         ledger = json.loads((self.root / str(run["ledger_path"])).read_text())
         for entry in ledger.get("deferred", []):
             if "resolved_by" not in entry:
-                self.fail_escalation(run, entry["unit_kind"], entry["unit"])
+                self.fail_escalation(run, (entry["unit_kind"], entry["unit"]))
         for gate in inputs["gates"]:  # type: ignore[attr-defined]
             if gate["status"] == "failed":
                 digest = command_digest(gate["command"])
-                self.fail_escalation(run, "gate_failure", digest, tiers=(2,))
+                self.fail_escalation(run, ("gate_failure", digest), tiers=(2,))
                 self.verification(run, gate)  # the gate is red again after the tier-2 retry
-                self.fail_escalation(run, "gate_failure", digest, tiers=(3,))
+                self.fail_escalation(run, ("gate_failure", digest), tiers=(3,))
         return inputs
 
 
-
-class _LedgerFixture(_EvidenceFixture):
+class _LedgerFixture(_EscalationEvidence, _HarnessEvidence):
     """A temporary repository with a clean ledger and one holding a deferral."""
 
     def setUp(self) -> None:
@@ -212,6 +220,12 @@ class _LedgerFixture(_EvidenceFixture):
             )
         run.update(run_id=result["ledger"]["run_id"], ledger_path=result["ledger_path"])
         return result
+
+    def assert_finalizes_after_a_recorded_cycle(self, gates: list[dict[str, object]]) -> None:
+        """A recorded cycle over `gates` is followed by an all-green run that finalizes ready for review."""
+        finalize(self.root, self.inputs(gates=gates), record=True)
+        result = finalize(self.root, self.inputs())
+        self.assertEqual((result["outcome"], result["mark_ready"]), ("complete_with_deferred", True))
 
     def inputs(self, run: dict[str, object] | None = None, **overrides: object) -> dict[str, object]:
         run = run or self.clean
@@ -279,60 +293,6 @@ class FinalizeRunTests(_LedgerFixture, unittest.TestCase):
         self.assertIn(HEADS[103], request)
         self.assertNotIn("ready for review.", request)
 
-    def test_an_exhausted_ledger_unit_is_a_decision_and_the_stack_still_goes_ready(self) -> None:
-        self.fail_escalation(self.deferring, "failure_family", "FR-001")
-        result = finalize(self.root, self.inputs(self.deferring))
-        self.assertEqual(result["outcome"], "complete_with_deferred")
-        self.assertTrue(result["mark_ready"])
-        self.assertEqual(result["ready_commands"], ["gh pr ready 101", "gh pr ready 103"])
-        self.assertIsNone(result["human_stop"])
-        decisions = result["decisions"]
-        self.assertEqual([decision["unit"] for decision in decisions], ["Failure family FR-001"])
-        self.assertEqual(decisions[0]["class"], "exhausted")
-        self.assertIn("authorize-corrective-exception", decisions[0]["finish"])
-        self.assertIn("tier 3", decisions[0]["evidence"])
-        request = result["end_of_run_request"]
-        self.assertIn("Decisions for you", request)
-        self.assertIn("Failure family FR-001", request)
-        self.assertIn("ready for review", request)
-
-    def test_exhausted_stop_classes_and_reasons_come_from_the_stop_policy(self) -> None:
-        from speckit_pro_runner import stop_policy
-
-        self.fail_escalation(self.deferring, "failure_family", "FR-001")
-        decision = finalize(self.root, self.inputs(self.deferring))["decisions"][0]
-        self.assertEqual((decision["class"], decision["reason_code"]),
-                         (stop_policy.EXHAUSTED, stop_policy.ALL_TIERS_FAILED))
-        self.assertEqual(stop_policy.stop_class(decision["reason_code"]), decision["class"])
-
-    def test_a_stop_reason_the_stop_policy_does_not_know_fails_closed(self) -> None:
-        from speckit_pro_runner import stop_policy
-
-        with self.assertRaises(ValueError):
-            stop_policy.stop_class("made_up_reason")
-        self.fail_escalation(self.deferring, "failure_family", "FR-001")
-        with patch("speckit_pro_runner.helpers.run_finalization._exhausted_reason", return_value="made_up_reason"):
-            with self.assertRaises(ValueError):
-                finalize(self.root, self.inputs(self.deferring))
-
-    def test_an_unresolved_deferred_task_is_an_authority_decision_not_a_draft_stack(self) -> None:
-        result = finalize(self.root, self.inputs(unresolved_deferrals=[dict(VETO)]))
-        self.assertEqual(result["outcome"], "complete_with_deferred")
-        self.assertTrue(result["mark_ready"])
-        self.assertEqual(len(result["decisions"]), 1)
-        self.assertEqual({key: result["decisions"][0][key] for key in VETO} | {"class": result["decisions"][0]["class"]},
-                         {**VETO, "class": "authority"})
-        self.assertIn(VETO["finish"], result["end_of_run_request"])
-        self.assertIn("Decisions for you", result["end_of_run_request"])
-
-    def test_decisions_and_human_uat_alone_never_keep_the_stack_draft(self) -> None:
-        self.fail_escalation(self.deferring, "failure_family", "FR-001")
-        result = finalize(self.root, self.inputs(self.deferring, unresolved_deferrals=[dict(VETO)]))
-        self.assertEqual((result["outcome"], result["goal_status"], result["mark_ready"]),
-                         ("complete_with_deferred", "complete", True))
-        self.assertEqual(sorted(decision["class"] for decision in result["decisions"]), ["authority", "exhausted"])
-        self.assertEqual(result["deferred_items"], [UAT])
-
     def test_only_human_uat_reaches_the_deferred_section(self) -> None:
         result = finalize(self.root, self.inputs(self.deferring, gates=per_head(LIVE_EVAL),
                                                  unresolved_deferrals=[dict(VETO)]))
@@ -355,7 +315,7 @@ class FinalizeRunTests(_LedgerFixture, unittest.TestCase):
         self.assertEqual(result["end_of_run_request"], "")
 
     def test_digest_is_stable_for_an_unchanged_blocker(self) -> None:
-        self.fail_escalation(self.deferring, "failure_family", "FR-001")
+        self.fail_escalation(self.deferring, ("failure_family", "FR-001"))
         first = finalize(self.root, self.inputs(self.deferring))
         second = finalize(self.root, self.inputs(self.deferring))
         self.assertEqual(first["deferred_digest"], second["deferred_digest"])
@@ -531,6 +491,64 @@ class FinalizeRunTests(_LedgerFixture, unittest.TestCase):
                     finalize(self.root, self.inputs(**override))
 
 
+class FinalizeRunDecisionTests(_LedgerFixture, unittest.TestCase):
+    """An exhausted unit is a decision, not a stop, and the stop policy owns the stop classes."""
+
+    def test_an_exhausted_ledger_unit_is_a_decision_and_the_stack_still_goes_ready(self) -> None:
+        self.fail_escalation(self.deferring, ("failure_family", "FR-001"))
+        result = finalize(self.root, self.inputs(self.deferring))
+        self.assertEqual(result["outcome"], "complete_with_deferred")
+        self.assertTrue(result["mark_ready"])
+        self.assertEqual(result["ready_commands"], ["gh pr ready 101", "gh pr ready 103"])
+        self.assertIsNone(result["human_stop"])
+        decisions = result["decisions"]
+        self.assertEqual([decision["unit"] for decision in decisions], ["Failure family FR-001"])
+        self.assertEqual(decisions[0]["class"], "exhausted")
+        self.assertIn("authorize-corrective-exception", decisions[0]["finish"])
+        self.assertIn("tier 3", decisions[0]["evidence"])
+        request = result["end_of_run_request"]
+        self.assertIn("Decisions for you", request)
+        self.assertIn("Failure family FR-001", request)
+        self.assertIn("ready for review", request)
+
+    def test_exhausted_stop_classes_and_reasons_come_from_the_stop_policy(self) -> None:
+        from speckit_pro_runner import stop_policy
+
+        self.fail_escalation(self.deferring, ("failure_family", "FR-001"))
+        decision = finalize(self.root, self.inputs(self.deferring))["decisions"][0]
+        self.assertEqual((decision["class"], decision["reason_code"]),
+                         (stop_policy.EXHAUSTED, stop_policy.ALL_TIERS_FAILED))
+        self.assertEqual(stop_policy.stop_class(decision["reason_code"]), decision["class"])
+
+    def test_a_stop_reason_the_stop_policy_does_not_know_fails_closed(self) -> None:
+        from speckit_pro_runner import stop_policy
+
+        with self.assertRaises(ValueError):
+            stop_policy.stop_class("made_up_reason")
+        self.fail_escalation(self.deferring, ("failure_family", "FR-001"))
+        with patch("speckit_pro_runner.helpers.run_finalization._exhausted_reason", return_value="made_up_reason"):
+            with self.assertRaises(ValueError):
+                finalize(self.root, self.inputs(self.deferring))
+
+    def test_an_unresolved_deferred_task_is_an_authority_decision_not_a_draft_stack(self) -> None:
+        result = finalize(self.root, self.inputs(unresolved_deferrals=[dict(VETO)]))
+        self.assertEqual(result["outcome"], "complete_with_deferred")
+        self.assertTrue(result["mark_ready"])
+        self.assertEqual(len(result["decisions"]), 1)
+        self.assertEqual({key: result["decisions"][0][key] for key in VETO} | {"class": result["decisions"][0]["class"]},
+                         {**VETO, "class": "authority"})
+        self.assertIn(VETO["finish"], result["end_of_run_request"])
+        self.assertIn("Decisions for you", result["end_of_run_request"])
+
+    def test_decisions_and_human_uat_alone_never_keep_the_stack_draft(self) -> None:
+        self.fail_escalation(self.deferring, ("failure_family", "FR-001"))
+        result = finalize(self.root, self.inputs(self.deferring, unresolved_deferrals=[dict(VETO)]))
+        self.assertEqual((result["outcome"], result["goal_status"], result["mark_ready"]),
+                         ("complete_with_deferred", "complete", True))
+        self.assertEqual(sorted(decision["class"] for decision in result["decisions"]), ["authority", "exhausted"])
+        self.assertEqual(result["deferred_items"], [UAT])
+
+
 def _runner(request: dict[str, object], cwd: Path = REPO_ROOT) -> dict[str, object]:
     completed = subprocess.run(
         [sys.executable, "-m", "speckit_pro_runner"],
@@ -545,8 +563,8 @@ def _runner(request: dict[str, object], cwd: Path = REPO_ROOT) -> dict[str, obje
     return json.loads(completed.stdout.splitlines()[-1])
 
 
-class ResolvedDeferralTests(_LedgerFixture, unittest.TestCase):
-    """A deferral that a later completed dispatch for its unit resolved leaves the request (issue 825)."""
+class _ResolvedDeferralFixture(_LedgerFixture):
+    """Shared fixture for the tests below."""
 
     SCOPE = "a" * 64
 
@@ -579,6 +597,20 @@ class ResolvedDeferralTests(_LedgerFixture, unittest.TestCase):
     def ledger_path(self) -> Path:
         return self.root / str(self.run["ledger_path"])
 
+    def escalate_and_finalize(self, outcome: str, units: tuple[str, ...]) -> tuple[dict[str, object], dict[str, object]]:
+        """Settle fix-c under the exception as `outcome`, exhaust each unit's tiers, then finalize the run."""
+        self.invoke(self.run, "reserve", dispatch_id="fix-d", kind="corrective", failure_invariant="FR-002")
+        settled = self.fix_under_exception(outcome)
+        for unit in units:
+            self.fail_escalation(self.run, ("failure_family", unit))
+        result = finalize(self.root, self.inputs(self.run))
+        self.assertEqual((result["outcome"], result["mark_ready"]), ("complete_with_deferred", True))
+        return settled, result
+
+
+class ResolvedDeferralTests(_ResolvedDeferralFixture, unittest.TestCase):
+    """A deferral that a later completed dispatch for its unit resolved leaves the request (issue 825)."""
+
     def test_a_deferral_whose_fix_completed_leaves_the_request_and_keeps_its_history(self) -> None:
         completed = self.fix_under_exception()
         entry = completed["ledger"]["deferred"][0]
@@ -595,23 +627,18 @@ class ResolvedDeferralTests(_LedgerFixture, unittest.TestCase):
         self.assertEqual(json_schema_failures(completed["ledger"], schema, schema, "ledger"), [])
 
     def test_a_deferral_with_no_completed_fix_reaches_the_owner_as_a_decision(self) -> None:
-        self.invoke(self.run, "reserve", dispatch_id="fix-d", kind="corrective", failure_invariant="FR-002")
-        failed = self.fix_under_exception(outcome="failed")
+        failed, result = self.escalate_and_finalize("failed", ("FR-001", "FR-002"))
         self.assertNotIn("resolved_by", failed["ledger"]["deferred"][0])
-        for unit in ("FR-001", "FR-002"):
-            self.fail_escalation(self.run, "failure_family", unit)
-        result = finalize(self.root, self.inputs(self.run))
-        self.assertEqual((result["outcome"], result["mark_ready"]), ("complete_with_deferred", True))
         self.assertEqual(sorted(unit["unit"] for unit in result["decisions"]),
                          ["Failure family FR-001", "Failure family FR-002"])
 
     def test_only_the_resolved_unit_leaves_the_request(self) -> None:
-        self.invoke(self.run, "reserve", dispatch_id="fix-d", kind="corrective", failure_invariant="FR-002")
-        self.fix_under_exception()
-        self.fail_escalation(self.run, "failure_family", "FR-002")
-        result = finalize(self.root, self.inputs(self.run))
-        self.assertEqual((result["outcome"], result["mark_ready"]), ("complete_with_deferred", True))
+        _, result = self.escalate_and_finalize("completed", ("FR-002",))
         self.assertEqual([unit["unit"] for unit in result["decisions"]], ["Failure family FR-002"])
+
+
+class ResolvedDeferralIntegrityTests(_ResolvedDeferralFixture, unittest.TestCase):
+    """A forged resolution fails closed and an earlier ledger still validates."""
 
     def test_a_forged_resolution_fails_closed(self) -> None:
         self.invoke(self.run, "reserve", dispatch_id="fix-d", kind="corrective", failure_invariant="FR-002")
@@ -652,7 +679,7 @@ class ResolvedDeferralTests(_LedgerFixture, unittest.TestCase):
         result = finalize(self.root, self.inputs(self.run))
         self.assertEqual(result["outcome"], "continue")
         self.assertTrue(any("Failure family FR-001" in item for item in result["pending_items"]))
-        self.fail_escalation(self.run, "failure_family", "FR-001")
+        self.fail_escalation(self.run, ("failure_family", "FR-001"))
         result = finalize(self.root, self.inputs(self.run))
         self.assertEqual(result["outcome"], "complete_with_deferred")
         self.assertEqual([unit["unit"] for unit in result["decisions"]], ["Failure family FR-001"])
@@ -669,7 +696,7 @@ class EscalationBeforeStopTests(_LedgerFixture, unittest.TestCase):
         self.assertIn("Escalate Failure family FR-001 to tier 2", before["pending_items"][0])
         self.assertIn("different approach", before["pending_items"][0])
         self.assertIn("consensus", before["pending_items"][0])
-        self.fail_escalation(self.deferring, "failure_family", "FR-001", tiers=(2,), outcome=None)
+        self.fail_escalation(self.deferring, ("failure_family", "FR-001"), tiers=(2,), outcome=None)
         running = finalize(self.root, self.inputs(self.deferring))
         self.assertEqual(running["outcome"], "continue")
         self.assertIn("Finish the escalation retry", running["pending_items"][0])
@@ -679,7 +706,7 @@ class EscalationBeforeStopTests(_LedgerFixture, unittest.TestCase):
         self.assertEqual(tier_three["outcome"], "continue")
         self.assertIn("Escalate Failure family FR-001 to tier 3", tier_three["pending_items"][0])
         self.assertIn("strongest model at max effort with the full failure history", tier_three["pending_items"][0])
-        self.fail_escalation(self.deferring, "failure_family", "FR-001", tiers=(3,))
+        self.fail_escalation(self.deferring, ("failure_family", "FR-001"), tiers=(3,))
         after = finalize(self.root, self.inputs(self.deferring))
         self.assertEqual((after["outcome"], after["mark_ready"]), ("complete_with_deferred", True))
         self.assertIn("escalation tiers are exhausted", after["decisions"][0]["reason"])
@@ -691,10 +718,10 @@ class EscalationBeforeStopTests(_LedgerFixture, unittest.TestCase):
                     "head_sha": HEADS[101]}
             digest = command_digest(gate["command"])
             self.verification(self.deferring, gate)
-            self.fail_escalation(self.deferring, "gate_failure", digest, tiers=(2,))
+            self.fail_escalation(self.deferring, ("gate_failure", digest), tiers=(2,))
             self.verification(self.deferring, gate)
-            self.fail_escalation(self.deferring, "gate_failure", digest, tiers=(3,))
-        self.fail_escalation(self.deferring, "failure_family", "FR-001", tiers=(2,))
+            self.fail_escalation(self.deferring, ("gate_failure", digest), tiers=(3,))
+        self.fail_escalation(self.deferring, ("failure_family", "FR-001"), tiers=(2,))
         result = finalize(self.root, self.inputs(self.deferring))
         self.assertEqual((result["outcome"], result["mark_ready"]), ("complete_with_deferred", True))
         self.assertEqual(result["decisions"][0]["reason_code"], "tier3_cap_reached")
@@ -703,11 +730,15 @@ class EscalationBeforeStopTests(_LedgerFixture, unittest.TestCase):
         self.assertEqual(ledger["escalation_tier3_cap"], 3)
 
     def test_a_completed_tier_resolves_the_unit_and_the_run_finalizes(self) -> None:
-        self.fail_escalation(self.deferring, "failure_family", "FR-001", tiers=(2,), outcome="completed")
+        self.fail_escalation(self.deferring, ("failure_family", "FR-001"), tiers=(2,), outcome="completed")
         result = finalize(self.root, self.inputs(self.deferring))
         self.assertEqual(result["outcome"], "complete_with_deferred")
         self.assertTrue(result["mark_ready"])
         self.assertEqual(result["decisions"], [])
+
+
+class EscalationGateStopTests(_LedgerFixture, unittest.TestCase):
+    """A failed gate climbs the tiers before it keeps the stack draft, and forged escalation records fail closed."""
 
     def test_a_failed_gate_climbs_the_tiers_before_it_keeps_the_stack_draft(self) -> None:
         gates = self.per_head_gates(failed=(HEADS[103], "G7"))
@@ -718,14 +749,14 @@ class EscalationBeforeStopTests(_LedgerFixture, unittest.TestCase):
         self.assertEqual(first["outcome"], "continue")
         self.assertIn("Escalate failed gate G7 at head", first["pending_items"][0])
         self.assertIn("tier 2", first["pending_items"][0])
-        self.fail_escalation(self.clean, "gate_failure", digest, tiers=(2,), outcome="completed")
+        self.fail_escalation(self.clean, ("gate_failure", digest), tiers=(2,), outcome="completed")
         rerun = finalize(self.root, inputs)
         self.assertEqual(rerun["outcome"], "continue")
         self.assertIn("Rerun gate G7", rerun["pending_items"][0])
         red_again = self.inputs(gates=gates)
         tier_three = finalize(self.root, red_again)
         self.assertIn("tier 3", tier_three["pending_items"][0])
-        self.fail_escalation(self.clean, "gate_failure", digest, tiers=(3,))
+        self.fail_escalation(self.clean, ("gate_failure", digest), tiers=(3,))
         result = finalize(self.root, red_again)
         self.assertEqual((result["outcome"], result["goal_status"], result["mark_ready"]), ("human_stop", "blocked", False))
         self.assertEqual((result["human_stop"]["gates"][0]["gate"], result["human_stop"]["gates"][0]["reason_code"]),
@@ -737,7 +768,7 @@ class EscalationBeforeStopTests(_LedgerFixture, unittest.TestCase):
 
     def test_forged_escalation_records_fail_closed(self) -> None:
         path = self.root / str(self.deferring["ledger_path"])
-        self.fail_escalation(self.deferring, "failure_family", "FR-001")
+        self.fail_escalation(self.deferring, ("failure_family", "FR-001"))
         inputs = self.inputs(self.deferring)
         valid = path.read_bytes()
         record = json.loads(valid)["escalation_allowances"]["failure_family:FR-001"]
@@ -853,10 +884,7 @@ class MissingGateAcrossCyclesTests(_LedgerFixture, unittest.TestCase):
         self.assertEqual(second["pending_items"], [])
 
     def test_a_gate_that_is_run_before_the_next_cycle_finalizes_the_stack(self) -> None:
-        finalize(self.root, self.inputs(gates=self.TIP_ONLY), record=True)
-        result = finalize(self.root, self.inputs())
-        self.assertEqual(result["outcome"], "complete_with_deferred")
-        self.assertTrue(result["mark_ready"])
+        self.assert_finalizes_after_a_recorded_cycle(self.TIP_ONLY)
 
     def test_only_a_recording_cycle_counts_and_a_read_only_look_never_stops_the_run(self) -> None:
         for _ in range(3):
@@ -919,9 +947,7 @@ class HarnessExtraAttemptTests(_LedgerFixture, unittest.TestCase):
         self.assertEqual(stopped["outcome"], "human_stop")
 
     def test_a_later_pass_in_the_changed_environment_finalizes(self) -> None:
-        finalize(self.root, self.inputs(gates=self.harness_gates()), record=True)
-        result = finalize(self.root, self.inputs())
-        self.assertEqual(result["outcome"], "complete_with_deferred")
+        self.assert_finalizes_after_a_recorded_cycle(self.harness_gates())
 
 
 class FinalizeRunRegistryTests(unittest.TestCase):
@@ -937,6 +963,15 @@ class FinalizeRunRegistryTests(unittest.TestCase):
         self.assertEqual([decision["class"] for decision in data["decisions"]], ["exhausted"])
         self.assertIn("Decisions for you", data["end_of_run_request"])
         self.assertFalse(data["writes_state"])
+
+    def test_bad_request_is_an_input_error(self) -> None:
+        request = json.loads(FIXTURE_REQUEST.read_text(encoding="utf-8"))
+        request["inputs"]["gates"] = []
+        self.assertEqual(_runner(request)["status"], "input_error")
+
+
+class FinalizeRunCycleCountTests(unittest.TestCase):
+    """The finalize cycle count is reachable through the runner and only moves toward a stop."""
 
     def test_the_cycle_count_is_reachable_through_the_runner_and_only_ever_moves_toward_a_stop(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
@@ -975,11 +1010,6 @@ class FinalizeRunRegistryTests(unittest.TestCase):
             second = call(request)
             self.assertEqual((second["data"]["outcome"], second["data"]["mark_ready"]), ("human_stop", False))
             self.assertEqual(len(second["data"]["human_stop"]["missing"]), 1)
-
-    def test_bad_request_is_an_input_error(self) -> None:
-        request = json.loads(FIXTURE_REQUEST.read_text(encoding="utf-8"))
-        request["inputs"]["gates"] = []
-        self.assertEqual(_runner(request)["status"], "input_error")
 
 
 def _packet_inputs(**overrides: object) -> dict[str, object]:

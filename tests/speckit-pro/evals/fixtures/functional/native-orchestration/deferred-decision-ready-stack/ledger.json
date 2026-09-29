@@ -16,114 +16,13 @@
     }
   ],
   "dispatches": {
-    "escalate-fr-001-tier-2": {
-      "completed_at": 1030.0,
-      "escalation": "failure_family:FR-001",
-      "escalation_tier": 2,
-      "kind": "corrective",
-      "outcome": "failed",
-      "reconciliations": 0,
-      "reservation_id": null,
-      "reserved_at": 1020.0
-    },
-    "escalate-fr-001-tier-3": {
-      "completed_at": 1050.0,
-      "escalation": "failure_family:FR-001",
-      "escalation_tier": 3,
-      "kind": "corrective",
-      "outcome": "failed",
-      "reconciliations": 0,
-      "reservation_id": null,
-      "reserved_at": 1040.0
-    },
-    "fix-a": {
-      "completed_at": 1000.0,
-      "kind": "corrective",
-      "outcome": "completed",
-      "reconciliations": 0,
-      "reservation_id": "reservation-fix-a",
-      "reserved_at": 1000.0
-    },
-    "verify-1": {
-      "completed_at": 1000.0,
-      "failing_checks": {
-        "checks_run": null,
-        "command_id": "UNIT_TEST",
-        "command_sha256": "159762a639c19351e521156a18a2d147cf8c03fa98b1050523e8fd28dd741940",
-        "failing": [],
-        "format": "passed",
-        "head_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-        "output_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
-        "passing": null,
-        "recorded_at": 1000.0,
-        "worktree_clean": true
-      },
-      "kind": "verification",
-      "outcome": "completed",
-      "reconciliations": 0,
-      "reservation_id": null,
-      "reserved_at": 1000.0
-    },
-    "verify-2": {
-      "completed_at": 1000.0,
-      "failing_checks": {
-        "checks_run": null,
-        "command_id": "UNIT_TEST",
-        "command_sha256": "a98299d3962f5f2c43902dcfb4eed1515c93af2aaefe27bd3a16f19da0d9ed1d",
-        "failing": [],
-        "format": "passed",
-        "head_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-        "output_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
-        "passing": null,
-        "recorded_at": 1000.0,
-        "worktree_clean": true
-      },
-      "kind": "verification",
-      "outcome": "completed",
-      "reconciliations": 0,
-      "reservation_id": null,
-      "reserved_at": 1000.0
-    },
-    "verify-3": {
-      "completed_at": 1000.0,
-      "failing_checks": {
-        "checks_run": null,
-        "command_id": "UNIT_TEST",
-        "command_sha256": "159762a639c19351e521156a18a2d147cf8c03fa98b1050523e8fd28dd741940",
-        "failing": [],
-        "format": "passed",
-        "head_sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-        "output_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
-        "passing": null,
-        "recorded_at": 1000.0,
-        "worktree_clean": true
-      },
-      "kind": "verification",
-      "outcome": "completed",
-      "reconciliations": 0,
-      "reservation_id": null,
-      "reserved_at": 1000.0
-    },
-    "verify-4": {
-      "completed_at": 1000.0,
-      "failing_checks": {
-        "checks_run": null,
-        "command_id": "UNIT_TEST",
-        "command_sha256": "a98299d3962f5f2c43902dcfb4eed1515c93af2aaefe27bd3a16f19da0d9ed1d",
-        "failing": [],
-        "format": "passed",
-        "head_sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-        "output_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
-        "passing": null,
-        "recorded_at": 1000.0,
-        "worktree_clean": true
-      },
-      "kind": "verification",
-      "outcome": "completed",
-      "reconciliations": 0,
-      "reservation_id": null,
-      "reserved_at": 1000.0
-    }
+    "escalate-fr-001-tier-2": {"completed_at": 1030.0, "escalation": "failure_family:FR-001", "escalation_tier": 2, "kind": "corrective", "outcome": "failed", "reconciliations": 0, "reservation_id": null, "reserved_at": 1020.0},
+    "escalate-fr-001-tier-3": {"completed_at": 1050.0, "escalation": "failure_family:FR-001", "escalation_tier": 3, "kind": "corrective", "outcome": "failed", "reconciliations": 0, "reservation_id": null, "reserved_at": 1040.0},
+    "fix-a": {"completed_at": 1000.0, "kind": "corrective", "outcome": "completed", "reconciliations": 0, "reservation_id": "reservation-fix-a", "reserved_at": 1000.0},
+    "verify-1": {"completed_at": 1000.0, "failing_checks": {"checks_run": null, "command_id": "UNIT_TEST", "command_sha256": "159762a639c19351e521156a18a2d147cf8c03fa98b1050523e8fd28dd741940", "failing": [], "format": "passed", "head_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "output_sha256": "0000000000000000000000000000000000000000000000000000000000000000", "passing": null, "recorded_at": 1000.0, "worktree_clean": true}, "kind": "verification", "outcome": "completed", "reconciliations": 0, "reservation_id": null, "reserved_at": 1000.0},
+    "verify-2": {"completed_at": 1000.0, "failing_checks": {"checks_run": null, "command_id": "UNIT_TEST", "command_sha256": "a98299d3962f5f2c43902dcfb4eed1515c93af2aaefe27bd3a16f19da0d9ed1d", "failing": [], "format": "passed", "head_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "output_sha256": "0000000000000000000000000000000000000000000000000000000000000000", "passing": null, "recorded_at": 1000.0, "worktree_clean": true}, "kind": "verification", "outcome": "completed", "reconciliations": 0, "reservation_id": null, "reserved_at": 1000.0},
+    "verify-3": {"completed_at": 1000.0, "failing_checks": {"checks_run": null, "command_id": "UNIT_TEST", "command_sha256": "159762a639c19351e521156a18a2d147cf8c03fa98b1050523e8fd28dd741940", "failing": [], "format": "passed", "head_sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", "output_sha256": "0000000000000000000000000000000000000000000000000000000000000000", "passing": null, "recorded_at": 1000.0, "worktree_clean": true}, "kind": "verification", "outcome": "completed", "reconciliations": 0, "reservation_id": null, "reserved_at": 1000.0},
+    "verify-4": {"completed_at": 1000.0, "failing_checks": {"checks_run": null, "command_id": "UNIT_TEST", "command_sha256": "a98299d3962f5f2c43902dcfb4eed1515c93af2aaefe27bd3a16f19da0d9ed1d", "failing": [], "format": "passed", "head_sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", "output_sha256": "0000000000000000000000000000000000000000000000000000000000000000", "passing": null, "recorded_at": 1000.0, "worktree_clean": true}, "kind": "verification", "outcome": "completed", "reconciliations": 0, "reservation_id": null, "reserved_at": 1000.0}
   },
   "escalation_allowances": {
     "failure_family:FR-001": {

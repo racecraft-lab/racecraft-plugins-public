@@ -19,6 +19,7 @@ TEST_ROOT = ROOT / "tests" / "speckit-pro"
 sys.path.insert(0, str(TEST_ROOT / "lib"))
 
 from native_eval_catalog import load_catalog, plan_trials  # noqa: E402
+from finalize_fixture import run_finalize_fixture  # noqa: E402
 from native_eval_grading import grade_observation  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
@@ -30,7 +31,9 @@ def focused_case(case: dict, checks: list[dict]) -> dict:
             "requirements": [item for item in case["requirements"] if item["id"] in covered]}
 
 
-class NativeReturnCatalogTests(unittest.TestCase):
+class _ReturnCatalogFixture:
+    """Shared fixture for the tests below."""
+
     def setUp(self) -> None:
         catalog = load_catalog(TEST_ROOT / "evals" / "catalog.json", ROOT)
         self.cases = {case["id"]: case for case in catalog["cases"]}
@@ -42,6 +45,8 @@ class NativeReturnCatalogTests(unittest.TestCase):
         self.keyword_majority = self.cases["integration.return-04-keyword-only-majority"]
         self.keyword_security = self.cases["integration.return-05-keyword-security-relevant"]
 
+
+class NativeReturnCatalogTests(_ReturnCatalogFixture, unittest.TestCase):
     def test_return_cases_preserve_two_and_three_input_boundaries(self) -> None:
         for case, names in (
             (self.disagreement, ["codebase-analyst", "domain-researcher"]),
@@ -139,38 +144,6 @@ class NativeReturnCatalogTests(unittest.TestCase):
                 with self.subTest(case=case["id"], field=field):
                     self.assertEqual(grade_observation(focused, bad)["status"], "fail")
 
-    def test_round3_tiebreak_case_applies_the_conservative_option_without_a_stop(self) -> None:
-        case = self.cases["integration.consensus-round3-tiebreak"]
-        self.assertEqual(case["layer"], "integration")
-        self.assertEqual(case["resource_class"], "nested")
-        self.assertIn("`**Round:** 3`", case["prompt"])
-        self.assertIn("must not ask the user, and must not stop", case["prompt"])
-        paths = [f"scenario-inputs/analysts/{name}.md" for name in (
-            "codebase-analyst", "domain-researcher", "spec-context-analyst", "tiebreak-analyst")]
-        self.assertEqual(sorted(fixture["destination"] for fixture in case["fixtures"]), sorted(paths))
-        self.assertEqual(sorted(check["path"] for check in case["checks"]
-                                if check["type"] == "file_access"), sorted(paths))
-        dispatch = [check for check in case["checks"] if check["type"] == "native_subagent_dispatch"]
-        self.assertEqual(len(dispatch), 1)
-        self.assertEqual([pair["role"] for pair in dispatch[0]["expected"]], ["consensus-tiebreaker"])
-        self.assertEqual(dispatch[0]["forbidden_roles"], ["consensus-synthesizer"])
-        expected = {"decision": "per-request", "next_action": "apply", "retained_options":
-                    ["per-request", "per-billing-period"], "dissent": ["per-billing-period"],
-                    "agreement": "tiebreak", "scope_deferred": False}
-        checks = [check for check in case["checks"] if check["type"] == "json_field"]
-        self.assertEqual({check["field_path"][0]: check["expected"] for check in checks}, expected)
-        focused = focused_case(case, checks)
-        observation = {"completed": True, "error": None, "final_text": "",
-                       "activations": [], "tool_calls": [], "usage": {},
-                       "artifacts": {"scenario-output/consensus-result.json": json.dumps(expected)}}
-        self.assertEqual(grade_observation(focused, observation)["status"], "pass")
-        for field, wrong in (("next_action", "round_3_tiebreak"), ("agreement", "0/3-all-disagree"),
-                             ("decision", None), ("scope_deferred", True), ("dissent", [])):
-            bad = copy.deepcopy(observation)
-            bad["artifacts"]["scenario-output/consensus-result.json"] = json.dumps({**expected, field: wrong})
-            with self.subTest(field=field):
-                self.assertEqual(grade_observation(focused, bad)["status"], "fail")
-
     def test_explicit_json_spelling_alternatives_preserve_choice_and_evidence(self) -> None:
         checks = copy.deepcopy([check for check in self.majority["checks"]
                                 if check["id"] in {"decision", "retained-options", "evidence"}])
@@ -192,7 +165,6 @@ class NativeReturnCatalogTests(unittest.TestCase):
             bad["artifacts"]["scenario-output/consensus-result.json"] = json.dumps({**answer, field: wrong})
             with self.subTest(field=field, wrong=wrong):
                 self.assertEqual(grade_observation(focused, bad)["status"], "fail")
-
 
     def test_keyword_route_cases_differ_only_in_one_security_relevant_answer(self) -> None:
         item = "`[domain] I1: Should the usage report count tokens per LLM request or per billing period?`"
@@ -232,6 +204,42 @@ class NativeReturnCatalogTests(unittest.TestCase):
                     "scenario-output/consensus-result.json": json.dumps({"evidence": changed})}}
                 with self.subTest(case=case["id"], field=field, wrong=wrong):
                     self.assertEqual(grade_observation(focused, bad)["status"], "fail")
+
+
+class NativeReturnRoundTests(_ReturnCatalogFixture, unittest.TestCase):
+    """The round three tiebreak and red-gate finalize cases grade the real result."""
+
+    def test_round3_tiebreak_case_applies_the_conservative_option_without_a_stop(self) -> None:
+        case = self.cases["integration.consensus-round3-tiebreak"]
+        self.assertEqual(case["layer"], "integration")
+        self.assertEqual(case["resource_class"], "nested")
+        self.assertIn("`**Round:** 3`", case["prompt"])
+        self.assertIn("must not ask the user, and must not stop", case["prompt"])
+        paths = [f"scenario-inputs/analysts/{name}.md" for name in (
+            "codebase-analyst", "domain-researcher", "spec-context-analyst", "tiebreak-analyst")]
+        self.assertEqual(sorted(fixture["destination"] for fixture in case["fixtures"]), sorted(paths))
+        self.assertEqual(sorted(check["path"] for check in case["checks"]
+                                if check["type"] == "file_access"), sorted(paths))
+        dispatch = [check for check in case["checks"] if check["type"] == "native_subagent_dispatch"]
+        self.assertEqual(len(dispatch), 1)
+        self.assertEqual([pair["role"] for pair in dispatch[0]["expected"]], ["consensus-tiebreaker"])
+        self.assertEqual(dispatch[0]["forbidden_roles"], ["consensus-synthesizer"])
+        expected = {"decision": "per-request", "next_action": "apply", "retained_options":
+                    ["per-request", "per-billing-period"], "dissent": ["per-billing-period"],
+                    "agreement": "tiebreak", "scope_deferred": False}
+        checks = [check for check in case["checks"] if check["type"] == "json_field"]
+        self.assertEqual({check["field_path"][0]: check["expected"] for check in checks}, expected)
+        focused = focused_case(case, checks)
+        observation = {"completed": True, "error": None, "final_text": "",
+                       "activations": [], "tool_calls": [], "usage": {},
+                       "artifacts": {"scenario-output/consensus-result.json": json.dumps(expected)}}
+        self.assertEqual(grade_observation(focused, observation)["status"], "pass")
+        for field, wrong in (("next_action", "round_3_tiebreak"), ("agreement", "0/3-all-disagree"),
+                             ("decision", None), ("scope_deferred", True), ("dissent", [])):
+            bad = copy.deepcopy(observation)
+            bad["artifacts"]["scenario-output/consensus-result.json"] = json.dumps({**expected, field: wrong})
+            with self.subTest(field=field):
+                self.assertEqual(grade_observation(focused, bad)["status"], "fail")
 
     def test_finalize_red_gate_case_grades_the_real_end_of_run_request(self) -> None:
         case = self.cases["integration.finalize-red-gate-draft"]
@@ -284,18 +292,7 @@ class FinalizeStackReadyCatalogTests(unittest.TestCase):
                 "ready_commands": ["gh pr ready 101", "gh pr ready 102", "gh pr ready 103"]}
 
     def test_the_fixture_is_the_real_runner_result(self) -> None:
-        sys.path.insert(0, str(ROOT / "speckit-pro"))
-        import tempfile
-
-        from speckit_pro_runner.helpers.run_finalization import finalize_run
-
-        directory = ROOT / "tests/speckit-pro/evals/fixtures/integration-finalize/finalize-stack-ready"
-        request = json.loads((directory / "finalize-request.json").read_text(encoding="utf-8"))
-        with tempfile.TemporaryDirectory() as temp:
-            (Path(temp) / ".process/execution-control").mkdir(parents=True)
-            (Path(temp) / ".process/execution-control/ledger.json").write_text(
-                (directory / "ledger.json").read_text(encoding="utf-8"), encoding="utf-8")
-            result = finalize_run(Path(temp), request["inputs"])
+        request, result = run_finalize_fixture(ROOT / "tests/speckit-pro/evals/fixtures/integration-finalize/finalize-stack-ready")
         correct = self.correct()
         self.assertEqual((result["outcome"], result["mark_ready"], result["ready_commands"]),
                          (correct["outcome"], correct["mark_ready"], correct["ready_commands"]))
@@ -332,5 +329,6 @@ class FinalizeStackReadyCatalogTests(unittest.TestCase):
 
 if __name__ == "__main__":
     suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case)
-                               for case in (NativeReturnCatalogTests, FinalizeStackReadyCatalogTests))
+                               for case in (NativeReturnCatalogTests, NativeReturnRoundTests,
+                                            FinalizeStackReadyCatalogTests))
     raise SystemExit(run_counted(suite, label="test-native-integration-catalog"))

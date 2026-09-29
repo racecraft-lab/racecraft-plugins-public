@@ -321,7 +321,9 @@ def state_json(*, include_confidence: bool = True, include_post: bool = True, co
     }
 
 
-class AutopilotPhaseCoverageTests(unittest.TestCase):
+class _ValidatorRunner(object):
+    """Shared fixture for the tests below."""
+
     def run_validator_paths(self, workflow_path: Path, state_path: Path) -> tuple[int, dict[str, object]]:
         local_validator = state_path.parent / VALIDATOR.relative_to(REPO_ROOT)
         installed_validator = getattr(self, "_installed_validator", None)
@@ -377,6 +379,8 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
                 state_path.write_text(json.dumps(state), encoding="utf-8")
             return self.run_validator_paths(workflow_path, state_path)
 
+
+class AutopilotPhaseCoverageTests(_ValidatorRunner, unittest.TestCase):
     @staticmethod
     def complete_checkpoint(*, commit_sha: str = "a" * 40) -> dict[str, object]:
         return {
@@ -3564,17 +3568,6 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
                     report["marker_plan_status_errors"],
                 )
 
-    def test_a_failing_report_names_the_orchestrator_repair_route_and_the_failing_keys(self) -> None:
-        exit_code, report = self.run_validator(workflow_text(), state_json(include_post=False))
-        self.assertEqual(exit_code, 1)
-        repair = report["repair"]
-        self.assertEqual(repair["owner"], "orchestrator")
-        self.assertEqual(repair["retry"], "validate-autopilot-phase-coverage")
-        self.assertEqual(repair["failing_keys"], ["missing_state_post_items"])
-        exit_code, report = self.run_validator(workflow_text(), state_json())
-        self.assertEqual(exit_code, 0)
-        self.assertIsNone(report["repair"])
-
     def test_missing_confidence_gate_in_workflow_fails(self) -> None:
         exit_code, report = self.run_validator(workflow_text(include_confidence=False), state_json())
         self.assertEqual(exit_code, 1)
@@ -3867,8 +3860,24 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
         self.assertIn("migrate", required[0])
 
 
+class AutopilotPhaseCoverageRepairTests(_ValidatorRunner, unittest.TestCase):
+    """A failing coverage report names the orchestrator repair route and the failing keys."""
+
+    def test_a_failing_report_names_the_orchestrator_repair_route_and_the_failing_keys(self) -> None:
+        exit_code, report = self.run_validator(workflow_text(), state_json(include_post=False))
+        self.assertEqual(exit_code, 1)
+        repair = report["repair"]
+        self.assertEqual(repair["owner"], "orchestrator")
+        self.assertEqual(repair["retry"], "validate-autopilot-phase-coverage")
+        self.assertEqual(repair["failing_keys"], ["missing_state_post_items"])
+        exit_code, report = self.run_validator(workflow_text(), state_json())
+        self.assertEqual(exit_code, 0)
+        self.assertIsNone(report["repair"])
+
+
 if __name__ == "__main__":
-    suite = unittest.defaultTestLoader.loadTestsFromTestCase(AutopilotPhaseCoverageTests)
+    suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case)
+                               for case in (AutopilotPhaseCoverageTests, AutopilotPhaseCoverageRepairTests))
     result = unittest.TextTestRunner(verbosity=1).run(suite)
     total = result.testsRun
     failed = len(result.failures) + len(result.errors)

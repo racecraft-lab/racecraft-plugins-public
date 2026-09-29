@@ -310,9 +310,30 @@ def command_stdin_fixture(command: str) -> Path:
     return REPO_ROOT / stdin_path
 
 
-class ReadOnlyHelperTests(unittest.TestCase):
+class _ReadOnlyHelperRunner:
+    """Shared fixture for the tests below."""
+
     helper_filter: str | None = None
 
+    def run_plan_layers(
+        self,
+        feature_dir: str,
+    ) -> tuple[subprocess.CompletedProcess[str], dict[str, object], dict[str, object]]:
+        completed, response, stderr_records = run_runner(
+            helper_request("plan-layers-feature-dir", {"feature_dir": feature_dir})
+        )
+        self.assertEqual(completed.returncode, response["exit_code"])
+        self.assertEqual(
+            [diag["code"] for diag in stderr_records],
+            [diag["code"] for diag in response["diagnostics"]],
+        )
+        planner = response["data"]["stdout_json"]
+        self.assertEqual(planner["tool"], "plan-layers")
+        self.assertEqual(planner["contract_version"], 1)
+        return completed, response, planner
+
+
+class ReadOnlyHelperTests(_ReadOnlyHelperRunner, unittest.TestCase):
     def test_validate_agent_install_rejects_invalid_surface_or_loaded_root(self) -> None:
         if self.helper_filter and self.helper_filter != "validate-agent-install":
             self.skipTest("validate-agent-install cases use validate-agent-install")
@@ -633,23 +654,6 @@ class ReadOnlyHelperTests(unittest.TestCase):
             expected_json,
             f"FAIL detail: {helper_id} JSON stdout mismatch: actual_json={actual_json!r}; expected_json={expected_json!r}; actual={actual!r}; expected={expected!r}",
         )
-
-    def run_plan_layers(
-        self,
-        feature_dir: str,
-    ) -> tuple[subprocess.CompletedProcess[str], dict[str, object], dict[str, object]]:
-        completed, response, stderr_records = run_runner(
-            helper_request("plan-layers-feature-dir", {"feature_dir": feature_dir})
-        )
-        self.assertEqual(completed.returncode, response["exit_code"])
-        self.assertEqual(
-            [diag["code"] for diag in stderr_records],
-            [diag["code"] for diag in response["diagnostics"]],
-        )
-        planner = response["data"]["stdout_json"]
-        self.assertEqual(planner["tool"], "plan-layers")
-        self.assertEqual(planner["contract_version"], 1)
-        return completed, response, planner
 
     def test_registry_dispatch_lists_only_read_only_helpers(self) -> None:
         if self.helper_filter and self.helper_filter != "helper-registry-dispatch":
@@ -1908,6 +1912,7 @@ class ReadOnlyHelperTests(unittest.TestCase):
         self.assertTrue(all(not root.exists() for root in roots))
 
     ANALYSIS_HEADER = ("| ID | Severity | Issue | Resolution |", "|----|----------|-------|------------|")
+
     SEVERITY_LEGEND = "\n".join(
         (
             "| Severity | Meaning | Action Required |",
@@ -3512,6 +3517,7 @@ class ReadOnlyHelperTests(unittest.TestCase):
         + "## Phase 3: User Story 1\n\n"
         + "- [ ] T003 [US1] Implement the parser in src/parser.py\n"
     )
+
     G5_LOOP_DEPENDS = {"T001": [], "T002": ["T001"], "T003": ["T002"]}
 
     def test_validate_gate_g5_rejects_a_gate_task_that_waits_on_its_dependents(self) -> None:
@@ -4313,33 +4319,6 @@ class ReadOnlyHelperTests(unittest.TestCase):
             {"duplicate_task_id", "duplicate_increment_id", "malformed_task"},
         )
 
-    def test_plan_layers_invalid_plan_routes_tasks_md_repair_to_the_phase_executor(self) -> None:
-        if self.helper_filter and self.helper_filter != "plan-layers-feature-dir":
-            self.skipTest("plan-layers repair route case")
-        _, _, planner = self.run_plan_layers(f"{PLAN_LAYERS_FIXTURE_DIR}/dependency-cycle")
-        self.assertEqual(planner["status"], "invalid_plan")
-        repair = planner["repair"]
-        self.assertEqual(repair["owner"], "phase-executor")
-        self.assertEqual(repair["target"], f"{PLAN_LAYERS_FIXTURE_DIR}/dependency-cycle/tasks.md")
-        self.assertEqual(repair["retry"], "plan-layers-feature-dir")
-        self.assertNotIn("repair", self.run_plan_layers(f"{PLAN_LAYERS_FIXTURE_DIR}/valid-real")[2])
-
-    def test_plan_layers_input_error_routes_by_what_is_missing(self) -> None:
-        if self.helper_filter and self.helper_filter != "plan-layers-feature-dir":
-            self.skipTest("plan-layers input-error repair route case")
-        cases = (
-            (PLAN_LAYERS_FIXTURE_DIR, "tasks_file_missing", "phase-executor"),
-            (f"{PLAN_LAYERS_FIXTURE_DIR}/no-such-feature", "feature_dir_not_found", "orchestrator"),
-        )
-        for feature_dir, code, owner in cases:
-            with self.subTest(code=code):
-                completed, response, planner = self.run_plan_layers(feature_dir)
-                self.assertEqual(completed.returncode, 2)
-                self.assertEqual(planner["status"], "input_error")
-                self.assertEqual(planner["errors"][0]["code"], code)
-                self.assertEqual(planner["repair"]["owner"], owner)
-                self.assertEqual(planner["repair"]["retry"], "plan-layers-feature-dir")
-
     def test_plan_layers_repository_bash_confinement_preserves_increment_contract(self) -> None:
         if self.helper_filter and self.helper_filter != "plan-layers-feature-dir":
             self.skipTest("plan-layers repository Bash confinement case")
@@ -4423,11 +4402,9 @@ class ReadOnlyHelperTests(unittest.TestCase):
                 if helper_id == "finalize-run":
                     self.assert_response(response, "ok", 0)
                     self.assertFalse(data["writes_state"])
-                    # The fixture ledger holds a deferral whose escalation tiers all failed: the run finalizes
-                    # ready for review and lists that unit under "Decisions for you".
-                    self.assertEqual(data["outcome"], "complete_with_deferred")
-                    self.assertEqual(data["ready_commands"], ["gh pr ready 101", "gh pr ready 102"])
-                    self.assertEqual([decision["class"] for decision in data["decisions"]], ["exhausted"])
+                    # The fixture deferral failed every escalation tier: the run finalizes ready for review.
+                    self.assertEqual((data["outcome"], data["ready_commands"], [d["class"] for d in data["decisions"]]),
+                                     ("complete_with_deferred", ["gh pr ready 101", "gh pr ready 102"], ["exhausted"]))
                     self.assertEqual(stderr_records, [])
                     continue
                 if helper_id == "ratify-pr-split":
@@ -4479,12 +4456,44 @@ class ReadOnlyHelperTests(unittest.TestCase):
                 self.assert_response(response, expected_status, expected_code)
 
 
+class PlanLayersRepairRouteTests(_ReadOnlyHelperRunner, unittest.TestCase):
+    """A plan-layers failure routes its repair to the agent that owns the fix."""
+
+    def test_plan_layers_invalid_plan_routes_tasks_md_repair_to_the_phase_executor(self) -> None:
+        if self.helper_filter and self.helper_filter != "plan-layers-feature-dir":
+            self.skipTest("plan-layers repair route case")
+        _, _, planner = self.run_plan_layers(f"{PLAN_LAYERS_FIXTURE_DIR}/dependency-cycle")
+        self.assertEqual(planner["status"], "invalid_plan")
+        repair = planner["repair"]
+        self.assertEqual(repair["owner"], "phase-executor")
+        self.assertEqual(repair["target"], f"{PLAN_LAYERS_FIXTURE_DIR}/dependency-cycle/tasks.md")
+        self.assertEqual(repair["retry"], "plan-layers-feature-dir")
+        self.assertNotIn("repair", self.run_plan_layers(f"{PLAN_LAYERS_FIXTURE_DIR}/valid-real")[2])
+
+    def test_plan_layers_input_error_routes_by_what_is_missing(self) -> None:
+        if self.helper_filter and self.helper_filter != "plan-layers-feature-dir":
+            self.skipTest("plan-layers input-error repair route case")
+        cases = (
+            (PLAN_LAYERS_FIXTURE_DIR, "tasks_file_missing", "phase-executor"),
+            (f"{PLAN_LAYERS_FIXTURE_DIR}/no-such-feature", "feature_dir_not_found", "orchestrator"),
+        )
+        for feature_dir, code, owner in cases:
+            with self.subTest(code=code):
+                completed, response, planner = self.run_plan_layers(feature_dir)
+                self.assertEqual(completed.returncode, 2)
+                self.assertEqual(planner["status"], "input_error")
+                self.assertEqual(planner["errors"][0]["code"], code)
+                self.assertEqual(planner["repair"]["owner"], owner)
+                self.assertEqual(planner["repair"]["retry"], "plan-layers-feature-dir")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--helper", choices=EXPECTED_HELPERS)
     args = parser.parse_args()
-    ReadOnlyHelperTests.helper_filter = args.helper
-    suite = unittest.defaultTestLoader.loadTestsFromTestCase(ReadOnlyHelperTests)
+    _ReadOnlyHelperRunner.helper_filter = args.helper
+    suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case)
+                               for case in (ReadOnlyHelperTests, PlanLayersRepairRouteTests))
     result = unittest.TextTestRunner(verbosity=1).run(suite)
     total = result.testsRun
     failed = len(result.failures) + len(result.errors)

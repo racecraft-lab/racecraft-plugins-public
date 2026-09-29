@@ -27,6 +27,7 @@ TEST_ROOT = REPO_ROOT / "tests" / "speckit-pro"
 FIXTURE_ROOT = TEST_ROOT / "evals" / "fixtures" / "functional" / "corrective-authorization"
 sys.path.insert(0, str(TEST_ROOT / "lib"))
 
+from git_fixture import commit_baseline  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
 
@@ -53,20 +54,18 @@ def _field(value: object, dotted: str) -> object:
     return value
 
 
-class CorrectiveAuthorizationReplayTests(unittest.TestCase):
-    def setUp(self) -> None:
-        self.reset_repository()
+class _ReplayRunner:
+    """Shared fixture for the tests below."""
 
-    def reset_repository(self) -> None:
-        """Give each scenario a fresh consumer repository and no ledger."""
-        temporary = tempfile.TemporaryDirectory()
-        self.addCleanup(temporary.cleanup)
-        self.root = Path(temporary.name)
-        (self.root / ".specify").mkdir()
-        (self.root / "feature").mkdir()
-        shutil.copyfile(FIXTURE_ROOT / "workflow.md", self.root / WORKFLOW)
-        self.ledger: dict | None = None
-        self.ledger_path: Path | None = None
+    def run_runner(self, request: dict) -> tuple[int, dict]:
+        environment = {**os.environ, "PYTHONPATH": str(REPO_ROOT / "speckit-pro"),
+                       "PYTHONDONTWRITEBYTECODE": "1"}
+        completed = subprocess.run(
+            [sys.executable, "-B", "-m", "speckit_pro_runner"], cwd=self.root,
+            env=environment, input=json.dumps(request), text=True,
+            capture_output=True, timeout=60, check=False, shell=False,
+        )
+        return completed.returncode, json.loads(completed.stdout)
 
     def resolve(self, value: object) -> object:
         if isinstance(value, dict):
@@ -90,26 +89,6 @@ class CorrectiveAuthorizationReplayTests(unittest.TestCase):
             return self.ledger["dispatches"][value.split(":", 1)[1]]["reservation_id"]
         raise AssertionError(f"unknown fixture token {value}")
 
-    def run_runner(self, request: dict) -> tuple[int, dict]:
-        environment = {**os.environ, "PYTHONPATH": str(REPO_ROOT / "speckit-pro"),
-                       "PYTHONDONTWRITEBYTECODE": "1"}
-        completed = subprocess.run(
-            [sys.executable, "-B", "-m", "speckit_pro_runner"], cwd=self.root,
-            env=environment, input=json.dumps(request), text=True,
-            capture_output=True, timeout=60, check=False, shell=False,
-        )
-        return completed.returncode, json.loads(completed.stdout)
-
-    def send(self, step: dict) -> tuple[int, dict]:
-        binding = {"expected_run_id": self.ledger["run_id"]} if self.ledger else {}
-        request = {
-            "schema_version": "1.0", "helper_id": step.get("helper", "execution-control"),
-            "operation": step.get("helper", "execution-control"), "mode": step.get("mode", "apply"),
-            "inputs": {"workflow_file": WORKFLOW, "action": step["action"], **binding,
-                       **self.resolve(step.get("inputs", {}))},
-        }
-        return self.run_runner(request)
-
     def finalize(self, step: dict) -> None:
         """Send the run's end-of-run request through the read-only `finalize-run` helper."""
         inputs = {"ledger_path": self.ledger_path.relative_to(self.root).as_posix(),
@@ -124,6 +103,10 @@ class CorrectiveAuthorizationReplayTests(unittest.TestCase):
             self.assertEqual(result[key], expected, key)
         for text in step["expect"].get("request_omits", []):
             self.assertNotIn(text, result["end_of_run_request"])
+
+
+class _ReplayStaging(_ReplayRunner):
+    """Shared fixture for the tests below."""
 
     def place_spec(self, name: str) -> None:
         target = self.root / SPEC
@@ -147,20 +130,52 @@ class CorrectiveAuthorizationReplayTests(unittest.TestCase):
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(FIXTURE_ROOT / source, target)
 
-    def git_baseline(self) -> None:
-        """Commit the staged files so HEAD holds the task-definition baseline."""
-        environment = {**os.environ, "GIT_CONFIG_GLOBAL": os.devnull, "GIT_CONFIG_NOSYSTEM": "1"}
-        if not (self.root / ".git").exists():
-            subprocess.run(["git", "init", "-q", str(self.root)], check=True, env=environment)
-        subprocess.run(["git", "-C", str(self.root), "add", "-A"], check=True, env=environment)
-        subprocess.run(["git", "-C", str(self.root), "-c", "user.name=fixture", "-c", "user.email=git@github.com",
-                        "-c", "commit.gpgsign=false", "commit", "-q", "--allow-empty", "-m", "baseline"],
-                       check=True, env=environment)
-
     def write(self, files: dict[str, str]) -> None:
         for destination, text in files.items():
             (self.root / destination).parent.mkdir(parents=True, exist_ok=True)
             (self.root / destination).write_text(text, encoding="utf-8")
+
+    def run_staging_step(self, step: dict) -> bool:
+        """Run a fixture-staging step; False when the step is a runner request instead."""
+        if "place_spec" in step:
+            self.place_spec(step["place_spec"])
+        elif "place_check" in step:
+            self.place_check(step["place_check"], step.get("exit_code", 1))
+        elif "stage" in step:
+            self.stage(step["stage"])
+        elif "write" in step:
+            self.write(step["write"])
+        elif "git" in step:
+            self.assertEqual(step["git"], "baseline")
+            commit_baseline(self.root)
+        else:
+            return False
+        return True
+
+class CorrectiveAuthorizationReplayTests(_ReplayStaging, unittest.TestCase):
+    def setUp(self) -> None:
+        self.reset_repository()
+
+    def reset_repository(self) -> None:
+        """Give each scenario a fresh consumer repository and no ledger."""
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        self.root = Path(temporary.name)
+        (self.root / ".specify").mkdir()
+        (self.root / "feature").mkdir()
+        shutil.copyfile(FIXTURE_ROOT / "workflow.md", self.root / WORKFLOW)
+        self.ledger: dict | None = None
+        self.ledger_path: Path | None = None
+
+    def send(self, step: dict) -> tuple[int, dict]:
+        binding = {"expected_run_id": self.ledger["run_id"]} if self.ledger else {}
+        request = {
+            "schema_version": "1.0", "helper_id": step.get("helper", "execution-control"),
+            "operation": step.get("helper", "execution-control"), "mode": step.get("mode", "apply"),
+            "inputs": {"workflow_file": WORKFLOW, "action": step["action"], **binding,
+                       **self.resolve(step.get("inputs", {}))},
+        }
+        return self.run_runner(request)
 
     def check_step(self, step: dict) -> None:
         before_ledger = self.ledger
@@ -199,21 +214,8 @@ class CorrectiveAuthorizationReplayTests(unittest.TestCase):
             self.reset_repository()
             for step in scenario["steps"]:
                 with self.subTest(scenario=name, step=step["id"]):
-                    if "place_spec" in step:
-                        self.place_spec(step["place_spec"])
-                    elif "place_check" in step:
-                        self.place_check(step["place_check"], step.get("exit_code", 1))
-                    elif "stage" in step:
-                        self.stage(step["stage"])
-                    elif "write" in step:
-                        self.write(step["write"])
-                    elif "finalize" in step:
-                        self.finalize(step)
-                    elif "git" in step:
-                        self.assertEqual(step["git"], "baseline")
-                        self.git_baseline()
-                    else:
-                        self.check_step(step)
+                    if not self.run_staging_step(step):
+                        (self.finalize if "finalize" in step else self.check_step)(step)
 
     def test_unit_scoped_unknown_outcome_scenarios_replay_against_the_shipped_runner(self) -> None:
         self.replay(UNIT_SCENARIOS)

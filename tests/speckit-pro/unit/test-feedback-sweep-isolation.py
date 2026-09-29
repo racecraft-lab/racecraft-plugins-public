@@ -26,29 +26,12 @@ for import_root in (PLUGIN_ROOT, LIB_DIR):
     if str(import_root) not in sys.path:
         sys.path.insert(0, str(import_root))
 
+from git_fixture import git_stdout
 from test_result import run_counted  # noqa: E402
 from speckit_pro_runner import sweep_isolation  # noqa: E402
 from speckit_pro_runner import sweep_broker  # noqa: E402
 from speckit_pro_runner import sweep_launcher  # noqa: E402
 from speckit_pro_runner.helpers import read_only, registry  # noqa: E402
-
-
-def git(repo: Path, *args: str) -> str:
-    completed = subprocess.run(
-        ["git", *args],
-        cwd=repo,
-        text=True,
-        capture_output=True,
-        check=False,
-        env={
-            "PATH": os.environ.get("PATH", ""),
-            "GIT_CONFIG_NOSYSTEM": "1",
-            "GIT_CONFIG_GLOBAL": os.devnull,
-        },
-    )
-    if completed.returncode != 0:
-        raise AssertionError(f"git {' '.join(args)} failed: {completed.stderr}")
-    return completed.stdout.strip()
 
 
 def issuer_secret_cases() -> tuple[str, ...]:
@@ -69,9 +52,9 @@ class GitFixture:
         self.temp = tempfile.TemporaryDirectory(prefix="sweep-isolation-")
         self.root = Path(self.temp.name) / "repo"
         self.root.mkdir()
-        git(self.root, "init", "-q")
-        git(self.root, "config", "user.name", "Sweep Test")
-        git(self.root, "config", "user.email", "sweep.invalid")
+        git_stdout(self.root, "init", "-q")
+        git_stdout(self.root, "config", "user.name", "Sweep Test")
+        git_stdout(self.root, "config", "user.email", "sweep.invalid")
 
     def close(self) -> None:
         self.temp.cleanup()
@@ -86,9 +69,9 @@ class GitFixture:
         return target
 
     def commit(self, message: str = "fixture") -> str:
-        git(self.root, "add", "-A")
-        git(self.root, "commit", "-qm", message)
-        return git(self.root, "rev-parse", "HEAD")
+        git_stdout(self.root, "add", "-A")
+        git_stdout(self.root, "commit", "-qm", message)
+        return git_stdout(self.root, "rev-parse", "HEAD")
 
 
 class SnapshotIsolationTests(unittest.TestCase):
@@ -108,10 +91,10 @@ class SnapshotIsolationTests(unittest.TestCase):
         self.fixture.write(".env", canary)
         os.environ["SPECKIT_SWEEP_TEST_CANARY"] = canary
         (self.fixture.root / "host-link").symlink_to(outside)
-        git(self.fixture.root, "add", "host-link")
-        git(self.fixture.root, "commit", "-qm", "tracked symlink")
+        git_stdout(self.fixture.root, "add", "host-link")
+        git_stdout(self.fixture.root, "commit", "-qm", "tracked symlink")
         sibling = Path(self.fixture.temp.name) / "sibling-worktree"
-        git(self.fixture.root, "worktree", "add", "-q", "-b", "sibling-test", str(sibling), "HEAD")
+        git_stdout(self.fixture.root, "worktree", "add", "-q", "-b", "sibling-test", str(sibling), "HEAD")
         (sibling / "sibling-canary.txt").write_text(canary, encoding="utf-8")
 
         snapshot = sweep_isolation.GitSnapshot.capture(self.fixture.root)
@@ -132,8 +115,8 @@ class SnapshotIsolationTests(unittest.TestCase):
         self.fixture.write("config/credentials.json", "{}\n")
         self.fixture.write("leaky.txt", f"API_TOKEN={canary}\n")
         head = self.fixture.commit()
-        git(self.fixture.root, "update-index", "--add", "--cacheinfo", f"160000,{head},vendor/module")
-        git(self.fixture.root, "commit", "-qm", "gitlink")
+        git_stdout(self.fixture.root, "update-index", "--add", "--cacheinfo", f"160000,{head},vendor/module")
+        git_stdout(self.fixture.root, "commit", "-qm", "gitlink")
 
         snapshot = sweep_isolation.GitSnapshot.capture(self.fixture.root)
         listed = {entry["path"] for entry in snapshot.list()}
@@ -215,25 +198,23 @@ class SweepSessionCase(unittest.TestCase):
         self.fixture.close()
 
     def classifier(self, **overrides: object) -> dict[str, object]:
-        record: dict[str, object] = {
-            "comment_id": "RC_kwDO123",
-            "class": "amended",
-            "target": "plan.md",
-            "reason": "The plan needs the requested constraint.",
-        }
-        record.update(overrides)
-        return record
+        result = {"comment_id": "RC_kwDO123", "class": "amended", "target": "plan.md"}
+        result["reason"] = "The plan needs the requested constraint."
+        result.update(overrides)
+        return result
 
     def synthesis(self, **overrides: object) -> dict[str, object]:
-        record: dict[str, object] = {
-            "comment_id": "RC_kwDO123",
-            "outcome": "resolved",
-            "agreement": "3/3",
-            "basis": None,
-            "edit": {"file": "plan.md", "anchor": "old text", "replacement": "new text"},
-        }
-        record.update(overrides)
-        return record
+        result = {"comment_id": "RC_kwDO123", "outcome": "resolved", "agreement": "3/3", "basis": None}
+        result["edit"] = {"file": "plan.md", "anchor": "old text", "replacement": "new text"}
+        result.update(overrides)
+        return result
+
+    def human_review(self, basis: str) -> dict[str, object]:
+        return self.synthesis(outcome="human_review", agreement=None, basis=basis, edit=None)
+
+    def apply_receipt(self, receipt: object, mode: str) -> dict[str, object]:
+        return sweep_isolation.apply_synthesis_receipt(
+            self.fixture.root, "specs/001-safe", self.session, receipt, mode=mode)
 
 
 class SessionAndReceiptTests(SweepSessionCase):
@@ -596,9 +577,7 @@ class SessionAndReceiptTests(SweepSessionCase):
         before = target.read_bytes()
         duplicate = self.session.submit_result("synthesis", self.synthesis())
         with self.assertRaises(sweep_isolation.MutationViolation):
-            sweep_isolation.apply_synthesis_receipt(
-                self.fixture.root, "specs/001-safe", self.session, duplicate, mode="apply"
-            )
+            self.apply_receipt(duplicate, "apply")
         self.assertEqual(before, target.read_bytes())
 
         target.write_text("# Plan\nold text\n", encoding="utf-8")
@@ -606,9 +585,7 @@ class SessionAndReceiptTests(SweepSessionCase):
         secret_receipt = self.session.submit_result(
             "synthesis", self.synthesis(edit={"file": "plan.md", "anchor": "old text", "replacement": secret})
         )
-        result = sweep_isolation.apply_synthesis_receipt(
-            self.fixture.root, "specs/001-safe", self.session, secret_receipt, mode="apply"
-        )
+        result = self.apply_receipt(secret_receipt, "apply")
         self.assertEqual("applied_redacted", result["status"])
         self.assertNotIn(secret, target.read_text(encoding="utf-8"))
         self.assertNotIn(secret, json.dumps(result, sort_keys=True))
@@ -630,9 +607,7 @@ class SessionAndReceiptTests(SweepSessionCase):
             with self.subTest(edit=record["edit"]):
                 with self.assertRaises((sweep_isolation.SchemaViolation, sweep_isolation.MutationViolation)):
                     receipt = self.session.submit_result("synthesis", record)
-                    sweep_isolation.apply_synthesis_receipt(
-                        self.fixture.root, "specs/001-safe", self.session, receipt, mode="apply"
-                    )
+                    self.apply_receipt(receipt, "apply")
                 self.assertEqual(before, target.read_bytes())
 
     def test_mutation_preconditions_do_not_consume_a_valid_receipt(self) -> None:
@@ -645,9 +620,7 @@ class SessionAndReceiptTests(SweepSessionCase):
                 sweep_isolation.apply_synthesis_receipt(
                     other.root, "specs/001-safe", self.session, receipt, mode="apply"
                 )
-            result = sweep_isolation.apply_synthesis_receipt(
-                self.fixture.root, "specs/001-safe", self.session, receipt, mode="apply"
-            )
+            result = self.apply_receipt(receipt, "apply")
             self.assertEqual("applied", result["status"])
         finally:
             other.close()
@@ -697,7 +670,9 @@ class SessionAndReceiptTests(SweepSessionCase):
             )
 
 
-class Round3TiebreakTests(SweepSessionCase):
+class _Round3Fixture(SweepSessionCase):
+    """Shared fixture for the tests below."""
+
     def accept_consensus_prior(self, *, escape: bool = False) -> None:
         receipt = self.session.submit_result("classifier", self.classifier())
         self.session.accept_receipt(receipt, expected_stage="classifier")
@@ -718,15 +693,28 @@ class Round3TiebreakTests(SweepSessionCase):
     def accept_first_round_review(self, basis: str) -> dict[str, object]:
         receipt = self.session.submit_result(
             "synthesis",
-            self.synthesis(outcome="human_review", agreement=None, basis=basis, edit=None),
+            self.human_review(basis),
         )
-        return sweep_isolation.apply_synthesis_receipt(
-            self.fixture.root, "specs/001-safe", self.session, receipt, mode="apply"
-        )
+        return self.apply_receipt(receipt, "apply")
 
     def tiebreak(self, **overrides: object) -> dict[str, object]:
         return self.synthesis(agreement="tiebreak", **overrides)
 
+    def start_round_three(self, basis: str, *, escape: bool = False) -> None:
+        self.accept_consensus_prior(escape=escape)
+        self.accept_first_round_review(basis)
+
+    def assert_synthesis_refused(self, payload: dict[str, object]) -> None:
+        with self.assertRaises(sweep_isolation.SchemaViolation):
+            self.session.submit_result("synthesis", payload)
+
+    def assert_second_synthesis_refused(self, receipt: object) -> None:
+        self.apply_receipt(receipt, "dry_run")
+        with self.assertRaises(sweep_isolation.ReceiptViolation):
+            self.session.issue_capability("RC_kwDO123", stage="synthesis")
+
+
+class Round3TiebreakTests(_Round3Fixture):
     def test_round3_tiebreak_resolves_an_all_disagree_synthesis_through_a_fresh_call(self) -> None:
         self.accept_consensus_prior()
         first = self.accept_first_round_review("all_disagree")
@@ -740,9 +728,7 @@ class Round3TiebreakTests(SweepSessionCase):
         self.assertEqual(3, len(inputs["perspectives"]))
 
         receipt = self.session.submit_result("synthesis", self.tiebreak())
-        result = sweep_isolation.apply_synthesis_receipt(
-            self.fixture.root, "specs/001-safe", self.session, receipt, mode="apply"
-        )
+        result = self.apply_receipt(receipt, "apply")
         self.assertEqual("applied", result["status"])
         self.assertEqual(3, result["round"])
         self.assertEqual("# Plan\nnew text\n", (self.fixture.root / "specs/001-safe/plan.md").read_text())
@@ -750,71 +736,48 @@ class Round3TiebreakTests(SweepSessionCase):
 
     def test_round3_tiebreak_resolves_an_unresolved_escape_without_weakening_round_one(self) -> None:
         self.accept_consensus_prior(escape=True)
-        with self.assertRaises(sweep_isolation.SchemaViolation):
-            self.session.submit_result("synthesis", self.synthesis())
+        self.assert_synthesis_refused(self.synthesis())
         self.accept_first_round_review("escape_unresolved")
 
         inputs = self.session.consensus_inputs("RC_kwDO123", stage="synthesis")
         self.assertEqual("escape_unresolved", inputs["prior_basis"])
         receipt = self.session.submit_result("synthesis", self.tiebreak())
-        result = sweep_isolation.apply_synthesis_receipt(
-            self.fixture.root, "specs/001-safe", self.session, receipt, mode="dry_run"
-        )
+        result = self.apply_receipt(receipt, "dry_run")
         self.assertEqual("planned", result["status"])
         self.assertEqual(3, result["round"])
 
     def test_round3_scope_deferral_is_a_status_not_a_stop_and_writes_nothing(self) -> None:
-        self.accept_consensus_prior()
-        self.accept_first_round_review("all_disagree")
+        self.start_round_three("all_disagree")
         before = (self.fixture.root / "specs/001-safe/plan.md").read_bytes()
         receipt = self.session.submit_result(
             "synthesis",
-            self.synthesis(outcome="human_review", agreement=None, basis="scope_unsettled", edit=None),
+            self.human_review("scope_unsettled"),
         )
-        result = sweep_isolation.apply_synthesis_receipt(
-            self.fixture.root, "specs/001-safe", self.session, receipt, mode="apply"
-        )
+        result = self.apply_receipt(receipt, "apply")
         self.assertEqual(
             {"status": "scope_deferred", "comment_id": "RC_kwDO123", "head": self.head, "round": 3},
             result,
         )
         self.assertEqual(before, (self.fixture.root / "specs/001-safe/plan.md").read_bytes())
 
+
+class Round3TiebreakRefusalTests(_Round3Fixture):
+    """The round three call accepts only tiebreak values and runs once."""
+
     def test_tiebreak_values_are_refused_outside_a_round_three_call(self) -> None:
         self.accept_consensus_prior()
-        with self.assertRaises(sweep_isolation.SchemaViolation):
-            self.session.submit_result("synthesis", self.tiebreak())
-        with self.assertRaises(sweep_isolation.SchemaViolation):
-            self.session.submit_result(
-                "synthesis",
-                self.synthesis(outcome="human_review", agreement=None, basis="scope_unsettled", edit=None),
-            )
+        self.assert_synthesis_refused(self.tiebreak())
+        self.assert_synthesis_refused(self.human_review("scope_unsettled"))
 
     def test_round3_call_must_use_tiebreak_values_and_runs_once(self) -> None:
-        self.accept_consensus_prior()
-        self.accept_first_round_review("all_disagree")
-        with self.assertRaises(sweep_isolation.SchemaViolation):
-            self.session.submit_result("synthesis", self.synthesis())
-        with self.assertRaises(sweep_isolation.SchemaViolation):
-            self.session.submit_result(
-                "synthesis",
-                self.synthesis(outcome="human_review", agreement=None, basis="all_disagree", edit=None),
-            )
-        receipt = self.session.submit_result("synthesis", self.tiebreak())
-        sweep_isolation.apply_synthesis_receipt(
-            self.fixture.root, "specs/001-safe", self.session, receipt, mode="dry_run"
-        )
-        with self.assertRaises(sweep_isolation.ReceiptViolation):
-            self.session.issue_capability("RC_kwDO123", stage="synthesis")
+        self.start_round_three("all_disagree")
+        self.assert_synthesis_refused(self.synthesis())
+        self.assert_synthesis_refused(self.human_review("all_disagree"))
+        self.assert_second_synthesis_refused(self.session.submit_result("synthesis", self.tiebreak()))
 
     def test_a_resolved_synthesis_cannot_be_reopened_by_a_second_synthesis_call(self) -> None:
         self.accept_consensus_prior()
-        receipt = self.session.submit_result("synthesis", self.synthesis())
-        sweep_isolation.apply_synthesis_receipt(
-            self.fixture.root, "specs/001-safe", self.session, receipt, mode="dry_run"
-        )
-        with self.assertRaises(sweep_isolation.ReceiptViolation):
-            self.session.issue_capability("RC_kwDO123", stage="synthesis")
+        self.assert_second_synthesis_refused(self.session.submit_result("synthesis", self.synthesis()))
 
     def test_a_fresh_perspective_replaces_a_failed_one_and_reaches_synthesis(self) -> None:
         self.accept_consensus_prior()
