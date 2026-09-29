@@ -70,13 +70,12 @@ class StopReasonParityTests(unittest.TestCase):
                 )
 
     def test_eval_scan_reaches_the_expectation_files(self) -> None:
-        names = {path.name for path in _eval_files()}
-        self.assertIn("speckit-autopilot-evals.json", names)
-        self.assertIn("catalog.json", names)
-        roots = {path.relative_to(REPO_ROOT / "tests" / "speckit-pro").parts[:2] for path in _eval_files()}
-        self.assertIn(("layer3-functional", "evals"), roots)
-        self.assertIn(("layer3-functional", "codex-evals"), roots)
-        self.assertTrue(any(root[0] == "layer2-trigger" for root in roots))
+        files = _eval_files()
+        self.assertIn("catalog.json", {path.name for path in files})
+        hosts = {p.parent.name for p in files if p.name == "speckit-autopilot-evals.json"}
+        self.assertEqual(hosts, {"evals", "codex-evals"}, "scan both hosts' evals")
+        tests = REPO_ROOT / "tests" / "speckit-pro"
+        self.assertTrue(any(tests / "layer2-trigger" in path.parents for path in files))
 
     def test_runner_set_is_closed_and_classified(self) -> None:
         known = _runner_set()
