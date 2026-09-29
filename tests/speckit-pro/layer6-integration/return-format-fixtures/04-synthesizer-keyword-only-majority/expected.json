@@ -16,9 +16,9 @@
     {
       "subagent_type": "speckit-pro:consensus-synthesizer",
       "must_not_contain_any": [
-        "HUMAN REVIEW NEEDED"
+        "ROUND_3_TIEBREAK"
       ],
-      "rationale": "A keyword-only item with every analyst security_relevant: false follows the ordinary rule, so a 2/3 majority never stops for human review"
+      "rationale": "A keyword-only item with every analyst security_relevant: false follows the ordinary rule, so a 2/3 majority never flags the Round 3 tiebreak"
     },
     {
       "subagent_type": "speckit-pro:consensus-synthesizer",

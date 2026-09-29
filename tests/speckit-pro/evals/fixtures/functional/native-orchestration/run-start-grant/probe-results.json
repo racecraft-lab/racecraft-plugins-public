@@ -1,0 +1,11 @@
+{
+  "recorded_at": "run start, before Step -1 and before any phase work",
+  "phase_work_started": false,
+  "probes": [
+    {"id": "runner-request", "surface": "one no-op runner request", "result": "prompted"},
+    {"id": "git-status", "surface": "one git status", "result": "ok"},
+    {"id": "checkout-work", "surface": "standing policy class probe", "result": "ok"},
+    {"id": "pre-pr-audit", "surface": "declared pre-PR dependency audit", "result": "denied"},
+    {"id": "private-autonomy-record", "surface": "private record directory write", "result": "denied"}
+  ]
+}

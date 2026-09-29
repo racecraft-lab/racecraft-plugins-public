@@ -1,6 +1,6 @@
 {
   "fixture_id": "05-synthesizer-keyword-security-relevant",
-  "purpose": "Verify the consensus-synthesizer keeps the unanimity bar for a keyword-routed item when any analyst returns security_relevant: true, so a 2-of-3 majority flags human review.",
+  "purpose": "Verify the consensus-synthesizer keeps the unanimity bar for a keyword-routed item when any analyst returns security_relevant: true, so a 2-of-3 majority flags the Round 3 tiebreak instead of applying.",
   "must_dispatch_to": [
     "speckit-pro:consensus-synthesizer"
   ],
@@ -9,9 +9,9 @@
     {
       "subagent_type": "speckit-pro:consensus-synthesizer",
       "must_contain_any": [
-        "HUMAN REVIEW NEEDED"
+        "ROUND_3_TIEBREAK"
       ],
-      "rationale": "One analyst marked the item security-relevant, so only 3/3 applies and the 2/3 majority must stop for human review"
+      "rationale": "One analyst marked the item security-relevant, so only 3/3 applies and the 2/3 majority must flag the Round 3 tiebreak, not stop and not ask"
     },
     {
       "subagent_type": "speckit-pro:consensus-synthesizer",

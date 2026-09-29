@@ -150,15 +150,6 @@ class RatifyPrSplitTests(unittest.TestCase):
         data = _run(inputs)["data"]
         self.assertIn("group_added", _codes(data))
 
-    def test_over_budget_increment_needs_a_reviewability_exception(self) -> None:
-        for field, value in (("production_paths", 5), ("total_paths", 25)):
-            with self.subTest(field=field):
-                inputs = _fixture("preserving-split")
-                inputs["increments"][0][field] = value  # type: ignore[index]
-                data = _run(inputs)["data"]
-                self.assertEqual(data["decision"], "operator_required")
-                self.assertEqual(_codes(data), ["reviewability_exception_needed"])
-
     def test_invalid_input_fails_closed(self) -> None:
         base = _fixture("preserving-split")
 
@@ -188,11 +179,53 @@ class RatifyPrSplitTests(unittest.TestCase):
                 response = _run(inputs)
                 self.assertEqual(response["status"], "input_error", response)
                 self.assertEqual([item["code"] for item in response["diagnostics"]], ["invalid_input"])
+                remediation = response["diagnostics"][0]["remediation"]
+                self.assertNotIn("ask the operator", remediation["summary"].lower())
+                self.assertIn("regenerate the split evidence", remediation["summary"])
+                self.assertEqual(response["data"]["repair"]["owner"], "orchestrator")
 
     def test_fixture_request_is_ratified(self) -> None:
         request = json.loads(FIXTURE_REQUEST.read_text(encoding="utf-8"))
         self.assertEqual(request["helper_id"], HELPER_ID)
         self.assertEqual(_run(request["inputs"])["data"]["decision"], "autopilot_ratified")
+
+
+class RatifyPrSplitRepairTests(unittest.TestCase):
+    """A size finding is repaired by a re-slice while a scope change stays with the operator."""
+
+    def test_over_budget_increment_is_resliced_not_sent_to_the_operator(self) -> None:
+        for field, value in (("production_paths", 5), ("total_paths", 25)):
+            with self.subTest(field=field):
+                inputs = _fixture("preserving-split")
+                inputs["increments"][0][field] = value  # type: ignore[index]
+                data = _run(inputs)["data"]
+                self.assertEqual(data["decision"], "reslice_required")
+                self.assertEqual(data["owner_ratification"], "pending")
+                self.assertIsNone(data["ratified_by"])
+                self.assertEqual(_codes(data), ["reviewability_exception_needed"])
+                self.assertNotIn("stop_reason", data)
+                self.assertEqual(data["repair"]["owner"], "orchestrator")
+                self.assertEqual(data["repair"]["retry"], HELPER_ID)
+                self.assertIn("reviewability exception", data["repair"]["action"])
+
+    def test_scope_changing_findings_stay_with_the_operator_and_name_the_stop_reason(self) -> None:
+        from speckit_pro_runner.stop_policy import STOP_REASONS
+
+        self.assertIn("scope_changing_pr_split", STOP_REASONS)
+        for name in ("dropped-requirement", "reordered-groups"):
+            with self.subTest(fixture=name):
+                data = _run(_fixture(name))["data"]
+                self.assertEqual(data["decision"], "operator_required")
+                self.assertEqual(data["stop_reason"], "scope_changing_pr_split")
+                self.assertNotIn("repair", data)
+
+    def test_a_size_finding_beside_a_scope_finding_stays_with_the_operator(self) -> None:
+        inputs = _fixture("dropped-requirement")
+        inputs["increments"][0]["total_paths"] = 25  # type: ignore[index]
+        data = _run(inputs)["data"]
+        self.assertIn("reviewability_exception_needed", _codes(data))
+        self.assertEqual(data["decision"], "operator_required")
+        self.assertEqual(data["stop_reason"], "scope_changing_pr_split")
 
 
 class SplitRatificationSourceContractTests(unittest.TestCase):
@@ -244,6 +277,7 @@ if __name__ == "__main__":
     suite = unittest.TestSuite(
         [
             loader.loadTestsFromTestCase(RatifyPrSplitTests),
+            loader.loadTestsFromTestCase(RatifyPrSplitRepairTests),
             loader.loadTestsFromTestCase(SplitRatificationSourceContractTests),
         ]
     )

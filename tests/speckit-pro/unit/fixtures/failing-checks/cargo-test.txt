@@ -1,0 +1,31 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 2.65s
+     Running unittests src/lib.rs (target/debug/deps/demo-f5198af510ba1dec)
+
+running 3 tests
+test tests::adds ... ok
+test tests::nested_path_bad ... FAILED
+test tests::subs ... FAILED
+
+failures:
+
+---- tests::nested_path_bad stdout ----
+
+thread 'tests::nested_path_bad' (152733296) panicked at src/lib.rs:5:36:
+boom
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- tests::subs stdout ----
+
+thread 'tests::subs' (152733297) panicked at src/lib.rs:4:25:
+assertion `left == right` failed
+  left: 1
+ right: 2
+
+
+failures:
+    tests::nested_path_bad
+    tests::subs
+
+test result: FAILED. 1 passed; 2 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `--lib`

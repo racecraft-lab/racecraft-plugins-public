@@ -11,7 +11,11 @@ writes a file.
 With `scope=standing` it renders one repository-scoped fragment instead, for
 the operator to install once at setup. It pre-authorizes the ordinary actions
 of any ratified autopilot plan in that repository and keeps the same human
-stops, so a covered preflight needs no per-run question.
+stops, so a covered preflight needs no per-run question. Its `derived_classes`
+input takes the `policy_classes` that `check-gate-preflight-coverage` derives
+from each gate's egress need, so a pre-PR audit sits inside the one policy.
+Each class names a `probe`: the harmless call the run makes before Phase 1 to
+learn whether that class would stop it midway.
 """
 
 from __future__ import annotations
@@ -23,7 +27,9 @@ from typing import Any
 from ..envelope import diagnostic, response
 
 ALLOWED_INPUTS = frozenset({"repository", "default_branch", "actions"})
-STANDING_INPUTS = frozenset({"scope", "repository", "default_branch", "installed_extra_policy"})
+STANDING_INPUTS = frozenset({"scope", "repository", "default_branch", "installed_extra_policy", "derived_classes"})
+DERIVED_FIELDS = frozenset({"class_id", "gate", "target", "effect", "probe"})
+DERIVED_REQUIRED = ("class_id", "gate", "target", "effect")
 SCOPES = ("run", "standing")
 ACTION_FIELDS = frozenset({"action_id", "target", "effect", "purpose"})
 ACTION_ID = re.compile(r"^[a-z0-9][a-z0-9._-]*$")
@@ -75,36 +81,69 @@ def _actions(value: Any) -> list[dict[str, str]]:
     return actions
 
 
-def _standing_classes(repository: str, default_branch: str) -> list[dict[str, str]]:
-    """The ordinary actions every ratified autopilot plan in the repository needs."""
+def _derived_classes(value: Any, base_ids: set[str]) -> list[dict[str, str]]:
+    if not isinstance(value, list):
+        raise _InvalidInput("derived_classes must be the policy_classes list check-gate-preflight-coverage returns")
+    classes: list[dict[str, str]] = []
+    seen = set(base_ids)
+    for index, raw in enumerate(value):
+        if not isinstance(raw, dict):
+            raise _InvalidInput(f"derived_classes[{index}] must be an object")
+        unknown = sorted(set(raw) - DERIVED_FIELDS)
+        if unknown:
+            raise _InvalidInput(f"derived_classes[{index}] has unknown fields: {', '.join(unknown)}")
+        item = {key: _text(raw.get(key), f"derived_classes[{index}].{key}") for key in DERIVED_REQUIRED}
+        if not ACTION_ID.match(item["class_id"]):
+            raise _InvalidInput(f"derived_classes[{index}].class_id must match {ACTION_ID.pattern}")
+        if item["class_id"] in seen:
+            raise _InvalidInput(f"derived_classes[{index}].class_id repeats {item['class_id']}")
+        seen.add(item["class_id"])
+        if "probe" in raw:
+            item["probe"] = _text(raw["probe"], f"derived_classes[{index}].probe")
+        classes.append(item)
+    return classes
+
+
+def _standing_classes(repository: str, default_branch: str,
+                      derived: list[dict[str, str]] | None = None) -> list[dict[str, str]]:
+    """The ordinary actions every ratified autopilot plan in the repository needs, plus derived gate classes."""
+    return [*_base_classes(repository, default_branch), *(derived or [])]
+
+
+def _base_classes(repository: str, default_branch: str) -> list[dict[str, str]]:
     return [
         {
             "class_id": "checkout-work",
             "target": "the in-scope checkout itself; nothing leaves the machine",
             "effect": "source, test, and documentation edits, verification runs, and local commits",
+            "probe": "git status --porcelain",
         },
         {
             "class_id": "feature-branch-push",
             "target": f"the in-scope checkout's origin remote ({repository} on GitHub), "
             + f"any branch other than {default_branch}",
             "effect": "committed repository content, pushed with a plain fast-forward push",
+            "probe": "git ls-remote --heads origin",
         },
         {
             "class_id": "pull-request-activity",
             "target": f"pull requests, reviews, and review threads on https://github.com/{repository}",
             "effect": "pull-request titles, bodies, labels, review replies, and thread resolutions "
             + "written from repository content",
+            "probe": f"gh pr list --repo {repository} --limit 1",
         },
         {
             "class_id": "public-docs-research",
             "target": "public documentation and web search services",
             "effect": "search queries that name public libraries, tools, and APIs, never repository "
             + "files or private project text",
+            "probe": "runner helper research-broker-preflight",
         },
         {
             "class_id": "local-offline-audit",
             "target": "an operator-owned worker on this machine, reached over a loopback address or local socket",
             "effect": "repository content sent for an offline audit or review",
+            "probe": "delegate_health, only when the plan delegates work to the local worker",
         },
     ]
 
@@ -210,12 +249,12 @@ def render_extra_policy_fragment(repository: str, default_branch: str, actions: 
     )
 
 
-def render_standing_policy(repository: str, default_branch: str) -> str:
+def render_standing_policy(repository: str, default_branch: str, derived: list[dict[str, str]] | None = None) -> str:
     """The standing policy text, exactly as it sits inside extra_policy."""
     grants = [
         f"- {item['class_id']}: Payload: {item['effect']}, from an in-scope checkout. "
         + f"Destination: {item['target']}. Only this payload to this destination."
-        for item in _standing_classes(repository, default_branch)
+        for item in _standing_classes(repository, default_branch, derived)
     ]
     body = _policy_body(
         repository,
@@ -263,9 +302,11 @@ def _run_standing(entry: Any, request: Any, inputs: dict[str, Any]) -> dict[str,
         installed_text = inputs.get("installed_extra_policy")
         if installed_text is not None and not isinstance(installed_text, str):
             raise _InvalidInput("installed_extra_policy must be the extra_policy string from the user-level config")
+        derived = _derived_classes(inputs.get("derived_classes", []),
+                                   {item["class_id"] for item in _base_classes(repository, default_branch)})
     except _InvalidInput as error:
         return _input_error(request, str(error))
-    policy = render_standing_policy(repository, default_branch)
+    policy = render_standing_policy(repository, default_branch, derived)
     return response(
         "ok",
         request_id=request.request_id,
@@ -274,7 +315,7 @@ def _run_standing(entry: Any, request: Any, inputs: dict[str, Any]) -> dict[str,
             "operation": entry.operation,
             "writes_state": False,
             "scope": "standing",
-            "policy_classes": _standing_classes(repository, default_branch),
+            "policy_classes": _standing_classes(repository, default_branch, derived),
             "standing_policy_sha256": "sha256:" + hashlib.sha256(policy.encode("utf-8")).hexdigest(),
             "installed": isinstance(installed_text, str) and policy in installed_text,
             "extra_policy_fragment": _fragment(policy.split("\n")),

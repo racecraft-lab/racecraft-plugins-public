@@ -6,16 +6,44 @@
   "authorization_granted": false,
   "checkpoint_at": 1000.0,
   "corrective_cycles": 1,
+  "deferred": [
+    {
+      "deferred_at": 1000.0,
+      "dispatch_id": "fix-a-again",
+      "reason": "failure_family_budget_exhausted",
+      "unit": "FR-001",
+      "unit_kind": "failure_family"
+    }
+  ],
   "dispatches": {
-    "fix-a": {
-      "completed_at": 1000.0,
-      "kind": "corrective",
-      "outcome": "completed",
-      "reconciliations": 0,
-      "reservation_id": "reservation-fix-a",
-      "reserved_at": 1000.0
+    "escalate-fr-001-tier-2": {"completed_at": 1000.0, "escalation": "failure_family:FR-001", "escalation_tier": 2, "kind": "corrective", "outcome": "failed", "reconciliations": 0, "reservation_id": null, "reserved_at": 1000.0},
+    "escalate-fr-001-tier-3": {"completed_at": 1000.0, "escalation": "failure_family:FR-001", "escalation_tier": 3, "kind": "corrective", "outcome": "failed", "reconciliations": 0, "reservation_id": null, "reserved_at": 1000.0},
+    "fix-a": {"completed_at": 1000.0, "kind": "corrective", "outcome": "completed", "reconciliations": 0, "reservation_id": "reservation-fix-a", "reserved_at": 1000.0},
+    "verify-1": {"completed_at": 1000.0, "failing_checks": {"checks_run": null, "command_id": "UNIT_TEST", "command_sha256": "fe6c174d7d2f0e26d07999b29f7a42d8743b45cd0176884a0fdd357869ed0798", "failing": [], "format": "passed", "head_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "output_sha256": "0000000000000000000000000000000000000000000000000000000000000000", "passing": null, "recorded_at": 1000.0, "worktree_clean": true}, "kind": "verification", "outcome": "completed", "reconciliations": 0, "reservation_id": null, "reserved_at": 1000.0},
+    "verify-2": {"completed_at": 1000.0, "failing_checks": {"checks_run": null, "command_id": "UNIT_TEST", "command_sha256": "a1fed9f3a0779e3da01c57793de0bcd2d10fc9f4ff1720ab0e0dfe98953116ae", "failing": [], "format": "passed", "head_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "output_sha256": "0000000000000000000000000000000000000000000000000000000000000000", "passing": null, "recorded_at": 1000.0, "worktree_clean": true}, "kind": "verification", "outcome": "completed", "reconciliations": 0, "reservation_id": null, "reserved_at": 1000.0},
+    "verify-3": {"completed_at": 1000.0, "failing_checks": {"checks_run": null, "command_id": "UNIT_TEST", "command_sha256": "fe6c174d7d2f0e26d07999b29f7a42d8743b45cd0176884a0fdd357869ed0798", "failing": [], "format": "passed", "head_sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", "output_sha256": "0000000000000000000000000000000000000000000000000000000000000000", "passing": null, "recorded_at": 1000.0, "worktree_clean": true}, "kind": "verification", "outcome": "completed", "reconciliations": 0, "reservation_id": null, "reserved_at": 1000.0},
+    "verify-4": {"completed_at": 1000.0, "failing_checks": {"checks_run": null, "command_id": "UNIT_TEST", "command_sha256": "a1fed9f3a0779e3da01c57793de0bcd2d10fc9f4ff1720ab0e0dfe98953116ae", "failing": [], "format": "passed", "head_sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", "output_sha256": "0000000000000000000000000000000000000000000000000000000000000000", "passing": null, "recorded_at": 1000.0, "worktree_clean": true}, "kind": "verification", "outcome": "completed", "reconciliations": 0, "reservation_id": null, "reserved_at": 1000.0}
+  },
+  "escalation_allowances": {
+    "failure_family:FR-001": {
+      "dispatches": [
+        {
+          "dispatch_id": "escalate-fr-001-tier-2",
+          "reserved_at": 1000.0,
+          "tier": 2
+        },
+        {
+          "dispatch_id": "escalate-fr-001-tier-3",
+          "reserved_at": 1000.0,
+          "tier": 3
+        }
+      ],
+      "tier": 3,
+      "unit": "FR-001",
+      "unit_kind": "failure_family"
     }
   },
+  "escalation_tier3_cap": 3,
   "excluded_intervals": [],
   "last_observed_at": 1000.0,
   "reservations": {
@@ -33,14 +61,5 @@
     "current_workflow_file": "feature/workflow.md",
     "original_workflow_file": "feature/workflow.md",
     "relocation_event_ids": []
-  },
-  "deferred": [
-    {
-      "dispatch_id": "fix-a-again",
-      "reason": "failure_family_budget_exhausted",
-      "unit_kind": "failure_family",
-      "unit": "FR-001",
-      "deferred_at": 1000.0
-    }
-  ]
+  }
 }
