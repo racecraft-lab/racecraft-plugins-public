@@ -4,14 +4,14 @@ from __future__ import annotations
 
 import hashlib
 import json
-import os
 import re
-import tempfile
 from pathlib import Path
 from typing import Any
 
-from .catalog import EVIDENCE_PATH, FormalError, confined, digest, read_json
-from .selection import SelectionError, next_fence, selection_from_workflow
+from ..strict_input import SelectionError, next_fence
+from .primitives import EVIDENCE_PATH, FormalError, atomic_record, confined, digest, read_json
+from .selection import selection_from_workflow
+from .traces import selected_paths
 
 CHECKPOINT_ROWS = {"plan": "Plan model authoring and G3", "planning": "Planning reconciliation", "final": "Final model and optional trace checks", "post": "Post integration"}
 
@@ -31,24 +31,11 @@ def fingerprint(root: Path, selection: dict[str, Any], models: dict[str, Any], i
                 raise FormalError("missing_implementation_scope", "Declare implementation_inputs before final or Post verification")
             paths.update(implementation)
     if checkpoint in ("final", "post") and include_traces:
-        from .traces import selected_paths
         paths.update(selected_paths(root, selection, models))
     files = {name: digest(confined(root, name)) for name in sorted(paths)}
     engine = {path.name: digest(path) for path in sorted(Path(__file__).parent.glob("*.py"))}
     material = {"selection": selection, "models": models, "files": files, "checkers": identities, "engine": engine}
     return hashlib.sha256(json.dumps(material, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
-
-
-def atomic_record(path: Path, record: dict[str, Any]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    descriptor, temporary = tempfile.mkstemp(prefix=".formal-", dir=path.parent)
-    try:
-        with os.fdopen(descriptor, "w", encoding="utf-8") as stream:
-            json.dump(record, stream, sort_keys=True, indent=2, allow_nan=False)
-            stream.write("\n")
-        os.replace(temporary, path)
-    finally:
-        Path(temporary).unlink(missing_ok=True)
 
 
 def checkpoint_section(text: str) -> tuple[list[str], list[int], int]:
