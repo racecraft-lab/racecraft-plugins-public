@@ -17,6 +17,7 @@ import re
 import stat
 from typing import Any, Mapping
 
+import native_eval_strict_json as strict_json
 from native_eval_capture import CaptureError, claude_continuation_layout
 
 
@@ -96,16 +97,6 @@ def _absolute_posix_path(value: object, label: str) -> str:
     return value
 
 
-def _unique_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
-    if len(pairs) != len({key for key, _value in pairs}):
-        raise ValueError("duplicate JSON key")
-    return dict(pairs)
-
-
-def _reject_constant(value: str) -> None:
-    raise ValueError(f"non-JSON constant: {value}")
-
-
 def _valid_json(value: Any) -> bool:
     if value is None or isinstance(value, (bool, int)):
         return True
@@ -122,12 +113,7 @@ def _valid_json(value: Any) -> bool:
 
 
 def _json_line(value: str, label: str) -> dict[str, Any]:
-    try:
-        result = json.loads(
-            value, object_pairs_hook=_unique_object, parse_constant=_reject_constant,
-        )
-    except (TypeError, ValueError) as exc:
-        raise ClaudeActivationInvalid(f"malformed {label}: {exc}") from exc
+    result = strict_json.loads(value, error=ClaudeActivationInvalid, label=f"malformed {label}")
     _require(isinstance(result, dict) and _valid_json(result), f"malformed {label}")
     return result
 

@@ -28,12 +28,15 @@ import uuid
 
 import native_eval_fixture_setup as fixture_setup
 import native_eval_git_observation
+import native_eval_git_scaffold
 import native_eval_pairing
 import native_eval_runner_result
 import native_eval_runtime
+import native_eval_strict_json as strict_json
 import native_eval_toolchain
 import native_eval_trigger
 import native_eval_upstream
+import native_eval_upstream_scaffold
 import native_eval_verification
 import trigger_process
 
@@ -69,81 +72,6 @@ _STRICT_JSON_RESPONSE_SUFFIX = (
 )
 _CODEX_GIT_CONTROLLER_EXCLUDE = b"/.agents/\n/.codex/\n/.native-eval-tmp/\n"
 _CODEX_PROJECT_CONFIG = "[agents]\nenabled = true\n"
-_CLAUDE_GIT_SCAFFOLD_SOURCE = r'''from __future__ import annotations
-
-import json
-import os
-from pathlib import Path
-import stat
-
-import native_eval_fixture_setup as setup
-
-
-CONTROLLER_EXCLUDE = b""
-
-
-def write_exclude(workspace: Path, include_worktrees: bool) -> None:
-    git_directory = workspace / ".git"
-    status = git_directory.lstat()
-    if not stat.S_ISDIR(status.st_mode) or stat.S_ISLNK(status.st_mode):
-        raise ValueError("git fixture control directory is unsafe")
-    info_directory = git_directory / "info"
-    try:
-        info_directory.mkdir(mode=0o700)
-    except FileExistsError:
-        pass
-    status = info_directory.lstat()
-    if not stat.S_ISDIR(status.st_mode) or stat.S_ISLNK(status.st_mode):
-        raise ValueError("git fixture info directory is unsafe")
-    flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC | getattr(os, "O_NOFOLLOW", 0)
-    descriptor = os.open(info_directory / "exclude", flags, 0o600)
-    with os.fdopen(descriptor, "wb") as stream:
-        stream.write(CONTROLLER_EXCLUDE + (b"/.worktrees/\n" if include_worktrees else b""))
-        stream.flush()
-        os.fsync(stream.fileno())
-
-
-def main() -> int:
-    root = Path(__file__).resolve(strict=True).parent
-    workspace = setup._workspace_directory(Path.cwd())
-    receipt = root / "fixture-receipt.json"
-    result = {
-        "schema_version": setup.GIT_SCHEMA_VERSION,
-        **setup.materialize_workspace(setup.load_plan(root / "fixture-plan.json"), workspace),
-    }
-    write_exclude(workspace, "worktrees" in result)
-    setup.snapshot_git_repository_controls(workspace)
-    setup._write_receipt(receipt, result)
-    print(json.dumps(result, sort_keys=True, separators=(",", ":")))
-    return 0
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())
-'''
-_CLAUDE_UPSTREAM_SCAFFOLD_SOURCE = r'''from __future__ import annotations
-
-from pathlib import Path
-
-import native_eval_fixture_setup as setup
-import native_eval_upstream as upstream
-
-
-def main() -> int:
-    root = Path(__file__).resolve(strict=True).parent
-    workspace = setup._workspace_directory(Path.cwd())
-    setup.populate_workspace(setup.load_plan(root / "fixture-plan.json"), workspace)
-    upstream.stage_serialized(
-        root / "upstream-controller" / "specify-claude",
-        workspace,
-        root / "upstream-identity.json",
-    )
-    return 0
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())
-'''
 _CODEX_READ_TOOLS = frozenset({
     "read_file", "list_files", "search_files", "read", "glob", "grep", "Read", "Glob", "Grep",
 })
@@ -478,9 +406,8 @@ def _codex_native_skill_reference(payload_root: Path, skill_name: str) -> str:
     manifest = payload_root / ".codex-plugin" / "plugin.json"
     try:
         metadata = manifest.lstat()
-        payload = manifest.read_bytes().decode("utf-8", errors="strict")
-        parsed = json.loads(payload, object_pairs_hook=_unique_object)
-    except (OSError, UnicodeError, json.JSONDecodeError, ValueError) as exc:
+        parsed = strict_json.loads(manifest.read_bytes(), error=ValueError)
+    except (OSError, ValueError) as exc:
         raise NativeAdapterError("staged Codex plugin manifest is unavailable") from exc
     _require(stat.S_ISREG(metadata.st_mode) and not stat.S_ISLNK(metadata.st_mode),
              "staged Codex plugin manifest must be a regular file")
@@ -541,6 +468,14 @@ def _write_text(path: Path, text: str, *, mode: int = 0o600) -> None:
     with path.open("x", encoding="utf-8", newline="\n") as stream:
         stream.write(text)
     path.chmod(mode)
+
+
+def _stage_module(case_dir: Path, module: Any) -> None:
+    """Copy one lib module beside the case inputs, read-only, for standalone scaffold runs."""
+    source = Path(module.__file__).resolve()
+    staged = case_dir / source.name
+    shutil.copyfile(source, staged)
+    staged.chmod(0o500)
 
 
 def _write_json(path: Path, value: object) -> None:
@@ -1334,42 +1269,6 @@ def _merge_staged_file_exclusions(
         if path not in files:
             files.append(path)
     return {"root_directories": roots, "files": files}
-
-
-def _claude_git_upstream_scaffold_source() -> str:
-    source = _CLAUDE_GIT_SCAFFOLD_SOURCE.replace(
-        "import native_eval_fixture_setup as setup\n",
-        "import native_eval_fixture_setup as setup\nimport native_eval_upstream as upstream\n",
-    )
-    source = source.replace(
-        'CONTROLLER_EXCLUDE = b""',
-        "CONTROLLER_EXCLUDE = " + repr(_git_controller_exclude(
-            {}, host="claude", include_upstream=True,
-        )),
-    )
-    marker = "    setup._write_receipt(receipt, result)\n"
-    replacement = marker + (
-        "    upstream.stage_serialized(\n"
-        "        root / 'upstream-controller' / 'specify-claude', workspace,\n"
-        "        root / 'upstream-identity.json',\n"
-        "    )\n"
-    )
-    _require(source.count(marker) == 1, "Claude Git scaffold source is incompatible")
-    return source.replace(marker, replacement)
-
-
-def _claude_external_receipt_scaffold_source() -> str:
-    source = _CLAUDE_GIT_SCAFFOLD_SOURCE.replace("import stat\n", "import stat\nimport sys\n")
-    marker = '    receipt = root / "fixture-receipt.json"\n'
-    replacement = (
-        '    if len(sys.argv) != 2:\n'
-        '        raise ValueError("controller receipt path is required")\n'
-        '    receipt = Path(sys.argv[1])\n'
-        '    if not receipt.is_absolute():\n'
-        '        raise ValueError("controller receipt path must be absolute")\n'
-    )
-    _require(source.count(marker) == 1, "Claude Git scaffold source is incompatible")
-    return source.replace(marker, replacement)
 
 
 def _prepared_upstream_integration(
@@ -2573,31 +2472,23 @@ def _prepare_claude(
     if context:
         case_config += "context:\n" + "".join(context)
     if needs_scaffold:
-        staged_setup = case_dir / "native_eval_fixture_setup.py"
-        shutil.copyfile(Path(fixture_setup.__file__).resolve(), staged_setup)
-        staged_setup.chmod(0o500)
+        _stage_module(case_dir, fixture_setup)
+        _stage_module(case_dir, strict_json)
         launcher = "#!/bin/sh\nexec " + shlex.quote(str(Path(sys.executable).resolve()))
         if prepared_upstream is not None:
-            staged_upstream = case_dir / "native_eval_upstream.py"
-            shutil.copyfile(Path(native_eval_upstream.__file__).resolve(), staged_upstream)
-            staged_upstream.chmod(0o500)
-            staged_toolchain = case_dir / "native_eval_toolchain.py"
-            shutil.copyfile(Path(native_eval_toolchain.__file__).resolve(), staged_toolchain)
-            staged_toolchain.chmod(0o500)
+            _stage_module(case_dir, native_eval_upstream)
+            _stage_module(case_dir, native_eval_toolchain)
             _write_json(case_dir / "upstream-identity.json", prepared_upstream.runtime_identity)
-            scaffold_source = (
-                _claude_git_upstream_scaffold_source()
-                if git_settings is not None else _CLAUDE_UPSTREAM_SCAFFOLD_SOURCE
-            )
-            _write_text(case_dir / "native_eval_upstream_scaffold.py", scaffold_source, mode=0o500)
-            launcher += ' -B "${0%/*}/native_eval_upstream_scaffold.py"\n'
+            scaffold = native_eval_upstream_scaffold
+            if git_settings is not None:
+                scaffold = native_eval_git_scaffold
+                _write_text(case_dir / "git-controller-exclude.bin", _git_controller_exclude(
+                    {}, host="claude", include_upstream=True,
+                ).decode("utf-8"))
+            _stage_module(case_dir, scaffold)
+            launcher += f' -B "${{0%/*}}/{Path(scaffold.__file__).name}"\n'
         elif git_settings is not None:
-            _write_text(
-                case_dir / "native_eval_git_scaffold.py",
-                _claude_external_receipt_scaffold_source()
-                if external_git_receipt else _CLAUDE_GIT_SCAFFOLD_SOURCE,
-                mode=0o500,
-            )
+            _stage_module(case_dir, native_eval_git_scaffold)
             launcher += ' -B "${0%/*}/native_eval_git_scaffold.py"'
             if external_git_receipt:
                 launcher += " " + shlex.quote(str(case_dir / "fixture-receipt.json"))
@@ -3372,18 +3263,13 @@ def _decode_stream(payload: bytes, label: str) -> str:
         return payload.decode("utf-8", errors="surrogateescape")
 
 
-def _unique_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
-    _require(len(pairs) == len({key for key, _value in pairs}), "native framework result has duplicate keys")
-    return dict(pairs)
-
-
 def _read_claude_result(prepared: PreparedTrial) -> dict[str, Any]:
     result_path = prepared.result_path
     if result_path is None or not result_path.is_file() or result_path.is_symlink():
         raise NativeAdapterError("Claude framework result is unavailable")
     try:
-        result = json.loads(result_path.read_text(encoding="utf-8"), object_pairs_hook=_unique_object)
-    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        result = strict_json.loads(result_path.read_bytes(), error=ValueError)
+    except (OSError, ValueError) as exc:
         raise NativeAdapterError("Claude framework result is malformed") from exc
     _require(isinstance(result, dict) and result.get("schemaVersion") == 1,
              "Claude framework result has an unsupported schemaVersion")
@@ -3988,8 +3874,8 @@ def _read_claude_fixture_receipt(
              "Claude fixture receipt is unsafe")
     try:
         payload = path.read_bytes()
-        receipt = json.loads(payload.decode("utf-8", errors="strict"), object_pairs_hook=_unique_object)
-    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        receipt = strict_json.loads(payload, error=ValueError)
+    except (OSError, ValueError) as exc:
         raise NativeAdapterError("Claude fixture receipt is malformed") from exc
     _require(isinstance(receipt, dict) and receipt == settings["expected_result"],
              "Claude fixture receipt does not match expected Git materialization")
