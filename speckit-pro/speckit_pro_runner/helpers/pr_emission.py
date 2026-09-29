@@ -807,24 +807,39 @@ def generated_packet_schema_failures(packet: dict[str, Any]) -> list[dict[str, A
     return pr_packet_schema_failures(packet, schema)
 
 
+def title_shape_matches(scope: str, value: str | None = None) -> bool:
+    """True when `scope`, and `value` if given, fit the shapes the PR-title gate accepts."""
+    if re.fullmatch(PACKET_TITLE_SCOPE_PATTERN, scope) is None:
+        return False
+    return value is None or re.fullmatch(PACKET_TITLE_VALUE_PATTERN, value) is not None
+
+
+def generated_title_shape_failure(raw: dict[str, Any]) -> dict[str, Any] | None:
+    """The diagnostic for a supplied generated_title with wrong keys, non-string fields, or a title the gate rejects."""
+    required = ["value", "type", "scope", "description", "source_evidence", "rejected_candidates"]
+    missing = [field for field in required if field not in raw]
+    if missing:
+        return invalid_packet_input("generated_title is missing required fields", field="generated_title", details={"missing": missing})
+    extra = sorted(set(raw) - set(required))
+    if extra:
+        return invalid_packet_input("generated_title contains unsupported fields", field="generated_title", details={"fields": extra})
+    invalid = validate_string_fields(raw, ["value", "type", "scope", "description"])
+    if invalid:
+        return invalid_packet_input("generated_title contains invalid string fields", field="generated_title", details={"fields": invalid})
+    if not title_shape_matches(raw["scope"], raw["value"]):
+        return invalid_packet_input(
+            "generated_title must read <type>(<lowercase-scope>): <description>, the shape the PR-title gate accepts",
+            field="generated_title",
+        )
+    return None
+
+
 def normalize_generated_title(inputs: dict[str, Any]) -> dict[str, Any]:
     raw = inputs.get("generated_title")
     if isinstance(raw, dict):
-        required = ["value", "type", "scope", "description", "source_evidence", "rejected_candidates"]
-        missing = [field for field in required if field not in raw]
-        if missing:
-            return invalid_packet_input("generated_title is missing required fields", field="generated_title", details={"missing": missing})
-        extra = sorted(set(raw) - set(required))
-        if extra:
-            return invalid_packet_input("generated_title contains unsupported fields", field="generated_title", details={"fields": extra})
-        invalid = validate_string_fields(raw, ["value", "type", "scope", "description"])
-        if invalid:
-            return invalid_packet_input("generated_title contains invalid string fields", field="generated_title", details={"fields": invalid})
-        if not (re.fullmatch(PACKET_TITLE_SCOPE_PATTERN, raw["scope"]) and re.fullmatch(PACKET_TITLE_VALUE_PATTERN, raw["value"])):
-            return invalid_packet_input(
-                "generated_title must read <type>(<lowercase-scope>): <description>, the shape the PR-title gate accepts",
-                field="generated_title",
-            )
+        malformed = generated_title_shape_failure(raw)
+        if malformed is not None:
+            return malformed
         source_evidence = normalize_evidence_record(raw.get("source_evidence"), field="generated_title.source_evidence")
         if isinstance(source_evidence, dict) and "diagnostic" in source_evidence:
             return source_evidence
@@ -846,7 +861,7 @@ def normalize_generated_title(inputs: dict[str, Any]) -> dict[str, Any]:
     title_description = inputs.get("title_description")
     if not isinstance(title_scope, str) or not title_scope:
         return invalid_packet_input("title_scope is required when generated_title is omitted", field="title_scope")
-    if re.fullmatch(PACKET_TITLE_SCOPE_PATTERN, title_scope) is None:
+    if not title_shape_matches(title_scope):
         return invalid_packet_input(
             "title_scope must be lowercase letters, digits, and hyphens, as the PR-title gate requires",
             field="title_scope",

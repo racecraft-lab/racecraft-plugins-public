@@ -90,6 +90,14 @@ def _text(value: Any, field: str) -> str:
     return require_text(value, field).strip()
 
 
+def _one_line(value: Any, field: str) -> str:
+    """Text the PR body renders on one line; the packet normalizer rejects a line break."""
+    text = _text(value, field)
+    if not is_one_line(text):
+        raise ValueError(f"{field} must be one line")
+    return text
+
+
 def _ledger(root: Path, inputs: dict[str, Any]) -> dict[str, Any]:
     relative = _text(inputs.get("ledger_path"), "ledger_path")
     if Path(relative).parent.name != "execution-control" or Path(relative).suffix != ".json":
@@ -152,11 +160,7 @@ def _records(value: Any, name: str, fields: tuple[str, ...]) -> list[dict[str, s
     for index, raw in enumerate(value):
         if not isinstance(raw, dict) or set(raw) != set(fields):
             raise ValueError(f"{name}[{index}] must have exactly {', '.join(fields)}")
-        record = {field: _text(raw[field], f"{name}[{index}].{field}") for field in fields}
-        for field, text in record.items():
-            if not is_one_line(text):
-                raise ValueError(f"{name}[{index}].{field} must be one line; the PR body section renders one line per field")
-        records.append(record)
+        records.append({field: _one_line(raw[field], f"{name}[{index}].{field}") for field in fields})
     return records
 
 

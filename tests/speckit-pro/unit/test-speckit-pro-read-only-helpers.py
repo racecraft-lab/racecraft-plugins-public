@@ -2347,40 +2347,6 @@ class ReadOnlyHelperTests(_ReadOnlyHelperRunner, unittest.TestCase):
                     self.assertIn(expected_rule, rules)
                     self.assertEqual(stderr_records, response["diagnostics"])
 
-    def test_pr_packet_schema_and_title_gate_accept_the_same_scopes(self) -> None:
-        if self.helper_filter and self.helper_filter != "validate-pr-packet-read-only":
-            self.skipTest("validate-pr-packet schema pattern case")
-        schema = json.loads(PR_PACKET_SCHEMA.read_text(encoding="utf-8"))
-        title_properties = schema["$defs"]["generated_title"]["properties"]
-        scope_pattern = title_properties["scope"]["pattern"]
-        value_pattern = title_properties["value"]["pattern"]
-        self.assertEqual(scope_pattern, PACKET_TITLE_SCOPE_PATTERN)
-        self.assertEqual(value_pattern, PACKET_TITLE_VALUE_PATTERN)
-
-        for scope in ("speckit-pro", "feature-001", "spec-014c"):
-            with self.subTest(scope=scope, expected="accepted"):
-                title = f"feat({scope}): Add packet validation"
-                self.assertIsNotNone(re.fullmatch(scope_pattern, scope))
-                self.assertIsNotNone(re.fullmatch(value_pattern, title))
-                self.assertEqual(self.title_gate_status(title), "ok")
-
-        for scope in ("FEATURE-001", "FIXTURE-014C", "PRsg-012", "SPEC-014c", "speckit-PRO"):
-            with self.subTest(scope=scope, expected="rejected"):
-                title = f"feat({scope}): Add packet validation"
-                self.assertIsNone(re.fullmatch(scope_pattern, scope))
-                self.assertIsNone(re.fullmatch(value_pattern, title))
-                self.assertEqual(self.title_gate_status(title), "expected_failure")
-
-    @staticmethod
-    def title_gate_status(title: str) -> str:
-        """The status the live PR-title gate reports for `title`."""
-        request = REPO_ROOT / "tests" / "speckit-pro" / "unit" / "fixtures" / "runner-gates" / "requests" / "validate-pr-title-live.json"
-        completed = subprocess.run(
-            [sys.executable, "-m", "speckit_pro_runner"], input=request.read_text(encoding="utf-8"), text=True, capture_output=True,
-            cwd=REPO_ROOT, check=False, env={**os.environ, "TITLE": title, "PYTHONPATH": str(PLUGIN_ROOT)},
-        )
-        return str(json.loads(completed.stdout)["status"])
-
     def test_validate_pr_packet_rejects_unsafe_missing_and_unreadable_body(self) -> None:
         if self.helper_filter and self.helper_filter != "validate-pr-packet-read-only":
             self.skipTest("validate-pr-packet body path case")
@@ -4490,13 +4456,49 @@ class PlanLayersRepairRouteTests(_ReadOnlyHelperRunner, unittest.TestCase):
                 self.assertEqual(planner["repair"]["retry"], "plan-layers-feature-dir")
 
 
+class PacketTitlePatternTests(unittest.TestCase):
+    """The packet schema and the live PR-title gate accept the same title scopes."""
+
+    def test_pr_packet_schema_and_title_gate_accept_the_same_scopes(self) -> None:
+        schema = json.loads(PR_PACKET_SCHEMA.read_text(encoding="utf-8"))
+        title_properties = schema["$defs"]["generated_title"]["properties"]
+        scope_pattern = title_properties["scope"]["pattern"]
+        value_pattern = title_properties["value"]["pattern"]
+        self.assertEqual(scope_pattern, PACKET_TITLE_SCOPE_PATTERN)
+        self.assertEqual(value_pattern, PACKET_TITLE_VALUE_PATTERN)
+
+        for scope in ("speckit-pro", "feature-001", "spec-014c"):
+            with self.subTest(scope=scope, expected="accepted"):
+                title = f"feat({scope}): Add packet validation"
+                self.assertIsNotNone(re.fullmatch(scope_pattern, scope))
+                self.assertIsNotNone(re.fullmatch(value_pattern, title))
+                self.assertEqual(self.title_gate_status(title), "ok")
+
+        for scope in ("FEATURE-001", "FIXTURE-014C", "PRsg-012", "SPEC-014c", "speckit-PRO"):
+            with self.subTest(scope=scope, expected="rejected"):
+                title = f"feat({scope}): Add packet validation"
+                self.assertIsNone(re.fullmatch(scope_pattern, scope))
+                self.assertIsNone(re.fullmatch(value_pattern, title))
+                self.assertEqual(self.title_gate_status(title), "expected_failure")
+
+    @staticmethod
+    def title_gate_status(title: str) -> str:
+        """The status the live PR-title gate reports for `title`."""
+        request = REPO_ROOT / "tests" / "speckit-pro" / "unit" / "fixtures" / "runner-gates" / "requests" / "validate-pr-title-live.json"
+        completed = subprocess.run(
+            [sys.executable, "-m", "speckit_pro_runner"], input=request.read_text(encoding="utf-8"), text=True, capture_output=True,
+            cwd=REPO_ROOT, check=False, env={**os.environ, "TITLE": title, "PYTHONPATH": str(PLUGIN_ROOT)},
+        )
+        return str(json.loads(completed.stdout)["status"])
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--helper", choices=EXPECTED_HELPERS)
     args = parser.parse_args()
     _ReadOnlyHelperRunner.helper_filter = args.helper
     suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case)
-                               for case in (ReadOnlyHelperTests, PlanLayersRepairRouteTests))
+                               for case in (ReadOnlyHelperTests, PlanLayersRepairRouteTests, PacketTitlePatternTests))
     result = unittest.TextTestRunner(verbosity=1).run(suite)
     total = result.testsRun
     failed = len(result.failures) + len(result.errors)

@@ -491,6 +491,9 @@ class FinalizeRunTests(_LedgerFixture, unittest.TestCase):
                     finalize(self.root, self.inputs(**override))
 
 
+class FinalizeRunOneLineTests(_LedgerFixture, unittest.TestCase):
+    """A deferred item is one line per field, as the packet normalizer requires."""
+
     def test_multi_line_text_is_refused_before_the_packet_normalizer_would_reject_it(self) -> None:
         # pr-packet-output rejects a newline in a deferred item, so finalize-run must refuse it first.
         records = {"human_uat": ("item", "reason", "finish"), "unresolved_deferrals": ("unit", "reason", "finish")}
