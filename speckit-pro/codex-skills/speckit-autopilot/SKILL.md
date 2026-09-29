@@ -61,6 +61,9 @@ gates, and advance through every phase in the resolved
 `AUTOPILOT_STAGE`. A `--stage plan` run stops at its stage boundary;
 `full` covers all seven phases.
 
+When a run may involve a human, and which reasons count, is set by the shared
+[Autopilot Stop Policy](../../skills/speckit-autopilot/references/stop-policy.md).
+
 ## Architectural Constraint — Main Agent Is The Orchestrator
 
 This skill loads into the **main Codex session agent**, which owns all phase
@@ -220,7 +223,7 @@ response is one of:
 
 - Run the `$speckit-clarify` skill (Phase 2) with the multi-agent consensus
   protocol — that is autopilot's only clarification mechanism.
-- Fail the gate, surface the ambiguity, and stop. Pre-workflow interviews
+- Route the ambiguity to Clarify consensus, and defer it when consensus cannot settle it. Pre-workflow interviews
   belong in `$speckit-scaffold-spec`, not autopilot.
 
 This rule applies to: the orchestrator, every phase subagent
@@ -743,7 +746,8 @@ at every PR head and only human UAT left, the run finalizes: mark the stack read
 (never merge), open the top PR body with its `Deferred / not verified` section,
 and mark the thread goal complete. When deferred items remain beyond human UAT
 (a failed gate, a ledger `deferred` entry, or an unresolved task), the run makes
-one human stop instead and the stack stays in draft. Either way, make the one
+one human stop instead and the stack stays in draft. Print the final report as plain text on `outcome=complete` with nothing deferred, and ask no question.
+Otherwise ask only on `human_stop` or deferred human UAT: make the one
 consolidated `request_user_input` request and print the same question as plain
 text in the final message, listing every fallback taken and every deferred item,
 including each entry of the ledger's `deferred` list.
@@ -803,6 +807,7 @@ PR URL.
   protocol, common issues, context window management
 
 **Shared CC references (still applicable to Codex):**
+- [Stop Policy](../../skills/speckit-autopilot/references/stop-policy.md) — The one contract for when a run may involve a human.
 - [Consensus Protocol](../../skills/speckit-autopilot/references/consensus-protocol.md) —
   Multi-agent resolution rules and flows
 - [Gate Validation](../../skills/speckit-autopilot/references/gate-validation.md) —

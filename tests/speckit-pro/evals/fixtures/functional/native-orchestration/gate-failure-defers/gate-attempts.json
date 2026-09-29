@@ -1,0 +1,9 @@
+{
+  "gate": "G4",
+  "failing_command": "python3 -m speckit_pro_runner validate-gate --gate G4",
+  "failing_output": "G4 failed: 3 [Gap] markers remain (spec.md: 2, plan.md: 1)",
+  "repair_allowance": 2,
+  "repair_attempts": 2,
+  "independent_units": ["T021", "T022"],
+  "dependent_units": ["T023"]
+}

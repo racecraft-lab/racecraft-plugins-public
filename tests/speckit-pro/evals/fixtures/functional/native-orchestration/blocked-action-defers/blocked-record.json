@@ -1,0 +1,8 @@
+{
+  "blocked_action": {
+    "task": "T007",
+    "action": "gh api --method PUT registry/schemas/report",
+    "reason": "The approval reviewer denied the request."
+  },
+  "defined_fallback": null
+}

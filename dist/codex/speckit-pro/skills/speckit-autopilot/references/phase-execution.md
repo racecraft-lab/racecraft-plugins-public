@@ -362,7 +362,7 @@ G2 is a separate post-Clarify check, not an inference from completed tasks or
 consensus. After the final session, scan the current `spec.md` again and advance
 only when the actual `[NEEDS CLARIFICATION]` count is zero. A missing scan,
 unreadable spec, or remaining marker leaves Clarify and G2 incomplete and
-follows the configured gate-failure/escalation path.
+follows the Failure Escalation Protocol and defers.
 
 **Commit:**
 `git add specs/ <workflow-file-path> <workflow-dir>/autopilot-state.json && git commit -m "feat(SPEC-XXX): complete clarify phase"`
