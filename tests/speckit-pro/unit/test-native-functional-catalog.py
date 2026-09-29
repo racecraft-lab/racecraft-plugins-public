@@ -943,6 +943,12 @@ def _derive_red_baseline_answers(read: Callable[[str], str]) -> dict:
     }
 
 
+_SEPARATE_DERIVATIONS = {
+    "missing-quality-tool-install-hint": _derive_quality_tool_answers,
+    "red-baseline-repaired-by-implement-executor": _derive_red_baseline_answers,
+}
+
+
 def _derive_stop_policy_answers(scenario: str, read: Callable[[str], str]) -> dict:
     """Derive the graded fields of the stop-policy orchestration cases from their fixtures."""
     if scenario == "gate-failure-defers":
@@ -982,10 +988,8 @@ def _derive_stop_policy_answers(scenario: str, read: Callable[[str], str]) -> di
             "resolved_unit_in_request": deferred["deferred.0.unit"] not in finalize["request_omits"],
             "second_exception_refused": "refused" in steps["second-exception"],
         }
-    if scenario == "missing-quality-tool-install-hint":
-        return _derive_quality_tool_answers(read)
-    if scenario == "red-baseline-repaired-by-implement-executor":
-        return _derive_red_baseline_answers(read)
+    if scenario in _SEPARATE_DERIVATIONS:
+        return _SEPARATE_DERIVATIONS[scenario](read)
     if scenario == "blocked-action-defers":
         record = json.loads(read("scenario-inputs/blocked-record.json"))
         open_tasks = {
