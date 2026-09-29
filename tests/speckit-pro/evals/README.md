@@ -249,6 +249,12 @@ uses the official `claude plugin eval` path; Codex uses native `codex exec`
 with JSON evidence. The catalog defines each host mode rather than treating one
 provider's transcript as evidence for the other.
 
+Three flags pin the models: `--claude-model` (default `claude-sonnet-5`),
+`--codex-model` (default `gpt-6-sol`), and `--judge-model` (default
+`gpt-6-sol`, used for semantic checks). Pass a flag only to measure a different
+model. The judge model is checked again before each judge call, and a change
+after admission is refused.
+
 The provider interfaces are documented by
 [Anthropic's plugin-evals guide](https://code.claude.com/docs/en/plugin-evals)
 and OpenAI's [Testing Agent Skills Systematically with Evals](https://developers.openai.com/blog/eval-skills).
