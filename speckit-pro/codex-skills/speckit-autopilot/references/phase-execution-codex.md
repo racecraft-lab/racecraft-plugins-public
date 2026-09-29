@@ -2864,7 +2864,7 @@ whose refreshed preflight disposition is `operator_action_required`.
        plain-text copy is the request.
    - `outcome=human_stop`: a gate failed or hit a persistent harness error at
      some PR head, a PR head has no
-     result for a gate, the ledger's `deferred` list is not empty, or a
+     result for a gate, the ledger's `deferred` list holds an unresolved entry, or a
      deferred task is unresolved. This is one human stop, never
      ready for review, and the stack stays in draft. Before calling the helper,
      retry with backoff any gate that failed on a genuine external failure, such
@@ -2927,7 +2927,8 @@ under rule 2, name the task or gate it blocks, and keep executing every
 independent task, increment, gate, and Post check; never set the thread goal
 blocked for it mid-run. Mid-run that only moves the run on to other units. At the end of the run an
 unresolved ledger deferral, a gate's included, makes `finalize-run` return
-`outcome=human_stop`: rule 3's one request lists every ledger deferral;
+`outcome=human_stop`: rule 3's one request lists every unresolved ledger deferral (a deferral whose unit a later
+completed dispatch fixed is marked resolved by the ledger and drops out);
 there the operator can approve `authorize-corrective-exception` or
 `begin-replan-epoch` once for everything deferred. It is never a mid-run
 question.

@@ -53,6 +53,9 @@ DEFER_REASONS = {"failure_family_budget_exhausted": "failure_family",
                  "gate_remediation_allowance_exhausted": "gate",
                  "failure_class_allowance_exhausted": "failure_class"}
 DEFERRAL_KEYS = {"dispatch_id", "reason", "unit_kind", "unit", "deferred_at"}
+# A later completed dispatch for the same unit resolves a deferral. The runner stamps
+# the resolution itself when it records that completion; no request can name one.
+DEFERRAL_RESOLUTION_KEYS = {"resolved_by", "resolved_at"}
 # Verification evidence the runner itself records; never a helper-request action.
 RECORD_FAILING_CHECKS = "record-failing-checks"
 FAILING_CHECK_KEYS = {"command_id", "command_sha256", "format", "failing", "passing", "checks_run", "output_sha256",
@@ -573,7 +576,7 @@ def _validate_deferrals(ledger: dict[str, Any]) -> None:
     seen: set[str] = set()
     previous = ledger["started_at"]
     for entry in entries:
-        if (not isinstance(entry, dict) or set(entry) != DEFERRAL_KEYS
+        if (not isinstance(entry, dict) or set(entry) not in (DEFERRAL_KEYS, DEFERRAL_KEYS | DEFERRAL_RESOLUTION_KEYS)
                 or DEFER_REASONS.get(entry["reason"]) != entry["unit_kind"]):
             raise ValueError("invalid deferral record")
         dispatch_id = require_text(entry["dispatch_id"], "deferred dispatch_id")
@@ -587,6 +590,54 @@ def _validate_deferrals(ledger: dict[str, Any]) -> None:
         previous = deferred_at
         if not _allowance_spent(ledger, entry["reason"], unit):
             raise ValueError("deferral names an allowance the ledger does not show as spent")
+        if "resolved_by" in entry:
+            resolver = entry["resolved_by"]
+            if (not isinstance(resolver, str) or not _resolves(ledger, entry, resolver)
+                    or entry["resolved_at"] != ledger["dispatches"][resolver]["completed_at"]
+                    or any(_resolves(ledger, entry, other) and item["completed_at"] < entry["resolved_at"]
+                           for other, item in ledger["dispatches"].items())):
+                raise ValueError("deferral resolution is not the first later completed dispatch for its unit")
+
+
+def _dispatch_units(ledger: dict[str, Any], item: dict[str, Any]) -> set[tuple[str, str]]:
+    """The deferrable units a corrective dispatch works on, derived only from the ledger's own records."""
+    if item.get("kind") != "corrective":
+        return set()
+    units: set[tuple[str, str]] = set()
+    # A test fix runs under its own allowance and is not the deferred review fix, so it names no unit.
+    if isinstance(item.get("increment"), str):
+        units.add(("increment", item["increment"]))
+    if isinstance(item.get("gate"), str):
+        units.add(("gate", item["gate"]))
+    reservation = item.get("reservation_id")
+    if reservation in ledger["reservations"]:
+        units.add(("failure_family", ledger["reservations"][reservation]["family"]))
+    exception = ledger.get("corrective_exception")
+    if isinstance(exception, dict) and reservation is not None and reservation == exception.get("reservation_id"):
+        units.add(("failure_family", exception["failure_invariant"]))
+        if isinstance(exception.get("failure_class"), dict):
+            units.add(("failure_class", exception["failure_class"]["test_file"]))
+    return units
+
+
+def _resolves(ledger: dict[str, Any], entry: dict[str, Any], dispatch_id: str) -> bool:
+    """True when the ledger's own records show this dispatch resolved the deferral.
+
+    The dispatch completed, was reserved at or after the deferral, and its allowance
+    or reservation ties it to the deferral's unit. Nothing the caller claims counts.
+    """
+    item = ledger["dispatches"].get(dispatch_id)
+    return (isinstance(item, dict) and item.get("outcome") == "completed"
+            and type(item.get("completed_at")) in (int, float) and type(item.get("reserved_at")) in (int, float)
+            and item["reserved_at"] >= entry["deferred_at"]
+            and (entry["unit_kind"], entry["unit"]) in _dispatch_units(ledger, item))
+
+
+def _resolve_deferrals(ledger: dict[str, Any], dispatch_id: str, now: float) -> None:
+    """Stamp each open deferral that this just-completed dispatch resolves; the history stays."""
+    for entry in ledger.get("deferred", []):
+        if "resolved_by" not in entry and _resolves(ledger, entry, dispatch_id):
+            entry.update(resolved_by=dispatch_id, resolved_at=now)
 
 
 def _defer(ledger: dict[str, Any], dispatch_id: str, reason: str, unit: str, now: float) -> dict[str, Any]:
@@ -1681,6 +1732,8 @@ def record_result(ledger: dict[str, Any], inputs: dict[str, Any], now: float, ro
         if changed is not None:
             item["changed_paths"] = changed
     item.update(outcome=outcome, completed_at=now)
+    if outcome == "completed":
+        _resolve_deferrals(ledger, dispatch_id, now)
     return {"reasons": ["unknown_side_effects_require_operator_reconciliation"] if outcome == "unknown" else []}
 
 

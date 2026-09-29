@@ -400,6 +400,109 @@ def _runner(request: dict[str, object]) -> dict[str, object]:
     return json.loads(completed.stdout.splitlines()[-1])
 
 
+class ResolvedDeferralTests(_LedgerFixture, unittest.TestCase):
+    """A deferral that a later completed dispatch for its unit resolved leaves the request (issue 825)."""
+
+    SCOPE = "a" * 64
+
+    def setUp(self) -> None:
+        super().setUp()
+        spec = self.root / "resolved/spec.md"
+        (self.root / "resolved").mkdir()
+        (self.root / "resolved/workflow.md").write_text("# Workflow\n")
+        self.run: dict[str, object] = {"workflow": "resolved/workflow.md"}
+        self.invoke(self.run, "start")
+        spec.write_text("- FR-001: preserve data\n- FR-002: no secrets\n")
+        bound = self.invoke(self.run, "bind-invariants", spec_file="resolved/spec.md")
+        self.spec_digest = bound["ledger"]["invariant_binding"]["spec_sha256"]
+        for dispatch_id, invariant in (("fix-a", "FR-001"), ("fix-b", "FR-002")):
+            self.invoke(self.run, "reserve", dispatch_id=dispatch_id, kind="corrective", failure_invariant=invariant)
+            self.invoke(self.run, "complete", dispatch_id=dispatch_id, outcome="completed")
+        deferred = self.invoke(self.run, "reserve", dispatch_id="fix-c", kind="corrective", failure_invariant="FR-001")
+        assert deferred["reasons"] == ["failure_family_budget_exhausted"], deferred
+
+    def fix_under_exception(self, outcome: str = "completed") -> dict[str, object]:
+        event = {"native_event_id": "operator-exception", "run_id": self.run["run_id"],
+                 "action": "corrective_exception_approved", "failure_invariant": "FR-001", "dispatch_id": "fix-c",
+                 "failure_kind": "application", "refusal_reason": "failure_family_budget_exhausted",
+                 "scope_sha256": self.SCOPE, "spec_sha256": self.spec_digest}
+        self.invoke(self.run, "authorize-corrective-exception", dispatch_id="fix-c", failure_invariant="FR-001",
+                    scope_sha256=self.SCOPE, native_observation=event)
+        return self.invoke(self.run, "complete", dispatch_id="fix-c", outcome=outcome)
+
+    def ledger_path(self) -> Path:
+        return self.root / str(self.run["ledger_path"])
+
+    def test_a_deferral_whose_fix_completed_leaves_the_request_and_keeps_its_history(self) -> None:
+        completed = self.fix_under_exception()
+        entry = completed["ledger"]["deferred"][0]
+        self.assertEqual((entry["dispatch_id"], entry["unit"], entry["resolved_by"], entry["resolved_at"]),
+                         ("fix-c", "FR-001", "fix-c", 1000.0))
+        result = finalize(self.root, self.inputs(self.run))
+        self.assertEqual(result["outcome"], "complete_with_deferred")
+        self.assertTrue(result["mark_ready"])
+        self.assertNotIn("FR-001", result["end_of_run_request"])
+        self.assertEqual(len(json.loads(self.ledger_path().read_text())["deferred"]), 1)
+        from speckit_pro_runner.helpers.read_only import json_schema_failures
+
+        schema = json.loads((PLUGIN_ROOT / "speckit_pro_runner/contracts/execution-control.schema.json").read_text())
+        self.assertEqual(json_schema_failures(completed["ledger"], schema, schema, "ledger"), [])
+
+    def test_a_deferral_with_no_completed_fix_stays_a_human_stop(self) -> None:
+        self.invoke(self.run, "reserve", dispatch_id="fix-d", kind="corrective", failure_invariant="FR-002")
+        failed = self.fix_under_exception(outcome="failed")
+        self.assertNotIn("resolved_by", failed["ledger"]["deferred"][0])
+        result = finalize(self.root, self.inputs(self.run))
+        self.assertEqual(result["outcome"], "human_stop")
+        self.assertEqual(sorted(unit["unit"] for unit in result["human_stop"]["units"]),
+                         ["Failure family FR-001", "Failure family FR-002"])
+
+    def test_only_the_resolved_unit_leaves_the_request(self) -> None:
+        self.invoke(self.run, "reserve", dispatch_id="fix-d", kind="corrective", failure_invariant="FR-002")
+        self.fix_under_exception()
+        result = finalize(self.root, self.inputs(self.run))
+        self.assertEqual(result["outcome"], "human_stop")
+        self.assertEqual([unit["unit"] for unit in result["human_stop"]["units"]], ["Failure family FR-002"])
+
+    def test_a_forged_resolution_fails_closed(self) -> None:
+        self.invoke(self.run, "reserve", dispatch_id="fix-d", kind="corrective", failure_invariant="FR-002")
+        self.fix_under_exception()
+        valid = self.ledger_path().read_bytes()
+        tampers = {
+            "claimed by a dispatch of another unit": lambda ledger: ledger["deferred"][1].update(
+                resolved_by="fix-c", resolved_at=1000.0),
+            "claimed by an unknown dispatch": lambda ledger: ledger["deferred"][1].update(
+                resolved_by="operator-said-so", resolved_at=1000.0),
+            "claimed by a dispatch reserved before the deferral": lambda ledger: ledger["deferred"][1].update(
+                resolved_by="fix-b", resolved_at=1000.0),
+            "resolution clock disagrees": lambda ledger: ledger["deferred"][0].update(resolved_at=999.0),
+            "resolution without its clock": lambda ledger: ledger["deferred"][0].pop("resolved_at"),
+            "resolving dispatch did not complete": lambda ledger: ledger["dispatches"]["fix-c"].update(
+                outcome="failed"),
+        }
+        for name, tamper in tampers.items():
+            with self.subTest(tamper=name):
+                ledger = json.loads(valid)
+                if name == "claimed by a dispatch reserved before the deferral":
+                    ledger["deferred"][1]["deferred_at"] = 1000.0
+                    ledger["dispatches"]["fix-b"]["reserved_at"] = 999.0
+                tamper(ledger)
+                self.ledger_path().write_text(json.dumps(ledger), encoding="utf-8")
+                with self.assertRaises(ValueError):
+                    finalize(self.root, self.inputs(self.run))
+
+    def test_a_ledger_from_an_earlier_version_still_validates_and_reports_its_deferral(self) -> None:
+        self.fix_under_exception()
+        legacy = json.loads(self.ledger_path().read_text())
+        for entry in legacy["deferred"]:
+            entry.pop("resolved_by", None)
+            entry.pop("resolved_at", None)
+        self.ledger_path().write_text(json.dumps(legacy), encoding="utf-8")
+        result = finalize(self.root, self.inputs(self.run))
+        self.assertEqual(result["outcome"], "human_stop")
+        self.assertEqual([unit["unit"] for unit in result["human_stop"]["units"]], ["Failure family FR-001"])
+
+
 class FinalizeRunRegistryTests(unittest.TestCase):
     def test_fixture_request_runs_through_the_runner(self) -> None:
         # The fixture ledger holds a deferral, so the authoritative request ends in the human stop.
