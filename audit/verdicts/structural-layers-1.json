@@ -1,0 +1,339 @@
+{
+  "tests/speckit-pro/AGENTS.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=speckit-pro"
+    ]
+  },
+  "tests/speckit-pro/CLAUDE.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=speckit-pro"
+    ]
+  },
+  "tests/speckit-pro/GEMINI.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=speckit-pro"
+    ]
+  },
+  "tests/speckit-pro/layer1-structural/fixtures/moc/gate/gate-no-fence/SPEC-MOC.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=gate-no-fence"
+    ]
+  },
+  "tests/speckit-pro/layer1-structural/fixtures/moc/gate/gate-no-marker/README.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=gate-no-marker"
+    ]
+  },
+  "tests/speckit-pro/layer1-structural/fixtures/moc/gate/gate-no-version/SPEC-MOC.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=gate-no-version"
+    ]
+  },
+  "tests/speckit-pro/layer1-structural/fixtures/moc/gate/gate-version-commented/SPEC-MOC.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=gate-version-commented"
+    ]
+  },
+  "tests/speckit-pro/layer1-structural/fixtures/moc/gate/gate-version-decimal/SPEC-MOC.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=gate-version-decimal"
+    ]
+  },
+  "tests/speckit-pro/layer1-structural/fixtures/moc/gate/gate-version-quoted/SPEC-MOC.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=gate-version-quoted"
+    ]
+  },
+  "tests/speckit-pro/layer1-structural/fixtures/moc/gate/gate-version-text/SPEC-MOC.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=gate-version-text"
+    ]
+  },
+  "tests/speckit-pro/layer1-structural/fixtures/moc/gate/gate-version-zero/SPEC-MOC.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=gate-version-zero"
+    ]
+  },
+  "tests/speckit-pro/layer1-structural/fixtures/moc/orphan/orphan-absolute-url-up/SPEC-MOC.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=orphan-absolute-url-up"
+    ]
+  },
+  "tests/speckit-pro/layer1-structural/fixtures/moc/orphan/orphan-anchor-only-up/SPEC-MOC.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=orphan-anchor-only-up"
+    ]
+  },
+  "tests/speckit-pro/layer1-structural/fixtures/moc/orphan/orphan-empty-up/SPEC-MOC.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=orphan-empty-up"
+    ]
+  },
+  "tests/speckit-pro/layer1-structural/fixtures/moc/orphan/orphan-leading-space-up/SPEC-MOC.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=orphan-leading-space-up"
+    ]
+  },
+  "tests/speckit-pro/layer1-structural/fixtures/moc/orphan/orphan-missing-up/SPEC-MOC.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=orphan-missing-up"
+    ]
+  },
+  "tests/speckit-pro/layer1-structural/fixtures/moc/orphan/orphan-protocol-relative-up/SPEC-MOC.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=orphan-protocol-relative-up"
+    ]
+  },
+  "tests/speckit-pro/layer1-structural/fixtures/moc/orphan/orphan-root-absolute-up/SPEC-MOC.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=orphan-root-absolute-up"
+    ]
+  },
+  "tests/speckit-pro/layer1-structural/fixtures/moc/orphan/orphan-scheme-up/SPEC-MOC.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=orphan-scheme-up"
+    ]
+  },
+  "tests/speckit-pro/layer1-structural/fixtures/moc/orphan/orphan-valid/SPEC-MOC.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=orphan-valid"
+    ]
+  },
+  "tests/speckit-pro/layer1-structural/fixtures/moc/orphan/orphan-wikilink-up/SPEC-MOC.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=orphan-wikilink-up"
+    ]
+  },
+  "tests/speckit-pro/layer1-structural/fixtures/moc/scan-clean/orphan-non-moc-doc/SPEC-MOC.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=orphan-non-moc-doc"
+    ]
+  },
+  "tests/speckit-pro/layer1-structural/fixtures/moc/scan-clean/orphan-non-moc-doc/contracts/foo.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=contracts"
+    ]
+  },
+  "tests/speckit-pro/layer1-structural/fixtures/moc/scan-clean/orphan-non-moc-doc/spec.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=orphan-non-moc-doc"
+    ]
+  },
+  "tests/speckit-pro/layer1-structural/fixtures/moc/specid/006a-uat-skeleton/SPEC-MOC.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=006a-uat-skeleton"
+    ]
+  },
+  "tests/speckit-pro/layer1-structural/fixtures/moc/specid/013a/SPEC-MOC.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=013a"
+    ]
+  },
+  "tests/speckit-pro/layer1-structural/fixtures/moc/specid/prsg-002-collision/SPEC-MOC.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=prsg-002-collision"
+    ]
+  },
+  "tests/speckit-pro/layer1-structural/fixtures/moc/specid/prsg-002-something/SPEC-MOC.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=prsg-002-something"
+    ]
+  },
+  "tests/speckit-pro/layer1-structural/fixtures/moc/specid/specid-absent/SPEC-MOC.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=specid-absent"
+    ]
+  },
+  "tests/speckit-pro/layer1-structural/fixtures/moc/specid/specid-empty/SPEC-MOC.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=specid-empty"
+    ]
+  },
+  "tests/speckit-pro/layer1-structural/fixtures/moc/stale-exempt/legacy-no-gate/SPEC-MOC.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=legacy-no-gate"
+    ]
+  },
+  "tests/speckit-pro/layer1-structural/fixtures/moc/stale/stale-absent-link/SPEC-MOC.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=stale-absent-link"
+    ]
+  },
+  "tests/speckit-pro/layer1-structural/fixtures/moc/stale/stale-absent-link/roadmap.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=stale-absent-link"
+    ]
+  },
+  "tests/speckit-pro/layer1-structural/fixtures/moc/stale/stale-broken-symlink/SPEC-MOC.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=stale-broken-symlink"
+    ]
+  },
+  "tests/speckit-pro/layer1-structural/fixtures/moc/stale/stale-broken-symlink/roadmap.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=stale-broken-symlink"
+    ]
+  },
+  "tests/speckit-pro/layer1-structural/fixtures/moc/stale/stale-dir-target/SPEC-MOC.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=stale-dir-target"
+    ]
+  },
+  "tests/speckit-pro/layer1-structural/fixtures/moc/stale/stale-dir-target/roadmap.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=stale-dir-target"
+    ]
+  },
+  "tests/speckit-pro/layer1-structural/fixtures/moc/stale/stale-valid/SPEC-MOC.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=stale-valid"
+    ]
+  },
+  "tests/speckit-pro/layer1-structural/fixtures/moc/stale/stale-valid/child.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=stale-valid"
+    ]
+  },
+  "tests/speckit-pro/layer1-structural/fixtures/moc/stale/stale-valid/roadmap.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=stale-valid"
+    ]
+  },
+  "tests/speckit-pro/layer1-structural/fixtures/moc/stale/stale-wikilink/SPEC-MOC.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=stale-wikilink"
+    ]
+  },
+  "tests/speckit-pro/layer1-structural/fixtures/moc/stale/stale-wikilink/roadmap.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=stale-wikilink"
+    ]
+  },
+  "tests/speckit-pro/layer1-structural/fixtures/spec-index/README.md": {
+    "verdict": [
+      "structural-layers-1-001"
+    ],
+    "checks_run": [
+      "ripwire . --grep=spec-index"
+    ]
+  },
+  "tests/speckit-pro/layer1-structural/fixtures/spec-index/current-empty/specs/prsg-900-current/SPEC-MOC.md": {
+    "verdict": [
+      "structural-layers-1-002"
+    ],
+    "checks_run": [
+      "ripwire . --grep=prsg-900-current"
+    ]
+  },
+  "tests/speckit-pro/layer1-structural/fixtures/spec-index/determinism/specs/a-prsg-910-current/SPEC-MOC.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=a-prsg-910-current"
+    ]
+  },
+  "tests/speckit-pro/layer1-structural/fixtures/spec-index/determinism/specs/b-prsg-911-stale/SPEC-MOC.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=b-prsg-911-stale"
+    ]
+  },
+  "tests/speckit-pro/layer1-structural/fixtures/spec-index/determinism/specs/b-prsg-911-stale/contracts/sample.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=contracts"
+    ]
+  },
+  "tests/speckit-pro/layer1-structural/fixtures/spec-index/determinism/specs/b-prsg-911-stale/plan.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=b-prsg-911-stale"
+    ]
+  },
+  "tests/speckit-pro/layer1-structural/fixtures/spec-index/determinism/specs/b-prsg-911-stale/spec.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=b-prsg-911-stale"
+    ]
+  },
+  "tests/speckit-pro/layer1-structural/fixtures/spec-index/determinism/specs/c-prsg-912-legacy/SPEC-MOC.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=c-prsg-912-legacy"
+    ]
+  },
+  "tests/speckit-pro/layer1-structural/fixtures/spec-index/inject-missing-all/specs/prsg-902-inject/SPEC-MOC.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=prsg-902-inject"
+    ]
+  },
+  "tests/speckit-pro/layer1-structural/fixtures/spec-index/inject-missing-all/specs/prsg-902-inject/spec.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=prsg-902-inject"
+    ]
+  },
+  "tests/speckit-pro/layer1-structural/fixtures/spec-index/prs-malformed/specs/prsg-908-prs-malformed/SPEC-MOC.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=prsg-908-prs-malformed"
+    ]
+  },
+  "tests/speckit-pro/layer1-structural/fixtures/spec-index/roadmap-moc/.specify/structure-version.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=.specify"
+    ]
+  },
+  "tests/speckit-pro/layer1-structural/fixtures/spec-index/roadmap-moc/docs/ai/specs/myproject-roadmap-MOC.md": {
+    "verdict": [
+      "structural-layers-1-001",
+      "structural-layers-1-002"
+    ],
+    "checks_run": [
+      "ripwire . --grep=specs"
+    ]
+  }
+}
