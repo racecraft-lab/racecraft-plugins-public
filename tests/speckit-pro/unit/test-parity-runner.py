@@ -16,6 +16,7 @@ import tempfile
 import unittest
 from pathlib import Path
 from types import ModuleType
+from typing import Any
 from unittest.mock import patch
 
 
@@ -176,6 +177,13 @@ def make_fixture(
     return fixture
 
 
+def make_contract_fixture(
+    runner: ModuleType, root: Path, name: str, compare: list[dict[str, str]], tolerances: dict[str, dict[str, str]]
+) -> tuple[Path, dict[str, Any], dict[str, Any]]:
+    fixture = make_fixture(root, name, compare, tolerances)
+    return fixture, runner.load_json(fixture / "expected-equivalence.json"), runner.load_json(fixture / "tolerance.json")
+
+
 def fake_claude_run(argv: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
     """Emulate Claude without relying on POSIX executable files."""
     child_env = kwargs["env"]
@@ -328,14 +336,13 @@ class Layer7RunnerTests(unittest.TestCase):
     def test_input_only_compare_sources_require_invariants(self) -> None:
         runner = import_runner()
         with tempfile.TemporaryDirectory() as temporary:
-            fixture = make_fixture(
+            fixture, expected, tolerance = make_contract_fixture(
+                runner,
                 Path(temporary),
                 "copied-input-canary",
                 [{"field": "workflow", "source": "workflow.md", "tolerance_key": "workflow"}],
                 {"workflow": {"tolerance": "exact"}},
             )
-            expected = runner.load_json(fixture / "expected-equivalence.json")
-            tolerance = runner.load_json(fixture / "tolerance.json")
             with self.subTest(msg="workflow.md-only compare without invariants is rejected"):
                 with self.assertRaisesRegex(ValueError, "copied workflow.md"):
                     runner.validate_fixture_contracts(fixture, expected, tolerance)
@@ -353,14 +360,13 @@ class Layer7RunnerTests(unittest.TestCase):
         self.assertNotEqual(runner.EXPECTED_SCHEMA, native_eval_pairing.EXPECTED_SCHEMA_VERSION)
         self.assertNotEqual(runner.TOLERANCE_SCHEMA, native_eval_pairing.TOLERANCE_SCHEMA_VERSION)
         with tempfile.TemporaryDirectory() as temporary:
-            fixture = make_fixture(
+            fixture, expected, tolerance = make_contract_fixture(
+                runner,
                 Path(temporary),
                 "schema-canary",
                 [{"field": "artifact", "source": "artifact.md", "tolerance_key": "artifact"}],
                 {"artifact": {"tolerance": "tolerance-1"}},
             )
-            expected = runner.load_json(fixture / "expected-equivalence.json")
-            tolerance = runner.load_json(fixture / "tolerance.json")
             with self.subTest(msg="whole-file tolerance-1 is rejected"):
                 with self.assertRaisesRegex(ValueError, "tolerance-1 requires table_row_count"):
                     runner.validate_fixture_contracts(fixture, expected, tolerance)

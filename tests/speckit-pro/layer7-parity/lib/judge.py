@@ -42,19 +42,6 @@ class ComparisonResult:
     def skipped(self) -> bool:
         return self.status == "skip"
 
-    def to_dict(self) -> dict[str, Any]:
-        payload: dict[str, Any] = {
-            "status": self.status,
-            "matched": self.matched,
-            "skipped": self.skipped,
-            "tolerance": self.tolerance,
-            "field": self.field,
-            "reason": self.reason,
-        }
-        if self.detail:
-            payload["detail"] = self.detail
-        return payload
-
 
 def judge_values(value_a: str, value_b: str, tolerance: str, *, field: str = "field") -> ComparisonResult:
     """Compare two already-extracted values under ``tolerance``."""

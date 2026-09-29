@@ -74,11 +74,9 @@ class Layer7JudgeTests(unittest.TestCase):
                 check()
 
     def _assert_source_contract(self) -> None:
-        source = JUDGE.read_text(encoding="utf-8")
-        self.assertNotIn("claude", source.lower())
-        self.assertNotIn("--json-schema", source)
-        self.assertNotIn("subprocess", source)
-        self.assertNotIn("shell=True", source)
+        source = JUDGE.read_text(encoding="utf-8").lower()
+        for forbidden in ("claude", "--json-schema", "subprocess"):
+            self.assertNotIn(forbidden, source)
 
 
 def main() -> int:
