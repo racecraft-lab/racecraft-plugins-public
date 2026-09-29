@@ -436,6 +436,14 @@
     {
       "path": {
         "kind": "plugin_relative",
+        "value": "speckit_pro_runner/stop_policy.py",
+        "display": "speckit_pro_runner/stop_policy.py"
+      },
+      "sha256": "eb61f8915adda40e14ab664d532c26e89fdfc76d393dc8f29ae3a3594f5e95e0"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
         "value": "speckit_pro_runner/sweep_broker.py",
         "display": "speckit_pro_runner/sweep_broker.py"
       },
