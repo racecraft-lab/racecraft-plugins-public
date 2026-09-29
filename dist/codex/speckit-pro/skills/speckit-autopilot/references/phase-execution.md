@@ -2908,10 +2908,12 @@ denial), a missing approval, or an unavailable tool or route.
        fixes a deferral resolves it; a completed gate retry means rerun the gate at
        the PR's head and pass the fresh result.
      - **A gate missing at a head.** Run it at that head. The gate is not a stop
-       until it stays missing: call `finalize-run` in `apply` mode once per
-       finalize cycle so the ledger counts each cycle that saw the head and gate
-       unfinished, and only a pair counted in an earlier cycle stops the run.
-       In `read_only` or `dry_run` mode nothing is counted.
+       until it stays missing: after each `finalize-run` cycle that returned it
+       pending, record the cycle with `execution-control` action
+       `record-finalize-cycle` (`mode=apply`, with `finalize_inputs` set to the same
+       inputs you passed to `finalize-run`). The runner recomputes the unfinished
+       heads and gates itself and counts each in the ledger; only a pair counted in
+       an earlier cycle stops the run. `finalize-run` itself never writes.
      - **A harness error awaiting its changed-environment attempt** (see Harness
        errors below).
    - `outcome=complete_with_deferred` or `outcome=complete`: every required
@@ -2955,7 +2957,7 @@ denial), a missing approval, or an unavailable tool or route.
      `attempts`, and that directory as `evidence`. The helper answers with a
      pending item asking for the changed-environment attempt: run it, then pass
      the result with `attempts` 4 and `environment_change` (`fresh_worktree` or
-     `cleared_caches`) in a later finalize cycle. It never counts as passed, and the human stop
+     `cleared_caches`) in a later finalize cycle, recorded the same way. It never counts as passed, and the human stop
      cites the evidence only if the error persists through that attempt. An attempt that ran the code
      under test and failed is a gate failure, not a harness error.
    Record `deferred_digest` in the workflow file's Phase 7 result. After the

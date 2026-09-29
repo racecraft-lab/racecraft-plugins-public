@@ -708,20 +708,28 @@ def finalize_observation_key(kind: str, head_sha: str, gate: str) -> str:
     return f"{kind}:{head_sha}:{gate}"
 
 
-def record_finalize_observations(root: Path, ledger_path: str, expected_run_id: str, keys: list[str]) -> None:
-    """Count each key once for the finalize cycle that just observed it; the count stops at the cap."""
-    path = confined_path(root, ledger_path)
-    with exclusive_ledger(path):
-        ledger = json.loads(path.read_text(encoding="utf-8"))
-        validate_ledger(ledger)
-        if ledger["run_id"] != expected_run_id:
-            raise ValueError("expected_run_id does not match the ledger")
-        counts = dict(ledger.get("finalize_observations", {}))
-        for key in sorted(set(keys)):
-            counts[key] = min(counts.get(key, 0) + 1, FINALIZE_OBSERVATION_CAP)
+RECORD_FINALIZE_CYCLE = "record-finalize-cycle"
+
+
+def record_finalize_cycle(root: Path, ledger: dict[str, Any], inputs: dict[str, Any], ledger_path: str) -> dict[str, Any]:
+    """Count each head and gate that a `finalize-run` over these inputs leaves unfinished, once for this cycle.
+
+    The runner recomputes the observed pairs itself from the same evidence, so no request names one. A count
+    only moves a pair from pending work toward a stop; it never makes a run ready.
+    """
+    from .helpers.run_finalization import finalize_run
+
+    request = inputs.get("finalize_inputs")
+    if (not isinstance(request, dict) or request.get("ledger_path") != ledger_path
+            or request.get("expected_run_id") != ledger["run_id"]):
+        raise ValueError("finalize_inputs must be the finalize-run inputs for this run's own ledger")
+    observed = finalize_run(root, request)["observed"]
+    counts = dict(ledger.get("finalize_observations", {}))
+    for key in observed:
+        counts[key] = min(counts.get(key, 0) + 1, FINALIZE_OBSERVATION_CAP)
+    if counts:
         ledger["finalize_observations"] = counts
-        validate_ledger(ledger)
-        durable_json(path, ledger)
+    return {"finalize_observed": observed}
 
 
 def _reserve_escalation(ledger: dict[str, Any], inputs: dict[str, Any], dispatch_id: str,
@@ -2137,7 +2145,7 @@ def execution_control(root: Path, inputs: dict[str, Any], mode: str,
     if spec_name is not None and not spec.is_file():
         raise ValueError("spec_file must be an existing contained file")
     action = inputs.get("action", "status")
-    if action not in {"start", "status", "bind-invariants", "reserve", "authorize-corrective-retry", "authorize-corrective-continuation", "authorize-corrective-exception", "reserve-class-correction", "begin-replan-epoch", "begin-stage-epoch", "begin-verification", "complete", "reconcile", "checkpoint", "pause", "resume", "relocate-workflow"}:
+    if action not in {"start", "status", "bind-invariants", "reserve", "authorize-corrective-retry", "authorize-corrective-continuation", "authorize-corrective-exception", "reserve-class-correction", "begin-replan-epoch", "begin-stage-epoch", "begin-verification", "complete", "reconcile", "checkpoint", "pause", "resume", "relocate-workflow", RECORD_FINALIZE_CYCLE}:
         if evidence is None or action != RECORD_FAILING_CHECKS:
             raise ValueError("unsupported action; pauses/resets require verified native authorization")
     elif evidence is not None:
@@ -2184,6 +2192,8 @@ def execution_control(root: Path, inputs: dict[str, Any], mode: str,
         _bind_invariants_if_requested(root, inputs, spec, ledger, now, reasons)
         if action == RECORD_FAILING_CHECKS and evidence is not None:
             extra = _record_failing_checks(ledger, inputs, evidence, now)
+        elif action == RECORD_FINALIZE_CYCLE and not reasons:
+            extra = record_finalize_cycle(root, ledger, inputs, relative)
         elif action == "reserve" and not reasons:
             extra = reserve(ledger, inputs, now, root, spec)
         elif action == "authorize-corrective-retry" and not reasons:

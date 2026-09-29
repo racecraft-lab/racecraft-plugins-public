@@ -15,9 +15,8 @@ exhausted, a gate still missing at a head, or a harness error. A ledger entry is
 resolved only when the ledger itself shows a later completed dispatch for the
 same unit; it stays in the ledger for audit but leaves the request. A `defer`
 disposition keeps the run working on other units mid-run; it never survives to
-a finalized run as a stop. This helper fails closed on missing or malformed
-evidence and writes only the finalize-cycle counts described below, and only in
-apply mode.
+a finalized run as a stop. This read-only helper fails closed on missing or
+malformed evidence and never writes a file.
 
 Every gate result names the PR head (`head_sha`) it ran at. A stack finalizes
 only when every PR head passed every non-UAT gate reported for any head, so a
@@ -42,8 +41,8 @@ fresh agent with a different approach guided by a consensus diagnosis, then tier
 run by the ledger. Only after tier 3 fails, or the cap is spent, is the unit
 exhausted. A gate missing at a head and a harness error awaiting its
 changed-environment attempt are pending too; a head-and-gate pair stops the run
-only when an earlier finalize cycle, counted in the ledger by a `finalize-run`
-request in apply mode, saw it unfinished too.
+only when an earlier finalize cycle, counted in the ledger by the
+`execution-control` action `record-finalize-cycle`, saw it unfinished too.
 """
 
 from __future__ import annotations
@@ -57,8 +56,7 @@ from typing import Any
 from ..agent_materialization import canonical_bytes
 from ..envelope import diagnostic, response
 from ..execution_control import (ESCALATION_TIER3_CAP, confined_path, escalation_key, escalation_progress,
-                                 failed_verification, finalize_observation_key, record_finalize_observations,
-                                 require_text, validate_ledger)
+                                 failed_verification, finalize_observation_key, require_text, validate_ledger)
 from ..sweep_isolation import HEX_OBJECT_RE
 
 ALLOWED_INPUTS = frozenset({"repo_root", "ledger_path", "expected_run_id", "gates", "pending_items",
@@ -448,10 +446,11 @@ def _missing_findings(prs: list[dict[str, Any]], gates: list[dict[str, Any]],
     return missing, pending, observed
 
 
-def finalize_run(root: Path, inputs: dict[str, Any], record: bool = False) -> dict[str, Any]:
+def finalize_run(root: Path, inputs: dict[str, Any]) -> dict[str, Any]:
     """The run's terminal decision; raises ValueError on missing or malformed evidence.
 
-    With `record`, each head and gate this cycle left pending is counted in the ledger once.
+    `observed` lists each head and gate this cycle left unfinished. The runner's `execution-control`
+    `record-finalize-cycle` action counts them in the ledger, so this helper itself writes nothing.
     """
     resume_command = _checked_inputs(inputs)
     ledger = _ledger(root, inputs)
@@ -469,10 +468,6 @@ def finalize_run(root: Path, inputs: dict[str, Any], record: bool = False) -> di
     missing, missing_pending, missing_observed = _missing_findings(prs, gates, counted)
     pending_items += gate_pending + missing_pending
     observed += missing_observed
-    if record and observed:
-        record_finalize_observations(root, _text(inputs.get("ledger_path"), "ledger_path"),
-                                     _text(inputs.get("expected_run_id"), "expected_run_id"), observed)
-
     # Canonical order, so the same blocker listed another way has the same digest and request text.
     stop = {"gates": _canonical(failed), "missing": _canonical(missing), "harness_errors": _canonical(harness)}
     human_uat, decisions = _canonical(human_uat), _canonical(decisions)
@@ -497,12 +492,13 @@ def finalize_run(root: Path, inputs: dict[str, Any], record: bool = False) -> di
         "decisions": decisions if finalized else [],
         "deferred_digest": digest,
         "end_of_run_request": request,
-        "writes_state": record and bool(observed),
+        "observed": sorted(observed),
+        "writes_state": False,
     }
 
 
 def run_run_finalization_helper(entry: Any, request: Any) -> dict[str, Any]:
-    """Runner helper entry point: reads one ledger, writes nothing."""
+    """Runner helper entry point: reads one ledger, writes nothing. Counting a cycle is `execution-control`'s job."""
     from .read_only import resolve_repo_root
 
     inputs = request.inputs if isinstance(request.inputs, dict) else {}
@@ -510,7 +506,7 @@ def run_run_finalization_helper(entry: Any, request: Any) -> dict[str, Any]:
     if isinstance(root, dict):
         return response("input_error", request_id=request.request_id, diagnostics=[root])
     try:
-        data = finalize_run(root, request.inputs, record=request.mode == "apply")
+        data = finalize_run(root, request.inputs)
     except (ValueError, OSError, TypeError, KeyError) as error:
         return response(
             "input_error",
