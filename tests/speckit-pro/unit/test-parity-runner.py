@@ -723,6 +723,32 @@ class Layer7ContractTests(unittest.TestCase):
 
 
 class Layer7LiveGuardTests(unittest.TestCase):
+    def test_unchanged_input_workflow_fails_live(self) -> None:
+        runner = import_runner()
+        fixture = LAYER7 / "04-stack-manager-guidance"
+
+        def do_nothing(argv: list[str], **_kwargs: object) -> subprocess.CompletedProcess[str]:
+            return subprocess.CompletedProcess(argv, 0)
+
+        def touch_workflow(argv: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+            with (Path(str(kwargs["cwd"])) / "workflow.md").open("a", encoding="utf-8") as handle:
+                handle.write("\n")
+            return subprocess.CompletedProcess(argv, 0)
+
+        for label, fake, failed in (("do-nothing run", do_nothing, 2), ("run that updates workflow.md", touch_workflow, 0)):
+            with self.subTest(msg=label), tempfile.TemporaryDirectory() as temporary:
+                counts = runner.Counts()
+                with (
+                    patch.dict(os.environ, {"L7_OUT": temporary}),
+                    patch.object(runner, "resolve_executable", return_value="claude"),
+                    patch.object(runner.subprocess, "run", side_effect=fake),
+                    contextlib.redirect_stdout(io.StringIO()),
+                ):
+                    runner.run_fixture_live(fixture, runner.Config(mode="live"), counts)
+                self.assertEqual(counts.failed, failed)
+
+
+class Layer7LiveSkipTests(unittest.TestCase):
     def test_live_skip_fails_unless_accepted(self) -> None:
         runner = import_runner()
         with tempfile.TemporaryDirectory() as temporary:
@@ -750,30 +776,6 @@ class Layer7LiveGuardTests(unittest.TestCase):
             with self.subTest(msg="accept-skips exits zero"):
                 self.assertEqual(run_main("--accept-skips"), 0)
 
-    def test_unchanged_input_workflow_fails_live(self) -> None:
-        runner = import_runner()
-        fixture = LAYER7 / "04-stack-manager-guidance"
-
-        def do_nothing(argv: list[str], **_kwargs: object) -> subprocess.CompletedProcess[str]:
-            return subprocess.CompletedProcess(argv, 0)
-
-        def touch_workflow(argv: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
-            with (Path(str(kwargs["cwd"])) / "workflow.md").open("a", encoding="utf-8") as handle:
-                handle.write("\n")
-            return subprocess.CompletedProcess(argv, 0)
-
-        for label, fake, failed in (("do-nothing run", do_nothing, 2), ("run that updates workflow.md", touch_workflow, 0)):
-            with self.subTest(msg=label), tempfile.TemporaryDirectory() as temporary:
-                counts = runner.Counts()
-                with (
-                    patch.dict(os.environ, {"L7_OUT": temporary}),
-                    patch.object(runner, "resolve_executable", return_value="claude"),
-                    patch.object(runner.subprocess, "run", side_effect=fake),
-                    contextlib.redirect_stdout(io.StringIO()),
-                ):
-                    runner.run_fixture_live(fixture, runner.Config(mode="live"), counts)
-                self.assertEqual(counts.failed, failed)
-
 
 class SkillNameTests(unittest.TestCase):
     def test_autopilot_references_use_the_shipped_skill_name(self) -> None:
@@ -795,6 +797,6 @@ if __name__ == "__main__":
     loader = unittest.defaultTestLoader
     suite = unittest.TestSuite(
         loader.loadTestsFromTestCase(case)
-        for case in (Layer7RunnerTests, Layer7ContractTests, Layer7LiveGuardTests, SkillNameTests)
+        for case in (Layer7RunnerTests, Layer7ContractTests, Layer7LiveGuardTests, Layer7LiveSkipTests, SkillNameTests)
     )
     raise SystemExit(run_counted(suite, label="test-parity-runner"))
