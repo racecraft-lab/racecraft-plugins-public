@@ -1987,11 +1987,13 @@ class UntaggedFailureFamilyTests(_CorrectionProgressFixture, unittest.TestCase):
         self.assert_schema_valid(json.loads((self.root / second["ledger_path"]).read_text()))
 
     def test_the_same_untagged_failing_set_keeps_one_family_and_one_reservation(self):
-        self.verify(runner_output("cargo-test.txt"))
-        self.correct("fix-1", invariant="words that name no requirement")
-        self.verify(runner_output("cargo-test.txt"))
-        repeated = self.correct("fix-2", invariant="different words")
-        self.assertEqual((repeated["disposition"], repeated["reasons"]), ("defer", ["failure_family_budget_exhausted"]))
+        outcomes = []
+        for attempt, words in enumerate(("words that name no requirement", "different words"), 1):
+            self.verify(runner_output("cargo-test.txt"))
+            outcomes.append(self.correct(f"fix-{attempt}", invariant=words))
+        repeated = outcomes[-1]
+        self.assertEqual((outcomes[0]["disposition"], repeated["disposition"], repeated["reasons"]),
+                         ("continue", "defer", ["failure_family_budget_exhausted"]))
         self.assertRegex(repeated["deferred"]["unit"], r"^untagged-[0-9a-f]{16}$")
         self.assert_schema_valid(repeated["ledger"])
         self.assertNotIn("fix-2", repeated["ledger"]["dispatches"])
