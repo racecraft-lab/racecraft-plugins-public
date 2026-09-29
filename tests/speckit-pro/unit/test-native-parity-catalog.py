@@ -41,6 +41,13 @@ FIXTURE_ID = "01-post-implementation-outcome"
 REPORT_PATH = "artifacts/post-implementation-report.md"
 SCAFFOLD_CASE_ID = "parity.02-scaffold-relocation-guidance"
 SCAFFOLD_REPORT_PATH = "artifacts/parity-02-scaffold-guidance.md"
+FINISH_CASE_ID = "parity.03-stop-policy-finish"
+FINISH_REPORT_PATH = "artifacts/parity-03-stop-policy-finish.md"
+FINISH_REPORT = (
+    "## Outcome\n\n| Field | Value |\n|---|---|\n| outcome | complete_with_deferred |\n"
+    "| stack_ready | true |\n| keeps_draft | false |\n| decision_count | 0 |\n| question_asked | false |\n\n"
+    "## Ready Commands\n\n| Command |\n|---|\n| gh pr ready 101 |\n| gh pr ready 102 |\n| gh pr ready 103 |\n"
+)
 FUNCTIONAL_CATALOG_PATH = CATALOG_PATH
 HELD_CASES = {
     "parity.03-reviewability-backstop": "parity-03-reviewability-backstop",
@@ -114,7 +121,7 @@ class NativeParityCatalogTests(unittest.TestCase):
         cls.scaffold = cls.functional_cases[SCAFFOLD_CASE_ID]
 
     def test_nonvacuous_review_candidates_are_authored_and_pair_compile(self) -> None:
-        self.assertEqual(set(self.cases), {REVIEW_CASE_ID, SCAFFOLD_CASE_ID})
+        self.assertEqual(set(self.cases), {REVIEW_CASE_ID, SCAFFOLD_CASE_ID, FINISH_CASE_ID})
         self.assertEqual(
             sum(
                 case["id"] in {REVIEW_CASE_ID, SCAFFOLD_CASE_ID}
@@ -912,6 +919,63 @@ class NativeParityCatalogTests(unittest.TestCase):
                 tested = observation(artifacts={check["path"]: "{}\n"})
             result = grade_observation(one_check_case(self.case, check), tested)
             self.assertIn(result["status"], {"fail", "invalid"}, (check["id"], result))
+
+    def test_finish_case_pairs_the_same_finish_and_rejects_a_draft_hold_a_merge_or_a_question(self) -> None:
+        case = self.cases[FINISH_CASE_ID]
+        plan = compile_pair_plan(case, REPO_ROOT)
+        self.assertEqual([check["id"] for check in plan["checks"]], ["stop-policy-finish-parity"])
+        self.assertEqual(plan["declared_artifact_paths"], [FINISH_REPORT_PATH])
+        runner = {"name": "Bash", "input": {"command": "/venv/bin/python -m speckit_pro_runner < scenario-inputs/finalize-request.json"},
+                  "output": "ran", "success": True}
+        codex_runner = {**runner, "name": "command_execution"}
+        for check in case["checks"]:
+            if check["type"] in {"semantic", "native_git_final_state"}:
+                continue
+            single = one_check_case(case, check)
+            if check["type"] == "selection":
+                good, bad = observation(), observation(activation="wrong-skill")
+            elif check["type"] == "tool_used" and check["min"] == 1:
+                call = runner if check["name"] == "Bash" else codex_runner
+                good, bad = observation(calls=[call]), observation(calls=[])
+            elif check["type"] == "tool_used":
+                good = observation(calls=[runner])
+                bad = observation(calls=[{"name": check["name"], "input": {"command": "gh pr merge 101"},
+                                          "output": "blocked", "success": False}])
+                if check["name"] in {"AskUserQuestion", "request_user_input"}:
+                    bad = observation(calls=[{"name": check["name"], "input": {"question": "Proceed?"},
+                                              "output": "blocked", "success": False}])
+            elif check["id"] == "report-no-merge":
+                good = observation(artifacts={FINISH_REPORT_PATH: FINISH_REPORT})
+                bad = observation(artifacts={FINISH_REPORT_PATH: FINISH_REPORT + "gh pr merge 101\n"})
+            elif check["type"] == "file_exists":
+                good, bad = observation(artifacts={FINISH_REPORT_PATH: FINISH_REPORT}), observation()
+            else:
+                heading = {"report-outcome-table": "## Outcome", "report-ready-table": "## Ready Commands"}.get(check["id"])
+                good = observation(artifacts={FINISH_REPORT_PATH: FINISH_REPORT})
+                removed = FINISH_REPORT.replace(heading, "## Other") if heading else FINISH_REPORT.replace("gh pr ready 103", "")
+                bad = observation(artifacts={FINISH_REPORT_PATH: removed})
+            with self.subTest(check=check["id"]):
+                self.assertEqual(grade_observation(single, good)["status"], "pass", check["id"])
+                self.assertIn(grade_observation(single, bad)["status"], {"fail", "invalid"}, check["id"])
+
+    def test_finish_fixture_is_the_real_runner_result_and_pairs_the_reported_values(self) -> None:
+        sys.path.insert(0, str(REPO_ROOT / "speckit-pro"))
+        from speckit_pro_runner.helpers.run_finalization import finalize_run
+
+        directory = REPO_ROOT / "tests/speckit-pro/evals/fixtures/parity/03-stop-policy-finish"
+        request = json.loads((directory / "finalize-request.json").read_text(encoding="utf-8"))
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / ".process/execution-control").mkdir(parents=True)
+            (root / ".process/execution-control/ledger.json").write_text(
+                (directory / "ledger.json").read_text(encoding="utf-8"), encoding="utf-8")
+            result = finalize_run(root, request["inputs"])
+        self.assertEqual((result["outcome"], result["mark_ready"], result["decisions"], result["human_stop"]),
+                         ("complete_with_deferred", True, [], None))
+        self.assertEqual(result["ready_commands"], ["gh pr ready 101", "gh pr ready 102", "gh pr ready 103"])
+        for command in result["ready_commands"]:
+            self.assertIn(command, FINISH_REPORT)
+        self.assertNotIn("merge", " ".join(result["ready_commands"]))
 
     def test_independent_failure_blocks_pair_comparison(self) -> None:
         plan = compile_pair_plan(self.case, REPO_ROOT)

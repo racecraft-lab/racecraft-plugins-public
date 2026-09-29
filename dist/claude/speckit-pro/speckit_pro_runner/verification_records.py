@@ -31,7 +31,7 @@ from typing import Any
 
 from .agent_materialization import canonical_bytes
 from .execution_control import (confined_path, default_ledger_directory, durable_json, evidence_directory, execution_control,
-                                record_failing_checks, require_text)
+                                record_failing_checks, require_text, worktree_evidence)
 from .failing_checks import fingerprint as failing_check_fingerprint
 
 SCHEMA = "verification-record/v1"
@@ -318,6 +318,7 @@ def execute_verification(root: Path, inputs: dict[str, Any], mode: str) -> dict[
     executable, toolchain = toolchain_binding(argv)
     before = tree_bytes(root, workflow_name)
     snapshot_sha = tree_digest(before)
+    head_evidence = worktree_evidence(root)
     if mode == "dry_run":
         return {"command_id": command_id, "argv": argv, "snapshot_sha256": snapshot_sha,
                 "writes_state": False, "authorization_granted": False, "reusable": False}
@@ -351,7 +352,8 @@ def execute_verification(root: Path, inputs: dict[str, Any], mode: str) -> dict[
               "isolation_mode": "copy_only"}
     durable_json(record_path, record)
     record_failing_checks(root, {**inputs, "workflow_file": workflow_name},
-                          failing_check_fingerprint(command_id, argv, exit_code, completed, stdout, stderr))
+                          {**failing_check_fingerprint(command_id, argv, exit_code, completed, stdout, stderr),
+                           **head_evidence})
     return {"record_path": record_name, "record": record, "observation_material": observation_material(record),
             "writes_state": True, "reusable": False, "requires_independent_native_event": True,
             "authorization_granted": False, "rerun_required": True,

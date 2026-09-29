@@ -41,9 +41,9 @@ gate never becomes a pass.
    missing budget number is a `block` that no pragma excuses.
 ```
 
-**Auto-Fix:** Not applicable — if the codebase doesn't pass typecheck/test/build, the user must fix it before starting a new spec workflow. These are foundational health checks.
+**Auto-Fix:** Spawn a repair agent for the failing typecheck/test/build check within the gate's allowance. These are foundational health checks.
 
-**Failure Escalation:** Immediate STOP. Report which checks failed with output. The user must resolve codebase issues before autopilot can proceed.
+**Failure Escalation:** If a check still fails, run the repair loop within its allowance, then defer per the Failure Escalation Protocol. Record which checks failed with their output.
 
 ### G1 — After Specify
 
@@ -69,7 +69,7 @@ This is a routing decision, not a pass/fail gate. The presence of markers is exp
 
 **Auto-Fix:** Re-run clarify focused on remaining markers. Spawn consensus agents for each unresolved question.
 
-**Failure Escalation:** If markers remain when the shared reservation ends, STOP. Present remaining ambiguities to human with all 3 agent perspectives.
+**Failure Escalation:** If markers remain when the shared reservation ends, run the repair loop within its allowance, then defer per the Failure Escalation Protocol. Record the remaining ambiguities with all 3 agent perspectives.
 
 ### G3 — After Plan
 
@@ -182,12 +182,11 @@ impossible. A skipped repair records the applicable reason rather than
 fabricating an attempt.
 
 **Failure Escalation:** If any G3 condition still fails after its reserved cycle,
-or provenance cannot be established well enough to repair safely, apply the
-configured `gate-failure` behavior. The default `stop` path presents the exact
-gate output, disputed wording, source evidence, provenance class, repairs made,
-and the remaining choice that requires human input. `skip-and-log` is a
-deliberate override only: it leaves the failed G3 verdict and unresolved marker
-recorded and must not rewrite their provenance.
+or provenance cannot be established well enough to repair safely, run the repair loop within its allowance, then defer per the Failure Escalation Protocol.
+Record the exact gate output, disputed wording, source evidence, provenance
+class, repairs made, and the remaining choice that requires human input. The
+deferred item leaves the failed G3 verdict and unresolved marker recorded and
+must not rewrite their provenance.
 
 ### G4 — After Checklist
 
@@ -245,8 +244,8 @@ Step 4: Re-run the domain checklist to verify the gap
     no per-domain reset or independent nested allowance
   - If 0 gaps → domain complete, proceed to next domain
 
-Step 5: If gaps remain when the shared reservation ends → STOP, present
-  to human with the gap description, research findings,
+Step 5: If gaps remain when the shared reservation ends → run the repair loop within its allowance, then defer per the Failure Escalation Protocol,
+  recording the gap description, research findings,
   and attempted fixes
 ```
 
@@ -315,7 +314,7 @@ names no evidence and passes. An unreadable sidecar fails the gate closed.
 - Place it in the appropriate user story phase
 - Ensure it has the correct FR reference marker
 
-**Failure Escalation:** If coverage gaps persist after the reserved cycle, STOP. Present the unmapped FRs with the relevant spec sections.
+**Failure Escalation:** If coverage gaps persist after the reserved cycle, run the repair loop within its allowance, then defer per the Failure Escalation Protocol. Record the unmapped FRs with the relevant spec sections.
 
 #### Post-G5 Reviewability Capture Matrix
 
@@ -414,8 +413,8 @@ Step 4: Re-run analyze to verify all findings resolved
   - If new required findings appear → reserve by stable invariant in the same ledger
   - If 0 findings → G6 PASS
 
-Step 5: If required findings remain when the reservation ends → STOP, present
-  to human with all remaining findings, research results,
+Step 5: If required findings remain when the reservation ends → run the repair loop within its allowance, then defer per the Failure Escalation Protocol,
+  recording all remaining findings, research results,
   and attempted fixes
 ```
 
@@ -584,7 +583,7 @@ Only `pass`, `warn`, or an honored typed-exception outcome may continue. An
 unexcepted block or gate error stops PR preparation and records the
 `final_reviewability_gate` state plus re-slicing packet when applicable.
 
-**Failure Escalation:** If verification suite fails after its shared corrective cycle, STOP. Present the specific failures to human.
+**Failure Escalation:** If verification suite fails after its shared corrective cycle, run the repair loop within its allowance, then defer per the Failure Escalation Protocol. Record the specific failures.
 
 ## Gate Summary Table
 

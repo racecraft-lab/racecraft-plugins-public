@@ -61,6 +61,9 @@ gates, and advance through every phase in the resolved
 `AUTOPILOT_STAGE`. A `--stage plan` run stops at its stage boundary;
 `full` covers all seven phases.
 
+When a run may involve a human, and which reasons count, is set by the shared
+[Autopilot Stop Policy](../../skills/speckit-autopilot/references/stop-policy.md).
+
 ## Architectural Constraint — Main Agent Is The Orchestrator
 
 This skill loads into the **main Codex session agent**, which owns all phase
@@ -220,7 +223,7 @@ response is one of:
 
 - Run the `$speckit-clarify` skill (Phase 2) with the multi-agent consensus
   protocol — that is autopilot's only clarification mechanism.
-- Fail the gate, surface the ambiguity, and stop. Pre-workflow interviews
+- Route the ambiguity to Clarify consensus, and defer it when consensus cannot settle it. Pre-workflow interviews
   belong in `$speckit-scaffold-spec`, not autopilot.
 
 This rule applies to: the orchestrator, every phase subagent
@@ -757,17 +760,23 @@ passing, with no operator event. `execution_control.disposition=defer`
 and not a stop: it defers one blocked unit whose
 correction made no measurable progress and whose allowance is spent, and the
 run keeps executing independent work.
-When every runnable item has finished, the read-only `finalize-run` runner
-helper decides the end under §Blocked Actions Mid-Run: Fall Back or Defer, Never
-Stop. Human UAT is the only gate a run may defer. With every non-UAT gate passed
-at every PR head and only human UAT left, the run finalizes: mark the stack ready for review
-(never merge), open the top PR body with its `Deferred / not verified` section,
-and mark the thread goal complete. When deferred items remain beyond human UAT
-(a failed gate, a ledger `deferred` entry, or an unresolved task), the run makes
-one human stop instead and the stack stays in draft. Either way, make the one
-consolidated `request_user_input` request and print the same question as plain
-text in the final message, listing every fallback taken and every deferred item,
-including each entry of the ledger's `deferred` list.
+When every runnable item has finished, whether or not deferred items remain, the
+read-only `finalize-run` runner helper decides the end under §Blocked Actions Mid-Run: Fall Back or Defer, Never
+Stop. Human UAT is the only gate a run may defer, and every required
+gate must be green at every PR head as the runner's own verification record shows
+it. With every required gate green, the run finalizes: mark the stack ready for
+review (never merge), open the top PR body with its `Deferred / not verified`
+section, and mark the thread goal complete. Human UAT, a ledger `deferred` unit
+that failed every escalation tier, and an unresolved task never keep the stack in
+draft: they reach the owner as items in the end-of-run request, the units and
+tasks under "Decisions for you". A failed unit climbs two escalation tiers first
+(a fresh agent guided by a consensus diagnosis, then the strongest model at max
+effort), and only a required gate still red, missing, or blocked by a harness
+error after that is one human stop, and the stack stays in draft. The run never pauses to ask.
+Print the final report as plain text on `outcome=complete` with nothing deferred, and ask no question.
+Otherwise print `end_of_run_request` as plain text in the final message. It
+is the handoff, listing every fallback taken and every deferred item, including
+each entry of the ledger's `deferred` list.
 If the audit finds incomplete Post work, set the first
 incomplete item to `in_progress` in both state stores and continue the
 autopilot loop instead of summarizing. `Post: Retrospective` is the final
@@ -824,6 +833,7 @@ PR URL.
   protocol, common issues, context window management
 
 **Shared CC references (still applicable to Codex):**
+- [Stop Policy](../../skills/speckit-autopilot/references/stop-policy.md) — The one contract for when a run may involve a human.
 - [Consensus Protocol](../../skills/speckit-autopilot/references/consensus-protocol.md) —
   Multi-agent resolution rules and flows
 - [Gate Validation](../../skills/speckit-autopilot/references/gate-validation.md) —

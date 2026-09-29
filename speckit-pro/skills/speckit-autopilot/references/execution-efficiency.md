@@ -36,7 +36,8 @@ ownership from the caller's current workflow.
 - `start`: open or recover the same workflow's ledger before the first phase.
   Pass `inputs.spec_file` as the resolved repo-relative feature spec path when
   available; the workflow can live elsewhere. If omitted, only an existing
-  adjacent spec can supply requirement IDs, otherwise failures use `unresolved`.
+  adjacent spec can supply requirement IDs, otherwise untagged failures take the
+  `untagged-<digest>` family, or `unresolved` when no failing set is recorded.
   An existing spec's registry freezes at start; later paths or contents never
   reset counters.
   Agent replacement, compaction, a reclaimed state mirror, and resume never
@@ -58,8 +59,11 @@ ownership from the caller's current workflow.
 - `reserve`: before each native dispatch or command, supply `dispatch_id` and
   `kind=implementation|corrective|verification|infrastructure`. A corrective
   dispatch supplies `failure_invariant`: a stable approved requirement or
-  invariant ID. Unknown mappings share `unresolved`; changed wording, task IDs,
-  agents, and commits are not new families.
+  invariant ID. A failure that names no approved ID takes the family
+  `untagged-<digest>` from the failing set the runner last recorded, so
+  unrelated untagged failures get separate reservations and the same set keeps
+  one; with no recorded failing set they share `unresolved`. Changed wording,
+  task IDs, agents, and commits are not new families.
   A review fix for the increment under review also supplies
   `review_remediation`: `{"tdd_unit": <the increment's TDD unit>, "paths":
   [<every repo-relative path the fix touches>]}`, plus an explicit `spec_file`
@@ -384,14 +388,15 @@ reservation (`failure_family_budget_exhausted`), the helper first asks whether
 that family's previous correction measurably converged, judged only from
 evidence the runner recorded itself. Every `execute-verification` run parses
 the output it executed, from a closed set of formats (unittest, pytest, bun,
-and jest), into `failing_checks` on its verification dispatch: `command_id`,
+jest, go test, cargo test, vitest, mocha, and JUnit XML), into `failing_checks` on its verification dispatch: `command_id`,
 `command_sha256` (the digest of the argv it ran), `format`, the sorted
 `failing` test identifiers, the `passing` identifiers when the format names
 them, `checks_run` (the run's own summary count), an `output_sha256` digest,
 and `recorded_at`. No
 helper action accepts this field, so a caller cannot supply it. Output in no
 supported format, output matching two formats, a nonzero exit naming no
-failure, or a command that did not finish records `failing: null`.
+failure, or a command that did not finish records `failing: null`. A plain `go test` prints no check count, so
+run `go test -v`; without it `checks_run` is unknown and no correction is admitted as progress.
 
 A family's first correction stores the newest recorded failure as its
 `baseline`, and pins `spec_file` (the bound spec when the run has one, else
@@ -455,11 +460,14 @@ increment's own review allowance, or the gate's allowance. It
 must be reserved at or after `deferred_at` and have `outcome=completed`. No
 request can name a resolution, and a failed or unknown result resolves
 nothing. At the end, list every unresolved entry of the current `deferred`
-list in the one end-of-run consolidated request; `finalize-run` omits resolved
-entries. An entry still unresolved at the end makes `finalize-run` return
-`outcome=human_stop`: the run never finalizes ready for review over it, a
-gate's included. `authorize-corrective-exception` and `begin-replan-epoch` are
-end-of-run tools that act on the operator's answer to that request. A new
+list in the one end-of-run request; `finalize-run` omits resolved
+entries. An entry still unresolved at the end first climbs the escalation
+tiers (tier 2, then tier 3, recorded per unit in `escalation_allowances` and
+capped at 3 tier-3 retries per run). A unit that failed every tier is listed
+under "Decisions for you" in the request of a stack that is still ready for
+review; only a required gate that is not green makes `finalize-run` return
+`outcome=human_stop`. `authorize-corrective-exception` and `begin-replan-epoch`
+are end-of-run tools that act on the operator's answer to that request. A new
 allowance archives the list into `corrective_epochs` with the rest of the
 spent allowance. The ledger validates every entry on each call: an entry whose
 allowance the ledger does not show as spent, a duplicate, or an out-of-order
