@@ -1,0 +1,258 @@
+[
+  {
+    "id": "brokers-and-verification-001",
+    "lane": "brokers-and-verification",
+    "severity": "major",
+    "kind": "cohesion",
+    "files": [
+      "speckit-pro/speckit_pro_runner/execution_control.py:413-452",
+      "speckit-pro/speckit_pro_runner/execution_control.py:916-931",
+      "speckit-pro/speckit_pro_runner/execution_control.py:1010-1025",
+      "speckit-pro/speckit_pro_runner/execution_control.py:1205-1233"
+    ],
+    "ripwire_command": "ripwire . --expand=_reserve_gate_remediation",
+    "summary": "The increment-review and gate-remediation allowances are implemented twice, near verbatim, in the validators, the request parsers and the reserve functions. The two request parsers are also asymmetric: only _gate_remediation rejects the other request kind, and the deferral keys differ (review_allowance versus remediation_allowance).",
+    "proposed_fix": "Parameterize one allowance implementation by ledger key, marker field and round limit. PR 852 already merges the two validators into _validate_round_allowances but keeps both _reserve_* functions and both request parsers, so finish the consolidation there.",
+    "in_flight_status": "still-open"
+  },
+  {
+    "id": "brokers-and-verification-002",
+    "lane": "brokers-and-verification",
+    "severity": "minor",
+    "kind": "cohesion",
+    "files": [
+      "speckit-pro/speckit_pro_runner/sweep_isolation.py:268",
+      "speckit-pro/speckit_pro_runner/sweep_isolation.py:556",
+      "speckit-pro/speckit_pro_runner/sweep_isolation.py:833",
+      "speckit-pro/speckit_pro_runner/sweep_isolation.py:1381",
+      "speckit-pro/speckit_pro_runner/sweep_isolation.py:1454",
+      "speckit-pro/speckit_pro_runner/sweep_isolation.py:1504"
+    ],
+    "ripwire_command": "ripwire . --grep=^def\\ |^class\\ ",
+    "summary": "One 1583-line module holds five jobs: Git snapshot capture, GitHub comment capture through gh, the HMAC session and receipt store, result validation and redaction, and the artifact-mutating apply_synthesis_receipt. apply_synthesis_receipt also calls the private SweepSession._consume_result.",
+    "proposed_fix": "Split into snapshot, github capture, session store and apply-mutation modules, and expose a public consume method instead of _consume_result.",
+    "in_flight_status": "still-open"
+  },
+  {
+    "id": "brokers-and-verification-003",
+    "lane": "brokers-and-verification",
+    "severity": "major",
+    "kind": "cohesion",
+    "files": [
+      "speckit-pro/speckit_pro_runner/execution_control.py:387",
+      "speckit-pro/speckit_pro_runner/execution_control.py:1097",
+      "speckit-pro/speckit_pro_runner/execution_control.py:1556",
+      "speckit-pro/speckit_pro_runner/execution_control.py:1726",
+      "speckit-pro/speckit_pro_runner/task_results.py:20",
+      "speckit-pro/speckit_pro_runner/task_results.py:76",
+      "speckit-pro/speckit_pro_runner/task_results.py:319",
+      "speckit-pro/speckit_pro_runner/sweep_isolation.py:660",
+      "speckit-pro/speckit_pro_runner/sweep_isolation.py:1564"
+    ],
+    "ripwire_command": "ripwire . --grep=from\\ .helpers",
+    "summary": "Core modules import shared primitives (resolve_repo_root, is_test_path, trusted_text, write_bytes_atomic, PHASE7_* constants) from helpers/read_only.py and helpers/mutation.py through function-local imports. This is the inverted core-to-helpers edge the arch baseline records, and the local imports hide a 20-file import cycle from static tools. PR 852 raises execution_control's local helper imports from 4 to 7.",
+    "proposed_fix": "Move the shared primitives into a core module (path and text utilities, atomic write) that both layers import at module level, then drop the local imports and the baselined edges.",
+    "in_flight_status": "still-open"
+  },
+  {
+    "id": "brokers-and-verification-004",
+    "lane": "brokers-and-verification",
+    "severity": "minor",
+    "kind": "cohesion",
+    "files": [
+      "speckit-pro/speckit_pro_runner/verification_records.py:309",
+      "speckit-pro/speckit_pro_runner/verification_records.py:38-60",
+      "speckit-pro/speckit_pro_runner/verification_docker_qualification.py:14",
+      "speckit-pro/speckit_pro_runner/verification_docker_qualification.py:222-241"
+    ],
+    "ripwire_command": "ripwire . --callers=_read_bounded_regular",
+    "summary": "verification_records.py is both the copy-only host executor and the home of primitives (sha, digest, tree_digest, evidence_directories, workflow_argv, _read_bounded_regular) that every Docker module needs. The Docker modules import a private name from it while it lazily imports the Docker workflow back, and the Docker qualification module uses four function-local imports to break the cycle.",
+    "proposed_fix": "Move the shared snapshot and evidence primitives into a small leaf module that both the host executor and the Docker modules import, and make _read_bounded_regular public there.",
+    "in_flight_status": "still-open"
+  },
+  {
+    "id": "brokers-and-verification-005",
+    "lane": "brokers-and-verification",
+    "severity": "minor",
+    "kind": "cohesion",
+    "files": [
+      "speckit-pro/speckit_pro_runner/sweep_isolation.py:428-435",
+      "speckit-pro/speckit_pro_runner/helpers/read_only.py:3396-3404"
+    ],
+    "ripwire_command": "ripwire . --clones",
+    "summary": "_bounded_comment_body and sweep_cut_utf8 are the same UTF-8 boundary cut, defined in two modules.",
+    "proposed_fix": "Keep one function in a shared text utility and call it from both.",
+    "in_flight_status": "still-open"
+  },
+  {
+    "id": "brokers-and-verification-006",
+    "lane": "brokers-and-verification",
+    "severity": "minor",
+    "kind": "coherence",
+    "files": [
+      "speckit-pro/speckit_pro_runner/sweep_launcher.py:86-96",
+      "speckit-pro/speckit_pro_runner/contracts/sweep-receipt-output.schema.json:1-11",
+      "speckit-pro/speckit_pro_runner/sweep_isolation.py:47-49",
+      "speckit-pro/scripts/sweep-isolation-hook.py:21-22"
+    ],
+    "ripwire_command": "ripwire . --grep=sweep-result:v1",
+    "summary": "The receipt shape is stated four times: the shipped schema file (used by Codex), an inline CLAUDE_RECEIPT_OUTPUT_SCHEMA dict (used by Claude), RECEIPT_RE in sweep_isolation.py, and RECEIPT_RE/CAPABILITY_RE in the hook script. No test compares them, so a change to one silently desyncs the others.",
+    "proposed_fix": "Load the Claude schema from the same JSON file and add a test that the hook script's patterns equal sweep_isolation's.",
+    "in_flight_status": "still-open"
+  },
+  {
+    "id": "brokers-and-verification-007",
+    "lane": "brokers-and-verification",
+    "severity": "minor",
+    "kind": "coherence",
+    "files": [
+      "speckit-pro/agents/sweep-analyst.md:96",
+      "speckit-pro/codex-skills/speckit-autopilot/references/sweep-prompts/analyst.md:29",
+      "speckit-pro/speckit_pro_runner/sweep_isolation.py:1454",
+      "speckit-pro/speckit_pro_runner/sweep_isolation.py:1504"
+    ],
+    "ripwire_command": "ripwire . --grep=exactly\\ once",
+    "summary": "Both analyst prompts say the synthesis anchor 'matches the snapshot exactly once', but validate_result and submit_result never check that. The only uniqueness check is live_text.count(anchor) == 1 at apply time, after the receipt is accepted, so an ambiguous anchor is refused late and the analyst cannot retry.",
+    "proposed_fix": "Check anchor uniqueness against the snapshot file for edit.file in validate_result, and return a broker error code so the analyst can retry.",
+    "in_flight_status": "still-open"
+  },
+  {
+    "id": "brokers-and-verification-008",
+    "lane": "brokers-and-verification",
+    "severity": "minor",
+    "kind": "cohesion",
+    "files": [
+      "speckit-pro/speckit_pro_runner/sweep_broker.py:236-330",
+      "speckit-pro/speckit_pro_runner/research_broker.py:1042-1097",
+      "speckit-pro/speckit_pro_runner/mcp_protocol.py:1-20"
+    ],
+    "ripwire_command": "ripwire . --clones",
+    "summary": "The stdio JSON-RPC loop (initialize, ping, tools/list, tools/call envelope, error framing, parse-error handling) is copied across the sweep, research and author brokers. mcp_protocol.py shares only version negotiation. Error handling already differs: the research broker maps any exception to internal_error, the sweep broker only its three violation classes.",
+    "proposed_fix": "Extend mcp_protocol.py with one serve(handle_call, server_info, tools) loop that each broker supplies a call handler and error mapper to.",
+    "in_flight_status": "still-open"
+  },
+  {
+    "id": "brokers-and-verification-009",
+    "lane": "brokers-and-verification",
+    "severity": "minor",
+    "kind": "coherence",
+    "files": [
+      "speckit-pro/speckit_pro_runner/research_broker.py:225-242",
+      "docs/ai/specs/research-broker-contract.md:112-117"
+    ],
+    "ripwire_command": "ripwire . --expand=project_root",
+    "summary": "project_root returns None for any directory that holds .claude-plugin or .codex-plugin, so in a repo that is itself a marketplace root (this one) the spec_text_detected outbound check is silently off even with CLAUDE_PROJECT_DIR set. The contract only says the check is off when neither variable nor git root names a project. Confirmed by calling project_root with the repo root.",
+    "proposed_fix": "Skip the check only when the candidate is the running plugin's own root, or state the marketplace-root exception in the contract.",
+    "in_flight_status": null
+  },
+  {
+    "id": "brokers-and-verification-010",
+    "lane": "brokers-and-verification",
+    "severity": "minor",
+    "kind": "coherence",
+    "files": [
+      "speckit-pro/speckit_pro_runner/contracts/quality-gates.schema.json:28",
+      "speckit-pro/skills/speckit-coach/references/quality-gates-guide.md:25-26",
+      "speckit-pro/skills/speckit-coach/references/quality-gates-guide.md:79-83",
+      "speckit-pro/scripts/crap-score.py:1-30"
+    ],
+    "ripwire_command": "ripwire . --grep=changed\\ function",
+    "summary": "The schema descriptions and the guide's field table say the complexity and CRAP thresholds apply 'per changed function', but the same guide says the gates judge every function in each changed file, and crap-score.py checks every function in the paths it is given.",
+    "proposed_fix": "Reword the schema descriptions and table rows to 'per function in each changed file'.",
+    "in_flight_status": "still-open"
+  },
+  {
+    "id": "brokers-and-verification-011",
+    "lane": "brokers-and-verification",
+    "severity": "minor",
+    "kind": "coherence",
+    "files": [
+      "speckit-pro/speckit_pro_runner/verification_docker.py:64",
+      "speckit-pro/speckit_pro_runner/verification_docker.py:126",
+      "speckit-pro/speckit_pro_runner/verification_docker_image.py:53",
+      "speckit-pro/speckit_pro_runner/verification_docker_image.py:121",
+      "speckit-pro/speckit_pro_runner/verification_docker_runtime.py:178",
+      "speckit-pro/skills/speckit-autopilot/references/execution-efficiency.md:526-560"
+    ],
+    "ripwire_command": "ripwire . --grep=arm64",
+    "summary": "The Linux/arm64 requirement is hard-coded in five places, and the Docker verification guidance in execution-efficiency.md never says qualified verification only works against an arm64 daemon. On an amd64 host or CI runner the run fails with ValueError('Docker daemon must report Linux/arm64').",
+    "proposed_fix": "Define one PLATFORM constant used by all three modules and add the arm64-only limit to the Docker section of the guidance.",
+    "in_flight_status": "still-open"
+  },
+  {
+    "id": "brokers-and-verification-012",
+    "lane": "brokers-and-verification",
+    "severity": "minor",
+    "kind": "coherence",
+    "files": [
+      "speckit-pro/codex-hooks.json:8-18",
+      "speckit-pro/hooks/hooks.json:37-47",
+      "speckit-pro/scripts/workflow-guard-hook.py:3-6",
+      "tests/speckit-pro/unit/test-workflow-guard-hook.py:208-221"
+    ],
+    "ripwire_command": "ripwire . --grep=matcher",
+    "summary": "The hook docstring and the Codex guide say the lockfile PreToolUse hook is 'matched to the shell tool by the hook manifest'. hooks.json has matcher Bash, but codex-hooks.json declares none, so the Codex hook runs for every tool call. The matcher-exemption test feeds a synthetic codex-hooks.json matcher line that the real file does not contain.",
+    "proposed_fix": "Add the shell-tool matcher to codex-hooks.json, or correct the docstring and guide and drop the synthetic case.",
+    "in_flight_status": null
+  },
+  {
+    "id": "brokers-and-verification-013",
+    "lane": "brokers-and-verification",
+    "severity": "minor",
+    "kind": "coherence",
+    "files": [
+      "tests/speckit-pro/evals/audit/unit-execution-contract-audit.md:28",
+      "tests/speckit-pro/unit/test-execution-control.py:3142-3154"
+    ],
+    "ripwire_command": "ripwire . --doc-drift",
+    "summary": "The audit record cites test-execution-control.py:619-623 for the custom loader and says it loads 45 families. The loader is now at lines 3142-3154 and lists 20 classes on main. Its drift is reported by --doc-drift.",
+    "proposed_fix": "Refresh the citation and the family count, or cite the loader by symbol instead of line.",
+    "in_flight_status": "still-open"
+  },
+  {
+    "id": "brokers-and-verification-014",
+    "lane": "brokers-and-verification",
+    "severity": "minor",
+    "kind": "cohesion",
+    "files": [
+      "tests/speckit-pro/unit/test-execution-control.py:2544",
+      "tests/speckit-pro/unit/test-execution-control.py:3058",
+      "tests/speckit-pro/unit/test-execution-control.py:3142-3154"
+    ],
+    "ripwire_command": "ripwire . --grep=DockerVerificationTests",
+    "summary": "The 3154-line execution-control test file also holds the host and Docker verification suites (VerificationTests, DockerVerificationTests), which duplicate the subject of test-verification-docker.py and test-verification-git.py. Its __main__ block runs a hand-written class list, so a new TestCase class not added there never runs, and nothing asserts the list is complete. The branch of PR 852 keeps growing that list.",
+    "proposed_fix": "Move the verification classes to their own module and replace the manual list with a check that every TestCase in the module is in the suite.",
+    "in_flight_status": "still-open"
+  },
+  {
+    "id": "brokers-and-verification-015",
+    "lane": "brokers-and-verification",
+    "severity": "minor",
+    "kind": "coherence",
+    "files": [
+      "speckit-pro/speckit_pro_runner/sweep_launcher.py:50-80",
+      "speckit-pro/speckit_pro_runner/sweep_launcher.py:189",
+      "speckit-pro/speckit_pro_runner/sweep_launcher.py:242",
+      "speckit-pro/codex-skills/speckit-autopilot/references/sweep-prompts/classifier.md:1-12"
+    ],
+    "ripwire_command": "ripwire . --grep=CODEX_STAGE_PROMPTS",
+    "summary": "The Codex stage instructions ('first action must be review_comment', 'submit_result exactly once', the result field shape) are written both in CODEX_STAGE_PROMPTS and in the sweep-prompts markdown, then concatenated into one prompt. The Claude path also validates its stage against the Codex-named CODEX_STAGE_PROMPTS dict.",
+    "proposed_fix": "Keep the instructions in the markdown only, and use a neutral STAGES tuple for stage validation in both commands.",
+    "in_flight_status": null
+  },
+  {
+    "id": "brokers-and-verification-016",
+    "lane": "brokers-and-verification",
+    "severity": "minor",
+    "kind": "cohesion",
+    "files": [
+      "speckit-pro/speckit_pro_runner/helpers/archive_sweep.py:31",
+      "speckit-pro/speckit_pro_runner/helpers/stack_manager.py:27",
+      "speckit-pro/speckit_pro_runner/sweep_isolation.py:438"
+    ],
+    "ripwire_command": "ripwire . --clones",
+    "summary": "Three modules each carry their own subprocess wrapper for gh (and git in stack_manager), with the same result shape and different timeouts (30, 20, and sweep_isolation's own).",
+    "proposed_fix": "Share one fixed-argv gh/git probe helper that takes the timeout as a parameter.",
+    "in_flight_status": "still-open"
+  }
+]

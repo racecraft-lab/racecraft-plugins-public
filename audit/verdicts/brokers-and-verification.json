@@ -1,0 +1,551 @@
+{
+  "docs/ai/specs/research-broker-contract.md": {
+    "verdict": [
+      "brokers-and-verification-009"
+    ],
+    "checks_run": [
+      "ripwire . --grep=research-broker-contract.md"
+    ]
+  },
+  "speckit-pro/.codex-plugin/sweep-mcp.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=sweep-mcp.json"
+    ]
+  },
+  "speckit-pro/.mcp.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=.mcp.json"
+    ]
+  },
+  "speckit-pro/agents/sweep-analyst.md": {
+    "verdict": [
+      "brokers-and-verification-007"
+    ],
+    "checks_run": [
+      "ripwire . --grep=sweep-analyst.md"
+    ]
+  },
+  "speckit-pro/agents/sweep-classifier.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=sweep-classifier.md"
+    ]
+  },
+  "speckit-pro/codex-hooks.json": {
+    "verdict": [
+      "brokers-and-verification-012"
+    ],
+    "checks_run": [
+      "ripwire . --grep=codex-hooks.json"
+    ]
+  },
+  "speckit-pro/codex-skills/speckit-autopilot/references/sweep-prompts/analyst.md": {
+    "verdict": [
+      "brokers-and-verification-007"
+    ],
+    "checks_run": [
+      "ripwire . --grep=analyst.md"
+    ]
+  },
+  "speckit-pro/codex-skills/speckit-autopilot/references/sweep-prompts/classifier.md": {
+    "verdict": [
+      "brokers-and-verification-015"
+    ],
+    "checks_run": [
+      "ripwire . --grep=classifier.md"
+    ]
+  },
+  "speckit-pro/hooks/hooks.json": {
+    "verdict": [
+      "brokers-and-verification-012"
+    ],
+    "checks_run": [
+      "ripwire . --grep=hooks.json"
+    ]
+  },
+  "speckit-pro/scripts/crap-score.py": {
+    "verdict": [
+      "brokers-and-verification-010"
+    ],
+    "checks_run": [
+      "ripwire . --grep=crap-score.py"
+    ]
+  },
+  "speckit-pro/scripts/mutation-score.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=mutation-score.py"
+    ]
+  },
+  "speckit-pro/scripts/sweep-isolation-hook.py": {
+    "verdict": [
+      "brokers-and-verification-006"
+    ],
+    "checks_run": [
+      "ripwire . --grep=sweep-isolation-hook.py"
+    ]
+  },
+  "speckit-pro/scripts/workflow-guard-hook.py": {
+    "verdict": [
+      "brokers-and-verification-012"
+    ],
+    "checks_run": [
+      "ripwire . --grep=workflow-guard-hook.py"
+    ]
+  },
+  "speckit-pro/skills/speckit-coach/references/quality-gates-guide.md": {
+    "verdict": [
+      "brokers-and-verification-010"
+    ],
+    "checks_run": [
+      "ripwire . --grep=quality-gates-guide.md"
+    ]
+  },
+  "speckit-pro/speckit_pro_runner/contracts/docker-verification-record-v2.schema.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=docker-verification-record-v2.schema.json"
+    ]
+  },
+  "speckit-pro/speckit_pro_runner/contracts/docker-verification-record.schema.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=docker-verification-record.schema.json"
+    ]
+  },
+  "speckit-pro/speckit_pro_runner/contracts/execution-control.schema.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=execution-control.schema.json"
+    ]
+  },
+  "speckit-pro/speckit_pro_runner/contracts/quality-gates.schema.json": {
+    "verdict": [
+      "brokers-and-verification-010"
+    ],
+    "checks_run": [
+      "ripwire . --grep=quality-gates.schema.json"
+    ]
+  },
+  "speckit-pro/speckit_pro_runner/contracts/sweep-receipt-output.schema.json": {
+    "verdict": [
+      "brokers-and-verification-006"
+    ],
+    "checks_run": [
+      "ripwire . --grep=sweep-receipt-output.schema.json"
+    ]
+  },
+  "speckit-pro/speckit_pro_runner/contracts/task-execution.schema.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=task-execution.schema.json"
+    ]
+  },
+  "speckit-pro/speckit_pro_runner/contracts/task-results.schema.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=task-results.schema.json"
+    ]
+  },
+  "speckit-pro/speckit_pro_runner/contracts/verification-record.schema.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=verification-record.schema.json"
+    ]
+  },
+  "speckit-pro/speckit_pro_runner/execution_control.py": {
+    "verdict": [
+      "brokers-and-verification-001",
+      "brokers-and-verification-003"
+    ],
+    "checks_run": [
+      "ripwire . --grep=execution_control.py"
+    ]
+  },
+  "speckit-pro/speckit_pro_runner/failing_checks.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=failing_checks.py"
+    ]
+  },
+  "speckit-pro/speckit_pro_runner/helpers/archive_sweep.py": {
+    "verdict": [
+      "brokers-and-verification-016"
+    ],
+    "checks_run": [
+      "ripwire . --grep=archive_sweep.py"
+    ]
+  },
+  "speckit-pro/speckit_pro_runner/mcp_protocol.py": {
+    "verdict": [
+      "brokers-and-verification-008"
+    ],
+    "checks_run": [
+      "ripwire . --grep=mcp_protocol.py"
+    ]
+  },
+  "speckit-pro/speckit_pro_runner/quality_gates.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=quality_gates.py"
+    ]
+  },
+  "speckit-pro/speckit_pro_runner/research_broker.py": {
+    "verdict": [
+      "brokers-and-verification-008",
+      "brokers-and-verification-009"
+    ],
+    "checks_run": [
+      "ripwire . --grep=research_broker.py"
+    ]
+  },
+  "speckit-pro/speckit_pro_runner/research_preflight.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=research_preflight.py"
+    ]
+  },
+  "speckit-pro/speckit_pro_runner/sweep_broker.py": {
+    "verdict": [
+      "brokers-and-verification-008"
+    ],
+    "checks_run": [
+      "ripwire . --grep=sweep_broker.py"
+    ]
+  },
+  "speckit-pro/speckit_pro_runner/sweep_isolation.py": {
+    "verdict": [
+      "brokers-and-verification-002",
+      "brokers-and-verification-003",
+      "brokers-and-verification-005",
+      "brokers-and-verification-006",
+      "brokers-and-verification-007",
+      "brokers-and-verification-016"
+    ],
+    "checks_run": [
+      "ripwire . --grep=sweep_isolation.py"
+    ]
+  },
+  "speckit-pro/speckit_pro_runner/sweep_launcher.py": {
+    "verdict": [
+      "brokers-and-verification-006",
+      "brokers-and-verification-015"
+    ],
+    "checks_run": [
+      "ripwire . --grep=sweep_launcher.py"
+    ]
+  },
+  "speckit-pro/speckit_pro_runner/task_execution.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=task_execution.py"
+    ]
+  },
+  "speckit-pro/speckit_pro_runner/task_results.py": {
+    "verdict": [
+      "brokers-and-verification-003"
+    ],
+    "checks_run": [
+      "ripwire . --grep=task_results.py"
+    ]
+  },
+  "speckit-pro/speckit_pro_runner/verification_docker.py": {
+    "verdict": [
+      "brokers-and-verification-011"
+    ],
+    "checks_run": [
+      "ripwire . --grep=verification_docker.py"
+    ]
+  },
+  "speckit-pro/speckit_pro_runner/verification_docker_entrypoint.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=verification_docker_entrypoint.py"
+    ]
+  },
+  "speckit-pro/speckit_pro_runner/verification_docker_image.py": {
+    "verdict": [
+      "brokers-and-verification-011"
+    ],
+    "checks_run": [
+      "ripwire . --grep=verification_docker_image.py"
+    ]
+  },
+  "speckit-pro/speckit_pro_runner/verification_docker_qualification.py": {
+    "verdict": [
+      "brokers-and-verification-004"
+    ],
+    "checks_run": [
+      "ripwire . --grep=verification_docker_qualification.py"
+    ]
+  },
+  "speckit-pro/speckit_pro_runner/verification_docker_readback.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=verification_docker_readback.py"
+    ]
+  },
+  "speckit-pro/speckit_pro_runner/verification_docker_runtime.py": {
+    "verdict": [
+      "brokers-and-verification-011"
+    ],
+    "checks_run": [
+      "ripwire . --grep=verification_docker_runtime.py"
+    ]
+  },
+  "speckit-pro/speckit_pro_runner/verification_docker_workflow.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=verification_docker_workflow.py"
+    ]
+  },
+  "speckit-pro/speckit_pro_runner/verification_git.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=verification_git.py"
+    ]
+  },
+  "speckit-pro/speckit_pro_runner/verification_records.py": {
+    "verdict": [
+      "brokers-and-verification-004"
+    ],
+    "checks_run": [
+      "ripwire . --grep=verification_records.py"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/scenario-contracts/archive/no-candidates/archive_sweep.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=archive_sweep.py"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/run-feedback-sweep-isolation-smoke.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=run-feedback-sweep-isolation-smoke.py"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/crap-score/coverage-istanbul.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=coverage-istanbul.json"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/crap-score/coverage-py.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=coverage-py.json"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/crap-score/coverage.lcov": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=coverage.lcov"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/crap-score/eslint-bad-message.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=eslint-bad-message.json"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/crap-score/eslint.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=eslint.json"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/crap-score/oxlint.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=oxlint.json"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/crap-score/radon.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=radon.json"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/crap-score/sample.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=sample.py"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/crap-score/sample.ts": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=sample.ts"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/mutation-helpers/requests/execution-control.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=execution-control.json"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/mutation-helpers/requests/sweep-apply-result.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=sweep-apply-result.json"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/read-only-helpers/requests/research-broker-preflight.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=research-broker-preflight.json"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/read-only-helpers/requests/sweep-isolation-session.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=sweep-isolation-session.json"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/read-only-helpers/requests/sweep-pr-feedback.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=sweep-pr-feedback.json"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/read-only-helpers/requests/validate-task-execution.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=validate-task-execution.json"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/research-broker/context7-context.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=context7-context.json"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/research-broker/context7-libs-search.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=context7-libs-search.json"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/research-broker/jev-recorded-inbound.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=jev-recorded-inbound.json"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/research-broker/tavily-search-response.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=tavily-search-response.json"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/verification-docker/docker": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=docker"
+    ]
+  },
+  "tests/speckit-pro/unit/test-archive-sweep-candidates.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=test-archive-sweep-candidates.py"
+    ]
+  },
+  "tests/speckit-pro/unit/test-batched-task-results.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=test-batched-task-results.py"
+    ]
+  },
+  "tests/speckit-pro/unit/test-claude-hooks.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=test-claude-hooks.py"
+    ]
+  },
+  "tests/speckit-pro/unit/test-crap-score.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=test-crap-score.py"
+    ]
+  },
+  "tests/speckit-pro/unit/test-execution-control.py": {
+    "verdict": [
+      "brokers-and-verification-013",
+      "brokers-and-verification-014"
+    ],
+    "checks_run": [
+      "ripwire . --grep=test-execution-control.py"
+    ]
+  },
+  "tests/speckit-pro/unit/test-feedback-sweep-isolation.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=test-feedback-sweep-isolation.py"
+    ]
+  },
+  "tests/speckit-pro/unit/test-feedback-sweep-parse.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=test-feedback-sweep-parse.py"
+    ]
+  },
+  "tests/speckit-pro/unit/test-mcp-protocol-negotiation.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=test-mcp-protocol-negotiation.py"
+    ]
+  },
+  "tests/speckit-pro/unit/test-mutation-score.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=test-mutation-score.py"
+    ]
+  },
+  "tests/speckit-pro/unit/test-quality-gates.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=test-quality-gates.py"
+    ]
+  },
+  "tests/speckit-pro/unit/test-research-broker-preflight.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=test-research-broker-preflight.py"
+    ]
+  },
+  "tests/speckit-pro/unit/test-research-broker.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=test-research-broker.py"
+    ]
+  },
+  "tests/speckit-pro/unit/test-task-execution.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=test-task-execution.py"
+    ]
+  },
+  "tests/speckit-pro/unit/test-verification-docker.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=test-verification-docker.py"
+    ]
+  },
+  "tests/speckit-pro/unit/test-verification-git.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=test-verification-git.py"
+    ]
+  },
+  "tests/speckit-pro/unit/test-workflow-guard-hook.py": {
+    "verdict": [
+      "brokers-and-verification-012"
+    ],
+    "checks_run": [
+      "ripwire . --grep=test-workflow-guard-hook.py"
+    ]
+  }
+}
