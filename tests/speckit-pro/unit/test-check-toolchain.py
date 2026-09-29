@@ -192,6 +192,8 @@ class CheckToolchainTests(unittest.TestCase):
                 with self.subTest(msg=name):
                     check()
 
+
+class PnpmPinTests(unittest.TestCase):
     def test_pnpm_pin_has_one_source(self) -> None:
         declared = json.loads((REPO_ROOT / "docs-site" / "package.json").read_text(encoding="utf-8"))["packageManager"]
         self.assertRegex(declared, r"^pnpm@\d+\.\d+\.\d+$")
@@ -210,7 +212,10 @@ class CheckToolchainTests(unittest.TestCase):
 
 
 def main() -> int:
-    suite = unittest.defaultTestLoader.loadTestsFromTestCase(CheckToolchainTests)
+    loader = unittest.defaultTestLoader
+    suite = unittest.TestSuite(
+        loader.loadTestsFromTestCase(case) for case in (CheckToolchainTests, PnpmPinTests)
+    )
     return run_counted(suite, label="test-check-toolchain")
 
 

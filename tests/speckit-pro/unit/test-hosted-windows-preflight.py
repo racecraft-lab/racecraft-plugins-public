@@ -107,21 +107,6 @@ class HostedPreflightScenario:
 
 
 class HostedWindowsPreflightTests(unittest.TestCase):
-    def test_preflight_scripts_share_one_architecture_vocabulary(self) -> None:
-        for machine in ("AMD64", "x64", "x86_64", "ARM64", "aarch64", "riscv64", ""):
-            with self.subTest(machine=machine):
-                self.assertEqual(helper._architecture_family(machine), dispatch_helper._architecture_family(machine))
-        self.assertEqual("x64", dispatch_helper._architecture_family("x86_64"))
-        self.assertEqual("x64", dispatch_helper.WINDOWS_ROLE_ARCHITECTURES["windows-x64"])
-        self.assertEqual("x64", dispatch_helper.LINUX_ROLE_ARCHITECTURES["linux-amd64"])
-        for role, family in helper.ROLE_ARCHITECTURE_FAMILIES.items():
-            self.assertEqual(family, dispatch_helper.WINDOWS_ROLE_ARCHITECTURES[role])
-
-    def test_response_contract_matches_the_runner_envelope(self) -> None:
-        self.assertEqual(envelope.STATUS_EXIT_CODES, helper.RESPONSE_STATUS_EXIT_CODES)
-        sent_fields = set(envelope.response("ok"))
-        self.assertEqual(sent_fields, helper.RESPONSE_REQUIRED_FIELDS)
-
     def run_scenario(
         self,
         scenario: HostedPreflightScenario,
@@ -994,6 +979,23 @@ class ContainerPreflightDispatchTests(unittest.TestCase):
             self.assertTrue((REPO_ROOT / request).is_file())
 
 
+class PreflightContractTests(unittest.TestCase):
+    def test_preflight_scripts_share_one_architecture_vocabulary(self) -> None:
+        for machine in ("AMD64", "x64", "x86_64", "ARM64", "aarch64", "riscv64", ""):
+            with self.subTest(machine=machine):
+                self.assertEqual(helper._architecture_family(machine), dispatch_helper._architecture_family(machine))
+        self.assertEqual("x64", dispatch_helper._architecture_family("x86_64"))
+        self.assertEqual("x64", dispatch_helper.WINDOWS_ROLE_ARCHITECTURES["windows-x64"])
+        self.assertEqual("x64", dispatch_helper.LINUX_ROLE_ARCHITECTURES["linux-amd64"])
+        for role, family in helper.ROLE_ARCHITECTURE_FAMILIES.items():
+            self.assertEqual(family, dispatch_helper.WINDOWS_ROLE_ARCHITECTURES[role])
+
+    def test_response_contract_matches_the_runner_envelope(self) -> None:
+        self.assertEqual(envelope.STATUS_EXIT_CODES, helper.RESPONSE_STATUS_EXIT_CODES)
+        sent_fields = set(envelope.response("ok"))
+        self.assertEqual(sent_fields, helper.RESPONSE_REQUIRED_FIELDS)
+
+
 def main() -> int:
     suite = unittest.TestSuite(
         [
@@ -1002,6 +1004,9 @@ def main() -> int:
             ),
             unittest.defaultTestLoader.loadTestsFromTestCase(
                 ContainerPreflightDispatchTests
+            ),
+            unittest.defaultTestLoader.loadTestsFromTestCase(
+                PreflightContractTests
             ),
         ]
     )
