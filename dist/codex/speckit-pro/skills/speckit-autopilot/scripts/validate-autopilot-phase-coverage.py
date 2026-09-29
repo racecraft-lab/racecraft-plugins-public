@@ -4394,7 +4394,7 @@ def formal_checkpoint_errors(workflow: Path, workflow_text: str, state: dict[str
     if plugin_root not in sys.path:
         sys.path.insert(0, plugin_root)
     try:
-        from speckit_pro_runner.formal.lifecycle import coverage_errors
+        from speckit_pro_runner.helpers.formal_policy import coverage_errors
         from speckit_pro_runner.formal.selection import selection_from_workflow
 
         selection = selection_from_workflow(workflow_text)

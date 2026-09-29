@@ -20,11 +20,12 @@ from typing import Any, Callable, cast
 from ..agent_inventory import CLAUDE_REQUIRED_AGENT_NAMES
 from ..envelope import diagnostic, response
 from ..execution_control import is_implementation_notes
-from ..formal.selection import unique_object
 from ..gate_discovery import DEFAULT_BASE_BRANCH, SLOTS as GATE_SLOTS, resolve_slots as resolve_gate_slots
 from .. import quality_gates
 from ..json_schema import json_schema_failures
 from ..runtime import detect_plugin_root
+from ..strict_input import unique_object
+from .formal_policy import apply_resume_guard, gate_checkpoint
 
 CAPTURE_LIMIT_BYTES = 16 * 1024
 PLAN_LAYERS_CAPTURE_LIMIT_BYTES = 256 * 1024
@@ -2200,7 +2201,6 @@ def validate_gate(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
     feature = resolve_input_path(inputs.get("feature_dir") or "", repo_root)
     if gate not in {f"G{i}" for i in range(1, 8)}:
         return make_result(json_text({"error": f"Unknown gate: {gate}"}), exit_code=2)
-    from ..formal.helper import gate_checkpoint
     formal_gate = gate_checkpoint(repo_root, {**inputs, "gate": gate})
     if formal_gate is not None:
         return make_result(json_text(formal_gate), exit_code=1)
@@ -3165,7 +3165,6 @@ def resolve_autopilot_stage(inputs: dict[str, Any], repo_root: Path) -> dict[str
             f" table: {workflow_raw}\n",
             2,
         )
-    from ..formal.helper import apply_resume_guard
     from ..artifact_review import review_handoff
     try:
         formal = apply_resume_guard(repo_root, workflow_raw, parsed, signals)
