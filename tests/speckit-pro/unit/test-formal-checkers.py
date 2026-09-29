@@ -582,6 +582,7 @@ if __name__ == "__main__":
         parser.error("--quint-root requires --apalache-jar")
     suite = unittest.defaultTestLoader.loadTestsFromTestCase(FormalCheckerTests)
     suite.addTests(unittest.defaultTestLoader.loadTestsFromTestCase(QuintIdentityTests))
+    suite.addTests(unittest.defaultTestLoader.loadTestsFromTestCase(FormalLifecycleTimestampTests))
     if JAR:
         for name in unittest.defaultTestLoader.getTestCaseNames(NativeApalacheTests):
             if name.startswith("test_native_"):

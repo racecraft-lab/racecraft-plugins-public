@@ -27,7 +27,8 @@ LAYER_SCRIPT_DISPATCHER = "tests/speckit-pro/run-layer-scripts.py"
 LAYER_SCRIPT_TIMEOUT_SECONDS = 1800
 SUITE_MANIFEST_PATH = "tests/speckit-pro/suite-manifest.json"
 TOOLCHAIN_CHECKER = "tests/speckit-pro/check-toolchain.py"
-TOOLCHAIN_MODES = {"tests", "shell", "docs", "all"}
+TOOLCHAIN_MODE_NAMES = ("tests", "docs", "all")
+TOOLCHAIN_MODES = frozenset(TOOLCHAIN_MODE_NAMES)
 
 
 class SuiteManifestError(Exception):
@@ -277,9 +278,9 @@ def run_toolchain_preflight(entry: Any, request: Any, repo_root: Path) -> dict[s
         diag = diagnostic(
             "invalid_toolchain_mode",
             "run-toolchain-preflight requires a supported toolchain mode",
-            details={"mode": mode, "supported_modes": ["tests", "shell", "docs", "all"]},
+            details={"mode": mode, "supported_modes": list(TOOLCHAIN_MODE_NAMES)},
             remediation_summary="Send a supported toolchain preflight mode.",
-            remediation_actions=["Set inputs.mode to tests, shell, docs, or all.", "Retry the request."],
+            remediation_actions=[f"Set inputs.mode to {', '.join(TOOLCHAIN_MODE_NAMES[:-1])}, or {TOOLCHAIN_MODE_NAMES[-1]}.", "Retry the request."],
         )
         return response("input_error", request_id=request.request_id, data=base_data(entry, request.operation, "input_error"), diagnostics=[diag])
     return run_command_set(entry, request, repo_root, ["toolchain"])
@@ -402,7 +403,7 @@ def internal_command_spec(command_id: str) -> CommandSpec:
 def toolchain_command_spec(command_id: str, inputs: dict[str, Any], repo_root: Path) -> CommandSpec | dict[str, Any]:
     mode = inputs.get("mode", "tests")
     if not isinstance(mode, str) or mode not in TOOLCHAIN_MODES:
-        return unsafe_command_diagnostic(command_id, "toolchain mode must be one of all, docs, shell, or tests")
+        return unsafe_command_diagnostic(command_id, f"toolchain mode must be one of {', '.join(sorted(TOOLCHAIN_MODES))}")
     checker = repo_root / TOOLCHAIN_CHECKER
     if checker.is_file():
         return CommandSpec(

@@ -2,7 +2,6 @@
 """Mocked dispatch, cancellation, global ceiling and resume contracts; no providers."""
 from __future__ import annotations
 
-import importlib.util
 from contextlib import ExitStack, nullcontext
 import hashlib
 import json
@@ -30,11 +29,12 @@ import trigger_comparison as comparison
 from test_result import run_counted
 
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "lib"))
+from script_loader import load_script  # noqa: E402
+
+
 def fixture_module():
-    spec = importlib.util.spec_from_file_location("campaign_comparison_fixture", ROOT / "unit/test-trigger-comparison.py")
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    return load_script("campaign_comparison_fixture", ROOT / 'unit/test-trigger-comparison.py')
 
 
 def request_fixture(root):

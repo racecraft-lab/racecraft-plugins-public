@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import errno
-import importlib.util
 import io
 import json
 import os
@@ -30,14 +29,12 @@ if str(SHARED_LIB) not in sys.path:
 from test_result import run_counted  # noqa: E402
 
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "lib"))
+from script_loader import load_script  # noqa: E402
+
+
 def import_runner():
-    spec = importlib.util.spec_from_file_location("functional_headless_runner", RUNNER_PATH)
-    if spec is None or spec.loader is None:
-        raise AssertionError(f"cannot import {RUNNER_PATH}")
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[spec.name] = module
-    spec.loader.exec_module(module)
-    return module
+    return load_script("functional_headless_runner", RUNNER_PATH)
 
 
 def actor_environment(root: Path) -> dict[str, str]:

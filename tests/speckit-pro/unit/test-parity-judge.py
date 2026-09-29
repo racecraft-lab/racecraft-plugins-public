@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-import importlib.util
 import json
 import os
 import subprocess
@@ -41,12 +40,12 @@ CURRENT_INVENTORY = [
 ]
 
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "lib"))
+from script_loader import load_script  # noqa: E402
+
+
 def import_judge():
-    spec = importlib.util.spec_from_file_location("l7_judge", JUDGE)
-    module = importlib.util.module_from_spec(spec)
-    assert spec.loader is not None
-    spec.loader.exec_module(module)
-    return module
+    return load_script("l7_judge", JUDGE)
 
 
 def run_cli(*args: str) -> subprocess.CompletedProcess[str]:

@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 """run-all.py — Python stdlib orchestrator for the speckit-pro test suite.
 
-Reproduces the ``run-all.sh`` developer UX with no Bash or ``jq`` dependency of
-its own:
+Runs the speckit-pro test suite with no Bash or ``jq`` dependency of its own:
 
   run-all.py               # Layers 1, 4, 5 + toolchain preflight (default)
   run-all.py --live        # default deterministic layers; no live Layer 6 selected
@@ -14,7 +13,7 @@ its own:
 The layer roster, per-layer scripts, execution mode (execute vs print-commands),
 and counting flags all come from ``tests/speckit-pro/suite-manifest.json`` — the
 single source of truth the shipped suite gate also reads. Layer 7 is a gate-only
-parity layer with no run-all block, matching ``run-all.sh``.
+parity layer with no run-all block.
 
 Headline: ``speckit-pro test suite: X/Y passed`` (``X/Y passed (Z failed)`` on
 failure), where X/Y sums each child's ``<label>: X/Y passed`` line. Exit 0 iff
@@ -37,6 +36,7 @@ TEST_LIB = Path(__file__).resolve().parent / "lib"
 if str(TEST_LIB) not in sys.path:
     sys.path.insert(0, str(TEST_LIB))
 
+from suite_child_env import child_environment  # noqa: E402
 from test_result import classify_counted_child, failure_report  # noqa: E402
 
 SUITE_MANIFEST = "tests/speckit-pro/suite-manifest.json"
@@ -136,16 +136,6 @@ def exit_code_for(total_fail: int) -> int:
     return 0 if total_fail == 0 else 1
 
 
-def child_env(root: Path, config: Config) -> dict[str, str]:
-    env = os.environ.copy()
-    env["TESTS_DIR"] = str(root / "tests" / "speckit-pro")
-    env["PLUGIN_ROOT"] = str(root / "speckit-pro")
-    env.setdefault("PROJECT_ROOT", env["PLUGIN_ROOT"])
-    if config.verbose:
-        env["VERBOSE"] = "true"
-    return env
-
-
 def dispatch_script(
     path: Path,
     layer: dict,
@@ -168,7 +158,7 @@ def dispatch_script(
         cwd=root,
         text=True,
         capture_output=True,
-        env=child_env(root, config),
+        env=child_environment(root, verbose=config.verbose),
         shell=False,
         check=False,
     )
@@ -227,21 +217,16 @@ def print_layer_commands(layer: dict, root: Path) -> None:
         print(f"    python3 {script['path']}{argument_hint}")
 
 
-def run_toolchain_preflight(root: Path, config: Config, manifest: dict) -> bool:
-    by_key = {layer.get("key"): layer for layer in manifest["layers"] if layer.get("key")}
-    mode = "tests" if ("structural" in by_key and layer_should_run(by_key["structural"], config)) else "shell"
+def run_toolchain_preflight(root: Path) -> bool:
     request = {
         "schema_version": "1.0",
         "request_id": "run-all-py-toolchain",
         "helper_id": "suite-gate",
         "operation": "run-toolchain-preflight",
         "mode": "read_only",
-        "inputs": {"mode": mode, "repo_root": "."},
+        "inputs": {"mode": "tests", "repo_root": "."},
     }
-    env = os.environ.copy()
-    plugin_root = str(root / "speckit-pro")
-    existing = env.get("PYTHONPATH")
-    env["PYTHONPATH"] = plugin_root if not existing else f"{plugin_root}{os.pathsep}{existing}"
+    env = child_environment(root)
     env["PYTHONDONTWRITEBYTECODE"] = "1"
     completed = subprocess.run(
         [sys.executable, "-m", "speckit_pro_runner"],
@@ -285,7 +270,7 @@ def main(argv: list[str]) -> int:
     if os.environ.get("SPECKIT_SKIP_TOOLCHAIN_CHECK") != "1" and toolchain_should_run(manifest, config):
         print("\nToolchain Preflight")
         print(RULE)
-        if not run_toolchain_preflight(root, config, manifest):
+        if not run_toolchain_preflight(root):
             print("  FAIL check-toolchain (gate)")
             print("\nToolchain preflight failed — aborting before running any layer.", file=sys.stderr)
             print("Fix the tools listed above, or set SPECKIT_SKIP_TOOLCHAIN_CHECK=1 to bypass the gate.", file=sys.stderr)

@@ -29,6 +29,7 @@ TEST_LIB = Path(__file__).resolve().parent / "lib"
 if str(TEST_LIB) not in sys.path:
     sys.path.insert(0, str(TEST_LIB))
 
+from suite_child_env import child_environment  # noqa: E402
 from test_result import child_check_status, failure_report  # noqa: E402
 
 SUITE_MANIFEST = "tests/speckit-pro/suite-manifest.json"
@@ -66,7 +67,7 @@ def canonical_layer_entry(repo_root: Path, selector: str) -> dict | None:
 
 
 def canonical_test_scripts(repo_root: Path, layer: str) -> list[Path]:
-    """Return the layer's dispatch roster from suite-manifest.json (not run-all.sh).
+    """Return the layer's dispatch roster from suite-manifest.json.
 
     The manifest's per-layer ``scripts[]`` is the single source of truth for the
     dispatch set.
@@ -75,21 +76,6 @@ def canonical_test_scripts(repo_root: Path, layer: str) -> list[Path]:
     if entry is None:
         return []
     return [repo_root / script["path"] for script in entry.get("scripts", [])]
-
-
-def python_child_env(repo_root: Path) -> dict[str, str]:
-    env = os.environ.copy()
-    plugin_root = repo_root / "speckit-pro"
-    existing = env.get("PYTHONPATH")
-    env["PYTHONPATH"] = plugin_root.as_posix() if not existing else f"{plugin_root.as_posix()}{os.pathsep}{existing}"
-    # Scripts run in parallel, and git's detached auto-maintenance can create and
-    # delete .git/objects/maintenance.lock while a fixture walks .git.
-    git_config = (("commit.gpgsign", "false"), ("maintenance.auto", "false"), ("gc.auto", "0"))
-    env["GIT_CONFIG_COUNT"] = str(len(git_config))
-    for index, (key, value) in enumerate(git_config):
-        env[f"GIT_CONFIG_KEY_{index}"] = key
-        env[f"GIT_CONFIG_VALUE_{index}"] = value
-    return env
 
 
 def rel(path: Path, repo_root: Path) -> str:
@@ -121,7 +107,7 @@ def run_script(test_path: Path, repo_root: Path) -> tuple[str, bool, str]:
         return (rel(test_path, repo_root), False, "test file missing")
     if test_path.suffix != ".py":
         return (rel(test_path, repo_root), False, "non-Python manifest entry")
-    env = python_child_env(repo_root)
+    env = child_environment(repo_root)
     argv = [sys.executable, rel(test_path, repo_root)]
     completed = subprocess.run(
         argv,

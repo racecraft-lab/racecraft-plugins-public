@@ -19,36 +19,15 @@ PLUGIN_ROOT = REPO_ROOT / "speckit-pro"
 RUNNER_DIR = PLUGIN_ROOT / "speckit_pro_runner"
 RELEASE_PLEASE_BRANCH_PREFIX = "release-please--branches--"
 sys.path.insert(0, str(PLUGIN_ROOT))
+sys.path.insert(0, str(REPO_ROOT / "tests" / "speckit-pro" / "lib"))
+from runner_invocation import assert_runner_response, run_runner  # noqa: E402
 FIXTURE_FILE = Path(__file__).resolve().parent / "fixtures" / "speckit-pro-runner" / "contract-fixtures.json"
-
-
-def runner_env() -> dict[str, str]:
-    env = os.environ.copy()
-    existing = env.get("PYTHONPATH")
-    env["PYTHONPATH"] = str(PLUGIN_ROOT) if not existing else f"{PLUGIN_ROOT}{os.pathsep}{existing}"
-    return env
 
 
 def encode_request(request: object) -> str:
     if isinstance(request, str):
         return request
     return json.dumps(request)
-
-
-def run_runner(request: object) -> tuple[subprocess.CompletedProcess[str], dict[str, object] | None, list[dict[str, object]]]:
-    completed = subprocess.run(
-        [sys.executable, "-m", "speckit_pro_runner"],
-        input=encode_request(request),
-        text=True,
-        capture_output=True,
-        cwd=REPO_ROOT,
-        env=runner_env(),
-        shell=False,
-        check=False,
-    )
-    response = json.loads(completed.stdout) if completed.stdout.strip() else None
-    stderr_records = [json.loads(line) for line in completed.stderr.splitlines() if line.strip()]
-    return completed, response, stderr_records
 
 
 def review_base_candidates() -> list[str]:
@@ -142,12 +121,7 @@ class RunnerFoundationTests(unittest.TestCase):
             self.assertEqual(diagnostic["code"], code)
 
     def assert_response(self, response: dict[str, object], status: str, exit_code: int) -> None:
-        self.assertEqual(response["schema_version"], "1.0")
-        self.assertEqual(response["status"], status)
-        self.assertEqual(response["exit_code"], exit_code)
-        self.assertIsNone(response["legacy_exit_code"])
-        self.assertIsInstance(response["diagnostics"], list)
-        self.assertIsInstance(response["data"], dict)
+        assert_runner_response(self, response, status, exit_code)
 
     def test_runner_subprocess_executables_are_statically_bash_free(self) -> None:
         from speckit_pro_runner.gates.active_path_guard import repo_bash_python_findings

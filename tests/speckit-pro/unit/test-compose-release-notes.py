@@ -8,7 +8,6 @@ import contextlib
 import functools
 import hashlib
 import http.client
-import importlib.util
 import io
 import json
 import os
@@ -40,6 +39,10 @@ TAG = "speckit-pro-v2.19.0"
 PREVIOUS_TAG = "speckit-pro-v2.18.0"
 
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "lib"))
+from script_loader import load_script  # noqa: E402
+
+
 def inventory_check(test):  # type: ignore[no-untyped-def]
     """Give a non-loop unittest method one stable parity-inventory name."""
     @functools.wraps(test)
@@ -52,13 +55,7 @@ def inventory_check(test):  # type: ignore[no-untyped-def]
 
 
 def load_composer():  # type: ignore[no-untyped-def]
-    spec = importlib.util.spec_from_file_location("compose_release_notes", SCRIPT)
-    if spec is None or spec.loader is None:
-        raise AssertionError(f"unable to load composer: {SCRIPT}")
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[spec.name] = module
-    spec.loader.exec_module(module)
-    return module
+    return load_script("compose_release_notes", SCRIPT)
 
 
 COMPOSER = load_composer()

@@ -72,8 +72,8 @@ LINUX_REQUESTS = (
         False,
     ),
     (
-        "default-suite",
-        "tests/speckit-pro/unit/fixtures/runner-gates/requests/run-default-suite.json",
+        "ci-suite",
+        "tests/speckit-pro/unit/fixtures/runner-gates/requests/run-ci-suite.json",
         True,
     ),
     (

@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import ast
-import importlib.util
 import json
 import os
 import stat
@@ -23,6 +22,10 @@ if str(LIB_DIR) not in sys.path:
 from test_result import run_counted  # noqa: E402
 
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "lib"))
+from script_loader import load_script  # noqa: E402
+
+
 def run_hook(script: Path, payload: str) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         [sys.executable, str(script)],
@@ -36,11 +39,7 @@ def run_hook(script: Path, payload: str) -> subprocess.CompletedProcess[str]:
 
 
 def import_module(path: Path, name: str):
-    spec = importlib.util.spec_from_file_location(name, path)
-    module = importlib.util.module_from_spec(spec)
-    assert spec.loader is not None
-    spec.loader.exec_module(module)
-    return module
+    return load_script(name, path)
 
 
 def make_payload(path: str) -> str:

@@ -61,6 +61,9 @@ CONFIDENCE_GATE_RUNBOOKS = (
 
 if str(PLUGIN_ROOT) not in sys.path:
     sys.path.insert(0, str(PLUGIN_ROOT))
+sys.path.insert(0, str(REPO_ROOT / "tests" / "speckit-pro" / "lib"))
+import runner_invocation  # noqa: E402
+from runner_invocation import assert_runner_response, command_stdin_fixture  # noqa: E402
 
 EXPECTED_HELPERS = [
     "formal-doctor",
@@ -240,12 +243,15 @@ def roadmap_budget_entry(spec_id: str, name: str, surface: str, loc: int, prod: 
     )
 
 
+RUNNER_ENV_DEFAULTS = {"SPECKIT_PR_PACKET_TIMESTAMP": "2026-07-02T00:00:00Z"}
+
+
 def runner_env() -> dict[str, str]:
-    env = os.environ.copy()
-    existing = env.get("PYTHONPATH")
-    env["PYTHONPATH"] = str(PLUGIN_ROOT) if not existing else f"{PLUGIN_ROOT}{os.pathsep}{existing}"
-    env.setdefault("SPECKIT_PR_PACKET_TIMESTAMP", "2026-07-02T00:00:00Z")
-    return env
+    return runner_invocation.runner_env(defaults=RUNNER_ENV_DEFAULTS)
+
+
+def run_runner(request: object, extra_env: dict[str, str] | None = None, *, cwd: Path = REPO_ROOT):
+    return runner_invocation.run_runner(request, cwd=cwd, extra_env=extra_env, env_defaults=RUNNER_ENV_DEFAULTS)
 
 
 def helper_request(helper_id: str, inputs: dict[str, object] | None = None) -> dict[str, object]:
@@ -268,30 +274,6 @@ def helper_project() -> Iterator[Path]:
         yield root
 
 
-def run_runner(
-    request: object,
-    env_override: dict[str, str] | None = None,
-    *,
-    cwd: Path = REPO_ROOT,
-) -> tuple[subprocess.CompletedProcess[str], dict[str, object], list[dict[str, object]]]:
-    env = runner_env()
-    if env_override:
-        env.update(env_override)
-    completed = subprocess.run(
-        [sys.executable, "-m", "speckit_pro_runner"],
-        input=json.dumps(request) if not isinstance(request, str) else request,
-        text=True,
-        capture_output=True,
-        cwd=cwd,
-        env=env,
-        shell=False,
-        check=False,
-    )
-    response = json.loads(completed.stdout) if completed.stdout.strip() else {}
-    stderr_records = [json.loads(line) for line in completed.stderr.splitlines() if line.strip()]
-    return completed, response, stderr_records
-
-
 def response_cwd(data: dict[str, object]) -> Path:
     record = data.get("effective_cwd") or data.get("cwd")
     if not isinstance(record, dict):
@@ -299,15 +281,6 @@ def response_cwd(data: dict[str, object]) -> Path:
     value = str(record.get("value") or ".")
     path = Path(value)
     return path if path.is_absolute() else REPO_ROOT / path
-
-
-def command_stdin_fixture(command: str) -> Path:
-    if "<" not in command:
-        raise AssertionError(f"authoritative_command must include a stdin fixture: {command}")
-    stdin_path = command.split("<", 1)[1].strip()
-    if not stdin_path or any(char.isspace() for char in stdin_path):
-        raise AssertionError(f"authoritative_command must use one stdin fixture path: {command}")
-    return REPO_ROOT / stdin_path
 
 
 class _ReadOnlyHelperRunner:
@@ -614,12 +587,7 @@ class ReadOnlyHelperTests(_ReadOnlyHelperRunner, unittest.TestCase):
         return json.loads(result["stdout"]), int(result["exit_code"])
 
     def assert_response(self, response: dict[str, object], status: str, exit_code: int) -> None:
-        self.assertEqual(response["schema_version"], "1.0")
-        self.assertEqual(response["status"], status)
-        self.assertEqual(response["exit_code"], exit_code)
-        self.assertIsNone(response["legacy_exit_code"])
-        self.assertIsInstance(response["diagnostics"], list)
-        self.assertIsInstance(response["data"], dict)
+        assert_runner_response(self, response, status, exit_code)
 
     def filtered_helpers(self) -> list[str]:
         if self.helper_filter:
@@ -4245,7 +4213,7 @@ class ReadOnlyHelperTests(_ReadOnlyHelperRunner, unittest.TestCase):
             )
             completed, response, stderr_records = run_runner(
                 helper_request("detect-commands", {"repo_root": "."}),
-                env_override={"PATH": "/nonexistent"},
+                extra_env={"PATH": "/nonexistent"},
                 cwd=project_path,
             )
         self.assertEqual(completed.returncode, 0)

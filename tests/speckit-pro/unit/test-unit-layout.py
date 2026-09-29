@@ -121,6 +121,59 @@ def _contains_repository_spec_id(value: str, families: frozenset[str]) -> bool:
     )
 
 
+SUITE_LOADER_ATTRIBUTES = frozenset({"loadTestsFromModule", "discover", "main"})
+
+
+def unreferenced_test_cases(source: str) -> list[str]:
+    """TestCase classes with tests that no suite builder in ``source`` mentions.
+
+    A module that loads by module, discovery or ``unittest.main`` runs them all.
+    Otherwise a class must appear by name (or as a string for loadTestsFromNames)
+    outside its own definition, or its tests never run and the suite still passes.
+    """
+    tree = ast.parse(source)
+    if any(isinstance(node, ast.Attribute) and node.attr in SUITE_LOADER_ATTRIBUTES for node in ast.walk(tree)):
+        return []
+    classes = {node.name: node for node in tree.body if isinstance(node, ast.ClassDef)}
+
+    def base_names(node: ast.ClassDef) -> list[str]:
+        return [b.id if isinstance(b, ast.Name) else b.attr for b in node.bases if isinstance(b, (ast.Name, ast.Attribute))]
+
+    def inherits_tests(node: ast.ClassDef, seen: frozenset[str] = frozenset()) -> tuple[bool, bool]:
+        """(is a TestCase, has test methods) through same-file bases."""
+        is_case = "TestCase" in base_names(node)
+        has_tests = any(isinstance(m, ast.FunctionDef) and m.name.startswith("test") for m in node.body)
+        for name in base_names(node):
+            if name in classes and name not in seen:
+                base_case, base_tests = inherits_tests(classes[name], seen | {node.name})
+                is_case, has_tests = is_case or base_case, has_tests or base_tests
+        return is_case, has_tests
+
+    mentioned: set[str] = set()
+
+    class Mentions(ast.NodeVisitor):
+        def visit_ClassDef(self, node: ast.ClassDef) -> None:
+            for child in [*node.decorator_list, *node.body]:
+                self.visit(child)
+
+        def visit_Name(self, node: ast.Name) -> None:
+            mentioned.add(node.id)
+
+        def visit_Constant(self, node: ast.Constant) -> None:
+            if isinstance(node.value, str):
+                mentioned.add(node.value)
+
+    Mentions().visit(tree)
+    covered = set(mentioned)
+    pending = [name for name in classes if name in mentioned]
+    while pending:  # a listed subclass runs the tests it inherits
+        for base in base_names(classes[pending.pop()]):
+            if base in classes and base not in covered:
+                covered.add(base)
+                pending.append(base)
+    return sorted(name for name, node in classes.items() if all(inherits_tests(node)) and name not in covered)
+
+
 class UnitLayoutTests(unittest.TestCase):
     def test_unit_directory_replaces_the_opaque_layer_name(self) -> None:
         self.assertTrue(UNIT_ROOT.is_dir())
@@ -288,6 +341,37 @@ class UnitRosterTests(unittest.TestCase):
             for path in UNIT_ROOT.glob("test-*.py")
         }
         self.assertEqual(sorted(discovered - registered), [])
+
+    def test_every_registered_test_case_is_added_to_its_suite(self) -> None:
+        manifest = json.loads((TEST_ROOT / "suite-manifest.json").read_text(encoding="utf-8"))
+        scripts = [
+            script["path"]
+            for layer in manifest["layers"]
+            for script in layer.get("scripts", [])
+            if script["path"].endswith(".py")
+        ]
+        self.assertTrue(scripts)
+        unrun = {
+            path: names
+            for path in scripts
+            if (names := unreferenced_test_cases((REPO_ROOT / path).read_text(encoding="utf-8")))
+        }
+        self.assertEqual(unrun, {})
+
+    def test_unreferenced_test_case_detection_finds_a_class_missing_from_a_hand_list(self) -> None:
+        listed = (
+            "import unittest\n"
+            "class A(unittest.TestCase):\n    def test_a(self): pass\n"
+            "class B(unittest.TestCase):\n    def test_b(self): pass\n"
+            "suite = unittest.defaultTestLoader.loadTestsFromTestCase(A)\n"
+        )
+        self.assertEqual(["B"], unreferenced_test_cases(listed))
+        self.assertEqual([], unreferenced_test_cases(listed + "loader.loadTestsFromTestCase(B)\n"))
+        self.assertEqual([], unreferenced_test_cases(listed + "unittest.defaultTestLoader.loadTestsFromModule(m)\n"))
+        self.assertEqual([], unreferenced_test_cases(listed + "names = ['B']\n"))
+        inherited = "import unittest\nclass Base(unittest.TestCase):\n    def test_x(self): pass\nclass Child(Base): pass\nsuite = [Child]\n"
+        self.assertEqual([], unreferenced_test_cases(inherited))
+        self.assertEqual(["Base", "Child"], unreferenced_test_cases(inherited.replace("suite = [Child]", "")))
 
 
 if __name__ == "__main__":

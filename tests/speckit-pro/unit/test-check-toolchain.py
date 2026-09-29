@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import contextlib
-import importlib.util
 import io
 import os
 import subprocess
@@ -24,6 +23,7 @@ LIB_DIR = REPO_ROOT / "tests" / "speckit-pro" / "lib"
 for path in (PLUGIN_ROOT, LIB_DIR):
     if str(path) not in sys.path:
         sys.path.insert(0, str(path))
+from speckit_pro_runner.gates import suite as suite_gate  # noqa: E402
 from speckit_pro_runner.gates.active_path_guard import repo_bash_python_findings  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
@@ -41,10 +41,10 @@ CURRENT_INVENTORY = [
     "default tests mode requires git",
     "default tests mode does not require Bash",
     "default tests mode does not require jq",
-    "shell compatibility mode exits 0",
-    "shell compatibility mode labels output",
-    "shell compatibility mode does not require Bash",
-    "shell compatibility mode does not require jq",
+    "retired shell mode exits 2",
+    "retired shell mode prints a diagnostic",
+    "supported modes match the runner's toolchain modes",
+    "help lists every supported mode",
     "missing --mode value exits 2",
     "missing --mode value prints a diagnostic",
     "invalid --mode value exits 2",
@@ -54,9 +54,13 @@ CURRENT_INVENTORY = [
     "missing git prints diagnostic",
     "missing git still prints summary",
     "toolchain source has no forbidden command resolution",
-    "shell compatibility mode passes with a git-only PATH",
+    "tests mode passes with a git-only PATH",
     "docs mode scores command launch OSError",
 ]
+
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "lib"))
+from script_loader import load_script  # noqa: E402
 
 
 def run_checker(*args: str, path_fixture: Path | None = None) -> subprocess.CompletedProcess[str]:
@@ -107,12 +111,7 @@ def assert_source_is_python_only(test: unittest.TestCase) -> None:
 
 
 def import_checker() -> ModuleType:
-    spec = importlib.util.spec_from_file_location("check_toolchain_under_test", CHECKER)
-    module = importlib.util.module_from_spec(spec)
-    assert spec.loader is not None
-    sys.modules[spec.name] = module
-    spec.loader.exec_module(module)
-    return module
+    return load_script("check_toolchain_under_test", CHECKER)
 
 
 def assert_oserror_is_scored_by_real_main(test: unittest.TestCase) -> None:
@@ -148,7 +147,7 @@ class CheckToolchainTests(unittest.TestCase):
             invalid_mode = run_checker("--mode", "invalid")
             unknown = run_checker("--bogus")
             missing_git = run_checker(path_fixture=empty_path)
-            git_only = run_checker("--mode", "shell", path_fixture=git_only_path)
+            git_only = run_checker("--mode", "tests", path_fixture=git_only_path)
 
             help_output = merged_output(help_result)
             default_output = merged_output(default_result)
@@ -168,10 +167,10 @@ class CheckToolchainTests(unittest.TestCase):
                 (CURRENT_INVENTORY[9], lambda: self.assertIn("PASS git", default_output)),
                 (CURRENT_INVENTORY[10], lambda: self.assertNotIn("pass bash", default_output.lower())),
                 (CURRENT_INVENTORY[11], lambda: self.assertNotIn("pass jq", default_output.lower())),
-                (CURRENT_INVENTORY[12], lambda: self.assertEqual(shell_result.returncode, 0, shell_output)),
-                (CURRENT_INVENTORY[13], lambda: self.assertIn("toolchain check (shell)", shell_output)),
-                (CURRENT_INVENTORY[14], lambda: self.assertNotIn("pass bash", shell_output.lower())),
-                (CURRENT_INVENTORY[15], lambda: self.assertNotIn("pass jq", shell_output.lower())),
+                (CURRENT_INVENTORY[12], lambda: self.assertEqual(shell_result.returncode, 2, shell_output)),
+                (CURRENT_INVENTORY[13], lambda: self.assertIn("Invalid --mode: shell", shell_output)),
+                (CURRENT_INVENTORY[14], lambda: self.assertEqual(import_checker().SUPPORTED_MODES, set(suite_gate.TOOLCHAIN_MODES))),
+                (CURRENT_INVENTORY[15], lambda: [self.assertIn(f"--mode {mode}", help_output) for mode in suite_gate.TOOLCHAIN_MODES]),
                 (CURRENT_INVENTORY[16], lambda: self.assertEqual(missing_mode.returncode, 2)),
                 (CURRENT_INVENTORY[17], lambda: self.assertIn("Missing value for --mode", merged_output(missing_mode))),
                 (CURRENT_INVENTORY[18], lambda: self.assertEqual(invalid_mode.returncode, 2)),

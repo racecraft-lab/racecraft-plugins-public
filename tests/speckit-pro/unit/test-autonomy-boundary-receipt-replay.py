@@ -17,7 +17,6 @@ guard the validator locates the private record by the state's
 from __future__ import annotations
 
 import copy
-import importlib.util
 import json
 import shutil
 import subprocess
@@ -35,15 +34,14 @@ sys.path.insert(0, str(TEST_ROOT / "lib"))
 from test_result import run_counted  # noqa: E402
 
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "lib"))
+from script_loader import load_script  # noqa: E402
+
+
 def _load_coverage_tests() -> object:
     """Reuse the receipt projection and validator loader instead of copying them."""
     path = TEST_ROOT / "unit" / "test-autopilot-phase-coverage.py"
-    spec = importlib.util.spec_from_file_location("autopilot_phase_coverage_builders", path)
-    if spec is None or spec.loader is None:
-        raise RuntimeError("could not load the phase-coverage test builders")
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    return load_script("autopilot_phase_coverage_builders", path)
 
 
 BUILDERS = _load_coverage_tests()

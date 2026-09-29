@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-import importlib.util
 import json
 import os
 from pathlib import Path
@@ -40,13 +39,12 @@ CURRENT_INVENTORY = [
 ]
 
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "lib"))
+from script_loader import load_script  # noqa: E402
+
+
 def import_runner() -> ModuleType:
-    spec = importlib.util.spec_from_file_location("layer2_signal_runner", RUNNER_PATH)
-    module = importlib.util.module_from_spec(spec)
-    assert spec.loader is not None
-    sys.modules[spec.name] = module
-    spec.loader.exec_module(module)
-    return module
+    return load_script("layer2_signal_runner", RUNNER_PATH)
 
 
 def fixture_plugin(root: Path, skill: str) -> Path:

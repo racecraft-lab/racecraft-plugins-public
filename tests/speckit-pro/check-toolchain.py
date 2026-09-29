@@ -17,12 +17,11 @@ from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-SUPPORTED_MODES = {"tests", "shell", "docs", "all"}
+SUPPORTED_MODES = {"tests", "docs", "all"}
 HELP_TEXT = """check-toolchain.py - Report and validate local tools used by speckit-pro checks.
 
 Usage:
   python3 tests/speckit-pro/check-toolchain.py --mode tests
-  python3 tests/speckit-pro/check-toolchain.py --mode shell
   python3 tests/speckit-pro/check-toolchain.py --mode docs
   python3 tests/speckit-pro/check-toolchain.py --mode all
 """
@@ -218,8 +217,6 @@ def main(argv: list[str]) -> int:
     reporter = Reporter()
     if mode == "tests":
         check_test_tools(reporter)
-    elif mode == "shell":
-        check_repo_tools(reporter, "shell")
     elif mode == "docs":
         check_docs_tools(reporter)
     elif mode == "all":
