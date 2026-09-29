@@ -410,6 +410,7 @@ and the precedence rule documented there.
 
 See [prerequisites-codex.md](./references/prerequisites-codex.md) for the full pre-flight sequence:
 
+- **Step -2: Run-Start Authorization** — before Archive Sweep and any phase work, probe each egress class, an external workflow root, and the private autonomy-record write, and make the one run-start request ([prerequisites-codex.md](./references/prerequisites-codex.md#step--2-run-start-authorization); [run-start grants](../../skills/speckit-autopilot/references/stop-policy.md#run-start-grants))
 - **Step -1: Archive Sweep Startup** — list merged prior specs with helper
   `list-archive-candidates`, then execute the installed archive extension's
   project-local command contract directly in Codex once per `archive_order`
@@ -672,16 +673,19 @@ proves each
 is runnable or already authorized; and records the result durably. The
 operator's invocation and the ratified plan authorize the ordinary actions in
 the repository's standing policy, which the operator installs once at setup
-(runner helper `render-egress-authorization` with `scope=standing`). When every
-action is covered, the preflight asks no question. A missing standing policy is
-reported once as a setup gap, and the run still proceeds. An uncovered action,
-including a boundary-file edit the plan names, is deferred to the one
-end-of-run request, never an up-front question that stops the run. For
-uncovered data egress, the preflight shows a paste-ready authorization message
-at run start and asks the operator to send it as a normal chat message, never
-as a goal edit, without waiting for it; the end-of-run request repeats it with
-a proposed `auto_review.extra_policy` fragment, both rendered by the same
-helper. The plugin never writes either one.
+(runner helper `render-egress-authorization` with `scope=standing`). Before
+Phase 1, the Step -2 run-start authorization derives the policy classes from
+`check-gate-preflight-coverage`, probes each egress class, an external workflow
+root, and the private autonomy-record write, and makes a missing standing
+policy the one up-front ask. When every action is covered, the preflight asks
+no question. An uncovered action the ratified plan newly names, including a
+boundary-file edit, is deferred to the one end-of-run request, never an
+up-front question that stops the run. For uncovered plan-derived data egress,
+the preflight shows a paste-ready authorization message and asks the operator
+to send it as a normal chat message, never as a goal edit, without waiting for
+it; the end-of-run request repeats it with a proposed `auto_review.extra_policy`
+fragment, both rendered by the same helper. The plugin never writes either one.
+Bypassing a reviewer veto stays human authority (`stop_reason:veto_bypass`).
 
 Once autopilot is running, human input is for exceptional cases only. Once Phase 7 runs, one
 blocked action never stops the run: take the task's own fallback, or defer that

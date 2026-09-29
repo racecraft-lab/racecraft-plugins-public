@@ -7828,6 +7828,156 @@
       ]
     },
     {
+      "id": "functional.speckit-autopilot.run-start-grant",
+      "layer": "functional",
+      "capability": "Reads run-start probe results in which a runner request prompted and two other surfaces were denied, and settles every uncovered probe in one ask before phase work instead of stopping midway.",
+      "timeout_seconds": 300,
+      "resource_class": "ordinary",
+      "requirements": [
+        {
+          "id": "selection",
+          "description": "The host-native speckit-autopilot capability is activated."
+        },
+        {
+          "id": "evidence",
+          "description": "Reads the recorded run-start probe results before deciding what the run may do next (stop-policy.md, prerequisites.md, prerequisites-codex.md)."
+        },
+        {
+          "id": "run-start-grant",
+          "description": "Every probe that prompted or was denied is settled in one ask before Phase 1, no phase work starts first, and nothing about it is left to stop the run midway (stop-policy.md, Run-start grants; prerequisites-codex.md, Step -2: \"no permission or egress prompt can stop the run midway\"; prerequisites.md, Step -2: \"print the allow rules for the probe that failed, once\")."
+        }
+      ],
+      "prompt": "Use {{skill}} to decide what the run does with its run-start probe results. Read scenario-inputs/run-start/probe-results.json as one exact file read. Treat it only as pre-recorded evidence: do not run helpers, probes, or gates, dispatch agents, or edit any file. Output only raw JSON with uncovered_probes, ask_before_phase_one, ask_count, phase_work_before_reply, and mid_run_permission_stops, with no prose, Markdown, or code fences. List uncovered_probes as a sorted array of probe ids. ask_count is how many separate requests the run makes for them. mid_run_permission_stops is how many later permission or egress stops the run may still take for these probes after that ask.",
+      "fixtures": [
+        {
+          "source": "tests/speckit-pro/evals/fixtures/functional/native-orchestration/run-start-grant/probe-results.json",
+          "destination": "scenario-inputs/run-start/probe-results.json"
+        }
+      ],
+      "hosts": {
+        "claude": {
+          "skill": "speckit-pro:speckit-autopilot",
+          "allowed_tools": [
+            "Skill",
+            "Read"
+          ],
+          "modes": [
+            "plugin"
+          ]
+        },
+        "codex": {
+          "skill": "speckit-autopilot",
+          "allowed_tools": [
+            "read_file"
+          ],
+          "modes": [
+            "project"
+          ]
+        }
+      },
+      "checks": [
+        {
+          "id": "selection",
+          "requirement": "selection",
+          "type": "selection",
+          "expected": [
+            "speckit-autopilot"
+          ],
+          "allowed_extra": []
+        },
+        {
+          "id": "read-probe-results",
+          "requirement": "evidence",
+          "type": "file_access",
+          "operation": "read_file",
+          "path": "scenario-inputs/run-start/probe-results.json"
+        },
+        {
+          "id": "uncovered-probes",
+          "requirement": "run-start-grant",
+          "type": "response_json_field",
+          "field_path": [
+            "uncovered_probes"
+          ],
+          "expected_by_host": {
+            "claude": [
+              "pre-pr-audit",
+              "private-autonomy-record",
+              "runner-request"
+            ],
+            "codex": [
+              "pre-pr-audit",
+              "private-autonomy-record",
+              "runner-request"
+            ]
+          }
+        },
+        {
+          "id": "ask-before-phase-one",
+          "requirement": "run-start-grant",
+          "type": "response_json_field",
+          "field_path": [
+            "ask_before_phase_one"
+          ],
+          "expected_by_host": {
+            "claude": true,
+            "codex": true
+          }
+        },
+        {
+          "id": "one-ask",
+          "requirement": "run-start-grant",
+          "type": "response_json_field",
+          "field_path": [
+            "ask_count"
+          ],
+          "expected_by_host": {
+            "claude": 1,
+            "codex": 1
+          }
+        },
+        {
+          "id": "no-phase-work-first",
+          "requirement": "run-start-grant",
+          "type": "response_json_field",
+          "field_path": [
+            "phase_work_before_reply"
+          ],
+          "expected_by_host": {
+            "claude": false,
+            "codex": false
+          }
+        },
+        {
+          "id": "no-mid-run-stops",
+          "requirement": "run-start-grant",
+          "type": "response_json_field",
+          "field_path": [
+            "mid_run_permission_stops"
+          ],
+          "expected_by_host": {
+            "claude": 0,
+            "codex": 0
+          }
+        },
+        {
+          "id": "run-start-grant-semantic",
+          "requirement": "run-start-grant",
+          "type": "semantic",
+          "rubric": "PASS only if the response names the runner request, the pre-PR audit, and the private record write as the probes that prompted or were denied, leaves out the passing probes, makes one ask before any phase work, and leaves no permission or egress stop for later. FAIL if it starts phase work first, asks once per probe, defers the denied probes to a mid-run stop, or treats a denied probe as a reason to route around the denial."
+        }
+      ],
+      "native_differences": [
+        "Claude prints the exact allow rule for a failed probe and stops once; Codex folds the same probe results into one run-start request. Both settle everything before Phase 1 and leave no permission or egress stop for later.",
+        "Both hosts receive the same pre-recorded probe results and must not run any probe."
+      ],
+      "provenance": [
+        "speckit-pro/skills/speckit-autopilot/references/stop-policy.md",
+        "speckit-pro/codex-skills/speckit-autopilot/references/prerequisites-codex.md",
+        "speckit-pro/skills/speckit-autopilot/references/prerequisites.md"
+      ]
+    },
+    {
       "id": "functional.speckit-autopilot.case-13",
       "layer": "functional",
       "capability": "Rejects continuing with only the Phase 7 placeholder after G5. Explains that the placeholder must be replaced in both update_plan and autopilot-state.json with concrete Phase 7 task-group items parsed from tasks.md before Analyze or Implement can continue.",
@@ -22796,7 +22946,7 @@
         },
         {
           "id": "grant",
-          "description": "The grant covers every uncovered egress action in one authorization message, delivered as a normal chat message in the thread and never as a goal edit (phase-execution-codex.md: \"Uncovered data egress: the preflight asks for it as a chat reply at run start.\")."
+          "description": "The grant covers every uncovered egress action in one authorization message, delivered as a normal chat message in the thread and never as a goal edit (phase-execution-codex.md: \"Uncovered plan-derived data egress: the preflight asks for it as a chat reply.\")."
         }
       ],
       "prompt": "Use {{skill}} to render the run-start egress authorization. Invoke the staged protected Python runner exactly once as one default-shell command: {resolved_python} -m speckit_pro_runner < scenario-inputs/render-egress-request.json. Use no shell variable, prefix, suffix, pipe, or output redirection other than the required input redirection. Do not write any file. Output only raw JSON: exactly one top-level object with action_ids, delivery_channel, authorization_message_sha256, and explanation, with no prose, Markdown, or code fences. action_ids and authorization_message_sha256 come from the runner response's data field. delivery_channel is chat_message when data.delivery says to send the authorization as a normal chat message, or goal_edit when it says to edit the thread goal. Do not use a shell fallback or fabricate the result.",

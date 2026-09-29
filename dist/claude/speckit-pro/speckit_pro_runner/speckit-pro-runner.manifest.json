@@ -295,7 +295,7 @@
         "value": "speckit_pro_runner/helpers/egress_authorization.py",
         "display": "speckit_pro_runner/helpers/egress_authorization.py"
       },
-      "sha256": "8c238163cdb25da425b3b09be122663255657a70042adbab8bacf80a4cb5c444"
+      "sha256": "8eb70ee48c93a4897a0e3221df01d441fcd19bef8be7814f755cf1ec6815d0e6"
     },
     {
       "path": {
@@ -303,7 +303,7 @@
         "value": "speckit_pro_runner/helpers/gate_preflight_coverage.py",
         "display": "speckit_pro_runner/helpers/gate_preflight_coverage.py"
       },
-      "sha256": "88e36dc44bba9885aa850ca01b5a76a6a73f31d483fe558128b8d46bbdaa2d3a"
+      "sha256": "3e3817efac4a8c4eca644a428d63c976f7608cb0c6f87d85fda9c7bf0f7d5d00"
     },
     {
       "path": {
