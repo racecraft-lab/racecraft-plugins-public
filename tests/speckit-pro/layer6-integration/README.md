@@ -31,7 +31,7 @@ These are all **dispatch graph** failures. Layer 6 exists to catch them.
 ## Coverage matrix
 
 L7 covers every named subagent and every routing branch in
-`/speckit-pro:autopilot`. The fixtures are organized by what they
+`/speckit-pro:speckit-autopilot`. The fixtures are organized by what they
 exercise:
 
 ### Consensus routing (Class 1, fixtures 01–11)
