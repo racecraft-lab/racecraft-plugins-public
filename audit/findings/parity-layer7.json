@@ -1,0 +1,136 @@
+[
+  {
+    "id": "parity-layer7-001",
+    "lane": "parity-layer7",
+    "severity": "blocking",
+    "kind": "coherence",
+    "files": [
+      "tests/speckit-pro/layer7-parity/02-repository-migration-guidance/workflow.md:35",
+      "tests/speckit-pro/layer7-parity/02-repository-migration-guidance/expected-equivalence.json:5",
+      "tests/speckit-pro/layer7-parity/run-parity-fixtures.py:664",
+      "tests/speckit-pro/layer7-parity/run-parity-fixtures.py:409"
+    ],
+    "ripwire_command": "ripwire . --grep=required_invariants",
+    "summary": "Fixture 02 compares only tables in the workflow.md that run_path copies unchanged into both output dirs, and it declares no required_invariants. Live mode passes when autopilot does nothing, and no compared value is read from a shipped skill, registry, or runner. The audit doc already calls the removed parity policy tasks vacuous reimplementations.",
+    "proposed_fix": "Retire fixture 02 from the legacy runner (the native parity.02-scaffold-relocation-guidance case covers the surface), or compare artifacts a run must produce and derive the values from the skills and registry.",
+    "in_flight_status": null
+  },
+  {
+    "id": "parity-layer7-002",
+    "lane": "parity-layer7",
+    "severity": "major",
+    "kind": "coherence",
+    "files": [
+      "tests/speckit-pro/layer7-parity/run-parity-fixtures.py:418",
+      "tests/speckit-pro/layer7-parity/01-post-impl-parity/README.md:1"
+    ],
+    "ripwire_command": "ripwire . --grep=speckit-pro:autopilot",
+    "summary": "Live mode runs `/speckit-pro:autopilot workflow.md`, but the skill is `speckit-autopilot`, so the plugin-qualified name is `/speckit-pro:speckit-autopilot`. The native audit doc lists `speckit-pro:autopilot` as a rejected identifier. The runner test asserts only argv[0] is -p, so the wrong name is untested.",
+    "proposed_fix": "Use the real skill name and assert the prompt argv element in test-parity-runner.py.",
+    "in_flight_status": null
+  },
+  {
+    "id": "parity-layer7-003",
+    "lane": "parity-layer7",
+    "severity": "major",
+    "kind": "coherence",
+    "files": [
+      "tests/speckit-pro/layer7-parity/README.md:67",
+      "tests/speckit-pro/layer7-parity/01-post-impl-parity/README.md:24",
+      "tests/speckit-pro/layer7-parity/run-parity-fixtures.py:407"
+    ],
+    "ripwire_command": "ripwire . --grep=AGENT_TEAMS_AVAILABLE",
+    "summary": "The legacy fixtures run `claude -p` and require Claude Code >= 2.1.32 for Path A. The autopilot references say teams need version >= 2.1.178 and a positively interactive session, and that `claude -p` always uses ordinary subagents. Both paths therefore take the same route, and the version floor disagrees with the resolver contract.",
+    "proposed_fix": "State the 2.1.178 floor and the interactive requirement in one place, or mark fixtures 01 and 02 as parser-regression only in the fixture READMEs, not as proof of Path A versus Path B.",
+    "in_flight_status": null
+  },
+  {
+    "id": "parity-layer7-004",
+    "lane": "parity-layer7",
+    "severity": "major",
+    "kind": "coherence",
+    "files": [
+      "tests/speckit-pro/layer7-parity/01-post-impl-parity/workflow.md:80",
+      "tests/speckit-pro/layer7-parity/01-post-impl-parity/README.md:15",
+      "tests/speckit-pro/layer7-parity/01-post-impl-parity/workflow.md:76"
+    ],
+    "ripwire_command": "ripwire . --grep=from-phase",
+    "summary": "The fixture prose relies on a `--from-phase post` flag. The autopilot skills accept `--from-phase` only for specify through implement, so the flag does not exist. The workflow note also cites the stale path `tests/layer7-parity/01-post-impl-parity/`.",
+    "proposed_fix": "Describe how the run reaches Post from the current `--stage` and `--from-phase` grammar, and fix the path.",
+    "in_flight_status": null
+  },
+  {
+    "id": "parity-layer7-005",
+    "lane": "parity-layer7",
+    "severity": "major",
+    "kind": "cohesion",
+    "files": [
+      "tests/speckit-pro/layer7-parity/run-parity-fixtures.py:26",
+      "tests/speckit-pro/lib/native_eval_pairing.py:17",
+      "tests/speckit-pro/lib/native_eval_pairing.py:156"
+    ],
+    "ripwire_command": "ripwire . --grep=speckit.layer7.expected-equivalence.v1",
+    "summary": "Two implementations validate the same schema ids, and they disagree. The layer 7 runner rejects extractor `section_text`, which the native fixtures use. Native pairing requires tolerance-1 to use table_row_count and byte-identical to have no extractor. The runner accepts whole-file tolerance-1 and turns it into byte equality, which test-parity-runner.py:670 locks in.",
+    "proposed_fix": "Share one contract validator, or version the schema id so each consumer accepts only its own fixtures. Reject whole-file tolerance-1 in the runner.",
+    "in_flight_status": null
+  },
+  {
+    "id": "parity-layer7-006",
+    "lane": "parity-layer7",
+    "severity": "minor",
+    "kind": "coherence",
+    "files": [
+      "tests/speckit-pro/layer7-parity/README.md:104",
+      "tests/speckit-pro/layer7-parity/README.md:98",
+      "tests/speckit-pro/layer7-parity/README.md:20"
+    ],
+    "ripwire_command": "ripwire . --grep=four fixture",
+    "summary": "The README says four fixture cases are implemented, but the tree holds two. Parity 03 and 04 are held in the audit doc. The README also says Layer 7 must not run in CI while suite-manifest.json runs its dry-run, and it says the canonical catalog is still being integrated although the catalog is active.",
+    "proposed_fix": "Correct the count, scope the CI sentence to `--live`, and update the integration status.",
+    "in_flight_status": null
+  },
+  {
+    "id": "parity-layer7-007",
+    "lane": "parity-layer7",
+    "severity": "minor",
+    "kind": "coherence",
+    "files": [
+      "tests/speckit-pro/layer7-parity/01-post-impl-parity/expected-equivalence.json:41",
+      "tests/speckit-pro/layer7-parity/01-post-impl-parity/tolerance.json:31",
+      "tests/speckit-pro/layer7-parity/README.md:83"
+    ],
+    "ripwire_command": "ripwire . --grep=gate_results",
+    "summary": "Field `gate_results` (tolerance key G0_through_G7) reads the Status column of Workflow Overview, which lists seven phases, not gates G0 to G7. The README claims every gate G0-G7 is compared.",
+    "proposed_fix": "Extract the real gate results, or rename the field and the README claim.",
+    "in_flight_status": null
+  },
+  {
+    "id": "parity-layer7-008",
+    "lane": "parity-layer7",
+    "severity": "minor",
+    "kind": "cohesion",
+    "files": [
+      "tests/speckit-pro/layer7-parity/lib/judge.py:145",
+      "tests/speckit-pro/layer7-parity/lib/extractors.py:92",
+      "tests/speckit-pro/layer7-parity/run-parity-fixtures.py:646"
+    ],
+    "ripwire_command": "ripwire . --callers=judge_files",
+    "summary": "The judge and extractors CLI entry points, and judge byte-identical arms, have no caller besides their unit tests. They are leftovers of the shell-script port. The runner handles byte-identical itself, so judge_files is reached only for unsupported tolerances.",
+    "proposed_fix": "Remove the CLI wrappers and unreachable arms, and drop the matching unit-test cases.",
+    "in_flight_status": null
+  },
+  {
+    "id": "parity-layer7-009",
+    "lane": "parity-layer7",
+    "severity": "minor",
+    "kind": "coherence",
+    "files": [
+      "tests/speckit-pro/layer7-parity/run-parity-fixtures.py:676",
+      "tests/speckit-pro/layer7-parity/run-parity-fixtures.py:736"
+    ],
+    "ripwire_command": "ripwire . --grep=semantic-equivalent",
+    "summary": "In live mode a semantic-equivalent field whose values differ only counts as a skip, and main returns 0. A live parity run can end green with the only prose comparison unjudged.",
+    "proposed_fix": "Return non-zero on a live skip, or require an explicit accept-skips flag.",
+    "in_flight_status": null
+  }
+]

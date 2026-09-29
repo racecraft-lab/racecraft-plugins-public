@@ -1,0 +1,355 @@
+{
+  "tests/speckit-pro/evals/fixtures/parity/01-post-implementation-outcome/capability-alpha.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=capability-alpha.py"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/parity/01-post-implementation-outcome/capability-beta.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=capability-beta.py"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/parity/01-post-implementation-outcome/expected-equivalence.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=expected-equivalence.json"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/parity/01-post-implementation-outcome/gitignore": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=gitignore"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/parity/01-post-implementation-outcome/plan.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=plan.md"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/parity/01-post-implementation-outcome/spec.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=spec.md"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/parity/01-post-implementation-outcome/tasks.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=tasks.md"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/parity/01-post-implementation-outcome/test-capability-alpha.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=test-capability-alpha.py"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/parity/01-post-implementation-outcome/test-capability-beta.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=test-capability-beta.py"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/parity/01-post-implementation-outcome/tolerance.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=tolerance.json"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/parity/01-post-implementation-outcome/verify.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=verify.py"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/parity/01-post-implementation-outcome/workflow.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=workflow.md"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/parity/common/constitution.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=constitution.md"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/parity/common/feature.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=feature.json"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/parity/common/project.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=project.json"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/parity/parity-02-scaffold-relocation-guidance/baseline.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=baseline.md"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/parity/parity-02-scaffold-relocation-guidance/expected-equivalence.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=expected-equivalence.json"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/parity/parity-02-scaffold-relocation-guidance/tolerance.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=tolerance.json"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/scenario-contracts/plan-layers/autopilot-state.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=autopilot-state.json"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/scenario-contracts/plan-layers/input-error-request.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=input-error-request.json"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/scenario-contracts/plan-layers/invalid-request.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=invalid-request.json"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/scenario-contracts/plan-layers/invalid/tasks.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=tasks.md"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/scenario-contracts/plan-layers/valid-request.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=valid-request.json"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/scenario-contracts/plan-layers/valid/tasks.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=tasks.md"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/scenario-contracts/plan-layers/workflow.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=workflow.md"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/scenario-contracts/relocation/2026-06-uat-report.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=2026-06-uat-report.md"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/scenario-contracts/relocation/feature.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=feature.json"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/scenario-contracts/relocation/spec-911-analysis.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=spec-911-analysis.md"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/scenario-contracts/relocation/spec-911-uat-report.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=spec-911-uat-report.md"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/scenario-contracts/relocation/spec-912-moc.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=spec-912-moc.md"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/scenario-contracts/relocation/spec-913-moc.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=spec-913-moc.md"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/scenario-contracts/relocation/spec-913-process-analysis.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=spec-913-process-analysis.md"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/scenario-contracts/relocation/spec-913-process-uat-report.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=spec-913-process-uat-report.md"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/scenario-contracts/relocation/spec-914-contract.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=spec-914-contract.md"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/scenario-contracts/relocation/team-123-analysis.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=team-123-analysis.md"
+    ]
+  },
+  "tests/speckit-pro/layer7-parity/01-post-impl-parity/README.md": {
+    "verdict": [
+      "parity-layer7-002",
+      "parity-layer7-003",
+      "parity-layer7-004"
+    ],
+    "checks_run": [
+      "ripwire . --grep=README.md"
+    ]
+  },
+  "tests/speckit-pro/layer7-parity/01-post-impl-parity/env-fallback.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=env-fallback.json"
+    ]
+  },
+  "tests/speckit-pro/layer7-parity/01-post-impl-parity/env-teams.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=env-teams.json"
+    ]
+  },
+  "tests/speckit-pro/layer7-parity/01-post-impl-parity/expected-equivalence.json": {
+    "verdict": [
+      "parity-layer7-007"
+    ],
+    "checks_run": [
+      "ripwire . --grep=expected-equivalence.json"
+    ]
+  },
+  "tests/speckit-pro/layer7-parity/01-post-impl-parity/tolerance.json": {
+    "verdict": [
+      "parity-layer7-007"
+    ],
+    "checks_run": [
+      "ripwire . --grep=tolerance.json"
+    ]
+  },
+  "tests/speckit-pro/layer7-parity/01-post-impl-parity/workflow.md": {
+    "verdict": [
+      "parity-layer7-004"
+    ],
+    "checks_run": [
+      "ripwire . --grep=workflow.md"
+    ]
+  },
+  "tests/speckit-pro/layer7-parity/02-repository-migration-guidance/README.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=README.md"
+    ]
+  },
+  "tests/speckit-pro/layer7-parity/02-repository-migration-guidance/env-fallback.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=env-fallback.json"
+    ]
+  },
+  "tests/speckit-pro/layer7-parity/02-repository-migration-guidance/env-teams.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=env-teams.json"
+    ]
+  },
+  "tests/speckit-pro/layer7-parity/02-repository-migration-guidance/expected-equivalence.json": {
+    "verdict": [
+      "parity-layer7-001"
+    ],
+    "checks_run": [
+      "ripwire . --grep=expected-equivalence.json"
+    ]
+  },
+  "tests/speckit-pro/layer7-parity/02-repository-migration-guidance/tolerance.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=tolerance.json"
+    ]
+  },
+  "tests/speckit-pro/layer7-parity/02-repository-migration-guidance/workflow.md": {
+    "verdict": [
+      "parity-layer7-001"
+    ],
+    "checks_run": [
+      "ripwire . --grep=workflow.md"
+    ]
+  },
+  "tests/speckit-pro/layer7-parity/README.md": {
+    "verdict": [
+      "parity-layer7-003",
+      "parity-layer7-006",
+      "parity-layer7-007"
+    ],
+    "checks_run": [
+      "ripwire . --grep=README.md"
+    ]
+  },
+  "tests/speckit-pro/layer7-parity/lib/extractors.py": {
+    "verdict": [
+      "parity-layer7-008"
+    ],
+    "checks_run": [
+      "ripwire . --grep=extractors.py"
+    ]
+  },
+  "tests/speckit-pro/layer7-parity/lib/judge.py": {
+    "verdict": [
+      "parity-layer7-008"
+    ],
+    "checks_run": [
+      "ripwire . --grep=judge.py"
+    ]
+  },
+  "tests/speckit-pro/layer7-parity/run-parity-fixtures.py": {
+    "verdict": [
+      "parity-layer7-001",
+      "parity-layer7-002",
+      "parity-layer7-003",
+      "parity-layer7-005",
+      "parity-layer7-008",
+      "parity-layer7-009"
+    ],
+    "checks_run": [
+      "ripwire . --grep=run-parity-fixtures.py"
+    ]
+  },
+  "tests/speckit-pro/unit/test-parity-extractors.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=test-parity-extractors.py"
+    ]
+  },
+  "tests/speckit-pro/unit/test-parity-judge.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=test-parity-judge.py"
+    ]
+  },
+  "tests/speckit-pro/unit/test-parity-runner.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=test-parity-runner.py"
+    ]
+  }
+}
