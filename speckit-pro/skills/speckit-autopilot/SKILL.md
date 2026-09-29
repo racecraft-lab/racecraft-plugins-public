@@ -107,8 +107,9 @@ availability list and does not replace runtime capability discovery.
 
 Skill `allowed-tools` pre-approves the listed core primitives; it is not
 capability discovery. Runner calls still follow the session's permissions, so
-an unattended run must prepare them before launch. See the plugin agent caveat
-in Step 0 and
+the Step -2 run-start permission probe checks them once, before any phase work,
+and stops with the exact allow rule if a call prompts or is denied. See the
+plugin agent caveat in Step 0 and
 [`references/plugin-limitations.md`](./references/plugin-limitations.md).
 
 ## Prerequisites — Model
@@ -327,6 +328,11 @@ path/to/workflow-file.md [--from-phase specify|clarify|plan|checklist|tasks|anal
 `--stage` selects which range of phases this invocation runs; omit it and
 Step 0.6c resolves the stage from the workflow file's own status table.
 Argument order is presentation only — every argument is read by name.
+
+Before anything else, run the Step -2 run-start permission probe in
+[`references/prerequisites.md`](./references/prerequisites.md#step--2-run-start-permission-probe):
+one no-op runner request and one `git status`. If either prompts or is denied,
+print the exact allow rule and stop once, before any phase work.
 
 Before Step -1, use the read-only `resolve-workflow-binding` runner helper to
 verify that Claude Code's live checkout already owns the workflow. Continue
@@ -790,15 +796,19 @@ and deferred items remain under §Blocked Actions Mid-Run: Fall Back or Defer,
 Never Stop in
 [`phase-execution.md`](./references/phase-execution.md#blocked-actions-mid-run-fall-back-or-defer-never-stop),
 the read-only `finalize-run` runner helper decides the end. Human UAT is the
-only gate a run may defer. With every non-UAT gate passed at every PR head and
-only human UAT left, the run finalizes: mark the stack ready for review (never merge) and open
-the top PR body with its `Deferred / not verified` section. A failed gate, a
-ledger `deferred` entry, or an unresolved task is one human stop instead, and
-the stack stays in draft. Print the final report as plain text on `outcome=complete` with nothing deferred, and ask no question.
-Otherwise ask only on `human_stop` or deferred human UAT: make one consolidated
-`AskUserQuestion` request and print the same question as plain text in the
-final message, listing every fallback taken and every deferred item, including
-each entry of the ledger's `deferred` list.
+only gate a run may defer, and every required gate must be green at every PR
+head as the runner's own verification record shows it. With every required gate
+green, the run finalizes: mark the stack ready for review (never merge) and open
+the top PR body with its `Deferred / not verified` section. Human UAT, a ledger
+`deferred` unit that failed every escalation tier, and an unresolved task never
+keep the stack in draft: they reach the owner as items in the end-of-run
+request, the units and tasks under "Decisions for you". A failed unit climbs two
+escalation tiers first (a fresh agent guided by a consensus diagnosis, then the
+strongest model at max effort), and only a required gate still red, missing, or
+blocked by a harness error after that is one human stop, and the stack stays in draft. The run never pauses to ask.
+Print the final report as plain text on `outcome=complete` with nothing deferred, and ask no question.
+Otherwise print `end_of_run_request` as plain text in the final message. It is the handoff, listing every fallback taken and every
+deferred item, including each entry of the ledger's `deferred` list.
 
 ## Workflow File Update Protocol
 

@@ -4423,9 +4423,11 @@ class ReadOnlyHelperTests(unittest.TestCase):
                 if helper_id == "finalize-run":
                     self.assert_response(response, "ok", 0)
                     self.assertFalse(data["writes_state"])
-                    # The fixture ledger holds a deferral, so the run ends in one human stop.
-                    self.assertEqual(data["outcome"], "human_stop")
-                    self.assertEqual(data["ready_commands"], [])
+                    # The fixture ledger holds a deferral whose escalation tiers all failed: the run finalizes
+                    # ready for review and lists that unit under "Decisions for you".
+                    self.assertEqual(data["outcome"], "complete_with_deferred")
+                    self.assertEqual(data["ready_commands"], ["gh pr ready 101", "gh pr ready 102"])
+                    self.assertEqual([decision["class"] for decision in data["decisions"]], ["exhausted"])
                     self.assertEqual(stderr_records, [])
                     continue
                 if helper_id == "ratify-pr-split":

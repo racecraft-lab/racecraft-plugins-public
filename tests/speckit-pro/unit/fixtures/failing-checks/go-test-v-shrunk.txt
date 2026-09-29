@@ -1,0 +1,13 @@
+=== RUN   TestAdd
+--- PASS: TestAdd (0.00s)
+=== RUN   TestSub
+--- PASS: TestSub (0.00s)
+=== RUN   TestGroup
+=== RUN   TestGroup/inner_ok
+=== RUN   TestGroup/inner_bad
+--- FAIL: TestGroup (0.00s)
+    --- PASS: TestGroup/inner_ok (0.00s)
+    --- FAIL: TestGroup/inner_bad (0.00s)
+FAIL
+FAIL	example.test/demo	0.071s
+FAIL

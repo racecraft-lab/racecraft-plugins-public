@@ -13,6 +13,7 @@ authoring to remain pending until Plan. Existing-file/tool setup gaps block;
 checking never installs a runtime implicitly.
 
 - [Workflow Worktree Binding](#workflow-worktree-binding) — bind one safe execution worktree before any phase work
+- [Step -2: Run-Start Authorization](#step--2-run-start-authorization) — settle egress, probes, and private writes once, before any phase work
 - [Step -1: Archive Sweep Startup](#step--1-archive-sweep-startup) — archive previously merged specs before workflow execution
 - [Step 0.0: Resolve Script Paths](#step-00-resolve-script-paths) — locate the plugin's `SKILL_SCRIPTS` directory
 - [Step 0.0b: Research Broker Preflight](#00b-research-broker-preflight) — confirm typesafe-jev is installed and record the research screening mode
@@ -50,10 +51,10 @@ checkout.
    those external cases. Preserve the original `TASK_ROOT` as discovery context.
 4. An explicitly selected `relation=external` binds execution to the returned
    `WORKFLOW_ROOT`; it does not move the Codex task or grant filesystem access.
-   Check each required operation from that root. If a real sandbox denial occurs,
-   use the normal permission mechanism for that operation and STOP with the
-   denied path and operation if access remains unavailable. Do not claim a
-   binding failure merely because `WORKFLOW_ROOT` is outside `TASK_ROOT`.
+   Step -2 probes that root for write access before any phase work, so
+   a real sandbox denial is settled in its one run-start request and never first
+   appears mid-run. Do not claim a binding failure merely because `WORKFLOW_ROOT` is
+   outside `TASK_ROOT`.
 5. From `WORKFLOW_ROOT`, verify the live branch before Archive Sweep. STOP on
    `main`, a detached HEAD, or any protected integration/release branch; never
    reinterpret `TASK_ROOT` as a safer mutation target.
@@ -84,6 +85,61 @@ checkout.
 bound. Never copy, move, check out, rebase, or reconstruct the workflow to make
 the invocation checkout pass. Never execute a workflow from one worktree while
 phase commands, agents, gates, state, or commits target another.
+
+## Step -2: Run-Start Authorization
+
+Settle every permission, egress, and private write the run-start inventory can
+know, once, before any phase work. Run it right after the binding guard, before
+Archive Sweep and Step 0, on every start and every resume: a new thread or
+worktree root changes the sandbox. Once it completes, no permission or egress
+prompt can stop the run midway. Tool installs are settled the same way by the
+one-time Step 0.11 question. The contract is in
+[Run-start grants](stop-policy.md#run-start-grants).
+
+1. **Derive the classes.** Run read-only `detect-commands` for the project
+   commands. Run read-only `check-gate-preflight-coverage` with `repo_root` set to
+   `WORKFLOW_ROOT`, every gate the run-start record can know as `gates` (the
+   G-gates and each populated `PROJECT_COMMANDS` slot, each with its exact
+   `command` and `needs`), an empty `inventory_actions`, `writable_roots` set to the
+   thread's current writable roots, and `write_paths` set to `[WORKFLOW_ROOT]`
+   when the binding relation is `external`. Its `policy_classes` are the gate
+   egress needs, including each declared pre-PR audit. Its `missing` also names
+   the private autonomy-record directory and an external workflow root when
+   either lies outside the writable roots. Phase 6.5 adds only what the ratified
+   plan newly names, such as a live evaluation.
+2. **Check the standing policy.** Run `render-egress-authorization` with
+   `scope=standing`, the repository, its default branch, the user-level Codex
+   config's `auto_review.extra_policy` as `installed_extra_policy` (read it,
+   never write it), and step 1's `policy_classes` verbatim as `derived_classes`.
+   `installed=false` means the policy was never installed or a new gate need
+   changed its text. Either way the install text is the helper's
+   `extra_policy_fragment`.
+3. **Probe every class before Phase 1.** Run each `policy_classes` entry's `probe`
+   from the standing result. A base class's probe sends no repository content. A
+   derived class's probe is its gate command run once, and the reviewer's outcome
+   on that run is the answer. Also probe each write surface: create and remove an empty file directly under an
+   external `WORKFLOW_ROOT`, and create
+   `<git-common-dir>/speckit-pro/autonomy-boundary/` with mode `0700`, then create and
+   remove an empty file in it. That directory is where the private autonomy record
+   lives, and in a linked worktree it sits outside the worktree root. A probe the
+   sandbox or the approval reviewer denies or prompts on marks that class or path
+   `uncovered`. A denied probe is never retried through another tool, path, or
+   wrapper: bypassing a veto is `stop_reason:veto_bypass`, and that authority stays
+   with the human.
+4. **Ask once.** When `installed` is false, a probe is `uncovered`, or `missing` is
+   not empty, print one plain-text run-start request before Phase 1, never as a goal
+   edit. It carries the standing install text once; the paste-ready authorization
+   message from `render-egress-authorization` (run scope), listing each uncovered
+   class as an action, with the helper's `delivery` line; and each path the operator
+   must add to the writable roots. The run starts when the operator's reply lands in
+   this thread. That reply is `explicit_user` evidence for the classes it names, and
+   this is the only wait: nothing it covers is asked again. An item the reply leaves
+   uncovered is `operator_action_required`: defer its task and dependents, and list
+   it in the one end-of-run request. When every probe passes and `installed` is
+   true, ask nothing and print a one-line Step -2 result.
+5. **Carry it forward.** Keep the class ids, probe outcomes, `standing_policy_sha256`,
+   and the reply for Phase 6.5. It cites them as each action's `authorization.evidence`
+   and inventories the private-record write as an `outside_writable_roots` action.
 
 ## Step -1: Archive Sweep Startup
 
@@ -323,7 +379,8 @@ nonzero exit here is a branch, not a stop: do not stop because the probe
 exited nonzero. When the list is empty, continue. When it holds `current execution boundary
 does not match the persisted execution boundary`, or any other stale-record
 error above, rerun the complete Phase 6.5 preflight against the live boundary
-now, applying its standing policy coverage. A covered inventory asks no
+now, applying its standing policy coverage (rerun the standing check with Step
+-2's `derived_classes`). A covered inventory asks no
 question, including a planning-to-implementation stage change such as an
 explicit `--stage implement` run of a plan whose earlier record covered only
 planning: record the coverage and proceed. An uncovered action is deferred to

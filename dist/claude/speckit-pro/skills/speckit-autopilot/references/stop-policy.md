@@ -51,6 +51,20 @@ add scope or change public behavior beyond the spec.
 Tool installs and network egress are granted once, in the run-start
 authorization. They never stop a run midway.
 
+The run settles, before Phase 1, everything its start-up inventory can know:
+
+- Codex: the standing policy classes, the egress of each gate and declared
+  pre-PR command, an external workflow root, and the private record write. Each
+  is probed. A missing standing policy is the single up-front ask, and the run
+  starts on the operator's reply.
+- Claude Code: the session's permission settings. One no-op runner request and
+  one `git status` run first. If either prompts or is denied, the run prints the
+  exact allow rule and stops once, before any phase work.
+
+Any run-start probe that prompts or is denied is settled in that one ask.
+Nothing that inventory could have known is discovered mid-run. Bypassing a veto
+stays human authority: `stop_reason:veto_bypass`.
+
 ## End of run
 
 Mark the stack ready for review with a "Decisions for you" section listing each

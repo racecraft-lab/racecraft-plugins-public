@@ -12,37 +12,43 @@
         "gate": "G7",
         "status": "passed",
         "command": "python3 tests/run-all.py",
-        "head_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        "head_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "dispatch_id": "verify-1"
       },
       {
         "gate": "Post: Integration Suite",
         "status": "passed",
         "command": "python3 tests/integration.py",
-        "head_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        "head_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "dispatch_id": "verify-2"
       },
       {
         "gate": "G7",
         "status": "passed",
         "command": "python3 tests/run-all.py",
-        "head_sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        "head_sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "dispatch_id": "verify-3"
       },
       {
         "gate": "Post: Integration Suite",
         "status": "failed",
         "command": "python3 tests/integration.py",
-        "head_sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        "head_sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "dispatch_id": "verify-4"
       },
       {
         "gate": "G7",
         "status": "passed",
         "command": "python3 tests/run-all.py",
-        "head_sha": "cccccccccccccccccccccccccccccccccccccccc"
+        "head_sha": "cccccccccccccccccccccccccccccccccccccccc",
+        "dispatch_id": "verify-5"
       },
       {
         "gate": "Post: Integration Suite",
         "status": "passed",
         "command": "python3 tests/integration.py",
-        "head_sha": "cccccccccccccccccccccccccccccccccccccccc"
+        "head_sha": "cccccccccccccccccccccccccccccccccccccccc",
+        "dispatch_id": "verify-6"
       }
     ],
     "pending_items": [],

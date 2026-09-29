@@ -40,6 +40,9 @@ SCENARIOS = (
     "deferral-resolution.json",
     "test-fix.json",
 )
+UNIT_SCENARIOS = ("unknown-dispatch-unit.json", "agent-authorized-retry.json")
+CONVERGENCE_SCENARIOS = ("convergence-go-test.json",)
+CHECK_FIXTURES = TEST_ROOT / "unit" / "fixtures" / "failing-checks"
 APPROVAL_SCENARIOS = tuple(name for name in SCENARIOS if name != "test-fix.json")
 REFUSED = {"exit_code": 2, "status": "input_error"}
 
@@ -76,6 +79,11 @@ class CorrectiveAuthorizationReplayTests(unittest.TestCase):
             return self.ledger["run_id"]
         if value == "$spec_file":
             return SPEC
+        if value == "$check_command":
+            return f"{sys.executable} check.py"
+        if value == "$head_sha":
+            return subprocess.run(["git", "-C", str(self.root), "rev-parse", "HEAD"], check=True, text=True,
+                                  capture_output=True).stdout.strip()
         if value == "$spec_sha256":
             return self.ledger["invariant_binding"]["spec_sha256"]
         if value.startswith("$reservation:"):
@@ -95,8 +103,8 @@ class CorrectiveAuthorizationReplayTests(unittest.TestCase):
     def send(self, step: dict) -> tuple[int, dict]:
         binding = {"expected_run_id": self.ledger["run_id"]} if self.ledger else {}
         request = {
-            "schema_version": "1.0", "helper_id": "execution-control",
-            "operation": "execution-control", "mode": step.get("mode", "apply"),
+            "schema_version": "1.0", "helper_id": step.get("helper", "execution-control"),
+            "operation": step.get("helper", "execution-control"), "mode": step.get("mode", "apply"),
             "inputs": {"workflow_file": WORKFLOW, "action": step["action"], **binding,
                        **self.resolve(step.get("inputs", {}))},
         }
@@ -105,7 +113,7 @@ class CorrectiveAuthorizationReplayTests(unittest.TestCase):
     def finalize(self, step: dict) -> None:
         """Send the run's end-of-run request through the read-only `finalize-run` helper."""
         inputs = {"ledger_path": self.ledger_path.relative_to(self.root).as_posix(),
-                  "expected_run_id": self.ledger["run_id"], **step["finalize"]}
+                  "expected_run_id": self.ledger["run_id"], **self.resolve(step["finalize"])}
         code, envelope = self.run_runner({
             "schema_version": "1.0", "helper_id": "finalize-run", "operation": "finalize-run",
             "mode": "read_only", "inputs": inputs,
@@ -123,6 +131,14 @@ class CorrectiveAuthorizationReplayTests(unittest.TestCase):
             target.unlink(missing_ok=True)
         else:
             shutil.copyfile(FIXTURE_ROOT / name, target)
+
+    def place_check(self, fixture: str, exit_code: int = 1) -> None:
+        """Stage a verification command that prints one captured test-runner output and exits, as the runner would run it."""
+        commands = {"UNIT_TEST": f"{sys.executable} check.py"}
+        (self.root / WORKFLOW).write_text("# Workflow\n\n## PROJECT_COMMANDS\n```json\n" + json.dumps(commands) + "\n```\n",
+                                          encoding="utf-8")
+        output = (CHECK_FIXTURES / fixture).read_text(encoding="utf-8")
+        (self.root / "check.py").write_text(f"import sys\nsys.stdout.write({output!r})\nsys.exit({exit_code})\n", encoding="utf-8")
 
     def stage(self, files: dict[str, str]) -> None:
         """Copy frozen fixture files into the consumer repository."""
@@ -166,6 +182,8 @@ class CorrectiveAuthorizationReplayTests(unittest.TestCase):
                 self.assertEqual(data[key], expect[key], envelope)
         for key, expected in expect.get("data", {}).items():
             self.assertEqual(data[key], expected, key)
+        if "ledger" not in data:
+            return
         ledger = data["ledger"]
         for dotted, expected in expect.get("ledger", {}).items():
             self.assertEqual(_field(ledger, dotted), expected, dotted)
@@ -174,8 +192,8 @@ class CorrectiveAuthorizationReplayTests(unittest.TestCase):
         self.ledger = ledger
         self.ledger_path = self.root / data["ledger_path"]
 
-    def test_fixture_scenarios_replay_against_the_shipped_runner(self) -> None:
-        for name in SCENARIOS:
+    def replay(self, names: tuple[str, ...]) -> None:
+        for name in names:
             scenario = json.loads((FIXTURE_ROOT / name).read_text(encoding="utf-8"))
             self.assertEqual(scenario["schema"], "corrective-authorization-replay/v1")
             self.reset_repository()
@@ -183,6 +201,8 @@ class CorrectiveAuthorizationReplayTests(unittest.TestCase):
                 with self.subTest(scenario=name, step=step["id"]):
                     if "place_spec" in step:
                         self.place_spec(step["place_spec"])
+                    elif "place_check" in step:
+                        self.place_check(step["place_check"], step.get("exit_code", 1))
                     elif "stage" in step:
                         self.stage(step["stage"])
                     elif "write" in step:
@@ -194,6 +214,15 @@ class CorrectiveAuthorizationReplayTests(unittest.TestCase):
                         self.git_baseline()
                     else:
                         self.check_step(step)
+
+    def test_unit_scoped_unknown_outcome_scenarios_replay_against_the_shipped_runner(self) -> None:
+        self.replay(UNIT_SCENARIOS)
+
+    def test_fixture_scenarios_replay_against_the_shipped_runner(self) -> None:
+        self.replay(SCENARIOS)
+
+    def test_test_runner_output_lets_a_converging_correction_continue_its_family(self) -> None:
+        self.replay(CONVERGENCE_SCENARIOS)
 
     def test_each_scenario_refuses_a_replayed_or_second_approval(self) -> None:
         for name in APPROVAL_SCENARIOS:
