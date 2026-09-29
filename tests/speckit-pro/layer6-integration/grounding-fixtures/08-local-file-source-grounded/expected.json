@@ -1,0 +1,9 @@
+{
+  "fixture_id": "08-local-file-source-grounded",
+  "purpose": "A grounded answer whose selected source is a repository file, with two file:line citations. A local file source has no capability tool call to match, so it is its own grounded class and the note must not be counted as malformed.",
+  "expect_grounding_verdict": "grounded",
+  "must_invoke_tools": [
+    "Read"
+  ],
+  "expect_citation_count": 1
+}

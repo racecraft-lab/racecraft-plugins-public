@@ -1,0 +1,1 @@
+{"type":"assistant","isSidechain":false,"message":{"role":"assistant","content":[{"type":"text","text":"I could not confirm the current release date.\nCapability path: current release date -> repo-local fallback; Evidence: no installed documentation capability was usable; Confidence: low (repository text only)."}]}}

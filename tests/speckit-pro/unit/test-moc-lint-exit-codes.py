@@ -18,7 +18,7 @@ LIFECYCLE = (
     / "tests"
     / "speckit-pro"
     / "layer1-structural"
-    / "validate-spec-lifecycle-contracts.py"
+    / "validate-moc-lint.py"
 )
 LIB_DIR = REPO_ROOT / "tests" / "speckit-pro" / "lib"
 ORPHAN_MODE = "--moc-orphan"
