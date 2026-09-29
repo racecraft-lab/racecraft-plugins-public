@@ -24,7 +24,6 @@ from .path_utils import sha256_file
 
 MANIFEST_NAME = "speckit-pro-runner.manifest.json"
 CHECKSUM_NAME = "speckit-pro-runner.sha256"
-RUNNER_DATA_FILES = ("agent_inventory.json",)
 
 
 class MetadataFormatError(ValueError):
@@ -302,13 +301,17 @@ def metadata_report(
 
 
 def runner_source_files(package_dir: Path) -> list[Path]:
+    """List every runner file the trust manifest covers.
+
+    This is the one roster: the refresh script and the payload gates call it.
+    It holds all Python modules and every JSON file the runner loads at run
+    time, except the manifest itself.
+    """
     return sorted(
-        [
-            path
-            for path in package_dir.rglob("*.py")
-            if "__pycache__" not in path.parts
-        ]
-        + [package_dir / name for name in RUNNER_DATA_FILES]
+        path
+        for pattern in ("*.py", "*.json")
+        for path in package_dir.rglob(pattern)
+        if "__pycache__" not in path.parts and path.is_file() and path.name != MANIFEST_NAME
     )
 
 

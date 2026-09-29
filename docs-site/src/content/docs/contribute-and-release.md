@@ -114,12 +114,15 @@ Primary sources: [suite manifest](https://github.com/racecraft-lab/racecraft-plu
 
 Treat cache identity and version fields as owned by their source hierarchy:
 
-- The Claude source manifest and Claude marketplace entry intentionally omit
-  `version`. For a relative path in a git-hosted marketplace, Claude Code then
-  uses the resolved commit SHA for update detection and the cache key. Do not
-  add either field back: a static manifest version masks newer commits and can
-  leave installed skill bytes stale. See Anthropic's
+- The speckit-pro Claude source manifest and Claude marketplace entry
+  intentionally omit `version`. For a relative path in a git-hosted
+  marketplace, Claude Code then uses the resolved commit SHA for update
+  detection and the cache key. Do not add either field back: a static manifest
+  version masks newer commits and can leave installed skill bytes stale. See
+  Anthropic's
   [version-management reference](https://code.claude.com/docs/en/plugins-reference#version-management).
+  The typesafe-jev Claude manifest and marketplace entry do carry a `version`,
+  which release-please bumps.
 - Release-please owns release version bumps for the Codex source plugin
   manifest, the runner manifest's `plugin_version`, and the Codex marketplace
   registry version configured in `release-please-config.json`.
