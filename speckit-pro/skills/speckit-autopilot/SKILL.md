@@ -65,6 +65,9 @@ phase in the **resolved stage's** range (`AUTOPILOT_STAGE`, set at Step
 0.6c). A `--stage plan` run finishes its work after the confidence gate.
 A `full` run completes all 7 phases.
 
+When a run may involve a human, and which reasons count, is set by the shared
+[Autopilot Stop Policy](./references/stop-policy.md).
+
 **Neither is a status summary a stopping point.** Reporting progress to the
 operator is not a step in the workflow: when a phase still has work, the next
 dispatch goes in the same turn as the report. Ending a turn with no dispatch
@@ -844,6 +847,7 @@ in [`references/error-recovery.md`](./references/error-recovery.md).
 
 ## References
 
+- [Stop Policy](./references/stop-policy.md) — The one contract for when a run may involve a human; stop reasons and their classes
 - [Prerequisites](./references/prerequisites.md) — Archive Sweep + Step 0.x environment, settings, constitution, agent detection, command/preset discovery
 - [Phase Execution](./references/phase-execution.md) — Per-phase prompt construction, dispatch templates, branch-aware/Clarify/Multi-prompt prefixes
 - [Consensus Protocol](./references/consensus-protocol.md) — Category-routed dispatch, Round 1/2, per-phase flows, Logging schema
