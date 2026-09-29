@@ -691,7 +691,7 @@ class GateFoundationTests(unittest.TestCase):
         for case in cases["cases"]:
             with self.subTest(case_id=case["case_id"]):
                 self.assertIn(case["product"], {"claude", "codex"})
-                self.assertIn(case["operation"], {"preflight", "scaffold", "status", "autopilot-dry-run"})
+                self.assertNotIn("operation", case, "the record reports the runner operation it sends")
                 self.assertTrue(case["cache_root"])
                 if "candidate_results" not in case:
                     continue
