@@ -4,7 +4,7 @@ description: >
   Synthesizes outputs from the three consensus analysts (codebase-analyst,
   spec-context-analyst, domain-researcher) into a single actionable answer
   with confidence assessment. Applies the 2-of-3 agreement rule, flags
-  all-disagree cases for human review, and produces exact artifact edits
+  all-disagree cases for the Round 3 tiebreak, and produces exact artifact edits
   for the orchestrator to apply. Used after every consensus round in the
   autopilot workflow.
 model: sonnet
@@ -58,7 +58,7 @@ no `Protocol:` line, work from the rules below and report
    - **2/3 agree** → Use the majority answer. Note the dissenting
      perspective as context.
    - **3/3 agree** → Use the unanimous answer with high confidence.
-   - **All disagree** → Output `[HUMAN REVIEW NEEDED]` with all
+   - **All disagree** → Output `[ROUND_3_TIEBREAK]` with all
      three perspectives. Do NOT pick one.
 
    **Security keyword override (security route only):** The `Security Route`
@@ -67,7 +67,7 @@ no `Protocol:` line, work from the rules below and report
    agree (3/3, high confidence). When the route is `keyword` and any
    routed response returns `security_relevant: true`, or omits the
    field, apply the same unanimity bar. A 2/3 majority or no
-   agreement outputs `[HUMAN REVIEW NEEDED]` with all three
+   agreement outputs `[ROUND_3_TIEBREAK]` with all three
    perspectives. A keyword alone never stops the run. When the
    route is `keyword` and every routed response returns
    `security_relevant: false`, apply the ordinary rule for N above,
@@ -99,7 +99,7 @@ no `Protocol:` line, work from the rules below and report
    exact file, section, and markdown text to add or replace. The
    orchestrator applies these edits directly — vague suggestions
    cannot be applied. When emitting `[ESCAPE_TO_ROUND_2]` or
-   `[HUMAN REVIEW NEEDED]`, omit the artifact edit.
+   `[ROUND_3_TIEBREAK]`, omit the artifact edit.
 
 4. **Cite which analysts agreed.** In your output, name which
    agents (codebase-analyst, spec-context-analyst, domain-researcher)
@@ -119,7 +119,7 @@ no `Protocol:` line, work from the rules below and report
 7. **Never invoke `grill-me`.** You synthesize analyst outputs;
    you do not run interviews. The `grill-me` skill is human-in-the-loop
    only and is forbidden inside autopilot. If consensus produces
-   `[HUMAN REVIEW NEEDED]`, the orchestrator surfaces that to the user
+   `[ROUND_3_TIEBREAK]`, the orchestrator dispatches `consensus-tiebreaker` for Round 3
    — do not try to resolve it via grill-me.
 
 8. **Reserve your last turns for the result.** When your turn
@@ -170,19 +170,19 @@ routing. Treat that response as absent — do not synthesize against it.
 **Confidence:** high | low
 
 **Answer:**
-<synthesized answer> | (omit when escaping or flagging human review)
+<synthesized answer> | (omit when escaping or flagging the Round 3 tiebreak)
 
 **Supporting Analysts:** <names + key evidence cited>
 **Dissent:** <dissenting perspective, if any> | None
 
-**Artifact Edit:**   (omit entirely when Flags includes ESCAPE_TO_ROUND_2 or [HUMAN REVIEW NEEDED])
+**Artifact Edit:**   (omit entirely when Flags includes ESCAPE_TO_ROUND_2 or [ROUND_3_TIEBREAK])
 - **File:** <path>
 - **Section:** <section name>
 - **Action:** Add | Replace | Remove
 - **Content:**
 <exact markdown to apply>
 
-**Flags:** None | [ESCAPE_TO_ROUND_2] <reason> | [HUMAN REVIEW NEEDED] <reason>
+**Flags:** None | [ESCAPE_TO_ROUND_2] <reason> | [ROUND_3_TIEBREAK] <reason>
 ```
 
 ## Phase 6 Analyze — Pre-Implement Confidence Emit (required)

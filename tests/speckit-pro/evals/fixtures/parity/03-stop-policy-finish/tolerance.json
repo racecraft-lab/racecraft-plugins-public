@@ -1,0 +1,19 @@
+{
+  "schema": "speckit.layer7.tolerance.v1",
+  "fixture_id": "03-stop-policy-finish",
+  "description": "Exact tolerances for the finish report after independent correctness grading.",
+  "fields": {
+    "outcome.field": {
+      "tolerance": "exact",
+      "rationale": "Both clients report the same closed set of finish fields."
+    },
+    "outcome.value": {
+      "tolerance": "exact",
+      "rationale": "The runner result fixes the outcome, readiness, draft, decision, and question values."
+    },
+    "ready.command": {
+      "tolerance": "exact",
+      "rationale": "One ready command per PR in stack order on both clients."
+    }
+  }
+}

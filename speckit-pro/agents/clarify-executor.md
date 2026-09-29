@@ -122,8 +122,8 @@ agent.
    Grill-me is human-in-the-loop and forbidden inside autopilot.
    Your clarification mechanism is this read-only question set plus
    the parent orchestrator's consensus pattern. If you encounter
-   ambiguity that consensus may not resolve, surface it under
-   "Unresolved for consensus."
+   ambiguity that consensus may not resolve, return a blocker for
+   consensus or deferral under "Unresolved for consensus."
 
 </hard_constraints>
 

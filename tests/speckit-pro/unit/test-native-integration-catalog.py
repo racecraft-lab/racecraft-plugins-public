@@ -5,9 +5,13 @@ from __future__ import annotations
 
 import copy
 import json
+import os
 from pathlib import Path
 import re
+import shutil
+import subprocess
 import sys
+import tempfile
 import unittest
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -15,6 +19,7 @@ TEST_ROOT = ROOT / "tests" / "speckit-pro"
 sys.path.insert(0, str(TEST_ROOT / "lib"))
 
 from native_eval_catalog import load_catalog, plan_trials  # noqa: E402
+from finalize_fixture import run_finalize_fixture  # noqa: E402
 from native_eval_grading import grade_observation  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
@@ -26,7 +31,9 @@ def focused_case(case: dict, checks: list[dict]) -> dict:
             "requirements": [item for item in case["requirements"] if item["id"] in covered]}
 
 
-class NativeReturnCatalogTests(unittest.TestCase):
+class _ReturnCatalogFixture:
+    """Shared fixture for the tests below."""
+
     def setUp(self) -> None:
         catalog = load_catalog(TEST_ROOT / "evals" / "catalog.json", ROOT)
         self.cases = {case["id"]: case for case in catalog["cases"]}
@@ -38,6 +45,8 @@ class NativeReturnCatalogTests(unittest.TestCase):
         self.keyword_majority = self.cases["integration.return-04-keyword-only-majority"]
         self.keyword_security = self.cases["integration.return-05-keyword-security-relevant"]
 
+
+class NativeReturnCatalogTests(_ReturnCatalogFixture, unittest.TestCase):
     def test_return_cases_preserve_two_and_three_input_boundaries(self) -> None:
         for case, names in (
             (self.disagreement, ["codebase-analyst", "domain-researcher"]),
@@ -112,7 +121,7 @@ class NativeReturnCatalogTests(unittest.TestCase):
             (self.keyword_majority, {"decision": "per-request", "next_action": "apply",
                                      "agreement": "2/3-majority",
                                      "retained_options": ["per-request", "per-billing-period"]}),
-            (self.keyword_security, {"decision": None, "next_action": "human_review",
+            (self.keyword_security, {"decision": None, "next_action": "round_3_tiebreak",
                                      "agreement": "2/3-majority",
                                      "retained_options": ["per-request", "per-billing-period"]}),
         ):
@@ -130,7 +139,7 @@ class NativeReturnCatalogTests(unittest.TestCase):
                 bad = copy.deepcopy(observation)
                 value = {**expected, field: "incorrect"}
                 if field == "next_action" and case is self.disagreement:
-                    value[field] = "human_review"
+                    value[field] = "round_3_tiebreak"
                 bad["artifacts"]["scenario-output/consensus-result.json"] = json.dumps(value)
                 with self.subTest(case=case["id"], field=field):
                     self.assertEqual(grade_observation(focused, bad)["status"], "fail")
@@ -156,7 +165,6 @@ class NativeReturnCatalogTests(unittest.TestCase):
             bad["artifacts"]["scenario-output/consensus-result.json"] = json.dumps({**answer, field: wrong})
             with self.subTest(field=field, wrong=wrong):
                 self.assertEqual(grade_observation(focused, bad)["status"], "fail")
-
 
     def test_keyword_route_cases_differ_only_in_one_security_relevant_answer(self) -> None:
         item = "`[domain] I1: Should the usage report count tokens per LLM request or per billing period?`"
@@ -198,6 +206,129 @@ class NativeReturnCatalogTests(unittest.TestCase):
                     self.assertEqual(grade_observation(focused, bad)["status"], "fail")
 
 
+class NativeReturnRoundTests(_ReturnCatalogFixture, unittest.TestCase):
+    """The round three tiebreak and red-gate finalize cases grade the real result."""
+
+    def test_round3_tiebreak_case_applies_the_conservative_option_without_a_stop(self) -> None:
+        case = self.cases["integration.consensus-round3-tiebreak"]
+        self.assertEqual(case["layer"], "integration")
+        self.assertEqual(case["resource_class"], "nested")
+        self.assertIn("`**Round:** 3`", case["prompt"])
+        self.assertIn("must not ask the user, and must not stop", case["prompt"])
+        paths = [f"scenario-inputs/analysts/{name}.md" for name in (
+            "codebase-analyst", "domain-researcher", "spec-context-analyst", "tiebreak-analyst")]
+        self.assertEqual(sorted(fixture["destination"] for fixture in case["fixtures"]), sorted(paths))
+        self.assertEqual(sorted(check["path"] for check in case["checks"]
+                                if check["type"] == "file_access"), sorted(paths))
+        dispatch = [check for check in case["checks"] if check["type"] == "native_subagent_dispatch"]
+        self.assertEqual(len(dispatch), 1)
+        self.assertEqual([pair["role"] for pair in dispatch[0]["expected"]], ["consensus-tiebreaker"])
+        self.assertEqual(dispatch[0]["forbidden_roles"], ["consensus-synthesizer"])
+        expected = {"decision": "per-request", "next_action": "apply", "retained_options":
+                    ["per-request", "per-billing-period"], "dissent": ["per-billing-period"],
+                    "agreement": "tiebreak", "scope_deferred": False}
+        checks = [check for check in case["checks"] if check["type"] == "json_field"]
+        self.assertEqual({check["field_path"][0]: check["expected"] for check in checks}, expected)
+        focused = focused_case(case, checks)
+        observation = {"completed": True, "error": None, "final_text": "",
+                       "activations": [], "tool_calls": [], "usage": {},
+                       "artifacts": {"scenario-output/consensus-result.json": json.dumps(expected)}}
+        self.assertEqual(grade_observation(focused, observation)["status"], "pass")
+        for field, wrong in (("next_action", "round_3_tiebreak"), ("agreement", "0/3-all-disagree"),
+                             ("decision", None), ("scope_deferred", True), ("dissent", [])):
+            bad = copy.deepcopy(observation)
+            bad["artifacts"]["scenario-output/consensus-result.json"] = json.dumps({**expected, field: wrong})
+            with self.subTest(field=field):
+                self.assertEqual(grade_observation(focused, bad)["status"], "fail")
+
+    def test_finalize_red_gate_case_grades_the_real_end_of_run_request(self) -> None:
+        case = self.cases["integration.finalize-red-gate-draft"]
+        self.assertEqual(case["layer"], "integration")
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            for fixture in case["fixtures"]:
+                target = root / fixture["destination"]
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(ROOT / fixture["source"], target)
+            request = json.loads((root / "scenario-inputs/finalize-request.json").read_text(encoding="utf-8"))
+            result = subprocess.run(
+                [sys.executable, "-m", "speckit_pro_runner"], input=json.dumps(request), text=True,
+                capture_output=True, cwd=root, check=False,
+                env={**os.environ, "PYTHONPATH": str(ROOT / "speckit-pro")},
+            )
+        data = json.loads(result.stdout)["data"]
+        self.assertEqual((data["outcome"], data["mark_ready"], data["ready_commands"]), ("human_stop", False, []))
+        artifact = "scenario-output/end-of-run-request.md"
+        checks = [check for check in case["checks"] if check["type"] in {"text", "file_exists"}]
+        focused = focused_case(case, checks)
+        for label, text, expected in (("runner request", data["end_of_run_request"], "pass"),
+                                      ("hand-written request", "The run finished.", "fail")):
+            observed = {"completed": True, "error": None, "final_text": "", "activations": [],
+                        "tool_calls": [], "usage": {}, "artifacts": {artifact: text}}
+            with self.subTest(request=label):
+                self.assertEqual(grade_observation(focused, observed)["status"], expected)
+
+
+class FinalizeStackReadyCatalogTests(unittest.TestCase):
+    """The stack finishes ready for review with no merge and no question (issue 829)."""
+
+    SUMMARY = "scenario-output/finish-summary.json"
+    RUNNER = {"name": "Bash", "input": {"command": "/venv/bin/python -m speckit_pro_runner < scenario-inputs/finalize-request.json"},
+              "output": "ran", "success": True}
+
+    def setUp(self) -> None:
+        catalog = load_catalog(TEST_ROOT / "evals" / "catalog.json", ROOT)
+        self.case = next(case for case in catalog["cases"] if case["id"] == "integration.finalize-stack-ready")
+
+    def observation(self, summary: dict | None = None, calls: list[dict] | None = None) -> dict:
+        artifacts = {} if summary is None else {self.SUMMARY: json.dumps(summary)}
+        return {"completed": True, "error": None, "final_text": "", "activations": ["speckit-autopilot"],
+                "tool_calls": calls if calls is not None else [{**self.RUNNER}], "usage": {},
+                "artifacts": artifacts}
+
+    def correct(self) -> dict:
+        return {"outcome": "complete_with_deferred", "mark_ready": True, "keeps_draft": False,
+                "question_asked": False,
+                "ready_commands": ["gh pr ready 101", "gh pr ready 102", "gh pr ready 103"]}
+
+    def test_the_fixture_is_the_real_runner_result(self) -> None:
+        request, result = run_finalize_fixture(ROOT / "tests/speckit-pro/evals/fixtures/integration-finalize/finalize-stack-ready")
+        correct = self.correct()
+        self.assertEqual((result["outcome"], result["mark_ready"], result["ready_commands"]),
+                         (correct["outcome"], correct["mark_ready"], correct["ready_commands"]))
+        self.assertIsNone(result["human_stop"])
+        self.assertEqual(len(result["ready_commands"]), len(request["inputs"]["pull_requests"]))
+
+    def test_the_correct_finish_passes_and_each_wrong_finish_fails(self) -> None:
+        checks = [check for check in self.case["checks"] if check["type"] != "semantic"]
+        focused = focused_case(self.case, checks)
+        codex_only = {"runner-invoked-codex", "no-codex-gh", "no-codex-question"}
+        focused["checks"] = [check for check in focused["checks"] if check["id"] not in codex_only]
+        focused["requirements"] = [row for row in self.case["requirements"]
+                                   if any(check["requirement"] == row["id"] for check in focused["checks"])]
+        self.assertEqual(grade_observation(focused, self.observation(self.correct()))["status"], "pass")
+        wrong = {
+            "the stack held in draft for human UAT": {**self.correct(), "mark_ready": False, "keeps_draft": True},
+            "an outcome the runner did not return": {**self.correct(), "outcome": "human_stop"},
+            "a PR left out of the ready commands": {**self.correct(), "ready_commands": ["gh pr ready 101"]},
+            "a question asked": {**self.correct(), "question_asked": True},
+            "a merge command recorded": {**self.correct(), "ready_commands": ["gh pr merge 101"]},
+        }
+        for name, summary in wrong.items():
+            with self.subTest(wrong=name):
+                self.assertEqual(grade_observation(focused, self.observation(summary))["status"], "fail")
+        for name, call in {"a merge": {"name": "Bash", "input": {"command": "gh pr merge 101"}},
+                           "a ready command run by the case": {"name": "Bash", "input": {"command": "gh pr ready 101"}},
+                           "a question tool call": {"name": "AskUserQuestion", "input": {"question": "Ready?"}}}.items():
+            with self.subTest(forbidden=name):
+                calls = [{**self.RUNNER}, {**call, "output": "denied", "success": False}]
+                self.assertEqual(grade_observation(focused, self.observation(self.correct(), calls))["status"], "fail")
+        self.assertEqual(grade_observation(focused, self.observation(self.correct(), []))["status"], "fail")
+        self.assertEqual(grade_observation(focused, self.observation(None))["status"], "fail")
+
+
 if __name__ == "__main__":
-    raise SystemExit(run_counted(unittest.defaultTestLoader.loadTestsFromTestCase(NativeReturnCatalogTests),
-                                 label="test-native-integration-catalog"))
+    suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case)
+                               for case in (NativeReturnCatalogTests, NativeReturnRoundTests,
+                                            FinalizeStackReadyCatalogTests))
+    raise SystemExit(run_counted(suite, label="test-native-integration-catalog"))

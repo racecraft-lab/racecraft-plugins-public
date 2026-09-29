@@ -18,7 +18,9 @@ from speckit_pro_runner.helpers.registry import dispatch_helper
 from test_result import run_counted
 
 
-class StackManagerTests(unittest.TestCase):
+class StackManagerTestCase(unittest.TestCase):
+    """Shared staging for the manager selection and recovery tests."""
+
     def setUp(self):
         temporary = tempfile.TemporaryDirectory()
         self.addCleanup(temporary.cleanup)
@@ -67,6 +69,9 @@ class StackManagerTests(unittest.TestCase):
         return dispatch_helper(SimpleNamespace(helper_id="detect-stack-manager-plan", operation="detect-stack-manager-plan",
                                               request_id="manager-test", mode="dry_run", inputs={**self.inputs, **changes}))
 
+
+
+class StackManagerTests(StackManagerTestCase):
     def test_selected_manager_links_verified_urls_and_preserves_packet_creation(self):
         with patch.object(stack_manager, "probe", side_effect=self.probe):
             result = self.request()
@@ -158,5 +163,64 @@ class StackManagerTests(unittest.TestCase):
         self.assertEqual(previous["topology"]["post_mutation"], decision["recovery"]["observed_post_failure_topology"])
 
 
+
+class StackManagerRecoveryTests(StackManagerTestCase):
+    def partial_mutation_path(self):
+        with patch.object(stack_manager, "probe", side_effect=self.probe):
+            previous = self.request()["data"]["decision"]
+        previous["mutation_boundary"]["status"] = "partial_mutation_unknown"
+        previous["topology"]["post_mutation"] = previous["topology"]["pre_mutation"][:1]
+        path = "specs/example/.process/stack-manager-decision.json"
+        (self.root / path).parent.mkdir(parents=True)
+        (self.root / path).write_text(json.dumps(previous))
+        return path
+
+    def test_reverified_partial_mutation_retries_the_existing_pr_link(self):
+        path = self.partial_mutation_path()
+        self.calls.clear()
+        with patch.object(stack_manager, "probe", side_effect=self.probe):
+            result = self.request(previous_decision=path, preference="explicit-gh", reverify_recovery=True)
+        self.assertEqual("ok", result["status"], result)
+        decision = result["data"]["decision"]
+        self.assertEqual("gh-stack", decision["selected_manager"])
+        self.assertIsNone(decision.get("recovery"))
+        self.assertFalse(decision["fallback_allowed"])
+        self.assertEqual("planned", decision["mutation_boundary"]["status"])
+        self.assertFalse(decision["mutation_boundary"]["fallback_after_boundary_allowed"])
+        plan = decision["command_plan"][0]
+        self.assertEqual(("link-stack", True), (plan["id"], plan["mutates"]))
+        self.assertEqual([x["pr_url"] for x in self.inputs["topology"]], plan["argv"][-2:])
+        self.assertFalse(any("create" in c or "edit" in c for c in self.calls))
+
+    def test_recovery_stays_blocked_when_the_prs_no_longer_verify(self):
+        path = self.partial_mutation_path()
+
+        def drifted(root, argv):
+            result = self.probe(root, argv)
+            if argv[:2] == ["gh", "api"] and "/pulls/" in argv[-1]:
+                body = json.loads(result["stdout_tail"])
+                body["head"]["sha"] = "b" * 40
+                result["stdout_tail"] = json.dumps(body)
+            return result
+
+        with patch.object(stack_manager, "probe", side_effect=drifted):
+            decision = self.request(previous_decision=path, reverify_recovery=True)["data"]["decision"]
+        self.assertEqual("blocked", decision["selected_manager"])
+        self.assertFalse(decision["fallback_allowed"])
+        self.assertEqual("gh-stack", decision["recovery"]["selected_manager"])
+
+    def test_recovery_stays_blocked_when_a_slice_has_no_pr_identity(self):
+        path = self.partial_mutation_path()
+        record = json.loads((self.root / path).read_text())
+        record["topology"]["pre_mutation"][1].pop("pr_url")
+        (self.root / path).write_text(json.dumps(record))
+        with patch.object(stack_manager, "probe", side_effect=self.probe):
+            decision = self.request(previous_decision=path, reverify_recovery=True)["data"]["decision"]
+        self.assertEqual("blocked", decision["selected_manager"])
+
+
 if __name__ == "__main__":
-    sys.exit(run_counted(unittest.defaultTestLoader.loadTestsFromTestCase(StackManagerTests), label="test-stack-manager-plan"))
+    loader = unittest.defaultTestLoader
+    suite = unittest.TestSuite([loader.loadTestsFromTestCase(StackManagerTests),
+                                loader.loadTestsFromTestCase(StackManagerRecoveryTests)])
+    sys.exit(run_counted(suite, label="test-stack-manager-plan"))

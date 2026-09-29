@@ -63,9 +63,9 @@ exercise:
 
 | Fixture | Scenario |
 |---|---|
-| 17 | Phase-executor returns error → orchestrator does not retry blindly, does not escalate to grill-me |
+| 17 | Phase-executor returns error → orchestrator does not retry blindly, does not escalate to grill-me, and defers an unresolved blocker instead of stopping |
 
-### Cross-agent parsing (Class 2, fixtures 01–05)
+### Cross-agent parsing (Class 2, fixtures 01–08)
 
 | Fixture | Cross-agent flow |
 |---|---|
@@ -73,7 +73,10 @@ exercise:
 | 02 | 2 of 3 analysts agree → synthesizer emits majority decision |
 | 03 | checklist-executor output → orchestrator parses gaps + remediations |
 | 04 | keyword-only item, every analyst `security_relevant: false` → 2/3 majority applies |
-| 05 | same keyword item, one analyst `security_relevant: true` → 2/3 majority flags human review |
+| 05 | same keyword item, one analyst `security_relevant: true` → 2/3 majority flags the Round 3 tiebreak |
+| 06 | Round 2 all-disagree → Round 3 tiebreak returns an assumption and logs the dissent |
+| 07 | security item without 3/3 → Round 3 tiebreak, no human stop |
+| 08 | analyst fails its retry and is replaced → Round 3 tiebreak, no human stop |
 
 ### End-to-end (Class 3, fixtures 01–02)
 
@@ -181,7 +184,7 @@ python3 tests/speckit-pro/layer6-integration/run-all-fixtures.py --live
     {
       "subagent_type": "speckit-pro:consensus-synthesizer",
       "must_contain_any": ["bcrypt", "argon2"],
-      "must_not_contain_any": ["HUMAN REVIEW NEEDED"],
+      "must_not_contain_any": ["ROUND_3_TIEBREAK"],
       "must_contain_section_keywords": ["agreement", "confidence"]
     }
   ],
