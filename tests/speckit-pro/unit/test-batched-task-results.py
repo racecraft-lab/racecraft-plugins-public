@@ -171,19 +171,28 @@ class BatchedTaskResultsTests(unittest.TestCase):
         self.assertEqual(restarted["journal"]["batches"][0]["tasks"][0], "T001")
         self.assertEqual(self.path.read_bytes(), before)
 
-    def test_unfinished_results_preserved_and_require_checkpoint(self):
+    def test_unfinished_results_preserved_and_routed_to_their_batch_agent(self):
         report = self.first_report()
         report["results"][0]["status"] = "unfinished"
         report["results"][0]["evidence_event_ids"] = []
         report["native_observations"] = report["native_observations"][3:]
         result = self.call("record", **report)
+        batch = result["journal"]["batches"][0]
         self.assertEqual(result["helper_exit_code"], 1)
-        self.assertEqual(result["disposition"], "checkpoint_required")
+        self.assertEqual(result["disposition"], "redispatch")
+        self.assertEqual(result["reasons"], ["unfinished_task_results"])
+        self.assertEqual(result["repair"], {"retry": "task-results", "batches": [
+            {"batch_id": batch["id"], "agent": batch["agent"], "task_ids": [report["results"][0]["task_id"]]}]})
         self.assertEqual(result["journal"]["reports"][0]["results"], report["results"])
         inspected = self.call("inspect", mode="read_only")
-        self.assertEqual(inspected["disposition"], "checkpoint_required")
+        self.assertEqual(inspected["disposition"], "redispatch")
         self.assertEqual(inspected["helper_exit_code"], 0)
-        self.assertEqual(self.call()["disposition"], "checkpoint_required")
+        self.assertEqual(self.call()["disposition"], "redispatch")
+
+    def test_complete_results_need_no_repair(self):
+        result = self.call("record", **self.first_report())
+        self.assertEqual(result["disposition"], "continue")
+        self.assertNotIn("repair", result)
 
     def test_same_unit_cannot_report_test_only_green(self):
         self.meta["tasks"]["T002"]["tdd_unit"] = "behavior-1"
@@ -516,7 +525,7 @@ class BatchedTaskResultsTests(unittest.TestCase):
         self.assertEqual(result["status"], "expected_failure")
         code, inspected = self.runner("inspect", mode="read_only")
         self.assertEqual(code, 0, inspected)
-        self.assertEqual(inspected["data"]["disposition"], "checkpoint_required")
+        self.assertEqual(inspected["data"]["disposition"], "redispatch")
         report["results"].append(copy.deepcopy(report["results"][0]))
         code, result = self.runner("record", **report)
         self.assertEqual(code, 2, result)

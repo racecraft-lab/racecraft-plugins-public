@@ -5226,13 +5226,21 @@ def build_report(
     }
     passed = all(not values for values in problems.values())
 
-    return {
+    report = {
         "status": "pass" if passed else "fail",
         "workflow_file": str(workflow),
         "state_file": str(state),
         "plan_step_count": len(plan_steps),
         **problems,
     }
+    if not passed:
+        # The orchestrator owns the workflow and state files, so a failure is its to repair, not a stop.
+        report["repair"] = {
+            "owner": "orchestrator",
+            "failing_keys": sorted(key for key, values in problems.items() if values),
+            "retry": "validate-autopilot-phase-coverage",
+        }
+    return report
 
 
 def _argument_parser() -> argparse.ArgumentParser:

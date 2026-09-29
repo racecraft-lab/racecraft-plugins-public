@@ -4,10 +4,11 @@ The repository's per-PR path cap can force the planner to split an approved PR
 order into smaller increments. Such a split is routine when it only narrows the
 approved groups to meet the budget, so autopilot ratifies it and records
 `ratified_by=autopilot`. The operator is asked only when the split adds or drops
-scope, drops, merges, or reorders approved groups, or leaves an increment over
-the cap (which needs a reviewability exception). This helper reads only its
-request inputs and never writes a file. Malformed input is an `input_error`,
-which the skill treats as a question for the operator, never a ratification.
+scope, or drops, merges, or reorders approved groups (`scope_changing_pr_split`).
+An increment over the cap is a size finding: the orchestrator re-slices it or
+commits a typed reviewability exception. This helper reads only its request
+inputs and never writes a file. Malformed input is an `input_error` the
+orchestrator repairs from the layer plan and retries; it is never a ratification.
 """
 
 from __future__ import annotations
@@ -23,6 +24,11 @@ INCREMENT_FIELDS = frozenset({"increment_id", "group_id", "scope", "production_p
 BUDGET_FIELDS = frozenset({"production_paths", "total_paths"})
 IDENTIFIER = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
 # Findings are reported in this order, one per code.
+SIZE_ONLY = frozenset({"reviewability_exception_needed"})
+REPAIR = {
+    "owner": "orchestrator",
+    "retry": "ratify-pr-split",
+}
 FINDING_ORDER = (
     "group_added",
     "group_merged",
@@ -192,22 +198,39 @@ def run_pr_split_ratification_helper(entry: Any, request: Any) -> dict[str, Any]
                 diagnostic(
                     "invalid_input",
                     str(error),
-                    remediation_summary="The split evidence is incomplete, so ask the operator to ratify the split.",
+                    remediation_summary="The split evidence is incomplete, so regenerate the split evidence from the layer plan.",
                     remediation_actions=[
                         "Pass the approved groups in order with their scope, the increments in order with their "
                         + "group, scope, and path counts, the active requirement, story, and task IDs, and the "
                         + "per-PR path budget.",
-                        "Retry the request, or record owner_ratification=pending and ask the operator.",
+                        "Retry the request. Record owner_ratification=pending until the helper ratifies the split.",
                     ],
                 )
             ],
+            data={
+                "helper_id": entry.helper_id,
+                "writes_state": False,
+                "repair": {**REPAIR, "action": "Regenerate the split evidence from the layer plan and retry"},
+            },
         )
     findings = _findings(groups, increments, active, budget)
+    extra: dict[str, Any] = {}
     if findings:
         codes = [finding["code"] for finding in findings]
-        decision, ratification, ratified_by = "operator_required", "pending", None
-        reason = "the split changes approved delivery: " + ", ".join(codes)
+        ratification, ratified_by = "pending", None
         record = ["owner_ratification=pending", "ratification_blockers=" + ",".join(codes)]
+        if set(codes) <= SIZE_ONLY:
+            decision = "reslice_required"
+            reason = "the split leaves an increment over the path cap: " + ", ".join(codes)
+            extra["repair"] = {
+                **REPAIR,
+                "action": "Re-slice the over-cap increment, or commit a typed reviewability exception "
+                + "when it cannot split further, then rerun",
+            }
+        else:
+            decision = "operator_required"
+            reason = "the split changes approved delivery: " + ", ".join(codes)
+            extra["stop_reason"] = "scope_changing_pr_split"
     else:
         decision, ratification, ratified_by = "autopilot_ratified", "ratified", "autopilot"
         reason = (
@@ -230,5 +253,6 @@ def run_pr_split_ratification_helper(entry: Any, request: Any) -> dict[str, Any]
             "reason": reason,
             "findings": findings,
             "record": record,
+            **extra,
         },
     )
