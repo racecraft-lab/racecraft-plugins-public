@@ -1665,8 +1665,6 @@ When breaking a feature into specs:
 
 ---
 
----
-
 ## References
 
 - **Source PRD:** [../../prd-html-artifacts.md](../../prd-html-artifacts.md) — the SPEC catalog above is derived from its Features / Acceptance Criteria
