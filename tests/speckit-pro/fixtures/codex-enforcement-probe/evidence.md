@@ -120,7 +120,7 @@ The hook log (`hook_log` in the excerpts) shows the payload keys. The parent's
 
 ## Files
 
-- `rollout-excerpts.json`: the minimal redacted excerpts per case: parent
+- `rollout-excerpts.json`: one JSON line of redacted excerpts per case: parent
   errors, the child's role, `turn_context` effort and sandbox, tool calls and
   outputs, final messages, and, for hook cases, the hook log. Session ids,
   account ids, home and temp paths, and the encrypted spawn messages are

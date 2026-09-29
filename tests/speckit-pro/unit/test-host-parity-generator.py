@@ -19,7 +19,6 @@ for import_root in (PLUGIN_ROOT, LIB_DIR):
 
 from speckit_pro_runner.agent_inventory import AGENT_INVENTORY  # noqa: E402
 from speckit_pro_runner.host_parity import (  # noqa: E402
-    CodexHookPolicy,
     HostParityError,
     derive_codex_enforcement,
     derive_codex_hook_policy,
@@ -125,9 +124,8 @@ class SandboxDerivationTests(unittest.TestCase):
     )
 
     def test_sandbox_mode_follows_the_mutation_tools_left_to_the_role(self) -> None:
-        for fields, expected in self.CASES:
-            with self.subTest(fields=fields):
-                self.assertEqual(derive_codex_enforcement(fields).sandbox_mode, expected)
+        derived = [derive_codex_enforcement(fields).sandbox_mode for fields, _ in self.CASES]
+        self.assertEqual(derived, [expected for _, expected in self.CASES])
 
     def test_advisory_config_keys_carry_only_sandbox_mode(self) -> None:
         derived = derive_codex_enforcement({"tools": "Read, " + RESEARCH_TOOLS})
@@ -172,30 +170,41 @@ class BrokerAllowlistTests(unittest.TestCase):
                 derive_codex_enforcement(fields)
 
 
+READ_ONLY = {"disallowedTools": "Write, Edit, MultiEdit"}
+DOCS_ONLY = {"tools": "Read, mcp__plugin_speckit-pro_research-broker__docs_query"}
+OPEN_ROLE = {"disallowedTools": "Skill"}
+
+
 class HookPolicyTests(unittest.TestCase):
-    def policy(self, fields: dict[str, str]) -> CodexHookPolicy:
-        return derive_codex_hook_policy("probe-role", derive_codex_enforcement(fields))
+    # (role fields, calling agent_type, tool name, denied?)
+    DECISIONS = (
+        (READ_ONLY, "probe-role", "apply_patch", True),
+        (READ_ONLY, None, "apply_patch", False),
+        (READ_ONLY, "other-role", "apply_patch", False),
+        (READ_ONLY, "probe-role", "Bash", False),
+        (DOCS_ONLY, "probe-role", "mcp__research_broker__docs_query", False),
+        (DOCS_ONLY, "probe-role", "mcp__research_broker__research_search", True),
+        (DOCS_ONLY, "probe-role", "mcp__codex_apps__tavily_tavily_research", True),
+        (DOCS_ONLY, None, "mcp__research_broker__research_search", False),
+        (OPEN_ROLE, "probe-role", "mcp__research_broker__research_search", False),
+        (OPEN_ROLE, "probe-role", "apply_patch", False),
+    )
 
-    def test_read_only_role_denies_file_edits_only_for_that_role(self) -> None:
-        policy = self.policy({"disallowedTools": "Write, Edit, MultiEdit"})
-        self.assertTrue(policy.denies("probe-role", "apply_patch"))
-        self.assertFalse(policy.denies(None, "apply_patch"))
-        self.assertFalse(policy.denies("other-role", "apply_patch"))
-        self.assertFalse(policy.denies("probe-role", "Bash"))
+    def test_policy_denies_only_the_role_and_tools_it_limits(self) -> None:
+        decisions = [
+            derive_codex_hook_policy("probe-role", derive_codex_enforcement(fields)).denies(
+                agent_type, tool
+            )
+            for fields, agent_type, tool, _ in self.DECISIONS
+        ]
+        self.assertEqual(decisions, [denied for *_, denied in self.DECISIONS])
 
-    def test_allowlist_role_denies_every_mcp_tool_it_does_not_list(self) -> None:
-        policy = self.policy({"tools": "Read, mcp__plugin_speckit-pro_research-broker__docs_query"})
-        self.assertEqual(policy.allowed_mcp_tools, ("mcp__research_broker__docs_query",))
-        self.assertFalse(policy.denies("probe-role", "mcp__research_broker__docs_query"))
-        self.assertTrue(policy.denies("probe-role", "mcp__research_broker__research_search"))
-        self.assertTrue(policy.denies("probe-role", "mcp__codex_apps__tavily_tavily_research"))
-        self.assertFalse(policy.denies(None, "mcp__research_broker__research_search"))
-
-    def test_role_without_an_allowlist_leaves_mcp_tools_alone(self) -> None:
-        policy = self.policy({"disallowedTools": "Skill"})
-        self.assertIsNone(policy.allowed_mcp_tools)
-        self.assertFalse(policy.denies("probe-role", "mcp__research_broker__research_search"))
-        self.assertFalse(policy.denies("probe-role", "apply_patch"))
+    def test_allowlist_names_use_the_codex_tool_spelling(self) -> None:
+        allowed = derive_codex_hook_policy("r", derive_codex_enforcement(DOCS_ONLY)).allowed_mcp_tools
+        self.assertEqual(allowed, ("mcp__research_broker__docs_query",))
+        self.assertIsNone(
+            derive_codex_hook_policy("r", derive_codex_enforcement(OPEN_ROLE)).allowed_mcp_tools
+        )
 
 
 class PairingManifestTests(unittest.TestCase):
