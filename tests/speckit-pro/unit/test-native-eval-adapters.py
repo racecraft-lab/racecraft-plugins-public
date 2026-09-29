@@ -3760,7 +3760,9 @@ ISOLATION_CHECKER_COMPONENTS = frozenset({
 QUALIFY_DOCSTRING = '    """Qualify the exact local profile without contacting a model provider."""\n'
 
 
-class IsolationCheckerIdentityTests(unittest.TestCase):
+class IsolationCheckerCase(unittest.TestCase):
+    """Shared source fixtures for the isolation checker identity tests."""
+
     def setUp(self) -> None:
         self.source = Path(codex_adapter.__file__).read_text(encoding="utf-8")
         self.shared_source = Path(adapter_common.__file__).read_text(encoding="utf-8")
@@ -3793,6 +3795,8 @@ class IsolationCheckerIdentityTests(unittest.TestCase):
     def edited(self, old: str, new: str) -> str:
         return self.source.replace(old, new, 1)
 
+
+class IsolationCheckerClosureTests(IsolationCheckerCase):
     def test_identity_derives_exact_local_security_closure(self) -> None:
         identity = self.baseline
         self.assertEqual(identity["schema_version"], "native-eval-isolation-checker/v1")
@@ -3820,6 +3824,8 @@ class IsolationCheckerIdentityTests(unittest.TestCase):
                     with self.assertRaisesRegex(adapter_common.NativeAdapterError, message):
                         codex_adapter._isolation_checker_identity()
 
+
+class IsolationCheckerDigestTests(IsolationCheckerCase):
     def test_unrelated_edits_keep_the_digest(self) -> None:
         for edit in (
             {"codex": self.edited("enabled = true", "enabled = false")},

@@ -792,6 +792,32 @@ class _CheckerSource:
     import_bindings: dict[str, dict[str, object]]
 
 
+def _import_binding(module: str | None, name: str | None, alias: ast.alias, level: int, bound: str) -> dict[str, object]:
+    return {"kind": "import", "module": module, "name": name, "as": alias.asname, "level": level, "bound": bound}
+
+
+def _checker_entries(node: ast.stmt) -> list[tuple[str, str, dict[str, object] | None]]:
+    """Name each top-level binding one statement creates, with its kind and import binding."""
+    if isinstance(node, ast.Import):
+        return [
+            (bound, "import", _import_binding(alias.name, None, alias, 0, bound))
+            for alias in node.names
+            for bound in (alias.asname or alias.name.split(".", 1)[0],)
+        ]
+    if isinstance(node, ast.ImportFrom):
+        return [
+            (bound, "import", _import_binding(node.module, alias.name, alias, node.level, bound))
+            for alias in node.names
+            for bound in (alias.asname or alias.name,)
+        ]
+    if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+        return [(node.name, "helper", None)]
+    if isinstance(node, ast.ClassDef):
+        return [(node.name, "class", None)]
+    targets = node.targets if isinstance(node, ast.Assign) else [node.target] if isinstance(node, ast.AnnAssign) else []
+    return [(target.id, "constant", None) for target in targets if isinstance(target, ast.Name)]
+
+
 def _checker_source(path: Path) -> _CheckerSource:
     """Index one module's top-level imports, helpers, classes and constants."""
     try:
@@ -802,38 +828,11 @@ def _checker_source(path: Path) -> _CheckerSource:
 
     table = _CheckerSource(source, {}, {}, {})
     for node in module.body:
-        if isinstance(node, ast.Import):
-            for alias in node.names:
-                bound = alias.asname or alias.name.split(".", 1)[0]
-                table.nodes[bound] = node
-                table.kinds[bound] = "import"
-                table.import_bindings[bound] = {
-                    "kind": "import", "module": alias.name, "name": None,
-                    "as": alias.asname, "level": 0, "bound": bound,
-                }
-        elif isinstance(node, ast.ImportFrom):
-            for alias in node.names:
-                bound = alias.asname or alias.name
-                table.nodes[bound] = node
-                table.kinds[bound] = "import"
-                table.import_bindings[bound] = {
-                    "kind": "import", "module": node.module, "name": alias.name,
-                    "as": alias.asname, "level": node.level, "bound": bound,
-                }
-        elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-            table.nodes[node.name] = node
-            table.kinds[node.name] = "helper"
-        elif isinstance(node, ast.ClassDef):
-            table.nodes[node.name] = node
-            table.kinds[node.name] = "class"
-        elif isinstance(node, ast.Assign):
-            for target in node.targets:
-                if isinstance(target, ast.Name):
-                    table.nodes[target.id] = node
-                    table.kinds[target.id] = "constant"
-        elif isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
-            table.nodes[node.target.id] = node
-            table.kinds[node.target.id] = "constant"
+        for name, kind, binding in _checker_entries(node):
+            table.nodes[name] = node
+            table.kinds[name] = kind
+            if binding is not None:
+                table.import_bindings[name] = binding
     return table
 
 
