@@ -48,8 +48,9 @@ def _in_scope(event: JsonObject, scope: str) -> bool:
 
 def _message_id(event: JsonObject) -> str | None:
     message = event.get("message")
-    message_id = message.get("id") if isinstance(message, dict) else None
-    return message_id if isinstance(message_id, str) else None
+    if isinstance(message, dict) and isinstance(message.get("id"), str):
+        return str(message["id"])
+    return None
 
 
 def _dispatch_record(block: JsonObject, message_index: int) -> JsonObject:
