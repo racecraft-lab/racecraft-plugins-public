@@ -37,6 +37,15 @@ def release_branch_prefix(base_ref: str) -> str:
     return f"release-please--branches--{encoded_base}--components--"
 
 
+def component_from_branch(branch: str, base_ref: str) -> str | None:
+    prefix = release_branch_prefix(base_ref)
+    return branch.removeprefix(prefix) if branch.startswith(prefix) else None
+
+
+def default_release_title(component: str) -> str:
+    return f"chore(release): release {component}"
+
+
 def normalize_release_pr(candidate: Any, base_ref: str, *, strict: bool) -> dict[str, Any] | None:
     if not isinstance(candidate, dict):
         if strict:
@@ -61,7 +70,7 @@ def normalize_release_pr(candidate: Any, base_ref: str, *, strict: bool) -> dict
     if not isinstance(number, int) or isinstance(number, bool) or number <= 0:
         raise ResolutionError(f"release PR entry has invalid number: {number!r}")
 
-    title = candidate.get("title") or "chore(release): release speckit-pro"
+    title = candidate.get("title") or default_release_title(component)
     if not isinstance(title, str) or not title.strip():
         raise ResolutionError("release PR entry has an invalid title")
 
