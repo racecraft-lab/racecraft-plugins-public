@@ -270,13 +270,11 @@ class ReturnFormatReplayTests(unittest.TestCase):
             with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
                 return self.module.main([case.name])
 
-    def test_replay_fails_a_response_missing_the_required_substring(self) -> None:
-        assertion = {"subagent_type": "speckit-pro:codebase-analyst", "must_contain_any": ["ROUND_3_TIEBREAK"]}
-        self.assertEqual(self.replay_exit({"response_assertions": [assertion]}), 1)
-
-    def test_replay_fails_a_response_missing_the_section_keyword(self) -> None:
-        assertion = {"subagent_type": "speckit-pro:codebase-analyst", "must_contain_section_keywords": ["Agreement"]}
-        self.assertEqual(self.replay_exit({"response_assertions": [assertion]}), 1)
+    def test_replay_fails_a_response_missing_what_expected_json_requires(self) -> None:
+        for field, value in (("must_contain_any", ["ROUND_3_TIEBREAK"]), ("must_contain_section_keywords", ["Agreement"])):
+            with self.subTest(field=field):
+                assertion = {"subagent_type": "speckit-pro:codebase-analyst", field: value}
+                self.assertEqual(self.replay_exit({"response_assertions": [assertion]}), 1)
 
     def check_empty_response(self, mode: str) -> fixture_runner.Reporter:
         dispatch_line = next(line for line in self.source.splitlines() if '"tool_use"' in line)
