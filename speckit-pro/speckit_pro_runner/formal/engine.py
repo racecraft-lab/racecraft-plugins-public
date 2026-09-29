@@ -13,12 +13,13 @@ from pathlib import Path
 from typing import Any
 
 from . import apalache, tlc
-from .catalog import RUNS_PATH, FormalError, confined, digest
-from .process import run_process, runtime_environment
+from .pins import CHECKER_SHA256
+from .primitives import RUNS_PATH, FormalError, confined, digest
+from .process import checker_command, run_process, runtime_environment
+from .quint import command as quint_command, compile_model
+from .traces import execute as execute_traces
 
 ADAPTERS = {"apalache": apalache, "tlc": tlc}
-CHECKER_SHA256 = {"apalache": "079b6c2320252469dcf79afec6886b8255d3dd1b34a9484433c88986752efaa8",
-                  "tlc": "936a262061c914694dfd669a543be24573c45d5aa0ff20a8b96b23d01e050e88"}
 
 
 def manifest_attributes(manifest: str) -> dict[str, str]:
@@ -58,15 +59,6 @@ def inspect_tool(root: Path, tool: dict[str, Any], checker: str) -> dict[str, An
     return {"checker": checker, "version": tool["version"], "sha256": actual, "java_version": version, "java_sha256": digest(Path(java).resolve())}
 
 
-def checker_command(root: Path, tool: dict[str, Any], temporary: str) -> list[str]:
-    jar = Path(tool["jar"])
-    jar = jar.resolve() if jar.is_absolute() else confined(root, tool["jar"])
-    java = shutil.which(tool["java"])
-    if java is None:
-        raise FormalError("missing_tool", "Select the configured Java runtime on PATH before running the checker")
-    return [java, f"-Xmx{tool['heap_mb']}m", "-XX:+UseParallelGC", f"-Djava.io.tmpdir={temporary}", "-jar", str(jar)]
-
-
 def obligations(model: dict[str, Any]) -> list[dict[str, Any]]:
     return ADAPTERS[model["checker"]].obligations(model)
 
@@ -76,8 +68,7 @@ def preview_model(root: Path, item: dict[str, Any]) -> list[dict[str, Any]]:
     adapter = ADAPTERS[model["checker"]]
     commands = []
     if "compiler" in item:
-        from .quint import command
-        commands.append({"id": "compile", "argv": command(root, item["compiler"], model, "<run>/inputs")})
+        commands.append({"id": "compile", "argv": quint_command(root, item["compiler"], model, "<run>/inputs")})
         model = {**model, "module": model["module"] + ".json"}
     return commands + [{"id": obligation["id"], "argv": checker_command(root, item["tool"], "<run>/tmp") + adapter.arguments(model, obligation, "<run>/output", "<run>/settings.json")} for obligation in obligations(model)]
 
@@ -122,7 +113,6 @@ def execute_model(root: Path, model_id: str, item: dict[str, Any]) -> dict[str, 
     deadline = time.monotonic() + model["budget"]["timeout_seconds"]
     compilation = None
     if "compiler" in item:
-        from .quint import compile_model
         model, compilation = compile_model(root, item, snapshot, model["budget"]["timeout_seconds"])
         if compilation["verdict"] != "compiled":
             return {"model": model_id, "verdict": compilation["verdict"], "compilation": compilation, "obligations": []}
@@ -131,8 +121,7 @@ def execute_model(root: Path, model_id: str, item: dict[str, Any]) -> dict[str, 
     result = {"model": model_id, "verdict": "pass" if passed else results[-1]["verdict"], "mode": model["mode"], "bounds": model["bounds"], "assumptions": model["assumptions"], "obligations": results,
               **({"compilation": compilation} if compilation else {})}
     if passed and item.get("trace_required"):
-        from .traces import execute
-        result["traces"] = execute(root, model_id, item, model, snapshot, run, deadline)
+        result["traces"] = execute_traces(root, model_id, item, model, snapshot, run, deadline)
         failures = [r["verdict"] for r in result["traces"] if r["verdict"] != "pass"]
         result["verdict"] = failures[0] if failures else "pass"
     return result

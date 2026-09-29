@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import ast
 import json
 import shutil
 import sys
@@ -18,13 +19,18 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 PLUGIN_ROOT = REPO_ROOT / "speckit-pro"
 sys.path[:0] = [str(PLUGIN_ROOT), str(REPO_ROOT / "tests/speckit-pro/lib")]
 
-from speckit_pro_runner.formal import apalache, catalog, engine, helper, lifecycle, quint, tlc
+from speckit_pro_runner.formal import apalache, catalog, engine, helper, primitives, quint, tlc
 from speckit_pro_runner.formal.evidence import read_checkpoint, record_path
 from speckit_pro_runner.formal.process import run_process, start_process
+from speckit_pro_runner.helpers import formal_policy
 from speckit_pro_runner.helpers.registry import dispatch_helper
 from speckit_pro_runner.helpers.read_only import resolve_autopilot_stage, validate_gate
 from test_result import run_counted
 
+RUNNER = PLUGIN_ROOT / "speckit_pro_runner"
+POLICY_STRINGS = {"G3", "G5", "G6", "G7"}
+POLICY_FUNCTIONS = {"apply_resume_guard", "gate_checkpoint", "required_checkpoints", "coverage_errors"}
+SHARED_PARSING = {"SelectionError", "next_fence", "require_fields", "require_text", "unique_object"}
 JAR: str | None = None
 TLC_JAR: str | None = None
 QUINT_ROOT: str | None = None
@@ -71,8 +77,8 @@ class FormalCheckerTests(unittest.TestCase):
         self.workflow()
         with patch.object(helper, "inspect_tool", side_effect=AssertionError("tool probe forbidden")):
             self.assertEqual("disabled", self.request("apply")["data"]["verdict"])
-        self.assertFalse((self.root / catalog.RUNS_PATH).exists())
-        self.assertFalse((self.root / catalog.EVIDENCE_PATH).exists())
+        self.assertFalse((self.root / primitives.RUNS_PATH).exists())
+        self.assertFalse((self.root / primitives.EVIDENCE_PATH).exists())
 
     def test_pending_new_and_missing_existing_are_distinct(self) -> None:
         (self.root / catalog.CATALOG_PATH).unlink()
@@ -167,7 +173,7 @@ class FormalCheckerTests(unittest.TestCase):
         self.assertEqual("expected_failure", result["status"])
         self.assertEqual("missing_tool", result["data"]["verdict"])
         self.assertFalse(result["data"]["writes_state"])
-        self.assertFalse((self.root / catalog.EVIDENCE_PATH).exists())
+        self.assertFalse((self.root / primitives.EVIDENCE_PATH).exists())
 
     def test_apply_validation_errors_report_no_writes(self) -> None:
         for inputs in ({"unknown": True}, {"checkpoint": "invalid"}, {"spec_file": "missing.md"}):
@@ -175,7 +181,7 @@ class FormalCheckerTests(unittest.TestCase):
                 result = self.request("apply", **inputs)
                 self.assertEqual("input_error", result["status"])
                 self.assertFalse(result["data"]["writes_state"])
-                self.assertFalse((self.root / catalog.EVIDENCE_PATH).exists())
+                self.assertFalse((self.root / primitives.EVIDENCE_PATH).exists())
 
     def test_interrupted_workflow_write_reports_the_saved_record(self) -> None:
         with (self.root / "workflow.md").open("a") as stream:
@@ -198,7 +204,7 @@ class FormalCheckerTests(unittest.TestCase):
             launch.assert_not_called()
             with self.assertRaises(catalog.FormalError):
                 engine.execute_model(self.root, "counter", {"model": self.model, "tool": tool})
-        self.assertFalse((self.root / catalog.RUNS_PATH).exists())
+        self.assertFalse((self.root / primitives.RUNS_PATH).exists())
 
     def test_apalache_config_cannot_silently_override_or_drop_obligations(self) -> None:
         path = self.root / self.model["config"]
@@ -269,7 +275,7 @@ class FormalCheckerTests(unittest.TestCase):
         self.assertEqual("waived", current["verdict"])
         self.assertTrue(current["complete"])
         self.assertIn("| waived |", (self.root / "workflow.md").read_text())
-        self.assertEqual([], lifecycle.coverage_errors(self.root, "workflow.md", json.loads(state.read_text()), [("Phase 3: Plan", "completed")]))
+        self.assertEqual([], formal_policy.coverage_errors(self.root, "workflow.md", json.loads(state.read_text()), [("Phase 3: Plan", "completed")]))
         self.assertFalse(helper.checkpoint_guard(self.root, "workflow.md", "final")["complete"])
         (self.root / "plan.md").write_text("Changed after the operator's decision")
         self.assertFalse(helper.checkpoint_guard(self.root, "workflow.md")["complete"])
@@ -338,20 +344,20 @@ class FormalCheckerTests(unittest.TestCase):
         steps = [("Phase 3: Plan", "completed"), ("Phase 4: Checklist - quality", "in_progress")]
         with patch.object(engine.shutil, "which", return_value=sys.executable), patch.object(helper, "inspect_tool", return_value={"version": "fixture"}), patch.object(helper, "execute_model", side_effect=self.passed_model):
             self.request("apply")
-            self.assertTrue(lifecycle.coverage_errors(self.root, "workflow.md", {}, steps))
+            self.assertTrue(formal_policy.coverage_errors(self.root, "workflow.md", {}, steps))
             result = self.request("apply", state_file=state.name)
             self.assertIn(state.name, result["data"]["commit_paths"])
             mirrored = json.loads(state.read_text())
-            self.assertEqual([], lifecycle.coverage_errors(self.root, "workflow.md", mirrored, steps))
+            self.assertEqual([], formal_policy.coverage_errors(self.root, "workflow.md", mirrored, steps))
             mirrored["formal_checkpoints"]["checkpoints"]["plan"]["verdict"] = "waived"
-            self.assertTrue(lifecycle.coverage_errors(self.root, "workflow.md", mirrored, steps))
-            self.assertTrue(lifecycle.coverage_errors(self.root, "workflow.md", json.loads(state.read_text()), [("Post: PR Creation", "in_progress")]))
+            self.assertTrue(formal_policy.coverage_errors(self.root, "workflow.md", mirrored, steps))
+            self.assertTrue(formal_policy.coverage_errors(self.root, "workflow.md", json.loads(state.read_text()), [("Post: PR Creation", "in_progress")]))
             (self.root / "spec.md").write_text("Review changed the requirements")
-            self.assertTrue(lifecycle.coverage_errors(self.root, "workflow.md", json.loads(state.read_text()), steps))
+            self.assertTrue(formal_policy.coverage_errors(self.root, "workflow.md", json.loads(state.read_text()), steps))
         self.selection.update(status="none", models=[])
         self.workflow()
         with patch.object(helper, "inspect_tool", side_effect=AssertionError("disabled must not probe")):
-            self.assertEqual([], lifecycle.coverage_errors(self.root, "workflow.md", {}, [("Post: Integration Suite", "completed")]))
+            self.assertEqual([], formal_policy.coverage_errors(self.root, "workflow.md", {}, [("Post: Integration Suite", "completed")]))
 
 
 class FormalLifecycleTimestampTests(unittest.TestCase):
@@ -504,6 +510,44 @@ class NativeTlcTests(FormalCheckerTests):
         self.assertEqual("timeout", self.request("apply")["data"]["verdict"])
 
 
+def boundary_violations(runner: Path) -> dict[str, list[str]]:
+    """Package-boundary breaks in the runner tree at `runner`, keyed by rule."""
+    found: dict[str, list[str]] = {"autopilot_policy": [], "shared_parsing": [], "lazy_import": []}
+    for path in sorted(runner.rglob("*.py")):
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        name = path.relative_to(runner).as_posix()
+        if path.parent.name == "formal":
+            for node in ast.walk(tree):
+                if isinstance(node, ast.FunctionDef) and node.name in POLICY_FUNCTIONS:
+                    found["autopilot_policy"].append(f"{name}: def {node.name}")
+                if isinstance(node, ast.Constant) and isinstance(node.value, str) and (node.value in POLICY_STRINGS or node.value.startswith(("Phase ", "Post:"))):
+                    found["autopilot_policy"].append(f"{name}: {node.value!r}")
+            for outer in ast.walk(tree):
+                if isinstance(outer, ast.FunctionDef):
+                    found["lazy_import"] += [f"{name}:{n.lineno}" for n in ast.walk(outer) if isinstance(n, ast.ImportFrom)]
+        else:
+            for node in ast.walk(tree):
+                if isinstance(node, ast.ImportFrom) and "formal" in (node.module or "").split(".") and SHARED_PARSING & {a.name for a in node.names}:
+                    found["shared_parsing"].append(f"{name}:{node.lineno}")
+    return found
+
+
+class PackageBoundaryTests(unittest.TestCase):
+    def test_runner_tree_respects_the_formal_package_boundary(self) -> None:
+        self.assertEqual({"autopilot_policy": [], "shared_parsing": [], "lazy_import": []}, boundary_violations(RUNNER))
+
+    def test_boundary_check_flags_each_kind_of_break(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            runner = Path(temporary)
+            (runner / "formal").mkdir()
+            (runner / "formal/lifecycle.py").write_text('def coverage_errors():\n    from .helper import x\n    return "Post: PR Creation"\n')
+            (runner / "consumer.py").write_text("from .formal.selection import unique_object\n")
+            found = boundary_violations(runner)
+        self.assertEqual(2, len(found["autopilot_policy"]))
+        self.assertEqual(["consumer.py:1"], found["shared_parsing"])
+        self.assertEqual(["formal/lifecycle.py:2"], found["lazy_import"])
+
+
 class QuintIdentityTests(unittest.TestCase):
     def setUp(self) -> None:
         temporary = tempfile.TemporaryDirectory()
@@ -582,6 +626,7 @@ if __name__ == "__main__":
         parser.error("--quint-root requires --apalache-jar")
     suite = unittest.defaultTestLoader.loadTestsFromTestCase(FormalCheckerTests)
     suite.addTests(unittest.defaultTestLoader.loadTestsFromTestCase(QuintIdentityTests))
+    suite.addTests(unittest.defaultTestLoader.loadTestsFromTestCase(PackageBoundaryTests))
     if JAR:
         for name in unittest.defaultTestLoader.getTestCaseNames(NativeApalacheTests):
             if name.startswith("test_native_"):
