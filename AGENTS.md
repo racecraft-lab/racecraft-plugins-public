@@ -214,7 +214,8 @@ the two in step when either changes.
 
 - `AGENTS.md` is the only authored agent-instruction source in each scoped
   directory.
-- `CLAUDE.md` files must only import the sibling `AGENTS.md`.
+- Do not add a `CLAUDE.md`: Claude Code reads `AGENTS.md` directly. Put
+  Claude-only guidance in your own `~/.claude/rules/`, not in this repository.
 - `GEMINI.md` files must only import the sibling `AGENTS.md`.
 - Do not put feature plans, release notes, implementation transcripts, or
   detailed process history in agent files.

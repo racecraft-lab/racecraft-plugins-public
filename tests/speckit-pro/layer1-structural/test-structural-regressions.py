@@ -51,7 +51,6 @@ def write_valid_agent_instruction_tree(root: Path) -> None:
         target = root / directory
         target.mkdir(parents=True, exist_ok=True)
         (target / "AGENTS.md").write_text("# Rules\n\nKeep this short.\n", encoding="utf-8")
-        (target / "CLAUDE.md").write_text(agents.CLAUDE_WRAPPER, encoding="utf-8")
         (target / "GEMINI.md").write_text(agents.GEMINI_WRAPPER, encoding="utf-8")
     copilot = root / ".github" / "copilot-instructions.md"
     copilot.parent.mkdir(parents=True, exist_ok=True)
@@ -76,19 +75,20 @@ class StructuralRegressionTests(unittest.TestCase):
             with self.assertRaisesRegex(AssertionError, "unable to read.*missing.json"):
                 payloads.load_json_file(path)
 
-    def test_agent_instruction_validator_accepts_wrapper_only_shape(self) -> None:
+    def test_agent_instruction_validator_accepts_agents_and_gemini_only_shape(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             write_valid_agent_instruction_tree(root)
             self.assertEqual([], agents.collect_agent_instruction_errors(root))
 
-    def test_agent_instruction_validator_rejects_claude_drift(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary:
-            root = Path(temporary)
-            write_valid_agent_instruction_tree(root)
-            (root / "CLAUDE.md").write_text("@./AGENTS.md\n\nExtra local rule.\n", encoding="utf-8")
-            errors = agents.collect_agent_instruction_errors(root)
-            self.assertIn("CLAUDE.md must contain only '@./AGENTS.md'", "\n".join(errors))
+    def test_agent_instruction_validator_rejects_claude_md_beside_agents_md(self) -> None:
+        for directory in agents.AGENT_INSTRUCTION_DIRS:
+            with self.subTest(directory=directory.as_posix()), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary)
+                write_valid_agent_instruction_tree(root)
+                (root / directory / "CLAUDE.md").write_text("@./AGENTS.md\n", encoding="utf-8")
+                errors = "\n".join(agents.collect_agent_instruction_errors(root))
+                self.assertIn(f"{(directory / 'CLAUDE.md').as_posix()} must not exist", errors)
 
     def test_agent_instruction_validator_rejects_unexpected_agent_scope(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
