@@ -1063,7 +1063,7 @@ Ripwire quality-delta returned exit 2 for canonical process-state verbosity. Its
 | 3 | `us2` | A2 | T006, T007 | complete at `ed24ecd831d0b9f98e300fdc772f29839bd09d9a`; evidence `specs/hrns-015-autopilot-gate-pr-emission-repair/.process/checkpoints/us2.json` |
 | 4 | `us3` | A3 | T008, T009 | complete at `c60a3398b1e07412ec3cbb4468f3ca8a16a4687d`; evidence `specs/hrns-015-autopilot-gate-pr-emission-repair/.process/checkpoints/us3.json` |
 | 5 | `us4` | B1a | T010 | complete at `a1aa6bd265aa15d4a7005b5c0f0be77af786cb04`; evidence `specs/hrns-015-autopilot-gate-pr-emission-repair/.process/checkpoints/us4.json` |
-| 6 | `us5` | B1b | T011 | Pending |
+| 6 | `us5` | B1b | T011 | complete at `4c7ec9ec41d9592b8444370b9012e577b1b8288d`; evidence `specs/hrns-015-autopilot-gate-pr-emission-repair/.process/checkpoints/us5.json` |
 | 7 | `us6` | B2b | T012, T013 | Pending |
 | 8 | `us7` | B3a | T014 | Pending |
 | 9 | `us8` | B3b | T015, T016 | Pending |

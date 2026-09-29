@@ -1,0 +1,52 @@
+{
+  "schema_version": "verification-report.v1",
+  "feature_id": "HRNS-015",
+  "marker_id": "us5",
+  "status": "pass",
+  "generated_at": "2026-09-29T01:16:56Z",
+  "verified_commit_sha": "4c7ec9ec41d9592b8444370b9012e577b1b8288d",
+  "required_gate_ids": [
+    "focused_tests",
+    "quick_suite",
+    "ci_suite",
+    "artifact_consistency",
+    "docs_validation",
+    "python_lint",
+    "independent_critical_high_review",
+    "host_parity"
+  ],
+  "results": {
+    "focused_tests": {
+      "status": "pass",
+      "evidence": "B1b spec-index freshness 5/5, existing index generation 24/24, release reconciliation 51/51, and read-only helpers 151/151 passed. Historical stale, untracked, staged, and literal-pathspec cases were reproduced RED where applicable, then GREEN and refactor."
+    },
+    "quick_suite": {
+      "status": "pass",
+      "evidence": "Committed B1b source quick suite 10,261/10,261 with toolchain preflight and native exit 0; privacy scan 14/14."
+    },
+    "ci_suite": {
+      "status": "pass",
+      "evidence": "Committed B1b source CI-equivalent default suite passed 6/6 dispatches, including layer 7 host parity, native exit 0."
+    },
+    "artifact_consistency": {
+      "status": "pass",
+      "evidence": "After source commit 4c7ec9ec4, refresh-release-artifacts.py --check reported generated artifacts match the source tree."
+    },
+    "docs_validation": {
+      "status": "pass",
+      "evidence": "Reference check, docs quality and full docs validation passed, including 88 browser checks and 4 gallery checks."
+    },
+    "python_lint": {
+      "status": "pass",
+      "evidence": "Pinned repository wrapper Ruff and isolated pinned mypy passed across 54 source files."
+    },
+    "independent_critical_high_review": {
+      "status": "pass",
+      "evidence": "Independent B1b review inspected Git-index filtering, spec-index rendering, release refresh, fixture tests, suite registration, and root AGENTS.md against FR-009, FR-010, and FR-026, and found no requirement-linked defect."
+    },
+    "host_parity": {
+      "status": "pass",
+      "evidence": "Generated Claude and Codex runner payloads align with source; CI-equivalent layer 7 parity passed."
+    }
+  }
+}

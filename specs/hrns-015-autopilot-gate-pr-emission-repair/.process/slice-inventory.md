@@ -23,7 +23,7 @@ The current marker contract uses `kind=user_story`, `id=usN` for an unsplit stor
 | A2 | `us2` | US2 | T006–T007 | 1 | 24 | Candidate only; actual diff/LOC unmeasured |
 | A3 | `us3` | US3 | T008–T009 | 2 | 24 | Source delta: 18 paths; 22 with four tracked process paths; 204 authored non-process changed lines; final PR base/head diff and LOC pending |
 | B1a | `us4` | US4 | T010 | 1 | 22 | Source delta: 18 paths; 22 with four tracked process paths; 497 authored non-process changed lines; final PR base/head diff and LOC pending |
-| B1b | `us5` | US5 | T011 | 2 | 23 | Candidate only; actual diff/LOC unmeasured |
+| B1b | `us5` | US5 | T011 | 2 | 23 | Source delta: 19 paths; 23 with four tracked process paths; 481 authored non-process changed lines; final PR base/head diff and LOC pending |
 | B2b | `us6` | US6 | T012–T013 | 1 | 23 | Candidate only; actual diff/LOC unmeasured |
 | B3a | `us7` | US7 | T014 | 1 | 18 | Candidate only; actual diff/LOC unmeasured |
 | B3b | `us8` | US8 | T015–T016 | 2 | 22 | Candidate only; actual diff/LOC unmeasured |
@@ -241,6 +241,8 @@ Tasks: T011. Requirements: FR-009, FR-010, FR-026. **23 candidate paths; 2 produ
 | process/evidence | modify | `specs/hrns-015-autopilot-gate-pr-emission-repair/.process/task-execution.json` | tasks source fingerprint |
 | process/evidence | modify | `specs/hrns-015-autopilot-gate-pr-emission-repair/.process/slice-inventory.md` | RED/GREEN and measured budget evidence |
 | generated index | regenerate | `specs/hrns-015-autopilot-gate-pr-emission-repair/SPEC-MOC.md` | PR/index refresh candidate |
+
+The B1b source checkpoint `4c7ec9ec41d9592b8444370b9012e577b1b8288d` changes 19 tracked paths, including two production paths. Four tracked process updates (workflow, state, tasks, inventory) bring the marker to its 23-path cap; checkpoint and verification reports are outside that budget. Authored non-process changes total 481 lines, above the 400-line review warning and below the 800-line block. The existing index-generation, release-refresh, and read-only helper tests were necessary fixture adaptations; the unused FORMAL-001 index, scripts reference, and task-execution sidecar candidates have no diff. RED/GREEN/refactor freshness cases, quick suite 10,261/10,261, CI suite 6/6, generated-artifact check, full docs validation, pinned Python lint, privacy 14/14, host parity, and independent review passed. Final emitted PR base/head diff and reviewable LOC remain mandatory.
 
 ### B2b — US6 complete slice and greenfield budgets
 
