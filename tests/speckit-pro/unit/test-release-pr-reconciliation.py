@@ -1206,6 +1206,12 @@ class RefreshReleaseArtifactsCheckTests(unittest.TestCase):
 
             def fake_run(argv, **kwargs):
                 calls.append((list(argv), kwargs))
+                if argv[:2] == ["git", "ls-files"]:
+                    return subprocess.CompletedProcess(
+                        argv, 0,
+                        stdout="scripts/refresh-release-artifacts.py\0generated.txt\0",
+                        stderr="",
+                    )
                 if argv[0] == "git":
                     return subprocess.CompletedProcess(argv, 0, stdout="", stderr="")
                 return subprocess.CompletedProcess(argv, 0, stdout="already consistent\n", stderr="")
@@ -1221,7 +1227,18 @@ class RefreshReleaseArtifactsCheckTests(unittest.TestCase):
         self.assertEqual([sys.executable, "scripts/refresh-release-artifacts.py"], refresh_calls[0][0])
         self.assertFalse(refresh_calls[0][1]["shell"])
         self.assertIn(["git", "init", "--quiet"], git_calls)
-        self.assertIn(["git", "add", "--all"], git_calls)
+        self.assertIn(
+            [
+                "git", "--literal-pathspecs", "add", "--force",
+                "--pathspec-from-file=-", "--pathspec-file-nul",
+            ],
+            git_calls,
+        )
+        add_call = next(call for call in calls if call[0][:3] == ["git", "--literal-pathspecs", "add"])
+        self.assertEqual(
+            "scripts/refresh-release-artifacts.py\0generated.txt\0",
+            add_call[1]["input"],
+        )
 
     def test_check_mode_excludes_ignored_local_files_from_isolated_git_index(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

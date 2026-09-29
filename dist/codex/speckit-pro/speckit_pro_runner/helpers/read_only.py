@@ -5560,13 +5560,22 @@ def _spec_index_path_state(path: Path, label: str, repo_root: Path) -> str:
     return "regular"
 
 
-def _spec_index_directories(specs_dir: Path, repo_root: Path) -> list[Path]:
+def _spec_index_directories(
+    specs_dir: Path, repo_root: Path, indexed_paths: set[str]
+) -> list[Path]:
     names = trusted_dir_entries(specs_dir, repo_root)
     if names is None:
         raise SpecIndexRenderError(f"could not scan specs directory: {specs_dir} (descriptor-safe read failed)")
     entries = sorted((specs_dir / name for name in names), key=lambda path: path.name.encode("utf-8"))
+    indexed_names = {
+        parts[1]
+        for path in indexed_paths
+        if (parts := Path(path).parts)[:1] == ("specs",) and len(parts) >= 3
+    }
     directories: list[Path] = []
     for entry in entries:
+        if entry.name not in indexed_names:
+            continue
         fd = trusted_open_directory(entry, repo_root)
         if fd is not None:
             try:
@@ -5616,8 +5625,12 @@ def _spec_index_jq_text(value: Any) -> str:
     return str(value)
 
 
-def _spec_index_render_prs(spec_dir: Path, repo_root: Path) -> list[str]:
+def _spec_index_render_prs(
+    spec_dir: Path, repo_root: Path, indexed_paths: set[str]
+) -> list[str]:
     manifest = spec_dir / ".process" / "prs.json"
+    if manifest.relative_to(repo_root).as_posix() not in indexed_paths:
+        return []
     if _spec_index_path_state(manifest, "PRS manifest", repo_root) == "missing":
         return []
     try:
@@ -5729,23 +5742,11 @@ def _spec_index_render_prs(spec_dir: Path, repo_root: Path) -> list[str]:
     return [row for _, _, _, _, row in sortable]
 
 
-def _spec_index_filter_gitignored_files(files: list[Path], repo_root: Path) -> list[Path]:
-    if not files:
-        return files
-
-    by_relative: dict[bytes, Path] = {}
-    for path in files:
-        try:
-            relative = path.relative_to(repo_root).as_posix()
-        except ValueError as exc:
-            raise SpecIndexRenderError(f"spec artifact escapes the repository: {path}") from exc
-        by_relative[os.fsencode(relative)] = path
-
-    argv = ["git", "check-ignore", "--stdin", "-z"]
+def _spec_index_git_index_paths(repo_root: Path) -> set[str]:
+    argv = ["git", "ls-files", "--cached", "-z", "--", "specs", "docs/ai/specs"]
     try:
         completed = subprocess.run(
             argv,
-            input=b"\0".join(by_relative) + b"\0",
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             cwd=repo_root,
@@ -5755,25 +5756,27 @@ def _spec_index_filter_gitignored_files(files: list[Path], repo_root: Path) -> l
         )
     except (OSError, subprocess.TimeoutExpired) as exc:
         raise SpecIndexRenderError(
-            f"could not evaluate Git ignore rules: {type(exc).__name__}"
+            f"could not read the source Git index: {type(exc).__name__}"
         ) from exc
-    if completed.returncode not in {0, 1}:
+    if completed.returncode != 0:
         detail = completed.stderr.decode("utf-8", errors="replace").strip()
         suffix = f" ({detail[:240]})" if detail else ""
         raise SpecIndexRenderError(
-            f"could not evaluate Git ignore rules: git check-ignore exited "
+            f"could not read the source Git index: git ls-files exited "
             f"{completed.returncode}{suffix}"
         )
-
-    ignored = {item for item in completed.stdout.split(b"\0") if item}
-    unexpected = ignored.difference(by_relative)
-    if unexpected or (completed.returncode == 0) != bool(ignored):
-        raise SpecIndexRenderError("could not evaluate Git ignore rules: unexpected git output")
-    return [path for relative, path in by_relative.items() if relative not in ignored]
+    return {os.fsdecode(path) for path in completed.stdout.split(b"\0") if path}
 
 
-def _spec_index_walk_regular_files(root: Path, repo_root: Path) -> list[Path]:
+def _spec_index_walk_regular_files(
+    root: Path, repo_root: Path, indexed_paths: set[str]
+) -> list[Path]:
     files: list[Path] = []
+    indexed_directories = {
+        "/".join(Path(path).parts[:depth])
+        for path in indexed_paths
+        for depth in range(1, len(Path(path).parts))
+    }
 
     def visit(directory: Path) -> None:
         names = trusted_dir_entries(directory, repo_root)
@@ -5783,6 +5786,9 @@ def _spec_index_walk_regular_files(root: Path, repo_root: Path) -> list[Path]:
             )
         entries = sorted((directory / name for name in names), key=lambda path: path.name.encode("utf-8"))
         for entry in entries:
+            relative = entry.relative_to(repo_root).as_posix()
+            if relative not in indexed_paths and relative not in indexed_directories:
+                continue
             try:
                 mode = entry.lstat().st_mode
             except OSError as exc:
@@ -5812,12 +5818,14 @@ def _spec_index_walk_regular_files(root: Path, repo_root: Path) -> list[Path]:
                     )
 
     visit(root)
-    return _spec_index_filter_gitignored_files(files, repo_root)
+    return files
 
 
-def _spec_index_render_backlinks(spec_dir: Path, repo_root: Path) -> list[str]:
+def _spec_index_render_backlinks(
+    spec_dir: Path, repo_root: Path, indexed_paths: set[str]
+) -> list[str]:
     records: list[tuple[int, bytes, str]] = []
-    for path in _spec_index_walk_regular_files(spec_dir, repo_root):
+    for path in _spec_index_walk_regular_files(spec_dir, repo_root, indexed_paths):
         relative = path.relative_to(spec_dir).as_posix()
         if relative == "SPEC-MOC.md":
             continue
@@ -5880,11 +5888,14 @@ def _spec_index_render_home_index(
     specs_dir: Path,
     home_path: Path,
     home_text: str,
+    indexed_paths: set[str],
 ) -> list[str]:
     sortable: list[tuple[bytes, bytes, str]] = []
-    spec_dirs = _spec_index_directories(specs_dir, repo_root)
+    spec_dirs = _spec_index_directories(specs_dir, repo_root, indexed_paths)
     for spec_dir in spec_dirs:
         moc = spec_dir / "SPEC-MOC.md"
+        if moc.relative_to(repo_root).as_posix() not in indexed_paths:
+            continue
         if _spec_index_path_state(moc, "SPEC-MOC.md", repo_root) == "missing":
             continue
         moc_text = _spec_index_read_text(moc, repo_root)
@@ -5911,7 +5922,11 @@ def _spec_index_render_home_index(
         for spec_dir in spec_dirs:
             branch = spec_dir.name
             moc = spec_dir / "SPEC-MOC.md"
-            moc_state = _spec_index_path_state(moc, "SPEC-MOC.md", repo_root)
+            moc_state = (
+                _spec_index_path_state(moc, "SPEC-MOC.md", repo_root)
+                if moc.relative_to(repo_root).as_posix() in indexed_paths
+                else "missing"
+            )
             if moc_state == "regular" and _spec_index_is_gated(_spec_index_read_text(moc, repo_root)):
                 continue
             if _spec_index_candidate_out_of_scope(branch):
@@ -5921,6 +5936,8 @@ def _spec_index_render_home_index(
             ):
                 continue
             spec_file = spec_dir / "spec.md"
+            if spec_file.relative_to(repo_root).as_posix() not in indexed_paths:
+                continue
             try:
                 spec_state = _spec_index_path_state(spec_file, "spec.md", repo_root)
             except SpecIndexRenderError:
@@ -6006,6 +6023,7 @@ def _spec_index_rebuild_map(
     repo_root: Path,
     specs_dir: Path,
     is_home: bool,
+    indexed_paths: set[str],
 ) -> str:
     newline = _spec_index_newline(text, path)
     lines = text.splitlines()
@@ -6023,16 +6041,22 @@ def _spec_index_rebuild_map(
 
     bodies = {zone: [] for zone in SPEC_INDEX_ZONE_ORDER}
     if positions["index"] is not None and is_home:
-        bodies["index"] = _spec_index_render_home_index(repo_root, specs_dir, path, text)
+        bodies["index"] = _spec_index_render_home_index(
+            repo_root, specs_dir, path, text, indexed_paths
+        )
     if positions["prs"] is not None:
-        bodies["prs"] = _spec_index_render_prs(spec_dir, repo_root)
+        bodies["prs"] = _spec_index_render_prs(spec_dir, repo_root, indexed_paths)
     if positions["backlinks"] is not None:
-        bodies["backlinks"] = _spec_index_render_backlinks(spec_dir, repo_root)
+        bodies["backlinks"] = _spec_index_render_backlinks(
+            spec_dir, repo_root, indexed_paths
+        )
 
     all_absent = all(positions[zone] is None for zone in SPEC_INDEX_ZONE_ORDER)
     if all_absent:
-        bodies["prs"] = _spec_index_render_prs(spec_dir, repo_root)
-        bodies["backlinks"] = _spec_index_render_backlinks(spec_dir, repo_root)
+        bodies["prs"] = _spec_index_render_prs(spec_dir, repo_root, indexed_paths)
+        bodies["backlinks"] = _spec_index_render_backlinks(
+            spec_dir, repo_root, indexed_paths
+        )
         while lines and not lines[-1].strip():
             lines.pop()
         if lines:
@@ -6081,9 +6105,12 @@ def render_spec_index(repo_root: Path) -> tuple[list[RenderedSpecIndexMap], bool
     if not stat.S_ISDIR(specs_mode):
         return [], False
 
+    indexed_paths = _spec_index_git_index_paths(root)
     rendered: list[RenderedSpecIndexMap] = []
-    for spec_dir in _spec_index_directories(specs_dir, root):
+    for spec_dir in _spec_index_directories(specs_dir, root, indexed_paths):
         moc = spec_dir / "SPEC-MOC.md"
+        if moc.relative_to(root).as_posix() not in indexed_paths:
+            continue
         if _spec_index_path_state(moc, "SPEC-MOC.md", root) == "missing":
             continue
         original = _spec_index_read_text(moc, root)
@@ -6096,6 +6123,7 @@ def render_spec_index(repo_root: Path) -> tuple[list[RenderedSpecIndexMap], bool
             repo_root=root,
             specs_dir=specs_dir,
             is_home=False,
+            indexed_paths=indexed_paths,
         )
         rendered.append(RenderedSpecIndexMap(moc, spec_dir.name, original, rebuilt))
 
@@ -6125,6 +6153,8 @@ def render_spec_index(repo_root: Path) -> tuple[list[RenderedSpecIndexMap], bool
     for home in home_entries:
         if not home.name.endswith("-roadmap-MOC.md"):
             continue
+        if home.relative_to(root).as_posix() not in indexed_paths:
+            continue
         if _spec_index_path_state(home, "roadmap-MOC home note", root) == "missing":
             continue
         original = _spec_index_read_text(home, root)
@@ -6137,6 +6167,7 @@ def render_spec_index(repo_root: Path) -> tuple[list[RenderedSpecIndexMap], bool
             repo_root=root,
             specs_dir=specs_dir,
             is_home=True,
+            indexed_paths=indexed_paths,
         )
         rendered.append(RenderedSpecIndexMap(home, home.name, original, rebuilt))
 

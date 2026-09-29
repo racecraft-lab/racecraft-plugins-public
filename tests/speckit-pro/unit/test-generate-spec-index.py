@@ -142,12 +142,12 @@ def _assert_git_ignore_behavior(test_case: unittest.TestCase, work: Path) -> Non
         test_case.assertTrue(path.is_file())
     for relative in (
         ".process/prs.json",
-        "artifacts/.gitignore",
-        "artifacts/.intentional",
         "contracts/tracked.tmp",
         "spec.md",
     ):
         test_case.assertIn(f"- [{relative}]({relative})", rendered)
+    for relative in ("artifacts/.gitignore", "artifacts/.intentional"):
+        test_case.assertNotIn(f"- [{relative}]({relative})", rendered)
 
     current, _ = check_request(root)
     test_case.assertEqual(current.returncode, 0, current.stderr)
@@ -165,7 +165,7 @@ def _assert_git_ignore_failure(
     from speckit_pro_runner.envelope import RunnerRequest
     from speckit_pro_runner.helpers import mutation, read_only, registry
 
-    root = work / f"git-ignore-{label}"
+    root = work / f"git-index-{label}"
     shutil.copytree(FIXTURES / "stale-fill", root)
     before = snapshot(root)
     patch_kwargs = (
@@ -180,11 +180,11 @@ def _assert_git_ignore_failure(
             work,
         )
     test_case.assertEqual(check_result["exit_code"], 2)
-    test_case.assertIn("could not evaluate Git ignore rules", check_result["stderr"])
+    test_case.assertIn("could not read the source Git index", check_result["stderr"])
     test_case.assertEqual(snapshot(root), before)
 
     request = RunnerRequest(
-        f"test-spec-index-git-ignore-{label}",
+        f"test-spec-index-git-index-{label}",
         "generate-spec-index-write",
         "generate-spec-index-write",
         "apply",
@@ -198,36 +198,36 @@ def _assert_git_ignore_failure(
     test_case.assertEqual(write_result["status"], "input_error")
     test_case.assertEqual(write_result["exit_code"], 2)
     test_case.assertIn(
-        "could not evaluate Git ignore rules",
+        "could not read the source Git index",
         write_result["diagnostics"][0]["message"],
     )
     test_case.assertEqual(snapshot(root), before)
 
 
-class _SpecIndexGitIgnoreTests:
-    def test_backlinks_honor_git_ignores_without_hiding_tracked_or_intentional_files(self) -> None:
+class _SpecIndexGitIndexTests:
+    def test_backlinks_include_tracked_ignored_files_and_exclude_untracked_files(self) -> None:
         _assert_git_ignore_behavior(self, self.work)
 
-    def test_git_ignore_failures_abort_check_and_write_without_writes(self) -> None:
+    def test_git_index_failures_abort_check_and_write_without_writes(self) -> None:
         failures = (
             (
                 "fatal",
                 subprocess.CompletedProcess(
-                    ["git", "check-ignore"],
+                    ["git", "ls-files"],
                     128,
                     stdout=b"",
                     stderr=b"fatal: ignore evaluation failed\n",
                 ),
             ),
             ("missing", OSError("git is unavailable")),
-            ("timeout", subprocess.TimeoutExpired(["git", "check-ignore"], 30)),
+            ("timeout", subprocess.TimeoutExpired(["git", "ls-files"], 30)),
         )
         for label, failure in failures:
             with self.subTest(label=label):
                 _assert_git_ignore_failure(self, self.work, label, failure)
 
 
-class GenerateSpecIndexTests(_SpecIndexGitIgnoreTests, unittest.TestCase):
+class GenerateSpecIndexTests(_SpecIndexGitIndexTests, unittest.TestCase):
     def setUp(self) -> None:
         self.temp_dir = tempfile.TemporaryDirectory(prefix="spec-index-consumer-")
         self.addCleanup(self.temp_dir.cleanup)

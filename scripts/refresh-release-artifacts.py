@@ -9,6 +9,7 @@ merge:
 1. Recompute the runner trust metadata (manifest sha256 entries + ``.sha256``).
 2. Rebuild the Claude and Codex install payloads.
 3. Sync the marketplace registries to the source plugin versions.
+4. Refresh tracked spec-index maps.
 
 The refresh is idempotent: a second run on the same source makes no further
 changes. It does NOT regenerate the docs reference — the release workflow runs
@@ -49,6 +50,8 @@ CHECK_WORKTREE_PATHS = (
     "docs-site/src/content/docs/reference",
     RUNNER_MANIFEST_FILE,
     RUNNER_CHECKSUM_FILE,
+    ":(glob)specs/*/SPEC-MOC.md",
+    ":(glob)docs/ai/specs/*-roadmap-MOC.md",
 )
 CHECK_COPY_IGNORES = {
     ".git",
@@ -93,6 +96,13 @@ def refresh_release_artifacts(repo_root: Path) -> int:
     # 3. Sync marketplace versions to the source plugin versions.
     changed += sync_marketplace_versions(repo_root)
 
+    # 4. Refresh tracked spec-index maps through the runner's mutation contract.
+    try:
+        changed += refresh_spec_index(repo_root)
+    except (OSError, RuntimeError, ValueError) as exc:
+        print(f"::error::Unable to refresh spec indexes: {exc}", file=sys.stderr)
+        return 1
+
     if changed:
         print("Refreshed release artifacts:")
         for path in sorted(dict.fromkeys(changed)):
@@ -100,6 +110,44 @@ def refresh_release_artifacts(repo_root: Path) -> int:
     else:
         print("Release artifacts already consistent; no changes.")
     return 0
+
+
+def refresh_spec_index(repo_root: Path) -> list[str]:
+    request = {
+        "schema_version": "1.0",
+        "request_id": "refresh-release-artifacts-spec-index",
+        "helper_id": "generate-spec-index-write",
+        "operation": "generate-spec-index-write",
+        "mode": "apply",
+        "inputs": {"repo_root": "."},
+    }
+    environment = os.environ.copy()
+    runner_root = str(repo_root / "speckit-pro")
+    environment["PYTHONPATH"] = os.pathsep.join(
+        item for item in (runner_root, environment.get("PYTHONPATH", "")) if item
+    )
+    completed = subprocess.run(
+        [sys.executable, "-m", "speckit_pro_runner"],
+        input=json.dumps(request),
+        text=True,
+        capture_output=True,
+        cwd=repo_root,
+        env=environment,
+        check=False,
+        shell=False,
+    )
+    if completed.returncode != 0:
+        raise RuntimeError(f"generate-spec-index-write exited {completed.returncode}: {completed.stderr.strip()}")
+    try:
+        result = json.loads(completed.stdout)
+        if result["status"] != "ok":
+            raise ValueError("generate-spec-index-write did not return ok")
+        touched = result["data"]["mutation"]["touched_paths"]
+        if not isinstance(touched, list) or any(not isinstance(path, str) for path in touched):
+            raise ValueError("generate-spec-index-write returned invalid touched paths")
+    except (KeyError, TypeError, json.JSONDecodeError) as exc:
+        raise ValueError("generate-spec-index-write returned an invalid response") from exc
+    return touched
 
 
 def check_release_artifacts(
@@ -157,10 +205,32 @@ def check_release_artifacts(
                 ignore=ignored_copy_names,
                 symlinks=True,
             )
-            for setup_argv in (
-                ["git", "init", "--quiet"],
-                ["git", "add", "--all"],
-            ):
+            source_index = run(
+                ["git", "ls-files", "--cached", "-z"],
+                cwd=str(repo_root),
+                text=True,
+                capture_output=True,
+                check=False,
+                shell=False,
+            )
+            if source_index.returncode != 0:
+                if source_index.stderr:
+                    stderr.write(source_index.stderr)
+                print("::error::Unable to read the source Git index.", file=stderr)
+                return source_index.returncode or 1
+            indexed_files = [
+                path for path in dict.fromkeys(source_index.stdout.split("\0"))
+                if path and ((isolated_root / path).is_file() or (isolated_root / path).is_symlink())
+            ]
+            setup_commands = [["git", "init", "--quiet"]]
+            if indexed_files:
+                setup_commands.append(
+                    [
+                        "git", "--literal-pathspecs", "add", "--force",
+                        "--pathspec-from-file=-", "--pathspec-file-nul",
+                    ]
+                )
+            for setup_argv in setup_commands:
                 setup = run(
                     setup_argv,
                     cwd=str(isolated_root),
@@ -168,6 +238,7 @@ def check_release_artifacts(
                     capture_output=True,
                     check=False,
                     shell=False,
+                    **({"input": "\0".join(indexed_files) + "\0"} if "add" in setup_argv else {}),
                 )
                 if setup.returncode != 0:
                     if setup.stderr:

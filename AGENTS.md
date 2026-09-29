@@ -78,7 +78,7 @@ Run from the repository root (Python 3.11+, Node >= 22.12 for docs).
 | --- | --- | --- |
 | Quick suite: toolchain, layers 1, 4, 5 (`--layer 1`, `4`, `5`, or `6` for one) | `python3 tests/speckit-pro/run-all.py` | none |
 | CI suite: adds layers 6 and 7 (`run-all.py` cannot select 7; `python3 tests/speckit-pro/run-layer-scripts.py --layer 7` runs it alone) | `SPECKIT_SKIP_TOOLCHAIN_CHECK=1 GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null GIT_CONFIG_NOSYSTEM=1 PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/runner-gates/requests/run-default-suite.json` | `test` (yes, via `validate-plugins`) |
-| Generated-artifact drift; commit first, since any uncommitted change under its paths fails it | `python3 scripts/refresh-release-artifacts.py --check` | `artifact-consistency` (yes, via `validate-plugins`) |
+| Generated-artifact and spec-index drift; commit first, since any uncommitted generated path fails it | `python3 scripts/refresh-release-artifacts.py --check` | `artifact-consistency` (yes, via `validate-plugins`) |
 | PR title | `TITLE='<title>' PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/runner-gates/requests/validate-pr-title-live.json` | `validate-pr-title` (yes) |
 | Release-note fence | `PR_TITLE='<title>' PR_BODY='<body>' PR_LABELS_JSON='[]' python3 scripts/compose-release-notes.py --validate-pr` | `validate-release-note` (yes) |
 | Docs, reference mode: reference inputs changed | `pnpm --dir docs-site reference:check`, then `pnpm --dir docs-site validate:quality` | `validate-docs` (no) |
@@ -121,7 +121,7 @@ pnpm --dir docs-site reference:generate
 | --- | --- | --- |
 | `dist/` payloads, marketplace versions, runner hashes (any runner `.py` edit) | `python3 scripts/refresh-release-artifacts.py` | `artifact-consistency` |
 | `docs-site/src/content/docs/reference/**`, from plugin sources, READMEs, manifests, `scripts/`, `tests/speckit-pro/` | `pnpm --dir docs-site reference:generate` | `validate-docs` only, not required |
-| Spec index blocks in `SPEC-MOC.md` and roadmap MOC files | runner request shaped like `tests/speckit-pro/unit/fixtures/mutation-helpers/requests/generate-spec-index-write.json` with `repo_root` `.`: `dry_run`, then `apply`, with untracked files moved aside (the generator scans the filesystem, so a backlink to an untracked path passes locally and fails on a clean checkout); commit only your spec's index files, since `main` may already be stale | freshness: no PR check |
+| Spec index blocks in tracked `SPEC-MOC.md` and roadmap MOC files | `python3 scripts/refresh-release-artifacts.py`; Git-index membership excludes untracked candidates and includes staged additions | `artifact-consistency` |
 
 ## Gotchas
 
