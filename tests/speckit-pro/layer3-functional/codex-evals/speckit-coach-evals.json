@@ -43,7 +43,7 @@
         "Uses the current live autopilot skill or its consensus-protocol reference as the authority",
         "States that routing selects one to three analysts by unresolved-item category rather than always dispatching three",
         "Explains that Round 2 and a 2-of-3 majority are conditional escalation behavior, not the default",
-        "Explains that unresolved Round 2 disagreement is surfaced for human review: asked in place in an interactive run, and stopping advancement in an unattended run"
+        "Explains that unresolved Round 2 disagreement is resolved by a Round 3 agent tiebreak, in an interactive and an unattended run alike, without asking a human or stopping the run"
       ]
     },
     {

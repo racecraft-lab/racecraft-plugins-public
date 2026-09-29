@@ -469,7 +469,7 @@ def post_implementation_outcome_violations(bodies: dict[str, str]) -> list[str]:
         ),
     }
     required_patterns = {
-        "missing packet blocker": r"if any (?:required )?packet is absent or invalid,(?:.|\n){0,120}stop",
+        "missing packet blocker": r"if any (?:required )?packet is absent or invalid,(?:.|\n){0,120}regenerate it with `pr-packet-output`",
         "post-mutation manager block": r"(?:prior|partial) `gh-stack` mutation(?: already occurred)?,?(?:.|\n){0,120}block(?:.|\n){0,120}(?:rather than|instead of) mixing managers",
         "golden-only live-mutation prohibition": r"`multi-pr-emission`(?:.|\n){0,120}`golden_only`(?:.|\n){0,160}does not emit packets or execute live pr mutations",
     }
@@ -648,7 +648,7 @@ class EvalRunnerSkillSelectionTests(unittest.TestCase):
         self.assertIn("Do not resolve or execute those entries from the Codex plugin", normalized)
         self.assertIn("`prerequisite_mode=codex_native_worktree_binding`", normalized)
         self.assertIn("Do not substitute a manual `specs/` inventory", normalized)
-        self.assertIn("STOP before Phase 0", normalized)
+        self.assertIn("defer the Archive Sweep with the exact failed path or operation and continue to Phase 0", normalized)
         self.assertIn("`status=no_candidates`", normalized)
         self.assertIn("It is not a fallback for a broken or unexecuted command path", normalized)
 

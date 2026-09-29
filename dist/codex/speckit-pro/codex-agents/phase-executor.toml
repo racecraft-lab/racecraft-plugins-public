@@ -33,8 +33,8 @@ orchestrator validates the result at the phase gate.
 
 4. **Never invoke `$grill-me`.** That skill is human-in-the-loop
    only and is forbidden inside autopilot. If the workflow appears
-   to require interactive scoping, fail the gate and surface the
-   condition to the orchestrator instead.
+   to require interactive scoping, return a blocker for consensus or
+   deferral instead.
 
 5. **Research only through the research broker.** If the loaded command
    needs web or library-documentation research, use only the

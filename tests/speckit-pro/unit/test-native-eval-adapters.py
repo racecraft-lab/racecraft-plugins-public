@@ -2561,7 +2561,7 @@ class AdapterPreparationTests(unittest.TestCase):
                 self.temp / "real-runtime", "gpt-5.6-sol",
             )
         runtime = prepared.runtime_identity["settings"]["codex_runtime"]
-        self.assertEqual(len(runtime["proof"]["materializations"]), 13)
+        self.assertEqual(len(runtime["proof"]["materializations"]), 14)
         self.assertTrue((prepared.cwd / ".agents/.codex-plugin/plugin.json").is_file())
         self.assertTrue((prepared.cwd / ".agents/speckit_pro_runner/__main__.py").is_file())
         self.assertEqual(
@@ -2620,7 +2620,7 @@ class AdapterPreparationTests(unittest.TestCase):
         self.assertEqual(len({item.runtime_identity["digest"] for item in prepared}), 1)
         for item in prepared:
             installed = list((item.cwd / ".codex/agents").glob("*.toml"))
-            self.assertEqual(len(installed), 13)
+            self.assertEqual(len(installed), 14)
             self.assertTrue((item.cwd / ".codex/agents/autopilot-fast-helper.toml").is_file())
 
     def test_codex_runtime_fails_closed_when_missing_and_rejects_control_mutation(self) -> None:

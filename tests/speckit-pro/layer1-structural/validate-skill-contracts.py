@@ -496,20 +496,20 @@ class ValidateCodexSkills(unittest.TestCase):
             case_19 = next(case for case in catalog['cases'] if case['id'] == 'functional.speckit-autopilot.case-19')
             self.assertNotIn(stale, case_19['capability'], 'expected catalog case-19 to drop the always-review claim')
             self.assertIn(corrected, case_19['capability'], 'expected catalog case-19 to apply a unanimous security answer')
-        with self.subTest(msg='speckit-coach: eval 4 lets an interactive run answer human review in place'):
-            stale = 'surfaced for human review and stops advancement'
-            corrected = 'asked in place in an interactive run'
+        with self.subTest(msg='speckit-coach: eval 4 resolves unresolved disagreement through the Round 3 agent tiebreak'):
+            stale = 'asked in place in an interactive run'
+            corrected = 'resolved by a Round 3 agent tiebreak'
             for legacy_path in (
                 'tests/speckit-pro/layer3-functional/codex-evals/speckit-coach-evals.json',
                 'tests/speckit-pro/layer3-functional/evals/speckit-coach-evals.json',
             ):
                 legacy = json.loads(_read(REPO_ROOT / legacy_path))
                 coach_eval = json.dumps(next(item for item in legacy['evals'] if item['id'] == 4))
-                self.assertNotIn(stale, coach_eval, f'expected {legacy_path} eval 4 to allow an in-place answer')
-                self.assertIn(corrected, coach_eval, f'expected {legacy_path} eval 4 to name the in-place answer')
+                self.assertNotIn(stale, coach_eval, f'expected {legacy_path} eval 4 to drop the in-place answer')
+                self.assertIn(corrected, coach_eval, f'expected {legacy_path} eval 4 to name the Round 3 tiebreak')
             catalog = json.dumps(next(case for case in json.loads(_read(REPO_ROOT / 'tests/speckit-pro/evals/catalog.json'))['cases'] if case['id'] == 'functional.speckit-coach.case-4'))
-            self.assertNotIn(stale, catalog, 'expected catalog coach case-4 to allow an in-place answer')
-            self.assertIn(corrected, catalog, 'expected catalog coach case-4 to name the in-place answer')
+            self.assertNotIn(stale, catalog, 'expected catalog coach case-4 to drop the in-place answer')
+            self.assertIn(corrected, catalog, 'expected catalog coach case-4 to name the Round 3 tiebreak')
         with self.subTest(msg='speckit-autopilot: documents the optional Luna helper'):
             self.assertIn('autopilot-fast-helper', body)
         with self.subTest(msg='speckit-autopilot: keeps the Luna helper advisory and parent-only'):
@@ -560,8 +560,8 @@ validate_capability_pointer_CODEX_AGENTS_DIR = PLUGIN_ROOT / 'codex-agents'
 validate_capability_pointer_DIRECTIVE_MARKER = 'capability-discovery.md'
 validate_capability_pointer_GROUNDING_MARKER = 'grounding.md'
 CAPABILITY_NOTE = 'Capability path:'
-validate_capability_pointer_CC_EXCLUSIONS = frozenset({'artifact-preview-observer', 'consensus-synthesizer', 'phase-executor', 'sweep-analyst', 'sweep-classifier'})
-validate_capability_pointer_CODEX_EXCLUSIONS = frozenset({'autopilot-fast-helper', 'consensus-synthesizer', 'phase-executor'})
+validate_capability_pointer_CC_EXCLUSIONS = frozenset({'artifact-preview-observer', 'consensus-synthesizer', 'consensus-tiebreaker', 'phase-executor', 'sweep-analyst', 'sweep-classifier'})
+validate_capability_pointer_CODEX_EXCLUSIONS = frozenset({'autopilot-fast-helper', 'consensus-synthesizer', 'consensus-tiebreaker', 'phase-executor'})
 APPROVED_EQUIVALENTS: frozenset[str] = frozenset()
 
 def validate_capability_pointer__rel(path: Path) -> str:
@@ -610,7 +610,7 @@ validate_capability_resolution_GROUNDING_MARKER = 'grounding.md'
 validate_capability_resolution_PATH_TOKEN_RE = re.compile('speckit-pro/[A-Za-z0-9._/-]*capability-discovery\\.md')
 validate_capability_resolution_GROUNDING_TOKEN_RE = re.compile('speckit-pro/[A-Za-z0-9._/-]*grounding\\.md')
 validate_capability_resolution_CC_EXCLUSIONS = frozenset({'consensus-synthesizer', 'phase-executor'})
-validate_capability_resolution_CODEX_EXCLUSIONS = frozenset({'autopilot-fast-helper', 'consensus-synthesizer', 'phase-executor'})
+validate_capability_resolution_CODEX_EXCLUSIONS = frozenset({'autopilot-fast-helper', 'consensus-synthesizer', 'consensus-tiebreaker', 'phase-executor'})
 
 def validate_capability_resolution__rel(path: Path) -> str:
     return path.relative_to(REPO_ROOT).as_posix()
@@ -978,6 +978,28 @@ class ValidateCodexSkillsDualPath(unittest.TestCase):
                 for path in ('`.codex/prompts/', '`.agents/skills/speckit-*/` (primary)', '`.codex/skills/speckit-*/`'):
                     self.assertIn(path, dedupe)
 
+
+class ValidateStopPolicyReference(unittest.TestCase):
+    """Both autopilot skills load the one shared stop-policy reference."""
+
+    LINKS = (
+        ('Claude', 'skills/speckit-autopilot/SKILL.md', '(./references/stop-policy.md)'),
+        ('Codex', 'codex-skills/speckit-autopilot/SKILL.md', '(../../skills/speckit-autopilot/references/stop-policy.md)'),
+    )
+
+    def test_shared_reference_exists_in_source_and_both_payloads(self) -> None:
+        for label, root in (('source', PLUGIN_ROOT),
+                            ('Claude payload', REPO_ROOT / 'dist/claude/speckit-pro'),
+                            ('Codex payload', REPO_ROOT / 'dist/codex/speckit-pro')):
+            with self.subTest(msg=f'{label}: references/stop-policy.md exists'):
+                self.assertTrue((root / 'skills/speckit-autopilot/references/stop-policy.md').is_file())
+
+    def test_both_autopilot_skills_link_it_and_the_link_resolves(self) -> None:
+        for label, skill, link in self.LINKS:
+            path = PLUGIN_ROOT / skill
+            with self.subTest(msg=f'{label} autopilot skill links stop-policy.md'):
+                self.assertIn(link, _read(path))
+                self.assertTrue((path.parent / link.strip('()')).resolve().is_file())
 
 def main() -> int:
     suite = unittest.defaultTestLoader.loadTestsFromModule(sys.modules[__name__])

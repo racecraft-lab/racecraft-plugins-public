@@ -16,7 +16,7 @@ Consensus dispatch runs as batched ordinary subagents; see
 - [The 3 Perspective Agents](#the-3-perspective-agents) — codebase-analyst / spec-context-analyst / domain-researcher
 - [Consensus Rules](#consensus-rules) — N=1, N=2, N=3 agreement rules + escape-hatch + STOP conditions
 - [Security Keywords](#security-keywords) — always-all-3 trigger words
-- [Human Review Needed](#human-review-needed) — ask the operator in place when interactive, otherwise STOP
+- [Round 3 Tiebreak](#round-3-tiebreak) — a fresh analyst plus a max-effort `consensus-tiebreaker` resolve what Rounds 1 and 2 could not; nothing asks a human or stops
 - [Phase-Specific Consensus Flows](#phase-specific-consensus-flows) — Clarify, Checklist, Analyze patterns + per-phase prompt templates ("Specification Context" / "Question" / "Your Task" sub-sections appear inside each flow)
 - [Pre-Implement Confidence Emit (end of Phase 6 Analyze)](#pre-implement-confidence-emit-end-of-phase-6-analyze) — synthesizer emits `📊 Confidence: X.XX` + 5-criterion breakdown for the optional Confidence Gate at G6.5
 - [Determining Agreement](#determining-agreement) — how the synthesizer scores responses
@@ -105,7 +105,10 @@ ROUND 2 — full fan-out
   Spawn the remaining (3 - N) analysts.
   Re-invoke consensus-synthesizer with all 3 responses.
   Apply the multi-analyst rules below.
-  APPLY edit OR flag [HUMAN REVIEW NEEDED].
+  APPLY edit OR flag [ROUND_3_TIEBREAK].
+
+ROUND 3 — agent tiebreak (only after a [ROUND_3_TIEBREAK] flag)
+  Run §Round 3 Tiebreak. Its result is applied like any other edit.
 ```
 
 The escape hatch is the asymmetry that keeps routing cheap when
@@ -262,14 +265,14 @@ Stage 3 — Apply Artifact Edits SERIALLY (orchestrator's own Edit calls):
       Write a CRL row: Round=1, Routed Categories=Sx, Outcome=<outcome>, Analysts Used=Sx
     IF Flags includes [ESCAPE_TO_ROUND_2] OR low confidence:
       Push (Ix, Sx) onto ROUND_2_QUEUE
-    IF Flags includes [HUMAN REVIEW NEEDED]: resolve per §Human Review Needed
-      after this batch: ask the operator in place and record the answer, or
-      write CRL row with Outcome=[HUMAN REVIEW] and STOP autopilot
+    IF Flags includes [ROUND_3_TIEBREAK]: run the Round 3 tiebreak per
+      §Round 3 Tiebreak after this batch's other edits are applied; the
+      flag is the Round 3 trigger and never a question or a stop
 
 If ROUND_2_QUEUE non-empty:
   Stage 4 — All Round-2 analysts (the remaining (3 − |Sx|) per queued item) in ONE message
   Stage 5 — All Round-2 synthesizers in ONE message
-  Stage 6 — Apply Round-2 edits serially (same as Stage 3), including §Human Review Needed.
+  Stage 6 — Apply Round-2 edits serially (same as Stage 3), including §Round 3 Tiebreak.
 ```
 
 ### What stays serial — and why
@@ -292,16 +295,19 @@ even when batched dispatch returns results out of order.
 If an analyst in Stage 1 errors, others continue (background pattern
 semantics). After Stage 1's await completes, Stage 2 synthesizes only
 items where all required analysts succeeded; failed items get
-re-queued for a single retry. If retry also fails, surface to user
-via `[HUMAN REVIEW NEEDED]` for that item — do NOT block the rest of
+re-queued for a single retry. If retry also fails, the failed analyst
+is replaced by a fresh analyst, never by a human (see
+[Round 3 Tiebreak](#round-3-tiebreak)); do NOT block the rest of
 the batch.
 
 If a synthesizer dispatch fails or returns a missing or malformed result, the
 parent applies no edit, writes no completed Consensus Resolution Log row, and
 does not mark the item complete. The parent may retry the same named
-synthesizer once with the same analyst responses. A second invalid result is
-`[HUMAN REVIEW NEEDED]` and stops that item; the parent must never replace it
-with parent-authored synthesis.
+synthesizer once with the same analyst responses. A second invalid result is not a stop: the
+parent runs the Round 3 tiebreak with one `consensus-tiebreaker`. If that
+result is invalid too, the item is deferred to the
+end-of-run request as in [Round 3 Tiebreak](#round-3-tiebreak) and the run
+continues; the parent must never replace it with parent-authored synthesis.
 
 ## Three-Analyst Consensus Rules (Round 2 / N=3)
 
@@ -321,8 +327,8 @@ with parent-authored synthesis.
 |----------|--------|
 | **2/3 agree** | Use the majority answer. Log the dissenting perspective for context. |
 | **3/3 agree** | Use the answer with high confidence. |
-| **All 3 disagree** | Flag as `[HUMAN REVIEW NEEDED]` with all 3 perspectives. Ask in place or STOP autopilot, per [Human Review Needed](#human-review-needed). |
-| **Security item** (`[security]` tag, or keyword with any analyst returning `security_relevant: true` or omitting the field) | Apply only on 3/3 agreement. A 2/3 majority or all-disagree flags `[HUMAN REVIEW NEEDED]`. |
+| **All 3 disagree** | Flag as `[ROUND_3_TIEBREAK]` with all 3 perspectives, which starts the [Round 3 Tiebreak](#round-3-tiebreak). |
+| **Security item** (`[security]` tag, or keyword with any analyst returning `security_relevant: true` or omitting the field) | Apply only on 3/3 agreement. A 2/3 majority or all-disagree flags `[ROUND_3_TIEBREAK]` and starts the Round 3 tiebreak. |
 | **Keyword-only item** (every routed analyst returns `security_relevant: false`) | Use the ordinary rules above: a 2/3 majority applies. |
 | **Non-security route** (`Security Route: none`) | Use the item's own rule: a `security_relevant: true` answer does not raise the bar, so two disagreeing Round 1 analysts still escape to Round 2 and a 2/3 majority applies at N = 3. |
 
@@ -330,15 +336,15 @@ with parent-authored synthesis.
 
 Same as moderate, but:
 - Requires 3/3 agreement for auto-answer
-- 2/3 agreement flags for human with recommendation
-- Any disagreement stops for human review
+- 2/3 agreement flags `[ROUND_3_TIEBREAK]`, and the Round 3 tiebreak starts with the majority as its recommendation
+- Any disagreement flags `[ROUND_3_TIEBREAK]` and starts the Round 3 tiebreak
 
 ### Aggressive Mode
 
 Same as moderate, but:
 - 2/3 agreement auto-answers (same as moderate)
 - Even all-disagree attempts to synthesize best answer and proceed
-- Only a security item without 3/3 agreement stops for human review
+- Only a security item without 3/3 agreement starts the Round 3 tiebreak
   (a keyword-only item that every analyst marks `security_relevant: false`
   is not a security item)
 
@@ -361,43 +367,83 @@ When a security keyword is detected:
 2. Pass the helper's `security_route` to the synthesizer as its `Security Route` line
 3. When every routed analyst returns `security_relevant: false`, the keyword was used in another sense (for example `tokens` counting LLM usage), so apply the ordinary agreement rule for the item: a 2/3 majority applies at N = 3
 4. An explicit `[security]` tag, or, on a keyword route, any analyst returning `security_relevant: true`, keeps unanimity: when all 3 agree, apply the answer like any other item and continue. A keyword alone never stops autopilot
-5. When a unanimity item's analysts do not all agree, present all 3 answers to the human and let the human decide, per [Human Review Needed](#human-review-needed)
-6. Resume autopilot after the human decision
+5. When a unanimity item's analysts do not all agree, flag `[ROUND_3_TIEBREAK]` and run the [Round 3 Tiebreak](#round-3-tiebreak) on all 3 answers
+6. Continue the run with the Round 3 result
 
-## Human Review Needed
+## Round 3 Tiebreak
 
-A synthesizer result flagged `[HUMAN REVIEW NEEDED]` is a decision only a human
-may make. The parent orchestrator, never an executor, analyst, or synthesizer,
-handles it after the batch's other edits are applied. How it reaches the human
-depends on whether one is present:
+Consensus that cannot agree is resolved by agents, never by a question or a
+stop. A synthesizer result flagged `[ROUND_3_TIEBREAK]` is the Round 3
+trigger; it asks no human. Four situations raise it:
 
-- **Interactive run: ask in place.** Ask only when an interactive user is
-  present and the host's native question tool is available in the
-  orchestrator's own loop: `AskUserQuestion` on Claude Code (the recorded
-  `execution_mode` is `interactive`), or `request_user_input` on Codex. Ask one
-  question per flagged item. Name the item and its routed categories, then
-  offer each distinct analyst position as an option, with the synthesizer's
-  recommendation first when it named one (for example the 2/3 majority on a
-  security item), and a final `Stop the run` option. Give each option the
-  analyst that holds it and one line of that analyst's evidence.
-- **Apply the answer.** Apply the chosen position as the item's artifact edit,
-  exactly as an accepted consensus answer would be applied, and label its
-  source `human answer` (see
-  [workflow-file-protocol.md](./workflow-file-protocol.md)). Write the
-  Consensus Resolution Log row with Outcome `[HUMAN REVIEW]` and a Resolution
-  cell of `human answer: <chosen position>`, then continue the run. A Clarify
-  item also records the answer in Clarify Results under the same label.
-- **`Stop the run`, or no usable answer: stop.** Write the Consensus
-  Resolution Log row with Outcome `[HUMAN REVIEW]` and stop exactly as an
-  unattended run does.
-- **Unattended run: stop exactly as before.** With no user or no native
-  question tool (`claude -p`, `codex exec`, CI, or a background agent), write
-  the Consensus Resolution Log row with Outcome `[HUMAN REVIEW]`, STOP
-  autopilot, and present all perspectives in the stop report. Never ask through
-  free text or `grill-me`, and never wait on a question no one can answer.
+- a Round 2 all-disagree (or a Round-1 escape that Round 2 cannot resolve),
+- a security item without 3/3 agreement,
+- an analyst that fails its retry (see below), and
+- conservative mode, where a 2/3 agreement or any disagreement is not enough.
 
-The pull-request feedback sweep keeps its own human-review stop; this section
-covers Clarify, Checklist, and Analyze consensus.
+The parent orchestrator, never an executor, analyst, or synthesizer, runs
+Round 3 after the batch's other edits are applied. An interactive run and an
+unattended run behave the same: the parent asks no question and stops nowhere.
+
+**Round 3 dispatch.** Two agents, in two waves:
+
+1. Wave one: dispatch one fresh `spec-context-analyst` (Claude Code
+   `speckit-pro:spec-context-analyst`; Codex
+   `spawn_agent(agent_type="spec-context-analyst", ...)`), a new instance with
+   no memory of the earlier rounds. Its prompt carries the item, all prior
+   analyst answers, the constitution, and the technical roadmap, and asks for
+   the single most conservative option that satisfies the spec.
+2. Wave two, after that analyst returns: dispatch a `consensus-tiebreaker` at
+   max effort (Claude Code `speckit-pro:consensus-tiebreaker`; Codex
+   `spawn_agent(agent_type="consensus-tiebreaker", ...)`; omitting `agent_type`
+   is a failed dispatch). The agent ships pinned at max (Claude Code
+   `effort: max`, Codex `model_reasoning_effort = "max"`) with the
+   synthesizer's read-only tool set, while `consensus-synthesizer` keeps its
+   default effort for Rounds 1 and 2. Its prompt sets `**Round:** 3` and
+   carries every earlier analyst response plus the fresh analyst's response
+   as `**Tiebreak Analyst Response:**`. Round 3 uses no other synthesizer, and
+   the parent never performs this synthesis itself.
+
+The tiebreaker returns the most conservative option that satisfies the spec
+among the supplied positions, with the Artifact Edit, an `**Assumption:**` line,
+and every position it did not choose under `**Dissent:**`. Round 3 never
+returns `[ROUND_3_TIEBREAK]` or `[ESCAPE_TO_ROUND_2]`.
+
+**Apply and record.** Apply the edit exactly as an accepted consensus answer.
+Then:
+
+- Write the Consensus Resolution Log row with Outcome `[ROUND 3]` and a
+  Resolution cell of `assumption: <chosen option>; dissent: <positions not
+  chosen>`. A Clarify item also records the answer in Clarify Results,
+  labeled as an assumption.
+- The choice is recorded as an assumption and the dissent is logged in that
+  row. Both go to `pr-packet-output` as `known_gaps`, one line per Round 3
+  item naming the item, the assumption, and the dissent, so the PR body lists
+  them under `## Known Gaps`.
+
+An analyst that fails its retry is replaced by a fresh analyst, never by a
+human: dispatch one new instance of the same perspective with the same prompt.
+If it returns, the item continues under the ordinary rules with that answer.
+If the replacement also fails, raise the flag and run Round 3 on the answers in
+hand.
+
+**Product scope is the one deferral.** When the tiebreaker finds that the
+choice changes product scope the spec and the roadmap do not settle, it adds
+`[SCOPE_DEFERRED] <reason>` to a result that still carries the most
+conservative (narrowest) edit. Apply that edit provisionally so gates keep
+passing, log the row as `[ROUND 3]` with `scope deferred` in the Resolution
+cell, and add a record to the `unresolved_deferrals` input of `finalize-run`
+so the item appears in the one end-of-run consolidated request. That deferral
+is never a mid-run stop and never a question; nothing else in consensus
+defers.
+
+Never ask through free text or `grill-me`, and never wait on a question no one
+can answer.
+
+The pull-request feedback sweep runs its own isolated Round 3 through a fresh
+`sweep-analyst`; see the sweep section of
+[phase-execution.md](./phase-execution.md). This section covers Clarify,
+Checklist, and Analyze consensus.
 
 ## Phase-Specific Consensus Flows
 
@@ -439,11 +485,11 @@ clarify-executor prepares read-only Clarify Question Set
         │   (one synthesizer per item).
         │
         ├── Stage 3: apply Artifact Edits SERIALLY in item order:
-        │   ├── Security item → apply only on 3/3; otherwise flag for human
+        │   ├── Security item → apply only on 3/3; otherwise Round 3 tiebreak
         │   ├── N=1 high-confidence | N=2 both-agree | N=3 2/3 or 3/3 agree
         │   │   → Edit spec.md with the consensus answer, remove marker
         │   ├── [ESCAPE_TO_ROUND_2] → enqueue for Round 2 batch
-        │   └── All disagree (after Round 2) → [HUMAN REVIEW NEEDED] → ask in place or STOP
+        │   └── All disagree (after Round 2) → [ROUND_3_TIEBREAK] → Round 3 tiebreak
 ```
 
 The diagram above is per-item educational. The actual dispatch is
@@ -502,11 +548,11 @@ checklist-executor runs /speckit-checklist domain
         │   (one synthesizer per gap).
         │
         ├── Stage 3: apply Artifact Edits SERIALLY in gap order:
-        │   ├── Security item → apply only on 3/3; otherwise flag for human
+        │   ├── Security item → apply only on 3/3; otherwise Round 3 tiebreak
         │   ├── N=1 high-confidence | N=2 both-agree | N=3 2/3 or 3/3 agree
         │   │   → Apply edit to spec.md or plan.md, log to workflow
         │   ├── [ESCAPE_TO_ROUND_2] → enqueue for Round 2 batch
-        │   └── All disagree (after Round 2) → [HUMAN REVIEW NEEDED] → ask in place or STOP
+        │   └── All disagree (after Round 2) → [ROUND_3_TIEBREAK] → Round 3 tiebreak
 ```
 
 The diagram above is per-gap educational. Actual dispatch is
@@ -563,11 +609,11 @@ analyze-executor runs /speckit-analyze
         │   (one synthesizer per finding).
         │
         ├── Stage 3: apply Artifact Edits SERIALLY in finding order:
-        │   ├── Security item → apply only on 3/3; otherwise flag for human
+        │   ├── Security item → apply only on 3/3; otherwise Round 3 tiebreak
         │   ├── N=1 high-confidence | N=2 both-agree | N=3 2/3 or 3/3 agree
         │   │   → Apply fix to tasks.md / spec.md / plan.md, log to workflow
         │   ├── [ESCAPE_TO_ROUND_2] → enqueue for Round 2 batch
-        │   └── All disagree (after Round 2) → [HUMAN REVIEW NEEDED] → ask in place or STOP
+        │   └── All disagree (after Round 2) → [ROUND_3_TIEBREAK] → Round 3 tiebreak
 ```
 
 The diagram above is per-finding educational. Actual dispatch is
@@ -731,14 +777,14 @@ from the log alone.
 | 2 | Gap     | Rate limit thresholds        | [codebase, domain] | 1     | both-agree     | Added to spec §4.2         | codebase-analyst, domain-researcher    |
 | 3 | Finding | Missing integration tests    | [ambiguous]        | 2     | 3/3            | Added task T050            | codebase-analyst, spec-context-analyst, domain-researcher |
 | 4 | Clarify | Bcrypt vs argon2?            | [codebase]         | 1→2   | escape-hatch   | Argon2 (NIST SP 800-63B)   | codebase-analyst (Round 1) + spec-context-analyst, domain-researcher (Round 2) |
-| 5 | Finding | OAuth callback URL handling  | [security]         | 1     | [HUMAN REVIEW] | Surfaced to user           | All (security tag → all-3; not unanimous) |
+| 5 | Finding | OAuth callback URL handling  | [security]         | 1→3   | [ROUND 3]      | assumption: reject unknown callback URLs; dissent: allow-list per tenant | All (security tag → all-3; not unanimous) + fresh spec-context-analyst |
 ```
 
 **`Type` values:** `Clarify`, `Gap`, and `Finding` name the phase that produced
 the item. `Sweep` names the pull-request feedback sweep, which writes one row
 per amended item. A `Sweep` row's item cell names the comment id, and the
 Feedback Sweep Log row's `CRL #` names this row's number, so the link runs both
-ways at no extra column. On the human-review path the sweep writes this row and
+ways at no extra column. On the scope-deferred path the sweep writes this row and
 no Feedback Sweep Log row, so the link degrades to one direction, by design.
 
 **Sweep rows count toward the Round-2 escape-rate metric.** They are produced by
@@ -753,4 +799,4 @@ sweep rows or to phase rows without either being excluded from the rate.
 - `both-agree` — Round 1, two-analyst, agreement
 - `3/3`, `2/3` — Round 2, classic agreement counts
 - `escape-hatch` — Round 1 escaped to Round 2 (count this in the 10% trigger metric)
-- `[HUMAN REVIEW]` — Round 2 all-disagree, or a security flag (Round 1, all 3); autopilot stopped, or, in an interactive run, the operator answered in place and the Resolution cell reads `human answer: <chosen position>`
+- `[ROUND 3]` — the item took the Round 3 tiebreak (Round 2 all-disagree, a security item without 3/3, a failed analyst, or conservative mode). The Resolution cell reads `assumption: <chosen option>; dissent: <positions not chosen>`, or adds `scope deferred` when the synthesizer flagged `[SCOPE_DEFERRED]`. Count it in the 10% trigger metric like an escape

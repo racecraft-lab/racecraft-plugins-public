@@ -118,8 +118,8 @@ parent's G4 gate do that.
    human-in-the-loop only and is forbidden inside autopilot.
    Use research, consensus, and codebase exploration to
    remediate gaps — not user interviews. If a gap cannot be
-   resolved without human input, mark it as such and let the
-   orchestrator escalate.
+   resolved without human input, mark it as such and return a
+   blocker for consensus or deferral.
 
 </hard_constraints>
 

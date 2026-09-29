@@ -11,11 +11,15 @@ import sys
 import tempfile
 import unittest
 import uuid
+from functools import partialmethod
 from pathlib import Path
 from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "speckit-pro"))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "lib"))
+from git_fixture import commit_baseline, git
+from guide_text import (EXECUTION_EFFICIENCY_GUIDE, PHASE_EXECUTION_GUIDES, PLUGIN_ROOT, GuidePhrases,
+                        assert_guides_document, assert_guides_say, guide_text)
 from test_result import run_counted
 from speckit_pro_runner.execution_control import (durable_json, execution_control, ignore_owned_directory, is_runner_byproduct,
                                                   record_failing_checks)
@@ -25,7 +29,102 @@ from speckit_pro_runner.task_execution import fingerprints
 from speckit_pro_runner.verification_records import digest, execute_verification, project_command, run_snapshot_command, tree_bytes, validate_execution_record
 
 
-class _ExecutionControlFixture:
+class _LedgerAssertions:
+    """Assertions on a ledger the fixture wrote."""
+
+    def assert_schema_valid(self, ledger):
+        schema = json.loads(SCHEMA_PATH.read_text())
+        self.assertEqual(json_schema_failures(ledger, schema, schema, "ledger"), [])
+
+    def allowance_tampers(self, key, marker, unit, **forged_fields):
+        """The forged-record tampers every round-counted allowance must reject."""
+        forged = {"kind": "corrective", "outcome": "reserved", "reserved_at": self.now, "reservation_id": None,
+                  "reconciliations": 0, marker: unit, **forged_fields}
+        def first_of(ledger):
+            return ledger[key][unit]["dispatch_ids"][0]
+
+        return {
+            "unlisted dispatch": lambda ledger: ledger["dispatches"].update(forged=forged),
+            "rounds over the bound": lambda ledger: (
+                ledger["dispatches"].update({"a2": forged, "a3": forged}),
+                ledger[key][unit].update(rounds=3, dispatch_ids=[*ledger[key][unit]["dispatch_ids"], "a2", "a3"])),
+            "counter disagrees": lambda ledger: ledger[key][unit].update(rounds=2),
+            "allowance record dropped": lambda ledger: ledger.pop(key),
+            "unreserved corrective": lambda ledger: ledger["dispatches"][first_of(ledger)].pop(marker),
+            "allowance dispatch on a reservation": lambda ledger: ledger["dispatches"][first_of(ledger)].update(
+                reservation_id=next(iter(ledger["reservations"]))),
+        }
+
+    def assert_tampers_rejected(self, path, valid, tampers, also=None):
+        """Each tamper of the valid ledger bytes makes the next read, and `also` when given, fail closed."""
+        for name, tamper in tampers.items():
+            with self.subTest(tamper=name):
+                ledger = json.loads(valid)
+                tamper(ledger)
+                path.write_text(json.dumps(ledger), encoding="utf-8")
+                with self.assertRaises(ValueError):
+                    self.invoke("status", mode="read_only")
+                if also is not None:
+                    with self.assertRaises(ValueError):
+                        also()
+
+    def assert_forgeries_fail_closed(self, path, valid, tampers):
+        self.assert_tampers_rejected(path, valid, tampers)
+        path.write_bytes(valid)
+        self.assertEqual(self.invoke("status", mode="read_only")["disposition"], "continue")
+
+
+class _LedgerScenarios:
+    """Verification and budget steps the tests share."""
+
+    def _remediation(key, subject):
+        def request(self, dispatch_id, target, paths, mode="apply"):
+            return self.remediate(key, dispatch_id, {subject: target, "paths": paths}, mode)
+        return request
+
+    review_fix = _remediation("review_remediation", "tdd_unit")
+    request_fix = _remediation("test_fix", "tdd_unit")
+    gate_fix = _remediation("gate_remediation", "gate")
+    del _remediation
+
+    def open_stage_epoch(self):
+        (self.root / "feature/workflow.md").write_text(stage_workflow())
+        return self.invoke("begin-stage-epoch", autopilot_args=["--stage", "implement"])
+
+    def invoke_for_spec(self, action, mode="apply", **inputs):
+        """Invoke an action that names the feature spec explicitly."""
+        return self.invoke(action, mode=mode, spec_file="feature/spec.md", **inputs)
+
+    def begin_replan(self, event=None, mode="apply", **inputs):
+        return self.invoke_for_spec("begin-replan-epoch", mode, native_observation=event, **inputs)
+
+    def remediate(self, key, dispatch_id, request, mode="apply"):
+        """Reserve a corrective dispatch that names one remediation request."""
+        return self.invoke_for_spec("reserve", mode, dispatch_id=dispatch_id, kind="corrective",
+                                    failure_invariant="FR-001", **{key: request})
+
+    def verify(self, stdout, exit_code=1, completed=True, argv=("python3", "-m", "unittest")):
+        """Run one verification dispatch whose output the runner fingerprints into the ledger."""
+        self.verifications = getattr(self, "verifications", 0) + 1
+        dispatch_id = f"verify-{self.verifications}"
+        self.now += 10
+        self.invoke("reserve", dispatch_id=dispatch_id, kind="verification")
+        self.invoke("begin-verification", dispatch_id=dispatch_id)
+        evidence = failing_check_fingerprint("UNIT_TEST", list(argv), exit_code, completed, stdout.encode(), b"")
+        with patch("speckit_pro_runner.execution_control.time.time", return_value=self.now):
+            record_failing_checks(self.root, {"workflow_file": "feature/workflow.md", "expected_run_id": self.run_id,
+                                              "dispatch_id": dispatch_id}, evidence)
+        self.invoke("complete", dispatch_id=dispatch_id, outcome="failed" if exit_code else "completed")
+        return dispatch_id
+
+    def spend_corrective_budget(self, suffix="", outcome="completed"):
+        """Spend both run-wide corrective cycles, one on FR-001 and one on FR-002."""
+        for dispatch_id, invariant in ((f"fix-a{suffix}", "FR-001"), (f"fix-b{suffix}", "FR-002")):
+            self.invoke("reserve", dispatch_id=dispatch_id, kind="corrective", failure_invariant=invariant)
+            self.invoke("complete", dispatch_id=dispatch_id, outcome=outcome)
+
+
+class _ExecutionControlFixture(_LedgerAssertions, _LedgerScenarios):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
@@ -164,10 +263,10 @@ class ExecutionControlTests(_ExecutionControlFixture, unittest.TestCase):
         self.invoke("reserve", dispatch_id="task", kind="implementation")
         first = self.invoke("reconcile", dispatch_id="task")
         self.assertTrue(first["reconciliation_allowed"])
-        second = self.invoke("reconcile", dispatch_id="task")
-        self.assertFalse(second["reconciliation_allowed"])
+        self.assertFalse(self.invoke("reconcile", dispatch_id="task")["reconciliation_allowed"])
         self.assertEqual(self.invoke("reserve", dispatch_id="task", kind="implementation")["disposition"], "checkpoint_required")
-        self.assertEqual(self.invoke("status", mode="read_only")["disposition"], "checkpoint_required")
+        status = self.invoke("status", mode="read_only")
+        self.assertEqual((status["disposition"], status["unknown_dispatch_ids"]), ("continue", ["task"]))
         self.assertEqual(self.invoke("reserve", dispatch_id="renamed-task", kind="implementation")["disposition"], "checkpoint_required")
 
     def test_unknown_effects_block_already_reserved_verification_until_native_resolution(self):
@@ -378,9 +477,7 @@ class CorrectiveContinuationTests(_ExecutionControlFixture, unittest.TestCase):
         self.assertEqual(continued["ledger"]["dispatches"]["metadata"]["continuation_of"], "analyze-retry")
         self.assertEqual(continued["ledger"]["dispatches"]["metadata"]["operator_continuation_event_id"],
                          "operator-consensus-message")
-        schema = json.loads((Path(__file__).resolve().parents[3] /
-                             "speckit-pro/speckit_pro_runner/contracts/execution-control.schema.json").read_text())
-        self.assertEqual(json_schema_failures(continued["ledger"], schema, schema, "ledger"), [])
+        self.assert_schema_valid(continued["ledger"])
         metadata["fingerprints"] = fingerprints((feature / "spec.md").read_text(), "plan\n", tasks)
         sidecar.write_text(json.dumps(metadata))
         self.assertEqual(validate_task_execution(request, self.root.resolve())["exit_code"], 0)
@@ -422,9 +519,7 @@ class CorrectiveRecoveryTests(_ExecutionControlFixture, unittest.TestCase):
         self.assertEqual(retry["ledger"]["dispatches"]["owner-retry"]["outcome"], "reserved")
         self.assertEqual(retry["ledger"]["dispatches"]["owner-retry"]["recovery_of"], "owner")
         self.assertEqual(retry["ledger"]["dispatches"]["owner-retry"]["operator_recovery_event_id"], "operator-message")
-        schema = json.loads((Path(__file__).resolve().parents[3] /
-                             "speckit-pro/speckit_pro_runner/contracts/execution-control.schema.json").read_text())
-        self.assertEqual(json_schema_failures(retry["ledger"], schema, schema, "ledger"), [])
+        self.assert_schema_valid(retry["ledger"])
         self.invoke("complete", dispatch_id="owner-retry", outcome="completed")
         self.assertEqual(self.invoke("status", mode="read_only")["disposition"], "continue")
         with self.assertRaises(ValueError):
@@ -529,9 +624,7 @@ class CorrectiveExceptionTests(_ExecutionControlFixture, unittest.TestCase):
         self.assertEqual(ledger["dispatches"]["fix-c"]["kind"], "corrective")
         self.assertNotIn(exception["reservation_id"], ledger["reservations"])
         self.assertEqual(granted["reservation_id"], exception["reservation_id"])
-        schema = json.loads((Path(__file__).resolve().parents[3] /
-                             "speckit-pro/speckit_pro_runner/contracts/execution-control.schema.json").read_text())
-        self.assertEqual(json_schema_failures(ledger, schema, schema, "ledger"), [])
+        self.assert_schema_valid(ledger)
 
         self.invoke("complete", dispatch_id="fix-c", outcome="failed")
         self.assertEqual(self.invoke("status", mode="read_only")["disposition"], "continue")
@@ -652,9 +745,7 @@ class CorrectiveExceptionTests(_ExecutionControlFixture, unittest.TestCase):
         (self.root / "feature/workflow.md").write_text("# Workflow\n")
         (self.root / "feature/spec.md").write_text("- FR-001: preserve data\n- FR-002: no secrets\n")
         self.invoke("start")
-        for dispatch_id, invariant in (("fix-a", "FR-001"), ("fix-b", "FR-002")):
-            self.invoke("reserve", dispatch_id=dispatch_id, kind="corrective", failure_invariant=invariant)
-            self.invoke("complete", dispatch_id=dispatch_id, outcome="failed")
+        self.spend_corrective_budget(outcome="failed")
         with self.assertRaises(ValueError):
             self.authorize(self.approval(digest_value))
 
@@ -673,9 +764,7 @@ class CorrectiveFailureClassTests(_ExecutionControlFixture, unittest.TestCase):
         self.invoke("start")
         spec.write_text(text)
         spec_digest = self.invoke("bind-invariants", spec_file="feature/spec.md")["ledger"]["invariant_binding"]["spec_sha256"]
-        for dispatch_id, invariant in (("fix-a", "FR-001"), ("fix-b", "FR-002")):
-            self.invoke("reserve", dispatch_id=dispatch_id, kind="corrective", failure_invariant=invariant)
-            self.invoke("complete", dispatch_id=dispatch_id, outcome="failed")
+        self.spend_corrective_budget(outcome="failed")
         return spec_digest
 
     def approve_class(self, spec_digest, failure_class=None, mode="apply", **changes):
@@ -712,9 +801,7 @@ class CorrectiveFailureClassTests(_ExecutionControlFixture, unittest.TestCase):
         self.assertEqual(ledger["corrective_exception"]["failure_class"]["follow_up_dispatch_ids"], ["fix-d"])
         self.assertEqual(ledger["corrective_cycles"], 2)
         self.assertEqual(ledger["corrective_exception"]["operator_exception_event_id"], "operator-class")
-        schema = json.loads((Path(__file__).resolve().parents[3] /
-                             "speckit-pro/speckit_pro_runner/contracts/execution-control.schema.json").read_text())
-        self.assertEqual(json_schema_failures(ledger, schema, schema, "ledger"), [])
+        self.assert_schema_valid(ledger)
         self.invoke("complete", dispatch_id="fix-d", outcome="completed")
         self.assertEqual(self.follow_up("fix-e")["disposition"], "continue")
         self.invoke("complete", dispatch_id="fix-e", outcome="completed")
@@ -725,7 +812,7 @@ class CorrectiveFailureClassTests(_ExecutionControlFixture, unittest.TestCase):
         self.assertNotIn("fix-f", capped["ledger"]["dispatches"])
         self.assertEqual(capped["ledger"]["corrective_exception"]["failure_class"]["follow_up_dispatch_ids"],
                          ["fix-d", "fix-e"])
-        self.assertEqual(json_schema_failures(capped["ledger"], schema, schema, "ledger"), [])
+        self.assert_schema_valid(capped["ledger"])
 
     def test_class_follow_ups_validate_in_recorded_order_not_key_order(self):
         """#789 review: the ledger is saved with sorted keys, so ownership must not depend on key order."""
@@ -870,9 +957,6 @@ class ReplanEpochTests(_ExecutionControlFixture, unittest.TestCase):
                  "action": "replan_epoch_approved", "spec_sha256": spec_digest}
         return {**event, **changes}
 
-    def begin(self, event, mode="apply"):
-        return self.invoke("begin-replan-epoch", mode=mode, spec_file="feature/spec.md", native_observation=event)
-
     def greenfield(self):
         spec = self.root / "feature/spec.md"
         text = spec.read_text()
@@ -880,9 +964,7 @@ class ReplanEpochTests(_ExecutionControlFixture, unittest.TestCase):
         self.invoke("start")
         spec.write_text(text)
         self.invoke("bind-invariants", spec_file="feature/spec.md")
-        for dispatch_id, invariant in (("fix-a", "FR-001"), ("fix-b", "FR-002")):
-            self.invoke("reserve", dispatch_id=dispatch_id, kind="corrective", failure_invariant=invariant)
-            self.invoke("complete", dispatch_id=dispatch_id, outcome="failed")
+        self.spend_corrective_budget(outcome="failed")
         spec_digest = self.invoke("status", mode="read_only")["ledger"]["invariant_binding"]["spec_sha256"]
         event = {"native_event_id": "operator-exception", "run_id": self.run_id,
                  "action": "corrective_exception_approved", "failure_invariant": "FR-001", "dispatch_id": "fix-c",
@@ -898,11 +980,11 @@ class ReplanEpochTests(_ExecutionControlFixture, unittest.TestCase):
         self.assertEqual(self.invoke("reserve", dispatch_id="fix-d", kind="corrective", failure_invariant="FR-002",
                                      mode="dry_run")["reasons"], ["failure_family_budget_exhausted"])
         new_digest = self.rescope()
-        preview = self.begin(self.epoch_event(new_digest), mode="dry_run")
+        preview = self.begin_replan(self.epoch_event(new_digest), mode="dry_run")
         self.assertEqual(preview["disposition"], "continue")
         self.assertNotIn("corrective_epochs", self.invoke("status", mode="read_only")["ledger"])
 
-        ledger = self.begin(self.epoch_event(new_digest))["ledger"]
+        ledger = self.begin_replan(self.epoch_event(new_digest))["ledger"]
         self.assertEqual(ledger["run_id"], before["run_id"])
         self.assertEqual(ledger["started_at"], before["started_at"])
         self.assertEqual((ledger["corrective_cycles"], ledger["reservations"], ledger["dispatches"]), (0, {}, {}))
@@ -914,9 +996,7 @@ class ReplanEpochTests(_ExecutionControlFixture, unittest.TestCase):
                     "invariant_binding", "corrective_exception"):
             self.assertEqual(epoch[key], before[key], key)
         self.assertEqual(epoch["epoch_event_id"], "operator-replan")
-        schema = json.loads((Path(__file__).resolve().parents[3] /
-                             "speckit-pro/speckit_pro_runner/contracts/execution-control.schema.json").read_text())
-        self.assertEqual(json_schema_failures(ledger, schema, schema, "ledger"), [])
+        self.assert_schema_valid(ledger)
 
         granted = self.invoke("reserve", dispatch_id="fix-d", kind="corrective", failure_invariant="FR-003")
         self.assertEqual(granted["disposition"], "continue")
@@ -940,19 +1020,19 @@ class ReplanEpochTests(_ExecutionControlFixture, unittest.TestCase):
         for index, event in enumerate(refusals):
             with self.subTest(refusal=index):
                 with self.assertRaises(ValueError):
-                    self.begin(event)
+                    self.begin_replan(event)
                 self.assertEqual(path.read_bytes(), before)
 
-        self.begin(self.epoch_event(new_digest))
+        self.begin_replan(self.epoch_event(new_digest))
         rotated = path.read_bytes()
         with self.assertRaises(ValueError):
-            self.begin(self.epoch_event(new_digest))
+            self.begin_replan(self.epoch_event(new_digest))
         self.assertEqual(path.read_bytes(), rotated)
 
         self.invoke("reserve", dispatch_id="fix-d", kind="corrective", failure_invariant="FR-003")
         running = path.read_bytes()
         with self.assertRaises(ValueError):
-            self.begin(self.epoch_event(new_digest, native_event_id="operator-replan-2"))
+            self.begin_replan(self.epoch_event(new_digest, native_event_id="operator-replan-2"))
         self.assertEqual(path.read_bytes(), running)
 
         tampered = json.loads(running)
@@ -1003,9 +1083,7 @@ class StageEpochTests(_ExecutionControlFixture, unittest.TestCase):
             self.assertEqual(epoch[key], before[key], key)
         self.assertEqual((epoch["epoch_event_id"], epoch["stage_transition"]),
                          ("stage-transition:implement", "implement"))
-        schema = json.loads((Path(__file__).resolve().parents[3] /
-                             "speckit-pro/speckit_pro_runner/contracts/execution-control.schema.json").read_text())
-        self.assertEqual(json_schema_failures(ledger, schema, schema, "ledger"), [])
+        self.assert_schema_valid(ledger)
 
         granted = self.invoke("reserve", dispatch_id="fix-d", kind="corrective", failure_invariant="FR-001")
         self.assertEqual(granted["disposition"], "continue")
@@ -1087,25 +1165,20 @@ class StageEpochTests(_ExecutionControlFixture, unittest.TestCase):
         path.write_bytes(opened)
 
 
-    def test_both_hosts_document_the_stage_allowance(self):
-        plugin = Path(__file__).resolve().parents[3] / "speckit-pro"
-        shared = (plugin / "skills/speckit-autopilot/references/execution-efficiency.md").read_text()
-        for phrase in ("`begin-stage-epoch`", "`autopilot_args`", "`stage-transition:implement`",
-                       "`stage_epoch_opened=false`"):
-            self.assertIn(phrase, shared)
-        self.assertNotIn("stage changes, a reclaimed state mirror", shared)
-        for host in ("skills/speckit-autopilot/SKILL.md", "skills/speckit-autopilot/references/error-recovery.md",
-                     "codex-skills/speckit-autopilot/references/error-recovery-codex.md"):
-            with self.subTest(host=host):
-                self.assertIn("`begin-stage-epoch`", " ".join((plugin / host).read_text().split()))
+class _OwnershipFixture(_ExecutionControlFixture):
+    """A feature whose task-execution sidecar names the paths each increment owns."""
 
-class IncrementReviewAllowanceTests(_ExecutionControlFixture, unittest.TestCase):
-    """Review fixes inside one increment's owned paths draw on that increment's own bound."""
+    def write(self, relative, text):
+        (self.root / relative).parent.mkdir(parents=True, exist_ok=True)
+        (self.root / relative).write_text(text)
 
-    TASKS = ("## Phase 3: Stories\n- [ ] T001 Build the alpha increment\n"
-             + "- [ ] T002 Build the beta increment\n- [ ] T003 Build the gamma increment\n")
-    OWNERSHIP = {"T001": ("alpha", ["src/alpha", "src/common.py"]), "T002": ("beta", ["src/beta"]),
-                 "T003": ("gamma", ["src/common.py"])}
+    def start_committed(self, files):
+        """Write the sidecar and each source file, commit the tree as the task-definition baseline, then start."""
+        self.write_sidecar()
+        for relative, text in files.items():
+            self.write(relative, text)
+        commit_baseline(self.root)
+        self.invoke("start")
 
     def write_sidecar(self, **changes):
         feature = self.root / "feature"
@@ -1119,17 +1192,22 @@ class IncrementReviewAllowanceTests(_ExecutionControlFixture, unittest.TestCase)
                     "tasks": tasks, **changes}
         (feature / ".process/task-execution.json").write_text(json.dumps(metadata))
 
+class _IncrementReviewFixture(_OwnershipFixture):
+    """Shared fixture for the increment review tests."""
+
+    TASKS = ("## Phase 3: Stories\n- [ ] T001 Build the alpha increment\n"
+             + "- [ ] T002 Build the beta increment\n- [ ] T003 Build the gamma increment\n")
+    OWNERSHIP = {"T001": ("alpha", ["src/alpha", "src/common.py"]), "T002": ("beta", ["src/beta"]),
+                 "T003": ("gamma", ["src/common.py"])}
+
     def spend_run_wide_budget(self):
         self.invoke("start")
-        for dispatch_id, invariant in (("fix-a", "FR-001"), ("fix-b", "FR-002")):
-            self.invoke("reserve", dispatch_id=dispatch_id, kind="corrective", failure_invariant=invariant)
-            self.invoke("complete", dispatch_id=dispatch_id, outcome="completed")
+        self.spend_corrective_budget()
         self.assertEqual(self.invoke("reserve", dispatch_id="ordinary", kind="corrective", mode="dry_run",
                                      failure_invariant="FR-001")["reasons"], ["failure_family_budget_exhausted"])
 
-    def review_fix(self, dispatch_id, unit, paths, mode="apply"):
-        return self.invoke("reserve", mode=mode, dispatch_id=dispatch_id, kind="corrective", spec_file="feature/spec.md",
-                           failure_invariant="FR-001", review_remediation={"tdd_unit": unit, "paths": paths})
+class IncrementReviewAllowanceTests(_IncrementReviewFixture, unittest.TestCase):
+    """Review fixes inside one increment's owned paths draw on that increment's own bound."""
 
     def test_review_fix_names_the_feature_spec_when_the_workflow_lives_elsewhere(self):
         self.write_sidecar()
@@ -1172,9 +1250,7 @@ class IncrementReviewAllowanceTests(_ExecutionControlFixture, unittest.TestCase)
                          ["dispatch_already_reserved_no_relaunch"])
         independent = self.review_fix("beta-review-1", "beta", ["src/beta/b.py"])
         self.assertEqual((independent["disposition"], independent["review_allowance"]), ("continue", "increment"))
-        schema = json.loads((Path(__file__).resolve().parents[3] /
-                             "speckit-pro/speckit_pro_runner/contracts/execution-control.schema.json").read_text())
-        self.assertEqual(json_schema_failures(independent["ledger"], schema, schema, "ledger"), [])
+        self.assert_schema_valid(independent["ledger"])
 
     def test_fix_outside_ownership_or_reopening_accepted_work_uses_the_run_wide_budget(self):
         self.write_sidecar()
@@ -1201,7 +1277,7 @@ class IncrementReviewAllowanceTests(_ExecutionControlFixture, unittest.TestCase)
         tasks = self.root / "feature/tasks.md"
         completed = self.TASKS.replace("- [ ] T003", "- [X] T003")
         tasks.write_text(completed)
-        commit_fixture(self.root)
+        commit_baseline(self.root)
         self.spend_run_wide_budget()
         admitted = self.review_fix("alpha-shared", "alpha", ["src/common.py"])
         self.assertEqual((admitted["disposition"], admitted["review_allowance"]), ("continue", "increment"))
@@ -1213,7 +1289,7 @@ class IncrementReviewAllowanceTests(_ExecutionControlFixture, unittest.TestCase)
         for name, (committed, worktree) in cases.items():
             with self.subTest(case=name):
                 tasks.write_text(committed)
-                commit_fixture(self.root)
+                commit_baseline(self.root)
                 tasks.write_text(worktree)
                 refused = self.review_fix("alpha-" + name.replace(" ", "-"), "alpha", ["src/common.py"],
                                           mode="dry_run")
@@ -1249,6 +1325,32 @@ class IncrementReviewAllowanceTests(_ExecutionControlFixture, unittest.TestCase)
             self.invoke("reserve", dispatch_id="not-corrective", kind="implementation", spec_file="feature/spec.md",
                         review_remediation={"tdd_unit": "alpha", "paths": ["src/alpha/core.py"]})
 
+    def test_forged_or_overspent_increment_records_fail_closed(self):
+        self.write_sidecar()
+        self.spend_run_wide_budget()
+        path = self.root / self.review_fix("alpha-review-1", "alpha", ["src/alpha/core.py"])["ledger_path"]
+        tampers = self.allowance_tampers("increment_allowances", "increment", "alpha")
+        self.assert_forgeries_fail_closed(path, path.read_bytes(), tampers)
+
+    def test_stage_epoch_archives_increment_allowances(self):
+        self.write_sidecar()
+        self.spend_run_wide_budget()
+        for number in (1, 2):
+            self.review_fix(f"alpha-review-{number}", "alpha", ["src/alpha/core.py"])
+            self.invoke("complete", dispatch_id=f"alpha-review-{number}", outcome="completed")
+        opened = self.open_stage_epoch()
+        self.assertEqual(opened["ledger"]["corrective_epochs"][0]["increment_allowances"]["alpha"]["rounds"], 2)
+        self.assertNotIn("increment_allowances", opened["ledger"])
+        self.assertEqual(self.review_fix("alpha-review-1", "alpha", ["src/alpha/core.py"])["reasons"],
+                         ["dispatch_already_reserved_no_relaunch"])
+        fresh = self.review_fix("alpha-review-3", "alpha", ["src/alpha/core.py"])
+        self.assertEqual((fresh["disposition"], fresh["ledger"]["increment_allowances"]["alpha"]["rounds"]),
+                         ("continue", 1))
+        self.assert_schema_valid(fresh["ledger"])
+
+class IncrementReviewDeferralTests(_IncrementReviewFixture, unittest.TestCase):
+    """A serial plan keeps running after an increment review fix is deferred."""
+
     def test_a_serial_plan_keeps_running_after_a_review_fix_deferral(self):
         from speckit_pro_runner.helpers.run_finalization import finalize_run
 
@@ -1263,85 +1365,36 @@ class IncrementReviewAllowanceTests(_ExecutionControlFixture, unittest.TestCase)
         dependent = self.invoke("reserve", dispatch_id="beta-implement", kind="implementation")
         self.assertEqual(dependent["disposition"], "continue")
         self.assertEqual(self.invoke("status", mode="read_only")["disposition"], "continue")
+        self.invoke("reserve", dispatch_id="verify-g7", kind="verification")
+        self.invoke("begin-verification", dispatch_id="verify-g7")
+        evidence = failing_check_fingerprint("UNIT_TEST", ["python3", "-m", "unittest"], 0, True, b"", b"")
+        with patch("speckit_pro_runner.execution_control.time.time", return_value=self.now):
+            record_failing_checks(self.root, {"workflow_file": "feature/workflow.md", "expected_run_id": self.run_id,
+                                              "dispatch_id": "verify-g7"},
+                                  {**evidence, "head_sha": "a" * 40, "worktree_clean": True})
+        self.invoke("complete", dispatch_id="verify-g7", outcome="completed")
         common = {"ledger_path": dependent["ledger_path"], "expected_run_id": self.run_id,
                   "gates": [{"gate": "G7", "status": "passed", "command": "python3 -m unittest",
-                             "head_sha": "a" * 40}],
+                             "head_sha": "a" * 40, "dispatch_id": "verify-g7"}],
                   "pull_requests": [{"number": 1, "url": "https://github.com/example/repo/pull/1", "draft": True,
                                      "head_sha": "a" * 40}],
                   "resume_command": "/speckit-pro:speckit-autopilot feature/workflow.md --stage implement"}
         running = finalize_run(self.root, {**common, "pending_items": ["T002 Build the beta increment"]})
         self.assertEqual((running["outcome"], running["human_stop"]), ("continue", None))
+        # The deferred increment climbs its escalation tiers before it becomes a decision for the owner (issue 829).
+        escalating = finalize_run(self.root, {**common, "pending_items": []})
+        self.assertEqual((escalating["outcome"], escalating["human_stop"]), ("continue", None))
+        self.assertIn("Escalate Increment alpha", escalating["pending_items"][0])
+        for tier in (2, 3):
+            self.invoke("reserve", dispatch_id=f"alpha-tier-{tier}", kind="corrective",
+                        escalation={"unit_kind": "increment", "unit": "alpha", "tier": tier})
+            self.invoke("complete", dispatch_id=f"alpha-tier-{tier}", outcome="failed")
+        # Every tier failed: the run still finalizes ready for review, with the unit listed as a decision.
         ended = finalize_run(self.root, {**common, "pending_items": []})
-        self.assertEqual(ended["outcome"], "human_stop")
+        self.assertEqual((ended["outcome"], ended["mark_ready"]), ("complete_with_deferred", True))
+        self.assertEqual([decision["class"] for decision in ended["decisions"]], ["exhausted"])
+        self.assertIn("Decisions for you", ended["end_of_run_request"])
         self.assertIn("Increment alpha", ended["end_of_run_request"])
-
-    def test_forged_or_overspent_increment_records_fail_closed(self):
-        self.write_sidecar()
-        self.spend_run_wide_budget()
-        admitted = self.review_fix("alpha-review-1", "alpha", ["src/alpha/core.py"])
-        path = self.root / admitted["ledger_path"]
-        valid = path.read_bytes()
-        forged_dispatch = {"kind": "corrective", "outcome": "reserved", "reserved_at": self.now,
-                           "reservation_id": None, "reconciliations": 0, "increment": "alpha"}
-        tampers = {
-            "unlisted increment dispatch": lambda ledger: ledger["dispatches"].update(forged=forged_dispatch),
-            "rounds over the bound": lambda ledger: (
-                ledger["dispatches"].update({"a2": forged_dispatch, "a3": forged_dispatch}),
-                ledger["increment_allowances"]["alpha"].update(
-                    rounds=3, dispatch_ids=["alpha-review-1", "a2", "a3"])),
-            "counter disagrees": lambda ledger: ledger["increment_allowances"]["alpha"].update(rounds=2),
-            "allowance record dropped": lambda ledger: ledger.pop("increment_allowances"),
-            "unreserved corrective": lambda ledger: ledger["dispatches"]["alpha-review-1"].pop("increment"),
-            "increment on a reservation": lambda ledger: ledger["dispatches"]["alpha-review-1"].update(
-                reservation_id=next(iter(ledger["reservations"]))),
-        }
-        for name, tamper in tampers.items():
-            with self.subTest(tamper=name):
-                ledger = json.loads(valid)
-                tamper(ledger)
-                path.write_text(json.dumps(ledger), encoding="utf-8")
-                with self.assertRaises(ValueError):
-                    self.invoke("status", mode="read_only")
-        path.write_bytes(valid)
-        self.assertEqual(self.invoke("status", mode="read_only")["disposition"], "continue")
-
-    def test_stage_epoch_archives_increment_allowances(self):
-        self.write_sidecar()
-        self.spend_run_wide_budget()
-        for number in (1, 2):
-            self.review_fix(f"alpha-review-{number}", "alpha", ["src/alpha/core.py"])
-            self.invoke("complete", dispatch_id=f"alpha-review-{number}", outcome="completed")
-        (self.root / "feature/workflow.md").write_text(stage_workflow())
-        opened = self.invoke("begin-stage-epoch", autopilot_args=["--stage", "implement"])
-        self.assertEqual(opened["ledger"]["corrective_epochs"][0]["increment_allowances"]["alpha"]["rounds"], 2)
-        self.assertNotIn("increment_allowances", opened["ledger"])
-        self.assertEqual(self.review_fix("alpha-review-1", "alpha", ["src/alpha/core.py"])["reasons"],
-                         ["dispatch_already_reserved_no_relaunch"])
-        fresh = self.review_fix("alpha-review-3", "alpha", ["src/alpha/core.py"])
-        self.assertEqual((fresh["disposition"], fresh["ledger"]["increment_allowances"]["alpha"]["rounds"]),
-                         ("continue", 1))
-        schema = json.loads((Path(__file__).resolve().parents[3] /
-                             "speckit-pro/speckit_pro_runner/contracts/execution-control.schema.json").read_text())
-        self.assertEqual(json_schema_failures(fresh["ledger"], schema, schema, "ledger"), [])
-
-    def test_both_hosts_document_the_increment_review_allowance(self):
-        plugin = Path(__file__).resolve().parents[3] / "speckit-pro"
-        shared = " ".join((plugin / "skills/speckit-autopilot/references/execution-efficiency.md").read_text().split())
-        for phrase in ("`review_remediation`", "an explicit `spec_file`", "`increment_review_allowance_exhausted`",
-                       "`review_allowance=increment`", "`review_allowance=run_wide`",
-                       "`increment_ineligible`", "never draws on the run-wide"):
-            self.assertIn(phrase, shared)
-        for host in ("skills/speckit-autopilot/references/phase-execution.md",
-                     "codex-skills/speckit-autopilot/references/phase-execution-codex.md"):
-            with self.subTest(host=host):
-                text = " ".join((plugin / host).read_text().split())
-                self.assertIn("`review_remediation`", text)
-                self.assertIn("`spec_file`", text)
-                self.assertIn("`increment_review_allowance_exhausted`", text)
-                self.assertIn("defer that increment", text)
-                self.assertIn("never a mid-run question", text)
-                self.assertNotIn("except `increment_review_allowance_exhausted`", text)
-                self.assertIn("An exhausted correction allowance is not a stop", text)
 
 
 SCHEMA_PATH = Path(__file__).resolve().parents[3] / "speckit-pro/speckit_pro_runner/contracts/execution-control.schema.json"
@@ -1353,10 +1406,6 @@ class DeferOnExhaustedAllowanceTests(_ExecutionControlFixture, unittest.TestCase
     def entry(self, dispatch_id, reason, unit_kind, unit):
         return {"dispatch_id": dispatch_id, "reason": reason, "unit_kind": unit_kind, "unit": unit,
                 "deferred_at": self.now}
-
-    def assert_schema_valid(self, ledger):
-        schema = json.loads(SCHEMA_PATH.read_text())
-        self.assertEqual(json_schema_failures(ledger, schema, schema, "ledger"), [])
 
     def test_exhausted_family_and_run_budgets_defer_the_named_family_and_keep_refusing(self):
         self.invoke("start")
@@ -1435,21 +1484,14 @@ class DeferOnExhaustedAllowanceTests(_ExecutionControlFixture, unittest.TestCase
             "run budget not spent": lambda ledger: ledger["deferred"][0].update(
                 reason="corrective_run_budget_exhausted"),
         }
-        for name, tamper in tampers.items():
-            with self.subTest(tamper=name):
-                ledger = json.loads(valid)
-                tamper(ledger)
-                path.write_text(json.dumps(ledger), encoding="utf-8")
-                with self.assertRaises(ValueError):
-                    self.invoke("status", mode="read_only")
-                with self.assertRaises(ValueError):
-                    self.invoke("reserve", dispatch_id="fix-b", kind="corrective", failure_invariant="FR-002")
+        self.assert_tampers_rejected(path, valid, tampers, lambda: self.invoke(
+            "reserve", dispatch_id="fix-b", kind="corrective", failure_invariant="FR-002"))
         path.write_bytes(valid)
         self.invoke("reserve", dispatch_id="worker", kind="implementation")
         self.invoke("complete", dispatch_id="worker", outcome="unknown")
         unknown = self.invoke("reserve", dispatch_id="fix-b", kind="corrective", failure_invariant="FR-002")
         self.assertEqual(unknown["disposition"], "checkpoint_required")
-        self.assertIn("unknown_side_effects_require_operator_reconciliation", unknown["reasons"])
+        self.assertIn("unknown_dispatch_blocks_unit", unknown["reasons"])
         self.now = 1
         with self.assertRaisesRegex(ValueError, "clock moved backwards"):
             self.invoke("reserve", dispatch_id="fix-c", kind="corrective", failure_invariant="FR-002")
@@ -1461,9 +1503,7 @@ class DeferOnExhaustedAllowanceTests(_ExecutionControlFixture, unittest.TestCase
         self.invoke("start")
         spec.write_text(text)
         self.invoke("bind-invariants", spec_file="feature/spec.md")
-        for dispatch_id, invariant in (("fix-a", "FR-001"), ("fix-b", "FR-002")):
-            self.invoke("reserve", dispatch_id=dispatch_id, kind="corrective", failure_invariant=invariant)
-            self.invoke("complete", dispatch_id=dispatch_id, outcome="failed")
+        self.spend_corrective_budget(outcome="failed")
         deferred = self.invoke("reserve", dispatch_id="fix-c", kind="corrective", failure_invariant="FR-001")
         self.assertEqual(deferred["disposition"], "defer")
         event = {"native_event_id": "operator-replan", "run_id": self.run_id, "action": "replan_epoch_approved",
@@ -1485,13 +1525,8 @@ class DeferOnExhaustedAllowanceTests(_ExecutionControlFixture, unittest.TestCase
 class DeferOnExhaustedAllowanceGuidanceTests(unittest.TestCase):
     """Both hosts defer exhausted-allowance work to the end-of-run request, never a mid-run question."""
 
-    PLUGIN = Path(__file__).resolve().parents[3] / "speckit-pro"
-
-    def flat(self, relative):
-        return " ".join((self.PLUGIN / relative).read_text().split())
-
     def test_shared_ledger_reference_defers_and_keeps_approvals_for_the_end(self):
-        text = self.flat("skills/speckit-autopilot/references/execution-efficiency.md")
+        text = guide_text("skills/speckit-autopilot/references/execution-efficiency.md")
         for phrase in ("`disposition=defer`", "`deferred`", "`unit_kind`", "`failure_class_allowance_exhausted`",
                        "`corrective_cycle_failed_no_nested_retry`", "end-of-run tools",
                        "never a mid-run question", "keep executing every independent task, increment, gate, and Post check",
@@ -1503,14 +1538,14 @@ class DeferOnExhaustedAllowanceGuidanceTests(unittest.TestCase):
             self.assertNotIn(stale, text)
 
     def test_shared_gate_and_hardener_references_defer_on_exhaustion(self):
-        gates = self.flat("skills/speckit-autopilot/references/gate-validation.md")
+        gates = guide_text("skills/speckit-autopilot/references/gate-validation.md")
         escalation = gates.split("## Failure Escalation Protocol", 1)[1]
         for phrase in ("`disposition=defer`", "one end-of-run consolidated request", "never a mid-run question",
                        "`authorize-corrective-exception`", "`begin-replan-epoch`"):
             self.assertIn(phrase, escalation)
         for stale in ("**STOP** execution", "Wait for guidance", "Time/budget exhaustion checkpoints"):
             self.assertNotIn(stale, gates)
-        hardener = self.flat("skills/speckit-autopilot/references/hardener-delegation.md")
+        hardener = guide_text("skills/speckit-autopilot/references/hardener-delegation.md")
         self.assertIn("On exhaustion retain the failing MUTATION result and defer", hardener)
 
     def test_both_hosts_turn_an_exhausted_budget_into_a_deferral(self):
@@ -1523,7 +1558,7 @@ class DeferOnExhaustedAllowanceGuidanceTests(unittest.TestCase):
                   "### Blocked Actions Mid-Run", "## PR Packet and Body Boundary"))
         for relative, start, end in pairs:
             with self.subTest(host=relative):
-                text = self.flat(relative)
+                text = guide_text(relative)
                 section = text.split(start, 1)[1]
                 section = section.split(end, 1)[0] if end else section
                 self.assertIn("`disposition=defer`", section)
@@ -1536,7 +1571,7 @@ class DeferOnExhaustedAllowanceGuidanceTests(unittest.TestCase):
                     self.assertNotIn(stale, section)
 
     def test_a_serial_plan_never_stops_mid_run_on_a_deferral(self):
-        shared = self.flat("skills/speckit-autopilot/references/execution-efficiency.md")
+        shared = guide_text("skills/speckit-autopilot/references/execution-efficiency.md")
         self.assertIn("a serial plan never stops mid-run on a deferral", shared)
         self.assertIn("tracked follow-up", shared)
         for relative, start, end in (
@@ -1545,10 +1580,10 @@ class DeferOnExhaustedAllowanceGuidanceTests(unittest.TestCase):
                 ("codex-skills/speckit-autopilot/references/phase-execution-codex.md",
                  "### Blocked Actions Mid-Run", "### Repeated Gate Failures")):
             with self.subTest(host=relative):
-                text = self.flat(relative)
+                text = guide_text(relative)
                 section = text.split(start, 1)[1].split(end, 1)[0]
                 for phrase in ("a serial plan never stops mid-run on a deferral", "`finalize-run`",
-                               "the only stop is its end-of-run human stop"):
+                               "the only stop is a required gate that is still not green"):
                     self.assertIn(phrase, section)
                 review = text.split("**Review fixes inside one increment.**", 1)[1].split("\n\n", 1)[0]
                 review = " ".join(review.split())
@@ -1558,7 +1593,7 @@ class DeferOnExhaustedAllowanceGuidanceTests(unittest.TestCase):
                 self.assertNotIn("keep its dependents deferred", review)
 
     def test_codex_audit_and_both_hosts_keep_the_true_stops(self):
-        audit = self.flat("codex-skills/speckit-autopilot/SKILL.md").split("### 3.4 Pre-final completion audit", 1)[1]
+        audit = guide_text("codex-skills/speckit-autopilot/SKILL.md").split("### 3.4 Pre-final completion audit", 1)[1]
         self.assertIn("`execution_control.disposition=defer`", audit)
         for relative, start, end in (
                 ("skills/speckit-autopilot/references/phase-execution.md",
@@ -1566,10 +1601,68 @@ class DeferOnExhaustedAllowanceGuidanceTests(unittest.TestCase):
                 ("codex-skills/speckit-autopilot/references/phase-execution-codex.md",
                  "### Blocked Actions Mid-Run", "### Repeated Gate Failures")):
             with self.subTest(host=relative):
-                section = self.flat(relative).split(start, 1)[1].split(end, 1)[0]
+                section = guide_text(relative).split(start, 1)[1].split(end, 1)[0]
                 for phrase in ("unknown side effects", "`checkpoint_required`", "a ledger or clock error",
                                "invalid or stale state"):
                     self.assertIn(phrase, section)
+
+
+class DeferralListingGuidanceTests(unittest.TestCase):
+    """Both hosts list only unresolved deferrals in the end-of-run request."""
+
+    def test_both_hosts_list_only_unresolved_deferrals_at_the_end(self):
+        assert_guides_say(self, (EXECUTION_EFFICIENCY_GUIDE,),
+                          ("`resolved_by`", "`resolved_at`", "keeps the entry for audit",
+                           "No request can name a resolution", "`finalize-run` omits resolved entries"))
+        assert_guides_say(self, PHASE_EXECUTION_GUIDES,
+                          ('lists it under "Decisions for you"',
+                           "unresolved ledger deferral first climbs the escalation tiers in rule 3"),
+                          ("the ledger's `deferred` list is not empty",))
+
+
+ERROR_RECOVERY_GUIDES = ("skills/speckit-autopilot/SKILL.md", "skills/speckit-autopilot/references/error-recovery.md",
+                         "codex-skills/speckit-autopilot/references/error-recovery-codex.md")
+ALLOWANCE_GUIDES = {
+    "stage": (GuidePhrases(("`begin-stage-epoch`", "`autopilot_args`", "`stage-transition:implement`",
+                            "`stage_epoch_opened=false`"), ("stage changes, a reclaimed state mirror",)),
+              GuidePhrases(("`begin-stage-epoch`",)), ERROR_RECOVERY_GUIDES),
+    "increment review": (GuidePhrases(("`review_remediation`", "an explicit `spec_file`",
+                                       "`increment_review_allowance_exhausted`", "`review_allowance=increment`",
+                                       "`review_allowance=run_wide`", "`increment_ineligible`",
+                                       "never draws on the run-wide")),
+                         GuidePhrases(("`review_remediation`", "`spec_file`", "`increment_review_allowance_exhausted`",
+                                       "defer that increment", "never a mid-run question",
+                                       "An exhausted correction allowance is not a stop"),
+                                      ("except `increment_review_allowance_exhausted`",)), PHASE_EXECUTION_GUIDES),
+    "gate remediation": (GuidePhrases(("`gate_remediation`", "`gate_allowances`", "`gate_remediation_allowance_exhausted`",
+                                       "`remediation_allowance=gate`", "`remediation_allowance=run_wide`",
+                                       "`gate_ineligible`", "`path_outside_planning_documents`",
+                                       "`feature_binding_mismatch`")),
+                         GuidePhrases(("`gate_remediation`", "planning documents",
+                                       "`gate_remediation_allowance_exhausted`", "never a mid-run question")),
+                         PHASE_EXECUTION_GUIDES),
+    "metadata only": (GuidePhrases(("`metadata_only: true`", "`metadata_corrections`",
+                                    "`correction_allowance=metadata_only`", "`correction_allowance=run_wide`",
+                                    "`metadata_ineligible`", "`PHASE7_VERIFY_KEYWORDS`", "`baseline_unavailable`",
+                                    "`planning_source_changed`", "`not_metadata_only`", "`no_task_correction`",
+                                    "`task_already_corrected`", "`feature_binding_mismatch`", "`action=fingerprints`"),
+                                   ("admission is deferred",)),
+                      GuidePhrases(("`metadata_only: true`",)), ERROR_RECOVERY_GUIDES),
+    "test fix": (GuidePhrases(("`test_fix`", "`tdd_units`", "`changed_paths`", "`test_fix_allowance=increment`",
+                               "`test_fix_allowance=run_wide`", "`test_fix_ineligible`", "`test_fix_scope_unproven`",
+                               "`path_not_edited_by_increment`", "one test fix per increment")),
+                 GuidePhrases(("`test_fix`", "`tdd_units`", "without `begin-replan-epoch`",
+                               "never ask the operator for a re-plan")), PHASE_EXECUTION_GUIDES),
+}
+
+
+class AllowanceGuideTests(unittest.TestCase):
+    """Both hosts document every correction allowance the runner grants."""
+
+    def test_each_allowance_is_documented_in_the_shared_and_host_guides(self):
+        for name, (shared, host, hosts) in ALLOWANCE_GUIDES.items():
+            with self.subTest(allowance=name):
+                assert_guides_document(self, shared, host, hosts)
 
 
 def unittest_output(*failing, ran=6):
@@ -1586,6 +1679,237 @@ def bun_output(failing, passing):
     lines += ["", f" {len(passing)} pass", f" {len(failing)} fail",
               f"Ran {len(passing) + len(failing)} tests across 1 files. [5.00ms]"]
     return "tests/sample.test.ts:\n" + "\n".join(lines) + "\n"
+
+
+class _EscalationFixture(_ExecutionControlFixture):
+    """Shared fixture for the tests below."""
+
+    def setUp(self):
+        super().setUp()
+        self.invoke("start")
+        self.invoke("reserve", dispatch_id="fix-a", kind="corrective", failure_invariant="FR-001")
+        self.invoke("complete", dispatch_id="fix-a", outcome="completed")
+        self.deferred = self.invoke("reserve", dispatch_id="fix-a-again", kind="corrective", failure_invariant="FR-001")
+        self.assertEqual(self.deferred["disposition"], "defer")
+        self.family = {"unit_kind": "failure_family", "unit": "FR-001"}
+
+    def escalate(self, dispatch_id, tier, unit=None, **inputs):
+        self.now += 10
+        return self.invoke("reserve", dispatch_id=dispatch_id, kind="corrective",
+                           escalation={**(unit or self.family), "tier": tier}, **inputs)
+
+    def settle(self, dispatch_id, outcome="failed"):
+        self.now += 10
+        return self.invoke("complete", dispatch_id=dispatch_id, outcome=outcome)
+
+    def verify_red(self, argv):
+        """A failing verification of one command, fingerprinted by the runner; returns the command digest."""
+        self.verify(unittest_output("test_a"), argv=argv)
+        return digest(list(argv))
+
+
+class EscalationAllowanceTests(_EscalationFixture, unittest.TestCase):
+    """A failed unit climbs tier 2 then tier 3 outside the corrective budget before it is exhausted (issue 829)."""
+
+    def test_a_deferred_unit_gets_tier_two_outside_the_corrective_budget_and_records_its_tier(self):
+        admitted = self.escalate("tier-2", 2)
+        self.assertEqual((admitted["disposition"], admitted["escalation_allowance"]), ("continue", "unit"))
+        ledger = admitted["ledger"]
+        self.assertEqual(ledger["corrective_cycles"], 1)
+        self.assertEqual((ledger["dispatches"]["tier-2"]["escalation"], ledger["dispatches"]["tier-2"]["escalation_tier"]),
+                         ("failure_family:FR-001", 2))
+        record = ledger["escalation_allowances"]["failure_family:FR-001"]
+        self.assertEqual((record["tier"], [entry["dispatch_id"] for entry in record["dispatches"]]), (2, ["tier-2"]))
+        self.assertEqual(ledger["escalation_tier3_cap"], 3)
+        self.assert_schema_valid(ledger)
+        spent = self.escalate("tier-2-again", 2)
+        self.assertEqual((spent["disposition"], spent["reasons"]), ("checkpoint_required", ["escalation_allowance_spent"]))
+        self.assertNotIn("tier-2-again", spent["ledger"]["dispatches"])
+
+    def test_tier_three_follows_a_failed_tier_two_and_records_the_tier_reached(self):
+        skipped = self.escalate("tier-3-early", 3)
+        self.assertEqual(skipped["reasons"], ["escalation_tier_out_of_order"])
+        self.escalate("tier-2", 2)
+        running = self.escalate("tier-3-running", 3)
+        self.assertEqual(running["reasons"], ["escalation_tier_out_of_order"])
+        self.settle("tier-2")
+        admitted = self.escalate("tier-3", 3)
+        self.assertEqual(admitted["disposition"], "continue")
+        record = admitted["ledger"]["escalation_allowances"]["failure_family:FR-001"]
+        self.assertEqual((record["tier"], [entry["tier"] for entry in record["dispatches"]]), (3, [2, 3]))
+        self.assert_schema_valid(admitted["ledger"])
+        self.assertEqual(self.escalate("tier-3-again", 3)["reasons"], ["escalation_allowance_spent"])
+        self.assertEqual(self.invoke("status", mode="read_only")["ledger"]["corrective_cycles"], 1)
+
+    def test_a_completed_tier_resolves_the_deferral_and_a_failed_one_does_not(self):
+        self.escalate("tier-2", 2)
+        failed = self.settle("tier-2")
+        self.assertNotIn("resolved_by", failed["ledger"]["deferred"][0])
+        self.invoke("reserve", dispatch_id="fix-b", kind="corrective", failure_invariant="FR-002")
+        self.invoke("reserve", dispatch_id="fix-b-again", kind="corrective", failure_invariant="FR-002")
+        other = {"unit_kind": "failure_family", "unit": "FR-002"}
+        self.escalate("other-tier-2", 2, other)
+        done = self.settle("other-tier-2", "completed")
+        self.assertEqual(done["ledger"]["deferred"][1]["resolved_by"], "other-tier-2")
+        self.assertNotIn("resolved_by", done["ledger"]["deferred"][0])
+        self.assertEqual(self.escalate("other-tier-3", 3, other)["reasons"], ["escalation_requires_a_failed_unit"])
+        self.assert_schema_valid(done["ledger"])
+
+    def test_a_ledger_without_escalation_records_still_validates(self):
+        from speckit_pro_runner.execution_control import escalation_progress, validate_ledger
+
+        ledger = self.deferred["ledger"]
+        for key in ("escalation_allowances", "escalation_tier3_cap", "finalize_observations"):
+            self.assertNotIn(key, ledger)
+        validate_ledger(ledger)
+        self.assertEqual(self.invoke("status", mode="read_only")["disposition"], "continue")
+        self.assertEqual(escalation_progress(ledger, "failure_family", "FR-001"), "tier2")
+
+
+class EscalationCapTests(_EscalationFixture, unittest.TestCase):
+    """Tier three is capped per run and a gate failure needs a fresh red run after each tier."""
+
+    def test_tier_three_has_a_per_run_cap_the_runner_enforces(self):
+        digests = [self.verify_red(("python3", f"gate-{number}.py")) for number in range(4)]
+        for number, digest_value in enumerate(digests[:3]):
+            unit = {"unit_kind": "gate_failure", "unit": digest_value}
+            self.assertEqual(self.escalate(f"g{number}-tier-2", 2, unit)["disposition"], "continue")
+            self.settle(f"g{number}-tier-2")
+            self.verify_red(("python3", f"gate-{number}.py"))
+            self.assertEqual(self.escalate(f"g{number}-tier-3", 3, unit)["disposition"], "continue")
+            self.settle(f"g{number}-tier-3")
+        last = {"unit_kind": "gate_failure", "unit": digests[3]}
+        self.escalate("g3-tier-2", 2, last)
+        self.settle("g3-tier-2")
+        self.verify_red(("python3", "gate-3.py"))
+        capped = self.escalate("g3-tier-3", 3, last)
+        self.assertEqual((capped["disposition"], capped["reasons"]), ("checkpoint_required", ["escalation_tier3_cap_reached"]))
+        from speckit_pro_runner.execution_control import escalation_progress, escalation_tier3_used
+
+        ledger = self.invoke("status", mode="read_only")["ledger"]
+        self.assertEqual(escalation_tier3_used(ledger), 3)
+        self.assertEqual(escalation_progress(ledger, "gate_failure", digests[3]), "exhausted")
+        self.assertEqual(escalation_progress(ledger, "gate_failure", digests[0]), "exhausted")
+        self.assertEqual(escalation_progress(ledger, "failure_family", "FR-001"), "tier2")
+
+    def test_a_gate_failure_needs_a_fresh_red_run_after_each_tier(self):
+        digest_value = self.verify_red(("python3", "gate.py"))
+        unit = {"unit_kind": "gate_failure", "unit": digest_value}
+        self.escalate("tier-2", 2, unit)
+        self.settle("tier-2", "completed")
+        stale = self.escalate("tier-3", 3, unit)
+        self.assertEqual(stale["reasons"], ["escalation_requires_a_failed_unit"])
+        self.verify_red(("python3", "gate.py"))
+        self.assertEqual(self.escalate("tier-3", 3, unit)["disposition"], "continue")
+
+    def test_forged_finalize_observations_fail_closed(self):
+        from speckit_pro_runner.execution_control import FINALIZE_OBSERVATION_CAP, finalize_observation_key, validate_ledger
+
+        key = finalize_observation_key("missing_gate", "a" * 40, "G7")
+        valid = self.deferred["ledger"]
+        validate_ledger({**valid, "finalize_observations": {key: FINALIZE_OBSERVATION_CAP}})
+        self.assert_schema_valid({**valid, "finalize_observations": {key: FINALIZE_OBSERVATION_CAP}})
+        for name, forged in {"bad kind": {f"stop:{'a' * 40}:G7": 1}, "short head": {"missing_gate:abc:G7": 1},
+                             "no gate": {f"missing_gate:{'a' * 40}:": 1}, "over the cap": {key: FINALIZE_OBSERVATION_CAP + 1},
+                             "zero": {key: 0}, "boolean count": {key: True}, "empty": {}}.items():
+            with self.subTest(forged=name), self.assertRaises(ValueError):
+                validate_ledger({**valid, "finalize_observations": forged})
+        with self.assertRaises(ValueError):
+            self.invoke("record-finalize-cycle", finalize_inputs={"ledger_path": "elsewhere.json"})
+
+
+class EscalationRequestTests(_EscalationFixture, unittest.TestCase):
+    """An escalation needs a failed unit and a well-formed request, and a new epoch archives its records."""
+
+    def test_an_escalation_needs_a_failed_unit_and_a_well_formed_request(self):
+        refused = self.escalate("tier-x", 2, {"unit_kind": "increment", "unit": "alpha"})
+        self.assertEqual(refused["reasons"], ["escalation_requires_a_failed_unit"])
+        self.assertNotIn("escalation_allowances", refused["ledger"])
+        passing = self.verify_red(("python3", "gate.py"))
+        self.assertEqual(self.escalate("tier-y", 2, {"unit_kind": "gate_failure", "unit": "0" * 64})["reasons"],
+                         ["escalation_requires_a_failed_unit"])
+        self.assertNotEqual(passing, "0" * 64)
+        for name, request in {"unknown kind": {"unit_kind": "gate_zero", "unit": "FR-001", "tier": 2},
+                              "extra key": {**self.family, "tier": 2, "approved": True},
+                              "no tier": dict(self.family), "tier one": {**self.family, "tier": 1},
+                              "tier four": {**self.family, "tier": 4}, "tier as text": {**self.family, "tier": "2"},
+                              "blank unit": {"unit_kind": "failure_family", "unit": " ", "tier": 2},
+                              "not an object": "FR-001"}.items():
+            with self.subTest(request=name), self.assertRaises(ValueError):
+                self.invoke("reserve", dispatch_id="escalate-y", kind="corrective", escalation=request)
+        with self.assertRaises(ValueError):
+            self.invoke("reserve", dispatch_id="escalate-z", kind="implementation", escalation={**self.family, "tier": 2})
+        reservation = next(iter(self.deferred["ledger"]["reservations"]))
+        with self.assertRaises(ValueError):
+            self.escalate("escalate-w", 2, reservation_id=reservation)
+
+    def test_a_new_epoch_archives_the_escalation_records_and_the_cap_still_counts_them(self):
+        from speckit_pro_runner.execution_control import escalation_tier3_used
+
+        spec = self.root / "feature/spec.md"
+        self.escalate("tier-2", 2)
+        self.settle("tier-2")
+        self.escalate("tier-3", 3)
+        self.settle("tier-3")
+        event = {"native_event_id": "operator-replan", "run_id": self.run_id, "action": "replan_epoch_approved",
+                 "spec_sha256": hashlib.sha256(spec.read_bytes()).hexdigest()}
+        opened = self.invoke("begin-replan-epoch", spec_file="feature/spec.md", native_observation=event)
+        self.assertNotIn("escalation_allowances", opened["ledger"])
+        self.assertEqual(opened["ledger"]["corrective_epochs"][0]["escalation_allowances"]["failure_family:FR-001"]["tier"], 3)
+        self.assertEqual(escalation_tier3_used(opened["ledger"]), 1)
+        self.assert_schema_valid(opened["ledger"])
+
+
+class EscalationForgeryTests(_EscalationFixture, unittest.TestCase):
+    """Forged escalation records fail closed."""
+
+    def test_forged_escalation_records_fail_closed(self):
+        self.escalate("tier-2", 2)
+        self.settle("tier-2")
+        admitted = self.escalate("tier-3", 3)
+        path = self.root / admitted["ledger_path"]
+        valid = path.read_bytes()
+        key = "failure_family:FR-001"
+        tampers = {
+            "allowance for a unit that never failed": lambda ledger: ledger["escalation_allowances"].update(
+                {"increment:alpha": {**ledger["escalation_allowances"][key], "unit_kind": "increment", "unit": "alpha"}}),
+            "dispatch marker without an allowance": lambda ledger: ledger.pop("escalation_allowances"),
+            "allowance names another dispatch": lambda ledger: ledger["escalation_allowances"][key]["dispatches"][
+                1].update(dispatch_id="fix-a"),
+            "allowance key disagrees with its unit": lambda ledger: ledger["escalation_allowances"].update(
+                {"failure_family:FR-002": ledger["escalation_allowances"].pop(key)}),
+            "unknown unit kind": lambda ledger: ledger["escalation_allowances"][key].update(unit_kind="merge"),
+            "extra key": lambda ledger: ledger["escalation_allowances"][key].update(approved=True),
+            "tier disagrees with its dispatches": lambda ledger: ledger["escalation_allowances"][key].update(tier=2),
+            "tier three with no tier two": lambda ledger: ledger["escalation_allowances"][key].update(
+                dispatches=ledger["escalation_allowances"][key]["dispatches"][1:]),
+            "tier three before tier two settled": lambda ledger: ledger["dispatches"]["tier-2"].update(
+                outcome="running"),
+            "tier three after a completed tier two": lambda ledger: ledger["dispatches"]["tier-2"].update(
+                outcome="completed"),
+            "dispatch tier rewritten": lambda ledger: ledger["dispatches"]["tier-3"].update(escalation_tier=2),
+            "reserved_at disagrees": lambda ledger: ledger["escalation_allowances"][key]["dispatches"][0].update(
+                reserved_at=1.0),
+            "cap missing": lambda ledger: ledger.pop("escalation_tier3_cap"),
+            "cap raised": lambda ledger: ledger.update(escalation_tier3_cap=99),
+            "escalation on a corrective reservation": lambda ledger: ledger["dispatches"]["tier-3"].update(
+                reservation_id=next(iter(ledger["reservations"]))),
+            "escalation on an implementation dispatch": lambda ledger: ledger["dispatches"]["tier-3"].update(
+                kind="implementation"),
+            "escalation and an increment allowance": lambda ledger: ledger["dispatches"]["tier-3"].update(
+                increment="alpha"),
+            "empty allowance map": lambda ledger: ledger.update(escalation_allowances={}),
+            "deferral removed": lambda ledger: ledger.pop("deferred"),
+        }
+        self.assert_forgeries_fail_closed(path, valid, tampers)
+
+
+FAILING_CHECK_FIXTURES = Path(__file__).resolve().parent / "fixtures" / "failing-checks"
+
+
+def runner_output(name):
+    """Real test-runner output captured from the tool itself (see the fixture directory)."""
+    return (FAILING_CHECK_FIXTURES / name).read_text(encoding="utf-8")
 
 
 class FailingCheckFingerprintTests(unittest.TestCase):
@@ -1638,27 +1962,78 @@ class FailingCheckFingerprintTests(unittest.TestCase):
                          ("passed", [], None))
 
 
-class CorrectionProgressTests(_ExecutionControlFixture, unittest.TestCase):
-    """A correction that measurably converged admits the next one with no operator event (issue 796)."""
+class MoreTestRunnerFingerprintTests(unittest.TestCase):
+    """go test, cargo test, vitest, mocha, and JUnit XML parse from output the tools really produced."""
+
+    fingerprint = FailingCheckFingerprintTests.fingerprint
+
+    CASES = {
+        "go-test-v.txt": ("go", ["TestGroup", "TestGroup/inner_bad", "TestSub"], ["TestAdd", "TestGroup/inner_ok"], 5),
+        "go-test.txt": ("go", ["TestGroup", "TestGroup/inner_bad", "TestSub"], None, None),
+        "cargo-test.txt": ("cargo", ["tests::nested_path_bad", "tests::subs"], ["tests::adds"], 3),
+        "vitest.txt": ("vitest", ["math.test.js > math > subtracts", "math.test.js > strings > upper"], None, 3),
+        "mocha.txt": ("mocha", ["math nested upper", "math subtracts"], None, 3),
+        "junit-vitest.xml": ("junit", ["math.test.js.math > subtracts", "math.test.js.strings > upper"],
+                             ["math.test.js.math > adds"], 3),
+        "junit-mocha.xml": ("junit", ["math nested.upper", "math.subtracts"], ["math.adds"], 3),
+    }
+
+    def test_each_new_format_yields_a_sorted_failing_set(self):
+        for name, (fmt, failing, passing, checks_run) in self.CASES.items():
+            with self.subTest(fixture=name):
+                result = self.fingerprint(runner_output(name))
+                self.assertEqual((result["format"], result["failing"], result["passing"], result["checks_run"]),
+                                 (fmt, failing, passing, checks_run))
+
+    def test_stderr_carries_the_same_output(self):
+        for name in ("go-test-v.txt", "cargo-test.txt", "mocha.txt"):
+            with self.subTest(fixture=name):
+                self.assertEqual(self.fingerprint(stderr=runner_output(name))["failing"],
+                                 self.fingerprint(runner_output(name))["failing"])
+
+    def test_a_passing_run_in_a_new_format_records_an_empty_set_and_its_count(self):
+        cases = {"go": ("=== RUN   TestAdd\n--- PASS: TestAdd (0.00s)\n=== RUN   TestSub\n--- PASS: TestSub (0.00s)\nPASS\n"
+                        "ok  \texample.test/demo\t0.1s\n", 2),
+                 "cargo": ("test a ... ok\ntest b ... ok\n\ntest result: ok. 2 passed; 0 failed; 1 ignored; "
+                           "0 measured; 0 filtered out; finished in 0.00s\n", 3),
+                 "vitest": (" Test Files  1 passed (1)\n      Tests  4 passed (4)\n", 4),
+                 "mocha": ("  3 passing (5ms)\n  1 pending\n", 4),
+                 "junit": ('<testsuite tests="2"><testcase classname="a" name="b"/><testcase classname="a" name="c"/>'
+                           "</testsuite>\n", 2)}
+        for fmt, (text, checks_run) in cases.items():
+            with self.subTest(format=fmt):
+                result = self.fingerprint(text, exit_code=0)
+                self.assertEqual((result["format"], result["failing"], result["checks_run"]), (fmt, [], checks_run))
+
+    def test_new_format_output_that_cannot_be_trusted_records_no_failing_set(self):
+        junit = runner_output("junit-vitest.xml")
+        cases = {"two formats at once": runner_output("go-test-v.txt") + runner_output("cargo-test.txt"),
+                 "junit and a text format": junit + runner_output("mocha.txt"),
+                 "truncated xml": junit[:junit.index("</testsuite>")],
+                 "entity declaration": '<!DOCTYPE x [<!ENTITY a "b">]>' + junit,
+                 "junit that names no failure": '<testsuite tests="1"><testcase classname="a" name="b"/></testsuite>',
+                 "go build failure": "FAIL\texample.test/demo [build failed]\nFAIL\n",
+                 "cargo compile error": "error[E0425]: cannot find value\n\nerror: could not compile `demo`\n"}
+        for name, text in cases.items():
+            with self.subTest(case=name):
+                result = self.fingerprint(text)
+                self.assertEqual((result["format"], result["failing"]), ("unparsed", None))
+
+    def test_the_ledger_accepts_each_new_format_and_older_ledgers_still_validate(self):
+        schema = json.loads(SCHEMA_PATH.read_text())
+        formats = schema["properties"]["dispatches"]["additionalProperties"]["properties"]["failing_checks"][
+            "properties"]["format"]["enum"]
+        self.assertEqual(formats[:4] + formats[-2:], ["unittest", "pytest", "bun", "jest", "passed", "unparsed"])
+        self.assertEqual({"go", "cargo", "vitest", "mocha", "junit"}, set(formats) - {
+            "unittest", "pytest", "bun", "jest", "passed", "unparsed"})
+
+
+class _CorrectionProgressFixture(_ExecutionControlFixture):
 
     def setUp(self):
         super().setUp()
         self.invoke("start")
         self.verifications = 0
-
-    def verify(self, stdout, exit_code=1, completed=True, command_id="UNIT_TEST", argv=("python3", "-m", "unittest")):
-        """Run one verification dispatch whose output the runner fingerprints into the ledger."""
-        self.verifications += 1
-        dispatch_id = f"verify-{self.verifications}"
-        self.now += 10
-        self.invoke("reserve", dispatch_id=dispatch_id, kind="verification")
-        self.invoke("begin-verification", dispatch_id=dispatch_id)
-        evidence = failing_check_fingerprint(command_id, list(argv), exit_code, completed, stdout.encode(), b"")
-        with patch("speckit_pro_runner.execution_control.time.time", return_value=self.now):
-            record_failing_checks(self.root, {"workflow_file": "feature/workflow.md", "expected_run_id": self.run_id,
-                                              "dispatch_id": dispatch_id}, evidence)
-        self.invoke("complete", dispatch_id=dispatch_id, outcome="failed" if exit_code else "completed")
-        return dispatch_id
 
     def correct(self, dispatch_id, invariant="FR-001", outcome="completed", **inputs):
         self.now += 10
@@ -1668,9 +2043,9 @@ class CorrectionProgressTests(_ExecutionControlFixture, unittest.TestCase):
             self.invoke("complete", dispatch_id=dispatch_id, outcome=outcome)
         return result
 
-    def assert_schema_valid(self, ledger):
-        schema = json.loads(SCHEMA_PATH.read_text())
-        self.assertEqual(json_schema_failures(ledger, schema, schema, "ledger"), [])
+
+class CorrectionProgressTests(_CorrectionProgressFixture, unittest.TestCase):
+    """A correction that measurably converged admits the next one with no operator event (issue 796)."""
 
     def assert_deferred_for(self, result, reason):
         self.assertEqual(result["disposition"], "defer")
@@ -1736,7 +2111,11 @@ class CorrectionProgressTests(_ExecutionControlFixture, unittest.TestCase):
         self.verify(unittest_output("test_x", "test_y"))
         self.correct("fix-u1", invariant="words that name no requirement")
         self.verify(unittest_output("test_x"))
-        self.assert_deferred_for(self.correct("fix-u2", invariant="other words"), "unresolved_family")
+        # The shrunk set is a different untagged family, so only the run-wide cap refuses it; no progress path applies.
+        shrunk = self.correct("fix-u2", invariant="other words")
+        self.assertEqual((shrunk["disposition"], shrunk["reasons"]), ("defer", ["corrective_run_budget_exhausted"]))
+        self.assertNotIn("progress", shrunk)
+        self.assertNotIn("fix-u2", shrunk["ledger"]["dispatches"])
 
     def test_a_narrowed_command_or_a_removed_check_is_not_progress(self):
         self.verify(unittest_output("test_a", "test_b"))
@@ -1866,28 +2245,74 @@ class CorrectionProgressTests(_ExecutionControlFixture, unittest.TestCase):
         self.correct("fix-1")
         self.verify(unittest_output("test_a"))
         self.assertEqual(self.correct("fix-2")["disposition"], "continue")
-        (self.root / "feature/workflow.md").write_text(stage_workflow())
-        opened = self.invoke("begin-stage-epoch", autopilot_args=["--stage", "implement"])
+        opened = self.open_stage_epoch()
         self.assertTrue(opened["stage_epoch_opened"])
         archived = opened["ledger"]["corrective_epochs"][0]["dispatches"]
         self.assertEqual(archived["fix-2"]["progress_of"], "fix-1")
         self.assert_schema_valid(opened["ledger"])
 
 
+class UntaggedFailureFamilyTests(_CorrectionProgressFixture, unittest.TestCase):
+    """An untagged failure takes its family from the failing set the runner recorded, not one shared name."""
+
+    def families(self, result):
+        ledger = result["ledger"]
+        return {ledger["reservations"][item["reservation_id"]]["family"]
+                for item in ledger["dispatches"].values() if item.get("reservation_id") in ledger["reservations"]}
+
+    def test_two_unrelated_untagged_failures_get_separate_families_and_reservations(self):
+        self.verify(runner_output("go-test-v.txt"))
+        first = self.correct("fix-go", invariant="words that name no requirement")
+        self.assertEqual(first["disposition"], "continue")
+        self.verify(runner_output("cargo-test.txt"))
+        second = self.correct("fix-rust", invariant="other words")
+        self.assertEqual(second["disposition"], "continue", second.get("reasons"))
+        families = [record["family"] for record in second["ledger"]["reservations"].values()]
+        self.assertEqual(len(set(families)), 2)
+        self.assertNotIn("unresolved", families)
+        self.assertEqual(second["ledger"]["corrective_cycles"], 2)
+        self.assert_schema_valid(json.loads((self.root / second["ledger_path"]).read_text()))
+
+    def test_the_same_untagged_failing_set_keeps_one_family_and_one_reservation(self):
+        outcomes = []
+        for attempt, words in enumerate(("words that name no requirement", "different words"), 1):
+            self.verify(runner_output("cargo-test.txt"))
+            outcomes.append(self.correct(f"fix-{attempt}", invariant=words))
+        repeated = outcomes[-1]
+        self.assertEqual((outcomes[0]["disposition"], repeated["disposition"], repeated["reasons"]),
+                         ("continue", "defer", ["failure_family_budget_exhausted"]))
+        self.assertRegex(repeated["deferred"]["unit"], r"^untagged-[0-9a-f]{16}$")
+        self.assert_schema_valid(repeated["ledger"])
+        self.assertNotIn("fix-2", repeated["ledger"]["dispatches"])
+
+    def test_the_family_ignores_identifier_order_and_the_tagging_words(self):
+        self.verify(unittest_output("test_a", "test_b"))
+        first = self.correct("fix-1", invariant="words that name no requirement", outcome=None)
+        (family,) = self.families(first)
+        self.assertRegex(family, r"^untagged-[0-9a-f]{16}$")
+
+    def test_an_untagged_failure_with_no_recorded_failing_set_keeps_the_shared_family(self):
+        first = self.correct("fix-1", invariant="words that name no requirement")
+        self.assertEqual(self.families(first), {"unresolved"})
+        self.assert_schema_valid(first["ledger"])
+        denied = self.correct("fix-2", invariant="other words")
+        self.assertEqual(denied["reasons"], ["failure_family_budget_exhausted"])
+
+    def test_an_approved_invariant_still_names_its_own_family(self):
+        self.verify(runner_output("go-test-v.txt"))
+        first = self.correct("fix-1", invariant="FR-001")
+        self.assertEqual(self.families(first), {"FR-001"})
+
+
 class CorrectionProgressGuidanceTests(unittest.TestCase):
     """Both hosts remediate while rounds converge; a deferral is the non-convergence fallback."""
 
-    PLUGIN = Path(__file__).resolve().parents[3] / "speckit-pro"
-
-    def flat(self, relative):
-        return " ".join((self.PLUGIN / relative).read_text().split())
-
     def test_shared_ledger_reference_documents_the_progress_path(self):
-        text = self.flat("skills/speckit-autopilot/references/execution-efficiency.md")
+        text = guide_text("skills/speckit-autopilot/references/execution-efficiency.md")
         self.assertIn("keep remediating while each round converges", text.lower())
         for phrase in ("`progress_of`", "`failing_checks`",
                        "strict subset", "no operator event", "`returned_to_earlier_state`", "`evidence_unparsed`",
-                       "`spec_changed`", "non-convergence fallback", "unittest, pytest, bun, and jest"):
+                       "`spec_changed`", "non-convergence fallback", "unittest, pytest, bun, jest, go test, cargo test, vitest, mocha, and JUnit XML"):
             self.assertIn(phrase, text)
 
     def test_both_hosts_remediate_while_converging_and_defer_only_on_non_convergence(self):
@@ -1901,7 +2326,7 @@ class CorrectionProgressGuidanceTests(unittest.TestCase):
                   "### Blocked Actions Mid-Run", "## PR Packet and Body Boundary"))
         for relative, start, end in pairs:
             with self.subTest(host=relative):
-                section = self.flat(relative).split(start, 1)[1]
+                section = guide_text(relative).split(start, 1)[1]
                 section = section.split(end, 1)[0] if end else section
                 self.assertIn("keep remediating while each round converges", section.lower())
                 self.assertIn("non-convergence", section.lower())
@@ -1915,11 +2340,6 @@ class GateRemediationAllowanceTests(_ExecutionControlFixture, unittest.TestCase)
 
     def spend_run_wide_budget(self):
         IncrementReviewAllowanceTests.spend_run_wide_budget(self)
-
-    def gate_fix(self, dispatch_id, gate, paths, mode="apply", **inputs):
-        request = {"spec_file": "feature/spec.md", "failure_invariant": "FR-001", **inputs}
-        return self.invoke("reserve", mode=mode, dispatch_id=dispatch_id, kind="corrective",
-                           gate_remediation={"gate": gate, "paths": paths}, **request)
 
     def test_documentation_only_g6_remediation_is_admitted_after_run_wide_exhaustion_up_to_the_bound(self):
         self.spend_run_wide_budget()
@@ -1951,9 +2371,7 @@ class GateRemediationAllowanceTests(_ExecutionControlFixture, unittest.TestCase)
         other_gate = self.gate_fix("g4-fix-1", "G4", ["feature/spec.md"])
         self.assertEqual((other_gate["disposition"], other_gate["remediation_allowance"]), ("continue", "gate"))
         self.assertEqual(other_gate["ledger"]["gate_allowances"]["G4"]["rounds"], 1)
-        schema = json.loads((Path(__file__).resolve().parents[3] /
-                             "speckit-pro/speckit_pro_runner/contracts/execution-control.schema.json").read_text())
-        self.assertEqual(json_schema_failures(other_gate["ledger"], schema, schema, "ledger"), [])
+        self.assert_schema_valid(other_gate["ledger"])
 
     def test_code_test_formal_or_outside_paths_are_refused_on_the_gate_allowance(self):
         (self.root / "src").mkdir()
@@ -2014,94 +2432,42 @@ class GateRemediationAllowanceTests(_ExecutionControlFixture, unittest.TestCase)
 
     def test_forged_or_overspent_gate_records_fail_closed(self):
         self.spend_run_wide_budget()
-        admitted = self.gate_fix("g6-fix-1", "G6", ["feature/spec.md"])
-        path = self.root / admitted["ledger_path"]
-        valid = path.read_bytes()
-        forged_dispatch = {"kind": "corrective", "outcome": "reserved", "reserved_at": self.now,
-                           "reservation_id": None, "reconciliations": 0, "gate": "G6"}
-        tampers = {
-            "unlisted gate dispatch": lambda ledger: ledger["dispatches"].update(forged=forged_dispatch),
-            "rounds over the bound": lambda ledger: (
-                ledger["dispatches"].update({"g2": forged_dispatch, "g3": forged_dispatch}),
-                ledger["gate_allowances"]["G6"].update(rounds=3, dispatch_ids=["g6-fix-1", "g2", "g3"])),
-            "counter disagrees": lambda ledger: ledger["gate_allowances"]["G6"].update(rounds=2),
-            "allowance record dropped": lambda ledger: ledger.pop("gate_allowances"),
-            "unreserved corrective": lambda ledger: ledger["dispatches"]["g6-fix-1"].pop("gate"),
-            "gate on a reservation": lambda ledger: ledger["dispatches"]["g6-fix-1"].update(
-                reservation_id=next(iter(ledger["reservations"]))),
-            "unknown gate": lambda ledger: (ledger["gate_allowances"].update({"G1": ledger["gate_allowances"].pop("G6")}),
-                                            ledger["dispatches"]["g6-fix-1"].update(gate="G1")),
-            "gate and increment on one dispatch": lambda ledger: (
-                ledger["dispatches"]["g6-fix-1"].update(increment="alpha"),
-                ledger.update(increment_allowances={"alpha": {"rounds": 1, "dispatch_ids": ["g6-fix-1"]}})),
-        }
-        for name, tamper in tampers.items():
-            with self.subTest(tamper=name):
-                ledger = json.loads(valid)
-                tamper(ledger)
-                path.write_text(json.dumps(ledger), encoding="utf-8")
-                with self.assertRaises(ValueError):
-                    self.invoke("status", mode="read_only")
-        path.write_bytes(valid)
-        self.assertEqual(self.invoke("status", mode="read_only")["disposition"], "continue")
+        path = self.root / self.gate_fix("g6-fix-1", "G6", ["feature/spec.md"])["ledger_path"]
+        tampers = self.allowance_tampers("gate_allowances", "gate", "G6")
+        tampers["unknown gate"] = lambda ledger: (
+            ledger["gate_allowances"].update({"G1": ledger["gate_allowances"].pop("G6")}),
+            ledger["dispatches"]["g6-fix-1"].update(gate="G1"))
+        tampers["gate and increment on one dispatch"] = lambda ledger: (
+            ledger["dispatches"]["g6-fix-1"].update(increment="alpha"),
+            ledger.update(increment_allowances={"alpha": {"rounds": 1, "dispatch_ids": ["g6-fix-1"]}}))
+        self.assert_forgeries_fail_closed(path, path.read_bytes(), tampers)
 
     def test_stage_epoch_archives_gate_allowances(self):
         self.spend_run_wide_budget()
         for number in (1, 2):
             self.gate_fix(f"g6-fix-{number}", "G6", ["feature/tasks.md"])
             self.invoke("complete", dispatch_id=f"g6-fix-{number}", outcome="completed")
-        (self.root / "feature/workflow.md").write_text(stage_workflow())
-        opened = self.invoke("begin-stage-epoch", autopilot_args=["--stage", "implement"])
+        opened = self.open_stage_epoch()
         self.assertEqual(opened["ledger"]["corrective_epochs"][0]["gate_allowances"]["G6"]["rounds"], 2)
         self.assertNotIn("gate_allowances", opened["ledger"])
         self.assertEqual(self.gate_fix("g6-fix-1", "G7", ["feature/tasks.md"])["reasons"],
                          ["dispatch_already_reserved_no_relaunch"])
         fresh = self.gate_fix("g7-fix-1", "G7", ["feature/tasks.md"])
         self.assertEqual((fresh["disposition"], fresh["ledger"]["gate_allowances"]["G7"]["rounds"]), ("continue", 1))
-        schema = json.loads((Path(__file__).resolve().parents[3] /
-                             "speckit-pro/speckit_pro_runner/contracts/execution-control.schema.json").read_text())
-        self.assertEqual(json_schema_failures(fresh["ledger"], schema, schema, "ledger"), [])
+        self.assert_schema_valid(fresh["ledger"])
 
-    def test_both_hosts_document_the_gate_remediation_allowance(self):
-        plugin = Path(__file__).resolve().parents[3] / "speckit-pro"
-        references = plugin / "skills/speckit-autopilot/references"
-        shared = " ".join((references / "execution-efficiency.md").read_text().split())
-        for phrase in ("`gate_remediation`", "`gate_allowances`", "`gate_remediation_allowance_exhausted`",
-                       "`remediation_allowance=gate`", "`remediation_allowance=run_wide`", "`gate_ineligible`",
-                       "`path_outside_planning_documents`", "`feature_binding_mismatch`"):
-            self.assertIn(phrase, shared)
-        gates = (references / "gate-validation.md").read_text()
+    def test_the_gate_table_gives_each_remediation_gate_its_own_allowance(self):
+        gates = (PLUGIN_ROOT / "skills/speckit-autopilot/references/gate-validation.md").read_text()
         rows = {line.split("|")[1].strip(): line.split("|")[5].strip() for line in gates.splitlines()
                 if line.startswith("| G")}
         for gate in ("G2", "G3", "G4", "G5", "G6", "G7"):
             with self.subTest(gate=gate):
                 self.assertIn("own", rows[gate])
         self.assertIn("`gate_remediation_allowance_exhausted`", " ".join(gates.split()))
-        for host in ("skills/speckit-autopilot/references/phase-execution.md",
-                     "codex-skills/speckit-autopilot/references/phase-execution-codex.md"):
-            with self.subTest(host=host):
-                text = " ".join((plugin / host).read_text().split())
-                self.assertIn("`gate_remediation`", text)
-                self.assertIn("planning documents", text)
-                self.assertIn("`gate_remediation_allowance_exhausted`", text)
-                self.assertIn("never a mid-run question", text)
 
 
-GIT_ENVIRONMENT = {**os.environ, "GIT_CONFIG_GLOBAL": os.devnull, "GIT_CONFIG_NOSYSTEM": "1"}
-
-
-def commit_fixture(root):
-    """Commit every file under ``root`` so HEAD holds the task-definition baseline."""
-    if not (root / ".git").exists():
-        subprocess.run(["git", "init", "-q", str(root)], check=True, env=GIT_ENVIRONMENT)
-    subprocess.run(["git", "-C", str(root), "add", "-A"], check=True, env=GIT_ENVIRONMENT)
-    subprocess.run(["git", "-C", str(root), "-c", "user.name=fixture", "-c", "user.email=git@github.com",
-                    "-c", "commit.gpgsign=false", "commit", "-q", "--allow-empty", "-m", "baseline"],
-                   check=True, env=GIT_ENVIRONMENT)
-
-
-class MetadataOnlyCorrectionTests(_ExecutionControlFixture, unittest.TestCase):
-    """A task-verb swap inside the verification verbs is recorded without spending a cycle."""
+class _MetadataTasksFixture(_ExecutionControlFixture):
+    """A feature whose tasks.md carries verification verbs a metadata-only correction may swap."""
 
     TASKS = ("## Phase 1: Setup\n\n"
              "- [ ] T001 Confirm the fixture loads from `src/app.py`\n"
@@ -2114,16 +2480,16 @@ class MetadataOnlyCorrectionTests(_ExecutionControlFixture, unittest.TestCase):
         (self.root / "feature/plan.md").write_text("# Plan\n")
         (self.root / "feature/tasks.md").write_text(self.TASKS)
 
+
+class MetadataOnlyCorrectionTests(_MetadataTasksFixture, unittest.TestCase):
+    """A task-verb swap inside the verification verbs is recorded without spending a cycle."""
+
     def correct(self, dispatch_id, mode="apply", **inputs):
         request = {"spec_file": "feature/spec.md", "failure_invariant": "FR-001", "metadata_only": True, **inputs}
         return self.invoke("reserve", mode=mode, dispatch_id=dispatch_id, kind="corrective", **request)
 
-    def schema(self):
-        return json.loads((Path(__file__).resolve().parents[3] /
-                           "speckit-pro/speckit_pro_runner/contracts/execution-control.schema.json").read_text())
-
     def test_a_verification_verb_swap_is_admitted_without_spending_a_cycle(self):
-        commit_fixture(self.root)
+        commit_baseline(self.root)
         IncrementReviewAllowanceTests.spend_run_wide_budget(self)
         before = self.invoke("status", mode="read_only")["ledger"]
         tasks = self.CORRECTED.replace("- [ ] T003", "- [x] T003").replace("- [ ] T001", "- [x] T001")
@@ -2142,7 +2508,7 @@ class MetadataOnlyCorrectionTests(_ExecutionControlFixture, unittest.TestCase):
                          {"dispatch_id": "verb-fix", "task_ids": ["T001", "T002"], "tasks_file": "feature/tasks.md"})
         self.assertEqual(record["baseline_sha256"], hashlib.sha256(self.TASKS.encode()).hexdigest())
         self.assertEqual(record["corrected_sha256"], hashlib.sha256(tasks.encode()).hexdigest())
-        self.assertEqual(json_schema_failures(ledger, self.schema(), self.schema(), "ledger"), [])
+        self.assert_schema_valid(ledger)
         self.invoke("complete", dispatch_id="verb-fix", outcome="completed")
         self.assertEqual(self.invoke("status", mode="read_only")["ledger"]["corrective_cycles"], 2)
 
@@ -2160,7 +2526,7 @@ class MetadataOnlyCorrectionTests(_ExecutionControlFixture, unittest.TestCase):
 
     def test_the_task_execution_sidecar_must_keep_every_task_entry(self):
         self.write_sidecar()
-        commit_fixture(self.root)
+        commit_baseline(self.root)
         IncrementReviewAllowanceTests.spend_run_wide_budget(self)
         (self.root / "feature/tasks.md").write_text(self.CORRECTED)
         sidecar = self.root / "feature/.process/task-execution.json"
@@ -2185,7 +2551,7 @@ class MetadataOnlyCorrectionTests(_ExecutionControlFixture, unittest.TestCase):
                          ("metadata_only", 2))
 
     def test_a_sidecar_absent_from_the_baseline_is_refused(self):
-        commit_fixture(self.root)
+        commit_baseline(self.root)
         self.invoke("start")
         (self.root / "feature/tasks.md").write_text(self.CORRECTED)
         self.write_sidecar(self.CORRECTED)
@@ -2195,7 +2561,7 @@ class MetadataOnlyCorrectionTests(_ExecutionControlFixture, unittest.TestCase):
         self.assertEqual(refused["ledger"]["corrective_cycles"], 1)
 
     def test_an_unspent_budget_stays_unspent(self):
-        commit_fixture(self.root)
+        commit_baseline(self.root)
         self.invoke("start")
         (self.root / "feature/tasks.md").write_text(self.CORRECTED)
         admitted = self.correct("verb-fix")
@@ -2203,7 +2569,7 @@ class MetadataOnlyCorrectionTests(_ExecutionControlFixture, unittest.TestCase):
         self.assertEqual((admitted["ledger"]["corrective_cycles"], admitted["ledger"]["reservations"]), (0, {}))
 
     def test_scope_changing_edits_take_the_ordinary_path(self):
-        commit_fixture(self.root)
+        commit_baseline(self.root)
         IncrementReviewAllowanceTests.spend_run_wide_budget(self)
         cases = {
             "extra word": self.TASKS.replace("T001 Confirm the", "T001 Verify carefully the"),
@@ -2246,7 +2612,7 @@ class MetadataOnlyCorrectionTests(_ExecutionControlFixture, unittest.TestCase):
                 source.write_text(original)
 
     def test_a_scope_change_under_an_open_budget_spends_an_ordinary_cycle(self):
-        commit_fixture(self.root)
+        commit_baseline(self.root)
         self.invoke("start")
         (self.root / "feature/tasks.md").write_text(self.TASKS.replace("T001 Confirm", "T001 Add"))
         ordinary = self.correct("scope-fix")
@@ -2264,12 +2630,12 @@ class MetadataOnlyCorrectionTests(_ExecutionControlFixture, unittest.TestCase):
                          ("run_wide", "baseline_unavailable"))
         (self.root / "feature/tasks.md").write_text(self.TASKS)
         (self.root / "feature/plan.md").rename(self.root / "plan.md.hold")
-        commit_fixture(self.root)
+        commit_baseline(self.root)
         (self.root / "plan.md.hold").rename(self.root / "feature/plan.md")
         (self.root / "feature/tasks.md").write_text(self.CORRECTED)
         untracked = self.correct("untracked-plan")
         self.assertEqual(untracked["metadata_ineligible"], "baseline_unavailable")
-        commit_fixture(self.root)
+        commit_baseline(self.root)
         (self.root / "feature/tasks.md").write_text(self.CORRECTED)
         with patch("speckit_pro_runner.execution_control.shutil.which", return_value=None):
             no_git = self.correct("no-git")
@@ -2282,19 +2648,19 @@ class MetadataOnlyCorrectionTests(_ExecutionControlFixture, unittest.TestCase):
             self.assertNotIn("metadata_corrections", ledger["ledger"])
 
     def test_a_task_is_corrected_once_per_run_even_across_stage_epochs(self):
-        commit_fixture(self.root)
+        commit_baseline(self.root)
         IncrementReviewAllowanceTests.spend_run_wide_budget(self)
         (self.root / "feature/tasks.md").write_text(self.CORRECTED)
         self.correct("verb-fix")
         self.invoke("complete", dispatch_id="verb-fix", outcome="completed")
-        commit_fixture(self.root)
+        commit_baseline(self.root)
         (self.root / "feature/tasks.md").write_text(self.CORRECTED.replace("T001 Verify", "T001 Check"))
         again = self.correct("verb-fix-again")
         self.assertEqual((again["correction_allowance"], again["metadata_ineligible"]),
                          ("run_wide", "task_already_corrected"))
         (self.root / "feature/tasks.md").write_text(self.CORRECTED)
         (self.root / "feature/workflow.md").write_text(stage_workflow())
-        commit_fixture(self.root)
+        commit_baseline(self.root)
         opened = self.invoke("begin-stage-epoch", autopilot_args=["--stage", "implement"])
         self.assertEqual(opened["ledger"]["corrective_epochs"][0]["metadata_corrections"][0]["task_ids"], ["T001", "T002"])
         (self.root / "feature/tasks.md").write_text(self.CORRECTED.replace("T001 Verify", "T001 Check"))
@@ -2304,7 +2670,7 @@ class MetadataOnlyCorrectionTests(_ExecutionControlFixture, unittest.TestCase):
         self.assertEqual(after_epoch["ledger"]["corrective_cycles"], 1)
 
     def test_a_malformed_request_is_rejected(self):
-        commit_fixture(self.root)
+        commit_baseline(self.root)
         self.invoke("start")
         with self.assertRaisesRegex(ValueError, "explicit spec_file"):
             self.invoke("reserve", dispatch_id="unbound", kind="corrective", metadata_only=True)
@@ -2318,7 +2684,7 @@ class MetadataOnlyCorrectionTests(_ExecutionControlFixture, unittest.TestCase):
                         metadata_only=True)
 
     def test_forged_metadata_records_fail_closed(self):
-        commit_fixture(self.root)
+        commit_baseline(self.root)
         IncrementReviewAllowanceTests.spend_run_wide_budget(self)
         (self.root / "feature/tasks.md").write_text(self.CORRECTED)
         admitted = self.correct("verb-fix")
@@ -2353,13 +2719,7 @@ class MetadataOnlyCorrectionTests(_ExecutionControlFixture, unittest.TestCase):
                 tasks_file="feature/../other/tasks.md"),
             "not a tasks file": lambda ledger: ledger["metadata_corrections"][0].update(tasks_file="feature/plan.md"),
         }
-        for name, tamper in tampers.items():
-            with self.subTest(tamper=name):
-                ledger = json.loads(valid)
-                tamper(ledger)
-                path.write_text(json.dumps(ledger), encoding="utf-8")
-                with self.assertRaises(ValueError):
-                    self.invoke("status", mode="read_only")
+        self.assert_tampers_rejected(path, valid, tampers)
         # A bound run's record must name the bound feature's tasks.md.
         ledger = json.loads(valid)
         ledger.update(approved_invariants=ledger["approved_invariants"] or ["FR-001"],
@@ -2370,8 +2730,7 @@ class MetadataOnlyCorrectionTests(_ExecutionControlFixture, unittest.TestCase):
             self.invoke("status", mode="read_only")
         path.write_bytes(valid)
         self.invoke("complete", dispatch_id="verb-fix", outcome="completed")
-        (self.root / "feature/workflow.md").write_text(stage_workflow())
-        opened = self.invoke("begin-stage-epoch", autopilot_args=["--stage", "implement"])
+        opened = self.open_stage_epoch()
         archived = path.read_bytes()
         ledger = json.loads(archived)
         ledger["dispatches"]["forged"] = {**forged, "metadata_correction": ["T001"]}
@@ -2381,23 +2740,7 @@ class MetadataOnlyCorrectionTests(_ExecutionControlFixture, unittest.TestCase):
             self.invoke("status", mode="read_only")
         path.write_bytes(archived)
         self.assertEqual(opened["disposition"], "continue")
-        self.assertEqual(json_schema_failures(opened["ledger"], self.schema(), self.schema(), "ledger"), [])
-
-    def test_both_hosts_document_the_metadata_only_correction(self):
-        plugin = Path(__file__).resolve().parents[3] / "speckit-pro"
-        shared = " ".join((plugin / "skills/speckit-autopilot/references/execution-efficiency.md").read_text().split())
-        for phrase in ("`metadata_only: true`", "`metadata_corrections`", "`correction_allowance=metadata_only`",
-                       "`correction_allowance=run_wide`", "`metadata_ineligible`", "`PHASE7_VERIFY_KEYWORDS`",
-                       "`baseline_unavailable`", "`planning_source_changed`", "`not_metadata_only`",
-                       "`no_task_correction`", "`task_already_corrected`", "`feature_binding_mismatch`",
-                       "`action=fingerprints`"):
-            self.assertIn(phrase, shared)
-        self.assertNotIn("admission is deferred", shared)
-        for host in ("skills/speckit-autopilot/SKILL.md", "skills/speckit-autopilot/references/error-recovery.md",
-                     "codex-skills/speckit-autopilot/references/error-recovery-codex.md"):
-            with self.subTest(host=host):
-                self.assertIn("`metadata_only: true`", " ".join((plugin / host).read_text().split()))
-
+        self.assert_schema_valid(opened["ledger"])
 
 class WorkflowIdentityTests(_ExecutionControlFixture, unittest.TestCase):
     def test_different_workflows_cannot_adopt_an_existing_ledger(self):
@@ -2486,23 +2829,222 @@ class WorkflowIdentityTests(_ExecutionControlFixture, unittest.TestCase):
         self.assertFalse([path for path in snapshot if "execution-control" in path])
 
 
+class _TestFixFixture(_OwnershipFixture):
+    """Shared fixture for the tests below."""
+
+    TASKS = ("## Phase 3: Stories\n- [ ] T001 Build the alpha increment\n"
+             + "- [ ] T002 Build the beta increment\n")
+
+    OWNERSHIP = {"T001": ("alpha", ["src/alpha", "tests/test_runner.py", "tests/test_alpha_extra.py"]),
+                 "T002": ("beta", ["src/beta", "tests/test_beta.py"])}
+
+    RUNNER_TEST = "tests/test_runner.py"
+    PASSING_TEST = "def test_cancellation():\n    assert True\n"
+
+    def setUp(self):
+        super().setUp()
+        self.start_committed({self.RUNNER_TEST: self.PASSING_TEST, "tests/test_beta.py": "def test_beta():\n    assert True\n",
+                              "tests/test_alpha_extra.py": "def test_extra():\n    assert True\n"})
+        self.spend_corrective_budget()
+
+    def refused_fix(self, dispatch_id, paths, reason):
+        """Request a test fix for alpha, expect it deferred to the run-wide allowance, and return the result."""
+        refused = self.request_fix(dispatch_id, "alpha", paths)
+        self.assertEqual((refused["test_fix_allowance"], refused["test_fix_ineligible"]), ("run_wide", reason))
+        self.assertEqual(refused["disposition"], "defer")
+        self.assertNotIn(dispatch_id, refused["ledger"]["dispatches"])
+        return refused
+
+    def complete_fix(self, dispatch_id="alpha-test-fix"):
+        """Implement, admit a test fix for alpha, apply it to the test file, and complete it."""
+        self.implement()
+        self.request_fix(dispatch_id, "alpha", [self.RUNNER_TEST])
+        self.write(self.RUNNER_TEST, self.PASSING_TEST)
+        return self.invoke("complete", dispatch_id=dispatch_id, outcome="completed")
+
+    def implement(self):
+        """alpha stops at RED: its optional mock in an existing test file breaks the cancellation test."""
+        reserved = self.invoke("reserve", dispatch_id="alpha-implement", kind="implementation", tdd_units=["alpha"])
+        self.assertEqual(reserved["disposition"], "continue")
+        self.write("src/alpha/core.py", "def cancel():\n    return None\n")
+        self.write(self.RUNNER_TEST, "import mock\n\ndef test_cancellation():\n    assert False\n")
+        done = self.invoke("complete", dispatch_id="alpha-implement", outcome="failed")
+        self.assertEqual(done["ledger"]["dispatches"]["alpha-implement"]["changed_paths"],
+                         ["src/alpha/core.py", self.RUNNER_TEST])
+        self.invoke("reserve", dispatch_id="beta-implement", kind="implementation", tdd_units=["beta"])
+        self.write("tests/test_beta.py", "def test_beta():\n    assert 1\n")
+        self.invoke("complete", dispatch_id="beta-implement", outcome="completed")
+
+class IncrementTestFixAllowanceTests(_TestFixFixture, unittest.TestCase):
+    """A test-only fix to test code an increment itself edited in this run needs no re-plan (issue 826)."""
+
+    def test_a_test_only_fix_to_the_increments_own_test_edit_runs_without_a_replan(self):
+        self.implement()
+        admitted = self.request_fix("alpha-test-fix", "alpha", [self.RUNNER_TEST])
+        self.assertEqual((admitted["disposition"], admitted["test_fix_allowance"]), ("continue", "increment"))
+        self.assertIsNone(admitted["reservation_id"])
+        ledger = admitted["ledger"]
+        self.assertEqual(ledger["corrective_cycles"], 2)
+        self.assertNotIn("corrective_epochs", ledger)
+        self.assertEqual(ledger["test_fix_allowances"], {"alpha": {"rounds": 1, "dispatch_ids": ["alpha-test-fix"]}})
+        self.assertEqual(ledger["dispatches"]["alpha-test-fix"]["test_fix"], "alpha")
+        self.write(self.RUNNER_TEST, self.PASSING_TEST)
+        completed = self.invoke("complete", dispatch_id="alpha-test-fix", outcome="completed")
+        self.assertEqual(completed["disposition"], "continue")
+        record = completed["ledger"]["dispatches"]["alpha-test-fix"]
+        self.assertEqual((record["outcome"], record["changed_paths"]), ("completed", [self.RUNNER_TEST]))
+        self.assertNotIn("worktree_before", record)
+        self.assert_schema_valid(completed["ledger"])
+        ordinary = self.invoke("reserve", mode="dry_run", dispatch_id="ordinary", kind="corrective",
+                               failure_invariant="FR-001")
+        self.assertEqual(ordinary["reasons"], ["failure_family_budget_exhausted"])
+
+    def test_a_fix_that_touches_product_code_is_refused(self):
+        self.implement()
+        refused = self.refused_fix("alpha-product", [self.RUNNER_TEST, "src/alpha/core.py"], "path_not_test_code")
+        self.assertEqual((refused["reasons"], "test_fix_allowances" in refused["ledger"]),
+                         (["failure_family_budget_exhausted"], False))
+
+    def test_a_test_file_the_increment_did_not_edit_in_this_run_is_refused(self):
+        self.implement()
+        cases = {"another increment's test file": ("tests/test_beta.py", "path_outside_increment_ownership"),
+                 "an owned test file nobody edited": ("tests/test_alpha_extra.py", "path_not_edited_by_increment"),
+                 "an owned directory": ("src/alpha", "path_not_test_code")}
+        for name, (path, reason) in cases.items():
+            with self.subTest(case=name):
+                refused = self.request_fix("alpha-" + name.replace(" ", "-").replace("'", ""), "alpha", [path])
+                self.assertEqual((refused["test_fix_allowance"], refused["test_fix_ineligible"]), ("run_wide", reason))
+                self.assertEqual(refused["disposition"], "defer")
+        beta_edit = self.request_fix("beta-claims-alpha", "alpha", ["tests/test_beta.py"])
+        self.assertEqual(beta_edit["test_fix_ineligible"], "path_outside_increment_ownership")
+        unrecorded = self.request_fix("gamma-fix", "gamma", [self.RUNNER_TEST])
+        self.assertEqual(unrecorded["test_fix_ineligible"], "increment_not_in_ownership_evidence")
+
+
+class IncrementTestFixEditTests(_TestFixFixture, unittest.TestCase):
+    """A test fix completes only when its recorded edits stay inside its declared test files."""
+
+    def test_edits_are_attributed_only_to_recorded_implementation_dispatches(self):
+        self.invoke("reserve", dispatch_id="untagged-implement", kind="implementation")
+        self.write(self.RUNNER_TEST, "import mock\n")
+        self.invoke("complete", dispatch_id="untagged-implement", outcome="failed")
+        refused = self.request_fix("alpha-untagged", "alpha", [self.RUNNER_TEST])
+        self.assertEqual(refused["test_fix_ineligible"], "path_not_edited_by_increment")
+        with patch("speckit_pro_runner.execution_control.shutil.which", return_value=None):
+            self.invoke("reserve", dispatch_id="no-git-implement", kind="implementation", tdd_units=["alpha"])
+            self.write(self.RUNNER_TEST, "import other_mock\n")
+            done = self.invoke("complete", dispatch_id="no-git-implement", outcome="failed")
+        self.assertNotIn("changed_paths", done["ledger"]["dispatches"]["no-git-implement"])
+        self.assertEqual(self.request_fix("alpha-no-git", "alpha", [self.RUNNER_TEST])["test_fix_ineligible"],
+                         "path_not_edited_by_increment")
+        with self.assertRaises(ValueError):
+            self.invoke("reserve", dispatch_id="tagged-corrective", kind="corrective", failure_invariant="FR-001",
+                        tdd_units=["alpha"])
+        for malformed in ([], ["alpha", "alpha"], [""], "alpha"):
+            with self.subTest(tdd_units=malformed), self.assertRaises(ValueError):
+                self.invoke("reserve", dispatch_id="malformed-implement", kind="implementation", tdd_units=malformed)
+
+    def test_a_second_test_fix_for_the_same_increment_is_refused(self):
+        self.complete_fix()
+        allowances = self.refused_fix("alpha-test-fix-2", [self.RUNNER_TEST], "test_fix_allowance_spent")["ledger"]
+        self.assertEqual(allowances["test_fix_allowances"]["alpha"]["rounds"], 1)
+
+    def test_a_fix_that_changes_nothing_or_leaves_its_declared_test_paths_does_not_complete(self):
+        self.implement()
+        self.request_fix("alpha-test-fix", "alpha", [self.RUNNER_TEST])
+        for edits in ({}, {self.RUNNER_TEST: self.PASSING_TEST, "src/alpha/core.py": "def cancel():\n    return 1\n"}):
+            for relative, text in edits.items():
+                self.write(relative, text)
+            refused = self.invoke("complete", dispatch_id="alpha-test-fix", outcome="completed")
+            self.assertEqual((refused["disposition"], refused["reasons"]),
+                             ("checkpoint_required", ["test_fix_scope_unproven"]))
+            self.assertEqual(refused["ledger"]["dispatches"]["alpha-test-fix"]["outcome"], "reserved")
+        failed = self.invoke("complete", dispatch_id="alpha-test-fix", outcome="failed")
+        record = failed["ledger"]["dispatches"]["alpha-test-fix"]
+        self.assertEqual((record["outcome"], record["changed_paths"]), ("failed", ["src/alpha/core.py", self.RUNNER_TEST]))
+
+class IncrementTestFixRecordTests(_TestFixFixture, unittest.TestCase):
+    """Test-fix records stay separate from review deferrals, fail closed when forged, and archive on a new epoch."""
+
+    def test_a_completed_test_fix_does_not_resolve_a_deferred_review_fix(self):
+        self.implement()
+        for dispatch_id in ("alpha-review-1", "alpha-review-2"):
+            request = dict(dispatch_id=dispatch_id, kind="corrective", spec_file="feature/spec.md",
+                           failure_invariant="FR-001", review_remediation={"tdd_unit": "alpha", "paths": ["src/alpha"]})
+            self.invoke("reserve", **request)
+            self.invoke("complete", dispatch_id=dispatch_id, outcome="completed")
+        deferred = self.invoke("reserve", dispatch_id="alpha-review-3", kind="corrective", spec_file="feature/spec.md",
+                               failure_invariant="FR-001",
+                               review_remediation={"tdd_unit": "alpha", "paths": ["src/alpha"]})
+        self.assertEqual(deferred["reasons"], ["increment_review_allowance_exhausted"])
+        self.assertEqual(self.request_fix("alpha-test-fix", "alpha", [self.RUNNER_TEST])["test_fix_allowance"], "increment")
+        self.write(self.RUNNER_TEST, self.PASSING_TEST)
+        completed = self.invoke("complete", dispatch_id="alpha-test-fix", outcome="completed")
+        entry = completed["ledger"]["deferred"][0]
+        self.assertEqual((entry["unit"], "resolved_by" in entry), ("alpha", False))
+
+    def test_forged_test_fix_and_edit_records_fail_closed(self):
+        self.implement()
+        path = self.root / self.request_fix("alpha-test-fix", "alpha", [self.RUNNER_TEST])["ledger_path"]
+        tampers = self.allowance_tampers("test_fix_allowances", "test_fix", "alpha",
+                                         test_fix_paths=[self.RUNNER_TEST])
+
+        def set_paths(dispatch, paths):
+            return lambda ledger: ledger["dispatches"][dispatch].update(changed_paths=paths)
+
+        tampers.update({
+            "product path declared": lambda ledger: ledger["dispatches"]["alpha-test-fix"].update(
+                test_fix_paths=["src/alpha/core.py"]),
+            "test fix and increment review at once": lambda ledger: ledger["dispatches"]["alpha-test-fix"].update(
+                increment="alpha"),
+            "edits on an untagged dispatch": set_paths("fix-a", [self.RUNNER_TEST]),
+            "units on a corrective dispatch": lambda ledger: ledger["dispatches"]["fix-a"].update(tdd_units=["alpha"]),
+            "unsorted edits": set_paths("alpha-implement", [self.RUNNER_TEST, "src/alpha/core.py"]),
+            "escaping edit": set_paths("alpha-implement", ["../outside.py"]),
+            "snapshot after settlement": lambda ledger: ledger["dispatches"]["alpha-implement"].update(
+                worktree_before={"head": "0" * 40, "dirty": {}}),
+        })
+        self.assert_forgeries_fail_closed(path, path.read_bytes(), tampers)
+
+    def test_a_replan_archives_the_test_fix_allowance(self):
+        self.complete_fix()
+        opened = self.open_stage_epoch()
+        self.assertEqual(opened["ledger"]["corrective_epochs"][0]["test_fix_allowances"]["alpha"]["rounds"], 1)
+        self.assertNotIn("test_fix_allowances", opened["ledger"])
+        self.assert_schema_valid(opened["ledger"])
+
+
+class IncrementTestFixRequestTests(_TestFixFixture, unittest.TestCase):
+    """Malformed test-fix requests are rejected and both hosts document the allowance."""
+
+    def test_malformed_test_fix_requests_are_rejected(self):
+        for malformed in ({"tdd_unit": "alpha"}, {"tdd_unit": "alpha", "paths": "tests/x.py"},
+                          {"tdd_unit": "", "paths": ["tests/x.py"]}, ["alpha"]):
+            with self.subTest(malformed=malformed), self.assertRaises(ValueError):
+                self.invoke("reserve", dispatch_id="malformed", kind="corrective", spec_file="feature/spec.md",
+                            test_fix=malformed)
+        request = {"tdd_unit": "alpha", "paths": [self.RUNNER_TEST]}
+        for extra in ({"review_remediation": request}, {"gate_remediation": {"gate": "G6", "paths": []}},
+                      {"metadata_only": True}):
+            with self.subTest(extra=list(extra)), self.assertRaises(ValueError):
+                self.invoke("reserve", dispatch_id="mixed", kind="corrective", spec_file="feature/spec.md",
+                            test_fix=request, **extra)
+        with self.assertRaisesRegex(ValueError, "explicit spec_file"):
+            self.invoke("reserve", dispatch_id="no-spec", kind="corrective", test_fix=request)
+        with self.assertRaises(ValueError):
+            self.invoke("reserve", dispatch_id="not-corrective", kind="implementation", spec_file="feature/spec.md",
+                        test_fix=request)
+
 class SelfIgnoringByproductDirectoryTests(_ExecutionControlFixture, unittest.TestCase):
     """#813: every runner byproduct directory ignores itself from the run's first write."""
 
     def setUp(self):
         super().setUp()
-        self.environment = {**os.environ, "GIT_CONFIG_GLOBAL": os.devnull, "GIT_CONFIG_NOSYSTEM": "1"}
-        self.git("init", "-q")
-        self.git("add", "-A")
-        self.git("-c", "user.name=fixture", "-c", "user.email=git@github.com", "commit", "-q", "-m", "base")
-
-    def git(self, *args, check=True):
-        return subprocess.run(["git", "-C", str(self.root), *args], check=check, capture_output=True, text=True,
-                              env=self.environment)
+        commit_baseline(self.root, "base")
 
     def assert_clean_and_ignored(self, relative):
-        self.assertEqual(self.git("status", "--porcelain", "--untracked-files=all").stdout, "")
-        self.assertEqual(self.git("check-ignore", "-q", relative, check=False).returncode, 0, relative)
+        self.assertEqual(git(self.root, "status", "--porcelain", "--untracked-files=all").stdout, "")
+        self.assertEqual(git(self.root, "check-ignore", "-q", relative, check=False).returncode, 0, relative)
 
     def test_ledger_directory_is_ignored_after_the_first_write(self):
         started = self.invoke("start")
@@ -2524,21 +3066,17 @@ class SelfIgnoringByproductDirectoryTests(_ExecutionControlFixture, unittest.Tes
         record.parent.mkdir(exist_ok=True)
         record.write_text("{}\n")
         checkpoint.write_text("{}\n")
-        self.assertEqual(self.git("check-ignore", "-q", "feature/.process/checkpoints/M1.json", check=False).returncode, 1)
-        self.git("add", "--force", "--", "feature/.process/verification/M1.json")
-        self.git("add", "--", "feature/.process/checkpoints/M1.json")
-        self.git("-c", "user.name=fixture", "-c", "user.email=git@github.com", "commit", "-q", "-m", "marker")
+        self.assertEqual(git(self.root, "check-ignore", "-q", "feature/.process/checkpoints/M1.json", check=False).returncode, 1)
+        git(self.root, "add", "--force", "--", "feature/.process/verification/M1.json")
+        git(self.root, "add", "--", "feature/.process/checkpoints/M1.json")
+        git(self.root, "commit", "-q", "-m", "marker")
         record.write_text('{"status": "complete"}\n')
-        self.assertEqual(self.git("status", "--porcelain").stdout, " M feature/.process/verification/M1.json\n")
-        self.assertEqual(self.git("check-ignore", "-q", "feature/.process/verification/M1.json", check=False).returncode, 1)
+        self.assertEqual(git(self.root, "status", "--porcelain").stdout, " M feature/.process/verification/M1.json\n")
+        self.assertEqual(git(self.root, "check-ignore", "-q", "feature/.process/verification/M1.json", check=False).returncode, 1)
 
     def test_both_hosts_say_the_verification_directory_is_self_ignoring(self):
-        plugin = Path(__file__).resolve().parents[3] / "speckit-pro"
-        for name in ("skills/speckit-autopilot/references/phase-execution.md",
-                     "codex-skills/speckit-autopilot/references/phase-execution-codex.md"):
-            with self.subTest(file=name):
-                text = " ".join((plugin / name).read_text(encoding="utf-8").split())
-                self.assertIn("the verification directory is self-ignoring before any verification record exists", text)
+        assert_guides_say(self, PHASE_EXECUTION_GUIDES,
+                          ("the verification directory is self-ignoring before any verification record exists",))
 
 
 class VerificationTests(unittest.TestCase):
@@ -2851,8 +3389,8 @@ class VerificationTests(unittest.TestCase):
                       validate_execution_record(self.root, {**inputs, "record_path": stray})["reasons"])
 
 
-class RunnerDispatchTests(unittest.TestCase):
-    """Exercise actual request-envelope entrypoints in a temporary consumer repo."""
+class _RunnerRouteFixture(_LedgerScenarios):
+    """Drive execution-control through the runner's request envelope in a temporary consumer repo."""
 
     def setUp(self):
         VerificationTests.setUp(self)
@@ -2870,6 +3408,13 @@ class RunnerDispatchTests(unittest.TestCase):
         if helper == "execution-control" and "ledger" in result["data"]:
             self.run_id = result["data"]["ledger"]["run_id"]
         return process.returncode, result
+
+    def invoke(self, action, mode="apply", **inputs):
+        return self.call_runner("execution-control", mode, action=action, **inputs)
+
+
+class RunnerDispatchTests(_RunnerRouteFixture, unittest.TestCase):
+    """Exercise actual request-envelope entrypoints in a temporary consumer repo."""
 
     def test_ledger_and_verification_helpers_are_real_runner_routes(self):
         code, started = self.call_runner("execution-control", "apply", action="start")
@@ -2912,11 +3457,7 @@ class RunnerDispatchTests(unittest.TestCase):
 
     def test_replan_epoch_is_a_real_runner_route(self):
         self.call_runner("execution-control", "apply", action="start")
-        for dispatch_id, invariant in (("fix-a", "FR-001"), ("fix-b", "FR-002")):
-            self.call_runner("execution-control", "apply", action="reserve", dispatch_id=dispatch_id,
-                             kind="corrective", failure_invariant=invariant)
-            self.call_runner("execution-control", "apply", action="complete", dispatch_id=dispatch_id,
-                             outcome="failed")
+        self.spend_corrective_budget(outcome="failed")
         spec = self.root / "feature/spec.md"
         spec.write_text("- FR-001: preserve data\n- FR-002: no secrets\n- FR-003: explain refusals\n")
         event = {"native_event_id": "operator-replan", "run_id": self.run_id,
@@ -2938,11 +3479,7 @@ class RunnerDispatchTests(unittest.TestCase):
         code, bound = self.call_runner("execution-control", "apply", action="bind-invariants",
                                        spec_file="feature/spec.md")
         self.assertEqual(code, 0, bound)
-        for dispatch_id, invariant in (("fix-a", "FR-001"), ("fix-b", "FR-002")):
-            self.call_runner("execution-control", "apply", action="reserve", dispatch_id=dispatch_id,
-                             kind="corrective", failure_invariant=invariant)
-            self.call_runner("execution-control", "apply", action="complete", dispatch_id=dispatch_id,
-                             outcome="failed")
+        self.spend_corrective_budget(outcome="failed")
         failure_class = {"test_file": "tests/cli.test.ts", "failure_signature": "Test timed out in 5000ms",
                          "change_kind": "test_timeout"}
         event = {"native_event_id": "operator-class", "run_id": self.run_id,
@@ -2966,14 +3503,10 @@ class RunnerDispatchTests(unittest.TestCase):
 
     def test_increment_review_allowance_is_a_real_runner_route(self):
         (self.root / "feature/spec.md").write_text("- FR-001: preserve data\n- FR-002: no secrets\n")
-        self.TASKS, self.OWNERSHIP = IncrementReviewAllowanceTests.TASKS, IncrementReviewAllowanceTests.OWNERSHIP
-        IncrementReviewAllowanceTests.write_sidecar(self)
+        self.TASKS, self.OWNERSHIP = _IncrementReviewFixture.TASKS, _IncrementReviewFixture.OWNERSHIP
+        _OwnershipFixture.write_sidecar(self)
         self.call_runner("execution-control", "apply", action="start")
-        for dispatch_id, invariant in (("fix-a", "FR-001"), ("fix-b", "FR-002")):
-            self.call_runner("execution-control", "apply", action="reserve", dispatch_id=dispatch_id,
-                             kind="corrective", failure_invariant=invariant)
-            self.call_runner("execution-control", "apply", action="complete", dispatch_id=dispatch_id,
-                             outcome="completed")
+        self.spend_corrective_budget()
         code, admitted = self.call_runner("execution-control", "apply", action="reserve", dispatch_id="alpha-review",
                                           kind="corrective", failure_invariant="FR-001", spec_file="feature/spec.md",
                                           review_remediation={"tdd_unit": "alpha", "paths": ["src/alpha/core.py"]})
@@ -2983,11 +3516,7 @@ class RunnerDispatchTests(unittest.TestCase):
     def test_gate_remediation_allowance_is_a_real_runner_route(self):
         (self.root / "feature/spec.md").write_text("- FR-001: preserve data\n- FR-002: no secrets\n")
         self.call_runner("execution-control", "apply", action="start")
-        for dispatch_id, invariant in (("fix-a", "FR-001"), ("fix-b", "FR-002")):
-            self.call_runner("execution-control", "apply", action="reserve", dispatch_id=dispatch_id,
-                             kind="corrective", failure_invariant=invariant)
-            self.call_runner("execution-control", "apply", action="complete", dispatch_id=dispatch_id,
-                             outcome="completed")
+        self.spend_corrective_budget()
         code, admitted = self.call_runner("execution-control", "apply", action="reserve", dispatch_id="g6-fix",
                                           kind="corrective", failure_invariant="FR-001", spec_file="feature/spec.md",
                                           gate_remediation={"gate": "G6", "paths": ["feature/tasks.md"]})
@@ -2998,13 +3527,9 @@ class RunnerDispatchTests(unittest.TestCase):
         (self.root / "feature/spec.md").write_text("- FR-001: preserve data\n- FR-002: no secrets\n")
         (self.root / "feature/plan.md").write_text("# Plan\n")
         (self.root / "feature/tasks.md").write_text(MetadataOnlyCorrectionTests.TASKS)
-        commit_fixture(self.root)
+        commit_baseline(self.root)
         self.call_runner("execution-control", "apply", action="start")
-        for dispatch_id, invariant in (("fix-a", "FR-001"), ("fix-b", "FR-002")):
-            self.call_runner("execution-control", "apply", action="reserve", dispatch_id=dispatch_id,
-                             kind="corrective", failure_invariant=invariant)
-            self.call_runner("execution-control", "apply", action="complete", dispatch_id=dispatch_id,
-                             outcome="completed")
+        self.spend_corrective_budget()
         (self.root / "feature/tasks.md").write_text(MetadataOnlyCorrectionTests.CORRECTED)
         code, admitted = self.call_runner("execution-control", "apply", action="reserve", dispatch_id="verb-fix",
                                           kind="corrective", failure_invariant="FR-001", spec_file="feature/spec.md",
@@ -3015,11 +3540,7 @@ class RunnerDispatchTests(unittest.TestCase):
 
     def test_stage_epoch_is_a_real_runner_route(self):
         self.call_runner("execution-control", "apply", action="start")
-        for dispatch_id, invariant in (("fix-a", "FR-001"), ("fix-b", "FR-002")):
-            self.call_runner("execution-control", "apply", action="reserve", dispatch_id=dispatch_id,
-                             kind="corrective", failure_invariant=invariant)
-            self.call_runner("execution-control", "apply", action="complete", dispatch_id=dispatch_id,
-                             outcome="failed")
+        self.spend_corrective_budget(outcome="failed")
         (self.root / "feature/workflow.md").write_text(stage_workflow())
         code, preview = self.call_runner("execution-control", "dry_run", action="begin-stage-epoch",
                                          autopilot_args=["--stage", "implement"])
@@ -3053,6 +3574,55 @@ class RunnerDispatchTests(unittest.TestCase):
         self.assertIn("fingerprints", result["data"]["stdout_json"])
         code, result = self.call_runner("validate-task-execution", "apply", tasks_file="feature/tasks.md")
         self.assertEqual(code, 2, result)
+
+
+class RunnerConvergenceRouteTests(_RunnerRouteFixture, unittest.TestCase):
+    """A shrinking failing set continues a correction family through the real runner routes."""
+
+    def test_go_test_output_admits_a_converging_correction_through_the_real_runner_routes(self):
+        """End to end: `go test -v` output the runner executed lets a shrinking failing set continue a family."""
+        self.assert_shrinking_failures_continue(
+            "go", "go-test-v.txt", "go-test-v-shrunk.txt", ["TestGroup", "TestGroup/inner_bad"])
+
+    def test_cargo_test_output_admits_a_converging_correction_through_the_real_runner_routes(self):
+        """End to end: `cargo test` output the runner executed lets a shrinking failing set continue a family."""
+        self.assert_shrinking_failures_continue(
+            "cargo", "cargo-test.txt", "cargo-test-shrunk.txt", ["tests::nested_path_bad"])
+
+    def assert_shrinking_failures_continue(self, format_name, first_fixture, shrunk_fixture, shrunk_failing):
+        (self.root / "feature/spec.md").write_text("- FR-001: preserve data\n")
+        self.call_runner("execution-control", "apply", action="start")
+
+        def verify(dispatch_id, fixture):
+            (self.root / "check.py").write_text("import sys\nsys.stdout.write(" + repr(runner_output(fixture))
+                                                + ")\nsys.exit(1)\n")
+            self.call_runner("execution-control", "apply", action="reserve", dispatch_id=dispatch_id,
+                             kind="verification")
+            code, executed = self.call_runner("execute-verification", "apply", command_id="UNIT_TEST",
+                                              dispatch_id=dispatch_id)
+            self.assertEqual(code, 0, executed)
+            self.call_runner("execution-control", "apply", action="complete", dispatch_id=dispatch_id,
+                             outcome="failed")
+
+        def correct(dispatch_id):
+            code, result = self.call_runner("execution-control", "apply", action="reserve", dispatch_id=dispatch_id,
+                                            kind="corrective", failure_invariant="FR-001")
+            self.assertEqual(code, 0, result)
+            if result["data"]["disposition"] == "continue":
+                self.call_runner("execution-control", "apply", action="complete", dispatch_id=dispatch_id,
+                                 outcome="completed")
+            return result["data"]
+
+        verify("verify-1", first_fixture)
+        self.assertEqual(correct("fix-1")["disposition"], "continue")
+        verify("verify-2", shrunk_fixture)
+        second = correct("fix-2")
+        self.assertEqual(second["disposition"], "continue", second)
+        self.assertEqual((second["progress"]["admitted"], second["progress"]["change"]), (True, "shrank"))
+        ledger = second["ledger"]
+        self.assertEqual(ledger["corrective_cycles"], 1)
+        self.assertEqual(ledger["dispatches"]["verify-1"]["failing_checks"]["format"], format_name)
+        self.assertEqual(ledger["dispatches"]["verify-2"]["failing_checks"]["failing"], shrunk_failing)
 
 
 class DockerVerificationTests(VerificationTests):
@@ -3139,16 +3709,512 @@ class DockerVerificationTests(VerificationTests):
                 execute_verification(self.root, self.inputs, "dry_run")
 
 
+class _UnknownDispatchFixture(_OwnershipFixture):
+    """Shared fixture for the tests below."""
+
+    TASKS = ("## Phase 3: Stories\n- [ ] T001 Build the alpha core\n- [ ] T002 Build the alpha edge\n"
+             + "- [ ] T003 Build the beta increment\n")
+
+    OWNERSHIP = {"T001": ("alpha", ["src/alpha"]), "T002": ("alpha", ["src/alpha"]), "T003": ("beta", ["src/beta"])}
+
+    BLOCKED = "unknown_dispatch_blocks_unit"
+
+    def setUp(self):
+        super().setUp()
+        self.start_committed({"src/alpha/core.py": "VALUE = 0\n", "src/beta/core.py": "VALUE = 0\n"})
+
+    def dispatch(self, dispatch_id, unit, outcome=None):
+        result = self.invoke("reserve", dispatch_id=dispatch_id, kind="implementation", tdd_units=[unit])
+        if outcome is not None:
+            result = self.invoke("complete", dispatch_id=dispatch_id, outcome=outcome)
+        return result
+
+    def reconcile(self, dispatch_id, classification, **extra):
+        return self.invoke_for_spec("reconcile-unit", dispatch_id=dispatch_id, classification=classification, **extra)
+
+    def check_tasks(self, *task_ids):
+        path = self.root / "feature/tasks.md"
+        text = path.read_text()
+        for task_id in task_ids:
+            text = text.replace(f"- [ ] {task_id}", f"- [x] {task_id}")
+        path.write_text(text)
+
+
+class UnknownDispatchUnitScopeTests(_UnknownDispatchFixture, unittest.TestCase):
+    """An unknown dispatch outcome blocks only its own unit; the runner reconciles it from git state (issue 831)."""
+
+    def test_an_unknown_outcome_leaves_independent_units_dispatchable(self):
+        self.dispatch("alpha-1", "alpha", "unknown")
+        status = self.invoke("status", mode="read_only")
+        self.assertEqual((status["disposition"], status["reasons"]), ("continue", []))
+        self.assertEqual(status["unknown_dispatch_ids"], ["alpha-1"])
+        beta = self.dispatch("beta-1", "beta")
+        self.assertEqual((beta["disposition"], beta["reasons"]), ("continue", []))
+        self.invoke("complete", dispatch_id="beta-1", outcome="completed")
+        for label, request in {
+                "same unit": {"kind": "implementation", "tdd_units": ["alpha"]},
+                "overlapping units": {"kind": "implementation", "tdd_units": ["beta", "alpha"]},
+                "review of the unit": {"kind": "corrective", "failure_invariant": "FR-001", "spec_file": "feature/spec.md",
+                                       "review_remediation": {"tdd_unit": "alpha", "paths": ["src/alpha/core.py"]}},
+                "unscoped work": {"kind": "implementation"}}.items():
+            with self.subTest(label):
+                blocked = self.invoke("reserve", dispatch_id="next-" + label.replace(" ", "-"), **request)
+                self.assertEqual((blocked["disposition"], blocked["reasons"], blocked["blocked_by"]),
+                                 ("checkpoint_required", [self.BLOCKED], ["alpha-1"]))
+                self.assertNotIn("next-" + label.replace(" ", "-"), blocked["ledger"]["dispatches"])
+        corrective = self.invoke("reserve", dispatch_id="beta-fix", kind="corrective", failure_invariant="FR-002")
+        self.assertEqual(corrective["disposition"], "continue")
+
+    def test_an_unscoped_unknown_dispatch_still_blocks_all_new_dispatch(self):
+        self.invoke("reserve", dispatch_id="worker", kind="implementation")
+        self.invoke("complete", dispatch_id="worker", outcome="unknown")
+        blocked = self.dispatch("beta-1", "beta")
+        self.assertEqual((blocked["disposition"], blocked["reasons"]), ("checkpoint_required", [self.BLOCKED]))
+        refused = self.reconcile("worker", "no_effect")
+        self.assertEqual(refused["reasons"], ["unit_not_reconcilable"])
+
+    def test_no_effect_marks_the_dispatch_failed_and_allows_a_redispatch_with_no_parent_event(self):
+        self.dispatch("alpha-1", "alpha", "unknown")
+        (self.root / "src/beta/core.py").write_text("VALUE = 1\n")
+        result = self.reconcile("alpha-1", "no_effect")
+        record = result["ledger"]["dispatches"]["alpha-1"]
+        self.assertEqual((result["disposition"], result["reconciled"], result["relaunch_allowed"]),
+                         ("continue", "no_effect", True))
+        self.assertEqual((record["outcome"], record["reconciled_as"], record["changed_paths"]), ("failed", "no_effect", []))
+        self.assertNotIn("resolution_event_id", record)
+        self.assertNotIn("worktree_before", record)
+        again = self.dispatch("alpha-2", "alpha")
+        self.assertEqual((again["disposition"], again["reasons"]), ("continue", []))
+        self.assert_schema_valid(again["ledger"])
+
+
+class UnknownDispatchVerificationTests(_UnknownDispatchFixture, unittest.TestCase):
+    """A reconciled unknown dispatch is released only by a completed verification, and a forged classification fails closed."""
+
+    def test_partial_changes_need_a_verification_pass_before_the_unit_is_released(self):
+        self.dispatch("alpha-1", "alpha", "unknown")
+        (self.root / "src/alpha/core.py").write_text("VALUE = 1\n")
+        result = self.reconcile("alpha-1", "partial")
+        record = result["ledger"]["dispatches"]["alpha-1"]
+        self.assertEqual((result["reconciled"], result["verification_required"]), ("partial", True))
+        self.assertEqual((record["outcome"], record["reconciliation"]["class"], record["reconciliation"]["paths"]),
+                         ("unknown", "partial", ["src/alpha/core.py"]))
+        self.assertEqual(self.dispatch("alpha-2", "alpha")["reasons"], [self.BLOCKED])
+        self.assertEqual(self.invoke("complete", dispatch_id="alpha-1", outcome="failed")["reasons"],
+                         ["missing_independent_native_result"])
+        self.invoke("reserve", dispatch_id="verify-1", kind="verification", verifies_dispatch_id="alpha-1")
+        early = self.invoke("complete", dispatch_id="alpha-1", outcome="failed", verification_dispatch_id="verify-1")
+        self.assertEqual(early["reasons"], ["unit_verification_not_completed"])
+        self.invoke("begin-verification", dispatch_id="verify-1")
+        self.invoke("complete", dispatch_id="verify-1", outcome="completed")
+        wrong = self.invoke("complete", dispatch_id="alpha-1", outcome="completed", verification_dispatch_id="verify-1")
+        self.assertEqual(wrong["reasons"], ["unit_resolution_mismatch"])
+        resolved = self.invoke("complete", dispatch_id="alpha-1", outcome="failed", verification_dispatch_id="verify-1")
+        item = resolved["ledger"]["dispatches"]["alpha-1"]
+        self.assertEqual((resolved["disposition"], item["outcome"], item["verified_by"]), ("continue", "failed", "verify-1"))
+        self.assertEqual(self.dispatch("alpha-2", "alpha")["disposition"], "continue")
+        self.assert_schema_valid(resolved["ledger"])
+
+    def test_complete_changes_with_every_unit_task_checked_resolve_as_completed_after_verification(self):
+        self.dispatch("alpha-1", "alpha", "unknown")
+        (self.root / "src/alpha/core.py").write_text("VALUE = 1\n")
+        self.check_tasks("T001", "T002")
+        result = self.reconcile("alpha-1", "complete")
+        self.assertEqual((result["reconciled"], result["verification_required"]), ("complete", True))
+        self.invoke("reserve", dispatch_id="verify-1", kind="verification", verifies_dispatch_id="alpha-1")
+        self.invoke("begin-verification", dispatch_id="verify-1")
+        self.invoke("complete", dispatch_id="verify-1", outcome="completed")
+        resolved = self.invoke("complete", dispatch_id="alpha-1", outcome="completed", verification_dispatch_id="verify-1")
+        item = resolved["ledger"]["dispatches"]["alpha-1"]
+        self.assertEqual((item["outcome"], item["changed_paths"], item["verified_by"]),
+                         ("completed", ["src/alpha/core.py"], "verify-1"))
+        self.assert_schema_valid(resolved["ledger"])
+
+    def test_a_forged_classification_fails_closed(self):
+        self.dispatch("alpha-1", "alpha", "unknown")
+        (self.root / "src/alpha/core.py").write_text("VALUE = 1\n")
+        before = self.invoke("status", mode="read_only")["ledger"]["dispatches"]
+        for claim in ("no_effect", "complete"):
+            with self.subTest(claim=claim):
+                forged = self.reconcile("alpha-1", claim)
+                self.assertEqual((forged["disposition"], forged["reasons"]), ("checkpoint_required", ["unit_classification_mismatch"]))
+                self.assertEqual(forged["ledger"]["dispatches"], before)
+        for bad in ("finished", None, True):
+            with self.subTest(bad=bad), self.assertRaises(ValueError):
+                self.reconcile("alpha-1", bad)
+        with self.assertRaises(ValueError):
+            self.reconcile("alpha-1", "partial", native_observation={"native_event_id": "x"})
+        self.assertEqual(self.reconcile("alpha-1", "partial")["reconciled"], "partial")
+        unnamed = self.invoke("reserve", dispatch_id="verify-x", kind="verification", verifies_dispatch_id="beta-none")
+        self.assertEqual((unnamed["disposition"], unnamed["reasons"]), ("checkpoint_required", [self.BLOCKED]))
+        with self.assertRaises(ValueError):
+            self.invoke("reserve", dispatch_id="verify-y", kind="implementation", tdd_units=["beta"],
+                            verifies_dispatch_id="alpha-1")
+
+
+class UnknownDispatchEvidenceTests(_UnknownDispatchFixture, unittest.TestCase):
+    """Reconciliation evidence is unit scoped, tamper evident, and never blocks the operator's native resolution."""
+
+    def test_missing_evidence_or_other_units_changes_never_reclassify(self):
+        self.dispatch("alpha-1", "alpha", "unknown")
+        (self.root / "src/beta/core.py").write_text("VALUE = 2\n")
+        self.assertEqual(self.reconcile("alpha-1", "partial")["reasons"], ["unit_classification_mismatch"])
+        (self.root / "feature/plan.md").write_text("plan changed\n")
+        self.assertEqual(self.reconcile("alpha-1", "no_effect")["reasons"], ["ownership_evidence_stale"])
+        (self.root / "feature/plan.md").write_text("plan\n")
+        self.assertEqual(self.reconcile("alpha-1", "no_effect")["reconciled"], "no_effect")
+        with self.assertRaises(ValueError):
+            self.invoke("reconcile-unit", dispatch_id="alpha-1", classification="no_effect")
+
+    def test_verifying_one_reconciled_unit_is_not_blocked_by_another_units_unknown_dispatch(self):
+        self.dispatch("alpha-1", "alpha", "unknown")
+        self.dispatch("beta-1", "beta", "unknown")
+        (self.root / "src/alpha/core.py").write_text("VALUE = 1\n")
+        (self.root / "src/beta/core.py").write_text("VALUE = 1\n")
+        for dispatch_id in ("alpha-1", "beta-1"):
+            self.assertEqual(self.reconcile(dispatch_id, "partial")["reconciled"], "partial")
+        for unit in ("alpha", "beta"):
+            verified = self.invoke("reserve", dispatch_id=f"verify-{unit}", kind="verification",
+                                   verifies_dispatch_id=f"{unit}-1")
+            self.assertEqual((verified["disposition"], verified["reasons"]), ("continue", []))
+        self.invoke("begin-verification", dispatch_id="verify-alpha")
+        self.assertEqual(self.invoke("begin-verification", dispatch_id="verify-beta")["disposition"], "continue")
+        self.invoke("complete", dispatch_id="verify-alpha", outcome="unknown")
+        blocked = self.invoke("reserve", dispatch_id="alpha-2", kind="implementation", tdd_units=["alpha"])
+        self.assertEqual(blocked["blocked_by"], ["alpha-1", "verify-alpha"])
+        self.invoke("complete", dispatch_id="verify-beta", outcome="completed")
+        resolved = self.invoke("complete", dispatch_id="beta-1", outcome="failed", verification_dispatch_id="verify-beta")
+        self.assertEqual(resolved["ledger"]["dispatches"]["beta-1"]["outcome"], "failed")
+        self.assertEqual(self.dispatch("beta-2", "beta")["disposition"], "continue")
+
+    def test_tampered_reconciliation_records_fail_validation(self):
+        self.dispatch("alpha-1", "alpha", "unknown")
+        (self.root / "src/alpha/core.py").write_text("VALUE = 1\n")
+        self.reconcile("alpha-1", "partial")
+        self.invoke("reserve", dispatch_id="verify-1", kind="verification", verifies_dispatch_id="alpha-1")
+        path = self.root / self.invoke("status", mode="read_only")["ledger_path"]
+        valid = path.read_bytes()
+        tampers = {
+            "unknown class": lambda ledger: ledger["dispatches"]["alpha-1"]["reconciliation"].update({"class": "no_effect"}),
+            "unsorted paths": lambda ledger: ledger["dispatches"]["alpha-1"]["reconciliation"].update({"paths": ["b", "a"]}),
+            "verified without a verifier": lambda ledger: ledger["dispatches"]["alpha-1"].update(verified_by="verify-1"),
+            "verifier for nothing": lambda ledger: ledger["dispatches"]["verify-1"].update(verifies="beta-none"),
+            "no-effect with a record": lambda ledger: ledger["dispatches"]["alpha-1"].update(reconciled_as="no_effect"),
+            "verifier that is not verification": lambda ledger: ledger["dispatches"]["verify-1"].update(kind="corrective"),
+        }
+        self.assert_tampers_rejected(path, valid, tampers)
+        path.write_bytes(valid)
+        self.assertEqual(self.invoke("status", mode="read_only")["unknown_dispatch_ids"], ["alpha-1"])
+
+    def test_operator_native_resolution_of_an_unknown_dispatch_still_works(self):
+        self.dispatch("alpha-1", "alpha", "unknown")
+        event = {"native_event_id": "recovered", "run_id": self.run_id, "dispatch_id": "alpha-1",
+                 "action": "dispatch_result", "outcome": "completed"}
+        resolved = self.invoke("complete", dispatch_id="alpha-1", outcome="completed", native_observation=event)
+        self.assertEqual(resolved["ledger"]["dispatches"]["alpha-1"]["outcome"], "completed")
+
+
+class UnknownDispatchGuidanceTests(unittest.TestCase):
+    """Both hosts tell the lead to reconcile an unknown outcome per unit instead of asking the operator (issue 831)."""
+
+    GUIDANCE = ("skills/speckit-autopilot/references/execution-efficiency.md",
+                "skills/speckit-autopilot/references/error-recovery.md",
+                "skills/speckit-autopilot/references/phase-execution.md",
+                "codex-skills/speckit-autopilot/SKILL.md",
+                "codex-skills/speckit-autopilot/references/phase-execution-codex.md",
+                "codex-skills/speckit-autopilot/references/error-recovery-codex.md")
+
+    def test_every_host_guide_names_the_unit_scoped_reconciliation(self):
+        assert_guides_say(self, self.GUIDANCE, ("reconcile-unit",),
+                          ("Unknown effects require a checkpoint", "Unknown effects require an honest checkpoint"))
+
+
+class _AgentApprovalFixture(_MetadataTasksFixture):
+    """An agent issues capped approvals the runner proves itself."""
+
+    def agent_approval(self, action, request, **changes):
+        return self.invoke(action, **{"agent_authorized": True, **request, **changes})
+
+
+class _AgentRetryFixture(_AgentApprovalFixture):
+    """Shared fixture for the tests below."""
+
+    def fail_owner(self, dispatch_id, invariant, event_id):
+        reservation = self.invoke("reserve", dispatch_id=dispatch_id, kind="corrective",
+                                  failure_invariant=invariant)["reservation_id"]
+        self.invoke("reconcile", dispatch_id=dispatch_id)
+        self.invoke("complete", dispatch_id=dispatch_id, outcome="failed", native_observation={
+            "native_event_id": event_id, "run_id": self.run_id, "dispatch_id": dispatch_id,
+            "action": "dispatch_result", "outcome": "failed"})
+        return reservation
+
+    def agent_retry(self, dispatch_id, owner, reservation, **changes):
+        return self.agent_approval("authorize-corrective-retry", {
+            "dispatch_id": dispatch_id, "reservation_id": reservation, "failed_dispatch_id": owner,
+            "failure_kind": "infrastructure"}, **changes)
+
+
+class AgentApprovalTests(_AgentRetryFixture, unittest.TestCase):
+    """An agent issues capped approvals the runner proves itself, with no operator event (issue 830)."""
+
+    def test_an_agent_authorizes_one_infrastructure_retry_with_no_operator_event(self):
+        self.invoke("start")
+        first = self.fail_owner("owner", "FR-001", "host-auth-error")
+        second = self.fail_owner("other", "FR-002", "host-timeout")
+        retry = self.agent_retry("owner-retry", "owner", first)
+        record = retry["ledger"]["dispatches"]["owner-retry"]
+        self.assertEqual((retry["disposition"], retry["ledger"]["corrective_cycles"]), ("continue", 2))
+        self.assertEqual((record["recovery_of"], record["failure_event_id"], record["operator_recovery_event_id"]),
+                         ("owner", "host-auth-error", "agent-recovery:owner-retry"))
+        self.assert_schema_valid(retry["ledger"])
+        self.invoke("complete", dispatch_id="owner-retry", outcome="completed")
+        self.assertEqual(self.invoke("status", mode="read_only")["disposition"], "continue")
+        with self.assertRaisesRegex(ValueError, "agent-authorized corrective retry approvals are spent"):
+            self.agent_retry("other-retry", "other", second)
+        operator = self.invoke("authorize-corrective-retry", dispatch_id="other-retry", reservation_id=second,
+                               failed_dispatch_id="other", native_observation={
+                                   "native_event_id": "operator-message", "run_id": self.run_id,
+                                   "action": "corrective_retry_approved", "failed_dispatch_id": "other",
+                                   "failed_native_event_id": "host-timeout", "retry_dispatch_id": "other-retry",
+                                   "reservation_id": second, "failure_kind": "infrastructure"})
+        self.assertEqual(operator["disposition"], "continue")
+
+    def test_forged_agent_approval_records_fail_validation(self):
+        self.invoke("start")
+        reservation = self.fail_owner("owner", "FR-001", "host-auth-error")
+        self.invoke("reserve", dispatch_id="other", kind="corrective", failure_invariant="FR-002")
+        retry = self.agent_retry("owner-retry", "owner", reservation)
+        path = self.root / retry["ledger_path"]
+        valid = path.read_bytes()
+        tampers = {
+            "event for another dispatch": lambda ledger: ledger["dispatches"]["owner-retry"].update(
+                operator_recovery_event_id="agent-recovery:someone-else"),
+            "second agent retry": lambda ledger: ledger["dispatches"].update(
+                {"forged": {**ledger["dispatches"]["owner-retry"], "recovery_of": "other",
+                            "operator_recovery_event_id": "agent-recovery:forged"}}),
+        }
+        self.assert_forgeries_fail_closed(path, valid, tampers)
+
+
+class AgentRetryRefusalTests(_AgentRetryFixture, unittest.TestCase):
+    """An agent retry fails closed without the runner's own proof."""
+
+    def test_an_agent_retry_fails_closed_without_the_runners_own_proof(self):
+        self.invoke("start")
+        reservation = self.invoke("reserve", dispatch_id="owner", kind="corrective",
+                                  failure_invariant="FR-001")["reservation_id"]
+        self.invoke("reserve", dispatch_id="other", kind="corrective", failure_invariant="FR-002")
+        self.invoke("complete", dispatch_id="owner", outcome="failed")
+        path = self.root / self.invoke("status", mode="read_only")["ledger_path"]
+        before = path.read_bytes()
+        cases = {"no native resolution of the failure": {},
+                 "an application failure": {"failure_kind": "application"},
+                 "no failure kind": {"failure_kind": None},
+                 "an operator event beside the flag": {"native_observation": {"native_event_id": "x"}},
+                 "a flag that is not true": {"agent_authorized": "yes"},
+                 "another reservation": {"reservation_id": "other-reservation"}}
+        for name, changes in cases.items():
+            with self.subTest(case=name), self.assertRaises(ValueError):
+                self.agent_retry("owner-retry", "owner", reservation, **changes)
+            self.assertEqual(path.read_bytes(), before)
+        with self.assertRaisesRegex(ValueError, "reserved for agent approvals"):
+            self.invoke("authorize-corrective-retry", dispatch_id="owner-retry", reservation_id=reservation,
+                        failed_dispatch_id="owner", native_observation={
+                            "native_event_id": "agent-recovery:owner-retry", "run_id": self.run_id,
+                            "action": "corrective_retry_approved", "failed_dispatch_id": "owner",
+                            "failed_native_event_id": "x", "retry_dispatch_id": "owner-retry",
+                            "reservation_id": reservation, "failure_kind": "infrastructure"})
+
+
+class _AgentReplanFixture(_AgentApprovalFixture):
+    """Shared fixture for the tests below."""
+
+    def plan_sidecar(self, plan="# Plan\n"):
+        feature = self.root / "feature"
+        (feature / "plan.md").write_text(plan)
+        sources = [(feature / name).read_text() for name in ("spec.md", "plan.md", "tasks.md")]
+        (feature / ".process").mkdir(exist_ok=True)
+        (feature / ".process/task-execution.json").write_text(json.dumps({
+            "schema_version": "task-execution.v1", "fingerprints": fingerprints(*sources), "tasks": {}}))
+
+    def start_bound(self):
+        spec = self.root / "feature/spec.md"
+        text = spec.read_text()
+        spec.unlink()
+        self.invoke("start")
+        spec.write_text(text)
+        self.invoke("bind-invariants", spec_file="feature/spec.md")
+
+    def spend_and_defer(self, suffix):
+        self.spend_corrective_budget(suffix, "failed")
+        deferred = self.invoke("reserve", dispatch_id=f"fix-c{suffix}", kind="corrective", failure_invariant="FR-001")
+        self.assertEqual(deferred["disposition"], "defer")
+
+    def open_first_epoch(self):
+        """An operator re-plan opens the first epoch, which records the planning fingerprints an agent later compares."""
+        self.plan_sidecar()
+        self.start_bound()
+        self.spend_and_defer("")
+        digest = hashlib.sha256((self.root / "feature/spec.md").read_bytes()).hexdigest()
+        opened = self.invoke("begin-replan-epoch", spec_file="feature/spec.md", native_observation={
+            "native_event_id": "operator-replan", "run_id": self.run_id, "action": "replan_epoch_approved",
+            "spec_sha256": digest})
+        self.assertIn("planning_fingerprints", opened["ledger"]["invariant_binding"])
+
+    def open_first_epoch_from_bound(self):
+        self.spend_and_defer("")
+        digest = hashlib.sha256((self.root / "feature/spec.md").read_bytes()).hexdigest()
+        self.invoke("begin-replan-epoch", spec_file="feature/spec.md", native_observation={
+            "native_event_id": "operator-replan", "run_id": self.run_id, "action": "replan_epoch_approved",
+            "spec_sha256": digest})
+
+
+class AgentReplanApprovalTests(_AgentReplanFixture, unittest.TestCase):
+    """An agent opens a capped re-plan epoch only when the runner proves the preconditions."""
+
+    def test_an_agent_opens_a_replan_epoch_after_the_tasks_rerun_and_stops_at_the_cap(self):
+        self.open_first_epoch()
+        for number, suffix in enumerate(("-1", "-2"), start=2):
+            self.spend_and_defer(suffix)
+            self.plan_sidecar(f"# Plan\nrevision {number}\n")
+            opened = self.begin_replan(agent_authorized=True)
+            ledger = opened["ledger"]
+            self.assertEqual((opened["disposition"], ledger["corrective_epochs"][-1]["epoch_event_id"]),
+                             ("continue", f"agent-replan:{number}"))
+            self.assertEqual((ledger["corrective_cycles"], ledger["dispatches"], ledger["approved_invariants"]),
+                             (0, {}, ["FR-001", "FR-002"]))
+            self.assertEqual(ledger["invariant_binding"]["planning_fingerprints"]["plan_sha256"],
+                             hashlib.sha256(f"# Plan\nrevision {number}\n".encode()).hexdigest())
+            self.assert_schema_valid(ledger)
+        self.spend_and_defer("-3")
+        self.plan_sidecar("# Plan\nrevision 4\n")
+        with self.assertRaisesRegex(ValueError, "agent-authorized re-plan epoch approvals are spent"):
+            self.begin_replan(agent_authorized=True)
+
+    def test_an_agent_replan_needs_an_open_deferral_and_recorded_fingerprints(self):
+        self.plan_sidecar()
+        self.start_bound()
+        self.plan_sidecar("# Plan\nrevision\n")
+        with self.assertRaisesRegex(ValueError, "no_recorded_planning_fingerprints"):
+            self.begin_replan(agent_authorized=True)
+        self.open_first_epoch_from_bound()
+        self.plan_sidecar("# Plan\nrevision 2\n")
+        with self.assertRaisesRegex(ValueError, "no_open_deferral"):
+            self.begin_replan(agent_authorized=True)
+
+    def test_a_ledger_written_before_agent_approvals_still_validates(self):
+        self.open_first_epoch()
+        path = self.root / self.invoke("status", mode="read_only")["ledger_path"]
+        ledger = json.loads(path.read_text())
+        del ledger["invariant_binding"]["planning_fingerprints"]
+        path.write_text(json.dumps(ledger), encoding="utf-8")
+        self.assertEqual(self.invoke("status", mode="read_only")["disposition"], "continue")
+        ledger["invariant_binding"]["planning_fingerprints"] = {"spec_sha256": "z"}
+        path.write_text(json.dumps(ledger), encoding="utf-8")
+        with self.assertRaises(ValueError):
+            self.invoke("status", mode="read_only")
+
+
+class AgentReplanRefusalTests(_AgentReplanFixture, unittest.TestCase):
+    """An agent re-plan fails closed when a precondition is missing."""
+
+    def test_an_agent_replan_fails_closed_when_a_precondition_is_missing(self):
+        self.open_first_epoch()
+        path = self.root / self.invoke("status", mode="read_only")["ledger_path"]
+        self.spend_and_defer("-1")
+        before = path.read_bytes()
+        spec = self.root / "feature/spec.md"
+        original = spec.read_text()
+        def rescope():
+            spec.write_text(original + "- FR-003: explain refusals\n")
+        def stale_sidecar():
+            (self.root / "feature/plan.md").write_text("# Plan\nedited without a rerun\n")
+        cases = {"the Tasks rerun changed nothing": lambda: None, "the plan changed without a sidecar refresh": stale_sidecar,
+                 "the spec (scope) changed": rescope}
+        for name, prepare in cases.items():
+            with self.subTest(case=name):
+                if name.startswith("the Tasks"):
+                    self.plan_sidecar()
+                prepare()
+                with self.assertRaisesRegex(ValueError, "not provable"):
+                    self.begin_replan(agent_authorized=True)
+                self.assertEqual(path.read_bytes(), before)
+                spec.write_text(original)
+                self.plan_sidecar()
+        self.plan_sidecar("# Plan\nrevision\n")
+        with self.assertRaises(ValueError):
+            self.invoke("begin-replan-epoch", spec_file="feature/spec.md", agent_authorized=True,
+                        native_observation={"native_event_id": "x"})
+        self.invoke("reserve", dispatch_id="in-flight", kind="implementation")
+        with self.assertRaisesRegex(ValueError, "settle every dispatch"):
+            self.begin_replan(agent_authorized=True)
+
+
+class AgentContinuationApprovalTests(_AgentApprovalFixture, unittest.TestCase):
+    """An agent continues task metadata only when the runner proves the metadata-only correction."""
+
+    continuation = partialmethod(_AgentApprovalFixture.agent_approval, "authorize-corrective-continuation", {
+        "dispatch_id": "metadata", "completed_dispatch_id": "analyze", "spec_file": "feature/spec.md"})
+
+    def continuation_setup(self):
+        commit_baseline(self.root)
+        self.invoke("start")
+        reservation = self.invoke("reserve", dispatch_id="analyze", kind="corrective",
+                                  failure_invariant="FR-001")["reservation_id"]
+        self.invoke("complete", dispatch_id="analyze", outcome="completed")
+        self.invoke("reserve", dispatch_id="other-family", kind="corrective", failure_invariant="FR-002")
+        return reservation
+
+    def test_an_agent_continues_task_metadata_when_the_metadata_only_proof_holds(self):
+        reservation = self.continuation_setup()
+        (self.root / "feature/tasks.md").write_text(self.CORRECTED)
+        admitted = self.continuation(reservation_id=reservation)
+        record = admitted["ledger"]["dispatches"]["metadata"]
+        self.assertEqual((admitted["disposition"], admitted["continuation_of"]), ("continue", "analyze"))
+        self.assertEqual((record["operator_continuation_event_id"], record["continuation_purpose"]),
+                         ("agent-continuation:metadata", "task_metadata_reconciliation"))
+        self.assert_schema_valid(admitted["ledger"])
+        self.assertEqual(self.invoke("status", mode="read_only")["disposition"], "continue")
+
+    def test_an_agent_continuation_fails_closed_without_the_metadata_only_proof(self):
+        reservation = self.continuation_setup()
+        path = self.root / self.invoke("status", mode="read_only")["ledger_path"]
+        before = path.read_bytes()
+        cases = {"no correction on disk": (self.TASKS, {}),
+                 "a scope-changing edit": (self.CORRECTED.replace("src/app.py", "src/other.py"), {}),
+                 "no spec_file": (self.CORRECTED, {"spec_file": None}),
+                 "an operator event beside the flag": (self.CORRECTED, {"native_observation": {"native_event_id": "x"}}),
+                 "another reservation": (self.CORRECTED, {"reservation_id": "elsewhere"})}
+        for name, (tasks, changes) in cases.items():
+            with self.subTest(case=name):
+                (self.root / "feature/tasks.md").write_text(tasks)
+                with self.assertRaises(ValueError):
+                    self.continuation(**{"reservation_id": reservation, **changes})
+                self.assertEqual(path.read_bytes(), before)
+
+    def test_the_guides_tell_the_lead_to_issue_the_agent_approvals(self):
+        assert_guides_say(self, UnknownDispatchGuidanceTests.GUIDANCE, ("agent_authorized",))
+
+
 if __name__ == "__main__":
     suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case)
                                for case in (GreenfieldInvariantBindingTests, ExecutionControlTests, CorrectiveRecoveryTests,
                                             CorrectiveContinuationTests, CorrectiveExceptionTests, CorrectiveFailureClassTests,
-                                            ReplanEpochTests, StageEpochTests, IncrementReviewAllowanceTests,
-                                            DeferOnExhaustedAllowanceTests, DeferOnExhaustedAllowanceGuidanceTests,
-                                            FailingCheckFingerprintTests, CorrectionProgressTests,
+                                            ReplanEpochTests, StageEpochTests, IncrementReviewAllowanceTests, IncrementReviewDeferralTests,
+                                            DeferOnExhaustedAllowanceTests, DeferOnExhaustedAllowanceGuidanceTests, DeferralListingGuidanceTests,
+                                            AllowanceGuideTests,
+                                            EscalationAllowanceTests, EscalationCapTests, EscalationRequestTests,
+                                            EscalationForgeryTests,
+                                            FailingCheckFingerprintTests, MoreTestRunnerFingerprintTests,
+                                            CorrectionProgressTests, UntaggedFailureFamilyTests,
                                             CorrectionProgressGuidanceTests, GateRemediationAllowanceTests,
-                                            MetadataOnlyCorrectionTests,
+                                            MetadataOnlyCorrectionTests, IncrementTestFixAllowanceTests, IncrementTestFixEditTests,
+                                            IncrementTestFixRecordTests, IncrementTestFixRequestTests,
                                             WorkflowIdentityTests, SelfIgnoringByproductDirectoryTests, VerificationTests,
-                                            RunnerDispatchTests))
+                                            RunnerDispatchTests, RunnerConvergenceRouteTests))
     suite.addTests(DockerVerificationTests(name) for name in DockerVerificationTests.__dict__ if name.startswith("test_docker_"))
+    suite.addTests(unittest.defaultTestLoader.loadTestsFromTestCase(case) for case in (UnknownDispatchUnitScopeTests, UnknownDispatchVerificationTests,
+                                                                            UnknownDispatchEvidenceTests, UnknownDispatchGuidanceTests,
+                                                                            AgentApprovalTests, AgentRetryRefusalTests, AgentReplanApprovalTests,
+                                                                            AgentReplanRefusalTests, AgentContinuationApprovalTests))
     raise SystemExit(run_counted(suite, label="test-execution-control"))

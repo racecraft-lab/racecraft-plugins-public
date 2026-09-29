@@ -1,0 +1,110 @@
+{
+  "decisions": [
+    {
+      "class": "exhausted",
+      "evidence": "Ledger deferral fix-a-again; escalation reached tier 3 (tier 2 dispatch escalate-fr-001-tier-2, tier 3 dispatch escalate-fr-001-tier-3).",
+      "finish": "Reply approving one `authorize-corrective-exception` for FR-001, or a re-plan with `begin-replan-epoch`, then resume with: /speckit-pro:speckit-autopilot feature/workflow.md --stage implement",
+      "reason": "Its correction allowance is spent and the last correction made no measurable progress. Its escalation tiers are exhausted. (failure_family_budget_exhausted)",
+      "reason_code": "all_tiers_failed",
+      "unit": "Failure family FR-001"
+    }
+  ],
+  "deferred_digest": "sha256:fdcac506cb094b9ffad34818b9f9c957a92a1996e3314e4e9d65f6b3c75b6fde",
+  "deferred_items": [
+    {
+      "finish": "Follow steps 4 to 6 of the UAT runbook and record the result on the pull request.",
+      "item": "UAT story 2: the export opens in a spreadsheet app",
+      "reason": "It needs a person to open the exported file."
+    }
+  ],
+  "end_of_run_request": "The run is finished: every runnable task and gate is done, and the pull request stack is ready for review. Nothing was merged.\n\nDecisions for you (each spent every escalation tier):\n\n1. Failure family FR-001: Its correction allowance is spent and the last correction made no measurable progress. Its escalation tiers are exhausted. (failure_family_budget_exhausted)\n   Evidence: Ledger deferral fix-a-again; escalation reached tier 3 (tier 2 dispatch escalate-fr-001-tier-2, tier 3 dispatch escalate-fr-001-tier-3).\n   To decide it: Reply approving one `authorize-corrective-exception` for FR-001, or a re-plan with `begin-replan-epoch`, then resume with: /speckit-pro:speckit-autopilot feature/workflow.md --stage implement\n\nThis human UAT is deferred and not verified:\n\n1. UAT story 2: the export opens in a spreadsheet app: It needs a person to open the exported file.\n   To finish it: Follow steps 4 to 6 of the UAT runbook and record the result on the pull request.\n\nReply in this thread with any finding. The run resumes with: /speckit-pro:speckit-autopilot feature/workflow.md --stage implement\n",
+  "finalized": true,
+  "gates": [
+    {
+      "command": "python3 tests/run-all.py",
+      "dispatch_id": "verify-1",
+      "gate": "G7",
+      "head_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "status": "passed"
+    },
+    {
+      "command": "python3 tests/integration.py",
+      "dispatch_id": "verify-2",
+      "gate": "Post: Integration Suite",
+      "head_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "status": "passed"
+    },
+    {
+      "command": "python3 tests/run-all.py",
+      "dispatch_id": "verify-3",
+      "gate": "G7",
+      "head_sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "status": "passed"
+    },
+    {
+      "command": "python3 tests/integration.py",
+      "dispatch_id": "verify-4",
+      "gate": "Post: Integration Suite",
+      "head_sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "status": "passed"
+    }
+  ],
+  "goal_status": "complete",
+  "human_stop": null,
+  "mark_ready": true,
+  "observed": [],
+  "outcome": "complete_with_deferred",
+  "pending_items": [],
+  "pull_requests": [
+    {
+      "draft": true,
+      "gates": [
+        {
+          "command": "python3 tests/run-all.py",
+          "dispatch_id": "verify-1",
+          "gate": "G7",
+          "head_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "status": "passed"
+        },
+        {
+          "command": "python3 tests/integration.py",
+          "dispatch_id": "verify-2",
+          "gate": "Post: Integration Suite",
+          "head_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "status": "passed"
+        }
+      ],
+      "head_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "number": 101,
+      "url": "https://github.com/example-org/example-repo/pull/101"
+    },
+    {
+      "draft": true,
+      "gates": [
+        {
+          "command": "python3 tests/run-all.py",
+          "dispatch_id": "verify-3",
+          "gate": "G7",
+          "head_sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "status": "passed"
+        },
+        {
+          "command": "python3 tests/integration.py",
+          "dispatch_id": "verify-4",
+          "gate": "Post: Integration Suite",
+          "head_sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "status": "passed"
+        }
+      ],
+      "head_sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "number": 102,
+      "url": "https://github.com/example-org/example-repo/pull/102"
+    }
+  ],
+  "ready_commands": [
+    "gh pr ready 101",
+    "gh pr ready 102"
+  ],
+  "top_pull_request": "https://github.com/example-org/example-repo/pull/102",
+  "writes_state": false
+}

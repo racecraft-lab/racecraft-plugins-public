@@ -20,7 +20,7 @@ options and includes the standard sections.
 The item's `Security Route` is `none`. On that route a
 `security_relevant: true` answer does not raise the bar to unanimity,
 so the two-analyst disagreement escapes to Round 2 rather than going
-to human review.
+straight to the Round 3 tiebreak.
 
 ## Assertions
 
