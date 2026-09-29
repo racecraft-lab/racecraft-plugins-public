@@ -227,12 +227,17 @@ def _job_permissions(content: str, job_id: str) -> dict[str, str]:
 def _yaml_valid(path: Path) -> bool:
     return yaml_syntax_sane(path.read_text(encoding='utf-8'))
 
-def _required_sentinel_passes(changes: str, run_preflight: str, heavy: str) -> bool:
-    if changes != 'success':
-        return False
-    if run_preflight == 'true':
-        return heavy == 'success'
-    return heavy == 'skipped'
+def _load_shipped_sentinel():
+    """Import the shipped container preflight so the sentinel truth table reads its real predicate."""
+    path = REPO_ROOT / 'tests' / 'speckit-pro' / 'run-container-preflight.py'
+    spec = importlib.util.spec_from_file_location('run_container_preflight_sentinel', path)
+    if spec is None or spec.loader is None:
+        raise ImportError(f'cannot load container preflight from {path}')
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module._required_sentinel_passes
+
+_required_sentinel_passes = _load_shipped_sentinel()
 
 class ValidatePrChecksSentinel(unittest.TestCase):
 
@@ -478,7 +483,7 @@ class ValidatePrChecksSentinel(unittest.TestCase):
             self.assertIn(CONTAINER_DISPATCH, block)
             for condition in ('if changes_result != "success":', 'if run_preflight == "true":', 'return heavy_result == "success"', 'return run_preflight == "false" and heavy_result == "skipped"'):
                 self.assertIn(condition, dispatch_content)
-            self.assertEqual([True, False, False, True, False, False, False], [_required_sentinel_passes('success', 'true', 'success'), _required_sentinel_passes('success', 'true', 'failure'), _required_sentinel_passes('success', 'true', 'cancelled'), _required_sentinel_passes('success', 'false', 'skipped'), _required_sentinel_passes('success', 'false', 'success'), _required_sentinel_passes('failure', 'true', 'success'), _required_sentinel_passes('cancelled', 'false', 'skipped')])
+            self.assertEqual([True, False, False, True, False, False, False, False, False], [_required_sentinel_passes('success', 'true', 'success'), _required_sentinel_passes('success', 'true', 'failure'), _required_sentinel_passes('success', 'true', 'cancelled'), _required_sentinel_passes('success', 'false', 'skipped'), _required_sentinel_passes('success', 'false', 'success'), _required_sentinel_passes('failure', 'true', 'success'), _required_sentinel_passes('cancelled', 'false', 'skipped'), _required_sentinel_passes('success', '', 'skipped'), _required_sentinel_passes('success', 'TRUE', 'skipped')])
         with self.subTest(msg='Linux arm64 required check is an always sentinel'):
             block = _job_block(content, 'linux-arm64')
             self.assertIn('name: container-preflight-linux-arm64', block)
@@ -762,7 +767,7 @@ class ValidateReleaseWorkflow(unittest.TestCase):
         audit_upload_step = _named_step_block(composer_job, 'Upload immutable release note audit')
         audit_record_step = _named_step_block(composer_job, 'Record immutable audit artifact')
         with self.subTest(msg='release workflow can dispatch PR checks'):
-            self.assertTrue(_contains_all(content + dispatch_helper_content, ('actions: write', 'scripts/dispatch-release-pr-checks.py', '"gh",', '"workflow",', '"run",', '"pr-checks.yml",', '"pr-metadata.yml",', '"--ref",', 'f"pr_number={release_pr[\'number\']}"', 'f"pr_title={release_pr[\'title\']}"', '"base_ref=main",', 'check=True', 'shell=False')), 'expected release workflow to dispatch PR Checks and PR Metadata for release-please PR branches')
+            self.assertTrue(_contains_all(content + dispatch_helper_content, ('actions: write', 'scripts/dispatch-release-pr-checks.py', '"gh",', '"workflow",', '"run",', '"pr-checks.yml",', '"pr-metadata.yml",', '"--ref",', 'f"pr_number={release_pr[\'number\']}"', 'f"pr_title={release_pr[\'title\']}"', 'f"base_ref={base_ref}",', 'check=True', 'shell=False')), 'expected release workflow to dispatch PR Checks and PR Metadata for release-please PR branches')
         with self.subTest(msg='required workflow gate rejects dropped commits cited by resolved release reviews'):
             integrity_helper = REPO_ROOT / 'scripts' / 'validate-release-pr-integrity.py'
             integrity_content = integrity_helper.read_text(encoding='utf-8') if integrity_helper.is_file() else ''
@@ -855,7 +860,7 @@ class ValidateReleaseWorkflow(unittest.TestCase):
             capture_function = _python_function_block(composer_content, 'capture_release_input_snapshot')
             canonical_function = _python_function_block(composer_content, 'canonical_snapshot_bytes')
             loader_function = _python_function_block(composer_content, 'load_release_input_snapshot')
-            self.assertTrue(_contains_all(capture_function + canonical_function + loader_function, ('f"/repos/{client.repository}/compare/{base}...{head}"', 'f"/repos/{client.repository}/pulls/{commit.pr_number}"', '"body": body', '"labels": sorted(_label_names(pr))', '"release_body": raw_body', '"compare": compare', '"pulls": pulls', 'raw != canonical_snapshot_bytes(value)', 'digest != expected_sha256', 'set(pulls_value) != expected_pull_keys')))
+            self.assertTrue(_contains_all(capture_function + canonical_function + loader_function, ('f"/repos/{client.repository}/compare/{base}...{head}"', 'f"/repos/{client.repository}/pulls/{commit.pr_number}"', '"body": body', '"labels": sorted(label_names(pr))', '"release_body": raw_body', '"compare": compare', '"pulls": pulls', 'raw != canonical_snapshot_bytes(value)', 'digest != expected_sha256', 'set(pulls_value) != expected_pull_keys')))
         with self.subTest(msg='composer audits all non-cancelled post-publication capture outcomes'):
             self.assertIn('compose-release-notes:', composer_job)
             self.assertEqual(['[release, capture-release-note-inputs]'], _scalar_values(composer_job, 'needs', 4))
@@ -867,7 +872,7 @@ class ValidateReleaseWorkflow(unittest.TestCase):
             self.assertEqual(2, len(DOWNLOAD_ARTIFACT_PIN_RE.findall(content)))
             self.assertTrue(_contains_all(snapshot_download_step, ('id: download_release_snapshot', 'if: ${{ always() && !cancelled() }}', 'actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c', 'artifact-ids: ${{ needs.capture-release-note-inputs.outputs.snapshot_artifact_id }}', 'path: release-note-input', 'digest-mismatch: error')))
         with self.subTest(msg='composer audits capture download and digest failures'):
-            self.assertTrue(_contains_all(compose_step + audit_helper_content, ('if: ${{ always() && !cancelled() }}', 'CAPTURE_RESULT: ${{ needs.capture-release-note-inputs.result }}', 'EXPECTED_SNAPSHOT_SHA256: ${{ needs.capture-release-note-inputs.outputs.snapshot_sha256 }}', 'SNAPSHOT_ARTIFACT_DIGEST: ${{ needs.capture-release-note-inputs.outputs.snapshot_artifact_digest }}', 'SNAPSHOT_DOWNLOAD_OUTCOME: ${{ steps.download_release_snapshot.outcome }}', 'run: python3 scripts/audit-release-notes.py', 'FAILURE_OUTCOME = "release_note_composition_failed"', '"capture_result": capture_result', '"snapshot_download_outcome": download_outcome', 'if capture_result != "success":', 'if download_outcome != "success":', 'snapshot_sha256 != expected_sha256', 'snapshot["repository"] != environment["GITHUB_REPOSITORY"]', '"compare_headers"', '"release_body"', '"pulls"', 'not re.fullmatch(r"[0-9a-f]{64}", artifact_digest)', 'except AuditFailure as error:')))
+            self.assertTrue(_contains_all(compose_step + audit_helper_content + policy_content, ('if: ${{ always() && !cancelled() }}', 'CAPTURE_RESULT: ${{ needs.capture-release-note-inputs.result }}', 'EXPECTED_SNAPSHOT_SHA256: ${{ needs.capture-release-note-inputs.outputs.snapshot_sha256 }}', 'SNAPSHOT_ARTIFACT_DIGEST: ${{ needs.capture-release-note-inputs.outputs.snapshot_artifact_digest }}', 'SNAPSHOT_DOWNLOAD_OUTCOME: ${{ steps.download_release_snapshot.outcome }}', 'run: python3 scripts/audit-release-notes.py', 'FAILURE_OUTCOME = "release_note_composition_failed"', 'FAILURE_OUTCOME = release_note_policy.FAILURE_OUTCOME', '"capture_result": capture_result', '"snapshot_download_outcome": download_outcome', 'if capture_result != "success":', 'if download_outcome != "success":', 'snapshot_sha256 != expected_sha256', 'snapshot["repository"] != environment["GITHUB_REPOSITORY"]', '"compare_headers"', '"release_body"', '"pulls"', 'not re.fullmatch(r"[0-9a-f]{64}", artifact_digest)', 'except AuditFailure as error:')))
             self.assertNotIn('release_note_audit_failed', audit_helper_content)
             failure_branch = audit_helper_content.find('if completed.returncode != 0:')
             wrapper_fail = audit_helper_content.find('fail(message, completed.returncode)', failure_branch)

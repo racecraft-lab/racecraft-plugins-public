@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from .catalog import FormalError
+from .primitives import FormalError
 
 TOKEN = re.compile(r'\(\*|\*\)|\\\*[^\n]*|"(?:\\.|[^"\\])*"|[A-Za-z_][A-Za-z0-9_]*')
 DIRECTIVES = frozenset("INIT NEXT SPECIFICATION CONSTANT CONSTANTS INVARIANT INVARIANTS PROPERTY PROPERTIES CONSTRAINT CONSTRAINTS ACTION_CONSTRAINT ACTION_CONSTRAINTS SYMMETRY VIEW ALIAS POSTCONDITION CHECK_DEADLOCK".split())

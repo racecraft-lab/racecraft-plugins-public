@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.0",
+  "tools": {
+    "apalache": {
+      "version": "0.62.2",
+      "jar": ".specify/tools/formal/apalache-0.62.2/apalache.jar",
+      "sha256": "079b6c2320252469dcf79afec6886b8255d3dd1b34a9484433c88986752efaa8",
+      "java": "java",
+      "heap_mb": 4096
+    },
+    "quint": {
+      "version": "0.32.0",
+      "root": ".specify/tools/formal/quint-0.32.0",
+      "tree_sha256": "ad2b0a994292da8dcf69ef33d26a95bdfec609a1250615251789543b6cef342f",
+      "node": "node"
+    }
+  },
+  "models": {
+    "counter-quint": {
+      "language": "quint",
+      "checker": "apalache",
+      "module": "formal/counter-quint/Counter.qnt",
+      "config": "formal/counter-quint/Counter.cfg",
+      "inputs": ["formal/counter-quint/Counter.qnt", "formal/counter-quint/Counter.cfg"],
+      "main": "Counter",
+      "init": "init",
+      "next": "step",
+      "properties": {"Bounded": {"kind": "invariant", "requirement": "The count stays between zero and two."}},
+      "assumptions": ["Limit = 2"],
+      "mode": "bounded",
+      "bounds": {"length": 5},
+      "budget": {"timeout_seconds": 60, "output_bytes": 1048576}
+    }
+  }
+}
