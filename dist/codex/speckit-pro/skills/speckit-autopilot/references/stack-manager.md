@@ -71,9 +71,14 @@ evidence. A lower-layer fix propagates upward by merge, never by rebase or
 force-push; then re-verify every affected head.
 
 After any attempted or partial mutation, resume through the selected manager.
-Detection returns a blocking recovery record, preserving prior PR identities and
+Detection returns a blocked recovery record, preserving prior PR identities and
 observed topology. Use the installed skill and read-only remote evidence to
-reconcile the exact outcome before retrying the existing-PR command. Never
+reconcile the exact outcome, then rerun detection with `previous_decision` and
+`reverify_recovery=true`. When the read-only proof still matches every recorded
+PR, the helper returns a `gh-stack` decision that plans the same existing-PR
+command: retry the existing-PR link within the shared allowance. When it does
+not match, the record stays blocked and defers only when repair fails, through
+the Failure Escalation Protocol. Never
 automatically switch managers, recreate PRs, or erase the attempted boundary.
 Only a reconciled successful result may supersede the blocked event. Subsequent
 supported stack operations follow the installed skill; this helper does not

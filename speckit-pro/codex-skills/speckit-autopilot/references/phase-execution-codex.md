@@ -1067,8 +1067,11 @@ runner helper generate-spec-index-write with repo root "$PWD" and mode apply
 **Act on the result:**
 
 - **Exit 2 (error)** → a map is malformed/unbalanced or a PRS manifest is
-  unreadable. **Surface the actionable stderr line and STOP.** Do NOT commit a
-  broken regen and do NOT advance the phase.
+  unreadable. **Route the actionable stderr line to the phase-executor,**
+  which repairs the malformed zone or unreadable manifest it names. Then
+  rerun `generate-spec-index-write` once; if it still exits 2,
+  run the repair loop within its allowance, then defer per the Failure Escalation Protocol.
+  Do NOT commit a broken regeneration and do NOT advance the phase until it exits 0.
 - **Exit 0 (clean)** → the generator wrote any stale maps and returned success.
   **The commit decision is diff-driven, not exit-code-driven** (write mode
   returns `0` whether or not it changed a file; the stale `exit 1` is
@@ -1491,8 +1494,10 @@ unticked ones, and never edit a checklist marker. Never exceed derived
 `subagent_slots`. Consume every real per-task result, update both state stores,
 and call `task-results` `action=record` with every frozen task's full result
 block plus independently captured parent `native_observations` before marking
-completion. Follow the shared journal inputs; invalid evidence blocks recording
-and unfinished results require a checkpoint, not replay. Use `action=inspect`
+completion. Follow the shared journal inputs; invalid evidence blocks recording.
+An unfinished result returns `disposition=redispatch` with a `repair` record naming each batch's agent
+and its unfinished task IDs: redispatch only those tasks to that agent, never the completed ones, and
+run the repair loop within its allowance, then defer per the Failure Escalation Protocol. Use `action=inspect`
 again before group completion; native authorization qualification stays pending.
 Append separate implementation-notes entries; no compound task IDs. Legacy
 runs use singletons. Repartition before dispatch if inputs/ownership changed.
@@ -1634,13 +1639,19 @@ active requirement, story, and task, and keeps each increment within the
 budget. On `decision=autopilot_ratified`, write `data.record` verbatim to the
 current workflow section (`owner_ratification=ratified`,
 `ratified_by=autopilot`, and the reason) and continue without a question.
-Ask the operator only when the helper returns `decision=operator_required`;
-its findings name the cause: `scope_added`, `scope_dropped`, `group_added`,
-`group_dropped`, `group_reordered`, `group_merged`, `scope_duplicated`, or
-`reviewability_exception_needed`. Record `data.record`
-(`owner_ratification=pending` with the blockers), then ask. An `input_error`,
-a missing budget, or unreadable evidence also goes to the operator; never
-ratify it yourself.
+Ask the operator only when the helper returns `decision=operator_required`,
+which carries `stop_reason:scope_changing_pr_split`; its findings name the
+cause: `scope_added`, `scope_dropped`, `group_added`, `group_dropped`,
+`group_reordered`, `group_merged`, or `scope_duplicated`. Record `data.record`
+(`owner_ratification=pending` with the blockers), park that split for the
+operator's decision, and keep every independent unit running. A
+`decision=reslice_required` result carries only `reviewability_exception_needed`:
+follow `data.repair` by re-slicing the over-cap increment through the layer
+planner, or committing a typed reviewability exception when it cannot split
+further, then rerun the helper. An `input_error`, a missing budget, or
+unreadable evidence is repaired by the orchestrator: regenerate the split
+evidence from the layer plan and rerun the helper, and
+run the repair loop within its allowance, then defer per the Failure Escalation Protocol; never ratify it yourself.
 
 Keep only one live `owner_ratification` value in the workflow file. When a
 later section records a ratification, change each earlier
@@ -3028,7 +3039,7 @@ Before creating or updating a PR after G7, the parent session applies this
 fail-closed sequence:
 
 ```text
-final-reviewability boundary: use current committed reviewability evidence; if none is current, stop before PR side effects
+final-reviewability boundary: use current committed reviewability evidence; if none is current, hold PR side effects and regenerate the committed reviewability evidence
 emit or refresh specs/<feature>/.process/pr-packets/<packet-id>.json with pr-packet-output dry_run then apply
 run validate-pr-packet-read-only for that packet and consume response data.stdout_json in memory/state
 require data.stdout_json.status=passed, data.stdout_json.pr_blocked=false, and response data.writes_state=false
@@ -3053,7 +3064,7 @@ response condition: read `autopilot_continuation`, the packet's
 run through reviewability routing, layer planning, and split-PR emission until a valid slice PR stack is
 emitted or a typed exception is committed. Never report completion while
 `autopilot_continuation.required=true`. Recorded exit 2 is a gate error: state is
-written, no packet is valid, and the run stops for operator repair.
+written, no packet is valid, and the orchestrator reruns the gate; run the repair loop within its allowance, then defer per the Failure Escalation Protocol.
 
 For marker-aware PR preparation, record gate status/mode/exit/evidence path,
 fingerprint status, ordered marker IDs, checkpoints, warnings, final
@@ -3065,8 +3076,9 @@ packet-owned body before `gh pr create`. If the packet or body is missing,
 stale, malformed, or invalid, rerun packet output with current title, target,
 changed-file, verification, UAT, non-goal, and known-gap evidence. The
 read-only validator returns its result in `data.stdout_json` and does not
-persist state. If any required packet is absent or invalid, stop before PR
-creation with the validator diagnostics. Checkpoint packet/body artifacts so
+persist state. If any required packet is absent or invalid, regenerate it with `pr-packet-output` from the validator diagnostics,
+then revalidate; run the repair loop within its allowance, then defer per the Failure Escalation Protocol.
+No PR is created until validation passes. Checkpoint packet/body artifacts so
 `validate-pr-packet-write` runs from a clean worktree; apply mode reruns
 read-only validation before persisting `validation_result_path`.
 

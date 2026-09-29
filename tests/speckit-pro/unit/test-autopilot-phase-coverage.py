@@ -3573,7 +3573,7 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
         self.assertEqual(repair["failing_keys"], ["missing_state_post_items"])
         exit_code, report = self.run_validator(workflow_text(), state_json())
         self.assertEqual(exit_code, 0)
-        self.assertNotIn("repair", report)
+        self.assertIsNone(report["repair"])
 
     def test_missing_confidence_gate_in_workflow_fails(self) -> None:
         exit_code, report = self.run_validator(workflow_text(include_confidence=False), state_json())

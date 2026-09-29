@@ -166,6 +166,7 @@
         { "path": "tests/speckit-pro/unit/test-implementation-notes-record.py", "label": "test-implementation-notes-record" },
         { "path": "tests/speckit-pro/unit/test-autopilot-stop-reason-parity.py", "label": "test-autopilot-stop-reason-parity" },
         { "path": "tests/speckit-pro/unit/test-autopilot-stale-stop-phrases.py", "label": "test-autopilot-stale-stop-phrases" },
+        { "path": "tests/speckit-pro/unit/test-autopilot-repair-routing-guidance.py", "label": "test-autopilot-repair-routing-guidance" },
         { "path": "tests/speckit-pro/unit/test-consensus-analyst-shared-prose.py", "label": "test-consensus-analyst-shared-prose" },
         { "path": "tests/speckit-pro/unit/test-feedback-sweep-parse.py", "label": "test-feedback-sweep-parse" },
         { "path": "tests/speckit-pro/unit/test-feedback-sweep-isolation.py", "label": "test-feedback-sweep-isolation" },

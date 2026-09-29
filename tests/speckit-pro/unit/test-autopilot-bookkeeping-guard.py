@@ -353,6 +353,7 @@ class StatusEvidenceReportAssertions:
         "workflow_file",
         "state_file",
         "plan_step_count",
+        "repair",
         *validator.PROBLEM_KEY_INTENT,
     })
 
@@ -1910,16 +1911,16 @@ class StatePrivacyTests(StatusEvidenceReportAssertions, unittest.TestCase):
         self.assertEqual(code, 0, report)
         self.assertEqual(report["state_privacy_errors"], [])
 
-    def test_both_hosts_digest_event_ids_and_remediate_privacy_errors_once(self) -> None:
-        """#800: store native event ids as digests; a privacy-only failure is fixed in place, once."""
+    def test_both_hosts_digest_event_ids_and_repair_every_gated_guard_failure(self) -> None:
+        """#800, #835: store native event ids as digests; a privacy failure is fixed in place, and any gated failure is repaired."""
         for skill_path in (CLAUDE_AUTOPILOT_SKILL, CODEX_AUTOPILOT_SKILL):
             with self.subTest(skill=skill_path.parent.parent.name):
                 skill = _flat(skill_path)
                 self.assertIn("native or operator event id", skill)
                 self.assertIn("`sha256:<digest>`", skill)
-                self.assertIn("When `state_privacy_errors` is the only failing gated key", skill)
-                self.assertIn("rerun the guard once", skill)
-                self.assertIn("A second failure, or any other failing gated key, is a stop", skill)
+                self.assertIn("For `state_privacy_errors`, each error names the field and its remedy", skill)
+                self.assertIn("then rerun the guard", skill)
+                self.assertNotIn("any other failing gated key, is a stop", skill)
 
     def test_both_hosts_account_for_the_implementation_notes_record(self) -> None:
         """#801: the notes record is committed, exempt from the path budget, and never dirties apply."""
@@ -2341,7 +2342,7 @@ class ProblemKeyClassificationTests(unittest.TestCase):
     VERDICTS = frozenset({"gated", "advisory-deliberate", "advisory-accidental"})
 
     #: Report fields that describe the run rather than name a finding.
-    METADATA_KEYS = frozenset({"status", "workflow_file", "state_file", "plan_step_count"})
+    METADATA_KEYS = frozenset({"status", "workflow_file", "state_file", "plan_step_count", "repair"})
 
     @classmethod
     def setUpClass(cls) -> None:
