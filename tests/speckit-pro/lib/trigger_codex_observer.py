@@ -85,8 +85,10 @@ def _catalog_entry_identity(
             result["file_exact"] = result["file_valid"] and rendered_file == expected_file
         if all(result[key] for key in ("description_exact", "alias_valid", "file_exact")):
             result["locator"] = locator
-    except (OSError, RuntimeError, TypeError, ValueError):
-        pass
+    except (OSError, RuntimeError, ValueError):
+        # An unresolvable catalog path fails the identity check: the flags recorded so far
+        # stay as set, and no locator is reported.
+        result["locator"] = None
     return result
 
 

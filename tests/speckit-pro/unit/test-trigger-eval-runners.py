@@ -53,6 +53,7 @@ if str(SHARED_LIB) not in sys.path:
 
 from test_result import run_counted  # noqa: E402
 import trigger_claude_observer as claude_observer  # noqa: E402
+import trigger_codex_observer as codex_observer  # noqa: E402
 import trigger_evidence as evidence_records  # noqa: E402
 import trigger_process  # noqa: E402
 
@@ -3874,6 +3875,20 @@ class NoOpDescriptionSourceTests(unittest.TestCase):
         self.assertEqual((claude.NO_SPECKIT_SKILL_DESCRIPTION, engine.NO_SPECKIT_SKILL_DESCRIPTION), (default, default))
 
 
+class CatalogIdentityFailureTests(unittest.TestCase):
+    """An unresolvable catalog path fails the identity check and reports no locator."""
+
+    def test_a_missing_catalog_file_yields_flags_and_no_locator(self) -> None:
+        missing = Path("/nonexistent-skill-root/demo/SKILL.md")
+        identity = codex_observer._catalog_entry_identity(
+            f"Demo. (file: {missing})", ("demo", "Demo.", missing), None, {},
+        )
+        self.assertEqual(
+            (identity["description_exact"], identity["alias_valid"], identity["file_valid"], identity["locator"]),
+            (True, True, False, None),
+        )
+
+
 class CodexRelativeSkillBodyReadTests(unittest.TestCase):
     def test_relative_skill_body_read_requires_the_matched_skill_path(self) -> None:
         engine = import_script(CODEX_ENGINE, "layer2_codex_relative_skill_body_read")
@@ -3947,6 +3962,7 @@ def main() -> int:
         unittest.defaultTestLoader.loadTestsFromTestCase(CodexEvalCorpusResolutionTests),
         unittest.defaultTestLoader.loadTestsFromTestCase(SharedRunnerCodeTests),
         unittest.defaultTestLoader.loadTestsFromTestCase(NoOpDescriptionSourceTests),
+        unittest.defaultTestLoader.loadTestsFromTestCase(CatalogIdentityFailureTests),
     ])
     return run_counted(suite, label="test-trigger-eval-runners")
 
