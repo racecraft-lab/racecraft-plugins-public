@@ -1,0 +1,200 @@
+[
+  {
+    "id": "structural-layers-2-001",
+    "lane": "structural-layers-2",
+    "severity": "blocking",
+    "kind": "coherence",
+    "files": [
+      "tests/speckit-pro/suite-manifest.json:176",
+      "tests/speckit-pro/unit/test-consensus-synthesizer-regressions.py:1",
+      "tests/speckit-pro/unit/test-native-eval-fixture-setup.py:1"
+    ],
+    "ripwire_command": "ripwire . --grep=consensus-synthesizer-regressions",
+    "summary": "Layer 4 lists its scripts by hand and omits two tracked unit tests. Neither test-consensus-synthesizer-regressions.py nor test-native-eval-fixture-setup.py appears in the manifest, so run-all.py and the CI suite never run them. test-unit-layout.py does not check roster completeness. No in-flight branch adds them.",
+    "proposed_fix": "Add both tests to layer 4 in suite-manifest.json, and add a manifest-completeness check (every unit/test-*.py is listed) to test-unit-layout.py.",
+    "in_flight_status": "still-open"
+  },
+  {
+    "id": "structural-layers-2-002",
+    "lane": "structural-layers-2",
+    "severity": "major",
+    "kind": "coherence",
+    "files": [
+      "tests/speckit-pro/layer5-tool-scoping/validate-tool-scoping.py:112",
+      "tests/speckit-pro/layer1-structural/validate-agent-contracts.py:347",
+      "tests/speckit-pro/layer1-structural/validate-skill-contracts.py:563",
+      "tests/speckit-pro/layer1-structural/validate-skill-contracts.py:612",
+      "tests/speckit-pro/layer1-structural/validate-skill-contracts.py:836"
+    ],
+    "ripwire_command": "ripwire . --grep=CODEX_SANDBOX_POLICY",
+    "summary": "Agent roster, sandbox and profile facts are restated by hand in five places (CODEX_SANDBOX_POLICY, _check_profile, two capability EXCLUSIONS pairs, CC_ONLY_AGENTS) although AGENT_INVENTORY already holds them. The two CC exclusion sets already differ. PR 851 adds one role and must edit six lists.",
+    "proposed_fix": "Derive the sandbox, profile, Claude-only, Codex-only and exemption sets from AGENT_INVENTORY (or one shared test helper) and delete the hand-kept copies.",
+    "in_flight_status": "still-open"
+  },
+  {
+    "id": "structural-layers-2-003",
+    "lane": "structural-layers-2",
+    "severity": "major",
+    "kind": "coherence",
+    "files": [
+      "tests/speckit-pro/layer1-structural/validate-skill-contracts.py:26",
+      "tests/speckit-pro/layer1-structural/validate-skill-contracts.py:278",
+      "tests/speckit-pro/layer1-structural/validate-plugin-metadata.py:65"
+    ],
+    "ripwire_command": "ripwire . --grep=validate_skills_SKILLS",
+    "summary": "Three hand-kept skill rosters exist and none is compared to the skills/ and codex-skills/ directories. A new skill added to both trees gets parity and pointer checks only, and skips the frontmatter, name and description checks in test_skills and test_codex_skills.",
+    "proposed_fix": "Assert each roster equals the discovered directory set, or iterate the discovered set with per-skill policy tables.",
+    "in_flight_status": "still-open"
+  },
+  {
+    "id": "structural-layers-2-004",
+    "lane": "structural-layers-2",
+    "severity": "major",
+    "kind": "coherence",
+    "files": [
+      "tests/speckit-pro/layer1-structural/validate-spec-lifecycle-contracts.py:271",
+      "tests/speckit-pro/layer1-structural/validate-spec-lifecycle-contracts.py:280",
+      "tests/speckit-pro/layer1-structural/validate-spec-lifecycle-contracts.py:443",
+      "speckit-pro/speckit_pro_runner/helpers/read_only.py:5275"
+    ],
+    "ripwire_command": "ripwire . --callers=_spec_index_is_gated",
+    "summary": "The lifecycle validator reimplements the structureVersion gate, frontmatter scalar parsing and spec-ID normalization twice (orphan and stale variants) instead of using the runner helpers (_spec_index_is_gated, _spec_index_normalize). The copies differ in quote stripping and digit checks, so the lint and the generator can disagree.",
+    "proposed_fix": "Import the runner functions (or extract one shared module) and delete the local copies.",
+    "in_flight_status": null
+  },
+  {
+    "id": "structural-layers-2-005",
+    "lane": "structural-layers-2",
+    "severity": "major",
+    "kind": "cohesion",
+    "files": [
+      "tests/speckit-pro/layer1-structural/validate-spec-lifecycle-contracts.py:57",
+      "tests/speckit-pro/layer1-structural/validate-spec-lifecycle-contracts.py:133",
+      "tests/speckit-pro/layer1-structural/validate-spec-lifecycle-contracts.py:203",
+      "tests/speckit-pro/layer1-structural/validate-spec-lifecycle-contracts.py:612",
+      "tests/speckit-pro/layer1-structural/validate-spec-lifecycle-contracts.py:739"
+    ],
+    "ripwire_command": "ripwire . --for=\"validate-spec-lifecycle-contracts responsibilities\"",
+    "summary": "One file named for spec lifecycle bundles unrelated contracts: zero shell scripts in the plugin, roadmap and spec templates, .specify extension integrity, .gitattributes scope, MOC orphan and stale lints (with a CLI mode), spec-index determinism, and the shipped-prose interpreter rule. A failure names the file, not the concern.",
+    "proposed_fix": "Split by concern (plugin payload hygiene, spec templates and extensions, MOC lint, spec-index helper contract) and update the manifest entries.",
+    "in_flight_status": null
+  },
+  {
+    "id": "structural-layers-2-006",
+    "lane": "structural-layers-2",
+    "severity": "minor",
+    "kind": "cohesion",
+    "files": [
+      "tests/speckit-pro/layer1-structural/validate-skill-contracts.py:470",
+      "tests/speckit-pro/layer1-structural/validate-skill-contracts.py:499"
+    ],
+    "ripwire_command": "ripwire . --grep=eval_106",
+    "summary": "A layer 1 structural validator pins layer 3 eval JSON content by numeric eval id (106, 18, 14, 19, 15, 4). The speckit-coach eval 4 assertions also sit inside _check_autopilot_skill, a Codex autopilot helper. PR 851 already had to rewrite them.",
+    "proposed_fix": "Move eval-content pins next to the eval fixtures (layer 3 unit tests) and key them by stable case id.",
+    "in_flight_status": "still-open"
+  },
+  {
+    "id": "structural-layers-2-007",
+    "lane": "structural-layers-2",
+    "severity": "minor",
+    "kind": "coherence",
+    "files": [
+      "tests/speckit-pro/run-all.py:141",
+      "tests/speckit-pro/run-all.py:4",
+      "tests/speckit-pro/run-layer-scripts.py:69",
+      "tests/speckit-pro/run-layer-scripts.py:80"
+    ],
+    "ripwire_command": "ripwire . --grep=TESTS_DIR",
+    "summary": "run-all.py exports TESTS_DIR, PLUGIN_ROOT and PROJECT_ROOT to children, but nothing under tests, scripts or the plugin reads them. Its docstring (lines 4 and 17) and run-layer-scripts.py:69 cite the retired run-all.sh. The two dispatchers also build different child environments.",
+    "proposed_fix": "Drop the unused variables, remove run-all.sh references, and share one child-environment helper.",
+    "in_flight_status": null
+  },
+  {
+    "id": "structural-layers-2-008",
+    "lane": "structural-layers-2",
+    "severity": "minor",
+    "kind": "coherence",
+    "files": [
+      "tests/speckit-pro/lib/test_result.py:129",
+      "tests/speckit-pro/layer1-structural/validate-spec-lifecycle-contracts.py:327",
+      "tests/speckit-pro/layer1-structural/validate-spec-lifecycle-contracts.py:529"
+    ],
+    "ripwire_command": "ripwire . --grep=allow_live_specs",
+    "summary": "The install_specs_read_guard docstring lists opt-out suites that no longer exist (validate-moc-orphan, validate-moc-stale-index, validate-agent-instructions) and names test-artifact-gallery, which does not pass allow_live_specs. The lifecycle validator prints warnings naming the retired scripts.",
+    "proposed_fix": "Update the docstring to the real opt-out set (privacy scan, spec lifecycle, agent contracts) and fix the warning text.",
+    "in_flight_status": null
+  },
+  {
+    "id": "structural-layers-2-009",
+    "lane": "structural-layers-2",
+    "severity": "minor",
+    "kind": "coherence",
+    "files": [
+      "tests/speckit-pro/layer1-structural/fixtures/spec-index/current-empty/specs/prsg-900-current/SPEC-MOC.md:15",
+      "tests/speckit-pro/layer1-structural/fixtures/spec-index/roadmap-moc/docs/ai/specs/myproject-roadmap-MOC.md:14",
+      "tests/speckit-pro/unit/test-generate-spec-index.py:579"
+    ],
+    "ripwire_command": "ripwire . --grep=generate-spec-index.sh",
+    "summary": "Every committed spec-index fixture carries the legacy sentinel spelling (regenerated by generate-spec-index.sh) and prose naming the retired shell script, while templates and the runner emit generate-spec-index. The canonical spelling is exercised only by a string replace in one test, and the fixtures README does not say the spelling is deliberate.",
+    "proposed_fix": "State in the fixtures README that the .sh spelling is the legacy-migration input, and add a canonical-spelling fixture tree.",
+    "in_flight_status": null
+  },
+  {
+    "id": "structural-layers-2-010",
+    "lane": "structural-layers-2",
+    "severity": "minor",
+    "kind": "cohesion",
+    "files": [
+      "tests/speckit-pro/layer1-structural/validate-agent-contracts.py:132",
+      "tests/speckit-pro/layer1-structural/validate-skill-contracts.py:32",
+      "tests/speckit-pro/layer5-tool-scoping/validate-tool-scoping.py:169",
+      "tests/speckit-pro/layer5-tool-scoping/validate-tool-scoping.py:185"
+    ],
+    "ripwire_command": "ripwire . --exemplar=\"parse toml developer_instructions and yaml frontmatter field\"",
+    "summary": "Frontmatter field and TOML instruction extractors are copied per validator (_field twice at 0.97 clone similarity, _extract_developer_instructions and _toml_prose) although lib/structural_helpers.py exists. The copies differ: layer 1 strips quotes, layer 5 does not.",
+    "proposed_fix": "Move the extractors into structural_helpers.py and import them.",
+    "in_flight_status": "still-open"
+  },
+  {
+    "id": "structural-layers-2-011",
+    "lane": "structural-layers-2",
+    "severity": "minor",
+    "kind": "cohesion",
+    "files": [
+      "tests/speckit-pro/layer5-tool-scoping/validate-tool-scoping.py:129",
+      "tests/speckit-pro/layer5-tool-scoping/validate-tool-scoping.py:550"
+    ],
+    "ripwire_command": "ripwire . --callers=build_suite",
+    "summary": "build_suite runs a hand-listed TEST_METHOD_ORDER, so a test method added to ValidateToolScoping and not listed never runs, and the suite still passes.",
+    "proposed_fix": "Discover test_* methods and keep an explicit order only for the one test that mutates module state, or assert the list equals the discovered set.",
+    "in_flight_status": "still-open"
+  },
+  {
+    "id": "structural-layers-2-012",
+    "lane": "structural-layers-2",
+    "severity": "minor",
+    "kind": "cohesion",
+    "files": [
+      "tests/speckit-pro/layer1-structural/validate-agent-contracts.py:31",
+      "tests/speckit-pro/layer1-structural/validate-agent-contracts.py:113"
+    ],
+    "ripwire_command": "ripwire . --for=\"AGENTS.md wrapper drift validation\"",
+    "summary": "validate-agent-contracts.py also owns the AGENTS.md, CLAUDE.md, GEMINI.md and Copilot wrapper and size-budget checks (repo instruction hygiene), which is a different concern from plugin agent definitions.",
+    "proposed_fix": "Move collect_errors and its constants to their own validator.",
+    "in_flight_status": "still-open"
+  },
+  {
+    "id": "structural-layers-2-013",
+    "lane": "structural-layers-2",
+    "severity": "minor",
+    "kind": "cohesion",
+    "files": [
+      "tests/speckit-pro/layer1-structural/validate-skill-contracts.py:565",
+      "tests/speckit-pro/layer1-structural/validate-skill-contracts.py:573"
+    ],
+    "ripwire_command": "ripwire . --uses=APPROVED_EQUIVALENTS",
+    "summary": "APPROVED_EQUIVALENTS is an empty frozenset and _approved_equivalent can never return true, so the escape hatch is dead code that reads as a live policy.",
+    "proposed_fix": "Delete the constant and the helper, or record a real equivalent.",
+    "in_flight_status": "still-open"
+  }
+]

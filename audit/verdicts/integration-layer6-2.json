@@ -1,0 +1,698 @@
+{
+  "tests/speckit-pro/layer6-integration/dispatch-fixtures/19-implement-parallel-p-tasks/parser-fixture.jsonl": {
+    "verdict": [
+      "integration-layer6-2-001",
+      "integration-layer6-2-002"
+    ],
+    "checks_run": [
+      "ripwire . --for=\"layer 6 integration fixtures coherence\"",
+      "read of cited lines"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/dispatch-fixtures/19-implement-parallel-p-tasks/prompt.txt": {
+    "verdict": [
+      "integration-layer6-2-002"
+    ],
+    "checks_run": [
+      "ripwire . --for=\"layer 6 integration fixtures coherence\"",
+      "read of cited lines"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/dispatch-fixtures/20-consensus-multi-item-batch/README.md": {
+    "verdict": [
+      "integration-layer6-2-001"
+    ],
+    "checks_run": [
+      "ripwire . --for=\"layer 6 integration fixtures coherence\"",
+      "read of cited lines"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/dispatch-fixtures/20-consensus-multi-item-batch/expected.json": {
+    "verdict": [
+      "integration-layer6-2-001"
+    ],
+    "checks_run": [
+      "ripwire . --for=\"layer 6 integration fixtures coherence\"",
+      "read of cited lines"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/dispatch-fixtures/20-consensus-multi-item-batch/parser-fixture.jsonl": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"layer 6 integration fixtures coherence\"",
+      "read of cited lines"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/dispatch-fixtures/20-consensus-multi-item-batch/prompt.txt": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"layer 6 integration fixtures coherence\"",
+      "read of cited lines"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/dispatch-fixtures/21-resolve-pr-parallel-files/README.md": {
+    "verdict": [
+      "integration-layer6-2-001",
+      "integration-layer6-2-003"
+    ],
+    "checks_run": [
+      "ripwire . --for=\"layer 6 integration fixtures coherence\"",
+      "read of cited lines"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/dispatch-fixtures/21-resolve-pr-parallel-files/expected.json": {
+    "verdict": [
+      "integration-layer6-2-001"
+    ],
+    "checks_run": [
+      "ripwire . --for=\"layer 6 integration fixtures coherence\"",
+      "read of cited lines"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/dispatch-fixtures/21-resolve-pr-parallel-files/parser-fixture.jsonl": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"layer 6 integration fixtures coherence\"",
+      "read of cited lines"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/dispatch-fixtures/21-resolve-pr-parallel-files/prompt.txt": {
+    "verdict": [
+      "integration-layer6-2-003"
+    ],
+    "checks_run": [
+      "ripwire . --for=\"layer 6 integration fixtures coherence\"",
+      "read of cited lines"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/e2e-fixtures/01-autopilot-minimal-smoke/README.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"layer 6 integration fixtures coherence\"",
+      "read of cited lines"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/e2e-fixtures/01-autopilot-minimal-smoke/expected.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"layer 6 integration fixtures coherence\"",
+      "read of cited lines"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/e2e-fixtures/01-autopilot-minimal-smoke/parser-fixture.jsonl": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"layer 6 integration fixtures coherence\"",
+      "read of cited lines"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/e2e-fixtures/01-autopilot-minimal-smoke/prompt.txt": {
+    "verdict": [
+      "integration-layer6-2-006"
+    ],
+    "checks_run": [
+      "ripwire . --for=\"layer 6 integration fixtures coherence\"",
+      "read of cited lines"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/e2e-fixtures/01-autopilot-minimal-smoke/sample-spec.md": {
+    "verdict": [
+      "integration-layer6-2-006"
+    ],
+    "checks_run": [
+      "ripwire . --for=\"layer 6 integration fixtures coherence\"",
+      "read of cited lines"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/e2e-fixtures/02-autopilot-extended-pipeline/README.md": {
+    "verdict": [
+      "integration-layer6-2-006"
+    ],
+    "checks_run": [
+      "ripwire . --for=\"layer 6 integration fixtures coherence\"",
+      "read of cited lines"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/e2e-fixtures/02-autopilot-extended-pipeline/expected.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"layer 6 integration fixtures coherence\"",
+      "read of cited lines"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/e2e-fixtures/02-autopilot-extended-pipeline/parser-fixture.jsonl": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"layer 6 integration fixtures coherence\"",
+      "read of cited lines"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/e2e-fixtures/02-autopilot-extended-pipeline/prompt.txt": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"layer 6 integration fixtures coherence\"",
+      "read of cited lines"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/e2e-fixtures/02-autopilot-extended-pipeline/sample-spec.md": {
+    "verdict": [
+      "integration-layer6-2-006"
+    ],
+    "checks_run": [
+      "ripwire . --for=\"layer 6 integration fixtures coherence\"",
+      "read of cited lines"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/grounding-fixtures/01-grounded-research/expected.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"layer 6 integration fixtures coherence\"",
+      "read of cited lines"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/grounding-fixtures/01-grounded-research/parser-fixture.jsonl": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"layer 6 integration fixtures coherence\"",
+      "read of cited lines"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/grounding-fixtures/02-fabricated-citation/expected.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"layer 6 integration fixtures coherence\"",
+      "read of cited lines"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/grounding-fixtures/02-fabricated-citation/parser-fixture.jsonl": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"layer 6 integration fixtures coherence\"",
+      "read of cited lines"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/grounding-fixtures/03-abstained-no-capability/expected.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"layer 6 integration fixtures coherence\"",
+      "read of cited lines"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/grounding-fixtures/03-abstained-no-capability/parser-fixture.jsonl": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"layer 6 integration fixtures coherence\"",
+      "read of cited lines"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/grounding-fixtures/04-discovered-tool-used/expected.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"layer 6 integration fixtures coherence\"",
+      "read of cited lines"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/grounding-fixtures/04-discovered-tool-used/parser-fixture.jsonl": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"layer 6 integration fixtures coherence\"",
+      "read of cited lines"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/grounding-fixtures/05-errored-tool/expected.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"layer 6 integration fixtures coherence\"",
+      "read of cited lines"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/grounding-fixtures/05-errored-tool/parser-fixture.jsonl": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"layer 6 integration fixtures coherence\"",
+      "read of cited lines"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/grounding-fixtures/06-malformed-citation/expected.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"layer 6 integration fixtures coherence\"",
+      "read of cited lines"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/grounding-fixtures/06-malformed-citation/parser-fixture.jsonl": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"layer 6 integration fixtures coherence\"",
+      "read of cited lines"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/lib/fixture_runner.py": {
+    "verdict": [
+      "integration-layer6-2-001",
+      "integration-layer6-2-008",
+      "integration-layer6-2-010"
+    ],
+    "checks_run": [
+      "ripwire . --for=\"layer 6 integration fixtures coherence\"",
+      "read of cited lines",
+      "ripwire . --callers=assert_dispatch_fixture"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/lib/transcript_helpers.py": {
+    "verdict": [
+      "integration-layer6-2-001",
+      "integration-layer6-2-005",
+      "integration-layer6-2-009"
+    ],
+    "checks_run": [
+      "ripwire . --for=\"layer 6 integration fixtures coherence\"",
+      "read of cited lines",
+      "ripwire . --callers=main"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/performance-fixtures/COMMON-TASKS-INPUT.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"layer 6 integration fixtures coherence\"",
+      "read of cited lines"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/performance-fixtures/DEPENDENCY-PINS.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"layer 6 integration fixtures coherence\"",
+      "read of cited lines"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/performance-fixtures/PROTOCOL.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"layer 6 integration fixtures coherence\"",
+      "read of cited lines"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/performance-fixtures/manifest.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"layer 6 integration fixtures coherence\"",
+      "read of cited lines"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/performance-fixtures/troubleshooting-security/kickoff.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"layer 6 integration fixtures coherence\"",
+      "read of cited lines"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/performance-fixtures/troubleshooting-security/prepared-tasks.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"layer 6 integration fixtures coherence\"",
+      "read of cited lines"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/performance-fixtures/troubleshooting-security/source/data-model.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"layer 6 integration fixtures coherence\"",
+      "read of cited lines"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/performance-fixtures/troubleshooting-security/source/design-concept.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"layer 6 integration fixtures coherence\"",
+      "read of cited lines"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/performance-fixtures/troubleshooting-security/source/plan.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"layer 6 integration fixtures coherence\"",
+      "read of cited lines"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/performance-fixtures/troubleshooting-security/source/quickstart.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"layer 6 integration fixtures coherence\"",
+      "read of cited lines"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/performance-fixtures/troubleshooting-security/source/research.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"layer 6 integration fixtures coherence\"",
+      "read of cited lines"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/performance-fixtures/troubleshooting-security/source/spec.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"layer 6 integration fixtures coherence\"",
+      "read of cited lines"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/performance-fixtures/troubleshooting-security/source/tasks.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"layer 6 integration fixtures coherence\"",
+      "read of cited lines"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/performance-fixtures/troubleshooting-security/source/workflow.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"layer 6 integration fixtures coherence\"",
+      "read of cited lines"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/reduce-transcript-fixture.py": {
+    "verdict": [
+      "integration-layer6-2-004",
+      "integration-layer6-2-007",
+      "integration-layer6-2-008"
+    ],
+    "checks_run": [
+      "ripwire . --for=\"layer 6 integration fixtures coherence\"",
+      "read of cited lines",
+      "ripwire . --callers=main"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/return-format-fixtures/01-synthesizer-reads-analysts/README.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"layer 6 integration fixtures coherence\"",
+      "read of cited lines"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/return-format-fixtures/01-synthesizer-reads-analysts/expected.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"layer 6 integration fixtures coherence\"",
+      "read of cited lines"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/return-format-fixtures/01-synthesizer-reads-analysts/parser-fixture.jsonl": {
+    "verdict": [
+      "integration-layer6-2-004"
+    ],
+    "checks_run": [
+      "ripwire . --for=\"layer 6 integration fixtures coherence\"",
+      "read of cited lines"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/return-format-fixtures/01-synthesizer-reads-analysts/prompt.txt": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"layer 6 integration fixtures coherence\"",
+      "read of cited lines"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/return-format-fixtures/02-synthesizer-majority/README.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"layer 6 integration fixtures coherence\"",
+      "read of cited lines"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/return-format-fixtures/02-synthesizer-majority/expected.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"layer 6 integration fixtures coherence\"",
+      "read of cited lines"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/return-format-fixtures/02-synthesizer-majority/parser-fixture.jsonl": {
+    "verdict": [
+      "integration-layer6-2-004"
+    ],
+    "checks_run": [
+      "ripwire . --for=\"layer 6 integration fixtures coherence\"",
+      "read of cited lines"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/return-format-fixtures/02-synthesizer-majority/prompt.txt": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"layer 6 integration fixtures coherence\"",
+      "read of cited lines"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/return-format-fixtures/03-checklist-output/README.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"layer 6 integration fixtures coherence\"",
+      "read of cited lines"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/return-format-fixtures/03-checklist-output/expected.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"layer 6 integration fixtures coherence\"",
+      "read of cited lines"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/return-format-fixtures/03-checklist-output/parser-fixture.jsonl": {
+    "verdict": [
+      "integration-layer6-2-004"
+    ],
+    "checks_run": [
+      "ripwire . --for=\"layer 6 integration fixtures coherence\"",
+      "read of cited lines"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/return-format-fixtures/03-checklist-output/prompt.txt": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"layer 6 integration fixtures coherence\"",
+      "read of cited lines"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/return-format-fixtures/04-synthesizer-keyword-only-majority/README.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"layer 6 integration fixtures coherence\"",
+      "read of cited lines"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/return-format-fixtures/04-synthesizer-keyword-only-majority/expected.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"layer 6 integration fixtures coherence\"",
+      "read of cited lines"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/return-format-fixtures/04-synthesizer-keyword-only-majority/parser-fixture.jsonl": {
+    "verdict": [
+      "integration-layer6-2-004"
+    ],
+    "checks_run": [
+      "ripwire . --for=\"layer 6 integration fixtures coherence\"",
+      "read of cited lines"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/return-format-fixtures/04-synthesizer-keyword-only-majority/prompt.txt": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"layer 6 integration fixtures coherence\"",
+      "read of cited lines"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/return-format-fixtures/05-synthesizer-keyword-security-relevant/README.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"layer 6 integration fixtures coherence\"",
+      "read of cited lines"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/return-format-fixtures/05-synthesizer-keyword-security-relevant/expected.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"layer 6 integration fixtures coherence\"",
+      "read of cited lines"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/return-format-fixtures/05-synthesizer-keyword-security-relevant/parser-fixture.jsonl": {
+    "verdict": [
+      "integration-layer6-2-004"
+    ],
+    "checks_run": [
+      "ripwire . --for=\"layer 6 integration fixtures coherence\"",
+      "read of cited lines"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/return-format-fixtures/05-synthesizer-keyword-security-relevant/prompt.txt": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"layer 6 integration fixtures coherence\"",
+      "read of cited lines"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/run-all-fixtures.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"layer 6 integration fixtures coherence\"",
+      "read of cited lines",
+      "ripwire . --callers=main"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/run-dispatch-fixtures.py": {
+    "verdict": [
+      "integration-layer6-2-010"
+    ],
+    "checks_run": [
+      "ripwire . --for=\"layer 6 integration fixtures coherence\"",
+      "read of cited lines",
+      "ripwire . --callers=main"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/run-e2e-fixtures.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"layer 6 integration fixtures coherence\"",
+      "read of cited lines",
+      "ripwire . --callers=main"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/run-grounding-fixtures.py": {
+    "verdict": [
+      "integration-layer6-2-008",
+      "integration-layer6-2-010"
+    ],
+    "checks_run": [
+      "ripwire . --for=\"layer 6 integration fixtures coherence\"",
+      "read of cited lines",
+      "ripwire . --callers=main"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/run-return-format-fixtures.py": {
+    "verdict": [
+      "integration-layer6-2-004",
+      "integration-layer6-2-008"
+    ],
+    "checks_run": [
+      "ripwire . --for=\"layer 6 integration fixtures coherence\"",
+      "read of cited lines",
+      "ripwire . --callers=main"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/scrub-transcript.py": {
+    "verdict": [
+      "integration-layer6-2-007"
+    ],
+    "checks_run": [
+      "ripwire . --for=\"layer 6 integration fixtures coherence\"",
+      "read of cited lines",
+      "ripwire . --callers=main"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/test-fixtures/forbidden-spawn.jsonl": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"layer 6 integration fixtures coherence\"",
+      "read of cited lines"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/test-fixtures/multi-dispatch.jsonl": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"layer 6 integration fixtures coherence\"",
+      "read of cited lines"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/test-fixtures/no-dispatch.jsonl": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"layer 6 integration fixtures coherence\"",
+      "read of cited lines"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/test-fixtures/redelegation-chain.jsonl": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"layer 6 integration fixtures coherence\"",
+      "read of cited lines"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/test-fixtures/sidechain-noise.jsonl": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"layer 6 integration fixtures coherence\"",
+      "read of cited lines"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/test-fixtures/single-dispatch.jsonl": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"layer 6 integration fixtures coherence\"",
+      "read of cited lines"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/test-fixtures/skill-invocations.jsonl": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"layer 6 integration fixtures coherence\"",
+      "read of cited lines"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/mutation-helpers/requests/mutation-registry-dispatch.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"layer 6 integration fixtures coherence\"",
+      "read of cited lines"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/read-only-helpers/read-only-helper-feature/checklists/integration.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"layer 6 integration fixtures coherence\"",
+      "read of cited lines"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/read-only-helpers/requests/helper-registry-dispatch.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"layer 6 integration fixtures coherence\"",
+      "read of cited lines"
+    ]
+  },
+  "tests/speckit-pro/unit/test-integration-runners.py": {
+    "verdict": [
+      "integration-layer6-2-011"
+    ],
+    "checks_run": [
+      "ripwire . --for=\"layer 6 integration fixtures coherence\"",
+      "read of cited lines",
+      "ripwire . --grep=layer6-integration"
+    ]
+  },
+  "tests/speckit-pro/unit/test-performance-fixtures.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"layer 6 integration fixtures coherence\"",
+      "read of cited lines",
+      "ripwire . --grep=layer6-integration"
+    ]
+  },
+  "tests/speckit-pro/unit/test-transcript-helpers.py": {
+    "verdict": [
+      "integration-layer6-2-011"
+    ],
+    "checks_run": [
+      "ripwire . --for=\"layer 6 integration fixtures coherence\"",
+      "read of cited lines",
+      "ripwire . --grep=layer6-integration"
+    ]
+  },
+  "tests/speckit-pro/unit/test-transcript-tools.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"layer 6 integration fixtures coherence\"",
+      "read of cited lines",
+      "ripwire . --grep=layer6-integration"
+    ]
+  }
+}

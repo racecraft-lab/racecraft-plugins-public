@@ -1,0 +1,159 @@
+[
+  {
+    "id": "coach-and-formal-001",
+    "lane": "coach-and-formal",
+    "severity": "major",
+    "kind": "coherence",
+    "files": [
+      "speckit-pro/codex-agents/formal-model-author.toml:23",
+      "speckit-pro/agents/formal-model-author.md:37",
+      "speckit-pro/skills/speckit-autopilot/references/formal-methods.md:36"
+    ],
+    "ripwire_command": "ripwire . --grep=write_formal_file",
+    "summary": "The shared contract says both platforms dispatch the author with a parent-minted broker capability and that every file change goes through the author-broker write tool. Only the Claude agent carries that rule. The Codex TOML never mentions the capability or the broker tool, runs with workspace-write, and states the output-path limit as prose only.",
+    "proposed_fix": "Add the capability input and the broker-only write rule to the Codex TOML, or state in formal-methods.md that Codex confinement is prose-only and record the reason in agent_inventory.json.",
+    "in_flight_status": null
+  },
+  {
+    "id": "coach-and-formal-002",
+    "lane": "coach-and-formal",
+    "severity": "minor",
+    "kind": "coherence",
+    "files": [
+      "speckit-pro/speckit_pro_runner/formal/engine.py:20",
+      "speckit-pro/skills/speckit-coach/scripts/setup-formal-tools.py:27",
+      "speckit-pro/speckit_pro_runner/formal/catalog.py:17",
+      "speckit-pro/speckit_pro_runner/formal/quint.py:17",
+      "speckit-pro/speckit_pro_runner/contracts/formal-methods.schema.json:15"
+    ],
+    "ripwire_command": "ripwire . --callers=CHECKER_SHA256",
+    "summary": "Tool versions and checksums are hand-copied into engine.py, setup-formal-tools.py, catalog.py, quint.py, the JSON schema, package.json and several docs. No test asserts that setup TOOLS agree with engine CHECKER_SHA256 or catalog VERSIONS. The values agree today, so a version bump can drift silently.",
+    "proposed_fix": "Make one module the pin source and import it in setup-formal-tools.py and engine.py, or add one test that compares all copies including the schema consts.",
+    "in_flight_status": null
+  },
+  {
+    "id": "coach-and-formal-003",
+    "lane": "coach-and-formal",
+    "severity": "minor",
+    "kind": "coherence",
+    "files": [
+      "speckit-pro/skills/speckit-coach/references/formal-setup.md:56",
+      "speckit-pro/skills/speckit-coach/examples/formal/counter-tlc/catalog.json:10",
+      "speckit-pro/skills/speckit-coach/examples/formal/counter/catalog.json:6",
+      "speckit-pro/skills/speckit-coach/scripts/setup-formal-tools.py:82",
+      "speckit-pro/skills/speckit-coach/references/quint-guide.md:70"
+    ],
+    "ripwire_command": "ripwire . --grep=heap_mb",
+    "summary": "formal-setup.md says the example catalogs default heap_mb to 4096, but the TLC example sets 1024. Example catalogs point at .specify/tools/apalache-0.62.2/lib/apalache.jar and .specify/tools/tla2tools-1.7.4.jar, while the setup script installs under .specify/tools/formal/<tool>-<version>/. The Quint catalog snippet copies to formal/counter, the directory the TLA counter step already uses, and counter-quint ships no catalog.",
+    "proposed_fix": "Align the example catalog paths and heap values with the setup script output, correct the 4096 claim, and give the Quint example its own catalog and model directory name.",
+    "in_flight_status": null
+  },
+  {
+    "id": "coach-and-formal-004",
+    "lane": "coach-and-formal",
+    "severity": "minor",
+    "kind": "coherence",
+    "files": [
+      "specs/formal-001-selective-formal-methods/acceptance.md:140",
+      "specs/formal-001-selective-formal-methods/acceptance.md:14",
+      "specs/formal-001-selective-formal-methods/acceptance.md:30"
+    ],
+    "ripwire_command": "ripwire . --grep=26/26",
+    "summary": "The trace-layer evidence says native TLC trace qualification passed 26/26. The acceptance table (A4) and the delivery row for PR 563 both record TLC 27/27 on the same hosted run.",
+    "proposed_fix": "Reconcile the count to the hosted run, or label 26/26 as the earlier layer-5 figure.",
+    "in_flight_status": null
+  },
+  {
+    "id": "coach-and-formal-005",
+    "lane": "coach-and-formal",
+    "severity": "minor",
+    "kind": "coherence",
+    "files": [
+      "specs/formal-001-selective-formal-methods/plan.md:54",
+      "specs/formal-001-selective-formal-methods/plan.md:56",
+      "specs/formal-001-selective-formal-methods/plan.md:85",
+      "specs/formal-001-selective-formal-methods/plan.md:117",
+      "specs/formal-001-selective-formal-methods/tasks.md:26"
+    ],
+    "ripwire_command": "ripwire . --grep=T5",
+    "summary": "plan.md still has four unchecked items (T5, T6, T6, and the full-harness review) for work that tasks.md marks complete (T5, T5a, T6, T6a, T6b) and acceptance.md A7 records as finished.",
+    "proposed_fix": "Check the plan items or drop the duplicated checklist from plan.md so tasks.md is the only status record.",
+    "in_flight_status": null
+  },
+  {
+    "id": "coach-and-formal-006",
+    "lane": "coach-and-formal",
+    "severity": "minor",
+    "kind": "coherence",
+    "files": [
+      "specs/formal-001-selective-formal-methods/stack-uat.md:55",
+      "tests/speckit-pro/lib/privacy_patterns.py:21"
+    ],
+    "ripwire_command": "ripwire . --grep=formal-uat-live",
+    "summary": "stack-uat.md cites raw evidence under macOS temp directories that no reader can open. AGENTS.md says the privacy scan rejects macOS temp paths, but TMP_TRANSCRIPT_PATTERN only matches the Claude-specific temp prefix, so these paths pass the scan.",
+    "proposed_fix": "Drop the temp-directory paths from the record (the results are already summarized), and widen the privacy pattern if temp paths are meant to be rejected.",
+    "in_flight_status": null
+  },
+  {
+    "id": "coach-and-formal-007",
+    "lane": "coach-and-formal",
+    "severity": "minor",
+    "kind": "coherence",
+    "files": [
+      "tests/speckit-pro/evals/audit/unit-quality-formal-audit.md:10",
+      "tests/speckit-pro/evals/audit/unit-quality-formal-audit.json:9"
+    ],
+    "ripwire_command": "ripwire . --grep=unit-quality-formal-audit",
+    "summary": "The audit says all current source hashes match its frozen inventory and source_drift_at_review is false. Eight of the eleven listed test scripts (including test-formal-checkers, -setup and -traces) no longer hash to their recorded frozen_sha256, and the counted-unit totals are stale with them.",
+    "proposed_fix": "Mark the record as a dated snapshot, or refresh hashes and counts. Do not let the wording claim current-state agreement.",
+    "in_flight_status": null
+  },
+  {
+    "id": "coach-and-formal-008",
+    "lane": "coach-and-formal",
+    "severity": "minor",
+    "kind": "cohesion",
+    "files": [
+      "speckit-pro/speckit_pro_runner/formal/helper.py:69",
+      "speckit-pro/speckit_pro_runner/formal/helper.py:84",
+      "speckit-pro/speckit_pro_runner/formal/lifecycle.py:145",
+      "speckit-pro/speckit_pro_runner/formal/lifecycle.py:160",
+      "speckit-pro/speckit_pro_runner/formal/catalog.py:153"
+    ],
+    "ripwire_command": "ripwire . --callers=apply_resume_guard",
+    "summary": "The formal package holds autopilot policy: apply_resume_guard edits resume parse and signal dicts, gate_checkpoint knows gate ids G3 to G7, and required_checkpoints hardcodes autopilot Post step names. Modules also import each other lazily (helper and lifecycle, catalog and traces or native_config) to hide cycles.",
+    "proposed_fix": "Move resume, gate and step-name policy next to resolve-autopilot-stage or validate-gate and have it call a small formal API. Give catalog validators a leaf module so the imports stop cycling.",
+    "in_flight_status": null
+  },
+  {
+    "id": "coach-and-formal-009",
+    "lane": "coach-and-formal",
+    "severity": "minor",
+    "kind": "coherence",
+    "files": [
+      "speckit-pro/skills/speckit-coach/templates/workflow-template.md:43",
+      "speckit-pro/skills/speckit-coach/templates/workflow-template.md:581",
+      "speckit-pro/codex-skills/speckit-autopilot/references/task-list-canonical-codex.md:56"
+    ],
+    "ripwire_command": "ripwire . --grep=Final Reviewability Backstop",
+    "summary": "The shared workflow template says the Post closeout has 11 items. The Codex canonical list has 14 rows, adding Final Reviewability Backstop and PR Packet/Body Generation. The template's Post table carries neither row, so a Codex workflow starts with a checklist that disagrees with its own canonical plan.",
+    "proposed_fix": "Give the Codex scaffold path a documented row set, or add the two rows to the template with a note on which host uses them.",
+    "in_flight_status": "still-open"
+  },
+  {
+    "id": "coach-and-formal-010",
+    "lane": "coach-and-formal",
+    "severity": "minor",
+    "kind": "coherence",
+    "files": [
+      "speckit-pro/skills/speckit-coach/templates/workflow-template.md:296",
+      "speckit-pro/skills/speckit-coach/references/checklist-domains-guide.md:43",
+      "specs/formal-001-selective-formal-methods/SPEC-MOC.md:4",
+      "speckit-pro/skills/speckit-coach/references/roadmap-moc-guide.md:58"
+    ],
+    "ripwire_command": "ripwire . --grep=mobile-ux",
+    "summary": "The workflow template's domain signal table lists 12 domains. The checklist guide lists 15 (it adds integration, mobile-ux and reliability), so the two disagree on what to recommend. Separately, SPEC-MOC.md sets status to in-progress (hyphen), while the MOC guide names in_progress as the canonical value; normalize_status accepts both.",
+    "proposed_fix": "Make the guide the single domain list and have the template point to it. Change the SPEC-MOC status to in_progress.",
+    "in_flight_status": "still-open"
+  }
+]

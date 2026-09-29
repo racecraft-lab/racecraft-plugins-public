@@ -1,0 +1,275 @@
+{
+  "tests/speckit-pro/layer1-structural/fixtures/spec-index/roadmap-moc/docs/ai/specs/otherproject-roadmap-MOC.md": {
+    "verdict": "clean",
+    "checks_run": []
+  },
+  "tests/speckit-pro/layer1-structural/fixtures/spec-index/roadmap-moc/specs/legacy-thing/SPEC-MOC.md": {
+    "verdict": "clean",
+    "checks_run": []
+  },
+  "tests/speckit-pro/layer1-structural/fixtures/spec-index/roadmap-moc/specs/prsg-001-foo/SPEC-MOC.md": {
+    "verdict": "clean",
+    "checks_run": []
+  },
+  "tests/speckit-pro/layer1-structural/fixtures/spec-index/roadmap-moc/specs/prsg-002-bar/SPEC-MOC.md": {
+    "verdict": "clean",
+    "checks_run": []
+  },
+  "tests/speckit-pro/layer1-structural/fixtures/spec-index/roadmap-moc/specs/prsg-003-noid/SPEC-MOC.md": {
+    "verdict": "clean",
+    "checks_run": []
+  },
+  "tests/speckit-pro/layer1-structural/fixtures/spec-index/roadmap-moc/specs/prsg-004-other/SPEC-MOC.md": {
+    "verdict": "clean",
+    "checks_run": []
+  },
+  "tests/speckit-pro/layer1-structural/fixtures/spec-index/roadmap-moc/specs/prsg-010-baz/SPEC-MOC.md": {
+    "verdict": "clean",
+    "checks_run": []
+  },
+  "tests/speckit-pro/layer1-structural/fixtures/spec-index/roadmap-moc/specs/prsg-011-flat-owned/spec.md": {
+    "verdict": "clean",
+    "checks_run": []
+  },
+  "tests/speckit-pro/layer1-structural/fixtures/spec-index/roadmap-moc/specs/prsg-099-flat/spec.md": {
+    "verdict": "clean",
+    "checks_run": []
+  },
+  "tests/speckit-pro/layer1-structural/fixtures/spec-index/skip-one-missing/specs/prsg-903-skipone/SPEC-MOC.md": {
+    "verdict": "clean",
+    "checks_run": []
+  },
+  "tests/speckit-pro/layer1-structural/fixtures/spec-index/skip-one-missing/specs/prsg-903-skipone/spec.md": {
+    "verdict": "clean",
+    "checks_run": []
+  },
+  "tests/speckit-pro/layer1-structural/fixtures/spec-index/stale-fill/specs/prsg-901-stale/SPEC-MOC.md": {
+    "verdict": "clean",
+    "checks_run": []
+  },
+  "tests/speckit-pro/layer1-structural/fixtures/spec-index/stale-fill/specs/prsg-901-stale/contracts/sample.md": {
+    "verdict": "clean",
+    "checks_run": []
+  },
+  "tests/speckit-pro/layer1-structural/fixtures/spec-index/stale-fill/specs/prsg-901-stale/plan.md": {
+    "verdict": "clean",
+    "checks_run": []
+  },
+  "tests/speckit-pro/layer1-structural/fixtures/spec-index/stale-fill/specs/prsg-901-stale/spec.md": {
+    "verdict": "clean",
+    "checks_run": []
+  },
+  "tests/speckit-pro/layer1-structural/validate-agent-contracts.py": {
+    "verdict": [
+      "structural-layers-2-002",
+      "structural-layers-2-010",
+      "structural-layers-2-012"
+    ],
+    "checks_run": [
+      "ripwire . --grep=CODEX_SANDBOX_POLICY",
+      "ripwire . --exemplar=\"parse toml developer_instructions and yaml frontmatter field\"",
+      "ripwire . --for=\"AGENTS.md wrapper drift validation\""
+    ]
+  },
+  "tests/speckit-pro/layer1-structural/validate-hook-contracts.py": {
+    "verdict": "clean",
+    "checks_run": []
+  },
+  "tests/speckit-pro/layer1-structural/validate-skill-contracts.py": {
+    "verdict": [
+      "structural-layers-2-002",
+      "structural-layers-2-003",
+      "structural-layers-2-006",
+      "structural-layers-2-010",
+      "structural-layers-2-013"
+    ],
+    "checks_run": [
+      "ripwire . --grep=CODEX_SANDBOX_POLICY",
+      "ripwire . --grep=validate_skills_SKILLS",
+      "ripwire . --grep=eval_106",
+      "ripwire . --exemplar=\"parse toml developer_instructions and yaml frontmatter field\"",
+      "ripwire . --uses=APPROVED_EQUIVALENTS"
+    ]
+  },
+  "tests/speckit-pro/layer1-structural/validate-spec-lifecycle-contracts.py": {
+    "verdict": [
+      "structural-layers-2-004",
+      "structural-layers-2-005",
+      "structural-layers-2-008"
+    ],
+    "checks_run": [
+      "ripwire . --callers=_spec_index_is_gated",
+      "ripwire . --for=\"validate-spec-lifecycle-contracts responsibilities\"",
+      "ripwire . --grep=allow_live_specs"
+    ]
+  },
+  "tests/speckit-pro/layer5-tool-scoping/validate-tool-scoping.py": {
+    "verdict": [
+      "structural-layers-2-002",
+      "structural-layers-2-010",
+      "structural-layers-2-011"
+    ],
+    "checks_run": [
+      "ripwire . --grep=CODEX_SANDBOX_POLICY",
+      "ripwire . --exemplar=\"parse toml developer_instructions and yaml frontmatter field\"",
+      "ripwire . --callers=build_suite"
+    ]
+  },
+  "tests/speckit-pro/lib/privacy_patterns.py": {
+    "verdict": "clean",
+    "checks_run": []
+  },
+  "tests/speckit-pro/lib/structural_helpers.py": {
+    "verdict": "clean",
+    "checks_run": []
+  },
+  "tests/speckit-pro/lib/test_lib.py": {
+    "verdict": "clean",
+    "checks_run": []
+  },
+  "tests/speckit-pro/lib/test_result.py": {
+    "verdict": [
+      "structural-layers-2-008"
+    ],
+    "checks_run": [
+      "ripwire . --grep=allow_live_specs"
+    ]
+  },
+  "tests/speckit-pro/run-all.py": {
+    "verdict": [
+      "structural-layers-2-007"
+    ],
+    "checks_run": [
+      "ripwire . --grep=TESTS_DIR"
+    ]
+  },
+  "tests/speckit-pro/run-layer-scripts.py": {
+    "verdict": [
+      "structural-layers-2-007"
+    ],
+    "checks_run": [
+      "ripwire . --grep=TESTS_DIR",
+      "ripwire . --callers=canonical_test_scripts"
+    ]
+  },
+  "tests/speckit-pro/suite-manifest.json": {
+    "verdict": [
+      "structural-layers-2-001"
+    ],
+    "checks_run": [
+      "ripwire . --grep=consensus-synthesizer-regressions"
+    ]
+  },
+  "tests/speckit-pro/test-run-all.py": {
+    "verdict": "clean",
+    "checks_run": []
+  },
+  "tests/speckit-pro/unit/README.md": {
+    "verdict": "clean",
+    "checks_run": []
+  },
+  "tests/speckit-pro/unit/fixtures/README.md": {
+    "verdict": "clean",
+    "checks_run": []
+  },
+  "tests/speckit-pro/unit/fixtures/mutation-helpers/requests/generate-spec-index-write.json": {
+    "verdict": "clean",
+    "checks_run": []
+  },
+  "tests/speckit-pro/unit/fixtures/plan-layers/repository-bash-confinement-plan/tasks.md": {
+    "verdict": "clean",
+    "checks_run": []
+  },
+  "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/allowlist-active-path.json": {
+    "verdict": "clean",
+    "checks_run": []
+  },
+  "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/allowlist-line-bounds.json": {
+    "verdict": "clean",
+    "checks_run": []
+  },
+  "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/allowlist-missing-fields.json": {
+    "verdict": "clean",
+    "checks_run": []
+  },
+  "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/allowlist-traversal.json": {
+    "verdict": "clean",
+    "checks_run": []
+  },
+  "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/allowlist-unsupported-field.json": {
+    "verdict": "clean",
+    "checks_run": []
+  },
+  "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/allowlist.json": {
+    "verdict": "clean",
+    "checks_run": []
+  },
+  "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/contracts/historical-allowlist-entry.schema.json": {
+    "verdict": "clean",
+    "checks_run": []
+  },
+  "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/contracts/zero-bash-guard-request.schema.json": {
+    "verdict": "clean",
+    "checks_run": []
+  },
+  "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/contracts/zero-bash-guard-result.schema.json": {
+    "verdict": "clean",
+    "checks_run": []
+  },
+  "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/requests/zero-bash-guard.json": {
+    "verdict": "clean",
+    "checks_run": []
+  },
+  "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/zero-bash-guard-cases.json": {
+    "verdict": "clean",
+    "checks_run": []
+  },
+  "tests/speckit-pro/unit/fixtures/read-only-helpers/requests/generate-spec-index-check.json": {
+    "verdict": "clean",
+    "checks_run": []
+  },
+  "tests/speckit-pro/unit/fixtures/repository-bash-confinement/allowlist.json": {
+    "verdict": "clean",
+    "checks_run": []
+  },
+  "tests/speckit-pro/unit/fixtures/repository-bash-confinement/confinement-guard-cases.json": {
+    "verdict": "clean",
+    "checks_run": []
+  },
+  "tests/speckit-pro/unit/fixtures/repository-bash-confinement/contracts/repo-bash-confinement-result.schema.json": {
+    "verdict": "clean",
+    "checks_run": []
+  },
+  "tests/speckit-pro/unit/fixtures/repository-bash-confinement/requests/repo-bash-confinement.json": {
+    "verdict": "clean",
+    "checks_run": []
+  },
+  "tests/speckit-pro/unit/test-generate-spec-index.py": {
+    "verdict": [
+      "structural-layers-2-009"
+    ],
+    "checks_run": [
+      "ripwire . --grep=generate-spec-index.sh"
+    ]
+  },
+  "tests/speckit-pro/unit/test-json-schema-validator.py": {
+    "verdict": "clean",
+    "checks_run": []
+  },
+  "tests/speckit-pro/unit/test-moc-lint-exit-codes.py": {
+    "verdict": "clean",
+    "checks_run": []
+  },
+  "tests/speckit-pro/unit/test-privacy-scan.py": {
+    "verdict": "clean",
+    "checks_run": []
+  },
+  "tests/speckit-pro/unit/test-repo-bash-confinement.py": {
+    "verdict": "clean",
+    "checks_run": []
+  },
+  "tests/speckit-pro/unit/test-semantic-contract-identifiers.py": {
+    "verdict": "clean",
+    "checks_run": []
+  }
+}

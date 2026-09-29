@@ -1,0 +1,176 @@
+[
+  {
+    "id": "integration-layer6-2-001",
+    "lane": "integration-layer6-2",
+    "severity": "blocking",
+    "kind": "coherence",
+    "files": [
+      "tests/speckit-pro/layer6-integration/lib/transcript_helpers.py:49-69",
+      "tests/speckit-pro/layer6-integration/lib/fixture_runner.py:231-256",
+      "tests/speckit-pro/layer6-integration/dispatch-fixtures/20-consensus-multi-item-batch/README.md:22-27",
+      "tests/speckit-pro/layer6-integration/dispatch-fixtures/19-implement-parallel-p-tasks/README.md:26-28",
+      "tests/speckit-pro/layer6-integration/dispatch-fixtures/21-resolve-pr-parallel-files/expected.json:14"
+    ],
+    "ripwire_command": "ripwire . --callers=extract_orchestrator_dispatches",
+    "summary": "Fixtures 19, 20 and 21 claim to catch per-task or per-item serial dispatch, a missing isolation setting and non-background calls, but the parser records only subagent_type, description and prompt and counts dispatches across all messages. Serial dispatch across several messages, or foreground calls, passes every assertion; fixture 21 max_dispatch_count 6 also admits the per-thread regression its README says is a defect.",
+    "proposed_fix": "Record the assistant-message index, run_in_background and isolation in extract_orchestrator_dispatches. Add an expected.json key such as same_message_dispatch_groups or must_run_in_background, assert it, and tighten fixture 21 max_dispatch_count to 3. Otherwise drop the regression-net claims from the fixture READMEs and purpose strings.",
+    "in_flight_status": null
+  },
+  {
+    "id": "integration-layer6-2-002",
+    "lane": "integration-layer6-2",
+    "severity": "major",
+    "kind": "coherence",
+    "files": [
+      "tests/speckit-pro/layer6-integration/dispatch-fixtures/19-implement-parallel-p-tasks/prompt.txt:10-23",
+      "tests/speckit-pro/layer6-integration/dispatch-fixtures/19-implement-parallel-p-tasks/parser-fixture.jsonl:1",
+      "tests/speckit-pro/layer6-integration/dispatch-fixtures/19-implement-parallel-p-tasks/README.md:6-13",
+      "speckit-pro/skills/speckit-autopilot/references/agent-teams-integration.md:171-174",
+      "speckit-pro/skills/speckit-autopilot/references/phase-execution.md:2750-2770"
+    ],
+    "ripwire_command": "ripwire . --grep=isolation",
+    "summary": "Fixture 19 requires every [P] dispatch to carry isolation: worktree and to use RUNS with exactly 3 dispatches. The current contract forbids per-agent worktree isolation for Phase 7, has no isolation field in the Step 3c Agent template, and takes batches and waves from the partition-phase7-tasks helper rather than from consecutive [P] tags.",
+    "proposed_fix": "Rewrite prompt.txt, README.md and parser-fixture.jsonl to the Step 3c template (no isolation, batch and wave wording from partition-phase7-tasks, disjoint owns), and assert that isolation is absent once the parser records it.",
+    "in_flight_status": null
+  },
+  {
+    "id": "integration-layer6-2-003",
+    "lane": "integration-layer6-2",
+    "severity": "minor",
+    "kind": "coherence",
+    "files": [
+      "tests/speckit-pro/layer6-integration/dispatch-fixtures/21-resolve-pr-parallel-files/prompt.txt:13-17",
+      "speckit-pro/skills/speckit-resolve-pr/SKILL.md:125-131"
+    ],
+    "ripwire_command": "ripwire . --grep=resolve-pr",
+    "summary": "The fixture 21 prompt cites commands/resolve-pr.md section 4c, a file that no longer exists (speckit-pro/commands is gone). It also orders unconditional parallel dispatch, while SKILL.md 4c dispatches only with 2 or more partitions and fixes large enough to repay worker setup.",
+    "proposed_fix": "Cite skills/speckit-resolve-pr/SKILL.md section 4c and state the dispatch-worthiness condition in the prompt and README.",
+    "in_flight_status": null
+  },
+  {
+    "id": "integration-layer6-2-004",
+    "lane": "integration-layer6-2",
+    "severity": "major",
+    "kind": "coherence",
+    "files": [
+      "tests/speckit-pro/layer6-integration/reduce-transcript-fixture.py:51-72",
+      "tests/speckit-pro/layer6-integration/run-return-format-fixtures.py:94-119",
+      "tests/speckit-pro/layer6-integration/return-format-fixtures/05-synthesizer-keyword-security-relevant/parser-fixture.jsonl:2",
+      "tests/speckit-pro/layer6-integration/return-format-fixtures/04-synthesizer-keyword-only-majority/parser-fixture.jsonl:2"
+    ],
+    "ripwire_command": "ripwire . --callers=reduced_response",
+    "summary": "Class 2 replay proves nothing about response format. reduced_response builds each synthesizer tool_result from the keywords in expected.json, then run-return-format-fixtures.py checks those same keywords against it. must_not_contain_any can never fail, and a frozen fixture is edited by changing the synthesized string (the open consensus-tiebreak PR swaps HUMAN REVIEW NEEDED for ROUND_3_TIEBREAK in one line). The README still describes Class 2 as verifying cross-agent parsing.",
+    "proposed_fix": "Keep real (scrubbed and redacted) synthesizer response text in the reduced fixture instead of synthesizing it, or mark Class 2 replay as parser-only and move the format assertions to a live or Layer 3 check.",
+    "in_flight_status": "still-open"
+  },
+  {
+    "id": "integration-layer6-2-005",
+    "lane": "integration-layer6-2",
+    "severity": "major",
+    "kind": "coherence",
+    "files": [
+      "tests/speckit-pro/layer6-integration/lib/transcript_helpers.py:15-17",
+      "tests/speckit-pro/layer6-integration/lib/transcript_helpers.py:245-262",
+      "speckit-pro/skills/speckit-autopilot/references/capability-discovery.md:142",
+      "speckit-pro/skills/speckit-autopilot/references/grounding.md:45"
+    ],
+    "ripwire_command": "ripwire . --uses=GROUNDING_NOTE_RE",
+    "summary": "GROUNDING_NOTE_RE requires a whitespace-free source and forbids semicolons or newlines inside Evidence. The contract allows a capability/source such as a local file reference and Evidence lists multiple citations. Such notes are counted as malformed, so grounding_verdict returns ungrounded (verified: a note with two semicolon-separated evidence URLs, and one citing local referenced docs, both match 0 while Capability path appears once). A fallback source can also never be grounded, because it must equal a completed tool name.",
+    "proposed_fix": "Parse the note against the documented segments (Capability path, Evidence, Confidence) with a tolerant Evidence pattern, and treat repo-local and fallback sources as their own grounded class. Add a grounding fixture for each.",
+    "in_flight_status": null
+  },
+  {
+    "id": "integration-layer6-2-006",
+    "lane": "integration-layer6-2",
+    "severity": "minor",
+    "kind": "coherence",
+    "files": [
+      "tests/speckit-pro/layer6-integration/e2e-fixtures/01-autopilot-minimal-smoke/prompt.txt:7",
+      "tests/speckit-pro/layer6-integration/e2e-fixtures/01-autopilot-minimal-smoke/sample-spec.md:1-3",
+      "tests/speckit-pro/layer6-integration/e2e-fixtures/02-autopilot-extended-pipeline/sample-spec.md:1-3",
+      "tests/speckit-pro/layer6-integration/e2e-fixtures/02-autopilot-extended-pipeline/README.md:36",
+      "tests/speckit-pro/layer6-integration/README.md:314",
+      "tests/speckit-pro/layer6-integration/README.md:330-335"
+    ],
+    "ripwire_command": "ripwire . --grep=L7",
+    "summary": "Layer 6 fixtures, prompts and README call themselves L7, but L7 is layer7-parity in suite-manifest.json. The e2e sample specs also say G0 to G6 while the READMEs say G1 to G7. README lines 330-335 name validate-codex-skills.sh and validate-codex-agents.sh, which do not exist (layer1-structural has only .py validators). The README coverage matrix omits dispatch fixtures 18-22 and the Class 4 grounding fixtures and their cost row.",
+    "proposed_fix": "Rename L7 to Layer 6 in these files, correct the phase range, point the Codex section at the real .py validators, and extend the coverage matrix to fixtures 18-22 and Class 4.",
+    "in_flight_status": null
+  },
+  {
+    "id": "integration-layer6-2-007",
+    "lane": "integration-layer6-2",
+    "severity": "minor",
+    "kind": "coherence",
+    "files": [
+      "tests/speckit-pro/layer6-integration/scrub-transcript.py:52-92",
+      "tests/speckit-pro/layer6-integration/reduce-transcript-fixture.py:22",
+      "tests/speckit-pro/lib/privacy_patterns.py:15-40"
+    ],
+    "ripwire_command": "ripwire . --callers=scrub_event",
+    "summary": "The scrubber keeps its own path and identity regex list, separate from privacy_patterns.py that the reducer uses. They diverge: scrub-transcript.py leaves Claude temp-directory paths and email addresses unchanged (verified by running it), while the README says it scrubs home, repo and temp paths.",
+    "proposed_fix": "Have scrub_string call redact_private_text for the shared patterns and keep only the telemetry-field replacements local.",
+    "in_flight_status": null
+  },
+  {
+    "id": "integration-layer6-2-008",
+    "lane": "integration-layer6-2",
+    "severity": "minor",
+    "kind": "cohesion",
+    "files": [
+      "tests/speckit-pro/layer6-integration/lib/fixture_runner.py:156-260",
+      "tests/speckit-pro/layer6-integration/run-return-format-fixtures.py:51-92",
+      "tests/speckit-pro/layer6-integration/run-grounding-fixtures.py:56-69",
+      "tests/speckit-pro/layer6-integration/reduce-transcript-fixture.py:25-40",
+      "tests/speckit-pro/layer6-integration/lib/transcript_helpers.py:20-40"
+    ],
+    "ripwire_command": "ripwire . --clones",
+    "summary": "The must_dispatch_to, forbidden-spawn, skill and term assertion blocks are written out again in run-return-format-fixtures.py and run-grounding-fixtures.py instead of reused from fixture_runner. The reducer re-implements load_events and _blocks, and the runner main() functions are near clones (the whole-repo clone scan lists them).",
+    "proposed_fix": "Move the shared expected.json checks into fixture_runner and import load_events and _blocks from transcript_helpers in the reducer.",
+    "in_flight_status": null
+  },
+  {
+    "id": "integration-layer6-2-009",
+    "lane": "integration-layer6-2",
+    "severity": "minor",
+    "kind": "cohesion",
+    "files": [
+      "tests/speckit-pro/layer6-integration/lib/transcript_helpers.py:272-345",
+      "tests/speckit-pro/layer6-integration/lib/transcript_helpers.py:206-262"
+    ],
+    "ripwire_command": "ripwire . --uses=extract_dispatched_set",
+    "summary": "The 25-command CLI in transcript_helpers.main has no caller besides one unit test (two commands). extract_dispatched_set, extract_assistant_text and other helpers are reachable only from that table. The module also mixes dispatch parsing with the grounding verdict.",
+    "proposed_fix": "Delete the unused CLI commands and their table, or cut it to the tested subset. Move the grounding helpers to their own module.",
+    "in_flight_status": null
+  },
+  {
+    "id": "integration-layer6-2-010",
+    "lane": "integration-layer6-2",
+    "severity": "minor",
+    "kind": "coherence",
+    "files": [
+      "tests/speckit-pro/layer6-integration/lib/fixture_runner.py:81-90",
+      "tests/speckit-pro/layer6-integration/lib/fixture_runner.py:170-173",
+      "tests/speckit-pro/layer6-integration/run-grounding-fixtures.py:83-90",
+      "tests/speckit-pro/layer6-integration/run-dispatch-fixtures.py:47-49"
+    ],
+    "ripwire_command": "ripwire . --callers=capture_live",
+    "summary": "Runner edge cases fail open. A replay fixture with no parser-fixture.jsonl is skipped with a message and the run still passes. capture_live returns False when the claude CLI is missing, the caller ignores it, and a stale transcript.jsonl from an earlier live run is asserted as if fresh. run-grounding-fixtures.py advertises --live in its usage text and receives it from run-all-fixtures.py, but ignores the mode.",
+    "proposed_fix": "Fail a fixture that lacks parser-fixture.jsonl, skip assertion when capture_live returns False, and drop --live from the grounding usage line or make run-all skip Class 4 in live mode.",
+    "in_flight_status": null
+  },
+  {
+    "id": "integration-layer6-2-011",
+    "lane": "integration-layer6-2",
+    "severity": "minor",
+    "kind": "coherence",
+    "files": [
+      "tests/speckit-pro/unit/test-integration-runners.py:76-260",
+      "tests/speckit-pro/unit/test-transcript-helpers.py:31-40"
+    ],
+    "ripwire_command": "ripwire . --grep=max_dispatch_count",
+    "summary": "No unit test drives a failing case through assert_dispatch_fixture for min_dispatch_count, max_dispatch_count, dispatch_order_constraints, must_dispatch_to_at_least_one_of or must_not_include_terms; only replay of the committed fixtures and return-format term cases run. Those keys could stop failing without a red test.",
+    "proposed_fix": "Add negative unit cases for each dispatch expected.json key, using the small transcripts in test-fixtures.",
+    "in_flight_status": "still-open"
+  }
+]

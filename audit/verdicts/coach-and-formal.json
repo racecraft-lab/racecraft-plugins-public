@@ -1,0 +1,551 @@
+{
+  "docs/ai/specs/formal-check-decision.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"formal methods selection checkpoint coach\""
+    ]
+  },
+  "speckit-pro/agents/formal-model-author.md": {
+    "verdict": [
+      "coach-and-formal-001"
+    ],
+    "checks_run": [
+      "ripwire . --for=\"formal methods selection checkpoint coach\""
+    ]
+  },
+  "speckit-pro/codex-agents/formal-model-author.toml": {
+    "verdict": [
+      "coach-and-formal-001"
+    ],
+    "checks_run": [
+      "ripwire . --for=\"formal methods selection checkpoint coach\""
+    ]
+  },
+  "speckit-pro/codex-skills/speckit-coach/SKILL.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"formal methods selection checkpoint coach\""
+    ]
+  },
+  "speckit-pro/codex-skills/speckit-coach/agents/openai.yaml": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"formal methods selection checkpoint coach\""
+    ]
+  },
+  "speckit-pro/skills/speckit-autopilot/references/formal-methods.md": {
+    "verdict": [
+      "coach-and-formal-001"
+    ],
+    "checks_run": [
+      "ripwire . --for=\"formal methods selection checkpoint coach\""
+    ]
+  },
+  "speckit-pro/skills/speckit-coach/SKILL.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"formal methods selection checkpoint coach\""
+    ]
+  },
+  "speckit-pro/skills/speckit-coach/examples/formal/counter-quint/Counter.cfg": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"formal methods selection checkpoint coach\""
+    ]
+  },
+  "speckit-pro/skills/speckit-coach/examples/formal/counter-quint/Counter.qnt": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"formal methods selection checkpoint coach\""
+    ]
+  },
+  "speckit-pro/skills/speckit-coach/examples/formal/counter-tlc/CounterTLC.cfg": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"formal methods selection checkpoint coach\""
+    ]
+  },
+  "speckit-pro/skills/speckit-coach/examples/formal/counter-tlc/CounterTLC.tla": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"formal methods selection checkpoint coach\""
+    ]
+  },
+  "speckit-pro/skills/speckit-coach/examples/formal/counter-tlc/catalog.json": {
+    "verdict": [
+      "coach-and-formal-003"
+    ],
+    "checks_run": [
+      "ripwire . --for=\"formal methods selection checkpoint coach\""
+    ]
+  },
+  "speckit-pro/skills/speckit-coach/examples/formal/counter-traces/Counter.cfg": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"formal methods selection checkpoint coach\""
+    ]
+  },
+  "speckit-pro/skills/speckit-coach/examples/formal/counter-traces/Counter.tla": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"formal methods selection checkpoint coach\""
+    ]
+  },
+  "speckit-pro/skills/speckit-coach/examples/formal/counter-traces/CounterTrace.swift": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"formal methods selection checkpoint coach\""
+    ]
+  },
+  "speckit-pro/skills/speckit-coach/examples/formal/counter-traces/counter.mts": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"formal methods selection checkpoint coach\""
+    ]
+  },
+  "speckit-pro/skills/speckit-coach/examples/formal/counter-traces/counter.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"formal methods selection checkpoint coach\""
+    ]
+  },
+  "speckit-pro/skills/speckit-coach/examples/formal/counter/Counter.cfg": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"formal methods selection checkpoint coach\""
+    ]
+  },
+  "speckit-pro/skills/speckit-coach/examples/formal/counter/Counter.tla": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"formal methods selection checkpoint coach\""
+    ]
+  },
+  "speckit-pro/skills/speckit-coach/examples/formal/counter/catalog.json": {
+    "verdict": [
+      "coach-and-formal-003"
+    ],
+    "checks_run": [
+      "ripwire . --for=\"formal methods selection checkpoint coach\""
+    ]
+  },
+  "speckit-pro/skills/speckit-coach/examples/formal/tooling/quint/package.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"formal methods selection checkpoint coach\""
+    ]
+  },
+  "speckit-pro/skills/speckit-coach/references/checklist-domains-guide.md": {
+    "verdict": [
+      "coach-and-formal-010"
+    ],
+    "checks_run": [
+      "ripwire . --for=\"formal methods selection checkpoint coach\""
+    ]
+  },
+  "speckit-pro/skills/speckit-coach/references/command-guide.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"formal methods selection checkpoint coach\""
+    ]
+  },
+  "speckit-pro/skills/speckit-coach/references/constitution-guide.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"formal methods selection checkpoint coach\""
+    ]
+  },
+  "speckit-pro/skills/speckit-coach/references/formal-methods-guide.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"formal methods selection checkpoint coach\""
+    ]
+  },
+  "speckit-pro/skills/speckit-coach/references/formal-setup.md": {
+    "verdict": [
+      "coach-and-formal-003"
+    ],
+    "checks_run": [
+      "ripwire . --for=\"formal methods selection checkpoint coach\""
+    ]
+  },
+  "speckit-pro/skills/speckit-coach/references/getting-started.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"formal methods selection checkpoint coach\""
+    ]
+  },
+  "speckit-pro/skills/speckit-coach/references/implementation-traces.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"formal methods selection checkpoint coach\""
+    ]
+  },
+  "speckit-pro/skills/speckit-coach/references/presets-extensions-guide.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"formal methods selection checkpoint coach\""
+    ]
+  },
+  "speckit-pro/skills/speckit-coach/references/quint-guide.md": {
+    "verdict": [
+      "coach-and-formal-003"
+    ],
+    "checks_run": [
+      "ripwire . --for=\"formal methods selection checkpoint coach\""
+    ]
+  },
+  "speckit-pro/skills/speckit-coach/references/roadmap-moc-guide.md": {
+    "verdict": [
+      "coach-and-formal-010"
+    ],
+    "checks_run": [
+      "ripwire . --for=\"formal methods selection checkpoint coach\""
+    ]
+  },
+  "speckit-pro/skills/speckit-coach/references/sdd-methodology.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"formal methods selection checkpoint coach\""
+    ]
+  },
+  "speckit-pro/skills/speckit-coach/references/slicing-heuristics.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"formal methods selection checkpoint coach\""
+    ]
+  },
+  "speckit-pro/skills/speckit-coach/references/tlc-guide.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"formal methods selection checkpoint coach\""
+    ]
+  },
+  "speckit-pro/skills/speckit-coach/scripts/run-formal-ci.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"formal methods selection checkpoint coach\""
+    ]
+  },
+  "speckit-pro/skills/speckit-coach/scripts/setup-formal-tools.py": {
+    "verdict": [
+      "coach-and-formal-002",
+      "coach-and-formal-003"
+    ],
+    "checks_run": [
+      "ripwire . --for=\"formal methods selection checkpoint coach\""
+    ]
+  },
+  "speckit-pro/skills/speckit-coach/templates/prd-template.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"formal methods selection checkpoint coach\""
+    ]
+  },
+  "speckit-pro/skills/speckit-coach/templates/roadmap-moc-template.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"formal methods selection checkpoint coach\""
+    ]
+  },
+  "speckit-pro/skills/speckit-coach/templates/spec-moc-template.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"formal methods selection checkpoint coach\""
+    ]
+  },
+  "speckit-pro/skills/speckit-coach/templates/technical-roadmap-template.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"formal methods selection checkpoint coach\""
+    ]
+  },
+  "speckit-pro/skills/speckit-coach/templates/workflow-template.md": {
+    "verdict": [
+      "coach-and-formal-009",
+      "coach-and-formal-010"
+    ],
+    "checks_run": [
+      "ripwire . --for=\"formal methods selection checkpoint coach\""
+    ]
+  },
+  "speckit-pro/speckit_pro_runner/contracts/formal-methods.schema.json": {
+    "verdict": [
+      "coach-and-formal-002"
+    ],
+    "checks_run": [
+      "ripwire . --for=\"formal methods selection checkpoint coach\""
+    ]
+  },
+  "speckit-pro/speckit_pro_runner/contracts/formal-selection.schema.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"formal methods selection checkpoint coach\""
+    ]
+  },
+  "speckit-pro/speckit_pro_runner/formal/__init__.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --callers=required_checkpoints",
+      "ripwire . --callers=apply_resume_guard",
+      "ripwire . --callers=validate_contract",
+      "ripwire . --callers=CHECKER_SHA256"
+    ]
+  },
+  "speckit-pro/speckit_pro_runner/formal/apalache.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --callers=required_checkpoints",
+      "ripwire . --callers=apply_resume_guard",
+      "ripwire . --callers=validate_contract",
+      "ripwire . --callers=CHECKER_SHA256"
+    ]
+  },
+  "speckit-pro/speckit_pro_runner/formal/catalog.py": {
+    "verdict": [
+      "coach-and-formal-002",
+      "coach-and-formal-008"
+    ],
+    "checks_run": [
+      "ripwire . --callers=required_checkpoints",
+      "ripwire . --callers=apply_resume_guard",
+      "ripwire . --callers=validate_contract",
+      "ripwire . --callers=CHECKER_SHA256"
+    ]
+  },
+  "speckit-pro/speckit_pro_runner/formal/engine.py": {
+    "verdict": [
+      "coach-and-formal-002"
+    ],
+    "checks_run": [
+      "ripwire . --callers=required_checkpoints",
+      "ripwire . --callers=apply_resume_guard",
+      "ripwire . --callers=validate_contract",
+      "ripwire . --callers=CHECKER_SHA256"
+    ]
+  },
+  "speckit-pro/speckit_pro_runner/formal/evidence.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --callers=required_checkpoints",
+      "ripwire . --callers=apply_resume_guard",
+      "ripwire . --callers=validate_contract",
+      "ripwire . --callers=CHECKER_SHA256"
+    ]
+  },
+  "speckit-pro/speckit_pro_runner/formal/helper.py": {
+    "verdict": [
+      "coach-and-formal-008"
+    ],
+    "checks_run": [
+      "ripwire . --callers=required_checkpoints",
+      "ripwire . --callers=apply_resume_guard",
+      "ripwire . --callers=validate_contract",
+      "ripwire . --callers=CHECKER_SHA256"
+    ]
+  },
+  "speckit-pro/speckit_pro_runner/formal/itf.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --callers=required_checkpoints",
+      "ripwire . --callers=apply_resume_guard",
+      "ripwire . --callers=validate_contract",
+      "ripwire . --callers=CHECKER_SHA256"
+    ]
+  },
+  "speckit-pro/speckit_pro_runner/formal/lifecycle.py": {
+    "verdict": [
+      "coach-and-formal-008"
+    ],
+    "checks_run": [
+      "ripwire . --callers=required_checkpoints",
+      "ripwire . --callers=apply_resume_guard",
+      "ripwire . --callers=validate_contract",
+      "ripwire . --callers=CHECKER_SHA256"
+    ]
+  },
+  "speckit-pro/speckit_pro_runner/formal/native_config.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --callers=required_checkpoints",
+      "ripwire . --callers=apply_resume_guard",
+      "ripwire . --callers=validate_contract",
+      "ripwire . --callers=CHECKER_SHA256"
+    ]
+  },
+  "speckit-pro/speckit_pro_runner/formal/process.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --callers=required_checkpoints",
+      "ripwire . --callers=apply_resume_guard",
+      "ripwire . --callers=validate_contract",
+      "ripwire . --callers=CHECKER_SHA256"
+    ]
+  },
+  "speckit-pro/speckit_pro_runner/formal/quint.py": {
+    "verdict": [
+      "coach-and-formal-002"
+    ],
+    "checks_run": [
+      "ripwire . --callers=required_checkpoints",
+      "ripwire . --callers=apply_resume_guard",
+      "ripwire . --callers=validate_contract",
+      "ripwire . --callers=CHECKER_SHA256"
+    ]
+  },
+  "speckit-pro/speckit_pro_runner/formal/selection.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --callers=required_checkpoints",
+      "ripwire . --callers=apply_resume_guard",
+      "ripwire . --callers=validate_contract",
+      "ripwire . --callers=CHECKER_SHA256"
+    ]
+  },
+  "speckit-pro/speckit_pro_runner/formal/tlc.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --callers=required_checkpoints",
+      "ripwire . --callers=apply_resume_guard",
+      "ripwire . --callers=validate_contract",
+      "ripwire . --callers=CHECKER_SHA256"
+    ]
+  },
+  "speckit-pro/speckit_pro_runner/formal/traces.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --callers=required_checkpoints",
+      "ripwire . --callers=apply_resume_guard",
+      "ripwire . --callers=validate_contract",
+      "ripwire . --callers=CHECKER_SHA256",
+      "ripwire . --callers=write_trace"
+    ]
+  },
+  "specs/formal-001-selective-formal-methods/SPEC-MOC.md": {
+    "verdict": [
+      "coach-and-formal-010"
+    ],
+    "checks_run": [
+      "ripwire . --for=\"formal methods selection checkpoint coach\""
+    ]
+  },
+  "specs/formal-001-selective-formal-methods/acceptance.md": {
+    "verdict": [
+      "coach-and-formal-004"
+    ],
+    "checks_run": [
+      "ripwire . --for=\"formal methods selection checkpoint coach\""
+    ]
+  },
+  "specs/formal-001-selective-formal-methods/harness-review.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"formal methods selection checkpoint coach\""
+    ]
+  },
+  "specs/formal-001-selective-formal-methods/onboarding-uat.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"formal methods selection checkpoint coach\""
+    ]
+  },
+  "specs/formal-001-selective-formal-methods/plan.md": {
+    "verdict": [
+      "coach-and-formal-005"
+    ],
+    "checks_run": [
+      "ripwire . --for=\"formal methods selection checkpoint coach\""
+    ]
+  },
+  "specs/formal-001-selective-formal-methods/spec.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"formal methods selection checkpoint coach\""
+    ]
+  },
+  "specs/formal-001-selective-formal-methods/stack-uat.md": {
+    "verdict": [
+      "coach-and-formal-006"
+    ],
+    "checks_run": [
+      "ripwire . --for=\"formal methods selection checkpoint coach\""
+    ]
+  },
+  "specs/formal-001-selective-formal-methods/tasks.md": {
+    "verdict": [
+      "coach-and-formal-005"
+    ],
+    "checks_run": [
+      "ripwire . --for=\"formal methods selection checkpoint coach\""
+    ]
+  },
+  "tests/speckit-pro/evals/audit/unit-quality-formal-audit.json": {
+    "verdict": [
+      "coach-and-formal-007"
+    ],
+    "checks_run": [
+      "ripwire . --for=\"formal methods selection checkpoint coach\""
+    ]
+  },
+  "tests/speckit-pro/evals/audit/unit-quality-formal-audit.md": {
+    "verdict": [
+      "coach-and-formal-007"
+    ],
+    "checks_run": [
+      "ripwire . --for=\"formal methods selection checkpoint coach\""
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/formal-methods/disabled-workflow.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"formal methods selection checkpoint coach\""
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/mutation-helpers/requests/formal-check.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"formal methods selection checkpoint coach\""
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/read-only-helpers/requests/formal-doctor.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"formal methods selection checkpoint coach\""
+    ]
+  },
+  "tests/speckit-pro/unit/test-formal-checkers.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --callers=write_trace",
+      "ripwire . --callers=CHECKER_SHA256"
+    ]
+  },
+  "tests/speckit-pro/unit/test-formal-selection.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --callers=write_trace",
+      "ripwire . --callers=CHECKER_SHA256"
+    ]
+  },
+  "tests/speckit-pro/unit/test-formal-setup.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --callers=write_trace",
+      "ripwire . --callers=CHECKER_SHA256"
+    ]
+  },
+  "tests/speckit-pro/unit/test-formal-traces.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --callers=write_trace",
+      "ripwire . --callers=CHECKER_SHA256"
+    ]
+  },
+  "tests/speckit-pro/unit/test-quint-reference-attribution.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --callers=write_trace",
+      "ripwire . --callers=CHECKER_SHA256"
+    ]
+  }
+}
