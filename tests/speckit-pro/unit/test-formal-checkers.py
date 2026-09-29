@@ -376,7 +376,7 @@ class FormalLifecycleTimestampTests(unittest.TestCase):
         fixture = FormalCheckerTests()
         fixture.setUp()
         self.addCleanup(fixture.doCleanups)
-        with patch.object(helper, "inspect_tool", return_value={"version": "fixture"}), patch.object(helper, "execute_model", side_effect=fixture.passed_model):
+        with patch.object(engine.shutil, "which", return_value=sys.executable), patch.object(helper, "inspect_tool", return_value={"version": "fixture"}), patch.object(helper, "execute_model", side_effect=fixture.passed_model):
             self.assertEqual("pass", fixture.request("apply")["data"]["verdict"])
             self.assert_stale_then_renewed(fixture, "plan", "pass", {})
 

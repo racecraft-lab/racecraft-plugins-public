@@ -214,6 +214,7 @@ class RosterDerivationTests(unittest.TestCase):
         self.assertEqual(claude, sorted(skills.validate_skills_SKILLS))
         self.assertEqual(codex, sorted(skills.validate_codex_skills_SKILLS))
         self.assertEqual(codex, sorted(metadata.REQUIRED_SKILLS))
+        self.assertEqual([], metadata.codex_skill_gaps(plugin))
 
     def test_discovery_finds_a_new_skill_without_editing_a_list(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -260,11 +261,33 @@ class RosterDerivationTests(unittest.TestCase):
         )
 
 
+class CodexSkillRosterTests(unittest.TestCase):
+    """The Codex skill roster is read from skills/, so a dropped Codex skill is a gap."""
+
+    def test_a_dropped_codex_skill_is_a_gap_in_a_copy_of_the_plugin(self) -> None:
+        plugin = REPO_ROOT / "speckit-pro"
+        with tempfile.TemporaryDirectory() as temporary:
+            copy = Path(temporary)
+            for tree in ("skills", "codex-skills"):
+                shutil.copytree(plugin / tree, copy / tree, ignore=shutil.ignore_patterns("references", "agents", "scripts"))
+            self.assertEqual([], metadata.codex_skill_gaps(copy))
+            shutil.rmtree(copy / "codex-skills" / "speckit-install")
+            self.assertEqual(["codex-skills/speckit-install/SKILL.md is missing"], metadata.codex_skill_gaps(copy))
+            shutil.rmtree(copy / "skills" / "speckit-upgrade")
+            (copy / "codex-skills" / "stray").mkdir()
+            (copy / "codex-skills" / "stray" / "SKILL.md").write_text("---\nname: stray\n---\n", encoding="utf-8")
+            self.assertEqual(
+                ["codex-skills/speckit-install/SKILL.md is missing", "codex-skills/speckit-upgrade/ is not a required skill", "codex-skills/stray/ is not a required skill"],
+                metadata.codex_skill_gaps(copy),
+            )
+
+
 def main() -> int:
     suite = unittest.TestSuite()
     suite.addTests(unittest.defaultTestLoader.loadTestsFromTestCase(StructuralRegressionTests))
     suite.addTests(unittest.defaultTestLoader.loadTestsFromTestCase(CodexAgentRegressionTests))
     suite.addTests(unittest.defaultTestLoader.loadTestsFromTestCase(RosterDerivationTests))
+    suite.addTests(unittest.defaultTestLoader.loadTestsFromTestCase(CodexSkillRosterTests))
     return run_counted(suite, label="test-structural-regressions")
 
 

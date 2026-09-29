@@ -360,6 +360,33 @@ class UnitRosterTests(unittest.TestCase):
         self.assertEqual(sorted(discovered - registered), [])
 
 
+LOADER_CALL = "spec_from" + "_file_location"
+LOADER_HOME = LIB_DIR / "script_loader.py"
+
+
+def files_with_private_loader(paths) -> list[str]:
+    """Return the paths whose text repeats the importlib file-loader call."""
+    return [str(p) for p in paths if LOADER_CALL in p.read_text(encoding="utf-8")]
+
+
+class ScriptLoaderTests(unittest.TestCase):
+    def test_only_the_shared_helper_loads_scripts_by_file_path(self) -> None:
+        copies = [
+            Path(p).relative_to(REPO_ROOT).as_posix()
+            for p in files_with_private_loader(sorted(TEST_ROOT.rglob("*.py")))
+            if Path(p) != LOADER_HOME and Path(p) != Path(__file__).resolve()
+        ]
+        self.assertEqual([], copies)
+
+    def test_private_loader_detection_finds_a_copy(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            copy = Path(raw) / "copy.py"
+            copy.write_text(f"importlib.util.{LOADER_CALL}('x', p)\n", encoding="utf-8")
+            clean = Path(raw) / "clean.py"
+            clean.write_text("from script_loader import load_script\n", encoding="utf-8")
+            self.assertEqual([str(copy)], files_with_private_loader([copy, clean]))
+
+
 class UnitSuiteCompletenessTests(unittest.TestCase):
     def test_every_registered_test_case_is_added_to_its_suite(self) -> None:
         manifest = json.loads((TEST_ROOT / "suite-manifest.json").read_text(encoding="utf-8"))
@@ -396,6 +423,6 @@ class UnitSuiteCompletenessTests(unittest.TestCase):
 if __name__ == "__main__":
     suite = unittest.TestSuite(
         unittest.defaultTestLoader.loadTestsFromTestCase(case)
-        for case in (UnitLayoutTests, UnitRosterTests, UnitSuiteCompletenessTests)
+        for case in (UnitLayoutTests, UnitRosterTests, ScriptLoaderTests, UnitSuiteCompletenessTests)
     )
     raise SystemExit(run_counted(suite, label="test-unit-layout"))
