@@ -105,7 +105,6 @@ const SUPPORT_ANCHOR_INVENTORY = Object.freeze([
     publicPath: '/racecraft-plugins-public/choose-your-path/',
     sourcePath: 'docs-site/src/content/docs/choose-your-path.mdx',
     anchors: Object.freeze([
-      'route-shell',
       'static-selector-fallback',
       'support-link-map',
       'install-source-update-guidance',
@@ -179,7 +178,7 @@ const SUPPORT_ANCHOR_INVENTORY = Object.freeze([
     anchors: Object.freeze([
       'generated-reference-subpages',
       'generated-page-boundary',
-      'doc-008-support-handoffs',
+      'support-handoffs',
     ]),
   },
   {
