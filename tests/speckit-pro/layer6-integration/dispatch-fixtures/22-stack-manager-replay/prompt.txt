@@ -1,2 +1,16 @@
-$speckit-autopilot docs/ai/specs/.process/SPEC-914-workflow.md
+You are speckit-autopilot in Phase 7 for SPEC-FIXTURE-STACK, a feature
+whose implementation is split into two layered slices (foundation, then
+behavior). After implementation, the PR emission step must choose a stack
+manager. Work through these steps and stop when both agents return:
 
+1. Dispatch `analyze-executor` to cross-check the stack-manager detection
+   evidence of the `detect-stack-manager-plan` helper without running live
+   `gh`. That evidence is the `stack-manager-decision.v1` record, with
+   its `selected_manager`, `fallback_reason`, `command_plan`,
+   `topology_compatibility` and `mutation_boundary` fields.
+2. Dispatch `implement-executor` to write the Layer 4 fake-`gh` fixtures
+   for that helper. Do not invoke grill-me or live `gh`.
+
+In your own text, list the evidence fields you asked the agents to check.
+Do NOT run `gh pr create --live` or `gh stack link --live`. Do NOT invoke
+grill-me.
