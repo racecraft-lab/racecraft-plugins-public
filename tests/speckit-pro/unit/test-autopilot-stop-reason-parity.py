@@ -40,7 +40,8 @@ def _eval_files() -> list[Path]:
     JSON or Markdown by accident, so a raw text scan has no false positives.
     """
     tests = REPO_ROOT / "tests" / "speckit-pro"
-    roots = [tests / "layer3-functional" / "codex-evals", tests / "evals" / "catalog.json",
+    roots = [tests / "layer3-functional" / "evals", tests / "layer3-functional" / "codex-evals",
+             tests / "evals" / "catalog.json",
              tests / "layer6-integration", tests / "layer7-parity"]
     files: list[Path] = []
     for root in roots:
@@ -69,9 +70,10 @@ class StopReasonParityTests(unittest.TestCase):
                 )
 
     def test_eval_scan_reaches_the_expectation_files(self) -> None:
-        names = {path.name for path in _eval_files()}
-        self.assertIn("speckit-autopilot-evals.json", names)
-        self.assertIn("catalog.json", names)
+        files = _eval_files()
+        self.assertIn("catalog.json", {path.name for path in files})
+        hosts = {p.parent.name for p in files if p.name == "speckit-autopilot-evals.json"}
+        self.assertEqual(hosts, {"evals", "codex-evals"}, "scan both hosts' evals")
 
     def test_runner_set_is_closed_and_classified(self) -> None:
         known = _runner_set()
