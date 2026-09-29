@@ -156,14 +156,34 @@ ownership from the caller's current workflow.
   distinct from failed required verification; neither authorizes blind retry.
 - `reconcile`: permit one read-only inspection of a missing native result for
   its `dispatch_id`. Inspect owned effects and retained output, not just agent
-  liveness. This records an unknown outcome and `checkpoint_required`, even
-  when `reconciliation_allowed=true` permits that one inspection. It does not
-  authorize continuing writes, a new dispatch ID, or a replacement launch.
-  Resolve a recovered result only with `action=complete` and independently
+  liveness. This records an unknown outcome, even when
+  `reconciliation_allowed=true` permits that one inspection. An unknown outcome
+  blocks only its own unit (below); it does not authorize continuing writes, a
+  new dispatch ID, or a replacement launch. Independent units stay dispatchable.
+  A recovered result also resolves with `action=complete` and an independently
   recovered parent `native_observation` containing `native_event_id`, `run_id`,
   `dispatch_id`, `action=dispatch_result`, and matching
-  `outcome=completed|failed|expected_tdd_red`. Without that genuine event,
-  unknown remains a checkpoint; worker text or a receipt cannot clear it.
+  `outcome=completed|failed|expected_tdd_red`. Worker text or a receipt cannot
+  clear an unknown outcome; the runner-classified path below needs no operator.
+- `reconcile-unit`: settle an unknown implementation dispatch with no operator
+  event. Pass `tdd_units` on every implementation `reserve`; the runner records
+  the dispatch's worktree snapshot and its unit, and an unknown outcome then
+  blocks a new dispatch only when it shares that unit (`reasons` carries
+  `unknown_dispatch_blocks_unit` and `blocked_by`). An implementation dispatch
+  without `tdd_units` is unscoped and blocks all new dispatch until settled.
+  Spawn a read-only reconciler agent that inspects the unit's owned paths and
+  reports `no_effect`, `partial`, or `complete`. Pass `dispatch_id`, an
+  explicit `spec_file`, and that report as `classification`. The runner
+  recomputes the class from git state under the unit's owned paths (task-execution
+  sidecar) and accepts only a matching claim; a mismatch returns
+  `unit_classification_mismatch` and changes nothing. `no_effect` marks the
+  dispatch `failed`, and the unit takes a new `dispatch_id` at once. `partial`
+  and `complete` keep it unknown: reserve a `kind=verification` dispatch with
+  `verifies_dispatch_id`, run it, and record it `completed`; then call
+  `complete` on the unknown dispatch with `verification_dispatch_id`. The class
+  fixes the outcome (`complete` records `completed`, `partial` records `failed`,
+  so only unfinished work is re-dispatched). A verification that has not
+  completed returns `unit_verification_not_completed`.
 - `authorize-corrective-retry`: after a corrective reservation owner's
   dispatch has failed because of an infrastructure error in the host result,
   and the operator has explicitly approved recovery, atomically reserve one retry under that same
@@ -432,7 +452,15 @@ has no resolution fields and still validates; its entries stay unresolved.
 
 If `disposition=checkpoint_required`, stop new work and record remaining work,
 owned in-flight dispatches, unknown effects, consumed reservations, elapsed
-time, and the required operator decision. Never call this completion or a
+time, and the required operator decision. An unknown dispatch outcome alone is
+not a checkpoint: reconcile it with `reconcile-unit` and keep dispatching
+independent units. A `checkpoint_required` whose `reasons` is only
+`unknown_dispatch_blocks_unit` means reconcile each `blocked_by` id, not stop;
+after `unit_classification_mismatch`, re-inspect and call once more with the
+class the paths show, never cycling the three values. Read
+`unknown_dispatch_ids` from `status` before each wave. A corrective dispatch's
+scope is its failure family, so do not reserve one against a failure inside a
+still-unknown unit. Never call this completion or a
 successful runtime measurement. Keep existing run status `in_progress` or
 `awaiting_review` as applicable and mirror the execution-control disposition;
 do not invent a top-level status. Independent approved work can continue only

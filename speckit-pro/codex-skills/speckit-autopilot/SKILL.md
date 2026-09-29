@@ -726,6 +726,16 @@ forbidden if any `Post:` item is `pending`, `in_progress`, or missing.
 Exception: `execution_control.disposition=checkpoint_required` permits an
 honest checkpoint response stating the run is **not complete**, remaining Post
 work, consumed budget, unknown effects, and the operator decision required.
+An unknown dispatch outcome alone is not that decision: settle it with
+`execution-control action=reconcile-unit` (a read-only reconciler over the
+unit's owned paths, runner-classified from git state) and keep dispatching
+independent units; pass `tdd_units` on each implementation reserve.
+A `checkpoint_required` whose `reasons` is only `unknown_dispatch_blocks_unit`
+is not a stop: run `reconcile-unit` for each id in `blocked_by`. On
+`unit_classification_mismatch`, re-inspect the owned paths and call once more
+with the class the paths show; never cycle the three values. Read
+`unknown_dispatch_ids` from `status` before each wave so a blocked unit is
+seldom reserved.
 Keep pending rows and current status; never mark them completed to stop.
 A failing gate or test is remediated, not deferred: keep remediating while
 each round converges, dispatching each diagnosed fix through the executor and

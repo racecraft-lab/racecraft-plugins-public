@@ -167,7 +167,8 @@ class ExecutionControlTests(_ExecutionControlFixture, unittest.TestCase):
         second = self.invoke("reconcile", dispatch_id="task")
         self.assertFalse(second["reconciliation_allowed"])
         self.assertEqual(self.invoke("reserve", dispatch_id="task", kind="implementation")["disposition"], "checkpoint_required")
-        self.assertEqual(self.invoke("status", mode="read_only")["disposition"], "checkpoint_required")
+        status = self.invoke("status", mode="read_only")
+        self.assertEqual((status["disposition"], status["unknown_dispatch_ids"]), ("continue", ["task"]))
         self.assertEqual(self.invoke("reserve", dispatch_id="renamed-task", kind="implementation")["disposition"], "checkpoint_required")
 
     def test_unknown_effects_block_already_reserved_verification_until_native_resolution(self):
@@ -1449,7 +1450,7 @@ class DeferOnExhaustedAllowanceTests(_ExecutionControlFixture, unittest.TestCase
         self.invoke("complete", dispatch_id="worker", outcome="unknown")
         unknown = self.invoke("reserve", dispatch_id="fix-b", kind="corrective", failure_invariant="FR-002")
         self.assertEqual(unknown["disposition"], "checkpoint_required")
-        self.assertIn("unknown_side_effects_require_operator_reconciliation", unknown["reasons"])
+        self.assertIn("unknown_dispatch_blocks_unit", unknown["reasons"])
         self.now = 1
         with self.assertRaisesRegex(ValueError, "clock moved backwards"):
             self.invoke("reserve", dispatch_id="fix-c", kind="corrective", failure_invariant="FR-002")
@@ -3407,6 +3408,241 @@ class DockerVerificationTests(VerificationTests):
                 execute_verification(self.root, self.inputs, "dry_run")
 
 
+class UnknownDispatchUnitScopeTests(_ExecutionControlFixture, unittest.TestCase):
+    """An unknown dispatch outcome blocks only its own unit; the runner reconciles it from git state (issue 831)."""
+
+    TASKS = ("## Phase 3: Stories\n- [ ] T001 Build the alpha core\n- [ ] T002 Build the alpha edge\n"
+             + "- [ ] T003 Build the beta increment\n")
+    OWNERSHIP = {"T001": ("alpha", ["src/alpha"]), "T002": ("alpha", ["src/alpha"]), "T003": ("beta", ["src/beta"])}
+    BLOCKED = "unknown_dispatch_blocks_unit"
+
+    def setUp(self):
+        super().setUp()
+        feature = self.root / "feature"
+        (feature / ".process").mkdir()
+        (feature / "plan.md").write_text("plan\n")
+        (feature / "tasks.md").write_text(self.TASKS)
+        tasks = {task_id: {"capability_group": "stories", "depends_on": [], "owns": owns, "tdd_unit": unit}
+                 for task_id, (unit, owns) in self.OWNERSHIP.items()}
+        metadata = {"schema_version": "task-execution.v1",
+                    "fingerprints": fingerprints((feature / "spec.md").read_text(), "plan\n", self.TASKS),
+                    "tasks": tasks}
+        (feature / ".process/task-execution.json").write_text(json.dumps(metadata))
+        for relative in ("src/alpha/core.py", "src/beta/core.py"):
+            (self.root / relative).parent.mkdir(parents=True, exist_ok=True)
+            (self.root / relative).write_text("VALUE = 0\n")
+        commit_fixture(self.root)
+        self.invoke("start")
+
+    def dispatch(self, dispatch_id, unit, outcome=None):
+        result = self.invoke("reserve", dispatch_id=dispatch_id, kind="implementation", tdd_units=[unit])
+        if outcome is not None:
+            result = self.invoke("complete", dispatch_id=dispatch_id, outcome=outcome)
+        return result
+
+    def reconcile(self, dispatch_id, classification, **extra):
+        return self.invoke("reconcile-unit", dispatch_id=dispatch_id, spec_file="feature/spec.md",
+                           classification=classification, **extra)
+
+    def check_tasks(self, *task_ids):
+        path = self.root / "feature/tasks.md"
+        text = path.read_text()
+        for task_id in task_ids:
+            text = text.replace(f"- [ ] {task_id}", f"- [x] {task_id}")
+        path.write_text(text)
+
+    def test_an_unknown_outcome_leaves_independent_units_dispatchable(self):
+        self.dispatch("alpha-1", "alpha", "unknown")
+        status = self.invoke("status", mode="read_only")
+        self.assertEqual((status["disposition"], status["reasons"]), ("continue", []))
+        self.assertEqual(status["unknown_dispatch_ids"], ["alpha-1"])
+        beta = self.dispatch("beta-1", "beta")
+        self.assertEqual((beta["disposition"], beta["reasons"]), ("continue", []))
+        self.invoke("complete", dispatch_id="beta-1", outcome="completed")
+        for label, request in {
+                "same unit": {"kind": "implementation", "tdd_units": ["alpha"]},
+                "overlapping units": {"kind": "implementation", "tdd_units": ["beta", "alpha"]},
+                "review of the unit": {"kind": "corrective", "failure_invariant": "FR-001", "spec_file": "feature/spec.md",
+                                       "review_remediation": {"tdd_unit": "alpha", "paths": ["src/alpha/core.py"]}},
+                "unscoped work": {"kind": "implementation"}}.items():
+            with self.subTest(label):
+                blocked = self.invoke("reserve", dispatch_id="next-" + label.replace(" ", "-"), **request)
+                self.assertEqual((blocked["disposition"], blocked["reasons"], blocked["blocked_by"]),
+                                 ("checkpoint_required", [self.BLOCKED], ["alpha-1"]))
+                self.assertNotIn("next-" + label.replace(" ", "-"), blocked["ledger"]["dispatches"])
+        corrective = self.invoke("reserve", dispatch_id="beta-fix", kind="corrective", failure_invariant="FR-002")
+        self.assertEqual(corrective["disposition"], "continue")
+
+    def test_an_unscoped_unknown_dispatch_still_blocks_all_new_dispatch(self):
+        self.invoke("reserve", dispatch_id="worker", kind="implementation")
+        self.invoke("complete", dispatch_id="worker", outcome="unknown")
+        blocked = self.dispatch("beta-1", "beta")
+        self.assertEqual((blocked["disposition"], blocked["reasons"]), ("checkpoint_required", [self.BLOCKED]))
+        refused = self.reconcile("worker", "no_effect")
+        self.assertEqual(refused["reasons"], ["unit_not_reconcilable"])
+
+    def test_no_effect_marks_the_dispatch_failed_and_allows_a_redispatch_with_no_parent_event(self):
+        self.dispatch("alpha-1", "alpha", "unknown")
+        (self.root / "src/beta/core.py").write_text("VALUE = 1\n")
+        result = self.reconcile("alpha-1", "no_effect")
+        record = result["ledger"]["dispatches"]["alpha-1"]
+        self.assertEqual((result["disposition"], result["reconciled"], result["relaunch_allowed"]),
+                         ("continue", "no_effect", True))
+        self.assertEqual((record["outcome"], record["reconciled_as"], record["changed_paths"]), ("failed", "no_effect", []))
+        self.assertNotIn("resolution_event_id", record)
+        self.assertNotIn("worktree_before", record)
+        again = self.dispatch("alpha-2", "alpha")
+        self.assertEqual((again["disposition"], again["reasons"]), ("continue", []))
+        schema = json.loads(SCHEMA_PATH.read_text())
+        self.assertEqual(json_schema_failures(again["ledger"], schema, schema, "ledger"), [])
+
+    def test_partial_changes_need_a_verification_pass_before_the_unit_is_released(self):
+        self.dispatch("alpha-1", "alpha", "unknown")
+        (self.root / "src/alpha/core.py").write_text("VALUE = 1\n")
+        result = self.reconcile("alpha-1", "partial")
+        record = result["ledger"]["dispatches"]["alpha-1"]
+        self.assertEqual((result["reconciled"], result["verification_required"]), ("partial", True))
+        self.assertEqual((record["outcome"], record["reconciliation"]["class"], record["reconciliation"]["paths"]),
+                         ("unknown", "partial", ["src/alpha/core.py"]))
+        self.assertEqual(self.dispatch("alpha-2", "alpha")["reasons"], [self.BLOCKED])
+        self.assertEqual(self.invoke("complete", dispatch_id="alpha-1", outcome="failed")["reasons"],
+                         ["missing_independent_native_result"])
+        self.invoke("reserve", dispatch_id="verify-1", kind="verification", verifies_dispatch_id="alpha-1")
+        early = self.invoke("complete", dispatch_id="alpha-1", outcome="failed", verification_dispatch_id="verify-1")
+        self.assertEqual(early["reasons"], ["unit_verification_not_completed"])
+        self.invoke("begin-verification", dispatch_id="verify-1")
+        self.invoke("complete", dispatch_id="verify-1", outcome="completed")
+        wrong = self.invoke("complete", dispatch_id="alpha-1", outcome="completed", verification_dispatch_id="verify-1")
+        self.assertEqual(wrong["reasons"], ["unit_resolution_mismatch"])
+        resolved = self.invoke("complete", dispatch_id="alpha-1", outcome="failed", verification_dispatch_id="verify-1")
+        item = resolved["ledger"]["dispatches"]["alpha-1"]
+        self.assertEqual((resolved["disposition"], item["outcome"], item["verified_by"]), ("continue", "failed", "verify-1"))
+        self.assertEqual(self.dispatch("alpha-2", "alpha")["disposition"], "continue")
+        schema = json.loads(SCHEMA_PATH.read_text())
+        self.assertEqual(json_schema_failures(resolved["ledger"], schema, schema, "ledger"), [])
+
+    def test_complete_changes_with_every_unit_task_checked_resolve_as_completed_after_verification(self):
+        self.dispatch("alpha-1", "alpha", "unknown")
+        (self.root / "src/alpha/core.py").write_text("VALUE = 1\n")
+        self.check_tasks("T001", "T002")
+        result = self.reconcile("alpha-1", "complete")
+        self.assertEqual((result["reconciled"], result["verification_required"]), ("complete", True))
+        self.invoke("reserve", dispatch_id="verify-1", kind="verification", verifies_dispatch_id="alpha-1")
+        self.invoke("begin-verification", dispatch_id="verify-1")
+        self.invoke("complete", dispatch_id="verify-1", outcome="completed")
+        resolved = self.invoke("complete", dispatch_id="alpha-1", outcome="completed", verification_dispatch_id="verify-1")
+        item = resolved["ledger"]["dispatches"]["alpha-1"]
+        self.assertEqual((item["outcome"], item["changed_paths"], item["verified_by"]),
+                         ("completed", ["src/alpha/core.py"], "verify-1"))
+        schema = json.loads(SCHEMA_PATH.read_text())
+        self.assertEqual(json_schema_failures(resolved["ledger"], schema, schema, "ledger"), [])
+
+    def test_a_forged_classification_fails_closed(self):
+        self.dispatch("alpha-1", "alpha", "unknown")
+        (self.root / "src/alpha/core.py").write_text("VALUE = 1\n")
+        before = self.invoke("status", mode="read_only")["ledger"]["dispatches"]
+        for claim in ("no_effect", "complete"):
+            with self.subTest(claim=claim):
+                forged = self.reconcile("alpha-1", claim)
+                self.assertEqual((forged["disposition"], forged["reasons"]), ("checkpoint_required", ["unit_classification_mismatch"]))
+                self.assertEqual(forged["ledger"]["dispatches"], before)
+        for bad in ("finished", None, True):
+            with self.subTest(bad=bad), self.assertRaises(ValueError):
+                self.reconcile("alpha-1", bad)
+        with self.assertRaises(ValueError):
+            self.reconcile("alpha-1", "partial", native_observation={"native_event_id": "x"})
+        self.assertEqual(self.reconcile("alpha-1", "partial")["reconciled"], "partial")
+        unnamed = self.invoke("reserve", dispatch_id="verify-x", kind="verification", verifies_dispatch_id="beta-none")
+        self.assertEqual((unnamed["disposition"], unnamed["reasons"]), ("checkpoint_required", [self.BLOCKED]))
+        with self.assertRaises(ValueError):
+            self.invoke("reserve", dispatch_id="verify-y", kind="implementation", tdd_units=["beta"],
+                            verifies_dispatch_id="alpha-1")
+
+    def test_missing_evidence_or_other_units_changes_never_reclassify(self):
+        self.dispatch("alpha-1", "alpha", "unknown")
+        (self.root / "src/beta/core.py").write_text("VALUE = 2\n")
+        self.assertEqual(self.reconcile("alpha-1", "partial")["reasons"], ["unit_classification_mismatch"])
+        (self.root / "feature/plan.md").write_text("plan changed\n")
+        self.assertEqual(self.reconcile("alpha-1", "no_effect")["reasons"], ["ownership_evidence_stale"])
+        (self.root / "feature/plan.md").write_text("plan\n")
+        self.assertEqual(self.reconcile("alpha-1", "no_effect")["reconciled"], "no_effect")
+        with self.assertRaises(ValueError):
+            self.invoke("reconcile-unit", dispatch_id="alpha-1", classification="no_effect")
+
+    def test_verifying_one_reconciled_unit_is_not_blocked_by_another_units_unknown_dispatch(self):
+        self.dispatch("alpha-1", "alpha", "unknown")
+        self.dispatch("beta-1", "beta", "unknown")
+        (self.root / "src/alpha/core.py").write_text("VALUE = 1\n")
+        (self.root / "src/beta/core.py").write_text("VALUE = 1\n")
+        for dispatch_id in ("alpha-1", "beta-1"):
+            self.assertEqual(self.reconcile(dispatch_id, "partial")["reconciled"], "partial")
+        for unit in ("alpha", "beta"):
+            verified = self.invoke("reserve", dispatch_id=f"verify-{unit}", kind="verification",
+                                   verifies_dispatch_id=f"{unit}-1")
+            self.assertEqual((verified["disposition"], verified["reasons"]), ("continue", []))
+        self.invoke("begin-verification", dispatch_id="verify-alpha")
+        self.assertEqual(self.invoke("begin-verification", dispatch_id="verify-beta")["disposition"], "continue")
+        self.invoke("complete", dispatch_id="verify-alpha", outcome="unknown")
+        blocked = self.invoke("reserve", dispatch_id="alpha-2", kind="implementation", tdd_units=["alpha"])
+        self.assertEqual(blocked["blocked_by"], ["alpha-1", "verify-alpha"])
+        self.invoke("complete", dispatch_id="verify-beta", outcome="completed")
+        resolved = self.invoke("complete", dispatch_id="beta-1", outcome="failed", verification_dispatch_id="verify-beta")
+        self.assertEqual(resolved["ledger"]["dispatches"]["beta-1"]["outcome"], "failed")
+        self.assertEqual(self.dispatch("beta-2", "beta")["disposition"], "continue")
+
+    def test_tampered_reconciliation_records_fail_validation(self):
+        self.dispatch("alpha-1", "alpha", "unknown")
+        (self.root / "src/alpha/core.py").write_text("VALUE = 1\n")
+        self.reconcile("alpha-1", "partial")
+        self.invoke("reserve", dispatch_id="verify-1", kind="verification", verifies_dispatch_id="alpha-1")
+        path = self.root / self.invoke("status", mode="read_only")["ledger_path"]
+        valid = path.read_bytes()
+        tampers = {
+            "unknown class": lambda ledger: ledger["dispatches"]["alpha-1"]["reconciliation"].update({"class": "no_effect"}),
+            "unsorted paths": lambda ledger: ledger["dispatches"]["alpha-1"]["reconciliation"].update({"paths": ["b", "a"]}),
+            "verified without a verifier": lambda ledger: ledger["dispatches"]["alpha-1"].update(verified_by="verify-1"),
+            "verifier for nothing": lambda ledger: ledger["dispatches"]["verify-1"].update(verifies="beta-none"),
+            "no-effect with a record": lambda ledger: ledger["dispatches"]["alpha-1"].update(reconciled_as="no_effect"),
+            "verifier that is not verification": lambda ledger: ledger["dispatches"]["verify-1"].update(kind="corrective"),
+        }
+        for name, tamper in tampers.items():
+            with self.subTest(tamper=name):
+                ledger = json.loads(valid)
+                tamper(ledger)
+                path.write_text(json.dumps(ledger), encoding="utf-8")
+                with self.assertRaises(ValueError):
+                    self.invoke("status", mode="read_only")
+        path.write_bytes(valid)
+        self.assertEqual(self.invoke("status", mode="read_only")["unknown_dispatch_ids"], ["alpha-1"])
+
+    def test_operator_native_resolution_of_an_unknown_dispatch_still_works(self):
+        self.dispatch("alpha-1", "alpha", "unknown")
+        event = {"native_event_id": "recovered", "run_id": self.run_id, "dispatch_id": "alpha-1",
+                 "action": "dispatch_result", "outcome": "completed"}
+        resolved = self.invoke("complete", dispatch_id="alpha-1", outcome="completed", native_observation=event)
+        self.assertEqual(resolved["ledger"]["dispatches"]["alpha-1"]["outcome"], "completed")
+
+
+class UnknownDispatchGuidanceTests(unittest.TestCase):
+    """Both hosts tell the lead to reconcile an unknown outcome per unit instead of asking the operator (issue 831)."""
+
+    GUIDANCE = ("skills/speckit-autopilot/references/execution-efficiency.md",
+                "skills/speckit-autopilot/references/error-recovery.md",
+                "skills/speckit-autopilot/references/phase-execution.md",
+                "codex-skills/speckit-autopilot/SKILL.md",
+                "codex-skills/speckit-autopilot/references/phase-execution-codex.md",
+                "codex-skills/speckit-autopilot/references/error-recovery-codex.md")
+
+    def test_every_host_guide_names_the_unit_scoped_reconciliation(self):
+        root = Path(__file__).resolve().parents[3] / "speckit-pro"
+        for relative in self.GUIDANCE:
+            with self.subTest(guide=relative):
+                text = " ".join((root / relative).read_text(encoding="utf-8").split())
+                self.assertIn("reconcile-unit", text)
+                self.assertNotIn("Unknown effects require a checkpoint", text)
+                self.assertNotIn("Unknown effects require an honest checkpoint", text)
+
+
 if __name__ == "__main__":
     suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case)
                                for case in (GreenfieldInvariantBindingTests, ExecutionControlTests, CorrectiveRecoveryTests,
@@ -3419,4 +3655,5 @@ if __name__ == "__main__":
                                             WorkflowIdentityTests, SelfIgnoringByproductDirectoryTests, VerificationTests,
                                             RunnerDispatchTests))
     suite.addTests(DockerVerificationTests(name) for name in DockerVerificationTests.__dict__ if name.startswith("test_docker_"))
+    suite.addTests(unittest.defaultTestLoader.loadTestsFromTestCase(case) for case in (UnknownDispatchUnitScopeTests, UnknownDispatchGuidanceTests))
     raise SystemExit(run_counted(suite, label="test-execution-control"))

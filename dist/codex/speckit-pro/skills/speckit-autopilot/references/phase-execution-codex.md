@@ -2907,9 +2907,20 @@ treat an earlier answer as authorization for the vetoed action. A reviewer veto 
 authorization is a genuine external failure: retry with backoff, then the one
 human stop. The
 correctness stops above are unchanged and still stop the run: unknown side
-effects, an execution-control `checkpoint_required` disposition, a ledger or
-clock error, invalid or stale state, and a failed gate whose repair is out of
-scope.
+effects the runner cannot classify with `reconcile-unit`, an execution-control
+`checkpoint_required` disposition, a ledger or clock error, invalid or stale
+state, and a failed gate whose repair is out of scope. An unknown dispatch
+outcome blocks only its own unit: pass `tdd_units` on each implementation
+reserve, run a read-only reconciler over the unit's owned paths, and settle it
+with `execution-control action=reconcile-unit`; `no_effect` allows a new
+dispatch with no operator event, and `partial` or `complete` need a
+`kind=verification` dispatch (`verifies_dispatch_id`) first.
+A `checkpoint_required` whose `reasons` is only `unknown_dispatch_blocks_unit`
+is not a stop: run `reconcile-unit` for each id in `blocked_by`. On
+`unit_classification_mismatch`, re-inspect the owned paths and call once more
+with the class the paths show; never cycle the three values. Read
+`unknown_dispatch_ids` from `status` before each wave so a blocked unit is
+seldom reserved.
 
 A failed gate or test is not a blocked action: diagnose it through the
 consensus agents, fix it through the executor, rerun verification, and keep

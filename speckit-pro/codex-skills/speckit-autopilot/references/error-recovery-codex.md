@@ -43,8 +43,13 @@ $speckit-autopilot workflow.md --from-phase <next-pending-phase>
 
 - **Subagent returns empty/incomplete summary:** Use one read-only reconciliation
   through `execution-control action=reconcile` to inspect retained output and
-  owned effects. Unknown effects require a checkpoint, not a replacement agent
-  or direct shell retry. Retain verified partial task results; reserve only
+  owned effects. An unknown outcome blocks only its own unit: settle it with
+  `execution-control action=reconcile-unit`, where a read-only reconciler
+  reports `no_effect`, `partial`, or `complete` and the runner verifies the class
+  from git state under the unit's owned paths. `no_effect` allows a new dispatch
+  with no operator event; `partial` and `complete` need a `kind=verification`
+  dispatch (`verifies_dispatch_id`) before the unit is released. Never use a
+  direct shell retry. Retain verified partial task results; reserve only
   unfinished work after reconciliation proves it is safe.
 - **Gate needs repair:** Diagnose through the consensus agents, fix through
   the executor, rerun verification, and keep remediating while each round
