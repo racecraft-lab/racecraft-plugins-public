@@ -1,105 +1,6 @@
 ---
-const lifecycleSteps = [
-  {
-    id: 'idea',
-    title: 'Idea',
-    summary: 'Problem, request, support note, or transcript.',
-    artifact: 'Raw note or scoped request',
-    gate: 'Specific enough to become a PRD',
-    next: 'Create or update the PRD',
-    badge: 'Input',
-  },
-  {
-    id: 'prd',
-    title: 'PRD',
-    summary: 'Requirements, success criteria, and SPEC catalog.',
-    artifact: 'Product requirements and acceptance criteria',
-    gate: 'A SPEC-ID is visible',
-    next: 'Add or confirm the roadmap entry',
-    badge: 'Product artifact',
-  },
-  {
-    id: 'roadmap',
-    title: 'Roadmap',
-    summary: 'SPEC-ID, dependencies, status, and execution order.',
-    artifact: 'Roadmap row with status and dependencies',
-    gate: 'Ready status or a named blocker',
-    next: 'Scaffold the SPEC',
-    badge: 'Planning artifact',
-  },
-  {
-    id: 'scaffold',
-    title: 'Scaffold',
-    summary: 'Workflow file, design concept, spec folder, and MOC.',
-    artifact: 'Workflow, design concept, SPEC-MOC, and initial spec',
-    gate: 'Setup gates pass and the feature directory exists',
-    next: 'Start the implementation workflow',
-    badge: 'Setup gate',
-  },
-  {
-    id: 'specify',
-    title: 'Specify',
-    summary: 'User stories and functional requirements.',
-    artifact: 'spec.md',
-    gate: 'G1: spec exists and the request is captured',
-    next: 'Clarify remaining decisions',
-    badge: 'G1',
-  },
-  {
-    id: 'clarify',
-    title: 'Clarify',
-    summary: 'Open questions resolved before planning starts.',
-    artifact: 'Updated spec and clarification notes',
-    gate: 'G2: no unresolved clarification markers remain',
-    next: 'Plan implementation',
-    badge: 'G2',
-  },
-  {
-    id: 'plan',
-    title: 'Plan',
-    summary: 'Implementation approach, contracts, research, and quickstart.',
-    artifact: 'plan.md, research, data model, contracts, and quickstart',
-    gate: 'G3: plan exists with concrete files and validation',
-    next: 'Generate checklists',
-    badge: 'G3',
-  },
-  {
-    id: 'checklist',
-    title: 'Checklist',
-    summary: 'UX, accessibility, integration, and error-handling gaps.',
-    artifact: 'checklists/*.md',
-    gate: 'G4: gaps are resolved or intentionally deferred',
-    next: 'Generate tasks',
-    badge: 'G4',
-  },
-  {
-    id: 'tasks',
-    title: 'Tasks',
-    summary: 'Reviewable work items grouped by user story.',
-    artifact: 'tasks.md and reviewability evidence',
-    gate: 'G5: tasks exist and route planning is recorded',
-    next: 'Analyze drift',
-    badge: 'G5',
-  },
-  {
-    id: 'analyze',
-    title: 'Analyze',
-    summary: 'Cross-artifact drift review before implementation.',
-    artifact: 'Analysis results in the workflow file',
-    gate: 'G6: no Critical or High findings remain',
-    next: 'Pass the confidence gate',
-    badge: 'G6',
-  },
-  {
-    id: 'implement',
-    title: 'Implement',
-    summary: 'Docs changes, validation evidence, and PR packet.',
-    artifact: 'Changed files, validation output, and PR packet',
-    gate: 'G7: tasks complete and evidence is present',
-    next: 'Prepare review',
-    badge: 'G7',
-  },
-];
+import { lifecycleSteps } from '../data/lifecycle';
+import InlineCode from './InlineCode.astro';
 ---
 
 <section
@@ -136,20 +37,20 @@ const lifecycleSteps = [
   <ol class="lifecycle-flow__list">
     {lifecycleSteps.map((step) => (
       <li>
-        <h3 id={`lifecycle-step-${step.id}`}>{step.title}</h3>
-        <p>{step.summary}</p>
+        <h3 id={`lifecycle-step-${step.id}`}>{step.stage}</h3>
+        <p>{step.purpose}</p>
         <dl>
           <div>
             <dt>Artifact</dt>
-            <dd>{step.artifact}</dd>
+            <dd><InlineCode text={step.output} /></dd>
           </div>
           <div>
             <dt>Gate</dt>
-            <dd>{step.gate}</dd>
+            <dd><InlineCode text={step.gate} /></dd>
           </div>
           <div>
             <dt>Next</dt>
-            <dd>{step.next}</dd>
+            <dd><InlineCode text={step.next} /></dd>
           </div>
         </dl>
         <span>{step.badge}</span>

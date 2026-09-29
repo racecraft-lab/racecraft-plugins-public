@@ -168,22 +168,7 @@ class TranscriptToolTests(unittest.TestCase):
                 "".join(json.dumps(event, separators=(",", ":")) + "\n" for event in reduction_events),
                 encoding="utf-8",
             )
-            expected = root / "expected.json"
-            expected.write_text(
-                json.dumps(
-                    {
-                        "response_assertions": [
-                            {
-                                "subagent_type": "speckit-pro:codebase-analyst",
-                                "must_contain_any": ["Finding", "ignored-second"],
-                                "must_contain_section_keywords": ["Evidence"],
-                            }
-                        ]
-                    }
-                ),
-                encoding="utf-8",
-            )
-            reduced = run_script(REDUCE, str(transcript), str(expected))
+            reduced = run_script(REDUCE, str(transcript))
             checks.append(("reduce transcript exits 0", lambda: self.assertEqual(reduced.returncode, 0, reduced.stderr)))
             checks.append(("reduce keeps only replay events", lambda: self.assertEqual(len(reduced_events()), 2)))
             checks.append(
@@ -224,17 +209,14 @@ class TranscriptToolTests(unittest.TestCase):
             )
             checks.append(
                 (
-                    "reduce synthesizes expected response keywords",
-                    lambda: self.assertEqual(
-                        reduced_events()[1]["message"]["content"][0]["content"],
-                        "Reduced parser fixture response for speckit-pro:codebase-analyst: Finding Evidence",
-                    ),
+                    "reduce keeps the real subagent response text",
+                    lambda: self.assertEqual(reduced_events()[1]["message"]["content"][0]["content"], "private response"),
                 )
             )
 
             reduce_usage = run_script(REDUCE)
             checks.append(("reduce invalid usage exits 2", lambda: self.assertEqual(reduce_usage.returncode, 2)))
-            reduce_missing = run_script(REDUCE, str(root / "missing.jsonl"), str(expected))
+            reduce_missing = run_script(REDUCE, str(root / "missing.jsonl"))
             checks.append(("reduce missing transcript exits 1", lambda: self.assertEqual(reduce_missing.returncode, 1)))
 
             fixture = LAYER6 / "test-fixtures" / "single-dispatch.jsonl"
@@ -287,9 +269,7 @@ class TranscriptToolTests(unittest.TestCase):
             root = Path(temp_dir)
             transcript = root / "transcript.jsonl"
             transcript.write_text("".join(json.dumps(event) + "\n" for event in events), encoding="utf-8")
-            expected = root / "expected.json"
-            expected.write_text("{}", encoding="utf-8")
-            reduced = run_script(REDUCE, str(transcript), str(expected))
+            reduced = run_script(REDUCE, str(transcript))
         self.assertEqual(reduced.returncode, 0, reduced.stderr)
         reduced_events = [json.loads(line) for line in reduced.stdout.splitlines()]
         self.assertEqual(len(reduced_events), 1)
@@ -317,7 +297,7 @@ class TranscriptToolTests(unittest.TestCase):
                     self.assertTrue(all(isinstance(term, str) for term in terms), terms)
                 if not isinstance(terms, list) or not terms:
                     continue
-                reduced = run_script(REDUCE, str(parser_fixture), str(expected))
+                reduced = run_script(REDUCE, str(parser_fixture))
                 self.assertEqual(reduced.returncode, 0, reduced.stderr)
                 for term in terms:
                     checked += 1
@@ -326,6 +306,68 @@ class TranscriptToolTests(unittest.TestCase):
         self.assertGreater(checked, 0, "no replay fixture declares must_include_terms")
 
 
+class ScrubberPrivacyTests(unittest.TestCase):
+    def test_scrub_uses_the_shared_privacy_patterns(self) -> None:
+        # Built at run time so this source never holds a value the privacy scan rejects.
+        private_values = {
+            "claude temp path": "/private/" + "tmp/claude-" + "501/scratch",
+            "macos temp folder": "/private/" + "var/folders/ab/cd/T",
+            "email": "someone" + "@" + "example.invalid",
+            "uuid": str(uuid.uuid4()),
+            "hyphenated home": "-" + "Users-operator-work",
+        }
+        text = "Paths " + " ".join(private_values.values())
+        scrubbed = run_script(SCRUB, input_text=json.dumps({"type": "assistant", "note": text}) + "\n")
+        self.assertEqual(scrubbed.returncode, 0, scrubbed.stderr)
+        for name, value in private_values.items():
+            with self.subTest(private_value=name):
+                self.assertNotIn(value, scrubbed.stdout)
+        self.assertIn("<TMP>", scrubbed.stdout)
+        self.assertIn("<EMAIL>", scrubbed.stdout)
+
+
+class ReducedResponseTests(unittest.TestCase):
+    def test_reduce_keeps_redacted_capped_subagent_responses(self) -> None:
+        home_path = "/" + "Users/" + "operator/work"
+        agent_block = {
+            "type": "tool_use",
+            "id": "original-agent-id",
+            "name": "Agent",
+            "input": {"subagent_type": "speckit-pro:consensus-synthesizer", "description": "Synthesize", "prompt": "p"},
+        }
+        results = {
+            "string": "Agreement 2/3 read " + home_path,
+            "text blocks": [{"type": "text", "text": "Agreement"}, {"type": "text", "text": "Confidence"}],
+            "non-text": {"unexpected": "shape"},
+            "oversized": "x" * 20000,
+        }
+        with tempfile.TemporaryDirectory() as temp_dir:
+            reduced_content: dict[str, str] = {}
+            for name, content in results.items():
+                transcript = Path(temp_dir) / "transcript.jsonl"
+                events = [
+                    {"type": "assistant", "message": {"role": "assistant", "content": [agent_block]}},
+                    {
+                        "type": "user",
+                        "message": {
+                            "role": "user",
+                            "content": [{"type": "tool_result", "tool_use_id": "original-agent-id", "content": content}],
+                        },
+                    },
+                ]
+                transcript.write_text("".join(json.dumps(event) + "\n" for event in events), encoding="utf-8")
+                reduced = run_script(REDUCE, str(transcript))
+                self.assertEqual(reduced.returncode, 0, reduced.stderr)
+                reduced_content[name] = json.loads(reduced.stdout.splitlines()[1])["message"]["content"][0]["content"]
+        self.assertIn("Agreement 2/3 read", reduced_content["string"])
+        self.assertNotIn(home_path, reduced_content["string"])
+        self.assertEqual(reduced_content["text blocks"], "Agreement\nConfidence")
+        self.assertEqual(reduced_content["non-text"], "")
+        self.assertEqual(len(reduced_content["oversized"]), 8000)
+
+
 if __name__ == "__main__":
     suite = unittest.defaultTestLoader.loadTestsFromTestCase(TranscriptToolTests)
+    for case in (ReducedResponseTests, ScrubberPrivacyTests):
+        suite.addTests(unittest.defaultTestLoader.loadTestsFromTestCase(case))
     raise SystemExit(run_counted(suite, label="test-transcript-tools"))

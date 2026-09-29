@@ -11,6 +11,8 @@ import time
 from pathlib import Path
 from typing import Any
 
+from .primitives import FormalError, confined
+
 
 def runtime_environment() -> dict[str, str]:
     """Keep ambient runtime flags from changing inspection or execution semantics."""
@@ -71,3 +73,12 @@ def capture(process: subprocess.Popen, output: Any, limit: int, result: dict[str
                 result["output_limited"] = True
                 process.kill()
                 break
+
+
+def checker_command(root: Path, tool: dict[str, Any], temporary: str) -> list[str]:
+    jar = Path(tool["jar"])
+    jar = jar.resolve() if jar.is_absolute() else confined(root, tool["jar"])
+    java = shutil.which(tool["java"])
+    if java is None:
+        raise FormalError("missing_tool", "Select the configured Java runtime on PATH before running the checker")
+    return [java, f"-Xmx{tool['heap_mb']}m", "-XX:+UseParallelGC", f"-Djava.io.tmpdir={temporary}", "-jar", str(jar)]

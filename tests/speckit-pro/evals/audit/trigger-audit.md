@@ -85,7 +85,7 @@ Existing deterministic coverage:
 - `tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py::MutationHelperTests::test_install_codex_agents_refreshes_stale_files_and_preserves_unrelated_agents`
 - `tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py::MutationHelperTests::test_install_codex_agents_defaults_to_fake_user_home_without_touching_real_home`
 
-Proposed deterministic coverage:
+Proposed at audit time (these tests were never added and do not exist in the tree):
 
 - `tests/speckit-pro/unit/test-native-agent-bootstrap-contracts.py::NativeAgentBootstrapTests::test_cross_host_bootstrap_compares_capability_not_equal_roster_or_file_format`
 - `tests/speckit-pro/unit/test-native-agent-bootstrap-contracts.py::NativeAgentBootstrapTests::test_claude_enabled_plugin_exposes_exact_required_agent_roster_without_copy`

@@ -10,7 +10,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
-from ..envelope import diagnostic, is_diagnostic, response
+from ..envelope import SUPPORTED_RUNNER_OPERATIONS, diagnostic, is_diagnostic, response
 from ..path_utils import find_repo_root
 from ..pr_contract import GATE_TITLE_PATTERN
 from .gate_response import gate_base_data
@@ -33,7 +33,7 @@ INSTALLED_RELEASE_BLOCKER_CLASSES = {
 }
 VALID_STATUS = {"pass", "fail"}
 EVIDENCE_STATUS = {"pass", "fail", "blocked"}
-RUNNER_OPERATIONS = {"preflight", "scaffold", "status", "autopilot-dry-run", "doctor", "update", "autoheal"}
+RUNNER_OPERATIONS = SUPPORTED_RUNNER_OPERATIONS
 PAYLOAD_RESULT_KEYS = {
     "payload_surface",
     "plugin_version",

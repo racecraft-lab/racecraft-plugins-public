@@ -133,8 +133,9 @@ pnpm --dir docs-site reference:generate
 
 - `test-privacy-scan.py` rejects non-allowlisted emails, home paths, Claude and
   macOS temp paths, raw UUIDs, and local identity terms in non-ignored files;
-  use repo-relative placeholders. Files listed in `active_path_guard.py`, this
-  one included, must not instruct `bash`, `sh`, or `jq`; use `python3`.
+  use repo-relative placeholders. Files listed in
+  `gates/active_path_guard/repo_bash.py`, this one included, must not instruct
+  `bash`, `sh`, or `jq`; use `python3`.
 - Live sessions run the installed plugin; `claude --plugin-dir
   dist/claude/speckit-pro` tests a refreshed `dist/`. Ask before
   `scripts/refresh-local-plugin.py` (`--dry-run` previews): it rebuilds `dist/`,

@@ -24,6 +24,7 @@ TEST_ROOT = REPO_ROOT / "tests" / "speckit-pro"
 sys.path.insert(0, str(TEST_ROOT / "lib"))
 
 from native_eval_catalog import (  # noqa: E402
+    CHECK_TYPES,
     NATIVE_SYNTHESIS_MECHANISMS,
     input_fingerprint,
     load_catalog,
@@ -1809,9 +1810,25 @@ class NativeFixtureMaterializerTests(unittest.TestCase):
             self.assertEqual(list(workspace.iterdir()), [])
 
 
+class NativeEvalReadmeContractTests(unittest.TestCase):
+    """The evals README documents every supported check type and optional case field."""
+
+    OPTIONAL_CASE_FIELDS = ("git_fixture", "git_metadata_access", "required_tools", "pairing")
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.readme = (TEST_ROOT / "evals" / "README.md").read_text(encoding="utf-8")
+
+    def test_every_check_type_and_optional_case_field_is_documented(self) -> None:
+        for name in sorted(CHECK_TYPES) + list(self.OPTIONAL_CASE_FIELDS):
+            with self.subTest(name=name):
+                self.assertIn(f"`{name}`", self.readme)
+
+
 if __name__ == "__main__":
     suite = unittest.TestSuite()
     suite.addTests(unittest.defaultTestLoader.loadTestsFromTestCase(NativeEvalCatalogTests))
     suite.addTests(unittest.defaultTestLoader.loadTestsFromTestCase(NativeEvalGradingTests))
     suite.addTests(unittest.defaultTestLoader.loadTestsFromTestCase(NativeFixtureMaterializerTests))
+    suite.addTests(unittest.defaultTestLoader.loadTestsFromTestCase(NativeEvalReadmeContractTests))
     raise SystemExit(run_counted(suite, label="test-native-eval-contracts"))

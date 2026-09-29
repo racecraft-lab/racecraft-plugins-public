@@ -18,7 +18,7 @@ Start by choosing the install context before running commands:
 - **CLI marketplace add:** use this when you want Codex to track a local or
   Git-backed marketplace source from the command line.
 
-Claude Code installation is the separate DOC-003-owned path. Use the
+Claude Code installation has its own guide. Use the
 [Claude Code install guide](/racecraft-plugins-public/install/claude-code/)
 for Claude Code commands.
 
@@ -43,7 +43,7 @@ Keep these surfaces separate:
 When source changes, update the marketplace source or copied personal payload, then reinstall or refresh the plugin. Do not edit the installed plugin cache to
 try to patch a stale install.
 
-For generated reference detail, use the focused DOC-007 pages:
+For generated reference detail, use the focused reference pages:
 [manifests](/racecraft-plugins-public/reference/manifests/),
 [skills](/racecraft-plugins-public/reference/skills/),
 [agents](/racecraft-plugins-public/reference/agents/),
@@ -168,6 +168,17 @@ files into the selected Codex agent directory. The default destination is
 `~/.codex/agents/`; `.codex/agents/` is the project-scoped destination when you
 explicitly choose a repo-local registration.
 
+SpecKit Pro requires the `typesafe-jev` plugin, and Codex has no plugin
+dependency mechanism, so add it yourself before the checklist below:
+
+```text
+codex plugin add typesafe-jev@racecraft-plugins-public
+```
+
+Restart Codex afterward. The [TypeSafe Jev install guide](/racecraft-plugins-public/install/typesafe-jev/)
+covers the binary and the optional API key. The install skill checks for the
+plugin and stops with this command when it is missing.
+
 Use this checklist:
 
 1. Invoke `@SpecKit Pro -> install` from the SpecKit Pro plugin card, or invoke
@@ -180,24 +191,18 @@ Use this checklist:
    the selected destination.
 5. Restart Codex after the installer reports success.
 
-Expected installed TOML files:
-
-- `autopilot-fast-helper.toml`
-- `phase-executor.toml`
-- `clarify-executor.toml`
-- `checklist-executor.toml`
-- `analyze-executor.toml`
-- `implement-executor.toml`
-- `codebase-analyst.toml`
-- `spec-context-analyst.toml`
-- `domain-researcher.toml`
-- `uat-runbook-author.toml`
+Expected installed TOML files: one for every Codex custom agent that the
+runner's agent inventory lists as `required` or `optional`. That is every
+`.toml` file in `speckit-pro/codex-agents/`. The
+[agents reference](/racecraft-plugins-public/reference/agents/) is generated
+from that inventory and lists each role, so it stays current when the roster
+grows. The installer report names each copied file.
 
 ## Verify The Install
 
 After the custom-agent registration step, use observational verification only.
 Do not edit the installed plugin cache, and do not manually edit the copied TOML
-files as part of DOC-004 verification.
+files as part of verification.
 
 1. Review the install skill report for the source directory, destination
    directory, effective model, copied filenames, and restart instruction.
@@ -216,7 +221,7 @@ Rerun `@SpecKit Pro -> install` or `$install` after a plugin update when the
 installer report, expected TOML list, model lines, or bundled custom-agent
 behavior has changed, then restart Codex before expecting updated custom agents.
 
-The full command-snippet review belongs to the later DOC-004 validation tasks.
+Review each command snippet before you run it.
 Use the generated [skills](/racecraft-plugins-public/reference/skills/) and
 [manifests](/racecraft-plugins-public/reference/manifests/) reference pages
 when you need source-cited command or manifest detail.
@@ -274,10 +279,10 @@ installation and custom-agent registration.
   not automatic. It remains subject to the connected service and Codex approval
   flow.
 
-DOC-008 owns hook trust analysis, managed policy, external authentication,
+The security and troubleshooting pages own hook trust analysis, managed policy, external authentication,
 permission troubleshooting, update, remove, rollback, and stale-cache forensics.
 The full security, trust, hook policy, and install lifecycle belong in
-[DOC-008 security and trust](/racecraft-plugins-public/security-and-trust/) and
+[Security & Trust](/racecraft-plugins-public/security-and-trust/) and
 [Troubleshooting](/racecraft-plugins-public/troubleshooting/). Returning users
 who need procedural recovery should use
 [Update & Rollback](/racecraft-plugins-public/update-and-rollback/).
@@ -300,7 +305,7 @@ This page is grounded in:
   `speckit-pro/speckit_pro_runner/helpers/install.py`,
   `speckit-pro/codex-agents/*.toml`, and `speckit-pro/codex-hooks.json`
 
-DOC-004 stays bounded to Codex first-install guidance. DOC-007 owns deeper
-reference content, and DOC-008 owns troubleshooting, update, remove, rollback,
-managed-policy, stale-cache forensics, and full trust or security lifecycle
-depth.
+This page stays bounded to Codex first-install guidance. The reference pages
+hold deeper reference content. The troubleshooting, update, and security pages
+cover troubleshooting, update, remove, rollback, managed-policy, stale-cache
+forensics, and full trust or security lifecycle depth.
