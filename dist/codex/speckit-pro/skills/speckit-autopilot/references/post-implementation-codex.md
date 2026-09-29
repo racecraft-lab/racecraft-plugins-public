@@ -157,12 +157,13 @@ background subagents as the fallback path. The 3-track structure
   is not a stop: it defers one unit whose allowance is spent. When every runnable
   item has finished and deferred items remain, the read-only `finalize-run`
   helper decides the end, as the phase-execution reference's blocked-action
-  rule states. Human UAT is the only gate a run may defer: with every non-UAT
-  gate passed at every PR head, the stack goes ready for review, the top PR body opens with
-  `deferred_items` in its Deferred / not verified section, and the goal is
-  marked complete. Anything else left is one human stop. Either way, one
-  consolidated operator request and the same question as plain text in the
-  final message list every fallback taken and every deferred item. Run every
+  rule states. Human UAT is the only gate a run may defer: with every required
+  gate green at every PR head, the stack goes ready for review, the top PR body opens with
+  `deferred_items` and each of `decisions` in its Deferred / not verified section, and the goal is
+  marked complete. Only a required gate that is not green after its escalation
+  tiers is one human stop. The end-of-run request is plain text in the final
+  message, never a question tool call, and lists every fallback taken and every
+  deferred item. Run every
   Post item that does not depend on deferred work first. Otherwise continue
   with the first incomplete item. `Post: Retrospective` remains the final Post item and
   must be completed or explicitly skipped before completion can be reported.

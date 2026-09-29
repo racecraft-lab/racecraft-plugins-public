@@ -60,6 +60,24 @@ DEFERRAL_RESOLUTION_KEYS = {"resolved_by", "resolved_at"}
 RECORD_FAILING_CHECKS = "record-failing-checks"
 FAILING_CHECK_KEYS = {"command_id", "command_sha256", "format", "failing", "passing", "checks_run", "output_sha256",
                       "recorded_at"}
+# The runner reads the head it verified and whether the worktree matched it. Earlier records lack both.
+FAILING_CHECK_OPTIONAL_KEYS = {"head_sha", "worktree_clean"}
+# A failed unit climbs a fixed ladder before it is exhausted. Tier 1 is the current agent's
+# repair loop inside its existing allowance (corrective_cycles and the unit allowances). Tier 2
+# is a fresh agent with a different approach, guided by a consensus diagnosis. Tier 3 is the
+# strongest model at max effort with the full failure history. Each retry is one corrective
+# ledger dispatch that draws on the unit's escalation record, never on `corrective_cycles`, and
+# the record shows the tier reached. Tier 3 has a per-run cap. A unit is a deferral's unit, or
+# `gate_failure` (the command digest of a verification the runner fingerprinted as failing).
+ESCALATION_UNIT_KINDS = {*DEFER_REASONS.values(), "gate_failure"}
+ESCALATION_TIERS = (2, 3)
+ESCALATION_TIER3_CAP = 3
+ESCALATION_KEYS = {"unit_kind", "unit", "tier", "dispatches"}
+ESCALATION_DISPATCH_KEYS = {"tier", "dispatch_id", "reserved_at"}
+# `finalize-run` counts how often it saw the same head and gate unfinished, so a stop is
+# proved by the runner's own record of earlier cycles and never by a caller's claim.
+FINALIZE_OBSERVATION_KINDS = ("missing_gate", "harness_error")
+FINALIZE_OBSERVATION_CAP = 3
 # A metadata-only correction rewords task definitions without changing scope. The
 # runner proves it against the committed baseline itself and admits it once per
 # task per run without spending a corrective cycle.
@@ -230,6 +248,8 @@ def validate_ledger(value: Any) -> None:
     validate_intervals(value)
     _validate_corrective_state(value)
     _validate_corrective_epochs(value)
+    _validate_escalation_cap(value)
+    _validate_finalize_observations(value)
 
 
 def _validate_corrective_state(value: dict[str, Any]) -> None:
@@ -249,6 +269,7 @@ def _validate_corrective_state(value: dict[str, Any]) -> None:
     metadata_corrections = _validate_metadata_corrections(value)
     _validate_deferrals(value)
     gate_allowances = _validate_gate_allowances(value)
+    escalations = _validate_escalations(value)
     families = [item.get("family") for item in value["reservations"].values() if isinstance(item, dict)]
     if len(families) != len(value["reservations"]) or len(set(families)) != len(families):
         raise ValueError("duplicate or malformed corrective family")
@@ -260,10 +281,16 @@ def _validate_corrective_state(value: dict[str, Any]) -> None:
         if type(item.get("reconciliations")) is not int or not 0 <= item["reconciliations"] <= 1:
             raise ValueError("invalid reconciliation counter")
         reservation = item.get("reservation_id")
-        if sum(key in item for key in ("increment", "gate", "metadata_correction", "test_fix")) > 1:
+        if sum(key in item for key in ("increment", "gate", "metadata_correction", "test_fix", "escalation")) > 1:
             raise ValueError("a corrective dispatch draws on one allowance, not an increment and a gate")
         _validate_edit_records(item)
-        if "test_fix" in item:
+        if "escalation" in item or "escalation_tier" in item:
+            listed = {(entry["tier"], entry["dispatch_id"])
+                      for entry in escalations.get(str(item.get("escalation")), {}).get("dispatches", [])}
+            if (item["kind"] != "corrective" or reservation is not None
+                    or (item.get("escalation_tier"), dispatch_id) not in listed):
+                raise ValueError("escalation dispatch is not recorded in its escalation allowance")
+        elif "test_fix" in item:
             if (item["kind"] != "corrective" or reservation is not None
                     or dispatch_id not in test_fixes.get(item["test_fix"], {}).get("dispatch_ids", [])):
                 raise ValueError("test-fix dispatch is not recorded in its increment's test-fix allowance")
@@ -289,7 +316,7 @@ def _validate_corrective_state(value: dict[str, Any]) -> None:
 
 EPOCH_STATE_KEYS = ("corrective_cycles", "reservations", "dispatches", "approved_invariants")
 EPOCH_OPTIONAL_KEYS = ("invariant_binding", "corrective_exception", "increment_allowances", "gate_allowances",
-                       "deferred", "metadata_corrections", "test_fix_allowances")
+                       "deferred", "metadata_corrections", "test_fix_allowances", "escalation_allowances")
 # An operator's explicit stage start closes the prior stage's allowance under a
 # runner-derived event ID, so each stage opens at most one allowance per run.
 STAGE_EPOCH_STAGES = ("implement",)
@@ -551,6 +578,185 @@ def _validate_metadata_corrections(ledger: dict[str, Any]) -> dict[str, list[str
     return owned
 
 
+def escalation_key(unit_kind: str, unit: str) -> str:
+    return f"{unit_kind}:{unit}"
+
+
+def failed_verification(item: Any) -> bool:
+    """True when the runner's own fingerprint on a verification dispatch shows failing or unparsed checks."""
+    fingerprint = item.get("failing_checks") if isinstance(item, dict) else None
+    return (isinstance(item, dict) and item.get("kind") == "verification"
+            and isinstance(fingerprint, dict) and fingerprint.get("failing") != [])
+
+
+def _failing_verification_since(ledger: dict[str, Any], command_sha256: str, since: float, until: float) -> bool:
+    """True when the ledger shows a verification of this command failing between two clock readings."""
+    return any(failed_verification(item) and item["failing_checks"]["command_sha256"] == command_sha256
+               and since <= item["failing_checks"]["recorded_at"] <= until for item in ledger["dispatches"].values())
+
+
+def _escalation_unit_failed(ledger: dict[str, Any], unit_kind: str, unit: str, since: float, until: float) -> bool:
+    """True when the ledger itself shows this unit failed, by the moment a tier was reserved."""
+    if unit_kind == "gate_failure":
+        return _failing_verification_since(ledger, unit, since, until)
+    return any(entry.get("unit_kind") == unit_kind and entry.get("unit") == unit and entry["deferred_at"] <= until
+               for entry in ledger.get("deferred", []))
+
+
+def _failing_since(ledger: dict[str, Any], unit_kind: str, earlier: list[dict[str, Any]]) -> float:
+    """A failing gate must fail again after the prior tier settled; a deferral has one failure to answer."""
+    if unit_kind == "gate_failure" and earlier:
+        completed = ledger["dispatches"].get(earlier[-1]["dispatch_id"], {}).get("completed_at")
+        if type(completed) in (int, float):
+            return completed  # type: ignore[no-any-return]
+    return ledger["started_at"]  # type: ignore[no-any-return]
+
+
+def _tier_ready(ledger: dict[str, Any], record: dict[str, Any] | None, tier: int, reserved_at: float) -> bool:
+    """True when the ledger shows the prior tier settled without resolving the unit, as `tier` requires."""
+    if tier == 2:
+        return record is None
+    if record is None or len(record["dispatches"]) != tier - 2:
+        return False
+    dispatches = record["dispatches"]
+    previous = ledger["dispatches"].get(dispatches[-1]["dispatch_id"])
+    return (isinstance(previous, dict) and previous.get("outcome") in {"failed", "unknown", "completed"}
+            and type(previous.get("completed_at")) in (int, float) and previous["completed_at"] <= reserved_at
+            and (record["unit_kind"] == "gate_failure" or previous["outcome"] != "completed"))
+
+
+def escalation_tier3_used(ledger: dict[str, Any]) -> int:
+    """Tier-3 retries the run has reserved, in the current allowance and every archived one."""
+    records = [ledger, *ledger.get("corrective_epochs", [])]
+    return sum(1 for owner in records for record in owner.get("escalation_allowances", {}).values()
+               if record["tier"] == 3)
+
+
+def escalation_progress(ledger: dict[str, Any], unit_kind: str, unit: str) -> str:
+    """The next step for a failed unit: `tier2`, `tier3`, `open` while a retry runs, or `exhausted`."""
+    record = ledger.get("escalation_allowances", {}).get(escalation_key(unit_kind, unit))
+    if record is None:
+        return "tier2"
+    if ledger["dispatches"][record["dispatches"][-1]["dispatch_id"]]["outcome"] in {"reserved", "running"}:
+        return "open"
+    if record["tier"] == 2 and escalation_tier3_used(ledger) < ESCALATION_TIER3_CAP:
+        return "tier3"
+    return "exhausted"
+
+
+def _validate_escalations(ledger: dict[str, Any]) -> dict[str, Any]:
+    """Each escalation record lists the tiers one unit reached, each owned by one recorded corrective dispatch."""
+    if "escalation_allowances" not in ledger:
+        return {}
+    allowances = ledger["escalation_allowances"]
+    if not isinstance(allowances, dict) or not allowances or ledger.get("escalation_tier3_cap") != ESCALATION_TIER3_CAP:
+        raise ValueError("invalid escalation allowances")
+    for key, record in allowances.items():
+        if (not isinstance(record, dict) or set(record) != ESCALATION_KEYS
+                or record["unit_kind"] not in ESCALATION_UNIT_KINDS
+                or not isinstance(record["unit"], str) or not record["unit"]
+                or key != escalation_key(record["unit_kind"], record["unit"])
+                or record["tier"] not in ESCALATION_TIERS or not isinstance(record["dispatches"], list)
+                or len(record["dispatches"]) != record["tier"] - 1):
+            raise ValueError("invalid escalation allowance")
+        for tier, entry in zip(ESCALATION_TIERS, record["dispatches"], strict=False):
+            if (not isinstance(entry, dict) or set(entry) != ESCALATION_DISPATCH_KEYS or entry["tier"] != tier
+                    or type(entry["reserved_at"]) not in (int, float)):
+                raise ValueError("invalid escalation allowance")
+            item = ledger["dispatches"].get(entry["dispatch_id"])
+            if (not isinstance(item, dict) or item.get("escalation") != key or item.get("escalation_tier") != tier
+                    or item.get("reserved_at") != entry["reserved_at"]):
+                raise ValueError("escalation allowance lists a dispatch it does not own")
+            earlier = record["dispatches"][:tier - 2]
+            partial = {**record, "dispatches": earlier} if earlier else None
+            if (not _escalation_unit_failed(ledger, record["unit_kind"], record["unit"],
+                                            _failing_since(ledger, record["unit_kind"], earlier), entry["reserved_at"])
+                    or not _tier_ready(ledger, partial, tier, entry["reserved_at"])):
+                raise ValueError("escalation allowance names a unit or tier the ledger does not show as reached")
+    return allowances
+
+
+def _validate_escalation_cap(ledger: dict[str, Any]) -> None:
+    """The run-wide tier-3 count never passes the cap the ledger records."""
+    if "escalation_tier3_cap" in ledger and ledger["escalation_tier3_cap"] != ESCALATION_TIER3_CAP:
+        raise ValueError("invalid escalation tier-3 cap")
+    if escalation_tier3_used(ledger) > ESCALATION_TIER3_CAP:
+        raise ValueError("escalation tier-3 retries pass the per-run cap")
+
+
+def _validate_finalize_observations(ledger: dict[str, Any]) -> None:
+    """Counts of the head-and-gate pairs `finalize-run` saw unfinished, one per pair and kind."""
+    if "finalize_observations" not in ledger:
+        return
+    observations = ledger["finalize_observations"]
+    if not isinstance(observations, dict) or not observations:
+        raise ValueError("invalid finalize observations")
+    for key, count in observations.items():
+        kind, _, rest = key.partition(":")
+        head, _, gate = rest.partition(":")
+        if (kind not in FINALIZE_OBSERVATION_KINDS or re.fullmatch(r"[0-9a-f]{40}", head) is None or not gate
+                or type(count) is not int or not 1 <= count <= FINALIZE_OBSERVATION_CAP):
+            raise ValueError("invalid finalize observations")
+
+
+def finalize_observation_key(kind: str, head_sha: str, gate: str) -> str:
+    return f"{kind}:{head_sha}:{gate}"
+
+
+def record_finalize_observations(root: Path, ledger_path: str, expected_run_id: str, keys: list[str]) -> None:
+    """Count each key once for the finalize cycle that just observed it; the count stops at the cap."""
+    path = confined_path(root, ledger_path)
+    with exclusive_ledger(path):
+        ledger = json.loads(path.read_text(encoding="utf-8"))
+        validate_ledger(ledger)
+        if ledger["run_id"] != expected_run_id:
+            raise ValueError("expected_run_id does not match the ledger")
+        counts = dict(ledger.get("finalize_observations", {}))
+        for key in sorted(set(keys)):
+            counts[key] = min(counts.get(key, 0) + 1, FINALIZE_OBSERVATION_CAP)
+        ledger["finalize_observations"] = counts
+        validate_ledger(ledger)
+        durable_json(path, ledger)
+
+
+def _reserve_escalation(ledger: dict[str, Any], dispatch_id: str, kind: Any, reservation: Any, request: Any,
+                        now: float) -> dict[str, Any]:
+    """Admit one escalation retry for a failed unit, outside the run-wide corrective budget."""
+    if (not isinstance(request, dict) or set(request) != {"unit_kind", "unit", "tier"}
+            or request["unit_kind"] not in ESCALATION_UNIT_KINDS or request["tier"] not in ESCALATION_TIERS
+            or type(request["tier"]) is not int or not isinstance(request["unit"], str) or not request["unit"].strip()):
+        raise ValueError("escalation must name a unit_kind, a unit, and a tier of 2 or 3")
+    if kind != "corrective" or reservation is not None:
+        raise ValueError("an escalation retry is a corrective dispatch with no corrective reservation")
+    unit_kind, unit, tier = request["unit_kind"], request["unit"], request["tier"]
+    key = escalation_key(unit_kind, unit)
+    record = ledger.get("escalation_allowances", {}).get(key)
+    note = {"escalation_allowance": "unit", "escalation_tier": tier}
+    open_unit = unit_kind == "gate_failure" or any(
+        entry["unit_kind"] == unit_kind and entry["unit"] == unit and "resolved_by" not in entry
+        for entry in ledger.get("deferred", []))
+    if record is not None and record["tier"] >= tier:
+        return {"reasons": ["escalation_allowance_spent"], **note}
+    earlier = record["dispatches"] if record is not None else []
+    if not open_unit or not _escalation_unit_failed(ledger, unit_kind, unit,
+                                                    _failing_since(ledger, unit_kind, earlier), now):
+        return {"reasons": ["escalation_requires_a_failed_unit"], **note}
+    if not _tier_ready(ledger, record, tier, now):
+        return {"reasons": ["escalation_tier_out_of_order"], **note}
+    if tier == 3 and escalation_tier3_used(ledger) >= ESCALATION_TIER3_CAP:
+        return {"reasons": ["escalation_tier3_cap_reached"], **note}
+    entry = {"tier": tier, "dispatch_id": dispatch_id, "reserved_at": now}
+    ledger["escalation_tier3_cap"] = ESCALATION_TIER3_CAP
+    ledger["escalation_allowances"] = {
+        **ledger.get("escalation_allowances", {}),
+        key: {"unit_kind": unit_kind, "unit": unit, "tier": tier,
+              "dispatches": [*(record["dispatches"] if record is not None else []), entry]}}
+    ledger["dispatches"][dispatch_id] = {"kind": kind, "outcome": "reserved", "reserved_at": now,
+                                         "reservation_id": None, "reconciliations": 0, "escalation": key,
+                                         "escalation_tier": tier}
+    return {"reservation_id": None, "dispatch_id": dispatch_id, **note}
+
+
 def _allowance_spent(ledger: dict[str, Any], reason: str, unit: str) -> bool:
     """True when the ledger itself shows the allowance a deferral names as spent."""
     if reason in {"failure_family_budget_exhausted", "corrective_run_budget_exhausted"}:
@@ -612,6 +818,9 @@ def _dispatch_units(ledger: dict[str, Any], item: dict[str, Any]) -> set[tuple[s
     reservation = item.get("reservation_id")
     if reservation in ledger["reservations"]:
         units.add(("failure_family", ledger["reservations"][reservation]["family"]))
+    if isinstance(item.get("escalation"), str):
+        unit_kind, _, unit = item["escalation"].partition(":")
+        units.add((unit_kind, unit))
     exception = ledger.get("corrective_exception")
     if isinstance(exception, dict) and reservation is not None and reservation == exception.get("reservation_id"):
         units.add(("failure_family", exception["failure_invariant"]))
@@ -655,9 +864,14 @@ def _validate_failing_checks(record: Any, item: dict[str, Any]) -> None:
     """One runner-recorded fingerprint: closed shape, sorted unique identifiers, recorded while running."""
     from .failing_checks import FORMATS, MAX_IDENTIFIER_LENGTH, MAX_IDENTIFIERS
 
-    if (not isinstance(record, dict) or set(record) != FAILING_CHECK_KEYS or item.get("kind") != "verification"
-            or record["format"] not in {*FORMATS, "passed", "unparsed"}):
+    if (not isinstance(record, dict) or not FAILING_CHECK_KEYS <= set(record) <= FAILING_CHECK_KEYS | FAILING_CHECK_OPTIONAL_KEYS
+            or item.get("kind") != "verification" or record["format"] not in {*FORMATS, "passed", "unparsed"}):
         raise ValueError("invalid failing-check evidence")
+    if ("head_sha" in record) != ("worktree_clean" in record) or (
+            "head_sha" in record and (not isinstance(record["head_sha"], str)
+                                      or re.fullmatch(r"[0-9a-f]{40}", record["head_sha"]) is None
+                                      or type(record["worktree_clean"]) is not bool)):
+        raise ValueError("invalid failing-check head evidence")
     require_text(record["command_id"], "failing-check command_id")
     for key in ("failing", "passing"):
         values = record[key]
@@ -1237,6 +1451,14 @@ def _worktree_snapshot(root: Path) -> dict[str, Any] | None:
     return {"head": commit, "dirty": {path: _file_digest(root, path) for path in sorted(paths) if _tracked_path(path)}}
 
 
+def worktree_evidence(root: Path) -> dict[str, Any]:
+    """The head the runner sees and whether no tracked path differs from it; empty when git cannot answer."""
+    snapshot = _worktree_snapshot(root)
+    if snapshot is None:
+        return {}
+    return {"head_sha": snapshot["head"], "worktree_clean": not snapshot["dirty"]}
+
+
 def _changed_since(root: Path, before: dict[str, Any]) -> list[str] | None:
     """Every path whose content differs from the snapshot, in sorted order; None when git cannot answer.
 
@@ -1498,6 +1720,8 @@ def reserve(ledger: dict[str, Any], inputs: dict[str, Any], now: float, root: Pa
     if dispatch_id in _used_dispatch_ids(ledger):
         return {"reasons": ["dispatch_already_reserved_no_relaunch"]}
     reservation = inputs.get("reservation_id")
+    if "escalation" in inputs:
+        return _reserve_escalation(ledger, dispatch_id, kind, reservation, inputs["escalation"], now)
     note: dict[str, Any] = {}
     if metadata_only:
         ineligible, record = _metadata_ineligibility(root, spec, ledger)
