@@ -29,7 +29,10 @@
         { "path": "tests/speckit-pro/layer1-structural/validate-skill-contracts.py", "label": "validate-skill-contracts" },
         { "path": "tests/speckit-pro/layer1-structural/validate-payload-contracts.py", "label": "validate-payload-contracts" },
         { "path": "tests/speckit-pro/layer1-structural/validate-ci-release-contracts.py", "label": "validate-ci-release-contracts" },
-        { "path": "tests/speckit-pro/layer1-structural/validate-spec-lifecycle-contracts.py", "label": "validate-spec-lifecycle-contracts" },
+        { "path": "tests/speckit-pro/layer1-structural/validate-plugin-payload-hygiene.py", "label": "validate-plugin-payload-hygiene" },
+        { "path": "tests/speckit-pro/layer1-structural/validate-spec-templates-and-extensions.py", "label": "validate-spec-templates-and-extensions" },
+        { "path": "tests/speckit-pro/layer1-structural/validate-moc-lint.py", "label": "validate-moc-lint" },
+        { "path": "tests/speckit-pro/layer1-structural/validate-spec-index-helper-contract.py", "label": "validate-spec-index-helper-contract" },
         { "path": "tests/speckit-pro/layer1-structural/test-structural-regressions.py", "label": "test-structural-regressions" }
       ]
     },
