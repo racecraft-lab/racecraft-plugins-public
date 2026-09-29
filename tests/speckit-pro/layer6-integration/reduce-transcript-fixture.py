@@ -62,9 +62,35 @@ def reduced_response(block: JsonObject) -> str:
     return redact_private_text(content)[:RESPONSE_LIMIT]
 
 
+def reduced_agent_input(inputs: JsonObject) -> JsonObject:
+    reduced_input: JsonObject = {
+        "subagent_type": jq_coalesce_empty(inputs.get("subagent_type", "")),
+        "description": jq_coalesce_empty(inputs.get("description", "")),
+        "prompt": redact_private_text(str(jq_coalesce_empty(inputs.get("prompt", "")))),
+    }
+    # Keep the dispatch-shape fields the Layer 6 dispatch assertions read.
+    for shape_key in ("run_in_background", "isolation"):
+        if shape_key in inputs:
+            reduced_input[shape_key] = inputs[shape_key]
+    return reduced_input
+
+
+def reduced_assistant_message(
+    event: JsonObject, output_blocks: list[JsonObject], message_ids: dict[str, str]
+) -> JsonObject:
+    message: JsonObject = {"role": "assistant", "content": output_blocks}
+    source_message = event.get("message") if isinstance(event.get("message"), dict) else {}
+    source_id = source_message.get("id")
+    if isinstance(source_id, str):
+        # Stream events of one assistant message share an id; keep that link, not the raw id.
+        message["id"] = message_ids.setdefault(source_id, f"msg-{len(message_ids) + 1:03d}")
+    return message
+
+
 def reduce_transcript(events: list[JsonObject]) -> list[JsonObject]:
     reduced: list[JsonObject] = []
     id_map: dict[str, str] = {}
+    message_ids: dict[str, str] = {}
     sequence = 0
 
     for event in events:
@@ -84,18 +110,8 @@ def reduce_transcript(events: list[JsonObject]) -> list[JsonObject]:
                     id_map[old_id] = new_id
                 inputs = block.get("input") if isinstance(block.get("input"), dict) else {}
                 if block.get("name") == "Agent":
-                    subagent_type = jq_coalesce_empty(inputs.get("subagent_type", ""))
                     output_blocks.append(
-                        {
-                            "type": "tool_use",
-                            "id": new_id,
-                            "name": "Agent",
-                            "input": {
-                                "subagent_type": subagent_type,
-                                "description": jq_coalesce_empty(inputs.get("description", "")),
-                                "prompt": redact_private_text(str(jq_coalesce_empty(inputs.get("prompt", "")))),
-                            },
-                        }
+                        {"type": "tool_use", "id": new_id, "name": "Agent", "input": reduced_agent_input(inputs)}
                     )
                 else:
                     output_blocks.append(
@@ -107,13 +123,8 @@ def reduce_transcript(events: list[JsonObject]) -> list[JsonObject]:
                         }
                     )
             if output_blocks:
-                reduced.append(
-                    {
-                        "type": "assistant",
-                        "isSidechain": is_sidechain,
-                        "message": {"role": "assistant", "content": output_blocks},
-                    }
-                )
+                message = reduced_assistant_message(event, output_blocks, message_ids)
+                reduced.append({"type": "assistant", "isSidechain": is_sidechain, "message": message})
             continue
 
         if event.get("type") == "user":
