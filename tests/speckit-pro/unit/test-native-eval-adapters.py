@@ -18,6 +18,7 @@ import subprocess
 import sys
 import tempfile
 import threading
+from typing import Any
 import unittest
 from unittest import mock
 
@@ -583,194 +584,6 @@ class AdapterPreparationTests(unittest.TestCase):
             target.mkdir()
             return subprocess.CompletedProcess(command, 0, b"", b"")
         return subprocess.CompletedProcess(command, 1, b"", b"cat: Operation not permitted\n")
-
-    @staticmethod
-    def checker_sources(*, codex: bytes | None = None, shared: bytes | None = None):
-        """Serve replacement source bytes for the Codex and shared adapter modules only."""
-        real_read_bytes = Path.read_bytes
-        overrides = {
-            Path(codex_adapter.__file__): codex,
-            Path(adapter_common.__file__): shared,
-        }
-
-        def read_bytes(path: Path) -> bytes:
-            replacement = overrides.get(Path(path))
-            return real_read_bytes(path) if replacement is None else replacement
-
-        return mock.patch.object(Path, "read_bytes", autospec=True, side_effect=read_bytes)
-
-    def test_isolation_checker_identity_derives_exact_local_security_closure(self) -> None:
-        identity = codex_adapter._isolation_checker_identity()
-        self.assertEqual(identity["schema_version"], "native-eval-isolation-checker/v1")
-        shared = "native_eval_adapter_common."
-        self.assertEqual(
-            set(identity["components"]),
-            {
-                "Mapping",
-                "Path",
-                "_CheckerSource",
-                "_ISOLATION_CONTROL",
-                "_ISOLATION_DENIAL",
-                "_SHARED_CHECKER_MODULE",
-                "_checker_closure",
-                "_checker_component",
-                "_checker_dependencies",
-                "_checker_source",
-                "_is_broad_temporary_root",
-                "_isolation_checker_identity",
-                "_qualify_codex_git_metadata", "_qualify_codex_isolation",
-                "_real_canonical_directory",
-                "_remove_exact_probe_entry",
-                "_require_probe_result",
-                "_require_unchanged_probe",
-                "_run_codex_sandbox_probe",
-                "_sandbox_probe_command",
-                "_temporary_isolation_probes",
-                "_write_exclusive_probe",
-                "adapter_common",
-                "ast",
-                "contextmanager",
-                "dataclass",
-                "hashlib",
-                "os",
-                "re",
-                "stat",
-                "subprocess",
-                "sys",
-                "tempfile",
-                "uuid",
-                shared + "NativeAdapterError",
-                shared + "Path",
-                shared + "_canonical_json",
-                shared + "_relocated",
-                shared + "_require",
-                shared + "_resolve_executable",
-                shared + "json",
-                shared + "os",
-                shared + "shutil",
-            },
-        )
-        unsigned = copy.deepcopy(identity)
-        digest = unsigned.pop("digest")
-        self.assertEqual(digest, hashlib.sha256(adapter_common._canonical_json(unsigned)).hexdigest())
-        self.assertEqual(identity["components"][shared + "NativeAdapterError"]["kind"], "class")
-        self.assertEqual(identity["components"]["_ISOLATION_CONTROL"]["kind"], "constant")
-        self.assertEqual(
-            identity["components"]["Path"]["binding"],
-            {
-                "kind": "import", "module": "pathlib", "name": "Path",
-                "as": None, "level": 0, "bound": "Path",
-            },
-        )
-        self.assertNotIn("PurePosixPath", identity["components"])
-        self.assertNotIn("native_eval_verification", identity["components"])
-        self.assertNotIn(shared + "_tree_digest", identity["components"])
-        for sources in ({"codex": b"\xff"}, {"shared": b"\xff"}):
-            with self.subTest(unreadable=next(iter(sources))), self.checker_sources(**sources):
-                with self.assertRaisesRegex(adapter_common.NativeAdapterError, "checker source is unavailable"):
-                    codex_adapter._isolation_checker_identity()
-        for sources in ({"codex": b"value = 1\n"}, {"shared": b"value = 1\n"}):
-            with self.subTest(incomplete=next(iter(sources))), self.checker_sources(**sources):
-                with self.assertRaisesRegex(adapter_common.NativeAdapterError, "closure is incomplete"):
-                    codex_adapter._isolation_checker_identity()
-
-    def test_isolation_checker_identity_tracks_new_security_dependencies_not_unrelated_edits(self) -> None:
-        source = Path(codex_adapter.__file__).read_text(encoding="utf-8")
-        shared_source = Path(adapter_common.__file__).read_text(encoding="utf-8")
-        baseline = codex_adapter._isolation_checker_identity()
-
-        def identity(*, codex: str | None = None, shared: str | None = None) -> dict[str, object]:
-            with self.checker_sources(
-                codex=None if codex is None else codex.encode("utf-8"),
-                shared=None if shared is None else shared.encode("utf-8"),
-            ):
-                return codex_adapter._isolation_checker_identity()
-
-        unrelated_edit = source.replace("enabled = true", "enabled = false", 1)
-        self.assertNotEqual(unrelated_edit, source)
-        self.assertEqual(identity(codex=unrelated_edit), baseline)
-
-        unrelated_shared_edit = shared_source.replace(
-            "def _tree_digest(", "def _tree_digest(  # unrelated to isolation\n", 1,
-        )
-        self.assertNotEqual(unrelated_shared_edit, shared_source)
-        self.assertEqual(identity(shared=unrelated_shared_edit), baseline)
-
-        shared_helper_edit = shared_source.replace(
-            "        raise ValueError(message)\n", "        raise ValueError(message) from None\n", 1,
-        )
-        self.assertNotEqual(shared_helper_edit, shared_source)
-        self.assertNotEqual(identity(shared=shared_helper_edit)["digest"], baseline["digest"])
-
-        helper = (
-            "\ndef _future_isolation_security_helper() -> None:\n"
-            "    return None\n\n"
-        )
-        future_source = source.replace("\ndef _qualify_codex_isolation(\n", helper + "def _qualify_codex_isolation(\n", 1)
-        future_source = future_source.replace(
-            '    """Qualify the exact local profile without contacting a model provider."""\n',
-            '    """Qualify the exact local profile without contacting a model provider."""\n'
-            "    _future_isolation_security_helper()\n",
-            1,
-        )
-        self.assertNotEqual(future_source, source)
-        future = identity(codex=future_source)
-        self.assertIn("_future_isolation_security_helper", future["components"])
-        self.assertNotEqual(future["digest"], baseline["digest"])
-
-        future_shared = source.replace(
-            '    """Qualify the exact local profile without contacting a model provider."""\n',
-            '    """Qualify the exact local profile without contacting a model provider."""\n'
-            "    adapter_common._tree_digest\n",
-            1,
-        )
-        self.assertNotEqual(future_shared, source)
-        self.assertIn(
-            "native_eval_adapter_common._tree_digest", identity(codex=future_shared)["components"],
-        )
-
-        helper_edited = source.replace(
-            "probe returned malformed evidence", "probe returned invalid evidence", 1,
-        )
-        self.assertNotEqual(identity(codex=helper_edited)["digest"], baseline["digest"])
-
-        policy_edited = source.replace(
-            'native-eval-isolation-control/v1\\n', 'native-eval-isolation-control/v2\\n', 1,
-        )
-        self.assertNotEqual(policy_edited, source)
-        self.assertNotEqual(identity(codex=policy_edited)["digest"], baseline["digest"])
-
-        relevant = identity(codex=source.replace("import stat\n", "import os as stat\n", 1))
-        self.assertEqual(relevant["components"]["stat"]["binding"]["module"], "os")
-        self.assertNotEqual(relevant["digest"], baseline["digest"])
-
-        unrelated_import_edited = source.replace(
-            "import native_eval_verification\n",
-            "import native_eval_verification as changed_verification\n", 1,
-        )
-        self.assertNotEqual(unrelated_import_edited, source)
-        self.assertEqual(identity(codex=unrelated_import_edited), baseline)
-
-        same_statement_unrelated_alias = source.replace(
-            "from pathlib import Path, PurePosixPath\n",
-            "from pathlib import Path,   PurePosixPath as OtherPosixPath\n",
-            1,
-        )
-        self.assertNotEqual(same_statement_unrelated_alias, source)
-        self.assertEqual(identity(codex=same_statement_unrelated_alias), baseline)
-
-        imported_helper = source.replace("import hashlib\n", "import fractions\nimport hashlib\n", 1)
-        imported_helper = imported_helper.replace(
-            '    """Qualify the exact local profile without contacting a model provider."""\n',
-            '    """Qualify the exact local profile without contacting a model provider."""\n'
-            "    fractions.Fraction(1, 1)\n",
-            1,
-        )
-        future_import = identity(codex=imported_helper)
-        self.assertEqual(
-            future_import["components"]["fractions"]["binding"]["module"], "fractions",
-        )
-        self.assertNotEqual(future_import["digest"], baseline["digest"])
 
     @unittest.skipUnless(NATIVE_CODEX_SANDBOX_PROBES, "requires native POSIX sandbox probes")
     def test_codex_qualifies_exact_non_temp_store_policy_without_provider_launch(self) -> None:
@@ -3927,6 +3740,142 @@ class AdapterPreparationTests(unittest.TestCase):
                     adapters.execute_prepared(prepared, 20)
                 self.assertTrue(prepared.process_receipt_path.is_file())
                 self.assertFalse(prepared.git_observation_path.exists())
+
+
+SHARED_CHECKER = "native_eval_adapter_common."
+ISOLATION_CHECKER_COMPONENTS = frozenset({
+    "Mapping", "Path", "_CheckerSource", "_ISOLATION_CONTROL", "_ISOLATION_DENIAL",
+    "_SHARED_CHECKER_MODULE", "_checker_closure", "_checker_component", "_checker_dependencies",
+    "_checker_source", "_is_broad_temporary_root", "_isolation_checker_identity",
+    "_qualify_codex_git_metadata", "_qualify_codex_isolation", "_real_canonical_directory",
+    "_remove_exact_probe_entry", "_require_probe_result", "_require_unchanged_probe",
+    "_run_codex_sandbox_probe", "_sandbox_probe_command", "_temporary_isolation_probes",
+    "_write_exclusive_probe", "adapter_common", "ast", "contextmanager", "dataclass", "hashlib",
+    "os", "re", "stat", "subprocess", "sys", "tempfile", "uuid",
+    *(SHARED_CHECKER + name for name in (
+        "NativeAdapterError", "Path", "_canonical_json", "_relocated", "_require",
+        "_resolve_executable", "json", "os", "shutil",
+    )),
+})
+QUALIFY_DOCSTRING = '    """Qualify the exact local profile without contacting a model provider."""\n'
+
+
+class IsolationCheckerIdentityTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.source = Path(codex_adapter.__file__).read_text(encoding="utf-8")
+        self.shared_source = Path(adapter_common.__file__).read_text(encoding="utf-8")
+        self.baseline = codex_adapter._isolation_checker_identity()
+
+    @staticmethod
+    def checker_sources(*, codex: bytes | None = None, shared: bytes | None = None):
+        """Serve replacement source bytes for the Codex and shared adapter modules only."""
+        real_read_bytes = Path.read_bytes
+        overrides = {
+            Path(codex_adapter.__file__): codex,
+            Path(adapter_common.__file__): shared,
+        }
+
+        def read_bytes(path: Path) -> bytes:
+            replacement = overrides.get(Path(path))
+            return real_read_bytes(path) if replacement is None else replacement
+
+        return mock.patch.object(Path, "read_bytes", autospec=True, side_effect=read_bytes)
+
+    def identity(self, *, codex: str | None = None, shared: str | None = None) -> dict[str, Any]:
+        for label, source, original in (("codex", codex, self.source), ("shared", shared, self.shared_source)):
+            self.assertNotEqual(source, original, f"{label} edit did not apply")
+        with self.checker_sources(
+            codex=None if codex is None else codex.encode("utf-8"),
+            shared=None if shared is None else shared.encode("utf-8"),
+        ):
+            return codex_adapter._isolation_checker_identity()
+
+    def edited(self, old: str, new: str) -> str:
+        return self.source.replace(old, new, 1)
+
+    def test_identity_derives_exact_local_security_closure(self) -> None:
+        identity = self.baseline
+        self.assertEqual(identity["schema_version"], "native-eval-isolation-checker/v1")
+        self.assertEqual(set(identity["components"]), ISOLATION_CHECKER_COMPONENTS)
+        unsigned = copy.deepcopy(identity)
+        digest = unsigned.pop("digest")
+        self.assertEqual(digest, hashlib.sha256(adapter_common._canonical_json(unsigned)).hexdigest())
+        self.assertEqual(identity["components"][SHARED_CHECKER + "NativeAdapterError"]["kind"], "class")
+        self.assertEqual(identity["components"]["_ISOLATION_CONTROL"]["kind"], "constant")
+        self.assertEqual(
+            identity["components"]["Path"]["binding"],
+            {
+                "kind": "import", "module": "pathlib", "name": "Path",
+                "as": None, "level": 0, "bound": "Path",
+            },
+        )
+        for absent in ("PurePosixPath", "native_eval_verification", SHARED_CHECKER + "_tree_digest"):
+            self.assertNotIn(absent, identity["components"])
+
+    def test_unreadable_or_incomplete_source_fails_closed(self) -> None:
+        for payload, message in ((b"\xff", "checker source is unavailable"),
+                                 (b"value = 1\n", "closure is incomplete")):
+            for module in ("codex", "shared"):
+                with self.subTest(module=module, message=message), self.checker_sources(**{module: payload}):
+                    with self.assertRaisesRegex(adapter_common.NativeAdapterError, message):
+                        codex_adapter._isolation_checker_identity()
+
+    def test_unrelated_edits_keep_the_digest(self) -> None:
+        for edit in (
+            {"codex": self.edited("enabled = true", "enabled = false")},
+            {"codex": self.edited(
+                "import native_eval_verification\n",
+                "import native_eval_verification as changed_verification\n",
+            )},
+            {"codex": self.edited(
+                "from pathlib import Path, PurePosixPath\n",
+                "from pathlib import Path,   PurePosixPath as OtherPosixPath\n",
+            )},
+            {"shared": self.shared_source.replace(
+                "def _tree_digest(", "def _tree_digest(  # unrelated to isolation\n", 1,
+            )},
+        ):
+            with self.subTest(edit=next(iter(edit))):
+                self.assertEqual(self.identity(**edit), self.baseline)
+
+    def test_security_edits_change_the_digest(self) -> None:
+        for edit in (
+            {"codex": self.edited("probe returned malformed evidence", "probe returned invalid evidence")},
+            {"codex": self.edited(
+                'native-eval-isolation-control/v1\\n', 'native-eval-isolation-control/v2\\n',
+            )},
+            {"shared": self.shared_source.replace(
+                "        raise ValueError(message)\n", "        raise ValueError(message) from None\n", 1,
+            )},
+        ):
+            with self.subTest(edit=next(iter(edit))):
+                self.assertNotEqual(self.identity(**edit)["digest"], self.baseline["digest"])
+        relevant = self.identity(codex=self.edited("import stat\n", "import os as stat\n"))
+        self.assertEqual(relevant["components"]["stat"]["binding"]["module"], "os")
+        self.assertNotEqual(relevant["digest"], self.baseline["digest"])
+
+    def test_new_dependencies_join_the_closure(self) -> None:
+        helper = "\ndef _future_isolation_security_helper() -> None:\n    return None\n\n"
+        future_source = self.edited("\ndef _qualify_codex_isolation(\n", helper + "def _qualify_codex_isolation(\n")
+        future_source = future_source.replace(
+            QUALIFY_DOCSTRING, QUALIFY_DOCSTRING + "    _future_isolation_security_helper()\n", 1,
+        )
+        imported = self.edited("import hashlib\n", "import fractions\nimport hashlib\n").replace(
+            QUALIFY_DOCSTRING, QUALIFY_DOCSTRING + "    fractions.Fraction(1, 1)\n", 1,
+        )
+        shared = self.edited(QUALIFY_DOCSTRING, QUALIFY_DOCSTRING + "    adapter_common._tree_digest\n")
+        for source, component in (
+            (future_source, "_future_isolation_security_helper"),
+            (imported, "fractions"),
+            (shared, SHARED_CHECKER + "_tree_digest"),
+        ):
+            with self.subTest(component=component):
+                future = self.identity(codex=source)
+                self.assertIn(component, future["components"])
+                self.assertNotEqual(future["digest"], self.baseline["digest"])
+        self.assertEqual(
+            self.identity(codex=imported)["components"]["fractions"]["binding"]["module"], "fractions",
+        )
 
 
 class AdapterExecutionTests(unittest.TestCase):
