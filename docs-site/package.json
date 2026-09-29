@@ -13,7 +13,7 @@
     "validate": "pnpm reference:check && pnpm check && pnpm validate:links && pnpm validate:safe-aids && pnpm validate:quality && pnpm validate:smoke:preview && pnpm validate:gallery",
     "validate:links": "pnpm build",
     "validate:safe-aids": "node scripts/validate-safe-install-aids.mjs",
-    "validate:quality": "node scripts/validate-docs-quality.mjs",
+    "validate:quality": "node --test scripts/validate-docs-quality.test.mjs && node scripts/validate-docs-quality.mjs",
     "validate:smoke:preview": "playwright test",
     "validate:gallery": "playwright test --config playwright.gallery.config.mjs",
     "preview": "astro preview"

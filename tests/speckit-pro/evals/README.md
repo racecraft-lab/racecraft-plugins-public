@@ -127,6 +127,39 @@ requirement IDs are unique within a case. Supported checks and parameters are:
   this check alone does not distinguish project files from staged skill files.
 - `semantic`: a nonempty `rubric`. Deterministic grading returns `needs_judge`
   until a typed, evidence-backed verdict is supplied.
+- `subagent_returns_before_parent_file_change`: an artifact-relative `path`. The
+  native subagent must return before the parent changes that file.
+- `native_synthesis_mechanism`: a declared `artifact_path` and `per_host`
+  settings with exactly `mode` and `role` for `claude` and `codex`. The case
+  needs at least one `file_access` check.
+- `native_subagent_dispatch`: exactly one of `expected` (shared) or
+  `expected_by_host`, each a nonempty list of `item_id` and `role` pairs, plus
+  `forbidden_roles` and an optional boolean `single_item_context`. The case must
+  use `resource_class` `nested`.
+- `native_plan_repair_context`: `contexts`, `g3_request_path`,
+  `context_request_path`, `executor_role`, `max_repairs` (exactly 2), and
+  `terminal_outcome` (`pass` or `unresolved`). The case must use `nested` and
+  `required_tools` `["specify"]`.
+- `native_verification_pointer`: `workflow_file`, `command_id`, `pointer_path`,
+  and `reusable`. The controller binds the pointer to retained native evidence.
+- `native_runner_result`: `request_path`, `helper_id`, `operation`, `mode`,
+  `expected_status`, `expected_exit_code`, `stdout_field_path`,
+  `expected_stdout_value`, and `response_field_path`. The prompt must name the
+  exact runner command for each request.
+
+`tool_used` also accepts a boolean `include_failed`.
+
+Optional case fields:
+
+- `git_fixture`: `recipe` (`baseline-feature-origin-main/v1`) and a nonempty
+  `baseline` fixture list, with optional `worktrees` (one to four confined
+  `.worktrees/<name>` entries, each with `path`, `branch`, and `revision` of
+  `baseline` or `feature`) and `feature_deletions` (exact baseline files).
+- `git_metadata_access`: only the value `write`, and only with `git_fixture`.
+- `required_tools`: a nonempty list, currently only `specify`. It enables the
+  `{{resolved_python}}` prompt placeholder.
+- `pairing`: required on `parity` layer cases and forbidden elsewhere; it
+  describes the cross-host pair that `native_eval_pairing.py` compiles.
 
 `native_git_final_state` requires a declared `git_fixture` and compares all of
 these fields exactly: `head_equals_initial_feature`, `branch`, `commit_count`,
@@ -376,8 +409,10 @@ boundary includes documented minimal-runtime access; it is not a machine-wide
 workspace-only sandbox.
 
 Migration is **IN PROGRESS**. Only the currently authored catalog subset is
-available, and no complete native qualification is claimed. See the audit
-ledger under `tests/speckit-pro/evals/audit/` for current coverage and gaps;
-this document intentionally does not hard-code pass totals. Genuine interactive
+available, and no complete native qualification is claimed. The audit
+reports under `tests/speckit-pro/evals/audit/` are dated snapshots of the
+tree when they were written, not current coverage; regenerate or re-derive them
+before relying on them. This document intentionally does not hard-code pass
+totals. Genuine interactive
 team work needs separate, user-operated qualification. Other requirements are
 not waived because a non-interactive native run or deterministic test passed.
