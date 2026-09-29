@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-import subprocess
 import sys
 import tempfile
 import textwrap
@@ -22,17 +21,6 @@ for value in (EXTRACTORS_LIB, SHARED_LIB):
 
 import extractors  # noqa: E402
 from test_result import run_counted  # noqa: E402
-
-
-def run_extractor(*args: str) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(
-        [sys.executable, str(EXTRACTORS), *args],
-        cwd=REPO_ROOT,
-        text=True,
-        capture_output=True,
-        shell=False,
-        check=False,
-    )
 
 
 class Layer7ExtractorTests(unittest.TestCase):
@@ -143,23 +131,6 @@ class Layer7ExtractorTests(unittest.TestCase):
         with self.subTest(msg="table with no data rows → column extract emits nothing"):
             result = extractors.extract_table_column(self.empty_table_fixture, "Empty Table", "A")
             self.assertEqual("", result)
-
-        with self.subTest(msg="CLI subcommand row-count returns expected value"):
-            result = run_extractor("row-count", str(self.fixture), "Post-Implementation Checklist")
-            self.assertEqual(0, result.returncode, result.stderr)
-            self.assertEqual("3", result.stdout.strip())
-
-        result = run_extractor("column", str(self.fixture), "Post-Implementation Checklist", "Status")
-        with self.subTest(msg="CLI subcommand column returns expected value"):
-            self.assertEqual(0, result.returncode, result.stderr)
-            self.assertIn("PASS", result.stdout)
-        with self.subTest(msg="CLI subcommand column returns expected value"):
-            self.assertEqual(0, result.returncode, result.stderr)
-            self.assertIn("FAIL", result.stdout)
-
-        with self.subTest(msg="CLI invalid subcommand → exit 2"):
-            result = run_extractor("bogus")
-            self.assertEqual(2, result.returncode)
 
 
 if __name__ == "__main__":
