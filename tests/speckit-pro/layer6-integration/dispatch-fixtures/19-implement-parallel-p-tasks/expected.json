@@ -15,5 +15,13 @@
   "max_dispatch_count": 3,
   "must_not_invoke_skill": [
     "grill-me"
-  ]
+  ],
+  "same_message_dispatch_groups": [
+    {
+      "subagent_type": "speckit-pro:implement-executor",
+      "size": 3
+    }
+  ],
+  "must_run_in_background": true,
+  "forbidden_isolation": "worktree"
 }

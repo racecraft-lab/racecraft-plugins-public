@@ -11,8 +11,15 @@
   ],
   "must_not_have_forbidden_spawns": true,
   "min_dispatch_count": 3,
-  "max_dispatch_count": 6,
+  "max_dispatch_count": 3,
   "must_not_invoke_skill": [
     "grill-me"
-  ]
+  ],
+  "same_message_dispatch_groups": [
+    {
+      "subagent_type": "general-purpose",
+      "size": 3
+    }
+  ],
+  "must_run_in_background": true
 }

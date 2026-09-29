@@ -236,6 +236,45 @@ def check_dispatch_counts(reporter: Reporter, fixture_id: str, transcript: Path,
         )
 
 
+def check_same_message_groups(reporter: Reporter, fixture_id: str, transcript: Path, expected: dict[str, Any]) -> None:
+    groups = expected.get("same_message_dispatch_groups", [])
+    for group in groups if isinstance(groups, list) else []:
+        if not isinstance(group, dict):
+            continue
+        size = int(group.get("size", 0))
+        target = group.get("subagent_type")
+        label = f" {target}" if target else ""
+        largest = helpers.largest_same_message_dispatch_group(transcript, target)
+        reporter.check(
+            f"{fixture_id}: >= {size}{label} dispatches in one assistant message (got {largest})",
+            largest >= size,
+            f"expected >= {size} in one message, largest single-message group was {largest}",
+        )
+
+
+def check_dispatch_flags(reporter: Reporter, fixture_id: str, transcript: Path, expected: dict[str, Any]) -> None:
+    if expected.get("must_run_in_background") is True:
+        reporter.check(
+            f"{fixture_id}: every dispatch runs in the background",
+            helpers.assert_all_dispatches_background(transcript),
+            "found a dispatch without run_in_background: true",
+        )
+    if "required_isolation" in expected:
+        isolation = str(expected["required_isolation"])
+        reporter.check(
+            f"{fixture_id}: every dispatch uses isolation {isolation}",
+            helpers.assert_all_dispatches_isolated(transcript, isolation),
+            f"found a dispatch without isolation {isolation!r}",
+        )
+    if "forbidden_isolation" in expected:
+        isolation = str(expected["forbidden_isolation"])
+        reporter.check(
+            f"{fixture_id}: no dispatch uses isolation {isolation}",
+            helpers.assert_no_dispatch_isolation(transcript, isolation),
+            f"found a dispatch with isolation {isolation!r}",
+        )
+
+
 def check_dispatch_order(reporter: Reporter, fixture_id: str, transcript: Path, expected: dict[str, Any]) -> None:
     order = helpers.extract_dispatch_order(transcript)
     constraints = expected.get("dispatch_order_constraints", [])
@@ -264,7 +303,14 @@ def assert_dispatch_fixture(
     *,
     check_terms: bool,
 ) -> None:
-    checks = [check_dispatch_targets, check_dispatch_shape, check_dispatch_counts, check_dispatch_order]
+    checks = [
+        check_dispatch_targets,
+        check_dispatch_shape,
+        check_dispatch_counts,
+        check_same_message_groups,
+        check_dispatch_flags,
+        check_dispatch_order,
+    ]
     apply_checks(fixture, mode, reporter, [*checks, check_transcript_terms] if check_terms else checks)
 
 
