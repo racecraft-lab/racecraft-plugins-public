@@ -128,6 +128,7 @@ AMENDED_LEGACY_DESCRIPTION_IDS = {
     "functional.speckit-autopilot.case-29",
     "functional.speckit-autopilot.case-30",
     "functional.speckit-autopilot.case-32",
+    "functional.speckit-autopilot.case-36",
     "functional.speckit-coach.case-9",
     "functional.speckit-coach.case-6",
     "functional.speckit-coach.case-12",
@@ -236,6 +237,8 @@ PHASE_EXECUTION_CODEX = "speckit-pro/codex-skills/speckit-autopilot/references/p
 EXECUTION_EFFICIENCY = "speckit-pro/skills/speckit-autopilot/references/execution-efficiency.md"
 AUTOPILOT_SKILL = "speckit-pro/skills/speckit-autopilot/SKILL.md"
 AUTOPILOT_SKILL_CODEX = "speckit-pro/codex-skills/speckit-autopilot/SKILL.md"
+PREREQUISITES = "speckit-pro/skills/speckit-autopilot/references/prerequisites.md"
+PREREQUISITES_CODEX = "speckit-pro/codex-skills/speckit-autopilot/references/prerequisites-codex.md"
 # Stop-policy cases: staged from the recorded fixtures below, graded on derived answers.
 CORRECTIVE_FIXTURE_ROOT = "tests/speckit-pro/evals/fixtures/functional/corrective-authorization/"
 ORCHESTRATION_REQUIRING_TEXT.update({
@@ -260,6 +263,18 @@ ORCHESTRATION_REQUIRING_TEXT.update({
         (EXECUTION_EFFICIENCY, "it adds `resolved_by` (that dispatch ID) and `resolved_at`"),
         (EXECUTION_EFFICIENCY, "keeps the entry for audit"),
         (EXECUTION_EFFICIENCY, "list every unresolved entry of the current `deferred`"),
+    ),
+    "functional.speckit-autopilot.missing-quality-tool-install-hint": (
+        (PREREQUISITES, "default to the recorded install hint, then `skip (spec)`"),
+        (PREREQUISITES, "the run never asks"),
+        (PREREQUISITES_CODEX, "default to the recorded install hint, then `skip (spec)`"),
+        (PREREQUISITES_CODEX, "the run never asks"),
+    ),
+    "functional.speckit-autopilot.red-baseline-repaired-by-implement-executor": (
+        (PREREQUISITES, "route the failing check to the implement-executor"),
+        (PREREQUISITES, "Phase 1 starts once the check passes, or once the failure is deferred with its evidence"),
+        (PREREQUISITES_CODEX, "route the failing check to the implement-executor"),
+        (PREREQUISITES_CODEX, "Phase 1 starts once the check passes, or once the failure is deferred with its evidence"),
     ),
     "functional.speckit-autopilot.blocked-action-defers": (
         (PHASE_EXECUTION, "With no defined fallback, defer that task."),
@@ -353,6 +368,17 @@ RUNNER_CASES = {
                     "failing_gate": "G7", "failing_pull_request": 103, "failing_head_sha": "c" * 40},
         "phrase": "marks any PR ready",
     },
+    "functional.speckit-autopilot.pr-split-over-budget-reslices": {
+        "request": "scenario-inputs/ratify-request.json",
+        "destinations": {"scenario-inputs/ratify-request.json"},
+        "citations": ((PHASE_EXECUTION, "`decision=reslice_required`"),
+                      (PHASE_EXECUTION_CODEX, "`decision=reslice_required`"),
+                      (PHASE_EXECUTION, "follow `data.repair`"), (PHASE_EXECUTION_CODEX, "follow `data.repair`")),
+        "failure": {"decision": "operator_required", "owner_ratification": "ratified", "ratified_by": "autopilot",
+                    "repair_owner": None, "repair_retry": None,
+                    "operator_stop_reason": "scope_changing_pr_split"},
+        "phrase": "reports operator_required",
+    },
     "functional.speckit-autopilot.codex-run-start-grant": {
         "request": "scenario-inputs/render-egress-request.json",
         "destinations": {"scenario-inputs/render-egress-request.json"},
@@ -385,6 +411,8 @@ ORCHESTRATION_FAILURE_PHRASES = {
     "functional.speckit-autopilot.test-only-fix-no-replan": "requires begin-replan-epoch or an operator approval",
     "functional.speckit-autopilot.resolved-deferral-leaves-request": "lists the resolved deferral in the request",
     "functional.speckit-autopilot.blocked-action-defers": "retries the blocked action by another route",
+    "functional.speckit-autopilot.missing-quality-tool-install-hint": "asks the operator to choose install or skip",
+    "functional.speckit-autopilot.red-baseline-repaired-by-implement-executor": "starts Phase 1 on a red baseline",
 }
 LOCAL_COMMAND_LEGACY_SOURCES = {
     "functional.speckit-autopilot.case-2": (
@@ -854,6 +882,20 @@ ORCHESTRATION_FAILURE_ANSWERS = {
         "resolved_unit_in_request": True,
         "second_exception_refused": False,
     },
+    "functional.speckit-autopilot.missing-quality-tool-install-hint": {
+        "question_offered": True,
+        "install_commands_run": [],
+        "outcomes": {"COMPLEXITY": "unanswered", "MUTATION": "unanswered", "DEPENDENCY_RULES": "unanswered"},
+        "decisions_for_you": [],
+    },
+    "functional.speckit-autopilot.red-baseline-repaired-by-implement-executor": {
+        "repair_allowance_spent": True,
+        "owner": "operator",
+        "next_action": "stop",
+        "rerun_command": "",
+        "phase_one_starts": True,
+        "question_offered": True,
+    },
     "functional.speckit-autopilot.blocked-action-defers": {
         "deferred_tasks": ["T007"],
         "continuing_tasks": [],
@@ -889,6 +931,56 @@ def _run_coverage_guard(workflow: Path, state: Path) -> dict:
         text=True, capture_output=True, check=False,
     )
     return _stdout_json(result, "validate-autopilot-phase-coverage.py")
+
+
+def _derive_quality_tool_answers(read: Callable[[str], str]) -> dict:
+    """Step 0.11: a recorded answer wins, else the install hint, else skip (spec)."""
+    recorded = {
+        cells[0]: cells[4] for cells in (
+            [cell.strip() for cell in line.strip().strip("|").split("|")]
+            for line in read("scenario-inputs/workflow.md").splitlines() if line.startswith("| ")
+        ) if len(cells) == 7 and cells[0].isupper() and cells[4]
+    }
+    outcomes: dict[str, str] = {}
+    installs: list[str] = []
+    for slot in json.loads(read("scenario-inputs/quality-slots.json"))["slots"]:
+        if slot["slot"] in recorded:
+            outcomes[slot["slot"]] = recorded[slot["slot"]]
+            continue
+        installs.append(slot["install"])
+        installed = slot["install_result"]["tool_present_after"]
+        outcomes[slot["slot"]] = "install" if installed else "skip (spec)"
+    return {
+        # Step 0.11: "the run never asks", so a missing tool defaults to its install hint.
+        "question_offered": False,
+        "install_commands_run": sorted(installs),
+        "outcomes": outcomes,
+        "decisions_for_you": sorted(slot for slot, outcome in outcomes.items() if outcome == "skip (spec)"),
+    }
+
+
+def _derive_red_baseline_answers(read: Callable[[str], str]) -> dict:
+    """Step 0.9: a failing baseline goes to the implement-executor within its allowance."""
+    attempts = json.loads(read("scenario-inputs/baseline-attempts.json"))
+    failing = re.search(r"^\| Baseline test suite \| failed \| `([^`]+)`", read("scenario-inputs/workflow.md"), re.M)
+    assert failing and failing.group(1) == attempts["failing_check"], "workflow and attempts disagree"
+    spent = attempts["repair_attempts"] >= attempts["repair_allowance"]
+    return {
+        "repair_allowance_spent": spent,
+        # Step 0.9: a failing check goes to the implement-executor; Phase 1 starts once it
+        # passes or the failure is deferred with its evidence.
+        "owner": "implement-executor",
+        "next_action": "defer" if spent else "repair",
+        "rerun_command": attempts["failing_check"],
+        "phase_one_starts": spent,
+        "question_offered": False,
+    }
+
+
+_SEPARATE_DERIVATIONS = {
+    "missing-quality-tool-install-hint": _derive_quality_tool_answers,
+    "red-baseline-repaired-by-implement-executor": _derive_red_baseline_answers,
+}
 
 
 def _derive_stop_policy_answers(scenario: str, read: Callable[[str], str]) -> dict:
@@ -930,6 +1022,8 @@ def _derive_stop_policy_answers(scenario: str, read: Callable[[str], str]) -> di
             "resolved_unit_in_request": deferred["deferred.0.unit"] not in finalize["request_omits"],
             "second_exception_refused": "refused" in steps["second-exception"],
         }
+    if scenario in _SEPARATE_DERIVATIONS:
+        return _SEPARATE_DERIVATIONS[scenario](read)
     if scenario == "blocked-action-defers":
         record = json.loads(read("scenario-inputs/blocked-record.json"))
         open_tasks = {
@@ -1134,6 +1228,12 @@ def _derive_runner_answers(case_id: str, data: dict) -> dict:
             "ready_commands": data["ready_commands"], "failing_gate": gate["gate"],
             "failing_pull_request": gate["pull_request"], "failing_head_sha": gate["head_sha"],
         }
+    if scenario == "pr-split-over-budget-reslices":
+        return {
+            "decision": data["decision"], "owner_ratification": data["owner_ratification"],
+            "ratified_by": data["ratified_by"], "repair_owner": data["repair"]["owner"],
+            "repair_retry": data["repair"]["retry"], "operator_stop_reason": data.get("stop_reason"),
+        }
     if scenario == "codex-run-start-grant":
         return {
             "action_ids": data["action_ids"],
@@ -1164,8 +1264,8 @@ class NativeFunctionalCatalogTests(unittest.TestCase):
             - REDIRECT_IDS - WORKTREE_MIGRATION_IDS - TASK_LIST_CONTRACT_IDS
         )
         self.assertEqual(len(response_only_ids), 59)
-        self.assertEqual(len(self.all_cases), 228)
-        self.assertEqual(len(self.catalog["cases"]), 109)
+        self.assertEqual(len(self.all_cases), 231)
+        self.assertEqual(len(self.catalog["cases"]), 112)
         self.assertEqual(
             set(self.cases),
             selected_ids | GROUNDED_IDS | NATIVE_RESPONSE_IDS | DASHBOARD_IDS | NATIVE_ONLY_IDS,

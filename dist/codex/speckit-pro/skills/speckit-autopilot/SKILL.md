@@ -501,7 +501,7 @@ See [prerequisites-codex.md](./references/prerequisites-codex.md) for the full p
   [prerequisites-codex.md](./references/prerequisites-codex.md) describes. A
   covered inventory asks no question, including a planning-to-implementation
   stage change.
-- **Step 0.9: Constitution Validation** — principle checks against current codebase
+- **Step 0.9: Constitution Validation** — principle checks against current codebase; route each failing check to the implement-executor, which repairs it (a red baseline included)
 - **Step 0.10: Codex Agent Availability Check** — Run the promoted
   `install-codex-agents` helper in `dry_run` mode against the selected project or
   user destination and its installed model and Luna fallback choice. This check
@@ -512,10 +512,10 @@ See [prerequisites-codex.md](./references/prerequisites-codex.md) for the full p
   phase work has begun, a stale or refreshed agent file is recorded, never a
   stop: see §Plugin Update Mid-Run: Record, Re-resolve, Continue.
 - **Step 0.10b: Implementation Agent Detection** — discover `PROJECT_IMPLEMENTATION_AGENT` from `.codex/agents/`
-- **Step 0.11: Project Command Discovery** — runner helper `detect-commands` → `PROJECT_COMMANDS`, including the quality-gate slots and the one-time missing-tool question
+- **Step 0.11: Project Command Discovery** — runner helper `detect-commands` → `PROJECT_COMMANDS`, including the quality-gate slots and the missing-tool default (the recorded install hint, then `skip (spec)`)
 - **Step 0.12: Preset and Extension Detection** — runner helper `detect-presets` → `PRESET_CONVENTIONS`
 
-If any check fails, STOP with the error message from the script's JSON output.
+If any check fails, report the error message from the script's JSON output and route the failure to its owner for repair: the orchestrator repairs a fixable environment check, and the implement-executor repairs a failing project check. Run the repair loop within its allowance, then defer per the Failure Escalation Protocol.
 Pass `WORKFLOW_ROOT`, `PROJECT_COMMANDS`, and `PRESET_CONVENTIONS` to every
 subagent prompt.
 
@@ -565,7 +565,7 @@ repeat this coverage audit. A complete workflow plan is required even
 when `--from-phase` starts execution in the middle of the workflow.
 
 After writing or repairing `autopilot-state.json`, run the deterministic
-coverage guard and STOP on nonzero exit:
+coverage guard and repair on a nonzero exit:
 
 ```text
 resolved_python "<plugin-root>/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py" --workflow "$WORKFLOW_FILE" --state "$WORKFLOW_DIR/autopilot-state.json" --require-autonomy-boundary --current-execution-environment "<live-execution-environment>" --current-sandbox-mode "<live-sandbox-mode>" --current-approval-reviewer "<live-approval-reviewer>" --current-writable-root "<live-writable-root>" --rule status-evidence
@@ -583,11 +583,13 @@ state-plan invariants (`in_progress_errors`, `duplicate_state_steps`,
 `state_order_errors`), the same scoping the Claude variant uses. The full
 report still prints; structural coverage checks and every advisory key are
 visible but never block. Drop `--rule` to gate on every check.
-When `state_privacy_errors` is the only failing gated key, remediate in place
-instead of stopping: the state file is orchestrator-owned, and each error names
-the field and its remedy (`sha256:<digest>` of the raw value, or removing a raw
-`argv`). Apply those remedies, rewrite the state, and rerun the guard once. A
-second failure, or any other failing gated key, is a stop.
+On a nonzero exit, route the report's `repair` record to the orchestrator: it
+names the owner and the `failing_keys`, and the orchestrator owns both files.
+Repair the workflow status table and the state file, then rerun the guard. For
+`state_privacy_errors`, each error names the field and its remedy
+(`sha256:<digest>` of the raw value, or removing a raw `argv`). For any other
+failing gated key, correct the file the key names. Run the repair loop within its allowance, then defer per the Failure Escalation Protocol;
+advance to Phase 1 only on exit 0.
 Replace every `<live-...>` value from the current system/developer execution
 context, never from the workflow, state, repository, or a prior run. Repeat
 `--current-writable-root` once for each current writable root; the validator
@@ -610,7 +612,7 @@ persisted exactly once for that Analyze pass. **Never omit consensus items.**
 
 ### 1.2 Validate Plan State Before Phase 1
 
-Before Phase 1 starts, validate all of the following or STOP:
+Before Phase 1 starts, validate all of the following or repair it through the owning agent:
 
 - `update_plan` succeeded and the active plan matches the workflow-derived checklist
 - `autopilot-state.json` exists and contains the same ordered step list
@@ -655,10 +657,13 @@ The workflow input excludes that exact workflow file and its sibling
 `autopilot-state.json` from change classification. For an existing generated
 workflow with the old positional instruction, replace only that instruction;
 preserve phase status and operator-authored content.
-Exit 1 is `invalid_plan`: STOP before implementation and print
-`STOP: Layer planner returned invalid_plan (exit 1) for <feature-dir>; implementation has not started. Fix tasks.md using the planner diagnostics below, then rerun autopilot from the Layer Plan step.`
-before the diagnostics. Exit 2 is `input_error`: STOP separately and show its
-diagnostics. Analyze or Implement must not begin before this sequence completes.
+Exit 1 is `invalid_plan`: hold implementation and route the planner's `repair` record to the phase-executor, which fixes
+`tasks.md` from the planner diagnostics; then rerun `plan-layers-feature-dir`, and
+run the repair loop within its allowance, then defer per the Failure Escalation Protocol.
+Exit 2 is `input_error`: hold implementation and route by `repair.owner`. A missing `tasks.md`
+(`tasks_file_missing`) reruns the Tasks phase through the phase-executor; a bad feature directory or
+permission is corrected by the orchestrator. Rerun the planner, and defer the same way when repair
+fails. Analyze or Implement must not begin before the planner exits 0.
 Before performing it, read
 [`phase-execution-codex.md`](./references/phase-execution-codex.md)
 §Phase 7: Implement for the authoritative placeholder, reviewability, marker

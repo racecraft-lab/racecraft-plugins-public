@@ -1,0 +1,25 @@
+{
+  "slots": [
+    {
+      "slot": "COMPLEXITY",
+      "tool": "lizard",
+      "tool_present": false,
+      "install": "pip install lizard",
+      "install_result": {"exit_code": 0, "tool_present_after": true}
+    },
+    {
+      "slot": "MUTATION",
+      "tool": "mutmut",
+      "tool_present": false,
+      "install": "pip install mutmut",
+      "install_result": {"exit_code": 1, "tool_present_after": false}
+    },
+    {
+      "slot": "DEPENDENCY_RULES",
+      "tool": "depcruise",
+      "tool_present": false,
+      "install": "npm install --save-dev dependency-cruiser",
+      "install_result": null
+    }
+  ]
+}

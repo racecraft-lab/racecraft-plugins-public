@@ -203,25 +203,11 @@ def qualify_topology(root: Path, repository: str, decision: dict[str, Any]) -> b
     return True
 
 
-def detect(inputs: dict[str, Any]) -> dict[str, Any]:
-    if set(inputs) - {"repo_root", "repository", "remote", "topology", "skill_path", "preference", "previous_decision"}:
-        raise ValueError("unknown stack-manager input; arbitrary commands are not accepted")
-    root = Path(inputs["repo_root"]).resolve(strict=True)
-    repository, remote = inputs["repository"], inputs.get("remote", "origin")
-    if not REPOSITORY.fullmatch(repository) or not BRANCH.fullmatch(remote):
-        raise ValueError("invalid repository or remote")
-    preference = inputs.get("preference", "auto")
-    if preference not in ("auto", "explicit-gh"):
-        raise ValueError("preference must be auto or explicit-gh")
-    if inputs.get("previous_decision"):
-        recovery = recovery_decision(root, inputs["previous_decision"])
-        if recovery is not None:
-            return recovery
-    decision = initial_decision(topology_inputs(inputs["topology"]))
-    if preference == "explicit-gh":
-        return fallback(decision, "Operator selected current packet-owned PR management")
+def select_manager(root: Path, repository: str, remote: str, skill: Any, topology: list[dict[str, Any]]) -> dict[str, Any]:
+    """Qualify the tools, repository, and topology, then plan the existing-PR link when every PR exists."""
+    decision = initial_decision(topology_inputs(topology))
     try:
-        if not qualify_tools(root, inputs.get("skill_path"), decision) or not qualify_repository(root, repository, remote, decision):
+        if not qualify_tools(root, skill, decision) or not qualify_repository(root, repository, remote, decision):
             return decision
         if not qualify_topology(root, repository, decision):
             return fallback(decision, "Branch or PR topology does not match the owned layer plan", "topology_incompatible")
@@ -240,6 +226,46 @@ def detect(inputs: dict[str, Any]) -> dict[str, Any]:
     else:
         decision["command_plan"][0]["reason"] = "Create or refresh missing PRs through validated packet commands, persist identities, then rerun detection"
     return decision
+
+
+def reverified_retry(root: Path, repository: str, remote: str, skill: Any, blocked: dict[str, Any]) -> dict[str, Any] | None:
+    """Re-plan the existing-PR link after a partial mutation once read-only proof matches the recorded PRs.
+
+    The retry reuses the recorded PR identities, never recreates a PR, and never switches managers.
+    Anything the proof cannot confirm leaves the recovery record blocked.
+    """
+    keys = ("review_order", "slice_id", "branch", "base_branch", "pr_url")
+    rows = [{key: row[key] for key in keys if key in row} for row in blocked["topology"]["pre_mutation"]]
+    if not all(row.get("pr_url") for row in rows):
+        return None
+    try:
+        decision = select_manager(root, repository, remote, skill, rows)
+    except ValueError:
+        return None
+    if decision["selected_manager"] != "gh-stack" or decision["operation"] != "link":
+        return None
+    decision.update(reason="Existing PRs re-verified after a partial mutation; retry the existing-PR link", fallback_allowed=False)
+    return decision
+
+
+def detect(inputs: dict[str, Any]) -> dict[str, Any]:
+    if set(inputs) - {"repo_root", "repository", "remote", "topology", "skill_path", "preference", "previous_decision", "reverify_recovery"}:
+        raise ValueError("unknown stack-manager input; arbitrary commands are not accepted")
+    root = Path(inputs["repo_root"]).resolve(strict=True)
+    repository, remote = inputs["repository"], inputs.get("remote", "origin")
+    if not REPOSITORY.fullmatch(repository) or not BRANCH.fullmatch(remote):
+        raise ValueError("invalid repository or remote")
+    preference = inputs.get("preference", "auto")
+    if preference not in ("auto", "explicit-gh"):
+        raise ValueError("preference must be auto or explicit-gh")
+    if inputs.get("previous_decision"):
+        recovery = recovery_decision(root, inputs["previous_decision"])
+        if recovery is not None:
+            retry = reverified_retry(root, repository, remote, inputs.get("skill_path"), recovery) if inputs.get("reverify_recovery") is True else None
+            return retry or recovery
+    if preference == "explicit-gh":
+        return fallback(initial_decision(topology_inputs(inputs["topology"])), "Operator selected current packet-owned PR management")
+    return select_manager(root, repository, remote, inputs.get("skill_path"), inputs["topology"])
 
 
 def run_stack_manager_helper(entry: Any, request: Any) -> dict[str, Any]:

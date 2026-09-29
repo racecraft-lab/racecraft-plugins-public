@@ -577,10 +577,10 @@ final reviewability boundary before PR body generation, any `gh pr create`
 variant, or `multi-pr-emission`. The runner helper
 `final-reviewability-backstop` is registered as deferred for installed
 workflows; do not invoke it as an active helper. Use current committed
-reviewability evidence or stop before PR side effects if no current evidence
-exists.
+reviewability evidence, or hold PR side effects and regenerate the committed reviewability evidence if no current evidence
+exists; run the repair loop within its allowance, then defer per the Failure Escalation Protocol.
 Only `pass`, `warn`, or an honored typed-exception outcome may continue. An
-unexcepted block or gate error stops PR preparation and records the
+unexcepted block or gate error holds PR preparation and records the
 `final_reviewability_gate` state plus re-slicing packet when applicable.
 
 **Failure Escalation:** If verification suite fails after its shared corrective cycle, run the repair loop within its allowance, then defer per the Failure Escalation Protocol. Record the specific failures.

@@ -1,6 +1,6 @@
 # Prerequisites Reference
 
-The autopilot's pre-flight sequence. Run these before Step 1 (Parse Workflow State) and before any phase work. If any check fails, STOP with the error message from the script's JSON output.
+The autopilot's pre-flight sequence. Run these before Step 1 (Parse Workflow State) and before any phase work. If any check fails, report the error message from the script's JSON output and route the failure to its owner for repair: the orchestrator repairs a fixable environment check, and the implement-executor repairs a failing project check. Run the repair loop within its allowance, then defer per the Failure Escalation Protocol.
 
 ## Contents
 
@@ -126,7 +126,8 @@ to archive previously merged specs.
    (stock step 5.3, fork step 6.3). If an archive run still changes
    `AGENTS.md`, `CLAUDE.md`, or `GEMINI.md`, the installed contract ignored the
    union: treat that run as failed, and do not commit the agent context change.
-   If a run fails, STOP before Phase 0 with that spec and the command's error.
+   If a run fails, retry the failed archive run once, then defer the Archive Sweep with that spec and the command's error
+   and continue to Phase 0. The sweep is hygiene, so a failed sweep never holds Phase 0.
 
    **`main`, a release branch, or any protected integration branch** (dry-run
    only): do not run the archive command, because every archive run writes
@@ -271,7 +272,9 @@ printf '%s\n' '{"schema_version":"1.0","request_id":"autopilot-check-prerequisit
 ```
 
 Parse the JSON result:
-- `all_pass`: if `false`, report each failed check's `message` and STOP
+- `all_pass`: if `false`, route each failed check's `message` to its owner: the orchestrator repairs a fixable check
+  (a missing workflow directory, a stale binding), and the implement-executor repairs a failing project check; rerun the helper,
+  then defer per the Failure Escalation Protocol when repair fails
 - `branch`: current git branch name
 - `on_feature_branch`: if `true`, Specify must skip branch creation
 - `is_worktree`: if `true`, already in an isolated worktree
@@ -386,8 +389,10 @@ Read the workflow file's Prerequisites table. If already
    `DEPENDENCY_AUDIT` do real work here) and record the baseline
    in the Quality Gates table
 4. Update the workflow file's table with results and baselines
-5. If any check or populated blocking gate fails, STOP — do not proceed
-   to Phase 1
+5. If any check or populated blocking gate fails, route the failing check to the implement-executor, which repairs it
+   (a red baseline included). Rerun the check, and
+   run the repair loop within its allowance, then defer per the Failure Escalation Protocol with `stop_reason:all_tiers_failed`.
+   Phase 1 starts once the check passes, or once the failure is deferred with its evidence.
 
 ## Step 0.10: Implementation Agent Detection
 
@@ -544,39 +549,29 @@ warning to note and move past. The final table shows the
 `COMPLEXITY` baseline next to the diff result so the delta is
 visible.
 
-**Missing tool, one question per tool per repository.** For each
+**Missing tool: default to the recorded install hint, then `skip (spec)`.** For each
 populated slot with `tool_present: false`,
 look for a recorded answer for that tool: first `skips` in `.specify/quality-gates.json`,
 then the workflow file's Quality Gates table, then (only while no
 `quality-gates.json` exists yet) a `skip (repo)` row for the same
-tool in any other `docs/ai/specs/.process/*-workflow.md`. If none
-exists, ask once
-with `AskUserQuestion`:
+tool in any other `docs/ai/specs/.process/*-workflow.md`. A recorded
+answer wins. If none exists, the run never asks: tool installs are
+granted once in the run-start authorization
+(`references/stop-policy.md`), so default to the recorded install hint,
+then `skip (spec)`. Record the outcome in the Quality Gates table before continuing:
 
-```text
-<tool> is not installed, but this repository configures the
-<slot> gate (signal: <signal>). Install it, skip it for this
-spec, or skip it for this repository?
-  1. Install (<install>)   2. Skip this spec   3. Skip this repo
-```
-
-Record the answer in the Quality Gates table before continuing:
-
-- `install`: carry out the install hint. Run its commands, and add
+- `install` (the default): carry out the install hint. Run its commands, and add
   any tool it names as a project dev dependency with the project's
   own package manager. Then re-run `detect-commands` and require
-  `tool_present: true`. If it is still false, STOP.
-- `skip (spec)`: the slot is `"N/A"` for this workflow only.
-- `skip (repo)`: the durable record is a `skips` entry in
-  `.specify/quality-gates.json`, written by the operator through
-  the coach flow, never by an agent. Record `skip (repo)` in the
-  table, point the operator at the coach flow, and continue with
-  the slot as `"N/A"`.
-
-When no interactive runtime is available, record `unanswered`
-for the tool, then STOP naming the tool and the three options;
-a resume after the operator edits the table proceeds from the
-recorded answer.
+  `tool_present: true`. If it is still false, or the install fails,
+  record `skip (spec)` with the failing command and its output, and continue.
+- `skip (spec)`: the slot is `"N/A"` for this workflow only. List it
+  under "Decisions for you" with the tool, the slot, and the install
+  hint that failed.
+- `skip (repo)`: only ever a recorded operator answer. The durable
+  record is a `skips` entry in `.specify/quality-gates.json`, written by
+  the operator through the coach flow, never by an agent. When a row
+  already records `skip (repo)`, continue with the slot as `"N/A"`.
 
 ### Workflow guards
 

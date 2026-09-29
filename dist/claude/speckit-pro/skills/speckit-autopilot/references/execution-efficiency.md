@@ -574,7 +574,10 @@ Workers supply their result blocks, never the independent native observations.
 
 Missing, duplicate, reordered, stale, or invalid evidence blocks recording;
 never discard earlier reports to make a record pass. An unfinished report is
-persisted with `helper_exit_code=1` and `disposition=checkpoint_required`.
+persisted with `helper_exit_code=1`, `disposition=redispatch`, and a `repair` record naming each
+batch's agent and its unfinished task IDs. Redispatch only those tasks to that agent within the
+shared allowance, then record the next report; defer per the Failure Escalation Protocol when
+repair fails. Nothing is marked complete from an unfinished report.
 On a partial batch's later report, carry every previously complete task's block
 and evidence references unchanged; identical native observations may be carried
 only for those completed tasks. Resume unfinished work without replaying them.

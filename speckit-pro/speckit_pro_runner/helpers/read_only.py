@@ -7598,8 +7598,17 @@ def file_fingerprint(path: Path, repo_root: Path, *, content: bytes | None = Non
     }
 
 
+def plan_layers_repair(owner: str, target: str, action: str) -> dict[str, str]:
+    """Name the agent that repairs a planner failure; the run retries the planner, never stops."""
+    return {"owner": owner, "target": target, "action": action, "retry": "plan-layers-feature-dir"}
+
+
 def plan_layers_error(code: str, message: str, feature: str, tasks: str, details: dict[str, Any]) -> dict[str, Any]:
     source_path = tasks or feature or None
+    if code == "tasks_file_missing":
+        repair = plan_layers_repair("phase-executor", tasks, "Rerun the Tasks phase to generate tasks.md")
+    else:
+        repair = plan_layers_repair("orchestrator", source_path or "", "Correct the feature directory or its permissions")
     obj = {
         "tool": "plan-layers",
         "contract_version": 1,
@@ -7610,6 +7619,7 @@ def plan_layers_error(code: str, message: str, feature: str, tasks: str, details
         "warnings": [],
         "errors": [{"code": code, "severity": "error", "message": message, "source": {"path": source_path, "line": None}, "details": details}],
         "summary": {"increment_count": 0, "task_count": 0, "warning_count": 0, "error_count": 1, "message": message},
+        "repair": repair,
     }
     return make_result(json_text(obj), f"plan-layers: input_error: {message}\n", 2)
 
@@ -7937,6 +7947,10 @@ def plan_layers_json(feature_rel: str, tasks_file: Path, repo_root: Path) -> tup
             "message": message,
         },
     }
+    if error_count:
+        obj["repair"] = plan_layers_repair(
+            "phase-executor", tasks_rel, "Fix tasks.md using the listed errors, then rerun the planner"
+        )
     return json_text(obj), len(warnings), error_count
 
 

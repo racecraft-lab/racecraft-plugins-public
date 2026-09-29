@@ -384,9 +384,11 @@ opens one slice PR.
    evidence. It must be the exact `plan-layers` envelope with
    status=ok.
 5. Apply the final reviewability boundary using current committed evidence. If
-   no current evidence exists, stop before `generate-pr-body`, any
-   `gh pr create` variant, or `multi-pr-emission` because
-   `final-reviewability-backstop` is deferred for installed workflows. Proceed
+   no current evidence exists, hold `generate-pr-body`, any
+   `gh pr create` variant, and `multi-pr-emission` because
+   `final-reviewability-backstop` is deferred for installed workflows, and
+   regenerate the committed reviewability evidence through the Reviewability Diff Gate task;
+   run the repair loop within its allowance, then defer per the Failure Escalation Protocol. Proceed
    only on `pass`, `warn`, honored typed-exception, or final `marker_split`
    when the current `pr_marker_plan`
    is valid. If a current `pr_marker_plan` exists, marker-based PR emission is
@@ -400,8 +402,8 @@ opens one slice PR.
    `autopilot_continuation`, `operator_steps`, and `resume.resume_from`, then
    continue through reviewability routing, layer planning, and split-PR emission until a valid slice PR stack is emitted or a
    typed exception is committed. Never end the run or report completion while
-   `autopilot_continuation.required=true`; on gate error, stop with state only
-   and no packet. Correctness stops include
+   `autopilot_continuation.required=true`; on gate error, write state only
+   and no packet, then rerun the gate; run the repair loop within its allowance, then defer per the Failure Escalation Protocol. Correctness blocks include
    malformed/stale marker state, failed verification, invalid packet, unsafe
    output, unusable gate evidence, invalid JSON, missing status/mode, and stale
    fingerprints.
@@ -457,8 +459,9 @@ opens one slice PR.
    Consume the current response's `data.stdout_json` in memory and durable
    workflow state. Continue only when `data.stdout_json.status=passed`,
    `data.stdout_json.pr_blocked=false`, and response `data.writes_state=false`.
-   If any required packet is absent or invalid, stop before PR creation with
-   the validator diagnostics. Commit or otherwise checkpoint the packet/body
+   If any required packet is absent or invalid, regenerate it with `pr-packet-output` from the validator diagnostics,
+   then revalidate; run the repair loop within its allowance, then defer per the Failure Escalation Protocol.
+   No PR is created until validation passes. Commit or otherwise checkpoint the packet/body
    artifacts so the worktree is clean, then run `validate-pr-packet-write`;
    apply mode reruns read-only validation before persisting the packet's
    `validation_result_path`. Prior validation artifacts never authorize PR
@@ -477,8 +480,8 @@ opens one slice PR.
    installation path`; `docs(SPEC-704): ...` is invalid. Likewise,
    `feat(speckit-pro): ...` is only valid for non-spec plugin changes. Any
    split-contract failure means the single-PR path is forbidden: run
-   `multi-pr-emission` with the current layer or marker plan, or stop
-   blocked with the validator output.
+   `multi-pr-emission` with the current layer or marker plan, or route the
+   validator output to the packet regenerator and revalidate; run the repair loop within its allowance, then defer per the Failure Escalation Protocol.
 6f. Create the single PR from packet fields, never from branch-derived title
    text or hand-written body content:
    ```text
@@ -495,8 +498,8 @@ opens one slice PR.
    packets or execute live PR mutations. Every slice packet must be emitted or
    refreshed at `specs/<feature>/.process/pr-packets/<packet-id>.json` with
    `pr-packet-output`, rerun through read-only validation, and paired with
-   persisted current validation evidence before PR side effects. Stop only if
-   emission or validation fails.
+   persisted current validation evidence before PR side effects. If
+   emission or validation fails, route the diagnostics to the packet regenerator and rerun; run the repair loop within its allowance, then defer per the Failure Escalation Protocol.
    For marker emission, `--feature-branch` is the emitted branch prefix. If
    that prefix would collide with an existing parent branch ref, pass a
    non-conflicting prefix through `--feature-branch` and the authoritative
@@ -506,8 +509,9 @@ opens one slice PR.
    prefix.
    Live marker emission requires each marker checkpoint to record
    `implementation_checkpoint.head_sha` or
-   `implementation_checkpoint.commit_sha`; without those commit SHAs, stop
-   before branch or PR mutation and repair the marker checkpoints.
+   `implementation_checkpoint.commit_sha`; without those commit SHAs, hold
+   branch and PR mutation and record the marker checkpoint commit SHAs through the orchestrator, then rerun;
+   run the repair loop within its allowance, then defer per the Failure Escalation Protocol.
    The per-slice order is exact and fail-closed:
    1. validate the current `pr_marker_plan`, source fingerprint, marker order,
       checkpoint commit, and final `marker_split`/emission-ready status;
@@ -553,11 +557,13 @@ opens one slice PR.
    verification before PR creation and
    its existing packet must pass a fresh `validate-pr-packet-read-only` request
    whose `data.stdout_json` is consumed in memory/state. If any required packet
-   is absent or invalid, stop before PR creation with the validator diagnostics.
-   The read-only validator writes no state or validation file. A
-   failing required scoped command must stop before `gh pr create`, record the
+   is absent or invalid, regenerate it with `pr-packet-output` from the validator diagnostics and revalidate; no PR is created until it passes.
+   The read-only validator writes no state or validation file. For a
+   failing required scoped command, hold `gh pr create`, record the
    failed command, exit status, evidence path, stderr/stdout tail, and keep
-   `next_slice_id` on the blocked slice.
+   `next_slice_id` on the blocked slice; then route the failing command to the implement-executor,
+   rerun it, and run the repair loop within its allowance, then defer per the Failure Escalation Protocol
+   while independent slices keep moving.
 10. After each successful slice PR, persist reviewer and resume surfaces before
     the next slice starts:
     - specs/<feature>/.process/prs.json with `schemaVersion: 2`
@@ -799,8 +805,8 @@ actual registered UAT-validation path exists, log
 `skipped: UAT validation unavailable` and continue fail-open. If a registered
 validation path exists, run that registered validator against the existing
 runbook. If and only if that just-run validator reports the existing runbook
-invalid, STOP before PR-body generation or PR creation and report its
-diagnostics. Missing output after a recorded generation failure is never sent
+invalid, hold PR-body generation and PR creation, route the validator diagnostics to the uat-runbook-author to rewrite the runbook,
+and revalidate; run the repair loop within its allowance, then defer per the Failure Escalation Protocol. Missing output after a recorded generation failure is never sent
 to validation and never blocks.
 
 If generation or authoring changed the runbook, auto-commit that change:

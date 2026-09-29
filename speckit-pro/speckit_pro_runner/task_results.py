@@ -351,13 +351,19 @@ def task_results(root: Path, inputs: dict[str, Any], mode: str) -> dict[str, Any
                 ignore_owned_directory(path.parent)
                 write_file_atomic(path, canonical_bytes(journal).decode("utf-8") + "\n", trust_root=root, expected_snapshot=snapshot)
             latest = {report["batch_id"]: report for report in journal["reports"]}
-            unfinished = any(r["status"] == "unfinished" for report in latest.values() for r in report["results"])
+            agents = {batch["id"]: batch["agent"] for batch in journal["batches"]}
+            pending = [{"batch_id": batch_id, "agent": agents[batch_id], "task_ids": ids}
+                       for batch_id, report in latest.items()
+                       if (ids := [r["task_id"] for r in report["results"] if r["status"] == "unfinished"])]
+            unfinished = bool(pending)
+            # Unfinished work is repaired by its batch's own agent, not parked for a human.
+            repair = {"repair": {"retry": "task-results", "batches": pending}} if unfinished else {}
             return {"journal": journal, "journal_path": inputs["journal_file"],
                     "partition_sha256": journal["partition_sha256"],
-                    "disposition": "checkpoint_required" if unfinished else "continue",
+                    "disposition": "redispatch" if unfinished else "continue",
                     "reasons": ["unfinished_task_results"] if unfinished else [],
                     "helper_exit_code": int(unfinished and action == "record"),
                     "authorization_granted": False, "native_qualification": "pending",
-                    "writes_state": changed and mode == "apply"}
+                    "writes_state": changed and mode == "apply", **repair}
     except (OSError, TypeError, KeyError, AttributeError, UnicodeError) as exc:
         raise ValueError(f"task result journal invalid or inaccessible: {exc}") from exc

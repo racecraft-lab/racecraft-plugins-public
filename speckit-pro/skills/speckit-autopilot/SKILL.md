@@ -343,7 +343,7 @@ the workflow's worktree from the parent checkout.
 
 ## Step -1 + Step 0: Pre-flight (Archive Sweep + Prerequisites)
 
-Run the pre-flight sequence before any phase work. STOP on failure.
+Run the pre-flight sequence before any phase work. A failure goes to the owning agent for repair; only an exhausted repair defers.
 
 1. **Use runner helper operation IDs**. Invoke read-only helper behavior through
    `resolved_python -m speckit_pro_runner` with one JSON request on stdin; do not rely on
@@ -356,9 +356,11 @@ Run the pre-flight sequence before any phase work. STOP on failure.
    record the helper report as a dry run and archive nothing. Skip if the
    archive extension is absent. Excludes the current target spec. Distinguish
    an absent extension from a broken installation: if the extension is present
-   but `/speckit-archive-run` is missing or unregistered, STOP pre-flight with
-   that discovery evidence and repair/install guidance. Never silently treat a
-   missing archive command as an absent extension.
+   but `/speckit-archive-run` is missing or unregistered, defer the Archive
+   Sweep with that discovery evidence and continue to Phase 0, listing the
+   repair/install guidance under "Decisions for you". A failed archive run is
+   retried once, then deferred the same way. Never silently treat a missing
+   archive command as an absent extension.
 3. **Run prereq helper operations** and parse the JSON output of each:
    ```text
    helper_id=check-prerequisites operation=check-prerequisites mode=read_only
@@ -373,7 +375,9 @@ Run the pre-flight sequence before any phase work. STOP on failure.
 4. **Constitution validation** — for each principle in
    `.specify/memory/constitution.md`, run the appropriate
    PROJECT_COMMANDS check (typecheck/test/build/lint); update the
-   workflow's Prerequisites table. STOP on any failure.
+   workflow's Prerequisites table. On a failure, route each failing check to the implement-executor,
+   which repairs it (a red baseline included); run the repair loop within its allowance, then defer per the Failure Escalation Protocol
+   with `stop_reason:all_tiers_failed` only when repair fails.
 5. **Implementation agent detection** — Glob `.claude/agents/*.md`,
    match descriptions against implementation keywords; set
    `PROJECT_IMPLEMENTATION_AGENT` (fallback: `speckit-pro:phase-executor`). Also
@@ -593,7 +597,7 @@ marked `skipped: <ext-name> not installed`.
 entries (every Phase, every Consensus, every `Post:`) and ADD any
 missing before advancing.
 
-**Then run the deterministic coverage guard and STOP on a nonzero exit.**
+**Then run the deterministic coverage guard and repair on a nonzero exit.**
 This is the same guard the Codex variant runs, so both distributions share
 one enforcement path instead of two prose descriptions of one:
 
@@ -611,11 +615,13 @@ the three current-run state-plan invariants (`in_progress_errors`,
 printed; structural coverage checks and every advisory key are visible but
 never block. Drop `--rule` to gate on every check.
 
-When `state_privacy_errors` is the only failing gated key, remediate in place
-instead of stopping: the state file is orchestrator-owned, and each error names
-the field and its remedy (`sha256:<digest>` of the raw value, or removing a raw
-`argv`). Apply those remedies, rewrite the state, and rerun the guard once. A
-second failure, or any other failing gated key, is a stop.
+On a nonzero exit, route the report's `repair` record to the orchestrator: it
+names the owner and the `failing_keys`, and the orchestrator owns both files.
+Repair the workflow status table and the state file, then rerun the guard. For
+`state_privacy_errors`, each error names the field and its remedy
+(`sha256:<digest>` of the raw value, or removing a raw `argv`). For any other
+failing gated key, correct the file the key names. Run the repair loop within its allowance, then defer per the Failure Escalation Protocol;
+advance to Phase 1 only on exit 0.
 
 `<resolved_python>` is the Python 3.11+ interpreter resolved by the
 Installed Runtime Contract; `<plugin-root>` is the directory that owns
@@ -708,11 +714,13 @@ for phase in PHASES starting from first_pending:
           persist it under `layer_plan` in `autopilot-state.json`, write a
           concise workflow "## Layer Plan" summary, carry warnings into the
           implementation context, then continue.
-        - exit 1: STOP before implementation and print exactly:
-          `STOP: Layer planner returned invalid_plan (exit 1) for <feature-dir>; implementation has not started. Fix tasks.md using the planner diagnostics below, then rerun autopilot from the Layer Plan step.`
-          Then show planner diagnostics from stdout/stderr.
-        - exit 2: STOP before implementation with a distinct
-          `input_error` message and include planner diagnostics.
+        - exit 1 (`invalid_plan`): hold implementation and route the planner's `repair` record to the phase-executor, which fixes
+          `tasks.md` from the planner diagnostics in stdout/stderr. Then rerun `plan-layers-feature-dir`;
+          run the repair loop within its allowance, then defer per the Failure Escalation Protocol.
+        - exit 2 (`input_error`): hold implementation and route by `repair.owner`. A missing `tasks.md`
+          (`tasks_file_missing`) reruns the Tasks phase through the phase-executor; a bad feature
+          directory or permission is corrected by the orchestrator. Rerun the planner, and defer the
+          same way when repair fails. Analyze and Implement do not begin before the planner exits 0.
         This wires NO PR emission or branch creation; the multi-PR emission
         phase owns those effects.
     8e. Persist marker planning state when reviewability evidence requires it:
