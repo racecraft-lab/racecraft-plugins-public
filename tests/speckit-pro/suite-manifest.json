@@ -74,6 +74,7 @@
         { "path": "tests/speckit-pro/unit/test-native-eval-search.py", "label": "test-native-eval-search" },
         { "path": "tests/speckit-pro/unit/test-native-eval-store.py", "label": "test-native-eval-store" },
         { "path": "tests/speckit-pro/unit/test-native-eval-strict-json.py", "label": "test-native-eval-strict-json" },
+        { "path": "tests/speckit-pro/unit/test-native-eval-scaffolds.py", "label": "test-native-eval-scaffolds" },
         { "path": "tests/speckit-pro/unit/test-native-eval-pool.py", "label": "test-native-eval-pool" },
         { "path": "tests/speckit-pro/unit/test-native-eval-judge.py", "label": "test-native-eval-judge" },
         { "path": "tests/speckit-pro/unit/test-native-eval-entrypoint.py", "label": "test-native-eval-entrypoint" },
