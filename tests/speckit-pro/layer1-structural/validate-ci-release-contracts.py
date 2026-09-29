@@ -234,6 +234,11 @@ def _required_sentinel_passes(changes: str, run_preflight: str, heavy: str) -> b
         return heavy == 'success'
     return heavy == 'skipped'
 
+def uses_shared_changed_files(docs_content: str) -> bool:
+    """The docs classifier delegates to the shared helper, which runs the argv-array git diff."""
+    shared = (REPO_ROOT / 'scripts' / 'changed_files.py').read_text(encoding='utf-8')
+    return '_changed_files.changed_files_for_base(base_ref' in docs_content and '["git", "diff", "--name-only", f"origin/{base_ref}...HEAD"]' in shared
+
 class ValidatePrChecksSentinel(unittest.TestCase):
 
     def test_sentinel(self) -> None:
@@ -359,7 +364,7 @@ class ValidatePrChecksSentinel(unittest.TestCase):
             self.assertIn('sorted_workflow_files', actionlint_content)
             self.assertIn('shell=False', actionlint_content)
             docs_content = helper_contents[DOCS_CLASSIFIER_FILE]
-            self.assertTrue('_changed_files.changed_files_for_base(base_ref' in docs_content and '["git", "diff", "--name-only", f"origin/{base_ref}...HEAD"]' in (REPO_ROOT / 'scripts' / 'changed_files.py').read_text(encoding='utf-8'))
+            self.assertTrue(uses_shared_changed_files(docs_content))
             for output_name in ('should_validate_docs', 'validation_mode', 'rendered_docs', 'generated_reference', 'docs_contract'):
                 self.assertIn(output_name, docs_content)
             self.assertNotIn('git add -A', content)
