@@ -38,26 +38,20 @@ export const DOCUMENTED_ROUTE_TITLES = Object.freeze([
   },
 ]);
 
+// Each documented boundary maps to the forbidden pattern, written exactly as it
+// appears in validate-safe-install-aids.mjs, that enforces it on the safe-aid
+// sources. validateSafetyBoundaries fails when the enforcer drops a pattern.
 export const DOCUMENTED_SAFETY_BOUNDARIES = Object.freeze({
-  allowedInputs: Object.freeze([
-    'checked-in repository docs-site sources',
-    'checked-in generated reference pages',
-    'local Astro preview served from docs-site',
-  ]),
-  forbiddenInputs: Object.freeze([
-    'user home directories',
-    'browser profiles',
-    'environment secrets',
-    'user-supplied JSON',
-    'local plugin cache files',
-  ]),
-  forbiddenActions: Object.freeze([
-    'live plugin installs',
-    'destructive cleanup',
-    'browser-side local command execution',
-    'analytics or production telemetry',
-    'external marketplace navigation',
-  ]),
+  forbiddenInputs: Object.freeze({
+    'user home directories': '/os\\.homedir/',
+    'environment secrets': '/process\\.env/',
+    'user-supplied JSON': '/paste(?:d)? user json/i',
+    'browser storage': '/localStorage/',
+    'local files picked in the browser': '/FileReader/',
+  }),
+  forbiddenActions: Object.freeze({
+    'browser-side local command execution': '/child_process/',
+  }),
 });
 
 const DOC010_FOUNDATION_FILES = Object.freeze([
@@ -548,10 +542,33 @@ function validateSourceUpdateGuidance(diagnostics) {
   }
 }
 
-function validateSafetyBoundaries(diagnostics) {
-  for (const [group, entries] of Object.entries(DOCUMENTED_SAFETY_BOUNDARIES)) {
-    if (entries.length === 0) {
+const SAFETY_ENFORCER_PATH = 'docs-site/scripts/validate-safe-install-aids.mjs';
+
+export function validateSafetyBoundaries(
+  diagnostics,
+  {
+    boundaries = DOCUMENTED_SAFETY_BOUNDARIES,
+    readEnforcerSource = () => fs.readFileSync(repoResolve(SAFETY_ENFORCER_PATH), 'utf8'),
+  } = {},
+) {
+  let enforcerSource;
+  try {
+    enforcerSource = readEnforcerSource();
+  } catch {
+    diagnostics.push(`${SAFETY_ENFORCER_PATH}: unreadable, so the documented safety boundaries cannot be verified.`);
+    return;
+  }
+  for (const [group, entries] of Object.entries(boundaries)) {
+    const pairs = Object.entries(entries);
+    if (pairs.length === 0) {
       diagnostics.push(`docs-site/scripts/validate-docs-quality.mjs: ${group} must not be empty.`);
+    }
+    for (const [boundary, pattern] of pairs) {
+      if (!enforcerSource.includes(`    ${pattern},`)) {
+        diagnostics.push(
+          `${SAFETY_ENFORCER_PATH}: documented ${group} boundary "${boundary}" is not enforced; forbidden pattern ${pattern} is missing.`,
+        );
+      }
     }
   }
 }
