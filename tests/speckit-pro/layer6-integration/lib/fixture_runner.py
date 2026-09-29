@@ -211,9 +211,6 @@ def check_transcript_terms(reporter: Reporter, fixture_id: str, transcript: Path
         lambda term: helpers.assert_transcript_contains_term(transcript, term),
         "expected transcript to include {!r}",
     )
-
-
-def check_forbidden_terms(reporter: Reporter, fixture_id: str, transcript: Path, expected: dict[str, Any]) -> None:
     check_each(
         reporter,
         string_list(expected.get("must_not_include_terms")),
@@ -286,7 +283,6 @@ def assert_dispatch_fixture(
     check_dispatch_targets(reporter, fixture_id, transcript, expected)
     if check_terms:
         check_transcript_terms(reporter, fixture_id, transcript, expected)
-        check_forbidden_terms(reporter, fixture_id, transcript, expected)
     check_dispatch_counts(reporter, fixture_id, transcript, expected)
     check_dispatch_order(reporter, fixture_id, transcript, expected)
 
