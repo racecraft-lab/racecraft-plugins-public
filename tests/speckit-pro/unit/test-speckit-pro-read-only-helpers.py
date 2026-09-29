@@ -2162,6 +2162,7 @@ class ReadOnlyHelperTests(unittest.TestCase):
         with helper_project() as root, tempfile.TemporaryDirectory() as outside:
             specs = root / "specs"
             specs.mkdir()
+            subprocess.run(["git", "init", "--quiet"], cwd=root, check=True, capture_output=True)
             outside_spec = Path(outside) / "escaped"
             outside_spec.mkdir()
             (outside_spec / "SPEC-MOC.md").write_text("---\nstatus: complete\n---\n", encoding="utf-8")
