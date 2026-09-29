@@ -3828,6 +3828,49 @@ class SharedRunnerCodeTests(unittest.TestCase):
         self.assertTrue(kept["jsonl_path"].endswith("case-001-trial-02.jsonl"))
 
 
+class NoOpDescriptionSourceTests(unittest.TestCase):
+    """The no-op description has one source, and an override reaches staging as an argument."""
+
+    OVERRIDE = "Use when nothing else applies; reply that no skill applies and stop."
+
+    def write_source(self, root: Path, family: str) -> Path:
+        source = root / family / "demo" / "SKILL.md"
+        source.parent.mkdir(parents=True)
+        source.write_text("---\nname: demo\ndescription: Demo.\n---\n\nBody.\n", encoding="utf-8")
+        return source
+
+    def test_both_runners_alias_the_library_constant(self) -> None:
+        claude = import_script(CLAUDE_RUNNER, "layer2_noop_claude")
+        engine = import_script(CODEX_ENGINE, "layer2_noop_engine")
+        for module in (claude, engine):
+            with self.subTest(module=module.__name__):
+                self.assertIs(module.NO_SPECKIT_SKILL_DESCRIPTION, evidence_records.NO_SPECKIT_SKILL_DESCRIPTION)
+                self.assertEqual(module.NO_SPECKIT_SKILL_NAME, evidence_records.NO_SPECKIT_SKILL_NAME)
+
+    def test_claude_staging_uses_the_override_without_touching_the_default(self) -> None:
+        claude = import_script(CLAUDE_RUNNER, "layer2_noop_claude_stage")
+        default = claude.NO_SPECKIT_SKILL_DESCRIPTION
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = self.write_source(root, "skills")
+            claude.stage_measurement_plugin(source, root / "plugin", "catalog", "demo-eval", "nonce",
+                                            no_op_description=self.OVERRIDE)
+            staged = (root / "plugin" / "skills" / claude.NO_SPECKIT_SKILL_NAME / "SKILL.md").read_text()
+        self.assertIn(f"description: {self.OVERRIDE}", staged)
+        self.assertEqual(claude.NO_SPECKIT_SKILL_DESCRIPTION, default)
+
+    def test_codex_staging_uses_the_override_without_touching_the_default(self) -> None:
+        engine = import_script(CODEX_ENGINE, "layer2_noop_engine_stage")
+        default = engine.NO_SPECKIT_SKILL_DESCRIPTION
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = self.write_source(root, "codex-skills")
+            siblings, _markers = engine.stage_sibling_skills(source, root / "workspace", "0123456789ab",
+                                                             no_op_description=self.OVERRIDE)
+        self.assertEqual(siblings[engine.NO_SPECKIT_SKILL_NAME], self.OVERRIDE)
+        self.assertEqual(engine.NO_SPECKIT_SKILL_DESCRIPTION, default)
+
+
 class CodexRelativeSkillBodyReadTests(unittest.TestCase):
     def test_relative_skill_body_read_requires_the_matched_skill_path(self) -> None:
         engine = import_script(CODEX_ENGINE, "layer2_codex_relative_skill_body_read")
@@ -3900,6 +3943,7 @@ def main() -> int:
         unittest.defaultTestLoader.loadTestsFromTestCase(MeasurementRecordTests),
         unittest.defaultTestLoader.loadTestsFromTestCase(CodexEvalCorpusResolutionTests),
         unittest.defaultTestLoader.loadTestsFromTestCase(SharedRunnerCodeTests),
+        unittest.defaultTestLoader.loadTestsFromTestCase(NoOpDescriptionSourceTests),
     ])
     return run_counted(suite, label="test-trigger-eval-runners")
 

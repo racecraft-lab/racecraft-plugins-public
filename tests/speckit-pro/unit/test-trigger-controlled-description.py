@@ -75,7 +75,7 @@ class ControlledDescriptionTests(unittest.TestCase):
                     self.assertEqual(state["NO_SPECKIT_SKILL_DESCRIPTION"], original)
                     self.assertEqual(state["evidence_records"].description_override(None, state["NO_SPECKIT_SKILL_DESCRIPTION"]), original)
 
-    def test_both_current_hosts_use_the_approved_candidate(self):
+    def test_the_library_constant_is_the_approved_candidate(self):
         manifest = json.loads((LAYER / "controlled-descriptions.json").read_text())
         for path in manifest["source_paths"]:
             with self.subTest(path=path):
@@ -85,6 +85,18 @@ class ControlledDescriptionTests(unittest.TestCase):
                           and any(isinstance(target, ast.Name)
                                   and target.id == manifest["symbol"] for target in node.targets)]
                 self.assertEqual(values, [manifest["candidate"]])
+        self.assertEqual(manifest["source_paths"], ["tests/speckit-pro/lib/trigger_evidence.py"])
+
+    def test_neither_runner_defines_its_own_copy(self):
+        manifest = json.loads((LAYER / "controlled-descriptions.json").read_text())
+        for filename in ("run-trigger-evals.py", "run_codex_evals.py"):
+            with self.subTest(runner=filename):
+                tree = ast.parse((LAYER / filename).read_text())
+                literals = [node for node in tree.body
+                            if isinstance(node, ast.Assign) and isinstance(node.value, ast.Constant)
+                            and any(isinstance(target, ast.Name) and target.id == manifest["symbol"]
+                                    for target in node.targets)]
+                self.assertEqual(literals, [])
 
 
 if __name__ == "__main__":

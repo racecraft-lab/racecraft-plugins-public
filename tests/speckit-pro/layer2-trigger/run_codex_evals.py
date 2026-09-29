@@ -65,14 +65,8 @@ SKILL_CATALOG_WARNINGS = (
     "Skill descriptions were shortened to fit the skills context budget.",
     "Exceeded skills context budget.",
 )
-NO_SPECKIT_SKILL_NAME = "no-speckit-skill"
-NO_SPECKIT_SKILL_DESCRIPTION = (
-    "Use when no available SpecKit skill covers the request, including ordinary coding, testing, tooling, or "
-    "repository work and host-specific SpecKit operations whose matching skill is absent from the current catalog, "
-    "such as installing Codex subagents when no agent-install skill is available or running the plan stage for an "
-    "already-existing spec or populated workflow when no planning skill is available. Reply that no available "
-    "SpecKit skill applies and stop."
-)
+NO_SPECKIT_SKILL_NAME = evidence_records.NO_SPECKIT_SKILL_NAME
+NO_SPECKIT_SKILL_DESCRIPTION = evidence_records.NO_SPECKIT_SKILL_DESCRIPTION
 MEASUREMENT_STUB_SENTENCE = (
     "This skill is a measurement stub used by the repository's skill-selection test suite. It is not a real "
     "workflow and contains no injected instruction."
@@ -166,6 +160,8 @@ def stage_sibling_skills(
     src: pathlib.Path,
     workspace: pathlib.Path,
     test_id: str,
+    *,
+    no_op_description: str | None = None,
 ) -> tuple[dict[str, str], dict[str, str]]:
     """Stage every sibling with its source description and unique attestation.
 
@@ -193,16 +189,17 @@ def stage_sibling_skills(
             raise ValueError(f"staged sibling description differs from its source: {sibling.name}")
     if NO_SPECKIT_SKILL_NAME in siblings:
         raise ValueError(f"reserved sibling skill name: {NO_SPECKIT_SKILL_NAME}")
+    description = NO_SPECKIT_SKILL_DESCRIPTION if no_op_description is None else no_op_description
     destination = workspace / ".agents" / "skills" / NO_SPECKIT_SKILL_NAME
     destination.mkdir(parents=True, exist_ok=False)
     marker = selection_marker(NO_SPECKIT_SKILL_NAME, test_id)
     (destination / "SKILL.md").write_text(
         f"---\nname: {NO_SPECKIT_SKILL_NAME}\n"
-        f"description: {NO_SPECKIT_SKILL_DESCRIPTION}\n---\n\n"
+        f"description: {description}\n---\n\n"
         f"{selection_stub(marker)}",
         encoding="utf-8",
     )
-    siblings[NO_SPECKIT_SKILL_NAME] = NO_SPECKIT_SKILL_DESCRIPTION
+    siblings[NO_SPECKIT_SKILL_NAME] = description
     markers[NO_SPECKIT_SKILL_NAME] = marker
     return siblings, markers
 
@@ -1412,7 +1409,6 @@ def print_case_result(case_number: int, case_count: int, result: dict[str, objec
 
 
 def main() -> int:
-    global NO_SPECKIT_SKILL_DESCRIPTION
     ap = argparse.ArgumentParser()
     ap.add_argument("skill", help="Codex skill name (looked up under codex-skills/)")
     ap.add_argument("--runs", type=int, default=3, help="Trials per query (default 3)")
@@ -1458,7 +1454,6 @@ def main() -> int:
     test_uuid = uuid.uuid4().hex
     test_skill_name = f"{args.skill}-eval-{test_uuid}"
     marker = selection_marker(test_skill_name, test_uuid)
-    original_no_op_description = NO_SPECKIT_SKILL_DESCRIPTION
 
     if args.evidence_dir:
         evidence_dir = pathlib.Path(args.evidence_dir).resolve()
@@ -1469,7 +1464,6 @@ def main() -> int:
     exit_code = 1
     previous_handlers = processes.install_termination_handlers()
     try:
-        NO_SPECKIT_SKILL_DESCRIPTION = no_op_description
         initialized = subprocess.run(
             ["git", "init", "--quiet"],
             cwd=workspace,
@@ -1488,7 +1482,9 @@ def main() -> int:
         target_description = source_skill_description(skill_src)
         if source_skill_description(target_skill) != target_description:
             raise ValueError("staged Codex skill description differs from its source")
-        siblings, sibling_markers = stage_sibling_skills(skill_src, workspace, test_uuid)
+        siblings, sibling_markers = stage_sibling_skills(
+            skill_src, workspace, test_uuid, no_op_description=no_op_description,
+        )
         witnesses = skill_witnesses(
             workspace,
             {test_skill_name: marker, **sibling_markers},
@@ -1641,7 +1637,6 @@ def main() -> int:
         print(f"ERROR: {exc}", file=sys.stderr)
         exit_code = 1
     finally:
-        NO_SPECKIT_SKILL_DESCRIPTION = original_no_op_description
         cleanup_error = remove_workspace(workspace)
         if cleanup_error is not None:
             print(f"ERROR: {cleanup_error}", file=sys.stderr)

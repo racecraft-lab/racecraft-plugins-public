@@ -41,14 +41,8 @@ MACOS_MANAGED_ROOT = Path("/Library/Application Support/ClaudeCode")
 LINUX_MANAGED_ROOT = Path("/etc/claude-code")
 RUNS_PER_QUERY = 3
 TRIGGER_THRESHOLD = 0.5
-NO_SPECKIT_SKILL_NAME = "no-speckit-skill"
-NO_SPECKIT_SKILL_DESCRIPTION = (
-    "Use when no available SpecKit skill covers the request, including ordinary coding, testing, tooling, or "
-    "repository work and host-specific SpecKit operations whose matching skill is absent from the current catalog, "
-    "such as installing Codex subagents when no agent-install skill is available or running the plan stage for an "
-    "already-existing spec or populated workflow when no planning skill is available. Reply that no available "
-    "SpecKit skill applies and stop."
-)
+NO_SPECKIT_SKILL_NAME = evidence_records.NO_SPECKIT_SKILL_NAME
+NO_SPECKIT_SKILL_DESCRIPTION = evidence_records.NO_SPECKIT_SKILL_DESCRIPTION
 MEASUREMENT_STUB_SENTENCE = (
     "This skill is a measurement stub used by the repository's skill-selection test suite. It is not a real "
     "workflow and contains no injected instruction."
@@ -165,6 +159,8 @@ def stage_measurement_plugin(
     skill_name: str,
     nonce: str,
     siblings: dict[str, Path] | None = None,
+    *,
+    no_op_description: str | None = None,
 ) -> tuple[Path, str]:
     """Stage only the exact source description plus a minimal measurement body.
 
@@ -178,7 +174,8 @@ def stage_measurement_plugin(
     }
     if NO_SPECKIT_SKILL_NAME in staged_siblings:
         raise ValueError(f"reserved sibling skill name: {NO_SPECKIT_SKILL_NAME}")
-    staged_siblings[NO_SPECKIT_SKILL_NAME] = [f"description: {NO_SPECKIT_SKILL_DESCRIPTION}"]
+    description = NO_SPECKIT_SKILL_DESCRIPTION if no_op_description is None else no_op_description
+    staged_siblings[NO_SPECKIT_SKILL_NAME] = [f"description: {description}"]
     for sibling_name, description_lines in sorted(staged_siblings.items()):
         if sibling_name == skill_name:
             raise ValueError("sibling skill name collides with the measured skill")
@@ -884,7 +881,6 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
 
 
 def main(argv: list[str]) -> int:
-    global NO_SPECKIT_SKILL_DESCRIPTION
     args = parse_args(argv)
     try:
         eval_file = find_eval_file(args.skill)
@@ -912,14 +908,12 @@ def main(argv: list[str]) -> int:
     plugin_name = f"skill-catalog-eval-{test_id}"
     skill_name = f"{args.skill}-eval-{test_id}"
     nonce = f"CLAUDE_SKILL_SELECTED_{test_id}"
-    original_no_op_description = NO_SPECKIT_SKILL_DESCRIPTION
     plugin_root = Path(tempfile.mkdtemp(prefix=f"claude-trigger-{args.skill}-"))
     sibling_sources = {sibling.name: sibling / "SKILL.md" for sibling in sibling_skill_dirs(skill_source)}
     exit_code = 1
     evidence_dir = None
     previous_handlers = install_termination_handlers()
     try:
-        NO_SPECKIT_SKILL_DESCRIPTION = no_op_description
         _skill_dir, expected_skill = stage_measurement_plugin(
             skill_source,
             plugin_root,
@@ -927,6 +921,7 @@ def main(argv: list[str]) -> int:
             skill_name,
             nonce,
             sibling_sources,
+            no_op_description=no_op_description,
         )
         sibling_skills = tuple(
             f"{plugin_name}:{name}"
@@ -1043,7 +1038,6 @@ def main(argv: list[str]) -> int:
         eprint(f"ERROR: {exc}")
         exit_code = 1
     finally:
-        NO_SPECKIT_SKILL_DESCRIPTION = original_no_op_description
         cleanup_error = remove_plugin_root(plugin_root)
         if cleanup_error:
             eprint(f"ERROR: {cleanup_error}")
