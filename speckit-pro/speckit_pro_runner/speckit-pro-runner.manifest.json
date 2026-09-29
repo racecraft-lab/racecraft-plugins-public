@@ -367,7 +367,7 @@
         "value": "speckit_pro_runner/helpers/run_finalization.py",
         "display": "speckit_pro_runner/helpers/run_finalization.py"
       },
-      "sha256": "12bd4d6a995d5d5babe5b2a55e6b516e9921950ac1875bbab6542cbc20f0b0cc"
+      "sha256": "cd044954ba387d2ebe211b498f1a5ee7abc44d6a718fe5479b054eaac7df970d"
     },
     {
       "path": {
@@ -439,7 +439,7 @@
         "value": "speckit_pro_runner/stop_policy.py",
         "display": "speckit_pro_runner/stop_policy.py"
       },
-      "sha256": "eb61f8915adda40e14ab664d532c26e89fdfc76d393dc8f29ae3a3594f5e95e0"
+      "sha256": "21f5f94e47354f79602adc8810704dedb62524f90ad9468fe2f41b05266992ee"
     },
     {
       "path": {

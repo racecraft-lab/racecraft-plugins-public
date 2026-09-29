@@ -296,6 +296,25 @@ class FinalizeRunTests(_LedgerFixture, unittest.TestCase):
         self.assertIn("Failure family FR-001", request)
         self.assertIn("ready for review", request)
 
+    def test_exhausted_stop_classes_and_reasons_come_from_the_stop_policy(self) -> None:
+        from speckit_pro_runner import stop_policy
+
+        self.fail_escalation(self.deferring, "failure_family", "FR-001")
+        decision = finalize(self.root, self.inputs(self.deferring))["decisions"][0]
+        self.assertEqual((decision["class"], decision["reason_code"]),
+                         (stop_policy.EXHAUSTED, stop_policy.ALL_TIERS_FAILED))
+        self.assertEqual(stop_policy.stop_class(decision["reason_code"]), decision["class"])
+
+    def test_a_stop_reason_the_stop_policy_does_not_know_fails_closed(self) -> None:
+        from speckit_pro_runner import stop_policy
+
+        with self.assertRaises(ValueError):
+            stop_policy.stop_class("made_up_reason")
+        self.fail_escalation(self.deferring, "failure_family", "FR-001")
+        with patch("speckit_pro_runner.helpers.run_finalization._exhausted_reason", return_value="made_up_reason"):
+            with self.assertRaises(ValueError):
+                finalize(self.root, self.inputs(self.deferring))
+
     def test_an_unresolved_deferred_task_is_an_authority_decision_not_a_draft_stack(self) -> None:
         result = finalize(self.root, self.inputs(unresolved_deferrals=[dict(VETO)]))
         self.assertEqual(result["outcome"], "complete_with_deferred")
