@@ -398,8 +398,8 @@
     },
     {
       "id": 30,
-      "prompt": "Tasks just passed G5 and runner helper atomicity-route returned route=split-PR for specs/spec-908-layer-planner. Walk through the Codex layer-plan gate before Analyze or Implement starts. Which runner request runs, what happens on helper exit 0 with warnings, what exact stop line appears on exit 1, what happens on exit 2, and what if the route is one-navigable-PR instead?",
-      "expected_output": "Explains that Codex invokes the plan-layers-feature-dir read-only runner helper only when the recorded atomicity route is exactly split-PR, before Analyze or Implement. Exit 0 persists the full versioned envelope under layer_plan in autopilot-state.json, writes a workflow ## Layer Plan summary, carries warnings forward, and continues. Exit 1 prints the fixed invalid_plan stop line; exit 2 is a distinct input_error. Non-split routes skip planning and record layer_plan.status=skipped.",
+      "prompt": "Tasks just passed G5 and runner helper atomicity-route returned route=split-PR for specs/spec-908-layer-planner. Walk through the Codex layer-plan gate before Analyze or Implement starts. Which runner request runs, what happens on helper exit 0 with warnings, what happens on exit 1, what happens on exit 2, and what if the route is one-navigable-PR instead?",
+      "expected_output": "Explains that Codex invokes the plan-layers-feature-dir read-only runner helper only when the recorded atomicity route is exactly split-PR, before Analyze or Implement. Exit 0 persists the full versioned envelope under layer_plan in autopilot-state.json, writes a workflow ## Layer Plan summary, carries warnings forward, and continues. Exit 1 holds implementation and routes the planner's repair record to the phase-executor, which fixes tasks.md before the planner reruns; exit 2 is a distinct input_error routed by repair.owner. Non-split routes skip planning and record layer_plan.status=skipped.",
       "expectations": [
         "States that runner helper plan-layers-feature-dir runs only when the recorded atomicity route is exactly split-PR",
         "States that the planner runs after G5 atomicity routing and before Analyze or Implement",
@@ -407,9 +407,9 @@
         "States that exit 0 persists the full versioned planner envelope under layer_plan in autopilot-state.json",
         "States that exit 0 writes a concise workflow ## Layer Plan summary",
         "States that planner warnings on exit 0 are carried forward into implementation context",
-        "Includes the exact invalid-plan stop line: STOP: Layer planner returned invalid_plan (exit 1) for <feature-dir>; implementation has not started. Fix tasks.md using the planner diagnostics below, then rerun autopilot from the Layer Plan step.",
-        "States that exit 1 and exit 2 both stop before implementation",
-        "Distinguishes exit 2 as input_error with its own message and planner diagnostics",
+        "Routes an exit-1 invalid_plan result to the phase-executor through the planner's repair record, reruns plan-layers-feature-dir after the fix, and defers per the Failure Escalation Protocol only when repair fails",
+        "States that exit 1 and exit 2 both hold implementation until the planner exits 0",
+        "Distinguishes exit 2 as input_error with its own message and planner diagnostics, routed by repair.owner",
         "States that non-split routes such as one-navigable-PR skip the planner and record layer_plan.status=skipped",
         "States that the planner gate creates no branches, PR bodies, restacks, or stacked-PR topology"
       ]
@@ -512,13 +512,13 @@
     {
       "id": 36,
       "prompt": "Archive Sweep startup finds the archive extension enabled, but its manifest command file is missing (or the Codex-native worktree binding cannot resolve the required paths). A manual specs/ listing shows zero prior candidates. Can Codex mark the sweep completed and move Phase 0 to in progress?",
-      "expected_output": "No. Treats the installed extension as broken, records archive_sweep status=blocked and safeToApplyCleanup=false with invocation_available=false or prerequisite_available=false as applicable, leaves Archive Sweep incomplete, and stops before Phase 0 with the exact missing path. A manual zero-candidate inventory cannot substitute for an unexecuted command contract.",
+      "expected_output": "No. Treats the installed extension as broken, records archive_sweep status=blocked and safeToApplyCleanup=false with invocation_available=false or prerequisite_available=false as applicable, leaves Archive Sweep incomplete, and defers the sweep with the exact missing path so the run continues to Phase 0 without asking. A manual zero-candidate inventory cannot substitute for an unexecuted command contract.",
       "expectations": [
         "Rejects marking Archive Sweep completed from a manual specs/ inventory",
         "Records status=blocked and safeToApplyCleanup=false",
         "Records invocation_available=false for a missing command or prerequisite_available=false for a missing prerequisite",
         "Reports the exact missing path or failed command",
-        "Stops before Phase 0 and does not mark Phase 0 in progress",
+        "Defers the Archive Sweep with the exact missing path, asks no question, and leaves the sweep item incomplete rather than marking it completed",
         "Does not confuse status=no_candidates with an unavailable or unexecuted invocation path"
       ]
     },

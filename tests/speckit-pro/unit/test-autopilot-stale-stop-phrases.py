@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Guard: eval expectations never carry the retired stop-and-skip vocabulary.
 
-Autopilot defers an exhausted gate and keeps running. Three phrases described
+Autopilot defers an exhausted gate and keeps running. Four phrases described
 the older behavior: a `default stop path` that escalates a failed gate, a
-`skip-and-log override`, and an unconditional `STOP before Phase 7`. This scans
+`skip-and-log override`, a fixed `STOP: Layer planner returned` line for an invalid
+plan, and an unconditional `STOP before Phase 7`. This scans
 every eval root, the catalog, its fixtures, and its audit ledgers for them. The
 only allowed hit is `STOP before Phase 7` inside a strict-mode case, because
 the opt-in `--strict` confidence mode still stops before Phase 7.
@@ -28,7 +29,7 @@ ROOTS = (
     "evals/catalog.json", "evals/fixtures", "evals/audit", "evals/README.md",
 )
 SUFFIXES = {".json", ".md", ".txt", ".jsonl"}
-ALWAYS_STALE = ("default stop path", "skip-and-log override")
+ALWAYS_STALE = ("default stop path", "skip-and-log override", "STOP: Layer planner returned")
 STRICT_ONLY = "STOP before Phase 7"
 # The strict-mode confidence case in each eval file, by entry id.
 STRICT_CASES = {

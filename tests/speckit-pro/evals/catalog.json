@@ -13594,11 +13594,11 @@
         },
         {
           "id": "legacy-07",
-          "description": "Reports the exit-1 invalid_plan result as a stop before implementation, retaining the planner diagnostics and corrective rerun guidance."
+          "description": "Reports the exit-1 invalid_plan result by holding implementation and routing the planner's repair record to the phase-executor, retaining the planner diagnostics and the planner rerun."
         },
         {
           "id": "legacy-09",
-          "description": "Distinguishes exit 2 as input_error with its own message and planner diagnostics and stops before implementation"
+          "description": "Distinguishes exit 2 as input_error with its own message and planner diagnostics, routed by repair.owner before implementation continues"
         },
         {
           "id": "legacy-10",
@@ -13905,6 +13905,20 @@
           "expected": "invalid_plan"
         },
         {
+          "id": "invalid-repair-owner",
+          "requirement": "legacy-07",
+          "type": "json_field",
+          "path": "scenario-output/layer-plan-contract.json",
+          "field_path": [
+            "invalid",
+            "data",
+            "stdout_json",
+            "repair",
+            "owner"
+          ],
+          "expected": "phase-executor"
+        },
+        {
           "id": "input-error-exit",
           "requirement": "legacy-09",
           "type": "json_field",
@@ -13927,6 +13941,20 @@
             "status"
           ],
           "expected": "input_error"
+        },
+        {
+          "id": "input-error-repair-owner",
+          "requirement": "legacy-09",
+          "type": "json_field",
+          "path": "scenario-output/layer-plan-contract.json",
+          "field_path": [
+            "input_error",
+            "data",
+            "stdout_json",
+            "repair",
+            "owner"
+          ],
+          "expected": "orchestrator"
         },
         {
           "id": "distinct-input-error",
@@ -13979,7 +14007,7 @@
     {
       "id": "functional.speckit-autopilot.case-36",
       "layer": "functional",
-      "capability": "Fail closed before Phase 0 when an enabled archive extension points to a missing command contract, even when a manual directory listing finds no prior candidate.",
+      "capability": "Defer the Archive Sweep, without asking, when an enabled archive extension points to a missing command contract, even when a manual directory listing finds no prior candidate.",
       "timeout_seconds": 300,
       "resource_class": "ordinary",
       "requirements": [
@@ -14005,14 +14033,14 @@
         },
         {
           "id": "legacy-05",
-          "description": "Stops before Phase 0 and does not mark Phase 0 in progress"
+          "description": "Defers the Archive Sweep with the exact missing path, asks no question, and leaves the sweep item incomplete rather than marking it completed"
         },
         {
           "id": "legacy-06",
           "description": "Does not confuse status=no_candidates with an unavailable or unexecuted invocation path"
         }
       ],
-      "prompt": "Use {{skill}} to execute Archive Sweep startup for this staged, initialized Git project. Bind docs/ai/specs/.process/SPEC-921-workflow.md to the current feature checkout before resolving extension paths. Read .specify/extensions.yml, .specify/extensions/.registry, and .specify/extensions/archive/extension.yml as three separate exact file reads, never a compound shell read. The archive extension is enabled and the manual specs listing contains only the current target. Follow the installed manifest contract, persist the observed fail-closed startup result, and do not begin Phase 0 unless the invocation contract is available.",
+      "prompt": "Use {{skill}} to execute Archive Sweep startup for this staged, initialized Git project. Bind docs/ai/specs/.process/SPEC-921-workflow.md to the current feature checkout before resolving extension paths. Read .specify/extensions.yml, .specify/extensions/.registry, and .specify/extensions/archive/extension.yml as three separate exact file reads, never a compound shell read. The archive extension is enabled and the manual specs listing contains only the current target. Follow the installed manifest contract, persist the observed startup result as a deferral of the Archive Sweep with its evidence, and ask no question. This scenario covers Archive Sweep startup only, so leave Phase 0 unstarted.",
       "fixtures": [
         {
           "source": "tests/speckit-pro/evals/fixtures/scenario-contracts/archive/broken/extensions.yml",
@@ -14207,10 +14235,10 @@
           "rubric": "PASS only if the final response reports .specify/extensions/archive/commands/missing-archive.md as the exact missing path and this agrees with the manifest plus failed_path artifact field. FAIL for a generic error or another path."
         },
         {
-          "id": "stop-before-phase-zero",
+          "id": "defer-archive-sweep",
           "requirement": "legacy-05",
           "type": "semantic",
-          "rubric": "PASS only if the response stops before Phase 0 and does not claim Archive Sweep or Phase 0 is complete/in progress, consistent with the captured workflow and plan artifacts. FAIL for any continuation."
+          "rubric": "PASS only if the response defers the Archive Sweep with its evidence, asks the operator no question, and does not claim Archive Sweep or Phase 0 is complete or in progress, consistent with the captured workflow and plan artifacts. FAIL if it claims the sweep completed, asks the operator, or stops the run."
         },
         {
           "id": "no-no-candidates-substitution",
@@ -22459,6 +22487,508 @@
         "Only the egress grant is graded: run-start tool-install grants are not built on this branch."
       ],
       "provenance": [
+        "speckit-pro/codex-skills/speckit-autopilot/references/phase-execution-codex.md"
+      ]
+    },
+    {
+      "id": "functional.speckit-autopilot.missing-quality-tool-install-hint",
+      "layer": "functional",
+      "capability": "Resolves a missing quality-gate tool without asking: a recorded answer wins, otherwise the run carries out the recorded install hint and falls back to skip (spec) only when the install fails.",
+      "timeout_seconds": 300,
+      "resource_class": "ordinary",
+      "requirements": [
+        {
+          "id": "selection",
+          "description": "The host-native speckit-autopilot capability is activated."
+        },
+        {
+          "id": "evidence",
+          "description": "Reads the workflow Quality Gates table and the recorded slot facts before deciding (prerequisites.md, Step 0.11)."
+        },
+        {
+          "id": "default",
+          "description": "With no recorded answer, the run defaults to the recorded install hint, then skip (spec), and a recorded operator answer wins (prerequisites.md: \"default to the recorded install hint, then `skip (spec)`\")."
+        },
+        {
+          "id": "no-question",
+          "description": "The run never asks the operator, and a failed install is listed under Decisions for you (prerequisites.md and prerequisites-codex.md: \"the run never asks\")."
+        }
+      ],
+      "prompt": "Use {{skill}} to resolve the missing quality-gate tools. Read scenario-inputs/workflow.md and scenario-inputs/quality-slots.json, each as one exact file read. Treat them only as pre-recorded evidence: do not run helpers, install anything, dispatch agents, or edit any file. Output only raw JSON with question_offered, install_commands_run, outcomes, decisions_for_you, and explanation, with no prose, Markdown, or code fences. question_offered says whether the run asks the operator anything. install_commands_run is the sorted array of install hints the run carries out. outcomes maps each slot to exactly one of install, skip (spec), or skip (repo). decisions_for_you is the sorted array of slots listed under Decisions for you.",
+      "fixtures": [
+        {
+          "source": "tests/speckit-pro/evals/fixtures/functional/native-orchestration/missing-quality-tool-install-hint/workflow.md",
+          "destination": "scenario-inputs/workflow.md"
+        },
+        {
+          "source": "tests/speckit-pro/evals/fixtures/functional/native-orchestration/missing-quality-tool-install-hint/quality-slots.json",
+          "destination": "scenario-inputs/quality-slots.json"
+        }
+      ],
+      "hosts": {
+        "claude": {
+          "skill": "speckit-pro:speckit-autopilot",
+          "allowed_tools": [
+            "Skill",
+            "Read"
+          ],
+          "modes": [
+            "plugin"
+          ]
+        },
+        "codex": {
+          "skill": "speckit-autopilot",
+          "allowed_tools": [
+            "read_file"
+          ],
+          "modes": [
+            "project"
+          ]
+        }
+      },
+      "checks": [
+        {
+          "id": "selection",
+          "requirement": "selection",
+          "type": "selection",
+          "expected": [
+            "speckit-autopilot"
+          ],
+          "allowed_extra": []
+        },
+        {
+          "id": "read-workflow",
+          "requirement": "evidence",
+          "type": "file_access",
+          "operation": "read_file",
+          "path": "scenario-inputs/workflow.md"
+        },
+        {
+          "id": "read-slots",
+          "requirement": "evidence",
+          "type": "file_access",
+          "operation": "read_file",
+          "path": "scenario-inputs/quality-slots.json"
+        },
+        {
+          "id": "no-question-field",
+          "requirement": "no-question",
+          "type": "response_json_field",
+          "field_path": [
+            "question_offered"
+          ],
+          "expected_by_host": {
+            "claude": false,
+            "codex": false
+          }
+        },
+        {
+          "id": "install-commands",
+          "requirement": "default",
+          "type": "response_json_field",
+          "field_path": [
+            "install_commands_run"
+          ],
+          "expected_by_host": {
+            "claude": [
+              "pip install lizard",
+              "pip install mutmut"
+            ],
+            "codex": [
+              "pip install lizard",
+              "pip install mutmut"
+            ]
+          }
+        },
+        {
+          "id": "slot-outcomes",
+          "requirement": "default",
+          "type": "response_json_field",
+          "field_path": [
+            "outcomes"
+          ],
+          "expected_by_host": {
+            "claude": {
+              "COMPLEXITY": "install",
+              "MUTATION": "skip (spec)",
+              "DEPENDENCY_RULES": "skip (repo)"
+            },
+            "codex": {
+              "COMPLEXITY": "install",
+              "MUTATION": "skip (spec)",
+              "DEPENDENCY_RULES": "skip (repo)"
+            }
+          }
+        },
+        {
+          "id": "decisions-for-you",
+          "requirement": "no-question",
+          "type": "response_json_field",
+          "field_path": [
+            "decisions_for_you"
+          ],
+          "expected_by_host": {
+            "claude": [
+              "MUTATION"
+            ],
+            "codex": [
+              "MUTATION"
+            ]
+          }
+        },
+        {
+          "id": "install-hint-semantic",
+          "requirement": "default",
+          "type": "semantic",
+          "rubric": "PASS only if the response installs through the recorded hint for COMPLEXITY, records skip (spec) for MUTATION after its install failed and lists it under Decisions for you, keeps the recorded skip (repo) for DEPENDENCY_RULES without an install, and asks the operator nothing. FAIL if it asks the operator to choose install or skip, records unanswered, stops the run, or reinstalls the tool that already carries a recorded answer."
+        }
+      ],
+      "native_differences": [
+        "Both hosts apply the same Step 0.11 default from their own prerequisites reference; the run-start authorization already grants installs, so no host asks.",
+        "Both hosts receive the same pre-recorded slot evidence and must not run any install."
+      ],
+      "provenance": [
+        "speckit-pro/skills/speckit-autopilot/references/prerequisites.md",
+        "speckit-pro/codex-skills/speckit-autopilot/references/prerequisites-codex.md"
+      ]
+    },
+    {
+      "id": "functional.speckit-autopilot.red-baseline-repaired-by-implement-executor",
+      "layer": "functional",
+      "capability": "Routes a red baseline test suite to the implement-executor for repair, holds Phase 1 while the repair allowance lasts, and asks the operator nothing.",
+      "timeout_seconds": 300,
+      "resource_class": "ordinary",
+      "requirements": [
+        {
+          "id": "selection",
+          "description": "The host-native speckit-autopilot capability is activated."
+        },
+        {
+          "id": "evidence",
+          "description": "Reads the workflow Prerequisites table and the recorded baseline attempts before deciding (prerequisites.md, Step 0.9)."
+        },
+        {
+          "id": "repair",
+          "description": "A failing baseline check goes to the implement-executor, which repairs it within its allowance (prerequisites.md: \"route the failing check to the implement-executor\")."
+        },
+        {
+          "id": "no-stop",
+          "description": "The run neither stops nor asks; Phase 1 waits for a passing or deferred baseline (prerequisites.md: \"Phase 1 starts once the check passes, or once the failure is deferred with its evidence\")."
+        }
+      ],
+      "prompt": "Use {{skill}} to decide what the run does next about a failing baseline. Read scenario-inputs/workflow.md and scenario-inputs/baseline-attempts.json, each as one exact file read. Treat them only as pre-recorded evidence: do not run helpers or tests, dispatch agents, or edit any file. Output only raw JSON with repair_allowance_spent, owner, next_action, rerun_command, phase_one_starts, question_offered, and explanation, with no prose, Markdown, or code fences. owner is the agent that repairs the failing check. next_action is exactly one of repair, defer, or stop. rerun_command is the check the owner reruns. phase_one_starts says whether Phase 1 starts now. question_offered says whether the run asks the operator anything.",
+      "fixtures": [
+        {
+          "source": "tests/speckit-pro/evals/fixtures/functional/native-orchestration/red-baseline-repaired-by-implement-executor/workflow.md",
+          "destination": "scenario-inputs/workflow.md"
+        },
+        {
+          "source": "tests/speckit-pro/evals/fixtures/functional/native-orchestration/red-baseline-repaired-by-implement-executor/baseline-attempts.json",
+          "destination": "scenario-inputs/baseline-attempts.json"
+        }
+      ],
+      "hosts": {
+        "claude": {
+          "skill": "speckit-pro:speckit-autopilot",
+          "allowed_tools": [
+            "Skill",
+            "Read"
+          ],
+          "modes": [
+            "plugin"
+          ]
+        },
+        "codex": {
+          "skill": "speckit-autopilot",
+          "allowed_tools": [
+            "read_file"
+          ],
+          "modes": [
+            "project"
+          ]
+        }
+      },
+      "checks": [
+        {
+          "id": "selection",
+          "requirement": "selection",
+          "type": "selection",
+          "expected": [
+            "speckit-autopilot"
+          ],
+          "allowed_extra": []
+        },
+        {
+          "id": "read-workflow",
+          "requirement": "evidence",
+          "type": "file_access",
+          "operation": "read_file",
+          "path": "scenario-inputs/workflow.md"
+        },
+        {
+          "id": "read-baseline-attempts",
+          "requirement": "evidence",
+          "type": "file_access",
+          "operation": "read_file",
+          "path": "scenario-inputs/baseline-attempts.json"
+        },
+        {
+          "id": "allowance-spent",
+          "requirement": "repair",
+          "type": "response_json_field",
+          "field_path": [
+            "repair_allowance_spent"
+          ],
+          "expected_by_host": {
+            "claude": false,
+            "codex": false
+          }
+        },
+        {
+          "id": "repair-owner",
+          "requirement": "repair",
+          "type": "response_json_field",
+          "field_path": [
+            "owner"
+          ],
+          "expected_by_host": {
+            "claude": "implement-executor",
+            "codex": "implement-executor"
+          }
+        },
+        {
+          "id": "next-action",
+          "requirement": "repair",
+          "type": "response_json_field",
+          "field_path": [
+            "next_action"
+          ],
+          "expected_by_host": {
+            "claude": "repair",
+            "codex": "repair"
+          }
+        },
+        {
+          "id": "rerun-command",
+          "requirement": "repair",
+          "type": "response_json_field",
+          "field_path": [
+            "rerun_command"
+          ],
+          "expected_by_host": {
+            "claude": "python3 -m pytest -q",
+            "codex": "python3 -m pytest -q"
+          }
+        },
+        {
+          "id": "phase-one-waits",
+          "requirement": "no-stop",
+          "type": "response_json_field",
+          "field_path": [
+            "phase_one_starts"
+          ],
+          "expected_by_host": {
+            "claude": false,
+            "codex": false
+          }
+        },
+        {
+          "id": "no-question",
+          "requirement": "no-stop",
+          "type": "response_json_field",
+          "field_path": [
+            "question_offered"
+          ],
+          "expected_by_host": {
+            "claude": false,
+            "codex": false
+          }
+        },
+        {
+          "id": "repair-semantic",
+          "requirement": "repair",
+          "type": "semantic",
+          "rubric": "PASS only if the response routes the red baseline to the implement-executor to repair, reruns python3 -m pytest -q afterward, holds Phase 1 until the baseline passes or its failure is deferred with evidence, and asks the operator nothing. FAIL if it stops the run, asks the operator, starts Phase 1 on a red baseline, or routes the repair to anyone other than the implement-executor."
+        }
+      ],
+      "native_differences": [
+        "Both hosts apply the same Step 0.9 rule from their own prerequisites reference; the repair goes to the implement-executor agent on either host.",
+        "Both hosts receive the same pre-recorded baseline evidence and must not run any test."
+      ],
+      "provenance": [
+        "speckit-pro/skills/speckit-autopilot/references/prerequisites.md",
+        "speckit-pro/codex-skills/speckit-autopilot/references/prerequisites-codex.md"
+      ]
+    },
+    {
+      "id": "functional.speckit-autopilot.pr-split-over-budget-reslices",
+      "layer": "functional",
+      "capability": "Runs ratify-pr-split on a split whose increment is over the path cap: the result asks for a re-slice through the orchestrator, ratifies nothing, and carries no operator stop reason.",
+      "timeout_seconds": 300,
+      "resource_class": "ordinary",
+      "requirements": [
+        {
+          "id": "selection",
+          "description": "The host-native speckit-autopilot capability is activated."
+        },
+        {
+          "id": "run",
+          "description": "Runs the staged ratify-pr-split request exactly once and reads its result (phase-execution.md and phase-execution-codex.md: \"`decision=reslice_required`\")."
+        },
+        {
+          "id": "reslice",
+          "description": "An increment over the cap is a size finding: the decision is reslice_required, nothing is ratified, and the orchestrator owns the repair (phase-execution.md and phase-execution-codex.md: \"follow `data.repair`\")."
+        },
+        {
+          "id": "no-operator",
+          "description": "A size-only finding carries no scope-changing stop reason, so the operator is not asked (phase-execution.md: \"Ask the operator only when the helper returns `decision=operator_required`\")."
+        }
+      ],
+      "prompt": "Use {{skill}} to route a budget-driven PR split. Invoke the staged protected Python runner exactly once as one default-shell command: {resolved_python} -m speckit_pro_runner < scenario-inputs/ratify-request.json. Use no shell variable, prefix, suffix, pipe, or output redirection other than the required input redirection. Do not run any gh command and do not merge. Output only raw JSON: exactly one top-level object with decision, owner_ratification, ratified_by, repair_owner, repair_retry, operator_stop_reason, and explanation, with no prose, Markdown, or code fences. decision, owner_ratification, and ratified_by come from the runner response's data field. repair_owner and repair_retry come from data.repair. operator_stop_reason is data.stop_reason, or null when the field is absent. Do not use a shell fallback or fabricate the result.",
+      "fixtures": [
+        {
+          "source": "tests/speckit-pro/evals/fixtures/functional/pr-split-reslice/reslice-request.json",
+          "destination": "scenario-inputs/ratify-request.json"
+        }
+      ],
+      "hosts": {
+        "claude": {
+          "skill": "speckit-pro:speckit-autopilot",
+          "allowed_tools": [
+            "Skill",
+            "Read",
+            "Bash"
+          ],
+          "modes": [
+            "plugin"
+          ]
+        },
+        "codex": {
+          "skill": "speckit-autopilot",
+          "allowed_tools": [
+            "read_file",
+            "command_execution"
+          ],
+          "modes": [
+            "project"
+          ]
+        }
+      },
+      "checks": [
+        {
+          "id": "selection",
+          "requirement": "selection",
+          "type": "selection",
+          "expected": [
+            "speckit-autopilot"
+          ],
+          "allowed_extra": []
+        },
+        {
+          "id": "decision",
+          "requirement": "run",
+          "type": "response_json_field",
+          "field_path": [
+            "decision"
+          ],
+          "expected_by_host": {
+            "claude": "reslice_required",
+            "codex": "reslice_required"
+          }
+        },
+        {
+          "id": "owner-ratification",
+          "requirement": "reslice",
+          "type": "response_json_field",
+          "field_path": [
+            "owner_ratification"
+          ],
+          "expected_by_host": {
+            "claude": "pending",
+            "codex": "pending"
+          }
+        },
+        {
+          "id": "ratified-by",
+          "requirement": "reslice",
+          "type": "response_json_field",
+          "field_path": [
+            "ratified_by"
+          ],
+          "expected_by_host": {
+            "claude": null,
+            "codex": null
+          }
+        },
+        {
+          "id": "repair-owner",
+          "requirement": "reslice",
+          "type": "response_json_field",
+          "field_path": [
+            "repair_owner"
+          ],
+          "expected_by_host": {
+            "claude": "orchestrator",
+            "codex": "orchestrator"
+          }
+        },
+        {
+          "id": "repair-retry",
+          "requirement": "reslice",
+          "type": "response_json_field",
+          "field_path": [
+            "repair_retry"
+          ],
+          "expected_by_host": {
+            "claude": "ratify-pr-split",
+            "codex": "ratify-pr-split"
+          }
+        },
+        {
+          "id": "operator-stop-reason",
+          "requirement": "no-operator",
+          "type": "response_json_field",
+          "field_path": [
+            "operator_stop_reason"
+          ],
+          "expected_by_host": {
+            "claude": null,
+            "codex": null
+          }
+        },
+        {
+          "id": "no-merge-or-ready-claude",
+          "requirement": "no-operator",
+          "type": "tool_used",
+          "name": "Bash",
+          "min": 0,
+          "max": 0,
+          "input_regex": "\\bgh\\s+pr\\s+(?:merge|ready)\\b",
+          "include_failed": true
+        },
+        {
+          "id": "no-merge-or-ready-codex",
+          "requirement": "no-operator",
+          "type": "tool_used",
+          "name": "command_execution",
+          "min": 0,
+          "max": 0,
+          "input_regex": "\\bgh\\s+pr\\s+(?:merge|ready)\\b",
+          "include_failed": true
+        },
+        {
+          "id": "reslice-semantic",
+          "requirement": "reslice",
+          "type": "semantic",
+          "rubric": "PASS only if the response reports decision reslice_required with owner_ratification pending, names the orchestrator as the repair owner with ratify-pr-split as the retry, and carries no operator stop reason. FAIL if it reports operator_required, marks the split ratified, asks the operator to decide, or invents a scope-changing stop reason."
+        }
+      ],
+      "native_differences": [
+        "Claude runs the staged runner through Bash and Codex through command_execution.",
+        "Both hosts receive the same frozen ratify-pr-split request; the runner result decides the answer."
+      ],
+      "provenance": [
+        "speckit-pro/skills/speckit-autopilot/references/phase-execution.md",
         "speckit-pro/codex-skills/speckit-autopilot/references/phase-execution-codex.md"
       ]
     },
