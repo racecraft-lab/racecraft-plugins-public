@@ -1,0 +1,75 @@
+[
+  {
+    "id": "seam-001",
+    "lane": "seam",
+    "severity": "major",
+    "kind": "coherence",
+    "files": [
+      "tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json:84",
+      "tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json:96",
+      "tests/speckit-pro/evals/fixtures/functional/legacy-selection.json:5837",
+      "speckit-pro/codex-skills/speckit-autopilot/references/post-implementation-codex.md:336",
+      "speckit-pro/skills/speckit-autopilot/references/post-implementation.md:528",
+      "speckit-pro/speckit_pro_runner/helpers/registry.py:636-643"
+    ],
+    "ripwire_command": "ripwire . --grep=detect-stack-manager-plan",
+    "summary": "Codex autopilot eval 7 expects the answer to say detect-stack-manager-plan is out of scope and not an active installed helper call, and the native catalog copy in legacy-selection.json repeats that expectation. Both hosts' Post guidance runs it in dry_run and the registry lists it as a golden_only, dispatchable mutation helper, so the eval rewards a wrong answer. This is the eval-side twin of pr-emission-and-stack-2-001 (parity fixture 04); functional-evals-1 did not record it.",
+    "proposed_fix": "Rewrite eval 7's expected_output and its expectation line (and the legacy-selection.json copy) to say the orchestrator runs detect-stack-manager-plan in dry_run per stack-manager.md, and keep final-reviewability-backstop as the only deferred helper named there.",
+    "in_flight_status": "still-open"
+  },
+  {
+    "id": "seam-002",
+    "lane": "seam",
+    "severity": "major",
+    "kind": "coherence",
+    "files": [
+      "speckit-pro/codex-skills/grill-me/SKILL.md:15-16",
+      "speckit-pro/codex-skills/speckit-prd/SKILL.md:15-16",
+      "speckit-pro/codex-skills/ubiquitous-language/SKILL.md:17-18",
+      "speckit-pro/codex-skills/speckit-coach/SKILL.md:12",
+      "speckit-pro/skills/grill-me/SKILL.md:19-20",
+      "speckit-pro/speckit_pro_runner/gates/payloads.py:409",
+      "tests/speckit-pro/layer1-structural/validate-skill-contracts.py:688-689"
+    ],
+    "ripwire_command": "ripwire . --grep=speckit-pro/skills/speckit-autopilot/references/grounding.md",
+    "summary": "Four Codex skills point at the shared grounding.md and capability-discovery.md contracts with a repo-root path (speckit-pro/skills/...). The Claude twins use ${CLAUDE_PLUGIN_ROOT}, and other Codex links use ../ paths that the payload builder rewrites; its regex (payloads.py:409) matches only ../ prefixes, so these four stay unresolvable in the built Codex payload (confirmed: every dist/codex copy of the link is dead). The pointer validator accepts the speckit-pro/ form and strips it before checking existence, so it locks the unreachable form in.",
+    "proposed_fix": "Write the four Codex pointers as ../../skills/speckit-autopilot/references/<file>.md (the form the payload rewrite repairs), and make the pointer validator resolve each link from the SKILL.md in the built payload instead of from the plugin root.",
+    "in_flight_status": "still-open"
+  },
+  {
+    "id": "seam-003",
+    "lane": "seam",
+    "severity": "blocking",
+    "kind": "coherence",
+    "files": [
+      "tests/speckit-pro/layer7-parity/03-reviewability-backstop-parent-child-routing/expected-equivalence.json:5-34",
+      "tests/speckit-pro/layer7-parity/03-reviewability-backstop-parent-child-routing/workflow.md:27",
+      "tests/speckit-pro/layer7-parity/run-parity-fixtures.py:409",
+      "tests/speckit-pro/layer7-parity/run-parity-fixtures.py:694-696"
+    ],
+    "ripwire_command": "ripwire . --grep=required_invariants",
+    "summary": "Parity fixture 03 has the same defect as parity-layer7-001 (fixture 02). It compares only table columns of the input workflow.md, which run_path copies unchanged into both output directories, and it declares no required_invariants, so live mode passes when autopilot does nothing. parity-layer7-001's fix names only fixture 02, and parity-layer7-006 missed fixtures 03 and 04 because it counted two tracked fixtures where four exist.",
+    "proposed_fix": "Retire fixture 03 from the legacy runner or compare artifacts the run must produce, and make the runner reject a fixture whose every compare source is the copied workflow.md unless required_invariants is declared.",
+    "in_flight_status": null
+  },
+  {
+    "id": "seam-004",
+    "lane": "seam",
+    "severity": "major",
+    "kind": "coherence",
+    "files": [
+      "speckit-pro/skills/speckit-autopilot/references/prerequisites.md:257-260",
+      "speckit-pro/codex-skills/speckit-autopilot/references/prerequisites-codex.md:263-265",
+      "speckit-pro/README.md:257-265",
+      "speckit-pro/skills/speckit-autopilot/references/consensus-protocol.md:225-236",
+      "speckit-pro/skills/speckit-autopilot/references/consensus-protocol.md:329-345",
+      "speckit-pro/agents/consensus-synthesizer.md:40-61",
+      "speckit-pro/codex-agents/consensus-synthesizer.toml:20-26",
+      "speckit-pro/speckit_pro_runner/helpers/read_only.py:5047-5051"
+    ],
+    "ripwire_command": "ripwire . --callers=parse_consensus_categories",
+    "summary": "Both hosts load consensus-mode and security-keywords at Step 0.6, and the README offers conservative, moderate and aggressive modes. Neither setting reaches anything that decides. The synthesizer dispatch template carries no mode line, both synthesizer definitions apply only the moderate rules, and Stage 3 applies any 2-of-3 edit. parse-consensus-categories reads only inputs.line and a fixed keyword list. Conservative and aggressive modes and a custom keyword list therefore change nothing, although functional-evals-2-002's eval and the README describe their effects.",
+    "proposed_fix": "Either pass the resolved mode and keyword list into the synthesizer prompt and the parse-consensus-categories request and implement the mode rules there, or remove the two settings from prerequisites, README and consensus-protocol.md.",
+    "in_flight_status": "still-open"
+  }
+]

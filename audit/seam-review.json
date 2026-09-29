@@ -1,0 +1,110 @@
+{
+  "duplicates": [
+    ["docs-001", "lifecycle-skills-001"],
+    ["integration-layer6-1-001", "integration-layer6-2-002"],
+    ["integration-layer6-1-002", "integration-layer6-2-006"],
+    ["structural-layers-1-002", "structural-layers-2-009"],
+    ["native-eval-harness-004", "structural-layers-2-001"],
+    ["pr-emission-and-stack-1-004", "pr-emission-and-stack-2-008"],
+    ["brokers-and-verification-003", "runner-core-001"],
+    ["autopilot-and-agents-007", "runner-core-004"],
+    ["brokers-and-verification-016", "pr-emission-and-stack-1-008"],
+    ["release-tooling-011", "structural-layers-2-003"],
+    ["functional-evals-1-002", "coach-and-formal-009"],
+    ["integration-layer6-1-004", "parity-layer7-003"],
+    ["parity-layer7-002", "functional-evals-2-001"],
+    ["pr-emission-and-stack-2-001", "seam-001"]
+  ],
+  "severity_corrections": [
+    {
+      "id": "native-eval-harness-004",
+      "from": "major",
+      "to": "blocking",
+      "reason": "Same issue as structural-layers-2-001 (test-native-eval-fixture-setup.py missing from the Layer 4 manifest), which re-verified as blocking. Two records of one issue at different severities must align."
+    },
+    {
+      "id": "integration-layer6-2-004",
+      "from": "major",
+      "to": "blocking",
+      "reason": "A check that passes on nothing. reduce-transcript-fixture.py:51-72 builds each committed synthesizer response from the keywords in expected.json, and run-return-format-fixtures.py:94-114 asserts those same keywords in CI replay mode (confirmed on fixture 05 parser-fixture.jsonl:2). No change to the synthesizer can fail Class 2 replay. Same rule the lane applied to integration-layer6-2-001."
+    },
+    {
+      "id": "brokers-and-verification-009",
+      "from": "minor",
+      "to": "major",
+      "reason": "research_broker.py:225-242 returns None for any root holding .claude-plugin or .codex-plugin, even with CLAUDE_PROJECT_DIR set, so the spec_text_detected privacy guard fails open in every such repository, this one included. That breaks the fail-closed rule, so it is a real defect. Not blocking: the blocking clause covers repository tooling and tests, this is shipped runtime, the guard still fires in ordinary consumer repos, and the plugin-root skip is documented as intended; the fault is over-broad detection."
+    },
+    {
+      "id": "release-tooling-001",
+      "from": "major",
+      "to": "minor",
+      "reason": "The shipped predicate is covered. validate-ci-release-contracts.py:481 asserts the exact shipped source line, including run_preflight == \"false\", against run-container-preflight.py, and test-hosted-windows-preflight.py:589-603 (in the Layer 4 manifest) runs the seven-case truth table on the shipped function loaded from run-container-preflight.py (line 37). The private copy is a redundant, looser duplicate, not a check that passes on nothing."
+    },
+    {
+      "id": "autopilot-and-agents-001",
+      "from": "major",
+      "to": "minor",
+      "reason": "post-implementation-codex.md:45 (Post row 14, Integration Suite) tells the Codex orchestrator to run the hardener once per spec between the MUTATION run and its block decision. The remaining drift is placement (Claude runs it in Phase 7 final verification, Codex in Post) and the 'Step 4 of Phase 7' anchor at hardener-delegation.md:17,29."
+    },
+    {
+      "id": "native-eval-harness-001",
+      "from": "major",
+      "to": "minor",
+      "reason": "The README table is accurate for run-native-evals.py, which accepts suite-manifest selectors 2, 3, 6 and 7 (README:210-215, run-native-evals.py:135). The residue is two entry points for one layer id (run-all.py dispatches the legacy runners), which is a cohesion issue, not a behavioral contradiction."
+    },
+    {
+      "id": "runner-core-002",
+      "from": "major",
+      "to": "minor",
+      "reason": "gate-tooling-decision.md is a dated decision record (2026-09-06) whose stated scope is 'decisions and contracts only ... gate wiring is the next layer'. No skill, agent or runner reads it as a live contract, so its drift from gate_discovery.py is a stale record, not a behavioral mismatch."
+    }
+  ],
+  "invalid": [
+    {
+      "id": "integration-layer6-1-006",
+      "reason": "The cited rule (error-recovery.md:64-70, phase-execution.md 'Blocked Actions Mid-Run') covers blocked actions once Phase 7 is running: vetoes, missing approvals, unavailable tools. Fixture 17 is a Plan-phase executor FAIL, which that rule does not cover, and phase-execution.md:2925-2928 still lists correctness stops that end the run. Offering 'stop and report' does not contradict the reference."
+    },
+    {
+      "id": "release-tooling-002",
+      "reason": "AGENTS.md:63-65 calls Jev optional for agents working on this repository and forbids checks from depending on it. It says nothing about the plugin's runtime dependency. The Codex manifest has no dependency mechanism, and speckit-pro/README.md:122-126 plus codex-skills/speckit-install/SKILL.md:212-215 and speckit-upgrade/SKILL.md:266-269 tell Codex users to add typesafe-jev. No contradiction remains."
+    },
+    {
+      "id": "parity-layer7-006",
+      "reason": "Partial. 'The tree holds two' is false: git tracks four fixtures (01 to 04) under tests/speckit-pro/layer7-parity, so the README's four-case count is right. The CI-wording and catalog-status sub-claims still hold. The miscount also hid seam-003."
+    },
+    {
+      "id": "coach-and-formal-009",
+      "reason": "Partial. The Codex canonical Post list (task-list-canonical-codex.md:55-67) has 13 rows, not 14; codex eval 7 also says 13, and '14' appears only in the Codex SKILL.md claim that functional-evals-1-001 reports. The core claim holds: the shared workflow template lacks the two Codex-only rows."
+    },
+    {
+      "id": "autopilot-and-agents-001",
+      "reason": "Partial. 'The Codex reference never tells the orchestrator to run it' is false (post-implementation-codex.md:45). The placement and anchor drift survives; see its severity correction."
+    }
+  ],
+  "cross_lane_confirmations": [
+    {
+      "note": "Codex autopilot eval 7 (and its native catalog copy in legacy-selection.json:5837) says detect-stack-manager-plan is out of scope. No functional-evals lane recorded it. Confirmed against both hosts' Post step and the registry, and recorded as a new finding.",
+      "recorded_as": ["seam-001", "pr-emission-and-stack-2-001"]
+    },
+    {
+      "note": "The Claude-only artifact-preview-observer, sweep-analyst and sweep-classifier have recorded host findings. The observer tool contract and step number are artifact-gallery-004 and -003; the receipt shape, anchor uniqueness and duplicated Codex stage text are brokers-and-verification-006, -007 and -015. The roster itself is coherent. agent_inventory.json maps each role to its Codex isolated_prompt_role file, validate-skill-contracts.py:836 and :877-885 exclude them and require the sweep prompts, and test-author-broker.py:203 covers preview-prompts/observer.md. Frontmatter model, effort and memory match the inventory for all 15 Claude agents, and TOML model, effort and sandbox match for all 13 Codex agents.",
+      "recorded_as": ["artifact-gallery-003", "artifact-gallery-004", "brokers-and-verification-006", "brokers-and-verification-007", "brokers-and-verification-015"]
+    },
+    {
+      "note": "docs-001 says the same ten-file Codex TOML list is repeated in docs-site/src/content/docs/install/codex.md (another lane). It is recorded there.",
+      "recorded_as": ["lifecycle-skills-001"]
+    },
+    {
+      "note": "pr-emission-and-stack-1-003 notes that fixture 22's replay terms are checked against text the fixture itself contains. The same tautology in the Class 2 return-format replay is recorded and raised to blocking in severity_corrections.",
+      "recorded_as": ["integration-layer6-2-004"]
+    },
+    {
+      "note": "parity-layer7-001's fix names only fixture 02. Fixture 03 has the identical vacuity and fixture 04 was checked (it declares required_invariants). Recorded as a new blocking finding.",
+      "recorded_as": ["seam-003"]
+    },
+    {
+      "note": "functional-evals-2-002 shows eval 4 asserting aggressive-mode semantics. The seam check found that no component implements any mode other than moderate, so the eval and the protocol both describe unimplemented behavior.",
+      "recorded_as": ["seam-004", "functional-evals-2-002"]
+    }
+  ]
+}
