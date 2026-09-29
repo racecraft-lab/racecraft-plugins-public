@@ -483,17 +483,16 @@ def sanitize_fallback_subject(subject: str) -> str:
 
 
 def _label_name(label: object) -> str | None:
-    if isinstance(label, str):
-        return label
-    name = label.get("name") if isinstance(label, dict) else None
-    return name if isinstance(name, str) else None
+    if isinstance(label, dict):
+        label = label.get("name")
+    return label if isinstance(label, str) else None
 
 
 def label_names(pr: Mapping[str, object]) -> set[str]:
     labels = pr.get("labels", [])
     if not isinstance(labels, list):
         raise CompositionError("pull request labels are not a list")
-    return {name for name in map(_label_name, labels) if name is not None}
+    return {name for label in labels if (name := _label_name(label)) is not None}
 
 
 def validate_release_note(
