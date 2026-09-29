@@ -1066,9 +1066,9 @@ class FunctionalHeadlessRunnerTests(unittest.TestCase):
                 self.assertFalse(cli.resolve().is_relative_to(root.resolve()))
                 supervisor = root / "supervisor.py"
                 supervisor.write_text(
-                    "import importlib.util,json,os,signal,sys\nfrom pathlib import Path\n"
-                    f"spec=importlib.util.spec_from_file_location('signal_witness_collector', {str(RUNNER_PATH)!r})\n"
-                    "runner=importlib.util.module_from_spec(spec)\nsys.modules[spec.name]=runner\nspec.loader.exec_module(runner)\n"
+                    "import json,os,signal,sys\nfrom pathlib import Path\n"
+                    f"sys.path.insert(0,{str(SHARED_LIB)!r})\nfrom script_loader import load_script\n"
+                    f"runner=load_script('signal_witness_collector', Path({str(RUNNER_PATH)!r}))\n"
                     f"runner.shutil.which=lambda host:{str(cli)!r}\n"
                     "before={s:signal.getsignal(s) for s in (signal.SIGTERM,signal.SIGHUP)}\n"
                     f"result=runner.capture_process('claude',[{str(cli)!r},{str(ready)!r}],b'',Path({str(root / 'evidence')!r}),Path({str(root)!r}),os.environ.copy(),30)\n"

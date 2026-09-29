@@ -12,7 +12,6 @@ import base64
 from contextlib import contextmanager
 from dataclasses import dataclass
 import hashlib
-import importlib.util
 import json
 import os
 from pathlib import Path, PurePosixPath
@@ -36,6 +35,7 @@ import native_eval_trigger
 import native_eval_upstream
 import native_eval_verification
 import trigger_process
+from script_loader import load_script
 
 
 _CASE_ID = re.compile(r"[a-z0-9][a-z0-9._-]*")
@@ -332,12 +332,9 @@ def _codex_helpers() -> object:
     if _CODEX_HELPERS is not None:
         return _CODEX_HELPERS
     path = Path(__file__).resolve().parents[1] / "layer2-trigger" / "run_codex_evals.py"
-    spec = importlib.util.spec_from_file_location("native_eval_codex_helpers", path)
-    if spec is None or spec.loader is None:
+    if not path.is_file():
         raise NativeAdapterError("Codex isolation helpers are unavailable")
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[spec.name] = module
-    spec.loader.exec_module(module)
+    module = load_script("native_eval_codex_helpers", path)
     _CODEX_HELPERS = module
     return module
 
