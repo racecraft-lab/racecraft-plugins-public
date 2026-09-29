@@ -1,0 +1,130 @@
+{
+  "ConsensusSynthesizerRegressionTests.test_codex_dispatch_names_the_custom_agent_in_the_native_argument#1": [
+    "`agent_type=\"<installed-agent-name>\"`",
+    "`agent_type=\"consensus-synthesizer\"`",
+    "A default or general-purpose worker is not the named synthesizer"
+  ],
+  "ConsensusSynthesizerRegressionTests.test_all_agreement_branches_are_explicit_and_fail_closed#1": [
+    "N = 1:",
+    "A high-confidence answer with no escape phrase",
+    "Low confidence or any escape phrase",
+    "N = 2:",
+    "Agreement produces `confidence: high`",
+    "Disagreement produces",
+    "N = 3:",
+    "Unanimity produces high confidence",
+    "A 2/3 majority wins while the dissent is preserved",
+    "If all three disagree",
+    "[ROUND_3_TIEBREAK]",
+    "Security override on a security route",
+    "apply the answer only when all three analysts agree",
+    "A 2/3 majority or no agreement returns `[ROUND_3_TIEBREAK]`",
+    "a keyword alone never stops the run"
+  ],
+  "ConsensusSynthesizerRegressionTests.test_keyword_only_route_uses_the_items_own_rule_when_no_analyst_flags_security#1": [
+    "**Security Route:** <security_route from parse-consensus-categories: tag | keyword | none; write JSON null as none>",
+    "every routed analyst returns `security_relevant: false`",
+    "An explicit `[security]` tag, or, on a keyword route, any analyst returning `security_relevant: true`, keeps unanimity"
+  ],
+  "ConsensusSynthesizerRegressionTests.test_security_relevant_raises_the_bar_only_on_a_security_route#1": [
+    "| **Non-security route** (`Security Route: none`) |",
+    "a `security_relevant: true` answer does not raise the bar",
+    "two disagreeing Round 1 analysts still escape to Round 2"
+  ],
+  "ConsensusSynthesizerRegressionTests.test_escape_phrases_and_security_override_are_complete#1": [
+    "insufficient context",
+    "not in this codebase",
+    "no precedent in this repo",
+    "outside my scope",
+    "cannot answer from this perspective",
+    "this is a [different category] question",
+    "security item arrives with fewer than three responses"
+  ],
+  "ConsensusSynthesizerRegressionTests.test_result_contract_preserves_evidence_dissent_and_exact_edits#1": [
+    "**Supporting Analysts:**",
+    "**Dissent:**",
+    "**Artifact Edit:**",
+    "- **File:**",
+    "- **Section:**",
+    "- **Action:**",
+    "- **Content:**",
+    "**Flags:**"
+  ],
+  "ConsensusSynthesizerRegressionTests.test_missing_failed_or_malformed_synthesis_cannot_apply_or_complete#1": [
+    "applies no edit",
+    "writes no completed Consensus Resolution Log row",
+    "does not mark the item complete",
+    "retry the same named synthesizer once with the same analyst responses",
+    "A second invalid result is",
+    "must never replace it with parent-authored synthesis"
+  ],
+  "Round3TiebreakGuidanceTests.test_round3_tiebreak_replaces_every_consensus_human_stop_in_the_protocol#1": [
+    "## Round 3 Tiebreak",
+    "a Round 2 all-disagree",
+    "a security item without 3/3 agreement",
+    "an analyst that fails its retry",
+    "conservative mode",
+    "one fresh `spec-context-analyst`",
+    "a `consensus-tiebreaker` at max effort",
+    "all prior analyst answers, the constitution, and the technical roadmap",
+    "the most conservative option that satisfies the spec",
+    "recorded as an assumption",
+    "the dissent is logged",
+    "`known_gaps`",
+    "is replaced by a fresh analyst, never by a human",
+    "`[SCOPE_DEFERRED]`",
+    "`unresolved_deferrals`",
+    "never a mid-run stop",
+    "An interactive run and an unattended run behave the same",
+    "Outcome `[ROUND 3]`",
+    "IF Flags includes [ROUND_3_TIEBREAK]: run the Round 3 tiebreak"
+  ],
+  "Round3TiebreakGuidanceTests.test_round3_tiebreak_replaces_every_consensus_human_stop_in_the_protocol#2": [
+    "AskUserQuestion",
+    "request_user_input",
+    "ask in place or STOP",
+    "STOP autopilot",
+    "Outcome=[HUMAN REVIEW]",
+    "Outcome `[HUMAN REVIEW]`",
+    "let the human decide",
+    "Any disagreement stops",
+    "stops for human review",
+    "surface to user",
+    "#human-review-needed"
+  ],
+  "Round3TiebreakGuidanceTests.test_tiebreaker_agent_is_max_effort_read_only_and_owns_round_three#1": [
+    "the most conservative option that satisfies the spec",
+    "**Agreement:** tiebreak",
+    "**Assumption:**",
+    "**Dissent:**",
+    "[SCOPE_DEFERRED]",
+    "never returns [ROUND_3_TIEBREAK] or [ESCAPE_TO_ROUND_2]",
+    "**Round:** 3",
+    "skills/speckit-autopilot/references/consensus-protocol.md"
+  ],
+  "Round3TiebreakGuidanceTests.test_round3_dispatch_names_the_tiebreaker_on_both_hosts#1": [
+    "`speckit-pro:consensus-tiebreaker`",
+    "`spawn_agent(agent_type=\"consensus-tiebreaker\"",
+    "Round 3 uses no other synthesizer"
+  ],
+  "Round3TiebreakGuidanceTests.test_round3_tiebreak_covers_the_pr_feedback_sweep_inside_its_isolation#1": [
+    "**When consensus does not answer, the item takes a Round 3 tiebreak.**",
+    "one more `stage=synthesis` call by a fresh `sweep-analyst`",
+    "`agreement` of `tiebreak`",
+    "`scope_unsettled`",
+    "`scope_deferred`",
+    "never `consensus-synthesizer`",
+    "The orchestrator is still not a conduit",
+    "Nothing stops the run"
+  ],
+  "Round3TiebreakGuidanceTests.test_round3_tiebreak_covers_the_pr_feedback_sweep_inside_its_isolation#2": [
+    "the item goes to human review",
+    "It stops the run whether or not anything was amended",
+    "stops that run too"
+  ],
+  "Round3TiebreakGuidanceTests.test_round3_tiebreak_covers_the_pr_feedback_sweep_inside_its_isolation#3": [
+    "`tiebreak: true`",
+    "agreement `tiebreak`",
+    "basis `scope_unsettled`"
+  ]
+}

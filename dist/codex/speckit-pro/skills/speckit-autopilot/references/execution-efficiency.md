@@ -36,7 +36,8 @@ ownership from the caller's current workflow.
 - `start`: open or recover the same workflow's ledger before the first phase.
   Pass `inputs.spec_file` as the resolved repo-relative feature spec path when
   available; the workflow can live elsewhere. If omitted, only an existing
-  adjacent spec can supply requirement IDs, otherwise failures use `unresolved`.
+  adjacent spec can supply requirement IDs, otherwise untagged failures take the
+  `untagged-<digest>` family, or `unresolved` when no failing set is recorded.
   An existing spec's registry freezes at start; later paths or contents never
   reset counters.
   Agent replacement, compaction, a reclaimed state mirror, and resume never
@@ -58,8 +59,11 @@ ownership from the caller's current workflow.
 - `reserve`: before each native dispatch or command, supply `dispatch_id` and
   `kind=implementation|corrective|verification|infrastructure`. A corrective
   dispatch supplies `failure_invariant`: a stable approved requirement or
-  invariant ID. Unknown mappings share `unresolved`; changed wording, task IDs,
-  agents, and commits are not new families.
+  invariant ID. A failure that names no approved ID takes the family
+  `untagged-<digest>` from the failing set the runner last recorded, so
+  unrelated untagged failures get separate reservations and the same set keeps
+  one; with no recorded failing set they share `unresolved`. Changed wording,
+  task IDs, agents, and commits are not new families.
   A review fix for the increment under review also supplies
   `review_remediation`: `{"tdd_unit": <the increment's TDD unit>, "paths":
   [<every repo-relative path the fix touches>]}`, plus an explicit `spec_file`
@@ -90,6 +94,41 @@ ownership from the caller's current workflow.
   implementation notes and the workflow file, never a new `tasks.md` line, so
   a serial plan never stops mid-run on a deferral. Increment
   allowances archive with the rest of the allowance in `corrective_epochs`.
+  An implementation dispatch also supplies `tdd_units`: the TDD units of the
+  tasks it runs (the frozen batch's `tdd_units`). The runner then snapshots the
+  worktree itself at `reserve` (HEAD plus a digest of every changed path) and,
+  at `complete`, records on the dispatch the sorted `changed_paths` whose
+  content differs from that snapshot. Runner byproducts and the implementation
+  notes are never counted. Without git, no edit is recorded. Parallel
+  dispatches record each other's edits too, so the ownership check below, not
+  the edit record alone, keeps one unit from claiming another unit's file.
+  A test-only fix to test code the increment itself edited earlier in this run
+  (for example removing a mock that broke an existing test) instead supplies
+  `test_fix`: `{"tdd_unit": <the increment's TDD unit>, "paths": [<every
+  repo-relative test file the fix touches>]}`, plus the explicit `spec_file`.
+  It needs no `begin-replan-epoch` and no operator event. The runner admits it
+  only when every path passes the same ownership check as `review_remediation`
+  (the unit's `owns` in a current sidecar, overlapping no other open unit), is
+  a test file under the runner's test-file classifier, and appears in the
+  `changed_paths` of one of that unit's own implementation dispatches in this
+  run. The increment's tasks may still be open, and the file need not be new:
+  an existing test file the increment edited qualifies. The admission is one
+  test fix per increment per corrective epoch, recorded in
+  `test_fix_allowances`, returned as `test_fix_allowance=increment`, and it
+  never draws on the run-wide `corrective_cycles` budget or changes any other
+  ceiling. Anything else takes the ordinary run-wide path unchanged, and the
+  result carries `test_fix_allowance=run_wide` and the reason in
+  `test_fix_ineligible`: `test_fix_allowance_spent`, an ownership reason from
+  the list above, `path_not_test_code`, `path_not_edited_by_increment`, or
+  `worktree_state_unavailable`. The runner also snapshots the worktree when it
+  admits the fix. A `complete` with `outcome=completed` succeeds only when
+  every path the runner sees changed since then is one of the declared test
+  files and at least one path changed; otherwise it records nothing and returns `test_fix_scope_unproven`
+  (`disposition=checkpoint_required`), and the dispatch can only be completed
+  `failed`. Run no other dispatch while a test fix is open: its edits would
+  count against the fix. When the run-wide budget is spent and the fix
+  qualifies, reserve it as a test fix; never ask the operator for a re-plan or a
+  corrective exception for it.
   A planning gate's own remediation (G2 through G7, most often G6 Analyze)
   instead supplies `gate_remediation`: `{"gate": "G6", "paths": [<every
   repo-relative path the fix touches>]}`, plus the same explicit `spec_file`.
@@ -121,14 +160,34 @@ ownership from the caller's current workflow.
   distinct from failed required verification; neither authorizes blind retry.
 - `reconcile`: permit one read-only inspection of a missing native result for
   its `dispatch_id`. Inspect owned effects and retained output, not just agent
-  liveness. This records an unknown outcome and `checkpoint_required`, even
-  when `reconciliation_allowed=true` permits that one inspection. It does not
-  authorize continuing writes, a new dispatch ID, or a replacement launch.
-  Resolve a recovered result only with `action=complete` and independently
+  liveness. This records an unknown outcome, even when
+  `reconciliation_allowed=true` permits that one inspection. An unknown outcome
+  blocks only its own unit (below); it does not authorize continuing writes, a
+  new dispatch ID, or a replacement launch. Independent units stay dispatchable.
+  A recovered result also resolves with `action=complete` and an independently
   recovered parent `native_observation` containing `native_event_id`, `run_id`,
   `dispatch_id`, `action=dispatch_result`, and matching
-  `outcome=completed|failed|expected_tdd_red`. Without that genuine event,
-  unknown remains a checkpoint; worker text or a receipt cannot clear it.
+  `outcome=completed|failed|expected_tdd_red`. Worker text or a receipt cannot
+  clear an unknown outcome; the runner-classified path below needs no operator.
+- `reconcile-unit`: settle an unknown implementation dispatch with no operator
+  event. Pass `tdd_units` on every implementation `reserve`; the runner records
+  the dispatch's worktree snapshot and its unit, and an unknown outcome then
+  blocks a new dispatch only when it shares that unit (`reasons` carries
+  `unknown_dispatch_blocks_unit` and `blocked_by`). An implementation dispatch
+  without `tdd_units` is unscoped and blocks all new dispatch until settled.
+  Spawn a read-only reconciler agent that inspects the unit's owned paths and
+  reports `no_effect`, `partial`, or `complete`. Pass `dispatch_id`, an
+  explicit `spec_file`, and that report as `classification`. The runner
+  recomputes the class from git state under the unit's owned paths (task-execution
+  sidecar) and accepts only a matching claim; a mismatch returns
+  `unit_classification_mismatch` and changes nothing. `no_effect` marks the
+  dispatch `failed`, and the unit takes a new `dispatch_id` at once. `partial`
+  and `complete` keep it unknown: reserve a `kind=verification` dispatch with
+  `verifies_dispatch_id`, run it, and record it `completed`; then call
+  `complete` on the unknown dispatch with `verification_dispatch_id`. The class
+  fixes the outcome (`complete` records `completed`, `partial` records `failed`,
+  so only unfinished work is re-dispatched). A verification that has not
+  completed returns `unit_verification_not_completed`.
 - `authorize-corrective-retry`: after a corrective reservation owner's
   dispatch has failed because of an infrastructure error in the host result,
   and the operator has explicitly approved recovery, atomically reserve one retry under that same
@@ -144,6 +203,11 @@ ownership from the caller's current workflow.
   dispatch used that reservation. Dispatch only after it returns `continue`.
   A second retry, self-asserted approval, or a failed result without a recorded
   native failure event remains blocked.
+  An agent may issue this approval itself: pass `agent_authorized: true`,
+  `failure_kind=infrastructure`, and no `native_observation`. The runner takes
+  the failure event from the failed dispatch's own recorded native resolution,
+  derives the event ID `agent-recovery:<dispatch_id>`, and allows one such retry
+  per run; the next goes to the operator.
 - `authorize-corrective-continuation`: after a corrective executor or its
   authorized infrastructure retry completes, a required Analyze consensus
   edit can make the Tasks metadata fingerprint stale. If the two-cycle ceiling
@@ -162,6 +226,10 @@ ownership from the caller's current workflow.
   The Tasks producer may update only source-bound metadata, then the parent
   revalidates G5 before G6. A second continuation or a failed/unknown source
   remains blocked; this action is not a general repair-budget reset.
+  Agent path: pass `agent_authorized: true` and an explicit `spec_file` with no
+  `native_observation`. The runner admits it when the same metadata-only proof
+  as `metadata_only` holds, derives `agent-continuation:<dispatch_id>`, and
+  allows two per run; otherwise the operator approves.
 - `authorize-corrective-exception`: when an ordinary corrective `reserve` for a
   reproduced application failure returns `disposition=defer` with
   `corrective_run_budget_exhausted` or `failure_family_budget_exhausted` (a
@@ -219,6 +287,14 @@ ownership from the caller's current workflow.
   the counters. The run ID, clocks, and consumed events carry over; archived
   dispatch IDs and events can never be reused. A re-plan the operator did not
   order is not grounds for a new epoch.
+  Agent path: pass `agent_authorized: true` and the explicit `spec_file` with
+  no `native_observation`. The runner opens the epoch when a deferral is open
+  with its allowance spent, the spec and its invariants are the bound ones, the
+  task-execution sidecar matches the current spec, plan, and tasks and differs
+  from the `invariant_binding.planning_fingerprints` recorded when the stage
+  epoch opened, and every dispatch is settled. It derives `agent-replan:<n>`
+  and allows two per run. A rescope, a ledger without recorded fingerprints, or
+  the third re-plan goes to the operator.
 - `begin-stage-epoch`: when the invocation argv names `--stage implement`,
   call it once after `start`, after Step 0.6c has written the resolved `Stage`
   row. Pass `autopilot_args`, the same invocation argv given to
@@ -312,14 +388,15 @@ reservation (`failure_family_budget_exhausted`), the helper first asks whether
 that family's previous correction measurably converged, judged only from
 evidence the runner recorded itself. Every `execute-verification` run parses
 the output it executed, from a closed set of formats (unittest, pytest, bun,
-and jest), into `failing_checks` on its verification dispatch: `command_id`,
+jest, go test, cargo test, vitest, mocha, and JUnit XML), into `failing_checks` on its verification dispatch: `command_id`,
 `command_sha256` (the digest of the argv it ran), `format`, the sorted
 `failing` test identifiers, the `passing` identifiers when the format names
 them, `checks_run` (the run's own summary count), an `output_sha256` digest,
 and `recorded_at`. No
 helper action accepts this field, so a caller cannot supply it. Output in no
 supported format, output matching two formats, a nonzero exit naming no
-failure, or a command that did not finish records `failing: null`.
+failure, or a command that did not finish records `failing: null`. A plain `go test` prints no check count, so
+run `go test -v`; without it `checks_run` is unknown and no correction is admitted as progress.
 
 A family's first correction stores the newest recorded failure as its
 `baseline`, and pins `spec_file` (the bound spec when the run has one, else
@@ -373,20 +450,42 @@ entry as `deferred`: `dispatch_id`, `reason`, `unit_kind` (`failure_family`,
 `reserve` for the same `dispatch_id` returns that entry again. Record the
 deferred item with the task or gate it blocks and the exact gate output, then
 keep executing every independent task, increment, gate, and Post check. A
-deferral is never a stop and never a mid-run question. At the end, list every
-entry of the current `deferred` list in the one end-of-run consolidated
-request. An entry still unresolved at the end makes `finalize-run` return
-`outcome=human_stop`: the run never finalizes ready for review over it, a
-gate's included. `authorize-corrective-exception` and `begin-replan-epoch` are
-end-of-run tools that act on the operator's answer to that request. A new
+deferral is never a stop and never a mid-run question. When a later
+corrective dispatch for the same unit completes, the ledger marks the entry
+resolved itself: it adds `resolved_by` (that dispatch ID) and `resolved_at`
+(its completion time) and keeps the entry for audit. A dispatch resolves an
+entry only when the ledger ties it to the entry's unit: the reservation or
+`corrective_exception` of that failure family (or failure class), the
+increment's own review allowance, or the gate's allowance. It
+must be reserved at or after `deferred_at` and have `outcome=completed`. No
+request can name a resolution, and a failed or unknown result resolves
+nothing. At the end, list every unresolved entry of the current `deferred`
+list in the one end-of-run request; `finalize-run` omits resolved
+entries. An entry still unresolved at the end first climbs the escalation
+tiers (tier 2, then tier 3, recorded per unit in `escalation_allowances` and
+capped at 3 tier-3 retries per run). A unit that failed every tier is listed
+under "Decisions for you" in the request of a stack that is still ready for
+review; only a required gate that is not green makes `finalize-run` return
+`outcome=human_stop`. `authorize-corrective-exception` and `begin-replan-epoch`
+are end-of-run tools that act on the operator's answer to that request. A new
 allowance archives the list into `corrective_epochs` with the rest of the
 spent allowance. The ledger validates every entry on each call: an entry whose
 allowance the ledger does not show as spent, a duplicate, or an out-of-order
-clock is an integrity failure that stops the run.
+clock is an integrity failure that stops the run, and so is a resolution the
+ledger's own records do not prove. A ledger written before resolutions existed
+has no resolution fields and still validates; its entries stay unresolved.
 
 If `disposition=checkpoint_required`, stop new work and record remaining work,
 owned in-flight dispatches, unknown effects, consumed reservations, elapsed
-time, and the required operator decision. Never call this completion or a
+time, and the required operator decision. An unknown dispatch outcome alone is
+not a checkpoint: reconcile it with `reconcile-unit` and keep dispatching
+independent units. A `checkpoint_required` whose `reasons` is only
+`unknown_dispatch_blocks_unit` means reconcile each `blocked_by` id, not stop;
+after `unit_classification_mismatch`, re-inspect and call once more with the
+class the paths show, never cycling the three values. Read
+`unknown_dispatch_ids` from `status` before each wave. A corrective dispatch's
+scope is its failure family, so do not reserve one against a failure inside a
+still-unknown unit. Never call this completion or a
 successful runtime measurement. Keep existing run status `in_progress` or
 `awaiting_review` as applicable and mirror the execution-control disposition;
 do not invent a top-level status. Independent approved work can continue only
@@ -475,7 +574,10 @@ Workers supply their result blocks, never the independent native observations.
 
 Missing, duplicate, reordered, stale, or invalid evidence blocks recording;
 never discard earlier reports to make a record pass. An unfinished report is
-persisted with `helper_exit_code=1` and `disposition=checkpoint_required`.
+persisted with `helper_exit_code=1`, `disposition=redispatch`, and a `repair` record naming each
+batch's agent and its unfinished task IDs. Redispatch only those tasks to that agent within the
+shared allowance, then record the next report; defer per the Failure Escalation Protocol when
+repair fails. Nothing is marked complete from an unfinished report.
 On a partial batch's later report, carry every previously complete task's block
 and evidence references unchanged; identical native observations may be carried
 only for those completed tasks. Resume unfinished work without replaying them.

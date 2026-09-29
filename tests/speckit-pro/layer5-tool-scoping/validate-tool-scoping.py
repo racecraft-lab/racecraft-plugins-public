@@ -46,6 +46,7 @@ READ_ONLY_ROLES = (
     "domain-researcher",
     "clarify-executor",
     "consensus-synthesizer",
+    "consensus-tiebreaker",
 )
 UNTRUSTED_INPUT_CONSUMERS = ("sweep-classifier", "sweep-analyst")
 RESEARCH_BROKER_TOOLS = {
@@ -117,6 +118,7 @@ CODEX_SANDBOX_POLICY = {
     "clarify-executor": "read-only",
     "codebase-analyst": "read-only",
     "consensus-synthesizer": "read-only",
+    "consensus-tiebreaker": "read-only",
     "domain-researcher": "read-only",
     "formal-model-author": "workspace-write",
     "implement-executor": "workspace-write",
@@ -224,6 +226,16 @@ def _first_named_tool_violation(text: str) -> str:
     return ""
 
 
+MODEL_AND_EFFORT_PINS = (
+    ("phase-executor", "effort", "high", "measured against max, no quality loss"),
+    ("consensus-synthesizer", "model", "sonnet", "bounded rule-applier"),
+    ("consensus-synthesizer", "effort", "high", "bounded rule-applier runs at the documented default"),
+    ("consensus-tiebreaker", "model", "sonnet", "same model tier as the synthesizer"),
+    ("consensus-tiebreaker", "effort", "max", "the Round 3 tiebreak is a judgment call"),
+)
+TIEBREAK_TWINS = ("consensus-synthesizer", "consensus-tiebreaker")
+
+
 class ValidateToolScoping(unittest.TestCase):
     def assert_denied(self, denials: list[str], tool: str, agent: str) -> None:
         self.assertIn(tool, denials, f"{agent} must deny '{tool}' in disallowedTools but does not")
@@ -327,14 +339,13 @@ class ValidateToolScoping(unittest.TestCase):
             with self.subTest(msg=f"{agent_name} does not reference retired TeamCreate tooling"):
                 self.assertNotIn("TeamCreate", _read(agent_file))
 
-        with self.subTest(msg="phase-executor effort is high (measured against max, no quality loss)"):
-            self.assertEqual("high", _yaml_field(AGENTS_DIR / "phase-executor.md", "effort"))
+        for agent, field, expected, why in MODEL_AND_EFFORT_PINS:
+            with self.subTest(msg=f"{agent} {field} is {expected} ({why})"):
+                self.assertEqual(expected, _yaml_field(AGENTS_DIR / f"{agent}.md", field))
 
-        with self.subTest(msg="consensus-synthesizer model is sonnet"):
-            self.assertEqual("sonnet", _yaml_field(AGENTS_DIR / "consensus-synthesizer.md", "model"))
-
-        with self.subTest(msg="consensus-synthesizer effort is high (bounded rule-applier runs at the documented default)"):
-            self.assertEqual("high", _yaml_field(AGENTS_DIR / "consensus-synthesizer.md", "effort"))
+        with self.subTest(msg="consensus-tiebreaker carries the synthesizer's read-only tool set"):
+            tools = [_yaml_field(AGENTS_DIR / f"{agent}.md", "disallowedTools") for agent in TIEBREAK_TWINS]
+            self.assertEqual(tools[0], tools[1])
 
     def test_codex_agent_sandbox_mode_scoping(self) -> None:
         with self.subTest(msg="codex agent directory exists (fail closed)"):

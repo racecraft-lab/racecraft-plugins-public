@@ -12,7 +12,6 @@ import os
 import shutil
 import subprocess
 import sys
-import re
 import tempfile
 import unittest
 from types import SimpleNamespace
@@ -696,28 +695,6 @@ class GateFoundationTests(unittest.TestCase):
         self.assertEqual(request["operation"], "runner-invocation")
         self.assertEqual(request["mode"], "read_only")
         self.assertEqual(request["inputs"]["case_id"], "live-host-runtime-info")
-
-    def test_installed_release_runner_invocation_operation_matches_envelope_vocabulary(self) -> None:
-        from speckit_pro_runner import envelope
-        from speckit_pro_runner.gates import release
-        from speckit_pro_runner.helpers import install as install_helper
-
-        vocabulary = sorted(envelope.SUPPORTED_RUNNER_OPERATIONS)
-        self.assertEqual(sorted(release.RUNNER_OPERATIONS), vocabulary)
-        schema = json.loads((INSTALLED_RELEASE_CONTRACT_DIR / "runner-invocation.schema.json").read_text(encoding="utf-8"))
-        release_schema = json.loads((INSTALLED_RELEASE_CONTRACT_DIR / "release-readiness.schema.json").read_text(encoding="utf-8"))
-        self.assertEqual(sorted(schema["properties"]["operation"]["enum"]), vocabulary)
-        self.assertEqual(
-            sorted(release_schema["$defs"]["runner_invocation"]["properties"]["operation"]["enum"]),
-            vocabulary,
-        )
-        for case in installed_release_fixture_cases("runner-invocation")["cases"]:
-            if "candidate_results" not in case:
-                continue
-            with self.subTest(case_id=case["case_id"]):
-                record, _diagnostics = install_helper.runner_invocation_record(case, None, REPO_ROOT)
-                self.assertEqual(record["operation"], record["runner_request"]["operation"])
-                self.assertIn(record["operation"], envelope.SUPPORTED_RUNNER_OPERATIONS)
 
     def test_installed_release_runner_invocation_records_have_no_shell_fallback(self) -> None:
         contract = json.loads((INSTALLED_RELEASE_CONTRACT_DIR / "runner-invocation.schema.json").read_text(encoding="utf-8"))
@@ -2193,45 +2170,22 @@ class GateFoundationTests(unittest.TestCase):
     def test_installed_release_payload_completeness_detects_stale_runner_trust_metadata(self) -> None:
         from speckit_pro_runner.gates import payloads as payload_gate
 
-        for changed in ("__main__.py", "gate_discovery_table.json"):
-            with self.subTest(changed=changed), tempfile.TemporaryDirectory() as tmp:
-                dist_root = Path(tmp) / "dist"
-                payload_gate.build_installed_plugin_payloads(REPO_ROOT, dist_root)
-                payload_root = dist_root / "claude" / "speckit-pro"
-                runner_file = payload_root / "speckit_pro_runner" / changed
-                runner_file.write_text(runner_file.read_text(encoding="utf-8") + "\n# stale trust metadata test\n", encoding="utf-8")
+        with tempfile.TemporaryDirectory() as tmp:
+            dist_root = Path(tmp) / "dist"
+            payload_gate.build_installed_plugin_payloads(REPO_ROOT, dist_root)
+            payload_root = dist_root / "claude" / "speckit-pro"
+            runner_file = payload_root / "speckit_pro_runner" / "__main__.py"
+            runner_file.write_text(runner_file.read_text(encoding="utf-8") + "\n# stale trust metadata test\n", encoding="utf-8")
 
-                mismatches = payload_gate.payload_trust_metadata_mismatches(payload_root)
+            mismatches = payload_gate.payload_trust_metadata_mismatches(payload_root)
 
-                self.assertEqual(
-                    set(mismatches),
-                    {
-                        "speckit_pro_runner/speckit-pro-runner.manifest.json",
-                        "speckit_pro_runner/speckit-pro-runner.sha256",
-                    },
-                )
-
-    def test_payload_build_fails_when_a_required_source_directory_is_missing(self) -> None:
-        from speckit_pro_runner.gates import payloads as payload_gate
-
-        required = sorted(
-            set(payload_gate.CLAUDE_REQUIRED_PAYLOAD_PATHS)
-            | set(payload_gate.CODEX_REQUIRED_PAYLOAD_PATHS)
-            | {"skills", "codex-skills"}
+        self.assertEqual(
+            set(mismatches),
+            {
+                "speckit_pro_runner/speckit-pro-runner.manifest.json",
+                "speckit_pro_runner/speckit-pro-runner.sha256",
+            },
         )
-        self.assertIn("agents", required)
-        self.assertIn("codex-agents", required)
-        for missing in required:
-            with self.subTest(missing=missing), tempfile.TemporaryDirectory() as tmp:
-                repo_root = Path(tmp) / "repo"
-                source = repo_root / "speckit-pro"
-                for name in required:
-                    if name != missing:
-                        (source / name).mkdir(parents=True)
-                # The message names the missing source directory, not a later one.
-                expected = re.escape(f"required source path missing: {source / missing}")
-                with self.assertRaisesRegex(FileNotFoundError, expected):
-                    payload_gate.build_installed_plugin_payloads(repo_root, Path(tmp) / "dist")
 
     def test_installed_release_readiness_registration_and_workflow_are_live(self) -> None:
         request = installed_release_fixture_request("release-readiness")

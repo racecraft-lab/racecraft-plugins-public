@@ -1,0 +1,6 @@
+{
+  "failing_check": "python3 -m pytest -q",
+  "failing_output": "1 failed, 42 passed: tests/test_math.py::test_add",
+  "repair_allowance": 2,
+  "repair_attempts": 0
+}

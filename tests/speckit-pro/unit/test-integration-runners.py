@@ -228,7 +228,7 @@ class Layer6RunnerTests(unittest.TestCase):
             term_exits: dict[str, int] = {}
             for name, expected in {
                 "forbidden-response-present": {"response_assertions": [{"subagent_type": "speckit-pro:codebase-analyst", "must_not_contain_any": ["src/auth.ts"]}]},
-                "forbidden-response-absent": {"response_assertions": [{"subagent_type": "speckit-pro:codebase-analyst", "must_not_contain_any": ["HUMAN REVIEW NEEDED"]}]},
+                "forbidden-response-absent": {"response_assertions": [{"subagent_type": "speckit-pro:codebase-analyst", "must_not_contain_any": ["ROUND_3_TIEBREAK"]}]},
                 "term-present": {"must_include_terms": ["Analyze the auth module"]},
                 "term-absent": {"must_include_terms": ["Protocol:"]},
             }.items():

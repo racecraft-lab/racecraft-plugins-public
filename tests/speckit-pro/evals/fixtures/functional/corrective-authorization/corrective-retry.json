@@ -36,9 +36,9 @@
         "dispatch_id": "owner"
       },
       "expect": {
-        "exit_code": 1,
-        "status": "expected_failure",
-        "disposition": "checkpoint_required"
+        "exit_code": 0,
+        "status": "ok",
+        "disposition": "continue"
       }
     },
     {

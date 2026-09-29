@@ -1,0 +1,19 @@
+{
+  "schema": "corrective-authorization-replay/v1",
+  "description": "go test -v output the runner executed lets a shrinking failing set continue one approved family with no operator event.",
+  "steps": [
+    {"id": "spec", "place_spec": "spec.md"},
+    {"id": "stage-first-output", "place_check": "go-test-v.txt"},
+    {"id": "start", "action": "start", "expect": {"exit_code": 0, "status": "ok", "disposition": "continue"}},
+    {"id": "reserve-verify-1", "action": "reserve", "inputs": {"dispatch_id": "verify-1", "kind": "verification"}, "expect": {"exit_code": 0, "status": "ok", "disposition": "continue"}},
+    {"id": "run-verify-1", "action": "execute-verification", "helper": "execute-verification", "inputs": {"command_id": "UNIT_TEST", "dispatch_id": "verify-1"}, "expect": {"exit_code": 0, "status": "ok"}},
+    {"id": "complete-verify-1", "action": "complete", "inputs": {"dispatch_id": "verify-1", "outcome": "failed"}, "expect": {"exit_code": 0, "status": "ok", "disposition": "continue"}},
+    {"id": "reserve-fix-1", "action": "reserve", "inputs": {"dispatch_id": "fix-1", "kind": "corrective", "failure_invariant": "FR-001"}, "expect": {"exit_code": 0, "status": "ok", "disposition": "continue"}},
+    {"id": "complete-fix-1", "action": "complete", "inputs": {"dispatch_id": "fix-1", "outcome": "completed"}, "expect": {"exit_code": 0, "status": "ok", "disposition": "continue"}},
+    {"id": "stage-shrunk-output", "place_check": "go-test-v-shrunk.txt"},
+    {"id": "reserve-verify-2", "action": "reserve", "inputs": {"dispatch_id": "verify-2", "kind": "verification"}, "expect": {"exit_code": 0, "status": "ok", "disposition": "continue"}},
+    {"id": "run-verify-2", "action": "execute-verification", "helper": "execute-verification", "inputs": {"command_id": "UNIT_TEST", "dispatch_id": "verify-2"}, "expect": {"exit_code": 0, "status": "ok"}},
+    {"id": "complete-verify-2", "action": "complete", "inputs": {"dispatch_id": "verify-2", "outcome": "failed"}, "expect": {"exit_code": 0, "status": "ok", "disposition": "continue"}},
+    {"id": "reserve-fix-2", "action": "reserve", "inputs": {"dispatch_id": "fix-2", "kind": "corrective", "failure_invariant": "FR-001"}, "expect": {"exit_code": 0, "status": "ok", "disposition": "continue", "ledger": {"corrective_cycles": 1, "dispatches.verify-1.failing_checks.format": "go", "dispatches.verify-2.failing_checks.failing": ["TestGroup", "TestGroup/inner_bad"], "dispatches.fix-2.baseline": "verify-2"}}}
+  ]
+}

@@ -23,8 +23,12 @@ when its disposition permits. Resume and agent replacement never reset budget.
 - **Subagent returns an empty/incomplete summary:** Reserve the one read-only
   reconciliation with `execution-control action=reconcile`. Inspect retained
   output and owned effects; a supported `SendMessage` may request only the
-  already-produced result, not continuing writes. Unknown effects require an
-  honest checkpoint, never a fresh retry or direct-command fallback. Proven
+  already-produced result, not continuing writes. An unknown outcome blocks
+  only its own unit: spawn a read-only reconciler over the unit's owned paths
+  and settle it with `execution-control action=reconcile-unit` (see
+  [Bounded Execution](./execution-efficiency.md)). `no_effect` allows a new
+  dispatch of that unit with no operator event; `partial` and `complete` need
+  a verification dispatch first. Never use a direct-command fallback. Proven
   partial results retain completed tasks; only unfinished work may be reserved.
 - **A parallel wave exceeds capacity:** Dispatch deterministic waves of at most
   `SUBAGENT_WAVE_SIZE`, preserving task order in the final result regardless of
@@ -42,7 +46,10 @@ when its disposition permits. Resume and agent replacement never reset budget.
   task, increment, and gate, and list it in the one end-of-run consolidated
   request. It is never a mid-run question. `authorize-corrective-exception`
   and `begin-replan-epoch` are end-of-run tools that act on the operator's
-  answer to that request. An explicit `--stage implement` opens the implement
+  answer to that request. Before that request, use the agent-issued paths in
+  [Bounded Execution](./execution-efficiency.md): `agent_authorized: true` on
+  `authorize-corrective-retry`, `begin-replan-epoch`, or
+  `authorize-corrective-continuation`, each capped and runner-proved. An explicit `--stage implement` opens the implement
   stage's own allowance through `begin-stage-epoch`
   ([Bounded Execution](./execution-efficiency.md)). A task-verb fix that only
   reroutes a task to verification reserves with `metadata_only: true`; the
@@ -50,13 +57,15 @@ when its disposition permits. Resume and agent replacement never reset budget.
   Repeated failures with one signature in one test file are one class: one
   approval covers its follow-ups through `reserve-class-correction`. See
   [Repeated Gate Failures: Diagnose One Class, Approve It Once](./phase-execution.md#repeated-gate-failures-diagnose-one-class-approve-it-once).
-- **Consensus agents all disagree:** Flag `[HUMAN REVIEW NEEDED]`.
-  In an interactive session, ask the operator in place with
-  `AskUserQuestion` (the analysts' positions as options, the synthesizer's
-  recommendation first, and a `Stop the run` option), apply the answer with
-  the `human answer` label, and continue. In an unattended run, STOP and
-  present all 3 perspectives. See
-  [consensus-protocol.md §Human Review Needed](./consensus-protocol.md#human-review-needed).
+- **Consensus agents cannot agree:** The synthesizer flags
+  `[ROUND_3_TIEBREAK]`, which starts the Round 3 tiebreak: a fresh analyst
+  and a max-effort `consensus-tiebreaker` return the most conservative option
+  that satisfies the spec. Apply it as an assumption with the dissent logged,
+  in an interactive and an unattended run alike, and continue. An analyst that
+  fails its retry is replaced by a fresh analyst. A choice that changes
+  product scope the spec and roadmap do not settle is deferred to the
+  end-of-run request, never a mid-run stop. See
+  [consensus-protocol.md §Round 3 Tiebreak](./consensus-protocol.md#round-3-tiebreak).
 - **MCP tool unavailable:** Skip research that depends on it.
   Use Read/Grep fallback for codebase analysis. Log warning.
 - **Action blocked mid-run:** An approval-reviewer veto, a missing approval,
