@@ -5,9 +5,13 @@ from __future__ import annotations
 
 import copy
 import json
+import os
 from pathlib import Path
 import re
+import shutil
+import subprocess
 import sys
+import tempfile
 import unittest
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -196,6 +200,33 @@ class NativeReturnCatalogTests(unittest.TestCase):
                     "scenario-output/consensus-result.json": json.dumps({"evidence": changed})}}
                 with self.subTest(case=case["id"], field=field, wrong=wrong):
                     self.assertEqual(grade_observation(focused, bad)["status"], "fail")
+
+    def test_finalize_red_gate_case_grades_the_real_end_of_run_request(self) -> None:
+        case = self.cases["integration.finalize-red-gate-draft"]
+        self.assertEqual(case["layer"], "integration")
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            for fixture in case["fixtures"]:
+                target = root / fixture["destination"]
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(ROOT / fixture["source"], target)
+            request = json.loads((root / "scenario-inputs/finalize-request.json").read_text(encoding="utf-8"))
+            result = subprocess.run(
+                [sys.executable, "-m", "speckit_pro_runner"], input=json.dumps(request), text=True,
+                capture_output=True, cwd=root, check=False,
+                env={**os.environ, "PYTHONPATH": str(ROOT / "speckit-pro")},
+            )
+        data = json.loads(result.stdout)["data"]
+        self.assertEqual((data["outcome"], data["mark_ready"], data["ready_commands"]), ("human_stop", False, []))
+        artifact = "scenario-output/end-of-run-request.md"
+        checks = [check for check in case["checks"] if check["type"] in {"text", "file_exists"}]
+        focused = focused_case(case, checks)
+        for label, text, expected in (("runner request", data["end_of_run_request"], "pass"),
+                                      ("hand-written request", "The run finished.", "fail")):
+            observed = {"completed": True, "error": None, "final_text": "", "activations": [],
+                        "tool_calls": [], "usage": {}, "artifacts": {artifact: text}}
+            with self.subTest(request=label):
+                self.assertEqual(grade_observation(focused, observed)["status"], expected)
 
 
 class FinalizeStackReadyCatalogTests(unittest.TestCase):

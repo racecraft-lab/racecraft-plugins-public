@@ -50,6 +50,9 @@ phase in the **resolved stage's** range (`AUTOPILOT_STAGE`, set at Step
 0.6c). A `--stage plan` run finishes its work after the confidence gate.
 A `full` run completes all 7 phases.
 
+When a run may involve a human, and which reasons count, is set by the shared
+[Autopilot Stop Policy](./references/stop-policy.md).
+
 **Neither is a status summary a stopping point.** Reporting progress to the
 operator is not a step in the workflow: when a phase still has work, the next
 dispatch goes in the same turn as the report. Ending a turn with no dispatch
@@ -106,8 +109,7 @@ into expensive rework.
 **Before executing any step**, verify:
 
 1. **Model:** run on the operator's strongest available tier. If the
-   session reports a small-tier model, stop and ask the operator to
-   switch models and re-run.
+   session does not report the strongest tier, warn the operator once and route gate and consensus dispatches to the strongest available tier.
 
 **Reasoning effort is inherited, never checked.** Run at whatever the
 operator has set for the session and do not stop, warn, or ask them to
@@ -774,9 +776,9 @@ keep the stack in draft: they reach the owner as items in the end-of-run
 request, the units and tasks under "Decisions for you". A failed unit climbs two
 escalation tiers first (a fresh agent guided by a consensus diagnosis, then the
 strongest model at max effort), and only a required gate still red, missing, or
-blocked by a harness error after that is one human stop that keeps the stack in
-draft. The run never pauses to ask: print `end_of_run_request` as plain text in
-the final message. It is the handoff, listing every fallback taken and every
+blocked by a harness error after that is one human stop, and the stack stays in draft. The run never pauses to ask.
+Print the final report as plain text on `outcome=complete` with nothing deferred, and ask no question.
+Otherwise print `end_of_run_request` as plain text in the final message. It is the handoff, listing every fallback taken and every
 deferred item, including each entry of the ledger's `deferred` list.
 
 ## Workflow File Update Protocol
@@ -834,6 +836,7 @@ in [`references/error-recovery.md`](./references/error-recovery.md).
 
 ## References
 
+- [Stop Policy](./references/stop-policy.md) — The one contract for when a run may involve a human; stop reasons and their classes
 - [Prerequisites](./references/prerequisites.md) — Archive Sweep + Step 0.x environment, settings, constitution, agent detection, command/preset discovery
 - [Phase Execution](./references/phase-execution.md) — Per-phase prompt construction, dispatch templates, branch-aware/Clarify/Multi-prompt prefixes
 - [Consensus Protocol](./references/consensus-protocol.md) — Category-routed dispatch, Round 1/2, per-phase flows, Logging schema

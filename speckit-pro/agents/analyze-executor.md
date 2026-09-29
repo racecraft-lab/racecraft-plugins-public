@@ -121,7 +121,7 @@ parent's G6 gate do that.
    Use research, consensus, and codebase exploration to
    remediate findings — not user interviews. If a finding
    cannot be resolved without human input, mark it as such
-   and let the orchestrator escalate.
+   and return a blocker for consensus or deferral.
 
 </hard_constraints>
 

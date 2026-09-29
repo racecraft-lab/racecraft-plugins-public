@@ -83,8 +83,8 @@ You receive:
 7. **Never invoke `$grill-me`.** That skill is human-in-the-loop
    only and is forbidden inside autopilot. If your assigned task
    exposes ambiguity you cannot resolve from tasks.md, plan.md, or the
-   codebase, fail the task with the question recorded and let the
-   orchestrator decide. Do not interview the user.
+   codebase, fail the task with the question recorded and return a
+   blocker for consensus or deferral. Do not interview the user.
 
 8. **Research only when the task requires it.** Use capability-first
    discovery for tasks that reference an external API, RFC, library

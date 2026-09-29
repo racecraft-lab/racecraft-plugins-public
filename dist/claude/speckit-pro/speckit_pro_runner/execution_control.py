@@ -1127,6 +1127,19 @@ def _correction_baseline(ledger: dict[str, Any], now: float) -> str | None:
     return latest if latest is not None and ledger["dispatches"][latest]["failing_checks"]["failing"] else None
 
 
+def _untagged_family(ledger: dict[str, Any], now: float) -> str:
+    """The family of a failure no approved invariant names: a digest of the failing set the runner last recorded.
+
+    Unrelated untagged failures record different sets, so each gets its own reservation. With no recorded
+    failing set there is nothing to tell them apart, and they share the `unresolved` family as before.
+    """
+    baseline = _correction_baseline(ledger, now)
+    if baseline is None:
+        return "unresolved"
+    failing = ledger["dispatches"][baseline]["failing_checks"]["failing"]
+    return "untagged-" + hashlib.sha256(json.dumps(failing).encode("utf-8")).hexdigest()[:16]
+
+
 def _progress_chain(ledger: dict[str, Any], reservation: str, until: str | None = None) -> list[str]:
     """The family's corrections in order: the reservation owner, then each progress admission."""
     chain = [ledger["reservations"][reservation]["dispatch_id"]]
@@ -1770,7 +1783,7 @@ def reserve(ledger: dict[str, Any], inputs: dict[str, Any], now: float, root: Pa
                 return _defer(ledger, dispatch_id, "corrective_cycle_failed_no_nested_retry", family, now)
         else:
             invariant = inputs.get("failure_invariant")
-            family = str(invariant) if invariant in ledger["approved_invariants"] else "unresolved"
+            family = str(invariant) if invariant in ledger["approved_invariants"] else _untagged_family(ledger, now)
             refusal = _corrective_refusal(ledger, family)
             if refusal == "failure_family_budget_exhausted":
                 admitted, progress = _admit_progress(ledger, dispatch_id, family, root, now)

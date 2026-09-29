@@ -979,6 +979,28 @@ class ValidateCodexSkillsDualPath(unittest.TestCase):
                     self.assertIn(path, dedupe)
 
 
+class ValidateStopPolicyReference(unittest.TestCase):
+    """Both autopilot skills load the one shared stop-policy reference."""
+
+    LINKS = (
+        ('Claude', 'skills/speckit-autopilot/SKILL.md', '(./references/stop-policy.md)'),
+        ('Codex', 'codex-skills/speckit-autopilot/SKILL.md', '(../../skills/speckit-autopilot/references/stop-policy.md)'),
+    )
+
+    def test_shared_reference_exists_in_source_and_both_payloads(self) -> None:
+        for label, root in (('source', PLUGIN_ROOT),
+                            ('Claude payload', REPO_ROOT / 'dist/claude/speckit-pro'),
+                            ('Codex payload', REPO_ROOT / 'dist/codex/speckit-pro')):
+            with self.subTest(msg=f'{label}: references/stop-policy.md exists'):
+                self.assertTrue((root / 'skills/speckit-autopilot/references/stop-policy.md').is_file())
+
+    def test_both_autopilot_skills_link_it_and_the_link_resolves(self) -> None:
+        for label, skill, link in self.LINKS:
+            path = PLUGIN_ROOT / skill
+            with self.subTest(msg=f'{label} autopilot skill links stop-policy.md'):
+                self.assertIn(link, _read(path))
+                self.assertTrue((path.parent / link.strip('()')).resolve().is_file())
+
 def main() -> int:
     suite = unittest.defaultTestLoader.loadTestsFromModule(sys.modules[__name__])
     return run_counted(suite, label="validate-skill-contracts")
