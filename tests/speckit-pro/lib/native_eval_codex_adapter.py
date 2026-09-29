@@ -792,24 +792,19 @@ class _CheckerSource:
     import_bindings: dict[str, dict[str, object]]
 
 
-def _import_binding(module: str | None, name: str | None, alias: ast.alias, level: int, bound: str) -> dict[str, object]:
-    return {"kind": "import", "module": module, "name": name, "as": alias.asname, "level": level, "bound": bound}
-
-
 def _checker_entries(node: ast.stmt) -> list[tuple[str, str, dict[str, object] | None]]:
     """Name each top-level binding one statement creates, with its kind and import binding."""
-    if isinstance(node, ast.Import):
-        return [
-            (bound, "import", _import_binding(alias.name, None, alias, 0, bound))
-            for alias in node.names
-            for bound in (alias.asname or alias.name.split(".", 1)[0],)
-        ]
-    if isinstance(node, ast.ImportFrom):
-        return [
-            (bound, "import", _import_binding(node.module, alias.name, alias, node.level, bound))
-            for alias in node.names
-            for bound in (alias.asname or alias.name,)
-        ]
+    if isinstance(node, (ast.Import, ast.ImportFrom)):
+        entries: list[tuple[str, str, dict[str, object] | None]] = []
+        for alias in node.names:
+            from_import = node if isinstance(node, ast.ImportFrom) else None
+            bound = alias.asname or (alias.name if from_import else alias.name.split(".", 1)[0])
+            entries.append((bound, "import", {
+                "kind": "import", "module": from_import.module if from_import else alias.name,
+                "name": alias.name if from_import else None, "as": alias.asname,
+                "level": from_import.level if from_import else 0, "bound": bound,
+            }))
+        return entries
     if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
         return [(node.name, "helper", None)]
     if isinstance(node, ast.ClassDef):
