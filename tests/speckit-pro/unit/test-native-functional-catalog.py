@@ -952,6 +952,37 @@ def _derive_stop_policy_answers(scenario: str, read: Callable[[str], str]) -> di
     raise AssertionError(f"unknown orchestration scenario {scenario}")
 
 
+def _derive_run_start_answers(read: Callable[[str], str]) -> dict:
+    """The graded fields of the run-start grant case, from its recorded probe results."""
+    record = json.loads(read("scenario-inputs/run-start/probe-results.json"))
+    uncovered = sorted(probe["id"] for probe in record["probes"] if probe["result"] != "ok")
+    return {
+        "uncovered_probes": uncovered,
+        "ask_before_phase_one": bool(uncovered),
+        "ask_count": 1 if uncovered else 0,
+        "phase_work_before_reply": record["phase_work_started"],
+        "mid_run_permission_stops": 0,
+    }
+
+
+def _derive_deferred_decision_answers(read: Callable[[str], str]) -> dict:
+    """The graded fields of the deferred-decision case, from its finalize result and ledger."""
+    result = json.loads(read("scenario-inputs/finalize-result.json"))
+    ledger = json.loads(read("scenario-inputs/ledger.json"))
+    first = result["decisions"][0]
+    unit_kind = next(entry["unit_kind"] for entry in ledger["deferred"] if entry["unit"] == first["unit"].rsplit(" ", 1)[-1])
+    record = ledger["escalation_allowances"][f"{unit_kind}:{first['unit'].rsplit(' ', 1)[-1]}"]
+    return {
+        "outcome": result["outcome"],
+        "stack_ready": result["mark_ready"],
+        "keeps_draft": not result["mark_ready"],
+        "decision_units": [decision["unit"] for decision in result["decisions"]],
+        "decision_classes": [decision["class"] for decision in result["decisions"]],
+        "tier_reached": record["tier"],
+        "asked_question": False,
+    }
+
+
 def _derive_orchestration_answers(case: dict) -> dict:
     """Derive every graded response field from the staged evidence alone."""
     sources = {row["destination"]: REPO_ROOT / row["source"] for row in case["fixtures"]}
@@ -1043,30 +1074,9 @@ def _derive_orchestration_answers(case: dict) -> dict:
             "reconcile_before_g3": bool(stale),
         }
     if scenario == "run-start-grant":
-        record = json.loads(read("scenario-inputs/run-start/probe-results.json"))
-        uncovered = sorted(probe["id"] for probe in record["probes"] if probe["result"] != "ok")
-        return {
-            "uncovered_probes": uncovered,
-            "ask_before_phase_one": bool(uncovered),
-            "ask_count": 1 if uncovered else 0,
-            "phase_work_before_reply": record["phase_work_started"],
-            "mid_run_permission_stops": 0,
-        }
+        return _derive_run_start_answers(read)
     if scenario == "deferred-decision-ready-stack":
-        result = json.loads(read("scenario-inputs/finalize-result.json"))
-        ledger = json.loads(read("scenario-inputs/ledger.json"))
-        first = result["decisions"][0]
-        unit_kind = next(entry["unit_kind"] for entry in ledger["deferred"] if entry["unit"] == first["unit"].rsplit(" ", 1)[-1])
-        record = ledger["escalation_allowances"][f"{unit_kind}:{first['unit'].rsplit(' ', 1)[-1]}"]
-        return {
-            "outcome": result["outcome"],
-            "stack_ready": result["mark_ready"],
-            "keeps_draft": not result["mark_ready"],
-            "decision_units": [decision["unit"] for decision in result["decisions"]],
-            "decision_classes": [decision["class"] for decision in result["decisions"]],
-            "tier_reached": record["tier"],
-            "asked_question": False,
-        }
+        return _derive_deferred_decision_answers(read)
     return _derive_stop_policy_answers(scenario, read)
 
 
