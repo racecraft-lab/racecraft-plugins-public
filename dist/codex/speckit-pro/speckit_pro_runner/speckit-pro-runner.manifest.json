@@ -263,7 +263,7 @@
         "value": "speckit_pro_runner/gates/release.py",
         "display": "speckit_pro_runner/gates/release.py"
       },
-      "sha256": "078eff203254a54c9e0403f3907a24bde3b7dcb6d42801ce74a275ea0f765d2e"
+      "sha256": "ac69ffec2bfa8910eefda1efd4b0b9d13d6c04741f6fe41c7955877e89f4bf41"
     },
     {
       "path": {
@@ -327,7 +327,7 @@
         "value": "speckit_pro_runner/helpers/pr_emission.py",
         "display": "speckit_pro_runner/helpers/pr_emission.py"
       },
-      "sha256": "8c24a34ed18af7f482d30d5bd86325cd9a32a7fcef0f3c6d87ac10fde941b892"
+      "sha256": "d409ae4b0c149327f85d2bb6e9e18a60f1a95b0a245f223d394f2c8932c4120a"
     },
     {
       "path": {
@@ -367,7 +367,7 @@
         "value": "speckit_pro_runner/helpers/run_finalization.py",
         "display": "speckit_pro_runner/helpers/run_finalization.py"
       },
-      "sha256": "cd044954ba387d2ebe211b498f1a5ee7abc44d6a718fe5479b054eaac7df970d"
+      "sha256": "d0afad63b3daf6b9d87db6e9af93305b63155329cacb4869a9d9f5f88afe5a32"
     },
     {
       "path": {
@@ -400,6 +400,14 @@
         "display": "speckit_pro_runner/path_utils.py"
       },
       "sha256": "02840b01a30d3d891b219df26cf2efcd66325d196e6959317acee7353afddb29"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
+        "value": "speckit_pro_runner/pr_contract.py",
+        "display": "speckit_pro_runner/pr_contract.py"
+      },
+      "sha256": "d2fdc0fcf6ed8f38826cb084c2ee45da1dcc37e2f4aca48ee7cb3af8d858f9f5"
     },
     {
       "path": {

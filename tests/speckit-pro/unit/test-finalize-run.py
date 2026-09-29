@@ -491,6 +491,17 @@ class FinalizeRunTests(_LedgerFixture, unittest.TestCase):
                     finalize(self.root, self.inputs(**override))
 
 
+    def test_multi_line_text_is_refused_before_the_packet_normalizer_would_reject_it(self) -> None:
+        # pr-packet-output rejects a newline in a deferred item, so finalize-run must refuse it first.
+        records = {"human_uat": ("item", "reason", "finish"), "unresolved_deferrals": ("unit", "reason", "finish")}
+        for name, fields in records.items():
+            for field in fields:
+                record = {key: "one line" for key in fields} | {field: "first line\nsecond line"}
+                with self.subTest(record=name, field=field):
+                    with self.assertRaisesRegex(ValueError, "one line"):
+                        finalize(self.root, self.inputs(**{name: [record]}))
+
+
 class FinalizeRunDecisionTests(_LedgerFixture, unittest.TestCase):
     """An exhausted unit is a decision, not a stop, and the stop policy owns the stop classes."""
 

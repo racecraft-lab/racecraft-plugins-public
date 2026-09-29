@@ -9,6 +9,13 @@ from pathlib import Path
 from typing import Any
 
 from ..envelope import diagnostic, response
+from ..pr_contract import (
+    DEFERRED_ITEM_FIELDS,
+    PACKET_TITLE_SCOPE_PATTERN,
+    PACKET_TITLE_VALUE_PATTERN,
+    TITLE_TYPES,
+    is_one_line,
+)
 from .mutation import (
     empty_mutation,
     operation_records,
@@ -33,7 +40,6 @@ PACKET_SLUG = r"[a-z0-9][a-z0-9._-]*"
 SOURCE_FEATURE_PATTERN = re.compile(rf"^specs/(?P<feature>{PACKET_SLUG})$")
 # A run that finished with deferred items opens its top PR body with this section.
 DEFERRED_HEADING = "Deferred / not verified"
-DEFERRED_ITEM_FIELDS = ("item", "reason", "finish")
 PACKET_PATH_PATTERN = re.compile(
     rf"^(?P<source_feature_dir>specs/{PACKET_SLUG})/\.process/pr-packets/(?P<packet_id>{PACKET_SLUG})\.json$"
 )
@@ -814,6 +820,11 @@ def normalize_generated_title(inputs: dict[str, Any]) -> dict[str, Any]:
         invalid = validate_string_fields(raw, ["value", "type", "scope", "description"])
         if invalid:
             return invalid_packet_input("generated_title contains invalid string fields", field="generated_title", details={"fields": invalid})
+        if not (re.fullmatch(PACKET_TITLE_SCOPE_PATTERN, raw["scope"]) and re.fullmatch(PACKET_TITLE_VALUE_PATTERN, raw["value"])):
+            return invalid_packet_input(
+                "generated_title must read <type>(<lowercase-scope>): <description>, the shape the PR-title gate accepts",
+                field="generated_title",
+            )
         source_evidence = normalize_evidence_record(raw.get("source_evidence"), field="generated_title.source_evidence")
         if isinstance(source_evidence, dict) and "diagnostic" in source_evidence:
             return source_evidence
@@ -835,9 +846,14 @@ def normalize_generated_title(inputs: dict[str, Any]) -> dict[str, Any]:
     title_description = inputs.get("title_description")
     if not isinstance(title_scope, str) or not title_scope:
         return invalid_packet_input("title_scope is required when generated_title is omitted", field="title_scope")
+    if re.fullmatch(PACKET_TITLE_SCOPE_PATTERN, title_scope) is None:
+        return invalid_packet_input(
+            "title_scope must be lowercase letters, digits, and hyphens, as the PR-title gate requires",
+            field="title_scope",
+        )
     if not isinstance(title_description, str) or len(title_description) < 8:
         return invalid_packet_input("title_description must be at least 8 characters", field="title_description")
-    if not isinstance(title_type, str) or title_type not in {"feat", "fix", "chore", "docs", "refactor", "test"}:
+    if not isinstance(title_type, str) or title_type not in TITLE_TYPES:
         return invalid_packet_input("title_type must be a supported conventional commit type", field="title_type")
     value = f"{title_type}({title_scope}): {title_description}"
     return {
@@ -1017,7 +1033,7 @@ def normalize_deferred_items(raw: Any, mode: str) -> list[dict[str, str]] | dict
         return []
     if not isinstance(raw, list) or not all(
         isinstance(item, dict) and set(item) == set(DEFERRED_ITEM_FIELDS)
-        and all(isinstance(item[key], str) and item[key].strip() and "\n" not in item[key] for key in item)
+        and all(isinstance(item[key], str) and is_one_line(item[key]) for key in item)
         for item in raw
     ):
         return invalid_packet_input(

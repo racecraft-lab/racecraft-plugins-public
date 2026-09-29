@@ -14,7 +14,7 @@
       "head_branch": "agent/prsg-998-fixture"
     },
     "title_type": "feat",
-    "title_scope": "PRSG-998",
+    "title_scope": "prsg-998",
     "title_description": "Generate packet fixture",
     "changed_files": [
       "specs/prsg-998-fixture/spec.md"

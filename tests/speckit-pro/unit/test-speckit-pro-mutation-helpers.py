@@ -9034,6 +9034,27 @@ This line must not be copied.
         self.assertEqual(title["value"], "feat(demo): add a demo feature")
         self.assertEqual(title["description"], "add a demo feature")
 
+    def test_generated_title_rejects_a_scope_the_title_gate_rejects(self) -> None:
+        for scope in ("PRSG-998", "FEATURE-001", "Demo", "demo scope", "demo_scope"):
+            with self.subTest(scope=scope):
+                title = pr_emission.normalize_generated_title(
+                    {"title_type": "feat", "title_scope": scope, "title_description": "add a demo feature"}
+                )
+                self.assertEqual(title["diagnostic"]["details"]["field"], "title_scope")
+        supplied = pr_emission.normalize_generated_title(
+            {
+                "generated_title": {
+                    "value": "feat(FEATURE-001): Add a demo feature",
+                    "type": "feat",
+                    "scope": "FEATURE-001",
+                    "description": "Add a demo feature",
+                    "source_evidence": {"kind": "workflow", "source": "autopilot-state", "summary": "the run state"},
+                    "rejected_candidates": [],
+                }
+            }
+        )
+        self.assertEqual(supplied["diagnostic"]["details"]["field"], "generated_title")
+
     def test_documented_draft_packet_requests_execute_and_validate(self) -> None:
         docs = [
             PLUGIN_ROOT / "skills/speckit-autopilot/references/phase-execution.md",

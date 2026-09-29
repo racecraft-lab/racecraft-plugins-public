@@ -38,14 +38,6 @@ DRAFT_PACKET_VALIDATION_DIR = "specs/fixture-draft-pr/.process/pr-packets"
 PR_PACKET_SCHEMA = (
     PLUGIN_ROOT / "skills" / "speckit-autopilot" / "contracts" / "pr-packet.schema.json"
 )
-PR_PACKET_SCHEMA_FIXTURE = (
-    REPO_ROOT
-    / "tests"
-    / "speckit-pro"
-    / "unit"
-    / "fixtures"
-    / "pr-packet-title-patterns.json"
-)
 # Shipped runbooks that tell an operator what to do with the confidence-gate
 # JSON on the exit-2 path. All three describe the same loop, so they have to
 # agree on which field the loop reads first.
@@ -61,6 +53,8 @@ CONFIDENCE_GATE_RUNBOOKS = (
 
 if str(PLUGIN_ROOT) not in sys.path:
     sys.path.insert(0, str(PLUGIN_ROOT))
+
+from speckit_pro_runner.pr_contract import PACKET_TITLE_SCOPE_PATTERN, PACKET_TITLE_VALUE_PATTERN  # noqa: E402
 
 EXPECTED_HELPERS = [
     "formal-doctor",
@@ -2353,30 +2347,39 @@ class ReadOnlyHelperTests(_ReadOnlyHelperRunner, unittest.TestCase):
                     self.assertIn(expected_rule, rules)
                     self.assertEqual(stderr_records, response["diagnostics"])
 
-    def test_pr_packet_schema_accepts_established_scopes_and_rejects_mixed_case(self) -> None:
+    def test_pr_packet_schema_and_title_gate_accept_the_same_scopes(self) -> None:
         if self.helper_filter and self.helper_filter != "validate-pr-packet-read-only":
             self.skipTest("validate-pr-packet schema pattern case")
         schema = json.loads(PR_PACKET_SCHEMA.read_text(encoding="utf-8"))
         title_properties = schema["$defs"]["generated_title"]["properties"]
         scope_pattern = title_properties["scope"]["pattern"]
         value_pattern = title_properties["value"]["pattern"]
-        fixture_patterns = json.loads(PR_PACKET_SCHEMA_FIXTURE.read_text(encoding="utf-8"))
-        self.assertEqual(fixture_patterns["scope_pattern"], scope_pattern)
-        self.assertEqual(fixture_patterns["value_pattern"], value_pattern)
+        self.assertEqual(scope_pattern, PACKET_TITLE_SCOPE_PATTERN)
+        self.assertEqual(value_pattern, PACKET_TITLE_VALUE_PATTERN)
 
-        for scope in ("speckit-pro", "FEATURE-001", "FIXTURE-014C"):
+        for scope in ("speckit-pro", "feature-001", "spec-014c"):
             with self.subTest(scope=scope, expected="accepted"):
+                title = f"feat({scope}): Add packet validation"
                 self.assertIsNotNone(re.fullmatch(scope_pattern, scope))
-                self.assertIsNotNone(
-                    re.fullmatch(value_pattern, f"feat({scope}): Add packet validation")
-                )
+                self.assertIsNotNone(re.fullmatch(value_pattern, title))
+                self.assertEqual(self.title_gate_status(title), "ok")
 
-        for scope in ("PRsg-012", "SPEC-014c", "speckit-PRO"):
+        for scope in ("FEATURE-001", "FIXTURE-014C", "PRsg-012", "SPEC-014c", "speckit-PRO"):
             with self.subTest(scope=scope, expected="rejected"):
+                title = f"feat({scope}): Add packet validation"
                 self.assertIsNone(re.fullmatch(scope_pattern, scope))
-                self.assertIsNone(
-                    re.fullmatch(value_pattern, f"feat({scope}): Add packet validation")
-                )
+                self.assertIsNone(re.fullmatch(value_pattern, title))
+                self.assertEqual(self.title_gate_status(title), "expected_failure")
+
+    @staticmethod
+    def title_gate_status(title: str) -> str:
+        """The status the live PR-title gate reports for `title`."""
+        request = REPO_ROOT / "tests" / "speckit-pro" / "unit" / "fixtures" / "runner-gates" / "requests" / "validate-pr-title-live.json"
+        completed = subprocess.run(
+            [sys.executable, "-m", "speckit_pro_runner"], input=request.read_text(encoding="utf-8"), text=True, capture_output=True,
+            cwd=REPO_ROOT, check=False, env={**os.environ, "TITLE": title, "PYTHONPATH": str(PLUGIN_ROOT)},
+        )
+        return str(json.loads(completed.stdout)["status"])
 
     def test_validate_pr_packet_rejects_unsafe_missing_and_unreadable_body(self) -> None:
         if self.helper_filter and self.helper_filter != "validate-pr-packet-read-only":
