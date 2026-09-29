@@ -72,7 +72,7 @@ $speckit-autopilot workflow.md --from-phase <next-pending-phase>
   [Repeated Gate Failures: Diagnose One Class, Approve It Once](./phase-execution-codex.md#repeated-gate-failures-diagnose-one-class-approve-it-once).
 - **Consensus agents cannot agree:** The synthesizer flags
   `[ROUND_3_TIEBREAK]`, which starts the Round 3 tiebreak: a fresh analyst
-  and a max-effort `consensus-synthesizer` return the most conservative option
+  and a max-effort `consensus-tiebreaker` return the most conservative option
   that satisfies the spec. Apply it as an assumption with the dissent logged,
   in an interactive and an unattended run alike, and continue. An analyst that
   fails its retry is replaced by a fresh analyst. A choice that changes

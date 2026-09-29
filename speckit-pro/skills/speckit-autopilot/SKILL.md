@@ -830,7 +830,7 @@ directions; do not infer a broader precedence rule.
   reset or bypass the ledger otherwise; `checkpoint_required` and ledger integrity errors still stop.
 - **Consensus cannot agree** (Round 2 all-disagree, a security item without
   3/3, an analyst that fails its retry, or conservative mode): run the Round 3
-  agent tiebreak, a fresh analyst plus a max-effort `consensus-synthesizer`,
+  agent tiebreak, a fresh analyst plus a max-effort `consensus-tiebreaker`,
   record the most conservative option that satisfies the spec as an assumption
   with the dissent logged, and continue. Only a choice that changes product
   scope the spec and roadmap do not settle is deferred to the one end-of-run

@@ -11,7 +11,7 @@ Claude Code and Codex agent responsibilities derived from the authoritative ship
 
 - **Public path:** `/racecraft-plugins-public/reference/agents/`
 - **Generated output:** `docs-site/src/content/docs/reference/agents.md`
-- **Records:** 16
+- **Records:** 17
 
 ## Navigation Summary
 
@@ -23,6 +23,7 @@ Claude Code and Codex agent responsibilities derived from the authoritative ship
 - Clarify Executor
 - Codebase Analyst
 - Consensus Synthesizer
+- Consensus Tiebreaker
 - Domain Researcher
 - Formal Model Author
 - Implement Executor
@@ -54,6 +55,7 @@ Claude Code and Codex agent responsibilities derived from the authoritative ship
 | spec-context-analyst | shared | plugin agent (required) | custom agent (required) | Responsibilities align; runtime prompts remain separately authored and retain platform-specific model, effort, sandbox, and memory settings. |
 | domain-researcher | shared | plugin agent (required) | custom agent (required) | Responsibilities align; runtime prompts remain separately authored and retain platform-specific model, effort, sandbox, and memory settings. |
 | consensus-synthesizer | shared | plugin agent (required) | custom agent (required) | Responsibilities align; runtime prompts remain separately authored and retain platform-specific model, effort, sandbox, and memory settings. |
+| consensus-tiebreaker | shared | plugin agent (required) | custom agent (required) | Responsibilities align; runtime prompts remain separately authored and retain platform-specific model, effort, sandbox, and memory settings. |
 | artifact-author | shared | plugin agent (required) | custom agent (required) | Responsibilities align; runtime prompts remain separately authored and retain platform-specific model, effort, sandbox, and memory settings. |
 | uat-runbook-author | shared | plugin agent (required) | custom agent (required) | Responsibilities align; runtime prompts remain separately authored and retain platform-specific model, effort, sandbox, and memory settings. |
 | sweep-classifier | sweep_security | plugin agent (required) | isolated prompt role (not installed) | Claude Code uses a broker-only plugin agent; Codex uses an isolated launcher prompt so credentials, filesystem access, and raw reviewer text remain outside the model process. |
@@ -239,7 +241,7 @@ Claude Code and Codex agent responsibilities derived from the authoritative ship
 
 #### Source Facts
 
-- consensus-synthesizer is classified as `shared`. Claude Code: plugin agent (required). Codex: custom agent (required). Codex uses `gpt-6-sol` with `max` effort. Source refs: `speckit-pro/speckit_pro_runner/agent_inventory.json`, `speckit-pro/agents/consensus-synthesizer.md`, `speckit-pro/codex-agents/consensus-synthesizer.toml`.
+- consensus-synthesizer is classified as `shared`. Claude Code: plugin agent (required). Codex: custom agent (required). Codex uses `gpt-6-sol` with `medium` effort. Source refs: `speckit-pro/speckit_pro_runner/agent_inventory.json`, `speckit-pro/agents/consensus-synthesizer.md`, `speckit-pro/codex-agents/consensus-synthesizer.toml`.
 
 #### Sources
 
@@ -251,6 +253,30 @@ Claude Code and Codex agent responsibilities derived from the authoritative ship
 
 - Runtime-specific Markdown, TOML, and isolated prompt sources remain authored separately; the inventory aligns responsibilities and records intentional exceptions.
   - Based on: `speckit-pro/speckit_pro_runner/agent_inventory.json`, `speckit-pro/agents/consensus-synthesizer.md`, `speckit-pro/codex-agents/consensus-synthesizer.toml`
+
+### Consensus Tiebreaker
+
+- **Purpose:** Terminal read-only Round 3 worker that resolves a consensus item Rounds 1 and 2 could not settle, returning the most conservative option that satisfies the spec with its assumption, dissent, and exact proposed edit fo...
+- **Classification:** `source`
+- **Platform concept:** SpecKit Pro consensus-tiebreaker agent
+- **Claude Code:** plugin agent (required)
+- **Codex:** custom agent (required)
+- **Runtime difference:** Responsibilities align; runtime prompts remain separately authored and retain platform-specific model, effort, sandbox, and memory settings.
+
+#### Source Facts
+
+- consensus-tiebreaker is classified as `shared`. Claude Code: plugin agent (required). Codex: custom agent (required). Codex uses `gpt-6-sol` with `max` effort. Source refs: `speckit-pro/speckit_pro_runner/agent_inventory.json`, `speckit-pro/agents/consensus-tiebreaker.md`, `speckit-pro/codex-agents/consensus-tiebreaker.toml`.
+
+#### Sources
+
+- [speckit-pro/speckit_pro_runner/agent_inventory.json](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/speckit-pro/speckit_pro_runner/agent_inventory.json)
+- [speckit-pro/agents/consensus-tiebreaker.md](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/speckit-pro/agents/consensus-tiebreaker.md)
+- [speckit-pro/codex-agents/consensus-tiebreaker.toml](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/speckit-pro/codex-agents/consensus-tiebreaker.toml)
+
+#### Inferred Notes
+
+- Runtime-specific Markdown, TOML, and isolated prompt sources remain authored separately; the inventory aligns responsibilities and records intentional exceptions.
+  - Based on: `speckit-pro/speckit_pro_runner/agent_inventory.json`, `speckit-pro/agents/consensus-tiebreaker.md`, `speckit-pro/codex-agents/consensus-tiebreaker.toml`
 
 ### Domain Researcher
 

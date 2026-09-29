@@ -560,8 +560,8 @@ validate_capability_pointer_CODEX_AGENTS_DIR = PLUGIN_ROOT / 'codex-agents'
 validate_capability_pointer_DIRECTIVE_MARKER = 'capability-discovery.md'
 validate_capability_pointer_GROUNDING_MARKER = 'grounding.md'
 CAPABILITY_NOTE = 'Capability path:'
-validate_capability_pointer_CC_EXCLUSIONS = frozenset({'artifact-preview-observer', 'consensus-synthesizer', 'phase-executor', 'sweep-analyst', 'sweep-classifier'})
-validate_capability_pointer_CODEX_EXCLUSIONS = frozenset({'autopilot-fast-helper', 'consensus-synthesizer', 'phase-executor'})
+validate_capability_pointer_CC_EXCLUSIONS = frozenset({'artifact-preview-observer', 'consensus-synthesizer', 'consensus-tiebreaker', 'phase-executor', 'sweep-analyst', 'sweep-classifier'})
+validate_capability_pointer_CODEX_EXCLUSIONS = frozenset({'autopilot-fast-helper', 'consensus-synthesizer', 'consensus-tiebreaker', 'phase-executor'})
 APPROVED_EQUIVALENTS: frozenset[str] = frozenset()
 
 def validate_capability_pointer__rel(path: Path) -> str:
@@ -610,7 +610,7 @@ validate_capability_resolution_GROUNDING_MARKER = 'grounding.md'
 validate_capability_resolution_PATH_TOKEN_RE = re.compile('speckit-pro/[A-Za-z0-9._/-]*capability-discovery\\.md')
 validate_capability_resolution_GROUNDING_TOKEN_RE = re.compile('speckit-pro/[A-Za-z0-9._/-]*grounding\\.md')
 validate_capability_resolution_CC_EXCLUSIONS = frozenset({'consensus-synthesizer', 'phase-executor'})
-validate_capability_resolution_CODEX_EXCLUSIONS = frozenset({'autopilot-fast-helper', 'consensus-synthesizer', 'phase-executor'})
+validate_capability_resolution_CODEX_EXCLUSIONS = frozenset({'autopilot-fast-helper', 'consensus-synthesizer', 'consensus-tiebreaker', 'phase-executor'})
 
 def validate_capability_resolution__rel(path: Path) -> str:
     return path.relative_to(REPO_ROOT).as_posix()

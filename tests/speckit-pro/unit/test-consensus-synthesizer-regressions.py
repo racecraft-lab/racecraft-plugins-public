@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import json
 import sys
 import tomllib
 import unittest
@@ -35,6 +36,8 @@ CODEX_PHASE_EXECUTION = (
 )
 ACTIVE_PROTOCOL = "<plugin_root>/skills/speckit-autopilot/references/consensus-protocol.md"
 ACTIVE_REFERENCES = "Reference dir: <plugin_root>/skills/speckit-autopilot/references/"
+TIEBREAKER_CLAUDE = REPO_ROOT / "speckit-pro" / "agents" / "consensus-tiebreaker.md"
+TIEBREAKER_CODEX = REPO_ROOT / "speckit-pro" / "codex-agents" / "consensus-tiebreaker.toml"
 SCAFFOLD_SKILL = REPO_ROOT / "speckit-pro" / "skills" / "speckit-scaffold-spec" / "SKILL.md"
 EXECUTORS = tuple(
     REPO_ROOT / "speckit-pro" / folder / f"{role}-executor{suffix}"
@@ -253,7 +256,7 @@ class ConsensusSynthesizerRegressionTests(unittest.TestCase):
             "- **Content:**",
             "**Flags:**",
         ))
-        self.assertIn("Omit the complete `Artifact Edit` block whenever `Flags` is `[ESCAPE_TO_ROUND_2]` or `[ROUND_3_TIEBREAK]`.", text)
+        self.assertIn("Omit the complete `Artifact Edit` block whenever `Flags` is not `None`.", text)
 
     def test_missing_failed_or_malformed_synthesis_cannot_apply_or_complete(self) -> None:
         required = (
@@ -311,7 +314,7 @@ class Round3TiebreakGuidanceTests(unittest.TestCase):
             "an analyst that fails its retry",
             "conservative mode",
             "one fresh `spec-context-analyst`",
-            "a `consensus-synthesizer` at max effort",
+            "a `consensus-tiebreaker` at max effort",
             "all prior analyst answers, the constitution, and the technical roadmap",
             "the most conservative option that satisfies the spec",
             "recorded as an assumption",
@@ -381,24 +384,72 @@ class Round3TiebreakGuidanceTests(unittest.TestCase):
             self.assertNotIn("AskUserQuestion", path.read_text(encoding="utf-8"))
             self.assertNotIn("request_user_input", path.read_text(encoding="utf-8"))
 
-    def test_synthesizer_agents_run_round_three_at_max_effort_and_never_flag_review(self) -> None:
+    def test_synthesizer_keeps_its_default_effort_and_only_flags_round_three(self) -> None:
         claude = CLAUDE_SYNTHESIZER.read_text(encoding="utf-8")
         codex = SYNTHESIZER.read_text(encoding="utf-8")
-        self.assertIn("effort: max", claude)
-        self.assertIn('model_reasoning_effort = "max"', codex)
+        self.assertIn("effort: high", claude)
+        self.assertIn('model_reasoning_effort = "medium"', codex)
         for label, text in (("claude", claude), ("codex", instructions())):
             flat = " ".join(text.split())
             with self.subTest(host=label):
-                assert_contains(self, flat, (
-                    "Round 3",
-                    "the most conservative option that satisfies the spec",
-                    "Agreement: tiebreak",
-                    "**Assumption:**",
-                    "[SCOPE_DEFERRED]",
-                    "Round 3 never returns `[ROUND_3_TIEBREAK]` or `[ESCAPE_TO_ROUND_2]`",
-                    "**Round:** 1 | 2 | 3",
-                ))
+                assert_contains(self, flat, ("[ROUND_3_TIEBREAK]", "consensus-tiebreaker"))
+                self.assertNotIn("**Round:** 1 | 2 | 3", flat)
+                self.assertNotIn("[SCOPE_DEFERRED]", flat)
         self.assertNotIn("the orchestrator surfaces that to the user", claude)
+
+    def test_tiebreaker_agent_is_max_effort_read_only_and_owns_round_three(self) -> None:
+        claude = TIEBREAKER_CLAUDE.read_text(encoding="utf-8")
+        codex_raw = TIEBREAKER_CODEX.read_text(encoding="utf-8")
+        codex = tomllib.loads(codex_raw)
+        self.assertIn("name: consensus-tiebreaker", claude)
+        self.assertIn("effort: max", claude)
+        self.assertIn("model: sonnet", claude)
+        self.assertEqual("consensus-tiebreaker", codex["name"])
+        self.assertEqual("max", codex["model_reasoning_effort"])
+        self.assertEqual("read-only", codex["sandbox_mode"])
+        synth_tools = next(l for l in CLAUDE_SYNTHESIZER.read_text(encoding="utf-8").splitlines() if l.startswith("disallowedTools:"))
+        self.assertIn(synth_tools, claude)
+        for label, text in (("claude", claude), ("codex", codex["developer_instructions"])):
+            flat = " ".join(text.split())
+            with self.subTest(host=label):
+                assert_contains(self, flat, (
+                    "the most conservative option that satisfies the spec",
+                    "**Agreement:** tiebreak",
+                    "**Assumption:**",
+                    "**Dissent:**",
+                    "[SCOPE_DEFERRED]",
+                    "never returns [ROUND_3_TIEBREAK] or [ESCAPE_TO_ROUND_2]",
+                    "**Round:** 3",
+                    "skills/speckit-autopilot/references/consensus-protocol.md",
+                ))
+
+    def test_inventory_pins_the_synthesizer_at_default_and_the_tiebreaker_at_max(self) -> None:
+        inventory = json.loads(
+            (REPO_ROOT / "speckit-pro" / "speckit_pro_runner" / "agent_inventory.json").read_text(encoding="utf-8")
+        )
+        roles = {role["name"]: role for role in inventory["roles"]}
+        self.assertEqual(("high", "medium"), (
+            roles["consensus-synthesizer"]["claude_code"]["effort"],
+            roles["consensus-synthesizer"]["codex"]["effort"],
+        ))
+        tiebreaker = roles["consensus-tiebreaker"]
+        self.assertEqual("shared", tiebreaker["category"])
+        self.assertEqual("agents/consensus-tiebreaker.md", tiebreaker["claude_code"]["source"])
+        self.assertEqual("codex-agents/consensus-tiebreaker.toml", tiebreaker["codex"]["source"])
+        self.assertEqual(("max", "max"), (tiebreaker["claude_code"]["effort"], tiebreaker["codex"]["effort"]))
+        self.assertEqual("read-only", tiebreaker["codex"]["sandbox"])
+        self.assertEqual("tool-policy-read-only", tiebreaker["claude_code"]["sandbox"])
+
+    def test_round3_dispatch_names_the_tiebreaker_on_both_hosts(self) -> None:
+        protocol = " ".join(PROTOCOL.read_text(encoding="utf-8").split())
+        assert_contains(self, protocol, (
+            "`speckit-pro:consensus-tiebreaker`",
+            '`spawn_agent(agent_type="consensus-tiebreaker"',
+            "Round 3 uses no other synthesizer",
+        ))
+        for path in (AUTOPILOT_SKILLS[0], AUTOPILOT_SKILLS[1], REFERENCES / "error-recovery.md"):
+            with self.subTest(path=path.name):
+                self.assertIn("consensus-tiebreaker", path.read_text(encoding="utf-8"))
 
     def test_round3_tiebreak_covers_the_pr_feedback_sweep_inside_its_isolation(self) -> None:
         sites = (

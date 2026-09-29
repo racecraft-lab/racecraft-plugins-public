@@ -146,9 +146,10 @@ class NativeReturnCatalogTests(unittest.TestCase):
         self.assertEqual(sorted(fixture["destination"] for fixture in case["fixtures"]), sorted(paths))
         self.assertEqual(sorted(check["path"] for check in case["checks"]
                                 if check["type"] == "file_access"), sorted(paths))
-        mechanism = [check for check in case["checks"] if check["type"] == "native_synthesis_mechanism"]
-        self.assertEqual(mechanism[0]["per_host"]["claude"]["role"], "speckit-pro:consensus-synthesizer")
-        self.assertEqual(mechanism[0]["per_host"]["codex"]["role"], "consensus-synthesizer")
+        dispatch = [check for check in case["checks"] if check["type"] == "native_subagent_dispatch"]
+        self.assertEqual(len(dispatch), 1)
+        self.assertEqual([pair["role"] for pair in dispatch[0]["expected"]], ["consensus-tiebreaker"])
+        self.assertEqual(dispatch[0]["forbidden_roles"], ["consensus-synthesizer"])
         expected = {"decision": "per-request", "next_action": "apply", "retained_options":
                     ["per-request", "per-billing-period"], "dissent": ["per-billing-period"],
                     "agreement": "tiebreak", "scope_deferred": False}

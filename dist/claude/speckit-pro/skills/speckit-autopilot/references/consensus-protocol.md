@@ -16,7 +16,7 @@ Consensus dispatch runs as batched ordinary subagents; see
 - [The 3 Perspective Agents](#the-3-perspective-agents) — codebase-analyst / spec-context-analyst / domain-researcher
 - [Consensus Rules](#consensus-rules) — N=1, N=2, N=3 agreement rules + escape-hatch + STOP conditions
 - [Security Keywords](#security-keywords) — always-all-3 trigger words
-- [Round 3 Tiebreak](#round-3-tiebreak) — a fresh analyst plus a max-effort synthesizer resolve what Rounds 1 and 2 could not; nothing asks a human or stops
+- [Round 3 Tiebreak](#round-3-tiebreak) — a fresh analyst plus a max-effort `consensus-tiebreaker` resolve what Rounds 1 and 2 could not; nothing asks a human or stops
 - [Phase-Specific Consensus Flows](#phase-specific-consensus-flows) — Clarify, Checklist, Analyze patterns + per-phase prompt templates ("Specification Context" / "Question" / "Your Task" sub-sections appear inside each flow)
 - [Pre-Implement Confidence Emit (end of Phase 6 Analyze)](#pre-implement-confidence-emit-end-of-phase-6-analyze) — synthesizer emits `📊 Confidence: X.XX` + 5-criterion breakdown for the optional Confidence Gate at G6.5
 - [Determining Agreement](#determining-agreement) — how the synthesizer scores responses
@@ -304,8 +304,8 @@ If a synthesizer dispatch fails or returns a missing or malformed result, the
 parent applies no edit, writes no completed Consensus Resolution Log row, and
 does not mark the item complete. The parent may retry the same named
 synthesizer once with the same analyst responses. A second invalid result is not a stop: the
-parent dispatches one fresh `consensus-synthesizer` as the Round 3 tiebreak
-synthesizer. If that result is invalid too, the item is deferred to the
+parent runs the Round 3 tiebreak with one `consensus-tiebreaker`. If that
+result is invalid too, the item is deferred to the
 end-of-run request as in [Round 3 Tiebreak](#round-3-tiebreak) and the run
 continues; the parent must never replace it with parent-authored synthesis.
 
@@ -393,14 +393,18 @@ unattended run behave the same: the parent asks no question and stops nowhere.
    no memory of the earlier rounds. Its prompt carries the item, all prior
    analyst answers, the constitution, and the technical roadmap, and asks for
    the single most conservative option that satisfies the spec.
-2. Wave two, after that analyst returns: dispatch a `consensus-synthesizer` at
-   max effort. The agent ships pinned at max (Claude Code `effort: max`, Codex
-   `model_reasoning_effort = "max"`), so the dispatch needs no override. Its
-   prompt sets `**Round:** 3` and carries every earlier analyst response plus
-   the fresh analyst's response as a fourth input. The parent never performs
-   this synthesis itself.
+2. Wave two, after that analyst returns: dispatch a `consensus-tiebreaker` at
+   max effort (Claude Code `speckit-pro:consensus-tiebreaker`; Codex
+   `spawn_agent(agent_type="consensus-tiebreaker", ...)`; omitting `agent_type`
+   is a failed dispatch). The agent ships pinned at max (Claude Code
+   `effort: max`, Codex `model_reasoning_effort = "max"`) with the
+   synthesizer's read-only tool set, while `consensus-synthesizer` keeps its
+   default effort for Rounds 1 and 2. Its prompt sets `**Round:** 3` and
+   carries every earlier analyst response plus the fresh analyst's response
+   as `**Tiebreak Analyst Response:**`. Round 3 uses no other synthesizer, and
+   the parent never performs this synthesis itself.
 
-The synthesizer returns the most conservative option that satisfies the spec
+The tiebreaker returns the most conservative option that satisfies the spec
 among the supplied positions, with the Artifact Edit, an `**Assumption:**` line,
 and every position it did not choose under `**Dissent:**`. Round 3 never
 returns `[ROUND_3_TIEBREAK]` or `[ESCAPE_TO_ROUND_2]`.
@@ -423,7 +427,7 @@ If it returns, the item continues under the ordinary rules with that answer.
 If the replacement also fails, raise the flag and run Round 3 on the answers in
 hand.
 
-**Product scope is the one deferral.** When the synthesizer finds that the
+**Product scope is the one deferral.** When the tiebreaker finds that the
 choice changes product scope the spec and the roadmap do not settle, it adds
 `[SCOPE_DEFERRED] <reason>` to a result that still carries the most
 conservative (narrowest) edit. Apply that edit provisionally so gates keep

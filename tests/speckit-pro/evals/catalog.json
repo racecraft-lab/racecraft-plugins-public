@@ -16050,7 +16050,7 @@
     {
       "id": "integration.consensus-round3-tiebreak",
       "layer": "integration",
-      "capability": "Resolve a keyword-routed Clarify item that Round 2 could not settle (one analyst returned `security_relevant: true` with only a 2/3 majority) through the Round 3 tiebreak: a max-effort synthesizer applies the most conservative option that satisfies the spec as an assumption, logs the dissent, and neither asks a human nor stops.",
+      "capability": "Resolve a keyword-routed Clarify item that Round 2 could not settle (one analyst returned `security_relevant: true` with only a 2/3 majority) through the Round 3 tiebreak: the max-effort consensus-tiebreaker applies the most conservative option that satisfies the spec as an assumption, logs the dissent, and neither asks a human nor stops.",
       "timeout_seconds": 300,
       "resource_class": "nested",
       "requirements": [
@@ -16079,7 +16079,7 @@
           "description": "Record the Round 3 result using the `tiebreak` agreement value and no product-scope deferral."
         }
       ],
-      "prompt": "First invoke {{skill}} through the client's native skill-loading mechanism. Execute only one bounded Clarify Round 3 tiebreak observation. Read `scenario-inputs/analysts/codebase-analyst.md`, `scenario-inputs/analysts/domain-researcher.md`, `scenario-inputs/analysts/spec-context-analyst.md`, and `scenario-inputs/analysts/tiebreak-analyst.md` completely, using a separate native tool call for each file; parallel calls are allowed. They are retained returns for one Clarify item, `[domain] I1: Should the usage report count tokens per LLM request or per billing period?`, routed to all three analysts with `security_route: keyword`; one analyst returned `security_relevant: true` and only two of three agreed, so the synthesizer flagged the Round 3 tiebreak, and `tiebreak-analyst.md` is the fresh spec-context-analyst's return for it. Do not dispatch replacement analysts and do not research beyond these inputs. Dispatch the installed client's named consensus-synthesizer with the protocol's synthesis input, including the `**Unresolved Item:**` line, `**Routed Categories:** [domain]`, `**Security Route:** keyword`, `**Round:** 3`, the three analyst responses, and the `**Tiebreak Analyst Response:**` in full. Wait for its actual returned result, and use that result before writing the artifact. The parent must not perform or silently replace synthesis, must not ask the user, and must not stop. Then write only `scenario-output/consensus-result.json` as strict JSON with exactly these keys: `decision` (string or null), `retained_options` (distinct recommendation tokens in input order), `dissent` (recommendation tokens the synthesizer did not choose), `agreement` (one of `single-analyst`, `both-agree`, `two-analyst-disagreement`, `3/3-unanimous`, `2/3-majority`, `0/3-all-disagree`, `tiebreak`), `confidence` (`high` or `low`), `next_action` (`apply`, `escape_to_round_2`, or `round_3_tiebreak`), and `scope_deferred` (boolean). Use the same concise option token in `retained_options`, in `dissent`, and in `decision` when non-null; do not put explanatory sentences in these token fields. Do not copy an expected answer from elsewhere, do not edit the inputs, and stop after the artifact is written.",
+      "prompt": "First invoke {{skill}} through the client's native skill-loading mechanism. Execute only one bounded Clarify Round 3 tiebreak observation. Read `scenario-inputs/analysts/codebase-analyst.md`, `scenario-inputs/analysts/domain-researcher.md`, `scenario-inputs/analysts/spec-context-analyst.md`, and `scenario-inputs/analysts/tiebreak-analyst.md` completely, using a separate native tool call for each file; parallel calls are allowed. They are retained returns for one Clarify item, `[domain] I1: Should the usage report count tokens per LLM request or per billing period?`, routed to all three analysts with `security_route: keyword`; one analyst returned `security_relevant: true` and only two of three agreed, so the synthesizer flagged the Round 3 tiebreak, and `tiebreak-analyst.md` is the fresh spec-context-analyst's return for it. Do not dispatch replacement analysts and do not research beyond these inputs. Dispatch the installed client's named consensus-tiebreaker with the protocol's synthesis input, including the `**Unresolved Item:**` line, `**Routed Categories:** [domain]`, `**Security Route:** keyword`, `**Round:** 3`, the three analyst responses, and the `**Tiebreak Analyst Response:**` in full. Wait for its actual returned result, and use that result before writing the artifact. The parent must not perform or silently replace synthesis, must not ask the user, and must not stop. Then write only `scenario-output/consensus-result.json` as strict JSON with exactly these keys: `decision` (string or null), `retained_options` (distinct recommendation tokens in input order), `dissent` (recommendation tokens the synthesizer did not choose), `agreement` (one of `single-analyst`, `both-agree`, `two-analyst-disagreement`, `3/3-unanimous`, `2/3-majority`, `0/3-all-disagree`, `tiebreak`), `confidence` (`high` or `low`), `next_action` (`apply`, `escape_to_round_2`, or `round_3_tiebreak`), and `scope_deferred` (boolean). Use the same concise option token in `retained_options`, in `dissent`, and in `decision` when non-null; do not put explanatory sentences in these token fields. Do not copy an expected answer from elsewhere, do not edit the inputs, and stop after the artifact is written.",
       "fixtures": [
         {
           "source": "tests/speckit-pro/evals/fixtures/integration-return-contracts/return-05-keyword-security-relevant/codebase-analyst.md",
@@ -16136,18 +16136,17 @@
         {
           "id": "native-mechanism",
           "requirement": "mechanism",
-          "type": "native_synthesis_mechanism",
-          "artifact_path": "scenario-output/consensus-result.json",
-          "per_host": {
-            "claude": {
-              "mode": "dedicated_subagent",
-              "role": "speckit-pro:consensus-synthesizer"
-            },
-            "codex": {
-              "mode": "dedicated_subagent",
-              "role": "consensus-synthesizer"
+          "type": "native_subagent_dispatch",
+          "expected": [
+            {
+              "item_id": "round3-item",
+              "role": "consensus-tiebreaker"
             }
-          }
+          ],
+          "single_item_context": true,
+          "forbidden_roles": [
+            "consensus-synthesizer"
+          ]
         },
         {
           "id": "read-codebase",
@@ -16188,7 +16187,7 @@
           "id": "mechanism-evidence",
           "requirement": "mechanism",
           "type": "semantic",
-          "rubric": "PASS only if retained tool evidence and the captured artifact demonstrate the installed native synthesis mechanism rather than a final-response claim. When a subagent call is present, there must be exactly one successful call identifying consensus-synthesizer, its actual nonempty returned result must support the artifact, and the parent artifact write must follow that return. When no subagent call is present, the exact declared analyst reads and artifact write must occur in the parent and no child synthesis role may be claimed. FAIL for a wrong or invented role, an empty or missing child return, multiple synthesis calls, write-before-return, or an artifact unsupported by observed work."
+          "rubric": "PASS only if retained tool evidence and the captured artifact demonstrate the installed native synthesis mechanism rather than a final-response claim. When a subagent call is present, there must be exactly one successful call identifying consensus-tiebreaker, its actual nonempty returned result must support the artifact, and the parent artifact write must follow that return. When no subagent call is present, the exact declared analyst reads and artifact write must occur in the parent and no child synthesis role may be claimed. FAIL for a wrong or invented role, an empty or missing child return, multiple synthesis calls, write-before-return, or an artifact unsupported by observed work."
         },
         {
           "id": "decision",
@@ -16285,8 +16284,8 @@
         }
       ],
       "native_differences": [
-        "Claude dispatches the namespaced speckit-pro:consensus-synthesizer role through its native Agent transport.",
-        "Codex dispatches the consensus-synthesizer custom agent through its native collaboration transport; both clients require an actual nonempty returned result before the parent writes the artifact."
+        "Claude dispatches the namespaced speckit-pro:consensus-tiebreaker role through its native Agent transport.",
+        "Codex dispatches the consensus-tiebreaker custom agent through its native collaboration transport; both clients require an actual nonempty returned result before the parent writes the artifact."
       ],
       "provenance": [
         "tests/speckit-pro/layer6-integration/return-format-fixtures/06-synthesizer-round3-all-disagree",

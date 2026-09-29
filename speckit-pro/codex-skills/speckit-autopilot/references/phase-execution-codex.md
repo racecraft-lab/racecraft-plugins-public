@@ -832,7 +832,7 @@ for phase in PHASES starting from first_pending:
        artifacts → mark the corresponding Consensus item complete in both stores.
        An item that ends in [ROUND_3_TIEBREAK] follows
        consensus-protocol.md#round-3-tiebreak: a fresh analyst plus a
-       max-effort `consensus-synthesizer` resolve it in an interactive and an
+       max-effort `consensus-tiebreaker` resolve it in an interactive and an
        unattended run alike; it never asks the operator and never stops the run.
     6. Check .specify/extensions.yml for after_<phase> hooks
        → run accepted hooks (non-destructive), skip duplicates
