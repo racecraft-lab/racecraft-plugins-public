@@ -127,28 +127,7 @@ LAYER3_NEGATIVE_CONTEXTS = {
 
 # Layer 7 Markdown is scanned only in contract files. Each retained retired
 # path must live in one explicitly classified section.
-LAYER7_MARKDOWN_CONTEXTS = {
-    (
-        "tests/speckit-pro/layer7-parity/02-repository-migration-guidance/README.md",
-        "Test scenario",
-        "relocate-process-artifacts.sh",
-    ): "negative",
-    (
-        "tests/speckit-pro/layer7-parity/02-repository-migration-guidance/workflow.md",
-        "Legacy Input Scenario",
-        "migrate-structure.sh",
-    ): "legacy_input",
-    (
-        "tests/speckit-pro/layer7-parity/02-repository-migration-guidance/workflow.md",
-        "Legacy Input Scenario",
-        "relocate-process-artifacts.sh",
-    ): "legacy_input",
-    (
-        "tests/speckit-pro/layer7-parity/02-repository-migration-guidance/workflow.md",
-        "No Auto-Run Guard",
-        "relocate-process-artifacts.sh",
-    ): "negative",
-}
+LAYER7_MARKDOWN_CONTEXTS: dict[tuple[str, str, str], str] = {}
 
 NEGATIVE_MARKERS = ("must not", "does not", "never", "reject", "forbidden", "not invoke")
 LEGACY_SECTION_MARKERS = ("fixture input", "historical provenance", "neither may be recommended or invoked")

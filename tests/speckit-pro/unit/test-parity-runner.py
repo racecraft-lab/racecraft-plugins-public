@@ -16,6 +16,7 @@ import tempfile
 import unittest
 from pathlib import Path
 from types import ModuleType
+from typing import Any
 from unittest.mock import patch
 
 
@@ -57,12 +58,13 @@ CURRENT_INVENTORY = [
     "invalid env contract is labeled to the env file",
     "diff reports consume bounded input and truncate deterministically",
     "no-extractor exact fallback passes identical bytes",
-    "no-extractor tolerance-1 fallback passes identical bytes",
+    "no-extractor tolerance-1 comparison is rejected even for identical bytes",
     "no-extractor tolerance-1 fallback rejects numeric drift as byte diff",
     "no-extractor exact fallback rejects byte drift",
     "fail_fast stops after first failing comparison",
     "fail_fast omits later comparison label",
     "live mode writes claude exit code files",
+    "live stub receives the shipped autopilot skill name",
 ]
 
 
@@ -93,11 +95,6 @@ LIVE_COMPARE = [
         "source": "same-exact.txt",
         "tolerance_key": "whole_file.exact",
     },
-    {
-        "field": "whole_file.tolerance_one",
-        "source": "same-number.txt",
-        "tolerance_key": "whole_file.tolerance_one",
-    },
 ]
 
 LIVE_TOLERANCES = {
@@ -105,7 +102,6 @@ LIVE_TOLERANCES = {
     "extractor.row_count": {"tolerance": "tolerance-1"},
     "semantic.findings": {"tolerance": "semantic-equivalent"},
     "whole_file.exact": {"tolerance": "exact"},
-    "whole_file.tolerance_one": {"tolerance": "tolerance-1"},
 }
 
 
@@ -161,7 +157,7 @@ def make_fixture(
     write_json(
         fixture / "tolerance.json",
         {
-            "schema": "speckit.layer7.tolerance.v1",
+            "schema": "speckit.layer7.legacy.tolerance.v1",
             "fixture_id": name,
             "fields": {
                 key: value | {"rationale": value.get("rationale", "focused unit-test contract")}
@@ -172,13 +168,20 @@ def make_fixture(
     write_json(
         fixture / "expected-equivalence.json",
         {
-            "schema": "speckit.layer7.expected-equivalence.v1",
+            "schema": "speckit.layer7.legacy.expected-equivalence.v1",
             "fixture_id": name,
             "compare": compare,
             "fail_fast": fail_fast,
         },
     )
     return fixture
+
+
+def make_contract_fixture(
+    runner: ModuleType, root: Path, name: str, compare: list[dict[str, str]], tolerances: dict[str, dict[str, str]]
+) -> tuple[Path, dict[str, Any], dict[str, Any]]:
+    fixture = make_fixture(root, name, compare, tolerances)
+    return fixture, runner.load_json(fixture / "expected-equivalence.json"), runner.load_json(fixture / "tolerance.json")
 
 
 def fake_claude_run(argv: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
@@ -472,81 +475,37 @@ class Layer7RunnerTests(unittest.TestCase):
             bounded_diff_output = io.StringIO()
             runner._write_bounded_diff(bounded_diff_output, bounded_diff_lines())
 
-            drift_number_status = self._compare_direct(
-                runner,
-                path_a,
-                path_b,
-                {
-                    "field": "whole_file.tolerance_drift",
-                    "source": "drift-number.txt",
-                    "tolerance_key": "whole_file.tolerance_drift",
-                },
-                {"fields": {"whole_file.tolerance_drift": {"tolerance": "tolerance-1"}}},
-            )
-            drift_exact_status = self._compare_direct(
-                runner,
-                path_a,
-                path_b,
-                {
-                    "field": "whole_file.exact_drift",
-                    "source": "drift-exact.txt",
-                    "tolerance_key": "whole_file.exact_drift",
-                },
-                {"fields": {"whole_file.exact_drift": {"tolerance": "exact"}}},
-            )
-            byte_first_status = self._compare_direct(
-                runner,
-                path_a,
-                path_b,
-                {
-                    "field": "whole_file.byte_first",
-                    "source": "same-exact.txt",
-                    "section_selector": "## Missing Section",
-                    "extractor": "table_column:Missing",
-                    "tolerance_key": "whole_file.byte_first",
-                },
-                {"fields": {"whole_file.byte_first": {"tolerance": "byte-identical"}}},
-            )
-            with patch.object(runner.judge, "judge_values", side_effect=AssertionError("judge should not run")):
-                semantic_fast_path_status = self._compare_direct(
+            selector = {"section_selector": "## Exact Section", "extractor": "table_column:Status"}
+            direct = {
+                key: self._compare_direct(
                     runner,
                     path_a,
                     path_b,
-                    {
-                        "field": "extractor.semantic_fast_path",
-                        "source": "artifact.md",
-                        "section_selector": "## Exact Section",
-                        "extractor": "table_column:Status",
-                        "tolerance_key": "extractor.semantic_fast_path",
-                    },
-                    {"fields": {"extractor.semantic_fast_path": {"tolerance": "semantic-equivalent"}}},
+                    {"field": key, "source": source, "tolerance_key": key} | extra,
+                    {"fields": {key: {"tolerance": tolerance_type}}},
                 )
-            nonnumeric_tolerance_status = self._compare_direct(
-                runner,
-                path_a,
-                path_b,
-                {
-                    "field": "extractor.equal_nonnumeric",
-                    "source": "artifact.md",
-                    "section_selector": "## Exact Section",
-                    "extractor": "table_column:Status",
-                    "tolerance_key": "extractor.equal_nonnumeric",
-                },
-                {"fields": {"extractor.equal_nonnumeric": {"tolerance": "tolerance-1"}}},
-            )
-            unsupported_tolerance_status = self._compare_direct(
-                runner,
-                path_a,
-                path_b,
-                {
-                    "field": "extractor.unsupported",
-                    "source": "artifact.md",
-                    "section_selector": "## Exact Section",
-                    "extractor": "table_column:Status",
-                    "tolerance_key": "extractor.unsupported",
-                },
-                {"fields": {"extractor.unsupported": {"tolerance": "unsupported"}}},
-            )
+                for key, source, tolerance_type, extra in (
+                    ("same_number", "same-number.txt", "tolerance-1", {}),
+                    ("drift_number", "drift-number.txt", "tolerance-1", {}),
+                    ("drift_exact", "drift-exact.txt", "exact", {}),
+                    (
+                        "byte_first",
+                        "same-exact.txt",
+                        "byte-identical",
+                        {"section_selector": "## Missing Section", "extractor": "table_column:Missing"},
+                    ),
+                    ("nonnumeric", "artifact.md", "tolerance-1", selector),
+                    ("unsupported", "artifact.md", "unsupported", selector),
+                )
+            }
+            with patch.object(runner.judge, "judge_values", side_effect=AssertionError("judge should not run")):
+                direct["semantic_fast_path"] = self._compare_direct(
+                    runner,
+                    path_a,
+                    path_b,
+                    {"field": "fast", "source": "artifact.md", "tolerance_key": "fast"} | selector,
+                    {"fields": {"fast": {"tolerance": "semantic-equivalent"}}},
+                )
 
             names = iter(CURRENT_INVENTORY)
             checks = [
@@ -625,12 +584,12 @@ class Layer7RunnerTests(unittest.TestCase):
                 ),
                 (
                     next(names),
-                    lambda: self.assertEqual(byte_first_status, "pass"),
+                    lambda: self.assertEqual(direct["byte_first"], "pass"),
                 ),
                 (
                     next(names),
                     lambda: self.assertEqual(
-                        (semantic_fast_path_status, nonnumeric_tolerance_status, unsupported_tolerance_status),
+                        (direct["semantic_fast_path"], direct["nonnumeric"], direct["unsupported"]),
                         ("pass", "fail", "fail"),
                     ),
                 ),
@@ -666,18 +625,15 @@ class Layer7RunnerTests(unittest.TestCase):
                 ),
                 (
                     next(names),
-                    lambda: self.assertIn(
-                        "PASS canonical-live:whole_file.tolerance_one (tolerance-1, whole-file)",
-                        output,
-                    ),
+                    lambda: self.assertEqual(direct["same_number"], "fail"),
                 ),
                 (
                     next(names),
-                    lambda: self.assertEqual(drift_number_status, "fail"),
+                    lambda: self.assertEqual(direct["drift_number"], "fail"),
                 ),
                 (
                     next(names),
-                    lambda: self.assertEqual(drift_exact_status, "fail"),
+                    lambda: self.assertEqual(direct["drift_exact"], "fail"),
                 ),
                 (
                     next(names),
@@ -695,6 +651,13 @@ class Layer7RunnerTests(unittest.TestCase):
                             (path_b / ".claude-exit-code").read_text(encoding="utf-8").strip(),
                         ],
                         ["0", "0"],
+                    ),
+                ),
+                (
+                    next(names),
+                    lambda: self.assertEqual(
+                        [entry["argv"][-1] for entry in logs],
+                        ["/speckit-pro:speckit-autopilot workflow.md"] * 2,
                     ),
                 ),
             ]
@@ -722,6 +685,118 @@ class Layer7RunnerTests(unittest.TestCase):
             )
 
 
+class Layer7ContractTests(unittest.TestCase):
+    def test_contract_rejections(self) -> None:
+        runner = import_runner()
+        import native_eval_pairing
+
+        self.assertNotEqual(runner.EXPECTED_SCHEMA, native_eval_pairing.EXPECTED_SCHEMA_VERSION)
+        self.assertNotEqual(runner.TOLERANCE_SCHEMA, native_eval_pairing.TOLERANCE_SCHEMA_VERSION)
+        artifact = {"field": "artifact", "source": "artifact.md", "tolerance_key": "t"}
+        workflow = {"field": "workflow", "source": "workflow.md", "tolerance_key": "t"}
+
+        def native_schema(expected: dict[str, Any]) -> None:
+            expected["schema"] = native_eval_pairing.EXPECTED_SCHEMA_VERSION
+
+        def add_artifact(expected: dict[str, Any]) -> None:
+            expected["compare"].append(artifact)
+
+        cases = (
+            ("workflow.md-only compare without invariants", [workflow], "exact", None, "copied workflow.md"),
+            ("a run-produced compare source", [workflow], "exact", add_artifact, None),
+            ("whole-file tolerance-1", [artifact], "tolerance-1", None, "tolerance-1 requires table_row_count"),
+            ("native pairing schema id", [artifact], "exact", native_schema, "schema must be"),
+        )
+        with tempfile.TemporaryDirectory() as temporary:
+            for index, (label, compare, tolerance_type, mutate, pattern) in enumerate(cases):
+                with self.subTest(msg=label):
+                    fixture, expected, tolerance = make_contract_fixture(
+                        runner, Path(temporary), f"canary-{index}", compare, {"t": {"tolerance": tolerance_type}}
+                    )
+                    if mutate is not None:
+                        mutate(expected)
+                    if pattern is None:
+                        runner.validate_fixture_contracts(fixture, expected, tolerance)
+                    else:
+                        with self.assertRaisesRegex(ValueError, pattern):
+                            runner.validate_fixture_contracts(fixture, expected, tolerance)
+
+
+class Layer7LiveGuardTests(unittest.TestCase):
+    def test_unchanged_input_workflow_fails_live(self) -> None:
+        runner = import_runner()
+        fixture = LAYER7 / "04-stack-manager-guidance"
+
+        def do_nothing(argv: list[str], **_kwargs: object) -> subprocess.CompletedProcess[str]:
+            return subprocess.CompletedProcess(argv, 0)
+
+        def touch_workflow(argv: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+            with (Path(str(kwargs["cwd"])) / "workflow.md").open("a", encoding="utf-8") as handle:
+                handle.write("\n")
+            return subprocess.CompletedProcess(argv, 0)
+
+        for label, fake, failed in (("do-nothing run", do_nothing, 2), ("run that updates workflow.md", touch_workflow, 0)):
+            with self.subTest(msg=label), tempfile.TemporaryDirectory() as temporary:
+                counts = runner.Counts()
+                with (
+                    patch.dict(os.environ, {"L7_OUT": temporary}),
+                    patch.object(runner, "resolve_executable", return_value="claude"),
+                    patch.object(runner.subprocess, "run", side_effect=fake),
+                    contextlib.redirect_stdout(io.StringIO()),
+                ):
+                    runner.run_fixture_live(fixture, runner.Config(mode="live"), counts)
+                self.assertEqual(counts.failed, failed)
+
+
+class Layer7LiveSkipTests(unittest.TestCase):
+    def test_live_skip_fails_unless_accepted(self) -> None:
+        runner = import_runner()
+        with tempfile.TemporaryDirectory() as temporary:
+            fixture = make_fixture(
+                Path(temporary),
+                "skip-canary",
+                [{"field": "artifact", "source": "artifact.md", "tolerance_key": "artifact"}],
+                {"artifact": {"tolerance": "exact"}},
+            )
+
+            def skipped(_fixture: Path, _config: object, counts: object) -> None:
+                counts.skip("skip-canary:semantic", "unjudged")
+
+            def run_main(*flags: str) -> int:
+                with (
+                    patch.object(runner, "discover_fixtures", return_value=[fixture]),
+                    patch.object(runner, "run_fixture_live", side_effect=skipped),
+                    contextlib.redirect_stdout(io.StringIO()),
+                    contextlib.redirect_stderr(io.StringIO()),
+                ):
+                    return runner.main(["--live", *flags])
+
+            with self.subTest(msg="live skip exits nonzero"):
+                self.assertEqual(run_main(), 1)
+            with self.subTest(msg="accept-skips exits zero"):
+                self.assertEqual(run_main("--accept-skips"), 0)
+
+
+class SkillNameTests(unittest.TestCase):
+    def test_autopilot_references_use_the_shipped_skill_name(self) -> None:
+        wrong = "/speckit-pro:autopilot"
+        layer6 = TESTS_ROOT / "layer6-integration"
+        paths = [
+            layer6 / "README.md",
+            layer6 / "e2e-fixtures" / "02-autopilot-extended-pipeline" / "prompt.txt",
+            layer6 / "e2e-fixtures" / "02-autopilot-extended-pipeline" / "README.md",
+            RUNNER,
+        ]
+        for path in paths:
+            with self.subTest(msg=path.name):
+                self.assertNotIn(wrong, path.read_text(encoding="utf-8"))
+        self.assertIn("/speckit-pro:speckit-autopilot", paths[0].read_text(encoding="utf-8"))
+
+
 if __name__ == "__main__":
-    suite = unittest.defaultTestLoader.loadTestsFromTestCase(Layer7RunnerTests)
+    loader = unittest.defaultTestLoader
+    suite = unittest.TestSuite(
+        loader.loadTestsFromTestCase(case)
+        for case in (Layer7RunnerTests, Layer7ContractTests, Layer7LiveGuardTests, Layer7LiveSkipTests, SkillNameTests)
+    )
     raise SystemExit(run_counted(suite, label="test-parity-runner"))

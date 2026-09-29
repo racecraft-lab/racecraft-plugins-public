@@ -1,5 +1,5 @@
 {
-  "schema": "speckit.layer7.expected-equivalence.v1",
+  "schema": "speckit.layer7.legacy.expected-equivalence.v1",
   "fixture_id": "01-post-impl-parity",
   "description": "Fields that MUST match between Path A (Agent Teams) and Path B (parallel subagents fallback) runs. Tolerances per field defined in tolerance.json.",
   "compare": [
@@ -40,11 +40,11 @@
       "tolerance_key": "workflow.post_impl_checklist.findings_text"
     },
     {
-      "field": "gate_results",
+      "field": "workflow_overview.phase_statuses",
       "source": "workflow.md",
       "section_selector": "## Workflow Overview",
       "extractor": "table_column:Status",
-      "tolerance_key": "gate_results.G0_through_G7"
+      "tolerance_key": "workflow_overview.phase_statuses"
     },
     {
       "field": "workflow.pr_packet_validation.status",
