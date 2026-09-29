@@ -792,25 +792,33 @@ class _CheckerSource:
     import_bindings: dict[str, dict[str, object]]
 
 
+def _import_entries(node: ast.Import | ast.ImportFrom) -> list[tuple[str, str, dict[str, object] | None]]:
+    """Name each binding one import statement creates, with its exact import form."""
+    entries: list[tuple[str, str, dict[str, object] | None]] = []
+    for alias in node.names:
+        if isinstance(node, ast.ImportFrom):
+            module, name, level, bound = node.module, alias.name, node.level, alias.asname or alias.name
+        else:
+            module, name, level, bound = alias.name, None, 0, alias.asname or alias.name.split(".", 1)[0]
+        binding: dict[str, object] = {
+            "kind": "import", "module": module, "name": name,
+            "as": alias.asname, "level": level, "bound": bound,
+        }
+        entries.append((bound, "import", binding))
+    return entries
+
+
 def _checker_entries(node: ast.stmt) -> list[tuple[str, str, dict[str, object] | None]]:
     """Name each top-level binding one statement creates, with its kind and import binding."""
     if isinstance(node, (ast.Import, ast.ImportFrom)):
-        entries: list[tuple[str, str, dict[str, object] | None]] = []
-        for alias in node.names:
-            from_import = node if isinstance(node, ast.ImportFrom) else None
-            bound = alias.asname or (alias.name if from_import else alias.name.split(".", 1)[0])
-            entries.append((bound, "import", {
-                "kind": "import", "module": from_import.module if from_import else alias.name,
-                "name": alias.name if from_import else None, "as": alias.asname,
-                "level": from_import.level if from_import else 0, "bound": bound,
-            }))
-        return entries
-    if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-        return [(node.name, "helper", None)]
-    if isinstance(node, ast.ClassDef):
-        return [(node.name, "class", None)]
-    targets = node.targets if isinstance(node, ast.Assign) else [node.target] if isinstance(node, ast.AnnAssign) else []
-    return [(target.id, "constant", None) for target in targets if isinstance(target, ast.Name)]
+        return _import_entries(node)
+    if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+        return [(node.name, "class" if isinstance(node, ast.ClassDef) else "helper", None)]
+    if isinstance(node, ast.Assign):
+        return [(target.id, "constant", None) for target in node.targets if isinstance(target, ast.Name)]
+    if isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
+        return [(node.target.id, "constant", None)]
+    return []
 
 
 def _checker_source(path: Path) -> _CheckerSource:

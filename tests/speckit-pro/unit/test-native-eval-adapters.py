@@ -3746,7 +3746,7 @@ SHARED_CHECKER = "native_eval_adapter_common."
 ISOLATION_CHECKER_COMPONENTS = frozenset({
     "Mapping", "Path", "_CheckerSource", "_ISOLATION_CONTROL", "_ISOLATION_DENIAL",
     "_SHARED_CHECKER_MODULE", "_checker_closure", "_checker_component", "_checker_dependencies",
-    "_checker_entries", "_checker_source", "_is_broad_temporary_root", "_isolation_checker_identity",
+    "_checker_entries", "_checker_source", "_import_entries", "_is_broad_temporary_root", "_isolation_checker_identity",
     "_qualify_codex_git_metadata", "_qualify_codex_isolation", "_real_canonical_directory",
     "_remove_exact_probe_entry", "_require_probe_result", "_require_unchanged_probe",
     "_run_codex_sandbox_probe", "_sandbox_probe_command", "_temporary_isolation_probes",
