@@ -8,11 +8,15 @@ from pathlib import Path
 from typing import Any
 
 from ..envelope import diagnostic, response
-from .catalog import CATALOG_PATH, FormalError, confined, selected_catalog
+from ..strict_input import SelectionError
+from .catalog import selected_catalog
 from .engine import execute_model, inspect_tool, obligations, preview_model
 from .evidence import CHECKPOINT_ROWS, fingerprint, read_checkpoint, record_path, write_checkpoint
 from .lifecycle import latest_planning_checkpoint, mirror_checkpoint, recorded_now, state_path, waive_checkpoint, waiver_status
-from .selection import SelectionError, selection_from_workflow
+from .primitives import CATALOG_PATH, FormalError, confined
+from .quint import inspect as inspect_quint
+from .selection import selection_from_workflow
+from .traces import complete_receipts, preview
 
 
 def relative_input(root: Path, value: str) -> str:
@@ -30,7 +34,6 @@ def discover(root: Path, workflow: str) -> dict[str, Any]:
         try:
             identities[model_id] = inspect_tool(root, item["tool"], item["model"]["checker"])
             if "compiler" in item:
-                from .quint import inspect as inspect_quint
                 identities[model_id]["quint"] = inspect_quint(root, item["compiler"])
         except FormalError as exc:
             gaps.append({"model": model_id, "verdict": exc.verdict, "reason": str(exc)})
@@ -66,31 +69,6 @@ def checkpoint_guard(root: Path, workflow: str, checkpoint: str = "plan") -> dic
         return {"required": True, "complete": False, "verdict": "invalid_configuration", "reason": str(exc), "resume": "plan"}
 
 
-def apply_resume_guard(root: Path, workflow: str, parsed: dict[str, Any], signals: dict[str, Any]) -> dict[str, Any]:
-    """Constrain parsed resume state without skipping earlier planning phases."""
-    formal = checkpoint_guard(root, workflow)
-    if formal["complete"]:
-        return formal
-    if parsed["stage"] == "implement" or parsed["from_phase"] in {"checklist", "tasks", "analyze", "implement"}:
-        raise SelectionError(f"formal checkpoint {formal['verdict']}; resume --stage plan --from-phase plan")
-    signals["planning_complete"] = False
-    first = signals.get("first_open")
-    if first is None or first[0] not in {"Specify", "Clarify", "Plan"}:
-        signals["first_open"] = ("Formal Check", formal["verdict"])
-        parsed["from_phase"] = parsed["from_phase"] or "plan"
-    return formal
-
-
-def gate_checkpoint(root: Path, inputs: dict[str, Any]) -> dict[str, Any] | None:
-    gate = inputs["gate"]
-    if gate not in {"G3", "G5", "G6", "G7"} or not inputs.get("workflow_file"):
-        return None
-    formal = checkpoint_guard(root, str(inputs["workflow_file"]), "final" if gate == "G7" else "plan")
-    if formal["complete"]:
-        return None
-    return {"gate": gate, "pass": False, "reason": "selected formal checkpoint is incomplete or stale", "formal_checkpoint": formal, "markers": 0, "details": []}
-
-
 def complete_model_result(result: dict[str, Any], model: dict[str, Any]) -> bool:
     if model.get("language") == "quint":
         compilation = result.get("compilation")
@@ -118,7 +96,6 @@ def complete_results(record: dict[str, Any], models: dict[str, Any]) -> bool:
         if not complete_model_result(result, models[result["model"]]["model"]):
             return False
         if result["model"] in traced:
-            from .traces import complete_receipts
             if not complete_receipts(result.get("traces"), models[result["model"]]["model"]["trace"]["paths"]):
                 return False
     return True
@@ -136,7 +113,6 @@ def check(root: Path, workflow: str, inputs: dict[str, Any], mode: str, context:
     plans = {key: preview_model(root, item) for key, item in context["models"].items()}
     trace_checks = {}
     if checkpoint in ("final", "post"):
-        from .traces import preview
         trace_checks = preview(root, context["selection"], context["models"])
     record = {"schema_version": "1.0", "workflow_file": workflow, "spec_file": spec, "plan_file": plan, "checkpoint": checkpoint, "fingerprint": before, "selection": context["selection"], "checkers": context["identities"], "verdict": "preview", "commands": plans, "results": [], "recorded_at": recorded_now(),
               "evidence": record_path(root, workflow, checkpoint).relative_to(root).as_posix()}
