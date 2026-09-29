@@ -367,7 +367,7 @@
         "value": "speckit_pro_runner/helpers/run_finalization.py",
         "display": "speckit_pro_runner/helpers/run_finalization.py"
       },
-      "sha256": "2772de56df7d2076a9e42186edd39f9ce17cb34d3c7d3846a2d0fb330d571f49"
+      "sha256": "eed3671b7a7772f6c3183e6fb03b3ee391db1170d6ef277e6141a06ef9d3a300"
     },
     {
       "path": {
@@ -407,7 +407,7 @@
         "value": "speckit_pro_runner/pr_contract.py",
         "display": "speckit_pro_runner/pr_contract.py"
       },
-      "sha256": "d2fdc0fcf6ed8f38826cb084c2ee45da1dcc37e2f4aca48ee7cb3af8d858f9f5"
+      "sha256": "97e2e294c2558ae635a9b2386dc2012683d2984b603768dffab7173c38f01c30"
     },
     {
       "path": {

@@ -57,7 +57,7 @@ from ..agent_materialization import canonical_bytes
 from ..envelope import diagnostic, response
 from ..execution_control import (ESCALATION_TIER3_CAP, confined_path, escalation_key, escalation_progress,
                                  failed_verification, finalize_observation_key, require_text, validate_ledger)
-from ..pr_contract import DEFERRED_ITEM_FIELDS, is_one_line
+from ..pr_contract import DEFERRED_ITEM_FIELDS, require_one_line
 from ..stop_policy import ALL_TIERS_FAILED, AUTHORITY, EXHAUSTED, TIER3_CAP_REACHED, stop_class
 from ..sweep_isolation import HEX_OBJECT_RE
 
@@ -88,14 +88,6 @@ REASON_TEXT = {
 
 def _text(value: Any, field: str) -> str:
     return require_text(value, field).strip()
-
-
-def _one_line(value: Any, field: str) -> str:
-    """Text the PR body renders on one line; the packet normalizer rejects a line break."""
-    text = _text(value, field)
-    if not is_one_line(text):
-        raise ValueError(f"{field} must be one line")
-    return text
 
 
 def _ledger(root: Path, inputs: dict[str, Any]) -> dict[str, Any]:
@@ -160,7 +152,7 @@ def _records(value: Any, name: str, fields: tuple[str, ...]) -> list[dict[str, s
     for index, raw in enumerate(value):
         if not isinstance(raw, dict) or set(raw) != set(fields):
             raise ValueError(f"{name}[{index}] must have exactly {', '.join(fields)}")
-        records.append({field: _one_line(raw[field], f"{name}[{index}].{field}") for field in fields})
+        records.append({field: require_one_line(_text(raw[field], f"{name}[{index}].{field}"), f"{name}[{index}].{field}") for field in fields})
     return records
 
 

@@ -27,3 +27,10 @@ DEFERRED_ITEM_FIELDS = ("item", "reason", "finish")
 def is_one_line(text: str) -> bool:
     """True when `text` is non-blank and holds no line break."""
     return bool(text.strip()) and re.search(r"[\r\n]", text) is None
+
+
+def require_one_line(text: str, field: str) -> str:
+    """`text` itself, or a ValueError naming `field` when it breaks across lines."""
+    if re.search(r"[\r\n]", text):
+        raise ValueError(f"{field} must be one line; the PR body renders each deferred field on one line")
+    return text
