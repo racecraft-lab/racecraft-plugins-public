@@ -174,53 +174,41 @@ def load_fixture(fixture: Path, mode: str, reporter: Reporter) -> tuple[Path, di
     return transcript, load_expected(expected_path)
 
 
-def check_each(reporter: Reporter, values: list[str], label: str, holds: Callable[[str], bool], detail: str) -> None:
-    """Record one check per value; ``label`` and ``detail`` take the value as ``{}``."""
-    for value in values:
-        reporter.check(label.format(value), holds(value), detail.format(value))
+Check = Callable[[Reporter, str, Path, dict[str, Any]], None]
+
+# expected.json key -> (check label, predicate over the transcript and one value, failure detail)
+VALUE_CHECKS: dict[str, tuple[str, Callable[[Path, str], bool], str]] = {
+    "must_dispatch_to": ("dispatched to {}", helpers.assert_dispatched_to, "expected dispatch to {}, none found"),
+    "must_not_dispatch_to": ("never dispatched to {}", helpers.assert_not_dispatched_to, "{} was dispatched but should not have been"),
+    "must_not_invoke_skill": ("skill never invoked: {} (any scope)", helpers.assert_skill_not_invoked, "skill matching {!r} was invoked"),
+    "must_include_terms": ("transcript includes term: {}", helpers.assert_transcript_contains_term, "expected transcript to include {!r}"),
+    "must_not_include_terms": ("transcript excludes term: {}", helpers.assert_transcript_not_contains_term, "transcript included forbidden term {!r}"),
+}
+
+
+def expectation_check(*keys: str) -> Check:
+    """Build a check that records one result per value of each listed expected.json key."""
+
+    def run(reporter: Reporter, fixture_id: str, transcript: Path, expected: dict[str, Any]) -> None:
+        for key in keys:
+            label, holds, detail = VALUE_CHECKS[key]
+            for value in string_list(expected.get(key)):
+                reporter.check(f"{fixture_id}: {label.format(value)}", holds(transcript, value), detail.format(value))
+
+    return run
+
+
+check_dispatch_targets = expectation_check("must_dispatch_to", "must_not_dispatch_to", "must_not_invoke_skill")
+check_transcript_terms = expectation_check("must_include_terms", "must_not_include_terms")
 
 
 def check_dispatch_shape(reporter: Reporter, fixture_id: str, transcript: Path, expected: dict[str, Any]) -> None:
-    check_each(
-        reporter,
-        string_list(expected.get("must_dispatch_to")),
-        f"{fixture_id}: dispatched to {{}}",
-        lambda target: helpers.assert_dispatched_to(transcript, target),
-        "expected dispatch to {}, none found",
-    )
     if expected.get("must_not_have_forbidden_spawns") is True:
         reporter.check(
             f"{fixture_id}: no subagent spawned an Agent()",
             helpers.assert_no_forbidden_spawns(transcript),
             "found subagent that spawned another Agent",
         )
-    check_each(
-        reporter,
-        string_list(expected.get("must_not_invoke_skill")),
-        f"{fixture_id}: skill never invoked: {{}} (any scope)",
-        lambda pattern: helpers.assert_skill_not_invoked(transcript, pattern),
-        "skill matching {!r} was invoked",
-    )
-
-
-def check_transcript_terms(reporter: Reporter, fixture_id: str, transcript: Path, expected: dict[str, Any]) -> None:
-    check_each(
-        reporter,
-        string_list(expected.get("must_include_terms")),
-        f"{fixture_id}: transcript includes term: {{}}",
-        lambda term: helpers.assert_transcript_contains_term(transcript, term),
-        "expected transcript to include {!r}",
-    )
-    check_each(
-        reporter,
-        string_list(expected.get("must_not_include_terms")),
-        f"{fixture_id}: transcript excludes term: {{}}",
-        lambda term: helpers.assert_transcript_not_contains_term(transcript, term),
-        "transcript included forbidden term {!r}",
-    )
-
-
-def check_dispatch_targets(reporter: Reporter, fixture_id: str, transcript: Path, expected: dict[str, Any]) -> None:
     if "must_dispatch_to_at_least_one_of" in expected:
         allowed = string_list(expected["must_dispatch_to_at_least_one_of"])
         reporter.check(
@@ -228,13 +216,6 @@ def check_dispatch_targets(reporter: Reporter, fixture_id: str, transcript: Path
             any(helpers.assert_dispatched_to(transcript, target) for target in allowed),
             "expected dispatch to at least one allowed target",
         )
-    check_each(
-        reporter,
-        string_list(expected.get("must_not_dispatch_to")),
-        f"{fixture_id}: never dispatched to {{}}",
-        lambda target: helpers.assert_not_dispatched_to(transcript, target),
-        "{} was dispatched but should not have been",
-    )
 
 
 def check_dispatch_counts(reporter: Reporter, fixture_id: str, transcript: Path, expected: dict[str, Any]) -> None:
@@ -267,6 +248,15 @@ def check_dispatch_order(reporter: Reporter, fixture_id: str, transcript: Path, 
         reporter.check(f"{fixture_id}: {before} precedes {after}", condition, "order constraint violated")
 
 
+def apply_checks(fixture: Path, mode: str, reporter: Reporter, checks: list[Check]) -> None:
+    loaded = load_fixture(fixture, mode, reporter)
+    if loaded is None:
+        return
+    transcript, expected = loaded
+    for check in checks:
+        check(reporter, fixture.name, transcript, expected)
+
+
 def assert_dispatch_fixture(
     fixture: Path,
     mode: str,
@@ -274,17 +264,8 @@ def assert_dispatch_fixture(
     *,
     check_terms: bool,
 ) -> None:
-    loaded = load_fixture(fixture, mode, reporter)
-    if loaded is None:
-        return
-    transcript, expected = loaded
-    fixture_id = fixture.name
-    check_dispatch_shape(reporter, fixture_id, transcript, expected)
-    check_dispatch_targets(reporter, fixture_id, transcript, expected)
-    if check_terms:
-        check_transcript_terms(reporter, fixture_id, transcript, expected)
-    check_dispatch_counts(reporter, fixture_id, transcript, expected)
-    check_dispatch_order(reporter, fixture_id, transcript, expected)
+    checks = [check_dispatch_targets, check_dispatch_shape, check_dispatch_counts, check_dispatch_order]
+    apply_checks(fixture, mode, reporter, [*checks, check_transcript_terms] if check_terms else checks)
 
 
 def print_fixture_heading(fixture: Path) -> None:

@@ -9,12 +9,14 @@ from pathlib import Path
 
 from lib import transcript_helpers as helpers
 from lib.fixture_runner import (
+    Check,
     Reporter,
+    apply_checks,
     capture_or_fail,
     check_dispatch_shape,
+    check_dispatch_targets,
     check_transcript_terms,
     collect_fixtures,
-    load_fixture,
     parse_runner_args,
     print_fixture_heading,
     report_runtime_error,
@@ -85,15 +87,17 @@ def check_response_assertion(
         )
 
 
+def response_check(mode: str) -> Check:
+    def run(reporter: Reporter, fixture_id: str, transcript: Path, expected: dict[str, object]) -> None:
+        for assertion in response_assertions(expected, fixture_id):
+            check_response_assertion(reporter, fixture_id, transcript, assertion, mode)
+
+    return run
+
+
 def assert_fixture(fixture: Path, mode: str, reporter: Reporter) -> None:
-    loaded = load_fixture(fixture, mode, reporter)
-    if loaded is None:
-        return
-    transcript, expected = loaded
-    check_dispatch_shape(reporter, fixture.name, transcript, expected)
-    check_transcript_terms(reporter, fixture.name, transcript, expected)
-    for assertion in response_assertions(expected, fixture.name):
-        check_response_assertion(reporter, fixture.name, transcript, assertion, mode)
+    checks = [check_dispatch_targets, check_dispatch_shape, check_transcript_terms, response_check(mode)]
+    apply_checks(fixture, mode, reporter, checks)
 
 
 def main(argv: list[str]) -> int:
