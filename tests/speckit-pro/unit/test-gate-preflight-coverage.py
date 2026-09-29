@@ -138,6 +138,41 @@ class GatePreflightCoverageTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 gate_preflight_coverage({"gates": GATES, "inventory_actions": INVENTORY}, root)
 
+    def test_both_hosts_collect_declared_pre_pr_commands_at_run_start(self) -> None:
+        codex = " ".join((PLUGIN_ROOT / "codex-skills/speckit-autopilot/references/phase-execution-codex.md")
+                         .read_text(encoding="utf-8").split())
+        for phrase in ("`declared_commands`", "declared pre-PR command", "copy its `target` verbatim"):
+            self.assertIn(phrase, codex)
+        claude = " ".join((PLUGIN_ROOT / "skills/speckit-autopilot/references/phase-execution.md")
+                          .read_text(encoding="utf-8").split())
+        for phrase in ("declared pre-PR command", "`check-gate-preflight-coverage`"):
+            self.assertIn(phrase, claude)
+
+    def test_runner_reports_a_gap_as_an_expected_failure(self) -> None:
+        request = json.loads(FIXTURE_REQUEST.read_text(encoding="utf-8"))
+        response = _runner(request)
+        self.assertEqual(response["status"], "ok", response)
+        self.assertTrue(response["data"]["covered"])
+        request["inputs"]["inventory_actions"] = []
+        response = _runner(request)
+        self.assertEqual(response["status"], "expected_failure", response)
+        self.assertFalse(response["data"]["covered"])
+        request["inputs"]["gates"] = []
+        self.assertEqual(_runner(request)["status"], "input_error")
+
+
+GIT_ENV = {"PATH": os.environ["PATH"], "GIT_CONFIG_GLOBAL": os.devnull, "GIT_CONFIG_SYSTEM": os.devnull,
+           "GIT_CONFIG_NOSYSTEM": "1", "GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "native-eval@example.invalid",
+           "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "native-eval@example.invalid"}
+
+
+def _git(cwd: Path, *args: str) -> None:
+    subprocess.run(["git", *args], cwd=cwd, env=GIT_ENV, check=True, capture_output=True, timeout=60)
+
+
+class RunStartCoverageTests(unittest.TestCase):
+    """Run-start derivation: standing-policy classes and write surfaces outside the writable roots."""
+
     def test_declared_audits_derive_standing_policy_classes(self) -> None:
         """A missing external_side_effect need becomes a class the standing policy can cover."""
         import tempfile
@@ -165,24 +200,16 @@ class GatePreflightCoverageTests(unittest.TestCase):
 
     def test_a_private_record_and_workflow_root_outside_the_writable_roots_are_needs(self) -> None:
         """A linked worktree's git common dir and an external workflow root sit outside its writable roots."""
-        import subprocess
         import tempfile
 
         from speckit_pro_runner.helpers.gate_preflight_coverage import gate_preflight_coverage
 
-        env = {"PATH": os.environ["PATH"], "GIT_CONFIG_GLOBAL": os.devnull, "GIT_CONFIG_SYSTEM": os.devnull,
-               "GIT_CONFIG_NOSYSTEM": "1", "GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "native-eval@example.invalid",
-               "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "native-eval@example.invalid"}
-
-        def git(cwd: Path, *args: str) -> None:
-            subprocess.run(["git", *args], cwd=cwd, env=env, check=True, capture_output=True, timeout=60)
-
         with tempfile.TemporaryDirectory() as temp:
             main, linked, external = (Path(temp).resolve() / name for name in ("main", "linked", "external"))
             main.mkdir()
-            git(main, "init", "-q", "-b", "main")
-            git(main, "commit", "-q", "--allow-empty", "-m", "init")
-            git(main, "worktree", "add", "-q", "-b", "feature", str(linked))
+            _git(main, "init", "-q", "-b", "main")
+            _git(main, "commit", "-q", "--allow-empty", "-m", "init")
+            _git(main, "worktree", "add", "-q", "-b", "feature", str(linked))
             base = {"gates": GATES, "inventory_actions": INVENTORY}
             record = str(main / ".git" / "speckit-pro" / "autonomy-boundary")
 
@@ -210,16 +237,6 @@ class GatePreflightCoverageTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 gate_preflight_coverage({**base, "writable_roots": ["relative"]}, linked)
 
-    def test_both_hosts_collect_declared_pre_pr_commands_at_run_start(self) -> None:
-        codex = " ".join((PLUGIN_ROOT / "codex-skills/speckit-autopilot/references/phase-execution-codex.md")
-                         .read_text(encoding="utf-8").split())
-        for phrase in ("`declared_commands`", "declared pre-PR command", "copy its `target` verbatim"):
-            self.assertIn(phrase, codex)
-        claude = " ".join((PLUGIN_ROOT / "skills/speckit-autopilot/references/phase-execution.md")
-                          .read_text(encoding="utf-8").split())
-        for phrase in ("declared pre-PR command", "`check-gate-preflight-coverage`"):
-            self.assertIn(phrase, claude)
-
     def test_runner_reports_an_external_workflow_root_and_derived_classes(self) -> None:
         request = json.loads(FIXTURE_REQUEST.read_text(encoding="utf-8"))
         request["inputs"].update(repo_root=str(REPO_ROOT), writable_roots=[str(REPO_ROOT)],
@@ -230,18 +247,6 @@ class GatePreflightCoverageTests(unittest.TestCase):
         self.assertIn("/external-workflow-root", [item["target"] for item in data["missing"]])
         self.assertEqual([item["class_id"] for item in data["policy_classes"]], ["gate-post-live-evaluation"])
         self.assertTrue(data["private_record_dir"].endswith("speckit-pro/autonomy-boundary"))
-
-    def test_runner_reports_a_gap_as_an_expected_failure(self) -> None:
-        request = json.loads(FIXTURE_REQUEST.read_text(encoding="utf-8"))
-        response = _runner(request)
-        self.assertEqual(response["status"], "ok", response)
-        self.assertTrue(response["data"]["covered"])
-        request["inputs"]["inventory_actions"] = []
-        response = _runner(request)
-        self.assertEqual(response["status"], "expected_failure", response)
-        self.assertFalse(response["data"]["covered"])
-        request["inputs"]["gates"] = []
-        self.assertEqual(_runner(request)["status"], "input_error")
 
 
 if __name__ == "__main__":

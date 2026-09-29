@@ -610,6 +610,11 @@ def _section(text: str, heading: str, next_heading: str) -> str:
     return text[start : text.index(next_heading, start + len(heading))]
 
 
+def _assert_phrases(case: unittest.TestCase, text: str, phrases: tuple[str, ...]) -> None:
+    for phrase in phrases:
+        case.assertIn(phrase, text)
+
+
 BLOCKED_ACTION_HEADING = "Blocked Actions Mid-Run: Fall Back or Defer, Never Stop"
 
 
@@ -1087,18 +1092,17 @@ class CodexRunStartAuthorizationSourceContractTests(unittest.TestCase):
         self.policy = _flat(CLAUDE_AUTOPILOT_SKILL.parent / "references" / "stop-policy.md")
 
     def test_step_runs_before_archive_sweep_and_on_every_resume(self) -> None:
-        for phrase in (
+        _assert_phrases(self, self.step, (
             "right after the binding guard, before Archive Sweep and Step 0",
             "on every start and every resume",
             "no permission or egress prompt can stop the run midway",
             "before Phase 1",
-        ):
-            self.assertIn(phrase, self.step)
+        ))
         self.assertLess(self.skill.index("**Step -2: Run-Start Authorization**"),
                         self.skill.index("**Step -1: Archive Sweep Startup**"))
 
     def test_policy_classes_derive_from_the_gate_coverage_output(self) -> None:
-        for phrase in (
+        _assert_phrases(self, self.step, (
             "`check-gate-preflight-coverage`",
             "`policy_classes`",
             "`derived_classes`",
@@ -1108,11 +1112,10 @@ class CodexRunStartAuthorizationSourceContractTests(unittest.TestCase):
             "`write_paths`",
             "`scope=standing`",
             "`installed_extra_policy`",
-        ):
-            self.assertIn(phrase, self.step)
+        ))
 
     def test_each_class_and_write_surface_is_probed_before_phase_one(self) -> None:
-        for phrase in (
+        _assert_phrases(self, self.step, (
             "Probe every class before Phase 1",
             "each `policy_classes` entry's `probe`",
             "external `WORKFLOW_ROOT`",
@@ -1122,11 +1125,10 @@ class CodexRunStartAuthorizationSourceContractTests(unittest.TestCase):
             "`uncovered`",
             "never retried through another tool, path, or wrapper",
             "`stop_reason:veto_bypass`",
-        ):
-            self.assertIn(phrase, self.step)
+        ))
 
     def test_a_missing_policy_or_denied_probe_is_one_plain_text_request(self) -> None:
-        for phrase in (
+        _assert_phrases(self, self.step, (
             "Ask once",
             "one plain-text run-start request before Phase 1, never as a goal edit",
             "the standing install text once",
@@ -1136,8 +1138,7 @@ class CodexRunStartAuthorizationSourceContractTests(unittest.TestCase):
             "`explicit_user`",
             "`operator_action_required`",
             "ask nothing",
-        ):
-            self.assertIn(phrase, self.step)
+        ))
 
     def test_binding_guard_defers_the_external_root_denial_to_the_probe(self) -> None:
         self.assertIn("Step -2 probes that root for write access before any phase work", self.binding)
@@ -1152,16 +1153,15 @@ class CodexRunStartAuthorizationSourceContractTests(unittest.TestCase):
         self.assertIn("A derived class's probe is its gate command run once", self.step)
 
     def test_phase_six_five_cites_the_run_start_result_and_inventories_the_private_write(self) -> None:
-        for phrase in (
+        _assert_phrases(self, self.phase, (
             "Anything Step -2 could have known is not discovered here",
             "is an autopilot defect",
             "probes the write at run start",
             "`outside_writable_roots` action",
-        ):
-            self.assertIn(phrase, self.phase)
+        ))
 
     def test_shared_reference_states_the_run_start_grant_for_both_hosts(self) -> None:
-        for phrase in (
+        _assert_phrases(self, self.policy, (
             "## Run-start grants",
             "Codex:",
             "Claude Code:",
@@ -1169,8 +1169,7 @@ class CodexRunStartAuthorizationSourceContractTests(unittest.TestCase):
             "Any run-start probe that prompts or is denied is settled in that one ask",
             "Nothing that inventory could have known is discovered mid-run",
             "`stop_reason:veto_bypass`",
-        ):
-            self.assertIn(phrase, self.policy)
+        ))
         self.assertIn("stop-policy.md#run-start-grants", self.skill)
 
 
@@ -1186,17 +1185,16 @@ class ClaudeRunStartPermissionProbeSourceContractTests(unittest.TestCase):
         self.phase = _flat(references / "phase-execution.md")
 
     def test_one_no_op_runner_request_and_one_git_status_run_first(self) -> None:
-        for phrase in (
+        _assert_phrases(self, self.step, (
             "before the binding guard, Step -1, Step 0, and any phase work",
             "on every start and every resume",
             "one no-op runner request: helper `helper-registry-dispatch` with empty `inputs`",
             "`<resolved_python> -m speckit_pro_runner`",
             "one `git status --porcelain` in the live checkout",
-        ):
-            self.assertIn(phrase, self.step)
+        ))
 
     def test_a_prompt_or_denial_prints_the_exact_allow_rule_and_stops_once(self) -> None:
-        for phrase in (
+        _assert_phrases(self, self.step, (
             "either prompts or is denied",
             "print the allow rules for the probe that failed, once",
             "stop before any phase work",
@@ -1207,8 +1205,7 @@ class ClaudeRunStartPermissionProbeSourceContractTests(unittest.TestCase):
             "Print each rule in Claude Code's `Tool(pattern)` form",
             "written exactly as the request invoked it",
             "bypassPermissions",
-        ):
-            self.assertIn(phrase, self.step)
+        ))
         # The zero-shell guard rejects the shell tool's name in shipped guidance.
         self.assertNotIn("Ba" + "sh", self.step)
         self.assertIn("print nothing and continue", self.step)
