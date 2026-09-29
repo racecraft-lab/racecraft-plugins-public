@@ -2202,42 +2202,23 @@ class GateFoundationTests(unittest.TestCase):
     def test_installed_release_payload_completeness_detects_stale_runner_trust_metadata(self) -> None:
         from speckit_pro_runner.gates import payloads as payload_gate
 
-        with tempfile.TemporaryDirectory() as tmp:
-            dist_root = Path(tmp) / "dist"
-            payload_gate.build_installed_plugin_payloads(REPO_ROOT, dist_root)
-            payload_root = dist_root / "claude" / "speckit-pro"
-            runner_file = payload_root / "speckit_pro_runner" / "__main__.py"
-            runner_file.write_text(runner_file.read_text(encoding="utf-8") + "\n# stale trust metadata test\n", encoding="utf-8")
+        for changed in ("__main__.py", "gate_discovery_table.json"):
+            with self.subTest(changed=changed), tempfile.TemporaryDirectory() as tmp:
+                dist_root = Path(tmp) / "dist"
+                payload_gate.build_installed_plugin_payloads(REPO_ROOT, dist_root)
+                payload_root = dist_root / "claude" / "speckit-pro"
+                runner_file = payload_root / "speckit_pro_runner" / changed
+                runner_file.write_text(runner_file.read_text(encoding="utf-8") + "\n# stale trust metadata test\n", encoding="utf-8")
 
-            mismatches = payload_gate.payload_trust_metadata_mismatches(payload_root)
+                mismatches = payload_gate.payload_trust_metadata_mismatches(payload_root)
 
-        self.assertEqual(
-            set(mismatches),
-            {
-                "speckit_pro_runner/speckit-pro-runner.manifest.json",
-                "speckit_pro_runner/speckit-pro-runner.sha256",
-            },
-        )
-
-    def test_installed_release_payload_completeness_detects_stale_runtime_json(self) -> None:
-        from speckit_pro_runner.gates import payloads as payload_gate
-
-        with tempfile.TemporaryDirectory() as tmp:
-            dist_root = Path(tmp) / "dist"
-            payload_gate.build_installed_plugin_payloads(REPO_ROOT, dist_root)
-            payload_root = dist_root / "claude" / "speckit-pro"
-            table = payload_root / "speckit_pro_runner" / "gate_discovery_table.json"
-            table.write_text(table.read_text(encoding="utf-8") + "\n", encoding="utf-8")
-
-            mismatches = payload_gate.payload_trust_metadata_mismatches(payload_root)
-
-        self.assertEqual(
-            set(mismatches),
-            {
-                "speckit_pro_runner/speckit-pro-runner.manifest.json",
-                "speckit_pro_runner/speckit-pro-runner.sha256",
-            },
-        )
+                self.assertEqual(
+                    set(mismatches),
+                    {
+                        "speckit_pro_runner/speckit-pro-runner.manifest.json",
+                        "speckit_pro_runner/speckit-pro-runner.sha256",
+                    },
+                )
 
     def test_payload_build_fails_when_a_required_source_directory_is_missing(self) -> None:
         from speckit_pro_runner.gates import payloads as payload_gate
