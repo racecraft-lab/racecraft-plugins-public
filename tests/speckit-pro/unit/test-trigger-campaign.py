@@ -565,6 +565,8 @@ class CampaignDraftBindingTests(unittest.TestCase):
                     self.assertEqual(draft[field], plan[field], field)
                 self.assertEqual(draft["launch_budget_requested"], plan["launch_count"])
 
+
+class DraftIdentityTests(unittest.TestCase):
     def test_committed_campaign_drafts_bind_the_current_identities(self):
         """A draft names the observer, catalog and fixture it was planned against.
 
@@ -604,5 +606,6 @@ if __name__ == "__main__":
         unittest.defaultTestLoader.loadTestsFromTestCase(MultiGenerationApprovalTests),
         unittest.defaultTestLoader.loadTestsFromTestCase(CarryForwardTests),
         unittest.defaultTestLoader.loadTestsFromTestCase(CampaignDraftBindingTests),
+        unittest.defaultTestLoader.loadTestsFromTestCase(DraftIdentityTests),
     ])
     raise SystemExit(run_counted(suite, label="test-trigger-campaign"))
