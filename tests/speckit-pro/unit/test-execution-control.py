@@ -44,6 +44,10 @@ class _ExecutionControlFixture:
             self.run_id = result["ledger"]["run_id"]
         return result
 
+    def assert_schema_valid(self, ledger):
+        schema = json.loads(SCHEMA_PATH.read_text())
+        self.assertEqual(json_schema_failures(ledger, schema, schema, "ledger"), [])
+
 
 def _assert_relocation_event_reuse_rejected(test, path, common):
     event_id, run_id = "workflow-move-1", test.run_id
@@ -1354,10 +1358,6 @@ class DeferOnExhaustedAllowanceTests(_ExecutionControlFixture, unittest.TestCase
         return {"dispatch_id": dispatch_id, "reason": reason, "unit_kind": unit_kind, "unit": unit,
                 "deferred_at": self.now}
 
-    def assert_schema_valid(self, ledger):
-        schema = json.loads(SCHEMA_PATH.read_text())
-        self.assertEqual(json_schema_failures(ledger, schema, schema, "ledger"), [])
-
     def test_exhausted_family_and_run_budgets_defer_the_named_family_and_keep_refusing(self):
         self.invoke("start")
         self.invoke("reserve", dispatch_id="fix-a", kind="corrective", failure_invariant="FR-001")
@@ -1601,6 +1601,14 @@ def bun_output(failing, passing):
     return "tests/sample.test.ts:\n" + "\n".join(lines) + "\n"
 
 
+FAILING_CHECK_FIXTURES = Path(__file__).resolve().parent / "fixtures" / "failing-checks"
+
+
+def runner_output(name):
+    """Real test-runner output captured from the tool itself (see the fixture directory)."""
+    return (FAILING_CHECK_FIXTURES / name).read_text(encoding="utf-8")
+
+
 class FailingCheckFingerprintTests(unittest.TestCase):
     """The runner derives a failing-check set from the output it executed, from a closed set of formats."""
 
@@ -1651,8 +1659,73 @@ class FailingCheckFingerprintTests(unittest.TestCase):
                          ("passed", [], None))
 
 
-class CorrectionProgressTests(_ExecutionControlFixture, unittest.TestCase):
-    """A correction that measurably converged admits the next one with no operator event (issue 796)."""
+class MoreTestRunnerFingerprintTests(unittest.TestCase):
+    """go test, cargo test, vitest, mocha, and JUnit XML parse from output the tools really produced."""
+
+    fingerprint = FailingCheckFingerprintTests.fingerprint
+
+    CASES = {
+        "go-test-v.txt": ("go", ["TestGroup", "TestGroup/inner_bad", "TestSub"], ["TestAdd", "TestGroup/inner_ok"], 5),
+        "go-test.txt": ("go", ["TestGroup", "TestGroup/inner_bad", "TestSub"], None, None),
+        "cargo-test.txt": ("cargo", ["tests::nested_path_bad", "tests::subs"], ["tests::adds"], 3),
+        "vitest.txt": ("vitest", ["math.test.js > math > subtracts", "math.test.js > strings > upper"], None, 3),
+        "mocha.txt": ("mocha", ["math nested upper", "math subtracts"], None, 3),
+        "junit-vitest.xml": ("junit", ["math.test.js.math > subtracts", "math.test.js.strings > upper"],
+                             ["math.test.js.math > adds"], 3),
+        "junit-mocha.xml": ("junit", ["math nested.upper", "math.subtracts"], ["math.adds"], 3),
+    }
+
+    def test_each_new_format_yields_a_sorted_failing_set(self):
+        for name, (fmt, failing, passing, checks_run) in self.CASES.items():
+            with self.subTest(fixture=name):
+                result = self.fingerprint(runner_output(name))
+                self.assertEqual((result["format"], result["failing"], result["passing"], result["checks_run"]),
+                                 (fmt, failing, passing, checks_run))
+
+    def test_stderr_carries_the_same_output(self):
+        for name in ("go-test-v.txt", "cargo-test.txt", "mocha.txt"):
+            with self.subTest(fixture=name):
+                self.assertEqual(self.fingerprint(stderr=runner_output(name))["failing"],
+                                 self.fingerprint(runner_output(name))["failing"])
+
+    def test_a_passing_run_in_a_new_format_records_an_empty_set_and_its_count(self):
+        cases = {"go": ("=== RUN   TestAdd\n--- PASS: TestAdd (0.00s)\n=== RUN   TestSub\n--- PASS: TestSub (0.00s)\nPASS\n"
+                        "ok  \texample.test/demo\t0.1s\n", 2),
+                 "cargo": ("test a ... ok\ntest b ... ok\n\ntest result: ok. 2 passed; 0 failed; 1 ignored; "
+                           "0 measured; 0 filtered out; finished in 0.00s\n", 3),
+                 "vitest": (" Test Files  1 passed (1)\n      Tests  4 passed (4)\n", 4),
+                 "mocha": ("  3 passing (5ms)\n  1 pending\n", 4),
+                 "junit": ('<testsuite tests="2"><testcase classname="a" name="b"/><testcase classname="a" name="c"/>'
+                           "</testsuite>\n", 2)}
+        for fmt, (text, checks_run) in cases.items():
+            with self.subTest(format=fmt):
+                result = self.fingerprint(text, exit_code=0)
+                self.assertEqual((result["format"], result["failing"], result["checks_run"]), (fmt, [], checks_run))
+
+    def test_new_format_output_that_cannot_be_trusted_records_no_failing_set(self):
+        junit = runner_output("junit-vitest.xml")
+        cases = {"two formats at once": runner_output("go-test-v.txt") + runner_output("cargo-test.txt"),
+                 "junit and a text format": junit + runner_output("mocha.txt"),
+                 "truncated xml": junit[:junit.index("</testsuite>")],
+                 "entity declaration": '<!DOCTYPE x [<!ENTITY a "b">]>' + junit,
+                 "junit that names no failure": '<testsuite tests="1"><testcase classname="a" name="b"/></testsuite>',
+                 "go build failure": "FAIL\texample.test/demo [build failed]\nFAIL\n",
+                 "cargo compile error": "error[E0425]: cannot find value\n\nerror: could not compile `demo`\n"}
+        for name, text in cases.items():
+            with self.subTest(case=name):
+                result = self.fingerprint(text)
+                self.assertEqual((result["format"], result["failing"]), ("unparsed", None))
+
+    def test_the_ledger_accepts_each_new_format_and_older_ledgers_still_validate(self):
+        schema = json.loads(SCHEMA_PATH.read_text())
+        formats = schema["properties"]["dispatches"]["additionalProperties"]["properties"]["failing_checks"][
+            "properties"]["format"]["enum"]
+        self.assertEqual(formats[:4] + formats[-2:], ["unittest", "pytest", "bun", "jest", "passed", "unparsed"])
+        self.assertEqual({"go", "cargo", "vitest", "mocha", "junit"}, set(formats) - {
+            "unittest", "pytest", "bun", "jest", "passed", "unparsed"})
+
+
+class _CorrectionProgressFixture(_ExecutionControlFixture):
 
     def setUp(self):
         super().setUp()
@@ -1681,9 +1754,10 @@ class CorrectionProgressTests(_ExecutionControlFixture, unittest.TestCase):
             self.invoke("complete", dispatch_id=dispatch_id, outcome=outcome)
         return result
 
-    def assert_schema_valid(self, ledger):
-        schema = json.loads(SCHEMA_PATH.read_text())
-        self.assertEqual(json_schema_failures(ledger, schema, schema, "ledger"), [])
+
+
+class CorrectionProgressTests(_CorrectionProgressFixture, unittest.TestCase):
+    """A correction that measurably converged admits the next one with no operator event (issue 796)."""
 
     def assert_deferred_for(self, result, reason):
         self.assertEqual(result["disposition"], "defer")
@@ -1749,7 +1823,11 @@ class CorrectionProgressTests(_ExecutionControlFixture, unittest.TestCase):
         self.verify(unittest_output("test_x", "test_y"))
         self.correct("fix-u1", invariant="words that name no requirement")
         self.verify(unittest_output("test_x"))
-        self.assert_deferred_for(self.correct("fix-u2", invariant="other words"), "unresolved_family")
+        # The shrunk set is a different untagged family, so only the run-wide cap refuses it; no progress path applies.
+        shrunk = self.correct("fix-u2", invariant="other words")
+        self.assertEqual((shrunk["disposition"], shrunk["reasons"]), ("defer", ["corrective_run_budget_exhausted"]))
+        self.assertNotIn("progress", shrunk)
+        self.assertNotIn("fix-u2", shrunk["ledger"]["dispatches"])
 
     def test_a_narrowed_command_or_a_removed_check_is_not_progress(self):
         self.verify(unittest_output("test_a", "test_b"))
@@ -1887,6 +1965,58 @@ class CorrectionProgressTests(_ExecutionControlFixture, unittest.TestCase):
         self.assert_schema_valid(opened["ledger"])
 
 
+class UntaggedFailureFamilyTests(_CorrectionProgressFixture, unittest.TestCase):
+    """An untagged failure takes its family from the failing set the runner recorded, not one shared name."""
+
+    def families(self, result):
+        ledger = result["ledger"]
+        return {ledger["reservations"][item["reservation_id"]]["family"]
+                for item in ledger["dispatches"].values() if item.get("reservation_id") in ledger["reservations"]}
+
+    def test_two_unrelated_untagged_failures_get_separate_families_and_reservations(self):
+        self.verify(runner_output("go-test-v.txt"))
+        first = self.correct("fix-go", invariant="words that name no requirement")
+        self.assertEqual(first["disposition"], "continue")
+        self.verify(runner_output("cargo-test.txt"))
+        second = self.correct("fix-rust", invariant="other words")
+        self.assertEqual(second["disposition"], "continue", second.get("reasons"))
+        families = [record["family"] for record in second["ledger"]["reservations"].values()]
+        self.assertEqual(len(set(families)), 2)
+        self.assertNotIn("unresolved", families)
+        self.assertEqual(second["ledger"]["corrective_cycles"], 2)
+        self.assert_schema_valid(json.loads((self.root / second["ledger_path"]).read_text()))
+
+    def test_the_same_untagged_failing_set_keeps_one_family_and_one_reservation(self):
+        outcomes = []
+        for attempt, words in enumerate(("words that name no requirement", "different words"), 1):
+            self.verify(runner_output("cargo-test.txt"))
+            outcomes.append(self.correct(f"fix-{attempt}", invariant=words))
+        repeated = outcomes[-1]
+        self.assertEqual((outcomes[0]["disposition"], repeated["disposition"], repeated["reasons"]),
+                         ("continue", "defer", ["failure_family_budget_exhausted"]))
+        self.assertRegex(repeated["deferred"]["unit"], r"^untagged-[0-9a-f]{16}$")
+        self.assert_schema_valid(repeated["ledger"])
+        self.assertNotIn("fix-2", repeated["ledger"]["dispatches"])
+
+    def test_the_family_ignores_identifier_order_and_the_tagging_words(self):
+        self.verify(unittest_output("test_a", "test_b"))
+        first = self.correct("fix-1", invariant="words that name no requirement", outcome=None)
+        (family,) = self.families(first)
+        self.assertRegex(family, r"^untagged-[0-9a-f]{16}$")
+
+    def test_an_untagged_failure_with_no_recorded_failing_set_keeps_the_shared_family(self):
+        first = self.correct("fix-1", invariant="words that name no requirement")
+        self.assertEqual(self.families(first), {"unresolved"})
+        self.assert_schema_valid(first["ledger"])
+        denied = self.correct("fix-2", invariant="other words")
+        self.assertEqual(denied["reasons"], ["failure_family_budget_exhausted"])
+
+    def test_an_approved_invariant_still_names_its_own_family(self):
+        self.verify(runner_output("go-test-v.txt"))
+        first = self.correct("fix-1", invariant="FR-001")
+        self.assertEqual(self.families(first), {"FR-001"})
+
+
 class CorrectionProgressGuidanceTests(unittest.TestCase):
     """Both hosts remediate while rounds converge; a deferral is the non-convergence fallback."""
 
@@ -1900,7 +2030,7 @@ class CorrectionProgressGuidanceTests(unittest.TestCase):
         self.assertIn("keep remediating while each round converges", text.lower())
         for phrase in ("`progress_of`", "`failing_checks`",
                        "strict subset", "no operator event", "`returned_to_earlier_state`", "`evidence_unparsed`",
-                       "`spec_changed`", "non-convergence fallback", "unittest, pytest, bun, and jest"):
+                       "`spec_changed`", "non-convergence fallback", "unittest, pytest, bun, jest, go test, cargo test, vitest, mocha, and JUnit XML"):
             self.assertIn(phrase, text)
 
     def test_both_hosts_remediate_while_converging_and_defer_only_on_non_convergence(self):
@@ -3119,7 +3249,7 @@ class VerificationTests(unittest.TestCase):
                       validate_execution_record(self.root, {**inputs, "record_path": stray})["reasons"])
 
 
-class RunnerDispatchTests(unittest.TestCase):
+class RunnerRouteCase(unittest.TestCase):
     """Exercise actual request-envelope entrypoints in a temporary consumer repo."""
 
     def setUp(self):
@@ -3139,6 +3269,8 @@ class RunnerDispatchTests(unittest.TestCase):
             self.run_id = result["data"]["ledger"]["run_id"]
         return process.returncode, result
 
+
+class RunnerDispatchTests(RunnerRouteCase):
     def test_ledger_and_verification_helpers_are_real_runner_routes(self):
         code, started = self.call_runner("execution-control", "apply", action="start")
         self.assertEqual(code, 0, started)
@@ -3323,6 +3455,55 @@ class RunnerDispatchTests(unittest.TestCase):
         self.assertEqual(code, 2, result)
 
 
+class RunnerFormatConvergenceTests(RunnerRouteCase):
+    """A shrinking failing set in a runner-executed test format continues a corrective family."""
+
+    def test_go_test_output_admits_a_converging_correction_through_the_real_runner_routes(self):
+        """End to end: `go test -v` output the runner executed lets a shrinking failing set continue a family."""
+        self.assert_shrinking_failures_continue(
+            "go", "go-test-v.txt", "go-test-v-shrunk.txt", ["TestGroup", "TestGroup/inner_bad"])
+
+    def test_cargo_test_output_admits_a_converging_correction_through_the_real_runner_routes(self):
+        """End to end: `cargo test` output the runner executed lets a shrinking failing set continue a family."""
+        self.assert_shrinking_failures_continue(
+            "cargo", "cargo-test.txt", "cargo-test-shrunk.txt", ["tests::nested_path_bad"])
+
+    def assert_shrinking_failures_continue(self, format_name, first_fixture, shrunk_fixture, shrunk_failing):
+        (self.root / "feature/spec.md").write_text("- FR-001: preserve data\n")
+        self.call_runner("execution-control", "apply", action="start")
+
+        def verify(dispatch_id, fixture):
+            (self.root / "check.py").write_text("import sys\nsys.stdout.write(" + repr(runner_output(fixture))
+                                                + ")\nsys.exit(1)\n")
+            self.call_runner("execution-control", "apply", action="reserve", dispatch_id=dispatch_id,
+                             kind="verification")
+            code, executed = self.call_runner("execute-verification", "apply", command_id="UNIT_TEST",
+                                              dispatch_id=dispatch_id)
+            self.assertEqual(code, 0, executed)
+            self.call_runner("execution-control", "apply", action="complete", dispatch_id=dispatch_id,
+                             outcome="failed")
+
+        def correct(dispatch_id):
+            code, result = self.call_runner("execution-control", "apply", action="reserve", dispatch_id=dispatch_id,
+                                            kind="corrective", failure_invariant="FR-001")
+            self.assertEqual(code, 0, result)
+            if result["data"]["disposition"] == "continue":
+                self.call_runner("execution-control", "apply", action="complete", dispatch_id=dispatch_id,
+                                 outcome="completed")
+            return result["data"]
+
+        verify("verify-1", first_fixture)
+        self.assertEqual(correct("fix-1")["disposition"], "continue")
+        verify("verify-2", shrunk_fixture)
+        second = correct("fix-2")
+        self.assertEqual(second["disposition"], "continue", second)
+        self.assertEqual((second["progress"]["admitted"], second["progress"]["change"]), (True, "shrank"))
+        ledger = second["ledger"]
+        self.assertEqual(ledger["corrective_cycles"], 1)
+        self.assertEqual(ledger["dispatches"]["verify-1"]["failing_checks"]["format"], format_name)
+        self.assertEqual(ledger["dispatches"]["verify-2"]["failing_checks"]["failing"], shrunk_failing)
+
+
 class DockerVerificationTests(VerificationTests):
     """Only these Docker-specific methods run; host methods have their own class."""
 
@@ -3413,10 +3594,11 @@ if __name__ == "__main__":
                                             CorrectiveContinuationTests, CorrectiveExceptionTests, CorrectiveFailureClassTests,
                                             ReplanEpochTests, StageEpochTests, IncrementReviewAllowanceTests,
                                             DeferOnExhaustedAllowanceTests, DeferOnExhaustedAllowanceGuidanceTests,
-                                            FailingCheckFingerprintTests, CorrectionProgressTests,
+                                            FailingCheckFingerprintTests, MoreTestRunnerFingerprintTests,
+                                            CorrectionProgressTests, UntaggedFailureFamilyTests,
                                             CorrectionProgressGuidanceTests, GateRemediationAllowanceTests,
                                             MetadataOnlyCorrectionTests, IncrementTestFixAllowanceTests,
                                             WorkflowIdentityTests, SelfIgnoringByproductDirectoryTests, VerificationTests,
-                                            RunnerDispatchTests))
+                                            RunnerDispatchTests, RunnerFormatConvergenceTests))
     suite.addTests(DockerVerificationTests(name) for name in DockerVerificationTests.__dict__ if name.startswith("test_docker_"))
     raise SystemExit(run_counted(suite, label="test-execution-control"))
