@@ -63,7 +63,7 @@
         "value": "speckit_pro_runner/artifact_review.py",
         "display": "speckit_pro_runner/artifact_review.py"
       },
-      "sha256": "aac24e601b64258d0dcb3f7088dbea3a7d4e50f9987ffcc10ed42f60e316e9d6"
+      "sha256": "cbb0bedd4c128dc972275cead5871977787ed082ede1e9fefcbb4d124dc83dc7"
     },
     {
       "path": {
@@ -191,7 +191,7 @@
         "value": "speckit_pro_runner/execution_control.py",
         "display": "speckit_pro_runner/execution_control.py"
       },
-      "sha256": "0d61d2cb41f29c09e7b02a50baa6cd17ed95f31e2491a3ad54432075e13330ce"
+      "sha256": "88e4e2ff7803deb25f5702a49b72755b7b2074c9a8c86e90da974786370467af"
     },
     {
       "path": {
@@ -223,7 +223,7 @@
         "value": "speckit_pro_runner/formal/catalog.py",
         "display": "speckit_pro_runner/formal/catalog.py"
       },
-      "sha256": "cec0222dadda6e3d5008f67ba4e304e32477e43a34204fd760626b2b01276506"
+      "sha256": "6b548eed78b1c44b26783e085e479e6e2dd49935c4270b8f7b4081417cfed001"
     },
     {
       "path": {
@@ -231,7 +231,7 @@
         "value": "speckit_pro_runner/formal/engine.py",
         "display": "speckit_pro_runner/formal/engine.py"
       },
-      "sha256": "7af54fb3fc306b8893535f1c505849703ddd93ac154058bf57a898dfad0c43d9"
+      "sha256": "495277d17d9071a316bd320bd52184b537623357aa62c83f0599d30fa24a3a88"
     },
     {
       "path": {
@@ -239,7 +239,7 @@
         "value": "speckit_pro_runner/formal/evidence.py",
         "display": "speckit_pro_runner/formal/evidence.py"
       },
-      "sha256": "4adc4d8c32b7ed81449344e3c03143242e6f079e637123d40c4f93ed6b9d4f75"
+      "sha256": "989295e8d2e2c74b5653d56ad6b223de2d49cc50fe4103fa8db905ac1c4ca70d"
     },
     {
       "path": {
@@ -247,7 +247,7 @@
         "value": "speckit_pro_runner/formal/helper.py",
         "display": "speckit_pro_runner/formal/helper.py"
       },
-      "sha256": "91810a086607c32f284413a44032024fe101c185a953beb4166e81a74357a7c4"
+      "sha256": "c101cae91c0eea6e31040c19f5768f14fbd14b2635e9f4a4a8b9a9598bfd7bdf"
     },
     {
       "path": {
@@ -255,7 +255,7 @@
         "value": "speckit_pro_runner/formal/itf.py",
         "display": "speckit_pro_runner/formal/itf.py"
       },
-      "sha256": "2daeff8496bce4eafa5aa5d698b463d7af86a320b3a0c0195399fcb6c2b183e1"
+      "sha256": "11f2442da5b93d66f8b574bda0d2d2306dd15c152a795aad9d9ba409954d6cd8"
     },
     {
       "path": {
@@ -263,7 +263,7 @@
         "value": "speckit_pro_runner/formal/lifecycle.py",
         "display": "speckit_pro_runner/formal/lifecycle.py"
       },
-      "sha256": "5098a0e10f3c3225ba1c7ee900ccd93f4214fc6c17cd98542a5281ae2141e8d8"
+      "sha256": "6ece16ef8d8ae7372a4f2c66217083a3b9815e68962cb18a9d18351441692913"
     },
     {
       "path": {
@@ -271,7 +271,23 @@
         "value": "speckit_pro_runner/formal/native_config.py",
         "display": "speckit_pro_runner/formal/native_config.py"
       },
-      "sha256": "e4b21113720245146342c19875d6eb945d6052311b75d5a33d5ee2626f3d0eef"
+      "sha256": "ce7facf02c491ee9d719cedf3720e181b7cbfc4aa5e4c44cdaf5d4ed4ebb6bdc"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
+        "value": "speckit_pro_runner/formal/pins.py",
+        "display": "speckit_pro_runner/formal/pins.py"
+      },
+      "sha256": "7bb40b91ffe8bd6cab6cc1ee01cf590d72aa7de1133e7f473938b655c6d90803"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
+        "value": "speckit_pro_runner/formal/primitives.py",
+        "display": "speckit_pro_runner/formal/primitives.py"
+      },
+      "sha256": "0ee126c98d33d871316c0662c5a7c9e00d17a2fb1801242442c43cbf0462e186"
     },
     {
       "path": {
@@ -279,7 +295,7 @@
         "value": "speckit_pro_runner/formal/process.py",
         "display": "speckit_pro_runner/formal/process.py"
       },
-      "sha256": "8edb8f02f942925a88028aee2d4868631d6d59c5131a5ee5c9d185c9ba43fab7"
+      "sha256": "c449eb1fdd0e8b358f68b6495a08397ccd0639d6c25e16f98a9974371063e194"
     },
     {
       "path": {
@@ -287,7 +303,7 @@
         "value": "speckit_pro_runner/formal/quint.py",
         "display": "speckit_pro_runner/formal/quint.py"
       },
-      "sha256": "b9e166369676ba29bea392fe8d9939a08a3f76f266fcb1724960ce2e54a10f11"
+      "sha256": "9836a2becb74a62b1c4be4dd2d00eba6d2b7f2c8aaf35438e8a50a9c6bd1670a"
     },
     {
       "path": {
@@ -295,7 +311,7 @@
         "value": "speckit_pro_runner/formal/selection.py",
         "display": "speckit_pro_runner/formal/selection.py"
       },
-      "sha256": "26d54edc31308a4af93e8a4b46af839e7d27df3d2c96d6dd6e8bf564e48482f0"
+      "sha256": "d497cc61251f8921c06f7ff2a3465a07ad34914036e4edef838c99b5fd61f179"
     },
     {
       "path": {
@@ -311,7 +327,7 @@
         "value": "speckit_pro_runner/formal/traces.py",
         "display": "speckit_pro_runner/formal/traces.py"
       },
-      "sha256": "92c5e8fe1091f95b33dd527f8afaf9848645c0325b9495a9683bd6d776cb215b"
+      "sha256": "ce55aa92a853bd6df4cdf2d5c07f5e9a8e96bb1f72eced32e2651185fce3d2ea"
     },
     {
       "path": {
@@ -468,6 +484,14 @@
     {
       "path": {
         "kind": "plugin_relative",
+        "value": "speckit_pro_runner/helpers/formal_policy.py",
+        "display": "speckit_pro_runner/helpers/formal_policy.py"
+      },
+      "sha256": "73bc8d1a93c5331656766b7c19e48f2b90c39526f43ba52c6fa42b0395d04390"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
         "value": "speckit_pro_runner/helpers/gate_preflight_coverage.py",
         "display": "speckit_pro_runner/helpers/gate_preflight_coverage.py"
       },
@@ -519,7 +543,7 @@
         "value": "speckit_pro_runner/helpers/read_only.py",
         "display": "speckit_pro_runner/helpers/read_only.py"
       },
-      "sha256": "9ff30a36ed2837ef6e33538b7d2792e6f6749ce158559beb90b9207b9b6b682e"
+      "sha256": "a3aa513a3c4d59dbd637eac68a5bbdae0de2d1e8100ff0a8d0ba4954ea64495c"
     },
     {
       "path": {
@@ -636,6 +660,14 @@
     {
       "path": {
         "kind": "plugin_relative",
+        "value": "speckit_pro_runner/strict_input.py",
+        "display": "speckit_pro_runner/strict_input.py"
+      },
+      "sha256": "8fa7f8def294c3cada1721f5e5972754e49cdbb93d9c1b5bb218be7104d12c17"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
         "value": "speckit_pro_runner/sweep_broker.py",
         "display": "speckit_pro_runner/sweep_broker.py"
       },
@@ -663,7 +695,7 @@
         "value": "speckit_pro_runner/task_execution.py",
         "display": "speckit_pro_runner/task_execution.py"
       },
-      "sha256": "9cfe7f3d5f971cea8e4b7fbab58bbd5cdcc1e8562c450908be0bdbbf548e7fac"
+      "sha256": "b9cb149db43b005fe44babe2b276b2098d652de31b74ea05ef4f7092bd2080f2"
     },
     {
       "path": {
@@ -671,7 +703,7 @@
         "value": "speckit_pro_runner/task_results.py",
         "display": "speckit_pro_runner/task_results.py"
       },
-      "sha256": "2c5f8bb7257840728bc0a9b11907deb03df985609f039365a44e1698fb6b63ba"
+      "sha256": "6b5d029a7b83f0ec1bc03311602ff1e7cfe67aeb7a6a589e9a5aab0ceda19ab0"
     },
     {
       "path": {
