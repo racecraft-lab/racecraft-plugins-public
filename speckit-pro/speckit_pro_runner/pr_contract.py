@@ -31,6 +31,6 @@ def is_one_line(text: str) -> bool:
 
 def require_one_line(text: str, field: str) -> str:
     """`text` itself, or a ValueError naming `field` when it breaks across lines."""
-    if re.search(r"[\r\n]", text):
-        raise ValueError(f"{field} must be one line; the PR body renders each deferred field on one line")
-    return text
+    if is_one_line(text):
+        return text
+    raise ValueError(f"{field} must be one line; the PR body renders each deferred field on one line")
