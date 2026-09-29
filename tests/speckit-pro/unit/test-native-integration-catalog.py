@@ -116,7 +116,7 @@ class NativeReturnCatalogTests(unittest.TestCase):
             (self.keyword_majority, {"decision": "per-request", "next_action": "apply",
                                      "agreement": "2/3-majority",
                                      "retained_options": ["per-request", "per-billing-period"]}),
-            (self.keyword_security, {"decision": None, "next_action": "human_review",
+            (self.keyword_security, {"decision": None, "next_action": "round_3_tiebreak",
                                      "agreement": "2/3-majority",
                                      "retained_options": ["per-request", "per-billing-period"]}),
         ):
@@ -134,10 +134,42 @@ class NativeReturnCatalogTests(unittest.TestCase):
                 bad = copy.deepcopy(observation)
                 value = {**expected, field: "incorrect"}
                 if field == "next_action" and case is self.disagreement:
-                    value[field] = "human_review"
+                    value[field] = "round_3_tiebreak"
                 bad["artifacts"]["scenario-output/consensus-result.json"] = json.dumps(value)
                 with self.subTest(case=case["id"], field=field):
                     self.assertEqual(grade_observation(focused, bad)["status"], "fail")
+
+    def test_round3_tiebreak_case_applies_the_conservative_option_without_a_stop(self) -> None:
+        case = self.cases["integration.consensus-round3-tiebreak"]
+        self.assertEqual(case["layer"], "integration")
+        self.assertEqual(case["resource_class"], "nested")
+        self.assertIn("`**Round:** 3`", case["prompt"])
+        self.assertIn("must not ask the user, and must not stop", case["prompt"])
+        paths = [f"scenario-inputs/analysts/{name}.md" for name in (
+            "codebase-analyst", "domain-researcher", "spec-context-analyst", "tiebreak-analyst")]
+        self.assertEqual(sorted(fixture["destination"] for fixture in case["fixtures"]), sorted(paths))
+        self.assertEqual(sorted(check["path"] for check in case["checks"]
+                                if check["type"] == "file_access"), sorted(paths))
+        dispatch = [check for check in case["checks"] if check["type"] == "native_subagent_dispatch"]
+        self.assertEqual(len(dispatch), 1)
+        self.assertEqual([pair["role"] for pair in dispatch[0]["expected"]], ["consensus-tiebreaker"])
+        self.assertEqual(dispatch[0]["forbidden_roles"], ["consensus-synthesizer"])
+        expected = {"decision": "per-request", "next_action": "apply", "retained_options":
+                    ["per-request", "per-billing-period"], "dissent": ["per-billing-period"],
+                    "agreement": "tiebreak", "scope_deferred": False}
+        checks = [check for check in case["checks"] if check["type"] == "json_field"]
+        self.assertEqual({check["field_path"][0]: check["expected"] for check in checks}, expected)
+        focused = focused_case(case, checks)
+        observation = {"completed": True, "error": None, "final_text": "",
+                       "activations": [], "tool_calls": [], "usage": {},
+                       "artifacts": {"scenario-output/consensus-result.json": json.dumps(expected)}}
+        self.assertEqual(grade_observation(focused, observation)["status"], "pass")
+        for field, wrong in (("next_action", "round_3_tiebreak"), ("agreement", "0/3-all-disagree"),
+                             ("decision", None), ("scope_deferred", True), ("dissent", [])):
+            bad = copy.deepcopy(observation)
+            bad["artifacts"]["scenario-output/consensus-result.json"] = json.dumps({**expected, field: wrong})
+            with self.subTest(field=field):
+                self.assertEqual(grade_observation(focused, bad)["status"], "fail")
 
     def test_explicit_json_spelling_alternatives_preserve_choice_and_evidence(self) -> None:
         checks = copy.deepcopy([check for check in self.majority["checks"]

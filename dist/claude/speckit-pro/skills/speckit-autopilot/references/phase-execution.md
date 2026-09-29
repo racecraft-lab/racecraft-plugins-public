@@ -332,7 +332,7 @@ For each clarify session in the workflow file:
         Stage 3: apply each synthesizer's Artifact Edit SERIALLY
                  to spec.md (preserves write contention safety).
         Round 2 escape-hatch: also batched across all queued items.
-        [HUMAN REVIEW NEEDED]: consensus-protocol.md#human-review-needed
+        [ROUND_3_TIEBREAK]: consensus-protocol.md#round-3-tiebreak (Round 3 agent tiebreak)
      c. TaskUpdate: "<session> Consensus" → completed
   7. After accepted consensus edits, re-scan spec.md and update the recorded
      remaining-marker count
@@ -349,9 +349,10 @@ edit artifacts. It returns questions and recommendations to the parent.
 (low confidence, conflicting sources, security keywords),
 the main session spawns 3 consensus agents to get distinct
 perspectives and applies consensus rules. An item that ends in
-`[HUMAN REVIEW NEEDED]` goes to the operator through `AskUserQuestion` when
-the session is interactive; an unattended run stops, as in every phase that
-runs consensus.
+`[ROUND_3_TIEBREAK]` takes the Round 3 agent tiebreak in
+[consensus-protocol.md](./consensus-protocol.md#round-3-tiebreak), in an
+interactive and an unattended run alike; it never asks the operator and never
+stops the run.
 
 **Why after each session:** Session 2 may depend on
 Session 1's resolved questions. Both layers complete
@@ -483,7 +484,7 @@ For each checklist domain in the workflow file:
         Stage 3: apply each synthesizer's Artifact Edit SERIALLY
                  to spec.md or plan.md.
         Round 2 escape-hatch: also batched across all queued gaps.
-        [HUMAN REVIEW NEEDED]: consensus-protocol.md#human-review-needed
+        [ROUND_3_TIEBREAK]: consensus-protocol.md#round-3-tiebreak (Round 3 agent tiebreak)
      c. Re-run domain checklist to verify gaps closed
      d. TaskUpdate: "<domain> Consensus" → completed
   5. TaskUpdate: domain task → completed
@@ -736,7 +737,7 @@ Items it can't resolve are flagged in its
       Stage 3: apply each synthesizer's Artifact Edit SERIALLY to
                tasks.md, spec.md, or plan.md.
       Round 2 escape-hatch: also batched across all queued findings.
-      [HUMAN REVIEW NEEDED]: consensus-protocol.md#human-review-needed
+      [ROUND_3_TIEBREAK]: consensus-protocol.md#round-3-tiebreak (Round 3 agent tiebreak)
    c. Re-run analyze to verify findings resolved
    d. TaskUpdate: "Analyze - Consensus" → completed
 5. TaskUpdate: "Analyze" → completed
@@ -1672,20 +1673,16 @@ reaches, and never to the pull request.
 authenticated account, a corroboration status that is neither `match` nor
 `no_record` or one outside the six, a failed observation, an unreadable
 Feedback Sweep Log row, an unavailable isolation boundary, a malformed or
-non-receipt model result, a refused receipt mutation, a failed push, a
-consensus outcome requiring human review, and one or more amendments requiring
-re-review. The final condition is not a failure.
+non-receipt model result, a refused receipt mutation, a failed push, and
+one or more amendments requiring re-review. The final condition is not a
+failure. A consensus item that no round settles is not on this list: it takes
+the Round 3 tiebreak below and never ends a run.
 
 **The failed push in that list is the amendment push above.** The
 regeneration sequence's own artifacts push ends the run only on the leg that
 amended; on the leg that amended nothing it is reported and the run proceeds,
 so it is not among the conditions this list names. The member names the
 amendment push and no other.
-
-**One condition needs more than the shared shape.** The human-review stop's
-resume path names **both** operator actions, resolve the substance and re-run
-**or** resolve the thread, because it is the only stop whose resume path a
-re-run alone does not satisfy.
 
 **A failed description refresh names its resume path per stopping status**,
 one line per status rather than one shared line, for the reason the
@@ -1896,13 +1893,13 @@ the loop terminate, and any future rule that writes to either comment surface
 has to be tested against it, because a rule that adds an unexcluded comment
 breaks convergence however reasonable it looks on its own.
 
-One path does not shrink the set. A comment whose consensus round returns a
-human-review outcome takes no class and writes no row, so it is in the set
-again on the next run and stops that run too. The set does not grow, so this
-is not divergence, but re-running without operator action reproduces the same
-stop. That path is bounded by a human rather than by a counter, and **no
-attempt counter is introduced**: a per-comment counter would need the
-state-file mirror the log rules forbid.
+One path does not shrink the set. A comment whose Round 3 tiebreak returns
+`scope_deferred`, or whose replacement analyst fails, takes no class and
+writes no row, so it is in the set again on the next run. The set does not
+grow, so this is not divergence, and the current run continues past it. The
+next run repeats the tiebreak unless an operator has settled the scope or
+resolved the thread first. **No attempt counter is introduced**: a per-comment
+counter would need the state-file mirror the log rules forbid.
 
 #### Phase 7 Setup: Consensus for an Amended Comment
 
@@ -1934,37 +1931,61 @@ table and the three phase-specific flows under it are never reached and
 Clarify, Checklist, and Analyze keep the shared analysts and those flows
 unchanged.
 
-**When consensus does not answer, the item goes to human review.** Three ways
-lead there: all three analysts disagreeing after Round 2, a Round-1 escape
+**When consensus does not answer, the item takes a Round 3 tiebreak.** Three
+ways lead there: all three analysts disagreeing after Round 2, a Round-1 escape
 whose Round 2 still cannot resolve, and an analyst that fails its single
-retry. All three land on one behavior, and only the report names which
-occurred.
+retry. The first two return `human_review` from `sweep-apply-result` with basis
+`all_disagree` or `escape_unresolved`. An analyst that fails its retry is
+replaced by a fresh analyst, not a human: launch that perspective once more
+through `launch_claude`, which mints a new capability and replaces the failed
+perspective's record. If the replacement fails too, no synthesis is possible,
+the report names `analyst_failed`, and the comment is deferred as below.
+
+**The Round 3 call.** On `human_review`, call `launch_claude` once more with
+`stage=synthesis` for the same comment. That is one more `stage=synthesis`
+call by a fresh `sweep-analyst`, a new process that has no memory of the first
+call. The broker's `consensus_inputs` adds `tiebreak: true` and `prior_basis`
+to what it returns, which is how the analyst knows it is the tiebreak. It
+picks the most conservative option that satisfies the spec, from the three
+accepted perspective records and the constitution and roadmap in the snapshot,
+and returns one of two results. A resolved result carries an `agreement` of
+`tiebreak` and one edit. A result whose choice changes product scope the spec
+and roadmap do not settle carries basis `scope_unsettled` and no edit. The
+runner allows exactly one such call per comment and only after a synthesis
+returned `human_review`, and refuses the two tiebreak values anywhere else.
+The receipt goes directly to `sweep-apply-result`.
+
+**The tiebreak is a `sweep-analyst` call, never `consensus-synthesizer`**, for
+the reason above: only `sweep-analyst` carries the closed read-only allowlist.
+The orchestrator is still not a conduit: it never receives the tiebreak's
+finding, its dissent, or its edit text. Those stay in the private session.
+
+**Two outcomes.** A resolved tiebreak is an ordinary amendment from here on: the
+same helper leg edits the artifact, the projection adds `round: 3`, the comment
+takes class `amended`, and the run follows the steps below unchanged. The
+Consensus Resolution Log row for it has Outcome `[ROUND 3]` and the fixed
+Resolution text `Round 3 tiebreak assumption`. The assumption and its dissent
+stay in the private session, so the orchestrator lists in `known_gaps` only the
+comment id, the artifact, and the amending commit. When `sweep-apply-result`
+returns `scope_deferred`, nothing is edited, the comment takes no class, and
+**no Feedback Sweep Log row is written**, because the skip key is that log's
+comment-id column and nothing else, so the absent row is what makes the
+comment a candidate again once the scope is settled; a row here would record
+the sweep's own deferral as the comment's disposition and make it permanent.
+The comment id is added to the `unresolved_deferrals` input of `finalize-run`
+and appears in the one end-of-run consolidated request. Nothing stops the run,
+and other items in the batch complete normally.
 
 The closed synthesis basis must remain exact: no agreeing pair is
-`all_disagree`, an unresolved escape is `escape_unresolved`, and an exhausted
-analyst retry is `analyst_failed`. Do not replace these sweep-specific values
-with the general Consensus Resolution Log outcome labels.
+`all_disagree`, an unresolved escape is `escape_unresolved`, an unsettled scope
+is `scope_unsettled`, and a launcher failure that survives its replacement is
+`analyst_failed`. Do not replace these sweep-specific values with the general
+Consensus Resolution Log outcome labels.
 
-**No edit, no class, no sweep row.** No artifact is edited and the comment is
-given no class, because `amended` would assert an edit nobody resolved and the
-other three would assert a disposition nobody reached. Writing no Feedback
-Sweep Log row is the load-bearing part: the skip key is that log's comment-id
-column and nothing else, so the absent row is what makes the comment a
-candidate again once a human has resolved it. A row here would record the
-sweep's own failure as the comment's disposition and make it permanent.
-
-**It surfaces as one Consensus Resolution Log row instead**, `Type` `Sweep`,
-its item cell naming the comment id, and that row **counts** toward the
-Round-2 escape-rate metric. That log feeds no skip key, so a row there costs
-no idempotency.
-
-**It stops the run whether or not anything was amended.** A run whose only
-unresolved item took no class would otherwise read as nothing to act on and
-walk into task work. When other items amended in the same run, the re-review
-stop and this one are the same stop and one report, not two.
-
-**Other items in the batch still complete.** Items that resolved are edited,
-committed, recorded, and replied to normally, and the run stops after that.
+**It surfaces as one Consensus Resolution Log row**, `Type` `Sweep`, its item
+cell naming the comment id, and that row **counts** toward the Round-2
+escape-rate metric. That log feeds no skip key, so a row there costs no
+idempotency.
 
 #### Phase 7 Setup: Amending, Committing, and Pushing
 
@@ -2095,8 +2116,8 @@ deferred: Recorded and not acted on because the requested target is outside the 
 no action: Recorded; no actionable artifact change was identified.
 ```
 
-A human-review Consensus Resolution Log row uses only the comment id, the
-closed `Sweep` type, fixed text `Requires human review`, the closed round and
+A scope-deferred Consensus Resolution Log row uses only the comment id, the
+closed `Sweep` type, fixed text `Scope deferred`, the closed round and
 outcome enums, and analyst role names. It never summarizes the disagreement.
 The legacy outbound redaction helper remains defense in depth for callers
 outside this isolated flow; it is not a transport for model text here.
@@ -2146,8 +2167,8 @@ interrupt case exact rather than ambiguous. A run interrupted after two rows
 were written, with one amendment commit local and unpushed, has posted
 **zero** replies.
 
-**Which stops post replies is named rather than inferred.** The re-review and
-human-review stops occur **after** the reply point, so a run that reaches either
+**Which stops post replies is named rather than inferred.** The re-review
+stop occurs **after** the reply point, so a run that reaches it
 has already posted every reply it owes. Every boundary, capture, schema,
 receipt, mutation, or push failure aborts before the reply point and posts
 none.

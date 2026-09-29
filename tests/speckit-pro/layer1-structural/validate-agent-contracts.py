@@ -216,7 +216,7 @@ CODEX_AGENT_PROFILES = {
 }
 validate_codex_agents_AGENTS = (*CODEX_REQUIRED_AGENT_NAMES, *CODEX_OPTIONAL_AGENT_NAMES)
 CONSENSUS_ANALYST_ROLES = frozenset({'codebase-analyst', 'spec-context-analyst', 'domain-researcher'})
-NATIVE_COMMAND_LIFECYCLE_EXEMPT_ROLES = frozenset({'autopilot-fast-helper', 'consensus-synthesizer'})
+NATIVE_COMMAND_LIFECYCLE_EXEMPT_ROLES = frozenset({'autopilot-fast-helper', 'consensus-synthesizer', 'consensus-tiebreaker'})
 CC_ONLY_FIELDS = ('tools', 'disallowedTools', 'permissionMode', 'color', 'maxTurns', 'background', 'effort')
 validate_codex_agents_MODEL_RE = re.compile('^(gpt-6-sol|gpt-6-luna|gpt-6-astra)$')
 EFFORT_RE = re.compile('^(minimal|low|medium|high|xhigh|max)$')
@@ -369,6 +369,9 @@ class ValidateCodexAgents(unittest.TestCase):
         elif agent == 'consensus-synthesizer':
             with self.subTest(msg='consensus-synthesizer: uses medium-effort GPT-6 Sol read-only synthesis profile'):
                 self.assertTrue(model_val == 'gpt-6-sol' and effort_val == 'medium' and (sandbox_val == 'read-only'), f'expected gpt-6-sol / medium / read-only, got {model_val} / {effort_val} / {sandbox_val}')
+        elif agent == 'consensus-tiebreaker':
+            with self.subTest(msg='consensus-tiebreaker: uses max-effort GPT-6 Sol read-only tiebreak profile'):
+                self.assertTrue(model_val == 'gpt-6-sol' and effort_val == 'max' and (sandbox_val == 'read-only'), f'expected gpt-6-sol / max / read-only, got {model_val} / {effort_val} / {sandbox_val}')
 
 AGENT_INSTRUCTION_DIRS = EXPECTED_AGENT_DIRS
 collect_agent_instruction_errors = collect_errors

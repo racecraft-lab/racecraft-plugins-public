@@ -59,17 +59,17 @@ This is a routing decision, not a pass/fail gate. The presence of markers is exp
 
 ### G2 — After Clarify
 
-**Check:** All ambiguities resolved, no human review flags.
+**Check:** All ambiguities resolved, no unresolved review flags.
 
 ```
 1. grep -c "NEEDS CLARIFICATION" spec.md → must be 0
-2. grep -c "HUMAN REVIEW NEEDED" spec.md → must be 0
+2. grep -c "ROUND_3_TIEBREAK" spec.md → must be 0
 3. Clarifications section exists in spec.md with documented decisions
 ```
 
 **Auto-Fix:** Re-run clarify focused on remaining markers. Spawn consensus agents for each unresolved question.
 
-**Failure Escalation:** If markers remain when the shared reservation ends, run the repair loop within its allowance, then defer per the Failure Escalation Protocol. Record the remaining ambiguities with all 3 agent perspectives.
+**Failure Escalation:** If markers remain when the shared reservation ends, run the repair loop within its allowance, then defer per the Failure Escalation Protocol; its last tier for a remaining consensus item is the Round 3 tiebreak (see consensus-protocol.md §Round 3 Tiebreak). An item that changes product scope the spec and roadmap do not settle is applied provisionally with its most conservative option and listed in the end-of-run request; the run continues. Record the remaining ambiguities with all 3 agent perspectives.
 
 ### G3 — After Plan
 

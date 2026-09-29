@@ -1264,7 +1264,7 @@ class NativeFunctionalCatalogTests(unittest.TestCase):
             - REDIRECT_IDS - WORKTREE_MIGRATION_IDS - TASK_LIST_CONTRACT_IDS
         )
         self.assertEqual(len(response_only_ids), 59)
-        self.assertEqual(len(self.all_cases), 231)
+        self.assertEqual(len(self.all_cases), 232)
         self.assertEqual(len(self.catalog["cases"]), 112)
         self.assertEqual(
             set(self.cases),
@@ -1805,7 +1805,7 @@ class NativeFunctionalCatalogTests(unittest.TestCase):
         ).casefold()
         self.assertIn("all three analysts", security_text)
         self.assertIn("security-keyword override", security_text)
-        self.assertIn("human review", security_text)
+        self.assertIn("round 3 tiebreak", security_text)
         self.assertIn("does not single-route", security_text)
 
         for case_id in (
