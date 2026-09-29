@@ -1,0 +1,9 @@
+{
+  "fixture_id": "09-fallback-source-grounded",
+  "purpose": "An abstaining fallback disclosure. No installed capability covered the need, so the note names a fallback source at low confidence. A fallback source must not be judged against completed tool names, so the verdict is grounded.",
+  "expect_grounding_verdict": "grounded",
+  "must_not_invoke_tools": [
+    "mcp__context7__get-library-docs"
+  ],
+  "expect_citation_count": 1
+}

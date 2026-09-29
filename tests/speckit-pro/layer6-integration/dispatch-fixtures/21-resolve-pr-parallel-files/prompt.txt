@@ -1,4 +1,4 @@
-You are running the speckit-pro:resolve-pr command on PR #46 in
+You are running the speckit-pro:speckit-resolve-pr skill on PR #46 in
 owner/repo. You have already fetched 6 unresolved review threads via
 gh GraphQL. The threads partition by file path as:
 
@@ -8,11 +8,15 @@ gh GraphQL. The threads partition by file path as:
 
 None of the comment bodies mention cross-file effects (no "rename and
 update all callers" or similar). So all 6 threads are non-cross-file
-and partition into 3 file-groups.
+and partition into 3 file-groups. Every thread asks for a multi-line
+change that needs the file re-read and its checks re-run, so the fixes
+are large enough to repay a worker's setup cost.
 
-Per `commands/resolve-pr.md` §4c, dispatch ALL 3 partitions in ONE
-assistant message via background subagents (one general-purpose
-worker per file). Each worker:
+Per `skills/speckit-resolve-pr/SKILL.md` §4c, subagents are worth
+dispatching only when there are 2 or more partitions and the fixes are
+large enough to repay setup. Both hold here, so dispatch ALL 3
+partitions in ONE assistant message via background subagents (one
+general-purpose worker per file). Each worker:
 - subagent_type: general-purpose
 - run_in_background: true
 - description: "Resolve PR #46 comments on <file_path>"
