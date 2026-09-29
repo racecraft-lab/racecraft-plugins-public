@@ -6,170 +6,28 @@ import re
 from pathlib import Path
 from typing import Any
 
-from ...envelope import diagnostic, response
 from .common import (
-    CONTAINER_PREFLIGHT_WORKFLOW,
-    FORBIDDEN_CONTENT_PATTERNS,
-    FORBIDDEN_PATTERNS,
     RawFinding,
     SourceFile,
-    add_finding,
-    bounded_findings,
-    classified_counts,
-    direct_dispatch_line,
     has_prohibited_script_suffix,
     is_direct_python_gate_dispatch,
     is_docs_or_workflow_tooling,
-    is_hook_matcher_line,
-    line_context,
-    line_number_for_offset,
     normalize_path,
     repository_bash_container_preflight_dispatch_glue,
     scan_root_entry_validation,
-    workflow_context_for_line,
-    workflow_run_contexts,
 )
+from .scan import GuardPolicy, scan_with_policy
 
 
 # The guard's own modules name every token it detects. Each module is exempt
 # by exact path, so a new file in this package is scanned until it is listed.
 GUARD_SOURCE_PATHS = tuple(
     f"speckit_pro_runner/gates/active_path_guard/{module}.py"
-    for module in ("__init__", "common", "path_guard", "python_ast", "repo_bash", "runtime_guard", "zero_bash")
+    for module in ("__init__", "common", "path_guard", "python_ast", "repo_bash", "runtime_guard", "scan", "zero_bash")
 )
 
 
 INSTALLED_RUNTIME_DEFAULT_CASE_FILE = "tests/speckit-pro/unit/fixtures/installed-plugin-release/active-runtime-guard-cases.json"
-
-
-def active_runtime_guard_response(entry: Any, request: Any, findings: list[RawFinding]) -> dict[str, Any]:
-    blocking = [finding for finding in findings if finding.classification == "blocking_active_runtime"]
-    status = "expected_failure" if blocking else "ok"
-    returned_findings = bounded_findings(findings)
-    data = active_runtime_base_data(entry, request.operation, status)
-    data.update(
-        {
-            "schema_version": "2.0",
-            "contract_id": "installed-plugin-release",
-            "status": status,
-            "blocking_count": len(blocking),
-            "classified_counts": classified_counts(findings),
-            "findings": [finding.as_record() for finding in returned_findings],
-            "total_finding_count": len(findings),
-            "truncated_finding_count": max(0, len(findings) - len(returned_findings)),
-        }
-    )
-    if not blocking:
-        return response("ok", request_id=request.request_id, data=data)
-
-    diag = diagnostic(
-        "active_runtime_guard_blocked",
-        "active-runtime guard found prohibited shell-only behavior in installed-runtime surfaces",
-        details={
-            "blocking_count": len(blocking),
-            "categories": sorted({finding.category for finding in blocking}),
-            "paths": sorted({finding.path for finding in blocking})[:20],
-        },
-        remediation_summary="Move active installed-runtime behavior to argv-only Python runner invocation.",
-        remediation_actions=[
-            "Inspect data.findings for blocking_active_runtime entries.",
-            "Use a resolved Python 3.11+ executable with -m speckit_pro_runner and JSON stdin/stdout.",
-        ],
-    )
-    return response("expected_failure", request_id=request.request_id, data=data, diagnostics=[diag])
-
-
-def scan_installed_runtime_sources(sources: list[SourceFile], repo_root: Path) -> list[RawFinding]:
-    findings: list[RawFinding] = []
-    seen: set[tuple[str, int | None, str, str]] = set()
-    for source in sources:
-        path = normalize_path(source.path)
-        lines = source.content.splitlines()
-        workflow_contexts = workflow_run_contexts(source.content) if path.startswith(".github/workflows/") else []
-        if has_prohibited_script_suffix(path):
-            add_finding(
-                findings,
-                seen,
-                classify_installed_runtime_raw_finding(
-                    path,
-                    1,
-                    "script_file",
-                    Path(path).suffix,
-                    "script file retained in scanned scope",
-                    source.content,
-                    source.source_kind,
-                ),
-            )
-        if path.startswith(".github/workflows/") and is_direct_python_gate_dispatch(source.content):
-            line = direct_dispatch_line(source.content)
-            add_finding(
-                findings,
-                seen,
-                classify_installed_runtime_raw_finding(
-                    path,
-                    line,
-                    "bash",
-                    "run: python -m speckit_pro_runner",
-                    "workflow shell dispatches a Python gate",
-                    source.content,
-                    source.source_kind,
-                ),
-            )
-        for category, pattern, reason in FORBIDDEN_CONTENT_PATTERNS:
-            for match in pattern.finditer(source.content):
-                line_number = line_number_for_offset(source.content, match.start())
-                context = workflow_context_for_line(workflow_contexts, line_number) or line_context(lines, line_number)
-                if path == CONTAINER_PREFLIGHT_WORKFLOW:
-                    context = source.content
-                add_finding(
-                    findings,
-                    seen,
-                    classify_installed_runtime_raw_finding(path, line_number, category, match.group(0), reason, context, source.source_kind),
-                )
-        for number, line in enumerate(lines, start=1):
-            stripped = line.strip()
-            if not stripped or (stripped.startswith("#") and not path.endswith(".md")):
-                continue
-            if is_hook_matcher_line(path, line):
-                continue
-            for category, pattern, reason in FORBIDDEN_PATTERNS:
-                match = pattern.search(line)
-                if match is None:
-                    continue
-                context = workflow_context_for_line(workflow_contexts, number) or line_context(lines, number)
-                if path == CONTAINER_PREFLIGHT_WORKFLOW:
-                    context = source.content
-                if installed_runtime_agent_tool_declaration(path, line):
-                    context = line
-                add_finding(
-                    findings,
-                    seen,
-                    classify_installed_runtime_raw_finding(path, number, category, match.group(0), reason, context, source.source_kind),
-                )
-    return findings
-
-
-def classify_installed_runtime_raw_finding(
-    path: str,
-    line: int | None,
-    category: str,
-    pattern: str,
-    reason: str,
-    content: str,
-    source_kind: str,
-) -> RawFinding:
-    role = installed_runtime_active_role(path)
-    classification = classify_installed_runtime_path(path, category, pattern, content, source_kind)
-    return RawFinding(
-        path=path,
-        line=line,
-        category=category,
-        pattern=pattern[:120],
-        reason=reason,
-        active_role=role,
-        classification=classification,
-        remediation=installed_runtime_remediation_for(classification),
-    )
 
 
 def classify_installed_runtime_path(path: str, category: str, pattern: str, content: str, source_kind: str) -> str:
@@ -626,24 +484,6 @@ def installed_runtime_backtick_requires_shell(pattern: str, content: str) -> boo
     return any(marker in lowered_content for marker in requirement_markers)
 
 
-def installed_runtime_remediation_for(classification: str) -> str:
-    if classification == "blocking_active_runtime":
-        return "Replace the installed-runtime shell dependency with argv-only Python runner invocation."
-    if classification == "ci_dispatch_glue":
-        return "Keep CI glue limited to direct Python runner dispatch."
-    if classification == "archive_provenance":
-        return "No change required for historical archive text."
-    if classification == "upstream_spec_kit_helper":
-        return "No change required for upstream consumer Spec Kit helper evidence."
-    if classification == "test_fixture":
-        return "No change required for fixture or parity evidence."
-    if classification == "source_checkout_helper":
-        return "Keep source-checkout helper references out of installed-runtime instructions."
-    if classification == "docs_non_runtime":
-        return "No change required for non-runtime docs prose."
-    return "No active-runtime change required."
-
-
 def diff_scan_unavailable_finding(reason: str) -> RawFinding:
     return RawFinding(
         path=".git",
@@ -737,3 +577,44 @@ def active_runtime_base_data(entry: Any, operation: str, status: str) -> dict[st
             {"path": INSTALLED_RUNTIME_DEFAULT_CASE_FILE, "kind": "fixture"},
         ],
     }
+
+
+def runtime_guard_script_file(path: str) -> tuple[str, str] | None:
+    if has_prohibited_script_suffix(path):
+        return Path(path).suffix, "script file retained in scanned scope"
+    return None
+
+
+RUNTIME_GUARD_POLICY = GuardPolicy(
+    schema_version="2.0",
+    contract_id="installed-plugin-release",
+    blocking_classification="blocking_active_runtime",
+    bound_findings=True,
+    base_data=active_runtime_base_data,
+    active_role=installed_runtime_active_role,
+    classify=classify_installed_runtime_path,
+    remediations={
+        "blocking_active_runtime": "Replace the installed-runtime shell dependency with argv-only Python runner invocation.",
+        "ci_dispatch_glue": "Keep CI glue limited to direct Python runner dispatch.",
+        "archive_provenance": "No change required for historical archive text.",
+        "upstream_spec_kit_helper": "No change required for upstream consumer Spec Kit helper evidence.",
+        "test_fixture": "No change required for fixture or parity evidence.",
+        "source_checkout_helper": "Keep source-checkout helper references out of installed-runtime instructions.",
+        "docs_non_runtime": "No change required for non-runtime docs prose.",
+    },
+    default_remediation="No active-runtime change required.",
+    script_file=runtime_guard_script_file,
+    line_context_window=True,
+    bare_line_context=installed_runtime_agent_tool_declaration,
+    blocked_code="active_runtime_guard_blocked",
+    blocked_message="active-runtime guard found prohibited shell-only behavior in installed-runtime surfaces",
+    blocked_summary="Move active installed-runtime behavior to argv-only Python runner invocation.",
+    blocked_actions=(
+        "Inspect data.findings for blocking_active_runtime entries.",
+        "Use a resolved Python 3.11+ executable with -m speckit_pro_runner and JSON stdin/stdout.",
+    ),
+)
+
+
+def scan_installed_runtime_sources(sources: list[SourceFile], repo_root: Path) -> list[RawFinding]:
+    return scan_with_policy(RUNTIME_GUARD_POLICY, sources)

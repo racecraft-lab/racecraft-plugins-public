@@ -1,4 +1,11 @@
-"""Active-path no-shell/no-jq guard operations."""
+"""Active-path no-shell/no-jq guard operations.
+
+One module per guard: path_guard (v1.0 active-path guard), runtime_guard
+(v2.0 installed-runtime guard), zero_bash, repo_bash, and the python_ast
+analyzer. scan holds the path the v1.0 and v2.0 guards share. This module
+keeps the entry points and the source-discovery functions they call, so a
+test that patches one of those names here reaches the entry points.
+"""
 
 from __future__ import annotations
 
@@ -31,21 +38,21 @@ from .python_ast import (
     command_argv_contains_forbidden as command_argv_contains_forbidden,
 )
 from .path_guard import (
+    PATH_GUARD_POLICY,
     base_data,
-    classify_raw_finding,
-    guard_response,
     scan_sources,
 )
 from .runtime_guard import (
     INSTALLED_RUNTIME_DEFAULT_CASE_FILE,
+    RUNTIME_GUARD_POLICY,
     active_runtime_base_data,
-    active_runtime_guard_response,
     diff_scan_unavailable_finding,
     installed_runtime_active_role,
     missing_installed_runtime_scan_root_findings,
     scan_installed_runtime_sources,
     classify_installed_runtime_path as classify_installed_runtime_path,
 )
+from .scan import Hit, classify_hit, policy_guard_response
 from .zero_bash import (
     PLUGIN_BASH_CONFINEMENT_ALLOWLIST,
     PLUGIN_BASH_CONFINEMENT_DEFAULT_CASE_FILE,
@@ -151,7 +158,7 @@ def run_active_path_guard(entry: Any, request: Any) -> dict[str, Any]:
         return response("input_error", request_id=request.request_id, data=base_data(entry, request.operation, "input_error"), diagnostics=[source_result])
 
     findings = scan_sources(source_result, repo_root)
-    return guard_response(entry, request, findings)
+    return policy_guard_response(PATH_GUARD_POLICY, entry, request, findings)
 
 
 def run_active_runtime_guard(entry: Any, request: Any, repo_root: Path) -> dict[str, Any]:
@@ -187,7 +194,7 @@ def run_active_runtime_guard(entry: Any, request: Any, repo_root: Path) -> dict[
     findings.extend(coverage_findings)
     if diff_finding is not None:
         findings.append(diff_finding)
-    return active_runtime_guard_response(entry, request, findings)
+    return policy_guard_response(RUNTIME_GUARD_POLICY, entry, request, findings)
 
 
 def classify_shell_finding(entry: Any, request: Any, repo_root: Path) -> dict[str, Any]:
@@ -207,14 +214,11 @@ def classify_shell_finding(entry: Any, request: Any, repo_root: Path) -> dict[st
     findings = scan_sources([SourceFile(normalize_path(raw_path), text, "fixture")], repo_root)
     if not findings:
         findings = [
-            classify_raw_finding(
+            classify_hit(
+                PATH_GUARD_POLICY,
                 normalize_path(raw_path),
-                line,
-                str(request.inputs.get("category") or "bash"),
-                text.strip() or raw_path,
-                "manual classification request",
-                text,
                 "fixture",
+                Hit(line, str(request.inputs.get("category") or "bash"), text.strip() or raw_path, "manual classification request", text),
             )
         ]
     blocking = [finding for finding in findings if finding.classification == "blocking_active_gate"]

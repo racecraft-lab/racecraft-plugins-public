@@ -5,128 +5,15 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from ...envelope import diagnostic, response
 from .common import (
-    CONTAINER_PREFLIGHT_WORKFLOW,
     DEFAULT_CASE_FILE,
-    FORBIDDEN_CONTENT_PATTERNS,
-    FORBIDDEN_PATTERNS,
     RawFinding,
     SourceFile,
-    add_finding,
-    classified_counts,
-    direct_dispatch_line,
     is_direct_python_gate_dispatch,
     is_docs_or_workflow_tooling,
-    is_hook_matcher_line,
-    line_context,
-    line_number_for_offset,
-    normalize_path,
     repository_bash_container_preflight_dispatch_glue,
-    workflow_context_for_line,
-    workflow_run_contexts,
 )
-
-
-def guard_response(entry: Any, request: Any, findings: list[RawFinding]) -> dict[str, Any]:
-    blocking = [finding for finding in findings if finding.classification == "blocking_active_gate"]
-    status = "expected_failure" if blocking else "ok"
-    data = base_data(entry, request.operation, status)
-    data.update(
-        {
-            "schema_version": "1.0",
-            "status": status,
-            "blocking_count": len(blocking),
-            "classified_counts": classified_counts(findings),
-            "findings": [finding.as_record() for finding in findings],
-        }
-    )
-    if not blocking:
-        return response("ok", request_id=request.request_id, data=data)
-
-    diag = diagnostic(
-        "active_path_guard_blocked",
-        "active-path guard found shell-specific dependencies in active repo-local gates",
-        details={
-            "blocking_count": len(blocking),
-            "categories": sorted({finding.category for finding in blocking}),
-            "paths": sorted({finding.path for finding in blocking})[:20],
-        },
-        remediation_summary="Remove the active shell dependency or reclassify the retained path as inactive parity evidence.",
-        remediation_actions=["Inspect data.findings for blocking_active_gate entries.", "Migrate the active path to a Python runner gate."],
-    )
-    return response("expected_failure", request_id=request.request_id, data=data, diagnostics=[diag])
-
-
-def scan_sources(sources: list[SourceFile], repo_root: Path) -> list[RawFinding]:
-    findings: list[RawFinding] = []
-    seen: set[tuple[str, int | None, str, str]] = set()
-    for source in sources:
-        path = normalize_path(source.path)
-        lines = source.content.splitlines()
-        workflow_contexts = workflow_run_contexts(source.content) if path.startswith(".github/workflows/") else []
-        if path.endswith(".sh"):
-            add_finding(findings, seen, classify_raw_finding(path, 1, "script_file", "*.sh", ".sh file retained in scanned scope", source.content, source.source_kind))
-        if path.startswith(".github/workflows/") and is_direct_python_gate_dispatch(source.content):
-            line = direct_dispatch_line(source.content)
-            add_finding(
-                findings,
-                seen,
-                classify_raw_finding(path, line, "bash", "run: python -m speckit_pro_runner", "workflow shell dispatches a Python gate", source.content, source.source_kind),
-            )
-        for category, pattern, reason in FORBIDDEN_CONTENT_PATTERNS:
-            for match in pattern.finditer(source.content):
-                line_number = line_number_for_offset(source.content, match.start())
-                context = workflow_context_for_line(workflow_contexts, line_number) or line_context(lines, line_number)
-                if path == CONTAINER_PREFLIGHT_WORKFLOW:
-                    context = source.content
-                add_finding(
-                    findings,
-                    seen,
-                    classify_raw_finding(path, line_number, category, match.group(0), reason, context, source.source_kind),
-                )
-        for number, line in enumerate(lines, start=1):
-            stripped = line.strip()
-            if not stripped or (stripped.startswith("#") and not path.endswith(".md")):
-                continue
-            if is_hook_matcher_line(path, line):
-                continue
-            for category, pattern, reason in FORBIDDEN_PATTERNS:
-                match = pattern.search(line)
-                if match is None:
-                    continue
-                context = workflow_context_for_line(workflow_contexts, number) or line
-                if path == CONTAINER_PREFLIGHT_WORKFLOW:
-                    context = source.content
-                add_finding(
-                    findings,
-                    seen,
-                    classify_raw_finding(path, number, category, match.group(0), reason, context, source.source_kind),
-                )
-    return findings
-
-
-def classify_raw_finding(
-    path: str,
-    line: int | None,
-    category: str,
-    pattern: str,
-    reason: str,
-    content: str,
-    source_kind: str,
-) -> RawFinding:
-    role = active_role(path)
-    classification = classify_path(path, category, pattern, content, source_kind)
-    return RawFinding(
-        path=path,
-        line=line,
-        category=category,
-        pattern=pattern[:120],
-        reason=reason,
-        active_role=role,
-        classification=classification,
-        remediation=remediation_for(classification),
-    )
+from .scan import GuardPolicy, scan_with_policy
 
 
 def classify_path(path: str, category: str, pattern: str, content: str, source_kind: str) -> str:
@@ -175,24 +62,6 @@ def active_role(path: str) -> str:
     return "repository_text"
 
 
-def remediation_for(classification: str) -> str:
-    if classification == "blocking_active_gate":
-        return "Migrate the active command path to a Python runner gate before release readiness can pass."
-    if classification == "ci_dispatch_glue":
-        return "Keep workflow shell limited to direct Python runner dispatch."
-    if classification == "installed_runtime_cutover_surface":
-        return "Keep installed Claude/Codex invocation cutover deferred."
-    if classification == "temporary_parity_evidence":
-        return "Retain only as inactive parity evidence while promotion records remain valid."
-    if classification == "archive_provenance":
-        return "No code change required for archived provenance text."
-    if classification == "consumer_spec_kit_helper":
-        return "No runner-gate change required for vendored consumer Spec Kit helper evidence."
-    if classification == "generated_payload_mirror":
-        return "Do not cut over generated release payload mirrors until installed-runtime verification passes."
-    return "No runner-gate change required for documentation-only text."
-
-
 def base_data(entry: Any, operation: str, status: str) -> dict[str, Any]:
     gate_status = "pass" if status == "ok" else "fail" if status == "expected_failure" else status
     return {
@@ -206,3 +75,45 @@ def base_data(entry: Any, operation: str, status: str) -> dict[str, Any]:
         },
         "artifacts": [{"path": DEFAULT_CASE_FILE, "kind": "fixture"}],
     }
+
+
+def path_guard_script_file(path: str) -> tuple[str, str] | None:
+    if path.endswith(".sh"):
+        return "*.sh", ".sh file retained in scanned scope"
+    return None
+
+
+def never_bare_line_context(path: str, line: str) -> bool:
+    return False
+
+
+PATH_GUARD_POLICY = GuardPolicy(
+    schema_version="1.0",
+    contract_id=None,
+    blocking_classification="blocking_active_gate",
+    bound_findings=False,
+    base_data=base_data,
+    active_role=active_role,
+    classify=classify_path,
+    remediations={
+        "blocking_active_gate": "Migrate the active command path to a Python runner gate before release readiness can pass.",
+        "ci_dispatch_glue": "Keep workflow shell limited to direct Python runner dispatch.",
+        "installed_runtime_cutover_surface": "Keep installed Claude/Codex invocation cutover deferred.",
+        "temporary_parity_evidence": "Retain only as inactive parity evidence while promotion records remain valid.",
+        "archive_provenance": "No code change required for archived provenance text.",
+        "consumer_spec_kit_helper": "No runner-gate change required for vendored consumer Spec Kit helper evidence.",
+        "generated_payload_mirror": "Do not cut over generated release payload mirrors until installed-runtime verification passes.",
+    },
+    default_remediation="No runner-gate change required for documentation-only text.",
+    script_file=path_guard_script_file,
+    line_context_window=False,
+    bare_line_context=never_bare_line_context,
+    blocked_code="active_path_guard_blocked",
+    blocked_message="active-path guard found shell-specific dependencies in active repo-local gates",
+    blocked_summary="Remove the active shell dependency or reclassify the retained path as inactive parity evidence.",
+    blocked_actions=("Inspect data.findings for blocking_active_gate entries.", "Migrate the active path to a Python runner gate."),
+)
+
+
+def scan_sources(sources: list[SourceFile], repo_root: Path) -> list[RawFinding]:
+    return scan_with_policy(PATH_GUARD_POLICY, sources)
