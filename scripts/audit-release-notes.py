@@ -16,7 +16,12 @@ from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path
 from typing import Any, TextIO
 
-FAILURE_OUTCOME = "release_note_composition_failed"
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import release_note_policy  # noqa: E402
+
+FAILURE_OUTCOME = release_note_policy.FAILURE_OUTCOME
+SNAPSHOT_KEYS = release_note_policy.SNAPSHOT_KEYS
+SNAPSHOT_SCHEMA_VERSION = release_note_policy.SNAPSHOT_SCHEMA_VERSION
 
 
 class AuditFailure(RuntimeError):
@@ -114,20 +119,10 @@ def audit_release_notes(
             fail("release snapshot artifact metadata is invalid")
 
         snapshot = json.loads(snapshot_bytes)
-        expected_keys = {
-            "compare",
-            "compare_headers",
-            "previous_tag",
-            "pulls",
-            "release_body",
-            "repository",
-            "schema_version",
-            "tag",
-        }
-        if not isinstance(snapshot, dict) or set(snapshot) != expected_keys:
+        if not isinstance(snapshot, dict) or set(snapshot) != SNAPSHOT_KEYS:
             fail("release snapshot schema is invalid")
         if (
-            snapshot["schema_version"] != 1
+            snapshot["schema_version"] != SNAPSHOT_SCHEMA_VERSION
             or snapshot["repository"] != environment["GITHUB_REPOSITORY"]
             or not isinstance(snapshot["release_body"], str)
             or not isinstance(snapshot["tag"], str)

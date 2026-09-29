@@ -116,7 +116,7 @@ class RefreshLocalPluginTests(unittest.TestCase):
         with self.subTest(msg="dry-run default rebuilds, validates, and prints Claude dev command"):
             result = run_helper("--dry-run")
             self.assertEqual(result.returncode, 0, merged(result))
-            self.assertIn("build-plugin-payloads.py", merged(result))
+            self.assertIn("scripts/refresh-release-artifacts.py", merged(result))
             self.assertIn("claude plugin validate", merged(result))
             self.assertIn("claude --plugin-dir", merged(result))
 
