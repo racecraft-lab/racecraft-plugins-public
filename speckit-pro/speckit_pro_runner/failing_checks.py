@@ -109,10 +109,10 @@ FORMATS: dict[str, dict[str, Any]] = {
     "jest": {"marker": re.compile(r"^Tests: +.*\b(\d+) total$", re.M),
              "failing": re.compile(r"^ +● (.+?)$", re.M),
              "passing": None},
-    # `go test`: the package line marks the run; every `--- PASS|FAIL|SKIP` line is one check. Without `-v` only
-    # failures print, so a plain run's count can never show more checks than before.
+    # `go test`: the package line marks the run, and every `=== RUN` line (printed only with `-v`) is one check.
+    # A plain run does not say how many checks ran, so its count is unknown, never the failure count.
     "go": {"marker": re.compile(r"^(?:ok|FAIL)\s+\S+\s+(?:[\d.]+s|\(cached\))(?:\s.*)?$", re.M),
-           "count": re.compile(r"^ *--- (?:PASS|FAIL|SKIP): ", re.M),
+           "count": re.compile(r"^=== RUN ", re.M),
            "failing": re.compile(r"^ *--- FAIL: (\S+)", re.M),
            "passing": re.compile(r"^ *--- PASS: (\S+)", re.M)},
     "cargo": {"marker": re.compile(r"^test result: (?:ok|FAILED)\. (\d+) passed; (\d+) failed; (\d+) ignored;", re.M),
@@ -162,7 +162,7 @@ def _checks_run(name: str, text: str) -> int | None:
     if name == "junit":
         return _junit_checks(text)
     if name == "go":
-        return len(patterns["count"].findall(text))
+        return len(patterns["count"].findall(text)) or None
     if name == "cargo":
         return sum(int(count) for counts in patterns["marker"].findall(text) for count in counts)
     if name == "mocha":

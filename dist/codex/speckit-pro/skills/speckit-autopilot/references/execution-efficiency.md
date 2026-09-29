@@ -36,7 +36,8 @@ ownership from the caller's current workflow.
 - `start`: open or recover the same workflow's ledger before the first phase.
   Pass `inputs.spec_file` as the resolved repo-relative feature spec path when
   available; the workflow can live elsewhere. If omitted, only an existing
-  adjacent spec can supply requirement IDs, otherwise failures use `unresolved`.
+  adjacent spec can supply requirement IDs, otherwise untagged failures take the
+  `untagged-<digest>` family, or `unresolved` when no failing set is recorded.
   An existing spec's registry freezes at start; later paths or contents never
   reset counters.
   Agent replacement, compaction, a reclaimed state mirror, and resume never
@@ -357,7 +358,8 @@ them, `checks_run` (the run's own summary count), an `output_sha256` digest,
 and `recorded_at`. No
 helper action accepts this field, so a caller cannot supply it. Output in no
 supported format, output matching two formats, a nonzero exit naming no
-failure, or a command that did not finish records `failing: null`.
+failure, or a command that did not finish records `failing: null`. A plain `go test` prints no check count, so
+run `go test -v`; without it `checks_run` is unknown and no correction is admitted as progress.
 
 A family's first correction stores the newest recorded failure as its
 `baseline`, and pins `spec_file` (the bound spec when the run has one, else

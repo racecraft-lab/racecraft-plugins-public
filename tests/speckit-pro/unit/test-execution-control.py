@@ -44,6 +44,10 @@ class _ExecutionControlFixture:
             self.run_id = result["ledger"]["run_id"]
         return result
 
+    def assert_schema_valid(self, ledger):
+        schema = json.loads(SCHEMA_PATH.read_text())
+        self.assertEqual(json_schema_failures(ledger, schema, schema, "ledger"), [])
+
 
 def _assert_relocation_event_reuse_rejected(test, path, common):
     event_id, run_id = "workflow-move-1", test.run_id
@@ -1354,10 +1358,6 @@ class DeferOnExhaustedAllowanceTests(_ExecutionControlFixture, unittest.TestCase
         return {"dispatch_id": dispatch_id, "reason": reason, "unit_kind": unit_kind, "unit": unit,
                 "deferred_at": self.now}
 
-    def assert_schema_valid(self, ledger):
-        schema = json.loads(SCHEMA_PATH.read_text())
-        self.assertEqual(json_schema_failures(ledger, schema, schema, "ledger"), [])
-
     def test_exhausted_family_and_run_budgets_defer_the_named_family_and_keep_refusing(self):
         self.invoke("start")
         self.invoke("reserve", dispatch_id="fix-a", kind="corrective", failure_invariant="FR-001")
@@ -1662,13 +1662,11 @@ class FailingCheckFingerprintTests(unittest.TestCase):
 class MoreTestRunnerFingerprintTests(unittest.TestCase):
     """go test, cargo test, vitest, mocha, and JUnit XML parse from output the tools really produced."""
 
-    def fingerprint(self, stdout="", stderr="", exit_code=1, completed=True):
-        return failing_check_fingerprint("UNIT_TEST", ["go", "test"], exit_code, completed,
-                                         stdout.encode(), stderr.encode())
+    fingerprint = FailingCheckFingerprintTests.fingerprint
 
     CASES = {
         "go-test-v.txt": ("go", ["TestGroup", "TestGroup/inner_bad", "TestSub"], ["TestAdd", "TestGroup/inner_ok"], 5),
-        "go-test.txt": ("go", ["TestGroup", "TestGroup/inner_bad", "TestSub"], None, 3),
+        "go-test.txt": ("go", ["TestGroup", "TestGroup/inner_bad", "TestSub"], None, None),
         "cargo-test.txt": ("cargo", ["tests::nested_path_bad", "tests::subs"], ["tests::adds"], 3),
         "vitest.txt": ("vitest", ["math.test.js > math > subtracts", "math.test.js > strings > upper"], None, 3),
         "mocha.txt": ("mocha", ["math nested upper", "math subtracts"], None, 3),
@@ -1691,7 +1689,8 @@ class MoreTestRunnerFingerprintTests(unittest.TestCase):
                                  self.fingerprint(runner_output(name))["failing"])
 
     def test_a_passing_run_in_a_new_format_records_an_empty_set_and_its_count(self):
-        cases = {"go": ("--- PASS: TestAdd (0.00s)\n--- PASS: TestSub (0.00s)\nPASS\nok  \texample.test/demo\t0.1s\n", 2),
+        cases = {"go": ("=== RUN   TestAdd\n--- PASS: TestAdd (0.00s)\n=== RUN   TestSub\n--- PASS: TestSub (0.00s)\nPASS\n"
+                        "ok  \texample.test/demo\t0.1s\n", 2),
                  "cargo": ("test a ... ok\ntest b ... ok\n\ntest result: ok. 2 passed; 0 failed; 1 ignored; "
                            "0 measured; 0 filtered out; finished in 0.00s\n", 3),
                  "vitest": (" Test Files  1 passed (1)\n      Tests  4 passed (4)\n", 4),
@@ -1754,10 +1753,6 @@ class _CorrectionProgressFixture(_ExecutionControlFixture):
             self.now += 10
             self.invoke("complete", dispatch_id=dispatch_id, outcome=outcome)
         return result
-
-    def assert_schema_valid(self, ledger):
-        schema = json.loads(SCHEMA_PATH.read_text())
-        self.assertEqual(json_schema_failures(ledger, schema, schema, "ledger"), [])
 
 
 
@@ -1997,6 +1992,8 @@ class UntaggedFailureFamilyTests(_CorrectionProgressFixture, unittest.TestCase):
         self.verify(runner_output("cargo-test.txt"))
         repeated = self.correct("fix-2", invariant="different words")
         self.assertEqual((repeated["disposition"], repeated["reasons"]), ("defer", ["failure_family_budget_exhausted"]))
+        self.assertRegex(repeated["deferred"]["unit"], r"^untagged-[0-9a-f]{16}$")
+        self.assert_schema_valid(repeated["ledger"])
         self.assertNotIn("fix-2", repeated["ledger"]["dispatches"])
 
     def test_the_family_ignores_identifier_order_and_the_tagging_words(self):
@@ -2008,6 +2005,7 @@ class UntaggedFailureFamilyTests(_CorrectionProgressFixture, unittest.TestCase):
     def test_an_untagged_failure_with_no_recorded_failing_set_keeps_the_shared_family(self):
         first = self.correct("fix-1", invariant="words that name no requirement")
         self.assertEqual(self.families(first), {"unresolved"})
+        self.assert_schema_valid(first["ledger"])
         denied = self.correct("fix-2", invariant="other words")
         self.assertEqual(denied["reasons"], ["failure_family_budget_exhausted"])
 
