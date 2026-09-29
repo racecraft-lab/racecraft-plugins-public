@@ -156,6 +156,22 @@ def transcript_for(fixture: Path, mode: str) -> Path:
 def assert_dispatch_shape(
     fixture_id: str, transcript: Path, expected: dict[str, Any], reporter: Reporter, helpers: Any
 ) -> None:
+    total = len(helpers.extract_orchestrator_dispatches(transcript))
+    if "min_dispatch_count" in expected:
+        minimum = int(expected["min_dispatch_count"])
+        reporter.check(
+            f"{fixture_id}: dispatch count >= {minimum} (got {total})",
+            total >= minimum,
+            f"expected >= {minimum}, got {total}",
+        )
+    if "max_dispatch_count" in expected:
+        maximum = int(expected["max_dispatch_count"])
+        reporter.check(
+            f"{fixture_id}: dispatch count <= {maximum} (got {total})",
+            total <= maximum,
+            f"expected <= {maximum}, got {total}",
+        )
+
     groups = expected.get("same_message_dispatch_groups", [])
     if isinstance(groups, list):
         for group in groups:
@@ -268,22 +284,6 @@ def assert_dispatch_fixture(
                 helpers.assert_transcript_not_contains_term(transcript, term),
                 f"transcript included forbidden term {term!r}",
             )
-
-    total = len(helpers.extract_orchestrator_dispatches(transcript))
-    if "min_dispatch_count" in expected:
-        minimum = int(expected["min_dispatch_count"])
-        reporter.check(
-            f"{fixture_id}: dispatch count >= {minimum} (got {total})",
-            total >= minimum,
-            f"expected >= {minimum}, got {total}",
-        )
-    if "max_dispatch_count" in expected:
-        maximum = int(expected["max_dispatch_count"])
-        reporter.check(
-            f"{fixture_id}: dispatch count <= {maximum} (got {total})",
-            total <= maximum,
-            f"expected <= {maximum}, got {total}",
-        )
 
     assert_dispatch_shape(fixture_id, transcript, expected, reporter, helpers)
 
