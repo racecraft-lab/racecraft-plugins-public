@@ -4,6 +4,7 @@ The autopilot's pre-flight sequence. Run these before Step 1 (Parse Workflow Sta
 
 ## Contents
 
+- [Step -2: Run-Start Permission Probe](#step--2-run-start-permission-probe) — settle the runner and `git status` prompts once, before any phase work
 - [Workflow Worktree Binding](#workflow-worktree-binding) — verify Claude's live checkout after `/cd`
 - [Step -1: Archive Sweep Startup](#step--1-archive-sweep-startup) — archive previously merged specs before workflow execution
 - [Step 0.0: Resolve Script Paths](#step-00-resolve-script-paths) — extract `SKILL_SCRIPTS` from the skill header (plugin path)
@@ -16,6 +17,41 @@ The autopilot's pre-flight sequence. Run these before Step 1 (Parse Workflow Sta
 - [Step 0.10: Implementation Agent Detection](#step-010-implementation-agent-detection) — discover `PROJECT_IMPLEMENTATION_AGENT`
 - [Step 0.11: Project Command Discovery](#step-011-project-command-discovery) — `detect-commands` → `PROJECT_COMMANDS`
 - [Step 0.12: Preset and Extension Detection](#step-012-preset-and-extension-detection) — `detect-presets` → `PRESET_CONVENTIONS`
+
+## Step -2: Run-Start Permission Probe
+
+Run this first, before the binding guard, Step -1, Step 0, and any phase work, on
+every start and every resume. Runner calls and Git commands follow the session's
+permission settings, and plugin agents inherit them, so an unattended run stops at
+the first call the settings do not allow. Probe that once, up front, instead of
+midway. The contract is in
+[Run-start grants](./stop-policy.md#run-start-grants).
+
+1. Run one no-op runner request: helper `helper-registry-dispatch` with empty
+   `inputs`, sent on stdin to `<resolved_python> -m speckit_pro_runner` exactly as
+   every later request is.
+2. Run one `git status --porcelain` in the live checkout.
+
+When both run without a prompt and finish cleanly, print nothing and continue. When
+either prompts or is denied, print the allow rules for the probe that failed, once,
+and stop before any phase work: do not run Archive Sweep, edit a file, or dispatch
+an agent. This halt happens before the run starts, so it is the run-start grant and
+not a run stop.
+
+```text
+Autopilot needs permission for its own calls before it starts. Add these allow
+rules to permissions.allow in .claude/settings.local.json or your user settings,
+then rerun. Or start the session in bypassPermissions mode.
+  runner request:  <resolved_python> -m speckit_pro_runner:*   and   printf:*
+  git status:      git status:*
+```
+
+Print each rule in Claude Code's `Tool(pattern)` form, where the tool is the shell
+tool and the pattern is the text above. Print only the rules for the failed probe.
+Replace `<resolved_python>` with the interpreter path the request used, written
+exactly as the request invoked it: a shell rule matches the command text, and an
+absolute interpreter path must appear in the rule as it does in the request. A probe
+that passes needs no rule.
 
 ## Workflow Worktree Binding
 

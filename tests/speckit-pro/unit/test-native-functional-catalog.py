@@ -229,6 +229,14 @@ ORCHESTRATION_REQUIRING_TEXT = {
          RESCOPE_RECONCILIATION_RULE),
     ),
 }
+ORCHESTRATION_REQUIRING_TEXT["functional.speckit-autopilot.run-start-grant"] = (
+    ("speckit-pro/skills/speckit-autopilot/references/stop-policy.md",
+     "Nothing that inventory could have known is discovered mid-run."),
+    ("speckit-pro/codex-skills/speckit-autopilot/references/prerequisites-codex.md",
+     "no permission or egress prompt can stop the run midway"),
+    ("speckit-pro/skills/speckit-autopilot/references/prerequisites.md",
+     "print the allow rules for the probe that failed, once, and stop before any phase work"),
+)
 ORCHESTRATION_IDS = set(ORCHESTRATION_REQUIRING_TEXT)
 # Native-only scaffold cases for the spec-scoped reviewability setup gate. The
 # staged roadmap puts the over-budget target first and a small entry last, so a
@@ -279,6 +287,7 @@ ORCHESTRATION_FAILURE_PHRASES = {
     "functional.speckit-autopilot.clarify-answer-provenance": "consensus answer as a human answer",
     "functional.speckit-autopilot.progress-projection-mid-run": "summary rows as an acceptable projection",
     "functional.speckit-autopilot.rescope-reconciliation": "accepts the rescoped plan.md alone",
+    "functional.speckit-autopilot.run-start-grant": "asks once per probe",
 }
 LOCAL_COMMAND_LEGACY_SOURCES = {
     "functional.speckit-autopilot.case-2": (
@@ -708,6 +717,13 @@ ORCHESTRATION_FAILURE_ANSWERS = {
         "g3_may_run": True,
         "reconcile_before_g3": False,
     },
+    "functional.speckit-autopilot.run-start-grant": {
+        "uncovered_probes": [],
+        "ask_before_phase_one": False,
+        "ask_count": 3,
+        "phase_work_before_reply": True,
+        "mid_run_permission_stops": 3,
+    },
 }
 
 
@@ -829,6 +845,16 @@ def _derive_orchestration_answers(case: dict) -> dict:
             "g3_may_run": not stale,
             "reconcile_before_g3": bool(stale),
         }
+    if scenario == "run-start-grant":
+        record = json.loads(read("scenario-inputs/run-start/probe-results.json"))
+        uncovered = sorted(probe["id"] for probe in record["probes"] if probe["result"] != "ok")
+        return {
+            "uncovered_probes": uncovered,
+            "ask_before_phase_one": bool(uncovered),
+            "ask_count": 1 if uncovered else 0,
+            "phase_work_before_reply": record["phase_work_started"],
+            "mid_run_permission_stops": 0,
+        }
     raise AssertionError(f"unknown orchestration scenario {case['id']}")
 
 
@@ -875,8 +901,8 @@ class NativeFunctionalCatalogTests(unittest.TestCase):
             - REDIRECT_IDS - WORKTREE_MIGRATION_IDS - TASK_LIST_CONTRACT_IDS
         )
         self.assertEqual(len(response_only_ids), 59)
-        self.assertEqual(len(self.all_cases), 216)
-        self.assertEqual(len(self.catalog["cases"]), 100)
+        self.assertEqual(len(self.all_cases), 217)
+        self.assertEqual(len(self.catalog["cases"]), 101)
         self.assertEqual(
             set(self.cases),
             selected_ids | GROUNDED_IDS | NATIVE_RESPONSE_IDS | DASHBOARD_IDS | NATIVE_ONLY_IDS,

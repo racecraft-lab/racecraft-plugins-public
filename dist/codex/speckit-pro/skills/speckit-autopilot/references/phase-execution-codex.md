@@ -1161,7 +1161,10 @@ and `local-offline-audit` (a worker on this machine). It keeps the same human
 stops as the per-run fragment and never proposes `auto_review.policy`. At this
 preflight, run the helper again with `scope=standing`, passing the user-level
 Codex config's current `auto_review.extra_policy` string as
-`installed_extra_policy`; read that config, never write it.
+`installed_extra_policy` and Step -2's `policy_classes` verbatim as
+`derived_classes`; read that config, never write it. Without the derived
+classes, the rendered text differs and a correctly installed policy reads as
+missing.
 
 For each action whose payload and destination fall inside one class, record
 `disposition=ready` and `authorization.status=explicit_user`. The explicit user
@@ -1175,12 +1178,24 @@ preflight asks no question: it records the coverage and proceeds. That includes
 a planning-to-implementation stage change, such as an explicit
 `--stage implement` run of a plan whose earlier record covered only planning.
 
-**A missing standing policy is a setup gap.** When `installed` is false, it is
-reported once as a setup gap: name it in the Phase 6.5 result and the final
-report, with the helper's `extra_policy_fragment` as the install text. The run
-still proceeds on the invocation and the ratified plan. If the reviewer then
-vetoes a covered action, that is a blocked action: defer it under
-[Blocked Actions Mid-Run: Fall Back or Defer, Never Stop](#blocked-actions-mid-run-fall-back-or-defer-never-stop).
+**A missing standing policy is asked once, at run start.** Step -2 in
+[prerequisites-codex.md](./prerequisites-codex.md#step--2-run-start-authorization)
+owns it: it derives the policy classes, probes each one, and makes the single
+run-start request before Phase 1. This preflight only cites that result and does
+not ask again. When `installed` is still false here, the operator declined the
+run-start request: record the covered actions `operator_action_required` and
+defer their tasks up front, rather than attempting them toward a likely veto. A
+reviewer veto of a covered action is still a blocked action: defer it under
+[Blocked Actions Mid-Run: Fall Back or Defer, Never Stop](#blocked-actions-mid-run-fall-back-or-defer-never-stop),
+and never route the action through another tool, path, or wrapper to get past the
+veto (`stop_reason:veto_bypass`).
+
+**Anything Step -2 could have known is not discovered here.** A standing class,
+a gate's egress, a declared pre-PR command, the private autonomy record, and an
+external workflow root are all settled at run start. One that arrives here
+uncovered is an autopilot defect: fix the Step -2 inputs and rerun it. Only an
+action the ratified plan newly names, such as a live evaluation or a new
+destination, is new at this preflight.
 
 **Uncovered actions are deferred.** An action outside every standing class,
 such as a new destination or data class, a privileged command, or an
@@ -1191,8 +1206,9 @@ and every task and Post item that depends on it, and keeps executing
 independent work; the one end-of-run request names it. A `plan` run lists it in
 its final report as work the implement run will defer.
 
-**Uncovered data egress: the preflight asks for it as a chat reply at run
-start.** Render the paste-ready authorization message described below at the
+**Uncovered plan-derived data egress: the preflight asks for it as a chat reply.**
+This covers only an action the plan newly names; Step -2 already asked for every
+class the run-start inventory could know. Render the paste-ready authorization message described below at the
 preflight, show it with the helper's `delivery` line, and ask the operator to
 send it back as a normal chat message in this thread, never as a goal edit. The
 approval reviewer reads goal text as user-provided data and records an
@@ -1201,7 +1217,9 @@ action stays `operator_action_required` and its task stays deferred until the
 reply lands, and the end-of-run request repeats the message if it never does.
 
 **Every gate's escalation is inventoried at run start.** A gate that fails for
-want of an authorization is a preflight defect, not a deferral. Before
+want of an authorization is a preflight defect, not a deferral. Step -2 runs the
+check below first with the gates the run-start record can know, and its
+`policy_classes` become the standing policy's derived classes. Before
 recording the status, run the read-only `check-gate-preflight-coverage` runner
 helper. Pass every gate the run will execute (the G-gates, the integration
 suite, live evaluations, and the Post quality and test gates) as `gate`, its
@@ -1254,7 +1272,10 @@ Keep the complete record private and publish only its receipt. The complete
 evidence, and any native event identity. Those values are machine-local, so
 the record never goes in a tracked or untracked repository file; the privacy
 scan reads both. Write it with owner-only permissions (directory `0700`, file
-`0600`) to `<git-common-dir>/speckit-pro/autonomy-boundary/<run-id>.json`.
+`0600`) to `<git-common-dir>/speckit-pro/autonomy-boundary/<run-id>.json`. In a
+linked worktree that directory sits outside the worktree root, so Step -2
+probes the write at run start and this inventory records it as an
+`outside_writable_roots` action; the write never first prompts here.
 `<git-common-dir>` is `git rev-parse --git-common-dir` resolved against the
 worktree, and `<run-id>` is the execution-control ledger's `run_id`. That
 directory is outside every worktree's file listing, is shared by all worktrees

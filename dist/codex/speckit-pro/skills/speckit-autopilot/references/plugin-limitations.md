@@ -87,10 +87,14 @@ skill" in the Claude Code skills documentation.
 
 One consequence for the autopilot:
 
-1. **Those settings decide whether an unattended run stops.** `acceptEdits`
-   covers file edits and common filesystem commands. It does not cover
-   arbitrary command execution, so a run that must never prompt needs
-   `bypassPermissions` or a session allow rule that covers the runner.
+1. **Those settings decide whether an unattended run stops, so the run checks
+   them once at start.** `acceptEdits` covers file edits and common filesystem
+   commands. It does not cover arbitrary command execution, so a run that must
+   never prompt needs `bypassPermissions` or a session allow rule that covers the
+   runner. Before any phase work, the Step -2 run-start permission probe runs one
+   no-op runner request and one `git status`. If either prompts or is denied, it
+   prints the exact allow rule and stops once, so a prompt never first appears
+   midway. See [Run-start grants](./stop-policy.md#run-start-grants).
 
 ## Research/Context Capability Coverage
 

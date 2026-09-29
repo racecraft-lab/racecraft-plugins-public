@@ -1434,9 +1434,11 @@ so routing happens here.
 `AGENTS.md` or `CLAUDE.md` names for every PR, such as a dependency audit,
 runs before each PR like any other gate. On Codex the Phase 6.5 preflight
 collects its egress authorization at run start through
-`check-gate-preflight-coverage`. Claude Code has no approval reviewer, so it
-needs no run-start inventory: the command runs under the session's
-permission settings, and a denial is a blocked action (below).
+`check-gate-preflight-coverage`. Claude Code has no approval reviewer, so it has
+no egress inventory. Its Step -2 run-start permission probe settles the runner
+and `git status` prompts before any phase work. The command then runs under the
+session's permission settings, and a denial the probe could not know is a blocked
+action (below).
 
 #### Phase 7 Setup: The Pull-Request Feedback Sweep
 
