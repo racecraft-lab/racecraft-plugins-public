@@ -1,0 +1,384 @@
+{
+  "docs-site/src/content/docs/contribute-and-release.md": {
+    "verdict": [
+      "release-tooling-014"
+    ],
+    "checks_run": [
+      "ripwire . --grep=classify_changed_files"
+    ]
+  },
+  "docs-site/src/content/docs/install/typesafe-jev.md": {
+    "verdict": "clean",
+    "checks_run": []
+  },
+  "docs/ai/specs/cicd-release-pipeline-technical-roadmap.md": {
+    "verdict": "clean",
+    "checks_run": []
+  },
+  "docs/ai/specs/cicd-release-pipeline-verification.md": {
+    "verdict": [
+      "release-tooling-004"
+    ],
+    "checks_run": [
+      "ripwire . --grep=validate-pr-title"
+    ]
+  },
+  "scripts/audit-release-notes.py": {
+    "verdict": [
+      "release-tooling-009"
+    ],
+    "checks_run": [
+      "ripwire . --grep=release_note_composition_failed"
+    ]
+  },
+  "scripts/build-plugin-payloads.py": {
+    "verdict": [
+      "release-tooling-003"
+    ],
+    "checks_run": [
+      "ripwire . --uses=build_installed_plugin_payloads"
+    ]
+  },
+  "scripts/build-typesafe-jev-release.py": {
+    "verdict": "clean",
+    "checks_run": []
+  },
+  "scripts/check-go-module.py": {
+    "verdict": [
+      "release-tooling-016"
+    ],
+    "checks_run": [
+      "ripwire . --grep=spec_from_file_location"
+    ]
+  },
+  "scripts/check-pr-workflow-results.py": {
+    "verdict": "clean",
+    "checks_run": []
+  },
+  "scripts/classify-docs-validation.py": {
+    "verdict": [
+      "release-tooling-014",
+      "release-tooling-016"
+    ],
+    "checks_run": [
+      "ripwire . --grep=classify_changed_files",
+      "ripwire . --grep=spec_from_file_location"
+    ]
+  },
+  "scripts/compose-release-notes.py": {
+    "verdict": [
+      "release-tooling-009",
+      "release-tooling-010"
+    ],
+    "checks_run": [
+      "ripwire . --grep=release_note_composition_failed",
+      "ripwire . --uses=_validation_inputs_from_environment"
+    ]
+  },
+  "scripts/dispatch-release-pr-checks.py": {
+    "verdict": [
+      "release-tooling-007"
+    ],
+    "checks_run": [
+      "ripwire . --uses=DEFAULT_TITLE"
+    ]
+  },
+  "scripts/emit-plugin-matrix.py": {
+    "verdict": "clean",
+    "checks_run": []
+  },
+  "scripts/install-actionlint.py": {
+    "verdict": "clean",
+    "checks_run": []
+  },
+  "scripts/refresh-local-plugin.py": {
+    "verdict": [
+      "release-tooling-003"
+    ],
+    "checks_run": [
+      "ripwire . --uses=build_installed_plugin_payloads"
+    ]
+  },
+  "scripts/release-pr-lifecycle.py": {
+    "verdict": "clean",
+    "checks_run": []
+  },
+  "scripts/release_note_policy.py": {
+    "verdict": [
+      "release-tooling-010"
+    ],
+    "checks_run": [
+      "ripwire . --uses=_validation_inputs_from_environment"
+    ]
+  },
+  "scripts/resolve_release_prs.py": {
+    "verdict": [
+      "release-tooling-007"
+    ],
+    "checks_run": [
+      "ripwire . --uses=DEFAULT_TITLE"
+    ]
+  },
+  "scripts/run-plugin-evals.py": {
+    "verdict": "clean",
+    "checks_run": []
+  },
+  "scripts/run-python-lint.py": {
+    "verdict": "clean",
+    "checks_run": []
+  },
+  "scripts/run-runner-requests.py": {
+    "verdict": "clean",
+    "checks_run": []
+  },
+  "scripts/sync-marketplace-versions.py": {
+    "verdict": "clean",
+    "checks_run": []
+  },
+  "scripts/sync_release_pr.py": {
+    "verdict": [
+      "release-tooling-008"
+    ],
+    "checks_run": [
+      "ripwire . --grep=10.25.0"
+    ]
+  },
+  "scripts/validate-release-pr-integrity.py": {
+    "verdict": "clean",
+    "checks_run": []
+  },
+  "speckit-pro/.claude-plugin/plugin.json": {
+    "verdict": [
+      "release-tooling-002"
+    ],
+    "checks_run": [
+      "ripwire . --grep=typesafe-jev"
+    ]
+  },
+  "speckit-pro/.codex-plugin/plugin.json": {
+    "verdict": "clean",
+    "checks_run": []
+  },
+  "speckit-pro/CHANGELOG.md": {
+    "verdict": "clean",
+    "checks_run": []
+  },
+  "speckit-pro/speckit_pro_runner/gates/payloads.py": {
+    "verdict": [
+      "release-tooling-013"
+    ],
+    "checks_run": [
+      "ripwire . --callers=copy_optional_installed_plugin"
+    ]
+  },
+  "speckit-pro/speckit_pro_runner/gates/release.py": {
+    "verdict": [
+      "release-tooling-012"
+    ],
+    "checks_run": [
+      "ripwire . --grep=SUPPORTED_RUNNER_OPERATIONS"
+    ]
+  },
+  "tests/speckit-pro/check-toolchain.py": {
+    "verdict": [
+      "release-tooling-008",
+      "release-tooling-015"
+    ],
+    "checks_run": [
+      "ripwire . --grep=10.25.0",
+      "ripwire . --grep=TOOLCHAIN_MODES"
+    ]
+  },
+  "tests/speckit-pro/evals/audit/unit-release-tooling-audit.json": {
+    "verdict": "clean",
+    "checks_run": []
+  },
+  "tests/speckit-pro/evals/audit/unit-release-tooling-audit.md": {
+    "verdict": "clean",
+    "checks_run": []
+  },
+  "tests/speckit-pro/layer1-structural/validate-ci-release-contracts.py": {
+    "verdict": [
+      "release-tooling-001"
+    ],
+    "checks_run": [
+      "ripwire . --callers=_required_sentinel_passes"
+    ]
+  },
+  "tests/speckit-pro/layer1-structural/validate-payload-contracts.py": {
+    "verdict": "clean",
+    "checks_run": []
+  },
+  "tests/speckit-pro/layer1-structural/validate-plugin-metadata.py": {
+    "verdict": [
+      "release-tooling-011"
+    ],
+    "checks_run": [
+      "ripwire . --grep=REQUIRED_SKILLS"
+    ]
+  },
+  "tests/speckit-pro/run-container-preflight.py": {
+    "verdict": [
+      "release-tooling-001",
+      "release-tooling-006"
+    ],
+    "checks_run": [
+      "ripwire . --callers=_required_sentinel_passes",
+      "ripwire . --grep=_architecture_family"
+    ]
+  },
+  "tests/speckit-pro/run-hosted-windows-preflight.py": {
+    "verdict": [
+      "release-tooling-005",
+      "release-tooling-006"
+    ],
+    "checks_run": [
+      "ripwire . --grep=_architecture_family",
+      "ripwire . --uses=STATUS_EXIT_CODES"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/installed-plugin-release/active-runtime-guard-cases.json": {
+    "verdict": "clean",
+    "checks_run": []
+  },
+  "tests/speckit-pro/unit/fixtures/installed-plugin-release/contracts/payload-completeness.schema.json": {
+    "verdict": "clean",
+    "checks_run": []
+  },
+  "tests/speckit-pro/unit/fixtures/installed-plugin-release/contracts/release-readiness.schema.json": {
+    "verdict": "clean",
+    "checks_run": []
+  },
+  "tests/speckit-pro/unit/fixtures/installed-plugin-release/contracts/runner-invocation.schema.json": {
+    "verdict": [
+      "release-tooling-012"
+    ],
+    "checks_run": [
+      "ripwire . --grep=SUPPORTED_RUNNER_OPERATIONS"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/installed-plugin-release/payload-completeness-cases.json": {
+    "verdict": "clean",
+    "checks_run": []
+  },
+  "tests/speckit-pro/unit/fixtures/installed-plugin-release/requests/active-runtime-guard.json": {
+    "verdict": "clean",
+    "checks_run": []
+  },
+  "tests/speckit-pro/unit/fixtures/installed-plugin-release/requests/payload-completeness-apply.json": {
+    "verdict": "clean",
+    "checks_run": []
+  },
+  "tests/speckit-pro/unit/fixtures/installed-plugin-release/requests/payload-completeness.json": {
+    "verdict": "clean",
+    "checks_run": []
+  },
+  "tests/speckit-pro/unit/fixtures/installed-plugin-release/requests/release-readiness.json": {
+    "verdict": "clean",
+    "checks_run": []
+  },
+  "tests/speckit-pro/unit/fixtures/installed-plugin-release/requests/runner-invocation.json": {
+    "verdict": "clean",
+    "checks_run": []
+  },
+  "tests/speckit-pro/unit/fixtures/installed-plugin-release/runner-invocation-cases.json": {
+    "verdict": "clean",
+    "checks_run": []
+  },
+  "tests/speckit-pro/unit/fixtures/pr-checks/actionlint": {
+    "verdict": "clean",
+    "checks_run": []
+  },
+  "tests/speckit-pro/unit/fixtures/refresh-local-plugin/failure-claude": {
+    "verdict": "clean",
+    "checks_run": []
+  },
+  "tests/speckit-pro/unit/fixtures/refresh-local-plugin/failure-codex": {
+    "verdict": "clean",
+    "checks_run": []
+  },
+  "tests/speckit-pro/unit/fixtures/refresh-local-plugin/reject-execution": {
+    "verdict": "clean",
+    "checks_run": []
+  },
+  "tests/speckit-pro/unit/fixtures/refresh-local-plugin/success-claude": {
+    "verdict": "clean",
+    "checks_run": []
+  },
+  "tests/speckit-pro/unit/fixtures/refresh-local-plugin/success-codex": {
+    "verdict": "clean",
+    "checks_run": []
+  },
+  "tests/speckit-pro/unit/fixtures/release-notes/quickstart.json": {
+    "verdict": "clean",
+    "checks_run": []
+  },
+  "tests/speckit-pro/unit/fixtures/runner-gates/install-verification-cases.json": {
+    "verdict": "clean",
+    "checks_run": []
+  },
+  "tests/speckit-pro/unit/fixtures/runner-gates/payload-evidence-cases.json": {
+    "verdict": "clean",
+    "checks_run": []
+  },
+  "tests/speckit-pro/unit/fixtures/runner-gates/requests/install-verification.json": {
+    "verdict": "clean",
+    "checks_run": []
+  },
+  "tests/speckit-pro/unit/fixtures/runner-gates/requests/test-payload-evidence.json": {
+    "verdict": "clean",
+    "checks_run": []
+  },
+  "tests/speckit-pro/unit/test-check-toolchain.py": {
+    "verdict": "clean",
+    "checks_run": []
+  },
+  "tests/speckit-pro/unit/test-compose-release-notes.py": {
+    "verdict": "clean",
+    "checks_run": []
+  },
+  "tests/speckit-pro/unit/test-hosted-windows-preflight.py": {
+    "verdict": "clean",
+    "checks_run": []
+  },
+  "tests/speckit-pro/unit/test-installed-release-gates.py": {
+    "verdict": "clean",
+    "checks_run": []
+  },
+  "tests/speckit-pro/unit/test-pr-checks-helpers.py": {
+    "verdict": [
+      "release-tooling-016"
+    ],
+    "checks_run": [
+      "ripwire . --grep=spec_from_file_location"
+    ]
+  },
+  "tests/speckit-pro/unit/test-refresh-local-plugin.py": {
+    "verdict": "clean",
+    "checks_run": []
+  },
+  "tests/speckit-pro/unit/test-release-note-policy.py": {
+    "verdict": "clean",
+    "checks_run": []
+  },
+  "tests/speckit-pro/unit/test-release-pr-reconciliation.py": {
+    "verdict": [
+      "release-tooling-016"
+    ],
+    "checks_run": [
+      "ripwire . --grep=spec_from_file_location"
+    ]
+  },
+  "tests/speckit-pro/unit/test-sync-marketplace-versions.py": {
+    "verdict": "clean",
+    "checks_run": []
+  },
+  "tests/speckit-pro/unit/test-typesafe-jev-release-build.py": {
+    "verdict": [
+      "release-tooling-016"
+    ],
+    "checks_run": [
+      "ripwire . --grep=spec_from_file_location"
+    ]
+  }
+}

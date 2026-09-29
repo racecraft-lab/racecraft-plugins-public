@@ -1,0 +1,256 @@
+[
+  {
+    "id": "release-tooling-001",
+    "lane": "release-tooling",
+    "severity": "major",
+    "kind": "coherence",
+    "files": [
+      "tests/speckit-pro/layer1-structural/validate-ci-release-contracts.py:230",
+      "tests/speckit-pro/layer1-structural/validate-ci-release-contracts.py:481",
+      "tests/speckit-pro/run-container-preflight.py:778"
+    ],
+    "ripwire_command": "ripwire . --callers=_required_sentinel_passes",
+    "summary": "The CI-contract validator asserts a private copy of the container sentinel predicate, not the shipped one. The copy passes any run_preflight value when the heavy job was skipped; the shipped predicate requires exactly 'false'. Its seven cases never touch run-container-preflight.py.",
+    "proposed_fix": "Import the shipped _required_sentinel_passes (the way test-hosted-windows-preflight.py:590 does) and assert against it, or delete the copy and its case list.",
+    "in_flight_status": null
+  },
+  {
+    "id": "release-tooling-002",
+    "lane": "release-tooling",
+    "severity": "major",
+    "kind": "coherence",
+    "files": [
+      "speckit-pro/.claude-plugin/plugin.json:20",
+      "speckit-pro/README.md:122",
+      "AGENTS.md:65"
+    ],
+    "ripwire_command": "ripwire . --grep=typesafe-jev",
+    "summary": "The Claude manifest declares typesafe-jev as a hard dependency and the README says SpecKit Pro requires it. AGENTS.md says Jev is an optional tool and work goes on without it. The Codex manifest declares no dependency.",
+    "proposed_fix": "Decide one status for Jev. Either soften the README and manifest to optional, or correct the AGENTS.md sentence and add a Codex-side note.",
+    "in_flight_status": null
+  },
+  {
+    "id": "release-tooling-003",
+    "lane": "release-tooling",
+    "severity": "major",
+    "kind": "coherence",
+    "files": [
+      "scripts/refresh-local-plugin.py:219",
+      "scripts/build-plugin-payloads.py:18",
+      "scripts/refresh-release-artifacts.py:88"
+    ],
+    "ripwire_command": "ripwire . --uses=build_installed_plugin_payloads",
+    "summary": "refresh-local-plugin.py rebuilds dist through build-plugin-payloads.py only. That skips the runner trust-metadata recompute (refresh step 1) and the marketplace sync (step 3), so after a runner edit the local dist carries stale trust hashes. build-plugin-payloads.py is a second entry point to step 2 of refresh-release-artifacts.py and has no other caller.",
+    "proposed_fix": "Have refresh-local-plugin.py call scripts/refresh-release-artifacts.py and delete build-plugin-payloads.py, or document that the local refresh needs a prior artifact refresh.",
+    "in_flight_status": null
+  },
+  {
+    "id": "release-tooling-004",
+    "lane": "release-tooling",
+    "severity": "major",
+    "kind": "coherence",
+    "files": [
+      "docs/ai/specs/cicd-release-pipeline-verification.md:8"
+    ],
+    "ripwire_command": "ripwire . --grep=validate-pr-title",
+    "summary": "The runbook says pr-checks.yml exposes validate-pr-title. That job lives in pr-metadata.yml, which also owns validate-release-note; the runbook lists neither workflow split.",
+    "proposed_fix": "Name pr-metadata.yml as the owner of validate-pr-title and validate-release-note in baseline check 2.",
+    "in_flight_status": null
+  },
+  {
+    "id": "release-tooling-005",
+    "lane": "release-tooling",
+    "severity": "minor",
+    "kind": "coherence",
+    "files": [
+      "tests/speckit-pro/run-hosted-windows-preflight.py:27",
+      "speckit-pro/speckit_pro_runner/envelope.py:12",
+      "tests/speckit-pro/unit/test-speckit-pro-gates.py:51"
+    ],
+    "ripwire_command": "ripwire . --uses=STATUS_EXIT_CODES",
+    "summary": "The status-to-exit-code table and required response fields are restated in the Windows preflight helper and in test-speckit-pro-gates.py, with no equality check against envelope.py.",
+    "proposed_fix": "Import the table from speckit_pro_runner.envelope (the helper already puts the runner on sys.path) or add a drift test.",
+    "in_flight_status": null
+  },
+  {
+    "id": "release-tooling-006",
+    "lane": "release-tooling",
+    "severity": "minor",
+    "kind": "cohesion",
+    "files": [
+      "tests/speckit-pro/run-container-preflight.py:152",
+      "tests/speckit-pro/run-hosted-windows-preflight.py:139",
+      "tests/speckit-pro/run-container-preflight.py:36",
+      "tests/speckit-pro/run-hosted-windows-preflight.py:43"
+    ],
+    "ripwire_command": "ripwire . --grep=_architecture_family",
+    "summary": "Two scripts hold the same architecture-normalizing function and the same Windows interpreter and architecture probing. The container script names x86-64 'amd64' where the Windows helper names it 'x64', so evidence for one role uses two vocabularies. run-container-preflight.py (865 lines) also mixes change detection, Linux gates, Windows probing and the sentinel.",
+    "proposed_fix": "Share one probe module for both, pick one family vocabulary, and split the Windows probing out of the container script.",
+    "in_flight_status": null
+  },
+  {
+    "id": "release-tooling-007",
+    "lane": "release-tooling",
+    "severity": "minor",
+    "kind": "coherence",
+    "files": [
+      "scripts/dispatch-release-pr-checks.py:13",
+      "scripts/dispatch-release-pr-checks.py:106",
+      "scripts/resolve_release_prs.py:64"
+    ],
+    "ripwire_command": "ripwire . --uses=DEFAULT_TITLE",
+    "summary": "The fallback release title 'chore(release): release speckit-pro' is a literal in two scripts and is wrong for a typesafe-jev release PR. The dispatcher also hardcodes base_ref=main while every sibling honors BASE_REF, and it re-validates PR metadata instead of reusing resolve_release_prs.normalize_release_pr.",
+    "proposed_fix": "Define the fallback once in resolve_release_prs.py, derive it from the component, and pass BASE_REF through.",
+    "in_flight_status": null
+  },
+  {
+    "id": "release-tooling-008",
+    "lane": "release-tooling",
+    "severity": "minor",
+    "kind": "coherence",
+    "files": [
+      "scripts/sync_release_pr.py:244",
+      "tests/speckit-pro/check-toolchain.py:186",
+      "docs-site/package.json:6"
+    ],
+    "ripwire_command": "ripwire . --grep=10.25.0",
+    "summary": "The pnpm pin is restated in sync_release_pr.py, check-toolchain.py, docs-site/package.json, release.yml and the docs page, with no single source.",
+    "proposed_fix": "Read packageManager from docs-site/package.json in sync_release_pr.py and check-toolchain.py, or add a test that ties the literals together.",
+    "in_flight_status": null
+  },
+  {
+    "id": "release-tooling-009",
+    "lane": "release-tooling",
+    "severity": "minor",
+    "kind": "coherence",
+    "files": [
+      "scripts/audit-release-notes.py:117",
+      "scripts/audit-release-notes.py:130",
+      "scripts/audit-release-notes.py:19",
+      "scripts/compose-release-notes.py:492",
+      "scripts/compose-release-notes.py:43"
+    ],
+    "ripwire_command": "ripwire . --grep=release_note_composition_failed",
+    "summary": "The snapshot key set, the schema version literal 1 and FAILURE_OUTCOME are duplicated between the audit script and the composer. The composer keeps SNAPSHOT_SCHEMA_VERSION; the audit hardcodes 1.",
+    "proposed_fix": "Share the snapshot schema and outcome constants in release_note_policy.py or a small module both scripts import.",
+    "in_flight_status": null
+  },
+  {
+    "id": "release-tooling-010",
+    "lane": "release-tooling",
+    "severity": "minor",
+    "kind": "cohesion",
+    "files": [
+      "scripts/compose-release-notes.py:33",
+      "scripts/compose-release-notes.py:34",
+      "scripts/release_note_policy.py:514"
+    ],
+    "ripwire_command": "ripwire . --uses=_validation_inputs_from_environment",
+    "summary": "The composer re-exports underscore-private names (_label_names, _validation_inputs_from_environment) from the policy module and leaves them out of __all__. The policy module also owns CLI environment parsing.",
+    "proposed_fix": "Make both helpers public in release_note_policy.py, add them to __all__, and move the PR_* environment reader to the composer.",
+    "in_flight_status": null
+  },
+  {
+    "id": "release-tooling-011",
+    "lane": "release-tooling",
+    "severity": "minor",
+    "kind": "coherence",
+    "files": [
+      "tests/speckit-pro/layer1-structural/validate-plugin-metadata.py:65"
+    ],
+    "ripwire_command": "ripwire . --grep=REQUIRED_SKILLS",
+    "summary": "REQUIRED_SKILLS names ten codex-skills but omits speckit-install and speckit-upgrade, which exist in skills/ and codex-skills/. The check would not notice either being dropped. The file also mixes speckit-pro manifests, typesafe-jev provenance and versions, and the curated-set catalog.",
+    "proposed_fix": "Derive the roster from skills/ (or the agent inventory) and split typesafe-jev and curated-set checks into their own files.",
+    "in_flight_status": null
+  },
+  {
+    "id": "release-tooling-012",
+    "lane": "release-tooling",
+    "severity": "minor",
+    "kind": "coherence",
+    "files": [
+      "speckit-pro/speckit_pro_runner/gates/release.py:35",
+      "speckit-pro/speckit_pro_runner/envelope.py:23",
+      "tests/speckit-pro/unit/fixtures/installed-plugin-release/contracts/runner-invocation.schema.json:45"
+    ],
+    "ripwire_command": "ripwire . --grep=SUPPORTED_RUNNER_OPERATIONS",
+    "summary": "Runner-invocation evidence and its schema allow operations (scaffold, status, autopilot-dry-run, doctor, update, autoheal) that envelope.py rejects. The runner accepts only preflight and runtime-info, and runtime-info is absent from the schema. The live-host case is named runtime-info but records status.",
+    "proposed_fix": "Align the enum with the envelope vocabulary or document that the field names skill operations, not runner operations.",
+    "in_flight_status": null
+  },
+  {
+    "id": "release-tooling-013",
+    "lane": "release-tooling",
+    "severity": "minor",
+    "kind": "coherence",
+    "files": [
+      "speckit-pro/speckit_pro_runner/gates/payloads.py:300",
+      "speckit-pro/speckit_pro_runner/gates/payloads.py:360"
+    ],
+    "ripwire_command": "ripwire . --callers=copy_optional_installed_plugin",
+    "summary": "The Claude payload copies .claude-plugin, skills, agents, hooks and speckit_pro_runner with the optional copier, so a missing source directory yields a passing empty payload. The Codex side uses the required copier for skills. AGENTS.md says gates fail closed.",
+    "proposed_fix": "Use copy_required_installed_plugin for the directories the payload cannot ship without.",
+    "in_flight_status": null
+  },
+  {
+    "id": "release-tooling-014",
+    "lane": "release-tooling",
+    "severity": "minor",
+    "kind": "coherence",
+    "files": [
+      "scripts/classify-docs-validation.py:102",
+      ".github/workflows/deploy-docs.yml:6",
+      "docs-site/src/content/docs/contribute-and-release.md:117"
+    ],
+    "ripwire_command": "ripwire . --grep=classify_changed_files",
+    "summary": "The docs-affecting path set lives in classify-docs-validation.py and again in deploy-docs.yml paths. The classifier counts any tests/speckit-pro change (fixtures included) as reference-affecting; the deploy trigger excludes fixtures. Version Fields also says the Claude marketplace entry omits version, which is true only for speckit-pro (typesafe-jev's carries 0.9.2).",
+    "proposed_fix": "State the path set once, or add a test comparing the two lists. Scope the Version Fields sentence to speckit-pro.",
+    "in_flight_status": null
+  },
+  {
+    "id": "release-tooling-015",
+    "lane": "release-tooling",
+    "severity": "minor",
+    "kind": "cohesion",
+    "files": [
+      "tests/speckit-pro/check-toolchain.py:20",
+      "tests/speckit-pro/check-toolchain.py:221",
+      "speckit-pro/speckit_pro_runner/gates/suite.py:30"
+    ],
+    "ripwire_command": "ripwire . --grep=TOOLCHAIN_MODES",
+    "summary": "The 'shell' toolchain mode runs the same checks as 'tests' under a different label, in a repository with no Bash dependency. The mode set is listed in check-toolchain.py and three times in suite.py; run-all.py still selects shell as a fallback.",
+    "proposed_fix": "Drop the shell mode, or derive the mode set from one constant.",
+    "in_flight_status": null
+  },
+  {
+    "id": "release-tooling-016",
+    "lane": "release-tooling",
+    "severity": "minor",
+    "kind": "cohesion",
+    "files": [
+      "tests/speckit-pro/unit/test-release-pr-reconciliation.py:25",
+      "tests/speckit-pro/unit/test-typesafe-jev-release-build.py:33",
+      "tests/speckit-pro/unit/test-pr-checks-helpers.py:32",
+      "scripts/check-go-module.py:50",
+      "scripts/classify-docs-validation.py:129"
+    ],
+    "ripwire_command": "ripwire . --grep=spec_from_file_location",
+    "summary": "About thirty unit tests each define the same importlib file loader, and no shared helper exists in tests/speckit-pro/lib. changed_files_for_base is duplicated between check-go-module.py and classify-docs-validation.py.",
+    "proposed_fix": "Add one load_script helper to tests/speckit-pro/lib and one shared changed-files function in scripts/.",
+    "in_flight_status": null
+  },
+  {
+    "id": "release-tooling-017",
+    "lane": "release-tooling",
+    "severity": "minor",
+    "kind": "coherence",
+    "files": [
+      "tests/speckit-pro/unit/fixtures/runner-gates/requests/run-default-suite.json:9",
+      "tests/speckit-pro/suite-manifest.json:1"
+    ],
+    "ripwire_command": "ripwire . --grep=run-default-suite",
+    "summary": "run-default-suite.json lists six layer keys, including integration and parity, which the manifest marks non-default, and it restates the manifest roster by hand. The name says default; the request is the CI suite.",
+    "proposed_fix": "Rename it to the CI suite and derive the roster from the manifest, or drop the explicit list.",
+    "in_flight_status": null
+  }
+]
