@@ -3519,6 +3519,15 @@ class RunnerDispatchTests(unittest.TestCase):
 
     def test_go_test_output_admits_a_converging_correction_through_the_real_runner_routes(self):
         """End to end: `go test -v` output the runner executed lets a shrinking failing set continue a family."""
+        self.assert_shrinking_failures_continue(
+            "go", "go-test-v.txt", "go-test-v-shrunk.txt", ["TestGroup", "TestGroup/inner_bad"])
+
+    def test_cargo_test_output_admits_a_converging_correction_through_the_real_runner_routes(self):
+        """End to end: `cargo test` output the runner executed lets a shrinking failing set continue a family."""
+        self.assert_shrinking_failures_continue(
+            "cargo", "cargo-test.txt", "cargo-test-shrunk.txt", ["tests::nested_path_bad"])
+
+    def assert_shrinking_failures_continue(self, format_name, first_fixture, shrunk_fixture, shrunk_failing):
         (self.root / "feature/spec.md").write_text("- FR-001: preserve data\n")
         self.call_runner("execution-control", "apply", action="start")
 
@@ -3542,17 +3551,16 @@ class RunnerDispatchTests(unittest.TestCase):
                                  outcome="completed")
             return result["data"]
 
-        verify("verify-1", "go-test-v.txt")
+        verify("verify-1", first_fixture)
         self.assertEqual(correct("fix-1")["disposition"], "continue")
-        verify("verify-2", "go-test-v-shrunk.txt")
+        verify("verify-2", shrunk_fixture)
         second = correct("fix-2")
         self.assertEqual(second["disposition"], "continue", second)
         self.assertEqual((second["progress"]["admitted"], second["progress"]["change"]), (True, "shrank"))
         ledger = second["ledger"]
         self.assertEqual(ledger["corrective_cycles"], 1)
-        self.assertEqual(ledger["dispatches"]["verify-1"]["failing_checks"]["format"], "go")
-        self.assertEqual(ledger["dispatches"]["verify-2"]["failing_checks"]["failing"],
-                         ["TestGroup", "TestGroup/inner_bad"])
+        self.assertEqual(ledger["dispatches"]["verify-1"]["failing_checks"]["format"], format_name)
+        self.assertEqual(ledger["dispatches"]["verify-2"]["failing_checks"]["failing"], shrunk_failing)
 
     def test_corrective_exception_is_a_real_runner_route(self):
         self.call_runner("execution-control", "apply", action="start")
