@@ -7370,7 +7370,7 @@ def validate_pr_packet_read_only(inputs: dict[str, Any], repo_root: Path) -> dic
     canonical_packet_identity_paths: dict[str, str] | None = None
     packet_rel = repo_relative(packet, repo_root)
     if packet_rel.startswith("specs/") or "/.process/pr-packets/" in packet_rel:
-        from .pr_emission import canonical_packet_paths, packet_path_parts
+        from .pr_packet import canonical_packet_paths, packet_path_parts
 
         packet_parts = packet_path_parts(packet_rel)
         if packet_parts is None:
