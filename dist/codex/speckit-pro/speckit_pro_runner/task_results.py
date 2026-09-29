@@ -308,6 +308,31 @@ def load_bound_journal(root: Path, path: Path, inputs: dict[str, Any], binding: 
     return journal, snapshot
 
 
+def pending_batches(journal: dict[str, Any]) -> list[dict[str, Any]]:
+    """The batches whose latest report left tasks unfinished, each with the agent that owns the repair."""
+    latest = {report["batch_id"]: report for report in journal["reports"]}
+    agents = {batch["id"]: batch["agent"] for batch in journal["batches"]}
+    return [{"batch_id": batch_id, "agent": agents[batch_id], "task_ids": ids}
+            for batch_id, report in latest.items()
+            if (ids := [r["task_id"] for r in report["results"] if r["status"] == "unfinished"])]
+
+
+def task_results_response(journal: dict[str, Any], inputs: dict[str, Any], action: str,
+                          writes_state: bool) -> dict[str, Any]:
+    """The helper's result: the journal, and a redispatch to each batch's own agent while tasks stay unfinished."""
+    pending = pending_batches(journal)
+    unfinished = bool(pending)
+    # Unfinished work is repaired by its batch's own agent, not parked for a human.
+    repair = {"repair": {"retry": "task-results", "batches": pending}} if unfinished else {}
+    return {"journal": journal, "journal_path": inputs["journal_file"],
+            "partition_sha256": journal["partition_sha256"],
+            "disposition": "redispatch" if unfinished else "continue",
+            "reasons": ["unfinished_task_results"] if unfinished else [],
+            "helper_exit_code": int(unfinished and action == "record"),
+            "authorization_granted": False, "native_qualification": "pending",
+            "writes_state": writes_state, **repair}
+
+
 def task_results(root: Path, inputs: dict[str, Any], mode: str) -> dict[str, Any]:
     """Validate supplied evidence; never execute workers or authenticate the caller.
 
@@ -350,20 +375,6 @@ def task_results(root: Path, inputs: dict[str, Any], mode: str) -> dict[str, Any
                 validate_lineage(root, path, journal)
                 ignore_owned_directory(path.parent)
                 write_file_atomic(path, canonical_bytes(journal).decode("utf-8") + "\n", trust_root=root, expected_snapshot=snapshot)
-            latest = {report["batch_id"]: report for report in journal["reports"]}
-            agents = {batch["id"]: batch["agent"] for batch in journal["batches"]}
-            pending = [{"batch_id": batch_id, "agent": agents[batch_id], "task_ids": ids}
-                       for batch_id, report in latest.items()
-                       if (ids := [r["task_id"] for r in report["results"] if r["status"] == "unfinished"])]
-            unfinished = bool(pending)
-            # Unfinished work is repaired by its batch's own agent, not parked for a human.
-            repair = {"repair": {"retry": "task-results", "batches": pending}} if unfinished else {}
-            return {"journal": journal, "journal_path": inputs["journal_file"],
-                    "partition_sha256": journal["partition_sha256"],
-                    "disposition": "redispatch" if unfinished else "continue",
-                    "reasons": ["unfinished_task_results"] if unfinished else [],
-                    "helper_exit_code": int(unfinished and action == "record"),
-                    "authorization_granted": False, "native_qualification": "pending",
-                    "writes_state": changed and mode == "apply", **repair}
+            return task_results_response(journal, inputs, action, changed and mode == "apply")
     except (OSError, TypeError, KeyError, AttributeError, UnicodeError) as exc:
         raise ValueError(f"task result journal invalid or inaccessible: {exc}") from exc

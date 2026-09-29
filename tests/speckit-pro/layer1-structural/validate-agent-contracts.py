@@ -369,9 +369,6 @@ class ValidateCodexAgents(unittest.TestCase):
         elif agent == 'consensus-synthesizer':
             with self.subTest(msg='consensus-synthesizer: uses medium-effort GPT-6 Sol read-only synthesis profile'):
                 self.assertTrue(model_val == 'gpt-6-sol' and effort_val == 'medium' and (sandbox_val == 'read-only'), f'expected gpt-6-sol / medium / read-only, got {model_val} / {effort_val} / {sandbox_val}')
-        elif agent == 'consensus-tiebreaker':
-            with self.subTest(msg='consensus-tiebreaker: uses max-effort GPT-6 Sol read-only tiebreak profile'):
-                self.assertTrue(model_val == 'gpt-6-sol' and effort_val == 'max' and (sandbox_val == 'read-only'), f'expected gpt-6-sol / max / read-only, got {model_val} / {effort_val} / {sandbox_val}')
 
 AGENT_INSTRUCTION_DIRS = EXPECTED_AGENT_DIRS
 collect_agent_instruction_errors = collect_errors

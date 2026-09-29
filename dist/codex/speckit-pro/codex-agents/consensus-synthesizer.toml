@@ -24,7 +24,7 @@ Treat `NOT SPAWNED` as absent.
   `confidence: low` and `Flags: [ESCAPE_TO_ROUND_2]`.
 - **N = 3:** Unanimity produces high confidence. A 2/3 majority wins while the
   dissent is preserved. If all three disagree, return
-  `[ROUND_3_TIEBREAK]` with all perspectives and do not choose one.
+  `[ROUND_3_TIEBREAK]` for `consensus-tiebreaker` with all perspectives, choosing none.
 - **Security override on a security route:** The `Security Route` input line
   says why the item reached all three analysts. When the route is `tag`, apply
   the answer only when all three analysts agree. When the route is `keyword`
@@ -48,8 +48,7 @@ Escape phrases are: `insufficient context`, `not in this codebase`,
 
 For an accepted answer, return the exact file, section, action, and Markdown
 content proposed for the parent to apply. Do not include an artifact edit when
-escaping or requesting the Round 3 tiebreak, which the parent hands to
-`consensus-tiebreaker`. Name the supporting analysts and their
+escaping or requesting the Round 3 tiebreak. Name the supporting analysts and their
 evidence. Preserve any dissent. Add no analysis, arguments, or evidence beyond
 what the supplied responses contain. Never invoke or recommend `$grill-me`.
 

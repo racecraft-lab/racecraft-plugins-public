@@ -17,8 +17,9 @@ import tempfile
 import time
 import uuid
 from contextlib import contextmanager
+from collections.abc import Callable
 from pathlib import Path, PurePosixPath
-from typing import Any
+from typing import Any, NamedTuple
 
 from .formal.selection import require_text as require_nonempty_text
 
@@ -31,8 +32,10 @@ UNKNOWN_BLOCKED = "unknown_dispatch_blocks_unit"
 AGENT_RETRY_PREFIX, AGENT_RETRY_CAP = "agent-recovery:", 1
 AGENT_REPLAN_PREFIX, AGENT_REPLAN_CAP = "agent-replan:", 2
 AGENT_CONTINUATION_PREFIX, AGENT_CONTINUATION_CAP = "agent-continuation:", 2
-AGENT_APPROVAL_CAPS = ((AGENT_RETRY_PREFIX, AGENT_RETRY_CAP), (AGENT_REPLAN_PREFIX, AGENT_REPLAN_CAP),
-                       (AGENT_CONTINUATION_PREFIX, AGENT_CONTINUATION_CAP))
+AGENT_RETRY_APPROVAL = (AGENT_RETRY_PREFIX, AGENT_RETRY_CAP)
+AGENT_REPLAN_APPROVAL = (AGENT_REPLAN_PREFIX, AGENT_REPLAN_CAP)
+AGENT_CONTINUATION_APPROVAL = (AGENT_CONTINUATION_PREFIX, AGENT_CONTINUATION_CAP)
+AGENT_APPROVAL_CAPS = (AGENT_RETRY_APPROVAL, AGENT_REPLAN_APPROVAL, AGENT_CONTINUATION_APPROVAL)
 UNIT_CLASSIFICATIONS = ("no_effect", "partial", "complete")
 UNKNOWN_GUARDED_ACTIONS = frozenset({"reserve", "authorize-corrective-retry", "authorize-corrective-continuation",
                                      "authorize-corrective-exception", "reserve-class-correction",
@@ -275,8 +278,8 @@ def validate_ledger(value: Any) -> None:
     _validate_finalize_observations(value)
 
 
-def _validate_corrective_state(value: dict[str, Any]) -> None:
-    """One allowance's counters, reservations, dispatches, and operator records."""
+def _validate_corrective_counters(value: dict[str, Any]) -> None:
+    """The counters, registries, and reservation tables every allowance carries."""
     if type(value.get("corrective_cycles")) is not int or not 0 <= value["corrective_cycles"] <= 2:
         raise ValueError("invalid corrective counter")
     if not isinstance(value.get("approved_invariants"), list) or not all(isinstance(v, str) for v in value["approved_invariants"]):
@@ -286,48 +289,70 @@ def _validate_corrective_state(value: dict[str, Any]) -> None:
         raise ValueError("invalid execution reservations")
     if len(value["reservations"]) != value["corrective_cycles"]:
         raise ValueError("reservation counter disagrees with ledger")
-    exception_reservation = _validate_corrective_exception(value)
-    allowances = _validate_unit_allowances(value, "increment_allowances", "increment", INCREMENT_REVIEW_ROUNDS)
-    test_fixes = _validate_unit_allowances(value, "test_fix_allowances", "test_fix", TEST_FIX_ROUNDS)
-    metadata_corrections = _validate_metadata_corrections(value)
-    _validate_deferrals(value)
-    gate_allowances = _validate_gate_allowances(value)
-    escalations = _validate_escalations(value)
-    families = [item.get("family") for item in value["reservations"].values() if isinstance(item, dict)]
-    if len(families) != len(value["reservations"]) or len(set(families)) != len(families):
-        raise ValueError("duplicate or malformed corrective family")
+
+
+_MARKED_DISPATCH_REFUSALS = {
+    "test_fix": "test-fix dispatch is not recorded in its increment's test-fix allowance",
+    "metadata_correction": "metadata correction dispatch is not recorded in the metadata corrections",
+    "increment": "increment review dispatch is not recorded in its increment allowance",
+    "gate": "gate remediation dispatch is not recorded in its gate allowance",
+}
+
+
+def _validate_dispatch_shape(item: Any) -> None:
+    """One dispatch record's own fields, before any allowance is asked to own it."""
+    if not isinstance(item, dict) or item.get("kind") not in KINDS or item.get("outcome") not in OUTCOMES | {"reserved", "running"}:
+        raise ValueError("invalid dispatch record")
+    if "failing_checks" in item:
+        _validate_failing_checks(item["failing_checks"], item)
+    if type(item.get("reconciliations")) is not int or not 0 <= item["reconciliations"] <= 1:
+        raise ValueError("invalid reconciliation counter")
+    if sum(key in item for key in ("increment", "gate", "metadata_correction", "test_fix", "escalation")) > 1:
+        raise ValueError("a corrective dispatch draws on one allowance, not an increment and a gate")
+    _validate_edit_records(item)
+
+
+def _validate_marked_dispatch(dispatch_id: str, item: dict[str, Any], marker: str, granted: dict[str, Any]) -> None:
+    """A corrective dispatch under one allowance is unreserved and listed by that allowance's own record."""
+    if item["kind"] != "corrective" or item.get("reservation_id") is not None:
+        listed = False
+    elif marker == "metadata_correction":
+        listed = granted[marker].get(dispatch_id) == item[marker]
+    else:
+        listed = dispatch_id in granted[marker].get(item[marker], {}).get("dispatch_ids", [])
+    if not listed:
+        raise ValueError(_MARKED_DISPATCH_REFUSALS[marker])
+
+
+def _validate_dispatch_records(value: dict[str, Any], exception_reservation: str | None, granted: dict[str, Any]) -> None:
+    """Every dispatch is well formed and draws on exactly the allowance or reservation that lists it."""
     for dispatch_id, item in value["dispatches"].items():
-        if not isinstance(item, dict) or item.get("kind") not in KINDS or item.get("outcome") not in OUTCOMES | {"reserved", "running"}:
-            raise ValueError("invalid dispatch record")
-        if "failing_checks" in item:
-            _validate_failing_checks(item["failing_checks"], item)
-        if type(item.get("reconciliations")) is not int or not 0 <= item["reconciliations"] <= 1:
-            raise ValueError("invalid reconciliation counter")
+        _validate_dispatch_shape(item)
         reservation = item.get("reservation_id")
-        if sum(key in item for key in ("increment", "gate", "metadata_correction", "test_fix", "escalation")) > 1:
-            raise ValueError("a corrective dispatch draws on one allowance, not an increment and a gate")
-        _validate_edit_records(item)
+        marker = next((name for name in _MARKED_DISPATCH_REFUSALS if name in item), None)
         if "escalation" in item or "escalation_tier" in item:
-            _validate_escalation_dispatch(dispatch_id, item, escalations)
-        elif "test_fix" in item:
-            if (item["kind"] != "corrective" or reservation is not None
-                    or dispatch_id not in test_fixes.get(item["test_fix"], {}).get("dispatch_ids", [])):
-                raise ValueError("test-fix dispatch is not recorded in its increment's test-fix allowance")
-        elif "metadata_correction" in item:
-            if (item["kind"] != "corrective" or reservation is not None
-                    or metadata_corrections.get(dispatch_id) != item["metadata_correction"]):
-                raise ValueError("metadata correction dispatch is not recorded in the metadata corrections")
-        elif "increment" in item:
-            if (item["kind"] != "corrective" or reservation is not None
-                    or dispatch_id not in allowances.get(item["increment"], {}).get("dispatch_ids", [])):
-                raise ValueError("increment review dispatch is not recorded in its increment allowance")
-        elif "gate" in item:
-            if (item["kind"] != "corrective" or reservation is not None
-                    or dispatch_id not in gate_allowances.get(item["gate"], {}).get("dispatch_ids", [])):
-                raise ValueError("gate remediation dispatch is not recorded in its gate allowance")
+            _validate_escalation_dispatch(dispatch_id, item, granted["escalation"])
+        elif marker is not None:
+            _validate_marked_dispatch(dispatch_id, item, marker, granted)
         elif (item["kind"] == "corrective" and reservation not in value["reservations"]
                 and (exception_reservation is None or reservation != exception_reservation)):
             raise ValueError("corrective dispatch has no reservation")
+
+
+def _validate_corrective_state(value: dict[str, Any]) -> None:
+    """One allowance's counters, reservations, dispatches, and operator records."""
+    _validate_corrective_counters(value)
+    exception_reservation = _validate_corrective_exception(value)
+    granted = {"increment": _validate_unit_allowances(value, "increment_allowances", "increment", INCREMENT_REVIEW_ROUNDS),
+               "test_fix": _validate_unit_allowances(value, "test_fix_allowances", "test_fix", TEST_FIX_ROUNDS),
+               "metadata_correction": _validate_metadata_corrections(value)}
+    _validate_deferrals(value)
+    granted["gate"] = _validate_gate_allowances(value)
+    granted["escalation"] = _validate_escalations(value)
+    families = [item.get("family") for item in value["reservations"].values() if isinstance(item, dict)]
+    if len(families) != len(value["reservations"]) or len(set(families)) != len(families):
+        raise ValueError("duplicate or malformed corrective family")
+    _validate_dispatch_records(value, exception_reservation, granted)
     _validate_progress(value)
     _validate_unit_reconciliation(value)
     validate_recovery_records(value)
@@ -351,6 +376,28 @@ def _epoch_view(ledger: dict[str, Any], epoch: dict[str, Any]) -> dict[str, Any]
     return view
 
 
+def _validate_epoch_identity(epoch: Any, number: int, required: set[str], allowed: set[str]) -> None:
+    """One archived epoch's shape and the event ID its agent re-plan or stage transition owns."""
+    if not isinstance(epoch, dict) or not required <= set(epoch) <= allowed:
+        raise ValueError("invalid corrective epoch record")
+    if (str(epoch["epoch_event_id"]).startswith(AGENT_REPLAN_PREFIX)
+            and epoch["epoch_event_id"] != AGENT_REPLAN_PREFIX + str(number)):
+        raise ValueError("invalid agent-authorized re-plan epoch")
+    stage = epoch.get("stage_transition")
+    if (("stage_transition" in epoch or str(epoch["epoch_event_id"]).startswith(STAGE_EPOCH_PREFIX))
+            and (stage not in STAGE_EPOCH_STAGES or epoch["epoch_event_id"] != STAGE_EPOCH_PREFIX + stage)):
+        raise ValueError("invalid stage transition epoch")
+
+
+def _epoch_owned_events(ledger: dict[str, Any], view: dict[str, Any]) -> set[str]:
+    """The native event IDs an archived epoch consumed, less the ones the whole ledger shares."""
+    owned = _consumed_native_event_ids(view) - set(ledger["workflow_identity"]["relocation_event_ids"])
+    owned -= {event for interval in ledger["excluded_intervals"] for event in (interval["start_event"], interval["end_event"])}
+    if ledger.get("active_wait"):
+        owned.discard(ledger["active_wait"]["start_event"])
+    return owned
+
+
 def _validate_corrective_epochs(ledger: dict[str, Any]) -> None:
     """Archived allowances stay valid, settled, and disjoint from the current one."""
     if "corrective_epochs" not in ledger:
@@ -365,15 +412,7 @@ def _validate_corrective_epochs(ledger: dict[str, Any]) -> None:
     event_ids = _consumed_native_event_ids({key: value for key, value in ledger.items() if key != "corrective_epochs"})
     previous_close = ledger["started_at"]
     for number, epoch in enumerate(epochs, start=1):
-        if not isinstance(epoch, dict) or not required <= set(epoch) <= allowed:
-            raise ValueError("invalid corrective epoch record")
-        if (str(epoch["epoch_event_id"]).startswith(AGENT_REPLAN_PREFIX)
-                and epoch["epoch_event_id"] != AGENT_REPLAN_PREFIX + str(number)):
-            raise ValueError("invalid agent-authorized re-plan epoch")
-        stage = epoch.get("stage_transition")
-        if (("stage_transition" in epoch or str(epoch["epoch_event_id"]).startswith(STAGE_EPOCH_PREFIX))
-                and (stage not in STAGE_EPOCH_STAGES or epoch["epoch_event_id"] != STAGE_EPOCH_PREFIX + stage)):
-            raise ValueError("invalid stage transition epoch")
+        _validate_epoch_identity(epoch, number, required, allowed)
         closed_at = epoch["closed_at"]
         if type(closed_at) not in (int, float) or not previous_close <= closed_at < float("inf"):
             raise ValueError("invalid corrective epoch clock")
@@ -390,10 +429,7 @@ def _validate_corrective_epochs(ledger: dict[str, Any]) -> None:
             raise ValueError("a task was corrected twice as metadata-only in one run")
         corrected_tasks.update(epoch_tasks)
         epoch_event = require_text(epoch["epoch_event_id"], "epoch_event_id")
-        owned = _consumed_native_event_ids(view) - set(ledger["workflow_identity"]["relocation_event_ids"])
-        owned -= {event for interval in ledger["excluded_intervals"] for event in (interval["start_event"], interval["end_event"])}
-        if ledger.get("active_wait"):
-            owned.discard(ledger["active_wait"]["start_event"])
+        owned = _epoch_owned_events(ledger, view)
         if epoch_event in owned or (owned | {epoch_event}) & event_ids:
             raise ValueError("native event reused across corrective epochs")
         event_ids.update(owned | {epoch_event})
@@ -474,25 +510,46 @@ def _validate_failure_class(value: Any) -> list[str]:
     return follow_ups
 
 
-def _validate_unit_allowances(ledger: dict[str, Any], key: str, marker: str, limit: int) -> dict[str, Any]:
-    """Each increment's rounds under one allowance match its own recorded, unreserved corrective dispatches."""
-    if key not in ledger:
+class _RoundAllowance(NamedTuple):
+    """How one round-counted allowance is keyed, limited, and worded when its ledger record disagrees."""
+
+    key: str
+    marker: str
+    limit: int
+    refusals: tuple[str, str, str]
+    unit_valid: Callable[[Any], bool]
+
+
+def _round_record_ok(record: Any, limit: int) -> bool:
+    """True when the record's rounds equal its distinct dispatch ids and stay within the limit."""
+    return (isinstance(record, dict) and set(record) == {"rounds", "dispatch_ids"}
+            and type(record["rounds"]) is int and 1 <= record["rounds"] <= limit
+            and isinstance(record["dispatch_ids"], list) and len(record["dispatch_ids"]) == record["rounds"]
+            and len(set(record["dispatch_ids"])) == record["rounds"])
+
+
+def _validate_round_allowances(ledger: dict[str, Any], spec: _RoundAllowance) -> dict[str, Any]:
+    """Each unit's rounds match its own recorded, unreserved corrective dispatches."""
+    if spec.key not in ledger:
         return {}
-    allowances = ledger[key]
+    allowances = ledger[spec.key]
     if not isinstance(allowances, dict) or not allowances:
-        raise ValueError(f"invalid {key}")
+        raise ValueError(spec.refusals[0])
     for unit, record in allowances.items():
-        require_text(unit, "increment tdd_unit")
-        if (not isinstance(record, dict) or set(record) != {"rounds", "dispatch_ids"}
-                or type(record["rounds"]) is not int or not 1 <= record["rounds"] <= limit
-                or not isinstance(record["dispatch_ids"], list) or len(record["dispatch_ids"]) != record["rounds"]
-                or len(set(record["dispatch_ids"])) != record["rounds"]):
-            raise ValueError(f"{key} rounds disagree with the ledger")
+        if not spec.unit_valid(unit) or not _round_record_ok(record, spec.limit):
+            raise ValueError(spec.refusals[1])
         for dispatch_id in record["dispatch_ids"]:
             item = ledger["dispatches"].get(dispatch_id)
-            if not isinstance(item, dict) or item.get(marker) != unit:
-                raise ValueError(f"{key} lists a dispatch it does not own")
+            if not isinstance(item, dict) or item.get(spec.marker) != unit:
+                raise ValueError(spec.refusals[2])
     return allowances
+
+
+def _validate_unit_allowances(ledger: dict[str, Any], key: str, marker: str, limit: int) -> dict[str, Any]:
+    """Each increment's rounds under one allowance match its own recorded, unreserved corrective dispatches."""
+    refusals = (f"invalid {key}", f"{key} rounds disagree with the ledger", f"{key} lists a dispatch it does not own")
+    return _validate_round_allowances(ledger, _RoundAllowance(
+        key, marker, limit, refusals, lambda unit: bool(require_text(unit, "increment tdd_unit"))))
 
 
 def _canonical_repo_path(value: Any) -> bool:
@@ -518,22 +575,30 @@ def _validate_snapshot(value: Any) -> bool:
                     for path, digest in value["dirty"].items()))
 
 
-def _validate_edit_records(item: dict[str, Any]) -> None:
-    """The runner's own edit records: the units an implementation dispatch works on and the paths it changed."""
+def _validate_tdd_units(item: dict[str, Any]) -> None:
+    units = item["tdd_units"]
+    if (item["kind"] != "implementation" or not isinstance(units, list) or not units
+            or not all(isinstance(unit, str) and unit.strip() and len(unit) <= 240 for unit in units)
+            or len(set(units)) != len(units)):
+        raise ValueError("invalid implementation tdd_units")
+
+
+def _validate_test_fix_record(item: dict[str, Any]) -> None:
     from .helpers.read_only import is_test_path
 
+    paths = item.get("test_fix_paths")
+    if ("test_fix" not in item or not isinstance(item["test_fix"], str) or not item["test_fix"].strip()
+            or not _sorted_paths(paths) or not paths
+            or not all(is_test_path(path) and not is_runner_byproduct(path) for path in paths)):
+        raise ValueError("a test fix names its increment and only test files")
+
+
+def _validate_edit_records(item: dict[str, Any]) -> None:
+    """The runner's own edit records: the units an implementation dispatch works on and the paths it changed."""
     if "tdd_units" in item:
-        units = item["tdd_units"]
-        if (item["kind"] != "implementation" or not isinstance(units, list) or not units
-                or not all(isinstance(unit, str) and unit.strip() and len(unit) <= 240 for unit in units)
-                or len(set(units)) != len(units)):
-            raise ValueError("invalid implementation tdd_units")
+        _validate_tdd_units(item)
     if "test_fix_paths" in item or "test_fix" in item:
-        paths = item.get("test_fix_paths")
-        if ("test_fix" not in item or not isinstance(item["test_fix"], str) or not item["test_fix"].strip()
-                or not _sorted_paths(paths) or not paths
-                or not all(is_test_path(path) and not is_runner_byproduct(path) for path in paths)):
-            raise ValueError("a test fix names its increment and only test files")
+        _validate_test_fix_record(item)
     tracked = "tdd_units" in item or "test_fix" in item
     if "worktree_before" in item and (not tracked or item["outcome"] not in {"reserved", "running", "unknown"}
                                       or not _validate_snapshot(item["worktree_before"])):
@@ -543,24 +608,15 @@ def _validate_edit_records(item: dict[str, Any]) -> None:
         raise ValueError("invalid changed-path record")
 
 
+_GATE_ALLOWANCE = _RoundAllowance(
+    "gate_allowances", "gate", GATE_REMEDIATION_ROUNDS,
+    ("invalid gate remediation allowances", "gate remediation rounds disagree with the ledger",
+     "gate remediation allowance lists a dispatch it does not own"), REMEDIATION_GATES.__contains__)
+
+
 def _validate_gate_allowances(ledger: dict[str, Any]) -> dict[str, Any]:
     """Each gate's remediation rounds match its own recorded, unreserved corrective dispatches."""
-    if "gate_allowances" not in ledger:
-        return {}
-    allowances = ledger["gate_allowances"]
-    if not isinstance(allowances, dict) or not allowances:
-        raise ValueError("invalid gate remediation allowances")
-    for gate, record in allowances.items():
-        if (gate not in REMEDIATION_GATES or not isinstance(record, dict) or set(record) != {"rounds", "dispatch_ids"}
-                or type(record["rounds"]) is not int or not 1 <= record["rounds"] <= GATE_REMEDIATION_ROUNDS
-                or not isinstance(record["dispatch_ids"], list) or len(record["dispatch_ids"]) != record["rounds"]
-                or len(set(record["dispatch_ids"])) != record["rounds"]):
-            raise ValueError("gate remediation rounds disagree with the ledger")
-        for dispatch_id in record["dispatch_ids"]:
-            item = ledger["dispatches"].get(dispatch_id)
-            if not isinstance(item, dict) or item.get("gate") != gate:
-                raise ValueError("gate remediation allowance lists a dispatch it does not own")
-    return allowances
+    return _validate_round_allowances(ledger, _GATE_ALLOWANCE)
 
 
 def _validate_metadata_corrections(ledger: dict[str, Any]) -> dict[str, list[str]]:
@@ -676,6 +732,32 @@ def _validate_escalation_dispatch(dispatch_id: str, item: dict[str, Any], escala
         raise ValueError("escalation dispatch is not recorded in its escalation allowance")
 
 
+def _escalation_record_ok(key: str, record: Any) -> bool:
+    return (isinstance(record, dict) and set(record) == ESCALATION_KEYS
+            and record["unit_kind"] in ESCALATION_UNIT_KINDS
+            and isinstance(record["unit"], str) and bool(record["unit"])
+            and key == escalation_key(record["unit_kind"], record["unit"])
+            and record["tier"] in ESCALATION_TIERS and isinstance(record["dispatches"], list)
+            and len(record["dispatches"]) == record["tier"] - 1)
+
+
+def _validate_escalation_tier(ledger: dict[str, Any], key: str, record: dict[str, Any], tier: int, entry: Any) -> None:
+    """One reached tier is owned by its recorded dispatch and follows a failed unit and a settled prior tier."""
+    if (not isinstance(entry, dict) or set(entry) != ESCALATION_DISPATCH_KEYS or entry["tier"] != tier
+            or type(entry["reserved_at"]) not in (int, float)):
+        raise ValueError("invalid escalation allowance")
+    item = ledger["dispatches"].get(entry["dispatch_id"])
+    if (not isinstance(item, dict) or item.get("escalation") != key or item.get("escalation_tier") != tier
+            or item.get("reserved_at") != entry["reserved_at"]):
+        raise ValueError("escalation allowance lists a dispatch it does not own")
+    earlier = record["dispatches"][:tier - 2]
+    partial = {**record, "dispatches": earlier} if earlier else None
+    if (not _escalation_unit_failed(ledger, record["unit_kind"], record["unit"],
+                                    _failing_since(ledger, record["unit_kind"], earlier), entry["reserved_at"])
+            or not _tier_ready(ledger, partial, tier, entry["reserved_at"])):
+        raise ValueError("escalation allowance names a unit or tier the ledger does not show as reached")
+
+
 def _validate_escalations(ledger: dict[str, Any]) -> dict[str, Any]:
     """Each escalation record lists the tiers one unit reached, each owned by one recorded corrective dispatch."""
     if "escalation_allowances" not in ledger:
@@ -684,27 +766,10 @@ def _validate_escalations(ledger: dict[str, Any]) -> dict[str, Any]:
     if not isinstance(allowances, dict) or not allowances or ledger.get("escalation_tier3_cap") != ESCALATION_TIER3_CAP:
         raise ValueError("invalid escalation allowances")
     for key, record in allowances.items():
-        if (not isinstance(record, dict) or set(record) != ESCALATION_KEYS
-                or record["unit_kind"] not in ESCALATION_UNIT_KINDS
-                or not isinstance(record["unit"], str) or not record["unit"]
-                or key != escalation_key(record["unit_kind"], record["unit"])
-                or record["tier"] not in ESCALATION_TIERS or not isinstance(record["dispatches"], list)
-                or len(record["dispatches"]) != record["tier"] - 1):
+        if not _escalation_record_ok(key, record):
             raise ValueError("invalid escalation allowance")
         for tier, entry in zip(ESCALATION_TIERS, record["dispatches"], strict=False):
-            if (not isinstance(entry, dict) or set(entry) != ESCALATION_DISPATCH_KEYS or entry["tier"] != tier
-                    or type(entry["reserved_at"]) not in (int, float)):
-                raise ValueError("invalid escalation allowance")
-            item = ledger["dispatches"].get(entry["dispatch_id"])
-            if (not isinstance(item, dict) or item.get("escalation") != key or item.get("escalation_tier") != tier
-                    or item.get("reserved_at") != entry["reserved_at"]):
-                raise ValueError("escalation allowance lists a dispatch it does not own")
-            earlier = record["dispatches"][:tier - 2]
-            partial = {**record, "dispatches": earlier} if earlier else None
-            if (not _escalation_unit_failed(ledger, record["unit_kind"], record["unit"],
-                                            _failing_since(ledger, record["unit_kind"], earlier), entry["reserved_at"])
-                    or not _tier_ready(ledger, partial, tier, entry["reserved_at"])):
-                raise ValueError("escalation allowance names a unit or tier the ledger does not show as reached")
+            _validate_escalation_tier(ledger, key, record, tier, entry)
     return allowances
 
 
@@ -813,6 +878,40 @@ def _allowance_spent(ledger: dict[str, Any], reason: str, unit: str) -> bool:
     return any(item["family"] == unit for item in ledger["reservations"].values())
 
 
+def _deferral_well_formed(entry: Any) -> bool:
+    return (isinstance(entry, dict) and set(entry) in (DEFERRAL_KEYS, DEFERRAL_KEYS | DEFERRAL_RESOLUTION_KEYS)
+            and DEFER_REASONS.get(entry["reason"]) == entry["unit_kind"])
+
+
+def _validate_deferral_resolution(ledger: dict[str, Any], entry: dict[str, Any]) -> None:
+    """A resolution names the first later completed dispatch that resolves the deferral's unit."""
+    resolver = entry["resolved_by"]
+    if (not isinstance(resolver, str) or not _resolves(ledger, entry, resolver)
+            or entry["resolved_at"] != ledger["dispatches"][resolver]["completed_at"]
+            or any(_resolves(ledger, entry, other) and item["completed_at"] < entry["resolved_at"]
+                   for other, item in ledger["dispatches"].items())):
+        raise ValueError("deferral resolution is not the first later completed dispatch for its unit")
+
+
+def _validate_deferral(ledger: dict[str, Any], entry: Any, seen: set[str], previous: float) -> float:
+    """One deferral entry; returns its clock reading for the next entry's order check."""
+    if not _deferral_well_formed(entry):
+        raise ValueError("invalid deferral record")
+    dispatch_id = require_text(entry["dispatch_id"], "deferred dispatch_id")
+    unit = require_text(entry["unit"], "deferred unit")
+    if dispatch_id in seen:
+        raise ValueError("duplicate deferral")
+    seen.add(dispatch_id)
+    deferred_at = entry["deferred_at"]
+    if type(deferred_at) not in (int, float) or not previous <= deferred_at < float("inf"):
+        raise ValueError("invalid deferral clock")
+    if not _allowance_spent(ledger, entry["reason"], unit):
+        raise ValueError("deferral names an allowance the ledger does not show as spent")
+    if "resolved_by" in entry:
+        _validate_deferral_resolution(ledger, entry)
+    return deferred_at  # type: ignore[no-any-return]
+
+
 def _validate_deferrals(ledger: dict[str, Any]) -> None:
     """Each deferral is well formed, recorded once, in clock order, and names a spent allowance."""
     if "deferred" not in ledger:
@@ -823,27 +922,7 @@ def _validate_deferrals(ledger: dict[str, Any]) -> None:
     seen: set[str] = set()
     previous = ledger["started_at"]
     for entry in entries:
-        if (not isinstance(entry, dict) or set(entry) not in (DEFERRAL_KEYS, DEFERRAL_KEYS | DEFERRAL_RESOLUTION_KEYS)
-                or DEFER_REASONS.get(entry["reason"]) != entry["unit_kind"]):
-            raise ValueError("invalid deferral record")
-        dispatch_id = require_text(entry["dispatch_id"], "deferred dispatch_id")
-        unit = require_text(entry["unit"], "deferred unit")
-        if dispatch_id in seen:
-            raise ValueError("duplicate deferral")
-        seen.add(dispatch_id)
-        deferred_at = entry["deferred_at"]
-        if type(deferred_at) not in (int, float) or not previous <= deferred_at < float("inf"):
-            raise ValueError("invalid deferral clock")
-        previous = deferred_at
-        if not _allowance_spent(ledger, entry["reason"], unit):
-            raise ValueError("deferral names an allowance the ledger does not show as spent")
-        if "resolved_by" in entry:
-            resolver = entry["resolved_by"]
-            if (not isinstance(resolver, str) or not _resolves(ledger, entry, resolver)
-                    or entry["resolved_at"] != ledger["dispatches"][resolver]["completed_at"]
-                    or any(_resolves(ledger, entry, other) and item["completed_at"] < entry["resolved_at"]
-                           for other, item in ledger["dispatches"].items())):
-                raise ValueError("deferral resolution is not the first later completed dispatch for its unit")
+        previous = _validate_deferral(ledger, entry, seen, previous)
 
 
 def _dispatch_units(ledger: dict[str, Any], item: dict[str, Any]) -> set[tuple[str, str]]:
@@ -901,9 +980,21 @@ def _defer(ledger: dict[str, Any], dispatch_id: str, reason: str, unit: str, now
     return {"reasons": [entry["reason"]], "deferred": dict(entry)}
 
 
+def _validate_check_identifiers(record: dict[str, Any]) -> None:
+    from .failing_checks import MAX_IDENTIFIER_LENGTH, MAX_IDENTIFIERS
+
+    for key in ("failing", "passing"):
+        values = record[key]
+        if values is not None and (not isinstance(values, list) or len(values) > MAX_IDENTIFIERS
+                                   or values != sorted(set(values))
+                                   or not all(isinstance(value, str) and 0 < len(value) <= MAX_IDENTIFIER_LENGTH
+                                              for value in values)):
+            raise ValueError("failing-check identifiers must be a sorted unique bounded list")
+
+
 def _validate_failing_checks(record: Any, item: dict[str, Any]) -> None:
     """One runner-recorded fingerprint: closed shape, sorted unique identifiers, recorded while running."""
-    from .failing_checks import FORMATS, MAX_IDENTIFIER_LENGTH, MAX_IDENTIFIERS
+    from .failing_checks import FORMATS
 
     if (not isinstance(record, dict) or not FAILING_CHECK_KEYS <= set(record) <= FAILING_CHECK_KEYS | FAILING_CHECK_OPTIONAL_KEYS
             or item.get("kind") != "verification" or record["format"] not in {*FORMATS, "passed", "unparsed"}):
@@ -914,13 +1005,7 @@ def _validate_failing_checks(record: Any, item: dict[str, Any]) -> None:
                                       or type(record["worktree_clean"]) is not bool)):
         raise ValueError("invalid failing-check head evidence")
     require_text(record["command_id"], "failing-check command_id")
-    for key in ("failing", "passing"):
-        values = record[key]
-        if values is not None and (not isinstance(values, list) or len(values) > MAX_IDENTIFIERS
-                                   or values != sorted(set(values))
-                                   or not all(isinstance(value, str) and 0 < len(value) <= MAX_IDENTIFIER_LENGTH
-                                              for value in values)):
-            raise ValueError("failing-check identifiers must be a sorted unique bounded list")
+    _validate_check_identifiers(record)
     if (record["failing"] is None) != (record["format"] == "unparsed") or (
             record["failing"] is None and record["passing"] is not None):
         raise ValueError("invalid failing-check evidence")
@@ -950,6 +1035,17 @@ def _record_failing_checks(ledger: dict[str, Any], inputs: dict[str, Any], evide
     return {"dispatch_id": dispatch_id}
 
 
+def _validate_reconciliation_record(ledger: dict[str, Any], item: dict[str, Any], dispatch_id: str, record: Any) -> None:
+    if (not isinstance(record, dict) or set(record) != {"class", "paths", "at"}
+            or record["class"] not in UNIT_CLASSIFICATIONS[1:] or not _sorted_paths(record["paths"])
+            or not record["paths"] or type(record["at"]) not in (int, float)
+            or "tdd_units" not in item or item["outcome"] not in {"unknown", "completed", "failed"}
+            or (item["outcome"] == "unknown") == ("verified_by" in item)):
+        raise ValueError("invalid unit reconciliation record")
+    if "verified_by" in item and not _unit_verified(ledger, item, dispatch_id):
+        raise ValueError("unit resolution is not backed by a completed verification dispatch")
+
+
 def _validate_unit_reconciliation(ledger: dict[str, Any]) -> None:
     """The runner's own unit-reconciliation records agree with the dispatches they name."""
     for dispatch_id, item in ledger["dispatches"].items():
@@ -957,18 +1053,10 @@ def _validate_unit_reconciliation(ledger: dict[str, Any]) -> None:
         if "reconciled_as" in item and (item["reconciled_as"] != "no_effect" or item["outcome"] != "failed"
                                         or record is not None or "verified_by" in item):
             raise ValueError("invalid no-effect reconciliation record")
-        if record is None:
-            if "verified_by" in item:
-                raise ValueError("a verified unit resolution needs its reconciliation record")
-        else:
-            if (not isinstance(record, dict) or set(record) != {"class", "paths", "at"}
-                    or record["class"] not in UNIT_CLASSIFICATIONS[1:] or not _sorted_paths(record["paths"])
-                    or not record["paths"] or type(record["at"]) not in (int, float)
-                    or "tdd_units" not in item or item["outcome"] not in {"unknown", "completed", "failed"}
-                    or (item["outcome"] == "unknown") == ("verified_by" in item)):
-                raise ValueError("invalid unit reconciliation record")
-            if "verified_by" in item and not _unit_verified(ledger, item, dispatch_id):
-                raise ValueError("unit resolution is not backed by a completed verification dispatch")
+        if record is not None:
+            _validate_reconciliation_record(ledger, item, dispatch_id, record)
+        elif "verified_by" in item:
+            raise ValueError("a verified unit resolution needs its reconciliation record")
         if "verifies" in item:
             target = ledger["dispatches"].get(item["verifies"])
             if item["kind"] != "verification" or not isinstance(target, dict) or "reconciliation" not in target:
@@ -1017,31 +1105,43 @@ def validate_recovery_records(ledger: dict[str, Any]) -> None:
         events.add(approval_event_id)
 
 
+def _continuation_foreign_events(ledger: dict[str, Any]) -> set[str]:
+    """Native event IDs other records own, which no continuation approval may reuse."""
+    events = set(ledger["workflow_identity"]["relocation_event_ids"])
+    events.update(event for interval in ledger["excluded_intervals"]
+                  for event in (interval["start_event"], interval["end_event"]))
+    if ledger.get("active_wait"):
+        events.add(ledger["active_wait"]["start_event"])
+    events.update(record["resolution_event_id"] for record in ledger["dispatches"].values()
+                  if "resolution_event_id" in record)
+    events.update(record["operator_recovery_event_id"] for record in ledger["dispatches"].values()
+                  if "operator_recovery_event_id" in record)
+    if "corrective_exception" in ledger:
+        events.add(ledger["corrective_exception"]["operator_exception_event_id"])
+    return events
+
+
+def _continuation_ids(dispatch_id: str, item: dict[str, Any]) -> tuple[str, str]:
+    """The source dispatch and approval event a continuation record names."""
+    source_id = require_text(item["continuation_of"], "continuation_of")
+    event_id = require_text(item["operator_continuation_event_id"], "operator_continuation_event_id")
+    if event_id.startswith(AGENT_CONTINUATION_PREFIX) and event_id != AGENT_CONTINUATION_PREFIX + dispatch_id:
+        raise ValueError("invalid agent-authorized continuation event")
+    return source_id, event_id
+
+
 def validate_continuation_records(ledger: dict[str, Any]) -> None:
     keys = {"continuation_of", "operator_continuation_event_id", "continuation_purpose"}
     events: set[str] = set()
     reservations: set[str] = set()
-    other_events = set(ledger["workflow_identity"]["relocation_event_ids"])
-    other_events.update(event for interval in ledger["excluded_intervals"]
-                        for event in (interval["start_event"], interval["end_event"]))
-    if ledger.get("active_wait"):
-        other_events.add(ledger["active_wait"]["start_event"])
-    other_events.update(record["resolution_event_id"] for record in ledger["dispatches"].values()
-                        if "resolution_event_id" in record)
-    other_events.update(record["operator_recovery_event_id"] for record in ledger["dispatches"].values()
-                        if "operator_recovery_event_id" in record)
-    if "corrective_exception" in ledger:
-        other_events.add(ledger["corrective_exception"]["operator_exception_event_id"])
+    other_events = _continuation_foreign_events(ledger)
     for dispatch_id, item in ledger["dispatches"].items():
         present = keys & item.keys()
         if not present:
             continue
         if present != keys:
             raise ValueError("incomplete corrective continuation record")
-        source_id = require_text(item["continuation_of"], "continuation_of")
-        event_id = require_text(item["operator_continuation_event_id"], "operator_continuation_event_id")
-        if event_id.startswith(AGENT_CONTINUATION_PREFIX) and event_id != AGENT_CONTINUATION_PREFIX + dispatch_id:
-            raise ValueError("invalid agent-authorized continuation event")
+        source_id, event_id = _continuation_ids(dispatch_id, item)
         reservation = item.get("reservation_id")
         source = ledger["dispatches"].get(source_id)
         owner_id = ledger["reservations"].get(reservation, {}).get("dispatch_id")
@@ -1139,13 +1239,15 @@ def _operator_event(ledger: dict[str, Any], inputs: dict[str, Any], keys: set[st
     return event, event_id
 
 
-def _agent_approval(ledger: dict[str, Any], inputs: dict[str, Any], prefix: str, cap: int,
+def _agent_approval(ledger: dict[str, Any], inputs: dict[str, Any], approval: tuple[str, int],
                     suffix: str, name: str) -> str | None:
     """The runner-derived event ID for an agent-issued approval, or None when the request names none.
 
-    The request says `agent_authorized: true` and carries no operator event. The
-    approval counts against a run-wide cap; the next one goes to the operator.
+    `approval` is the event-ID prefix and the run-wide cap. The request says
+    `agent_authorized: true` and carries no operator event. The approval counts
+    against the cap; the next one goes to the operator.
     """
+    prefix, cap = approval
     if "agent_authorized" not in inputs:
         return None
     if inputs["agent_authorized"] is not True or inputs.get("native_observation") is not None:
@@ -1347,20 +1449,56 @@ def _validate_progress(ledger: dict[str, Any]) -> None:
             raise ValueError("correction progress disagrees with the recorded verification evidence")
 
 
-def _review_remediation(inputs: dict[str, Any]) -> dict[str, Any] | None:
-    """The optional `review_remediation` request: one increment and the paths the fix touches."""
-    request = inputs.get("review_remediation")
+class _RemediationRequest(NamedTuple):
+    """One optional corrective-dispatch request naming a subject and the paths its fix touches."""
+
+    name: str
+    subject: str
+    shape_refusal: str
+    excludes: tuple[str, ...] = ()
+    excludes_refusal: str = ""
+    subject_ok: Callable[[Any], bool] | None = None
+
+
+_REVIEW_REMEDIATION = _RemediationRequest(
+    "review_remediation", "tdd_unit", "review_remediation requires exactly tdd_unit and a paths array of strings")
+_GATE_REMEDIATION = _RemediationRequest(
+    "gate_remediation", "gate", "gate_remediation requires exactly a gate from G2 to G7 and a paths array of strings",
+    ("review_remediation",), "a corrective dispatch names review_remediation or gate_remediation, never both",
+    REMEDIATION_GATES.__contains__)
+_TEST_FIX_REQUEST = _RemediationRequest(
+    "test_fix", "tdd_unit", "test_fix requires exactly tdd_unit and a paths array of strings",
+    ("review_remediation", "gate_remediation", "metadata_only"),
+    "a test_fix names no review_remediation, gate_remediation, or metadata_only")
+
+
+def _require_new_corrective_dispatch(inputs: dict[str, Any], name: str) -> None:
+    if inputs.get("kind") != "corrective" or inputs.get("reservation_id") is not None:
+        raise ValueError(f"{name} applies only to a new corrective dispatch")
+    if inputs.get("spec_file") is None:
+        raise ValueError(f"{name} requires an explicit spec_file naming the feature spec")
+
+
+def _remediation_request(inputs: dict[str, Any], spec: _RemediationRequest) -> dict[str, Any] | None:
+    """The optional request `spec` names, checked for shape, exclusivity, and a new corrective dispatch."""
+    request = inputs.get(spec.name)
     if request is None:
         return None
-    if (not isinstance(request, dict) or set(request) != {"tdd_unit", "paths"}
-            or not isinstance(request["paths"], list) or not all(isinstance(path, str) for path in request["paths"])):
-        raise ValueError("review_remediation requires exactly tdd_unit and a paths array of strings")
-    require_text(request["tdd_unit"], "review_remediation tdd_unit")
-    if inputs.get("kind") != "corrective" or inputs.get("reservation_id") is not None:
-        raise ValueError("review_remediation applies only to a new corrective dispatch")
-    if inputs.get("spec_file") is None:
-        raise ValueError("review_remediation requires an explicit spec_file naming the feature spec")
+    if (not isinstance(request, dict) or set(request) != {spec.subject, "paths"}
+            or not isinstance(request["paths"], list) or not all(isinstance(path, str) for path in request["paths"])
+            or (spec.subject_ok is not None and not spec.subject_ok(request[spec.subject]))):
+        raise ValueError(spec.shape_refusal)
+    if spec.subject_ok is None:
+        require_text(request[spec.subject], f"{spec.name} {spec.subject}")
+    if any(inputs.get(key) is not None for key in spec.excludes):
+        raise ValueError(spec.excludes_refusal)
+    _require_new_corrective_dispatch(inputs, spec.name)
     return request
+
+
+def _review_remediation(inputs: dict[str, Any]) -> dict[str, Any] | None:
+    """The optional `review_remediation` request: one increment and the paths the fix touches."""
+    return _remediation_request(inputs, _REVIEW_REMEDIATION)
 
 
 def _task_ownership(root: Path, spec: Path) -> tuple[str | None, dict[str, Any]]:
@@ -1455,19 +1593,7 @@ def _closed_units(root: Path, feature: str, tasks: dict[str, Any], bound: dict[s
 
 def _gate_remediation(inputs: dict[str, Any]) -> dict[str, Any] | None:
     """The optional `gate_remediation` request: one planning gate and the paths the fix touches."""
-    request = inputs.get("gate_remediation")
-    if request is None:
-        return None
-    if (not isinstance(request, dict) or set(request) != {"gate", "paths"} or request["gate"] not in REMEDIATION_GATES
-            or not isinstance(request["paths"], list) or not all(isinstance(path, str) for path in request["paths"])):
-        raise ValueError("gate_remediation requires exactly a gate from G2 to G7 and a paths array of strings")
-    if inputs.get("review_remediation") is not None:
-        raise ValueError("a corrective dispatch names review_remediation or gate_remediation, never both")
-    if inputs.get("kind") != "corrective" or inputs.get("reservation_id") is not None:
-        raise ValueError("gate_remediation applies only to a new corrective dispatch")
-    if inputs.get("spec_file") is None:
-        raise ValueError("gate_remediation requires an explicit spec_file naming the feature spec")
-    return request
+    return _remediation_request(inputs, _GATE_REMEDIATION)
 
 
 def _gate_ineligibility(root: Path, spec: Path, ledger: dict[str, Any], paths: list[str]) -> str | None:
@@ -1511,10 +1637,7 @@ def _metadata_correction(inputs: dict[str, Any]) -> bool:
         raise ValueError("metadata_only must be true when present")
     if inputs.get("review_remediation") is not None or inputs.get("gate_remediation") is not None:
         raise ValueError("a metadata_only correction names no review_remediation or gate_remediation")
-    if inputs.get("kind") != "corrective" or inputs.get("reservation_id") is not None:
-        raise ValueError("metadata_only applies only to a new corrective dispatch")
-    if inputs.get("spec_file") is None:
-        raise ValueError("metadata_only requires an explicit spec_file naming the feature spec")
+    _require_new_corrective_dispatch(inputs, "metadata_only")
     return True
 
 
@@ -1726,20 +1849,7 @@ def _admit_metadata_correction(ledger: dict[str, Any], dispatch_id: str, record:
 
 def _test_fix_request(inputs: dict[str, Any]) -> dict[str, Any] | None:
     """The optional `test_fix` request: one increment and the test files the fix touches."""
-    request = inputs.get("test_fix")
-    if request is None:
-        return None
-    if (not isinstance(request, dict) or set(request) != {"tdd_unit", "paths"}
-            or not isinstance(request["paths"], list) or not all(isinstance(path, str) for path in request["paths"])):
-        raise ValueError("test_fix requires exactly tdd_unit and a paths array of strings")
-    require_text(request["tdd_unit"], "test_fix tdd_unit")
-    if any(inputs.get(key) is not None for key in ("review_remediation", "gate_remediation", "metadata_only")):
-        raise ValueError("a test_fix names no review_remediation, gate_remediation, or metadata_only")
-    if inputs.get("kind") != "corrective" or inputs.get("reservation_id") is not None:
-        raise ValueError("test_fix applies only to a new corrective dispatch")
-    if inputs.get("spec_file") is None:
-        raise ValueError("test_fix requires an explicit spec_file naming the feature spec")
-    return request
+    return _remediation_request(inputs, _TEST_FIX_REQUEST)
 
 
 def _implementation_units(inputs: dict[str, Any]) -> list[str] | None:
@@ -1829,113 +1939,191 @@ def _reserve_increment_review(ledger: dict[str, Any], dispatch_id: str, unit: st
     return {"reservation_id": None, "dispatch_id": dispatch_id, "review_allowance": "increment"}
 
 
+class _Reserve(NamedTuple):
+    """One reserve request and the state its helpers read."""
+
+    ledger: dict[str, Any]
+    inputs: dict[str, Any]
+    dispatch_id: str
+    now: float
+    root: Path
+    spec: Path
+
+
+class _ReserveRequests(NamedTuple):
+    """The optional requests a reserve carries, each already checked for shape."""
+
+    metadata_only: bool
+    review: dict[str, Any] | None
+    gate: dict[str, Any] | None
+    test_fix: dict[str, Any] | None
+    units: list[str] | None
+
+
+def _reserve_allowance(ctx: _Reserve, requests: _ReserveRequests) -> tuple[dict[str, Any] | None, dict[str, Any]]:
+    """The admission an increment, gate, test-fix, or metadata allowance grants, and the note a refusal leaves."""
+    ledger, dispatch_id, root, spec, now = ctx.ledger, ctx.dispatch_id, ctx.root, ctx.spec, ctx.now
+    note: dict[str, Any] = {}
+    if requests.metadata_only:
+        ineligible, record = _metadata_ineligibility(root, spec, ledger)
+        if ineligible is None:
+            return _admit_metadata_correction(ledger, dispatch_id, record, now), note
+        note = {"correction_allowance": "run_wide", "metadata_ineligible": ineligible}
+    if requests.review is not None:
+        ineligible = _increment_ineligibility(root, spec, requests.review)
+        if ineligible is None:
+            return _reserve_increment_review(ledger, dispatch_id, requests.review["tdd_unit"], now), note
+        note = {"review_allowance": "run_wide", "increment_ineligible": ineligible}
+    if requests.gate is not None:
+        ineligible = _gate_ineligibility(root, spec, ledger, requests.gate["paths"])
+        if ineligible is None:
+            return _reserve_gate_remediation(ledger, dispatch_id, requests.gate["gate"], now), note
+        note = {"remediation_allowance": "run_wide", "gate_ineligible": ineligible}
+    if requests.test_fix is not None:
+        ineligible, snapshot = _test_fix_ineligibility(root, spec, ledger, requests.test_fix)
+        if ineligible is None and snapshot is not None:
+            return _reserve_test_fix(ledger, dispatch_id, requests.test_fix, snapshot, now), note
+        note = {"test_fix_allowance": "run_wide", "test_fix_ineligible": ineligible}
+    return None, note
+
+
+def _nested_correction(ctx: _Reserve, reservation: str) -> dict[str, Any] | None:
+    """A deferral when the reservation's cycle is closed or failed, else None to reserve the nested dispatch."""
+    ledger = ctx.ledger
+    if reservation not in ledger["reservations"]:
+        raise ValueError("nested correction requires an existing run reservation")
+    owner = ledger["reservations"][reservation]["dispatch_id"]
+    family = ledger["reservations"][reservation]["family"]
+    if ledger["dispatches"][owner]["outcome"] != "reserved":
+        return _defer(ledger, ctx.dispatch_id, "corrective_cycle_already_closed", family, ctx.now)
+    if any(item.get("reservation_id") == reservation and item["outcome"] in {"failed", "unknown"}
+           for item in ledger["dispatches"].values()):
+        return _defer(ledger, ctx.dispatch_id, "corrective_cycle_failed_no_nested_retry", family, ctx.now)
+    return None
+
+
+def _new_correction(ctx: _Reserve, note: dict[str, Any]) -> tuple[dict[str, Any] | None, str | None]:
+    """A new run-budget correction: an admission or deferral, or the fresh reservation the caller records."""
+    ledger, dispatch_id, now = ctx.ledger, ctx.dispatch_id, ctx.now
+    invariant = ctx.inputs.get("failure_invariant")
+    family = str(invariant) if invariant in ledger["approved_invariants"] else _untagged_family(ledger, now)
+    refusal = _corrective_refusal(ledger, family)
+    if refusal == "failure_family_budget_exhausted":
+        admitted, progress = _admit_progress(ledger, dispatch_id, family, ctx.root, now)
+        if admitted is not None:
+            return {**admitted, "progress": progress, **note}, None
+        return {**_defer(ledger, dispatch_id, refusal, family, now), "progress": progress, **note}, None
+    if refusal is not None:
+        return {**_defer(ledger, dispatch_id, refusal, family, now), **note}, None
+    reservation = uuid.uuid4().hex
+    ledger["reservations"][reservation] = {"family": family, "dispatch_id": dispatch_id, "reserved_at": now}
+    ledger["corrective_cycles"] += 1
+    spec_file = _chain_spec_file(ledger, ctx.root, ctx.spec)
+    baseline, spec_sha256 = _correction_baseline(ledger, now), _spec_digest(ctx.root, spec_file)
+    if family in ledger["approved_invariants"] and baseline is not None and spec_sha256 is not None:
+        ledger["dispatches"][dispatch_id] = {"kind": "corrective", "outcome": "reserved", "reserved_at": now,
+                                             "reservation_id": reservation, "reconciliations": 0,
+                                             "baseline": baseline, "spec_file": spec_file,
+                                             "spec_sha256": spec_sha256}
+        return {"reservation_id": reservation, "dispatch_id": dispatch_id, **note}, reservation
+    return None, reservation
+
+
+def _record_dispatch(ctx: _Reserve, kind: Any, reservation: str | None, verifies: str | None,
+                     units: list[str] | None) -> None:
+    """Record the plain reserved dispatch, with the verification target and edit snapshot it carries."""
+    record: dict[str, Any] = {"kind": kind, "outcome": "reserved", "reserved_at": ctx.now,
+                              "reservation_id": reservation, "reconciliations": 0}
+    ctx.ledger["dispatches"][ctx.dispatch_id] = record
+    if verifies is not None:
+        record["verifies"] = verifies
+    if units is not None:
+        record["tdd_units"] = units
+        snapshot = _worktree_snapshot(ctx.root)
+        if snapshot is not None:
+            record["worktree_before"] = snapshot
+
+
 def reserve(ledger: dict[str, Any], inputs: dict[str, Any], now: float, root: Path, spec: Path) -> dict[str, Any]:
     dispatch_id = require_text(inputs.get("dispatch_id"), "dispatch_id")
     kind = inputs.get("kind")
     if kind not in KINDS:
         raise ValueError("unknown execution kind")
-    metadata_only = _metadata_correction(inputs)
-    review = _review_remediation(inputs)
-    gate_request = _gate_remediation(inputs)
-    test_fix = _test_fix_request(inputs)
-    units = _implementation_units(inputs)
+    requests = _ReserveRequests(_metadata_correction(inputs), _review_remediation(inputs),
+                                _gate_remediation(inputs), _test_fix_request(inputs), _implementation_units(inputs))
     if dispatch_id in _used_dispatch_ids(ledger):
         return {"reasons": ["dispatch_already_reserved_no_relaunch"]}
     verifies = _verifies_request(ledger, inputs)
     reservation = inputs.get("reservation_id")
     if "escalation" in inputs:
         return _reserve_escalation(ledger, inputs, dispatch_id, now)
-    note: dict[str, Any] = {}
-    if metadata_only:
-        ineligible, record = _metadata_ineligibility(root, spec, ledger)
-        if ineligible is None:
-            return _admit_metadata_correction(ledger, dispatch_id, record, now)
-        note = {"correction_allowance": "run_wide", "metadata_ineligible": ineligible}
-    if review is not None:
-        ineligible = _increment_ineligibility(root, spec, review)
-        if ineligible is None:
-            return _reserve_increment_review(ledger, dispatch_id, review["tdd_unit"], now)
-        note = {"review_allowance": "run_wide", "increment_ineligible": ineligible}
-    if gate_request is not None:
-        ineligible = _gate_ineligibility(root, spec, ledger, gate_request["paths"])
-        if ineligible is None:
-            return _reserve_gate_remediation(ledger, dispatch_id, gate_request["gate"], now)
-        note = {"remediation_allowance": "run_wide", "gate_ineligible": ineligible}
-    if test_fix is not None:
-        ineligible, snapshot = _test_fix_ineligibility(root, spec, ledger, test_fix)
-        if ineligible is None and snapshot is not None:
-            return _reserve_test_fix(ledger, dispatch_id, test_fix, snapshot, now)
-        note = {"test_fix_allowance": "run_wide", "test_fix_ineligible": ineligible}
+    ctx = _Reserve(ledger, inputs, dispatch_id, now, root, spec)
+    admitted, note = _reserve_allowance(ctx, requests)
+    if admitted is not None:
+        return admitted
     if kind == "corrective":
-        if reservation is not None:
-            if reservation not in ledger["reservations"]:
-                raise ValueError("nested correction requires an existing run reservation")
-            owner = ledger["reservations"][reservation]["dispatch_id"]
-            family = ledger["reservations"][reservation]["family"]
-            if ledger["dispatches"][owner]["outcome"] != "reserved":
-                return _defer(ledger, dispatch_id, "corrective_cycle_already_closed", family, now)
-            if any(item.get("reservation_id") == reservation and item["outcome"] in {"failed", "unknown"}
-                   for item in ledger["dispatches"].values()):
-                return _defer(ledger, dispatch_id, "corrective_cycle_failed_no_nested_retry", family, now)
-        else:
-            invariant = inputs.get("failure_invariant")
-            family = str(invariant) if invariant in ledger["approved_invariants"] else _untagged_family(ledger, now)
-            refusal = _corrective_refusal(ledger, family)
-            if refusal == "failure_family_budget_exhausted":
-                admitted, progress = _admit_progress(ledger, dispatch_id, family, root, now)
-                if admitted is not None:
-                    return {**admitted, "progress": progress, **note}
-                return {**_defer(ledger, dispatch_id, refusal, family, now), "progress": progress, **note}
-            if refusal is not None:
-                return {**_defer(ledger, dispatch_id, refusal, family, now), **note}
-            reservation = uuid.uuid4().hex
-            ledger["reservations"][reservation] = {"family": family, "dispatch_id": dispatch_id, "reserved_at": now}
-            ledger["corrective_cycles"] += 1
-            spec_file = _chain_spec_file(ledger, root, spec)
-            baseline, spec_sha256 = _correction_baseline(ledger, now), _spec_digest(root, spec_file)
-            if family in ledger["approved_invariants"] and baseline is not None and spec_sha256 is not None:
-                ledger["dispatches"][dispatch_id] = {"kind": kind, "outcome": "reserved", "reserved_at": now,
-                                                     "reservation_id": reservation, "reconciliations": 0,
-                                                     "baseline": baseline, "spec_file": spec_file,
-                                                     "spec_sha256": spec_sha256}
-                return {"reservation_id": reservation, "dispatch_id": dispatch_id, **note}
+        early, reservation = ((_nested_correction(ctx, reservation), reservation) if reservation is not None
+                              else _new_correction(ctx, note))
+        if early is not None:
+            return early
     elif reservation is not None:
         raise ValueError("only corrective dispatches use corrective reservations")
-    ledger["dispatches"][dispatch_id] = {"kind": kind, "outcome": "reserved", "reserved_at": now,
-                                        "reservation_id": reservation, "reconciliations": 0}
-    if verifies is not None:
-        ledger["dispatches"][dispatch_id]["verifies"] = verifies
-    if units is not None:
-        ledger["dispatches"][dispatch_id]["tdd_units"] = units
-        snapshot = _worktree_snapshot(root)
-        if snapshot is not None:
-            ledger["dispatches"][dispatch_id]["worktree_before"] = snapshot
+    _record_dispatch(ctx, kind, reservation, verifies, requests.units)
     return {"reservation_id": reservation, "dispatch_id": dispatch_id, **note}
 
 
-def authorize_corrective_retry(ledger: dict[str, Any], inputs: dict[str, Any], now: float) -> dict[str, Any]:
-    dispatch_id = require_text(inputs.get("dispatch_id"), "dispatch_id")
-    failed_id = require_text(inputs.get("failed_dispatch_id"), "failed_dispatch_id")
-    reservation = require_text(inputs.get("reservation_id"), "reservation_id")
+class _ApprovalIds(NamedTuple):
+    """The new dispatch, the earlier dispatch it follows up, and the reservation an approval request names."""
+
+    dispatch_id: str
+    source_id: str
+    reservation: str
+
+
+def _approval_ids(inputs: dict[str, Any], source_key: str) -> _ApprovalIds:
+    return _ApprovalIds(require_text(inputs.get("dispatch_id"), "dispatch_id"),
+                        require_text(inputs.get(source_key), source_key),
+                        require_text(inputs.get("reservation_id"), "reservation_id"))
+
+
+def _admit_follow_up(ledger: dict[str, Any], now: float, ids: _ApprovalIds, link_key: str,
+                     link: dict[str, Any]) -> dict[str, Any]:
+    """Record the corrective dispatch an approval admits under the reservation, tied to its source by `link`."""
+    ledger["dispatches"][ids.dispatch_id] = {"kind": "corrective", "outcome": "reserved", "reserved_at": now,
+                                             "reservation_id": ids.reservation, "reconciliations": 0,
+                                             link_key: ids.source_id, **link}
+    return {"reservation_id": ids.reservation, "dispatch_id": ids.dispatch_id, link_key: ids.source_id}
+
+
+def _operator_retry_event(ledger: dict[str, Any], inputs: dict[str, Any], ids: _ApprovalIds) -> tuple[str, Any]:
+    """The operator's event ID and the failed dispatch's native event it names, once bound to this run."""
+    keys = {"native_event_id", "run_id", "action", "failed_dispatch_id", "failed_native_event_id",
+            "retry_dispatch_id", "reservation_id", "failure_kind"}
+    event, event_id = _operator_event(ledger, inputs, keys, "corrective retry")
+    binding = (event.get("run_id"), event.get("action"), event.get("failed_dispatch_id"),
+               event.get("retry_dispatch_id"), event.get("reservation_id"), event.get("failure_kind"))
+    expected = (ledger["run_id"], "corrective_retry_approved", ids.source_id, ids.dispatch_id,
+                ids.reservation, "infrastructure")
+    if binding != expected:
+        raise ValueError("operator recovery event does not match this run")
+    return event_id, event.get("failed_native_event_id")
+
+
+def _retry_approval(ledger: dict[str, Any], inputs: dict[str, Any], ids: _ApprovalIds) -> tuple[str, Any]:
+    """The approval event ID and failure event of a retry, from the agent's own proof or the operator's event."""
+    agent_event = _agent_approval(ledger, inputs, AGENT_RETRY_APPROVAL, ids.dispatch_id, "corrective retry")
+    if agent_event is None:
+        return _operator_retry_event(ledger, inputs, ids)
+    # The runner's own record of the failed dispatch's native resolution is the failure event.
+    if inputs.get("failure_kind") != "infrastructure":
+        raise ValueError("an agent-authorized corrective retry covers only an infrastructure failure")
+    failed = ledger["dispatches"].get(ids.source_id)
+    return agent_event, failed.get("resolution_event_id") if isinstance(failed, dict) else None
+
+
+def _require_retry_eligible(ledger: dict[str, Any], ids: _ApprovalIds, failed_event: Any) -> None:
+    dispatch_id, failed_id, reservation = ids
     failed = ledger["dispatches"].get(failed_id)
-    agent_event = _agent_approval(ledger, inputs, AGENT_RETRY_PREFIX, AGENT_RETRY_CAP, dispatch_id, "corrective retry")
-    if agent_event is not None:
-        # The runner's own record of the failed dispatch's native resolution is the failure event.
-        if inputs.get("failure_kind") != "infrastructure":
-            raise ValueError("an agent-authorized corrective retry covers only an infrastructure failure")
-        event_id = agent_event
-        failed_event = failed.get("resolution_event_id") if isinstance(failed, dict) else None
-    else:
-        keys = {"native_event_id", "run_id", "action", "failed_dispatch_id", "failed_native_event_id",
-                "retry_dispatch_id", "reservation_id", "failure_kind"}
-        event, event_id = _operator_event(ledger, inputs, keys, "corrective retry")
-        binding = (event.get("run_id"), event.get("action"), event.get("failed_dispatch_id"),
-                   event.get("retry_dispatch_id"), event.get("reservation_id"), event.get("failure_kind"))
-        expected = (ledger["run_id"], "corrective_retry_approved", failed_id, dispatch_id,
-                    reservation, "infrastructure")
-        if binding != expected:
-            raise ValueError("operator recovery event does not match this run")
-        failed_event = event.get("failed_native_event_id")
     if (dispatch_id in _used_dispatch_ids(ledger) or ledger["corrective_cycles"] != 2 or
             not isinstance(failed, dict) or failed.get("kind") != "corrective" or
             failed.get("outcome") != "failed" or failed.get("reservation_id") != reservation or
@@ -1944,38 +2132,40 @@ def authorize_corrective_retry(ledger: dict[str, Any], inputs: dict[str, Any], n
             any(item.get("reservation_id") == reservation for item_id, item in ledger["dispatches"].items()
                 if item_id != failed_id)):
         raise ValueError("failed corrective dispatch is not eligible for a one-time infrastructure retry")
-    ledger["dispatches"][dispatch_id] = {"kind": "corrective", "outcome": "reserved", "reserved_at": now,
-                                         "reservation_id": reservation, "reconciliations": 0,
-                                         "recovery_of": failed_id, "failure_event_id": failed_event,
-                                         "operator_recovery_event_id": event_id}
-    return {"reservation_id": reservation, "dispatch_id": dispatch_id, "recovery_of": failed_id}
 
 
-def authorize_corrective_continuation(root: Path, ledger: dict[str, Any], inputs: dict[str, Any], spec: Path,
-                                      now: float) -> dict[str, Any]:
-    dispatch_id = require_text(inputs.get("dispatch_id"), "dispatch_id")
-    source_id = require_text(inputs.get("completed_dispatch_id"), "completed_dispatch_id")
-    reservation = require_text(inputs.get("reservation_id"), "reservation_id")
-    agent_event = _agent_approval(ledger, inputs, AGENT_CONTINUATION_PREFIX, AGENT_CONTINUATION_CAP, dispatch_id,
-                                  "corrective continuation")
-    if agent_event is not None:
-        # The runner proves the metadata-only correction itself, as the reserve path does.
-        if inputs.get("spec_file") is None:
-            raise ValueError("an agent-authorized continuation requires an explicit spec_file naming the feature spec")
-        ineligible, _ = _metadata_ineligibility(root, spec, ledger)
-        if ineligible is not None:
-            raise ValueError(f"the metadata-only proof does not hold ({ineligible}); the operator approves a continuation")
-        event_id = agent_event
-    else:
-        keys = {"native_event_id", "run_id", "action", "completed_dispatch_id",
-                "continuation_dispatch_id", "reservation_id", "purpose"}
-        event, event_id = _operator_event(ledger, inputs, keys, "corrective continuation")
-        expected = (ledger["run_id"], "corrective_continuation_approved", source_id, dispatch_id,
-                    reservation, "task_metadata_reconciliation")
-        binding = (event.get("run_id"), event.get("action"), event.get("completed_dispatch_id"),
-                   event.get("continuation_dispatch_id"), event.get("reservation_id"), event.get("purpose"))
-        if binding != expected:
-            raise ValueError("operator continuation event does not match this run")
+def authorize_corrective_retry(ledger: dict[str, Any], inputs: dict[str, Any], now: float) -> dict[str, Any]:
+    ids = _approval_ids(inputs, "failed_dispatch_id")
+    event_id, failed_event = _retry_approval(ledger, inputs, ids)
+    _require_retry_eligible(ledger, ids, failed_event)
+    return _admit_follow_up(ledger, now, ids, "recovery_of",
+                            {"failure_event_id": failed_event, "operator_recovery_event_id": event_id})
+
+
+def _agent_continuation_proof(root: Path, ledger: dict[str, Any], inputs: dict[str, Any], spec: Path) -> None:
+    """The runner proves the metadata-only correction itself, as the reserve path does."""
+    if inputs.get("spec_file") is None:
+        raise ValueError("an agent-authorized continuation requires an explicit spec_file naming the feature spec")
+    ineligible, _ = _metadata_ineligibility(root, spec, ledger)
+    if ineligible is not None:
+        raise ValueError(f"the metadata-only proof does not hold ({ineligible}); the operator approves a continuation")
+
+
+def _operator_continuation_event(ledger: dict[str, Any], inputs: dict[str, Any], ids: _ApprovalIds) -> str:
+    keys = {"native_event_id", "run_id", "action", "completed_dispatch_id",
+            "continuation_dispatch_id", "reservation_id", "purpose"}
+    event, event_id = _operator_event(ledger, inputs, keys, "corrective continuation")
+    expected = (ledger["run_id"], "corrective_continuation_approved", ids.source_id, ids.dispatch_id,
+                ids.reservation, "task_metadata_reconciliation")
+    binding = (event.get("run_id"), event.get("action"), event.get("completed_dispatch_id"),
+               event.get("continuation_dispatch_id"), event.get("reservation_id"), event.get("purpose"))
+    if binding != expected:
+        raise ValueError("operator continuation event does not match this run")
+    return event_id
+
+
+def _require_continuation_eligible(ledger: dict[str, Any], ids: _ApprovalIds) -> None:
+    dispatch_id, source_id, reservation = ids
     source = ledger["dispatches"].get(source_id)
     owner_id = ledger["reservations"].get(reservation, {}).get("dispatch_id")
     owner = ledger["dispatches"].get(owner_id)
@@ -1987,12 +2177,20 @@ def authorize_corrective_continuation(root: Path, ledger: dict[str, Any], inputs
             (source_id != owner_id and not recovered) or
             members != {owner_id, source_id}):
         raise ValueError("completed corrective dispatch is not eligible for one metadata continuation")
-    ledger["dispatches"][dispatch_id] = {"kind": "corrective", "outcome": "reserved", "reserved_at": now,
-                                         "reservation_id": reservation, "reconciliations": 0,
-                                         "continuation_of": source_id,
-                                         "operator_continuation_event_id": event_id,
-                                         "continuation_purpose": "task_metadata_reconciliation"}
-    return {"reservation_id": reservation, "dispatch_id": dispatch_id, "continuation_of": source_id}
+
+
+def authorize_corrective_continuation(root: Path, ledger: dict[str, Any], inputs: dict[str, Any], spec: Path,
+                                      now: float) -> dict[str, Any]:
+    ids = _approval_ids(inputs, "completed_dispatch_id")
+    event_id = _agent_approval(ledger, inputs, AGENT_CONTINUATION_APPROVAL, ids.dispatch_id, "corrective continuation")
+    if event_id is None:
+        event_id = _operator_continuation_event(ledger, inputs, ids)
+    else:
+        _agent_continuation_proof(root, ledger, inputs, spec)
+    _require_continuation_eligible(ledger, ids)
+    return _admit_follow_up(ledger, now, ids, "continuation_of",
+                            {"operator_continuation_event_id": event_id,
+                             "continuation_purpose": "task_metadata_reconciliation"})
 
 
 def authorize_corrective_exception(ledger: dict[str, Any], inputs: dict[str, Any], now: float) -> dict[str, Any]:
@@ -2087,6 +2285,20 @@ def _reservation_scope(ledger: dict[str, Any], reservation: Any) -> set[str]:
     return {f"reservation:{reservation}", *([f"family:{family}"] if family is not None else [])}
 
 
+def _requested_scope(inputs: dict[str, Any]) -> set[str]:
+    """The units, gate, and metadata scope a request's own remediation fields name."""
+    units = inputs.get("tdd_units")
+    scope = {f"unit:{unit}" for unit in (units if isinstance(units, list) else []) if isinstance(unit, str)}
+    for key in ("review_remediation", "test_fix"):
+        if isinstance(inputs.get(key), dict) and isinstance(inputs[key].get("tdd_unit"), str):
+            scope.add(f"unit:{inputs[key]['tdd_unit']}")
+    if isinstance(inputs.get("gate_remediation"), dict) and isinstance(inputs["gate_remediation"].get("gate"), str):
+        scope.add(f"gate:{inputs['gate_remediation']['gate']}")
+    if inputs.get("metadata_only") is True:
+        scope.add("metadata")
+    return scope
+
+
 def _request_scope(ledger: dict[str, Any], action: str, inputs: dict[str, Any]) -> set[str] | None:
     """The units a new request would work on, or None when it needs every dispatch settled."""
     if action in {"begin-replan-epoch", "begin-stage-epoch", "bind-invariants"}:
@@ -2099,15 +2311,7 @@ def _request_scope(ledger: dict[str, Any], action: str, inputs: dict[str, Any]) 
         scope |= _reservation_scope(ledger, ledger.get("corrective_exception", {}).get("reservation_id"))
     if action == "begin-verification":
         return None
-    units = inputs.get("tdd_units")
-    scope.update(f"unit:{unit}" for unit in (units if isinstance(units, list) else []) if isinstance(unit, str))
-    for key in ("review_remediation", "test_fix"):
-        if isinstance(inputs.get(key), dict) and isinstance(inputs[key].get("tdd_unit"), str):
-            scope.add(f"unit:{inputs[key]['tdd_unit']}")
-    if isinstance(inputs.get("gate_remediation"), dict) and isinstance(inputs["gate_remediation"].get("gate"), str):
-        scope.add(f"gate:{inputs['gate_remediation']['gate']}")
-    if inputs.get("metadata_only") is True:
-        scope.add("metadata")
+    scope |= _requested_scope(inputs)
     invariant = inputs.get("failure_invariant")
     if isinstance(invariant, str) and (action == "authorize-corrective-exception" or inputs.get("kind") == "corrective"):
         scope.add(f"family:{invariant if invariant in ledger['approved_invariants'] else 'unresolved'}")
@@ -2215,28 +2419,27 @@ def _resolve_verified_unit(ledger: dict[str, Any], dispatch_id: str, inputs: dic
     return {"reasons": []}
 
 
-def record_result(ledger: dict[str, Any], inputs: dict[str, Any], now: float, root: Path) -> dict[str, Any]:
-    dispatch_id = require_text(inputs.get("dispatch_id"), "dispatch_id")
-    if dispatch_id not in ledger["dispatches"]:
-        raise ValueError("dispatch was not reserved")
-    item = ledger["dispatches"][dispatch_id]
-    if inputs["action"] == "reconcile":
-        allowed = item["reconciliations"] == 0 and item["outcome"] in {"reserved", "running", "unknown"}
-        if allowed:
-            item["reconciliations"] = 1
-            item["outcome"] = "unknown"
-        return {"reconciliation_allowed": allowed, "relaunch_allowed": False,
-                "reasons": [] if allowed else ["reconciliation_budget_exhausted"]}
-    outcome = inputs.get("outcome")
-    if outcome not in OUTCOMES or (outcome == "expected_tdd_red" and item["kind"] != "implementation"):
-        raise ValueError("invalid outcome for dispatch kind")
-    if item["outcome"] == "unknown" and "reconciliation" in item and inputs.get("verification_dispatch_id") is not None:
-        return _resolve_verified_unit(ledger, dispatch_id, inputs, outcome, now)
-    changed = _observed_changes(item, outcome, root)
+def _reconcile_dispatch(item: dict[str, Any]) -> dict[str, Any]:
+    """Spend the dispatch's one reconciliation, moving it to unknown, or refuse a second."""
+    allowed = item["reconciliations"] == 0 and item["outcome"] in {"reserved", "running", "unknown"}
+    if allowed:
+        item["reconciliations"] = 1
+        item["outcome"] = "unknown"
+    return {"reconciliation_allowed": allowed, "relaunch_allowed": False,
+            "reasons": [] if allowed else ["reconciliation_budget_exhausted"]}
+
+
+def _test_fix_refusal(item: dict[str, Any], outcome: Any, changed: list[str] | None) -> dict[str, Any] | None:
+    """A test fix completes only when the runner saw a change and every change stayed in its declared test files."""
     if "test_fix" in item and outcome == "completed" and item["outcome"] in {"reserved", "running"}:
-        # A test fix completes only when the runner saw a change and every change stayed in its declared test files.
         if not changed or not set(changed) <= set(item["test_fix_paths"]):
             return {"reasons": ["test_fix_scope_unproven"]}
+    return None
+
+
+def _result_refusal(ledger: dict[str, Any], item: dict[str, Any], dispatch_id: str, inputs: dict[str, Any],
+                    outcome: Any) -> dict[str, Any] | None:
+    """The refusal a result meets, or None once an unknown dispatch's independent native result is bound."""
     if item["outcome"] == "unknown":
         event = inputs.get("native_observation")
         if not isinstance(event, dict) or not isinstance(event.get("native_event_id"), str) or not event["native_event_id"].strip():
@@ -2248,6 +2451,25 @@ def record_result(ledger: dict[str, Any], inputs: dict[str, Any], now: float, ro
         item["resolution_event_id"] = event["native_event_id"]
     elif item["outcome"] not in {"reserved", "running"}:
         return {"reasons": ["recorded_outcome_cannot_be_overwritten"]}
+    return None
+
+
+def record_result(ledger: dict[str, Any], inputs: dict[str, Any], now: float, root: Path) -> dict[str, Any]:
+    dispatch_id = require_text(inputs.get("dispatch_id"), "dispatch_id")
+    if dispatch_id not in ledger["dispatches"]:
+        raise ValueError("dispatch was not reserved")
+    item = ledger["dispatches"][dispatch_id]
+    if inputs["action"] == "reconcile":
+        return _reconcile_dispatch(item)
+    outcome = inputs.get("outcome")
+    if outcome not in OUTCOMES or (outcome == "expected_tdd_red" and item["kind"] != "implementation"):
+        raise ValueError("invalid outcome for dispatch kind")
+    if item["outcome"] == "unknown" and "reconciliation" in item and inputs.get("verification_dispatch_id") is not None:
+        return _resolve_verified_unit(ledger, dispatch_id, inputs, outcome, now)
+    changed = _observed_changes(item, outcome, root)
+    refusal = _test_fix_refusal(item, outcome, changed) or _result_refusal(ledger, item, dispatch_id, inputs, outcome)
+    if refusal is not None:
+        return refusal
     if outcome != "unknown" and "worktree_before" in item:
         del item["worktree_before"]
         if changed is not None:
@@ -2364,34 +2586,48 @@ def _replan_ineligibility(root: Path, ledger: dict[str, Any], spec: Path, spec_b
     return "planning_unchanged" if current == binding["planning_fingerprints"] else None
 
 
+def _require_settled(ledger: dict[str, Any]) -> None:
+    if ledger.get("active_wait") or any(item["outcome"] not in OUTCOMES - {"unknown"}
+                                        for item in ledger["dispatches"].values()):
+        raise ValueError("settle every dispatch and wait before opening a new corrective epoch")
+
+
+def _close_epoch(ledger: dict[str, Any]) -> dict[str, Any]:
+    """Remove the current allowance's state from the ledger and return it as an archived epoch."""
+    return {key: ledger.pop(key) for key in (*EPOCH_STATE_KEYS, *EPOCH_OPTIONAL_KEYS) if key in ledger}
+
+
+def _replan_approval(root: Path, ledger: dict[str, Any], inputs: dict[str, Any], spec: Path,
+                     spec_bytes: bytes) -> str:
+    """The re-plan's event ID, from the agent's own proof or an operator event bound to the current spec."""
+    agent_event = _agent_approval(ledger, inputs, AGENT_REPLAN_APPROVAL,
+                                  str(len(ledger.get("corrective_epochs", [])) + 1), "re-plan epoch")
+    if agent_event is not None:
+        ineligible = _replan_ineligibility(root, ledger, spec, spec_bytes)
+        if ineligible is not None:
+            raise ValueError(f"agent-authorized re-plan epoch is not provable ({ineligible}); the operator approves it")
+        return agent_event
+    keys = {"native_event_id", "run_id", "action", "spec_sha256"}
+    event, event_id = _operator_event(ledger, inputs, keys, "re-plan epoch")
+    if (event.get("run_id"), event.get("action"), event.get("spec_sha256")) != (
+            ledger["run_id"], "replan_epoch_approved", hashlib.sha256(spec_bytes).hexdigest()):
+        raise ValueError("operator re-plan event does not match this run and the current spec")
+    return event_id
+
+
 def begin_replan_epoch(root: Path, ledger: dict[str, Any], inputs: dict[str, Any], spec: Path,
                        now: float) -> dict[str, Any]:
     """Archive the spent allowance and open a fresh one for an operator-approved or agent-proved re-plan."""
     if inputs.get("spec_file") is None:
         raise ValueError("begin-replan-epoch requires an explicit spec_file")
     spec_bytes = spec.read_bytes()
-    spec_digest = hashlib.sha256(spec_bytes).hexdigest()
-    agent_event = _agent_approval(ledger, inputs, AGENT_REPLAN_PREFIX, AGENT_REPLAN_CAP,
-                                  str(len(ledger.get("corrective_epochs", [])) + 1), "re-plan epoch")
-    if agent_event is not None:
-        event_id = agent_event
-        ineligible = _replan_ineligibility(root, ledger, spec, spec_bytes)
-        if ineligible is not None:
-            raise ValueError(f"agent-authorized re-plan epoch is not provable ({ineligible}); the operator approves it")
-    else:
-        keys = {"native_event_id", "run_id", "action", "spec_sha256"}
-        event, event_id = _operator_event(ledger, inputs, keys, "re-plan epoch")
-        if (event.get("run_id"), event.get("action"), event.get("spec_sha256")) != (
-                ledger["run_id"], "replan_epoch_approved", spec_digest):
-            raise ValueError("operator re-plan event does not match this run and the current spec")
-    if ledger.get("active_wait") or any(item["outcome"] not in OUTCOMES - {"unknown"}
-                                        for item in ledger["dispatches"].values()):
-        raise ValueError("settle every dispatch and wait before opening a new corrective epoch")
-    epoch = {key: ledger.pop(key) for key in (*EPOCH_STATE_KEYS, *EPOCH_OPTIONAL_KEYS) if key in ledger}
+    event_id = _replan_approval(root, ledger, inputs, spec, spec_bytes)
+    _require_settled(ledger)
+    epoch = _close_epoch(ledger)
     epoch.update(epoch_event_id=event_id, closed_at=now)
     ledger.setdefault("corrective_epochs", []).append(epoch)
-    binding: dict[str, Any] = {"spec_file": spec.relative_to(root.resolve()).as_posix(), "spec_sha256": spec_digest,
-                               "bound_at": now}
+    binding: dict[str, Any] = {"spec_file": spec.relative_to(root.resolve()).as_posix(),
+                               "spec_sha256": hashlib.sha256(spec_bytes).hexdigest(), "bound_at": now}
     fingerprints = _planning_fingerprints(root, binding["spec_file"])
     ledger.update(corrective_cycles=0, reservations={}, dispatches={}, approved_invariants=_spec_invariants(spec_bytes),
                   invariant_binding={**binding, **({"planning_fingerprints": fingerprints} if fingerprints else {})})
@@ -2428,10 +2664,8 @@ def begin_stage_epoch(root: Path, ledger: dict[str, Any], inputs: dict[str, Any]
         return {"stage_epoch_opened": False, "corrective_epoch": len(ledger["corrective_epochs"])}
     if event_id in _consumed_native_event_ids(ledger):
         raise ValueError("the stage transition event ID was already consumed by another event")
-    if ledger.get("active_wait") or any(item["outcome"] not in OUTCOMES - {"unknown"}
-                                        for item in ledger["dispatches"].values()):
-        raise ValueError("settle every dispatch and wait before opening a new corrective epoch")
-    epoch = {key: ledger.pop(key) for key in (*EPOCH_STATE_KEYS, *EPOCH_OPTIONAL_KEYS) if key in ledger}
+    _require_settled(ledger)
+    epoch = _close_epoch(ledger)
     ledger.update(corrective_cycles=0, reservations={}, dispatches={},
                   approved_invariants=list(epoch["approved_invariants"]))
     if "invariant_binding" in epoch:
@@ -2462,13 +2696,41 @@ def _bind_invariants_if_requested(root: Path, inputs: dict[str, Any], spec: Path
     }
 
 
-def execution_control(root: Path, inputs: dict[str, Any], mode: str,
-                      evidence: dict[str, Any] | None = None) -> dict[str, Any]:
-    """Runner adapter returns a disposition without changing autopilot top-state.
+_ACTIONS = frozenset({"start", "status", "bind-invariants", "reserve", "authorize-corrective-retry",
+                      "authorize-corrective-continuation", "authorize-corrective-exception",
+                      "reserve-class-correction", "begin-replan-epoch", "begin-stage-epoch", "begin-verification",
+                      "complete", "reconcile", "reconcile-unit", "checkpoint", "pause", "resume",
+                      "relocate-workflow", RECORD_FINALIZE_CYCLE})
 
-    `evidence` is set only by `record_failing_checks`, the verification executors'
-    internal path; a helper request cannot reach the evidence action.
-    """
+
+class _Control(NamedTuple):
+    """One validated execution-control request: what to run, against which workflow, spec, and ledger file."""
+
+    root: Path
+    inputs: dict[str, Any]
+    mode: str
+    evidence: dict[str, Any] | None
+    action: str
+    workflow_name: str
+    workflow: Path
+    spec: Path
+    expected_run_id: Any
+    relative: str
+    path: Path
+
+
+def _require_supported_action(action: Any, mode: str, evidence: dict[str, Any] | None) -> None:
+    if action not in _ACTIONS:
+        if evidence is None or action != RECORD_FAILING_CHECKS:
+            raise ValueError("unsupported action; pauses/resets require verified native authorization")
+    elif evidence is not None:
+        raise ValueError("failing-check evidence is recorded only by the verification executors")
+    if mode not in {"read_only", "dry_run", "apply"} or (mode == "read_only" and action != "status"):
+        raise ValueError("ledger mutations require dry_run or apply")
+
+
+def _open_control(root: Path, inputs: dict[str, Any], mode: str, evidence: dict[str, Any] | None) -> _Control:
+    """Validate the request's workflow, spec, action, run binding, and ledger location."""
     workflow_name = require_text(inputs.get("workflow_file"), "workflow_file")
     workflow = confined_path(root, workflow_name)
     if not workflow.is_file():
@@ -2479,13 +2741,7 @@ def execution_control(root: Path, inputs: dict[str, Any], mode: str,
     if spec_name is not None and not spec.is_file():
         raise ValueError("spec_file must be an existing contained file")
     action = inputs.get("action", "status")
-    if action not in {"start", "status", "bind-invariants", "reserve", "authorize-corrective-retry", "authorize-corrective-continuation", "authorize-corrective-exception", "reserve-class-correction", "begin-replan-epoch", "begin-stage-epoch", "begin-verification", "complete", "reconcile", "reconcile-unit", "checkpoint", "pause", "resume", "relocate-workflow", RECORD_FINALIZE_CYCLE}:
-        if evidence is None or action != RECORD_FAILING_CHECKS:
-            raise ValueError("unsupported action; pauses/resets require verified native authorization")
-    elif evidence is not None:
-        raise ValueError("failing-check evidence is recorded only by the verification executors")
-    if mode not in {"read_only", "dry_run", "apply"} or (mode == "read_only" and action != "status"):
-        raise ValueError("ledger mutations require dry_run or apply")
+    _require_supported_action(action, mode, evidence)
     expected_run_id = inputs.get("expected_run_id")
     if expected_run_id is not None:
         require_text(expected_run_id, "expected_run_id")
@@ -2495,86 +2751,120 @@ def execution_control(root: Path, inputs: dict[str, Any], mode: str,
     relative = inputs.get("ledger_path") or f"{default_ledger_directory(workflow_name)}/{workflow_key}.json"
     if Path(relative).parent.name != "execution-control" or Path(relative).suffix != ".json":
         raise ValueError("ledger_path must reference an owned execution-control JSON record")
-    path = confined_path(root, relative)
+    return _Control(root, inputs, mode, evidence, action, workflow_name, workflow, spec, expected_run_id, relative,
+                    confined_path(root, relative))
 
-    def update() -> dict[str, Any]:
-        now = time.time()
-        ledger = json.loads(path.read_text(encoding="utf-8")) if path.exists() else None
-        existing_ledger = ledger is not None
-        if ledger is None:
-            if action != "start" or expected_run_id is not None:
-                raise ValueError("known run ledger missing; recover its owned ledger without resetting the budget")
-            ledger = initial_ledger(spec, now)
-            ledger["workflow_identity"] = {"original_workflow_file": workflow_name,
-                                           "current_workflow_file": workflow_name,
-                                           "relocation_event_ids": []}
-        validate_ledger(ledger)
-        if existing_ledger and expected_run_id is None:
-            raise ValueError("expected_run_id is required for every existing execution ledger action")
-        if expected_run_id is not None and ledger["run_id"] != expected_run_id:
-            raise ValueError("execution ledger does not match the parent expected_run_id")
-        ledger = copy.deepcopy(ledger)
-        identity = ledger["workflow_identity"]
-        if action == "relocate-workflow":
-            _relocate_workflow(ledger, inputs, workflow_name)
-        elif identity["current_workflow_file"] != workflow_name:
-            raise ValueError("execution ledger belongs to a different workflow")
-        reasons = clock_reasons(ledger, now)
-        extra: dict[str, Any] = {}
-        blockers = _unknown_blockers(ledger, action, inputs) if action in UNKNOWN_GUARDED_ACTIONS else []
-        if blockers:
-            reasons.append(UNKNOWN_BLOCKED)
-            extra["blocked_by"] = blockers
-        if "clock_moved_backwards" in reasons and action not in {"status", "start"}:
-            raise ValueError("clock moved backwards; preserve the ledger and reconcile time before continuing")
-        _bind_invariants_if_requested(root, inputs, spec, ledger, now, reasons)
-        if action == RECORD_FAILING_CHECKS and evidence is not None:
-            extra = _record_failing_checks(ledger, inputs, evidence, now)
-        elif action == RECORD_FINALIZE_CYCLE and not reasons:
-            extra = record_finalize_cycle(root, ledger, inputs, relative)
-        elif action == "reserve" and not reasons:
-            extra = reserve(ledger, inputs, now, root, spec)
-        elif action == "authorize-corrective-retry" and not reasons:
-            extra = authorize_corrective_retry(ledger, inputs, now)
-        elif action == "authorize-corrective-continuation" and not reasons:
-            extra = authorize_corrective_continuation(root, ledger, inputs, spec, now)
-        elif action == "authorize-corrective-exception" and not reasons:
-            extra = authorize_corrective_exception(ledger, inputs, now)
-        elif action == "reserve-class-correction" and not reasons:
-            extra = reserve_class_correction(ledger, inputs, now)
-        elif action == "begin-replan-epoch" and not reasons:
-            extra = begin_replan_epoch(root, ledger, inputs, spec, now)
-        elif action == "begin-stage-epoch" and not reasons:
-            extra = begin_stage_epoch(root, ledger, inputs, workflow, now)
-        elif action == "begin-verification" and not reasons:
-            extra = begin_verification(ledger, inputs)
-        elif action == "reconcile-unit":
-            extra = reconcile_unit(root, ledger, inputs, spec, now)
-        elif action in {"complete", "reconcile"}:
-            extra = record_result(ledger, inputs, now, root)
-            reasons = clock_reasons(ledger, now)
-        elif action in {"checkpoint", "pause", "resume"}:
-            extra = checkpoint_or_wait(ledger, inputs, now)
-            reasons = clock_reasons(ledger, now)
-        reasons.extend(extra.pop("reasons", []))
-        if mode == "apply":
-            ledger["last_observed_at"] = max(now, ledger["last_observed_at"])
-            durable_json(path, ledger)
-        disposition = ("continue" if not reasons else "defer" if all(reason in DEFER_REASONS for reason in reasons)
-                       else "checkpoint_required")
-        return {"ledger": ledger, "ledger_path": relative, "disposition": disposition,
-                "reasons": reasons, "elapsed_seconds": elapsed(ledger, now, ledger["started_at"]),
-                "checkpoint_due": elapsed(ledger, now, ledger["checkpoint_at"]) >= 2700,
-                "authorization_granted": False, "writes_state": mode == "apply", **extra,
-                **({"unknown_dispatch_ids": unknown} if (unknown := sorted(
-                    key for key, item in ledger["dispatches"].items() if item["outcome"] == "unknown")) else {})}
 
+def _load_ledger(ctl: _Control, now: float) -> dict[str, Any]:
+    """The validated ledger this request works on: the recorded run's, or a fresh one for `start`."""
+    ledger = json.loads(ctl.path.read_text(encoding="utf-8")) if ctl.path.exists() else None
+    existing_ledger = ledger is not None
+    if ledger is None:
+        if ctl.action != "start" or ctl.expected_run_id is not None:
+            raise ValueError("known run ledger missing; recover its owned ledger without resetting the budget")
+        ledger = initial_ledger(ctl.spec, now)
+        ledger["workflow_identity"] = {"original_workflow_file": ctl.workflow_name,
+                                       "current_workflow_file": ctl.workflow_name,
+                                       "relocation_event_ids": []}
+    validate_ledger(ledger)
+    if existing_ledger and ctl.expected_run_id is None:
+        raise ValueError("expected_run_id is required for every existing execution ledger action")
+    if ctl.expected_run_id is not None and ledger["run_id"] != ctl.expected_run_id:
+        raise ValueError("execution ledger does not match the parent expected_run_id")
+    ledger = copy.deepcopy(ledger)
+    if ctl.action == "relocate-workflow":
+        _relocate_workflow(ledger, ctl.inputs, ctl.workflow_name)
+    elif ledger["workflow_identity"]["current_workflow_file"] != ctl.workflow_name:
+        raise ValueError("execution ledger belongs to a different workflow")
+    return ledger  # type: ignore[no-any-return]
+
+
+def _guarded_action(ctl: _Control, ledger: dict[str, Any], now: float) -> dict[str, Any]:
+    """The actions that run only while no clock or unknown-dispatch reason holds."""
+    action, inputs, root, spec = ctl.action, ctl.inputs, ctl.root, ctl.spec
+    if action == RECORD_FINALIZE_CYCLE:
+        return record_finalize_cycle(root, ledger, inputs, ctl.relative)
+    if action == "reserve":
+        return reserve(ledger, inputs, now, root, spec)
+    if action == "authorize-corrective-retry":
+        return authorize_corrective_retry(ledger, inputs, now)
+    if action == "authorize-corrective-continuation":
+        return authorize_corrective_continuation(root, ledger, inputs, spec, now)
+    if action == "authorize-corrective-exception":
+        return authorize_corrective_exception(ledger, inputs, now)
+    if action == "reserve-class-correction":
+        return reserve_class_correction(ledger, inputs, now)
+    if action == "begin-replan-epoch":
+        return begin_replan_epoch(root, ledger, inputs, spec, now)
+    if action == "begin-stage-epoch":
+        return begin_stage_epoch(root, ledger, inputs, ctl.workflow, now)
+    if action == "begin-verification":
+        return begin_verification(ledger, inputs)
+    return {}
+
+
+def _run_action(ctl: _Control, ledger: dict[str, Any], now: float, reasons: list[str],
+                extra: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:
+    """Run the request's action; returns its extra result and the clock reasons after it."""
+    action = ctl.action
+    if action == RECORD_FAILING_CHECKS and ctl.evidence is not None:
+        return _record_failing_checks(ledger, ctl.inputs, ctl.evidence, now), reasons
+    if action == "reconcile-unit":
+        return reconcile_unit(ctl.root, ledger, ctl.inputs, ctl.spec, now), reasons
+    if action in {"complete", "reconcile"}:
+        return record_result(ledger, ctl.inputs, now, ctl.root), clock_reasons(ledger, now)
+    if action in {"checkpoint", "pause", "resume"}:
+        return checkpoint_or_wait(ledger, ctl.inputs, now), clock_reasons(ledger, now)
+    return (extra if reasons else _guarded_action(ctl, ledger, now)), reasons
+
+
+def _control_result(ctl: _Control, ledger: dict[str, Any], now: float, reasons: list[str],
+                    extra: dict[str, Any]) -> dict[str, Any]:
+    disposition = ("continue" if not reasons else "defer" if all(reason in DEFER_REASONS for reason in reasons)
+                   else "checkpoint_required")
+    unknown = sorted(key for key, item in ledger["dispatches"].items() if item["outcome"] == "unknown")
+    return {"ledger": ledger, "ledger_path": ctl.relative, "disposition": disposition,
+            "reasons": reasons, "elapsed_seconds": elapsed(ledger, now, ledger["started_at"]),
+            "checkpoint_due": elapsed(ledger, now, ledger["checkpoint_at"]) >= 2700,
+            "authorization_granted": False, "writes_state": ctl.mode == "apply", **extra,
+            **({"unknown_dispatch_ids": unknown} if unknown else {})}
+
+
+def _update_ledger(ctl: _Control) -> dict[str, Any]:
+    """Run one action against the ledger and, in apply mode, publish the result durably."""
+    now = time.time()
+    ledger = _load_ledger(ctl, now)
+    reasons = clock_reasons(ledger, now)
+    extra: dict[str, Any] = {}
+    blockers = _unknown_blockers(ledger, ctl.action, ctl.inputs) if ctl.action in UNKNOWN_GUARDED_ACTIONS else []
+    if blockers:
+        reasons.append(UNKNOWN_BLOCKED)
+        extra["blocked_by"] = blockers
+    if "clock_moved_backwards" in reasons and ctl.action not in {"status", "start"}:
+        raise ValueError("clock moved backwards; preserve the ledger and reconcile time before continuing")
+    _bind_invariants_if_requested(ctl.root, ctl.inputs, ctl.spec, ledger, now, reasons)
+    extra, reasons = _run_action(ctl, ledger, now, reasons, extra)
+    reasons.extend(extra.pop("reasons", []))
+    if ctl.mode == "apply":
+        ledger["last_observed_at"] = max(now, ledger["last_observed_at"])
+        durable_json(ctl.path, ledger)
+    return _control_result(ctl, ledger, now, reasons, extra)
+
+
+def execution_control(root: Path, inputs: dict[str, Any], mode: str,
+                      evidence: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Runner adapter returns a disposition without changing autopilot top-state.
+
+    `evidence` is set only by `record_failing_checks`, the verification executors'
+    internal path; a helper request cannot reach the evidence action.
+    """
+    ctl = _open_control(root, inputs, mode, evidence)
     if mode == "apply":
         # Mark the evidence directory before the orchestrator can write its own logs there (#813).
-        ignore_owned_directory(confined_path(root, evidence_directory(workflow_name)))
-        with exclusive_ledger(path):
-            return update()
-    return update()
+        ignore_owned_directory(confined_path(root, evidence_directory(ctl.workflow_name)))
+        with exclusive_ledger(ctl.path):
+            return _update_ledger(ctl)
+    return _update_ledger(ctl)
 
 
 def record_failing_checks(root: Path, inputs: dict[str, Any], evidence: dict[str, Any]) -> dict[str, Any]:

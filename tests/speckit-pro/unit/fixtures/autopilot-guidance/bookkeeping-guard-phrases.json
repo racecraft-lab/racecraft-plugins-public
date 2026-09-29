@@ -1,0 +1,302 @@
+{
+  "AutonomyBoundarySourceContractTests.test_resume_re_attests_a_stale_boundary_before_the_coverage_guard#1": [
+    "persisted `autonomy_boundary` receipt, at any stage",
+    "including a plan-stage resume",
+    "before the Step 1.1 coverage guard",
+    "current execution boundary does not match the persisted execution boundary",
+    "a branch, not a stop",
+    "standing policy coverage",
+    "the one end-of-run request",
+    "never as a guard-failure repair",
+    "A mismatch still blocks"
+  ],
+  "AutonomyBoundarySourceContractTests.test_preflight_inventories_data_egress_to_model_services#1": [
+    "data egress",
+    "live model evaluation",
+    "a push or PR to a remote",
+    "exact destination"
+  ],
+  "AutonomyBoundarySourceContractTests.test_consolidated_request_emits_egress_authorization_and_extra_policy#1": [
+    "`render-egress-authorization`",
+    "paste-ready authorization message",
+    "Send <data class> from <repository> to <destination> for <purpose>",
+    "`auto_review.extra_policy`",
+    "never `auto_review.policy`",
+    "replaces the default reviewer policy",
+    "`git remote get-url --push origin`",
+    "Outcome rule: deny",
+    "autonomy-boundary files, their schema, or their recorded digests",
+    "a push to the default branch",
+    "a force push",
+    "`--mirror`",
+    "a remote change",
+    "reaches the reviewer only when it escalates",
+    "CI and the boundary validator",
+    "never writes the authorization message or the fragment into `~/.codex`",
+    "into the repository's `.codex/` directory, or into `AGENTS.md`",
+    "`authorization_message_sha256`",
+    "`authorization.evidence`"
+  ],
+  "RunFinalizationSourceContractTests#1": [
+    "honest incomplete checkpoint, never completion",
+    "Never report completion while a deferred item remains",
+    "may the rows holding deferred work move to `⚠ Blocked`",
+    "reported as deferred, never green",
+    "`attributed_units`",
+    "instead of rerunning the full suite for every slice"
+  ],
+  "RunFinalizationSourceContractTests#2": [
+    "at each PR head, bottom-up",
+    "`head_sha`",
+    "`human_stop.missing`",
+    "cites only the gate results listed under its own entry",
+    "`status=harness_error`",
+    "`attempts`",
+    ".process/verification/harness/",
+    "a harness error, never as a failure of the code under test",
+    "never counts as passed"
+  ],
+  "RunFinalizationSourceContractTests#3": [
+    "at the slice's own head",
+    "never carry another head's evidence",
+    "propagate it upward by merge",
+    "re-verify every affected head",
+    "only the evidence produced at that slice's own head"
+  ],
+  "RunFinalizationSourceContractTests.test_codex_finalizes_a_deferred_run_and_completes_the_goal#1": [
+    "`check-gate-preflight-coverage`",
+    "preflight defect",
+    "at run start"
+  ],
+  "RunFinalizationSourceContractTests.test_stack_manager_keeps_draft_status_only_until_finalization#1": [
+    "at its own head",
+    "bottom-up",
+    "re-verify every affected head"
+  ],
+  "FailureClassApprovalSourceContractTests.assert_class_rules#1": [
+    "same failure signature in the same test file",
+    "even when the failing tests differ",
+    "one failure class",
+    "environment signal first",
+    "host load and temp-directory size",
+    "rerun the gate once, before proposing any timeout change",
+    "one class-level fix",
+    "never per-test diffs",
+    "`failure_class`",
+    "`authorize-corrective-exception`",
+    "`reserve-class-correction`",
+    "without a new question",
+    "at most once",
+    "production",
+    "consolidated operator request"
+  ],
+  "FailureClassApprovalSourceContractTests.test_ledger_reference_documents_the_class_request_shape#1": [
+    "`test_file`",
+    "`failure_signature`",
+    "`change_kind`",
+    "`test_timeout`",
+    "`follow_up_dispatch_ids`",
+    "completed",
+    "two follow-ups"
+  ],
+  "GateFailureDeferSourceContractTests.test_every_gate_failure_line_defers_instead_of_stopping#1": [
+    "Immediate STOP",
+    "STOP. Present",
+    "→ STOP",
+    "The default `stop` path",
+    "present to human"
+  ],
+  "CleanFinishAndStopWordingSourceContractTests.test_claude_executors_return_a_blocker_instead_of_escalating#1": [
+    "orchestrator surface",
+    "orchestrator escalate",
+    "orchestrator fail the gate"
+  ],
+  "MidRunPluginDriftSourceContractTests.assert_drift_rules#1": [
+    "at setup or run start",
+    "changed or vanished",
+    "re-resolve",
+    "`plugin_root`",
+    "Installed Runtime Contract",
+    "retry each failed bookkeeping call once",
+    "record the drift",
+    "never a stop",
+    "single end-of-run consolidated request",
+    "not a deferred task",
+    "correctness stops"
+  ],
+  "StandingPolicyPreflightSourceContractTests.test_covered_inventory_asks_no_question_including_a_stage_change#1": [
+    "`render-egress-authorization`",
+    "`scope=standing`",
+    "standing policy",
+    "the operator's autopilot invocation in this thread and the ratified plan",
+    "only the standing policy's classes",
+    "asks no question",
+    "planning-to-implementation stage change"
+  ],
+  "StandingPolicyPreflightSourceContractTests.test_uncovered_plan_derived_egress_is_asked_as_a_chat_reply#1": [
+    "Uncovered plan-derived data egress: the preflight asks for it as a chat reply",
+    "normal chat message in this thread, never as a goal edit",
+    "the helper's `delivery` line",
+    "never waits for the reply",
+    "reads goal text as user-provided data",
+    "Step -2 already asked for every class the run-start inventory could know"
+  ],
+  "StandingPolicyPreflightSourceContractTests.test_ratified_boundary_file_edit_is_deferred_not_a_start_blocker#1": [
+    "boundary-file edit named in the ratified plan",
+    "never blocks the start of the run",
+    "the reviewer trusts `AGENTS.md`",
+    "never dispatch that task"
+  ],
+  "StandingPolicyPreflightSourceContractTests.test_missing_standing_policy_is_the_single_up_front_ask_not_a_setup_gap#1": [
+    "A missing standing policy is asked once, at run start",
+    "Step -2",
+    "does not ask again",
+    "record the covered actions `operator_action_required`",
+    "`stop_reason:veto_bypass`"
+  ],
+  "StandingPolicyPreflightSourceContractTests.test_missing_standing_policy_is_the_single_up_front_ask_not_a_setup_gap#2": [
+    "`render-egress-authorization`",
+    "`scope=standing`",
+    "never `auto_review.policy`",
+    "never writes"
+  ],
+  "CodexRunStartAuthorizationSourceContractTests.test_step_runs_before_archive_sweep_and_on_every_resume#1": [
+    "right after the binding guard, before Archive Sweep and Step 0",
+    "on every start and every resume",
+    "no permission or egress prompt can stop the run midway",
+    "before Phase 1"
+  ],
+  "CodexRunStartAuthorizationSourceContractTests.test_policy_classes_derive_from_the_gate_coverage_output#1": [
+    "`check-gate-preflight-coverage`",
+    "`policy_classes`",
+    "`derived_classes`",
+    "verbatim",
+    "each declared pre-PR audit",
+    "`writable_roots`",
+    "`write_paths`",
+    "`scope=standing`",
+    "`installed_extra_policy`"
+  ],
+  "CodexRunStartAuthorizationSourceContractTests.test_each_class_and_write_surface_is_probed_before_phase_one#1": [
+    "Probe every class before Phase 1",
+    "each `policy_classes` entry's `probe`",
+    "external `WORKFLOW_ROOT`",
+    "<git-common-dir>/speckit-pro/autonomy-boundary/",
+    "mode `0700`",
+    "in a linked worktree it sits outside the worktree root",
+    "`uncovered`",
+    "never retried through another tool, path, or wrapper",
+    "`stop_reason:veto_bypass`"
+  ],
+  "CodexRunStartAuthorizationSourceContractTests.test_a_missing_policy_or_denied_probe_is_one_plain_text_request#1": [
+    "Ask once",
+    "one plain-text run-start request before Phase 1, never as a goal edit",
+    "the standing install text once",
+    "the paste-ready authorization message",
+    "each path the operator must add to the writable roots",
+    "this is the only wait",
+    "`explicit_user`",
+    "`operator_action_required`",
+    "ask nothing"
+  ],
+  "CodexRunStartAuthorizationSourceContractTests.test_phase_six_five_cites_the_run_start_result_and_inventories_the_private_write#1": [
+    "Anything Step -2 could have known is not discovered here",
+    "is an autopilot defect",
+    "probes the write at run start",
+    "`outside_writable_roots` action"
+  ],
+  "CodexRunStartAuthorizationSourceContractTests.test_shared_reference_states_the_run_start_grant_for_both_hosts#1": [
+    "## Run-start grants",
+    "Codex:",
+    "Claude Code:",
+    "A missing standing policy is the single up-front ask",
+    "Any run-start probe that prompts or is denied is settled in that one ask",
+    "Nothing that inventory could have known is discovered mid-run",
+    "`stop_reason:veto_bypass`"
+  ],
+  "ClaudeRunStartPermissionProbeSourceContractTests.test_one_no_op_runner_request_and_one_git_status_run_first#1": [
+    "before the binding guard, Step -1, Step 0, and any phase work",
+    "on every start and every resume",
+    "one no-op runner request: helper `helper-registry-dispatch` with empty `inputs`",
+    "`<resolved_python> -m speckit_pro_runner`",
+    "one `git status --porcelain` in the live checkout"
+  ],
+  "ClaudeRunStartPermissionProbeSourceContractTests.test_a_prompt_or_denial_prints_the_exact_allow_rule_and_stops_once#1": [
+    "either prompts or is denied",
+    "print the allow rules for the probe that failed, once",
+    "stop before any phase work",
+    "do not run Archive Sweep, edit a file, or dispatch an agent",
+    "<resolved_python> -m speckit_pro_runner:*",
+    "printf:*",
+    "git status:*",
+    "Print each rule in Claude Code's `Tool(pattern)` form",
+    "written exactly as the request invoked it",
+    "bypassPermissions"
+  ],
+  "ClaudeRunStartPermissionProbeSourceContractTests.test_the_skill_and_references_point_at_the_probe#1": [
+    "run the Step -2 run-start permission probe",
+    "one no-op runner request and one `git status`",
+    "prerequisites.md#step--2-run-start-permission-probe"
+  ],
+  "StatusEvidenceSourceGuidanceTests.test_source_guidance_names_every_gated_key_and_the_nonblocking_rest#1": [
+    "status-evidence checks",
+    "state-plan invariants",
+    "structural coverage checks",
+    "visible but never block"
+  ],
+  "StatePrivacyTests.test_native_event_id_error_names_the_digest_remedy#1": [
+    "autopilot_state.implementation_startup.active_batch.operator_approval_event_id",
+    "sha256:",
+    "rerun this guard"
+  ],
+  "StatePrivacyTests.test_both_hosts_digest_event_ids_and_repair_every_gated_guard_failure#1": [
+    "native or operator event id",
+    "`sha256:<digest>`",
+    "For `state_privacy_errors`, each error names the field and its remedy",
+    "then rerun the guard"
+  ],
+  "StatePrivacyTests.test_both_hosts_account_for_the_implementation_notes_record#1": [
+    "stage it with each marker checkpoint commit",
+    "`declared_files.implementation_notes`",
+    "clean-worktree check ignores it"
+  ],
+  "AutonomyBoundarySourceContractTests.test_source_contract_places_preflight_before_every_phase_seven_entry#1": [
+    "--require-autonomy-boundary",
+    "--current-execution-environment",
+    "--current-sandbox-mode",
+    "--current-approval-reviewer",
+    "--current-writable-root"
+  ],
+  "BlockedActionDeferralSourceContractTests.assert_deferral_rules#1": [
+    "approval-reviewer veto",
+    "missing approval",
+    "unavailable tool",
+    "fallback that the task, `tasks.md`, or the spec itself defines",
+    "auto-applied fallback",
+    "defer that task",
+    "every task and Post item that depends on it",
+    "keep executing every independent task, gate, and Post check",
+    "while runnable work remains",
+    "reserves no execution-control budget",
+    "one consolidated operator request",
+    "plain text in the final message",
+    "known_gaps",
+    "every fallback taken and every deferred item",
+    "never bypass",
+    "never change approval, sandbox, or reviewer configuration",
+    "unknown side effects",
+    "`checkpoint_required`"
+  ],
+  "MarkerEvidencePrivacyTests.skills": [
+    "external task, session, thread, or event id cited in a committed record",
+    "`marker_evidence_privacy_errors`"
+  ],
+  "MarkerEvidencePrivacyTests.phase guides": [
+    "external task, session, thread, or event id",
+    "marker checkpoint",
+    "verification report",
+    "workflow file",
+    "implementation notes",
+    "PR body"
+  ]
+}

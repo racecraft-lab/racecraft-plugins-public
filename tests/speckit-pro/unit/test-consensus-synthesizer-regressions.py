@@ -17,6 +17,11 @@ if str(LIB_DIR) not in sys.path:
 
 from test_result import run_counted  # noqa: E402
 
+PHRASES = json.loads(
+    (REPO_ROOT / "tests" / "speckit-pro" / "unit" / "fixtures" / "autopilot-guidance" / "consensus-synthesizer-phrases.json")
+    .read_text(encoding="utf-8")
+)
+
 
 SYNTHESIZER = REPO_ROOT / "speckit-pro" / "codex-agents" / "consensus-synthesizer.toml"
 CLAUDE_SYNTHESIZER = REPO_ROOT / "speckit-pro" / "agents" / "consensus-synthesizer.md"
@@ -70,11 +75,7 @@ class ConsensusSynthesizerRegressionTests(unittest.TestCase):
     def test_codex_dispatch_names_the_custom_agent_in_the_native_argument(self) -> None:
         codex = CODEX_AUTOPILOT.read_text(encoding="utf-8")
         protocol = PROTOCOL.read_text(encoding="utf-8")
-        assert_contains(self, codex, (
-            '`agent_type="<installed-agent-name>"`',
-            '`agent_type="consensus-synthesizer"`',
-            "A default or general-purpose worker is not the named synthesizer",
-        ))
+        assert_contains(self, codex, PHRASES["ConsensusSynthesizerRegressionTests.test_codex_dispatch_names_the_custom_agent_in_the_native_argument#1"])
         assert_contains(self, protocol, (
             '`spawn_agent(agent_type="consensus-synthesizer"',
             "Omitting `agent_type` and accepting the default role is a failed dispatch",
@@ -83,23 +84,7 @@ class ConsensusSynthesizerRegressionTests(unittest.TestCase):
     def test_all_agreement_branches_are_explicit_and_fail_closed(self) -> None:
         text = instructions()
         flat = " ".join(text.split())
-        assert_contains(self, flat, (
-            "N = 1:",
-            "A high-confidence answer with no escape phrase",
-            "Low confidence or any escape phrase",
-            "N = 2:",
-            "Agreement produces `confidence: high`",
-            "Disagreement produces",
-            "N = 3:",
-            "Unanimity produces high confidence",
-            "A 2/3 majority wins while the dissent is preserved",
-            "If all three disagree",
-            "[ROUND_3_TIEBREAK]",
-            "Security override on a security route",
-            "apply the answer only when all three analysts agree",
-            "A 2/3 majority or no agreement returns `[ROUND_3_TIEBREAK]`",
-            "a keyword alone never stops the run",
-        ))
+        assert_contains(self, flat, PHRASES["ConsensusSynthesizerRegressionTests.test_all_agreement_branches_are_explicit_and_fail_closed#1"])
 
     def test_keyword_only_route_uses_the_items_own_rule_when_no_analyst_flags_security(self) -> None:
         # A keyword such as `tokens` meaning LLM usage counts must not force
@@ -121,11 +106,7 @@ class ConsensusSynthesizerRegressionTests(unittest.TestCase):
                 self.assertIn("null is written as none", flat)
                 assert_contains(self, flat, (rule, fail_closed, "a 2/3 majority wins at N = 3"))
         protocol = " ".join(PROTOCOL.read_text(encoding="utf-8").split())
-        assert_contains(self, protocol, (
-            "**Security Route:** <security_route from parse-consensus-categories: tag | keyword | none; write JSON null as none>",
-            "every routed analyst returns `security_relevant: false`",
-            "An explicit `[security]` tag, or, on a keyword route, any analyst returning `security_relevant: true`, keeps unanimity",
-        ))
+        assert_contains(self, protocol, PHRASES["ConsensusSynthesizerRegressionTests.test_keyword_only_route_uses_the_items_own_rule_when_no_analyst_flags_security#1"])
 
     def test_security_relevant_raises_the_bar_only_on_a_security_route(self) -> None:
         # A `true` from one analyst on a two-analyst non-security route must
@@ -150,11 +131,7 @@ class ConsensusSynthesizerRegressionTests(unittest.TestCase):
                     none_route,
                 ))
         protocol = " ".join(PROTOCOL.read_text(encoding="utf-8").split())
-        assert_contains(self, protocol, (
-            "| **Non-security route** (`Security Route: none`) |",
-            "a `security_relevant: true` answer does not raise the bar",
-            "two disagreeing Round 1 analysts still escape to Round 2",
-        ))
+        assert_contains(self, protocol, PHRASES["ConsensusSynthesizerRegressionTests.test_security_relevant_raises_the_bar_only_on_a_security_route#1"])
 
     def test_executors_reserve_the_security_tag_for_security_substance(self) -> None:
         # A `[security]` tag always keeps unanimity, so an executor that tags
@@ -234,28 +211,11 @@ class ConsensusSynthesizerRegressionTests(unittest.TestCase):
 
     def test_escape_phrases_and_security_override_are_complete(self) -> None:
         text = instructions()
-        assert_contains(self, text, (
-            "insufficient context",
-            "not in this codebase",
-            "no precedent in this repo",
-            "outside my scope",
-            "cannot answer from this perspective",
-            "this is a [different category] question",
-            "security item arrives with fewer than three responses",
-        ))
+        assert_contains(self, text, PHRASES["ConsensusSynthesizerRegressionTests.test_escape_phrases_and_security_override_are_complete#1"])
 
     def test_result_contract_preserves_evidence_dissent_and_exact_edits(self) -> None:
         text = instructions()
-        assert_contains(self, text, (
-            "**Supporting Analysts:**",
-            "**Dissent:**",
-            "**Artifact Edit:**",
-            "- **File:**",
-            "- **Section:**",
-            "- **Action:**",
-            "- **Content:**",
-            "**Flags:**",
-        ))
+        assert_contains(self, text, PHRASES["ConsensusSynthesizerRegressionTests.test_result_contract_preserves_evidence_dissent_and_exact_edits#1"])
         self.assertIn("Omit the complete `Artifact Edit` block whenever `Flags` is not `None`.", text)
 
     def test_missing_failed_or_malformed_synthesis_cannot_apply_or_complete(self) -> None:
@@ -271,14 +231,7 @@ class ConsensusSynthesizerRegressionTests(unittest.TestCase):
                 assert_contains(self, flat, required)
         protocol = PROTOCOL.read_text(encoding="utf-8")
         protocol_flat = " ".join(protocol.split())
-        assert_contains(self, protocol_flat, (
-            "applies no edit",
-            "writes no completed Consensus Resolution Log row",
-            "does not mark the item complete",
-            "retry the same named synthesizer once with the same analyst responses",
-            "A second invalid result is",
-            "must never replace it with parent-authored synthesis",
-        ))
+        assert_contains(self, protocol_flat, PHRASES["ConsensusSynthesizerRegressionTests.test_missing_failed_or_malformed_synthesis_cannot_apply_or_complete#1"])
 
     def test_analyze_confidence_is_one_five_criterion_block_even_with_zero_findings(self) -> None:
         text = instructions()
@@ -307,42 +260,34 @@ class Round3TiebreakGuidanceTests(unittest.TestCase):
         # in an interactive and an unattended run alike. Nothing asks or stops.
         raw = PROTOCOL.read_text(encoding="utf-8")
         protocol = " ".join(raw.split())
-        assert_contains(self, protocol, (
-            "## Round 3 Tiebreak",
-            "a Round 2 all-disagree",
-            "a security item without 3/3 agreement",
-            "an analyst that fails its retry",
-            "conservative mode",
-            "one fresh `spec-context-analyst`",
-            "a `consensus-tiebreaker` at max effort",
-            "all prior analyst answers, the constitution, and the technical roadmap",
-            "the most conservative option that satisfies the spec",
-            "recorded as an assumption",
-            "the dissent is logged",
-            "`known_gaps`",
-            "is replaced by a fresh analyst, never by a human",
-            "`[SCOPE_DEFERRED]`",
-            "`unresolved_deferrals`",
-            "never a mid-run stop",
-            "An interactive run and an unattended run behave the same",
-            "Outcome `[ROUND 3]`",
-            "IF Flags includes [ROUND_3_TIEBREAK]: run the Round 3 tiebreak",
-        ))
-        for stale in (
-            "AskUserQuestion",
-            "request_user_input",
-            "ask in place or STOP",
-            "STOP autopilot",
-            "Outcome=[HUMAN REVIEW]",
-            "Outcome `[HUMAN REVIEW]`",
-            "let the human decide",
-            "Any disagreement stops",
-            "stops for human review",
-            "surface to user",
-            "#human-review-needed",
-        ):
+        assert_contains(self, protocol, PHRASES["Round3TiebreakGuidanceTests.test_round3_tiebreak_replaces_every_consensus_human_stop_in_the_protocol#1"])
+        for stale in PHRASES["Round3TiebreakGuidanceTests.test_round3_tiebreak_replaces_every_consensus_human_stop_in_the_protocol#2"]:
             with self.subTest(stale=stale):
                 self.assertNotIn(stale, protocol)
+
+    def test_synthesizer_keeps_its_default_effort_and_only_flags_round_three(self) -> None:
+        claude = CLAUDE_SYNTHESIZER.read_text(encoding="utf-8")
+        codex = SYNTHESIZER.read_text(encoding="utf-8")
+        self.assertIn("effort: high", claude)
+        self.assertIn('model_reasoning_effort = "medium"', codex)
+        for label, text in (("claude", claude), ("codex", instructions())):
+            flat = " ".join(text.split())
+            with self.subTest(host=label):
+                assert_contains(self, flat, ("[ROUND_3_TIEBREAK]", "consensus-tiebreaker"))
+                self.assertNotIn("**Round:** 1 | 2 | 3", flat)
+                self.assertNotIn("[SCOPE_DEFERRED]", flat)
+        self.assertNotIn("the orchestrator surfaces that to the user", claude)
+
+    def test_round3_dispatch_names_the_tiebreaker_on_both_hosts(self) -> None:
+        protocol = " ".join(PROTOCOL.read_text(encoding="utf-8").split())
+        assert_contains(self, protocol, PHRASES["Round3TiebreakGuidanceTests.test_round3_dispatch_names_the_tiebreaker_on_both_hosts#1"])
+        for path in (AUTOPILOT_SKILLS[0], AUTOPILOT_SKILLS[1], REFERENCES / "error-recovery.md"):
+            with self.subTest(path=path.name):
+                self.assertIn("consensus-tiebreaker", path.read_text(encoding="utf-8"))
+
+
+class Round3TiebreakHostTests(unittest.TestCase):
+    """Round 3 reads the same on both hosts and covers the PR feedback sweep."""
 
     def test_round3_tiebreak_reads_the_same_on_both_hosts(self) -> None:
         anchor = "consensus-protocol.md#round-3-tiebreak"
@@ -384,18 +329,30 @@ class Round3TiebreakGuidanceTests(unittest.TestCase):
             self.assertNotIn("AskUserQuestion", path.read_text(encoding="utf-8"))
             self.assertNotIn("request_user_input", path.read_text(encoding="utf-8"))
 
-    def test_synthesizer_keeps_its_default_effort_and_only_flags_round_three(self) -> None:
-        claude = CLAUDE_SYNTHESIZER.read_text(encoding="utf-8")
-        codex = SYNTHESIZER.read_text(encoding="utf-8")
-        self.assertIn("effort: high", claude)
-        self.assertIn('model_reasoning_effort = "medium"', codex)
-        for label, text in (("claude", claude), ("codex", instructions())):
-            flat = " ".join(text.split())
-            with self.subTest(host=label):
-                assert_contains(self, flat, ("[ROUND_3_TIEBREAK]", "consensus-tiebreaker"))
-                self.assertNotIn("**Round:** 1 | 2 | 3", flat)
-                self.assertNotIn("[SCOPE_DEFERRED]", flat)
-        self.assertNotIn("the orchestrator surfaces that to the user", claude)
+    def test_round3_tiebreak_covers_the_pr_feedback_sweep_inside_its_isolation(self) -> None:
+        sites = (
+            ("claude", REFERENCES / "phase-execution.md"),
+            ("codex", CODEX_PHASE_EXECUTION),
+        )
+        for host, path in sites:
+            flat = " ".join(path.read_text(encoding="utf-8").split())
+            with self.subTest(host=host):
+                assert_contains(self, flat, PHRASES["Round3TiebreakGuidanceTests.test_round3_tiebreak_covers_the_pr_feedback_sweep_inside_its_isolation#1"])
+                for stale in PHRASES["Round3TiebreakGuidanceTests.test_round3_tiebreak_covers_the_pr_feedback_sweep_inside_its_isolation#2"]:
+                    self.assertNotIn(stale, flat)
+        codex_prompt = " ".join(
+            (CODEX_AUTOPILOT.parent / "references" / "sweep-prompts" / "analyst.md").read_text(encoding="utf-8").split()
+        )
+        claude_prompt = " ".join(
+            (REPO_ROOT / "speckit-pro" / "agents" / "sweep-analyst.md").read_text(encoding="utf-8").split()
+        )
+        for label, text in (("claude", claude_prompt), ("codex", codex_prompt)):
+            with self.subTest(prompt=label):
+                assert_contains(self, text, PHRASES["Round3TiebreakGuidanceTests.test_round3_tiebreak_covers_the_pr_feedback_sweep_inside_its_isolation#3"])
+
+
+class Round3TiebreakAgentTests(unittest.TestCase):
+    """The tiebreaker agent and the inventory pin its effort."""
 
     def test_tiebreaker_agent_is_max_effort_read_only_and_owns_round_three(self) -> None:
         claude = TIEBREAKER_CLAUDE.read_text(encoding="utf-8")
@@ -412,16 +369,7 @@ class Round3TiebreakGuidanceTests(unittest.TestCase):
         for label, text in (("claude", claude), ("codex", codex["developer_instructions"])):
             flat = " ".join(text.split())
             with self.subTest(host=label):
-                assert_contains(self, flat, (
-                    "the most conservative option that satisfies the spec",
-                    "**Agreement:** tiebreak",
-                    "**Assumption:**",
-                    "**Dissent:**",
-                    "[SCOPE_DEFERRED]",
-                    "never returns [ROUND_3_TIEBREAK] or [ESCAPE_TO_ROUND_2]",
-                    "**Round:** 3",
-                    "skills/speckit-autopilot/references/consensus-protocol.md",
-                ))
+                assert_contains(self, flat, PHRASES["Round3TiebreakGuidanceTests.test_tiebreaker_agent_is_max_effort_read_only_and_owns_round_three#1"])
 
     def test_inventory_pins_the_synthesizer_at_default_and_the_tiebreaker_at_max(self) -> None:
         inventory = json.loads(
@@ -440,56 +388,16 @@ class Round3TiebreakGuidanceTests(unittest.TestCase):
         self.assertEqual("read-only", tiebreaker["codex"]["sandbox"])
         self.assertEqual("tool-policy-read-only", tiebreaker["claude_code"]["sandbox"])
 
-    def test_round3_dispatch_names_the_tiebreaker_on_both_hosts(self) -> None:
-        protocol = " ".join(PROTOCOL.read_text(encoding="utf-8").split())
-        assert_contains(self, protocol, (
-            "`speckit-pro:consensus-tiebreaker`",
-            '`spawn_agent(agent_type="consensus-tiebreaker"',
-            "Round 3 uses no other synthesizer",
-        ))
-        for path in (AUTOPILOT_SKILLS[0], AUTOPILOT_SKILLS[1], REFERENCES / "error-recovery.md"):
-            with self.subTest(path=path.name):
-                self.assertIn("consensus-tiebreaker", path.read_text(encoding="utf-8"))
-
-    def test_round3_tiebreak_covers_the_pr_feedback_sweep_inside_its_isolation(self) -> None:
-        sites = (
-            ("claude", REFERENCES / "phase-execution.md"),
-            ("codex", CODEX_PHASE_EXECUTION),
-        )
-        for host, path in sites:
-            flat = " ".join(path.read_text(encoding="utf-8").split())
-            with self.subTest(host=host):
-                assert_contains(self, flat, (
-                    "**When consensus does not answer, the item takes a Round 3 tiebreak.**",
-                    "one more `stage=synthesis` call by a fresh `sweep-analyst`",
-                    "`agreement` of `tiebreak`",
-                    "`scope_unsettled`",
-                    "`scope_deferred`",
-                    "never `consensus-synthesizer`",
-                    "The orchestrator is still not a conduit",
-                    "Nothing stops the run",
-                ))
-                for stale in (
-                    "the item goes to human review",
-                    "It stops the run whether or not anything was amended",
-                    "stops that run too",
-                ):
-                    self.assertNotIn(stale, flat)
-        codex_prompt = " ".join(
-            (CODEX_AUTOPILOT.parent / "references" / "sweep-prompts" / "analyst.md").read_text(encoding="utf-8").split()
-        )
-        claude_prompt = " ".join(
-            (REPO_ROOT / "speckit-pro" / "agents" / "sweep-analyst.md").read_text(encoding="utf-8").split()
-        )
-        for label, text in (("claude", claude_prompt), ("codex", codex_prompt)):
-            with self.subTest(prompt=label):
-                assert_contains(self, text, ("`tiebreak: true`", "agreement `tiebreak`", "basis `scope_unsettled`"))
-
 
 def main() -> int:
     suite = unittest.TestSuite(
         unittest.defaultTestLoader.loadTestsFromTestCase(case)
-        for case in (ConsensusSynthesizerRegressionTests, Round3TiebreakGuidanceTests)
+        for case in (
+            ConsensusSynthesizerRegressionTests,
+            Round3TiebreakGuidanceTests,
+            Round3TiebreakHostTests,
+            Round3TiebreakAgentTests,
+        )
     )
     return run_counted(suite, label="test-consensus-synthesizer-regressions")
 

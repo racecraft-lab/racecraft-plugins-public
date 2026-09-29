@@ -7600,7 +7600,7 @@ def file_fingerprint(path: Path, repo_root: Path, *, content: bytes | None = Non
 
 def plan_layers_repair(owner: str, target: str, action: str) -> dict[str, str]:
     """Name the agent that repairs a planner failure; the run retries the planner, never stops."""
-    return {"owner": owner, "target": target, "action": action, "retry": "plan-layers-feature-dir"}
+    return dict(owner=owner, target=target, action=action, retry="plan-layers-feature-dir")
 
 
 def plan_layers_error(code: str, message: str, feature: str, tasks: str, details: dict[str, Any]) -> dict[str, Any]:
@@ -7622,6 +7622,41 @@ def plan_layers_error(code: str, message: str, feature: str, tasks: str, details
         "repair": repair,
     }
     return make_result(json_text(obj), f"plan-layers: input_error: {message}\n", 2)
+
+
+def plan_layers_find_cycle(
+    known_order: list[str], dependencies: dict[str, list[str]], sections: dict[str, dict[str, Any]]
+) -> list[str] | None:
+    """The first dependency cycle reachable from the increments in delivery order, or None."""
+    cycle_stack: list[str] = []
+    cycle_visiting: set[str] = set()
+    cycle_visited: set[str] = set()
+
+    def find_cycle_from(increment_id: str) -> list[str] | None:
+        if increment_id in cycle_visiting:
+            start = cycle_stack.index(increment_id)
+            return [*cycle_stack[start:], increment_id]
+        if increment_id in cycle_visited:
+            return None
+        cycle_visiting.add(increment_id)
+        cycle_stack.append(increment_id)
+        for dependency_id in dependencies.get(increment_id, []):
+            if dependency_id not in sections:
+                continue
+            cycle = find_cycle_from(dependency_id)
+            if cycle is not None:
+                return cycle
+        cycle_stack.pop()
+        cycle_visiting.remove(increment_id)
+        cycle_visited.add(increment_id)
+        return None
+
+    for increment_id in known_order:
+        cycle_stack.clear()
+        cycle = find_cycle_from(increment_id)
+        if cycle is not None:
+            return cycle
+    return None
 
 
 def plan_layers_json(feature_rel: str, tasks_file: Path, repo_root: Path) -> tuple[str, int, int]:
@@ -7844,35 +7879,7 @@ def plan_layers_json(feature_rel: str, tasks_file: Path, repo_root: Path) -> tup
             )
             break
 
-    cycle_stack: list[str] = []
-    cycle_visiting: set[str] = set()
-    cycle_visited: set[str] = set()
-
-    def find_cycle_from(increment_id: str) -> list[str] | None:
-        if increment_id in cycle_visiting:
-            start = cycle_stack.index(increment_id)
-            return [*cycle_stack[start:], increment_id]
-        if increment_id in cycle_visited:
-            return None
-        cycle_visiting.add(increment_id)
-        cycle_stack.append(increment_id)
-        for dependency_id in dependencies.get(increment_id, []):
-            if dependency_id not in sections:
-                continue
-            cycle = find_cycle_from(dependency_id)
-            if cycle is not None:
-                return cycle
-        cycle_stack.pop()
-        cycle_visiting.remove(increment_id)
-        cycle_visited.add(increment_id)
-        return None
-
-    cycle: list[str] | None = None
-    for increment_id in known_order:
-        cycle_stack.clear()
-        cycle = find_cycle_from(increment_id)
-        if cycle is not None:
-            break
+    cycle = plan_layers_find_cycle(known_order, dependencies, sections)
     if cycle is not None:
         errors.append(
             plan_layers_diagnostic(

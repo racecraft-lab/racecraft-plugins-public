@@ -5162,6 +5162,12 @@ def artifact_review_errors(workflow: Path, workflow_text: str) -> dict[str, list
     return {"artifact_review_errors": errors}
 
 
+def _repair_request(problems: dict[str, Any]) -> dict[str, Any] | None:
+    """The orchestrator owns the workflow and state files, so a failure is its to repair, not a stop."""
+    failing = sorted(key for key, values in problems.items() if values)
+    return {"owner": "orchestrator", "failing_keys": failing, "retry": "validate-autopilot-phase-coverage"} if failing else None
+
+
 def build_report(
     workflow: Path, state: Path, *, authority: ReportAuthority | None = None,
 ) -> dict[str, Any]:
@@ -5176,9 +5182,7 @@ def build_report(
     workflow_checkpoint_result = validate_workflow_checkpoint_bindings(
         workflow_text, state_data,
     )
-    workflow_checkpoint_result["workflow_checkpoint_errors"].extend(
-        workflow_checkpoint_errors
-    )
+    workflow_checkpoint_result["workflow_checkpoint_errors"].extend(workflow_checkpoint_errors)
     state_result = validate_state(plan_steps)
     status_result = validate_state_status(state_data)
     privacy_result = state_privacy_errors(state_data)
@@ -5226,18 +5230,12 @@ def build_report(
     }
     passed = all(not values for values in problems.values())
 
-    # The orchestrator owns the workflow and state files, so a failure is its to repair, not a stop.
-    repair = None if passed else {
-        "owner": "orchestrator",
-        "failing_keys": sorted(key for key, values in problems.items() if values),
-        "retry": "validate-autopilot-phase-coverage",
-    }
     return {
         "status": "pass" if passed else "fail",
         "workflow_file": str(workflow),
         "state_file": str(state),
         "plan_step_count": len(plan_steps),
-        "repair": repair,
+        "repair": _repair_request(problems),
         **problems,
     }
 

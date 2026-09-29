@@ -307,6 +307,31 @@ class RenderEgressAuthorizationTests(unittest.TestCase):
         other = policy.replace("example-org/example-repo", "example-org/other-repo")
         self.assertIs(_run(_standing_inputs(installed_extra_policy=other))["data"]["installed"], False)
 
+    def test_scope_rules_fail_closed(self) -> None:
+        cases = {
+            "standing with actions": _standing_inputs(actions=[dict(ACTIONS[0])]),
+            "unknown scope": _inputs(scope="session"),
+            "installed policy in run scope": _inputs(installed_extra_policy="x"),
+            "installed policy not a string": _standing_inputs(installed_extra_policy=3),
+            "standing missing default branch": {
+                k: v for k, v in _standing_inputs().items() if k != "default_branch"
+            },
+        }
+        for label, inputs in cases.items():
+            with self.subTest(case=label):
+                response = _run(inputs)
+                self.assertEqual(response["status"], "input_error", response)
+
+    def test_fixture_request_renders(self) -> None:
+        request = json.loads(FIXTURE_REQUEST.read_text(encoding="utf-8"))
+        self.assertEqual(request["helper_id"], HELPER_ID)
+        response = _run(request["inputs"])
+        self.assertEqual(response["status"], "ok", response)
+
+
+class RenderEgressDerivedClassTests(unittest.TestCase):
+    """Derived gate classes join the standing policy and fail closed."""
+
     def test_every_base_class_names_a_probe_the_run_can_make_before_phase_one(self) -> None:
         classes = _run(_standing_inputs())["data"]["policy_classes"]
         probes = {item["class_id"]: item["probe"] for item in classes}
@@ -358,28 +383,8 @@ class RenderEgressAuthorizationTests(unittest.TestCase):
                 inputs = _inputs(**overrides) if overrides.get("scope") == "run" else _standing_inputs(**overrides)
                 self.assertEqual(_run(inputs)["status"], "input_error", label)
 
-    def test_scope_rules_fail_closed(self) -> None:
-        cases = {
-            "standing with actions": _standing_inputs(actions=[dict(ACTIONS[0])]),
-            "unknown scope": _inputs(scope="session"),
-            "installed policy in run scope": _inputs(installed_extra_policy="x"),
-            "installed policy not a string": _standing_inputs(installed_extra_policy=3),
-            "standing missing default branch": {
-                k: v for k, v in _standing_inputs().items() if k != "default_branch"
-            },
-        }
-        for label, inputs in cases.items():
-            with self.subTest(case=label):
-                response = _run(inputs)
-                self.assertEqual(response["status"], "input_error", response)
-
-    def test_fixture_request_renders(self) -> None:
-        request = json.loads(FIXTURE_REQUEST.read_text(encoding="utf-8"))
-        self.assertEqual(request["helper_id"], HELPER_ID)
-        response = _run(request["inputs"])
-        self.assertEqual(response["status"], "ok", response)
-
 
 if __name__ == "__main__":
-    suite = unittest.defaultTestLoader.loadTestsFromTestCase(RenderEgressAuthorizationTests)
+    suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case)
+                               for case in (RenderEgressAuthorizationTests, RenderEgressDerivedClassTests))
     raise SystemExit(run_counted(suite, label="test-render-egress-authorization"))

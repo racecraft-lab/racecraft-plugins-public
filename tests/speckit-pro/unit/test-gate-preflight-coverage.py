@@ -22,6 +22,7 @@ for entry in (PLUGIN_ROOT, REPO_ROOT / "tests" / "speckit-pro" / "lib"):
     if str(entry) not in sys.path:
         sys.path.insert(0, str(entry))
 
+from git_fixture import git  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
 HELPER_ID = "check-gate-preflight-coverage"
@@ -161,15 +162,6 @@ class GatePreflightCoverageTests(unittest.TestCase):
         self.assertEqual(_runner(request)["status"], "input_error")
 
 
-GIT_ENV = {"PATH": os.environ["PATH"], "GIT_CONFIG_GLOBAL": os.devnull, "GIT_CONFIG_SYSTEM": os.devnull,
-           "GIT_CONFIG_NOSYSTEM": "1", "GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "native-eval@example.invalid",
-           "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "native-eval@example.invalid"}
-
-
-def _git(cwd: Path, *args: str) -> None:
-    subprocess.check_output(["git", "-C", str(cwd), *args], env=GIT_ENV, stderr=subprocess.STDOUT, timeout=60)
-
-
 class RunStartCoverageTests(unittest.TestCase):
     """Run-start derivation: standing-policy classes and write surfaces outside the writable roots."""
 
@@ -211,9 +203,9 @@ class WritableRootCoverageTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             main, linked, external = (Path(temp).resolve() / name for name in ("main", "linked", "external"))
             main.mkdir()
-            _git(main, "init", "-q", "-b", "main")
-            _git(main, "commit", "-q", "--allow-empty", "-m", "init")
-            _git(main, "worktree", "add", "-q", "-b", "feature", str(linked))
+            git(main, "init", "-q", "-b", "main")
+            git(main, "commit", "-q", "--allow-empty", "-m", "init")
+            git(main, "worktree", "add", "-q", "-b", "feature", str(linked))
             base = {"gates": GATES, "inventory_actions": INVENTORY}
             record = str(main / ".git" / "speckit-pro" / "autonomy-boundary")
 
@@ -247,7 +239,7 @@ class WritableRootCoverageTests(unittest.TestCase):
         request = json.loads(FIXTURE_REQUEST.read_text(encoding="utf-8"))
         with tempfile.TemporaryDirectory() as temp:
             repo = Path(temp).resolve()
-            _git(repo, "init", "-q", "-b", "main")
+            git(repo, "init", "-q", "-b", "main")
             (repo / ".specify").mkdir()
             request["inputs"].update(writable_roots=[str(repo)], write_paths=["/external-workflow-root"],
                                      inventory_actions=[])
