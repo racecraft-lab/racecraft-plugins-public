@@ -4,8 +4,6 @@
 from __future__ import annotations
 
 import html
-import json
-import os
 import re
 import urllib.parse
 from dataclasses import dataclass
@@ -16,6 +14,20 @@ MAX_NOTE_CHARS = 2_000
 MAX_FALLBACK_CHARS = 250
 TRUNCATION_MARKER = "\n\n[release note truncated at 2,000 characters]"
 SKIP_LABEL = "release-note/skip"
+SNAPSHOT_SCHEMA_VERSION = 1
+SNAPSHOT_KEYS = frozenset(
+    {
+        "compare",
+        "compare_headers",
+        "previous_tag",
+        "pulls",
+        "release_body",
+        "repository",
+        "schema_version",
+        "tag",
+    }
+)
+FAILURE_OUTCOME = "release_note_composition_failed"
 MARKUP_BOUNDARY = "\x00"
 
 TRAILING_PR_RE = re.compile(r"\(#(?P<number>[1-9][0-9]*)\)[ \t]*$")
@@ -470,17 +482,17 @@ def sanitize_fallback_subject(subject: str) -> str:
     return sanitized
 
 
-def _label_names(pr: Mapping[str, object]) -> set[str]:
+def _label_name(label: object) -> str | None:
+    if isinstance(label, dict):
+        label = label.get("name")
+    return label if isinstance(label, str) else None
+
+
+def label_names(pr: Mapping[str, object]) -> set[str]:
     labels = pr.get("labels", [])
     if not isinstance(labels, list):
         raise CompositionError("pull request labels are not a list")
-    names: set[str] = set()
-    for label in labels:
-        if isinstance(label, str):
-            names.add(label)
-        elif isinstance(label, dict) and isinstance(label.get("name"), str):
-            names.add(label["name"])
-    return names
+    return {name for label in labels if (name := _label_name(label)) is not None}
 
 
 def validate_release_note(
@@ -511,35 +523,21 @@ def validate_release_note(
     return True, "valid release-note fence"
 
 
-def _validation_inputs_from_environment() -> tuple[str, str, set[str], bool]:
-    title = os.environ.get("PR_TITLE", "")
-    if not title.strip():
-        raise CompositionError("PR_TITLE is required for --validate-pr")
-    body = os.environ.get("PR_BODY", "")
-    raw_labels = os.environ.get("PR_LABELS_JSON", "[]")
-    try:
-        labels_value = json.loads(raw_labels)
-    except json.JSONDecodeError as error:
-        raise CompositionError("PR_LABELS_JSON must be a JSON array") from error
-    if not isinstance(labels_value, list) or not all(isinstance(label, str) for label in labels_value):
-        raise CompositionError("PR_LABELS_JSON must be a JSON array of strings")
-    draft_value = os.environ.get("PR_DRAFT", "false").strip().lower()
-    if draft_value not in {"true", "false"}:
-        raise CompositionError("PR_DRAFT must be true or false")
-    return title, body, set(labels_value), draft_value == "true"
-
-
 __all__ = (
     "CompositionError",
     "CONVENTIONAL_PREFIX_RE",
     "DiscoveredCommit",
+    "FAILURE_OUTCOME",
     "MAX_FALLBACK_CHARS",
     "MAX_NOTE_CHARS",
     "SKIP_LABEL",
+    "SNAPSHOT_KEYS",
+    "SNAPSHOT_SCHEMA_VERSION",
     "TRAILING_PR_RE",
     "TRUNCATION_MARKER",
     "deprefix_title",
     "extract_release_note",
+    "label_names",
     "sanitize_fallback_subject",
     "sanitize_release_note",
     "validate_release_note",

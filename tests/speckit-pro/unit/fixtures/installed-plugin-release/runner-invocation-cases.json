@@ -5,7 +5,6 @@
       "product": "claude",
       "platform": "windows",
       "surface_path": "speckit-pro/skills/speckit-status/SKILL.md",
-      "operation": "status",
       "cache_root": "C:/fixture-home/AppData/Local/Claude/plugins/speckit-pro",
       "candidate_results": [
         {
@@ -21,7 +20,6 @@
       "product": "codex",
       "platform": "windows",
       "surface_path": "speckit-pro/codex-skills/speckit-scaffold-spec/SKILL.md",
-      "operation": "scaffold",
       "cache_root": "C:/fixture-home/.codex/plugins/speckit-pro",
       "candidate_results": [
         {
@@ -42,7 +40,6 @@
       "product": "claude",
       "platform": "macos",
       "surface_path": "speckit-pro/skills/speckit-autopilot/SKILL.md",
-      "operation": "autopilot-dry-run",
       "cache_root": "/fixture-home/.claude/plugins/speckit-pro",
       "candidate_results": [
         {
@@ -58,7 +55,6 @@
       "product": "codex",
       "platform": "linux",
       "surface_path": "speckit-pro/codex-skills/speckit-status/SKILL.md",
-      "operation": "status",
       "cache_root": "/fixture-home/.codex/plugins/speckit-pro",
       "candidate_results": [
         {
@@ -79,7 +75,6 @@
       "case_id": "live-host-runtime-info",
       "product": "codex",
       "surface_path": "speckit-pro/codex-skills/speckit-status/SKILL.md",
-      "operation": "status",
       "cache_root": "dist/codex/speckit-pro"
     },
     {
@@ -87,7 +82,6 @@
       "product": "claude",
       "platform": "linux",
       "surface_path": "speckit-pro/skills/speckit-scaffold-spec/SKILL.md",
-      "operation": "preflight",
       "cache_root": "/fixture-home/.claude/plugins/speckit-pro",
       "candidate_results": [
         {
