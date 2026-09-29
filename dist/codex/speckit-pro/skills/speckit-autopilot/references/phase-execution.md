@@ -2975,6 +2975,17 @@ completed dispatch fixed is marked resolved by the ledger and drops out); there 
 `authorize-corrective-exception` or `begin-replan-epoch` once for everything
 deferred. It is never a mid-run question.
 
+Issue capped approvals yourself when the runner proves them, instead of asking
+the operator. Pass `agent_authorized: true` and no `native_observation` to
+`authorize-corrective-retry` (a lost worker's failed corrective dispatch with
+a recorded native failure event; one per run), to `begin-replan-epoch` (a
+deferral is open, the spec is unchanged, the Tasks rerun changed the plan or
+task fingerprints the stage epoch recorded, and every dispatch is settled; two
+per run), or to `authorize-corrective-continuation` with `spec_file` (the
+metadata-only proof holds). A refusal means the proof does not hold or the cap
+is spent; only then does the request go to the operator. Scope changes and
+forged events stay operator-only.
+
 #### Repeated Gate Failures: Diagnose One Class, Approve It Once
 
 When consecutive runs of a gate fail with the same failure signature in the

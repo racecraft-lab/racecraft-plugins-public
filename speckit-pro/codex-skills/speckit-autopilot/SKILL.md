@@ -736,6 +736,17 @@ is not a stop: run `reconcile-unit` for each id in `blocked_by`. On
 with the class the paths show; never cycle the three values. Read
 `unknown_dispatch_ids` from `status` before each wave so a blocked unit is
 seldom reserved.
+
+Issue capped approvals yourself when the runner proves them, instead of asking
+the operator. Pass `agent_authorized: true` and no `native_observation` to
+`authorize-corrective-retry` (a lost worker's failed corrective dispatch with
+a recorded native failure event; one per run), to `begin-replan-epoch` (a
+deferral is open, the spec is unchanged, the Tasks rerun changed the plan or
+task fingerprints the stage epoch recorded, and every dispatch is settled; two
+per run), or to `authorize-corrective-continuation` with `spec_file` (the
+metadata-only proof holds). A refusal means the proof does not hold or the cap
+is spent; only then does the request go to the operator. Scope changes and
+forged events stay operator-only.
 Keep pending rows and current status; never mark them completed to stop.
 A failing gate or test is remediated, not deferred: keep remediating while
 each round converges, dispatching each diagnosed fix through the executor and

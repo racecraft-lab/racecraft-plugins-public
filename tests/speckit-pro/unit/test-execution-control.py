@@ -3643,6 +3643,273 @@ class UnknownDispatchGuidanceTests(unittest.TestCase):
                 self.assertNotIn("Unknown effects require an honest checkpoint", text)
 
 
+class AgentApprovalTests(_ExecutionControlFixture, unittest.TestCase):
+    """An agent issues capped approvals the runner proves itself, with no operator event (issue 830)."""
+
+    TASKS = MetadataOnlyCorrectionTests.TASKS
+    CORRECTED = MetadataOnlyCorrectionTests.CORRECTED
+
+    def setUp(self):
+        super().setUp()
+        (self.root / "feature/plan.md").write_text("# Plan\n")
+        (self.root / "feature/tasks.md").write_text(self.TASKS)
+
+    def schema_failures(self, ledger):
+        schema = json.loads(SCHEMA_PATH.read_text())
+        return json_schema_failures(ledger, schema, schema, "ledger")
+
+    def fail_owner(self, dispatch_id, invariant, event_id):
+        reservation = self.invoke("reserve", dispatch_id=dispatch_id, kind="corrective",
+                                  failure_invariant=invariant)["reservation_id"]
+        self.invoke("reconcile", dispatch_id=dispatch_id)
+        self.invoke("complete", dispatch_id=dispatch_id, outcome="failed", native_observation={
+            "native_event_id": event_id, "run_id": self.run_id, "dispatch_id": dispatch_id,
+            "action": "dispatch_result", "outcome": "failed"})
+        return reservation
+
+    def agent_retry(self, dispatch_id, owner, reservation, **changes):
+        request = {"dispatch_id": dispatch_id, "reservation_id": reservation, "failed_dispatch_id": owner,
+                   "agent_authorized": True, "failure_kind": "infrastructure", **changes}
+        return self.invoke("authorize-corrective-retry", **request)
+
+    def test_an_agent_authorizes_one_infrastructure_retry_with_no_operator_event(self):
+        self.invoke("start")
+        first = self.fail_owner("owner", "FR-001", "host-auth-error")
+        second = self.fail_owner("other", "FR-002", "host-timeout")
+        retry = self.agent_retry("owner-retry", "owner", first)
+        record = retry["ledger"]["dispatches"]["owner-retry"]
+        self.assertEqual((retry["disposition"], retry["ledger"]["corrective_cycles"]), ("continue", 2))
+        self.assertEqual((record["recovery_of"], record["failure_event_id"], record["operator_recovery_event_id"]),
+                         ("owner", "host-auth-error", "agent-recovery:owner-retry"))
+        self.assertEqual(self.schema_failures(retry["ledger"]), [])
+        self.invoke("complete", dispatch_id="owner-retry", outcome="completed")
+        self.assertEqual(self.invoke("status", mode="read_only")["disposition"], "continue")
+        with self.assertRaisesRegex(ValueError, "agent-authorized corrective retry approvals are spent"):
+            self.agent_retry("other-retry", "other", second)
+        operator = self.invoke("authorize-corrective-retry", dispatch_id="other-retry", reservation_id=second,
+                               failed_dispatch_id="other", native_observation={
+                                   "native_event_id": "operator-message", "run_id": self.run_id,
+                                   "action": "corrective_retry_approved", "failed_dispatch_id": "other",
+                                   "failed_native_event_id": "host-timeout", "retry_dispatch_id": "other-retry",
+                                   "reservation_id": second, "failure_kind": "infrastructure"})
+        self.assertEqual(operator["disposition"], "continue")
+
+    def test_an_agent_retry_fails_closed_without_the_runners_own_proof(self):
+        self.invoke("start")
+        reservation = self.invoke("reserve", dispatch_id="owner", kind="corrective",
+                                  failure_invariant="FR-001")["reservation_id"]
+        self.invoke("reserve", dispatch_id="other", kind="corrective", failure_invariant="FR-002")
+        self.invoke("complete", dispatch_id="owner", outcome="failed")
+        path = self.root / self.invoke("status", mode="read_only")["ledger_path"]
+        before = path.read_bytes()
+        cases = {"no native resolution of the failure": {},
+                 "an application failure": {"failure_kind": "application"},
+                 "no failure kind": {"failure_kind": None},
+                 "an operator event beside the flag": {"native_observation": {"native_event_id": "x"}},
+                 "a flag that is not true": {"agent_authorized": "yes"},
+                 "another reservation": {"reservation_id": "other-reservation"}}
+        for name, changes in cases.items():
+            with self.subTest(case=name), self.assertRaises(ValueError):
+                self.agent_retry("owner-retry", "owner", reservation, **changes)
+            self.assertEqual(path.read_bytes(), before)
+        with self.assertRaisesRegex(ValueError, "reserved for agent approvals"):
+            self.invoke("authorize-corrective-retry", dispatch_id="owner-retry", reservation_id=reservation,
+                        failed_dispatch_id="owner", native_observation={
+                            "native_event_id": "agent-recovery:owner-retry", "run_id": self.run_id,
+                            "action": "corrective_retry_approved", "failed_dispatch_id": "owner",
+                            "failed_native_event_id": "x", "retry_dispatch_id": "owner-retry",
+                            "reservation_id": reservation, "failure_kind": "infrastructure"})
+
+    def test_forged_agent_approval_records_fail_validation(self):
+        self.invoke("start")
+        reservation = self.fail_owner("owner", "FR-001", "host-auth-error")
+        self.invoke("reserve", dispatch_id="other", kind="corrective", failure_invariant="FR-002")
+        retry = self.agent_retry("owner-retry", "owner", reservation)
+        path = self.root / retry["ledger_path"]
+        valid = path.read_bytes()
+        tampers = {
+            "event for another dispatch": lambda ledger: ledger["dispatches"]["owner-retry"].update(
+                operator_recovery_event_id="agent-recovery:someone-else"),
+            "second agent retry": lambda ledger: ledger["dispatches"].update(
+                {"forged": {**ledger["dispatches"]["owner-retry"], "recovery_of": "other",
+                            "operator_recovery_event_id": "agent-recovery:forged"}}),
+        }
+        for name, tamper in tampers.items():
+            with self.subTest(tamper=name):
+                ledger = json.loads(valid)
+                tamper(ledger)
+                path.write_text(json.dumps(ledger), encoding="utf-8")
+                with self.assertRaises(ValueError):
+                    self.invoke("status", mode="read_only")
+        path.write_bytes(valid)
+        self.assertEqual(self.invoke("status", mode="read_only")["disposition"], "continue")
+
+    def plan_sidecar(self, plan="# Plan\n"):
+        feature = self.root / "feature"
+        (feature / "plan.md").write_text(plan)
+        sources = [(feature / name).read_text() for name in ("spec.md", "plan.md", "tasks.md")]
+        (feature / ".process").mkdir(exist_ok=True)
+        (feature / ".process/task-execution.json").write_text(json.dumps({
+            "schema_version": "task-execution.v1", "fingerprints": fingerprints(*sources), "tasks": {}}))
+
+    def start_bound(self):
+        spec = self.root / "feature/spec.md"
+        text = spec.read_text()
+        spec.unlink()
+        self.invoke("start")
+        spec.write_text(text)
+        self.invoke("bind-invariants", spec_file="feature/spec.md")
+
+    def spend_and_defer(self, suffix):
+        for dispatch_id, invariant in ((f"fix-a{suffix}", "FR-001"), (f"fix-b{suffix}", "FR-002")):
+            self.invoke("reserve", dispatch_id=dispatch_id, kind="corrective", failure_invariant=invariant)
+            self.invoke("complete", dispatch_id=dispatch_id, outcome="failed")
+        deferred = self.invoke("reserve", dispatch_id=f"fix-c{suffix}", kind="corrective", failure_invariant="FR-001")
+        self.assertEqual(deferred["disposition"], "defer")
+
+    def agent_replan(self, mode="apply"):
+        return self.invoke("begin-replan-epoch", mode=mode, spec_file="feature/spec.md", agent_authorized=True)
+
+    def open_first_epoch(self):
+        """An operator re-plan opens the first epoch, which records the planning fingerprints an agent later compares."""
+        self.plan_sidecar()
+        self.start_bound()
+        self.spend_and_defer("")
+        digest = hashlib.sha256((self.root / "feature/spec.md").read_bytes()).hexdigest()
+        opened = self.invoke("begin-replan-epoch", spec_file="feature/spec.md", native_observation={
+            "native_event_id": "operator-replan", "run_id": self.run_id, "action": "replan_epoch_approved",
+            "spec_sha256": digest})
+        self.assertIn("planning_fingerprints", opened["ledger"]["invariant_binding"])
+
+    def test_an_agent_opens_a_replan_epoch_after_the_tasks_rerun_and_stops_at_the_cap(self):
+        self.open_first_epoch()
+        for number, suffix in enumerate(("-1", "-2"), start=2):
+            self.spend_and_defer(suffix)
+            self.plan_sidecar(f"# Plan\nrevision {number}\n")
+            opened = self.agent_replan()
+            ledger = opened["ledger"]
+            self.assertEqual((opened["disposition"], ledger["corrective_epochs"][-1]["epoch_event_id"]),
+                             ("continue", f"agent-replan:{number}"))
+            self.assertEqual((ledger["corrective_cycles"], ledger["dispatches"], ledger["approved_invariants"]),
+                             (0, {}, ["FR-001", "FR-002"]))
+            self.assertEqual(ledger["invariant_binding"]["planning_fingerprints"]["plan_sha256"],
+                             hashlib.sha256(f"# Plan\nrevision {number}\n".encode()).hexdigest())
+            self.assertEqual(self.schema_failures(ledger), [])
+        self.spend_and_defer("-3")
+        self.plan_sidecar("# Plan\nrevision 4\n")
+        with self.assertRaisesRegex(ValueError, "agent-authorized re-plan epoch approvals are spent"):
+            self.agent_replan()
+
+    def test_an_agent_replan_fails_closed_when_a_precondition_is_missing(self):
+        self.open_first_epoch()
+        path = self.root / self.invoke("status", mode="read_only")["ledger_path"]
+        self.spend_and_defer("-1")
+        before = path.read_bytes()
+        spec = self.root / "feature/spec.md"
+        original = spec.read_text()
+        def rescope():
+            spec.write_text(original + "- FR-003: explain refusals\n")
+        def stale_sidecar():
+            (self.root / "feature/plan.md").write_text("# Plan\nedited without a rerun\n")
+        cases = {"the Tasks rerun changed nothing": lambda: None, "the plan changed without a sidecar refresh": stale_sidecar,
+                 "the spec (scope) changed": rescope}
+        for name, prepare in cases.items():
+            with self.subTest(case=name):
+                if name.startswith("the Tasks"):
+                    self.plan_sidecar()
+                prepare()
+                with self.assertRaisesRegex(ValueError, "not provable"):
+                    self.agent_replan()
+                self.assertEqual(path.read_bytes(), before)
+                spec.write_text(original)
+                self.plan_sidecar()
+        self.plan_sidecar("# Plan\nrevision\n")
+        with self.assertRaises(ValueError):
+            self.invoke("begin-replan-epoch", spec_file="feature/spec.md", agent_authorized=True,
+                        native_observation={"native_event_id": "x"})
+        self.invoke("reserve", dispatch_id="in-flight", kind="implementation")
+        with self.assertRaisesRegex(ValueError, "settle every dispatch"):
+            self.agent_replan()
+
+    def test_an_agent_replan_needs_an_open_deferral_and_recorded_fingerprints(self):
+        self.plan_sidecar()
+        self.start_bound()
+        self.plan_sidecar("# Plan\nrevision\n")
+        with self.assertRaisesRegex(ValueError, "no_recorded_planning_fingerprints"):
+            self.agent_replan()
+        self.open_first_epoch_from_bound()
+        self.plan_sidecar("# Plan\nrevision 2\n")
+        with self.assertRaisesRegex(ValueError, "no_open_deferral"):
+            self.agent_replan()
+
+    def test_a_ledger_written_before_agent_approvals_still_validates(self):
+        self.open_first_epoch()
+        path = self.root / self.invoke("status", mode="read_only")["ledger_path"]
+        ledger = json.loads(path.read_text())
+        del ledger["invariant_binding"]["planning_fingerprints"]
+        path.write_text(json.dumps(ledger), encoding="utf-8")
+        self.assertEqual(self.invoke("status", mode="read_only")["disposition"], "continue")
+        ledger["invariant_binding"]["planning_fingerprints"] = {"spec_sha256": "z"}
+        path.write_text(json.dumps(ledger), encoding="utf-8")
+        with self.assertRaises(ValueError):
+            self.invoke("status", mode="read_only")
+
+    def open_first_epoch_from_bound(self):
+        self.spend_and_defer("")
+        digest = hashlib.sha256((self.root / "feature/spec.md").read_bytes()).hexdigest()
+        self.invoke("begin-replan-epoch", spec_file="feature/spec.md", native_observation={
+            "native_event_id": "operator-replan", "run_id": self.run_id, "action": "replan_epoch_approved",
+            "spec_sha256": digest})
+
+    def continuation_setup(self):
+        commit_fixture(self.root)
+        self.invoke("start")
+        reservation = self.invoke("reserve", dispatch_id="analyze", kind="corrective",
+                                  failure_invariant="FR-001")["reservation_id"]
+        self.invoke("complete", dispatch_id="analyze", outcome="completed")
+        self.invoke("reserve", dispatch_id="other-family", kind="corrective", failure_invariant="FR-002")
+        return reservation
+
+    def continuation(self, reservation, **changes):
+        request = {"dispatch_id": "metadata", "completed_dispatch_id": "analyze", "reservation_id": reservation,
+                   "agent_authorized": True, "spec_file": "feature/spec.md", **changes}
+        return self.invoke("authorize-corrective-continuation", **request)
+
+    def test_an_agent_continues_task_metadata_when_the_metadata_only_proof_holds(self):
+        reservation = self.continuation_setup()
+        (self.root / "feature/tasks.md").write_text(self.CORRECTED)
+        admitted = self.continuation(reservation)
+        record = admitted["ledger"]["dispatches"]["metadata"]
+        self.assertEqual((admitted["disposition"], admitted["continuation_of"]), ("continue", "analyze"))
+        self.assertEqual((record["operator_continuation_event_id"], record["continuation_purpose"]),
+                         ("agent-continuation:metadata", "task_metadata_reconciliation"))
+        self.assertEqual(self.schema_failures(admitted["ledger"]), [])
+        self.assertEqual(self.invoke("status", mode="read_only")["disposition"], "continue")
+
+    def test_an_agent_continuation_fails_closed_without_the_metadata_only_proof(self):
+        reservation = self.continuation_setup()
+        path = self.root / self.invoke("status", mode="read_only")["ledger_path"]
+        before = path.read_bytes()
+        cases = {"no correction on disk": (self.TASKS, {}),
+                 "a scope-changing edit": (self.CORRECTED.replace("src/app.py", "src/other.py"), {}),
+                 "no spec_file": (self.CORRECTED, {"spec_file": None}),
+                 "an operator event beside the flag": (self.CORRECTED, {"native_observation": {"native_event_id": "x"}}),
+                 "another reservation": (self.CORRECTED, {"reservation_id": "elsewhere"})}
+        for name, (tasks, changes) in cases.items():
+            with self.subTest(case=name):
+                (self.root / "feature/tasks.md").write_text(tasks)
+                with self.assertRaises(ValueError):
+                    self.continuation(reservation, **changes)
+                self.assertEqual(path.read_bytes(), before)
+
+    def test_the_guides_tell_the_lead_to_issue_the_agent_approvals(self):
+        root = Path(__file__).resolve().parents[3] / "speckit-pro"
+        for relative in UnknownDispatchGuidanceTests.GUIDANCE:
+            with self.subTest(guide=relative):
+                text = " ".join((root / relative).read_text(encoding="utf-8").split())
+                self.assertIn("agent_authorized", text)
+
+
 if __name__ == "__main__":
     suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case)
                                for case in (GreenfieldInvariantBindingTests, ExecutionControlTests, CorrectiveRecoveryTests,
@@ -3655,5 +3922,6 @@ if __name__ == "__main__":
                                             WorkflowIdentityTests, SelfIgnoringByproductDirectoryTests, VerificationTests,
                                             RunnerDispatchTests))
     suite.addTests(DockerVerificationTests(name) for name in DockerVerificationTests.__dict__ if name.startswith("test_docker_"))
-    suite.addTests(unittest.defaultTestLoader.loadTestsFromTestCase(case) for case in (UnknownDispatchUnitScopeTests, UnknownDispatchGuidanceTests))
+    suite.addTests(unittest.defaultTestLoader.loadTestsFromTestCase(case) for case in (UnknownDispatchUnitScopeTests, UnknownDispatchGuidanceTests,
+                                                                            AgentApprovalTests))
     raise SystemExit(run_counted(suite, label="test-execution-control"))

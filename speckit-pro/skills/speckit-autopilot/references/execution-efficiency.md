@@ -199,6 +199,11 @@ ownership from the caller's current workflow.
   dispatch used that reservation. Dispatch only after it returns `continue`.
   A second retry, self-asserted approval, or a failed result without a recorded
   native failure event remains blocked.
+  An agent may issue this approval itself: pass `agent_authorized: true`,
+  `failure_kind=infrastructure`, and no `native_observation`. The runner takes
+  the failure event from the failed dispatch's own recorded native resolution,
+  derives the event ID `agent-recovery:<dispatch_id>`, and allows one such retry
+  per run; the next goes to the operator.
 - `authorize-corrective-continuation`: after a corrective executor or its
   authorized infrastructure retry completes, a required Analyze consensus
   edit can make the Tasks metadata fingerprint stale. If the two-cycle ceiling
@@ -217,6 +222,10 @@ ownership from the caller's current workflow.
   The Tasks producer may update only source-bound metadata, then the parent
   revalidates G5 before G6. A second continuation or a failed/unknown source
   remains blocked; this action is not a general repair-budget reset.
+  Agent path: pass `agent_authorized: true` and an explicit `spec_file` with no
+  `native_observation`. The runner admits it when the same metadata-only proof
+  as `metadata_only` holds, derives `agent-continuation:<dispatch_id>`, and
+  allows two per run; otherwise the operator approves.
 - `authorize-corrective-exception`: when an ordinary corrective `reserve` for a
   reproduced application failure returns `disposition=defer` with
   `corrective_run_budget_exhausted` or `failure_family_budget_exhausted` (a
@@ -274,6 +283,14 @@ ownership from the caller's current workflow.
   the counters. The run ID, clocks, and consumed events carry over; archived
   dispatch IDs and events can never be reused. A re-plan the operator did not
   order is not grounds for a new epoch.
+  Agent path: pass `agent_authorized: true` and the explicit `spec_file` with
+  no `native_observation`. The runner opens the epoch when a deferral is open
+  with its allowance spent, the spec and its invariants are the bound ones, the
+  task-execution sidecar matches the current spec, plan, and tasks and differs
+  from the `invariant_binding.planning_fingerprints` recorded when the stage
+  epoch opened, and every dispatch is settled. It derives `agent-replan:<n>`
+  and allows two per run. A rescope, a ledger without recorded fingerprints, or
+  the third re-plan goes to the operator.
 - `begin-stage-epoch`: when the invocation argv names `--stage implement`,
   call it once after `start`, after Step 0.6c has written the resolved `Stage`
   row. Pass `autopilot_args`, the same invocation argv given to

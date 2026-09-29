@@ -38,7 +38,7 @@ SCENARIOS = (
     "corrective-continuation.json",
     "corrective-exception.json",
 )
-UNIT_SCENARIOS = ("unknown-dispatch-unit.json",)
+UNIT_SCENARIOS = ("unknown-dispatch-unit.json", "agent-authorized-retry.json")
 REFUSED = {"exit_code": 2, "status": "input_error"}
 
 

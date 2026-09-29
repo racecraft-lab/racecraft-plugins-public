@@ -46,7 +46,10 @@ when its disposition permits. Resume and agent replacement never reset budget.
   task, increment, and gate, and list it in the one end-of-run consolidated
   request. It is never a mid-run question. `authorize-corrective-exception`
   and `begin-replan-epoch` are end-of-run tools that act on the operator's
-  answer to that request. An explicit `--stage implement` opens the implement
+  answer to that request. Before that request, use the agent-issued paths in
+  [Bounded Execution](./execution-efficiency.md): `agent_authorized: true` on
+  `authorize-corrective-retry`, `begin-replan-epoch`, or
+  `authorize-corrective-continuation`, each capped and runner-proved. An explicit `--stage implement` opens the implement
   stage's own allowance through `begin-stage-epoch`
   ([Bounded Execution](./execution-efficiency.md)). A task-verb fix that only
   reroutes a task to verification reserves with `metadata_only: true`; the
