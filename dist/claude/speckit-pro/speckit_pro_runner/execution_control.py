@@ -285,11 +285,7 @@ def _validate_corrective_state(value: dict[str, Any]) -> None:
             raise ValueError("a corrective dispatch draws on one allowance, not an increment and a gate")
         _validate_edit_records(item)
         if "escalation" in item or "escalation_tier" in item:
-            listed = {(entry["tier"], entry["dispatch_id"])
-                      for entry in escalations.get(str(item.get("escalation")), {}).get("dispatches", [])}
-            if (item["kind"] != "corrective" or reservation is not None
-                    or (item.get("escalation_tier"), dispatch_id) not in listed):
-                raise ValueError("escalation dispatch is not recorded in its escalation allowance")
+            _validate_escalation_dispatch(dispatch_id, item, escalations)
         elif "test_fix" in item:
             if (item["kind"] != "corrective" or reservation is not None
                     or dispatch_id not in test_fixes.get(item["test_fix"], {}).get("dispatch_ids", [])):
@@ -644,6 +640,15 @@ def escalation_progress(ledger: dict[str, Any], unit_kind: str, unit: str) -> st
     return "exhausted"
 
 
+def _validate_escalation_dispatch(dispatch_id: str, item: dict[str, Any], escalations: dict[str, Any]) -> None:
+    """An escalation retry is one corrective dispatch listed by its unit's escalation record."""
+    listed = {(entry["tier"], entry["dispatch_id"])
+              for entry in escalations.get(str(item.get("escalation")), {}).get("dispatches", [])}
+    if (item["kind"] != "corrective" or item.get("reservation_id") is not None
+            or (item.get("escalation_tier"), dispatch_id) not in listed):
+        raise ValueError("escalation dispatch is not recorded in its escalation allowance")
+
+
 def _validate_escalations(ledger: dict[str, Any]) -> dict[str, Any]:
     """Each escalation record lists the tiers one unit reached, each owned by one recorded corrective dispatch."""
     if "escalation_allowances" not in ledger:
@@ -719,9 +724,10 @@ def record_finalize_observations(root: Path, ledger_path: str, expected_run_id: 
         durable_json(path, ledger)
 
 
-def _reserve_escalation(ledger: dict[str, Any], dispatch_id: str, kind: Any, reservation: Any, request: Any,
+def _reserve_escalation(ledger: dict[str, Any], inputs: dict[str, Any], dispatch_id: str,
                         now: float) -> dict[str, Any]:
     """Admit one escalation retry for a failed unit, outside the run-wide corrective budget."""
+    request, kind, reservation = inputs["escalation"], inputs.get("kind"), inputs.get("reservation_id")
     if (not isinstance(request, dict) or set(request) != {"unit_kind", "unit", "tier"}
             or request["unit_kind"] not in ESCALATION_UNIT_KINDS or request["tier"] not in ESCALATION_TIERS
             or type(request["tier"]) is not int or not isinstance(request["unit"], str) or not request["unit"].strip()):
@@ -1721,7 +1727,7 @@ def reserve(ledger: dict[str, Any], inputs: dict[str, Any], now: float, root: Pa
         return {"reasons": ["dispatch_already_reserved_no_relaunch"]}
     reservation = inputs.get("reservation_id")
     if "escalation" in inputs:
-        return _reserve_escalation(ledger, dispatch_id, kind, reservation, inputs["escalation"], now)
+        return _reserve_escalation(ledger, inputs, dispatch_id, now)
     note: dict[str, Any] = {}
     if metadata_only:
         ineligible, record = _metadata_ineligibility(root, spec, ledger)

@@ -113,7 +113,7 @@ def _ledger_deferrals(ledger: dict[str, Any]) -> list[dict[str, Any]]:
     return [entry for entry in ledger.get("deferred", []) if "resolved_by" not in entry]
 
 
-def _gate_command_digest(command: str) -> str:
+def gate_command_digest(command: str) -> str:
     """The digest of the argv the verification runner derives from a workflow command."""
     lexer = shlex.shlex(command, posix=True, punctuation_chars=True)
     lexer.whitespace_split = True
@@ -127,7 +127,7 @@ def _derived_status(ledger: dict[str, Any], gate: dict[str, Any], field: str) ->
     if not isinstance(item, dict) or item.get("kind") != "verification" or not isinstance(fingerprint, dict):
         raise ValueError(f"{field}.dispatch_id must name a verification dispatch the runner ran and fingerprinted; "
                          + "a gate status the runner did not record never counts")
-    if fingerprint["command_sha256"] != _gate_command_digest(gate["command"]):
+    if fingerprint["command_sha256"] != gate_command_digest(gate["command"]):
         raise ValueError(f"{field}.command is not the command the runner ran in that verification")
     if fingerprint.get("head_sha") != gate["head_sha"] or fingerprint.get("worktree_clean") is not True:
         raise ValueError(f"{field} was not verified by the runner at this PR head with a clean worktree; "
@@ -137,7 +137,7 @@ def _derived_status(ledger: dict[str, Any], gate: dict[str, Any], field: str) ->
 
 def _gate_progress(ledger: dict[str, Any], gate: dict[str, Any]) -> str:
     """The next step for a failed gate: `tier2`, `tier3`, `open`, `rerun` when its result predates the last retry, or `exhausted`."""
-    unit = _gate_command_digest(gate["command"])
+    unit = gate_command_digest(gate["command"])
     progress = escalation_progress(ledger, "gate_failure", unit)
     record = ledger.get("escalation_allowances", {}).get(escalation_key("gate_failure", unit))
     if record is not None and progress != "open":
@@ -177,6 +177,38 @@ def _harness_evidence(root: Path, value: Any, field: str) -> str:
     return relative
 
 
+def _harness_gate(root: Path, raw: dict[str, Any], gate: dict[str, Any], field: str) -> None:
+    """Add a harness_error result's attempts, evidence, and optional changed-environment proof to `gate`."""
+    if set(raw) - {"environment_change"} != HARNESS_FIELDS:
+        raise ValueError(f"{field} must have exactly gate, status, command, head_sha, attempts, "
+                         + "and evidence, plus environment_change after the changed-environment attempt")
+    if type(raw["attempts"]) is not int or raw["attempts"] < HARNESS_RETRY_BUDGET:
+        raise ValueError(f"{field}.attempts must show the harness retry budget of "
+                         + f"{HARNESS_RETRY_BUDGET} attempts was spent before reporting harness_error")
+    gate.update(attempts=raw["attempts"], evidence=_harness_evidence(root, raw["evidence"], f"{field}.evidence"))
+    if "environment_change" in raw:
+        if (raw["environment_change"] not in ENVIRONMENT_CHANGES
+                or raw["attempts"] < HARNESS_RETRY_BUDGET + HARNESS_ENVIRONMENT_ATTEMPTS):
+            raise ValueError(f"{field}.environment_change must be one of {', '.join(ENVIRONMENT_CHANGES)} and "
+                             + f"follow the {HARNESS_RETRY_BUDGET} budgeted attempts with one more attempt")
+        gate["environment_change"] = raw["environment_change"]
+
+
+def _verified_gate(ledger: dict[str, Any], raw: dict[str, Any], gate: dict[str, Any], field: str,
+                   dispatches: set[str]) -> None:
+    """Add a passed or failed result's runner dispatch to `gate`; its status must be the runner's record."""
+    if set(raw) != VERIFIED_FIELDS:
+        raise ValueError(f"{field} must have exactly gate, status, command, head_sha, and the "
+                         + "dispatch_id of the verification the runner ran")
+    gate["dispatch_id"] = _text(raw["dispatch_id"], f"{field}.dispatch_id")
+    if gate["dispatch_id"] in dispatches:
+        raise ValueError(f"{field}.dispatch_id already backs another gate result")
+    dispatches.add(gate["dispatch_id"])
+    derived = _derived_status(ledger, gate, field)
+    if derived != gate["status"]:
+        raise ValueError(f"{field}.status claims {gate['status']}, but the runner's verification record shows {derived}")
+
+
 def _gates(root: Path, ledger: dict[str, Any], value: Any, heads: set[str]) -> list[dict[str, Any]]:
     if not isinstance(value, list) or not value:
         raise ValueError("gates must list every final non-UAT gate result; a run never finalizes on no evidence")
@@ -184,46 +216,23 @@ def _gates(root: Path, ledger: dict[str, Any], value: Any, heads: set[str]) -> l
     seen: set[tuple[str, str]] = set()
     dispatches: set[str] = set()
     for index, raw in enumerate(value):
+        field = f"gates[{index}]"
         if not isinstance(raw, dict) or raw.get("status") not in GATE_STATUSES:
-            raise ValueError(f"gates[{index}].status must be passed, failed, or harness_error; "
-                             + "only human UAT may be deferred")
+            raise ValueError(f"{field}.status must be passed, failed, or harness_error; only human UAT may be deferred")
+        if not GATE_FIELDS <= set(raw):
+            raise ValueError(f"{field} must have gate, status, command, and head_sha")
+        gate: dict[str, Any] = {"gate": _text(raw["gate"], f"{field}.gate"), "status": raw["status"],
+                                "command": _text(raw["command"], f"{field}.command"),
+                                "head_sha": _head(raw["head_sha"], f"{field}.head_sha")}
         if raw["status"] == "harness_error":
-            if set(raw) - {"environment_change"} != HARNESS_FIELDS:
-                raise ValueError(f"gates[{index}] must have exactly gate, status, command, head_sha, attempts, "
-                                 + "and evidence, plus environment_change after the changed-environment attempt")
-        elif set(raw) != VERIFIED_FIELDS:
-            raise ValueError(f"gates[{index}] must have exactly gate, status, command, head_sha, and the "
-                             + "dispatch_id of the verification the runner ran")
-        gate: dict[str, Any] = {"gate": _text(raw["gate"], f"gates[{index}].gate"), "status": raw["status"],
-                                "command": _text(raw["command"], f"gates[{index}].command"),
-                                "head_sha": _head(raw["head_sha"], f"gates[{index}].head_sha")}
-        if raw["status"] == "harness_error":
-            if type(raw["attempts"]) is not int or raw["attempts"] < HARNESS_RETRY_BUDGET:
-                raise ValueError(f"gates[{index}].attempts must show the harness retry budget of "
-                                 + f"{HARNESS_RETRY_BUDGET} attempts was spent before reporting harness_error")
-            gate.update(attempts=raw["attempts"],
-                        evidence=_harness_evidence(root, raw["evidence"], f"gates[{index}].evidence"))
-            if "environment_change" in raw:
-                if (raw["environment_change"] not in ENVIRONMENT_CHANGES
-                        or raw["attempts"] < HARNESS_RETRY_BUDGET + HARNESS_ENVIRONMENT_ATTEMPTS):
-                    raise ValueError(f"gates[{index}].environment_change must be one of "
-                                     + f"{', '.join(ENVIRONMENT_CHANGES)} and follow the {HARNESS_RETRY_BUDGET} "
-                                     + "budgeted attempts with one more attempt")
-                gate["environment_change"] = raw["environment_change"]
+            _harness_gate(root, raw, gate, field)
         else:
-            gate["dispatch_id"] = _text(raw["dispatch_id"], f"gates[{index}].dispatch_id")
-            if gate["dispatch_id"] in dispatches:
-                raise ValueError(f"gates[{index}].dispatch_id already backs another gate result")
-            dispatches.add(gate["dispatch_id"])
-            derived = _derived_status(ledger, gate, f"gates[{index}]")
-            if derived != gate["status"]:
-                raise ValueError(f"gates[{index}].status claims {gate['status']}, but the runner's verification "
-                                 + f"record shows {derived}")
+            _verified_gate(ledger, raw, gate, field, dispatches)
         if gate["head_sha"] not in heads:
-            raise ValueError(f"gates[{index}].head_sha is not the head of any listed pull request; "
+            raise ValueError(f"{field}.head_sha is not the head of any listed pull request; "
                              + "evidence from another head never counts")
         if (gate["head_sha"], gate["gate"]) in seen:
-            raise ValueError(f"gates[{index}] repeats gate {gate['gate']} at one head; pass its final result once")
+            raise ValueError(f"{field} repeats gate {gate['gate']} at one head; pass its final result once")
         seen.add((gate["head_sha"], gate["gate"]))
         gates.append(gate)
     return gates
@@ -302,7 +311,7 @@ def _gate_pending(where: dict[str, Any], gate: dict[str, Any], progress: str) ->
     if progress == "rerun":
         return f"Rerun {label} after its escalation retry: {gate['command']}"
     return (f"Escalate failed {label} to {_tier_steps(progress)}, unit_kind gate_failure and unit "
-            f"{_gate_command_digest(gate['command'])}, then rerun it: {gate['command']}")
+            f"{gate_command_digest(gate['command'])}, then rerun it: {gate['command']}")
 
 
 def _harness_pending(where: dict[str, Any], gate: dict[str, Any]) -> str:
@@ -370,6 +379,50 @@ def _units(ledger: dict[str, Any], resume_command: str) -> tuple[list[dict[str, 
     return decisions, pending
 
 
+def _gate_findings(ledger: dict[str, Any], gates: list[dict[str, Any]], numbers: dict[str, int],
+                   counted: dict[str, int]) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[str], list[str]]:
+    """Red-gate stops, harness stops, pending work, and the counts to record, from each gate's runner-proved state."""
+    failed: list[dict[str, Any]] = []
+    harness: list[dict[str, Any]] = []
+    pending: list[str] = []
+    observed: list[str] = []
+    for gate in gates:
+        where = {"gate": gate["gate"], "command": gate["command"], "pull_request": numbers[gate["head_sha"]],
+                 "head_sha": gate["head_sha"], "class": "exhausted"}
+        if gate["status"] == "failed":
+            progress = _gate_progress(ledger, gate)
+            if progress == "exhausted":
+                failed.append({**where, "reason_code": _exhausted_reason(
+                    ledger, "gate_failure", gate_command_digest(gate["command"]))})
+            else:
+                pending.append(_gate_pending(where, gate, progress))
+        elif gate["status"] == "harness_error":
+            key = finalize_observation_key("harness_error", gate["head_sha"], gate["gate"])
+            if "environment_change" in gate and counted.get(key, 0) >= 1:
+                harness.append({**where, "attempts": gate["attempts"], "evidence": gate["evidence"]})
+            else:
+                pending.append(_harness_pending(where, gate))
+                observed.append(key)
+    return failed, harness, pending, observed
+
+
+def _missing_findings(prs: list[dict[str, Any]], gates: list[dict[str, Any]],
+                      counted: dict[str, int]) -> tuple[list[dict[str, Any]], list[str], list[str]]:
+    """A gate missing at a head is pending until an earlier counted cycle also saw it missing, then a stop."""
+    missing: list[dict[str, Any]] = []
+    pending: list[str] = []
+    observed: list[str] = []
+    for entry in _missing(prs, gates):
+        key = finalize_observation_key("missing_gate", entry["head_sha"], entry["gate"])
+        if counted.get(key, 0) >= 1:
+            missing.append({**entry, "class": "exhausted"})
+        else:
+            pending.append(f"Run gate {entry['gate']} at head {entry['head_sha']} of PR "
+                           f"#{entry['pull_request']}: {entry['command']}")
+            observed.append(key)
+    return missing, pending, observed
+
+
 def finalize_run(root: Path, inputs: dict[str, Any], record: bool = False) -> dict[str, Any]:
     """The run's terminal decision; raises ValueError on missing or malformed evidence.
 
@@ -395,35 +448,10 @@ def finalize_run(root: Path, inputs: dict[str, Any], record: bool = False) -> di
         raise ValueError("pending_items must list the runnable work still open, or be empty")
     pending_items = [_text(item, "pending_items") for item in pending] + unit_pending
     counted = ledger.get("finalize_observations", {})
-    observed: list[str] = []
-    failed: list[dict[str, Any]] = []
-    harness: list[dict[str, Any]] = []
-    for gate in gates:
-        where = {"gate": gate["gate"], "command": gate["command"], "pull_request": numbers[gate["head_sha"]],
-                 "head_sha": gate["head_sha"], "class": "exhausted"}
-        if gate["status"] == "failed":
-            progress = _gate_progress(ledger, gate)
-            if progress == "exhausted":
-                failed.append({**where, "reason_code": _exhausted_reason(
-                    ledger, "gate_failure", _gate_command_digest(gate["command"]))})
-            else:
-                pending_items.append(_gate_pending(where, gate, progress))
-        elif gate["status"] == "harness_error":
-            key = finalize_observation_key("harness_error", gate["head_sha"], gate["gate"])
-            if "environment_change" in gate and counted.get(key, 0) >= 1:
-                harness.append({**where, "attempts": gate["attempts"], "evidence": gate["evidence"]})
-            else:
-                pending_items.append(_harness_pending(where, gate))
-                observed.append(key)
-    missing: list[dict[str, Any]] = []
-    for entry in _missing(prs, gates):
-        key = finalize_observation_key("missing_gate", entry["head_sha"], entry["gate"])
-        if counted.get(key, 0) >= 1:
-            missing.append({**entry, "class": "exhausted"})
-        else:
-            pending_items.append(f"Run gate {entry['gate']} at head {entry['head_sha']} of PR "
-                                 f"#{entry['pull_request']}: {entry['command']}")
-            observed.append(key)
+    failed, harness, gate_pending, observed = _gate_findings(ledger, gates, numbers, counted)
+    missing, missing_pending, missing_observed = _missing_findings(prs, gates, counted)
+    pending_items += gate_pending + missing_pending
+    observed += missing_observed
     if record and observed:
         record_finalize_observations(root, _text(inputs.get("ledger_path"), "ledger_path"),
                                      _text(inputs.get("expected_run_id"), "expected_run_id"), observed)
