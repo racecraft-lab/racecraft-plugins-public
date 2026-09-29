@@ -17,6 +17,7 @@ from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "lib"))
+import native_eval_trigger
 import trigger_comparison as comparison
 import trigger_carry_forward as carry
 import trigger_campaign as campaign
@@ -394,18 +395,8 @@ def evidence_fixture(root, host="claude", entry_override=None, selected_pattern=
     return manifest, indexes
 
 
-def runner_script(host):
-    """Load one runner script, as the staging calls in these fixtures need its stage functions."""
-    filename = "run-trigger-evals.py" if host == "claude" else "run_codex_evals.py"
-    spec = importlib.util.spec_from_file_location(f"comparison_fixture_{host}", ROOT / "layer2-trigger" / filename)
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[spec.name] = module
-    spec.loader.exec_module(module)
-    return module
-
-
 def native_fixture(helper, root, host, entry, model, arm, selected_pattern):
-    parser = runner_script(host)
+    parser = native_eval_trigger._helpers(host)
     target = f"{entry['skill']}-eval-0123456789ab"
     source = parser.find_skill_source(entry["skill"])
     workspace = (root / "removed").resolve()

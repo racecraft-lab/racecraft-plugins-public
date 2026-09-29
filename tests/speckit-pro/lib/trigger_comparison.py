@@ -18,6 +18,7 @@ from trigger_campaign_pins import FRESH_LAUNCH_CEILING
 from trigger_inventory import canonical_sha256, validate_inventory
 
 ROOT = Path(__file__).resolve().parents[1]
+_SOURCE_FAMILIES = {"claude": ("skills", "codex-skills"), "codex": ("codex-skills",)}
 _DIGEST = re.compile(r"[0-9a-f]{64}")
 
 
@@ -164,8 +165,7 @@ def _target_binding(context: dict, case: dict) -> None:
     _require(isinstance(target, str) and re.fullmatch(re.escape(case["skill"]) + r"-eval-[0-9a-f]+", target) is not None, "native target does not identify the declared source skill")
     if case["host"] == "claude":
         _require(context["expected_skill"] == f"{context['plugin_name']}:{target}", "native target plugin mismatch")
-    families = ("skills", "codex-skills") if case["host"] == "claude" else ("codex-skills",)
-    source = evidence.find_skill_source(ROOT.parents[1] / "speckit-pro", case["skill"], families)
+    source = evidence.find_skill_source(ROOT.parents[1] / "speckit-pro", case["skill"], _SOURCE_FAMILIES[case["host"]])
     sources = {path.name: path / "SKILL.md" for path in evidence.sibling_skill_dirs(source)}
     sources[target] = source
     sources[evidence.NO_SPECKIT_SKILL_NAME] = None
