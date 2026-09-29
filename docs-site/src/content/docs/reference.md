@@ -1,18 +1,10 @@
 ---
 title: "Reference"
-description: "The reference shell for SpecKit Pro repository surfaces and generated payloads — your index into skills, agents, manifests, marketplace files, hooks, scripts, tests, and file layout."
+description: "The index for SpecKit Pro repository surfaces and generated payloads — your index into skills, agents, manifests, marketplace files, hooks, scripts, tests, and file layout."
 ---
 
-Use this route as the stable reference shell for repository surfaces and generated payload orientation.
+Use this page as the index for repository surfaces and generated payload orientation.
 
-## Route Shell
-
-- **Audience:** Users, agents, and maintainers
-- **Purpose:** Index commands, skills, manifests, marketplace files, hooks, agents, payloads, tests, and file layout.
-- **Shell owner DOC:** DOC-002
-- **Full-content owner DOC:** DOC-007
-- **Success criterion:** Each supported surface has a stable deep link and source citation.
-- **Useful now:** Use this page to decide whether you are looking at authoring source, generated payloads, or later reference content.
 
 ## Source And Generated Payloads
 
@@ -39,9 +31,9 @@ Generated install payloads live under `dist/claude/**` and `dist/codex/**`. Thos
 
 ## Generated Page Boundary
 
-DOC-007 owns the generated subpages listed above. They are committed Markdown output generated from checked-in repository files. Do not treat generated pages as source evidence for themselves; rerun `pnpm --dir docs-site reference:generate` after source changes, then use `pnpm --dir docs-site reference:check`.
+The generated subpages listed above are committed Markdown output generated from checked-in repository files. Do not treat generated pages as source evidence for themselves; rerun `pnpm --dir docs-site reference:generate` after source changes, then use `pnpm --dir docs-site reference:check`.
 
-## DOC-008 Support Handoffs
+## Support Handoffs
 
 Use these hand-authored handoffs when a reference page identifies the source or
 payload surface, but you need diagnosis or recovery guidance:
@@ -62,4 +54,4 @@ payload surface, but you need diagnosis or recovery guidance:
 
 ## Next Step
 
-[Open the contributor and release shell](/racecraft-plugins-public/contribute-and-release/) if you need maintainer workflow orientation.
+[Open Contribute & Release](/racecraft-plugins-public/contribute-and-release/) if you need maintainer workflow orientation.

@@ -14,7 +14,7 @@ plugin source. The full Q&A log, Goals, Non-goals, Open Questions, and an
 evidence-backed implementation map live at:
 
 ```text
-docs/ai/specs/PRSG-001-design-concept.md
+docs/ai/specs/.process/PRSG-001-design-concept.md
 ```
 
 Re-read it before each phase. The locked decisions from that interview (Q1–Q5):

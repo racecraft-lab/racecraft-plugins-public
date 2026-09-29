@@ -1,0 +1,33 @@
+---
+import { lifecycleGates, lifecycleSteps } from '../data/lifecycle';
+import InlineCode from './InlineCode.astro';
+
+interface Props {
+  kind: 'stages' | 'gates';
+}
+
+const { kind } = Astro.props;
+const headers =
+  kind === 'stages'
+    ? ['Stage', 'Purpose', 'Output to inspect', 'Gate or signal', 'Next action']
+    : ['Gate', 'Checks', 'If it does not pass'];
+const rows =
+  kind === 'stages'
+    ? lifecycleSteps.map((step) => [step.stage, step.purpose, step.output, step.gate, step.next])
+    : lifecycleGates.map((gate) => [gate.gate, gate.checks, gate.ifFails]);
+---
+
+<table>
+  <thead>
+    <tr>{headers.map((header) => <th>{header}</th>)}</tr>
+  </thead>
+  <tbody>
+    {rows.map((row) => (
+      <tr>
+        {row.map((cell) => (
+          <td><InlineCode text={cell} /></td>
+        ))}
+      </tr>
+    ))}
+  </tbody>
+</table>

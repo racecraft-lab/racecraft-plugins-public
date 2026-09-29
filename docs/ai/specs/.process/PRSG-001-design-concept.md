@@ -283,5 +283,5 @@ Setup mode — the worktree, branch (`007-artifact-relocation`), and this
 design concept already exist. After the workflow file is populated and committed:
 
 ```text
-/speckit-pro:speckit-autopilot docs/ai/specs/PRSG-001-workflow.md
+/speckit-pro:speckit-autopilot docs/ai/specs/.process/PRSG-001-workflow.md
 ```

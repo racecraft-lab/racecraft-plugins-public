@@ -62,7 +62,7 @@ namespaced plugin skills such as `/speckit-pro:speckit-status` and
 
 ### Codex
 
-Claude Code commands are the separate DOC-003-owned path; use the
+Claude Code commands have their own guide; use the
 [Claude Code install guide](./docs-site/src/content/docs/install/claude-code.md)
 for that runtime. For Codex, open this repository in Codex, then open the plugin
 directory:
@@ -92,19 +92,13 @@ $install
 ```
 
 The default destination is `~/.codex/agents/`; choose `.codex/agents/` only when
-you intentionally want project-scoped custom agents. Verify these ten
-installer-copied TOML files only:
-
-- `autopilot-fast-helper.toml`
-- `phase-executor.toml`
-- `clarify-executor.toml`
-- `checklist-executor.toml`
-- `analyze-executor.toml`
-- `implement-executor.toml`
-- `codebase-analyst.toml`
-- `spec-context-analyst.toml`
-- `domain-researcher.toml`
-- `uat-runbook-author.toml`
+you intentionally want project-scoped custom agents. The installer copies one
+TOML file for every Codex custom agent that `agent_inventory.json` lists as
+`required` or `optional`, which today is every `.toml` file in
+[`speckit-pro/codex-agents/`](./speckit-pro/codex-agents/). Verify that the
+destination holds exactly those files and no others. The
+[agents reference](./docs-site/src/content/docs/reference/agents.md) lists the
+roles and stays in step with the inventory.
 
 Then restart Codex. Also restart Codex after plugin enablement changes,
 custom-agent refreshes, or relevant Codex config edits.
@@ -137,12 +131,12 @@ dist/codex/speckit-pro/
 ```
 
 For deeper Codex file-layout details, use the
-[DOC-007 reference shell](./docs-site/src/content/docs/reference.md). For
+[reference index](./docs-site/src/content/docs/reference.md). For
 trust, hook policy, update, rollback, permission repair, and stale-cache
 forensics, use the
-[DOC-008 security and trust](./docs-site/src/content/docs/security-and-trust.md)
-and [DOC-008 troubleshooting](./docs-site/src/content/docs/troubleshooting.md)
-shells.
+[security and trust](./docs-site/src/content/docs/security-and-trust.md)
+and [troubleshooting](./docs-site/src/content/docs/troubleshooting.md)
+pages.
 
 ## How This Repo Is Organized
 
@@ -153,7 +147,7 @@ shells.
 | [`dist/claude/speckit-pro/`](./dist/claude/speckit-pro/) | Generated Claude Code install payload. | No, regenerate |
 | [`dist/codex/speckit-pro/`](./dist/codex/speckit-pro/) | Generated Codex install payload. | No, regenerate |
 | [`tests/speckit-pro/`](./tests/speckit-pro/) | Repository validation suite for structure, tool scoping, and generated payloads. | Yes |
-| Payload rebuilds | Python runner payload-completeness operation for source-checkout payload and release automation paths. | Yes |
+| Payload rebuilds | `python3 scripts/refresh-release-artifacts.py` rebuilds payloads, marketplace versions, and runner trust metadata. | Yes |
 
 ## Contributor Path
 
@@ -161,20 +155,23 @@ Use this lane when changing documentation, skills, agents, hooks, scripts, or
 marketplace packaging.
 
 1. Edit source files under `speckit-pro/` or this root README.
-2. Rebuild generated install payloads through the Python runner gate:
+2. Rebuild generated install payloads from the repository root:
 
    ```text
-   cd speckit-pro
-   python3 -m speckit_pro_runner < ../tests/speckit-pro/unit/fixtures/installed-plugin-release/requests/payload-completeness-apply.json
+   python3 scripts/refresh-release-artifacts.py
    ```
 
 3. Run the default validation suite:
 
-   Use the repository default validation suite documented in the contributor guide.
+   ```text
+   python3 tests/speckit-pro/run-all.py
+   ```
 
 4. For structural-only changes, this narrower check is useful while iterating:
 
-   Use the repository structural validation suite documented in the contributor guide.
+   ```text
+   python3 tests/speckit-pro/run-all.py --layer 1
+   ```
 
 5. Open a PR with a Conventional Commit title, for example:
 

@@ -15,5 +15,11 @@
   "max_dispatch_count": 9,
   "must_not_invoke_skill": [
     "grill-me"
-  ]
+  ],
+  "same_message_dispatch_groups": [
+    {
+      "size": 9
+    }
+  ],
+  "must_run_in_background": true
 }

@@ -1,6 +1,8 @@
 import { getCollection } from 'astro:content';
 import { OGImageRoute } from 'astro-og-canvas';
 
+import { routeKey } from '../../lib/route-key';
+
 /**
  * Per-page Open Graph card endpoint (DOC-014, C6 / FR-019, FR-020 · US5).
  *
@@ -24,17 +26,6 @@ import { OGImageRoute } from 'astro-og-canvas';
  * @see specs/doc-014-seo-and-ai-discoverability/contracts/build-output-contracts.md C6
  */
 
-/**
- * Map a docs collection id to its OG card key — identical to the mapping the
- * route middleware uses to build the `og:image` URL, so the referenced card and
- * the generated card share one slug. Root (`index`) → `index`; otherwise the id
- * with any trailing `/index` stripped.
- */
-function ogCardKey(id: string): string {
-  if (id === 'index' || id === '' || id === '/') return 'index';
-  return (id.endsWith('/index') ? id.slice(0, -'/index'.length) : id).normalize();
-}
-
 interface CardPage {
   title: string;
   description: string;
@@ -44,7 +35,7 @@ const docs = await getCollection('docs');
 
 const pages: Record<string, CardPage> = Object.fromEntries(
   docs.map((entry) => [
-    ogCardKey(entry.id),
+    routeKey(entry.id),
     {
       title: entry.data.title,
       description: entry.data.description ?? '',
@@ -57,13 +48,13 @@ export const { getStaticPaths, GET } = await OGImageRoute({
   getImageOptions: (_path, page: CardPage) => ({
     title: page.title,
     description: page.description,
-    // Brand-styled, text-only card (FR-019/FR-020): dark background + indigo
-    // accent edge, matching the docs site's brand palette.
+    // Brand-styled, text-only card (FR-019/FR-020): dark background + blue
+    // accent edge, the same accent as --sl-color-accent in src/styles/brand.css.
     bgGradient: [
       [12, 12, 16],
       [24, 24, 32],
     ],
-    border: { color: [99, 102, 241], width: 12, side: 'inline-start' },
+    border: { color: [60, 137, 198], width: 12, side: 'inline-start' },
     padding: 72,
     font: {
       title: {

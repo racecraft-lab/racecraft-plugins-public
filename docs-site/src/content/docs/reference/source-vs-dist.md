@@ -177,22 +177,23 @@ Editability and responsibility map for source, generated payloads, tests, releas
 - **Classification:** `source`
 - **Platform concept:** Source-vs-dist responsibility
 - **Claude Code:** .specify/integrations/claude.manifest.json, .specify/integrations/speckit.manifest.json
-- **Codex:** .specify/integrations/speckit.manifest.json
+- **Codex:** .specify/integrations/codex.manifest.json, .specify/integrations/speckit.manifest.json
 - **Runtime difference:** Integration manifests record installed SpecKit and Claude integration evidence; they are reference inventory, not generated plugin payloads.
 
 #### Source Facts
 
-- SpecKit Integration Manifests is classified as source. Source refs: `.specify/integrations/claude.manifest.json`, `.specify/integrations/speckit.manifest.json`.
+- SpecKit Integration Manifests is classified as source. Source refs: `.specify/integrations/claude.manifest.json`, `.specify/integrations/codex.manifest.json`, `.specify/integrations/speckit.manifest.json`.
 
 #### Sources
 
 - [.specify/integrations/claude.manifest.json](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/.specify/integrations/claude.manifest.json)
+- [.specify/integrations/codex.manifest.json](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/.specify/integrations/codex.manifest.json)
 - [.specify/integrations/speckit.manifest.json](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/.specify/integrations/speckit.manifest.json)
 
 #### Inferred Notes
 
 - Use this classification before deciding whether a future change should edit source directly, regenerate payloads, or update docs only.
-  - Based on: `.specify/integrations/claude.manifest.json`, `.specify/integrations/speckit.manifest.json`
+  - Based on: `.specify/integrations/claude.manifest.json`, `.specify/integrations/codex.manifest.json`, `.specify/integrations/speckit.manifest.json`
 
 ### Validation Test Suite
 

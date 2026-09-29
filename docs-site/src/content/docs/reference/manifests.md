@@ -11,13 +11,14 @@ Marketplace, plugin, integration, and generated distribution manifests with runt
 
 - **Public path:** `/racecraft-plugins-public/reference/manifests/`
 - **Generated output:** `docs-site/src/content/docs/reference/manifests.md`
-- **Records:** 8
+- **Records:** 9
 
 ## Navigation Summary
 
 - .agents/plugins/marketplace.json
 - .claude-plugin/marketplace.json
 - .specify/integrations/claude.manifest.json
+- .specify/integrations/codex.manifest.json
 - .specify/integrations/speckit.manifest.json
 - dist/claude/speckit-pro/.claude-plugin/plugin.json
 - dist/codex/speckit-pro/.codex-plugin/plugin.json
@@ -102,6 +103,30 @@ Marketplace, plugin, integration, and generated distribution manifests with runt
 
 - Required and optional field groupings are reference metadata for review; they do not change manifest semantics or generated payload content.
   - Based on: `.specify/integrations/claude.manifest.json`
+
+### .specify/integrations/codex.manifest.json
+
+- **Purpose:** Reference inventory for the Codex SpecKit integration manifest.
+- **Classification:** `source`
+- **Platform concept:** SpecKit integration manifest
+- **Claude Code:** Not a Claude Code manifest record.
+- **Codex:** .specify/integrations/codex.manifest.json
+- **Runtime difference:** Marketplace, plugin, integration, and generated distribution manifests are documented as separate categories.
+
+#### Source Facts
+
+- .specify/integrations/codex.manifest.json is categorized as SpecKit integration manifest. Source refs: `.specify/integrations/codex.manifest.json`.
+- Top-level fields: `files`, `installed_at`, `integration`, `version`. Source refs: `.specify/integrations/codex.manifest.json`.
+- The manifest declares version `1.0.1`. Source refs: `.specify/integrations/codex.manifest.json`.
+
+#### Sources
+
+- [.specify/integrations/codex.manifest.json](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/.specify/integrations/codex.manifest.json)
+
+#### Inferred Notes
+
+- Required and optional field groupings are reference metadata for review; they do not change manifest semantics or generated payload content.
+  - Based on: `.specify/integrations/codex.manifest.json`
 
 ### .specify/integrations/speckit.manifest.json
 

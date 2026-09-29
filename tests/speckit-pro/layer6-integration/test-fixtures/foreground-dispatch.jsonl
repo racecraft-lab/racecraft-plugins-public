@@ -1,0 +1,4 @@
+{"type":"system","subtype":"init"}
+{"type":"assistant","isSidechain":false,"message":{"type":"message","role":"assistant","content":[{"type":"tool_use","id":"toolu_F1","name":"Agent","input":{"description":"Task 1","prompt":"Do task 1","subagent_type":"speckit-pro:implement-executor"}},{"type":"tool_use","id":"toolu_F2","name":"Agent","input":{"description":"Task 2","prompt":"Do task 2","subagent_type":"speckit-pro:implement-executor"}},{"type":"tool_use","id":"toolu_F3","name":"Agent","input":{"description":"Task 3","prompt":"Do task 3","subagent_type":"speckit-pro:implement-executor"}}]}}
+{"type":"user","isSidechain":false,"message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_F1","content":"done"},{"type":"tool_result","tool_use_id":"toolu_F2","content":"done"},{"type":"tool_result","tool_use_id":"toolu_F3","content":"done"}]}}
+{"type":"result","subtype":"success"}
