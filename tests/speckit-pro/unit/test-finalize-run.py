@@ -19,12 +19,21 @@ A harness or tooling error that blocks a gate is retried within a fixed budget
 attempt count and the `.process/verification/` path holding each attempt's raw
 error and trace. It never counts as passed, and the one human stop reports it
 as a harness error, never as a failure of the code under test.
+
+The stop triggers are proved from the runner's own records (issue 829). A gate's
+status comes from the verification dispatch the runner fingerprinted, so a forged
+status fails closed. A deferred unit or failed gate gets one escalation cycle
+first, a gate missing at a head becomes pending work, and a harness error gets
+one more attempt in a changed environment. A stop needs the earlier cycle the
+runner counted in the ledger.
 """
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
+import shlex
 import subprocess
 import sys
 import tempfile
@@ -41,7 +50,8 @@ for entry in (PLUGIN_ROOT, REPO_ROOT / "tests" / "speckit-pro" / "lib"):
 
 from test_result import run_counted  # noqa: E402
 
-from speckit_pro_runner.execution_control import execution_control  # noqa: E402
+from speckit_pro_runner.agent_materialization import canonical_bytes  # noqa: E402
+from speckit_pro_runner.execution_control import execution_control, record_failing_checks  # noqa: E402
 
 HELPER_ID = "finalize-run"
 FIXTURE_REQUEST = (
@@ -72,15 +82,24 @@ HARNESS_ERROR = {"gate": "G7", "status": "harness_error", "command": "python3 te
                  "head_sha": HEADS[103], "attempts": 3, "evidence": HARNESS_EVIDENCE}
 
 
+DROP = object()  # marks an evidence key the seeded verification record leaves out
+
+
+def command_digest(command: str) -> str:
+    lexer = shlex.shlex(command, posix=True, punctuation_chars=True)
+    lexer.whitespace_split = True
+    return hashlib.sha256(canonical_bytes(list(lexer))).hexdigest()
+
+
 def per_head(*gates: dict[str, object], heads: tuple[str, ...] = tuple(HEADS.values())) -> list[dict[str, object]]:
     """Each gate result repeated at every listed PR head."""
     return [{**gate, "head_sha": head} for head in heads for gate in gates]
 
 
-def finalize(root: Path, inputs: dict[str, object]) -> dict[str, object]:
+def finalize(root: Path, inputs: dict[str, object], record: bool = False) -> dict[str, object]:
     from speckit_pro_runner.helpers.run_finalization import finalize_run
 
-    return finalize_run(root, inputs)
+    return finalize_run(root, inputs, record=record)
 
 
 class _LedgerFixture:
@@ -90,10 +109,12 @@ class _LedgerFixture:
         temp = tempfile.TemporaryDirectory()
         self.addCleanup(temp.cleanup)
         self.root = Path(temp.name)
+        self.clock = 1000.0
         self.clean = self.start("clean")
         self.deferring = self.start("feature")
         self.invoke(self.deferring, "reserve", dispatch_id="fix-a", kind="corrective", failure_invariant="FR-001")
         self.invoke(self.deferring, "complete", dispatch_id="fix-a", outcome="completed")
+        self.clock += 10  # the deferral comes after the completed fix, as it does in a real run
         deferred = self.invoke(self.deferring, "reserve", dispatch_id="fix-a-again", kind="corrective",
                                failure_invariant="FR-001")
         assert deferred["disposition"] == "defer", deferred
@@ -106,9 +127,81 @@ class _LedgerFixture:
         self.invoke(run, "start")
         return run
 
+    def verification(self, run: dict[str, object], gate: dict[str, object], **changes: object) -> str:
+        """One verification dispatch the runner fingerprinted for this gate, returned as its dispatch id."""
+        self.clock += 10
+        run["verifications"] = int(run.get("verifications", 0)) + 1  # type: ignore[call-overload]
+        dispatch_id = f"verify-{run['verifications']}"
+        passed = gate["status"] == "passed"
+        evidence: dict[str, object] = {
+            "command_id": "UNIT_TEST", "command_sha256": command_digest(str(gate["command"])),
+            "format": "passed" if passed else "unittest", "failing": [] if passed else ["test_x (m.T.test_x)"],
+            "passing": None, "checks_run": None if passed else 1, "output_sha256": "0" * 64,
+            "head_sha": gate["head_sha"], "worktree_clean": True}
+        evidence.update(changes)
+        for key in [key for key, value in evidence.items() if value is DROP]:
+            del evidence[key]
+        self.invoke(run, "reserve", dispatch_id=dispatch_id, kind="verification")
+        self.invoke(run, "begin-verification", dispatch_id=dispatch_id)
+        with patch("speckit_pro_runner.execution_control.time.time", return_value=self.clock):
+            record_failing_checks(self.root, {"workflow_file": run["workflow"], "expected_run_id": run["run_id"],
+                                              "dispatch_id": dispatch_id}, evidence)
+        self.invoke(run, "complete", dispatch_id=dispatch_id, outcome="completed" if passed else "failed")
+        return dispatch_id
+
+    def harness_gates(self, **overrides: object) -> list[dict[str, object]]:
+        """Green at every head except G7 at the tip, which hit a persistent harness error."""
+        evidence = self.root / HARNESS_EVIDENCE
+        evidence.mkdir(parents=True, exist_ok=True)
+        for attempt in (1, 2, 3, 4):
+            (evidence / f"attempt-{attempt}.log").write_text("harness exited 70 before the suite ran\n")
+        gates = [gate for gate in per_head(*GREEN) if not (gate["head_sha"] == HEADS[103] and gate["gate"] == "G7")]
+        return gates + [{**HARNESS_ERROR, **overrides}]
+
+    def changed_environment_gates(self) -> list[dict[str, object]]:
+        """The harness error after the extra attempt in a changed environment."""
+        return self.harness_gates(attempts=4, environment_change="fresh_worktree")
+
+    def bind_gates(self, run: dict[str, object], gates: list[dict[str, object]]) -> list[dict[str, object]]:
+        """Back each passed or failed gate result with a runner-fingerprinted verification dispatch."""
+        bound = []
+        for gate in gates:
+            if (gate.get("status") in ("passed", "failed") and "dispatch_id" not in gate
+                    and isinstance(gate.get("command"), str) and str(gate["command"]).strip()
+                    and isinstance(gate.get("head_sha"), str) and len(str(gate["head_sha"])) == 40):
+                gate = {**gate, "dispatch_id": self.verification(run, gate)}
+            bound.append(gate)
+        return bound
+
+    def fail_escalation(self, run: dict[str, object], unit_kind: str, unit: str,
+                        tiers: tuple[int, ...] = (2, 3), outcome: str | None = "failed") -> None:
+        """Run each listed tier's retry for one unit; the last settles as `outcome`, or stays open when None."""
+        for tier in tiers:
+            self.clock += 10
+            name = f"escalate-{unit_kind}-{unit[:12]}-tier-{tier}"
+            self.invoke(run, "reserve", dispatch_id=name, kind="corrective",
+                        escalation={"unit_kind": unit_kind, "unit": unit, "tier": tier})
+            if outcome is not None or tier != tiers[-1]:
+                self.clock += 10
+                self.invoke(run, "complete", dispatch_id=name, outcome=outcome or "failed")
+
+    def exhaust(self, run: dict[str, object], inputs: dict[str, object]) -> dict[str, object]:
+        """Fail every escalation tier of every failed gate in the inputs and every open deferral in the ledger."""
+        ledger = json.loads((self.root / str(run["ledger_path"])).read_text())
+        for entry in ledger.get("deferred", []):
+            if "resolved_by" not in entry:
+                self.fail_escalation(run, entry["unit_kind"], entry["unit"])
+        for gate in inputs["gates"]:  # type: ignore[attr-defined]
+            if gate["status"] == "failed":
+                digest = command_digest(gate["command"])
+                self.fail_escalation(run, "gate_failure", digest, tiers=(2,))
+                self.verification(run, gate)  # the gate is red again after the tier-2 retry
+                self.fail_escalation(run, "gate_failure", digest, tiers=(3,))
+        return inputs
+
     def invoke(self, run: dict[str, object], action: str, **inputs: object) -> dict[str, object]:
         binding = {"expected_run_id": run["run_id"]} if "run_id" in run else {}
-        with patch("speckit_pro_runner.execution_control.time.time", return_value=1000.0):
+        with patch("speckit_pro_runner.execution_control.time.time", return_value=self.clock):
             result = execution_control(
                 self.root, {"workflow_file": run["workflow"], "action": action, **binding, **inputs}, "apply"
             )
@@ -135,6 +228,7 @@ class _LedgerFixture:
             "resume_command": RESUME,
         }
         inputs.update(overrides)
+        inputs["gates"] = self.bind_gates(run, inputs["gates"])  # type: ignore[arg-type]
         return inputs
 
 
@@ -161,7 +255,9 @@ class FinalizeRunTests(_LedgerFixture, unittest.TestCase):
     def test_a_failed_gate_is_one_human_stop_naming_the_gate_and_command(self) -> None:
         gates = per_head(GREEN[0]) + per_head({**LIVE_EVAL, "status": "passed"}, heads=(HEADS[101], HEADS[102]))
         gates.append(dict(LIVE_EVAL))
-        result = finalize(self.root, self.inputs(gates=gates))
+        inputs = self.inputs(gates=gates)
+        self.assertEqual(finalize(self.root, inputs)["outcome"], "continue")
+        result = finalize(self.root, self.exhaust(self.clean, inputs))
         self.assertEqual(result["outcome"], "human_stop")
         self.assertEqual(result["goal_status"], "blocked")
         self.assertFalse(result["mark_ready"])
@@ -169,7 +265,8 @@ class FinalizeRunTests(_LedgerFixture, unittest.TestCase):
         self.assertEqual(result["ready_commands"], [])
         stop = result["human_stop"]
         self.assertEqual(stop["gates"], [{"gate": LIVE_EVAL["gate"], "command": LIVE_EVAL["command"],
-                                          "pull_request": 103, "head_sha": HEADS[103]}])
+                                          "pull_request": 103, "head_sha": HEADS[103], "class": "exhausted",
+                                          "reason_code": "all_tiers_failed"}])
         self.assertEqual(stop["missing"], [])
         request = result["end_of_run_request"]
         self.assertIn(LIVE_EVAL["gate"], request)
@@ -177,20 +274,40 @@ class FinalizeRunTests(_LedgerFixture, unittest.TestCase):
         self.assertIn(HEADS[103], request)
         self.assertNotIn("ready for review.", request)
 
-    def test_an_unresolved_ledger_deferral_is_a_human_stop_not_finalize_ready(self) -> None:
+    def test_an_exhausted_ledger_unit_is_a_decision_and_the_stack_still_goes_ready(self) -> None:
+        self.fail_escalation(self.deferring, "failure_family", "FR-001")
         result = finalize(self.root, self.inputs(self.deferring))
-        self.assertEqual(result["outcome"], "human_stop")
-        self.assertFalse(result["mark_ready"])
-        units = result["human_stop"]["units"]
-        self.assertEqual([unit["unit"] for unit in units], ["Failure family FR-001"])
-        self.assertIn("authorize-corrective-exception", units[0]["finish"])
-        self.assertIn("Failure family FR-001", result["end_of_run_request"])
+        self.assertEqual(result["outcome"], "complete_with_deferred")
+        self.assertTrue(result["mark_ready"])
+        self.assertEqual(result["ready_commands"], ["gh pr ready 101", "gh pr ready 103"])
+        self.assertIsNone(result["human_stop"])
+        decisions = result["decisions"]
+        self.assertEqual([decision["unit"] for decision in decisions], ["Failure family FR-001"])
+        self.assertEqual(decisions[0]["class"], "exhausted")
+        self.assertIn("authorize-corrective-exception", decisions[0]["finish"])
+        self.assertIn("tier 3", decisions[0]["evidence"])
+        request = result["end_of_run_request"]
+        self.assertIn("Decisions for you", request)
+        self.assertIn("Failure family FR-001", request)
+        self.assertIn("ready for review", request)
 
-    def test_an_unresolved_deferred_task_is_a_human_stop(self) -> None:
+    def test_an_unresolved_deferred_task_is_an_authority_decision_not_a_draft_stack(self) -> None:
         result = finalize(self.root, self.inputs(unresolved_deferrals=[dict(VETO)]))
-        self.assertEqual(result["outcome"], "human_stop")
-        self.assertEqual(result["human_stop"]["units"], [VETO])
+        self.assertEqual(result["outcome"], "complete_with_deferred")
+        self.assertTrue(result["mark_ready"])
+        self.assertEqual(len(result["decisions"]), 1)
+        self.assertEqual({key: result["decisions"][0][key] for key in VETO} | {"class": result["decisions"][0]["class"]},
+                         {**VETO, "class": "authority"})
         self.assertIn(VETO["finish"], result["end_of_run_request"])
+        self.assertIn("Decisions for you", result["end_of_run_request"])
+
+    def test_decisions_and_human_uat_alone_never_keep_the_stack_draft(self) -> None:
+        self.fail_escalation(self.deferring, "failure_family", "FR-001")
+        result = finalize(self.root, self.inputs(self.deferring, unresolved_deferrals=[dict(VETO)]))
+        self.assertEqual((result["outcome"], result["goal_status"], result["mark_ready"]),
+                         ("complete_with_deferred", "complete", True))
+        self.assertEqual(sorted(decision["class"] for decision in result["decisions"]), ["authority", "exhausted"])
+        self.assertEqual(result["deferred_items"], [UAT])
 
     def test_only_human_uat_reaches_the_deferred_section(self) -> None:
         result = finalize(self.root, self.inputs(self.deferring, gates=per_head(LIVE_EVAL),
@@ -214,6 +331,7 @@ class FinalizeRunTests(_LedgerFixture, unittest.TestCase):
         self.assertEqual(result["end_of_run_request"], "")
 
     def test_digest_is_stable_for_an_unchanged_blocker(self) -> None:
+        self.fail_escalation(self.deferring, "failure_family", "FR-001")
         first = finalize(self.root, self.inputs(self.deferring))
         second = finalize(self.root, self.inputs(self.deferring))
         self.assertEqual(first["deferred_digest"], second["deferred_digest"])
@@ -224,8 +342,8 @@ class FinalizeRunTests(_LedgerFixture, unittest.TestCase):
         """#807 review: the same blocker listed in another order is not a changed blocker."""
         gates = per_head(*({**gate, "status": "failed"} for gate in GREEN))
         uat = [dict(UAT), {**UAT, "item": "Second walkthrough"}]
-        forward = finalize(self.root, self.inputs(gates=gates, human_uat=uat))
-        backward = finalize(self.root, self.inputs(gates=gates[::-1], human_uat=uat[::-1]))
+        forward = finalize(self.root, self.exhaust(self.clean, self.inputs(gates=gates, human_uat=uat)))
+        backward = finalize(self.root, self.exhaust(self.clean, self.inputs(gates=gates[::-1], human_uat=uat[::-1])))
         self.assertEqual(forward["deferred_digest"], backward["deferred_digest"])
         self.assertEqual(forward["end_of_run_request"], backward["end_of_run_request"])
         ready = finalize(self.root, self.inputs(human_uat=uat))
@@ -240,10 +358,16 @@ class FinalizeRunTests(_LedgerFixture, unittest.TestCase):
         for pr in result["pull_requests"]:
             with self.subTest(pull_request=pr["number"]):
                 # Each PR body cites only the evidence produced at its own head.
-                self.assertEqual(pr["gates"], [{**gate, "head_sha": pr["head_sha"]} for gate in GREEN])
+                self.assertEqual([{key: value for key, value in gate.items() if key != "dispatch_id"}
+                                  for gate in pr["gates"]], [{**gate, "head_sha": pr["head_sha"]} for gate in GREEN])
+                self.assertTrue(all(gate["dispatch_id"].startswith("verify-") for gate in pr["gates"]))
 
     def test_a_stack_verified_only_at_its_tip_is_a_human_stop_naming_each_unverified_head(self) -> None:
-        result = finalize(self.root, self.inputs(gates=per_head(*GREEN, heads=(HEADS[103],))))
+        tip_only = per_head(*GREEN, heads=(HEADS[103],))
+        first = finalize(self.root, self.inputs(gates=tip_only), record=True)
+        self.assertEqual(first["outcome"], "continue")
+        self.assertEqual(len(first["pending_items"]), 4)
+        result = finalize(self.root, self.inputs(gates=tip_only))
         self.assertEqual(result["outcome"], "human_stop")
         self.assertFalse(result["mark_ready"])
         self.assertEqual(result["ready_commands"], [])
@@ -261,20 +385,21 @@ class FinalizeRunTests(_LedgerFixture, unittest.TestCase):
     def test_a_gate_missing_at_one_lower_head_blocks_the_whole_stack(self) -> None:
         gates = [gate for gate in per_head(*GREEN)
                  if not (gate["head_sha"] == HEADS[102] and gate["gate"] == "Post: Integration Suite")]
+        self.assertEqual(finalize(self.root, self.inputs(gates=gates), record=True)["outcome"], "continue")
         result = finalize(self.root, self.inputs(gates=gates))
         self.assertEqual(result["outcome"], "human_stop")
         self.assertEqual(result["human_stop"]["missing"],
                          [{"pull_request": 102, "head_sha": HEADS[102], "gate": "Post: Integration Suite",
-                           "command": GREEN[1]["command"]}])
+                           "command": GREEN[1]["command"], "class": "exhausted"}])
 
     def test_a_failed_gate_at_a_lower_head_is_a_human_stop_even_when_the_tip_passed(self) -> None:
         gates = per_head(*GREEN, heads=(HEADS[102], HEADS[103]))
         gates += [dict(GREEN[0], head_sha=HEADS[101]), dict(GREEN[1], status="failed", head_sha=HEADS[101])]
-        result = finalize(self.root, self.inputs(gates=gates))
+        result = finalize(self.root, self.exhaust(self.clean, self.inputs(gates=gates)))
         self.assertEqual(result["outcome"], "human_stop")
         self.assertEqual(result["human_stop"]["gates"],
                          [{"gate": GREEN[1]["gate"], "command": GREEN[1]["command"], "pull_request": 101,
-                           "head_sha": HEADS[101]}])
+                           "head_sha": HEADS[101], "class": "exhausted", "reason_code": "all_tiers_failed"}])
 
     def test_a_single_pull_request_run_finalizes_at_its_one_head(self) -> None:
         prs = [{"number": 7, "url": "https://github.com/example-org/example-repo/pull/7", "draft": True,
@@ -283,24 +408,17 @@ class FinalizeRunTests(_LedgerFixture, unittest.TestCase):
         self.assertEqual(result["outcome"], "complete_with_deferred")
         self.assertEqual(result["ready_commands"], ["gh pr ready 7"])
 
-    def harness_gates(self, **overrides: object) -> list[dict[str, object]]:
-        """Green at every head except G7 at the tip, which hit a persistent harness error."""
-        evidence = self.root / HARNESS_EVIDENCE
-        evidence.mkdir(parents=True, exist_ok=True)
-        for attempt in (1, 2, 3):
-            (evidence / f"attempt-{attempt}.log").write_text("harness exited 70 before the suite ran\n")
-        gates = [gate for gate in per_head(*GREEN) if not (gate["head_sha"] == HEADS[103] and gate["gate"] == "G7")]
-        return gates + [{**HARNESS_ERROR, **overrides}]
-
     def test_a_persistent_harness_error_is_a_human_stop_citing_its_evidence(self) -> None:
-        result = finalize(self.root, self.inputs(gates=self.harness_gates()))
+        first = finalize(self.root, self.inputs(gates=self.harness_gates()), record=True)
+        self.assertEqual(first["outcome"], "continue")
+        result = finalize(self.root, self.inputs(gates=self.changed_environment_gates()))
         self.assertEqual(result["outcome"], "human_stop")
         self.assertFalse(result["mark_ready"])
         self.assertEqual(result["ready_commands"], [])
         stop = result["human_stop"]
         self.assertEqual(stop["harness_errors"], [{"gate": "G7", "command": HARNESS_ERROR["command"],
-                                                   "pull_request": 103, "head_sha": HEADS[103], "attempts": 3,
-                                                   "evidence": HARNESS_EVIDENCE}])
+                                                   "pull_request": 103, "head_sha": HEADS[103], "attempts": 4,
+                                                   "evidence": HARNESS_EVIDENCE, "class": "exhausted"}])
         # Reported as a harness error, not as a failed gate or a missing result.
         self.assertEqual(stop["gates"], [])
         self.assertEqual(stop["missing"], [])
@@ -308,11 +426,12 @@ class FinalizeRunTests(_LedgerFixture, unittest.TestCase):
         self.assertIn("harness error", request)
         self.assertIn("not a failure of the code under test", request)
         self.assertIn(HARNESS_EVIDENCE, request)
-        self.assertIn("3 attempts", request)
+        self.assertIn("4 attempts", request)
         self.assertNotIn("G7 failed", request)
 
     def test_a_harness_error_never_counts_as_passed(self) -> None:
-        result = finalize(self.root, self.inputs(gates=self.harness_gates(), human_uat=[]))
+        finalize(self.root, self.inputs(gates=self.harness_gates()), record=True)
+        result = finalize(self.root, self.inputs(gates=self.changed_environment_gates(), human_uat=[]))
         self.assertFalse(result["finalized"])
         self.assertEqual(result["goal_status"], "blocked")
         tip = result["pull_requests"][-1]
@@ -333,6 +452,8 @@ class FinalizeRunTests(_LedgerFixture, unittest.TestCase):
     def test_harness_errors_fail_closed(self) -> None:
         cases: dict[str, dict[str, object]] = {
             "retry budget not spent": {"attempts": 2},
+            "unknown environment change": {"attempts": 4, "environment_change": "reboot"},
+            "environment change without the extra attempt": {"attempts": 3, "environment_change": "fresh_worktree"},
             "attempts is not an integer": {"attempts": "3"},
             "attempts is a boolean": {"attempts": True},
             "evidence outside the verification directory": {"evidence": "clean/.process/task-results/g7"},
@@ -407,6 +528,7 @@ class ResolvedDeferralTests(_LedgerFixture, unittest.TestCase):
 
     def setUp(self) -> None:
         super().setUp()
+        self.clock = 1000.0  # this ledger's fixes and its deferral share one reading
         spec = self.root / "resolved/spec.md"
         (self.root / "resolved").mkdir()
         (self.root / "resolved/workflow.md").write_text("# Workflow\n")
@@ -448,25 +570,30 @@ class ResolvedDeferralTests(_LedgerFixture, unittest.TestCase):
         schema = json.loads((PLUGIN_ROOT / "speckit_pro_runner/contracts/execution-control.schema.json").read_text())
         self.assertEqual(json_schema_failures(completed["ledger"], schema, schema, "ledger"), [])
 
-    def test_a_deferral_with_no_completed_fix_stays_a_human_stop(self) -> None:
+    def test_a_deferral_with_no_completed_fix_reaches_the_owner_as_a_decision(self) -> None:
         self.invoke(self.run, "reserve", dispatch_id="fix-d", kind="corrective", failure_invariant="FR-002")
         failed = self.fix_under_exception(outcome="failed")
         self.assertNotIn("resolved_by", failed["ledger"]["deferred"][0])
+        for unit in ("FR-001", "FR-002"):
+            self.fail_escalation(self.run, "failure_family", unit)
         result = finalize(self.root, self.inputs(self.run))
-        self.assertEqual(result["outcome"], "human_stop")
-        self.assertEqual(sorted(unit["unit"] for unit in result["human_stop"]["units"]),
+        self.assertEqual((result["outcome"], result["mark_ready"]), ("complete_with_deferred", True))
+        self.assertEqual(sorted(unit["unit"] for unit in result["decisions"]),
                          ["Failure family FR-001", "Failure family FR-002"])
 
     def test_only_the_resolved_unit_leaves_the_request(self) -> None:
         self.invoke(self.run, "reserve", dispatch_id="fix-d", kind="corrective", failure_invariant="FR-002")
         self.fix_under_exception()
+        self.fail_escalation(self.run, "failure_family", "FR-002")
         result = finalize(self.root, self.inputs(self.run))
-        self.assertEqual(result["outcome"], "human_stop")
-        self.assertEqual([unit["unit"] for unit in result["human_stop"]["units"]], ["Failure family FR-002"])
+        self.assertEqual((result["outcome"], result["mark_ready"]), ("complete_with_deferred", True))
+        self.assertEqual([unit["unit"] for unit in result["decisions"]], ["Failure family FR-002"])
 
     def test_a_forged_resolution_fails_closed(self) -> None:
         self.invoke(self.run, "reserve", dispatch_id="fix-d", kind="corrective", failure_invariant="FR-002")
         self.fix_under_exception()
+        valid = self.ledger_path().read_bytes()
+        inputs = self.inputs(self.run)
         valid = self.ledger_path().read_bytes()
         tampers = {
             "claimed by a dispatch of another unit": lambda ledger: ledger["deferred"][1].update(
@@ -489,7 +616,7 @@ class ResolvedDeferralTests(_LedgerFixture, unittest.TestCase):
                 tamper(ledger)
                 self.ledger_path().write_text(json.dumps(ledger), encoding="utf-8")
                 with self.assertRaises(ValueError):
-                    finalize(self.root, self.inputs(self.run))
+                    finalize(self.root, inputs)
 
     def test_a_ledger_from_an_earlier_version_still_validates_and_reports_its_deferral(self) -> None:
         self.fix_under_exception()
@@ -499,19 +626,275 @@ class ResolvedDeferralTests(_LedgerFixture, unittest.TestCase):
             entry.pop("resolved_at", None)
         self.ledger_path().write_text(json.dumps(legacy), encoding="utf-8")
         result = finalize(self.root, self.inputs(self.run))
-        self.assertEqual(result["outcome"], "human_stop")
-        self.assertEqual([unit["unit"] for unit in result["human_stop"]["units"]], ["Failure family FR-001"])
+        self.assertEqual(result["outcome"], "continue")
+        self.assertTrue(any("Failure family FR-001" in item for item in result["pending_items"]))
+        self.fail_escalation(self.run, "failure_family", "FR-001")
+        result = finalize(self.root, self.inputs(self.run))
+        self.assertEqual(result["outcome"], "complete_with_deferred")
+        self.assertEqual([unit["unit"] for unit in result["decisions"]], ["Failure family FR-001"])
+
+
+class EscalationBeforeStopTests(_LedgerFixture, unittest.TestCase):
+    """A failed unit climbs tier 2 then tier 3 before it becomes a decision or a red-gate stop (issue 829)."""
+
+    def test_a_deferred_unit_climbs_both_tiers_before_it_becomes_a_decision(self) -> None:
+        before = finalize(self.root, self.inputs(self.deferring))
+        self.assertEqual((before["outcome"], before["goal_status"], before["human_stop"]), ("continue", "not_complete", None))
+        self.assertFalse(before["mark_ready"])
+        self.assertEqual(before["ready_commands"], [])
+        self.assertIn("Escalate Failure family FR-001 to tier 2", before["pending_items"][0])
+        self.assertIn("different approach", before["pending_items"][0])
+        self.assertIn("consensus", before["pending_items"][0])
+        self.fail_escalation(self.deferring, "failure_family", "FR-001", tiers=(2,), outcome=None)
+        running = finalize(self.root, self.inputs(self.deferring))
+        self.assertEqual(running["outcome"], "continue")
+        self.assertIn("Finish the escalation retry", running["pending_items"][0])
+        self.clock += 10
+        self.invoke(self.deferring, "complete", dispatch_id="escalate-failure_family-FR-001-tier-2", outcome="failed")
+        tier_three = finalize(self.root, self.inputs(self.deferring))
+        self.assertEqual(tier_three["outcome"], "continue")
+        self.assertIn("Escalate Failure family FR-001 to tier 3", tier_three["pending_items"][0])
+        self.assertIn("strongest model at max effort with the full failure history", tier_three["pending_items"][0])
+        self.fail_escalation(self.deferring, "failure_family", "FR-001", tiers=(3,))
+        after = finalize(self.root, self.inputs(self.deferring))
+        self.assertEqual((after["outcome"], after["mark_ready"]), ("complete_with_deferred", True))
+        self.assertIn("escalation tiers are exhausted", after["decisions"][0]["reason"])
+        self.assertEqual(after["decisions"][0]["reason_code"], "all_tiers_failed")
+
+    def test_the_tier_three_cap_sends_a_unit_straight_to_the_decisions(self) -> None:
+        for number in range(3):
+            gate = {"gate": f"X{number}", "status": "failed", "command": f"python3 tests/x{number}.py",
+                    "head_sha": HEADS[101]}
+            digest = command_digest(gate["command"])
+            self.verification(self.deferring, gate)
+            self.fail_escalation(self.deferring, "gate_failure", digest, tiers=(2,))
+            self.verification(self.deferring, gate)
+            self.fail_escalation(self.deferring, "gate_failure", digest, tiers=(3,))
+        self.fail_escalation(self.deferring, "failure_family", "FR-001", tiers=(2,))
+        result = finalize(self.root, self.inputs(self.deferring))
+        self.assertEqual((result["outcome"], result["mark_ready"]), ("complete_with_deferred", True))
+        self.assertEqual(result["decisions"][0]["reason_code"], "tier3_cap_reached")
+        self.assertIn("tier 2", result["decisions"][0]["evidence"])
+        ledger = json.loads((self.root / str(self.deferring["ledger_path"])).read_text())
+        self.assertEqual(ledger["escalation_tier3_cap"], 3)
+
+    def test_a_completed_tier_resolves_the_unit_and_the_run_finalizes(self) -> None:
+        self.fail_escalation(self.deferring, "failure_family", "FR-001", tiers=(2,), outcome="completed")
+        result = finalize(self.root, self.inputs(self.deferring))
+        self.assertEqual(result["outcome"], "complete_with_deferred")
+        self.assertTrue(result["mark_ready"])
+        self.assertEqual(result["decisions"], [])
+
+    def test_a_failed_gate_climbs_the_tiers_before_it_keeps_the_stack_draft(self) -> None:
+        gates = self.per_head_gates(failed=(HEADS[103], "G7"))
+        inputs = self.inputs(gates=gates)
+        failed = next(gate for gate in inputs["gates"] if gate["status"] == "failed")  # type: ignore[attr-defined]
+        digest = command_digest(failed["command"])
+        first = finalize(self.root, inputs)
+        self.assertEqual(first["outcome"], "continue")
+        self.assertIn("Escalate failed gate G7 at head", first["pending_items"][0])
+        self.assertIn("tier 2", first["pending_items"][0])
+        self.fail_escalation(self.clean, "gate_failure", digest, tiers=(2,), outcome="completed")
+        rerun = finalize(self.root, inputs)
+        self.assertEqual(rerun["outcome"], "continue")
+        self.assertIn("Rerun gate G7", rerun["pending_items"][0])
+        red_again = self.inputs(gates=gates)
+        tier_three = finalize(self.root, red_again)
+        self.assertIn("tier 3", tier_three["pending_items"][0])
+        self.fail_escalation(self.clean, "gate_failure", digest, tiers=(3,))
+        result = finalize(self.root, red_again)
+        self.assertEqual((result["outcome"], result["goal_status"], result["mark_ready"]), ("human_stop", "blocked", False))
+        self.assertEqual((result["human_stop"]["gates"][0]["gate"], result["human_stop"]["gates"][0]["reason_code"]),
+                         ("G7", "all_tiers_failed"))
+
+    def per_head_gates(self, failed: tuple[str, str]) -> list[dict[str, object]]:
+        return [dict(gate, status="failed") if (gate["head_sha"], gate["gate"]) == failed else gate
+                for gate in per_head(*GREEN)]
+
+    def test_forged_escalation_records_fail_closed(self) -> None:
+        path = self.root / str(self.deferring["ledger_path"])
+        self.fail_escalation(self.deferring, "failure_family", "FR-001")
+        inputs = self.inputs(self.deferring)
+        valid = path.read_bytes()
+        record = json.loads(valid)["escalation_allowances"]["failure_family:FR-001"]
+        forged_dispatch = {"kind": "corrective", "outcome": "failed", "reserved_at": 1000.0, "completed_at": 1000.0,
+                           "reservation_id": None, "reconciliations": 0}
+        tampers = {
+            "failed dispatch that claims an escalation with no allowance": lambda ledger: (
+                ledger.pop("escalation_allowances"),
+                ledger["dispatches"].update(
+                    {"forged": {**forged_dispatch, "escalation": "failure_family:FR-001"}})),
+            "allowance that names no dispatch": lambda ledger: ledger["escalation_allowances"][
+                "failure_family:FR-001"].update(dispatch_id="never-ran"),
+            "allowance for a unit that never failed": lambda ledger: ledger["escalation_allowances"].update(
+                {"failure_family:FR-002": {**record, "unit": "FR-002"}}),
+            "allowance for a passing verification": lambda ledger: (
+                ledger["dispatches"].update({"verify-p": {**forged_dispatch, "kind": "verification"}}),
+                ledger["escalation_allowances"].update(
+                    {"gate_failure:verify-p": {**record, "unit_kind": "gate_failure", "unit": "verify-p"}})),
+            "escalation marker dropped from a dispatch": lambda ledger: ledger["dispatches"][
+                "escalate-failure_family-FR-001-tier-2"].pop("escalation"),
+        }
+        for name, tamper in tampers.items():
+            with self.subTest(tamper=name):
+                ledger = json.loads(valid)
+                tamper(ledger)
+                path.write_text(json.dumps(ledger), encoding="utf-8")
+                with self.assertRaises(ValueError):
+                    finalize(self.root, inputs)
+
+
+class GateStatusFromRunnerRecordsTests(_LedgerFixture, unittest.TestCase):
+    """A gate's status is the runner's own verification record, never the caller's claim (issue 829)."""
+
+    def gate(self, status: str = "passed", **changes: object) -> dict[str, object]:
+        """One G7 result at the tip, backed by a verification dispatch with `changes` to its evidence."""
+        base = {"gate": "G7", "status": status, "command": "python3 tests/run-all.py", "head_sha": HEADS[103]}
+        return {**base, "dispatch_id": self.verification(self.clean, base, **changes)}
+
+    def finalize_tip(self, gate: dict[str, object]) -> dict[str, object]:
+        prs = [pr for pr in self.inputs()["pull_requests"] if pr["head_sha"] == HEADS[103]]  # type: ignore[attr-defined]
+        return finalize(self.root, self.inputs(pull_requests=prs, gates=[gate]))
+
+    def test_a_forged_passed_status_no_longer_finalizes_ready(self) -> None:
+        failing = self.gate("failed")
+        with self.assertRaisesRegex(ValueError, "claims passed, but the runner's verification record shows failed"):
+            self.finalize_tip({**failing, "status": "passed"})
+        unparsed = self.gate("failed", format="unparsed", failing=None, checks_run=None)
+        with self.assertRaisesRegex(ValueError, "shows failed"):
+            self.finalize_tip({**unparsed, "status": "passed"})
+
+    def test_a_forged_failed_status_does_not_stop_a_passing_run(self) -> None:
+        with self.assertRaisesRegex(ValueError, "claims failed, but the runner's verification record shows passed"):
+            self.finalize_tip({**self.gate("passed"), "status": "failed"})
+
+    def test_the_runner_record_decides_the_status_and_an_unparsed_failure_is_failed(self) -> None:
+        self.assertEqual(self.finalize_tip(self.gate("passed"))["outcome"], "complete_with_deferred")
+        unparsed = self.gate("failed", format="unparsed", failing=None, checks_run=None)
+        self.assertEqual(self.finalize_tip(unparsed)["outcome"], "continue")
+
+    def test_a_status_the_runner_did_not_record_never_counts(self) -> None:
+        base = self.gate("passed")
+        cases: dict[str, dict[str, object]] = {
+            "no dispatch": {"dispatch_id": "never-ran"},
+            "another command": {"command": "python3 tests/other.py"},
+            "another head": {"head_sha": HEADS[102]},
+        }
+        for name, change in cases.items():
+            with self.subTest(case=name), self.assertRaises(ValueError):
+                self.finalize_tip({**base, **change})
+        for name, evidence in {"verified at another head": {"head_sha": HEADS[102]},
+                               "dirty worktree": {"worktree_clean": False},
+                               "no head recorded": {"head_sha": DROP, "worktree_clean": DROP}}.items():
+            with self.subTest(case=name), self.assertRaises(ValueError):
+                self.finalize_tip(self.gate("passed", **evidence))
+        self.invoke(self.clean, "reserve", dispatch_id="not-a-verification", kind="implementation")
+        with self.assertRaises(ValueError):
+            self.finalize_tip({**base, "dispatch_id": "not-a-verification"})
+        unbacked = self.inputs(gates=[{key: value for key, value in base.items() if key != "dispatch_id"}])
+        unbacked["gates"] = [{key: value for key, value in gate.items() if key != "dispatch_id"}
+                             for gate in unbacked["gates"]]  # type: ignore[attr-defined]
+        with self.assertRaisesRegex(ValueError, "dispatch_id of the verification the runner ran"):
+            finalize(self.root, unbacked)
+
+    def test_one_verification_never_backs_two_gate_results(self) -> None:
+        gate = self.gate("passed")
+        twin = {**gate, "gate": "G8"}
+        prs = [pr for pr in self.inputs()["pull_requests"] if pr["head_sha"] == HEADS[103]]  # type: ignore[attr-defined]
+        with self.assertRaisesRegex(ValueError, "already backs another gate result"):
+            finalize(self.root, self.inputs(pull_requests=prs, gates=[gate, twin]))
+
+
+class MissingGateAcrossCyclesTests(_LedgerFixture, unittest.TestCase):
+    """A gate missing at one PR head is pending work first and stops only if it stays missing (issue 829)."""
+
+    TIP_ONLY = per_head(*GREEN, heads=(HEADS[103],))
+
+    def ledger_counts(self) -> dict[str, int]:
+        ledger = json.loads((self.root / str(self.clean["ledger_path"])).read_text())
+        return ledger.get("finalize_observations", {})
+
+    def test_a_missing_head_gate_continues_and_then_stops_when_it_stays_missing(self) -> None:
+        first = finalize(self.root, self.inputs(gates=self.TIP_ONLY), record=True)
+        self.assertEqual((first["outcome"], first["human_stop"], first["mark_ready"]), ("continue", None, False))
+        self.assertTrue(first["writes_state"])
+        self.assertEqual(len(first["pending_items"]), 4)
+        self.assertIn(f"Run gate G7 at head {HEADS[101]} of PR #101: python3 tests/run-all.py", first["pending_items"])
+        self.assertEqual(len(self.ledger_counts()), 4)
+        second = finalize(self.root, self.inputs(gates=self.TIP_ONLY), record=True)
+        self.assertEqual(second["outcome"], "human_stop")
+        self.assertEqual(len(second["human_stop"]["missing"]), 4)
+        self.assertFalse(second["writes_state"])
+        self.assertEqual(second["pending_items"], [])
+
+    def test_a_gate_that_is_run_before_the_next_cycle_finalizes_the_stack(self) -> None:
+        finalize(self.root, self.inputs(gates=self.TIP_ONLY), record=True)
+        result = finalize(self.root, self.inputs())
+        self.assertEqual(result["outcome"], "complete_with_deferred")
+        self.assertTrue(result["mark_ready"])
+
+    def test_only_a_recording_cycle_counts_and_a_read_only_look_never_stops_the_run(self) -> None:
+        for _ in range(3):
+            result = finalize(self.root, self.inputs(gates=self.TIP_ONLY))
+            self.assertEqual((result["outcome"], result["writes_state"]), ("continue", False))
+        self.assertEqual(self.ledger_counts(), {})
+
+    def test_a_stop_needs_the_same_head_and_gate_seen_missing_before(self) -> None:
+        seen = per_head(*GREEN, heads=(HEADS[101], HEADS[103]))
+        finalize(self.root, self.inputs(gates=seen), record=True)
+        result = finalize(self.root, self.inputs(gates=per_head(*GREEN, heads=(HEADS[102], HEADS[103]))))
+        self.assertEqual((result["outcome"], result["human_stop"]), ("continue", None))
+        self.assertTrue(all(f"head {HEADS[101]}" in item for item in result["pending_items"]))
+
+    def test_a_forged_observation_count_fails_closed(self) -> None:
+        finalize(self.root, self.inputs(gates=self.TIP_ONLY), record=True)
+        path = self.root / str(self.clean["ledger_path"])
+        ledger = json.loads(path.read_text())
+        ledger["finalize_observations"] = {f"missing_gate:{HEADS[101]}:G7": 99}
+        path.write_text(json.dumps(ledger), encoding="utf-8")
+        with self.assertRaises(ValueError):
+            finalize(self.root, self.inputs(gates=self.TIP_ONLY))
+
+
+class HarnessExtraAttemptTests(_LedgerFixture, unittest.TestCase):
+    """One extra harness attempt in a changed environment comes before a harness error stops (issue 829)."""
+
+    def test_a_harness_error_continues_for_one_changed_environment_attempt_first(self) -> None:
+        first = finalize(self.root, self.inputs(gates=self.harness_gates()), record=True)
+        self.assertEqual((first["outcome"], first["human_stop"]), ("continue", None))
+        self.assertIn("changed environment (fresh_worktree or cleared_caches)", first["pending_items"][0])
+        self.assertIn("`attempts` 4", first["pending_items"][0])
+
+    def test_the_extra_attempt_alone_never_stops_the_run_without_an_earlier_counted_cycle(self) -> None:
+        result = finalize(self.root, self.inputs(gates=self.changed_environment_gates()))
+        self.assertEqual(result["outcome"], "continue")
+
+    def test_a_repeat_at_the_budget_stays_pending_until_the_changed_environment_attempt_shows(self) -> None:
+        for _ in range(3):
+            result = finalize(self.root, self.inputs(gates=self.harness_gates()), record=True)
+            self.assertEqual(result["outcome"], "continue")
+        self.assertEqual(finalize(self.root, self.inputs(gates=self.harness_gates()))["outcome"], "continue")
+        stopped = finalize(self.root, self.inputs(gates=self.changed_environment_gates()))
+        self.assertEqual(stopped["outcome"], "human_stop")
+
+    def test_a_later_pass_in_the_changed_environment_finalizes(self) -> None:
+        finalize(self.root, self.inputs(gates=self.harness_gates()), record=True)
+        result = finalize(self.root, self.inputs())
+        self.assertEqual(result["outcome"], "complete_with_deferred")
 
 
 class FinalizeRunRegistryTests(unittest.TestCase):
     def test_fixture_request_runs_through_the_runner(self) -> None:
-        # The fixture ledger holds a deferral, so the authoritative request ends in the human stop.
+        # The fixture ledger holds a deferral whose escalation tiers all failed, so the request finalizes ready
+        # with that unit under "Decisions for you".
         response = _runner(json.loads(FIXTURE_REQUEST.read_text(encoding="utf-8")))
         self.assertEqual(response["status"], "ok", response)
         data = response["data"]
         self.assertEqual(data["helper_id"], HELPER_ID)
-        self.assertEqual(data["outcome"], "human_stop")
-        self.assertEqual(data["goal_status"], "blocked")
+        self.assertEqual(data["outcome"], "complete_with_deferred")
+        self.assertEqual(data["goal_status"], "complete")
+        self.assertEqual([decision["class"] for decision in data["decisions"]], ["exhausted"])
+        self.assertIn("Decisions for you", data["end_of_run_request"])
         self.assertFalse(data["writes_state"])
 
     def test_bad_request_is_an_input_error(self) -> None:
