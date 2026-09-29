@@ -2425,7 +2425,10 @@ class GateFoundationTests(unittest.TestCase):
             "tests/speckit-pro/layer1-structural/validate-skill-contracts.py",
             "tests/speckit-pro/layer1-structural/validate-payload-contracts.py",
             "tests/speckit-pro/layer1-structural/validate-ci-release-contracts.py",
-            "tests/speckit-pro/layer1-structural/validate-spec-lifecycle-contracts.py",
+            "tests/speckit-pro/layer1-structural/validate-plugin-payload-hygiene.py",
+            "tests/speckit-pro/layer1-structural/validate-spec-templates-and-extensions.py",
+            "tests/speckit-pro/layer1-structural/validate-moc-lint.py",
+            "tests/speckit-pro/layer1-structural/validate-spec-index-helper-contract.py",
             "tests/speckit-pro/layer1-structural/test-structural-regressions.py",
         }
         self.assertEqual(set(layer1_scripts), expected_layer1_scripts)
