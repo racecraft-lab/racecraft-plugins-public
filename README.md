@@ -62,7 +62,7 @@ namespaced plugin skills such as `/speckit-pro:speckit-status` and
 
 ### Codex
 
-Claude Code commands are the separate DOC-003-owned path; use the
+Claude Code commands have their own guide; use the
 [Claude Code install guide](./docs-site/src/content/docs/install/claude-code.md)
 for that runtime. For Codex, open this repository in Codex, then open the plugin
 directory:
@@ -137,12 +137,12 @@ dist/codex/speckit-pro/
 ```
 
 For deeper Codex file-layout details, use the
-[DOC-007 reference shell](./docs-site/src/content/docs/reference.md). For
+[reference index](./docs-site/src/content/docs/reference.md). For
 trust, hook policy, update, rollback, permission repair, and stale-cache
 forensics, use the
-[DOC-008 security and trust](./docs-site/src/content/docs/security-and-trust.md)
-and [DOC-008 troubleshooting](./docs-site/src/content/docs/troubleshooting.md)
-shells.
+[security and trust](./docs-site/src/content/docs/security-and-trust.md)
+and [troubleshooting](./docs-site/src/content/docs/troubleshooting.md)
+pages.
 
 ## How This Repo Is Organized
 

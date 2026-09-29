@@ -1,9 +1,11 @@
 # Parity Fixture 01 — Post-Implementation Equivalence (Use site 1)
 
-Proves that the **Agent Teams path (Path A)** and **parallel-subagents
+Compares the **Agent Teams path (Path A)** and **parallel-subagents
 fallback path (Path B)** of the post-implementation parallel group
-(`post-implementation.md` §Post-Implementation Parallel Group) produce
-equivalent post-impl outcomes for the same workflow input.
+(`post-implementation.md` §Post-Implementation Parallel Group) for the
+same workflow input. Headless `claude -p` runs both arms on ordinary
+subagents, so a pass is parser-regression evidence, not proof of Path A
+versus Path B.
 
 This is the first fixture in Layer 7 — proving capability-driven
 dispatch is **outcome-equivalent** across paths, not just shape-correct
@@ -12,8 +14,8 @@ dispatch is **outcome-equivalent** across paths, not just shape-correct
 ## Test scenario
 
 A tiny synthetic workflow.md with all 7 phases pre-populated (no real
-LLM work in phases 1-7 — they short-circuit on the `--from-phase post`
-marker). Post-impl tasks 10-14 are stubbed to no-op extensions that
+LLM work in phases 1-7: every Workflow Overview row reads Complete, so
+autopilot starts at the Post-Implementation phase). Post-impl tasks 10-14 are stubbed to no-op extensions that
 return canned summaries.
 
 The test:
@@ -21,7 +23,7 @@ The test:
 1. **Path B run**: `env-fallback.json` unsets `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS`;
    invokes autopilot; captures artifacts.
 2. **Path A run**: `env-teams.json` sets `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`
-   (live mode also requires Claude Code ≥ 2.1.32); invokes autopilot;
+   invokes autopilot;
    captures artifacts.
 3. **Diff**: per `expected-equivalence.json` with tolerances from
    `tolerance.json`. PASS if all required fields match within
@@ -38,6 +40,9 @@ persisted a validation file. Codex guidance must use the same boundary rather
 than introducing a Codex-only packet path or validator copy.
 
 ## Mode
+
+This fixture is parser-regression coverage only. See the Layer 7 README for
+why headless `claude -p` cannot prove Path A versus Path B.
 
 This fixture is **live-mode only** — the whole point is to verify that
 two different real execution paths produce equivalent answers from the

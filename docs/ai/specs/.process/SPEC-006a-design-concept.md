@@ -115,6 +115,6 @@ None — interview reached a natural stop. All four implementation-detail decisi
 
 ## Recommended Next Step
 
-Setup mode — design concept and workflow file will be committed together as part of `/speckit-pro:speckit-scaffold-spec SPEC-006a`. The next operational step is `/speckit-pro:speckit-autopilot docs/ai/specs/SPEC-006a-workflow.md` from inside `.worktrees/006a-uat-skeleton/`.
+Setup mode — design concept and workflow file will be committed together as part of `/speckit-pro:speckit-scaffold-spec SPEC-006a`. The next operational step is `/speckit-pro:speckit-autopilot docs/ai/specs/.process/SPEC-006a-workflow.md` from inside `.worktrees/006a-uat-skeleton/`.
 
 This design concept is the source of truth for scoping decisions captured during scaffolding. Any drift in downstream artifacts (spec.md, plan.md, tasks.md) from the decisions above is a defect in the downstream artifact, not in this doc, unless there is an explicit revision note.

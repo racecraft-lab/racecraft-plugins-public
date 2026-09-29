@@ -1,5 +1,5 @@
 {
-  "schema": "speckit.layer7.tolerance.v1",
+  "schema": "speckit.layer7.legacy.tolerance.v1",
   "fixture_id": "01-post-impl-parity",
   "description": "Tolerances for comparing Path A (Agent Teams) vs Path B (parallel subagents fallback) outcomes on the post-implementation parallel group.",
   "fields": {
@@ -27,9 +27,9 @@
       "tolerance": "semantic-equivalent",
       "rationale": "LLM-driven prose; allow paraphrase but require semantic equivalence (no contradictory findings)."
     },
-    "gate_results.G0_through_G7": {
+    "workflow_overview.phase_statuses": {
       "tolerance": "exact",
-      "rationale": "All 8 gates must return identical PASS/FAIL across paths."
+      "rationale": "The seven Workflow Overview phase statuses must match across paths."
     },
     "workflow.pr_packet_validation.status": {
       "tolerance": "exact",

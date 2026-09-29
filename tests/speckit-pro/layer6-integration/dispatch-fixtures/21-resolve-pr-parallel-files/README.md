@@ -20,15 +20,15 @@ assistant message.
 - Dispatches go to `general-purpose`
 - No forbidden spawns (subagents don't nest)
 - `grill-me` is NEVER invoked
-- All 3 dispatches in ONE assistant message (parser-fixture transcript
-  shape captures this)
+- All 3 dispatches in ONE assistant message
+  (`same_message_dispatch_groups`)
+- Every dispatch sets `run_in_background: true` (`must_run_in_background`)
+- No more than 3 dispatches (`max_dispatch_count`)
 
 ## When this fixture would fail
 
-- If a future change reverts to per-thread serial processing, only 0-1
-  subagent dispatches would happen and
-  `min_dispatch_count: 3` fails.
-- If partitioning breaks and each thread gets its own subagent (6
-  dispatches instead of 3 per-file), `max_dispatch_count: 6` allows
-  it but the design note in the fixture description would flag the
-  inefficiency.
+- If a future change reverts to per-thread processing, each of the 6 threads
+  gets its own subagent and `max_dispatch_count: 3` fails.
+- If the per-file dispatches are spread across several assistant messages,
+  `same_message_dispatch_groups` fails.
+- If the dispatches run in the foreground, `must_run_in_background` fails.
