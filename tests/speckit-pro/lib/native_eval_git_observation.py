@@ -17,7 +17,7 @@ from native_eval_fixture_setup import (
     GIT_FIXTURE_RECIPE,
     _git_environment,
     _validate_git_controls,
-    _workspace_directory,
+    workspace_directory,
 )
 
 
@@ -47,7 +47,7 @@ def observe_git_state(
 
     receipt = _validate_receipt(initial_receipt)
     try:
-        target = _workspace_directory(workspace)
+        target = workspace_directory(workspace)
         git = _validate_git_controls(target, controls)
     except ValueError as exc:
         raise GitObservationError(str(exc)) from exc
@@ -76,7 +76,7 @@ def observe_registered_worktrees(
     receipt = _validate_receipt(initial_receipt)
     rows = _validate_expected_worktrees(expected_worktrees, receipt)
     try:
-        target = _workspace_directory(workspace)
+        target = workspace_directory(workspace)
         git = _validate_git_controls(target, controls)
     except ValueError as exc:
         raise GitObservationError(str(exc)) from exc
@@ -114,7 +114,7 @@ def snapshot_git_topology(
 
     receipt = _validate_receipt(initial_receipt)
     try:
-        target = _workspace_directory(workspace)
+        target = workspace_directory(workspace)
         git = _validate_git_controls(target, controls)
     except ValueError as exc:
         raise GitObservationError(str(exc)) from exc

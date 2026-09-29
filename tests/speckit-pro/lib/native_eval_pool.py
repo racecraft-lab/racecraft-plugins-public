@@ -65,7 +65,7 @@ def _validate_job(job: Job) -> None:
         raise ValueError("judge jobs must use the codex provider")
 
 
-def _validate_limits(name: str, values: Mapping[str, int], maximums: Mapping[str, int]) -> dict[str, int]:
+def validate_limits(name: str, values: Mapping[str, int], maximums: Mapping[str, int]) -> dict[str, int]:
     if not isinstance(values, Mapping) or set(values) != set(_HOSTS):
         raise ValueError(f"{name} must specify exactly claude and codex")
     checked: dict[str, int] = {}
@@ -136,11 +136,11 @@ def run_jobs(
         raise ValueError("jobs must be a non-empty list or tuple")
     if not callable(execute):
         raise ValueError("execute must be callable")
-    capacities = _validate_limits(
+    capacities = validate_limits(
         "limits", {"claude": 4, "codex": 4} if limits is None else limits,
         {"claude": _CLAUDE_RUNNER_MAXIMUM, "codex": _CODEX_HARNESS_MAXIMUM},
     )
-    nested = _validate_limits(
+    nested = validate_limits(
         "nested_limits", {"claude": 1, "codex": 1} if nested_limits is None else nested_limits,
         {host: min(2, capacities[host]) for host in _HOSTS},
     )
